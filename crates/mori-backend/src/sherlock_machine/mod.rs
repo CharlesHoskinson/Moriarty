@@ -595,6 +595,18 @@ pub use c6_equal_empty_step::{
     witness_from_host_pair as witness_equal_empty_from_host_pair,
 };
 
+// UIREQ-023 dispatch owner: per-rule Core selection over the C6 pre carriers.
+pub mod c6_dispatch_consumer;
+pub mod c6_dispatch_step;
+pub use c6_dispatch_consumer::{
+    C6DispatchCircuit, C6DispatchConsumerError, C6DispatchWitness, build_c6_dispatch_circuit,
+    check_c6_dispatch_circuit, witness_from_host_snapshot as witness_dispatch_from_host_snapshot,
+};
+pub use c6_dispatch_step::{
+    C6DispatchBlock, C6DispatchEmitter, C6DispatchError, C6DispatchInputs, dispatch_supported,
+    emit_c6_dispatch_block, supported_rules as dispatch_supported_rules,
+};
+
 // Additive Task2 fragment; complete range/provenance/native obligations remain open.
 pub mod c6_construct_nullary_consumer;
 pub mod c6_construct_nullary_step;

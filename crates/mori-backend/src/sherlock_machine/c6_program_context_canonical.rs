@@ -175,6 +175,29 @@ pub struct C6ProgramContextExpressionCaptureBlock {
     pub row: [Operand; 7],
 }
 
+/// One full PROG parser walk that captures two expression rows (at two
+/// independently selected indices) and the admitted function-table count.
+/// Used by the dispatch owner: the Eval expression, the control-origin
+/// expression and `admitted_function_count` come from the same walk.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextDispatchCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub first_index: Operand,
+    pub second_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextDispatchCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub expressions_count: Operand,
+    pub functions_count: Operand,
+    pub first_found: Operand,
+    pub first_row: [Operand; 7],
+    pub second_found: Operand,
+    pub second_row: [Operand; 7],
+}
+
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs {
     pub gate: Operand,
@@ -1784,6 +1807,150 @@ impl C6ProgramContextCanonicalEmitter {
             expressions_count,
             selected_found,
             row,
+        })
+    }
+    pub fn emit_prog_dispatch_capture(
+        &mut self,
+        inputs: &C6ProgramContextDispatchCaptureInputs,
+    ) -> Result<C6ProgramContextDispatchCaptureBlock, C6ProgramContextCanonicalError> {
+        if (LANE_BITS as usize) >= FR_BITS {
+            return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS });
+        }
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.first_index)?;
+        reject_reserved(&self.scope, &inputs.second_index)?;
+        for lane in &inputs.pre_prog {
+            reject_reserved(&self.scope, lane)?;
+        }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+            return Err(C6ProgramContextCanonicalError::LengthMismatch {
+                expected: PROGRAM_HEADER_LANES,
+                actual: inputs.pre_prog.len(),
+            });
+        }
+        let p = &inputs.caps.phys;
+        for cap in [
+            p.max_expressions,
+            p.max_names,
+            p.max_arms,
+            p.max_children,
+            p.max_functions,
+            p.max_arity,
+            p.max_types,
+            p.max_occurrences,
+            p.max_occurrence_paths,
+            p.max_parameters,
+            p.max_patterns,
+            p.max_pattern_children,
+            p.max_constructors,
+            p.max_ctor_fields,
+            p.max_decl_templates,
+            p.max_plan_nodes,
+            p.max_plan_cases,
+            p.max_field_paths,
+            p.max_constants,
+            p.max_constant_fields,
+            p.max_name_bytes,
+            p.max_type_expr_nodes,
+            p.max_template_bytes,
+        ] {
+            if cap == usize::MAX {
+                return Err(C6ProgramContextCanonicalError::GeometryOverflow);
+            }
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        let mut regs = Regs {
+            phase: Emitter::imm(0),
+            sub: Emitter::imm(0),
+            hold: Emitter::imm(0),
+            opt: Emitter::imm(0),
+            rem: Emitter::imm(0),
+            cnt: Emitter::imm(0),
+            cnt2: Emitter::imm(0),
+            cnt3: Emitter::imm(0),
+            te_need: Emitter::imm(0),
+            srem: Emitter::imm(0),
+            utf_pending: Emitter::imm(0),
+            utf_cp: Emitter::imm(0),
+            utf_min: Emitter::imm(0),
+            cum_name: Emitter::imm(0),
+            cum_tmpl: Emitter::imm(0),
+            cum_nodes: Emitter::imm(0),
+            const_count: Emitter::imm(0),
+            const_row_index: Emitter::imm(0),
+            const_capture_active: Emitter::imm(0),
+            const_found: Emitter::imm(0),
+            const_cap_0: Emitter::imm(0),
+            const_cap_1: Emitter::imm(0),
+            const_cap_2: Emitter::imm(0),
+            const_cap_3: Emitter::imm(0),
+            const_cap_4: Emitter::imm(0),
+            const_cap_5: Emitter::imm(0),
+            types_count: Emitter::imm(0),
+            type_row_index: Emitter::imm(0),
+            type_capture_active: Emitter::imm(0),
+            type_found: Emitter::imm(0),
+            type_ctor_start: Emitter::imm(0),
+            type_ctor_len: Emitter::imm(0),
+            ctor_row_index: Emitter::imm(0),
+            ctor_capture_active: Emitter::imm(0),
+            ctor_found: Emitter::imm(0),
+            ctor_owning_type: Emitter::imm(0),
+            ctor_field_start: Emitter::imm(0),
+            ctor_field_len: Emitter::imm(0),
+            ctor_fields_count: Emitter::imm(0),
+        };
+        em.cbits(inputs.first_index.clone(), LANE_BITS);
+        em.cbits(inputs.second_index.clone(), LANE_BITS);
+        let mut expressions_count = Emitter::imm(0);
+        let mut functions_count = Emitter::imm(0);
+        let mut expression_index = Emitter::imm(0);
+        let mut first_found = Emitter::imm(0);
+        let mut second_found = Emitter::imm(0);
+        let mut first_row: [Operand; 7] = std::array::from_fn(|_| Emitter::imm(0));
+        let mut second_row: [Operand; 7] = std::array::from_fn(|_| Emitter::imm(0));
+        for lane in &inputs.pre_prog {
+            em.cbits(lane.clone(), LANE_BITS);
+            let count_phase = em.eqv(regs.phase.clone(), PH_EXPR_COUNT);
+            expressions_count = em.sel(count_phase, lane.clone(), expressions_count);
+            let fn_count_phase = em.eqv(regs.phase.clone(), PH_FUNC_COUNT);
+            functions_count = em.sel(fn_count_phase, lane.clone(), functions_count);
+            let row_phase = em.eqv(regs.phase.clone(), PH_EXPR_ROW);
+            for (index, found, row) in [
+                (&inputs.first_index, &mut first_found, &mut first_row),
+                (&inputs.second_index, &mut second_found, &mut second_row),
+            ] {
+                let index_eq = em.teq(expression_index.clone(), index.clone());
+                let selected = em.and(row_phase.clone(), index_eq);
+                *found = em.sel(selected.clone(), Emitter::imm(1), found.clone());
+                for (column, value) in row.iter_mut().enumerate() {
+                    let at_column = em.eqv(regs.sub.clone(), column as u128);
+                    let capture = em.and(selected.clone(), at_column);
+                    *value = em.sel(capture, lane.clone(), value.clone());
+                }
+            }
+            // Every expression uses at least two lanes, so a tag lane cannot
+            // complete a row using the preceding row's retained tag.
+            let used = em.used_from_hold(&regs, &[2, 2, 4, 4, 3, 4, 4, 6, 7]);
+            let last_sub = em.add_i(used, -1);
+            let at_end = em.teq(regs.sub.clone(), last_sub);
+            let row_done = em.and(row_phase, at_end);
+            let incremented = em.add_i(expression_index.clone(), 1);
+            expression_index = em.sel(row_done, incremented, expression_index);
+            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+        }
+        em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextDispatchCaptureBlock {
+            instructions: em.instructions,
+            expressions_count,
+            functions_count,
+            first_found,
+            first_row,
+            second_found,
+            second_row,
         })
     }
     pub fn emit_prog_checked_sort_capture(

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use mori_core::sherlock_compile_artifact::draft_execution::run_draft_host;
 use mori_core::sherlock_compile_artifact::native_inventory::{
-    OTHER_MACHINE, RuleTally, TABLE, TABLE_PROVENANCE, UNEXERCISED_C6, report,
+    DISPATCH, OTHER_MACHINE, RuleTally, TABLE, TABLE_PROVENANCE, UNEXERCISED_C6, report,
 };
 
 const CONFIG: &str = include_str!("fixtures/technical-chunks/config.json");
@@ -94,6 +94,8 @@ fn every_named_fragment_exists_and_names_its_rule() {
     for (file, rule, entry) in OTHER_MACHINE {
         assert_entry(file, entry, rule);
     }
+    assert_entry(DISPATCH.file, DISPATCH.entry, "owner_select");
+    read(DISPATCH.consumer.unwrap());
 }
 
 #[test]
@@ -111,6 +113,8 @@ fn no_unclaimed_fragment_file_appears() {
         claimed.extend(f.consumer.map(String::from));
     }
     claimed.extend(OTHER_MACHINE.iter().map(|(f, _, _)| f.to_string()));
+    claimed.insert(DISPATCH.file.into());
+    claimed.extend(DISPATCH.consumer.map(String::from));
     let mut unclaimed = Vec::new();
     for entry in std::fs::read_dir(fragment_dir()).expect("fragment dir") {
         let name = entry.unwrap().file_name().into_string().unwrap();

@@ -326,6 +326,13 @@ pub const UNEXERCISED_C6: &[(&str, Fragment)] = &[
     ),
 ];
 
+/// HAND-AUTHORED: the C6 dispatch owner candidate (per-rule Core selection).
+pub const DISPATCH: Fragment = Fragment {
+    file: "c6_dispatch_step.rs",
+    entry: "emit_c6_dispatch_block",
+    consumer: Some("c6_dispatch_consumer.rs"),
+};
+
 /// HAND-AUTHORED: step fragments of the Candidate A `sherlock-k-a/1` image,
 /// not the helper-microstep machine and not on the C6 interface.
 pub const OTHER_MACHINE: &[(&str, &str, &str)] = &[
@@ -400,6 +407,11 @@ fn row_wire(row: &Row) -> Value {
 
 /// The whole hand-authored table, identical for every program.
 pub fn table_wire() -> Value {
+    let mut dispatch = fragment_wire(&DISPATCH);
+    dispatch["rule"] = json!("dispatch");
+    dispatch["supported"] = json!(
+        "every enabled pure RuleIdC except the XAdtHelperPlan*/XAdtHelperBuild* helper groups"
+    );
     json!({
         "provenance": TABLE_PROVENANCE,
         "note": "written by hand from the fragment sources; not generated from fragments, owner metadata or runs",
@@ -409,6 +421,7 @@ pub fn table_wire() -> Value {
             v["rule"] = json!(rule);
             v
         }).collect::<Vec<_>>(),
+        "dispatch_fragments": [dispatch],
         "other_machine_fragments": OTHER_MACHINE.iter().map(|(file, rule, entry)| json!({
             "file": format!("{FRAGMENT_DIR}/{file}"),
             "rule": rule,
@@ -467,8 +480,9 @@ fn owner_wire(owner: &str) -> Value {
     });
     if owner == "dispatch" {
         v["native_selection"] = json!(null);
+        v["candidate"] = json!(format!("{FRAGMENT_DIR}/{}", DISPATCH.file));
         v["status"] = json!(
-            "open: exactly-one rule dispatch is a caller obligation in every C6 fragment; no native dispatch owner exists"
+            "open: a source-only dispatch owner candidate exists (per-rule Core selection over the C6 pre carriers); native_selection stays null until its tests are compiled and run"
         );
     }
     v

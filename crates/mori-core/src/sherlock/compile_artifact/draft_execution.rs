@@ -134,6 +134,45 @@ pub fn run_draft_host_with_word_layout(
     Ok(WordLoweredDraftHostRun { word_layout, run })
 }
 
+/// The actual admitted pair and owner layout of dedicated draft source, before
+/// any owner step. For external step consumers (native fragment tests) that
+/// drive the same owner engine and capture each pre/post snapshot themselves.
+pub struct DraftGenesis {
+    pub admitted: crate::sherlock::helper_machine::shared::Admitted,
+    pub image: crate::sherlock::helper_machine::shared::MachineImage,
+    pub layout: crate::sherlock::helper_machine::shared::LayoutSchemaC,
+}
+
+pub fn draft_genesis(source: &str, config_source: &str) -> Result<DraftGenesis, CompileFailure> {
+    let config = parse_draft_config(config_source)?;
+    let bounds = config.bounds.owner();
+    let layout = config.layout.owner(bounds);
+    let checked = recursive_source::prepare_checked_draft_bounded(
+        source,
+        config.preprocessing.parser_budget(),
+        config.preprocessing.max_type_depth.0,
+    )
+    .map_err(CompileFailure::draft_source)?;
+    let AdmittedDraftSource {
+        preparation: _,
+        admitted,
+        image,
+    } = recursive_source::admit_checked_draft_bounded(
+        checked,
+        &config.preprocessing.copy_budget(),
+        &bounds,
+        &layout,
+        &config.fuel.owner(),
+        &config.stack.owner(),
+    )
+    .map_err(CompileFailure::draft_source)?;
+    Ok(DraftGenesis {
+        admitted,
+        image,
+        layout,
+    })
+}
+
 fn run_draft_host_impl(
     source: &str,
     config_source: &str,
