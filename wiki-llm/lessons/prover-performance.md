@@ -7,6 +7,14 @@ tags: [lessons, loki, performance, gpu, msm, ntt, blst]
 
 # Prover performance
 
+
+## The GPU MSM slows down when scalars repeat, so lookup_prepare got slower on GPU (2026-10-24)
+- **Measured (W10):** attributed A3 ran all 45 MSMs and 79 NTTs on the GPU with no fallback. It took 233.3 s against 253.1 s on CPU, but `lookup_prepare` took 51.4 s on GPU against 21.6 s on CPU.
+- On a warm k18 synthetic, wide repeated scalars took about 2,419 ms, against about 25 ms for random scalars.
+- **Why:** sppark's Pippenger gives each (window, bucket) to one thread, and lookup and permutation columns are full of repeated values, so one bucket gets most of the points.
+- The Lean review had suggested SRS-cache churn instead: the cache key depends on length and it has 2 slots. That is real, but it was not the main cost.
+- **Lesson:** benchmark kernels on the scalar distributions the real circuit has (repeated, boolean, small), not only on random ones. Route skewed MSMs to a different algorithm, or back to CPU.
+
 ## Pin which parent and which host a baseline came from (2026-10-24)
 - Scouts kept tripping over two "k20 parent" numbers: 882.6 s prove (and 867 s at 268% CPU, 15 GB) in the older recl9 logs, and 220 s
   for Moriarty's A3. They are different runs: the recl9 logs came from another host and user (`/home/charl`), using recl9's

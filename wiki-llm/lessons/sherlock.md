@@ -7,6 +7,15 @@ tags: [lessons, sherlock, recursion, stagenet, verifying-key]
 
 # Sherlock recursion chain and deployment
 
+
+## Ledger verification needs its proof-verifying feature, or bad proofs pass (2026-10-24)
+- **What happened:** A6's negative case, a reused proof bound to the wrong statement, was accepted by the local ledger-9 check. In the pinned `ledger-wasm`, `default = []`, and ledger has `default-features = false`. Without the `proof-verifying` feature, `ProofMarker::proof_verify` returns `Ok` without checking anything.
+- **Lesson:** a validation harness must prove it can reject (mutation tests) before its accepts count. Check that the dependency features actually turn verification on.
+
+## Redeploying is fast once the key lineage is recorded (2026-10-24)
+- A4 passed on a new stagenet contract, `ac93b80e…` (block 1013319). Its key was regenerated from scratch, matched `3f3b7e13…ff0083` exactly, and was read back through the indexer and a Rust ledger reader. The full lineage (child VKs → parent `801467c8…` → template → decider → contract) is in the record. The old contract was `80a0291c…`.
+- B3's own cohort (one 16-tx/50-header leaf → single-child parent → decider) is **not** the A-chain cohort (A102/A80 → A3). Its parent fits k19. Don't splice timings from different cohorts.
+
 ## A verifying key fingerprints the whole upstream chain (2026-10-24)
 - **What happened:** A1–A3 passed. A2 gives children A102 at k15 and A80 at k12, each a 3,440-byte proof. A3 gives a k20 parent of 6,432 bytes. A4 rebuilt the
   terminal decider key, `cdf36971…`, and it did not match the key installed on contract `80a0291c…` (`bd9e9d89…`).

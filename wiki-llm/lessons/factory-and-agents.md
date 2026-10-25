@@ -7,6 +7,17 @@ tags: [lessons, agents, codex, agentbus, doctorwatson, sandbox]
 
 # Running the factory and its agents
 
+
+## Hold-and-wait between the heavy slot and the GPU lock stalls everyone (2026-10-24)
+- **What happened:** jobs took DoctorWatson `heavy.lock` and then queued for `gpu.lock` behind 10-minute fuzz slices, or the reverse. A6, W9's GPU suffix and the lab probes all waited 15–30 minutes while the load was 2–4 on 20 cores.
+- **Next time:** take both locks in one fixed order (heavy, then GPU), and only right before the proof starts, not during compile or setup. Batch several GPU tests in one reservation. Keep fuzz slices short.
+
+## Agents that block on one sender miss their lead's tasks (2026-10-24)
+- Two lab engineers ran `wait --from gpu-runner` and never saw TASKs from their lead. Tell agents to `wait` on any sender, or `recv` between runner waits.
+
+## `pkill -f <script>` from a shell whose command line contains that name kills the shell (2026-10-24)
+- Match on PIDs from `pgrep`, excluding your own process tree, rather than on a pattern in your own command.
+
 ## The Codex sandbox cannot reach the GPU or write `.git`, so give it a host runner (2026-10-24)
 - **What happened:** `codex exec -s workspace-write` agents could not open the WSL GPU device. Adding `/dev` to the writable roots breaks bwrap.
   They also could not create `.git/worktrees/<wt>/index.lock`, even with the git common dir listed as a writable root. And
