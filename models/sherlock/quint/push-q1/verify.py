@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Reproduce green checks and the expected source/contract counterexample."""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import shlex
+import subprocess
+import time
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[3]
+MODEL = "models/sherlock/quint/push-q1/"
+WITNESSES = [
+    "entered", "accepted", "rejected", "refused", "cutReached", "bodyReturned",
+    "calleeReturned", "added", "callerReturned", "published", "exhausted",
+    "cutBeforeAddition",
+]
+COMMON_RUN = ["--max-steps", "30", "--max-samples", "10000", "--n-threads", "2",
+              "--seed", "1401516", "--verbosity", "1"]
+
+
+def main() -> int:
+    results = []
+    log = []
+    # Invalidate older green evidence before invoking any external command.
+    (HERE / "verification-results.json").write_text(json.dumps({"status": "running", "checks": []}) + "\n")
+    (HERE / "verification.log").write_text("")
+    cases = [
+        (["quint", "--version"], 0),
+        *[(["quint", "typecheck", MODEL + name], 0) for name in (
+            "suspensionResume.qnt", "suspensionResume_test.qnt",
+            "resumeAdmission.qnt", "resumeAdmission_test.qnt")],
+        *[(["quint", "test", MODEL + name, "--max-samples", "1", "--verbosity", "1"], 0)
+          for name in ("suspensionResume_test.qnt", "resumeAdmission_test.qnt")],
+        (["quint", "run", MODEL + "suspensionResume.qnt", "--invariant", "safety",
+          *COMMON_RUN, "--witnesses", *WITNESSES], 0),
+        (["quint", "run", MODEL + "resumeAdmission.qnt", "--invariant", "acceptedIsAffordable",
+          *COMMON_RUN, "--witnesses", "notReadyOnUnresumable", "lateResourceFailure"], 0),
+        (["quint", "run", MODEL + "resumeAdmission.qnt", "--step", "contractCheck",
+          "--invariant", "matchesContract", *COMMON_RUN], 0),
+        (["quint", "run", MODEL + "resumeAdmission.qnt", "--invariant", "matchesContract",
+          "--max-steps", "30", "--max-samples", "100", "--n-threads", "1",
+          "--seed", "1", "--verbosity", "2", "--out-itf",
+          MODEL + "resumeAdmission-counterexample.itf.json"], 1),
+    ]
+    for command, expected in cases:
+        started = time.monotonic()
+        try:
+            process = subprocess.run(command, cwd=ROOT, text=True,
+                                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     timeout=60, check=False)
+        except (subprocess.TimeoutExpired, OSError) as error:
+            process = subprocess.CompletedProcess(command, -1, stdout=f"{type(error).__name__}: {error}\n")
+        elapsed = round(time.monotonic() - started, 3)
+        valid = process.returncode == expected
+        if expected == 1:
+            valid = valid and "Invariant violated" in process.stdout
+        elif "test" in command:
+            expected_count = 30 if command[2].endswith("suspensionResume_test.qnt") else 4
+            valid = valid and f"{expected_count} passing" in process.stdout
+        elif "--witnesses" in command:
+            names = command[command.index("--witnesses") + 1:]
+            valid = valid and all(
+                f"{name} was witnessed in " in process.stdout
+                and f"{name} was witnessed in 0 trace(s)" not in process.stdout
+                for name in names
+            )
+        row = {"command": command, "expectedExit": expected,
+               "exit": process.returncode, "wallSeconds": elapsed, "passed": valid}
+        results.append(row)
+        log.append(f"$ {shlex.join(command)}\n{process.stdout}\nexit={process.returncode} wall={elapsed}s\n")
+        (HERE / "verification.log").write_text("\n".join(log))
+        (HERE / "verification-results.json").write_text(json.dumps(
+            {"status": "running" if valid else "failed", "checks": results}, indent=2) + "\n")
+        print(f"{'PASS' if valid else 'FAIL'} {shlex.join(command)} ({elapsed}s)", flush=True)
+        if not valid:
+            break
+    sources = [
+        ROOT / "docs/sherlock/design/suspension-and-finance.md",
+        ROOT / "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+        ROOT / "crates/mori-core/src/sherlock/helper_machine/shared/owner_resume.rs",
+        ROOT / "crates/mori-core/tests/sherlock_technical_chunks_positive.rs",
+    ]
+    owner = Path.home() / "repos/Moriarty-wt-factory-u"
+    sources += [owner / "crates/mori-core/src/sherlock" / name for name in (
+        "compile_artifact/suspension2.rs",
+        "helper_machine/shared/owner_suspend.rs",
+        "helper_machine/shared/owner_resume.rs",
+        "helper_machine/shared/owner_runtime.rs",
+    )]
+    sources += sorted(HERE.glob("*.qnt"))
+    hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources if p.exists()}
+    (HERE / "verification.log").write_text("\n".join(log))
+    (HERE / "verification-results.json").write_text(json.dumps(
+        {"status": "passed" if len(results) == len(cases) and all(r["passed"] for r in results) else "failed",
+         "checks": results, "sourceSha256": hashes,
+         "scope": "Sampled abstract models; source projection is not a Rust execution or refinement proof."},
+        indent=2) + "\n")
+    return 0 if len(results) == len(cases) and all(r["passed"] for r in results) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
