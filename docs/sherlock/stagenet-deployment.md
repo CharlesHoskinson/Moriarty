@@ -166,3 +166,21 @@ This negative control is retained in
 `target/a4-anchor/local-native-proof-rejected/negative-ledger-result.json`.
 It is not a positive ledger-acceptance result or a stagenet call. Call preimages
 and private openings reach the native prover only through a pipe.
+
+`doctorwatson check A6` passed on 2026-10-25. The installed contract state
+(SHA-256 `3a44aa7e…5342ae`) was put into a blank local ledger-9 by a bootstrap
+deploy that waives fees. A freshly proved, actual-bound terminal D proof for
+`acceptValidity` was then accepted and applied by the native
+`midnight-ledger-v9/proof-verifying` validator. Contract proofs, signatures and
+limits were on; balancing and native proofs were off. After the call,
+`validity_ok` contained the statement, `settled` was empty, and root, height and
+`batch_no` were unchanged. The native and JS complete post-state hashes match
+(`c0c10aa5…d462e4`). In the same run, the reused offline proof was refused as
+`Invalid proof`. The all-checks profile still refuses the unfunded local fixture
+(`invalid balance … for token Dust`), so this is not a claim of full
+transaction validity; that is A8 on stagenet. The check took **163.937 s** wall
+time with **14,999,412,736 bytes** peak RSS. The trace is
+`qa/sherlock/traces/20261025T042312Z-A6.log` and the receipt is
+`target/sherlock-a6/run-4M1RU5hz/receipt.json`. Do not take any acceptance from
+the installed SDK's JS WASM `wellFormed`: it does not verify proofs
+cryptographically.

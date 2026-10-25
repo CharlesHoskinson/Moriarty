@@ -150,7 +150,8 @@ try {
     const verified = proven.wellFormed(local, strictness(contractChecks), now);
     const [post, outcome] = local.apply(verified, new ledger.TransactionContext(local, blockContext));
     assert.equal(outcome.type, 'success');
-    const before = mod.ledger(state.data), after = mod.ledger(post.index(address).data);
+    const view = s => mod.ledger(rt.ContractState.deserialize(s.serialize()).data);
+    const before = view(state), after = view(post.index(address));
     assert.ok(after.validity_ok.member(stmt)); assert.ok(after.settled.isEmpty());
     for (const field of ['root', 'height', 'batch_no']) assert.equal(after[field], before[field]);
     const postHash = createHash('sha256').update(post.serialize()).digest('hex');
