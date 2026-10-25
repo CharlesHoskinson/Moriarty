@@ -1,0 +1,38 @@
+# cargo-nextest config. Each test runs in its own process; on timeout nextest
+# kills that test's process group, so a runaway test cannot outlive its run.
+# Tiers (see scripts/qa/cargo-tier.sh):
+#   fast  : everything except the SDK-circuit tests          (~1-2 min)
+#   slow  : the sherlock_machine c6_* / fuel_exhaustion SDK tests
+#   heavy : slow + `--run-ignored all` (deep sweeps, native proofs)
+[store]
+dir = "target/nextest"
+
+[profile.default]
+fail-fast = false
+slow-timeout = { period = "60s", terminate-after = 5, grace-period = "5s" }
+
+[[profile.default.overrides]]
+filter = "test(/sherlock_machine::(c6_|fuel_exhaustion)/)"
+slow-timeout = { period = "300s", terminate-after = 6, grace-period = "5s" }
+
+[[profile.default.overrides]]
+filter = "test(/all465/)"
+slow-timeout = { period = "300s", terminate-after = 12, grace-period = "5s" }
+
+[profile.fast]
+default-filter = "not test(/sherlock_machine::(c6_|fuel_exhaustion)/)"
+fail-fast = false
+slow-timeout = { period = "30s", terminate-after = 4, grace-period = "5s" }
+
+[profile.slow]
+default-filter = "test(/sherlock_machine::(c6_|fuel_exhaustion)/)"
+fail-fast = false
+slow-timeout = { period = "300s", terminate-after = 6, grace-period = "5s" }
+
+[[profile.slow.overrides]]
+filter = "test(/all465/)"
+slow-timeout = { period = "300s", terminate-after = 12, grace-period = "5s" }
+
+[profile.heavy]
+fail-fast = false
+slow-timeout = { period = "600s", terminate-after = 12, grace-period = "10s" }
