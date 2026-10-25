@@ -7,7 +7,8 @@ import {readFileSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {join} from 'node:path';
 import {sdkLoader} from './stagenet-session.mjs';
-import {prepareSettle, settleTrace, settleStatement, editSnapshot, ledgerView} from './settle-harness.mjs';
+import {prepareSettle, predictSettle, settleTrace, settleStatement, editSnapshot, ledgerView} from './settle-harness.mjs';
+import {createHash} from 'node:crypto';
 
 const fixture = name => readFileSync(new URL(`./fixtures/settle/${name}`, import.meta.url));
 const fromLe = s => BigInt('0x' + Buffer.from(s, 'hex').reverse().toString('hex'));
@@ -33,6 +34,15 @@ test('settleTrace over S0 reproduces the A3 parent trace f15', () => {
 
 test('settleStatement over S0 reproduces the A8 decider statement', () => {
   assert.equal(settleStatement(S0, 0n, fields), A8_STMT);
+});
+
+test('the VM post-settle state over S0 equals the call-current prediction for the live A8 state', async () => {
+  // call-current.mjs settleValidity preparation, 2026-10-25, live pre-state 1eba3c3e... (= this S0 fixture).
+  const post = await predictSettle(S0, 0n, fields);
+  assert.equal(createHash('sha256').update(post.serialize()).digest('hex'), '9016057e6ce4f64caf6de60385ca74a8873e7c649819fb81b643a24ccd8dde18');
+  const v = ledgerView(post);
+  assert.ok(v.settled.member(A8_STMT) && !v.validity_ok.member(A8_STMT));
+  assert.equal(v.root, fields[9]); assert.equal(v.height, 2n); assert.equal(v.batch_no, 1n);
 });
 
 test('the statement takes I, R, H, B from the snapshot, not from the fields', () => {

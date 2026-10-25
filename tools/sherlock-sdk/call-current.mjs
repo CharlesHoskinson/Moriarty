@@ -19,6 +19,14 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 const le = x => Buffer.from(x.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
 const fromLe = s => BigInt('0x' + Buffer.from(s, 'hex').reverse().toString('hex'));
 const pins = JSON.parse(readFileSync('crates/mori-recursion/tests/fixtures/stagenet-verifier.json'));
+// Target deployment: MORIARTY_SHERLOCK_DEPLOYMENT names a public deploy-current receipt of the same source and
+// keys (default: the A8 pin). The decider key, parent and relation pins are unchanged.
+const deploymentReceipt = resolve(process.env.MORIARTY_SHERLOCK_DEPLOYMENT ?? 'target/a4-anchor/deploy-run3/receipt.json');
+const deployment = JSON.parse(readFileSync(deploymentReceipt));
+assert.equal(deployment.schema, 'sherlock-stagenet-deployment/2');
+assert.equal(deployment.sourceSHA256, sha(readFileSync(new URL('./sherlock-anchor.compact', import.meta.url))));
+const target = deployment.address; assert.match(target, /^[0-9a-f]{64}$/);
+if (process.env.MORIARTY_SHERLOCK_DEPLOYMENT === undefined) assert.equal(target, pins.address);
 assert.equal(sha(readFileSync(join(parent, 'w.vk'))), pins.parent_vk_sha256);
 assert.equal(sha(readFileSync(join(key, 'decider.vk'))), pins.vk_sha256);
 assert.equal(sha(readFileSync(join(key, 'decider.relation'))), pins.relation_sha256);
@@ -62,14 +70,14 @@ const child = (command, argv, input, env, log) => new Promise((ok, reject) => {
 });
 let session, currentState, parameters, expectedState, nativeProofPublic, nativeProofHash, proofCalls=0;
 const prepared = new Error('PREPARATION_ONLY'); let preparedComplete=false;
-const options = {compiledContract, contractAddress:pins.address, circuitId:circuit, args};
+const options = {compiledContract, contractAddress:target, circuitId:circuit, args};
 const baseProver = httpClientProvingProvider(endpoints.proof,keys,{timeout:15*60_000});
 const proveProvider = {
   check:(raw,location)=>baseProver.check(raw,location),
   lookupKey:location=>baseProver.lookupKey(location),
   prove:async(raw,location,binding)=>{
     assert.equal(++proofCalls,1,'one contract proof per transaction');
-    assert.equal(location,`contract:${pins.address}/${circuit}?vk=${sha(currentState.operation(circuit).verifierKey)}`);
+    assert.equal(location,`contract:${target}/${circuit}?vk=${sha(currentState.operation(circuit).verifierKey)}`);
     if(circuit==='settleValidity') {
       if(!mode){preparedComplete=true;throw prepared;}
       return baseProver.prove(raw,location,binding);
@@ -96,26 +104,26 @@ const proveProvider = {
 // Bootstrap from the actual public deployment action; never persist or log transaction bodies.
 let prebalance;
 const nativeValidate=async(tx,log)=>{
-  const deployed=JSON.parse(readFileSync('target/a4-anchor/deploy-run3/receipt.json'));
-  assert.equal(deployed.address,pins.address);
+  const deployed=deployment;
+  assert.equal(deployed.address,target);
   const data=await graphql(`{transactions(offset:{identifier:"${deployed.txId}"}){raw}}`);
   const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(data.transactions[0].raw,'hex'));
   const deployments=[...deploymentTx.intents.values()].flatMap(i=>i.actions).filter(a=>a instanceof ledger.ContractDeploy);
-  assert.equal(deployments.length,1); assert.equal(deployments[0].address,pins.address);
+  assert.equal(deployments.length,1); assert.equal(deployments[0].address,target);
   let local=ledger.LedgerState.blank('stagenet'); local.parameters=parameters;
   const setup=ledger.Transaction.fromParts('stagenet',undefined,undefined,ledger.Intent.new(new Date(Date.now()+3600_000)).addDeploy(deployments[0])).eraseProofs();
   const lax=Object.assign(new ledger.WellFormedStrictness(),{enforceBalancing:false,verifyNativeProofs:false,verifyContractProofs:false,enforceLimits:false,verifySignatures:false});
   const secs=BigInt(Math.floor(Date.now()/1000)),block={secondsSinceEpoch:secs,secondsSinceEpochErr:30,parentBlockHash:'00'.repeat(32),lastBlockTime:secs-6n};
   const [boot,result]=local.apply(setup.wellFormed(local,lax,new Date()),new ledger.TransactionContext(local,block));assert.equal(result.type,'success');
   const ledgerState=ledger.ContractState.deserialize(currentState.serialize()); // compact-runtime -> ledger WASM class
-  local=boot.updateIndex(pins.address,ledgerState.data,ledgerState.balance);
+  local=boot.updateIndex(target,ledgerState.data,ledgerState.balance);
   return JSON.parse(await child(resolve('target/release/examples/validate_call'),[],
     JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,log+'-stderr.log'));
 };
 const checkCall=report=>{
   assert.equal(report.proofVerification,'native/proof-verifying');
   assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
-  assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
+  assert.equal(call.address,target);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
   if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
 };
 const proofProvider={proveTx:async tx=>{
@@ -131,7 +139,7 @@ const proofProvider={proveTx:async tx=>{
 try {
   if(mode)session=await openStagenetSession(load,output);
   const walletProvider=session?.walletProvider ?? {getCoinPublicKey:()=> '00'.repeat(32),getEncryptionPublicKey:()=> '00'.repeat(32)};
-  const source=await publicDataProvider.queryZSwapAndContractState(pins.address); assert.ok(source);
+  const source=await publicDataProvider.queryZSwapAndContractState(target); assert.ok(source);
   [,currentState,parameters]=source;
   const before=mod.ledger(currentState.data);
   for(const [name,value] of Object.entries({instance_id:id,keys_id:fields[0],a102_ctx_lo:fields[1],a102_ctx_hi:fields[2],
@@ -142,7 +150,7 @@ try {
   writeFileSync(join(output,'pre-state.bin'),currentState.serialize());
   // Independent deterministic VM prediction of the complete contract state, including keys/CMA/balance.
   const clone=rt.ContractState.deserialize(currentState.serialize());
-  const context=rt.createCircuitContext(circuit,pins.address,parseCoinPublicKeyToHex(walletProvider.getCoinPublicKey(),'stagenet'),clone,{});
+  const context=rt.createCircuitContext(circuit,target,parseCoinPublicKeyToHex(walletProvider.getCoinPublicKey(),'stagenet'),clone,{});
   const predicted=await new mod.Contract({}).provableCircuits[circuit](context,...args);
   clone.data=predicted.context.callContext.currentQueryContext.state;
   expectedState=Buffer.from(clone.serialize());
@@ -159,26 +167,26 @@ try {
       checkCall(report);
       writeFileSync(join(output,'native-final-check.json'),json(report));
       // The SDK builder fetched its own snapshot; refuse to submit unless the chain still holds the predicted pre-state.
-      const latest=await publicDataProvider.queryContractState(pins.address); assert.ok(latest);
+      const latest=await publicDataProvider.queryContractState(target); assert.ok(latest);
       assert.equal(sha(latest.serialize()),sha(currentState.serialize()),'contract state changed since prediction');
-      writeFileSync(join(output,'submitted.json'),json({at:new Date().toISOString(),network:'stagenet',address:pins.address,circuit}),{flag:'wx',mode:0o600});
+      writeFileSync(join(output,'submitted.json'),json({at:new Date().toISOString(),network:'stagenet',address:target,circuit}),{flag:'wx',mode:0o600});
       return session.walletProvider.submitTx(tx);
     }}};
   if(!mode){
     try {const unproven=await createUnprovenCallTx(providers,options);await proofProvider.proveTx(unproven.private.unprovenTx);}
     catch(error){if(!preparedComplete)throw error;}
     assert.ok(preparedComplete);
-    writeFileSync(join(output,'preparation.json'),json({address:pins.address,circuit,stmt:le(stmt),
+    writeFileSync(join(output,'preparation.json'),json({address:target,circuit,stmt:le(stmt),
       preStateSHA256:sha(currentState.serialize()),expectedPostStateSHA256:sha(expectedState),nativeVectorChecked:circuit==='acceptValidity',submitted:false}));
     console.log('PASS current stagenet call preparation; no wallet, proof generation or submission');
   } else {
     const unproven=await createUnprovenCallTx(providers,options);
     const result=await submitTx(providers,{unprovenTx:unproven.private.unprovenTx});assert.equal(result.status,SucceedEntirely);
-    const receipt={schema:'sherlock-stagenet-call/1',address:pins.address,circuit,txId:result.txId,txHash:result.txHash,
+    const receipt={schema:'sherlock-stagenet-call/1',address:target,circuit,txId:result.txId,txHash:result.txHash,
       blockHeight:result.blockHeight,blockHash:result.blockHash,status:result.status,preStateSHA256:sha(currentState.serialize()),
       expectedPostStateSHA256:sha(expectedState),stmt:le(stmt)};
     writeFileSync(join(output,'receipt.json'),json(receipt));
-    const indexed=await graphql(`{contractAction(address:"${pins.address}",offset:{transactionOffset:{hash:"${result.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}}}`);
+    const indexed=await graphql(`{contractAction(address:"${target}",offset:{transactionOffset:{hash:"${result.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}}}`);
     assert.equal(indexed.contractAction.__typename,'ContractCall');assert.equal(indexed.contractAction.transaction.hash,result.txHash);
     const post=Buffer.from(rt.ContractState.deserialize(Buffer.from(indexed.contractAction.state,'hex')).serialize());assert.deepEqual(post,expectedState,'complete contract effect readback');
     writeFileSync(join(output,'post-state.bin'),post);writeFileSync(join(output,'indexed-call.json'),json(indexed));
