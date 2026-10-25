@@ -31,9 +31,21 @@ def main() -> int:
         (["quint", "--version"], 0),
         *[(["quint", "typecheck", MODEL + name], 0) for name in (
             "suspensionResume.qnt", "suspensionResume_test.qnt",
-            "resumeAdmission.qnt", "resumeAdmission_test.qnt")],
+            "resumeAdmission.qnt", "resumeAdmission_test.qnt", "resumeEpoch.qnt", "resumeEpoch_test.qnt")],
         *[(["quint", "test", MODEL + name, "--max-samples", "1", "--verbosity", "1"], 0)
           for name in ("suspensionResume_test.qnt", "resumeAdmission_test.qnt")],
+        (["quint", "test", MODEL + "resumeEpoch_test.qnt", "--backend", "typescript",
+          "--max-samples", "1", "--verbosity", "1"], 0),
+        (["quint", "run", MODEL + "resumeEpoch.qnt", "--invariant", "sourceBehavior",
+          "--backend", "typescript", *COMMON_RUN, "--witnesses", "wrapped", "panicked",
+          "acceptedWithoutOverflow", "notReady"], 0),
+        (["quint", "run", MODEL + "resumeEpoch.qnt", "--step", "checkedAccept", "--invariant", "safeHeader",
+          "--backend", "typescript", *COMMON_RUN, "--witnesses", "refusedOverflow",
+          "acceptedWithoutOverflow", "notReady"], 0),
+        (["quint", "run", MODEL + "resumeEpoch.qnt", "--invariant", "safeHeader",
+          "--backend", "typescript", "--max-steps", "30", "--max-samples", "100",
+          "--seed", "1", "--verbosity", "2", "--out-itf",
+          MODEL + "resumeEpoch-counterexample.itf.json"], 1),
         (["quint", "run", MODEL + "suspensionResume.qnt", "--invariant", "safety",
           *COMMON_RUN, "--witnesses", *WITNESSES], 0),
         (["quint", "run", MODEL + "resumeAdmission.qnt", "--invariant", "acceptedIsAffordable",
@@ -58,7 +70,8 @@ def main() -> int:
         if expected == 1:
             valid = valid and "Invariant violated" in process.stdout
         elif "test" in command:
-            expected_count = 30 if command[2].endswith("suspensionResume_test.qnt") else 4
+            expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 4,
+                              "resumeEpoch_test.qnt": 6}[Path(command[2]).name]
             valid = valid and f"{expected_count} passing" in process.stdout
         elif "--witnesses" in command:
             names = command[command.index("--witnesses") + 1:]
@@ -86,6 +99,7 @@ def main() -> int:
     owner = Path.home() / "repos/Moriarty-wt-factory-u"
     sources += [owner / "crates/mori-core/src/sherlock" / name for name in (
         "compile_artifact/suspension2.rs",
+        "compile_artifact/suspension2_fin.rs",
         "helper_machine/shared/owner_suspend.rs",
         "helper_machine/shared/owner_resume.rs",
         "helper_machine/shared/owner_runtime.rs",

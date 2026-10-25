@@ -7,9 +7,12 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all eight Quint files, runs 28 deterministic tests, and
-samples 10,000 traces per model with `--invariant modelInv --max-steps 30`.
-All four runs passed; every requested witness was reached. Raw results are in
+The runner typechecks all ten Quint files, runs 32 deterministic tests, and
+samples 10,000 traces per model with `--max-steps 30`. The four baseline models
+use `modelInv`; the pinned s5 source projection uses `sourceInv`. All five
+positive runs passed; every requested witness was reached. Its separate
+`preservesDynamicTargets` run deliberately finds the source counterexample
+described below, which the runner checks explicitly. Raw results are in
 `verification.log`. These are sampled finite checks, not exhaustive proofs.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
 
@@ -19,10 +22,11 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `witnessStorage.qnt` | U024 supporting behavior; `crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs`, `evaluate_with_storage` | Five-node scheduler harness; exact ordered cache arguments, reads always executed, baseline order retained, release after final consumer, output live through publication, semantic work untouched |
 | `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
+| `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
-to be checked against sherlock-s5's implementation. The fixed masks currently
+to be checked against an actual Rust implementation. The fixed masks currently
 share one abstract dynamic graph; immutable image decoding/folding is outside
 this model. `midnightSupported` witnesses a hypothetical capability combination,
 not any existing backend or successful target execution.
@@ -56,3 +60,23 @@ Reported source finding: `sherlock_native_inventory.rs` still expects 9/9 covere
 rules for factorial/tree fold despite expanded C6 coverage in the table and the
 owner's reported 37/41. Sent to sherlock-c4 and sherlock-fable; Rust reproduction
 is pending their inventory run.
+
+Two more findings were reproduced from committed Python tooling source at
+`cfbab29c591e5f4aa634952596aee601fffcde1f` and sent to sherlock-s5,
+sherlock-c4 and sherlock-fable:
+
+- U033: `specialize('family', family='arith', limit=64)` removes `R_call` from
+  `R_fetch`'s dynamic-control dispatch, without a family guard or generic
+  fallback. The source projection violates `preservesDynamicTargets` after one
+  worklist visit. See `s5-residual-counterexample.log`.
+- U031: `prepare` accepts only a backend ID, using a hard-coded demonstration
+  STEP. Its five witness nodes omit `typedInputs` and `typedOutputs`;
+  `typedOperations` is a list of operation names. This is an honest tooling
+  model, with execution/acceptance `none`, rather than typed plans bound to an
+  actual Rust step.
+
+`audit_s5.py` loads those two exact Git objects and reproduces the observations
+without opening another worktree or copying its files. Its output is in
+`s5-source-observations.json`. The positive requirements model does not adopt
+the dropped-successor behavior. The source projection is deliberately pinned
+to the defective version so later repairs do not erase the counterexample.

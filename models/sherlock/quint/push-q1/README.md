@@ -1,8 +1,9 @@
 # U014–U016 suspension and continuation models
 
 `python3 models/sherlock/quint/push-q1/verify.py` reproduces all checks with
-Quint 0.32.0's default Rust evaluator, two evaluator threads and a 60-second
-per-command timeout. It writes `verification.log`, `verification-results.json`
+Quint 0.32.0's default Rust evaluator for the continuation/admission models,
+two evaluator threads and a 60-second per-command timeout. The epoch model
+uses `--backend typescript` for exact UInt64 boundary literals. It writes `verification.log`, `verification-results.json`
 (including source SHA-256 pins) and an expected counterexample ITF trace here.
 Nothing outside `push-q1` is written. No Rust build, holdout, ledger or native
 proof check is run by this package.
@@ -73,6 +74,35 @@ checksums are public and do not establish machine reachability. The entry rule
 protects machine-produced Waiting checkpoints. FINDING messages were sent to
 `sherlock-fable` and `sherlock-u2`.
 
+## Imported epoch overflow
+
+`resumeEpoch.qnt` models the unchecked `header.resume_epoch + 1` in both
+`resume_pure` and `resume_fin`, separately from checkpoint/guard validation.
+`Header::get` accepts every UInt64 value without a reachability check. For an
+otherwise valid imported checkpoint whose epoch is `18446744073709551615`, a
+true guard can cause a panic with overflow checks, or an accepted successor
+whose epoch wraps to zero without them. The model explicitly represents both
+Rust overflow modes; Quint arithmetic itself does not overflow. Six tests
+exercise zero, max-minus-one, max, false guard and a candidate checked increment.
+
+`sourceBehavior` is green and witnesses both failure modes. `safeHeader`
+intentionally fails under the default `sourceAccept` step. The candidate
+`--step checkedAccept` refuses an overflowing increment without changing the
+checkpoint and satisfies `safeHeader` in sampled runs. This candidate is a
+proposed remedy, **not a claim that the current design pins an overflow refusal
+stage**. The accepted successor's `epoch = predecessor + 1` is specified in §6.2;
+the current note does not define the maximum-epoch edge case. The source-order
+trace `resumeEpoch-counterexample.itf.json` is not a Rust execution. The finding
+was sent to `sherlock-fable` and `sherlock-u2`.
+
+The epoch model requires `--backend typescript`: Quint 0.32.0's Rust evaluator
+rejects literals outside the signed Int64 range with QNT600. The ordinary
+continuation/admission models still run on the default Rust evaluator. The
+verification runner records the backend on each command. All simulation runs
+use depth 30; runs with `contractCheck` or `checkedAccept` explicitly select a
+non-default step. The imported-input models finish after one API decision;
+short traces there are intentional, rather than protocol deadlocks.
+
 ## Correspondence and limits
 
 | Contract | Code/spec reference | Model |
@@ -97,4 +127,5 @@ During development two modeling issues were corrected: inserting a new binding
 requires `Map.put`, and chaining two disabled `.fail()` actions loses the test
 state in Quint. A separate tool failure was reduced to Quint's JSON reviver
 converting a record field named `reference` to BigInt; the field is now `uncut`.
-The final checks use the default Rust evaluator without a tool patch.
+The continuation/admission checks use the default Rust evaluator; the epoch
+checks use TypeScript. Neither evaluator is patched.
