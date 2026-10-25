@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import bus, head_sha, heavy, holdout, now_iso, preflight, repo_root, spawn, status, stoprule
+from . import bus, head_sha, heavy, holdout, now_iso, preflight, queue, repo_root, spawn, status, stoprule
 from . import predicates as preds_mod
 
 NO_RESULTS_HINT = "(no results yet — run scripts/doctorwatson check --tier T0)"
@@ -190,6 +190,8 @@ def build_parser():
     p.add_argument("--budget")
     p.add_argument("--hypothesis")
     p.set_defaults(fn=cmd_heavy)
+
+    queue.add_parser(sub)
 
     p = sub.add_parser("stop-rule", help="escalation rule")
     p.add_argument("--json", action="store_true")
