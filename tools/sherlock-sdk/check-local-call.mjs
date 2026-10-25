@@ -1,5 +1,7 @@
 // Maintainer-only SDK/native call preparation. No wallet or transaction submission.
 // Usage: node check-local-call.mjs SDK_ROOT BUILD KEYED_BUILD STATE PARENT KEY OUTPUT [--prove|--wrong-statement|--reject-offline-proof]
+// WARNING: the installed SDK JS WASM wellFormed does not verify proofs cryptographically (ledger-wasm is
+// built without proof-verifying); every acceptance claim here comes from the native validate_call example.
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -12,6 +14,7 @@ assert.ok(output && (mode === undefined || ['--prove', '--wrong-statement', '--r
 const proving = mode === '--prove';
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
+assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
 const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
@@ -147,7 +150,8 @@ try {
     const verified = proven.wellFormed(local, strictness(contractChecks), now);
     const [post, outcome] = local.apply(verified, new ledger.TransactionContext(local, blockContext));
     assert.equal(outcome.type, 'success');
-    const before = mod.ledger(state.data), after = mod.ledger(post.index(address).data);
+    const view = s => mod.ledger(rt.ContractState.deserialize(s.serialize()).data);
+    const before = view(state), after = view(post.index(address));
     assert.ok(after.validity_ok.member(stmt)); assert.ok(after.settled.isEmpty());
     for (const field of ['root', 'height', 'batch_no']) assert.equal(after[field], before[field]);
     const postHash = createHash('sha256').update(post.serialize()).digest('hex');

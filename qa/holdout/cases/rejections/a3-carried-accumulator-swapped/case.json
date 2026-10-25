@@ -1,0 +1,40 @@
+{
+  "id": "a3-carried-accumulator-swapped",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "a-tampered-inner-proof",
+  "title": "Swap the two halves of the carried inner-proof accumulator; require refusal at the carried pairing",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0 AND pairing_verifies=false (mutation.requireReport). A decoder refusal or a refusal only by the outer PLONK check does not satisfy this case.",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes), instance lanes 16..27 = carried accumulator (lhs 16..21, rhs 22..27)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "implementationSource": "crates/mori-recursion/src/bin/sherlock_verify_parent.rs (carried = Accumulator::new(lhs, rhs).check)"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-swap-range",
+    "start": 16,
+    "with": 22,
+    "length": 6,
+    "requireReport": {"pairing_verifies": false},
+    "description": "swap instance lanes 16..21 with 22..27 (both flag lanes stay 1, so both points still decode); everything else unchanged"
+  },
+  "seed": {
+    "status": "requirement-derived",
+    "note": "A8 cold review (qa/sherlock/traces/review-a8-t3.txt, finding 2): every retained cryptographic rejection had pairing_verifies=true, so replacing the carried check with `true` left A7 green."
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L22 ZR08",
+    "qa/sherlock/traces/review-a8-t3.txt finding 2"
+  ],
+  "rationale": "The inner (child) proofs reach the parent only as a deferred accumulator whose pairing is checked outside the circuit. A verifier that skips or hard-codes that pairing still refuses every outer-proof mutation, so the suite must contain a case whose oracle is the carried pairing itself. This case kills the 'carried := true' mutant: with the check removed, pairing_verifies is true and the case fails. Limitation: the swap also changes the outer public inputs, so stdlib_verifies is false too; it isolates the pairing result, not a valid-outer/invalid-inner proof.",
+  "followUp": {
+    "owner": "implementer",
+    "fixture": "invalid-carried-parent/{proof.bin,instance.json} under DW_PARENT_FIXTURE_DIR, proven with the A3 parent key (vk.bin) over a child proof whose final opening is tampered, with the off-circuit child/accumulator guards of prove_link_parent (crates/mori-recursion/src/parent.rs, verify_sherlock_child_offcircuit and the folded-accumulator pairing) bypassed only in a test-only producer",
+    "expected": "stdlib_verifies=true, pairing_verifies=false, verifies=false",
+    "note": "Not gating until the fixture exists; when it does, the evaluator adds it as a case with requireReport {stdlib_verifies:true, pairing_verifies:false}."
+  },
+  "unimplemented": null
+}

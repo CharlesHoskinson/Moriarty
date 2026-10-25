@@ -5,23 +5,33 @@
   "category": "b-mismatched-verifying-key",
   "title": "Submit a call whose verifying key differs from the authorized relation key",
   "expectedVerdict": "REJECT",
-  "verdictRule": "Target (ledger/network) refuses the call; observed via authenticated receipt and unchanged state readback.",
+  "verdictRule": "REJECT = the node refuses the attempt at submission (before inclusion, so no fee), its transaction hash is absent from the indexer, and the native proof-verifying ledger-9 predictor agrees on the refusal class; or, where the contract makes the operation idempotent, the call finalizes with an indexed post-state byte-equal to its pre-state. A local precheck or SDK refusal never counts. Nothing passes unless the same-session positive control finalized.",
   "target": {
     "kind": "stagenet-ledger",
-    "artifact": "Midnight stagenet recursive-rollup contract call",
-    "entrypoint": "stagenet submission harness with ledger-consumption readback"
+    "network": "Midnight ledger-9 stagenet",
+    "contract": "ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b",
+    "contractSource": "tools/sherlock-sdk/sherlock-anchor.compact (SHA-256 4f531ce0...2634)",
+    "evidenceProducer": "qa/holdout/lib/stagenet/produce-a9.sh (heavy slot; opens the existing stagenet wallet through tools/sherlock-sdk/stagenet-session.mjs)",
+    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)"
   },
   "mutation": {
-    "description": "Submit a call whose verifying key differs from the authorized relation key"
+    "description": "acceptValidity(fresh stmt) proven by the proof server under the compiled acceptValidity key (verifier SHA-256 f2d10277...96f4) instead of the installed decider key (10b2d9cf...6100)",
+    "stmtTag": "sherlock-a9/s-b/compiled-acceptValidity-key"
   },
-  "expectedTargetBehavior": "ledger or custom decider rejects the key identity; no state change",
+  "expectedTargetBehavior": "node refuses at submission; not indexed; the fresh stmt is not in validity_ok",
   "seed": {
-    "status": "specified-only",
-    "note": "No existing stagenet rejection evidence exists; requirement-derived."
+    "status": "requirement-derived",
+    "note": "Stagenet definitions by the evaluator, 2026-10-24, from the contract source and the A8 adapter; see definition/rationale."
   },
   "requirementRefs": [
     "ZR05/MNR03, SRPOC-007",
     "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#SRPOC-007"
   ],
-  "unimplemented": "UNIMPLEMENTED: needs a stagenet submission harness (deploy/call a tampered or replayed Sherlock parent against the stagenet verifier path and read back the target rejection receipt); specified-only, no stagenet transaction or wallet operation is permitted"
+  "unimplemented": null,
+  "definition": "Submit an acceptValidity call whose proof is an honest proof of the compiled acceptValidity circuit (the trivial insert transcript) under the compiler's own key, for a statement the contract has never accepted. The installed verifier is the hand-written decider key, so the node must refuse. If it were accepted, validity_ok would gain an unproven statement, and the transaction would be indexed.",
+  "rationale": "On Midnight a call cannot carry its own verifying key; the key identity is enforced by verifying against the operation key installed at deployment. The faithful mismatch is therefore a proof valid for a different key of the same entry point. The contract header names this exact key as the one that must never be installed. The SDK resolver's client-side key-hash guard is deliberately bypassed (bare circuit name), so the node, not the client, decides. Predicted offline (preparation run target/sherlock-a9/prep-rxMCfMLD): native ledger-9 refuses it as 'failed to verify proof: Invalid proof'. Limitation: the evaluator does not separately verify the proof under the compiled key; the proof server produced it from a satisfying preimage.",
+  "positiveControl": "Same-session differential twin: a fresh, actual-bound decider proof for acceptValidity(A8 stmt deffb497...a5c25a), wallet-balanced. It is submitted after the refused attempts and must finalize (indexed SUCCESS, acceptValidity ContractCall on the pin). A8 (tx a2b71fa2..., block 1014763) is re-checked live as the earlier acceptance. Order is mutants first because the s-a mutant shares the twin's dust spend and intent; submitting the twin first would let replay protection, not the proof check, refuse the mutant.",
+  "stagenetCheck": {
+    "kind": "wrong-verifying-key"
+  }
 }

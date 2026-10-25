@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Evaluator-owned A9 evidence run (opens the stagenet wallet, submits). Coordinator rule (2026-10-25): hold heavy
+# only while a proof or keygen runs. The --submit run below still holds it for the whole run (wallet syncs and
+# indexer waits included); before running it again, post ACQUIRE/RELEASE on #sherlock and move only the native
+# decider prove under heavy. Current form:
+#   DW_ROLE=evaluator scripts/doctorwatson heavy --id A9produce -- qa/holdout/lib/stagenet/produce-a9.sh
+# Writes target/sherlock-a9/run-*/receipt.json, which `qa/holdout/run.sh rejections-stagenet` checks read-only.
+# Resubmission (no proof; never under heavy): qa/holdout/lib/stagenet/produce-a9.sh --resubmit RUN_DIR
+#   at least 35 min after the twin; output is kept in RUN_DIR/resubmit.log.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+newest() { python3 - "$1" <<'PY'
+from pathlib import Path
+import sys
+paths = list(Path('.').glob(sys.argv[1]))
+if not paths:
+    raise SystemExit('A9 evidence requires ' + sys.argv[1])
+print(max(paths, key=lambda p: p.stat().st_mtime_ns).resolve())
+PY
+}
+parent="${MORIARTY_A3_PARENT_DIR:-$(newest 'target/sherlock-a3/run-*/artifacts/parent')}"
+key="${MORIARTY_TERMINAL_KEY_DIR:-$(newest 'target/sherlock-a4/run-*/artifacts/key')}"
+cargo build --release --locked -p mori-recursion --features sherlock-ledger-validation --example validate_call
+mkdir -p target/sherlock-a9
+if [[ "${1:-}" == "--resubmit" ]]; then
+  run_dir="${2:?usage: produce-a9.sh --resubmit RUN_DIR}"; mode=--resubmit
+else
+  run_dir="$(mktemp -d "$PWD/target/sherlock-a9/run-XXXXXXXX")"; mode=--submit
+fi
+if [[ "$mode" == "--resubmit" ]]; then
+  node qa/holdout/lib/stagenet/produce-a9.mjs "${MORIARTY_SDK_ROOT:-$HOME/.midnight/stagenet-wallet}" \
+    "${MORIARTY_ANCHOR_BUILD:-$PWD/target/a4-anchor/deploy-run3/build}" "${MORIARTY_ANCHOR_KEYED:-$PWD/target/a4-anchor/keyed}" \
+    "$parent" "$key" "$run_dir" "$mode" 2>&1 | tee -a "$run_dir/resubmit.log"
+  exit "${PIPESTATUS[0]}"
+fi
+exec node qa/holdout/lib/stagenet/produce-a9.mjs "${MORIARTY_SDK_ROOT:-$HOME/.midnight/stagenet-wallet}" \
+  "${MORIARTY_ANCHOR_BUILD:-$PWD/target/a4-anchor/deploy-run3/build}" "${MORIARTY_ANCHOR_KEYED:-$PWD/target/a4-anchor/keyed}" \
+  "$parent" "$key" "$run_dir" "$mode"

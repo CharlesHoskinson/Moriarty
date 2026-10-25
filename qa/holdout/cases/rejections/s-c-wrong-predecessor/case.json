@@ -5,23 +5,46 @@
   "category": "c-wrong-predecessor-root-or-height",
   "title": "Submit a valid parent whose pre_root/h_pre is not the current anchored state",
   "expectedVerdict": "REJECT",
-  "verdictRule": "Target (ledger/network) refuses the call; observed via authenticated receipt and unchanged state readback.",
+  "verdictRule": "REJECT = the node refuses the attempt at submission (before inclusion, so no fee), its transaction hash is absent from the indexer, and the native proof-verifying ledger-9 predictor agrees on the refusal class; or, where the contract makes the operation idempotent, the call finalizes with an indexed post-state byte-equal to its pre-state. A local precheck or SDK refusal never counts. Nothing passes unless the same-session positive control finalized.",
   "target": {
     "kind": "stagenet-ledger",
-    "artifact": "Midnight stagenet recursive-rollup contract call",
-    "entrypoint": "stagenet submission harness with ledger-consumption readback"
+    "network": "Midnight ledger-9 stagenet",
+    "contract": "ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b",
+    "contractSource": "tools/sherlock-sdk/sherlock-anchor.compact (SHA-256 4f531ce0...2634)",
+    "evidenceProducer": "qa/holdout/lib/stagenet/produce-a9.sh (heavy slot; opens the existing stagenet wallet through tools/sherlock-sdk/stagenet-session.mjs)",
+    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)"
   },
   "mutation": {
-    "description": "Submit a valid parent whose pre_root/h_pre is not the current anchored state"
+    "description": "settleValidity proven against a snapshot whose (root, height) is not the chain's current anchored head"
   },
-  "expectedTargetBehavior": "target rejects the stale or absent head; no state change",
+  "expectedTargetBehavior": "ledger refuses both stale and forged-head settles; no state change; control settle finalizes",
   "seed": {
-    "status": "specified-only",
-    "note": "No existing stagenet rejection evidence exists; requirement-derived."
+    "status": "requirement-derived",
+    "note": "Stagenet definitions by the evaluator, 2026-10-24, from the contract source and the A8 adapter; see definition/rationale."
   },
   "requirementRefs": [
     "ZR10 stale head, UISEC-011, link anchor (pre_root, h_pre)",
     "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#SRPOC-007"
   ],
-  "unimplemented": "UNIMPLEMENTED: needs a stagenet submission harness (deploy/call a tampered or replayed Sherlock parent against the stagenet verifier path and read back the target rejection receipt); specified-only, no stagenet transaction or wallet operation is permitted"
+  "unimplemented": "UNIMPLEMENTED: needs the implementer settle-path harness tools/sherlock-sdk/settle-harness.mjs (prepareSettle/settleTrace/settleStatement, interface in s-c-wrong-predecessor/case.json harnessInterface); the evaluator then adds the stale-head and forged-head settle attempts to produce-a9.mjs",
+  "definition": "Two ledger-observable forms, both needed. (1) Stale head (ZR10): P1 = prepareSettle(S0, 0, A3 fields) is prepared from the live pre-settle snapshot S0 but submitted only after the control settle C (same inputs, prepared separately) has finalized; the chain's (R, H, B) is now (post_root, H0+2, 1). (2) Forged head: P2 = prepareSettle(S0', 0, fields'), where S0' sets root := R' != R, fields'[6] = R', fields'[15] = settleTrace(S0', fields') and validity_ok contains settleStatement(S0', 0, fields'). P2 is submitted while the chain root is still R. Each must be refused by the ledger, not indexed, with the indexed state unchanged.",
+  "rationale": "Every settleValidity guard (predecessor root, h_pre, h_post, trace order) is an in-circuit assertion over values the transcript reads from the ledger. A mutated fields vector against the true state is unsatisfiable, so it fails in the prover, which is a local refusal and does not count. The guard is observable at the ledger only as a transcript whose ledger reads (root, height, batch_no, set membership) differ from chain state at execution, which is exactly a wrong or stale predecessor. Positive control: settle C must finalize with indexed settled containing stmt, root = f9, height = H0+2 and batch_no = 1.",
+  "positiveControl": "Control settle C = prepareSettle(S0, 0, A3 fields) submitted first; it must finalize with the indexed post-state equal to report.predictedPostStateSHA256.",
+  "harnessInterface": {
+    "owner": "implementer (sherlock-a)",
+    "module": "tools/sherlock-sdk/settle-harness.mjs",
+    "exports": {
+      "prepareSettle({load, session, snapshot, batch, fields})": "-> Promise<{tx, report}>",
+      "settleTrace(snapshot, fields)": "-> bigint: f15 as the contract computes it (TRACE_ORDER over the snapshot's pins and (R, H))",
+      "settleStatement(snapshot, batch, fields)": "-> bigint: stmt as settleValidity computes it (SHK_STMT, I, current B, ...)"
+    },
+    "requirements": [
+      "snapshot is a ledger-9 ContractState for the pinned address. The settleValidity circuit is executed and proven against exactly this snapshot: the evaluator passes either the live indexed state (recorded height) or a copy whose data it edited (root, height, batch_no, validity_ok, settled). The harness must not re-fetch chain state, compare the snapshot to the chain, or refuse because they differ.",
+      "batch is a bigint; fields are 16 bigints in W-instance order f0..f15.",
+      "The proof comes from the proof server with the installed compiled settleValidity key (verifier SHA-256 be8b0943...0b5c, as installed on the pin). The only client-side refusal allowed is the circuit itself being unsatisfiable over the snapshot; then throw an Error named SettleUnsatisfiable before any wallet use.",
+      "tx is the wallet-balanced, finalized ledger Transaction, held in memory and never written to disk or logged; TTL >= 30 minutes so a prepared tx can be held while another is submitted. The harness never submits; the evaluator submits with session.walletProvider.submitTx.",
+      "report = {snapshotSHA256, predictedPostStateSHA256 (VM over the snapshot), stmt}. The wallet comes only from tools/sherlock-sdk/stagenet-session.mjs; no seed, key or transaction body is logged."
+    ]
+  },
+  "consequence": "Surfaced, not decided: the settle control consumes the only accepted statement on ac93b80e... (root := post_root, height += 2, batch_no := 1). This is irreversible on the pinned contract. Accept-level evidence (s-a, s-b, s-e accept part) is unaffected, and A10 reads history at block 1014763. Any later check asserting `settled` empty on the latest state would change. Running the settle experiments on a fresh deployment of the same source and keys is authorized, but it would move the A9 pin; owner or implementer chooses."
 }

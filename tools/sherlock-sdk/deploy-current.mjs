@@ -1,14 +1,14 @@
 // Maintainer-only stagenet deployment. Default mode checks the SDK state without a wallet.
-// Usage: node deploy-current.mjs SDK_ROOT BUILD PREPARATION OUTPUT [--submit]
+// Usage: node deploy-current.mjs SDK_ROOT BUILD PREPARATION OUTPUT [--instance-id N] [--submit]
+// --instance-id deploys the same source and keys under another instance_id (constructor argument 0 only).
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, statSync, cpSync, symlinkSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
-assert.ok(sdkRoot && buildArg && preparation && outputArg);
-assert.ok(mode === undefined || mode === '--submit');
+import {parseDeployArgs, constructorArgs} from './deploy-args.mjs';
+const {sdkRoot, build: buildArg, preparation, output: outputArg, submit, instanceId} = parseDeployArgs(process.argv.slice(2));
 // Resolve packages through normal ESM imports, including import-only barrel packages.
 const load = async name => {
   const imports = join(output, 'sdk-imports');
@@ -61,13 +61,15 @@ class ExactKeys extends ZKConfigProvider {
 const zkConfigProvider = new ExactKeys();
 const compiledContract = CompiledContract.make('SherlockAnchor', mod.Contract).pipe(
   CompiledContract.withVacantWitnesses, CompiledContract.withCompiledFileAssets(deployBuild));
-const options = {compiledContract, args: expected.constructor.map(BigInt)};
+const ctorArgs = constructorArgs(expected, instanceId);
+if (instanceId !== undefined) console.log(`instance_id override: ${instanceId}`);
+const options = {compiledContract, args: ctorArgs};
 // Exercise the same SDK constructor/key installation used by deployContract before wallet access.
 const dry = await createUnprovenDeployTx({zkConfigProvider, walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),
 }}, options);
 const checkState = state => {
-  const view = mod.ledger(state.data), c = expected.constructor.map(BigInt);
+  const view = mod.ledger(state.data), c = ctorArgs;
   const fields = ['instance_id','keys_id','a102_ctx_lo','a102_ctx_hi','a80_ctx_lo','a80_ctx_hi',
     'program_c','genesis_root','genesis_height','genesis_batch'];
   for (let i = 0; i < fields.length; i++) assert.equal(view[fields[i]], c[i], fields[i]);
@@ -94,7 +96,7 @@ const {HDWallet, Roles, createKeystore, validateMnemonic, WalletFacade, Shielded
 const {mnemonicToSeedSync} = await load('@scure/bip39');
 assert.equal(typeof HDWallet.fromSeed, 'function');
 assert.equal(typeof WalletFacade.init, 'function');
-if (!mode) process.exit(0);
+if (!submit) process.exit(0);
 assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
 const walletDir = join(homedir(), '.midnight/stagenet-wallet');
 const mnemonicPath = join(walletDir, 'stagenet-wallet.mnemonic');
@@ -149,7 +151,9 @@ try {
   // Save only explicit public fields. Never serialize the SDK deployment result.
   const receipt = {schema: 'sherlock-stagenet-deployment/2', network: 'stagenet', address: p.contractAddress,
     txId: p.txId, blockHeight: p.blockHeight, deployedAt: new Date().toISOString(),
-    wallSeconds: (performance.now() - started) / 1000, sourceSHA256: expected.sourceSHA256, keys: expected.keys};
+    wallSeconds: (performance.now() - started) / 1000, sourceSHA256: expected.sourceSHA256, keys: expected.keys,
+    preparationSHA256: sha(readFileSync(preparation)), instanceId: String(ctorArgs[0]),
+    instanceIdOverridden: instanceId !== undefined, constructor: ctorArgs.map(String)};
   writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
   const state = await providers.publicDataProvider.queryContractState(p.contractAddress);
   assert.ok(state); checkState(state);

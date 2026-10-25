@@ -23,7 +23,12 @@ h = Path(sys.argv[1])
 print("suite\tcase\tstatus")
 for d in sorted((h / "cases" / "rejections").iterdir()):
     c = json.loads((d / "case.json").read_text())
-    st = "runnable-with-parent-verifier+fixtures" if c["scope"] == "local" else "specified-only"
+    if c["scope"] == "local":
+        st = "runnable-with-parent-verifier+fixtures"
+    elif c.get("stagenetCheck") and not c.get("unimplemented"):
+        st = "runnable-with-a9-evidence"
+    else:
+        st = "partial-with-a9-evidence" if c.get("stagenetCheck") else "needs-settle-harness"
     print(f"rejections-{c['scope']}\t{c['id']}\t{st}")
 for d in sorted((h / "cases" / "uireq").iterdir()):
     c = json.loads((d / "case.json").read_text())
