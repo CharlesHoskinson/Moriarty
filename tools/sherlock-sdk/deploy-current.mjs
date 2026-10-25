@@ -2,7 +2,6 @@
 // Usage: node deploy-current.mjs SDK_ROOT BUILD PREPARATION OUTPUT [--submit]
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, statSync, cpSync, symlinkSync} from 'node:fs';
-import {createRequire} from 'node:module';
 import {resolve, join} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
@@ -10,9 +9,16 @@ import {createHash} from 'node:crypto';
 const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
 assert.ok(sdkRoot && buildArg && preparation && outputArg);
 assert.ok(mode === undefined || mode === '--submit');
-const require = createRequire(resolve(sdkRoot, 'package.json'));
-const load = name => import(pathToFileURL(name === '@midnightntwrk/wallet-sdk'
-  ? resolve(sdkRoot, 'node_modules', name, 'dist/index.js') : require.resolve(name)).href);
+// Resolve packages through normal ESM imports, including import-only barrel packages.
+const load = async name => {
+  const imports = join(output, 'sdk-imports');
+  mkdirSync(imports, {recursive: true});
+  if (!existsSync(join(imports, 'node_modules')))
+    symlinkSync(resolve(sdkRoot, 'node_modules'), join(imports, 'node_modules'));
+  const file = join(imports, sha(Buffer.from(name)) + '.mjs');
+  writeFileSync(file, `import * as sdk from ${JSON.stringify(name)}; export default sdk;\n`);
+  return (await import(pathToFileURL(file).href)).default;
+};
 for (const [name, version] of Object.entries({
   '@midnight-ntwrk/midnight-js-contracts': '5.0.0-beta.7',
   '@midnightntwrk/wallet-sdk': '2.0.0-beta.2',
@@ -75,6 +81,9 @@ checkState(dry.public.initialContractState);
 console.log('PASS SDK constructor: all 13 fields, empty sets and exact verifier keys');
 const Rx = await load('rxjs');
 const {WebSocket} = await load('ws');
+assert.equal(typeof WebSocket, 'function', 'ESM WebSocket constructor');
+assert.equal(typeof Rx.firstValueFrom, 'function');
+assert.equal(typeof Rx.filter, 'function');
 globalThis.WebSocket = WebSocket;
 const {indexerPublicDataProvider} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
 const {httpClientProofProvider} = await load('@midnight-ntwrk/midnight-js-http-client-proof-provider');
@@ -83,6 +92,8 @@ const {ttlOneHour} = await load('@midnight-ntwrk/midnight-js-utils');
 const {HDWallet, Roles, createKeystore, validateMnemonic, WalletFacade, ShieldedWallet, DustWallet,
   UnshieldedWallet, PublicKey, NoOpTransactionHistoryStorage} = await load('@midnightntwrk/wallet-sdk');
 const {mnemonicToSeedSync} = await load('@scure/bip39');
+assert.equal(typeof HDWallet.fromSeed, 'function');
+assert.equal(typeof WalletFacade.init, 'function');
 if (!mode) process.exit(0);
 assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
 const walletDir = join(homedir(), '.midnight/stagenet-wallet');
