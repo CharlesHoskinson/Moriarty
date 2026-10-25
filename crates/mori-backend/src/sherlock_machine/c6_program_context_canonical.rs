@@ -202,6 +202,23 @@ pub struct C6ProgramContextDispatchCaptureBlock {
     pub child_value: Operand,
 }
 
+/// One FUNCTION row (`function_name, params.start, params.len, return_type,
+/// body`) captured from canonical PROG by index.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextFunctionCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub function_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextFunctionCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub functions_count: Operand,
+    pub function_found: Operand,
+    pub function_row: [Operand; 5],
+}
+
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs {
     pub gate: Operand,
@@ -271,6 +288,51 @@ struct Regs {
     ctor_field_start: Operand,
     ctor_field_len: Operand,
     ctor_fields_count: Operand,
+}
+impl Regs {
+    fn zero() -> Self {
+        Self {
+            phase: Emitter::imm(0),
+            sub: Emitter::imm(0),
+            hold: Emitter::imm(0),
+            opt: Emitter::imm(0),
+            rem: Emitter::imm(0),
+            cnt: Emitter::imm(0),
+            cnt2: Emitter::imm(0),
+            cnt3: Emitter::imm(0),
+            te_need: Emitter::imm(0),
+            srem: Emitter::imm(0),
+            utf_pending: Emitter::imm(0),
+            utf_cp: Emitter::imm(0),
+            utf_min: Emitter::imm(0),
+            cum_name: Emitter::imm(0),
+            cum_tmpl: Emitter::imm(0),
+            cum_nodes: Emitter::imm(0),
+            const_count: Emitter::imm(0),
+            const_row_index: Emitter::imm(0),
+            const_capture_active: Emitter::imm(0),
+            const_found: Emitter::imm(0),
+            const_cap_0: Emitter::imm(0),
+            const_cap_1: Emitter::imm(0),
+            const_cap_2: Emitter::imm(0),
+            const_cap_3: Emitter::imm(0),
+            const_cap_4: Emitter::imm(0),
+            const_cap_5: Emitter::imm(0),
+            types_count: Emitter::imm(0),
+            type_row_index: Emitter::imm(0),
+            type_capture_active: Emitter::imm(0),
+            type_found: Emitter::imm(0),
+            type_ctor_start: Emitter::imm(0),
+            type_ctor_len: Emitter::imm(0),
+            ctor_row_index: Emitter::imm(0),
+            ctor_capture_active: Emitter::imm(0),
+            ctor_found: Emitter::imm(0),
+            ctor_owning_type: Emitter::imm(0),
+            ctor_field_start: Emitter::imm(0),
+            ctor_field_len: Emitter::imm(0),
+            ctor_fields_count: Emitter::imm(0),
+        }
+    }
 }
 struct Emitter<'a> {
     scope: &'a str,
@@ -1969,6 +2031,58 @@ impl C6ProgramContextCanonicalEmitter {
             second_row,
             child_found,
             child_value,
+        })
+    }
+    pub fn emit_prog_function_capture(
+        &mut self,
+        inputs: &C6ProgramContextFunctionCaptureInputs,
+    ) -> Result<C6ProgramContextFunctionCaptureBlock, C6ProgramContextCanonicalError> {
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.function_index)?;
+        for lane in &inputs.pre_prog {
+            reject_reserved(&self.scope, lane)?;
+        }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+            return Err(C6ProgramContextCanonicalError::LengthMismatch {
+                expected: PROGRAM_HEADER_LANES,
+                actual: inputs.pre_prog.len(),
+            });
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        em.cbits(inputs.function_index.clone(), LANE_BITS);
+        let mut regs = Regs::zero();
+        let mut functions_count = Emitter::imm(0);
+        let mut row_index = Emitter::imm(0);
+        let mut function_found = Emitter::imm(0);
+        let mut function_row: [Operand; 5] = std::array::from_fn(|_| Emitter::imm(0));
+        for lane in &inputs.pre_prog {
+            em.cbits(lane.clone(), LANE_BITS);
+            let count_phase = em.eqv(regs.phase.clone(), PH_FUNC_COUNT);
+            functions_count = em.sel(count_phase, lane.clone(), functions_count);
+            let row_phase = em.eqv(regs.phase.clone(), PH_FUNC_ROW);
+            let index_eq = em.teq(row_index.clone(), inputs.function_index.clone());
+            let selected = em.and(row_phase.clone(), index_eq);
+            function_found = em.sel(selected.clone(), Emitter::imm(1), function_found);
+            for (column, value) in function_row.iter_mut().enumerate() {
+                let at_column = em.eqv(regs.sub.clone(), column as u128);
+                let capture = em.and(selected.clone(), at_column);
+                *value = em.sel(capture, lane.clone(), value.clone());
+            }
+            let at_end = em.eqv(regs.sub.clone(), 4);
+            let row_done = em.and(row_phase, at_end);
+            let incremented = em.add_i(row_index.clone(), 1);
+            row_index = em.sel(row_done, incremented, row_index);
+            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+        }
+        em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextFunctionCaptureBlock {
+            instructions: em.instructions,
+            functions_count,
+            function_found,
+            function_row,
         })
     }
     pub fn emit_prog_checked_sort_capture(
