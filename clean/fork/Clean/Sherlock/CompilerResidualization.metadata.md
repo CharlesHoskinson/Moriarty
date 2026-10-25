@@ -35,8 +35,12 @@ canonical identity encoding and Rust correspondence remain obligations. The
 module does not claim any of these missing implementations exist.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
-theorem dependency queries. **Kernel compilation and axiom queries are not run:**
-the shared heavy lock prevented the first heavy invocation, and `memcap 48G true`
-fails to connect to the user scope bus before child execution. No uncapped Lean
-build was attempted. The source is a reviewable, unverified draft until capped
-execution is available. No native, stock-verifier or ledger evidence is claimed.
+theorem dependency queries. Sherlock-fable independently ran the capped Lake
+package build with Lean 4.33.1. The recorded `lean-build-2.log` ends with a
+successful 17-job package build and exit 0. It replays this module's nine
+dependency queries: seven empty axiom sets and two containing only `propext`.
+The module itself compiled in the preceding package build; its source pins have
+not changed. The JSON records the exact sets and pins the successful observed
+log by digest. The agent read the log; it did not run the build itself.
+Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
+no uncapped build. No native, stock-verifier or ledger evidence is claimed.

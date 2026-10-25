@@ -17,18 +17,20 @@ correspondence. Relating B helper steps to A logical steps needs a separate
 erasure relation. Counter-only projection cannot instantiate the complete-image
 codec obligation.
 
-No custom axioms or `sorry` declarations are introduced. Kernel dependency sets
-must be read from the five `#print axioms` queries after a successful build.
-They have not yet been observed for these sources.
+No custom axioms or `sorry` declarations are introduced. A coordinator-produced
+`memcap 48G lake build` log on 2026-10-25 records successful builds of this module
+and its query module under Lean 4.33.1. All five theorem queries report empty axiom
+sets. The emitted task JSON was compared with the live U026 stage entrypoint.
+The first package build failed in three other modules; after their repairs,
+the coordinator's second capped build succeeded with 17 jobs and exit 0.
+Log digests and the exact per-theorem sets are recorded in the JSON metadata.
 
-Kernel status: **unverified: build not run**.
-
-Verification so far: `scripts/doctorwatson check U021 U026` passed both checks
-on 2026-10-25. Those checks validate the existing reporting entrypoint and do
-not compile these Lean modules. Lean execution is blocked because `memcap 48G`
-cannot connect to the user systemd bus; no uncapped Lean build was attempted.
-The shared Lake package pins Lean 4.33.1, installed successfully with elan. This does not supersede
-the adapter's historical 4.33.1 observations.
+`scripts/doctorwatson check U021 U026` separately passed both report checks on
+2026-10-25. Direct capped Lean execution from the worker sandbox remains blocked
+by its unavailable systemd user scope. The module result above was read from
+the coordinator's independently produced build log; no worker build bypass was
+attempted. The shared Lake pin matches the adapter's historical 4.33.1 toolchain,
+whose historical records remain unchanged.
 
 Open obligations remain the current stage report's recursive generic semantics,
 helper-metered fuel schedule, admitted bounded encoding, actual step constraints,

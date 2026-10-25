@@ -43,16 +43,20 @@ would not match the implementation. This is a report arithmetic property,
 not per-account, per-asset balance conservation.
 
 No new `sorry` or custom axiom is declared. The companion
-`FinancialItemsAxioms.lean` queries every named theorem. Kernel compilation
-and per-name dependency results are pending. The sandbox's first capped
-invocation failed before Lean started because it could not connect to the
-user scope bus. Sherlock-fable subsequently ran a capped build independently;
-this module failed to parse because `seal` was used as a reserved binder name.
-The binder is now `feeSeal`; a successful rebuild has not yet been observed.
-No uncapped build was run. Treat this module as unverified until the JSON
-records a successful capped build and actual dependency output.
-The shared Lake package now pins Lean 4.33.1; the first failed invocation
-selected the previously available 4.34.1 explicitly and never started Lean.
+`FinancialItemsAxioms.lean` queries every named theorem. Sherlock-fable's
+capped Lean 4.33.1 build compiled all 17 package jobs successfully; this
+module and its query reported 707 ms and 189 ms. The source was committed
+in `9a5865203`. This agent inspected the coordinator's complete build log;
+it did not execute the successful build. Its own capped invocation could
+not connect to the sandbox user scope bus, so no uncapped retry was run.
+
+The actual fourteen-name dependency query records eight empty axiom sets,
+four `propext`-only sets, `propext`/`Quot.sound` for
+`charge_preserves_work`, and `propext`/`Classical.choice`/`Quot.sound` for
+`charge_stays_uint128`. These are Lean's standard axioms; no custom or
+`sorryAx` dependency was observed. The JSON contains every per-name set,
+source hash and the coordinator log digest. Compilation validates the
+mathematical declarations, without discharging the operational premises.
 
 This module does not establish full Rust refinement, statement semantics,
 residual-duty extraction, source/plan admission, authenticated/consumed

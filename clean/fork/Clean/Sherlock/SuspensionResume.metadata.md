@@ -35,10 +35,11 @@ stock-verifier or ledger correspondence is established here.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran a capped package
-build with Lean 4.33.1; `lean-build-1.log` shows this module failing at the zero
-case of `runSteps_add`. Hypothesis: Nat addition recurses on the second argument,
-so `0 + second` needs `Nat.zero_add`, rather than definitional reduction. The
-source now simplifies with that lemma. **The corrected source has not been
-recompiled and its axiom queries have not run.** The JSON pins the failed log
-by digest. The agent read that log but did not run the build. Its sandbox still
-cannot connect `memcap` to the user scope bus; no uncapped build was attempted.
+build with Lean 4.33.1. After correcting `runSteps_add` to use `Nat.zero_add`,
+`lean-build-2.log` shows this module and its eleven axiom queries succeeding,
+then reports the complete 17-job package build successful with exit 0. Four
+queries have empty axiom sets and seven contain only `propext`; no custom or
+`sorry` axiom appears. The JSON records the exact sets and pins the observed
+log by digest. The agent read the complete log and checked source pins but did
+not run the build. Its sandbox still cannot connect `memcap` to the user scope
+bus; no uncapped build was attempted.

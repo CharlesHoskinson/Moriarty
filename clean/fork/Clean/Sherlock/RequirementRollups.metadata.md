@@ -23,8 +23,9 @@ and the C6 conjunction does not turn a task manifest into completed proofs.
 The module imports only `Init` and declares no `sorry` or custom axioms.
 Sherlock-fable's capped Lean 4.33.1 build compiled this module and its query
 successfully (reported module times 580 ms and 202 ms). The complete build
-failed in three other modules, so this is module-level evidence only. This
-agent inspected the coordinator's log; it did not execute the build.
+subsequently passed all 17 package jobs after fixes in other modules.
+The sources were committed in `9a5865203`. This agent inspected the
+coordinator's logs; it did not execute the successful build.
 
 The actual eight-name query reports no axioms for `component_required` and
 `missing_component_blocks`; each of `c1_iff` through `c6_iff` depends on

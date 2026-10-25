@@ -22,19 +22,22 @@ No whole-state rollback, helper-visit accounting, selected-rule validation,
 full SI03/StepInv, checked Rust/Fin correspondence, field constraints, financial
 correctness or native proof result follows.
 
-No custom axioms or `sorry` declarations are introduced. The four theorem
-dependency sets are queried in `DecodedCounterStagesAxioms.lean`; they have not
-yet been observed. The import closure includes the unchanged adapter and
+No custom axioms or `sorry` declarations are introduced. In the coordinator's
+2026-10-25 Lean 4.33.1 build, `helper_next_bounded` and
+`p4_nonhelper_not_accounting` have empty axiom sets;
+`p4_nonhelper_preserves_fuel` and `p4_helper_preserves_accounting` depend only
+on `propext`. The import closure includes the unchanged adapter,
 `NullaryCounterHeadroom` and ultimately `Init`.
 
-Kernel status: **unverified: corrected source not built**.
+Kernel status: **observed capped build passed**.
 
-The coordinator's first `memcap 48G lake build` log reports a rewrite failure
-in `p4_helper_preserves_accounting`: rewriting by a projected-record equality
-did not match the target's unfolded finite values. The one-line hypothesis is
-that transporting the equality with `congrArg` avoids that rewrite-pattern
-mismatch. The corrected source uses that direct equality argument; it has not
-yet been built. No theorem dependency observations are recorded for the changed
-module. Direct capped execution from the worker sandbox is unavailable because
-`memcap 48G` cannot connect to the systemd user bus. No worker bypass was attempted.
-The existing U021/U026 report checks passed but do not verify these proofs.
+The coordinator's `memcap 48G lake build` completed successfully with 17 jobs
+and exit 0 after the projected-equality rewrite was replaced by `congrArg`.
+This module took 511 ms and its four-name query took 242 ms in that log; these
+are build observations, not execution benchmarks. Exact source and log digests
+and per-theorem dependency sets are recorded in the JSON metadata.
+
+The worker read the coordinator's independently produced log. Direct capped
+execution from the worker sandbox is unavailable because `memcap 48G` cannot
+connect to the systemd user bus. No worker bypass was attempted. The existing
+U021/U026 report checks passed separately; they do not verify these proofs.
