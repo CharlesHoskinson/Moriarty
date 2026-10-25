@@ -519,8 +519,10 @@ pub fn report(label: &str, tally: &RuleTally) -> Value {
         "interface": {
             "name": "sherlock-c6-phys/1",
             "bounded": "fixed padded capacities (C6PhysCaps / C6PaddedCarrierGeometry)",
-            "step_input": ["enable", "META", "PROG", "CTX", "IMAGE", "DATA", "HELPER"],
-            "step_output": ["META", "PROG", "CTX", "IMAGE", "DATA", "HELPER"],
+            "statement_prefix": ["enable", "disposition_is_refused_helper_work", "host_schema", "carrier_version"],
+            "step_input_sections": ["META", "PROG", "CTX", "IMAGE", "DATA", "HELPER"],
+            "step_output_sections": ["META", "PROG", "CTX", "IMAGE", "DATA", "HELPER"],
+            "statement_source": "selected-step consumer headers (c6_*_consumer.rs)",
             "statement_modes": ["LocalPublic", "LedgerCall"],
         },
         "owners": {
