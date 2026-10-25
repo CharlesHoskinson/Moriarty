@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {anchorView} from './rollup-statement.mjs';
 import {ownedWalletProver} from './owned-wallet-prover.mjs';
-import {recordSubmissionRefusal} from './rollup-refusal.mjs';
+import {recordSubmissionRefusal, quietSubmission} from './rollup-refusal.mjs';
 const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
 assert.ok(sdkRoot && buildArg && preparation && outputArg);
 assert.ok(mode === undefined || mode === '--submit');
@@ -145,7 +145,7 @@ try {
         transactionSHA256: sha(tx.serialize())}) + '\n', {flag: 'wx', mode: 0o600});
       submissionStarted = performance.now();
       try {
-        const submitted = await wallet.submitTransaction(tx);
+        const submitted = await quietSubmission(() => wallet.submitTransaction(tx));
         submissionAcknowledged = performance.now();
         return submitted;
       } catch (error) {

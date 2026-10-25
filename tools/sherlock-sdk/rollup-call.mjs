@@ -13,7 +13,7 @@ import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-
 import {pinnedRollupKeys} from './rollup-keys.mjs';
 import {checkCompiledCall} from './rollup-compiled-check.mjs';
 import {ownedWalletProver} from './owned-wallet-prover.mjs';
-import {recordSubmissionRefusal} from './rollup-refusal.mjs';
+import {recordSubmissionRefusal, quietSubmission} from './rollup-refusal.mjs';
 const [sdkRoot, build, keyed, parent, key, deploymentReceipt, outputArg, circuit, mode] = process.argv.slice(2);
 assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
 assert.ok(mode === undefined || mode === '--submit');
@@ -175,7 +175,7 @@ try {
         transactionSHA256:sha(tx.serialize())}),{flag:'wx',mode:0o600});
       submissionStarted=performance.now();
       try {
-        const submitted=await session.walletProvider.submitTx(tx);
+        const submitted=await quietSubmission(()=>session.walletProvider.submitTx(tx));
         submissionAcknowledged=performance.now();
         return submitted;
       } catch(error) {

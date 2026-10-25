@@ -3,7 +3,7 @@ import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import test from 'node:test';
-import {submissionRefusal, recordSubmissionRefusal} from './rollup-refusal.mjs';
+import {submissionRefusal, recordSubmissionRefusal, quietSubmission} from './rollup-refusal.mjs';
 
 test('extracts only public RPC refusal codes through cyclic Effect causes', () => {
   for (const code of [115, 104, 244]) {
@@ -31,4 +31,25 @@ test('persists and logs no provider details and never proposes a retry', () => {
     assert.ok(!bytes.includes('PRIVATE_TEST_SENTINEL') && !logs.join('').includes('PRIVATE_TEST_SENTINEL'));
     assert.match(logs.join(''), /104/);
   } finally { console.error = original; rmSync(root, {recursive: true, force: true}); }
+});
+
+test('suppresses the SDK logger before an RPC failure reaches the application catch', async () => {
+  const names = ['log', 'error', 'warn', 'info', 'debug', 'trace'];
+  const original = Object.fromEntries(names.map(name => [name, console[name]])), logs = [];
+  try {
+    for (const name of names) console[name] = (...args) => logs.push(args);
+    for (const fail of [false, true]) {
+      const operation = async () => {
+        await Promise.resolve();
+        for (const name of names) console[name]('PRIVATE_TEST_SENTINEL');
+        if (fail) throw Error('1010: Invalid Transaction: Custom error: 115 PRIVATE_TEST_SENTINEL');
+        return 'submitted';
+      };
+      if (fail) await assert.rejects(quietSubmission(operation), error => submissionRefusal(error).codes[0] === 115);
+      else assert.equal(await quietSubmission(operation), 'submitted');
+      assert.deepEqual(logs, []);
+      console.error('public output restored');
+      assert.deepEqual(logs.pop(), ['public output restored']);
+    }
+  } finally { Object.assign(console, original); }
 });

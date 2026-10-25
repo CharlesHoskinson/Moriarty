@@ -3,6 +3,17 @@ import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 
+export async function quietSubmission(operation) {
+  // The pinned RPC client logs server error.data before rejecting the SDK
+  // promise. Each runner owns one submission; restore logging on either exit.
+  const saved = Object.fromEntries(['log', 'error', 'warn', 'info', 'debug', 'trace']
+    .map(name => [name, console[name]]));
+  try {
+    for (const name of Object.keys(saved)) console[name] = () => {};
+    return await operation();
+  } finally { Object.assign(console, saved); }
+}
+
 export function submissionRefusal(error) {
   const pending = [[error, 0]], seen = new Set(), codes = new Set();
   while (pending.length && seen.size < 128) {
