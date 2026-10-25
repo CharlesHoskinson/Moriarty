@@ -5,8 +5,8 @@ Reads qa/holdout/cases/uireq/NNN/case.json and executes every scenario whose
 `status` is "runnable" through the real `mori simulate` Sherlock host route.
 Expected outcomes live only in case.json (derived from the openspec spec text).
 
-Exit: 0 all scenarios pass and none unimplemented; 1 any assertion fails;
-2 at least one scenario is specified-only (no executable entrypoint yet);
+Exit: 0 all scenarios pass; 1 any assertion fails or a scenario is not implemented
+(docs/evaluator-loop.md: "not-implemented" is exit 1); 2 a broken case/harness;
 3 host unfit.
 """
 import json
@@ -1233,6 +1233,424 @@ def custom_native_inventory(c):
     need(not gates, "SPEC GATE (honest inventory, no candidate native realization): " + "; ".join(gates))
 
 
+# ---- profile /2 suspension and finance (U014 U015 U017 U018 U019 U020) -----------------
+#
+# Authored from the spec (UIREQ-014..020) and docs/sherlock/design/suspension-and-finance.md
+# (rev 4, §3.3-§8), not from the implementation. The CLI/JSON contract is the note's §3.5:
+#   start:  mori simulate SRC --execution-profile sherlock-helper-microstep/2 --source-profile P
+#           --execution-config C --target T (--entry | --action A --scenario S) [--checkpoint-out F]
+#   resume: mori simulate SRC --execution-profile .../2 --source-profile P --execution-config C
+#           --target T --resume F --observation OBS [--checkpoint-out F2]
+#   status/exit: waiting 0, halted 0, not_ready 3, refused 4, rejected 1, exhausted 1.
+# Independent oracles: the /1 route (pending-frame shape of the same pure program), the legacy
+# Core/2 --action/--resume/--event route (U018), and models/sherlock/oracles/financial-prefixes.json
+# case F01 (reserve 68, liability 10, gross debit 32, receipt 30, residual 10).
+# Until the /2 entrypoint exists every scenario FAILS with "not-implemented:" (exit 1, per
+# docs/evaluator-loop.md); exit 2 stays reserved for a broken case.
+
+import tempfile as _tempfile
+
+_EXIT2 = {"waiting": 0, "halted": 0, "not_ready": 3, "refused": 4, "rejected": 1, "exhausted": 1}
+_CK_RE = _re2.compile(r"[0-9a-f]{64}")
+
+
+class _Work:
+    """One scratch directory per scenario: checkpoint files must persist between calls."""
+
+    def __init__(self, c, route):
+        self.c = c
+        self.route = route
+        self.dir = Path(_tempfile.mkdtemp(prefix="dw-holdout-p2-"))
+        self.cfg = engine.config2_file(self.dir)
+        (self.dir / "target.json").write_text("{}")
+        self.n = 0
+
+    def put(self, name, text):
+        p = self.dir / name
+        p.write_text(text if isinstance(text, str) else json.dumps(text))
+        return name
+
+    def base(self, src):
+        return ["simulate", src, "--execution-profile", engine.PROFILE2,
+                "--source-profile", engine.SOURCE_PROFILE2[self.route],
+                "--execution-config", str(self.cfg), "--target", "target.json"]
+
+    def call(self, args, label, expect=None):
+        r = engine.mori_raw(args, self.dir)
+        if r.returncode == 2 or r.doc is None or "status" not in (r.doc or {}):
+            raise Fail(f"not-implemented: {label}: no /2 report (rc={r.returncode}, "
+                       f"stderr={r.stderr.strip()[:160]!r}, out={r.raw[:120]!r})")
+        st = r.doc["status"]
+        need(st in _EXIT2, f"{label}: unknown status {st!r}")
+        need(r.returncode == _EXIT2[st], f"{label}: status {st} exited {r.returncode}, contract says {_EXIT2[st]}")
+        need(r.doc.get("profile") == engine.PROFILE2, f"{label}: report profile {r.doc.get('profile')!r}")
+        need(r.doc.get("authentication") == "none" and r.doc.get("consumption") == "untracked" and r.doc.get("qualification"),
+             f"{label}: report lacks the Core/2 labels (authentication none, consumption untracked, qualification)")
+        if expect is not None:
+            need(st == expect, f"{label}: status {st!r}, expected {expect!r}: {json.dumps(r.doc)[:300]}")
+        return r.doc
+
+    def start(self, src, label, ck=None, action=None, scenario=None, extra=()):
+        a = self.base(src)
+        a += ["--action", action, "--scenario", scenario] if action else ["--entry"]
+        if ck:
+            a += ["--checkpoint-out", ck]
+        return self.call(a + list(extra), label)
+
+    def resume(self, src, ck, obs, label, out=None, expect=None, extra=()):
+        self.n += 1
+        of = self.put(f"obs{self.n}.json", obs)
+        a = self.base(src) + ["--resume", ck, "--observation", of] + (["--checkpoint-out", out] if out else [])
+        return self.call(a + list(extra), label, expect)
+
+    def read(self, name):
+        p = self.dir / name
+        return p.read_bytes() if p.is_file() else None
+
+
+def _obs(ck, site, label, values):
+    return {"format": "sherlock-observation/2", "checkpoint": ck, "site": site, "label": label,
+            "values": [{"name": n, "value": {"type": t, "value": v}} for n, t, v in values]}
+
+
+def _plain(v):
+    """Report values may be plain or typed ({"type","value"}); compare as plain strings/bools."""
+    if isinstance(v, dict) and "value" in v and set(v) <= {"type", "value"}:
+        return _plain(v["value"])
+    if isinstance(v, int) and not isinstance(v, bool):
+        return str(v)
+    return v
+
+
+def _waiting_ok(d, label, site, lab, binders):
+    need(d["status"] == "waiting", f"{label}: status {d['status']!r}, expected waiting: {json.dumps(d)[:300]}")
+    need(d.get("site") == site and d.get("label") == lab, f"{label}: waiting at {d.get('site')}/{d.get('label')}, expected {site}/{lab}")
+    need(isinstance(d.get("checkpoint"), str) and _CK_RE.fullmatch(d["checkpoint"]), f"{label}: checkpoint is not a 64-hex CK")
+    got = [(b.get("name"), b.get("type")) for b in d.get("binders") or []]
+    need(got == binders, f"{label}: binder layout {got} != {binders}")
+    cw, aw = int(d["committed_work"]), int(d["attempted_work"])
+    need(cw > 0 and aw >= 0, f"{label}: committed/attempted work {cw}/{aw}")
+
+
+def _frame_kind(f):
+    if isinstance(f, str):
+        m = _re2.match(r"\W*(\w+)", f)
+        return m.group(1) if m else f
+    if isinstance(f, dict):
+        if isinstance(f.get("kind"), str):
+            return f["kind"]
+        if len(f) == 1:
+            return next(iter(f))
+    return json.dumps(f)
+
+
+# -- pure route ------------------------------------------------------------------------
+
+def _pending_shape_v1(c):
+    """Independent oracle: under /1 the await-free analog of the program, during inner's body,
+    has the pending stack bottom-to-top [outer ReturnF, RightF Add (left 10), inner ReturnF]."""
+    r = runx(c, extra=["--chunk", "1"], source=c["analog_v1"])
+    chunks = _tc(r, "/1 analog")["chunks"][:-1]
+    shapes = [[next(iter(f)) for f in ch["boundary"]["view"]["frames"]] for ch in chunks]
+    need(c["pending_frames"] in shapes, f"/1 analog never reaches the pending stack {c['pending_frames']}")
+    return c["pending_frames"]
+
+
+def custom_suspend_pending(c):
+    # /1 keeps refusing await (note §3.3, §9)
+    v1 = runx(c, source=c["source_v1_await"])
+    need(v1.doc is not None and "execution" not in v1.doc and v1.doc.get("evaluation_performed") is False,
+         "/1 admitted an await program")
+    shape = _pending_shape_v1(c)
+    w = _Work(c, "draft")
+    src = w.put("p.mori", c["source"])
+    d = w.start(src, "start", ck="ck.bin")
+    _waiting_ok(d, "start", c["site"], c["await_label"], [tuple(b) for b in c["binders"]])
+    need(d.get("fin") is None, "pure route waiting report carries a financial prefix")
+    data = w.read("ck.bin")
+    need(data, "--checkpoint-out wrote no checkpoint file")
+    need(str(d.get("checkpoint_file") or "").rsplit("/", 1)[-1] == "ck.bin", f"checkpoint_file {d.get('checkpoint_file')!r}")
+    frames = d.get("frames") or []
+    kinds = [_frame_kind(f) for f in frames]
+    need(kinds == shape, f"waiting frames bottom-to-top {kinds} != pending stack {shape}")
+    pend = json.dumps(frames[shape.index("RightF")])
+    need("Add" in pend and "10" in pend, f"pending caller frame does not hold Add with left 10: {pend}")
+    # the stack is ordered: bottom is outer's return frame, top is inner's (kinds alone are a palindrome)
+    for idx, fn in c["return_functions"]:
+        need(_re2.search(r"\b" + fn + r"\b", json.dumps(frames[idx])),
+             f"waiting frame {idx} does not name the function {fn} it returns from: {json.dumps(frames[idx])}")
+    # deterministic, complete checkpoint: a second start is byte-identical; resuming only the
+    # written bytes (fresh directory, nothing else carried) completes the run
+    w2 = _Work(c, "draft")
+    src2 = w2.put("p.mori", c["source"])
+    d2 = w2.start(src2, "second start", ck="ck.bin")
+    need(w2.read("ck.bin") == data and d2["checkpoint"] == d["checkpoint"], "checkpoint is not deterministic")
+    w3 = _Work(c, "draft")
+    src3 = w3.put("p.mori", c["source"])
+    (w3.dir / "ck.bin").write_bytes(data)
+    h = w3.resume(src3, "ck.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("v", "UInt", c["ok_value"])]),
+                  "resume from bytes alone", expect="halted")
+    need(_plain(h.get("value")) == c["expect"], f"resume from the checkpoint bytes gave {h.get('value')!r}, expected {c['expect']}")
+    # a corrupted checkpoint is refused, not resumed (the encoding is the state)
+    bad = bytearray(data)
+    bad[len(bad) // 2] ^= 0x01
+    (w3.dir / "bad.bin").write_bytes(bytes(bad))
+    rf = w3.resume(src3, "bad.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("v", "UInt", c["ok_value"])]), "corrupted checkpoint")
+    need(rf["status"] == "refused" and rf.get("stage") in ("R0", "R1", "R2", "R3"), f"corrupted checkpoint: {rf['status']} {rf.get('stage')}")
+
+
+def custom_resume_pending(c):
+    w = _Work(c, "draft")
+    src = w.put("p.mori", c["source"])
+    d = w.start(src, "start", ck="ck.bin")
+    _waiting_ok(d, "start", c["site"], c["await_label"], [tuple(b) for b in c["binders"]])
+    ck, site, lab = d["checkpoint"], c["site"], c["await_label"]
+    data = w.read("ck.bin")
+    need(data, "--checkpoint-out wrote no checkpoint file")
+    ok = _obs(ck, site, lab, [("v", "UInt", c["ok_value"])])
+    h = w.resume(src, "ck.bin", ok, "resume v=4", expect="halted")
+    need(_plain(h.get("value")) == c["expect"], f"resume returned {h.get('value')!r}, expected {c['expect']}")
+    need(h.get("fin") is None, "pure halted report carries a financial prefix")
+    need(int(h["committed_work"]) > int(d["committed_work"]), "resume committed no further work")
+    h2 = w.resume(src, "ck.bin", ok, "resume v=4 again", expect="halted")
+    need(h2 == h, "local resume is not a pure function of (checkpoint, observation)")
+    # not ready: unchanged checkpoint (byte-identical with --checkpoint-out), host-only attempted work
+    nr = w.resume(src, "ck.bin", _obs(ck, site, lab, [("v", "UInt", c["bad_value"])]), "resume v=5", out="nr.bin", expect="not_ready")
+    need(nr.get("checkpoint") == ck and nr.get("site") == site, "not_ready changed the checkpoint identity")
+    need(nr.get("reason") == "guard_false", f"not_ready reason {nr.get('reason')!r}")
+    need(int(nr["attempted_work"]) > 0, "not_ready reports no attempted guard work")
+    need(w.read("nr.bin") == data, "not_ready --checkpoint-out is not byte-identical to the input checkpoint")
+    need(w.read("ck.bin") == data, "not_ready modified the input checkpoint file")
+    nr2 = w.resume(src, "nr.bin", _obs(ck, site, lab, [("v", "UInt", c["bad_value"])]), "resume v=5 again", expect="not_ready")
+    need(nr2.get("attempted_work") == nr["attempted_work"], "not_ready attempted work is not deterministic")
+    h3 = w.resume(src, "nr.bin", ok, "resume after not_ready", expect="halted")
+    need(_plain(h3.get("value")) == c["expect"] and h3 == h, "the checkpoint left by not_ready does not resume like the original")
+    # refusals R1-R5 (note §4): first failing stage, exit 4, no successor
+    refusals = [
+        ("R3", _obs("0" * 64, site, lab, [("v", "UInt", c["ok_value"])]), "observation bound to another checkpoint"),
+        ("R4", _obs(ck, site, "other", [("v", "UInt", c["ok_value"])]), "wrong label"),
+        ("R4", _obs(ck, site + 1, lab, [("v", "UInt", c["ok_value"])]), "wrong site"),
+        ("R5", _obs(ck, site, lab, [("w", "UInt", c["ok_value"])]), "wrong binder name"),
+        ("R5", _obs(ck, site, lab, [("v", "Bool", True)]), "wrong binder sort"),
+        ("R5", _obs(ck, site, lab, [("v", "UInt", "0" + c["ok_value"])]), "non-canonical UInt"),
+        ("R5", _obs(ck, site, lab, [("v", "UInt", c["ok_value"]), ("x", "UInt", "1")]), "extra binder"),
+        ("R5", _obs(ck, site, lab, []), "missing binder"),
+    ]
+    for stage, o, why in refusals:
+        rf = w.resume(src, "ck.bin", o, why, out="refused.bin", expect="refused")
+        need(rf.get("stage") == stage, f"{why}: refused at {rf.get('stage')!r}, expected {stage}")
+        need(rf.get("error"), f"{why}: refusal carries no error")
+        need(w.read("refused.bin") is None, f"{why}: a refused resume wrote a successor checkpoint")
+    alt = w.put("alt.mori", c["source_other_program"])
+    rf = w.resume(alt, "ck.bin", ok, "checkpoint of another program", expect="refused")
+    need(rf.get("stage") == "R2", f"checkpoint of another program refused at {rf.get('stage')!r}, expected R2")
+    # R1: a terminal checkpoint is refused, never "not ready"
+    hh = w.resume(src, "ck.bin", ok, "halted with checkpoint-out", out="halted.bin", expect="halted")
+    if w.read("halted.bin"):
+        rf = w.resume(src, "halted.bin", ok, "resume a halted checkpoint", expect="refused")
+        need(rf.get("stage") == "R1", f"halted checkpoint refused at {rf.get('stage')!r}, expected R1")
+
+
+# -- financial route -------------------------------------------------------------------
+
+def _oracle_prefix(pid):
+    o = json.loads((engine.REPO / "models/sherlock/oracles/financial-prefixes.json").read_text())
+    p = next(x for x in o["prefixes"] if x["id"] == pid)
+    ev = {e["id"]: e for e in o["ordered_events"]}
+    ref = p["committed_state_ref"]
+    m = _re2.fullmatch(r"ordered_events\[(\d+)\]\.(pre|post)", ref)
+    state = o["ordered_events"][int(m.group(1))][m.group(2)]
+    return p, state, [ev[i] for i in p["committed_event_ids"]]
+
+
+def _balances(snap):
+    return {b["account"]: str(b["amount"]) for b in snap.get("balances", [])}
+
+
+def _liabs(rows):
+    return {l["name"]: str(l["amount"]) for l in rows or []}
+
+
+def _fin(d, label):
+    f = d.get("fin")
+    need(isinstance(f, dict), f"{label}: financial report has no fin block")
+    need(isinstance(f.get("committed"), dict) and isinstance(f["committed"].get("snapshot"), dict),
+         f"{label}: fin block has no committed snapshot")
+    return f
+
+
+def _legacy(c, w, src, label, resume=None, event=None):
+    args = ["simulate", src] + (["--resume", resume, "--event", event] if resume else
+                                ["--action", c["action"], "--scenario", "scenario.json"])
+    r = engine.mori_raw(args, w.dir)
+    need(r.doc is not None and "status" in r.doc, f"legacy Core/2 {label}: no report ({r.stderr[:200]!r})")
+    return r.doc
+
+
+def _fin_start(c, w, label="fin start", source_key="source"):
+    src = w.put("f.mori", c[source_key])
+    w.put("scenario.json", c["scenario"])
+    d = w.start(src, label, ck="ck.bin", action=c["action"], scenario="scenario.json")
+    _waiting_ok(d, label, c["site"], c["await_label"], [tuple(b) for b in c["binders"]])
+    return src, d
+
+
+def _check_first_prefix(f, label, order=(("Transfer", "30"), ("Fee", "2"))):
+    p, state, events = _oracle_prefix("first-paid-prefix")
+    bal = _balances(f["committed"]["snapshot"])
+    for acct, amt in state["balances"].items():
+        need(bal.get(acct) == str(amt), f"{label}: committed {acct} {bal.get(acct)} != oracle {amt}")
+    li = _liabs(f["committed"]["snapshot"].get("liabilities"))
+    need(li.get("pay-beneficiary") == str(state["closing_liability"]), f"{label}: liability {li} != oracle {state['closing_liability']}")
+    acc = f.get("accounting") or {}
+    need(str(acc.get("gross_debit")) == str(state["gross_debit"]) and str(acc.get("fees")) == str(state["fees"])
+         and str(acc.get("recipient_receipt")) == str(state["net_receipts"]),
+         f"{label}: accounting {acc} != oracle gross {state['gross_debit']} fees {state['fees']} receipt {state['net_receipts']}")
+    rd = _liabs(f.get("residual_duties"))
+    need(rd == {"pay-beneficiary": str(state["residual_duty"]["amount"])}, f"{label}: residual duties {rd}")
+    eff = f["committed"].get("effects") or []
+    got = [(e.get("kind"), str(e.get("amount"))) for e in eff if e.get("kind") in ("Transfer", "Fee")]
+    need(got == [tuple(x) for x in order], f"{label}: committed transfer/fee effects {got} != source order {list(order)}")
+    return state
+
+
+def custom_fin_first_prefix(c):
+    w = _Work(c, "fin")
+    _, d = _fin_start(c, w)
+    f = _fin(d, "first paid prefix")
+    _check_first_prefix(f, "first paid prefix")
+    need(not (f.get("discarded_tentative") or {}).get("effects"), "a waiting prefix reports a discarded delta")
+    need(int(f["committed"].get("logical_work", -1)) >= 0, "committed logical work not reported")
+
+
+def custom_fin_await_core2(c):
+    w = _Work(c, "fin")
+    src, d = _fin_start(c, w)
+    f = _fin(d, "/2 waiting")
+    leg = _legacy(c, w, src, "start")
+    need(leg["status"] == "waiting", f"legacy Core/2 did not wait: {leg.get('status')} {leg.get('error')}")
+    lb = leg["continuation"]["boundary"]
+    need(_balances(f["committed"]["snapshot"]) == _balances(lb), "committed balances differ from Core/2 continuation boundary")
+    need(_liabs(f["committed"]["snapshot"].get("liabilities")) == _liabs(lb.get("liabilities")), "committed liabilities differ from Core/2")
+    need(_liabs(f.get("residual_duties")) == _liabs(leg.get("residual")), f"residual {f.get('residual_duties')} != Core/2 {leg.get('residual')}")
+    need(str(f["committed"].get("logical_work")) == str(leg["continuation"]["logical"]["committed"]),
+         f"committed logical work {f['committed'].get('logical_work')} != Core/2 {leg['continuation']['logical']['committed']}")
+    need(d.get("label") == leg["continuation"].get("site") or d.get("label") == c["await_label"], "await site differs from Core/2")
+    _check_first_prefix(f, "/2 waiting vs oracle")
+    # false observation: /2 not_ready leaves the checkpoint, Core/2 does not advance
+    w.put("cont.json", leg["continuation"])
+    w.put("ev-false.json", {"format": "moriarty-stage-event/1", "action": c["action"], "label": c["await_label"],
+                            "values": [{"name": "go", "value": {"type": "Bool", "value": False}}]})
+    w.put("ev-true.json", {"format": "moriarty-stage-event/1", "action": c["action"], "label": c["await_label"],
+                           "values": [{"name": "go", "value": {"type": "Bool", "value": True}}]})
+    lf = _legacy(c, w, src, "false resume", resume="cont.json", event="ev-false.json")
+    need(lf["status"] == "waiting" and lf.get("advanced") is False, "legacy Core/2 false resume advanced")
+    data = w.read("ck.bin")
+    nr = w.resume(src, "ck.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("go", "Bool", False)]),
+                  "/2 false observation", out="nr.bin", expect="not_ready")
+    need(w.read("nr.bin") == data, "/2 not_ready changed the checkpoint bytes")
+    # true observation: both complete with the same boundary and residual (present-zero duty kept)
+    lt = _legacy(c, w, src, "true resume", resume="cont.json", event="ev-true.json")
+    need(lt["status"] == "complete", f"legacy Core/2 true resume: {lt.get('status')} {lt.get('error')}")
+    h = w.resume(src, "ck.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("go", "Bool", True)]), "/2 true observation", expect="halted")
+    fh = _fin(h, "/2 complete")
+    post = lt["segment"]["execution"]["post"]
+    need(_balances(fh["committed"]["snapshot"]) == _balances(post), "completed balances differ from Core/2")
+    need(_liabs(fh["committed"]["snapshot"].get("liabilities")) == _liabs(post.get("liabilities")), "completed liabilities differ from Core/2")
+    need(_liabs(fh.get("residual_duties")) == _liabs(lt.get("residual")), "completed residual differs from Core/2")
+
+
+def custom_fin_local_failure(c):
+    w = _Work(c, "fin")
+    src, d = _fin_start(c, w)
+    f = _fin(d, "waiting before the failing segment")
+    _check_first_prefix(f, "retained prefix at the await")
+    rj = w.resume(src, "ck.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("go", "Bool", True)]),
+                  "second segment", expect="rejected")
+    fr = _fin(rj, "rejected")
+    need(rj.get("code") is not None, "rejected report has no code")
+    need(fr["committed"]["snapshot"] == f["committed"]["snapshot"], "the retained committed prefix changed on local failure")
+    need(fr["committed"].get("effects") == f["committed"].get("effects"), "committed effect log changed on local failure")
+    _check_first_prefix(fr, "retained prefix after failure")
+    disc = (fr.get("discarded_tentative") or {}).get("effects") or []
+    need(disc, "the discarded tentative delta is not reported")
+    need(any(e.get("kind") == "Transfer" and str(e.get("amount")) == c["discarded_transfer"] for e in disc),
+         f"discarded delta does not hold the failed segment's applied transfer {c['discarded_transfer']}: {disc}")
+    need(int(rj["committed_work"]) > int(d["committed_work"]), "later consumed work of the failed segment is not reported")
+    need(fr.get("ledger_rollback") == "none-inferred", f"ledger rollback {fr.get('ledger_rollback')!r}")
+    need(_liabs(fr.get("residual_duties")) == {"pay-beneficiary": "10"}, f"residual duties after failure {fr.get('residual_duties')}")
+    # stated difference from Core/2: the legacy rejection publishes no segment or continuation
+    leg = _legacy(c, w, src, "start")
+    w.put("cont.json", leg["continuation"])
+    w.put("ev.json", {"format": "moriarty-stage-event/1", "action": c["action"], "label": c["await_label"],
+                      "values": [{"name": "go", "value": {"type": "Bool", "value": True}}]})
+    lr = _legacy(c, w, src, "failing resume", resume="cont.json", event="ev.json")
+    need(lr["status"] == "rejected", f"legacy Core/2 did not reject the failing segment: {lr.get('status')}")
+
+
+def _policy_argv(c):
+    p = engine.HOLDOUT / "contracts" / f"{c['contract']}.json"
+    if not p.is_file():
+        raise Fail(f"not-implemented: no qa/holdout/contracts/{c['contract']}.json naming the phase-policy selection")
+    k = json.loads(p.read_text())
+    argv = (k.get("phase_policy") or {}).get("retain-guaranteed-fees/1")
+    need(isinstance(argv, list) and argv and all(isinstance(a, str) for a in argv),
+         f"contract {c['contract']} has no phase_policy.retain-guaranteed-fees/1 argv")
+    return argv
+
+
+def custom_fin_phase_policy(c):
+    retain = _policy_argv(c)
+    for policy, extra in (("all-or-nothing/1", []), ("retain-guaranteed-fees/1", retain)):
+        w = _Work(c, "fin")
+        src = w.put("f.mori", c["source"])
+        w.put("scenario.json", c["scenario"])
+        d = w.start(src, f"{policy} start", ck="ck.bin", action=c["action"], scenario="scenario.json", extra=extra)
+        _waiting_ok(d, f"{policy} start", c["site"], c["await_label"], [tuple(b) for b in c["binders"]])
+        f0 = _fin(d, f"{policy} waiting")
+        _check_first_prefix(f0, f"{policy} waiting", order=c["prefix_order"])
+        rj = w.resume(src, "ck.bin", _obs(d["checkpoint"], c["site"], c["await_label"], [("go", "Bool", True)]),
+                      f"{policy} failing segment", expect="rejected", extra=extra)
+        fr = _fin(rj, f"{policy} rejected")
+        bal = _balances(fr["committed"]["snapshot"])
+        rbp = fr.get("retained_by_policy")
+        if policy == "all-or-nothing/1":
+            need(bal == _balances(f0["committed"]["snapshot"]), f"default policy retained part of the failed segment: {bal}")
+            need(not rbp or not rbp.get("effects"), f"default policy reports policy-retained effects: {rbp}")
+        else:
+            want = dict(_balances(f0["committed"]["snapshot"]))
+            fee = int(c["guaranteed_fee"])
+            want["reserve"] = str(int(want["reserve"]) - fee)
+            want["fee_recipient"] = str(int(want["fee_recipient"]) + fee)
+            need(bal == want, f"retain policy committed {bal}, expected the sealed fee only {want}")
+            need(isinstance(rbp, dict) and rbp.get("policy") == policy, f"retained_by_policy {rbp}")
+            eff = rbp.get("effects") or []
+            need([(e.get("kind"), str(e.get("amount"))) for e in eff] == [("Fee", str(fee))],
+                 f"policy-retained effects {eff} != one Fee {fee}")
+        # four separate members: committed prefix, policy-retained fee, discarded delta, residual duties
+        need(_liabs(fr.get("residual_duties")) == {"pay-beneficiary": "10"}, f"{policy}: residual duties {fr.get('residual_duties')}")
+        need((fr.get("discarded_tentative") or {}).get("effects") is not None, f"{policy}: discarded delta member missing")
+        need(fr.get("ledger_rollback") == "none-inferred", f"{policy}: ledger rollback {fr.get('ledger_rollback')!r}")
+    # the note's worked example: a fee phase that fails is discarded whole (nothing retained)
+    w = _Work(c, "fin")
+    src = w.put("f.mori", c["source_fee_phase_fails"])
+    w.put("scenario.json", c["scenario"])
+    rj = w.start(src, "fee phase fails", action=c["action"], scenario="scenario.json", extra=retain)
+    need(rj["status"] == "rejected", f"failing fee phase: status {rj['status']}")
+    fr = _fin(rj, "failing fee phase")
+    need(_balances(fr["committed"]["snapshot"]) == {k: str(v) for k, v in c["entry_balances"].items()},
+         f"failing fee phase retained something: {_balances(fr['committed']['snapshot'])}")
+    rbp = fr.get("retained_by_policy") or {}
+    need(not rbp.get("effects"), f"failing fee phase reports retained fees {rbp}")
+    # admission: a fee after a fallible effect is refused under the retain policy
+    w = _Work(c, "fin")
+    src = w.put("f.mori", c["source_fee_after_effect"])
+    w.put("scenario.json", c["scenario"])
+    r = engine.mori_raw(w.base(src) + ["--action", c["action"], "--scenario", "scenario.json"] + retain, w.dir)
+    need(r.returncode != 0 and not (r.doc or {}).get("status") in ("waiting", "halted"),
+         "a Fee after a fallible effect was admitted under retain-guaranteed-fees/1")
+
+
 CHECKS = {
     "value": check_value,
     "outcome": check_outcome,
@@ -1253,6 +1671,12 @@ CHECKS = {
     "chunk-represent": custom_chunk_represent,
     "witness-materialize": custom_witness_materialize,
     "native-inventory": custom_native_inventory,
+    "suspend-pending": custom_suspend_pending,
+    "resume-pending": custom_resume_pending,
+    "fin-first-prefix": custom_fin_first_prefix,
+    "fin-await-core2": custom_fin_await_core2,
+    "fin-local-failure": custom_fin_local_failure,
+    "fin-phase-policy": custom_fin_phase_policy,
 }
 
 
@@ -1291,9 +1715,10 @@ def main(argv):
             print(f"FAIL uireq-{nnn} [{name}]: {msg}")
         return engine.EXIT_FAIL
     if unimpl:
+        # docs/evaluator-loop.md: not-implemented is a failure (exit 1); exit 2 is a broken case
         need_msgs = "; ".join(s.get("blocker", "specified only") for s in unimpl)
-        print(f"UNIMPLEMENTED: uireq-{nnn}: {need_msgs} (runnable scenarios passed: {len(passed)})")
-        return engine.EXIT_UNIMPL
+        print(f"FAIL uireq-{nnn}: not-implemented: {need_msgs} (runnable scenarios passed: {len(passed)})")
+        return engine.EXIT_FAIL
     print(f"PASS uireq-{nnn} ({len(passed)} scenario(s), coverage={cov})")
     return engine.EXIT_PASS
 

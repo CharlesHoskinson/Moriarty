@@ -214,3 +214,25 @@ def decode_value(run, ref=None):
 def outcome_kind(run):
     (k, v), = run.outcome.items()
     return k, v
+
+
+# ---- raw invocation (profile /2 suspension and finance routes) ------------------------
+
+PROFILE2 = "sherlock-helper-microstep/2"
+SOURCE_PROFILE2 = {"draft": "moriarty-sherlock-draft/2", "fin": "moriarty/2"}
+
+
+def config2_file(workdir, kind="draft"):
+    """The draft host config with the profile switched to /2 (nothing else is assumed)."""
+    cfg = json.loads(CONFIG_FILES[kind].read_text())
+    cfg["profile"] = PROFILE2
+    path = Path(workdir) / "config2.json"
+    path.write_text(json.dumps(cfg))
+    return path
+
+
+def mori_raw(args, cwd, timeout=120):
+    """Run `mori <args>` in `cwd` (files persist there between calls). Returns a Run."""
+    r = subprocess.run([mori_bin(), *[str(a) for a in args]], cwd=str(cwd),
+                       capture_output=True, text=True, timeout=timeout)
+    return Run(r.returncode, r.stdout, r.stderr)

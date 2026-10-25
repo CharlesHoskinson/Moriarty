@@ -16,12 +16,55 @@
       "specLine": 101,
       "when": "The future suspension extension snapshots 10+inner(3) while inner awaits a result.",
       "then": "The snapshot includes the caller frame, control, lexical contexts, reachable values, budgets and applicable financial prefix.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "snapshot of 10+inner(3) while inner awaits": "includes caller frame, control, lexical contexts, reachable values, budgets and applicable financial prefix"
       },
-      "coverage": "none",
-      "blocker": "needs the future suspension extension (checkpoint encoder for a waiting callee)"
+      "coverage": "primary",
+      "design_source": "docs/sherlock/design/suspension-and-finance.md rev4 (7c2087887); expectations from the spec, the note and models/sherlock/oracles/financial-prefixes.json F01, never from the implementation",
+      "unasserted": [
+        "exact FrameRowC rows (the note pins them from an actual run, not here); the frames summary is asserted for kind order, the pending Add with left 10, and the function each return frame belongs to",
+        "lexical contexts and reachable values are asserted operationally: the checkpoint bytes alone resume to the correct result, and a corrupted byte is refused",
+        "the applicable financial prefix is asserted null on the pure route; the fin prefix is U017-U019"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate (non-native build) --execution-profile sherlock-helper-microstep/2, CLI/JSON contract of docs/sherlock/design/suspension-and-finance.md \u00a73.5",
+        "checks": [
+          {
+            "kind": "suspend-pending",
+            "label": "10+inner(3) waiting in inner",
+            "source": "language \"moriarty-sherlock-draft/2\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { await reply(v: UInt) when v == n + 1; v }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n",
+            "site": 1,
+            "await_label": "reply",
+            "binders": [
+              [
+                "v",
+                "UInt"
+              ]
+            ],
+            "ok_value": "4",
+            "bad_value": "5",
+            "expect": "14",
+            "source_v1_await": "language \"moriarty-sherlock-draft/1\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { await reply(v: UInt) when v == n + 1; v }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n",
+            "analog_v1": "language \"moriarty-sherlock-draft/1\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { n + 1 }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n",
+            "pending_frames": [
+              "ReturnF",
+              "RightF",
+              "ReturnF"
+            ],
+            "return_functions": [
+              [
+                0,
+                "outer"
+              ],
+              [
+                2,
+                "inner"
+              ]
+            ]
+          }
+        ]
+      }
     }
   ]
 }

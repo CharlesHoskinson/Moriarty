@@ -16,13 +16,91 @@
       "specLine": 129,
       "when": "The preceding successful prefix reaches a typed await.",
       "then": "Its committed prefix and residual duty remain the same as Core/2; exact universal Commit/Yield/Await opcodes remain an open design choice.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "committed prefix and residual duty": "identical to Core/2",
         "checkpoint atomicity": "preserved"
       },
-      "coverage": "none",
-      "blocker": "needs a Core/2 typed-await to universal-machine lowering adapter with prefix/duty comparison"
+      "coverage": "primary",
+      "design_source": "docs/sherlock/design/suspension-and-finance.md rev4 (7c2087887); expectations from the spec, the note and models/sherlock/oracles/financial-prefixes.json F01, never from the implementation",
+      "unasserted": [
+        "captures field-by-field (no capture in the F01 action)",
+        "the deliberate logical-cap change (bound META, not editable)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate (non-native build) --execution-profile sherlock-helper-microstep/2, CLI/JSON contract of docs/sherlock/design/suspension-and-finance.md \u00a73.5",
+        "checks": [
+          {
+            "kind": "fin-await-core2",
+            "label": "F01 await after the first paid prefix vs legacy Core/2",
+            "source": "language \"moriarty/2\";\nagreement F01PaidPrefixes {\n  asset U = { network: \"local\", issuer: \"f01-oracle\", reference: \"U\", scale: 0 };\n  state marker: UInt = 0;\n  action open() {\n    liability(\"pay-beneficiary\", U, \"reserve\", \"beneficiary\", 40);\n  }\n  action pay() {\n    transfer(U, \"reserve\", \"beneficiary\", 30);\n    fee(U, \"reserve\", \"fee_recipient\", 2);\n    discharge(\"pay-beneficiary\", 30);\n    await second(go: Bool) when go;\n    transfer(U, \"reserve\", \"beneficiary\", 10);\n    fee(U, \"reserve\", \"fee_recipient\", 1);\n    discharge(\"pay-beneficiary\", 10);\n  }\n}\n",
+            "scenario": {
+              "balances": [
+                {
+                  "account": "beneficiary",
+                  "amount": "0",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                },
+                {
+                  "account": "fee_recipient",
+                  "amount": "0",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                },
+                {
+                  "account": "reserve",
+                  "amount": "100",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                }
+              ],
+              "inputs": {},
+              "liabilities": [
+                {
+                  "amount": "40",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  },
+                  "creditor": "beneficiary",
+                  "debtor": "reserve",
+                  "name": "pay-beneficiary"
+                }
+              ],
+              "state": {
+                "marker": {
+                  "type": "UInt",
+                  "value": "0"
+                }
+              }
+            },
+            "action": "pay",
+            "site": 1,
+            "await_label": "second",
+            "binders": [
+              [
+                "go",
+                "Bool"
+              ]
+            ]
+          }
+        ]
+      }
     }
   ]
 }

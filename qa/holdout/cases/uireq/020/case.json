@@ -16,13 +16,110 @@
       "specLine": 143,
       "when": "The selected target phase policy permits a guaranteed fee to remain after a fallible action fails.",
       "then": "The adapter reports that policy-specific fee and remaining duties separately from local segment rollback; concrete target evidence remains pending.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "policy-specific retained fee": "reported separately from local segment rollback, with remaining duties",
         "concrete target evidence": "pending"
       },
-      "coverage": "none",
-      "blocker": "needs the compiler target-phase mapping report for a financial segment (guaranteed/fallible phases)"
+      "coverage": "primary",
+      "design_source": "docs/sherlock/design/suspension-and-finance.md rev4 (7c2087887); expectations from the spec, the note and models/sherlock/oracles/financial-prefixes.json F01, never from the implementation",
+      "unasserted": [
+        "L2 target phase report (no CLI is specified for the compiler phase report; concrete target evidence is pending by the spec)",
+        "the phase-policy selection argv is read from the implementer contract qa/holdout/contracts/U020.json key phase_policy.retain-guaranteed-fees/1 (interface only)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate (non-native build) --execution-profile sherlock-helper-microstep/2, CLI/JSON contract of docs/sherlock/design/suspension-and-finance.md \u00a73.5",
+        "checks": [
+          {
+            "kind": "fin-phase-policy",
+            "label": "retained guaranteed fee vs local rollback",
+            "source": "language \"moriarty/2\";\nagreement F01PaidPrefixes {\n  asset U = { network: \"local\", issuer: \"f01-oracle\", reference: \"U\", scale: 0 };\n  state marker: UInt = 0;\n  action open() {\n    liability(\"pay-beneficiary\", U, \"reserve\", \"beneficiary\", 40);\n  }\n  action pay() {\n    fee(U, \"reserve\", \"fee_recipient\", 2);\n    transfer(U, \"reserve\", \"beneficiary\", 30);\n    discharge(\"pay-beneficiary\", 30);\n    await second(go: Bool) when go;\n    fee(U, \"reserve\", \"fee_recipient\", 1);\n    transfer(U, \"reserve\", \"beneficiary\", 100);\n    discharge(\"pay-beneficiary\", 10);\n  }\n}\n",
+            "scenario": {
+              "balances": [
+                {
+                  "account": "beneficiary",
+                  "amount": "0",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                },
+                {
+                  "account": "fee_recipient",
+                  "amount": "0",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                },
+                {
+                  "account": "reserve",
+                  "amount": "100",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  }
+                }
+              ],
+              "inputs": {},
+              "liabilities": [
+                {
+                  "amount": "40",
+                  "asset": {
+                    "issuer": "f01-oracle",
+                    "network": "local",
+                    "reference": "U",
+                    "scale": 0
+                  },
+                  "creditor": "beneficiary",
+                  "debtor": "reserve",
+                  "name": "pay-beneficiary"
+                }
+              ],
+              "state": {
+                "marker": {
+                  "type": "UInt",
+                  "value": "0"
+                }
+              }
+            },
+            "action": "pay",
+            "site": 1,
+            "await_label": "second",
+            "binders": [
+              [
+                "go",
+                "Bool"
+              ]
+            ],
+            "contract": "U020",
+            "guaranteed_fee": "1",
+            "prefix_order": [
+              [
+                "Fee",
+                "2"
+              ],
+              [
+                "Transfer",
+                "30"
+              ]
+            ],
+            "source_fee_phase_fails": "language \"moriarty/2\";\nagreement F01PaidPrefixes {\n  asset U = { network: \"local\", issuer: \"f01-oracle\", reference: \"U\", scale: 0 };\n  state marker: UInt = 0;\n  action open() {\n    liability(\"pay-beneficiary\", U, \"reserve\", \"beneficiary\", 40);\n  }\n  action pay() {\n    fee(U, \"reserve\", \"fee_recipient\", 10);\n    fee(U, \"reserve\", \"fee_recipient\", 100);\n    await second(go: Bool) when go;\n    transfer(U, \"reserve\", \"beneficiary\", 10);\n    fee(U, \"reserve\", \"fee_recipient\", 1);\n    discharge(\"pay-beneficiary\", 10);\n  }\n}\n",
+            "entry_balances": {
+              "beneficiary": 0,
+              "fee_recipient": 0,
+              "reserve": 100
+            },
+            "source_fee_after_effect": "language \"moriarty/2\";\nagreement F01PaidPrefixes {\n  asset U = { network: \"local\", issuer: \"f01-oracle\", reference: \"U\", scale: 0 };\n  state marker: UInt = 0;\n  action open() {\n    liability(\"pay-beneficiary\", U, \"reserve\", \"beneficiary\", 40);\n  }\n  action pay() {\n    transfer(U, \"reserve\", \"beneficiary\", 30);\n    fee(U, \"reserve\", \"fee_recipient\", 2);\n    discharge(\"pay-beneficiary\", 30);\n    await second(go: Bool) when go;\n    transfer(U, \"reserve\", \"beneficiary\", 10);\n    fee(U, \"reserve\", \"fee_recipient\", 1);\n    discharge(\"pay-beneficiary\", 10);\n  }\n}\n"
+          }
+        ]
+      }
     }
   ]
 }

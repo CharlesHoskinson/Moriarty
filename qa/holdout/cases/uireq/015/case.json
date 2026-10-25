@@ -16,13 +16,39 @@
       "specLine": 108,
       "when": "In the future extension, inner(3) resumes and returns 4 inside 10+inner(3).",
       "then": "The machine returns 14; a false/not-yet-ready observation leaves the waiting checkpoint unchanged.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "10+inner(3) with inner resuming and returning 4": 14,
         "false / not-yet-ready observation": "waiting checkpoint unchanged"
       },
-      "coverage": "none",
-      "blocker": "needs the future suspension extension (pending-return resume entrypoint)"
+      "coverage": "primary",
+      "design_source": "docs/sherlock/design/suspension-and-finance.md rev4 (7c2087887); expectations from the spec, the note and models/sherlock/oracles/financial-prefixes.json F01, never from the implementation",
+      "unasserted": [
+        "guard_error not-ready (the U015 guard v == n + 1 cannot error)",
+        "on-chain single use (anchor; no stagenet run)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate (non-native build) --execution-profile sherlock-helper-microstep/2, CLI/JSON contract of docs/sherlock/design/suspension-and-finance.md \u00a73.5",
+        "checks": [
+          {
+            "kind": "resume-pending",
+            "label": "inner resumes with 4 inside 10+inner(3)",
+            "source": "language \"moriarty-sherlock-draft/2\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { await reply(v: UInt) when v == n + 1; v }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n",
+            "site": 1,
+            "await_label": "reply",
+            "binders": [
+              [
+                "v",
+                "UInt"
+              ]
+            ],
+            "ok_value": "4",
+            "bad_value": "5",
+            "expect": "14",
+            "source_other_program": "language \"moriarty-sherlock-draft/2\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { await reply(v: UInt) when v == n + 2; v }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n"
+          }
+        ]
+      }
     }
   ]
 }
