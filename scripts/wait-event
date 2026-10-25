@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Block until something the coordinator should react to happens; built for Monitor.
+
+Events (one line each on stdout):
+  EVENT lock-release <heavy|gpu>        a watched flock went from held to free
+  EVENT bus <from> -> <to>: <subject>   a new bus message whose subject matches --match
+Default is to print the first event and exit 0; --loop keeps running (one line per event,
+the form Monitor wants). Exit 3 on --timeout. Read-only: uses `recv --peek` and /proc/locks,
+never takes a lock, never drains the inbox (tick-check does that).
+
+Env (tests): DW_LOCK, DW_GPU_LOCK, TC_PROC_LOCKS, TC_RECV_CMD, TC_COORD_CWD.
+"""
+import argparse
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+
+HOME = os.path.expanduser("~")
+DEFAULT_MATCH = r"^(BLOCKED|READY|QUESTION|RELEASE|ACQUIRE|ACTION|GO requested|Host action|PASS B|DONE)"
+
+
+def lock_paths():
+    d = f"{HOME}/.cache/doctorwatson"
+    return {"heavy": os.environ.get("DW_LOCK") or f"{d}/heavy.lock",
+            "gpu": os.environ.get("DW_GPU_LOCK") or f"{d}/gpu.lock"}
+
+
+def held_set():
+    try:
+        with open(os.environ.get("TC_PROC_LOCKS", "/proc/locks")) as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        return None
+    held = set()
+    for name, p in lock_paths().items():
+        try:
+            ino = os.stat(p).st_ino
+        except OSError:
+            continue
+        if any(len(f := ln.split()) >= 6 and f[5].endswith(f":{ino}") for ln in lines):
+            held.add(name)
+    return held
+
+
+def recv():
+    cwd = os.environ.get("TC_COORD_CWD") or f"{HOME}/repos/loki-wt/ids/coordinator"
+    cmd = shlex.split(os.environ.get("TC_RECV_CMD") or f"agentbus --cwd {shlex.quote(cwd)} recv --all --peek")
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout
+    except Exception:
+        return []
+    msgs = []
+    for ln in out.splitlines():
+        if ln.startswith("{"):
+            try:
+                msgs.append(json.loads(ln))
+            except ValueError:
+                pass
+    return msgs
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--loop", action="store_true")
+    ap.add_argument("--timeout", type=float, default=0, help="seconds; 0 = forever")
+    ap.add_argument("--interval", type=float, default=10)
+    ap.add_argument("--match", default=DEFAULT_MATCH)
+    ap.add_argument("--since-now", action="store_true", help="ignore messages already unread at start")
+    ap.add_argument("--no-bus", action="store_true")
+    ap.add_argument("--no-locks", action="store_true")
+    a = ap.parse_args()
+    rx = re.compile(a.match, re.I)
+    prev = None if a.no_locks else held_set()
+    seen = set()
+    if a.since_now and not a.no_bus:
+        seen = {m.get("id") for m in recv()}
+    t0 = time.time()
+    while True:
+        events = []
+        if not a.no_locks:
+            cur = held_set()
+            if prev is not None and cur is not None:
+                events += [f"EVENT lock-release {n}" for n in sorted(prev - cur)]
+            if cur is not None:
+                prev = cur
+        if not a.no_bus:
+            for m in recv():
+                i = m.get("id") or m.get("subj")
+                if i in seen:
+                    continue
+                seen.add(i)
+                subj = m.get("subj", "")
+                if rx.match(subj) or m.get("kind") == "ask":
+                    events.append(f"EVENT bus {m.get('from_name', '?')} -> {m.get('to', '?')}: {subj[:100]}")
+        for e in events:
+            print(e, flush=True)
+        if events and not a.loop:
+            return 0
+        if a.timeout and time.time() - t0 >= a.timeout:
+            print("TIMEOUT", flush=True)
+            return 3
+        time.sleep(a.interval)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""One-command coordinator tick: bus recv, open asks, locks, agents, host, queue, Sherlock counts.
+
+Read-only except for draining the coordinator's bus inbox (use --peek to avoid even that)
+and a small open-ask state file. Every section is time-boxed; a failing section prints
+"unavailable: <why>" and never aborts the tick. Exit 0 always unless --strict.
+
+Env overrides (used by tests): TC_COORD_CWD, TC_RECV_CMD, TC_STATE, TC_RUN_DIR,
+TC_PROC_LOCKS, TC_PROC, DW_LOCK, DW_GPU_LOCK, TC_NOW, TC_SECTION_TIMEOUT, TC_Q_CMD,
+TC_REAP_CMD, TC_NEXT_CMD, TC_STOP_CMD.
+"""
+import argparse
+import glob
+import json
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+
+HOME = os.path.expanduser("~")
+HERE = os.path.dirname(os.path.abspath(__file__))
+TMO = float(os.environ.get("TC_SECTION_TIMEOUT", "8"))
+ASK_RE = re.compile(r"^(BLOCKED|QUESTION|QUEUE|READY|ACQUIRE|ACTION|GO requested|Host action)", re.I)
+CLOSE_RE = re.compile(r"^(RELEASE|DONE|PASS|READY-MERGE)", re.I)
+
+
+def now():
+    v = os.environ.get("TC_NOW")
+    return float(v) if v else time.time()
+
+
+def run(cmd, timeout=TMO):
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return r.returncode, r.stdout, r.stderr
+
+
+def fmt_age(s):
+    s = int(max(s, 0))
+    if s >= 3600:
+        return f"{s // 3600}h{(s % 3600) // 60:02d}m"
+    return f"{s // 60}m{s % 60:02d}s"
+
+
+def parse_ts(ts):
+    try:
+        return datetime.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+    except Exception:
+        return now()
+
+
+def section(name):
+    print(f"\n== {name}")
+
+
+def safe(name, fn):
+    section(name)
+    try:
+        fn()
+    except subprocess.TimeoutExpired:
+        print(f"  unavailable: timed out after {TMO:g}s")
+    except Exception as e:  # noqa: BLE001 - a tick must survive any one section
+        print(f"  unavailable: {type(e).__name__}: {e}")
+
+
+# ---- bus -------------------------------------------------------------------
+def state_path():
+    return os.environ.get("TC_STATE") or os.path.join(HOME, ".cache/doctorwatson/tick-asks.json")
+
+
+def load_state():
+    try:
+        with open(state_path()) as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def save_state(st):
+    p = state_path()
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w") as fh:
+        json.dump(st, fh)
+
+
+def bus(peek):
+    cwd = os.environ.get("TC_COORD_CWD") or os.path.join(HOME, "repos/loki-wt/ids/coordinator")
+    base = os.environ.get("TC_RECV_CMD") or f"agentbus --cwd {shlex.quote(cwd)} recv --all"
+    cmd = shlex.split(base) + (["--peek"] if peek and not os.environ.get("TC_RECV_CMD") else [])
+    rc, out, err = run(cmd)
+    if rc != 0:
+        print(f"  unavailable: rc={rc} {err.strip()[:120]}")
+        return
+    msgs = []
+    for line in out.splitlines():
+        if line.startswith("{"):
+            try:
+                msgs.append(json.loads(line))
+            except ValueError:
+                pass
+    print(f"  {len(msgs)} new message(s)")
+    st = load_state()
+    for i, m in enumerate(msgs):
+        who, subj = m.get("from_name", "?"), m.get("subj", "")
+        if i == max(len(msgs) - 30, 0) and i:
+            print(f"  ... {i} older message(s) folded into open asks")
+        if i >= len(msgs) - 30:
+          print(f"  {m.get('ts', '')[11:19]} {who} -> {m.get('to', '?')}: {subj[:100]}")
+        if CLOSE_RE.match(subj):
+            for k in [k for k, v in st.items() if v["from"] == who]:
+                del st[k]
+        if ASK_RE.match(subj) or m.get("kind") == "ask":
+            st[m.get("id", subj)] = {"from": who, "subj": subj, "ts": parse_ts(m.get("ts", ""))}
+    if not peek:
+        save_state(st)
+    section("open asks (oldest first)")
+    if not st:
+        print("  none")
+    for v in sorted(st.values(), key=lambda v: v["ts"]):
+        print(f"  {fmt_age(now() - v['ts']):>7}  {v['from']}: {v['subj'][:90]}")
+
+
+# ---- locks -----------------------------------------------------------------
+def proc_root():
+    return os.environ.get("TC_PROC", "/proc")
+
+
+def etime(pid):
+    try:
+        with open(f"{proc_root()}/{pid}/stat") as fh:
+            f = fh.read().rsplit(")", 1)[1].split()
+        start = int(f[19]) / os.sysconf("SC_CLK_TCK")
+        with open(f"{proc_root()}/uptime") as fh:
+            up = float(fh.read().split()[0])
+        return fmt_age(up - start)
+    except Exception:
+        return "?"
+
+
+def cmdline(pid):
+    try:
+        with open(f"{proc_root()}/{pid}/cmdline", "rb") as fh:
+            return fh.read().replace(b"\0", b" ").decode(errors="replace").strip()[:110]
+    except Exception:
+        return "(not visible)"
+
+
+def locks():
+    d = os.path.join(HOME, ".cache/doctorwatson")
+    paths = {"heavy": os.environ.get("DW_LOCK") or f"{d}/heavy.lock",
+             "gpu": os.environ.get("DW_GPU_LOCK") or f"{d}/gpu.lock"}
+    try:
+        with open(os.environ.get("TC_PROC_LOCKS", "/proc/locks")) as fh:
+            plocks = fh.read().splitlines()
+    except OSError:
+        plocks = []
+    for name, p in paths.items():
+        try:
+            ino = os.stat(p).st_ino
+        except OSError:
+            print(f"  {name}: no lock file ({p})")
+            continue
+        holders = []
+        for ln in plocks:
+            f = ln.split()
+            if len(f) >= 6 and f[5].endswith(f":{ino}"):
+                holders.append(f[4])
+        if holders:
+            for pid in holders:
+                print(f"  {name}: HELD pid={pid} age={etime(pid)} {cmdline(pid)}")
+        else:
+            print(f"  {name}: free" + ("  (note: /proc/locks empty; sandbox?)" if not plocks else ""))
+        for lp in (p + ".lease", p + ".lease.json"):
+            if os.path.exists(lp):
+                try:
+                    with open(lp) as fh:
+                        print(f"    lease: {fh.read().strip()[:200]}")
+                except OSError:
+                    pass
+    reap = os.environ.get("TC_REAP_CMD") or os.path.join(HERE, "doctorwatson") + " reap --dry-run"
+    try:
+        rc, out, err = run(reap)
+        if rc == 0 and out.strip():
+            print("  reap --dry-run:\n" + "\n".join("    " + x for x in out.strip().splitlines()[:6]))
+        else:
+            print("  reap --dry-run: stub (wf-4 not landed)")
+    except Exception:
+        print("  reap --dry-run: stub (wf-4 not landed)")
+
+
+# ---- agents ----------------------------------------------------------------
+def agents():
+    rd = os.environ.get("TC_RUN_DIR") or "/tmp/claude-1000/-home-charles/9dfb451b-c903-4483-a9b8-656ad9ac91de/scratchpad/loki-run"
+    _, ps, _ = run(["ps", "-eo", "pid,etime,args"])
+    live = {}
+    for ln in ps.splitlines():
+        m = re.search(r"launch\.sh\s+(\S+)", ln)
+        if m and "grep" not in ln:
+            live[m.group(1)] = ln.split()[1]
+    names = sorted(os.path.basename(p)[:-4] for p in glob.glob(rd + "/*.log")
+                   if re.fullmatch(r"[A-Za-z0-9_-]+\.log", os.path.basename(p)))
+    rows = []
+    for n in names:
+        lp = f"{rd}/{n}.log"
+        age = now() - os.path.getmtime(lp)
+        try:
+            tail = subprocess.run(["tail", "-n", "1", lp], capture_output=True, text=True, timeout=3).stdout.strip()
+        except Exception:
+            tail = ""
+        if n in live:
+            rows.append((0, f"  RUNNING  {n:<18} up {live[n]:<10} log idle {fmt_age(age)}"))
+        elif age < 6 * 3600:
+            rows.append((1, f"  exited   {n:<18} {tail[:40]:<14} {fmt_age(age)} ago"))
+    for _, r in sorted(rows):
+        print(r)
+    if not rows:
+        print("  none")
+    # runs with live launch.sh but no log are impossible; flag stale-but-running
+    for n, e in live.items():
+        lp = f"{rd}/{n}.log"
+        if os.path.exists(lp) and now() - os.path.getmtime(lp) > 3600:
+            print(f"  WARN {n} running but log idle > 1h")
+
+
+# ---- host ------------------------------------------------------------------
+def host():
+    du = shutil.disk_usage("/")
+    la = os.getloadavg()
+    mem = {}
+    with open("/proc/meminfo") as fh:
+        for ln in fh:
+            k, v = ln.split(":")
+            mem[k] = int(v.split()[0])
+    print(f"  df /: {du.used * 100 // du.total}% used, {du.free // 2**30} GiB free; "
+          f"load {la[0]:.1f} {la[1]:.1f} {la[2]:.1f}; "
+          f"mem avail {mem.get('MemAvailable', 0) // 2**20} GiB; swap used {(mem.get('SwapTotal', 0) - mem.get('SwapFree', 0)) // 2**10} MiB")
+
+
+# ---- queue + sherlock ------------------------------------------------------
+def queue():
+    q = os.environ.get("TC_Q_CMD") or os.path.join(HERE, "doctorwatson") + " q status"
+    try:
+        rc, out, err = run(q)
+    except Exception:
+        rc, out = 1, ""
+    if rc == 0 and out.strip():
+        print("\n".join("  " + x for x in out.strip().splitlines()[:10]))
+    else:
+        print("  stub: `doctorwatson q status` not available yet (wf-2); read the last HEAVY ORDER on #loki")
+
+
+def sherlock():
+    for label, env, default in (("next", "TC_NEXT_CMD", "next"), ("stop-rule", "TC_STOP_CMD", "stop-rule")):
+        c = os.environ.get(env) or os.path.join(HERE, "doctorwatson") + " " + default
+        rc, out, err = run(c, timeout=max(TMO, 15))
+        txt = (out or err).strip().splitlines()
+        print(f"  {label}: " + (" | ".join(x.strip() for x in txt[:4]) if txt else f"rc={rc} no output"))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--peek", action="store_true", help="do not drain the bus inbox or touch state")
+    ap.add_argument("--skip", default="", help="comma list: bus,locks,agents,host,queue,sherlock")
+    a = ap.parse_args()
+    skip = set(a.skip.split(","))
+    t0 = time.time()
+    print(f"tick-check {datetime.fromtimestamp(now(), timezone.utc):%Y-%m-%dT%H:%MZ}")
+    for key, name, fn in (("bus", "bus recv", lambda: bus(a.peek)), ("locks", "locks / leases", locks),
+                          ("agents", "agents (loki-run)", agents), ("host", "host", host),
+                          ("queue", "heavy queue head", queue), ("sherlock", "sherlock", sherlock)):
+        if key not in skip:
+            safe(name, fn)
+    print(f"\n(tick-check took {time.time() - t0:.1f}s)")
+
+
+if __name__ == "__main__":
+    main()
