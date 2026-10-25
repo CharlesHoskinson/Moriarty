@@ -47,9 +47,40 @@ impl TreeInterner {
 
     /// Intern `tree` bottom-up without host recursion.
     pub fn intern_tree(&mut self, tree: &Arc<Tree>) -> Arc<Tree> {
-        // RED: no sharing yet; the table stays empty.
-        let _ = (&mut self.nodes, NodeKey::Leaf(0), NodeKey::Branch(0, 0));
-        tree.clone()
+        // (node, children done)
+        let mut work: Vec<(Arc<Tree>, bool)> = vec![(tree.clone(), false)];
+        let mut done: Vec<Arc<Tree>> = Vec::new();
+        while let Some((node, expanded)) = work.pop() {
+            match (&*node, expanded) {
+                (Tree::Leaf(n), _) => {
+                    let n = *n;
+                    let shared = self
+                        .nodes
+                        .entry(NodeKey::Leaf(n))
+                        .or_insert_with(|| Arc::new(Tree::Leaf(n)))
+                        .clone();
+                    done.push(shared);
+                }
+                (Tree::Branch(l, r), false) => {
+                    let (l, r) = (l.clone(), r.clone());
+                    work.push((node, true));
+                    work.push((r, false));
+                    work.push((l, false));
+                }
+                (Tree::Branch(..), true) => {
+                    let r = done.pop().expect("right child interned");
+                    let l = done.pop().expect("left child interned");
+                    let key = NodeKey::Branch(Arc::as_ptr(&l) as usize, Arc::as_ptr(&r) as usize);
+                    let shared = self
+                        .nodes
+                        .entry(key)
+                        .or_insert_with(|| Arc::new(Tree::Branch(l, r)))
+                        .clone();
+                    done.push(shared);
+                }
+            }
+        }
+        done.pop().expect("root interned")
     }
 
     pub fn intern_value(&mut self, value: &Value) -> Value {
