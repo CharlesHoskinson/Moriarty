@@ -232,10 +232,14 @@ fn main() -> Result<()> {
     };
     let started = Instant::now();
     let pk = setup_pk(&relation, &vk);
+    let pk_seconds = started.elapsed().as_secs_f64();
+    let proving = Instant::now();
     let proof =
         prove::<_, blake2b_simd::State>(&p, &pk, &relation, &public, witness, rand::rngs::OsRng)
             .map_err(|_| bad("call-bound D proving failed"))?;
+    let prove_seconds = proving.elapsed().as_secs_f64();
     drop(pk);
+    let verifying = Instant::now();
     verify::<DeciderRelation, blake2b_simd::State>(
         &p.verifier_params(),
         &vk,
@@ -244,7 +248,9 @@ fn main() -> Result<()> {
         &proof,
     )
     .map_err(|_| bad("call-bound D verification failed"))?;
+    let local_verify_seconds = verifying.elapsed().as_secs_f64();
     let ledger_key = VerifierKey::from(vk);
+    let ledger_verifying = Instant::now();
     ledger_key
         .verify(
             &PARAMS_VERIFIER,
@@ -252,6 +258,7 @@ fn main() -> Result<()> {
             public.iter().copied().map(Fr),
         )
         .map_err(|_| bad("ledger verifier rejected call-bound D"))?;
+    let ledger_verify_seconds = ledger_verifying.elapsed().as_secs_f64();
     for lane in 0..public.len() {
         let mut wrong = public.clone();
         wrong[lane] += F::ONE;
@@ -279,6 +286,8 @@ fn main() -> Result<()> {
     let receipt = serde_json::json!({"schema":"sherlock-b4-call-proof/1","vk_sha256":sha256_hex(&raw_vk),
         "proof_sha256":sha256_hex(&proof),"statement":f_to_hex(&stmt),"public_input_count":public.len(),
         "keygen_prove_verify_wall_seconds":started.elapsed().as_secs_f64(),"peak_rss_bytes":peak_rss_kb()*1024,
+        "pk_keygen_seconds":pk_seconds,"prove_seconds":prove_seconds,"local_verify_seconds":local_verify_seconds,
+        "ledger_verify_seconds":ledger_verify_seconds,"timing_scope":"isolated host wall timers; not validator execution time",
         "negative_public_lanes_rejected":public.len(),"opening_persisted":false,"submitted":false});
     json_new(&out, "proof.json", &receipt)?;
     println!("{}", receipt);

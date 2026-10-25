@@ -1,0 +1,186 @@
+// Synthetic Sherlock rollup stagenet call. Default is read-only preparation; --submit opens the wallet.
+// Usage: node rollup-call.mjs SDK_ROOT BUILD KEYED_BUILD B3_DIR KEY DEPLOY_RECEIPT OUTPUT acceptValidity|settleValidity [--submit]
+// WARNING: the installed SDK JS WASM wellFormed does not verify proofs cryptographically; the final
+// balanced transaction is checked by the native proof-verifying validate_call before submission.
+import assert from 'node:assert/strict';
+import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
+import {resolve, join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+import {spawn} from 'node:child_process';
+import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
+import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
+const [sdkRoot, build, keyed, parent, key, deploymentReceipt, outputArg, circuit, mode] = process.argv.slice(2);
+assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
+assert.ok(mode === undefined || mode === '--submit');
+const output = resolve(outputArg); mkdirSync(output, {recursive: true, mode: 0o700});
+assert.ok(!existsSync(join(output, 'submitted.json')), 'submission already attempted from this output directory');
+const load = sdkLoader(sdkRoot, join(output, 'sdk-imports'));
+const sha = b => createHash('sha256').update(b).digest('hex');
+const le = x => Buffer.from(x.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
+const fromLe = s => BigInt('0x' + Buffer.from(s, 'hex').reverse().toString('hex'));
+const pins = JSON.parse(readFileSync(deploymentReceipt));
+assert.equal(pins.schema,'sherlock-rollup-stagenet-deployment/1');
+assert.equal(pins.network,'stagenet'); assert.match(pins.address,/^[0-9a-f]{64}$/);
+assert.equal(pins.sourceSHA256,sha(readFileSync(new URL('./rollup-anchor.compact',import.meta.url))));
+const manifest=JSON.parse(readFileSync(join(key,'manifest.json')));
+assert.equal(manifest.schema,'sherlock-b4-preparation/1');
+assert.equal(sha(readFileSync(join(parent,'parent.vk'))),manifest.parent_vk_sha256);
+assert.equal(sha(readFileSync(join(key,'decider.vk'))),manifest.vk_sha256);
+assert.equal(sha(readFileSync(join(key,'decider.relation'))),manifest.relation_sha256);
+assert.equal(sha(readFileSync(join(key,'acceptValidity.verifier'))),manifest.tagged_vk_sha256);
+assert.equal(pins.keys.acceptValidity.sha256,manifest.tagged_vk_sha256);
+assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
+const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
+const {WebSocket} = await load('ws'); assert.equal(typeof WebSocket, 'function'); globalThis.WebSocket = WebSocket;
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const rt = await load('@midnight-ntwrk/compact-runtime');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {createVerifierKey, SucceedEntirely} = await load('@midnight-ntwrk/midnight-js-types');
+const {parseCoinPublicKeyToHex} = await load('@midnight-ntwrk/midnight-js-utils');
+const {createUnprovenCallTx, submitTx} = await load('@midnight-ntwrk/midnight-js-contracts');
+const {indexerPublicDataProvider} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
+const {NodeZkConfigProvider} = await load('@midnight-ntwrk/midnight-js-node-zk-config-provider');
+const {httpClientProvingProvider} = await load('@midnight-ntwrk/midnight-js-http-client-proof-provider');
+const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
+const publicDataProvider = indexerPublicDataProvider(endpoints.indexer, endpoints.indexerWs);
+class Keys extends NodeZkConfigProvider {
+  async getVerifierKey(name) {
+    if (name !== 'acceptValidity') return super.getVerifierKey(name);
+    return createVerifierKey(readFileSync(join(key, 'acceptValidity.verifier')));
+  }
+}
+const keys = new Keys(resolve(keyed));
+const compiledContract = CompiledContract.make('SherlockRollupAnchor', mod.Contract).pipe(
+  CompiledContract.withVacantWitnesses, CompiledContract.withCompiledFileAssets(resolve(build)));
+const bound=bindBatch(JSON.parse(readFileSync(join(parent,'leaf.instance.json'))),
+  JSON.parse(readFileSync(join(parent,'parent.instance.json'))),manifest,rt);
+const {fields,id,batch,statement:stmt}=bound;
+const args=circuit==='acceptValidity'?[stmt]:[batch,fields];
+const json = x => JSON.stringify(x, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2) + '\n';
+const graphql = async query => {
+  const r = await fetch(endpoints.indexer, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({query})});
+  assert.ok(r.ok); const body=await r.json(); assert.ok(!body.errors, 'indexer query failed'); return body.data;
+};
+const child = (command, argv, input, env, log) => new Promise((ok, reject) => {
+  const p=spawn(command,argv,{env,stdio:['pipe','pipe','pipe']}); let stdout='',stderr='';
+  p.stdout.on('data',b=>{stdout+=b;});p.stderr.on('data',b=>{stderr+=b;});p.on('error',reject);
+  p.on('close',exit=>{writeFileSync(join(output,log),stderr); if(exit===0)ok(stdout);else reject(Error('child failed: '+log));});
+  p.stdin.end(input);
+});
+let session, currentState, parameters, expectedState, nativeProofPublic, nativeProofHash, proofCalls=0;
+let submissionStarted, submissionAcknowledged, finalizationObserved, provenFeesSpecks;
+const prepared = new Error('PREPARATION_ONLY'); let preparedComplete=false;
+const options = {compiledContract, contractAddress:pins.address, circuitId:circuit, args};
+const baseProver = httpClientProvingProvider(endpoints.proof,keys,{timeout:15*60_000});
+const proveProvider = {
+  check:(raw,location)=>baseProver.check(raw,location),
+  lookupKey:location=>baseProver.lookupKey(location),
+  prove:async(raw,location,binding)=>{
+    assert.equal(++proofCalls,1,'one contract proof per transaction');
+    assert.equal(location,`contract:${pins.address}/${circuit}?vk=${sha(currentState.operation(circuit).verifierKey)}`);
+    if(circuit==='settleValidity') {
+      if(!mode){preparedComplete=true;throw prepared;}
+      return baseProver.prove(raw,location,binding);
+    }
+    assert.equal(typeof binding,'bigint');
+    const log=await child('python3', ['-B','scripts/qa/measure-rollup.py',join(output,'native-proof.measurement.json'),'--',
+      resolve(process.env.ROLLUP_CALL_BINARY ?? 'target/release/examples/rollup_call'),
+       mode?'prove':'check',resolve(parent),resolve('crates/mori-recursion/tests/fixtures/rollup-template.json'),
+       resolve(key),join(output,'proof'),manifest.instance_id,resolve('target/sherlock-srs/bls_midnight_2p20')],
+      JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),
+      {...process.env,RAYON_NUM_THREADS:'4'},'native-prover-stderr.log');
+    writeFileSync(join(output,'native-prover-stdout.log'),log);
+    if(!mode){preparedComplete=true;throw prepared;}
+    nativeProofPublic=JSON.parse(readFileSync(join(output,'proof/terminal.public.json')));
+    nativeProofHash=sha(readFileSync(join(output,'proof/terminal.proof')));
+    assert.equal(nativeProofPublic[0],le(binding)); assert.equal(nativeProofPublic[11],le(stmt));assert.equal(nativeProofPublic[25],le(stmt));
+    return readFileSync(join(output,'proof/terminal.tagged-proof'));
+  },
+};
+const proofProvider={proveTx:tx=>tx.prove(proveProvider,parameters.transactionCostModel.runtimeCostModel)};
+try {
+  if(mode)session=await openStagenetSession(load,output);
+  const walletProvider=session?.walletProvider ?? {getCoinPublicKey:()=> '00'.repeat(32),getEncryptionPublicKey:()=> '00'.repeat(32)};
+  const source=await publicDataProvider.queryZSwapAndContractState(pins.address); assert.ok(source);
+  [,currentState,parameters]=source;
+  const before=anchorView(rt,mod,currentState);
+  assertPredecessor(before,bound);
+  assert.ok(!before.settled.member(stmt));
+  assert.equal(before.validity_ok.member(stmt),circuit==='settleValidity');
+  for(const name of ['acceptValidity','settleValidity'])assert.equal(sha(await keys.getVerifierKey(name)),sha(currentState.operation(name).verifierKey));
+  writeFileSync(join(output,'pre-state.bin'),currentState.serialize());
+  // Independent deterministic VM prediction of the complete contract state, including keys/CMA/balance.
+  const clone=rt.ContractState.deserialize(currentState.serialize());
+  const context=rt.createCircuitContext(circuit,pins.address,parseCoinPublicKeyToHex(walletProvider.getCoinPublicKey(),'stagenet'),clone,{});
+  const predicted=await new mod.Contract({}).provableCircuits[circuit](context,...args);
+  clone.data=predicted.context.callContext.currentQueryContext.state;
+  expectedState=Buffer.from(clone.serialize());
+  const providers={publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
+    ...(session?{privateStateProvider:session.privateStateProvider}:{}),midnightProvider:{submitTx:async tx=>{
+      // Bootstrap from the actual public deployment action; never persist or log transaction bodies.
+      const deployed=pins;
+      assert.equal(deployed.address,pins.address);
+      const data=await graphql(`{transactions(offset:{identifier:"${deployed.txId}"}){raw}}`);
+      const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(data.transactions[0].raw,'hex'));
+      const deployments=[...deploymentTx.intents.values()].flatMap(i=>i.actions).filter(a=>a instanceof ledger.ContractDeploy);
+      assert.equal(deployments.length,1); assert.equal(deployments[0].address,pins.address);
+      let local=ledger.LedgerState.blank('stagenet'); local.parameters=parameters;
+      const setup=ledger.Transaction.fromParts('stagenet',undefined,undefined,ledger.Intent.new(new Date(Date.now()+3600_000)).addDeploy(deployments[0])).eraseProofs();
+      const lax=Object.assign(new ledger.WellFormedStrictness(),{enforceBalancing:false,verifyNativeProofs:false,verifyContractProofs:false,enforceLimits:false,verifySignatures:false});
+      const secs=BigInt(Math.floor(Date.now()/1000)),block={secondsSinceEpoch:secs,secondsSinceEpochErr:30,parentBlockHash:'00'.repeat(32),lastBlockTime:secs-6n};
+      const [boot,result]=local.apply(setup.wellFormed(local,lax,new Date()),new ledger.TransactionContext(local,block));assert.equal(result.type,'success');
+      const nativeState=ledger.ContractState.deserialize(currentState.serialize());
+      local=boot.updateIndex(pins.address,nativeState.data,nativeState.balance);
+      const report=JSON.parse(await child(resolve(process.env.SHERLOCK_NATIVE_VALIDATOR ?? 'target/release/examples/validate_call'),[],
+        JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,'native-final-stderr.log'));
+      assert.equal(report.contractProofsSignaturesLimitsAccepted,true,report.contractProfileFailure);
+      assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
+      assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
+      if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
+      writeFileSync(join(output,'native-final-check.json'),json(report));
+      provenFeesSpecks=String(tx.fees(parameters));
+      writeFileSync(join(output,'submitted.json'),json({at:new Date().toISOString(),network:'stagenet',address:pins.address,circuit}),{flag:'wx',mode:0o600});
+      submissionStarted=performance.now();
+      const submitted=await session.walletProvider.submitTx(tx);
+      submissionAcknowledged=performance.now();
+      return submitted;
+    }}};
+  if(!mode){
+    try {const unproven=await createUnprovenCallTx(providers,options);await proofProvider.proveTx(unproven.private.unprovenTx);}
+    catch(error){if(!preparedComplete)throw error;}
+    assert.ok(preparedComplete);
+    writeFileSync(join(output,'preparation.json'),json({address:pins.address,circuit,stmt:le(stmt),
+      preStateSHA256:sha(currentState.serialize()),expectedPostStateSHA256:sha(expectedState),nativeVectorChecked:circuit==='acceptValidity',submitted:false}));
+    console.log('PASS current stagenet call preparation; no wallet, proof generation or submission');
+  } else {
+    const unproven=await createUnprovenCallTx(providers,options);
+    const result=await submitTx(providers,{unprovenTx:unproven.private.unprovenTx});assert.equal(result.status,SucceedEntirely);
+    finalizationObserved=performance.now();
+    const receipt={schema:'sherlock-rollup-stagenet-call/1',address:pins.address,circuit,txId:result.txId,txHash:result.txHash,
+      blockHeight:result.blockHeight,blockHash:result.blockHash,status:result.status,preStateSHA256:sha(currentState.serialize()),
+      expectedPostStateSHA256:sha(expectedState),stmt:le(stmt),network:'stagenet',batch:String(batch),keys:pins.keys,
+      blockTimestamp:result.blockTimestamp,fees:result.fees,provenFeesSpecks,
+      timing:{submissionAckSeconds:(submissionAcknowledged-submissionStarted)/1000,
+        finalizationObservedSeconds:(finalizationObserved-submissionStarted)/1000,
+        finalizationScope:'host time from RPC submission start through SDK finalized transaction observation',
+        validatorCryptographicVerificationSeconds:null,validatorTimingEvidence:'unavailable'}};
+    writeFileSync(join(output,'receipt.json'),json(receipt));
+    const readbackStarted=performance.now();
+    const indexed=await graphql(`{contractAction(address:"${pins.address}",offset:{transactionOffset:{hash:"${result.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}}}`);
+    assert.equal(indexed.contractAction.__typename,'ContractCall');assert.equal(indexed.contractAction.transaction.hash,result.txHash);
+    const post=Buffer.from(indexed.contractAction.state,'hex');assert.deepEqual(post,expectedState,'complete contract effect readback');
+    const after=anchorView(rt,mod,rt.ContractState.deserialize(post));
+    if(circuit==='settleValidity')assertSettled(after,bound);
+    else {assertPredecessor(after,bound);assert.ok(after.validity_ok.member(stmt));assert.ok(!after.settled.member(stmt));}
+    writeFileSync(join(output,'post-state.bin'),post);writeFileSync(join(output,'indexed-call.json'),json(indexed));
+    receipt.timing.readbackSeconds=(performance.now()-readbackStarted)/1000;
+    receipt.timing.submissionToReadbackSeconds=(performance.now()-submissionStarted)/1000;
+    receipt.completeEffectsMatch=true;receipt.postStateSHA256=sha(post);
+    receipt.localCryptographicVerification=circuit==='acceptValidity'
+      ? JSON.parse(readFileSync(join(output,'proof/proof.json'))).local_verify_seconds : null;
+    receipt.localVerificationScope='isolated stock host proof verification; not validator execution time';
+    writeFileSync(join(output,'receipt.json'),json(receipt));
+    console.log(json(receipt));
+  }
+} finally {if(session)await session.close();}

@@ -121,6 +121,7 @@ const wallet = await WalletFacade.init({configuration: {...config,
   unshielded: cfg => UnshieldedWallet(cfg).startWithPublicKey(PublicKey.fromKeyStore(keystore)),
   dust: cfg => DustWallet(cfg).startWithSecretKey(dustSecretKey, ledgerLib.LedgerParameters.initialParameters().dust)});
 const started = performance.now();
+let submissionStarted, submissionAcknowledged;
 try {
   await wallet.start(shieldedSecretKeys, dustSecretKey);
   console.log('Syncing stagenet wallet');
@@ -132,10 +133,13 @@ try {
     getEncryptionPublicKey: () => shieldedSecretKeys.encryptionPublicKey,
     balanceTx: async (tx, ttl = ttlOneHour()) => wallet.finalizeRecipe(
       await wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys, dustSecretKey}, {ttl})),
-    submitTx: tx => {
+    submitTx: async tx => {
       writeFileSync(join(output, 'submitted.json'), JSON.stringify({at: new Date().toISOString(),
         network: 'stagenet', purpose: 'deploy synthetic Sherlock rollup verifier'}) + '\n', {flag: 'wx', mode: 0o600});
-      return wallet.submitTransaction(tx);
+      submissionStarted = performance.now();
+      const submitted = await wallet.submitTransaction(tx);
+      submissionAcknowledged = performance.now();
+      return submitted;
     },
   };
   const providers = {zkConfigProvider, walletProvider, midnightProvider: walletProvider,
@@ -147,15 +151,27 @@ try {
       accountId: String(keystore.getBech32Address())})};
   console.log('Deploying synthetic Sherlock rollup verifier');
   const deployed = await deployContract(providers, options);
+  const finalizationObserved = performance.now();
   const p = deployed.deployTxData.public;
   // Save only explicit public fields. Never serialize the SDK deployment result.
   const receipt = {schema: 'sherlock-rollup-stagenet-deployment/1', network: 'stagenet', address: p.contractAddress,
-    txId: p.txId, blockHeight: p.blockHeight, deployedAt: new Date().toISOString(),
-    wallSeconds: (performance.now() - started) / 1000, sourceSHA256: expected.sourceSHA256, keys: expected.keys};
+    txId: p.txId, txHash: p.txHash, blockHeight: p.blockHeight, blockHash: p.blockHash,
+    fees: p.fees, status: p.status, deployedAt: new Date().toISOString(),
+    wallSeconds: (performance.now() - started) / 1000, sourceSHA256: expected.sourceSHA256, keys: expected.keys,
+    timing: {submissionAckSeconds: (submissionAcknowledged - submissionStarted) / 1000,
+      finalizationObservedSeconds: (finalizationObserved - submissionStarted) / 1000,
+      finalizationScope: 'host RPC submission start through SDK finalized deployment observation',
+      validatorCryptographicVerificationSeconds: null, validatorTimingEvidence: 'unavailable'}};
   writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
+  const readbackStarted = performance.now();
   const state = await providers.publicDataProvider.queryContractState(p.contractAddress);
   assert.ok(state); checkState(state);
   writeFileSync(join(output, 'contract-state.bin'), state.serialize());
+  receipt.timing.readbackSeconds = (performance.now() - readbackStarted) / 1000;
+  receipt.timing.submissionToReadbackSeconds = (performance.now() - submissionStarted) / 1000;
+  receipt.completeEffectsMatch = true;
+  receipt.postStateSHA256 = sha(state.serialize());
+  writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify({...receipt, readback: 'all fields and both keys match'}));
 } finally { await wallet.stop(); }
 process.exit(0);

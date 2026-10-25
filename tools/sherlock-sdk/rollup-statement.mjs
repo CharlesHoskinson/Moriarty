@@ -30,3 +30,12 @@ export function assertPredecessor(view, {fields, id, batch}) {
     height: fields[15] - 1n, batch_no: batch - 1n, dep_consumed: fields[5], dep_acc: fields[7]}))
     assert.equal(view[name], value, `anchor predecessor ${name}`);
 }
+export function assertSettled(view, {fields, id, batch, statement}) {
+  const expected = {instance_id: id, root: fields[1], height: fields[16], batch_no: batch,
+    dep_consumed: fields[6], dep_acc: fields[8], last_in_root: fields[4], last_fee_sum: fields[9],
+    last_wd_sum_usd: fields[10], last_wd_sum_night: fields[11],
+    last_dep_sum_usd: fields[12], last_dep_sum_night: fields[13]};
+  for (const [name, value] of Object.entries(expected)) assert.equal(view[name], value, `settled ${name}`);
+  assert.ok(view.settled.member(statement), 'missing settlement');
+  assert.ok(!view.validity_ok.member(statement), 'accepted statement was not consumed');
+}

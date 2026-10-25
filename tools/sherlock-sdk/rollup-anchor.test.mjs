@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
-import {anchorView, bindBatch, assertPredecessor} from './rollup-statement.mjs';
+import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
 
 const sdk = process.env.SHERLOCK_SDK_ROOT;
 assert.ok(sdk, 'SHERLOCK_SDK_ROOT must identify the pinned SDK package directory');
@@ -82,6 +82,9 @@ test('accept then settle advances the complete synthetic anchor observation', as
   assert.equal(state.last_dep_sum_night, fields[13]);
   assert.ok(state.settled.member(stmt));
   assert.ok(!state.validity_ok.member(stmt));
+  assertSettled(state, {fields, id: 1n, batch: 1n, statement: stmt});
+  assert.throws(() => assertSettled({...state, dep_acc: state.dep_acc + 1n},
+    {fields, id: 1n, batch: 1n, statement: stmt}), /settled dep_acc/);
   await assert.rejects(call(session, 'acceptValidity', stmt), /replay/);
   await assert.rejects(call(session, 'settleValidity', 1n, fields), /batch/);
 });

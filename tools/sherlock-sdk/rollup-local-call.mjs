@@ -88,7 +88,10 @@ const provider = {
       resolve(output, 'proof'), manifest.instance_id, resolve('target/sherlock-srs/bls_midnight_2p20')];
     const env = {...process.env, RAYON_NUM_THREADS: '4'};
     await new Promise((ok, reject) => {
-      const child = spawn(resolve('target/release/examples/rollup_call'), args, {env, stdio: ['pipe', 'pipe', 'pipe']});
+      const child = spawn('python3', ['-B', 'scripts/qa/measure-rollup.py',
+        join(output, 'native-proof.measurement.json'), '--',
+        resolve(process.env.ROLLUP_CALL_BINARY ?? 'target/release/examples/rollup_call'), ...args],
+        {env, stdio: ['pipe', 'pipe', 'pipe']});
       let logs = '';
       child.stdout.on('data', b => { logs += b; }); child.stderr.on('data', b => { logs += b; });
       child.on('error', reject);
@@ -116,7 +119,7 @@ const nativeCheck = async proven => {
     transaction: Buffer.from(proven.serialize()).toString('hex'),
     block_seconds: Number(blockContext.secondsSinceEpoch)});
   return new Promise((ok, reject) => {
-    const child = spawn(resolve('target/release/examples/validate_call'), [], {stdio: ['pipe','pipe','pipe']});
+    const child = spawn(resolve(process.env.SHERLOCK_NATIVE_VALIDATOR ?? 'target/release/examples/validate_call'), [], {stdio: ['pipe','pipe','pipe']});
     let stdout = '', stderr = '';
     child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
     child.on('error', reject);
