@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {anchorView, bindBatch} from './rollup-statement.mjs';
+import {pinnedRollupKeys} from './rollup-keys.mjs';
 
 const [sdk, build, b3, key, settle, output] = process.argv.slice(2);
 assert.ok(output, 'SDK_ROOT BUILD B3_DIR KEY_DIR SETTLE_KEY OUTPUT required');
@@ -14,6 +15,8 @@ const require = createRequire(resolve(sdk, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
 const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
 const {ZKConfigProvider, createVerifierKey} = await load('@midnight-ntwrk/midnight-js-types');
+const types = await load('@midnight-ntwrk/midnight-js-types');
+const {ZkArtifactIntegrityError} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenDeployTx} = await load('@midnight-ntwrk/midnight-js-contracts');
 const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
 const runtime = await load('@midnight-ntwrk/compact-runtime');
@@ -32,6 +35,16 @@ const keys = Object.fromEntries(Object.entries(paths).map(([entry, path]) => {
   const raw = readFileSync(path);
   return [entry, {path, bytes: raw.length, sha256: sha(raw)}];
 }));
+const artifact = path => {
+  path = resolve(path); const raw = readFileSync(path);
+  return {path, bytes: raw.length, sha256: sha(raw)};
+};
+const provingArtifacts = Object.fromEntries(['acceptValidity', 'settleValidity'].map(name => [name, {
+  prover: artifact(join(build, `keys/${name}.prover`)), ir: artifact(join(build, `zkir/${name}.bzkir`)),
+}]));
+// Exercise the same real SDK provider used for submission after manual compile.
+const pinned = pinnedRollupKeys(types, ZkArtifactIntegrityError, {keys, provingArtifacts});
+for (const name of ['acceptValidity', 'settleValidity']) await pinned.get(name);
 assert.equal(keys.acceptValidity.sha256, manifest.tagged_vk_sha256);
 class ExactKeys extends ZKConfigProvider {
   async getVerifierKey(name) {
@@ -62,7 +75,7 @@ writeFileSync(join(output, 'contract-state.bin'), state.serialize(), {flag: 'wx'
 writeFileSync(join(output, 'preparation.json'), JSON.stringify({
   schema: 'sherlock-rollup-deployment-preparation/1',
   sourceSHA256: sha(readFileSync(new URL('./rollup-anchor.compact', import.meta.url))),
-  constructor: constructor.map(String), keys, all12FieldsEqual: true, setsEmpty: true,
+  constructor: constructor.map(String), keys, provingArtifacts, all12FieldsEqual: true, setsEmpty: true,
   stateSHA256: sha(state.serialize()), submitted: false,
 }, null, 2) + '\n', {flag: 'wx'});
 console.log('PASS offline rollup deployment: twelve fields, both empty sets and exact verifier keys');

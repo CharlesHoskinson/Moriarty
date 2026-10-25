@@ -158,6 +158,7 @@ try {
     txId: p.txId, txHash: p.txHash, blockHeight: p.blockHeight, blockHash: p.blockHash,
     fees: p.fees, status: p.status, deployedAt: new Date().toISOString(),
     wallSeconds: (performance.now() - started) / 1000, sourceSHA256: expected.sourceSHA256, keys: expected.keys,
+    provingArtifacts: expected.provingArtifacts,
     timing: {submissionAckSeconds: (submissionAcknowledged - submissionStarted) / 1000,
       finalizationObservedSeconds: (finalizationObserved - submissionStarted) / 1000,
       finalizationScope: 'host RPC submission start through SDK finalized deployment observation',

@@ -9,6 +9,7 @@ unset SHERLOCK_PROVER_ID
 sdk="${MORIARTY_SDK_ROOT:-$HOME/.midnight/stagenet-wallet}"
 compiler="${COMPACT_TOOLCHAIN:-$HOME/.compact/versions/0.34.0/x86_64-unknown-linux-musl}"
 srs="${MORIARTY_PARENT_SRS:-$PWD/target/sherlock-srs/bls_midnight_2p20}"
+export MORIARTY_PARENT_SRS="$srs"
 b3="$(python3 -B - <<'PY'
 import importlib.util, json
 spec=importlib.util.spec_from_file_location('e','scripts/qa/check-rollup-evidence.py')
@@ -51,6 +52,8 @@ PY
 )"
 python3 -B scripts/qa/measure-rollup.py "$run_dir/decider-keygen.measurement.json" -- \
   "$ROLLUP_CALL_BINARY" prepare "$b3" "$run_dir/template.json" "$run_dir/key" "$run_dir/key-output" "$id" "$srs"
+cmp "$run_dir/key/decider.vk" "$b3/decider.vk"
+cmp "$run_dir/key/decider.relation" "$b3/decider.relation"
 node tools/sherlock-sdk/rollup-prepare.mjs "$sdk" "$run_dir/build" "$b3" "$run_dir/key" \
   "$run_dir/build/keys/settleValidity.verifier" "$run_dir/deployment"
 node tools/sherlock-sdk/rollup-local-call.mjs "$sdk" "$run_dir/build" "$run_dir/build" \
@@ -69,7 +72,7 @@ doc={'schema':'sherlock-b4-local-preparation/1','b3':sys.argv[2],'sdk':sys.argv[
      'build':str(root/'build'),'key':str(root/'key'),'deployment_preparation':str(root/'deployment/preparation.json'),
      'rollup_call_binary':str(root/'rollup_call.bin'),'native_validator':str(root/'validate_call.bin'),
      'rollup_call_sha256':digest(root/'rollup_call.bin'),'native_validator_sha256':digest(root/'validate_call.bin'),
-     'local':positive,'submitted':False}
+     'decider_key_bytes_match_b3':True,'local':positive,'submitted':False}
 (root/'ready.json').write_text(json.dumps(doc,indent=2,sort_keys=True)+'\n')
 print('PASS B4 offline full V3/SDK/native call preparation:',root/'ready.json')
 PY

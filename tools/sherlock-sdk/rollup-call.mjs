@@ -10,6 +10,7 @@ import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
 import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
+import {pinnedRollupKeys} from './rollup-keys.mjs';
 const [sdkRoot, build, keyed, parent, key, deploymentReceipt, outputArg, circuit, mode] = process.argv.slice(2);
 assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
 assert.ok(mode === undefined || mode === '--submit');
@@ -36,21 +37,19 @@ const {WebSocket} = await load('ws'); assert.equal(typeof WebSocket, 'function')
 const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
-const {createVerifierKey, SucceedEntirely} = await load('@midnight-ntwrk/midnight-js-types');
-const {parseCoinPublicKeyToHex} = await load('@midnight-ntwrk/midnight-js-utils');
+const types = await load('@midnight-ntwrk/midnight-js-types');
+const {SucceedEntirely} = types;
+const {parseCoinPublicKeyToHex, ZkArtifactIntegrityError} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenCallTx, submitTx} = await load('@midnight-ntwrk/midnight-js-contracts');
 const {indexerPublicDataProvider} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
-const {NodeZkConfigProvider} = await load('@midnight-ntwrk/midnight-js-node-zk-config-provider');
 const {httpClientProvingProvider} = await load('@midnight-ntwrk/midnight-js-http-client-proof-provider');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const publicDataProvider = indexerPublicDataProvider(endpoints.indexer, endpoints.indexerWs);
-class Keys extends NodeZkConfigProvider {
-  async getVerifierKey(name) {
-    if (name !== 'acceptValidity') return super.getVerifierKey(name);
-    return createVerifierKey(readFileSync(join(key, 'acceptValidity.verifier')));
-  }
+for (const name of ['acceptValidity', 'settleValidity']) {
+  assert.equal(resolve(pins.provingArtifacts[name].prover.path), resolve(keyed, `keys/${name}.prover`));
+  assert.equal(resolve(pins.provingArtifacts[name].ir.path), resolve(keyed, `zkir/${name}.bzkir`));
 }
-const keys = new Keys(resolve(keyed));
+const keys = pinnedRollupKeys(types, ZkArtifactIntegrityError, pins);
 const compiledContract = CompiledContract.make('SherlockRollupAnchor', mod.Contract).pipe(
   CompiledContract.withVacantWitnesses, CompiledContract.withCompiledFileAssets(resolve(build)));
 const bound=bindBatch(JSON.parse(readFileSync(join(parent,'leaf.instance.json'))),
@@ -87,7 +86,7 @@ const proveProvider = {
     const log=await child('python3', ['-B','scripts/qa/measure-rollup.py',join(output,'native-proof.measurement.json'),'--',
       resolve(process.env.ROLLUP_CALL_BINARY ?? 'target/release/examples/rollup_call'),
        mode?'prove':'check',resolve(parent),resolve('crates/mori-recursion/tests/fixtures/rollup-template.json'),
-       resolve(key),join(output,'proof'),manifest.instance_id,resolve('target/sherlock-srs/bls_midnight_2p20')],
+       resolve(key),join(output,'proof'),manifest.instance_id,resolve(process.env.MORIARTY_PARENT_SRS ?? 'target/sherlock-srs/bls_midnight_2p20')],
       JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),
       {...process.env,RAYON_NUM_THREADS:'4'},'native-prover-stderr.log');
     writeFileSync(join(output,'native-prover-stdout.log'),log);
@@ -135,10 +134,13 @@ try {
       const report=JSON.parse(await child(resolve(process.env.SHERLOCK_NATIVE_VALIDATOR ?? 'target/release/examples/validate_call'),[],
         JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,'native-final-stderr.log'));
       assert.equal(report.contractProofsSignaturesLimitsAccepted,true,report.contractProfileFailure);
+      assert.equal(report.applied,true,'native execution against the predicted snapshot');
       assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
       assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
       if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
       writeFileSync(join(output,'native-final-check.json'),json(report));
+      const latest=await publicDataProvider.queryContractState(pins.address);assert.ok(latest);
+      assert.equal(sha(latest.serialize()),sha(currentState.serialize()),'contract state changed since prediction');
       provenFeesSpecks=String(tx.fees(parameters));
       writeFileSync(join(output,'submitted.json'),json({at:new Date().toISOString(),network:'stagenet',address:pins.address,circuit}),{flag:'wx',mode:0o600});
       submissionStarted=performance.now();

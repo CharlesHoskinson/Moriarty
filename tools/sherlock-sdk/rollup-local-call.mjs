@@ -85,7 +85,8 @@ const provider = {
     const input = JSON.stringify({binding_input: le(binding), preimage: Buffer.from(raw).toString('hex')});
     const args = [proving ? 'prove' : 'check', resolve(parent),
       resolve('crates/mori-recursion/tests/fixtures/rollup-template.json'), resolve(key),
-      resolve(output, 'proof'), manifest.instance_id, resolve('target/sherlock-srs/bls_midnight_2p20')];
+      resolve(output, 'proof'), manifest.instance_id,
+      resolve(process.env.MORIARTY_PARENT_SRS ?? 'target/sherlock-srs/bls_midnight_2p20')];
     const env = {...process.env, RAYON_NUM_THREADS: '4'};
     await new Promise((ok, reject) => {
       const child = spawn('python3', ['-B', 'scripts/qa/measure-rollup.py',
