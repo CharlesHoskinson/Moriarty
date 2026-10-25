@@ -2,7 +2,7 @@
 use midnight_base_crypto::{hash::HashOutput, time::Timestamp};
 use midnight_ledger::{
     semantics::{TransactionContext, TransactionResult},
-    structure::{LedgerState, ProofMarker, Signature, Transaction},
+    structure::{ContractAction, LedgerState, ProofMarker, ProofVersioned, Signature, Transaction},
     verify::WellFormedStrictness,
 };
 use midnight_onchain_runtime::context::BlockContext;
@@ -52,6 +52,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     if encode(&state) != state_raw || encode(&tx) != tx_raw {
         return Err("noncanonical input".into());
     }
+    let Transaction::Standard(standard) = &tx else {
+        return Err("expected standard call transaction".into());
+    };
+    let mut calls = Vec::new();
+    for entry in standard.intents.iter() {
+        let intent = &entry.1;
+        for index in 0..intent.actions.len() {
+            let ContractAction::Call(call) = intent.actions.get(index).ok_or("missing action")?
+            else {
+                return Err("non-call contract action".into());
+            };
+            let (version, proof) = match &call.proof {
+                ProofVersioned::V2(p) => ("V2", p),
+                ProofVersioned::V3(p) => ("V3", p),
+                _ => return Err("unsupported proof version".into()),
+            };
+            calls.push(serde_json::json!({"address":hex::encode(call.address.0.0),
+                "entryPoint":String::from_utf8_lossy(&call.entry_point.0), "proofVersion":version,
+                "proofSHA256":hex::encode(Sha256::digest(&proof.0)),
+                "publicInputs":call.public_inputs(intent.binding_commitment.clone().into()).iter()
+                    .map(|f| hex::encode(f.as_le_bytes())).collect::<Vec<_>>()}));
+        }
+    }
+    if calls.len() != 1 {
+        return Err("expected exactly one contract call".into());
+    }
     let tblock = Timestamp::from_secs(input.block_seconds);
     let mut strict = WellFormedStrictness::default();
     strict.enforce_balancing = false;
@@ -87,7 +113,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
         "{}",
         serde_json::json!({"schema":"sherlock-native-ledger-validation/1",
-        "proofVerification":"native/proof-verifying", "transactionSHA256":hex::encode(Sha256::digest(&tx_raw)),
+        "proofVerification":"native/proof-verifying", "contractCalls":calls, "transactionSHA256":hex::encode(Sha256::digest(&tx_raw)),
         "contractProofsSignaturesLimitsAccepted":accepted, "contractProfileFailure":reason,
         "applied":applied, "postStateSHA256":post_sha256,
         "allOn":all_on.is_ok(), "allOnFailure":all_on.err().map(|e| e.to_string())})
