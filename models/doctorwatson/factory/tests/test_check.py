@@ -51,10 +51,24 @@ class CheckTests(FakeRepo):
         self.assertFalse(os.path.exists(self.p("ran-a3")))
         self.assertFalse(self.status()["predicates"]["A2"]["passes"])
 
-    def test_explicit_id_bypasses_block(self):
+    def test_explicit_id_is_still_blocked(self):
+        # naming a predicate must not bypass its depends gate (it printed a false C2 PASS)
         import os
-        self.predicates(yaml_of(pred("A1", check="exit 1"), pred("A2", depends=["A1"], check="touch ran-a2")))
-        r = self.run_cli("check", "A2")
+        self.predicates(yaml_of(pred("U1", set="U", check="exit 1"),
+                                pred("C2", set="C", depends=["U1"], check="touch ran-c2")))
+        r = self.run_cli("check", "C2")
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("C2: BLOCKED-BY U1", r.stdout)
+        self.assertNotIn("C2: PASS", r.stdout)
+        self.assertFalse(os.path.exists(self.p("ran-c2")))
+        st = self.status()["predicates"]["C2"]
+        self.assertFalse(st["passes"])
+        self.assertEqual(st.get("blockedBy"), "U1")
+
+    def test_explicit_ids_run_dependency_first(self):
+        import os
+        self.predicates(yaml_of(pred("A1"), pred("A2", depends=["A1"], check="touch ran-a2")))
+        r = self.run_cli("check", "A2", "A1")  # topo order: A1 passes in this run, then A2 runs
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertTrue(os.path.exists(self.p("ran-a2")))
 

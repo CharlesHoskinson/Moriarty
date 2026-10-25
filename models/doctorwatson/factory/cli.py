@@ -79,7 +79,6 @@ def cmd_check(args):
     selected = _select(preds, args)
     if selected is None:
         return 2
-    explicit = set(args.ids or [])
     prev_status = bus.snapshot(repo)  # bus hook input only
     prior = status.entries_of(status.load(repo))
     passing = {p.id: (prior.get(p.id) or {}).get("passes") is True for p in preds}
@@ -88,7 +87,7 @@ def cmd_check(args):
     all_pass = True
     for p in selected:
         blockers = [d for d in p.depends if not passing.get(d)]
-        if blockers and p.id not in explicit:
+        if blockers:  # applies to explicitly named ids too: never record a pass past a failing dependency
             print(f"{p.id}: BLOCKED-BY {blockers[0]}")
             passing[p.id] = False
             all_pass = False
