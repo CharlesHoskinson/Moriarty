@@ -4432,6 +4432,7 @@ pub fn owner_check_step_inv(
     a: &Admitted,
     img: &MachineImage,
     check_view: &dyn Fn(&ProgramView, &BoundsC, &LayoutSchemaC) -> Result<(), ProgramViewViolation>,
+    selected_profile: u8,
 ) -> Result<(), Vec<StepInvViolation>> {
     if !std::sync::Arc::ptr_eq(&a.body, &img.admission.body) {
         return Err(vec![siv(
@@ -4487,7 +4488,10 @@ pub fn owner_check_step_inv(
         });
     // SI-01 identity profile/domain/finance.
     let profile = a.body.identity.profile_id;
-    let profile_ok = profile == PROFILE_ID_MICROSTEP_1 || profile == PROFILE_ID_MICROSTEP_2;
+    // SI-01 pins the engine's selected profile: /1 refuses /2 images and
+    // /2 refuses /1 images (suspension design note §9).
+    let profile_ok = profile == selected_profile
+        && (profile == PROFILE_ID_MICROSTEP_1 || profile == PROFILE_ID_MICROSTEP_2);
     let si01_ok = if has_ext {
         profile_ok
     } else {
@@ -5107,6 +5111,8 @@ pub struct CheckedOwnerEngine<F> {
     families: F,
     guards: OwnerGuards,
     prepare: PrepareDeps,
+    /// Selected execution profile id (SI-01 pin, suspension design note §9).
+    profile: u8,
 }
 impl<F> CheckedOwnerEngine<F> {
     pub(super) fn new_reviewed(families: F, prepare: PrepareDeps) -> Self {
@@ -5114,6 +5120,33 @@ impl<F> CheckedOwnerEngine<F> {
             families,
             guards: OwnerGuards::new_owner(),
             prepare,
+            profile: PROFILE_ID_MICROSTEP_1,
+        }
+    }
+    /// Select profile `/2` (`PROFILE_ID_MICROSTEP_2`) for admission, stepping
+    /// and step invariants. Every other engine keeps `/1`.
+    pub(super) fn with_profile2(mut self) -> Self {
+        self.profile = PROFILE_ID_MICROSTEP_2;
+        self
+    }
+    /// Admissions are produced with the `/1` id by the shared preparers;
+    /// a `/2` engine records its own id on the fresh, solely owned body.
+    fn record_profile(&self, mut a: Admitted) -> Admitted {
+        if let Some(body) = std::sync::Arc::get_mut(&mut a.body) {
+            body.identity.profile_id = self.profile;
+        }
+        a
+    }
+    fn require_profile(&self, a: &Admitted) -> Result<(), HostViolation> {
+        if a.body.identity.profile_id == self.profile {
+            Ok(())
+        } else {
+            Err(hv(
+                HostViolationKind::StepInvViolated,
+                None,
+                None,
+                "admission profile is not the selected profile",
+            ))
         }
     }
     pub(super) fn checked_guards(&self) -> &OwnerGuards {
@@ -5145,7 +5178,7 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
         (self.prepare.check_program_view)(v, b, l)
     }
     fn admit(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC) -> Result<Admitted, Tooling> {
-        (self.prepare.admit)(p, b, l)
+        (self.prepare.admit)(p, b, l).map(|a| self.record_profile(a))
     }
     fn admit_run(
         &self,
@@ -5162,7 +5195,7 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
         b: &BoundsC,
         l: &LayoutSchemaC,
     ) -> Result<Admitted, Tooling> {
-        (self.prepare.admit_fin)(prepared, b, l)
+        (self.prepare.admit_fin)(prepared, b, l).map(|a| self.record_profile(a))
     }
     fn admit_fin_run(
         &self,
@@ -5192,6 +5225,7 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
         owner_family_of(rule)
     }
     fn step(&self, a: &Admitted, img: &mut MachineImage) -> Result<StepResult, HostViolation> {
+        self.require_profile(a)?;
         owner_step(a, img, &self.families, &self.guards)
     }
     fn run(
@@ -5200,10 +5234,16 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
         img: &mut MachineImage,
         sink: &mut dyn FnMut(&StepEventC),
     ) -> Result<RunSummary, HostViolation> {
+        self.require_profile(a)?;
         owner_run(a, img, &self.families, &self.guards, sink)
     }
     fn check_step_inv(&self, pre: &PreImage<'_>) -> Result<(), Vec<StepInvViolation>> {
-        owner_check_step_inv(pre.admitted, pre.img, &self.prepare.check_program_view)
+        owner_check_step_inv(
+            pre.admitted,
+            pre.img,
+            &self.prepare.check_program_view,
+            self.profile,
+        )
     }
 }
 

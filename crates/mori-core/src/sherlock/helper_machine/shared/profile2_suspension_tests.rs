@@ -82,9 +82,25 @@ fn suspend(img: &mut super::MachineImage, site: u16) {
     };
 }
 
+/// Step invariants checked by the engine selected for the image's own
+/// profile (the /2 engine for profile 3, the /1 engine otherwise).
 fn clauses(a: &super::Admitted, img: &super::MachineImage) -> Vec<StepInvClauseId> {
+    let profile = a.body.identity.profile_id;
+    clauses_under(a, img, profile)
+}
+
+fn clauses_under(
+    a: &super::Admitted,
+    img: &super::MachineImage,
+    selected: u8,
+) -> Vec<StepInvClauseId> {
     let pre = PreImage::bind(a, img).expect("bind");
-    match super::owner_host::host_owner_engine().check_step_inv(&pre) {
+    let got = if selected == PROFILE_ID_MICROSTEP_2 {
+        super::owner_host::host_owner_engine_profile2().check_step_inv(&pre)
+    } else {
+        super::owner_host::host_owner_engine().check_step_inv(&pre)
+    };
+    match got {
         Ok(()) => Vec::new(),
         Err(v) => v.into_iter().map(|x| x.clause).collect(),
     }
@@ -103,9 +119,10 @@ fn genesis_images_pass_step_invariants_under_both_profiles() {
         let (a, img) = image(profile);
         assert_eq!(clauses(&a, &img), Vec::new(), "profile {profile}");
     }
-    // Any other profile id is refused by SI-01.
+    // Any other profile id is refused by SI-01 under either engine.
     let (a, img) = image(4);
-    assert!(clauses(&a, &img).contains(&StepInvClauseId::SI01));
+    assert!(clauses_under(&a, &img, PROFILE_ID_MICROSTEP_1).contains(&StepInvClauseId::SI01));
+    assert!(clauses_under(&a, &img, PROFILE_ID_MICROSTEP_2).contains(&StepInvClauseId::SI01));
 }
 
 #[test]
@@ -195,4 +212,66 @@ fn waiting_image_is_not_steppable_and_unchanged() {
     // And select refuses Await control rather than inventing a site.
     let pre = PreImage::bind(&a, &img).expect("bind");
     assert!(engine.select(&pre).is_err());
+}
+
+#[test]
+fn each_engine_admits_only_its_selected_profile() {
+    // SI-01 is pinned to the engine's selected profile (design note §9):
+    // the /1 engine refuses a /2 image and the /2 engine refuses a /1 image.
+    let (a2, img2) = image(PROFILE_ID_MICROSTEP_2);
+    assert!(clauses_under(&a2, &img2, PROFILE_ID_MICROSTEP_1).contains(&StepInvClauseId::SI01));
+    assert_eq!(
+        clauses_under(&a2, &img2, PROFILE_ID_MICROSTEP_2),
+        Vec::new()
+    );
+    let (a1, img1) = image(PROFILE_ID_MICROSTEP_1);
+    assert!(clauses_under(&a1, &img1, PROFILE_ID_MICROSTEP_2).contains(&StepInvClauseId::SI01));
+    assert_eq!(
+        clauses_under(&a1, &img1, PROFILE_ID_MICROSTEP_1),
+        Vec::new()
+    );
+}
+
+#[test]
+fn each_engine_steps_only_its_selected_profile() {
+    let (mut a2, mut img2) = image(PROFILE_ID_MICROSTEP_2);
+    assert!(
+        super::owner_host::host_owner_engine()
+            .step(&a2, &mut img2)
+            .is_err()
+    );
+    let (a1, mut img1) = image(PROFILE_ID_MICROSTEP_1);
+    assert!(
+        super::owner_host::host_owner_engine_profile2()
+            .step(&a1, &mut img1)
+            .is_err()
+    );
+    // The matching engine steps the genesis image.
+    assert!(
+        super::owner_host::host_owner_engine_profile2()
+            .step(&a2, &mut img2)
+            .is_ok()
+    );
+    let _ = &mut a2;
+}
+
+#[test]
+fn profile2_engine_admission_records_profile_3() {
+    let program = CoreProgram {
+        functions: Vec::new(),
+        entry: CoreExpr::Literal {
+            value: CoreValue::UInt {
+                n: super::i128_class::KIntC::InRange(7),
+            },
+        },
+    };
+    let b = bounds();
+    let a = super::owner_host::host_owner_engine_profile2()
+        .admit(&program, &b, &layout(b))
+        .expect("admission");
+    assert_eq!(a.body.identity.profile_id, PROFILE_ID_MICROSTEP_2);
+    let a1 = super::owner_host::host_owner_engine()
+        .admit(&program, &b, &layout(b))
+        .expect("admission");
+    assert_eq!(a1.body.identity.profile_id, PROFILE_ID_MICROSTEP_1);
 }

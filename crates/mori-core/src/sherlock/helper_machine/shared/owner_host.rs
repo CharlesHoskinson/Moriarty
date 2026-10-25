@@ -60,6 +60,23 @@ pub fn host_owner_engine() -> impl OwnerEngine {
     )
 }
 
+/// The `sherlock-helper-microstep/2` owner engine: same preparers and
+/// families as [`host_owner_engine`], with profile id 3 selected.
+pub fn host_owner_engine_profile2() -> impl OwnerEngine {
+    CheckedOwnerEngine::new_reviewed(
+        HostFamilyPlans,
+        PrepareDeps {
+            prepare_core: owner_prepare::prepare_core,
+            check_program_view: owner_prepare::check_program_view,
+            admit: owner_prepare::admit,
+            admit_run: owner_prepare::admit_run,
+            admit_fin: owner_prepare::admit_fin,
+            admit_fin_run: owner_prepare::admit_fin_run,
+        },
+    )
+    .with_profile2()
+}
+
 pub fn host_owner_engine_with_word_layout(
     layout: crate::sherlock_word_lowering::WordLayout,
 ) -> impl OwnerEngine {
