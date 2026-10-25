@@ -71,7 +71,7 @@ def manifest():
     body = dict(referenceDefinitionId='stepReference', profileId=PROFILE, layoutVersion=LAYOUT,
                 operations=ops)
     return dict(manifestId=digest(body), **body,
-                typedOperations=[o[0] for o in STEP],
+                typedOperations=[dict(operationId=o[0], domain=o[1]) for o in STEP],
                 orderedInputs=['pre_image', 'program_image', 'fuel'],
                 orderedOutputs=['next_image', 'outcome'],
                 sourceMembership='reference-step', componentMembership=sorted({o[3] for o in STEP if o[3]}),
@@ -107,7 +107,8 @@ def prepare(backend_id='structured-witness-basic'):
                       omissions=[u['operationId'] for u in unsup_c])
     wplan_body = dict(operationManifestId=man['manifestId'], layoutVersion=LAYOUT,
                       inputBindings=['pre_image', 'program_image', 'fuel'],
-                      nodes=[dict(nodeId=f'n{i}', operationId=o[0], dependencies=[f'n{i-1}'] if i else [])
+                      nodes=[dict(nodeId=f'n{i}', operationId=o[0], typedInputs=[dict(name='in', type=o[1])],
+                             typedOutputs=[dict(name='out', type=o[1])], dependencies=[f'n{i-1}'] if i else [])
                              for i, o in enumerate(STEP) if o[4] == 'basic'],
                       stableTopologicalOrder='declaration', outputBindings=['next_image', 'outcome'],
                       programKind='structured-witness', omissions=[u['operationId'] for u in unsup_w])

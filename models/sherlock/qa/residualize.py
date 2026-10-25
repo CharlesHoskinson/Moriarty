@@ -62,10 +62,13 @@ def specialize(mask='empty', family=None, image=None, limit=64):
             continue
         # Static folding applies to decode/dispatch only; successors are never dropped.
         if kind == 'dispatch':
-            folded = [s for s in succ if s in live] if mask != 'empty' else list(succ)
-            body = dict(kind='static-dispatch', targets=folded, dynamicSelector='control')
-            if mask != 'empty' and len(folded) != len(succ):
-                body['foldedAway'] = [s for s in succ if s not in live]
+            # Static decode only: every successor stays reachable. Targets outside the
+            # fixed family/image keep a generic-dispatch path guarded at runtime.
+            body = dict(kind='static-dispatch', targets=list(succ), dynamicSelector='control',
+                        genericTargets=[s for s in succ if s not in live])
+            for s_ in body['genericTargets']:
+                fallbacks.append(dict(rule=rule, occurrence=occ, target=s_,
+                                      reason='target-outside-static-binding', fallback='generic-dispatch'))
         elif kind == 'cond':
             body = dict(kind='dynamic-branch', targets=list(succ), dynamicSelector='input-data')
         elif kind == 'call':
@@ -75,7 +78,7 @@ def specialize(mask='empty', family=None, image=None, limit=64):
             body = dict(kind='return', targets=[], outcome='dynamic')
         body.update(rule=rule, occurrence=occ, charge=charge, capacityCheck='dynamic', fuelCheck='dynamic')
         blocks[rule] = body
-        pending.extend(t for t in body['targets'] if t in RULES)
+        pending.extend(t for t in body['targets'] if t in RULES and t in live)
     body = dict(referenceDefinitionId='stepReference', profileId=PROFILE, layoutVersion=LAYOUT,
                 programImageId=static.get('programImageId'), realization=mask,
                 blocks=[blocks[k] for k in sorted(blocks)], dynamicInputs=list(DYNAMIC_INPUTS),

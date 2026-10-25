@@ -41,6 +41,13 @@ class Residualize(unittest.TestCase):
         ir = residualize.specialize('empty', limit=2)
         self.assertTrue(ir['genericFallbacks'])
 
+    def test_family_keeps_dynamic_call_path(self):
+        ir = residualize.specialize('family', family='arith')
+        fetch = [b for b in ir['blocks'] if b['rule'] == 'R_fetch'][0]
+        self.assertEqual(fetch['targets'], ['R_cond', 'R_call'])
+        self.assertEqual(fetch['genericTargets'], ['R_call'])
+        self.assertTrue(ir['genericFallbacks'])
+
     def test_masks_share_rule_map(self):
         a = residualize.specialize('empty')['sourceOccurrenceMap']
         b = residualize.specialize('image', image='img-sum')['sourceOccurrenceMap']
