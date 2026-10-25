@@ -16,7 +16,7 @@
       "specLine": 235,
       "when": "A candidate groups up to 1, 2, 4 or 8 reference transitions around a callee return under the same schedule/bounds.",
       "then": "StepRecord preserves each internal position, rule/source occurrence, prefix charge, logical frame check and first outcome. Under sherlock-k-a/1 zero-fuel terminal/error publication and frame-cap Rejected(error4) keep their original precedence; padding adds physical work only. Technical cuts retain complete resumable state and create no financial commit or movement of an existing Core/2 await prefix.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "StepRecord preserves": [
           "each internal position",
@@ -27,8 +27,38 @@
         ],
         "sherlock-k-a/1 precedence": "zero-fuel terminal/error publication and frame-cap Rejected(error4) unchanged; padding adds physical work only"
       },
-      "coverage": "none",
-      "blocker": "needs a ReferenceSlice grouping entrypoint (group up to 1, 2, 4 or 8 reference transitions around a callee return) exposing StepRecord internals"
+      "coverage": "primary",
+      "unasserted": [
+        "Core/2 await prefixes (no await primitive in the draft profile)",
+        "padding is asserted zero; no padded candidate exists to show padding adds physical work only"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with --reference-slices M",
+        "checks": [
+          {
+            "kind": "reference-slices",
+            "label": "K-A ReferenceSlices around a callee return",
+            "budgets": [
+              1,
+              2,
+              4,
+              8
+            ],
+            "sources": [
+              {
+                "label": "10+inner(3)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn inner(x: UInt): UInt { x + 1 }\n  entry 10 + inner(3);\n}\n",
+                "expect_value": "uiU(14)"
+              },
+              {
+                "label": "fact(2)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(2);\n}\n",
+                "expect_value": "uiU(2)"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

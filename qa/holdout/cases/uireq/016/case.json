@@ -16,7 +16,7 @@
       "specLine": 115,
       "when": "A pure run is chunked between callee return and caller addition.",
       "then": "It retains the same result, frame sequence, effects, duties and cumulative logical work, without introducing a financial commit.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "result": "same",
         "frame sequence": "same",
@@ -24,8 +24,23 @@
         "cumulative logical work": "same",
         "financial commit": "none introduced"
       },
-      "coverage": "none",
-      "blocker": "needs a chunked-execution entrypoint with a boundary between callee return and caller addition"
+      "coverage": "primary",
+      "unasserted": [
+        "effects and duties: the draft profile has no effects; asserted only as identical (empty) task state and identical event streams"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with --chunk 1 / --chunk-at E --chunk-events",
+        "checks": [
+          {
+            "kind": "chunk-boundary-return",
+            "label": "cut between inner() return and the pending 10 + _",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn inner(x: UInt): UInt { x + 1 }\n  entry 10 + inner(3);\n}\n",
+            "expect": 14,
+            "callee_value": 4,
+            "caller_op": "Add"
+          }
+        ]
+      }
     }
   ]
 }

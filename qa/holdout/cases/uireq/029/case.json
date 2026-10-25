@@ -16,7 +16,7 @@
       "specLine": 214,
       "when": "An in-domain factorial state retains a pending multiplication, caller environment and a helper cursor.",
       "then": "Partial encode/decode retain code references, ordered frames, control, reachable structural values, active lengths, fuel/work, outcome and helper state under the selected field/layout/capacities. A value outside those capacities has no represented-image claim; immutable sharing unfolds to structural occurrences and physical identity is not source equality. Encode/decode and circuit correspondence remain unimplemented/unproved.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "partial encode/decode retains": [
           "code references",
@@ -30,8 +30,36 @@
         ],
         "out-of-capacity value": "no represented-image claim; sharing unfolds to structural occurrences"
       },
-      "coverage": "none",
-      "blocker": "needs a MachineImage encode/decode adapter entrypoint (ReferenceState to bounded image or explicit out-of-domain result) over the factorial pending state"
+      "coverage": "primary",
+      "unasserted": [
+        "the lane encoding itself (lanes_sha256 not recomputed independently; only injectivity, state-determinism and the capacity threshold are asserted)",
+        "decode equality is the adapter's own flag, cross-checked against the fuel-limited reference state; encode/decode and circuit correspondence are asserted to remain unproved/unimplemented"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with --chunk N --chunk-represent",
+        "checks": [
+          {
+            "kind": "chunk-represent",
+            "label": "fact(3) pending-multiplication boundaries",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6,
+            "plan": [
+              "--chunk",
+              "3"
+            ],
+            "out_of_domain": {
+              "extra": [
+                "--chunk",
+                "100000"
+              ],
+              "bounds": {
+                "serialization_bytes": "4096"
+              },
+              "expect_refused_by": "encode"
+            }
+          }
+        ]
+      }
     }
   ]
 }

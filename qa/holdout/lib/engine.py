@@ -118,7 +118,9 @@ class Run:
         return prep.get("admission", {}).get("program_view")
 
 
-def run_source(kind, source, fuel=None, stack=None, workdir=None):
+def run_source(kind, source, fuel=None, stack=None, workdir=None, extra=None, bounds=None):
+    """Run `mori simulate`. `extra` argv is appended to the call (e.g. ["--chunk", "1"]);
+    `bounds` overrides config bounds entries (string values), applied after the fuel adjustments."""
     cfg = json.loads(CONFIG_FILES[kind].read_text())
     if fuel is not None:
         cfg["fuel"]["value"] = str(fuel)
@@ -130,6 +132,9 @@ def run_source(kind, source, fuel=None, stack=None, workdir=None):
             cfg["layout"]["capacities"]["value_slots"] = str(fuel + 64)
     if stack is not None:
         cfg["stack"]["value"] = str(stack)
+    for k, v in (bounds or {}).items():
+        assert k in cfg["bounds"], f"unknown config bound {k}"
+        cfg["bounds"][k] = str(v)
     with tempfile.TemporaryDirectory(prefix="dw-holdout-") as d:
         p = Path(d)
         (p / "program.mori").write_text(source)
@@ -141,7 +146,7 @@ def run_source(kind, source, fuel=None, stack=None, workdir=None):
              "--source-profile", SOURCE_PROFILES[kind],
              "--entry",
              "--execution-config", str(p / "config.json"),
-             "--target", str(p / "target.json")],
+             "--target", str(p / "target.json"), *[str(x) for x in (extra or [])]],
             capture_output=True, text=True, timeout=120,
         )
     return Run(r.returncode, r.stdout, r.stderr)

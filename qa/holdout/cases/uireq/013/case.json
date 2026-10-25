@@ -16,13 +16,72 @@
       "specLine": 94,
       "when": "The same admitted computation is collected in one trace and in two technical chunks.",
       "then": "Its cumulative reference work is the sum of the same semantic charges; physical transitions, helper visits, logical frame depth, physical frame/environment bytes, preparation/serialization bytes, host time/memory, circuit rows/degree, proof/key bytes and ledger fees remain separate fields. sherlock-k-a/1 and sherlock-quint-a/1 retain their unequal terminal charges; sherlock-helper-microstep/1 is a new proposed schedule, without same-fuel equivalence or a measured cost winner.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "cumulative reference work": "identical sum of the same semantic charges for one trace and two technical chunks",
         "separate fields": "physical transitions, helper visits, frame depth, bytes, host time, circuit rows, proof/key bytes, fees"
       },
-      "coverage": "none",
-      "blocker": "needs a chunked-execution entrypoint that reports cumulative reference work per technical chunk (e.g. `mori simulate --chunk N`)"
+      "coverage": "primary",
+      "unasserted": [
+        "values of physical/host/circuit/proof/fee fields (only asserted to be reported as separate, unmeasured fields; no such measurement exists yet)",
+        "sherlock-quint-a/1 terminal charge is a retained manifest entry, not an observation of this run"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with --chunk N | --chunk-at E [--chunk-events]",
+        "checks": [
+          {
+            "kind": "chunk-transparency",
+            "label": "10+inner(3): one trace vs technical chunks",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn inner(x: UInt): UInt { x + 1 }\n  entry 10 + inner(3);\n}\n",
+            "expect": 14,
+            "plans": [
+              [
+                "--chunk-at",
+                "30"
+              ],
+              [
+                "--chunk",
+                "1"
+              ],
+              [
+                "--chunk",
+                "5"
+              ],
+              [
+                "--chunk-at",
+                "7,30,55"
+              ]
+            ],
+            "bad_plans": [
+              [
+                "--chunk",
+                "0"
+              ],
+              [
+                "--chunk-at",
+                "5,3"
+              ]
+            ]
+          },
+          {
+            "kind": "chunk-transparency",
+            "label": "fact(3): one trace vs technical chunks",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6,
+            "plans": [
+              [
+                "--chunk-at",
+                "100"
+              ],
+              [
+                "--chunk",
+                "7"
+              ]
+            ],
+            "bad_plans": []
+          }
+        ]
+      }
     }
   ]
 }
