@@ -7,7 +7,7 @@ use midnight_proofs::{poly::kzg::params::ParamsKZG, utils::SerdeFormat};
 use midnight_storage::db::InMemoryDB;
 use midnight_transient_crypto::{
     curve::Fr,
-    proofs::{PARAMS_VERIFIER, Proof, VerifierKey},
+    proofs::{PARAMS_VERIFIER, Proof, ProofPreimage, VerifierKey},
 };
 use midnight_zk_stdlib::{Relation, prove, setup_pk, verify};
 use mori_recursion::{
@@ -26,6 +26,69 @@ struct Deployment {
     vk_sha256: String,
     parent_vk_sha256: String,
     relation_sha256: String,
+}
+
+// Only the call adapter writes this pipe. The private opening never enters a file or log.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CallOpening {
+    binding_input: String,
+    preimage: String,
+}
+
+fn call_opening(call: &CallOpening, stmt: F, template: &Template) -> (F, Vec<F>) {
+    let raw = hex::decode(&call.preimage).expect("call preimage encoding");
+    let mut reader = &raw[..];
+    let p: ProofPreimage =
+        midnight_serialize::tagged_deserialize(&mut reader).expect("call preimage codec");
+    assert!(reader.is_empty(), "trailing bytes in call preimage");
+    assert!(
+        p.inputs.len() == 1 && p.inputs[0].0 == stmt,
+        "acceptValidity input shape"
+    );
+    assert!(
+        p.private_transcript.is_empty(),
+        "unexpected private transcript"
+    );
+    let binding = f_from_hex(&call.binding_input).expect("canonical binding input");
+    let (comm, rand) = p.communications_commitment.expect("call commitment");
+    assert!(midnight_transient_crypto::hash::transient_commit(&p.inputs, rand) == comm);
+    let actual = [
+        vec![binding, comm.0],
+        p.public_transcript_inputs.iter().map(|f| f.0).collect(),
+    ]
+    .concat();
+    assert_eq!(
+        actual,
+        template.public_inputs(binding, comm.0, stmt),
+        "SDK call vector"
+    );
+    (rand.0, actual)
+}
+
+#[test]
+#[ignore = "SDK pipe cross-check; no proof generation"]
+fn sdk_call_vector_matches_the_decider_template() {
+    let call: CallOpening =
+        serde_json::from_reader(std::io::stdin().lock()).expect("call input shape");
+    let input = PathBuf::from(std::env::var_os("MORIARTY_A3_PARENT_DIR").unwrap());
+    let lanes: Vec<String> =
+        serde_json::from_slice(&fs::read(input.join("w.instance.json")).unwrap()).unwrap();
+    assert_eq!(lanes.len(), 28);
+    let mut fields = vec![
+        mori_recursion::parent::dom("SHK_STMT"),
+        f_from_hex("489080d3e57cacab615cd0cde4c87914b47c4ff0ab5857d865ee2474ecd45c00").unwrap(),
+        F::ZERO,
+    ];
+    fields.extend(lanes[..16].iter().map(|f| f_from_hex(f).unwrap()));
+    let stmt = mori_recursion::parent::poseidon(&fields);
+    let template =
+        Template::from_any_json(include_bytes!("fixtures/accept-template.json")).unwrap();
+    let (_, public) = call_opening(&call, stmt, &template);
+    assert_eq!(public.len(), 15);
+    println!(
+        "PASS SDK call vector and private commitment opening; 15 public inputs; no proof generated"
+    );
 }
 
 fn deployment() -> Deployment {
@@ -196,22 +259,37 @@ fn terminal_proof(require_installed: bool) {
         );
     }
 
+    let call: Option<CallOpening> = if std::env::var_os("MORIARTY_TERMINAL_CALL_STDIN").is_some() {
+        Some(serde_json::from_reader(std::io::stdin().lock()).expect("call input shape"))
+    } else {
+        None
+    };
     // The communication opening exists only in memory and is never logged or persisted.
     let mut rng = rand::rngs::OsRng;
+    let instance_id =
+        f_from_hex("489080d3e57cacab615cd0cde4c87914b47c4ff0ab5857d865ee2474ecd45c00").unwrap();
+    let stmt = relation.stmt(&parent_instance, instance_id, F::ZERO);
+    let checked_call = call
+        .as_ref()
+        .map(|c| call_opening(c, stmt, &relation.template));
     let witness = DeciderWitness {
         w_instance: parent_instance,
         w_proof: parent_proof,
-        instance_id: f_from_hex("489080d3e57cacab615cd0cde4c87914b47c4ff0ab5857d865ee2474ecd45c00")
-            .unwrap(),
+        instance_id,
         batch_no: F::ZERO,
-        comm_rand: F::random(&mut rng),
+        comm_rand: checked_call
+            .as_ref()
+            .map_or_else(|| F::random(&mut rng), |c| c.0),
     };
     let stmt = relation.stmt(&witness.w_instance, witness.instance_id, witness.batch_no);
     let public = relation.template.public_inputs(
-        F::from(1u64),
+        checked_call.as_ref().map_or(F::ONE, |c| c.1[0]),
         relation.comm_commitment_for(stmt, witness.comm_rand),
         stmt,
     );
+    if let Some((_, actual)) = checked_call {
+        assert_eq!(actual, public, "SDK call vector before proving");
+    }
     let pk = setup_pk(&relation, &vk);
     let start = Instant::now();
     let proof = prove::<DeciderRelation, blake2b_simd::State>(
@@ -251,6 +329,9 @@ fn terminal_proof(require_installed: bool) {
     bad[0] ^= 1;
     assert!(verify::<DeciderRelation, blake2b_simd::State>(&vp, &vk, &public, None, &bad).is_err());
     fs::write(output.join("terminal.proof"), &proof).unwrap();
+    let mut transport = Vec::new();
+    midnight_serialize::tagged_serialize(&Proof(proof.clone()), &mut transport).unwrap();
+    fs::write(output.join("terminal.tagged-proof"), transport).unwrap();
     fs::write(
         output.join("terminal.public.json"),
         serde_json::to_vec_pretty(
