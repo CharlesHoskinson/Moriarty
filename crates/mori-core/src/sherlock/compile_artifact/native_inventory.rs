@@ -304,10 +304,34 @@ pub const TABLE: &[Row] = &[
         "emit_c6_call_helper_block",
         Some("c6_call_helper_consumer.rs"),
     ),
-    gap("BHelperAppendEntry", CallBind),
-    gap("BHelperAppendEmpty", CallBind),
-    gap("BHelperAppendTail", CallBind),
-    gap("BHelperAppendExit", CallBind),
+    c6(
+        "BHelperAppendEntry",
+        CallBind,
+        "c6_append_helper_step.rs",
+        "emit_c6_append_helper_block",
+        Some("c6_append_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperAppendEmpty",
+        CallBind,
+        "c6_append_helper_step.rs",
+        "emit_c6_append_helper_block",
+        Some("c6_append_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperAppendTail",
+        CallBind,
+        "c6_append_helper_step.rs",
+        "emit_c6_append_helper_block",
+        Some("c6_append_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperAppendExit",
+        CallBind,
+        "c6_append_helper_step.rs",
+        "emit_c6_append_helper_block",
+        Some("c6_append_helper_consumer.rs"),
+    ),
     // FrameReturn: Push or Return with the named top frame.
     c6(
         "KMachinePushAccept",

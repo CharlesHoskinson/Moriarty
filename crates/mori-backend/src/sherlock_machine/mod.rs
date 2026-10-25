@@ -609,6 +609,9 @@ pub mod c6_call_bind_step;
 // UIREQ-023 Find/EnvGet call helper fragment.
 pub mod c6_call_helper_consumer;
 pub mod c6_call_helper_step;
+// UIREQ-023 Append helper fragment (RetArgs accumulation).
+pub mod c6_append_helper_consumer;
+pub mod c6_append_helper_step;
 pub use c6_dispatch_consumer::{
     C6DispatchCircuit, C6DispatchConsumerError, C6DispatchWitness, build_c6_dispatch_circuit,
     check_c6_dispatch_circuit, witness_from_host_snapshot as witness_dispatch_from_host_snapshot,
