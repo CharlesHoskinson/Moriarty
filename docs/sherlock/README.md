@@ -42,6 +42,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
 - [Suspension and finance, profile /2](design/suspension-and-finance.md)
+- [Finish-push change log](CHANGELOG-push.md)
 - [Implemented design by group, 2026-10-25](design.md#2026-10-25-implemented-design-by-group)
 
 ## Explanation

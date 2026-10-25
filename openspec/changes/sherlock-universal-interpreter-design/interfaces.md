@@ -314,7 +314,7 @@ The engineering handoff requires applicable Opus-authored B001–B009 hostile ca
 
 ## Suspension, resume and finance (profile /2)
 
-Added 2026-10-25. Profile `sherlock-helper-microstep/1` is unchanged and refuses everything below.
+Added 2026-10-25. Implemented so far: the `Await` control, `Waiting` outcome, `LogicalCap` and profile pinning. Specified, not yet in code: the rules `BAwaitEnter`, `BResumeAccept`, `XFinCommit`, `XFinResumeAccept`, draft language `/2`, `OD` and the anchor. Counts and states elsewhere are per branch. Profile `sherlock-helper-microstep/1` is unchanged and refuses everything below.
 Admitted profile ids are 2 and 3; the owner engine carries one selected profile and refuses an image or
 step of another (SI-01).
 

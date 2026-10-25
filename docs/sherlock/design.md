@@ -186,7 +186,7 @@ This section states what the pipeline is now and which lines of work carry it. I
 owner's finish push (`qa/sherlock/predicates.yaml` groups A, B, C, F, U). The ledger (major 9), node,
 Midnight SDK and proof server are unchanged. Everything else in the design is open to change, and the
 changes below are the ones that have landed. Counts are from `scripts/sherlock-next` on each line at
-the time of writing; they are not merged into one line yet (see "Lines" below).
+the time of writing. The counts are per branch and will change when the lines are consolidated (see "Lines" below).
 
 ### Pipeline as built
 
@@ -204,9 +204,12 @@ the time of writing; they are not merged into one line yet (see "Lines" below).
    chunk boundaries through the `WitnessPlan` DAG (U013, U016, U029, U032). The `Waiting` checkpoint,
    its single observation and the atomic resume relation are specified in
    [suspension-and-finance](design/suspension-and-finance.md) and landed on the reference machine for
-   profile `/2`; the U014/U015 and U017-U020 acceptance checks are not yet passing.
+   profile `/2` as the control, outcome and exhaust-reason slice (tags 11, 4, 7); the resume relation, the
+   `moriarty-sherlock-draft/2` syntax and the U014/U015 and U017-U020 acceptance checks are not yet in code.
 4. **Finance.** Core/2 financial actions run on the Sherlock financial route. Await maps to the same
-   `Waiting` outcome; `XFinCommit`, `XFinAwaitEnter` and `XFinResumeAccept` are the `/2` rules.
+   `Waiting` outcome. `XFinAwaitEnter` exists in the fin selection code; `XFinCommit`,
+   `XFinResumeAccept` and the pure `BAwaitEnter`/`BResumeAccept` are specified in the design note and
+   not yet in code.
    Commit stays implicit at an await and at completion; there is no surface commit statement.
 5. **Native inventory and C6 fragments.** The hand-authored native relation inventory is reported for
    every draft run, and receipted compiled-and-run evidence is accepted for U023 fragments. C6
