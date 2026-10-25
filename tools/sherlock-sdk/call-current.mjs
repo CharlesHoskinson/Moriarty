@@ -68,6 +68,9 @@ const graphql = async query => {
 // fed from memory by a `cat` helper; nothing is written to disk. Exit 3 (lock busy) waits outside the lock and
 // retries. MORIARTY_AGENTBUS_CWD, if set, posts ACQUIRE/RELEASE on #sherlock (bounded by a timeout).
 const dwHeavy = process.env.MORIARTY_DW_HEAVY, busCwd = process.env.MORIARTY_AGENTBUS_CWD;
+// Caps: the measured terminal-D budget (keygen + prove) bounds a prove-only run; MORIARTY_DW_BUDGET overrides.
+const dwBudget = process.env.MORIARTY_DW_BUDGET ?? 'a4-terminal-d';
+assert.ok(/^[a-z0-9-]+$/.test(dwBudget), 'MORIARTY_DW_BUDGET');
 assert.ok(dwHeavy === undefined || /^[A-Za-z0-9._-]+$/.test(dwHeavy), 'MORIARTY_DW_HEAVY must be a DoctorWatson id');
 const bus = (subj, body) => { if (busCwd) spawnSync('agentbus', ['--cwd', busCwd, 'send', '#sherlock', subj, '--body', body], {stdio: 'ignore', timeout: 15_000}); };
 const heavyChild = async (argv, input, env, log) => {
@@ -77,7 +80,7 @@ const heavyChild = async (argv, input, env, log) => {
     assert.equal(spawnSync('mkfifo', ['-m', '600', fifo]).status, 0, 'mkfifo');
     const feeder = spawn('sh', ['-c', 'exec cat > "$0"', fifo], {stdio: ['pipe', 'ignore', 'ignore']});
     feeder.on('error', () => {}); feeder.stdin.on('error', () => {}); feeder.stdin.end(input);
-    const p = spawn('scripts/doctorwatson', ['heavy', '--id', dwHeavy, '--', 'sh', '-c', 'exec "$@" < "$0"', fifo, ...argv],
+    const p = spawn('scripts/doctorwatson', ['heavy', '--id', dwHeavy, '--budget', dwBudget, '--', 'sh', '-c', 'exec "$@" < "$0"', fifo, ...argv],
       {env, stdio: ['ignore', 'pipe', 'pipe']});
     let stdout = '', stderr = '', acquired = false;
     p.stdout.on('data', b => { stdout += b; if (!acquired) { acquired = true; bus(`ACQUIRE ${dwHeavy}`, 'heavy held for the native decider prove only; wallet sync and indexer waits are outside it'); } });
