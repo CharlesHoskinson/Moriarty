@@ -5,14 +5,19 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 export CARGO_BUILD_JOBS=4
 export RAYON_NUM_THREADS=4
+export MALLOC_MMAP_THRESHOLD_=131072
+export MALLOC_TRIM_THRESHOLD_=131072
+export MALLOC_ARENA_MAX=1
 export FENRIR_ROOT="${FENRIR_ROOT:-$HOME/repos/projectfenrir-main}"
 export FRTF_V3_ROOT="${FRTF_V3_ROOT:-$FENRIR_ROOT/recursion/rollup-test-format/v3}"
 export MORIARTY_PARENT_SRS="${MORIARTY_PARENT_SRS:-$PWD/target/sherlock-srs/bls_midnight_2p20}"
 python3 -B scripts/qa/fetch-sherlock-srs.py "$MORIARTY_PARENT_SRS"
 python3 -B -m unittest discover -s scripts/qa/tests -p 'test_rollup_*.py'
-cargo test --release --locked -p mori-recursion --features sherlock-rollup \
+cargo test --release --locked -p mori-recursion --features sherlock-rollup-prefix \
   --test sherlock_rollup -- --nocapture --test-threads=1
-cargo build --release --locked -p mori-recursion --features sherlock-rollup --example rollup
+cargo test --release --locked -p mori-recursion --features sherlock-rollup-prefix \
+  --test sherlock_rollup_uniform --test sherlock_rollup_trace -- --include-ignored --nocapture --test-threads=1
+cargo build --release --locked -p mori-recursion --features sherlock-rollup-prefix --example rollup
 mkdir -p target/sherlock-b3
 run_dir="$(mktemp -d "$PWD/target/sherlock-b3/run-XXXXXXXX")"
 cut="${FSYN_DESIGN_CUT:-$PWD/openspec/changes/sherlock-synthetic-rollup-data/design-cut.json}"
@@ -35,8 +40,10 @@ def sha(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 doc = {'schema': 'sherlock-b3-build/1', 'binary_sha256': sha(binary),
-       'cargo_lock_sha256': sha(pathlib.Path('Cargo.lock')), 'features': ['sherlock-rollup'],
-       'adapter_version': 'sherlock-v3-batch/1',
+       'cargo_lock_sha256': sha(pathlib.Path('Cargo.lock')), 'features': ['sherlock-rollup-prefix'],
+       'adapter_version': 'sherlock-v3-batch/2',
+       'source_sha256': {str(path): sha(path) for path in sorted(pathlib.Path('crates/mori-recursion').rglob('*'))
+                         if path.is_file() and path.suffix in ('.rs', '.toml', '.json')},
        'rustc': subprocess.check_output(['rustc', '-Vv'], text=True),
        'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
        'dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True)),

@@ -5,5 +5,9 @@ pub mod compose;
 pub mod i1;
 pub mod parent;
 pub mod segment;
+#[cfg(feature = "sherlock-rollup-prefix")]
+pub mod trace;
 pub mod transition;
+#[cfg(feature = "sherlock-rollup-prefix")]
+pub mod uniform;
 pub mod user;

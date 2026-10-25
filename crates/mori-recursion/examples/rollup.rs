@@ -17,7 +17,6 @@ use mori_recursion::{
     decider::{CommBinding, DeciderRelation, DeciderWitness},
     inner::{verify_offcircuit, vk_name},
     rollup::{
-        batch::{BatchRelation, load_batch},
         i1::fp::dom,
         parent::{ParentWitness, RollupParent},
     },
@@ -33,6 +32,16 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+
+#[cfg(not(feature = "sherlock-rollup-prefix"))]
+use mori_recursion::rollup::batch::{BatchRelation as BatchLeaf, load_batch};
+#[cfg(feature = "sherlock-rollup-prefix")]
+use mori_recursion::rollup::uniform::UniformBatch as BatchLeaf;
+
+#[cfg(feature = "sherlock-rollup-prefix")]
+const OFFLINE_TEMPLATE: &[u8] = include_bytes!("../tests/fixtures/rollup-template.json");
+#[cfg(not(feature = "sherlock-rollup-prefix"))]
+const OFFLINE_TEMPLATE: &[u8] = include_bytes!("../tests/fixtures/accept-template.json");
 
 type Pos = PoseidonState<F>;
 type BoxError = Box<dyn std::error::Error>;
@@ -96,6 +105,26 @@ where
     midnight_curves::G1Projective: Hashable<H>,
     F: Hashable<H> + Sampleable<H>,
 {
+    prove_many::<R, H>(
+        name,
+        srs,
+        relation,
+        vec![(dir.to_path_buf(), instance, witness)],
+    )
+}
+
+fn prove_many<R, H>(
+    name: &str,
+    srs: &Path,
+    relation: &R,
+    inputs: Vec<(PathBuf, Vec<F>, R::Witness)>,
+) -> Result<()>
+where
+    R: Relation<Instance = Vec<F>, Error = midnight_proofs::plonk::Error>,
+    H: TranscriptHash,
+    midnight_curves::G1Projective: Hashable<H>,
+    F: Hashable<H> + Sampleable<H>,
+{
     let total = Instant::now();
     let start = Instant::now();
     let probe = cost_model(relation, None);
@@ -119,54 +148,58 @@ where
     let mut counter = CountBytes(0);
     pk.write(&mut counter, SerdeFormat::RawBytes)?;
     let pk_size_seconds = start.elapsed().as_secs_f64();
-    eprintln!("{name} keygen complete; proving stock 0.8.3");
-    let start = Instant::now();
-    let proof = prove::<R, H>(
-        &params,
-        &pk,
-        relation,
-        &instance,
-        witness,
-        ChaCha20Rng::from_entropy(),
-    )
-    .map_err(|e| error(format!("{name} prove: {e:?}")))?;
-    let prove_seconds = start.elapsed().as_secs_f64();
-    drop(pk);
-    let start = Instant::now();
-    verify::<R, H>(&params.verifier_params(), &vk, &instance, None, &proof)
-        .map_err(|e| error(format!("{name} verify: {e:?}")))?;
-    let verify_seconds = start.elapsed().as_secs_f64();
-    let mut changed = instance.clone();
-    changed[0] += F::ONE;
-    if verify::<R, H>(&params.verifier_params(), &vk, &changed, None, &proof).is_ok() {
-        return Err(error("changed instance accepted"));
+    let count = inputs.len();
+    for (dir, instance, witness) in inputs {
+        fs::create_dir_all(&dir)?;
+        eprintln!("{name} keygen complete; proving stock 0.8.3");
+        let start = Instant::now();
+        let proof = prove::<R, H>(
+            &params,
+            &pk,
+            relation,
+            &instance,
+            witness,
+            ChaCha20Rng::from_entropy(),
+        )
+        .map_err(|e| error(format!("{name} prove: {e:?}")))?;
+        let prove_seconds = start.elapsed().as_secs_f64();
+        let start = Instant::now();
+        verify::<R, H>(&params.verifier_params(), &vk, &instance, None, &proof)
+            .map_err(|e| error(format!("{name} verify: {e:?}")))?;
+        let verify_seconds = start.elapsed().as_secs_f64();
+        let mut changed = instance.clone();
+        changed[0] += F::ONE;
+        if verify::<R, H>(&params.verifier_params(), &vk, &changed, None, &proof).is_ok() {
+            return Err(error("changed instance accepted"));
+        }
+        let mut relation_bytes = Vec::new();
+        relation.write_relation(&mut relation_bytes)?;
+        fs::write(dir.join(format!("{name}.relation")), &relation_bytes)?;
+        fs::write(dir.join(format!("{name}.vk")), &raw_vk)?;
+        fs::write(dir.join(format!("{name}.proof")), &proof)?;
+        write_json(
+            &dir.join(format!("{name}.instance.json")),
+            &instance.iter().map(f_to_hex).collect::<Vec<_>>(),
+        )?;
+        let receipt = json!({"schema":"sherlock-b3-stage/1","layer":name,"prover":"midnight-proofs 0.8.3 registry stock",
+            "model":model,"domain_capacity":1u64<<model.k,"model_seconds":model_seconds,
+            "parameter_read_downsize_seconds":parameter_seconds,"vk_keygen_seconds":vk_seconds,
+            "pk_keygen_seconds":pk_seconds,"pk_measurement_seconds":pk_size_seconds,
+            "prove_seconds":prove_seconds,"local_verify_seconds":verify_seconds,"process_wall_seconds":total.elapsed().as_secs_f64(),
+            "peak_rss_bytes":peak_rss_kb()*1024,"rss_scope":"process lifetime, includes oracle/model/parameters/keygen/prove/verify",
+            "proof_bytes":proof.len(),"vk_bytes":raw_vk.len(),"pk_raw_bytes":counter.0,
+            "proof_sha256":sha256_hex(&proof),"vk_sha256":sha256_hex(&raw_vk),"relation_sha256":sha256_hex(&relation_bytes),
+            "instance_sha256":sha256_hex(&fs::read(dir.join(format!("{name}.instance.json")))?),
+            "negative_changed_instance":"rejected","threads":4,"shared_keygen_proofs":count});
+        write_json(&dir.join(format!("{name}.stats.json")), &receipt)?;
+        println!(
+            "PASS {name}: {} proof bytes, {:.3}s prove, {:.3}s verify",
+            proof.len(),
+            prove_seconds,
+            verify_seconds
+        );
     }
-    let mut relation_bytes = Vec::new();
-    relation.write_relation(&mut relation_bytes)?;
-    fs::write(dir.join(format!("{name}.relation")), &relation_bytes)?;
-    fs::write(dir.join(format!("{name}.vk")), &raw_vk)?;
-    fs::write(dir.join(format!("{name}.proof")), &proof)?;
-    write_json(
-        &dir.join(format!("{name}.instance.json")),
-        &instance.iter().map(f_to_hex).collect::<Vec<_>>(),
-    )?;
-    let receipt = json!({"schema":"sherlock-b3-stage/1","layer":name,"prover":"midnight-proofs 0.8.3 registry stock",
-        "model":model,"domain_capacity":1u64<<model.k,"model_seconds":model_seconds,
-        "parameter_read_downsize_seconds":parameter_seconds,"vk_keygen_seconds":vk_seconds,
-        "pk_keygen_seconds":pk_seconds,"pk_measurement_seconds":pk_size_seconds,
-        "prove_seconds":prove_seconds,"local_verify_seconds":verify_seconds,"process_wall_seconds":total.elapsed().as_secs_f64(),
-        "peak_rss_bytes":peak_rss_kb()*1024,"rss_scope":"process lifetime, includes oracle/model/parameters/keygen/prove/verify",
-        "proof_bytes":proof.len(),"vk_bytes":raw_vk.len(),"pk_raw_bytes":counter.0,
-        "proof_sha256":sha256_hex(&proof),"vk_sha256":sha256_hex(&raw_vk),"relation_sha256":sha256_hex(&relation_bytes),
-        "instance_sha256":sha256_hex(&fs::read(dir.join(format!("{name}.instance.json")))?),
-        "negative_changed_instance":"rejected","threads":4});
-    write_json(&dir.join(format!("{name}.stats.json")), &receipt)?;
-    println!(
-        "PASS {name}: {} proof bytes, {:.3}s prove, {:.3}s verify",
-        proof.len(),
-        prove_seconds,
-        verify_seconds
-    );
+
     Ok(())
 }
 
@@ -186,7 +219,14 @@ fn main() -> Result<()> {
     if std::env::var("RAYON_NUM_THREADS").as_deref() != Ok("4") {
         return Err(error("RAYON_NUM_THREADS must be 4"));
     }
+    #[cfg(feature = "sherlock-rollup-prefix")]
+    if mode.starts_with("prefix-") {
+        return prefix_stage(mode, &corpus, batch, &out, &srs);
+    }
+    #[cfg(not(feature = "sherlock-rollup-prefix"))]
     let (leaf, w, expected) = load_batch(&corpus, batch)?;
+    #[cfg(feature = "sherlock-rollup-prefix")]
+    let (leaf, w, expected) = BatchLeaf::load(&corpus, batch)?;
     match mode.as_str() {
         "mock" => {
             let model = cost_model(&leaf, None);
@@ -218,7 +258,7 @@ fn main() -> Result<()> {
                 return Err(error("leaf differs from corpus"));
             }
             let params = read_params(&srs, 20)?;
-            verify::<BatchRelation, Pos>(
+            verify::<BatchLeaf, Pos>(
                 &params.verifier_params(),
                 &relation.child_vk,
                 &expected,
@@ -239,9 +279,7 @@ fn main() -> Result<()> {
                 s_g2: params.s_g2().to_affine(),
                 dom_stmt: dom::stmt(),
                 stmt_fields: vec![0, 1, 15, 16, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                template: Template::from_any_json(include_bytes!(
-                    "../tests/fixtures/accept-template.json"
-                ))?,
+                template: Template::from_any_json(OFFLINE_TEMPLATE)?,
                 comm_binding: CommBinding::BoundPoseidonStmtV1,
             };
             relation.validate()?;
@@ -275,7 +313,7 @@ fn main() -> Result<()> {
                 "decider", &out, &srs, &relation, instance, witness,
             )
         }
-        "verify" => verify_bundle(&out, &srs, &leaf, &expected, batch),
+        "verify" => verify_bundle(&out, &srs, &leaf, &expected, batch, true),
         _ => Err(error("unknown stage")),
     }
 }
@@ -286,6 +324,7 @@ fn verify_bundle(
     leaf: &impl Relation<Instance = Vec<F>, Error = midnight_proofs::plonk::Error>,
     expected: &Vec<F>,
     batch: u64,
+    reconstruct_keys: bool,
 ) -> Result<()> {
     let started = Instant::now();
     let params = read_params(srs, 20)?;
@@ -293,7 +332,7 @@ fn verify_bundle(
     let raw = fs::read(out.join("leaf.vk"))?;
     let leaf_vk = vk_from_bytes(&raw)?;
     let mut p = read_params(srs, leaf_vk.k() as u32)?;
-    if vk_bytes(&setup_vk(&p, leaf)) != raw {
+    if reconstruct_keys && vk_bytes(&setup_vk(&p, leaf)) != raw {
         return Err(error(
             "leaf key differs from independently reconstructed relation",
         ));
@@ -302,7 +341,7 @@ fn verify_bundle(
         return Err(error("leaf statement differs from corpus"));
     }
     let proof = fs::read(out.join("leaf.proof"))?;
-    verify::<BatchRelation, Pos>(&params.verifier_params(), &leaf_vk, expected, None, &proof)
+    verify::<BatchLeaf, Pos>(&params.verifier_params(), &leaf_vk, expected, None, &proof)
         .map_err(|e| error(format!("leaf verify: {e:?}")))?;
     let parent = RollupParent { child_vk: leaf_vk };
     let w = ParentWitness {
@@ -316,7 +355,7 @@ fn verify_bundle(
     let raw = fs::read(out.join("parent.vk"))?;
     let parent_vk = vk_from_bytes(&raw)?;
     p.downsize(parent_vk.k() as u32);
-    if vk_bytes(&setup_vk(&p, &parent)) != raw {
+    if reconstruct_keys && vk_bytes(&setup_vk(&p, &parent)) != raw {
         return Err(error("parent key differs from independent reconstruction"));
     }
     let proof = fs::read(out.join("parent.proof"))?;
@@ -344,15 +383,13 @@ fn verify_bundle(
         s_g2: params.s_g2().to_affine(),
         dom_stmt: dom::stmt(),
         stmt_fields: vec![0, 1, 15, 16, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-        template: Template::from_any_json(include_bytes!(
-            "../tests/fixtures/accept-template.json"
-        ))?,
+        template: Template::from_any_json(OFFLINE_TEMPLATE)?,
         comm_binding: CommBinding::BoundPoseidonStmtV1,
     };
     let raw = fs::read(out.join("decider.vk"))?;
     let dvk = vk_from_bytes(&raw)?;
     let p = read_params(srs, dvk.k() as u32)?;
-    if vk_bytes(&setup_vk(&p, &d)) != raw {
+    if reconstruct_keys && vk_bytes(&setup_vk(&p, &d)) != raw {
         return Err(error("decider key differs from independent reconstruction"));
     }
     let stmt = d.stmt(&parent_expected, F::ZERO, F::from(batch));
@@ -387,7 +424,7 @@ fn verify_bundle(
     write_json(
         &out.join("verified.json"),
         &json!({"schema":"sherlock-b3-verified/1","batch":batch,"transactions":16,"headers":50,
-        "layers":["leaf","parent","decider"],"stock_verification":true,"independent_key_reconstruction":true,
+        "layers":["leaf","parent","decider"],"stock_verification":true,"independent_key_reconstruction":true,"shared_key_reconstruction_reused":!reconstruct_keys,
         "separate_process_wall_seconds":started.elapsed().as_secs_f64(),"terminal_statement":f_to_hex(&stmt),
         "scope":"S0 v3 synthetic era-zero batch, stock recursion and local terminal verification; no ledger call"}),
     )?;
@@ -395,4 +432,118 @@ fn verify_bundle(
         "PASS separately reconstructed and stock-verified leaf/parent/decider; wrong statement rejected"
     );
     Ok(())
+}
+
+#[cfg(feature = "sherlock-rollup-prefix")]
+fn prefix_stage(mode: &str, corpus: &Path, count: u64, out: &Path, srs: &Path) -> Result<()> {
+    if ![2, 4, 6].contains(&count) {
+        return Err(error("prefix must contain 2, 4 or 6 complete batches"));
+    }
+    let batch_dir = |batch| out.join(format!("batch-{batch:02}"));
+    let mut leaves = Vec::new();
+    for batch in 1..=count {
+        let (_, witness, expected) = BatchLeaf::load(corpus, batch)?;
+        leaves.push((batch_dir(batch), expected, witness));
+    }
+    match mode {
+        "prefix-leaf" => prove_many::<_, Pos>("leaf", srs, &BatchLeaf, leaves),
+        "prefix-parent" => {
+            let raw = fs::read(batch_dir(1).join("leaf.vk"))?;
+            let relation = RollupParent {
+                child_vk: vk_from_bytes(&raw)?,
+            };
+            let params = read_params(srs, 20)?;
+            let mut inputs = Vec::new();
+            for (dir, expected, _) in leaves {
+                if fs::read(dir.join("leaf.vk"))? != raw || read_instance(&dir, "leaf")? != expected
+                {
+                    return Err(error("prefix leaf key/statement differs"));
+                }
+                let witness = ParentWitness {
+                    instance: expected,
+                    proof: fs::read(dir.join("leaf.proof"))?,
+                };
+                verify::<BatchLeaf, Pos>(
+                    &params.verifier_params(),
+                    &relation.child_vk,
+                    &witness.instance,
+                    None,
+                    &witness.proof,
+                )
+                .map_err(|e| error(format!("prefix child: {e:?}")))?;
+                inputs.push((dir, relation.instance(&witness).map_err(error)?, witness));
+            }
+            drop(params);
+            prove_many::<_, Pos>("parent", srs, &relation, inputs)
+        }
+        "prefix-decider" => {
+            let raw = fs::read(batch_dir(1).join("parent.vk"))?;
+            let params = read_params(srs, 20)?;
+            let relation = DeciderRelation {
+                nr_cols: 4,
+                w_vk: vk_from_bytes(&raw)?,
+                n_w_instance: 29,
+                s_g2: params.s_g2().to_affine(),
+                dom_stmt: dom::stmt(),
+                stmt_fields: vec![0, 1, 15, 16, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                template: Template::from_any_json(OFFLINE_TEMPLATE)?,
+                comm_binding: CommBinding::BoundPoseidonStmtV1,
+            };
+            relation.validate()?;
+            let mut inputs = Vec::new();
+            for (i, (dir, expected, _)) in leaves.into_iter().enumerate() {
+                let parent = read_instance(&dir, "parent")?;
+                if fs::read(dir.join("parent.vk"))? != raw
+                    || parent.len() != 29
+                    || parent[..17] != expected
+                {
+                    return Err(error("prefix parent key/statement differs"));
+                }
+                let witness = DeciderWitness {
+                    w_instance: parent,
+                    w_proof: fs::read(dir.join("parent.proof"))?,
+                    instance_id: F::ZERO,
+                    batch_no: F::from(i as u64 + 1),
+                    comm_rand: F::ZERO,
+                };
+                verify_offcircuit(
+                    &params.verifier_params(),
+                    &relation.w_vk,
+                    &vk_name("w", &relation.w_vk),
+                    &witness.w_instance,
+                    &witness.w_proof,
+                    true,
+                )
+                .map_err(error)?;
+                let stmt =
+                    relation.stmt(&witness.w_instance, witness.instance_id, witness.batch_no);
+                let public = relation.template.public_inputs(
+                    F::ZERO,
+                    relation.comm_commitment_for(stmt, F::ZERO),
+                    stmt,
+                );
+                inputs.push((dir, public, witness));
+            }
+            drop(params);
+            prove_many::<_, blake2b_simd::State>("decider", srs, &relation, inputs)
+        }
+        "prefix-verify" => {
+            let first = batch_dir(1);
+            // Reconstruct the three keys once in this separate process. Every
+            // following batch must use those exact bytes, not a supplied new key.
+            for (i, (dir, expected, _)) in leaves.into_iter().enumerate() {
+                for layer in ["leaf", "parent", "decider"] {
+                    for suffix in ["vk", "relation"] {
+                        let file = format!("{layer}.{suffix}");
+                        if fs::read(dir.join(&file))? != fs::read(first.join(&file))? {
+                            return Err(error("prefix changed its fixed relation or key"));
+                        }
+                    }
+                }
+                verify_bundle(&dir, srs, &BatchLeaf, &expected, i as u64 + 1, i == 0)?;
+            }
+            Ok(())
+        }
+        _ => Err(error("unknown prefix stage")),
+    }
 }
