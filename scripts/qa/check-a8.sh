@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# A8: read-only indexer query; passes only when a finalized ContractCall exists on the stagenet Sherlock contract 80a0291c...
+# A8: read-only indexer query; passes only when a finalized ContractCall exists on the pinned stagenet Sherlock contract
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 python3 -I - <<'PY'
 import json, sys, urllib.request
+from pathlib import Path
 URL = "https://indexer.stagenet.shielded.tools/api/v4/graphql"
-ADDR = "80a0291cc688bc627b5dfef1a18d8e02ec5ed2f15343e60f18ee61e58a955371"
+ADDR = json.loads(Path("crates/mori-recursion/tests/fixtures/stagenet-verifier.json").read_bytes())["address"]
 def q(height):
     off = "" if height is None else ', offset:{blockOffset:{height:%d}}' % height
     query = ('{ contractAction(address:"%s"%s){ __typename '
