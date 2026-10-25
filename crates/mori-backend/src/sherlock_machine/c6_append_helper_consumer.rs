@@ -72,4 +72,4 @@ pub fn append_helper_statement(witness: &C6AppendHelperWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_append_helper_tests.rs"]
-mod tests;
+mod c6_append_helper_tests;

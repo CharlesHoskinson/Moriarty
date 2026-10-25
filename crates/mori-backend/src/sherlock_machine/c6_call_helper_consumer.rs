@@ -72,4 +72,4 @@ pub fn call_helper_statement(witness: &C6CallHelperWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_call_helper_tests.rs"]
-mod tests;
+mod c6_call_helper_tests;

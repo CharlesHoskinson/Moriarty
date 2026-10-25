@@ -72,4 +72,4 @@ pub fn call_bind_statement(witness: &C6CallBindWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_call_bind_tests.rs"]
-mod tests;
+mod c6_call_bind_tests;

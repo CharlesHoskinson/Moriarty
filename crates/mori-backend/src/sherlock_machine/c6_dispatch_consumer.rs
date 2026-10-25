@@ -287,4 +287,4 @@ pub fn check_c6_dispatch_circuit(
 
 #[cfg(test)]
 #[path = "c6_dispatch_tests.rs"]
-mod tests;
+mod c6_dispatch_tests;

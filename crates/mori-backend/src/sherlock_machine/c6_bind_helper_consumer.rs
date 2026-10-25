@@ -72,4 +72,4 @@ pub fn bind_helper_statement(witness: &C6BindHelperWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_bind_helper_tests.rs"]
-mod tests;
+mod c6_bind_helper_tests;

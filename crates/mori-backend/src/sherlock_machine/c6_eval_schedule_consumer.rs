@@ -72,4 +72,4 @@ pub fn eval_schedule_statement(witness: &C6EvalScheduleWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_eval_schedule_tests.rs"]
-mod tests;
+mod c6_eval_schedule_tests;

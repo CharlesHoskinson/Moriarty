@@ -72,4 +72,4 @@ pub fn legacy_control_statement(witness: &C6LegacyControlWitness) -> Vec<Fr> {
 
 #[cfg(test)]
 #[path = "c6_legacy_control_tests.rs"]
-mod tests;
+mod c6_legacy_control_tests;
