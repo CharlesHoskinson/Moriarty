@@ -6,7 +6,8 @@ from pathlib import Path
 import sys
 import urllib.request
 
-ADDRESS = "80a0291cc688bc627b5dfef1a18d8e02ec5ed2f15343e60f18ee61e58a955371"
+DEPLOYMENT = Path(__file__).resolve().parents[2] / "crates/mori-recursion/tests/fixtures/stagenet-verifier.json"
+ADDRESS = json.loads(DEPLOYMENT.read_bytes())["address"]
 URL = "https://indexer.stagenet.shielded.tools/api/v4/graphql"
 
 

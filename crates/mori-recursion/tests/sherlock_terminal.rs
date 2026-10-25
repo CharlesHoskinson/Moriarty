@@ -7,9 +7,9 @@ use midnight_proofs::{poly::kzg::params::ParamsKZG, utils::SerdeFormat};
 use midnight_storage::db::InMemoryDB;
 use midnight_transient_crypto::{
     curve::Fr,
-    proofs::{PARAMS_VERIFIER, Proof},
+    proofs::{PARAMS_VERIFIER, Proof, VerifierKey},
 };
-use midnight_zk_stdlib::{Relation, cost_model, prove, setup_pk, verify};
+use midnight_zk_stdlib::{Relation, prove, setup_pk, verify};
 use mori_recursion::{
     decider::{DeciderRelation, DeciderWitness},
     inner::{verify_offcircuit, vk_name},
@@ -19,28 +19,90 @@ use mori_recursion::{
 };
 use std::{fs, io::Cursor, path::PathBuf, time::Instant};
 
-const INSTALLED_VK_SHA256: &str =
-    "bd9e9d89ad0a5570571160b29dc8b2d89e11e3c6065b46638a2e978f9218776e";
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Deployment {
+    address: String,
+    vk_sha256: String,
+    parent_vk_sha256: String,
+    relation_sha256: String,
+}
+
+fn deployment() -> Deployment {
+    serde_json::from_slice(include_bytes!("fixtures/stagenet-verifier.json")).unwrap()
+}
+
+#[test]
+#[ignore = "offline terminal preparation; use scripts/doctorwatson heavy"]
+fn prepare_terminal_proof_for_deployment() {
+    terminal_proof(false);
+}
 
 #[test]
 #[ignore = "real terminal proof; use scripts/doctorwatson check A4"]
 fn terminal_proof_matches_the_installed_stagenet_verifier() {
+    terminal_proof(true);
+}
+
+#[test]
+#[ignore = "read-only verification of prepared public artifacts"]
+fn prepared_terminal_proof_verifies_after_ledger_key_deserialization() {
+    let dir = PathBuf::from(std::env::var_os("MORIARTY_TERMINAL_VERIFY_DIR").unwrap());
+    let tagged = fs::read(dir.join("key/acceptValidity.verifier")).unwrap();
+    let key: VerifierKey = midnight_serialize::tagged_deserialize(&tagged[..]).unwrap();
+    let mut roundtrip = Vec::new();
+    midnight_serialize::tagged_serialize(&key, &mut roundtrip).unwrap();
+    assert_eq!(roundtrip, tagged);
+    let proof = Proof(fs::read(dir.join("terminal.proof")).unwrap());
+    let lanes: Vec<String> =
+        serde_json::from_slice(&fs::read(dir.join("terminal.public.json")).unwrap()).unwrap();
+    let public = lanes
+        .iter()
+        .map(|s| Fr(f_from_hex(s).unwrap()))
+        .collect::<Vec<_>>();
+    key.verify(&PARAMS_VERIFIER, &proof, public.iter().copied())
+        .unwrap();
+    for lane in 0..public.len() {
+        let mut bad = public.clone();
+        bad[lane].0 += F::ONE;
+        assert!(
+            key.verify(&PARAMS_VERIFIER, &proof, bad.into_iter())
+                .is_err()
+        );
+    }
+}
+
+fn terminal_proof(require_installed: bool) {
     let path = |name| PathBuf::from(std::env::var_os(name).unwrap());
     let input = path("MORIARTY_A3_PARENT_DIR");
     let output = path("MORIARTY_TERMINAL_OUTPUT_DIR");
-    let state_raw = fs::read(path("MORIARTY_DEPLOYED_CONTRACT_STATE")).unwrap();
-    assert!(state_raw.len() <= 16 * 1024 * 1024);
-    let state: ContractState<InMemoryDB> =
-        midnight_serialize::tagged_deserialize(&state_raw[..]).unwrap();
-    let mut roundtrip = Vec::new();
-    midnight_serialize::tagged_serialize(&state, &mut roundtrip).unwrap();
-    assert_eq!(roundtrip, state_raw);
-    let entry = EntryPointBuf::from(b"acceptValidity".as_slice());
-    let operation = state.operations.get(&entry).unwrap();
-    let installed = operation.latest().expect("installed v3 verifier");
-    let installed_bytes = installed.original_bytes();
-    assert_eq!(sha256_hex(&installed_bytes), INSTALLED_VK_SHA256);
-    let installed_vk = vk_from_bytes(&installed_bytes).unwrap();
+    let deployment = deployment();
+    assert_eq!(deployment.address.len(), 64);
+    let installed = if require_installed {
+        let state_raw = fs::read(path("MORIARTY_DEPLOYED_CONTRACT_STATE")).unwrap();
+        assert!(state_raw.len() <= 16 * 1024 * 1024);
+        let state: ContractState<InMemoryDB> =
+            midnight_serialize::tagged_deserialize(&state_raw[..]).unwrap();
+        let mut roundtrip = Vec::new();
+        midnight_serialize::tagged_serialize(&state, &mut roundtrip).unwrap();
+        assert_eq!(roundtrip, state_raw);
+        let entry = EntryPointBuf::from(b"acceptValidity".as_slice());
+        let operation = state.operations.get(&entry).unwrap();
+        let verifier = operation.latest().expect("installed v3 verifier").clone();
+        assert_eq!(sha256_hex(&verifier.original_bytes()), deployment.vk_sha256);
+        Some(verifier)
+    } else {
+        None
+    };
+    let parent_raw = fs::read(input.join("w.vk")).unwrap();
+    // Refuse stale A3 artifacts before reading the SRS, modeling or generating a key.
+    if require_installed {
+        assert_eq!(
+            sha256_hex(&parent_raw),
+            deployment.parent_vk_sha256,
+            "A4 parent differs from the deployed decider input; keygen was not attempted"
+        );
+    }
 
     let srs_path = path("MORIARTY_PARENT_SRS");
     assert_eq!(fs::metadata(&srs_path).unwrap().len(), 201_326_980);
@@ -55,7 +117,6 @@ fn terminal_proof_matches_the_installed_stagenet_verifier() {
     assert_eq!(cursor.position(), cursor.get_ref().len() as u64);
     drop(cursor);
     let vp = params.verifier_params();
-    let parent_raw = fs::read(input.join("w.vk")).unwrap();
     let parent_vk = vk_from_bytes(&parent_raw).unwrap();
     let parent_proof = fs::read(input.join("w.proof")).unwrap();
     let lanes: Vec<String> =
@@ -86,36 +147,54 @@ fn terminal_proof_matches_the_installed_stagenet_verifier() {
         Template::from_any_json(include_bytes!("fixtures/accept-template.json")).unwrap();
     let relation =
         sherlock_decider_relation(parent_vk, params.s_g2().to_affine(), template).unwrap();
-    let start = Instant::now();
-    let model = cost_model(&relation, None);
+    let mut relation_bytes = Vec::new();
+    relation.write_relation(&mut relation_bytes).unwrap();
     println!(
-        "A4 model_k={} rows={} model_seconds={:.3} parent_vk_sha256={}",
-        model.k,
-        model.rows,
-        start.elapsed().as_secs_f64(),
-        sha256_hex(&parent_raw)
+        "terminal inputs parent_vk_sha256={} relation_sha256={} relation_bytes={}",
+        sha256_hex(&parent_raw),
+        sha256_hex(&relation_bytes),
+        relation_bytes.len()
     );
-    assert_eq!(
-        model.k,
-        u32::from(installed_vk.k()),
-        "terminal degree must match the installed key"
-    );
+    if require_installed {
+        assert_eq!(
+            sha256_hex(&relation_bytes),
+            deployment.relation_sha256,
+            "A4 relation differs from the deployed decider input; keygen was not attempted"
+        );
+    }
     fs::create_dir(&output).unwrap();
     let start = Instant::now();
-    let vk = keygen_sherlock_decider(&params, &relation, &output.join("key")).unwrap();
+    let vk = if let Some(key_dir) = std::env::var_os("MORIARTY_TERMINAL_KEY_DIR") {
+        let key_dir = PathBuf::from(key_dir);
+        assert_eq!(
+            fs::read(key_dir.join("decider.relation")).unwrap(),
+            relation_bytes,
+            "cached key must carry the exact current relation"
+        );
+        let raw = fs::read(key_dir.join("decider.vk")).unwrap();
+        let vk = vk_from_bytes(&raw).unwrap();
+        fs::create_dir(output.join("key")).unwrap();
+        fs::write(output.join("key/decider.vk"), &raw).unwrap();
+        fs::write(output.join("key/decider.relation"), &relation_bytes).unwrap();
+        vk
+    } else {
+        keygen_sherlock_decider(&params, &relation, &output.join("key")).unwrap()
+    };
     let candidate = vk_bytes(&vk);
     println!(
-        "A4 keygen_seconds={:.3} reconstructed_vk_sha256={} installed_vk_sha256={}",
+        "terminal key_seconds={:.3} vk_sha256={} installed_required={} k={}",
         start.elapsed().as_secs_f64(),
         sha256_hex(&candidate),
-        INSTALLED_VK_SHA256
+        require_installed,
+        vk.k()
     );
-    assert!(
-        candidate == installed_bytes,
-        "A4 terminal key mismatch: reconstructed={} installed={}; the exact deployed relation is required",
-        sha256_hex(&candidate),
-        INSTALLED_VK_SHA256
-    );
+    if let Some(installed) = &installed {
+        assert_eq!(
+            candidate,
+            installed.original_bytes(),
+            "A4 terminal key must equal the exact installed verifier"
+        );
+    }
 
     // The communication opening exists only in memory and is never logged or persisted.
     let mut rng = rand::rngs::OsRng;
@@ -139,29 +218,38 @@ fn terminal_proof_matches_the_installed_stagenet_verifier() {
         &params, &pk, &relation, &public, witness, &mut rng,
     )
     .unwrap();
-    verify::<DeciderRelation, blake2b_simd::State>(&vp, &installed_vk, &public, None, &proof)
-        .unwrap();
-    installed
+    verify::<DeciderRelation, blake2b_simd::State>(&vp, &vk, &public, None, &proof).unwrap();
+    // Exercise the ledger reader even during offline preparation. A4 uses the readback key.
+    let ledger_key = installed.unwrap_or_else(|| VerifierKey::from(vk.clone()));
+    ledger_key
         .verify(
             &PARAMS_VERIFIER,
             &Proof(proof.clone()),
             public.iter().copied().map(Fr),
         )
         .unwrap();
+    let mut tagged = Vec::new();
+    midnight_serialize::tagged_serialize(&ledger_key, &mut tagged).unwrap();
+    let decoded: VerifierKey = midnight_serialize::tagged_deserialize(&tagged[..]).unwrap();
+    assert_eq!(decoded.original_bytes(), candidate);
+    decoded
+        .verify(
+            &PARAMS_VERIFIER,
+            &Proof(proof.clone()),
+            public.iter().copied().map(Fr),
+        )
+        .unwrap();
+    fs::write(output.join("key/acceptValidity.verifier"), tagged).unwrap();
     for lane in 0..public.len() {
         let mut bad = public.clone();
         bad[lane] += F::ONE;
         assert!(
-            verify::<DeciderRelation, blake2b_simd::State>(&vp, &installed_vk, &bad, None, &proof)
-                .is_err()
+            verify::<DeciderRelation, blake2b_simd::State>(&vp, &vk, &bad, None, &proof).is_err()
         );
     }
     let mut bad = proof.clone();
     bad[0] ^= 1;
-    assert!(
-        verify::<DeciderRelation, blake2b_simd::State>(&vp, &installed_vk, &public, None, &bad)
-            .is_err()
-    );
+    assert!(verify::<DeciderRelation, blake2b_simd::State>(&vp, &vk, &public, None, &bad).is_err());
     fs::write(output.join("terminal.proof"), &proof).unwrap();
     fs::write(
         output.join("terminal.public.json"),
@@ -174,11 +262,9 @@ fn terminal_proof_matches_the_installed_stagenet_verifier() {
         .unwrap(),
     )
     .unwrap();
-    let mut relation_bytes = Vec::new();
-    relation.write_relation(&mut relation_bytes).unwrap();
     fs::write(output.join("terminal.relation"), relation_bytes).unwrap();
     println!(
-        "A4 accepted proof_bytes={} prove_verify_seconds={:.3} public_artifacts={}",
+        "terminal proof_bytes={} prove_verify_seconds={:.3} public_artifacts={}",
         proof.len(),
         start.elapsed().as_secs_f64(),
         output.display()

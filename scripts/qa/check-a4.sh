@@ -20,4 +20,4 @@ export MORIARTY_DEPLOYED_CONTRACT_STATE="$run_dir/contract-state.bin"
 python3 scripts/qa/fetch-sherlock-contract.py "$MORIARTY_DEPLOYED_CONTRACT_STATE"
 export MORIARTY_TERMINAL_OUTPUT_DIR="$run_dir/artifacts"
 exec cargo test --release --locked -p mori-recursion --features sherlock-ledger \
-  --test sherlock_terminal -- --include-ignored --nocapture --test-threads=1
+  --test sherlock_terminal terminal_proof_matches_the_installed_stagenet_verifier -- --exact --include-ignored --nocapture --test-threads=1
