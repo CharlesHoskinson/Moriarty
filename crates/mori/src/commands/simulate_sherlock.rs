@@ -46,6 +46,7 @@ fn chunk_request(args: &Args) -> Option<host::draft_chunked::ChunkRequest> {
         } else {
             Representation::Off
         },
+        witness: args.chunk_witness,
     })
 }
 

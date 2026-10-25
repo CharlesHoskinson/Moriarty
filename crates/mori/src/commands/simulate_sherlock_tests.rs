@@ -86,6 +86,11 @@ fn technical_chunk_flags_parse_and_conflict() {
         panic!("wrong command");
     };
     assert!(args.chunk_represent);
+    let Command::Simulate(args) = parse(&["--chunk", "1", "--chunk-witness"]).unwrap().command
+    else {
+        panic!("wrong command");
+    };
+    assert!(args.chunk_witness);
     assert!(parse(&["--chunk", "-1"]).is_err());
     // Chunking needs the explicit Sherlock route.
     assert!(Cli::try_parse_from(["mori", "simulate", "p.mori", "--chunk", "2"]).is_err());

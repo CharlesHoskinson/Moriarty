@@ -37,6 +37,7 @@ fn chunked(source: &str, plan: ChunkPlan, events: ChunkEvents) -> (Value, Value)
         plan,
         events,
         represent: Representation::Off,
+        witness: false,
     };
     let (run, chunks) = run_draft_host_chunked(source, CONFIG, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));
@@ -236,6 +237,7 @@ fn invalid_chunk_plans_are_refused_before_execution() {
             plan: plan.clone(),
             events: ChunkEvents::NotRetained,
             represent: Representation::Off,
+            witness: false,
         };
         let mut seen = 0;
         let refused = run_draft_host_chunked(INNER, CONFIG, TARGET, &request, &mut |_| seen += 1);
@@ -291,6 +293,7 @@ fn represented(source: &str, config: &str, plan: ChunkPlan) -> Value {
         plan,
         events: ChunkEvents::NotRetained,
         represent: Representation::Bounded,
+        witness: false,
     };
     let (_, chunks) = run_draft_host_chunked(source, config, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));

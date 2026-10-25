@@ -25,6 +25,8 @@ pub mod draft_profile;
 pub mod draft_reference_slices;
 #[path = "compile_artifact/draft_report.rs"]
 pub mod draft_report;
+#[path = "compile_artifact/draft_witness.rs"]
+pub mod draft_witness;
 #[path = "compile_artifact/recursive_source.rs"]
 pub(crate) mod recursive_source;
 #[path = "compile_artifact/wire.rs"]

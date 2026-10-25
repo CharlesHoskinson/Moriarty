@@ -99,6 +99,9 @@ pub struct ChunkRequest {
     pub events: ChunkEvents,
     /// Also offer each cut's complete state to the bounded C6P1 representation.
     pub represent: Representation,
+    /// Also materialize each boundary through the WitnessPlan DAG under the
+    /// uncached, last-use, cold-cache and warm-cache schedules.
+    pub witness: bool,
 }
 
 /// Whether each technical cut is also encoded in the bounded C6P1 layout.
@@ -429,6 +432,9 @@ pub(super) fn run_chunked(
         });
         if request.events == ChunkEvents::Retained {
             record["events"] = Value::Array(std::mem::take(&mut chunk_events));
+        }
+        if request.witness {
+            record["witness"] = super::draft_witness::materialize_boundary(admitted, &image);
         }
         if request.represent == Representation::Bounded {
             record["representation"] = represent_bounded(
