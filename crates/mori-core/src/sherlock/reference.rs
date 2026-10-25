@@ -30,6 +30,12 @@ impl Machine {
         self.state.clone()
     }
 
+    /// Resume a technical cut from its complete [`Snapshot`]. The snapshot is the
+    /// whole `sherlock-k-a/1` state, so no field is defaulted or inferred.
+    pub fn from_snapshot(state: Snapshot) -> Self {
+        Self { state }
+    }
+
     /// Executes at most one `sherlock-k-a/1` transition or free terminal publication.
     ///
     /// Clones the full [`Snapshot`] twice (`before` and `after`), including environments and

@@ -68,6 +68,10 @@ pub struct Args {
     /// Retain every owner event inside each technical chunk in the report
     #[arg(long, requires = "execution_profile")]
     pub chunk_events: bool,
+    /// Also group the sherlock-k-a/1 reference run of the same draft source into
+    /// earliest-stop ReferenceSlices of at most M events (normally 1, 2, 4 or 8)
+    #[arg(long, value_name = "M", requires = "execution_profile")]
+    pub reference_slices: Option<usize>,
 }
 fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
     serde_json::from_value(serde_json::Value::String(value.into()))

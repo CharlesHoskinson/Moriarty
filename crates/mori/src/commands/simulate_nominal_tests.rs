@@ -46,6 +46,7 @@ fn args(source: &str) -> Args {
         chunk: None,
         chunk_at: None,
         chunk_events: false,
+        reference_slices: None,
     }
 }
 fn must<T>(value: Result<T, mori_core::sherlock_compile_artifact::CompileFailure>) -> T {
@@ -171,7 +172,7 @@ fn check(source_file: &str, expected: Value) {
     // bounded production source/config/target reads and the normal Core library.
     let run = match must(execute(&args, &mut |event| events.push(event.clone()))) {
         SelectedRun::Nominal(run) => run,
-        SelectedRun::Draft(_) | SelectedRun::Chunked(..) => {
+        SelectedRun::Draft(_) | SelectedRun::Chunked(..) | SelectedRun::Extended(..) => {
             panic!("nominal profile reached the draft compiler")
         }
     };

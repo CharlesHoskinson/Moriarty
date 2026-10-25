@@ -75,6 +75,10 @@ fn technical_chunk_flags_parse_and_conflict() {
     };
     assert_eq!(args.chunk_at, Some(vec![1, 4, 9]));
     assert!(parse(&["--chunk", "2", "--chunk-at", "1"]).is_err());
+    let Command::Simulate(args) = parse(&["--reference-slices", "4"]).unwrap().command else {
+        panic!("wrong command");
+    };
+    assert_eq!(args.reference_slices, Some(4));
     assert!(parse(&["--chunk", "-1"]).is_err());
     // Chunking needs the explicit Sherlock route.
     assert!(Cli::try_parse_from(["mori", "simulate", "p.mori", "--chunk", "2"]).is_err());

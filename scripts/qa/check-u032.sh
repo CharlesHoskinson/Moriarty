@@ -15,6 +15,7 @@ run_py() {     # module [dotted test]
 }
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
 run_cargo sherlock_grouped_callee_return
+run_cargo sherlock_reference_slices_entrypoint
 # The visible tests above are a necessary guard; the holdout scenario is the arbiter.
 [ -x qa/holdout/run.sh ] || { echo "UNIMPLEMENTED U032 (qa/holdout/run.sh absent)"; exit 2; }
 exec qa/holdout/run.sh uireq-032

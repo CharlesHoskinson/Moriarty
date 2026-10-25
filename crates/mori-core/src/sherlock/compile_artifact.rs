@@ -21,6 +21,8 @@ pub mod draft_contract;
 pub mod draft_execution;
 #[path = "compile_artifact/draft_profile.rs"]
 pub mod draft_profile;
+#[path = "compile_artifact/draft_reference_slices.rs"]
+pub mod draft_reference_slices;
 #[path = "compile_artifact/draft_report.rs"]
 pub mod draft_report;
 #[path = "compile_artifact/recursive_source.rs"]

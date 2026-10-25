@@ -18,6 +18,12 @@ fn print_failure(failure: &CompileFailure) -> super::super::Result<ExitCode> {
 enum SelectedRun {
     Draft(host::draft_execution::DraftHostRun),
     Chunked(host::draft_execution::DraftHostRun, serde_json::Value),
+    /// A draft run with technical chunks and/or K-A reference slices attached.
+    Extended(
+        host::draft_execution::DraftHostRun,
+        Option<serde_json::Value>,
+        serde_json::Value,
+    ),
     Nominal(host::nominal_body_command::NominalHostRun),
 }
 
@@ -36,6 +42,29 @@ fn chunk_request(args: &Args) -> Option<host::draft_chunked::ChunkRequest> {
             ChunkEvents::NotRetained
         },
     })
+}
+
+/// The optional K-A reference grouping of the same draft source and config.
+fn reference_slices(args: &Args) -> Result<Option<serde_json::Value>, CompileFailure> {
+    let Some(m) = args.reference_slices else {
+        return Ok(None);
+    };
+    if args.source_profile.as_deref()
+        == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE)
+    {
+        return Err(CompileFailure::input(
+            "config",
+            "reference slices are supported on the dedicated draft route only",
+        ));
+    }
+    let (config, target) = selection(args)?;
+    let read = |path: &std::path::Path, stage: &'static str| {
+        core_io::read_source(path).map_err(|error| CompileFailure::input(stage, error.to_string()))
+    };
+    let source = read(&args.file, "source")?;
+    let config = read(config, "config")?;
+    let target = read(target, "config")?;
+    host::draft_reference_slices::reference_slices(&source, &config, &target, m).map(Some)
 }
 
 fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun, CompileFailure> {
@@ -72,28 +101,29 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
     // Retain no event vector. Both existing consumers forward every actual full
     // event once and report its actual count; this command does not claim a trace.
     let mut sink = |_event: &StepEventC| {};
+    let slices = match reference_slices(args) {
+        Ok(slices) => slices,
+        Err(failure) => return print_failure(&failure),
+    };
     let selected = match execute(args, &mut sink) {
         Ok(run) => run,
         Err(failure) => return print_failure(&failure),
     };
+    let selected = match (selected, slices) {
+        (SelectedRun::Draft(run), Some(slices)) => SelectedRun::Extended(run, None, slices),
+        (SelectedRun::Chunked(run, chunks), Some(slices)) => {
+            SelectedRun::Extended(run, Some(chunks), slices)
+        }
+        (SelectedRun::Chunked(run, chunks), None) => {
+            SelectedRun::Extended(run, Some(chunks), serde_json::Value::Null)
+        }
+        (other, _) => other,
+    };
     match selected {
         SelectedRun::Chunked(run, chunks) => {
-            let report = match host::draft_simulation_report::report(&run) {
-                Ok(report) => report,
-                Err(failure) => return print_failure(&failure),
-            };
-            let mut value = match serde_json::to_value(&report) {
-                Ok(value) => value,
-                Err(error) => {
-                    return print_failure(&run.failure("serialization", error.to_string()));
-                }
-            };
-            value["execution"]["technical_chunks"] = chunks;
-            if let Err(error) = core_io::print(&value) {
-                return print_failure(&run.failure("serialization", error.to_string()));
-            }
-            Ok(exit_for(run.completed.summary.outcome))
+            print_extended(&run, Some(chunks), serde_json::Value::Null)
         }
+        SelectedRun::Extended(run, chunks, slices) => print_extended(&run, chunks, slices),
         SelectedRun::Draft(run) => {
             let report = match host::draft_simulation_report::report(&run) {
                 Ok(report) => report,
@@ -130,6 +160,32 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
             })
         }
     }
+}
+
+/// The ordinary draft report plus the requested chunk and slice sections.
+fn print_extended(
+    run: &host::draft_execution::DraftHostRun,
+    chunks: Option<serde_json::Value>,
+    slices: serde_json::Value,
+) -> super::super::Result<ExitCode> {
+    let report = match host::draft_simulation_report::report(run) {
+        Ok(report) => report,
+        Err(failure) => return print_failure(&failure),
+    };
+    let mut value = match serde_json::to_value(&report) {
+        Ok(value) => value,
+        Err(error) => return print_failure(&run.failure("serialization", error.to_string())),
+    };
+    if let Some(chunks) = chunks {
+        value["execution"]["technical_chunks"] = chunks;
+    }
+    if !slices.is_null() {
+        value["reference_slices"] = slices;
+    }
+    if let Err(error) = core_io::print(&value) {
+        return print_failure(&run.failure("serialization", error.to_string()));
+    }
+    Ok(exit_for(run.completed.summary.outcome))
 }
 
 fn exit_for(outcome: OutcomeC) -> ExitCode {
