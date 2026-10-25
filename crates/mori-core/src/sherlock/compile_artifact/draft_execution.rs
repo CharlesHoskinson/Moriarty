@@ -80,7 +80,28 @@ pub fn run_draft_host(
     target_source: &str,
     sink: &mut dyn FnMut(&StepEventC),
 ) -> Result<DraftHostRun, CompileFailure> {
-    run_draft_host_impl(source, config_source, target_source, None, sink)
+    run_draft_host_impl(source, config_source, target_source, None, None, sink).map(|(run, _)| run)
+}
+
+/// The same preparation and owner as `run_draft_host`, stepped in technical
+/// chunks. Each cut resumes from a decoded complete checkpoint; the returned
+/// run is the final resumed image, and the JSON is the chunk report.
+pub fn run_draft_host_chunked(
+    source: &str,
+    config_source: &str,
+    target_source: &str,
+    request: &super::draft_chunked::ChunkRequest,
+    sink: &mut dyn FnMut(&StepEventC),
+) -> Result<(DraftHostRun, serde_json::Value), CompileFailure> {
+    let (run, report) = run_draft_host_impl(
+        source,
+        config_source,
+        target_source,
+        None,
+        Some(request),
+        sink,
+    )?;
+    Ok((run, report.unwrap_or(serde_json::Value::Null)))
 }
 
 /// The caller-selected arithmetic realization and its actual completed owner run.
@@ -102,11 +123,12 @@ pub fn run_draft_host_with_word_layout(
     word_layout: WordLayout,
     sink: &mut dyn FnMut(&StepEventC),
 ) -> Result<WordLoweredDraftHostRun, CompileFailure> {
-    let run = run_draft_host_impl(
+    let (run, _) = run_draft_host_impl(
         source,
         config_source,
         target_source,
         Some(word_layout),
+        None,
         sink,
     )?;
     Ok(WordLoweredDraftHostRun { word_layout, run })
@@ -117,8 +139,9 @@ fn run_draft_host_impl(
     config_source: &str,
     target_source: &str,
     word_layout: Option<WordLayout>,
+    chunking: Option<&super::draft_chunked::ChunkRequest>,
     sink: &mut dyn FnMut(&StepEventC),
-) -> Result<DraftHostRun, CompileFailure> {
+) -> Result<(DraftHostRun, Option<serde_json::Value>), CompileFailure> {
     let config = parse_draft_config(config_source)?;
     let target_descriptor =
         crate::json::parse(target_source).map_err(|error| CompileFailure::core("config", error))?;
@@ -169,11 +192,40 @@ fn run_draft_host_impl(
         completed: false,
     })?;
 
+    let serialization_bytes = bounds.serialization_bytes;
     let AdmittedDraftSource {
         preparation: _,
         admitted,
         mut image,
     } = pair;
+    if let Some(request) = chunking {
+        if word_layout.is_some() {
+            return Err(CompileFailure::input(
+                "config",
+                "technical chunks use the default arithmetic realization only",
+            ));
+        }
+        let outcome = super::draft_chunked::run_chunked(
+            &admitted,
+            image,
+            request,
+            serialization_bytes,
+            sink,
+        )?;
+        let events_forwarded = outcome.summary.events;
+        return Ok((
+            DraftHostRun {
+                preparation,
+                completed: CompletedRun {
+                    admitted,
+                    image: outcome.image,
+                    summary: outcome.summary,
+                    events_forwarded,
+                },
+            },
+            Some(outcome.report),
+        ));
+    }
     let mut events = EventForwarding::default();
     let result = {
         let mut forwarding_sink = |event: &StepEventC| {
@@ -195,15 +247,18 @@ fn run_draft_host_impl(
             events_forwarded: events.forwarded,
         })
     })?;
-    Ok(DraftHostRun {
-        preparation,
-        completed: CompletedRun {
-            admitted,
-            image,
-            summary,
-            events_forwarded: events.forwarded,
+    Ok((
+        DraftHostRun {
+            preparation,
+            completed: CompletedRun {
+                admitted,
+                image,
+                summary,
+                events_forwarded: events.forwarded,
+            },
         },
-    })
+        None,
+    ))
 }
 
 // The selected public draft run exposes the same owner-bound reporter.

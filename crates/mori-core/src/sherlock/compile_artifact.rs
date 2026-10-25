@@ -13,6 +13,8 @@ use std::collections::BTreeMap;
 
 #[path = "compile_artifact/config.rs"]
 pub mod config;
+#[path = "compile_artifact/draft_chunked.rs"]
+pub mod draft_chunked;
 #[path = "compile_artifact/draft_contract.rs"]
 pub mod draft_contract;
 #[path = "compile_artifact/draft_execution.rs"]

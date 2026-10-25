@@ -44,3 +44,38 @@ fn explicit_draft_selection_and_legacy_shapes_match_frozen_literals() {
         }
     }
 }
+
+#[test]
+fn technical_chunk_flags_parse_and_conflict() {
+    let base = [
+        "mori",
+        "simulate",
+        "p.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/1",
+        "--entry",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+    ];
+    let parse = |extra: &[&str]| {
+        let mut argv = base.to_vec();
+        argv.extend_from_slice(extra);
+        Cli::try_parse_from(argv)
+    };
+    let Command::Simulate(args) = parse(&["--chunk", "3", "--chunk-events"]).unwrap().command
+    else {
+        panic!("wrong command");
+    };
+    assert_eq!(args.chunk, Some(3));
+    assert!(args.chunk_events);
+    let Command::Simulate(args) = parse(&["--chunk-at", "1,4,9"]).unwrap().command else {
+        panic!("wrong command");
+    };
+    assert_eq!(args.chunk_at, Some(vec![1, 4, 9]));
+    assert!(parse(&["--chunk", "2", "--chunk-at", "1"]).is_err());
+    assert!(parse(&["--chunk", "-1"]).is_err());
+    // Chunking needs the explicit Sherlock route.
+    assert!(Cli::try_parse_from(["mori", "simulate", "p.mori", "--chunk", "2"]).is_err());
+}

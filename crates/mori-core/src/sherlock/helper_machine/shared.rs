@@ -2014,6 +2014,7 @@ pub mod owner_ext_t3_uses;
 pub mod owner_ext_type_builder;
 pub mod owner_host;
 mod owner_prepare;
+pub mod owner_resume;
 mod owner_runtime;
 pub use fin_carrier::{
     FinActionBinding, FinActionPlan, FinAdmittedExtras, FinAssetBinding, FinAssetRowId,

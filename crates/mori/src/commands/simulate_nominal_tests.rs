@@ -43,6 +43,9 @@ fn args(source: &str) -> Args {
         source_profile: Some("moriarty-sherlock-nominal-body-typed/1".into()),
         entry: true,
         execution_config: Some(root.join("config.json")),
+        chunk: None,
+        chunk_at: None,
+        chunk_events: false,
     }
 }
 fn must<T>(value: Result<T, mori_core::sherlock_compile_artifact::CompileFailure>) -> T {
@@ -168,7 +171,9 @@ fn check(source_file: &str, expected: Value) {
     // bounded production source/config/target reads and the normal Core library.
     let run = match must(execute(&args, &mut |event| events.push(event.clone()))) {
         SelectedRun::Nominal(run) => run,
-        SelectedRun::Draft(_) => panic!("nominal profile reached the draft compiler"),
+        SelectedRun::Draft(_) | SelectedRun::Chunked(..) => {
+            panic!("nominal profile reached the draft compiler")
+        }
     };
     assert!(!events.is_empty());
     assert_eq!(events.len() as u128, run.completed().events_forwarded);

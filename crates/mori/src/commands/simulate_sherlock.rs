@@ -17,7 +17,25 @@ fn print_failure(failure: &CompileFailure) -> super::super::Result<ExitCode> {
 // This is private command plumbing, not an artifact importer or a new Core API.
 enum SelectedRun {
     Draft(host::draft_execution::DraftHostRun),
+    Chunked(host::draft_execution::DraftHostRun, serde_json::Value),
     Nominal(host::nominal_body_command::NominalHostRun),
+}
+
+fn chunk_request(args: &Args) -> Option<host::draft_chunked::ChunkRequest> {
+    use host::draft_chunked::{ChunkEvents, ChunkPlan, ChunkRequest};
+    let plan = match (args.chunk, &args.chunk_at) {
+        (Some(n), _) => ChunkPlan::Every(n),
+        (None, Some(points)) => ChunkPlan::At(points.clone()),
+        (None, None) => return None,
+    };
+    Some(ChunkRequest {
+        plan,
+        events: if args.chunk_events {
+            ChunkEvents::Retained
+        } else {
+            ChunkEvents::NotRetained
+        },
+    })
 }
 
 fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun, CompileFailure> {
@@ -28,9 +46,21 @@ fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun
         .map_err(|error| CompileFailure::input("config", error.to_string()))?;
     let target = core_io::read_source(target)
         .map_err(|error| CompileFailure::input("config", error.to_string()))?;
-    if args.source_profile.as_deref()
-        == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE)
-    {
+    let nominal = args.source_profile.as_deref()
+        == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE);
+    if let Some(request) = chunk_request(args) {
+        if nominal {
+            return Err(CompileFailure::input(
+                "config",
+                "technical chunks are supported on the dedicated draft route only",
+            ));
+        }
+        return host::draft_execution::run_draft_host_chunked(
+            &source, &config, &target, &request, sink,
+        )
+        .map(|(run, report)| SelectedRun::Chunked(run, report));
+    }
+    if nominal {
         host::nominal_body_command::run(&source, &config, &target, sink).map(SelectedRun::Nominal)
     } else {
         host::draft_execution::run_draft_host(&source, &config, &target, sink)
@@ -47,6 +77,23 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
         Err(failure) => return print_failure(&failure),
     };
     match selected {
+        SelectedRun::Chunked(run, chunks) => {
+            let report = match host::draft_simulation_report::report(&run) {
+                Ok(report) => report,
+                Err(failure) => return print_failure(&failure),
+            };
+            let mut value = match serde_json::to_value(&report) {
+                Ok(value) => value,
+                Err(error) => {
+                    return print_failure(&run.failure("serialization", error.to_string()));
+                }
+            };
+            value["execution"]["technical_chunks"] = chunks;
+            if let Err(error) = core_io::print(&value) {
+                return print_failure(&run.failure("serialization", error.to_string()));
+            }
+            Ok(exit_for(run.completed.summary.outcome))
+        }
         SelectedRun::Draft(run) => {
             let report = match host::draft_simulation_report::report(&run) {
                 Ok(report) => report,
@@ -81,6 +128,15 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
                     ExitCode::FAILURE
                 }
             })
+        }
+    }
+}
+
+fn exit_for(outcome: OutcomeC) -> ExitCode {
+    match outcome {
+        OutcomeC::Halted { .. } => ExitCode::SUCCESS,
+        OutcomeC::Rejected { .. } | OutcomeC::Exhausted { .. } | OutcomeC::Running => {
+            ExitCode::FAILURE
         }
     }
 }

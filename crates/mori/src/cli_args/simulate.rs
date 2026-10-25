@@ -48,6 +48,26 @@ pub struct Args {
     /// Exact caller configuration; no numerical defaults
     #[arg(long, requires = "execution_profile")]
     pub execution_config: Option<PathBuf>,
+    /// Technical chunks: cut after every N owner events and resume each chunk
+    /// from its decoded complete checkpoint (dedicated draft route only)
+    #[arg(
+        long,
+        value_name = "N",
+        requires = "execution_profile",
+        conflicts_with = "chunk_at"
+    )]
+    pub chunk: Option<u128>,
+    /// Technical chunks: cut after exactly these owner event counts (comma list)
+    #[arg(
+        long,
+        value_name = "E1,E2,...",
+        requires = "execution_profile",
+        value_delimiter = ','
+    )]
+    pub chunk_at: Option<Vec<u128>>,
+    /// Retain every owner event inside each technical chunk in the report
+    #[arg(long, requires = "execution_profile")]
+    pub chunk_events: bool,
 }
 fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
     serde_json::from_value(serde_json::Value::String(value.into()))
