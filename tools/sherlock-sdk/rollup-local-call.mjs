@@ -7,7 +7,7 @@ import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {bindBatch, assertPredecessor} from './rollup-statement.mjs';
+import {anchorView, bindBatch, assertPredecessor} from './rollup-statement.mjs';
 const [sdkRoot, build, keyedBuild, statePath, parent, key, output, mode] = process.argv.slice(2);
 assert.ok(output && (mode === undefined || ['--prove', '--wrong-statement'].includes(mode)));
 const proving = mode === '--prove';
@@ -26,7 +26,7 @@ assert.equal(manifest.schema, 'sherlock-b4-preparation/1');
 const batch = bindBatch(JSON.parse(readFileSync(join(parent, 'leaf.instance.json'))),
   JSON.parse(readFileSync(join(parent, 'parent.instance.json'))), manifest, rt);
 const stmt = batch.statement;
-assertPredecessor(mod.ledger(state.data), batch);
+assertPredecessor(anchorView(rt, mod, state), batch);
 const now = new Date(), ttl = new Date(now.getTime() + 3600_000);
 const parameters = ledger.LedgerParameters.initialParameters();
 // Install the exact keys and constructor state in an isolated local ledger. This bootstrap
@@ -138,7 +138,7 @@ try {
   const verified = proven.wellFormed(local, strictness(contractChecks), now);
   const [post, outcome] = local.apply(verified, new ledger.TransactionContext(local, blockContext));
   assert.equal(outcome.type, 'success');
-  const before = mod.ledger(state.data), after = mod.ledger(post.index(address).data);
+  const before = anchorView(rt, mod, state), after = anchorView(rt, mod, post.index(address));
   assert.ok(after.validity_ok.member(stmt)); assert.ok(after.settled.isEmpty());
   for (const field of ['instance_id', 'root', 'height', 'batch_no', 'dep_consumed', 'dep_acc',
     'last_in_root', 'last_fee_sum', 'last_wd_sum_usd', 'last_wd_sum_night',

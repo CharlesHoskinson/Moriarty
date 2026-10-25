@@ -5,12 +5,13 @@ import {createRequire} from 'node:module';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
-import {bindBatch, assertPredecessor} from './rollup-statement.mjs';
+import {anchorView, bindBatch, assertPredecessor} from './rollup-statement.mjs';
 
 const sdk = process.env.SHERLOCK_SDK_ROOT;
 assert.ok(sdk, 'SHERLOCK_SDK_ROOT must identify the pinned SDK package directory');
 const require = createRequire(resolve(sdk, 'package.json'));
 const rt = await import(pathToFileURL(require.resolve('@midnight-ntwrk/compact-runtime')).href);
+const native = await import(pathToFileURL(require.resolve('@midnight-ntwrk/midnight-js-protocol/ledger')).href);
 const build = resolve(process.env.ROLLUP_ANCHOR_BUILD ?? 'target/sherlock-rollup-anchor/build');
 const mod = await import(pathToFileURL(join(build, 'contract/index.js')).href);
 assert.ok(process.env.SHERLOCK_B3_DIR, 'SHERLOCK_B3_DIR must identify a verified B3 run');
@@ -37,6 +38,14 @@ async function call(session, entry, ...args) {
 test('terminal projection matches the retained stock D statement', () => {
   const verified = JSON.parse(readFileSync(join(proof, 'verified.json')));
   assert.equal(statement(fields, 0n), fromLe(verified.terminal_statement));
+});
+
+test('anchor readback crosses the SDK ledger and compact runtime WASM modules', async () => {
+  const session = await initial();
+  const state = native.ContractState.deserialize(session.state.serialize());
+  const view = anchorView(rt, mod, state);
+  assert.equal(view.root, fields[0]);
+  assert.equal(view.instance_id, 1n);
 });
 
 test('deployment binds the proven leaf, parent, statement and complete predecessor', async () => {

@@ -6,7 +6,7 @@ import {resolve, join} from 'node:path';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-import {bindBatch} from './rollup-statement.mjs';
+import {anchorView, bindBatch} from './rollup-statement.mjs';
 
 const [sdk, build, b3, key, settle, output] = process.argv.slice(2);
 assert.ok(output, 'SDK_ROOT BUILD B3_DIR KEY_DIR SETTLE_KEY OUTPUT required');
@@ -49,7 +49,7 @@ const compiledContract = CompiledContract.make('SherlockRollupAnchor', mod.Contr
 const dry = await createUnprovenDeployTx({zkConfigProvider: new ExactKeys(), walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),
 }}, {compiledContract, args: constructor});
-const state = dry.public.initialContractState, view = mod.ledger(state.data);
+const state = dry.public.initialContractState, view = anchorView(runtime, mod, state);
 for (const [i, name] of ['instance_id', 'root', 'height', 'batch_no', 'dep_consumed', 'dep_acc'].entries())
   assert.equal(view[name], constructor[i], name);
 for (const name of ['last_in_root', 'last_fee_sum', 'last_wd_sum_usd', 'last_wd_sum_night',

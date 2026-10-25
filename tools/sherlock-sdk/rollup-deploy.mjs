@@ -6,6 +6,7 @@ import {resolve, join} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
+import {anchorView} from './rollup-statement.mjs';
 const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
 assert.ok(sdkRoot && buildArg && preparation && outputArg);
 assert.ok(mode === undefined || mode === '--submit');
@@ -37,6 +38,7 @@ const ledgerLib = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
 const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
 const {ZKConfigProvider, createVerifierKey} = await load('@midnight-ntwrk/midnight-js-types');
 const {createUnprovenDeployTx, deployContract} = await load('@midnight-ntwrk/midnight-js-contracts');
+const rt = await load('@midnight-ntwrk/compact-runtime');
 // WASM classes are tied to a module instance; use the wallet SDK runtime for this copy.
 const deployBuild = join(output, 'build');
 mkdirSync(deployBuild, {recursive: true});
@@ -67,7 +69,7 @@ const dry = await createUnprovenDeployTx({zkConfigProvider, walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),
 }}, options);
 const checkState = state => {
-  const view = mod.ledger(state.data), c = expected.constructor.map(BigInt);
+  const view = anchorView(rt, mod, state), c = expected.constructor.map(BigInt);
   const fields = ['instance_id', 'root', 'height', 'batch_no', 'dep_consumed', 'dep_acc'];
   for (let i = 0; i < fields.length; i++) assert.equal(view[fields[i]], c[i], fields[i]);
   for (const field of ['last_in_root', 'last_fee_sum', 'last_wd_sum_usd', 'last_wd_sum_night',

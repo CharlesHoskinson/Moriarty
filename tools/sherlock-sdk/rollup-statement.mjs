@@ -1,5 +1,8 @@
 // Public correspondence checks shared by offline deployment and call preparation.
 import assert from 'node:assert/strict';
+// Each WASM module owns distinct classes; cross the public serialization boundary.
+export const anchorView = (runtime, contract, state) =>
+  contract.ledger(runtime.ContractState.deserialize(state.serialize()).data);
 const modulus = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001n;
 export const fromLe = value => {
   assert.match(value, /^[0-9a-f]{64}$/);
