@@ -369,7 +369,10 @@ fn derived_owner_site(before_host: &HostSnapshot) -> Result<SiteTag, EM> {
         ControlC::CaseResult { .. } => SiteTag::CaseResult,
         ControlC::PrimResult { .. } => SiteTag::Prim,
         ControlC::Materialize { .. } => SiteTag::Materialize,
-        ControlC::Error { .. } => return Err(em("snapshot control before")),
+        // Profile /2 Await is not steppable, mirroring Core `owner_site`.
+        ControlC::Error { .. } | ControlC::Await { .. } => {
+            return Err(em("snapshot control before"));
+        }
     })
 }
 

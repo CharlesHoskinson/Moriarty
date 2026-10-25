@@ -1249,6 +1249,14 @@ pub fn owner_site(pre: &PreImage) -> Result<SiteTag, HostViolation> {
         ControlC::CaseResult { .. } => Ok(SiteTag::CaseResult),
         ControlC::PrimResult { .. } => Ok(SiteTag::Prim),
         ControlC::Materialize { .. } => Ok(SiteTag::Materialize),
+        // Profile /2: a Waiting image is not steppable; only the atomic
+        // resume relation leaves Await (suspension design note §6.2).
+        ControlC::Await { .. } => Err(hv(
+            HostViolationKind::SelectUndefined,
+            None,
+            None,
+            "Await control in select",
+        )),
         ControlC::Error { .. } => Err(hv(
             HostViolationKind::SelectUndefined,
             None,
@@ -2621,6 +2629,7 @@ fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostV
                 }
             }
             ControlC::Bound { body, .. } | ControlC::CaseResult { body, .. } => exprs.push(*body),
+            ControlC::Await { expr, .. } => exprs.push(*expr),
             ControlC::Return { .. }
             | ControlC::Cases { .. }
             | ControlC::PrimResult { .. }
@@ -3301,6 +3310,7 @@ fn outcome_tag(o: &OutcomeC) -> OutcomeTagC {
         OutcomeC::Halted { .. } => OutcomeTagC::Halted,
         OutcomeC::Rejected { .. } => OutcomeTagC::Rejected,
         OutcomeC::Exhausted { .. } => OutcomeTagC::Exhausted,
+        OutcomeC::Waiting { .. } => OutcomeTagC::Waiting,
     }
 }
 fn build_event(
@@ -4476,10 +4486,12 @@ pub fn owner_check_step_inv(
             )
         });
     // SI-01 identity profile/domain/finance.
+    let profile = a.body.identity.profile_id;
+    let profile_ok = profile == PROFILE_ID_MICROSTEP_1 || profile == PROFILE_ID_MICROSTEP_2;
     let si01_ok = if has_ext {
-        a.body.identity.profile_id == 2
+        profile_ok
     } else {
-        a.body.identity.profile_id == 2
+        profile_ok
             && a.body.identity.grammar_domain == GrammarDomain::DedicatedSorts
             && a.body.identity.finance == FinanceInput::Absent
     };
@@ -4494,8 +4506,17 @@ pub fn owner_check_step_inv(
     let si02 = match img.outcome {
         OutcomeC::Halted { value } => !ref_in_bounds(&pre, &value),
         OutcomeC::Rejected { code } => !(1..=11).contains(&code),
-        OutcomeC::Exhausted { reason } => reason == ExhaustReason::SerializationBytes,
+        OutcomeC::Exhausted { reason } => {
+            reason == ExhaustReason::SerializationBytes
+                || (reason == ExhaustReason::LogicalCap && profile != PROFILE_ID_MICROSTEP_2)
+        }
         OutcomeC::Running => false,
+        // SI-27 (profile /2): Waiting{s} iff control is Await{s, ..}, s >= 1.
+        OutcomeC::Waiting { site } => {
+            profile != PROFILE_ID_MICROSTEP_2
+                || site == 0
+                || !matches!(img.control, ControlC::Await { site: s, .. } if s == site)
+        }
     };
     push(
         StepInvClauseId::SI02,
@@ -4847,6 +4868,11 @@ pub fn owner_check_step_inv(
     // SI-20 controlOrigin coherence.
     let si20 = match &img.control {
         ControlC::Eval { expr } => img.control_origin != *expr,
+        // SI-27 converse: Await control only under a matching Waiting outcome.
+        ControlC::Await { site, expr } => {
+            img.control_origin != *expr
+                || !matches!(img.outcome, OutcomeC::Waiting { site: s } if s == *site)
+        }
         ControlC::ScheduleNext { frame, .. } => img.control_origin != frame_origin(frame),
         ControlC::Invoke { .. } | ControlC::Enter { .. } | ControlC::Bound { .. } => !matches!(
             pre.expr(&img.control_origin),
@@ -4937,7 +4963,8 @@ pub fn owner_check_step_inv(
             result: PrimOutcome::Error { code },
         } => !matches!(code, 10 | 11),
         ControlC::Error { code } => !(1..=11).contains(code),
-        ControlC::Eval { .. }
+        ControlC::Await { .. }
+        | ControlC::Eval { .. }
         | ControlC::Return { .. }
         | ControlC::Bound { .. }
         | ControlC::PrimResult {

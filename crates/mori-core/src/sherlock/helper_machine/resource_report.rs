@@ -48,6 +48,7 @@ pub enum Exhaustion {
     HelperTasks,
     HelperWork,
     SerializationBytes,
+    LogicalCap,
 }
 impl From<ExhaustReason> for Exhaustion {
     fn from(reason: ExhaustReason) -> Self {
@@ -59,6 +60,7 @@ impl From<ExhaustReason> for Exhaustion {
             ExhaustReason::HelperTasks => Self::HelperTasks,
             ExhaustReason::HelperWork => Self::HelperWork,
             ExhaustReason::SerializationBytes => Self::SerializationBytes,
+            ExhaustReason::LogicalCap => Self::LogicalCap,
         }
     }
 }
@@ -70,6 +72,7 @@ pub enum ReportOutcome {
     Halted { value: ValueReference },
     Rejected { code: u8 },
     Exhausted { reason: Exhaustion },
+    Waiting { site: u16 },
 }
 impl From<OutcomeC> for ReportOutcome {
     fn from(outcome: OutcomeC) -> Self {
@@ -82,6 +85,7 @@ impl From<OutcomeC> for ReportOutcome {
             OutcomeC::Exhausted { reason } => Self::Exhausted {
                 reason: reason.into(),
             },
+            OutcomeC::Waiting { site } => Self::Waiting { site },
         }
     }
 }

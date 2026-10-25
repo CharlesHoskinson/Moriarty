@@ -122,8 +122,8 @@ scalar_enum!(enc_MatchPhase,dec_MatchPhase,MatchPhase;Arm=0,Tag=1,Distinct=2,Fie
 scalar_enum!(enc_BuildPhase,dec_BuildPhase,BuildPhase;Copy=0,Done=1);
 scalar_enum!(enc_PlanPhase,dec_PlanPhase,PlanPhase;Walk=0,Test=1,Bind=2,Ready=3,NoMatchReady=4,Done=5);
 scalar_enum!(enc_HelperResultTagC,dec_HelperResultTagC,HelperResultTagC;Validated=0,EnvFound=1,EnvMissing=2,EnvUpdated=3,FindFound=4,FindMissing=5,BindOk=6,BindBad=7,AppendDone=8,ScalarValue=9,ScalarError=10,ScalarSelector=11,ScalarTypeTest=12,EqualDone=13,MatchMatched=14,MatchNoMatch=15,PlanMatched=16,PlanNoMatch=17,BuildDone=18);
-scalar_enum!(enc_ExhaustReason,dec_ExhaustReason,ExhaustReason;Fuel=0,DataNodes=1,DataFields=2,EnvironmentCells=3,HelperTasks=4,HelperWork=5,SerializationBytes=6);
-scalar_enum!(enc_OutcomeTagC,dec_OutcomeTagC,OutcomeTagC;Running=0,Halted=1,Rejected=2,Exhausted=3);
+scalar_enum!(enc_ExhaustReason,dec_ExhaustReason,ExhaustReason;Fuel=0,DataNodes=1,DataFields=2,EnvironmentCells=3,HelperTasks=4,HelperWork=5,SerializationBytes=6,LogicalCap=7);
+scalar_enum!(enc_OutcomeTagC,dec_OutcomeTagC,OutcomeTagC;Running=0,Halted=1,Rejected=2,Exhausted=3,Waiting=4);
 scalar_enum!(enc_BoundaryKind,dec_BoundaryKind,BoundaryKind;None=0,Terminal=1,TechnicalCut=2,SourceSuspensionExtensionReserved=3);
 fn phase(e: &mut Enc, p: HelperPhaseSummaryC) -> Result<(), EventCodecError> {
     match p {
@@ -193,6 +193,10 @@ fn outcome(e: &mut Enc, v: OutcomeC) -> Result<(), EventCodecError> {
             e.put(3)?;
             e.put(enc_ExhaustReason(reason))
         }
+        OutcomeC::Waiting { site } => {
+            e.put(4)?;
+            e.put(site.into())
+        }
     }
 }
 fn read_outcome(d: &mut Dec<'_>) -> Result<OutcomeC, EventCodecError> {
@@ -212,6 +216,9 @@ fn read_outcome(d: &mut Dec<'_>) -> Result<OutcomeC, EventCodecError> {
         2 => OutcomeC::Rejected { code: d.byte()? },
         3 => OutcomeC::Exhausted {
             reason: dec_ExhaustReason(d.get()?)?,
+        },
+        4 => OutcomeC::Waiting {
+            site: u16::try_from(d.get()?).map_err(|_| EventCodecError::Invalid)?,
         },
         _ => return Err(EventCodecError::Invalid),
     })

@@ -463,6 +463,14 @@ impl Raw for u8 {
         rd.u8()
     }
 }
+impl Raw for u16 {
+    fn put(&self, wr: &mut W<'_>) -> Enc {
+        wr.bytes(&self.to_le_bytes())
+    }
+    fn get(rd: &mut R<'_>) -> Dec<Self> {
+        Ok(u16::from_le_bytes(rd.arr()?))
+    }
+}
 impl Raw for u32 {
     fn put(&self, wr: &mut W<'_>) -> Enc {
         wr.bytes(&self.to_le_bytes())
@@ -814,7 +822,7 @@ raw_unit! {
         15 RetArgs 16 RetCall 17 RetScope 18 Invoke 19 Enter 20 Bound 21 Cases 22 CaseResult
         23 Prim 24 EvalConstruct 25 RetCtorFields 26 Materialize]
     ExhaustReason [0 Fuel 1 DataNodes 2 DataFields 3 EnvironmentCells 4 HelperTasks 5 HelperWork
-        6 SerializationBytes]
+        6 SerializationBytes 7 LogicalCap]
     TaskVisitC [0 Unvisited 1 Fields]
 }
 
@@ -848,7 +856,10 @@ raw_enum! {
     BoundBinding { 0 Bad {} 1 Ok { env } }
     CaseMatching { 0 NoMatch {} 1 Matched { env } }
     PrimOutcome { 0 Value { value } 1 Error { code } }
-    OutcomeC { 0 Running {} 1 Halted { value } 2 Rejected { code } 3 Exhausted { reason } }
+    OutcomeC {
+        0 Running {} 1 Halted { value } 2 Rejected { code } 3 Exhausted { reason }
+        4 Waiting { site }
+    }
     ScalarStaged {
         0 None {} 1 U128Value { n } 2 BoolValue { b } 3 PendingNode { tag }
         4 PrimError { code } 5 Selector { sel } 6 TypeTest { ok }
@@ -858,7 +869,7 @@ raw_enum! {
         3 Invoke { function_name, args } 4 Enter { function, args }
         5 Bound { binding, return_type, body } 6 Cases { value, arms, saved_env }
         7 CaseResult { matching, value, body, rest, saved_env } 8 PrimResult { result }
-        9 Error { code } 10 Materialize { type_id, ctor_id, fields }
+        9 Error { code } 10 Materialize { type_id, ctor_id, fields } 11 Await { site, expr }
     }
     FrameRowC {
         0 LetF { binder, body, saved_env, origin } 1 LeftF { op, right, saved_env, origin }
@@ -1590,7 +1601,7 @@ mod tests {
         units::<AppendPhase>(3);
         units::<MatchPhase>(8);
         units::<SiteTag>(27);
-        units::<ExhaustReason>(7);
+        units::<ExhaustReason>(8);
         units::<TaskVisitC>(2);
     }
 

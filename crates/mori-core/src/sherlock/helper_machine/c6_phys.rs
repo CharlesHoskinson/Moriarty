@@ -296,6 +296,9 @@ fn rd(section: &'static str, value: u128) -> C6Result<usize> {
 fn rd_u8(section: &'static str, value: u128) -> C6Result<u8> {
     u8::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
 }
+fn rd_u16(section: &'static str, value: u128) -> C6Result<u16> {
+    u16::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
+}
 fn rd_bool(section: &'static str, value: u128) -> C6Result<bool> {
     match value {
         0 => Ok(false),
@@ -403,6 +406,7 @@ fn exhaust_tag(reason: ExhaustReason) -> u128 {
         ExhaustReason::HelperTasks => 4,
         ExhaustReason::HelperWork => 5,
         ExhaustReason::SerializationBytes => 6,
+        ExhaustReason::LogicalCap => 7,
     }
 }
 fn exhaust_from(section: &'static str, tag: u128) -> C6Result<ExhaustReason> {
@@ -414,6 +418,7 @@ fn exhaust_from(section: &'static str, tag: u128) -> C6Result<ExhaustReason> {
         4 => ExhaustReason::HelperTasks,
         5 => ExhaustReason::HelperWork,
         6 => ExhaustReason::SerializationBytes,
+        7 => ExhaustReason::LogicalCap,
         _ => return Err(C6PhysError::BadTag { section, tag }),
     })
 }
@@ -655,6 +660,7 @@ fn control_caps(control: &ControlC, c: &C6PhysCaps) -> C6Result<()> {
             cap_index("control.ctor_id", ctor_id.0, c.max_constructors)?;
             cap_vals("control.fields", fields, c)
         }
+        K::Await { expr, .. } => cap_index("control.expr", expr, x),
     }
 }
 
@@ -978,6 +984,11 @@ pub fn encode_control(control: &ControlC) -> [u128; CONTROL_LANES] {
             o[2] = u(ctor_id.0);
             put_slice(&mut o, 3, fields);
         }
+        K::Await { site, expr } => {
+            o[0] = 11;
+            o[1] = u128::from(site);
+            o[2] = u(expr);
+        }
     }
     o
 }
@@ -1118,6 +1129,13 @@ pub fn decode_control(l: &[u128; CONTROL_LANES]) -> C6Result<ControlC> {
                 fields: get_slice(S, l, 3)?,
             },
             5,
+        ),
+        11 => (
+            K::Await {
+                site: rd_u16(S, l[1])?,
+                expr: rd(S, l[2])?,
+            },
+            3,
         ),
         tag => return Err(C6PhysError::BadTag { section: S, tag }),
     };
@@ -1288,6 +1306,10 @@ fn put_outcome(out: &mut [u128], at: usize, outcome: OutcomeC) {
             out[at] = 3;
             out[at + 1] = exhaust_tag(reason);
         }
+        OutcomeC::Waiting { site } => {
+            out[at] = 4;
+            out[at + 1] = u128::from(site);
+        }
     }
 }
 fn get_outcome(s: &'static str, l: &[u128], at: usize) -> C6Result<OutcomeC> {
@@ -1308,6 +1330,11 @@ fn get_outcome(s: &'static str, l: &[u128], at: usize) -> C6Result<OutcomeC> {
             let reason = exhaust_from(s, l[at + 1])?;
             zero(s, l, at + 2, at + 3)?;
             Ok(OutcomeC::Exhausted { reason })
+        }
+        4 => {
+            let site = rd_u16(s, l[at + 1])?;
+            zero(s, l, at + 2, at + 3)?;
+            Ok(OutcomeC::Waiting { site })
         }
         tag => Err(C6PhysError::BadTag { section: s, tag }),
     }

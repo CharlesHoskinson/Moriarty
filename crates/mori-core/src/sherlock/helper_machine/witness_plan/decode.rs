@@ -345,7 +345,10 @@ impl<'a> Builder<'a> {
             InputValue::Result(result) => self.result_fields(result, &mut fields, at)?,
             InputValue::Outcome(outcome) => match outcome {
                 OutcomeC::Halted { value } => self.value_field(&mut fields, "value", value, at)?,
-                OutcomeC::Running | OutcomeC::Rejected { .. } | OutcomeC::Exhausted { .. } => (),
+                OutcomeC::Running
+                | OutcomeC::Rejected { .. }
+                | OutcomeC::Exhausted { .. }
+                | OutcomeC::Waiting { .. } => (),
             },
             _ => return Err(fail(at, FailureKind::WrongOperation)),
         }
@@ -615,6 +618,9 @@ impl<'a> Builder<'a> {
             } => {
                 self.constructor_fields(type_id, ctor_id, f, at)?;
                 self.values_field(f, "fields", fields, at)?;
+            }
+            ControlC::Await { expr, .. } => {
+                self.source_field(f, "expr", InputPath::Expression(expr), at)?
             }
             ControlC::Error { .. } => (),
         }

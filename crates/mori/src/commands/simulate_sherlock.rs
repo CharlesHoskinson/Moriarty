@@ -162,7 +162,8 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
             // Preserve the actual runtime outcome. Completed owner tooling is not
             // a fabricated accepted result; unexpected Running stays non-success.
             Ok(match run.completed.summary.outcome {
-                OutcomeC::Halted { .. } => ExitCode::SUCCESS,
+                // Profile /2 Waiting is a resumable success (design note §3.5).
+                OutcomeC::Halted { .. } | OutcomeC::Waiting { .. } => ExitCode::SUCCESS,
                 OutcomeC::Rejected { .. } | OutcomeC::Exhausted { .. } | OutcomeC::Running => {
                     ExitCode::FAILURE
                 }
@@ -180,7 +181,8 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
                 return print_failure(&report.failure("serialization", error.to_string()));
             }
             Ok(match outcome {
-                OutcomeC::Halted { .. } => ExitCode::SUCCESS,
+                // Profile /2 Waiting is a resumable success (design note §3.5).
+                OutcomeC::Halted { .. } | OutcomeC::Waiting { .. } => ExitCode::SUCCESS,
                 OutcomeC::Rejected { .. } | OutcomeC::Exhausted { .. } | OutcomeC::Running => {
                     ExitCode::FAILURE
                 }
@@ -221,7 +223,8 @@ fn print_extended(
 
 fn exit_for(outcome: OutcomeC) -> ExitCode {
     match outcome {
-        OutcomeC::Halted { .. } => ExitCode::SUCCESS,
+        // Profile /2 Waiting is a resumable success (design note §3.5).
+        OutcomeC::Halted { .. } | OutcomeC::Waiting { .. } => ExitCode::SUCCESS,
         OutcomeC::Rejected { .. } | OutcomeC::Exhausted { .. } | OutcomeC::Running => {
             ExitCode::FAILURE
         }

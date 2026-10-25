@@ -372,6 +372,9 @@ pub enum ExhaustReason {
     HelperTasks,
     HelperWork,
     SerializationBytes,
+    /// Profile /2 only: an await entry whose following Core/2 segment would
+    /// exceed the admitted logical cap (suspension design note §6.1).
+    LogicalCap,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StepDisposition {
@@ -549,7 +552,14 @@ pub struct IdentityC {
     pub field_id: Option<(String, String)>,
     pub program_membership_digest: DigestC,
 }
-// profile_id: owner maps 0=sherlock-k-a/1,1=sherlock-quint-a/1,2=sherlock-helper-microstep/1; B-core requires 2.
+// profile_id: owner maps 0=sherlock-k-a/1,1=sherlock-quint-a/1,2=sherlock-helper-microstep/1,
+// 3=sherlock-helper-microstep/2; B-core requires 2, the /2 suspension route requires 3.
+/// Numeric `IdentityC::profile_id` of `sherlock-helper-microstep/1`.
+pub const PROFILE_ID_MICROSTEP_1: u8 = 2;
+/// Numeric `IdentityC::profile_id` of `sherlock-helper-microstep/2`.
+pub const PROFILE_ID_MICROSTEP_2: u8 = 3;
+/// Execution-profile name of the /2 suspension/finance profile.
+pub const PROFILE_MICROSTEP_2: &str = "sherlock-helper-microstep/2";
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RunIdC {
     pub identity: IdentityC,
@@ -589,6 +599,8 @@ pub enum OutcomeTagC {
     Halted,
     Rejected,
     Exhausted,
+    /// Profile /2 only: suspended at an await site, resumable.
+    Waiting,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HelperPhaseSummaryC {
@@ -977,6 +989,12 @@ pub enum ControlC {
         ctor_id: adt::CtorIdC,
         fields: ValSliceC,
     },
+    /// Profile /2 only: suspended at await `site`; `expr` is the await
+    /// expression row (binders, guard and body are read from it).
+    Await {
+        site: u16,
+        expr: usize,
+    },
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HelperTaskC {
@@ -1022,9 +1040,20 @@ pub enum HelperResultC {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OutcomeC {
     Running,
-    Halted { value: RefC },
-    Rejected { code: u8 },
-    Exhausted { reason: ExhaustReason },
+    Halted {
+        value: RefC,
+    },
+    Rejected {
+        code: u8,
+    },
+    Exhausted {
+        reason: ExhaustReason,
+    },
+    /// Profile /2 only: non-terminal and not steppable; only the atomic
+    /// resume relation leaves it (suspension design note §6.2).
+    Waiting {
+        site: u16,
+    },
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct EnvCellC {
@@ -2028,6 +2057,9 @@ mod fin_owner_genesis_tests;
 #[cfg(test)]
 #[path = "shared/fin_staged_source_tests.rs"]
 mod fin_staged_source_tests;
+#[cfg(test)]
+#[path = "shared/profile2_suspension_tests.rs"]
+mod profile2_suspension_tests;
 
 pub use owner_ext_admit::{
     ExtCapacitiesC, PreparationReportC, WorkMapEntryC, admit_ext, admit_ext_program,

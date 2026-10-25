@@ -39,6 +39,9 @@ pub enum ProjectionGap {
     UnappliedSourceRule,
     IncompleteInterval,
     BResourceOutcome,
+    /// Profile /2 Waiting/Await: suspension is outside the A observation
+    /// domain (design.md "Pending/None is outside the A observation domain").
+    Suspension,
     /// A generic nominal form this finite dedicated A projection cannot represent.
     UnsupportedGeneric(GenericGap),
 }
@@ -748,6 +751,7 @@ impl ReferenceSource {
                 PrimOutcome::Error { code } => Err(code),
             }),
             ControlC::Error { code } => a::Control::Error(code),
+            ControlC::Await { .. } => return Err(ProjectionGap::Suspension),
             ControlC::Materialize {
                 type_id,
                 ctor_id,
@@ -785,6 +789,7 @@ impl ReferenceSource {
                 reason: ExhaustReason::Fuel,
             } if remaining == 0 => a::Outcome::Exhausted,
             OutcomeC::Exhausted { .. } => return Err(ProjectionGap::BResourceOutcome),
+            OutcomeC::Waiting { .. } => return Err(ProjectionGap::Suspension),
         };
         let control = if outcome == a::Outcome::Pending {
             Some(self.control(payload(field(&decoded.fields, "control")?, "control")?)?)

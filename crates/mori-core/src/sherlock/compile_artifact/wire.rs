@@ -305,6 +305,9 @@ impl OwnerWire for ControlC {
             } => {
                 json!({"Materialize": {"type_id": type_id.owner_wire(), "ctor_id": ctor_id.owner_wire(), "fields": fields.owner_wire()}})
             }
+            Self::Await { site, expr } => {
+                json!({"Await": {"site": site, "expr": expr.owner_wire()}})
+            }
         }
     }
 }
@@ -366,6 +369,7 @@ impl OwnerWire for ExhaustReason {
             Self::HelperTasks => json!("HelperTasks"),
             Self::HelperWork => json!("HelperWork"),
             Self::SerializationBytes => json!("SerializationBytes"),
+            Self::LogicalCap => json!("LogicalCap"),
         }
     }
 }
@@ -1050,6 +1054,7 @@ impl OwnerWire for OutcomeC {
             Self::Halted { value } => json!({"Halted": {"value": value.owner_wire()}}),
             Self::Rejected { code } => json!({"Rejected": {"code": code.owner_wire()}}),
             Self::Exhausted { reason } => json!({"Exhausted": {"reason": reason.owner_wire()}}),
+            Self::Waiting { site } => json!({"Waiting": {"site": site}}),
         }
     }
 }
@@ -1929,6 +1934,7 @@ impl OwnerWire for OutcomeTagC {
             Self::Halted => json!("Halted"),
             Self::Rejected => json!("Rejected"),
             Self::Exhausted => json!("Exhausted"),
+            Self::Waiting => json!("Waiting"),
         }
     }
 }
