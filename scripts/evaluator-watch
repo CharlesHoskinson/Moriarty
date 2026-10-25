@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Evaluator auto-watch: emit one TRIGGER line per new implementer signal.
+
+Signals (per watched worktree): new commits touching crates/ or qa/holdout/contracts/ since the
+last seen HEAD, and (best effort) `doctorwatson bus tail` events whose text names STATUS or
+CONTRACT. Intended as a Monitor/loop source: each stdout line is a wake-up for the evaluator, e.g.
+  scripts/evaluator-watch --worktree ~/repos/Moriarty-wt-factory-u --interval 120
+Use --once for a single poll (exit 0 = no signal, 10 = signal emitted). State: <worktree>/.git-adjacent
+file qa/sherlock/.evaluator-watch (gitignored via .git/info/exclude is the caller's choice); override with --state.
+It only reads; it never commits, signals processes, or touches the holdout.
+"""
+import argparse, os, subprocess, sys, time
+
+
+def git(wt, *a):
+    return subprocess.run(["git", "-C", wt, *a], capture_output=True, text=True).stdout.strip()
+
+
+def poll(wt, state, paths):
+    head = git(wt, "rev-parse", "HEAD")
+    seen = open(state).read().strip() if os.path.exists(state) else ""
+    sigs = []
+    if head and head != seen:
+        rng = f"{seen}..{head}" if seen and git(wt, "cat-file", "-t", seen) == "commit" else f"-1 {head}"
+        log = git(wt, "log", "--format=%h %s", "--name-only", *rng.split(), "--", *paths)
+        if log:
+            sigs.append("TRIGGER commits " + " | ".join(l for l in log.splitlines() if l and " " in l)[:300])
+        os.makedirs(os.path.dirname(state), exist_ok=True)
+        open(state, "w").write(head)
+    return sigs
+
+
+def bus_signals(wt, since_file):
+    dw = os.path.join(wt, "scripts", "doctorwatson")
+    if not os.path.exists(dw):
+        return []
+    r = subprocess.run([dw, "bus", "tail"], capture_output=True, text=True, timeout=30)
+    seen = set(open(since_file).read().split("\n")) if os.path.exists(since_file) else set()
+    out, new = [], []
+    for line in r.stdout.splitlines():
+        if any(k in line for k in ("STATUS", "CONTRACT")) and line not in seen:
+            out.append("TRIGGER bus " + line[:200]); new.append(line)
+    if new:
+        open(since_file, "a").write("\n".join(new) + "\n")
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--worktree", default=os.getcwd())
+    ap.add_argument("--interval", type=int, default=120)
+    ap.add_argument("--once", action="store_true")
+    ap.add_argument("--state")
+    ap.add_argument("--paths", nargs="*", default=["crates", "qa/holdout/contracts"])
+    ap.add_argument("--no-bus", action="store_true")
+    a = ap.parse_args()
+    state = a.state or os.path.join(a.worktree, ".git-evaluator-watch") if not a.state else a.state
+    while True:
+        sigs = poll(a.worktree, state, a.paths)
+        if not a.no_bus:
+            try:
+                sigs += bus_signals(a.worktree, state + ".bus")
+            except Exception:
+                pass
+        for s in sigs:
+            print(s, flush=True)
+        if a.once:
+            return 10 if sigs else 0
+        time.sleep(a.interval)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

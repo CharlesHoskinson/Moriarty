@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import bus, head_sha, heavy, holdout, now_iso, preflight, queue, repo_root, spawn, status, stoprule
+from . import bus, evalloop, head_sha, heavy, holdout, now_iso, preflight, queue, repo_root, spawn, status, stoprule
 from . import predicates as preds_mod
 
 NO_RESULTS_HINT = "(no results yet — run scripts/doctorwatson check --tier T0)"
@@ -151,6 +151,18 @@ def cmd_bus(args):
     }[args.bus_cmd]()
 
 
+def cmd_clean(args):
+    return evalloop.cmd_clean()
+
+
+def cmd_state_commit(args):
+    return evalloop.cmd_state_commit()
+
+
+def cmd_contract_check(args):
+    return evalloop.cmd_contract_check(args.id)
+
+
 def cmd_spawn(args):
     args.extra = args.extra or []
     return spawn.main(args)
@@ -223,6 +235,16 @@ def build_parser():
     q = bsub.add_parser("watch", help="agentbus watch --exit-on-first on stop.escalate|review.reply|status.flip")
     q.add_argument("--max-time", type=int)
     p.set_defaults(fn=cmd_bus)
+
+    p = sub.add_parser("clean", help="exit 0 if the tree is clean ignoring qa/sherlock/{status.json,runs.jsonl}")
+    p.set_defaults(fn=cmd_clean)
+
+    p = sub.add_parser("state-commit", help="commit only qa/sherlock/{status.json,runs.jsonl} as chore(factory-state)")
+    p.set_defaults(fn=cmd_state_commit)
+
+    p = sub.add_parser("contract-check", help="run qa/holdout/contracts/ID.json against its entrypoint")
+    p.add_argument("id", metavar="ID_OR_PATH")
+    p.set_defaults(fn=cmd_contract_check)
 
     p = sub.add_parser("spawn", help="run a vendor CLI as a bus participant: spawn --vendor V --as N --role R --brief F [--] ARGS")
     p.add_argument("--vendor", required=True, choices=sorted(spawn.VENDORS))
