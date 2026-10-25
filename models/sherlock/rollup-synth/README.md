@@ -8,6 +8,44 @@ approved design; P0/G0 and fixture release remain open.
 
 From the repository root, with the pinned Fenrir checkout available:
 
+For relocated sources, set `FSYN_SOURCE_MAP` to a JSON object mapping original
+cut paths to absolute local paths. Aliases affect only file lookup: every byte
+count and SHA256, the original cut digest, duplicate-source rejection and corpus
+authority binding remain checked. Aliases are not included in fixture identity.
+`scripts/qa/check-b1.sh` prepares this map from `FENRIR_ROOT` (default
+`~/repos/projectfenrir-main`) and the original revision-20 Git snapshot, caching
+matching historical bytes under `target/fsyn-sources/`. If an original public
+source was never imported into Git, `FSYN_ARCHIVE_ROOT` may name an archive
+mirroring its original home-relative path (`research/...`). Missing or stale pins
+remain hard failures; preparation never refreshes the cut.
+
+## B1 recovered-source baseline (2026-10-24)
+
+The owner authorized a new B1 baseline while Sherlock's design is unfrozen. It
+uses the 123 recovered sources with their original size and SHA256 pins. The new
+cut digest is `884f0f1162ea3589f42a39820b8a7a3dc35051ea8e3c0f1bd924c321d3187bfd`.
+The old 125-source digest was
+`345c4f139c724dbf261e7aed343f4537b8b6c636464e0aa1e4af7246bcb98e02`.
+Two historical sources were not recoverable on this host or in Git history:
+
+| Original research path | Bytes | SHA256 |
+|---|---:|---|
+| `fenrir-rollup-design-2026-10-19/scripts/build-rev20.py` | 15535 | `faea2379c597cafc82d403b35cb11d7237bd3d79d32fd2e90af4749b83fead8a` |
+| `fenrir-rollup-design-2026-10-19/audits/ROLLUP-ARCHITECTURE.rev19.md` | 524974 | `6c7d5831e0dd2ead7b8a66bf48d9eae0d7a612b98cc9f7864f9a732a5f610f62` |
+
+Their original pins and the old digest remain in the cut's `baseline` record.
+This baseline does not claim to run the missing architecture builder. It keeps
+all 659 public corpus members and independently rebuilds 13 positive envelopes.
+With seed `0x5354524157`, the fixture has 662 files and identity
+`44ca50713872b4ce7a27566ae3f271f7f163176d97458216be575c429a1024fa`.
+`baseline.json` pins its manifest SHA256
+`a35a6b037484962b8108cc48432f0e016ddee0f113dbf0323c3d9a9d75376cc9`
+and content digest
+`19f51b924638947ef698aa9a6b7eae39203fdac5e8312ef7fd1006b67c7a90d1`.
+The B1 check generates twice, compares every member byte-for-byte, checks these
+fixed digests, and retains stale-source and tamper rejection tests. Full FSYN
+release gates remain open.
+
 ```sh
 python3 models/sherlock/rollup-synth/fsyn.py cut check --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json
 python3 models/sherlock/rollup-synth/fsyn.py generate --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json --golden-root "$HOME/projectfenrir/recursion/rollup-test-format/v3" --out NEW_OUTPUT_DIRECTORY --seed 0x5354524157 --scale S0 --profile both --mix strawman

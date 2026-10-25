@@ -59,10 +59,13 @@ class CutTests(unittest.TestCase):
     def test_nonfinite_json_rejected(self):
         self.cut.write_text('{"value":NaN}')
         with self.assertRaises(Error): load_json(self.cut)
-    def test_actual_125_cut(self):
+    def test_actual_123_source_baseline(self):
         result = check_cut(CUT)
-        self.assertEqual(result["files"], 125)
-        self.assertEqual(result["cut_digest"], "345c4f139c724dbf261e7aed343f4537b8b6c636464e0aa1e4af7246bcb98e02")
+        self.assertEqual(result["files"], 123)
+        self.assertEqual(result["cut_digest"], "884f0f1162ea3589f42a39820b8a7a3dc35051ea8e3c0f1bd924c321d3187bfd")
+        baseline = load_json(CUT)["baseline"]
+        self.assertEqual(baseline["previous_cut_digest"], "345c4f139c724dbf261e7aed343f4537b8b6c636464e0aa1e4af7246bcb98e02")
+        self.assertEqual(len(baseline["omitted_unrecoverable_sources"]), 2)
 
 class StreamTests(unittest.TestCase):
     def test_repeatability_and_chunk_independence(self):
@@ -98,6 +101,12 @@ class S0Tests(unittest.TestCase):
         generate(CUT, GOLDEN, other)
         files = lambda root: {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*") if p.is_file()}
         self.assertEqual(files(self.fixture), files(other))
+        baseline = load_json(Path(__file__).resolve().parents[1] / "baseline.json")
+        manifest = (self.fixture / "MANIFEST.json").read_bytes()
+        self.assertEqual(hashlib.sha256(manifest).hexdigest(), baseline["manifest_sha256"])
+        self.assertEqual(json.loads(manifest)["content_digest"], baseline["content_digest"])
+        self.assertEqual(self.report["fixture_id"], baseline["fixture_id"])
+        self.assertEqual(self.report["files"], baseline["files"])
     def test_replay_and_scope_truth(self):
         self.assertEqual(verify(self.fixture, CUT, GOLDEN)["status"], "internal-replay-pass")
         meta = load_json(self.fixture / "FIXTURE.json")
@@ -143,7 +152,7 @@ class CliTests(unittest.TestCase):
             fixture = Path(tmp) / "fixture"
             with contextlib.redirect_stdout(io.StringIO()) as stdout:
                 self.assertEqual(main(["cut", "check", "--cut", str(CUT)]), 0)
-            self.assertEqual(json.loads(stdout.getvalue())["files"], 125)
+            self.assertEqual(json.loads(stdout.getvalue())["files"], 123)
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["generate", "--cut", str(CUT), "--golden-root", str(GOLDEN), "--out", str(fixture), "--seed", "0x5354524157"]), 0)
                 self.assertEqual(main(["verify", "--cut", str(CUT), "--golden-root", str(GOLDEN), "--fixture", str(fixture)]), 0)
