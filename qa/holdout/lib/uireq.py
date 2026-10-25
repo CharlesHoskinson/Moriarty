@@ -1154,6 +1154,16 @@ def _inventory_honest(c, src, name, ops=None):
     claimed_files = set()
     frags = [(k, row["fragment"]) for k, row in rows.items() if row.get("fragment")]
     frags += [(u["rule"], u) for u in table["unexercised_c6_fragments"]]
+    # dispatch-owner candidates: same file/entry/rule/evidence checks as every other fragment
+    dfr = table.get("dispatch_fragments") or []
+    need(isinstance(dfr, list), f"inventory dishonest: {name}: dispatch_fragments is not a list")
+    for df in dfr:
+        need(df.get("rule") == "dispatch" and df.get("file") and df.get("entry"),
+             f"inventory dishonest: {name}: malformed dispatch fragment {df}")
+    frags += [(df["rule"], df) for df in dfr]
+    cand = ni["owners"]["dispatch"].get("candidate")
+    need(cand is None or cand in {df["file"] for df in dfr},
+         f"inventory dishonest: {name}: dispatch candidate {cand} is not a claimed dispatch fragment")
     for rule, fr in frags:
         text = _repo_file(fr["file"], f"{rule} fragment")
         need(f"pub fn {fr['entry']}" in text, f"inventory dishonest: {name}: {fr['file']} has no pub fn {fr['entry']}")
