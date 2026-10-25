@@ -3,10 +3,10 @@
 Status: DESIGN NOTE, Phase 1, 2026-10-25. Decided by sherlock-u under the owner
 decision relayed by the coordinator ("change whatever you like in the design of
 sherlock ... we can't change ledger 9"). Nothing here is implemented, compiled or
-run. Revision 2 closes the five Opus security review findings
-(`scratchpad/panel/susp-opus.txt`: 2 HIGH, 1 MED, 2 LOW); see §13. The GPT Sol
-review is pending, and Phase 2 starts only when both reviews' blocking items are
-closed. The coordinator approved the §1.3 anchor interpretation. The note lifts the
+run. Revision 2 closes the five Opus security review findings (2 HIGH, 1 MED,
+2 LOW; §13). Revision 3 closes the three GPT Sol findings on 0bd74deaa (2 High,
+1 Medium; §14). An Opus re-check of rev 3 is running in parallel with Phase 2, as
+the coordinator directed. The coordinator approved the §1.3 anchor interpretation. The note lifts the
 option-C hold on U014, U015, U017, U018, U019 and U020.
 
 Claims scope. This note decides host semantics (the reference machine, the draft
@@ -120,7 +120,7 @@ Decisions:
       `height := h_post` and `batch_no := batch`.
 
    The D statement absorbs `od` at the resume event's position in `trace`, and the
-   leaf proves that the image after `XFinResumeAccept` / `BAwaitGuardReturn`
+   leaf proves that the image after `XFinResumeAccept` / `BResumeAccept`
    recorded that same `od`. So the disclosed observation, the proved transition and
    the settled root are one object. A settler cannot settle one observation while
    publishing another, and cannot settle without publishing.
@@ -148,7 +148,7 @@ sees roots, and root linearity is what makes a checkpoint single-use on chain (�
 | Financial | Core/2 `moriarty/2` actions on the Sherlock fin route | U017, U018, U019, U020 | statement level, top of an action (Core/2 places awaits only there) |
 
 Both lower to the same machine primitives: one `Await` control, one `Waiting`
-outcome, one `AwaitGuardF` frame, one observation format, one `resume` transition
+outcome, one observation format, one atomic resume relation
 and one `XFinCommit` rule. §6 and §7 give the two lowerings.
 
 ## 3. (a) Universal machine primitives
@@ -169,9 +169,8 @@ publishes its boundary there. A technical chunk cut is none of these
 | --- | --- | --- | --- | --- |
 | `ControlC` | `Await{site, guard, binders}` | 11 | site: u16 (1-based, per program), guard: ExprId, binders: ordered (BinderId, Sort) slice id | existing tags 0–10 unchanged |
 | `OutcomeC` | `Waiting{site}` | 4 | site | not terminal, not Running; existing 0–3 unchanged |
-| `FrameRowC` | `AwaitGuardF{site, saved_env, origin}` | 10 | existing 13-lane frame record | existing tags 0–9 unchanged |
 | `RuleIdC` (fin group) | `XFinCommit`, `XFinAwaitEnter`, `XFinResumeAccept` | n/a | | joins the existing `FinRuleId::AwaitEnter` header in fin_selection.rs |
-| `RuleIdC` (pure) | `BAwaitEnter`, `BAwaitGuardReturn` | n/a | | replaces the reserved `BBookkeepingResumeStore/Restore` extension rules |
+| `RuleIdC` (pure) | `BAwaitEnter`, `BResumeAccept` (atomic resume relation, §6.2) | n/a | | replaces the reserved `BBookkeepingResumeStore/Restore` extension rules |
 | `BoundaryKind` | `SourceSuspensionExtensionReserved` (name kept) | 3 | | /2 starts using the existing variant and tag 3; no /1 enum or codec is renamed |
 
 `ExhaustReason` gains `LogicalCap` (tag 7, /2 only, §6.1); tags 0–6 are unchanged.
@@ -224,6 +223,8 @@ A checkpoint is the complete `MachineImage` encoded by the existing C6 HOST code
 - **Fin section:** a new child of STATE holds `FinImageState` (committed snapshot,
   committed effect log, tentative snapshot and effects, retained env/captures,
   statement cursor, segment index, committed logical work, phase policy).
+- **Await capture section (rev 3):** 8 scalar lanes plus a count. It holds the
+  guard operands copied at await entry; it is zero outside Waiting (SI-31).
 - **Carrier version:** the C6 padded carrier version is bumped. /1 carriers
   decode only under /1.
 
@@ -369,100 +370,134 @@ contract layer. /2 adds no oracle or signature primitive.
 
 ## 6. (d) Work charging across suspension, and the pure lowering
 
-### 6.1 Charging
+### 6.1 Charging (rev 3)
 
-| Event | Reference fuel | helper_work | Committed? |
-| --- | --- | --- | --- |
-| `BAwaitEnter` / `XFinAwaitEnter` (Eval of await, Running→Waiting) | 1 | 0 | yes, part of the batch that ends Waiting |
-| Waiting itself; delivering an observation; R0–R7 checks | 0 | 0 | no work; checks are host work |
-| guard evaluation events | normal per-rule charges | normal | only if the guard returns `true` |
-| `BAwaitGuardReturn` / `XFinResumeAccept` (guard returned true) | 1 | 0 | yes |
-| not-ready attempt | 0 in state | 0 | reported only as `attempted_work` |
-| `XFinCommit` | 0 (it is part of the event that triggers it, §7.3) | 0 | yes |
+| Event | Reference fuel | helper_work | Allocation | Committed? |
+| --- | --- | --- | --- | --- |
+| `BAwaitEnter` / `XFinAwaitEnter` (Running→Waiting) | 1 | 0 | none; guard operands copied into the Await capture section (§3.4) | yes, part of the batch that ends Waiting |
+| Waiting itself; delivering an observation; R0–R7 checks | 0 | 0 | none | no work; checks are host work |
+| `BResumeAccept` / `XFinResumeAccept` (the atomic resume relation, §6.2) | `1 + |G_s|` (static) | 0 | pure: `n_s` DATA rows + `n_s` env cells; fin: `n_s` retained-env binder slots | yes |
+| not-ready attempt | 0 | 0 | none | no relation instance exists; nothing is reported in state |
+| `XFinCommit` | 0 (part of the event that triggers it, §7.3) | 0 | none | yes |
 
+`|G_s|` is the guard's admitted node count and `n_s` is the binder count of site
+`s`. Both are static per site.
+
+- **The guard is not executed by machine microsteps (rev 3, Sol findings 1 and 3).**
+  - It is evaluated inside the single resume relation, as a straight-line scalar
+    program over circuit wires.
+  - Its intermediate values are never DATA rows, env cells, frames or helper tasks.
+  - So the guard's cost is exactly its fixed charge `1 + |G_s|`, and its only
+    allocation is the `n_s` binder cells written on accept.
+  - The rev-2 bound, derived from expression-node counts of machine microsteps, is
+    withdrawn: microsteps include frame, validation, environment-lookup and
+    scalar-helper events, and allocate DATA rows (`scalar.proposed.rs:216-235`).
 - **Fuel is fixed at genesis.** An observation never adds fuel, and `initial_fuel`,
-  `max_reference_work` and `step_cap` are unchanged by resume. This bounds total
-  computation per run regardless of how many observations arrive.
+  `max_reference_work` and `step_cap` are unchanged by resume.
 - If `remaining_work == 0` when `Await` would be entered, the existing P2 rule
   publishes `Exhausted(Fuel)` uncharged, as for any event.
-- **Resumability check at await entry (rev 2, HIGH finding 2).** A Waiting root must
-  never be unresumable for resource reasons, because fuel is fixed at genesis and
-  the cap is bound in META. Let `g` be the site's static guard bound (§6.3). When
-  control is `Eval(await)` (pure) or the Await statement (fin), the entry rule
-  first checks:
-  - fuel: `remaining_work >= 1 + g + 1`, covering entry, at most `g` guard events
-    and the accept event;
-  - helper budget: `max_helper_work - helper_work >= g`;
-  - (fin route) cap: `committed_before[s] + segment_cost[s+1] <= cap`, using the
-    static plan cost of the segment that follows the await.
+- **Resumability check at await entry (HIGH Opus finding 2, revised in rev 3).**
+  When control is `Eval(await)` (pure) or the Await statement (fin), the entry rule
+  checks, after its own charge of 1:
 
-  If any check fails, the rule publishes `Exhausted` at entry instead of Waiting:
-  - `Exhausted(Fuel)` for fuel, `Exhausted(HelperWork)` for the helper budget, and
-    the new `Exhausted(LogicalCap)` (ExhaustReason tag 7, /2 only) for the cap;
-  - the entry is charged 1, like a P6 capacity refusal;
-  - on the fin route the tentative segment is committed first, exactly as at a
-    successful await, because the prefix up to the await succeeded.
+  | Resource | Requirement | Exhaust reason on failure |
+  | --- | --- | --- |
+  | fuel | `remaining_work >= 1 + |G_s|` | `Fuel` |
+  | DATA rows (pure) | `data_nodes - active.data >= n_s` | `DataNodes` |
+  | env cells (pure) | `environment_cells - active.env >= n_s` | `EnvironmentCells` |
+  | binder slots (fin) | `await_binder_slots - retained.binders >= n_s` | `DataFields` |
+  | Core/2 cap (fin) | `committed_before[s] + segment_cost[s+1] <= cap` | `LogicalCap` (new tag 7, /2 only) |
 
-  The new invariant SI-29 says `Waiting{s} ⇒` all three inequalities hold, minus
-  the entry charge already paid. So every Waiting checkpoint can afford one full
-  guard attempt and acceptance. Exhaustion inside a guard is then unreachable, and
-  `guard_exhausted` is dropped from the `not_ready` reasons.
-
-  Liveness that depends on the program is out of scope: a guard that is false or
-  errors for every observation leaves the run waiting forever, by the program's
-  own definition.
+  - Frames, helper tasks, helper work and serialization need no check. The resume
+    relation pushes no frame, starts no helper and adds no helper work, and the
+    checkpoint's serialized size is fixed by the admitted capacities, which the
+    checkpoint already fits.
+  - If any check fails, the entry publishes `Exhausted(reason)` instead of Waiting.
+    The entry is charged 1, like a P6 capacity refusal. On the fin route the
+    tentative segment is committed first, exactly as at a successful await.
+  - Invariant SI-29: `Waiting{s}` implies every row of the table holds. So every
+    Waiting checkpoint can afford one accept, and no resource can fail inside the
+    resume relation.
+  - Program liveness is out of scope: a guard that is false or errors for every
+    observation leaves the run waiting forever, by the program's own definition.
 - Waiting is checked before P2: a Waiting image is never exhausted while it waits.
-- The SI-03/SI-04 invariants hold across suspension unchanged
-  (`remaining + consumed == initial_fuel`; `reference_cursor == consumed - helper_work`).
-- Core/2 logical work (`moriarty-reference-logical-cost/2`) stays a separate
-  counter in `FinImageState.committed` on the fin route. It equals
-  `plan.committed_before[site]` at every Waiting and is never mixed with Sherlock
-  fuel (UIREQ-013).
+- SI-03/SI-04 hold across suspension unchanged (`remaining + consumed ==
+  initial_fuel`; `reference_cursor == consumed - helper_work`).
+  `BResumeAccept`/`XFinResumeAccept` advance `reference_cursor` by `1 + |G_s|`,
+  since they are reference events, not helper events.
+- Core/2 logical work stays a separate counter in `FinImageState.committed`,
+  equal to `plan.committed_before[site]` at every Waiting (UIREQ-013).
 
 ### 6.2 Pure lowering (U014, U015)
 
 - **`Eval(await)` charges `BAwaitEnter`.**
-  - control := `Await{site, guard, binders}`
-  - outcome := `Waiting{site}`
-  - The frames, env root, heap tables and counters are untouched. This is the
-    checkpoint.
-  - For `10 + inner(3)` the frame stack bottom-to-top is
-    `outer`'s return frame, then the pending `+` frame holding the evaluated
-    left operand 10, then `inner`'s return frame. The exact `FrameRowC` rows
-    (variant per row: `ReturnF`, `RightF`, `ReturnF`, and any `ArgsF`/`ScopeF`
-    the existing call schedule leaves) are pinned by the Phase 2 visible test from
-    an actual run, not asserted here. The current env is inner's
-    (`n = 3`), and the caller env is saved in the frames.
+  - It resolves the guard's free non-binder variables in the current env. These
+    are its guard operands: scalar UInt/Bool values, at most 8 per site (an
+    admission bound).
+  - Their values are copied into the Await capture section (§3.4) in admitted
+    operand order.
+  - control := `Await{site, guard, binders}`, outcome := `Waiting{site}`.
+  - Frames, env root, heap tables and the remaining counters are untouched. This
+    is the checkpoint.
+  - For `10 + inner(3)` the frame stack, bottom to top, is `outer`'s return frame,
+    the pending `+` frame holding the evaluated left operand 10, then `inner`'s
+    return frame. The exact `FrameRowC` rows are pinned by the Phase 2 visible test
+    from an actual run, not asserted here.
+  - The current env is inner's (`n = 3`); `n` is also guard operand 0. The caller
+    env is saved in the frames.
   - This is the UIREQ-014 snapshot: caller frame, control, lexical contexts,
     reachable values, budgets. On this route the financial prefix is `null`.
 - **`owner_step` on a Waiting image** returns `Terminal` (no next) and changes
-  nothing. `owner_run` stops there, and the CLI prints `waiting`.
-- **`resume(C, obs)` after R0–R7**, on the scratch copy:
-  - extend the env with fresh cells binding `x_i := v_i`;
-  - push `AwaitGuardF{site, saved_env = env before the binders, origin}`;
-  - control := `Eval{G}`;
-  - outcome := `Running`;
-  - step until control is `Return{b}` with `AwaitGuardF` on top.
-- **If `b == true`, charge `BAwaitGuardReturn`.**
-  - Pop `AwaitGuardF` and keep the binder env.
-  - control := `Eval{E}`.
-  - Set `LAST_OBS_DIGEST` and increment `RESUME_EPOCH`.
-  - Continue `owner_run`.
-  - With `v = 4`, `inner` returns 4 and `outer` returns `10 + 4`, giving
-    `Halted(14)` (U015).
-- **Otherwise (false, Error, Exhausted) the scratch copy is discarded** and the
-  result is `not_ready` (U015 "false/not-yet-ready leaves the waiting checkpoint
-  unchanged").
+  nothing. `owner_run` stops there.
+- **Resume is one atomic, constrained relation, `BResumeAccept` (rev 3, Sol
+  finding 1).** Its inputs are the Waiting image `C` and the observation lane
+  vector `obs`. It is satisfiable only when all of the following hold:
+  1. `C.outcome == Waiting{s}`, `C.control == Await{s, ..}` and `CK(C) == ck_pre`.
+  2. `obs` has the exact layout of site `s`: `n == n_s`, sorts by lane range (Bool
+     is 0 or 1, UInt is a 128-bit range), and zero padding.
+     `OD(obs) == od` is absorbed into the trace.
+  3. The site's straight-line guard program evaluated over `(obs values, Await
+     capture operands)` yields exactly `1`, with every arithmetic step in range.
+     Overflow, a non-Bool result or `0` make the relation unsatisfiable.
+  4. The successor image is exactly `C` with these changes:
+     - outcome := `Running`;
+     - `n_s` fresh DATA rows and env cells binding `x_i := v_i`, extending the
+       current env;
+     - control := `Eval{E}`;
+     - `remaining_work -= 1 + |G_s|`, `consumed_work += 1 + |G_s|`,
+       `reference_cursor += 1 + |G_s|`;
+     - `LAST_OBS_DIGEST := od`, `RESUME_EPOCH += 1`;
+     - the Await capture section is cleared to zero.
 
-### 6.3 Why the guard is call-free
+     Every other lane is equal to `C`.
 
-- A call-free guard has a static cost bound: one event per expression node, at
-  most the guard's node count, recorded at admission.
-- A not-ready attempt costs at most that bound in host time.
-- With the entry check (§6.1, SI-29), exhaustion inside a guard is unreachable.
-- An adversary cannot make the guard loop or allocate.
-- Recursive or allocating checks belong in `E`, after acceptance, where their work
-  is committed and settled like any other work.
+  The relation is one event, and it is the only rule enabled on a Waiting image.
+  So no image exists in which the observation is inserted but the guard is not yet
+  accepted, and no scratch guard prefix can be settled. A batch's first event from
+  a Waiting root is either `BResumeAccept` or nothing.
+
+  Natively it is one C6 step fragment (`c6_resume_accept_step`, Phase 3) whose
+  guard program is a per-site table entry in PROG. It is not a sequence of
+  dispatch steps, so it does not need the Running-only dispatch owner.
+- **Host `resume(C, obs)`** runs R0–R7 and then evaluates the same guard program.
+  - On `1` it applies the successor exactly as above and continues `owner_run`.
+    With `v = 4`, `inner` returns 4 and `outer` returns `10 + 4`: `Halted(14)`
+    (U015).
+  - On `0` or a guard error it returns `not_ready`. No successor image is built,
+    the checkpoint bytes are untouched, and `attempted_work` reports the guard's
+    static charge that was not committed.
+
+### 6.3 Why the guard is call-free and straight-line
+
+- Call-free, constructor-free and match-free guards over scalars compile to a fixed
+  straight-line program: one operation per node, operands drawn from binders,
+  captured operands and literals.
+- Its cost is static (`|G_s|`), it allocates nothing, and it has no frames, env
+  lookups or helpers. That is what makes the atomic relation fixed-size and the
+  resource check in §6.1 exact.
+- An adversary cannot make the guard loop, allocate or exhaust anything.
+- Recursive or allocating checks belong in `E`, after acceptance, where they run as
+  ordinary committed microsteps.
 
 ## 7. (e)/(f) Financial route: Core/2 typed await on the universal machine (U017, U018, U019)
 
@@ -515,7 +550,14 @@ all of the following atomically:
      Core/2 `finish` checks.
 2. Capture `retained_env` per the site's capture layout (inputs, lets, earlier
    binders).
-3. control := `Await{s, guard, binders}`, outcome := `Waiting{s}`.
+3. Copy the guard operands into the Await capture section (§3.4, §6.2). These are
+   the guard's free non-binder names, taken from `retained_env` and from the
+   committed snapshot (state, `LiabilityPresent`/`LiabilityAmount`). Nothing
+   changes the committed snapshot while the run waits, so capture at entry equals
+   evaluation at resume.
+4. Apply the §6.1 resumability check; on failure publish `Exhausted(reason)` after
+   step 1.
+5. control := `Await{s, guard, binders}`, outcome := `Waiting{s}`.
 
 At the end of the action, `XFinComplete` = `XFinCommit` then `Halted(unit)` in one
 event.
@@ -524,7 +566,8 @@ A technical cut lands only between owner events (draft_chunked.rs). So no
 checkpoint can exist with a committed prefix but no Waiting control, or with a
 Waiting control over an uncommitted tentative delta. That is the Core/2
 `emit_checked` atomicity carried into the machine. Resume follows §6.2 with the
-fin route's rule names. On accept, execution continues at statement `ordinal + 1`
+fin route's atomic relation `XFinResumeAccept`. Its binders go into `retained_env`
+binder slots rather than DATA rows. On accept, execution continues at statement `ordinal + 1`
 as a new tentative segment `segment_index + 1`.
 
 ### 7.4 Correspondence with Core/2 (U018)
@@ -596,16 +639,39 @@ Rejected successor consumes the root (§5).
 - **`all-or-nothing/1` (default).**
   - A local segment failure discards the whole tentative segment, fees included.
   - This is Core/2's and U019's semantics.
-- **`retain-guaranteed-fees/1`.**
-  - The segment's `Fee` statements are its guaranteed part, and everything after
-    them is its fallible part.
-  - Admission requires that, within each segment, every `Fee` statement precedes
-    every non-`Let`/`Requires` effect statement. Fees therefore apply to the
-    committed snapshot directly, and applying them alone can never underflow.
-  - On local failure in the fallible part, `XFinLocalFailure` commits exactly the
-    segment's fee effects. The rest is discarded, and the outcome is
+- **`retain-guaranteed-fees/1` (rev 3, Sol finding 2).**
+  - **Phases.** Each segment's leading `Fee` statements form its guaranteed fee
+    phase. Admission requires that every `Fee` precedes every non-`Let`/`Requires`
+    effect statement in the segment. Everything after the fee phase is the fallible
+    phase.
+  - **Staging.** Fees never touch the committed snapshot directly.
+    `FinExecState` holds three staged values:
+    - `entry` = the committed snapshot at segment entry (unchanged until a commit
+      event);
+    - `fee_stage` = a snapshot plus ordered fee effects, starting at `entry`;
+    - `tentative` = the fallible-phase snapshot plus effects.
+  - **Fee phase.** Each fee applies to `fee_stage` only. When the last fee succeeds
+    (the cursor reaches the first fallible statement or the segment end), the fee
+    phase seals: `fee_sealed := true`, and `tentative` starts from
+    `fee_stage.snapshot`.
+  - **If any fee fails.** The whole fee phase is discarded (`fee_stage` and
+    `tentative` are both dropped). `XFinLocalFailure` publishes `Rejected{code}`
+    with `committed == entry`, so nothing is retained.
+  - **Worked example.** Balance 100, fees 10 then 100: the first fee stages 90, the
+    second fails, the committed balance stays 100, and `retained_by_policy` is
+    empty.
+  - **If the fallible phase fails after sealing.** `XFinLocalFailure` sets
+    committed := `fee_stage.snapshot` and committed effects ++= `fee_stage.effects`,
+    as one event. The fallible delta is discarded, and the outcome is
     `Rejected{code}`.
-  - If a fee itself fails, nothing is retained, as in the default.
+  - **On success** (await or complete). `XFinCommit` sets committed :=
+    `tentative.snapshot`, and effects ++= fee effects then fallible effects, in
+    source order.
+  - **Technical cuts.** A cut may land inside either phase. It exposes `fee_stage`
+    and `tentative` as staged fields, and never a partially fee-reduced committed
+    snapshot. New invariant SI-30: `committed` changes only in `XFinCommit`,
+    `XFinAwaitEnter`, `XFinComplete` and `XFinLocalFailure`; `fee_sealed` is false
+    implies the fallible tentative is empty.
   - The report adds `"retained_by_policy":{"policy":"retain-guaranteed-fees/1",
     "effects":[fee...]}`. The committed prefix, the policy-retained fee, the
     discarded delta and the remaining duties are four separate members, which is
@@ -675,7 +741,8 @@ Threats and the invariant that answers each:
 | T7 | Cap editing between resumes | The cap is in bound META (unlike Core/2 `logical.cap`) |
 | T8 | Fee-retention underflow or reordering | `retain-guaranteed-fees/1` admission requires fees first in each segment; retained fees apply to the committed snapshot with the existing checked mutators |
 | T9 | Waiting image treated as terminal or exhausted | `owner_step` on Waiting returns no-next before P2; only `resume` leaves Waiting; Waiting is not Halted (UIREQ-011 distinction preserved) |
-| T10 | Guard escapes its scope | `AwaitGuardF` saves the pre-binder env; binders are fresh cells; no shadowing; guard call-free |
+| T10 | Guard escapes its scope or settles part-way | The guard is a straight-line program inside the one atomic resume relation; there is no intermediate image, frame or env change before acceptance, so no scratch guard prefix can be settled; binders are fresh cells; no shadowing |
+| T13 | Fee retention leaks a partial fee phase | Fees are staged in `fee_stage` from the segment-entry snapshot; they are retained only after the whole fee phase seals; any fee failure retains nothing (SI-30) |
 | T11 | Discarded delta leaking into later state | `discarded_effects` exists only on a Rejected (terminal) image; SI-26 requires it to be empty otherwise |
 
 New host invariants for /2:
@@ -684,7 +751,9 @@ New host invariants for /2:
 - SI-26: `discarded_effects` ≠ ∅ ⇒ outcome is Rejected.
 - SI-27: Waiting{s} ⇔ control is `Await{s,..}`, and `WAIT_SITE == s`.
 - SI-28: on the fin route, Waiting{s} ⇒ `committed == plan.committed_before[s]`.
-- SI-29: Waiting{s} ⇒ `remaining_work >= g_s + 1`, `max_helper_work - helper_work >= g_s`, and on the fin route `committed + segment_cost[s+1] <= cap`.
+- SI-29: Waiting{s} ⇒ every row of the §6.1 resumability table holds: fuel `>= 1 + |G_s|`, free DATA rows and env cells `>= n_s` (pure), free binder slots `>= n_s` and `committed + segment_cost[s+1] <= cap` (fin).
+- SI-30: `committed` changes only in the four commit events; `fee_sealed == false` ⇒ fallible tentative empty.
+- SI-31: Waiting{s} ⇒ the Await capture section holds exactly the site's guard operands; outcome ≠ Waiting ⇒ the section is zero.
 
 ## 11. States and transitions (for the chip animation)
 
@@ -712,7 +781,7 @@ the reason, not a code.
 | E3 | Commit+AwaitEnter (fin) | Running → Waiting(s) | `XFinAwaitEnter` | 1 | tentative → committed; captures saved; control/outcome as E2 |
 | E4 | Observe-Refused | Waiting(s) → Waiting(s) | R0–R7 fail | 0 | none (no successor exists) |
 | E5 | Observe-NotReady | Waiting(s) → Waiting(s) | guard ≠ true | 0 in state (attempted reported) | none; bytes identical |
-| E6 | Observe-Accept | Waiting(s) → Running | guard steps + `BAwaitGuardReturn` / `XFinResumeAccept` | guard events + 1 | binders bound, obs digest and epoch recorded |
+| E6 | Observe-Accept | Waiting(s) → Running | atomic `BResumeAccept` / `XFinResumeAccept` (guard evaluated inside) | `1 + |G_s|` | binders bound, obs digest and epoch recorded |
 | E7 | Complete | Running → Halted | P1 publish (pure) / `XFinComplete` (fin) | 0 / 1 | fin: tentative → committed |
 | E8 | LocalFailure | Running → Rejected | `XFinLocalFailure` (fin) / existing error publish (pure) | 0 publish | tentative → discarded (fees → committed under retain policy) |
 | E9 | Exhaust | Running → Exhausted | existing P2/P3/P6 | as /1 | fin: tentative → discarded, committed prefix kept; under `retain-guaranteed-fees/1` the segment's fees are committed exactly as in E8 |
@@ -729,7 +798,7 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 1. Core types and tags (§3.2), the C6 host codec extension (§3.4), SI-25..28, and
    the profile id 3 sites.
 2. Pure route: `moriarty-sherlock-draft/2` parser/checker (await/yield, call-free
-   guard), `BAwaitEnter`/`BAwaitGuardReturn`, and `resume`. Visible tests: the U014
+   guard), `BAwaitEnter`/`BResumeAccept`, and `resume`. Visible tests: the U014
    snapshot contents; U015 accept (14), not-ready byte identity and R3 wrong-checkpoint
    refusal.
 3. Fin route: the XFin rules with `owner_step`/`owner_run` beyond genesis, plus
@@ -740,7 +809,7 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
    holdouts are authored.
 5. Update `docs/sherlock/design.md` and the interfaces.md:308 OPEN text to record
    these decisions.
-6. Later, separate evidence: /2 C6 circuits for tags 11/4/10 and the bound
+6. Later, separate evidence: /2 C6 circuits for control tag 11, outcome tag 4, the atomic resume fragment `c6_resume_accept_step`, and the bound
    profile_id; the decider statement with `(CK, OD)` absorption; the
    `sherlock-run-anchor` contract; a stagenet run.
 
@@ -753,4 +822,12 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 | 3. A /1 leaf passes as /2 | MED | Fixed. `keys_id` commits to a /2-only key set; the /2 decider refuses /1 leaf keys (§1.5, T5) |
 | 4. General anchor pins | LOW | Fixed. `h_post = h_pre + n_steps` with `n_steps >= 1` is computed by the anchor; `batch == batch_no + 1`; `instance_id` and `batch` are in `stmt`; `!settled.member` is restored in `acceptValidity`. The "no state recurs" argument is withdrawn as the safety basis (§1.5, §5.4, T2) |
 | 5. CK domain tag; OD width | LOW | Fixed. `DOM_CK2` tag plus profile and carrier version in CK; OD is a fixed 21-lane vector with an explicit `n` and zero padding to 16 binders (§3.4) |
+
+## 14. Revision 3: GPT Sol review dispositions
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| 1. No proved resume-entry relation | High | Fixed. Resume is one atomic, constrained relation (`BResumeAccept` / `XFinResumeAccept`). It is satisfiable only for a Waiting image with matching CK, an exact-layout observation and a guard program evaluating to 1, and it produces an exactly specified successor. It is the only rule enabled on Waiting, so no partly resumed image or scratch guard prefix exists to settle. Natively it is one C6 fragment, not dispatch steps (§6.2, T10). `AwaitGuardF` and `BAwaitGuardReturn` are removed |
+| 2. Fee retention breaks rollback | High | Fixed. A staged guaranteed fee phase starts from the segment-entry snapshot and is retained only after all fees seal; any fee failure retains nothing (balance 100, fees 10 then 100 ⇒ committed 100). SI-30 (§8 L1, T13) |
+| 3. Guard resource bound wrong | Medium | Fixed by construction. The guard is a straight-line program evaluated inside the resume relation: no microsteps, frames, env lookups, helpers or DATA allocation. Its charge is exactly `1 + |G_s|`, and its only allocation is `n_s` binder cells (pure: DATA rows and env cells; fin: binder slots). The entry check covers fuel, DATA, env, binder slots and cap, each with a named Exhaust reason (§6.1, SI-29, SI-31). The rev-2 node-count bound is withdrawn |
 
