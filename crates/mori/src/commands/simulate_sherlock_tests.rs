@@ -79,6 +79,10 @@ fn technical_chunk_flags_parse_and_conflict() {
         panic!("wrong command");
     };
     assert_eq!(args.reference_slices, Some(4));
+    let Command::Simulate(args) = parse(&["--native-inventory"]).unwrap().command else {
+        panic!("wrong command");
+    };
+    assert!(args.native_inventory);
     let Command::Simulate(args) = parse(&["--chunk", "1", "--chunk-represent"])
         .unwrap()
         .command

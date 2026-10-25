@@ -83,6 +83,10 @@ pub struct Args {
     /// earliest-stop ReferenceSlices of at most M events (normally 1, 2, 4 or 8)
     #[arg(long, value_name = "M", requires = "execution_profile")]
     pub reference_slices: Option<usize>,
+    /// Also report the hand-authored UIREQ-023 native relation inventory for
+    /// the rules this run actually exercises (description only; no proof)
+    #[arg(long, requires = "execution_profile")]
+    pub native_inventory: bool,
 }
 fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
     serde_json::from_value(serde_json::Value::String(value.into()))

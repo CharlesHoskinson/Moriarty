@@ -50,6 +50,7 @@ fn args(source: &str) -> Args {
         chunk_witness: false,
         chunk_images: false,
         reference_slices: None,
+        native_inventory: false,
     }
 }
 fn must<T>(value: Result<T, mori_core::sherlock_compile_artifact::CompileFailure>) -> T {

@@ -107,7 +107,8 @@ fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun
 pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
     // Retain no event vector. Both existing consumers forward every actual full
     // event once and report its actual count; this command does not claim a trace.
-    let mut sink = |_event: &StepEventC| {};
+    let mut tally = host::native_inventory::RuleTally::default();
+    let mut sink = |event: &StepEventC| tally.observe(event);
     let slices = match reference_slices(args) {
         Ok(slices) => slices,
         Err(failure) => return print_failure(&failure),
@@ -116,8 +117,25 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
         Ok(run) => run,
         Err(failure) => return print_failure(&failure),
     };
+    let inventory = if args.native_inventory {
+        if matches!(selected, SelectedRun::Nominal(_)) {
+            return print_failure(&CompileFailure::input(
+                "config",
+                "the native inventory is supported on the dedicated draft route only",
+            ));
+        }
+        Some(host::native_inventory::report(
+            &args.file.display().to_string(),
+            &tally,
+        ))
+    } else {
+        None
+    };
     let selected = match (selected, slices) {
         (SelectedRun::Draft(run), Some(slices)) => SelectedRun::Extended(run, None, slices),
+        (SelectedRun::Draft(run), None) if inventory.is_some() => {
+            SelectedRun::Extended(run, None, serde_json::Value::Null)
+        }
         (SelectedRun::Chunked(run, chunks), Some(slices)) => {
             SelectedRun::Extended(run, Some(chunks), slices)
         }
@@ -128,9 +146,11 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
     };
     match selected {
         SelectedRun::Chunked(run, chunks) => {
-            print_extended(&run, Some(chunks), serde_json::Value::Null)
+            print_extended(&run, Some(chunks), serde_json::Value::Null, inventory)
         }
-        SelectedRun::Extended(run, chunks, slices) => print_extended(&run, chunks, slices),
+        SelectedRun::Extended(run, chunks, slices) => {
+            print_extended(&run, chunks, slices, inventory)
+        }
         SelectedRun::Draft(run) => {
             let report = match host::draft_simulation_report::report(&run) {
                 Ok(report) => report,
@@ -174,6 +194,7 @@ fn print_extended(
     run: &host::draft_execution::DraftHostRun,
     chunks: Option<serde_json::Value>,
     slices: serde_json::Value,
+    inventory: Option<serde_json::Value>,
 ) -> super::super::Result<ExitCode> {
     let report = match host::draft_simulation_report::report(run) {
         Ok(report) => report,
@@ -188,6 +209,9 @@ fn print_extended(
     }
     if !slices.is_null() {
         value["reference_slices"] = slices;
+    }
+    if let Some(inventory) = inventory {
+        value["native_inventory"] = inventory;
     }
     if let Err(error) = core_io::print(&value) {
         return print_failure(&run.failure("serialization", error.to_string()));
