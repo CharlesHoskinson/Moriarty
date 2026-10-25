@@ -2116,8 +2116,11 @@ mod tests {
         let mut bad = w.clone();
         bad.post_image[L_HELPER_VISITS] += 1;
         assert_pre_rejects(&bad, "helper visits changed");
+        // The applied post's control tag is already Return (1); writing 1
+        // was a no-op. Change it to a value distinct from the current one.
         let mut bad = w.clone();
-        bad.post_image[L_CONTROL] = 1;
+        bad.post_image[L_CONTROL] = w.post_image[L_CONTROL] + 1;
+        assert_ne!(bad.post_image[L_CONTROL], w.post_image[L_CONTROL]);
         assert_pre_rejects(&bad, "control changed");
         let mut bad = w.clone();
         bad.post_image[L_CONTROL_ORIGIN] = 0;
@@ -3634,9 +3637,15 @@ mod tests {
             Ok(_) => panic!("shifted offset SDK stage: tied witness must not check"),
         }
         // META and CTX lane mutations reach this composition's checking.
+        // META lane 3 is profile_id, which the bound META relation leaves
+        // runtime (c6_meta_canonical module docs), so mutating it is
+        // correctly accepted. Mutate the admission-bounds `frames` lane
+        // instead: it is compared against the circuit-retained binding.
+        let frames = w.host_prefix.meta_bounds_frames_offset;
         let mut bad = w.clone();
-        bad.host_prefix.meta[3] += 1;
-        assert_pre_rejects(&bad, "META lane through ScalarFailure composition");
+        bad.host_prefix.meta[frames] += 1;
+        assert_ne!(bad.host_prefix.meta[frames], w.host_prefix.meta[frames]);
+        assert_pre_rejects(&bad, "bound META lane through ScalarFailure composition");
         let mut bad = w.clone();
         bad.host_prefix.ctx[21] += 1;
         assert_pre_rejects(&bad, "CTX budget lane through ScalarFailure composition");

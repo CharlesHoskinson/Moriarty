@@ -2065,9 +2065,13 @@ pub fn build_c6_push_step_circuit(
         serde_json::to_string(&disk).map_err(|e| C6PushStepError::Backend(e.to_string()))?;
     let loaded = IrSource::load(serialized_zkir.as_bytes())
         .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
-    if loaded.instructions.len() > (1usize << VERIFIER_MAX_DEGREE) {
+    // The SDK documents VERIFIER_MAX_DEGREE as the bound on the public
+    // inputs usable with the standard verifier key; it does not bound IR
+    // length (circuit size is `IrSource::model().k()`). Bound the binding
+    // input plus the public statement, as `literal_bridge` does.
+    if statement_lane_count + 1 > (1usize << VERIFIER_MAX_DEGREE) {
         return Err(C6PushStepError::Backend(
-            "instruction count exceeds verifier degree bound".into(),
+            "public statement exceeds the verifier public-input bound".into(),
         ));
     }
     Ok(C6PushStepCircuit {
@@ -2498,8 +2502,18 @@ mod tests {
             })
         ));
         let mut bad_data = padded;
-        let base = bad_data.geometry.env_base();
-        bad_data.data[base + 2 * ENV_ROW_LANES] = 1;
+        // Nonzero padding in the first INACTIVE value-slot row (the last
+        // header lane is the value-slot count). The fixture's env table is
+        // full (2 of 2 cells), so it has no padding; the former write at
+        // env_base + 2 * ENV_ROW_LANES landed on the first ACTIVE value slot,
+        // whose RefC::Data tag is already 1, and was a no-op.
+        let base = bad_data.geometry.value_slots_base();
+        let rows = bad_data.geometry.value_slots_lanes / REF_LANES;
+        let active = bad_data.data[DATA_HEADER_LANES - 1] as usize;
+        assert!(active < rows, "fixture needs an inactive value slot");
+        let lane = base + active * REF_LANES;
+        assert_eq!(bad_data.data[lane], 0, "inactive padding starts zero");
+        bad_data.data[lane] = 1;
         assert!(decode_padded_state_to_owned(&bad_data).is_err());
     }
 

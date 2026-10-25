@@ -1167,9 +1167,16 @@ fn prog_ctx_meta_statement_and_post_only_equality() {
     let mut ctx_ext = w.clone();
     ctx_ext.host_prefix.ctx[3] = 1;
     assert_rejects_both(&ctx_ext, "CTX ext presence canonicality");
-    // Both-sided META admission-field mutation reaches bound META.
+    // Both-sided META admission-field mutation reaches bound META. Lane 3
+    // is profile_id, deliberately runtime in the bound relation, so it is
+    // not a negative; the admission-bounds `frames` lane is bound.
+    let frames = w.host_prefix().meta_bounds_frames_offset;
     let mut meta_bad = w.clone();
-    meta_bad.host_prefix.meta[3] += 1;
+    meta_bad.host_prefix.meta[frames] += 1;
+    assert_ne!(
+        meta_bad.host_prefix.meta[frames],
+        w.host_prefix().meta[frames]
+    );
     assert_rejects_both(&meta_bad, "META lane through bound composition");
     // Post-only equality mutations, at raw statement level (the u128
     // witness carries one shared prefix, so pre!=post exists only as
