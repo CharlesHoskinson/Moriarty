@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tomllib
 
@@ -25,6 +26,22 @@ def source_pins(root):
     return {raw.decode(): sha(root / raw.decode()) for raw in sorted(set(files)) if raw and (root / raw.decode()).is_file()}
 
 
+def snapshot_pins(root):
+    return {str(path.relative_to(root)): sha(path) for path in sorted(root.rglob('*')) if path.is_file()}
+
+
+def snapshot_sources(source, destination, pins):
+    destination.mkdir(exist_ok=False)
+    for name, expected in pins.items():
+        path = destination / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / name, path)
+        if sha(path) != expected:
+            raise ValueError('Loki source changed during snapshot: ' + name)
+    if snapshot_pins(destination) != pins:
+        raise ValueError('Loki source snapshot inventory differs')
+
+
 def recursion_pins(root):
     files = [root / 'Cargo.toml', root / 'Cargo.lock']
     files.extend(path for path in (root / 'crates/mori-recursion').rglob('*')
@@ -32,7 +49,7 @@ def recursion_pins(root):
     return {str(path.relative_to(root)): sha(path) for path in sorted(files)}
 
 
-def render_runner(source, prover, gpu):
+def render_runner(source, prover, gpu, factory=None):
     runner = source.read_text().replace('fn main() -> Result<()> {', 'fn rollup_main() -> Result<()> {', 1)
     runner = re.sub(r'include_bytes!\("([^"]+)"\)',
                     lambda match: 'include_bytes!(' + json.dumps(str((source.parent / match[1]).resolve())) + ')', runner)
@@ -45,6 +62,16 @@ def render_runner(source, prover, gpu):
     runner += '        return Err(error("Loki prover identity/features differ from preparation"));\n    }\n'
     runner += '    if std::env::args().any(|a| a == "verify" || a == "prefix-verify") {\n'
     runner += '        return Err(error("Loki requires the retained stock reference verifier"));\n    }\n'
+    if factory is not None:
+        root, output = factory
+        runner += '    if std::env::args().nth(1).as_deref() == Some("factory-prefixes") {\n'
+        runner += '        if std::env::args().count() != 2 { return Err(error("factory-prefixes takes no other arguments")); }\n'
+        runner += '        let status = std::process::Command::new(' + json.dumps(str(root / 'scripts/doctorwatson')) + ')\n'
+        runner += '            .current_dir(' + json.dumps(str(root)) + ')\n'
+        runner += '            .env("SHERLOCK_PREFIX_PROVER_BUILD", ' + json.dumps(str(output / 'build.json')) + ')\n'
+        runner += '            .env("CARGO_BUILD_JOBS", "4").env("RAYON_NUM_THREADS", "4")\n'
+        runner += '            .args(["check", "B5", "--hypothesis", "Loki fixed-key prefix proofs remain stock-compatible; independently verify every new proof using the retained stock B3 binary"]).status()?;\n'
+        runner += '        return if status.success() { Ok(()) } else { Err(error("B5 factory check failed; retain its trace")) };\n    }\n'
     runner += '    rollup_main()\n}\n'
     return runner
 
@@ -63,8 +90,8 @@ def main():
         parser.error('generated maintainer package must be under this worktree target directory')
     if args.mode == 'stamp':
         manifest = json.loads((output / 'preparation.json').read_bytes())
-        if source_pins(loki) != manifest['loki_source_sha256']:
-            parser.error('Loki source changed during build; retain this attempt and prepare a new build')
+        if snapshot_pins(Path(manifest['loki_snapshot'])) != manifest['loki_source_sha256']:
+            parser.error('Loki source snapshot changed during build; retain this attempt and prepare a new build')
         binary = output / 'target/release/rollup_loki'
         identity = json.loads(subprocess.check_output([str(binary), 'identity']))
         if identity != {'prover': manifest['prover'], 'fixed_key_prefix': True, 'gpu': manifest['gpu']}:
@@ -83,6 +110,13 @@ def main():
         print(output / 'build.json')
         return
     output.mkdir(parents=True, exist_ok=False)
+    head = subprocess.check_output(['git', '-C', str(loki), 'rev-parse', 'HEAD'], text=True).strip()
+    pins = source_pins(loki)
+    snapshot = output / 'loki-source'
+    snapshot_sources(loki, snapshot, pins)
+    if source_pins(loki) != pins or subprocess.check_output(
+            ['git', '-C', str(loki), 'rev-parse', 'HEAD'], text=True).strip() != head:
+        parser.error('Loki changed during snapshot; retain this attempt and prepare a new build')
     workspace = tomllib.loads((root / 'Cargo.toml').read_text())
     crate = tomllib.loads((root / 'crates/mori-recursion/Cargo.toml').read_text())
     dependencies = {'mori-recursion': {'path': str(root / 'crates/mori-recursion'),
@@ -94,9 +128,11 @@ def main():
         inherited = workspace['workspace']['dependencies'][name]
         entry = {'version': inherited} if isinstance(inherited, str) else dict(inherited)
         entry['features'] = sorted(set(entry.get('features', []) + local.get('features', [])))
+        if name == 'midnight-proofs':
+            entry['features'] = sorted(set(entry['features'] + ['loki-cpu-budget']))
         dependencies[name] = entry
     patches = dict(workspace['patch']['crates-io'])
-    patches['midnight-proofs'] = {'path': str(loki)}
+    patches['midnight-proofs'] = {'path': str(snapshot)}
     lines = ['[package]', 'name = "sherlock-rollup-loki"', 'version = "0.1.0"', 'edition = "2024"',
              '[workspace]', '[features]', 'default = ["sherlock-rollup-prefix"]',
              'sherlock-rollup-prefix = ["mori-recursion/sherlock-rollup-prefix"]',
@@ -106,10 +142,9 @@ def main():
     lines.extend(json.dumps(name) + ' = ' + toml_value(value) for name, value in patches.items())
     lines.extend(['[[bin]]', 'name = "rollup_loki"', 'path = "main.rs"'])
     (output / 'Cargo.toml').write_text('\n'.join(lines) + '\n')
-    head = subprocess.check_output(['git', '-C', str(loki), 'rev-parse', 'HEAD'], text=True).strip()
     prover = f'Loki {"GPU MSM/NTT" if args.gpu else "CPU"} {head}'
     source = root / 'crates/mori-recursion/examples/rollup.rs'
-    (output / 'main.rs').write_text(render_runner(source, prover, args.gpu))
+    (output / 'main.rs').write_text(render_runner(source, prover, args.gpu, (root, output)))
     config = {'build': {'target-dir': str(output / 'target'), 'jobs': 4},
               'env': {'SHERLOCK_PROVER_ID': {'value': prover, 'force': True}, 'RAYON_NUM_THREADS': '4'}}
     lines = []
@@ -118,7 +153,7 @@ def main():
         lines.extend(json.dumps(key) + ' = ' + toml_value(value) for key, value in values.items())
     (output / 'config.toml').write_text('\n'.join(lines) + '\n')
     preparation = {'schema': 'sherlock-loki-preparation/1', 'prover': prover, 'gpu': args.gpu,
-                   'loki_head': head, 'loki_source_sha256': source_pins(loki),
+                   'loki_head': head, 'loki_source_sha256': pins, 'loki_snapshot': str(snapshot),
                    'rollup_source_sha256': sha(source), 'runner_source_sha256': sha(output / 'main.rs'),
                    'recursion_source_sha256': recursion_pins(root),
                    'workspace_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),

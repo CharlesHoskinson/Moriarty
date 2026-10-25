@@ -10,6 +10,22 @@ evidence = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(evidence)
 
 
+def proving_build(root, stock):
+    root = Path(root)
+    path = root / 'prover-build.json'
+    if not path.exists():
+        if (root / 'prover.bin').exists():
+            raise ValueError('unlabeled prefix prover binary')
+        return stock
+    build = evidence.read(path, 'sherlock-loki-build/1')
+    if (not build['prover'].startswith('Loki ') or not build['loki_source_sha256']
+            or not build['recursion_source_sha256'] or build['public_workspace_patch']
+            or build['independent_verifier'] != 'retained stock B3 binary required'):
+        raise ValueError('missing isolated Loki source or reference-verifier identity')
+    evidence.require_digest(root / 'prover.bin', build['binary_sha256'])
+    return build
+
+
 def reject_reused_proofs(root):
     seen = set()
     for count in (2, 4, 6):
@@ -33,6 +49,7 @@ def check(root):
     if build['prover'] != 'midnight-proofs 0.8.3 registry stock' or build['adapter_version'] != 'sherlock-v3-batch/2':
         raise ValueError('prefix prover/adapter differs from retained stock baseline')
     evidence.require_digest(root / 'rollup.bin', build['binary_sha256'])
+    prover = proving_build(root, build)
     baseline = json.loads((Path(__file__).parents[2] / 'models/sherlock/rollup-synth/baseline.json').read_bytes())
     evidence.require_digest(root / 'fixture/MANIFEST.json', baseline['manifest_sha256'])
     reject_reused_proofs(root)
@@ -69,7 +86,7 @@ def check(root):
             layers = {}
             for layer in ('leaf', 'parent', 'decider'):
                 stats = evidence.read(directory / f'{layer}.stats.json', 'sherlock-b3-stage/1')
-                if (stats['prover'] != build['prover'] or stats['layer'] != layer
+                if (stats['prover'] != prover['prover'] or stats['layer'] != layer
                         or stats['shared_keygen_proofs'] != count or stats['negative_changed_instance'] != 'rejected'):
                     raise ValueError('incorrect shared-key proof stage')
                 for suffix, name in (('vk', 'vk'), ('relation', 'relation'), ('proof', 'proof'), ('instance.json', 'instance')):
@@ -92,7 +109,9 @@ def check(root):
             'wall_seconds': sum(m['wall_seconds'] for m in measurements.values()),
             'wall_scope': 'sum of four measured sequential child processes; wrapper/file-copy overhead excluded'}
     return {'predicate': 'B5', 'schema': 'sherlock-b5-results/1', 'workload': workload,
-            'build': build, 'prefixes': summaries, 'censored_attempts': 'retained in sibling run directories and factory runs.jsonl'}
+            'build': build, 'proving_build': prover, 'prefixes': summaries,
+            'gpu_execution_scope': 'build features recorded; device dispatch counters unavailable',
+            'censored_attempts': 'retained in sibling run directories and factory runs.jsonl'}
 
 
 def main():
@@ -104,7 +123,8 @@ def main():
     except (OSError, ValueError, KeyError) as error:
         parser.exit(1, f'B5 FAIL: {error}\n')
     (args.run / 'B5.json').write_text(json.dumps(result, indent=2, sort_keys=True) + '\n')
-    print('PASS B5: independent 2/4/6-batch runs, exact stock-verified statements and fixed keys')
+    print('PASS B5: independent 2/4/6-batch runs, exact stock-verified statements and fixed keys;',
+          'prover:', result['proving_build']['prover'])
 
 
 if __name__ == '__main__':

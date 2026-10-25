@@ -12,6 +12,31 @@ SPEC.loader.exec_module(prefix)
 
 
 class PrefixEvidenceTests(unittest.TestCase):
+    def test_loki_declaration_requires_exact_binary_and_stock_reference(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stock = {'prover': 'midnight-proofs 0.8.3 registry stock'}
+            self.assertEqual(prefix.proving_build(root, stock), stock)
+            binary = root / 'prover.bin'
+            binary.write_bytes(b'isolated prover')
+            with self.assertRaisesRegex(ValueError, 'unlabeled'):
+                prefix.proving_build(root, stock)
+            build = {'schema': 'sherlock-loki-build/1', 'prover': 'Loki GPU test-source',
+                     'loki_source_sha256': {'src/lib.rs': 'source-pin'},
+                     'recursion_source_sha256': {'rollup.rs': 'source-pin'},
+                     'public_workspace_patch': False,
+                     'independent_verifier': 'retained stock B3 binary required',
+                     'binary_sha256': prefix.evidence.digest(binary)}
+            declaration = root / 'prover-build.json'
+            declaration.write_text(json.dumps(build))
+            self.assertEqual(prefix.proving_build(root, stock), build)
+            binary.write_bytes(b'changed prover')
+            with self.assertRaises(ValueError):
+                prefix.proving_build(root, stock)
+            declaration.write_text(json.dumps({**build, 'independent_verifier': 'Loki'}))
+            with self.assertRaisesRegex(ValueError, 'reference-verifier'):
+                prefix.proving_build(root, stock)
+
     def test_copied_public_proof_is_not_an_independent_prefix_sample(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
