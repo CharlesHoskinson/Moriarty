@@ -7,6 +7,14 @@ tags: [lessons, loki, performance, gpu, msm, ntt, blst]
 
 # Prover performance
 
+## Pin which parent and which host a baseline came from (2026-10-24)
+- Scouts kept tripping over two "k20 parent" numbers: 882.6 s prove (and 867 s at 268% CPU, 15 GB) in the older recl9 logs, and 220 s
+  for Moriarty's A3. They are different runs: the recl9 logs came from another host and user (`/home/charl`), using recl9's
+  `sherlock_link.rs` parent on stock 0.8.2. A3 is Moriarty's ported `mori-recursion` parent on this host, at RAYON_NUM_THREADS=4.
+  The parent's shape: k=20, 15 advice, 45 fixed, 5 lookups, 18 permutation columns, single phase.
+- **Lesson:** every timing note must name the circuit (crate and commit), the prover (stock version or Loki commit and features),
+  the thread counts and the host. Otherwise downstream agents compare unlike things.
+
 ## Accelerating MSM and NTT alone does not speed up the real workload (2026-10-24)
 - **Measured:** the k20 Sherlock parent (A3, RAYON_NUM_THREADS=4) took 220.2 s prove+verify on stock 0.8.3, 252.6 s on Loki CPU and 220.8 s on
   Loki with GPU MSM+NTT, with a 16.0 GiB peak RSS. The proof was accepted each time.
