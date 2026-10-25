@@ -54,6 +54,9 @@ pub(crate) mod image_reference;
 // Host-only event grouping; every internal reference record stays observable.
 pub mod reference_slice;
 
+// UIREQ-024 candidate optimization (intern equal tree nodes) and its preservation predicate.
+pub mod optimization_intern;
+
 // Unadopted host snapshot rows; normal materialization checks only.
 #[cfg(test)]
 mod machine_image;
