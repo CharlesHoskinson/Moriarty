@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# hostcommit WORKTREE "message" PATH...
+# For agents whose sandbox has a read-only .git: run this on the host (coordinator or
+# runner) to commit exactly the listed paths. Never pushes. Refuses AI-attribution text.
+set -euo pipefail
+wt=${1:?usage: hostcommit WORKTREE MESSAGE PATH...}; msg=${2:?message}; shift 2
+[ $# -ge 1 ] || { echo "hostcommit: list the paths to commit (no blanket -a)" >&2; exit 2; }
+if printf '%s' "$msg" | grep -qiE 'co-authored-by|generated with|claude|anthropic'; then
+  echo "hostcommit: refused, message contains AI attribution (owner rule)" >&2; exit 3
+fi
+cd "$wt"
+git add -- "$@"
+if git diff --cached --quiet -- "$@"; then echo "hostcommit: nothing to commit"; exit 0; fi
+git commit -m "$msg" -- "$@"
+git log --oneline -1

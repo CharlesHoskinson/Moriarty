@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import bus, evalloop, head_sha, heavy, holdout, now_iso, preflight, queue, repo_root, spawn, status, stoprule
+from . import bus, evalloop, head_sha, heavy, holdout, now_iso, preflight, queue, reap, repo_root, spawn, status, stoprule
 from . import predicates as preds_mod
 
 NO_RESULTS_HINT = "(no results yet — run scripts/doctorwatson check --tier T0)"
@@ -131,6 +131,10 @@ def cmd_heavy(args):
     return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd)
 
 
+def cmd_reap(args):
+    return reap.cmd_reap(args.execute, args.grace, args.json)
+
+
 def cmd_stop_rule(args):
     return stoprule.main(args.json)
 
@@ -204,6 +208,12 @@ def build_parser():
     p.set_defaults(fn=cmd_heavy)
 
     queue.add_parser(sub)
+
+    p = sub.add_parser("reap", help="expired-lease reaper: dry-run by default; --execute needs the owner standing rule file")
+    p.add_argument("--execute", action="store_true", help="signal the expired lease's session (refused unless owner enabled)")
+    p.add_argument("--grace", type=float, default=15.0, help="seconds between SIGTERM and SIGKILL")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_reap)
 
     p = sub.add_parser("stop-rule", help="escalation rule")
     p.add_argument("--json", action="store_true")
