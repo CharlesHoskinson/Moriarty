@@ -749,3 +749,65 @@ pub(super) fn disabled_identity(em: &mut Em, inputs: &C6StepInputs) {
         em.geq(disabled.clone(), b.clone(), a.clone());
     }
 }
+
+/// Applied (non-P3) helper charge: remaining work - 1, consumed work + 1,
+/// helper work + 1, helper visits + `visits`; outcome and reference cursor
+/// stay. The P3 helper-work refusal (`pre.helper_work == max_helper_work`) is
+/// a different disposition and is rejected here, not constrained.
+pub(super) fn charge_helper(em: &mut Em, inputs: &C6StepInputs, visits: u128) {
+    use mori_core::sherlock::helper_machine::c6_phys::{L_HELPER_VISITS, L_HELPER_WORK};
+    let en = inputs.enable.clone();
+    let pre_i = &inputs.pre_image;
+    let post_i = &inputs.post_image;
+    let max_hw = inputs.source_params.admission_bounds().max_helper_work;
+    let is_p3 = em.teq(pre_i[L_HELPER_WORK].clone(), Em::imm(max_hw));
+    let not_p3 = em.not(is_p3);
+    em.gassert(en.clone(), not_p3);
+    let dec = em.add(post_i[L_REMAINING_WORK].clone(), Em::imm(1));
+    em.geq(en.clone(), dec, pre_i[L_REMAINING_WORK].clone());
+    for (lane, by) in [
+        (L_CONSUMED_WORK, 1),
+        (L_HELPER_WORK, 1),
+        (L_HELPER_VISITS, visits),
+    ] {
+        if by > 0 {
+            let room = em.lt128(pre_i[lane].clone(), Em::imm(u128::MAX - by + 1));
+            em.gassert(en.clone(), room);
+        }
+        let inc = em.add(pre_i[lane].clone(), Em::imm(by));
+        em.geq(en.clone(), post_i[lane].clone(), inc);
+    }
+}
+
+/// The header lanes an applied helper step may change.
+pub(super) fn helper_charge_lanes() -> Vec<usize> {
+    use mori_core::sherlock::helper_machine::c6_phys::{L_HELPER_VISITS, L_HELPER_WORK};
+    vec![
+        L_REMAINING_WORK,
+        L_CONSUMED_WORK,
+        L_HELPER_WORK,
+        L_HELPER_VISITS,
+    ]
+}
+
+/// Row `index` of a fixed-width padded table (`rows` rows of `width` lanes
+/// starting at `base`), by one-hot mux; also returns `index < rows`.
+pub(super) fn mux_row(
+    em: &mut Em,
+    lanes: &[Operand],
+    base: usize,
+    rows: usize,
+    width: usize,
+    index: Operand,
+) -> (Operand, Vec<Operand>) {
+    let mut out = vec![Em::imm(0); width];
+    let mut hit_any = Em::imm(0);
+    for r in 0..rows {
+        let hit = em.teq(Em::imm(r as u128), index.clone());
+        hit_any = em.add(hit_any, hit.clone());
+        for (c, o) in out.iter_mut().enumerate() {
+            *o = em.sel(hit.clone(), lanes[base + r * width + c].clone(), o.clone());
+        }
+    }
+    (hit_any, out)
+}
