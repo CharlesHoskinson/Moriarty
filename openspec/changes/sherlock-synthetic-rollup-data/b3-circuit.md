@@ -39,3 +39,12 @@ Implementation sequence:
 
 No B3 pass follows from host replay or MockProver alone. Stagenet predicates
 require the separately coordinated T3 promotion.
+
+The implemented adapter is `sherlock-v3-batch/1`: one whole-batch leaf, one
+single-child verifier parent, and the terminal Sherlock decider. The parent's
+17 lanes equal the frozen Profile A A2 statement. Its local terminal projection
+uses `DOM_STMT`, instance id zero, the batch number, then parent lanes
+`[0,1,15,16,4,5,6,7,8,9,10,11,12,13]`. This includes both deposit accumulator
+endpoints. It is a new terminal projection, not the historical v3 digest with
+synthetic verifier fingerprints. B4 needs its own anchor/template and call-bound
+terminal proof; the offline proof carries no ledger-acceptance claim.
