@@ -219,6 +219,21 @@ pub struct C6ProgramContextFunctionCaptureBlock {
     pub function_row: [Operand; 5],
 }
 
+/// One PARAMETER row (`binder, sort`) captured from canonical PROG by index.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextParameterCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub parameter_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextParameterCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub parameters_count: Operand,
+    pub parameter_found: Operand,
+    pub parameter_row: [Operand; 2],
+}
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs {
     pub gate: Operand,
@@ -2037,53 +2052,99 @@ impl C6ProgramContextCanonicalEmitter {
         &mut self,
         inputs: &C6ProgramContextFunctionCaptureInputs,
     ) -> Result<C6ProgramContextFunctionCaptureBlock, C6ProgramContextCanonicalError> {
-        reject_reserved(&self.scope, &inputs.gate)?;
-        reject_reserved(&self.scope, &inputs.function_index)?;
-        for lane in &inputs.pre_prog {
+        let (instructions, functions_count, function_found, row) = self.emit_fixed_row_capture(
+            &inputs.gate,
+            &inputs.pre_prog,
+            &inputs.caps,
+            &inputs.function_index,
+            PH_FUNC_COUNT,
+            PH_FUNC_ROW,
+            5,
+        )?;
+        Ok(C6ProgramContextFunctionCaptureBlock {
+            instructions,
+            functions_count,
+            function_found,
+            function_row: row.try_into().expect("five function lanes"),
+        })
+    }
+    /// One PARAMETER row (`binder, sort`) captured from canonical PROG by index.
+    pub fn emit_prog_parameter_capture(
+        &mut self,
+        inputs: &C6ProgramContextParameterCaptureInputs,
+    ) -> Result<C6ProgramContextParameterCaptureBlock, C6ProgramContextCanonicalError> {
+        let (instructions, parameters_count, parameter_found, row) = self.emit_fixed_row_capture(
+            &inputs.gate,
+            &inputs.pre_prog,
+            &inputs.caps,
+            &inputs.parameter_index,
+            PH_PARAM_COUNT,
+            PH_PARAM_ROW,
+            2,
+        )?;
+        Ok(C6ProgramContextParameterCaptureBlock {
+            instructions,
+            parameters_count,
+            parameter_found,
+            parameter_row: row.try_into().expect("two parameter lanes"),
+        })
+    }
+    /// Captures row `index` of a fixed-width PROG table while the complete
+    /// canonical parser walks PROG; returns (instructions, count, found, row).
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
+    fn emit_fixed_row_capture(
+        &mut self,
+        gate: &Operand,
+        pre_prog: &[Operand],
+        caps: &C6StateCaps,
+        index: &Operand,
+        count_ph: u128,
+        row_ph: u128,
+        width: usize,
+    ) -> Result<(Vec<Instruction>, Operand, Operand, Vec<Operand>), C6ProgramContextCanonicalError>
+    {
+        reject_reserved(&self.scope, gate)?;
+        reject_reserved(&self.scope, index)?;
+        for lane in pre_prog {
             reject_reserved(&self.scope, lane)?;
         }
-        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+        if pre_prog.len() < PROGRAM_HEADER_LANES {
             return Err(C6ProgramContextCanonicalError::LengthMismatch {
                 expected: PROGRAM_HEADER_LANES,
-                actual: inputs.pre_prog.len(),
+                actual: pre_prog.len(),
             });
         }
         let mut em = Emitter::new(&self.scope, self.next_temp);
-        let gate = inputs.gate.clone();
+        let gate = gate.clone();
         em.cbool(gate.clone());
-        em.cbits(inputs.function_index.clone(), LANE_BITS);
+        em.cbits(index.clone(), LANE_BITS);
         let mut regs = Regs::zero();
-        let mut functions_count = Emitter::imm(0);
+        let mut count = Emitter::imm(0);
         let mut row_index = Emitter::imm(0);
-        let mut function_found = Emitter::imm(0);
-        let mut function_row: [Operand; 5] = std::array::from_fn(|_| Emitter::imm(0));
-        for lane in &inputs.pre_prog {
+        let mut found = Emitter::imm(0);
+        let mut row: Vec<Operand> = (0..width).map(|_| Emitter::imm(0)).collect();
+        for lane in pre_prog {
             em.cbits(lane.clone(), LANE_BITS);
-            let count_phase = em.eqv(regs.phase.clone(), PH_FUNC_COUNT);
-            functions_count = em.sel(count_phase, lane.clone(), functions_count);
-            let row_phase = em.eqv(regs.phase.clone(), PH_FUNC_ROW);
-            let index_eq = em.teq(row_index.clone(), inputs.function_index.clone());
+            let count_phase = em.eqv(regs.phase.clone(), count_ph);
+            count = em.sel(count_phase, lane.clone(), count);
+            let row_phase = em.eqv(regs.phase.clone(), row_ph);
+            let index_eq = em.teq(row_index.clone(), index.clone());
             let selected = em.and(row_phase.clone(), index_eq);
-            function_found = em.sel(selected.clone(), Emitter::imm(1), function_found);
-            for (column, value) in function_row.iter_mut().enumerate() {
+            found = em.sel(selected.clone(), Emitter::imm(1), found);
+            for (column, value) in row.iter_mut().enumerate() {
                 let at_column = em.eqv(regs.sub.clone(), column as u128);
                 let capture = em.and(selected.clone(), at_column);
                 *value = em.sel(capture, lane.clone(), value.clone());
             }
-            let at_end = em.eqv(regs.sub.clone(), 4);
+            let at_end = em.eqv(regs.sub.clone(), (width - 1) as u128);
             let row_done = em.and(row_phase, at_end);
             let incremented = em.add_i(row_index.clone(), 1);
             row_index = em.sel(row_done, incremented, row_index);
-            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+            regs = em.step(&gate, lane.clone(), regs, &caps.phys, None, None);
         }
         em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
         self.next_temp = em.next_temp;
-        Ok(C6ProgramContextFunctionCaptureBlock {
-            instructions: em.instructions,
-            functions_count,
-            function_found,
-            function_row,
-        })
+        Ok((em.instructions, count, found, row))
     }
     pub fn emit_prog_checked_sort_capture(
         &mut self,
