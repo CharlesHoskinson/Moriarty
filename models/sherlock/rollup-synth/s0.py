@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import tempfile
 from common import Error, canonical, digest, load_json, parse_json, regular, relative, sha
-from cut import _document, check_cut
+from cut import _document, check_cut, source_path
 from frtf import encode_view, th, validate
 
 SEED = 0x5354524157
@@ -19,7 +19,7 @@ def _source(cut, golden):
     checked = check_cut(cut)
     doc = _document(cut)
     golden = Path(golden).resolve()
-    bound = {str(Path(row["path"]).expanduser().resolve()): row for rows in doc["groups"].values() for row in rows}
+    bound = {str(source_path(row["path"]).resolve()): row for rows in doc["groups"].values() for row in rows}
     # All bytes read as corpus authority must be direct members of the checked cut.
     for name in ("MANIFEST.json", "params-v3.json", "workloads.json"):
         if str(golden / name) not in bound: raise Error("golden authority absent from source cut: " + name)

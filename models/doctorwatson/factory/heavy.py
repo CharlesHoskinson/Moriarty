@@ -6,6 +6,7 @@ import os
 import re
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -59,7 +60,7 @@ def _killpg(pgid):
         pass
 
 
-def run_command(argv, cwd, trace_path, echo, cap=None):
+def run_command(argv, cwd, trace_path, echo, cap=None, pipe_stdin=False):
     """Run argv in its own session; tee merged stdout/stderr to trace_path (and stdout if echo).
 
     Returns {exit, wallSeconds, maxRssBytes, exceeded} where exceeded is None, "wall" or "rss".
@@ -72,7 +73,7 @@ def run_command(argv, cwd, trace_path, echo, cap=None):
     t0 = time.monotonic()
     try:
         proc = subprocess.Popen(
-            argv, cwd=cwd, stdin=subprocess.DEVNULL,
+            argv, cwd=cwd, stdin=None if pipe_stdin else subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True,
         )
     except OSError as exc:
@@ -191,7 +192,8 @@ def run_record(rid, pid_label, cmd_str, hypothesis, res, exit_code, pre, head, r
     return rec
 
 
-def run_heavy(pid_label, argv, cmd_str, budget_key=None, hypothesis=None, repo=None, echo=True, err=None):
+def run_heavy(pid_label, argv, cmd_str, budget_key=None, hypothesis=None, repo=None, echo=True, err=None,
+              pipe_stdin=False):
     """Run one heavy command, with bus visibility (advisory claim, job.start/end) around it.
 
     The bus hooks never raise, print or change the result; the flock stays authoritative.
@@ -200,12 +202,12 @@ def run_heavy(pid_label, argv, cmd_str, budget_key=None, hypothesis=None, repo=N
     hb = bus.heavy_bus(pid_label, budget_key, repo)
     hb.begin()
     try:
-        return _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb)
+        return _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb, pipe_stdin)
     finally:
         hb.close()
 
 
-def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb):
+def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb, pipe_stdin=False):
     """Run one heavy command. Returns {exit, run, trace, wallSeconds, maxRssBytes, message}.
 
     exit is the child's exit, 3 (host unfit), 4 (budget exceeded) or 5 (hypothesis required).
@@ -234,7 +236,7 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
         rid = run_id(pid_label, repo)
         trace_abs = os.path.join(repo, trace_rel(rid))
         hb.started(cap, hypothesis)
-        res = run_command(argv, repo, trace_abs, echo, cap)
+        res = run_command(argv, repo, trace_abs, echo, cap, pipe_stdin=pipe_stdin)
         code = res["exit"]
         extra = {}
         if res["exceeded"]:
@@ -258,10 +260,15 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
             os.close(fd)
 
 
-def cmd_heavy(pid_label, budget_key, hypothesis, argv):
+def cmd_heavy(pid_label, budget_key, hypothesis, argv, pipe_stdin=False):
     """CLI entry for `heavy --id ID [--budget KEY] [--hypothesis TEXT] -- CMD...`."""
     from . import predicates
 
+    if pipe_stdin:
+        mode = os.fstat(0).st_mode
+        if not (stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)):
+            print("--pipe-stdin requires a pipe or socket; input is never traced", file=sys.stderr)
+            return 2
     repo = repo_root()
     preds = None
     try:
@@ -271,7 +278,7 @@ def cmd_heavy(pid_label, budget_key, hypothesis, argv):
     known = {p.id: p for p in preds} if preds else {}
     if not budget_key and pid_label in known:
         budget_key = known[pid_label].budget
-    r = run_heavy(pid_label, argv, shlex.join(argv), budget_key, hypothesis, repo)
+    r = run_heavy(pid_label, argv, shlex.join(argv), budget_key, hypothesis, repo, pipe_stdin=pipe_stdin)
     print(r["message"], file=sys.stderr)
     if r["exit"] not in (EXIT_UNFIT, EXIT_HYPOTHESIS) and pid_label in known:
         status.update(preds, {pid_label: {

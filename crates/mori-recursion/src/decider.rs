@@ -90,6 +90,16 @@ pub struct DeciderWitness {
     pub comm_rand: F,
 }
 
+fn validate_known_shapes(
+    n_w_instance: usize,
+    n_public: usize,
+    instance: &Value<Vec<F>>,
+    witness: &Value<DeciderWitness>,
+) -> Result<(), Error> {
+    instance.error_if_known_and(|fields| fields.len() != n_public)?;
+    witness.error_if_known_and(|w| w.w_instance.len() != n_w_instance)
+}
+
 impl DeciderRelation {
     pub fn w_name(&self) -> String {
         vk_name("w", &self.w_vk)
@@ -153,6 +163,14 @@ impl Relation for DeciderRelation {
         instance: Value<Vec<F>>,
         witness: Value<DeciderWitness>,
     ) -> Result<(), Error> {
+        // Host shape checks assign no cells, so keygen with unknown values has
+        // the same layout. Reject malformed known vectors before indexing them.
+        validate_known_shapes(
+            self.n_w_instance as usize,
+            self.template.slots.len(),
+            &instance,
+            &witness,
+        )?;
         let ecc = std.bls12_381();
 
         // 1. W's instance (private witness of D), verify W, fold, resolve, collapse.
@@ -318,5 +336,60 @@ mod comm_binding_tests {
         );
         assert!(comm_binding_from_tag(2).is_err());
         assert!(comm_binding_from_tag(255).is_err());
+    }
+}
+
+#[cfg(test)]
+mod shape_tests {
+    use super::*;
+
+    fn witness(width: usize) -> Value<DeciderWitness> {
+        Value::known(DeciderWitness {
+            w_instance: vec![F::from(0); width],
+            w_proof: vec![1],
+            instance_id: F::from(0),
+            batch_no: F::from(0),
+            comm_rand: F::from(0),
+        })
+    }
+
+    #[test]
+    fn malformed_widths_are_errors_before_any_witness_indexing() {
+        for (n_w, n_public) in [(28, 15), (29, 30)] {
+            for width in [0, n_w - 1, n_w + 1] {
+                assert!(
+                    validate_known_shapes(
+                        n_w,
+                        n_public,
+                        &Value::known(vec![F::from(0); n_public]),
+                        &witness(width)
+                    )
+                    .is_err()
+                );
+            }
+            for width in [0, n_public - 1, n_public + 1] {
+                assert!(
+                    validate_known_shapes(
+                        n_w,
+                        n_public,
+                        &Value::known(vec![F::from(0); width]),
+                        &witness(n_w)
+                    )
+                    .is_err()
+                );
+            }
+            assert!(
+                validate_known_shapes(
+                    n_w,
+                    n_public,
+                    &Value::known(vec![F::from(0); n_public]),
+                    &witness(n_w)
+                )
+                .is_ok()
+            );
+            assert!(
+                validate_known_shapes(n_w, n_public, &Value::unknown(), &Value::unknown()).is_ok()
+            );
+        }
     }
 }
