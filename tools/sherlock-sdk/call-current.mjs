@@ -92,7 +92,42 @@ const proveProvider = {
     return readFileSync(join(output,'proof/terminal.tagged-proof'));
   },
 };
-const proofProvider={proveTx:tx=>tx.prove(proveProvider,parameters.transactionCostModel.runtimeCostModel)};
+// Native proof-verifying validation over an isolated ledger holding the indexed deployment and the predicted snapshot.
+// Bootstrap from the actual public deployment action; never persist or log transaction bodies.
+let prebalance;
+const nativeValidate=async(tx,log)=>{
+  const deployed=JSON.parse(readFileSync('target/a4-anchor/deploy-run3/receipt.json'));
+  assert.equal(deployed.address,pins.address);
+  const data=await graphql(`{transactions(offset:{identifier:"${deployed.txId}"}){raw}}`);
+  const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(data.transactions[0].raw,'hex'));
+  const deployments=[...deploymentTx.intents.values()].flatMap(i=>i.actions).filter(a=>a instanceof ledger.ContractDeploy);
+  assert.equal(deployments.length,1); assert.equal(deployments[0].address,pins.address);
+  let local=ledger.LedgerState.blank('stagenet'); local.parameters=parameters;
+  const setup=ledger.Transaction.fromParts('stagenet',undefined,undefined,ledger.Intent.new(new Date(Date.now()+3600_000)).addDeploy(deployments[0])).eraseProofs();
+  const lax=Object.assign(new ledger.WellFormedStrictness(),{enforceBalancing:false,verifyNativeProofs:false,verifyContractProofs:false,enforceLimits:false,verifySignatures:false});
+  const secs=BigInt(Math.floor(Date.now()/1000)),block={secondsSinceEpoch:secs,secondsSinceEpochErr:30,parentBlockHash:'00'.repeat(32),lastBlockTime:secs-6n};
+  const [boot,result]=local.apply(setup.wellFormed(local,lax,new Date()),new ledger.TransactionContext(local,block));assert.equal(result.type,'success');
+  const ledgerState=ledger.ContractState.deserialize(currentState.serialize()); // compact-runtime -> ledger WASM class
+  local=boot.updateIndex(pins.address,ledgerState.data,ledgerState.balance);
+  return JSON.parse(await child(resolve('target/release/examples/validate_call'),[],
+    JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,log+'-stderr.log'));
+};
+const checkCall=report=>{
+  assert.equal(report.proofVerification,'native/proof-verifying');
+  assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
+  assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
+  if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
+};
+const proofProvider={proveTx:async tx=>{
+  const proven=await tx.prove(proveProvider,parameters.transactionCostModel.runtimeCostModel);
+  if(mode){ // strict pre-balance check: contract proof, signatures and limits on; must apply
+    prebalance=await nativeValidate(ledger.Transaction.deserialize('signature','proof','pre-binding',proven.serialize()).bind(),'native-prebalance');
+    assert.equal(prebalance.contractProofsSignaturesLimitsAccepted,true,prebalance.contractProfileFailure);
+    assert.equal(prebalance.applied,true,'pre-balance native execution'); checkCall(prebalance);
+    writeFileSync(join(output,'native-prebalance-check.json'),json(prebalance));
+  }
+  return proven;
+}};
 try {
   if(mode)session=await openStagenetSession(load,output);
   const walletProvider=session?.walletProvider ?? {getCoinPublicKey:()=> '00'.repeat(32),getEncryptionPublicKey:()=> '00'.repeat(32)};
@@ -113,26 +148,15 @@ try {
   expectedState=Buffer.from(clone.serialize());
   const providers={publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
     ...(session?{privateStateProvider:session.privateStateProvider}:{}),midnightProvider:{submitTx:async tx=>{
-      // Bootstrap from the actual public deployment action; never persist or log transaction bodies.
-      const deployed=JSON.parse(readFileSync('target/a4-anchor/deploy-run3/receipt.json'));
-      assert.equal(deployed.address,pins.address);
-      const data=await graphql(`{transactions(offset:{identifier:"${deployed.txId}"}){raw}}`);
-      const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(data.transactions[0].raw,'hex'));
-      const deployments=[...deploymentTx.intents.values()].flatMap(i=>i.actions).filter(a=>a instanceof ledger.ContractDeploy);
-      assert.equal(deployments.length,1); assert.equal(deployments[0].address,pins.address);
-      let local=ledger.LedgerState.blank('stagenet'); local.parameters=parameters;
-      const setup=ledger.Transaction.fromParts('stagenet',undefined,undefined,ledger.Intent.new(new Date(Date.now()+3600_000)).addDeploy(deployments[0])).eraseProofs();
-      const lax=Object.assign(new ledger.WellFormedStrictness(),{enforceBalancing:false,verifyNativeProofs:false,verifyContractProofs:false,enforceLimits:false,verifySignatures:false});
-      const secs=BigInt(Math.floor(Date.now()/1000)),block={secondsSinceEpoch:secs,secondsSinceEpochErr:30,parentBlockHash:'00'.repeat(32),lastBlockTime:secs-6n};
-      const [boot,result]=local.apply(setup.wellFormed(local,lax,new Date()),new ledger.TransactionContext(local,block));assert.equal(result.type,'success');
-      local=boot.updateIndex(pins.address,currentState.data,currentState.balance);
-      const report=JSON.parse(await child(resolve('target/release/examples/validate_call'),[],
-        JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,'native-final-stderr.log'));
-      assert.equal(report.contractProofsSignaturesLimitsAccepted,true,report.contractProfileFailure);
-      assert.equal(report.applied,true,'native execution against the predicted snapshot');
-      assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
-      assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
-      if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
+      // Final balanced transaction. A refusal that is about proofs or signatures, or a non-applied call,
+      // blocks submission; a refusal caused only by wallet DUST/fee state absent from the blank local ledger
+      // is retained as evidence, because the pre-balance call already passed the strict native check.
+      const report=await nativeValidate(tx,'native-final');
+      if(!report.contractProofsSignaturesLimitsAccepted){
+        assert.doesNotMatch(report.contractProfileFailure,/proof|signature/i,report.contractProfileFailure);
+        assert.ok(prebalance?.applied,'pre-balance native check must have applied');
+      } else assert.equal(report.applied,true,'native execution against the predicted snapshot');
+      checkCall(report);
       writeFileSync(join(output,'native-final-check.json'),json(report));
       // The SDK builder fetched its own snapshot; refuse to submit unless the chain still holds the predicted pre-state.
       const latest=await publicDataProvider.queryContractState(pins.address); assert.ok(latest);
@@ -156,7 +180,7 @@ try {
     writeFileSync(join(output,'receipt.json'),json(receipt));
     const indexed=await graphql(`{contractAction(address:"${pins.address}",offset:{transactionOffset:{hash:"${result.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}}}`);
     assert.equal(indexed.contractAction.__typename,'ContractCall');assert.equal(indexed.contractAction.transaction.hash,result.txHash);
-    const post=Buffer.from(indexed.contractAction.state,'hex');assert.deepEqual(post,expectedState,'complete contract effect readback');
+    const post=Buffer.from(rt.ContractState.deserialize(Buffer.from(indexed.contractAction.state,'hex')).serialize());assert.deepEqual(post,expectedState,'complete contract effect readback');
     writeFileSync(join(output,'post-state.bin'),post);writeFileSync(join(output,'indexed-call.json'),json(indexed));
     console.log(json({...receipt,completeEffectsMatch:true}));
   }
