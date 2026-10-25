@@ -74,19 +74,19 @@ def attempts(rc):
     return {a["name"]: (i, a) for i, a in enumerate(rc.get("attempts") or [])}
 
 
-def measured_run(repo, path, rc):
+def measured_run(repo, path, rc, run_id="A9produce"):
     """A node refusal leaves no public trace; bind each claimed outcome to a measured heavy run whose trace has it."""
     runs = repo / "qa" / "sherlock" / "runs.jsonl"
     lines = [json.loads(l) for l in runs.read_text().splitlines() if l.strip()] if runs.is_file() else []
     want = [f"[a9] output {path.parent.resolve()}"] + [
         f"[a9] {a['name']}: node {'ACCEPTED' if a['nodeOutcome'] == 'accepted' else 'refused'} {a['txSHA256']}" for a in rc["attempts"]]
     for r in reversed(lines):
-        if r.get("id") != "A9produce" or r.get("exit") != 0 or not r.get("trace"):
+        if r.get("id") != run_id or r.get("exit") != 0 or not r.get("trace"):
             continue
         t = repo / r["trace"]
         if t.is_file() and all(w in t.read_text(errors="replace") for w in want):
             return r["run"]
-    raise Fail("no exit-0 A9produce heavy run whose trace records this receipt's attempts")
+    raise Fail(f"no exit-0 {run_id} heavy run whose trace records this receipt's attempts")
 
 
 def control(rc):
@@ -148,24 +148,35 @@ def check_s_b(rc, _t, _a, case):
            f"refusal={a['refusal'][0]['tag']}: {a['refusal'][-1]['message'][:120]!r}"
 
 
-def check_s_e(rc, twin_tx, twin_action, case):
+BAN = "1012: Transaction is temporarily banned"
+
+
+def check_s_e(rc, twin_tx, twin_action, case, evidence_dir=None, repo=None):
     need(rc["stmt"] == A8_STMT, "s-e: twin statement is not the A8-accepted statement")
     a8 = action(A8_TX)
     need(sha(bytes.fromhex(a8["state"])) == rc["preStateSHA256"], "s-e: pinned pre-state is not the indexed A8 post-state")
     need(sha(bytes.fromhex(twin_action["state"])) == rc["preStateSHA256"], "s-e: second acceptance of the statement changed indexed state")
-    a = refused_unincluded_identical(rc, twin_tx)
-    return f"re-acceptance of A8 stmt finalized with indexed post-state == pre-state ({rc['preStateSHA256'][:16]}); " \
-           f"identical-bytes resubmission refused ({a['refusal'][0]['tag']}) and indexed once"
-
-
-def refused_unincluded_identical(rc, twin_tx):
+    msg = f"(i) re-acceptance of the A8 stmt finalized with indexed post-state == pre-state ({rc['preStateSHA256'][:16]})"
     at = attempts(rc)
     need("s-e-identical-bytes" in at, "no identical-bytes resubmission recorded")
     i, a = at["s-e-identical-bytes"]
     need(i > at["twin"][0] and a["txSHA256"] == at["twin"][1]["txSHA256"], "resubmission is not the twin's exact bytes after acceptance")
-    need(a["nodeOutcome"] == "refused" and a.get("refusal"), "identical-bytes resubmission was not refused")
-    need(len(txs(a["txSHA256"])) == 1, "twin bytes are indexed more than once")
-    return a
+    need(a["nodeOutcome"] == "refused", "identical-bytes resubmission was not refused")
+    if not any(BAN in r["message"] for r in a["refusal"]):
+        need(len(txs(a["txSHA256"])) == 1, "twin bytes are indexed more than once")
+        return msg + f"; (ii) identical bytes refused ({a['refusal'][-1]['message'][:80]!r}) and indexed once", None
+    # The pool's temporary ban is not the ledger's replay guard; require a resubmission after the ban window.
+    rs = (evidence_dir / "resubmit.json") if evidence_dir else None
+    if not rs or not rs.is_file():
+        return msg, ("UNIMPLEMENTED: s-e (ii) the identical-bytes resubmission was refused only by the node pool's temporary ban; "
+                     "needs `DW_ROLE=evaluator scripts/doctorwatson heavy --id A9resubmit -- qa/holdout/lib/stagenet/produce-a9.sh --resubmit "
+                     f"{evidence_dir}` at least 35 min after the twin")
+    r = json.loads(rs.read_text()); b = r["attempt"]
+    need(r["twinSHA256"] == a["txSHA256"] == b["txSHA256"] and r["minutesAfterTwin"] >= 35, "resubmit.json is not a post-ban resubmission of the twin")
+    need(b["nodeOutcome"] == "refused" and not any(BAN in x["message"] for x in b["refusal"]), "post-ban identical bytes were not refused by the ledger")
+    measured_run(repo, rs, {"attempts": [b]}, run_id="A9resubmit")
+    need(len(txs(b["txSHA256"])) == 1, "twin bytes are indexed more than once")
+    return msg + f"; (ii) identical bytes refused after the ban window ({b['refusal'][-1]['message'][:80]!r}) and indexed once", None
 
 
 CHECKS = {"proof-bit-flip": check_s_a, "wrong-verifying-key": check_s_b, "statement-replay": check_s_e}
@@ -196,12 +207,15 @@ def run(cases, repo):
         return res
     for c in implemented:
         try:
-            msg = CHECKS[c["stagenetCheck"]["kind"]](rc, twin_tx, twin_action, c)
+            if c["stagenetCheck"]["kind"] == "statement-replay":
+                msg, pending = check_s_e(rc, twin_tx, twin_action, c, path.parent, repo)
+            else:
+                msg, pending = CHECKS[c["stagenetCheck"]["kind"]](rc, twin_tx, twin_action, c), None
         except (Fail, RuntimeError, OSError, KeyError, TypeError) as e:
             res[1].append((c["id"], f"{type(e).__name__}: {e}"))
             continue
-        rest = c.get("unimplemented")
-        if rest:   # implemented sub-checks passed; the case still needs the remaining harness
+        rest = " ; ".join(x for x in (pending, c.get("unimplemented")) if x)
+        if rest:   # implemented sub-checks passed; the case still needs the remaining evidence or harness
             res[2].append((c["id"], rest))
             print(f"PARTIAL {c['id']}: implemented sub-checks pass: {msg}")
         else:

@@ -17,7 +17,11 @@ parent="${MORIARTY_A3_PARENT_DIR:-$(newest 'target/sherlock-a3/run-*/artifacts/p
 key="${MORIARTY_TERMINAL_KEY_DIR:-$(newest 'target/sherlock-a4/run-*/artifacts/key')}"
 cargo build --release --locked -p mori-recursion --features sherlock-ledger-validation --example validate_call
 mkdir -p target/sherlock-a9
-run_dir="$(mktemp -d "$PWD/target/sherlock-a9/run-XXXXXXXX")"
+if [[ "${1:-}" == "--resubmit" ]]; then
+  run_dir="${2:?usage: produce-a9.sh --resubmit RUN_DIR}"; mode=--resubmit
+else
+  run_dir="$(mktemp -d "$PWD/target/sherlock-a9/run-XXXXXXXX")"; mode=--submit
+fi
 exec node qa/holdout/lib/stagenet/produce-a9.mjs "${MORIARTY_SDK_ROOT:-$HOME/.midnight/stagenet-wallet}" \
   "${MORIARTY_ANCHOR_BUILD:-$PWD/target/a4-anchor/deploy-run3/build}" "${MORIARTY_ANCHOR_KEYED:-$PWD/target/a4-anchor/keyed}" \
-  "$parent" "$key" "$run_dir" --submit
+  "$parent" "$key" "$run_dir" "$mode"

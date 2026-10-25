@@ -21,10 +21,12 @@ import {sdkLoader, endpoints, openStagenetSession} from '../../../../tools/sherl
 
 const [sdkRoot, build, keyed, parent, key, outputArg, mode] = process.argv.slice(2);
 assert.ok(outputArg, 'usage: produce-a9.mjs SDK_ROOT BUILD KEYED PARENT KEY OUTPUT [--submit]');
-assert.ok(mode === undefined || mode === '--submit');
-const submit = mode === '--submit';
+assert.ok(mode === undefined || mode === '--submit' || mode === '--resubmit');
+const submit = mode === '--submit', resubmit = mode === '--resubmit';
 const output = resolve(outputArg); mkdirSync(output, {recursive: true, mode: 0o700});
-assert.ok(!existsSync(join(output, 'receipt.json')), 'evidence already recorded in this output directory');
+// --resubmit OUTPUT names a finished run: resubmit the twin's indexed bytes after the node pool's temporary ban.
+if (resubmit) assert.ok(existsSync(join(output, 'receipt.json')) && !existsSync(join(output, 'resubmit.json')), 'resubmit needs a finished run without resubmit.json');
+else assert.ok(!existsSync(join(output, 'receipt.json')), 'evidence already recorded in this output directory');
 const caseOf = id => JSON.parse(readFileSync(`qa/holdout/cases/rejections/${id}/case.json`));
 const FLIP = Object.freeze((({proofOffset, mask}) => ({proofOffset, mask}))(caseOf('s-a-tampered-inner-proof').mutation));
 const STMT_B_TAG = caseOf('s-b-mismatched-verifying-key').mutation.stmtTag;
@@ -103,7 +105,7 @@ assert.ok(!before.validity_ok.member(stmtB) && !before.settled.member(stmtB), 's
 assert.equal(sha(await deciderKeys.getVerifierKey('acceptValidity')), sha(currentState.operation('acceptValidity').verifierKey));
 const compiledVk = await compiledKeys.getVerifierKey('acceptValidity');
 assert.notEqual(sha(compiledVk), sha(currentState.operation('acceptValidity').verifierKey), 's-b key must differ from the installed key');
-writeFileSync(join(output, 'pre-state.bin'), currentState.serialize());
+if (!resubmit) writeFileSync(join(output, 'pre-state.bin'), currentState.serialize());
 
 let deployState;
 const nativeValidate = async (tx, name) => {
@@ -218,7 +220,22 @@ const receipt = {schema: 'sherlock-a9-stagenet-rejections/1', address: pins.addr
   preStateSHA256, stmt: le(stmt), stmtB: le(stmtB), stmtBTag: STMT_B_TAG,
   installedAcceptVkSHA256: sha(currentState.operation('acceptValidity').verifierKey), compiledAcceptVkSHA256: sha(compiledVk)};
 try {
-  if (!submit) {
+  if (resubmit) {
+    const done = JSON.parse(readFileSync(join(output, 'receipt.json')));
+    const twinAttempt = done.attempts.find(a => a.name === 'twin');
+    assert.equal(twinAttempt?.nodeOutcome, 'accepted');
+    const waited = (Date.now() - Date.parse(twinAttempt.at)) / 60_000;
+    assert.ok(waited >= 35, `node pool ban window: wait ${Math.ceil(35 - waited)} more minutes`);
+    const data = await graphql(`{transactions(offset:{hash:"${twinAttempt.txSHA256}"}){raw}}`);
+    assert.equal(data.transactions.length, 1);
+    const raw = Buffer.from(data.transactions[0].raw, 'hex'); assert.equal(sha(raw), twinAttempt.txSHA256);
+    session = await openStagenetSession(load, join(output, 'session-3'));
+    log('wallet synced for resubmission');
+    const a = await attempt('s-e-identical-bytes-after-ban', ledger.Transaction.deserialize('signature', 'proof', 'binding', raw));
+    writeFileSync(join(output, 'resubmit.json'), json({schema: 'sherlock-a9-resubmit/1', twinSHA256: twinAttempt.txSHA256,
+      minutesAfterTwin: waited, attempt: a, finishedAt: new Date().toISOString()}), {flag: 'wx'});
+    console.log(json({resubmit: [a.name, a.nodeOutcome, a.refusal?.at(-1)?.message]}));
+  } else if (!submit) {
     const B = await buildWrongKey();
     receipt.prediction = {sB: await nativeValidate(unboundForCheck(B), 'native-sB-prebalance')};
     assert.ok(isProofRefusal(receipt.prediction.sB), 's-b prediction: the native validator must refuse the wrong-key proof');
