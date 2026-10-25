@@ -169,12 +169,14 @@ def check_s_e(rc, twin_tx, twin_action, case, evidence_dir=None, repo=None):
     rs = (evidence_dir / "resubmit.json") if evidence_dir else None
     if not rs or not rs.is_file():
         return msg, ("UNIMPLEMENTED: s-e (ii) the identical-bytes resubmission was refused only by the node pool's temporary ban; "
-                     "needs `DW_ROLE=evaluator scripts/doctorwatson heavy --id A9resubmit -- qa/holdout/lib/stagenet/produce-a9.sh --resubmit "
-                     f"{evidence_dir}` at least 35 min after the twin")
+                     "needs `qa/holdout/lib/stagenet/produce-a9.sh --resubmit "
+                     f"{evidence_dir}` (outside the heavy slot; no proof) at least 35 min after the twin")
     r = json.loads(rs.read_text()); b = r["attempt"]
     need(r["twinSHA256"] == a["txSHA256"] == b["txSHA256"] and r["minutesAfterTwin"] >= 35, "resubmit.json is not a post-ban resubmission of the twin")
     need(b["nodeOutcome"] == "refused" and not any(BAN in x["message"] for x in b["refusal"]), "post-ban identical bytes were not refused by the ledger")
-    measured_run(repo, rs, {"attempts": [b]}, run_id="A9resubmit")
+    log = rs.parent / "resubmit.log"   # no proof, so this run is never under heavy; bind to its own log
+    need(log.is_file() and f"[a9] {b['name']}: node refused {b['txSHA256']}" in log.read_text(errors="replace"),
+         "resubmit.log does not record the post-ban refusal")
     need(len(txs(b["txSHA256"])) == 1, "twin bytes are indexed more than once")
     return msg + f"; (ii) identical bytes refused after the ban window ({b['refusal'][-1]['message'][:80]!r}) and indexed once", None
 
