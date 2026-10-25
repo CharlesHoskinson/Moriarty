@@ -3,7 +3,10 @@
 Status: DESIGN NOTE, Phase 1, 2026-10-25. Decided by sherlock-u under the owner
 decision relayed by the coordinator ("change whatever you like in the design of
 sherlock ... we can't change ledger 9"). Nothing here is implemented, compiled or
-run. Pending Opus security review and GPT Sol review before Phase 2. It lifts the
+run. Revision 2 closes the five Opus security review findings
+(`scratchpad/panel/susp-opus.txt`: 2 HIGH, 1 MED, 2 LOW); see §13. The GPT Sol
+review is pending, and Phase 2 starts only when both reviews' blocking items are
+closed. The coordinator approved the §1.3 anchor interpretation. The note lifts the
 option-C hold on U014, U015, U017, U018, U019 and U020.
 
 Claims scope. This note decides host semantics (the reference machine, the draft
@@ -49,6 +52,8 @@ Decisions:
    hashes a trace commitment over the batch (A: `f[15] == trace`, B4: leaf lanes).
    A resume batch's trace commitment additionally absorbs `OD(observation)` (§3.3)
    at the position of the resume event. D and its statement layout are ours to change.
+   Rev 2: the settle call also discloses the observation itself, and the anchor
+   recomputes `OD` (§1.5). This is a contract argument, not a ledger lane.
 3. **Anchor contract.** Neither existing anchor is generic: the A anchor pins a
    two-step A102/A80 program (`f[13] == N_STEPS()`, `f[14] == WORK()`), and the B4
    anchor pins the rollup header span (`f[16] == h + 50`). A general Sherlock run
@@ -59,11 +64,77 @@ Decisions:
    recomputes `stmt` and advances `root`. This is a new contract deployment (allowed:
    stagenet redeploys are authorized), not a ledger, node, SDK or proof-server change.
    It uses only `Set<Field>`, `Field`, `Uint<64>`, `transientHash` and `disclose`,
-   all already used by the deployed anchors.
+   all already used by the deployed anchors. Coordinator-approved. The exact
+   circuit is §1.5.
 4. **Phase policy on chain is `guaranteed-only`.** All Sherlock calls keep the
    guaranteed-only shape A9/B4 used (`crates/mori-recursion/tests/fixtures/accept-template.json`:
    "all guaranteed, none fallible"; deployments pin `phase_policy == "guaranteed-only"`,
    `crates/mori-ledger/src/layout.rs:142`). §8 maps source outcomes onto that.
+
+5. **§1.5 `sherlock-run-anchor` specification (rev 2).**
+
+   Ledger fields:
+   - `validity_ok: Set<Field>`, `settled: Set<Field>`, `root: Field`,
+     `height: Uint<64>`, `batch_no: Uint<64>`;
+   - sealed `instance_id`, `keys_id`, `profile_id` (= 3), `program_c`,
+     `genesis_root`, `genesis_height`, `genesis_batch`.
+
+   **`keys_id` (MED finding 3).** It commits to the /2-only verifier-key set: the
+   /2 leaf/step keys and the /2 decider key. No /1 key is in it. The /2 decider
+   refuses any child proof whose key is not in that set. A /1 leaf therefore cannot
+   be folded into a /2 statement, even though the /1 META leaves profile_id unbound.
+
+   `acceptValidity(stmt)`:
+   - asserts `!settled.member(stmt)` (restored from the deployed anchors);
+   - inserts `stmt` into `validity_ok`.
+
+   `settleValidity(batch: Uint<64>, fields: Vector<F, Field>, obs: Vector<19, Field>)`.
+   `fields` carries the D statement lanes:
+   - `keys_id`, `program_c`, `profile_id`;
+   - `ck_pre`, `h_pre`, `ck_post`, `n_steps`;
+   - `trace`;
+   - `od`, which is zero for a batch with no resume.
+
+   `settleValidity` asserts each of the following:
+   1. `batch == batch_no + 1`. `batch_no` and `instance_id` are bound into `stmt`
+      (LOW finding 4).
+   2. The pins equal their sealed values: `keys_id`, `program_c`, `profile_id`.
+   3. Root and height:
+      - `ck_pre == root` and `h_pre == height`;
+      - `n_steps >= 1`;
+      - `h_post = h_pre + n_steps` is computed by the anchor, not taken from the
+        prover;
+      - wrap guards on height and batch.
+   4. **Observation disclosure (HIGH finding 1).**
+      - `obs = [site, label_id, n, v_0, ..., v_15]`. It is disclosed, so the
+        observation is public in the call transcript.
+      - When `od != 0` the anchor recomputes
+        `transientHash([DOM_OBS2, ck_pre, site, label_id, n, v_0..v_15])` and asserts
+        it equals `od`.
+      - It asserts `n <= 16`, and that `v_i == 0` for every `i >= n`.
+      - When `od == 0`, `obs` must be all zero.
+   5. `stmt = transientHash([DOM_STMT2, instance_id, batch, keys_id, program_c,
+      profile_id, ck_pre, h_pre, ck_post, h_post, n_steps, trace, od])`. Then
+      `!settled.member(stmt)` and `validity_ok.member(stmt)`.
+   6. It moves `stmt` from `validity_ok` to `settled`, then sets `root := ck_post`,
+      `height := h_post` and `batch_no := batch`.
+
+   The D statement absorbs `od` at the resume event's position in `trace`, and the
+   leaf proves that the image after `XFinResumeAccept` / `BAwaitGuardReturn`
+   recorded that same `od`. So the disclosed observation, the proved transition and
+   the settled root are one object. A settler cannot settle one observation while
+   publishing another, and cannot settle without publishing.
+
+   **Who owns the observation on chain (decided).** Authentication stays `none`. The
+   observation that counts is the one in the first settled successor of the
+   Waiting root. Any party able to produce a valid proof can race to settle, and
+   the observation it uses becomes public.
+
+   /2 deliberately adds no observer pin. A sealed observer key would need an
+   in-circuit signature or caller-identity check, and this note does not assume
+   that Compact facility. It is recorded as a future anchor option. Applications
+   that need a single observer must restrict who can produce proofs (private
+   inputs held by that observer) or check attestation in the guard.
 
 Consequence: suspension adds no on-chain state machine. Waiting, resume and local
 failure are all deterministic machine transitions inside a batch; the chain only
@@ -103,7 +174,7 @@ publishes its boundary there. A technical chunk cut is none of these
 | `RuleIdC` (pure) | `BAwaitEnter`, `BAwaitGuardReturn` | n/a | | replaces the reserved `BBookkeepingResumeStore/Restore` extension rules |
 | `BoundaryKind` | `SourceSuspensionExtensionReserved` (name kept) | 3 | | /2 starts using the existing variant and tag 3; no /1 enum or codec is renamed |
 
-`ExhaustReason` is unchanged.
+`ExhaustReason` gains `LogicalCap` (tag 7, /2 only, §6.1); tags 0–6 are unchanged.
 
 ### 3.3 Surface syntax and typing
 
@@ -156,17 +227,24 @@ A checkpoint is the complete `MachineImage` encoded by the existing C6 HOST code
 - **Carrier version:** the C6 padded carrier version is bumped. /1 carriers
   decode only under /1.
 
-**One checkpoint identity.** `CK(image)` is the Field-domain state commitment
-over the C6 HOST lane vector, the same function the decider leaf uses for `root`,
-computed identically by host and circuit. It is written as 64 hex characters of
+**One checkpoint identity.** `CK(image) = transientHash-tree(DOM_CK2 ‖ profile_id ‖
+carrier_version ‖ C6 HOST lane vector)`. This is the Field-domain state commitment
+the decider leaf uses for `root`, computed identically by host and circuit.
+`DOM_CK2` is the packed ASCII tag `"SHK_CK2"`, separating /2 checkpoint digests
+from every other hash domain, /1 roots included (LOW finding 5). It is written as 64 hex characters of
 the field element's canonical bytes. There is no separate host SHA-256 name.
 The CK an observation binds to (R3) is therefore exactly the root the anchor
 consumes (§5.3).
 
-`OD(obs)` is the same Field-domain hash over the admitted fixed-width lane vector
-`[DOM_OBS, CK, site, label_id, v_1, ..., v_n]`. In that vector `label_id` is the
-site's admitted label index, UInt values are their u128 lanes and Bool values are
-0 or 1. The JSON file is only a carrier: R3–R5 decode it into that vector, and the
+`OD(obs) = transientHash([DOM_OBS2, CK, site, label_id, n, v_0, ..., v_15])`. The
+vector has a fixed width of 21 Field lanes:
+- `DOM_OBS2` is the tag `"SHK_OBS2"`;
+- `n` is the explicit binder count, at most 16 (the Core/2 bound);
+- `v_i` for `i >= n` is required to be 0;
+- `label_id` is the site's admitted label index;
+- UInt values are their u128 lanes; Bool values are 0 or 1.
+
+This is the same function the anchor recomputes (§1.5). The JSON file is only a carrier: R3–R5 decode it into that vector, and the
 digest never hashes JSON text, so JSON canonicalization is not part of the
 binding.
 
@@ -203,7 +281,7 @@ Report (stdout JSON). Every report carries `profile` and the Core/2 labels
 | `status` | Exit code | Members |
 | --- | --- | --- |
 | `waiting` | 0 | `site`, `label`, `checkpoint` (CK hex), `checkpoint_file` (if `--checkpoint-out`), `binders` (name/type layout the next observation must match), `committed_work`, `attempted_work`, `frames` (bottom-to-top summary), `fin` (§7.4, or null) |
-| `not_ready` | 3 | `checkpoint` (= input CK, unchanged), `site`, `attempted_work`, `reason` (`guard_false`, `guard_error{code}` or `guard_exhausted`); with `--checkpoint-out` the written file is byte-identical to the `--resume` input (`cmp` holds) |
+| `not_ready` | 3 | `checkpoint` (= input CK, unchanged), `site`, `attempted_work`, `reason` (`guard_false` or `guard_error{code}`); with `--checkpoint-out` the written file is byte-identical to the `--resume` input (`cmp` holds) |
 | `refused` | 4 | `stage` (`R0`..`R7`, §4), `error`; the checkpoint is not read past the failing check and no successor exists (2 is left to clap usage errors) |
 | `halted` | 0 | `value`, `committed_work`, `fin` |
 | `rejected` | 1 | `code`, `committed_work`, `fin` (§7.5) |
@@ -220,7 +298,7 @@ in this order. The first failure is the reported `stage`. R0–R7 mirror Core/2
 
 | Stage | Check |
 | --- | --- |
-| R0 | `C` decodes under `sherlock-helper-microstep/2` (profile id 3 in META, carrier version /2, full SI01–SI24 host invariants plus the new SI25–SI28 below). Low fuel is not a refusal: a guard that runs out of fuel is `not_ready{guard_exhausted}` (§6.3), the only outcome for that condition |
+| R0 | `C` decodes under `sherlock-helper-microstep/2` (profile id 3 in META, carrier version /2, full SI01–SI24 host invariants plus the new SI25–SI29 below). A checkpoint violating SI-29 cannot be produced by the machine and is refused here as malformed |
 | R1 | `C.outcome == Waiting{site}` and `C.control == Await{site, ..}` with the same site; a Running/terminal checkpoint is refused, not "not ready" |
 | R2 | admission identity in `C` (program membership digest, layout and bounds digests, and for fin the Core/2 `program_hash`/`plan_hash`) equals the supplied source's admission; the CLI action, if given, equals the checkpoint's action |
 | R3 | `obs.format == "sherlock-observation/2"` and `obs.checkpoint == CK(C)` (binds the observation to exactly one checkpoint) |
@@ -239,8 +317,9 @@ A settled successor is therefore bound to its exact predecessor and observation.
 
 **Authentication: none (deliberate, as Core/2).** Sherlock does not decide whether
 an observation is true. The guard is the program's own admission check on the
-observation, and on chain the observation is whatever the settling submitter
-proved. An application that needs an attested source must check it in the guard
+observation. On chain the first settler of the Waiting root's successor owns the
+observation. Settlement discloses it, and the anchor recomputes and checks `OD`
+(§1.5), so the settler cannot hide it or substitute another. An application that needs an attested source must check it in the guard
 (for example, equality with a value fixed at an earlier, settled step) or at the
 contract layer. /2 adds no oracle or signature primitive.
 
@@ -248,8 +327,8 @@ contract layer. /2 adds no oracle or signature primitive.
 
 1. **Not-ready is byte-identical.**
    - `resume` evaluates the guard on a scratch copy of the image.
-   - If the guard does not return `true` (false, a runtime `Error`, or fuel
-     exhaustion inside the guard), the copy is discarded. The output checkpoint is
+   - If the guard does not return `true` (false or a runtime `Error`;
+     exhaustion is unreachable by SI-29), the copy is discarded. The output checkpoint is
      the input bytes, and `CK` is unchanged.
    - Attempted guard work is reported host-side (`attempted_work`) and is in no
      checkpoint.
@@ -272,10 +351,21 @@ contract layer. /2 adds no oracle or signature primitive.
      observed for stale settles P1).
    - `settled` additionally refuses an identical statement replay.
    - So a resumed checkpoint can be resumed into at most one settled state.
-4. **No state recurs.** `RESUME_EPOCH` increases on every accepted resume, and
-   `consumed_work` increases on every charged event. So a successor's `CK` never
-   equals any earlier `CK` of the same run, and root linearity cannot be defeated
-   by returning to an old root.
+4. **Replay safety rests on the anchor pins, not on state non-recurrence (rev 2,
+   LOW finding 4).**
+   - Some events charge 0 (E7, E8 and `XFinCommit`), so `consumed_work` alone is
+     not a strict clock.
+   - The rev-1 claim "no state recurs" is withdrawn as the safety argument.
+   - Single settlement per root comes from the pins in §1.5:
+     - the predecessor pins `ck_pre == root` and `h_pre == height`;
+     - the anchor-computed `h_post = h_pre + n_steps` with `n_steps >= 1`, so height
+       strictly increases;
+     - `batch == batch_no + 1`;
+     - `instance_id` and `batch` are inside `stmt`;
+     - `!settled.member` in both `acceptValidity` and `settleValidity`.
+   - A statement can therefore settle at most once, and only at its exact
+     (root, height, batch) position, even if an image recurs.
+   - `RESUME_EPOCH` remains as a host diagnostic and an extra input to `CK`.
 
 ## 6. (d) Work charging across suspension, and the pure lowering
 
@@ -295,6 +385,32 @@ contract layer. /2 adds no oracle or signature primitive.
   computation per run regardless of how many observations arrive.
 - If `remaining_work == 0` when `Await` would be entered, the existing P2 rule
   publishes `Exhausted(Fuel)` uncharged, as for any event.
+- **Resumability check at await entry (rev 2, HIGH finding 2).** A Waiting root must
+  never be unresumable for resource reasons, because fuel is fixed at genesis and
+  the cap is bound in META. Let `g` be the site's static guard bound (§6.3). When
+  control is `Eval(await)` (pure) or the Await statement (fin), the entry rule
+  first checks:
+  - fuel: `remaining_work >= 1 + g + 1`, covering entry, at most `g` guard events
+    and the accept event;
+  - helper budget: `max_helper_work - helper_work >= g`;
+  - (fin route) cap: `committed_before[s] + segment_cost[s+1] <= cap`, using the
+    static plan cost of the segment that follows the await.
+
+  If any check fails, the rule publishes `Exhausted` at entry instead of Waiting:
+  - `Exhausted(Fuel)` for fuel, `Exhausted(HelperWork)` for the helper budget, and
+    the new `Exhausted(LogicalCap)` (ExhaustReason tag 7, /2 only) for the cap;
+  - the entry is charged 1, like a P6 capacity refusal;
+  - on the fin route the tentative segment is committed first, exactly as at a
+    successful await, because the prefix up to the await succeeded.
+
+  The new invariant SI-29 says `Waiting{s} ⇒` all three inequalities hold, minus
+  the entry charge already paid. So every Waiting checkpoint can afford one full
+  guard attempt and acceptance. Exhaustion inside a guard is then unreachable, and
+  `guard_exhausted` is dropped from the `not_ready` reasons.
+
+  Liveness that depends on the program is out of scope: a guard that is false or
+  errors for every observation leaves the run waiting forever, by the program's
+  own definition.
 - Waiting is checked before P2: a Waiting image is never exhausted while it waits.
 - The SI-03/SI-04 invariants hold across suspension unchanged
   (`remaining + consumed == initial_fuel`; `reference_cursor == consumed - helper_work`).
@@ -343,8 +459,7 @@ contract layer. /2 adds no oracle or signature primitive.
 - A call-free guard has a static cost bound: one event per expression node, at
   most the guard's node count, recorded at admission.
 - A not-ready attempt costs at most that bound in host time.
-- Exhaustion inside a guard is possible only when remaining fuel is below the
-  bound. The report then says `guard_exhausted` and the checkpoint is unchanged.
+- With the entry check (§6.1, SI-29), exhaustion inside a guard is unreachable.
 - An adversary cannot make the guard loop or allocate.
 - Recursive or allocating checks belong in `E`, after acceptance, where their work
   is committed and settled like any other work.
@@ -551,10 +666,11 @@ Threats and the invariant that answers each:
 | # | Threat | Invariant / mechanism |
 | --- | --- | --- |
 | T1 | Observation replayed against a different checkpoint | R3 binds `obs.checkpoint == CK(C)`; the trace commitment absorbs `(CK, OD)` |
-| T2 | Double resume into divergent states | Locally untracked by design (as Core/2). On chain, root linearity (`f_pre == root`, then root replaced) and `settled` give at most one settled successor per root; `RESUME_EPOCH` and monotone `consumed_work` prevent root recurrence (§5.3–5.4) |
-| T3 | Forged observation | Authentication is `none` (labelled). The program's guard is the admission check; the binder sorts UInt/Bool and fixed layout bound what can enter. Applications needing attestation must encode it in the guard |
+| T2 | Double resume into divergent states | Locally untracked by design (as Core/2). On chain: predecessor pins (`ck_pre == root`, `h_pre == height`), anchor-computed `h_post = h_pre + n_steps` (`n_steps >= 1`), `batch == batch_no + 1`, `instance_id` and `batch` in `stmt`, `!settled.member` in accept and settle (§1.5, §5.4) |
+| T3 | Forged or hidden observation | Authentication is `none` (labelled); the first on-chain settler owns the observation. `settleValidity` discloses `obs` and recomputes `OD` against the statement, so the settled observation is public and cannot differ from the proved one. The guard is the program's admission check; UInt/Bool sorts and the fixed 16-lane layout with zero padding bound what can enter |
 | T4 | Griefing via junk observations | Not-ready is byte-identical and work-free in state; the guard is call-free with a static cost bound (§6.3); no fuel is added by observations |
-| T5 | Profile confusion (/1 vs /2) | profile_id = 3 constrained in /2 circuits and pinned in the anchor; no cross-profile resume (SI-01) |
+| T5 | Profile confusion (/1 vs /2) | profile_id = 3 constrained in /2 circuits and pinned in the anchor; `keys_id` commits to a /2-only key set and the /2 decider refuses /1 leaf keys; `DOM_CK2` separates digest domains; no cross-profile resume (SI-01) |
+| T12 | Unresumable Waiting root (liveness griefing by resource starvation) | Entry check publishes `Exhausted` instead of Waiting when fuel, helper budget or cap cannot cover a full guard and acceptance; SI-29 |
 | T6 | Technical cut presented as commit or Waiting | Commit happens only inside `XFinAwaitEnter`/`XFinComplete`/`XFinLocalFailure`; a cut produces no event and leaves `BoundaryKind::TechnicalCut`; SI-25 requires `fin.tentative` to be empty whenever outcome ≠ Running |
 | T7 | Cap editing between resumes | The cap is in bound META (unlike Core/2 `logical.cap`) |
 | T8 | Fee-retention underflow or reordering | `retain-guaranteed-fees/1` admission requires fees first in each segment; retained fees apply to the committed snapshot with the existing checked mutators |
@@ -568,6 +684,7 @@ New host invariants for /2:
 - SI-26: `discarded_effects` ≠ ∅ ⇒ outcome is Rejected.
 - SI-27: Waiting{s} ⇔ control is `Await{s,..}`, and `WAIT_SITE == s`.
 - SI-28: on the fin route, Waiting{s} ⇒ `committed == plan.committed_before[s]`.
+- SI-29: Waiting{s} ⇒ `remaining_work >= g_s + 1`, `max_helper_work - helper_work >= g_s`, and on the fin route `committed + segment_cost[s+1] <= cap`.
 
 ## 11. States and transitions (for the chip animation)
 
@@ -590,7 +707,8 @@ the reason, not a code.
 | Id | Name | From → To | Rule | Charge (fuel) | State change |
 | --- | --- | --- | --- | --- | --- |
 | E1 | Step | Running → Running | any existing rule | per rule | as /1 |
-| E2 | AwaitEnter (pure) | Running → Waiting(s) | `BAwaitEnter` | 1 | control := Await, outcome := Waiting |
+| E2 | AwaitEnter (pure) | Running → Waiting(s) | `BAwaitEnter` (entry check passes) | 1 | control := Await, outcome := Waiting |
+| E2x | AwaitEnter-Starved | Running → Exhausted(Fuel / HelperWork / LogicalCap) | `BAwaitEnter` / `XFinAwaitEnter` (entry check fails) | 1 | fin: tentative → committed first; no Waiting root is produced |
 | E3 | Commit+AwaitEnter (fin) | Running → Waiting(s) | `XFinAwaitEnter` | 1 | tentative → committed; captures saved; control/outcome as E2 |
 | E4 | Observe-Refused | Waiting(s) → Waiting(s) | R0–R7 fail | 0 | none (no successor exists) |
 | E5 | Observe-NotReady | Waiting(s) → Waiting(s) | guard ≠ true | 0 in state (attempted reported) | none; bytes identical |
@@ -600,7 +718,7 @@ the reason, not a code.
 | E9 | Exhaust | Running → Exhausted | existing P2/P3/P6 | as /1 | fin: tentative → discarded, committed prefix kept; under `retain-guaranteed-fees/1` the segment's fees are committed exactly as in E8 |
 | E10 | TechnicalCut | any → same | none (between events) | 0 | none; not a commit, not Waiting |
 | S1 | AcceptValidity | (on chain) | D-proved `stmt` inserted in `validity_ok` | DUST fee | none to root |
-| S2 | Settle | root R → root R' | `settleValidity` with predecessor == R | DUST fee | root := CK-commitment of the batch's last image (may be Waiting) |
+| S2 | Settle | root R, height H, batch B → R', H + n_steps, B + 1 | `settleValidity`: predecessor pins, disclosed `obs` with `OD` recomputed | DUST fee | root := CK of the batch's last image (may be Waiting); the observation becomes public |
 
 Typical U015 sequence: E1×k, E2 (root R1 = Waiting), E5 (v = 5, R1 unchanged),
 E6 (v = 4), E1×m, E7 → `Halted(14)`. Typical U019 sequence: E1×a, E3 (68/10
@@ -625,3 +743,14 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 6. Later, separate evidence: /2 C6 circuits for tags 11/4/10 and the bound
    profile_id; the decider statement with `(CK, OD)` absorption; the
    `sherlock-run-anchor` contract; a stagenet run.
+
+## 13. Revision 2: security review dispositions
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| 1. The first settler picks or hides the observation | HIGH | Fixed. `settleValidity` discloses `obs` (site, label_id, n, 16 values), and the anchor recomputes `OD` and checks it against the statement (§1.5). Ownership is documented as "authentication none = the first on-chain settler owns the observation"; no observer pin in /2 (§1.5, §4, T3) |
+| 2. A Waiting root can become unresumable | HIGH | Fixed. The await-entry resumability check covers fuel, helper budget and, on the fin route, the cap. On failure the entry publishes `Exhausted` (new `LogicalCap` tag 7) instead of Waiting. SI-29 added; `guard_exhausted` removed (§6.1, §6.3, E2x, T12) |
+| 3. A /1 leaf passes as /2 | MED | Fixed. `keys_id` commits to a /2-only key set; the /2 decider refuses /1 leaf keys (§1.5, T5) |
+| 4. General anchor pins | LOW | Fixed. `h_post = h_pre + n_steps` with `n_steps >= 1` is computed by the anchor; `batch == batch_no + 1`; `instance_id` and `batch` are in `stmt`; `!settled.member` is restored in `acceptValidity`. The "no state recurs" argument is withdrawn as the safety basis (§1.5, §5.4, T2) |
+| 5. CK domain tag; OD width | LOW | Fixed. `DOM_CK2` tag plus profile and carrier version in CK; OD is a fixed 21-lane vector with an explicit `n` and zero padding to 16 binders (§3.4) |
+
