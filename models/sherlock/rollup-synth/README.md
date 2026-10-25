@@ -46,6 +46,32 @@ The B1 check generates twice, compares every member byte-for-byte, checks these
 fixed digests, and retains stale-source and tamper rejection tests. Full FSYN
 release gates remain open.
 
+## B2 independent replay
+
+Run `scripts/doctorwatson check B2`. The check prepares the separately pinned
+35-file Rust oracle snapshot from `replay-cut.json` under `target/sherlock-b2/`.
+It preserves the original lockfile and rewrites only the three local dependency
+paths. The archived public handoff crate supplies the FSQO encoding. Source
+hashes and the complete prepared tree are checked before every build. Builds and
+replays run through DoctorWatson with four Cargo jobs.
+
+Fenrir's `rtf verify` replays the exact B1 fixture through the I1 v2 state oracle:
+300 headers, 96 transactions, six batches in each profile, and the two-transaction
+minimal window. It recomputes Poseidon state digests, Merkle transitions,
+signatures, envelope bindings, profile-B slots and the modeled anchor chain.
+The check also changes a frozen expected state and a transaction signature,
+repairs their manifest hashes, and requires both to fail inside the Rust oracle.
+Run directories retain the logs and `receipt.json`, including source, executable
+and fixture digests and the honest replay duration.
+
+The historical deployment `PIN-SET.json` refers to old home paths and verifier
+keys. Dataset replay uses `--no-pins` for that deployment set; B1's fixed manifest
+and B2's fixed source cut are mandatory instead. No deployment verifier-key or
+proof files, or wallets, are read by this check. Modeled anchor settlement and
+proof-case descriptors do not establish recursive-proof or ledger acceptance.
+This is the B2 state-replay
+result; the broader FSYN release and stagenet gates remain open.
+
 ```sh
 python3 models/sherlock/rollup-synth/fsyn.py cut check --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json
 python3 models/sherlock/rollup-synth/fsyn.py generate --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json --golden-root "$HOME/projectfenrir/recursion/rollup-test-format/v3" --out NEW_OUTPUT_DIRECTORY --seed 0x5354524157 --scale S0 --profile both --mix strawman
@@ -99,11 +125,13 @@ slice are `fsyn/2.0`, `both`, `S0`, `strawman`; any broader profile needs an exp
 encoding/version contract. These exact byte conventions have a literal unit test
 for the stream and are exposed here for a future Rust port.
 
-Every fixture is marked **unreleased**. The Rust `rtf generate` comparison,
-`rtf verify`, Poseidon relation-digest computation, Quint forward/reverse replay,
-two-host comparison and G0/G2 release are unobserved. Python tests establish
-byte replay and hash-free consistency only. No P3/SRPOC-002, S3 performance,
-ledger acceptance or complete Sherlock requirement is claimed.
+Every fixture is marked **unreleased**. Generator metadata describes the Python
+generation checks; separate B2 receipts record Rust verification and Poseidon
+relation-digest recomputation. The Rust `rtf generate` comparison, Quint
+forward/reverse replay, two-host comparison and G0/G2 release remain unobserved.
+Python tests establish byte replay and hash-free consistency only. No
+P3/SRPOC-002, S3 performance, ledger acceptance or complete Sherlock requirement
+is claimed.
 
 ## Existing benchmark consumers
 
