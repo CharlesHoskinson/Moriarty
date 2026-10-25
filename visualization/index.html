@@ -35,7 +35,7 @@
           </a>
         </div>
         <h1 class="subtitle">A small computer whose internal workings are intentionally visible.</h1>
-        <p class="deck">Sherlock is the execution engine at the center of Moriarty. Instead of every loan, payment arrangement, or swap inventing its own execution machinery, Sherlock gives supported programs one common machine with one common meaning. A calculator only tells you that <code>40 &minus; 30 = 10</code>; Sherlock establishes which prepared program (<code>ProgramImage</code>) ran, what committed state (<code>MachineImage</code>) it began from, which of the <strong>39 fixed machine rules</strong> fired on each step (<code>StepRecord</code>), and what fuel and stack limits applied &mdash; turning &ldquo;follow the agreement&rdquo; into an unbroken chain that a cryptographic proof can verify without trusting the solver that ran it.</p>
+        <p class="deck">Sherlock is the execution engine at the center of Moriarty. Instead of every loan, payment arrangement, or swap inventing its own execution machinery, Sherlock gives supported programs one common machine with one common meaning. A calculator only tells you that <code>40 &minus; 30 = 10</code>; Sherlock establishes which prepared program (<code>ProgramImage</code>) ran, what committed state (<code>MachineImage</code>) it began from, which of the <strong>39 fixed machine rules</strong> (profile /2 adds wait and resume rules beside them) fired on each step (<code>StepRecord</code>), and what fuel and stack limits applied &mdash; turning &ldquo;follow the agreement&rdquo; into an unbroken chain that a cryptographic proof can verify without trusting the solver that ran it.</p>
       </div>
     </header>
 
@@ -72,6 +72,52 @@
         </div>
         <p>A final answer of <code>10</code> could conceal an unauthorized recipient, an inflated solver fee, or a skipped guard. The <strong>10-sector center dial</strong> shows the active control state, the <strong>39-rule floor</strong> proves which rule justified the transition, and the <strong>outer rim</strong> drains <code>1</code> unit of fuel per charged step so <code>WitnessPlan</code> and <code>ConstraintPlan</code> can lock the entire trace into a Midnight proof.</p>
       </article>
+    </section>
+
+    <!-- Pipeline strip: the current Sherlock pipeline, from source to settled root (state as of 2026-10-25) -->
+    <section class="pipeline-strip" id="pipelineStrip" aria-label="Sherlock pipeline, current state">
+      <style>
+        .pipeline-strip{max-width:1400px;margin:14px auto;padding:14px 16px;border:1px solid rgba(120,100,70,.25);border-radius:14px;background:#fffdf8}
+        .pipeline-strip h2{margin:0 0 4px;font-size:15px;letter-spacing:.02em}
+        .pipeline-strip .pl-sub{margin:0 0 10px;font-size:12.5px;opacity:.8}
+        .pl-track{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;list-style:none;margin:0;counter-reset:pl}
+        .pl-stage{flex:1 0 148px;min-width:148px;padding:9px 10px;border-radius:10px;border:1px solid rgba(120,100,70,.28);background:#faf5ea;position:relative;transition:box-shadow .3s,border-color .3s,transform .3s}
+        .pl-stage b{display:block;font-size:12.5px;margin-bottom:3px}
+        .pl-stage small{display:block;font-size:11px;line-height:1.35;opacity:.85}
+        .pl-stage .pl-tag{display:inline-block;margin-top:5px;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em}
+        .pl-done .pl-tag{background:#d8f3e6;color:#0b5d3b}
+        .pl-part .pl-tag{background:#fdebc2;color:#7a4b00}
+        .pl-open .pl-tag{background:#e6e6e6;color:#444}
+        .pl-stage.pl-on{border-color:#0369a1;box-shadow:0 0 0 2px rgba(3,105,161,.3),0 0 14px rgba(3,105,161,.25);transform:translateY(-2px)}
+        .pl-stage:not(:last-child)::after{content:"\2192";position:absolute;right:-10px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.6;z-index:1}
+        .pl-wait{margin-top:8px;font-size:11.5px;opacity:.85}
+        @media (prefers-reduced-motion:reduce){.pl-stage{transition:none}}
+      </style>
+      <h2>The pipeline as built</h2>
+      <p class="pl-sub">One program travels left to right. The lit stage is a demo pointer that steps along; the tags show where each stage stands today.</p>
+      <ol class="pl-track" id="plTrack">
+        <li class="pl-stage pl-done"><b>1 &middot; Source</b><small>Draft text parsed and typed into a ProgramImage (U001&ndash;U012).</small><span class="pl-tag">LANDED</span></li>
+        <li class="pl-stage pl-done"><b>2 &middot; 39-rule machine</b><small>One StepRecord per step; profile /1 unchanged.</small><span class="pl-tag">LANDED</span></li>
+        <li class="pl-stage pl-part"><b>3 &middot; Chunks &amp; Waiting</b><small>Technical cuts done; profile /2 Await, Waiting and resume on the reference machine (U014, U015).</small><span class="pl-tag">PARTIAL</span></li>
+        <li class="pl-stage pl-part"><b>4 &middot; Finance</b><small>Core/2 await, commit and resume rules; acceptance U017&ndash;U020 pending.</small><span class="pl-tag">PARTIAL</span></li>
+        <li class="pl-stage pl-part"><b>5 &middot; Native C6 + Clean</b><small>Dispatch owner and fragments; Lean/Clean stage package (U023, U026).</small><span class="pl-tag">PARTIAL</span></li>
+        <li class="pl-stage pl-done"><b>6 &middot; Recursive proof</b><small>A102 and A80 children, k20 parent, decider D, five rejections refused.</small><span class="pl-tag">A 10/10</span></li>
+        <li class="pl-stage pl-part"><b>7 &middot; Rollup batch</b><small>16-transaction batch leaf, parent, decider; prefixes and report open (B 7/9).</small><span class="pl-tag">PARTIAL</span></li>
+        <li class="pl-stage pl-done"><b>8 &middot; Settled root</b><small>Accept/settle anchor on stagenet; ledger 9 unchanged.</small><span class="pl-tag">LANDED</span></li>
+      </ol>
+      <p class="pl-wait">A Waiting checkpoint is an ordinary root: a batch that ends in a wait settles like any other, and the resume observation is disclosed with the call that settles it.</p>
+      <script>
+        (function(){
+          var items=document.querySelectorAll('#plTrack .pl-stage');
+          if(!items.length)return;
+          var i=0;
+          function show(){items.forEach(function(el,k){el.classList.toggle('pl-on',k===i);});}
+          show();
+          var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if(reduce)return;
+          setInterval(function(){i=(i+1)%items.length;show();},1400);
+        })();
+      </script>
     </section>
 
     <!-- Main 3-Pane Material Design 3 Workbench Layout -->

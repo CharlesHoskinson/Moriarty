@@ -2,8 +2,7 @@
 
 Status: DESIGN NOTE, Phase 1, 2026-10-25. Decided by sherlock-u under the owner
 decision relayed by the coordinator ("change whatever you like in the design of
-sherlock ... we can't change ledger 9"). Nothing here is implemented, compiled or
-run. Revision 2 closes the five Opus security review findings (2 HIGH, 1 MED,
+sherlock ... we can't change ledger 9"). The reference-machine slice (Await control, Waiting outcome, LogicalCap, profile pinning; commits 1523aa9b6 and 88d1a0c0b) has landed; the rest is specification until its check passes. Revision 2 closes the five Opus security review findings (2 HIGH, 1 MED,
 2 LOW; §13). Revision 3 closes the three GPT Sol findings on 0bd74deaa (2 High,
 1 Medium; §14). Revision 4 closes the Opus re-check of rev 3 (§15). Phase 2
 implementation is in progress. The coordinator approved the §1.3 anchor interpretation. The note lifts the

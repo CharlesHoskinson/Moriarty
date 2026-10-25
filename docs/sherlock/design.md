@@ -1,5 +1,7 @@
 # Sherlock completion design — revision 03
 
+Current state: see [Implemented design as of 2026-10-25](#2026-10-25-implemented-design-by-group) at the end of this file for what has landed per group; the sections between are the 2026-10-17 reconciled design and stay as history where later sections change them.
+
 Superseded 2026-10-24: review routing, adoption votes, consumed-attempt and no-retry rules, permanent lanes and campaign queues in this file are retired. The process is the factory loop in [AGENTS.md](../../AGENTS.md); technical descriptions below stand as history of the legacy tooling.
 
 Date: 2026-10-17. Status: reconciled design after ten Gemini Argon HIGH research reports and three Astra MAX reconciliation reviews; finite Quint execution and five Astra HIGH final readiness passes are separately recorded prerequisites to the newly requested implementation loop. Baseline public source: `628615a94d8a74837a1af510293927bb74d5c2b5`. The old automatic goal remains historical and CLEARED. The user now requests a new completion loop after this design, EARS/OpenSpec and readiness checks. Root arms that new goal explicitly; this document changes no native/security authority.
@@ -177,3 +179,81 @@ qualification. No private source or paths enter the shareable package. A missing
 record is explicit, and source membership establishes no proof/native correspondence.
 These are maintainer checks, with no public compile/prove/deploy prerequisite. Ledger 9,
 stock-verifier compatibility and the existing proof format stay fixed.
+
+## 2026-10-25: implemented design by group
+
+This section states what the pipeline is now and which lines of work carry it. It is a snapshot of the
+owner's finish push (`qa/sherlock/predicates.yaml` groups A, B, C, F, U). The ledger (major 9), node,
+Midnight SDK and proof server are unchanged. Everything else in the design is open to change, and the
+changes below are the ones that have landed. Counts are from `scripts/sherlock-next` on each line at
+the time of writing; they are not merged into one line yet (see "Lines" below).
+
+### Pipeline as built
+
+1. **Source and compile.** `moriarty-sherlock-draft/1` text is parsed, typed and compiled by the
+   public source compiler into a `ProgramImage`. Nominal ADTs, typed word arithmetic and generic
+   whole-program types are admitted through the declaration and preparation APIs (U001-U012, U022,
+   U027, U034, U035).
+2. **Reference machine.** The fixed 39-rule `sherlock-k-a/1` transition table runs the image one step at
+   a time and produces `StepRecord`s. Profile `sherlock-helper-microstep/1` is the original machine.
+   Profile `/2` adds the `Await` control (C6 tag 11), the `Waiting{site}` outcome (tag 4) and the
+   `LogicalCap` exhaust reason (tag 7); `/1` refuses all three, and the owner engine pins the selected
+   profile (SI-01).
+3. **Chunks and checkpoints.** A technical chunk cut is not a wait and not a financial commit. `mori
+   simulate` chunks a run, resumes from a checkpoint, groups K-A `ReferenceSlice`s and materializes
+   chunk boundaries through the `WitnessPlan` DAG (U013, U016, U029, U032). The `Waiting` checkpoint,
+   its single observation and the atomic resume relation are specified in
+   [suspension-and-finance](design/suspension-and-finance.md) and landed on the reference machine for
+   profile `/2`; the U014/U015 and U017-U020 acceptance checks are not yet passing.
+4. **Finance.** Core/2 financial actions run on the Sherlock financial route. Await maps to the same
+   `Waiting` outcome; `XFinCommit`, `XFinAwaitEnter` and `XFinResumeAccept` are the `/2` rules.
+   Commit stays implicit at an await and at completion; there is no surface commit statement.
+5. **Native inventory and C6 fragments.** The hand-authored native relation inventory is reported for
+   every draft run, and receipted compiled-and-run evidence is accepted for U023 fragments. C6
+   fragments landed for the Eval schedule, CallBind, Find/EnvGet, Append, Bind, Eval CallArguments and
+   the legacy control rows, behind one dispatch owner that constrains Core rule selection (U023, U028,
+   U030). The native constraints for the new `/2` tags remain later work.
+6. **Model correspondence.** `models/sherlock/qa/model_package.py` provides `projection` (U021, K/Quint
+   against the frozen oracle) and `stage` (U026, recursive Lean semantics and fuel tasks separate from
+   bounded Clean encoding) plus `bind-private`; details in the previous section.
+7. **Recursive proof chain.** Two linked child proofs (A102 and A80) are verified by a k20 parent, which
+   a handwritten terminal decider D checks against the stagenet verifier contract. The exact artifacts
+   were verified independently, accepted by local ledger-9, and the five rejection cases (tampered inner
+   proof, mismatched VK, wrong predecessor root or height, reordered batch, replayed statement) were
+   refused locally and on stagenet. A finalized contract call and its public receipts and complete
+   effects readback exist (A1-A10, all passing).
+8. **Rollup.** The B line builds the stagenet recursive rollup: a deterministic Fenrir-derived dataset
+   with public seed (B1), independent replay (B2), a 16-transaction batch as one `sherlock-v3-batch/1`
+   leaf, one verifier parent and the terminal decider (B3), per-layer k, rows and columns (B6) and
+   time, RSS and bytes in separate scopes under decimal 32 GB with swap zero (B7; the cap was raised
+   from 16 GB by the owner on 2026-10-25, original 16 GB failures kept). The fixed-key
+   `FSYNB002` prefix extension commits to a 67-state trace so one sealed anchor serves every batch of a
+   prefix. B4 (stagenet acceptance of the batch), B5 (two-, four- and six-batch prefixes) and B9 (the
+   feasibility report) remain open; B8 follows B4.
+9. **Settlement.** Every settle goes through an accept/settle anchor of the shape used by A9 and B4.
+   The planned `sherlock-run-anchor` generalizes it for any Sherlock run: a Waiting checkpoint digest is
+   an ordinary root, the resume observation is disclosed and recomputed by the anchor, and the /2
+   verifier-key set is sealed as `keys_id`. It is a new contract, not a ledger change.
+
+### Groups
+
+| Group | Meaning | State (2026-10-25) |
+| --- | --- | --- |
+| A | Native backend, linked children, k20 parent, decider, local and stagenet acceptance | 10 of 10 |
+| B | Synthetic rollup data, replay, batch proof, resources, feasibility | 7 of 9 on the factory-b line; B5 and B9 open |
+| C | Rollups of U items (C1 core; C2 chunks; C3 compiler; C4 native/optimizations; C5 finance; C6 evidence) | 1 of 6; C2-C6 follow their U items |
+| F | Factory: charter, schema, hooks, preflight, holdout, bus | 12 of 13 on factory-b; F4 needs only a quiet heavy lock |
+| U | The 35 UIREQ scenarios | 23 of 35 on factory-u; open: U014, U015, U017-U021, U023, U024, U026, U031, U033 |
+
+### Lines
+
+The work is on parallel lines that have not been consolidated: `factory-a` (A), `factory-b` (B and F,
+carrying A 10/10 by merge), `factory-u` and `factory-u-c4` (U, at the same head for now),
+`factory-u-kc`. Consolidation into one line and a full re-verification of all groups is the last step
+before publication. Pages and the visualization are updated after that.
+
+### What did not change
+
+The 39-rule table, the ledger-9 call shape, the stock verifier compatibility, the existing proof format
+and the public-use rule (no compile, prove or deploy permission is required of a developer) stand.
+Claims stay conjunctive: a host pass, a model pass or a settled root alone does not close an exit.

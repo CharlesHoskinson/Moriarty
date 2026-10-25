@@ -41,6 +41,8 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Retained Push family and checked positive K context projection](reference/c6-retained-push-family-and-context.md)
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
+- [Suspension and finance, profile /2](design/suspension-and-finance.md)
+- [Implemented design by group, 2026-10-25](design.md#2026-10-25-implemented-design-by-group)
 
 ## Explanation
 
