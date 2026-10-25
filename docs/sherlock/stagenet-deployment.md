@@ -222,3 +222,59 @@ statement, `settled` is empty, and root, height, `batch_no` and every pinned fie
 are unchanged. Time: 2.336 s. Trace: `qa/sherlock/traces/20261025T050529Z-A10.log`.
 Receipt: `target/sherlock-a10/run-48eEFirl/receipt.json`. Indexer note:
 `contractAction` offsets select an exact block height, not "at or before".
+
+## A9 settle deployments (D2, D3)
+
+The A9 settle-path cases (s-c wrong predecessor, s-d reordered batch, s-e (iii) settle
+replay and (iv) other domain) consume an accepted statement, which cannot be undone.
+By coordinator decision on 2026-10-25 they run on two fresh, owner-authorized
+deployments of the same source and keys. The A8 pin `ac93b80e…55388b` was not called
+and remains the accept-level pin (s-a, s-b, s-e (i)/(ii)).
+
+| | D2 (settle control, s-c, s-d, s-e iii) | D3 (s-e iv, other domain) |
+| --- | --- | --- |
+| Contract | `2fbe68b30cd302f9ea9c1c260385a02c679f746d3d05c2bf131f8d9fef4b59e0` | `03e750800b904d30fc813cc0d87f08dafd612c5ab1804d5a963134bfb7c2aa2b` |
+| Deploy tx id | `009dda35e550cbb3f96ad1138970d72cf12524c67c3fb5e910671535989d460f07` | `0077429fcaffd690e3a2a09373b453edf220372d774f862abf0f9042dd2c4bb273` |
+| Deploy tx hash | `b416ecf3c15439de61bc481beead8fb9174e8ede0c4191bd9f32855c56f34189` | `57239e060ad706ea7eb56c0b936e52e091526741c59004d6ae18c8650e5ff75f` |
+| Block | **1016246** (`9aa4a30e…c3f162a`) | **1016306** (`daf94b32…450ef87`) |
+| Indexer result, fee (SPECK) | `SUCCESS`, 997855085714286 | `SUCCESS`, 998403657142858 |
+| instance_id | `489080d3…ecd45c00` (LE; identical to ac93b80e) | I2 = sha256("sherlock A9 s-e(iv) second instance_id") mod r = 18814733036858064687259868561697402537754088490782013248729309943217888935855 |
+| Deployed state SHA-256 | `cf2e97d2…94c8eb44` | `f352e748…4782d70` |
+
+Key lineage is unchanged from the current chain above. Both deployments use source
+`4f531ce0…3252634`, the installed tagged `acceptValidity` decider verifier
+`10b2d9cf…5fd46100` (raw decider VK `3f3b7e13…01ff0083`, relation `86dfecc6…91577905`,
+A3 parent VK `801467c8…108849a8`), and the compiled `settleValidity` verifier
+`be8b0943…1c0b5c`. The constructor is that of `target/a4-anchor/prepared-deployment.json`
+(SHA-256 `f0d3ee9d…925e3f21`), with only argument 0 replaced on D3. Both used
+`tools/sherlock-sdk/deploy-current.mjs` (D3 with `--instance-id`). Each passed the SDK
+constructor check and the finalized readback of all 13 fields, both empty sets and both
+verifier keys. Receipts: `target/sherlock-a9-deploy/{d2,d3}/receipt.json`.
+
+D2 then received `acceptValidity(deffb497…a5c25a)`, the A8 statement, which is the
+precondition for the settle control. The call used `tools/sherlock-sdk/call-current.mjs`
+with `MORIARTY_SHERLOCK_DEPLOYMENT` set to the D2 receipt and a fresh actual-bound native
+decider proof:
+- Transaction `5f3ae140a257ee07e5b5f9c461f44df142fb28b9ebd2a8257b29b1fc9c9a85e5`
+  (id `00d44e7d…0e52ffb2`), block **1016423** (`8d7f86df…ed33445`), `SucceedEntirely` /
+  indexer `SUCCESS`, fee 292262057142858.
+- Pre-state `cf2e97d2…94c8eb44`, indexed post-state `e4bb4589…a7d7a1b6`, byte-equal to
+  the VM prediction. Native proof-verifying ledger-9 accepted and applied the call before
+  balancing (contract proofs, signatures and limits on).
+- Only the decider prove ran under `doctorwatson heavy --budget a4-terminal-d`. Wallet
+  sync and indexer waits stayed outside the slot: **311.586 s** and **15,085,056,000 B**
+  peak RSS (`20261025T074513Z-A9-D2accept-prove`). Outputs are in
+  `target/sherlock-a9-deploy/d2-accept/`.
+
+The settle attempts use `tools/sherlock-sdk/settle-harness.mjs`, which proves
+`settleValidity` against a given snapshot with no chain re-fetch and never submits. Before
+any transaction, `tools/sherlock-sdk/settle-rehearsal.mjs` passed under native
+proof-verifying ledger-9 (`20261025T072650Z-A9settle-rehearsal`, receipt
+`target/sherlock-a9-rehearsal/run1/receipt.json`):
+- The control settle C applies over the A8 post-state.
+- The stale (P1), forged-head (P2), reordered (P3) and other-domain (P4) settles each
+  carry a real proof and are well-formed. Each applies over the snapshot it claims and
+  fails to apply on its target.
+- The honest second settle over post-C is refused locally (`SettleUnsatisfiable`).
+Native refusal happens at guaranteed-transcript apply, not at `wellFormed`. Whether the
+stagenet node refuses before inclusion is for the A9 evidence to show.
