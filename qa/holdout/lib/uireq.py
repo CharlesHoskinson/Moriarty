@@ -710,6 +710,192 @@ def custom_chunk_represent(c):
     _common_rep(rep, "out-of-domain plan")
 
 
+# ---- WitnessPlan materialization (U035) ----------------------------------------------
+#
+# Expected decoded states are authored in case.json from the program text (control value,
+# environment, pending operands, active call frames, final value); they are not read from the
+# materializer. Each materialized state is also cross-checked against a fuel-limited unchunked
+# owner run, and against the same cut under a different chunk plan and a repeated run.
+
+import re as _re
+
+_FRAME_KIND = _re.compile(r"Frame\((\w+)")
+
+
+def _wfields(w):
+    return w["decoded"]["fields"]
+
+
+def _wvalue(field):
+    """Plain decoded value carried by a Control/Outcome payload, or None."""
+    for f in field.get("fields", []):
+        if f["field"] == "value":
+            return f["value"].get("value")
+    return None
+
+
+def _wframes(w):
+    out = []
+    for f in _wfields(w)["frames"]["items"]:
+        m = _FRAME_KIND.match(f["raw"])
+        need(m, f"undecodable frame {f['raw']!r}")
+        left = next((x["value"].get("value") for x in f["fields"] if x["field"] == "left"), None)
+        out.append((m.group(1), left))
+    return out
+
+
+def _wenv(w):
+    return {e["name"]: e["value"] for e in _wfields(w)["current_environment"]["environment"]}
+
+
+def _witness_ok(w, label):
+    need(isinstance(w, dict), f"{label}: no witness materialization")
+    need(w.get("format") == "moriarty-sherlock-witness-materialization/1", f"{label}: witness format {w.get('format')!r}")
+    need(w["status"] == "materialized", f"{label}: witness {w['status']!r}")
+    need(w["schedules_agree"] is True, f"{label}: cached/lifetime schedules do not retain the uncached baseline")
+    plan = w["plan"]
+    need(plan["stable_order_is_identity"] is True, f"{label}: dependency order is not the stable identity order")
+    n = int(plan["nodes"])
+    need(n > 0 and 0 < int(plan["inputs"]) <= n and 0 < int(plan["live_outs"]) <= n, f"{label}: implausible plan {plan}")
+    scope = " ".join(w["cache_key_scope"])
+    for word in ("program", "profile", "layout", "immutable argument values"):
+        need(word in scope, f"{label}: reusable cache key omits {word}: {w['cache_key_scope']}")
+    d = w["diagnostics"]
+    need("not bytes, time, prover memory or semantic work" in d["qualification"], f"{label}: diagnostics over-qualified")
+    un, cold, warm, lu = d["uncached"], d["cold_cache"], d["warm_cache"], d["last_use"]
+    for nm, host in (("uncached", un), ("cold", cold["host"]), ("warm", warm["host"]), ("last-use", lu["host"])):
+        need(host["measured_host_bytes"] is None and host["measured_host_time_ns"] is None,
+             f"{label}: {nm} diagnostics claim measured memory/time")
+    for nm, s in (("cold", cold), ("warm", warm), ("last-use", lu)):
+        need(int(s["scheduling"]["scheduled_nodes"]) == n, f"{label}: {nm} schedule skips nodes")
+    need(int(un["evaluated_nodes"]) == n and int(cold["host"]["evaluated_nodes"]) == n,
+         f"{label}: uncached/cold baseline did not evaluate every node")
+    cm, wh = int(cold["scheduling"]["cache_misses"]), int(warm["scheduling"]["cache_hits"])
+    need(int(cold["scheduling"]["cache_hits"]) == 0 and cm > 0, f"{label}: cold cache was not cold")
+    need(int(warm["scheduling"]["cache_misses"]) == 0 and wh == cm, f"{label}: warm cache did not reuse every cold entry")
+    need(int(warm["host"]["evaluated_nodes"]) < n, f"{label}: warm cache re-evaluated every node")
+    need(int(lu["scheduling"]["reclaimed_slots"]) > 0 and int(lu["scheduling"]["peak_live_slots"]) < int(un["retained_slots"]),
+         f"{label}: last-use lifetime reclaimed nothing")
+    dk = set(w["decoded"]) | set(_wfields(w))
+    for diag in ("cache_hits", "cache_misses", "peak_live_slots", "copied_value_nodes", "retained_slots"):
+        need(diag not in dk, f"{label}: diagnostic {diag} leaked into the decoded snapshot")
+
+
+def _owner_kinds(frames):
+    return [next(iter(f)) for f in frames]
+
+
+def _witness_vs_owner(c, src, ch, label):
+    """Decoded counters, outcome and frame order against an unchunked owner run stopped by fuel."""
+    w = ch["witness"]
+    dec = w["decoded"]
+    for k in _COUNTERS + ("remaining_work",):
+        need(dec[k] == ch["end_counters"][k], f"{label}: decoded {k} {dec[k]} != chunk counter {ch['end_counters'][k]}")
+    wk = int(ch["end_counters"]["consumed_work"])
+    f = runx(c, fuel=wk, source=src)
+    need_executed(f, f"{label}: fuel-limited owner run")
+    im = f.execution["image"]
+    for k in _COUNTERS:
+        need(dec[k] == im[k], f"{label}: decoded {k} {dec[k]} != owner {im[k]}")
+    kinds = [k for k, _ in _wframes(w)]
+    need(kinds == list(reversed(_owner_kinds(im["frames"]))),
+         f"{label}: decoded frames {kinds} are not the owner frames innermost-first {_owner_kinds(im['frames'])}")
+    need(_FRAME_KIND.pattern and ("Return" in json.dumps(im["control"])) == ("Return" in _wfields(w)["control"]["raw"]),
+         f"{label}: decoded control kind differs from the owner control")
+
+
+_K_FRAME = _re.compile(r"ui(\w+F)\(")
+_K_RIGHT_LEFT = _re.compile(r"^uiRightF\(ui\w+\(\), uiU\((\d+)\)\)$")
+_K_RET_U = _re.compile(r"^uiRet\(uiU\((\d+)\)\)$")
+_K_BIND = _re.compile(r"(\w+) \|-> ")
+
+
+def _k_crosscheck(c, src, w, label):
+    """The independent K-A reference model (sherlock-k-a/1, via --reference-slices 1) at the same
+    reference position must show the same frames innermost-first, pending operands, control value
+    and environment names as the materialized snapshot."""
+    rc = int(w["decoded"]["reference_cursor"])
+    r = runx(c, extra=["--reference-slices", "1"], source=src)
+    need(r.doc is not None and "reference_slices" in r.doc, f"{label}: no K-A reference run")
+    sl = r.doc["reference_slices"]["slices"]
+    need(0 < rc <= len(sl), f"{label}: reference cursor {rc} outside the K-A run ({len(sl)} records)")
+    k = sl[rc - 1]["end"]
+    kinds = []
+    for f in k["frames"]:
+        m = _K_FRAME.match(f)
+        need(m, f"{label}: unparsable K frame {f!r}")
+        kinds.append(m.group(1))
+    wf = _wframes(w)
+    need([kd for kd, _ in wf] == kinds, f"{label}: frames {[kd for kd, _ in wf]} != K-A reference frames {kinds}")
+    klefts = [_K_RIGHT_LEFT.match(f).group(1) for f in k["frames"] if f.startswith("uiRightF(") and _K_RIGHT_LEFT.match(f)]
+    wlefts = [left for kd, left in wf if kd == "RightF" and isinstance(left, str)]
+    need(wlefts == klefts, f"{label}: pending operands {wlefts} != K-A {klefts}")
+    m = _K_RET_U.match(k["control"])
+    if m:
+        need(_wvalue(_wfields(w)["control"]) == m.group(1), f"{label}: control value != K-A {k['control']}")
+    kenv = [] if k["environment"] == ".Map" else _K_BIND.findall(k["environment"])
+    need(sorted(_wenv(w)) == sorted(kenv), f"{label}: environment names {sorted(_wenv(w))} != K-A {sorted(kenv)}")
+
+
+def custom_witness_materialize(c):
+    for prog in c["programs"]:
+        src, name = prog["source"], prog["label"]
+        sc = {**c, "source": src}
+        base = _base({**sc, "expect": prog["expect_halted"]} if "expect_halted" in prog else sc, f"{name} unchunked")
+        steps = _tc(runx(sc, extra=["--chunk", "1"]), f"{name} single-step plan")["chunks"]
+        # final state: one chunk, decoded outcome is the authored value
+        fin = runx(sc, extra=["--chunk", "100000", "--chunk-witness"])
+        ftc = _tc(fin, f"{name} final")
+        _same_run(fin, base, f"{name} witness run")
+        fw = ftc["chunks"][-1]["witness"]
+        _witness_ok(fw, f"{name} final")
+        need("Halted" in _wfields(fw)["outcome"]["raw"], f"{name}: final decoded outcome {_wfields(fw)['outcome']['raw']}")
+        need(_wvalue(_wfields(fw)["outcome"]) == prog["final"], f"{name}: final value {_wvalue(_wfields(fw)['outcome'])!r} != {prog['final']!r}")
+        for k in _COUNTERS:
+            need(fw["decoded"][k] == base.summary[k], f"{name}: final decoded {k} != one-trace summary")
+        need(_wfields(fw)["frames"]["items"] == [], f"{name}: halted state still has frames")
+        for st in prog["states"]:
+            lbl = f"{name} return under {'/'.join(st['frames'])}"
+            # select the cut from the owner view only: the first Return whose pending frames are the
+            # authored kinds (innermost first)
+            cands = [ch for ch in steps[:-1] if "Return" in ch["boundary"]["view"]["control"]
+                     and list(reversed(_owner_kinds(ch["boundary"]["view"]["frames"]))) == st["frames"]]
+            need(cands, f"{lbl}: the owner run never returns under frames {st['frames']}")
+            e = cands[0]["end_event"]
+            r = runx(sc, extra=["--chunk-at", e, "--chunk-witness"])
+            tc = _tc(r, lbl)
+            _same_run(r, base, lbl)
+            ch = tc["chunks"][0]
+            need(ch["end_event"] == e, f"{lbl}: cut at {ch['end_event']} not {e}")
+            w = ch["witness"]
+            _witness_ok(w, lbl)
+            _witness_vs_owner(sc, src, ch, lbl)
+            _k_crosscheck(sc, src, w, lbl)
+            fl = _wfields(w)
+            need("Running" in fl["outcome"]["raw"], f"{lbl}: outcome {fl['outcome']['raw']}")
+            need(_wvalue(fl["control"]) == st["control"], f"{lbl}: decoded control value {_wvalue(fl['control'])!r} != {st['control']!r}")
+            need(_wenv(w) == st["env"], f"{lbl}: decoded environment {_wenv(w)} != {st['env']}")
+            fr = _wframes(w)
+            lefts = [left for kind, left in fr if kind == "RightF"]
+            need(lefts == st["pending_lefts"], f"{lbl}: pending operands innermost-first {lefts} != {st['pending_lefts']}")
+            need([k for k, _ in fr] == st["frames"], f"{lbl}: decoded frames {[k for k, _ in fr]} != {st['frames']}")
+            # determinism: same state under another plan, and on a repeated run
+            half = str(max(1, int(e) // 2))
+            r2 = runx(sc, extra=["--chunk-at", f"{half},{e}", "--chunk-witness"]) if half != e else r
+            w2 = _tc(r2, f"{lbl} replanned")["chunks"][1 if half != e else 0]["witness"]
+            for key in ("decoded", "plan", "cache_key_scope"):
+                need(w2[key] == w[key], f"{lbl}: witness {key} depends on the chunk plan")
+            w3 = _tc(runx(sc, extra=["--chunk-at", e, "--chunk-witness"]), f"{lbl} repeat")["chunks"][0]["witness"]
+            need(w3 == w, f"{lbl}: materialization is not deterministic across runs")
+    # immutable inputs are part of the reusable key: a different entry argument changes the decoded state
+    a, b = c["input_pair"]
+    wa = _tc(runx(c, extra=["--chunk", "100000", "--chunk-witness"], source=a), "input A")["chunks"][-1]["witness"]
+    wb = _tc(runx(c, extra=["--chunk", "100000", "--chunk-witness"], source=b), "input B")["chunks"][-1]["witness"]
+    need(wa["decoded"] != wb["decoded"], "different immutable inputs materialized the same snapshot")
+    need(wa["cache_key_scope"] == wb["cache_key_scope"], "cache key scope varies with the input")
+    _refused({**c, "source": c["programs"][0]["source"]}, ["--chunk-at", "0", "--chunk-witness"], "invalid witness plan")
+
+
 CHECKS = {
     "value": check_value,
     "outcome": check_outcome,
@@ -728,6 +914,7 @@ CHECKS = {
     "chunk-boundary-return": custom_chunk_boundary_return,
     "reference-slices": custom_reference_slices,
     "chunk-represent": custom_chunk_represent,
+    "witness-materialize": custom_witness_materialize,
 }
 
 

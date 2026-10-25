@@ -16,13 +16,152 @@
       "specLine": 256,
       "when": "The same admitted factorial/list/tree or pending-caller state is materialized without caching, with cold caches and with warm caches.",
       "then": "Stable dependency ordering and explicit bindings produce identical decoded reference prefixes, ordered frames/environments, outcomes and reference-work observations against independently authored expectations. Cache/lifetime/streaming variants retain the uncached baseline; reusable keys include exact program/profile/layout and immutable inputs, while helper visits, copies, live values and memory remain separate diagnostics. Neither those expectations nor semantic behavior are generated from the materializer/DAG metadata.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "decoded reference prefixes, ordered frames/environments, outcomes, reference-work observations": "identical across uncached, cold-cache and warm-cache materialization",
         "expectations": "independently authored, not generated from materializer/DAG metadata"
       },
-      "coverage": "none",
-      "blocker": "needs a WitnessPlan materializer entrypoint (uncached, cold-cache and warm-cache StepRecord materialization) compared to independently authored expectations"
+      "coverage": "primary",
+      "unasserted": [
+        "the four schedule snapshots are not exposed separately: their agreement is the materializer's flag, backed here by authored decoded states, owner cross-checks and cache/lifetime diagnostics consistency",
+        "streaming variants (none offered)",
+        "helper visits/copies/live values/memory are asserted only to stay out of the decoded snapshot; their values are diagnostics"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with --chunk-at E / --chunk 100000 --chunk-witness",
+        "checks": [
+          {
+            "kind": "witness-materialize",
+            "label": "uncached, cold and warm materialization of factorial/list/tree/pending-caller states",
+            "programs": [
+              {
+                "label": "10+inner(3) pending caller",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn inner(x: UInt): UInt { x + 1 }\n  entry 10 + inner(3);\n}\n",
+                "final": "14",
+                "states": [
+                  {
+                    "control": "4",
+                    "env": {
+                      "x": "3"
+                    },
+                    "pending_lefts": [
+                      "10"
+                    ],
+                    "frames": [
+                      "ReturnF",
+                      "RightF"
+                    ]
+                  },
+                  {
+                    "control": "4",
+                    "env": {},
+                    "pending_lefts": [
+                      "10"
+                    ],
+                    "frames": [
+                      "RightF"
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "fact(3)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+                "final": "6",
+                "states": [
+                  {
+                    "control": "0",
+                    "env": {
+                      "n": "0"
+                    },
+                    "pending_lefts": [
+                      "1",
+                      "2",
+                      "3"
+                    ],
+                    "frames": [
+                      "LeftF",
+                      "IfF",
+                      "ReturnF",
+                      "RightF",
+                      "ReturnF",
+                      "RightF",
+                      "ReturnF",
+                      "RightF",
+                      "ReturnF"
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "list sum",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(2,cons(5,nil)));\n}\n",
+                "final": "7",
+                "states": [
+                  {
+                    "control": [],
+                    "env": {
+                      "xs": []
+                    },
+                    "pending_lefts": [
+                      "5",
+                      "2"
+                    ],
+                    "frames": [
+                      "MatchF",
+                      "ReturnF",
+                      "RightF",
+                      "ScopeF",
+                      "ReturnF",
+                      "RightF",
+                      "ScopeF",
+                      "ReturnF"
+                    ]
+                  }
+                ]
+              },
+              {
+                "label": "list id",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn id(xs: List): List { xs }\n  entry id(cons(1, cons(2, nil)));\n}\n",
+                "final": [
+                  "1",
+                  "2"
+                ],
+                "states": []
+              },
+              {
+                "label": "tree fold",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(5)));\n}\n",
+                "final": "9",
+                "states": [
+                  {
+                    "control": {
+                      "leaf": "4"
+                    },
+                    "env": {
+                      "t": {
+                        "leaf": "4"
+                      }
+                    },
+                    "pending_lefts": [],
+                    "frames": [
+                      "MatchF",
+                      "ReturnF",
+                      "LeftF",
+                      "ScopeF",
+                      "ReturnF"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "input_pair": [
+              "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(2);\n}\n",
+              "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n"
+            ]
+          }
+        ]
+      }
     }
   ]
 }
