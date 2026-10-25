@@ -7,9 +7,9 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all ten Quint files, runs 32 deterministic tests, and
-samples 10,000 traces per model with `--max-steps 30`. The four baseline models
-use `modelInv`; the pinned s5 source projection uses `sourceInv`. All five
+The runner typechecks all twelve Quint files, runs 37 deterministic tests, and
+samples 10,000 traces per model with `--max-steps 30`. The five baseline models
+use `modelInv`; the pinned s5 source projection uses `sourceInv`. All six
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets` run deliberately finds the source counterexample
 described below, which the runner checks explicitly. Raw results are in
@@ -20,6 +20,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | --- | --- | --- |
 | `nativeInventory.qnt` | U023; `crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs`, `report`, `Family::owner` | Four named table rows plus an unknown rule; event multiplicity versus unique-rule coverage, disjoint gap/unlisted partitions, source-only coverage versus unwired native acceptance |
 | `witnessStorage.qnt` | U024 supporting behavior; `crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs`, `evaluate_with_storage` | Five-node scheduler harness; exact ordered cache arguments, reads always executed, baseline order retained, release after final consumer, output live through publication, semantic work untouched |
+| `treeInterning.qnt` | U024 selected candidate; `69aeb882d:crates/mori-core/src/sherlock/optimization_intern.rs`, `intern_tree` | Bottom-up hash-consing with full leaf payload and ordered canonical child keys; seven-node fixture becomes four canonical nodes with structural sum 18; reversed children remain distinct; shape-only merging is detected |
 | `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
@@ -39,6 +40,15 @@ scratch-slot peaks are **3** for LastUse and **5** for RetainAll, with three slo
 reclaimed; both the publication input and result remain live. These are model
 counts, not measured bytes or runtime improvement.
 The complete boundary's work/duties/frame fields are opaque preserved inputs.
+
+The tree model projects the selected `sherlock-a-intern-equal-tree-nodes/1`
+candidate on seven expanded postorder occurrences. It checks the interned
+representation against independent structural prefix encodings and sums;
+runtime expression traversal and complete reference/candidate machine traces
+are outside this finite model. Fuel/frame/control/outcome metadata is opaque
+and preserved. Its four-node result is a canonical-node count, not allocated
+bytes, retained interner-table memory or a measured speedup. The source's full
+trace preservation predicate and tests were read, but not run here.
 
 The inventory model pins the inspected source-only/unwired baseline; it must be
 updated when receipts or recursion wiring change. It does not validate receipt
