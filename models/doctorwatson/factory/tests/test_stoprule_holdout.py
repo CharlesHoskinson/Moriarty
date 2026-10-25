@@ -97,6 +97,20 @@ class HoldoutTests(FakeRepo):
         r = self.run_cli("holdout", "verify")
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_bytecode_cache_ignored(self):
+        # Interpreter caches are local build products, never holdout content:
+        # a seal must not list them and a later cache write must not fail verify.
+        self.write("qa/holdout/lib/__pycache__/x.cpython-314.pyc", "stale")
+        self.write("qa/holdout/lib/y.pyc", "stale")
+        self.make()
+        with open(self.p("qa/holdout/MANIFEST.sha256")) as fh:
+            body = fh.read()
+        self.assertNotIn("__pycache__", body)
+        self.assertNotIn(".pyc", body)
+        self.write("qa/holdout/lib/__pycache__/z.cpython-314.pyc", "fresh")
+        r = self.run_cli("holdout", "verify")
+        self.assertEqual(r.returncode, 0, r.stdout)
+
     def test_changed(self):
         self.make()
         self.write("qa/holdout/s2.txt", "tampered")

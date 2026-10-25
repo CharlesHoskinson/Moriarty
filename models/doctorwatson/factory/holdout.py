@@ -23,11 +23,15 @@ def digest(path):
 
 
 def scan(root):
-    """Return {relative posix path: sha256} for every file except the top-level manifest."""
+    """Return {relative posix path: sha256} for every file except the top-level
+    manifest and Python bytecode caches (__pycache__/, *.pyc), which are local
+    build products and gitignored, so a fresh checkout never has them."""
     out = {}
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames.sort()
+        dirnames[:] = sorted(d for d in dirnames if d != "__pycache__")
         for name in filenames:
+            if name.endswith(".pyc"):
+                continue
             full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, root).replace(os.sep, "/")
             if rel == MANIFEST:
