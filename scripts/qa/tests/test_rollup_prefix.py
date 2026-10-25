@@ -12,6 +12,23 @@ SPEC.loader.exec_module(prefix)
 
 
 class PrefixEvidenceTests(unittest.TestCase):
+    def test_prefixes_enforce_the_owner_memory_and_zero_swap_limits(self):
+        good = {'exit': 0, 'max_rss_bytes': 16_084_004_864, 'swap_samples': 5, 'swap_peak_bytes': 0}
+        prefix.check_resources(good)
+        for changes in ({'max_rss_bytes': 32_000_000_000}, {'swap_peak_bytes': 1},
+                        {'exit': 4}, {'swap_samples': 0}):
+            with self.assertRaises(ValueError):
+                prefix.check_resources({**good, **changes})
+
+    def test_public_position_must_chain_along_with_root_and_deposits(self):
+        previous = ['00' * 32] * 17
+        previous[3] = '01' + '00' * 31
+        fields = ['00' * 32] * 17
+        with self.assertRaisesRegex(ValueError, 'position'):
+            prefix.check_state_chain(fields, previous)
+        fields[2] = previous[3]
+        prefix.check_state_chain(fields, previous)
+
     def test_loki_declaration_requires_exact_binary_and_stock_reference(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

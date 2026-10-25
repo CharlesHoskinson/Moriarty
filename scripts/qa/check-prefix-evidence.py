@@ -10,6 +10,18 @@ evidence = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(evidence)
 
 
+def check_resources(measurement):
+    if measurement['exit'] != 0 or measurement['max_rss_bytes'] <= 0 or measurement['swap_samples'] < 1:
+        raise ValueError('failed or unmeasured prefix stage')
+    if measurement['max_rss_bytes'] >= 32_000_000_000 or measurement['swap_peak_bytes'] != 0:
+        raise ValueError('prefix stage exceeds decimal 32 GB or used swap')
+
+
+def check_state_chain(fields, previous):
+    if any(fields[a] != previous[b] for a, b in ((0, 1), (2, 3), (5, 6), (7, 8))):
+        raise ValueError('prefix root/position/deposit chain is broken')
+
+
 def proving_build(root, stock):
     root = Path(root)
     path = root / 'prover-build.json'
@@ -60,8 +72,7 @@ def check(root):
         measurements = {}
         for stage in ('leaf', 'parent', 'decider', 'verify'):
             measurement = evidence.read(prefix / f'{stage}.measurement.json', 'sherlock-rollup-measurement/1')
-            if measurement['exit'] != 0 or measurement['max_rss_bytes'] <= 0 or measurement['swap_samples'] < 1:
-                raise ValueError('failed or unmeasured prefix stage')
+            check_resources(measurement)
             measurements[stage] = measurement
         batches = []
         previous = None
@@ -77,8 +88,8 @@ def check(root):
             parent = json.loads((directory / 'parent.instance.json').read_bytes())
             if len(fields) != 17 or len(parent) != 29 or fields != parent[:17]:
                 raise ValueError('prefix leaf/parent statement differs')
-            if previous is not None and any(fields[a] != previous[b] for a, b in ((0, 1), (5, 6), (7, 8))):
-                raise ValueError('prefix state/deposit chain is broken')
+            if previous is not None:
+                check_state_chain(fields, previous)
             as_int = lambda value: int.from_bytes(bytes.fromhex(value), 'little')
             if as_int(fields[15]) != (batch - 1) * 50 + 1 or as_int(fields[16]) != batch * 50:
                 raise ValueError('prefix header window differs')
@@ -98,6 +109,8 @@ def check(root):
                             raise ValueError('prefixes changed the fixed relation or verifier key')
                 if stats['prove_seconds'] <= 0 or stats['local_verify_seconds'] <= 0:
                     raise ValueError('missing actual proof timing')
+                if not 0 < stats['peak_rss_bytes'] < 32_000_000_000:
+                    raise ValueError('prefix proof high-water RSS exceeds decimal 32 GB')
                 layers[layer] = stats
             if len(json.loads((directory / 'decider.instance.json').read_bytes())) != 30:
                 raise ValueError('prefix terminal template differs from the replay-check anchor')
@@ -111,6 +124,8 @@ def check(root):
     return {'predicate': 'B5', 'schema': 'sherlock-b5-results/1', 'workload': workload,
             'build': build, 'proving_build': prover, 'prefixes': summaries,
             'gpu_execution_scope': 'build features recorded; device dispatch counters unavailable',
+            'resource_limit': {'max_rss_bytes_exclusive': 32_000_000_000, 'swap_peak_bytes': 0,
+                               'owner_decision_date': '2026-10-25'},
             'censored_attempts': 'retained in sibling run directories and factory runs.jsonl'}
 
 
