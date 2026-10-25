@@ -7,6 +7,7 @@ import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {anchorView} from './rollup-statement.mjs';
+import {ownedWalletProver} from './owned-wallet-prover.mjs';
 const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
 assert.ok(sdkRoot && buildArg && preparation && outputArg);
 assert.ok(mode === undefined || mode === '--submit');
@@ -97,7 +98,9 @@ const {mnemonicToSeedSync} = await load('@scure/bip39');
 assert.equal(typeof HDWallet.fromSeed, 'function');
 assert.equal(typeof WalletFacade.init, 'function');
 if (!mode) process.exit(0);
-assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
+const guard = await ownedWalletProver({binary: process.env.MORIARTY_WALLET_PROOF_SERVER,
+  parameters: process.env.MORIARTY_WALLET_PROOF_PARAMS, output,
+  sha256: process.env.MORIARTY_WALLET_PROOF_SERVER_SHA256, purpose: 'deploy'});
 const walletDir = join(homedir(), '.midnight/stagenet-wallet');
 const mnemonicPath = join(walletDir, 'stagenet-wallet.mnemonic');
 assert.equal(statSync(mnemonicPath).mode & 0o777, 0o600);
@@ -113,7 +116,7 @@ const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.Nig
 const indexerHttpUrl = 'https://indexer.stagenet.shielded.tools/api/v4/graphql';
 const indexerWsUrl = 'wss://indexer.stagenet.shielded.tools/api/v4/graphql/ws';
 const config = {networkId: getNetworkId(), indexerClientConnection: {indexerHttpUrl, indexerWsUrl},
-  provingServerUrl: new URL('http://localhost:6300'), relayURL: new URL('wss://rpc.stagenet.shielded.tools')};
+  provingServerUrl: new URL(guard.url), relayURL: new URL('wss://rpc.stagenet.shielded.tools')};
 const wallet = await WalletFacade.init({configuration: {...config,
   txHistoryStorage: new NoOpTransactionHistoryStorage(),
   costParameters: {additionalFeeOverhead: 300_000_000_000_000n, feeBlocksMargin: 5}},
@@ -131,8 +134,10 @@ try {
   const walletProvider = {
     getCoinPublicKey: () => shieldedSecretKeys.coinPublicKey,
     getEncryptionPublicKey: () => shieldedSecretKeys.encryptionPublicKey,
-    balanceTx: async (tx, ttl = ttlOneHour()) => wallet.finalizeRecipe(
-      await wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys, dustSecretKey}, {ttl})),
+    balanceTx: async (tx, ttl = ttlOneHour()) => {
+      const recipe = await wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys, dustSecretKey}, {ttl});
+      return guard.run(() => wallet.finalizeRecipe(recipe));
+    },
     submitTx: async tx => {
       writeFileSync(join(output, 'submitted.json'), JSON.stringify({at: new Date().toISOString(),
         network: 'stagenet', purpose: 'deploy synthetic Sherlock rollup verifier'}) + '\n', {flag: 'wx', mode: 0o600});
@@ -144,7 +149,7 @@ try {
   };
   const providers = {zkConfigProvider, walletProvider, midnightProvider: walletProvider,
     publicDataProvider: indexerPublicDataProvider(indexerHttpUrl, indexerWsUrl),
-    proofProvider: httpClientProofProvider('http://localhost:6300', zkConfigProvider),
+    proofProvider: httpClientProofProvider(guard.url, zkConfigProvider),
     privateStateProvider: levelPrivateStateProvider({
       privateStateStoreName: join(output, 'private-state'), signingKeyStoreName: join(output, 'signing-keys'),
       privateStoragePasswordProvider: () => readFileSync(join(walletDir, 'private-state.password'), 'utf8').trim(),
@@ -174,5 +179,6 @@ try {
   receipt.postStateSHA256 = sha(state.serialize());
   writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
   console.log(JSON.stringify({...receipt, readback: 'all fields and both keys match'}));
-} finally { await wallet.stop(); }
+} catch { throw Error('rollup deployment failed; private wallet/provider details suppressed'); }
+finally { try { await wallet.stop(); } catch { throw Error('wallet shutdown failed; private details suppressed'); } }
 process.exit(0);

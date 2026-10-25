@@ -11,6 +11,8 @@ import {spawn} from 'node:child_process';
 import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
 import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
 import {pinnedRollupKeys} from './rollup-keys.mjs';
+import {checkCompiledCall} from './rollup-compiled-check.mjs';
+import {ownedWalletProver} from './owned-wallet-prover.mjs';
 const [sdkRoot, build, keyed, parent, key, deploymentReceipt, outputArg, circuit, mode] = process.argv.slice(2);
 assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
 assert.ok(mode === undefined || mode === '--submit');
@@ -31,7 +33,6 @@ assert.equal(sha(readFileSync(join(key,'decider.vk'))),manifest.vk_sha256);
 assert.equal(sha(readFileSync(join(key,'decider.relation'))),manifest.relation_sha256);
 assert.equal(sha(readFileSync(join(key,'acceptValidity.verifier'))),manifest.tagged_vk_sha256);
 assert.equal(pins.keys.acceptValidity.sha256,manifest.tagged_vk_sha256);
-assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
 const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
 const {WebSocket} = await load('ws'); assert.equal(typeof WebSocket, 'function'); globalThis.WebSocket = WebSocket;
 const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
@@ -42,7 +43,6 @@ const {SucceedEntirely} = types;
 const {parseCoinPublicKeyToHex, ZkArtifactIntegrityError} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenCallTx, submitTx} = await load('@midnight-ntwrk/midnight-js-contracts');
 const {indexerPublicDataProvider} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
-const {httpClientProvingProvider} = await load('@midnight-ntwrk/midnight-js-http-client-proof-provider');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const publicDataProvider = indexerPublicDataProvider(endpoints.indexer, endpoints.indexerWs);
 for (const name of ['acceptValidity', 'settleValidity']) {
@@ -72,10 +72,17 @@ let session, currentState, parameters, expectedState, nativeProofPublic, nativeP
 let submissionStarted, submissionAcknowledged, finalizationObserved, provenFeesSpecks;
 const prepared = new Error('PREPARATION_ONLY'); let preparedComplete=false;
 const options = {compiledContract, contractAddress:pins.address, circuitId:circuit, args};
-const baseProver = httpClientProvingProvider(endpoints.proof,keys,{timeout:15*60_000});
+const registry = new types.ZKConfigRegistry([keys]);
 const proveProvider = {
-  check:(raw,location)=>baseProver.check(raw,location),
-  lookupKey:location=>baseProver.lookupKey(location),
+  check:async(raw,location)=>{
+    assert.ok(await registry.resolveKeyLocation(location));
+    return checkCompiledCall(raw,location,{ir:pins.provingArtifacts[circuit].ir.path,
+      prover:pins.provingArtifacts[circuit].prover.path,verifier:pins.keys[circuit].path,output});
+  },
+  lookupKey:async location=>{
+    const material=await registry.resolveKeyLocation(location);assert.ok(material);
+    return {ir:material.zkir,proverKey:material.proverKey,verifierKey:material.verifierKey};
+  },
   prove:async(raw,location,binding)=>{
     assert.equal(++proofCalls,1,'one contract proof per transaction');
     assert.equal(location,`contract:${pins.address}/${circuit}?vk=${sha(currentState.operation(circuit).verifierKey)}`);
@@ -113,7 +120,12 @@ const proveProvider = {
 };
 const proofProvider={proveTx:tx=>tx.prove(proveProvider,parameters.transactionCostModel.runtimeCostModel)};
 try {
-  if(mode)session=await openStagenetSession(load,output);
+  if(mode){
+    const guard=await ownedWalletProver({binary:process.env.MORIARTY_WALLET_PROOF_SERVER,
+      parameters:process.env.MORIARTY_WALLET_PROOF_PARAMS,output,
+      sha256:process.env.MORIARTY_WALLET_PROOF_SERVER_SHA256,purpose:circuit});
+    session=await openStagenetSession(load,output,{proofUrl:guard.url,finalize:operation=>guard.run(operation)});
+  }
   const walletProvider=session?.walletProvider ?? {getCoinPublicKey:()=> '00'.repeat(32),getEncryptionPublicKey:()=> '00'.repeat(32)};
   const source=await publicDataProvider.queryZSwapAndContractState(pins.address); assert.ok(source);
   [,currentState,parameters]=source;
@@ -134,8 +146,10 @@ try {
       // Bootstrap from the actual public deployment action; never persist or log transaction bodies.
       const deployed=pins;
       assert.equal(deployed.address,pins.address);
-      const data=await graphql(`{transactions(offset:{identifier:"${deployed.txId}"}){raw}}`);
-      const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(data.transactions[0].raw,'hex'));
+      assert.match(deployed.txHash,/^[0-9a-f]{64}$/);
+      const data=await graphql(`{transactions(offset:{hash:"${deployed.txHash}"}){hash raw}}`);
+      const indexedDeployment=data.transactions.find(tx=>tx.hash===deployed.txHash);assert.ok(indexedDeployment);
+      const deploymentTx=ledger.Transaction.deserialize('signature','proof','binding',Buffer.from(indexedDeployment.raw,'hex'));
       const deployments=[...deploymentTx.intents.values()].flatMap(i=>i.actions).filter(a=>a instanceof ledger.ContractDeploy);
       assert.equal(deployments.length,1); assert.equal(deployments[0].address,pins.address);
       let local=ledger.LedgerState.blank('stagenet'); local.parameters=parameters;
@@ -199,4 +213,5 @@ try {
     writeFileSync(join(output,'receipt.json'),json(receipt));
     console.log(json(receipt));
   }
-} finally {if(session)await session.close();}
+} catch {throw Error('rollup call failed; private wallet/provider details suppressed');}
+finally {if(session)try{await session.close();}catch{throw Error('wallet shutdown failed; private details suppressed');}}

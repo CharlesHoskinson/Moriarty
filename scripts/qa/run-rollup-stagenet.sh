@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 [[ $# == 2 ]] || { echo 'usage: run-rollup-stagenet.sh LOCAL_READY_JSON NEW_OUTPUT' >&2; exit 2; }
 mapfile -t config < <(python3 -B - "$1" "$2" <<'PY'
-import hashlib,json,pathlib,sys
+import hashlib,json,os,pathlib,sys
 ready=json.loads(pathlib.Path(sys.argv[1]).read_bytes())
 assert ready['schema']=='sherlock-b4-local-preparation/1' and not ready['submitted']
 assert ready['decider_key_bytes_match_b3'] and ready['local']['contractProofAccepted'] and ready['local']['applied']
@@ -19,16 +19,23 @@ assert out.is_relative_to(pathlib.Path('target').resolve()) and not out.exists()
 assert out.parent==pathlib.Path('target/sherlock-b4').resolve() and out.name.startswith('stagenet-')
 for name in ('sdk','build','b3','key','deployment_preparation','srs','rollup_call_binary','native_validator','compiled_call_binary'):
     value=ready[name]; assert isinstance(value,str) and '\n' not in value; print(value)
+server=pathlib.Path(os.environ['MORIARTY_WALLET_PROOF_SERVER']).resolve()
+parameters=pathlib.Path(os.environ['MORIARTY_WALLET_PROOF_PARAMS']).resolve()
+assert server.is_file() and parameters.is_dir()
+with server.open('rb') as stream:server_sha=hashlib.file_digest(stream,'sha256').hexdigest()
+assert server_sha==os.environ['MORIARTY_WALLET_PROOF_SERVER_SHA256']
+for value in (str(server),str(parameters),server_sha):assert '\n' not in value;print(value)
 print(out)
 PY
 )
-[[ ${#config[@]} == 10 ]] || exit 1
+[[ ${#config[@]} == 13 ]] || exit 1
 sdk="${config[0]}"; build="${config[1]}"; b3="${config[2]}"; key="${config[3]}"; preparation="${config[4]}"
 export MORIARTY_PARENT_SRS="${config[5]}" ROLLUP_CALL_BINARY="${config[6]}" SHERLOCK_NATIVE_VALIDATOR="${config[7]}"
 export COMPILED_CALL_BINARY="${config[8]}"
+export MORIARTY_WALLET_PROOF_SERVER="${config[9]}" MORIARTY_WALLET_PROOF_PARAMS="${config[10]}" MORIARTY_WALLET_PROOF_SERVER_SHA256="${config[11]}"
 export CARGO_BUILD_JOBS=4 RAYON_NUM_THREADS=4
 export MALLOC_MMAP_THRESHOLD_=131072 MALLOC_TRIM_THRESHOLD_=131072 MALLOC_ARENA_MAX=1
-run_dir="${config[9]}"
+run_dir="${config[12]}"
 mkdir "$run_dir"
 cp "$1" "$run_dir/ready.json"
 python3 -B - "$run_dir" <<'PY'

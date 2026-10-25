@@ -8,6 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
+import {checkCompiledCall} from './rollup-compiled-check.mjs';
 const [sdkRoot, build, keyedBuild, statePath, parent, key, output, mode] = process.argv.slice(2);
 assert.ok(output && (mode === undefined || ['--prove', '--wrong-statement'].includes(mode)));
 const proving = mode === '--prove';
@@ -66,11 +67,8 @@ const prepared = new Error('PREPARED_WITHOUT_PROVING');
 const provider = {
   check: async (raw, location) => {
     assert.equal(location, 'sherlock/rollup/acceptValidity');
-    const payload = ledger.createCheckPayload(raw, readFileSync(join(keyedBuild, 'zkir/acceptValidity.bzkir')));
-    const response = await fetch('http://localhost:6300/check', {method: 'POST',
-      headers: {'content-type': 'application/octet-stream'}, body: payload});
-    assert.ok(response.ok, 'compiled call check');
-    return ledger.parseCheckResult(new Uint8Array(await response.arrayBuffer()));
+    return checkCompiledCall(raw, location, {ir: join(keyedBuild, 'zkir/acceptValidity.bzkir'),
+      prover: join(keyedBuild, 'keys/acceptValidity.prover'), verifier: join(key, 'acceptValidity.verifier'), output});
   },
   lookupKey: async location => {
     assert.equal(location, 'sherlock/rollup/acceptValidity');
@@ -167,12 +165,8 @@ try {
     ledger.communicationCommitmentRandomness(), settleLocation);
   const settleTx = ledger.Transaction.fromParts('stagenet', undefined, undefined, ledger.Intent.new(ttl).addCall(settlePrototype));
   const settleProvider = {
-    check: async raw => {
-      const payload = ledger.createCheckPayload(raw, readFileSync(join(keyedBuild, 'zkir/settleValidity.bzkir')));
-      const response = await fetch('http://localhost:6300/check', {method: 'POST',
-        headers: {'content-type': 'application/octet-stream'}, body: payload});
-      assert.ok(response.ok); return ledger.parseCheckResult(new Uint8Array(await response.arrayBuffer()));
-    },
+    check: (raw, location) => checkCompiledCall(raw, location, {ir: join(keyedBuild, 'zkir/settleValidity.bzkir'),
+      prover: join(keyedBuild, 'keys/settleValidity.prover'), verifier: join(keyedBuild, 'keys/settleValidity.verifier'), output}),
     lookupKey: async () => ({proverKey: readFileSync(join(keyedBuild, 'keys/settleValidity.prover')),
       verifierKey: accepted.operation('settleValidity').verifierKey,
       ir: readFileSync(join(keyedBuild, 'zkir/settleValidity.bzkir'))}),

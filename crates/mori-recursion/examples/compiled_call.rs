@@ -43,7 +43,7 @@ struct Opening {
     binding_input: String,
     preimage: String,
 }
-fn decode_opening(input: &[u8], location: &str) -> Result<ProofPreimage> {
+fn decode_opening(input: &[u8], location: &str, overwrite_binding: bool) -> Result<ProofPreimage> {
     let opening: Opening = serde_json::from_slice(input).map_err(|_| bad("invalid pipe input"))?;
     let binding =
         f_from_canonical_hex(&opening.binding_input).map_err(|_| bad("invalid binding field"))?;
@@ -55,7 +55,9 @@ fn decode_opening(input: &[u8], location: &str) -> Result<ProofPreimage> {
         return Err(bad("preimage location or length differs"));
     }
     // Matches the official proof server's explicit overwriteBindingInput path.
-    p.binding_input = Fr(binding);
+    if overwrite_binding {
+        p.binding_input = Fr(binding);
+    }
     Ok(p)
 }
 fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -83,7 +85,7 @@ fn run() -> Result<()> {
     if input.len() > 2 * 1024 * 1024 {
         return Err(bad("input exceeds 2 MiB"));
     }
-    let preimage = decode_opening(&input, &args[6])?;
+    let preimage = decode_opening(&input, &args[6], args[0] == "prove")?;
     let ir_raw = fs::read(&args[1])?;
     let ir =
         IrSource::load_ir_from_tagged(Cursor::new(&ir_raw)).map_err(|_| bad("invalid V3 IR"))?;
@@ -91,7 +93,10 @@ fn run() -> Result<()> {
         .check(&preimage)
         .map_err(|_| bad("compiled call witness rejected"))?;
     if args[0] == "check" {
-        println!("PASS direct V3 witness check; no proof or private files");
+        println!(
+            "{}",
+            serde_json::json!({"schema":"sherlock-compiled-call-check/1","pi_skips":skips})
+        );
         return Ok(());
     }
     let started = Instant::now();
@@ -165,6 +170,9 @@ fn run() -> Result<()> {
     Ok(())
 }
 fn main() {
+    std::panic::set_hook(Box::new(|_| {
+        eprintln!("direct compiled-call worker aborted; private details suppressed");
+    }));
     if let Err(error) = run() {
         eprintln!("direct compiled-call worker failed: {error}; private request not logged");
         std::process::exit(1);
@@ -191,18 +199,26 @@ mod tests {
     }
     #[test]
     fn pipe_codec_binds_the_supplied_field_and_exact_location() {
-        let p = decode_opening(&serde_json::to_vec(&encoded()).unwrap(), "expected").unwrap();
+        let raw = serde_json::to_vec(&encoded()).unwrap();
+        let p = decode_opening(&raw, "expected", true).unwrap();
         assert_eq!(p.binding_input.0, mori_recursion::util::F::from(9));
-        assert!(decode_opening(&serde_json::to_vec(&encoded()).unwrap(), "other").is_err());
+        assert_eq!(
+            decode_opening(&raw, "expected", false)
+                .unwrap()
+                .binding_input
+                .0,
+            mori_recursion::util::F::ZERO
+        );
+        assert!(decode_opening(&raw, "other", true).is_err());
         let mut raw = encoded();
         raw["preimage"] = (raw["preimage"].as_str().unwrap().to_string() + "00").into();
-        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected").is_err());
+        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected", true).is_err());
         let mut raw = encoded();
         raw["extra"] = true.into();
-        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected").is_err());
+        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected", true).is_err());
         let mut raw = encoded();
         raw["binding_input"] =
             "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff".into();
-        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected").is_err());
+        assert!(decode_opening(&serde_json::to_vec(&raw).unwrap(), "expected", true).is_err());
     }
 }

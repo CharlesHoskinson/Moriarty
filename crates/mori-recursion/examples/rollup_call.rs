@@ -102,6 +102,9 @@ fn opening(call: CallOpening, stmt: F, template: &Template) -> Result<(F, Vec<F>
 }
 
 fn main() -> Result<()> {
+    std::panic::set_hook(Box::new(|_| {
+        eprintln!("native rollup-call worker aborted; private details suppressed");
+    }));
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if args.len() != 7 {
         return Err(bad(

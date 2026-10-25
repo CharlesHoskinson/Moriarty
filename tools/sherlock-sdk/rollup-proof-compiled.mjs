@@ -26,7 +26,7 @@ try {
   const pins = JSON.parse(readFileSync(preparation));
   const keys = pinnedRollupKeys(types, ZkArtifactIntegrityError, pins);
   const registry = new types.ZKConfigRegistry([keys]);
-  await registry.resolveKeyLocation(location);
+  assert.ok(await registry.resolveKeyLocation(location), 'unresolved compiled key location');
   const name = 'settleValidity';
   assert.ok(location.includes('/' + name + '?vk='));
   const le = Buffer.from(binding.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
