@@ -44,6 +44,50 @@ class HeavyTests(FakeRepo):
     def heavy(self, *args, cmd=("true",), env=None, timeout=60):
         return self.run_cli("heavy", *args, "--", *cmd, env=env, timeout=timeout)
 
+    def test_pipe_stdin_is_explicit_and_never_teed(self):
+        cmd = ("python3", "-c", "import sys; print(len(sys.stdin.read()))")
+        payload = "private-opening-test-sentinel"
+        r = self.run_cli("heavy", "--id", "P0", "--", *cmd, input=payload)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "0")
+        r = self.run_cli("heavy", "--id", "P1", "--pipe-stdin", "--", *cmd, input=payload)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), str(len(payload)))
+        for run in self.runs():
+            with open(self.p(run["trace"])) as stream:
+                self.assertNotIn(payload, stream.read())
+            self.assertNotIn(payload, str(run))
+        self.assertNotIn(payload, r.stdout + r.stderr)
+
+    def test_pipe_stdin_refuses_regular_files_before_running(self):
+        import subprocess
+        import sys
+        from .helpers import PKG_PARENT
+        self.write("input", "test-input")
+        with open(self.p("input")) as stream:
+            r = subprocess.run([sys.executable, "-m", "factory", "heavy", "--id", "P1",
+                                "--pipe-stdin", "--", "true"], cwd=PKG_PARENT, env=self.env,
+                               stdin=stream, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("pipe or socket", r.stderr)
+        self.assertEqual(self.runs(), [])
+
+    def test_node_socket_stdin_reaches_only_the_proving_child(self):
+        import subprocess
+        import sys
+        from .helpers import PKG_PARENT
+        self.write("forward.mjs", "import {spawn} from 'node:child_process';\n"
+                   "const p=spawn(process.argv[2],['-m','factory','heavy','--id','N1','--pipe-stdin','--',"
+                   "'python3','-c','import sys; print(len(sys.stdin.read()))'],{stdio:['pipe','inherit','inherit']});\n"
+                   "process.stdin.pipe(p.stdin);p.on('close',code=>{process.exitCode=code;});\n")
+        payload = "node-pipe-opening-test"
+        r = subprocess.run(["node", self.p("forward.mjs"), sys.executable], cwd=PKG_PARENT,
+                           env=self.env, input=payload, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), str(len(payload)))
+        with open(self.p(self.runs()[0]["trace"])) as stream:
+            self.assertNotIn(payload, stream.read())
+
     def test_passthrough_exit_and_tee(self):
         r = self.heavy("--id", "X1", cmd=("bash", "-c", "echo out; echo err >&2; exit 7"))
         self.assertEqual(r.returncode, 7)

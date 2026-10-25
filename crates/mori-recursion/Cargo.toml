@@ -9,6 +9,7 @@ repository.workspace = true
 [features]
 sherlock-rollup-prefix = ["sherlock-rollup"]
 sherlock-rollup = ["sherlock-recursion"]
+sherlock-compiled-prover = ["sherlock-ledger", "dep:midnight-zkir-v3", "dep:futures"]
 sherlock-ledger-validation = [
     "sherlock-ledger", "dep:midnight-ledger", "dep:midnight-base-crypto", "dep:midnight-onchain-runtime",
 ]
@@ -23,6 +24,8 @@ sherlock-recursion = [
 ]
 
 [dependencies]
+futures = { workspace = true, optional = true }
+midnight-zkir-v3 = { workspace = true, optional = true }
 midnight-ledger = { workspace = true, optional = true, features = ["proof-verifying"] }
 midnight-base-crypto = { workspace = true, optional = true }
 midnight-onchain-runtime = { workspace = true, optional = true }
@@ -82,6 +85,10 @@ required-features = ["sherlock-ledger"]
 [[example]]
 name = "validate_call"
 required-features = ["sherlock-ledger-validation"]
+
+[[example]]
+name = "compiled_call"
+required-features = ["sherlock-compiled-prover"]
 
 [[bin]]
 name = "sherlock-verify-parent"

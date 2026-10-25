@@ -3,11 +3,11 @@
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-import {resolve, join} from 'node:path';
+import {resolve, join, dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {anchorView, bindBatch, assertPredecessor} from './rollup-statement.mjs';
+import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
 const [sdkRoot, build, keyedBuild, statePath, parent, key, output, mode] = process.argv.slice(2);
 assert.ok(output && (mode === undefined || ['--prove', '--wrong-statement'].includes(mode)));
 const proving = mode === '--prove';
@@ -115,8 +115,8 @@ const provider = {
     return readFileSync(join(output, 'proof/terminal.tagged-proof'));
   },
 };
-const nativeCheck = async proven => {
-  const request = JSON.stringify({state: Buffer.from(local.serialize()).toString('hex'),
+const nativeCheck = async (proven, pre = local, log = 'native-ledger.log') => {
+  const request = JSON.stringify({state: Buffer.from(pre.serialize()).toString('hex'),
     transaction: Buffer.from(proven.serialize()).toString('hex'),
     block_seconds: Number(blockContext.secondsSinceEpoch)});
   return new Promise((ok, reject) => {
@@ -125,7 +125,7 @@ const nativeCheck = async proven => {
     child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
     child.on('error', reject);
     child.on('close', exit => {
-      writeFileSync(join(output, 'native-ledger.log'), stderr);
+      writeFileSync(join(output, log), stderr);
       if (exit !== 0) reject(Error('native ledger input/validation failed; see native-ledger.log'));
       else { try { ok(JSON.parse(stdout)); } catch (error) { reject(error); } }
     });
@@ -149,10 +149,66 @@ try {
     'last_dep_sum_usd', 'last_dep_sum_night']) assert.equal(after[field], before[field]);
   const postHash = createHash('sha256').update(post.serialize()).digest('hex');
   assert.equal(postHash, native.postStateSHA256, 'native/WASM complete post-state correspondence');
+  // Rehearse the compiled settlement too, before the first network transaction.
+  // The outer local-preparation command already owns the heavy slot.
+  const accepted = post.index(address);
+  const settleContext = rt.createCircuitContext('settleValidity', address, '00'.repeat(32),
+    rt.ContractState.deserialize(accepted.serialize()), {}, undefined, undefined, undefined, now);
+  const settledCall = await new mod.Contract({}).provableCircuits.settleValidity(settleContext, batch.batch, batch.fields);
+  const settleData = settledCall.context.callProofDataTrace[0];
+  const settleQuery = new ledger.QueryContext(accepted.data, address);
+  settleQuery.block = settleContext.callContext.currentQueryContext.block;
+  const [settleTranscript, settleFallible] = ledger.partitionTranscripts(
+    [new ledger.PreTranscript(settleQuery, settleData.publicTranscript)], parameters)[0];
+  assert.ok(settleTranscript && !settleFallible);
+  const settleLocation = `contract:${address}/settleValidity?vk=${createHash('sha256').update(accepted.operation('settleValidity').verifierKey).digest('hex')}`;
+  const settlePrototype = new ledger.ContractCallPrototype(address, 'settleValidity', accepted.operation('settleValidity'),
+    settleTranscript, undefined, settleData.privateTranscriptOutputs, settleData.input, settleData.output,
+    ledger.communicationCommitmentRandomness(), settleLocation);
+  const settleTx = ledger.Transaction.fromParts('stagenet', undefined, undefined, ledger.Intent.new(ttl).addCall(settlePrototype));
+  const settleProvider = {
+    check: async raw => {
+      const payload = ledger.createCheckPayload(raw, readFileSync(join(keyedBuild, 'zkir/settleValidity.bzkir')));
+      const response = await fetch('http://localhost:6300/check', {method: 'POST',
+        headers: {'content-type': 'application/octet-stream'}, body: payload});
+      assert.ok(response.ok); return ledger.parseCheckResult(new Uint8Array(await response.arrayBuffer()));
+    },
+    lookupKey: async () => ({proverKey: readFileSync(join(keyedBuild, 'keys/settleValidity.prover')),
+      verifierKey: accepted.operation('settleValidity').verifierKey,
+      ir: readFileSync(join(keyedBuild, 'zkir/settleValidity.bzkir'))}),
+    prove: async (raw, location, binding) => {
+      assert.equal(location, settleLocation);
+      const proof = resolve(output, 'settle.tagged-proof');
+      await new Promise((ok, reject) => {
+        const child = spawn(process.execPath, ['tools/sherlock-sdk/rollup-proof-compiled.mjs', resolve(sdkRoot),
+          resolve(dirname(statePath), 'preparation.json'), location, proof], {stdio: ['pipe', 'pipe', 'pipe']});
+        let logs = '';
+        child.stdout.on('data', b => { logs += b; }); child.stderr.on('data', b => { logs += b; });
+        child.on('error', reject);
+        child.on('close', code => {
+          writeFileSync(join(output, 'settle-prover.log'), logs);
+          code === 0 ? ok() : reject(Error('compiled settlement worker failed'));
+        });
+        child.stdin.end(JSON.stringify({binding: String(binding), preimage: Buffer.from(raw).toString('hex')}));
+      });
+      return readFileSync(proof);
+    },
+  };
+  const settledTx = (await settleTx.prove(settleProvider, parameters.transactionCostModel.runtimeCostModel)).bind();
+  const settleNative = await nativeCheck(settledTx, post, 'settle-native-ledger.log');
+  assert.equal(settleNative.contractProofsSignaturesLimitsAccepted, true);
+  assert.equal(settleNative.applied, true);
+  const [settledState, settledOutcome] = post.apply(settledTx.wellFormed(post, strictness(contractChecks), now),
+    new ledger.TransactionContext(post, blockContext));
+  assert.equal(settledOutcome.type, 'success');
+  assert.equal(createHash('sha256').update(settledState.serialize()).digest('hex'), settleNative.postStateSHA256);
+  assertSettled(anchorView(rt, mod, settledState.index(address)), batch);
   const result = {schema: 'sherlock-rollup-local-call/1', address, contractChecks,
     proofVerification: native.proofVerification,
     contractProofAccepted: true, applied: true, validityStatementPresent: true,
     rootHeightBatchUnchanged: true, nativePostStateSHA256: postHash,
+    settlementProofAccepted: true, settlementApplied: true, completeSettledEffectsMatch: true,
+    nativeSettledPostStateSHA256: settleNative.postStateSHA256,
     allOn: native.allOn, allOnFailure: native.allOnFailure, submitted: false};
   writeFileSync(join(output, 'ledger-result.json'), JSON.stringify(result, null, 2) + '\n');
   console.log(JSON.stringify(result));

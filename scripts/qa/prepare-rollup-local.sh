@@ -22,11 +22,12 @@ PY
 )"
 mkdir -p target/sherlock-b4
 run_dir="$(mktemp -d "$PWD/target/sherlock-b4/local-XXXXXXXX")"
-cargo build --release --locked -p mori-recursion --features sherlock-rollup-prefix,sherlock-ledger-validation \
-  --example rollup_call --example validate_call
+cargo build --release --locked -p mori-recursion --features sherlock-rollup-prefix,sherlock-ledger-validation,sherlock-compiled-prover \
+  --example rollup_call --example validate_call --example compiled_call
 cp "${CARGO_TARGET_DIR:-$PWD/target}/release/examples/rollup_call" "$run_dir/rollup_call.bin"
 cp "${CARGO_TARGET_DIR:-$PWD/target}/release/examples/validate_call" "$run_dir/validate_call.bin"
-export ROLLUP_CALL_BINARY="$run_dir/rollup_call.bin" SHERLOCK_NATIVE_VALIDATOR="$run_dir/validate_call.bin"
+cp "${CARGO_TARGET_DIR:-$PWD/target}/release/examples/compiled_call" "$run_dir/compiled_call.bin"
+export ROLLUP_CALL_BINARY="$run_dir/rollup_call.bin" SHERLOCK_NATIVE_VALIDATOR="$run_dir/validate_call.bin" COMPILED_CALL_BINARY="$run_dir/compiled_call.bin"
 "$compiler/compactc" --skip-zk --feature-zkir-v3 tools/sherlock-sdk/rollup-anchor.compact "$run_dir/build"
 python3 -B - "$run_dir/build" "$sdk" <<'PY'
 import json,pathlib,sys
@@ -66,11 +67,13 @@ import hashlib,json,pathlib,sys
 root=pathlib.Path(sys.argv[1]); positive=json.loads((root/'call-proof/ledger-result.json').read_bytes())
 assert positive['contractProofAccepted'] and positive['applied'] and positive['validityStatementPresent']
 assert positive['proofVerification']=='native/proof-verifying'
+assert positive['settlementProofAccepted'] and positive['settlementApplied'] and positive['completeSettledEffectsMatch']
 def digest(p):
     with p.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 doc={'schema':'sherlock-b4-local-preparation/1','b3':sys.argv[2],'sdk':sys.argv[3],'srs':sys.argv[4],
      'build':str(root/'build'),'key':str(root/'key'),'deployment_preparation':str(root/'deployment/preparation.json'),
      'rollup_call_binary':str(root/'rollup_call.bin'),'native_validator':str(root/'validate_call.bin'),
+     'compiled_call_binary':str(root/'compiled_call.bin'),'compiled_call_sha256':digest(root/'compiled_call.bin'),
      'rollup_call_sha256':digest(root/'rollup_call.bin'),'native_validator_sha256':digest(root/'validate_call.bin'),
      'decider_key_bytes_match_b3':True,'local':positive,'submitted':False}
 (root/'ready.json').write_text(json.dumps(doc,indent=2,sort_keys=True)+'\n')

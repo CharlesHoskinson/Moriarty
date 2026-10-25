@@ -41,6 +41,11 @@ def check():
         if run['id'].startswith('B') and run.get('exit') != 0:
             failures.append(run)
     baseline = json.loads((ROOT / 'models/sherlock/rollup-synth/baseline.json').read_bytes())
+    inventories = {}
+    for name, pattern in [('stagenet_attempts', 'sherlock-b4/stagenet-*/attempt.json'),
+                          ('prefix_attempts', 'sherlock-b5/run-*/workload.json')]:
+        inventories[name] = [{'directory': str(path.parent), 'record': json.loads(path.read_bytes())}
+                             for path in sorted((ROOT / 'target').glob(pattern))]
     return {'schema': 'sherlock-b9-feasibility/1', 'predicate': 'B9',
         'scope': 'S0 synthetic Fenrir v3 rollup experiment; not an unrestricted Sherlock release claim',
         'workload': {'transactions_per_batch': 16, 'headers_per_batch': 50,
@@ -54,7 +59,7 @@ def check():
         'stagenet': b4, 'stagenet_performance': network,
         'network_transaction_scope': 'deployment, proof acceptance and settlement are three native transactions carrying one synthetic 16-transaction batch',
         'synthetic_fee_scope': 'the proved fee totals are synthetic corpus state; network fees are separate SDK/indexer receipt fields',
-        'failures_and_censored_runs': failures, 'factory_snapshot': status,
+        'failures_and_censored_runs': failures, 'attempt_inventories': inventories, 'factory_snapshot': status,
         'remaining_gaps': [
             'One deterministic corpus and one sample at each prefix length; no latency distribution is established.',
             'Fixed 16-transaction/50-header batches, era zero and at most 512 initial commitments in the fixed-key adapter.',

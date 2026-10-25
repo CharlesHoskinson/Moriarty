@@ -64,6 +64,7 @@ const graphql = async query => {
 const child = (command, argv, input, env, log) => new Promise((ok, reject) => {
   const p=spawn(command,argv,{env,stdio:['pipe','pipe','pipe']}); let stdout='',stderr='';
   p.stdout.on('data',b=>{stdout+=b;});p.stderr.on('data',b=>{stderr+=b;});p.on('error',reject);
+  p.stdin.on('error',error=>{if(error.code!=='EPIPE')reject(Error('child input transport failed'));});
   p.on('close',exit=>{writeFileSync(join(output,log),stderr); if(exit===0)ok(stdout);else reject(Error('child failed: '+log));});
   p.stdin.end(input);
 });
@@ -80,13 +81,26 @@ const proveProvider = {
     assert.equal(location,`contract:${pins.address}/${circuit}?vk=${sha(currentState.operation(circuit).verifierKey)}`);
     if(circuit==='settleValidity') {
       if(!mode){preparedComplete=true;throw prepared;}
-      return baseProver.prove(raw,location,binding);
+      const proof=join(output,'settle.tagged-proof');
+      const log=await child(resolve('scripts/doctorwatson'),['heavy','--id','B4-settle-proof',
+        '--budget','b4-compiled-settle','--hypothesis','Generate only the compiled settlement proof under heavy; wallet sync and finalization stay outside',
+        '--pipe-stdin','--',process.execPath,resolve('tools/sherlock-sdk/rollup-proof-compiled.mjs'),
+        resolve(sdkRoot),resolve(deploymentReceipt),location,proof],
+        JSON.stringify({binding:String(binding),preimage:Buffer.from(raw).toString('hex')}),
+        {...process.env,RAYON_NUM_THREADS:'4'},'settle-prover-stderr.log');
+      writeFileSync(join(output,'settle-prover-stdout.log'),log);
+      return readFileSync(proof);
     }
     assert.equal(typeof binding,'bigint');
-    const log=await child('python3', ['-B','scripts/qa/measure-rollup.py',join(output,'native-proof.measurement.json'),'--',
+    const measured=['-B','scripts/qa/measure-rollup.py',join(output,'native-proof.measurement.json'),'--',
       resolve(process.env.ROLLUP_CALL_BINARY ?? 'target/release/examples/rollup_call'),
        mode?'prove':'check',resolve(parent),resolve('crates/mori-recursion/tests/fixtures/rollup-template.json'),
-       resolve(key),join(output,'proof'),manifest.instance_id,resolve(process.env.MORIARTY_PARENT_SRS ?? 'target/sherlock-srs/bls_midnight_2p20')],
+       resolve(key),join(output,'proof'),manifest.instance_id,resolve(process.env.MORIARTY_PARENT_SRS ?? 'target/sherlock-srs/bls_midnight_2p20')];
+    const command=mode?resolve('scripts/doctorwatson'):'python3';
+    const argv=mode?['heavy','--id','B4-bound-decider','--budget','b4-bound-decider',
+      '--hypothesis','Generate only the SDK-bound stock D under heavy; wallet sync and finalization stay outside',
+      '--pipe-stdin','--','python3',...measured]:measured;
+    const log=await child(command,argv,
       JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),
       {...process.env,RAYON_NUM_THREADS:'4'},'native-prover-stderr.log');
     writeFileSync(join(output,'native-prover-stdout.log'),log);
