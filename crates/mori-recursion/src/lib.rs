@@ -5,8 +5,14 @@
 #![cfg(feature = "sherlock-recursion")]
 
 pub mod child;
+pub mod decider;
+pub mod flat;
 pub mod inner;
+pub mod pairing;
 pub mod parent;
+pub mod reference;
+pub mod template;
+pub mod tower;
 pub mod util;
 
 fn bls_arch(nr_cols: u8) -> midnight_zk_stdlib::ZkStdLibArch {

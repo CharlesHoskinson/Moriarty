@@ -7,9 +7,13 @@ license.workspace = true
 repository.workspace = true
 
 [features]
+sherlock-ledger = [
+    "sherlock-recursion", "dep:midnight-onchain-state", "dep:midnight-storage", "dep:midnight-serialize", "dep:midnight-transient-crypto",
+]
 sherlock-recursion = [
     "dep:ff", "dep:group", "dep:hex", "dep:num-bigint", "dep:rand",
-    "dep:rand_chacha", "dep:sha2", "dep:serde_json", "dep:midnight-curves",
+    "dep:rand_chacha", "dep:sha2", "dep:serde", "dep:serde_json", "dep:midnight-curves",
+    "dep:num-integer", "dep:num-traits", "dep:blake2b_simd",
     "dep:midnight-proofs", "dep:midnight-circuits", "dep:midnight-zk-stdlib",
 ]
 
@@ -18,14 +22,22 @@ ff = { workspace = true, optional = true }
 group = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 num-bigint = { workspace = true, optional = true }
+num-integer = { workspace = true, optional = true }
+num-traits = { workspace = true, optional = true }
+blake2b_simd = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 rand_chacha = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 midnight-curves = { workspace = true, optional = true }
 midnight-proofs = { workspace = true, optional = true, features = ["circuit-params", "committed-instances"] }
 midnight-circuits = { workspace = true, optional = true }
 midnight-zk-stdlib = { workspace = true, optional = true }
+midnight-onchain-state = { workspace = true, optional = true }
+midnight-storage = { workspace = true, optional = true }
+midnight-serialize = { workspace = true, optional = true }
+midnight-transient-crypto = { workspace = true, optional = true }
 
 [dev-dependencies]
 mori-backend.workspace = true
@@ -34,3 +46,11 @@ mori-core.workspace = true
 [[test]]
 name = "sherlock_parent"
 required-features = ["sherlock-recursion"]
+
+[[test]]
+name = "sherlock_terminal"
+required-features = ["sherlock-ledger"]
+
+[[example]]
+name = "contract_key"
+required-features = ["sherlock-ledger"]

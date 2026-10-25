@@ -57,10 +57,12 @@ use crate::{
     child::{
         MAX_CHILD_INSTANCE, MAX_CHILD_PROOF_BYTES, SherlockChild, verify_sherlock_child_offcircuit,
     },
+    decider::{CommBinding, DeciderRelation},
     inner::{
         C, S, acc_pi_len, acc_pis, prepare_own_offcircuit, reconstruct_acc, verify_offcircuit,
         vk_name,
     },
+    template::Template,
     util::{
         F, f_from_hex, f_to_hex, read_bytes, read_f, read_u32, sha256_hex, vk_bytes, vk_from_bytes,
         write_bytes, write_f,
@@ -1042,4 +1044,68 @@ pub fn write_w_dir(dir: &Path, parent: &LinkParentProof, source: &str) -> io::Re
         &serde_json::to_vec_pretty(&fields).map_err(io::Error::other)?,
     )?;
     write_new(dir, "SOURCE", source.as_bytes())
+}
+
+/// The stock decider over the parent: W instance 16 statement fields plus 12 accumulator
+/// fields, SHK_STMT, every statement field in order. DeciderRelation's 1024 stmt_fields
+/// read cap is unchanged; the terminal public statement is the captured template's slot
+/// vector, refused above 1023 slots.
+pub fn sherlock_decider_relation(
+    parent_vk: MidnightVK,
+    s_g2: G2Affine,
+    template: Template,
+) -> io::Result<DeciderRelation> {
+    if template.slots.len() > MAX_TERMINAL_PUBLIC {
+        return Err(bad("terminal public statement must stay below 1024 fields"));
+    }
+    let rel = DeciderRelation {
+        nr_cols: 4,
+        w_vk: parent_vk,
+        n_w_instance: (LINK_STATE_FIELDS + acc_pi_len()) as u32,
+        s_g2,
+        dom_stmt: dom(DOM_STMT),
+        stmt_fields: (0..LINK_STATE_FIELDS as u32).collect(),
+        template,
+        comm_binding: CommBinding::BoundPoseidonStmtV1,
+    };
+    rel.validate()?;
+    Ok(rel)
+}
+
+/// Native: decider keygen at exactly its cost-model degree, standard g2 and matching
+/// [tau]_2, key and relation round trips, then decider.vk and decider.relation in a new
+/// key_dir for the unchanged per-call prove route.
+pub fn keygen_sherlock_decider(
+    params: &ParamsKZG<Bls12>,
+    rel: &DeciderRelation,
+    key_dir: &Path,
+) -> io::Result<MidnightVK> {
+    let shaped = rel.n_w_instance as usize == LINK_STATE_FIELDS + acc_pi_len()
+        && rel
+            .stmt_fields
+            .iter()
+            .copied()
+            .eq(0..LINK_STATE_FIELDS as u32)
+        && rel.dom_stmt == dom(DOM_STMT)
+        && rel.template.slots.len() <= MAX_TERMINAL_PUBLIC
+        && rel.comm_binding == CommBinding::BoundPoseidonStmtV1;
+    if !shaped {
+        return Err(bad(
+            "decider relation is not the Sherlock parent configuration",
+        ));
+    }
+    rel.validate()?;
+    check_srs(params, &rel.s_g2)?;
+    let k = cost_model(rel, None).k;
+    exact_k(params, k, "decider")?;
+    let vk = setup_vk(params, rel);
+    if vk.k() as u32 != k {
+        return Err(bad("decider key degree differs from the cost model"));
+    }
+    let vkb = vk_roundtrip(&vk)?;
+    let relb = relation_bytes(rel)?;
+    fs::create_dir(key_dir)?;
+    write_new(key_dir, "decider.vk", &vkb)?;
+    write_new(key_dir, "decider.relation", &relb)?;
+    Ok(vk)
 }
