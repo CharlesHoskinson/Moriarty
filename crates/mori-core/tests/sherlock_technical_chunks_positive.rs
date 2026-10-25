@@ -38,6 +38,7 @@ fn chunked(source: &str, plan: ChunkPlan, events: ChunkEvents) -> (Value, Value)
         events,
         represent: Representation::Off,
         witness: false,
+        images: true,
     };
     let (run, chunks) = run_draft_host_chunked(source, CONFIG, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));
@@ -105,18 +106,19 @@ fn assert_transparent(source: &str, expected: u128, plan: ChunkPlan) {
     let mut cursor = 0u128;
     let mut events = 0u128;
     let mut cuts = 0u128;
+    let mut previous_consumed = 0u128;
     for (i, c) in list.iter().enumerate() {
         assert_eq!(n(&c["start_event"]), at, "{plan:?} chunk {i}");
         let end = n(&c["end_event"]);
-        let acc = &c["accounting"];
-        assert_eq!(exact(&acc["event_count"]), end - at);
-        work += exact(&acc["work_delta_sum"]);
-        helper += exact(&acc["helper_work_delta_sum"]);
-        cursor += exact(&acc["reference_cursor_delta_sum"]);
-        events += exact(&acc["event_count"]);
-        let delta =
-            n(&c["end_counters"]["consumed_work"]) - n(&c["start_counters"]["consumed_work"]);
-        assert_eq!(delta, exact(&acc["work_delta_sum"]), "{plan:?} chunk {i}");
+        let acc = &c["charges"];
+        assert_eq!(n(&acc["events"]), end - at);
+        work += n(&acc["work"]);
+        helper += n(&acc["helper_work"]);
+        cursor += n(&acc["reference_cursor"]);
+        events += n(&acc["events"]);
+        let delta = n(&c["end_counters"]["consumed_work"]) - previous_consumed;
+        assert_eq!(delta, n(&acc["work"]), "{plan:?} chunk {i}");
+        previous_consumed = n(&c["end_counters"]["consumed_work"]);
         if c["end"] == "technical-cut" {
             cuts += 1;
             let cp = &c["checkpoint"];
@@ -184,10 +186,7 @@ fn two_technical_chunks_sum_to_the_one_trace_work() {
     );
     let list = chunks["chunks"].as_array().unwrap();
     assert_eq!(list.len(), 2);
-    let w: u128 = list
-        .iter()
-        .map(|c| exact(&c["accounting"]["work_delta_sum"]))
-        .sum();
+    let w: u128 = list.iter().map(|c| n(&c["charges"]["work"])).sum();
     assert_eq!(w, n(&one["execution"]["summary"]["consumed_work"]));
 }
 
@@ -197,20 +196,25 @@ fn boundary_between_callee_return_and_caller_addition_is_transparent() {
     let (full, chunks) = chunked(INNER, ChunkPlan::Every(1), ChunkEvents::Retained);
     assert_eq!(halted_value(&full), 14);
     let list = chunks["chunks"].as_array().unwrap();
+    // Use only the always-published boundary view (no full image needed).
     let found = list.iter().find(|c| {
-        let image = &c["boundary"]["image"];
-        let ret = &image["control"]["Return"]["value"];
+        let view = &c["boundary"]["view"];
         c["end"] == "technical-cut"
-            && ret.get("Data").is_some()
-            && scalar(image, ret) == 4
-            && !image["frames"].as_array().unwrap().is_empty()
+            && view["control"].get("Return").is_some()
+            && view["returned_data_row"]["U128"]["n"] == "4"
+            && !view["frames"].as_array().unwrap().is_empty()
     });
     let cut = found.expect("a cut with the callee result 4 returning into a pending caller frame");
     // The pending caller frame is the left-evaluated addition of 10.
-    let frames = cut["boundary"]["image"]["frames"].as_array().unwrap();
+    let frames = cut["boundary"]["view"]["frames"].as_array().unwrap();
     assert!(
         frames.iter().any(|f| f.to_string().contains("Add")),
         "pending caller addition frame retained: {frames:?}"
+    );
+    // The full image agrees with the view.
+    assert_eq!(
+        cut["boundary"]["image"]["frames"],
+        cut["boundary"]["view"]["frames"]
     );
     assert_eq!(cut["checkpoint"]["resumed_capture"], "equal");
     // Every chunk retains its own owner events, in order and without gaps.
@@ -238,6 +242,7 @@ fn invalid_chunk_plans_are_refused_before_execution() {
             events: ChunkEvents::NotRetained,
             represent: Representation::Off,
             witness: false,
+            images: true,
         };
         let mut seen = 0;
         let refused = run_draft_host_chunked(INNER, CONFIG, TARGET, &request, &mut |_| seen += 1);
@@ -294,6 +299,7 @@ fn represented(source: &str, config: &str, plan: ChunkPlan) -> Value {
         events: ChunkEvents::NotRetained,
         represent: Representation::Bounded,
         witness: false,
+        images: true,
     };
     let (_, chunks) = run_draft_host_chunked(source, config, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));

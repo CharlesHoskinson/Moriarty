@@ -25,6 +25,7 @@ fn chunks(source: &str, plan: ChunkPlan, witness: bool) -> Value {
         events: ChunkEvents::NotRetained,
         represent: Representation::Off,
         witness,
+        images: true,
     };
     run_draft_host_chunked(source, CONFIG, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("run failed: {}", serde_json::to_string(&f).unwrap()))

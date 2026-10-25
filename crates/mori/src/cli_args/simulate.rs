@@ -76,6 +76,9 @@ pub struct Args {
     /// (uncached, last-use, cold-cache and warm-cache schedules)
     #[arg(long, requires = "execution_profile")]
     pub chunk_witness: bool,
+    /// Also publish each chunk boundary's complete wire image
+    #[arg(long, requires = "execution_profile")]
+    pub chunk_images: bool,
     /// Also group the sherlock-k-a/1 reference run of the same draft source into
     /// earliest-stop ReferenceSlices of at most M events (normally 1, 2, 4 or 8)
     #[arg(long, value_name = "M", requires = "execution_profile")]

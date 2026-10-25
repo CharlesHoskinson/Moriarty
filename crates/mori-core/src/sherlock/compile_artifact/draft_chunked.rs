@@ -102,6 +102,31 @@ pub struct ChunkRequest {
     /// Also materialize each boundary through the WitnessPlan DAG under the
     /// uncached, last-use, cold-cache and warm-cache schedules.
     pub witness: bool,
+    /// Also publish each boundary's complete wire image (large; see the
+    /// command's 1 MiB output cap). Control, frames, helper and the returned
+    /// value row are always published.
+    pub images: bool,
+}
+
+/// Small always-published boundary view taken from the complete wire image.
+fn boundary_view(image: &Value) -> Value {
+    let returned = image["control"]["Return"]["value"].clone();
+    let row = match returned.get("Data").and_then(Value::as_str) {
+        Some(index) => index
+            .parse::<usize>()
+            .ok()
+            .and_then(|i| image["data"].get(i).cloned())
+            .unwrap_or(Value::Null),
+        None => Value::Null,
+    };
+    json!({
+        "control": image["control"].clone(),
+        "frames": image["frames"].clone(),
+        "helper": image["helper"].clone(),
+        "env_root": image["env_root"].clone(),
+        "returned_value": returned,
+        "returned_data_row": row,
+    })
 }
 
 /// Whether each technical cut is also encoded in the bounded C6P1 layout.
@@ -347,8 +372,26 @@ fn checkpoint(
     ))
 }
 
-fn accounting_wire(acc: &EventAccounting, end: PrefixEnd) -> Value {
-    serde_json::to_value(acc.snapshot(end)).unwrap_or(Value::Null)
+/// Compact exact per-chunk charge sums from the chunk's own events.
+fn charges_wire(acc: &EventAccounting, events: u128) -> Result<Value, CompileFailure> {
+    use crate::sherlock::helper_machine::resource_event_accounting::CheckedTotal;
+    let r = acc.snapshot(PrefixEnd::Open);
+    let exact = |t: CheckedTotal| match t {
+        CheckedTotal::Exact { value } => Ok(value.0.to_string()),
+        CheckedTotal::Overflow { .. } => Err(failure(
+            "chunk-accounting",
+            events,
+            "chunk charge sum overflow",
+        )),
+    };
+    Ok(json!({
+        "events": exact(r.event_count)?,
+        "work": exact(r.work_delta_sum)?,
+        "helper_work": exact(r.helper_work_delta_sum)?,
+        "helper_visits": exact(r.helper_visits_delta_sum)?,
+        "reference_cursor": exact(r.reference_cursor_delta_sum)?,
+        "maximum_observed_logical_depth": r.maximum_observed_logical_depth.map(|d| d.to_string()),
+    }))
 }
 
 /// Drive the owner one step at a time over `image`, cutting per `request`.
@@ -368,7 +411,6 @@ pub(super) fn run_chunked(
     let mut events: u128 = 0;
     let mut total = EventAccounting::new();
     let mut chunks: Vec<Value> = Vec::new();
-    let (_, mut start_counters, _, _) = observe(admitted, &image, events)?;
     let mut chunk_start = events;
     let mut chunk_acc = EventAccounting::new();
     let mut chunk_events: Vec<Value> = Vec::new();
@@ -420,18 +462,20 @@ pub(super) fn run_chunked(
             "start_event": chunk_start.to_string(),
             "end_event": events.to_string(),
             "end": if cut { "technical-cut" } else { "terminal" },
-            "start_counters": counters(&start_counters),
             "end_counters": counters(&end_counters),
-            "accounting": accounting_wire(&chunk_acc, if cut { PrefixEnd::Open } else { PrefixEnd::ReturnedOk }),
+            "charges": charges_wire(&chunk_acc, events)?,
             "boundary": {
                 "outcome": outcome.owner_wire(),
                 "logical_depth": depth.to_string(),
-                "image": boundary_image,
+                "view": boundary_view(&boundary_image),
             },
             "checkpoint": checkpoint,
         });
         if request.events == ChunkEvents::Retained {
             record["events"] = Value::Array(std::mem::take(&mut chunk_events));
+        }
+        if request.images {
+            record["boundary"]["image"] = boundary_image;
         }
         if request.witness {
             record["witness"] = super::draft_witness::materialize_boundary(admitted, &image);
@@ -445,7 +489,6 @@ pub(super) fn run_chunked(
             );
         }
         chunks.push(record);
-        start_counters = end_counters;
         chunk_start = events;
         chunk_acc = EventAccounting::new();
         if !cut {
