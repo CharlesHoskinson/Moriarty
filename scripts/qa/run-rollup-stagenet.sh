@@ -13,6 +13,7 @@ for field,pin in [('rollup_call_binary','rollup_call_sha256'),('native_validator
     with pathlib.Path(ready[field]).open('rb') as stream:assert hashlib.file_digest(stream,'sha256').hexdigest()==ready[pin]
 out=pathlib.Path(sys.argv[2]).resolve()
 assert out.is_relative_to(pathlib.Path('target').resolve()) and not out.exists()
+assert out.parent==pathlib.Path('target/sherlock-b4').resolve() and out.name.startswith('stagenet-')
 for name in ('sdk','build','b3','key','deployment_preparation','srs','rollup_call_binary','native_validator'):
     value=ready[name]; assert isinstance(value,str) and '\n' not in value; print(value)
 print(out)

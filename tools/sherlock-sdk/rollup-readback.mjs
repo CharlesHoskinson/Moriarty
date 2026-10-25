@@ -51,11 +51,13 @@ for (const [name, receipt] of Object.entries(receipts)) {
       assert.deepEqual(native.contractCalls[0].publicInputs, read(join(run, name, 'proof/terminal.public.json')));
     }
   }
-  assert.match(receipt.txId, /^[0-9a-f]{64}$/);
-  const rawQuery = name === 'deploy' ? '' : `transactions(offset:{identifier:"${receipt.txId}"}){hash raw}`;
+  // SDK transaction IDs may carry a 0x prefix. The chain hash is canonical and
+  // the hash-offset query was independently exercised against a finalized call.
+  const rawQuery = name === 'deploy' ? '' : `transactions(offset:{hash:"${receipt.txHash}"}){hash raw ... on RegularTransaction{transactionResult{status}}}`;
   const body = await queryIndexer(`{contractAction(address:"${deployment.address}",offset:{transactionOffset:{hash:"${receipt.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}} ${rawQuery}}`);
   const action = body.contractAction; assert.ok(action);
   assert.equal(action.__typename, name === 'deploy' ? 'ContractDeploy' : 'ContractCall');
+  if (name !== 'deploy') assert.equal(action.entryPoint, name);
   assert.equal(action.transaction.hash, receipt.txHash);
   assert.equal(action.transaction.block.height, receipt.blockHeight);
   assert.equal(action.transaction.block.hash, receipt.blockHash);
@@ -66,6 +68,7 @@ for (const [name, receipt] of Object.entries(receipts)) {
   else {assertPredecessor(view, bound); assert.equal(view.validity_ok.member(bound.statement), name === 'acceptValidity');}
   if (name !== 'deploy') {
     const transaction = body.transactions.find(tx => tx.hash === receipt.txHash); assert.ok(transaction);
+    assert.equal(transaction.transactionResult.status, 'SUCCESS');
     assert.equal(sha(Buffer.from(transaction.raw, 'hex')), read(join(run, name, 'native-final-check.json')).transactionSHA256,
       'indexed transaction differs from the exact native-verified proof/statement artifact');
   }
