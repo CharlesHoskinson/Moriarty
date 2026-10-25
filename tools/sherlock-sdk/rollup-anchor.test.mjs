@@ -5,6 +5,7 @@ import {createRequire} from 'node:module';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import test from 'node:test';
+import {bindBatch, assertPredecessor} from './rollup-statement.mjs';
 
 const sdk = process.env.SHERLOCK_SDK_ROOT;
 assert.ok(sdk, 'SHERLOCK_SDK_ROOT must identify the pinned SDK package directory');
@@ -36,6 +37,21 @@ async function call(session, entry, ...args) {
 test('terminal projection matches the retained stock D statement', () => {
   const verified = JSON.parse(readFileSync(join(proof, 'verified.json')));
   assert.equal(statement(fields, 0n), fromLe(verified.terminal_statement));
+});
+
+test('deployment binds the proven leaf, parent, statement and complete predecessor', async () => {
+  const leaf = JSON.parse(readFileSync(join(proof, 'leaf.instance.json')));
+  const parent = JSON.parse(readFileSync(join(proof, 'parent.instance.json')));
+  const le = n => Buffer.from(n.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
+  const manifest = {instance_id: le(1n), batch_no: le(1n), statement: le(statement(fields))};
+  const bound = bindBatch(leaf, parent, manifest, rt);
+  const session = await initial();
+  const view = mod.ledger(session.state.data);
+  assertPredecessor(view, bound);
+  const changed = leaf.slice(); changed[0] = le(fields[0] + 1n);
+  assert.throws(() => bindBatch(changed, parent, manifest, rt), /leaf\/parent/);
+  assert.throws(() => bindBatch(leaf, parent, {...manifest, statement: le(1n)}, rt), /statement mismatch/);
+  assert.throws(() => assertPredecessor({...view, root: view.root + 1n}, bound), /predecessor root/);
 });
 
 test('accept then settle advances the complete synthetic anchor observation', async () => {

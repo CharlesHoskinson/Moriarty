@@ -66,7 +66,8 @@ for (let i = 0; i < captures[0].length; i++) {
     slots.push({kind: 'stmt'}); stmtIndices.push(i + 2);
   }
 }
-assert.ok(stmtIndices.length > 0);
+assert.equal(slots.length, 30, 'sherlock-v3-batch/1 public input count changed');
+assert.deepEqual(stmtIndices, [11, 25], 'sherlock-v3-batch/1 statement slots changed');
 writeFileSync(output, JSON.stringify({slots, n: slots.length, free: [0, 1, ...stmtIndices],
   stmt_index: stmtIndices[0], stmt_indices: stmtIndices, constants, provisional: false,
   source: 'two compiled S0 rollup-anchor acceptValidity runtime captures; repeated statement slots constrained equal'}, null, 2) + '\n');
