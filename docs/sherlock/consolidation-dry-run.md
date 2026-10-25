@@ -42,7 +42,7 @@ B counts: the B predicates present in status.json are B1, B2, B3, B5, B6, B7 (5 
 | Set | Result on sherlock-s1 | Source line | Regression? |
 | --- | --- | --- | --- |
 | F | F1-F3, F5-F13 pass (12/13); F4 fails exit 3 (heavy lock held) | factory-a2/b: 12/13, F4 held by heavy lock | no |
-| U | 23/35. Failing: U014 U015 U017 U018 U019 U020 U023 U024 U031 U033 (all open slices), plus U-set passes include U013 U016 U029 U032 U035 | factory-u: 23/35 on its own status; factory-b: 18/35 | no (strictly better than b; same as u) |
+| U | 25/35. Failing: U014 U015 U017 U018 U019 U020 U023 U024 U031 U033 (all open slices); U013 U016 U029 U032 U035 pass | factory-u: 25/35 by direct run; factory-b ledger: 18/35 | no (U ledger carried 23, direct run gives 25) |
 | C | C1 and C6 pass (2/6); C2-C5 blocked by U014/U031/U023/U017 | factory-u C 1/6 | no (C6 newly passes) |
 | A | A1 passes; A2 fails exit 3 "host unfit: another process holds the heavy lock", A3-A10 blocked by A2 | factory-a2/b: 10/10 recorded | not a regression: lock-blocked, not run |
 | B | B1, B2 pass; B3 blocked by A5 (dependency on the lock-blocked A chain); B4 B6 B7 B8 B9 blocked transitively | rollup: B1-B4, B6-B8 pass (7/9) | not a regression: see below |
@@ -58,3 +58,9 @@ Consequence for the real consolidation: run the B set from the integration workt
 ### Static evidence for A and B code
 
 The sherlock-u side adds no changes to mori-recursion, the Compact contracts, tools/sherlock-sdk or the Loki runner. Diff of the merge against factory-b outside qa/, docs/ and models/ is only crates/mori-core/src/sherlock, crates/mori-backend/src/sherlock_machine, crates/mori simulate commands, and scripts/qa/check-u0{13,16,21,32,35}.sh.
+
+### Re-run with B evidence copied in (per sherlock-fable option b)
+
+`target/sherlock-b{1,2,3,4,7,9}`, `sherlock-srs`, `sherlock-rollup-anchor`, `sherlock-indexed-test` were copied (not symlinked, so checks cannot write into Moriarty-rollup) from Moriarty-rollup/target into sherlock-s1/target. B1 and B2 pass. B3 fails "host unfit: another process holds the heavy lock" (same B5 job), and B4, B6, B7, B8 are chained behind B3. B evidence is worktree-local; final B verification happens in Moriarty-rollup (sherlock-b) after the final merge.
+
+Ledger note: `doctorwatson check` records blocked or host-unfit predicates as `passes: false`, which clobbers previously recorded A and B passes. The committed status.json keeps the A/B entries from the merge commit f3d937efa (A 10/10, B 5/9) and only the real U/F/C/B1/B2 results from this run. Do not let a lock-blocked check run overwrite a ledger that is to be committed.
