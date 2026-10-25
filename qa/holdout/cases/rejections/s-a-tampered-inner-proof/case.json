@@ -5,23 +5,34 @@
   "category": "a-tampered-inner-proof",
   "title": "Submit a parent whose proof has one flipped byte",
   "expectedVerdict": "REJECT",
-  "verdictRule": "Target (ledger/network) refuses the call; observed via authenticated receipt and unchanged state readback.",
+  "verdictRule": "REJECT = the node refuses the attempt at submission (before inclusion, so no fee), its transaction hash is absent from the indexer, and the native proof-verifying ledger-9 predictor agrees on the refusal class; or, where the contract makes the operation idempotent, the call finalizes with an indexed post-state byte-equal to its pre-state. A local precheck or SDK refusal never counts. Nothing passes unless the same-session positive control finalized.",
   "target": {
     "kind": "stagenet-ledger",
-    "artifact": "Midnight stagenet recursive-rollup contract call",
-    "entrypoint": "stagenet submission harness with ledger-consumption readback"
+    "network": "Midnight ledger-9 stagenet",
+    "contract": "ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b",
+    "contractSource": "tools/sherlock-sdk/sherlock-anchor.compact (SHA-256 4f531ce0...2634)",
+    "evidenceProducer": "qa/holdout/lib/stagenet/produce-a9.sh (heavy slot; opens the existing stagenet wallet through tools/sherlock-sdk/stagenet-session.mjs)",
+    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)"
   },
   "mutation": {
-    "description": "Submit a parent whose proof has one flipped byte"
+    "description": "Exact balanced bytes of the positive-control twin with one bit flipped inside its acceptValidity contract proof (proof offset 3000, mask 0x01)",
+    "proofOffset": 3000,
+    "mask": 1
   },
-  "expectedTargetBehavior": "ledger rejects the call; no state change; rejection receipt retained",
+  "expectedTargetBehavior": "node refuses at submission; transaction hash absent from the indexer; contract state unchanged; the unflipped twin finalizes afterwards",
   "seed": {
-    "status": "specified-only",
-    "note": "No existing stagenet rejection evidence exists; requirement-derived."
+    "status": "requirement-derived",
+    "note": "Stagenet definitions by the evaluator, 2026-10-24, from the contract source and the A8 adapter; see definition/rationale."
   },
   "requirementRefs": [
     "ZR08/ZR16, SRPOC-007 target/rejection evidence",
     "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#SRPOC-007"
   ],
-  "unimplemented": "UNIMPLEMENTED: needs a stagenet submission harness (deploy/call a tampered or replayed Sherlock parent against the stagenet verifier path and read back the target rejection receipt); specified-only, no stagenet transaction or wallet operation is permitted"
+  "unimplemented": null,
+  "definition": "Submit the twin transaction with one bit of its 6,432-byte decider proof flipped; nothing else changes (signatures, binding, dust spend and TTL are the twin's). The node must refuse it, it must not be indexed, and the unflipped twin must then finalize.",
+  "rationale": "On stagenet the decider proof is the only gate of acceptValidity, and the inner child proofs reach it only through that proof. A one-bit difference is the minimal tamper, and the twin's later acceptance isolates the bit as the cause, ruling out dust, TTL, fee or signature confounds. Offline prediction against the retained A8 transaction and its pre-state: the unmutated transaction is accepted and applied by native ledger-9 (contract proofs, signatures, limits on). Flips at proof offsets 0, 48, 3000, 4000, 5000, 6000, 6400 and 6431 all deserialize and are refused as 'failed to verify proof: Invalid proof', with no signature failure. The flip is made after balancing, which is valid because the proof is outside the signed data (the same prediction).",
+  "positiveControl": "Same-session differential twin: a fresh, actual-bound decider proof for acceptValidity(A8 stmt deffb497...a5c25a), wallet-balanced. It is submitted after the refused attempts and must finalize (indexed SUCCESS, acceptValidity ContractCall on the pin). A8 (tx a2b71fa2..., block 1014763) is re-checked live as the earlier acceptance. Order is mutants first because the s-a mutant shares the twin's dust spend and intent; submitting the twin first would let replay protection, not the proof check, refuse the mutant.",
+  "stagenetCheck": {
+    "kind": "proof-bit-flip"
+  }
 }

@@ -5,23 +5,33 @@
   "category": "d-reordered-batch",
   "title": "Submit the two transitions of a batch in swapped order",
   "expectedVerdict": "REJECT",
-  "verdictRule": "Target (ledger/network) refuses the call; observed via authenticated receipt and unchanged state readback.",
+  "verdictRule": "REJECT = the node refuses the attempt at submission (before inclusion, so no fee), its transaction hash is absent from the indexer, and the native proof-verifying ledger-9 predictor agrees on the refusal class; or, where the contract makes the operation idempotent, the call finalizes with an indexed post-state byte-equal to its pre-state. A local precheck or SDK refusal never counts. Nothing passes unless the same-session positive control finalized.",
   "target": {
     "kind": "stagenet-ledger",
-    "artifact": "Midnight stagenet recursive-rollup contract call",
-    "entrypoint": "stagenet submission harness with ledger-consumption readback"
+    "network": "Midnight ledger-9 stagenet",
+    "contract": "ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b",
+    "contractSource": "tools/sherlock-sdk/sherlock-anchor.compact (SHA-256 4f531ce0...2634)",
+    "evidenceProducer": "qa/holdout/lib/stagenet/produce-a9.sh (heavy slot; opens the existing stagenet wallet through tools/sherlock-sdk/stagenet-session.mjs)",
+    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)"
   },
   "mutation": {
-    "description": "Submit the two transitions of a batch in swapped order"
+    "description": "settleValidity for the A80-then-A102 order: fields with (f8 mid_root, f9 post_root) and (f11 bind_a102, f12 bind_a80) swapped and f15 recomputed for the swapped order"
   },
-  "expectedTargetBehavior": "target rejects; with two valid successors of one state at most one consumes (ZR10)",
+  "expectedTargetBehavior": "ledger refuses the swapped-order settle; with two valid successors of one state at most one consumes (ZR10)",
   "seed": {
-    "status": "specified-only",
-    "note": "No existing stagenet rejection evidence exists; requirement-derived."
+    "status": "requirement-derived",
+    "note": "Stagenet definitions by the evaluator, 2026-10-24, from the contract source and the A8 adapter; see definition/rationale."
   },
   "requirementRefs": [
     "ZR08/MNR01/ZR09",
     "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#SRPOC-007"
   ],
-  "unimplemented": "UNIMPLEMENTED: needs a stagenet submission harness (deploy/call a tampered or replayed Sherlock parent against the stagenet verifier path and read back the target rejection receipt); specified-only, no stagenet transaction or wallet operation is permitted"
+  "unimplemented": "UNIMPLEMENTED: needs the implementer settle-path harness tools/sherlock-sdk/settle-harness.mjs (prepareSettle/settleTrace/settleStatement, interface in s-c-wrong-predecessor/case.json harnessInterface); the evaluator then adds the stale-head and forged-head settle attempts to produce-a9.mjs",
+  "definition": "P3 = prepareSettle(S0'', 0, fields_swapped), where S0'' is the live snapshot plus validity_ok containing settleStatement(S0'', 0, fields_swapped). The circuit is satisfiable only over that edited snapshot. Submitted against the chain, where no decider-accepted statement exists for the swapped order, it must be refused by the ledger, not indexed, and leave the state unchanged. The two-successor form of ZR10 (at most one of two valid successors of one head consumes) is the stale-head attempt P1 of s-c, shared with this case.",
+  "rationale": "The reordering is bound by the decider statement: the order lives in the trace hash and the statement. The contract has accepted only the A102-then-A80 statement, so a correctly formatted swapped-order settle can pass the circuit only by claiming an acceptance that the ledger does not hold. Its refusal at the ledger membership read is the stagenet meaning of 'reordered batch refused'. A swapped vector against the true snapshot fails in the prover (local), which does not count.",
+  "positiveControl": "Control settle C of s-c (same harness and session).",
+  "harnessInterface": {
+    "sameAs": "s-c-wrong-predecessor harnessInterface"
+  },
+  "consequence": "Surfaced, not decided: the settle control consumes the only accepted statement on ac93b80e... (root := post_root, height += 2, batch_no := 1). This is irreversible on the pinned contract. Accept-level evidence (s-a, s-b, s-e accept part) is unaffected, and A10 reads history at block 1014763. Any later check asserting `settled` empty on the latest state would change. Running the settle experiments on a fresh deployment of the same source and keys is authorized, but it would move the A9 pin; owner or implementer chooses."
 }

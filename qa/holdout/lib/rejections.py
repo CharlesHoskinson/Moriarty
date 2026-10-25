@@ -10,6 +10,10 @@ Verdict rule (from the security requirements, never from current behavior):
   REJECT  = (verifier exit 0 AND verifies == false) OR typed decoder refusal (exit 1, empty stdout)
   anything else (signal, exit >1, unparsable success) -> case FAILS
 Exit status 0 alone is never the oracle.
+A case may add `mutation.requireReport` ({field: value}); REJECT then also requires those report fields,
+so a verifier that drops one check (e.g. the carried pairing) cannot pass by failing another.
+
+Stagenet scope is checked read-only against retained evidence and the public indexer; see stagenet_check.py.
 """
 import hashlib
 import json
@@ -79,7 +83,7 @@ def call(exe, vk, proof, inst, srs):
     return r
 
 
-def verdict(r):
+def verdict(r, require=None):
     if r.returncode == 0:
         try:
             doc = json.loads(r.stdout.strip().splitlines()[-1])
@@ -87,7 +91,13 @@ def verdict(r):
             return "ERROR", "exit 0 with unparsable output"
         if doc.get("kind") != CFG["outputKind"] or not isinstance(doc.get("verifies"), bool):
             return "ERROR", f"exit 0 with unexpected report shape {sorted(doc)[:6]}"
-        return ("ACCEPT" if doc["verifies"] else "REJECT"), json.dumps({k: doc.get(k) for k in ("verifies", "stdlib_verifies", "pairing_verifies", "failure")})
+        detail = json.dumps({k: doc.get(k) for k in ("verifies", "stdlib_verifies", "pairing_verifies", "failure")})
+        if doc["verifies"]:
+            return "ACCEPT", detail
+        wrong = {k: doc.get(k) for k, v in (require or {}).items() if doc.get(k) != v}
+        return ("ERROR", f"refused, but not at the required check: {wrong} {detail}") if wrong else ("REJECT", detail)
+    if require:
+        return "ERROR", f"exit {r.returncode}: a case with requireReport needs a typed report, not a decoder refusal"
     if r.returncode == 1 and r.stdout.strip() == "" and r.stderr.strip():
         return "REJECT", "typed decoder refusal (exit 1)"
     return "ERROR", f"exit {r.returncode}: {r.stderr[:160]!r}"
@@ -111,7 +121,7 @@ def mutate(m, work, fx):
         vk.write_bytes(vk.read_bytes() + bytes([m["value"]]))
     elif op == "vk-substitute":
         shutil.copy(fx / CFG["fixtureFiles"]["wrongValidChildVk"], vk)
-    elif op in ("scalar-set", "scalar-flip-low-bit", "scalar-swap"):
+    elif op in ("scalar-set", "scalar-flip-low-bit", "scalar-swap", "scalar-swap-range"):
         doc = json.loads(inst.read_text())
         assert len(doc) == 28 and all(len(s) == 64 for s in doc), "fixture instance is not the 28-scalar array"
         if op == "scalar-set":
@@ -119,6 +129,10 @@ def mutate(m, work, fx):
             doc[m["index"]] = m["to"]
         elif op == "scalar-flip-low-bit":
             s = doc[m["index"]]; first = int(s[:2], 16) ^ 1; doc[m["index"]] = f"{first:02x}" + s[2:]
+        elif op == "scalar-swap-range":
+            a, b, n = m["start"], m["with"], m["length"]
+            assert doc[a:a + n] != doc[b:b + n], "swap of equal ranges would not mutate the statement"
+            doc[a:a + n], doc[b:b + n] = doc[b:b + n], doc[a:a + n]
         else:
             i, j = m["indices"]
             assert doc[i] != doc[j], "swap of equal scalars would not mutate the statement"
@@ -143,8 +157,14 @@ def main(scope):
     srs = find_srs()
     results = {"pass": [], "fail": [], "unimplemented": []}
     control_done = False
+    if scope == "stagenet":
+        sys.path.insert(0, str(HERE))
+        import stagenet_check
+        p, f, u = stagenet_check.run(cases, REPO)
+        results["pass"], results["fail"], results["unimplemented"] = p, f, u
+        cases = []
     for c in cases:
-        if scope == "stagenet" or c["target"].get("kind") != "local-verifier":
+        if c["target"].get("kind") != "local-verifier":
             results["unimplemented"].append((c["id"], c["unimplemented"]))
             continue
         need = unimplemented_reasons(c, exe, fx, srs)
@@ -163,7 +183,7 @@ def main(scope):
                 control_done = True
             vk, proof, inst = mutate(c["mutation"], work, fx)
             r = call(exe, vk, proof, inst, srs)
-            v, detail = verdict(r)
+            v, detail = verdict(r, c["mutation"].get("requireReport"))
             (results["pass"] if v == "REJECT" else results["fail"]).append((c["id"], f"{v} {detail}"))
     for cid, msg in results["pass"]:
         print(f"PASS {cid}: {msg}")
