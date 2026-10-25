@@ -10,6 +10,8 @@ e=importlib.util.module_from_spec(spec);spec.loader.exec_module(e)
 attempts=list(pathlib.Path('target/sherlock-b4').glob('stagenet-*/attempt.json'))
 if not attempts:raise SystemExit('B4 requires an actual coordinated stagenet attempt')
 attempt=max(attempts,key=lambda p:json.loads(p.read_bytes())['started_at'])
+if not all((attempt.parent/name/'receipt.json').is_file() for name in ('deploy','acceptValidity','settleValidity')):
+    raise SystemExit('B4 requires finalized deployment, acceptance and settlement receipts')
 ready=json.loads((attempt.parent/'ready.json').read_bytes());assert ready['schema']=='sherlock-b4-local-preparation/1'
 b3=pathlib.Path(ready['b3']);e.check('B3',b3)
 print(attempt.parent.resolve());print(b3);print(ready['srs'])
@@ -25,8 +27,10 @@ for layer in leaf parent decider; do
     cp "$b3/$layer.$suffix" "$check_dir/$layer.$suffix"
   done
 done
-python3 -B scripts/qa/measure-rollup.py "$check_dir/stock-verify.measurement.json" -- \
-  "$b3/rollup.bin" verify "$b3/fixture/corpus" 1 "$check_dir" "$srs"
+scripts/doctorwatson heavy --id B4-stock-verify --budget b4-full-batch-stagenet \
+  --hypothesis 'Reverify retained stock proofs under heavy; release the slot before network readback' -- \
+  python3 -B scripts/qa/measure-rollup.py "$check_dir/stock-verify.measurement.json" -- \
+    "$b3/rollup.bin" verify "$b3/fixture/corpus" 1 "$check_dir" "$srs"
 node tools/sherlock-sdk/rollup-readback.mjs "$run_dir" "$check_dir/readback.json"
 python3 -B - "$check_dir" "$run_dir" <<'PY'
 import json,pathlib,sys
