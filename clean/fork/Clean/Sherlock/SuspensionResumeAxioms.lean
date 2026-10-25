@@ -1,0 +1,13 @@
+import Clean.Sherlock.SuspensionResume
+
+#print axioms Clean.Sherlock.SuspensionResume.profile_ids_distinct
+#print axioms Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor
+#print axioms Clean.Sherlock.SuspensionResume.financial_technical_restore_refused
+#print axioms Clean.Sherlock.SuspensionResume.successful_restore_is_exact
+#print axioms Clean.Sherlock.SuspensionResume.runSteps_add
+#print axioms Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation
+#print axioms Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint
+#print axioms Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint
+#print axioms Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers
+#print axioms Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge
+#print axioms Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance

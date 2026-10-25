@@ -1,0 +1,16 @@
+import Clean.Sherlock.FinancialItems
+
+#print axioms Clean.Sherlock.FinancialItems.charge_preserves_work
+#print axioms Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix
+#print axioms Clean.Sherlock.FinancialItems.charge_stays_uint128
+#print axioms Clean.Sherlock.FinancialItems.await_publishes_committed_prefix
+#print axioms Clean.Sherlock.FinancialItems.complete_publishes_ordered_effects
+#print axioms Clean.Sherlock.FinancialItems.failed_unsealed_phase_preserves_prefix
+#print axioms Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix
+#print axioms Clean.Sherlock.FinancialItems.sealed_fees_retained_separately
+#print axioms Clean.Sherlock.FinancialItems.failure_keeps_charged_work
+#print axioms Clean.Sherlock.FinancialItems.not_ready_preserves_image
+#print axioms Clean.Sherlock.FinancialItems.accounting_gross_is_saturated
+#print axioms Clean.Sherlock.FinancialItems.accounting_conservation_without_saturation
+#print axioms Clean.Sherlock.FinancialItems.first_paid_prefix_accounting
+#print axioms Clean.Sherlock.FinancialItems.saturated_gross_example

@@ -1,0 +1,80 @@
+{
+  "schema": "sherlock-lean-finish-contract/1",
+  "module": "Clean.Sherlock.SuspensionResume",
+  "requirements": [
+    "U014",
+    "U015",
+    "U016"
+  ],
+  "implementedSources": [
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_resume.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/profile2_suspension_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/complete_observation.rs"
+  ],
+  "prospectiveSources": [
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_suspend.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/suspension2.rs"
+  ],
+  "remainingObligations": [
+    "Instantiate Whole with the entire checkpoint, including exact admission/profile identity, frames, environments, heap, counters, pending helper state and applicable finance.",
+    "Prove actual Rust restore/capture roundtrip and concrete SI checks produce the predicates used here.",
+    "Prove actual deterministic step correspondence, terminal/error/exhaustion precedence and exact charged traces; generic iteration alone does not establish these.",
+    "In-flight profile /2 changes are not committed in factory-u at the recorded base; recheck after landing.",
+    "Prove concrete R0-R5 validation, canonical scalar layout, observation/checkpoint digest binding and capture preservation.",
+    "Connect pure atomic binder installation to complete successor state, fresh allocation, capacity checks and UInt128 counter/epoch headroom.",
+    "Prove actual pending callee and caller continuation behavior (including the 10+inner(3)=14 scenario); caller-frame retention alone does not prove evaluation.",
+    "Financial checkpoint restoration is refused by the current technical-restore interface; financial continuation semantics belong to FinancialItems.",
+    "No C6 suspension/resume, native proof, cryptographic codec or ledger refinement follows."
+  ],
+  "sourceBase": "0699194f9",
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "sourceFiles": [
+    {
+      "path": "clean/fork/Clean/Sherlock/SuspensionResume.lean",
+      "bytes": 8826,
+      "sha256": "8a041fb593bf0434eafaa2c2dbe57c72265e9239a208fb65235751179875ae68"
+    },
+    {
+      "path": "clean/fork/Clean/Sherlock/SuspensionResumeAxioms.lean",
+      "bytes": 871,
+      "sha256": "a5cd2c5691fcd32578467770b6f67731acc16cc52828921a92a2c03b270937fc"
+    }
+  ],
+  "theoremNames": [
+    "Clean.Sherlock.SuspensionResume.profile_ids_distinct",
+    "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor",
+    "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused",
+    "Clean.Sherlock.SuspensionResume.successful_restore_is_exact",
+    "Clean.Sherlock.SuspensionResume.runSteps_add",
+    "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation",
+    "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint",
+    "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance"
+  ],
+  "verification": {
+    "status": "observed-failure-source-corrected-awaiting-recheck",
+    "observation": {
+      "runner": "sherlock-fable",
+      "commandReported": "memcap 48G lake -d clean/fork build",
+      "artifact": "lean-build-1.log",
+      "bytes": 14787,
+      "sha256": "bd2ecbad9637ebf0b70d8153484f2a2dfe0736f6d16772ebc582bbdc8bcfc250",
+      "overallPackageExit": 1,
+      "agentAction": "read complete observed build log; did not execute build"
+    },
+    "firstError": "runSteps_add zero case: 0 + second does not reduce definitionally",
+    "hypothesis": "Nat addition recurses on its second argument; explicitly simplify Nat.zero_add before runSteps.",
+    "correction": "Replace zero-case rfl with simp only [Nat.zero_add, runSteps].",
+    "axiomQueryStatus": "not-run",
+    "actualAxiomSets": null,
+    "localSandboxExecution": "blocked by memcap user scope bus"
+  },
+  "trust": {
+    "newSorry": false,
+    "newCustomAxioms": false,
+    "rustRefinementProved": false,
+    "nativeAcceptance": false
+  }
+}
