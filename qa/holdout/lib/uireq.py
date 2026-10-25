@@ -923,7 +923,173 @@ def _repo_file(rel, label):
     return path.read_text()
 
 
-def _inventory_honest(c, src, name):
+# ---- compiled-and-run receipts for native fragments (U023) ---------------------------
+#
+# A fragment may claim evidence "compiled-and-run" only with a committed receipt
+# (crates/mori-backend/src/sherlock_machine/testdata/receipts/*.json, format
+# moriarty-sherlock-fragment-receipt/1). The receipt's own words are never trusted: every field is
+# cross-checked against the factory run log (qa/sherlock/runs.jsonl), the run trace on disk (pinned
+# by sha256), git history (the run's commit is an ancestor of HEAD and the fragment, consumer and
+# test files are unchanged since), and the test sources (each named test is a #[test] fn whose body,
+# or a local helper it calls, uses a pub fn of the fragment or its consumer; a mutated-witness
+# rejection test is required). "cargo check" or "--no-run" never counts as run.
+
+import re as _re2
+import shlex as _shlex
+import subprocess as _subprocess
+
+RECEIPT_DIR = "crates/mori-backend/src/sherlock_machine/testdata/receipts/"
+RECEIPT_FORMAT = "moriarty-sherlock-fragment-receipt/1"
+SDK_CHECK = "ProofPreimage::check (nonproving)"
+_EVIDENCE = ("source-only, uncompiled and unrun", "compiled-and-run")
+_REJECT_MARKERS = ("is_err", "Err(", "assert!(!", "should_panic", "reject", "unsatisf", "refus")
+
+
+class RepoOps:
+    """Real repository oracle (git + files + factory run log). Tests substitute a fake."""
+
+    def __init__(self, root):
+        self.root = root
+
+    def _git(self, *a):
+        return _subprocess.run(["git", "-C", str(self.root), *a], capture_output=True, text=True)
+
+    def read(self, rel):
+        p = self.root / rel
+        return p.read_text() if p.is_file() else None
+
+    def tracked_clean(self, rel):
+        if self._git("ls-files", "--error-unmatch", rel).returncode != 0:
+            return False
+        return self._git("diff", "--quiet", "HEAD", "--", rel).returncode == 0
+
+    def tracked_names(self, d):
+        out = self._git("ls-files", "--", d + "/").stdout.split()
+        return [x[len(d) + 1:] for x in out if "/" not in x[len(d) + 1:]]
+
+    def is_ancestor(self, sha):
+        return self._git("merge-base", "--is-ancestor", sha, "HEAD").returncode == 0
+
+    def unchanged_since(self, sha, rels):
+        return self._git("diff", "--quiet", sha, "--", *rels).returncode == 0
+
+    def runs(self):
+        text = self.read("qa/sherlock/runs.jsonl") or ""
+        out = []
+        for line in text.splitlines():
+            try:
+                out.append(json.loads(line))
+            except ValueError:
+                pass
+        return out
+
+
+def _pub_fns(text):
+    return set(_re2.findall(r"\bpub(?:\([^)]*\))?\s+fn\s+(\w+)", text or ""))
+
+
+def _fn_body(text, fn):
+    m = _re2.search(r"\bfn\s+" + _re2.escape(fn) + r"\s*[(<]", text)
+    if not m:
+        return None
+    nxt = _re2.search(r"\n(?:#\[|fn\s|pub\s+fn\s)", text[m.end():])
+    return text[m.start(): m.end() + (nxt.start() if nxt else len(text))]
+
+
+def _is_test_fn(text, fn):
+    m = _re2.search(r"#\[test\][^\n]*\n(?:\s*#\[[^\n]*\n)*\s*(?:pub\s+)?fn\s+" + _re2.escape(fn) + r"\s*\(", text)
+    return m is not None
+
+
+def _expanded(text, fn):
+    body = _fn_body(text, fn) or ""
+    extra = []
+    for callee in set(_re2.findall(r"\b(\w+)\s*\(", body)) - {fn}:
+        b = _fn_body(text, callee)
+        if b:
+            extra.append(b)
+    return body + "\n".join(extra)
+
+
+def verify_receipt(rule, fr, ops, label):
+    """Fail unless fragment `fr` (an inventory fragment entry) is honestly evidenced."""
+    ev = fr.get("evidence")
+    need(ev in _EVIDENCE, f"inventory dishonest: {label}: {rule} evidence {ev!r} is not in the vocabulary {_EVIDENCE}")
+    if ev == _EVIDENCE[0]:
+        need(not fr.get("receipt"), f"inventory dishonest: {label}: {rule} is source-only but carries a receipt")
+        return False
+    bad = f"inventory dishonest: {label}: {rule} receipt"
+    rp = fr.get("receipt")
+    need(isinstance(rp, str) and rp.startswith(RECEIPT_DIR) and rp.endswith(".json") and ".." not in rp.split("/"),
+         f"{bad}: path {rp!r} is not under {RECEIPT_DIR}")
+    need(ops.tracked_clean(rp), f"{bad}: {rp} is not committed (untracked or modified)")
+    try:
+        rc = json.loads(ops.read(rp) or "")
+    except ValueError:
+        raise Fail(f"{bad}: {rp} is not JSON")
+    need(rc.get("format") == RECEIPT_FORMAT, f"{bad}: format {rc.get('format')!r}")
+    for k in ("file", "entry", "consumer"):
+        need(rc.get(k) == fr.get(k), f"{bad}: {k} {rc.get(k)!r} != inventory {fr.get(k)!r}")
+    need(rc.get("rule") == rule, f"{bad}: names rule {rc.get('rule')!r}")
+    need(rc.get("sdk_check") == SDK_CHECK, f"{bad}: sdk_check {rc.get('sdk_check')!r} (only {SDK_CHECK!r} is accepted)")
+    sha = rc.get("commit")
+    need(isinstance(sha, str) and _re2.fullmatch(r"[0-9a-f]{40}", sha or "") is not None, f"{bad}: commit {sha!r}")
+    need(ops.is_ancestor(sha), f"{bad}: commit {sha[:12]} is not an ancestor of HEAD")
+    cmd = rc.get("command") or ""
+    argv = _shlex.split(cmd)
+    need(argv[:2] == ["cargo", "test"] and "--no-run" not in argv, f"{bad}: command {cmd!r} is not a cargo test run")
+    # the factory run log, not the receipt, says what ran
+    recs = [r for r in ops.runs() if r.get("run") == rc.get("run")]
+    need(len(recs) == 1, f"{bad}: run {rc.get('run')!r} is not in qa/sherlock/runs.jsonl")
+    rec = recs[0]
+    need(rec.get("exit") == 0, f"{bad}: run {rec['run']} exited {rec.get('exit')}")
+    need(rec.get("head") == sha, f"{bad}: run {rec['run']} was on {str(rec.get('head'))[:12]}, not {sha[:12]}")
+    need(rec.get("cmd") == cmd, f"{bad}: run {rec['run']} ran {rec.get('cmd')!r}, not the receipt command")
+    need(rec.get("trace") == rc.get("trace"), f"{bad}: trace path differs from the run log")
+    trace = ops.read(rc.get("trace") or "")
+    need(trace is not None, f"{bad}: trace {rc.get('trace')} is not on disk (unverifiable)")
+    need(_hashlib.sha256(trace.encode()).hexdigest() == rc.get("trace_sha256"), f"{bad}: trace sha256 differs (trace edited)")
+    results = _re2.findall(r"^test result: (ok|FAILED)\. (\d+) passed; (\d+) failed", trace, _re2.M)
+    need(results, f"{bad}: trace has no cargo test result")
+    passed = sum(int(p) for _, p, _ in results)
+    failed = sum(int(f) for _, _, f in results)
+    need(all(s == "ok" for s, _, _ in results) and failed == 0 and rc.get("failed") == 0,
+         f"{bad}: the run had failures")
+    need(passed == rc.get("passed") and passed > 0, f"{bad}: passed {rc.get('passed')} != trace {passed}")
+    need(not _re2.search(r"^test \S+ \.\.\. FAILED$", trace, _re2.M), f"{bad}: trace shows a failed test")
+    # named tests: present and ok in the trace, real #[test] fns that exercise this fragment
+    tests = rc.get("tests") or []
+    roles = {t.get("role") for t in tests}
+    need("positive" in roles and "rejects-mutated-witness" in roles,
+         f"{bad}: needs a positive test and a mutated-witness rejection test, has {sorted(r for r in roles if r)}")
+    need(roles <= {"positive", "rejects-mutated-witness"}, f"{bad}: unknown test roles {roles}")
+    api = _pub_fns(ops.read(fr["file"])) | _pub_fns(ops.read(fr["consumer"]) if fr.get("consumer") else "")
+    need(api, f"{bad}: fragment exposes no pub fn")
+    modrs = ops.read(fr["file"].rsplit("/", 1)[0] + "/mod.rs") or ""
+    api |= {alias for orig, alias in _re2.findall(r"\b(\w+)\s+as\s+(\w+)", modrs) if orig in api}
+    test_files = []
+    for t in tests:
+        name, tf = t.get("name") or "", t.get("file") or ""
+        need(_re2.search(r"^test " + _re2.escape(name) + r" \.\.\. ok$", trace, _re2.M),
+             f"{bad}: test {name} did not pass in the trace")
+        text = ops.read(tf) if tf.startswith("crates/") else None
+        need(text is not None, f"{bad}: test file {tf!r} does not exist")
+        fn = name.split("::")[-1]
+        stem = tf.rsplit("/", 1)[-1][:-3]
+        need("/tests/" in tf or stem in name.split("::"), f"{bad}: test {name} is not in {tf}")
+        need(_is_test_fn(text, fn), f"{bad}: {tf} has no #[test] fn {fn}")
+        body = _expanded(text, fn)
+        need(any(_re2.search(r"\b" + _re2.escape(a) + r"\b", body) for a in api),
+             f"{bad}: test {fn} never calls the fragment or its consumer")
+        if t["role"] == "rejects-mutated-witness":
+            need(any(m in body for m in _REJECT_MARKERS), f"{bad}: test {fn} asserts no rejection")
+        test_files.append(tf)
+    paths = [fr["file"]] + ([fr["consumer"]] if fr.get("consumer") else []) + test_files
+    need(ops.unchanged_since(sha, sorted(set(paths))), f"{bad}: fragment, consumer or tests changed since {sha[:12]}")
+    return True
+
+def _inventory_honest(c, src, name, ops=None):
+    ops = ops or RepoOps(engine.REPO)
     r = runx(c, extra=["--native-inventory"], source=src)
     need_executed(r, f"{name} inventory run")
     need(engine.outcome_kind(r)[0] == "Halted", f"{name}: inventory run did not halt: {r.outcome}")
@@ -992,7 +1158,7 @@ def _inventory_honest(c, src, name):
         text = _repo_file(fr["file"], f"{rule} fragment")
         need(f"pub fn {fr['entry']}" in text, f"inventory dishonest: {name}: {fr['file']} has no pub fn {fr['entry']}")
         need(rule in text, f"inventory dishonest: {name}: {fr['file']} never names {rule}")
-        need(fr["evidence"] == "source-only, uncompiled and unrun", f"{name}: {rule} fragment evidence over-claimed: {fr['evidence']!r}")
+        fr["verified_run"] = verify_receipt(rule, fr, ops, name)
         claimed_files.add(fr["file"])
         if fr.get("consumer"):
             _repo_file(fr["consumer"], f"{rule} consumer")
@@ -1008,7 +1174,8 @@ def _inventory_honest(c, src, name):
         claimed_files.add(om["file"])
     # no hidden C6 fragment: every c6_*_step.rs / c6_*_consumer.rs in the tree is claimed
     d = "crates/mori-backend/src/sherlock_machine"
-    for fn in sorted(_os.listdir(engine.REPO / d)):
+    # committed fragments only: untracked work in progress is not part of the realization at HEAD
+    for fn in sorted(ops.tracked_names(d)):
         if fn.startswith("c6_") and (fn.endswith("_step.rs") or fn.endswith("_consumer.rs")):
             need(f"{d}/{fn}" in claimed_files, f"inventory dishonest: {name}: C6 fragment {d}/{fn} is not in the inventory")
     _repo_file(ni["recursion_adapter"]["relation"], "recursion relation")
@@ -1045,9 +1212,11 @@ def custom_native_inventory(c):
         s = ni["summary"]
         if not s["complete"]:
             gates.append(f"{name}: {len(s['gaps'])} of {s['rules']} exercised transitions have no native/circuit consumer")
-        unrun = sorted({x["fragment"]["evidence"] for x in ni["exercised"] if x.get("fragment")} - {"compiled-and-run"})
+        rows = {row["rule"]: row for row in ni["table"]["rows"]}
+        unrun = sorted(x["rule"] for x in ni["exercised"]
+                       if x.get("fragment") and not (rows.get(x["rule"]) or {}).get("fragment", {}).get("verified_run"))
         if unrun:
-            gates.append(f"{name}: fragments are not a routed realization ({', '.join(unrun)})")
+            gates.append(f"{name}: {len(unrun)} fragments have no verified compiled-and-run receipt")
     ra = a["recursion_adapter"]
     if ra.get("c6_fragments_wired") is not True:
         gates.append(f"recursion/custom-decider adapter not wired ({ra.get('status')})")

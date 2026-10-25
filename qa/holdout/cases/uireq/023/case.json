@@ -24,8 +24,10 @@
       "coverage": "primary",
       "judgment": "Evaluator reading of the spec (UIREQ-023 requirement and scenario 1): the WHEN routes factorial and tree fold through a candidate native realization, and the THEN requires the inventory to NAME dispatch, scalar, frame and data constraint owners and the native recursion/custom-decider adapter; the requirement identifies each model transition with its circuit/host/native consumer. A hand-authored, source-only rule-to-fragment table with complete=false (fact 9/46, fold 9/57 rules with a C6 fragment), no native dispatch owner (native_selection null, status open), uncompiled/unrun fragments and an unwired recursion adapter is an honest gap report, not that realization. The check therefore verifies the inventory is truthful (exercised rules re-derived from the owner event stream, summary recomputed, every named fragment/consumer/entry present, no unclaimed C6 fragment file, table digest recomputed, one fixed table/interface across both programs) and then FAILS on the spec gates until a native realization exists. A failure message starting 'inventory dishonest' means the report lies; 'SPEC GATE' means it is honest but incomplete.",
       "unasserted": [
-        "fragment semantics (fragments are source-only; nothing is compiled, proved or verified)",
-        "the K-rule/fragment correspondence beyond the rule name appearing in the fragment source"
+        "the K-rule/fragment correspondence beyond the rule name appearing in the fragment source",
+        "fragment semantics beyond the receipted tests (nothing is proved or verified natively)",
+        "receipted tests are not re-run by the holdout: native cargo test needs the heavy lock, which the holdout must not take; receipts are verified against the factory run log and trace instead",
+        "receipts are verifiable only on a host whose qa/sherlock/traces holds the run trace (traces are gitignored); a missing trace fails as unverifiable"
       ],
       "exec": {
         "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) --native-inventory",
@@ -45,7 +47,8 @@
             ]
           }
         ]
-      }
+      },
+      "evidence_rule": "Fragment evidence is either 'source-only, uncompiled and unrun' (no receipt) or 'compiled-and-run' with a committed receipt crates/mori-backend/src/sherlock_machine/testdata/receipts/<name>.json: {format 'moriarty-sherlock-fragment-receipt/1', rule, file, entry, consumer, commit (40-hex), run (doctorwatson run id), trace (qa/sherlock/traces/<run>.log), trace_sha256, command (exact 'cargo test ...'), tests [{name (as cargo prints it), file, role 'positive'|'rejects-mutated-witness'}], passed, failed 0, sdk_check 'ProofPreimage::check (nonproving)'}. The receipt is cross-checked, not trusted: the qa/sherlock/runs.jsonl record for that run must show exit 0, head == commit, cmd == command and the same trace; the trace on disk must hash to trace_sha256 and show every named test 'ok' with cargo totals equal to passed and 0 failed; commit must be an ancestor of HEAD with the fragment, consumer and test files unchanged since; each test must be a #[test] fn whose body (or a local helper it calls) uses a pub fn of the fragment/consumer (including mod.rs aliases), and the rejection test must assert a rejection. cargo check or --no-run never counts. sdk_check is a nonproving preimage check, not keygen/proof/verification. Only fragments with a verified receipt clear SPEC GATE 3."
     },
     {
       "name": "Midnight stagenet end-to-end qualification",
