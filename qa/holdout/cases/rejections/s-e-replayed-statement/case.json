@@ -12,7 +12,14 @@
     "contract": "ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b",
     "contractSource": "tools/sherlock-sdk/sherlock-anchor.compact (SHA-256 4f531ce0...2634)",
     "evidenceProducer": "qa/holdout/lib/stagenet/produce-a9.sh (heavy slot; opens the existing stagenet wallet through tools/sherlock-sdk/stagenet-session.mjs)",
-    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)"
+    "checker": "qa/holdout/lib/stagenet_check.py (read-only: retained receipt + public indexer)",
+    "settleContract": "2fbe68b30cd302f9ea9c1c260385a02c679f746d3d05c2bf131f8d9fef4b59e0",
+    "settleOtherDomain": {
+      "contract": "03e750800b904d30fc813cc0d87f08dafd612c5ab1804d5a963134bfb7c2aa2b",
+      "instanceId": "18814733036858064687259868561697402537754088490782013248729309943217888935855",
+      "note": "D3: same source and keys, constructor argument 0 replaced by I2; deployment only. P4 is proven over live D3 plus validity_ok containing settleStatement(D3, 0, A3 fields); the transcript reads that membership, which is false on D3 whether or not the A8 statement was replayed into D3."
+    },
+    "settleEvidenceProducer": "qa/holdout/lib/stagenet/produce-a9-settle.mjs (proofs only under heavy.lock; one fresh wallet session per transaction; WALLET BUSY/FREE and ACQUIRE/RELEASE on #sherlock)"
   },
   "mutation": {
     "description": "re-submit the accepted statement: (i) acceptValidity again with a fresh proof, (ii) the identical finalized bytes, (iii) settle the same statement a second time, (iv) under another deployment domain"
@@ -26,16 +33,20 @@
     "ZR10 replay and unique consumption, UISEC-011",
     "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#SRPOC-007"
   ],
-  "unimplemented": "UNIMPLEMENTED: parts (iii) settle-level replay and (iv) other-domain settlement need the implementer settle-path harness tools/sherlock-sdk/settle-harness.mjs (interface in s-c-wrong-predecessor/case.json) and, for (iv), a second deployment with a different instance_id; parts (i) and (ii) are checked from evidence",
+  "unimplemented": null,
   "definition": "Four parts. (i) Accept-level: the twin, a second acceptValidity of the A8 statement with a fresh valid proof, finalizes with indexed post-state byte-equal to its pre-state, which equals the indexed A8 post-state; this is a no-effect outcome by design, since validity_ok is a set and consumption happens only at settle. (ii) Transaction replay: the twin's exact bytes resubmitted after it finalized are refused by the node, and the hash is indexed exactly once. This is the ledger's generic transaction replay guard, not Sherlock's statement guard. A refusal by the node pool's temporary ban ('1012: Transaction is temporarily banned') does not count, because it expires; the bytes are then resubmitted at least 35 minutes after the twin (produce-a9.sh --resubmit RUN_DIR, outside the heavy slot because it carries no proof), and that refusal must not be the ban. (iii) Settle-level (SRPOC/ZR10 unique consumption): after the control settle C, a second settlement of the same statement (the stale P1 of s-c) is refused; the indexed settled set contains the statement once, and root, height and batch_no advanced exactly once. (iv) Other domain: on a second deployment of the same source and keys with a different instance_id, the same parent fields cannot settle. settleStatement differs (I is in the statement), so a settle claiming acceptance there, proven over a snapshot whose validity_ok holds that domain's statement, is refused by that deployment's ledger.",
   "rationale": "sherlock-a's finding is right: acceptValidity is a proof-gated idempotent insert, and replay protection lives in settleValidity (assert !settled.member(stmt)). After one settle, batch_no, root and height advance, so an honest second settle of the same statement is refused at the earlier root/height/batch reads; the 'replay' assert itself is defence in depth that no ledger-observable attempt reaches in isolation. The observable property, that one statement is consumed at most once, is what (iii) checks. Parts (i) and (ii) are implemented now; (iii) and (iv) need the settle harness, and (iv) also needs a second deployment (redeploys are authorized).",
   "positiveControl": "Same-session differential twin: a fresh, actual-bound decider proof for acceptValidity(A8 stmt deffb497...a5c25a), wallet-balanced. It is submitted after the refused attempts and must finalize (indexed SUCCESS, acceptValidity ContractCall on the pin). A8 (tx a2b71fa2..., block 1014763) is re-checked live as the earlier acceptance. Order is mutants first because the s-a mutant shares the twin's dust spend and intent; submitting the twin first would let replay protection, not the proof check, refuse the mutant. For (iii) and (iv): control settle C of s-c.",
   "stagenetCheck": {
-    "kind": "statement-replay"
+    "kind": "statement-replay",
+    "settleAttempts": {
+      "iii": "P1",
+      "iv": "P4"
+    }
   },
   "harnessInterface": {
     "sameAs": "s-c-wrong-predecessor harnessInterface",
-    "plus": "for (iv): tools/sherlock-sdk/deploy-current.mjs accepts an alternative instance_id (all other constructor arguments and both verifier keys identical) and records the new address in a public receipt"
+    "implementedBy": "tools/sherlock-sdk/settle-harness.mjs (0ea1d2cd8); D3 by tools/sherlock-sdk/deploy-current.mjs --instance-id (a1c16170c)"
   },
-  "consequence": "Surfaced, not decided: the settle control consumes the only accepted statement on ac93b80e... (root := post_root, height += 2, batch_no := 1). This is irreversible on the pinned contract. Accept-level evidence (s-a, s-b, s-e accept part) is unaffected, and A10 reads history at block 1014763. Any later check asserting `settled` empty on the latest state would change. Running the settle experiments on a fresh deployment of the same source and keys is authorized, but it would move the A9 pin; owner or implementer chooses."
+  "verdictRuleSettle": "Settle cases (evaluator rule fixed 2026-10-25 before any settle submission). REJECT = either (a) the node refuses the attempt at submission with an RPC 1010 Invalid Transaction refusal and its hash is absent from the indexer, or (b) it is included with an indexed result other than SUCCESS and the target's latest contract action is unchanged by it. Not counted, in either form: refusals or failures about fees, DUST or balance, the pool's 1012 temporary ban, or TTL expiry. Both forms also need the native proof-verifying ledger-9 predictor to apply the same proven call over the snapshot it claims and refuse it on the target, so the refusal is caused by the ledger state the transcript reads. And both need the control settle C, from the same harness and run, to have finalized with SUCCESS and an indexed post-state equal to the harness VM prediction. A refusal in the prover (SettleUnsatisfiable) is local and never counts."
 }

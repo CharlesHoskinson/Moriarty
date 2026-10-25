@@ -182,11 +182,18 @@ def check_s_e(rc, twin_tx, twin_action, case, evidence_dir=None, repo=None):
 
 
 CHECKS = {"proof-bit-flip": check_s_a, "wrong-verifying-key": check_s_b, "statement-replay": check_s_e}
+SETTLE_KINDS = ("settle-wrong-predecessor", "settle-reordered")
 
 
 def run(cases, repo):
     """Returns (pass, fail, unimplemented) lists of (id, message)."""
     res = ([], [], [])
+    settle_cases = [c for c in cases if c.get("stagenetCheck", {}).get("kind") in SETTLE_KINDS]
+    need_settle = settle_cases + [c for c in cases if c.get("stagenetCheck", {}).get("settleAttempts")]
+    settle = run_settle(settle_cases, repo, res) if need_settle else None
+    if need_settle and not settle_cases:
+        settle = run_settle([], repo, res)
+    cases = [c for c in cases if c not in settle_cases]
     path, rc = find_evidence(repo)
     implemented = [c for c in cases if c.get("stagenetCheck", {}).get("kind") in CHECKS]
     for c in cases:
@@ -211,6 +218,11 @@ def run(cases, repo):
         try:
             if c["stagenetCheck"]["kind"] == "statement-replay":
                 msg, pending = check_s_e(rc, twin_tx, twin_action, c, path.parent, repo)
+                if c["stagenetCheck"].get("settleAttempts"):
+                    if settle is None:
+                        pending = "; ".join(x for x in (pending, "UNIMPLEMENTED: s-e (iii)/(iv) need A9 settle evidence (produce-a9-settle.sh) with a finalized control settle") if x)
+                    else:
+                        msg += "; " + settle_replay(*settle)
             else:
                 msg, pending = CHECKS[c["stagenetCheck"]["kind"]](rc, twin_tx, twin_action, c), None
         except (Fail, RuntimeError, OSError, KeyError, TypeError) as e:
@@ -223,3 +235,106 @@ def run(cases, repo):
         else:
             res[0].append((c["id"], msg))
     return res
+
+
+# ---- settle cases (D2, D3): evidence from produce-a9-settle.mjs -----------------------------------------
+import re
+EXCLUDED = re.compile(r"1012|temporarily banned|dust|fee|balanc|insufficient|ttl|expir|outdated|stale|future", re.I)
+
+
+def find_settle_evidence(repo):
+    env = os.environ.get("DW_A9_SETTLE_EVIDENCE_DIR")
+    cands = [Path(env) / "receipt.json"] if env else list((repo / "target" / "sherlock-a9").glob("settle-run-*/receipt.json"))
+    cands = [c for c in cands if c.is_file()]
+    if not cands:
+        return None, None
+    path = max(cands, key=lambda p: p.stat().st_mtime_ns)
+    return path, json.loads(path.read_text())
+
+
+def latest(address):
+    return gql('{contractAction(address:"%s"){__typename state transaction{hash}}}' % address)["contractAction"]
+
+
+def action_at(address, h):
+    return gql('{contractAction(address:"%s",offset:{transactionOffset:{hash:"%s"}}){__typename state transaction{hash} '
+               '... on ContractCall{entryPoint}}}' % (address, h))["contractAction"]
+
+
+def settle_control(path, rs):
+    need(rs.get("schema") == "sherlock-a9-settle/1" and rs.get("submitted") is True and rs.get("finishedAt"), "settle receipt is not a completed submission run")
+    log = path.parent / "settle.log"
+    text = log.read_text(errors="replace") if log.is_file() else ""
+    need(f"[a9s] output {path.parent.resolve()}" in text, "settle.log does not belong to this receipt")
+    for a in rs["attempts"]:
+        need(f"[a9s] {a['name']}: node {'ACCEPTED' if a['nodeOutcome'] == 'accepted' else 'refused'} {a['txSHA256']}" in text,
+             f"settle.log does not record {a['name']}")
+    at = {a["name"]: (i, a) for i, a in enumerate(rs["attempts"])}
+    need(all(k in at for k in ("P1", "P2", "P3", "P4", "C")), "settle run is missing attempts")
+    need(at["P2"][0] < at["C"][0] and at["P3"][0] < at["C"][0] and at["P1"][0] > at["C"][0], "settle attempts out of order")
+    need(rs["reports"]["P1"]["provenAt"] < at["C"][1]["at"], "P1 was not proven before C was submitted")
+    c = at["C"][1]
+    need(c["nodeOutcome"] == "accepted", "control settle C was not accepted")
+    t = txs(c["txSHA256"])
+    need(len(t) == 1 and (t[0].get("transactionResult") or {}).get("status") == "SUCCESS", "control settle C is not indexed once with SUCCESS")
+    a = action_at(rs["d2"], c["txSHA256"])
+    need(a and a["__typename"] == "ContractCall" and a["entryPoint"] == "settleValidity", "C is not a settleValidity ContractCall on D2")
+    need(sha(bytes.fromhex(a["state"])) == rs["postCPredictedSHA256"] == rs["reports"]["C"]["predictedPostStateSHA256"],
+         "C indexed post-state differs from the harness VM prediction")
+    p = rs["prediction"]["C"]["onSnapshot"]
+    need(p["accepted"] and p["applied"], "C native prediction did not apply over S0")
+    return at
+
+
+def settle_rejected(rs, at, name):
+    i, a = at[name]
+    p = rs["prediction"][name]
+    need(p["onSnapshot"]["accepted"] and p["onSnapshot"]["applied"], f"{name}: does not apply over its own snapshot (not a real proof of that transcript)")
+    need(not (p["onTarget"]["accepted"] and p["onTarget"]["applied"]), f"{name}: native predictor applies it on the target")
+    if a["nodeOutcome"] == "refused":
+        msgs = " | ".join(r["message"] for r in a["refusal"])
+        need("1010: Invalid Transaction" in msgs and not EXCLUDED.search(msgs), f"{name}: refusal is not a counted ledger refusal: {msgs[:200]!r}")
+        need(txs(a["txSHA256"]) == [], f"{name}: refused transaction is indexed")
+        return f"{name} {a['txSHA256'][:16]} refused at submission ({a['refusal'][-1]['message'][:60]!r})"
+    t = txs(a["txSHA256"])
+    need(len(t) == 1, f"{name}: accepted by the node but not indexed once")
+    st = (t[0].get("transactionResult") or {}).get("status")
+    need(st != "SUCCESS", f"{name}: included with SUCCESS (the ledger accepted it)")
+    act = action_at(a["address"], a["txSHA256"])
+    need(act is None or sha(bytes.fromhex(act["state"])) == a["stateBeforeSHA256"], f"{name}: included and changed the target's contract state")
+    return f"{name} {a['txSHA256'][:16]} included as {st} with no contract effect (block {t[0]['block']['height']})"
+
+
+def run_settle(cases, repo, res):
+    path, rs = find_settle_evidence(repo)
+    if rs is None:
+        for c in cases:
+            res[2].append((c["id"], "UNIMPLEMENTED: needs A9 settle evidence: run qa/holdout/lib/stagenet/produce-a9-settle.sh "
+                                    "(proofs only under heavy; wallet BUSY/FREE on #sherlock)"))
+        return None
+    print(f"settle evidence: {path}")
+    try:
+        at = settle_control(path, rs)
+    except (Fail, RuntimeError, OSError, KeyError, TypeError) as e:
+        for c in cases:
+            res[1].append((c["id"], f"settle positive control failed, harness cannot be trusted to reject: {e}"))
+        return None
+    for c in cases:
+        try:
+            msgs = [settle_rejected(rs, at, n) for n in c["stagenetCheck"]["attempts"]]
+            res[0].append((c["id"], "; ".join(msgs) + f"; control C {at['C'][1]['txSHA256'][:16]} finalized"))
+        except (Fail, RuntimeError, OSError, KeyError, TypeError) as e:
+            res[1].append((c["id"], f"{type(e).__name__}: {e}"))
+    return rs, at
+
+
+def settle_replay(rs, at):
+    """s-e (iii) on D2 and (iv) on D3."""
+    m3 = settle_rejected(rs, at, "P1")
+    last = latest(rs["d2"])
+    need(last["transaction"]["hash"] == at["C"][1]["txSHA256"] and sha(bytes.fromhex(last["state"])) == rs["postCPredictedSHA256"],
+         "D2 has a contract action after C (the statement must be consumed exactly once)")
+    m4 = settle_rejected(rs, at, "P4")
+    last3 = latest(rs["d3"])
+    need(last3["__typename"] == "ContractDeploy" and sha(bytes.fromhex(last3["state"])) == rs["d3StateSHA256"], "D3 has a contract action after its deployment")
+    return f"(iii) {m3}; D2 latest action is C (consumed once); (iv) {m4}; D3 untouched since deployment"
