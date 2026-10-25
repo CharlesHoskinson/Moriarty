@@ -28,27 +28,24 @@ const graphql = async query => {
   assert.ok(r.ok, 'indexer HTTP ' + r.status); const body = await r.json();
   assert.ok(!body.errors, 'indexer error ' + JSON.stringify(body.errors)); return body.data;
 };
-const actionAt = async height => (await graphql(`{contractAction(address:"${pins.address}"${height === undefined ? ''
-  : `,offset:{blockOffset:{height:${height}}}`}){__typename state transaction{hash block{height}} ... on ContractCall{entryPoint}}}`)).contractAction;
-// Complete public action history, newest first; one action per block is checked below.
-const history = [];
-for (let a = await actionAt(); a; ) {
-  history.push(a);
-  if (a.__typename === 'ContractDeploy') break;
-  assert.ok(history.length < 500, 'history too long');
-  a = await actionAt(a.transaction.block.height - 1);
-}
-assert.equal(history.at(-1).__typename, 'ContractDeploy', 'history must reach the deployment');
-// The height walk sees one action per block; enumerate each visited block and refuse any block
-// holding more than one action on this contract, so no action is skipped silently.
-for (const a of history) {
-  const {block} = await graphql(`{block(offset:{height:${a.transaction.block.height}}){transactions{hash contractActions{__typename address}}}}`);
+// The indexer's contractAction offsets are exact block heights, so history is not walked by height.
+// The newest action must be the acceptValidity call; its deployment comes from the call itself and its
+// pre-state from the indexer's contract state as of the previous block.
+const {contractAction: call} = await graphql(`{contractAction(address:"${pins.address}"){__typename state
+  transaction{hash block{height}} ... on ContractCall{entryPoint deploy{state transaction{hash block{height}}}}}}`);
+assert.ok(call, 'no contract action on the pinned contract');
+assert.equal(call.__typename, 'ContractCall', 'newest action must be a ContractCall');
+assert.equal(call.entryPoint, 'acceptValidity', 'newest action must be acceptValidity');
+const deploy = call.deploy;
+const callHeight = call.transaction.block.height;
+// Refuse a block holding more than one action on this contract, so the pre-state below is exact.
+{
+  const {block} = await graphql(`{block(offset:{height:${callHeight}}){transactions{hash contractActions{__typename address}}}}`);
   const here = block.transactions.flatMap(t => t.contractActions.filter(c => c.address === pins.address).map(c => ({tx: t.hash, kind: c.__typename})));
-  assert.deepEqual(here, [{tx: a.transaction.hash, kind: a.__typename}], `block ${a.transaction.block.height} must hold exactly this one action`);
+  assert.deepEqual(here, [{tx: call.transaction.hash, kind: 'ContractCall'}], `block ${callHeight} must hold exactly this one action`);
 }
-const index = history.findIndex(a => a.__typename === 'ContractCall' && a.entryPoint === 'acceptValidity');
-assert.ok(index >= 0, 'no acceptValidity ContractCall on the pinned contract');
-const call = history[index], pre = history[index + 1], deploy = history.at(-1);
+const {contract: pre} = await graphql(`{contract(address:"${pins.address}",offset:{height:${callHeight - 1}}){state}}`);
+assert.ok(pre, 'no indexed contract state before the call');
 const txq = h => graphql(`{transactions(offset:{hash:"${h}"}){hash raw block{height hash timestamp}
   ... on RegularTransaction{fee transactionResult{status}}}}`);
 const [tx] = (await txq(call.transaction.hash)).transactions;
@@ -103,11 +100,10 @@ for (const f of ['instance_id', 'keys_id', 'a102_ctx_lo', 'a102_ctx_hi', 'a80_ct
 writeFileSync(join(output, 'post-state.bin'), observedPost);
 const receipt = {schema: 'sherlock-a10-public-readback/1', network: 'stagenet', address: pins.address,
   deciderVkSHA256: pins.vk_sha256, deployTx: deploy.transaction.hash, deployHeight: deploy.transaction.block.height,
-  callTx: tx.hash, callHeight: tx.block.height, callBlockHash: tx.block.hash, callTimestamp: tx.block.timestamp,
+  callTx: tx.hash, callHeight: tx.block.height, preStateHeight: callHeight - 1, callBlockHash: tx.block.hash, callTimestamp: tx.block.timestamp,
   status: tx.transactionResult.status, fee: tx.fee, transactionSHA256: sha(raw), proofSHA256: native.contractCalls[0].proofSHA256,
   statement: stmtLe, publicInputs: native.contractCalls[0].publicInputs, nativeProofVerified: true,
   preStateSHA256: sha(Buffer.from(pre.state, 'hex')), postStateSHA256: sha(observedPost), completeEffectsMatch: true,
-  validityStatementPresent: true, settledEmpty: true, rootHeightBatchUnchanged: true,
-  historyNewestFirst: history.map(a => ({kind: a.__typename, entryPoint: a.entryPoint ?? null, tx: a.transaction.hash, height: a.transaction.block.height}))};
+  validityStatementPresent: true, settledEmpty: true, rootHeightBatchUnchanged: true};
 writeFileSync(join(output, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n');
 console.log('PASS A10: independent readback of', tx.hash, 'block', tx.block.height, '; native proof verified; complete effects match');

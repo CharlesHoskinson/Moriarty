@@ -184,3 +184,41 @@ time with **14,999,412,736 bytes** peak RSS. The trace is
 `target/sherlock-a6/run-4M1RU5hz/receipt.json`. Do not take any acceptance from
 the installed SDK's JS WASM `wellFormed`: it does not verify proofs
 cryptographically.
+
+## First stagenet call (A8, A10)
+
+On 2026-10-25 one `acceptValidity` call was submitted to `ac93b80e…55388b` with
+`tools/sherlock-sdk/call-current.mjs --submit` under `doctorwatson heavy --id A8`.
+- Transaction `a2b71fa213437f7c8470f60be871eed20ff1c78209ee5dcf29a91198f8e3af07`
+  (id `0085e459…20611f`), block **1014763** (`5f5b16b7…c6f8d9`), result `SucceedEntirely`
+  / indexer `SUCCESS`, fee `292262057142858`.
+- Statement `deffb497…a5c25a` (public input 10 of the A4 terminal statement); fresh
+  actual-bound D proof SHA-256 `7a8691fc…861ee9`.
+- Pre-state `3a44aa7e…5342ae` (identical to the A6 state); indexed post-state
+  `1eba3c3e…0349b9`, byte-equal to the independent VM prediction.
+- Before balancing, the proven call was accepted and applied by native
+  `proof-verifying` ledger-9 with contract proofs, signatures and limits on. After
+  wallet balancing, the transaction was accepted again in the same profile. The
+  local all-checks profile refuses only on DUST state absent from the blank local
+  ledger, and that refusal is kept as evidence.
+- Time: **475.682 s** wall, **14,999,293,952 B** peak RSS. Wallet sync took about
+  287 s, the native D prove with key load about 163 s, native checks and balancing
+  about 2 s, and submission to indexed readback about 20.5 s. Trace:
+  `qa/sherlock/traces/20261025T045601Z-A8.log`. Outputs:
+  `target/sherlock-a8/submit-20261025T045601/`.
+- An earlier attempt (`20261025T044552Z-A8`) stopped before submission. It had passed
+  a compact-runtime `ChargedState` to the ledger WASM `updateIndex`, and no
+  transaction was sent.
+
+`doctorwatson check A8` passed (indexer `ContractCall`). `doctorwatson check A10`
+passed with `tools/sherlock-sdk/readback-call.mjs`, which reads only the pinned
+address, the public A4 statement and the indexer. It took the deployment from the
+call's `deploy` field and the pre-state from `contract(offset:{height:1014762})`,
+and found the call to be the only action on the contract in its block. It
+re-verified the indexed transaction's proof natively against that pre-state,
+checked that public input 10 is the statement, replayed the call and matched the
+complete indexed post-state. In the decoded state, `validity_ok` contains the
+statement, `settled` is empty, and root, height, `batch_no` and every pinned field
+are unchanged. Time: 2.336 s. Trace: `qa/sherlock/traces/20261025T050529Z-A10.log`.
+Receipt: `target/sherlock-a10/run-48eEFirl/receipt.json`. Indexer note:
+`contractAction` offsets select an exact block height, not "at or before".
