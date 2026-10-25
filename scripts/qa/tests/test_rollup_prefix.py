@@ -20,14 +20,19 @@ class PrefixEvidenceTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 prefix.check_resources({**good, **changes})
 
-    def test_public_position_must_chain_along_with_root_and_deposits(self):
+    def test_public_transaction_spans_allow_header_gaps_but_never_overlap(self):
         previous = ['00' * 32] * 17
-        previous[3] = '01' + '00' * 31
+        # Frozen Profile A batch1 ends at header45 and batch2 starts at52;
+        # these are transaction endpoints, not the closed-header state cursor.
+        le = lambda value: value.to_bytes(32, 'little').hex()
+        previous[3] = le(45 * 65536)
         fields = ['00' * 32] * 17
-        with self.assertRaisesRegex(ValueError, 'position'):
-            prefix.check_state_chain(fields, previous)
-        fields[2] = previous[3]
+        fields[2] = le(52 * 65536)
         prefix.check_state_chain(fields, previous)
+        for position in (44 * 65536, 45 * 65536):
+            fields[2] = le(position)
+            with self.assertRaisesRegex(ValueError, 'position'):
+                prefix.check_state_chain(fields, previous)
 
     def test_loki_declaration_requires_exact_binary_and_stock_reference(self):
         with tempfile.TemporaryDirectory() as tmp:

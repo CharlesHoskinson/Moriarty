@@ -18,8 +18,13 @@ def check_resources(measurement):
 
 
 def check_state_chain(fields, previous):
-    if any(fields[a] != previous[b] for a, b in ((0, 1), (2, 3), (5, 6), (7, 8))):
-        raise ValueError('prefix root/position/deposit chain is broken')
+    if any(fields[a] != previous[b] for a, b in ((0, 1), (5, 6), (7, 8))):
+        raise ValueError('prefix root/deposit chain is broken')
+    # Profile A positions bound the first/last transaction, not every header.
+    # Gaps are valid when empty headers lie between consecutive batches.
+    integer = lambda value: int.from_bytes(bytes.fromhex(value), 'little')
+    if integer(fields[2]) <= integer(previous[3]):
+        raise ValueError('prefix transaction positions overlap or are reordered')
 
 
 def proving_build(root, stock):
