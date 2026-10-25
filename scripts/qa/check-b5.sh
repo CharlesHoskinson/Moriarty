@@ -49,6 +49,12 @@ for count in 2 4 6; do
     if [[ "$stage" == verify ]]; then selected="$run_dir/rollup.bin"; fi
     python3 -B scripts/qa/measure-rollup.py "$prefix/$stage.measurement.json" -- \
       "$selected" "prefix-$stage" "$run_dir/fixture/corpus" "$count" "$prefix" "$srs"
+    python3 -B - "$prefix/$stage.measurement.json" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location('prefix', 'scripts/qa/check-prefix-evidence.py')
+prefix = importlib.util.module_from_spec(spec); spec.loader.exec_module(prefix)
+prefix.check_resources(prefix.evidence.read(sys.argv[1], 'sherlock-rollup-measurement/1'))
+PY
   done
 done
 python3 -B - "$run_dir/workload.json" <<'PY'
