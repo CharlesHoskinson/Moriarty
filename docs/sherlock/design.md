@@ -145,3 +145,35 @@ After two failures of the same defect class, preserve the smallest permitted rep
 Each implementation batch updates affected Diátaxis tutorial/how-to/reference/explanation pages, or records a concrete no-impact disposition for a category. Validate examples, relative links and actual API references; preserve source/result/acceptance distinctions and earlier receipts. Regular reviewed GitHub integration and local CI continue. The graph and DoctorWatson/circuit design logs are updated after material changes.
 
 Full completion is the conjunction of all retained atomic UIREQ/B/U0–U7/M/MC/SP/G, formal, financial, composition, native, target, conformance and release exits. A literal transaction, source merge, model pass or scoped host success cannot complete Sherlock. Unknown implementation feasibility, external targets and owner availability are explicit risks, not a guarantee of no blockers.
+
+## 2026-10-25: U021/U026 executable comparison packages
+
+Under the owner's Sherlock design authority, `models/sherlock/qa/model_package.py`
+exposes two maintainer interfaces. `projection` compares a selected complete K/Quint
+trace pair with the independent frozen oracle. Its default re-compares the retained
+actual F03 artifacts; producer executions stay historical. An explicit supplied pair
+requires both artifacts, case and fuel. Every ordered pre/post state, rule, charge and
+publication participates; the projection names bounds, field maps, hidden steps,
+representation differences and unmatched finance/await behavior. Agreement supplies
+no refinement, constraint, theorem, native or ledger evidence.
+Public divergence diagnostics identify the field and hash the differing values;
+raw states and arbitrary provenance remain in the digest-identified input artifacts.
+
+`stage` emits the required recursive Lean semantic/fuel tasks separately from bounded
+Clean encoding, fixed-capacity transition circuits and correspondence/export tasks.
+It carries the six-file pinned public upstream reuse inventory, complete-prefix
+comparison matrix, first divergence and missing layer/component membership. The eight
+normal Lean examples plus exact-remaining-zero publication remain historical narrow
+evidence. An optional comparison report is supplied data, not authenticated execution.
+A missing comparison is explicitly not run, even with a null divergence.
+`stage --retained-comparison` instead re-compares the pinned retained F03 pair
+in-process (producers not rerun), so the canonical package needs no local files;
+it and `--comparison` are mutually exclusive.
+
+`bind-private` reads an explicitly selected integration tree without modifying it.
+Source-byte pins, Git HEAD/dirty membership and integration details stay in an ignored
+private record; public output contains only its opaque digest, source count and
+qualification. No private source or paths enter the shareable package. A missing
+record is explicit, and source membership establishes no proof/native correspondence.
+These are maintainer checks, with no public compile/prove/deploy prerequisite. Ledger 9,
+stock-verifier compatibility and the existing proof format stay fixed.

@@ -13,8 +13,9 @@ run_py() {     # module [dotted test]
   echo "$out" | tail -3
   echo "$out" | grep -Eq '^Ran [1-9][0-9]* test' || { echo "no test matched: $m $*"; exit 1; }
 }
-export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-6}"
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 run_py test_paired_projection PairedProjectionTests.test_projection_contract_contains_every_field_and_declares_hidden_steps_and_unmatched_state
+run_py test_model_package
 # The visible tests above are a necessary guard; the holdout scenario is the arbiter.
 [ -x qa/holdout/run.sh ] || { echo "UNIMPLEMENTED U021 (qa/holdout/run.sh absent)"; exit 2; }
 exec qa/holdout/run.sh uireq-021
