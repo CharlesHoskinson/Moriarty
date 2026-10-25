@@ -1,0 +1,127 @@
+// SherlockAnchor: the Fenrir anchor of the Sherlock linked parent (recl9 sherlock_link.rs).
+// One settlement advances (R, H, B) by one decider-proved parent: two ordered Machine steps,
+// A102 (envelope (3, 1)) then A80 (envelope (0, 0)), taking (pre_root, h_pre) to
+// (post_root, h_pre + 2).
+//
+// acceptValidity is the transcript template of the stock ledger-9 decider. Its deployed verifier
+// key must be the hand-written Sherlock decider key, never the compiled key of the circuit below.
+// The decider exposes only stmt = H(SHK_STMT, instance_id, batch_no, f0..f15) in its single Stmt
+// slot. settleValidity recomputes stmt from this anchor's pins and CURRENT (R, H, B), requires it
+// accepted and unsettled, then sets R := post_root, H := H + 2, B := B + 1. batch_no in stmt is the
+// current B, not B + 1. The parent proves only h_post - h_pre = 2; binding h_pre to H is this
+// anchor's equation alone.
+//
+// H = transientHash over Vector<n, Field> (midnight-circuits Poseidon, recl9 `poseidon`). Domains
+// are ASCII tags packed little-endian into one field (recl9 `dom`).
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export ledger validity_ok: Set<Field>;          // decider-accepted statements, unsettled
+export ledger settled: Set<Field>;              // settled statements
+export ledger root: Field;                      // R: state root after the last settled step
+export ledger height: Uint<64>;                 // H: Machine height of R
+export ledger batch_no: Uint<64>;               // B: batch number bound into the next stmt
+export sealed ledger instance_id: Field;        // I: reviewed deployment id
+export sealed ledger keys_id: Field;            // f0
+export sealed ledger a102_ctx_lo: Field;        // f1
+export sealed ledger a102_ctx_hi: Field;        // f2
+export sealed ledger a80_ctx_lo: Field;         // f3
+export sealed ledger a80_ctx_hi: Field;         // f4
+export sealed ledger program_c: Field;          // f5
+export sealed ledger genesis_root: Field;       // R0
+export sealed ledger genesis_height: Uint<64>;  // H0
+export sealed ledger genesis_batch: Uint<64>;   // B0
+
+// recl9 domains packed as field elements (little-endian ASCII).
+pure circuit SHK_STMT(): Field { return 0x544d54535f4b4853 as Field; }      // "SHK_STMT"
+pure circuit SHK_TRACE(): Field { return 0x45434152545f4b4853 as Field; }   // "SHK_TRACE"
+// recl9 A102_ENVELOPE, A80_ENVELOPE, n_steps and work.
+pure circuit A102_TAG(): Field { return 3 as Field; }
+pure circuit A102_CHARGE(): Field { return 1 as Field; }
+pure circuit A80_TAG(): Field { return 0 as Field; }
+pure circuit A80_CHARGE(): Field { return 0 as Field; }
+pure circuit N_STEPS(): Field { return 2 as Field; }
+pure circuit WORK(): Field { return 1 as Field; }
+pure circuit H_MAX_PRE(): Uint<64> { return 18446744073709551613; }   // 2^64 - 3: h_pre + 2 < 2^64
+pure circuit B_MAX(): Uint<64> { return 18446744073709551615; }       // 2^64 - 1
+
+constructor(id: Field, keys: Field, a102_lo: Uint<128>, a102_hi: Uint<128>, a80_lo: Uint<128>,
+            a80_hi: Uint<128>, prog: Field, r0: Field, h0: Uint<64>, b0: Uint<64>) {
+  const i = disclose(id);
+  const k = disclose(keys);
+  const p = disclose(prog);
+  const r = disclose(r0);
+  const h = disclose(h0);
+  const b = disclose(b0);
+  assert(i != (0 as Field), "zero deployment id");
+  assert(k != (0 as Field), "zero keys_id");
+  assert(p != (0 as Field), "zero program_c");
+  assert(r != (0 as Field), "zero genesis root");
+  assert(h <= H_MAX_PRE(), "genesis height admits no step");
+  assert(b < B_MAX(), "genesis batch admits no step");
+  instance_id = i;
+  keys_id = k;
+  a102_ctx_lo = disclose(a102_lo) as Field;
+  a102_ctx_hi = disclose(a102_hi) as Field;
+  a80_ctx_lo = disclose(a80_lo) as Field;
+  a80_ctx_hi = disclose(a80_hi) as Field;
+  program_c = p;
+  genesis_root = r;
+  genesis_height = h;
+  genesis_batch = b;
+  root = r;
+  height = h;
+  batch_no = b;
+}
+
+// Transcript template for the hand-written decider key: insert stmt into validity_ok, nothing else.
+export circuit acceptValidity(stmt: Field): [] {
+  validity_ok.insert(disclose(stmt));
+}
+
+// Settle the parent statement for the current (R, H, B). fields = W instance f0..f15 in
+// FIELD_NAMES order; mid_root, post_root, bind_a102, bind_a80 are taken from it, every other
+// field must equal its pin, current state value or constant.
+export circuit settleValidity(batch: Uint<64>, fields: Vector<16, Field>): [] {
+  const f = disclose(fields);
+  const b = batch_no;
+  const r = root;
+  const h = height;
+  const k = keys_id;
+  const c0 = a102_ctx_lo;
+  const c1 = a102_ctx_hi;
+  const c2 = a80_ctx_lo;
+  const c3 = a80_ctx_hi;
+  const pc = program_c;
+  assert(disclose(batch) == b, "batch");
+  assert(h <= H_MAX_PRE(), "height wrap");
+  assert(b < B_MAX(), "batch wrap");
+  assert(f[0] == k, "keys_id");
+  assert(f[1] == c0, "a102 context lo");
+  assert(f[2] == c1, "a102 context hi");
+  assert(f[3] == c2, "a80 context lo");
+  assert(f[4] == c3, "a80 context hi");
+  assert(f[5] == pc, "program");
+  assert(f[6] == r, "predecessor root");
+  assert(f[7] == h as Field, "h_pre");
+  assert(f[10] == (h + 2) as Field, "h_post");
+  assert(f[13] == N_STEPS(), "n_steps");
+  assert(f[14] == WORK(), "work");
+  // TRACE_ORDER, exactly as recl9 `link_statement`.
+  const trace = transientHash<Vector<21, Field>>([SHK_TRACE(), k, c0, c1, c2, c3, pc,
+      r, h as Field, f[11], A102_TAG(), A102_CHARGE(),
+      f[8], (h + 1) as Field, f[12], A80_TAG(), A80_CHARGE(),
+      f[9], (h + 2) as Field, N_STEPS(), WORK()]);
+  assert(f[15] == trace, "trace order");
+  // stmt = H(SHK_STMT, I, CURRENT_B, f0..f15), as recl9 `DeciderRelation::stmt`.
+  const stmt = transientHash<Vector<19, Field>>([SHK_STMT(), instance_id, b as Field,
+      k, c0, c1, c2, c3, pc, r, h as Field, f[8], f[9], (h + 2) as Field,
+      f[11], f[12], N_STEPS(), WORK(), trace]);
+  assert(!settled.member(stmt), "replay");
+  assert(validity_ok.member(stmt), "statement not accepted");
+  validity_ok.remove(stmt);
+  settled.insert(stmt);
+  root = f[9];
+  height = (h + 2) as Uint<64>;
+  batch_no = (b + 1) as Uint<64>;
+}
