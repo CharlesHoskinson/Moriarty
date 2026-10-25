@@ -1,5 +1,7 @@
 """Evidence checks must refuse missing stages and altered public artifacts."""
 import importlib.util
+import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -10,6 +12,23 @@ SPEC.loader.exec_module(evidence)
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_profile_cannot_override_a_newer_b3_relation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            old = target / 'sherlock-b3/run-old'
+            new = target / 'sherlock-b3/run-new'
+            profile = target / 'sherlock-b7/run-profile'
+            for root in (old, new, profile):
+                root.mkdir(parents=True)
+            (old / 'verified.json').write_text('{}')
+            (new / 'verified.json').write_text('{}')
+            os.utime(old / 'verified.json', ns=(1, 1))
+            os.utime(new / 'verified.json', ns=(2, 2))
+            (profile / 'profile.json').write_text(json.dumps({'reference': str(old.resolve())}))
+            self.assertEqual(evidence.latest_run('B7', target), new)
+            (profile / 'profile.json').write_text(json.dumps({'reference': str(new.resolve())}))
+            self.assertEqual(evidence.latest_run('B7', target), profile)
+
     def test_missing_result_cannot_pass(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises((ValueError, OSError)):

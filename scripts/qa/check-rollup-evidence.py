@@ -71,13 +71,29 @@ def check(kind, root):
         # silently substitute the binary behind an earlier run's evidence.
         require_digest(root / 'rollup.bin', build['binary_sha256'])
     if kind == 'B7':
+        if (root / 'profile.json').exists():
+            profile = read(root / 'profile.json', 'sherlock-b7-profile/1')
+            reference = root / 'reference'
+            old_stats = read(reference / 'decider.stats.json', 'sherlock-b3-stage/1')
+            for suffix, field in [('vk', 'vk'), ('relation', 'relation'), ('proof', 'proof')]:
+                require_digest(reference / f'decider.{suffix}', old_stats[field + '_sha256'])
+            for suffix in ('vk', 'relation', 'instance.json'):
+                if (root / f'decider.{suffix}').read_bytes() != (reference / f'decider.{suffix}').read_bytes():
+                    raise ValueError('memory retry changed the statement, relation or verifier key')
+            if measurements['decider'].get('allocator_environment') != {
+                    'MALLOC_MMAP_THRESHOLD_': '131072', 'MALLOC_TRIM_THRESHOLD_': '131072',
+                    'MALLOC_ARENA_MAX': None, 'GLIBC_TUNABLES': None}:
+                raise ValueError('memory profile allocator settings differ from the declared experiment')
+            profile['reference_measurement'] = read(reference / 'decider.measurement.json', 'sherlock-rollup-measurement/1')
+        else:
+            profile = None
         for stage, measurement in measurements.items():
             if measurement['max_rss_bytes'] >= 16_000_000_000 or measurement['swap_peak_bytes'] != 0:
                 raise ValueError(f'{stage} exceeds decimal 16 GB or used swap')
         for layer, stats in layers.items():
             if stats['peak_rss_bytes'] >= 16_000_000_000:
                 raise ValueError(f'{layer} process high-water RSS exceeds decimal 16 GB')
-    return {'predicate': kind, 'build': build,
+    return {'predicate': kind, 'build': build, 'memory_profile': profile if kind == 'B7' else None,
             'recursive_shape': 'one 16-transaction/50-header leaf; one single-child verifier parent; one terminal decider per batch',
             'timing_scopes': {'phase_wall_seconds': 'isolated timers for parameters, VK, PK, proof and verification',
                               'process_wall_seconds_in_stats': 'prove_stage only; corpus replay/witness preparation precede this timer',
@@ -94,18 +110,31 @@ def check(kind, root):
             for name, value in layers.items()}, 'measured': measurements, 'verified': verified}
 
 
+def latest_run(kind, target=Path('target')):
+    candidates = list((target / 'sherlock-b3').glob('run-*/verified.json'))
+    if not candidates:
+        raise ValueError('no completed B3 run')
+    source = max(candidates, key=lambda p: p.stat().st_mtime_ns).parent
+    if kind == 'B7':
+        # An allocator experiment can reuse only its exact B3 source. A newer
+        # circuit/proof run needs its own memory measurements.
+        attempts = []
+        for path in (target / 'sherlock-b7').glob('run-*/profile.json'):
+            profile = json.loads(path.read_bytes())
+            if Path(profile['reference']).resolve() == source.resolve():
+                attempts.append(path.parent)
+        if attempts:
+            return max(attempts, key=lambda p: p.stat().st_mtime_ns)
+    return source
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('predicate', choices=('B3', 'B6', 'B7'))
     parser.add_argument('run', type=Path, nargs='?')
     args = parser.parse_args()
-    root = args.run
-    if root is None:
-        candidates = list(Path('target/sherlock-b3').glob('run-*/verified.json'))
-        if not candidates:
-            parser.error('no completed B3 run')
-        root = max(candidates, key=lambda p: p.stat().st_mtime_ns).parent
     try:
+        root = args.run if args.run is not None else latest_run(args.predicate)
         result = check(args.predicate, root)
     except (ValueError, KeyError, OSError) as exc:
         parser.exit(1, f'{args.predicate} FAIL: {exc}\n')
