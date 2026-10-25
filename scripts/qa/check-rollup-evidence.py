@@ -90,12 +90,15 @@ def check(kind, root):
         else:
             profile = None
         for stage, measurement in measurements.items():
-            if measurement['max_rss_bytes'] >= 16_000_000_000 or measurement['swap_peak_bytes'] != 0:
-                raise ValueError(f'{stage} exceeds decimal 16 GB or used swap')
+            if measurement['max_rss_bytes'] >= 32_000_000_000 or measurement['swap_peak_bytes'] != 0:
+                raise ValueError(f'{stage} exceeds decimal 32 GB or used swap')
         for layer, stats in layers.items():
-            if stats['peak_rss_bytes'] >= 16_000_000_000:
-                raise ValueError(f'{layer} process high-water RSS exceeds decimal 16 GB')
+            if stats['peak_rss_bytes'] >= 32_000_000_000:
+                raise ValueError(f'{layer} process high-water RSS exceeds decimal 32 GB')
     return {'predicate': kind, 'build': build, 'memory_profile': profile if kind == 'B7' else None,
+            'resource_limit': {'max_rss_bytes_exclusive': 32_000_000_000, 'swap_peak_bytes': 0,
+                               'owner_decision_date': '2026-10-25', 'previous_max_rss_bytes': 16_000_000_000,
+                               'previous_failures_retained': True} if kind == 'B7' else None,
             'recursive_shape': 'one 16-transaction/50-header leaf; one single-child verifier parent; one terminal decider per batch',
             'timing_scopes': {'phase_wall_seconds': 'isolated timers for parameters, VK, PK, proof and verification',
                               'process_wall_seconds_in_stats': 'prove_stage only; corpus replay/witness preparation precede this timer',

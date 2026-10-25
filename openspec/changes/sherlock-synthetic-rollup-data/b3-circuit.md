@@ -40,6 +40,11 @@ Implementation sequence:
 No B3 pass follows from host replay or MockProver alone. Stagenet predicates
 require the separately coordinated T3 promotion.
 
+Owner decision dated 2026-10-25 raises B7's peak RSS cap from decimal 16 GB to
+decimal 32 GB, with swap still zero. The original 16 GB failures remain in
+history. The stock v2 decider measured 16,084,004,864 bytes peak RSS; the new
+criterion reuses those actual measurements and does not imply a 16 GB pass.
+
 The implemented adapter is `sherlock-v3-batch/1`: one whole-batch leaf, one
 single-child verifier parent, and the terminal Sherlock decider. The parent's
 17 lanes equal the frozen Profile A A2 statement. Its local terminal projection
