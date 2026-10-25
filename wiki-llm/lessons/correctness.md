@@ -31,3 +31,9 @@ tags: [lessons, loki, lean, quint, fuzzing, midnight-proofs]
   ZETA, and apply 1/n exactly once (sppark's inverse already scales).
 - **Batch inversion must skip zeros**, as ff's `batch_invert` does.
 - **Signed-digit Pippenger** needs one window more than ⌈255/c⌉, or it silently drops points.
+
+## See also
+
+- [[doctorwatson-workflow-review-2026-10-25]]: 2026-10-25 retrospective (orphaned locks, idle agents, DW121–DW130)
+- [[doctorwatson-workflow-review-2026-10-22]] and [[doctorwatson-improvement-log]]
+- Lessons index: [[lessons/README|lessons]]

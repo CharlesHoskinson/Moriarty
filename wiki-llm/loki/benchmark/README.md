@@ -29,3 +29,7 @@ See [prover-performance](../../lessons/prover-performance.md):
 - Pin the circuit, prover, threads and host on every row.
 - Build stock and Loki separately, because Cargo feature unification spreads `blst/no-threads` to every crate in a build.
 - Report end-to-end numbers next to kernel numbers.
+
+## Workflow
+
+The 2026-10-25 retrospective, [[doctorwatson-workflow-review-2026-10-25]], records why the benchmark prerequisites (P3/P4/P5/P7/W12 merges) stalled behind an orphaned heavy lock. Its DW128 merge train adds a CPU-merge / native-receipt split.

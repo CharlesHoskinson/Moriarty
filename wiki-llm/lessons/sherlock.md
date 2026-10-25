@@ -33,3 +33,9 @@ tags: [lessons, sherlock, recursion, stagenet, verifying-key]
 ## Pinned external sources must exist on the host (2026-10-24)
 - B1 failed first because its pinned design sources (`~/research/fenrir-rollup-design-2026-10-19`) were missing, and projectfenrir lives at
   `~/repos/projectfenrir`. Checks that depend on external corpora should fail with a clear "missing source" error, not a test failure.
+
+## See also
+
+- [[doctorwatson-workflow-review-2026-10-25]]: 2026-10-25 retrospective (orphaned locks, idle agents, DW121–DW130)
+- [[doctorwatson-workflow-review-2026-10-22]] and [[doctorwatson-improvement-log]]
+- Lessons index: [[lessons/README|lessons]]

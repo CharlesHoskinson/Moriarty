@@ -50,3 +50,9 @@ tags: [lessons, loki, performance, gpu, msm, ntt, blst]
   subexpressions (an estimated 1.2–1.8×). A GPU quotient needs batched intermediates; a naive layout needs about 26 GB at k22.
 - fflonk (midnight-zk PR #565) makes the prover 1.29× slower; its benefit is VK size, not speed.
 - See [speedups/](../loki/speedups/) for the ranked tables and sources.
+
+## See also
+
+- [[doctorwatson-workflow-review-2026-10-25]]: 2026-10-25 retrospective (orphaned locks, idle agents, DW121–DW130)
+- [[doctorwatson-workflow-review-2026-10-22]] and [[doctorwatson-improvement-log]]
+- Lessons index: [[lessons/README|lessons]]

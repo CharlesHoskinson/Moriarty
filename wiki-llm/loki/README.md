@@ -15,3 +15,5 @@ Ten GPT-6.1 Sol (xhigh) researchers wrote these on 2026-10-24. Every web source 
   - [[loki-09-cpu-witness-field]]
   - [[loki-10-integration-verification]]
 - **Run logs:** `.runs/` (gitignored).
+
+- **Factory workflow:** [[doctorwatson-workflow-review-2026-10-25]] (why Loki merges stalled on 2026-10-25), [[factory-and-agents]].

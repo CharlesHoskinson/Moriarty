@@ -58,3 +58,7 @@ Optional agentbus coordination remains under separate evaluation. Message transp
 ## Final local result cut
 
 The assembled factory passed 264 tests and two requirement-cache checks. Cleanup revision02 received independent approval after five fresh regressions. The actual first inspection refused stale missing refs; graph/wiki finalization subsequently completed with an explicit empty retirement selection and zero Git deletions. [Portable results](../docs/audits/2026-10-22/LOCAL-RESULTS.json) retain evidence boundaries. Shared AgentBus is merged in [ProjectFenrir PR84](https://github.com/CharlesHoskinson/projectfenrir/pull/84); its thin Moriarty adapter remains optional. The native goal stays paused.
+
+## Later review
+
+The next retrospective, with the orphaned-lock stall and the DW121–DW130 tooling changes, is [[doctorwatson-workflow-review-2026-10-25]]. The running log is [[doctorwatson-improvement-log]].
