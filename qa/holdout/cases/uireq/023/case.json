@@ -16,13 +16,36 @@
       "specLine": 164,
       "when": "Factorial and tree fold are routed through a candidate native realization of the same Sherlock reference machine.",
       "then": "The inventory names dispatch, scalar, frame and data constraint owners, whether the realization is universal, per-program or a finite family, its common bounded StepInput/StepOutput interface and the native recursion/custom-decider adapter; complete semantic StepRecord snapshots are produced separately by host materializeStep. No VerifyProof or ledger10 prerequisite is introduced.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "inventory": "names dispatch, scalar, frame and data constraint owners; universal vs per-program vs finite family; common StepInput/StepOutput interface; native recursion/custom-decider adapter",
         "excluded": "VerifyProof and ledger10 prerequisites"
       },
-      "coverage": "none",
-      "blocker": "needs a native relation inventory report naming dispatch/scalar/frame/data constraint owners and the recursion/custom-decider adapter for Factorial and tree fold"
+      "coverage": "primary",
+      "judgment": "Evaluator reading of the spec (UIREQ-023 requirement and scenario 1): the WHEN routes factorial and tree fold through a candidate native realization, and the THEN requires the inventory to NAME dispatch, scalar, frame and data constraint owners and the native recursion/custom-decider adapter; the requirement identifies each model transition with its circuit/host/native consumer. A hand-authored, source-only rule-to-fragment table with complete=false (fact 9/46, fold 9/57 rules with a C6 fragment), no native dispatch owner (native_selection null, status open), uncompiled/unrun fragments and an unwired recursion adapter is an honest gap report, not that realization. The check therefore verifies the inventory is truthful (exercised rules re-derived from the owner event stream, summary recomputed, every named fragment/consumer/entry present, no unclaimed C6 fragment file, table digest recomputed, one fixed table/interface across both programs) and then FAILS on the spec gates until a native realization exists. A failure message starting 'inventory dishonest' means the report lies; 'SPEC GATE' means it is honest but incomplete.",
+      "unasserted": [
+        "fragment semantics (fragments are source-only; nothing is compiled, proved or verified)",
+        "the K-rule/fragment correspondence beyond the rule name appearing in the fragment source"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) --native-inventory",
+        "checks": [
+          {
+            "kind": "native-inventory",
+            "label": "factorial and tree fold through one native relation",
+            "programs": [
+              {
+                "label": "fact(3)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n"
+              },
+              {
+                "label": "fold(branch(leaf 4, leaf 5))",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(5)));\n}\n"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "name": "Midnight stagenet end-to-end qualification",

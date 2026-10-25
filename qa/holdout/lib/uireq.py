@@ -896,6 +896,164 @@ def custom_witness_materialize(c):
     _refused({**c, "source": c["programs"][0]["source"]}, ["--chunk-at", "0", "--chunk-witness"], "invalid witness plan")
 
 
+# ---- native relation inventory (U023 scenario 1) -------------------------------------
+#
+# Two layers. (1) Honesty: the inventory's exercised rule multiset is re-derived from the owner
+# event stream of an independent --chunk-events run; its summary is recomputed from its rows;
+# every named fragment/consumer file and pub fn entry must exist in the tree, and no C6 fragment
+# file may exist unclaimed; table_sha256 is recomputed. Any lie fails as "inventory dishonest".
+# (2) Spec gates (UIREQ-023 scenario 1 THEN-clause): factorial and tree fold must be routed through
+# a candidate native realization, so the inventory must name a dispatch constraint owner as well as
+# scalar/frame/data owners, give every exercised model transition a native/circuit consumer, and
+# wire the recursion/custom-decider adapter. A hand-authored, source-only gap report cannot meet
+# these, so the check fails honestly until a native realization exists.
+
+import hashlib as _hashlib
+import os as _os
+from collections import Counter as _Counter
+
+_OWNERS = ("dispatch", "scalar", "frame", "data")
+
+
+def _repo_file(rel, label):
+    need(isinstance(rel, str) and rel and not rel.startswith("/") and ".." not in rel.split("/"),
+         f"inventory dishonest: {label}: bad path {rel!r}")
+    path = engine.REPO / rel
+    need(path.is_file(), f"inventory dishonest: {label}: named file {rel} does not exist")
+    return path.read_text()
+
+
+def _inventory_honest(c, src, name):
+    r = runx(c, extra=["--native-inventory"], source=src)
+    need_executed(r, f"{name} inventory run")
+    need(engine.outcome_kind(r)[0] == "Halted", f"{name}: inventory run did not halt: {r.outcome}")
+    ni = r.doc.get("native_inventory")
+    need(isinstance(ni, dict) and ni.get("format") == "moriarty-sherlock-native-inventory/1",
+         f"{name}: no native_inventory report")
+    # independent exercised-rule multiset from the owner event stream
+    ev = runx(c, extra=["--chunk", "1000000", "--chunk-events"], source=src)
+    events = [e["event"] for e in _tc(ev, f"{name} event run")["chunks"][0]["events"]]
+    need(len(events) == int(r.summary["events"]) == int(ni["events"]), f"inventory dishonest: {name}: event count")
+    fired = _Counter(e["rule_id"] for e in events)
+    claimed = {}
+    for row in ni["exercised"]:
+        need(row["rule"] not in claimed, f"inventory dishonest: {name}: rule {row['rule']} listed twice")
+        claimed[row["rule"]] = int(row["count"])
+    need(claimed == dict(fired), f"inventory dishonest: {name}: exercised rules differ from the fired rules: "
+         f"missing {sorted(set(fired) - set(claimed))}, extra {sorted(set(claimed) - set(fired))}, "
+         f"miscounted {sorted(k for k in claimed if k in fired and claimed[k] != fired[k])}")
+    # table identity
+    table = ni["table"]
+    want = _hashlib.sha256(json.dumps(table, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    need(ni["table_sha256"] == want, f"inventory dishonest: {name}: table_sha256 does not hash the reported table")
+    need(ni["table_provenance"] == "hand-authored", f"{name}: table provenance {ni['table_provenance']!r}")
+    rows = {row["rule"]: row for row in table["rows"]}
+    # summary recomputed from the rows
+    with_frag = sorted(k for k, row in ((x["rule"], x) for x in ni["exercised"]) if row.get("fragment"))
+    gaps = sorted(x["rule"] for x in ni["exercised"] if not x.get("fragment"))
+    unlisted = sorted(x["rule"] for x in ni["exercised"] if x.get("table") == "unlisted" or x["rule"] not in rows)
+    s = ni["summary"]
+    need(int(s["rules"]) == len(ni["exercised"]) and int(s["with_c6_fragment"]) == len(with_frag),
+         f"inventory dishonest: {name}: summary counts {s['rules']}/{s['with_c6_fragment']} vs rows {len(ni['exercised'])}/{len(with_frag)}")
+    need(sorted(s["gaps"]) == gaps and sorted(s["unlisted"]) == unlisted, f"inventory dishonest: {name}: summary gaps/unlisted")
+    need(s["complete"] is (not gaps and not unlisted), f"inventory dishonest: {name}: complete={s['complete']} with {len(gaps)} gaps")
+    for x in ni["exercised"]:
+        row = rows.get(x["rule"])
+        if row is None:
+            continue
+        for k in ("family", "owner", "fragment"):
+            need(x.get(k) == row.get(k), f"inventory dishonest: {name}: exercised {x['rule']} {k} differs from its table row")
+        need(x["owner"] in _OWNERS, f"inventory dishonest: {name}: {x['rule']} owner {x['owner']!r}")
+        need(x["rule"] in ni["owners"][x["owner"]]["rules"], f"inventory dishonest: {name}: owner {x['owner']} does not list {x['rule']}")
+    for o in _OWNERS:
+        body = ni["owners"][o]
+        frag_rules = sorted(k for k in body["rules"] if (rows.get(k) or {}).get("fragment"))
+        need(sorted(body["rules_with_c6_fragment"]) == frag_rules, f"inventory dishonest: {name}: owner {o} fragment list")
+        sc_ = body.get("section_constraints")
+        need(sc_ is None or isinstance(sc_, (list, str)), f"inventory dishonest: {name}: owner {o} section_constraints {sc_!r}")
+        for f in sc_ if isinstance(sc_, list) else []:
+            _repo_file(f, f"{o} section constraint")
+
+    def _paths(x):
+        if isinstance(x, str):
+            return [x] if x.endswith(".rs") else []
+        if isinstance(x, dict):
+            return [q for v in x.values() for q in _paths(v)]
+        if isinstance(x, list):
+            return [q for v in x for q in _paths(v)]
+        return []
+    for f in _paths(ni["owners"].get("sections")):
+        _repo_file(f, "section emitter")
+    # every named fragment and consumer exists with its entry and rule
+    claimed_files = set()
+    frags = [(k, row["fragment"]) for k, row in rows.items() if row.get("fragment")]
+    frags += [(u["rule"], u) for u in table["unexercised_c6_fragments"]]
+    for rule, fr in frags:
+        text = _repo_file(fr["file"], f"{rule} fragment")
+        need(f"pub fn {fr['entry']}" in text, f"inventory dishonest: {name}: {fr['file']} has no pub fn {fr['entry']}")
+        need(rule in text, f"inventory dishonest: {name}: {fr['file']} never names {rule}")
+        need(fr["evidence"] == "source-only, uncompiled and unrun", f"{name}: {rule} fragment evidence over-claimed: {fr['evidence']!r}")
+        claimed_files.add(fr["file"])
+        if fr.get("consumer"):
+            _repo_file(fr["consumer"], f"{rule} consumer")
+            claimed_files.add(fr["consumer"])
+    for row in rows.values():
+        for nc in row.get("narrow_carriers") or []:
+            text = _repo_file(nc["file"], f"{row['rule']} narrow carrier")
+            need(f"pub fn {nc['entry']}" in text, f"inventory dishonest: {name}: {nc['file']} has no pub fn {nc['entry']}")
+            claimed_files.add(nc["file"])
+    for om in table["other_machine_fragments"]:
+        text = _repo_file(om["file"], f"{om['rule']} other-machine fragment")
+        need(f"pub fn {om['entry']}" in text, f"inventory dishonest: {name}: {om['file']} has no pub fn {om['entry']}")
+        claimed_files.add(om["file"])
+    # no hidden C6 fragment: every c6_*_step.rs / c6_*_consumer.rs in the tree is claimed
+    d = "crates/mori-backend/src/sherlock_machine"
+    for fn in sorted(_os.listdir(engine.REPO / d)):
+        if fn.startswith("c6_") and (fn.endswith("_step.rs") or fn.endswith("_consumer.rs")):
+            need(f"{d}/{fn}" in claimed_files, f"inventory dishonest: {name}: C6 fragment {d}/{fn} is not in the inventory")
+    _repo_file(ni["recursion_adapter"]["relation"], "recursion relation")
+    need(ni["evidence"].startswith("inventory only"), f"{name}: inventory evidence over-claimed: {ni['evidence']!r}")
+    return ni
+
+
+def custom_native_inventory(c):
+    invs = [(p["label"], _inventory_honest(c, p["source"], p["label"])) for p in c["programs"]]
+    # the same realization across programs
+    a = invs[0][1]
+    for name, ni in invs[1:]:
+        for key in ("table_sha256", "realization", "interface", "owners", "recursion_adapter", "step_records", "prerequisites"):
+            need(ni[key] == a[key], f"{name}: {key} differs from {invs[0][0]} (not one fixed relation across programs)")
+    # spec gates that a gap report can satisfy
+    rz = a["realization"]
+    need(rz["kind"] in ("universal", "per-program", "finite-family") and
+         rz["universal"] is (rz["kind"] == "universal") and rz["per_program"] is (rz["kind"] == "per-program"),
+         f"realization class inconsistent: {rz}")
+    it = a["interface"]
+    need(it.get("bounded") and it["step_input_sections"] and it["step_output_sections"], f"no bounded StepInput/StepOutput interface: {it}")
+    need(a["step_records"]["native_produces_step_records"] is False and "materializeStep" in a["step_records"]["producer"],
+         "complete StepRecords not produced separately by host materializeStep")
+    need(a["prerequisites"] == {"verify_proof": False, "ledger10": False}, f"VerifyProof/ledger10 prerequisite introduced: {a['prerequisites']}")
+    # spec gates that require an actual candidate native realization
+    gates = []
+    disp = a["owners"]["dispatch"]
+    if not disp.get("native_selection") or not disp.get("section_constraints"):
+        gates.append(f"no dispatch constraint owner is named ({disp.get('status')})")
+    for o in ("scalar", "frame", "data"):
+        if not a["owners"][o].get("section_constraints"):
+            gates.append(f"no {o} constraint owner")
+    for name, ni in invs:
+        s = ni["summary"]
+        if not s["complete"]:
+            gates.append(f"{name}: {len(s['gaps'])} of {s['rules']} exercised transitions have no native/circuit consumer")
+        unrun = sorted({x["fragment"]["evidence"] for x in ni["exercised"] if x.get("fragment")} - {"compiled-and-run"})
+        if unrun:
+            gates.append(f"{name}: fragments are not a routed realization ({', '.join(unrun)})")
+    ra = a["recursion_adapter"]
+    if ra.get("c6_fragments_wired") is not True:
+        gates.append(f"recursion/custom-decider adapter not wired ({ra.get('status')})")
+    need(not gates, "SPEC GATE (honest inventory, no candidate native realization): " + "; ".join(gates))
+
+
 CHECKS = {
     "value": check_value,
     "outcome": check_outcome,
@@ -915,6 +1073,7 @@ CHECKS = {
     "reference-slices": custom_reference_slices,
     "chunk-represent": custom_chunk_represent,
     "witness-materialize": custom_witness_materialize,
+    "native-inventory": custom_native_inventory,
 }
 
 
