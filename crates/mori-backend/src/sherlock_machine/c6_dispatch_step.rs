@@ -637,6 +637,7 @@ impl C6DispatchEmitter {
                 caps,
                 first_index: k[1].clone(),
                 second_index: img[L_CONTROL_ORIGIN].clone(),
+                child_index: Em::imm(0),
             })
             .map_err(be)?;
         em.ins.extend(cap.instructions);

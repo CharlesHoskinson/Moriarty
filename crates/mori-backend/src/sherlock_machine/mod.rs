@@ -598,6 +598,11 @@ pub use c6_equal_empty_step::{
 // UIREQ-023 dispatch owner: per-rule Core selection over the C6 pre carriers.
 pub mod c6_dispatch_consumer;
 pub mod c6_dispatch_step;
+pub mod c6_step_harness;
+mod c6_step_kit;
+// UIREQ-023 Eval schedule fragment (legacy k.machine.eval.* rows).
+pub mod c6_eval_schedule_consumer;
+pub mod c6_eval_schedule_step;
 pub use c6_dispatch_consumer::{
     C6DispatchCircuit, C6DispatchConsumerError, C6DispatchWitness, build_c6_dispatch_circuit,
     check_c6_dispatch_circuit, witness_from_host_snapshot as witness_dispatch_from_host_snapshot,

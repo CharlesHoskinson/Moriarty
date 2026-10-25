@@ -186,6 +186,8 @@ pub struct C6ProgramContextDispatchCaptureInputs {
     pub caps: C6StateCaps,
     pub first_index: Operand,
     pub second_index: Operand,
+    /// Index into the PROG children table (`ProgramView::child`).
+    pub child_index: Operand,
 }
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextDispatchCaptureBlock {
@@ -196,6 +198,8 @@ pub struct C6ProgramContextDispatchCaptureBlock {
     pub first_row: [Operand; 7],
     pub second_found: Operand,
     pub second_row: [Operand; 7],
+    pub child_found: Operand,
+    pub child_value: Operand,
 }
 
 #[derive(Clone, Debug)]
@@ -1819,6 +1823,7 @@ impl C6ProgramContextCanonicalEmitter {
         reject_reserved(&self.scope, &inputs.gate)?;
         reject_reserved(&self.scope, &inputs.first_index)?;
         reject_reserved(&self.scope, &inputs.second_index)?;
+        reject_reserved(&self.scope, &inputs.child_index)?;
         for lane in &inputs.pre_prog {
             reject_reserved(&self.scope, lane)?;
         }
@@ -1904,6 +1909,10 @@ impl C6ProgramContextCanonicalEmitter {
         };
         em.cbits(inputs.first_index.clone(), LANE_BITS);
         em.cbits(inputs.second_index.clone(), LANE_BITS);
+        em.cbits(inputs.child_index.clone(), LANE_BITS);
+        let mut child_row_index = Emitter::imm(0);
+        let mut child_found = Emitter::imm(0);
+        let mut child_value = Emitter::imm(0);
         let mut expressions_count = Emitter::imm(0);
         let mut functions_count = Emitter::imm(0);
         let mut expression_index = Emitter::imm(0);
@@ -1917,6 +1926,13 @@ impl C6ProgramContextCanonicalEmitter {
             expressions_count = em.sel(count_phase, lane.clone(), expressions_count);
             let fn_count_phase = em.eqv(regs.phase.clone(), PH_FUNC_COUNT);
             functions_count = em.sel(fn_count_phase, lane.clone(), functions_count);
+            let child_phase = em.eqv(regs.phase.clone(), PH_CHILD_ROW);
+            let child_eq = em.teq(child_row_index.clone(), inputs.child_index.clone());
+            let child_hit = em.and(child_phase.clone(), child_eq);
+            child_found = em.sel(child_hit.clone(), Emitter::imm(1), child_found);
+            child_value = em.sel(child_hit, lane.clone(), child_value);
+            let child_next = em.add_i(child_row_index.clone(), 1);
+            child_row_index = em.sel(child_phase, child_next, child_row_index);
             let row_phase = em.eqv(regs.phase.clone(), PH_EXPR_ROW);
             for (index, found, row) in [
                 (&inputs.first_index, &mut first_found, &mut first_row),
@@ -1951,6 +1967,8 @@ impl C6ProgramContextCanonicalEmitter {
             first_row,
             second_found,
             second_row,
+            child_found,
+            child_value,
         })
     }
     pub fn emit_prog_checked_sort_capture(
