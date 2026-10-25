@@ -7,7 +7,7 @@ import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-import {spawn} from 'node:child_process';
+import {spawn, spawnSync} from 'node:child_process';
 import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
 const [sdkRoot, build, keyed, parent, key, outputArg, circuit, mode] = process.argv.slice(2);
 assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
@@ -62,6 +62,14 @@ const graphql = async query => {
   const r = await fetch(endpoints.indexer, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({query})});
   assert.ok(r.ok); const body=await r.json(); assert.ok(!body.errors, 'indexer query failed'); return body.data;
 };
+// Optional heavy-slot scoping (coordinator rule: hold heavy only while a proof runs). MORIARTY_HEAVY_LOCK names the
+// DoctorWatson heavy.lock; only the native prover child then runs under flock on it, with stdin still piped.
+// MORIARTY_AGENTBUS_CWD, if set, posts ACQUIRE once the lock is held and RELEASE after the child exits.
+const heavyLock = process.env.MORIARTY_HEAVY_LOCK, busCwd = process.env.MORIARTY_AGENTBUS_CWD;
+const bus = (subj, body) => { if (busCwd) spawnSync('agentbus', ['--cwd', busCwd, 'send', '#sherlock', subj, '--body', body], {stdio: 'ignore'}); };
+const underHeavy = (command, argv, id) => !heavyLock ? [command, argv] : ['flock', ['-w', '10800', heavyLock, 'sh', '-c',
+  (busCwd ? `agentbus --cwd "$MORIARTY_AGENTBUS_CWD" send '#sherlock' 'ACQUIRE ${id}' --body 'heavy held for the native decider prove only; wallet sync and indexer waits are outside it' >/dev/null 2>&1 || true; ` : '') +
+  'echo "heavy acquired $(date -u +%FT%TZ)" >&2; exec "$@"', 'sh', command, ...argv]];
 const child = (command, argv, input, env, log) => new Promise((ok, reject) => {
   const p=spawn(command,argv,{env,stdio:['pipe','pipe','pipe']}); let stdout='',stderr='';
   p.stdout.on('data',b=>{stdout+=b;});p.stderr.on('data',b=>{stderr+=b;});p.on('error',reject);
@@ -89,9 +97,13 @@ const proveProvider = {
       MORIARTY_DEPLOYED_CONTRACT_STATE:join(output,'pre-state.bin'),
       MORIARTY_PARENT_SRS:resolve('target/sherlock-srs/bls_midnight_2p20'),
       MORIARTY_TERMINAL_KEY_DIR:resolve(key),MORIARTY_TERMINAL_OUTPUT_DIR:join(output,'proof')};
-    const log=await child('cargo',['test','--release','--locked','-p','mori-recursion','--features','sherlock-ledger',
-      '--test','sherlock_terminal',test,'--','--exact','--include-ignored','--nocapture','--test-threads=1'],
-      JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),env,'native-prover-stderr.log');
+    const proveId=`${circuit} native prove on ${target.slice(0,8)}`;
+    const [proveCmd,proveArgv]=underHeavy('cargo',['test','--release','--locked','-p','mori-recursion','--features','sherlock-ledger',
+      '--test','sherlock_terminal',test,'--','--exact','--include-ignored','--nocapture','--test-threads=1'],proveId);
+    let log;
+    try { log=await child(proveCmd,proveArgv,
+      JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),env,'native-prover-stderr.log'); }
+    finally { if(heavyLock)bus(`RELEASE ${proveId}`,'native prover child exited; heavy lock released'); }
     writeFileSync(join(output,'native-prover-stdout.log'),log);
     if(!mode){preparedComplete=true;throw prepared;}
     nativeProofPublic=JSON.parse(readFileSync(join(output,'proof/terminal.public.json')));
