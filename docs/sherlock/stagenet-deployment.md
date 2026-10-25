@@ -122,8 +122,10 @@ byte-identical state, and the Rust ledger reader extracted the exact raw decider
 VK above (`k=20`, `hasIr=false`). The SDK interval, including wallet sync and
 confirmation, was **316.524843 s**. DoctorWatson measured **318.176 s** and
 **745,893,888 bytes** peak RSS for the complete deployment command. These are
-nested scopes, not isolated circuit proving measurements. The actual fee has not
-been independently measured in this run.
+nested scopes, not isolated circuit proving measurements. A subsequent independent indexer query reported `SUCCESS` and an actual fee of
+**997,443,262,154,202 SPECK**. RPC readback matched canonical block hash
+`5e4a30d96843d8f3689585c0940f59c986871be5ff5f2c5aae98789241f07b60`
+and observed finalized height 1,013,360, above the deployment height.
 
 The public receipt is retained locally at
 `target/a4-anchor/deploy-run3/receipt.json`; the independent state query and key
@@ -135,3 +137,32 @@ from version control. The deployment contains no physical contract call. Native
 A4 verification, a call with its actual bindings, local ledger acceptance and
 settlement remain distinct checks; the deployed parent still covers only the
 fixed A102 literal → A80 pair, not a Fenrir STF/A0 batch.
+
+The fresh installed-key A4 check passed on 2026-10-25. It regenerated the exact
+raw decider VK in **134.367 s**, then proved and verified a **6,432-byte** terminal
+proof in **142.783 s**, including individual public-input and proof-byte refusal
+checks. DoctorWatson measured **324.739 s** and **16,487,976,960 bytes** peak RSS
+for the complete command. Its trace is
+`qa/sherlock/traces/20261025T024457Z-A4.log`; the retained public proof bundle is
+`target/sherlock-a4/run-Fqxp6gSV/artifacts`.
+
+`doctorwatson check A5` also passed against independently fetched installed state.
+The separate stock verifier accepted all four exact A2–A4 proofs, reconstructed
+the carried accumulator from the exact child proof bytes, checked all statement
+links and refused 23 mutations. Verification took **0.958 s**; the complete
+factory check took **2.855 s** with **507,248,640 bytes** peak RSS. Its trace is
+`qa/sherlock/traces/20261025T025102Z-A5.log`.
+
+The A6 preparation uncovered a separate validator limitation: the installed JS
+WASM `wellFormed` accepted a retained proof reused with different call bindings,
+even with its contract-proof flag enabled. This matches the ledger-wasm source
+configuration, which disables the ledger's default features; without
+`proof-verifying`, `ProofMarker::proof_verify` returns success. A6 therefore uses
+the optional `sherlock-ledger-validation` feature and native `validate_call`
+example with `midnight-ledger-v9/proof-verifying` enabled. That verifier rejected
+the same reused proof as `failed to verify proof: Invalid proof`. Its separate
+all-checks profile also refused the unfunded fixture for a negative DUST balance.
+This negative control is retained in
+`target/a4-anchor/local-native-proof-rejected/negative-ledger-result.json`.
+It is not a positive ledger-acceptance result or a stagenet call. Call preimages
+and private openings reach the native prover only through a pipe.

@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [features]
+sherlock-ledger-validation = [
+    "sherlock-ledger", "dep:midnight-ledger", "dep:midnight-base-crypto", "dep:midnight-onchain-runtime",
+]
 sherlock-ledger = [
     "sherlock-recursion", "dep:midnight-onchain-state", "dep:midnight-storage", "dep:midnight-serialize", "dep:midnight-transient-crypto",
 ]
@@ -18,6 +21,9 @@ sherlock-recursion = [
 ]
 
 [dependencies]
+midnight-ledger = { workspace = true, optional = true, features = ["proof-verifying"] }
+midnight-base-crypto = { workspace = true, optional = true }
+midnight-onchain-runtime = { workspace = true, optional = true }
 ff = { workspace = true, optional = true }
 group = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
@@ -58,3 +64,7 @@ required-features = ["sherlock-ledger"]
 [[example]]
 name = "verify_chain"
 required-features = ["sherlock-ledger"]
+
+[[example]]
+name = "validate_call"
+required-features = ["sherlock-ledger-validation"]
