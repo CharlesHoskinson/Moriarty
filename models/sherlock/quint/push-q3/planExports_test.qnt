@@ -14,4 +14,10 @@ module planExports_test {
   run orderAndMultiplicitySurviveTest = init.then(request(List(structured, closure, lookup, interaction), allCaps, Midnight))
     .expect(state.report.constraintPlan == List(0, 1, 2, 3) and state.report.manifest.nth(0).inputs == List(2, 1, 2)
       and midnightSupported and modelInv)
+  run omissionsAreSeparateAndLocatedTest = init.then(request(List(structured, closure, lookup, interaction), basicCaps, Foreign))
+    .expect(state.report.constraintOmissions == Set(2, 3) and state.report.witnessOmissions == Set(1)
+      and state.report.manifest.nth(1).source == 10 and state.report.manifest.nth(1).component == 21 and modelInv)
+  run orderedOperandTypesSurviveTest = init.then(request(List(structured, closure, lookup, interaction), allCaps, Midnight))
+    .expect(state.report.manifest.nth(0).inputTypes == List(UInt128, UInt128, UInt128)
+      and state.report.manifest.nth(2).outputTypes == List(Field) and modelInv)
 }

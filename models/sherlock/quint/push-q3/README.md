@@ -7,7 +7,7 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all eight Quint files, runs 26 deterministic tests, and
+The runner typechecks all eight Quint files, runs 28 deterministic tests, and
 samples 10,000 traces per model with `--invariant modelInv --max-steps 30`.
 All four runs passed; every requested witness was reached. Raw results are in
 `verification.log`. These are sampled finite checks, not exhaustive proofs.
@@ -17,7 +17,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | --- | --- | --- |
 | `nativeInventory.qnt` | U023; `crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs`, `report`, `Family::owner` | Four named table rows plus an unknown rule; event multiplicity versus unique-rule coverage, disjoint gap/unlisted partitions, source-only coverage versus unwired native acceptance |
 | `witnessStorage.qnt` | U024 supporting behavior; `crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs`, `evaluate_with_storage` | Five-node scheduler harness; exact ordered cache arguments, reads always executed, baseline order retained, release after final consumer, output live through publication, semantic work untouched |
-| `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated inputs, explicit format qualification |
+| `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
