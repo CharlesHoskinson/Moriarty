@@ -45,10 +45,13 @@ class LokiIdentityTests(unittest.TestCase):
             doctor.chmod(0o755)
             runner.write_text(loki.render_runner(source, 'Loki CPU test-source', False,
                                                   (Path(tmp), Path(tmp) / 'output')))
-            binary = Path(tmp) / 'runner'
+            manifest = Path(tmp) / 'Cargo.toml'
+            manifest.write_text('[package]\nname="loki-runner-test"\nversion="0.1.0"\nedition="2024"\n'
+                                '[workspace]\n[[bin]]\nname="runner"\npath="runner.rs"\n')
+            binary = Path(tmp) / 'target/debug/runner'
             env = {**os.environ}
             env.pop('SHERLOCK_PROVER_ID', None)
-            args = ['rustc', str(runner), '--edition=2024', '-o', str(binary)]
+            args = ['cargo', 'build', '--offline', '--manifest-path', str(manifest)]
             missing = subprocess.run(args, env=env, capture_output=True)
             self.assertNotEqual(missing.returncode, 0)
             self.assertIn(b'Loki build requires', missing.stderr)
