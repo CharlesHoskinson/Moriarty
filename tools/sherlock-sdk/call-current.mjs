@@ -129,10 +129,14 @@ try {
       const report=JSON.parse(await child(resolve('target/release/examples/validate_call'),[],
         JSON.stringify({state:Buffer.from(local.serialize()).toString('hex'),transaction:Buffer.from(tx.serialize()).toString('hex'),block_seconds:Number(secs)}),process.env,'native-final-stderr.log'));
       assert.equal(report.contractProofsSignaturesLimitsAccepted,true,report.contractProfileFailure);
+      assert.equal(report.applied,true,'native execution against the predicted snapshot');
       assert.equal(report.contractCalls.length,1);const call=report.contractCalls[0];
       assert.equal(call.address,pins.address);assert.equal(call.entryPoint,circuit);assert.equal(call.proofVersion,'V3');
       if(circuit==='acceptValidity'){assert.equal(call.proofSHA256,nativeProofHash);assert.deepEqual(call.publicInputs,nativeProofPublic);}
       writeFileSync(join(output,'native-final-check.json'),json(report));
+      // The SDK builder fetched its own snapshot; refuse to submit unless the chain still holds the predicted pre-state.
+      const latest=await publicDataProvider.queryContractState(pins.address); assert.ok(latest);
+      assert.equal(sha(latest.serialize()),sha(currentState.serialize()),'contract state changed since prediction');
       writeFileSync(join(output,'submitted.json'),json({at:new Date().toISOString(),network:'stagenet',address:pins.address,circuit}),{flag:'wx',mode:0o600});
       return session.walletProvider.submitTx(tx);
     }}};

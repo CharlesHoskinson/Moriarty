@@ -30,7 +30,7 @@ const graphql = async query => {
 };
 const actionAt = async height => (await graphql(`{contractAction(address:"${pins.address}"${height === undefined ? ''
   : `,offset:{blockOffset:{height:${height}}}`}){__typename state transaction{hash block{height}} ... on ContractCall{entryPoint}}}`)).contractAction;
-// Complete public action history, newest first; one action per block is assumed and checked.
+// Complete public action history, newest first; one action per block is checked below.
 const history = [];
 for (let a = await actionAt(); a; ) {
   history.push(a);
@@ -39,6 +39,13 @@ for (let a = await actionAt(); a; ) {
   a = await actionAt(a.transaction.block.height - 1);
 }
 assert.equal(history.at(-1).__typename, 'ContractDeploy', 'history must reach the deployment');
+// The height walk sees one action per block; enumerate each visited block and refuse any block
+// holding more than one action on this contract, so no action is skipped silently.
+for (const a of history) {
+  const {block} = await graphql(`{block(offset:{height:${a.transaction.block.height}}){transactions{hash contractActions{__typename address}}}}`);
+  const here = block.transactions.flatMap(t => t.contractActions.filter(c => c.address === pins.address).map(c => ({tx: t.hash, kind: c.__typename})));
+  assert.deepEqual(here, [{tx: a.transaction.hash, kind: a.__typename}], `block ${a.transaction.block.height} must hold exactly this one action`);
+}
 const index = history.findIndex(a => a.__typename === 'ContractCall' && a.entryPoint === 'acceptValidity');
 assert.ok(index >= 0, 'no acceptValidity ContractCall on the pinned contract');
 const call = history[index], pre = history[index + 1], deploy = history.at(-1);
