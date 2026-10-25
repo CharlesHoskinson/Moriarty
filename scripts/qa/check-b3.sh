@@ -8,6 +8,7 @@ export RAYON_NUM_THREADS=4
 export MALLOC_MMAP_THRESHOLD_=131072
 export MALLOC_TRIM_THRESHOLD_=131072
 export MALLOC_ARENA_MAX=1
+unset SHERLOCK_PROVER_ID
 export FENRIR_ROOT="${FENRIR_ROOT:-$HOME/repos/projectfenrir-main}"
 export FRTF_V3_ROOT="${FRTF_V3_ROOT:-$FENRIR_ROOT/recursion/rollup-test-format/v3}"
 export MORIARTY_PARENT_SRS="${MORIARTY_PARENT_SRS:-$PWD/target/sherlock-srs/bls_midnight_2p20}"
@@ -33,6 +34,7 @@ export FRTF_V3_ROOT
 binary="${CARGO_TARGET_DIR:-$PWD/target}/release/examples/rollup"
 cp "$binary" "$run_dir/rollup.bin"
 binary="$run_dir/rollup.bin"
+"$binary" identity
 python3 -B - "$binary" "$run_dir/build.json" <<'PY'
 import hashlib, json, pathlib, subprocess, sys
 binary, output = map(pathlib.Path, sys.argv[1:])

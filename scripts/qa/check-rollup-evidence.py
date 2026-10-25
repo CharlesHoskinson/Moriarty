@@ -80,9 +80,11 @@ def check(kind, root):
             for suffix in ('vk', 'relation', 'instance.json'):
                 if (root / f'decider.{suffix}').read_bytes() != (reference / f'decider.{suffix}').read_bytes():
                     raise ValueError('memory retry changed the statement, relation or verifier key')
-            if measurements['decider'].get('allocator_environment') != {
-                    'MALLOC_MMAP_THRESHOLD_': '131072', 'MALLOC_TRIM_THRESHOLD_': '131072',
-                    'MALLOC_ARENA_MAX': None, 'GLIBC_TUNABLES': None}:
+            expected_allocator = {'MALLOC_MMAP_THRESHOLD_': '131072', 'MALLOC_TRIM_THRESHOLD_': '131072',
+                                  'MALLOC_ARENA_MAX': profile['allocator'].get('MALLOC_ARENA_MAX'),
+                                  'GLIBC_TUNABLES': None}
+            if (expected_allocator['MALLOC_ARENA_MAX'] not in (None, '1', '2', '3', '4')
+                    or measurements['decider'].get('allocator_environment') != expected_allocator):
                 raise ValueError('memory profile allocator settings differ from the declared experiment')
             profile['reference_measurement'] = read(reference / 'decider.measurement.json', 'sherlock-rollup-measurement/1')
         else:

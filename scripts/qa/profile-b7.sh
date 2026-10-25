@@ -5,10 +5,12 @@ cd "$(git rev-parse --show-toplevel)"
 export RAYON_NUM_THREADS=4
 export MALLOC_MMAP_THRESHOLD_=131072
 export MALLOC_TRIM_THRESHOLD_=131072
+export MALLOC_ARENA_MAX="${B7_ALLOCATOR_ARENAS:-1}"
+[[ "$MALLOC_ARENA_MAX" =~ ^[1-4]$ ]] || { echo 'B7 allocator arenas must be 1..4' >&2; exit 2; }
 mkdir -p target/sherlock-b7
 run_dir="$(mktemp -d "$PWD/target/sherlock-b7/run-XXXXXXXX")"
 python3 -B - "$run_dir" <<'PY'
-import hashlib, json, pathlib, shutil, sys
+import hashlib, json, os, pathlib, shutil, sys
 destination = pathlib.Path(sys.argv[1])
 candidates = list(pathlib.Path('target/sherlock-b3').glob('run-*/verified.json'))
 if not candidates:
@@ -27,8 +29,9 @@ for suffix in ('vk', 'proof', 'relation', 'instance.json', 'stats.json', 'measur
 shutil.copy2(source / 'verified.json', reference / 'verified.json')
 doc = {'schema': 'sherlock-b7-profile/1', 'reference': str(source),
        'reuse': ['mock', 'leaf', 'parent'], 'reproved': ['decider'],
-       'hypothesis': 'dynamic allocator thresholds retain temporary model/keygen buffers into proving',
-       'allocator': {'MALLOC_MMAP_THRESHOLD_': '131072', 'MALLOC_TRIM_THRESHOLD_': '131072'},
+       'hypothesis': 'bounded allocator arenas release thread-local temporary model/keygen buffers',
+       'allocator': {key: os.environ.get(key) for key in
+           ('MALLOC_MMAP_THRESHOLD_', 'MALLOC_TRIM_THRESHOLD_', 'MALLOC_ARENA_MAX', 'GLIBC_TUNABLES')},
        'unchanged': 'same retained executable, relation bytes, verifier keys, inputs and stock 0.8.3 prover'}
 (destination / 'profile.json').write_text(json.dumps(doc, indent=2, sort_keys=True) + '\n')
 build = json.loads((destination / 'build.json').read_bytes())

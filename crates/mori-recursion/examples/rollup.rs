@@ -46,6 +46,15 @@ const OFFLINE_TEMPLATE: &[u8] = include_bytes!("../tests/fixtures/accept-templat
 type Pos = PoseidonState<F>;
 type BoxError = Box<dyn std::error::Error>;
 type Result<T> = std::result::Result<T, BoxError>;
+const STOCK_PROVER: &str = "midnight-proofs 0.8.3 registry stock";
+const PROVER: &str = match option_env!("SHERLOCK_PROVER_ID") {
+    Some(identity) => identity,
+    None => STOCK_PROVER,
+};
+// The separate maintainer Loki package defines this feature. The stock
+// workspace deliberately has no GPU dependency or public GPU build option.
+#[allow(unexpected_cfgs)]
+const GPU_BUILD: bool = cfg!(feature = "gpu");
 
 fn error(msg: impl std::fmt::Display) -> BoxError {
     io::Error::other(msg.to_string()).into()
@@ -133,17 +142,21 @@ where
         return Err(error(format!("{name} exceeds k20")));
     }
     let model_seconds = start.elapsed().as_secs_f64();
+    let model_rss = peak_rss_kb() * 1024;
     eprintln!("{name} modeled k={} rows={}", model.k, model.rows);
     let start = Instant::now();
     let params = read_params(srs, model.k)?;
     let parameter_seconds = start.elapsed().as_secs_f64();
+    let parameter_rss = peak_rss_kb() * 1024;
     let start = Instant::now();
     let vk = setup_vk(&params, relation);
     let vk_seconds = start.elapsed().as_secs_f64();
+    let vk_rss = peak_rss_kb() * 1024;
     let raw_vk = vk_bytes(&vk);
     let start = Instant::now();
     let pk = setup_pk(relation, &vk);
     let pk_seconds = start.elapsed().as_secs_f64();
+    let pk_rss = peak_rss_kb() * 1024;
     let start = Instant::now();
     let mut counter = CountBytes(0);
     pk.write(&mut counter, SerdeFormat::RawBytes)?;
@@ -151,7 +164,7 @@ where
     let count = inputs.len();
     for (dir, instance, witness) in inputs {
         fs::create_dir_all(&dir)?;
-        eprintln!("{name} keygen complete; proving stock 0.8.3");
+        eprintln!("{name} keygen complete peak_rss={pk_rss}B; proving {PROVER}");
         let start = Instant::now();
         let proof = prove::<R, H>(
             &params,
@@ -163,6 +176,7 @@ where
         )
         .map_err(|e| error(format!("{name} prove: {e:?}")))?;
         let prove_seconds = start.elapsed().as_secs_f64();
+        let prove_rss = peak_rss_kb() * 1024;
         let start = Instant::now();
         verify::<R, H>(&params.verifier_params(), &vk, &instance, None, &proof)
             .map_err(|e| error(format!("{name} verify: {e:?}")))?;
@@ -181,12 +195,14 @@ where
             &dir.join(format!("{name}.instance.json")),
             &instance.iter().map(f_to_hex).collect::<Vec<_>>(),
         )?;
-        let receipt = json!({"schema":"sherlock-b3-stage/1","layer":name,"prover":"midnight-proofs 0.8.3 registry stock",
+        let receipt = json!({"schema":"sherlock-b3-stage/1","layer":name,"prover":PROVER,
             "model":model,"domain_capacity":1u64<<model.k,"model_seconds":model_seconds,
             "parameter_read_downsize_seconds":parameter_seconds,"vk_keygen_seconds":vk_seconds,
             "pk_keygen_seconds":pk_seconds,"pk_measurement_seconds":pk_size_seconds,
             "prove_seconds":prove_seconds,"local_verify_seconds":verify_seconds,"process_wall_seconds":total.elapsed().as_secs_f64(),
             "peak_rss_bytes":peak_rss_kb()*1024,"rss_scope":"process lifetime, includes oracle/model/parameters/keygen/prove/verify",
+        "phase_peak_rss_bytes":{"model":model_rss,"parameters":parameter_rss,"vk":vk_rss,"pk":pk_rss,"prove":prove_rss},
+        "phase_rss_scope":"process cumulative high-water snapshots at phase end, not isolated phase allocation",
             "proof_bytes":proof.len(),"vk_bytes":raw_vk.len(),"pk_raw_bytes":counter.0,
             "proof_sha256":sha256_hex(&proof),"vk_sha256":sha256_hex(&raw_vk),"relation_sha256":sha256_hex(&relation_bytes),
             "instance_sha256":sha256_hex(&fs::read(dir.join(format!("{name}.instance.json")))?),
@@ -205,12 +221,24 @@ where
 
 fn main() -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args == ["identity"] {
+        println!(
+            "{}",
+            json!({"prover":PROVER,"fixed_key_prefix":cfg!(feature="sherlock-rollup-prefix"),"gpu":GPU_BUILD})
+        );
+        return Ok(());
+    }
     if args.len() != 5 {
         return Err(error(
             "usage: rollup <mock|leaf|parent|decider|verify> <corpus> <batch 1..6> <output> <k20-srs>",
         ));
     }
     let mode = &args[0];
+    if (mode == "verify" || mode == "prefix-verify") && PROVER != STOCK_PROVER {
+        return Err(error(
+            "independent verification requires the retained stock binary",
+        ));
+    }
     let corpus = PathBuf::from(&args[1]);
     let batch: u64 = args[2].parse()?;
     let out = PathBuf::from(&args[3]);
