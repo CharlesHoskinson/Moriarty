@@ -13,7 +13,13 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 HOLDOUT = HERE.parent
-REPO = HOLDOUT.parent.parent
+# The system under test is the checkout holding this holdout. DW_SUT_ROOT (evaluator use only)
+# points the same sealed checks at another worktree, e.g. an implementer's uncommitted tree.
+REPO = Path(os.environ.get("DW_SUT_ROOT") or HOLDOUT.parent.parent).resolve()
+
+
+class Fail(Exception):
+    """A holdout assertion failed against the system under test."""
 
 PROFILE = "sherlock-helper-microstep/1"
 SOURCE_PROFILES = {

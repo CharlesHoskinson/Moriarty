@@ -1,0 +1,84 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U026",
+  "entrypoint": {
+    "argv": [
+      "python3",
+      "models/sherlock/qa/model_package.py",
+      "stage",
+      "--retained-comparison"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 1048576,
+    "timeout_s": 60,
+    "required_paths": [
+      "format",
+      "status",
+      "stage_status",
+      "profile",
+      "tasks[].id",
+      "tasks[].required",
+      "tasks[].status",
+      "tasks[].deliverable",
+      "public_reuse.commit",
+      "public_reuse.files[].sha256",
+      "historical_lean.normal_cases",
+      "historical_lean.zero_remaining_publications",
+      "historical_lean.current_execution",
+      "private_integration.status",
+      "private_integration.proof_membership",
+      "correctness_loop.projections",
+      "correctness_loop.complete_state_fields[]",
+      "correctness_loop.independent_expectations[]",
+      "correctness_loop.comparison_status",
+      "correctness_loop.selection.case_id",
+      "correctness_loop.comparison_input.sha256",
+      "correctness_loop.first_divergence",
+      "correctness_loop.layers[].layer",
+      "correctness_loop.layers[].source_membership",
+      "correctness_loop.layers[].witness_membership",
+      "correctness_loop.layers[].constraint_membership",
+      "unproved_gaps[]",
+      "midnight_exporter",
+      "execution_authority",
+      "acceptance"
+    ],
+    "forbidden_paths": [
+      "private_integration.integration_root",
+      "private_integration.head",
+      "private_integration.source_files",
+      "private_integration.dirty_membership"
+    ]
+  },
+  "interface": {
+    "format": "sherlock-clean-stage/1",
+    "stage_args": [
+      "--retained-comparison",
+      "| --comparison PROJECTION_REPORT.json",
+      "--private-record IGNORED_PRIVATE_RECORD.json"
+    ],
+    "optional_inputs": "Canonical argv needs no local files: --retained-comparison re-compares the pinned retained F03 K/Quint pair in-process (producers not rerun). --comparison and --retained-comparison are mutually exclusive (exit 2). Without either the comparison is not-run and a null first divergence is not agreement. Without --private-record, private_integration.status=not-supplied and record_sha256 is absent; with a record produced by bind-private, record_sha256/record_bytes/source_file_count appear.",
+    "private_binding_argv": [
+      "python3",
+      "models/sherlock/qa/model_package.py",
+      "bind-private",
+      "--integration-root",
+      "USER_SELECTED_PRIVATE_TREE",
+      "--record",
+      "target/sherlock-kc/private/integration.json"
+    ],
+    "private_binding": "Reads selected source bytes and Git membership without modifying the integration tree. Private record is ignored; stdout exposes only opaque record digest, count, scope and missing proof/native membership.",
+    "exit_codes": {
+      "0": "stage package produced; correspondence remains open",
+      "1": "supplied comparison mismatch",
+      "2": "invalid input"
+    },
+    "claims": "Historical eight normal plus one exact-zero publication examples are narrow; bounded Clean circuits/correspondence/exporter/native remain unimplemented or unproved. Ledger 9 fixed. No private paths/code in public JSON.",
+    "public_diagnostics": "Only validated selection/status and hashed first-divergence diagnostics are carried from supplied reports; independent oracle pins are reread locally. Raw supplied metadata is not published.",
+    "evaluator_note": "Adopted from sherlock-kc's target/ proposal (canonical argv needs no ignored local files); the earlier stray copy in qa/holdout/contracts depended on ignored target/ inputs and was removed."
+  }
+}

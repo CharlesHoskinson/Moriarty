@@ -1,0 +1,67 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U021",
+  "entrypoint": {
+    "argv": [
+      "python3",
+      "models/sherlock/qa/model_package.py",
+      "projection"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 1048576,
+    "timeout_s": 60,
+    "required_paths": [
+      "format",
+      "status",
+      "profile",
+      "execution",
+      "refinement",
+      "acceptance",
+      "comparison.status",
+      "comparison.selection",
+      "comparison.numeric_bounds",
+      "comparison.projection_contract.commonDomain",
+      "comparison.projection_contract.fieldMaps[]",
+      "comparison.projection_contract.ruleToAction",
+      "comparison.projection_contract.hiddenSteps[]",
+      "comparison.projection_contract.unmatchedFinanceWait",
+      "comparison.paired.first_difference",
+      "comparison.layers.k.status",
+      "comparison.layers.quint.status",
+      "oracle_files[]",
+      "inputs.k.sha256",
+      "inputs.quint.sha256",
+      "comparison.projection_contract.fieldMaps[].difference",
+      "comparison.numeric_bounds.UInt128_max",
+      "compared_edges"
+    ]
+  },
+  "interface": {
+    "format": "sherlock-model-projection/1",
+    "default": "Fresh complete-state comparison of retained historical actual F03 K/Quint observations against the independent frozen oracle; no producer rerun",
+    "supplied_pair_args": [
+      "--k-observations",
+      "K.json[.gz]",
+      "--quint-observations",
+      "QUINT.json[.gz]",
+      "--case",
+      "F03|N01..N08",
+      "--fuel",
+      "NONNEGATIVE_INT"
+    ],
+    "selection": "Supply all four selection options or none",
+    "exit_codes": {
+      "0": "finite supplied trace match",
+      "1": "first divergence or independent oracle mismatch",
+      "2": "malformed, incomplete, unsupported or pin-mismatched input"
+    },
+    "json_input_errors": "status=input-error; public error responses never echo private paths/code",
+    "claims": "execution=not-run, refinement=none, constraint_evidence=none, native_evidence=none, acceptance=none",
+    "public_diagnostics": "Public first differences expose a field pointer and expected_sha256/observed_sha256; unknown pointer segments are masked. Complete raw states stay in digest-identified input artifacts. Arbitrary provenance is represented by digest only.",
+    "evaluator_note": "Adopted from sherlock-kc's proposal; evaluator added fieldMaps[].difference (state representation differences), numeric_bounds.UInt128_max, top-level refinement and compared_edges."
+  }
+}

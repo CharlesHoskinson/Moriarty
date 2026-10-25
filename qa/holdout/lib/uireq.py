@@ -15,10 +15,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import engine  # noqa: E402
+import models  # noqa: E402
 
 
-class Fail(Exception):
-    pass
+Fail = engine.Fail
 
 
 def need(cond, msg):
@@ -1678,6 +1678,7 @@ CHECKS = {
     "fin-local-failure": custom_fin_local_failure,
     "fin-phase-policy": custom_fin_phase_policy,
 }
+CHECKS.update(models.CHECKS)
 
 
 def main(argv):
