@@ -10,7 +10,9 @@ use mori_core::sherlock::helper_machine::shared::owner_resume::{
     ResumeError, resume_technical_checkpoint,
 };
 use mori_core::sherlock::helper_machine::shared::{ActiveLengths, AllocCounters};
-use mori_core::sherlock_compile_artifact::draft_chunked::{ChunkEvents, ChunkPlan, ChunkRequest};
+use mori_core::sherlock_compile_artifact::draft_chunked::{
+    ChunkEvents, ChunkPlan, ChunkRequest, Representation,
+};
 use mori_core::sherlock_compile_artifact::draft_execution::{
     run_draft_host, run_draft_host_chunked,
 };
@@ -31,7 +33,11 @@ fn plain(source: &str) -> Value {
 }
 
 fn chunked(source: &str, plan: ChunkPlan, events: ChunkEvents) -> (Value, Value) {
-    let request = ChunkRequest { plan, events };
+    let request = ChunkRequest {
+        plan,
+        events,
+        represent: Representation::Off,
+    };
     let (run, chunks) = run_draft_host_chunked(source, CONFIG, TARGET, &request, &mut |_| {})
         .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));
     let full =
@@ -229,6 +235,7 @@ fn invalid_chunk_plans_are_refused_before_execution() {
         let request = ChunkRequest {
             plan: plan.clone(),
             events: ChunkEvents::NotRetained,
+            represent: Representation::Off,
         };
         let mut seen = 0;
         let refused = run_draft_host_chunked(INNER, CONFIG, TARGET, &request, &mut |_| seen += 1);
@@ -277,4 +284,59 @@ fn resume_reproduces_the_checkpoint_and_refuses_inconsistent_ones() {
         resume_technical_checkpoint(admitted, &truncated),
         Err(ResumeError::StepInvariant(_))
     ));
+}
+
+fn represented(source: &str, config: &str, plan: ChunkPlan) -> Value {
+    let request = ChunkRequest {
+        plan,
+        events: ChunkEvents::NotRetained,
+        represent: Representation::Bounded,
+    };
+    let (_, chunks) = run_draft_host_chunked(source, config, TARGET, &request, &mut |_| {})
+        .unwrap_or_else(|f| panic!("chunked run failed: {}", serde_json::to_string(&f).unwrap()));
+    chunks
+}
+
+/// UIREQ-029: a pending factorial state with a caller environment, pending
+/// multiplication and a live helper cursor is in-domain for the bounded
+/// C6P1 layout, and its decoded image equals the owner's.
+#[test]
+fn pending_factorial_states_have_a_bounded_representation() {
+    let chunks = represented(FACT, CONFIG, ChunkPlan::Every(1));
+    let mut pending_helper = 0;
+    for c in chunks["chunks"].as_array().unwrap() {
+        let r = &c["representation"];
+        assert_eq!(r["status"], "in-domain", "chunk {}: {r}", c["index"]);
+        assert_eq!(r["decoded_equals_owner_image"], true);
+        assert_eq!(r["decoded_equals_capture"], true);
+        assert_eq!(r["represented_image_claim"], true);
+        assert_eq!(r["encode_decode_correspondence"], "unproved");
+        assert!(n(&r["lanes"]) > 0);
+        let image = &c["boundary"]["image"];
+        let frames = image["frames"].to_string();
+        if !image["helper"].is_null()
+            && frames.contains("Mul")
+            && !image["env"].as_array().unwrap().is_empty()
+        {
+            pending_helper += 1;
+        }
+    }
+    assert!(
+        pending_helper > 0,
+        "no pending multiplication with a helper cursor"
+    );
+}
+
+/// A state beyond the representation capacities has no represented-image claim.
+#[test]
+fn states_beyond_the_lane_capacity_are_explicitly_out_of_domain() {
+    let mut config: Value = serde_json::from_str(CONFIG).unwrap();
+    config["bounds"]["serialization_bytes"] = Value::String("4096".into());
+    let chunks = represented(FACT, &config.to_string(), ChunkPlan::Every(100_000));
+    let last = chunks["chunks"].as_array().unwrap().last().unwrap();
+    let r = &last["representation"];
+    assert_eq!(r["status"], "out-of-domain", "{r}");
+    assert_eq!(r["refused_by"], "encode");
+    assert_eq!(r["represented_image_claim"], false);
+    assert!(r.get("lanes").is_none());
 }

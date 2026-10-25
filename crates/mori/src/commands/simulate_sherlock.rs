@@ -28,7 +28,7 @@ enum SelectedRun {
 }
 
 fn chunk_request(args: &Args) -> Option<host::draft_chunked::ChunkRequest> {
-    use host::draft_chunked::{ChunkEvents, ChunkPlan, ChunkRequest};
+    use host::draft_chunked::{ChunkEvents, ChunkPlan, ChunkRequest, Representation};
     let plan = match (args.chunk, &args.chunk_at) {
         (Some(n), _) => ChunkPlan::Every(n),
         (None, Some(points)) => ChunkPlan::At(points.clone()),
@@ -40,6 +40,11 @@ fn chunk_request(args: &Args) -> Option<host::draft_chunked::ChunkRequest> {
             ChunkEvents::Retained
         } else {
             ChunkEvents::NotRetained
+        },
+        represent: if args.chunk_represent {
+            Representation::Bounded
+        } else {
+            Representation::Off
         },
     })
 }

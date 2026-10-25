@@ -17,6 +17,10 @@ use serde_json::{Value, json};
 
 use super::CompileFailure;
 use super::wire::{self, OwnerWire};
+use crate::sherlock::helper_machine::c6_phys::C6CodecBudgets;
+use crate::sherlock::helper_machine::c6_phys_host::{
+    C6BindError, C6HostCaptureError, C6HostLimits, bind_decoded_host, capture_host, decode_host,
+};
 use crate::sherlock::helper_machine::c6_raw_snapshot_archive::{
     RawSnapshotReadBudgets, RawSnapshotWriteBudgets, decode_raw_host_snapshot,
     encode_raw_host_snapshot,
@@ -27,7 +31,8 @@ use crate::sherlock::helper_machine::resource_report::Unmeasured;
 use crate::sherlock::helper_machine::shared::owner_host::{host_owner_engine, observe_bound_image};
 use crate::sherlock::helper_machine::shared::owner_resume::resume_technical_checkpoint;
 use crate::sherlock::helper_machine::shared::{
-    Admitted, MachineImage, OutcomeC, OwnerEngine, RunSummary, StepEventC, StepResult,
+    Admitted, LayoutSchemaC, MachineImage, OutcomeC, OwnerEngine, RunSummary, StepEventC,
+    StepResult,
 };
 use crate::sherlock::reference_slice::RETAINED_RESOURCE_PROFILES;
 
@@ -92,6 +97,113 @@ pub enum ChunkEvents {
 pub struct ChunkRequest {
     pub plan: ChunkPlan,
     pub events: ChunkEvents,
+    /// Also offer each cut's complete state to the bounded C6P1 representation.
+    pub represent: Representation,
+}
+
+/// Whether each technical cut is also encoded in the bounded C6P1 layout.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Representation {
+    Off,
+    /// Encode with lanes limited to `serialization_bytes / 16` (one u128 lane
+    /// is sixteen bytes), decode, and bind to the live owner pair.
+    Bounded,
+}
+
+/// Explicit lane limits for the bounded representation adapter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RepresentationLimits {
+    pub max_total_lanes: usize,
+    pub max_metadata_bytes: usize,
+    pub max_string_bytes: usize,
+    pub max_width_entries: usize,
+    pub type_expr_nodes: usize,
+    pub template_bytes: usize,
+}
+
+impl RepresentationLimits {
+    pub fn from_serialization_bytes(bytes: usize) -> Self {
+        Self {
+            max_total_lanes: bytes / 16,
+            max_metadata_bytes: bytes,
+            max_string_bytes: bytes,
+            max_width_entries: 1024,
+            type_expr_nodes: bytes,
+            template_bytes: bytes,
+        }
+    }
+}
+
+/// Offer the complete state of a bound pair to the bounded C6P1 adapter.
+///
+/// Returns `in-domain` with the lane count, digest and the decoded-equals-owner
+/// result, or an explicit `out-of-domain` with the refusing check. Either way
+/// encode/decode correspondence to a circuit relation remains unproved, and a
+/// value outside the capacities has no represented-image claim.
+pub fn represent_bounded(
+    admitted: &Admitted,
+    image: &MachineImage,
+    layout: &LayoutSchemaC,
+    limits: RepresentationLimits,
+) -> Value {
+    let budgets = C6CodecBudgets {
+        type_expr_nodes: limits.type_expr_nodes,
+        template_bytes: limits.template_bytes,
+    };
+    let host_limits = C6HostLimits {
+        max_total_lanes: limits.max_total_lanes,
+        max_state_lanes: limits.max_total_lanes,
+        max_metadata_bytes: limits.max_metadata_bytes,
+        max_string_bytes: limits.max_string_bytes,
+        max_width_entries: limits.max_width_entries,
+    };
+    let common = json!({
+        "format": "sherlock-c6-phys/1",
+        "layout_version": [layout.layout_version.0.clone(), layout.layout_version.1.clone()],
+        "field_id": layout.field_id.clone(),
+        "max_total_lanes": limits.max_total_lanes.to_string(),
+        "sharing": "immutable sharing is unfolded to structural occurrences; physical identity is not source equality",
+        "encode_decode_correspondence": "unproved",
+        "circuit_correspondence": "unimplemented",
+    });
+    let out = |check: &str, detail: String| {
+        let mut v = common.clone();
+        v["status"] = json!("out-of-domain");
+        v["refused_by"] = json!(check);
+        v["detail"] = json!(detail);
+        v["represented_image_claim"] = json!(false);
+        v
+    };
+    let captured = match capture_host(admitted, image, layout, budgets, &host_limits) {
+        Ok(c) => c,
+        Err(C6HostCaptureError::Observation(v)) => return out("observation", format!("{v:?}")),
+        Err(C6HostCaptureError::RetainedLayout(e)) => return out("layout", format!("{e:?}")),
+        Err(C6HostCaptureError::Codec(e)) => return out("encode", format!("{e:?}")),
+    };
+    let decoded = match decode_host(captured.lanes(), captured.config(), &host_limits) {
+        Ok(d) => d,
+        Err(e) => return out("decode", format!("{e:?}")),
+    };
+    let bound = match bind_decoded_host(&decoded, admitted, image, layout, budgets, &host_limits) {
+        Ok(b) => b,
+        Err(C6BindError::Observation(v)) => return out("bind", format!("{v:?}")),
+        Err(C6BindError::RetainedLayout(e)) => return out("bind", format!("{e:?}")),
+        Err(C6BindError::Program(e)) => return out("bind", format!("{e:?}")),
+        Err(C6BindError::Mismatch { field }) => return out("bind", field.to_string()),
+    };
+    let lane_bytes: Vec<u8> = captured
+        .lanes()
+        .iter()
+        .flat_map(|lane| lane.to_le_bytes())
+        .collect();
+    let mut v = common;
+    v["status"] = json!("in-domain");
+    v["lanes"] = json!(captured.lanes().len().to_string());
+    v["lanes_sha256"] = json!(crate::intent::hash_bytes(&lane_bytes));
+    v["decoded_equals_owner_image"] = json!(bound.current_image_equal());
+    v["decoded_equals_capture"] = json!(decoded.host() == captured.host());
+    v["represented_image_claim"] = json!(bound.current_image_equal());
+    v
 }
 
 /// The completed chunked run: final image and summary, plus the chunk report.
@@ -242,6 +354,7 @@ pub(super) fn run_chunked(
     mut image: MachineImage,
     request: &ChunkRequest,
     serialization_bytes: usize,
+    layout: &LayoutSchemaC,
     sink: &mut dyn FnMut(&StepEventC),
 ) -> Result<ChunkedOutcome, CompileFailure> {
     request
@@ -316,6 +429,14 @@ pub(super) fn run_chunked(
         });
         if request.events == ChunkEvents::Retained {
             record["events"] = Value::Array(std::mem::take(&mut chunk_events));
+        }
+        if request.represent == Representation::Bounded {
+            record["representation"] = represent_bounded(
+                admitted,
+                &image,
+                layout,
+                RepresentationLimits::from_serialization_bytes(serialization_bytes),
+            );
         }
         chunks.push(record);
         start_counters = end_counters;

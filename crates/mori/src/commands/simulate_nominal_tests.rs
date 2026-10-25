@@ -46,6 +46,7 @@ fn args(source: &str) -> Args {
         chunk: None,
         chunk_at: None,
         chunk_events: false,
+        chunk_represent: false,
         reference_slices: None,
     }
 }

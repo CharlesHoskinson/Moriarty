@@ -210,6 +210,7 @@ fn run_draft_host_impl(
             image,
             request,
             serialization_bytes,
+            &layout,
             sink,
         )?;
         let events_forwarded = outcome.summary.events;
