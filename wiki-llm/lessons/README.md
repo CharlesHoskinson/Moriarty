@@ -20,3 +20,5 @@ with the date and the evidence (commit, trace, log path or measurement).
 
 Related: [Loki design](../loki/LOKI-DESIGN.md), [Loki 10x verdict](../loki/10x/LOKI-10X.md),
 [speed-up scouts](../loki/speedups/), [AgentBus decision](../doctorwatson-agentbus/DECISION.md).
+
+Workflow retrospectives: [[doctorwatson-workflow-review-2026-10-25]] (latest), [[doctorwatson-workflow-review-2026-10-22]]. Improvement log: [[doctorwatson-improvement-log]].

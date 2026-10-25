@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import bus, head_sha, heavy, holdout, now_iso, preflight, repo_root, spawn, status, stoprule
+from . import bus, evalloop, head_sha, heavy, holdout, now_iso, preflight, queue, reap, repo_root, spawn, status, stoprule
 from . import predicates as preds_mod
 
 NO_RESULTS_HINT = "(no results yet — run scripts/doctorwatson check --tier T0)"
@@ -128,7 +128,12 @@ def cmd_preflight(args):
 
 
 def cmd_heavy(args):
-    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd)
+    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd, gpu=args.gpu,
+                           deadline=args.deadline, max_wall=args.max_wall)
+
+
+def cmd_reap(args):
+    return reap.cmd_reap(args.execute, args.grace, args.json)
 
 
 def cmd_stop_rule(args):
@@ -149,6 +154,18 @@ def cmd_bus(args):
         "review": lambda: bus.cmd_review(args.range, args.t3, args.out),
         "watch": lambda: bus.cmd_watch(args.max_time),
     }[args.bus_cmd]()
+
+
+def cmd_clean(args):
+    return evalloop.cmd_clean()
+
+
+def cmd_state_commit(args):
+    return evalloop.cmd_state_commit()
+
+
+def cmd_contract_check(args):
+    return evalloop.cmd_contract_check(args.id)
 
 
 def cmd_spawn(args):
@@ -189,7 +206,18 @@ def build_parser():
     p.add_argument("--id", required=True)
     p.add_argument("--budget")
     p.add_argument("--hypothesis")
+    p.add_argument("--gpu", action="store_true", help="also hold gpu.lock in-process (replaces `-- flock gpu.lock`)")
+    p.add_argument("--deadline", type=float, help="epoch seconds by which the job must be dead")
+    p.add_argument("--max-wall", type=float, help="hard wall-clock cap in seconds")
     p.set_defaults(fn=cmd_heavy)
+
+    queue.add_parser(sub)
+
+    p = sub.add_parser("reap", help="expired-lease reaper: dry-run by default; --execute needs the owner standing rule file")
+    p.add_argument("--execute", action="store_true", help="signal the expired lease's session (refused unless owner enabled)")
+    p.add_argument("--grace", type=float, default=15.0, help="seconds between SIGTERM and SIGKILL")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_reap)
 
     p = sub.add_parser("stop-rule", help="escalation rule")
     p.add_argument("--json", action="store_true")
@@ -221,6 +249,16 @@ def build_parser():
     q = bsub.add_parser("watch", help="agentbus watch --exit-on-first on stop.escalate|review.reply|status.flip")
     q.add_argument("--max-time", type=int)
     p.set_defaults(fn=cmd_bus)
+
+    p = sub.add_parser("clean", help="exit 0 if the tree is clean ignoring qa/sherlock/{status.json,runs.jsonl}")
+    p.set_defaults(fn=cmd_clean)
+
+    p = sub.add_parser("state-commit", help="commit only qa/sherlock/{status.json,runs.jsonl} as chore(factory-state)")
+    p.set_defaults(fn=cmd_state_commit)
+
+    p = sub.add_parser("contract-check", help="run qa/holdout/contracts/ID.json against its entrypoint")
+    p.add_argument("id", metavar="ID_OR_PATH")
+    p.set_defaults(fn=cmd_contract_check)
 
     p = sub.add_parser("spawn", help="run a vendor CLI as a bus participant: spawn --vendor V --as N --role R --brief F [--] ARGS")
     p.add_argument("--vendor", required=True, choices=sorted(spawn.VENDORS))

@@ -65,3 +65,9 @@ tags: [lessons, agents, codex, agentbus, doctorwatson, sandbox]
 - The five Lean agents worked because each owned one file and asked the others for changes over the bus. The auditor
   rejected drafts until they were faithful to the Rust code.
 - A subagent that finishes while blocked on a dependency (lean-5 on Plonk) stops for good. Resume it with SendMessage once the dependency lands.
+
+## See also
+
+- [[doctorwatson-workflow-review-2026-10-25]]: 2026-10-25 retrospective (orphaned locks, idle agents, DW121–DW130)
+- [[doctorwatson-workflow-review-2026-10-22]] and [[doctorwatson-improvement-log]]
+- Lessons index: [[lessons/README|lessons]]

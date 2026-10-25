@@ -65,6 +65,13 @@ thiserror = "2.0.21"
 insta.opt-level = 3
 similar.opt-level = 3
 
+# Third-party crypto (midnight-proofs, circuits, curves, ff, group, ...) runs
+# unoptimized under `cargo test` and made SDK circuit checks 10-50x slower
+# (a workspace run took 8.1 h). `"*"` matches non-workspace crates only, so
+# Moriarty's own crates keep fast incremental debug builds.
+[profile.dev.package."*"]
+opt-level = 3
+
 # The pinned ledger's v2 compatibility path requires unpublished crypto 2.2.
 # Mirror its own workspace patches with an immutable retained release commit;
 # direct v3 dependencies remain pinned to 04c9c5d. No mutable local paths.

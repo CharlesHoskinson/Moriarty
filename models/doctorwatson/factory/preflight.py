@@ -14,8 +14,12 @@ def lock_path():
     return os.environ.get("DW_LOCK") or os.path.expanduser("~/.cache/doctorwatson/heavy.lock")
 
 
-def open_lock():
-    p = lock_path()
+def gpu_lock_path():
+    return os.environ.get("DW_GPU_LOCK") or os.path.join(os.path.dirname(lock_path()), "gpu.lock")
+
+
+def open_lock(p=None):
+    p = p or lock_path()
     os.makedirs(os.path.dirname(p), exist_ok=True)
     return os.open(p, os.O_RDWR | os.O_CREAT, 0o644)
 

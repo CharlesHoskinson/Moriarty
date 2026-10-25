@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""Owner-blocked escalation ledger for the coordinator loop.
+
+  blocked-notify add KEY "what only the owner can decide"   record (keeps first-seen time)
+  blocked-notify clear KEY                                  resolved
+  blocked-notify due [--after-min 20] [--repeat-min 60]     print items needing a push now
+
+`due` also treats an expired lease (from `doctorwatson reap --json`) as an item.
+A script cannot push; the coordinator calls PushNotification with each line `due`
+prints, then `due` marks it notified so it repeats at most every --repeat-min.
+State: $DW_BLOCKED_FILE or ~/.cache/doctorwatson/blocked.json
+"""
+import argparse, json, os, subprocess, sys, time
+
+PATH = os.environ.get("DW_BLOCKED_FILE") or os.path.expanduser("~/.cache/doctorwatson/blocked.json")
+
+
+def load():
+    try:
+        with open(PATH) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def save(d):
+    os.makedirs(os.path.dirname(PATH), exist_ok=True)
+    tmp = PATH + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(d, fh, indent=1)
+    os.replace(tmp, PATH)
+
+
+def lease_items():
+    if os.environ.get("DW_BLOCKED_NO_REAP"):
+        return {}
+    here = os.path.dirname(os.path.abspath(__file__))
+    cli = os.path.join(here, "doctorwatson")
+    try:
+        out = subprocess.run([cli, "reap", "--json"], capture_output=True, text=True, timeout=30).stdout
+        recs = json.loads(out)
+    except Exception:
+        return {}
+    return {f"lease:{r['lock']}:{r.get('id')}": {"text": f"expired {r['lock']} lease {r.get('id')} sid {r.get('sid')} overdue {r.get('overdue')}s; reap needs owner rule", "since": r.get("deadline", time.time())}
+            for r in recs if r.get("state") == "expired"}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    sub = ap.add_subparsers(dest="c", required=True)
+    a = sub.add_parser("add"); a.add_argument("key"); a.add_argument("text")
+    c = sub.add_parser("clear"); c.add_argument("key")
+    d = sub.add_parser("due"); d.add_argument("--after-min", type=float, default=20); d.add_argument("--repeat-min", type=float, default=60)
+    args = ap.parse_args()
+    st, now = load(), time.time()
+    if args.c == "add":
+        st.setdefault(args.key, {"since": now})["text"] = args.text
+    elif args.c == "clear":
+        st.pop(args.key, None)
+    else:
+        for k, v in lease_items().items():
+            st.setdefault(k, v)
+        for k, v in st.items():
+            if now - v["since"] >= args.after_min * 60 and now - v.get("notified", 0) >= args.repeat_min * 60:
+                print(f"[{k}] blocked {int((now - v['since']) / 60)} min: {v['text']}")
+                v["notified"] = now
+    save(st)
+
+
+main()
