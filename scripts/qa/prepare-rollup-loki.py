@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 import tomllib
 
@@ -22,6 +23,30 @@ def sha(path):
 def source_pins(root):
     files = subprocess.check_output(['git', '-C', str(root), 'ls-files', '-co', '--exclude-standard', '-z']).split(b'\0')
     return {raw.decode(): sha(root / raw.decode()) for raw in sorted(set(files)) if raw and (root / raw.decode()).is_file()}
+
+
+def recursion_pins(root):
+    files = [root / 'Cargo.toml', root / 'Cargo.lock']
+    files.extend(path for path in (root / 'crates/mori-recursion').rglob('*')
+                 if path.is_file() and path.suffix in ('.rs', '.toml', '.json'))
+    return {str(path.relative_to(root)): sha(path) for path in sorted(files)}
+
+
+def render_runner(source, prover, gpu):
+    runner = source.read_text().replace('fn main() -> Result<()> {', 'fn rollup_main() -> Result<()> {', 1)
+    runner = re.sub(r'include_bytes!\("([^"]+)"\)',
+                    lambda match: 'include_bytes!(' + json.dumps(str((source.parent / match[1]).resolve())) + ')', runner)
+    # The generated package is always Loki, even if an operator omits --config.
+    # Missing identity is a compile error; wrong identity/features are a startup
+    # error; reference-verifier modes are unconditionally refused by this wrapper.
+    runner += '\nfn main() -> Result<()> {\n'
+    runner += '    const ID: &str = env!("SHERLOCK_PROVER_ID", "Loki build requires the generated --config file");\n'
+    runner += '    if ID != ' + json.dumps(prover) + ' || cfg!(feature="gpu") != ' + str(gpu).lower() + ' {\n'
+    runner += '        return Err(error("Loki prover identity/features differ from preparation"));\n    }\n'
+    runner += '    if std::env::args().any(|a| a == "verify" || a == "prefix-verify") {\n'
+    runner += '        return Err(error("Loki requires the retained stock reference verifier"));\n    }\n'
+    runner += '    rollup_main()\n}\n'
+    return runner
 
 
 def main():
@@ -46,6 +71,10 @@ def main():
             parser.error('built prover identity/features differ from preparation')
         if sha(root / 'crates/mori-recursion/examples/rollup.rs') != manifest['rollup_source_sha256']:
             parser.error('rollup source changed during build; prepare a new build')
+        if sha(output / 'main.rs') != manifest['runner_source_sha256']:
+            parser.error('generated runner changed during build')
+        if recursion_pins(root) != manifest['recursion_source_sha256']:
+            parser.error('recursion source changed during build; prepare a new build')
         manifest.update({'schema': 'sherlock-loki-build/1', 'binary_sha256': sha(binary),
                          'cargo_lock_sha256': sha(output / 'Cargo.lock'),
                          'rustc': subprocess.check_output(['rustc', '-Vv'], text=True),
@@ -75,10 +104,12 @@ def main():
     lines.extend(json.dumps(name) + ' = ' + toml_value(value) for name, value in dependencies.items())
     lines.append('[patch.crates-io]')
     lines.extend(json.dumps(name) + ' = ' + toml_value(value) for name, value in patches.items())
-    lines.extend(['[[bin]]', 'name = "rollup_loki"', 'path = ' + json.dumps(str(root / 'crates/mori-recursion/examples/rollup.rs'))])
+    lines.extend(['[[bin]]', 'name = "rollup_loki"', 'path = "main.rs"'])
     (output / 'Cargo.toml').write_text('\n'.join(lines) + '\n')
     head = subprocess.check_output(['git', '-C', str(loki), 'rev-parse', 'HEAD'], text=True).strip()
     prover = f'Loki {"GPU MSM/NTT" if args.gpu else "CPU"} {head}'
+    source = root / 'crates/mori-recursion/examples/rollup.rs'
+    (output / 'main.rs').write_text(render_runner(source, prover, args.gpu))
     config = {'build': {'target-dir': str(output / 'target'), 'jobs': 4},
               'env': {'SHERLOCK_PROVER_ID': {'value': prover, 'force': True}, 'RAYON_NUM_THREADS': '4'}}
     lines = []
@@ -88,7 +119,8 @@ def main():
     (output / 'config.toml').write_text('\n'.join(lines) + '\n')
     preparation = {'schema': 'sherlock-loki-preparation/1', 'prover': prover, 'gpu': args.gpu,
                    'loki_head': head, 'loki_source_sha256': source_pins(loki),
-                   'rollup_source_sha256': sha(root / 'crates/mori-recursion/examples/rollup.rs'),
+                   'rollup_source_sha256': sha(source), 'runner_source_sha256': sha(output / 'main.rs'),
+                   'recursion_source_sha256': recursion_pins(root),
                    'workspace_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                    'public_workspace_patch': False}
     (output / 'preparation.json').write_text(json.dumps(preparation, indent=2, sort_keys=True) + '\n')

@@ -10,6 +10,18 @@ evidence = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(evidence)
 
 
+def reject_reused_proofs(root):
+    seen = set()
+    for count in (2, 4, 6):
+        for batch in range(1, count + 1):
+            for layer in ('leaf', 'parent', 'decider'):
+                digest = evidence.digest(Path(root) / f'prefix-{count}/batch-{batch:02}/{layer}.proof')
+                identity = (batch, layer, digest)
+                if identity in seen:
+                    raise ValueError('proof reused across independent prefixes')
+                seen.add(identity)
+
+
 def check(root):
     root = Path(root)
     workload = evidence.read(root / 'workload.json', 'sherlock-b5-workload/1')
@@ -23,6 +35,7 @@ def check(root):
     evidence.require_digest(root / 'rollup.bin', build['binary_sha256'])
     baseline = json.loads((Path(__file__).parents[2] / 'models/sherlock/rollup-synth/baseline.json').read_bytes())
     evidence.require_digest(root / 'fixture/MANIFEST.json', baseline['manifest_sha256'])
+    reject_reused_proofs(root)
     summaries = {}
     fixed = {}
     for count in (2, 4, 6):
