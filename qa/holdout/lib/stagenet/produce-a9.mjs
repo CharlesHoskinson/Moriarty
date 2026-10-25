@@ -5,7 +5,8 @@
 //   1. twin T: a fresh actual-bound decider proof for acceptValidity(stmt) (stmt already accepted by A8), balanced;
 //   2. s-a mutant M: the exact balanced bytes of T with one bit of its contract proof flipped;
 //   3. s-b mutant B: acceptValidity(fresh stmt) proven under the compiled acceptValidity key, not the installed decider key;
-//   submit B and M (each must be refused by the node), then T (positive control, must finalize),
+//   order: build, balance and submit B (must be refused; frees its dust), then prove and balance T, submit M
+//   (must be refused), then T (positive control, must finalize),
 //   then the identical bytes of T again (s-e transaction replay; must be refused).
 // The wallet comes only from tools/sherlock-sdk/stagenet-session.mjs; no seed, key or transaction body is
 // written or logged. Receipts hold hashes, offsets and sanitized refusal text only.
@@ -61,12 +62,22 @@ const child = (command, argv, input, env, name) => new Promise((ok, reject) => {
   p.on('close', code => { writeFileSync(join(output, name), err); code === 0 ? ok(out) : reject(Error('child failed: ' + name)); });
   p.stdin.end(input);
 });
-// Refusal text only: tags and messages along the cause chain, long hex runs (transaction bodies) removed.
+// Refusal text only: tags and messages along the Effect cause chain (including symbol-keyed causes),
+// long hex runs (transaction bodies) removed. Never serializes whole error objects.
 const refusal = error => {
-  const chain = []; let e = error;
-  for (let i = 0; e && i < 8; i++, e = e.cause)
-    chain.push({tag: String(e._tag ?? e.name ?? typeof e), message: String(e.message ?? e).replace(/[0-9a-fA-F]{129,}/g, '<hex>').slice(0, 600)});
-  return chain;
+  const out = [], seen = new Set();
+  const visit = (e, depth) => {
+    if (!e || typeof e !== 'object' || seen.has(e) || depth > 8 || out.length >= 16) return;
+    seen.add(e);
+    const tag = e._tag ?? e.name, msg = typeof e.message === 'string' ? e.message : null;
+    if (tag || msg) out.push({tag: String(tag ?? ''), message: String(msg ?? '').replace(/[0-9a-fA-F]{129,}/g, '<hex>').slice(0, 600)});
+    for (const k of ['cause', 'error', 'failure', 'reason', 'left'])
+      if (k in e) visit(e[k], depth + 1);
+    for (const k of Object.getOwnPropertySymbols(e)) if (/Cause/.test(String(k))) visit(e[k], depth + 1);
+  };
+  visit(error, 0);
+  if (!out.length) out.push({tag: typeof error, message: String(error).slice(0, 600)});
+  return out;
 };
 
 class DeciderKeys extends NodeZkConfigProvider {           // the installed decider key, as the A8 adapter
@@ -215,21 +226,33 @@ try {
     log('PASS preparation: s-b wrong-key call built and natively refused; no wallet, no submission');
   } else {
     session = await openStagenetSession(load, output);
+    log('wallet synced');
+    receipt.prediction = {}; receipt.attempts = [];
+    // s-b first: cheap to build, and its refusal (wallet revert) releases its dust before the twin is balanced.
+    const B0 = await buildWrongKey();
+    log('s-b built; balancing');
+    const B = await session.walletProvider.balanceTx(B0);
+    receipt.prediction.sB = await nativeValidate(B, 'native-sB-final');
+    assert.ok(isProofRefusal(receipt.prediction.sB), 'sB prediction must be a contract proof refusal');
+    assert.equal(await latestStateSHA(), preStateSHA256, 'contract state changed since the pinned snapshot');
+    receipt.attempts.push(await attempt('s-b', B));
+    // A refused transaction keeps its dust locked locally until the dust grace period; a fresh session
+    // re-syncs from chain, where the s-b dust spend never landed.
+    await session.close(); session = undefined;
+    session = await openStagenetSession(load, join(output, 'session-2'));
+    log('wallet re-synced for the twin');
     const T0 = await buildTwin();
     const pre = await nativeValidate(unboundForCheck(T0), 'native-twin-prebalance');
     assert.ok(pre.contractProofsSignaturesLimitsAccepted && pre.applied, 'twin control must be accepted and applied natively before balancing');
+    log('twin proven; balancing');
     const T = await session.walletProvider.balanceTx(T0);
     const {tx: M, flip} = flipProof(T);
-    const B0 = await buildWrongKey();
-    const B = await session.walletProvider.balanceTx(B0);
-    receipt.prediction = {twin: await nativeValidate(T, 'native-twin-final'), sA: await nativeValidate(M, 'native-sA-final'),
-      sB: await nativeValidate(B, 'native-sB-final')};
-    for (const k of ['sA', 'sB']) assert.ok(isProofRefusal(receipt.prediction[k]), `${k} prediction must be a contract proof refusal`);
+    receipt.prediction.twin = await nativeValidate(T, 'native-twin-final');
+    receipt.prediction.sA = await nativeValidate(M, 'native-sA-final');
+    assert.ok(isProofRefusal(receipt.prediction.sA), 'sA prediction must be a contract proof refusal');
     assert.ok(!/proof|signature/i.test(receipt.prediction.twin.contractProfileFailure ?? ''), 'twin final must not fail on proofs or signatures');
     receipt.flip = flip; receipt.twinProofSHA256 = twinProofHash;
     assert.equal(await latestStateSHA(), preStateSHA256, 'contract state changed since the pinned snapshot');
-    receipt.attempts = [];
-    receipt.attempts.push(await attempt('s-b', B));
     receipt.attempts.push(await attempt('s-a', M));
     receipt.stateAfterMutantsSHA256 = await latestStateSHA();
     receipt.attempts.push(await attempt('twin', T));
