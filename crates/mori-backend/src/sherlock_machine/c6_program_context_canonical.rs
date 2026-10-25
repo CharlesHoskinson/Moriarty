@@ -234,6 +234,21 @@ pub struct C6ProgramContextParameterCaptureBlock {
     pub parameter_found: Operand,
     pub parameter_row: [Operand; 2],
 }
+/// One ARM row (`pattern, body`) captured from canonical PROG by index.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextArmCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub arm_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextArmCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub arms_count: Operand,
+    pub arm_found: Operand,
+    pub arm_row: [Operand; 2],
+}
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs {
     pub gate: Operand,
@@ -2066,6 +2081,27 @@ impl C6ProgramContextCanonicalEmitter {
             functions_count,
             function_found,
             function_row: row.try_into().expect("five function lanes"),
+        })
+    }
+    /// One ARM row (`pattern, body`) captured from canonical PROG by index.
+    pub fn emit_prog_arm_capture(
+        &mut self,
+        inputs: &C6ProgramContextArmCaptureInputs,
+    ) -> Result<C6ProgramContextArmCaptureBlock, C6ProgramContextCanonicalError> {
+        let (instructions, arms_count, arm_found, row) = self.emit_fixed_row_capture(
+            &inputs.gate,
+            &inputs.pre_prog,
+            &inputs.caps,
+            &inputs.arm_index,
+            PH_ARM_COUNT,
+            PH_ARM_ROW,
+            2,
+        )?;
+        Ok(C6ProgramContextArmCaptureBlock {
+            instructions,
+            arms_count,
+            arm_found,
+            arm_row: row.try_into().expect("two arm lanes"),
         })
     }
     /// One PARAMETER row (`binder, sort`) captured from canonical PROG by index.

@@ -811,3 +811,27 @@ pub(super) fn mux_row(
     }
     (hit_any, out)
 }
+
+/// Frame pop: post depth + 1 = pre depth (> 0), the popped top slot is all
+/// zero after the step, every other slot is preserved. Pair with
+/// `preserve_image(.., frames_mutable = true)` and `L_FRAME_COUNT` mutable.
+pub(super) fn pop_frame(em: &mut Em, inputs: &C6StepInputs) {
+    use mori_core::sherlock::helper_machine::c6_phys::L_FRAME_COUNT;
+    let en = inputs.enable.clone();
+    let pre_i = &inputs.pre_image;
+    let post_i = &inputs.post_image;
+    let depth = pre_i[L_FRAME_COUNT].clone();
+    let some = em.lt128(Em::imm(0), depth.clone());
+    em.gassert(en.clone(), some);
+    let back = em.add(post_i[L_FRAME_COUNT].clone(), Em::imm(1));
+    em.geq(en.clone(), back, depth.clone());
+    let p = &inputs.geometry.caps.phys;
+    for slot in 0..p.max_frames {
+        let base = IMAGE_SECTION_HEADER_LANES + slot * FRAME_LANES;
+        let top = em.teq(Em::imm(slot as u128 + 1), depth.clone());
+        for lane in base..base + FRAME_LANES {
+            let want = em.sel(top.clone(), Em::imm(0), pre_i[lane].clone());
+            em.geq(en.clone(), post_i[lane].clone(), want);
+        }
+    }
+}

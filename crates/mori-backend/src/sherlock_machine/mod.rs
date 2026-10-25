@@ -615,6 +615,9 @@ pub mod c6_append_helper_step;
 // UIREQ-023 Bind helper fragment (parameter binding).
 pub mod c6_bind_helper_consumer;
 pub mod c6_bind_helper_step;
+// UIREQ-023 legacy control fragment (returns, primitive value, cases).
+pub mod c6_legacy_control_consumer;
+pub mod c6_legacy_control_step;
 pub use c6_dispatch_consumer::{
     C6DispatchCircuit, C6DispatchConsumerError, C6DispatchWitness, build_c6_dispatch_circuit,
     check_c6_dispatch_circuit, witness_from_host_snapshot as witness_dispatch_from_host_snapshot,
