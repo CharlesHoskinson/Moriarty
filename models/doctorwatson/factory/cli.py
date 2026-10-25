@@ -128,7 +128,8 @@ def cmd_preflight(args):
 
 
 def cmd_heavy(args):
-    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd)
+    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd, gpu=args.gpu,
+                           deadline=args.deadline, max_wall=args.max_wall)
 
 
 def cmd_reap(args):
@@ -205,6 +206,9 @@ def build_parser():
     p.add_argument("--id", required=True)
     p.add_argument("--budget")
     p.add_argument("--hypothesis")
+    p.add_argument("--gpu", action="store_true", help="also hold gpu.lock in-process (replaces `-- flock gpu.lock`)")
+    p.add_argument("--deadline", type=float, help="epoch seconds by which the job must be dead")
+    p.add_argument("--max-wall", type=float, help="hard wall-clock cap in seconds")
     p.set_defaults(fn=cmd_heavy)
 
     queue.add_parser(sub)
