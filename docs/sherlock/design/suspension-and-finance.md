@@ -5,8 +5,8 @@ decision relayed by the coordinator ("change whatever you like in the design of
 sherlock ... we can't change ledger 9"). Nothing here is implemented, compiled or
 run. Revision 2 closes the five Opus security review findings (2 HIGH, 1 MED,
 2 LOW; §13). Revision 3 closes the three GPT Sol findings on 0bd74deaa (2 High,
-1 Medium; §14). An Opus re-check of rev 3 is running in parallel with Phase 2, as
-the coordinator directed. The coordinator approved the §1.3 anchor interpretation. The note lifts the
+1 Medium; §14). Revision 4 closes the Opus re-check of rev 3 (§15). Phase 2
+implementation is in progress. The coordinator approved the §1.3 anchor interpretation. The note lifts the
 option-C hold on U014, U015, U017, U018, U019 and U020.
 
 Claims scope. This note decides host semantics (the reference machine, the draft
@@ -83,6 +83,10 @@ Decisions:
    /2 leaf/step keys and the /2 decider key. No /1 key is in it. The /2 decider
    refuses any child proof whose key is not in that set. A /1 leaf therefore cannot
    be folded into a /2 statement, even though the /1 META leaves profile_id unbound.
+   (rev 4) `keys_id` is not a free statement input. D computes it as
+   `transientHash([DOM_KEYS2, vk_hash_1, ..., vk_hash_k])` over the child
+   verifier keys it actually verified, in fixed order. The anchor compares that
+   derived value to its sealed pin.
 
    `acceptValidity(stmt)`:
    - asserts `!settled.member(stmt)` (restored from the deployed anchors);
@@ -111,13 +115,26 @@ Decisions:
       - When `od != 0` the anchor recomputes
         `transientHash([DOM_OBS2, ck_pre, site, label_id, n, v_0..v_15])` and asserts
         it equals `od`.
-      - It asserts `n <= 16`, and that `v_i == 0` for every `i >= n`.
+      - It casts the count lane to a typed integer, `const n = obs[2] as Uint<8>`
+        (the cast range-checks it), then asserts `n <= 16` and `v_i == 0` for every
+        `i >= n` (rev 4: Compact compares typed `Uint`, not `Field`).
       - When `od == 0`, `obs` must be all zero.
    5. `stmt = transientHash([DOM_STMT2, instance_id, batch, keys_id, program_c,
       profile_id, ck_pre, h_pre, ck_post, h_post, n_steps, trace, od])`. Then
       `!settled.member(stmt)` and `validity_ok.member(stmt)`.
    6. It moves `stmt` from `validity_ok` to `settled`, then sets `root := ck_post`,
       `height := h_post` and `batch_no := batch`.
+
+   **Decider constraints on batch shape (rev 4).** For every /2 batch, D enforces:
+   - **Waiting ends a batch.** An image whose outcome is `Waiting` may appear
+     only as the batch's final image, so `ck_post` is its CK. No event follows a
+     Waiting image inside a batch.
+   - **Resume only first.** At most one `BResumeAccept`/`XFinResumeAccept` occurs
+     per batch, and only as event 0, applied to the batch's input image
+     (`ck_pre`).
+   - **`od` and resumes agree.** `od != 0` if and only if event 0 is a resume.
+     Then `od` equals the `LAST_OBS_DIGEST` written by that event; otherwise
+     `od == 0`.
 
    The D statement absorbs `od` at the resume event's position in `trace`, and the
    leaf proves that the image after `XFinResumeAccept` / `BResumeAccept`
@@ -167,7 +184,7 @@ publishes its boundary there. A technical chunk cut is none of these
 
 | Kind | Name | C6 tag | Payload | Notes |
 | --- | --- | --- | --- | --- |
-| `ControlC` | `Await{site, guard, binders}` | 11 | site: u16 (1-based, per program), guard: ExprId, binders: ordered (BinderId, Sort) slice id | existing tags 0–10 unchanged |
+| `ControlC` | `Await{site, expr}` | 11 | lanes `[11, site, expr]`: site u16 (1-based, per program); expr = the await expression row, from which binders, guard and body are read (rev 4: matches the implemented `ControlC::Await`) | existing tags 0–10 unchanged |
 | `OutcomeC` | `Waiting{site}` | 4 | site | not terminal, not Running; existing 0–3 unchanged |
 | `RuleIdC` (fin group) | `XFinCommit`, `XFinAwaitEnter`, `XFinResumeAccept` | n/a | | joins the existing `FinRuleId::AwaitEnter` header in fin_selection.rs |
 | `RuleIdC` (pure) | `BAwaitEnter`, `BResumeAccept` (atomic resume relation, §6.2) | n/a | | replaces the reserved `BBookkeepingResumeStore/Restore` extension rules |
@@ -191,8 +208,16 @@ over `G` and `E` only. Typing rules:
 
 - `T_i` is `UInt` or `Bool`, the exact Core/2 observation domain (`ir.rs:34`).
 - `G : Bool`.
-- `G` is **call-free**: literals, variables, `+ - * == < not if` only. No named
-  calls, constructors or `match` (decided in §6.3).
+- `G` is **call-free and branch-free**: literals, variables, `+ - * == < not`
+  only. No named calls, constructors, `match` or `if` (decided in §6.3).
+  - Rev 4: the circuit evaluates every node of the straight-line guard, but a
+    lazy host `if` would skip the arm not taken. A failure in that arm would then
+    let the host accept a successor the circuit cannot prove.
+  - Forbidding `if` makes host and circuit evaluate exactly the same nodes. Any
+    error in any node (`-` underflow, `+`/`*` overflow) makes the guard
+    not-ready in both.
+  - A Core/2 guard containing a conditional is refused at /2 admission as
+    `Unsupported(GuardConditional)`.
 - Binders may not shadow any name in scope.
 - Labels are unique per program.
 - The Core/2 bounds apply: at most 16 binders per site and 16 sites per function.
@@ -407,6 +432,7 @@ contract layer. /2 adds no oracle or signature primitive.
   | env cells (pure) | `environment_cells - active.env >= n_s` | `EnvironmentCells` |
   | binder slots (fin) | `await_binder_slots - retained.binders >= n_s` | `DataFields` |
   | Core/2 cap (fin) | `committed_before[s] + segment_cost[s+1] <= cap` | `LogicalCap` (new tag 7, /2 only) |
+  | step_cap | Not a runtime counter in /1 or /2. It is an admission bound (`>= 1`) and a host trace-serialization budget; resume consumes none of it. If a future profile makes it a per-run counter, it joins this table | none |
 
   - Frames, helper tasks, helper work and serialization need no check. The resume
     relation pushes no frame, starts no helper and adds no helper work, and the
@@ -436,7 +462,7 @@ contract layer. /2 adds no oracle or signature primitive.
     admission bound).
   - Their values are copied into the Await capture section (§3.4) in admitted
     operand order.
-  - control := `Await{site, guard, binders}`, outcome := `Waiting{site}`.
+  - control := `Await{site, expr}`, outcome := `Waiting{site}`.
   - Frames, env root, heap tables and the remaining counters are untouched. This
     is the checkpoint.
   - For `10 + inner(3)` the frame stack, bottom to top, is `outer`'s return frame,
@@ -557,7 +583,7 @@ all of the following atomically:
    evaluation at resume.
 4. Apply the §6.1 resumability check; on failure publish `Exhausted(reason)` after
    step 1.
-5. control := `Await{s, guard, binders}`, outcome := `Waiting{s}`.
+5. control := `Await{s, expr}`, outcome := `Waiting{s}`.
 
 At the end of the action, `XFinComplete` = `XFinCommit` then `Halted(unit)` in one
 event.
@@ -670,8 +696,13 @@ Rejected successor consumes the root (§5).
   - **Technical cuts.** A cut may land inside either phase. It exposes `fee_stage`
     and `tentative` as staged fields, and never a partially fee-reduced committed
     snapshot. New invariant SI-30: `committed` changes only in `XFinCommit`,
-    `XFinAwaitEnter`, `XFinComplete` and `XFinLocalFailure`; `fee_sealed` is false
-    implies the fallible tentative is empty.
+    `XFinAwaitEnter`, `XFinComplete`, `XFinLocalFailure` and `XFinExhaust`;
+    `fee_sealed` is false implies the fallible tentative is empty.
+  - **Exhaustion (rev 4).** `XFinExhaust`, the fin-route form of P2/P3/P6
+    exhaustion inside a segment, follows the same rule as `XFinLocalFailure`.
+    Under `retain-guaranteed-fees/1` it commits `fee_stage` only if `fee_sealed`
+    holds; otherwise it commits nothing (`committed == entry`). Under the
+    default it commits nothing. The outcome is `Exhausted(reason)`.
   - The report adds `"retained_by_policy":{"policy":"retain-guaranteed-fees/1",
     "effects":[fee...]}`. The committed prefix, the policy-retained fee, the
     discarded delta and the remaining duties are four separate members, which is
@@ -736,10 +767,10 @@ Threats and the invariant that answers each:
 | T3 | Forged or hidden observation | Authentication is `none` (labelled); the first on-chain settler owns the observation. `settleValidity` discloses `obs` and recomputes `OD` against the statement, so the settled observation is public and cannot differ from the proved one. The guard is the program's admission check; UInt/Bool sorts and the fixed 16-lane layout with zero padding bound what can enter |
 | T4 | Griefing via junk observations | Not-ready is byte-identical and work-free in state; the guard is call-free with a static cost bound (§6.3); no fuel is added by observations |
 | T5 | Profile confusion (/1 vs /2) | profile_id = 3 constrained in /2 circuits and pinned in the anchor; `keys_id` commits to a /2-only key set and the /2 decider refuses /1 leaf keys; `DOM_CK2` separates digest domains; no cross-profile resume (SI-01) |
-| T12 | Unresumable Waiting root (liveness griefing by resource starvation) | Entry check publishes `Exhausted` instead of Waiting when fuel, helper budget or cap cannot cover a full guard and acceptance; SI-29 |
+| T12 | Unresumable Waiting root (liveness griefing by resource starvation) | Entry check publishes `Exhausted(Fuel / DataNodes / EnvironmentCells / DataFields / LogicalCap)` instead of Waiting when fuel, DATA rows, env cells, binder slots or the cap cannot cover the atomic accept; step_cap is not a runtime counter; SI-29 |
 | T6 | Technical cut presented as commit or Waiting | Commit happens only inside `XFinAwaitEnter`/`XFinComplete`/`XFinLocalFailure`; a cut produces no event and leaves `BoundaryKind::TechnicalCut`; SI-25 requires `fin.tentative` to be empty whenever outcome ≠ Running |
 | T7 | Cap editing between resumes | The cap is in bound META (unlike Core/2 `logical.cap`) |
-| T8 | Fee-retention underflow or reordering | `retain-guaranteed-fees/1` admission requires fees first in each segment; retained fees apply to the committed snapshot with the existing checked mutators |
+| T8 | Fee-retention underflow, reordering or partial retention | `retain-guaranteed-fees/1` admission requires fees first in each segment; fees apply to `fee_stage`, never directly to the committed snapshot; local failure and exhaustion (`XFinLocalFailure`, `XFinExhaust`) retain `fee_stage` only when `fee_sealed` (SI-30) |
 | T9 | Waiting image treated as terminal or exhausted | `owner_step` on Waiting returns no-next before P2; only `resume` leaves Waiting; Waiting is not Halted (UIREQ-011 distinction preserved) |
 | T10 | Guard escapes its scope or settles part-way | The guard is a straight-line program inside the one atomic resume relation; there is no intermediate image, frame or env change before acceptance, so no scratch guard prefix can be settled; binders are fresh cells; no shadowing |
 | T13 | Fee retention leaks a partial fee phase | Fees are staged in `fee_stage` from the segment-entry snapshot; they are retained only after the whole fee phase seals; any fee failure retains nothing (SI-30) |
@@ -777,14 +808,14 @@ the reason, not a code.
 | --- | --- | --- | --- | --- | --- |
 | E1 | Step | Running → Running | any existing rule | per rule | as /1 |
 | E2 | AwaitEnter (pure) | Running → Waiting(s) | `BAwaitEnter` (entry check passes) | 1 | control := Await, outcome := Waiting |
-| E2x | AwaitEnter-Starved | Running → Exhausted(Fuel / HelperWork / LogicalCap) | `BAwaitEnter` / `XFinAwaitEnter` (entry check fails) | 1 | fin: tentative → committed first; no Waiting root is produced |
+| E2x | AwaitEnter-Starved | Running → Exhausted(Fuel / DataNodes / EnvironmentCells / DataFields / LogicalCap) | `BAwaitEnter` / `XFinAwaitEnter` (entry check fails) | 1 | fin: tentative → committed first; no Waiting root is produced |
 | E3 | Commit+AwaitEnter (fin) | Running → Waiting(s) | `XFinAwaitEnter` | 1 | tentative → committed; captures saved; control/outcome as E2 |
 | E4 | Observe-Refused | Waiting(s) → Waiting(s) | R0–R7 fail | 0 | none (no successor exists) |
 | E5 | Observe-NotReady | Waiting(s) → Waiting(s) | guard ≠ true | 0 in state (attempted reported) | none; bytes identical |
 | E6 | Observe-Accept | Waiting(s) → Running | atomic `BResumeAccept` / `XFinResumeAccept` (guard evaluated inside) | `1 + |G_s|` | binders bound, obs digest and epoch recorded |
 | E7 | Complete | Running → Halted | P1 publish (pure) / `XFinComplete` (fin) | 0 / 1 | fin: tentative → committed |
 | E8 | LocalFailure | Running → Rejected | `XFinLocalFailure` (fin) / existing error publish (pure) | 0 publish | tentative → discarded (fees → committed under retain policy) |
-| E9 | Exhaust | Running → Exhausted | existing P2/P3/P6 | as /1 | fin: tentative → discarded, committed prefix kept; under `retain-guaranteed-fees/1` the segment's fees are committed exactly as in E8 |
+| E9 | Exhaust | Running → Exhausted | existing P2/P3/P6; fin: `XFinExhaust` | as /1 | fin: tentative → discarded, committed prefix kept; under `retain-guaranteed-fees/1` `fee_stage` is committed only if `fee_sealed`, otherwise nothing (SI-30) |
 | E10 | TechnicalCut | any → same | none (between events) | 0 | none; not a commit, not Waiting |
 | S1 | AcceptValidity | (on chain) | D-proved `stmt` inserted in `validity_ok` | DUST fee | none to root |
 | S2 | Settle | root R, height H, batch B → R', H + n_steps, B + 1 | `settleValidity`: predecessor pins, disclosed `obs` with `OD` recomputed | DUST fee | root := CK of the batch's last image (may be Waiting); the observation becomes public |
@@ -818,7 +849,7 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 | Finding | Severity | Disposition |
 | --- | --- | --- |
 | 1. The first settler picks or hides the observation | HIGH | Fixed. `settleValidity` discloses `obs` (site, label_id, n, 16 values), and the anchor recomputes `OD` and checks it against the statement (§1.5). Ownership is documented as "authentication none = the first on-chain settler owns the observation"; no observer pin in /2 (§1.5, §4, T3) |
-| 2. A Waiting root can become unresumable | HIGH | Fixed. The await-entry resumability check covers fuel, helper budget and, on the fin route, the cap. On failure the entry publishes `Exhausted` (new `LogicalCap` tag 7) instead of Waiting. SI-29 added; `guard_exhausted` removed (§6.1, §6.3, E2x, T12) |
+| 2. A Waiting root can become unresumable | HIGH | Fixed. The await-entry resumability check covers fuel, DATA rows, env cells and binder slots, plus the cap on the fin route (rev 3/4 reasons: `Fuel`, `DataNodes`, `EnvironmentCells`, `DataFields`, `LogicalCap`); step_cap is not a runtime counter. On failure the entry publishes `Exhausted` instead of Waiting. SI-29 added; `guard_exhausted` removed (§6.1, §6.3, E2x, T12) |
 | 3. A /1 leaf passes as /2 | MED | Fixed. `keys_id` commits to a /2-only key set; the /2 decider refuses /1 leaf keys (§1.5, T5) |
 | 4. General anchor pins | LOW | Fixed. `h_post = h_pre + n_steps` with `n_steps >= 1` is computed by the anchor; `batch == batch_no + 1`; `instance_id` and `batch` are in `stmt`; `!settled.member` is restored in `acceptValidity`. The "no state recurs" argument is withdrawn as the safety basis (§1.5, §5.4, T2) |
 | 5. CK domain tag; OD width | LOW | Fixed. `DOM_CK2` tag plus profile and carrier version in CK; OD is a fixed 21-lane vector with an explicit `n` and zero padding to 16 binders (§3.4) |
@@ -830,4 +861,17 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 | 1. No proved resume-entry relation | High | Fixed. Resume is one atomic, constrained relation (`BResumeAccept` / `XFinResumeAccept`). It is satisfiable only for a Waiting image with matching CK, an exact-layout observation and a guard program evaluating to 1, and it produces an exactly specified successor. It is the only rule enabled on Waiting, so no partly resumed image or scratch guard prefix exists to settle. Natively it is one C6 fragment, not dispatch steps (§6.2, T10). `AwaitGuardF` and `BAwaitGuardReturn` are removed |
 | 2. Fee retention breaks rollback | High | Fixed. A staged guaranteed fee phase starts from the segment-entry snapshot and is retained only after all fees seal; any fee failure retains nothing (balance 100, fees 10 then 100 ⇒ committed 100). SI-30 (§8 L1, T13) |
 | 3. Guard resource bound wrong | Medium | Fixed by construction. The guard is a straight-line program evaluated inside the resume relation: no microsteps, frames, env lookups, helpers or DATA allocation. Its charge is exactly `1 + |G_s|`, and its only allocation is `n_s` binder cells (pure: DATA rows and env cells; fin: binder slots). The entry check covers fuel, DATA, env, binder slots and cap, each with a named Exhaust reason (§6.1, SI-29, SI-31). The rev-2 node-count bound is withdrawn |
+
+## 15. Revision 4: Opus re-check of rev 3 dispositions
+
+| Item | Severity | Disposition |
+| --- | --- | --- |
+| SI-01 accepts profile 2 or 3 on every run | CODE | Fixed in code (88d1a0c0b). The owner engine carries a selected profile, and SI-01, admission, step and run are pinned to it. RED tests in `profile2_suspension_tests` |
+| N1: `if` guards are evaluated eagerly in the circuit but lazily by the host | MED | `if` is forbidden in guards; guards are call-free and branch-free (§3.3) |
+| E9 exhaustion commits a partial fee phase | MED | `XFinExhaust` retains `fee_stage` only when `fee_sealed` and is added to SI-30; T8 and E9 updated (§8 L1) |
+| No step_cap row; stale exhaust reasons | Partial | step_cap row added to §6.1. §13 row 2, T12 and E2x now name `Fuel / DataNodes / EnvironmentCells / DataFields / LogicalCap` |
+| N2: D batch-shape constraints | LOW | Stated in §1.5: Waiting ends a batch; at most one resume, only as event 0; `od != 0` iff a resume |
+| Compact `n <= 16` on Field | LOW | Cast to `Uint<8>` before the comparison (§1.5) |
+| `keys_id` as a free input | Condition | D derives `keys_id` from the verified child keys; the anchor compares it to the sealed pin (§1.5) |
+| Note/code mismatch on `ControlC::Await` | LOW | The note now says `Await{site, expr}`, matching the code (§3.2) |
 
