@@ -3,7 +3,7 @@
 // WARNING: the installed SDK JS WASM wellFormed does not verify proofs cryptographically; the final
 // balanced transaction is checked by the native proof-verifying validate_call before submission.
 import assert from 'node:assert/strict';
-import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
@@ -62,14 +62,38 @@ const graphql = async query => {
   const r = await fetch(endpoints.indexer, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({query})});
   assert.ok(r.ok); const body=await r.json(); assert.ok(!body.errors, 'indexer query failed'); return body.data;
 };
-// Optional heavy-slot scoping (coordinator rule: hold heavy only while a proof runs). MORIARTY_HEAVY_LOCK names the
-// DoctorWatson heavy.lock; only the native prover child then runs under flock on it, with stdin still piped.
-// MORIARTY_AGENTBUS_CWD, if set, posts ACQUIRE once the lock is held and RELEASE after the child exits.
-const heavyLock = process.env.MORIARTY_HEAVY_LOCK, busCwd = process.env.MORIARTY_AGENTBUS_CWD;
-const bus = (subj, body) => { if (busCwd) spawnSync('agentbus', ['--cwd', busCwd, 'send', '#sherlock', subj, '--body', body], {stdio: 'ignore'}); };
-const underHeavy = (command, argv, id) => !heavyLock ? [command, argv] : ['flock', ['-w', '10800', heavyLock, 'sh', '-c',
-  (busCwd ? `agentbus --cwd "$MORIARTY_AGENTBUS_CWD" send '#sherlock' 'ACQUIRE ${id}' --body 'heavy held for the native decider prove only; wallet sync and indexer waits are outside it' >/dev/null 2>&1 || true; ` : '') +
-  'echo "heavy acquired $(date -u +%FT%TZ)" >&2; exec "$@"', 'sh', command, ...argv]];
+// Optional heavy-slot scoping (coordinator rule: hold heavy only while a proof runs). With MORIARTY_DW_HEAVY=ID the
+// native prover child alone runs under `scripts/doctorwatson heavy --id ID` (lock, preflight, caps, trace). heavy
+// gives its child /dev/null as stdin, so the call opening travels through a FIFO in the 0700 output directory,
+// fed from memory by a `cat` helper; nothing is written to disk. Exit 3 (lock busy) waits outside the lock and
+// retries. MORIARTY_AGENTBUS_CWD, if set, posts ACQUIRE/RELEASE on #sherlock (bounded by a timeout).
+const dwHeavy = process.env.MORIARTY_DW_HEAVY, busCwd = process.env.MORIARTY_AGENTBUS_CWD;
+assert.ok(dwHeavy === undefined || /^[A-Za-z0-9._-]+$/.test(dwHeavy), 'MORIARTY_DW_HEAVY must be a DoctorWatson id');
+const bus = (subj, body) => { if (busCwd) spawnSync('agentbus', ['--cwd', busCwd, 'send', '#sherlock', subj, '--body', body], {stdio: 'ignore', timeout: 15_000}); };
+const heavyChild = async (argv, input, env, log) => {
+  const fifo = join(output, 'prover-input.fifo');
+  for (let attempt = 1; ; attempt++) {
+    if (existsSync(fifo)) unlinkSync(fifo);
+    assert.equal(spawnSync('mkfifo', ['-m', '600', fifo]).status, 0, 'mkfifo');
+    const feeder = spawn('sh', ['-c', 'exec cat > "$0"', fifo], {stdio: ['pipe', 'ignore', 'ignore']});
+    feeder.on('error', () => {}); feeder.stdin.on('error', () => {}); feeder.stdin.end(input);
+    const p = spawn('scripts/doctorwatson', ['heavy', '--id', dwHeavy, '--', 'sh', '-c', 'exec "$@" < "$0"', fifo, ...argv],
+      {env, stdio: ['ignore', 'pipe', 'pipe']});
+    let stdout = '', stderr = '', acquired = false;
+    p.stdout.on('data', b => { stdout += b; if (!acquired) { acquired = true; bus(`ACQUIRE ${dwHeavy}`, 'heavy held for the native decider prove only; wallet sync and indexer waits are outside it'); } });
+    p.stderr.on('data', b => { stderr += b; });
+    const code = await new Promise((ok, reject) => { p.on('error', reject); p.on('close', ok); });
+    feeder.kill(); unlinkSync(fifo);
+    writeFileSync(join(output, log), stderr);
+    if (acquired) bus(`RELEASE ${dwHeavy}`, `native prover exited ${code}; heavy lock released`);
+    if (code === 3 && /another process holds the heavy lock/.test(stdout + stderr)) {
+      console.log(`heavy busy (attempt ${attempt}); waiting outside the lock`);
+      await new Promise(r => setTimeout(r, 60_000)); continue;
+    }
+    if (code !== 0) throw Error(`child failed: ${log} (doctorwatson heavy exit ${code})`);
+    return stdout;
+  }
+};
 const child = (command, argv, input, env, log) => new Promise((ok, reject) => {
   const p=spawn(command,argv,{env,stdio:['pipe','pipe','pipe']}); let stdout='',stderr='';
   p.stdout.on('data',b=>{stdout+=b;});p.stderr.on('data',b=>{stderr+=b;});p.on('error',reject);
@@ -97,13 +121,11 @@ const proveProvider = {
       MORIARTY_DEPLOYED_CONTRACT_STATE:join(output,'pre-state.bin'),
       MORIARTY_PARENT_SRS:resolve('target/sherlock-srs/bls_midnight_2p20'),
       MORIARTY_TERMINAL_KEY_DIR:resolve(key),MORIARTY_TERMINAL_OUTPUT_DIR:join(output,'proof')};
-    const proveId=`${circuit} native prove on ${target.slice(0,8)}`;
-    const [proveCmd,proveArgv]=underHeavy('cargo',['test','--release','--locked','-p','mori-recursion','--features','sherlock-ledger',
-      '--test','sherlock_terminal',test,'--','--exact','--include-ignored','--nocapture','--test-threads=1'],proveId);
-    let log;
-    try { log=await child(proveCmd,proveArgv,
-      JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')}),env,'native-prover-stderr.log'); }
-    finally { if(heavyLock)bus(`RELEASE ${proveId}`,'native prover child exited; heavy lock released'); }
+    const proveArgv=['cargo','test','--release','--locked','-p','mori-recursion','--features','sherlock-ledger',
+      '--test','sherlock_terminal',test,'--','--exact','--include-ignored','--nocapture','--test-threads=1'];
+    const proveInput=JSON.stringify({binding_input:le(binding),preimage:Buffer.from(raw).toString('hex')});
+    const log=dwHeavy ? await heavyChild(proveArgv,proveInput,env,'native-prover-stderr.log')
+      : await child(proveArgv[0],proveArgv.slice(1),proveInput,env,'native-prover-stderr.log');
     writeFileSync(join(output,'native-prover-stdout.log'),log);
     if(!mode){preparedComplete=true;throw prepared;}
     nativeProofPublic=JSON.parse(readFileSync(join(output,'proof/terminal.public.json')));
