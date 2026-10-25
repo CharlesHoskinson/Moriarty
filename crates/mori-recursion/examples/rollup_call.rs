@@ -70,13 +70,16 @@ fn opening(call: CallOpening, stmt: F, template: &Template) -> Result<(F, Vec<F>
     let mut reader = &raw[..];
     let p: ProofPreimage = midnight_serialize::tagged_deserialize(&mut reader)
         .map_err(|_| bad("invalid call preimage"))?;
-    if !reader.is_empty()
-        || p.inputs.len() != 1
-        || p.inputs[0].0 != stmt
-        || !p.private_transcript.is_empty()
-        || !p.public_transcript_outputs.is_empty()
-    {
+    if !reader.is_empty() || p.inputs.len() != 1 || p.inputs[0].0 != stmt {
         return Err(bad("call is not the expected one-input rollup statement"));
+    }
+    if !p.private_transcript.is_empty() {
+        return Err(bad("unexpected private call transcript"));
+    }
+    // The replay guard has one Popeq query result: settled.member(stmt) is
+    // false. This is a public VM query output, not a circuit return value.
+    if p.public_transcript_outputs != [Fr(F::ZERO)] {
+        return Err(bad("expected the false replay-membership query result"));
     }
     let binding = f_from_canonical_hex(&call.binding_input)?;
     let (comm, rand) = p
@@ -317,7 +320,7 @@ mod tests {
             inputs,
             private_transcript: vec![],
             public_transcript_inputs: public[2..].iter().copied().map(Fr).collect(),
-            public_transcript_outputs: vec![],
+            public_transcript_outputs: vec![Fr(F::ZERO)],
             binding_input: Fr(F::ZERO),
             communications_commitment: Some((comm, rand)),
             key_location: KeyLocation("sherlock/rollup/acceptValidity".into()),
@@ -351,8 +354,14 @@ mod tests {
         assert!(opening(call(&p), F::from(42), &t).is_err());
     }
     #[test]
-    fn accept_validity_preimage_has_no_extra_public_outputs() {
+    fn accept_validity_preimage_requires_the_false_replay_membership_result() {
         let t = template();
+        let mut p = preimage(&t);
+        p.public_transcript_outputs.clear();
+        assert!(opening(call(&p), F::from(42), &t).is_err());
+        let mut p = preimage(&t);
+        p.public_transcript_outputs[0] = Fr(F::ONE);
+        assert!(opening(call(&p), F::from(42), &t).is_err());
         let mut p = preimage(&t);
         p.public_transcript_outputs.push(Fr(F::ONE));
         assert!(opening(call(&p), F::from(42), &t).is_err());
