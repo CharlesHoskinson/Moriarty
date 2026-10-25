@@ -1,0 +1,11 @@
+import Clean.Sherlock.CompilerResidualization
+
+#print axioms Clean.Sherlock.CompilerResidualization.inventory_independent_of_program
+#print axioms Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence
+#print axioms Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq
+#print axioms Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition
+#print axioms Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness
+#print axioms Clean.Sherlock.CompilerResidualization.keys_ignore_runtime
+#print axioms Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back
+#print axioms Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back
+#print axioms Clean.Sherlock.CompilerResidualization.realization_preserves
