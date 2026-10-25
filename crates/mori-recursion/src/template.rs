@@ -164,7 +164,7 @@ impl Template {
                 .collect::<io::Result<Vec<_>>>()?,
         };
         #[cfg(not(feature = "sherlock-rollup"))]
-        let statements = vec![s];
+        let statements = [s];
         if statements.first() != Some(&s)
             || statements.iter().any(|&i| i < 2 || i >= n)
             || statements.windows(2).any(|p| p[0] >= p[1])
