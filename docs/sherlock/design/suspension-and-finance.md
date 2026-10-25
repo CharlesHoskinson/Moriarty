@@ -101,7 +101,7 @@ publishes its boundary there. A technical chunk cut is none of these
 | `FrameRowC` | `AwaitGuardF{site, saved_env, origin}` | 10 | existing 13-lane frame record | existing tags 0–9 unchanged |
 | `RuleIdC` (fin group) | `XFinCommit`, `XFinAwaitEnter`, `XFinResumeAccept` | n/a | | joins the existing `FinRuleId::AwaitEnter` header in fin_selection.rs |
 | `RuleIdC` (pure) | `BAwaitEnter`, `BAwaitGuardReturn` | n/a | | replaces the reserved `BBookkeepingResumeStore/Restore` extension rules |
-| `BoundaryKind` | `SourceSuspension` | 3 | | renames `SourceSuspensionExtensionReserved`; stream tag 3 unchanged |
+| `BoundaryKind` | `SourceSuspensionExtensionReserved` (name kept) | 3 | | /2 starts using the existing variant and tag 3; no /1 enum or codec is renamed |
 
 `ExhaustReason` is unchanged.
 
@@ -156,12 +156,19 @@ A checkpoint is the complete `MachineImage` encoded by the existing C6 HOST code
 - **Carrier version:** the C6 padded carrier version is bumped. /1 carriers
   decode only under /1.
 
-`CK(image) = SHA-256("sherlock-checkpoint/2" || C6 HOST bytes)`. This is the host
-digest that names files and observations. The on-chain root is the existing
-Field-domain state commitment over the same lanes. The decider leaf proves that
-both commit to the same image. That binding is native work for Phase 3.
+**One checkpoint identity.** `CK(image)` is the Field-domain state commitment
+over the C6 HOST lane vector, the same function the decider leaf uses for `root`,
+computed identically by host and circuit. It is written as 64 hex characters of
+the field element's canonical bytes. There is no separate host SHA-256 name.
+The CK an observation binds to (R3) is therefore exactly the root the anchor
+consumes (§5.3).
 
-`OD(obs) = SHA-256("sherlock-observation/2" || canonical JSON bytes of obs)`.
+`OD(obs)` is the same Field-domain hash over the admitted fixed-width lane vector
+`[DOM_OBS, CK, site, label_id, v_1, ..., v_n]`. In that vector `label_id` is the
+site's admitted label index, UInt values are their u128 lanes and Bool values are
+0 or 1. The JSON file is only a carrier: R3–R5 decode it into that vector, and the
+digest never hashes JSON text, so JSON canonicalization is not part of the
+binding.
 
 ### 3.5 Resume API
 
@@ -196,8 +203,8 @@ Report (stdout JSON). Every report carries `profile` and the Core/2 labels
 | `status` | Exit code | Members |
 | --- | --- | --- |
 | `waiting` | 0 | `site`, `label`, `checkpoint` (CK hex), `checkpoint_file` (if `--checkpoint-out`), `binders` (name/type layout the next observation must match), `committed_work`, `attempted_work`, `frames` (bottom-to-top summary), `fin` (§7.4, or null) |
-| `not_ready` | 3 | `checkpoint` (= input CK, unchanged), `site`, `attempted_work`, `reason` (`guard_false`, `guard_error{code}` or `guard_exhausted`) |
-| `refused` | 2 | `stage` (`R0`..`R8`, §4), `error`; the checkpoint is not read past the failing check and no successor exists |
+| `not_ready` | 3 | `checkpoint` (= input CK, unchanged), `site`, `attempted_work`, `reason` (`guard_false`, `guard_error{code}` or `guard_exhausted`); with `--checkpoint-out` the written file is byte-identical to the `--resume` input (`cmp` holds) |
+| `refused` | 4 | `stage` (`R0`..`R7`, §4), `error`; the checkpoint is not read past the failing check and no successor exists (2 is left to clap usage errors) |
 | `halted` | 0 | `value`, `committed_work`, `fin` |
 | `rejected` | 1 | `code`, `committed_work`, `fin` (§7.5) |
 | `exhausted` | 1 | `reason`, `committed_work`, `fin` |
@@ -213,15 +220,14 @@ in this order. The first failure is the reported `stage`. R0–R7 mirror Core/2
 
 | Stage | Check |
 | --- | --- |
-| R0 | `C` decodes under `sherlock-helper-microstep/2` (profile id 3 in META, carrier version /2, full SI01–SI24 host invariants plus the new SI25–SI28 below) |
+| R0 | `C` decodes under `sherlock-helper-microstep/2` (profile id 3 in META, carrier version /2, full SI01–SI24 host invariants plus the new SI25–SI28 below). Low fuel is not a refusal: a guard that runs out of fuel is `not_ready{guard_exhausted}` (§6.3), the only outcome for that condition |
 | R1 | `C.outcome == Waiting{site}` and `C.control == Await{site, ..}` with the same site; a Running/terminal checkpoint is refused, not "not ready" |
 | R2 | admission identity in `C` (program membership digest, layout and bounds digests, and for fin the Core/2 `program_hash`/`plan_hash`) equals the supplied source's admission; the CLI action, if given, equals the checkpoint's action |
 | R3 | `obs.format == "sherlock-observation/2"` and `obs.checkpoint == CK(C)` (binds the observation to exactly one checkpoint) |
 | R4 | `obs.site == site` and `obs.label` equals the site's label |
 | R5 | `obs.values` matches the site's binder layout exactly: same length, same names in the same order, sorts equal; UInt is a canonical decimal u128 string; Bool is a JSON bool |
-| R6 | remaining fuel ≥ 1 (the guard needs at least one event) |
-| R7 | (fin route) the Core/2 cap preflight: effective cap ≥ committed + next segment static cost; the cap now lives in bound META (§7.2) |
-| R8 | the canonical-boundary decode of `C`'s fin snapshot (the Core/2 `canonical_boundary`) |
+| R6 | (fin route) the Core/2 cap preflight: effective cap ≥ committed + next segment static cost; the cap now lives in bound META (§7.2) |
+| R7 | the canonical-boundary decode of `C`'s fin snapshot (the Core/2 `canonical_boundary`) |
 
 Sorts are restricted to UInt/Bool so that an observation is a fixed-width,
 admission-bounded vector. It cannot inject unbounded data or references into the
@@ -278,7 +284,7 @@ contract layer. /2 adds no oracle or signature primitive.
 | Event | Reference fuel | helper_work | Committed? |
 | --- | --- | --- | --- |
 | `BAwaitEnter` / `XFinAwaitEnter` (Eval of await, Running→Waiting) | 1 | 0 | yes, part of the batch that ends Waiting |
-| Waiting itself; delivering an observation; R0–R8 checks | 0 | 0 | no work; checks are host work |
+| Waiting itself; delivering an observation; R0–R7 checks | 0 | 0 | no work; checks are host work |
 | guard evaluation events | normal per-rule charges | normal | only if the guard returns `true` |
 | `BAwaitGuardReturn` / `XFinResumeAccept` (guard returned true) | 1 | 0 | yes |
 | not-ready attempt | 0 in state | 0 | reported only as `attempted_work` |
@@ -305,14 +311,17 @@ contract layer. /2 adds no oracle or signature primitive.
   - The frames, env root, heap tables and counters are untouched. This is the
     checkpoint.
   - For `10 + inner(3)` the frame stack bottom-to-top is
-    `[ReturnF(outer), LeftF{+, right pending}/RightF holding 10, ReturnF(inner)]`
-    (exact rows per the existing call/arith schedule). The current env is inner's
+    `outer`'s return frame, then the pending `+` frame holding the evaluated
+    left operand 10, then `inner`'s return frame. The exact `FrameRowC` rows
+    (variant per row: `ReturnF`, `RightF`, `ReturnF`, and any `ArgsF`/`ScopeF`
+    the existing call schedule leaves) are pinned by the Phase 2 visible test from
+    an actual run, not asserted here. The current env is inner's
     (`n = 3`), and the caller env is saved in the frames.
   - This is the UIREQ-014 snapshot: caller frame, control, lexical contexts,
     reachable values, budgets. On this route the financial prefix is `null`.
 - **`owner_step` on a Waiting image** returns `Terminal` (no next) and changes
   nothing. `owner_run` stops there, and the CLI prints `waiting`.
-- **`resume(C, obs)` after R0–R8**, on the scratch copy:
+- **`resume(C, obs)` after R0–R7**, on the scratch copy:
   - extend the env with fresh cells binding `x_i := v_i`;
   - push `AwaitGuardF{site, saved_env = env before the binders, origin}`;
   - control := `Eval{G}`;
@@ -511,8 +520,9 @@ are, not changed.
 - **Identity.** New profile `sherlock-helper-microstep/2` with `IdentityC.profile_id = 3`.
   The values 0, 1 and 2 keep their meaning: k-a/1, quint-a/1 and microstep/1.
 - **Grammar and finance domains.** /2 accepts grammar `moriarty-sherlock-draft/2`
-  and `moriarty/2` fin. `FinanceInput` becomes `Absent | Core2Staged`, replacing
-  `TypedExtensionReserved`.
+  and `moriarty/2` fin. `FinanceInput` keeps its /1 variants and encoded tags. /2
+  admits the existing `TypedExtensionReserved` variant as the Core/2 staged finance
+  domain. No /1 variant is renamed or retagged.
 - **profile_id is bound in /2.** In the /1 bound META relation, META lane 3
   (`profile_id`) is deliberately runtime and unbound (c6_meta_canonical.rs docs).
   The /2 circuits constrain it to the constant 3, and the /2 decider statement
@@ -582,12 +592,12 @@ the reason, not a code.
 | E1 | Step | Running → Running | any existing rule | per rule | as /1 |
 | E2 | AwaitEnter (pure) | Running → Waiting(s) | `BAwaitEnter` | 1 | control := Await, outcome := Waiting |
 | E3 | Commit+AwaitEnter (fin) | Running → Waiting(s) | `XFinAwaitEnter` | 1 | tentative → committed; captures saved; control/outcome as E2 |
-| E4 | Observe-Refused | Waiting(s) → Waiting(s) | R0–R8 fail | 0 | none (no successor exists) |
+| E4 | Observe-Refused | Waiting(s) → Waiting(s) | R0–R7 fail | 0 | none (no successor exists) |
 | E5 | Observe-NotReady | Waiting(s) → Waiting(s) | guard ≠ true | 0 in state (attempted reported) | none; bytes identical |
 | E6 | Observe-Accept | Waiting(s) → Running | guard steps + `BAwaitGuardReturn` / `XFinResumeAccept` | guard events + 1 | binders bound, obs digest and epoch recorded |
 | E7 | Complete | Running → Halted | P1 publish (pure) / `XFinComplete` (fin) | 0 / 1 | fin: tentative → committed |
 | E8 | LocalFailure | Running → Rejected | `XFinLocalFailure` (fin) / existing error publish (pure) | 0 publish | tentative → discarded (fees → committed under retain policy) |
-| E9 | Exhaust | Running → Exhausted | existing P2/P3/P6 | as /1 | fin: as E8 without code |
+| E9 | Exhaust | Running → Exhausted | existing P2/P3/P6 | as /1 | fin: tentative → discarded, committed prefix kept; under `retain-guaranteed-fees/1` the segment's fees are committed exactly as in E8 |
 | E10 | TechnicalCut | any → same | none (between events) | 0 | none; not a commit, not Waiting |
 | S1 | AcceptValidity | (on chain) | D-proved `stmt` inserted in `validity_ok` | DUST fee | none to root |
 | S2 | Settle | root R → root R' | `settleValidity` with predecessor == R | DUST fee | root := CK-commitment of the batch's last image (may be Waiting) |
