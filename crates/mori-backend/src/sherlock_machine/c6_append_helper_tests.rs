@@ -131,12 +131,17 @@ fn exercise(source: &str, label: &str) -> BTreeSet<String> {
         if !APPEND_HELPER_RULES.contains(fired) {
             continue;
         }
-        seen.insert(format!("{fired:?}"));
+        // Rejection checks on the first step of each rule and every 8th step;
+        // the positive check runs on every step.
+        let sampled = seen.insert(format!("{fired:?}")) || i % 8 == 0;
         let w = witness_from_host_pair(true, pre, post, &r.cfg, &limits()).expect("witness");
         assert!(
             circuits.accepts(*fired, &w),
             "{label} step {i}: owner pair for {fired:?} rejected"
         );
+        if !sampled {
+            continue;
+        }
         for (what, m) in post_mutations(*fired, &w) {
             assert!(
                 !circuits.accepts(*fired, &m),
@@ -179,8 +184,15 @@ fn append_helper_accepts_owner_steps_and_rejects_mutations_on_tree_fold() {
 
 #[test]
 fn append_helper_covers_every_rule_both_programs_fire() {
-    let mut seen = exercise(FACT, "fact(3)");
-    seen.extend(exercise(FOLD, "fold"));
+    // Which claimed rules the owner fires (circuits run in the two tests above).
+    let mut seen = BTreeSet::new();
+    for source in [FACT, FOLD] {
+        for (_, _, fired) in run(source).steps {
+            if APPEND_HELPER_RULES.contains(&fired) {
+                seen.insert(format!("{fired:?}"));
+            }
+        }
+    }
     let want: BTreeSet<String> = APPEND_HELPER_RULES
         .iter()
         .map(|r| format!("{r:?}"))

@@ -219,6 +219,9 @@ impl C6EvalScheduleEmitter {
                 let empty = em.teq(row[3].clone(), Em::imm(0));
                 let nonempty = em.not(empty);
                 em.gassert(en.clone(), nonempty);
+                // Route the PROG-capture output through a kit temp: the
+                // capture refuses operands in its own reserved namespace.
+                let child_index = em.add(row[2].clone(), Em::imm(0));
                 let child = self
                     .composed
                     .progctx_em
@@ -228,7 +231,7 @@ impl C6EvalScheduleEmitter {
                         caps,
                         first_index: origin.clone(),
                         second_index: origin.clone(),
-                        child_index: row[2].clone(),
+                        child_index,
                     })
                     .map_err(|e| e.to_string())?;
                 em.ins.extend(child.instructions);
