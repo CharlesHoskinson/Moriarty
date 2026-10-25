@@ -11,7 +11,8 @@ const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
 assert.ok(sdkRoot && buildArg && preparation && outputArg);
 assert.ok(mode === undefined || mode === '--submit');
 const require = createRequire(resolve(sdkRoot, 'package.json'));
-const load = name => import(pathToFileURL(require.resolve(name)).href);
+const load = name => import(pathToFileURL(name === '@midnightntwrk/wallet-sdk'
+  ? resolve(sdkRoot, 'node_modules', name, 'dist/index.js') : require.resolve(name)).href);
 for (const [name, version] of Object.entries({
   '@midnight-ntwrk/midnight-js-contracts': '5.0.0-beta.7',
   '@midnightntwrk/wallet-sdk': '2.0.0-beta.2',
@@ -72,8 +73,6 @@ const checkState = state => {
 };
 checkState(dry.public.initialContractState);
 console.log('PASS SDK constructor: all 13 fields, empty sets and exact verifier keys');
-if (!mode) process.exit(0);
-assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
 const Rx = await load('rxjs');
 const {WebSocket} = await load('ws');
 globalThis.WebSocket = WebSocket;
@@ -84,6 +83,8 @@ const {ttlOneHour} = await load('@midnight-ntwrk/midnight-js-utils');
 const {HDWallet, Roles, createKeystore, validateMnemonic, WalletFacade, ShieldedWallet, DustWallet,
   UnshieldedWallet, PublicKey, NoOpTransactionHistoryStorage} = await load('@midnightntwrk/wallet-sdk');
 const {mnemonicToSeedSync} = await load('@scure/bip39');
+if (!mode) process.exit(0);
+assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
 const walletDir = join(homedir(), '.midnight/stagenet-wallet');
 const mnemonicPath = join(walletDir, 'stagenet-wallet.mnemonic');
 assert.equal(statSync(mnemonicPath).mode & 0o777, 0o600);
