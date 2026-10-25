@@ -61,6 +61,17 @@ No Loki prover code changes. `prove` receives identical inputs, so `Refinement.l
   pk equals stock (follows from `Ntt.coeffToExtended_eq_eval` and `IsCosetNtt`). **O17.2 (Rust gate):** the
   `circuit_model` output (rows, k, column counts) is unchanged.
 
+## File sets of the sequenced packages (for briefing when the predecessor merges)
+- **W13 msm-hostpath:** `cuda/msm.cu`, `src/poly/kzg/msm/cuda/backend.rs`, `src/poly/kzg/msm/cuda/convert.rs`, tests in
+  `src/poly/kzg/msm/cuda/tests.rs`. Starts from main after the W9 merge, which owns `backend.rs` and `msm.rs`.
+- **W14 cpu-quotient-fusion:** `src/plonk/evaluation.rs` `evaluate_numerator` loop only, plus its test module. W10 keeps
+  `src/plonk/evaluation/cuda.rs`, the `mod` line and the `compute_nu_poly` dispatch in `prover.rs`. Starts after the W9 merge.
+- **W15 shared-cse:** `src/plonk/evaluation.rs` `Evaluator::new`, `GraphEvaluator::add_calculation`/`add_expression`. Starts after
+  W10's compiler (`evaluation/cuda.rs`) lands, because it changes the graphs W10 consumes.
+- **W16 lookup-perm-prep:** `src/plonk/lookup/prover.rs`, `src/plonk/permutation/prover.rs` (call site in `prover.rs` only after W10
+  hands it off). Trigger: the H0 profile shows at least 5 s of non-MSM work in lookup_prepare/permutation_products/lookup_products.
+- **W17 keygen-speed:** `src/plonk/keygen.rs`, `src/dev/cost_model.rs` (and `src/plonk/permutation/keygen.rs`). Starts after the W9 merge.
+
 ## Track B (new keys)
 A circuit or protocol change (fused k15 terminal, table cut to k19, LogUp, smaller limbs, a lower quotient degree,
 fan-in, in-circuit fixed-base tables) is not a refinement of stock. Its contract is a new relation's soundness and

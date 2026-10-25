@@ -208,11 +208,12 @@ behind a merge; **later** = not scheduled; **dropped** = not worth doing for A3,
    only route on record to a large end-to-end factor; Track A after steps 2–5 is bounded at roughly 3× on A3 (ESTIMATE:
    220.8 → ≈70–90 s if every step realises its upper estimate).
 
-Briefs: `loki-run/loki-w12.md` (runnable). W13–W17 are sequenced, and their file sets are fixed in the obligations file so they
-can be briefed the moment their predecessor merges.
+Briefs: `loki-run/loki-w12.md` (runnable). W13–W17 are sequenced; their file sets and triggers are listed in
+[speedups/LEAN-OBLIGATIONS.md](speedups/LEAN-OBLIGATIONS.md#file-sets-of-the-sequenced-packages-for-briefing-when-the-predecessor-merges), so they can be briefed the moment their predecessor merges.
 
 ### Reconciliation with the independent GPT plan ([speedups/PLAN-gpt.md](speedups/PLAN-gpt.md))
 
+Package numbers here are this backlog's; PLAN-gpt.md numbers its own W12–W18 differently (its W13 is PK reuse, its W15 residency).
 The two plans were written independently. They **agree** on: measure the real A3 first and split the 117 s residual; W10's
 quotient is the largest prover target; reuse the PK only with full identity binding (VK, relation including the child VKs,
 SRS, k) and with every per-proof check kept; LogUp, fflonk, GWC and fixed-base precompute are not speed work for A3; the
