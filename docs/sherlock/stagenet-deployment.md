@@ -74,3 +74,64 @@ complete DoctorWatson run took 290.552 s with 16,587,382,784 bytes peak RSS
 (`20261025T012424Z-A4prepare-corrected`). The complete interval contains both phase timers.
 This key is a prepared candidate, not an installed verifier. A4 still refuses
 the historical deployed parent before keygen, and no new transaction was submitted.
+
+On 2026-10-25 the owner-authorized replacement for the current A2 → A3 → A4 chain
+finalized on stagenet at block **1,013,319**. The current verifier contract is
+`ac93b80e252f9cde794d22f76b2eb7d727f855f07ad77a0904afe5bac855388b`.
+Its transaction identifier is
+`00352295b794252756a67dcb63224a3a6b94fbbaf29a5f5c2b60343a48ff88af07`;
+the independently queried indexer transaction hash is
+`2444fb7c3969b7ab21b6b0a9fa09b6b9f00b8ad685e5ee9771f7173ab7b120dd`.
+This supersedes contract
+`80a0291cc688bc627b5dfef1a18d8e02ec5ed2f15343e60f18ee61e58a955371`
+and its raw terminal key
+`bd9e9d89ad0a5570571160b29dc8b2d89e11e3c6065b46638a2e978f9218776e`.
+The archived deployment above remains a historical record; its parent and
+relation are not inputs to the current chain.
+
+The complete current key lineage is:
+
+| Input or product | SHA-256 |
+| --- | --- |
+| A102 child VK (1,229 bytes) | `a6e6ed282daba635711e5d15863441a4888eb28407ec3899ee8722b5e1b02ab9` |
+| A80 child VK (1,229 bytes) | `65414136eabb682558c39e8a76d8d5f436641fe2d76a87bbe88a5b26b093c104` |
+| A3 parent VK (2,189 bytes) | `801467c825c79e063c0603b94c49eef63fd527ff8b3a6d42aa24022b108849a8` |
+| Official k20 SRS | `1cc62978558fdc1e445cd70cfd9a86ec3c2e2151b6d74811232d37faf9133ff1` |
+| `accept-template.json` (3,246 bytes) | `d7a9f218630cfc1f25e4f474927a671755b929501171e3fe3121351f5bd29207` |
+| Serialized decider relation (2,806 bytes) | `86dfecc6d4a09d10cea0508341bb435eeff32265b52b623fe84289aa91577905` |
+| Raw decider VK (2,189 bytes, k20) | `3f3b7e131e83101258ef080820362941218adf6d59cf6574c682267a01ff0083` |
+| Installed tagged `acceptValidity` verifier (2,217 bytes) | `10b2d9cfe7fd16df2616da4616f69c4f34f668e59f229e5855a1f6572fd46100` |
+| Compiled `settleValidity` verifier (1,353 bytes) | `be8b0943d8e2acadeb2fd914e4bcc100bdcce72ffe2a8da4e34f9417141c0b5c` |
+| Finalized contract state (4,604 bytes) | `3a44aa7e6cc54bcd79637a63a9b5d37b7a2d2e8113c0631175f4e854035342ae` |
+
+The child producer is in `865f06402`, the parent port in `9d485819b`, the
+corrected terminal template in `ed4d0181b`, and the terminal input guards in
+`b0e8cbba8`. Deployment ran the SDK adapter from `9677548df` on `factory-a2`.
+The anchor source remains SHA-256
+`4f531ce016c697c973162b8f5f6a9ac4d034ba3e3ca15b919d05c00cb3252634`.
+Its compiled build records Compact 0.34.0 and runtime 0.19.0. The deployment used
+midnight-js 5.0.0-beta.7, wallet-sdk 2.0.0-beta.2 and proof server
+9.0.0-rc.5_experimental, with `isCompleteWithin(50n)` for wallet synchronization.
+The adapter overrides only the verifier material when installing `acceptValidity`;
+it never installs that circuit's compiled verifier in place of the decider.
+
+Before opening the wallet, the exact SDK constructor path passed checks for all
+13 ledger fields, both empty statement sets and both verifier keys. The finalized
+SDK readback passed those checks again. A separate HTTP indexer query returned
+byte-identical state, and the Rust ledger reader extracted the exact raw decider
+VK above (`k=20`, `hasIr=false`). The SDK interval, including wallet sync and
+confirmation, was **316.524843 s**. DoctorWatson measured **318.176 s** and
+**745,893,888 bytes** peak RSS for the complete deployment command. These are
+nested scopes, not isolated circuit proving measurements. The actual fee has not
+been independently measured in this run.
+
+The public receipt is retained locally at
+`target/a4-anchor/deploy-run3/receipt.json`; the independent state query and key
+reader outputs are `target/a4-anchor/new-contract-indexer.json` and
+`target/a4-anchor/new-key-readback.json`. The measured factory trace is
+`qa/sherlock/traces/20261025T023414Z-A4deploy.log`. Wallet material, the SDK's
+local encrypted maintenance-key database and private proof preimages are excluded
+from version control. The deployment contains no physical contract call. Native
+A4 verification, a call with its actual bindings, local ledger acceptance and
+settlement remain distinct checks; the deployed parent still covers only the
+fixed A102 literal → A80 pair, not a Fenrir STF/A0 batch.
