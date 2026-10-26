@@ -131,14 +131,42 @@ structure Suspended (Whole Frame : Type) where
   referenceCursor : Nat
   resumeEpoch : Nat
 
+/-- Concrete correspondence must supply these projections from the complete
+checkpoint, rather than treating the wrapper's fields as independent evidence. -/
+structure SuspensionProjection (Whole Frame : Type) where
+  callerFrames : Whole → List Frame
+  remainingWork : Whole → Nat
+  consumedWork : Whole → Nat
+  referenceCursor : Whole → Nat
+  resumeEpoch : Whole → Nat
+
+structure ProjectionAgrees {Whole Frame : Type} (projection : SuspensionProjection Whole Frame)
+    (state : Suspended Whole Frame) : Prop where
+  callerFrames : projection.callerFrames state.whole = state.callerFrames
+  remainingWork : projection.remainingWork state.whole = state.remainingWork
+  consumedWork : projection.consumedWork state.whole = state.consumedWork
+  referenceCursor : projection.referenceCursor state.whole = state.referenceCursor
+  resumeEpoch : projection.resumeEpoch state.whole = state.resumeEpoch
+
+/-- Required concrete installer obligations. The unchecked update below does not
+establish any of them for an arbitrary function or for the Rust implementation. -/
+structure InstallerCorrect {Whole Frame : Type} (projection : SuspensionProjection Whole Frame)
+    (install : Whole → Whole) (charge : Nat) (whole : Whole) : Prop where
+  callerFrames : projection.callerFrames (install whole) = projection.callerFrames whole
+  remainingWork : projection.remainingWork (install whole) = projection.remainingWork whole - charge
+  consumedWork : projection.consumedWork (install whole) = projection.consumedWork whole + charge
+  referenceCursor :
+    projection.referenceCursor (install whole) = projection.referenceCursor whole + charge
+  resumeEpoch : projection.resumeEpoch (install whole) = projection.resumeEpoch whole + 1
+
 inductive ResumeResult (Whole Frame : Type) where
   | refused
   | notReady (checkpoint : Suspended Whole Frame) (attemptedWork : Nat)
   | accepted (successor : Suspended Whole Frame)
 
-/-- A mathematical pure-route accept update. `install` must implement fresh binder
-allocation and the Eval(body) successor while retaining the rest of the whole state.
-Natural counters require concrete UInt128 accounting/headroom premises in Rust. -/
+/-- A mathematical pure-route field update. `install` supplies the complete
+successor, including binders, Eval(body), counters and header. Agreement with the
+wrapper requires `InstallerCorrect`; UInt128 accounting/headroom remains separate. -/
 def acceptResume {Whole Frame : Type} (install : Whole → Whole) (guardNodes : Nat)
     (state : Suspended Whole Frame) : Suspended Whole Frame :=
   { state with
@@ -147,6 +175,36 @@ def acceptResume {Whole Frame : Type} (install : Whole → Whole) (guardNodes : 
     consumedWork := state.consumedWork + (1 + guardNodes)
     referenceCursor := state.referenceCursor + (1 + guardNodes)
     resumeEpoch := state.resumeEpoch + 1 }
+
+/-- Links the field-update model to a complete successor. Initial agreement and
+the actual installer's frame/counter laws are premises, not hidden assumptions. -/
+theorem accepted_resume_projection_agrees {Whole Frame : Type}
+    (projection : SuspensionProjection Whole Frame) (install : Whole → Whole)
+    (guardNodes : Nat) (state : Suspended Whole Frame)
+    (agreement : ProjectionAgrees projection state)
+    (installer : InstallerCorrect projection install (1 + guardNodes) state.whole) :
+    ProjectionAgrees projection (acceptResume install guardNodes state) := by
+  constructor
+  · change projection.callerFrames (install state.whole) = state.callerFrames
+    exact installer.callerFrames.trans agreement.callerFrames
+  · change projection.remainingWork (install state.whole) = state.remainingWork - (1 + guardNodes)
+    rw [installer.remainingWork, agreement.remainingWork]
+  · change projection.consumedWork (install state.whole) = state.consumedWork + (1 + guardNodes)
+    rw [installer.consumedWork, agreement.consumedWork]
+  · change projection.referenceCursor (install state.whole) =
+      state.referenceCursor + (1 + guardNodes)
+    rw [installer.referenceCursor, agreement.referenceCursor]
+  · change projection.resumeEpoch (install state.whole) = state.resumeEpoch + 1
+    rw [installer.resumeEpoch, agreement.resumeEpoch]
+
+/-- Negative control: the field-only caller law cannot certify the complete
+state when install is unconstrained. This fixture starts with matching frames. -/
+theorem unconstrained_installer_can_change_whole_frames :
+    let state : Suspended Nat Nat := ⟨0, [0], 1, 0, 0, 0⟩
+    let frames : Nat → List Nat := fun whole ↦ [whole]
+    frames state.whole = state.callerFrames ∧
+      frames (acceptResume (fun _ ↦ 1) 0 state).whole ≠
+        (acceptResume (fun _ ↦ 1) 0 state).callerFrames := ⟨rfl, by decide⟩
 
 /-- No successor is constructed for malformed requests or insufficient resources.
 False and error guards return the original complete checkpoint, with attempted work

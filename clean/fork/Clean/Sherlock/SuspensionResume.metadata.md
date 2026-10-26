@@ -28,6 +28,17 @@ The binder installer and remaining resource checks are supplied parameters;
 actual fresh allocation and UInt128/epoch headroom are unproved. Retaining
 caller frames does not establish the concrete result 14 for `10+inner(3)`.
 
+The explicit wrapper fields must agree with projections of the complete opaque
+state. `SuspensionProjection` and `ProjectionAgrees` state that link for frames,
+remaining/consumed work, reference cursor and resume epoch. `InstallerCorrect`
+requires the complete-state installer to preserve actual frames and update
+actual counters/header consistently. The agreement-preservation theorem takes
+those premises explicitly. A certified negative control shows that an arbitrary
+installer can change complete-state frames while the wrapper's caller-frame
+field stays unchanged. Field-only retention/charge laws therefore cannot certify
+complete-state preservation. Heap, environment, allocation, value and concrete
+Rust correspondence obligations remain separate.
+
 No financial restore implementation is introduced. Financial prefix, fee-phase,
 failure and exhaustion contracts belong to the sibling FinancialItems work.
 No cryptographic/checkpoint-byte injectivity, C6 resume relation, native proof,
@@ -43,3 +54,7 @@ queries have empty axiom sets and seven contain only `propext`; no custom or
 log by digest. The agent read the complete log and checked source pins but did
 not run the build. Its sandbox still cannot connect `memcap` to the user scope
 bus; no uncapped build was attempted.
+
+**The projection-consistency follow-up has not yet been compiled.** The JSON
+retains the earlier eleven-query build as historical evidence and pins the new
+source/query set separately. Its current kernel and axiom checks are pending.

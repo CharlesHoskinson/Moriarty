@@ -6,6 +6,8 @@ import Clean.Sherlock.SuspensionResume
 #print axioms Clean.Sherlock.SuspensionResume.successful_restore_is_exact
 #print axioms Clean.Sherlock.SuspensionResume.runSteps_add
 #print axioms Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation
+#print axioms Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees
+#print axioms Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames
 #print axioms Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint
 #print axioms Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint
 #print axioms Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers

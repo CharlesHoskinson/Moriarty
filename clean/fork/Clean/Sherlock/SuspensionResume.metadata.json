@@ -24,20 +24,21 @@
     "Connect pure atomic binder installation to complete successor state, fresh allocation, capacity checks and UInt128 counter/epoch headroom.",
     "Prove actual pending callee and caller continuation behavior (including the 10+inner(3)=14 scenario); caller-frame retention alone does not prove evaluation.",
     "Financial checkpoint restoration is refused by the current technical-restore interface; financial continuation semantics belong to FinancialItems.",
-    "No C6 suspension/resume, native proof, cryptographic codec or ledger refinement follows."
+    "No C6 suspension/resume, native proof, cryptographic codec or ledger refinement follows.",
+    "Instantiate SuspensionProjection from the actual complete Rust checkpoint, prove ProjectionAgrees initially, and establish InstallerCorrect for the actual whole-state installer (not just wrapper projections)."
   ],
   "sourceBase": "0699194f9",
   "leanToolchain": "leanprover/lean4:v4.33.1",
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/SuspensionResume.lean",
-      "bytes": 8826,
-      "sha256": "8a041fb593bf0434eafaa2c2dbe57c72265e9239a208fb65235751179875ae68"
+      "bytes": 12431,
+      "sha256": "ba3f27db4ac2ea41c1ad3a6a50b4e6d3b30c59b31bc6fd72945af1e31accb4ac"
     },
     {
       "path": "clean/fork/Clean/Sherlock/SuspensionResumeAxioms.lean",
-      "bytes": 871,
-      "sha256": "a5cd2c5691fcd32578467770b6f67731acc16cc52828921a92a2c03b270937fc"
+      "bytes": 1045,
+      "sha256": "16e9893a309cd951c95575b7495139c97c7fa39cbdc05da4d36b679c5eae829d"
     }
   ],
   "theoremNames": [
@@ -47,6 +48,8 @@
     "Clean.Sherlock.SuspensionResume.successful_restore_is_exact",
     "Clean.Sherlock.SuspensionResume.runSteps_add",
     "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees",
+    "Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames",
     "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint",
     "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint",
     "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers",
@@ -54,49 +57,69 @@
     "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance"
   ],
   "verification": {
-    "status": "observed-full-package-build-and-axiom-queries-pass",
-    "observation": {
-      "runner": "sherlock-fable",
-      "commandReported": "memcap 48G lake -d clean/fork build",
-      "artifact": "lean-build-2.log",
-      "bytes": 10568,
-      "sha256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
-      "overallPackageExit": 0,
-      "jobs": 17,
-      "cachedModuleResultsReplayed": false,
-      "agentAction": "read complete observed build log and checked current source pins; did not execute build"
+    "status": "projection-consistency-source-updated-awaiting-recheck",
+    "axiomQueryStatus": "new-source-not-run",
+    "actualAxiomSets": null,
+    "wholePackagePassedForCurrentSource": null,
+    "previousObservedVerification": {
+      "status": "observed-full-package-build-and-axiom-queries-pass",
+      "observation": {
+        "runner": "sherlock-fable",
+        "commandReported": "memcap 48G lake -d clean/fork build",
+        "artifact": "lean-build-2.log",
+        "bytes": 10568,
+        "sha256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
+        "overallPackageExit": 0,
+        "jobs": 17,
+        "cachedModuleResultsReplayed": false,
+        "agentAction": "read complete observed build log and checked current source pins; did not execute build"
+      },
+      "axiomQueryStatus": "observed-pass",
+      "actualAxiomSets": {
+        "Clean.Sherlock.SuspensionResume.profile_ids_distinct": [],
+        "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.successful_restore_is_exact": [],
+        "Clean.Sherlock.SuspensionResume.runSteps_add": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance": [
+          "propext"
+        ]
+      },
+      "emptyAxiomSetCount": 4,
+      "propextOnlyCount": 7,
+      "wholePackagePassed": true,
+      "localSandboxExecution": "blocked by memcap user scope bus"
     },
-    "axiomQueryStatus": "observed-pass",
-    "actualAxiomSets": {
-      "Clean.Sherlock.SuspensionResume.profile_ids_distinct": [],
-      "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.successful_restore_is_exact": [],
-      "Clean.Sherlock.SuspensionResume.runSteps_add": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint": [
-        "propext"
-      ],
-      "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers": [],
-      "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge": [],
-      "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance": [
-        "propext"
-      ]
-    },
-    "emptyAxiomSetCount": 4,
-    "propextOnlyCount": 7,
-    "wholePackagePassed": true,
+    "previousVerifiedSourceFiles": [
+      {
+        "path": "clean/fork/Clean/Sherlock/SuspensionResume.lean",
+        "bytes": 8826,
+        "sha256": "8a041fb593bf0434eafaa2c2dbe57c72265e9239a208fb65235751179875ae68"
+      },
+      {
+        "path": "clean/fork/Clean/Sherlock/SuspensionResumeAxioms.lean",
+        "bytes": 871,
+        "sha256": "a5cd2c5691fcd32578467770b6f67731acc16cc52828921a92a2c03b270937fc"
+      }
+    ],
+    "previousObservationCoversCurrentSource": false,
     "localSandboxExecution": "blocked by memcap user scope bus"
   },
   "trust": {
@@ -104,5 +127,11 @@
     "newCustomAxioms": false,
     "rustRefinementProved": false,
     "nativeAcceptance": false
+  },
+  "reviewFollowup": {
+    "finding": "P2: Whole and duplicated frame/work/epoch fields lacked an explicit agreement obligation.",
+    "hypothesis": "An unconstrained installer can change complete-state frames/counters independently of wrapper fields; field-only equalities are insufficient.",
+    "change": "Add SuspensionProjection, ProjectionAgrees and InstallerCorrect; prove preservation of agreement conditionally and a certified counterexample for unconstrained installation.",
+    "rustRefinementClaimed": false
   }
 }
