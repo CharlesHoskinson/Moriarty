@@ -168,19 +168,22 @@ fn classify(record: &StepRecord) -> (&'static str, Vec<Value>, Vec<Value>) {
         // Rule 153: the captured left operand and the returned right operand
         // are the actual inputs of the checked binary operation.
         (153, Some(right), Some(Frame::Right(op, left))) => {
-            let (result_ty, result) = match &after.control {
-                Some(Control::PrimitiveResult(Ok(value))) => (
+            let result = match &after.control {
+                Some(Control::PrimitiveResult(Ok(value))) => bound(
+                    "result",
                     value_type(value),
-                    bound(
-                        "result",
-                        value_type(value),
-                        "after.control.primitive_result",
-                        value,
-                    ),
+                    "after.control.primitive_result",
+                    value,
                 ),
-                _ => ("UInt128", typed("result", "UInt128")),
+                Some(Control::PrimitiveResult(Err(code))) => json!({
+                    "name": "result",
+                    "type": "CheckedU128Result",
+                    "source": "after.control.primitive_result",
+                    "value": after.control.as_ref().map_or_else(|| "none".to_owned(), KDisplay::to_k),
+                    "error_code": code.to_string(),
+                }),
+                _ => typed("result", "CheckedU128Result"),
             };
-            let _ = result_ty;
             (
                 binary_op_name(*op),
                 vec![
