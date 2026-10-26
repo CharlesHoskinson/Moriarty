@@ -4,7 +4,7 @@
 // one asset, three distinct accounts, named present duty, opening 100/40.
 // Host fuel is one per statement/commit/accept; logical expression costs and
 // R0-R7, capture/hash identity, native phases and cryptography are abstracted.
-// Read-only source cut: factory-u uncommitted sherlock2.rs SHA256 6054a66c...
+// Read-only source cut: factory-u uncommitted sherlock2.rs SHA256 5f2beded...
 module financialSegments {
   type Policy = AllOrNothing | RetainFees
   type Outcome = Running | Waiting | Halted | Rejected | Exhausted
@@ -38,6 +38,10 @@ module financialSegments {
         | Requires(_) => a
         | _ => {...a, fallible: true}
       }).valid
+  // check_policy now validates every segment at start, including unreached
+  // suffixes. The state machine below projects execution of admitted segments.
+  pure def actionAdmits(segments: List[List[Statement]], policy: Policy): bool =
+    segments.foldl(true, (valid, program) => valid and policyAdmits(program, policy))
   pure def initial(program: List[Statement], policy: Policy, fuel: int, awaitEnd: bool): State = {
     policy: policy, program: program, pc: 0, awaitEnd: awaitEnd, outcome: Running,
     entry: genesis, committed: genesis, tentative: genesis,

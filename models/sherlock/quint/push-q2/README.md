@@ -18,7 +18,13 @@ The financial engine source SHA-256 at intake was
 `6054a66cb35e7943f0c18013faf2316c9c9824de3a8b84bef97c8bd6f4f8a744`;
 the report adapter `sherlock/compile_artifact/suspension2_fin.rs` was
 `5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19`.
-Both were uncommitted at intake. Revisit these models when either source changes.
+Both were uncommitted at intake. The engine subsequently changed to
+`5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b`:
+`check_policy` now validates every action segment before start rather than
+checking each segment as it is entered. `actionAdmits` and two explicit tests
+track this change, including an invalid unreached suffix. Segment execution,
+fuel and saturating accounting are unchanged. Revisit these models when either
+source changes.
 
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
@@ -30,12 +36,14 @@ The evaluator subsequently published `qa/holdout/contracts/U020.json` on the
 owner branch in `c0fb7664d`. Read-only comparison confirms the same policy names,
 policy binding on start/resume, separated committed/retained/discarded effects,
 residual duties and `ledger_rollback: none-inferred` used here. The contract
-permits refusal either at admission or segment entry; the model follows the
-current implementation's per-entered-segment check. Report JSON shape and exit
+permits refusal either at admission or segment entry; the current model's
+`actionAdmits` follows the implementation's whole-action check. Report JSON shape and exit
 codes remain adapter obligations, outside these typed accounting models. The
-financial engine/report hashes above were unchanged when this contract arrived.
+financial engine/report hashes at intake were unchanged when this contract arrived;
+the whole-action check was added afterwards.
 
-The segment model assumes admitted well-typed scalar statements and a valid
+The segment model assumes an action satisfying `actionAdmits`, admitted
+well-typed scalar statements and a valid
 static Core/2 cost plan. Its program alphabet is transfer, fee, discharge and
 requires. One asset, three distinct accounts and one present liability start
 with reserve 100 and duty 40. Discharge changes the duty separately from payment;

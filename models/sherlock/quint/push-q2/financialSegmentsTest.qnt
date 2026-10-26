@@ -74,6 +74,11 @@ module financialSegmentsTest {
       .then(statementStep)
       .expect(allInvariants and image.outcome == Rejected and image.committed == genesis
         and image.retained == List() and image.discarded == List())
+  run wholeActionFeeOrderingTest = init
+    .expect(not(actionAdmits(List(List(Fee(1)), List(Pay(1), Fee(1))), RetainFees))
+      and actionAdmits(List(List(Fee(1)), List(Fee(1), Pay(1))), RetainFees))
+  run defaultPolicyIgnoresFeeOrderingTest = init
+    .expect(actionAdmits(List(List(Fee(1)), List(Pay(1), Fee(1))), AllOrNothing))
   // Current-code characterization, not endorsement of design SI-29.
   run zeroFuelWaitingCounterexampleTest = initCase(firstPrefix, AllOrNothing, 4, true)
     .then(statementStep).then(statementStep).then(statementStep).then(commitStep)
