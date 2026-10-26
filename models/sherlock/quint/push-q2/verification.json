@@ -1,0 +1,145 @@
+{
+  "quintVersion": "0.32.0",
+  "record": "Observed separate CLI invocations; check_models.py is the reproduction entrypoint, not a claim of a full script invocation.",
+  "results": [
+    {
+      "model": "financialSegments",
+      "typecheckExit": 0,
+      "tests": 18,
+      "testExit": 0,
+      "simulation": {
+        "backend": "rust",
+        "nThreads": 4,
+        "seed": "17",
+        "invariant": "allInvariants",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 2789,
+        "witnesses": {
+          "paidPrefix": 521,
+          "retainedFee": 1886,
+          "rejected": 5598,
+          "exhausted": 3022,
+          "completed": 1379,
+          "cutObserved": 7528,
+          "notReadyObserved": 481
+        }
+      },
+      "testReportedMillis": 409,
+      "testNote": "Includes whole-action fee-order admission (unreached invalid suffix/default-policy exemption), plus Requires before/between/after fees."
+    },
+    {
+      "model": "financialAccounting",
+      "typecheckExit": 0,
+      "tests": 6,
+      "testExit": 0,
+      "simulation": {
+        "backend": "typescript",
+        "seed": "17",
+        "invariant": "allInvariants",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 76234,
+        "witnesses": {
+          "selfTransfer": 9211,
+          "overflowed": 9761,
+          "feeObserved": 9829
+        }
+      }
+    },
+    {
+      "model": "feePoolHistory",
+      "typecheckExit": 0,
+      "tests": 3,
+      "testExit": 0,
+      "simulation": {
+        "backend": "typescript",
+        "seed": "17",
+        "invariant": "historyInvariants",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 239704,
+        "witnesses": {
+          "wFinish": 10000,
+          "wClaimOrdinary": 5053,
+          "wClaimDust": 5241
+        }
+      }
+    },
+    {
+      "model": "specs/quint/fee_pool_component_test.qnt",
+      "tests": 14,
+      "testExit": 0,
+      "backend": "typescript",
+      "seed": "17"
+    },
+    {
+      "model": "financialSegments",
+      "candidateInvariant": "waitingResumableInv",
+      "expectedViolation": true,
+      "trace": "waiting-zero-fuel.itf.json",
+      "backend": "rust",
+      "seed": "0xaec7",
+      "nThreads": 1,
+      "maxSteps": 30
+    },
+    {
+      "model": "financialAccounting",
+      "candidateInvariant": "exactReportInv",
+      "expectedViolation": true,
+      "trace": "accounting-overflow.itf.json",
+      "backend": "typescript",
+      "seed": "17",
+      "maxSamples": 10000,
+      "maxSteps": 30
+    },
+    {
+      "model": "financialImport",
+      "typecheckExit": 0,
+      "tests": 4,
+      "testExit": 0,
+      "testReportedMillis": 9,
+      "simulation": {
+        "backend": "typescript",
+        "seed": "17",
+        "invariant": "currentCodeInv",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 5487,
+        "witnesses": {
+          "imported": 5071,
+          "malformedAccepted": 4146,
+          "overflowReached": 1117
+        }
+      }
+    },
+    {
+      "model": "financialImport",
+      "candidateInvariant": "acceptedWorkInv",
+      "expectedViolation": true,
+      "trace": "financial-import-counters.itf.json",
+      "backend": "typescript",
+      "seed": "17",
+      "maxSamples": 10000,
+      "maxSteps": 30
+    }
+  ],
+  "contractReview": {
+    "id": "U020",
+    "ownerCommit": "c0fb7664d",
+    "sha256": "0cb7521f2aa23fd0783d87fe63bbbcc4a2ea5f923ecb0e2f550905610b192dd9",
+    "readOnly": true,
+    "result": "Policy names and retention separation match; JSON schema/exit codes are outside typed model. Source hashes unchanged."
+  },
+  "sourceCut": {
+    "ownerHead": "c0fb7664d",
+    "engineSha256": "5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b",
+    "reportSha256": "5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19",
+    "engineCommitted": false,
+    "change": "Whole-action fee-order admission before start; segment and accounting semantics unchanged."
+  }
+}
