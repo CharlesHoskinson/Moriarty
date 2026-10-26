@@ -142,7 +142,8 @@ theorem charge_stays_uint128 (image : Image Snapshot Capture Effect)
 /-- Successful XFinAwaitEnter after dispatch and logical-plan validation.
 Capture extraction success is supplied, not proved from an arbitrary environment. -/
 def awaitCommit (image : Image Snapshot Capture Effect) (tentative : Snapshot)
-    (feeEffects fallible : List Effect) (logical site : Nat) (captures : List Capture) :
+    (_resumeFuel : 0 < image.remainingWork) (feeEffects fallible : List Effect)
+    (logical site : Nat) (captures : List Capture) :
     Image Snapshot Capture Effect :=
   { image with
     committed := tentative
@@ -154,8 +155,8 @@ def awaitCommit (image : Image Snapshot Capture Effect) (tentative : Snapshot)
 
 theorem await_publishes_committed_prefix (image : Image Snapshot Capture Effect)
     (tentative : Snapshot) (fees fallible : List Effect) (logical site : Nat)
-    (captures : List Capture) :
-    let next := awaitCommit image tentative fees fallible logical site captures
+    (captures : List Capture) (resumeFuel : 0 < image.remainingWork) :
+    let next := awaitCommit image tentative resumeFuel fees fallible logical site captures
     next.committed = tentative ∧
     next.committedEffects = image.committedEffects ++ fees ++ fallible ∧
     next.committedLogical = logical ∧ next.outcome = .waiting site ∧
@@ -238,6 +239,42 @@ theorem failure_keeps_charged_work (image : Image Snapshot Capture Effect)
     next.outcome = failure.outcome := by
   cases policy : image.policy <;> cases feeSeal <;> simp [localFailure, policy]
 
+/-- Post-dispatch await fuel guard; other plan/capture checks are supplied separately. -/
+def awaitEnter (image : Image Snapshot Capture Effect) (tentative : Snapshot)
+    (feeSeal : Option (FeeSeal Snapshot Effect)) (fees fallible : List Effect)
+    (logical site : Nat) (captures : List Capture) : Image Snapshot Capture Effect :=
+  if resumeFuel : 0 < image.remainingWork then
+    awaitCommit image tentative resumeFuel fees fallible logical site captures
+  else
+    localFailure image (.exhausted "Fuel") feeSeal fees fallible
+
+theorem await_enter_zero_fuel_exhausts (image : Image Snapshot Capture Effect)
+    (tentative : Snapshot) (feeSeal : Option (FeeSeal Snapshot Effect))
+    (fees fallible : List Effect) (logical site : Nat) (captures : List Capture)
+    (zero : image.remainingWork = 0) :
+    awaitEnter image tentative feeSeal fees fallible logical site captures =
+      localFailure image (.exhausted "Fuel") feeSeal fees fallible := by
+  simp [awaitEnter, zero]
+
+theorem await_enter_waiting_has_fuel (image : Image Snapshot Capture Effect)
+    (tentative : Snapshot) (feeSeal : Option (FeeSeal Snapshot Effect))
+    (fees fallible : List Effect) (logical site : Nat) (captures : List Capture)
+    (waiting : (awaitEnter image tentative feeSeal fees fallible logical site captures).outcome =
+      .waiting site) : 0 < image.remainingWork := by
+  by_cases resumeFuel : 0 < image.remainingWork
+  · exact resumeFuel
+  · have failed := failure_keeps_charged_work image (.exhausted "Fuel") feeSeal fees fallible
+    rw [awaitEnter, dif_neg resumeFuel, failed.2.2.2.2] at waiting
+    cases waiting
+
+/-- The new financial R0 fuel check alone; not a complete image validator. -/
+def resumeFuelAllowed (image : Image Snapshot Capture Effect) : Bool :=
+  decide (0 < image.remainingWork)
+
+theorem resume_zero_fuel_refused (image : Image Snapshot Capture Effect)
+    (zero : image.remainingWork = 0) : resumeFuelAllowed image = false := by
+  simp [resumeFuelAllowed, zero]
+
 /-- False/error guards may report attempted logical work but return the original image. -/
 def notReady (image : Image Snapshot Capture Effect) (_attempted : Nat) :
     Image Snapshot Capture Effect := image
@@ -252,56 +289,92 @@ inductive AccountingEffect where
   | fee (amount : Fin (2 ^ 128))
   | other
 
-def satAdd (left right : Nat) : Nat := min (left + right) uint128Max
+def checkedAdd (left right : Nat) : Option Nat :=
+  if left + right ≤ uint128Max then some (left + right) else none
 
-def accountEffect (totals : Nat × Nat) : AccountingEffect → Nat × Nat
-  | .transfer amount => (satAdd totals.1 amount.val, totals.2)
-  | .fee amount => (totals.1, satAdd totals.2 amount.val)
-  | .other => totals
+theorem checkedAdd_success {left right result : Nat}
+    (success : checkedAdd left right = some result) :
+    left + right = result ∧ result ≤ uint128Max := by
+  by_cases bounded : left + right ≤ uint128Max
+  · rw [checkedAdd, if_pos bounded] at success
+    cases Option.some.inj success
+    exact ⟨rfl, bounded⟩
+  · rw [checkedAdd, if_neg bounded] at success
+    cases success
 
-/-- Exactly the two independent, left-to-right accumulators in sherlock2::accounting. -/
-def totals (effects : List AccountingEffect) : Nat × Nat :=
-  effects.foldl accountEffect (0, 0)
+def accountEffect (totals : Nat × Nat) : AccountingEffect → Option (Nat × Nat)
+  | .transfer amount =>
+    match checkedAdd totals.1 amount.val with
+    | some payments => some (payments, totals.2)
+    | none => none
+  | .fee amount =>
+    match checkedAdd totals.2 amount.val with
+    | some fees => some (totals.1, fees)
+    | none => none
+  | .other => some totals
+
+def accumulate : (Nat × Nat) → List AccountingEffect → Option (Nat × Nat)
+  | totals, [] => some totals
+  | totals, effect :: rest =>
+    match accountEffect totals effect with
+    | some next => accumulate next rest
+    | none => none
+
+/-- Left-to-right checked sums; the first overflowing accumulator refuses the report. -/
+def totals (effects : List AccountingEffect) : Option (Nat × Nat) :=
+  accumulate (0, 0) effects
 
 structure AccountingReport where
   grossDebit : Nat
   fees : Nat
   recipientReceipt : Nat
+  deriving DecidableEq
 
-/-- Saturated report, not an unbounded conservation identity. -/
-def accounting (effects : List AccountingEffect) : AccountingReport :=
-  let (payments, fees) := totals effects
-  ⟨satAdd payments fees, fees, payments⟩
+/-- Current host accounting returns no report on accumulator or gross overflow. -/
+def accounting (effects : List AccountingEffect) : Option AccountingReport :=
+  match totals effects with
+  | none => none
+  | some sums =>
+    match checkedAdd sums.1 sums.2 with
+    | none => none
+    | some gross => some ⟨gross, sums.2, sums.1⟩
 
-theorem accounting_gross_is_saturated (effects : List AccountingEffect) :
-    (accounting effects).grossDebit =
-      min ((accounting effects).recipientReceipt + (accounting effects).fees) uint128Max := by
-  rfl
-
-theorem accounting_conservation_without_saturation (effects : List AccountingEffect)
-    (bounded : (accounting effects).recipientReceipt + (accounting effects).fees ≤ uint128Max) :
-    (accounting effects).grossDebit =
-      (accounting effects).recipientReceipt + (accounting effects).fees := by
-  exact Nat.min_eq_left bounded
+theorem accounting_success (effects : List AccountingEffect) (report : AccountingReport)
+    (success : accounting effects = some report) :
+    report.grossDebit = report.recipientReceipt + report.fees ∧
+    report.grossDebit ≤ uint128Max := by
+  cases sums : totals effects with
+  | none => simp [accounting, sums] at success
+  | some values =>
+    cases added : checkedAdd values.1 values.2 with
+    | none => simp [accounting, sums, added] at success
+    | some gross =>
+      have reportEq : (⟨gross, values.2, values.1⟩ : AccountingReport) = report :=
+        Option.some.inj (by simpa [accounting, sums, added] using success)
+      have exactSum := checkedAdd_success added
+      cases reportEq
+      exact ⟨exactSum.1.symm, exactSum.2⟩
 
 /-- UIREQ-017's literal accounting example; snapshot evaluation is a separate premise. -/
 def firstPaidEffects : List AccountingEffect :=
   [.transfer ⟨30, by decide⟩, .fee ⟨2, by decide⟩, .other]
 
 theorem first_paid_prefix_accounting :
-    (accounting firstPaidEffects).grossDebit = 32 ∧
-    (accounting firstPaidEffects).fees = 2 ∧
-    (accounting firstPaidEffects).recipientReceipt = 30 ∧
-    100 - (accounting firstPaidEffects).grossDebit = 68 ∧ (40 : Nat) - 30 = 10 := by
+    accounting firstPaidEffects = some ⟨32, 2, 30⟩ ∧
+    (100 : Nat) - 32 = 68 ∧ (40 : Nat) - 30 = 10 := by
   decide
 
-/-- A reporting overflow saturates; an unqualified gross = receipt + fees is false. -/
-theorem saturated_gross_example :
-    (accounting [.transfer ⟨uint128Max, by decide⟩, .fee ⟨1, by decide⟩]).grossDebit =
-      uint128Max ∧
-    (accounting [.transfer ⟨uint128Max, by decide⟩, .fee ⟨1, by decide⟩]).recipientReceipt +
-      (accounting [.transfer ⟨uint128Max, by decide⟩, .fee ⟨1, by decide⟩]).fees =
-        uint128Max + 1 := by
+/-- The formerly saturated gross example now refuses publication. -/
+theorem accounting_gross_overflow_refused :
+    accounting [.transfer ⟨uint128Max, by decide⟩, .fee ⟨1, by decide⟩] = none := by
+  decide
+
+theorem accounting_payments_overflow_refused :
+    accounting [.transfer ⟨uint128Max, by decide⟩, .transfer ⟨1, by decide⟩] = none := by
+  decide
+
+theorem accounting_fees_overflow_refused :
+    accounting [.fee ⟨uint128Max, by decide⟩, .fee ⟨1, by decide⟩] = none := by
   decide
 
 end Clean.Sherlock.FinancialItems

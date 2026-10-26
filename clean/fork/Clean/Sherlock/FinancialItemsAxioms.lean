@@ -14,8 +14,13 @@ import Clean.Sherlock.FinancialItems
 #print axioms Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix
 #print axioms Clean.Sherlock.FinancialItems.sealed_fees_retained_separately
 #print axioms Clean.Sherlock.FinancialItems.failure_keeps_charged_work
+#print axioms Clean.Sherlock.FinancialItems.await_enter_zero_fuel_exhausts
+#print axioms Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel
+#print axioms Clean.Sherlock.FinancialItems.resume_zero_fuel_refused
 #print axioms Clean.Sherlock.FinancialItems.not_ready_preserves_image
-#print axioms Clean.Sherlock.FinancialItems.accounting_gross_is_saturated
-#print axioms Clean.Sherlock.FinancialItems.accounting_conservation_without_saturation
+#print axioms Clean.Sherlock.FinancialItems.checkedAdd_success
+#print axioms Clean.Sherlock.FinancialItems.accounting_success
 #print axioms Clean.Sherlock.FinancialItems.first_paid_prefix_accounting
-#print axioms Clean.Sherlock.FinancialItems.saturated_gross_example
+#print axioms Clean.Sherlock.FinancialItems.accounting_gross_overflow_refused
+#print axioms Clean.Sherlock.FinancialItems.accounting_payments_overflow_refused
+#print axioms Clean.Sherlock.FinancialItems.accounting_fees_overflow_refused

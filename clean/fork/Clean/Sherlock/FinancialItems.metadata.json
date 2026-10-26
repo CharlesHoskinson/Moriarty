@@ -11,66 +11,41 @@
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/FinancialItems.lean",
-      "bytes": 13221,
-      "sha256": "80115c6fc0d2709087d5b3d1c0631d2a89249dcda24e45f8b68c8c63ffc0b5de"
+      "bytes": 16394,
+      "sha256": "c6bbf5eef9c76ae76eb0baacc0446268f98397c0931dea4351768d3078abf009"
     },
     {
       "path": "clean/fork/Clean/Sherlock/FinancialItemsAxioms.lean",
-      "bytes": 1470,
-      "sha256": "4348d1fdbcf88885fbfc3c49a4f943594e0c61d0f637c872f94ea8adf03453f1"
+      "bytes": 1820,
+      "sha256": "132a896683863aa8d74d8956a9887feba653c772dbd8d8deb93291d78cd3392e"
     }
   ],
   "implementationComparison": {
     "worktree": "Moriarty-wt-factory-u",
-    "head": "c0fb7664dd425c7816135ed33aa0fd9a5e741dd0",
+    "head": "5041a0211079866465773f110908f6ce418df51e",
     "includesUncommittedImplementation": true,
     "sourcePins": [
       {
         "path": "crates/mori-core/src/stage/sherlock2.rs",
-        "bytes": 18309,
-        "sha256": "5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b"
+        "bytes": 18998,
+        "sha256": "907e5fc7684934f28bb460d84b0d23f95459a74719fda4b48cc05999446eefb5"
       },
       {
         "path": "crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs",
-        "bytes": 11081,
-        "sha256": "5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19"
+        "bytes": 11639,
+        "sha256": "2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2"
       }
     ],
-    "change": "Fees-first admission now checks every action segment before start; resume-time policy check removed."
+    "change": "Post-await positive fuel guard and zero-fuel resume refusal; accounting now checked Option with publication errors, not saturation; maximal resume epoch refused."
   },
   "verification": {
-    "status": "VERIFIED_BY_COORDINATOR_BUILD",
-    "kernelCompile": {
-      "toolchain": "4.33.1",
-      "moduleMilliseconds": 539,
-      "queryMilliseconds": 235,
-      "timingsAreReportedByLake": true,
-      "benchmarkClaimed": false
-    },
+    "status": "UNVERIFIED_FUEL_AND_CHECKED_ACCOUNTING_UPDATE",
+    "kernelCompile": null,
     "cappedInvocation": "memcap 48G lake +leanprover/lean4:v4.34.1 env lean Clean/Sherlock/FinancialItems.lean",
     "uncappedBuildRun": false,
-    "staticAxiomQueryCoverage": 19,
+    "staticAxiomQueryCoverage": 24,
     "staticDependencyListsMatch": null,
-    "coordinatorBuildObservation": {
-      "executor": "sherlock-fable",
-      "command": "memcap 48G lake -d clean/fork build",
-      "log": "factory-ops/scratchpad/sherlock-push/lean-build-5.log",
-      "logSHA256": "5cb2866e00cc9c74664a75c0e89446918a5010824b5c41479abd8be842f36e49",
-      "fullBuildExit": 0,
-      "packageJobs": 17,
-      "moduleResult": "passed",
-      "sourceCommit": "e9da3a079",
-      "executedByThisAgent": false
-    },
-    "previousCoordinatorBuildObservation": {
-      "executor": "sherlock-fable",
-      "command": "memcap 48G lake -d clean/fork build",
-      "log": "factory-ops/scratchpad/sherlock-push/lean-build-1.log",
-      "logSHA256": "bd2ecbad9637ebf0b70d8153484f2a2dfe0736f6d16772ebc582bbdc8bcfc250",
-      "fullBuildExit": 1,
-      "moduleResult": "parse failed; binder renamed; rebuild pending",
-      "executedByThisAgent": false
-    },
+    "coordinatorBuildObservation": null,
     "localExecutionBlocker": "memcap failed before Lean: Failed to connect to user scope bus via local transport: No data available"
   },
   "axioms": {
@@ -91,140 +66,23 @@
       "Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix",
       "Clean.Sherlock.FinancialItems.sealed_fees_retained_separately",
       "Clean.Sherlock.FinancialItems.failure_keeps_charged_work",
+      "Clean.Sherlock.FinancialItems.await_enter_zero_fuel_exhausts",
+      "Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel",
+      "Clean.Sherlock.FinancialItems.resume_zero_fuel_refused",
       "Clean.Sherlock.FinancialItems.not_ready_preserves_image",
-      "Clean.Sherlock.FinancialItems.accounting_gross_is_saturated",
-      "Clean.Sherlock.FinancialItems.accounting_conservation_without_saturation",
+      "Clean.Sherlock.FinancialItems.checkedAdd_success",
+      "Clean.Sherlock.FinancialItems.accounting_success",
       "Clean.Sherlock.FinancialItems.first_paid_prefix_accounting",
-      "Clean.Sherlock.FinancialItems.saturated_gross_example"
+      "Clean.Sherlock.FinancialItems.accounting_gross_overflow_refused",
+      "Clean.Sherlock.FinancialItems.accounting_payments_overflow_refused",
+      "Clean.Sherlock.FinancialItems.accounting_fees_overflow_refused"
     ],
-    "observedSets": {
-      "Clean.Sherlock.FinancialItems.all_or_nothing_admission_unrestricted": [],
-      "Clean.Sherlock.FinancialItems.retain_admission_iff_all_segments": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.bad_segment_blocks_retain_admission": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.fee_after_other_refused": [],
-      "Clean.Sherlock.FinancialItems.let_and_requires_before_fee_admitted": [],
-      "Clean.Sherlock.FinancialItems.charge_preserves_work": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix": [],
-      "Clean.Sherlock.FinancialItems.charge_stays_uint128": [
-        "propext",
-        "Classical.choice",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.await_publishes_committed_prefix": [],
-      "Clean.Sherlock.FinancialItems.complete_publishes_ordered_effects": [],
-      "Clean.Sherlock.FinancialItems.failed_unsealed_phase_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.sealed_fees_retained_separately": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.failure_keeps_charged_work": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.not_ready_preserves_image": [],
-      "Clean.Sherlock.FinancialItems.accounting_gross_is_saturated": [],
-      "Clean.Sherlock.FinancialItems.accounting_conservation_without_saturation": [],
-      "Clean.Sherlock.FinancialItems.first_paid_prefix_accounting": [],
-      "Clean.Sherlock.FinancialItems.saturated_gross_example": []
-    },
-    "note": "Nineteen-name query observed in coordinator capped-build log; source bytes match e9da3a079. Prior fourteen-name baseline retained separately."
+    "observedSets": null,
+    "note": "Current checked-accounting/fuel update pending; historical nineteen-name verified metadata is in commit0c1020244."
   },
   "refinementClaimed": false,
   "targetEvidenceClaimed": false,
   "scope": "See FinancialItems.metadata.md for assumptions, host/design drift and remaining obligations.",
-  "baselineAxiomObservation": {
-    "sourceCommit": "9a5865203",
-    "sourceFiles": [
-      {
-        "path": "clean/fork/Clean/Sherlock/FinancialItems.lean",
-        "bytes": 11143,
-        "sha256": "c5af3d01e8448ae0a0476584ea95692bdf8eafc6c7fc4f96b98c6623b43786d2"
-      },
-      {
-        "path": "clean/fork/Clean/Sherlock/FinancialItemsAxioms.lean",
-        "bytes": 1081,
-        "sha256": "69a697550c094ad93db37abb107867ba0bf16bf074884ed741190fd6428190e1"
-      }
-    ],
-    "sets": {
-      "Clean.Sherlock.FinancialItems.charge_preserves_work": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix": [],
-      "Clean.Sherlock.FinancialItems.charge_stays_uint128": [
-        "propext",
-        "Classical.choice",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.await_publishes_committed_prefix": [],
-      "Clean.Sherlock.FinancialItems.complete_publishes_ordered_effects": [],
-      "Clean.Sherlock.FinancialItems.failed_unsealed_phase_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.sealed_fees_retained_separately": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.failure_keeps_charged_work": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.not_ready_preserves_image": [],
-      "Clean.Sherlock.FinancialItems.accounting_gross_is_saturated": [],
-      "Clean.Sherlock.FinancialItems.accounting_conservation_without_saturation": [],
-      "Clean.Sherlock.FinancialItems.first_paid_prefix_accounting": [],
-      "Clean.Sherlock.FinancialItems.saturated_gross_example": []
-    },
-    "verification": {
-      "status": "VERIFIED_BY_COORDINATOR_BUILD",
-      "kernelCompile": {
-        "toolchain": "4.33.1",
-        "moduleMilliseconds": 707,
-        "queryMilliseconds": 189,
-        "timingsAreReportedByLake": true,
-        "benchmarkClaimed": false
-      },
-      "cappedInvocation": "memcap 48G lake +leanprover/lean4:v4.34.1 env lean Clean/Sherlock/FinancialItems.lean",
-      "uncappedBuildRun": false,
-      "staticAxiomQueryCoverage": 14,
-      "staticDependencyListsMatch": null,
-      "coordinatorBuildObservation": {
-        "executor": "sherlock-fable",
-        "command": "memcap 48G lake -d clean/fork build",
-        "log": "factory-ops/scratchpad/sherlock-push/lean-build-2.log",
-        "logSHA256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
-        "fullBuildExit": 0,
-        "packageJobs": 17,
-        "moduleResult": "passed",
-        "sourceCommit": "9a5865203",
-        "executedByThisAgent": false
-      },
-      "previousCoordinatorBuildObservation": {
-        "executor": "sherlock-fable",
-        "command": "memcap 48G lake -d clean/fork build",
-        "log": "factory-ops/scratchpad/sherlock-push/lean-build-1.log",
-        "logSHA256": "bd2ecbad9637ebf0b70d8153484f2a2dfe0736f6d16772ebc582bbdc8bcfc250",
-        "fullBuildExit": 1,
-        "moduleResult": "parse failed; binder renamed; rebuild pending",
-        "executedByThisAgent": false
-      },
-      "localExecutionBlocker": "memcap failed before Lean: Failed to connect to user scope bus via local transport: No data available"
-    }
-  },
   "financialImageAdmission": {
     "workAccountingEstablishedByCurrentImport": false,
     "counterExampleShape": {
@@ -232,9 +90,29 @@
       "consumedWork": "2^128-1",
       "effect": "Individually valid UInt128 lanes cannot satisfy WorkAccounting for a UInt128 initialFuel."
     },
-    "sourceAudit": "decode_body checks canonical JSON; same_admission checks identities; resume preflight checks committed snapshot/captures, not the full machine-counter or segment/site invariants.",
+    "sourceAudit": "Beyond the new positive-fuel/epoch checks, canonical JSON, identity and snapshot/capture checks do not establish full machine-counter balance or segment/site consistency.",
     "separateOwnerCounterModuleSuppliesFinancialPremise": false,
     "rustOrForgedCheckpointExecuted": false,
-    "fullImageValidationAndRustRefinement": "open"
+    "fullImageValidationAndRustRefinement": "open",
+    "additionalChecksInCurrentSource": [
+      "positive remaining_work on financial await/resume",
+      "maximal UInt64 resume epoch refused and increment checked"
+    ]
+  },
+  "lastVerifiedRevision": {
+    "sourceCommit": "e9da3a079",
+    "metadataCommit": "0c1020244",
+    "theoremCount": 19,
+    "coordinatorBuild": {
+      "executor": "sherlock-fable",
+      "command": "memcap 48G lake -d clean/fork build",
+      "log": "factory-ops/scratchpad/sherlock-push/lean-build-5.log",
+      "logSHA256": "5cb2866e00cc9c74664a75c0e89446918a5010824b5c41479abd8be842f36e49",
+      "fullBuildExit": 0,
+      "packageJobs": 17,
+      "moduleResult": "passed",
+      "sourceCommit": "e9da3a079",
+      "executedByThisAgent": false
+    }
   }
 }

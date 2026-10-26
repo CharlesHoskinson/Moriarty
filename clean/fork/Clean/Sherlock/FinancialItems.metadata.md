@@ -20,8 +20,8 @@ The statements cover these boundary contracts:
 
 | Requirement | Statements and limits |
 | --- | --- |
-| U017 | Successful await/complete publishes the supplied snapshot and ordered prefix plus fee/fallible effects. `accounting` folds the projected log in order with independent saturating payment and fee sums. The literal 30-payment/2-fee calculation yields gross 32, receipt 30, reserve arithmetic 68 and liability arithmetic 10. Statement evaluation producing the snapshot remains an obligation. |
-| U018 | Successful await installs the supplied captures, advances the segment and publishes Waiting together with the committed prefix. A false/error guard's `notReady` leaves the image identical even when attempted logical work is nonzero. Capture extraction, guard evaluation, exact checkpoint bytes and comparison with Core/2 remain obligations. |
+| U017 | Successful await/complete publishes the supplied snapshot and ordered prefix plus fee/fallible effects. `accounting` checks each payment/fee accumulation and their final sum; overflow yields no report. A successful report has exact gross = receipt + fees and fits UInt128. The literal 30-payment/2-fee calculation yields gross 32, receipt 30, reserve arithmetic 68 and liability arithmetic 10. Statement evaluation producing the snapshot remains an obligation. |
+| U018 | Successful await requires remaining fuel for resume, installs supplied captures, advances the segment and publishes Waiting with the committed prefix. Zero post-dispatch fuel instead enters the local Fuel-exhaustion path. A false/error guard's `notReady` leaves the engine image identical even when attempted logical work is nonzero; successful checkpoint publication also requires successful accounting. Capture extraction, guard evaluation, exact checkpoint bytes and Core/2 comparison remain obligations. |
 | U019 | A failure with no fee seal retains the prior committed snapshot/log, discards the fee and fallible deltas in order, clears captures and publishes the specified rejection/exhaustion. Previously charged machine work remains charged, while committed logical work remains unchanged. |
 | U020 | All-or-nothing retains the prior prefix. Retain-guaranteed-fees with an actual seal installs the sealed snapshot/log and reports retained fees separately from discarded fallible effects. A failing unsealed fee phase retains nothing new. The seal's production, admission correspondence and target phase correspondence remain obligations. |
 
@@ -40,42 +40,40 @@ dispatch must supply its unchanged input image. The supplied seal must be
 the actual successfully completed fee phase, including the last-fee boundary.
 No theorem invents a seal, refund, rollback continuation or ledger action.
 
-At this comparison point the host can publish Waiting with zero remaining
-machine fuel, then exhaust on a ready resume. Quint-2 independently reported
-that SI-29 drift to the implementation owners. `awaitCommit` mirrors this
-current boundary and makes no post-await positive-fuel/resumability claim.
-It must be revised if the host adds the design's await-entry resource guard.
+The current host fixes the earlier zero-fuel Waiting case: `awaitEnter`
+models its new post-dispatch fuel guard, while `awaitCommit` requires
+positive remaining fuel. A failed guard follows the existing local-failure
+policy, including any sealed fee phase. Resume separately refuses an
+imported zero-fuel Waiting image at R0. These are the host's current fuel
+checks, not a proof of every resource row of the design's SI-29 table.
 
-The report sums saturate exactly as the current Rust `accounting` function.
-Consequently the gross/receipt/fee equality is stated with a saturation bound;
-the overflow example demonstrates why unconditional unbounded conservation
-would not match the implementation. This is a report arithmetic property,
-not per-account, per-asset balance conservation.
+The current Rust `accounting` function replaces its earlier silent
+saturation with checked UInt128 sums. The Lean result is therefore optional;
+`accounting_success` proves exact report arithmetic and its gross bound from
+successful publication. Three examples refuse gross, payment-accumulator
+and fee-accumulator overflow. The publisher maps failure to an `accounting`
+input error rather than emitting a saturated report or checkpoint. These
+are report arithmetic properties, not per-account, per-asset balance
+conservation or a guarantee that every otherwise valid action can publish.
 
 No new `sorry` or custom axiom is declared. The companion
-`FinancialItemsAxioms.lean` queries every named theorem. The nineteen-theorem
-source in `e9da3a079` was checked by Sherlock-fable's capped Lean 4.33.1
-build, which compiled all 17 package jobs successfully; this module and its
-query reported 539 ms and 235 ms. This agent inspected the complete build log;
-it did not execute the successful build. Its own capped invocation could
-not connect to the sandbox user scope bus, so no uncapped retry was run.
-
-The actual nineteen-name dependency query records eleven empty axiom sets,
-four `propext`-only sets, `propext`/`Quot.sound` for
-`retain_admission_iff_all_segments`, `bad_segment_blocks_retain_admission`
-and `charge_preserves_work`, and `propext`/`Classical.choice`/`Quot.sound` for
-`charge_stays_uint128`. These are Lean's standard axioms; no custom or
-`sorryAx` dependency was observed. The JSON contains every per-name set,
-source hash and the coordinator log digest. Compilation validates the
-mathematical declarations, without discharging the operational premises.
-The publication baseline's fourteen-name observations are retained separately
-from the current whole-action admission extension and nineteen-name query.
+`FinancialItemsAxioms.lean` queries every named theorem. The current
+fuel-guard/checked-accounting update is pending capped kernel verification.
+The preceding nineteen-theorem source in `e9da3a079` was checked in the
+coordinator's successful 17-job Lean 4.33.1 build, with exact metadata in
+`0c1020244`. That historical query observed only Lean's standard `propext`,
+`Quot.sound` and `Classical.choice` axioms, with no custom or `sorryAx`
+dependency. The JSON distinguishes this baseline from the current pending
+query. This agent cannot connect to the sandbox user scope bus and has
+not run an uncapped build.
 
 `WorkAccounting` is a theorem premise, not a guarantee currently supplied by
 financial checkpoint import. In the pinned host source, `decode_body`
 checks canonical `FinImage2` JSON, `same_admission` checks program/plan/policy
-identity, and the resume preflight checks the snapshot and captures. Those
-checks do not establish the machine-counter balance or the segment/site
+identity, and the resume preflight checks positive fuel, snapshot and captures.
+The carrier also refuses a maximal UInt64 resume epoch and uses checked epoch
+increment; the epoch/header is outside this module's `Image` projection. These
+checks do not establish the full machine-counter balance or the segment/site
 relation used by execution. Individually valid UInt128 values such as
 remaining 1 and consumed `uint128Max` violate the accounting premise, so
 the headroom theorem cannot be applied to that imported image. The older
