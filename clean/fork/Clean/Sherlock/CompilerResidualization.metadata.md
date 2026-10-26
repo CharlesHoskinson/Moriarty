@@ -61,20 +61,16 @@ equality theorem mirrors acceptance, not first-divergence diagnostic priority.
 Effect/duty preservation is vacuous for this A-profile candidate; no claim
 transfers to financial or helper profiles. Physical sharing counts in Rust
 tests are not measured bytes, prover memory or performance evidence here.
+The preservation record added at `87d1a2e2c` retains those six observation
+planes, distinct evidence/gap tables, no acceptance and candidate-only adoption.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
-package build with Lean 4.33.1. The recorded `lean-build-2.log` ends with a
-successful 17-job package build and exit 0. It replays this module's nine
-dependency queries: seven empty axiom sets and two containing only `propext`.
-The earlier nine-theorem module compiled in the preceding package build. The
-JSON retains the exact historical sets and successful observed log by digest.
-The agent read the log; it did not run the build itself.
+package build with Lean 4.33.1. The recorded `lean-build-3.log` shows the updated
+U024/U031/U033 module and all eighteen dependency queries succeeding, then a
+successful 17-job package build and exit 0. Fourteen queries have empty axiom
+sets; four contain only `propext`. The JSON records the exact current sets and
+pins the successful observed log by digest. The agent read the complete log
+and checked current source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
-
-**The subsequent U024/U031/U033 additions have not yet been compiled.** Their current
-source pins and theorem-query list replace the earlier source, while the JSON
-retains the earlier successful build as historical evidence that does not cover
-the new declarations. Passing build and axiom metadata must be refreshed before
-claiming the updated module is verified.
