@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget residualFlow kResidualDispatch s5ResidualRepaired exportMulBindings; do
+for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget residualFlow kResidualDispatch s5ResidualRepaired exportMulBindings programPatternRows; do
   quint typecheck "$model.qnt"
   quint typecheck "${model}_test.qnt"
   backend=rust
@@ -18,10 +18,22 @@ for model in nativeInventory witnessStorage treeInterning planExports residualWo
     kResidualDispatch) witnesses=(sampled genericUsed stopped nextArgumentBranches) ;;
     s5ResidualRepaired) witnesses=(finished delegatedCall sizeFallback fullImage) ;;
     exportMulBindings) witnesses=(success overflow unequalOperands) ;;
+    programPatternRows) witnesses=(finished sourceLate sourceEarly repairedUnitRow) ;;
   esac
   quint run "$model.qnt" --backend="$backend" --invariant modelInv --max-steps 30 --max-samples 10000 \
     --seed 0x303 --witnesses "${witnesses[@]}" --verbosity 1
 done
+if quint run programPatternRows.qnt --invariant sourceMatchesCodec --max-steps 30 --max-samples 10000 \
+  --seed 0x303 --verbosity 2 > program-pattern-counterexample.log 2>&1; then
+  echo 'Expected the pinned PROG pattern-row boundary counterexample' >&2
+  exit 1
+else
+  result=$?
+  if [ "$result" -ne 1 ] || ! rg -q 'Invariant violated' program-pattern-counterexample.log; then
+    cat program-pattern-counterexample.log >&2
+    exit 1
+  fi
+fi
 quint typecheck s5ResidualProjection.qnt
 quint typecheck s5ResidualProjection_test.qnt
 quint test s5ResidualProjection_test.qnt

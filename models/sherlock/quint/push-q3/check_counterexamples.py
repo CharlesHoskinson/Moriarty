@@ -12,7 +12,10 @@ import subprocess
 HERE = Path(__file__).resolve().parent
 source = (HERE / "check.sh").read_text()
 commands = re.findall(r"^if (quint run .*?) > \S+\.log 2>&1; then", source, re.M | re.S)
-assert len(commands) == 3, f"expected three negative searches, found {len(commands)}"
+required = {"s5ResidualProjection.qnt", "rustExportClassification.qnt",
+            "rustResidualIdentity.qnt", "programPatternRows.qnt"}
+present = {shlex.split(command.replace("\\\n", ""))[2] for command in commands}
+assert required <= present, f"missing required negative searches: {sorted(required - present)}"
 for command in commands:
     argv = shlex.split(command.replace("\\\n", ""))
     result = subprocess.run(argv, cwd=HERE, capture_output=True, text=True)

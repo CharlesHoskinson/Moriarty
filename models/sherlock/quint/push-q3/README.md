@@ -7,18 +7,19 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-six Quint files, runs 82 deterministic Quint
+The runner typechecks all twenty-eight Quint files, runs 91 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Ten models use `modelInv`; the three pinned
+per model with `--max-steps 30`. Eleven models use `modelInv`; the three pinned
 defective source projections use `sourceInv`. A repaired classifier variant
-additionally uses `--step classifyRepaired --invariant repairedInv`. All fourteen
+additionally uses `--step classifyRepaired --invariant repairedInv`. All fifteen
 positive runs passed; every requested witness was reached. Its separate
-`preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
+`preservesDynamicTargets`, `stableAcrossFuel`, `belongsToActiveStep` and `sourceMatchesCodec` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
 `verification.log` (79 tests before the strengthened selector/classifier checks),
 `selector-sweep.log` (all nine current dispatcher tests) and
 `classification-repin.log` (all eight current classifier tests and fresh
-10,000-trace source/repaired runs). The selector sweep checks all
+10,000-trace source/repaired runs), and `program-pattern-rows.log` (nine pattern
+row tests plus its 10,000-trace run). The selector sweep checks all
 6,000 positive-fuel selector combinations plus exhaustion and reaches every
 one of the 39 rule IDs. This is exhaustive within that selector quotient;
 the sampled runs are not exhaustive proofs of complete machines.
@@ -26,7 +27,7 @@ Negative searches also explicitly set `--max-samples 10000`: Quint otherwise
 defaults to one sample when a seed is supplied. Expanding the classifier's
 input set exposed that implicit budget by selecting a valid multiplication
 first. `python3 models/sherlock/quint/push-q3/check_counterexamples.py` runs the
-three actual negative commands from the runner and verifies that each finds
+four actual negative commands from the runner and verifies that each finds
 its intended invariant violation; see `counterexample-search-check.log`.
 That focused integration check failed before the budget fix and passed after it.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
@@ -49,6 +50,7 @@ finite operands are 0, 1, 2, 3 and 2^128 - 1, without truncating multiplication.
 | `rustResidualIdentity.qnt` | U033; `2d1b2b373:crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs:143` | Source-derived WIP counterexample: the same literal program selects static rules `{84}` at fuel 0 versus `{80,102}` at fuel 1, changing per-program IR content |
 | `rustExportClassification.qnt` | U031; `b705bfacb:crates/mori-core/src/sherlock/export_plans.rs`, `classify` | Source-derived counterexample: a rule-195 scope return above a pending multiplication frame is attributed to multiplication instead of restoration |
 | `exportMulBindings.qnt` | U031; `32fcbce3e:crates/mori-core/src/sherlock/export_plans.rs`, rule-153 `classify` arm | Actual u128-bound multiplication projection; ordered captured-left and returned-right bindings, sourced success or error result, rejection of swapped operands, wrong paths/results and the historical missing-result placeholder |
+| `programPatternRows.qnt` | U023 compiler/native codec; `388b92d9b:crates/mori-backend/src/sherlock_machine/c6_program_context_canonical.rs`, `step`/`var_step`, and `crates/mori-core/src/sherlock/helper_machine/c6_phys_program.rs` | Pattern-row segment: previous-tag width selection disagrees with literal owner encodings; current-tag-at-sub0 variant preserves all row boundaries in the finite projection |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
@@ -226,6 +228,10 @@ forbidden-operation check. Results are in `u031-observation-audit.json`.
 These probes requested no emissions, so this audit does not check emitted
 file bytes; the evaluator's complete holdout PASS is a separate external report.
 The raw inputs remain external and no Rust/native/target execution is claimed.
+The consolidated ledger is now confirmed too: `369281b01` records run
+`20261026T035253Z-U031` exit 0 at source head `82cbf4f4e`. Both commits carry
+the exact `7f0942c3d` holdout tree and exact `3bb404f15` exporter. That closes
+the earlier current-E evidence gap; no binary execution by this worker is implied.
 
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
@@ -275,6 +281,27 @@ record and wrong IR hash) are rejected for the intended reasons. Results and
 both SHA-256 pins are in `u033-observation-audit.json`. This is a concrete observation audit, not a fresh
 Rust run, complete refinement proof or native/target acceptance test. The two
 large input JSON files remain in the evaluator's external shared directory.
+
+The U023 PROG parser finding at `388b92d9b` is separate from the inventory
+projection. At pattern-row sub-position 0, the emitter stores the incoming
+tag in `nxt.hold`, but selects the row width from `org.hold`. Pattern tags
+1 (PNil) and 5 (Wildcard) have width 1. A stale 1/5 therefore terminates a
+wider row after its tag; a new 1/5 after a non-unit tag fails to terminate.
+The stale tag can also come from the expression table: Expr Var=1 and If=5
+precede the pattern table with the same shared hold register. The native
+owner confirmed this source finding and reports applying the current-tag fix
+to both the program-context and duplicated validate-field parser; a committed
+fix/native result is still pending this audit.
+
+`programPatternRows` compares literal owner-codec row encodings with both
+the old latch rule and a proposed current-tag-at-sub0 variant. It explores
+one/two rows, all seven pattern tags, prior tags 0 through 8, and zero-valued
+usize payloads. Nine tests and 10,000 traces pass the repaired boundary
+invariant; the old source violates the codec boundary after one lane in
+`program-pattern-counterexample.log`. This is a segment projection, excluding
+the rest of PROG, gates other than 1, other range/UTF-8 checks, full field
+arithmetic and native execution. Its connection to the observed tree-fold
+failure was not established by this worker.
 
 The U024 CLI replay at `381f9e902` was source-audited against the tree model.
 Core interning is unchanged, preservation is checked before reporting, and
