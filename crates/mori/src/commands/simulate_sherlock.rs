@@ -71,7 +71,35 @@ fn reference_slices(args: &Args) -> Result<Option<serde_json::Value>, CompileFai
     let source = read(&args.file, "source")?;
     let config = read(config, "config")?;
     let target = read(target, "config")?;
-    host::draft_reference_slices::reference_slices(&source, &config, &target, m).map(Some)
+    if args.optimization.is_some() {
+        host::draft_reference_slices::reference_slices_with_candidate(&source, &config, &target, m)
+            .map(Some)
+    } else {
+        host::draft_reference_slices::reference_slices(&source, &config, &target, m).map(Some)
+    }
+}
+
+/// The optional UIREQ-024 candidate replay of the same draft source and config.
+fn optimization(args: &Args) -> Result<Option<serde_json::Value>, CompileFailure> {
+    let Some(candidate) = args.optimization.as_deref() else {
+        return Ok(None);
+    };
+    if args.source_profile.as_deref()
+        == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE)
+    {
+        return Err(CompileFailure::input(
+            "config",
+            "optimization replay is supported on the dedicated draft route only",
+        ));
+    }
+    let (config, target) = selection(args)?;
+    let read = |path: &std::path::Path, stage: &'static str| {
+        core_io::read_source(path).map_err(|error| CompileFailure::input(stage, error.to_string()))
+    };
+    let source = read(&args.file, "source")?;
+    let config = read(config, "config")?;
+    let target = read(target, "config")?;
+    host::draft_optimization::optimization_report(&source, &config, &target, candidate).map(Some)
 }
 
 fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun, CompileFailure> {
@@ -113,6 +141,10 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
         Ok(slices) => slices,
         Err(failure) => return print_failure(&failure),
     };
+    let optimization = match optimization(args) {
+        Ok(report) => report,
+        Err(failure) => return print_failure(&failure),
+    };
     let selected = match execute(args, &mut sink) {
         Ok(run) => run,
         Err(failure) => return print_failure(&failure),
@@ -133,7 +165,7 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
     };
     let selected = match (selected, slices) {
         (SelectedRun::Draft(run), Some(slices)) => SelectedRun::Extended(run, None, slices),
-        (SelectedRun::Draft(run), None) if inventory.is_some() => {
+        (SelectedRun::Draft(run), None) if inventory.is_some() || optimization.is_some() => {
             SelectedRun::Extended(run, None, serde_json::Value::Null)
         }
         (SelectedRun::Chunked(run, chunks), Some(slices)) => {
@@ -145,11 +177,15 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
         (other, _) => other,
     };
     match selected {
-        SelectedRun::Chunked(run, chunks) => {
-            print_extended(&run, Some(chunks), serde_json::Value::Null, inventory)
-        }
+        SelectedRun::Chunked(run, chunks) => print_extended(
+            &run,
+            Some(chunks),
+            serde_json::Value::Null,
+            inventory,
+            optimization,
+        ),
         SelectedRun::Extended(run, chunks, slices) => {
-            print_extended(&run, chunks, slices, inventory)
+            print_extended(&run, chunks, slices, inventory, optimization)
         }
         SelectedRun::Draft(run) => {
             let report = match host::draft_simulation_report::report(&run) {
@@ -197,6 +233,7 @@ fn print_extended(
     chunks: Option<serde_json::Value>,
     slices: serde_json::Value,
     inventory: Option<serde_json::Value>,
+    optimization: Option<serde_json::Value>,
 ) -> super::super::Result<ExitCode> {
     let report = match host::draft_simulation_report::report(run) {
         Ok(report) => report,
@@ -214,6 +251,9 @@ fn print_extended(
     }
     if let Some(inventory) = inventory {
         value["native_inventory"] = inventory;
+    }
+    if let Some(optimization) = optimization {
+        value["optimization"] = optimization;
     }
     if let Err(error) = core_io::print(&value) {
         return print_failure(&run.failure("serialization", error.to_string()));

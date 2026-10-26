@@ -87,6 +87,10 @@ pub struct Args {
     /// the rules this run actually exercises (description only; no proof)
     #[arg(long, requires = "execution_profile")]
     pub native_inventory: bool,
+    /// Also replay a UIREQ-024 optimization candidate against the K-A reference
+    /// run of the same draft source; --reference-slices then uses the candidate
+    #[arg(long, value_name = "CANDIDATE", requires = "execution_profile")]
+    pub optimization: Option<String>,
 }
 fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
     serde_json::from_value(serde_json::Value::String(value.into()))

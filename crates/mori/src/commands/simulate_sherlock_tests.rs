@@ -83,6 +83,17 @@ fn technical_chunk_flags_parse_and_conflict() {
         panic!("wrong command");
     };
     assert!(args.native_inventory);
+    let Command::Simulate(args) =
+        parse(&["--optimization", "sherlock-a-intern-equal-tree-nodes/1"])
+            .unwrap()
+            .command
+    else {
+        panic!("wrong command");
+    };
+    assert_eq!(
+        args.optimization.as_deref(),
+        Some("sherlock-a-intern-equal-tree-nodes/1")
+    );
     let Command::Simulate(args) = parse(&["--chunk", "1", "--chunk-represent"])
         .unwrap()
         .command

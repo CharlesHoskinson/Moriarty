@@ -50,6 +50,7 @@ fn args(source: &str) -> Args {
         chunk_witness: false,
         chunk_images: false,
         reference_slices: None,
+        optimization: None,
         native_inventory: false,
     }
 }

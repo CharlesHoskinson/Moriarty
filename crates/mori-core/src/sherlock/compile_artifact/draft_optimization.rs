@@ -74,9 +74,52 @@ pub fn optimization_report(
             format!("unknown optimization candidate {candidate:?}; supported: {CANDIDATE}"),
         ));
     }
-    let _ = (source, config_source, target_source);
-    Err(CompileFailure::input(
-        "observation",
-        "candidate replay not implemented",
-    ))
+    let config = super::parse_draft_config(config_source)?;
+    let fuel = run_int(config.fuel.owner(), "fuel")?;
+    let stack = usize::try_from(run_int(config.stack.owner(), "stack")?)
+        .map_err(|_| CompileFailure::input("config", "stack exceeds usize"))?;
+    let (pair_, _, _) = super::prepare_draft_pair(source, config_source, target_source)?;
+    let program = pair_.preparation.draft.program.clone();
+    // At most fuel + 1 events (one free publication); a defensive bound only.
+    let max_events = usize::try_from(fuel.saturating_add(1)).unwrap_or(usize::MAX);
+    let reference = intern::observe_reference(Arc::clone(&program), fuel, stack, max_events);
+    let mut interner = TreeInterner::new();
+    let realized = intern::observe_candidate(&program, fuel, stack, max_events, &mut interner);
+    let kept = check_preservation(&reference, &realized).map_err(|d| {
+        CompileFailure::input(
+            "observation",
+            format!(
+                "candidate {CANDIDATE} diverged on {} at event {:?}: {}",
+                d.clause.name(),
+                d.event,
+                d.detail
+            ),
+        )
+    })?;
+    let (rc, cc) = (reference.peak_census(), realized.peak_census());
+    Ok(json!({
+        "format": RUN_FORMAT,
+        "candidate": CANDIDATE,
+        "realization": format!("{PROFILE} host reference run of the same draft source; B owner execution unchanged"),
+        "qualification": "HostOnly unmetered K-A machine; no circuit, proof, native or acceptance claim",
+        "applied": interner.distinct_nodes() > 0,
+        "interned_nodes": interner.distinct_nodes().to_string(),
+        "preservation": {
+            "entry": "check_preservation",
+            "status": "preserved",
+            "clauses": intern::Clause::ALL.iter().map(|c| c.name()).collect::<Vec<_>>(),
+            "duties": if kept.duties_vacuous { "vacuous-by-profile" } else { "compared" },
+        },
+        "logical": {
+            "events": pair(reference.records.len(), realized.records.len()),
+            "work": pair(work(&reference), work(&realized)),
+            "outcome": pair(outcome(&reference.final_state.outcome), outcome(&realized.final_state.outcome)),
+            "remaining_fuel": pair(reference.final_state.remaining_fuel, realized.final_state.remaining_fuel),
+            "max_depth": pair(max_depth(&reference), max_depth(&realized)),
+            "peak_tree_child_occurrences": pair(rc.structural_children, cc.structural_children),
+        },
+        "physical": {
+            "peak_tree_child_allocations": pair(rc.physical_children, cc.physical_children),
+        },
+    }))
 }
