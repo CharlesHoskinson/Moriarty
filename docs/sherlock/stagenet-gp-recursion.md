@@ -64,7 +64,7 @@ reference engine runs. Each source is committed under `docs/sherlock/qualificati
   transaction is indexed exactly once with `SUCCESS`.
 - **E8. Call.** One `ContractCall` to that entry carries the decider proof of the program run. The
   stagenet node verifies that proof and the call succeeds. The entry writes the result into a
-  `Uint<128>` ledger field. The stored value is bound by the decider statement, so a valid proof
+  16-byte big-endian ledger field (layout encoding u128-be). The stored value is bound by the decider statement, so a valid proof
   for a different program, input or result cannot write it.
 - **E9. Readback.** From the public indexer alone (read-only, no wallet): the deploy-state result
   equals `layout.initial`, the post-call result equals the `mori simulate` reference and differs
@@ -103,29 +103,47 @@ None of the six stages can run for a general program yet.
 | Stagenet path | deploy/call/readback harness proven: A8 block 1014763; Loki proofs accepted at blocks 1016992 (CPU) and 1024894 (GPU) | `tools/sherlock-sdk/{deploy,call}-current.mjs`, `loki-stagenet` |
 | Qualification record | absent, so U023 scenario 2 = not-implemented | `docs/sherlock/qualification/` |
 
-## 3. Architecture (proposed, decided by M1-M3)
+## 3. Architecture (decided 2026-10-26; M2/M3 measure it)
 
 ```
-mori simulate owner run  ──►  per-step C6 witness (pre/post carriers, rule)      [host]
+mori simulate owner run  ──►  per-step C6 witness (pre/post carriers, rule)      [host, G5]
       │
       ▼
-LEAF  L(rule): dispatch(pre)=rule ∧ fragment_rule(pre,post);                     [ZKIR v3 → IrSource as
-      public = (prog_d, pre_d, post_d, rule, h)   (Poseidon digests, carriers private)  zk-stdlib Relation,
-      │                                                                             PoseidonState transcript]
+LEAF  L: ONE universal circuit: dispatch(pre)=rule ∧ every fragment gated by rule;  [ZKIR v3 → IrSource as
+      public = [prog_d, pre_d, post_d, rule, h_pre]  (5 lanes, no binding lane)        zk-stdlib Relation,
+      state digest = Poseidon(dom SHK_SD, tag, value, lanes_d); carriers private      PoseidonState transcript]
+      │                                                                               (sherlock_c6_child.rs, s8)
       ▼
-NODE  N: verifies 2 children (leaf key from family table, or N's own key via
-      assign_vk_as_public_input); links left.post_d = right.pre_d, h contiguous;
-      public = (prog_d, pre_d, post_d, h_lo, h_hi, vk_N_repr, acc)
-      │   (tree; depth ⌈log2(#leaves)⌉; odd leaf padded with identity Done→Done)
-      ▼
-DECIDER D: verifies root N, pins vk_N_repr to the real N key, pins pre_d = genesis image digest,
-      requires the final state = Halted(result); pairing in-circuit;
-      transcript = acceptRun(stmt, result)  (stmt = H(SHK_RUN, instance, prog_d, init_d, fin_d, n, result))
+NODE  N (linear IVC, crates/mori-recursion/src/ivc.rs, SHKIVC01): verifies its own previous
+      proof (assign_vk_as_public_input, skipped by bit at genesis) and ONE leaf (fixed key);
+      enforces leaf.pre_d = (genesis ? init_d : prev.cur_d), h = prev.h + 1;
+      public = [vk_N_repr, prog_d, init_d, cur_d, h, acc]   (one key, any number of steps)
       │
       ▼
-CONTRACT SherlockRun (new Compact): acceptRun(stmt, result) { runs.insert(stmt); result_out = result }
-      with the decider VK installed for acceptRun (adapter override as in A4); sealed prog_d/instance.
+DECIDER D (run_decider.rs, SHKRUND1, blake2b): verifies the last N proof, pins vk_N_repr,
+      folds and pairs the accumulator in-circuit, opens cur_d = Poseidon(SHK_SD, HALTED, result,
+      lanes_d), values = [prog_d, init_d, fin_d, n_steps, result_be];
+      stmt = Poseidon(dom SHK_RUN, values); transcript = the acceptRun template (70 slots,
+      tests/fixtures/run-template.json) with value slots; comm = Poseidon(rand, stmt, p, i, n, fin, r)
+      │
+      ▼
+CONTRACT SherlockRun (tools/sherlock-sdk/sherlock-run.compact):
+      ledger result: Bytes<16> (BIG-endian u128, initial 1; state window offset 32, length 16),
+      steps, sealed program_d, sealed init_d, runs: Set<Field>;
+      acceptRun(stmt, p, i, n, fin, r) { program_d == p; init_d == i; !runs.member(stmt);
+      runs.insert(stmt); steps = n; result = r }
+      with the decider VK installed for acceptRun (ZKConfigProvider override as in A4).
 ```
+
+Why: per-rule leaf keys cannot feed one node, so the leaf is universal. The result is
+big-endian because the ledger value encoding trims trailing zero bytes; a BE u128 with a nonzero
+low byte keeps a fixed 16-byte window, which the U023 holdout layout (u128-be) decodes. Reading
+program_d and init_d in acceptRun puts the deployed digests into the transcript, so a proof of
+another program or initial state is refused by the ledger. Pipeline test:
+`crates/mori-recursion/tests/sherlock_gp.rs` (gp_fold_and_key, gp_call_prove); stand-in leaf
+`src/standin.rs` for rehearsal only.
+
+The original proposal (kept for the record) was a binary tree of nodes over per-rule leaves.
 
 Rationale and alternatives:
 
@@ -174,7 +192,7 @@ Rationale and alternatives:
 | G5 | Host witness stream: owner run → per-step C6 witnesses for the whole program (`materializeStep`-style), under a committed qualification config | E1/E3 | `mori-core` `c6_phys_*` + a driver | gpr (or worker) |
 | G6 | Node relation N (verifies leaf or node; links digests and heights; vk_N passthrough) and measurement M3 | E4 | `crates/mori-recursion/src/node.rs` (new), reusing `inner.rs` and `child.rs` | **gpr** |
 | G7 | Decider over N with the root statement and a result slot in the template | E5 | `decider.rs` (W := N), `template.rs` new slot kind `result` | gpr |
-| G8 | SherlockRun contract: `acceptRun(stmt, result)` writes a `Uint<128>` result; sealed prog/instance; adapter installs the decider VK for acceptRun | E7/E8 | `tools/sherlock-sdk/sherlock-run.compact`, `deploy-run.mjs`, `call-run.mjs` from `*-current.mjs` | gpr |
+| G8 | SherlockRun contract: `acceptRun(stmt, p, i, n, fin, r)` writes a big-endian `Bytes<16>` result; sealed prog/instance; adapter installs the decider VK for acceptRun | E7/E8 | `tools/sherlock-sdk/sherlock-run.compact`, `deploy-run.mjs`, `call-run.mjs` from `*-current.mjs` | gpr |
 | G9 | Local ledger-9 proof-verifying acceptance and refusal (A6 pattern) for acceptRun | E8 negative | `examples/validate_call.rs` | gpr |
 | G10 | Independent verifier over the exact submitted bundle (A5 / `verify_chain` pattern, stock verifier when Loki proves) | E6 | `examples/verify_chain.rs` generalized | gpr / worker |
 | G11 | Stagenet deploy, call and indexer readback. Compute the layout offset from the **indexed** deploy bytes, never predict it. Check `_installed_vk` locally on the deploy state before spending the call. | E7-E9 | wallet.lock session | **gpr** |
