@@ -16,6 +16,8 @@ import Clean.Sherlock.CompilerResidualization
 #print axioms Clean.Sherlock.CompilerResidualization.model_recursive_call_keeps_back_edge
 #print axioms Clean.Sherlock.CompilerResidualization.legacy_model_arith_prunes_call
 #print axioms Clean.Sherlock.CompilerResidualization.model_arith_keeps_call_via_generic
+#print axioms Clean.Sherlock.CompilerResidualization.residual_record_has_execution_witness
+#print axioms Clean.Sherlock.CompilerResidualization.refusing_executor_has_no_records
 #print axioms Clean.Sherlock.CompilerResidualization.keys_ignore_runtime
 #print axioms Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back
 #print axioms Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back

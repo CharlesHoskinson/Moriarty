@@ -42,6 +42,18 @@ reference definition. Its `arith`/`recursive` family labels
 are separate from the five native inventory families, so specialization keys
 now carry family identity strings instead of the native family enum.
 
+U033's `abe5ee146` contract additionally requires each residual execution record
+to name its producing block, satisfy rule membership (or generic dispatch),
+follow an allowed block edge and preserve state continuity. `ResidualBlock`,
+`ResidualRecord` and `ResidualExecution` state these obligations with a supplied
+actual executor. `RecordProduced` requires an execution equation, not merely
+an annotation on a reference stream. The witness theorem exposes that equation;
+a negative control proves that an executor returning no records cannot support
+a nonempty certified stream. These requirements complement semantic preservation
+and do not prove it. Actual immutable lookup, Rust block execution, rule/charge
+maps, block-ID encoding and correspondence remain unproved. The Python sample
+models do not instantiate this real-IR execution contract.
+
 The three residual masks have immutable specialization keys. Profile/layout
 tokens are context identities even for the empty code-binding mask; runtime
 state is never read by key construction. Worklist and size refusal execute the
@@ -78,7 +90,7 @@ theorem dependency queries. Sherlock-fable independently ran the capped Lake
 package build with Lean 4.33.1. The recorded `lean-build-4.log` shows the updated
 U024/U031/U033 module and all twenty dependency queries succeeding, then a
 successful 17-job package build and exit 0. Fifteen queries have empty axiom
-sets; five contain only `propext`. The JSON records those exact current sets and
+sets; five contain only `propext`. The JSON retains those exact historical sets and
 pins the successful observed log by digest. The agent read the complete log
 and checked current source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
@@ -88,3 +100,7 @@ The evaluator subsequently required actual `mori simulate` integration for
 U031/U033 and U024 replay over D23/D35/tree45 with unchanged complete observations
 and allocation counters. These models do not supply that integration; its Rust
 landing and corresponding source-level contracts remain to be reconciled.
+
+**The execution-provenance additions have not yet been compiled.** Their source
+and query pins are current; the preceding twenty-query build remains historical
+evidence until the new declarations and dependency queries are rechecked.

@@ -257,6 +257,68 @@ theorem model_arith_keeps_call_via_generic :
     ModelRule.call ∈ modelTargets true .fetch ∧
       ModelRule.call ∈ modelGenericTargets true .fetch := by decide
 
+/-! U033 contract abe5ee146: required real-IR provenance. These are obligations
+for the forthcoming Rust executor, separate from the synthetic Python graph. -/
+
+structure ResidualBlock where
+  id : Nat
+  rules : List Nat
+  successors : List Nat
+  genericDispatch : Bool
+
+structure ResidualRecord (Whole : Type) where
+  blockId : Nat
+  reference : InternStepRecord Whole
+
+/-- The executor is supplied from the actual implementation. A matching annotation
+or a copied reference stream is not evidence for this production equation. -/
+def RecordProduced {Whole : Type} (lookup : Nat → Option ResidualBlock)
+    (execute : ResidualBlock → Whole → Option (InternStepRecord Whole))
+    (record : ResidualRecord Whole) : Prop :=
+  ∃ block, lookup record.blockId = some block ∧ block.id = record.blockId ∧
+    (block.genericDispatch = true ∨ record.reference.ruleStartLine ∈ block.rules) ∧
+    execute block record.reference.before = some record.reference
+
+def AllowedBlockEdge (lookup : Nat → Option ResidualBlock) (current next : Nat) : Prop :=
+  ∃ block, lookup current = some block ∧
+    (block.genericDispatch = true ∨ next = current ∨ next ∈ block.successors)
+
+/-- Complete observed records must actually be produced, follow IR edges and
+chain through the same complete states. Concrete lookup, decoding and execution
+correspondence still have to be proved; this record constructs no Rust executor. -/
+structure ResidualExecution {Whole : Type} (lookup : Nat → Option ResidualBlock)
+    (execute : ResidualBlock → Whole → Option (InternStepRecord Whole)) where
+  records : List (ResidualRecord Whole)
+  production : ∀ record, record ∈ records → RecordProduced lookup execute record
+  adjacency : ∀ index current next,
+    records[index]? = some current → records[index + 1]? = some next →
+      AllowedBlockEdge lookup current.blockId next.blockId
+  continuity : ∀ index current next,
+    records[index]? = some current → records[index + 1]? = some next →
+      current.reference.after = next.reference.before
+
+theorem residual_record_has_execution_witness {Whole : Type}
+    (lookup : Nat → Option ResidualBlock)
+    (execute : ResidualBlock → Whole → Option (InternStepRecord Whole))
+    (run : ResidualExecution lookup execute) (record : ResidualRecord Whole)
+    (member : record ∈ run.records) :
+    ∃ block, lookup record.blockId = some block ∧
+      execute block record.reference.before = some record.reference := by
+  obtain ⟨block, found, _, _, produced⟩ := run.production record member
+  exact ⟨block, found, produced⟩
+
+/-- Negative control: a reference stream cannot become a genuine nonempty IR
+execution merely by adding block IDs when the supplied executor emits nothing. -/
+theorem refusing_executor_has_no_records {Whole : Type}
+    (lookup : Nat → Option ResidualBlock)
+    (run : ResidualExecution (Whole := Whole) lookup (fun _ _ ↦ none)) :
+    run.records = [] := by
+  cases recordsEq : run.records with
+  | nil => rfl
+  | cons record rest =>
+    obtain ⟨_, _, _, _, impossible⟩ := run.production record (by simp [recordsEq])
+    cases impossible
+
 inductive StaticMask where
   | empty | fixedFamily (family : String) | fixedProgram
   deriving DecidableEq, Repr
