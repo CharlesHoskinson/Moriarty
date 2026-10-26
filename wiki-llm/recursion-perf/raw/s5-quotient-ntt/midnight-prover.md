@@ -1,0 +1,973 @@
+# Midnight quotient prover source
+> Source: https://raw.githubusercontent.com/midnightntwrk/midnight-zk/main/proofs/src/plonk/prover.rs
+> Collected: 2026-10-26
+> Published: Unknown
+
+```text
+use std::{
+    collections::{BTreeMap, HashSet},
+    hash::Hash,
+    iter::{self},
+    ops::RangeTo,
+    slice,
+};
+
+use ff::{Field, FromUniformBytes, PrimeField, WithSmallOrderMulGroup};
+use rand_core::{CryptoRng, OsRng, RngCore};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
+
+use super::{
+    Error, ProvingKey,
+    circuit::{
+        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
+        Selector,
+    },
+    logup,
+};
+use crate::{
+    circuit::Value,
+    plonk::{argument, traces::ProverTrace},
+    poly::{
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, PolynomialLabel,
+        ProverQuery, Rotation, batch_invert_rational, commitment::PolynomialCommitmentScheme,
+    },
+    transcript::{Hashable, Sampleable, Transcript},
+    utils::{arithmetic::eval_polynomial_seq, rational::Rational},
+};
+
+#[cfg(feature = "committed-instances")]
+/// Commit to a vector of raw instances. This function can be used to prepare
+/// the committed instances that the verifier will be provided with when this
+/// feature is enabled.
+pub fn commit_to_instances<F, CS: PolynomialCommitmentScheme<F>>(
+    params: &CS::Parameters,
+    domain: &EvaluationDomain<F>,
+    instances: &[F],
+) -> CS::Commitment
+where
+    F: WithSmallOrderMulGroup<3> + Ord + FromUniformBytes<64>,
+{
+    let mut poly = domain.empty_lagrange();
+    for (poly_eval, value) in poly.iter_mut().zip(instances.iter()) {
+        *poly_eval = *value;
+    }
+    CS::commit(params, &poly, PolynomialLabel::CommittedInstance(0))
+}
+
+/// This computes a proof trace for the provided `circuit` when given the
+/// public parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+///
+/// The trace can then be used to finalise the proof.
+pub(crate) fn compute_trace<
+    'a,
+    F,
+    CS: PolynomialCommitmentScheme<F>,
+    T: Transcript,
+    ConcreteCircuit: Circuit<F>,
+>(
+    params: &CS::Parameters,
+    pk: &'a ProvingKey<F, CS>,
+    circuit: &ConcreteCircuit,
+    // The prover needs to get all instances in non-committed form. However,
+    // the first `nb_committed_instances` instance columns are dedicated for
+    // instances that the verifier receives in committed form.
+    #[cfg(feature = "committed-instances")] nb_committed_instances: usize,
+    instances: &[&[F]],
+    transcript: &mut T,
+    mut rng: impl RngCore + CryptoRng,
+) -> Result<ProverTrace<'a, F>, Error>
+where
+    CS::Commitment: Hashable<T::Hash>,
+    F: WithSmallOrderMulGroup<3>
+        + Sampleable<T::Hash>
+        + Hashable<T::Hash>
+        + Hash
+        + Ord
+        + FromUniformBytes<64>,
+{
+    #[cfg(not(feature = "committed-instances"))]
+    let nb_committed_instances: usize = 0;
+
+    if instances.len() != pk.vk.cs.num_instance_columns || instances.len() < nb_committed_instances
+    {
+        return Err(Error::InvalidInstances);
+    }
+
+    // Hash verification key into transcript
+    let vk_absorbed = pk.vk.absorb_into(transcript)?;
+    let phase0_committed = pk.phase0_polys.committed(&vk_absorbed);
+
+    let domain = &pk.vk.domain;
+
+    let instance = compute_instances(params, pk, instances, nb_committed_instances, transcript)?;
+
+    let advice_polys = parse_advices(pk, circuit, instances, &mut rng)?;
+
+    // Helper: sample `num_sets` blinding vectors, each of length `inner_len`.
+    // Used to pre-generate every blinding the parallel compute sections below
+    // consume, since `&mut rng` cannot cross rayon thread boundaries.
+    let mut sample_blindings = |num_sets: usize, inner_len: usize| -> Vec<Vec<F>> {
+        (0..num_sets)
+            .map(|_| (0..inner_len).map(|_| F::random(&mut rng)).collect())
+            .collect()
+    };
+
+    let num_lookups = pk.vk.cs.lookups.len();
+    let mult_blinding_count = pk.vk.cs.blinding_factors() + 1;
+    let mult_blindings: Vec<Vec<F>> = sample_blindings(num_lookups, mult_blinding_count);
+
+    // Compute the multiplicities columns in parallel. They are committed to
+    // below, as the phase1 argument group.
+    let logup_multiplicities: Vec<logup::prover::ComputedMultiplicities<F>> = {
+        let logup_args: Vec<_> =
+            pk.vk.cs.lookups.iter().map(|l| l.chunk_by_degree(pk.vk.cs.degree())).collect();
+        logup_args
+            .par_iter()
+            .enumerate()
+            .zip(mult_blindings.par_iter())
+            .map(|((argument_index, logup), blinds)| {
+                logup.compute_multiplicities_parallel(
+                    argument_index,
+                    pk,
+                    &advice_polys,
+                    &pk.fixed_values,
+                    &instance.instance_values,
+                    blinds,
+                )
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+    };
+
+    let logup_multiplicities_len = logup_multiplicities.len();
+    // The advice columns and the multiplicities form the phase1 group.
+    // TODO: Check the multiplicities clone - see if we can remove it.
+    let advice_labels = pk.vk.cs.advice_labels();
+    let mut phase1_polys_map: BTreeMap<PolynomialLabel, Polynomial<F, LagrangeCoeff>> =
+        BTreeMap::new();
+
+    for (label, poly) in advice_labels.iter().cloned().zip(advice_polys) {
+        if phase1_polys_map.insert(label, poly).is_some() {
+            return Err(Error::DuplicatedLabel);
+        }
+    }
+
+    for c in logup_multiplicities.iter() {
+        let label = PolynomialLabel::LogupMultiplicities(c.argument_index);
+        if phase1_polys_map.insert(label, c.multiplicities.clone()).is_some() {
+            return Err(Error::DuplicatedLabel);
+        }
+    }
+
+    let phase1_committed = argument::prover::Committed::commit::<CS, T, _>(
+        params,
+        phase1_polys_map,
+        Polynomial::to_delta,
+        transcript,
+    )?;
+
+    // Sample theta challenge for keeping lookup columns linearly independent
+    let theta: F = transcript.squeeze_challenge();
+
+    // Sample beta challenge
+    let beta: F = transcript.squeeze_challenge();
+
+    // Sample gamma challenge
+    let gamma: F = transcript.squeeze_challenge();
+
+    // Sample the trash challenge after the advices have been committed to
+    let trash_challenge: F = transcript.squeeze_challenge();
+
+    let blinding_factors = pk.vk.cs.blinding_factors();
+    let num_perm_sets = pk.vk.cs.permutation.num_sets(pk.vk.cs_degree);
+    let perm_blindings: Vec<Vec<F>> = sample_blindings(num_perm_sets, blinding_factors);
+    let logup_blindings: Vec<Vec<F>> = sample_blindings(logup_multiplicities_len, blinding_factors);
+
+    let mut phase2_polys_map: BTreeMap<PolynomialLabel, Polynomial<F, LagrangeCoeff>> =
+        BTreeMap::new();
+
+    let perm_z_polys = pk.vk.cs.permutation.compute_z_polys::<F, CS>(
+        pk,
+        phase1_committed.polys_of(&advice_labels),
+        &pk.fixed_values,
+        &instance.instance_values,
+        beta,
+        gamma,
+        perm_blindings,
+    );
+
+    for (i, poly) in perm_z_polys.into_iter().enumerate() {
+        if phase2_polys_map
+            .insert(PolynomialLabel::PermutationAccumulator(i), poly)
+            .is_some()
+        {
+            return Err(Error::DuplicatedLabel);
+        }
+    }
+
+    let logup_polys_maps = logup_multiplicities
+        .into_par_iter()
+        .zip(logup_blindings.into_par_iter())
+        .map(|(lookup, blindings)| lookup.compute_logderivative(pk, theta, beta, blindings))
+        .collect::<Result<Vec<_>, Error>>()?
+        .into_par_iter()
+        .map(|c| {
+            BTreeMap::from_iter(
+                [
+                    c.helper_polys_lagrange
+                        .into_par_iter()
+                        .enumerate()
+                        .map(|(j, p)| {
+                            (
+                                PolynomialLabel::LogupHelper(c.argument_index, j),
+                                domain.lagrange_from_vec(p),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                    vec![(
+                        PolynomialLabel::LogupAggregator(c.argument_index),
+                        c.aggregator_poly,
+                    )],
+                ]
+                .concat(),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    for polys_map in logup_polys_maps {
+        for (label, p) in polys_map {
+            if phase2_polys_map.insert(label, p).is_some() {
+                return Err(Error::DuplicatedLabel);
+            }
+        }
+    }
+
+    for (i, trash) in pk.vk.cs.trashcans.iter().enumerate() {
+        let p = trash.compute_trash_poly(
+            domain,
+            trash_challenge,
+            phase1_committed.polys_of(&advice_labels),
+            &pk.fixed_values,
+            &instance.instance_values,
+        );
+
+        if phase2_polys_map.insert(PolynomialLabel::Trash(i), p).is_some() {
+            return Err(Error::DuplicatedLabel);
+        }
+    }
+
+    let phase2_committed = argument::prover::Committed::commit::<CS, T, _>(
+        params,
+        phase2_polys_map,
+        Polynomial::to_double_delta,
+        transcript,
+    )?;
+
+    // Obtain challenge for keeping all separate gates linearly independent
+    let y: F = transcript.squeeze_challenge();
+
+    let InstanceSingle {
+        instance_polys,
+        instance_values,
+    } = instance;
+
+    let domain = pk.vk.get_domain();
+
+    let phase1_committed = phase1_committed.into_coeff(domain);
+    let phase2_committed = phase2_committed.into_coeff(domain);
+
+    Ok(ProverTrace {
+        instance_polys,
+        instance_values,
+        phase0_committed,
+        phase1_committed,
+        phase2_committed,
+        beta,
+        gamma,
+        theta,
+        trash_challenge,
+        y,
+    })
+}
+
+/// This takes the computed trace of a set of witnesses and creates a proof
+/// for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+pub(crate) fn finalise_proof<'a, F, CS: PolynomialCommitmentScheme<F>, T: Transcript>(
+    params: &'a CS::Parameters,
+    pk: &'a ProvingKey<F, CS>,
+    // The prover needs to get all instances in non-committed form. However,
+    // the first `nb_committed_instances` instance columns are dedicated for
+    // instances that the verifier receives in committed form.
+    #[cfg(feature = "committed-instances")] nb_committed_instances: usize,
+    trace: ProverTrace<'a, F>,
+    transcript: &mut T,
+) -> Result<(), Error>
+where
+    CS::Commitment: Hashable<T::Hash>,
+    F: WithSmallOrderMulGroup<3>
+        + Sampleable<T::Hash>
+        + Hashable<T::Hash>
+        + Hash
+        + Ord
+        + FromUniformBytes<64>,
+{
+    #[cfg(not(feature = "committed-instances"))]
+    let nb_committed_instances: usize = 0;
+
+    let nu_poly = compute_nu_poly(pk, &trace);
+
+    // Construct the quotient polynomial h(X) = nu(X)/(X^n-1), split it into limbs,
+    // and commit to each limb separately
+    let quotient_limbs =
+        compute_h_poly::<F, CS, T>(params, pk.get_vk().get_domain(), nu_poly, transcript)?;
+
+    let ProverTrace {
+        instance_polys,
+        phase0_committed,
+        phase1_committed,
+        phase2_committed,
+        ..
+    } = trace;
+
+    let x: F = CS::squeeze_evaluation_point(transcript);
+    let domain = pk.vk.get_domain();
+    let cs = pk.vk.cs();
+
+    let x_rotations: BTreeMap<Rotation, F> = argument::rotations(cs)
+        .into_iter()
+        .map(|rotation| (rotation, domain.rotate_omega(x, rotation)))
+        .collect();
+
+    write_instance_evals_to_transcript(
+        pk,
+        nb_committed_instances,
+        &instance_polys,
+        &x_rotations,
+        transcript,
+    )?;
+
+    let phase0_evaluated = phase0_committed.evaluate(cs, &x_rotations, transcript)?;
+
+    let phase1_evaluated = phase1_committed.evaluate(cs, &x_rotations, transcript)?;
+
+    let phase2_evaluated = phase2_committed.evaluate(cs, &x_rotations, transcript)?;
+
+    // h(X) = h_0(X) + x^{n-1} h_1(X) + ..., scaled by (1 - x^n): the
+    // polynomial behind the verifier's quotient commitment, which opens to
+    // -nu(x) at x.
+    let splitting_factor = x.pow_vartime([pk.vk.n() - 1]);
+    let xn = splitting_factor * x;
+    let quotient_poly = iter::successors(Some(xn - F::ONE), |pow| Some(*pow * splitting_factor))
+        .zip(quotient_limbs)
+        .fold(Polynomial::init(0), |acc, (scalar, limb)| {
+            acc.padded_sub(&(limb * scalar))
+        });
+
+    let instance_labels: Vec<_> = (0..nb_committed_instances)
+        .map(|i| [PolynomialLabel::CommittedInstance(i)])
+        .collect();
+    let queries = compute_queries(
+        pk,
+        &instance_labels,
+        &instance_polys,
+        &phase0_evaluated,
+        &phase1_evaluated,
+        &phase2_evaluated,
+        &x_rotations,
+        &quotient_poly,
+    );
+
+    CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
+}
+
+/// This creates a proof for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+//
+// NOTE: Any change here must be mirrored in src/plonk/bench/prover.rs
+// to ensure the benchmarks remain aligned with the real prover.
+pub fn create_proof<
+    F,
+    CS: PolynomialCommitmentScheme<F>,
+    T: Transcript,
+    ConcreteCircuit: Circuit<F>,
+>(
+    params: &CS::Parameters,
+    pk: &ProvingKey<F, CS>,
+    circuit: &ConcreteCircuit,
+    #[cfg(feature = "committed-instances")] nb_committed_instances: usize,
+    instances: &[&[F]],
+    transcript: &mut T,
+    mut rng: impl RngCore + CryptoRng,
+) -> Result<(), Error>
+where
+    CS::Commitment: Hashable<T::Hash>,
+    F: WithSmallOrderMulGroup<3>
+        + Sampleable<T::Hash>
+        + Hashable<T::Hash>
+        + Hash
+        + Ord
+        + FromUniformBytes<64>,
+{
+    let trace = compute_trace(
+        params,
+        pk,
+        circuit,
+        #[cfg(feature = "committed-instances")]
+        nb_committed_instances,
+        instances,
+        transcript,
+        &mut rng,
+    )?;
+    finalise_proof(
+        params,
+        pk,
+        #[cfg(feature = "committed-instances")]
+        nb_committed_instances,
+        trace,
+        transcript,
+    )
+}
+
+pub(super) fn compute_instances<F, CS, T>(
+    params: &CS::Parameters,
+    pk: &ProvingKey<F, CS>,
+    instances: &[&[F]],
+    nb_committed_instances: usize,
+    transcript: &mut T,
+) -> Result<InstanceSingle<F>, Error>
+where
+    T: Transcript,
+    CS: PolynomialCommitmentScheme<F>,
+    CS::Commitment: Hashable<T::Hash>,
+    F: WithSmallOrderMulGroup<3>
+        + Sampleable<T::Hash>
+        + Hashable<T::Hash>
+        + Hash
+        + Ord
+        + FromUniformBytes<64>,
+{
+    let instance_values = instances
+        .iter()
+        .enumerate()
+        .map(|(i, values)| {
+            // Committed instances go first.
+            let is_committed_instance = i < nb_committed_instances;
+            let mut poly = pk.vk.domain.empty_lagrange();
+            assert_eq!(poly.len(), pk.vk.domain.n as usize);
+            if values.len() > (poly.len() - (pk.vk.cs.blinding_factors() + 1)) {
+                return Err(Error::InstanceTooLarge);
+            }
+            if !is_committed_instance {
+                transcript.common(&F::from_u128(values.len() as u128))?;
+            }
+
+            for (poly_eval, value) in poly.iter_mut().zip(values.iter()) {
+                if !is_committed_instance {
+                    transcript.common(value)?;
+                }
+                *poly_eval = *value;
+            }
+
+            if is_committed_instance {
+                transcript.common(&CS::commit(
+                    params,
+                    &poly,
+                    PolynomialLabel::CommittedInstance(i),
+                ))?;
+            }
+
+            Ok(poly)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let instance_polys: Vec<_> = instance_values
+        .iter()
+        .map(|poly| {
+            let lagrange_vec = pk.vk.domain.lagrange_from_vec(poly.to_vec());
+            pk.vk.domain.lagrange_to_coeff(lagrange_vec)
+        })
+        .collect();
+
+    Ok(InstanceSingle {
+        instance_values,
+        instance_polys,
+    })
+}
+
+pub(super) fn parse_advices<F, CS, ConcreteCircuit>(
+    pk: &ProvingKey<F, CS>,
+    circuit: &ConcreteCircuit,
+    instances: &[&[F]],
+    rng: &mut (impl RngCore + CryptoRng),
+) -> Result<Vec<Polynomial<F, LagrangeCoeff>>, Error>
+where
+    F: WithSmallOrderMulGroup<3>,
+    CS: PolynomialCommitmentScheme<F>,
+    ConcreteCircuit: Circuit<F>,
+{
+    let mut meta = ConstraintSystem::default();
+    #[cfg(feature = "circuit-params")]
+    let config = ConcreteCircuit::configure_with_params(&mut meta, circuit.params());
+    #[cfg(not(feature = "circuit-params"))]
+    let config = ConcreteCircuit::configure(&mut meta);
+
+    let domain = &pk.vk.domain;
+    // Selector optimizations cannot be applied here; use the ConstraintSystem
+    // from the verification key.
+    let meta = &pk.vk.cs;
+
+    let unusable_rows_start = domain.n as usize - (meta.blinding_factors() + 1);
+
+    let mut witness = WitnessCollection {
+        k: domain.k(),
+        advice: vec![domain.empty_lagrange_rational(); meta.num_advice_columns],
+        unblinded_advice: HashSet::from_iter(meta.unblinded_advice_columns.clone()),
+        instances,
+        // The prover will not be allowed to assign values to advice
+        // cells that exist within inactive rows, which include some
+        // number of blinding factors and an extra row for use in the
+        // permutation argument.
+        usable_rows: ..unusable_rows_start,
+        _marker: std::marker::PhantomData,
+    };
+
+    // Synthesize the circuit to obtain the witness. If keygen captured
+    // the region layout (see `ProvingKey::region_starts`), we reuse it
+    // here to skip the shape pass; otherwise the floor planner falls
+    // back to computing it.
+    ConcreteCircuit::FloorPlanner::synthesize_with_cached_regions(
+        &mut witness,
+        circuit,
+        config,
+        meta.constants.clone(),
+        pk.region_starts.as_deref(),
+    )?;
+
+    let mut advice_polys = batch_invert_rational::<F>(witness.advice);
+
+    for (i, advice_polys) in advice_polys.iter_mut().enumerate() {
+        if !witness.unblinded_advice.contains(&i) {
+            for cell in &mut advice_polys[unusable_rows_start..] {
+                *cell = F::random(&mut *rng);
+            }
+        } else {
+            #[cfg(debug_assertions)]
+            for cell in &advice_polys[unusable_rows_start..] {
+                assert_eq!(*cell, F::ZERO);
+            }
+        }
+    }
+
+    Ok(advice_polys)
+}
+
+pub(super) fn compute_nu_poly<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommitmentScheme<F>>(
+    pk: &ProvingKey<F, CS>,
+    trace: &ProverTrace<'_, F>,
+) -> Polynomial<F, ExtendedLagrangeCoeff> {
+    let ProverTrace {
+        instance_polys,
+        phase1_committed,
+        phase2_committed,
+        beta,
+        gamma,
+        theta,
+        trash_challenge,
+        y,
+        ..
+    } = &trace;
+    let domain = pk.vk.get_domain();
+    // Calculate the advice and instance cosets
+    let advice_cosets: Vec<Polynomial<F, ExtendedLagrangeCoeff>> = phase1_committed
+        .polys_of(&pk.vk.cs.advice_labels())
+        .par_iter()
+        .map(|poly| domain.coeff_to_extended(poly.clone()))
+        .collect();
+    let instance_cosets: Vec<Polynomial<F, ExtendedLagrangeCoeff>> = instance_polys
+        .par_iter()
+        .map(|poly| domain.coeff_to_extended(poly.clone()))
+        .collect();
+
+    // Evaluate the numerator polynomial nu(X) of the quotient polynomial
+    // h(X) = nu(X) / (X^n-1): nu(X) is a random linear combination of all
+    // independent identities
+    pk.ev.evaluate_numerator::<ExtendedLagrangeCoeff>(
+        &pk.vk.domain,
+        &pk.vk.cs,
+        &advice_cosets,
+        &instance_cosets,
+        &pk.fixed_cosets,
+        *y,
+        *beta,
+        *gamma,
+        *theta,
+        *trash_challenge,
+        phase1_committed,
+        phase2_committed,
+        &pk.l0,
+        &pk.l_last,
+        &pk.l_active_row,
+        &pk.sigmas.cosets,
+    )
+}
+
+/// Computes the quotient polynomial `h(X) = nu(X) / (X^n - 1)` and commits to
+/// it, writing the commitment(s) to the transcript.
+///
+/// `h(X)` is split into `quotient_poly_degree` limbs of degree `n-2` each, so
+/// that each can be committed with an SRS of size `n` after 1 term for
+/// blinding. Each limb is independently blinded and committed, and all
+/// `quotient_poly_degree` commitments are written to the transcript. The
+/// returned `Vec` contains the `quotient_poly_degree` limb polynomials in
+/// coefficient form.
+pub(crate) fn compute_h_poly<
+    F: WithSmallOrderMulGroup<3> + Hashable<T::Hash>,
+    CS: PolynomialCommitmentScheme<F>,
+    T: Transcript,
+>(
+    params: &CS::Parameters,
+    domain: &EvaluationDomain<F>,
+    nu_poly: Polynomial<F, ExtendedLagrangeCoeff>,
+    transcript: &mut T,
+) -> Result<Vec<Polynomial<F, Coeff>>, Error>
+where
+    CS::Commitment: Hashable<T::Hash>,
+{
+    // Construct quotient polynomial h(X) = nu(X) / (X^n - 1) in evaluation form
+    let h_poly = domain.divide_by_vanishing_poly(nu_poly);
+
+    // Convert h(X) to coefficient form
+    let mut h_poly = domain.extended_to_coeff(h_poly);
+
+    // Let n := size of evaluation domain
+    // Let d := degree of constraint system
+    // Hence, the degree of the quotient poly is: d*(n-1) - n = (d-1)*(n-1) - 1,
+    // and a domain of size (d-1)*(n-1) suffices to correctly represent it
+    h_poly.truncate((domain.n - 1) as usize * domain.get_quotient_poly_degree());
+
+    // Split h(X) up into limbs and add inter-limb blinding so that
+    // individual limb commitments do not leak information about h(X).
+    let h_poly_iter = h_poly.chunks_exact((domain.n - 1) as usize);
+    assert_eq!(h_poly_iter.remainder().len(), 0);
+    let mut h_limbs = h_poly_iter.map(|v| v.to_vec()).collect::<Vec<_>>();
+    drop(h_poly);
+
+    blind_quotient_limbs(&mut h_limbs);
+
+    let h_limbs: Vec<_> = h_limbs.into_iter().map(|h_limb| domain.coeff_from_vec(h_limb)).collect();
+
+    // Compute commitment to each limb (parallel MSMs).
+    let h_commitments: Vec<_> = h_limbs
+        .par_iter()
+        .enumerate()
+        .map(|(i, h_piece)| CS::commit(params, h_piece, PolynomialLabel::QuotientPiece(i)))
+        .collect();
+
+    // Write each limb commitment to the transcript in order.
+    for c in h_commitments {
+        transcript.write(&c)?;
+    }
+
+    Ok(h_limbs)
+}
+
+fn blind_quotient_limbs<F: PrimeField>(quotient_limbs: &mut [Vec<F>]) {
+    let nr_limbs = quotient_limbs.len();
+    assert!(nr_limbs >= 2);
+
+    for i in 1..nr_limbs {
+        let t = F::random(OsRng);
+        quotient_limbs[i - 1].push(t);
+        quotient_limbs[i][0] -= t;
+    }
+
+    quotient_limbs[nr_limbs - 1].push(F::ZERO);
+}
+
+pub(super) fn write_instance_evals_to_transcript<F, CS, T>(
+    pk: &ProvingKey<F, CS>,
+    nb_committed_instances: usize,
+    instance_polys: &[Polynomial<F, Coeff>],
+    x_rotations: &BTreeMap<Rotation, F>,
+    transcript: &mut T,
+) -> Result<Vec<F>, Error>
+where
+    F: WithSmallOrderMulGroup<3> + Hashable<T::Hash>,
+    CS: PolynomialCommitmentScheme<F>,
+    T: Transcript,
+{
+    let meta = &pk.vk.cs;
+
+    // Batch-evaluate all polynomials with outer parallelism and sequential
+    // Horner per task, avoiding the per-call rayon::scope overhead of the
+    // internally-parallel eval_polynomial.
+    let instance_evals: Vec<F> = meta
+        .instance_queries
+        .par_iter()
+        .map(|&(column, at)| eval_polynomial_seq(&instance_polys[column.index()], x_rotations[&at]))
+        .collect();
+
+    // Write evaluations to transcript in the canonical order.
+    for (eval, &(column, _)) in instance_evals.iter().zip(meta.instance_queries.iter()) {
+        if column.index() < nb_committed_instances {
+            transcript.write(eval)?;
+        }
+    }
+
+    Ok(instance_evals)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn compute_queries<
+    'a,
+    F: WithSmallOrderMulGroup<3>,
+    CS: PolynomialCommitmentScheme<F>,
+>(
+    pk: &'a ProvingKey<F, CS>,
+    instance_labels: &'a [[PolynomialLabel; 1]],
+    instance_polys: &'a [Polynomial<F, Coeff>],
+    phase0_evals: &'a argument::prover::Evaluated<'a, F>,
+    phase1_evals: &'a argument::prover::Evaluated<'a, F>,
+    phase2_evals: &'a argument::prover::Evaluated<'a, F>,
+    x_rotations: &'a BTreeMap<Rotation, F>,
+    quotient_poly: &'a Polynomial<F, Coeff>,
+) -> Vec<ProverQuery<'a, F>> {
+    // The multi-open scales the first commitment by 1, which is best spent on
+    // one read from the proof: the phase-0 commitments are known in advance and
+    // a committed instance may be a constant, so both go after phases 1 and 2.
+    iter::empty()
+        .chain(phase1_evals.open())
+        .chain(phase2_evals.open())
+        .chain(phase0_evals.open())
+        .chain(
+            pk.vk.cs.instance_queries.iter().filter_map(move |&(column, at)| {
+                let i = column.index();
+                instance_labels.get(i).map(|labels| {
+                    ProverQuery::new(
+                        labels,
+                        slice::from_ref(&instance_polys[i]),
+                        x_rotations[&at],
+                        labels[0].clone(),
+                    )
+                })
+            }),
+        )
+        .chain(iter::once(ProverQuery::new(
+            &[PolynomialLabel::Quotient],
+            slice::from_ref(quotient_poly),
+            x_rotations[&Rotation::cur()],
+            PolynomialLabel::Quotient,
+        )))
+        .collect()
+}
+
+#[derive(Clone)]
+pub(super) struct InstanceSingle<F: PrimeField> {
+    pub instance_values: Vec<Polynomial<F, LagrangeCoeff>>,
+    pub instance_polys: Vec<Polynomial<F, Coeff>>,
+}
+
+struct WitnessCollection<'a, F: Field> {
+    k: u32,
+    advice: Vec<Polynomial<Rational<F>, LagrangeCoeff>>,
+    unblinded_advice: HashSet<usize>,
+    instances: &'a [&'a [F]],
+    usable_rows: RangeTo<usize>,
+    _marker: std::marker::PhantomData<F>,
+}
+
+impl<F: Field> Assignment<F> for WitnessCollection<'_, F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(&mut self, _: A, _: &Selector, _: usize) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn annotate_column<A, AR>(&mut self, _annotation: A, _column: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Do nothing
+    }
+
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        self.instances
+            .get(column.index())
+            .and_then(|column| column.get(row))
+            .map(|v| Value::known(*v))
+            .ok_or(Error::BoundsFailure)
+    }
+
+    fn assign_advice<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        column: Column<Advice>,
+        row: usize,
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Rational<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        *self
+            .advice
+            .get_mut(column.index())
+            .and_then(|v| v.get_mut(row))
+            .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
+
+        Ok(())
+    }
+
+    fn assign_fixed<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Fixed>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Rational<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn copy(&mut self, _: Column<Any>, _: usize, _: Column<Any>, _: usize) -> Result<(), Error> {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn fill_from_row(
+        &mut self,
+        _: Column<Fixed>,
+        _: usize,
+        _: Value<Rational<F>>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+}
+
+#[test]
+#[cfg(feature = "dev-curves")]
+fn test_create_proof() {
+    use midnight_curves::bn256::{Bn256, Fr};
+    use rand_core::OsRng;
+
+    use crate::{
+        circuit::SimpleFloorPlanner,
+        plonk::{keygen_pk, keygen_vk_with_k},
+        poly::kzg::{KZGCommitmentScheme, params::ParamsKZG},
+        transcript::CircuitTranscript,
+    };
+
+    #[derive(Clone, Copy)]
+    struct MyCircuit;
+
+    impl<F: Field> Circuit<F> for MyCircuit {
+        type Config = ();
+        type FloorPlanner = SimpleFloorPlanner;
+        #[cfg(feature = "circuit-params")]
+        type Params = ();
+
+        fn without_witnesses(&self) -> Self {
+            *self
+        }
+
+        fn configure(_meta: &mut ConstraintSystem<F>) -> Self::Config {}
+
+        fn synthesize(
+            &self,
+            _config: Self::Config,
+            _layouter: impl crate::circuit::Layouter<F>,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    const K: u32 = 4;
+    let params: ParamsKZG<Bn256> = ParamsKZG::unsafe_setup(K, OsRng);
+    let vk = keygen_vk_with_k::<Fr, KZGCommitmentScheme<Bn256>, _>(&params, &MyCircuit, K)
+        .expect("keygen_vk should not fail");
+    let pk = keygen_pk(vk, &MyCircuit).expect("keygen_pk should not fail");
+    let mut transcript = CircuitTranscript::<_>::init();
+
+    // Create proof with wrong number of instances (extra column).
+    let proof = create_proof(
+        &params,
+        &pk,
+        &MyCircuit,
+        #[cfg(feature = "committed-instances")]
+        0,
+        &[&[]],
+        &mut transcript,
+        OsRng,
+    );
+    assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
+
+    // Create proof with correct number of instances.
+    create_proof(
+        &params,
+        &pk,
+        &MyCircuit,
+        #[cfg(feature = "committed-instances")]
+        0,
+        &[],
+        &mut transcript,
+        OsRng,
+    )
+    .expect("proof generation should not fail");
+}
+
+```
