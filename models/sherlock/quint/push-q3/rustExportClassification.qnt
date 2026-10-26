@@ -2,6 +2,8 @@
 // Source-audited only: no Rust build/run claimed. The Rust classifier scans
 // every pending frame, which can attribute an outer binary operation to an
 // active scope-return step (K-A reference.rs rule 195).
+// At evaluator 7f0942c3d, rule 149 scheduling the right operand is also
+// explicitly forbidden from claiming the pending checked multiplication.
 module rustExportClassification {
   type Frame = Scope | ReturnF | LeftMul | RightMul | RightAdd
   type Op = ArenaRead | FrameRestore | CheckedMul | CheckedAdd
@@ -10,6 +12,7 @@ module rustExportClassification {
   var observation: Observation
   pure val pendingMul: Input = {returning: true, frames: List(Scope, RightMul), rule: 195}
   pure val activeMul: Input = {returning: true, frames: List(RightMul), rule: 153}
+  pure val returnLeft: Input = {returning: true, frames: List(LeftMul), rule: 149}
   pure val typedReturn: Input = {returning: true, frames: List(ReturnF, RightMul), rule: 185}
   pure def firstBinary(frames: List[Frame]): Op = frames.foldl(ArenaRead, (found, frame) =>
     if (found != ArenaRead) found
@@ -32,7 +35,7 @@ module rustExportClassification {
     else if (input.returning and input.rule == 195 and input.frames.head() == Scope) FrameRestore
     else ArenaRead
   action init = {
-    nondet input = Set(pendingMul, activeMul, typedReturn).oneOf()
+    nondet input = Set(pendingMul, activeMul, typedReturn, returnLeft).oneOf()
     observation' = {classified: false, input: input, operation: ArenaRead}
   }
   action classify = all {
@@ -48,8 +51,12 @@ module rustExportClassification {
     or observation.operation == referenceOperation(observation.input)
   val sourceInv = not(observation.classified) or observation.operation == sourceClassify(observation.input)
   val misclassifiedPendingFrame = observation.classified and not(belongsToActiveStep)
+  val misclassifiedLeftFrame = observation.classified and observation.input == returnLeft
+    and observation.operation == CheckedMul
   val repairedInv = belongsToActiveStep and (not(observation.classified)
     or observation.operation == repairedClassify(observation.input))
   val repairedPendingFrame = observation.classified and observation.input == pendingMul
     and observation.operation == FrameRestore
+  val repairedLeftFrame = observation.classified and observation.input == returnLeft
+    and observation.operation == ArenaRead
 }

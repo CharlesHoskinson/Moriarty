@@ -7,7 +7,7 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-six Quint files, runs 80 deterministic Quint
+The runner typechecks all twenty-six Quint files, runs 82 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
 per model with `--max-steps 30`. Ten models use `modelInv`; the three pinned
 defective source projections use `sourceInv`. A repaired classifier variant
@@ -15,11 +15,20 @@ additionally uses `--step classifyRepaired --invariant repairedInv`. All fourtee
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
-`verification.log` (79 tests before the strengthened selector sweep) and
-`selector-sweep.log` (all nine current dispatcher tests). The latter checks all
+`verification.log` (79 tests before the strengthened selector/classifier checks),
+`selector-sweep.log` (all nine current dispatcher tests) and
+`classification-repin.log` (all eight current classifier tests and fresh
+10,000-trace source/repaired runs). The selector sweep checks all
 6,000 positive-fuel selector combinations plus exhaustion and reaches every
 one of the 39 rule IDs. This is exhaustive within that selector quotient;
 the sampled runs are not exhaustive proofs of complete machines.
+Negative searches also explicitly set `--max-samples 10000`: Quint otherwise
+defaults to one sample when a seed is supplied. Expanding the classifier's
+input set exposed that implicit budget by selecting a valid multiplication
+first. `python3 models/sherlock/quint/push-q3/check_counterexamples.py` runs the
+three actual negative commands from the runner and verifies that each finds
+its intended invariant violation; see `counterexample-search-check.log`.
+That focused integration check failed before the budget fix and passed after it.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
 `exportMulBindings` uses `--backend=typescript`: the default Rust evaluator is
 limited to i64 integers and cannot represent the actual u128 maximum. Its
@@ -189,11 +198,17 @@ that module is byte-identical to defective `b705bfacb`, without the later
 `6a6774a0c` / `32fcbce3e` / `3bb404f15` repairs. Its committed U031 trace says
 PASS despite the scope/pending-multiplication misclassification and missing
 value/error bindings. `audit_s5.py` checks that exact module identity and the
-new route. The existing model again violates `belongsToActiveStep` for rule
-195 with `[Scope, RightMul]`; see `s5-export-regression-counterexample.log`.
+new route. The existing model violates `belongsToActiveStep` for rule 195 with
+`[Scope, RightMul]` and rule 149 with `[LeftMul]`; see
+`s5-export-regression-counterexample.log` and the directed classifier tests.
 This is a source-derived regression finding, reported to s5, s3, the evaluator
 and fable. The correctly repaired consolidated exporter remains at
 `93f61a41c`; the older s5 PASS is not evidence for those repairs.
+The evaluator accepted the finding and strengthened U031 at `7f0942c3d`:
+rules 149 and 195 must not report any `CheckedU128*` operation. The model now
+samples both cases; old-source witnesses are reached and the repaired source
+classifies the scheduling/restoration steps without multiplication. No real
+run against the strengthened holdout has been observed here yet.
 
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
