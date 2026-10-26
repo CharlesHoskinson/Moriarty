@@ -305,9 +305,65 @@ PlanNode = Switch(occurrencePath,cases,default) | Bind(binderId,occurrencePath,n
 
 First extend to closed monomorphic nominal recursive groups, including mutual references. Assign stable type/constructor/field/binder/occurrence IDs; derive a plain tagged-node layout; compile source-ordered pattern matrices using first-column specialization/default decomposition. Field slot `i` always means source field `i`. Evaluate constructor fields strictly left-to-right before allocation and the scrutinee once before matching. Select the minimum matching source arm index, bind in its fresh arm scope and execute only its body. Pattern occurrences use `(sourceMatchId,sourceArmId,fieldPath)`, never arena addresses. `workMap` carries an ordered reference-event cursor; shared tests/suffixes cannot erase charges or stop positions. Heuristic columns, packing and test sharing are later comparisons. Parameterized types need separately bounded instantiation; closures, GADTs, mutation/cycles and or-patterns remain additional extensions. Existing dedicated K list/tree sorts do not discharge this work.
 
-The financial extension must add complete committed/tentative state, ordered effects, residual duties, pending operations/observations and phase/cost fields to `ReferenceState`, images and observations together. Existing Core/2 successful-prefix typed await remains controlling. Exact universal `Commit`/`Yield`/`Await` opcodes and target-phase mapping stay OPEN for integration/review; no opcode is supplied here. Chunk cuts, caches, match plans and residual blocks cannot create financial commits or move source boundaries. Existing UISEC clauses remain unchanged, with all new security implications referred to their Opus owner.
+The financial extension must add complete committed/tentative state, ordered effects, residual duties, pending operations/observations and phase/cost fields to `ReferenceState`, images and observations together. Existing Core/2 successful-prefix typed await remains controlling. Decided 2026-10-25 (profile `/2`, see "Suspension, resume and finance (profile /2)" below and `docs/sherlock/design/suspension-and-finance.md`): `Await` is the only new opcode, `yield` is sugar for a constant-true await, and `Commit` is the machine rule `XFinCommit`, implicit at an await and at completion. The target-phase mapping onto the guaranteed-only on-chain shape is in that note, section 8. Chunk cuts, caches, match plans and residual blocks cannot create financial commits or move source boundaries. Existing UISEC clauses remain unchanged, with all new security implications referred to their Opus owner.
 
 
 ## Opus-owned claim gates
 
 The engineering handoff requires applicable Opus-authored B001–B009 hostile cases at every phase making a B-specific claim; the later security phase is not the sole gate. In particular, `bounded_decode_matches` must be gated on the Opus A4/B002 cases (inactive-slot garbage, a referenced unreachable node, foreign codeId, tag/layout mismatch, write below activeLength, and nondeterministic physical post-image). This records the designated owner's gates, not new tests, a security assessment or a claimed pass. All actual cases, constraints, WF proofs and acceptance judgments remain Opus-owned and pending.
+
+## Suspension, resume and finance (profile /2)
+
+Added 2026-10-25. Implemented so far: the `Await` control, `Waiting` outcome, `LogicalCap` and profile pinning. Specified, not yet in code: the rules `BAwaitEnter`, `BResumeAccept`, `XFinCommit`, `XFinResumeAccept`, draft language `/2`, `OD` and the anchor. Counts and states elsewhere are per branch. Profile `sherlock-helper-microstep/1` is unchanged and refuses everything below.
+Admitted profile ids are 2 and 3; the owner engine carries one selected profile and refuses an image or
+step of another (SI-01).
+
+```text
+ControlC.Await{site:u16, expr:ExprId}          C6 tag 11, lanes [11, site, expr]
+OutcomeC.Waiting{site:u16}                     tag 4; not Running, not terminal for the program;
+                                               Terminal to owner_step, refused by select
+ExhaustReason.LogicalCap                       tag 7, /2 only; tags 0-6 unchanged
+Rules (pure)       BAwaitEnter, BResumeAccept            atomic resume relation
+Rules (financial)  XFinAwaitEnter, XFinResumeAccept, XFinCommit
+Observation        OD = transientHash([DOM_OBS2, ck_pre, site, label_id, n, v_0..v_15]), n <= 16
+Checkpoint         one identity CK(image); the post root of a batch that ends in Waiting
+```
+
+Checks SI-02 and SI-20 refuse Waiting, Await or LogicalCap under `/1`; SI-27 requires `Waiting{s}` to
+agree with `Await{s}`. A technical chunk cut remains neither a Waiting nor a commit (unchanged from the
+reference-slice interface). Draft language `moriarty-sherlock-draft/2` adds `await`; the `/1` grammar
+still treats it as an unknown keyword.
+
+Settlement shape (specified, not yet deployed): a `sherlock-run-anchor` Compact contract with
+`validity_ok`/`settled` sets, `root`, `height`, `batch_no` and sealed `instance_id`, `keys_id`,
+`profile_id`, `program_c`, `genesis_*`. `settleValidity(batch, fields, obs)` checks the predecessor root and
+height, recomputes the statement and `OD`, and advances the root. The `/2` decider enforces: Waiting ends a
+batch, at most one resume and only as event 0, and `od != 0` iff event 0 is a resume. No ledger lane,
+node, SDK or proof-server change is involved.
+
+## Model correspondence package (U021, U026)
+
+```text
+model_package.py projection [--k-observations P --quint-observations P --case C --fuel N]   complete ordered K/Quint trace comparison
+model_package.py stage [--retained-comparison | --comparison P] [--private-record P]  Lean semantic/fuel tasks, bounded Clean encoding,
+                                                                         correspondence tasks, upstream reuse inventory
+model_package.py bind-private --integration-root P --record P                     opaque digest, source count, qualification
+```
+
+`projection` defaults to the retained F03 artifacts and reports first divergence by field and value
+hash. `stage` separates recursive Lean tasks from bounded Clean encoding; a missing comparison is "not
+run". Agreement supplies no theorem, native or ledger evidence. These are maintainer checks.
+
+## Rollup interfaces (B line, factory-b)
+
+```text
+sherlock-v3-batch/1     one whole-batch leaf -> single-child verifier parent (17 lanes = Profile A
+                        statement) -> terminal Sherlock decider; terminal projection
+                        DOM_STMT, instance id, batch number, parent lanes [0,1,15,16,4,5,6,7,8,9,10,11,12,13]
+FSYNB002 UniformBatch   optional sherlock-rollup-prefix feature: 67-state trace, 16 transaction edges
+                        and 50 header-close edges each covered once, fixed capacity-512 commitment
+                        prefix; one key serves every batch of a prefix; k20, 669986 used rows
+```
+
+The v3 corpus changes root history once per header, including empty headers. Offline proofs carry no
+ledger-acceptance claim; B4 uses its own anchor/template and a call-bound terminal proof.
