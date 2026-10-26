@@ -7,10 +7,10 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty Quint files, runs 52 deterministic Quint
+The runner typechecks all twenty-two Quint files, runs 60 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Seven models use `modelInv`; the three pinned
-defective source projections use `sourceInv`. All ten
+per model with `--max-steps 30`. Eight models use `modelInv`; the three pinned
+defective source projections use `sourceInv`. All eleven
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
@@ -25,6 +25,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
 | `residualBlockBudget.qnt` | U033; `c41f2da11:qa/holdout/contracts/U033.json` | Updated contract model counts one shared generic block inside the positive size cap, rejects zero as tooling refusal, and retains per-rule charges even when charged and free rules share one block |
+| `residualFlow.qnt` | U033; `abe5ee146:qa/holdout/contracts/U033.json` | Records require a known producing block and correct rule membership; transitions follow same-block, explicit successor or generic-exit flow; invalid records are refused |
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
 | `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
 | `rustResidualIdentity.qnt` | U033; `2d1b2b373:crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs:143` | Source-derived WIP counterexample: the same literal program selects static rules `{84}` at fuel 0 versus `{80,102}` at fuel 1, changing per-program IR content |
@@ -155,3 +156,11 @@ in that model denotes the restoration category, not a restriction against a
 more specific ScopeRestore operation name. The owner reports a working-tree
 repair selecting by rule/control/top frame and binding actual operand paths;
 its committed source and test evidence are still awaited.
+
+At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
+to residual records after the post-hoc replay finding. `residualFlow` covers
+that metadata contract, including the distinction that exiting a generic block
+is allowed while entering one still needs an edge. It does not establish causal
+execution of IR blocks; actual reference-prefix equality and the Rust producer
+must still be audited. In particular, metadata-valid repeated records are not
+asserted to be valid machine traces by this model.

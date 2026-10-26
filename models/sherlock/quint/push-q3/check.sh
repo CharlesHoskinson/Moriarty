@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget s5ResidualRepaired; do
+for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget residualFlow s5ResidualRepaired; do
   quint typecheck "$model.qnt"
   quint typecheck "${model}_test.qnt"
   quint test "${model}_test.qnt"
@@ -12,6 +12,7 @@ for model in nativeInventory witnessStorage treeInterning planExports residualWo
     planExports) witnesses=(unsupportedWitness constraintsOnly midnightSupported) ;;
     residualWorklist) witnesses=(prepared hitFallback compiledBranch retainedRecursiveCall fullSpecialization) ;;
     residualBlockBudget) witnesses=(configured compiled genericUsed invalidRefused) ;;
+    residualFlow) witnesses=(acceptedSome refusedSome usedSuccessor exitedGeneric) ;;
     s5ResidualRepaired) witnesses=(finished delegatedCall sizeFallback fullImage) ;;
   esac
   quint run "$model.qnt" --invariant modelInv --max-steps 30 --max-samples 10000 \
