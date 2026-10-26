@@ -34,6 +34,7 @@ mod publish_io;
 pub mod replay;
 mod signed_call_io;
 pub mod simulate;
+pub mod simulate_suspend;
 mod source_io;
 pub mod test;
 pub mod verify;

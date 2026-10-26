@@ -25,6 +25,8 @@ use super::{
 };
 
 const PROFILE_HELPER_MICROSTEP: u8 = 2; // IdentityC.profile_id owner mapping in `shared`
+// Profile /2 (suspension design note §9): the same uncut segment base.
+const PROFILE_HELPER_MICROSTEP_2: u8 = super::PROFILE_ID_MICROSTEP_2;
 
 // R4 segBase shape: {active: {data, dataFields, env, valueSlots},
 //   alloc: {dataNodes, dataFields, environmentCells}, consumedWork}.
@@ -86,7 +88,8 @@ pub fn implied_seg_base(pre: &PreImage<'_>) -> Result<SegBase, HostViolation> {
         FinanceInput::Absent => body.view.is_some() && body.fin.is_none(),
         FinanceInput::TypedExtensionReserved => body.view.is_none() && body.fin.is_some(),
     };
-    if body.identity.profile_id != PROFILE_HELPER_MICROSTEP
+    if (body.identity.profile_id != PROFILE_HELPER_MICROSTEP
+        && body.identity.profile_id != PROFILE_HELPER_MICROSTEP_2)
         || !domain_ok
         || !finance_ok
         || body.layout.boundary_capacities_present

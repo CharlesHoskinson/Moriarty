@@ -8,6 +8,40 @@ use mori_lexer::{TokenIdx, TokenKind, Tokens};
 use std::sync::Arc;
 
 pub const DRAFT_LANGUAGE: &str = "moriarty-sherlock-draft/1";
+/// Profile /2 dialect: the /1 grammar plus `await` (suspension design note §3.3).
+pub const DRAFT_LANGUAGE_2: &str = "moriarty-sherlock-draft/2";
+/// Core/2 bounds carried into the /2 draft dialect (§3.3, §6.2).
+pub const MAX_AWAIT_BINDERS: usize = 16;
+pub const MAX_AWAIT_SITES_PER_FUNCTION: usize = 16;
+pub const MAX_AWAIT_OPERANDS: usize = 8;
+
+/// One `await L(x1: T1, ..) when G; E` site of a /2 draft program.
+///
+/// Host lowering (Phase 2): the await is the AST node
+/// `let x1 = hole1 in .. let xn = holen in E`, where each hole is the zero
+/// literal of the binder's sort. That outer `let` node is the await
+/// expression row the machine stops at (`ControlC::Await.expr`); the holes are
+/// never evaluated, because the owner enters `Await` instead of the `let`.
+/// The guard is not in the AST: it is the straight-line program `guard`,
+/// evaluated only inside the atomic resume relation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AwaitSiteSrc {
+    /// 1-based, in source order across the whole program.
+    pub site: u16,
+    pub label: Name,
+    pub binders: Vec<(Name, Type)>,
+    pub guard: ExprRef,
+    /// Free non-binder guard names (parameters or enclosing await binders),
+    /// in first-occurrence preorder, with their declared sorts.
+    pub operands: Vec<(Name, Type)>,
+    /// Admitted guard node count `|G_s|`.
+    pub guard_nodes: usize,
+    pub span: SourceSpan,
+    /// Location of the outer `let` node and its index in provenance
+    /// `expressions` (image preorder).
+    pub location: SourceLocation,
+    pub expression_index: usize,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SourceSpan {
@@ -181,12 +215,48 @@ pub fn parse_draft_source_bounded(
     Parser::new(source, tokens, Some(budget)).program()
 }
 
+/// Parse `moriarty-sherlock-draft/2` under the same explicit limits as
+/// [`parse_draft_source_bounded`]. Returns the lowered program (see
+/// [`AwaitSiteSrc`]) and its await sites in source order. The /1 entry points
+/// are unchanged and keep refusing this language.
+pub fn parse_draft2_source_bounded(
+    source: &str,
+    budget: DraftParseBudget,
+) -> Result<(ParsedDraft, Vec<AwaitSiteSrc>), DraftError> {
+    within(
+        DraftBudgetResource::SourceBytes,
+        budget.max_source_bytes,
+        source.len(),
+    )?;
+    let tokens =
+        mori_lexer::lex_with_token_limit(source, budget.max_tokens).map_err(
+            |error| match error {
+                mori_lexer::TokenLimitedLexError::Lex(error) => DraftError::Lex(error.to_string()),
+                mori_lexer::TokenLimitedLexError::TokenLimit { limit, observed } => {
+                    DraftError::Budget(DraftBudgetExceeded {
+                        resource: DraftBudgetResource::Tokens,
+                        limit,
+                        observed,
+                    })
+                }
+            },
+        )?;
+    let mut parser = Parser::new(source, tokens, Some(budget));
+    parser.v2 = true;
+    parser.program_with_awaits()
+}
+
 struct Node {
     expression: ExprRef,
     span: SourceSpan,
     children: Vec<Node>,
     patterns: Vec<(SourceSpan, Vec<BinderSite>)>,
     depth: usize,
+    /// /2 only: index into the parser's await sites when this node is the
+    /// outer `let` of an await lowering.
+    await_site: Option<usize>,
+    /// /2 only: the declared sort of a `let` produced by an await lowering.
+    let_sort: Option<Type>,
 }
 
 impl Node {
@@ -198,6 +268,8 @@ impl Node {
             children,
             patterns: vec![],
             depth,
+            await_site: None,
+            let_sort: None,
         }
     }
 }
@@ -211,6 +283,16 @@ struct Parser<'a> {
     total_parameters: usize,
     ast_occurrences: usize,
     parser_depth: usize,
+    /// Dialect `moriarty-sherlock-draft/2` (await admitted).
+    v2: bool,
+    awaits: Vec<PendingAwait>,
+}
+
+struct PendingAwait {
+    label: BinderSite,
+    binders: Vec<(BinderSite, Type)>,
+    guard: ExprRef,
+    span: SourceSpan,
 }
 
 impl<'a> Parser<'a> {
@@ -224,6 +306,8 @@ impl<'a> Parser<'a> {
             total_parameters: 0,
             ast_occurrences: 0,
             parser_depth: 0,
+            v2: false,
+            awaits: Vec::new(),
         }
     }
     fn descend<T>(
@@ -311,7 +395,10 @@ impl<'a> Parser<'a> {
         Ok(())
     }
     fn name(&mut self) -> Result<BinderSite, DraftError> {
-        if self.kind(0) != TokenKind::Ident || reserved(self.text()) {
+        if self.kind(0) != TokenKind::Ident
+            || reserved(self.text())
+            || (self.v2 && reserved_v2(self.text()))
+        {
             return Err(self.error("identifier"));
         }
         let site = BinderSite {
@@ -333,14 +420,26 @@ impl<'a> Parser<'a> {
         self.bump();
         Ok((ty, span))
     }
-    fn program(mut self) -> Result<ParsedDraft, DraftError> {
+    fn program(self) -> Result<ParsedDraft, DraftError> {
+        self.program_with_awaits().map(|(draft, _)| draft)
+    }
+    fn program_with_awaits(mut self) -> Result<(ParsedDraft, Vec<AwaitSiteSrc>), DraftError> {
         self.expect_word("language")?;
         if self.kind(0) != TokenKind::String {
             return Err(self.error("draft language string"));
         }
         let language_span = self.span();
-        if mori_lexer::decode_string(self.text()) != DRAFT_LANGUAGE {
-            return Err(self.error(DRAFT_LANGUAGE));
+        let language = if self.v2 {
+            DRAFT_LANGUAGE_2
+        } else {
+            DRAFT_LANGUAGE
+        };
+        if mori_lexer::decode_string(self.text()) != language {
+            return Err(self.error(if self.v2 {
+                DRAFT_LANGUAGE_2
+            } else {
+                DRAFT_LANGUAGE
+            }));
         }
         self.bump();
         self.expect(TokenKind::Semicolon, ";")?;
@@ -432,15 +531,41 @@ impl<'a> Parser<'a> {
             expressions: Vec::new(),
             patterns: Vec::new(),
         };
-        collect_sites(&entry, None, &mut provenance, self.budget)?;
+        let mut located = Vec::new();
+        collect_sites(&entry, None, &mut provenance, self.budget, &mut located)?;
         for (index, body) in bodies.iter().enumerate() {
-            collect_sites(body, Some(index), &mut provenance, self.budget)?;
+            collect_sites(
+                body,
+                Some(index),
+                &mut provenance,
+                self.budget,
+                &mut located,
+            )?;
         }
-        Ok(ParsedDraft {
-            name: name.name,
-            program,
-            provenance,
-        })
+        let awaits = if self.awaits.is_empty() {
+            Vec::new()
+        } else {
+            let mut scopes = AwaitScopes::new(&self.awaits);
+            scopes.walk(&entry, &mut Vec::new())?;
+            for (index, body) in bodies.iter().enumerate() {
+                let mut scope = program.functions[index]
+                    .parameters
+                    .iter()
+                    .map(|p| (p.name.clone(), Some(p.ty)))
+                    .collect();
+                scopes.function = Some(index);
+                scopes.walk(body, &mut scope)?;
+            }
+            scopes.finish(located)?
+        };
+        Ok((
+            ParsedDraft {
+                name: name.name,
+                program,
+                provenance,
+            },
+            awaits,
+        ))
     }
     fn block(&mut self) -> Result<Node, DraftError> {
         self.descend(Self::block_inner)
@@ -550,6 +675,13 @@ impl<'a> Parser<'a> {
         if self.word("match") {
             return self.match_expression(start);
         }
+        if self.v2 && self.word("await") {
+            return self.await_expression(start);
+        }
+        if self.v2 && self.word("yield") {
+            return Err(self
+                .error("await with at least one binder (yield is not implemented on this route)"));
+        }
         if self.kind(0) == TokenKind::Number {
             let text = self.text().to_owned();
             let span = self.span();
@@ -640,6 +772,86 @@ impl<'a> Parser<'a> {
     }
     fn arguments(&mut self) -> Result<Vec<Node>, DraftError> {
         self.descend(Self::arguments_inner)
+    }
+    /// `await LABEL "(" binder ("," binder)* ")" "when" GUARD ";" BODY`,
+    /// lowered to nested `let` nodes over sort-zero holes (see `AwaitSiteSrc`).
+    fn await_expression(&mut self, start: u32) -> Result<Node, DraftError> {
+        self.bump();
+        let label = self.name()?;
+        self.expect(TokenKind::LParen, "(")?;
+        let mut binders: Vec<(BinderSite, Type)> = Vec::new();
+        if self.kind(0) != TokenKind::RParen {
+            loop {
+                let binder = self.name()?;
+                self.expect(TokenKind::Colon, ":")?;
+                let (ty, _) = self.ty()?;
+                if !matches!(ty, Type::UInt | Type::Bool) {
+                    return Err(DraftError::Syntax {
+                        span: binder.span,
+                        expected: "await binder sort UInt or Bool",
+                        found: binder.name,
+                    });
+                }
+                if binders.iter().any(|(b, _)| b.name == binder.name) {
+                    return Err(DraftError::Syntax {
+                        span: binder.span,
+                        expected: "distinct await binder names",
+                        found: binder.name,
+                    });
+                }
+                binders.push((binder, ty));
+                if self.kind(0) != TokenKind::Comma {
+                    break;
+                }
+                self.bump();
+            }
+        }
+        self.expect(TokenKind::RParen, ")")?;
+        if binders.is_empty() {
+            return Err(self.error("at least one await binder"));
+        }
+        if binders.len() > MAX_AWAIT_BINDERS {
+            return Err(DraftError::Syntax {
+                span: label.span,
+                expected: "at most 16 binders per await site",
+                found: label.name,
+            });
+        }
+        self.expect_word("when")?;
+        let guard = self.expression(0)?;
+        self.expect(TokenKind::Semicolon, ";")?;
+        let body = self.expression(0)?;
+        let end = body.span.end;
+        let mut node = body;
+        for (binder, ty) in binders.iter().rev() {
+            // The atom reserved one occurrence; each binder adds a hole and a let.
+            self.reserve_occurrence()?;
+            self.reserve_occurrence()?;
+            self.structural_depth(node.depth)?;
+            let hole_value = match ty {
+                Type::Bool => Value::Bool(false),
+                _ => Value::UInt(0),
+            };
+            let hole = Node::new(Expr::Literal(hole_value), binder.span, vec![]);
+            node = Node::new(
+                Expr::Let(
+                    binder.name.clone(),
+                    hole.expression.clone(),
+                    node.expression.clone(),
+                ),
+                SourceSpan { start, end },
+                vec![hole, node],
+            );
+            node.let_sort = Some(*ty);
+        }
+        node.await_site = Some(self.awaits.len());
+        self.awaits.push(PendingAwait {
+            label,
+            binders,
+            guard: guard.expression,
+            span: SourceSpan { start, end },
+        });
+        Ok(node)
     }
     fn arguments_inner(&mut self) -> Result<Vec<Node>, DraftError> {
         self.expect(TokenKind::LParen, "(")?;
@@ -746,6 +958,246 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Words reserved only by the /2 dialect; /1 keeps them ordinary identifiers.
+fn reserved_v2(name: &str) -> bool {
+    matches!(name, "await" | "when" | "yield")
+}
+
+/// Scope walk over the parsed /2 nodes: guard typing (call-free and
+/// branch-free: literals, variables, `+ - * == <` and `not`), guard operands,
+/// binder shadowing, label uniqueness and the per-function site bound.
+struct AwaitScopes<'a> {
+    pending: &'a [PendingAwait],
+    checked: Vec<Option<(Vec<(Name, Type)>, usize)>>,
+    function: Option<usize>,
+    per_function: std::collections::BTreeMap<Option<usize>, usize>,
+}
+
+impl<'a> AwaitScopes<'a> {
+    fn new(pending: &'a [PendingAwait]) -> Self {
+        Self {
+            pending,
+            checked: vec![None; pending.len()],
+            function: None,
+            per_function: Default::default(),
+        }
+    }
+    fn refuse(span: SourceSpan, expected: &'static str, found: impl Into<String>) -> DraftError {
+        DraftError::Syntax {
+            span,
+            expected,
+            found: found.into(),
+        }
+    }
+    fn walk(
+        &mut self,
+        node: &Node,
+        scope: &mut Vec<(Name, Option<Type>)>,
+    ) -> Result<(), DraftError> {
+        if let Some(index) = node.await_site {
+            let site = &self.pending[index];
+            for (binder, _) in &site.binders {
+                if scope.iter().any(|(name, _)| *name == binder.name) {
+                    return Err(Self::refuse(
+                        binder.span,
+                        "await binder that shadows no name in scope",
+                        binder.name.clone(),
+                    ));
+                }
+            }
+            let count = self.per_function.entry(self.function).or_insert(0);
+            *count += 1;
+            if *count > MAX_AWAIT_SITES_PER_FUNCTION {
+                return Err(Self::refuse(
+                    site.span,
+                    "at most 16 await sites per function",
+                    site.label.name.clone(),
+                ));
+            }
+            let mut guard_scope: Vec<(Name, Option<Type>)> = scope.clone();
+            guard_scope.extend(site.binders.iter().map(|(b, t)| (b.name.clone(), Some(*t))));
+            let binder_names: Vec<&str> =
+                site.binders.iter().map(|(b, _)| b.name.as_str()).collect();
+            let mut operands = Vec::new();
+            let mut nodes = 0usize;
+            let ty = guard_type(
+                &site.guard,
+                &guard_scope,
+                &binder_names,
+                &mut operands,
+                &mut nodes,
+            )
+            .map_err(|(expected, found)| Self::refuse(site.span, expected, found))?;
+            if ty != Type::Bool {
+                return Err(Self::refuse(
+                    site.span,
+                    "await guard of sort Bool",
+                    site.label.name.clone(),
+                ));
+            }
+            if operands.len() > MAX_AWAIT_OPERANDS {
+                return Err(Self::refuse(
+                    site.span,
+                    "at most 8 guard operands per await site",
+                    site.label.name.clone(),
+                ));
+            }
+            self.checked[index] = Some((operands, nodes));
+        }
+        match node.expression.as_ref() {
+            Expr::Let(name, ..) => {
+                self.walk(&node.children[0], scope)?;
+                scope.push((name.clone(), node.let_sort));
+                let result = self.walk(&node.children[1], scope);
+                scope.pop();
+                result
+            }
+            Expr::Match(_, arms) => {
+                self.walk(&node.children[0], scope)?;
+                for (arm, child) in arms.iter().zip(&node.children[1..]) {
+                    let names: Vec<Name> = match &arm.pattern {
+                        Pattern::Var(x) | Pattern::Leaf(x) => vec![x.clone()],
+                        Pattern::Nil => vec![],
+                        Pattern::Cons(x, y) | Pattern::Branch(x, y) => vec![x.clone(), y.clone()],
+                    };
+                    let depth = scope.len();
+                    scope.extend(names.into_iter().map(|n| (n, None)));
+                    let result = self.walk(child, scope);
+                    scope.truncate(depth);
+                    result?;
+                }
+                Ok(())
+            }
+            _ => {
+                for child in &node.children {
+                    self.walk(child, scope)?;
+                }
+                Ok(())
+            }
+        }
+    }
+    fn finish(
+        self,
+        located: Vec<(usize, SourceLocation, usize)>,
+    ) -> Result<Vec<AwaitSiteSrc>, DraftError> {
+        let mut labels = std::collections::BTreeSet::new();
+        let mut sites = Vec::with_capacity(self.pending.len());
+        for (index, site) in self.pending.iter().enumerate() {
+            if !labels.insert(site.label.name.clone()) {
+                return Err(Self::refuse(
+                    site.label.span,
+                    "await labels unique per program",
+                    site.label.name.clone(),
+                ));
+            }
+            let (operands, guard_nodes) = self.checked[index].clone().ok_or_else(|| {
+                Self::refuse(site.span, "a reachable await site", site.label.name.clone())
+            })?;
+            let (_, location, expression_index) = located
+                .iter()
+                .find(|(i, ..)| *i == index)
+                .cloned()
+                .ok_or_else(|| {
+                    Self::refuse(site.span, "a located await site", site.label.name.clone())
+                })?;
+            sites.push(AwaitSiteSrc {
+                site: u16::try_from(index + 1).map_err(|_| {
+                    Self::refuse(site.span, "fewer await sites", site.label.name.clone())
+                })?,
+                label: site.label.name.clone(),
+                binders: site
+                    .binders
+                    .iter()
+                    .map(|(b, t)| (b.name.clone(), *t))
+                    .collect(),
+                guard: site.guard.clone(),
+                operands,
+                guard_nodes,
+                span: site.span,
+                location,
+                expression_index,
+            });
+        }
+        Ok(sites)
+    }
+}
+
+/// Type a straight-line guard. Errors are `(expected, found)`.
+fn guard_type(
+    e: &Expr,
+    scope: &[(Name, Option<Type>)],
+    binders: &[&str],
+    operands: &mut Vec<(Name, Type)>,
+    nodes: &mut usize,
+) -> Result<Type, (&'static str, String)> {
+    *nodes += 1;
+    match e {
+        Expr::Literal(Value::UInt(_)) => Ok(Type::UInt),
+        Expr::Literal(Value::Bool(_)) => Ok(Type::Bool),
+        Expr::Literal(_) => Err((
+            "a UInt or Bool literal in an await guard",
+            "list or tree literal".into(),
+        )),
+        Expr::Var(name) => {
+            let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == name) else {
+                return Err(("a guard name in scope", name.clone()));
+            };
+            let Some(ty) = ty else {
+                return Err((
+                    "a guard operand that is a parameter or an await binder of sort UInt or Bool",
+                    name.clone(),
+                ));
+            };
+            if !matches!(ty, Type::UInt | Type::Bool) {
+                return Err(("a guard operand of sort UInt or Bool", name.clone()));
+            }
+            if !binders.contains(&name.as_str()) && !operands.iter().any(|(n, _)| n == name) {
+                operands.push((name.clone(), *ty));
+            }
+            Ok(*ty)
+        }
+        Expr::Binary(op, l, r) => {
+            let lt = guard_type(l, scope, binders, operands, nodes)?;
+            let rt = guard_type(r, scope, binders, operands, nodes)?;
+            match op {
+                BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Lt => {
+                    if lt != Type::UInt || rt != Type::UInt {
+                        return Err(("UInt operands of + - * <", format!("{lt:?}, {rt:?}")));
+                    }
+                    Ok(if *op == BinaryOp::Lt {
+                        Type::Bool
+                    } else {
+                        Type::UInt
+                    })
+                }
+                BinaryOp::Eq => {
+                    if lt != rt {
+                        return Err(("== operands of one sort", format!("{lt:?}, {rt:?}")));
+                    }
+                    Ok(Type::Bool)
+                }
+                BinaryOp::Cons | BinaryOp::Branch => Err((
+                    "a call-free, constructor-free await guard",
+                    "constructor".into(),
+                )),
+            }
+        }
+        Expr::Unary(UnaryOp::Not, x) => {
+            if guard_type(x, scope, binders, operands, nodes)? != Type::Bool {
+                return Err(("a Bool operand of not", "UInt".into()));
+            }
+            Ok(Type::Bool)
+        }
+        Expr::Unary(UnaryOp::Leaf, _) => {
+            Err(("a call-free, constructor-free await guard", "leaf".into()))
+        }
+        Expr::Call(name, _) => Err(("a call-free await guard", name.clone())),
+        Expr::If(..) => Err(("a branch-free await guard", "if".into())),
+        Expr::Match(..) => Err(("a match-free await guard", "match".into())),
+        Expr::Let(name, ..) => Err(("a let-free await guard", name.clone())),
+    }
+}
+
 fn reserved(name: &str) -> bool {
     matches!(
         name,
@@ -775,6 +1227,7 @@ fn collect_sites(
     function_index: Option<usize>,
     provenance: &mut SourceProvenance,
     budget: Option<DraftParseBudget>,
+    located: &mut Vec<(usize, SourceLocation, usize)>,
 ) -> Result<(), DraftError> {
     if let Some(budget) = budget {
         within(
@@ -813,6 +1266,9 @@ fn collect_sites(
             function_index,
             child_path: path.clone(),
         };
+        if let Some(site) = node.await_site {
+            located.push((site, source.clone(), provenance.expressions.len()));
+        }
         provenance.expressions.push(ExpressionSite {
             source: source.clone(),
             span: node.span,

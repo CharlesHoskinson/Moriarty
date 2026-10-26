@@ -31,6 +31,8 @@ pub mod draft_witness;
 pub mod native_inventory;
 #[path = "compile_artifact/recursive_source.rs"]
 pub(crate) mod recursive_source;
+#[path = "compile_artifact/suspension2.rs"]
+pub mod suspension2;
 #[path = "compile_artifact/wire.rs"]
 mod wire;
 // Retained checked source and actual B genesis for explicit reference consumers.
