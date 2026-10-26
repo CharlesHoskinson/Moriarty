@@ -1046,9 +1046,8 @@ def verify_receipt(rule, fr, ops, label):
     need(rec.get("head") == sha, f"{bad}: run {rec['run']} was on {str(rec.get('head'))[:12]}, not {sha[:12]}")
     need(rec.get("cmd") == cmd, f"{bad}: run {rec['run']} ran {rec.get('cmd')!r}, not the receipt command")
     need(rec.get("trace") == rc.get("trace"), f"{bad}: trace path differs from the run log")
-    trace = ops.read(rc.get("trace") or "")
-    need(trace is not None, f"{bad}: trace {rc.get('trace')} is not on disk (unverifiable)")
-    need(_hashlib.sha256(trace.encode()).hexdigest() == rc.get("trace_sha256"), f"{bad}: trace sha256 differs (trace edited)")
+    import plans as _plans
+    trace = _plans.receipt_trace(rc, ops, bad)
     results = _re2.findall(r"^test result: (ok|FAILED)\. (\d+) passed; (\d+) failed", trace, _re2.M)
     need(results, f"{bad}: trace has no cargo test result")
     passed = sum(int(p) for _, p, _ in results)
