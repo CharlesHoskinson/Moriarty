@@ -324,12 +324,15 @@ fn gp_fold_and_key() {
     drel.write_relation(&mut drb).unwrap();
     fs::write(out.join("key/decider.relation"), &drb).unwrap();
     fs::write(out.join("key/acceptRun.verifier"), &tagged).unwrap();
+    let run_values = RunDeciderRelation::values(&ni, leaves.result);
+    let stmt = RunDeciderRelation::stmt(&run_values);
     let summary = json!({
         "schema": "sherlock-gp-bundle/1",
         "standin": std::env::var("MORIARTY_GP_STANDIN_STEPS").is_ok(),
         "steps": n.to_string(), "result": leaves.result.to_string(),
         "prog_d": f_to_hex(&prog_d), "init_d": f_to_hex(&init_d), "fin_d": f_to_hex(&fin_d),
         "lanes_d": f_to_hex(&leaves.lanes_d),
+        "stmt": f_to_hex(&stmt), "result_be16_hex": format!("{:032x}", leaves.result),
         "leaf_vk_sha256": sha256_hex(&vk_bytes(&leaves.vk)), "leaf_k": leaves.vk.k(),
         "node_vk_sha256": sha256_hex(&vk_bytes(&node_vk)), "node_k": k,
         "decider_vk_sha256": sha256_hex(&vk_bytes(&dvk)), "decider_k": dk,
