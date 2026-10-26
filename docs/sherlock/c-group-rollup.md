@@ -43,3 +43,4 @@ U014-U016 are coupled (checkpoint, resume, chunk transparency), so C2 cannot fli
 ## Update log
 
 - 2026-10-25: initial map by sherlock-s3.
+- 2026-10-26: sherlock-eval reports uireq-014..020 PASS on factory-u (C2/C5 U-side clear there; flip after the consolidation tree re-checks those ids). U031 export plans module landed on sherlock-s3 `b705bfacb` (CLI wiring: sherlock-s5); C3 then needs only a U031 re-check. B9 waits on sherlock-b READY-MERGE.

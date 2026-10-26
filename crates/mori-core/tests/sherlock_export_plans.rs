@@ -208,3 +208,31 @@ fn position_zero_is_refused_and_no_request_writes_nothing() {
     assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn scope_return_is_not_misclassified_as_pending_arithmetic() {
+    // A Return through a Scope frame (rule 195) with a pending Right(Mul)
+    // frame below it must not report the pending multiplication.
+    let (position, _record) = select(|slice| {
+        slice["start"]["control"]
+            .as_str()
+            .is_some_and(|c| c.starts_with("uiRet("))
+            && slice["start"]["frames"][0]
+                .as_str()
+                .is_some_and(|f| f.starts_with("uiScopeF("))
+    });
+    let dir = temp_dir(&format!("{position}-scope"));
+    let report = plans(position, &CAPS, &dir);
+    let operations = report["operation_manifest"]["operations"]
+        .as_array()
+        .unwrap();
+    assert!(
+        operations.iter().all(|o| o["op"] != "CheckedU128Mul"),
+        "{operations:?}"
+    );
+    assert!(
+        operations.iter().any(|o| o["op"] == "ScopeRestore"),
+        "{operations:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
