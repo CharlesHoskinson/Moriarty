@@ -197,6 +197,20 @@ def _residual_exec(res, label, fuel, stack, ref):
     need(U._flat(ex) == U._flat(ref), f"{label}: residual StepRecord stream differs from the reference stream "
                                       f"(rules/occurrences/charges/frame checks/stops)")
     need(ex["outcome"] == ref["outcome"], f"{label}: residual outcome {ex['outcome']} != reference {ref['outcome']}")
+    # the stream must be an execution OF THIS IR: every record names the residual block that produced it,
+    # that block realizes the record's rule, and consecutive blocks follow the IR's control edges
+    blocks = {b["block_id"]: b for b in res["ir"]["blocks"]}
+    prev = None
+    for rec in recs:
+        bid = rec.get("block_id")
+        need(bid in blocks, f"{label}: record {rec['position']} names no residual block ({bid!r}); a replayed reference stream is not an execution of the IR")
+        b = blocks[bid]
+        need(b["kind"] == "generic-dispatch" or str(rec["rule_start_line"]) in [str(x) for x in b["rules"]],
+             f"{label}: record {rec['position']} (rule {rec['rule_start_line']}) ran in block {bid}, which does not realize that rule")
+        if prev is not None:
+            need(bid == prev["block_id"] or bid in prev["successors"] or prev["kind"] == "generic-dispatch",
+                 f"{label}: record {rec['position']} moves from block {prev['block_id']} to {bid}, which is not a residual successor")
+        prev = b
     return recs
 
 
@@ -750,26 +764,63 @@ def custom_native_qualification(c):
     # expected observation: independent of the record, the reference run of the same committed source
     base = engine.run_source(c.get("engine", "draft"), text)
     want = _halted_value(base, "reference run of the qualified source")
-    need(str(st["readback"].get("observed_result")) == str(want),
-         f"readback: observed result {st['readback'].get('observed_result')!r} != reference {want!r}")
+    lp = pins.get("state_layout_path")
+    need(lp and ops.tracked_clean(lp), f"record: compiled state layout {lp!r} is not committed")
+    raw_layout = (engine.REPO / lp).read_bytes()
+    need(hashlib.sha256(raw_layout).hexdigest() == pins.get("state_layout_sha256"), "record: state_layout_sha256 differs from the committed layout")
+    lay = json.loads(raw_layout)
+    need(lay.get("format") == "moriarty-sherlock-state-layout/1", f"layout: format {lay.get('format')!r}")
     import stagenet_check as sn
-    try:
-        dep = _indexer_tx(sn, st["deploy"]["tx"], "deploy")
-        call = _indexer_tx(sn, st["call"]["tx"], "call")
-        a = _action_at(sn, st["deploy"]["address"], st["call"]["tx"])
-    except (OSError, RuntimeError) as e:
-        raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
     need(st["deploy"]["tx"] != st["call"]["tx"], "record: deploy and call cite the same transaction")
     try:
+        _indexer_tx(sn, st["deploy"]["tx"], "deploy")
+        _indexer_tx(sn, st["call"]["tx"], "call")
         d = _action_at(sn, st["deploy"]["address"], st["deploy"]["tx"])
+        a = _action_at(sn, st["deploy"]["address"], st["call"]["tx"])
     except (OSError, RuntimeError) as e:
         raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
     need(d and d["__typename"] == "ContractDeploy", "deploy: the deploy transaction did not deploy the recorded address")
     need(a and a["__typename"] == "ContractCall" and a["entryPoint"] == st["call"].get("entry_point"),
          "call: not a ContractCall on the deployed address with the recorded entry point")
-    need(hashlib.sha256(bytes.fromhex(a["state"])).hexdigest() == st["readback"].get("state_sha256"),
-         "readback: recorded state does not hash like the indexed post-call state (complete state readback)")
+    pre, post = bytes.fromhex(d["state"]), bytes.fromhex(a["state"])
+    need(hashlib.sha256(post).hexdigest() == st["readback"].get("state_sha256"),
+         "readback: recorded state does not hash like the indexed post-call state")
+    # relation identity: the pinned verifier key is the one installed for the called entry point
+    _installed_vk(pre, (engine.REPO / vk).read_bytes(), st["call"]["entry_point"], "deploy state")
+    _installed_vk(post, (engine.REPO / vk).read_bytes(), st["call"]["entry_point"], "post-call state")
+    # the result is decoded from the indexed bytes themselves, never taken from the record
+    got_pre = _decode_field(pre, lay.get("result"), "deploy state result field")
+    got = _decode_field(post, lay.get("result"), "post-call result field")
+    need(str(got) == str(want), f"readback: indexed post-call result {got} != reference {want}")
+    need(str(got_pre) == str(lay["result"].get("initial")), f"readback: indexed deploy-state result {got_pre} != layout initial {lay['result'].get('initial')!r}")
+    if str(got_pre) == str(got):
+        raise Fail("readback: the result field did not change across the call, so the readback cannot attribute the value to the call")
+    if "observed_result" in st["readback"]:
+        need(str(st["readback"]["observed_result"]) == str(got), "readback: record's observed_result disagrees with the indexed state")
+    need(st["readback"].get("effects") == [], f"readback: pure qualification program reports effects {st['readback'].get('effects')!r}")
 
+
+VK_TAG = re.compile(rb"^midnight:verifier-key\[v\d+\]:")
+
+
+def _installed_vk(state, vkfile, entry, label):
+    m = VK_TAG.match(vkfile)
+    need(m is not None, "record: relation verifying key file has no midnight:verifier-key[vN]: header")
+    body = vkfile[m.end():]
+    name = entry.encode()
+    need(name in state, f"relation: {label} has no operation {entry}")
+    j = state.find(body)
+    starts = [k for k in range(len(state)) if state.startswith(name, k)]
+    need(j >= 0 and state.count(body) == 1 and any(0 <= j - (k + len(name)) <= 64 for k in starts),
+         f"relation: the pinned verifying key is not the key installed for {entry} in the {label}")
+
+
+def _decode_field(state, f, label):
+    need(isinstance(f, dict) and f.get("encoding") in ("u128-le", "u128-be") and str(f.get("length")) == "16"
+         and isinstance(f.get("offset"), int) and f["offset"] >= 0, f"layout: {label} window {f!r}")
+    w = state[f["offset"]: f["offset"] + 16]
+    need(len(w) == 16, f"layout: {label} window lies outside the state ({len(state)} bytes)")
+    return int.from_bytes(w, "little" if f["encoding"] == "u128-le" else "big")
 
 CHECKS = {
     "residual-masks": custom_residual_masks,
