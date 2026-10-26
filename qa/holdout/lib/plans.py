@@ -321,7 +321,7 @@ def _typed(xs, label):
          f"{label}: not an ordered typed list")
 
 
-def _check_plans(ep, rec, label, want_op):
+def _check_plans(ep, rec, label, want_op, forbid=()):
     need(ep.get("format") == "moriarty-sherlock-export-plans/1", f"{label}: export_plans format {ep.get('format')!r}")
     st = ep.get("step") or {}
     need(str(st.get("position")) == str(rec["position"]) and str(st.get("rule_start_line")) == str(rec["rule_start_line"])
@@ -350,8 +350,12 @@ def _check_plans(ep, rec, label, want_op):
         if ss["kind"] == "Unsupported":
             need(ss.get("reason"), f"{ol}: Unsupported without a reason")
         need("witness_program_kind" in o and "constraint_component_locator" in o, f"{ol}: witness/constraint locators missing")
-    need(any(o["op"] == want_op for o in ops), f"{label}: the step's manifest has no {want_op} operation "
-                                              f"(ops: {sorted({o['op'] for o in ops})})")
+    if want_op:
+        need(any(o["op"] == want_op for o in ops), f"{label}: the step's manifest has no {want_op} operation "
+                                                  f"(ops: {sorted({o['op'] for o in ops})})")
+    # an operation the step does not perform is a misidentification (UIREQ-031 "identifies typed operations")
+    wrong = sorted({o["op"] for o in ops if any(o["op"].startswith(f) for f in forbid)})
+    need(not wrong, f"{label}: the step's manifest claims {wrong}, operations this step does not perform")
     need(isinstance(om["omissions"], list), f"{label}: manifest omissions not listed")
     cp, wp = ep.get("constraint_plan") or {}, ep.get("witness_plan") or {}
     for k in ("plan_id", "operation_manifest_id", "layout_version", "field_id", "ordered_public_inputs",
@@ -484,14 +488,18 @@ def custom_export_plans(c):
     _, ref = U._slices(sc, 1)
     manifests = {}
     for step in c["steps"]:
+        need(step.get("expect_op") or step.get("forbid_op_prefixes"), f"{step['label']}: case step asserts nothing")
         rec = _select_step(ref, step["select"], step["label"])
+        if "rule_start_line" in step:
+            need(str(rec["rule_start_line"]) == str(step["rule_start_line"]),
+                 f"{step['label']}: selected reference step is rule {rec['rule_start_line']}, not {step['rule_start_line']} (harness/program drift)")
         label = step["label"]
         r, ep, d = _export_run(sc, con, rec["position"], list(CAPS), f"{label} all requests")
         try:
             U.need_executed(r, label)
             need(r.returncode == 0, f"{label}: tooling Unsupported changed the application exit ({r.returncode})")
             need(r.execution["summary"] == base.summary, f"{label}: export changed the application run")
-            om, cp, wp, bc = _check_plans(ep, rec, label, step["expect_op"])
+            om, cp, wp, bc = _check_plans(ep, rec, label, step.get("expect_op"), step.get("forbid_op_prefixes", ()))
             together = _check_exports(ep, list(CAPS), d, label, om, cp, wp, bc)
         finally:
             shutil.rmtree(d, ignore_errors=True)
