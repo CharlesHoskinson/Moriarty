@@ -70,16 +70,16 @@ planes, distinct evidence/gap tables, no acceptance and candidate-only adoption.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
-package build with Lean 4.33.1. The recorded `lean-build-3.log` shows the updated
-U024/U031/U033 module and all eighteen dependency queries succeeding, then a
-successful 17-job package build and exit 0. Fourteen queries have empty axiom
-sets; four contain only `propext`. The JSON retains those exact historical sets and
+package build with Lean 4.33.1. The recorded `lean-build-4.log` shows the updated
+U024/U031/U033 module and all twenty dependency queries succeeding, then a
+successful 17-job package build and exit 0. Fifteen queries have empty axiom
+sets; five contain only `propext`. The JSON records those exact current sets and
 pins the successful observed log by digest. The agent read the complete log
 and checked current source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
 
-**The a82446698 follow-up has not yet been compiled.** Current source pins and
-queries include the generic-fallback repair, historical negative witness and
-typed annotation contract; the preceding successful log covers their previous
-version. Recheck and current axiom-query results remain pending.
+The evaluator subsequently required actual `mori simulate` integration for
+U031/U033 and U024 replay over D23/D35/tree45 with unchanged complete observations
+and allocation counters. These models do not supply that integration; its Rust
+landing and corresponding source-level contracts remain to be reconciled.
