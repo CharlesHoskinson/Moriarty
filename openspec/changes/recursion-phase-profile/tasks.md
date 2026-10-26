@@ -4,8 +4,9 @@ Nothing is checked. Boxes record observed outcomes only. Paths are relative to t
 
 ## 1. Design check
 
-- [ ] 1.1 Model the accounting rules in Quint: `models/recursion/profile.qnt` and `models/recursion/profile_test.qnt`. Cover RPP-003 (partition sums, 5% bounds, one owner per interval), RPP-004 (peak-delta formula, null counters) and RPP-005 (qualification needs the upper bound). Seed one mutant per rule.
+- [x] 1.1 Model the accounting rules in Quint: `models/recursion/profile.qnt` and `models/recursion/profile_test.qnt`. Cover RPP-003 (partition sums, 5% bounds, one owner per interval), RPP-004 (peak-delta formula, null counters) and RPP-005 (qualification needs the upper bound). Seed one mutant per rule.
   Verify: `quint test models/recursion/profile_test.qnt --main profile_test` passes and every mutant is caught.
+  Observed 2026-10-26: 25 passing, 7 mutants caught, 7 invariants clean; see `models/recursion/PROFILE-RESULTS.md`.
 
 ## 2. Identity and isolation (tests first)
 
