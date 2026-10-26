@@ -55,11 +55,11 @@ proof, stock-verifier or ledger result follows.
 
 There are no new `sorry` or custom axioms. The sibling Axioms module lists all
 current dependency queries. Sherlock-fable's capped `lean-build-14.log` checked
-all twenty-five current statements; the whole build failed on the sibling
+the preceding twenty-five statements; the whole build failed on the sibling
 residual module's reserved-token binders. After that correction, `lean-build-15.log`
 replayed the same export sources/queries and completed the full 21-job package
 with exit 0. Eleven queries have empty axiom sets, fourteen contain only `propext`.
-The JSON pins the complete successful log and exact current/committed sources;
+The JSON pins the complete successful log and those checked sources;
 earlier receipts remain historical. The Lake glob needs no shared build-file
 edit. This agent read the complete log and source pins. Two own capped attempts
 could not start because `heavy.lock` was occupied (exit 3); its saved sandbox
@@ -76,3 +76,12 @@ not validate this module's newer `3bb404f15` contracts. S9's `93f61a41c` retains
 the fixed exporter. This branch difference was reported to sherlock-fable and
 Quint-3. CLI correctness, concrete source/binary binding and the newer U031
 holdout remain separate evidence obligations.
+
+Evaluator `7f0942c3d` adds two non-arithmetic negative controls. The module now
+names LeftF explicitly and states that rule 149 through LeftF(Mul) classifies
+as ArenaRead, while rule 195 through ScopeF above a pending RightF(Mul)
+classifies as ScopeRestore. The holdout forbids CheckedU128 operations there;
+these exact primary labels follow the current source rather than a stronger
+requirement added to the holdout. **The two new statements are pending kernel
+checking.** Current source/query pins contain twenty-seven statements; the
+previous twenty-five-statement build does not certify the changed Lean bytes.

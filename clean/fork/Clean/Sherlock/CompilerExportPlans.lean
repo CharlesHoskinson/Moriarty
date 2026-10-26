@@ -72,7 +72,7 @@ inductive UnaryKind where
   deriving DecidableEq, Repr
 
 inductive FrameKind where
-  | right (operation : BinaryKind)
+  | left (operation : BinaryKind) | right (operation : BinaryKind)
   | returnFrame | scope | unary (operation : UnaryKind) | ifFrame | other
   deriving DecidableEq, Repr
 
@@ -173,6 +173,17 @@ theorem typed_classification_ignores_pending_frames (rule : Nat) (returned : Boo
     (top : FrameKind) (first second : List FrameKind) (left right : OperandSort) :
     classifyWithOperands rule returned (top :: first) left right =
       classifyWithOperands rule returned (top :: second) left right := rfl
+
+/-- Evaluator 7f0942c3d: returning into LeftF schedules its right operand;
+it does not yet execute multiplication. -/
+theorem returning_into_left_mul_is_not_arithmetic (pending : List FrameKind) :
+    classifyWithOperands 149 true (.left .mul :: pending) .uint128 .uint128 = .arenaRead := rfl
+
+/-- A ScopeF above a pending RightF(Mul) restores scope, not multiplication.
+This states the source's exact label; the holdout only forbids CheckedU128*. -/
+theorem scope_above_pending_mul_is_not_arithmetic (pending : List FrameKind) :
+    classifyWithOperands 195 true (.scope :: .right .mul :: pending) .uint128 .uint128 =
+      .scopeRestore := rfl
 
 structure Atom where
   sort : BindingSort
