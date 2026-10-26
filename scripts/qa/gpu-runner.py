@@ -246,11 +246,13 @@ def main():
     roots = [Path(r).resolve() for r in a.root]
     bus(a.identity, "up")
     while True:
-        r = bus(a.identity, "wait", "--timeout", "240", timeout=260)
-        if r.returncode in (3,):
-            continue
+        # Drain the queue and poll; the factory never blocks on a bus wait (F11).
+        r = bus(a.identity, "recv", "--all", timeout=60)
         if r.returncode != 0:
             time.sleep(30)
+            continue
+        if not r.stdout.strip():
+            time.sleep(5)
             continue
         for line in r.stdout.splitlines():
             try:
