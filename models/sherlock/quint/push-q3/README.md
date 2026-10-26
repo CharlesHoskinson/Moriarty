@@ -126,6 +126,16 @@ network, wallet, transaction, proof or qualification was exercised. Results
 are in `qualification-counterexample.json`; findings were sent to the
 evaluator, sherlock-c4 and sherlock-fable. Holdout source was never edited.
 
+The evaluator accepted that finding and repaired the checker at `489bbdaaf`.
+The same audit script now uses a pinned binary 128-bit result field and key
+body, preserving both historical counterexamples and checking eleven repaired
+fixtures: two correct little/big-endian states pass and nine wrong-result,
+record, key, initial-value, unchanged-field, layout-hash, effects and range
+cases fail for their intended reasons. This confirms the targeted binding
+repair with unit oracles. It does not prove source-to-key correspondence or
+that the declared result window is compiler-derived; those remain explicit
+qualification evidence obligations. No actual stagenet qualification is claimed.
+
 Rust WIP `2d1b2b373` was source-audited, not built or run here. Its per-program
 specializer derives static rule membership from `run_records`, so identical
 code can change IR with fuel. `rustResidualIdentity` records that source-derived

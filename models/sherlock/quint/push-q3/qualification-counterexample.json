@@ -13,5 +13,62 @@
   "reference_result": 6,
   "recorded_observed_result": 6,
   "indexed_state_result": 999,
+  "state_encoding": "pinned u128-le field plus entry point and verifier-key body",
+  "repaired_checker_commit": "489bbdaaff4358cfd47e386956696207e736a667",
+  "repair_cases": [
+    {
+      "case": "correct-little-endian",
+      "checker_accepted": true
+    },
+    {
+      "case": "correct-big-endian",
+      "checker_accepted": true
+    },
+    {
+      "case": "indexed-result-999",
+      "checker_accepted": false,
+      "reason": "readback: indexed post-call result 999 != reference 6"
+    },
+    {
+      "case": "indexed-result-999-no-recorded-result",
+      "checker_accepted": false,
+      "reason": "readback: indexed post-call result 999 != reference 6"
+    },
+    {
+      "case": "lying-recorded-result",
+      "checker_accepted": false,
+      "reason": "readback: record's observed_result disagrees with the indexed state"
+    },
+    {
+      "case": "wrong-installed-key",
+      "checker_accepted": false,
+      "reason": "relation: the pinned verifying key is not the key installed for entry in the deploy state"
+    },
+    {
+      "case": "wrong-initial-field",
+      "checker_accepted": false,
+      "reason": "readback: indexed deploy-state result 1 != layout initial '0'"
+    },
+    {
+      "case": "unchanged-field",
+      "checker_accepted": false,
+      "reason": "readback: the result field did not change across the call, so the readback cannot attribute the value to the call"
+    },
+    {
+      "case": "layout-hash-mismatch",
+      "checker_accepted": false,
+      "reason": "record: state_layout_sha256 differs from the committed layout"
+    },
+    {
+      "case": "unexpected-effects",
+      "checker_accepted": false,
+      "reason": "readback: pure qualification program reports effects ['unexpected']"
+    },
+    {
+      "case": "layout-out-of-range",
+      "checker_accepted": false,
+      "reason": "layout: deploy state result field window lies outside the state (45 bytes)"
+    }
+  ],
   "real_stagenet_execution": false
 }
