@@ -65,17 +65,18 @@ impl Relation for ToyLeaf {
         w: Value<Vec<F>>,
     ) -> Result<(), Error> {
         let mut v: Vec<AssignedNative<F>> = Vec::new();
-        for i in 0..5 {
+        // Lane 0 is the binding (unconstrained here), then the 5 statement lanes.
+        for i in 0..6 {
             let x: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[i]))?;
             std.constrain_as_public_input(l, &x)?;
             v.push(x);
         }
-        let body = std.poseidon(l, &[v[0].clone(), v[1].clone(), v[3].clone(), v[4].clone()])?;
+        let body = std.poseidon(l, &[v[1].clone(), v[2].clone(), v[4].clone(), v[5].clone()])?;
         let d: AssignedNative<F> = std.assign_fixed(l, dom(DOM_STATE_D))?;
-        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[5]))?;
-        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[6]))?;
+        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[6]))?;
+        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[7]))?;
         let post = std.poseidon(l, &[d, tag, val, body])?;
-        std.assert_equal(l, &post, &v[2])
+        std.assert_equal(l, &post, &v[3])
     }
     fn used_chips(&self) -> ZkStdLibArch {
         ZkStdLibArch {
@@ -164,7 +165,8 @@ fn ivc_node_folds_three_leaves() {
         };
         let cur_d = state_digest(tag, val, body);
         last_lanes = body;
-        let li = SherlockIvcRelation::leaf_instance(&st, cur_d, rule);
+        let binding = F::from(0xb1d0 + step);
+        let li = SherlockIvcRelation::leaf_instance(&st, binding, cur_d, rule);
         let mut lw = li.clone();
         lw.extend([F::from(tag), F::from(val as u64)]);
         let lproof = prove::<ToyLeaf, Pos>(&lp, &leaf_pk, &leaf, &li, lw, &mut rng).unwrap();
@@ -175,6 +177,7 @@ fn ivc_node_folds_three_leaves() {
             prev_acc: acc.clone(),
             cur_d,
             rule,
+            leaf_binding: binding,
             leaf_proof: lproof,
         };
         let next_acc = rel.next_acc(Some(&node_vk), &w).unwrap();

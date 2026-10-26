@@ -1,7 +1,8 @@
 //! General-purpose recursion pipeline: fold proved leaves through the IVC node, key the
 //! run decider for the acceptRun template, and prove one acceptRun call from an SDK opening.
 //!
-//! Leaves come from MORIARTY_GP_LEAF_DIR (`leaf.vk`, `step-NNNNNN/{leaf.instance.json,leaf.proof}`,
+//! Leaves come from MORIARTY_GP_LEAF_DIR (`leaf.vk`, `step-NNNNNN/{leaf.instance.json,leaf.proof}` (instance = the complete proved
+//! instance [binding, prog_d, pre_d, post_d, rule, h_pre]),
 //! `final.json` {result, lanes_d}) or, with MORIARTY_GP_STANDIN_STEPS, from the stand-in
 //! leaf (a rehearsal; never a qualification).
 use std::{fs, io::Cursor, path::PathBuf, time::Instant};
@@ -90,7 +91,7 @@ fn standin_leaves(base: &ParamsKZG<Bls12>, n: u64, result: u128) -> Leaves {
             (OUTCOME_RUNNING, 0)
         };
         let post = state_digest(tag, val, body);
-        let inst = vec![prog_d, pre, post, rule, F::from(h)];
+        let inst = vec![F::from(0xb1d0 + h), prog_d, pre, post, rule, F::from(h)];
         let mut w = inst.clone();
         w.extend([F::from(tag), F::from_u128(val)]);
         let proof = prove::<StandInLeaf, Pos>(&p, &pk, &leaf, &inst, w, &mut rng).unwrap();
@@ -158,18 +159,22 @@ fn gp_fold_and_key() {
         t.elapsed().as_secs_f64()
     );
     // Every leaf verifies on its own, and the leaf chain is contiguous.
-    let (prog_d, init_d) = (leaves.steps[0].0[0], leaves.steps[0].0[1]);
+    let (prog_d, init_d) = (leaves.steps[0].0[1], leaves.steps[0].0[2]);
     for (h, (inst, proof)) in leaves.steps.iter().enumerate() {
-        assert_eq!(inst.len(), 5);
         assert_eq!(
-            (inst[0], inst[4]),
+            inst.len(),
+            6,
+            "leaf instance [binding, prog_d, pre_d, post_d, rule, h_pre]"
+        );
+        assert_eq!(
+            (inst[1], inst[5]),
             (prog_d, F::from(h as u64)),
             "leaf {h} program/height"
         );
         if h > 0 {
             assert_eq!(
-                inst[1],
-                leaves.steps[h - 1].0[2],
+                inst[2],
+                leaves.steps[h - 1].0[3],
                 "leaf {h} pre = previous post"
             );
         }
@@ -177,7 +182,7 @@ fn gp_fold_and_key() {
         verify::<StandInLeaf, Pos>(&p.verifier_params(), &leaves.vk, inst, None, proof)
             .unwrap_or_else(|e| panic!("leaf {h} verify: {e:?}"));
     }
-    let fin_d = leaves.steps.last().unwrap().0[2];
+    let fin_d = leaves.steps.last().unwrap().0[3];
     assert_eq!(
         fin_d,
         state_digest(OUTCOME_HALTED, leaves.result, leaves.lanes_d),
@@ -221,15 +226,16 @@ fn gp_fold_and_key() {
             prev: st.clone(),
             prev_proof: proof.clone(),
             prev_acc: acc.clone(),
-            cur_d: inst[2],
-            rule: inst[3],
+            cur_d: inst[3],
+            rule: inst[4],
+            leaf_binding: inst[0],
             leaf_proof: lproof.clone(),
         };
         let next_acc = rel.next_acc(Some(&node_vk), &w).unwrap();
         let next = IvcState {
             prog_d,
             init_d,
-            cur_d: inst[2],
+            cur_d: inst[3],
             h: st.h + 1,
         };
         let ni = SherlockIvcRelation::instance(repr, &next, &next_acc);

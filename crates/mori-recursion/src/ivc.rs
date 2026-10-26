@@ -50,13 +50,16 @@ use crate::{
     util::{F, read_bytes, read_u32, vk_bytes, vk_from_bytes, write_bytes},
 };
 
-const MAGIC: &[u8; 8] = b"SHKIVC01";
+const MAGIC: &[u8; 8] = b"SHKIVC02";
 /// Name prefix of the node's own (self) fixed bases.
 pub const SELF_NAME: &str = "shk_node";
 /// State fields after the self key: prog_d, init_d, cur_d, h.
 pub const IVC_STATE: usize = 4;
 /// Leaf statement: prog_d, pre_d, post_d, rule, h_pre.
-pub const LEAF_LANES: usize = 5;
+/// Leaf instance: [binding, prog_d, pre_d, post_d, rule, h_pre]. The binding lane is the
+/// leaf's own claim commitment (public input 0 of every ZKIR child); the node takes it as a
+/// free witness and constrains only the five statement lanes.
+pub const LEAF_LANES: usize = 6;
 
 /// Domain of a machine-state digest. Every leaf's pre_d/post_d is
 /// `Poseidon(dom("SHK_SD"), outcome_tag, outcome_value, lanes_d)`, with
@@ -114,6 +117,8 @@ pub struct IvcWitness {
     pub prev_acc: Accumulator<S>,
     pub cur_d: F,
     pub rule: F,
+    /// Public input 0 of the leaf proof (its claim binding), unconstrained by the node.
+    pub leaf_binding: F,
     pub leaf_proof: Vec<u8>,
 }
 
@@ -180,8 +185,9 @@ impl SherlockIvcRelation {
         v
     }
 
-    pub fn leaf_instance(st_prev: &IvcState, cur_d: F, rule: F) -> Vec<F> {
+    pub fn leaf_instance(st_prev: &IvcState, binding: F, cur_d: F, rule: F) -> Vec<F> {
         vec![
+            binding,
             st_prev.prog_d,
             st_prev.cur_d,
             cur_d,
@@ -215,7 +221,7 @@ impl SherlockIvcRelation {
             a.collapse();
             a
         };
-        let leaf_inst = Self::leaf_instance(&w.prev, w.cur_d, w.rule);
+        let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule);
         let leaf_acc = prepare_offcircuit(
             &self.leaf_vk,
             &self.leaf_name(),
@@ -298,6 +304,7 @@ impl Relation for SherlockIvcRelation {
         let prev_h: AssignedNative<F> = std.assign(l, wf(|w| F::from(w.prev.h)))?;
         let cur_d: AssignedNative<F> = std.assign(l, wf(|w| w.cur_d))?;
         let rule: AssignedNative<F> = std.assign(l, wf(|w| w.rule))?;
+        let binding: AssignedNative<F> = std.assign(l, wf(|w| w.leaf_binding))?;
         let h = std.add_constant(l, &prev_h, F::ONE)?;
         let is_genesis = std.is_zero(l, &prev_h)?;
         let not_genesis = std.not(l, &is_genesis)?;
@@ -338,7 +345,7 @@ impl Relation for SherlockIvcRelation {
         proof_acc.collapse(l, bls, scalar)?;
 
         // 4. The leaf under its fixed key, linked to (prog_d, prev_d, cur_d, h_pre).
-        let leaf_inst = vec![prog_d, prev_d, cur_d, rule, prev_h];
+        let leaf_inst = vec![binding, prog_d, prev_d, cur_d, rule, prev_h];
         let leaf_acc = verify_child_incircuit(
             std,
             l,
@@ -370,7 +377,7 @@ impl Relation for SherlockIvcRelation {
         let mut magic = [0u8; 8];
         r.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(io::Error::other("not a SHKIVC01 node relation"));
+            return Err(io::Error::other("not a SHKIVC02 node relation"));
         }
         let mut b = [0u8; 1];
         r.read_exact(&mut b)?;

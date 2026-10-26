@@ -23,7 +23,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct StandInLeaf;
 
-/// Witness: the 5 statement lanes, then tag and value.
+/// Witness: the binding lane, the 5 statement lanes, then tag and value.
 pub type StandInWitness = Vec<F>;
 
 pub fn standin_body(prog_d: F, pre_d: F, rule: F, h_pre: F) -> F {
@@ -45,17 +45,18 @@ impl Relation for StandInLeaf {
         w: Value<Vec<F>>,
     ) -> Result<(), Error> {
         let mut v: Vec<AssignedNative<F>> = Vec::new();
-        for i in 0..5 {
+        // Lane 0 is the binding (unconstrained here), then the 5 statement lanes.
+        for i in 0..6 {
             let x: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[i]))?;
             std.constrain_as_public_input(l, &x)?;
             v.push(x);
         }
-        let body = std.poseidon(l, &[v[0].clone(), v[1].clone(), v[3].clone(), v[4].clone()])?;
+        let body = std.poseidon(l, &[v[1].clone(), v[2].clone(), v[4].clone(), v[5].clone()])?;
         let d: AssignedNative<F> = std.assign_fixed(l, dom(DOM_STATE_D))?;
-        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[5]))?;
-        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[6]))?;
+        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[6]))?;
+        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[7]))?;
         let post = std.poseidon(l, &[d, tag, val, body])?;
-        std.assert_equal(l, &post, &v[2])
+        std.assert_equal(l, &post, &v[3])
     }
     fn used_chips(&self) -> ZkStdLibArch {
         ZkStdLibArch {
