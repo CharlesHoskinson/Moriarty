@@ -698,8 +698,77 @@ def custom_optimization_preservation(c):
     need(reduced, "no specimen shows a physical reduction: the candidate is vacuous on equal subtrees")
 
 
+# =================================================================================== U023 s2
+
+QUAL_STAGES = ("compile", "prove", "verify", "deploy", "call", "readback")
+QUAL_PINS = ("network", "ledger_version", "node_version", "toolchain", "relation_id")
+
+
+def _indexer_tx(sn, h, label):
+    t = sn.txs(h)
+    need(len(t) == 1 and (t[0].get("transactionResult") or {}).get("status") == "SUCCESS",
+         f"{label}: transaction {str(h)[:16]} is not indexed once with SUCCESS")
+    need(sn.sha(bytes.fromhex(t[0]["raw"])) == h, f"{label}: indexed bytes do not hash to {str(h)[:16]}")
+    return t[0]
+
+
+def _action_at(sn, address, h):
+    return sn.gql('{contractAction(address:"%s",offset:{transactionOffset:{hash:"%s"}}){__typename state '
+                  'transaction{hash} ... on ContractCall{entryPoint}}}' % (address, h))["contractAction"]
+
+
+def custom_native_qualification(c):
+    """UIREQ-023 scenario 2: verify a committed end-to-end qualification record; never trust its words."""
+    con = _contract("U023")
+    rp = con.get("qualification_record")
+    need(isinstance(rp, str), "contract U023 names no qualification_record")
+    ops = U.RepoOps(engine.REPO)
+    need(ops.tracked_clean(rp), f"not-implemented: qualification record {rp} is not committed")
+    q = json.loads(ops.read(rp))
+    need(q.get("format") == "moriarty-sherlock-native-qualification/1", f"record: format {q.get('format')!r}")
+    cl = q.get("claims") or {}
+    need(cl.get("execution_authority") == "none" and cl.get("preview_fenrir_evidence_transferred") is False,
+         f"record: claims {cl} (no execution authority, no Preview/Fenrir transfer)")
+    src = q.get("source") or {}
+    need(src.get("path") and ops.tracked_clean(src["path"]), f"record: source {src.get('path')!r} is not committed")
+    text = ops.read(src["path"])
+    need(hashlib.sha256(text.encode()).hexdigest() == src.get("sha256"), "record: source sha256 differs from the committed source")
+    pins = q.get("pins") or {}
+    miss = [k for k in QUAL_PINS if not pins.get(k)]
+    need(not miss, f"record: unpinned identities {miss}")
+    need(pins["network"] == "stagenet" and str(pins["ledger_version"]) == "9", f"record: pins {pins['network']}/{pins['ledger_version']} (stagenet, ledger 9)")
+    vk = pins.get("relation_vk_path")
+    need(vk and ops.tracked_clean(vk), f"record: relation verifying key {vk!r} is not committed")
+    need(hashlib.sha256((engine.REPO / vk).read_bytes()).hexdigest() == pins["relation_id"], "record: relation_id is not the sha256 of the committed verifying key")
+    st = q.get("stages") or {}
+    bad = [k for k in QUAL_STAGES if (st.get(k) or {}).get("status") not in ("run", "not-run")]
+    need(not bad, f"record: stages {bad} have no run/not-run status")
+    notrun = [k for k in QUAL_STAGES if st[k]["status"] != "run"]
+    need(not notrun, f"SPEC GATE (honest record): stages not run: {notrun}")
+    need(st["verify"].get("verifier") and st["verify"]["verifier"] != st["prove"].get("prover"),
+         "record: verification is not independent of the prover")
+    # expected observation: independent of the record, the reference run of the same committed source
+    base = engine.run_source(c.get("engine", "draft"), text)
+    want = _halted_value(base, "reference run of the qualified source")
+    need(str(st["readback"].get("observed_result")) == str(want),
+         f"readback: observed result {st['readback'].get('observed_result')!r} != reference {want!r}")
+    import stagenet_check as sn
+    try:
+        dep = _indexer_tx(sn, st["deploy"]["tx"], "deploy")
+        call = _indexer_tx(sn, st["call"]["tx"], "call")
+        a = _action_at(sn, st["deploy"]["address"], st["call"]["tx"])
+    except (OSError, RuntimeError) as e:
+        raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
+    need(dep and call, "")
+    need(a and a["__typename"] == "ContractCall" and a["entryPoint"] == st["call"].get("entry_point"),
+         "call: not a ContractCall on the deployed address with the recorded entry point")
+    need(hashlib.sha256(bytes.fromhex(a["state"])).hexdigest() == st["readback"].get("state_sha256"),
+         "readback: recorded state does not hash like the indexed post-call state (complete state readback)")
+
+
 CHECKS = {
     "residual-masks": custom_residual_masks,
     "export-plans": custom_export_plans,
     "optimization-preservation": custom_optimization_preservation,
+    "native-qualification": custom_native_qualification,
 }
