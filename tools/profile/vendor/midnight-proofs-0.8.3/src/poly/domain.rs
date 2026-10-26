@@ -222,28 +222,32 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// This function will panic if the provided vector does not have the
     /// correct length.
     pub fn lagrange_to_coeff(&self, mut a: Polynomial<F, LagrangeCoeff>) -> Polynomial<F, Coeff> {
-        assert_eq!(a.values.len(), 1 << self.k);
+        crate::profile_span!(Ntt, Diagnostic, {
+            assert_eq!(a.values.len(), 1 << self.k);
 
-        // Perform inverse FFT to obtain the polynomial in coefficient form
-        Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
+            // Perform inverse FFT to obtain the polynomial in coefficient form
+            Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
 
-        Polynomial {
-            values: a.values,
-            _marker: PhantomData,
-        }
+            Polynomial {
+                values: a.values,
+                _marker: PhantomData,
+            }
+        })
     }
 
     /// This takes us from an n-length coefficient vector into the
     /// lagrange evaluation domain.
     pub fn coeff_to_lagrange(&self, mut a: Polynomial<F, Coeff>) -> Polynomial<F, LagrangeCoeff> {
-        assert_eq!(a.values.len(), 1 << self.k);
+        crate::profile_span!(Ntt, Diagnostic, {
+            assert_eq!(a.values.len(), 1 << self.k);
 
-        best_fft(&mut a.values, self.omega, self.k);
+            best_fft(&mut a.values, self.omega, self.k);
 
-        Polynomial {
-            values: a.values,
-            _marker: PhantomData,
-        }
+            Polynomial {
+                values: a.values,
+                _marker: PhantomData,
+            }
+        })
     }
 
     /// This takes us from an n-length coefficient vector into a coset of the
@@ -252,16 +256,18 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         &self,
         mut a: Polynomial<F, Coeff>,
     ) -> Polynomial<F, ExtendedLagrangeCoeff> {
-        assert_eq!(a.values.len(), 1 << self.k);
+        crate::profile_span!(Ntt, Diagnostic, {
+            assert_eq!(a.values.len(), 1 << self.k);
 
-        self.distribute_powers_zeta(&mut a.values, true);
-        a.values.resize(self.extended_len(), F::ZERO);
-        best_fft(&mut a.values, self.extended_omega, self.extended_k);
+            self.distribute_powers_zeta(&mut a.values, true);
+            a.values.resize(self.extended_len(), F::ZERO);
+            best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
-        Polynomial {
-            values: a.values,
-            _marker: PhantomData,
-        }
+            Polynomial {
+                values: a.values,
+                _marker: PhantomData,
+            }
+        })
     }
 
     /// This takes us from the extended evaluation domain and gets us the
@@ -270,21 +276,23 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// This function will panic if the provided vector does not have the
     /// correct length.
     pub fn extended_to_coeff(&self, mut a: Polynomial<F, ExtendedLagrangeCoeff>) -> Vec<F> {
-        assert_eq!(a.values.len(), self.extended_len());
+        crate::profile_span!(Ntt, Diagnostic, {
+            assert_eq!(a.values.len(), self.extended_len());
 
-        // Inverse FFT
-        Self::ifft(
-            &mut a.values,
-            self.extended_omega_inv,
-            self.extended_k,
-            self.extended_ifft_divisor,
-        );
+            // Inverse FFT
+            Self::ifft(
+                &mut a.values,
+                self.extended_omega_inv,
+                self.extended_k,
+                self.extended_ifft_divisor,
+            );
 
-        // Distribute powers to move from coset; opposite from the
-        // transformation we performed earlier.
-        self.distribute_powers_zeta(&mut a.values, false);
+            // Distribute powers to move from coset; opposite from the
+            // transformation we performed earlier.
+            self.distribute_powers_zeta(&mut a.values, false);
 
-        a.values
+            a.values
+        })
     }
 
     /// This takes us from the extended evaluation domain and gets us to the
@@ -296,24 +304,26 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         &self,
         mut a: Polynomial<F, ExtendedLagrangeCoeff>,
     ) -> Polynomial<F, LagrangeCoeff> {
-        assert_eq!(a.values.len(), self.extended_len());
+        crate::profile_span!(Ntt, Diagnostic, {
+            assert_eq!(a.values.len(), self.extended_len());
 
-        Self::ifft(
-            &mut a.values,
-            self.extended_omega_inv,
-            self.extended_k,
-            self.extended_ifft_divisor,
-        );
+            Self::ifft(
+                &mut a.values,
+                self.extended_omega_inv,
+                self.extended_k,
+                self.extended_ifft_divisor,
+            );
 
-        a.values.truncate(self.n as usize);
-        self.distribute_powers_zeta(&mut a.values, false);
+            a.values.truncate(self.n as usize);
+            self.distribute_powers_zeta(&mut a.values, false);
 
-        best_fft(&mut a.values, self.omega, self.k);
+            best_fft(&mut a.values, self.omega, self.k);
 
-        Polynomial {
-            values: a.values,
-            _marker: PhantomData,
-        }
+            Polynomial {
+                values: a.values,
+                _marker: PhantomData,
+            }
+        })
     }
 
     /// This divides the polynomial (in the extended domain) by the vanishing

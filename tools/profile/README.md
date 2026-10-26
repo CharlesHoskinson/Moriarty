@@ -1,20 +1,17 @@
 # Recursion phase profiling
 
 This is the isolated dependency workspace for OpenSpec
-`recursion-phase-profile`, tasks 2.1–2.3 and 4.1–4.3. It is not an instrumented
-prover yet. No profiling run or speedup is claimed.
+`recursion-phase-profile`. It now contains the default-off observation feature
+and caller timers (tasks 3.1–3.3), alongside identity and reducer tooling.
+No proof, real profile, overhead qualification or speedup is claimed.
 
-The vendor directory is the exact published midnight-proofs 0.8.3 archive,
-verified before extraction against SHA-256
+The vendor base is published midnight-proofs 0.8.3, archive SHA-256
 `19b2e4b1acb581ad741b0cb7c0e9dbdf51142f4e9518886f25fcff40a6702dcc`.
-`identity.json` pins the archive, patch and each vendored file. `profile.patch`
-is empty: its SHA-256 is
-`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
-Task 3 must update the patch and identity manifest when it adds instrumentation.
-The separate Cargo manifest depends on Moriarty by path and patches only its own
-midnight-proofs resolution. Its lockfile was generated with
-`cargo generate-lockfile --offline --manifest-path tools/profile/Cargo.toml`.
-No Cargo build, check or test has been run for this change.
+`patches/midnight-proofs-0.8.3-profile.patch` records the complete unified diff
+against that archive. `identity.json` pins its SHA-256 and every vendored file.
+`prepare --check-only` verifies those hashes and reconstructs the diff from the
+archive to ensure it describes the checked-in vendor tree exactly.
+The separate manifest and lockfile affect only this workspace.
 
 Run these checks from the repository root:
 
@@ -48,8 +45,8 @@ The paired analysis must be fixed before running them; this tool validates the
 supplied statistics, as the Quint model does, and does not estimate confidence
 bounds from synthetic data.
 
-Task 3 must provide `src/bin/profile-recursion.rs`, the default-off
-`recursion-phase-profile` feature, and the following executable interface:
+The workload runner remains future work; the library timers do not yet provide
+`src/bin/profile-recursion.rs` or the following planned executable interface:
 
 ```text
 profile-recursion --workload A2|A3|A4|B3 \
@@ -61,9 +58,62 @@ record exact identities, and preserve failed/partial traces. A resident-PK run
 must prime the key and measure the second proof within the same process.
 The planner names sidecars as
 `qa/sherlock/profiles/<run>/<workload>-<cache>-<pair>-<variant>.json`.
-Execution is refused while that executable is missing. The runner, timers,
-bounded buffer, sampler and caller instrumentation remain task 3 work. Build
-and proof commands have not been executed here.
+Execution is refused while that executable is missing. The runner, sampler,
+process CPU and byte counters remain unfinished. No proof commands have been run.
+
+## Observation API and event mapping
+
+Enable either `midnight-proofs/recursion-phase-profile` or the harness's
+`recursion-phase-profile` forwarding feature. Both are off by default. Exported
+macros are selected in the dependency itself, so enabling just the dependency
+feature also enables caller timers. Off macros expand to the original expression
+or no statements; they perform no clock access, buffering or I/O.
+
+`src/lib.rs` provides key loading through `mori-recursion`, reusable `setup_pk`,
+generic stock prove/verify wrappers (caller-selected transcript and RNG), and
+backend child prove/verify wrappers. The vendor also times keygen's `setup_pk`
+work when it is hidden inside an existing backend API. `command` closes its
+diagnostic root and calls `profile::flush()` after success or a returned error.
+It returns the original operation result and the flush I/O result separately.
+
+The recorder preallocates 65,536 interval slots. Entry reserves a slot; RAII drop
+records its end even on a returned error or unwind. Integer records contain only
+phase, interval/parent, thread, public advice-phase/circuit ordinals, accounting
+and completion metadata. Timestamps
+are `Instant` nanoseconds relative to a process epoch. Recorder reentry is
+suppressed before clock access or locking. Full buffers, dropped events, failed
+clocks, reentry and incomplete/failed intervals invalidate observer integrity.
+There are no per-cell events or recorded witness/scalar/challenge/seed values.
+
+Accounting events own residual time after nested accounting children are
+subtracted. MSMs own their intervals, including the two multiopen commitments.
+NTTs are diagnostics; their enclosing phase owns their cost. Joined worker NTTs
+are attached to their containing accounting interval by the mapper. Prove and
+command roots are diagnostics so unexplained work cannot earn artificial credit.
+Transcript calls retain their order, and synthesis/resolution/commitments remain
+separate repeated intervals within each advice phase.
+
+Set `MORIARTY_PROFILE_EVENTS` to an output path before invoking the harness.
+When unset, flush creates no file. Flush emits `recursion.phase-events/1` JSON;
+`flush_wall_ns` measures encoding and event-body writing/flushing, excluding its
+own trailing metadata write. The caller receives any I/O failure. Flush after
+worker joins; flushing an open span retains a visibly incomplete trace.
+
+`profile-recursion.py reduce events.json` maps raw events to schema-compatible
+phase fragments and disjoint accounting residuals. It retains failed raw traces
+without awarding them accounting credit. An invocation with no fixed commitment
+batch gets a zero-cost `not_applicable` marker. Raw mapping reports
+`profile_valid: false`: sampling, counters, workload identity and verification
+evidence are still missing. Missing counters remain null with reasons, and
+`pid=0`/`source_line=0` mean uncollected. Mapped fragments cannot be passed to
+`decide` as qualified sidecars.
+
+Observed checks on 2026-10-26: feature-on and feature-off `cargo check --offline`
+passed with the separate target directory and four jobs. The sandbox blocks the
+configured `sccache`, so `RUSTC_WRAPPER` was unset for those commands. The exact
+vendored `profile_events` integration-test command was attempted but cannot
+resolve the uncached upstream `criterion` dependency offline. No dependency was
+installed or fetched; its tests are written but not reported as passing.
 
 ## Validation and reports
 

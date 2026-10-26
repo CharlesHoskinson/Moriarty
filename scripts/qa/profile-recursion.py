@@ -3,6 +3,7 @@
 import argparse
 from collections import defaultdict
 from fractions import Fraction
+import difflib
 import hashlib
 import importlib.util
 import json
@@ -35,6 +36,23 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def vendor_patch(archive, vendor):
+    """Canonical unified diff against the checksum-verified published archive."""
+    with tarfile.open(archive) as source:
+        pristine = {str(Path(m.name).relative_to('midnight-proofs-0.8.3')):
+                    source.extractfile(m).read() for m in source.getmembers() if m.isfile()}
+    current = {str(p.relative_to(vendor)): p.read_bytes() for p in vendor.rglob('*') if p.is_file()}
+    chunks = []
+    for name in sorted(pristine.keys() | current.keys()):
+        before, after = pristine.get(name, b''), current.get(name, b'')
+        if before != after:
+            chunks.extend(difflib.unified_diff(before.decode().splitlines(keepends=True),
+                                              after.decode().splitlines(keepends=True),
+                                              fromfile='a/' + name if name in pristine else '/dev/null',
+                                              tofile='b/' + name if name in current else '/dev/null'))
+    return ''.join(chunks).encode()
+
+
 def prepare(root=ROOT, archive=DEFAULT_ARCHIVE):
     root, archive = Path(root), Path(archive)
     require(digest(archive) == ARCHIVE_SHA256, 'archive checksum mismatch')
@@ -48,12 +66,7 @@ def prepare(root=ROOT, archive=DEFAULT_ARCHIVE):
     vendor = directory / 'vendor/midnight-proofs-0.8.3'
     actual = {str(p.relative_to(vendor)): digest(p) for p in sorted(vendor.rglob('*')) if p.is_file()}
     require(actual == manifest['vendor_files'], 'vendor file checksum mismatch')
-    if patch.stat().st_size == 0:
-        with tarfile.open(archive) as source:
-            original = {str(Path(m.name).relative_to('midnight-proofs-0.8.3')):
-                        hashlib.sha256(source.extractfile(m).read()).hexdigest()
-                        for m in source.getmembers() if m.isfile()}
-        require(actual == original, 'vendor differs from pristine archive with empty patch')
+    require(patch.read_bytes() == vendor_patch(archive, vendor), 'patch does not reproduce vendor changes')
     spec = importlib.util.spec_from_file_location('profile_isolation', ROOT / 'scripts/qa/check-profile-isolation.py')
     isolation = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(isolation)
@@ -215,6 +228,154 @@ def partition(root, phases, coverage):
         measured = ns(root_cpu)
         require(100 * abs(cpu - measured) <= 5 * measured, 'all-worker CPU reconciliation failed')
     return {'root_span_id': root['span_id'], 'total_ns': total, 'partition': rows, 'cpu_core_ns': cpu}
+
+
+
+# Stable IDs emitted by the vendored profile::Phase enum. Only public metadata
+# crosses this boundary; raw traces are not qualified schema sidecars.
+EVENT_PHASES = {
+    1: ('command', 'command'), 2: ('key_load', 'keys'), 3: ('setup_pk', 'keys'),
+    4: ('prove', 'other'), 5: ('verify', 'verification'),
+    6: ('instance_preparation', 'other'), 7: ('synthesis', 'witness'),
+    8: ('resolution_blinding', 'witness'), 9: ('advice_commitments', 'commitment'),
+    10: ('lookup_permutation', 'lookup'), 11: ('lookup_products', 'lookup'),
+    12: ('permutation_products', 'permutation'), 13: ('vanishing', 'quotient'),
+    14: ('quotient', 'quotient'), 15: ('quotient_commitments', 'commitment'),
+    16: ('evaluations', 'other'), 17: ('multiopen', 'multiopen'),
+    18: ('commitment_msm', 'commitment'), 19: ('transcript', 'transcript'),
+    20: ('fixed_commitments', 'commitment'), 21: ('permutation_commitments', 'commitment'),
+    22: ('ntt', 'other'), 23: ('trash', 'other'), 24: ('advice_ntt', 'witness'),
+}
+
+
+def map_events(raw, invocation_id):
+    """Map integer intervals to schema phase fragments, retaining invalid traces.
+
+    Each inclusive event becomes a diagnostic. Accounting events additionally
+    produce disjoint residual children. A nested MSM therefore has one owner;
+    overlapping worker diagnostics are never subtracted or credited.
+    """
+    reject_secrets(raw)
+    fields = {'schema', 'event_capacity', 'dropped_events', 'timer_failures',
+              'reentrant_events', 'profile_valid', 'events', 'flush_wall_ns'}
+    require(set(raw) == fields and raw['schema'] == 'recursion.phase-events/1',
+            'unknown event envelope')
+    require(type(raw['profile_valid']) is bool, 'invalid observer flag')
+    for key in fields - {'schema', 'profile_valid', 'events'}:
+        require(type(raw[key]) is int and raw[key] >= 0, 'invalid event counter')
+    events = raw['events']
+    require(isinstance(events, list) and len(events) <= raw['event_capacity'], 'invalid event capacity')
+    by_id = {}
+    event_fields = {'id', 'parent_id', 'phase_id', 'accounting', 'start_ns', 'end_ns', 'thread_id', 'status', 'advice_phase', 'circuit_index'}
+    for event in events:
+        require(set(event) == event_fields and all(type(v) is int and v >= 0 for v in event.values()),
+                'invalid integer event')
+        require(event['id'] > 0 and event['id'] not in by_id, 'duplicate event identity')
+        require(event['phase_id'] in EVENT_PHASES and event['accounting'] in (0, 1)
+                and event['status'] in (0, 1, 2, 3), 'unknown event code')
+        by_id[event['id']] = event
+    chains = {}
+    for event in events:
+        chain, parent = set(), event['parent_id']
+        while parent:
+            require(parent in by_id and parent not in chain and parent != event['id'], 'invalid event parent')
+            chain.add(parent)
+            ancestor = by_id[parent]
+            require(ancestor['thread_id'] == event['thread_id'], 'cross-thread event parent')
+            # An unfinished/error timer may lack an end; preserve it without credit.
+            if event['end_ns'] and ancestor['end_ns']:
+                require(ancestor['start_ns'] <= event['start_ns'] <= event['end_ns'] <= ancestor['end_ns'],
+                        'event outside parent')
+            parent = ancestor['parent_id']
+        chains[event['id']] = chain
+    observer_valid = (raw['profile_valid'] and len(events) < raw['event_capacity']
+                      and not any(raw[k] for k in ('dropped_events', 'timer_failures', 'reentrant_events'))
+                      and all(e['status'] == 1 and e['end_ns'] > e['start_ns'] for e in events))
+    schema = json.loads(SCHEMA.read_text())
+    reason = 'Task 3.4 sampler and counter collection not implemented.'
+
+    def phase(event, start, end, span_id, parent, accounting=False):
+        name, owner = EVENT_PHASES[event['phase_id']]
+        duration = max(0, (end or start) - start) / NS
+        byte_fields = schema['$defs']['bytes']['properties']
+        metrics = dict(wall_seconds=duration, exclusive_wall_seconds=duration if accounting else None,
+                       cpu_core_seconds=None, exclusive_cpu_core_seconds=None,
+                       cpu_scope='unattributable', cpu_null_reason=reason,
+                       rss=dict(entry_bytes=None, exit_bytes=None, sampled_peak_bytes=None,
+                                peak_delta_bytes=None, net_delta_bytes=None, samples=0,
+                                max_sample_gap_seconds=None, method='unavailable', quality='unavailable',
+                                reason=reason),
+                       bytes={**{k: None for k in byte_fields if k.endswith('_bytes')},
+                              'logical_coverage': 'unavailable', 'storage_method': 'unavailable',
+                              'dram_method': 'unavailable', 'device_method': 'cpu_only',
+                              'null_reasons': [reason], 'scope': 'exclusive' if accounting else 'diagnostic',
+                              'notes': 'No hardware traffic is inferred from wall time.'},
+                       device=dict(status='not_applicable', reason='CPU observer', intervals=[],
+                                   busy_union_seconds=None, live_peak_bytes=None,
+                                   reserved_peak_bytes=None, peak_method='not_applicable'))
+        return dict(span_id=span_id, parent_span_id=parent, invocation_id=invocation_id,
+                    pid=0, thread_id=event['thread_id'], parallel_group_id=None,
+                    phase=name, owner=owner, accounting=accounting,
+                    start_monotonic_ns=start, end_monotonic_ns=end,
+                    completed=event['status'] != 0 and end is not None,
+                    source_file='tools/profile/vendor/midnight-proofs-0.8.3/src/profile.rs',
+                    source_symbol='profile::Recorder::span', source_line=0,
+                    dimensions={**{k: None for k in schema['$defs']['dimensions']['required']},
+                                **{k: event[k] if event[k] != 2**64 - 1 else None
+                                   for k in ('advice_phase', 'circuit_index')}},
+                    metrics=metrics, status=('ok' if event['status'] == 1 else
+                                             'incomplete' if event['status'] == 0 else 'failed'),
+                    reason=None if event['status'] == 1 else 'Observer retained an unfinished or failed interval.')
+
+    phases = [phase(e, e['start_ns'], e['end_ns'] or None, str(e['id']),
+                    str(e['parent_id']) if e['parent_id'] else None) for e in events]
+    if observer_valid:
+        # Domain transforms launched by keygen's Rayon workers have no TLS
+        # parent. Assign diagnostics to the innermost joined accounting interval
+        # that contains them; the joined interval still owns their entire cost.
+        for event, mapped in zip(events, phases):
+            if event['phase_id'] == 22:
+                owners = [e for e in events if e['accounting']
+                          and e['start_ns'] <= event['start_ns'] <= event['end_ns'] <= e['end_ns']]
+                if owners:
+                    owner = min(owners, key=lambda e: (e['end_ns'] - e['start_ns'], -len(chains[e['id']])))
+                    mapped['owner'] = EVENT_PHASES[owner['phase_id']][1]
+                    if not event['parent_id']:
+                        mapped['parent_span_id'] = str(owner['id'])
+                        mapped['parallel_group_id'] = 'joined-' + str(owner['id'])
+    if observer_valid:
+        accounting_events = [e for e in events if e['accounting']]
+        for e in accounting_events:
+            # Union all nested accounting intervals; descendants of an already
+            # removed child must not be subtracted again.
+            cuts = sorted((c['start_ns'], c['end_ns']) for c in accounting_events
+                          if e['id'] in chains[c['id']])
+            cursor, ordinal = e['start_ns'], 0
+            for start, end in cuts + [(e['end_ns'], e['end_ns'])]:
+                if cursor < start:
+                    phases.append(phase(e, cursor, start, f"{e['id']}:exclusive:{ordinal}",
+                                        str(e['id']), True))
+                    ordinal += 1
+                cursor = max(cursor, end)
+        exclusive = sorted((p for p in phases if p['accounting']), key=lambda p: p['start_monotonic_ns'])
+        require(all(a['end_monotonic_ns'] <= b['start_monotonic_ns'] for a, b in zip(exclusive, exclusive[1:])),
+                'exclusive event overlap')
+        if not any(e['phase_id'] == 20 for e in events):
+            for e in events:
+                if e['phase_id'] == 4:
+                    absent = phase(dict(e, phase_id=20), e['start_ns'], e['start_ns'],
+                                   f"{e['id']}:fixed-not-applicable", str(e['id']))
+                    absent.update(status='not_applicable', reason='No fixed commitment batch ran in this invocation.')
+                    phases.append(absent)
+    return dict(schema='recursion.phase-events-mapped/1', invocation_id=invocation_id,
+                observer_valid=observer_valid, profile_valid=False,
+                invalid_reasons=([reason, 'Workload identity and verification evidence must be supplied.']
+                                 + ([] if observer_valid else ['Event buffer, timer or operation failed.'])),
+                phases=phases, overhead=dict(event_count=len(events), event_capacity=raw['event_capacity'],
+                                            dropped_events=raw['dropped_events'],
+                                            flush_wall_seconds=raw['flush_wall_ns'] / NS,
+                                            qualification='not_run'),
+                notes='Schema phase fragments only. pid=0 and source_line=0 mean uncollected; no qualified claim.')
 
 
 def validate_sidecar(sidecar):
@@ -464,9 +625,16 @@ def main(argv=None):
             require(bool(paths), 'no sidecars supplied')
             require(output is None or output.resolve() not in [p.resolve() for p in paths], 'cannot overwrite a source sidecar')
             sidecars = [read_sidecar(p) for p in paths]
-            require(len({s['invocation_id'] for s in sidecars}) == len(sidecars), 'duplicate invocation identity')
-            report = (decide_profiles(sidecars) if args.command == 'decide' else
-                      {'schema': 'recursion.phase-partition/1', 'profiles': [validate_sidecar(s) for s in sidecars]})
+            raw_events = [s.get('schema') == 'recursion.phase-events/1' for s in sidecars]
+            if any(raw_events):
+                require(args.command == 'reduce' and all(raw_events),
+                        'raw events can only be reduced separately; they are not qualified sidecars')
+                report = {'schema': 'recursion.phase-events-mapped/1', 'profiles':
+                          [map_events(s, 'events-' + digest(p)) for s, p in zip(sidecars, paths)]}
+            else:
+                require(len({s['invocation_id'] for s in sidecars}) == len(sidecars), 'duplicate invocation identity')
+                report = (decide_profiles(sidecars) if args.command == 'decide' else
+                          {'schema': 'recursion.phase-partition/1', 'profiles': [validate_sidecar(s) for s in sidecars]})
             write_report(output, report)
         return 0
     except (ValueError, OSError, KeyError, TypeError, tarfile.TarError) as error:

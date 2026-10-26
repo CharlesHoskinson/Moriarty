@@ -120,8 +120,14 @@ impl<F: WithSmallOrderMulGroup<3>> Committed<F> {
             h_pieces.into_iter().map(|h_piece| domain.coeff_from_vec(h_piece)).collect();
 
         // Compute commitments to each h(X) piece
-        let h_commitments: Vec<_> =
-            h_pieces.iter().map(|h_piece| CS::commit(params, h_piece)).collect();
+        let h_commitments: Vec<_> = crate::profile_span!(
+            QuotientCommitments,
+            Exclusive,
+            h_pieces
+                .iter()
+                .map(|h_piece| CS::commit(params, h_piece))
+                .collect()
+        );
 
         // Hash each h(X) piece
         for c in h_commitments {

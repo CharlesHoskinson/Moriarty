@@ -11,6 +11,7 @@
 pub mod circuit;
 pub mod plonk;
 pub mod poly;
+pub mod profile;
 pub mod transcript;
 
 pub mod dev;

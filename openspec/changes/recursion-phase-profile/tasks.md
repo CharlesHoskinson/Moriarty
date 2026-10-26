@@ -20,10 +20,15 @@ Boxes record observed outcomes only. Paths are relative to the repository root. 
 
 ## 3. Observation feature (tests first)
 
-- [ ] 3.1 Write tests for the bounded event buffer, overflow, timer failure and the reentrancy guard in `tools/profile/vendor/midnight-proofs-0.8.3/tests/profile_events.rs`.
-- [ ] 3.2 Add the default-off feature `recursion-phase-profile` and RAII timers at every phase boundary of RPP-002, including returned-error paths.
-  Verify: `cargo test --manifest-path tools/profile/Cargo.toml --locked --features recursion-phase-profile profile_`.
-- [ ] 3.3 Add caller timers around key load, `setup_pk`, prove and verify in `crates/mori-recursion` and `crates/mori-backend`, behind the same feature name.
+- [x] 3.1 Write tests for the bounded event buffer, overflow, timer failure and the reentrancy guard in `tools/profile/tests/profile_events.rs`. The tests sit in the harness crate, because the vendored crate's own dev-dependencies (`criterion`) are not in the offline cache.
+  Verify: `RUSTC_WRAPPER= CARGO_TARGET_DIR=tools/profile/target cargo test --offline --manifest-path tools/profile/Cargo.toml --features recursion-phase-profile --test profile_events`.
+  Observed 2026-10-26: 11 passed, 0 failed (overflow, reentrancy, regressing clock, returned-error span, thread ids, public-only JSON, opt-in flush).
+- [x] 3.2 Add the default-off feature `recursion-phase-profile` and RAII timers at every phase boundary of RPP-002, including returned-error paths.
+  Verify: the 3.1 command, plus `cargo check` of `tools/profile` with and without the feature.
+  Observed 2026-10-26 (lead): the 3.1 tests pass. A whitespace-insensitive review of the vendored diff shows only span wrappers around existing expressions; the multiopen fold changed formatting only. A dropped, unfinished span records status 2 (returned error). Proof behavior is still unverified until task 5.1 runs the on/off proofs.
+  Observed 2026-10-26: feature-on/off isolated `cargo check --offline` passed (four jobs, `tools/profile/target`, sandbox-blocked `RUSTC_WRAPPER` unset); event-test verification remains blocked offline.
+- [x] 3.3 Add caller timers around key load, `setup_pk`, prove and verify in the harness crate `tools/profile/src/`, which calls the `mori-recursion` and `mori-backend` APIs. The main crates stay unchanged: the registry midnight-proofs has no `recursion-phase-profile` feature, so forwarding it from a main crate would break production builds (RPP-007).
+  Observed 2026-10-26: both prescribed harness `cargo check` variants passed; 56 Python tests passed; `check-profile-isolation.py` reported OK, `prepare --check-only` verified the nonempty patch SHA-256, and `git diff --exit-code Cargo.lock` passed; no proof was run.
 - [ ] 3.4 Add the RSS sampler, process CPU clocks, typed byte counters and unavailable-counter reasons.
 
 ## 4. Sidecar, validator and reducer (tests first)

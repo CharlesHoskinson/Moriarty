@@ -77,7 +77,11 @@ where
     ) -> Self::Commitment {
         let size = polynomial.values.len();
         assert!(params.g.len() >= size);
-        msm_specific::<E::G1Affine>(&polynomial.values, &params.g[..size])
+        crate::profile_span!(
+            Msm,
+            Exclusive,
+            msm_specific::<E::G1Affine>(&polynomial.values, &params.g[..size])
+        )
     }
 
     fn commit_lagrange(
@@ -88,7 +92,11 @@ where
 
         assert!(params.g_lagrange.len() >= size);
 
-        msm_specific::<E::G1Affine>(&poly.values, &params.g_lagrange[0..size])
+        crate::profile_span!(
+            Msm,
+            Exclusive,
+            msm_specific::<E::G1Affine>(&poly.values, &params.g_lagrange[0..size])
+        )
     }
 
     fn multi_open<T: Transcript>(
@@ -100,6 +108,7 @@ where
         E::Fr: Sampleable<T::Hash> + Hash + Ord + Hashable<T::Hash>,
         E::G1: Hashable<T::Hash>,
     {
+        crate::profile_start!(profile_multiopen, Multiopen, Exclusive);
         // Refer to the halo2 book for docs:
         // https://zcash.github.io/halo2/design/proving-system/multipoint-opening.html
         let x1: E::Fr = transcript.squeeze_challenge();
@@ -196,7 +205,11 @@ where
             Self::commit(params, &pi_poly)
         };
 
-        transcript.write(&pi).map_err(|_| Error::OpeningError)
+        let result = transcript.write(&pi).map_err(|_| Error::OpeningError);
+        if result.is_ok() {
+            crate::profile_finish!(profile_multiopen);
+        }
+        result
     }
 
     fn multi_prepare<'com, T: Transcript>(
@@ -285,18 +298,21 @@ where
 
         // We can compute the expected msm_eval at x_3 using the u provided
         // by the prover and from x_2
-        let f_eval =
-            point_sets.iter().zip(q_eval_sets.iter()).zip(q_evals_on_x3.iter()).rev().fold(
-                E::Fr::ZERO,
-                |acc_eval, ((points, evals), proof_eval)| {
-                    let r_poly = lagrange_interpolate(points, evals);
-                    let r_eval = eval_polynomial(&r_poly, x3);
-                    // eval = (proof_eval - r_eval) / prod_i (x3 - point_i)
-                    let den = points.iter().fold(E::Fr::ONE, |acc, point| acc * &(x3 - point));
-                    let eval = (*proof_eval - &r_eval) * den.invert().unwrap();
-                    acc_eval * &(x2) + &eval
-                },
-            );
+        let f_eval = point_sets
+            .iter()
+            .zip(q_eval_sets.iter())
+            .zip(q_evals_on_x3.iter())
+            .rev()
+            .fold(E::Fr::ZERO, |acc_eval, ((points, evals), proof_eval)| {
+                let r_poly = lagrange_interpolate(points, evals);
+                let r_eval = eval_polynomial(&r_poly, x3);
+                // eval = (proof_eval - r_eval) / prod_i (x3 - point_i)
+                let den = points
+                    .iter()
+                    .fold(E::Fr::ONE, |acc, point| acc * &(x3 - point));
+                let eval = (*proof_eval - &r_eval) * den.invert().unwrap();
+                acc_eval * &(x2) + &eval
+            });
 
         let x4: E::Fr = transcript.squeeze_challenge();
 

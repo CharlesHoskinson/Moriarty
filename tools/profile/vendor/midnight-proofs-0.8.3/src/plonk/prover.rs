@@ -100,13 +100,18 @@ where
 
     let domain = &pk.vk.domain;
 
-    let instance = compute_instances(params, pk, instances, nb_committed_instances, transcript)?;
+    let instance = crate::profile_result!(
+        Instances,
+        Exclusive,
+        compute_instances(params, pk, instances, nb_committed_instances, transcript)
+    )?;
 
     let (advice, challenges) = parse_advices(params, pk, circuits, instances, transcript, rng)?;
 
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: F = transcript.squeeze_challenge();
 
+    crate::profile_start!(profile_lookup_permutation, LookupPermutation, Exclusive);
     let lookups: Vec<Vec<lookup::prover::Permuted<F>>> = instance
         .iter()
         .zip(advice.iter())
@@ -134,6 +139,8 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    crate::profile_finish!(profile_lookup_permutation);
+
     // Sample beta challenge
     let beta: F = transcript.squeeze_challenge();
 
@@ -141,6 +148,7 @@ where
     let gamma: F = transcript.squeeze_challenge();
 
     // Commit to permutations.
+    crate::profile_start!(profile_permutation_products, PermutationProducts, Exclusive);
     let permutations: Vec<permutation::prover::Committed<F>> = instance
         .iter()
         .zip(advice.iter())
@@ -160,6 +168,9 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    crate::profile_finish!(profile_permutation_products);
+
+    crate::profile_start!(profile_lookup_products, LookupProducts, Exclusive);
     let lookups: Vec<Vec<lookup::prover::Committed<F>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -171,9 +182,12 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    crate::profile_finish!(profile_lookup_products);
+
     // Trash argument
     let trash_challenge: F = transcript.squeeze_challenge();
 
+    crate::profile_start!(profile_trash, Trash, Exclusive);
     let trashcans: Vec<Vec<trash::prover::Committed<F>>> = instance
         .iter()
         .zip(advice.iter())
@@ -198,15 +212,24 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    crate::profile_finish!(profile_trash);
+
     // Commit to the vanishing argument's random polynomial for blinding h(x_3)
-    let vanishing = vanishing::Argument::<F, CS>::commit(params, domain, rng, transcript)?;
+    let vanishing = crate::profile_result!(
+        Vanishing,
+        Exclusive,
+        vanishing::Argument::<F, CS>::commit(params, domain, rng, transcript)
+    )?;
 
     // Obtain challenge for keeping all separate gates linearly independent
     let y: F = transcript.squeeze_challenge();
 
-    let (instance_polys, instance_values) =
-        instance.into_iter().map(|i| (i.instance_polys, i.instance_values)).unzip();
+    let (instance_polys, instance_values) = instance
+        .into_iter()
+        .map(|i| (i.instance_polys, i.instance_values))
+        .unzip();
 
+    crate::profile_start!(profile_advice_ntt, AdviceNtt, Exclusive);
     let advice_polys = advice
         .into_iter()
         .map(|a| {
@@ -216,6 +239,8 @@ where
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
+
+    crate::profile_finish!(profile_advice_ntt);
 
     Ok(ProverTrace {
         advice_polys,
@@ -264,7 +289,7 @@ where
 
     let domain = pk.get_vk().get_domain();
 
-    let nu_poly = compute_nu_poly(pk, &trace);
+    let nu_poly = crate::profile_span!(Quotient, Exclusive, compute_nu_poly(pk, &trace));
 
     let ProverTrace {
         advice_polys,
@@ -277,10 +302,15 @@ where
     } = trace;
 
     // Construct the vanishing argument's h(X) commitments
-    let vanishing = vanishing.construct::<CS, T>(params, domain, nu_poly, transcript, rng)?;
+    let vanishing = crate::profile_result!(
+        Quotient,
+        Exclusive,
+        vanishing.construct::<CS, T>(params, domain, nu_poly, transcript, rng)
+    )?;
 
     let x: F = transcript.squeeze_challenge();
 
+    crate::profile_start!(profile_evaluations, Evaluations, Exclusive);
     write_evals_to_transcript(
         pk,
         nb_committed_instances,
@@ -335,7 +365,13 @@ where
         x,
     );
 
-    CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
+    crate::profile_finish!(profile_evaluations);
+
+    crate::profile_result!(
+        Multiopen,
+        Diagnostic,
+        CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
+    )
 }
 
 /// This creates a proof for the provided `circuit` when given the public
@@ -368,6 +404,7 @@ where
         + Ord
         + FromUniformBytes<64>,
 {
+    crate::profile_start!(profile_prove, Prove, Diagnostic);
     let trace = compute_trace(
         params,
         pk,
@@ -378,7 +415,7 @@ where
         transcript,
         &mut rng,
     )?;
-    finalise_proof(
+    let result = finalise_proof(
         params,
         pk,
         #[cfg(feature = "committed-instances")]
@@ -386,7 +423,11 @@ where
         trace,
         transcript,
         &mut rng,
-    )
+    );
+    if result.is_ok() {
+        crate::profile_finish!(profile_prove);
+    }
+    result
 }
 
 pub(super) fn compute_instances<F, CS, T>(
@@ -498,7 +539,7 @@ where
     let mut challenges = HashMap::<usize, F>::with_capacity(meta.num_challenges);
 
     let unusable_rows_start = domain.n as usize - (meta.blinding_factors() + 1);
-    for current_phase in pk.vk.cs.phases() {
+    for (_profile_phase, current_phase) in pk.vk.cs.phases().enumerate() {
         let column_indices = meta
             .advice_column_phase
             .iter()
@@ -512,8 +553,10 @@ where
             })
             .collect::<BTreeSet<_>>();
 
-        for ((circuit, advice), instances) in circuits.iter().zip(advice.iter_mut()).zip(instances)
+        for (_profile_circuit, ((circuit, advice), instances)) in
+            circuits.iter().zip(advice.iter_mut()).zip(instances).enumerate()
         {
+            crate::profile_advice!(_profile_phase, _profile_circuit);
             let mut witness = WitnessCollection {
                 k: domain.k(),
                 current_phase,
@@ -529,6 +572,7 @@ where
                 _marker: std::marker::PhantomData,
             };
 
+            crate::profile_start!(profile_synthesis, Synthesis, Exclusive);
             // Synthesize the circuit to obtain the witness and other information.
             ConcreteCircuit::FloorPlanner::synthesize(
                 &mut witness,
@@ -537,6 +581,9 @@ where
                 meta.constants.clone(),
             )?;
 
+            crate::profile_finish!(profile_synthesis);
+
+            crate::profile_start!(profile_resolution, Resolution, Exclusive);
             let mut advice_values = batch_invert_rational::<F>(
                 witness
                     .advice
@@ -565,8 +612,15 @@ where
                 }
             }
 
-            let advice_commitments: Vec<_> =
-                advice_values.iter().map(|poly| CS::commit_lagrange(params, poly)).collect();
+            crate::profile_finish!(profile_resolution);
+
+            crate::profile_start!(profile_advice_commitments, AdviceCommitments, Exclusive);
+            let advice_commitments: Vec<_> = advice_values
+                .iter()
+                .map(|poly| CS::commit_lagrange(params, poly))
+                .collect();
+
+            crate::profile_finish!(profile_advice_commitments);
 
             for commitment in &advice_commitments {
                 transcript.write(commitment)?;

@@ -295,3 +295,112 @@ class ReduceTests(unittest.TestCase):
         proof.update(proof_id='duplicate-cpu-owner', root_span_id='inner-proof')
         self.data['proofs'].append(proof)
         self.reject('proof.*overlap')
+
+
+class EventMappingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load('profile-recursion')
+
+    def setUp(self):
+        def event(i, parent, phase, accounting, start, end, thread=1):
+            return dict(id=i, parent_id=parent, phase_id=phase, accounting=accounting,
+                        start_ns=start, end_ns=end, thread_id=thread, status=1,
+                        advice_phase=2**64 - 1, circuit_index=2**64 - 1)
+        self.data = dict(schema='recursion.phase-events/1', event_capacity=32,
+                         dropped_events=0, timer_failures=0, reentrant_events=0,
+                         profile_valid=True, flush_wall_ns=10, events=[
+            event(1, 0, 1, 0, 1, 101),  # command
+            event(2, 1, 4, 0, 2, 100),  # proof
+            event(3, 2, 17, 1, 3, 99),  # multiopen
+            event(4, 3, 18, 1, 10, 40), # nested MSM
+            event(5, 3, 18, 1, 60, 80), # second MSM
+            event(6, 3, 22, 0, 4, 90),  # diagnostic earns no credit
+        ])
+
+    def test_mapping_schema_and_unique_accounting(self):
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        phases = mapped['phases']
+        self.assertEqual(sum(self.profile.ns(p['metrics']['exclusive_wall_seconds'])
+                             for p in phases if p['accounting']), 96)
+        owners = [p for p in phases if p['accounting']]
+        self.assertEqual(sum(self.profile.ns(p['metrics']['wall_seconds']) for p in owners
+                             if p['phase'] == 'commitment_msm'), 50)
+        self.assertEqual(sum(self.profile.ns(p['metrics']['wall_seconds']) for p in owners
+                             if p['phase'] == 'multiopen'), 46)
+        self.assertFalse(mapped['profile_valid'])
+        self.assertTrue(mapped['observer_valid'])
+        from jsonschema import Draft202012Validator
+        schema = json.loads(self.profile.SCHEMA.read_text())
+        validator = Draft202012Validator({'$ref': '#/$defs/phase', '$defs': schema['$defs']})
+        for phase in phases:
+            validator.validate(phase)
+            self.assertIsNone(phase['metrics']['rss']['entry_bytes'])
+            self.assertIsNone(phase['metrics']['cpu_core_seconds'])
+        self.assertIn('not_applicable', [p['status'] for p in phases
+                                       if p['phase'] == 'fixed_commitments'])
+
+    def test_invalid_observer_keeps_partial_trace_without_credit(self):
+        for field in ['dropped_events', 'timer_failures', 'reentrant_events']:
+            with self.subTest(field=field):
+                data = copy.deepcopy(self.data)
+                data[field] = 1
+                mapped = self.profile.map_events(data, 'synthetic')
+                self.assertFalse(mapped['observer_valid'])
+                self.assertFalse(any(p['accounting'] for p in mapped['phases']))
+
+    def test_full_buffer_and_returned_error(self):
+        self.data['event_capacity'] = len(self.data['events'])
+        self.assertFalse(self.profile.map_events(self.data, 'synthetic')['observer_valid'])
+        self.data['event_capacity'] = 32
+        self.data['events'][3]['status'] = 2
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        self.assertFalse(mapped['observer_valid'])
+        self.assertIn('failed', [p['status'] for p in mapped['phases']])
+
+    def test_incomplete_timer_is_retained(self):
+        self.data['events'][0].update(status=0, end_ns=0)
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        self.assertFalse(mapped['observer_valid'])
+        self.assertIsNone(mapped['phases'][0]['end_monotonic_ns'])
+
+    def test_invalid_parent_and_overlap_are_rejected(self):
+        self.data['events'][3]['parent_id'] = 999
+        with self.assertRaisesRegex(ValueError, 'parent'):
+            self.profile.map_events(self.data, 'synthetic')
+        self.data['events'][3]['parent_id'] = 3
+        self.data['events'][4]['start_ns'] = 30
+        with self.assertRaisesRegex(ValueError, 'overlap'):
+            self.profile.map_events(self.data, 'synthetic')
+
+    def test_secret_metadata_rejected(self):
+        self.data['events'][0]['seed'] = 'synthetic'
+        with self.assertRaisesRegex(ValueError, 'secret'):
+            self.profile.map_events(self.data, 'synthetic')
+
+    def test_cli_maps_raw_events_without_qualifying_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'events.json'
+            output = Path(tmp) / 'mapped.json'
+            source.write_text(json.dumps(self.data))
+            self.assertEqual(self.profile.main(['reduce', str(source), '--output', str(output)]), 0)
+            mapped = json.loads(output.read_text())['profiles'][0]
+            self.assertFalse(mapped['profile_valid'])
+            self.assertTrue(mapped['observer_valid'])
+
+    def test_worker_ntt_is_owned_by_joined_phase_once(self):
+        self.data['events'][-1].update(parent_id=0, thread_id=2)
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        worker = next(p for p in mapped['phases'] if p['span_id'] == '6')
+        self.assertEqual(worker['parent_span_id'], '3')
+        self.assertEqual(worker['owner'], 'multiopen')
+        self.assertFalse(worker['accounting'])
+        self.assertEqual(sum(self.profile.ns(p['metrics']['wall_seconds'])
+                             for p in mapped['phases'] if p['accounting']), 96)
+
+    def test_public_advice_ordinals_map_to_dimensions(self):
+        self.data['events'][2].update(advice_phase=1, circuit_index=2)
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        phase = next(p for p in mapped['phases'] if p['span_id'] == '3')
+        self.assertEqual(phase['dimensions']['advice_phase'], 1)
+        self.assertEqual(phase['dimensions']['circuit_index'], 2)

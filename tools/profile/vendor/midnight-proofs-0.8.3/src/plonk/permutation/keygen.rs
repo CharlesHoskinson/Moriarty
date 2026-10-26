@@ -240,6 +240,7 @@ pub(crate) fn build_vk<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommitmentSch
         });
     }
 
+    crate::profile_start!(profile_permutation_commitments, PermutationCommitments, Exclusive);
     // Pre-compute commitments for the URS.
     let mut commitments = Vec::with_capacity(p.columns.len());
     for permutation in &permutations {
@@ -247,6 +248,7 @@ pub(crate) fn build_vk<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommitmentSch
         commitments.push(CS::commit_lagrange(params, permutation));
     }
 
+    crate::profile_finish!(profile_permutation_commitments);
     VerifyingKey { commitments }
 }
 

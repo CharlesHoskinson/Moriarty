@@ -31,18 +31,21 @@ class IdentityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'archive'):
                 self.profile.prepare(ROOT, archive)
 
-    def test_patch_is_empty_and_pinned(self):
+    def test_patch_is_nonempty_and_pinned(self):
         manifest = json.loads((ROOT / 'tools/profile/identity.json').read_text())
         patch = ROOT / 'tools/profile' / manifest['patch_file']
         self.assertEqual(hashlib.sha256(patch.read_bytes()).hexdigest(), manifest['patch_sha256'])
-        self.assertEqual(patch.read_bytes(), b'')
+        self.assertTrue(patch.read_bytes())
+        self.assertIn(b'src/profile.rs', patch.read_bytes())
 
     def test_patch_tamper(self):
         with tempfile.TemporaryDirectory() as tmp:
             import shutil
             root = Path(tmp)
-            shutil.copytree(ROOT / 'tools/profile', root / 'tools/profile')
-            (root / 'tools/profile/profile.patch').write_text('tampered')
+            shutil.copytree(ROOT / 'tools/profile', root / 'tools/profile',
+                            ignore=shutil.ignore_patterns('target', '*.log'))
+            manifest = json.loads((root / 'tools/profile/identity.json').read_text())
+            (root / 'tools/profile' / manifest['patch_file']).write_text('tampered')
             with self.assertRaisesRegex(ValueError, 'patch'):
                 self.profile.prepare(root, self.profile.DEFAULT_ARCHIVE)
 
@@ -50,7 +53,8 @@ class IdentityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             import shutil
             root = Path(tmp)
-            shutil.copytree(ROOT / 'tools/profile', root / 'tools/profile')
+            shutil.copytree(ROOT / 'tools/profile', root / 'tools/profile',
+                            ignore=shutil.ignore_patterns('target', '*.log'))
             (root / 'tools/profile/vendor/midnight-proofs-0.8.3/src/lib.rs').write_text('tampered')
             with self.assertRaisesRegex(ValueError, 'vendor'):
                 self.profile.prepare(root, self.profile.DEFAULT_ARCHIVE)

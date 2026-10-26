@@ -276,11 +276,22 @@ where
     // not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
     let selectors = std::mem::take(&mut assembly.selectors);
     let (cs, selector_polys) = cs.directly_convert_selectors_to_fixed(selectors);
-    fixed.extend(selector_polys.into_iter().map(|poly| domain.lagrange_from_vec(poly)));
+    fixed.extend(
+        selector_polys
+            .into_iter()
+            .map(|poly| domain.lagrange_from_vec(poly)),
+    );
 
     let permutation_vk = assembly.permutation.build_vk(params, &domain, &cs.permutation);
 
-    let fixed_commitments = fixed.iter().map(|poly| CS::commit_lagrange(params, poly)).collect();
+    let fixed_commitments = crate::profile_span!(
+        FixedCommitments,
+        Exclusive,
+        fixed
+            .iter()
+            .map(|poly| CS::commit_lagrange(params, poly))
+            .collect()
+    );
 
     Ok(VerifyingKey::from_parts(
         domain,
@@ -300,6 +311,7 @@ where
     CS: PolynomialCommitmentScheme<F>,
     ConcreteCircuit: Circuit<F>,
 {
+    crate::profile_start!(profile_setup_pk, SetupPk, Exclusive);
     let mut cs = ConstraintSystem::default();
     #[cfg(feature = "circuit-params")]
     let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());
@@ -343,6 +355,7 @@ where
     let [l0, l_last, l_active_row] = compute_lagrange_polys(&vk, &cs);
     // Compute the optimized evaluation data structure
     let ev = Evaluator::new(&vk.cs);
+    crate::profile_finish!(profile_setup_pk);
     Ok(ProvingKey {
         vk,
         l0,

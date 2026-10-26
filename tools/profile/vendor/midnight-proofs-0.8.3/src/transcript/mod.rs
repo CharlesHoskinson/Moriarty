@@ -111,30 +111,48 @@ impl<H: TranscriptHash> Transcript for CircuitTranscript<H> {
     }
 
     fn squeeze_challenge<T: Sampleable<H>>(&mut self) -> T {
-        T::sample(self.state.squeeze())
+        crate::profile_span!(Transcript, Exclusive, { T::sample(self.state.squeeze()) })
     }
 
     fn common<T: Hashable<H>>(&mut self, input: &T) -> io::Result<()> {
-        self.state.absorb(&input.to_input());
+        crate::profile_result!(
+            Transcript,
+            Exclusive,
+            (|| {
+                self.state.absorb(&input.to_input());
 
-        Ok(())
+                Ok(())
+            })()
+        )
     }
 
     fn read<T: Hashable<H>>(&mut self) -> io::Result<T> {
-        let val = T::read(&mut self.buffer)?;
-        self.common(&val)?;
+        crate::profile_result!(
+            Transcript,
+            Exclusive,
+            (|| {
+                let val = T::read(&mut self.buffer)?;
+                self.common(&val)?;
 
-        Ok(val)
+                Ok(val)
+            })()
+        )
     }
 
     fn write<T: Hashable<H>>(&mut self, input: &T) -> io::Result<()> {
-        self.common(input)?;
-        let bytes = input.to_bytes();
-        self.buffer.write_all(&bytes)
+        crate::profile_result!(
+            Transcript,
+            Exclusive,
+            (|| {
+                self.common(input)?;
+                let bytes = input.to_bytes();
+                self.buffer.write_all(&bytes)
+            })()
+        )
     }
 
     fn finalize(self) -> Vec<u8> {
-        self.buffer.into_inner()
+        crate::profile_span!(Transcript, Exclusive, { self.buffer.into_inner() })
     }
 
     fn assert_empty(&mut self) -> io::Result<()> {
