@@ -216,6 +216,21 @@ committed copy was requested. The evaluator independently reported the same
 holdout passing on that source. These are external runtime reports, not Rust
 executions by this worker, and show no residual size or performance improvement.
 
+The evaluator subsequently shared raw factorial(3) residual output and a fresh
+reference-only companion from the same saved binary. The separate
+`audit_u033_observation.py RESIDUAL.json REFERENCE.json PROBE.py` pins both
+file hashes, extracts unmodified validators from evaluator commit `abe5ee146`,
+and compares the observations without running the binary. It confirms the IR's
+canonical hash and program-source hash, seven blocks, 39 boundary rows, 114
+equal StepRecords, all complete boundary snapshots, reference work 113,
+unchanged host summary and `Done uiU(6)` at fuel 4000/stack 128. Five mutations
+(unknown/wrong producing block, missing exercised successor, changed reference
+record and wrong IR hash) are rejected for the intended reasons. Results and
+both SHA-256 pins are in `u033-observation-audit.json`. The original doctorwatson
+trace remains uninspected; this is a concrete observation audit, not a fresh
+Rust run, complete refinement proof or native/target acceptance test. The two
+large input JSON files remain in the evaluator's external shared directory.
+
 The U024 CLI replay at `381f9e902` was source-audited against the tree model.
 Core interning is unchanged, preservation is checked before reporting, and
 technical cuts resume from interned snapshots. The CLI census excludes inline
