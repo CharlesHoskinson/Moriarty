@@ -45,14 +45,18 @@ technical-checkpoint evidence. The evaluator notes that the current /2 CLI has
 no post-resume technical cut exposing this check. This agent ran no such probe.
 
 U2's later uncommitted pure/financial drivers now use checked UInt64 resume-epoch
-addition and refuse a ready observation at the maximum epoch. `resume` explicitly
-checks `epoch + 1 < 2^64` on its acceptance path. False/error guards still return
-the unchanged checkpoint without incrementing the epoch. The new field-bound
+addition. Subsequent R0 gates refuse maximum epoch and invalid pure SI-29
+resources before guard evaluation. `resume` now checks `epoch + 1 < 2^64` and
+resource availability before every guard outcome. False/error preservation
+therefore requires an admitted, resumable checkpoint; no epoch increment occurs.
+The field-bound
 theorem needs headroom; the complete-state bound additionally requires
 `ProjectionAgrees` and `InstallerCorrect`. Exact uncommitted source-byte
 observations are recorded separately, with no Rust run or landed-source claim.
 The unrelated unchecked carrier-length addition remains a reported source
 hypothesis; this module does not model or fix that parser.
+The abstract refusal constructor coalesces validation reasons; concrete stage,
+message and first-failure ordering need their own correspondence proof.
 
 No financial restore implementation is introduced. Financial prefix, fee-phase,
 failure and exhaustion contracts belong to the sibling FinancialItems work.
@@ -71,4 +75,8 @@ not run the build. Its sandbox still cannot connect `memcap` to the user scope
 bus; no uncapped build was attempted. A read-only follow-up review confirmed the
 projection gap resolved at the contract-model level, with no further substantive
 issue. That review ran no builds and establishes no concrete Rust correspondence.
+
+**The pre-guard validation follow-up has not yet been compiled.** The source and
+query pins describe nineteen current statements; the preceding seventeen-query
+build is retained historically pending current kernel and axiom checks.
 

@@ -9,6 +9,8 @@ import Clean.Sherlock.SuspensionResume
 #print axioms Clean.Sherlock.SuspensionResume.maximum_epoch_has_no_headroom
 #print axioms Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees
 #print axioms Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames
+#print axioms Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_any_guard
+#print axioms Clean.Sherlock.SuspensionResume.missing_resources_refuses_any_guard
 #print axioms Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_accept
 #print axioms Clean.Sherlock.SuspensionResume.accepted_resume_epoch_bounded
 #print axioms Clean.Sherlock.SuspensionResume.accepted_resume_complete_epoch_bounded
