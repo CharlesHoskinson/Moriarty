@@ -220,3 +220,24 @@ Results (2026-10-26):
 
 Critical path: M2 (G4) → M3 (G6) → G7 → G8 → G9 → G11 for P1, then P2 and P3. G1-G3 and G5 run in
 parallel and gate E3 coverage. Until M2 runs, everything after G4 is design, not evidence.
+
+## 6. Coverage probe (2026-10-26, after the host loss)
+
+`mori simulate --native-inventory`, run through the holdout engine (`draft` config), gives these fired-rule counts and gaps:
+
+| Program | Events | Rules fired | With a C6 fragment | Gaps |
+|---|---|---|---|---|
+| `fact3.mori` | 293 | 46 | 37 | BHelperEqual ×4 (Different, Entry, Exit, Pair), BHelperValidate ×4, KAdminPublishValue |
+| `list123.mori` | 303 | 55 | 39 | BHelperMatch ×10, BHelperScalarConstruct, BHelperValidate ×4, KAdminPublishValue |
+| `entry 7;` | 6 | 6 | 1 | BHelperValidate ×4, KAdminPublishValue |
+| `entry 3 + 4;` | 20 | 15 | 10 | BHelperValidate ×4, KAdminPublishValue |
+
+**No program can qualify scenario 2 today.** Every program publishes its value, and `KAdminPublishValue` and the four `BHelperValidate` rules have no inventoried fragment. Their source is merged as WIP: 36456d510 has Equal ×4 and Validate ×4; 5d7663275 has Match ×5, ScalarConstruct and AdminPublishValue. These modules compile in `sherlock_machine/mod.rs`, but `native_inventory.rs` still lists them as `gap(...)`. Their tests have not run on this host.
+
+The shortest honest path for scenario 2:
+1. Run the WIP fragment tests for KAdminPublishValue and BHelperValidate ×4 under the heavy lock.
+2. Flip those inventory rows and commit compiled-and-run receipts.
+3. Prove a small committed program end to end through real leaves, the IVC node and the run decider. No stand-in bundle.
+4. Verify independently, then run `validate_call`, deploy and call SherlockRun, read back, and assemble the record.
+
+fact(3) also needs the four BHelperEqual fragments. U023 scenario 1 needs only the dispatch receipt.
