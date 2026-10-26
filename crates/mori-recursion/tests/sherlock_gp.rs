@@ -57,6 +57,14 @@ fn at_k(base: &ParamsKZG<Bls12>, k: u32) -> ParamsKZG<Bls12> {
     p
 }
 
+/// A small field element (a step count) as u64; panics if it does not fit.
+fn small(x: &F) -> u64 {
+    let r = x.to_repr();
+    let b: &[u8] = r.as_ref();
+    assert!(b[8..].iter().all(|&z| z == 0), "step count out of range");
+    u64::from_le_bytes(b[..8].try_into().unwrap())
+}
+
 fn hexes(v: &[F]) -> Value {
     json!(v.iter().map(f_to_hex).collect::<Vec<_>>())
 }
@@ -82,16 +90,27 @@ fn standin_leaves(base: &ParamsKZG<Bls12>, n: u64, result: u128) -> Leaves {
     let prog_d = poseidon(&[F::from(0x5052_4f47u64)]);
     let mut pre = poseidon(&[F::from(0x494e_4954u64)]);
     let (mut steps, mut lanes_d) = (Vec::new(), F::ZERO);
-    for h in 0..n {
-        let rule = F::from(1000 + h);
+    // Stand-in leaves claim 2 machine steps each, so h counts machine steps.
+    const PER_LEAF: u64 = 2;
+    for i in 0..n {
+        let h = i * PER_LEAF;
+        let rule = F::from(1000 + i);
         let body = standin_body(prog_d, pre, rule, F::from(h));
-        let (tag, val) = if h + 1 == n {
+        let (tag, val) = if i + 1 == n {
             (OUTCOME_HALTED, result)
         } else {
             (OUTCOME_RUNNING, 0)
         };
         let post = state_digest(tag, val, body);
-        let inst = vec![F::from(0xb1d0 + h), prog_d, pre, post, rule, F::from(h)];
+        let inst = vec![
+            F::from(0xb1d0 + i),
+            prog_d,
+            pre,
+            post,
+            rule,
+            F::from(h),
+            F::from(PER_LEAF),
+        ];
         let mut w = inst.clone();
         w.extend([F::from(tag), F::from_u128(val)]);
         let proof = prove::<StandInLeaf, Pos>(&p, &pk, &leaf, &inst, w, &mut rng).unwrap();
@@ -160,17 +179,21 @@ fn gp_fold_and_key() {
     );
     // Every leaf verifies on its own, and the leaf chain is contiguous.
     let (prog_d, init_d) = (leaves.steps[0].0[1], leaves.steps[0].0[2]);
+    let mut machine_steps = 0u64;
     for (h, (inst, proof)) in leaves.steps.iter().enumerate() {
         assert_eq!(
             inst.len(),
-            6,
-            "leaf instance [binding, prog_d, pre_d, post_d, rule, h_pre]"
+            7,
+            "leaf instance [binding, prog_d, pre_d, post_d, rule, h_pre, steps]"
         );
         assert_eq!(
             (inst[1], inst[5]),
-            (prog_d, F::from(h as u64)),
+            (prog_d, F::from(machine_steps)),
             "leaf {h} program/height"
         );
+        let s = small(&inst[6]);
+        assert!(s >= 1, "leaf {h} proves at least one step");
+        machine_steps += s;
         if h > 0 {
             assert_eq!(
                 inst[2],
@@ -229,6 +252,7 @@ fn gp_fold_and_key() {
             cur_d: inst[3],
             rule: inst[4],
             leaf_binding: inst[0],
+            leaf_steps: small(&inst[6]),
             leaf_proof: lproof.clone(),
         };
         let next_acc = rel.next_acc(Some(&node_vk), &w).unwrap();
@@ -236,7 +260,7 @@ fn gp_fold_and_key() {
             prog_d,
             init_d,
             cur_d: inst[3],
-            h: st.h + 1,
+            h: st.h + small(&inst[6]),
         };
         let ni = SherlockIvcRelation::instance(repr, &next, &next_acc);
         let t = Instant::now();
@@ -256,7 +280,8 @@ fn gp_fold_and_key() {
     );
     let ni = SherlockIvcRelation::instance(repr, &st, &acc);
     println!(
-        "GP folded steps={n} fold_seconds={:.3}",
+        "GP folded leaves={n} machine_steps={} fold_seconds={:.3}",
+        st.h,
         t_fold.elapsed().as_secs_f64()
     );
     drop(node_pk);
@@ -335,7 +360,7 @@ fn gp_fold_and_key() {
     let summary = json!({
         "schema": "sherlock-gp-bundle/1",
         "standin": std::env::var("MORIARTY_GP_STANDIN_STEPS").is_ok(),
-        "steps": n.to_string(), "result": leaves.result.to_string(),
+        "steps": st.h.to_string(), "leaves": n.to_string(), "result": leaves.result.to_string(),
         "prog_d": f_to_hex(&prog_d), "init_d": f_to_hex(&init_d), "fin_d": f_to_hex(&fin_d),
         "lanes_d": f_to_hex(&leaves.lanes_d),
         "stmt": f_to_hex(&stmt), "result_be16_hex": format!("{:032x}", leaves.result),

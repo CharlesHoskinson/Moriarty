@@ -65,16 +65,17 @@ impl Relation for ToyLeaf {
         w: Value<Vec<F>>,
     ) -> Result<(), Error> {
         let mut v: Vec<AssignedNative<F>> = Vec::new();
-        // Lane 0 is the binding (unconstrained here), then the 5 statement lanes.
-        for i in 0..6 {
+        // Lane 0 is the binding (unconstrained here), then the 5 statement lanes and the
+        // step count (unconstrained here; a real leaf proves exactly that many steps).
+        for i in 0..7 {
             let x: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[i]))?;
             std.constrain_as_public_input(l, &x)?;
             v.push(x);
         }
         let body = std.poseidon(l, &[v[1].clone(), v[2].clone(), v[4].clone(), v[5].clone()])?;
         let d: AssignedNative<F> = std.assign_fixed(l, dom(DOM_STATE_D))?;
-        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[6]))?;
-        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[7]))?;
+        let tag: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[7]))?;
+        let val: AssignedNative<F> = std.assign(l, w.as_ref().map(|w| w[8]))?;
         let post = std.poseidon(l, &[d, tag, val, body])?;
         std.assert_equal(l, &post, &v[3])
     }
@@ -166,7 +167,8 @@ fn ivc_node_folds_three_leaves() {
         let cur_d = state_digest(tag, val, body);
         last_lanes = body;
         let binding = F::from(0xb1d0 + step);
-        let li = SherlockIvcRelation::leaf_instance(&st, binding, cur_d, rule);
+        let steps = 1 + step; // 1, 2, 3 machine steps per leaf
+        let li = SherlockIvcRelation::leaf_instance(&st, binding, cur_d, rule, steps);
         let mut lw = li.clone();
         lw.extend([F::from(tag), F::from(val as u64)]);
         let lproof = prove::<ToyLeaf, Pos>(&lp, &leaf_pk, &leaf, &li, lw, &mut rng).unwrap();
@@ -178,6 +180,7 @@ fn ivc_node_folds_three_leaves() {
             cur_d,
             rule,
             leaf_binding: binding,
+            leaf_steps: steps,
             leaf_proof: lproof,
         };
         let next_acc = rel.next_acc(Some(&node_vk), &w).unwrap();
@@ -185,7 +188,7 @@ fn ivc_node_folds_three_leaves() {
             prog_d,
             init_d,
             cur_d,
-            h: st.h + 1,
+            h: st.h + steps,
         };
         let inst = SherlockIvcRelation::instance(self_repr, &next, &next_acc);
         let t = Instant::now();
@@ -199,6 +202,9 @@ fn ivc_node_folds_three_leaves() {
         verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &inst, None, &p).unwrap();
         let mut bad = inst.clone();
         bad[3] += F::from(1u64);
+        assert!(verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &bad, None, &p).is_err());
+        let mut bad = inst.clone();
+        bad[4] += F::from(1u64); // the step count h
         assert!(verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &bad, None, &p).is_err());
         st = next;
         acc = next_acc;
@@ -216,7 +222,10 @@ fn ivc_node_folds_three_leaves() {
     let mid = flipped.len() / 2;
     flipped[mid] ^= 1;
     assert!(verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &inst, None, &flipped).is_err());
-    println!("M3 accepted steps=3 node_k={k} leaf_k={lk}");
+    println!(
+        "M3 accepted leaves=3 machine_steps={} node_k={k} leaf_k={lk}",
+        st.h
+    );
 
     // M4: the run decider over the last node proof, for the captured acceptRun template.
     let template = Template::from_any_json(include_bytes!("fixtures/run-template.json")).unwrap();
