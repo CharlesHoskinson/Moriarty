@@ -17,17 +17,17 @@
         "exit": 0,
         "reportedMillis": 2789,
         "witnesses": {
-          "paidPrefix": 521,
-          "retainedFee": 1886,
+          "paidPrefix": 445,
+          "retainedFee": 1926,
           "rejected": 5598,
           "exhausted": 3022,
           "completed": 1379,
           "cutObserved": 7528,
-          "notReadyObserved": 481
+          "notReadyObserved": 409
         }
       },
-      "testReportedMillis": 409,
-      "testNote": "Includes whole-action fee-order admission (unreached invalid suffix/default-policy exemption), plus Requires before/between/after fees."
+      "testReportedMillis": 243,
+      "testNote": "Includes SI-29 await-entry check (waitingResumableInv in allInvariants), whole-action fee-order admission, plus Requires before/between/after fees."
     },
     {
       "model": "financialAccounting",
@@ -47,7 +47,8 @@
           "overflowed": 9761,
           "feeObserved": 9829
         }
-      }
+      },
+      "testNote": "Includes checkedReportInv, exactReportInv and reportEquationInv in allInvariants for sherlock2.rs::accounting checked_add."
     },
     {
       "model": "feePoolHistory",
@@ -78,17 +79,17 @@
     },
     {
       "model": "financialSegments",
-      "candidateInvariant": "waitingResumableInv",
+      "candidateInvariant": "awaitStarvedCommitsPrefixInv",
       "expectedViolation": true,
       "trace": "waiting-zero-fuel.itf.json",
       "backend": "rust",
-      "seed": "0xaec7",
+      "seed": "17",
       "nThreads": 1,
       "maxSteps": 30
     },
     {
       "model": "financialAccounting",
-      "candidateInvariant": "exactReportInv",
+      "candidateInvariant": "unboundedHistoryFitsU128Inv",
       "expectedViolation": true,
       "trace": "accounting-overflow.itf.json",
       "backend": "typescript",
@@ -99,9 +100,9 @@
     {
       "model": "financialImport",
       "typecheckExit": 0,
-      "tests": 4,
+      "tests": 7,
       "testExit": 0,
-      "testReportedMillis": 9,
+      "testReportedMillis": 12,
       "simulation": {
         "backend": "typescript",
         "seed": "17",
@@ -109,13 +110,16 @@
         "samples": 10000,
         "maxSteps": 30,
         "exit": 0,
-        "reportedMillis": 5487,
+        "reportedMillis": 5847,
         "witnesses": {
-          "imported": 5071,
-          "malformedAccepted": 4146,
-          "overflowReached": 1117
+          "imported": 829,
+          "malformedAccepted": 749,
+          "overflowReached": 278,
+          "epochMaxRefused": 5068,
+          "r0LateAfterR3Observed": 390
         }
-      }
+      },
+      "testNote": "Includes R0 epochMax refusal, R0 remaining_work == 0 refusal when obsValid, and R0-after-R3 ordering violation when remaining_work == 0 with invalid observation."
     },
     {
       "model": "financialImport",
@@ -126,8 +130,68 @@
       "seed": "17",
       "maxSamples": 10000,
       "maxSteps": 30
+    },
+    {
+      "model": "financialSegmentImport",
+      "typecheckExit": 0,
+      "tests": 8,
+      "testExit": 0,
+      "testReportedMillis": 81,
+      "simulation": {
+        "backend": "rust",
+        "nThreads": 4,
+        "seed": "17",
+        "invariant": "currentCodeInv",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 1025,
+        "witnesses": {
+          "imported": 4968,
+          "malformedSegmentAccepted": 3745,
+          "boundsPanicReached": 1554,
+          "notReadyWithMalformedSegment": 1872,
+          "malformedCapturesAccepted": 2487,
+          "si26DiagnosticsLeakedToHalted": 299
+        }
+      },
+      "testNote": "Includes pending segment index, FinImage2.captures layout omission (decode.rs:109 let _ = captures), and SI-26 non-empty discarded_effects/retained_by_policy leaking into Halted reports."
+    },
+    {
+      "model": "financialSegmentImport",
+      "candidateInvariant": "acceptedSegmentInv",
+      "expectedViolation": true,
+      "trace": "financial-import-segment.itf.json",
+      "backend": "rust",
+      "seed": "17",
+      "nThreads": 1,
+      "maxSamples": 10000,
+      "maxSteps": 30
     }
   ],
+  "runtimeProbe": {
+    "script": "probe_financial_import.py",
+    "output": "financial-import-rust-probe.json",
+    "binary": "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+    "binarySha256": "6bd30b9bba866e6fa43cf5f2465cdef4d8947161808a1b35f2b937999726f8f4",
+    "cases": {
+      "start": 0,
+      "ordinaryAccept": 0,
+      "malformedCountersAccepted": 0,
+      "maximumConsumedFalseGuard": 3,
+      "maximumConsumedTrueGuard": 101,
+      "outOfBoundsSegmentFalseGuard": 3,
+      "outOfBoundsSegmentTrueGuard": 101,
+      "staleSegmentZeroRetainFeesTrueGuard": 101,
+      "malformedCapturesAccepted": 0,
+      "nonEmptyDiagnosticsLeakedToHalted": 0,
+      "zeroFuelAwaitEntryExhausted": 1,
+      "zeroRemainingRefusedAtR0": 4,
+      "zeroRemainingBadObsReportsR3BeforeR0": 4,
+      "epochMaxRefusedAtR0": 4,
+      "checkedAccountingOverflowRefused": 1
+    }
+  },
   "contractReview": {
     "id": "U020",
     "ownerCommit": "c0fb7664d",
@@ -136,10 +200,12 @@
     "result": "Policy names and retention separation match; JSON schema/exit codes are outside typed model. Source hashes unchanged."
   },
   "sourceCut": {
-    "ownerHead": "c0fb7664d",
-    "engineSha256": "5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b",
-    "reportSha256": "5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19",
-    "engineCommitted": false,
-    "change": "Whole-action fee-order admission before start; segment and accounting semantics unchanged."
+    "ownerHead": "7efe20196",
+    "engineCommit": "815a22d87",
+    "consolidationClosure": "c742e0136",
+    "engineSha256": "907e5fc7684934f28bb460d84b0d23f95459a74719fda4b48cc05999446eefb5",
+    "reportSha256": "2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2",
+    "engineCommitted": true,
+    "change": "Committed on factory-u in 815a22d87 and recorded passing for U014-U020 in 7efe20196 (and C5 on consolidation in c742e0136): SI-29 await-entry remaining_work > 0 check, checked_add accounting -> Option, and resume_epoch == u64::MAX refusal."
   }
 }

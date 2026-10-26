@@ -14,18 +14,23 @@ read without edits in the owning `Moriarty-wt-factory-u` worktree.
 | `financialAccounting.qnt` | `crates/mori-core/src/runtime.rs::move_funds`, `helper_machine/shared/fin_carrier.rs::apply_transfer`, `stage/sherlock2.rs::accounting`; exact UInt128 checked transfers, self transfers, asset isolation and saturating aggregate reports. |
 | `feePoolHistory.qnt` | Imports `specs/quint/fee_pool_component.qnt` unchanged; adds independent history replay for cash and residual liabilities, matching transfer/discharge totals and reserve coverage. |
 | `financialImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,charge}`; a conditional projection of counter import/charge with all other admission premises fixed valid. |
+| `financialSegmentImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,run_segment,fee_end}`, `stage/decode.rs::canonical_boundary`; conditional projection of pending `FinImage2.segment` vs `FinOutcome2::Waiting{site}`, site capture layout (`FinImage2.captures`), and SI-26 terminal-only diagnostics (`discarded_effects` / `retained_by_policy`). |
 
 The financial engine source SHA-256 at intake was
 `6054a66cb35e7943f0c18013faf2316c9c9824de3a8b84bef97c8bd6f4f8a744`;
 the report adapter `sherlock/compile_artifact/suspension2_fin.rs` was
 `5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19`.
 Both were uncommitted at intake. The engine subsequently changed to
-`5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b`:
-`check_policy` now validates every action segment before start rather than
-checking each segment as it is entered. `actionAdmits` and two explicit tests
-track this change, including an invalid unreached suffix. Segment execution,
-fuel and saturating accounting are unchanged. Revisit these models when either
-source changes.
+`5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b`
+(`check_policy` validating every action segment before start) and then to
+`907e5fc7684934f28bb460d84b0d23f95459a74719fda4b48cc05999446eefb5` with
+report adapter
+`2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2`
+(enforcing `remaining_work > 0` at await entry and R0 resume for SI-29,
+replacing saturating `accounting` with `checked_add -> Option`, and refusing
+`resume_epoch == u64::MAX`), committed on `factory-u` in `815a22d87` and
+recorded passing for `U014`–`U020` in `7efe20196` (and `C5` on the consolidation
+line in `c742e0136`). Revisit these models when either source changes.
 
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
@@ -98,34 +103,86 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
 
 ## Reported disagreements
 
-1. **Waiting without fuel (design SI-29).** F01's three statements with fuel 4
-   followed by await commit publish reserve 68/duty 10 and `Waiting` with fuel 0.
-   A ready resume then exhausts before progress. `waitingResumableInv` checks
-   even the weaker necessary condition `Waiting ⇒ remaining > 0`; the design
-   requires enough for accept plus guard evaluation. The host `run_segment`
-   does not apply the design's post-commit resumability check. Characterization:
-   `zeroFuelWaitingCounterexampleTest`; trace `waiting-zero-fuel.itf.json`.
-2. **Silent aggregate saturation (U017).** Two valid self transfers, payment MAX
-   then fee MAX, preserve every balance yet report gross = payments = fees = MAX.
-   Thus gross ≠ payments + fees, and exact sums are lost without an overflow
-   marker. A distinct-account MAX round trip also exceeds MAX cumulative payment
-   without any balance overflow. Characterizations:
-   `saturatedGrossCounterexampleTest`, `roundTripOverflowCounterexampleTest`;
-   candidate `exactReportInv`, trace `accounting-overflow.itf.json`.
-3. **Unvalidated imported work counters (financial R0/SI-03).** Under the import
-   model's fixed valid non-counter premises, canonical fields initial = 0,
-   remaining = 1, consumed = 0 pass import and charge, although
+1. **Await-entry starvation rollback vs commit-first (design §6.1 / §7.3 / E2x).**
+   `sherlock2.rs:319-325` (`907e5fc7`) repaired SI-29 (`waitingResumableInv` now
+   holds in `allInvariants`): F01 with fuel 4 no longer publishes `Waiting` with
+   `remaining_work == 0`. However, at `end < statements.len() && remaining == 0`
+   it calls `fail(...)` before committing `tentative`, rolling back the prefix
+   (or retaining only `fee_stage`), whereas design §6.1 / §7.3 step 4 / §11.2
+   `E2x` specify that `tentative` is committed first before publishing
+   `Exhausted(Fuel)`. Characterization: `zeroFuelWaitingExhaustsAtAwaitEntryTest`;
+   candidate `awaitStarvedCommitsPrefixInv`, trace `waiting-zero-fuel.itf.json`.
+2. **Checked aggregate report over unbounded transfer history (U017).**
+   `sherlock2.rs::accounting` (`907e5fc7`) and `suspension2_fin.rs::fin_block`
+   (`2852e423`) replaced silent `saturating_add` with `checked_add -> Option`:
+   `exactReportInv` and `reportEquationInv` (`gross == payments + fees`) now hold
+   in `allInvariants` whenever `reportOk` holds. Valid `u128` self-transfers or
+   multi-account round trips can still exceed `u128::MAX` cumulative transfer
+   volume without any balance overflow, where `accounting` now returns `None`
+   (`reportOk == false`). Characterizations:
+   `checkedGrossOverflowRefusedTest`, `roundTripOverflowRefusedTest`;
+   candidate `unboundedHistoryFitsU128Inv`, trace `accounting-overflow.itf.json`.
+3. **Unvalidated imported work counters and R0-after-R3 ordering (financial R0/SI-03/SI-29).**
+   Under the import model's fixed valid non-counter premises, canonical fields
+   initial = 0, remaining = 1, consumed = 0 pass import and charge, although
    remaining + consumed ≠ initial. Canonical initial = MAX, remaining = 1,
    consumed = MAX also passes import and reaches the unchecked `consumed += 1`
-   arithmetic boundary. The report adapter's `decode_body` checks canonical
-   encoding; later identity/logical-plan/snapshot checks never jointly validate
-   this counter triple. Characterizations:
-   `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`;
+   arithmetic boundary. In `2852e423` / `907e5fc7`, `resume_epoch == u64::MAX` is
+   refused at R0 (`epochMaxRefused`) and `remaining_work == 0` is refused as R0
+   inside `sherlock2::resume:460`, but `suspension2_fin::resume_fin:272` runs
+   `admit_observation` (R3–R5) before `sherlock2::resume`, so a `remaining_work == 0`
+   checkpoint paired with an invalid observation reports `R3` instead of `R0`
+   (`r0LateAfterR3Observed`, violating `r0FirstOrderingInv`). Characterizations:
+   `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`,
+   `zeroRemainingRefusedAtR0WhenObsValidTest`,
+   `zeroRemainingWithBadObsReportsR3BeforeR0Test`, `maximumEpochRefusedAtR0Test`;
    candidate `acceptedWorkInv`, trace `financial-import-counters.itf.json`.
+   Runtime host confirmation on the `907e5fc7` / `2852e423` binary (`6bd30b9b`,
+   `probe_financial_import.py`, recorded in `financial-import-rust-probe.json`):
+   resealing `FinImage2` with `initial_fuel = 0, remaining_work = 5, consumed_work = 0`
+   halts (`exit = 0`); resealing with `consumed_work = u128::MAX, remaining_work = 1`
+   returns `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
+   `crates/mori-core/src/stage/sherlock2.rs:217` (`attempt to add with overflow`,
+   `exit = 101`) on a true guard; resealing `remaining_work = 0` with a valid
+   observation refuses at `R0` (`exit = 4`), whereas pairing `remaining_work = 0`
+   with an invalid observation format reports `R3` instead of `R0` (`exit = 4`);
+   resealing `resume_epoch = u64::MAX` refuses at `R0` (`exit = 4`); and resealing
+   overflowing `committed_effects` fails at `accounting` (`exit = 1`).
+4. **Unvalidated imported pending segment index, capture layout, and SI-26 terminal diagnostics (financial R0/R1/R4/SI-26).** `FinImage2`
+   carries `outcome = Waiting{site}`, `segment: usize`, `captures: Vec<NamedValue>`,
+   `discarded_effects: Vec<Effect>`, and `retained_by_policy: Vec<Effect>`. On resume:
+   - Neither `decode_body` nor `resume` checks `image.segment == usize::from(site)`.
+   - `decode::canonical_boundary` ignores `captures` (`let _ = captures;` at
+     `stage/decode.rs:109`, because Core/2 `stage::resume` checks
+     `layout_matches(&c.captures, site.captures.iter(), ...)` at `stage/admit.rs:345`),
+     and `sherlock2::resume` (`sherlock2.rs:471`) omits `layout_matches`, accepting
+     arbitrary `FinImage2.captures` (`malformedCapturesAccepted`).
+   - Neither `decode_body` nor `resume` checks
+     `image.discarded_effects.is_empty() && image.retained_by_policy.is_empty()`
+     (SI-26) on a `Waiting` checkpoint, and `run_segment` (`sherlock2.rs:371-400`)
+     never clears them on `Waiting`/`Halted` completion, leaking forged terminal
+     diagnostics into `not_ready`, `Waiting`, `Halted`, and `all-or-nothing/1`
+     `Rejected` reports (`si26DiagnosticsLeakedToHalted`).
+   Characterizations: `outOfBoundsSegmentNotReadyTest`,
+   `outOfBoundsSegmentPanicsOnAcceptTest`,
+   `staleSegmentZeroRetainFeesPanicsTest`,
+   `staleSegmentZeroDefaultPolicyFailsPlanCostTest`,
+   `malformedCapturesAcceptedTest`, `si26DiagnosticsLeakedToHaltedTest`; candidates
+   `acceptedSegmentInv` and `acceptedMetadataInv`, trace `financial-import-segment.itf.json`.
+   Runtime host confirmation (`probe_financial_import.py`): resealing `segment = 2`
+   returns `not_ready` (`exit = 3`) on a false guard and panics at
+   `sherlock2.rs:260` (`index out of bounds`, `exit = 101`) on a true guard;
+   resealing `segment = 0` under `retain-guaranteed-fees/1` panics at
+   `sherlock2.rs:137` (`slice index starts at 4 but ends at 3`, `exit = 101`);
+   resealing `captures = [{"name":"injected","value":{"type":"UInt","value":"99"}}]`
+   halts (`exit = 0`); resealing non-empty `discarded_effects` and `retained_by_policy`
+   halts (`exit = 0`) with `discarded_tentative.effects` and `retained_by_policy.effects`
+   non-empty in the `halted` report.
 
 All findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
-`sherlock-lean-2`. These are model/source disagreements, not claims that a Rust
-integration reproduction was executed. The checked existing `account_effects`
-adapter distinguishes exact amounts from overflow; the newer host aggregate
-silently saturates. Concrete target phase evidence remains pending, as U020
-explicitly states.
+`sherlock-lean-2`. Host checkpoint cases are runtime-confirmed read-only via
+`probe_financial_import.py` (`financial-import-rust-probe.json`); no accepted
+on-chain proof is claimed. Both the existing `account_effects` adapter and the
+repaired host aggregate (`907e5fc7` / `2852e423` in `815a22d87`) now distinguish
+exact amounts from `u128` overflow via `checked_add`. Concrete target phase
+evidence remains a separate obligation, as U020 explicitly states.

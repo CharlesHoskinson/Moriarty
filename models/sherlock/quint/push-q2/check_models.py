@@ -15,7 +15,8 @@ def checks():
         ("financialSegments", "allInvariants", "rust", ["paidPrefix", "retainedFee", "rejected", "exhausted", "completed", "cutObserved", "notReadyObserved"]),
         ("financialAccounting", "allInvariants", "typescript", ["selfTransfer", "overflowed", "feeObserved"]),
         ("feePoolHistory", "historyInvariants", "typescript", ["wFinish", "wClaimOrdinary", "wClaimDust"]),
-        ("financialImport", "currentCodeInv", "typescript", ["imported", "malformedAccepted", "overflowReached"]),
+        ("financialImport", "currentCodeInv", "typescript", ["imported", "malformedAccepted", "overflowReached", "epochMaxRefused", "r0LateAfterR3Observed"]),
+        ("financialSegmentImport", "currentCodeInv", "rust", ["imported", "malformedSegmentAccepted", "boundsPanicReached", "notReadyWithMalformedSegment", "malformedCapturesAccepted", "si26DiagnosticsLeakedToHalted"]),
     ):
         source = str((HERE / (model + ".qnt")).relative_to(ROOT))
         tests = str((HERE / (model + "Test.qnt")).relative_to(ROOT))
@@ -27,11 +28,12 @@ def checks():
     yield "existing-fee-pool-tests", ["quint", "test", "specs/quint/fee_pool_component_test.qnt",
         "--backend", "typescript", "--seed", "17"], 0
     for model, invariant, trace in (
-        ("financialSegments", "waitingResumableInv", "waiting-zero-fuel"),
-        ("financialAccounting", "exactReportInv", "accounting-overflow"),
+        ("financialSegments", "awaitStarvedCommitsPrefixInv", "waiting-zero-fuel"),
+        ("financialAccounting", "unboundedHistoryFitsU128Inv", "accounting-overflow"),
         ("financialImport", "acceptedWorkInv", "financial-import-counters"),
+        ("financialSegmentImport", "acceptedSegmentInv", "financial-import-segment"),
     ):
-        backend = "rust" if model == "financialSegments" else "typescript"
+        backend = "rust" if model in ("financialSegments", "financialSegmentImport") else "typescript"
         yield trace, ["quint", "run", str((HERE / (model + ".qnt")).relative_to(ROOT)),
             "--backend", backend, "--invariant", invariant, "--max-steps", "30",
             "--max-samples", "10000", "--n-threads", "4", "--seed", "17",

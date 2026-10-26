@@ -79,10 +79,12 @@ module financialSegmentsTest {
       and actionAdmits(List(List(Fee(1)), List(Fee(1), Pay(1))), RetainFees))
   run defaultPolicyIgnoresFeeOrderingTest = init
     .expect(actionAdmits(List(List(Fee(1)), List(Pay(1), Fee(1))), AllOrNothing))
-  // Current-code characterization, not endorsement of design SI-29.
-  run zeroFuelWaitingCounterexampleTest = initCase(firstPrefix, AllOrNothing, 4, true)
+  // SI-29 await-entry check (sherlock2.rs:319-325): fuel=4 exhausts at await
+  // commit instead of publishing a zero-fuel Waiting image, rolling back
+  // tentative via fail(...) rather than committing tentative per E2x.
+  run zeroFuelWaitingExhaustsAtAwaitEntryTest = initCase(firstPrefix, AllOrNothing, 4, true)
     .then(statementStep).then(statementStep).then(statementStep).then(commitStep)
-    .expect(allInvariants and paidPrefix and not(waitingResumableInv))
-    .then(resumeWith(secondPrefix, false))
-    .expect(allInvariants and image.outcome == Exhausted and image.consumed == 4)
+    .expect(allInvariants and waitingResumableInv and image.outcome == Exhausted
+      and image.consumed == 4 and image.remaining == 0 and image.starvedAwait
+      and image.committed == genesis and not(awaitStarvedCommitsPrefixInv))
 }

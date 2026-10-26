@@ -4,7 +4,7 @@
 // one asset, three distinct accounts, named present duty, opening 100/40.
 // Host fuel is one per statement/commit/accept; logical expression costs and
 // R0-R7, capture/hash identity, native phases and cryptography are abstracted.
-// Read-only source cut: factory-u uncommitted sherlock2.rs SHA256 5f2beded...
+// Read-only source cut: factory-u uncommitted sherlock2.rs SHA256 907e5fc7...
 module financialSegments {
   type Policy = AllOrNothing | RetainFees
   type Outcome = Running | Waiting | Halted | Rejected | Exhausted
@@ -19,7 +19,7 @@ module financialSegments {
     discarded: List[Effect], retained: List[Effect],
     feeSealed: bool, feeSnapshot: Snapshot, sealAt: int,
     initialFuel: int, remaining: int, consumed: int, committedEvents: int,
-    cuts: int, notReady: int, failedSegment: bool,
+    cuts: int, notReady: int, failedSegment: bool, starvedAwait: bool,
   }
   var image: State
   pure val genesis: Snapshot = {reserve: 100, recipient: 0, feePool: 0, liability: 40}
@@ -50,7 +50,7 @@ module financialSegments {
     feeSealed: policy == AllOrNothing or phaseEnd(program) == 0,
     feeSnapshot: genesis, sealAt: if (policy == RetainFees) phaseEnd(program) else 0,
     initialFuel: fuel, remaining: fuel, consumed: 0, committedEvents: 0,
-    cuts: 0, notReady: 0, failedSegment: false,
+    cuts: 0, notReady: 0, failedSegment: false, starvedAwait: false,
   }
   pure def seal(s: State): State =
     if (not(s.feeSealed) and s.pc == s.sealAt)
@@ -99,9 +99,15 @@ module financialSegments {
     val ready = seal(s)
     if (ready.remaining == 0) failed(ready, Exhausted) else {
       val c = charged(ready)
-      {...c, committed: c.tentative,
+      // sherlock2.rs:319-325 enforces SI-29 by calling fail(...) when an await
+      // commit leaves remaining_work == 0, before committing tentative.
+      if (c.awaitEnd and c.remaining == 0)
+        {...failed(c, Exhausted), starvedAwait: true}
+      else {
+        ...c, committed: c.tentative,
         committedEffects: c.entryEffects.concat(c.feeEffects).concat(c.fallibleEffects),
-        committedEvents: c.consumed, outcome: if (c.awaitEnd) Waiting else Halted}
+        committedEvents: c.consumed, outcome: if (c.awaitEnd) Waiting else Halted
+      }
     }
   }
   action initCase(program: List[Statement], policy: Policy, fuel: int, awaitEnd: bool): bool = all {
@@ -178,11 +184,16 @@ module financialSegments {
     else image.retained == List() and image.discarded == image.feeEffects.concat(image.fallibleEffects)
       and image.committedEffects == image.entryEffects)
   val unsealedInv = not(image.feeSealed) implies image.fallibleEffects == List()
+  // Design §6.1/SI-29: now enforced by sherlock2.rs:319-325 at await entry.
+  val waitingResumableInv = (image.outcome == Waiting) implies image.remaining > 0
   val allInvariants = conservationInv and committedLogInv and feeCountedOnceInv
     and workInv and stagingInv and rollbackInv and failureEffectsInv and unsealedInv
-  // Design §6.1/SI-29, intentionally separate from current-code invariants.
-  // Even one resume-accept event needs positive remaining fuel.
-  val waitingResumableInv = (image.outcome == Waiting) implies image.remaining > 0
+    and waitingResumableInv
+  // Design §6.1 / §7.3 step 4 / §11.2 E2x (AwaitEnter-Starved): on the fin
+  // route, tentative is committed first before publishing Exhausted(Fuel).
+  // sherlock2.rs:319-325 calls fail(...) before committing tentative.
+  val awaitStarvedCommitsPrefixInv =
+    image.starvedAwait implies (image.committed == image.tentative and image.discarded == List())
   val paidPrefix = image.outcome == Waiting and image.committed.reserve == 68
     and image.committed.liability == 10
   val retainedFee = image.retained.length() > 0
