@@ -1680,6 +1680,10 @@ CHECKS = {
 }
 CHECKS.update(models.CHECKS)
 
+import plans  # noqa: E402  (U024/U031/U033; uses the helpers above)
+plans.U = sys.modules[__name__]
+CHECKS.update(plans.CHECKS)
+
 
 def main(argv):
     if len(argv) != 2 or not argv[1].isdigit():

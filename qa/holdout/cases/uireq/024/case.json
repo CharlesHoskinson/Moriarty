@@ -16,7 +16,7 @@
       "specLine": 175,
       "when": "A candidate reduces frame storage or interns equal nodes.",
       "then": "Its record covers values, rejection/exhaustion, evaluation/effect order, boundaries, duties and resource schedule, with evidence and unresolved gaps separately listed.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "record covers": [
           "values",
@@ -28,8 +28,52 @@
         ],
         "evidence and unresolved gaps": "listed separately"
       },
-      "coverage": "none",
-      "blocker": "needs an optimization proposal record format with a preservation predicate check (values, rejection/exhaustion, order, boundaries, duties, resource schedule)"
+      "coverage": "primary",
+      "judgment": "Evaluator reading (UIREQ-024 + optimization lane 10 + security-candidate-b logical allocation counters + D23/D30/D35): the record must state the predicate over exactly the six planes and the lane-10 cost planes, with evidence and unresolved gaps disjoint and every evidence claim verified (receipts cross-checked against runs.jsonl, the trace and git). Because the record's words are not evidence, the candidate must also be selectable on mori simulate and is replayed on sealed specimens: identical values, work/events/outcome, duties, reference stream, exhaustion and rejection; logical allocation counters may not drop; at least one equal-subtree specimen must show the physical reduction (non-vacuous).",
+      "unasserted": [
+        "the physical metric names and amounts (only a strict reduction on some metric is required)",
+        "circuit/proof/DUST costs (must be gaps or evidence, not values)",
+        "the predicate checker's internal logic beyond the receipted tests"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with the flags of qa/holdout/contracts/U024.json plus the committed record named by the contract",
+        "checks": [
+          {
+            "kind": "optimization-preservation",
+            "label": "intern-equal-tree-nodes record + replay",
+            "specimens": [
+              {
+                "label": "D23 equal leaves",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(4)));\n}\n",
+                "expect": 8,
+                "equal_subtrees": true
+              },
+              {
+                "label": "D23 shared binding",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry (let s = leaf(4) in fold(branch(s, s)));\n}\n",
+                "expect": 8,
+                "equal_subtrees": true
+              },
+              {
+                "label": "D35 nested equal subtrees",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(branch(leaf(1), leaf(2)), branch(leaf(1), leaf(2))));\n}\n",
+                "expect": 6,
+                "equal_subtrees": true
+              },
+              {
+                "label": "tree45",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(5)));\n}\n",
+                "expect": 9
+              },
+              {
+                "label": "factorial3 (no tree)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+                "expect": 6
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

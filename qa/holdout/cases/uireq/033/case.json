@@ -16,7 +16,7 @@
       "specLine": 242,
       "when": "Empty, fixed-family or fixed-ProgramImage static bindings are applied to the same reference step.",
       "then": "Only immutable code/declarations/layout facts are folded; runtime control, data, environments, frames, fuel/work, capacity checks and outcomes remain dynamic. A finite worklist and residual-size limit fall back to generic dispatch without application exhaustion. Recursion remains runtime calls, with no depth/fuel/local-value specialization or source recursion unrolling; rule/source-occurrence maps retain intermediate stops and charges in universal, family and per-program realizations.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "folded": "only immutable code/declarations/layout facts",
         "dynamic": [
@@ -30,8 +30,44 @@
         ],
         "worklist/size limit": "falls back to generic dispatch without application exhaustion"
       },
-      "coverage": "none",
-      "blocker": "needs a bounded static residualizer producing ResidualStepIR for empty, fixed-family and fixed-ProgramImage static bindings"
+      "coverage": "primary",
+      "judgment": "Evaluator reading (UIREQ-033 + interfaces.md 'Bounded static residualization' + demonstrators D33): the reference step is the K-A stepReference published by --reference-slices. A residual realization must cover every reference rule the program exercises and, when executed, reproduce the reference StepRecord stream (rules, charges, frame checks, stops) exactly, including exact-fuel, fuel-1 and stack-1 runs, under the universal (empty mask), each fixed family and the per-program mask. A residual over a hand-written rule table is a gap report and fails.",
+      "unasserted": [
+        "circuit cost/adoption (unmeasured by the spec)",
+        "the exact block granularity and layout_version value",
+        "source-occurrence map contents beyond non-emptiness for per-program (K control strings carry runtime values, so no independent occurrence key exists)",
+        "which static facts a family folds beyond layout+family"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with the flags of qa/holdout/contracts/U033.json",
+        "checks": [
+          {
+            "kind": "residual-masks",
+            "label": "D33 fact3/list123 under three masks",
+            "sources": [
+              {
+                "label": "fact(3)",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+                "expect": 6,
+                "expect_value": "uiU(6)"
+              },
+              {
+                "label": "list123",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(1,cons(2,cons(3,nil))));\n}\n",
+                "expect": 6,
+                "expect_value": "uiU(6)"
+              }
+            ],
+            "depth_variant": {
+              "label": "fact(6)",
+              "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(6);\n}\n",
+              "expect": 720,
+              "compare_to": "fact(3)"
+            },
+            "tiny_limit": 1
+          }
+        ]
+      }
     }
   ]
 }
