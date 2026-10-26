@@ -7,6 +7,22 @@ cd "$root"
 
 mapfile -d '' -t staged < <(git diff --cached --name-only --no-renames -z)
 
+# (0) Moriarty is public: no private Fenrir reference models and no verbatim
+# captures of private projectfenrir files (raw/ snapshots carry a Source header).
+for p in "${staged[@]}"; do
+  case "$p" in
+    models/recursion/fenrir-*.reference.qnt)
+      echo "pre-commit: REJECTED: private Fenrir reference model ($p)" >&2
+      exit 1
+      ;;
+  esac
+  hdr="$(git show ":$p" 2>/dev/null | head -c 4096 || true)"
+  if grep -qE '^> Source: file://[^ ]*/projectfenrir/' <<<"$hdr"; then
+    echo "pre-commit: REJECTED: $p is a verbatim capture of a private projectfenrir file; keep it local via info/exclude" >&2
+    exit 1
+  fi
+done
+
 # (1) The sealed holdout belongs to the evaluator.
 if [[ "${DW_ROLE:-}" != "evaluator" ]]; then
   for p in "${staged[@]}"; do
