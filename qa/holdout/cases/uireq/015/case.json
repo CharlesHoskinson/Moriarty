@@ -25,7 +25,9 @@
       "design_source": "docs/sherlock/design/suspension-and-finance.md rev4 (7c2087887); expectations from the spec, the note and models/sherlock/oracles/financial-prefixes.json F01, never from the implementation",
       "unasserted": [
         "guard_error not-ready (the U015 guard v == n + 1 cannot error)",
-        "on-chain single use (anchor; no stagenet run)"
+        "on-chain single use (anchor; no stagenet run)",
+        "site numbers beyond 1-based and distinct per await (the note fixes only '1-based, per program', not source-order numbering)",
+        "binder shadowing (the /2 draft grammar refuses an await binder that shadows a name in scope, so a binder leak is not observable through values)"
       ],
       "exec": {
         "entrypoint": "mori simulate (non-native build) --execution-profile sherlock-helper-microstep/2, CLI/JSON contract of docs/sherlock/design/suspension-and-finance.md \u00a73.5",
@@ -46,6 +48,69 @@
             "bad_value": "5",
             "expect": "14",
             "source_other_program": "language \"moriarty-sherlock-draft/2\";\nprogram PendingInner {\n  fn inner(n: UInt): UInt { await reply(v: UInt) when v == n + 2; v }\n  fn outer(): UInt { 10 + inner(3) }\n  entry outer();\n}\n"
+          },
+          {
+            "kind": "resume-sequential",
+            "label": "two awaits in one body resume in source order; caller environment after a resumed await body",
+            "source": "language \"moriarty-sherlock-draft/2\";\nprogram Seq {\n  fn pair(n: UInt): UInt { await first(a: UInt) when a == n; await second(b: UInt) when b == a + 1; 100 * a + b }\n  entry 10 + pair(3);\n}\n",
+            "first": {
+              "label": "first",
+              "binders": [
+                [
+                  "a",
+                  "UInt"
+                ]
+              ],
+              "values": [
+                [
+                  "a",
+                  "UInt",
+                  "3"
+                ]
+              ]
+            },
+            "second": {
+              "label": "second",
+              "binders": [
+                [
+                  "b",
+                  "UInt"
+                ]
+              ],
+              "values": [
+                [
+                  "b",
+                  "UInt",
+                  "4"
+                ]
+              ],
+              "bad_values": [
+                [
+                  "b",
+                  "UInt",
+                  "5"
+                ]
+              ]
+            },
+            "expect": "314",
+            "shadow": {
+              "source": "language \"moriarty-sherlock-draft/2\";\nprogram Scope {\n  fn g(x: UInt): UInt { (await r(y: UInt) when y == 1; y + x) + x }\n  entry g(5);\n}\n",
+              "label": "r",
+              "binders": [
+                [
+                  "y",
+                  "UInt"
+                ]
+              ],
+              "values": [
+                [
+                  "y",
+                  "UInt",
+                  "1"
+                ]
+              ],
+              "expect": "11"
+            }
           }
         ]
       }
