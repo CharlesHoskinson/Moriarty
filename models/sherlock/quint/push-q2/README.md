@@ -13,6 +13,7 @@ read without edits in the owning `Moriarty-wt-factory-u` worktree.
 | `financialSegments.qnt` | `crates/mori-core/src/stage/sherlock2.rs::{run_segment,fail,charge,resume,check_policy}`; ordered committed effects, F01 100/40 → 68/10 → 57/0, local rollback, sealed fee retention on rejection/exhaustion, fuel conservation. |
 | `financialAccounting.qnt` | `crates/mori-core/src/runtime.rs::move_funds`, `helper_machine/shared/fin_carrier.rs::apply_transfer`, `stage/sherlock2.rs::accounting`; exact UInt128 checked transfers, self transfers, asset isolation and saturating aggregate reports. |
 | `feePoolHistory.qnt` | Imports `specs/quint/fee_pool_component.qnt` unchanged; adds independent history replay for cash and residual liabilities, matching transfer/discharge totals and reserve coverage. |
+| `financialImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,charge}`; a conditional projection of counter import/charge with all other admission premises fixed valid. |
 
 The financial engine source SHA-256 at intake was
 `6054a66cb35e7943f0c18013faf2316c9c9824de3a8b84bef97c8bd6f4f8a744`;
@@ -63,6 +64,15 @@ initial supply MAX per asset. Each operation is atomic. Sampling picks amounts
 0, 1, MAX−1 and MAX; exact history sums use mathematical integers. No ledger
 coin custody or authenticated source is inferred.
 
+The import model assumes canonical public envelope/JSON, matching program, plan,
+policy, waiting site and captures, valid Core/2 logical counters and snapshot,
+and a true resume guard. Only the host fuel-counter triple varies. R0's
+canonicality and each UInt128 field's range are modelled; actual envelope
+construction and R1–R7 are fixed successful premises. `ArithmeticOverflow`
+records the debug host operation's arithmetic failure boundary, not a published
+successor or a claim about release overflow settings. This model does not claim
+an end-to-end forged-checkpoint Rust reproduction or an accepted on-chain proof.
+
 The fee-pool wrapper preserves the existing model's finite one-epoch, fixed-seat
 domain and external time/auth/membership premises. The upstream driver samples
 gross amounts 99/100/111 and the original bounded action inputs. Its invariants
@@ -73,14 +83,14 @@ are conditional source accounting, not a claim of universal financial coverage.
 Run `python3 models/sherlock/quint/push-q2/check_models.py` from the repository.
 It typechecks each model, runs its deterministic tests, and samples 10,000 traces
 of at most 30 steps with witnesses. It also runs the original fee-pool tests and
-reproduces two expected counterexamples. It writes `verification.json` and ITF
+reproduces three expected counterexamples. It writes `verification.json` and ITF
 traces only inside this directory. The script exits successfully only when
-positive checks pass and the two candidate design properties fail specifically
+positive checks pass and the three candidate design properties fail specifically
 with an invariant violation. The expected failures characterize current code;
 they are not acceptance evidence for the violated design requirements.
 
 `financialSegments` uses the Rust evaluator with four threads. The accounting
-and fee-pool models require `--backend typescript`: Quint 0.32.0's Rust evaluator
+and fee-pool/import models require `--backend typescript`: Quint 0.32.0's Rust evaluator
 rejects integer literals outside i64, including UInt64/UInt128 maxima. Every
 sampled check explicitly sets `--max-samples 10000`; passing `--seed` alone makes
 this Quint version run only one sample. This is sampled simulation, not exhaustive
@@ -102,8 +112,18 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
    without any balance overflow. Characterizations:
    `saturatedGrossCounterexampleTest`, `roundTripOverflowCounterexampleTest`;
    candidate `exactReportInv`, trace `accounting-overflow.itf.json`.
+3. **Unvalidated imported work counters (financial R0/SI-03).** Under the import
+   model's fixed valid non-counter premises, canonical fields initial = 0,
+   remaining = 1, consumed = 0 pass import and charge, although
+   remaining + consumed ≠ initial. Canonical initial = MAX, remaining = 1,
+   consumed = MAX also passes import and reaches the unchecked `consumed += 1`
+   arithmetic boundary. The report adapter's `decode_body` checks canonical
+   encoding; later identity/logical-plan/snapshot checks never jointly validate
+   this counter triple. Characterizations:
+   `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`;
+   candidate `acceptedWorkInv`, trace `financial-import-counters.itf.json`.
 
-Both findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
+All findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
 `sherlock-lean-2`. These are model/source disagreements, not claims that a Rust
 integration reproduction was executed. The checked existing `account_effects`
 adapter distinguishes exact amounts from overflow; the newer host aggregate

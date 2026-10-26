@@ -15,6 +15,7 @@ def checks():
         ("financialSegments", "allInvariants", "rust", ["paidPrefix", "retainedFee", "rejected", "exhausted", "completed", "cutObserved", "notReadyObserved"]),
         ("financialAccounting", "allInvariants", "typescript", ["selfTransfer", "overflowed", "feeObserved"]),
         ("feePoolHistory", "historyInvariants", "typescript", ["wFinish", "wClaimOrdinary", "wClaimDust"]),
+        ("financialImport", "currentCodeInv", "typescript", ["imported", "malformedAccepted", "overflowReached"]),
     ):
         source = str((HERE / (model + ".qnt")).relative_to(ROOT))
         tests = str((HERE / (model + "Test.qnt")).relative_to(ROOT))
@@ -28,6 +29,7 @@ def checks():
     for model, invariant, trace in (
         ("financialSegments", "waitingResumableInv", "waiting-zero-fuel"),
         ("financialAccounting", "exactReportInv", "accounting-overflow"),
+        ("financialImport", "acceptedWorkInv", "financial-import-counters"),
     ):
         backend = "rust" if model == "financialSegments" else "typescript"
         yield trace, ["quint", "run", str((HERE / (model + ".qnt")).relative_to(ROOT)),
