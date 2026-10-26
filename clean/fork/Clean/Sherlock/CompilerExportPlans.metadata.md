@@ -1,7 +1,9 @@
 # Real host export-plan contracts (U031)
 
 This `Init`-only module follows the selected-record Rust API in
-`sherlock/export_plans.rs` at `3bb404f15`. It is separate from the historical
+`sherlock/export_plans.rs` at `3bb404f15`, byte-identical in the current S9
+union `93f61a41c`. The current JSON also pins that union's CLI/module wiring.
+It is separate from the historical
 Python example in CompilerResidualization. Source/query hashes and exact Rust
 source pins are in the matching JSON. The module models data-shape and
 classification laws, not an extracted Rust implementation.
