@@ -31,13 +31,18 @@ caller frames does not establish the concrete result 14 for `10+inner(3)`.
 The explicit wrapper fields must agree with projections of the complete opaque
 state. `SuspensionProjection` and `ProjectionAgrees` state that link for frames,
 remaining/consumed work, reference cursor and resume epoch. `InstallerCorrect`
-requires the complete-state installer to preserve actual frames and update
+requires the complete-state installer to preserve the actual retained caller component and update
 actual counters/header consistently. The agreement-preservation theorem takes
 those premises explicitly. A certified negative control shows that an arbitrary
 installer can change complete-state frames while the wrapper's caller-frame
 field stays unchanged. Field-only retention/charge laws therefore cannot certify
 complete-state preservation. Heap, environment, allocation, value and concrete
 Rust correspondence obligations remain separate.
+The caller component is not a claim that the entire active scope-frame stack
+stays unchanged. Quint-1's reported post-resume ScopeF/SI-20 issue and its
+frame-capacity consequences require a concrete fix/projection and Rust unit or
+technical-checkpoint evidence. The evaluator notes that the current /2 CLI has
+no post-resume technical cut exposing this check. This agent ran no such probe.
 
 U2's later uncommitted pure/financial drivers now use checked UInt64 resume-epoch
 addition and refuse a ready observation at the maximum epoch. `resume` explicitly
@@ -56,10 +61,10 @@ stock-verifier or ledger correspondence is established here.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran a capped package
-build with Lean 4.33.1. `lean-build-6.log` shows the projection-consistency
-follow-up and all thirteen axiom queries succeeding, then reports the complete
-17-job package build successful with exit 0. Six queries have empty axiom sets
-and seven contain only `propext`; no custom or
+build with Lean 4.33.1. `lean-build-10.log` shows the checked-epoch
+follow-up and all seventeen axiom queries succeeding, then reports the complete
+17-job package build successful with exit 0. Nine queries have empty axiom sets
+and eight contain only `propext`; no custom or
 `sorry` axiom appears. The JSON records the exact sets and pins the observed
 log by digest. The agent read the complete log and checked source pins but did
 not run the build. Its sandbox still cannot connect `memcap` to the user scope
@@ -67,6 +72,3 @@ bus; no uncapped build was attempted. A read-only follow-up review confirmed the
 projection gap resolved at the contract-model level, with no further substantive
 issue. That review ran no builds and establishes no concrete Rust correspondence.
 
-**The checked-epoch follow-up has not yet been compiled.** Its source/query pins
-are current; the preceding thirteen-query build is retained as historical
-evidence pending current compilation and axiom checks.
