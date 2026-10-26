@@ -117,12 +117,12 @@ still declaring no native acceptance or adoption.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
-package build with Lean 4.33.1. The recorded `lean-build-8.log` shows the actual
-U024 replay follow-up and all twenty-seven dependency queries succeeding, then
-a successful 17-job package build and exit 0. Nineteen queries have empty axiom
-sets; eight contain only `propext`. The JSON retains those historical sets and
+package build with Lean 4.33.1. The recorded `lean-build-9.log` shows the actual
+U024 replay and U023 receipt follow-ups with all thirty dependency queries
+succeeding, then a successful 17-job package build and exit 0. Twenty queries
+have empty axiom sets; ten contain only `propext`. The JSON records those sets and
 pins the successful observed log by digest. The agent read the complete log
-and checked the recorded source pins; it did not run the build itself.
+and checked the current owned source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
 
@@ -130,6 +130,3 @@ Actual `mori simulate` integration for U031/U033 is still pending. The U024
 replay now has its own Rust source and observed holdout evidence as described
 above, without supplying the other compiler obligations or a refinement proof.
 
-**The receipt-class additions have not yet been compiled.** Their source and
-query pins are current; the preceding twenty-seven-query build remains historical
-evidence until the new declarations and dependency queries are rechecked.
