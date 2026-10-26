@@ -659,3 +659,6 @@ pub use c6_construct_nullary_step::{
 pub use c6_program_context_canonical::{
     C6ProgramContextExpressionCaptureBlock, C6ProgramContextExpressionCaptureInputs,
 };
+
+#[cfg(test)]
+mod c6_leaf_sizing_tests;
