@@ -1,7 +1,7 @@
 import Init
 
 /-!
-U031: source-level contract of sherlock/export_plans.rs at 97412cb2c.
+U031: source-level contract of sherlock/export_plans.rs at 32fcbce3e.
 This is the real selected-record host exporter, separate from the earlier
 Python reporting model. Classification and data-shape laws below do not prove
 Rust/JSON correspondence, executable constraints/witnesses or native acceptance.
@@ -141,7 +141,7 @@ theorem pending_return_frame_is_not_current (rule : Nat) (returned : Bool)
   cases returned <;> rfl
 
 inductive BindingSort where
-  | uint128 | bool | uint128List | uint128Tree | control
+  | uint128 | bool | uint128List | uint128Tree | control | checkedU128Result
   deriving DecidableEq, Repr
 
 structure Atom where
@@ -153,21 +153,40 @@ structure Binding where
   sort : BindingSort
   source : Option String
   value : Option String
+  errorCode : Option Nat
 
 inductive PrimitiveOutcome where
   | success (atom : Atom) | error (code : Nat) | notPrimitive
 
-/-- Mirrors the current fallback: errors omit a value/error variant and expose
-only a UInt128 type placeholder. This is a recorded limitation, not a proof that
-the placeholder is a valid result of the selected reference operation. -/
-def resultBinding : PrimitiveOutcome → Binding
+/-- Historical 97412cb2c fallback, retained as a negative discriminator. -/
+def legacyResultBinding : PrimitiveOutcome → Binding
   | .success atom =>
-      ⟨"result", atom.sort, some "after.control.primitive_result", some atom.display⟩
-  | .error _ | .notPrimitive => ⟨"result", .uint128, none, none⟩
+      ⟨"result", atom.sort, some "after.control.primitive_result", some atom.display, none⟩
+  | .error _ | .notPrimitive => ⟨"result", .uint128, none, none, none⟩
 
-theorem error_result_has_no_bound_value (code : Nat) :
-    (resultBinding (.error code)).value = none ∧
-      (resultBinding (.error code)).source = none := ⟨rfl, rfl⟩
+theorem legacy_error_result_has_no_bound_value (code : Nat) :
+    (legacyResultBinding (.error code)).value = none ∧
+      (legacyResultBinding (.error code)).source = none := ⟨rfl, rfl⟩
+
+/-- 32fcbce3e records checked failure as CheckedU128Result with source, value
+and error_code. The supplied printer must be related to the actual KDisplay. -/
+def resultBinding (renderError : Nat → String) : PrimitiveOutcome → Binding
+  | .success atom =>
+      ⟨"result", atom.sort, some "after.control.primitive_result", some atom.display, none⟩
+  | .error code =>
+      ⟨"result", .checkedU128Result, some "after.control.primitive_result",
+        some (renderError code), some code⟩
+  | .notPrimitive => ⟨"result", .checkedU128Result, none, none, none⟩
+
+theorem error_result_retains_code_and_value (renderError : Nat → String) (code : Nat) :
+    let binding := resultBinding renderError (.error code)
+    binding.sort = .checkedU128Result ∧
+      binding.source = some "after.control.primitive_result" ∧
+      binding.value = some (renderError code) ∧ binding.errorCode = some code := ⟨rfl, rfl, rfl, rfl⟩
+
+theorem unavailable_result_is_typed_only (renderError : Nat → String) :
+    (resultBinding renderError .notPrimitive).sort = .checkedU128Result ∧
+      (resultBinding renderError .notPrimitive).value = none := ⟨rfl, rfl⟩
 
 structure Identified (Body : Type) where
   body : Body

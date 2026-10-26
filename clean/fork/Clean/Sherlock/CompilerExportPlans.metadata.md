@@ -1,7 +1,7 @@
 # Real host export-plan contracts (U031)
 
 This `Init`-only module follows the selected-record Rust API in
-`sherlock/export_plans.rs` at `97412cb2c`. It is separate from the historical
+`sherlock/export_plans.rs` at `32fcbce3e`. It is separate from the historical
 Python example in CompilerResidualization. Source/query hashes and exact Rust
 source pins are in the matching JSON. The module models data-shape and
 classification laws, not an extracted Rust implementation.
@@ -14,13 +14,16 @@ an operation. Checked multiplication at rule 153 and ReturnF restoration at
 185 have named statements. Concrete stream selection, source/state binding and
 complete operational correspondence remain unproved.
 
-Two source limitations are mirrored explicitly, not silently repaired. The
-current generic Eq operator is labeled `UInt128Eq`, despite the reference and
-draft checker admitting arbitrary/unequal operand sorts. Checked primitive
-failure produces an ordinary UInt128 type placeholder without a bound value,
-source path or error variant. `error_result_has_no_bound_value` states that
-omission; it does not validate the placeholder as a computation result. Both
-findings were reported to the source owner/coordinator.
+The generic Eq operator is still labeled `UInt128Eq`, despite the reference and
+draft checker admitting arbitrary/unequal operand sorts. That source limitation
+was reported and is not silently repaired by the model. The checked-failure
+placeholder from `97412cb2c` is retained as `legacyResultBinding`; its theorem
+states the historical missing value/source. At `32fcbce3e`, failure is instead
+typed `CheckedU128Result`, with a bound source, displayed value and error code.
+The current model states retention of all those fields. The supplied error
+printer still requires correspondence to actual KDisplay; a typed-only result
+remains explicitly unbound when no primitive result is present. These data laws
+prove neither the arithmetic operation nor complete failure/witness semantics.
 
 Operation bindings and witness-node bindings are distinct typed records. Separate
 constraint/witness plan types share one manifest association. The source's
@@ -46,8 +49,12 @@ actual CLI binding still needs proof. No cross-profile fuel equality, circuit,
 proof, stock-verifier or ledger result follows.
 
 There are no new `sorry` or custom axioms. The sibling Axioms module lists all
-nineteen dependency queries. **This new module has not been compiled.** Its Lake
-glob needs no shared build-file edit. Capped execution in this agent's sandbox
-remains blocked by the user scope bus; no uncapped build was attempted. Rust
-tests, artifact/CLI integration and the U031 holdout were still pending when the
-source was inspected; no passing runtime evidence is claimed.
+current dependency queries. Sherlock-fable's capped `lean-build-12.log` checked
+the preceding nineteen-statement module and its queries: nine empty axiom sets,
+ten containing only `propext`, then a successful complete 19-job build and exit 0.
+That receipt is pinned historically. **The checked-error follow-up has not yet
+been compiled:** its current source/query pins contain twenty-one statements.
+The Lake glob needs no shared build-file edit. This agent read the build log and
+source pins; its own capped execution remains blocked by the user scope bus, and
+it attempted no uncapped build. Rust tests, artifact/CLI integration and the
+U031 holdout have no independently inspected passing receipt here.
