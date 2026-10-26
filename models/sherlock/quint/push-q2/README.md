@@ -14,6 +14,7 @@ read without edits in the owning `Moriarty-wt-factory-u` worktree.
 | `financialAccounting.qnt` | `crates/mori-core/src/runtime.rs::move_funds`, `helper_machine/shared/fin_carrier.rs::apply_transfer`, `stage/sherlock2.rs::accounting`; exact UInt128 checked transfers, self transfers, asset isolation and saturating aggregate reports. |
 | `feePoolHistory.qnt` | Imports `specs/quint/fee_pool_component.qnt` unchanged; adds independent history replay for cash and residual liabilities, matching transfer/discharge totals and reserve coverage. |
 | `financialImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,charge}`; a conditional projection of counter import/charge with all other admission premises fixed valid. |
+| `financialSegmentImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,run_segment,fee_end}`; conditional projection of pending `FinImage2.segment` vs `FinOutcome2::Waiting{site}` admission and `run_segment` slice/index bounds. |
 
 The financial engine source SHA-256 at intake was
 `6054a66cb35e7943f0c18013faf2316c9c9824de3a8b84bef97c8bd6f4f8a744`;
@@ -122,10 +123,34 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
    this counter triple. Characterizations:
    `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`;
    candidate `acceptedWorkInv`, trace `financial-import-counters.itf.json`.
+   Runtime host confirmation (`probe_financial_import.py`, recorded in
+   `financial-import-rust-probe.json`): resealing `FinImage2` with
+   `initial_fuel = 0, remaining_work = 5, consumed_work = 0` halts (`exit = 0`);
+   resealing with `consumed_work = u128::MAX, remaining_work = 1` returns
+   `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
+   `crates/mori-core/src/stage/sherlock2.rs:217` (`attempt to add with overflow`,
+   `exit = 101`) on a true guard.
+4. **Unvalidated imported pending segment index (financial R0/R1).** `FinImage2`
+   carries both `outcome = Waiting{site}` and `segment: usize`. On resume, R1,
+   R2, R6 and R7 check `site`, while `run_segment` indexes
+   `segments(sp, action)[image.segment]` and `fee_end` slices
+   `statements[begin..end]` with `begin = ordinal(site) + 1`. Neither
+   `decode_body` nor `resume` checks `image.segment == usize::from(site)`.
+   Characterizations: `outOfBoundsSegmentNotReadyTest`,
+   `outOfBoundsSegmentPanicsOnAcceptTest`,
+   `staleSegmentZeroRetainFeesPanicsTest`,
+   `staleSegmentZeroDefaultPolicyFailsPlanCostTest`; candidate
+   `acceptedSegmentInv`, trace `financial-import-segment.itf.json`. Runtime host
+   confirmation (`probe_financial_import.py`): resealing `segment = 2` returns
+   `not_ready` (`exit = 3`) on a false guard and panics at
+   `sherlock2.rs:260` (`index out of bounds`, `exit = 101`) on a true guard;
+   resealing `segment = 0` under `retain-guaranteed-fees/1` panics at
+   `sherlock2.rs:137` (`slice index starts at 4 but ends at 3`, `exit = 101`).
 
 All findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
-`sherlock-lean-2`. These are model/source disagreements, not claims that a Rust
-integration reproduction was executed. The checked existing `account_effects`
+`sherlock-lean-2`. Host checkpoint cases are runtime-confirmed read-only via
+`probe_financial_import.py` (`financial-import-rust-probe.json`); no accepted
+on-chain proof is claimed. The checked existing `account_effects`
 adapter distinguishes exact amounts from overflow; the newer host aggregate
 silently saturates. Concrete target phase evidence remains pending, as U020
 explicitly states.

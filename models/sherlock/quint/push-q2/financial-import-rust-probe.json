@@ -1,0 +1,470 @@
+{
+  "scope": "Executed read-only host diagnostic on synthetic financial checkpoints; no Rust build, native proof or chain operation.",
+  "binary": "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+  "binarySha256": "008400d398b6710ecb05b588230409d1dc38c45da96a21e5bfc5faf029cda0ac",
+  "engineSha256": "5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b",
+  "reportAdapterSha256": "5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19",
+  "source": "language \"moriarty/2\";\nagreement F01PaidPrefixes {\n  asset U = { network: \"local\", issuer: \"f01-oracle\", reference: \"U\", scale: 0 };\n  state marker: UInt = 0;\n  action open() {\n    liability(\"pay-beneficiary\", U, \"reserve\", \"beneficiary\", 40);\n  }\n  action pay() {\n    fee(U, \"reserve\", \"fee_recipient\", 2);\n    transfer(U, \"reserve\", \"beneficiary\", 30);\n    discharge(\"pay-beneficiary\", 30);\n    await second(go: Bool) when go;\n    fee(U, \"reserve\", \"fee_recipient\", 1);\n    transfer(U, \"reserve\", \"beneficiary\", 10);\n    discharge(\"pay-beneficiary\", 10);\n  }\n}\n",
+  "scenario": {
+    "balances": [
+      {
+        "account": "beneficiary",
+        "amount": "0",
+        "asset": {
+          "issuer": "f01-oracle",
+          "network": "local",
+          "reference": "U",
+          "scale": 0
+        }
+      },
+      {
+        "account": "fee_recipient",
+        "amount": "0",
+        "asset": {
+          "issuer": "f01-oracle",
+          "network": "local",
+          "reference": "U",
+          "scale": 0
+        }
+      },
+      {
+        "account": "reserve",
+        "amount": "100",
+        "asset": {
+          "issuer": "f01-oracle",
+          "network": "local",
+          "reference": "U",
+          "scale": 0
+        }
+      }
+    ],
+    "inputs": {},
+    "liabilities": [
+      {
+        "amount": "40",
+        "asset": {
+          "issuer": "f01-oracle",
+          "network": "local",
+          "reference": "U",
+          "scale": 0
+        },
+        "creditor": "beneficiary",
+        "debtor": "reserve",
+        "name": "pay-beneficiary"
+      }
+    ],
+    "state": {
+      "marker": {
+        "type": "UInt",
+        "value": "0"
+      }
+    }
+  },
+  "cases": [
+    {
+      "label": "start",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--action",
+        "pay",
+        "--scenario",
+        "scenario.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--checkpoint-out",
+        "waiting.bin"
+      ],
+      "exit": 0,
+      "stdout": "{\n  \"action\": \"pay\",\n  \"attempted_work\": \"7\",\n  \"authentication\": \"none\",\n  \"binders\": [\n    {\n      \"name\": \"go\",\n      \"type\": \"Bool\"\n    }\n  ],\n  \"checkpoint\": \"c57bb4ffc4a8968dc865da01b164e976d7666c753890b926f0b48c8199948f1a\",\n  \"checkpoint_file\": \"waiting.bin\",\n  \"committed_work\": \"4\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"2\",\n      \"gross_debit\": \"32\",\n      \"recipient_receipt\": \"30\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"7\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"30\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"2\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"68\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"10\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [\n      {\n        \"amount\": \"10\",\n        \"creditor\": \"beneficiary\",\n        \"debtor\": \"reserve\",\n        \"name\": \"pay-beneficiary\"\n      }\n    ],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"frames\": [],\n  \"label\": \"second\",\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"resume_epoch\": \"0\",\n  \"site\": 1,\n  \"status\": \"waiting\"\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0054
+    },
+    {
+      "label": "ordinaryAccept",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 0,
+      "stdout": "{\n  \"authentication\": \"none\",\n  \"checkpoint\": \"be03fa6f666503b9e79568ebc96c3c0eb82012c46e5401cfc22e310b7aa21f20\",\n  \"checkpoint_file\": \"output.bin\",\n  \"committed_work\": \"9\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"3\",\n      \"gross_debit\": \"43\",\n      \"recipient_receipt\": \"40\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        },\n        {\n          \"amount\": \"1\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"0\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"10\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"15\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"40\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"3\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"57\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"0\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"resume_epoch\": \"1\",\n  \"status\": \"halted\",\n  \"value\": {\n    \"type\": \"Unit\",\n    \"value\": \"unit\"\n  }\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0053,
+      "mutations": {},
+      "observationGo": true,
+      "inputUnchanged": true,
+      "outputExists": true,
+      "outputEqualsInput": false
+    },
+    {
+      "label": "malformedCountersAccepted",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 0,
+      "stdout": "{\n  \"authentication\": \"none\",\n  \"checkpoint\": \"4f1b3185d11e312cfc6505535e4af28d6f756d2a87990326a99dc3147489f8d2\",\n  \"checkpoint_file\": \"output.bin\",\n  \"committed_work\": \"5\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"3\",\n      \"gross_debit\": \"43\",\n      \"recipient_receipt\": \"40\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        },\n        {\n          \"amount\": \"1\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"0\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"10\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"15\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"40\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"3\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"57\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"0\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"resume_epoch\": \"1\",\n  \"status\": \"halted\",\n  \"value\": {\n    \"type\": \"Unit\",\n    \"value\": \"unit\"\n  }\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0047,
+      "mutations": {
+        "initial_fuel": "0",
+        "remaining_work": "5",
+        "consumed_work": "0"
+      },
+      "observationGo": true,
+      "inputUnchanged": true,
+      "outputExists": true,
+      "outputEqualsInput": false
+    },
+    {
+      "label": "maximumConsumedFalseGuard",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 3,
+      "stdout": "{\n  \"attempted_work\": \"2\",\n  \"authentication\": \"none\",\n  \"checkpoint\": \"e1c4856948d0fb6af9c2d9b7853d22e32143eef8af87f8eb51c8aa8de4223840\",\n  \"checkpoint_file\": \"output.bin\",\n  \"committed_work\": \"340282366920938463463374607431768211455\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"2\",\n      \"gross_debit\": \"32\",\n      \"recipient_receipt\": \"30\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"7\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"30\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"2\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"68\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"10\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [\n      {\n        \"amount\": \"10\",\n        \"creditor\": \"beneficiary\",\n        \"debtor\": \"reserve\",\n        \"name\": \"pay-beneficiary\"\n      }\n    ],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"reason\": \"guard_false\",\n  \"site\": 1,\n  \"status\": \"not_ready\"\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0045,
+      "mutations": {
+        "initial_fuel": "340282366920938463463374607431768211455",
+        "remaining_work": "1",
+        "consumed_work": "340282366920938463463374607431768211455"
+      },
+      "observationGo": false,
+      "inputUnchanged": true,
+      "outputExists": true,
+      "outputEqualsInput": true
+    },
+    {
+      "label": "maximumConsumedTrueGuard",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 101,
+      "stdout": "",
+      "stderr": "\nthread 'main' (1300703) panicked at crates/mori-core/src/stage/sherlock2.rs:217:5:\nattempt to add with overflow\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n",
+      "wallSeconds": 0.0041,
+      "mutations": {
+        "initial_fuel": "340282366920938463463374607431768211455",
+        "remaining_work": "1",
+        "consumed_work": "340282366920938463463374607431768211455"
+      },
+      "observationGo": true,
+      "inputUnchanged": true,
+      "outputExists": false,
+      "outputEqualsInput": false
+    },
+    {
+      "label": "outOfBoundsSegmentFalseGuard",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 3,
+      "stdout": "{\n  \"attempted_work\": \"2\",\n  \"authentication\": \"none\",\n  \"checkpoint\": \"ff18da7a45c8c281b6b1a86819ccd795fb7f039e23a7386fbc5cb25baa11b7d5\",\n  \"checkpoint_file\": \"output.bin\",\n  \"committed_work\": \"4\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"2\",\n      \"gross_debit\": \"32\",\n      \"recipient_receipt\": \"30\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"7\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"30\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"2\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"68\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"10\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 2\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [\n      {\n        \"amount\": \"10\",\n        \"creditor\": \"beneficiary\",\n        \"debtor\": \"reserve\",\n        \"name\": \"pay-beneficiary\"\n      }\n    ],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"reason\": \"guard_false\",\n  \"site\": 1,\n  \"status\": \"not_ready\"\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.004,
+      "mutations": {
+        "segment": 2
+      },
+      "observationGo": false,
+      "inputUnchanged": true,
+      "outputExists": true,
+      "outputEqualsInput": true
+    },
+    {
+      "label": "outOfBoundsSegmentTrueGuard",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 101,
+      "stdout": "",
+      "stderr": "\nthread 'main' (1300705) panicked at crates/mori-core/src/stage/sherlock2.rs:260:40:\nindex out of bounds: the len is 2 but the index is 2\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n",
+      "wallSeconds": 0.0033,
+      "mutations": {
+        "segment": 2
+      },
+      "observationGo": true,
+      "inputUnchanged": true,
+      "outputExists": false,
+      "outputEqualsInput": false
+    },
+    {
+      "label": "staleSegmentZeroRetainFeesTrueGuard",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "input.bin",
+        "--observation",
+        "observation.json",
+        "--checkpoint-out",
+        "output.bin"
+      ],
+      "exit": 101,
+      "stdout": "",
+      "stderr": "\nthread 'main' (1300706) panicked at crates/mori-core/src/stage/sherlock2.rs:137:15:\nslice index starts at 4 but ends at 3\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n",
+      "wallSeconds": 0.0036,
+      "mutations": {
+        "segment": 0
+      },
+      "observationGo": true,
+      "inputUnchanged": true,
+      "outputExists": false,
+      "outputEqualsInput": false
+    },
+    {
+      "label": "zeroFuelWaitingStart",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config-fuel4.json",
+        "--target",
+        "target.json",
+        "--action",
+        "pay",
+        "--scenario",
+        "scenario.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--checkpoint-out",
+        "waiting-fuel4.bin"
+      ],
+      "exit": 0,
+      "stdout": "{\n  \"action\": \"pay\",\n  \"attempted_work\": \"7\",\n  \"authentication\": \"none\",\n  \"binders\": [\n    {\n      \"name\": \"go\",\n      \"type\": \"Bool\"\n    }\n  ],\n  \"checkpoint\": \"7a88f348c102884c86b6d78425342ff289d7e8d4d61ed9c571e53bbbc8d87911\",\n  \"checkpoint_file\": \"waiting-fuel4.bin\",\n  \"committed_work\": \"4\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"2\",\n      \"gross_debit\": \"32\",\n      \"recipient_receipt\": \"30\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"7\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"30\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"2\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"68\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"10\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [\n      {\n        \"amount\": \"10\",\n        \"creditor\": \"beneficiary\",\n        \"debtor\": \"reserve\",\n        \"name\": \"pay-beneficiary\"\n      }\n    ],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"frames\": [],\n  \"label\": \"second\",\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"resume_epoch\": \"0\",\n  \"site\": 1,\n  \"status\": \"waiting\"\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0038,
+      "checkpointRemainingWork": "0",
+      "checkpointConsumedWork": "4"
+    },
+    {
+      "label": "zeroFuelWaitingResumeExhausted",
+      "command": [
+        "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+        "simulate",
+        "source.mori",
+        "--execution-profile",
+        "sherlock-helper-microstep/2",
+        "--source-profile",
+        "moriarty/2",
+        "--execution-config",
+        "config-fuel4.json",
+        "--target",
+        "target.json",
+        "--phase-policy",
+        "retain-guaranteed-fees/1",
+        "--resume",
+        "waiting-fuel4.bin",
+        "--observation",
+        "obs4.json"
+      ],
+      "exit": 1,
+      "stdout": "{\n  \"authentication\": \"none\",\n  \"checkpoint\": \"dea73b29d5dcac077c2ba5f5eba9800793ab568a97ef672b131af0c7c22deb48\",\n  \"committed_work\": \"4\",\n  \"consumption\": \"untracked\",\n  \"fin\": {\n    \"accounting\": {\n      \"fees\": \"2\",\n      \"gross_debit\": \"32\",\n      \"recipient_receipt\": \"30\"\n    },\n    \"committed\": {\n      \"effects\": [\n        {\n          \"amount\": \"2\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Fee\",\n          \"to\": \"fee_recipient\"\n        },\n        {\n          \"amount\": \"30\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"from\": \"reserve\",\n          \"kind\": \"Transfer\",\n          \"to\": \"beneficiary\"\n        },\n        {\n          \"after\": \"10\",\n          \"asset\": {\n            \"issuer\": \"f01-oracle\",\n            \"network\": \"local\",\n            \"reference\": \"U\",\n            \"scale\": 0\n          },\n          \"before\": \"40\",\n          \"creditor\": \"beneficiary\",\n          \"debtor\": \"reserve\",\n          \"kind\": \"Liability\",\n          \"name\": \"pay-beneficiary\"\n        }\n      ],\n      \"logical_work\": \"7\",\n      \"snapshot\": {\n        \"balances\": [\n          {\n            \"account\": \"beneficiary\",\n            \"amount\": \"30\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"fee_recipient\",\n            \"amount\": \"2\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          },\n          {\n            \"account\": \"reserve\",\n            \"amount\": \"68\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            }\n          }\n        ],\n        \"liabilities\": [\n          {\n            \"amount\": \"10\",\n            \"asset\": {\n              \"issuer\": \"f01-oracle\",\n              \"network\": \"local\",\n              \"reference\": \"U\",\n              \"scale\": 0\n            },\n            \"creditor\": \"beneficiary\",\n            \"debtor\": \"reserve\",\n            \"name\": \"pay-beneficiary\"\n          }\n        ],\n        \"state\": {\n          \"marker\": {\n            \"type\": \"UInt\",\n            \"value\": \"0\"\n          }\n        }\n      }\n    },\n    \"discarded_tentative\": {\n      \"effects\": [],\n      \"segment_index\": 1\n    },\n    \"ledger_rollback\": \"none-inferred\",\n    \"phase_policy\": \"retain-guaranteed-fees/1\",\n    \"residual_duties\": [\n      {\n        \"amount\": \"10\",\n        \"creditor\": \"beneficiary\",\n        \"debtor\": \"reserve\",\n        \"name\": \"pay-beneficiary\"\n      }\n    ],\n    \"retained_by_policy\": {\n      \"effects\": [],\n      \"policy\": \"retain-guaranteed-fees/1\"\n    }\n  },\n  \"profile\": \"sherlock-helper-microstep/2\",\n  \"qualification\": \"local-reference-suspension\",\n  \"reason\": \"Fuel\",\n  \"status\": \"exhausted\"\n}\n",
+      "stderr": "",
+      "wallSeconds": 0.0039
+    }
+  ],
+  "config": {
+    "format": "sherlock-draft-host-config/1",
+    "profile": "sherlock-helper-microstep/2",
+    "grammar": "DedicatedSorts",
+    "finance": "Absent",
+    "bounds": {
+      "code_rows": "512",
+      "function_rows": "8",
+      "code_child_slots": "512",
+      "parameter_slots": "16",
+      "pattern_rows": "32",
+      "match_plan_rows": "16",
+      "match_arm_rows": "32",
+      "type_rows": "16",
+      "constructor_rows": "16",
+      "constructor_field_slots": "32",
+      "max_arity": "8",
+      "constant_nodes": "64",
+      "constant_field_slots": "64",
+      "data_nodes": "512",
+      "data_field_slots": "512",
+      "environment_cells": "512",
+      "frames": "256",
+      "helper_tasks": "256",
+      "serialization_bytes": "1048576",
+      "max_reference_work": "4000",
+      "max_helper_work": "4000",
+      "step_cap": "4000"
+    },
+    "layout": {
+      "layout_version": [
+        "moriarty",
+        "sherlock-helper-microstep-hostonly/1"
+      ],
+      "field_id": null,
+      "widths": null,
+      "scalar_layout_id": null,
+      "capacities": {
+        "name_rows": "128",
+        "name_bytes": "2048",
+        "occurrence_path_slots": "4096",
+        "value_slots": "8192"
+      },
+      "boundary_capacities_present": false
+    },
+    "fuel": {
+      "kind": "Nat",
+      "value": "12"
+    },
+    "stack": {
+      "kind": "Nat",
+      "value": "128"
+    },
+    "preprocessing": {
+      "max_source_bytes": "16384",
+      "max_tokens": "2048",
+      "max_functions": "8",
+      "max_parameters_per_function": "8",
+      "max_total_parameters": "32",
+      "max_ast_nodes": "1024",
+      "max_parse_depth": "64",
+      "max_structural_ast_depth": "32",
+      "max_type_depth": "32",
+      "max_copy_depth": "32",
+      "max_copy_expr_nodes": "1024",
+      "max_copy_match_arms": "64",
+      "max_copy_name_bytes": "512",
+      "max_copy_list_elements": "256",
+      "max_copy_tree_nodes": "256",
+      "max_copy_tree_depth": "32"
+    }
+  }
+}

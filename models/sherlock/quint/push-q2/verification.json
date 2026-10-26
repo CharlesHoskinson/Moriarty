@@ -126,8 +126,60 @@
       "seed": "17",
       "maxSamples": 10000,
       "maxSteps": 30
+    },
+    {
+      "model": "financialSegmentImport",
+      "typecheckExit": 0,
+      "tests": 6,
+      "testExit": 0,
+      "testReportedMillis": 61,
+      "simulation": {
+        "backend": "rust",
+        "nThreads": 4,
+        "seed": "17",
+        "invariant": "currentCodeInv",
+        "samples": 10000,
+        "maxSteps": 30,
+        "exit": 0,
+        "reportedMillis": 921,
+        "witnesses": {
+          "imported": 4983,
+          "malformedSegmentAccepted": 3710,
+          "boundsPanicReached": 1531,
+          "notReadyWithMalformedSegment": 1842
+        }
+      }
+    },
+    {
+      "model": "financialSegmentImport",
+      "candidateInvariant": "acceptedSegmentInv",
+      "expectedViolation": true,
+      "trace": "financial-import-segment.itf.json",
+      "backend": "rust",
+      "seed": "17",
+      "nThreads": 1,
+      "maxSamples": 10000,
+      "maxSteps": 30
     }
   ],
+  "runtimeProbe": {
+    "script": "probe_financial_import.py",
+    "output": "financial-import-rust-probe.json",
+    "binary": "/home/charles/repos/Moriarty-wt-factory-u/target/debug/mori",
+    "binarySha256": "008400d398b6710ecb05b588230409d1dc38c45da96a21e5bfc5faf029cda0ac",
+    "cases": {
+      "start": 0,
+      "ordinaryAccept": 0,
+      "malformedCountersAccepted": 0,
+      "maximumConsumedFalseGuard": 3,
+      "maximumConsumedTrueGuard": 101,
+      "outOfBoundsSegmentFalseGuard": 3,
+      "outOfBoundsSegmentTrueGuard": 101,
+      "staleSegmentZeroRetainFeesTrueGuard": 101,
+      "zeroFuelWaitingStart": 0,
+      "zeroFuelWaitingResumeExhausted": 1
+    }
+  },
   "contractReview": {
     "id": "U020",
     "ownerCommit": "c0fb7664d",

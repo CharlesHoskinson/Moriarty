@@ -1,0 +1,20 @@
+module financialSegmentImportTest {
+  import financialSegmentImport.* from "./financialSegmentImport"
+  run validSegmentRunsTest = initCase(1, true, true, true).then(importStep)
+    .expect(currentCodeInv and acceptedSegmentInv).then(resumeStep)
+    .expect(currentCodeInv and acceptedSegmentInv and checkpoint.phase == SegmentRan)
+  run outOfBoundsSegmentNotReadyTest = initCase(2, true, true, false).then(importStep)
+    .expect(currentCodeInv and not(acceptedSegmentInv)).then(resumeStep)
+    .expect(currentCodeInv and notReadyWithMalformedSegment)
+  run outOfBoundsSegmentPanicsOnAcceptTest = initCase(2, true, true, true).then(importStep)
+    .expect(currentCodeInv and not(acceptedSegmentInv)).then(resumeStep)
+    .expect(currentCodeInv and checkpoint.phase == IndexOutOfBounds and boundsPanicReached)
+  run staleSegmentZeroRetainFeesPanicsTest = initCase(0, true, true, true).then(importStep)
+    .expect(currentCodeInv and not(acceptedSegmentInv)).then(resumeStep)
+    .expect(currentCodeInv and checkpoint.phase == InvertedSliceRange and boundsPanicReached)
+  run staleSegmentZeroDefaultPolicyFailsPlanCostTest = initCase(0, true, false, true).then(importStep)
+    .expect(currentCodeInv and not(acceptedSegmentInv)).then(resumeStep)
+    .expect(currentCodeInv and checkpoint.phase == PlanCostMismatch)
+  run noncanonicalSegmentRefusedTest = initCase(2, false, true, true).then(importStep)
+    .expect(currentCodeInv and checkpoint.phase == Refused)
+}
