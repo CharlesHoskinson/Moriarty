@@ -1,0 +1,21 @@
+import Clean.Sherlock.CompilerExportPlans
+
+#print axioms Clean.Sherlock.CompilerExportPlans.request_name_roundtrip
+#print axioms Clean.Sherlock.CompilerExportPlans.duplicate_request_emitted_once
+#print axioms Clean.Sherlock.CompilerExportPlans.zero_position_refused
+#print axioms Clean.Sherlock.CompilerExportPlans.first_position_is_head
+#print axioms Clean.Sherlock.CompilerExportPlans.classification_ignores_pending_frames
+#print axioms Clean.Sherlock.CompilerExportPlans.checked_mul_classifies_rule153
+#print axioms Clean.Sherlock.CompilerExportPlans.return_frame_classifies_rule185
+#print axioms Clean.Sherlock.CompilerExportPlans.pending_return_frame_is_not_current
+#print axioms Clean.Sherlock.CompilerExportPlans.error_result_has_no_bound_value
+#print axioms Clean.Sherlock.CompilerExportPlans.identity_uses_canonical_body
+#print axioms Clean.Sherlock.CompilerExportPlans.reidentification_ignores_prior_id
+#print axioms Clean.Sherlock.CompilerExportPlans.witness_node_keeps_typed_bindings
+#print axioms Clean.Sherlock.CompilerExportPlans.separate_plans_share_manifest
+#print axioms Clean.Sherlock.CompilerExportPlans.artifact_hash_covers_emitted_bytes
+#print axioms Clean.Sherlock.CompilerExportPlans.only_two_request_formats_supported
+#print axioms Clean.Sherlock.CompilerExportPlans.constraint_json_declares_no_witness
+#print axioms Clean.Sherlock.CompilerExportPlans.no_midnight_exporter
+#print axioms Clean.Sherlock.CompilerExportPlans.host_exporter_has_no_field_layout
+#print axioms Clean.Sherlock.CompilerExportPlans.tooling_disposition_keeps_application
