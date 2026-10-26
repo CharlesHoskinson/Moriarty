@@ -166,8 +166,30 @@ structure SeparatePlans (ConstraintPlan WitnessPlan Operation : Type) where
   constraintDisposition : ExportDisposition
   witnessDisposition : ExportDisposition
 
-/-! U031/U033 at cfbab29c5: finite Python reporting models, not Rust
+/-! U031/U033 at cfbab29c5 and a82446698: finite Python reporting models, not Rust
 exporters, residual execution or native artifacts. -/
+
+/-- The domain is a model annotation, not a verified operand binding or field encoding. -/
+structure ToolingOperation where
+  operationId : String
+  domain : String
+
+structure ToolingWitnessNode where
+  index : Nat
+  operation : ToolingOperation
+  typedInputs : List (String × String)
+  typedOutputs : List (String × String)
+  dependencies : List Nat
+
+/-- a82446698 emits one generic in/out label per operation and a preceding-node
+dependency. This does not bind a real Sherlock step's operands or result values. -/
+def toolingWitnessNode (index : Nat) (operation : ToolingOperation) : ToolingWitnessNode :=
+  ⟨index, operation, [("in", operation.domain)], [("out", operation.domain)],
+    if index = 0 then [] else [index - 1]⟩
+
+theorem tooling_witness_domain_annotations (index : Nat) (operation : ToolingOperation) :
+    (toolingWitnessNode index operation).typedInputs = [("in", operation.domain)] ∧
+      (toolingWitnessNode index operation).typedOutputs = [("out", operation.domain)] := ⟨rfl, rfl⟩
 
 inductive ToolingBackend where
   | constraintJsonBasic | structuredWitnessBasic | midnightZkir
@@ -202,13 +224,23 @@ inductive ModelRule where
   | fetch | condition | thenBranch | elseBranch | call
   deriving DecidableEq, Repr
 
-/-- Exact target lists from the synthetic five-rule Python residualization model.
-`arithOnly` selects its static family whitelist, not a proved dynamic-state invariant. -/
-def modelTargets (arithOnly : Bool) : ModelRule → List ModelRule
-  | .fetch => if arithOnly then [.condition] else [.condition, .call]
+/-- a82446698 preserves all possible targets; static binding controls which
+target is specialized, while other targets retain generic runtime dispatch. -/
+def modelTargets (_arithOnly : Bool) : ModelRule → List ModelRule
+  | .fetch => [.condition, .call]
   | .condition => [.thenBranch, .elseBranch]
   | .call => [.fetch]
   | .thenBranch | .elseBranch => []
+
+def modelGenericTargets (arithOnly : Bool) : ModelRule → List ModelRule
+  | .fetch => if arithOnly then [.call] else []
+  | _ => []
+
+/-- Historical cfbab29c5 whitelist: omitted runtime targets were dropped. -/
+def legacyModelTargets (arithOnly : Bool) (rule : ModelRule) : List ModelRule :=
+  match rule with
+  | .fetch => if arithOnly then [.condition] else [.condition, .call]
+  | other => modelTargets arithOnly other
 
 theorem model_dynamic_branch_keeps_both_targets (arithOnly : Bool) :
     modelTargets arithOnly .condition = [.thenBranch, .elseBranch] := rfl
@@ -216,11 +248,14 @@ theorem model_dynamic_branch_keeps_both_targets (arithOnly : Bool) :
 theorem model_recursive_call_keeps_back_edge (arithOnly : Bool) :
     modelTargets arithOnly .call = [.fetch] := rfl
 
-/-- This is a difference witness, not a proof that the family mask preserves
-the generic machine. Static admission must justify the removed dispatch edge. -/
-theorem model_arith_prunes_call :
-    ModelRule.call ∈ modelTargets false .fetch ∧
-      ModelRule.call ∉ modelTargets true .fetch := by decide
+/-- Keep the earlier negative witness, explicitly pinned to the historical model. -/
+theorem legacy_model_arith_prunes_call :
+    ModelRule.call ∈ legacyModelTargets false .fetch ∧
+      ModelRule.call ∉ legacyModelTargets true .fetch := by decide
+
+theorem model_arith_keeps_call_via_generic :
+    ModelRule.call ∈ modelTargets true .fetch ∧
+      ModelRule.call ∈ modelGenericTargets true .fetch := by decide
 
 inductive StaticMask where
   | empty | fixedFamily (family : String) | fixedProgram

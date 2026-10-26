@@ -31,10 +31,14 @@ the fixed operation manifest includes a native closure, lookup and interaction.
 Those capability flags are not real Midnight export evidence. `ModelRule` and
 `modelTargets` mirror the synthetic five-rule graph, including both dynamic
 conditional successors and the recursive back edge. The arithmetic-family
-whitelist drops the call successor of fetch. A Lean difference witness makes
-that omission explicit; preservation still needs a static-admission premise
-that excludes the omitted runtime case. This model is not a specializer for
-the actual Sherlock reference definition. Its `arith`/`recursive` family labels
+whitelist originally dropped the call successor of fetch. The negative witness
+is retained explicitly as `legacy_model_arith_prunes_call`. At `a82446698`,
+all targets remain and the arithmetic family routes the call through a named
+generic fallback. `model_arith_keeps_call_via_generic` states that repair.
+The same revision adds typed witness input/output annotations; Lean mirrors
+the exact generic `in`/`out` domain labels, which do not supply actual step
+operand binding. This model is not a specializer for the actual Sherlock
+reference definition. Its `arith`/`recursive` family labels
 are separate from the five native inventory families, so specialization keys
 now carry family identity strings instead of the native family enum.
 
@@ -69,8 +73,13 @@ theorem dependency queries. Sherlock-fable independently ran the capped Lake
 package build with Lean 4.33.1. The recorded `lean-build-3.log` shows the updated
 U024/U031/U033 module and all eighteen dependency queries succeeding, then a
 successful 17-job package build and exit 0. Fourteen queries have empty axiom
-sets; four contain only `propext`. The JSON records the exact current sets and
+sets; four contain only `propext`. The JSON retains those exact historical sets and
 pins the successful observed log by digest. The agent read the complete log
 and checked current source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
+
+**The a82446698 follow-up has not yet been compiled.** Current source pins and
+queries include the generic-fallback repair, historical negative witness and
+typed annotation contract; the preceding successful log covers their previous
+version. Recheck and current axiom-query results remain pending.
