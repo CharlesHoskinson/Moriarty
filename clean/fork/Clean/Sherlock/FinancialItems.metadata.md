@@ -53,23 +53,23 @@ would not match the implementation. This is a report arithmetic property,
 not per-account, per-asset balance conservation.
 
 No new `sorry` or custom axiom is declared. The companion
-`FinancialItemsAxioms.lean` queries every named theorem. The publication
-baseline in `9a5865203` was checked by Sherlock-fable's capped Lean 4.33.1
+`FinancialItemsAxioms.lean` queries every named theorem. The nineteen-theorem
+source in `e9da3a079` was checked by Sherlock-fable's capped Lean 4.33.1
 build, which compiled all 17 package jobs successfully; this module and its
-query reported 707 ms and 189 ms. This agent inspected the complete build log;
+query reported 539 ms and 235 ms. This agent inspected the complete build log;
 it did not execute the successful build. Its own capped invocation could
 not connect to the sandbox user scope bus, so no uncapped retry was run.
 
-The actual fourteen-name dependency query records eight empty axiom sets,
+The actual nineteen-name dependency query records eleven empty axiom sets,
 four `propext`-only sets, `propext`/`Quot.sound` for
-`charge_preserves_work`, and `propext`/`Classical.choice`/`Quot.sound` for
+`retain_admission_iff_all_segments`, `bad_segment_blocks_retain_admission`
+and `charge_preserves_work`, and `propext`/`Classical.choice`/`Quot.sound` for
 `charge_stays_uint128`. These are Lean's standard axioms; no custom or
 `sorryAx` dependency was observed. The JSON contains every per-name set,
 source hash and the coordinator log digest. Compilation validates the
 mathematical declarations, without discharging the operational premises.
-The later five-theorem whole-action admission extension is pending a capped
-rebuild. Its source pins and nineteen-name query are recorded separately
-from the baseline's fourteen observed dependency sets.
+The publication baseline's fourteen-name observations are retained separately
+from the current whole-action admission extension and nineteen-name query.
 
 This module does not establish full Rust refinement, statement semantics,
 residual-duty extraction, source/plan admission, authenticated/consumed
