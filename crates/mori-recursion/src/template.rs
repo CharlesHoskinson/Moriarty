@@ -3,8 +3,8 @@
 //! The transcript template: the ledger-9 contract-call public-input vector
 //! `[binding_input, communication_commitment, field_repr(guaranteed ops),
 //! field_repr(fallible ops)]` of `acceptValidity(stmt)`, with every slot
-//! either free (binding input, communication commitment), a constant, or the
-//! statement digest.
+//! either free (binding input, communication commitment), a constant, the
+//! statement digest, or (run decider only) one of the decider's public values.
 
 use std::io::{self, Read, Write};
 
@@ -18,6 +18,8 @@ pub enum Slot {
     CommunicationCommitment,
     Const(F),
     Stmt,
+    /// The `i`-th public value of the general-run decider (see `run_decider`).
+    Value(u32),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -63,10 +65,37 @@ impl Template {
                 "exactly one binding_input and one communication_commitment",
             ));
         }
-        if count(|s| matches!(s, Slot::Stmt)) != 1 {
-            return Err(io::Error::other("exactly one stmt slot"));
+        let stmts = count(|s| matches!(s, Slot::Stmt));
+        if stmts == 0 || (stmts > 1 && !self.has_values()) {
+            return Err(io::Error::other(
+                "exactly one stmt slot (a run template may repeat it)",
+            ));
         }
         Ok(())
+    }
+
+    pub fn has_values(&self) -> bool {
+        self.slots.iter().any(|s| matches!(s, Slot::Value(_)))
+    }
+
+    /// The ledger public-input vector, `values` filling the `Value` slots.
+    pub fn public_inputs_with(
+        &self,
+        binding_input: F,
+        comm: F,
+        stmt: F,
+        values: &[F],
+    ) -> Option<Vec<F>> {
+        self.slots
+            .iter()
+            .map(|s| match s {
+                Slot::BindingInput => Some(binding_input),
+                Slot::CommunicationCommitment => Some(comm),
+                Slot::Const(c) => Some(*c),
+                Slot::Stmt => Some(stmt),
+                Slot::Value(i) => values.get(*i as usize).copied(),
+            })
+            .collect()
     }
 
     pub fn stmt_index(&self) -> usize {
@@ -82,6 +111,7 @@ impl Template {
                 Slot::CommunicationCommitment => comm,
                 Slot::Const(c) => *c,
                 Slot::Stmt => stmt,
+                Slot::Value(_) => F::from(0u64),
             })
             .collect()
     }
@@ -108,6 +138,12 @@ impl Template {
                 "binding_input" => Slot::BindingInput,
                 "communication_commitment" => Slot::CommunicationCommitment,
                 "stmt" => Slot::Stmt,
+                "value" => Slot::Value(
+                    s.value
+                        .as_deref()
+                        .and_then(|v| v.parse().ok())
+                        .ok_or_else(|| io::Error::other("value slot without index"))?,
+                ),
                 "const" => Slot::Const(f_from_hex(
                     s.value
                         .as_deref()
@@ -201,6 +237,10 @@ impl Template {
                         kind: "const".into(),
                         value: Some(f_to_hex(c)),
                     },
+                    Slot::Value(i) => SlotJson {
+                        kind: "value".into(),
+                        value: Some(i.to_string()),
+                    },
                 })
                 .collect(),
             source: source.into(),
@@ -219,6 +259,10 @@ impl Template {
                     write_f(w, c)?;
                 }
                 Slot::Stmt => w.write_all(&[3])?,
+                Slot::Value(i) => {
+                    w.write_all(&[4])?;
+                    w.write_all(&i.to_le_bytes())?;
+                }
             }
         }
         Ok(())
@@ -238,6 +282,7 @@ impl Template {
                 1 => Slot::CommunicationCommitment,
                 2 => Slot::Const(read_f(r)?),
                 3 => Slot::Stmt,
+                4 => Slot::Value(read_u32(r)?),
                 t => return Err(io::Error::other(format!("bad slot tag {t}"))),
             });
         }

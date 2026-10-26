@@ -1,0 +1,47 @@
+// SherlockRun: stagenet settlement of one general-purpose Sherlock program run.
+//
+// acceptRun is the transcript template of the general-run decider
+// (crates/mori-recursion/src/run_decider.rs). Its deployed verifier key must be the
+// hand-written run-decider key, never the compiled key of the circuit below. The
+// decider verifies the last IVC node proof (every machine step proved as a leaf and
+// folded), opens the final state digest as Halted(result) and exposes
+// [prog_d, init_d, fin_d, n_steps, result] as public values:
+//   - the reads of program_d and init_d below put the deployed digests into the
+//     transcript; the decider binds those read values to the proved run, so a proof
+//     of another program or initial state is refused by the ledger;
+//   - stmt = H(SHK_RUN, prog_d, init_d, fin_d, n_steps, result) is recorded once;
+//   - result is written to the public ledger field `result`.
+// The communication commitment is Poseidon(comm_rand, stmt, p, i, steps, fin, r) over
+// the inputs below, bound in the decider.
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+// Field order is the state layout: result first, so its byte window does not move
+// when runs grows. The result is 16 big-endian bytes: the ledger trims trailing zero
+// bytes of a value, so a big-endian u128 whose low byte is nonzero keeps a fixed
+// 16-byte window (holdout layout encoding u128-be).
+export ledger result: Bytes<16>;           // big-endian u128 result of the last accepted run
+export ledger steps: Uint<64>;             // machine steps of the last accepted run
+export sealed ledger program_d: Field;     // program-image digest (Poseidon)
+export sealed ledger init_d: Field;        // admitted initial-state digest (Poseidon)
+export ledger runs: Set<Field>;            // accepted run statements
+
+constructor(prog: Field, init: Field, r0: Bytes<16>) {
+  const p = disclose(prog);
+  const i = disclose(init);
+  assert(p != (0 as Field), "zero program digest");
+  assert(i != (0 as Field), "zero initial digest");
+  program_d = p;
+  init_d = i;
+  result = disclose(r0);
+  steps = 0;
+}
+
+export circuit acceptRun(stmt: Field, p: Field, i: Field, n: Uint<64>, fin: Field, r: Bytes<16>): [] {
+  assert(program_d == disclose(p), "program digest differs");
+  assert(init_d == disclose(i), "initial digest differs");
+  assert(!runs.member(disclose(stmt)), "run already accepted");
+  runs.insert(disclose(stmt));
+  steps = disclose(n);
+  result = disclose(r);
+}
