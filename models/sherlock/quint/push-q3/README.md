@@ -7,10 +7,10 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all fourteen Quint files, runs 41 deterministic Quint
+The runner typechecks all sixteen Quint files, runs 46 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Six models use `modelInv`; the pinned defective
-s5 source projection uses `sourceInv`. All seven
+per model with `--max-steps 30`. Seven models use `modelInv`; the pinned defective
+s5 source projection uses `sourceInv`. All eight
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets` run deliberately finds the source counterexample
 described below, which the runner checks explicitly. Raw results are in
@@ -24,6 +24,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `treeInterning.qnt` | U024 selected candidate; `69aeb882d:crates/mori-core/src/sherlock/optimization_intern.rs`, `intern_tree` | Bottom-up hash-consing with full leaf payload and ordered canonical child keys; seven-node fixture becomes four canonical nodes with structural sum 18; reversed children remain distinct; shape-only merging is detected |
 | `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
+| `residualBlockBudget.qnt` | U033; `c41f2da11:qa/holdout/contracts/U033.json` | Updated contract model counts one shared generic block inside the positive size cap, rejects zero as tooling refusal, and retains per-rule charges even when charged and free rules share one block |
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
 | `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
 
@@ -104,3 +105,12 @@ The actual repaired Python source is also compared with hand-authored BFS
 block prefixes and generic frontiers for all four masks at size limits
 0 through 5: 24 cases passed. These expectations are explicit lists/sets,
 independent of the source worklist implementation.
+
+The evaluator's actual-Rust contract at `c41f2da11` requires a positive size
+limit, includes generic blocks in that count, and requires executed per-record
+reference streams. `residualBlockBudget` models that updated size contract with
+a reserved generic block. Earlier prototype models intentionally retain their
+zero-budget behavior and their own specialized-block counts; they do not claim
+the later Rust wire contract. No real residual execution or Rust export-plan
+result has been observed by this worker yet. U023's later qualification record
+at `64822e4c7` likewise remains outside the source-only inventory projection.
