@@ -1,14 +1,15 @@
 // SherlockRun.acceptRun on stagenet (gap G11, call half). Default: full local preparation with no wallet:
 // the run proof is made and checked by native proof-verifying ledger 9 against the indexed deployment, and
 // nothing is submitted. --submit opens the wallet (hold ~/.cache/doctorwatson/wallet.lock around it).
-// Usage: node call-run.mjs SDK_ROOT BUILD DEPLOYMENT_RECEIPT RUN_JSON OUTPUT [--submit]
+// Usage: node call-run.mjs SDK_ROOT BUILD DEPLOYMENT_RECEIPT GP_BUNDLE OUTPUT [--submit]
 //   BUILD               compiled tools/sherlock-sdk/sherlock-run.compact (its prover key/IR serve /check only)
 //   DEPLOYMENT_RECEIPT  receipt.json of deploy-run.mjs (address, txId, verifier path/sha, constructor digests)
-//   RUN_JSON            {"stmt","prog_d","init_d","fin_d": hex32le, "n_steps","result","reference_result": decimal}
-//                       from the run decider; reference_result is the `mori simulate` result of the program
+//   GP_BUNDLE           gp_fold_and_key output: bundle.json {stmt, prog_d, init_d, fin_d, steps, result, ...} and
+//                       key/acceptRun.verifier, which must be the deployment's pinned key
+//   SHERLOCK_RUN_REFERENCE  the `mori simulate` result of the program; required unless the bundle is a stand-in
 //   SHERLOCK_RUN_PROVER command: reads {"binding_input": hex32le, "preimage": hex} on stdin, writes the tagged
-//                       acceptRun proof as hex on stdout (wrap heavy/gpu locks inside it). The preimage holds the
-//                       private communication opening; it is only piped, never written.
+//                       acceptRun proof as hex on stdout (tools/sherlock-sdk/gp-call-prover.sh). The preimage holds
+//                       the private communication opening; it is only piped, never written.
 //   SHERLOCK_VALIDATE_CALL  native validator (default target/release/examples/validate_call)
 // Before any wallet access: the deployment's installed acceptRun key must equal the pinned run-decider key
 // (read from the indexer), its sealed digests must equal RUN_JSON, and the proven call must be accepted and
@@ -25,8 +26,8 @@ import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs'
 const argv = process.argv.slice(2);
 const submit = argv.includes('--submit');
 const pos = argv.filter(a => a !== '--submit');
-assert.equal(pos.length, 5, 'usage: call-run.mjs SDK_ROOT BUILD DEPLOYMENT_RECEIPT RUN_JSON OUTPUT [--submit]');
-const [sdkRoot, buildArg, receiptPath, runPath, outputArg] = pos;
+assert.equal(pos.length, 5, 'usage: call-run.mjs SDK_ROOT BUILD DEPLOYMENT_RECEIPT GP_BUNDLE OUTPUT [--submit]');
+const [sdkRoot, buildArg, receiptPath, bundleArg, outputArg] = pos;
 const proverCmd = process.env.SHERLOCK_RUN_PROVER;
 assert.ok(proverCmd, 'SHERLOCK_RUN_PROVER');
 const validateCall = resolve(process.env.SHERLOCK_VALIDATE_CALL ?? 'target/release/examples/validate_call');
@@ -45,11 +46,18 @@ assert.equal(deployment.sourceSHA256, sha(readFileSync(new URL('./sherlock-run.c
 const target = deployment.address; assert.match(target, /^[0-9a-f]{64}$/);
 const vkRaw = readFileSync(deployment.verifier.path);
 assert.equal(sha(vkRaw), deployment.verifier.sha256, 'pinned run-decider key');
-const runJson = JSON.parse(readFileSync(runPath));
+const bundleDir = resolve(bundleArg);
+const runJson = JSON.parse(readFileSync(join(bundleDir, 'bundle.json')));
+assert.equal(runJson.schema, 'sherlock-gp-bundle/1');
+assert.equal(sha(readFileSync(join(bundleDir, 'key/acceptRun.verifier'))), deployment.verifier.sha256, 'bundle key is the deployed key');
+assert.equal(runJson.acceptRun_verifier_sha256, deployment.verifier.sha256);
 const run = {stmt: fromLe(runJson.stmt), p: fromLe(runJson.prog_d), i: fromLe(runJson.init_d),
-  fin: fromLe(runJson.fin_d), n: BigInt(runJson.n_steps), r: BigInt(runJson.result)};
+  fin: fromLe(runJson.fin_d), n: BigInt(runJson.steps), r: BigInt(runJson.result)};
 assert.ok(run.r >= 0n && run.r < 1n << 128n && run.n >= 1n && run.n < 1n << 64n);
-assert.equal(BigInt(runJson.reference_result), run.r, 'decider result equals the mori simulate reference');
+assert.equal(runJson.result_be16_hex, Buffer.from(be16(run.r)).toString('hex'));
+const reference = process.env.SHERLOCK_RUN_REFERENCE;
+assert.ok(reference !== undefined || runJson.standin === true, 'SHERLOCK_RUN_REFERENCE (mori simulate result) is required');
+if (reference !== undefined) assert.equal(BigInt(reference), run.r, 'decider result equals the mori simulate reference');
 assert.deepEqual(deployment.constructor, [runJson.prog_d, runJson.init_d], 'deployment digests equal the run');
 assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
 
@@ -182,8 +190,8 @@ try {
   const unproven = await createUnprovenCallTx(providers, {compiledContract, contractAddress: target, circuitId: 'acceptRun', args});
   if (!submit) {
     await proofProvider.proveTx(unproven.private.unprovenTx);
-    writeFileSync(join(output, 'preparation.json'), json({address: target, stmt: runJson.stmt, result: run.r,
-      installedVerifierSHA256: sha(vkRaw), preStateSHA256: sha(currentState.serialize()),
+    writeFileSync(join(output, 'preparation.json'), json({address: target, stmt: runJson.stmt, result: run.r, reference: reference ?? 'none (stand-in bundle)',
+      bundleSHA256: sha(readFileSync(join(bundleDir, 'bundle.json'))), installedVerifierSHA256: sha(vkRaw), preStateSHA256: sha(currentState.serialize()),
       expectedPostStateSHA256: sha(expectedState), nativePrebalanceAccepted: true, proofSHA256: proofHash, submitted: false}));
     console.log('PASS acceptRun prepared: installed key, sealed digests and native proof-verifying ledger 9 accept; nothing submitted');
   } else {
@@ -192,7 +200,8 @@ try {
     const receipt = {schema: 'sherlock-run-stagenet-call/1', address: target, circuit: 'acceptRun', txId: result.txId,
       txHash: result.txHash, blockHeight: result.blockHeight, blockHash: result.blockHash, status: result.status,
       preStateSHA256: sha(currentState.serialize()), expectedPostStateSHA256: sha(expectedState), proofSHA256: proofHash,
-      stmt: runJson.stmt, result: run.r};
+      stmt: runJson.stmt, result: run.r, reference: reference ?? 'none (stand-in bundle)',
+      bundleSHA256: sha(readFileSync(join(bundleDir, 'bundle.json')))};
     writeFileSync(join(output, 'receipt.json'), json(receipt));
     const indexed = await graphql(`{contractAction(address:"${target}",offset:{transactionOffset:{hash:"${result.txHash}"}}){__typename state transaction{hash block{height hash}} ... on ContractCall{entryPoint}}}`);
     assert.equal(indexed.contractAction.__typename, 'ContractCall'); assert.equal(indexed.contractAction.transaction.hash, result.txHash);
