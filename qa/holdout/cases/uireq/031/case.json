@@ -33,7 +33,7 @@
         "unsupported features": "tooling Unsupported"
       },
       "coverage": "primary",
-      "judgment": "Evaluator reading (UIREQ-031 + interfaces.md 'Witness, constraints and exports' + D31): one bounded K-A step of fact(3) is prepared twice (the final checked multiplication, a scalar step, and a ReturnF frame return). Each must yield a content-addressed OperationManifest, separate ConstraintPlan and WitnessPlan sharing it, BackendCapabilities with lookup/interaction/custom-gate/structured-witness/native-closure/field-layout listed separately, emitted constraint and structured-witness artifacts whose bytes the holdout hashes, and a located tooling Unsupported for at least one of native closure/lookup/interaction, with the application run unchanged. Each capability requested alone gives the same disposition and bytes.",
+      "judgment": "Evaluator reading (UIREQ-031 + interfaces.md 'Witness, constraints and exports' + D31): one bounded K-A step of fact(3) is prepared twice (the final checked multiplication, a scalar step, and a ReturnF frame return). Each must yield a content-addressed OperationManifest, separate ConstraintPlan and WitnessPlan sharing it, BackendCapabilities with lookup/interaction/custom-gate/structured-witness/native-closure/field-layout listed separately, emitted constraint and structured-witness artifacts whose bytes the holdout hashes, and a located tooling Unsupported for at least one of native closure/lookup/interaction, with the application run unchanged. Each capability requested alone gives the same disposition and bytes. Steps that perform no arithmetic (a return into LeftF(Mul), which only schedules the right operand, and a return through ScopeF that has RightF(Mul) below it) must not list any CheckedU128* operation: a manifest that names an operation the selected step does not perform does not 'identify' that step's typed operations. The ops such a step SHOULD list are not asserted. (Added 2026-10-26 after sherlock-quint-3 showed that a classifier scanning pending frames reported Mul for rule 195.)",
       "unasserted": [
         "the exact operation decomposition beyond the presence of CheckedU128Mul (scalar step) and FrameRestore (frame step)",
         "field_id/layout values",
@@ -63,6 +63,36 @@
                   "top_frame_prefix": "uiReturnF("
                 },
                 "expect_op": "FrameRestore"
+              },
+              {
+                "label": "return into LeftF(Mul): evaluate the right operand (no multiplication yet)",
+                "select": {
+                  "start_control_prefix": "uiRet(",
+                  "top_frame_prefix": "uiLeftF(uiMul("
+                },
+                "rule_start_line": 149,
+                "forbid_op_prefixes": [
+                  "CheckedU128"
+                ]
+              }
+            ]
+          },
+          {
+            "kind": "export-plans",
+            "label": "scope pop above a pending multiplication",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(n: UInt): UInt { 2 * (let m = n + 1 in m) }\n  entry f(3);\n}\n",
+            "expect": 8,
+            "steps": [
+              {
+                "label": "return through ScopeF with RightF(Mul) below it",
+                "select": {
+                  "start_control_prefix": "uiRet(",
+                  "top_frame_prefix": "uiScopeF("
+                },
+                "rule_start_line": 195,
+                "forbid_op_prefixes": [
+                  "CheckedU128"
+                ]
               }
             ]
           }
