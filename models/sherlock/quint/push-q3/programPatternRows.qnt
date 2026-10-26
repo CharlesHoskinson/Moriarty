@@ -1,6 +1,8 @@
 // 388b92d9b: c6_program_context_canonical.rs::step/var_step uses org.hold
 // for row width even when sub == 0 and the new tag is only in nxt.hold.
 // c6_phys_program.rs encodes PNil and Wildcard in one lane (tags 1 and 5).
+// The useCurrentTag=true variant matches d570c75cc's committed repair in
+// both the program-context and duplicated validate-field walk.
 // Segment projection only: no full PROG circuit/native execution is claimed.
 module programPatternRows {
   type Parser = {hold: int, sub: int, remaining: int, doneAt: int}

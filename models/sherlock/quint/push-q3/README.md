@@ -7,7 +7,7 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-eight Quint files, runs 91 deterministic Quint
+The runner typechecks all twenty-eight Quint files, runs 92 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
 per model with `--max-steps 30`. Eleven models use `modelInv`; the three pinned
 defective source projections use `sourceInv`. A repaired classifier variant
@@ -18,7 +18,7 @@ source counterexamples described below, which the runner checks explicitly. Raw 
 `verification.log` (79 tests before the strengthened selector/classifier checks),
 `selector-sweep.log` (all nine current dispatcher tests) and
 `classification-repin.log` (all eight current classifier tests and fresh
-10,000-trace source/repaired runs), and `program-pattern-rows.log` (nine pattern
+10,000-trace source/repaired runs), and `program-pattern-rows.log` (ten pattern
 row tests plus its 10,000-trace run). The selector sweep checks all
 6,000 positive-fuel selector combinations plus exhaustion and reaches every
 one of the 39 rule IDs. This is exhaustive within that selector quotient;
@@ -289,19 +289,28 @@ tag in `nxt.hold`, but selects the row width from `org.hold`. Pattern tags
 wider row after its tag; a new 1/5 after a non-unit tag fails to terminate.
 The stale tag can also come from the expression table: Expr Var=1 and If=5
 precede the pattern table with the same shared hold register. The native
-owner confirmed this source finding and reports applying the current-tag fix
-to both the program-context and duplicated validate-field parser; a committed
-fix/native result is still pending this audit.
+owner confirmed this source finding and committed the current-tag fix at
+`d570c75cc` in both the program-context and duplicated validate-field parser.
+Both source patches were audited: `pat_start` is exactly PAT_ROW/sub0,
+`pat_hold` selects the current lane there and `org.hold` elsewhere, and the
+width table/`var_step` are unchanged. This matches the repaired model.
 
 `programPatternRows` compares literal owner-codec row encodings with both
 the old latch rule and a proposed current-tag-at-sub0 variant. It explores
 one/two rows, all seven pattern tags, prior tags 0 through 8, and zero-valued
-usize payloads. Nine tests and 10,000 traces pass the repaired boundary
+usize payloads. Ten tests and 10,000 traces pass the repaired boundary
 invariant; the old source violates the codec boundary after one lane in
-`program-pattern-counterexample.log`. This is a segment projection, excluding
+`program-pattern-counterexample.log`. One test exhausts all 504 initial cases
+(56 one/two-row sequences times nine prior tags), checking every lane prefix.
+The row-boundary source argument is local: at sub0 the current tag selects
+its owner-codec width; later positions use that same latched tag, and
+`var_step` finishes exactly at width minus one before decrementing the row
+count and resetting sub0. It therefore composes row by row under the parser
+state/valid-tag assumptions. This is a source argument, not a formal Rust or
+circuit refinement proof. The finite model is a segment projection, excluding
 the rest of PROG, gates other than 1, other range/UTF-8 checks, full field
-arithmetic and native execution. Its connection to the observed tree-fold
-failure was not established by this worker.
+arithmetic and native execution. The owner reports that the previously failing
+tree-fold step0 now accepts; full fragment reruns remain external evidence.
 
 The U024 CLI replay at `381f9e902` was source-audited against the tree model.
 Core interning is unchanged, preservation is checked before reporting, and
