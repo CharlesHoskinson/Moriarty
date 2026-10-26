@@ -1,0 +1,6 @@
+Consensus row C10 (persistent authenticated prover with resident prepared keys and a kept-synced wallet) meets the two-source test (s1 rank 1, s8 rank 1). Wave 2 designs it and settles the decider-domain question.
+
+1. Prover service design: process model on this host (20 cores, 90 GB RAM, 32 GB GPU), key residency budget (size of each prepared k20 proving key, parent and decider, and of the 2^20 SRS bases), authentication of callers, and artifact identity. The service must bind every proof to the VK hash it was made with, and refuse a request whose expected VK differs. This is the A4 failure class (decider VK differs from the installed contract VK).
+2. Wallet: the 435 s DUST registration was mostly a 374.9 s sync. Design a kept-synced wallet for the deployer, with its failure modes (stale UTXO set, fee-coin contention, transaction TTL). Measure nothing on stagenet; design only.
+3. Decider domain: from recorded row counts, is a k19 decider feasible (2^19 = 524,288 rows) given the 316,833-row pairing-residue gadget plus transcript and binding? Show the row arithmetic and which parts are SOURCE and which ESTIMATE.
+4. Deliverable in addition to FINDINGS.md and EXPERIMENTS.md: `clusters/s8-decider-settle/wave-2/OPENSPEC-DRAFT.md`, a draft OpenSpec change "persistent-prover-service" (proposal, tasks, one spec delta with SHALL requirements and scenarios).
