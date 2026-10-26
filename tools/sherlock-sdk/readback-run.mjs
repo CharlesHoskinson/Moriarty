@@ -59,6 +59,14 @@ assert.equal(tx.transactionResult.status, 'SUCCESS', 'call transaction result');
 }
 const {contract: pre} = await graphql(`{contract(address:"${address}",offset:{height:${callHeight - 1}}){state}}`);
 assert.ok(pre, 'no indexed state before the call');
+// The holdout reads both states as contractAction(address, offset:{transactionOffset:{hash}}).state; so do we.
+const actionState = async h => {
+  const {contractAction: a} = await graphql(`{contractAction(address:"${address}",offset:{transactionOffset:{hash:"${h}"}}){__typename state transaction{hash}}}`);
+  assert.ok(a && a.transaction.hash === h, 'contract action for ' + h); return a;
+};
+const deployAction = await actionState(deploy.transaction.hash), callAction = await actionState(call.transaction.hash);
+assert.equal(deployAction.__typename, 'ContractDeploy'); assert.equal(callAction.__typename, 'ContractCall');
+assert.equal(deployAction.state, deploy.state); assert.equal(callAction.state, call.state);
 const deployBytes = Buffer.from(deploy.state, 'hex'), preBytes = Buffer.from(pre.state, 'hex'), postBytes = Buffer.from(call.state, 'hex');
 writeFileSync(join(output, 'deploy-state.bin'), deployBytes); writeFileSync(join(output, 'post-state.bin'), postBytes);
 // E7/E9: the pinned key is installed in the deploy and post states (operation and byte checks).
@@ -115,10 +123,12 @@ const [replayed, replayResult] = local.apply(decoded.wellFormed(local, lax, new 
 assert.equal(replayResult.type, 'success');
 const norm = bytes => Buffer.from(rt.ContractState.deserialize(bytes).serialize());
 assert.deepEqual(norm(replayed.index(address).serialize()), norm(postBytes), 'complete contract effects');
-const stateLayout = {schema: 'sherlock-run-state-layout/1', address, field: 'result', ...layout,
-  derivedFrom: 'indexed deploy and post contract state bytes'};
+// Holdout layout format (moriarty-sherlock-state-layout/1), computed from the indexed bytes.
+const stateLayout = {format: 'moriarty-sherlock-state-layout/1',
+  result: {offset: layout.offset, length: layout.length, encoding: layout.encoding, initial: layout.initial}};
 writeFileSync(join(output, 'state-layout.json'), JSON.stringify(stateLayout, null, 2) + '\n');
-const record = {schema: 'sherlock-run-public-readback/1', network: 'stagenet', address, indexer: INDEXER,
+const record = {schema: 'sherlock-run-public-readback/1', state_sha256: sha(postBytes), observed_result: posted.toString(),
+  layoutDerivation: {deployCandidates: layout.deployCandidates, from: 'indexed deploy and post contractAction state bytes'}, network: 'stagenet', address, indexer: INDEXER,
   deployTx: deploy.transaction.hash, deployHeight: deploy.transaction.block.height, deployStatus: 'SUCCESS', deployIndexedOnce: true,
   callTx: tx.hash, callHeight: tx.block.height, callBlockHash: tx.block.hash, callTimestamp: tx.block.timestamp,
   callStatus: tx.transactionResult.status, fee: tx.fee, entryPoint: 'acceptRun', transactionSHA256: sha(raw),
