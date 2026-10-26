@@ -1,5 +1,10 @@
 import Clean.Sherlock.FinancialItems
 
+#print axioms Clean.Sherlock.FinancialItems.all_or_nothing_admission_unrestricted
+#print axioms Clean.Sherlock.FinancialItems.retain_admission_iff_all_segments
+#print axioms Clean.Sherlock.FinancialItems.bad_segment_blocks_retain_admission
+#print axioms Clean.Sherlock.FinancialItems.fee_after_other_refused
+#print axioms Clean.Sherlock.FinancialItems.let_and_requires_before_fee_admitted
 #print axioms Clean.Sherlock.FinancialItems.charge_preserves_work
 #print axioms Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix
 #print axioms Clean.Sherlock.FinancialItems.charge_stays_uint128

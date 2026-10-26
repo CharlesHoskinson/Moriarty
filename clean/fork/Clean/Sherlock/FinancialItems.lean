@@ -15,6 +15,57 @@ inductive PhasePolicy where
   | retainGuaranteedFees
   deriving DecidableEq
 
+/-- Syntactic classes used by `check_policy`, not statement evaluation outcomes. -/
+inductive StatementClass where
+  | fee
+  | letBinding
+  | precondition
+  | other
+
+def segmentFeesFirstFrom : Bool → List StatementClass → Bool
+  | _, [] => true
+  | seenOther, .fee :: rest =>
+    if seenOther then false else segmentFeesFirstFrom false rest
+  | seenOther, .letBinding :: rest => segmentFeesFirstFrom seenOther rest
+  | seenOther, .precondition :: rest => segmentFeesFirstFrom seenOther rest
+  | _, .other :: rest => segmentFeesFirstFrom true rest
+
+def segmentFeesFirst (statements : List StatementClass) : Bool :=
+  segmentFeesFirstFrom false statements
+
+/-- Start checks every segment, including segments never reached by execution. -/
+def admitActionPolicy : PhasePolicy → List (List StatementClass) → Bool
+  | .allOrNothing, _ => true
+  | .retainGuaranteedFees, segments => segments.all segmentFeesFirst
+
+theorem all_or_nothing_admission_unrestricted (segments : List (List StatementClass)) :
+    admitActionPolicy .allOrNothing segments = true := by
+  rfl
+
+theorem retain_admission_iff_all_segments (segments : List (List StatementClass)) :
+    admitActionPolicy .retainGuaranteedFees segments = true ↔
+      ∀ segment, segment ∈ segments → segmentFeesFirst segment = true := by
+  simp [admitActionPolicy]
+
+theorem bad_segment_blocks_retain_admission (segments : List (List StatementClass))
+    (segment : List StatementClass) (member : segment ∈ segments)
+    (bad : segmentFeesFirst segment = false) :
+    admitActionPolicy .retainGuaranteedFees segments = false := by
+  cases accepted : admitActionPolicy .retainGuaranteedFees segments with
+  | false => rfl
+  | true =>
+    have good := (retain_admission_iff_all_segments segments).mp accepted segment member
+    rw [bad] at good
+    cases good
+
+theorem fee_after_other_refused (suffix : List StatementClass) :
+    segmentFeesFirst (.other :: .fee :: suffix) = false := by
+  rfl
+
+theorem let_and_requires_before_fee_admitted :
+    segmentFeesFirst [.letBinding, .precondition, .fee] = true := by
+  rfl
+
 inductive Outcome where
   | running
   | waiting (site : Nat)
