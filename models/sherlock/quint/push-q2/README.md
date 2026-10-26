@@ -14,7 +14,7 @@ read without edits in the owning `Moriarty-wt-factory-u` worktree.
 | `financialAccounting.qnt` | `crates/mori-core/src/runtime.rs::move_funds`, `helper_machine/shared/fin_carrier.rs::apply_transfer`, `stage/sherlock2.rs::accounting`; exact UInt128 checked transfers, self transfers, asset isolation and saturating aggregate reports. |
 | `feePoolHistory.qnt` | Imports `specs/quint/fee_pool_component.qnt` unchanged; adds independent history replay for cash and residual liabilities, matching transfer/discharge totals and reserve coverage. |
 | `financialImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,charge}`; a conditional projection of counter import/charge with all other admission premises fixed valid. |
-| `financialSegmentImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,run_segment,fee_end}`; conditional projection of pending `FinImage2.segment` vs `FinOutcome2::Waiting{site}` admission and `run_segment` slice/index bounds. |
+| `financialSegmentImport.qnt` | `suspension2_fin.rs::{decode_body,resume_fin}`, `sherlock2.rs::{resume,run_segment,fee_end}`, `stage/decode.rs::canonical_boundary`; conditional projection of pending `FinImage2.segment` vs `FinOutcome2::Waiting{site}`, site capture layout (`FinImage2.captures`), and SI-26 terminal-only diagnostics (`discarded_effects` / `retained_by_policy`). |
 
 The financial engine source SHA-256 at intake was
 `6054a66cb35e7943f0c18013faf2316c9c9824de3a8b84bef97c8bd6f4f8a744`;
@@ -142,22 +142,36 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
    returns `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
    `crates/mori-core/src/stage/sherlock2.rs:217` (`attempt to add with overflow`,
    `exit = 101`) on a true guard.
-4. **Unvalidated imported pending segment index (financial R0/R1).** `FinImage2`
-   carries both `outcome = Waiting{site}` and `segment: usize`. On resume, R1,
-   R2, R6 and R7 check `site`, while `run_segment` indexes
-   `segments(sp, action)[image.segment]` and `fee_end` slices
-   `statements[begin..end]` with `begin = ordinal(site) + 1`. Neither
-   `decode_body` nor `resume` checks `image.segment == usize::from(site)`.
+4. **Unvalidated imported pending segment index, capture layout, and SI-26 terminal diagnostics (financial R0/R1/R4/SI-26).** `FinImage2`
+   carries `outcome = Waiting{site}`, `segment: usize`, `captures: Vec<NamedValue>`,
+   `discarded_effects: Vec<Effect>`, and `retained_by_policy: Vec<Effect>`. On resume:
+   - Neither `decode_body` nor `resume` checks `image.segment == usize::from(site)`.
+   - `decode::canonical_boundary` ignores `captures` (`let _ = captures;` at
+     `stage/decode.rs:109`, because Core/2 `stage::resume` checks
+     `layout_matches(&c.captures, site.captures.iter(), ...)` at `stage/admit.rs:345`),
+     and `sherlock2::resume` (`sherlock2.rs:471`) omits `layout_matches`, accepting
+     arbitrary `FinImage2.captures` (`malformedCapturesAccepted`).
+   - Neither `decode_body` nor `resume` checks
+     `image.discarded_effects.is_empty() && image.retained_by_policy.is_empty()`
+     (SI-26) on a `Waiting` checkpoint, and `run_segment` (`sherlock2.rs:371-400`)
+     never clears them on `Waiting`/`Halted` completion, leaking forged terminal
+     diagnostics into `not_ready`, `Waiting`, `Halted`, and `all-or-nothing/1`
+     `Rejected` reports (`si26DiagnosticsLeakedToHalted`).
    Characterizations: `outOfBoundsSegmentNotReadyTest`,
    `outOfBoundsSegmentPanicsOnAcceptTest`,
    `staleSegmentZeroRetainFeesPanicsTest`,
-   `staleSegmentZeroDefaultPolicyFailsPlanCostTest`; candidate
-   `acceptedSegmentInv`, trace `financial-import-segment.itf.json`. Runtime host
-   confirmation (`probe_financial_import.py`): resealing `segment = 2` returns
-   `not_ready` (`exit = 3`) on a false guard and panics at
+   `staleSegmentZeroDefaultPolicyFailsPlanCostTest`,
+   `malformedCapturesAcceptedTest`, `si26DiagnosticsLeakedToHaltedTest`; candidates
+   `acceptedSegmentInv` and `acceptedMetadataInv`, trace `financial-import-segment.itf.json`.
+   Runtime host confirmation (`probe_financial_import.py`): resealing `segment = 2`
+   returns `not_ready` (`exit = 3`) on a false guard and panics at
    `sherlock2.rs:260` (`index out of bounds`, `exit = 101`) on a true guard;
    resealing `segment = 0` under `retain-guaranteed-fees/1` panics at
-   `sherlock2.rs:137` (`slice index starts at 4 but ends at 3`, `exit = 101`).
+   `sherlock2.rs:137` (`slice index starts at 4 but ends at 3`, `exit = 101`);
+   resealing `captures = [{"name":"injected","value":{"type":"UInt","value":"99"}}]`
+   halts (`exit = 0`); resealing non-empty `discarded_effects` and `retained_by_policy`
+   halts (`exit = 0`) with `discarded_tentative.effects` and `retained_by_policy.effects`
+   non-empty in the `halted` report.
 
 All findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
 `sherlock-lean-2`. Host checkpoint cases are runtime-confirmed read-only via

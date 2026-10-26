@@ -7,7 +7,7 @@
   ],
   "sourceCut": {
     "ownerBranch": "factory-u",
-    "ownerHead": "5041a0211",
+    "ownerHead": "d50d2adc4",
     "engineSha256": "907e5fc7684934f28bb460d84b0d23f95459a74719fda4b48cc05999446eefb5",
     "reportSha256": "2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2",
     "historicalProbeBinarySha256": "008400d398b6710ecb05b588230409d1dc38c45da96a21e5bfc5faf029cda0ac",
@@ -23,7 +23,7 @@
       "financialImport",
       "financialSegmentImport"
     ],
-    "tests": 54,
+    "tests": 56,
     "maxSteps": 30,
     "samplesPerSafetyRun": 10000,
     "repairedInvariantsNowInAllInvariants": [
@@ -34,13 +34,14 @@
     "openWitnesses": [
       "malformedAccepted / overflowReached (financialImport.qnt)",
       "r0LateAfterR3Observed (financialImport.qnt)",
-      "malformedSegmentAccepted / boundsPanicReached / notReadyWithMalformedSegment (financialSegmentImport.qnt)"
+      "malformedSegmentAccepted / boundsPanicReached / notReadyWithMalformedSegment (financialSegmentImport.qnt)",
+      "malformedCapturesAccepted / si26DiagnosticsLeakedToHalted (financialSegmentImport.qnt)"
     ],
     "expectedCounterexamples": [
       "waiting-zero-fuel.itf.json (awaitStarvedCommitsPrefixInv / E2x)",
       "accounting-overflow.itf.json (unboundedHistoryFitsU128Inv)",
       "financial-import-counters.itf.json (acceptedWorkInv)",
-      "financial-import-segment.itf.json (acceptedSegmentInv)"
+      "financial-import-segment.itf.json (acceptedSegmentInv / acceptedMetadataInv)"
     ],
     "runtimeProbe": "financial-import-rust-probe.json"
   },
@@ -48,7 +49,7 @@
     "E2x / design §6.1 / §7.3 step 4: sherlock2.rs:319-325 enforces SI-29 (waitingResumableInv holds), but calls fail(...) before committing tentative when remaining_work == 0 at await entry",
     "Financial R0/SI-03: decode_body and resume do not validate remaining_work + consumed_work == initial_fuel or guard consumed_work += 1 against u128::MAX",
     "Financial R0-vs-R3 ordering: suspension2_fin.rs:272 runs admit_observation (R3-R5) before sherlock2.rs:460 checks remaining_work == 0 (R0 SI-29)",
-    "Financial R0/R1: decode_body and resume do not validate FinImage2.segment == usize::from(site), reaching out-of-bounds/inverted-slice panics in run_segment/fee_end"
+    "Financial R0/R1/R4/SI-26: decode_body and resume do not validate FinImage2.segment == usize::from(site), FinImage2.captures layout (decode.rs:109 let _ = captures), or SI-26 empty discarded_effects/retained_by_policy on Waiting checkpoints"
   ],
   "commits": [
     "18862bcde",
@@ -56,7 +57,8 @@
     "7d924ba3c",
     "75240a8ae",
     "5c71be223",
-    "7841b38f3"
+    "7841b38f3",
+    "58d9aeefb"
   ],
-  "awaiting": "u2 financial source commit + R0 counter/segment/ordering fix for provenance re-pin and sherlock-fable DONE-ALL"
+  "awaiting": "u2 financial source commit + R0 counter/segment/captures/SI-26/ordering fix for provenance re-pin and sherlock-fable DONE-ALL"
 }

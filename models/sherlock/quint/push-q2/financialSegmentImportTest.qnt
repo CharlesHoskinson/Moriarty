@@ -17,4 +17,10 @@ module financialSegmentImportTest {
     .expect(currentCodeInv and checkpoint.phase == PlanCostMismatch)
   run noncanonicalSegmentRefusedTest = initCase(2, false, true, true).then(importStep)
     .expect(currentCodeInv and checkpoint.phase == Refused)
+  run malformedCapturesAcceptedTest = initFullCase(1, true, false, true, true, true).then(importStep)
+    .expect(currentCodeInv and malformedCapturesAccepted and not(acceptedMetadataInv)).then(resumeStep)
+    .expect(currentCodeInv and checkpoint.phase == SegmentRan and malformedCapturesAccepted)
+  run si26DiagnosticsLeakedToHaltedTest = initFullCase(1, true, true, false, true, true).then(importStep)
+    .expect(currentCodeInv and not(acceptedMetadataInv)).then(resumeStep)
+    .expect(currentCodeInv and si26DiagnosticsLeakedToHalted)
 }

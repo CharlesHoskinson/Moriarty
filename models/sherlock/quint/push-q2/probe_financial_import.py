@@ -238,6 +238,23 @@ def main() -> int:
         run_resume_case("outOfBoundsSegmentFalseGuard", {"segment": 2}, False)
         run_resume_case("outOfBoundsSegmentTrueGuard", {"segment": 2}, True)
         run_resume_case("staleSegmentZeroRetainFeesTrueGuard", {"segment": 0}, True)
+        run_resume_case(
+            "malformedCapturesAccepted",
+            {
+                "captures": [
+                    {"name": "injected", "value": {"type": "UInt", "value": "99"}}
+                ]
+            },
+            True,
+        )
+        run_resume_case(
+            "nonEmptyDiagnosticsLeakedToHalted",
+            {
+                "discarded_effects": [base_image["committed_effects"][0]],
+                "retained_by_policy": [base_image["committed_effects"][0]],
+            },
+            True,
+        )
 
         # Genuine unresealed zero-fuel Waiting checkpoint produced by start with fuel=4 (SI-29).
         config_fuel4 = copy.deepcopy(config)

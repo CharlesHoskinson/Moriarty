@@ -16,7 +16,7 @@ def checks():
         ("financialAccounting", "allInvariants", "typescript", ["selfTransfer", "overflowed", "feeObserved"]),
         ("feePoolHistory", "historyInvariants", "typescript", ["wFinish", "wClaimOrdinary", "wClaimDust"]),
         ("financialImport", "currentCodeInv", "typescript", ["imported", "malformedAccepted", "overflowReached", "epochMaxRefused", "r0LateAfterR3Observed"]),
-        ("financialSegmentImport", "currentCodeInv", "rust", ["imported", "malformedSegmentAccepted", "boundsPanicReached", "notReadyWithMalformedSegment"]),
+        ("financialSegmentImport", "currentCodeInv", "rust", ["imported", "malformedSegmentAccepted", "boundsPanicReached", "notReadyWithMalformedSegment", "malformedCapturesAccepted", "si26DiagnosticsLeakedToHalted"]),
     ):
         source = str((HERE / (model + ".qnt")).relative_to(ROOT))
         tests = str((HERE / (model + "Test.qnt")).relative_to(ROOT))
