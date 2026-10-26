@@ -3,7 +3,7 @@
 This `Init`-only module separates complete technical checkpoints, ordinary
 stepping, observation acceptance and technical chunk boundaries. Source hashes,
 theorem names and verification disposition are in the matching JSON. The
-committed source base inspected on factory-u is `0699194f9`.
+committed implementation source base on factory-u is now `815a22d87`.
 
 The technical restore interface follows `shared/owner_resume.rs`: finance is
 refused, the segment must be genesis, profile/SI checks must succeed, and
@@ -18,9 +18,9 @@ of that iteration. It does not prove Rust determinism, outcome priority,
 absorbing terminal behavior or concrete source/circuit correspondence. Those
 remain premises to supply, as do the complete observation and state types.
 
-The observation contract tracks **uncommitted** profile /2 work inspected in
-factory-u's `owner_suspend.rs` and `compile_artifact/suspension2.rs`. It must be
-reconciled when that work lands. R0–R5 are named validation predicates; false and
+The observation contract tracks committed profile /2 work at `815a22d87` in
+`owner_suspend.rs` and `compile_artifact/suspension2.rs`. R0–R5 are named
+validation predicates; false and
 error guards preserve the complete input checkpoint and report attempted work
 separately. Acceptance keeps caller frames and charges `1 + guard_nodes` to
 consumed work and reference cursor. Fuel conservation requires enough fuel.
@@ -44,7 +44,7 @@ frame-capacity consequences require a concrete fix/projection and Rust unit or
 technical-checkpoint evidence. The evaluator notes that the current /2 CLI has
 no post-resume technical cut exposing this check. This agent ran no such probe.
 
-U2's later uncommitted pure/financial drivers now use checked UInt64 resume-epoch
+U2's committed pure/financial drivers use checked UInt64 resume-epoch
 addition. Subsequent R0 gates refuse maximum epoch and invalid pure SI-29
 resources before guard evaluation. `resume` now checks `epoch + 1 < 2^64` and
 resource availability before every guard outcome. False/error preservation
@@ -52,7 +52,8 @@ therefore requires an admitted, resumable checkpoint; no epoch increment occurs.
 The field-bound
 theorem needs headroom; the complete-state bound additionally requires
 `ProjectionAgrees` and `InstallerCorrect`. Exact uncommitted source-byte
-observations are recorded separately, with no Rust run or landed-source claim.
+observations are retained historically; their bytes match the committed source.
+This source pin supplies no Rust run or refinement proof.
 The unrelated unchecked carrier-length addition remains a reported source
 hypothesis; this module does not model or fix that parser.
 The abstract refusal constructor coalesces validation reasons; concrete stage,
@@ -65,10 +66,10 @@ stock-verifier or ledger correspondence is established here.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran a capped package
-build with Lean 4.33.1. `lean-build-10.log` shows the checked-epoch
-follow-up and all seventeen axiom queries succeeding, then reports the complete
+build with Lean 4.33.1. `lean-build-11.log` shows the pre-guard validation
+follow-up and all nineteen axiom queries succeeding, then reports the complete
 17-job package build successful with exit 0. Nine queries have empty axiom sets
-and eight contain only `propext`; no custom or
+and ten contain only `propext`; no custom or
 `sorry` axiom appears. The JSON records the exact sets and pins the observed
 log by digest. The agent read the complete log and checked source pins but did
 not run the build. Its sandbox still cannot connect `memcap` to the user scope
@@ -76,7 +77,4 @@ bus; no uncapped build was attempted. A read-only follow-up review confirmed the
 projection gap resolved at the contract-model level, with no further substantive
 issue. That review ran no builds and establishes no concrete Rust correspondence.
 
-**The pre-guard validation follow-up has not yet been compiled.** The source and
-query pins describe nineteen current statements; the preceding seventeen-query
-build is retained historically pending current kernel and axiom checks.
 
