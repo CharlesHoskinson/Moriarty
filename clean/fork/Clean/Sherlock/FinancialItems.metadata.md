@@ -73,7 +73,11 @@ build, with all 21 package jobs successful. Lake reported 736 ms for this
 module and 268 ms for its query. This agent inspected the complete log and
 verified exact source bytes, but did not execute the build. Its own capped
 invocation cannot connect to the sandbox user scope bus; no uncapped build
-was run.
+was run. The coordinator confirmed build 18 used `memcap 48G` but held
+no `heavy.lock` or light lane. Its kernel results remain observations; it
+does not satisfy the assignment and package README requirement for a
+locked full build. Coordinator build 19 is queued through the required
+DoctorWatson heavy runner; no result or lock admission is inferred.
 
 The actual thirty-name dependency query records fourteen empty axiom sets,
 twelve `propext`-only sets, three `propext`/`Quot.sound` sets and one

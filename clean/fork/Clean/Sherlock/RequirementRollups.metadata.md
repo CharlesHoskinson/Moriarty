@@ -25,7 +25,11 @@ Sherlock-fable's capped Lean 4.33.1 build compiled this module and its query
 successfully (reported module times 580 ms and 202 ms). The complete build
 subsequently passed all 17 package jobs after fixes in other modules.
 The sources were committed in `9a5865203`. This agent inspected the
-coordinator's logs; it did not execute the successful build.
+coordinator's logs; it did not execute the successful build. The historical
+build log does not establish whether `heavy.lock` was held. The required
+locked full-build verification remains pending; coordinator build 19 is
+queued through the DoctorWatson heavy runner with `memcap 48G`. No queued
+result is treated as a completed verification.
 
 The actual eight-name query reports no axioms for `component_required` and
 `missing_component_blocks`; each of `c1_iff` through `c6_iff` depends on
