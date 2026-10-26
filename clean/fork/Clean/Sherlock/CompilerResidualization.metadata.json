@@ -11,7 +11,10 @@
     "crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs",
     "crates/mori-core/src/sherlock/compile_artifact/draft_witness.rs",
     "crates/mori-core/src/sherlock/helper_machine/witness_plan.rs",
-    "crates/mori-core/src/sherlock/optimization_intern.rs"
+    "crates/mori-core/src/sherlock/optimization_intern.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/draft_optimization.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/draft_reference_slices.rs",
+    "crates/mori/src/commands/simulate_sherlock.rs"
   ],
   "prospectiveSources": [],
   "remainingObligations": [
@@ -24,21 +27,21 @@
     "No native, stock-verifier or ledger acceptance follows from this module.",
     "U024 at 69aeb882d: establish the Rust interner table invariant, stable live Arc child identities, bottom-up stack equations and actual complete A-profile trace preservation. No effectful/native or measured-memory result is inferred.",
     "U031/U033 at a82446698 are report-only sample models: actual exporters/reference-step residualization, full typed operand binding and semantic correspondence remain required; preserving all sample targets does not establish them.",
-    "Evaluator requires actual mori simulate integration for U031/U033 and a U024 replay on D23/D35/tree45 with unchanged observations/allocation counters; the Python and A-only models do not supply that behavior.",
-    "U033 abe5ee146: instantiate actual immutable IR lookup and block executor; prove RecordProduced for every emitted record, valid block adjacency and complete-state continuity. Matching reference streams or adding block IDs alone cannot establish IR execution."
+    "U033 abe5ee146: instantiate actual immutable IR lookup and block executor; prove RecordProduced for every emitted record, valid block adjacency and complete-state continuity. Matching reference streams or adding block IDs alone cannot establish IR execution.",
+    "Real U031/U033 simulate integration still pending. U024 replay is A-profile HostOnly alongside unchanged B execution; prove actual checker/metric/CLI correspondence and all-program tree preservation. No B/C6/finance optimization, byte-memory improvement or native acceptance follows."
   ],
   "sourceBase": "0699194f9",
   "leanToolchain": "leanprover/lean4:v4.33.1",
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/CompilerResidualization.lean",
-      "bytes": 18006,
-      "sha256": "1733278b0277ad05b0361c4db3ac1132745e762b7e389a990c1ff5e26f092ef4"
+      "bytes": 22165,
+      "sha256": "112abe807eb4a74286d677efa08cc4021c92b8cf9731f6466c55d75e816b9657"
     },
     {
       "path": "clean/fork/Clean/Sherlock/CompilerResidualizationAxioms.lean",
-      "bytes": 1966,
-      "sha256": "47b440ceba114410cebb547ef8947498958aecb289d6cca9a619f474e029c9d8"
+      "bytes": 2402,
+      "sha256": "6448bd0da5db7208c1f676ae106e380ba3989ca6b33891d75093000ad2a762dd"
     }
   ],
   "theoremNames": [
@@ -48,6 +51,11 @@
     "Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content",
     "Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content",
     "Clean.Sherlock.CompilerResidualization.intern_observation_preservation_iff",
+    "Clean.Sherlock.CompilerResidualization.unknown_optimization_refused",
+    "Clean.Sherlock.CompilerResidualization.divergent_replay_refused",
+    "Clean.Sherlock.CompilerResidualization.successful_replay_keeps_logical_metrics",
+    "Clean.Sherlock.CompilerResidualization.successful_replay_applied_tracks_interned_nodes",
+    "Clean.Sherlock.CompilerResidualization.attaching_replay_keeps_owner",
     "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition",
     "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness",
     "Clean.Sherlock.CompilerResidualization.tooling_witness_domain_annotations",
@@ -66,7 +74,7 @@
     "Clean.Sherlock.CompilerResidualization.realization_preserves"
   ],
   "verification": {
-    "status": "residual-execution-provenance-source-updated-awaiting-recheck",
+    "status": "U024-replay-source-updated-awaiting-recheck",
     "axiomQueryStatus": "new-source-not-run",
     "actualAxiomSets": null,
     "wholePackagePassedForCurrentSource": null,
@@ -75,13 +83,13 @@
       "observation": {
         "runner": "sherlock-fable",
         "commandReported": "memcap 48G lake -d clean/fork build",
-        "artifact": "lean-build-4.log",
-        "bytes": 12305,
-        "sha256": "49a5d316eaa33b9fe70f571b405a22fd6faa55b07d35a81a107a860605b3f1be",
+        "artifact": "lean-build-7.log",
+        "bytes": 13726,
+        "sha256": "3b9fc786d04f0c1dc3aa7979ee3b75c6b06b3ea0cc31cbb73013e60ee987a7a1",
         "overallPackageExit": 0,
         "jobs": 17,
         "cachedModuleResultsReplayed": false,
-        "agentAction": "read complete observed build log and checked current source pins; did not execute build"
+        "agentAction": "read complete observed build log and checked committed source pins; did not execute build"
       },
       "axiomQueryStatus": "observed-pass",
       "actualAxiomSets": {
@@ -109,6 +117,10 @@
         "Clean.Sherlock.CompilerResidualization.model_arith_keeps_call_via_generic": [
           "propext"
         ],
+        "Clean.Sherlock.CompilerResidualization.residual_record_has_execution_witness": [],
+        "Clean.Sherlock.CompilerResidualization.refusing_executor_has_no_records": [
+          "propext"
+        ],
         "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime": [],
         "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back": [],
         "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back": [
@@ -116,21 +128,20 @@
         ],
         "Clean.Sherlock.CompilerResidualization.realization_preserves": []
       },
-      "emptyAxiomSetCount": 15,
-      "propextOnlyCount": 5,
-      "wholePackagePassed": true,
-      "localSandboxExecution": "blocked by memcap user scope bus"
+      "emptyAxiomSetCount": 16,
+      "propextOnlyCount": 6,
+      "wholePackagePassed": true
     },
     "previousVerifiedSourceFiles": [
       {
         "path": "clean/fork/Clean/Sherlock/CompilerResidualization.lean",
-        "bytes": 14857,
-        "sha256": "9bed92397941a6d789cb4d9e15ec6a5ccfa63cd3001587ea556f4f5023bb38fd"
+        "bytes": 18006,
+        "sha256": "1733278b0277ad05b0361c4db3ac1132745e762b7e389a990c1ff5e26f092ef4"
       },
       {
         "path": "clean/fork/Clean/Sherlock/CompilerResidualizationAxioms.lean",
-        "bytes": 1789,
-        "sha256": "53b6b6937af1c3362bd968fc999af739aa5de9ad7788878107955fad70184508"
+        "bytes": 1966,
+        "sha256": "47b440ceba114410cebb547ef8947498958aecb289d6cca9a619f474e029c9d8"
       }
     ],
     "previousObservationCoversCurrentSource": false,
@@ -144,7 +155,7 @@
   },
   "implementationUpdates": {
     "U024": {
-      "commit": "69aeb882d7927539cecbc71098962130c1c0f392",
+      "commit": "06ec0f855ac1e9908ea6ffef6dd995aa95815dfe",
       "source": "crates/mori-core/src/sherlock/optimization_intern.rs",
       "tests": "crates/mori-core/tests/sherlock_u024_intern_preservation.rs",
       "profile": "sherlock-k-a/1",
@@ -158,9 +169,22 @@
         "resource schedule"
       ],
       "dutiesVacuous": true,
-      "recordCommit": "dbe33d95ded4a71281fea3ebedef8e906c894e91",
+      "recordCommit": "a069ccbff0015bee82cc816aae8baa18f9011579",
       "recordAcceptance": "none",
-      "observedTestEvidence": {
+      "initialInternerCommit": "69aeb882d7927539cecbc71098962130c1c0f392",
+      "cliFlag": [
+        "--optimization",
+        "sherlock-a-intern-equal-tree-nodes/1"
+      ],
+      "ownerExecutionChanged": false,
+      "physicalMetric": "peak_tree_child_allocations",
+      "physicalSampling": [
+        "initial",
+        "each record.before",
+        "final"
+      ],
+      "physicalBytesOrPeakMemoryMeasured": false,
+      "historicalObservedTestEvidence": {
         "runner": "sherlock-c4",
         "run": "20261026T001248Z-U024-evidence",
         "sourceCommit": "87d1a2e2cd52343783216c5980facae8a2d47b9d",
@@ -172,6 +196,32 @@
         "failed": 0,
         "agentAction": "read trace, verify its pinned digest and named test results; did not execute Rust tests",
         "scope": "A-profile candidate fixture only; not the mandatory real simulate replay"
+      },
+      "observedReceiptEvidence": {
+        "runner": "sherlock-c4",
+        "receipt": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json",
+        "run": "20261026T004602Z-U024-receipt",
+        "sourceCommit": "06ec0f855ac1e9908ea6ffef6dd995aa95815dfe",
+        "commandReported": "cargo test -p mori-core --test sherlock_u024_intern_preservation -- --test-threads=1",
+        "trace": "qa/sherlock/traces/20261026T004602Z-U024-receipt.log",
+        "traceSHA256": "98a35678872761f6fa33693cec893f6daac2a4da101baf0319f1ebfb654b9790",
+        "traceBytes": 12120,
+        "passed": 6,
+        "failed": 0,
+        "agentAction": "read receipt trace and verify digest/named test results; no local execution"
+      },
+      "observedHoldoutEvidence": {
+        "run": "20261026T004810Z-U024",
+        "head": "a069ccbff0015bee82cc816aae8baa18f9011579",
+        "cmd": "qa/holdout/run.sh uireq-024",
+        "exit": 0,
+        "wallSeconds": 1.746,
+        "maxRssBytes": 72126464,
+        "trace": "qa/sherlock/traces/20261026T004810Z-U024.log",
+        "traceBytes": 49,
+        "traceSHA256": "4cbd938142a7ddc42f2c2c0d3ef81a6652a51d9a1bc075fb2b6ce39fb9a69fe7",
+        "runner": "sherlock-c4",
+        "agentAction": "read factory run entry and passing trace; no local execution or binary/source reproducibility proof"
       }
     },
     "U031/U033": {
@@ -197,7 +247,8 @@
       "commit": "69aeb882d",
       "path": "crates/mori-core/src/sherlock/optimization_intern.rs",
       "bytes": 16687,
-      "sha256": "d53b698b3cdaa4bae49913cfb61d6a8af4fe3ec33b322db9c83513dc058f0b8c"
+      "sha256": "d53b698b3cdaa4bae49913cfb61d6a8af4fe3ec33b322db9c83513dc058f0b8c",
+      "historical": true
     },
     {
       "commit": "cfbab29c5",
@@ -236,7 +287,44 @@
       "commit": "dbe33d95d",
       "path": "models/sherlock/optimizations/intern-equal-tree-nodes.json",
       "bytes": 5877,
-      "sha256": "7acb416d6e943550a4edefb7c0be3db7926dc8de2ddce003153792965b73d72d"
+      "sha256": "7acb416d6e943550a4edefb7c0be3db7926dc8de2ddce003153792965b73d72d",
+      "historical": true
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "bytes": 20551,
+      "sha256": "cd4f6bff605e57e97527c4f129109e55764aacb05a371208c358d3059dd7ad34"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/draft_optimization.rs",
+      "bytes": 5410,
+      "sha256": "179e3b362e25098c66fe402fed42a52d96c6ab670976e21d101e8aa080a162db"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/draft_reference_slices.rs",
+      "bytes": 9356,
+      "sha256": "594463504963fb6b5e8f8cbb02a064000654d6cf2f4f138b694378069cef1d0b"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori/src/commands/simulate_sherlock.rs",
+      "bytes": 11235,
+      "sha256": "136886f83fe2b16b1daeb0fbf2693e41c3295abaf1e9407100c14a3a44196594"
+    },
+    {
+      "commit": "a069ccbff",
+      "path": "models/sherlock/optimizations/intern-equal-tree-nodes.json",
+      "bytes": 8083,
+      "sha256": "8be4891f6851d2fa59d717d6539606a54ee9c4ae689a344103716572e1740a6d"
+    },
+    {
+      "commit": "a069ccbff",
+      "path": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json",
+      "bytes": 1614,
+      "sha256": "4231ad83aa5af76ea260741f802e3178e892545f3f2bf052b6ce7b2ca6da4990"
     }
   ],
   "contractUpdates": [

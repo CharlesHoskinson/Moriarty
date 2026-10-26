@@ -132,6 +132,93 @@ theorem intern_observation_preservation_iff {Whole : Type}
   cases candidate
   simp only [InternObservation.mk.injEq]
 
+/-! U024 at 06ec0f855: actual draft-route K-A replay, alongside the unchanged
+B owner run. Logical metrics are deterministic projections of complete semantic
+observations; physical child counts are independent measurements. -/
+
+structure ReplayLogical where
+  events : Nat
+  work : Nat
+  outcome : String
+  remainingFuel : Nat
+  maxDepth : Nat
+  peakTreeChildOccurrences : Nat
+  deriving DecidableEq
+
+structure OptimizationReplay where
+  referenceLogical : ReplayLogical
+  candidateLogical : ReplayLogical
+  referencePhysicalChildren : Nat
+  candidatePhysicalChildren : Nat
+  internedNodes : Nat
+  applied : Bool
+
+def optimizationCandidate : String := "sherlock-a-intern-equal-tree-nodes/1"
+
+/-- Abstracts successful reporting versus refusal, not diagnostic priority or
+JSON encoding. The concrete checker and metric projection need correspondence.
+Physical counts concern resumed boundaries, not peak bytes or total allocation. -/
+def optimizationReplay {Whole : Type} [DecidableEq Whole] (candidateId : String)
+    (logical : InternObservation Whole → ReplayLogical)
+    (reference candidate : InternObservation Whole)
+    (referencePhysical candidatePhysical internedNodes : Nat) : Option OptimizationReplay :=
+  if candidateId = optimizationCandidate ∧ reference = candidate then
+    some ⟨logical reference, logical candidate, referencePhysical, candidatePhysical,
+      internedNodes, decide (0 < internedNodes)⟩
+  else none
+
+theorem unknown_optimization_refused {Whole : Type} [DecidableEq Whole]
+    (candidateId : String) (logical : InternObservation Whole → ReplayLogical)
+    (reference candidate : InternObservation Whole)
+    (referencePhysical candidatePhysical internedNodes : Nat)
+    (unknown : candidateId ≠ optimizationCandidate) :
+    optimizationReplay candidateId logical reference candidate
+      referencePhysical candidatePhysical internedNodes = none := by
+  simp [optimizationReplay, unknown]
+
+theorem divergent_replay_refused {Whole : Type} [DecidableEq Whole]
+    (candidateId : String) (logical : InternObservation Whole → ReplayLogical)
+    (reference candidate : InternObservation Whole)
+    (referencePhysical candidatePhysical internedNodes : Nat) (different : reference ≠ candidate) :
+    optimizationReplay candidateId logical reference candidate
+      referencePhysical candidatePhysical internedNodes = none := by
+  simp [optimizationReplay, different]
+
+theorem successful_replay_keeps_logical_metrics {Whole : Type} [DecidableEq Whole]
+    (candidateId : String) (logical : InternObservation Whole → ReplayLogical)
+    (reference candidate : InternObservation Whole)
+    (referencePhysical candidatePhysical internedNodes : Nat) (report : OptimizationReplay)
+    (success : optimizationReplay candidateId logical reference candidate
+      referencePhysical candidatePhysical internedNodes = some report) :
+    report.referenceLogical = report.candidateLogical := by
+  unfold optimizationReplay at success
+  split at success
+  · rename_i preserved
+    cases success
+    exact congrArg logical preserved.2
+  · contradiction
+
+theorem successful_replay_applied_tracks_interned_nodes {Whole : Type} [DecidableEq Whole]
+    (candidateId : String) (logical : InternObservation Whole → ReplayLogical)
+    (reference candidate : InternObservation Whole)
+    (referencePhysical candidatePhysical internedNodes : Nat) (report : OptimizationReplay)
+    (success : optimizationReplay candidateId logical reference candidate
+      referencePhysical candidatePhysical internedNodes = some report) :
+    report.applied = decide (0 < internedNodes) := by
+  unfold optimizationReplay at success
+  split at success
+  · cases success
+    rfl
+  · contradiction
+
+/-- Only the report is attached; the supplied B owner result remains its own
+complete object. Relating this wrapper to the actual CLI is still an obligation. -/
+def attachOptimization {Owner : Type} (owner : Owner) (report : OptimizationReplay) :
+    Owner × OptimizationReplay := (owner, report)
+
+theorem attaching_replay_keeps_owner {Owner : Type} (owner : Owner)
+    (report : OptimizationReplay) : (attachOptimization owner report).1 = owner := rfl
+
 inductive BackendFeature where
   | constraintExport | witnessProgramExport | nativeWitnessClosure
   | lookup | interaction | customGate | fieldLayout

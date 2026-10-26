@@ -85,22 +85,43 @@ digest and found all six named Rust tests passing. That observed C4 execution
 covers the stated A-profile fixture, including negative controls; it is not an
 agent-run test or evidence for the subsequent real-simulate replay requirement.
 
+Actual draft-route replay landed at `06ec0f855`; the evaluator-schema record
+and R1 receipt follow at `a069ccbff`. `ReplayLogical` names events, work, outcome,
+remaining fuel, maximum depth and peak structural child occurrences. The replay
+contract refuses an unknown candidate or different complete observations;
+success preserves every supplied deterministic logical metric. `applied` means
+the interner table is nonempty, not that a physical improvement was proved.
+Reference/candidate physical child counts are independent measurements over the
+initial state, each resumed `before` state and the final state. They are not
+byte size, total allocations or peak resident memory. `attachOptimization`
+preserves the separately supplied B owner result; linking this wrapper and the
+metric/checker definitions to Rust remains a correspondence obligation. No
+same-fuel equivalence between A and B profiles is inferred.
+
+The agent inspected R1's pinned six-test passing trace and C4's passing
+`20261026T004810Z-U024` holdout trace at source head `a069ccbff`. Its factory
+record reports 1.746 seconds and 72,126,464 bytes maximum RSS for the entire
+holdout command; these are neither optimization speedup nor memory reduction
+measurements. The agent executed neither command and establishes no binary/source
+reproducibility result. The old Python optimization-record checker was removed;
+the evaluator-owned replay is the current acceptance check, with the record
+still declaring no native acceptance or adoption.
+
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
-package build with Lean 4.33.1. The recorded `lean-build-4.log` shows the updated
-U024/U031/U033 module and all twenty dependency queries succeeding, then a
-successful 17-job package build and exit 0. Fifteen queries have empty axiom
-sets; five contain only `propext`. The JSON retains those exact historical sets and
+package build with Lean 4.33.1. The recorded `lean-build-7.log` shows the residual
+execution-provenance follow-up and all twenty-two dependency queries succeeding,
+then a successful 17-job package build and exit 0. Sixteen queries have empty
+axiom sets; six contain only `propext`. The JSON retains those historical sets and
 pins the successful observed log by digest. The agent read the complete log
-and checked current source pins; it did not run the build itself.
+and checked the recorded source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
 
-The evaluator subsequently required actual `mori simulate` integration for
-U031/U033 and U024 replay over D23/D35/tree45 with unchanged complete observations
-and allocation counters. These models do not supply that integration; its Rust
-landing and corresponding source-level contracts remain to be reconciled.
+Actual `mori simulate` integration for U031/U033 is still pending. The U024
+replay now has its own Rust source and observed holdout evidence as described
+above, without supplying the other compiler obligations or a refinement proof.
 
-**The execution-provenance additions have not yet been compiled.** Their source
-and query pins are current; the preceding twenty-query build remains historical
+**The U024 replay additions have not yet been compiled.** Their source and query
+pins are current; the preceding twenty-two-query build remains historical
 evidence until the new declarations and dependency queries are rechecked.
