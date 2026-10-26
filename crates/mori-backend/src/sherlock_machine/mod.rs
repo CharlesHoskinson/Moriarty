@@ -615,6 +615,9 @@ pub mod c6_append_helper_step;
 // UIREQ-023 Bind helper fragment (parameter binding).
 pub mod c6_bind_helper_consumer;
 pub mod c6_bind_helper_step;
+// UIREQ-023 Match helper fragment (arm matching for match expressions).
+pub mod c6_match_helper_consumer;
+pub mod c6_match_helper_step;
 // UIREQ-023 legacy control fragment (returns, primitive value, cases).
 pub mod c6_legacy_control_consumer;
 pub mod c6_legacy_control_step;
