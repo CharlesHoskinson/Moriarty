@@ -28,7 +28,8 @@ report adapter
 `2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2`
 (enforcing `remaining_work > 0` at await entry and R0 resume for SI-29,
 replacing saturating `accounting` with `checked_add -> Option`, and refusing
-`resume_epoch == u64::MAX`). Revisit these models when either source changes.
+`resume_epoch == u64::MAX`), committed on `factory-u` in `815a22d87`. Revisit
+these models when either source changes.
 
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
