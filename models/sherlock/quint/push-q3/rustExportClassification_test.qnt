@@ -8,4 +8,10 @@ module rustExportClassification_test {
     .expect(observation.operation == CheckedMul and belongsToActiveStep and sourceInv)
   run typedReturnSpecialCaseIsCorrectTest = begin(typedReturn).then(classify)
     .expect(observation.operation == FrameRestore and belongsToActiveStep and sourceInv)
+  run repairedScopeReturnUsesRestorationTest = begin(pendingMul).then(classifyRepaired)
+    .expect(repairedPendingFrame and belongsToActiveStep and repairedInv)
+  run repairedActiveMulStillUsesMulTest = begin(activeMul).then(classifyRepaired)
+    .expect(observation.operation == CheckedMul and repairedInv)
+  run repairedTypedReturnStillUsesRestorationTest = begin(typedReturn).then(classifyRepaired)
+    .expect(observation.operation == FrameRestore and repairedInv)
 }

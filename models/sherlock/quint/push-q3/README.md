@@ -7,10 +7,11 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-two Quint files, runs 60 deterministic Quint
+The runner typechecks all twenty-two Quint files, runs 63 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
 per model with `--max-steps 30`. Eight models use `modelInv`; the three pinned
-defective source projections use `sourceInv`. All eleven
+defective source projections use `sourceInv`. A repaired classifier variant
+additionally uses `--step classifyRepaired --invariant repairedInv`. All twelve
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
@@ -155,7 +156,14 @@ K-A rule is 195 (scope restoration), while its manifest reports multiplication.
 in that model denotes the restoration category, not a restriction against a
 more specific ScopeRestore operation name. The owner reports a working-tree
 repair selecting by rule/control/top frame and binding actual operand paths;
-its committed source and test evidence are still awaited.
+the targeted source repair was then confirmed at `6a6774a0c`. Its classifier
+variant passes three directed tests and a 10,000-sample run using the custom
+step named above, while the historical default step retains the bad source.
+The concrete Rust runtime tests remain queued; the pinned test diff had a
+scope regression but not the reported operand-value assertions. A separate
+source finding remains: checked multiplication yielding `PrimitiveResult(Err(10))`
+is currently exported with an ordinary UInt128 result placeholder. That needs
+an explicit checked-result/error type or located Unsupported disposition.
 
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
@@ -164,3 +172,20 @@ is allowed while entering one still needs an edge. It does not establish causal
 execution of IR blocks; actual reference-prefix equality and the Rust producer
 must still be audited. In particular, metadata-valid repeated records are not
 asserted to be valid machine traces by this model.
+
+The read-only U033 working-tree audit requested by sherlock-fable confirmed
+that the rewrite removes trace-derived rule membership and the second
+reference replay: it selects a group from the pre-state, steps once, checks
+the rule assignment and records the selected block. Its dense successor sets
+are conservative overapproximations permitted by `abe5ee146`; exact/minimal
+control-flow edges are not a stated requirement. Tighter edges are possible:
+scalar-check to publish; call to call/frame/publish; match to match/frame/publish.
+No committed rewrite or runtime result is claimed by this working-tree audit.
+
+The U024 CLI replay at `381f9e902` was source-audited against the tree model.
+Core interning is unchanged, preservation is checked before reporting, and
+technical cuts resume from interned snapshots. The CLI census excludes inline
+roots (six child allocations become three), whereas the model's seven-to-four
+count includes its root. The owner's committed run log records U024 passing;
+this worker did not rerun Rust or read its ignored receipt trace. The stale
+U023 inventory-count expectations were corrected at `d9908d374` to 37/41.

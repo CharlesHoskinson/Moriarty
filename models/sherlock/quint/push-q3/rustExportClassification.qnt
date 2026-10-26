@@ -24,6 +24,13 @@ module rustExportClassification {
   pure def referenceOperation(input: Input): Op =
     if (input.rule == 185 or input.rule == 195) FrameRestore
     else if (input.rule == 153 and input.frames.head() == RightMul) CheckedMul else ArenaRead
+  // Source repair at 6a6774a0c: use the rule and top frame. ScopeRestore is
+  // normalized to the FrameRestore category in this finite projection.
+  pure def repairedClassify(input: Input): Op =
+    if (input.returning and input.rule == 153 and input.frames.head() == RightMul) CheckedMul
+    else if (input.returning and input.rule == 185 and input.frames.head() == ReturnF) FrameRestore
+    else if (input.returning and input.rule == 195 and input.frames.head() == Scope) FrameRestore
+    else ArenaRead
   action init = {
     nondet input = Set(pendingMul, activeMul, typedReturn).oneOf()
     observation' = {classified: false, input: input, operation: ArenaRead}
@@ -33,8 +40,16 @@ module rustExportClassification {
     observation' = {...observation, classified: true, operation: sourceClassify(observation.input)},
   }
   action step = classify
+  action classifyRepaired = all {
+    not(observation.classified),
+    observation' = {...observation, classified: true, operation: repairedClassify(observation.input)},
+  }
   val belongsToActiveStep = not(observation.classified)
     or observation.operation == referenceOperation(observation.input)
   val sourceInv = not(observation.classified) or observation.operation == sourceClassify(observation.input)
   val misclassifiedPendingFrame = observation.classified and not(belongsToActiveStep)
+  val repairedInv = belongsToActiveStep and (not(observation.classified)
+    or observation.operation == repairedClassify(observation.input))
+  val repairedPendingFrame = observation.classified and observation.input == pendingMul
+    and observation.operation == FrameRestore
 }

@@ -41,6 +41,8 @@ quint typecheck rustExportClassification_test.qnt
 quint test rustExportClassification_test.qnt
 quint run rustExportClassification.qnt --invariant sourceInv --max-steps 30 --max-samples 10000 \
   --seed 0x303 --witnesses misclassifiedPendingFrame --verbosity 1
+quint run rustExportClassification.qnt --step classifyRepaired --invariant repairedInv \
+  --max-steps 30 --max-samples 10000 --seed 0x303 --witnesses repairedPendingFrame --verbosity 1
 if quint run rustExportClassification.qnt --invariant belongsToActiveStep --max-steps 30 \
   --seed 0x303 --verbosity 2 > rust-export-classification-counterexample.log 2>&1; then
   echo 'Expected the pinned Rust pending-frame classification counterexample' >&2
