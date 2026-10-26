@@ -17,13 +17,17 @@
   "openFindings": [
     "imported Waiting SI29 resource validation occurs after guard (suspension2.rs::resume_pure / owner_suspend.rs::resume_accept)",
     "imported UInt64 maximum resume_epoch unchecked increment (suspension2.rs:702 / suspension2_fin.rs:306)",
-    "post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn plus await binder env leak when ScopeF is omitted (draft_source.rs:826-846 / owner_suspend.rs:485-486 / owner_runtime.rs:4311-4396)",
-    "sequential await post-order site numbering reversal in draft_source.rs:823-854 (second await gets site 1, first gets site 2)",
+    "post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn when ScopeF is omitted in owner_suspend::resume_accept (not CLI-observable without a post-resume technical cut per sherlock-eval d50d2adc4)",
     "draft /2 surface parser rejects zero-binder await/yield and let-bound scalar locals in guards (draft_source.rs:681,809,1050,1145)"
+  ],
+  "resolvedOrNonBlockingNotes": [
+    "sequential await post-order site numbering in draft_source.rs:823-854 assigns site 2 to first and site 1 to second; labels still suspend in source order and Design §3.2 only requires distinct 1-based per-program site numbers (sherlock-eval d50d2adc4)"
   ],
   "commits": [
     "c03d399c4",
-    "511297bdf"
+    "511297bdf",
+    "6456bdac9",
+    "ba1919bf2"
   ],
   "awaiting": "sherlock-fable DONE-ALL or sherlock-u2 U014-U016 source changes",
   "stateLocationReason": "User restricts all edits to push-q1; target/AGENT-STATE.json not written."

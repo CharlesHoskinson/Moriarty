@@ -129,23 +129,30 @@ short traces there are intentional, rather than protocol deadlocks.
      `ExpressionRowC::Let.body`, `si20_return_ok` returns `false` and
      `owner_check_step_inv` (`owner_runtime.rs:4898–4900`) fails with `SI20`.
    - Consequently, taking a U016 technical checkpoint (`resume_profile2_checkpoint`
-     or `resume_technical_checkpoint`) at `InnerReturn` (`AtContextReturn` under
-     `ContextReturnF`) is refused with `ResumeError::StepInvariant(["SI20 ..."])`.
-   - Furthermore, when the enclosing frame does not restore `saved_env` on return
-     (`ContextRightF`, `UnaryF`, or top-level `ContextTopEntry`), omitting `ScopeF`
-     leaves the await binder cell in `img.env_root` after the await expression
-     returns (`binderLeakedAfterReturn`). Pushing `ScopeF` on `resume_accept`
-     (`--step scopedStep`) satisfies `SI-20`, accepts technical cuts at
-     `InnerReturn`, and restores `CallerEnv` via `KMachineReturnScope`.
-2. **Sequential `await` post-order site numbering reversal**:
+     or `resume_technical_checkpoint`, which invoke `owner_check_step_inv`) at
+     `InnerReturn` (`AtContextReturn` under `ContextReturnF`) is refused with
+     `ResumeError::StepInvariant(["SI20 ..."])`. Uninterrupted CLI execution via
+     `run_until_halt_or_await` does not invoke `owner_check_step_inv` on
+     intermediate `Return` steps.
+   - Furthermore, when the enclosing frame does not carry `saved_env`
+     (`ContextRightF`, `UnaryF`, or top-level `ContextTopEntry`; note that
+     `LeftF`, `LetF`, `IfF`, `MatchF`, `ArgsF` and `ReturnF` do carry `saved_env`
+     and `/2` forbids shadowing binders), omitting `ScopeF` leaves the await
+     binder cell on `img.env_root` at `AfterContext` (`binderLeakedAfterReturn`).
+     Pushing `ScopeF` on `resume_accept` (`--step scopedStep`) satisfies `SI-20`,
+     accepts technical cuts at `InnerReturn`, and restores `CallerEnv` via
+     `KMachineReturnScope`.
+2. **Sequential `await` post-order site numbering**:
    - In `draft_source::Parser::await_expression` (`draft_source.rs:823–854`),
      `let body = self.expression(0)?;` recursively parses `body` before
      `self.awaits.push(...)`, and `draft_source.rs:556–559` assigns 1-based
      `site` numbers in `self.awaits` push order.
    - In a sequential chain `await first(a: UInt) when G1; await second(b: UInt) when G2; E`,
      `second` receives `site = 1` and `first` receives `site = 2`
-     (`reversedSequentialSites`), contradicting source-order site numbering
-     (`draft_source.rs:29,217–220`; Design §3.2).
+     (`reversedSequentialSites`), whereas runtime still suspends in source
+     order by label (`first` at site 2, then `second` at site 1). Design §3.2
+     requires distinct 1-based per-program site numbers without pinning
+     source-order numbering (`sherlock-eval` `d50d2adc4`).
 3. **Draft `/2` surface admission gaps**:
    - `draft_source.rs:681,809` rejects `yield L;` and zero-binder
      `await L() when G; E`, and `draft_source.rs:1050,1145` records ordinary
