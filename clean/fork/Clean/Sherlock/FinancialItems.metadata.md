@@ -68,15 +68,21 @@ retained while zero-amount duties are omitted.
 
 No new `sorry` or custom axiom is declared. The companion
 `FinancialItemsAxioms.lean` queries every named theorem. The current
-thirty-name residual-duty extension is pending capped kernel verification.
-The preceding twenty-four-name source in `284c563f1` passed the coordinator's
-capped 17-job Lean 4.33.1 build, with exact observations in `875abc015`.
-That query observed only Lean's standard `propext`, `Quot.sound` and
-`Classical.choice` axioms, with no custom or `sorryAx` dependency. The JSON
-keeps that baseline separate from the current pending query. This agent
-inspected the coordinator's log but did not execute the build. Its own
-capped invocation cannot connect to the sandbox user scope bus; no uncapped
-build was run.
+thirty-name source in `f1aedbfb1` passed the coordinator's capped Lean 4.33.1
+build, with all 21 package jobs successful. Lake reported 736 ms for this
+module and 268 ms for its query. This agent inspected the complete log and
+verified exact source bytes, but did not execute the build. Its own capped
+invocation cannot connect to the sandbox user scope bus; no uncapped build
+was run.
+
+The actual thirty-name dependency query records fourteen empty axiom sets,
+twelve `propext`-only sets, three `propext`/`Quot.sound` sets and one
+`propext`/`Classical.choice`/`Quot.sound` set. The last remains
+`charge_stays_uint128`; the three quotient-dependent statements are the two
+general admission theorems and `charge_preserves_work`. New residual-duty
+statements use only empty or `propext`-only sets. No custom or `sorryAx`
+dependency was observed. The JSON records every per-name set and log digest;
+the prior twenty-four-name baseline remains available in `875abc015`.
 
 `WorkAccounting` is a theorem premise, not a guarantee currently supplied by
 financial checkpoint import. In the pinned host source, `decode_body`
