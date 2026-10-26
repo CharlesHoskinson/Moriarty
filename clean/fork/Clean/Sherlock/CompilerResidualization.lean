@@ -72,6 +72,66 @@ theorem materialization_preserves_of_decoded_eq {Input Observation : Type}
     (decoded : ∀ input, (candidate input).decoded = (reference input).decoded) :
     Preserves Materialization.decoded reference candidate := decoded
 
+/-! U024 at 69aeb882d: the candidate interns trees in the A profile only.
+These are semantic contents and abstract canonical allocation IDs; they do not
+encode Arc pointers or prove the Rust HashMap/work-stack invariant. -/
+
+inductive InternTree where
+  | leaf (value : Fin (2 ^ 128))
+  | branch (left right : InternTree)
+  deriving DecidableEq
+
+inductive InternNodeKey where
+  | leaf (value : Fin (2 ^ 128))
+  | branch (leftId rightId : Nat)
+  deriving DecidableEq
+
+def internKeyMeaning (content : Nat → InternTree) : InternNodeKey → InternTree
+  | .leaf value => .leaf value
+  | .branch left right => .branch (content left) (content right)
+
+/-- A live canonical ID must have a stable semantic content. Equal keys then
+cannot merge unequal trees; proving stable Rust allocation IDs is separate. -/
+theorem equal_intern_keys_preserve_content (content : Nat → InternTree)
+    (left right : InternNodeKey) (same : left = right) :
+    internKeyMeaning content left = internKeyMeaning content right := congrArg _ same
+
+/-- These equations are the table/work-stack invariant to establish for the
+bottom-up Rust interner. Given them, every finite input tree retains its content. -/
+theorem bottom_up_interning_preserves_content (intern : InternTree → InternTree)
+    (leaf : ∀ value, intern (.leaf value) = .leaf value)
+    (branch : ∀ left right, intern (.branch left right) = .branch (intern left) (intern right))
+    (tree : InternTree) : intern tree = tree := by
+  induction tree with
+  | leaf value => exact leaf value
+  | branch left right leftPreserved rightPreserved =>
+    rw [branch, leftPreserved, rightPreserved]
+
+/-- Exactly the compared StepRecord fields in optimization_intern.rs.
+`Whole` must be the complete structural A snapshot, including its program. -/
+structure InternStepRecord (Whole : Type) where
+  ruleStartLine : Nat
+  charge : Nat
+  before : Whole
+  after : Whole
+  deriving DecidableEq
+
+structure InternObservation (Whole : Type) where
+  initial : Whole
+  records : List (InternStepRecord Whole)
+  finalState : Whole
+  deriving DecidableEq
+
+/-- Mirrors the acceptance predicate, not its first-divergence diagnostic order.
+The A profile has no financial effect/duty state; no effectful claim is implied. -/
+theorem intern_observation_preservation_iff {Whole : Type}
+    (reference candidate : InternObservation Whole) :
+    reference = candidate ↔ reference.initial = candidate.initial ∧
+      reference.records = candidate.records ∧ reference.finalState = candidate.finalState := by
+  cases reference
+  cases candidate
+  simp only [InternObservation.mk.injEq]
+
 inductive BackendFeature where
   | constraintExport | witnessProgramExport | nativeWitnessClosure
   | lookup | interaction | customGate | fieldLayout
@@ -106,8 +166,64 @@ structure SeparatePlans (ConstraintPlan WitnessPlan Operation : Type) where
   constraintDisposition : ExportDisposition
   witnessDisposition : ExportDisposition
 
+/-! U031/U033 at cfbab29c5: finite Python reporting models, not Rust
+exporters, residual execution or native artifacts. -/
+
+inductive ToolingBackend where
+  | constraintJsonBasic | structuredWitnessBasic | midnightZkir
+  deriving DecidableEq, Repr
+
+/-- Per-feature primitive capability, distinct from aggregate complete-plan export. -/
+def toolingSupports (backend : ToolingBackend) : BackendFeature → Bool
+  | .constraintExport => decide (backend ≠ .midnightZkir)
+  | .witnessProgramExport => decide (backend = .structuredWitnessBasic)
+  | .nativeWitnessClosure | .lookup | .interaction | .customGate => false
+  | .fieldLayout => true
+
+/-- The fixed STEP manifest always contains native closure, lookup and interaction
+operations. Hence neither complete plan can be exported by any listed backend. -/
+def toolingWholePlanExport (_backend : ToolingBackend) : ExportDisposition :=
+  .unsupported .nativeWitnessClosure
+
+theorem tooling_native_closures_unsupported (backend : ToolingBackend) :
+    exportDisposition (toolingSupports backend) .nativeWitnessClosure =
+      .unsupported .nativeWitnessClosure := rfl
+
+theorem tooling_constraint_json_has_no_witness :
+    exportDisposition (toolingSupports .constraintJsonBasic) .witnessProgramExport =
+      .unsupported .witnessProgramExport := rfl
+
+def toolingAcceptance (_backend : ToolingBackend) : String := "none"
+
+theorem tooling_reports_grant_no_acceptance (backend : ToolingBackend) :
+    toolingAcceptance backend = "none" := rfl
+
+inductive ModelRule where
+  | fetch | condition | thenBranch | elseBranch | call
+  deriving DecidableEq, Repr
+
+/-- Exact target lists from the synthetic five-rule Python residualization model.
+`arithOnly` selects its static family whitelist, not a proved dynamic-state invariant. -/
+def modelTargets (arithOnly : Bool) : ModelRule → List ModelRule
+  | .fetch => if arithOnly then [.condition] else [.condition, .call]
+  | .condition => [.thenBranch, .elseBranch]
+  | .call => [.fetch]
+  | .thenBranch | .elseBranch => []
+
+theorem model_dynamic_branch_keeps_both_targets (arithOnly : Bool) :
+    modelTargets arithOnly .condition = [.thenBranch, .elseBranch] := rfl
+
+theorem model_recursive_call_keeps_back_edge (arithOnly : Bool) :
+    modelTargets arithOnly .call = [.fetch] := rfl
+
+/-- This is a difference witness, not a proof that the family mask preserves
+the generic machine. Static admission must justify the removed dispatch edge. -/
+theorem model_arith_prunes_call :
+    ModelRule.call ∈ modelTargets false .fetch ∧
+      ModelRule.call ∉ modelTargets true .fetch := by decide
+
 inductive StaticMask where
-  | empty | fixedFamily (family : Family) | fixedProgram
+  | empty | fixedFamily (family : String) | fixedProgram
   deriving DecidableEq, Repr
 
 /-- Immutable identity tokens only. Equality of tokens does not prove hash injectivity. -/
@@ -121,7 +237,7 @@ structure ImmutableFacts where
 structure SpecializationKey where
   profile : String
   layout : String
-  family : Option Family
+  family : Option String
   program : Option String
   declarations : Option String
   deriving DecidableEq, Repr

@@ -10,7 +10,8 @@
   "implementedSources": [
     "crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs",
     "crates/mori-core/src/sherlock/compile_artifact/draft_witness.rs",
-    "crates/mori-core/src/sherlock/helper_machine/witness_plan.rs"
+    "crates/mori-core/src/sherlock/helper_machine/witness_plan.rs",
+    "crates/mori-core/src/sherlock/optimization_intern.rs"
   ],
   "prospectiveSources": [],
   "remainingObligations": [
@@ -20,65 +21,96 @@
     "U031: actual separate constraint/witness exporter, typed operation manifest and per-feature capability evidence remain required.",
     "U033: actual finite worklist, three-mask residual IR, runtime recursion/boundaries and sound specialization implementation remain required.",
     "Specialization keys model immutable context identities; hash injectivity and concrete canonical bytes are not proved.",
-    "No native, stock-verifier or ledger acceptance follows from this module."
+    "No native, stock-verifier or ledger acceptance follows from this module.",
+    "U024 at 69aeb882d: establish the Rust interner table invariant, stable live Arc child identities, bottom-up stack equations and actual complete A-profile trace preservation. No effectful/native or measured-memory result is inferred.",
+    "U031/U033 at cfbab29c5 are report-only sample models: instantiate actual exporters/reference-step residualization and prove static family admission justifies pruning the dynamic call target."
   ],
   "sourceBase": "0699194f9",
   "leanToolchain": "leanprover/lean4:v4.33.1",
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/CompilerResidualization.lean",
-      "bytes": 8154,
-      "sha256": "41b776637e513ed84102fae4040944de1267e0e1cc1c8b87a609b5c36f2cf862"
+      "bytes": 13340,
+      "sha256": "c4b0634b132892f256bb440a577258b8c1538a6eab8d6c8b9e41cdc93c980e9d"
     },
     {
       "path": "clean/fork/Clean/Sherlock/CompilerResidualizationAxioms.lean",
-      "bytes": 808,
-      "sha256": "fdabd24d7b82bdb3ed94cb92aa7b76f3633c8ae6fd02e289af94b89cc63d49f3"
+      "bytes": 1606,
+      "sha256": "efb52fbc80f057a807797aeec94eb0da4edc7aac453f1bd30b99b1b3067c9b0b"
     }
   ],
   "theoremNames": [
     "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program",
     "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence",
     "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq",
+    "Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content",
+    "Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content",
+    "Clean.Sherlock.CompilerResidualization.intern_observation_preservation_iff",
     "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition",
     "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness",
+    "Clean.Sherlock.CompilerResidualization.tooling_native_closures_unsupported",
+    "Clean.Sherlock.CompilerResidualization.tooling_constraint_json_has_no_witness",
+    "Clean.Sherlock.CompilerResidualization.tooling_reports_grant_no_acceptance",
+    "Clean.Sherlock.CompilerResidualization.model_dynamic_branch_keeps_both_targets",
+    "Clean.Sherlock.CompilerResidualization.model_recursive_call_keeps_back_edge",
+    "Clean.Sherlock.CompilerResidualization.model_arith_prunes_call",
     "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime",
     "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back",
     "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back",
     "Clean.Sherlock.CompilerResidualization.realization_preserves"
   ],
   "verification": {
-    "status": "observed-full-package-build-and-axiom-queries-pass",
-    "observation": {
-      "runner": "sherlock-fable",
-      "commandReported": "memcap 48G lake -d clean/fork build",
-      "artifact": "lean-build-2.log",
-      "bytes": 10568,
-      "sha256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
-      "overallPackageExit": 0,
-      "jobs": 17,
-      "cachedModuleResultsReplayed": true,
-      "agentAction": "read complete observed build log and checked current source pins; did not execute build"
+    "status": "U024-U031-U033-source-updated-awaiting-recheck",
+    "axiomQueryStatus": "new-source-not-run",
+    "actualAxiomSets": null,
+    "wholePackagePassedForCurrentSource": null,
+    "previousObservedVerification": {
+      "status": "observed-full-package-build-and-axiom-queries-pass",
+      "observation": {
+        "runner": "sherlock-fable",
+        "commandReported": "memcap 48G lake -d clean/fork build",
+        "artifact": "lean-build-2.log",
+        "bytes": 10568,
+        "sha256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
+        "overallPackageExit": 0,
+        "jobs": 17,
+        "cachedModuleResultsReplayed": true,
+        "agentAction": "read complete observed build log and checked current source pins; did not execute build"
+      },
+      "axiomQueryStatus": "observed-pass",
+      "actualAxiomSets": {
+        "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program": [],
+        "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence": [],
+        "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq": [],
+        "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness": [],
+        "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime": [],
+        "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back": [],
+        "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.realization_preserves": []
+      },
+      "emptyAxiomSetCount": 7,
+      "propextOnlyCount": 2,
+      "wholePackagePassed": true,
+      "localSandboxExecution": "blocked by memcap user scope bus"
     },
-    "axiomQueryStatus": "observed-pass",
-    "actualAxiomSets": {
-      "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program": [],
-      "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence": [],
-      "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq": [],
-      "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition": [
-        "propext"
-      ],
-      "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness": [],
-      "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime": [],
-      "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back": [],
-      "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back": [
-        "propext"
-      ],
-      "Clean.Sherlock.CompilerResidualization.realization_preserves": []
-    },
-    "emptyAxiomSetCount": 7,
-    "propextOnlyCount": 2,
-    "wholePackagePassed": true,
+    "previousVerifiedSourceFiles": [
+      {
+        "path": "clean/fork/Clean/Sherlock/CompilerResidualization.lean",
+        "bytes": 8154,
+        "sha256": "41b776637e513ed84102fae4040944de1267e0e1cc1c8b87a609b5c36f2cf862"
+      },
+      {
+        "path": "clean/fork/Clean/Sherlock/CompilerResidualizationAxioms.lean",
+        "bytes": 808,
+        "sha256": "fdabd24d7b82bdb3ed94cb92aa7b76f3633c8ae6fd02e289af94b89cc63d49f3"
+      }
+    ],
+    "previousObservationCoversCurrentSource": false,
     "localSandboxExecution": "blocked by memcap user scope bus"
   },
   "trust": {
@@ -86,5 +118,55 @@
     "newCustomAxioms": false,
     "rustRefinementProved": false,
     "nativeAcceptance": false
-  }
+  },
+  "implementationUpdates": {
+    "U024": {
+      "commit": "69aeb882d7927539cecbc71098962130c1c0f392",
+      "source": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "tests": "crates/mori-core/tests/sherlock_u024_intern_preservation.rs",
+      "profile": "sherlock-k-a/1",
+      "integration": "candidate-only; reference machine unchanged",
+      "clauses": [
+        "values",
+        "rejection/exhaustion",
+        "evaluation/effect order",
+        "boundaries",
+        "duties",
+        "resource schedule"
+      ],
+      "dutiesVacuous": true
+    },
+    "U031/U033": {
+      "commit": "cfbab29c5",
+      "class": "Python finite report model only",
+      "execution": "none",
+      "acceptance": "none",
+      "rustExporterOrSpecializer": false,
+      "staticFamilyAdmissionProof": false
+    }
+  },
+  "modelSources": [
+    "models/sherlock/qa/export_plans.py",
+    "models/sherlock/qa/residualize.py"
+  ],
+  "implementationSourcePins": [
+    {
+      "commit": "69aeb882d",
+      "path": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "bytes": 16687,
+      "sha256": "d53b698b3cdaa4bae49913cfb61d6a8af4fe3ec33b322db9c83513dc058f0b8c"
+    },
+    {
+      "commit": "cfbab29c5",
+      "path": "models/sherlock/qa/export_plans.py",
+      "bytes": 8242,
+      "sha256": "8aeba7e11c254c2a6eca94c16bcbd256432950a70d13993396ade27cfeee11da"
+    },
+    {
+      "commit": "cfbab29c5",
+      "path": "models/sherlock/qa/residualize.py",
+      "bytes": 5313,
+      "sha256": "70a730e3fe454f77fc9dee9e362535a6d31576ebc4145f9d8088de17a7e07f5a"
+    }
+  ]
 }
