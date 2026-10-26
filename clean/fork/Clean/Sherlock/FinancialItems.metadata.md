@@ -3,9 +3,10 @@
 `FinancialItems.lean` follows the host financial route in
 `crates/mori-core/src/stage/sherlock2.rs` and its report publisher
 `crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs`, committed
-in `815a22d87`. The financial engine, publisher and audited decode/admit
-helpers byte-match that commit and the current factory-u working tree.
-Exact hashes and verification state are in the accompanying JSON.
+in `815a22d87`. The financial engine, publisher, residual-duty helper and
+audited decode/admit helpers byte-match that selected commit. Observation
+uses committed Git objects from the own checkout. Exact hashes and
+verification state are in the accompanying JSON.
 
 The module uses `Init` only. Snapshot, capture and effect types are parameters
 representing complete payloads, not alternate truncated host encodings.
@@ -18,7 +19,7 @@ The statements cover these boundary contracts:
 
 | Requirement | Statements and limits |
 | --- | --- |
-| U017 | Successful await/complete publishes the supplied snapshot and ordered prefix plus fee/fallible effects. `accounting` checks each payment/fee accumulation and their final sum; overflow yields no report. A successful report has exact gross = receipt + fees and fits UInt128. The literal 30-payment/2-fee calculation yields gross 32, receipt 30, reserve arithmetic 68 and liability arithmetic 10. Statement evaluation producing the snapshot remains an obligation. |
+| U017 | Successful await/complete publishes the supplied snapshot and ordered prefix plus fee/fallible effects. Positive residual duties are selected in snapshot order. `accounting` checks each payment/fee accumulation and their final sum; overflow yields no report. A successful report has exact gross = receipt + fees and fits UInt128. The literal 30-payment/2-fee calculation yields gross 32, receipt 30, reserve arithmetic 68 and liability arithmetic 10. Statement evaluation producing the snapshot remains an obligation. |
 | U018 | Successful await requires remaining fuel for resume, installs supplied captures, advances the segment and publishes Waiting with the committed prefix. Zero post-dispatch fuel instead enters the local Fuel-exhaustion path. A false/error guard's `notReady` leaves the engine image identical even when attempted logical work is nonzero; successful checkpoint publication also requires successful accounting. Capture extraction, guard evaluation, exact checkpoint bytes and Core/2 comparison remain obligations. |
 | U019 | A failure with no fee seal retains the prior committed snapshot/log, discards the fee and fallible deltas in order, clears captures and publishes the specified rejection/exhaustion. Previously charged machine work remains charged, while committed logical work remains unchanged. |
 | U020 | All-or-nothing retains the prior prefix. Retain-guaranteed-fees with an actual seal installs the sealed snapshot/log and reports retained fees separately from discarded fallible effects. A failing unsealed fee phase retains nothing new. The seal's production, admission correspondence and target phase correspondence remain obligations. |
@@ -54,22 +55,28 @@ input error rather than emitting a saturated report or checkpoint. These
 are report arithmetic properties, not per-account, per-asset balance
 conservation or a guarantee that every otherwise valid action can publish.
 
+`residualDuties` mirrors the positive-amount filter in `stage::residual`.
+Its generic duty type retains every supplied record field. The membership
+and sublist theorems state exact positive selection and retained order;
+`committedDuties` applies that filter to the selected committed snapshot.
+Await selects the supplied committed snapshot; an unsealed local failure
+keeps prior duties; a retained sealed fee phase selects its sealed snapshot's
+duties. The snapshot-to-liabilities and amount projections are supplied by
+the caller. These statements do not evaluate transfers or discharges, or
+establish the actual Rust projection. The literal remaining amount 10 is
+retained while zero-amount duties are omitted.
+
 No new `sorry` or custom axiom is declared. The companion
 `FinancialItemsAxioms.lean` queries every named theorem. The current
-fuel-guard/checked-accounting source in `284c563f1` passed the coordinator's
-capped 17-job Lean 4.33.1 build. Lake reported 907 ms for this module and
-224 ms for its query. This agent inspected the complete build log and checked
-that the source bytes match the commit; it did not execute the build.
-Its own capped invocation cannot connect to the sandbox user scope bus,
-and no uncapped build was run.
-
-The actual twenty-four-name query reports twelve empty axiom sets, eight
-`propext`-only sets, three `propext`/`Quot.sound` sets and one
-`propext`/`Classical.choice`/`Quot.sound` set. The last is
-`charge_stays_uint128`; the three quotient-dependent statements are the two
-general admission theorems and `charge_preserves_work`. The JSON records
-every per-name set and log digest. No custom or `sorryAx` dependency was
-observed. Prior nineteen-name metadata remains available in `0c1020244`.
+thirty-name residual-duty extension is pending capped kernel verification.
+The preceding twenty-four-name source in `284c563f1` passed the coordinator's
+capped 17-job Lean 4.33.1 build, with exact observations in `875abc015`.
+That query observed only Lean's standard `propext`, `Quot.sound` and
+`Classical.choice` axioms, with no custom or `sorryAx` dependency. The JSON
+keeps that baseline separate from the current pending query. This agent
+inspected the coordinator's log but did not execute the build. Its own
+capped invocation cannot connect to the sandbox user scope bus; no uncapped
+build was run.
 
 `WorkAccounting` is a theorem premise, not a guarantee currently supplied by
 financial checkpoint import. In the pinned host source, `decode_body`
@@ -112,7 +119,7 @@ full-image and ordering limits remain separate from that local acceptance;
 they do not justify an on-chain resume or refinement claim.
 
 This module does not establish full Rust refinement, statement semantics,
-residual-duty extraction, source/plan admission, authenticated/consumed
+Rust snapshot/amount projection, source/plan admission, authenticated/consumed
 observations, C6 encoding, in-circuit hashes, handwritten constraints,
 recursive proofs, stock-verifier compatibility or concrete ledger-9 phase
 evidence. In particular, it cannot close U020's target-evidence requirement.

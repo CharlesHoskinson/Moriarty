@@ -283,6 +283,57 @@ theorem not_ready_preserves_image (image : Image Snapshot Capture Effect) (attem
     notReady image attempted = image := by
   rfl
 
+/-- Positive liabilities in snapshot order, retaining each complete duty payload. -/
+def residualDuties {Duty : Type} (amount : Duty → Nat) (duties : List Duty) : List Duty :=
+  duties.filter (fun duty ↦ decide (0 < amount duty))
+
+/-- The actual snapshot-to-liabilities and amount projections remain caller obligations. -/
+def committedDuties {Duty : Type} (dutiesOf : Snapshot → List Duty) (amount : Duty → Nat)
+    (image : Image Snapshot Capture Effect) : List Duty :=
+  residualDuties amount (dutiesOf image.committed)
+
+theorem residual_duty_mem_iff {Duty : Type} (amount : Duty → Nat) (duties : List Duty)
+    (duty : Duty) :
+    duty ∈ residualDuties amount duties ↔ duty ∈ duties ∧ 0 < amount duty := by
+  simp [residualDuties]
+
+theorem residual_duties_preserve_order {Duty : Type} (amount : Duty → Nat)
+    (duties : List Duty) : (residualDuties amount duties).Sublist duties := by
+  exact List.filter_sublist
+
+theorem await_commits_residual_duties {Duty : Type} (dutiesOf : Snapshot → List Duty)
+    (amount : Duty → Nat) (image : Image Snapshot Capture Effect) (tentative : Snapshot)
+    (resumeFuel : 0 < image.remainingWork) (fees fallible : List Effect)
+    (logical site : Nat) (captures : List Capture) :
+    committedDuties dutiesOf amount
+      (awaitCommit image tentative resumeFuel fees fallible logical site captures) =
+      residualDuties amount (dutiesOf tentative) := by
+  rfl
+
+theorem failed_unsealed_retains_residual_duties {Duty : Type}
+    (dutiesOf : Snapshot → List Duty) (amount : Duty → Nat)
+    (image : Image Snapshot Capture Effect) (failure : Failure) (fees fallible : List Effect) :
+    committedDuties dutiesOf amount (localFailure image failure none fees fallible) =
+      committedDuties dutiesOf amount image := by
+  have dutyFacts := failed_unsealed_phase_preserves_prefix image failure fees fallible
+  unfold committedDuties
+  rw [dutyFacts.1]
+
+theorem sealed_failure_projects_residual_duties {Duty : Type}
+    (dutiesOf : Snapshot → List Duty) (amount : Duty → Nat)
+    (image : Image Snapshot Capture Effect) (policy : image.policy = .retainGuaranteedFees)
+    (failure : Failure) (sealed : FeeSeal Snapshot Effect) (fees fallible : List Effect) :
+    committedDuties dutiesOf amount
+      (localFailure image failure (some sealed) fees fallible) =
+      residualDuties amount (dutiesOf sealed.snapshot) := by
+  have dutyFacts := sealed_fees_retained_separately image policy failure sealed fees fallible
+  unfold committedDuties
+  rw [dutyFacts.1]
+
+/-- Literal residual amount in UIREQ-017, with extinguished duties omitted. -/
+theorem first_paid_residual_amount : residualDuties id [(0 : Nat), 10, 0] = [10] := by
+  decide
+
 /-- Only accounting-relevant payload is projected here; full effects remain in Image. -/
 inductive AccountingEffect where
   | transfer (amount : Fin (2 ^ 128))

@@ -11,13 +11,13 @@
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/FinancialItems.lean",
-      "bytes": 16394,
-      "sha256": "c6bbf5eef9c76ae76eb0baacc0446268f98397c0931dea4351768d3078abf009"
+      "bytes": 19097,
+      "sha256": "8c234b3c9f21b482e088915ab65fab6286bd896cad594b70fadb8ac027e1db26"
     },
     {
       "path": "clean/fork/Clean/Sherlock/FinancialItemsAxioms.lean",
-      "bytes": 1820,
-      "sha256": "132a896683863aa8d74d8956a9887feba653c772dbd8d8deb93291d78cd3392e"
+      "bytes": 2274,
+      "sha256": "a043edf490be353f27f9b67f1089bce532efb3e5216d451a85251e1b5fd443e5"
     }
   ],
   "implementationComparison": {
@@ -46,37 +46,33 @@
         "bytes": 14334,
         "sha256": "12474f92ad0752cfeee1a6054c5b251370dc08d8a17949f7747878ada60450c3",
         "scope": "Capture-layout source audit; not a Rust refinement proof."
+      },
+      {
+        "path": "crates/mori-core/src/stage/mod.rs",
+        "bytes": 6401,
+        "sha256": "bcc8c243662793f36c92123dd823d0e10f5db0f4cecee57f3ec77cb13a4de091",
+        "scope": "Positive residual-duty filter; actual snapshot/amount projection correspondence remains open."
       }
     ],
-    "change": "Post-await positive fuel guard and zero-fuel resume refusal; accounting now checked Option with publication errors, not saturation; maximal resume epoch refused.",
+    "change": "Current checked-accounting/fuel model extended with positive residual-duty selection and committed-prefix projections.",
     "adoptedImplementationCommit": "815a22d87da1d00b44a050d1b3760b540cf76683",
-    "committedBytesMatchWorkingTree": true
+    "committedBlobHashesVerified": true,
+    "comparisonMode": "Read-only committed git objects from own checkout; no current foreign working-tree assertion."
   },
   "verification": {
-    "status": "VERIFIED_BY_COORDINATOR_BUILD",
-    "kernelCompile": {
-      "toolchain": "4.33.1",
-      "moduleMilliseconds": 907,
-      "queryMilliseconds": 224,
-      "timingsAreReportedByLake": true,
-      "benchmarkClaimed": false
-    },
+    "status": "UNVERIFIED_RESIDUAL_DUTY_EXTENSION",
+    "kernelCompile": null,
     "cappedInvocation": "memcap 48G lake +leanprover/lean4:v4.34.1 env lean Clean/Sherlock/FinancialItems.lean",
     "uncappedBuildRun": false,
-    "staticAxiomQueryCoverage": 24,
+    "staticAxiomQueryCoverage": 30,
     "staticDependencyListsMatch": null,
-    "coordinatorBuildObservation": {
-      "executor": "sherlock-fable",
-      "command": "memcap 48G lake -d clean/fork build",
-      "log": "factory-ops/scratchpad/sherlock-push/lean-build-9.log",
-      "logSHA256": "727994a49de08d40471d2f7f77a62817fdd3318b3c7b820ba1b890fe981664f2",
-      "fullBuildExit": 0,
-      "packageJobs": 17,
-      "moduleResult": "passed",
-      "sourceCommit": "284c563f1",
-      "executedByThisAgent": false
-    },
-    "localExecutionBlocker": "memcap failed before Lean: Failed to connect to user scope bus via local transport: No data available"
+    "coordinatorBuildObservation": null,
+    "localExecutionBlocker": "memcap failed before Lean: Failed to connect to user scope bus via local transport: No data available",
+    "retryHypothesis": "The reserved local binder prefix caused both parser cascades; dutyFacts is a non-reserved replacement.",
+    "priorFailedCurrentBuild": {
+      "coordinatorLog": "factory-ops/scratchpad/sherlock-push/lean-build-16.log",
+      "cause": "Reserved prefix binder in two new residual-duty proofs; renamed dutyFacts. No proof statement changed."
+    }
   },
   "axioms": {
     "newCustomDeclarations": [],
@@ -100,6 +96,12 @@
       "Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel",
       "Clean.Sherlock.FinancialItems.resume_zero_fuel_refused",
       "Clean.Sherlock.FinancialItems.not_ready_preserves_image",
+      "Clean.Sherlock.FinancialItems.residual_duty_mem_iff",
+      "Clean.Sherlock.FinancialItems.residual_duties_preserve_order",
+      "Clean.Sherlock.FinancialItems.await_commits_residual_duties",
+      "Clean.Sherlock.FinancialItems.failed_unsealed_retains_residual_duties",
+      "Clean.Sherlock.FinancialItems.sealed_failure_projects_residual_duties",
+      "Clean.Sherlock.FinancialItems.first_paid_residual_amount",
       "Clean.Sherlock.FinancialItems.checkedAdd_success",
       "Clean.Sherlock.FinancialItems.accounting_success",
       "Clean.Sherlock.FinancialItems.first_paid_prefix_accounting",
@@ -107,62 +109,8 @@
       "Clean.Sherlock.FinancialItems.accounting_payments_overflow_refused",
       "Clean.Sherlock.FinancialItems.accounting_fees_overflow_refused"
     ],
-    "observedSets": {
-      "Clean.Sherlock.FinancialItems.all_or_nothing_admission_unrestricted": [],
-      "Clean.Sherlock.FinancialItems.retain_admission_iff_all_segments": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.bad_segment_blocks_retain_admission": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.fee_after_other_refused": [],
-      "Clean.Sherlock.FinancialItems.let_and_requires_before_fee_admitted": [],
-      "Clean.Sherlock.FinancialItems.charge_preserves_work": [
-        "propext",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix": [],
-      "Clean.Sherlock.FinancialItems.charge_stays_uint128": [
-        "propext",
-        "Classical.choice",
-        "Quot.sound"
-      ],
-      "Clean.Sherlock.FinancialItems.await_publishes_committed_prefix": [],
-      "Clean.Sherlock.FinancialItems.complete_publishes_ordered_effects": [],
-      "Clean.Sherlock.FinancialItems.failed_unsealed_phase_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.sealed_fees_retained_separately": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.failure_keeps_charged_work": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.await_enter_zero_fuel_exhausts": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.resume_zero_fuel_refused": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.not_ready_preserves_image": [],
-      "Clean.Sherlock.FinancialItems.checkedAdd_success": [],
-      "Clean.Sherlock.FinancialItems.accounting_success": [
-        "propext"
-      ],
-      "Clean.Sherlock.FinancialItems.first_paid_prefix_accounting": [],
-      "Clean.Sherlock.FinancialItems.accounting_gross_overflow_refused": [],
-      "Clean.Sherlock.FinancialItems.accounting_payments_overflow_refused": [],
-      "Clean.Sherlock.FinancialItems.accounting_fees_overflow_refused": []
-    },
-    "note": "Twenty-four-name query observed in coordinator capped build9 log; exact current source bytes match284c563f1. Standard axioms only."
+    "observedSets": null,
+    "note": "Current30-name query pending capped verification; prior24-name observed metadata in875abc015."
   },
   "refinementClaimed": false,
   "targetEvidenceClaimed": false,
@@ -326,18 +274,18 @@
     "evaluatorLocalScopeDisposition": "U017-U020 confirmed at815a22d87; recomputed-CK cases are non-gating under authentication none / consumption untracked. Full-image invariants remain a separate obligation before an on-chain resume claim."
   },
   "previousVerifiedRevision": {
-    "sourceCommit": "e9da3a079",
-    "metadataCommit": "0c1020244",
-    "theoremCount": 19,
+    "sourceCommit": "284c563f1",
+    "metadataCommit": "875abc015",
+    "theoremCount": 24,
     "coordinatorBuild": {
       "executor": "sherlock-fable",
       "command": "memcap 48G lake -d clean/fork build",
-      "log": "factory-ops/scratchpad/sherlock-push/lean-build-5.log",
-      "logSHA256": "5cb2866e00cc9c74664a75c0e89446918a5010824b5c41479abd8be842f36e49",
+      "log": "factory-ops/scratchpad/sherlock-push/lean-build-9.log",
+      "logSHA256": "727994a49de08d40471d2f7f77a62817fdd3318b3c7b820ba1b890fe981664f2",
       "fullBuildExit": 0,
       "packageJobs": 17,
       "moduleResult": "passed",
-      "sourceCommit": "e9da3a079",
+      "sourceCommit": "284c563f1",
       "executedByThisAgent": false
     }
   }

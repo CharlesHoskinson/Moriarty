@@ -18,6 +18,12 @@ import Clean.Sherlock.FinancialItems
 #print axioms Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel
 #print axioms Clean.Sherlock.FinancialItems.resume_zero_fuel_refused
 #print axioms Clean.Sherlock.FinancialItems.not_ready_preserves_image
+#print axioms Clean.Sherlock.FinancialItems.residual_duty_mem_iff
+#print axioms Clean.Sherlock.FinancialItems.residual_duties_preserve_order
+#print axioms Clean.Sherlock.FinancialItems.await_commits_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.failed_unsealed_retains_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.sealed_failure_projects_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.first_paid_residual_amount
 #print axioms Clean.Sherlock.FinancialItems.checkedAdd_success
 #print axioms Clean.Sherlock.FinancialItems.accounting_success
 #print axioms Clean.Sherlock.FinancialItems.first_paid_prefix_accounting
