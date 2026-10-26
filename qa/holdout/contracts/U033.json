@@ -52,7 +52,8 @@
       "residual.ir.omissions",
       "residual.worklist.fallback_used",
       "residual.execution.format",
-      "residual.execution.slices[].records[].rule_start_line"
+      "residual.execution.slices[].records[].rule_start_line",
+      "residual.execution.slices[].records[].block_id"
     ]
   },
   "flags": {
@@ -101,9 +102,9 @@
       "worklist": {
         "fallback_used": "bool, true iff generic_fallbacks non-empty (then a generic-dispatch block exists)"
       },
-      "execution": "the residual realization EXECUTED on this run (same program, fuel, stack) as a moriarty-sherlock-reference-slices/1 document with group_budget 1; its StepRecord stream must equal --reference-slices 1"
+      "execution": "the residual realization EXECUTED on this run (same program, fuel, stack) as a moriarty-sherlock-reference-slices/1 document with group_budget 1; its StepRecord stream must equal --reference-slices 1, AND every record carries block_id = the residual block that produced it: that block's rules contain the record's rule_start_line (or it is generic-dispatch), and each next record's block is the same block, one of its successors, or follows a generic-dispatch block"
     },
     "invariants": "ir_id independent of fuel and stack; universal and family ir_id identical across programs; per-program block structure independent of recursion depth; --residual-size-limit 0 and unknown families refused (nonzero exit, no completed execution)",
-    "evaluator_note": "Evaluator-authored (sherlock-eval 2026-10-25) from the spec, interfaces.md and demonstrators.md; implementer proposals reviewed. The holdout reads the flags below; a spelling change is a CONTRACT CHANGE posted to sherlock-eval. sherlock-s5's models/sherlock/qa/residualize.py (a five-rule hand table that never sees the program) would be judged a gap report: the residual must realize the real reference relation."
+    "evaluator_note": "Evaluator-authored (sherlock-eval 2026-10-25) from the spec, interfaces.md and demonstrators.md; implementer proposals reviewed. The holdout reads the flags below; a spelling change is a CONTRACT CHANGE posted to sherlock-eval. sherlock-s5's models/sherlock/qa/residualize.py (a five-rule hand table that never sees the program) would be judged a gap report: the residual must realize the real reference relation. CONTRACT CHANGE 2026-10-26 (evaluator, after quint-3's 'post-hoc replay' finding on s5 WIP): records carry block_id and must follow the IR's control edges."
   }
 }
