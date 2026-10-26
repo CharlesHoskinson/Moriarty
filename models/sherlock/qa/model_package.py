@@ -352,6 +352,10 @@ def main(argv=None):
     package.add_argument('--private-record', type=Path)
     package.add_argument('--retained-comparison', action='store_true',
                          help='re-compare the retained pinned F03 K/Quint pair in-process')
+    exports = commands.add_parser('export-plans')
+    exports.add_argument('--backend')
+    resid = commands.add_parser('residualize')
+    resid.add_argument('--limit', type=int, default=64)
     binding = commands.add_parser('bind-private')
     binding.add_argument('--integration-root', required=True, type=Path)
     binding.add_argument('--record', required=True, type=Path)
@@ -361,6 +365,12 @@ def main(argv=None):
             result = projection(args.k_observations, args.quint_observations, args.case, args.fuel)
         elif args.command == 'stage':
             result = stage(args.comparison, args.private_record, args.retained_comparison)
+        elif args.command == 'export-plans':
+            import export_plans
+            result = export_plans.prepare(args.backend) if args.backend else export_plans.report()
+        elif args.command == 'residualize':
+            import residualize
+            result = residualize.report(args.limit)
         else:
             result = bind_private(args.integration_root, args.record)
     except (OSError, ValueError, KeyError, TypeError, RecursionError, EOFError) as error:
