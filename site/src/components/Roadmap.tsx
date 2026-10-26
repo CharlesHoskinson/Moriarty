@@ -54,8 +54,11 @@ export function Roadmap() {
         These historical tracks identify separate evidence questions. Current
         sequencing and dependencies are defined by U0–U7. One asks whether the successor specification can be
         completed and executed in K. The native track asks whether the
-        recursive proof backend can verify a history at all, which is open
-        after the first experiment ran out of rows at k17. The third asks
+        recursive proof backend can verify a history: the GP design now uses
+        a universal gated leaf proving S consecutive steps per leaf, an IVC
+        node at k=20 and a k=20 run decider over the 5/6-lane digest
+        instance with arity-4 Poseidon (B group 9/9 on the consolidation
+        line). The third asks
         whether the accepted atomic subset can settle real loan and swap
         effects on the public network.
       </p>
