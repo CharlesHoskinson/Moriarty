@@ -61,12 +61,13 @@
         "unperformed stages": "stay not run"
       },
       "coverage": "primary",
-      "judgment": "Evaluator reading: the evidence is a committed qualification record whose words are not trusted. Pins, source and relation hashes are recomputed, the on-chain stages are re-read from the public stagenet indexer, and the readback result is compared with an independent reference run of the same source. Stages left not-run fail honestly as SPEC GATE, so the scenario cannot pass on Preview/Fenrir or rollup-anchor evidence.",
+      "judgment": "Evaluator reading: the evidence is a committed qualification record whose words are not trusted. Pins, source and relation hashes are recomputed, the on-chain stages are re-read from the public stagenet indexer, and the readback result is compared with an independent reference run of the same source. Stages left not-run fail honestly as SPEC GATE, so the scenario cannot pass on Preview/Fenrir or rollup-anchor evidence. Since the quint-3 finding (2026-10-26), the result is decoded from the indexed state bytes through the committed, hash-pinned compiled layout, and the pinned verifying key must be the installed key of the called entry in both the deploy and post-call states.",
       "unasserted": [
-        "the correspondence between the indexed contract state and observed_result beyond the state hash (the state layout is the realization's)",
         "proof bytes and local verification (no proof is re-verified by the holdout; verifier independence is checked by name only)",
         "compile reproducibility",
-        "that the deployed contract's on-chain verifying key is the committed relation_vk_path compiled from the source (the holdout does not parse the contract state); a record could cite an unrelated deployment, which a reviewer must catch"
+        "that the committed state layout's result window is the compiled ledger field (the layout is pinned by hash and belongs to the compiled toolchain output; a wrong layout must be caught in review; the pre/post change and reference-equality requirements make an arbitrary window unlikely to pass)",
+        "ledger fields other than the result (the pure qualification program has one result and no effects)",
+        "that the pinned verifying key was compiled from the source (only that it is the installed key of the called entry and pinned by hash)"
       ],
       "exec": {
         "entrypoint": "committed record named by qa/holdout/contracts/U023.json + stagenet public indexer (read-only) + mori simulate reference run",
