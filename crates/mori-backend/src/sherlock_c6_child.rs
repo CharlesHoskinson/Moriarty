@@ -498,13 +498,55 @@ pub fn c6_child_relation(
             .map(|id| Operand::Variable(id.clone()))
             .collect()
     };
+    // In-circuit Poseidon accepts only a few inputs per TransientHash in
+    // the ZKIR conversion (long single hashes fail synthesis), so every
+    // digest is a tree of arity-4 hashes. The off-circuit mirror is
+    // `hash_tree_offcircuit`; the node must use the same tree.
+    fn hash_tree(
+        body: &mut Vec<Instruction>,
+        name: &str,
+        level: usize,
+        mut inputs: Vec<Operand>,
+    ) -> Operand {
+        if inputs.is_empty() {
+            inputs.push(Operand::Immediate(Fr::from(0u64)));
+        }
+        if inputs.len() <= 4 {
+            let output = midnight_zkir_v3::Identifier(format!("%c6.digest.{name}.{level}"));
+            body.push(Instruction::TransientHash {
+                inputs,
+                output: output.clone(),
+            });
+            return Operand::Variable(output);
+        }
+        let mut next = Vec::new();
+        for (i, chunk) in inputs.chunks(4).enumerate() {
+            let output = midnight_zkir_v3::Identifier(format!("%c6.digest.{name}.{level}.{i}"));
+            body.push(Instruction::TransientHash {
+                inputs: chunk.to_vec(),
+                output: output.clone(),
+            });
+            next.push(Operand::Variable(output));
+        }
+        hash_tree(body, name, level + 1, next)
+    }
     let hash = |body: &mut Vec<Instruction>, name: &str, inputs: Vec<Operand>| -> Operand {
-        let output = midnight_zkir_v3::Identifier(format!("%c6.digest.{name}"));
-        body.push(Instruction::TransientHash {
-            inputs,
-            output: output.clone(),
+        hash_tree(body, name, 0, inputs)
+    };
+    // Digest constants are pinned private lanes, not immediates: circuit
+    // synthesis rejects immediate operands inside TransientHash.
+    let const_lane = |body: &mut Vec<Instruction>, name: &str, value: Fr| -> Operand {
+        let id = midnight_zkir_v3::Identifier(format!("%c6.const.{name}"));
+        body.push(Instruction::PrivateInput {
+            guard: None,
+            val_t: midnight_zkir_v3::ir_types::IrType::Native,
+            output: id.clone(),
         });
-        Operand::Variable(output)
+        body.push(Instruction::ConstrainEq {
+            a: Operand::Variable(id.clone()),
+            b: Operand::Immediate(value),
+        });
+        Operand::Variable(id)
     };
     let prog_d = hash(&mut body, "prog", section(0..sections.prog_lanes));
     // lanes_d hashes the full carrier of one state (shared prefix + its lanes);
@@ -514,28 +556,24 @@ pub fn c6_child_relation(
         sections.prog_lanes..sections.prog_lanes + sections.pre_lanes,
     ));
     let pre_lanes_d = hash(&mut body, "prelanes", pre_carrier);
+    let pre_dom = const_lane(&mut body, "pre.dom", dom("SHK_SD"));
+    let pre_tag = const_lane(&mut body, "pre.tag", Fr::from(pre_outcome.tag));
+    let pre_val = const_lane(&mut body, "pre.value", Fr::from(pre_outcome.value));
     let pre_d = hash(
         &mut body,
         "pre",
-        vec![
-            Operand::Immediate(dom("SHK_SD")),
-            Operand::Immediate(Fr::from(pre_outcome.tag)),
-            Operand::Immediate(Fr::from(pre_outcome.value)),
-            pre_lanes_d,
-        ],
+        vec![pre_dom, pre_tag, pre_val, pre_lanes_d],
     );
     let mut post_carrier = section(0..sections.prog_lanes);
     post_carrier.extend(section(sections.prog_lanes + sections.pre_lanes..total));
     let post_lanes_d = hash(&mut body, "postlanes", post_carrier);
+    let post_dom = const_lane(&mut body, "post.dom", dom("SHK_SD"));
+    let post_tag = const_lane(&mut body, "post.tag", Fr::from(post_outcome.tag));
+    let post_val = const_lane(&mut body, "post.value", Fr::from(post_outcome.value));
     let post_d = hash(
         &mut body,
         "post",
-        vec![
-            Operand::Immediate(dom("SHK_SD")),
-            Operand::Immediate(Fr::from(post_outcome.tag)),
-            Operand::Immediate(Fr::from(post_outcome.value)),
-            post_lanes_d,
-        ],
+        vec![post_dom, post_tag, post_val, post_lanes_d],
     );
     // Public lanes come after the body: the VM executes in order, so the
     // digests must be computed before the ConstrainEq that ties them.
@@ -604,10 +642,24 @@ pub fn statement_digests(
             outer::Scalar,
         >>::hash(xs))
     };
+    // Arity-4 tree mirror of the in-circuit digest (see c6_child_relation).
+    let hash_tree = |xs: &[outer::Scalar]| -> Fr {
+        let mut level: Vec<outer::Scalar> = if xs.is_empty() {
+            vec![outer::Scalar::from(0u64)]
+        } else {
+            xs.to_vec()
+        };
+        loop {
+            if level.len() <= 4 {
+                return hash(&level);
+            }
+            level = level.chunks(4).map(|chunk| hash(chunk).0).collect();
+        }
+    };
     let lanes_d = |range: std::ops::Range<usize>| {
         let mut carrier: Vec<outer::Scalar> = lanes[..sections.prog_lanes].to_vec();
         carrier.extend(&lanes[range]);
-        hash(&carrier)
+        hash_tree(&carrier)
     };
     let state_d = |outcome: StateOutcome, lanes_d: Fr| {
         hash(&[
@@ -618,7 +670,7 @@ pub fn statement_digests(
         ])
     };
     Ok([
-        hash(&lanes[..sections.prog_lanes]),
+        hash_tree(&lanes[..sections.prog_lanes]),
         state_d(
             pre_outcome,
             lanes_d(sections.prog_lanes..sections.prog_lanes + sections.pre_lanes),
@@ -638,6 +690,8 @@ pub struct C6DigestPrepared {
     pub instance: Vec<Fr>,
     pub public_statement: [Fr; 5],
     statement: Vec<u128>,
+    pre_outcome: StateOutcome,
+    post_outcome: StateOutcome,
     ir: IrSource,
 }
 
@@ -649,9 +703,10 @@ impl C6DigestPrepared {
         use midnight_transient_crypto::proofs::{KeyLocation, ProofPreimage};
         use midnight_zkir_v3::ir_types::IrValue;
         use std::collections::HashMap;
+        let private_transcript: Vec<Fr> = self.private_lanes_in_order();
         let preimage = ProofPreimage {
             inputs: Vec::new(),
-            private_transcript: self.statement.iter().map(|v| Fr::from(*v)).collect(),
+            private_transcript,
             public_transcript_inputs: self.public_statement.to_vec(),
             public_transcript_outputs: self.public_statement.to_vec(),
             binding_input: self.binding,
@@ -667,17 +722,20 @@ impl C6DigestPrepared {
                 "Nonproving check returned a different or skipped public statement.",
             ));
         }
-        let mut memory = HashMap::with_capacity(self.statement.len());
-        let mut lanes = self.statement.iter();
-        for insn in self.ir.instructions.iter() {
-            if let Instruction::PrivateInput { output, .. } = insn {
-                let lane = lanes.next().expect("statement covers private inputs");
-                if memory
-                    .insert(output.clone(), IrValue::Native(Fr::from(*lane)))
-                    .is_some()
-                {
-                    return Err(error("sherlock-c6-child", "Repeated private identifier."));
-                }
+        let mut memory = HashMap::with_capacity(self.statement.len() + 11);
+        // Public lanes are also read from witness memory by the circuit.
+        for (i, name) in ["digest.0", "digest.1", "digest.2", "rule", "h"]
+            .iter()
+            .enumerate()
+        {
+            memory.insert(
+                midnight_zkir_v3::Identifier(format!("%c6.public.{name}")),
+                IrValue::Native(self.public_statement[i]),
+            );
+        }
+        for (id, value) in self.private_assignments() {
+            if memory.insert(id, IrValue::Native(value)).is_some() {
+                return Err(error("sherlock-c6-child", "Repeated private identifier."));
             }
         }
         Ok(Preprocessed {
@@ -687,6 +745,45 @@ impl C6DigestPrepared {
             binding_input: self.binding.0,
             comm_comm: None,
         })
+    }
+}
+
+impl C6DigestPrepared {
+    /// Private values in the relation's PrivateInput order: statement lanes
+    /// for the carrier inputs, pinned constants for `%c6.const.*` lanes.
+    fn private_assignments(&self) -> Vec<(midnight_zkir_v3::Identifier, Fr)> {
+        let consts = [
+            ("pre.dom", dom("SHK_SD")),
+            ("pre.tag", Fr::from(self.pre_outcome.tag)),
+            ("pre.value", Fr::from(self.pre_outcome.value)),
+            ("post.dom", dom("SHK_SD")),
+            ("post.tag", Fr::from(self.post_outcome.tag)),
+            ("post.value", Fr::from(self.post_outcome.value)),
+        ];
+        let mut lanes = self.statement.iter();
+        let mut out = Vec::new();
+        for insn in self.ir.instructions.iter() {
+            if let Instruction::PrivateInput { output, .. } = insn {
+                let value = if let Some(name) = output.0.strip_prefix("%c6.const.") {
+                    consts
+                        .iter()
+                        .find(|(n, _)| *n == name)
+                        .map(|(_, v)| *v)
+                        .expect("const lane name")
+                } else {
+                    Fr::from(*lanes.next().expect("statement covers private inputs"))
+                };
+                out.push((output.clone(), value));
+            }
+        }
+        out
+    }
+
+    fn private_lanes_in_order(&self) -> Vec<Fr> {
+        self.private_assignments()
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect()
     }
 }
 
@@ -719,15 +816,20 @@ pub fn prepare_digest_c6_child(
     let mut claim = base.claim;
     claim.circuit_k = relation.k();
     let binding = c6_child_binding(&claim)?;
-    // The node consumes exactly the five public lanes; the binding lives in
-    // the claim and the prover carrier, not in the instance.
-    let instance = public_statement.to_vec();
+    // The ZKIR circuit pushes the binding as its first public input (as
+    // for A102), so the instance is the binding followed by the five lanes
+    // the node consumes.
+    let instance = std::iter::once(binding)
+        .chain(public_statement.iter().copied())
+        .collect();
     Ok(C6DigestPrepared {
         claim,
         binding,
         instance,
         public_statement,
         statement: statement.to_vec(),
+        pre_outcome,
+        post_outcome,
         ir: relation,
     })
 }
@@ -929,10 +1031,10 @@ pub fn verify_c6_child(
 /// existing export is never overwritten.
 pub fn write_leaf_files(dir: &std::path::Path, child: &C6ChildProof) -> Result<(), Error> {
     use std::io::Write;
-    if child.instance.len() != 5 {
+    if child.instance.len() != 6 {
         return Err(error(
             "sherlock-c6-child",
-            "Leaf instance must be exactly five lanes for export.",
+            "Leaf instance must be the binding plus five lanes for export.",
         ));
     }
     std::fs::create_dir_all(dir).map_err(|e| error("export", e.to_string()))?;
@@ -948,7 +1050,8 @@ pub fn write_leaf_files(dir: &std::path::Path, child: &C6ChildProof) -> Result<(
     };
     write_new("leaf.vk", &child.vk_bytes)?;
     write_new("leaf.proof", &child.proof)?;
-    let instance: Vec<String> = child.instance.iter().map(field_hex).collect();
+    // The node-facing file carries the five statement lanes (no binding).
+    let instance: Vec<String> = child.instance[1..].iter().map(field_hex).collect();
     let json = serde_json::to_vec(&instance).map_err(|e| error("export", e.to_string()))?;
     write_new("leaf.instance.json", &json)
 }

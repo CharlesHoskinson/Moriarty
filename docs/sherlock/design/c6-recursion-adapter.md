@@ -69,8 +69,10 @@ Poseidon over the program lanes; each state digest is
 running (value 0) and tag 1 = halted with the u128 result. Digests are the
 in-circuit `TransientHash`, confirmed identical to the `PoseidonChip`
 `HashCPU` Poseidon the node recomputes. `rule_id` is the low 128 bits of
-SHA-256 of the rule name. The binding lives in the claim and the prover
-carrier, not in the instance. Entry points:
+SHA-256 of the rule name. The ZKIR circuit pushes the binding as its
+first public input (as for A102), so the proved instance is the binding
+followed by the five lanes; the exported `leaf.instance.json` carries the
+five statement lanes. Entry points:
 `c6_child_relation(ir, sections)`, `prove_c6_child(...)`,
 `verify_c6_child(...)` in `sherlock_c6_child.rs`. gpr's node relation (G6)
 consumes the five public lanes. A tight committed qualification host config
@@ -96,11 +98,16 @@ obligations in the code.
   binds rule and statement (mutation changes both); witness carrier accepted;
   empty statement and private/guarded-input relations refused.
   `cargo test -p mori-backend --test sherlock_c6_child` (3 tests).
-- Heavy (after OK, under heavy.lock, one job at a time): a
-  `sherlock_linked_children`-style test — build one real C6 circuit from a
-  host pair, prove the leaf, verify independently, flip a proof byte and a
-  VK and expect refusal; then s4's parent acceptance test consumes the
-  export through `SherlockChild::from_bytes` and the decider.
+- Heavy M2 (done, light-2 lane, SRS `~/.cache/midnight/zk-params`): a
+  `sherlock_linked_children`-style test proves one C6-shaped digest leaf
+  (96 private lanes, sections 32/32/32), verifies it independently through
+  reconstruction, and refuses a mutated proof: k=13, proof 3824 bytes,
+  prove 2.55 s, whole test 6.71 s. A real fragment leaf under the tight
+  qualification caps, the universal gated leaf, and node/decider
+  consumption remain open. Two synthesis facts were learned: in-circuit
+  Poseidon accepts only a few inputs per `TransientHash`, so digests are
+  arity-4 hash trees (the node must use the same tree); and public lanes
+  are read from witness memory and the binding is always public input 0.
 - Risks: circuit k and row counts for a full C6 statement are unmeasured;
   crate-graph byte compatibility (producer midnight-proofs 0.8.3 versus the
   consumer graph) is unestablished, as for the A102 child. Prove/verify are

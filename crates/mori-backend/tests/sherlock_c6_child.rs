@@ -104,8 +104,9 @@ fn c6_digest_leaf_exposes_only_five_public_lanes() {
         7,
     )
     .expect("prepare");
-    assert_eq!(prepared.instance.len(), 5);
-    assert_eq!(prepared.instance, prepared.public_statement);
+    assert_eq!(prepared.instance.len(), 6);
+    assert_eq!(prepared.instance[0], prepared.binding);
+    assert_eq!(prepared.instance[1..], prepared.public_statement);
     let digests = statement_digests(
         &[1, 2, 3],
         sections,
@@ -117,7 +118,7 @@ fn c6_digest_leaf_exposes_only_five_public_lanes() {
     assert_eq!(prepared.public_statement[3], rule_lane("AppendHelper"));
     assert_eq!(prepared.public_statement[4], Fr::from(7u128));
     let witness = prepared.witness().expect("digest carrier");
-    assert_eq!(witness.pis.len(), 5);
+    assert_eq!(witness.pis.len(), 6);
     assert_eq!(witness.pi_skips.len(), 5);
 }
 
@@ -158,7 +159,7 @@ fn c6_leaf_is_proved_verified_and_exported() {
     .expect("prove C6 digest leaf");
     println!("C6 M2 prove_seconds={:.3}", start.elapsed().as_secs_f64());
     assert!(!child.proof.is_empty());
-    assert_eq!(child.instance.len(), 5);
+    assert_eq!(child.instance.len(), 6);
     verify_c6_child(
         &ir,
         "AppendHelper",
