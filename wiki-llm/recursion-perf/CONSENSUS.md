@@ -1,0 +1,13 @@
+# Speedup consensus tracker
+
+A speedup is **agreed** only when (a) at least two independent research sources rank it top-3 with consistent bounded-gain arithmetic, and (b) a cold cross-review by Muse Wonder Full and agy Gemini 4 Argon finds no refuting evidence. Agreed items go to the wiki, then an OpenSpec change in `openspec/changes/`, then a quint-llm-kit design check, then Sherlock roadmap Phase 5, then factory implementation.
+
+| # | Speedup | Stages | Support so far | Gain bound (ESTIMATE) | Review | Status |
+|---|---|---|---|---|---|---|
+| C0 | **Measure the phase profile first** (L0: synthesis, MSM, lookups, quotient, multiopen, key load; one pinned midnight-proofs version) | all | s2, s3 and s7 wave 1 each say independently that no 10× claim is checkable without it; Loki 10x plan step 1 | prerequisite, no gain claimed | pending | **candidate (strong)** |
+| C1 | **Direct fixed-pair (fused) terminal**, about k15 | s7 | s7 wave 1 rank 1; Loki astra-2 (s7 built on Loki, so not fully independent) | 11.2–19.8× vs the A3 interval if the unscaled share is 2–6%; 7.8× at 10% | pending | candidate |
+| C2 | **Leaf partition** (mono16 or 2×8 with a fused binary terminal) for 16-tx batches | s7, s9 | s7 wave 1 rank 2 | 8.84–9.88× vs the historical recl9 chain (proxy) | pending | candidate |
+| C3 | **Commitment-aware GPU bucket MSM service** (sppark first) | s3 | s3 wave 1 rank 1; Loki GPU-MSM study | 1.9–2.3× over Nocy GPU; 5.4–6.5× over CPU, at a 60% MSM share | pending | candidate |
+| C4 | **Phase-aware witness schedule + frontier batch inversion** | s2 | s2 wave 1 ranks 1–2; Loki-09 lazy inversions | C ≈ 1.5–2.4× | pending | candidate |
+
+Log of changes: see [wiki/log.md](wiki/log.md).
