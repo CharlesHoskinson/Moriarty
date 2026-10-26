@@ -120,21 +120,26 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
    (`reportOk == false`). Characterizations:
    `checkedGrossOverflowRefusedTest`, `roundTripOverflowRefusedTest`;
    candidate `unboundedHistoryFitsU128Inv`, trace `accounting-overflow.itf.json`.
-3. **Unvalidated imported work counters (financial R0/SI-03).** Under the import
-   model's fixed valid non-counter premises, canonical fields initial = 0,
-   remaining = 1, consumed = 0 pass import and charge, although
+3. **Unvalidated imported work counters and R0-after-R3 ordering (financial R0/SI-03/SI-29).**
+   Under the import model's fixed valid non-counter premises, canonical fields
+   initial = 0, remaining = 1, consumed = 0 pass import and charge, although
    remaining + consumed ≠ initial. Canonical initial = MAX, remaining = 1,
    consumed = MAX also passes import and reaches the unchecked `consumed += 1`
-   arithmetic boundary. The report adapter's `decode_body` checks canonical
-   encoding; later identity/logical-plan/snapshot checks never jointly validate
-   this counter triple. Characterizations:
-   `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`;
+   arithmetic boundary. In `2852e423` / `907e5fc7`, `resume_epoch == u64::MAX` is
+   refused at R0 (`epochMaxRefused`) and `remaining_work == 0` is refused as R0
+   inside `sherlock2::resume:460`, but `suspension2_fin::resume_fin:272` runs
+   `admit_observation` (R3–R5) before `sherlock2::resume`, so a `remaining_work == 0`
+   checkpoint paired with an invalid observation reports `R3` instead of `R0`
+   (`r0LateAfterR3Observed`, violating `r0FirstOrderingInv`). Characterizations:
+   `canonicalMalformedCountersAcceptedTest`, `maximumConsumedCounterAcceptedTest`,
+   `zeroRemainingRefusedAtR0WhenObsValidTest`,
+   `zeroRemainingWithBadObsReportsR3BeforeR0Test`, `maximumEpochRefusedAtR0Test`;
    candidate `acceptedWorkInv`, trace `financial-import-counters.itf.json`.
-   Runtime host confirmation (`probe_financial_import.py`, recorded in
-   `financial-import-rust-probe.json`): resealing `FinImage2` with
-   `initial_fuel = 0, remaining_work = 5, consumed_work = 0` halts (`exit = 0`);
-   resealing with `consumed_work = u128::MAX, remaining_work = 1` returns
-   `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
+   Runtime host confirmation on the earlier `5f2beded` / `5dccd0d8` binary
+   (`probe_financial_import.py`, recorded in `financial-import-rust-probe.json`):
+   resealing `FinImage2` with `initial_fuel = 0, remaining_work = 5, consumed_work = 0`
+   halts (`exit = 0`); resealing with `consumed_work = u128::MAX, remaining_work = 1`
+   returns `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
    `crates/mori-core/src/stage/sherlock2.rs:217` (`attempt to add with overflow`,
    `exit = 101`) on a true guard.
 4. **Unvalidated imported pending segment index (financial R0/R1).** `FinImage2`
