@@ -71,6 +71,18 @@ mathematical declarations, without discharging the operational premises.
 The publication baseline's fourteen-name observations are retained separately
 from the current whole-action admission extension and nineteen-name query.
 
+`WorkAccounting` is a theorem premise, not a guarantee currently supplied by
+financial checkpoint import. In the pinned host source, `decode_body`
+checks canonical `FinImage2` JSON, `same_admission` checks program/plan/policy
+identity, and the resume preflight checks the snapshot and captures. Those
+checks do not establish the machine-counter balance or the segment/site
+relation used by execution. Individually valid UInt128 values such as
+remaining 1 and consumed `uint128Max` violate the accounting premise, so
+the headroom theorem cannot be applied to that imported image. The older
+decoded-counter adapter and staged-counter module concern a separate owner
+path and do not supply this financial premise. These are source-audit
+observations, not an executed Rust or forged-checkpoint test.
+
 This module does not establish full Rust refinement, statement semantics,
 residual-duty extraction, source/plan admission, authenticated/consumed
 observations, C6 encoding, in-circuit hashes, handwritten constraints,
