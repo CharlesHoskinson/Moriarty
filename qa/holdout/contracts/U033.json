@@ -1,0 +1,109 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U033",
+  "entrypoint": {
+    "argv": [
+      "target/debug/mori",
+      "simulate",
+      "PROGRAM.mori",
+      "--execution-profile",
+      "sherlock-helper-microstep/1",
+      "--source-profile",
+      "moriarty-sherlock-draft/1",
+      "--entry",
+      "--execution-config",
+      "CONFIG.json",
+      "--target",
+      "TARGET.json",
+      "--residualize",
+      "per-program"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 4194304,
+    "timeout_s": 120,
+    "required_paths": [
+      "execution.summary",
+      "residual.format",
+      "residual.realization",
+      "residual.config.static_mask",
+      "residual.config.family",
+      "residual.config.residual_size_limit",
+      "residual.ir.ir_id",
+      "residual.ir.reference_definition_id",
+      "residual.ir.profile_id",
+      "residual.ir.program_image_id",
+      "residual.ir.layout_version",
+      "residual.ir.blocks[].block_id",
+      "residual.ir.blocks[].kind",
+      "residual.ir.blocks[].rules",
+      "residual.ir.blocks[].folded",
+      "residual.ir.blocks[].successors",
+      "residual.ir.dynamic_inputs",
+      "residual.ir.static_bindings.kinds",
+      "residual.ir.rule_boundary_map[].rule_start_line",
+      "residual.ir.rule_boundary_map[].block_id",
+      "residual.ir.rule_boundary_map[].charge",
+      "residual.ir.source_occurrence_map",
+      "residual.ir.generic_fallbacks",
+      "residual.ir.omissions",
+      "residual.worklist.fallback_used",
+      "residual.execution.format",
+      "residual.execution.slices[].records[].rule_start_line"
+    ]
+  },
+  "flags": {
+    "universal": [
+      "--residualize",
+      "universal"
+    ],
+    "family": [
+      "--residualize",
+      "family",
+      "--residual-family",
+      "{family}"
+    ],
+    "per-program": [
+      "--residualize",
+      "per-program"
+    ],
+    "size_limit": [
+      "--residual-size-limit",
+      "{n}"
+    ]
+  },
+  "interface": {
+    "route": "mori simulate on the holdout draft call (sherlock-helper-microstep/1, moriarty-sherlock-draft/1, --entry); the residual flags add a top-level `residual` and must not change execution.summary",
+    "reference": "ResidualStepIR specializes the K-A reference step (sherlock-k-a/1, the relation published by --reference-slices); ir.reference_definition_id = 'sherlock-k-a/1'",
+    "residual": {
+      "format": "moriarty-sherlock-residual-step/1",
+      "realization": "universal | family | per-program",
+      "config": {
+        "static_mask": "empty (universal) | family | program-image (per-program)",
+        "family": "null or Schedule|Scalar|CallBind|FrameReturn|DataMatch",
+        "residual_size_limit": "decimal string > 0 (default chosen by the tool when the flag is absent)"
+      },
+      "ir": {
+        "ir_id": "sha256 hex of canonical JSON (sort_keys, separators , and :, UTF-8) of ir without ir_id",
+        "program_image_id": "64-hex for per-program, null for universal and family",
+        "layout_version": "string",
+        "blocks": "[{block_id, kind: static-dispatch|dynamic-branch|runtime-call|return|step|generic-dispatch, rules:[K-A rule_start_line], folded:[subset of static_bindings.kinds], successors:[block_id], dynamic-branch: selector (a dynamic input) and >=2 successors, runtime-call: unrolled=false, frame_check='dynamic'}]; len(blocks) <= residual_size_limit",
+        "dynamic_inputs": "superset of control, data, environment, frames, depth, fuel, work, helper-cursor, capacity-checks, outcome",
+        "static_bindings": "{kinds: subset of code, declarations, layout, family, source-occurrence-ids, operand-slices; universal only layout; family only layout+family (and family: F); per-program includes code and program_image_id}",
+        "rule_boundary_map": "[{rule_start_line, block_id, charge}] covering every K-A rule the program exercises, with its reference charge",
+        "source_occurrence_map": "[...] non-empty for per-program",
+        "generic_fallbacks": "[{key, reason:'residual-size-limit'}]",
+        "omissions": "[...]"
+      },
+      "worklist": {
+        "fallback_used": "bool, true iff generic_fallbacks non-empty (then a generic-dispatch block exists)"
+      },
+      "execution": "the residual realization EXECUTED on this run (same program, fuel, stack) as a moriarty-sherlock-reference-slices/1 document with group_budget 1; its StepRecord stream must equal --reference-slices 1"
+    },
+    "invariants": "ir_id independent of fuel and stack; universal and family ir_id identical across programs; per-program block structure independent of recursion depth; --residual-size-limit 0 and unknown families refused (nonzero exit, no completed execution)",
+    "evaluator_note": "Evaluator-authored (sherlock-eval 2026-10-25) from the spec, interfaces.md and demonstrators.md; implementer proposals reviewed. The holdout reads the flags below; a spelling change is a CONTRACT CHANGE posted to sherlock-eval. sherlock-s5's models/sherlock/qa/residualize.py (a five-rule hand table that never sees the program) would be judged a gap report: the residual must realize the real reference relation."
+  }
+}

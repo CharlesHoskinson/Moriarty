@@ -55,13 +55,29 @@
       "specLine": 168,
       "when": "Sherlock/Moriarty native target behavior is submitted for acceptance.",
       "then": "The evidence includes actual supported source compilation, proof production and independent verification, Midnight stagenet deployment and call, and complete state/effects readback against independent expectations under pinned network/toolchain/relation identities. Unperformed stages stay not run; this scenario grants no execution authority or transfer of Preview/Fenrir evidence.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "evidence": "source compilation, proof production and independent verification, stagenet deployment and call, state/effects readback against independent expectations under pinned identities",
         "unperformed stages": "stay not run"
       },
-      "coverage": "none",
-      "blocker": "needs the Midnight stagenet end-to-end qualification harness (compile, prove, independent verify, deploy, call, readback); stagenet is out of scope for this run"
+      "coverage": "primary",
+      "judgment": "Evaluator reading: the evidence is a committed qualification record whose words are not trusted. Pins, source and relation hashes are recomputed, the on-chain stages are re-read from the public stagenet indexer, and the readback result is compared with an independent reference run of the same source. Stages left not-run fail honestly as SPEC GATE, so the scenario cannot pass on Preview/Fenrir or rollup-anchor evidence. Since the quint-3 finding (2026-10-26), the result is decoded from the indexed state bytes through the committed, hash-pinned compiled layout, and the pinned verifying key must be the installed key of the called entry in both the deploy and post-call states.",
+      "unasserted": [
+        "proof bytes and local verification (no proof is re-verified by the holdout; verifier independence is checked by name only)",
+        "compile reproducibility",
+        "that the committed state layout's result window is the compiled ledger field (the layout is pinned by hash and belongs to the compiled toolchain output; a wrong layout must be caught in review; the pre/post change and reference-equality requirements make an arbitrary window unlikely to pass)",
+        "ledger fields other than the result (the pure qualification program has one result and no effects)",
+        "that the pinned verifying key was compiled from the source (only that it is the installed key of the called entry and pinned by hash)"
+      ],
+      "exec": {
+        "entrypoint": "committed record named by qa/holdout/contracts/U023.json + stagenet public indexer (read-only) + mori simulate reference run",
+        "checks": [
+          {
+            "kind": "native-qualification",
+            "label": "stagenet end-to-end qualification record"
+          }
+        ]
+      }
     }
   ]
 }
