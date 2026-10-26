@@ -615,6 +615,15 @@ pub mod c6_append_helper_step;
 // UIREQ-023 Bind helper fragment (parameter binding).
 pub mod c6_bind_helper_consumer;
 pub mod c6_bind_helper_step;
+// UIREQ-023 Match helper fragment, first half (entry/arm/occurrence/field/binding).
+pub mod c6_match_helper_consumer;
+pub mod c6_match_helper_step;
+// UIREQ-023 Scalar construct helper fragment (leaf/cons/branch staging).
+pub mod c6_scalar_construct_consumer;
+pub mod c6_scalar_construct_step;
+// UIREQ-023 admin publish fragment (terminal value publication).
+pub mod c6_admin_publish_consumer;
+pub mod c6_admin_publish_step;
 // UIREQ-023 legacy control fragment (returns, primitive value, cases).
 pub mod c6_legacy_control_consumer;
 pub mod c6_legacy_control_step;
