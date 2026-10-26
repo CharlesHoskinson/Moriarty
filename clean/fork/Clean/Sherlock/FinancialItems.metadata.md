@@ -67,17 +67,20 @@ establish the actual Rust projection. The literal remaining amount 10 is
 retained while zero-amount duties are omitted.
 
 No new `sorry` or custom axiom is declared. The companion
-`FinancialItemsAxioms.lean` queries every named theorem. The current
-thirty-name source in `f1aedbfb1` passed the coordinator's capped Lean 4.33.1
-build, with all 21 package jobs successful. Lake reported 736 ms for this
-module and 268 ms for its query. This agent inspected the complete log and
-verified exact source bytes, but did not execute the build. Its own capped
-invocation cannot connect to the sandbox user scope bus; no uncapped build
-was run. The coordinator confirmed build 18 used `memcap 48G` but held
-no `heavy.lock` or light lane. Its kernel results remain observations; it
-does not satisfy the assignment and package README requirement for a
-locked full build. Coordinator build 19 is queued through the required
-DoctorWatson heavy runner; no result or lock admission is inferred.
+`FinancialItemsAxioms.lean` queries every named theorem. Coordinator build 19
+ran `scripts/doctorwatson heavy --id sherlock-lean-build -- memcap 48G lake
+-d clean/fork build`, recorded as `20261026T035951Z-sherlock-lean-build` in
+ledger commit `8853c8f8c`. All 21 jobs passed. The incremental run reported
+6.229 seconds and 890,322,944 bytes peak RSS; these are not benchmark results.
+Lake reported 847 ms for this module and 241 ms for its query. The
+coordinator attested an outer flock on the real `heavy.lock`, with a private
+`DW_LOCK` proxy for the runner. The recorded preflight passed without being
+skipped; its `lockHeld=false` probe concerns that proxy, not the outer lock.
+This agent inspected the full trace, ledger, thirty actual axiom records
+and exact current/run-head source bytes; it did not execute the build or
+inspect the host lock. Its own capped invocation cannot connect to the
+sandbox user scope bus; no uncapped build was run. Earlier builds 1--18
+remain capped but unlocked kernel observations, as confirmed by the coordinator.
 
 The actual thirty-name dependency query records fourteen empty axiom sets,
 twelve `propext`-only sets, three `propext`/`Quot.sound` sets and one

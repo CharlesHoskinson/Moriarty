@@ -21,15 +21,17 @@ conjunction does not turn local host policy arithmetic into target evidence,
 and the C6 conjunction does not turn a task manifest into completed proofs.
 
 The module imports only `Init` and declares no `sorry` or custom axioms.
-Sherlock-fable's capped Lean 4.33.1 build compiled this module and its query
-successfully (reported module times 580 ms and 202 ms). The complete build
-subsequently passed all 17 package jobs after fixes in other modules.
-The sources were committed in `9a5865203`. This agent inspected the
-coordinator's logs; it did not execute the successful build. The historical
-build log does not establish whether `heavy.lock` was held. The required
-locked full-build verification remains pending; coordinator build 19 is
-queued through the DoctorWatson heavy runner with `memcap 48G`. No queued
-result is treated as a completed verification.
+Sherlock-fable's required heavy-runner build 19 passed all 21 jobs under
+`memcap 48G`, recorded as `20261026T035951Z-sherlock-lean-build` in ledger
+commit `8853c8f8c`. The incremental run reported 6.229 seconds and
+890,322,944 bytes peak RSS; Lake reported 464 ms for this module and 322 ms
+for its query. These are run observations, not benchmarks. The coordinator
+attested an outer real `heavy.lock` flock and a private `DW_LOCK` runner
+proxy. Preflight passed without being skipped; its `lockHeld=false` probe
+concerns the proxy and does not attest the outer lock. This agent inspected
+the full trace, ledger and exact current/run-head bytes for the sources
+committed in `9a5865203`; it did not execute the build or inspect the host
+lock. Earlier builds 1--18 remain capped but unlocked kernel observations.
 
 The actual eight-name query reports no axioms for `component_required` and
 `missing_component_blocks`; each of `c1_iff` through `c6_iff` depends on
