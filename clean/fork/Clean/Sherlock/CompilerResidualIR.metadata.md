@@ -1,8 +1,10 @@
 # Actual HostOnly residual IR contracts (U033)
 
-This module follows `compile_artifact/draft_plans.rs` at `8ffed57fc`, as retained
-by the U033 passing-check commit `abc64975d`. It is separate from the historical
-Python examples and abstract preservation/provenance obligations in
+This module follows `compile_artifact/draft_plans.rs` at `8ffed57fc`, retained
+by `abc64975d` and now pinned through `3fabcca1c`. The latest commit removes
+the superseded U031 descriptor; the residual constants and complete folding,
+dispatch, execution and residualization function bytes are unchanged. It is
+separate from the historical Python examples and abstract preservation/provenance obligations in
 CompilerResidualization. The JSON pins the actual committed Rust bytes and the
 Lean source/query bytes. No private Clean source or additional library is used.
 
@@ -60,5 +62,9 @@ was also checked. That audit is not Rust execution. Two own capped attempts
 exited 3 because `heavy.lock` was occupied, so no local compiler started. The
 saved sandbox restriction also prevents `memcap` from reaching the user scope
 bus. No uncapped build or delegation of a denied operation was attempted.
-Owner/evaluator U033 PASS messages are advisory here; this agent has not
-independently read and pinned the associated full holdout trace or run it.
+The committed one-line U033 primary-scenario PASS trace copies and matching
+run records are now read and pinned in the JSON. The original run names
+`8ffed57fc`; the later run names old HEAD `d7e0aaa4c` with CLI edits subsequently
+committed in `3fabcca1c`. That is no binary/source reproducibility result.
+Their whole-command wall/RSS numbers are not optimization performance evidence.
+This agent executed neither holdout and claims no broader semantic coverage.

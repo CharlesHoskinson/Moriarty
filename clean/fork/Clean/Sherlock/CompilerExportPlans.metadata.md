@@ -62,5 +62,15 @@ earlier receipts remain historical. The Lake glob needs no shared build-file
 edit. This agent read the complete log and source pins. Two own capped attempts
 could not start because `heavy.lock` was occupied (exit 3); its saved sandbox
 restriction also prevents `memcap` from using the user scope bus. No uncapped
-build or delegation of a denied operation was attempted. Rust tests, artifact/CLI integration and the
-U031 holdout have no independently inspected passing receipt here.
+build or delegation of a denied operation was attempted. Rust tests, artifact/CLI
+integration and the U031 holdout for this newer exporter have no independently
+inspected passing receipt here.
+
+At `3fabcca1c`, S5 wires the CLI to the core exporter and removes its duplicate
+descriptor API. Its core copy still predates the rule/top-frame operand binding,
+checked-error and `ValueEq` repairs. The committed primary-scenario PASS trace
+and run record for that older copy are pinned separately in the JSON; they do
+not validate this module's newer `3bb404f15` contracts. S9's `93f61a41c` retains
+the fixed exporter. This branch difference was reported to sherlock-fable and
+Quint-3. CLI correctness, concrete source/binary binding and the newer U031
+holdout remain separate evidence obligations.
