@@ -84,8 +84,8 @@ relation used by execution. Individually valid UInt128 values such as
 remaining 1 and consumed `uint128Max` violate the accounting premise, so
 the headroom theorem cannot be applied to that imported image. The older
 decoded-counter adapter and staged-counter module concern a separate owner
-path and do not supply this financial premise. These are source-audit
-observations, not an executed Rust or forged-checkpoint test.
+path and do not supply this financial premise. The source audit itself did
+not execute Rust or synthesize a checkpoint.
 
 The mathematical record updates also preserve diagnostics unless explicitly
 updated: in particular, `completeCommit` does not erase pre-existing
@@ -94,12 +94,22 @@ carrying terminal diagnostics is not proved to satisfy SI-26 by these lemmas.
 Capture-layout validation and terminal-diagnostic admission are additional
 full-image obligations, not consequences of canonical JSON decoding.
 
-The separate diagnostic committed by Quint-2 in `5c71be223` records synthetic
-counter and segment imports reaching panics in an older pinned host binary.
-Its source hashes precede the current fuel/accounting changes. This agent
-inspected that committed report, but did not execute it; the report is not a
-test of the current binary. The JSON records its digest and historical source
-pins separately from the current source audit and Lean kernel observations.
+The separate diagnostic committed by Quint-2 in `c228a0cfe` records fifteen
+synthetic import cases against a pinned binary with the `815a22d87` source
+hashes. It observes the new fuel, epoch and accounting refusals, and also
+records malformed counter/capture acceptance, terminal-diagnostic leakage,
+three counter/segment panics and the multi-fault R3-before-R0 order. These
+are characterization cases, not fifteen conformance guarantees. This agent
+inspected the committed report but did not execute it or rebuild its binary.
+The JSON records its digest, source/binary pins and per-case outcome summary,
+separately from the Lean kernel observations. The preceding diagnostic is
+retained by a historical commit reference.
+
+The evaluator confirmed U017--U020 under the declared local-reference scope
+at `815a22d87`. Its verdict treats recomputed-CK import cases as non-gating
+for this unauthenticated, consumption-untracked host route. The recorded
+full-image and ordering limits remain separate from that local acceptance;
+they do not justify an on-chain resume or refinement claim.
 
 This module does not establish full Rust refinement, statement semantics,
 residual-duty extraction, source/plan admission, authenticated/consumed
