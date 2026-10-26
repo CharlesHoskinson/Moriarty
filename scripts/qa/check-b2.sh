@@ -3,7 +3,11 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
-export FENRIR_ROOT="${FENRIR_ROOT:-$HOME/repos/projectfenrir-main}"
+# First projectfenrir checkout that exists: this host (after the 2026-10-26 rebuild), then the old layout.
+if [[ -z "${FENRIR_ROOT:-}" ]]; then
+  for d in "$HOME/code/projectfenrir" "$HOME/repos/projectfenrir-main"; do [[ -d $d ]] && { FENRIR_ROOT=$d; break; }; done
+fi
+export FENRIR_ROOT="${FENRIR_ROOT:?no projectfenrir checkout found; set FENRIR_ROOT}"
 export FRTF_V3_ROOT="${FRTF_V3_ROOT:-$FENRIR_ROOT/recursion/rollup-test-format/v3}"
 cut="${FSYN_DESIGN_CUT:-$PWD/openspec/changes/sherlock-synthetic-rollup-data/design-cut.json}"
 if [[ -z "${FSYN_SOURCE_MAP:-}" ]]; then
