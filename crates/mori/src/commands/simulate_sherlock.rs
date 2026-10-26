@@ -109,15 +109,40 @@ fn plan_sections(args: &Args) -> Result<Vec<(&'static str, serde_json::Value)>, 
         ));
     }
     if let Some(position) = args.export_plan {
+        let mut requests = Vec::with_capacity(args.export_request.len());
+        for name in &args.export_request {
+            requests.push(
+                host::export_plans::ExportRequest::from_name(name).ok_or_else(|| {
+                    CompileFailure::input("config", format!("unknown --export-request {name}"))
+                })?,
+            );
+        }
+        let emitted = requests.iter().any(|request| {
+            matches!(
+                request,
+                host::export_plans::ExportRequest::ConstraintJson
+                    | host::export_plans::ExportRequest::StructuredWitness
+            )
+        });
+        let export_dir = match (args.export_dir.as_deref(), emitted) {
+            (Some(dir), _) => dir,
+            (None, true) => {
+                return Err(CompileFailure::input(
+                    "config",
+                    "--export-request needs --export-dir",
+                ));
+            }
+            (None, false) => std::path::Path::new(""),
+        };
         out.push((
             "export_plans",
-            host::draft_plans::export_plans(
+            host::export_plans::export_plans(
                 &source,
                 &config,
                 &target,
-                position,
-                &args.export_request,
-                args.export_dir.as_deref(),
+                position as u64,
+                &requests,
+                export_dir,
             )?,
         ));
     }
