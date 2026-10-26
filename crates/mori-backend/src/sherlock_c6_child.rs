@@ -626,8 +626,6 @@ pub fn statement_digests(
     pre_outcome: StateOutcome,
     post_outcome: StateOutcome,
 ) -> Result<[Fr; 3], Error> {
-    use midnight_circuits::hash::poseidon::PoseidonChip;
-    use midnight_circuits::instructions::hash::HashCPU;
     let total = sections.prog_lanes + sections.pre_lanes + sections.post_lanes;
     if statement.len() != total {
         return Err(error(
@@ -635,50 +633,62 @@ pub fn statement_digests(
             "Statement length differs from the digest sections.",
         ));
     }
-    let lanes: Vec<outer::Scalar> = statement.iter().map(|v| Fr::from(*v).0).collect();
-    let hash = |xs: &[outer::Scalar]| {
-        Fr(<PoseidonChip<outer::Scalar> as HashCPU<
-            outer::Scalar,
-            outer::Scalar,
-        >>::hash(xs))
-    };
-    // Arity-4 tree mirror of the in-circuit digest (see c6_child_relation).
-    let hash_tree = |xs: &[outer::Scalar]| -> Fr {
-        let mut level: Vec<outer::Scalar> = if xs.is_empty() {
-            vec![outer::Scalar::from(0u64)]
-        } else {
-            xs.to_vec()
-        };
-        loop {
-            if level.len() <= 4 {
-                return hash(&level);
-            }
-            level = level.chunks(4).map(|chunk| hash(chunk).0).collect();
-        }
-    };
+    let lanes: Vec<Fr> = statement.iter().copied().map(Fr::from).collect();
     let lanes_d = |range: std::ops::Range<usize>| {
-        let mut carrier: Vec<outer::Scalar> = lanes[..sections.prog_lanes].to_vec();
+        let mut carrier = lanes[..sections.prog_lanes].to_vec();
         carrier.extend(&lanes[range]);
-        hash_tree(&carrier)
-    };
-    let state_d = |outcome: StateOutcome, lanes_d: Fr| {
-        hash(&[
-            dom("SHK_SD").0,
-            Fr::from(outcome.tag).0,
-            Fr::from(outcome.value).0,
-            lanes_d.0,
-        ])
+        hash_tree_offcircuit(&carrier)
     };
     Ok([
-        hash_tree(&lanes[..sections.prog_lanes]),
-        state_d(
+        hash_tree_offcircuit(&lanes[..sections.prog_lanes]),
+        state_digest_offcircuit(
             pre_outcome,
             lanes_d(sections.prog_lanes..sections.prog_lanes + sections.pre_lanes),
         ),
-        state_d(
+        state_digest_offcircuit(
             post_outcome,
             lanes_d(sections.prog_lanes + sections.pre_lanes..total),
         ),
+    ])
+}
+
+/// Mirror of `c6_child_relation`'s arity-4 `TransientHash` tree. Hash consecutive
+/// chunks of at most four fields, repeat until at most four remain, then hash
+/// once more. Short chunks are not padded; the empty input hashes one zero.
+/// For `lanes_d`, the leaf must hash the shared prefix followed by that state's
+/// lanes in order, including inactive padding. The host stream's prefix is
+/// `[enable, host_schema, carrier_version, META..., PROG..., CTX...]`, followed
+/// by IMAGE, DATA, HELPER. `prog_d` hashes that prefix alone, as `DigestSections`
+/// specifies. No height, rule or outcome is inserted into this carrier hash.
+pub fn hash_tree_offcircuit(lanes: &[Fr]) -> Fr {
+    let mut level = if lanes.is_empty() {
+        vec![Fr::from(0u64)]
+    } else {
+        lanes.to_vec()
+    };
+    while level.len() > 4 {
+        level = level.chunks(4).map(poseidon_offcircuit).collect();
+    }
+    poseidon_offcircuit(&level)
+}
+
+fn poseidon_offcircuit(lanes: &[Fr]) -> Fr {
+    use midnight_circuits::hash::poseidon::PoseidonChip;
+    use midnight_circuits::instructions::hash::HashCPU;
+    Fr(<PoseidonChip<outer::Scalar> as HashCPU<
+        outer::Scalar,
+        outer::Scalar,
+    >>::hash(&scalars(lanes)))
+}
+
+/// Byte-for-byte field mirror of `mori_recursion::ivc::state_digest`:
+/// `Poseidon(dom("SHK_SD"), tag, value, lanes_d)`; halted is tag 1.
+pub fn state_digest_offcircuit(outcome: StateOutcome, lanes_d: Fr) -> Fr {
+    poseidon_offcircuit(&[
+        dom("SHK_SD"),
+        Fr::from(outcome.tag),
+        Fr::from(outcome.value),
+        lanes_d,
     ])
 }
 
