@@ -46,15 +46,13 @@ stock-verifier or ledger correspondence is established here.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran a capped package
-build with Lean 4.33.1. After correcting `runSteps_add` to use `Nat.zero_add`,
-`lean-build-2.log` shows this module and its eleven axiom queries succeeding,
-then reports the complete 17-job package build successful with exit 0. Four
-queries have empty axiom sets and seven contain only `propext`; no custom or
+build with Lean 4.33.1. `lean-build-6.log` shows the projection-consistency
+follow-up and all thirteen axiom queries succeeding, then reports the complete
+17-job package build successful with exit 0. Six queries have empty axiom sets
+and seven contain only `propext`; no custom or
 `sorry` axiom appears. The JSON records the exact sets and pins the observed
 log by digest. The agent read the complete log and checked source pins but did
 not run the build. Its sandbox still cannot connect `memcap` to the user scope
-bus; no uncapped build was attempted.
-
-**The projection-consistency follow-up has not yet been compiled.** The JSON
-retains the earlier eleven-query build as historical evidence and pins the new
-source/query set separately. Its current kernel and axiom checks are pending.
+bus; no uncapped build was attempted. A read-only follow-up review confirmed the
+projection gap resolved at the contract-model level, with no further substantive
+issue. That review ran no builds and establishes no concrete Rust correspondence.
