@@ -46,12 +46,19 @@ for this production relation. No A/B fuel equivalence or B/C6/financial result
 follows, and no circuit/native/stock-verifier/ledger result is claimed.
 
 No new `sorry` or custom axiom is declared. Twenty-three statements have exact
-sibling `#print axioms` queries. **Kernel checking is pending.** Static source
-comparison passed for all seven groups/thirty-nine rules/ten dynamic inputs and
-thirty-two positive size cases; declaration/query coverage was also checked.
-That audit is not Lean or Rust execution. Two capped heavy-run attempts exited 3
-because another job holds `heavy.lock`; no compiler started. The saved sandbox
-restriction also prevents `memcap` from reaching the user scope bus. No uncapped
-build or delegation of a denied operation was attempted. Owner/evaluator U033
-PASS messages are advisory here; this agent has not independently read and pinned
-the associated full holdout trace or executed the holdout.
+sibling `#print axioms` queries. Sherlock-fable's capped `lean-build-15.log`
+checked the current module and queries, then completed the full 21-job package
+with exit 0. Eight queries have empty axiom sets, twelve use only `propext`,
+three use `propext` and `Quot.sound`. The JSON pins the complete observed log,
+exact sets and checked current/committed sources. The agent read the full log;
+it did not execute the build. Build 14's two reserved-token hypothesis names
+were corrected before that successful retry, without changing statements.
+
+Static source comparison passed for all seven groups/thirty-nine rules/ten
+dynamic inputs and thirty-two positive size cases; declaration/query coverage
+was also checked. That audit is not Rust execution. Two own capped attempts
+exited 3 because `heavy.lock` was occupied, so no local compiler started. The
+saved sandbox restriction also prevents `memcap` from reaching the user scope
+bus. No uncapped build or delegation of a denied operation was attempted.
+Owner/evaluator U033 PASS messages are advisory here; this agent has not
+independently read and pinned the associated full holdout trace or run it.

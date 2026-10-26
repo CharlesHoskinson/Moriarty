@@ -177,3 +177,42 @@ qualification. No private source or paths enter the shareable package. A missing
 record is explicit, and source membership establishes no proof/native correspondence.
 These are maintainer checks, with no public compile/prove/deploy prerequisite. Ledger 9,
 stock-verifier compatibility and the existing proof format stay fixed.
+
+## 2026-10-25: Public Lean contracts for compiler and resume behavior
+
+The public `Init`-only package in [clean/fork](../../clean/fork/README.md) records
+implementation contracts separately from the K definitions, finite Quint checks
+and private Clean implementation. The public contract modules are:
+
+- [CompilerResidualization](../../clean/fork/Clean/Sherlock/CompilerResidualization.metadata.md):
+  U023 receipt-aware inventory, U024 complete A-profile replay observations and
+  abstract preservation/provenance obligations. Earlier Python examples remain
+  historical reporting models.
+- [CompilerExportPlans](../../clean/fork/Clean/Sherlock/CompilerExportPlans.metadata.md):
+  U031 selected-record host export requests, operand-aware equality labels,
+  typed checked-failure bindings, separate plans and declared capabilities.
+- [CompilerResidualIR](../../clean/fork/Clean/Sherlock/CompilerResidualIR.metadata.md):
+  U033 fixed seven-group residual partition, bounded generic fallback, immutable
+  folding, dynamic pre-step dispatch and checked produced records.
+- [SuspensionResume](../../clean/fork/Clean/Sherlock/SuspensionResume.metadata.md):
+  U014–U016 exact technical restore, complete-checkpoint preservation, pre-guard
+  resumability and checked resume-epoch premises.
+- [FinancialItems](../../clean/fork/Clean/Sherlock/FinancialItems.metadata.md):
+  U017–U020 committed financial prefixes, fee-phase policy, local failure and
+  checked report accounting, with actual capture/target correspondence open.
+- [RequirementRollups](../../clean/fork/Clean/Sherlock/RequirementRollups.metadata.md):
+  C1–C6 dependency conjunctions over supplied U obligations; unpacking a
+  conjunction does not discharge its external evidence obligations.
+- [StagePackage](../../clean/fork/Clean/Sherlock/StagePackage.metadata.md):
+  U021/U026 six task rows and parameterized codec/complete-trace obligations;
+  package comparison does not complete the named implementation layers.
+- [DecodedCounterStages](../../clean/fork/Clean/Sherlock/DecodedCounterStages.metadata.md):
+  counter-only P4/P6/P7 accounting extensions, preserving the original adapter
+  bytes; counter projection does not establish complete-state correspondence.
+
+Each module's metadata pins its implementation sources, Lean declarations,
+observed verification and remaining correspondence obligations. Kernel checking
+these mathematical contracts does not establish Rust/JSON refinement, complete
+K/Quint/Clean correspondence, native recursion, stock-verifier or ledger
+acceptance. The Lake package remains maintainer tooling; public developers do
+not need it to compile, prove or deploy.

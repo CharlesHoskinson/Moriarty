@@ -52,14 +52,15 @@ actual CLI binding still needs proof. No cross-profile fuel equality, circuit,
 proof, stock-verifier or ledger result follows.
 
 There are no new `sorry` or custom axioms. The sibling Axioms module lists all
-current dependency queries. Sherlock-fable's capped `lean-build-13.log` checked
-the preceding twenty-one-statement checked-error module and its queries: eleven
-empty axiom sets, ten containing only `propext`, then a successful complete
-19-job build and exit 0. That receipt is pinned historically. **The operand-aware
-follow-up has not yet been compiled:** current source/query pins contain
-twenty-five statements. The Lake glob needs no shared build-file edit. This
-agent read the complete build log and source pins; two fresh heavy-run attempts
-could not start because `heavy.lock` was occupied (exit 3). Its saved sandbox
-restriction also prevents `memcap` from using the user scope bus; no uncapped
+current dependency queries. Sherlock-fable's capped `lean-build-14.log` checked
+all twenty-five current statements; the whole build failed on the sibling
+residual module's reserved-token binders. After that correction, `lean-build-15.log`
+replayed the same export sources/queries and completed the full 21-job package
+with exit 0. Eleven queries have empty axiom sets, fourteen contain only `propext`.
+The JSON pins the complete successful log and exact current/committed sources;
+earlier receipts remain historical. The Lake glob needs no shared build-file
+edit. This agent read the complete log and source pins. Two own capped attempts
+could not start because `heavy.lock` was occupied (exit 3); its saved sandbox
+restriction also prevents `memcap` from using the user scope bus. No uncapped
 build or delegation of a denied operation was attempted. Rust tests, artifact/CLI integration and the
 U031 holdout have no independently inspected passing receipt here.
