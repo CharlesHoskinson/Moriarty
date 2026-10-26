@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 
 use super::CompileFailure;
 use crate::sherlock::helper_machine::shared::RunIntC;
+use crate::sherlock::optimization_intern::TreeInterner;
 use crate::sherlock::reference_display::{KDisplay, environment_to_k};
 use crate::sherlock::reference_slice::{
     ReferenceSlice, SliceBoundaryKind, SliceStop, advance_m,
@@ -121,6 +122,30 @@ pub fn reference_slices(
     target_source: &str,
     m: usize,
 ) -> Result<Value, CompileFailure> {
+    slices_with(source, config_source, target_source, m, None)
+}
+
+/// The same grouping realized by the UIREQ-024 intern-equal-tree-nodes
+/// candidate: the program's tree literals are interned and every technical cut
+/// resumes from the re-interned end snapshot. The report must equal
+/// [`reference_slices`] (interning preserves structural equality).
+pub fn reference_slices_with_candidate(
+    source: &str,
+    config_source: &str,
+    target_source: &str,
+    m: usize,
+) -> Result<Value, CompileFailure> {
+    let mut interner = TreeInterner::new();
+    slices_with(source, config_source, target_source, m, Some(&mut interner))
+}
+
+fn slices_with(
+    source: &str,
+    config_source: &str,
+    target_source: &str,
+    m: usize,
+    mut interner: Option<&mut TreeInterner>,
+) -> Result<Value, CompileFailure> {
     if m == 0 {
         return Err(CompileFailure::input(
             "config",
@@ -132,7 +157,10 @@ pub fn reference_slices(
     let stack = usize::try_from(run_int(config.stack.owner(), "stack")?)
         .map_err(|_| CompileFailure::input("config", "stack exceeds usize"))?;
     let (pair, _, _) = super::prepare_draft_pair(source, config_source, target_source)?;
-    let program = pair.preparation.draft.program.clone();
+    let mut program = pair.preparation.draft.program.clone();
+    if let Some(i) = interner.as_deref_mut() {
+        program = std::sync::Arc::new(i.intern_program(&program));
+    }
     // Each event charges one fuel unit except the single free publication, so
     // the run has at most fuel + 1 events; the cap is a defensive bound only.
     let max_events = fuel.saturating_add(1);
@@ -159,7 +187,10 @@ pub fn reference_slices(
         let cut = slice.stop == SliceStop::TechnicalCut;
         if cut {
             // Resume the next slice from the complete end snapshot only.
-            machine = Machine::from_snapshot(slice.end.clone());
+            machine = Machine::from_snapshot(match interner.as_deref_mut() {
+                Some(i) => i.intern_snapshot(&slice.end),
+                None => slice.end.clone(),
+            });
             resumed_cuts += 1;
         }
         slices.push(slice);

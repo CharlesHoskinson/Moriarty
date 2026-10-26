@@ -249,12 +249,131 @@ pub fn structural_tree_nodes(value: &Value) -> usize {
     count
 }
 
+fn push_env(env: &Environment, out: &mut Vec<Value>) {
+    out.extend(env.values().cloned());
+}
+
+fn push_frame(frame: &Frame, out: &mut Vec<Value>) {
+    match frame {
+        Frame::Let(_, _, env)
+        | Frame::Left(_, _, env)
+        | Frame::If(_, _, env)
+        | Frame::Match(_, env)
+        | Frame::Return(_, env)
+        | Frame::Scope(env) => push_env(env, out),
+        Frame::Right(_, v) => out.push(v.clone()),
+        Frame::Args(_, done, _, env) => {
+            out.extend(done.iter().cloned());
+            push_env(env, out);
+        }
+        Frame::Unary(_) => {}
+    }
+}
+
+fn push_control(control: &Control, out: &mut Vec<Value>) {
+    match control {
+        Control::Eval(_) | Control::Error(_) => {}
+        Control::Return(v) => out.push(v.clone()),
+        Control::Push(f, c, env) => {
+            push_frame(f, out);
+            push_control(c, out);
+            push_env(env, out);
+        }
+        Control::Invoke(_, vs) | Control::Enter(_, vs) => out.extend(vs.iter().cloned()),
+        Control::Bound(env, _, _) => {
+            if let Some(e) = env {
+                push_env(e, out);
+            }
+        }
+        Control::Cases(v, _, env) => {
+            out.push(v.clone());
+            push_env(env, out);
+        }
+        Control::CaseResult(env, v, _, _, outer) => {
+            if let Some(e) = env {
+                push_env(e, out);
+            }
+            out.push(v.clone());
+            push_env(outer, out);
+        }
+        Control::PrimitiveResult(r) => {
+            if let Ok(v) = r {
+                out.push(v.clone());
+            }
+        }
+    }
+}
+
+/// Every runtime value of a boundary state (control, environment, frames, outcome).
+pub fn snapshot_values(s: &Snapshot) -> Vec<Value> {
+    let mut out = Vec::new();
+    if let Some(c) = &s.control {
+        push_control(c, &mut out);
+    }
+    push_env(&s.environment, &mut out);
+    for f in &s.frames {
+        push_frame(f, &mut out);
+    }
+    if let Outcome::Done(v) = &s.outcome {
+        out.push(v.clone());
+    }
+    out
+}
+
+/// Tree child nodes held by a boundary state: distinct allocations (physical)
+/// and occurrences with sharing unfolded (structural). Roots are stored inline
+/// in `Value::Tree`, so only `Arc` children can be shared.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TreeCensus {
+    pub physical_children: usize,
+    pub structural_children: usize,
+}
+
+pub fn census(s: &Snapshot) -> TreeCensus {
+    let mut seen: BTreeSet<usize> = BTreeSet::new();
+    let mut c = TreeCensus::default();
+    for v in snapshot_values(s) {
+        let Value::Tree(root) = &v else { continue };
+        let mut work: Vec<&Tree> = vec![root];
+        while let Some(t) = work.pop() {
+            if let Tree::Branch(l, r) = t {
+                for ch in [l, r] {
+                    c.structural_children += 1;
+                    if seen.insert(Arc::as_ptr(ch) as usize) {
+                        c.physical_children += 1;
+                    }
+                    work.push(ch);
+                }
+            }
+        }
+    }
+    c
+}
+
 /// A complete actual run: initial state, every record, final state.
 #[derive(Clone, Debug)]
 pub struct Observation {
     pub initial: Snapshot,
     pub records: Vec<StepRecord>,
     pub final_state: Snapshot,
+}
+
+impl Observation {
+    /// Largest census over the resumed boundary states: the initial state,
+    /// every record's `before` (for the candidate, the re-interned state the
+    /// machine resumed from) and the final state.
+    pub fn peak_census(&self) -> TreeCensus {
+        let mut peak = TreeCensus::default();
+        let states = std::iter::once(&self.initial)
+            .chain(self.records.iter().map(|r| &r.before))
+            .chain(std::iter::once(&self.final_state));
+        for s in states {
+            let c = census(s);
+            peak.physical_children = peak.physical_children.max(c.physical_children);
+            peak.structural_children = peak.structural_children.max(c.structural_children);
+        }
+        peak
+    }
 }
 
 /// Reference realization: the unchanged machine on the unchanged program.
@@ -299,7 +418,7 @@ pub fn observe_candidate(
     Observation {
         initial,
         records,
-        final_state: m.snapshot(),
+        final_state: interner.intern_snapshot(&m.snapshot()),
     }
 }
 

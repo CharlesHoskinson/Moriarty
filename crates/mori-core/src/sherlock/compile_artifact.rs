@@ -19,6 +19,8 @@ pub mod draft_chunked;
 pub mod draft_contract;
 #[path = "compile_artifact/draft_execution.rs"]
 pub mod draft_execution;
+#[path = "compile_artifact/draft_optimization.rs"]
+pub mod draft_optimization;
 #[path = "compile_artifact/draft_profile.rs"]
 pub mod draft_profile;
 #[path = "compile_artifact/draft_reference_slices.rs"]
