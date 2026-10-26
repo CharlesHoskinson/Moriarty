@@ -21,12 +21,14 @@ The financial engine source SHA-256 at intake was
 the report adapter `sherlock/compile_artifact/suspension2_fin.rs` was
 `5dccd0d846331e0b0242658af5b78bf93b7bcd31502c33d1a642a3b1a59cfd19`.
 Both were uncommitted at intake. The engine subsequently changed to
-`5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b`:
-`check_policy` now validates every action segment before start rather than
-checking each segment as it is entered. `actionAdmits` and two explicit tests
-track this change, including an invalid unreached suffix. Segment execution,
-fuel and saturating accounting are unchanged. Revisit these models when either
-source changes.
+`5f2beded12d8ebd0070a487639300a03f89c3e33b0d3548f46d468dad0e1c08b`
+(`check_policy` validating every action segment before start) and then to
+`907e5fc7684934f28bb460d84b0d23f95459a74719fda4b48cc05999446eefb5` with
+report adapter
+`2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2`
+(enforcing `remaining_work > 0` at await entry and R0 resume for SI-29,
+replacing saturating `accounting` with `checked_add -> Option`, and refusing
+`resume_epoch == u64::MAX`). Revisit these models when either source changes.
 
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
@@ -99,20 +101,25 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
 
 ## Reported disagreements
 
-1. **Waiting without fuel (design SI-29).** F01's three statements with fuel 4
-   followed by await commit publish reserve 68/duty 10 and `Waiting` with fuel 0.
-   A ready resume then exhausts before progress. `waitingResumableInv` checks
-   even the weaker necessary condition `Waiting ⇒ remaining > 0`; the design
-   requires enough for accept plus guard evaluation. The host `run_segment`
-   does not apply the design's post-commit resumability check. Characterization:
-   `zeroFuelWaitingCounterexampleTest`; trace `waiting-zero-fuel.itf.json`.
-2. **Silent aggregate saturation (U017).** Two valid self transfers, payment MAX
-   then fee MAX, preserve every balance yet report gross = payments = fees = MAX.
-   Thus gross ≠ payments + fees, and exact sums are lost without an overflow
-   marker. A distinct-account MAX round trip also exceeds MAX cumulative payment
-   without any balance overflow. Characterizations:
-   `saturatedGrossCounterexampleTest`, `roundTripOverflowCounterexampleTest`;
-   candidate `exactReportInv`, trace `accounting-overflow.itf.json`.
+1. **Await-entry starvation rollback vs commit-first (design §6.1 / §7.3 / E2x).**
+   `sherlock2.rs:319-325` (`907e5fc7`) repaired SI-29 (`waitingResumableInv` now
+   holds in `allInvariants`): F01 with fuel 4 no longer publishes `Waiting` with
+   `remaining_work == 0`. However, at `end < statements.len() && remaining == 0`
+   it calls `fail(...)` before committing `tentative`, rolling back the prefix
+   (or retaining only `fee_stage`), whereas design §6.1 / §7.3 step 4 / §11.2
+   `E2x` specify that `tentative` is committed first before publishing
+   `Exhausted(Fuel)`. Characterization: `zeroFuelWaitingExhaustsAtAwaitEntryTest`;
+   candidate `awaitStarvedCommitsPrefixInv`, trace `waiting-zero-fuel.itf.json`.
+2. **Checked aggregate report over unbounded transfer history (U017).**
+   `sherlock2.rs::accounting` (`907e5fc7`) and `suspension2_fin.rs::fin_block`
+   (`2852e423`) replaced silent `saturating_add` with `checked_add -> Option`:
+   `exactReportInv` and `reportEquationInv` (`gross == payments + fees`) now hold
+   in `allInvariants` whenever `reportOk` holds. Valid `u128` self-transfers or
+   multi-account round trips can still exceed `u128::MAX` cumulative transfer
+   volume without any balance overflow, where `accounting` now returns `None`
+   (`reportOk == false`). Characterizations:
+   `checkedGrossOverflowRefusedTest`, `roundTripOverflowRefusedTest`;
+   candidate `unboundedHistoryFitsU128Inv`, trace `accounting-overflow.itf.json`.
 3. **Unvalidated imported work counters (financial R0/SI-03).** Under the import
    model's fixed valid non-counter premises, canonical fields initial = 0,
    remaining = 1, consumed = 0 pass import and charge, although

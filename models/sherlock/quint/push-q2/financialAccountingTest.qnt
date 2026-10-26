@@ -13,15 +13,16 @@ module financialAccountingTest {
     .expect(allInvariants and world.cash.get((1, 0)) == MAX and world.cash.get((1, 1)) == 0)
   run insufficientBalanceRefusedTest = init
     .expect(not(canTransfer(world, {asset: 0, sender: 1, recipient: 0, amount: 1, fee: false})))
-  // Two valid transfers, no overflowing balance. The report silently clamps.
-  run saturatedGrossCounterexampleTest = init
+  // Two valid transfers with no overflowing balance; checked accounting now
+  // returns None (reportOk == false) rather than silently clamping to MAX.
+  run checkedGrossOverflowRefusedTest = init
     .then(transfer({asset: 0, sender: 0, recipient: 0, amount: MAX, fee: false}))
     .then(transfer({asset: 0, sender: 0, recipient: 0, amount: MAX, fee: true}))
-    .expect(allInvariants and not(exactReportInv) and not(reportEquationInv)
-      and world.payments == MAX and world.fees == MAX and world.gross == MAX)
-  run roundTripOverflowCounterexampleTest = init
+    .expect(allInvariants and not(world.reportOk) and not(unboundedHistoryFitsU128Inv)
+      and exactPayments(world.log) == MAX and exactFees(world.log) == MAX)
+  run roundTripOverflowRefusedTest = init
     .then(transfer({asset: 0, sender: 0, recipient: 1, amount: MAX, fee: false}))
     .then(transfer({asset: 0, sender: 1, recipient: 0, amount: MAX, fee: false}))
-    .expect(allInvariants and not(exactReportInv) and world.cash.get((0, 0)) == MAX
-      and exactPayments(world.log) == 2 * MAX and world.payments == MAX)
+    .expect(allInvariants and not(world.reportOk) and not(unboundedHistoryFitsU128Inv)
+      and world.cash.get((0, 0)) == MAX and exactPayments(world.log) == 2 * MAX)
 }

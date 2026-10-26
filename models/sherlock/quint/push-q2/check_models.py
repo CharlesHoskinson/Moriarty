@@ -28,8 +28,8 @@ def checks():
     yield "existing-fee-pool-tests", ["quint", "test", "specs/quint/fee_pool_component_test.qnt",
         "--backend", "typescript", "--seed", "17"], 0
     for model, invariant, trace in (
-        ("financialSegments", "waitingResumableInv", "waiting-zero-fuel"),
-        ("financialAccounting", "exactReportInv", "accounting-overflow"),
+        ("financialSegments", "awaitStarvedCommitsPrefixInv", "waiting-zero-fuel"),
+        ("financialAccounting", "unboundedHistoryFitsU128Inv", "accounting-overflow"),
         ("financialImport", "acceptedWorkInv", "financial-import-counters"),
         ("financialSegmentImport", "acceptedSegmentInv", "financial-import-segment"),
     ):
