@@ -300,3 +300,26 @@ fn checked_mul_overflow_exports_error_typed_result() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn bool_equality_exports_generic_value_eq() {
+    const EQ: &str = "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(b: Bool): Bool { b == true }\n  entry f(true);\n}\n";
+    let (position, _record) = select_in(EQ, |slice| {
+        slice["end"]["control"] == "uiPrimResult(uiPrimValue(uiB(true)))"
+    });
+    let dir = temp_dir(&format!("{position}-eq"));
+    let report = plans_in(EQ, position, &CAPS, &dir);
+    let operations = report["operation_manifest"]["operations"]
+        .as_array()
+        .unwrap();
+    let eq = operations
+        .iter()
+        .find(|o| o["op"] == "ValueEq")
+        .expect("generic ValueEq for Bool operands");
+    assert!(
+        operations.iter().all(|o| o["op"] != "UInt128Eq"),
+        "{operations:?}"
+    );
+    assert_eq!(eq["inputs"][0]["type"], "Bool", "{eq}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
