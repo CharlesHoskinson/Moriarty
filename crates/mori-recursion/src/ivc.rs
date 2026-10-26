@@ -46,11 +46,11 @@ use midnight_zk_stdlib::{MidnightVK, Relation, ZkStdLib, ZkStdLibArch};
 
 use crate::{
     bls_arch,
-    inner::{C, S, prepare_offcircuit, verify_child_incircuit, vk_name},
+    inner::{C, S, prepare_offcircuit_with, verify_child_incircuit_with, vk_name},
     util::{F, read_bytes, read_u32, vk_bytes, vk_from_bytes, write_bytes},
 };
 
-const MAGIC: &[u8; 8] = b"SHKIVC02";
+const MAGIC: &[u8; 8] = b"SHKIVC03";
 /// Name prefix of the node's own (self) fixed bases.
 pub const SELF_NAME: &str = "shk_node";
 /// State fields after the self key: prog_d, init_d, cur_d, h.
@@ -217,16 +217,16 @@ impl SherlockIvcRelation {
             >(vk.vk(), &[&[C::identity()]], &[&[&prev_inst]], &mut tr)
             .map_err(|e| format!("prepare previous node proof: {e:?}"))?;
             let bases = fixed_bases::<S>(SELF_NAME, vk.vk());
-            let mut a = Accumulator::<S>::from_dual_msm(dual, SELF_NAME, &bases);
-            a.collapse();
-            a
+            // Left uncollapsed, mirroring the circuit (one collapse after folding).
+            Accumulator::<S>::from_dual_msm(dual, SELF_NAME, &bases)
         };
         let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule);
-        let leaf_acc = prepare_offcircuit(
+        let leaf_acc = prepare_offcircuit_with(
             &self.leaf_vk,
             &self.leaf_name(),
             &leaf_inst,
             &w.leaf_proof,
+            false,
             false,
         )?;
         let mut acc = Accumulator::accumulate(&[proof_acc, w.prev_acc.clone(), leaf_acc]);
@@ -342,17 +342,19 @@ impl Relation for SherlockIvcRelation {
             witness.as_ref().map(|w| w.prev_proof.clone()),
         )?;
         AssignedAccumulator::scale_by_bit(l, scalar, &not_genesis, &mut proof_acc)?;
-        proof_acc.collapse(l, bls, scalar)?;
+        // Not collapsed here: the proof, carried and leaf accumulators are folded first and
+        // collapsed once below (one shared MSM keeps the node at k=19).
 
         // 4. The leaf under its fixed key, linked to (prog_d, prev_d, cur_d, h_pre).
         let leaf_inst = vec![binding, prog_d, prev_d, cur_d, rule, prev_h];
-        let leaf_acc = verify_child_incircuit(
+        let leaf_acc = verify_child_incircuit_with(
             std,
             l,
             &self.leaf_vk,
             &self.leaf_name(),
             &leaf_inst,
             witness.as_ref().map(|w| w.leaf_proof.clone()),
+            false,
             false,
         )?;
 
@@ -377,7 +379,7 @@ impl Relation for SherlockIvcRelation {
         let mut magic = [0u8; 8];
         r.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(io::Error::other("not a SHKIVC02 node relation"));
+            return Err(io::Error::other("not a SHKIVC03 node relation"));
         }
         let mut b = [0u8; 1];
         r.read_exact(&mut b)?;
