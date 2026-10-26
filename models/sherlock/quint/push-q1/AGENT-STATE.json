@@ -1,24 +1,30 @@
 {
   "agent": "sherlock-quint-1",
+  "model": "gemini-4-argon",
+  "worktree": "/home/charles/repos/Moriarty-wt-sh-gq1",
+  "branch": "sherlock-gq1",
   "phase": "source-watch",
   "paths": [
     "models/sherlock/quint/push-q1/"
   ],
   "verification": {
     "status": "passed",
-    "checks": 17,
-    "tests": 40,
+    "checks": 23,
+    "tests": 47,
     "maxSteps": 30,
     "samplesPerSafetyRun": 10000
   },
   "openFindings": [
-    "imported Waiting SI29 resource validation occurs after guard",
-    "imported UInt64 maximum resume_epoch unchecked increment"
+    "imported Waiting SI29 resource validation occurs after guard (suspension2.rs::resume_pure / owner_suspend.rs::resume_accept)",
+    "imported UInt64 maximum resume_epoch unchecked increment (suspension2.rs:702 / suspension2_fin.rs:306)",
+    "post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn plus await binder env leak when ScopeF is omitted (draft_source.rs:826-846 / owner_suspend.rs:485-486 / owner_runtime.rs:4311-4396)",
+    "sequential await post-order site numbering reversal in draft_source.rs:823-854 (second await gets site 1, first gets site 2)",
+    "draft /2 surface parser rejects zero-binder await/yield and let-bound scalar locals in guards (draft_source.rs:681,809,1050,1145)"
   ],
   "commits": [
     "c03d399c4",
     "511297bdf"
   ],
-  "awaiting": "sherlock-fable DONE-ALL",
+  "awaiting": "sherlock-fable DONE-ALL or sherlock-u2 U014-U016 source changes",
   "stateLocationReason": "User restricts all edits to push-q1; target/AGENT-STATE.json not written."
 }

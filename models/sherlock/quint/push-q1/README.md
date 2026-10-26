@@ -99,9 +99,65 @@ The epoch model requires `--backend typescript`: Quint 0.32.0's Rust evaluator
 rejects literals outside the signed Int64 range with QNT600. The ordinary
 continuation/admission models still run on the default Rust evaluator. The
 verification runner records the backend on each command. All simulation runs
-use depth 30; runs with `contractCheck` or `checkedAccept` explicitly select a
+use depth 30; runs with `contractCheck`, `checkedAccept` or `scopedStep` explicitly select a
 non-default step. The imported-input models finish after one API decision;
 short traces there are intentional, rather than protocol deadlocks.
+
+## Await lowering, post-resume SI-20 / ScopeF, and site numbering
+
+`awaitLowering.qnt` projects `draft_source.rs`, `owner_suspend.rs` and
+`owner_runtime.rs` across three U014–U016 lowering and continuation boundaries:
+
+1. **Post-resume `SI-20` (`reg.controlOrigin`) violation, U016 technical-cut refusal at `InnerReturn`, and await binder env leak**:
+   - `draft_source::Parser::await_expression` (`draft_source.rs:826–846`) lowers
+     `await L(x: T) when G; E` to an `ExpressionRowC::Let` row (`site.expr`)
+     wrapping continuation body `E` (`site.body != site.expr`).
+   - `owner_suspend::await_enter` (`owner_suspend.rs:416`) intercepts
+     `ControlC::Eval { expr: site.expr }` before `KMachineEvalLet`, so no
+     `ScopeF` frame is pushed.
+   - `owner_suspend::resume_accept` (`owner_suspend.rs:444–491`) extends
+     `img.env_root` with the binder cell(s) and sets
+     `img.control = ControlC::Eval { expr: site.body }` and
+     `img.control_origin = site.body` without pushing
+     `ScopeF { saved_env: caller_env, origin: site.expr }`.
+   - When `site.body` returns (`ControlC::Return`) while `img.frames` is
+     non-empty (`ContextReturnF` such as `InnerReturn` in `10 + inner(3)`, or
+     `ContextRightF` in `10 + (await ...)`), `si20_return_ok`
+     (`owner_runtime.rs:4311–4396`) checks whether `img.control_origin` is in
+     the `If`-branch closure of `expectedChild(top) = site.expr`. Because
+     `si20_return_ok` only closes across `ExpressionRowC::If` branches and not
+     `ExpressionRowC::Let.body`, `si20_return_ok` returns `false` and
+     `owner_check_step_inv` (`owner_runtime.rs:4898–4900`) fails with `SI20`.
+   - Consequently, taking a U016 technical checkpoint (`resume_profile2_checkpoint`
+     or `resume_technical_checkpoint`) at `InnerReturn` (`AtContextReturn` under
+     `ContextReturnF`) is refused with `ResumeError::StepInvariant(["SI20 ..."])`.
+   - Furthermore, when the enclosing frame does not restore `saved_env` on return
+     (`ContextRightF`, `UnaryF`, or top-level `ContextTopEntry`), omitting `ScopeF`
+     leaves the await binder cell in `img.env_root` after the await expression
+     returns (`binderLeakedAfterReturn`). Pushing `ScopeF` on `resume_accept`
+     (`--step scopedStep`) satisfies `SI-20`, accepts technical cuts at
+     `InnerReturn`, and restores `CallerEnv` via `KMachineReturnScope`.
+2. **Sequential `await` post-order site numbering reversal**:
+   - In `draft_source::Parser::await_expression` (`draft_source.rs:823–854`),
+     `let body = self.expression(0)?;` recursively parses `body` before
+     `self.awaits.push(...)`, and `draft_source.rs:556–559` assigns 1-based
+     `site` numbers in `self.awaits` push order.
+   - In a sequential chain `await first(a: UInt) when G1; await second(b: UInt) when G2; E`,
+     `second` receives `site = 1` and `first` receives `site = 2`
+     (`reversedSequentialSites`), contradicting source-order site numbering
+     (`draft_source.rs:29,217–220`; Design §3.2).
+3. **Draft `/2` surface admission gaps**:
+   - `draft_source.rs:681,809` rejects `yield L;` and zero-binder
+     `await L() when G; E`, and `draft_source.rs:1050,1145` records ordinary
+     `Expr::Let` locals with `let_sort = None` in `AwaitScopes::walk` and
+     rejects them in `guard_type` (`surfaceRejectedYieldOrLetLocal`).
+
+The 7 tests in `awaitLowering_test.qnt` cover `InnerReturn` `SI-20` violation
+and technical-cut refusal, `ReturnF` masking of `env_root` after pop, `RightF`
+binder env leak, the `scopedStep` remedy under both `ReturnF` and `RightF`,
+sequential site reversal, and surface `/2` admission. `awaitLowering-counterexample.itf.json`
+records the 4-state `AtAwaitEval -> AtWaiting -> AtBodyEval -> AtContextReturn`
+trace violating `si20AndCutSafety`.
 
 ## Correspondence and limits
 
@@ -111,6 +167,8 @@ short traces there are intentional, rather than protocol deadlocks.
 | U015 atomic resume and retained caller | suspension2::resume_pure; owner_suspend::resume_accept; design §5 | accept, notReady, atomicAccept, continuationResult |
 | U016 transparent technical cut | local owner_resume::resume_technical_checkpoint; sherlock_technical_chunks_positive | cut, checkpointTransparency, cutBeforeAddition |
 | Imported Waiting SI29 | design §4 R0 versus owner_runtime / resume_pure order | resumeAdmission source/contract actions |
+| Imported epoch overflow | Header::get; suspension2::resume_pure; suspension2_fin::resume_fin | resumeEpoch sourceAccept / checkedAccept |
+| Await lowering, SI-20 & ScopeF | draft_source::await_expression; owner_suspend::resume_accept; owner_runtime::si20_return_ok | awaitLowering sourceStep / scopedStep |
 
 Codec bytes, lane widths, native C6 constraints, digest equality with the stock
 verifier, authentication, on-chain single use, arbitrary programs, physical
