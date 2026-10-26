@@ -57,6 +57,23 @@ module financialSegmentsTest {
     .expect(not(policyAdmits(firstPrefix, RetainFees))
       and policyAdmits(retainedFailure, RetainFees)
       and policyAdmits(firstPrefix, AllOrNothing))
+  run requiresBetweenFeesDiscardsPhaseTest =
+    initCase(List(Fee(10), Requires(false), Fee(1)), RetainFees, 10, false)
+      .then(statementStep).then(statementStep)
+      .expect(allInvariants and image.outcome == Rejected and not(image.feeSealed)
+        and image.committed == genesis and image.retained == List()
+        and image.discarded == List(FeePaid(10)))
+  run requiresAfterFeesRetainsPhaseTest =
+    initCase(List(Fee(10), Requires(false)), RetainFees, 10, false)
+      .then(statementStep).then(statementStep)
+      .expect(allInvariants and image.outcome == Rejected and image.feeSealed
+        and image.committed.reserve == 90 and image.retained == List(FeePaid(10))
+        and image.discarded == List() and image.committed.liability == 40)
+  run requiresBeforeFeesDiscardsNothingTest =
+    initCase(List(Requires(false), Fee(10)), RetainFees, 10, false)
+      .then(statementStep)
+      .expect(allInvariants and image.outcome == Rejected and image.committed == genesis
+        and image.retained == List() and image.discarded == List())
   // Current-code characterization, not endorsement of design SI-29.
   run zeroFuelWaitingCounterexampleTest = initCase(firstPrefix, AllOrNothing, 4, true)
     .then(statementStep).then(statementStep).then(statementStep).then(commitStep)

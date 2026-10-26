@@ -23,8 +23,17 @@ Both were uncommitted at intake. Revisit these models when either source changes
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
 and `docs/sherlock/design/suspension-and-finance.md` §6–8. The U017–U020 JSON
-contracts named by some holdout instructions are absent at this source cut.
+contracts named by some holdout instructions were absent at intake.
 No holdout was modified, and no U predicate is claimed to pass here.
+
+The evaluator subsequently published `qa/holdout/contracts/U020.json` on the
+owner branch in `c0fb7664d`. Read-only comparison confirms the same policy names,
+policy binding on start/resume, separated committed/retained/discarded effects,
+residual duties and `ledger_rollback: none-inferred` used here. The contract
+permits refusal either at admission or segment entry; the model follows the
+current implementation's per-entered-segment check. Report JSON shape and exit
+codes remain adapter obligations, outside these typed accounting models. The
+financial engine/report hashes above were unchanged when this contract arrived.
 
 The segment model assumes admitted well-typed scalar statements and a valid
 static Core/2 cost plan. Its program alphabet is transfer, fee, discharge and
