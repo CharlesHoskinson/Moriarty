@@ -238,6 +238,29 @@ impl SherlockIvcRelation {
     }
 }
 
+/// Inverse of the public accumulator encoding of a node instance tail, given the
+/// self fixed-base names; refuses any lanes that do not re-encode identically.
+pub fn acc_from_lanes(lanes: &[F], names: &[String]) -> Option<Accumulator<S>> {
+    let np = crate::inner::point_pi_len();
+    if lanes.len() != 2 * (np + 1) + names.len() {
+        return None;
+    }
+    let pt = |s: &[F]| <crate::inner::AP as Instantiable<F>>::from_public_input(s);
+    let (lb, ls) = (pt(&lanes[..np])?, lanes[np]);
+    let (rb, rs) = (pt(&lanes[np + 1..2 * np + 1])?, lanes[2 * np + 1]);
+    let mut sorted = names.to_vec();
+    sorted.sort();
+    let fixed: BTreeMap<String, F> = sorted
+        .into_iter()
+        .zip(lanes[2 * np + 2..].iter().copied())
+        .collect();
+    let acc = Accumulator::new(
+        Msm::new(&[lb], &[ls], &BTreeMap::new()),
+        Msm::new(&[rb], &[rs], &fixed),
+    );
+    (<AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&acc) == lanes).then_some(acc)
+}
+
 impl Relation for SherlockIvcRelation {
     type Instance = Vec<F>;
     type Witness = IvcWitness;

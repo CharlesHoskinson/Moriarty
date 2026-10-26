@@ -13,6 +13,7 @@ pub mod pairing;
 pub mod parent;
 pub mod reference;
 pub mod run_decider;
+pub mod standin;
 pub mod template;
 pub mod tower;
 pub mod util;
