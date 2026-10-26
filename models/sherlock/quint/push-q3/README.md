@@ -7,13 +7,13 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all sixteen Quint files, runs 46 deterministic Quint
+The runner typechecks all eighteen Quint files, runs 49 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Seven models use `modelInv`; the pinned defective
-s5 source projection uses `sourceInv`. All eight
+per model with `--max-steps 30`. Seven models use `modelInv`; the two pinned
+defective source projections use `sourceInv`. All nine
 positive runs passed; every requested witness was reached. Its separate
-`preservesDynamicTargets` run deliberately finds the source counterexample
-described below, which the runner checks explicitly. Raw results are in
+`preservesDynamicTargets` and `stableAcrossFuel` runs deliberately find the
+source counterexamples described below, which the runner checks explicitly. Raw results are in
 `verification.log`. These are sampled finite checks, not exhaustive proofs.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
 
@@ -27,6 +27,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `residualBlockBudget.qnt` | U033; `c41f2da11:qa/holdout/contracts/U033.json` | Updated contract model counts one shared generic block inside the positive size cap, rejects zero as tooling refusal, and retains per-rule charges even when charged and free rules share one block |
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
 | `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
+| `rustResidualIdentity.qnt` | U033; `2d1b2b373:crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs:143` | Source-derived WIP counterexample: the same literal program selects static rules `{84}` at fuel 0 versus `{80,102}` at fuel 1, changing per-program IR content |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
@@ -124,3 +125,13 @@ Repository/indexer/reference oracles are in-memory unit fixtures; no real
 network, wallet, transaction, proof or qualification was exercised. Results
 are in `qualification-counterexample.json`; findings were sent to the
 evaluator, sherlock-c4 and sherlock-fable. Holdout source was never edited.
+
+Rust WIP `2d1b2b373` was source-audited, not built or run here. Its per-program
+specializer derives static rule membership from `run_records`, so identical
+code can change IR with fuel. `rustResidualIdentity` records that source-derived
+counterexample; content identity is represented structurally, without a SHA
+collision argument. The WIP's residual stream is separately produced by a
+second reference run after post-hoc block labeling, and its multiplication
+plan omits the left operand held in `Frame::Right`. All three findings were
+sent to the owners and sherlock-fable; no final implementation verdict is
+claimed for this explicitly WIP version.

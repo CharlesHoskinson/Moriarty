@@ -35,3 +35,19 @@ else
   fi
 fi
 python3 audit_s5.py > s5-source-observations.json
+quint typecheck rustResidualIdentity.qnt
+quint typecheck rustResidualIdentity_test.qnt
+quint test rustResidualIdentity_test.qnt
+quint run rustResidualIdentity.qnt --invariant sourceInv --max-steps 30 --max-samples 10000 \
+  --seed 0x303 --witnesses observedRuntimeDependency --verbosity 1
+if quint run rustResidualIdentity.qnt --invariant stableAcrossFuel --max-steps 30 \
+  --seed 0x303 --verbosity 2 > rust-residual-identity-counterexample.log 2>&1; then
+  echo 'Expected the pinned Rust runtime-specialization counterexample' >&2
+  exit 1
+else
+  result=$?
+  if [ "$result" -ne 1 ] || ! rg -q 'Invariant violated' rust-residual-identity-counterexample.log; then
+    cat rust-residual-identity-counterexample.log >&2
+    exit 1
+  fi
+fi
