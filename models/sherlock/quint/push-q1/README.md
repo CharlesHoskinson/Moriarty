@@ -45,8 +45,10 @@ checked against independently specified frame/environment/work expectations.
 ## Imported-checkpoint disagreement
 
 `resumeAdmission.qnt` separates the design's R0 behavior (`contractCheck`) from
-the implementation's validation order (`sourceCheck`, the default step).
-Its four tests record the disagreement and machine-produced-input agreement.
+the implementation's validation order (`sourceCheck`, the default step), and
+includes the financial-route (`XFin`) `SI-29` counterpart (`finAwaitEntryAfterCommitCharge`
+and `finResumeReply`). Its five tests record the pre-fix disagreement,
+machine-produced-input agreement, and both pure and financial `SI-29` remedies.
 `acceptedIsAffordable` holds for the source projection. `matchesContract`
 intentionally fails for the source projection and holds with
 `--step contractCheck`.
@@ -72,10 +74,13 @@ successful in this small projection. Work conservation can remain satisfied
 on such an input by moving fuel to consumed work and the reference cursor;
 checksums are public and do not establish machine reachability. The entry rule
 protects machine-produced Waiting checkpoints. FINDING messages were sent to
-`sherlock-fable` and `sherlock-u2`. **CONFIRMED FIXED at `factory-u` `815a22d87`**
-(`suspension2.rs:674–676`, `owner_suspend.rs:423–433`): `suspend::check_resumable`
-is now called at `R0` before `admit_observation` and `s.guard.run`, matching
-`--step contractCheck` (`sourceCheck` is retained for regression and
+`sherlock-fable` and `sherlock-u2`. **CONFIRMED FIXED at `factory-u` `815a22d87` (ledger `7efe20196`)**
+(`suspension2.rs:674–676`, `owner_suspend.rs:423–433`, and `stage/sherlock2.rs:319–325,460–469`):
+`suspend::check_resumable` is called at `R0` before `admit_observation` and
+`s.guard.run` on the pure route (matching `--step contractCheck`), and on the
+financial route `remaining_work == 0` exhausts `Fuel` at await entry rather
+than publishing `Waiting` with zero fuel and is refused at `R0` before guard
+evaluation in `fin2::resume` (`sourceCheck` is retained for regression and
 counterexample coverage).
 
 ## Imported epoch overflow

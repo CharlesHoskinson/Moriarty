@@ -82,7 +82,7 @@ def main() -> int:
         if expected == 1:
             valid = valid and "Invariant violated" in process.stdout
         elif "test" in command:
-            expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 4,
+            expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 5,
                               "resumeEpoch_test.qnt": 7, "awaitLowering_test.qnt": 7}[Path(command[2]).name]
             valid = valid and f"{expected_count} passing" in process.stdout
         elif "--witnesses" in command:
@@ -113,7 +113,10 @@ def main() -> int:
         ["git", "-C", str(owner), "rev-parse", "--short", "HEAD"],
         text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
     ).stdout.strip()
-    sources += [owner / "docs/sherlock/design/suspension-and-finance.md"]
+    sources += [
+        owner / "docs/sherlock/design/suspension-and-finance.md",
+        owner / "crates/mori-core/src/stage/sherlock2.rs",
+    ]
     sources += [owner / "crates/mori-core/src/sherlock" / name for name in (
         "compile_artifact/suspension2.rs",
         "compile_artifact/suspension2_fin.rs",
