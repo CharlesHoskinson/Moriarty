@@ -1,0 +1,1047 @@
+diff --git a/circuits/CHANGELOG.md b/circuits/CHANGELOG.md
+index 6e17af4d1..71755afae 100644
+--- a/circuits/CHANGELOG.md
++++ b/circuits/CHANGELOG.md
+@@ -24,6 +24,7 @@ We use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+ * `verifier::fixed_bases` reads the labels carried by the verifying-key commitment, rather than assuming one commitment per fixed polynomial, and `fixed_base_labels` takes the constraint system and lets the new `InCircuitPCS::fixed_base_labels` group its fixed polynomials, returning the labels in the same order [#570](https://github.com/midnightntwrk/midnight-zk/pull/570)
+ * BREAKING: `SelfEmulation::PCS` declares the in-circuit PCS of the verified proofs; `AssignedVk` and the `VerifierGadget` methods drop their PCS generic [#570](https://github.com/midnightntwrk/midnight-zk/pull/570)
+ * `AssignedVk` holds an `AssignedEvaluationDomain` with assigned `k` and `omega` (and in-circuit derived `omega_inv` and `n = 2^k`) [#461](https://github.com/midnightntwrk/midnight-zk/pull/461)
++* The KZG verifier gadget computes the quotient `(q - r(x3)) / Π_i (x3 - point_i)` of each point set directly from the barycentric weights, without building the Lagrange bases [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
+ * Remove the linearization from the verifier gadget, mirroring `midnight-proofs`: the simple selectors are opened through the phase-0 group and `AssignedVk` no longer holds one commitment per simple selector [#566](https://github.com/midnightntwrk/midnight-zk/pull/566)
+ * `PreComputedRoundCPU::init` derives Poseidon's CPU partial-round pre-computation once per field and caches it [#527](https://github.com/midnightntwrk/midnight-zk/pull/527)
+ * Change the signature of `ForeignEdwardsEccChip::from_canonical_compressed_bytes` to derive the subgroup point from assigned bytes instead of requiring a caller-supplied point witness [#540](https://github.com/midnightntwrk/midnight-zk/pull/540)
+diff --git a/circuits/src/verifier/kzg.rs b/circuits/src/verifier/kzg.rs
+index 2ed958980..bd5eebf3c 100644
+--- a/circuits/src/verifier/kzg.rs
++++ b/circuits/src/verifier/kzg.rs
+@@ -53,7 +53,7 @@ use crate::{
+         pcs::{CommitmentBases, InCircuitHomomorphicCommitment, InCircuitPCS, VerifierQuery},
+         transcript_gadget::TranscriptGadget,
+         utils::{
+-            AssignedBoundedScalar, evaluate_interpolated_polynomial, inner_product, mul_add,
++            AssignedBoundedScalar, evaluate_interpolation_quotient, inner_product, mul_add,
+             mul_bounded_scalars, truncated_powers,
+         },
+     },
+@@ -549,26 +549,15 @@ pub(crate) fn multi_prepare_kzg<S: SelfEmulation<PCS = InCircuitKZG<S>>>(
+         .zip(q_evals_on_x3.iter())
+         .rev()
+         .try_fold(zero, |acc_eval, ((points, evals), proof_eval)| {
+-            let r_eval =
+-                evaluate_interpolated_polynomial(layouter, scalar_chip, points, evals, &x3.scalar)?;
+-
+             // eval = (proof_eval - r_eval) / prod_i (x3 - point_i)
+-            let den = points.iter().skip(1).try_fold(
+-                scalar_chip.sub(layouter, &x3.scalar, &points[0])?,
+-                |acc, point| {
+-                    // acc * (x3 - point) computed as acc * x3 - acc * point
+-                    scalar_chip.add_and_double_mul(
+-                        layouter,
+-                        (S::F::ZERO, &acc),
+-                        (S::F::ZERO, &x3.scalar),
+-                        (S::F::ZERO, point),
+-                        S::F::ZERO,
+-                        (S::F::ONE, -S::F::ONE),
+-                    )
+-                },
++            let eval = evaluate_interpolation_quotient(
++                layouter,
++                scalar_chip,
++                points,
++                evals,
++                &x3.scalar,
++                proof_eval,
+             )?;
+-            let mut eval = scalar_chip.sub(layouter, proof_eval, &r_eval)?;
+-            eval = scalar_chip.div(layouter, &eval, &den)?;
+ 
+             // acc_eval * x2 + eval
+             mul_add(layouter, scalar_chip, &acc_eval, &x2, &eval)
+diff --git a/circuits/src/verifier/utils.rs b/circuits/src/verifier/utils.rs
+index a862a4c85..271a730b2 100644
+--- a/circuits/src/verifier/utils.rs
++++ b/circuits/src/verifier/utils.rs
+@@ -184,17 +184,18 @@ pub fn evaluate_lagrange_polynomials<F: CircuitField>(
+         .collect()
+ }
+ 
+-/// Given n evaluation points {x_i}_i and n evaluations {y_i}_i, returns the
+-/// evaluation at x of the minimal polynomial that interpolates them.
++/// Given n evaluation points {x_i}_i, n evaluations {y_i}_i and a value `q`,
++/// returns `(q - f(x)) / Π_i (x - x_i)`.
+ ///
+-/// That is, let f be the polynomial of smallest degree such that f(x_i) = y_i
+-/// for all i in \[n\]. This function returns f(x).
+-pub fn evaluate_interpolated_polynomial<F: CircuitField>(
++/// Here f is the polynomial of smallest degree such that f(x_i) = y_i for all
++/// i in \[n\].
++pub fn evaluate_interpolation_quotient<F: CircuitField>(
+     layouter: &mut impl Layouter<F>,
+     scalar_chip: &impl ArithInstructions<F, AssignedNative<F>>,
+     points: &[AssignedNative<F>],
+     evals: &[AssignedNative<F>],
+     x: &AssignedNative<F>,
++    q: &AssignedNative<F>,
+ ) -> Result<AssignedNative<F>, Error> {
+     assert_eq!(points.len(), evals.len());
+ 
+@@ -205,31 +206,38 @@ pub fn evaluate_interpolated_polynomial<F: CircuitField>(
+         }
+     }
+ 
+-    if points.len() == 1 {
+-        return Ok(evals[0].clone());
+-    }
+-
+-    // Compute the Lagrange bases L_j evaluated at x.
+-    let mut lj_s = vec![];
+     let x_minus_xs = points
+         .iter()
+         .map(|xi| scalar_chip.sub(layouter, x, xi))
+         .collect::<Result<Vec<_>, Error>>()?;
+-    for (j, xj) in points.iter().enumerate() {
+-        let mut num_terms = vec![];
+-        let mut den_terms = vec![];
+-        for (i, xi) in points.iter().enumerate() {
+-            if i != j {
+-                num_terms.push(x_minus_xs[i].clone());
+-                den_terms.push(scalar_chip.sub(layouter, xj, xi)?);
+-            }
+-        }
+-        let num = prod::<F>(layouter, scalar_chip, &num_terms)?;
+-        let den = prod::<F>(layouter, scalar_chip, &den_terms)?;
+-        lj_s.push(scalar_chip.div(layouter, &num, &den)?);
++
++    if points.len() == 1 {
++        let num = scalar_chip.sub(layouter, q, &evals[0])?;
++        return scalar_chip.div(layouter, &num, &x_minus_xs[0]);
+     }
+ 
+-    inner_product(layouter, scalar_chip, &lj_s, evals)
++    // In factored form, f(x) is
++    // `Π_j (x - x_j) · Σ_i y_i / ((x - x_i) Π_{j≠i} (x_i - x_j))`,
++    // and the quotient is `q / Π_j (x - x_j)` minus the sum.
++    let mut terms = vec![];
++    for (i, (xi, yi)) in points.iter().zip(evals).enumerate() {
++        let mut den = x_minus_xs[i].clone();
++        for (_, xj) in points.iter().enumerate().filter(|(j, _)| *j != i) {
++            // den * (xi - xj) computed as den * xi - den * xj
++            den = scalar_chip.add_and_double_mul(
++                layouter,
++                (F::ZERO, &den),
++                (F::ZERO, xi),
++                (F::ZERO, xj),
++                F::ZERO,
++                (F::ONE, -F::ONE),
++            )?;
++        }
++        terms.push((-F::ONE, scalar_chip.div(layouter, yi, &den)?));
++    }
++    let vanishing = prod::<F>(layouter, scalar_chip, &x_minus_xs)?;
++    terms.push((F::ONE, scalar_chip.div(layouter, q, &vanishing)?));
++    scalar_chip.linear_combination(layouter, &terms, F::ZERO)
+ }
+ 
+ /// Computes the addition of all the given scalars.
+diff --git a/proofs/CHANGELOG.md b/proofs/CHANGELOG.md
+index dd84d5875..3fc5204c5 100644
+--- a/proofs/CHANGELOG.md
++++ b/proofs/CHANGELOG.md
+@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ * `PolynomialLabel::Collection`, a label made of other labels, and the `commitment_labels` method on the `PolynomialCommitmentScheme` trait, the labels a commitment tags its polynomials with [#555](https://github.com/midnightntwrk/midnight-zk/pull/555)
+ * `PolynomialCommitmentScheme::max_k`, the largest `k` such that some parameters can commit to polynomials of degree strictly less than `2^k` [#560](https://github.com/midnightntwrk/midnight-zk/pull/560)
+ * `PolynomialCommitmentScheme::load_params`, reading the parameters of the scheme for committing to polynomials of degree strictly less than `2^k` [#560](https://github.com/midnightntwrk/midnight-zk/pull/560)
++* `InterleavedCommit`, a `PolynomialCommitmentScheme` that commits to `Σ_i X^i f_i(X^t)` for chunks of polynomials `f_0, ..., f_{k-1}`, implemented by KZG from per-residue bases cached in `ParamsKZG` [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
+ 
+ ### Fixed
+ * LogUp verifier no longer panics when the prover makes some `fⱼ(x) + β` zero: the helper constraint folds products instead of inverting each term, which also saves the inversions [#562](https://github.com/midnightntwrk/midnight-zk/pull/562)
+@@ -56,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ * `commit_many`, `read_commitment` and `deserialize_commitment` take the labels of a group in the order it is committed to, rather than ordering them [#554](https://github.com/midnightntwrk/midnight-zk/pull/554)
+ * `ProverQuery` carries the labels and polynomials of the group the queried polynomial is committed with, so `multi_open` sees every polynomial committed together with the queried one [#554](https://github.com/midnightntwrk/midnight-zk/pull/554)
+ * fflonk writes and reads the implicit evaluations of a chunk in the order its points are first queried, rather than by their value. This changes the proof for `T_MAX > 1` [#569](https://github.com/midnightntwrk/midnight-zk/pull/569)
++* The prover commits to the phase-1 group in `LagrangeDelta` and to the phase-2 group in `LagrangeDoubleDelta` [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
++* fflonk requires its inner scheme to implement `InterleavedCommit` and commits through it, without building `g`, so polynomials in Lagrange form are not converted to coefficient form and the rows where they vanish stay free in the commitment [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
++* fflonk computes the roots of each opening point once per chunk size, and evaluates the chunks at them sequentially [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
++* The KZG verifier evaluates the interpolant of each point set at `x3` with the barycentric formula instead of interpolating it first, and divides by the vanishing polynomial at `x3` with the same batch inversion [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
++* The KZG multi-open divides each point set's polynomial by the product of `X - point` at once, skipping its zero coefficients, instead of by each point in turn [#565](https://github.com/midnightntwrk/midnight-zk/pull/565)
+ * Keygen bounds the circuit size by `PolynomialCommitmentScheme::max_k` rather than by `Params::max_k` [#560](https://github.com/midnightntwrk/midnight-zk/pull/560)
+ * The `PolynomialCommitmentScheme` implementation of `KZGCommitmentScheme<E>` requires `E::G1Affine: SerdeObject` and `E::G2: ProcessedSerdeObject` [#560](https://github.com/midnightntwrk/midnight-zk/pull/560)
+ * `ProcessedSerdeObject` no longer requires the curve to implement `Default` [#560](https://github.com/midnightntwrk/midnight-zk/pull/560)
+diff --git a/proofs/src/plonk/argument/prover.rs b/proofs/src/plonk/argument/prover.rs
+index c40478034..ee7bd0fa4 100644
+--- a/proofs/src/plonk/argument/prover.rs
++++ b/proofs/src/plonk/argument/prover.rs
+@@ -73,22 +73,24 @@ impl<F: WithSmallOrderMulGroup<3>, B: PolynomialRepresentation> Committed<F, B>
+ }
+ 
+ impl<F: PrimeField, B: PolynomialRepresentation> Committed<F, B> {
+-    pub fn commit<CS, T>(
++    /// Commits to the polynomials of `polys_map` in the representation given by
++    /// `encode`. The group keeps them as given.
++    pub fn commit<CS, T, E>(
+         params: &CS::Parameters,
+         polys_map: BTreeMap<PolynomialLabel, Polynomial<F, B>>,
++        encode: impl Fn(&Polynomial<F, B>) -> Polynomial<F, E> + Send + Sync,
+         transcript: &mut T,
+     ) -> Result<Self, Error>
+     where
+         CS: PolynomialCommitmentScheme<F>,
+         CS::Commitment: Hashable<T::Hash>,
+         T: Transcript,
++        E: PolynomialRepresentation,
+     {
+         let group = Self::from_map(polys_map);
+-        let commitment = CS::commit_many(
+-            params,
+-            &group.polys.iter().collect::<Vec<_>>(),
+-            &group.labels,
+-        );
++        let encoded: Vec<_> = group.polys.par_iter().map(encode).collect();
++        let commitment =
++            CS::commit_many(params, &encoded.iter().collect::<Vec<_>>(), &group.labels);
+ 
+         CS::write_commitment(transcript, &commitment)?;
+ 
+diff --git a/proofs/src/plonk/bench/prover.rs b/proofs/src/plonk/bench/prover.rs
+index 560ff1ac8..465bea79f 100644
+--- a/proofs/src/plonk/bench/prover.rs
++++ b/proofs/src/plonk/bench/prover.rs
+@@ -197,9 +197,10 @@ where
+                         &instance.instance_values,
+                         &mult_blinds,
+                     )?;
+-                    argument::prover::Committed::commit::<CS, _>(
++                    argument::prover::Committed::commit::<CS, _, _>(
+                         params,
+                         phase1_polys_map(advice_polys, &multiplicities)?,
++                        Polynomial::to_delta,
+                         &mut t,
+                     )?;
+                     Ok(())
+@@ -209,9 +210,10 @@ where
+         });
+         let multiplicities =
+             compute_multiplicities(&advice_polys, &instance.instance_values, &mult_blindings)?;
+-        let committed = argument::prover::Committed::commit::<CS, T>(
++        let committed = argument::prover::Committed::commit::<CS, T, _>(
+             params,
+             phase1_polys_map(advice_polys, &multiplicities)?,
++            Polynomial::to_delta,
+             transcript,
+         )?;
+         (multiplicities, committed)
+@@ -377,7 +379,12 @@ where
+                         phase1_committed.polys_of(&advice_labels),
+                         &instance.instance_values,
+                     )?;
+-                    argument::prover::Committed::commit::<CS, _>(params, polys_map, &mut t)?;
++                    argument::prover::Committed::commit::<CS, _, _>(
++                        params,
++                        polys_map,
++                        Polynomial::to_double_delta,
++                        &mut t,
++                    )?;
+                     Ok(())
+                 },
+                 criterion::BatchSize::LargeInput,
+@@ -390,7 +397,12 @@ where
+             phase1_committed.polys_of(&advice_labels),
+             &instance.instance_values,
+         )?;
+-        argument::prover::Committed::commit::<CS, T>(params, polys_map, transcript)?
++        argument::prover::Committed::commit::<CS, T, _>(
++            params,
++            polys_map,
++            Polynomial::to_double_delta,
++            transcript,
++        )?
+     };
+ 
+     // Obtain challenge for keeping all separate gates linearly independent
+diff --git a/proofs/src/plonk/mod.rs b/proofs/src/plonk/mod.rs
+index 092341beb..8634d2617 100644
+--- a/proofs/src/plonk/mod.rs
++++ b/proofs/src/plonk/mod.rs
+@@ -536,6 +536,28 @@ impl<F: PrimeField, CS: PolynomialCommitmentScheme<F>> VerifyingKey<F, CS> {
+     pub fn get_domain(&self) -> &EvaluationDomain<F> {
+         &self.domain
+     }
++
++    /// The labels of the phase1 group: the advice columns and the logup
++    /// multiplicities.
++    pub(crate) fn phase1_labels(&self) -> Vec<PolynomialLabel> {
++        (self.cs.advice_labels().into_iter())
++            .chain((0..self.cs.lookups.len()).map(PolynomialLabel::LogupMultiplicities))
++            .collect()
++    }
++
++    /// The labels of the phase2 group: the permutation accumulators, the logup
++    /// helpers and aggregators, and the trash polynomials.
++    pub(crate) fn phase2_labels(&self) -> Vec<PolynomialLabel> {
++        let mut labels = self.cs.permutation.accumulator_labels(self.cs_degree);
++        for (argument_index, logup_argument) in self.cs.lookups.iter().enumerate() {
++            for j in 0..logup_argument.num_chunks(self.cs_degree) {
++                labels.push(PolynomialLabel::LogupHelper(argument_index, j));
++            }
++        }
++        labels.extend((0..self.cs.lookups.len()).map(PolynomialLabel::LogupAggregator));
++        labels.extend((self.cs.trashcans.iter()).map(|t| PolynomialLabel::Trash(t.argument_index)));
++        labels
++    }
+ }
+ 
+ /// Evaluates the identities at the evaluation challenge `x` and batches them
+diff --git a/proofs/src/plonk/prover.rs b/proofs/src/plonk/prover.rs
+index ed6da58aa..636793ffa 100644
+--- a/proofs/src/plonk/prover.rs
++++ b/proofs/src/plonk/prover.rs
+@@ -156,8 +156,12 @@ where
+         }
+     }
+ 
+-    let phase1_committed =
+-        argument::prover::Committed::commit::<CS, T>(params, phase1_polys_map, transcript)?;
++    let phase1_committed = argument::prover::Committed::commit::<CS, T, _>(
++        params,
++        phase1_polys_map,
++        Polynomial::to_delta,
++        transcript,
++    )?;
+ 
+     // Sample theta challenge for keeping lookup columns linearly independent
+     let theta: F = transcript.squeeze_challenge();
+@@ -249,8 +253,12 @@ where
+         }
+     }
+ 
+-    let phase2_committed =
+-        argument::prover::Committed::commit::<CS, T>(params, phase2_polys_map, transcript)?;
++    let phase2_committed = argument::prover::Committed::commit::<CS, T, _>(
++        params,
++        phase2_polys_map,
++        Polynomial::to_double_delta,
++        transcript,
++    )?;
+ 
+     // Obtain challenge for keeping all separate gates linearly independent
+     let y: F = transcript.squeeze_challenge();
+diff --git a/proofs/src/plonk/verifier.rs b/proofs/src/plonk/verifier.rs
+index 45312fefb..1c4373b0e 100644
+--- a/proofs/src/plonk/verifier.rs
++++ b/proofs/src/plonk/verifier.rs
+@@ -61,22 +61,7 @@ where
+         }
+     }
+ 
+-    let logups = vk
+-        .cs
+-        .lookups
+-        .iter()
+-        .map(|l| l.chunk_by_degree(vk.cs_degree))
+-        .collect::<Vec<_>>();
+-
+-    // The advice columns and the logup multiplicities form the phase1 group.
+-    let phase1_labels = vk
+-        .cs
+-        .advice_labels()
+-        .into_iter()
+-        .chain((0..logups.len()).map(PolynomialLabel::LogupMultiplicities))
+-        .collect::<Vec<_>>();
+-
+-    let phase1_committed = argument::verifier::Committed::read(&phase1_labels, transcript)?;
++    let phase1_committed = argument::verifier::Committed::read(&vk.phase1_labels(), transcript)?;
+ 
+     // Sample theta challenge for keeping lookup columns linearly independent
+     let theta: F = transcript.squeeze_challenge();
+@@ -90,23 +75,7 @@ where
+     // Sample the trash challenge after the advices have been committed to
+     let trash_challenge: F = transcript.squeeze_challenge();
+ 
+-    let mut phase2_labels = vk.cs.permutation.accumulator_labels(vk.cs_degree);
+-
+-    for (argument_index, logup_argument) in logups.iter().enumerate() {
+-        for j in 0..logup_argument.num_chunks() {
+-            phase2_labels.push(PolynomialLabel::LogupHelper(argument_index, j));
+-        }
+-    }
+-
+-    for argument_index in 0..logups.len() {
+-        phase2_labels.push(PolynomialLabel::LogupAggregator(argument_index));
+-    }
+-
+-    for trash_argument in vk.cs.trashcans.iter() {
+-        phase2_labels.push(PolynomialLabel::Trash(trash_argument.argument_index))
+-    }
+-
+-    let phase2_committed = argument::verifier::Committed::read(&phase2_labels, transcript)?;
++    let phase2_committed = argument::verifier::Committed::read(&vk.phase2_labels(), transcript)?;
+ 
+     // Sample y challenge, which keeps the gates linearly independent.
+     let y: F = transcript.squeeze_challenge();
+diff --git a/proofs/src/poly/commitment.rs b/proofs/src/poly/commitment.rs
+index 6352ee582..1a16238b6 100644
+--- a/proofs/src/poly/commitment.rs
++++ b/proofs/src/poly/commitment.rs
+@@ -204,6 +204,24 @@ pub trait PolynomialCommitmentScheme<F: PrimeField>: Clone + Debug {
+         Self::Commitment: Hashable<T::Hash> + 'com;
+ }
+ 
++/// A [`PolynomialCommitmentScheme`] that commits to polynomials interleaved
++/// in chunks.
++pub trait InterleavedCommit<F: PrimeField>: PolynomialCommitmentScheme<F> {
++    /// Commit to `g(X) = Σ_i X^i f_i(X^t)` for every chunk `f_0, ..., f_{k-1}`
++    /// of `chunks`, with `t` the next power of two of `k`, tagging the `g` of
++    /// each chunk with the corresponding label.
++    ///
++    /// # Panics
++    ///
++    /// Panics if `chunks` and `labels` have different lengths, if a label is
++    /// repeated, or if the polynomials of a chunk have different lengths.
++    fn commit_interleaved<B: PolynomialRepresentation>(
++        params: &Self::Parameters,
++        chunks: &[&[&Polynomial<F, B>]],
++        labels: &[PolynomialLabel],
++    ) -> Self::Commitment;
++}
++
+ /// Interface for verifier finalizer, given the verifier parameters `VP` of
+ /// its PCS
+ pub trait Guard<VP>: Sized {
+diff --git a/proofs/src/poly/fflonk/mod.rs b/proofs/src/poly/fflonk/mod.rs
+index 7f970d527..d7103962d 100644
+--- a/proofs/src/poly/fflonk/mod.rs
++++ b/proofs/src/poly/fflonk/mod.rs
+@@ -45,16 +45,21 @@ use std::{
+ };
+ 
+ use ff::WithSmallOrderMulGroup;
+-use utils::compute_g;
+ pub use utils::roots;
++use utils::{cached_roots, compute_g};
+ 
+ use crate::{
+     poly::{
+-        Error, Polynomial, PolynomialLabel, PolynomialLabel::Collection, PolynomialRepresentation,
+-        ProverQuery, VerifierQuery, commitment::PolynomialCommitmentScheme,
++        Error, Polynomial, PolynomialLabel,
++        PolynomialLabel::Collection,
++        PolynomialRepresentation, ProverQuery, VerifierQuery,
++        commitment::{InterleavedCommit, PolynomialCommitmentScheme},
+     },
+     transcript::{Hashable, Sampleable, Transcript},
+-    utils::{arithmetic::eval_polynomial, helpers::SerdeFormat},
++    utils::{
++        arithmetic::{eval_polynomial, eval_polynomial_seq},
++        helpers::SerdeFormat,
++    },
+ };
+ 
+ /// fflonk over the polynomial commitment scheme `PCS`.
+@@ -72,7 +77,7 @@ impl<PCS, const LOG2_T_MAX: u32> Fflonk<PCS, LOG2_T_MAX> {
+ impl<F, PCS, const LOG2_T_MAX: u32> PolynomialCommitmentScheme<F> for Fflonk<PCS, LOG2_T_MAX>
+ where
+     F: WithSmallOrderMulGroup<3>,
+-    PCS: PolynomialCommitmentScheme<F>,
++    PCS: InterleavedCommit<F>,
+ {
+     type Parameters = PCS::Parameters;
+     type VerifierParameters = PCS::VerifierParameters;
+@@ -106,8 +111,8 @@ where
+     ) -> Self::Commitment {
+         PolynomialLabel::assert_distinct(labels);
+         let g_labels: Vec<_> = labels.chunks(Self::T_MAX).map(|l| Collection(l.to_vec())).collect();
+-        let gs: Vec<_> = polynomials.chunks(Self::T_MAX).map(compute_g).collect();
+-        PCS::commit_many(params, &gs.iter().collect::<Vec<_>>(), &g_labels)
++        let chunks: Vec<_> = polynomials.chunks(Self::T_MAX).collect();
++        PCS::commit_interleaved(params, &chunks, &g_labels)
+     }
+ 
+     fn read_commitment<T: Transcript>(
+@@ -196,11 +201,18 @@ where
+ 
+         // Opening a chunk at `x` amounts to opening its `g` at the `t`-th roots of `x`.
+         let mut inner_queries = Vec::new();
++        let mut roots_cache = HashMap::new();
+         for (((polys, points), g_label), g) in chunks_info.values().zip(&g_labels).zip(&gs) {
++            let t = polys.len().next_power_of_two();
+             for x in points {
+-                for root in roots(*x, polys.len().next_power_of_two()).ok_or(Error::OpeningError)? {
++                for root in cached_roots(&mut roots_cache, *x, t).ok_or(Error::OpeningError)? {
+                     let g_poly = slice::from_ref(g);
+-                    inner_queries.push(ProverQuery::new(g_label, g_poly, root, g_label[0].clone()));
++                    inner_queries.push(ProverQuery::new(
++                        g_label,
++                        g_poly,
++                        *root,
++                        g_label[0].clone(),
++                    ));
+                 }
+             }
+         }
+@@ -264,15 +276,15 @@ where
+         // such a root `r` is equivalent to evaluating at `r` the polynomial with
+         // coefficients `f_i(x)`.
+         let mut inner_queries = Vec::new();
++        let mut roots_cache = HashMap::new();
+         for (labels, (commitment, points)) in &chunks_info {
++            let t = labels.len().next_power_of_two();
+             for x in points {
+                 let f_evals: Vec<F> = labels.iter().map(|l| evals[&(l.clone(), *x)]).collect();
+-                for root in
+-                    roots(*x, labels.len().next_power_of_two()).ok_or(Error::OpeningError)?
+-                {
+-                    let eval = eval_polynomial(&f_evals, root);
++                for root in cached_roots(&mut roots_cache, *x, t).ok_or(Error::OpeningError)? {
++                    let eval = eval_polynomial_seq(&f_evals, *root);
+                     let label = Collection(labels.clone());
+-                    inner_queries.push(VerifierQuery::new(root, *commitment, label, eval));
++                    inner_queries.push(VerifierQuery::new(*root, *commitment, label, eval));
+                 }
+             }
+         }
+@@ -288,7 +300,7 @@ mod tests {
+     use blake2b_simd::State as Blake2bState;
+     use ff::Field;
+     use midnight_curves::{Bls12, Fq};
+-    use rand_core::OsRng;
++    use rand_core::{OsRng, RngCore};
+ 
+     use super::Fflonk;
+     use crate::{
+@@ -353,6 +365,54 @@ mod tests {
+         }
+     }
+ 
++    /// Commits to `nb_polys` sparse polynomials of `2^k` rows, given in
++    /// Lagrange form, in its delta forms and in coefficient form, and checks
++    /// that the commitments agree.
++    fn assert_lagrange_matches_coeff(params: &ParamsKZG<Bls12>, k: u32, nb_polys: usize) {
++        type CS = Fflonk<Kzg, 2>;
++        let domain = EvaluationDomain::<Fq>::new(1, k);
++        let lagrange: Vec<_> = (0..nb_polys)
++            .map(|_| {
++                let values = (0..1 << k)
++                    .map(|_| {
++                        if OsRng.next_u32().is_multiple_of(8) {
++                            Fq::random(OsRng)
++                        } else {
++                            Fq::ZERO
++                        }
++                    })
++                    .collect();
++                domain.lagrange_from_vec(values)
++            })
++            .collect();
++        let coeff: Vec<_> = lagrange.iter().map(|p| domain.lagrange_to_coeff(p.clone())).collect();
++        let delta: Vec<_> = lagrange.iter().map(|p| p.to_delta()).collect();
++        let double_delta: Vec<_> = lagrange.iter().map(|p| p.to_double_delta()).collect();
++        let labels: Vec<_> = (0..nb_polys).map(PolynomialLabel::Advice).collect();
++        let expected = CS::commit_many(params, &coeff.iter().collect::<Vec<_>>(), &labels);
++        assert_eq!(
++            CS::commit_many(params, &lagrange.iter().collect::<Vec<_>>(), &labels),
++            expected
++        );
++        assert_eq!(
++            CS::commit_many(params, &delta.iter().collect::<Vec<_>>(), &labels),
++            expected
++        );
++        assert_eq!(
++            CS::commit_many(params, &double_delta.iter().collect::<Vec<_>>(), &labels),
++            expected
++        );
++    }
++
++    #[test]
++    fn test_lagrange_commitments() {
++        // Full and partial chunks, of every chunk size up to `T_MAX = 4`.
++        let params = <Fflonk<Kzg, 2> as PolynomialCommitmentScheme<Fq>>::gen_params(4);
++        for nb_polys in 1..=9 {
++            assert_lagrange_matches_coeff(&params, 4, nb_polys);
++        }
++    }
++
+     #[test]
+     fn test_load_params() {
+         let mut srs = Vec::new();
+diff --git a/proofs/src/poly/fflonk/utils.rs b/proofs/src/poly/fflonk/utils.rs
+index ed796636f..9490204ca 100644
+--- a/proofs/src/poly/fflonk/utils.rs
++++ b/proofs/src/poly/fflonk/utils.rs
+@@ -1,48 +1,27 @@
+ //! Helpers of the fflonk scheme: the combination `g` of a chunk and the roots
+ //! it is opened at.
+ 
+-use std::{iter, marker::PhantomData};
++use std::{
++    collections::{HashMap, hash_map::Entry},
++    hash::Hash,
++    iter,
++    marker::PhantomData,
++};
+ 
+-use ff::{PrimeField, WithSmallOrderMulGroup};
++use ff::PrimeField;
+ 
+-use crate::poly::{Coeff, EvaluationDomain, Polynomial, PolynomialBasis, PolynomialRepresentation};
++use crate::poly::{Coeff, Polynomial};
+ 
+-/// `g(X) = Σ_i X^i f_i(X^t)`, for `polys` the polynomials `f_0, ..., f_{k-1}`,
+-/// in any basis, and `t` the next power of two of `k`.
+-///
+-/// # Panics
+-///
+-/// Panics if the field has no roots of unity of order `n · t`, for `n` the
+-/// length of the polynomials.
+-pub(super) fn compute_g<F, B>(polys: &[&Polynomial<F, B>]) -> Polynomial<F, Coeff>
+-where
+-    F: WithSmallOrderMulGroup<3>,
+-    B: PolynomialRepresentation,
+-{
++/// `g(X) = Σ_i X^i f_i(X^t)`, for `polys` the polynomials `f_0, ..., f_{k-1}`
++/// in coefficient form and `t` the next power of two of `k`: the coefficients
++/// of `g` interleave those of the `f_i`, with the slots of the `t - k` dummy
++/// polynomials padding the `k` given ones to `t` left zero.
++pub(super) fn compute_g<F: PrimeField>(polys: &[&Polynomial<F, Coeff>]) -> Polynomial<F, Coeff> {
+     let t = polys.len().next_power_of_two();
+     let n = polys.iter().map(|poly| poly.len()).max().unwrap_or(0);
+-    let log_order = n.next_power_of_two().ilog2() + t.ilog2();
+-    assert!(
+-        log_order <= F::S,
+-        "the field has no roots of unity of order 2^{log_order} for fflonk"
+-    );
+-    // TODO: In this first version, we are converting to coefficients.
+-    // We could try to compute g directly in the given base.
+-    let domain =
+-        (!matches!(B::BASIS, PolynomialBasis::Coeff)).then(|| EvaluationDomain::new(1, n.ilog2()));
+-    // The slots of the `t - k` dummy polynomials padding the `k` given ones to
+-    // `t` are left zero.
+     let mut values = vec![F::ZERO; t * n];
+     for (i, poly) in polys.iter().enumerate() {
+-        let converted;
+-        let coeffs = match &domain {
+-            None => &poly.values,
+-            Some(domain) => {
+-                converted = B::self_to_coeff(domain, (*poly).clone());
+-                &converted.values
+-            }
+-        };
+-        for (j, coeff) in coeffs.iter().enumerate() {
++        for (j, coeff) in poly.values.iter().enumerate() {
+             values[t * j + i] = *coeff;
+         }
+     }
+@@ -78,3 +57,15 @@ pub fn roots<F: PrimeField>(x: F, t: usize) -> Option<Vec<F>> {
+     let omega = F::ROOT_OF_UNITY.pow_vartime([1u64 << (F::S - log_t)]);
+     Some(iter::successors(Some(root), |r| Some(*r * omega)).take(t).collect())
+ }
++
++/// [`roots`] of `x`, computed once per `x` and `t` and kept in `cache`.
++pub(super) fn cached_roots<F: PrimeField + Hash>(
++    cache: &mut HashMap<(F, usize), Vec<F>>,
++    x: F,
++    t: usize,
++) -> Option<&[F]> {
++    Some(match cache.entry((x, t)) {
++        Entry::Occupied(entry) => entry.into_mut(),
++        Entry::Vacant(entry) => entry.insert(roots(x, t)?),
++    })
++}
+diff --git a/proofs/src/poly/kzg/mod.rs b/proofs/src/poly/kzg/mod.rs
+index e02e7797d..52b2479f4 100644
+--- a/proofs/src/poly/kzg/mod.rs
++++ b/proofs/src/poly/kzg/mod.rs
+@@ -39,7 +39,7 @@ use crate::utils::arithmetic::{truncate, truncated_powers};
+ use crate::{
+     poly::{
+         Coeff, Error, Polynomial, PolynomialRepresentation, ProverQuery,
+-        commitment::PolynomialCommitmentScheme,
++        commitment::{InterleavedCommit, PolynomialCommitmentScheme},
+         kzg::{
+             commitment::NB_POLYS_PREFIX_BYTES,
+             msm::{DualMSM, msm_specific},
+@@ -51,8 +51,8 @@ use crate::{
+     transcript::{Hashable, Sampleable, Transcript},
+     utils::{
+         arithmetic::{
+-            CurveAffine, CurveExt, eval_polynomial, evals_inner_product, inner_product,
+-            kate_division, lagrange_interpolate, parallelize, powers,
++            CurveAffine, CurveExt, divide_by_roots, eval_interpolant, eval_polynomial,
++            evals_inner_product, inner_product, kate_division, parallelize, powers,
+         },
+         helpers::{ProcessedSerdeObject, SerdeFormat},
+     },
+@@ -322,14 +322,9 @@ where
+             let f_polys: Vec<_> = point_sets
+                 .into_par_iter()
+                 .zip(q_polys.clone().into_par_iter())
+-                .map(|(points, q_poly)| {
+-                    let poly = points.iter().fold(q_poly.values.clone(), |poly, point| {
+-                        kate_division(&poly, *point)
+-                    });
+-                    Polynomial {
+-                        values: poly,
+-                        _marker: PhantomData,
+-                    }
++                .map(|(points, q_poly)| Polynomial {
++                    values: divide_by_roots(&q_poly.values, &points),
++                    _marker: PhantomData,
+                 })
+                 .collect();
+             poly_inner_product(&f_polys.iter().collect::<Vec<_>>(), powers(x2))
+@@ -492,11 +487,9 @@ where
+             point_sets.iter().zip(q_eval_sets.iter()).zip(q_evals_on_x3.iter()).rev().fold(
+                 E::Fr::ZERO,
+                 |acc_eval, ((points, evals), proof_eval)| {
+-                    let r_poly = lagrange_interpolate(points, evals);
+-                    let r_eval = eval_polynomial(&r_poly, x3);
+                     // eval = (proof_eval - r_eval) / prod_i (x3 - point_i)
+-                    let den = points.iter().fold(E::Fr::ONE, |acc, point| acc * &(x3 - point));
+-                    let eval = (*proof_eval - &r_eval) * den.invert().unwrap();
++                    let (sum, vanishing_inv) = eval_interpolant(points, evals, x3);
++                    let eval = *proof_eval * vanishing_inv - sum;
+                     acc_eval * &(x2) + &eval
+                 },
+             );
+@@ -550,6 +543,54 @@ where
+     }
+ }
+ 
++impl<E: MultiMillerLoop> InterleavedCommit<E::Fr> for KZGCommitmentScheme<E>
++where
++    E::G1: Default + CurveExt<ScalarExt = E::Fr> + ProcessedSerdeObject,
++    E::G1Affine: Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + SerdeObject,
++    E::G2: ProcessedSerdeObject,
++{
++    fn commit_interleaved<B: PolynomialRepresentation>(
++        params: &Self::Parameters,
++        chunks: &[&[&Polynomial<E::Fr, B>]],
++        labels: &[PolynomialLabel],
++    ) -> Self::Commitment {
++        assert_eq!(
++            chunks.len(),
++            labels.len(),
++            "chunks and labels must have the same length"
++        );
++        PolynomialLabel::assert_distinct(labels);
++
++        KZGMultiCommitment(
++            (chunks.iter().zip(labels))
++                .map(|(chunk, label)| {
++                    KZGCommitment::Simple(commit_chunk(params, chunk), label.clone())
++                })
++                .collect(),
++        )
++    }
++}
++
++/// Commitment to `Σ_i X^i f_i(X^t)`, for `chunk` the polynomials `f_i` and
++/// `t` the next power of two of their number.
++fn commit_chunk<E: MultiMillerLoop, B: PolynomialRepresentation>(
++    params: &ParamsKZG<E>,
++    chunk: &[&Polynomial<E::Fr, B>],
++) -> E::G1
++where
++    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
++{
++    let t = chunk.len().next_power_of_two();
++    let n = chunk[0].len();
++    assert!(
++        chunk.iter().all(|poly| poly.len() == n),
++        "the polynomials of a chunk have different lengths"
++    );
++    (chunk.iter().enumerate())
++        .map(|(i, poly)| msm_specific(&poly.values, &params.residue_bases::<B>(t, n, i)))
++        .sum()
++}
++
+ #[cfg(test)]
+ mod tests {
+     use std::{hash::Hash, slice};
+diff --git a/proofs/src/poly/kzg/params.rs b/proofs/src/poly/kzg/params.rs
+index 9b2c1891f..fa1da3bb8 100644
+--- a/proofs/src/poly/kzg/params.rs
++++ b/proofs/src/poly/kzg/params.rs
+@@ -1,4 +1,9 @@
+-use std::{fmt::Debug, io};
++use std::{
++    collections::HashMap,
++    fmt::Debug,
++    io,
++    sync::{Arc, RwLock},
++};
+ 
+ use ff::{Field, PrimeField};
+ use group::{Curve, Group, GroupEncoding, prime::PrimeCurveAffine};
+@@ -9,7 +14,7 @@ use midnight_curves::{
+ use rand_core::RngCore;
+ 
+ use crate::{
+-    poly::{PolynomialBasis, PolynomialRepresentation},
++    poly::{Coeff, LagrangeCoeff, LagrangeDeltaCoeff, PolynomialBasis, PolynomialRepresentation},
+     utils::{
+         SerdeFormat,
+         arithmetic::{CurveAffine, g_to_lagrange, parallelize},
+@@ -34,8 +39,46 @@ pub struct ParamsKZG<E: Engine> {
+     pub(crate) g_lagrange_double_delta: Vec<E::G1Affine>,
+     pub(crate) g2: E::G2,
+     pub(crate) s_g2: E::G2,
++    /// The bases of every [`Residue`] committed to so far.
++    residue_bases: ResidueBases<E::G1Affine>,
+ }
+ 
++/// Residue `i` modulo `t`, identifying the bases for committing to `X^i f(X^t)`
++/// from the `n` values of `f`, the `i`-th part of `g(X) = Σ_i X^i f_i(X^t)`.
++/// These bases depend heavily on the representation `basis` of the values, as
++/// detailed below. The name comes from `X^i f(X^t)` being made of the monomials
++/// `X^e` with `e ≡ i (mod t)`.
++///
++/// - `Coeff`: the strided monomials `[s^(i + t·j)]`. For `f = Σ_j c_j X^j`,
++///   `X^i f(X^t) = Σ_j c_j X^(i + t·j)`.
++///
++/// - `Lagrange`: `[s^i L_j(s^t)]`, for `L_j` the Lagrange basis of the domain
++///   of size `n`: the Lagrange basis built from the strided monomials.
++///
++/// - `LagrangeDelta`: `[s^i Σ_{k ≥ j} L_k(s^t)]`, the suffix sums of the
++///   `Lagrange` bases, as `g_lagrange_delta` is of `g_lagrange`.
++///
++/// - `LagrangeDoubleDelta`: `[s^i Σ_{k ≥ j} (k - j + 1) L_k(s^t)]`, the suffix
++///   sums of the `LagrangeDelta` bases.
++///
++/// Committing to every `f_i` on its own bases keeps the zeros of its values
++/// free. The bases are computed on first use, as the `Lagrange` ones take a
++/// group FFT of size `n`, and cached in `ParamsKZG`.
++#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
++struct Residue {
++    /// The representation of the values of `f_i`.
++    basis: PolynomialBasis,
++    /// The modulus, a power of two.
++    t: usize,
++    /// The number of values of `f_i`.
++    n: usize,
++    /// The residue, smaller than `t`.
++    i: usize,
++}
++
++/// The bases of every [`Residue`] committed to so far.
++type ResidueBases<C> = Arc<RwLock<HashMap<Residue, Arc<[C]>>>>;
++
+ /// Builds the suffix-sum of an affine SRS: `out[i] = sum_{j=i}^{n-1} input[j]`.
+ ///
+ /// Accumulate in projective coordinates (one curve add per step) and
+@@ -73,6 +116,55 @@ where
+         }
+     }
+ 
++    /// The bases of the [`Residue`] `i` modulo `t`, for committing to
++    /// `X^i f(X^t)` from the `n` values of `f` in the representation `B`.
++    ///
++    /// # Panics
++    ///
++    /// If `B` is the extended Lagrange basis, if `t·n` is larger than the SRS,
++    /// or if `B` is Lagrange or one of its delta forms and `n` is not a power
++    /// of two.
++    pub(crate) fn residue_bases<B: PolynomialRepresentation>(
++        &self,
++        t: usize,
++        n: usize,
++        i: usize,
++    ) -> Arc<[E::G1Affine]> {
++        let residue = Residue {
++            basis: B::BASIS,
++            t,
++            n,
++            i,
++        };
++        if let Some(bases) =
++            self.residue_bases.read().expect("residue bases lock poisoned").get(&residue)
++        {
++            return bases.clone();
++        }
++        let bases: Arc<[_]> = match B::BASIS {
++            PolynomialBasis::Coeff => {
++                assert!(
++                    t * n <= self.g.len(),
++                    "no residue bases of size {n} modulo {t}"
++                );
++                self.g[i..].iter().step_by(t).take(n).copied().collect()
++            }
++            PolynomialBasis::Lagrange => {
++                assert!(n.is_power_of_two(), "no Lagrange residue bases of size {n}");
++                g_to_lagrange(&self.residue_bases::<Coeff>(t, n, i), n.ilog2()).into()
++            }
++            PolynomialBasis::LagrangeDelta => {
++                suffix_sum(&self.residue_bases::<LagrangeCoeff>(t, n, i)).into()
++            }
++            PolynomialBasis::LagrangeDoubleDelta => {
++                suffix_sum(&self.residue_bases::<LagrangeDeltaCoeff>(t, n, i)).into()
++            }
++            basis => panic!("no residue bases in the {basis:?} basis"),
++        };
++        let mut cache = self.residue_bases.write().expect("residue bases lock poisoned");
++        cache.entry(residue).or_insert(bases).clone()
++    }
++
+     /// Returns the size of the SRS, expressed as the exponent `k` such that it
+     /// has `2^k` elements.
+     pub fn max_k(&self) -> u32 {
+@@ -92,6 +184,7 @@ where
+         self.g_lagrange = g_to_lagrange(&self.g, new_k);
+         self.g_lagrange_delta = suffix_sum(&self.g_lagrange);
+         self.g_lagrange_double_delta = suffix_sum(&self.g_lagrange_delta);
++        self.residue_bases = Default::default();
+     }
+ 
+     /// Initializes parameters for the curve, draws toxic secret from given rng.
+@@ -151,6 +244,7 @@ where
+             g_lagrange_double_delta,
+             g2,
+             s_g2,
++            residue_bases: Default::default(),
+         }
+     }
+ 
+@@ -183,6 +277,7 @@ where
+             g_lagrange_double_delta,
+             g2,
+             s_g2,
++            residue_bases: Default::default(),
+         }
+     }
+ 
+@@ -290,6 +385,7 @@ where
+             g_lagrange_double_delta,
+             g2,
+             s_g2,
++            residue_bases: Default::default(),
+         })
+     }
+ }
+diff --git a/proofs/src/poly/mod.rs b/proofs/src/poly/mod.rs
+index 8ead1e6e0..fea66429d 100644
+--- a/proofs/src/poly/mod.rs
++++ b/proofs/src/poly/mod.rs
+@@ -47,7 +47,7 @@ pub enum Error {
+ }
+ 
+ /// The possible basis of a polynomial representation.
+-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+ pub enum PolynomialBasis {
+     /// Monomial basis.
+     Coeff,
+diff --git a/proofs/src/utils/arithmetic.rs b/proofs/src/utils/arithmetic.rs
+index 71e07fe1e..5676989bf 100644
+--- a/proofs/src/utils/arithmetic.rs
++++ b/proofs/src/utils/arithmetic.rs
+@@ -124,6 +124,73 @@ where
+     q
+ }
+ 
++/// The evaluation at `x` of the polynomial of degree below `points.len()` that
++/// takes the value `evals_i` at `points_i`,
++/// `Σ_i evals_i · Π_{j ≠ i} (x - points_j) / (points_i - points_j)`,
++/// as a pair `(s, v)` with `v = 1 / Π_j (x - points_j)` and the evaluation
++/// equal to `s / v`.
++///
++/// # Panics
++///
++/// If `x` is one of `points`.
++pub fn eval_interpolant<F: Field>(points: &[F], evals: &[F], x: F) -> (F, F) {
++    assert_eq!(points.len(), evals.len());
++    // In factored form, the evaluation is
++    // `Π_j (x - points_j) · Σ_i evals_i / ((x - points_i) Π_{j≠i} (points_i -
++    // points_j))`.
++    let mut denoms: Vec<F> = (points.iter().enumerate())
++        .map(|(i, point_i)| {
++            (points.iter().enumerate())
++                .filter(|(j, _)| *j != i)
++                .fold(x - point_i, |acc, (_, point_j)| acc * (*point_i - point_j))
++        })
++        .chain([points.iter().map(|point| x - point).product()])
++        .collect();
++    denoms.iter_mut().batch_invert();
++    let vanishing_inv = denoms.pop().unwrap();
++    assert!(
++        bool::from(!vanishing_inv.is_zero()),
++        "x is an interpolation point"
++    );
++    let sum = evals.iter().zip(&denoms).map(|(eval, denom)| *eval * denom).sum();
++    (sum, vanishing_inv)
++}
++
++/// The quotient of `poly`, in coefficient form, by `∏_i (X - roots_i)`,
++/// discarding the remainder.
++///
++/// This equals dividing `poly` by each `X - roots_i` in turn with
++/// [`kate_division`], but divides by the product at once, skipping its zero
++/// coefficients. That is cheaper when the product is sparse, as for the
++/// `t`-th roots of a point, whose product is `X^t - x`.
++pub fn divide_by_roots<F: Field>(poly: &[F], roots: &[F]) -> Vec<F> {
++    let mut vanishing = vec![F::ONE];
++    for root in roots {
++        let mut next = vec![F::ZERO; vanishing.len() + 1];
++        for (i, coeff) in vanishing.iter().enumerate() {
++            next[i + 1] += coeff;
++            next[i] -= *coeff * root;
++        }
++        vanishing = next;
++    }
++    let degree = roots.len();
++    let terms: Vec<(usize, F)> = (vanishing[..degree].iter().enumerate())
++        .filter(|(_, coeff)| !bool::from(coeff.is_zero()))
++        .map(|(j, coeff)| (j, *coeff))
++        .collect();
++
++    let mut remainder = poly.to_vec();
++    let mut quotient = vec![F::ZERO; poly.len().saturating_sub(degree)];
++    for i in (degree..poly.len()).rev() {
++        let lead = remainder[i];
++        quotient[i - degree] = lead;
++        for (j, coeff) in &terms {
++            remainder[i - degree + j] -= lead * coeff;
++        }
++    }
++    quotient
++}
++
+ /// This utility function will parallelize an operation that is to be
+ /// performed over a mutable slice.
+ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mut [T], f: F) {
+@@ -350,3 +417,37 @@ fn test_lagrange_interpolate() {
+         }
+     }
+ }
++
++#[test]
++fn test_divide_by_roots() {
++    let poly: Vec<Scalar> = (0..64).map(|_| Scalar::random(OsRng)).collect();
++    let x = Scalar::random(OsRng).square().square();
++    // Arbitrary roots, and the 4th roots of a point.
++    let fourth_roots = {
++        let r = x.sqrt().unwrap().sqrt().unwrap();
++        let i = Scalar::ROOT_OF_UNITY.pow_vartime([1u64 << (Scalar::S - 2)]);
++        vec![r, r * i, r * i * i, r * i * i * i]
++    };
++    for roots in [
++        (0..5).map(|_| Scalar::random(OsRng)).collect(),
++        fourth_roots,
++    ] {
++        let expected = roots.iter().fold(poly.clone(), |acc, root| kate_division(&acc, *root));
++        assert_eq!(divide_by_roots(&poly, &roots), expected);
++    }
++}
++
++#[test]
++fn test_eval_interpolant() {
++    let points: Vec<Scalar> = (0..6).map(|_| Scalar::random(OsRng)).collect();
++    let evals: Vec<Scalar> = (0..6).map(|_| Scalar::random(OsRng)).collect();
++    for len in 1..=6 {
++        let (points, evals) = (&points[..len], &evals[..len]);
++        let poly = lagrange_interpolate(points, evals);
++        let x = Scalar::random(OsRng);
++        let (sum, vanishing_inv) = eval_interpolant(points, evals, x);
++        assert_eq!(sum, eval_polynomial(&poly, x) * vanishing_inv);
++        let vanishing: Scalar = points.iter().map(|point| x - point).product();
++        assert_eq!(vanishing_inv * vanishing, Scalar::ONE);
++    }
++}

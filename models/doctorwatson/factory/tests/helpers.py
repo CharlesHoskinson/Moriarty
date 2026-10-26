@@ -17,7 +17,8 @@ class FakeRepo(unittest.TestCase):
         self.repo = os.path.join(self._tmp.name, "repo")
         os.makedirs(os.path.join(self.repo, "qa", "sherlock"))
         self.lock = os.path.join(self._tmp.name, "heavy.lock")
-        self.env = dict(os.environ, DW_REPO=self.repo, DW_LOCK=self.lock, DW_SKIP_PREFLIGHT="1")
+        self.env = dict(os.environ, DW_REPO=self.repo, DW_LOCK=self.lock, DW_SKIP_PREFLIGHT="1",
+                        DW_MAX_WALL="600", DW_QUEUE_DIR=os.path.join(self._tmp.name, "queue"), DW_QUEUE_TIMEOUT="0.5", DW_GPU_LOCK=os.path.join(self._tmp.name, "gpu.lock"))
         self.env.pop("DW_ROLE", None)
 
     def p(self, *parts):
