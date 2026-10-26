@@ -29,3 +29,8 @@
 ## [2026-10-26] consensus | C8-C10 opened; C0 backed by nine of nine; C10 meets the two-source test
 - C10 (persistent prover with resident prepared keys) is s1 rank 1 and s8 rank 1 with consistent arithmetic (1.07x and 1.08x); it goes to cross-review with C0
 - s8 rank 5 adds a domain-doubling caveat to C1 (fusion at doubled k is 25.3% slower)
+
+## [2026-10-26] consensus | cross-review round 1 (Muse Wonder Full, Gemini Argon)
+- C0 agreed as a prerequisite measurement, not a speedup; no speedup row agreed
+- C1, C2, C5 and C10 weakened (single sources, shared Loki priors, unlike denominators); C10's decoded-key cache may already exist in ledger main
+- The cross-stage reading was withdrawn: the assumed stage shares add up to 216-241% of one proof
