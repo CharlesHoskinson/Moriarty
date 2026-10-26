@@ -40,6 +40,38 @@ def fixed_source_tests():
     return {"tests": result.testsRun, "passed": True, "log": output.getvalue()}
 
 
+def fixed_bound_cases():
+    specialize = source_module("residualize", FIXED_COMMIT)["specialize"]
+    # Hand-authored BFS prefixes/frontiers for the declared five-rule graph.
+    # Family selection delegates R_call, rather than removing its control edge.
+    ordinary_order = ["R_fetch", "R_cond", "R_call", "R_then", "R_else"]
+    arith_order = ["R_fetch", "R_cond", "R_then", "R_else"]
+    ordinary_frontiers = [
+        {"R_fetch"}, {"R_cond", "R_call"}, {"R_call", "R_then", "R_else"},
+        {"R_then", "R_else"}, {"R_else"}, set(),
+    ]
+    arith_frontiers = [
+        {"R_fetch"}, {"R_cond"}, {"R_then", "R_else"}, {"R_else"}, set(), set(),
+    ]
+    cases = 0
+    for config in ({"mask": "empty"}, {"mask": "family", "family": "arith"},
+                   {"mask": "family", "family": "recursive"}, {"mask": "image", "image": "img-sum"}):
+        arith = config.get("family") == "arith"
+        for limit in range(6):
+            ir = specialize(**config, limit=limit)
+            blocks = {block["rule"] for block in ir["blocks"]}
+            order = arith_order if arith else ordinary_order
+            expected_frontier = (arith_frontiers if arith else ordinary_frontiers)[limit]
+            frontier = {f["rule"] for f in ir["genericFallbacks"] if f["reason"] == "residual-size-limit"}
+            delegated = {f["target"] for f in ir["genericFallbacks"] if f["reason"] == "target-outside-static-binding"}
+            assert blocks == set(order[:limit]), (config, limit, blocks)
+            assert frontier == expected_frontier, (config, limit, frontier)
+            assert delegated == ({"R_call"} if arith and limit > 0 else set()), (config, limit, delegated)
+            assert all(block["charge"] == 1 for block in ir["blocks"])
+            cases += 1
+    return {"realizations": cases, "limits": [0, 1, 2, 3, 4, 5], "passed": True}
+
+
 def main():
     residual = source_module("residualize")
     ir = residual["specialize"]("family", family="arith", limit=64)
@@ -67,6 +99,7 @@ def main():
         "fixed_fallbacks": fixed_ir["genericFallbacks"],
         "fixed_first_witness_node": fixed_plans["witnessPlan"]["nodes"][0],
         "fixed_source_unit_tests": fixed_source_tests(),
+        "fixed_source_bound_cases": fixed_bound_cases(),
     }
     print(json.dumps(observations, indent=2))
     assert missing == ["R_call"] and not ir["genericFallbacks"]

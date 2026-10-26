@@ -99,3 +99,8 @@ executed from its Git object, all eight of its Python unit tests passed, and
 `s5ResidualRepaired` checks the repaired finite graph. U031's remaining scope
 gap persists: these are demonstration plans, with one generic input/output per
 node and no actual Rust-step parameter or per-operation operand arities.
+
+The actual repaired Python source is also compared with hand-authored BFS
+block prefixes and generic frontiers for all four masks at size limits
+0 through 5: 24 cases passed. These expectations are explicit lists/sets,
+independent of the source worklist implementation.
