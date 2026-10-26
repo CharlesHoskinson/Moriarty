@@ -29,7 +29,9 @@ Boxes record observed outcomes only. Paths are relative to the repository root. 
   Observed 2026-10-26: feature-on/off isolated `cargo check --offline` passed (four jobs, `tools/profile/target`, sandbox-blocked `RUSTC_WRAPPER` unset); event-test verification remains blocked offline.
 - [x] 3.3 Add caller timers around key load, `setup_pk`, prove and verify in the harness crate `tools/profile/src/`, which calls the `mori-recursion` and `mori-backend` APIs. The main crates stay unchanged: the registry midnight-proofs has no `recursion-phase-profile` feature, so forwarding it from a main crate would break production builds (RPP-007).
   Observed 2026-10-26: both prescribed harness `cargo check` variants passed; 56 Python tests passed; `check-profile-isolation.py` reported OK, `prepare --check-only` verified the nonempty patch SHA-256, and `git diff --exit-code Cargo.lock` passed; no proof was run.
-- [ ] 3.4 Add the RSS sampler, process CPU clocks, typed byte counters and unavailable-counter reasons.
+- [x] 3.4 Add the RSS sampler, process CPU clocks, typed byte counters and unavailable-counter reasons.
+  Verify: `RUSTC_WRAPPER= CARGO_TARGET_DIR=tools/profile/target CARGO_BUILD_JOBS=4 cargo test --offline --manifest-path tools/profile/Cargo.toml --features recursion-phase-profile --tests`.
+  Observed 2026-10-26: 20 integration tests passed (8 counters, 11 events, 1 sidecar), including strict interior RSS attribution, boundary-only quality, process CPU/I/O deltas, unavailable/regressing counters, overlapping proofs, sampler shutdown and expected verifier-control errors. Collection lives in the harness; the vendor adds only an optional boundary callback and shared monotonic clock. No proof was run.
 
 ## 4. Sidecar, validator and reducer (tests first)
 
@@ -42,6 +44,8 @@ Boxes record observed outcomes only. Paths are relative to the repository root. 
 ## 5. Small fixtures and overhead
 
 - [ ] 5.1 Profile A2 (A102 k13, A80 k12) with observation on and off. Check that stock verification accepts both and rejects the malformed controls (RPP-006-01).
+  Code implemented: `profile-a2` reproduces the linked public fixture with child caller timers, raw counter sidecars, stock verification and malformed-proof/statement plus wrong-key controls. `one --workload A2` plans both variants under `a2-linked-children`; resident-PK requests are refused because the public child APIs rebuild the PK. Real on/off proofs and qualification remain unrun; this box stays unchecked.
+  Observed 2026-10-26: `RUSTC_WRAPPER= CARGO_TARGET_DIR=tools/profile/target CARGO_BUILD_JOBS=4 cargo check --offline --manifest-path tools/profile/Cargo.toml --bins` passed both without the feature and with `--features recursion-phase-profile`; 61 Python tests passed, isolation reported OK, and `prepare --check-only` verified the regenerated patch/identity. These are code checks, not proof-run evidence.
 - [ ] 5.2 Run at least five paired on/off A2 runs. Report the one-sided 95% overhead bound (RPP-005).
   Verify: `python3 -B scripts/qa/profile-recursion.py calibrate --workload A2 --pairs 5`.
 

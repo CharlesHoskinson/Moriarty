@@ -16,6 +16,24 @@ use mori_backend::sherlock_child::{ChildKey, SherlockChildProof};
 use mori_recursion::parent::{self, SherlockLinkRelation};
 use rand_core::{CryptoRng, RngCore};
 
+#[cfg(feature = "recursion-phase-profile")]
+pub mod counters;
+pub mod sidecar;
+
+/// Scope a verifier negative control. Its transcript read errors are expected;
+/// the caller must still check the returned rejection and record a failed command
+/// if the malformed proof or statement was accepted.
+pub fn expected_rejection(operation: impl FnOnce() -> bool) -> bool {
+    #[cfg(feature = "recursion-phase-profile")]
+    {
+        counters::expected_rejection(operation)
+    }
+    #[cfg(not(feature = "recursion-phase-profile"))]
+    {
+        operation()
+    }
+}
+
 /// Retain the caller's exact result independently of observer flush failures.
 /// The second result reports I/O failure without changing proof behavior.
 pub fn command<T, E>(operation: impl FnOnce() -> Result<T, E>) -> (Result<T, E>, io::Result<()>) {
