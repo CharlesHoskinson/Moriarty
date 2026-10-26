@@ -7,12 +7,12 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all eighteen Quint files, runs 49 deterministic Quint
+The runner typechecks all twenty Quint files, runs 52 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Seven models use `modelInv`; the two pinned
-defective source projections use `sourceInv`. All nine
+per model with `--max-steps 30`. Seven models use `modelInv`; the three pinned
+defective source projections use `sourceInv`. All ten
 positive runs passed; every requested witness was reached. Its separate
-`preservesDynamicTargets` and `stableAcrossFuel` runs deliberately find the
+`preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
 `verification.log`. These are sampled finite checks, not exhaustive proofs.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
@@ -28,6 +28,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
 | `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
 | `rustResidualIdentity.qnt` | U033; `2d1b2b373:crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs:143` | Source-derived WIP counterexample: the same literal program selects static rules `{84}` at fuel 0 versus `{80,102}` at fuel 1, changing per-program IR content |
+| `rustExportClassification.qnt` | U031; `b705bfacb:crates/mori-core/src/sherlock/export_plans.rs`, `classify` | Source-derived counterexample: a rule-195 scope return above a pending multiplication frame is attributed to multiplication instead of restoration |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
@@ -145,3 +146,12 @@ second reference run after post-hoc block labeling, and its multiplication
 plan omits the left operand held in `Frame::Right`. All three findings were
 sent to the owners and sherlock-fable; no final implementation verdict is
 claimed for this explicitly WIP version.
+
+The later Rust export module at `b705bfacb` also scans every pending frame for
+a binary operation. For `Return(3)` with `[Scope, Right(Mul,2)]`, the active
+K-A rule is 195 (scope restoration), while its manifest reports multiplication.
+`rustExportClassification` preserves this one-step counterexample; FrameRestore
+in that model denotes the restoration category, not a restriction against a
+more specific ScopeRestore operation name. The owner reports a working-tree
+repair selecting by rule/control/top frame and binding actual operand paths;
+its committed source and test evidence are still awaited.

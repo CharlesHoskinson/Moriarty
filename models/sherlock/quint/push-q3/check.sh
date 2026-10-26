@@ -34,6 +34,23 @@ else
     exit 1
   fi
 fi
+python3 audit_qualification.py > qualification-counterexample.json
+quint typecheck rustExportClassification.qnt
+quint typecheck rustExportClassification_test.qnt
+quint test rustExportClassification_test.qnt
+quint run rustExportClassification.qnt --invariant sourceInv --max-steps 30 --max-samples 10000 \
+  --seed 0x303 --witnesses misclassifiedPendingFrame --verbosity 1
+if quint run rustExportClassification.qnt --invariant belongsToActiveStep --max-steps 30 \
+  --seed 0x303 --verbosity 2 > rust-export-classification-counterexample.log 2>&1; then
+  echo 'Expected the pinned Rust pending-frame classification counterexample' >&2
+  exit 1
+else
+  result=$?
+  if [ "$result" -ne 1 ] || ! rg -q 'Invariant violated' rust-export-classification-counterexample.log; then
+    cat rust-export-classification-counterexample.log >&2
+    exit 1
+  fi
+fi
 python3 audit_s5.py > s5-source-observations.json
 quint typecheck rustResidualIdentity.qnt
 quint typecheck rustResidualIdentity_test.qnt
