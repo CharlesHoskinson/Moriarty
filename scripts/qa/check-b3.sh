@@ -9,7 +9,11 @@ export MALLOC_MMAP_THRESHOLD_=131072
 export MALLOC_TRIM_THRESHOLD_=131072
 export MALLOC_ARENA_MAX=1
 unset SHERLOCK_PROVER_ID
-export FENRIR_ROOT="${FENRIR_ROOT:-$HOME/repos/projectfenrir-main}"
+# First projectfenrir checkout that exists: this host (after the 2026-10-26 rebuild), then the old layout.
+if [[ -z "${FENRIR_ROOT:-}" ]]; then
+  for d in "$HOME/code/projectfenrir" "$HOME/repos/projectfenrir-main"; do [[ -d $d ]] && { FENRIR_ROOT=$d; break; }; done
+fi
+export FENRIR_ROOT="${FENRIR_ROOT:?no projectfenrir checkout found; set FENRIR_ROOT}"
 export FRTF_V3_ROOT="${FRTF_V3_ROOT:-$FENRIR_ROOT/recursion/rollup-test-format/v3}"
 export MORIARTY_PARENT_SRS="${MORIARTY_PARENT_SRS:-$PWD/target/sherlock-srs/bls_midnight_2p20}"
 python3 -B scripts/qa/fetch-sherlock-srs.py "$MORIARTY_PARENT_SRS"
