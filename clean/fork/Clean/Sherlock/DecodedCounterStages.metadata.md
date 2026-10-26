@@ -23,21 +23,34 @@ full SI03/StepInv, checked Rust/Fin correspondence, field constraints, financial
 correctness or native proof result follows.
 
 No custom axioms or `sorry` declarations are introduced. In the coordinator's
-2026-10-25 Lean 4.33.1 build, `helper_next_bounded` and
+recorded 2026-10-26 Lean 4.33.1 build, `helper_next_bounded` and
 `p4_nonhelper_not_accounting` have empty axiom sets;
 `p4_nonhelper_preserves_fuel` and `p4_helper_preserves_accounting` depend only
 on `propext`. The import closure includes the unchanged adapter,
 `NullaryCounterHeadroom` and ultimately `Init`.
 
-Kernel status: **observed capped build passed**.
+Kernel status: **LOCKED_VERIFIED (observed coordinator run)**.
 
-The coordinator's `memcap 48G lake build` completed successfully with 17 jobs
-and exit 0 after the projected-equality rewrite was replaced by `congrArg`.
-This module took 511 ms and its four-name query took 242 ms in that log; these
-are build observations, not execution benchmarks. Exact source and log digests
-and per-theorem dependency sets are recorded in the JSON metadata.
+The coordinator's README-conformant
+`scripts/doctorwatson heavy --id sherlock-lean-build -- memcap 48G lake -d clean/fork build`
+completed all 21 package jobs with exit 0 and normal preflight in run
+`20261026T035951Z-sherlock-lean-build`. The ledger is committed in `8853c8f8c`;
+the retained output is
+`qa/sherlock/traces/20261026T035951Z-sherlock-lean-build.log`.
 
-The worker read the coordinator's independently produced log. Direct capped
-execution from the worker sandbox is unavailable because `memcap 48G` cannot
-connect to the systemd user bus. No worker bypass was attempted. The existing
-U021/U026 report checks passed separately; they do not verify these proofs.
+The coordinator reports an outer flock holding the real shared `heavy.lock`;
+the runner's recorded lock is a separate `DW_LOCK` proxy. The worker read the
+trace and ledger and checked the current source/query bytes against the run's
+Git head. It did not execute the build or independently monitor the outer lock.
+Source, log, resource, timing and exact dependency records are in the JSON metadata.
+The package build was incremental after build 18. Its timings describe
+compilation, not clean-build or runtime performance.
+
+Earlier builds 1–18 are capped, unlocked historical observations. The old
+17-job result and its 511 ms / 242 ms module/query measurements remain in
+`historicalBuildEvidence`; they do not establish lock-compliant verification.
+Direct capped execution from the worker sandbox remains unavailable because
+`memcap 48G` cannot connect to its systemd user bus. No worker bypass or delegated
+denied operation was requested. U021/U026 report checks passed separately;
+they do not verify these proofs. The original adapter and its historical metadata
+remain unchanged.

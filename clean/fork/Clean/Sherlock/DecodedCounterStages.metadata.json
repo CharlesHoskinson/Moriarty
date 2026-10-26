@@ -18,10 +18,11 @@
   "customAxioms": [],
   "sorryDeclarations": [],
   "kernelVerification": {
-    "status": "observed capped build passed",
-    "scope": "whole package: 17 successful jobs",
+    "status": "LOCKED_VERIFIED",
+    "scope": "whole package: 21 successful jobs",
     "toolchain": "4.33.1",
-    "workerExecution": "not run; sandbox user-scope permission blocker"
+    "workerExecution": "not run; worker inspected coordinator trace/ledger and checked source pins",
+    "qualification": "Coordinator run with explicit outer shared-lock report; no independent worker lock monitor"
   },
   "axiomObservation": {
     "Clean.Sherlock.DecodedCounterStages.helper_next_bounded": [],
@@ -36,13 +37,33 @@
   "refinement": "not-established",
   "acceptance": "none",
   "buildEvidence": {
-    "producer": "coordinator; log read by worker",
-    "command": "memcap 48G lake build",
-    "cwd": "clean/fork",
-    "logSHA256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
-    "logBytes": 10568,
+    "producer": "coordinator; trace and ledger read by worker",
+    "runner": "scripts/doctorwatson heavy --id sherlock-lean-build -- memcap 48G lake -d clean/fork build",
+    "command": "memcap 48G lake -d clean/fork build",
+    "cwd": ".",
+    "run": "20261026T035951Z-sherlock-lean-build",
+    "head": "5b68cb8c00e80d6ae6c5c1ec2d2682191fa57ada",
+    "ledgerCommit": "8853c8f8c",
+    "trace": "qa/sherlock/traces/20261026T035951Z-sherlock-lean-build.log",
+    "logSHA256": "dc0b2e82fcf4d4d6a9e5dbc7b4db8bf20d5301f5d95a02490782e99d312750eb",
+    "logBytes": 27167,
     "wholePackageExit": 0,
-    "jobs": 17
+    "jobs": 21,
+    "wallSeconds": 6.229,
+    "maxRssBytes": 890322944,
+    "memoryCap": "48G",
+    "preflight": {
+      "ok": true,
+      "skipped": false
+    },
+    "locking": {
+      "sharedLock": "~/.cache/doctorwatson/heavy.lock",
+      "method": "outer flock holds shared lock; runner uses separate DW_LOCK proxy",
+      "sharedLockEvidence": "coordinator execution report 2026-10-26T04:02:29Z",
+      "runnerProxyRecorded": true
+    },
+    "executionQualification": "Observed coordinator build; worker did not execute a capped build or request a delegated denied operation",
+    "buildMode": "incremental package build following build18; coordinator report"
   },
   "priorBuildEvidence": {
     "producer": "coordinator; log read by worker",
@@ -50,8 +71,37 @@
     "cwd": "clean/fork",
     "logSHA256": "bd2ecbad9637ebf0b70d8153484f2a2dfe0736f6d16772ebc582bbdc8bcfc250",
     "logBytes": 14787,
-    "wholePackageExit": 1
+    "wholePackageExit": 1,
+    "heavyLock": "not held; capped/unlocked historical observation"
   },
-  "moduleBuildMilliseconds": 511,
-  "queryBuildMilliseconds": 242
+  "moduleBuildMilliseconds": 314,
+  "queryBuildMilliseconds": 227,
+  "historicalBuildEvidence": [
+    {
+      "producer": "coordinator; log read by worker",
+      "command": "memcap 48G lake build",
+      "cwd": "clean/fork",
+      "logSHA256": "e3fe558d66d953a66edabbdde36b62ce188075f94a45435f479c685fda6b414b",
+      "logBytes": 10568,
+      "wholePackageExit": 0,
+      "jobs": 17,
+      "heavyLock": "not held; coordinator reports builds1-18 as capped/unlocked observations",
+      "moduleBuildMilliseconds": 511,
+      "queryBuildMilliseconds": 242
+    }
+  ],
+  "implementationCurrentness": {
+    "committedRefs": {
+      "factory-u": "7efe201963a8e83ceeeaf3223c5ddc78af3d4ba4",
+      "factory-u-c4": "577f0470b82647fcd4055b7c40d8f970505eae5e",
+      "sherlock-final": "d72a12b474190fe536cc685637190f868b01f4e8"
+    },
+    "ownedImplementationPins": {
+      "stage()": "ce2ddeae77175099c60cd8f60cbbbba0bc3e88879fe9207a6624c61aca98d412",
+      "shared/owner_runtime.rs": "33c353fbed41766f0c5d3c3fedc0e2e83f52bca154e0016fe8277bb7fa2757a2",
+      "c6_phys.rs": "dbce69f0e8d0e689f8e708a1f1cf0dd73d4f311adf54d0f4d28e27009ba8eece",
+      "c6_complete_step_capture.rs": "0694caa33fc1da4c25d96395f61c08474e1fa04405aee01dec710c7b6a98cc01"
+    },
+    "qualification": "stage/counter source slices agree on all observed committed lines"
+  }
 }
