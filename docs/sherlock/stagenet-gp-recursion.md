@@ -181,6 +181,25 @@ Rationale and alternatives:
 | M2 | **First real keygen, prove and verify of one C6 step relation** under `PoseidonState` (one fragment, then the dispatch plus fragment union), with k, RSS and time | heavy.lock (≤ 48 G) | leaf option U or F |
 | M3 | A node relation that verifies one leaf and one node child: k, RSS and time on CPU and on Loki GPU | heavy.lock + gpu.lock | self-recursive node or layers, S |
 
+Results (2026-10-26):
+
+- **M2** (s8, `232307247`): one C6-shaped digest leaf (96 private lanes) keys at k=13 and proves
+  in 2.55 s (proof 3824 B). The ZKIR child publishes its claim binding as input 0, so the proved
+  leaf instance is `[binding, prog_d, pre_d, post_d, rule, h_pre]`; the node takes the binding as a
+  free witness (`588bc5f25`, SHKIVC02).
+- **M3** (`588bc5f25`, heavy.lock, CPU): the self-recursive IVC node is k=20 (531,989 rows,
+  1.5% over 2^19). Keygen takes about 50 s and each step proves in about 95 s, with 6,432 B proofs
+  and 63 instance lanes. Three folded steps pass, the carried accumulator pairs and a flipped
+  proof is refused. Peak RSS is 26.2 GB.
+- **M4**: the run decider is k=20 (833,235 rows). Keygen takes 53 s and proving about 100 s
+  (6,432 B, 70 public lanes). The ledger-9 `VerifierKey` reader accepts it, and every one of the
+  70 lanes, mutated, is refused.
+- **GP stand-in bundle** (`sherlock_gp gp_fold_and_key`, `target/gp/standin-3`): stand-in leaves
+  → node → decider → tagged acceptRun verifier (2,217 B). This is a rehearsal only.
+- **Throughput**: about 95 s × number of leaves, plus about 2.5 min for the decider. With one step
+  per leaf, fact(3) (about 293 steps) takes about 7.7 h serially, so the universal leaf should
+  chain S steps (G13).
+
 ## 5. Gap list
 
 | # | Gap | Items | Code / step | Owner (proposed) |
