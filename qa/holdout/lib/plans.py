@@ -538,6 +538,23 @@ def _ids(xs, what):
     return set(ids)
 
 
+TRACE_COPY_DIR = "qa/sherlock/receipt-traces/"
+
+
+def receipt_trace(rc, ops, bad):
+    """The run trace named by the run log, or (when traces are not on this host, e.g. after a merge) its
+    committed copy rc.trace_copy under qa/sherlock/receipt-traces/. Either must hash to rc.trace_sha256."""
+    trace = ops.read(rc.get("trace") or "")
+    if trace is None and rc.get("trace_copy"):
+        tc = rc["trace_copy"]
+        need(isinstance(tc, str) and tc.startswith(TRACE_COPY_DIR) and ".." not in tc.split("/") and ops.tracked_clean(tc),
+             f"{bad}: trace_copy {tc!r} is not a committed file under {TRACE_COPY_DIR}")
+        trace = ops.read(tc)
+    need(trace is not None, f"{bad}: trace {rc.get('trace')} is not on disk and has no committed trace_copy (unverifiable)")
+    need(hashlib.sha256(trace.encode()).hexdigest() == rc.get("trace_sha256"), f"{bad}: trace sha256 differs (trace edited)")
+    return trace
+
+
 def verify_opt_receipt(ev, candidate, ops):
     bad = f"record dishonest: evidence {ev.get('id')} receipt"
     rp = ev.get("receipt")
@@ -559,9 +576,7 @@ def verify_opt_receipt(ev, candidate, ops):
     rec = recs[0]
     need(rec.get("exit") == 0 and rec.get("head") == sha and rec.get("cmd") == cmd and rec.get("trace") == rc.get("trace"),
          f"{bad}: run log record {rec.get('run')} disagrees (exit/head/cmd/trace)")
-    trace = ops.read(rc.get("trace") or "")
-    need(trace is not None, f"{bad}: trace {rc.get('trace')} is not on disk (unverifiable)")
-    need(hashlib.sha256(trace.encode()).hexdigest() == rc.get("trace_sha256"), f"{bad}: trace sha256 differs")
+    trace = receipt_trace(rc, ops, bad)
     results = re.findall(r"^test result: (ok|FAILED)\. (\d+) passed; (\d+) failed", trace, re.M)
     need(results and all(s == "ok" for s, _, _ in results) and sum(int(f) for _, _, f in results) == 0 and rc.get("failed") == 0,
          f"{bad}: the run had failures or no result")
@@ -709,6 +724,13 @@ def custom_optimization_preservation(c):
             need(_summ(kk) == _summ(bb), f"{l2}: candidate {_summ(kk)} != reference {_summ(bb)} (rejection/exhaustion/work)")
             need(len(kk.execution["image"]["frames"]) == len(bb.execution["image"]["frames"]), f"{l2}: pending frame count differs")
             _opt_report(kk, l2, con["candidate"])
+            # the K-A reference stream under the same bounds (a candidate may act on the reference route only)
+            _, sb = U._slices(sc, 1, fuel=fuel, stack=stack)
+            sk = U.runx(sc, extra=flag + ["--reference-slices", "1"], fuel=fuel, stack=stack)
+            need(sk.doc and "reference_slices" in sk.doc, f"{l2}: candidate run lost the reference slices")
+            need(U._flat(sk.doc["reference_slices"]) == U._flat(sb) and sk.doc["reference_slices"]["outcome"] == sb["outcome"],
+                 f"{l2}: candidate reference stream/outcome differs under these bounds")
+            _opt_report(sk, f"{l2} slices", con["candidate"])
     need(reduced, "no specimen shows a physical reduction: the candidate is vacuous on equal subtrees")
 
 
