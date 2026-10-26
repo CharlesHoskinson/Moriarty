@@ -1450,6 +1450,41 @@ def custom_resume_pending(c):
         need(rf.get("stage") == "R1", f"halted checkpoint refused at {rf.get('stage')!r}, expected R1")
 
 
+def custom_resume_sequential(c):
+    """Two awaits in one body resume in source order; a resumed binder scopes only its await body."""
+    w = _Work(c, "draft")
+    src = w.put("seq.mori", c["source"])
+    d1 = w.start(src, "sequential start", ck="s1.bin")
+    need(d1.get("status") == "waiting" and d1.get("label") == c["first"]["label"],
+         f"sequential start: waiting at {d1.get('label')!r}, expected the first await in source order {c['first']['label']!r}")
+    _waiting_ok(d1, "sequential start", d1.get("site"), c["first"]["label"], [tuple(b) for b in c["first"]["binders"]])
+    s1 = d1["site"]
+    need(isinstance(s1, int) and s1 >= 1, f"site {s1!r} is not 1-based")
+    o1 = _obs(d1["checkpoint"], s1, c["first"]["label"], [tuple(v) for v in c["first"]["values"]])
+    d2 = w.resume(src, "s1.bin", o1, "resume the first await", out="s2.bin", expect="waiting")
+    _waiting_ok(d2, "after the first resume", d2.get("site"), c["second"]["label"], [tuple(b) for b in c["second"]["binders"]])
+    s2 = d2["site"]
+    need(isinstance(s2, int) and s2 >= 1 and s2 != s1, f"the second await reuses site {s2!r}")
+    need(int(d2["committed_work"]) > int(d1["committed_work"]), "the first resume committed no work")
+    wrong = _obs(d2["checkpoint"], s1, c["first"]["label"], [tuple(v) for v in c["first"]["values"]])
+    rf = w.resume(src, "s2.bin", wrong, "answer the first await again at the second", expect="refused")
+    need(rf.get("stage") == "R4", f"an observation for the already-resumed first await was refused at {rf.get('stage')!r}, expected R4")
+    nr = w.resume(src, "s2.bin", _obs(d2["checkpoint"], s2, c["second"]["label"], [tuple(v) for v in c["second"]["bad_values"]]),
+                  "second await, guard false", expect="not_ready")
+    need(nr.get("checkpoint") == d2["checkpoint"], "not_ready at the second await changed its checkpoint")
+    h = w.resume(src, "s2.bin", _obs(d2["checkpoint"], s2, c["second"]["label"], [tuple(v) for v in c["second"]["values"]]),
+                 "resume the second await", expect="halted")
+    need(_plain(h.get("value")) == c["expect"], f"sequential result {h.get('value')!r}, expected {c['expect']}")
+    # binder scope: the resumed binder shadows only inside its await body (lexical scope, UIREQ-003)
+    sh = w.put("shadow.mori", c["shadow"]["source"])
+    d = w.start(sh, "shadow start", ck="sh.bin")
+    _waiting_ok(d, "shadow start", d.get("site"), c["shadow"]["label"], [tuple(b) for b in c["shadow"]["binders"]])
+    h = w.resume(sh, "sh.bin", _obs(d["checkpoint"], d["site"], c["shadow"]["label"], [tuple(v) for v in c["shadow"]["values"]]),
+                 "shadow resume", expect="halted")
+    need(_plain(h.get("value")) == c["shadow"]["expect"],
+         f"shadowing result {h.get('value')!r}, expected {c['shadow']['expect']} (the caller environment was not restored after the resumed await body)")
+
+
 # -- financial route -------------------------------------------------------------------
 
 def _oracle_prefix(pid):
@@ -1672,6 +1707,7 @@ CHECKS = {
     "native-inventory": custom_native_inventory,
     "suspend-pending": custom_suspend_pending,
     "resume-pending": custom_resume_pending,
+    "resume-sequential": custom_resume_sequential,
     "fin-first-prefix": custom_fin_first_prefix,
     "fin-await-core2": custom_fin_await_core2,
     "fin-local-failure": custom_fin_local_failure,
