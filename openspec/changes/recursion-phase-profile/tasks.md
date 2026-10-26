@@ -1,6 +1,6 @@
 # Recursion phase profile: tasks
 
-Nothing is checked. Boxes record observed outcomes only. Paths are relative to the repository root. Run every build and proof through `scripts/doctorwatson heavy` inside `capped heavy`.
+Boxes record observed outcomes only. Paths are relative to the repository root. Run every build and proof through `scripts/doctorwatson heavy` inside `capped heavy`.
 
 ## 1. Design check
 
@@ -10,11 +10,13 @@ Nothing is checked. Boxes record observed outcomes only. Paths are relative to t
 
 ## 2. Identity and isolation (tests first)
 
-- [ ] 2.1 Write `scripts/qa/tests/test_profile_identity.py`. Test the archive checksum, the patch checksum and the refusal of a 0.8.2 control (RPP-001-02).
-- [ ] 2.2 Create the workspace `tools/profile/` with its own `Cargo.lock`. Vendor midnight-proofs 0.8.3 at `tools/profile/vendor/midnight-proofs-0.8.3/`. Check the archive SHA-256 `19b2e4b1…6a702dcc`.
+- [x] 2.1 Write `scripts/qa/tests/test_profile_identity.py`. Test the archive checksum, the patch checksum and the refusal of a 0.8.2 control (RPP-001-02).
+- [x] 2.2 Create the workspace `tools/profile/` with its own `Cargo.lock`. Vendor midnight-proofs 0.8.3 at `tools/profile/vendor/midnight-proofs-0.8.3/`. Check the archive SHA-256 `19b2e4b1…6a702dcc`.
   Verify: `python3 -B scripts/qa/profile-recursion.py prepare --check-only`.
-- [ ] 2.3 Add a T0 check that the main workspace never enables `recursion-phase-profile` (RPP-007-02).
+- [x] 2.3 Add a T0 check that the main workspace never enables `recursion-phase-profile` (RPP-007-02).
   Verify: `git diff --exit-code Cargo.lock` after the change, and the T0 check fails on a seeded feature leak.
+  Observed 2026-10-26: `qa/tiers/t0.sh` runs `scripts/qa/check-profile-isolation.py`; the seeded-leak unit tests fail the check as required; the main `Cargo.lock` is unchanged.
+  Implemented standalone isolation check and seeded-leak tests; T0 wiring is reserved for the lead.
 
 ## 3. Observation feature (tests first)
 
@@ -26,10 +28,11 @@ Nothing is checked. Boxes record observed outcomes only. Paths are relative to t
 
 ## 4. Sidecar, validator and reducer (tests first)
 
-- [ ] 4.1 Write `scripts/qa/tests/test_profile_reduce.py`. Cover RPP-003-01 to 03, RPP-004-01 and 02, RPP-005-01 and 02, RPP-006-02 and RPP-009-01 and 02 with synthetic sidecars.
-- [ ] 4.2 Implement schema and semantic validation against `openspec/changes/recursion-phase-profile/profile.schema.json`.
-- [ ] 4.3 Implement `scripts/qa/profile-recursion.py` with `prepare`, `calibrate`, `one`, `reduce` and `decide`. Write sidecars under `qa/sherlock/profiles/<run>/`.
-  Verify: `python3 -B -m pytest scripts/qa/tests/test_profile_*.py`.
+- [x] 4.1 Write `scripts/qa/tests/test_profile_reduce.py`. Cover RPP-003-01 to 03, RPP-004-01 and 02, RPP-005-01 and 02, RPP-006-02 and RPP-009-01 and 02 with synthetic sidecars.
+- [x] 4.2 Implement schema and semantic validation against `openspec/changes/recursion-phase-profile/profile.schema.json`.
+- [x] 4.3 Implement `scripts/qa/profile-recursion.py` with `prepare`, `calibrate`, `one`, `reduce` and `decide`. Write sidecars under `qa/sherlock/profiles/<run>/`.
+  Verify: `python3 -B -m unittest discover -s scripts/qa/tests -p 'test_profile_*.py'`.
+  Observed 2026-10-26: 47 unittest tests pass with synthetic sidecars; no build or profile run was executed. Command execution still requires the task 3 executable and feature.
 
 ## 5. Small fixtures and overhead
 

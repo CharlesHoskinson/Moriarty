@@ -308,6 +308,33 @@
             "string",
             "null"
           ]
+        },
+        "sample_points": {
+          "description": "Strictly interior RSS samples; required semantically when samples is nonzero.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "at_monotonic_ns": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rss_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "at_monotonic_ns",
+              "rss_bytes"
+            ]
+          }
+        },
+        "certifies_instantaneous": {
+          "description": "Sampled RSS never certifies an instantaneous peak. Omission means false.",
+          "type": "boolean",
+          "default": false
         }
       },
       "required": [
@@ -1136,7 +1163,7 @@
             "number",
             "null"
           ],
-          "minimum": 0
+          "description": "Paired mean overhead fraction; may be negative due to noise. Qualification uses the upper bound."
         },
         "paired_wall_ratio_upper95": {
           "type": [

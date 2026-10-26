@@ -39,6 +39,7 @@ fi
 dw_step "holdout verify" scripts/doctorwatson holdout verify
 dw_step "predicate validate" scripts/doctorwatson validate
 dw_step "factory unittests" bash -c 'cd models/doctorwatson && python3 -m unittest discover -s factory/tests -t .'
+dw_step "profile isolation" python3 -B scripts/qa/check-profile-isolation.py
 
 # Map changed paths to workspace crates (crates/<dir>/... -> package name).
 declare -A seen=()
