@@ -18,6 +18,7 @@ pub mod authorization;
 pub mod replay;
 pub mod schnorr;
 pub mod sherlock_c6_child;
+pub mod sherlock_c6_witness_stream;
 pub mod sherlock_child;
 pub mod sherlock_link;
 pub mod sherlock_machine;
