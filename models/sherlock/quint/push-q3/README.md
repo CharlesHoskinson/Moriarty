@@ -114,3 +114,13 @@ zero-budget behavior and their own specialized-block counts; they do not claim
 the later Rust wire contract. No real residual execution or Rust export-plan
 result has been observed by this worker yet. U023's later qualification record
 at `64822e4c7` likewise remains outside the source-only inventory projection.
+
+`python3 models/sherlock/quint/push-q3/audit_qualification.py` reproduces a
+separate U023 checker finding at `64822e4c7` and `0eb431b92`: both exact checker
+versions accept reference/recorded result 6 with indexed state result 999, as
+long as the supplied state hash matches. The checker compares a recorded
+scalar with the reference and never decodes it from the indexed state.
+Repository/indexer/reference oracles are in-memory unit fixtures; no real
+network, wallet, transaction, proof or qualification was exercised. Results
+are in `qualification-counterexample.json`; findings were sent to the
+evaluator, sherlock-c4 and sherlock-fable. Holdout source was never edited.
