@@ -76,7 +76,9 @@ observed. Prior nineteen-name metadata remains available in `0c1020244`.
 `WorkAccounting` is a theorem premise, not a guarantee currently supplied by
 financial checkpoint import. In the pinned host source, `decode_body`
 checks canonical `FinImage2` JSON, `same_admission` checks program/plan/policy
-identity, and the resume preflight checks positive fuel, snapshot and captures.
+identity, and the resume preflight checks positive fuel and snapshot predicates.
+Its `canonical_boundary` call receives captures but ignores them; the separate
+legacy `stage::admit` capture-layout check is not thereby supplied to this route.
 The carrier also refuses a maximal UInt64 resume epoch and uses checked epoch
 increment; the epoch/header is outside this module's `Image` projection. These
 checks do not establish the full machine-counter balance or the segment/site
@@ -86,6 +88,13 @@ the headroom theorem cannot be applied to that imported image. The older
 decoded-counter adapter and staged-counter module concern a separate owner
 path and do not supply this financial premise. These are source-audit
 observations, not an executed Rust or forged-checkpoint test.
+
+The mathematical record updates also preserve diagnostics unless explicitly
+updated: in particular, `completeCommit` does not erase pre-existing
+`discardedEffects` or `retainedByPolicy`. Thus a malformed Waiting image
+carrying terminal diagnostics is not proved to satisfy SI-26 by these lemmas.
+Capture-layout validation and terminal-diagnostic admission are additional
+full-image obligations, not consequences of canonical JSON decoding.
 
 The separate diagnostic committed by Quint-2 in `5c71be223` records synthetic
 counter and segment imports reaching panics in an older pinned host binary.
