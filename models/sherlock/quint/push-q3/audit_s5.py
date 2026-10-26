@@ -1,4 +1,4 @@
-"""Reproduce two observations from committed s5 source, without another checkout.
+"""Reproduce pinned s5 observations and check the committed U033 run binding.
 
 This confirms the findings remain reproducible at the pinned commit; success
 does not mean the source meets the U031/U033 contracts.
@@ -12,6 +12,26 @@ import unittest
 
 COMMIT = "cfbab29c591e5f4aa634952596aee601fffcde1f"
 FIXED_COMMIT = "a824466981168933041fdba85f6a03a94fa1dc93"
+RUST_SOURCE_COMMIT = "8ffed57fc0e0362f928a2f106c4ce660b54440a2"
+RUST_RUN_COMMIT = "abc64975ddaaf825d6488cd89a61f57a4be08869"
+
+
+def committed_rust_run_record():
+    def read(path, commit):
+        return subprocess.run(
+            ["git", "show", f"{commit}:{path}"],
+            check=True, capture_output=True, text=True,
+        ).stdout
+
+    records = [json.loads(line) for line in read("qa/sherlock/runs.jsonl", RUST_RUN_COMMIT).splitlines()]
+    run = next(r for r in records if r["run"] == "20261026T012533Z-U033")
+    assert run["id"] == "U033" and run["cmd"] == "qa/holdout/run.sh uireq-033"
+    assert run["exit"] == 0 and run["head"] == RUST_SOURCE_COMMIT
+    path = "crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs"
+    assert read(path, RUST_RUN_COMMIT) == read(path, RUST_SOURCE_COMMIT)
+    subprocess.run(["git", "merge-base", "--is-ancestor", RUST_SOURCE_COMMIT, RUST_RUN_COMMIT], check=True)
+    return {"record_commit": RUST_RUN_COMMIT, "run": run, "residual_source_unchanged": True,
+            "trace_inspected": False, "rust_executed_by_this_audit": False}
 
 
 def source_module(name, commit=COMMIT):
@@ -100,6 +120,7 @@ def main():
         "fixed_first_witness_node": fixed_plans["witnessPlan"]["nodes"][0],
         "fixed_source_unit_tests": fixed_source_tests(),
         "fixed_source_bound_cases": fixed_bound_cases(),
+        "committed_rust_run_record": committed_rust_run_record(),
     }
     print(json.dumps(observations, indent=2))
     assert missing == ["R_call"] and not ir["genericFallbacks"]

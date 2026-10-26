@@ -7,7 +7,7 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-six Quint files, runs 79 deterministic Quint
+The runner typechecks all twenty-six Quint files, runs 80 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
 per model with `--max-steps 30`. Ten models use `modelInv`; the three pinned
 defective source projections use `sourceInv`. A repaired classifier variant
@@ -15,7 +15,11 @@ additionally uses `--step classifyRepaired --invariant repairedInv`. All fourtee
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
-`verification.log`. These are sampled finite checks, not exhaustive proofs.
+`verification.log` (79 tests before the strengthened selector sweep) and
+`selector-sweep.log` (all nine current dispatcher tests). The latter checks all
+6,000 positive-fuel selector combinations plus exhaustion and reaches every
+one of the 39 rule IDs. This is exhaustive within that selector quotient;
+the sampled runs are not exhaustive proofs of complete machines.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
 `exportMulBindings` uses `--backend=typescript`: the default Rust evaluator is
 limited to i64 integers and cannot represent the actual u128 maximum. Its
@@ -204,6 +208,13 @@ regressions for that transition. It samples independent abstract snapshots,
 not whole residual runs; expression values, environments and stack contents
 beyond the inspected tags/predicates are abstracted. No Rust runtime result
 is claimed by this source correspondence check.
+At `abc64975d`, the owner's committed run record binds `uireq-033` exit 0 to
+the exact `8ffed57fc` source, with 4.344 seconds wall time and 72,998,912 bytes
+peak RSS. `audit_s5.py` verifies that binding, unchanged residual source and
+source-commit ancestry. The ignored trace has not been inspected here; a
+committed copy was requested. The evaluator independently reported the same
+holdout passing on that source. These are external runtime reports, not Rust
+executions by this worker, and show no residual size or performance improvement.
 
 The U024 CLI replay at `381f9e902` was source-audited against the tree model.
 Core interning is unchanged, preservation is checked before reporting, and
