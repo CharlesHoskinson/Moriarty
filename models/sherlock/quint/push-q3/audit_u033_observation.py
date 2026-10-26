@@ -18,8 +18,8 @@ RESIDUAL_SHA256 = "558640fd9314e34b412cfc1ca189e574952a3d8e7001e60362e8a40b5ccc9
 REFERENCE_SHA256 = "ea4f3b2cfe1d99078ec0914b1a9cf0e1f90bf88a1a999da28e9c1e2b6e7cfb3a"
 
 
-def checker_functions(path, functions, constants=()):
-    source = subprocess.run(["git", "show", f"{CHECKER_COMMIT}:{path}"],
+def checker_functions(path, functions, constants=(), commit=CHECKER_COMMIT):
+    source = subprocess.run(["git", "show", f"{commit}:{path}"],
                             check=True, capture_output=True, text=True).stdout
     tree = ast.parse(source)
     nodes = [node for node in tree.body if
@@ -28,7 +28,7 @@ def checker_functions(path, functions, constants=()):
     # These are the actual function/constant nodes, without rewriting checks.
     # Only the exception class is adapted; no engine run or oracle is injected.
     namespace = {"json": json, "hashlib": hashlib, "re": re, "Fail": AssertionError}
-    exec(compile(ast.Module(body=nodes, type_ignores=[]), f"{CHECKER_COMMIT}:{path}", "exec"), namespace)
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), f"{commit}:{path}", "exec"), namespace)
     return namespace
 
 

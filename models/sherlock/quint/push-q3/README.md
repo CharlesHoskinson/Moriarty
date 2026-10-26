@@ -208,7 +208,24 @@ The evaluator accepted the finding and strengthened U031 at `7f0942c3d`:
 rules 149 and 195 must not report any `CheckedU128*` operation. The model now
 samples both cases; old-source witnesses are reached and the repaired source
 classifies the scheduling/restoration steps without multiplication. No real
-run against the strengthened holdout has been observed here yet.
+Rust run was performed by this worker. The evaluator independently reports
+the repaired s9 binary passing the strengthened holdout. Its own union
+`461e76d8c` has the exact repaired `3bb404f15` exporter, although the union's
+committed U031 run still used its older local holdout; the consolidation must
+record the new-E doctorwatson check separately.
+
+`audit_u031_observations.py EVALUATOR_SHARE_DIR` checks the two SHA-pinned
+evaluator JSONs at rules 195/149 with unmodified `7f0942c3d` plan validators.
+The observations report `ArenaRead, ScopeRestore` at position 24 and
+`ArenaRead, ArenaRead` at position 22. The audit checks the source/value
+bindings, separate canonical manifest/plan hashes, operation/node hash recipes,
+namespaced component IDs, component/node membership and dependency order.
+All ten mutations (five per observation) are rejected for their intended
+reasons, including a rehashed false multiplication that reaches the new
+forbidden-operation check. Results are in `u031-observation-audit.json`.
+These probes requested no emissions, so this audit does not check emitted
+file bytes; the evaluator's complete holdout PASS is a separate external report.
+The raw inputs remain external and no Rust/native/target execution is claimed.
 
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
