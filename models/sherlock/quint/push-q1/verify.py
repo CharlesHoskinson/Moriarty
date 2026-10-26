@@ -83,7 +83,7 @@ def main() -> int:
             valid = valid and "Invariant violated" in process.stdout
         elif "test" in command:
             expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 4,
-                              "resumeEpoch_test.qnt": 6, "awaitLowering_test.qnt": 7}[Path(command[2]).name]
+                              "resumeEpoch_test.qnt": 7, "awaitLowering_test.qnt": 7}[Path(command[2]).name]
             valid = valid and f"{expected_count} passing" in process.stdout
         elif "--witnesses" in command:
             names = command[command.index("--witnesses") + 1:]

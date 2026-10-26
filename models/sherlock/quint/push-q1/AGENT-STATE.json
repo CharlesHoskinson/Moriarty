@@ -3,7 +3,7 @@
   "model": "gemini-4-argon",
   "worktree": "/home/charles/repos/Moriarty-wt-sh-gq1",
   "branch": "sherlock-gq1",
-  "factoryUHead": "d50d2adc4",
+  "factoryUHead": "815a22d87",
   "phase": "source-watch",
   "paths": [
     "models/sherlock/quint/push-q1/"
@@ -11,14 +11,17 @@
   "verification": {
     "status": "passed",
     "checks": 23,
-    "tests": 47,
+    "tests": 48,
     "maxSteps": 30,
     "samplesPerSafetyRun": 10000
   },
+  "confirmedFindings": [
+    "CONFIRMED fixed at 815a22d87: imported Waiting SI-29 resource validation now runs at R0 before guard evaluation via suspend::check_resumable (suspension2.rs:674-676, owner_suspend.rs:423-433), matching resumeAdmission::contractCheck",
+    "CONFIRMED fixed at 815a22d87: imported UInt64 maximum resume_epoch == u64::MAX is now refused at R0 before guard evaluation and incremented via checked_add(1) on accept (suspension2.rs:671-673,705-707; suspension2_fin.rs:228-230,318-320), matching resumeEpoch::checkedAccept",
+    "CONFIRMED documented at 815a22d87: yield surface sugar is explicitly listed under Design §16 'Not implemented' (docs/sherlock/design/suspension-and-finance.md:890)"
+  ],
   "openFindings": [
-    "imported Waiting SI29 resource validation occurs after guard in pre-fix projection (fixed in u2 uncommitted tree at suspension2.rs:674-676 + owner_suspend.rs:423-433 via suspend::check_resumable before guard; awaiting u2 commit)",
-    "imported UInt64 maximum resume_epoch unchecked increment in pre-fix projection (fixed in u2 uncommitted tree at suspension2.rs:671-673,705-707 + suspension2_fin.rs:228-230,318-320 via R0 refusal + checked_add(1); awaiting u2 commit)",
-    "draft /2 surface parser rejects zero-binder await/yield and let-bound scalar locals in guards (draft_source.rs:681,809,1050,1145; yield noted as not implemented in Design §16)"
+    "draft /2 surface parser rejects let-bound scalar locals in guards (draft_source.rs:1050,1145: AwaitScopes::walk pushes let_sort = None for ordinary Expr::Let and guard_type requires Some(Type::UInt | Type::Bool)) and rejects zero-binder await L() when G; E (draft_source.rs:810)"
   ],
   "specLevelOrLatent": [
     "latent post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn when ScopeF is omitted in owner_suspend::resume_accept (not CLI-observable without a post-resume technical cut; LeftF/LetF/IfF/MatchF/ArgsF/ReturnF carry saved_env and grammar refuses shadowing binders; sherlock-eval d50d2adc4)",
@@ -29,8 +32,9 @@
     "511297bdf",
     "6456bdac9",
     "ba1919bf2",
-    "fba4d59ed"
+    "fba4d59ed",
+    "4d5164b13"
   ],
-  "awaiting": "sherlock-fable DONE-ALL or sherlock-u2 commit of U014-U020 tree",
+  "awaiting": "sherlock-fable DONE-ALL",
   "stateLocationReason": "User restricts all edits to push-q1; target/AGENT-STATE.json not written."
 }

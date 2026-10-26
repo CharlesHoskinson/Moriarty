@@ -72,10 +72,11 @@ successful in this small projection. Work conservation can remain satisfied
 on such an input by moving fuel to consumed work and the reference cursor;
 checksums are public and do not establish machine reachability. The entry rule
 protects machine-produced Waiting checkpoints. FINDING messages were sent to
-`sherlock-fable` and `sherlock-u2`. Note: in `Moriarty-wt-factory-u`'s current
-uncommitted working tree (`suspension2.rs:674–676`, `owner_suspend.rs:423–433`),
-`suspend::check_resumable` is now called before `admit_observation` and
-`s.guard.run`, matching `--step contractCheck` once committed.
+`sherlock-fable` and `sherlock-u2`. **CONFIRMED FIXED at `factory-u` `815a22d87`**
+(`suspension2.rs:674–676`, `owner_suspend.rs:423–433`): `suspend::check_resumable`
+is now called at `R0` before `admit_observation` and `s.guard.run`, matching
+`--step contractCheck` (`sourceCheck` is retained for regression and
+counterexample coverage).
 
 ## Imported epoch overflow
 
@@ -85,22 +86,20 @@ uncommitted working tree (`suspension2.rs:674–676`, `owner_suspend.rs:423–43
 otherwise valid imported checkpoint whose epoch is `18446744073709551615`, a
 true guard can cause a panic with overflow checks, or an accepted successor
 whose epoch wraps to zero without them. The model explicitly represents both
-Rust overflow modes; Quint arithmetic itself does not overflow. Six tests
-exercise zero, max-minus-one, max, false guard and a candidate checked increment.
+Rust overflow modes; Quint arithmetic itself does not overflow. Seven tests
+exercise zero, max-minus-one, max, false guard and the committed `R0` refusal +
+checked increment.
 
-`sourceBehavior` is green and witnesses both failure modes. `safeHeader`
-intentionally fails under the default `sourceAccept` step. The candidate
-`--step checkedAccept` refuses an overflowing increment without changing the
-checkpoint and satisfies `safeHeader` in sampled runs. This candidate is a
-proposed remedy, **not a claim that the current design pins an overflow refusal
-stage**. The accepted successor's `epoch = predecessor + 1` is specified in §6.2;
-the current note does not define the maximum-epoch edge case. The source-order
-trace `resumeEpoch-counterexample.itf.json` is not a Rust execution. The finding
-was sent to `sherlock-fable` and `sherlock-u2`. Note: in `Moriarty-wt-factory-u`'s
-current uncommitted working tree (`suspension2.rs:671–673,705–707` and
-`suspension2_fin.rs:228–230,318–320`), `header.resume_epoch == u64::MAX` is
+`sourceBehavior` is green and witnesses both pre-fix failure modes. `safeHeader`
+intentionally fails under the default pre-fix `sourceAccept` step.
+`--step checkedAccept` refuses `epoch >= MAX_EPOCH` at `R0` before the guard
+and uses checked increment on accept, satisfying `safeHeader` in sampled runs.
+The source-order trace `resumeEpoch-counterexample.itf.json` is not a Rust
+execution. The finding was sent to `sherlock-fable` and `sherlock-u2`.
+**CONFIRMED FIXED at `factory-u` `815a22d87`** (`suspension2.rs:671–673,705–707`
+and `suspension2_fin.rs:228–230,318–320`): `header.resume_epoch == u64::MAX` is
 refused at `R0` before the guard and `checked_add(1)` is used on accept,
-matching `--step checkedAccept` once committed.
+matching `--step checkedAccept`.
 
 The epoch model requires `--backend typescript`: Quint 0.32.0's Rust evaluator
 rejects literals outside the signed Int64 range with QNT600. The ordinary
