@@ -197,6 +197,20 @@ def _residual_exec(res, label, fuel, stack, ref):
     need(U._flat(ex) == U._flat(ref), f"{label}: residual StepRecord stream differs from the reference stream "
                                       f"(rules/occurrences/charges/frame checks/stops)")
     need(ex["outcome"] == ref["outcome"], f"{label}: residual outcome {ex['outcome']} != reference {ref['outcome']}")
+    # the stream must be an execution OF THIS IR: every record names the residual block that produced it,
+    # that block realizes the record's rule, and consecutive blocks follow the IR's control edges
+    blocks = {b["block_id"]: b for b in res["ir"]["blocks"]}
+    prev = None
+    for rec in recs:
+        bid = rec.get("block_id")
+        need(bid in blocks, f"{label}: record {rec['position']} names no residual block ({bid!r}); a replayed reference stream is not an execution of the IR")
+        b = blocks[bid]
+        need(b["kind"] == "generic-dispatch" or str(rec["rule_start_line"]) in [str(x) for x in b["rules"]],
+             f"{label}: record {rec['position']} (rule {rec['rule_start_line']}) ran in block {bid}, which does not realize that rule")
+        if prev is not None:
+            need(bid == prev["block_id"] or bid in prev["successors"] or prev["kind"] == "generic-dispatch",
+                 f"{label}: record {rec['position']} moves from block {prev['block_id']} to {bid}, which is not a residual successor")
+        prev = b
     return recs
 
 
