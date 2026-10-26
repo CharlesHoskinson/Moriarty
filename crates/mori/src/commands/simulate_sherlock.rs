@@ -102,6 +102,56 @@ fn optimization(args: &Args) -> Result<Option<serde_json::Value>, CompileFailure
     host::draft_optimization::optimization_report(&source, &config, &target, candidate).map(Some)
 }
 
+/// UIREQ-031/033 sections over the real K-A reference run.
+fn plan_sections(args: &Args) -> Result<Vec<(&'static str, serde_json::Value)>, CompileFailure> {
+    let mut out = Vec::new();
+    if args.residualize.is_none() && args.export_plan.is_none() {
+        return Ok(out);
+    }
+    if args.source_profile.as_deref()
+        == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE)
+    {
+        return Err(CompileFailure::input(
+            "config",
+            "residualization and export plans are supported on the dedicated draft route only",
+        ));
+    }
+    let (config, target) = selection(args)?;
+    let read = |path: &std::path::Path, stage: &'static str| {
+        core_io::read_source(path).map_err(|error| CompileFailure::input(stage, error.to_string()))
+    };
+    let source = read(&args.file, "source")?;
+    let config = read(config, "config")?;
+    let target = read(target, "config")?;
+    if let Some(mode) = &args.residualize {
+        out.push((
+            "residual",
+            host::draft_plans::residualize(
+                &source,
+                &config,
+                &target,
+                mode,
+                args.residual_family.as_deref(),
+                args.residual_size_limit,
+            )?,
+        ));
+    }
+    if let Some(position) = args.export_plan {
+        out.push((
+            "export_plans",
+            host::draft_plans::export_plans(
+                &source,
+                &config,
+                &target,
+                position,
+                &args.export_request,
+                args.export_dir.as_deref(),
+            )?,
+        ));
+    }
+    Ok(out)
+}
+
 fn execute(args: &Args, sink: &mut dyn FnMut(&StepEventC)) -> Result<SelectedRun, CompileFailure> {
     let (config, target) = selection(args)?;
     let source = core_io::read_source(&args.file)
@@ -145,6 +195,10 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
         Ok(report) => report,
         Err(failure) => return print_failure(&failure),
     };
+    let plans = match plan_sections(args) {
+        Ok(plans) => plans,
+        Err(failure) => return print_failure(&failure),
+    };
     let selected = match execute(args, &mut sink) {
         Ok(run) => run,
         Err(failure) => return print_failure(&failure),
@@ -165,7 +219,9 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
     };
     let selected = match (selected, slices) {
         (SelectedRun::Draft(run), Some(slices)) => SelectedRun::Extended(run, None, slices),
-        (SelectedRun::Draft(run), None) if inventory.is_some() || optimization.is_some() => {
+        (SelectedRun::Draft(run), None)
+            if inventory.is_some() || optimization.is_some() || !plans.is_empty() =>
+        {
             SelectedRun::Extended(run, None, serde_json::Value::Null)
         }
         (SelectedRun::Chunked(run, chunks), Some(slices)) => {
@@ -183,9 +239,10 @@ pub(super) fn run(args: &Args) -> super::super::Result<ExitCode> {
             serde_json::Value::Null,
             inventory,
             optimization,
+            &plans,
         ),
         SelectedRun::Extended(run, chunks, slices) => {
-            print_extended(&run, chunks, slices, inventory, optimization)
+            print_extended(&run, chunks, slices, inventory, optimization, &plans)
         }
         SelectedRun::Draft(run) => {
             let report = match host::draft_simulation_report::report(&run) {
@@ -234,6 +291,7 @@ fn print_extended(
     slices: serde_json::Value,
     inventory: Option<serde_json::Value>,
     optimization: Option<serde_json::Value>,
+    plans: &[(&'static str, serde_json::Value)],
 ) -> super::super::Result<ExitCode> {
     let report = match host::draft_simulation_report::report(run) {
         Ok(report) => report,
@@ -254,6 +312,9 @@ fn print_extended(
     }
     if let Some(optimization) = optimization {
         value["optimization"] = optimization;
+    }
+    for (key, section) in plans {
+        value[*key] = section.clone();
     }
     if let Err(error) = core_io::print(&value) {
         return print_failure(&run.failure("serialization", error.to_string()));

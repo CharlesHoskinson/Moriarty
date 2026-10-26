@@ -52,6 +52,12 @@ fn args(source: &str) -> Args {
         reference_slices: None,
         optimization: None,
         native_inventory: false,
+        residualize: None,
+        residual_family: None,
+        residual_size_limit: 64,
+        export_plan: None,
+        export_request: vec![],
+        export_dir: None,
     }
 }
 fn must<T>(value: Result<T, mori_core::sherlock_compile_artifact::CompileFailure>) -> T {
