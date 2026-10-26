@@ -5,6 +5,8 @@ does not mean the source meets the U031/U033 contracts.
 """
 import json
 import io
+import hashlib
+import re
 import subprocess
 import sys
 import types
@@ -14,6 +16,7 @@ COMMIT = "cfbab29c591e5f4aa634952596aee601fffcde1f"
 FIXED_COMMIT = "a824466981168933041fdba85f6a03a94fa1dc93"
 RUST_SOURCE_COMMIT = "8ffed57fc0e0362f928a2f106c4ce660b54440a2"
 RUST_RUN_COMMIT = "abc64975ddaaf825d6488cd89a61f57a4be08869"
+S5_WIRING_COMMIT = "3fabcca1cd34b3fbad2bf8e1a890e8bffba0e1e5"
 
 
 def committed_rust_run_record():
@@ -30,8 +33,43 @@ def committed_rust_run_record():
     path = "crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs"
     assert read(path, RUST_RUN_COMMIT) == read(path, RUST_SOURCE_COMMIT)
     subprocess.run(["git", "merge-base", "--is-ancestor", RUST_SOURCE_COMMIT, RUST_RUN_COMMIT], check=True)
+    trace_path = "qa/sherlock/receipt-traces/20261026T012533Z-U033.log"
+    trace = read(trace_path, S5_WIRING_COMMIT)
+    trace_hash = hashlib.sha256(trace.encode()).hexdigest()
+    assert trace_hash == "a226a8942fde60983d79ad00eb0ee24b6df4fa650a1916b4d8f1d2cbfa387b1f"
+    assert trace == "PASS uireq-033 (1 scenario(s), coverage=primary)\n"
+    current = read(path, S5_WIRING_COMMIT)
+    original = read(path, RUST_SOURCE_COMMIT)
+    functions = ("folded_kinds", "block_value", "dispatch_group", "outcome_value", "snapshot_value",
+                 "execute_residual", "residualize")
+    for name in functions:
+        pattern = rf"^(?:pub )?fn {name}\b.*?^}}"
+        before = re.search(pattern, original, re.M | re.S)
+        after = re.search(pattern, current, re.M | re.S)
+        assert before and after and before.group() == after.group(), name
     return {"record_commit": RUST_RUN_COMMIT, "run": run, "residual_source_unchanged": True,
-            "trace_inspected": False, "rust_executed_by_this_audit": False}
+            "trace_copy_commit": S5_WIRING_COMMIT, "trace_copy_path": trace_path,
+            "trace_copy_sha256": trace_hash, "trace_inspected": True,
+            "unchanged_residual_functions_at_wiring_commit": list(functions),
+            "rust_executed_by_this_audit": False}
+
+
+def committed_export_regression():
+    path = "crates/mori-core/src/sherlock/export_plans.rs"
+
+    def read(commit, file=path):
+        return subprocess.run(["git", "show", f"{commit}:{file}"], check=True,
+                              capture_output=True, text=True).stdout
+
+    assert read(S5_WIRING_COMMIT) == read("b705bfacb")
+    assert read(S5_WIRING_COMMIT) != read("3bb404f15")
+    cli = read(S5_WIRING_COMMIT, "crates/mori/src/commands/simulate_sherlock.rs")
+    assert "host::export_plans::export_plans(" in cli
+    return {"wiring_commit": S5_WIRING_COMMIT, "exporter_identical_to": "b705bfacb",
+            "repaired_exporter_not_included": "3bb404f15", "cli_uses_old_module": True,
+            "counterexample_model": "rustExportClassification.qnt",
+            "counterexample_log": "s5-export-regression-counterexample.log",
+            "rust_executed_by_this_audit": False}
 
 
 def source_module(name, commit=COMMIT):
@@ -121,6 +159,7 @@ def main():
         "fixed_source_unit_tests": fixed_source_tests(),
         "fixed_source_bound_cases": fixed_bound_cases(),
         "committed_rust_run_record": committed_rust_run_record(),
+        "committed_export_regression": committed_export_regression(),
     }
     print(json.dumps(observations, indent=2))
     assert missing == ["R_call"] and not ir["genericFallbacks"]

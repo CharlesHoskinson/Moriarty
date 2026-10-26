@@ -184,6 +184,17 @@ with UInt operands and represents KDisplay values by constructors. It checks
 bindings against the supplied record and independent arithmetic conditions;
 it does not execute Rust, serialize JSON or verify non-multiplication exports.
 
+Source regression at `3fabcca1c`: s5's new CLI selects the core exporter, but
+that module is byte-identical to defective `b705bfacb`, without the later
+`6a6774a0c` / `32fcbce3e` / `3bb404f15` repairs. Its committed U031 trace says
+PASS despite the scope/pending-multiplication misclassification and missing
+value/error bindings. `audit_s5.py` checks that exact module identity and the
+new route. The existing model again violates `belongsToActiveStep` for rule
+195 with `[Scope, RightMul]`; see `s5-export-regression-counterexample.log`.
+This is a source-derived regression finding, reported to s5, s3, the evaluator
+and fable. The correctly repaired consolidated exporter remains at
+`93f61a41c`; the older s5 PASS is not evidence for those repairs.
+
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
 that metadata contract, including the distinction that exiting a generic block
@@ -211,8 +222,11 @@ is claimed by this source correspondence check.
 At `abc64975d`, the owner's committed run record binds `uireq-033` exit 0 to
 the exact `8ffed57fc` source, with 4.344 seconds wall time and 72,998,912 bytes
 peak RSS. `audit_s5.py` verifies that binding, unchanged residual source and
-source-commit ancestry. The ignored trace has not been inspected here; a
-committed copy was requested. The evaluator independently reported the same
+source-commit ancestry. Its committed trace copy at `3fabcca1c` has SHA-256
+`a226a8942fde60983d79ad00eb0ee24b6df4fa650a1916b4d8f1d2cbfa387b1f`
+and says `PASS uireq-033`. The audit also verifies all seven residual functions
+are unchanged at that newer commit, which removes the unused legacy exporter.
+The original ignored trace file was not read. The evaluator independently reported the same
 holdout passing on that source. These are external runtime reports, not Rust
 executions by this worker, and show no residual size or performance improvement.
 
@@ -226,8 +240,7 @@ equal StepRecords, all complete boundary snapshots, reference work 113,
 unchanged host summary and `Done uiU(6)` at fuel 4000/stack 128. Five mutations
 (unknown/wrong producing block, missing exercised successor, changed reference
 record and wrong IR hash) are rejected for the intended reasons. Results and
-both SHA-256 pins are in `u033-observation-audit.json`. The original doctorwatson
-trace remains uninspected; this is a concrete observation audit, not a fresh
+both SHA-256 pins are in `u033-observation-audit.json`. This is a concrete observation audit, not a fresh
 Rust run, complete refinement proof or native/target acceptance test. The two
 large input JSON files remain in the evaluator's external shared directory.
 
