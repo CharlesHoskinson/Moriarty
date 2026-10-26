@@ -159,6 +159,15 @@ structure InstallerCorrect {Whole Frame : Type} (projection : SuspensionProjecti
     projection.referenceCursor (install whole) = projection.referenceCursor whole + charge
   resumeEpoch : projection.resumeEpoch (install whole) = projection.resumeEpoch whole + 1
 
+def resumeEpochModulus : Nat := 2 ^ 64
+
+/-- Header::resume_epoch is UInt64. A successful checked increment must stay
+strictly below its modulus; false/error guards do not attempt that increment. -/
+def resumeEpochHeadroom (epoch : Nat) : Bool := decide (epoch + 1 < resumeEpochModulus)
+
+theorem maximum_epoch_has_no_headroom :
+    resumeEpochHeadroom (resumeEpochModulus - 1) = false := by decide
+
 inductive ResumeResult (Whole Frame : Type) where
   | refused
   | notReady (checkpoint : Suspended Whole Frame) (attemptedWork : Nat)
@@ -206,7 +215,7 @@ theorem unconstrained_installer_can_change_whole_frames :
       frames (acceptResume (fun _ ↦ 1) 0 state).whole ≠
         (acceptResume (fun _ ↦ 1) 0 state).callerFrames := ⟨rfl, by decide⟩
 
-/-- No successor is constructed for malformed requests or insufficient resources.
+/-- No successor is constructed for malformed requests or missing resource/epoch headroom.
 False and error guards return the original complete checkpoint, with attempted work
 reported separately. The install function runs only for an accepted observation. -/
 def resume {Whole Frame : Type} (checks : ObservationChecks) (resources : Bool)
@@ -216,7 +225,33 @@ def resume {Whole Frame : Type} (checks : ObservationChecks) (resources : Bool)
   else match guard with
     | .notReady | .error => .notReady state (1 + guardNodes)
     | .accept =>
-        if resources then .accepted (acceptResume install guardNodes state) else .refused
+        if resources && resumeEpochHeadroom state.resumeEpoch then
+          .accepted (acceptResume install guardNodes state)
+        else .refused
+
+theorem missing_epoch_headroom_refuses_accept {Whole Frame : Type}
+    (checks : ObservationChecks) (resources : Bool) (guardNodes : Nat)
+    (install : Whole → Whole) (state : Suspended Whole Frame)
+    (missing : resumeEpochHeadroom state.resumeEpoch = false) :
+    resume checks resources .accept guardNodes install state = .refused := by
+  simp [resume, missing]
+
+theorem accepted_resume_epoch_bounded {Whole Frame : Type} (install : Whole → Whole)
+    (guardNodes : Nat) (state : Suspended Whole Frame)
+    (headroom : resumeEpochHeadroom state.resumeEpoch = true) :
+    (acceptResume install guardNodes state).resumeEpoch < resumeEpochModulus := by
+  exact of_decide_eq_true headroom
+
+theorem accepted_resume_complete_epoch_bounded {Whole Frame : Type}
+    (projection : SuspensionProjection Whole Frame) (install : Whole → Whole)
+    (guardNodes : Nat) (state : Suspended Whole Frame)
+    (agreement : ProjectionAgrees projection state)
+    (installer : InstallerCorrect projection install (1 + guardNodes) state.whole)
+    (headroom : resumeEpochHeadroom state.resumeEpoch = true) :
+    projection.resumeEpoch (acceptResume install guardNodes state).whole < resumeEpochModulus := by
+  rw [(accepted_resume_projection_agrees projection install guardNodes state agreement
+    installer).resumeEpoch]
+  exact accepted_resume_epoch_bounded install guardNodes state headroom
 
 theorem false_guard_preserves_checkpoint {Whole Frame : Type}
     (checks : ObservationChecks) (resources : Bool) (guardNodes : Nat)

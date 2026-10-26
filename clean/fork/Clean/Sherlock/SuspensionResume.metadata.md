@@ -39,6 +39,16 @@ field stays unchanged. Field-only retention/charge laws therefore cannot certify
 complete-state preservation. Heap, environment, allocation, value and concrete
 Rust correspondence obligations remain separate.
 
+U2's later uncommitted pure/financial drivers now use checked UInt64 resume-epoch
+addition and refuse a ready observation at the maximum epoch. `resume` explicitly
+checks `epoch + 1 < 2^64` on its acceptance path. False/error guards still return
+the unchanged checkpoint without incrementing the epoch. The new field-bound
+theorem needs headroom; the complete-state bound additionally requires
+`ProjectionAgrees` and `InstallerCorrect`. Exact uncommitted source-byte
+observations are recorded separately, with no Rust run or landed-source claim.
+The unrelated unchecked carrier-length addition remains a reported source
+hypothesis; this module does not model or fix that parser.
+
 No financial restore implementation is introduced. Financial prefix, fee-phase,
 failure and exhaustion contracts belong to the sibling FinancialItems work.
 No cryptographic/checkpoint-byte injectivity, C6 resume relation, native proof,
@@ -56,3 +66,7 @@ not run the build. Its sandbox still cannot connect `memcap` to the user scope
 bus; no uncapped build was attempted. A read-only follow-up review confirmed the
 projection gap resolved at the contract-model level, with no further substantive
 issue. That review ran no builds and establishes no concrete Rust correspondence.
+
+**The checked-epoch follow-up has not yet been compiled.** Its source/query pins
+are current; the preceding thirteen-query build is retained as historical
+evidence pending current compilation and axiom checks.
