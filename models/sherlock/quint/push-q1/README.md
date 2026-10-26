@@ -45,8 +45,10 @@ checked against independently specified frame/environment/work expectations.
 ## Imported-checkpoint disagreement
 
 `resumeAdmission.qnt` separates the design's R0 behavior (`contractCheck`) from
-the implementation's validation order (`sourceCheck`, the default step).
-Its four tests record the disagreement and machine-produced-input agreement.
+the implementation's validation order (`sourceCheck`, the default step), and
+includes the financial-route (`XFin`) `SI-29` counterpart (`finAwaitEntryAfterCommitCharge`
+and `finResumeReply`). Its five tests record the pre-fix disagreement,
+machine-produced-input agreement, and both pure and financial `SI-29` remedies.
 `acceptedIsAffordable` holds for the source projection. `matchesContract`
 intentionally fails for the source projection and holds with
 `--step contractCheck`.
@@ -72,7 +74,14 @@ successful in this small projection. Work conservation can remain satisfied
 on such an input by moving fuel to consumed work and the reference cursor;
 checksums are public and do not establish machine reachability. The entry rule
 protects machine-produced Waiting checkpoints. FINDING messages were sent to
-`sherlock-fable` and `sherlock-u2`.
+`sherlock-fable` and `sherlock-u2`. **CONFIRMED FIXED at `factory-u` `815a22d87` (ledger `7efe20196`)**
+(`suspension2.rs:674–676`, `owner_suspend.rs:423–433`, and `stage/sherlock2.rs:319–325,460–469`):
+`suspend::check_resumable` is called at `R0` before `admit_observation` and
+`s.guard.run` on the pure route (matching `--step contractCheck`), and on the
+financial route `remaining_work == 0` exhausts `Fuel` at await entry rather
+than publishing `Waiting` with zero fuel and is refused at `R0` before guard
+evaluation in `fin2::resume` (`sourceCheck` is retained for regression and
+counterexample coverage).
 
 ## Imported epoch overflow
 
@@ -82,26 +91,95 @@ protects machine-produced Waiting checkpoints. FINDING messages were sent to
 otherwise valid imported checkpoint whose epoch is `18446744073709551615`, a
 true guard can cause a panic with overflow checks, or an accepted successor
 whose epoch wraps to zero without them. The model explicitly represents both
-Rust overflow modes; Quint arithmetic itself does not overflow. Six tests
-exercise zero, max-minus-one, max, false guard and a candidate checked increment.
+Rust overflow modes; Quint arithmetic itself does not overflow. Seven tests
+exercise zero, max-minus-one, max, false guard and the committed `R0` refusal +
+checked increment.
 
-`sourceBehavior` is green and witnesses both failure modes. `safeHeader`
-intentionally fails under the default `sourceAccept` step. The candidate
-`--step checkedAccept` refuses an overflowing increment without changing the
-checkpoint and satisfies `safeHeader` in sampled runs. This candidate is a
-proposed remedy, **not a claim that the current design pins an overflow refusal
-stage**. The accepted successor's `epoch = predecessor + 1` is specified in §6.2;
-the current note does not define the maximum-epoch edge case. The source-order
-trace `resumeEpoch-counterexample.itf.json` is not a Rust execution. The finding
-was sent to `sherlock-fable` and `sherlock-u2`.
+`sourceBehavior` is green and witnesses both pre-fix failure modes. `safeHeader`
+intentionally fails under the default pre-fix `sourceAccept` step.
+`--step checkedAccept` refuses `epoch >= MAX_EPOCH` at `R0` before the guard
+and uses checked increment on accept, satisfying `safeHeader` in sampled runs.
+The source-order trace `resumeEpoch-counterexample.itf.json` is not a Rust
+execution. The finding was sent to `sherlock-fable` and `sherlock-u2`.
+**CONFIRMED FIXED at `factory-u` `815a22d87`** (`suspension2.rs:671–673,705–707`
+and `suspension2_fin.rs:228–230,318–320`): `header.resume_epoch == u64::MAX` is
+refused at `R0` before the guard and `checked_add(1)` is used on accept,
+matching `--step checkedAccept`.
 
 The epoch model requires `--backend typescript`: Quint 0.32.0's Rust evaluator
 rejects literals outside the signed Int64 range with QNT600. The ordinary
 continuation/admission models still run on the default Rust evaluator. The
 verification runner records the backend on each command. All simulation runs
-use depth 30; runs with `contractCheck` or `checkedAccept` explicitly select a
+use depth 30; runs with `contractCheck`, `checkedAccept` or `scopedStep` explicitly select a
 non-default step. The imported-input models finish after one API decision;
 short traces there are intentional, rather than protocol deadlocks.
+
+## Await lowering, latent post-resume SI-20 / ScopeF, and spec-level site numbering
+
+`awaitLowering.qnt` projects `draft_source.rs`, `owner_suspend.rs` and
+`owner_runtime.rs` across three U014–U016 lowering and continuation boundaries
+(the first two are **spec-level / latent**, not holdout defects, per
+`sherlock-eval` `d50d2adc4`):
+
+1. **Latent post-resume `SI-20` (`reg.controlOrigin`) violation, U016 technical-cut refusal at `InnerReturn`, and await binder env retention (not CLI-observable)**:
+   - `draft_source::Parser::await_expression` (`draft_source.rs:826–846`) lowers
+     `await L(x: T) when G; E` to an `ExpressionRowC::Let` row (`site.expr`)
+     wrapping continuation body `E` (`site.body != site.expr`).
+   - `owner_suspend::await_enter` (`owner_suspend.rs:416`) intercepts
+     `ControlC::Eval { expr: site.expr }` before `KMachineEvalLet`, so no
+     `ScopeF` frame is pushed.
+   - `owner_suspend::resume_accept` (`owner_suspend.rs:444–491`) extends
+     `img.env_root` with the binder cell(s) and sets
+     `img.control = ControlC::Eval { expr: site.body }` and
+     `img.control_origin = site.body` without pushing
+     `ScopeF { saved_env: caller_env, origin: site.expr }`.
+   - When `site.body` returns (`ControlC::Return`) while `img.frames` is
+     non-empty (`ContextReturnF` such as `InnerReturn` in `10 + inner(3)`, or
+     `ContextRightF` in `10 + (await ...)`), `si20_return_ok`
+     (`owner_runtime.rs:4311–4396`) checks whether `img.control_origin` is in
+     the `If`-branch closure of `expectedChild(top) = site.expr`. Because
+     `si20_return_ok` only closes across `ExpressionRowC::If` branches and not
+     `ExpressionRowC::Let.body`, `si20_return_ok` returns `false` and
+     `owner_check_step_inv` (`owner_runtime.rs:4898–4900`) fails with `SI20`.
+   - Consequently, taking a U016 technical checkpoint (`resume_profile2_checkpoint`
+     or `resume_technical_checkpoint`, which invoke `owner_check_step_inv`) at
+     `InnerReturn` (`AtContextReturn` under `ContextReturnF`) is refused with
+     `ResumeError::StepInvariant(["SI20 ..."])`. Uninterrupted CLI execution via
+     `run_until_halt_or_await` does not invoke `owner_check_step_inv` on
+     intermediate `Return` steps, so this is latent at the CLI boundary unless a
+     post-resume technical checkpoint CLI or unit test is added (`sherlock-eval`
+     `d50d2adc4`).
+   - Furthermore, when the enclosing frame does not carry `saved_env`
+     (`ContextRightF`, `UnaryF`, or top-level `ContextTopEntry`; note that
+     `LeftF`, `LetF`, `IfF`, `MatchF`, `ArgsF` and `ReturnF` do carry `saved_env`
+     and `/2` forbids shadowing binders), omitting `ScopeF` leaves the await
+     binder cell on `img.env_root` at `AfterContext` (`binderLeakedAfterReturn`).
+     Pushing `ScopeF` on `resume_accept` (`--step scopedStep`) satisfies `SI-20`,
+     accepts technical cuts at `InnerReturn`, and restores `CallerEnv` via
+     `KMachineReturnScope`.
+2. **Spec-level sequential `await` post-order site numbering (not a spec violation)**:
+   - In `draft_source::Parser::await_expression` (`draft_source.rs:823–854`),
+     `let body = self.expression(0)?;` recursively parses `body` before
+     `self.awaits.push(...)`, and `draft_source.rs:556–559` assigns 1-based
+     `site` numbers in `self.awaits` push order.
+   - In a sequential chain `await first(a: UInt) when G1; await second(b: UInt) when G2; E`,
+     `second` receives `site = 1` and `first` receives `site = 2`
+     (`reversedSequentialSites`), whereas runtime still suspends in source
+     order by label (`first` at site 2, then `second` at site 1). Design §3.2
+     requires distinct 1-based per-program site numbers without pinning
+     source-order numbering (`sherlock-eval` `d50d2adc4`, verified by `uireq-015`).
+3. **Draft `/2` surface admission gaps**:
+   - `draft_source.rs:681,809` rejects `yield L;` and zero-binder
+     `await L() when G; E`, and `draft_source.rs:1050,1145` records ordinary
+     `Expr::Let` locals with `let_sort = None` in `AwaitScopes::walk` and
+     rejects them in `guard_type` (`surfaceRejectedYieldOrLetLocal`).
+
+The 7 tests in `awaitLowering_test.qnt` cover `InnerReturn` `SI-20` violation
+and technical-cut refusal, `ReturnF` masking of `env_root` after pop, `RightF`
+binder env leak, the `scopedStep` remedy under both `ReturnF` and `RightF`,
+sequential site reversal, and surface `/2` admission. `awaitLowering-counterexample.itf.json`
+records the 4-state `AtAwaitEval -> AtWaiting -> AtBodyEval -> AtContextReturn`
+trace violating `si20AndCutSafety`.
 
 ## Correspondence and limits
 
@@ -111,6 +189,8 @@ short traces there are intentional, rather than protocol deadlocks.
 | U015 atomic resume and retained caller | suspension2::resume_pure; owner_suspend::resume_accept; design §5 | accept, notReady, atomicAccept, continuationResult |
 | U016 transparent technical cut | local owner_resume::resume_technical_checkpoint; sherlock_technical_chunks_positive | cut, checkpointTransparency, cutBeforeAddition |
 | Imported Waiting SI29 | design §4 R0 versus owner_runtime / resume_pure order | resumeAdmission source/contract actions |
+| Imported epoch overflow | Header::get; suspension2::resume_pure; suspension2_fin::resume_fin | resumeEpoch sourceAccept / checkedAccept |
+| Await lowering, SI-20 & ScopeF | draft_source::await_expression; owner_suspend::resume_accept; owner_runtime::si20_return_ok | awaitLowering sourceStep / scopedStep |
 
 Codec bytes, lane widths, native C6 constraints, digest equality with the stock
 verifier, authentication, on-chain single use, arbitrary programs, physical

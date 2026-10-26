@@ -31,9 +31,10 @@ def main() -> int:
         (["quint", "--version"], 0),
         *[(["quint", "typecheck", MODEL + name], 0) for name in (
             "suspensionResume.qnt", "suspensionResume_test.qnt",
-            "resumeAdmission.qnt", "resumeAdmission_test.qnt", "resumeEpoch.qnt", "resumeEpoch_test.qnt")],
+            "resumeAdmission.qnt", "resumeAdmission_test.qnt", "resumeEpoch.qnt", "resumeEpoch_test.qnt",
+            "awaitLowering.qnt", "awaitLowering_test.qnt")],
         *[(["quint", "test", MODEL + name, "--max-samples", "1", "--verbosity", "1"], 0)
-          for name in ("suspensionResume_test.qnt", "resumeAdmission_test.qnt")],
+          for name in ("suspensionResume_test.qnt", "resumeAdmission_test.qnt", "awaitLowering_test.qnt")],
         (["quint", "test", MODEL + "resumeEpoch_test.qnt", "--backend", "typescript",
           "--max-samples", "1", "--verbosity", "1"], 0),
         (["quint", "run", MODEL + "resumeEpoch.qnt", "--invariant", "sourceBehavior",
@@ -56,6 +57,17 @@ def main() -> int:
           "--max-steps", "30", "--max-samples", "100", "--n-threads", "1",
           "--seed", "1", "--verbosity", "2", "--out-itf",
           MODEL + "resumeAdmission-counterexample.itf.json"], 1),
+        (["quint", "run", MODEL + "awaitLowering.qnt", "--invariant", "sourceBehavior",
+          *COMMON_RUN, "--witnesses", "si20ViolatedAtInnerReturn", "technicalCutRefusedAtInnerReturn",
+          "binderLeakedAfterReturn", "reversedSequentialSites", "surfaceRejectedYieldOrLetLocal",
+          "returnFMasksEnvLeakAfterPop"], 0),
+        (["quint", "run", MODEL + "awaitLowering.qnt", "--step", "scopedStep",
+          "--invariant", "contractSafety", *COMMON_RUN, "--witnesses",
+          "scopedCutAcceptedAtInnerReturn", "scopedCleanAfterRightF"], 0),
+        (["quint", "run", MODEL + "awaitLowering.qnt", "--invariant", "si20AndCutSafety",
+          "--max-steps", "30", "--max-samples", "100", "--n-threads", "1",
+          "--seed", "1", "--verbosity", "2", "--out-itf",
+          MODEL + "awaitLowering-counterexample.itf.json"], 1),
     ]
     for command, expected in cases:
         started = time.monotonic()
@@ -70,8 +82,8 @@ def main() -> int:
         if expected == 1:
             valid = valid and "Invariant violated" in process.stdout
         elif "test" in command:
-            expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 4,
-                              "resumeEpoch_test.qnt": 6}[Path(command[2]).name]
+            expected_count = {"suspensionResume_test.qnt": 30, "resumeAdmission_test.qnt": 5,
+                              "resumeEpoch_test.qnt": 7, "awaitLowering_test.qnt": 7}[Path(command[2]).name]
             valid = valid and f"{expected_count} passing" in process.stdout
         elif "--witnesses" in command:
             names = command[command.index("--witnesses") + 1:]
@@ -97,9 +109,18 @@ def main() -> int:
         ROOT / "crates/mori-core/tests/sherlock_technical_chunks_positive.rs",
     ]
     owner = Path.home() / "repos/Moriarty-wt-factory-u"
+    owner_head = subprocess.run(
+        ["git", "-C", str(owner), "rev-parse", "--short", "HEAD"],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
+    ).stdout.strip()
+    sources += [
+        owner / "docs/sherlock/design/suspension-and-finance.md",
+        owner / "crates/mori-core/src/stage/sherlock2.rs",
+    ]
     sources += [owner / "crates/mori-core/src/sherlock" / name for name in (
         "compile_artifact/suspension2.rs",
         "compile_artifact/suspension2_fin.rs",
+        "draft_source.rs",
         "helper_machine/shared/owner_suspend.rs",
         "helper_machine/shared/owner_resume.rs",
         "helper_machine/shared/owner_runtime.rs",
@@ -109,6 +130,7 @@ def main() -> int:
     (HERE / "verification.log").write_text("\n".join(log))
     (HERE / "verification-results.json").write_text(json.dumps(
         {"status": "passed" if len(results) == len(cases) and all(r["passed"] for r in results) else "failed",
+         "factoryUHead": owner_head,
          "checks": results, "sourceSha256": hashes,
          "scope": "Sampled abstract models; source projection is not a Rust execution or refinement proof."},
         indent=2) + "\n")

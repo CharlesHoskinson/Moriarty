@@ -1,31 +1,39 @@
 $ quint --version
 0.32.0
 
-exit=0 wall=0.149s
+exit=0 wall=0.195s
 
 $ quint typecheck models/sherlock/quint/push-q1/suspensionResume.qnt
 
-exit=0 wall=0.639s
+exit=0 wall=0.725s
 
 $ quint typecheck models/sherlock/quint/push-q1/suspensionResume_test.qnt
 
-exit=0 wall=0.86s
+exit=0 wall=0.996s
 
 $ quint typecheck models/sherlock/quint/push-q1/resumeAdmission.qnt
 
-exit=0 wall=0.298s
+exit=0 wall=0.331s
 
 $ quint typecheck models/sherlock/quint/push-q1/resumeAdmission_test.qnt
 
-exit=0 wall=0.379s
+exit=0 wall=0.397s
 
 $ quint typecheck models/sherlock/quint/push-q1/resumeEpoch.qnt
 
-exit=0 wall=0.356s
+exit=0 wall=0.404s
 
 $ quint typecheck models/sherlock/quint/push-q1/resumeEpoch_test.qnt
 
-exit=0 wall=0.345s
+exit=0 wall=0.431s
+
+$ quint typecheck models/sherlock/quint/push-q1/awaitLowering.qnt
+
+exit=0 wall=0.464s
+
+$ quint typecheck models/sherlock/quint/push-q1/awaitLowering_test.qnt
+
+exit=0 wall=0.511s
 
 $ quint test models/sherlock/quint/push-q1/suspensionResume_test.qnt --max-samples 1 --verbosity 1
 
@@ -61,9 +69,9 @@ $ quint test models/sherlock/quint/push-q1/suspensionResume_test.qnt --max-sampl
     ok lostLexicalContextDetectedTest passed 1 test(s)
     ok replenishedFuelDetectedTest passed 1 test(s)
 
-  30 passing (917ms)
+  30 passing (1100ms)
 
-exit=0 wall=1.77s
+exit=0 wall=2.165s
 
 $ quint test models/sherlock/quint/push-q1/resumeAdmission_test.qnt --max-samples 1 --verbosity 1
 
@@ -72,10 +80,26 @@ $ quint test models/sherlock/quint/push-q1/resumeAdmission_test.qnt --max-sample
     ok trueGuardChecksSI29TooLateTest passed 1 test(s)
     ok machineProducedCheckpointAgreementTest passed 1 test(s)
     ok contractRejectsAllStarvedInputsTest passed 1 test(s)
+    ok finSI29AwaitEntryAndR0ResumeTest passed 1 test(s)
 
-  4 passing (30ms)
+  5 passing (49ms)
 
-exit=0 wall=0.359s
+exit=0 wall=0.459s
+
+$ quint test models/sherlock/quint/push-q1/awaitLowering_test.qnt --max-samples 1 --verbosity 1
+
+  awaitLowering_test
+    ok sourceInnerReturnViolatesSI20AndRefusesCutTest passed 1 test(s)
+    ok sourceReturnFPopRestoresOuterEnvAfterSI20ViolationTest passed 1 test(s)
+    ok sourceRightFLeaksBinderEnvAndViolatesSI20Test passed 1 test(s)
+    ok scopedRemedySatisfiesSI20AndAcceptsInnerReturnCutTest passed 1 test(s)
+    ok scopedRemedyRestoresCallerEnvUnderRightFTest passed 1 test(s)
+    ok sourceSequentialAwaitReversesSiteNumbersTest passed 1 test(s)
+    ok sourceSurfaceRejectsZeroBinderAndLetLocalGuardTest passed 1 test(s)
+
+  7 passing (97ms)
+
+exit=0 wall=0.642s
 
 $ quint test models/sherlock/quint/push-q1/resumeEpoch_test.qnt --backend typescript --max-samples 1 --verbosity 1
 
@@ -86,13 +110,14 @@ $ quint test models/sherlock/quint/push-q1/resumeEpoch_test.qnt --backend typesc
     ok sourceUncheckedOverflowWrapsTest passed 1 test(s)
     ok falseGuardPreservesMaximumEpochTest passed 1 test(s)
     ok candidateCheckedIncrementRefusesTest passed 1 test(s)
+    ok committedR0RefusesMaxEpochBeforeFalseGuardTest passed 1 test(s)
 
-  6 passing (6ms)
+  7 passing (9ms)
 
-exit=0 wall=0.353s
+exit=0 wall=0.416s
 
 $ quint run models/sherlock/quint/push-q1/resumeEpoch.qnt --invariant sourceBehavior --backend typescript --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses wrapped panicked acceptedWithoutOverflow notReady
-[ok] No violation found (482ms at 20747 traces/second).
+[ok] No violation found (571ms at 17513 traces/second).
 Witnesses:
 wrapped was witnessed in 870 trace(s) out of 10000 explored (8.70%)
 panicked was witnessed in 818 trace(s) out of 10000 explored (8.18%)
@@ -100,17 +125,17 @@ acceptedWithoutOverflow was witnessed in 3412 trace(s) out of 10000 explored (34
 notReady was witnessed in 4900 trace(s) out of 10000 explored (49.00%)
 Use --seed=0x1562ac --backend=typescript to reproduce.
 
-exit=0 wall=0.844s
+exit=0 wall=0.966s
 
 $ quint run models/sherlock/quint/push-q1/resumeEpoch.qnt --step checkedAccept --invariant safeHeader --backend typescript --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses refusedOverflow acceptedWithoutOverflow notReady
-[ok] No violation found (449ms at 22272 traces/second).
+[ok] No violation found (536ms at 18657 traces/second).
 Witnesses:
-refusedOverflow was witnessed in 1688 trace(s) out of 10000 explored (16.88%)
+refusedOverflow was witnessed in 3363 trace(s) out of 10000 explored (33.63%)
 acceptedWithoutOverflow was witnessed in 3412 trace(s) out of 10000 explored (34.12%)
-notReady was witnessed in 4900 trace(s) out of 10000 explored (49.00%)
+notReady was witnessed in 3225 trace(s) out of 10000 explored (32.25%)
 Use --seed=0x1562ac --backend=typescript to reproduce.
 
-exit=0 wall=0.778s
+exit=0 wall=0.939s
 
 $ quint run models/sherlock/quint/push-q1/resumeEpoch.qnt --invariant safeHeader --backend typescript --max-steps 30 --max-samples 100 --seed 1 --verbosity 2 --out-itf models/sherlock/quint/push-q1/resumeEpoch-counterexample.itf.json
 An example execution:
@@ -137,14 +162,14 @@ An example execution:
     }
 }
 
-[violation] Found an issue (8ms at 1000 traces/second).
+[violation] Found an issue (9ms at 889 traces/second).
 Use --verbosity=3 to show executions.
 error: Invariant violated
 
-exit=1 wall=0.337s
+exit=1 wall=0.406s
 
 $ quint run models/sherlock/quint/push-q1/suspensionResume.qnt --invariant safety --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses entered accepted rejected refused cutReached bodyReturned calleeReturned added callerReturned published exhausted cutBeforeAddition
-[ok] No violation found (3621ms at 2762 traces/second).
+[ok] No violation found (3971ms at 2518 traces/second).
 Witnesses:
 entered was witnessed in 10000 trace(s) out of 10000 explored (100.00%)
 accepted was witnessed in 1297 trace(s) out of 10000 explored (12.97%)
@@ -160,22 +185,22 @@ exhausted was witnessed in 9107 trace(s) out of 10000 explored (91.07%)
 cutBeforeAddition was witnessed in 243 trace(s) out of 10000 explored (2.43%)
 Use --seed=0x35e227 --backend=rust to reproduce.
 
-exit=0 wall=4.277s
+exit=0 wall=4.753s
 
 $ quint run models/sherlock/quint/push-q1/resumeAdmission.qnt --invariant acceptedIsAffordable --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses notReadyOnUnresumable lateResourceFailure
-[ok] No violation found (179ms at 55866 traces/second).
+[ok] No violation found (194ms at 51546 traces/second).
 Witnesses:
 notReadyOnUnresumable was witnessed in 4436 trace(s) out of 10000 explored (44.36%)
 lateResourceFailure was witnessed in 4379 trace(s) out of 10000 explored (43.79%)
 Use --seed=0x15fee8 --backend=rust to reproduce.
 
-exit=0 wall=0.461s
+exit=0 wall=0.53s
 
 $ quint run models/sherlock/quint/push-q1/resumeAdmission.qnt --step contractCheck --invariant matchesContract --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1
-[ok] No violation found (179ms at 55866 traces/second).
+[ok] No violation found (200ms at 50000 traces/second).
 Use --seed=0x15fee8 --backend=rust to reproduce.
 
-exit=0 wall=0.483s
+exit=0 wall=0.537s
 
 $ quint run models/sherlock/quint/push-q1/resumeAdmission.qnt --invariant matchesContract --max-steps 30 --max-samples 100 --n-threads 1 --seed 1 --verbosity 2 --out-itf models/sherlock/quint/push-q1/resumeAdmission-counterexample.itf.json
 An example execution:
@@ -192,8 +217,115 @@ An example execution:
   reply: NotReady
 }
 
-[violation] Found an issue (12ms at 83 traces/second).
+[violation] Found an issue (13ms at 77 traces/second).
 Use --verbosity=3 to show executions.
 error: Invariant violated
 
-exit=1 wall=0.294s
+exit=1 wall=0.356s
+
+$ quint run models/sherlock/quint/push-q1/awaitLowering.qnt --invariant sourceBehavior --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses si20ViolatedAtInnerReturn technicalCutRefusedAtInnerReturn binderLeakedAfterReturn reversedSequentialSites surfaceRejectedYieldOrLetLocal returnFMasksEnvLeakAfterPop
+[ok] No violation found (1240ms at 8065 traces/second).
+Witnesses:
+si20ViolatedAtInnerReturn was witnessed in 3333 trace(s) out of 10000 explored (33.33%)
+technicalCutRefusedAtInnerReturn was witnessed in 1710 trace(s) out of 10000 explored (17.10%)
+binderLeakedAfterReturn was witnessed in 6667 trace(s) out of 10000 explored (66.67%)
+reversedSequentialSites was witnessed in 5009 trace(s) out of 10000 explored (50.09%)
+surfaceRejectedYieldOrLetLocal was witnessed in 6648 trace(s) out of 10000 explored (66.48%)
+returnFMasksEnvLeakAfterPop was witnessed in 3333 trace(s) out of 10000 explored (33.33%)
+Use --seed=0x317574 --backend=rust to reproduce.
+
+exit=0 wall=1.739s
+
+$ quint run models/sherlock/quint/push-q1/awaitLowering.qnt --step scopedStep --invariant contractSafety --max-steps 30 --max-samples 10000 --n-threads 2 --seed 1401516 --verbosity 1 --witnesses scopedCutAcceptedAtInnerReturn scopedCleanAfterRightF
+[ok] No violation found (1293ms at 7734 traces/second).
+Witnesses:
+scopedCutAcceptedAtInnerReturn was witnessed in 1607 trace(s) out of 10000 explored (16.07%)
+scopedCleanAfterRightF was witnessed in 3397 trace(s) out of 10000 explored (33.97%)
+Use --seed=0x360936 --backend=rust to reproduce.
+
+exit=0 wall=1.753s
+
+$ quint run models/sherlock/quint/push-q1/awaitLowering.qnt --invariant si20AndCutSafety --max-steps 30 --max-samples 100 --n-threads 1 --seed 1 --verbosity 2 --out-itf models/sherlock/quint/push-q1/awaitLowering-counterexample.itf.json
+An example execution:
+
+[State 0]
+{
+  state:
+    {
+      binderCount: 1,
+      chainedAwait: true,
+      context: ContextRightF,
+      controlOrigin: SiteExprLet,
+      cutReply: CutNotAttempted,
+      envRoot: CallerEnv,
+      firstSite: 1,
+      guardUsesLetLocal: false,
+      hasScopeF: false,
+      phase: AtAwaitEval,
+      secondSite: 2,
+      surfaceAdmitted: true
+    }
+}
+
+[State 1]
+{
+  state:
+    {
+      binderCount: 1,
+      chainedAwait: true,
+      context: ContextRightF,
+      controlOrigin: SiteExprLet,
+      cutReply: CutNotAttempted,
+      envRoot: CallerEnv,
+      firstSite: 2,
+      guardUsesLetLocal: false,
+      hasScopeF: false,
+      phase: AtWaiting,
+      secondSite: 1,
+      surfaceAdmitted: true
+    }
+}
+
+[State 2]
+{
+  state:
+    {
+      binderCount: 1,
+      chainedAwait: true,
+      context: ContextRightF,
+      controlOrigin: SiteBody,
+      cutReply: CutNotAttempted,
+      envRoot: BinderEnv,
+      firstSite: 2,
+      guardUsesLetLocal: false,
+      hasScopeF: false,
+      phase: AtBodyEval,
+      secondSite: 1,
+      surfaceAdmitted: true
+    }
+}
+
+[State 3]
+{
+  state:
+    {
+      binderCount: 1,
+      chainedAwait: true,
+      context: ContextRightF,
+      controlOrigin: SiteBody,
+      cutReply: CutNotAttempted,
+      envRoot: BinderEnv,
+      firstSite: 2,
+      guardUsesLetLocal: false,
+      hasScopeF: false,
+      phase: AtContextReturn,
+      secondSite: 1,
+      surfaceAdmitted: true
+    }
+}
+
+[violation] Found an issue (17ms at 59 traces/second).
+Use --verbosity=3 to show executions.
+error: Invariant violated
+
+exit=1 wall=0.539s

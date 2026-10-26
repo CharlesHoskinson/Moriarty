@@ -11,10 +11,22 @@ module resumeAdmission {
   pure def resumable(c: Checkpoint): bool =
     c.remaining >= 6 and c.dataSpare >= 1 and c.envSpare >= 1
   // The design's R0 includes SI29, before evaluating the observation guard.
+  // Committed factory-u 815a22d87 (suspension2.rs:674-676, owner_suspend.rs:423-433)
+  // calls suspend::check_resumable before admit_observation and s.guard.run, matching contractReply.
   pure def contractReply(c: Checkpoint): Reply =
     if (not(resumable(c))) R0 else if (c.guardTrue) Accepted else NotReady
-  // Source: resume_profile2_checkpoint checks owner_runtime SI01-SI24/SI27;
-  // the first SI29 resource check is resume_accept, AFTER the false-guard return.
+  // Financial route (XFin) SI-29 counterpart in stage/sherlock2.rs:319-325,460-469 (815a22d87):
+  // - At await entry (after the 1-unit commit-point charge), remaining_work == 0 exhausts Fuel
+  //   rather than publishing Waiting with 0 fuel.
+  // - At fin2::resume (460-469), remaining_work == 0 is refused at R0 before guard evaluation.
+  type FinAwaitEntry = FinFuelExhausted | FinWaiting(int)
+  pure def finAwaitEntryAfterCommitCharge(remainingAfterCommit: int): FinAwaitEntry =
+    if (remainingAfterCommit <= 0) FinFuelExhausted else FinWaiting(remainingAfterCommit)
+  pure def finResumeReply(remainingWork: int, guardTrue: bool): Reply =
+    if (remainingWork <= 0) R0 else if (guardTrue) Accepted else NotReady
+  // Pre-815a22d87 source projection (retained for regression/counterexample coverage):
+  // resume_profile2_checkpoint checked owner_runtime SI01-SI24/SI27, and the first
+  // SI29 resource check was resume_accept, AFTER the false-guard return.
   pure def sourceReply(c: Checkpoint): Reply =
     if (not(c.guardTrue)) NotReady else if (not(resumable(c))) RunFailure else Accepted
   action init: bool = {

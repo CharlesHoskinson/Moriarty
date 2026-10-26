@@ -12,4 +12,6 @@ module resumeEpoch_test {
     .expect(state.header == {epoch: MAX_EPOCH, reply: NotReady} and safeHeader)
   run candidateCheckedIncrementRefusesTest = initWith(MAX_EPOCH, true, false).then(checkedAccept)
     .expect(state.header == {epoch: MAX_EPOCH, reply: Refused} and safeHeader)
+  run committedR0RefusesMaxEpochBeforeFalseGuardTest = initWith(MAX_EPOCH, false, true).then(checkedAccept)
+    .expect(state.header == {epoch: MAX_EPOCH, reply: Refused} and safeHeader)
 }

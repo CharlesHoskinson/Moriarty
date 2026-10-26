@@ -11,7 +11,8 @@ module resumeEpoch {
     else if (overflowChecks) {epoch: epoch, reply: Panic}
     else {epoch: 0, reply: Accepted}
   // Candidate remedy leaves the input checkpoint intact and refuses overflow.
-  // Refusal stage is deliberately unspecified: the current design does not pin it.
+  // Committed factory-u 815a22d87 (suspension2.rs:671-673,705-707; suspension2_fin.rs:228-230,318-320)
+  // refuses header.resume_epoch == u64::MAX at R0 before the guard and uses checked_add(1) on accept.
   pure def checkedIncrement(epoch: int): Header =
     if (epoch < MAX_EPOCH) {epoch: epoch + 1, reply: Accepted}
     else {epoch: epoch, reply: Refused}
@@ -19,7 +20,8 @@ module resumeEpoch {
     if (s.guardTrue) sourceIncrement(s.before, s.overflowChecks)
     else {epoch: s.before, reply: NotReady}
   pure def checkedResult(s: State): Header =
-    if (s.guardTrue) checkedIncrement(s.before)
+    if (s.before >= MAX_EPOCH) {epoch: s.before, reply: Refused}
+    else if (s.guardTrue) checkedIncrement(s.before)
     else {epoch: s.before, reply: NotReady}
   var state: State
   action initWith(epoch: int, ready: bool, checks: bool): bool =

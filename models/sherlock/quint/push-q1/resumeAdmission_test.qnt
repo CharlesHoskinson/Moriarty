@@ -16,4 +16,12 @@ module resumeAdmission_test {
       val c = {remaining: f, dataSpare: d, envSpare: e, guardTrue: false}
       resumable(c) or contractReply(c) == R0
     }))))
+  run finSI29AwaitEntryAndR0ResumeTest = init.expect(
+    finAwaitEntryAfterCommitCharge(0) == FinFuelExhausted
+      and finAwaitEntryAfterCommitCharge(1) == FinWaiting(1)
+      and finResumeReply(0, false) == R0
+      and finResumeReply(0, true) == R0
+      and finResumeReply(1, false) == NotReady
+      and finResumeReply(1, true) == Accepted
+  )
 }
