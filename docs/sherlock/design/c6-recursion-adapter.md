@@ -1,0 +1,114 @@
+# U023 recursion adapter: C6 leaf as a Sherlock decider child (design, s8)
+
+Status: DRAFT for c4 / sherlock-gpr / sherlock-fable OK before merge. Code is
+drafted on `sherlock-s8` (uncommitted) and will not be committed until this
+design is OK'd. Ledger 9, the node, the Midnight SDK and the proof server do
+not change.
+
+## Problem
+
+The recursion chain today is fixed: `sherlock_child.rs` proves one A102
+(Eval Literal -> Return) transition, `sherlock_link.rs` adds one A80
+(Return -> StepDone) child, `mori-recursion` `parent.rs` verifies that pair
+in circuit, and `decider.rs` verifies the parent (W) and pairs the collapsed
+accumulator. No C6 code feeds this chain, so a general compiled program —
+whose steps are C6 fragments — cannot recurse.
+
+## Child relation
+
+One C6 step fragment, realized through the existing `c6_step_harness`
+LocalPublic shape: unguarded Native public inputs (enable, host schema,
+carrier version, then pre/post META/PROG/CTX/IMAGE/DATA/HELPER lanes), each
+published, no raw inputs, no communications commitment. The rule is a
+build-time constant (`rule_id`, e.g. `AppendHelper`); one circuit per rule,
+as in the existing C6 consumers.
+
+## Adapter (following the A102 pattern)
+
+New producer `crates/mori-backend/src/sherlock_c6_child.rs`:
+
+1. Claim (`moriarty-sherlock-c6-poseidon-child/1`): rule id, statement lane
+   count, SHA-256 of the statement lanes, ZKIR hash, adapter-source hash,
+   circuit k. Binding is the A102 construction (domain-separated claim hash
+   as low128 + 2^128 * high128) under a C6-distinct domain, so C6 and A102
+   bindings never collide.
+2. Instance: binding lane followed by the complete statement. Nothing is
+   truncated or digested.
+3. Witness: the checked `child_witness` `Preprocessed` carrier after the
+   SDK nonproving `ProofPreimage::check` under the real binding — the same
+   carrier the A102 child uses.
+4. Key/prove/verify: reconstructed key only (`setup_vk` from the pinned
+   SRS, byte round-trip checked, never a supplied key), stdlib `prove` /
+   `verify` under `PoseidonState<Fq>` (`ChildTranscript`), self-verify after
+   proving, proof capped at 262144 bytes.
+
+One non-obvious step: the SDK groups consecutive public inputs into a
+single `pi_skips` entry, while the carrier is per lane (the A102 producer
+allocates each input followed by its own publication). The harness instead
+allocates all inputs and publishes them jointly. The adapter therefore
+re-emits the relation in A102 allocation order — each public input followed
+by its own unconditional publication, all other instructions after —
+checking first that the joint publication names exactly the assigned inputs
+in order. Definitions still precede every use; semantics are unchanged.
+
+Export is `RecursionChildInput` (VK SHA-256, instance lane count, instance
+hex, proof length): the byte shape `mori_recursion::child::SherlockChild::
+from_bytes` imports against an independently pinned key digest. A consumer
+pins the digest by its own key reconstruction; the export never pins itself.
+
+## Digest statement (gpr G4 interface, agreed 2026-10-26)
+
+The raw-lane instance above does not scale: the draft-config carrier is
+~35k lanes per side against the child cap of 2^14. The leaf therefore
+exposes digests, not lanes. Carriers are private (`PrivateInput`); the
+fragment body is unchanged; the public statement is exactly the five lanes
+`[prog_d, pre_d, post_d, rule_id, h_pre]` the node consumes. `prog_d` is
+Poseidon over the program lanes; each state digest is
+`Poseidon(dom("SHK_SD"), outcome_tag, outcome_value, lanes_d)` with
+`lanes_d` the Poseidon over all carrier lanes of that state, tag 0 =
+running (value 0) and tag 1 = halted with the u128 result. Digests are the
+in-circuit `TransientHash`, confirmed identical to the `PoseidonChip`
+`HashCPU` Poseidon the node recomputes. `rule_id` is the low 128 bits of
+SHA-256 of the rule name. The ZKIR circuit pushes the binding as its
+first public input (as for A102), so the proved instance is the binding
+followed by the five lanes; the exported `leaf.instance.json` carries the
+five statement lanes. Entry points:
+`c6_child_relation(ir, sections)`, `prove_c6_child(...)`,
+`verify_c6_child(...)` in `sherlock_c6_child.rs`. gpr's node relation (G6)
+consumes the five public lanes. A tight committed qualification host config
+(frames/data/env/value_slots in the tens) is required before a real
+fragment leaf can be keyed; caps are being frozen with gpr.
+
+## How a C6 proof becomes a decider child
+
+leaf (this adapter) -> parent -> decider. The decider is unchanged: it
+verifies W and pairs the collapsed accumulator. The missing piece is the
+parent: today it pins the A102/A80 keys, contexts and lane shape. A C6 leaf
+reaches the decider only once a reviewed parent carries a C6 slot — pinned
+C6 VK digest, C6 context, and lane constraints tying the C6 pre/post lanes
+into the chain (the analogue of `A102.post == A80.pre`). Proposed split:
+s8 owns the child producer + export (this design); s4 owns the decider-side
+acceptance (parent C6 slot + tests). Until that parent lands, the adapter
+claims only a well-formed leaf and its export shape, stated as open
+obligations in the code.
+
+## Test plan
+
+- Light (done in draft, no SRS): claim/binding/instance layout; binding
+  binds rule and statement (mutation changes both); witness carrier accepted;
+  empty statement and private/guarded-input relations refused.
+  `cargo test -p mori-backend --test sherlock_c6_child` (3 tests).
+- Heavy M2 (done, light-2 lane, SRS `~/.cache/midnight/zk-params`): a
+  `sherlock_linked_children`-style test proves one C6-shaped digest leaf
+  (96 private lanes, sections 32/32/32), verifies it independently through
+  reconstruction, and refuses a mutated proof: k=13, proof 3824 bytes,
+  prove 2.55 s, whole test 6.71 s. A real fragment leaf under the tight
+  qualification caps, the universal gated leaf, and node/decider
+  consumption remain open. Two synthesis facts were learned: in-circuit
+  Poseidon accepts only a few inputs per `TransientHash`, so digests are
+  arity-4 hash trees (the node must use the same tree); and public lanes
+  are read from witness memory and the binding is always public input 0.
+- Risks: circuit k and row counts for a full C6 statement are unmeasured;
+  crate-graph byte compatibility (producer midnight-proofs 0.8.3 versus the
+  consumer graph) is unestablished, as for the A102 child. Prove/verify are
+  UNOBSERVED until the heavy run.
