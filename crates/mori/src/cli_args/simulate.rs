@@ -87,6 +87,26 @@ pub struct Args {
     /// the rules this run actually exercises (description only; no proof)
     #[arg(long, requires = "execution_profile")]
     pub native_inventory: bool,
+    /// UIREQ-033: bounded static residualization of the K-A reference step
+    /// (universal, family or per-program) with its executed realization
+    #[arg(long, value_name = "MODE", requires = "execution_profile")]
+    pub residualize: Option<String>,
+    /// Family for `--residualize family`: Schedule|Scalar|CallBind|FrameReturn|DataMatch
+    #[arg(long, value_name = "FAMILY", requires = "residualize")]
+    pub residual_family: Option<String>,
+    /// Residual block limit; beyond it rules use generic dispatch
+    #[arg(long, value_name = "N", requires = "residualize", default_value_t = 64)]
+    pub residual_size_limit: usize,
+    /// UIREQ-031: separate ConstraintPlan/WitnessPlan for 1-based reference record E
+    #[arg(long, value_name = "E", requires = "execution_profile")]
+    pub export_plan: Option<usize>,
+    /// Export requested for the plan (repeatable): constraint-json, structured-witness,
+    /// native-witness-closure, lookup, interaction, custom-gate
+    #[arg(long, value_name = "CAP", requires = "export_plan")]
+    pub export_request: Vec<String>,
+    /// Directory receiving emitted export artifacts
+    #[arg(long, value_name = "DIR", requires = "export_plan")]
+    pub export_dir: Option<PathBuf>,
 }
 fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
     serde_json::from_value(serde_json::Value::String(value.into()))
