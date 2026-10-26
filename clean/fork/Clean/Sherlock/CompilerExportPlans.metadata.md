@@ -87,6 +87,10 @@ queries passed the coordinator's targeted build 17 (three jobs) and appear in
 the successful full-package build 18 (twenty-one jobs). Eleven query sets are
 empty and sixteen contain only `propext`. The agent read the complete log and
 verified exact current/committed source hashes against `8a341afd3`; it ran neither
-build. The latest log contains no wrapper/cap/lock receipt. Confirmation of the
-required 48G cap and full-build `heavy.lock` participation remains pending;
-the recorded observation establishes the kernel result, not that run-policy detail.
+build. The coordinator subsequently confirmed the exact command `memcap 48G lake build`
+in `clean/fork`, with neither `heavy.lock` nor a light lane held. The 48G cap was
+reported; the full-build lock required by this agent's direct assignment and
+the package README was not held. The coordinator interpreted COMMON's rule as
+cargo-only; that does not satisfy the more specific full-Lake-build instruction.
+The recorded observation establishes the kernel result, not compliance with
+that required run policy. This discrepancy was reported as a blocker.
