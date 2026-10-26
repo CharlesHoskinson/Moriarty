@@ -82,6 +82,11 @@ names LeftF explicitly and states that rule 149 through LeftF(Mul) classifies
 as ArenaRead, while rule 195 through ScopeF above a pending RightF(Mul)
 classifies as ScopeRestore. The holdout forbids CheckedU128 operations there;
 these exact primary labels follow the current source rather than a stronger
-requirement added to the holdout. **The two new statements are pending kernel
-checking.** Current source/query pins contain twenty-seven statements; the
-previous twenty-five-statement build does not certify the changed Lean bytes.
+requirement added to the holdout. The current twenty-seven statements and exact
+queries passed the coordinator's targeted build 17 (three jobs) and appear in
+the successful full-package build 18 (twenty-one jobs). Eleven query sets are
+empty and sixteen contain only `propext`. The agent read the complete log and
+verified exact current/committed source hashes against `8a341afd3`; it ran neither
+build. The latest log contains no wrapper/cap/lock receipt. Confirmation of the
+required 48G cap and full-build `heavy.lock` participation remains pending;
+the recorded observation establishes the kernel result, not that run-policy detail.
