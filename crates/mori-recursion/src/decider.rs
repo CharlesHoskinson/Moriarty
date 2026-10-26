@@ -120,6 +120,9 @@ impl DeciderRelation {
         if bool::from(self.s_g2.is_identity()) {
             return Err(io::Error::other("s_g2 is the identity"));
         }
+        if self.template.has_values() {
+            return Err(io::Error::other("value slots belong to the run decider"));
+        }
         if self.comm_binding == CommBinding::BoundPoseidonStmtV1
             && self.template.slots.get(1) != Some(&Slot::CommunicationCommitment)
         {
@@ -249,6 +252,9 @@ impl Relation for DeciderRelation {
                 }
                 Slot::Const(c) => std.assign_fixed(l, *c)?,
                 Slot::Stmt => stmt.clone(),
+                Slot::Value(_) => {
+                    return Err(Error::Synthesis("value slot in the parent decider".into()));
+                }
             };
             if let (Slot::CommunicationCommitment, Some(want)) = (slot, &cc_bound) {
                 std.assert_equal(l, &x, want)?;

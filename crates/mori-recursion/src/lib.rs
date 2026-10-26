@@ -8,11 +8,14 @@ pub mod child;
 pub mod decider;
 pub mod flat;
 pub mod inner;
+pub mod ivc;
 pub mod pairing;
 pub mod parent;
 pub mod reference;
 #[cfg(feature = "sherlock-rollup")]
 pub mod rollup;
+pub mod run_decider;
+pub mod standin;
 pub mod template;
 pub mod tower;
 pub mod util;

@@ -85,6 +85,19 @@ pub fn prepare_offcircuit(
     proof: &[u8],
     carried: bool,
 ) -> Result<Accumulator<S>, String> {
+    prepare_offcircuit_with(vk, name, instance, proof, carried, true)
+}
+
+/// As `prepare_offcircuit`, optionally leaving the (resolved) accumulator uncollapsed,
+/// mirroring `verify_child_incircuit_with(.., collapse = false)`.
+pub fn prepare_offcircuit_with(
+    vk: &MidnightVK,
+    name: &str,
+    instance: &[F],
+    proof: &[u8],
+    carried: bool,
+    collapse: bool,
+) -> Result<Accumulator<S>, String> {
     let bases = fixed_bases::<S>(name, vk.vk());
     let mut tr = CircuitTranscript::<PoseidonState<F>>::init_from_bytes(proof);
     let dual =
@@ -104,7 +117,9 @@ pub fn prepare_offcircuit(
         own
     };
     acc.resolve_fixed_bases(&bases);
-    acc.collapse();
+    if collapse {
+        acc.collapse();
+    }
     Ok(acc)
 }
 
@@ -137,6 +152,22 @@ pub fn verify_child_incircuit(
     instance: &[AssignedNative<F>],
     proof: Value<Vec<u8>>,
     carried: bool,
+) -> Result<AssignedAccumulator<S>, Error> {
+    verify_child_incircuit_with(std, l, vk, name, instance, proof, carried, true)
+}
+
+/// As `verify_child_incircuit`, optionally leaving the resolved accumulator uncollapsed so a
+/// caller can fold it with others and collapse once (one shared MSM).
+#[allow(clippy::too_many_arguments)]
+pub fn verify_child_incircuit_with(
+    std: &ZkStdLib,
+    l: &mut impl Layouter<F>,
+    vk: &MidnightVK,
+    name: &str,
+    instance: &[AssignedNative<F>],
+    proof: Value<Vec<u8>>,
+    carried: bool,
+    collapse: bool,
 ) -> Result<AssignedAccumulator<S>, Error> {
     let verifier = std.verifier();
     let bls = std.bls12_381();
@@ -174,7 +205,9 @@ pub fn verify_child_incircuit(
         own
     };
     acc.resolve_fixed_bases(&assigned_bases);
-    acc.collapse(l, bls, bls.scalar_field_chip())?;
+    if collapse {
+        acc.collapse(l, bls, bls.scalar_field_chip())?;
+    }
     Ok(acc)
 }
 
