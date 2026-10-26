@@ -641,9 +641,12 @@ impl<'a> Emitter<'a> {
         nxt.rem = self.sel(done, dec, nxt.rem.clone());
     }
     fn used_from_hold(&mut self, org: &Regs, table: &[u128]) -> Operand {
+        self.used_from_operand(org.hold.clone(), table)
+    }
+    fn used_from_operand(&mut self, hold: Operand, table: &[u128]) -> Operand {
         let mut used = Self::imm(table[0]);
         for (tag, width) in table.iter().enumerate().skip(1) {
-            let is_tag = self.eqv(org.hold.clone(), tag as u128);
+            let is_tag = self.eqv(hold.clone(), tag as u128);
             used = self.sel(is_tag, Self::imm(*width), used);
         }
         used
@@ -1204,7 +1207,14 @@ impl<'a> Emitter<'a> {
         }
         let used = self.used_from_hold(&org, &[2, 2, 4, 4, 3, 4, 4, 6, 7]);
         self.var_step(&org, &mut nxt, PH_EXPR_ROW, used, PH_OCC_COUNT);
-        let used = self.used_from_hold(&org, &[2, 1, 3, 2, 3, 1, 5]);
+        // Pattern rows can be one lane wide (tags 1 and 5), so at sub 0 the
+        // width must come from the current tag lane, not the retained hold,
+        // which still carries the previous row's tag.
+        let pat_row = self.eqv(org.phase.clone(), PH_PAT_ROW);
+        let pat_s0 = self.eqv(org.sub.clone(), 0);
+        let pat_start = self.and(pat_row, pat_s0);
+        let pat_hold = self.sel(pat_start, lane.clone(), org.hold.clone());
+        let used = self.used_from_operand(pat_hold, &[2, 1, 3, 2, 3, 1, 5]);
         self.var_step(&org, &mut nxt, PH_PAT_ROW, used, PH_PATCHILD_COUNT);
         let used = self.used_from_hold(&org, &[8, 6, 3, 2]);
         self.var_step(&org, &mut nxt, PH_PLAN_ROW, used, PH_PLANCASE_COUNT);
