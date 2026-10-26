@@ -15,7 +15,7 @@
 
 - `tools/profile/` is a separate Cargo workspace. It depends on the Moriarty crates by path. It patches `midnight-proofs` to `tools/profile/vendor/midnight-proofs-0.8.3/` with the feature `recursion-phase-profile`. Its own `Cargo.lock` keeps the main workspace lockfile unchanged.
 - Timers are RAII guards with integer event records in a bounded buffer. There is no per-cell instrumentation.
-- An external sampler reads RSS from `/proc/<pid>/status` at a fixed period. CPU uses process clocks for all threads.
+- A harness sampler thread reads VmRSS and VmHWM from `/proc/self/status` at a fixed 10 ms period. Only reads wholly inside a phase are attributed to it. A minimal vendor boundary hook supplies timestamps; the harness reads process `utime + stime` from `/proc/self/stat` and storage bytes from `/proc/self/io` at those boundaries. CPU includes all threads; unrelated overlapping jobs receive no duplicated process CPU credit.
 
 ## Phase ownership
 

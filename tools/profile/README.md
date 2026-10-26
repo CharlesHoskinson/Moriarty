@@ -2,7 +2,8 @@
 
 This is the isolated dependency workspace for OpenSpec
 `recursion-phase-profile`. It now contains the default-off observation feature
-and caller timers (tasks 3.1–3.3), alongside identity and reducer tooling.
+and caller timers, process counters and an RSS sampler (tasks 3.1–3.4),
+alongside identity and reducer tooling. The A2 binary is implemented but unrun.
 No proof, real profile, overhead qualification or speedup is claimed.
 
 The vendor base is published midnight-proofs 0.8.3, archive SHA-256
@@ -45,21 +46,43 @@ The paired analysis must be fixed before running them; this tool validates the
 supplied statistics, as the Quint model does, and does not estimate confidence
 bounds from synthetic data.
 
-The workload runner remains future work; the library timers do not yet provide
-`src/bin/profile-recursion.rs` or the following planned executable interface:
+`one --workload A2` prints both off/on builds and runs by default; select one
+with `--variant off` or `--variant on`. Each command uses
+`scripts/doctorwatson heavy --budget a2-linked-children -- ...`. Build plans set
+`RUSTC_WRAPPER=` and `CARGO_BUILD_JOBS=4`, with distinct on/off target directories.
+These are command plans, not run receipts.
+
+`src/bin/profile-a2.rs` reproduces the factory A2 literal-7 fixture using the
+public request, child-key, proof, linked-verification and artifact APIs. It uses
+the existing production RNG and authenticated local SRS, checks A102 k13 and
+A80 k12, and calls stock verification on both proofs. Each reconstructed key
+also checks a corrupted proof and a changed statement directly; the factory's
+linked corrupted-proof and wrong-key controls remain present. Key reconstruction
+spans include public preparation, SRS loading and VK construction; the backend's
+internal `setup_pk` has its own nested vendor span.
 
 ```text
-profile-recursion --workload A2|A3|A4|B3 \
-  --cache-mode process_cold|resident_pk --sidecar PATH
+profile-a2 --workload A2 --cache-mode process_cold --sidecar PATH [--params-dir PATH]
 ```
 
-The executable must perform the public workload, create its sidecar directory,
-record exact identities, and preserve failed/partial traces. A resident-PK run
-must prime the key and measure the second proof within the same process.
+The default SRS path is `MORIARTY_TEST_PARAMS_DIR`, falling back to the same
+`$HOME/.cache/midnight/zk-params` path as the factory script. Neither environment
+values nor SRS contents are written to sidecars. `resident_pk` is explicitly
+refused: the public child APIs rebuild their PK on every proof. A3/A4/B3 runners
+and the resident-PK matrix remain future work, with execution refused when the
+corresponding executable is missing.
+
 The planner names sidecars as
 `qa/sherlock/profiles/<run>/<workload>-<cache>-<pair>-<variant>.json`.
-Execution is refused while that executable is missing. The runner, sampler,
-process CPU and byte counters remain unfinished. No proof commands have been run.
+The writer reserves a fresh sidecar and retains an incomplete marker if killed;
+a returned error flushes the observed event trace. Public child artifacts go to
+the adjacent `.children` directory. An existing sidecar is never overwritten.
+Raw `recursion.phase-events/1` sidecars include counters, public proof/key/SRS
+hashes and verification results. They are **not** qualified
+`recursion.phase-profile/1` records: full resolved build identity, coverage and
+paired overhead qualification still need completion. Feature-off runs retain
+command wall time and verification evidence but allocate no phase recorder or
+sampler. No proof commands have been run.
 
 ## Observation API and event mapping
 
@@ -103,17 +126,53 @@ worker joins; flushing an open span retains a visibly incomplete trace.
 phase fragments and disjoint accounting residuals. It retains failed raw traces
 without awarding them accounting credit. An invocation with no fixed commitment
 batch gets a zero-cost `not_applicable` marker. Raw mapping reports
-`profile_valid: false`: sampling, counters, workload identity and verification
-evidence are still missing. Missing counters remain null with reasons, and
-`pid=0`/`source_line=0` mean uncollected. Mapped fragments cannot be passed to
-`decide` as qualified sidecars.
+`profile_valid: false`: raw events alone do not establish full identity,
+coverage or qualification. Counter measurements from the harness enrich both
+inclusive diagnostics and disjoint residuals. Missing counters remain null with
+reasons. `pid=0` (legacy traces) and `source_line=0` mean uncollected. Mapped
+fragments cannot be passed to `decide` as qualified sidecars.
 
-Observed checks on 2026-10-26: feature-on and feature-off `cargo check --offline`
-passed with the separate target directory and four jobs. The sandbox blocks the
-configured `sccache`, so `RUSTC_WRAPPER` was unset for those commands. The exact
-vendored `profile_events` integration-test command was attempted but cannot
-resolve the uncached upstream `criterion` dependency offline. No dependency was
-installed or fetched; its tests are written but not reported as passing.
+## Harness counters
+
+`src/counters.rs` owns all proc parsing and sampling. The vendor change only
+exposes the monotonic epoch and an optional boundary callback, invoked outside
+the event lock under the reentrancy guard. It neither reads proc files nor starts
+threads. The harness installs the callback before starting command spans.
+
+The RSS thread reads `/proc/self/status` every 10 ms with bounded storage. Both
+ends of each read must lie strictly inside an interval before that sample is
+attributed. Entry/exit VmRSS readings participate in the peak, while VmHWM stays
+in a separate process-lifetime summary. Fewer than two interior samples yields
+`boundary_only`; all sampled peaks are lower bounds, never admission guarantees.
+Sample/read failures and capacity overflow invalidate observation without
+changing the caller's result. Shutdown wakes and joins the sampler promptly.
+
+At each span boundary, `/proc/self/stat` supplies process `utime + stime`,
+converted using `_SC_CLK_TCK`; child-process times are excluded. These process
+counters include all worker threads. Residual intervals reuse their actual
+boundary snapshots, never a fraction of inclusive CPU. Unrelated overlapping
+proofs and worker NTT diagnostics get null CPU/I/O with an attribution reason.
+Inclusive diagnostics never receive exclusive CPU credit.
+
+`/proc/self/io` supplies `read_bytes` and `write_bytes`. These are storage I/O,
+not `rchar`/`wchar`, logical copies or DRAM traffic. Unavailable or regressing
+counters are null with reasons. Logical, hardware-memory-controller and device
+counters remain null with explicit reasons. Sampler thread CPU and read-wall
+cost, bounded-buffer drops and flush cost are recorded separately.
+
+Malformed-proof controls can produce expected transcript-read errors. The harness
+marks only those transcript events inside an explicit verifier-control scope;
+raw returned-error status is preserved. The mapper requires a successful
+verification ancestor and passing control evidence before accepting them in an
+otherwise valid run. Unexpected errors, clock failures and overflow still
+invalidate observation.
+
+Observed 2026-10-26: the prescribed offline harness test command passed
+20 integration tests (8 counter, 11 event, 1 sidecar); 61 Python tests passed.
+Isolation reported OK and prepare verified the regenerated vendor patch and
+identity. The prescribed `cargo check --bins` commands passed with and without
+the feature, using `RUSTC_WRAPPER=`, four jobs and the isolated target directory.
+No proof, DoctorWatson command or network access was performed.
 
 ## Validation and reports
 

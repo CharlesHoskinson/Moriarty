@@ -171,6 +171,32 @@ class ReduceTests(unittest.TestCase):
             for command in ['one', 'calibrate']:
                 self.assertEqual(self.profile.main([command, '--workload', 'A2']), 0)
 
+    def test_a2_plans_both_real_binaries_with_empty_rustc_wrapper(self):
+        import io
+        import shlex
+        from contextlib import redirect_stdout
+        out = io.StringIO()
+        with patch.object(self.profile.subprocess, 'run', side_effect=AssertionError('executed')), redirect_stdout(out):
+            self.assertEqual(self.profile.main(['one', '--workload', 'A2']), 0)
+        commands = [shlex.split(line) for line in out.getvalue().splitlines()]
+        self.assertEqual(len(commands), 4)
+        prefix = ['scripts/doctorwatson', 'heavy', '--budget', 'a2-linked-children', '--']
+        for command in commands:
+            self.assertEqual(command[:5], prefix)
+        for command in commands[:2]:
+            self.assertIn('RUSTC_WRAPPER=', command)
+            self.assertIn('CARGO_BUILD_JOBS=4', command)
+            self.assertIn('profile-a2', command)
+            self.assertIn('--offline', command)
+        self.assertNotIn('--features', commands[0])
+        self.assertEqual(commands[1][-2:], ['--features', 'recursion-phase-profile'])
+        self.assertEqual(commands[2][5], 'tools/profile/target/off/release/profile-a2')
+        self.assertEqual(commands[3][5], 'tools/profile/target/on/release/profile-a2')
+
+    def test_a2_resident_pk_is_not_falsely_planned(self):
+        with patch('sys.stderr'), patch('sys.stdout'):
+            self.assertEqual(self.profile.main(['one', '--workload', 'A2', '--cache-mode', 'resident_pk']), 1)
+
     def test_sampled_rss_predicates(self):
         rss = self.data['phases'][3]['metrics']['rss']
         rss.update(samples=2, sample_points=[{'at_monotonic_ns': 11_000_000_000, 'rss_bytes': 8},
@@ -404,3 +430,37 @@ class EventMappingTests(unittest.TestCase):
         phase = next(p for p in mapped['phases'] if p['span_id'] == '3')
         self.assertEqual(phase['dimensions']['advice_phase'], 1)
         self.assertEqual(phase['dimensions']['circuit_index'], 2)
+
+    def test_counter_measurements_map_without_duplicate_cpu_credit(self):
+        metrics = copy.deepcopy(json.loads(FIXTURE.read_text())['phases'][3]['metrics'])
+        measured = {k: metrics[k] for k in ('cpu_core_seconds', 'cpu_null_reason', 'cpu_scope', 'rss', 'bytes')}
+        measured['rss'].update(samples=0, sample_points=[], quality='boundary_only')
+        self.data['observation'] = dict(sampler_valid=True, pid=123, measurements=[
+            dict(event_id=4, start_ns=10, end_ns=40, metrics=measured)])
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        inclusive = next(p for p in mapped['phases'] if p['span_id'] == '4')
+        exclusive = next(p for p in mapped['phases'] if p['span_id'] == '4:exclusive:0')
+        self.assertEqual(inclusive['pid'], 123)
+        self.assertIsNone(inclusive['metrics']['exclusive_cpu_core_seconds'])
+        self.assertEqual(exclusive['metrics']['exclusive_cpu_core_seconds'], measured['cpu_core_seconds'])
+        self.assertFalse(mapped['profile_valid'])
+
+    def test_sampler_failure_keeps_evidence_without_credit(self):
+        self.data['observation'] = dict(sampler_valid=False, measurements=[])
+        self.data['workload'] = dict(id='A2', exit=1)
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        self.assertFalse(mapped['observer_valid'])
+        self.assertFalse(any(p['accounting'] for p in mapped['phases']))
+        self.assertEqual(mapped['workload']['exit'], 1)
+
+    def test_expected_transcript_error_needs_a_successful_verifier_control(self):
+        self.data['events'][2]['phase_id'] = 5
+        self.data['events'][3].update(phase_id=19, status=2)
+        self.data['observation'] = dict(sampler_valid=True, measurements=[], expected_rejections=[4])
+        self.data['workload'] = dict(exit=0, verification=dict(negative_controls='pass'))
+        mapped = self.profile.map_events(self.data, 'synthetic')
+        self.assertTrue(mapped['observer_valid'])
+        self.assertIn('Expected verifier rejection', next(p for p in mapped['phases'] if p['span_id'] == '4')['reason'])
+        self.data['workload']['verification']['negative_controls'] = 'fail'
+        with self.assertRaisesRegex(ValueError, 'expected rejection'):
+            self.profile.map_events(self.data, 'synthetic')

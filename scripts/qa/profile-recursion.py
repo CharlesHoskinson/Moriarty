@@ -258,7 +258,8 @@ def map_events(raw, invocation_id):
     reject_secrets(raw)
     fields = {'schema', 'event_capacity', 'dropped_events', 'timer_failures',
               'reentrant_events', 'profile_valid', 'events', 'flush_wall_ns'}
-    require(set(raw) == fields and raw['schema'] == 'recursion.phase-events/1',
+    optional = {'observation', 'workload', 'sidecar_flush_wall_ns'}
+    require(fields <= set(raw) <= fields | optional and raw['schema'] == 'recursion.phase-events/1',
             'unknown event envelope')
     require(type(raw['profile_valid']) is bool, 'invalid observer flag')
     for key in fields - {'schema', 'profile_valid', 'events'}:
@@ -288,11 +289,32 @@ def map_events(raw, invocation_id):
                         'event outside parent')
             parent = ancestor['parent_id']
         chains[event['id']] = chain
+    observation = raw.get('observation')
+    expected = set(observation.get('expected_rejections', [])) if isinstance(observation, dict) else set()
+    for event_id in expected:
+        require(event_id in by_id and by_id[event_id]['status'] == 2 and by_id[event_id]['phase_id'] == 19
+                and any(by_id[parent]['phase_id'] == 5 and by_id[parent]['status'] == 1
+                        for parent in chains[event_id])
+                and (not raw['profile_valid'] or (raw.get('workload', {}).get('exit') == 0
+                     and raw.get('workload', {}).get('verification', {}).get('negative_controls') == 'pass')),
+                'expected rejection requires a successful verifier control')
     observer_valid = (raw['profile_valid'] and len(events) < raw['event_capacity']
                       and not any(raw[k] for k in ('dropped_events', 'timer_failures', 'reentrant_events'))
-                      and all(e['status'] == 1 and e['end_ns'] > e['start_ns'] for e in events))
+                      and all((e['status'] == 1 or e['id'] in expected) and e['end_ns'] > e['start_ns'] for e in events))
     schema = json.loads(SCHEMA.read_text())
-    reason = 'Task 3.4 sampler and counter collection not implemented.'
+    reason = 'No boundary counter observations supplied for this interval.'
+    measurements = {}
+    if observation is not None:
+        require(isinstance(observation, dict) and type(observation.get('sampler_valid')) is bool,
+                'invalid sampler observation')
+        observer_valid = observer_valid and observation['sampler_valid']
+        for item in observation.get('measurements', []):
+            key = (item['event_id'], item['start_ns'], item['end_ns'])
+            require(key not in measurements and key[0] in by_id, 'duplicate or unknown measurement')
+            event = by_id[key[0]]
+            require(event['start_ns'] <= key[1] <= key[2] <= event['end_ns'],
+                    'measurement outside event')
+            measurements[key] = item['metrics']
 
     def phase(event, start, end, span_id, parent, accounting=False):
         name, owner = EVENT_PHASES[event['phase_id']]
@@ -313,8 +335,22 @@ def map_events(raw, invocation_id):
                        device=dict(status='not_applicable', reason='CPU observer', intervals=[],
                                    busy_union_seconds=None, live_peak_bytes=None,
                                    reserved_peak_bytes=None, peak_method='not_applicable'))
+        measured = measurements.get((event['id'], start, end))
+        if measured is not None:
+            require(set(measured) == {'cpu_core_seconds', 'cpu_null_reason', 'cpu_scope', 'rss', 'bytes'},
+                    'unknown measured counter')
+            metrics.update(measured)
+            metrics['bytes'] = dict(measured['bytes'], scope='exclusive' if accounting else 'diagnostic')
+            metrics['exclusive_cpu_core_seconds'] = metrics['cpu_core_seconds'] if accounting else None
+            # Validate only complete, available measurements. Missing counters
+            # remain visible in invalid raw traces instead of becoming zeros.
+            validator = Draft202012Validator({'$ref': '#/$defs/metrics', '$defs': schema['$defs']})
+            require(not list(validator.iter_errors(metrics)), 'invalid measured metrics schema')
+            if metrics['rss']['quality'] != 'unavailable':
+                validate_memory(metrics['rss'], start, end)
         return dict(span_id=span_id, parent_span_id=parent, invocation_id=invocation_id,
-                    pid=0, thread_id=event['thread_id'], parallel_group_id=None,
+                    pid=observation.get('pid', 0) if observation else 0,
+                    thread_id=event['thread_id'], parallel_group_id=None,
                     phase=name, owner=owner, accounting=accounting,
                     start_monotonic_ns=start, end_monotonic_ns=end,
                     completed=event['status'] != 0 and end is not None,
@@ -323,9 +359,10 @@ def map_events(raw, invocation_id):
                     dimensions={**{k: None for k in schema['$defs']['dimensions']['required']},
                                 **{k: event[k] if event[k] != 2**64 - 1 else None
                                    for k in ('advice_phase', 'circuit_index')}},
-                    metrics=metrics, status=('ok' if event['status'] == 1 else
+                    metrics=metrics, status=('ok' if event['status'] == 1 or event['id'] in expected else
                                              'incomplete' if event['status'] == 0 else 'failed'),
-                    reason=None if event['status'] == 1 else 'Observer retained an unfinished or failed interval.')
+                    reason=('Expected verifier rejection; raw returned-error status retained.' if event['id'] in expected else
+                            None if event['status'] == 1 else 'Observer retained an unfinished or failed interval.'))
 
     phases = [phase(e, e['start_ns'], e['end_ns'] or None, str(e['id']),
                     str(e['parent_id']) if e['parent_id'] else None) for e in events]
@@ -369,12 +406,15 @@ def map_events(raw, invocation_id):
                     phases.append(absent)
     return dict(schema='recursion.phase-events-mapped/1', invocation_id=invocation_id,
                 observer_valid=observer_valid, profile_valid=False,
-                invalid_reasons=([reason, 'Workload identity and verification evidence must be supplied.']
+                invalid_reasons=(([] if observation else [reason]) + ['Full workload identity, coverage and qualification are not established by raw event traces.']
                                  + ([] if observer_valid else ['Event buffer, timer or operation failed.'])),
                 phases=phases, overhead=dict(event_count=len(events), event_capacity=raw['event_capacity'],
                                             dropped_events=raw['dropped_events'],
                                             flush_wall_seconds=raw['flush_wall_ns'] / NS,
                                             qualification='not_run'),
+                observation_summary=({k: v for k, v in observation.items() if k != 'measurements'}
+                                     if observation else None),
+                workload=raw.get('workload'),
                 notes='Schema phase fragments only. pid=0 and source_line=0 mean uncollected; no qualified claim.')
 
 
@@ -555,22 +595,25 @@ def write_report(path, report):
 def planned_commands(args):
     require(re.fullmatch(r'[A-Za-z0-9_.-]+', args.run_id) and args.run_id not in ('.', '..'), 'invalid run ID')
     require(args.pairs >= 5, 'calibration needs at least five pairs')
-    base = ['scripts/doctorwatson', 'heavy', '--id', args.workload, '--budget', BUDGETS[args.workload]]
+    base = ['scripts/doctorwatson', 'heavy', '--budget', BUDGETS[args.workload]]
     if args.hypothesis:
         base += ['--hypothesis', args.hypothesis]
-    # Task 3 supplies this executable and its feature. These are plans, not receipts.
-    variants = ('off', 'on') if args.command == 'calibrate' else (args.variant,)
+    require(args.workload != 'A2' or args.cache_mode == 'process_cold',
+            'A2 resident_pk is unsupported: public child APIs rebuild the PK')
+    binary = 'profile-a2' if args.workload == 'A2' else 'profile-recursion'
+    variants = ('off', 'on') if args.command == 'calibrate' or args.variant == 'both' else (args.variant,)
     commands = []
     for variant in variants:
-        build = ['cargo', 'build', '--offline', '--locked', '--release', '--manifest-path', 'tools/profile/Cargo.toml',
-                 '--bin', 'profile-recursion', '--target-dir', f'tools/profile/target/{variant}']
+        build = ['env', 'RUSTC_WRAPPER=', 'CARGO_BUILD_JOBS=4', f'CARGO_TARGET_DIR=tools/profile/target/{variant}',
+                 'cargo', 'build', '--offline', '--locked', '--release', '--manifest-path', 'tools/profile/Cargo.toml',
+                 '--bin', binary]
         if variant == 'on':
             build += ['--features', 'recursion-phase-profile']
         commands.append(base + ['--'] + build)
     for pair in range(args.pairs if args.command == 'calibrate' else 1):
         for variant in variants:
             sidecar = f'qa/sherlock/profiles/{args.run_id}/{args.workload}-{args.cache_mode}-{pair}-{variant}.json'
-            commands.append(base + ['--', f'tools/profile/target/{variant}/release/profile-recursion',
+            commands.append(base + ['--', f'tools/profile/target/{variant}/release/{binary}',
                                     '--workload', args.workload, '--cache-mode', args.cache_mode,
                                     '--sidecar', sidecar])
     return commands
@@ -588,7 +631,7 @@ def main(argv=None):
         p.add_argument('--pairs', type=int, default=5)
         p.add_argument('--run-id', default='planned')
         p.add_argument('--cache-mode', choices=('process_cold', 'resident_pk'), default='process_cold')
-        p.add_argument('--variant', choices=('off', 'on'), default='on')
+        p.add_argument('--variant', choices=('off', 'on', 'both'), default='both')
         p.add_argument('--hypothesis')
         p.add_argument('--run', action='store_true')
     for name in ('reduce', 'decide'):
@@ -606,8 +649,9 @@ def main(argv=None):
                 print(shlex.join(command))
             if args.run:
                 prepare()
-                require((ROOT / 'tools/profile/src/bin/profile-recursion.rs').is_file(),
-                        'task 3 profiling executable is not implemented')
+                binary = 'profile-a2' if args.workload == 'A2' else 'profile-recursion'
+                require((ROOT / f'tools/profile/src/bin/{binary}.rs').is_file(),
+                        'profiling executable is not implemented for this workload')
                 for command in commands:
                     result = subprocess.run(command, cwd=ROOT, check=False)
                     if result.returncode:

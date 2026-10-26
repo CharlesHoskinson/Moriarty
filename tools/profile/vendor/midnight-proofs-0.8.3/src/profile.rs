@@ -175,8 +175,8 @@ mod enabled {
         marker::PhantomData,
         rc::Rc,
         sync::{
+            Arc, Mutex, OnceLock,
             atomic::{AtomicU64, Ordering},
-            Mutex, OnceLock,
         },
         time::Instant,
     };
@@ -198,6 +198,19 @@ mod enabled {
             .as_nanos()
             .try_into()
             .ok()
+    }
+
+    /// Harness hook clock, sharing the event epoch. No counters live in this crate.
+    pub fn monotonic_ns() -> Option<u64> {
+        EPOCH.get_or_init(Instant::now);
+        now()
+    }
+
+    /// Optional harness-owned boundary reader, called under the reentrancy guard
+    /// but outside the event lock. Implementations must not panic or run proofs.
+    pub trait BoundaryObserver: std::fmt::Debug + Send + Sync {
+        /// Observe the reserved entry or completed exit of an interval.
+        fn boundary(&self, event: &Event, entry: bool);
     }
 
     struct Enter;
@@ -281,6 +294,7 @@ mod enabled {
         dropped: AtomicU64,
         timers: AtomicU64,
         reentrant: AtomicU64,
+        observer: OnceLock<Arc<dyn BoundaryObserver>>,
     }
 
     impl Recorder {
@@ -305,7 +319,14 @@ mod enabled {
                 dropped: AtomicU64::new(0),
                 timers: AtomicU64::new(0),
                 reentrant: AtomicU64::new(0),
+                observer: OnceLock::new(),
             }
+        }
+
+        /// Install the harness reader before starting any spans. One installation
+        /// per recorder prevents mid-invocation changes of counter attribution.
+        pub fn set_observer(&self, observer: Arc<dyn BoundaryObserver>) -> bool {
+            self.observer.set(observer).is_ok()
         }
 
         /// Start an interval. An observer failure never interrupts the caller.
@@ -351,6 +372,11 @@ mod enabled {
             });
             span.index = Some(index);
             span.previous = previous;
+            let event = events[index];
+            drop(events);
+            if let Some(observer) = self.observer.get() {
+                observer.boundary(&event, true);
+            }
             span
         }
 
@@ -442,6 +468,11 @@ mod enabled {
                 } else {
                     2
                 };
+                let event = *event;
+                drop(events);
+                if let Some(observer) = self.recorder.observer.get() {
+                    observer.boundary(&event, false);
+                }
             }
         }
     }
