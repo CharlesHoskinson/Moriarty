@@ -56,6 +56,27 @@ hex, proof length): the byte shape `mori_recursion::child::SherlockChild::
 from_bytes` imports against an independently pinned key digest. A consumer
 pins the digest by its own key reconstruction; the export never pins itself.
 
+## Digest statement (gpr G4 interface, agreed 2026-10-26)
+
+The raw-lane instance above does not scale: the draft-config carrier is
+~35k lanes per side against the child cap of 2^14. The leaf therefore
+exposes digests, not lanes. Carriers are private (`PrivateInput`); the
+fragment body is unchanged; the public statement is exactly the five lanes
+`[prog_d, pre_d, post_d, rule_id, h_pre]` the node consumes. `prog_d` is
+Poseidon over the program lanes; each state digest is
+`Poseidon(dom("SHK_SD"), outcome_tag, outcome_value, lanes_d)` with
+`lanes_d` the Poseidon over all carrier lanes of that state, tag 0 =
+running (value 0) and tag 1 = halted with the u128 result. Digests are the
+in-circuit `TransientHash`, confirmed identical to the `PoseidonChip`
+`HashCPU` Poseidon the node recomputes. `rule_id` is the low 128 bits of
+SHA-256 of the rule name. The binding lives in the claim and the prover
+carrier, not in the instance. Entry points:
+`c6_child_relation(ir, sections)`, `prove_c6_child(...)`,
+`verify_c6_child(...)` in `sherlock_c6_child.rs`. gpr's node relation (G6)
+consumes the five public lanes. A tight committed qualification host config
+(frames/data/env/value_slots in the tens) is required before a real
+fragment leaf can be keyed; caps are being frozen with gpr.
+
 ## How a C6 proof becomes a decider child
 
 leaf (this adapter) -> parent -> decider. The decider is unchanged: it
