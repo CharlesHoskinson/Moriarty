@@ -1,0 +1,6 @@
+import Clean.Sherlock.DecodedCounterStages
+
+#print axioms Clean.Sherlock.DecodedCounterStages.helper_next_bounded
+#print axioms Clean.Sherlock.DecodedCounterStages.p4_nonhelper_preserves_fuel
+#print axioms Clean.Sherlock.DecodedCounterStages.p4_nonhelper_not_accounting
+#print axioms Clean.Sherlock.DecodedCounterStages.p4_helper_preserves_accounting

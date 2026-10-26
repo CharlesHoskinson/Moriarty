@@ -1,0 +1,32 @@
+import Clean.Sherlock.FinancialItems
+
+#print axioms Clean.Sherlock.FinancialItems.all_or_nothing_admission_unrestricted
+#print axioms Clean.Sherlock.FinancialItems.retain_admission_iff_all_segments
+#print axioms Clean.Sherlock.FinancialItems.bad_segment_blocks_retain_admission
+#print axioms Clean.Sherlock.FinancialItems.fee_after_other_refused
+#print axioms Clean.Sherlock.FinancialItems.let_and_requires_before_fee_admitted
+#print axioms Clean.Sherlock.FinancialItems.charge_preserves_work
+#print axioms Clean.Sherlock.FinancialItems.charge_preserves_financial_prefix
+#print axioms Clean.Sherlock.FinancialItems.charge_stays_uint128
+#print axioms Clean.Sherlock.FinancialItems.await_publishes_committed_prefix
+#print axioms Clean.Sherlock.FinancialItems.complete_publishes_ordered_effects
+#print axioms Clean.Sherlock.FinancialItems.failed_unsealed_phase_preserves_prefix
+#print axioms Clean.Sherlock.FinancialItems.all_or_nothing_preserves_prefix
+#print axioms Clean.Sherlock.FinancialItems.sealed_fees_retained_separately
+#print axioms Clean.Sherlock.FinancialItems.failure_keeps_charged_work
+#print axioms Clean.Sherlock.FinancialItems.await_enter_zero_fuel_exhausts
+#print axioms Clean.Sherlock.FinancialItems.await_enter_waiting_has_fuel
+#print axioms Clean.Sherlock.FinancialItems.resume_zero_fuel_refused
+#print axioms Clean.Sherlock.FinancialItems.not_ready_preserves_image
+#print axioms Clean.Sherlock.FinancialItems.residual_duty_mem_iff
+#print axioms Clean.Sherlock.FinancialItems.residual_duties_preserve_order
+#print axioms Clean.Sherlock.FinancialItems.await_commits_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.failed_unsealed_retains_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.sealed_failure_projects_residual_duties
+#print axioms Clean.Sherlock.FinancialItems.first_paid_residual_amount
+#print axioms Clean.Sherlock.FinancialItems.checkedAdd_success
+#print axioms Clean.Sherlock.FinancialItems.accounting_success
+#print axioms Clean.Sherlock.FinancialItems.first_paid_prefix_accounting
+#print axioms Clean.Sherlock.FinancialItems.accounting_gross_overflow_refused
+#print axioms Clean.Sherlock.FinancialItems.accounting_payments_overflow_refused
+#print axioms Clean.Sherlock.FinancialItems.accounting_fees_overflow_refused

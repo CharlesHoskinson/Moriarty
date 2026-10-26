@@ -1,0 +1,305 @@
+{
+  "schema": "sherlock-lean-finish-contract/1",
+  "module": "Clean.Sherlock.SuspensionResume",
+  "requirements": [
+    "U014",
+    "U015",
+    "U016"
+  ],
+  "implementedSources": [
+    "crates/mori-core/src/sherlock/compile_artifact/suspension2.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs",
+    "crates/mori-core/src/sherlock/helper_machine/complete_observation.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_resume.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_suspend.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/profile2_suspension_tests.rs"
+  ],
+  "prospectiveSources": [],
+  "remainingObligations": [
+    "Instantiate Whole with the entire checkpoint, including exact admission/profile identity, frames, environments, heap, counters, pending helper state and applicable finance.",
+    "Prove actual Rust restore/capture roundtrip and concrete SI checks produce the predicates used here.",
+    "Prove actual deterministic step correspondence, terminal/error/exhaustion precedence and exact charged traces; generic iteration alone does not establish these.",
+    "Prove concrete R0-R5 validation, canonical scalar layout, observation/checkpoint digest binding and capture preservation.",
+    "Connect pure atomic binder installation to complete successor state, fresh allocation, capacity checks and UInt128 counter/epoch headroom.",
+    "Prove actual pending callee and caller continuation behavior (including the 10+inner(3)=14 scenario); caller-frame retention alone does not prove evaluation.",
+    "Financial checkpoint restoration is refused by the current technical-restore interface; financial continuation semantics belong to FinancialItems.",
+    "No C6 suspension/resume, native proof, cryptographic codec or ledger refinement follows.",
+    "Instantiate SuspensionProjection from the actual complete Rust checkpoint, prove ProjectionAgrees initially, and establish InstallerCorrect for the actual whole-state installer (not just wrapper projections).",
+    "Quint1 reported post-resume SI20/InnerReturn missing-ScopeF behavior; evaluator notes current CLI exposes no post-resume technical cut. Confirm fix shape, whole-state invariant and frame-capacity/caller projection by actual Rust unit/technical-checkpoint evidence; no reproduction by this agent.",
+    "Model currently coalesces refusal into one constructor: concrete first-failing validation stage/messages and R0-vs-R3/R4/R5 priority remain unproved, alongside actual SI29/epoch checks and complete-state invariants.",
+    "Actual UInt64 codec, complete-state projection/installer and SI29 correspondences remain required after source pinning to 815a22d87; no Rust unit/CLI or forged-checkpoint probe was run by this agent."
+  ],
+  "sourceBase": "815a22d87",
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "sourceFiles": [
+    {
+      "path": "clean/fork/Clean/Sherlock/SuspensionResume.lean",
+      "bytes": 15189,
+      "sha256": "3a34ab21dd590802893002a4ee0e653413486e78f22824fdbfec1be154b10e67"
+    },
+    {
+      "path": "clean/fork/Clean/Sherlock/SuspensionResumeAxioms.lean",
+      "bytes": 1535,
+      "sha256": "4b59f004e52436fcaa1fe8824ce9a3dac0cd96885a873330a42657aaabd57142"
+    }
+  ],
+  "theoremNames": [
+    "Clean.Sherlock.SuspensionResume.profile_ids_distinct",
+    "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor",
+    "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused",
+    "Clean.Sherlock.SuspensionResume.successful_restore_is_exact",
+    "Clean.Sherlock.SuspensionResume.runSteps_add",
+    "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation",
+    "Clean.Sherlock.SuspensionResume.maximum_epoch_has_no_headroom",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees",
+    "Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames",
+    "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_any_guard",
+    "Clean.Sherlock.SuspensionResume.missing_resources_refuses_any_guard",
+    "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_accept",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_epoch_bounded",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_complete_epoch_bounded",
+    "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint",
+    "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge",
+    "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance"
+  ],
+  "verification": {
+    "status": "LOCKED_VERIFIED",
+    "observation": {
+      "runner": "sherlock-fable",
+      "run": "20261026T035951Z-sherlock-lean-build",
+      "commandReported": "scripts/doctorwatson heavy --id sherlock-lean-build -- memcap 48G lake -d clean/fork build",
+      "runRecordCommit": "8853c8f8c",
+      "runRecordPath": "qa/sherlock/runs.jsonl",
+      "runRecordLineSha256": "29e95ce2d05df6bca366e20e08da10120ea313c6604e73c0f8cf32af911a014d",
+      "artifact": "qa/sherlock/traces/20261026T035951Z-sherlock-lean-build.log",
+      "bytes": 27167,
+      "sha256": "dc0b2e82fcf4d4d6a9e5dbc7b4db8bf20d5301f5d95a02490782e99d312750eb",
+      "wrapperArtifact": "/home/charles/factory-ops/scratchpad/sherlock-push/lean-build-19.log",
+      "wrapperBytes": 27342,
+      "wrapperSha256": "6bb5a5c9d65a6d05af0a76c475359e57f7173210b8c7ae1dabc1422a8bbc2094",
+      "overallPackageExit": 0,
+      "jobs": 21,
+      "memoryCap": "48G via memcap",
+      "realHeavyLockReported": true,
+      "lockEvidence": "Coordinator confirms real heavy.lock outer flock; heavy runner uses a private DW_LOCK proxy. The raw ledger alone records that proxy, not the outer real lock.",
+      "preflight": {
+        "ok": true,
+        "skipped": false,
+        "privateDWLockProxyUsed": true
+      },
+      "sourceHead": "5b68cb8c00e80d6ae6c5c1ec2d2682191fa57ada",
+      "currentSourceBytesEqualRecordedRunHead": true,
+      "incrementalReplayedBuild": true,
+      "wallSeconds": 6.229,
+      "maxRssBytes": 890322944,
+      "measurementScope": "whole incremental Lake command, not runtime/optimization/native performance",
+      "agentAction": "read committed ledger record, complete trace and wrapper bytes, exact query sets and current/run-HEAD source equality; did not execute build"
+    },
+    "axiomQueryStatus": "observed-pass",
+    "actualAxiomSets": {
+      "Clean.Sherlock.SuspensionResume.profile_ids_distinct": [],
+      "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.successful_restore_is_exact": [],
+      "Clean.Sherlock.SuspensionResume.runSteps_add": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.maximum_epoch_has_no_headroom": [],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees": [],
+      "Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames": [],
+      "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_any_guard": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.missing_resources_refuses_any_guard": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_accept": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_epoch_bounded": [],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_complete_epoch_bounded": [],
+      "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint": [
+        "propext"
+      ],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers": [],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge": [],
+      "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance": [
+        "propext"
+      ]
+    },
+    "emptyAxiomSetCount": 9,
+    "propextOnlyCount": 10,
+    "wholePackagePassed": true,
+    "localSandboxExecution": "blocked by memcap user scope bus",
+    "previousUnlockedVerification": {
+      "status": "observed-full-package-build-and-axiom-queries-pass",
+      "observation": {
+        "runner": "sherlock-fable",
+        "commandReported": "memcap 48G lake -d clean/fork build",
+        "artifact": "lean-build-11.log",
+        "bytes": 16684,
+        "sha256": "c9b27bcbe2c72fa0febc07aa85bb75bbca824ee4983e33b713e1a78f111e1fff",
+        "overallPackageExit": 0,
+        "jobs": 17,
+        "cachedModuleResultsReplayed": false,
+        "agentAction": "read observed module/axiom results and validate full log and owned source bytes; did not execute build"
+      },
+      "axiomQueryStatus": "observed-pass",
+      "actualAxiomSets": {
+        "Clean.Sherlock.SuspensionResume.profile_ids_distinct": [],
+        "Clean.Sherlock.SuspensionResume.waiting_has_no_ordinary_successor": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.financial_technical_restore_refused": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.successful_restore_is_exact": [],
+        "Clean.Sherlock.SuspensionResume.runSteps_add": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.chunk_preserves_complete_observation": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.maximum_epoch_has_no_headroom": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_projection_agrees": [],
+        "Clean.Sherlock.SuspensionResume.unconstrained_installer_can_change_whole_frames": [],
+        "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_any_guard": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.missing_resources_refuses_any_guard": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.missing_epoch_headroom_refuses_accept": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_epoch_bounded": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_complete_epoch_bounded": [],
+        "Clean.Sherlock.SuspensionResume.false_guard_preserves_checkpoint": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.error_guard_preserves_checkpoint": [
+          "propext"
+        ],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_retains_callers": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_exact_charge": [],
+        "Clean.Sherlock.SuspensionResume.accepted_resume_fuel_balance": [
+          "propext"
+        ]
+      },
+      "emptyAxiomSetCount": 9,
+      "propextOnlyCount": 10,
+      "wholePackagePassed": true
+    },
+    "propextQuotSoundCount": 0,
+    "wholePackagePassedForCurrentSource": true,
+    "observationCoversCurrentSource": true,
+    "historicalRunPolicyNote": "Coordinator confirms builds1-18 were capped/unlocked observations. Run19 is the required locked/preflight/capped full build; earlier observations are retained historically."
+  },
+  "trust": {
+    "newSorry": false,
+    "newCustomAxioms": false,
+    "rustRefinementProved": false,
+    "nativeAcceptance": false
+  },
+  "reviewFollowup": {
+    "finding": "P2: Whole and duplicated frame/work/epoch fields lacked an explicit agreement obligation.",
+    "hypothesis": "An unconstrained installer can change complete-state frames/counters independently of wrapper fields; field-only equalities are insufficient.",
+    "change": "Add SuspensionProjection, ProjectionAgrees and InstallerCorrect; prove preservation of agreement conditionally and a certified counterexample for unconstrained installation.",
+    "rustRefinementClaimed": false,
+    "readOnlyFollowup": "Reviewer confirmed P2 resolved at contract-model level; no further substantive issue; no builds run by reviewer."
+  },
+  "epochUpdate": {
+    "representation": "UInt64 header projected to Nat",
+    "modulus": "2^64",
+    "acceptedIncrement": "epoch + 1 < 2^64",
+    "guardOrdering": "R0 maximum-epoch and pure SI29 resource checks precede guard; only admitted, resumable states can return not_ready",
+    "actualWholeBoundRequires": [
+      "ProjectionAgrees",
+      "InstallerCorrect"
+    ],
+    "carrierLengthArithmetic": "unchecked 17+len+32 remains a source hypothesis; no runtime reproduction by this agent",
+    "sourceClass": "committed 815a22d87"
+  },
+  "frameProjectionScope": "retained caller component; does not assert unchanged entire active scope-frame stack",
+  "preGuardUpdate": {
+    "source": "815a22d87 suspension2.rs R0 epoch/check_resumable gates",
+    "change": "move epoch and resource checks before all guard outcomes; false/error preservation requires explicit availability/headroom premises",
+    "refusalDetailModeled": false
+  },
+  "historicalUncommittedObservations": [
+    {
+      "path": "crates/mori-core/src/sherlock/compile_artifact/suspension2.rs",
+      "bytes": 26189,
+      "sha256": "b0167072ba70467181d3fed969abc7c9ef78e7893317254f9baf5a06d74bd651",
+      "ownerHead": "d50d2adc4d3d7bb5c35d60290e1a2e1df62981e9",
+      "sourceCommitted": false,
+      "evidenceClass": "source inspected, uncommitted; no Rust execution claim"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs",
+      "bytes": 11639,
+      "sha256": "2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2",
+      "ownerHead": "d50d2adc4d3d7bb5c35d60290e1a2e1df62981e9",
+      "sourceCommitted": false,
+      "evidenceClass": "source inspected, uncommitted; no Rust execution claim"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_suspend.rs",
+      "bytes": 21333,
+      "sha256": "ce705b1d374d5f43b2197ee73bb8bb307c72d052a652f02eaa27f9b09e305ba5",
+      "ownerHead": "d50d2adc4d3d7bb5c35d60290e1a2e1df62981e9",
+      "sourceCommitted": false,
+      "evidenceClass": "source inspected, uncommitted; no Rust execution claim"
+    }
+  ],
+  "implementationSourcePins": [
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/suspension2.rs",
+      "bytes": 26189,
+      "sha256": "b0167072ba70467181d3fed969abc7c9ef78e7893317254f9baf5a06d74bd651"
+    },
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs",
+      "bytes": 11639,
+      "sha256": "2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2"
+    },
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/helper_machine/complete_observation.rs",
+      "bytes": 62691,
+      "sha256": "35f6423d6a2d25bc1cf9278a64520edd8deee50bf18348cefc106831149629fc"
+    },
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_resume.rs",
+      "bytes": 6956,
+      "sha256": "78188c4763404cfee4e9621da40183f52958ecf85239776c68ae815441ea3655"
+    },
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_suspend.rs",
+      "bytes": 21333,
+      "sha256": "ce705b1d374d5f43b2197ee73bb8bb307c72d052a652f02eaa27f9b09e305ba5"
+    },
+    {
+      "commit": "815a22d87",
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/profile2_suspension_tests.rs",
+      "bytes": 9479,
+      "sha256": "d2bd6e099a0a9c4f117d8cd1594669baed4082d74d909fe5ed54970bf187a3a6"
+    }
+  ]
+}

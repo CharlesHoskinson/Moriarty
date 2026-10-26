@@ -1,0 +1,25 @@
+import Clean.Sherlock.CompilerResidualIR
+
+#print axioms Clean.Sherlock.CompilerResidualIR.partition_covers_inventory_once
+#print axioms Clean.Sherlock.CompilerResidualIR.universal_has_no_program_binding
+#print axioms Clean.Sherlock.CompilerResidualIR.family_folds_only_matching_family
+#print axioms Clean.Sherlock.CompilerResidualIR.zero_limit_refused
+#print axioms Clean.Sherlock.CompilerResidualIR.one_limit_is_entirely_generic
+#print axioms Clean.Sherlock.CompilerResidualIR.seven_limit_keeps_all_groups
+#print axioms Clean.Sherlock.CompilerResidualIR.block_count_bounded
+#print axioms Clean.Sherlock.CompilerResidualIR.large_limit_has_no_fallback
+#print axioms Clean.Sherlock.CompilerResidualIR.emitted_block_count_matches_policy
+#print axioms Clean.Sherlock.CompilerResidualIR.publish_has_no_successors
+#print axioms Clean.Sherlock.CompilerResidualIR.runtime_call_keeps_self_edge
+#print axioms Clean.Sherlock.CompilerResidualIR.branch_keeps_both_dynamic_outcomes
+#print axioms Clean.Sherlock.CompilerResidualIR.recursion_stays_runtime
+#print axioms Clean.Sherlock.CompilerResidualIR.terminal_return_publishes_at_zero_fuel
+#print axioms Clean.Sherlock.CompilerResidualIR.pending_call_at_zero_fuel_publishes
+#print axioms Clean.Sherlock.CompilerResidualIR.recursive_invoke_uses_call
+#print axioms Clean.Sherlock.CompilerResidualIR.missing_group_falls_back
+#print axioms Clean.Sherlock.CompilerResidualIR.one_limit_assigns_every_rule_to_generic
+#print axioms Clean.Sherlock.CompilerResidualIR.matching_record_retained_exactly
+#print axioms Clean.Sherlock.CompilerResidualIR.mismatched_record_refused
+#print axioms Clean.Sherlock.CompilerResidualIR.terminal_state_not_stepped
+#print axioms Clean.Sherlock.CompilerResidualIR.executed_record_preserved
+#print axioms Clean.Sherlock.CompilerResidualIR.partition_ignores_runtime

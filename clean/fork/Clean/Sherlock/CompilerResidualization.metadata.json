@@ -1,0 +1,475 @@
+{
+  "schema": "sherlock-lean-finish-contract/1",
+  "module": "Clean.Sherlock.CompilerResidualization",
+  "requirements": [
+    "U023",
+    "U024",
+    "U031",
+    "U033"
+  ],
+  "implementedSources": [
+    "crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/draft_witness.rs",
+    "crates/mori-core/src/sherlock/helper_machine/witness_plan.rs",
+    "crates/mori-core/src/sherlock/optimization_intern.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/draft_optimization.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/draft_reference_slices.rs",
+    "crates/mori/src/commands/simulate_sherlock.rs"
+  ],
+  "prospectiveSources": [],
+  "remainingObligations": [
+    "Instantiate complete observation types and prove correspondence to the actual Rust snapshot and all required semantic/resource fields.",
+    "U023: missing exercised C6 fragments and native C6 recursion wiring are not supplied by inventory definitions.",
+    "U024: prove equality of decoded outputs for actual witness schedules and state preservation for actual optimization candidates.",
+    "U031: prove actual separate constraint/witness exporter and CLI correspondence; the selected-record API is modeled separately in CompilerExportPlans.",
+    "U033: prove actual finite residualizer, dynamic boundaries and checked block execution correspondence; fixed-group definitions and statements now live in CompilerResidualIR.",
+    "Specialization keys model immutable context identities; hash injectivity and concrete canonical bytes are not proved.",
+    "No native, stock-verifier or ledger acceptance follows from this module.",
+    "U024 at 69aeb882d: establish the Rust interner table invariant, stable live Arc child identities, bottom-up stack equations and actual complete A-profile trace preservation. No effectful/native or measured-memory result is inferred.",
+    "U031/U033 at a82446698 remain historical report-only models; newer actual Rust contracts are separate modules and do not retroactively validate those sample models.",
+    "U033 abe5ee146: instantiate actual immutable IR lookup and block executor; prove RecordProduced for every emitted record, valid block adjacency and complete-state continuity. Matching reference streams or adding block IDs alone cannot establish IR execution.",
+    "U031/U033 simulate implementations now exist on s3/s5 integration branches; prove their concrete correspondence. U024 replay remains A-profile HostOnly alongside B execution; prove actual checker/metrics/CLI and all-program tree preservation; no B/C6/finance optimization or native acceptance follows.",
+    "U023 at577f0470b: authenticate any future nonproving receipt membership against committed files/runs/tests and concrete source. Current RECEIPTED is empty. Compiled-and-run fragment checks alone establish no key, proof or native verification."
+  ],
+  "sourceBase": "0699194f9",
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "sourceFiles": [
+    {
+      "path": "clean/fork/Clean/Sherlock/CompilerResidualization.lean",
+      "bytes": 23288,
+      "sha256": "1815c007bf0f7b21dcdb4d01fa9784da9de9574177badc69c53926c8581aeeb2"
+    },
+    {
+      "path": "clean/fork/Clean/Sherlock/CompilerResidualizationAxioms.lean",
+      "bytes": 2668,
+      "sha256": "49577e47daf55e5e467bc34f5e116866a0e0dfe2351fcb011ce46cbcb72e7588"
+    }
+  ],
+  "theoremNames": [
+    "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program",
+    "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence",
+    "Clean.Sherlock.CompilerResidualization.empty_receipts_are_source_only",
+    "Clean.Sherlock.CompilerResidualization.dispatch_selection_requires_receipt",
+    "Clean.Sherlock.CompilerResidualization.compiled_receipt_grants_no_native_proof",
+    "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq",
+    "Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content",
+    "Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content",
+    "Clean.Sherlock.CompilerResidualization.intern_observation_preservation_iff",
+    "Clean.Sherlock.CompilerResidualization.unknown_optimization_refused",
+    "Clean.Sherlock.CompilerResidualization.divergent_replay_refused",
+    "Clean.Sherlock.CompilerResidualization.successful_replay_keeps_logical_metrics",
+    "Clean.Sherlock.CompilerResidualization.successful_replay_applied_tracks_interned_nodes",
+    "Clean.Sherlock.CompilerResidualization.attaching_replay_keeps_owner",
+    "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition",
+    "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness",
+    "Clean.Sherlock.CompilerResidualization.tooling_witness_domain_annotations",
+    "Clean.Sherlock.CompilerResidualization.tooling_native_closures_unsupported",
+    "Clean.Sherlock.CompilerResidualization.tooling_constraint_json_has_no_witness",
+    "Clean.Sherlock.CompilerResidualization.tooling_reports_grant_no_acceptance",
+    "Clean.Sherlock.CompilerResidualization.model_dynamic_branch_keeps_both_targets",
+    "Clean.Sherlock.CompilerResidualization.model_recursive_call_keeps_back_edge",
+    "Clean.Sherlock.CompilerResidualization.legacy_model_arith_prunes_call",
+    "Clean.Sherlock.CompilerResidualization.model_arith_keeps_call_via_generic",
+    "Clean.Sherlock.CompilerResidualization.residual_record_has_execution_witness",
+    "Clean.Sherlock.CompilerResidualization.refusing_executor_has_no_records",
+    "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime",
+    "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back",
+    "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back",
+    "Clean.Sherlock.CompilerResidualization.realization_preserves"
+  ],
+  "verification": {
+    "status": "LOCKED_VERIFIED",
+    "observation": {
+      "runner": "sherlock-fable",
+      "run": "20261026T035951Z-sherlock-lean-build",
+      "commandReported": "scripts/doctorwatson heavy --id sherlock-lean-build -- memcap 48G lake -d clean/fork build",
+      "runRecordCommit": "8853c8f8c",
+      "runRecordPath": "qa/sherlock/runs.jsonl",
+      "runRecordLineSha256": "29e95ce2d05df6bca366e20e08da10120ea313c6604e73c0f8cf32af911a014d",
+      "artifact": "qa/sherlock/traces/20261026T035951Z-sherlock-lean-build.log",
+      "bytes": 27167,
+      "sha256": "dc0b2e82fcf4d4d6a9e5dbc7b4db8bf20d5301f5d95a02490782e99d312750eb",
+      "wrapperArtifact": "/home/charles/factory-ops/scratchpad/sherlock-push/lean-build-19.log",
+      "wrapperBytes": 27342,
+      "wrapperSha256": "6bb5a5c9d65a6d05af0a76c475359e57f7173210b8c7ae1dabc1422a8bbc2094",
+      "overallPackageExit": 0,
+      "jobs": 21,
+      "memoryCap": "48G via memcap",
+      "realHeavyLockReported": true,
+      "lockEvidence": "Coordinator confirms real heavy.lock outer flock; heavy runner uses a private DW_LOCK proxy. The raw ledger alone records that proxy, not the outer real lock.",
+      "preflight": {
+        "ok": true,
+        "skipped": false,
+        "privateDWLockProxyUsed": true
+      },
+      "sourceHead": "5b68cb8c00e80d6ae6c5c1ec2d2682191fa57ada",
+      "currentSourceBytesEqualRecordedRunHead": true,
+      "incrementalReplayedBuild": true,
+      "wallSeconds": 6.229,
+      "maxRssBytes": 890322944,
+      "measurementScope": "whole incremental Lake command, not runtime/optimization/native performance",
+      "agentAction": "read committed ledger record, complete trace and wrapper bytes, exact query sets and current/run-HEAD source equality; did not execute build"
+    },
+    "axiomQueryStatus": "observed-pass",
+    "actualAxiomSets": {
+      "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program": [],
+      "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence": [],
+      "Clean.Sherlock.CompilerResidualization.empty_receipts_are_source_only": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.dispatch_selection_requires_receipt": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.compiled_receipt_grants_no_native_proof": [],
+      "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq": [],
+      "Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content": [],
+      "Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content": [],
+      "Clean.Sherlock.CompilerResidualization.intern_observation_preservation_iff": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.unknown_optimization_refused": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.divergent_replay_refused": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.successful_replay_keeps_logical_metrics": [],
+      "Clean.Sherlock.CompilerResidualization.successful_replay_applied_tracks_interned_nodes": [],
+      "Clean.Sherlock.CompilerResidualization.attaching_replay_keeps_owner": [],
+      "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness": [],
+      "Clean.Sherlock.CompilerResidualization.tooling_witness_domain_annotations": [],
+      "Clean.Sherlock.CompilerResidualization.tooling_native_closures_unsupported": [],
+      "Clean.Sherlock.CompilerResidualization.tooling_constraint_json_has_no_witness": [],
+      "Clean.Sherlock.CompilerResidualization.tooling_reports_grant_no_acceptance": [],
+      "Clean.Sherlock.CompilerResidualization.model_dynamic_branch_keeps_both_targets": [],
+      "Clean.Sherlock.CompilerResidualization.model_recursive_call_keeps_back_edge": [],
+      "Clean.Sherlock.CompilerResidualization.legacy_model_arith_prunes_call": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.model_arith_keeps_call_via_generic": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.residual_record_has_execution_witness": [],
+      "Clean.Sherlock.CompilerResidualization.refusing_executor_has_no_records": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime": [],
+      "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back": [],
+      "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back": [
+        "propext"
+      ],
+      "Clean.Sherlock.CompilerResidualization.realization_preserves": []
+    },
+    "emptyAxiomSetCount": 20,
+    "propextOnlyCount": 10,
+    "wholePackagePassed": true,
+    "localSandboxExecution": "blocked by memcap user scope bus",
+    "previousUnlockedVerification": {
+      "status": "observed-full-package-build-and-axiom-queries-pass",
+      "observation": {
+        "runner": "sherlock-fable",
+        "commandReported": "memcap 48G lake -d clean/fork build",
+        "artifact": "lean-build-9.log",
+        "bytes": 15826,
+        "sha256": "727994a49de08d40471d2f7f77a62817fdd3318b3c7b820ba1b890fe981664f2",
+        "overallPackageExit": 0,
+        "jobs": 17,
+        "cachedModuleResultsReplayed": false,
+        "agentAction": "read observed module/axiom results and validate full log and owned source bytes; did not execute build"
+      },
+      "axiomQueryStatus": "observed-pass",
+      "actualAxiomSets": {
+        "Clean.Sherlock.CompilerResidualization.inventory_independent_of_program": [],
+        "Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence": [],
+        "Clean.Sherlock.CompilerResidualization.empty_receipts_are_source_only": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.dispatch_selection_requires_receipt": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.compiled_receipt_grants_no_native_proof": [],
+        "Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq": [],
+        "Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content": [],
+        "Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content": [],
+        "Clean.Sherlock.CompilerResidualization.intern_observation_preservation_iff": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.unknown_optimization_refused": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.divergent_replay_refused": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.successful_replay_keeps_logical_metrics": [],
+        "Clean.Sherlock.CompilerResidualization.successful_replay_applied_tracks_interned_nodes": [],
+        "Clean.Sherlock.CompilerResidualization.attaching_replay_keeps_owner": [],
+        "Clean.Sherlock.CompilerResidualization.unsupported_is_tooling_disposition": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.constraint_support_does_not_supply_witness": [],
+        "Clean.Sherlock.CompilerResidualization.tooling_witness_domain_annotations": [],
+        "Clean.Sherlock.CompilerResidualization.tooling_native_closures_unsupported": [],
+        "Clean.Sherlock.CompilerResidualization.tooling_constraint_json_has_no_witness": [],
+        "Clean.Sherlock.CompilerResidualization.tooling_reports_grant_no_acceptance": [],
+        "Clean.Sherlock.CompilerResidualization.model_dynamic_branch_keeps_both_targets": [],
+        "Clean.Sherlock.CompilerResidualization.model_recursive_call_keeps_back_edge": [],
+        "Clean.Sherlock.CompilerResidualization.legacy_model_arith_prunes_call": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.model_arith_keeps_call_via_generic": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.residual_record_has_execution_witness": [],
+        "Clean.Sherlock.CompilerResidualization.refusing_executor_has_no_records": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.keys_ignore_runtime": [],
+        "Clean.Sherlock.CompilerResidualization.missing_candidate_falls_back": [],
+        "Clean.Sherlock.CompilerResidualization.budget_refusal_falls_back": [
+          "propext"
+        ],
+        "Clean.Sherlock.CompilerResidualization.realization_preserves": []
+      },
+      "emptyAxiomSetCount": 20,
+      "propextOnlyCount": 10,
+      "wholePackagePassed": true
+    },
+    "propextQuotSoundCount": 0,
+    "wholePackagePassedForCurrentSource": true,
+    "observationCoversCurrentSource": true,
+    "historicalRunPolicyNote": "Coordinator confirms builds1-18 were capped/unlocked observations. Run19 is the required locked/preflight/capped full build; earlier observations are retained historically."
+  },
+  "trust": {
+    "newSorry": false,
+    "newCustomAxioms": false,
+    "rustRefinementProved": false,
+    "nativeAcceptance": false
+  },
+  "implementationUpdates": {
+    "U024": {
+      "commit": "06ec0f855ac1e9908ea6ffef6dd995aa95815dfe",
+      "source": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "tests": "crates/mori-core/tests/sherlock_u024_intern_preservation.rs",
+      "profile": "sherlock-k-a/1",
+      "integration": "candidate-only; reference machine unchanged",
+      "clauses": [
+        "values",
+        "rejection/exhaustion",
+        "evaluation/effect order",
+        "boundaries",
+        "duties",
+        "resource schedule"
+      ],
+      "dutiesVacuous": true,
+      "recordCommit": "a069ccbff0015bee82cc816aae8baa18f9011579",
+      "recordAcceptance": "none",
+      "initialInternerCommit": "69aeb882d7927539cecbc71098962130c1c0f392",
+      "cliFlag": [
+        "--optimization",
+        "sherlock-a-intern-equal-tree-nodes/1"
+      ],
+      "ownerExecutionChanged": false,
+      "physicalMetric": "peak_tree_child_allocations",
+      "physicalSampling": [
+        "initial",
+        "each record.before",
+        "final"
+      ],
+      "physicalBytesOrPeakMemoryMeasured": false,
+      "historicalObservedTestEvidence": {
+        "runner": "sherlock-c4",
+        "run": "20261026T001248Z-U024-evidence",
+        "sourceCommit": "87d1a2e2cd52343783216c5980facae8a2d47b9d",
+        "commandReported": "cargo test -p mori-core --test sherlock_u024_intern_preservation -- --test-threads=1",
+        "trace": "qa/sherlock/traces/20261026T001248Z-U024-evidence.log",
+        "traceBytes": 12120,
+        "traceSHA256": "b82226f6bf27ba8ee890eca9ab371129be77593b1a28783735eac72f4cccc562",
+        "passed": 6,
+        "failed": 0,
+        "agentAction": "read trace, verify its pinned digest and named test results; did not execute Rust tests",
+        "scope": "A-profile candidate fixture only; not the mandatory real simulate replay"
+      },
+      "observedReceiptEvidence": {
+        "runner": "sherlock-c4",
+        "receipt": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json",
+        "run": "20261026T004602Z-U024-receipt",
+        "sourceCommit": "06ec0f855ac1e9908ea6ffef6dd995aa95815dfe",
+        "commandReported": "cargo test -p mori-core --test sherlock_u024_intern_preservation -- --test-threads=1",
+        "trace": "qa/sherlock/traces/20261026T004602Z-U024-receipt.log",
+        "traceSHA256": "98a35678872761f6fa33693cec893f6daac2a4da101baf0319f1ebfb654b9790",
+        "traceBytes": 12120,
+        "passed": 6,
+        "failed": 0,
+        "agentAction": "read receipt trace and verify digest/named test results; no local execution"
+      },
+      "observedHoldoutEvidence": {
+        "run": "20261026T004810Z-U024",
+        "head": "a069ccbff0015bee82cc816aae8baa18f9011579",
+        "cmd": "qa/holdout/run.sh uireq-024",
+        "exit": 0,
+        "wallSeconds": 1.746,
+        "maxRssBytes": 72126464,
+        "trace": "qa/sherlock/traces/20261026T004810Z-U024.log",
+        "traceBytes": 49,
+        "traceSHA256": "4cbd938142a7ddc42f2c2c0d3ef81a6652a51d9a1bc075fb2b6ce39fb9a69fe7",
+        "runner": "sherlock-c4",
+        "agentAction": "read factory run entry and passing trace; no local execution or binary/source reproducibility proof"
+      }
+    },
+    "U031/U033": {
+      "commit": "a824466981168933041fdba85f6a03a94fa1dc93",
+      "historicalNegativeWitnessCommit": "cfbab29c5",
+      "class": "Python finite report model only",
+      "execution": "none",
+      "acceptance": "none",
+      "rustExporterOrSpecializer": false,
+      "allDynamicTargetsRetained": true,
+      "genericFallbackForCallOutsideArithFamily": true,
+      "witnessInputOutputDomainAnnotations": true,
+      "actualStepOperandBinding": false,
+      "confirmation": "source inspected; Quint-3 separately confirmed repair; no model execution by this agent"
+    },
+    "U023": {
+      "commit": "577f0470b82647fcd4055b7c40d8f970505eae5e",
+      "receiptAware": true,
+      "declaredReceiptedRules": [],
+      "nonprovingReceiptKind": "moriarty-sherlock-fragment-receipt/1",
+      "receiptTests": "ProofPreimage::check",
+      "nativeProofVerificationClaimed": false,
+      "receiptAuthenticityProvedInLean": false
+    }
+  },
+  "modelSources": [
+    "models/sherlock/qa/export_plans.py",
+    "models/sherlock/qa/residualize.py"
+  ],
+  "implementationSourcePins": [
+    {
+      "commit": "69aeb882d",
+      "path": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "bytes": 16687,
+      "sha256": "d53b698b3cdaa4bae49913cfb61d6a8af4fe3ec33b322db9c83513dc058f0b8c",
+      "historical": true
+    },
+    {
+      "commit": "cfbab29c5",
+      "path": "models/sherlock/qa/export_plans.py",
+      "bytes": 8242,
+      "sha256": "8aeba7e11c254c2a6eca94c16bcbd256432950a70d13993396ade27cfeee11da",
+      "historical": true
+    },
+    {
+      "commit": "cfbab29c5",
+      "path": "models/sherlock/qa/residualize.py",
+      "bytes": 5313,
+      "sha256": "70a730e3fe454f77fc9dee9e362535a6d31576ebc4145f9d8088de17a7e07f5a",
+      "historical": true
+    },
+    {
+      "commit": "87d1a2e2c",
+      "path": "models/sherlock/optimizations/intern-equal-tree-nodes.json",
+      "bytes": 5728,
+      "sha256": "c99128ad2f38d50d17369f69311683472d660d8d9cdc39f4cda5bd3b24b071e2",
+      "historical": true
+    },
+    {
+      "commit": "a82446698",
+      "path": "models/sherlock/qa/export_plans.py",
+      "bytes": 8388,
+      "sha256": "4d4e4134e81b170a23d7ee713af41feb729faf6bc8a54edea470ba9fd72bf05d"
+    },
+    {
+      "commit": "a82446698",
+      "path": "models/sherlock/qa/residualize.py",
+      "bytes": 5585,
+      "sha256": "dbb414929da0706aade6de37263e6302d9155300d1828bd2d878a4575d1b7b57"
+    },
+    {
+      "commit": "dbe33d95d",
+      "path": "models/sherlock/optimizations/intern-equal-tree-nodes.json",
+      "bytes": 5877,
+      "sha256": "7acb416d6e943550a4edefb7c0be3db7926dc8de2ddce003153792965b73d72d",
+      "historical": true
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/optimization_intern.rs",
+      "bytes": 20551,
+      "sha256": "cd4f6bff605e57e97527c4f129109e55764aacb05a371208c358d3059dd7ad34"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/draft_optimization.rs",
+      "bytes": 5410,
+      "sha256": "179e3b362e25098c66fe402fed42a52d96c6ab670976e21d101e8aa080a162db"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/draft_reference_slices.rs",
+      "bytes": 9356,
+      "sha256": "594463504963fb6b5e8f8cbb02a064000654d6cf2f4f138b694378069cef1d0b"
+    },
+    {
+      "commit": "06ec0f855",
+      "path": "crates/mori/src/commands/simulate_sherlock.rs",
+      "bytes": 11235,
+      "sha256": "136886f83fe2b16b1daeb0fbf2693e41c3295abaf1e9407100c14a3a44196594"
+    },
+    {
+      "commit": "a069ccbff",
+      "path": "models/sherlock/optimizations/intern-equal-tree-nodes.json",
+      "bytes": 8083,
+      "sha256": "8be4891f6851d2fa59d717d6539606a54ee9c4ae689a344103716572e1740a6d"
+    },
+    {
+      "commit": "a069ccbff",
+      "path": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json",
+      "bytes": 1614,
+      "sha256": "4231ad83aa5af76ea260741f802e3178e892545f3f2bf052b6ce7b2ca6da4990"
+    },
+    {
+      "commit": "577f0470b",
+      "path": "crates/mori-core/src/sherlock/compile_artifact/native_inventory.rs",
+      "bytes": 27010,
+      "sha256": "3e49f7dbc34e7599e172c79ec070f07a50929dcee6b641e32744e21a8ac5b9f1"
+    }
+  ],
+  "contractUpdates": [
+    {
+      "commit": "abe5ee146",
+      "path": "qa/holdout/contracts/U033.json",
+      "bytes": 5643,
+      "sha256": "4d1c4ad3c644e45729f3c820483d99a8eeff47e7f03812403987bd96dc0f2a8a",
+      "class": "evaluator execution-provenance requirement; not implemented Rust evidence"
+    }
+  ],
+  "currentCompilerContracts": {
+    "U031": "Clean.Sherlock.CompilerExportPlans at S9 union93f61a41c (fixed3bb404f15)",
+    "U033": "Clean.Sherlock.CompilerResidualIR at3fabcca1c (residual functions unchanged8ffed57fc/abc64975d)",
+    "relationship": "historical reporting model and abstract preservation/provenance obligations remain; actual Rust follow-up has separate modules"
+  },
+  "portableReplayReceiptObservation": {
+    "commit": "42df98819",
+    "receiptPath": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json",
+    "receiptBytes": 1694,
+    "receiptSha256": "e9aed1442442f7f4d4aa1e6ef5afdfe837267f3fe19d2487e976cf963ead7b22",
+    "traceCopy": "qa/sherlock/receipt-traces/20261026T004602Z-U024-receipt.log",
+    "traceBytes": 12120,
+    "traceSha256": "98a35678872761f6fa33693cec893f6daac2a4da101baf0319f1ebfb654b9790",
+    "testsPassed": [
+      "intern_preserves_frame_cap_rejection",
+      "intern_preserves_fuel_exhaustion",
+      "intern_preserves_normal_run",
+      "interner_shares_equal_nodes_and_keeps_structure",
+      "preservation_rejects_changed_budget",
+      "preservation_rejects_unsound_interning"
+    ],
+    "failed": 0,
+    "declaredSourceCommit": "06ec0f855ac1e9908ea6ffef6dd995aa95815dfe",
+    "qualification": "Existing R1 six-test run carried as a committed copy, not a fresh test rerun. This agent read complete bytes, matched declared digest and all six test names; no Rust test run by this agent.",
+    "scope": "K-A HostOnly candidate fixtures and negative controls; no all-program preservation, byte/RSS improvement or B/C6/financial/native result"
+  }
+}
