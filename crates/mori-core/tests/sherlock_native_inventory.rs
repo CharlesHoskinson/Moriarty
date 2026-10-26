@@ -160,9 +160,12 @@ fn inventory_report_is_fixed_across_programs() {
     assert_eq!(fact["table"], fold["table"]);
     assert_eq!(fact["summary"]["rules"], 46);
     assert_eq!(fold["summary"]["rules"], 57);
-    // Authored from the table: fact uses PushAccept, ReturnCallValid, ReturnLeft,
-    // ReturnRight, ScalarEntry/Tag/Arithmetic/Exit and EqualEmpty.
-    assert_eq!(fact["summary"]["with_c6_fragment"], 9);
-    // fold: the same minus EqualEmpty, plus ReturnScope.
-    assert_eq!(fold["summary"]["with_c6_fragment"], 9);
+    // Authored from the table: of the 46 fact rules, the 9 without a C6
+    // fragment are BHelperEqual{Entry,Pair,Different,Exit},
+    // BHelperValidate{Entry,Occurrence,Empty,Exit} and KAdminPublishValue.
+    assert_eq!(fact["summary"]["with_c6_fragment"], 37);
+    assert_eq!(fact["summary"]["gaps"].as_array().unwrap().len(), 9);
+    // fold adds the 10 BHelperMatch rules and BHelperScalarConstruct as gaps.
+    assert_eq!(fold["summary"]["with_c6_fragment"], 41);
+    assert_eq!(fold["summary"]["gaps"].as_array().unwrap().len(), 16);
 }
