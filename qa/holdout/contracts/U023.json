@@ -1,0 +1,26 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U023",
+  "entrypoint": {
+    "argv": [
+      "python3",
+      "-c",
+      "print('{}')"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 1048576,
+    "timeout_s": 60,
+    "required_paths": []
+  },
+  "qualification_record": "docs/sherlock/qualification/u023-stagenet-e2e.json",
+  "interface": {
+    "scenario": "UIREQ-023 scenario 2 (Midnight stagenet end-to-end qualification); scenario 1 keeps its --native-inventory interface",
+    "record": "committed JSON {format:'moriarty-sherlock-native-qualification/1', source:{path (committed draft .mori with a closed entry), sha256}, pins:{network:'stagenet', ledger_version:'9', node_version, toolchain, relation_id (sha256 of relation_vk_path bytes), relation_vk_path (committed)}, stages:{compile:{status,...}, prove:{status, prover,...}, verify:{status, verifier (not the prover)}, deploy:{status, tx (64-hex), address}, call:{status, tx, entry_point}, readback:{status, state_sha256 (sha256 of the indexed post-call contract state bytes), observed_result}}, claims:{execution_authority:'none', preview_fenrir_evidence_transferred:false}}; every stage status is 'run' or 'not-run'",
+    "holdout": "recomputes the source hash and relation_id; requires all six stages run (else SPEC GATE listing the not-run stages); requires the deploy and call transactions indexed once with SUCCESS on stagenet and hashing to their ids; requires the call to be a ContractCall at the deployed address with the recorded entry point; hashes the indexed post-call state; compares observed_result with the holdout's own mori simulate reference run of the committed source",
+    "evaluator_note": "Evaluator-authored (sherlock-eval 2026-10-25). No wallet is opened by the holdout; an unreachable indexer is host-unfit (exit 3). Ledger 9, node, SDK and proof server stay unchanged."
+  }
+}

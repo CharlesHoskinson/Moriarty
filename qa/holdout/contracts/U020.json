@@ -1,0 +1,86 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U020",
+  "entrypoint": {
+    "argv": [
+      "target/debug/mori",
+      "simulate",
+      "crates/mori/tests/fixtures/sherlock-simulate-p2/f01-fee-first.mori",
+      "--execution-profile",
+      "sherlock-helper-microstep/2",
+      "--source-profile",
+      "moriarty/2",
+      "--execution-config",
+      "crates/mori/tests/fixtures/sherlock-simulate-p2/config2.json",
+      "--target",
+      "crates/mori/tests/fixtures/sherlock-simulate-p2/target.json",
+      "--action",
+      "pay",
+      "--scenario",
+      "crates/mori/tests/fixtures/sherlock-simulate-p2/f01-scenario.json",
+      "--phase-policy",
+      "retain-guaranteed-fees/1"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 1048576,
+    "timeout_s": 120,
+    "required_paths": [
+      "status",
+      "profile",
+      "qualification",
+      "authentication",
+      "consumption",
+      "site",
+      "label",
+      "checkpoint",
+      "binders[].name",
+      "binders[].type",
+      "committed_work",
+      "attempted_work",
+      "fin.committed.snapshot.balances[].account",
+      "fin.committed.snapshot.balances[].amount",
+      "fin.committed.snapshot.liabilities[].name",
+      "fin.committed.effects[].kind",
+      "fin.committed.logical_work",
+      "fin.residual_duties[].name",
+      "fin.residual_duties[].amount",
+      "fin.accounting.gross_debit",
+      "fin.accounting.fees",
+      "fin.accounting.recipient_receipt",
+      "fin.discarded_tentative.effects",
+      "fin.discarded_tentative.segment_index",
+      "fin.retained_by_policy.policy",
+      "fin.retained_by_policy.effects",
+      "fin.phase_policy",
+      "fin.ledger_rollback"
+    ],
+    "forbidden_paths": [
+      "fin.tentative"
+    ]
+  },
+  "phase_policy": {
+    "all-or-nothing/1": [],
+    "retain-guaranteed-fees/1": [
+      "--phase-policy",
+      "retain-guaranteed-fees/1"
+    ]
+  },
+  "interface": {
+    "format": "sherlock-helper-microstep/2 financial route (docs/sherlock/design/suspension-and-finance.md \u00a73.5, \u00a77.5, \u00a78 L1)",
+    "selection": "--phase-policy POLICY on start AND resume; bound at admission (a resume under another policy is refused R2); omitted = all-or-nothing/1",
+    "admission": "retain-guaranteed-fees/1 refuses a Fee after a fallible effect in the same segment (exit 1, no status, stage admit)",
+    "exit_codes": {
+      "0": "waiting or halted",
+      "1": "rejected, exhausted or admission failure",
+      "3": "not_ready",
+      "4": "refused (stage R0-R7)",
+      "2": "usage"
+    },
+    "rejected_fin": "committed{snapshot,effects,logical_work} is the retained prefix (plus the sealed fee phase under retain-guaranteed-fees/1); retained_by_policy.effects are those fees; discarded_tentative.effects the discarded delta; ledger_rollback none-inferred",
+    "evaluator_note": "Adopted from sherlock-u2's draft. The holdout consumes only phase_policy.retain-guaranteed-fees/1 (appended to start AND resume). Admission refusal of a Fee after a fallible effect is asserted only as a nonzero exit without a waiting/halted status; whether it is refused at program admission or at segment entry (note section 16: R2, exit 4) is not asserted, and the holdout fixtures keep every unreached segment fees-first so either reading gives the same verdict."
+  }
+}

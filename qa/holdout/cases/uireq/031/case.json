@@ -16,7 +16,7 @@
       "specLine": 228,
       "when": "One step uses structured witness instructions and a requested export also encounters a native witness closure, lookup or interaction.",
       "then": "OperationManifest identifies typed operations, ordered inputs/outputs, source/component membership and omissions; constraint export, witness-program export, lookup/interact/custom-gate support and field/layout support are listed separately. Unsupported features yield tooling Unsupported, with no claim that basic constraint JSON supplies witness computation or that any non-Midnight format is a Midnight/ZKIR exporter.",
-      "status": "unimplemented",
+      "status": "runnable",
       "expected": {
         "OperationManifest identifies": [
           "typed operations",
@@ -32,8 +32,42 @@
         ],
         "unsupported features": "tooling Unsupported"
       },
-      "coverage": "none",
-      "blocker": "needs a backend preparation report exposing separate ConstraintPlan and WitnessPlan artifacts with BackendCapabilities disposition and an OperationManifest"
+      "coverage": "primary",
+      "judgment": "Evaluator reading (UIREQ-031 + interfaces.md 'Witness, constraints and exports' + D31): one bounded K-A step of fact(3) is prepared twice (the final checked multiplication, a scalar step, and a ReturnF frame return). Each must yield a content-addressed OperationManifest, separate ConstraintPlan and WitnessPlan sharing it, BackendCapabilities with lookup/interaction/custom-gate/structured-witness/native-closure/field-layout listed separately, emitted constraint and structured-witness artifacts whose bytes the holdout hashes, and a located tooling Unsupported for at least one of native closure/lookup/interaction, with the application run unchanged. Each capability requested alone gives the same disposition and bytes.",
+      "unasserted": [
+        "the exact operation decomposition beyond the presence of CheckedU128Mul (scalar step) and FrameRestore (frame step)",
+        "field_id/layout values",
+        "the security interpretation of constraint components (Opus-owned)",
+        "any actual proof or Midnight export (none is claimed)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --source-profile moriarty-sherlock-draft/1 --entry (non-native build) with the flags of qa/holdout/contracts/U031.json",
+        "checks": [
+          {
+            "kind": "export-plans",
+            "label": "D31 fact(3) scalar and frame steps",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6,
+            "steps": [
+              {
+                "label": "checked mul step (2*3)",
+                "select": {
+                  "end_control": "uiPrimResult(uiPrimValue(uiU(6)))"
+                },
+                "expect_op": "CheckedU128Mul"
+              },
+              {
+                "label": "ReturnF frame return",
+                "select": {
+                  "start_control_prefix": "uiRet(",
+                  "top_frame_prefix": "uiReturnF("
+                },
+                "expect_op": "FrameRestore"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

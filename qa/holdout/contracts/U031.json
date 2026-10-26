@@ -1,0 +1,98 @@
+{
+  "format": "doctorwatson-contract/1",
+  "id": "U031",
+  "entrypoint": {
+    "argv": [
+      "target/debug/mori",
+      "simulate",
+      "PROGRAM.mori",
+      "--execution-profile",
+      "sherlock-helper-microstep/1",
+      "--source-profile",
+      "moriarty-sherlock-draft/1",
+      "--entry",
+      "--execution-config",
+      "CONFIG.json",
+      "--target",
+      "TARGET.json",
+      "--export-plan",
+      "111",
+      "--export-dir",
+      "EXPORT_DIR",
+      "--export-request",
+      "constraint-json",
+      "--export-request",
+      "lookup"
+    ],
+    "cwd": "."
+  },
+  "expect": {
+    "exit": 0,
+    "json": true,
+    "max_stdout_bytes": 4194304,
+    "timeout_s": 120,
+    "required_paths": [
+      "execution.summary",
+      "export_plans.format",
+      "export_plans.step.position",
+      "export_plans.step.rule_start_line",
+      "export_plans.step.source_control",
+      "export_plans.step.profile_id",
+      "export_plans.operation_manifest.manifest_id",
+      "export_plans.operation_manifest.operations[].operation_id",
+      "export_plans.operation_manifest.operations[].op",
+      "export_plans.operation_manifest.operations[].ordering",
+      "export_plans.operation_manifest.operations[].inputs",
+      "export_plans.operation_manifest.operations[].outputs",
+      "export_plans.operation_manifest.operations[].source_locators",
+      "export_plans.operation_manifest.operations[].component_membership",
+      "export_plans.operation_manifest.operations[].witness_dependencies",
+      "export_plans.operation_manifest.operations[].supported_status.kind",
+      "export_plans.operation_manifest.omissions",
+      "export_plans.constraint_plan.plan_id",
+      "export_plans.constraint_plan.components",
+      "export_plans.constraint_plan.omissions",
+      "export_plans.witness_plan.plan_id",
+      "export_plans.witness_plan.nodes[].node_id",
+      "export_plans.witness_plan.stable_topological_order",
+      "export_plans.backend_capabilities.lookup.supported",
+      "export_plans.backend_capabilities.interaction.supported",
+      "export_plans.backend_capabilities.custom_gates.supported",
+      "export_plans.backend_capabilities.structured_witness_ir.supported",
+      "export_plans.backend_capabilities.native_closures.supported",
+      "export_plans.backend_capabilities.field_layouts.supported",
+      "export_plans.backend_capabilities.formats[].midnight_zkir_exporter",
+      "export_plans.exports[].request",
+      "export_plans.exports[].disposition",
+      "export_plans.claims.constraint_json_supplies_witness",
+      "export_plans.claims.midnight_zkir_exporter"
+    ]
+  },
+  "flags": {
+    "plan": [
+      "--export-plan",
+      "{position}"
+    ],
+    "request": [
+      "--export-request",
+      "{capability}"
+    ],
+    "dir": [
+      "--export-dir",
+      "{dir}"
+    ]
+  },
+  "interface": {
+    "route": "mori simulate on the holdout draft call; export flags add a top-level `export_plans`; the application run (summary, exit 0) is unchanged even when an export is Unsupported",
+    "step": "--export-plan E prepares the bounded step at 1-based K-A reference record position E of --reference-slices 1 (E=0 refused); export_plans.step echoes {position, rule_start_line, source_control, profile_id:'sherlock-k-a/1'} of that record",
+    "requests": "--export-request CAP (repeatable) with CAP in constraint-json, structured-witness, native-witness-closure, lookup, interaction, custom-gate; artifacts are written under --export-dir and nothing else is written there",
+    "operation_manifest": "{manifest_id, reference_definition_id, profile_id, layout_version, operations:[{operation_id, op (interfaces.md names: FieldAdd, FieldMul, AssertZero, LimbExtract, CheckedU128Add/Sub/Mul, Select, ArenaRead, FrameRestore, helper classes), ordering:int distinct, inputs:[{name,type}], outputs:[{name,type}], source_locators:[..] non-empty, component_membership: source|component|source+component, witness_dependencies:[operation_id], witness_program_kind, constraint_component_locator (nullable), supported_status:{kind: Specified|Implemented|Unsupported, reason}}], omissions:[..]}",
+    "constraint_plan": "{plan_id, operation_manifest_id, layout_version, field_id, ordered_public_inputs, ordered_private_inputs, ordered_outputs, components:[{component_id, operation_id, source_locator, parameters}], required_capabilities, omissions:[{operation_id, reason}]}; every operation is a component or an omission",
+    "witness_plan": "{plan_id, operation_manifest_id, layout_version, input_bindings, nodes:[{node_id, operation_id, typed_inputs:[{name,type}], typed_outputs, dependencies:[node_id], last_use}], stable_topological_order:[node_id], output_bindings, slot_counts, program_kind}; dependencies precede in the order; every non-Unsupported operation has a node",
+    "ids": "manifest_id / plan_id = sha256 hex of canonical JSON of the object without its id; the three are distinct; both plans carry the manifest id",
+    "backend_capabilities": "{backend_id, source_membership, field_id, formats:[{format, midnight_zkir_exporter:false, supplies_witness_computation:bool (false for constraint-json)}], constraint_operations, witness_operations, lookup, interaction, custom_gates, structured_witness_ir, native_closures, field_layouts (each {supported:bool, ...})}",
+    "exports": "one entry per request: {request, disposition: emitted|unsupported, artifact:{path relative to export dir, sha256, bytes} | null, unsupported:{feature, reason, operation_id|source_locator} | null}; emitted iff the capability is supported; constraint-json artifact carries plan_id = constraint_plan.plan_id and no witness keys; structured-witness artifact carries plan_id = witness_plan.plan_id and the plan's nodes",
+    "claims": "{constraint_json_supplies_witness:false, midnight_zkir_exporter:false}",
+    "evaluator_note": "Evaluator-authored (sherlock-eval 2026-10-25) from the spec, interfaces.md and demonstrators.md; implementer proposals reviewed. The holdout reads the flags below; a spelling change is a CONTRACT CHANGE posted to sherlock-eval. A model_package.py report not bound to the selected reference record is a gap report."
+  }
+}
