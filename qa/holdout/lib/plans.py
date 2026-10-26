@@ -759,7 +759,12 @@ def custom_native_qualification(c):
         a = _action_at(sn, st["deploy"]["address"], st["call"]["tx"])
     except (OSError, RuntimeError) as e:
         raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
-    need(dep and call, "")
+    need(st["deploy"]["tx"] != st["call"]["tx"], "record: deploy and call cite the same transaction")
+    try:
+        d = _action_at(sn, st["deploy"]["address"], st["deploy"]["tx"])
+    except (OSError, RuntimeError) as e:
+        raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
+    need(d and d["__typename"] == "ContractDeploy", "deploy: the deploy transaction did not deploy the recorded address")
     need(a and a["__typename"] == "ContractCall" and a["entryPoint"] == st["call"].get("entry_point"),
          "call: not a ContractCall on the deployed address with the recorded entry point")
     need(hashlib.sha256(bytes.fromhex(a["state"])).hexdigest() == st["readback"].get("state_sha256"),
