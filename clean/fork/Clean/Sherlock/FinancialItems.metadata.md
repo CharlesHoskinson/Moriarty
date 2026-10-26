@@ -58,14 +58,20 @@ conservation or a guarantee that every otherwise valid action can publish.
 
 No new `sorry` or custom axiom is declared. The companion
 `FinancialItemsAxioms.lean` queries every named theorem. The current
-fuel-guard/checked-accounting update is pending capped kernel verification.
-The preceding nineteen-theorem source in `e9da3a079` was checked in the
-coordinator's successful 17-job Lean 4.33.1 build, with exact metadata in
-`0c1020244`. That historical query observed only Lean's standard `propext`,
-`Quot.sound` and `Classical.choice` axioms, with no custom or `sorryAx`
-dependency. The JSON distinguishes this baseline from the current pending
-query. This agent cannot connect to the sandbox user scope bus and has
-not run an uncapped build.
+fuel-guard/checked-accounting source in `284c563f1` passed the coordinator's
+capped 17-job Lean 4.33.1 build. Lake reported 907 ms for this module and
+224 ms for its query. This agent inspected the complete build log and checked
+that the source bytes match the commit; it did not execute the build.
+Its own capped invocation cannot connect to the sandbox user scope bus,
+and no uncapped build was run.
+
+The actual twenty-four-name query reports twelve empty axiom sets, eight
+`propext`-only sets, three `propext`/`Quot.sound` sets and one
+`propext`/`Classical.choice`/`Quot.sound` set. The last is
+`charge_stays_uint128`; the three quotient-dependent statements are the two
+general admission theorems and `charge_preserves_work`. The JSON records
+every per-name set and log digest. No custom or `sorryAx` dependency was
+observed. Prior nineteen-name metadata remains available in `0c1020244`.
 
 `WorkAccounting` is a theorem premise, not a guarantee currently supplied by
 financial checkpoint import. In the pinned host source, `decode_body`
@@ -80,6 +86,13 @@ the headroom theorem cannot be applied to that imported image. The older
 decoded-counter adapter and staged-counter module concern a separate owner
 path and do not supply this financial premise. These are source-audit
 observations, not an executed Rust or forged-checkpoint test.
+
+The separate diagnostic committed by Quint-2 in `5c71be223` records synthetic
+counter and segment imports reaching panics in an older pinned host binary.
+Its source hashes precede the current fuel/accounting changes. This agent
+inspected that committed report, but did not execute it; the report is not a
+test of the current binary. The JSON records its digest and historical source
+pins separately from the current source audit and Lean kernel observations.
 
 This module does not establish full Rust refinement, statement semantics,
 residual-duty extraction, source/plan admission, authenticated/consumed
