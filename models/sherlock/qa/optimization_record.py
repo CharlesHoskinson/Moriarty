@@ -151,7 +151,7 @@ def check(record, repo):
             _need(i in evidence, f'{name}: evidence {i!r} is not in the evidence table')
         for i in gap_ids:
             _need(i in gaps, f'{name}: gap {i!r} is not in the gap table')
-        clauses.append(dict(observation=name, evidence=ev_ids, gaps=gap_ids))
+        clauses.append(dict(observation=name, predicate=c['predicate'], evidence=ev_ids, gaps=gap_ids))
     verified = []
     for e in record['evidence']:
         kind = e.get('kind')
