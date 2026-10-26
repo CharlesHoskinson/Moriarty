@@ -1,0 +1,89 @@
+// S0 Sherlock rollup anchor for sherlock-v3-batch/1. Synthetic observations only.
+// The installed acceptValidity verifier must be the call-bound handwritten D key.
+// The 17 parent lanes equal FRTF A2; the terminal projection includes both deposit
+// accumulator endpoints. Settling binds that projection to current root/height/cursor.
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export sealed ledger instance_id: Field;
+export ledger root: Field;
+export ledger height: Uint<64>;
+export ledger batch_no: Uint<64>;
+export ledger dep_consumed: Field;
+export ledger dep_acc: Field;
+export ledger validity_ok: Set<Field>;
+export ledger settled: Set<Field>;
+export ledger last_in_root: Field;
+export ledger last_fee_sum: Field;
+export ledger last_wd_sum_usd: Field;
+export ledger last_wd_sum_night: Field;
+export ledger last_dep_sum_usd: Field;
+export ledger last_dep_sum_night: Field;
+
+pure circuit DOM_STMT(): Field { return 0x544d54535f4d4f44 as Field; }
+pure circuit H_MAX_PRE(): Uint<64> { return 18446744073709551565; }
+pure circuit B_MAX(): Uint<64> { return 18446744073709551615; }
+
+constructor(id: Field, r0: Field, h0: Uint<64>, b0: Uint<64>, dep0: Field, acc0: Field) {
+  const i = disclose(id);
+  const r = disclose(r0);
+  const h = disclose(h0);
+  const b = disclose(b0);
+  assert(i != (0 as Field), "zero deployment id");
+  assert(r != (0 as Field), "zero genesis root");
+  assert(h <= H_MAX_PRE(), "genesis height admits no batch");
+  assert(b < B_MAX(), "genesis batch admits no batch");
+  instance_id = i;
+  root = r;
+  height = h;
+  batch_no = b;
+  dep_consumed = disclose(dep0);
+  dep_acc = disclose(acc0);
+  last_in_root = 0 as Field;
+  last_fee_sum = 0 as Field;
+  last_wd_sum_usd = 0 as Field;
+  last_wd_sum_night = 0 as Field;
+  last_dep_sum_usd = 0 as Field;
+  last_dep_sum_night = 0 as Field;
+}
+
+export circuit acceptValidity(stmt: Field): [] {
+  const s = disclose(stmt);
+  assert(!settled.member(s), "statement replay");
+  validity_ok.insert(s);
+}
+
+export circuit settleValidity(batch: Uint<64>, fields: Vector<17, Field>): [] {
+  const f = disclose(fields);
+  const h = height;
+  const b = batch_no;
+  assert(h <= H_MAX_PRE(), "height wrap");
+  assert(b < B_MAX(), "batch wrap");
+  const next = (b + 1) as Uint<64>;
+  assert(disclose(batch) == next, "batch");
+  assert(f[0] == root, "predecessor root");
+  assert(f[15] == (h + 1) as Field, "predecessor height");
+  assert(f[16] == (h + 50) as Field, "batch header span");
+  assert(f[5] == dep_consumed, "deposit predecessor cursor");
+  assert(f[7] == dep_acc, "deposit predecessor accumulator");
+  // Matches DeciderRelation's pinned projection. Position and reserved lanes
+  // are proved by the leaf but are not inputs to this terminal projection.
+  const stmt = transientHash<Vector<17, Field>>([DOM_STMT(), instance_id, next as Field,
+      f[0], f[1], f[15], f[16], f[4], f[5], f[6], f[7], f[8], f[9],
+      f[10], f[11], f[12], f[13]]);
+  assert(!settled.member(stmt), "statement replay");
+  assert(validity_ok.member(stmt), "statement not accepted");
+  validity_ok.remove(stmt);
+  settled.insert(stmt);
+  root = f[1];
+  height = (h + 50) as Uint<64>;
+  batch_no = next;
+  dep_consumed = f[6];
+  dep_acc = f[8];
+  last_in_root = f[4];
+  last_fee_sum = f[9];
+  last_wd_sum_usd = f[10];
+  last_wd_sum_night = f[11];
+  last_dep_sum_usd = f[12];
+  last_dep_sum_night = f[13];
+}

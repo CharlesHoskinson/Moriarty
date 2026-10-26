@@ -63,8 +63,17 @@ impl Template {
                 "exactly one binding_input and one communication_commitment",
             ));
         }
-        if count(|s| matches!(s, Slot::Stmt)) != 1 {
-            return Err(io::Error::other("exactly one stmt slot"));
+        let stmt_count = count(|s| matches!(s, Slot::Stmt));
+        if if cfg!(feature = "sherlock-rollup") {
+            stmt_count == 0
+        } else {
+            stmt_count != 1
+        } {
+            return Err(io::Error::other(if cfg!(feature = "sherlock-rollup") {
+                "at least one stmt slot"
+            } else {
+                "exactly one stmt slot"
+            }));
         }
         Ok(())
     }
@@ -94,6 +103,10 @@ impl Template {
         for (s, v) in self.slots.iter().zip(pis) {
             if let Slot::Const(c) = s
                 && c != v
+            {
+                return None;
+            }
+            if cfg!(feature = "sherlock-rollup") && *s == Slot::Stmt && *v != pis[self.stmt_index()]
             {
                 return None;
             }
@@ -136,6 +149,30 @@ impl Template {
         let s = v["stmt_index"]
             .as_u64()
             .ok_or_else(|| io::Error::other("template: no stmt_index"))? as usize;
+        #[cfg(feature = "sherlock-rollup")]
+        let statements = match v.get("stmt_indices") {
+            None => vec![s],
+            Some(value) => value
+                .as_array()
+                .ok_or_else(|| io::Error::other("template: stmt_indices must be an array"))?
+                .iter()
+                .map(|x| {
+                    x.as_u64()
+                        .and_then(|x| usize::try_from(x).ok())
+                        .ok_or_else(|| io::Error::other("template: invalid statement index"))
+                })
+                .collect::<io::Result<Vec<_>>>()?,
+        };
+        #[cfg(not(feature = "sherlock-rollup"))]
+        let statements = [s];
+        if statements.first() != Some(&s)
+            || statements.iter().any(|&i| i < 2 || i >= n)
+            || statements.windows(2).any(|p| p[0] >= p[1])
+        {
+            return Err(io::Error::other(
+                "template: invalid or repeated statement positions",
+            ));
+        }
         let mut free: Vec<u64> = v["free"]
             .as_array()
             .ok_or_else(|| io::Error::other("template: no free"))?
@@ -143,12 +180,15 @@ impl Template {
             .map(|x| x.as_u64().unwrap_or(u64::MAX))
             .collect();
         free.sort();
-        let mut want = vec![0u64, 1, s as u64];
+        let mut want = vec![0u64, 1];
+        want.extend(statements.iter().map(|&i| i as u64));
         want.sort();
         if free != want {
-            return Err(io::Error::other(
-                "template: free slots must be exactly 0, 1 and stmt_index",
-            ));
+            return Err(io::Error::other(if cfg!(feature = "sherlock-rollup") {
+                "template: free slots must match binding, communication and statement positions"
+            } else {
+                "template: free slots must be exactly 0, 1 and stmt_index"
+            }));
         }
         let consts = v["constants"]
             .as_object()
@@ -158,7 +198,7 @@ impl Template {
             slots.push(match i {
                 0 => Slot::BindingInput,
                 1 => Slot::CommunicationCommitment,
-                i if i == s => Slot::Stmt,
+                i if statements.contains(&i) => Slot::Stmt,
                 i => Slot::Const(f_from_hex(
                     consts
                         .get(&i.to_string())
@@ -169,10 +209,12 @@ impl Template {
                 )?),
             });
         }
-        if consts.len() != n - 3 {
-            return Err(io::Error::other(
-                "template: constant count does not match n - 3",
-            ));
+        if consts.len() != n - 2 - statements.len() {
+            return Err(io::Error::other(if cfg!(feature = "sherlock-rollup") {
+                "template: constant count does not match unassigned slots"
+            } else {
+                "template: constant count does not match n - 3"
+            }));
         }
         let t = Template { slots };
         t.validate()?;
