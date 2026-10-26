@@ -7,9 +7,10 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twelve Quint files, runs 37 deterministic tests, and
-samples 10,000 traces per model with `--max-steps 30`. The five baseline models
-use `modelInv`; the pinned s5 source projection uses `sourceInv`. All six
+The runner typechecks all fourteen Quint files, runs 41 deterministic Quint
+tests and eight committed Python tooling unit tests, and samples 10,000 traces
+per model with `--max-steps 30`. Six models use `modelInv`; the pinned defective
+s5 source projection uses `sourceInv`. All seven
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets` run deliberately finds the source counterexample
 described below, which the runner checks explicitly. Raw results are in
@@ -24,6 +25,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `planExports.qnt` | U031; `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md:225` and `interfaces.md`, Separate compilation/export plans | Requirements model: separate constraint/witness dispositions and omissions, native closure versus structured witness support, field/layout/lookup/interaction/custom-gate gates, ordered repeated typed inputs, source/component membership, explicit format qualification |
 | `residualWorklist.qnt` | U033; same spec at line 239 and `interfaces.md`, Bounded static residualization | Requirements model: finite memoized rule locations, recursive backedge without unrolling, both dynamic successors, size-limit generic fallback, all three masks preserve the dynamic input record |
 | `s5ResidualProjection.qnt` | U033; `cfbab29c5:models/sherlock/qa/residualize.py` | FIFO worklist and exact five-rule graph; source structural invariants pass while the dynamic-target contract fails for the `arith` family |
+| `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
@@ -90,3 +92,10 @@ without opening another worktree or copying its files. Its output is in
 `s5-source-observations.json`. The positive requirements model does not adopt
 the dropped-successor behavior. The source projection is deliberately pinned
 to the defective version so later repairs do not erase the counterexample.
+
+At `a82446698`, the owner repaired the lost `R_call` edge with an explicit
+generic target/fallback and added typed input/output fields. The repair was
+executed from its Git object, all eight of its Python unit tests passed, and
+`s5ResidualRepaired` checks the repaired finite graph. U031's remaining scope
+gap persists: these are demonstration plans, with one generic input/output per
+node and no actual Rust-step parameter or per-operation operand arities.
