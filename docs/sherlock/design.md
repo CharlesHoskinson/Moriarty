@@ -207,8 +207,8 @@ and private Clean implementation. The public contract modules are:
   U014–U016 exact technical restore, complete-checkpoint preservation, pre-guard
   resumability and checked resume-epoch premises.
 - [FinancialItems](../../clean/fork/Clean/Sherlock/FinancialItems.metadata.md):
-  U017–U020 committed financial prefixes, fee-phase policy, local failure and
-  checked report accounting, with actual capture/target correspondence open.
+  U017–U020 committed financial prefixes, positive residual duties, fee-phase
+  policy, local failure and checked report accounting, with actual capture/target correspondence open.
 - [RequirementRollups](../../clean/fork/Clean/Sherlock/RequirementRollups.metadata.md):
   C1–C6 dependency conjunctions over supplied U obligations; unpacking a
   conjunction does not discharge its external evidence obligations.

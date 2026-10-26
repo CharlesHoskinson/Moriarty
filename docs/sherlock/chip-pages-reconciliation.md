@@ -39,3 +39,16 @@ Docs-only; ledger 9, the node, the Midnight SDK and the proof server unchanged.
 Pages build verified locally in `site/` (`npm run check`, `npm test`,
 `npm run build`); no deploy performed (site workflow is manual-dispatch,
 main-only).
+
+## Final docs pass on sherlock-final (sherlock-s3, 2026-10-26)
+
+Consolidation facts: sherlock-final at `c7d3c48a3` (fast-forward line carrying
+the sherlock-s10 re-verification merges); evaluator HMERGE `9e5617e6d` set
+`qa/holdout` to E=`7f0942c3d`; F4 PASS run `20261026T040123Z`; U024 closed
+`035738Z`, U031 PASS `20261026T035253Z` and C3 PASS `20261026T035312Z` on the
+consolidation line; Lean locked build 19 run `20261026T035951Z-sherlock-lean-build`
+exit 0 (pin: sherlock-lean `0115ab1cf`). U023 status: fold-path fix
+`d570c75cc` landed on sherlock-s6, fragments re-running on s2/s7/s4, and the
+U023 qualification record remains pending the real stagenet run. A second
+small docs pass follows when U023/C4 close. Pages rebuild verified locally
+on this branch (typecheck, fixed-set tests, production build); no deploy.
