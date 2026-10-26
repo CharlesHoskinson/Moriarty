@@ -177,3 +177,13 @@ qualification. No private source or paths enter the shareable package. A missing
 record is explicit, and source membership establishes no proof/native correspondence.
 These are maintainer checks, with no public compile/prove/deploy prerequisite. Ledger 9,
 stock-verifier compatibility and the existing proof format stay fixed.
+
+## 2026-10-26: Final docs reconciliation (financial spec)
+
+Note from sherlock-lean-2, adopted at the finish push: `FinancialItems.metadata.md`
+is the current financial spec. Do not infer refinement closure from it: the metadata
+describes the financial items and their duties, it does not by itself close any
+refinement, native, or ledger correspondence. Lean contracts are at branch
+`sherlock-lean` `d70956d1b` and later (residual-duty and U031 regression records
+through `a2e7f9f86`). C-group state is in `docs/sherlock/c-group-rollup.md`;
+consolidation inputs for `sherlock-final` are in `docs/sherlock/consolidation.md`.
