@@ -2329,3 +2329,10 @@ Ideas not yet implemented:
 - **Dependency drift in a reinstalled SDK root.** A fresh `npm install` resolved `onchain-runtime-v4` 4.0.0-rc.5 at top level next to the nested rc.3. WASM classes then crossed module instances (`expected instance of ChargedState`). The dry run caught it before any wallet access. Idea: commit the SDK root's `package-lock.json`, and have the tools assert a single copy of each WASM runtime.
 - **Secrets and keys written outside the visible tree.** The SDK writes the maintenance key store to `<repo>/midnight-level-db/`, which is gitignored. It is now backed up with its password outside the repo. Idea: preflight should list every gitignored path holding key material and its backup state.
 - **Memory caps must fit the test, not the slice default.** The C6 dispatch factorial test went past a 30 GB cap, because it caches one circuit per rule. Record each test's peak RSS in its budget and size `capped` from that.
+
+## 2026-10-26 — resource lessons (ticks 6-8)
+
+- **A slice has two limits.** heavy.slice sets MemoryHigh 36G under MemoryMax 40G. Raising only MemoryMax for a 60G job left it throttled near 39 GB for over 30 minutes, and a commit in the same slice starved behind it. `capped` now warns when a requested cap exceeds the slice MemoryHigh. Idea: DoctorWatson heavy should read the budget's maxRssBytes and size both limits itself.
+- **Nested heavy work inherits the outer cgroup.** A wrapper script that calls `doctorwatson heavy` (for example call-current.mjs with `MORIARTY_DW_HEAVY`) runs that proof inside the wrapper's own unit. A small agents-slice wrapper would OOM a 16.5 GB proof. Launch such wrappers in the heavy slice, with the inner budget's cap.
+- **sccache can hang the whole build.** A wedged sccache server blocked `rustc -vV` indefinitely, and two builds stalled silently. Idea: preflight runs `timeout 10 sccache --show-stats` and falls back to `RUSTC_WRAPPER=` when it fails.
+- **The receipt test's memory was flat, not leaking.** The C6 dispatch factorial test rose to about 50 GB and then stayed flat while computing. Its budget should record about 50 GB, not the 30 GB default.
