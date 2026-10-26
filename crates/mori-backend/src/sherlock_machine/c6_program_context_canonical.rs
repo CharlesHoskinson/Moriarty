@@ -249,6 +249,41 @@ pub struct C6ProgramContextArmCaptureBlock {
     pub arm_found: Operand,
     pub arm_row: [Operand; 2],
 }
+/// One PATTERN row captured from canonical PROG by index. Row lanes are
+/// codec lanes normalised to `[tag, a, b, c, d]`: PVar `[0, x, 0, 0, 0]`,
+/// PNil `[1, 0, 0, 0, 0]`, PCons `[2, x, y, 0, 0]`, PLeaf `[3, x, 0, 0, 0]`,
+/// PBranch `[4, x, y, 0, 0]`, Wildcard `[5, 0, 0, 0, 0]`, Constructor
+/// `[6, type_id, ctor_id, children.start, children.len]`.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextPatternCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub pattern_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextPatternCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub patterns_count: Operand,
+    pub pattern_found: Operand,
+    pub pattern_row: [Operand; 5],
+}
+/// One CONSTANT-FIELD entry (a constant index) captured from canonical
+/// PROG by position in the constant-fields table.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextConstFieldCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub field_index: Operand,
+}
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextConstFieldCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub const_fields_count: Operand,
+    pub field_found: Operand,
+    pub const_index: Operand,
+}
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs {
     pub gate: Operand,
@@ -318,6 +353,20 @@ struct Regs {
     ctor_field_start: Operand,
     ctor_field_len: Operand,
     ctor_fields_count: Operand,
+    pat_count: Operand,
+    pat_row_index: Operand,
+    pat_capture_active: Operand,
+    pat_found: Operand,
+    pat_cap_0: Operand,
+    pat_cap_1: Operand,
+    pat_cap_2: Operand,
+    pat_cap_3: Operand,
+    pat_cap_4: Operand,
+    cf_count: Operand,
+    cf_row_index: Operand,
+    cf_capture_active: Operand,
+    cf_found: Operand,
+    cf_value: Operand,
 }
 impl Regs {
     fn zero() -> Self {
@@ -361,6 +410,20 @@ impl Regs {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         }
     }
 }
@@ -767,6 +830,8 @@ impl<'a> Emitter<'a> {
         caps: &C6PhysCaps,
         selected_const: Option<&Operand>,
         selected_ctor: Option<(&Operand, &Operand)>,
+        selected_pattern: Option<&Operand>,
+        selected_const_field: Option<&Operand>,
     ) -> Regs {
         let mut nxt = org.clone();
         let p_magic = self.eqv(org.phase.clone(), PH_MAGIC);
@@ -1511,6 +1576,53 @@ impl<'a> Emitter<'a> {
             let cnext_idx = self.add_i(org.ctor_row_index.clone(), 1);
             nxt.ctor_row_index = self.sel(crow_done, cnext_idx, nxt.ctor_row_index.clone());
         }
+        if let Some(selected) = selected_pattern {
+            let is_pcount = self.eqv(org.phase.clone(), PH_PAT_COUNT);
+            nxt.pat_count = self.sel(is_pcount, lane.clone(), nxt.pat_count.clone());
+            let is_prow = self.eqv(org.phase.clone(), PH_PAT_ROW);
+            let is_start = self.eqv(org.sub.clone(), 0);
+            let row_start = self.and(is_prow.clone(), is_start);
+            let idx_eq = self.teq(org.pat_row_index.clone(), selected.clone());
+            let active_here = self.sel(row_start, idx_eq, org.pat_capture_active.clone());
+            let lane_active = self.and(is_prow.clone(), active_here.clone());
+            nxt.pat_capture_active =
+                self.sel(is_prow.clone(), active_here, nxt.pat_capture_active.clone());
+            nxt.pat_found = self.sel(lane_active.clone(), Self::imm(1), nxt.pat_found.clone());
+            for (slot, cap) in [
+                (0u128, &mut nxt.pat_cap_0),
+                (1, &mut nxt.pat_cap_1),
+                (2, &mut nxt.pat_cap_2),
+                (3, &mut nxt.pat_cap_3),
+                (4, &mut nxt.pat_cap_4),
+            ] {
+                let s = self.eqv(org.sub.clone(), slot);
+                let h = self.and(lane_active.clone(), s);
+                let cur = cap.clone();
+                *cap = self.sel(h, lane.clone(), cur);
+            }
+            let mut org_hold = org.clone();
+            org_hold.hold = nxt.hold.clone();
+            let used = self.used_from_hold(&org_hold, &[2, 1, 3, 2, 3, 1, 5]);
+            let used_m1 = self.add_i(used, -1);
+            let is_last = self.teq(org.sub.clone(), used_m1);
+            let row_done = self.and(is_prow, is_last);
+            let next_idx = self.add_i(org.pat_row_index.clone(), 1);
+            nxt.pat_row_index = self.sel(row_done, next_idx, nxt.pat_row_index.clone());
+        }
+        if let Some(selected) = selected_const_field {
+            let is_cfcount = self.eqv(org.phase.clone(), PH_CONSTFIELD_COUNT);
+            nxt.cf_count = self.sel(is_cfcount, lane.clone(), nxt.cf_count.clone());
+            let is_cfrow = self.eqv(org.phase.clone(), PH_CONSTFIELD_ROW);
+            let idx_eq = self.teq(org.cf_row_index.clone(), selected.clone());
+            let active_here = self.sel(is_cfrow.clone(), idx_eq, org.cf_capture_active.clone());
+            let lane_active = self.and(is_cfrow.clone(), active_here.clone());
+            nxt.cf_capture_active =
+                self.sel(is_cfrow.clone(), active_here, nxt.cf_capture_active.clone());
+            nxt.cf_found = self.sel(lane_active.clone(), Self::imm(1), nxt.cf_found.clone());
+            nxt.cf_value = self.sel(lane_active, lane.clone(), nxt.cf_value.clone());
+            let next_idx = self.add_i(org.cf_row_index.clone(), 1);
+            nxt.cf_row_index = self.sel(is_cfrow, next_idx, nxt.cf_row_index.clone());
+        }
         nxt
     }
 }
@@ -1625,10 +1737,33 @@ impl C6ProgramContextCanonicalEmitter {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         };
         for lane in &inputs.pre_prog {
             em.cbits(lane.clone(), LANE_BITS);
-            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                None,
+                None,
+            );
         }
         em.gated_eq(gate.clone(), regs.phase, Emitter::imm(PH_END));
         let ctx = &inputs.pre_ctx;
@@ -1748,6 +1883,20 @@ impl C6ProgramContextCanonicalEmitter {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         };
         for lane in &inputs.pre_prog {
             em.cbits(lane.clone(), LANE_BITS);
@@ -1757,6 +1906,8 @@ impl C6ProgramContextCanonicalEmitter {
                 regs,
                 &inputs.caps.phys,
                 Some(&inputs.selected_index),
+                None,
+                None,
                 None,
             );
         }
@@ -1867,6 +2018,20 @@ impl C6ProgramContextCanonicalEmitter {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         };
         em.cbits(inputs.selected_index.clone(), LANE_BITS);
         let mut expressions_count = Emitter::imm(0);
@@ -1894,7 +2059,16 @@ impl C6ProgramContextCanonicalEmitter {
             let row_done = em.and(row_phase, at_end);
             let incremented = em.add_i(expression_index.clone(), 1);
             expression_index = em.sel(row_done, incremented, expression_index);
-            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                None,
+                None,
+            );
         }
         em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
         self.next_temp = em.next_temp;
@@ -1998,6 +2172,20 @@ impl C6ProgramContextCanonicalEmitter {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         };
         em.cbits(inputs.first_index.clone(), LANE_BITS);
         em.cbits(inputs.second_index.clone(), LANE_BITS);
@@ -2047,7 +2235,16 @@ impl C6ProgramContextCanonicalEmitter {
             let row_done = em.and(row_phase, at_end);
             let incremented = em.add_i(expression_index.clone(), 1);
             expression_index = em.sel(row_done, incremented, expression_index);
-            regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                None,
+                None,
+            );
         }
         em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
         self.next_temp = em.next_temp;
@@ -2102,6 +2299,99 @@ impl C6ProgramContextCanonicalEmitter {
             arms_count,
             arm_found,
             arm_row: row.try_into().expect("two arm lanes"),
+        })
+    }
+    /// One PATTERN row captured from canonical PROG by index; see
+    /// `C6ProgramContextPatternCaptureInputs` for the normalised lanes.
+    pub fn emit_prog_pattern_capture(
+        &mut self,
+        inputs: &C6ProgramContextPatternCaptureInputs,
+    ) -> Result<C6ProgramContextPatternCaptureBlock, C6ProgramContextCanonicalError> {
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.pattern_index)?;
+        for lane in &inputs.pre_prog {
+            reject_reserved(&self.scope, lane)?;
+        }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+            return Err(C6ProgramContextCanonicalError::LengthMismatch {
+                expected: PROGRAM_HEADER_LANES,
+                actual: inputs.pre_prog.len(),
+            });
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        em.cbits(inputs.pattern_index.clone(), LANE_BITS);
+        let mut regs = Regs::zero();
+        for lane in &inputs.pre_prog {
+            em.cbits(lane.clone(), LANE_BITS);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                Some(&inputs.pattern_index),
+                None,
+            );
+        }
+        em.gated_eq(gate, regs.phase.clone(), Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextPatternCaptureBlock {
+            instructions: em.instructions,
+            patterns_count: regs.pat_count.clone(),
+            pattern_found: regs.pat_found.clone(),
+            pattern_row: [
+                regs.pat_cap_0.clone(),
+                regs.pat_cap_1.clone(),
+                regs.pat_cap_2.clone(),
+                regs.pat_cap_3.clone(),
+                regs.pat_cap_4.clone(),
+            ],
+        })
+    }
+    /// One CONSTANT-FIELD entry captured from canonical PROG by position.
+    pub fn emit_prog_const_field_capture(
+        &mut self,
+        inputs: &C6ProgramContextConstFieldCaptureInputs,
+    ) -> Result<C6ProgramContextConstFieldCaptureBlock, C6ProgramContextCanonicalError> {
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.field_index)?;
+        for lane in &inputs.pre_prog {
+            reject_reserved(&self.scope, lane)?;
+        }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+            return Err(C6ProgramContextCanonicalError::LengthMismatch {
+                expected: PROGRAM_HEADER_LANES,
+                actual: inputs.pre_prog.len(),
+            });
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        em.cbits(inputs.field_index.clone(), LANE_BITS);
+        let mut regs = Regs::zero();
+        for lane in &inputs.pre_prog {
+            em.cbits(lane.clone(), LANE_BITS);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                None,
+                Some(&inputs.field_index),
+            );
+        }
+        em.gated_eq(gate, regs.phase.clone(), Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextConstFieldCaptureBlock {
+            instructions: em.instructions,
+            const_fields_count: regs.cf_count.clone(),
+            field_found: regs.cf_found.clone(),
+            const_index: regs.cf_value.clone(),
         })
     }
     /// One PARAMETER row (`binder, sort`) captured from canonical PROG by index.
@@ -2176,7 +2466,16 @@ impl C6ProgramContextCanonicalEmitter {
             let row_done = em.and(row_phase, at_end);
             let incremented = em.add_i(row_index.clone(), 1);
             row_index = em.sel(row_done, incremented, row_index);
-            regs = em.step(&gate, lane.clone(), regs, &caps.phys, None, None);
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &caps.phys,
+                None,
+                None,
+                None,
+                None,
+            );
         }
         em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
         self.next_temp = em.next_temp;
@@ -2274,6 +2573,20 @@ impl C6ProgramContextCanonicalEmitter {
             ctor_field_start: Emitter::imm(0),
             ctor_field_len: Emitter::imm(0),
             ctor_fields_count: Emitter::imm(0),
+            pat_count: Emitter::imm(0),
+            pat_row_index: Emitter::imm(0),
+            pat_capture_active: Emitter::imm(0),
+            pat_found: Emitter::imm(0),
+            pat_cap_0: Emitter::imm(0),
+            pat_cap_1: Emitter::imm(0),
+            pat_cap_2: Emitter::imm(0),
+            pat_cap_3: Emitter::imm(0),
+            pat_cap_4: Emitter::imm(0),
+            cf_count: Emitter::imm(0),
+            cf_row_index: Emitter::imm(0),
+            cf_capture_active: Emitter::imm(0),
+            cf_found: Emitter::imm(0),
+            cf_value: Emitter::imm(0),
         };
         for lane in &inputs.pre_prog {
             em.cbits(lane.clone(), LANE_BITS);
@@ -2284,6 +2597,8 @@ impl C6ProgramContextCanonicalEmitter {
                 &inputs.caps.phys,
                 None,
                 Some((&inputs.selected_type_id, &inputs.selected_ctor_id)),
+                None,
+                None,
             );
         }
         em.gated_eq(gate.clone(), regs.phase.clone(), Emitter::imm(PH_END));
