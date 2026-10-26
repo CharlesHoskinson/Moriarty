@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# commit-msg: the owner's iron rule. Reject any Claude/Anthropic co-author trailer or attribution.
+set -euo pipefail
+msg_file="$1"
+if grep -nEi '^[[:space:]]*co-authored-by:.*(claude|anthropic)|generated with.*claude|noreply@anthropic\.com|^claude-session:' "$msg_file" >&2; then
+  echo "commit-msg: REJECTED: Claude attribution is forbidden in this repository (owner's iron rule). Remove the line(s) above." >&2
+  exit 1
+fi
