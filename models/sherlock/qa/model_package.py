@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report the U021 projection, U026 required correspondence stage and U024 optimization record.
+"""Report the U021 projection and U026 required correspondence stage.
 
 Comparisons consume supplied or retained observations; no K, Quint, Lean,
 constraint, proof or native executor is invoked. Private integration records
@@ -355,15 +355,7 @@ def main(argv=None):
     binding = commands.add_parser('bind-private')
     binding.add_argument('--integration-root', required=True, type=Path)
     binding.add_argument('--record', required=True, type=Path)
-    optimization = commands.add_parser('optimization-record',
-                                       help='check a UIREQ-024 optimization preservation record')
-    optimization.add_argument('--record', type=Path)
     args = parser.parse_args(argv)
-    if args.command == 'optimization-record':
-        import optimization_record
-        code, report = optimization_record.main(args.record, REPO)
-        print(json.dumps(report, indent=2, allow_nan=False))
-        return code
     try:
         if args.command == 'projection':
             result = projection(args.k_observations, args.quint_observations, args.case, args.fuel)

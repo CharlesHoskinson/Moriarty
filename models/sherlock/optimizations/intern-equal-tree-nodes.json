@@ -2,12 +2,14 @@
   "format": "sherlock-optimization-preservation/1",
   "candidate": {
     "id": "sherlock-a-intern-equal-tree-nodes/1",
-    "kind": "node-sharing",
-    "replaces": "sherlock-k-a/1 physical Tree representation: one allocation per tree node occurrence in program literals and boundary states",
+    "class": "sharing",
+    "replaces": {
+      "kind": "representation",
+      "reference": "sherlock-k-a/1 physical Tree representation: one allocation per tree child occurrence in program literals and runtime boundary states (leaf/branch constructors allocate fresh nodes)"
+    },
     "by": "hash-consed allocation per structurally distinct node (TreeInterner), applied to program literals and re-applied to every boundary state before Machine::from_snapshot resumes",
     "module": "crates/mori-core/src/sherlock/optimization_intern.rs",
-    "entries": ["TreeInterner::intern_program", "TreeInterner::intern_snapshot", "observe_candidate"],
-    "used_by_reference": false
+    "realization": "sherlock-k-a/1 host reference machine of the dedicated draft source (mori simulate --optimization; --reference-slices then resumes cuts from interned snapshots). The B helper-microstep owner execution and its images are NOT changed by this candidate."
   },
   "reference": {
     "profile": "sherlock-k-a/1",
@@ -18,55 +20,228 @@
     "statement": "For the same program, fuel and stack limit, the candidate run has the same event count and per-event rule order, the same per-event charge and before/after remaining fuel, depth and stack limit, structurally equal complete before/after boundary states (code, control, environment, frames), the same outcome class (Done/Rejected(code)/Exhausted) and the same returned value. Physical node identity is not an observation; structural equality is.",
     "file": "crates/mori-core/src/sherlock/optimization_intern.rs",
     "entry": "check_preservation",
-    "first_divergence": "returns the clause, event index and detail of the first difference"
+    "first_divergence": "returns the clause, event index and detail of the first difference; mori simulate --optimization fails rather than reports on any divergence"
   },
   "clauses": [
-    {"observation": "values", "predicate": "final Done value and every Value in each boundary state are structurally equal", "evidence": ["E1"], "gaps": ["G1"]},
-    {"observation": "rejection/exhaustion", "predicate": "outcome class and error code equal, including fuel exhaustion and K-A frame-cap Rejected(4)", "evidence": ["E1"], "gaps": ["G1"]},
-    {"observation": "evaluation/effect order", "predicate": "same event count and rule_start_line sequence; no effects exist in this profile", "evidence": ["E1"], "gaps": ["G2"]},
-    {"observation": "boundaries", "predicate": "every before/after step boundary and the initial and final states are complete-state equal; resumed boundaries are the interned states", "evidence": ["E1"], "gaps": ["G3"]},
-    {"observation": "duties", "predicate": "ordered effects and residual duties equal; both are absent from sherlock-k-a/1 state", "evidence": ["E2"], "gaps": ["G2"]},
-    {"observation": "resource schedule", "predicate": "per-event charge, remaining fuel, initial fuel, logical depth and stack limit equal at every boundary", "evidence": ["E1"], "gaps": ["G4"]}
+    {
+      "observation": "values",
+      "statement": "final Done value and every Value in each boundary state are structurally equal",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G1"
+      ]
+    },
+    {
+      "observation": "rejection-exhaustion",
+      "statement": "outcome class and error code equal, including fuel exhaustion and K-A frame-cap Rejected(4); B exact/short/partial fuel and stack-1 outcomes equal on the sealed specimens",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G1"
+      ]
+    },
+    {
+      "observation": "evaluation-effect-order",
+      "statement": "same event count and rule_start_line sequence (K-A --reference-slices 1 stream equal); no effects exist in this profile",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G2"
+      ]
+    },
+    {
+      "observation": "boundaries",
+      "statement": "every before/after step boundary and the initial and final states are complete-state equal; resumed boundaries are the interned states; technical-cut slices equal",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G3"
+      ]
+    },
+    {
+      "observation": "duties",
+      "statement": "ordered effects and residual duties equal: absent from sherlock-k-a/1 state (check_preservation reports duties_vacuous) and B tasks equal on the sealed specimens",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G2"
+      ]
+    },
+    {
+      "observation": "resource-schedule",
+      "statement": "per-event charge, remaining fuel, initial fuel, logical depth and stack limit equal at every boundary",
+      "status": "evidenced-with-gaps",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [
+        "G4"
+      ]
+    }
+  ],
+  "costs": [
+    {
+      "metric": "logical-work",
+      "status": "measured",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [],
+      "reference": "equal",
+      "candidate": "equal",
+      "note": "K-A events/work/remaining fuel equal per run; B consumed_work unchanged"
+    },
+    {
+      "metric": "logical-allocation",
+      "status": "measured",
+      "evidence": [
+        "H1"
+      ],
+      "gaps": [],
+      "reference": "equal",
+      "candidate": "equal",
+      "note": "peak structural tree child occurrences equal (logical counter of the replay)"
+    },
+    {
+      "metric": "physical-tree-allocations",
+      "status": "measured",
+      "evidence": [
+        "R1",
+        "H1"
+      ],
+      "gaps": [],
+      "reference": "7 entry-literal nodes (R1); 6 peak child allocations on fold(branch(branch(leaf 1, leaf 2), branch(leaf 1, leaf 2)))",
+      "candidate": "4 (R1); 3"
+    },
+    {
+      "metric": "physical-bytes",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G5"
+      ]
+    },
+    {
+      "metric": "host-time",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G5"
+      ]
+    },
+    {
+      "metric": "host-memory",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G5"
+      ]
+    },
+    {
+      "metric": "rows-degree",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G6"
+      ]
+    },
+    {
+      "metric": "proof-key-sizes",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G6"
+      ]
+    },
+    {
+      "metric": "dust",
+      "status": "unmeasured",
+      "evidence": [],
+      "gaps": [
+        "G6"
+      ]
+    }
   ],
   "evidence": [
     {
-      "id": "E1",
-      "kind": "compiled-and-run",
-      "file": "crates/mori-core/tests/sherlock_u024_intern_preservation.rs",
-      "tests": [
-        "interner_shares_equal_nodes_and_keeps_structure",
-        "intern_preserves_normal_run",
-        "intern_preserves_fuel_exhaustion",
-        "intern_preserves_frame_cap_rejection",
-        "preservation_rejects_unsound_interning",
-        "preservation_rejects_changed_budget"
-      ],
-      "covers": "fold over branch(branch(leaf 4, leaf 5), branch(leaf 4, leaf 5)) at fuel 512/stack 32 (Done 18), fuel 20 (Exhausted), stack 2 (Rejected 4); unsound shape-only merge and changed budget are rejected",
-      "commit": "87d1a2e2cd52343783216c5980facae8a2d47b9d",
-      "run": "20261026T001248Z-U024-evidence",
-      "trace": "qa/sherlock/traces/20261026T001248Z-U024-evidence.log",
-      "trace_sha256": "b82226f6bf27ba8ee890eca9ab371129be77593b1a28783735eac72f4cccc562",
-      "command": "cargo test -p mori-core --test sherlock_u024_intern_preservation -- --test-threads=1"
+      "id": "R1",
+      "kind": "receipt",
+      "receipt": "models/sherlock/optimizations/receipts/intern-equal-tree-nodes.R1.json"
     },
     {
-      "id": "E2",
-      "kind": "vacuous-by-profile",
-      "profile": "sherlock-k-a/1",
-      "reason": "Snapshot has no effect, duty, liability or financial field; there is nothing for interning to reorder or drop"
+      "id": "H1",
+      "kind": "holdout-replay",
+      "command": "qa/holdout/run.sh uireq-024",
+      "statement": "evaluator-sealed specimens replayed under reference and --optimization: value, summary, tasks, --reference-slices 1 stream, exact/short/partial fuel and stack-1 outcomes, applied and physical reduction"
     }
   ],
   "unresolved_gaps": [
-    {"id": "G1", "clauses": ["values", "rejection/exhaustion"], "statement": "Only one fold program and three budgets are run; other programs, list values and other error codes (error1..error10 except 4) are not exercised. No proof that interning preserves equality for all states."},
-    {"id": "G2", "clauses": ["evaluation/effect order", "duties"], "statement": "Effectful/financial profiles (Core/2 typed await, sherlock-helper-microstep/2 finance) are not covered; preservation of ordered effects and residual duties is unexamined there."},
-    {"id": "G3", "clauses": ["boundaries"], "statement": "Only sherlock-k-a/1 step boundaries are compared. B helper-microstep chunk/A4 project boundaries, bounded C6 images (data arena append-only, child-before-parent) and canonical encode/decode are not covered; interning there would change active lengths and capacity checks."},
-    {"id": "G4", "clauses": ["resource schedule", "costs"], "statement": "Host time, peak memory, preparation bytes, circuit rows, degree, key/proof size, prover/verifier time and target fees are unmeasured; B data/env capacity exhaustion under sharing is unexamined."}
-  ],
-  "costs": [
-    {"metric": "physical tree nodes of the entry literal", "status": "measured", "reference": 7, "candidate": 4, "evidence": "E1"},
-    {"metric": "structural tree node occurrences", "status": "measured", "reference": 7, "candidate": 7, "evidence": "E1"},
-    {"metric": "reference events and charged work", "status": "measured", "reference": "equal", "candidate": "equal", "evidence": "E1"},
-    {"metric": "host time and peak memory", "status": "unknown", "gap": "G4"},
-    {"metric": "circuit rows, degree, key/proof bytes, prover/verifier time, fees", "status": "unknown", "gap": "G4"}
+    {
+      "id": "G1",
+      "clauses": [
+        "values",
+        "rejection-exhaustion"
+      ],
+      "statement": "Only a handful of fold/fact programs and budgets are run; other programs, list values and other error codes are not exercised. No proof that interning preserves equality for all states."
+    },
+    {
+      "id": "G2",
+      "clauses": [
+        "evaluation-effect-order",
+        "duties"
+      ],
+      "statement": "Effectful/financial profiles (Core/2 typed await, sherlock-helper-microstep/2 finance) are not covered; preservation of ordered effects and residual duties is unexamined there."
+    },
+    {
+      "id": "G3",
+      "clauses": [
+        "boundaries"
+      ],
+      "statement": "Only sherlock-k-a/1 step and technical-cut boundaries are realized by the candidate. B helper-microstep chunk/A4 boundaries, bounded C6 images (data arena append-only, child-before-parent) and canonical encode/decode are not interned; interning there would change active lengths and capacity checks."
+    },
+    {
+      "id": "G4",
+      "clauses": [
+        "resource-schedule"
+      ],
+      "statement": "B data/env capacity exhaustion under sharing is unexamined because the B owner is not realized by the candidate."
+    },
+    {
+      "id": "G5",
+      "clauses": [
+        "physical-bytes",
+        "host-time",
+        "host-memory"
+      ],
+      "statement": "Only allocation counts are measured; byte sizes, host wall time and peak memory of reference vs candidate are not measured."
+    },
+    {
+      "id": "G6",
+      "clauses": [
+        "rows-degree",
+        "proof-key-sizes",
+        "dust"
+      ],
+      "statement": "No circuit, native export or target realization of the candidate exists; rows, degree, key/proof sizes and DUST fees are unmeasured."
+    }
   ],
   "acceptance": "none",
   "adoption": "not-adopted; candidate only"
