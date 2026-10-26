@@ -64,9 +64,9 @@ earlier receipts remain historical. The Lake glob needs no shared build-file
 edit. This agent read the complete log and source pins. Two own capped attempts
 could not start because `heavy.lock` was occupied (exit 3); its saved sandbox
 restriction also prevents `memcap` from using the user scope bus. No uncapped
-build or delegation of a denied operation was attempted. Rust tests, artifact/CLI
-integration and the U031 holdout for this newer exporter have no independently
-inspected passing receipt here.
+build or delegation of a denied operation was attempted. Rust implementation,
+artifact/CLI and binary/source correspondence remain unproved. The subsequently
+committed fixed-exporter receipt and strengthened-holdout ledger are scoped below.
 
 At `3fabcca1c`, S5 wires the CLI to the core exporter and removes its duplicate
 descriptor API. Its core copy still predates the rule/top-frame operand binding,
@@ -74,8 +74,8 @@ checked-error and `ValueEq` repairs. The committed primary-scenario PASS trace
 and run record for that older copy are pinned separately in the JSON; they do
 not validate this module's newer `3bb404f15` contracts. S9's `93f61a41c` retains
 the fixed exporter. This branch difference was reported to sherlock-fable and
-Quint-3. CLI correctness, concrete source/binary binding and the newer U031
-holdout remain separate evidence obligations.
+Quint-3. CLI correctness and concrete source/binary binding remain separate
+evidence obligations.
 
 Evaluator `7f0942c3d` adds two non-arithmetic negative controls. The module now
 names LeftF explicitly and states that rule 149 through LeftF(Mul) classifies
@@ -107,3 +107,13 @@ ledger line, and distinguishes the reported outer lock from the private
 This agent inspected the artifacts and did not execute the build. Builds 1–18
 remain historical capped/unlocked observations. The required lock issue is
 resolved; no Rust, circuit, native or ledger correspondence follows.
+
+The fixed S9 exporter now has a committed primary-scenario PASS copy at
+`b035b567d`, matching run `20261026T034302Z-U031` at source HEAD `93f61a41c`.
+That local holdout predates evaluator `7f0942c3d`; it does not exercise the new
+149/195 negative controls. Separately, S10's committed run
+`20261026T035253Z-U031` reports exit 0 at `82cbf4f4e`; the agent verified that
+run HEAD's complete holdout tree equals `7f0942c3d`. The JSON distinguishes
+reading the former's one-line trace from reading only the latter's ledger.
+This agent executed neither command and has not inspected the latter's full
+runtime trace. Neither observation supplies all-program or native refinement.

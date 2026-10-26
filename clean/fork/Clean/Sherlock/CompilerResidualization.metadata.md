@@ -128,8 +128,9 @@ no uncapped build. No native, stock-verifier or ledger evidence is claimed.
 
 Actual U031/U033 Rust implementations now exist on the integration branches.
 Their follow-up contracts live in `CompilerExportPlans` (selected-record host
-exporter at `3bb404f15`) and `CompilerResidualIR` (seven-group K-A residualizer
-at `8ffed57fc`/`abc64975d`). The earlier Python examples remain historical.
+exporter in S9 union `93f61a41c`, fixed at `3bb404f15`) and `CompilerResidualIR`
+(seven-group K-A residualizer at `3fabcca1c`, unchanged from `8ffed57fc`/`abc64975d`).
+The earlier Python examples remain historical.
 The new modules supply neither Rust refinement nor native acceptance. The U024
 replay retains its separate source and observed holdout evidence described above.
 
@@ -143,4 +144,11 @@ queries and current/run-HEAD source bytes match: twenty empty sets and ten
 line; it did not run the build. Whole incremental build measurements are
 6.229 seconds and 890,322,944 bytes peak RSS, not optimization performance.
 Builds 1–18 remain historical capped/unlocked kernel observations.
+
+The S10 R1 receipt at `42df98819` now names a committed `trace_copy`. The agent
+read the complete copy, matched its digest to `trace_sha256` and found every
+one of the six declared preservation/negative-control tests passing. These are
+the existing `06ec0f855` fixture results carried portably, not new tests run by
+this agent. The JSON pins the receipt/copy bytes and named cases. This supplies
+neither all-program preservation nor a B/C6/financial, native or performance result.
 
