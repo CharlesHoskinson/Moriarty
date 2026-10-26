@@ -29,6 +29,7 @@ const rt = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const INDEXER = 'https://indexer.stagenet.shielded.tools/api/v4/graphql';
 const sha = b => createHash('sha256').update(b).digest('hex');
+const le = x => Buffer.from(x.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex'); // 32-byte LE, as in the bundle
 const vkRaw = readFileSync(vkPath);
 const graphql = async query => {
   const r = await fetch(INDEXER, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({query})});
@@ -135,7 +136,7 @@ const record = {schema: 'sherlock-run-public-readback/1', state_sha256: sha(post
   proofSHA256: native.contractCalls[0].proofSHA256, publicInputs: native.contractCalls[0].publicInputs, nativeProofVerified: true,
   verifier: {path: vkPath, ...deployKey}, keyInstalledInPostState: postKey.bodySHA256 === deployKey.bodySHA256,
   deployResult: initial.toString(), postResult: posted.toString(), referenceResult: reference.toString(),
-  programDigest: d.program_d.toString(16), initDigest: d.init_d.toString(16), steps: p.steps.toString(),
+  programDigest: le(d.program_d), initDigest: le(d.init_d), steps: p.steps.toString(),
   deployStateSHA256: sha(deployBytes), postStateSHA256: sha(postBytes), stateLayout: {path: join(output, 'state-layout.json'),
     sha256: sha(readFileSync(join(output, 'state-layout.json')))}, effects: [], effectFieldSizes: effects.sizes, completeEffectsMatch: true};
 writeFileSync(join(output, 'readback.json'), JSON.stringify(record, null, 2) + '\n');
