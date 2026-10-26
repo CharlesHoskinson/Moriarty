@@ -547,7 +547,7 @@ pub const COMPILED_AND_RUN: &str = "compiled-and-run";
 /// receipt in [`RECEIPT_DIR`] binding an actual factory test run (nonproving
 /// `ProofPreimage::check`) to the commit, trace and named tests. The visible
 /// test fails when this list and the committed receipt files disagree.
-pub const RECEIPTED: &[&str] = &[];
+pub const RECEIPTED: &[&str] = &["dispatch"];
 
 pub fn receipted(rule: &str) -> bool {
     RECEIPTED.contains(&rule)
