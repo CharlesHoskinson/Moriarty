@@ -207,7 +207,8 @@ and private Clean implementation. The public contract modules are:
   U021/U026 six task rows and parameterized codec/complete-trace obligations;
   package comparison does not complete the named implementation layers.
 - [DecodedCounterStages](../../clean/fork/Clean/Sherlock/DecodedCounterStages.metadata.md):
-  counter-only P4/P6/P7 accounting extensions, preserving the original adapter
+  counter-only P4/P6/P7 accounting extensions, preserving the
+  [original adapter](../../clean/fork/Clean/Sherlock/DecodedCounterAdapter.metadata.md)
   bytes; counter projection does not establish complete-state correspondence.
 
 Each module's metadata pins its implementation sources, Lean declarations,
