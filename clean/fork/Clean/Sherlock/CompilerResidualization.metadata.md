@@ -67,6 +67,11 @@ transfers to financial or helper profiles. Physical sharing counts in Rust
 tests are not measured bytes, prover memory or performance evidence here.
 The preservation record added at `87d1a2e2c` retains those six observation
 planes, distinct evidence/gap tables, no acceptance and candidate-only adoption.
+At `dbe33d95d`, its E1 entry is bound to run
+`20261026T001248Z-U024-evidence`. The agent read the pinned trace, checked its
+digest and found all six named Rust tests passing. That observed C4 execution
+covers the stated A-profile fixture, including negative controls; it is not an
+agent-run test or evidence for the subsequent real-simulate replay requirement.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
