@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget residualFlow kResidualDispatch s5ResidualRepaired; do
+for model in nativeInventory witnessStorage treeInterning planExports residualWorklist residualBlockBudget residualFlow kResidualDispatch s5ResidualRepaired exportMulBindings; do
   quint typecheck "$model.qnt"
   quint typecheck "${model}_test.qnt"
-  quint test "${model}_test.qnt"
+  backend=rust
+  if [ "$model" = exportMulBindings ]; then backend=typescript; fi
+  quint test "${model}_test.qnt" --backend="$backend"
   case "$model" in
     nativeInventory) witnesses=(sawFragment sawGap sawUnknown) ;;
     witnessStorage) witnesses=(published cacheUsed storageReclaimed) ;;
@@ -15,8 +17,9 @@ for model in nativeInventory witnessStorage treeInterning planExports residualWo
     residualFlow) witnesses=(acceptedSome refusedSome usedSuccessor exitedGeneric) ;;
     kResidualDispatch) witnesses=(sampled genericUsed stopped nextArgumentBranches) ;;
     s5ResidualRepaired) witnesses=(finished delegatedCall sizeFallback fullImage) ;;
+    exportMulBindings) witnesses=(success overflow unequalOperands) ;;
   esac
-  quint run "$model.qnt" --invariant modelInv --max-steps 30 --max-samples 10000 \
+  quint run "$model.qnt" --backend="$backend" --invariant modelInv --max-steps 30 --max-samples 10000 \
     --seed 0x303 --witnesses "${witnesses[@]}" --verbosity 1
 done
 quint typecheck s5ResidualProjection.qnt

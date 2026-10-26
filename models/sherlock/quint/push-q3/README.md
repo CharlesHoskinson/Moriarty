@@ -7,16 +7,19 @@ Quint: `0.32.0`. Run from the repository root:
 bash models/sherlock/quint/push-q3/check.sh
 ```
 
-The runner typechecks all twenty-four Quint files, runs 71 deterministic Quint
+The runner typechecks all twenty-six Quint files, runs 79 deterministic Quint
 tests and eight committed Python tooling unit tests, and samples 10,000 traces
-per model with `--max-steps 30`. Nine models use `modelInv`; the three pinned
+per model with `--max-steps 30`. Ten models use `modelInv`; the three pinned
 defective source projections use `sourceInv`. A repaired classifier variant
-additionally uses `--step classifyRepaired --invariant repairedInv`. All thirteen
+additionally uses `--step classifyRepaired --invariant repairedInv`. All fourteen
 positive runs passed; every requested witness was reached. Its separate
 `preservesDynamicTargets`, `stableAcrossFuel` and `belongsToActiveStep` runs deliberately find the
 source counterexamples described below, which the runner checks explicitly. Raw results are in
 `verification.log`. These are sampled finite checks, not exhaustive proofs.
 Terminating worklist and scheduler traces intentionally stop before 30 steps.
+`exportMulBindings` uses `--backend=typescript`: the default Rust evaluator is
+limited to i64 integers and cannot represent the actual u128 maximum. Its
+finite operands are 0, 1, 2, 3 and 2^128 - 1, without truncating multiplication.
 
 | Model | Requirement and source | Checked scope |
 | --- | --- | --- |
@@ -32,6 +35,7 @@ Terminating worklist and scheduler traces intentionally stop before 30 steps.
 | `s5ResidualRepaired.qnt` | U033; `a82446698:models/sherlock/qa/residualize.py` | Repaired source retains all dispatch targets and explicitly delegates out-of-family calls; finite worklist, size bound and reachable-path coverage agree |
 | `rustResidualIdentity.qnt` | U033; `2d1b2b373:crates/mori-core/src/sherlock/compile_artifact/draft_plans.rs:143` | Source-derived WIP counterexample: the same literal program selects static rules `{84}` at fuel 0 versus `{80,102}` at fuel 1, changing per-program IR content |
 | `rustExportClassification.qnt` | U031; `b705bfacb:crates/mori-core/src/sherlock/export_plans.rs`, `classify` | Source-derived counterexample: a rule-195 scope return above a pending multiplication frame is attributed to multiplication instead of restoration |
+| `exportMulBindings.qnt` | U031; `32fcbce3e:crates/mori-core/src/sherlock/export_plans.rs`, rule-153 `classify` arm | Actual u128-bound multiplication projection; ordered captured-left and returned-right bindings, sourced success or error result, rejection of swapped operands, wrong paths/results and the historical missing-result placeholder |
 
 `planExports` and `residualWorklist` do **not** claim an implemented Rust exporter
 or residualizer. Neither existed in this baseline. Their correspondence remains
@@ -171,6 +175,10 @@ scope restoration from a dedicated match-under-multiply program; and asserts
 actual multiplication operands `uiU(3)`, `uiU(2)` and result `uiU(6)`. This worker
 confirmed those source changes. The owner reports five Rust tests passing;
 this worker did not rerun them.
+The multiplication-binding model assumes a valid rule-153 reference record
+with UInt operands and represents KDisplay values by constructors. It checks
+bindings against the supplied record and independent arithmetic conditions;
+it does not execute Rust, serialize JSON or verify non-multiplication exports.
 
 At `abe5ee146`, the evaluator added producing-block IDs and successor discipline
 to residual records after the post-hoc replay finding. `residualFlow` covers
