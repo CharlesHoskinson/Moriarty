@@ -615,6 +615,12 @@ pub mod c6_append_helper_step;
 // UIREQ-023 Bind helper fragment (parameter binding).
 pub mod c6_bind_helper_consumer;
 pub mod c6_bind_helper_step;
+// UIREQ-023 Equal helper fragment (structural equality).
+pub mod c6_equal_helper_consumer;
+pub mod c6_equal_helper_step;
+// UIREQ-023 Validate helper fragment (literal validation).
+pub mod c6_validate_helper_consumer;
+pub mod c6_validate_helper_step;
 // UIREQ-023 legacy control fragment (returns, primitive value, cases).
 pub mod c6_legacy_control_consumer;
 pub mod c6_legacy_control_step;
