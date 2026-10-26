@@ -11,6 +11,14 @@ recursion unwired, native StepRecords absent and no native verification. The
 inventory definitions retain those dispositions; different program labels and
 exercise counts cannot change their supplied common table.
 
+At `577f0470b`, native inventory reporting becomes receipt-aware. A rule's
+declared membership in `RECEIPTED` selects `compiled-and-run`; absent membership
+leaves it source-only. Dispatch selection appears only with a dispatch receipt.
+The current list is empty. `FragmentEvidence` models those declarations and
+keeps nonproving `ProofPreimage::check` receipts distinct from keys, proofs or
+verification. It authenticates no receipt or run; that remains a concrete
+source/evidence obligation, separate from the fixed report flags above.
+
 `Preserves` compares a supplied complete observation function on every input.
 `Materialization` separates decoded semantic state from host scheduling counts,
 as the four witness schedules in `draft_witness.rs` do. Its theorem requires an
@@ -109,10 +117,10 @@ still declaring no native acceptance or adoption.
 
 No new `sorry` or custom axiom is declared. The sibling `Axioms.lean` lists all
 theorem dependency queries. Sherlock-fable independently ran the capped Lake
-package build with Lean 4.33.1. The recorded `lean-build-7.log` shows the residual
-execution-provenance follow-up and all twenty-two dependency queries succeeding,
-then a successful 17-job package build and exit 0. Sixteen queries have empty
-axiom sets; six contain only `propext`. The JSON retains those historical sets and
+package build with Lean 4.33.1. The recorded `lean-build-8.log` shows the actual
+U024 replay follow-up and all twenty-seven dependency queries succeeding, then
+a successful 17-job package build and exit 0. Nineteen queries have empty axiom
+sets; eight contain only `propext`. The JSON retains those historical sets and
 pins the successful observed log by digest. The agent read the complete log
 and checked the recorded source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
@@ -122,6 +130,6 @@ Actual `mori simulate` integration for U031/U033 is still pending. The U024
 replay now has its own Rust source and observed holdout evidence as described
 above, without supplying the other compiler obligations or a refinement proof.
 
-**The U024 replay additions have not yet been compiled.** Their source and query
-pins are current; the preceding twenty-two-query build remains historical
+**The receipt-class additions have not yet been compiled.** Their source and
+query pins are current; the preceding twenty-seven-query build remains historical
 evidence until the new declarations and dependency queries are rechecked.

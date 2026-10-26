@@ -2,6 +2,9 @@ import Clean.Sherlock.CompilerResidualization
 
 #print axioms Clean.Sherlock.CompilerResidualization.inventory_independent_of_program
 #print axioms Clean.Sherlock.CompilerResidualization.inventory_grants_no_native_evidence
+#print axioms Clean.Sherlock.CompilerResidualization.empty_receipts_are_source_only
+#print axioms Clean.Sherlock.CompilerResidualization.dispatch_selection_requires_receipt
+#print axioms Clean.Sherlock.CompilerResidualization.compiled_receipt_grants_no_native_proof
 #print axioms Clean.Sherlock.CompilerResidualization.materialization_preserves_of_decoded_eq
 #print axioms Clean.Sherlock.CompilerResidualization.equal_intern_keys_preserve_content
 #print axioms Clean.Sherlock.CompilerResidualization.bottom_up_interning_preserves_content

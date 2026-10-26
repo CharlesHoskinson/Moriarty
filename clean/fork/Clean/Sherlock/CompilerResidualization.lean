@@ -53,6 +53,32 @@ theorem inventory_grants_no_native_evidence (table : List InventoryRow)
       (inventoryReport table program exercised).nativeStepRecords = false ∧
       (inventoryReport table program exercised).nativeVerified = false := ⟨rfl, rfl, rfl⟩
 
+/-! U023 at 577f0470b: source declarations can name committed nonproving test
+receipts. This models declaration membership, not receipt authenticity. -/
+
+inductive FragmentEvidence where
+  | sourceOnly | compiledAndRun
+  deriving DecidableEq, Repr
+
+def fragmentEvidence (receipted : List String) (rule : String) : FragmentEvidence :=
+  if rule ∈ receipted then .compiledAndRun else .sourceOnly
+
+def dispatchSelectionVisible (receipted : List String) : Bool :=
+  decide ("dispatch" ∈ receipted)
+
+/-- ProofPreimage::check receipts are not keys, proofs or verification. -/
+def fragmentNativeVerified (_evidence : FragmentEvidence) : Bool := false
+
+theorem empty_receipts_are_source_only (rule : String) :
+    fragmentEvidence [] rule = .sourceOnly ∧ dispatchSelectionVisible [] = false := ⟨rfl, rfl⟩
+
+theorem dispatch_selection_requires_receipt (receipted : List String)
+    (missing : "dispatch" ∉ receipted) : dispatchSelectionVisible receipted = false := by
+  simp [dispatchSelectionVisible, missing]
+
+theorem compiled_receipt_grants_no_native_proof :
+    fragmentNativeVerified .compiledAndRun = false := rfl
+
 /-- The complete observation type must include outcomes, ordered effects, boundaries,
 duties, frames, resource checks and semantic work. A final value alone is insufficient. -/
 def Preserves {Input Result Observation : Type}
