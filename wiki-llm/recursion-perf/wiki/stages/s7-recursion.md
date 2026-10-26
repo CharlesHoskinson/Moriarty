@@ -27,6 +27,15 @@ Keep ordinary PLONK/KZG over BLS12-381, the Blake2b outer transcript, the offici
 - **E2:** fflonk inner verifiers aimed at the 23.63% threshold.
 - **E3:** folding only after costing the final verifier first.
 
+## Wave 2: making C1 checkable
+
+> Raw: [findings](../../clusters/s7-recursion/wave-2/FINDINGS.md); [experiments](../../clusters/s7-recursion/wave-2/EXPERIMENTS.md); [OpenSpec draft](../../clusters/s7-recursion/wave-2/OPENSPEC-DRAFT.md); [model](../../clusters/s7-recursion/wave-2/model.py)
+
+- C1 constrains A102→A80 and their link directly. It needs **no in-circuit verifier, accumulator or pairing gadget**, so the 316,833-row gadget and its k19 floor do not apply to C1. The ledger still checks the new outer PLONK/KZG proof.
+- s8 wave 1 rank 5 was a different fusion (terminal node with the decider). That fusion keeps the pairing floor and can double the domain.
+- The fit is unproven. The provisional budget is 20,466 advice rows, with tables constrained separately. It is not a synthesis result, and exact A102/A80 row counts are absent from the records. Strict >10× needs h < 7.0968% at k15 or h < 4% at k16.
+- Next: E1 synthesis-only (rows, columns, degree, table extent, fitted k) after C0 lands.
+
 ## See Also
 
 - [s2 witness synthesis](s2-witness.md)

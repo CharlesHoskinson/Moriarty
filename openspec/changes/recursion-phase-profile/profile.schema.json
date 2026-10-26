@@ -1,0 +1,1539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:recursion-phase-profile:1",
+  "title": "Proposed recursion.phase-profile/1 invocation sidecar",
+  "$comment": "ESTIMATE: proposed schema, not implemented. SOURCE labels records containing actual observations, not predicted runs. See FINDINGS.md for semantic validation, sample uncertainty and secret exclusions.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "recursion.phase-profile/1"
+    },
+    "claim_class": {
+      "const": "SOURCE"
+    },
+    "run": {
+      "type": "string"
+    },
+    "id": {
+      "enum": [
+        "A2",
+        "A3",
+        "A4",
+        "B3",
+        "calibration",
+        "candidate"
+      ]
+    },
+    "invocation_id": {
+      "type": "string"
+    },
+    "cmd": {
+      "type": "string"
+    },
+    "hypothesis": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "exit": {
+      "type": "integer"
+    },
+    "trace": {
+      "type": "string"
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "identity": {
+      "$ref": "#/$defs/identity"
+    },
+    "host": {
+      "$ref": "#/$defs/host"
+    },
+    "proofs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/proof"
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "overhead": {
+      "$ref": "#/$defs/overhead"
+    },
+    "lifecycle": {
+      "$ref": "#/$defs/lifecycle"
+    },
+    "verification": {
+      "$ref": "#/$defs/verification"
+    }
+  },
+  "required": [
+    "schema",
+    "claim_class",
+    "run",
+    "id",
+    "invocation_id",
+    "cmd",
+    "hypothesis",
+    "exit",
+    "trace",
+    "recorded_at",
+    "identity",
+    "host",
+    "proofs",
+    "phases",
+    "summary",
+    "overhead",
+    "lifecycle",
+    "verification"
+  ],
+  "$defs": {
+    "bytes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logical_copy_payload_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "logical_input_footprint_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "logical_output_footprint_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "storage_read_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "storage_write_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "dram_read_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "dram_write_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "h2d_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "d2h_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "d2d_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "logical_coverage": {
+          "enum": [
+            "complete",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "storage_method": {
+          "enum": [
+            "proc_pid_io",
+            "cgroup_io_stat",
+            "counted_reader_writer",
+            "unavailable"
+          ]
+        },
+        "dram_method": {
+          "enum": [
+            "hardware_pmu",
+            "unavailable"
+          ]
+        },
+        "device_method": {
+          "enum": [
+            "counted_cuda_copies",
+            "cpu_only",
+            "unavailable"
+          ]
+        },
+        "null_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "enum": [
+            "exclusive",
+            "inclusive",
+            "diagnostic"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logical_copy_payload_bytes",
+        "logical_input_footprint_bytes",
+        "logical_output_footprint_bytes",
+        "storage_read_bytes",
+        "storage_write_bytes",
+        "dram_read_bytes",
+        "dram_write_bytes",
+        "h2d_bytes",
+        "d2h_bytes",
+        "d2d_bytes",
+        "logical_coverage",
+        "storage_method",
+        "dram_method",
+        "device_method",
+        "null_reasons",
+        "scope",
+        "notes"
+      ]
+    },
+    "rss": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entry_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "exit_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "sampled_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "peak_delta_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "net_delta_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_sample_gap_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "method": {
+          "enum": [
+            "smaps_rollup",
+            "proc_status",
+            "mixed",
+            "unavailable"
+          ]
+        },
+        "quality": {
+          "enum": [
+            "sampled_lower_bound",
+            "boundary_only",
+            "unavailable"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "entry_bytes",
+        "exit_bytes",
+        "sampled_peak_bytes",
+        "peak_delta_bytes",
+        "net_delta_bytes",
+        "samples",
+        "max_sample_gap_seconds",
+        "method",
+        "quality",
+        "reason"
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "exclusive_wall_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cpu_core_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "exclusive_cpu_core_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cpu_scope": {
+          "enum": [
+            "isolated_process_all_threads",
+            "process_tree",
+            "task_threads",
+            "unattributable"
+          ]
+        },
+        "cpu_null_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rss": {
+          "$ref": "#/$defs/rss"
+        },
+        "bytes": {
+          "$ref": "#/$defs/bytes"
+        },
+        "device": {
+          "$ref": "#/$defs/device"
+        }
+      },
+      "required": [
+        "wall_seconds",
+        "exclusive_wall_seconds",
+        "cpu_core_seconds",
+        "exclusive_cpu_core_seconds",
+        "cpu_scope",
+        "cpu_null_reason",
+        "rss",
+        "bytes",
+        "device"
+      ]
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "k": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "extended_k": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "advice_phase": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "circuit_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "column_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "lookup_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "batch_ordinal": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "commitment_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "scalar_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "field_element_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "base_element_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "input_elements": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "output_elements": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "basis": {
+          "enum": [
+            "monomial",
+            "lagrange",
+            null
+          ]
+        },
+        "transform_direction": {
+          "enum": [
+            "forward",
+            "inverse",
+            null
+          ]
+        },
+        "coset": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dispatch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "k",
+        "extended_k",
+        "advice_phase",
+        "circuit_index",
+        "column_index",
+        "lookup_index",
+        "batch_ordinal",
+        "commitment_count",
+        "scalar_count",
+        "field_element_bytes",
+        "base_element_bytes",
+        "input_elements",
+        "output_elements",
+        "basis",
+        "transform_direction",
+        "coset",
+        "dispatch"
+      ]
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "span_id": {
+          "type": "string"
+        },
+        "parent_span_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "invocation_id": {
+          "type": "string"
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "thread_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "parallel_group_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase": {
+          "type": "string"
+        },
+        "owner": {
+          "enum": [
+            "command",
+            "keys",
+            "witness",
+            "commitment",
+            "lookup",
+            "permutation",
+            "quotient",
+            "multiopen",
+            "transcript",
+            "verification",
+            "queue",
+            "other"
+          ]
+        },
+        "accounting": {
+          "type": "boolean"
+        },
+        "start_monotonic_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_monotonic_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "source_file": {
+          "type": "string"
+        },
+        "source_symbol": {
+          "type": "string"
+        },
+        "source_line": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "metrics": {
+          "$ref": "#/$defs/metrics"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "failed",
+            "not_applicable",
+            "incomplete"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "span_id",
+        "parent_span_id",
+        "invocation_id",
+        "pid",
+        "thread_id",
+        "parallel_group_id",
+        "phase",
+        "owner",
+        "accounting",
+        "start_monotonic_ns",
+        "end_monotonic_ns",
+        "completed",
+        "source_file",
+        "source_symbol",
+        "source_line",
+        "dimensions",
+        "metrics",
+        "status",
+        "reason"
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "public_input_manifest",
+            "proof",
+            "vk",
+            "srs",
+            "profile_patch",
+            "binary",
+            "cargo_lock",
+            "source_archive"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "public_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "sha256",
+        "public_path"
+      ]
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proof_id": {
+          "type": "string"
+        },
+        "shape": {
+          "enum": [
+            "A102",
+            "A80",
+            "P",
+            "D",
+            "B3_leaf",
+            "B3_parent",
+            "B3_decider",
+            "other"
+          ]
+        },
+        "k": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extended_k": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "transcript": {
+          "type": "string"
+        },
+        "ordered_child_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "root_span_id": {
+          "type": "string"
+        },
+        "vk_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "srs_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "public_statement_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "cache_mode": {
+          "enum": [
+            "process_cold",
+            "disk_pk",
+            "resident_pk",
+            "prepared"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "invocation_ordinal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "priming": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "proof_id",
+        "shape",
+        "k",
+        "extended_k",
+        "transcript",
+        "ordered_child_ids",
+        "root_span_id",
+        "vk_sha256",
+        "srs_sha256",
+        "public_statement_manifest_sha256",
+        "cache_mode",
+        "coverage",
+        "invocation_ordinal",
+        "priming"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "measured_wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "accounted_exclusive_wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unattributed_wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "unexplained_other_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "overlap_error_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "relative_sum_error": {
+          "type": "number",
+          "minimum": 0
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "owner_shares": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "owner": {
+                "type": "string"
+              },
+              "exclusive_seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "fraction_of_named_scope": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "owner",
+              "exclusive_seconds",
+              "fraction_of_named_scope"
+            ]
+          }
+        }
+      },
+      "required": [
+        "measured_wall_seconds",
+        "accounted_exclusive_wall_seconds",
+        "unattributed_wall_seconds",
+        "unexplained_other_seconds",
+        "overlap_error_seconds",
+        "relative_sum_error",
+        "accepted",
+        "owner_shares"
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "head": {
+          "type": "string"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "cargo_lock_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "binary_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "patch_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "proofs_version": {
+          "const": "0.8.3"
+        },
+        "proofs_archive_sha256": {
+          "const": "19b2e4b1acb581ad741b0cb7c0e9dbdf51142f4e9518886f25fcff40a6702dcc"
+        },
+        "resolved_packages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "checksum": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "source",
+              "checksum",
+              "features"
+            ]
+          }
+        },
+        "rustc": {
+          "type": "string"
+        },
+        "build_profile": {
+          "const": "release"
+        },
+        "compile_features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profile_enabled": {
+          "type": "boolean"
+        },
+        "workload_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "input_provenance": {
+          "enum": [
+            "public_fixture",
+            "authorized_private_fixture"
+          ]
+        },
+        "rng_mode": {
+          "enum": [
+            "production_fresh",
+            "test_fixture_in_memory"
+          ]
+        },
+        "backend": {
+          "enum": [
+            "cpu",
+            "gpu_pilot"
+          ]
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        }
+      },
+      "required": [
+        "head",
+        "dirty",
+        "cargo_lock_sha256",
+        "binary_sha256",
+        "patch_sha256",
+        "proofs_version",
+        "proofs_archive_sha256",
+        "resolved_packages",
+        "rustc",
+        "build_profile",
+        "compile_features",
+        "profile_enabled",
+        "workload_manifest_sha256",
+        "input_provenance",
+        "rng_mode",
+        "backend",
+        "artifacts"
+      ]
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu_model": {
+          "type": "string"
+        },
+        "logical_cpus_available": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpu_affinity": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "rayon_threads": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "blst_threads": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "host_ram_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "host_cap_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "gpu_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gpu_uuid_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "device_ram_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "device_cap_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cuda_runtime": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "driver_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "os_kernel": {
+          "type": "string"
+        },
+        "factory_budget_key": {
+          "type": "string"
+        },
+        "power_policy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cpu_model",
+        "logical_cpus_available",
+        "cpu_affinity",
+        "rayon_threads",
+        "blst_threads",
+        "host_ram_bytes",
+        "host_cap_bytes",
+        "gpu_model",
+        "gpu_uuid_hash",
+        "device_ram_bytes",
+        "device_cap_bytes",
+        "cuda_runtime",
+        "driver_version",
+        "os_kernel",
+        "factory_budget_key",
+        "power_policy"
+      ]
+    },
+    "overhead": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "qualification": {
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive",
+            "not_run"
+          ]
+        },
+        "paired_baseline_run_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pair_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timer_pairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calibrated_pair_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "sampler_rate_hz": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sampler_core_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "flush_wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "estimated_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "paired_wall_ratio_upper95": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "comparison_method": {
+          "type": "string"
+        },
+        "event_capacity": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dropped_events": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "qualification",
+        "paired_baseline_run_ids",
+        "pair_count",
+        "timer_pairs",
+        "calibrated_pair_seconds",
+        "sampler_rate_hz",
+        "sampler_core_seconds",
+        "flush_wall_seconds",
+        "estimated_fraction",
+        "paired_wall_ratio_upper95",
+        "comparison_method",
+        "event_capacity",
+        "event_count",
+        "dropped_events"
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "clock_origin": {
+          "type": "string"
+        },
+        "enqueued_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "admitted_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "proof_ready_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "locally_verified_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "submitted_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "included_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "finalized_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "completion_state": {
+          "enum": [
+            "queued",
+            "proof_ready",
+            "locally_verified",
+            "ledger_verified",
+            "submitted",
+            "included",
+            "finalized",
+            "failed"
+          ]
+        },
+        "finality_evidence_public_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "clock_origin",
+        "enqueued_ns",
+        "admitted_ns",
+        "proof_ready_ns",
+        "locally_verified_ns",
+        "submitted_ns",
+        "included_ns",
+        "finalized_ns",
+        "completion_state",
+        "finality_evidence_public_sha256"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stock_verifier": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "installed_ledger_verifier": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "negative_controls": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "byte_differential": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_required",
+            "not_run"
+          ]
+        },
+        "official_srs_authenticated": {
+          "type": "boolean"
+        },
+        "terminal_blake2b_preserved": {
+          "type": "boolean"
+        },
+        "protocol_unchanged": {
+          "type": "boolean"
+        },
+        "public_evidence_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "stock_verifier",
+        "installed_ledger_verifier",
+        "negative_controls",
+        "byte_differential",
+        "official_srs_authenticated",
+        "terminal_blake2b_preserved",
+        "protocol_unchanged",
+        "public_evidence_sha256"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cpu_core_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cpu_method": {
+          "enum": [
+            "clock_process_cputime",
+            "wait4_tree",
+            "cgroup_cpu_stat",
+            "unavailable"
+          ]
+        },
+        "max_rss_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "max_rss_scope": {
+          "enum": [
+            "process_lifetime",
+            "largest_child",
+            "sampled_tree",
+            "unavailable"
+          ]
+        },
+        "cgroup_memory_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "device_live_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "device_reserved_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "profile_valid": {
+          "type": "boolean"
+        },
+        "invalid_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "wall_seconds",
+        "cpu_core_seconds",
+        "cpu_method",
+        "max_rss_bytes",
+        "max_rss_scope",
+        "cgroup_memory_peak_bytes",
+        "device_live_peak_bytes",
+        "device_reserved_peak_bytes",
+        "coverage",
+        "profile_valid",
+        "invalid_reasons"
+      ]
+    },
+    "gpu_interval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "device_id_hash": {
+          "type": "string"
+        },
+        "stream_id": {
+          "type": "string"
+        },
+        "start_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_ns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clock_domain": {
+          "enum": [
+            "device_correlated_to_host",
+            "device_only"
+          ]
+        },
+        "host_correlation_error_ns": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "kind": {
+          "enum": [
+            "compute",
+            "h2d",
+            "d2h",
+            "d2d",
+            "wait"
+          ]
+        },
+        "method": {
+          "enum": [
+            "cuda_events",
+            "cupti"
+          ]
+        }
+      },
+      "required": [
+        "device_id_hash",
+        "stream_id",
+        "start_ns",
+        "end_ns",
+        "clock_domain",
+        "host_correlation_error_ns",
+        "kind",
+        "method"
+      ]
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "measured",
+            "unavailable"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "intervals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gpu_interval"
+          }
+        },
+        "busy_union_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "live_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reserved_peak_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "peak_method": {
+          "enum": [
+            "allocation_lifecycle",
+            "sampled",
+            "unavailable",
+            "not_applicable"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "reason",
+        "intervals",
+        "busy_union_seconds",
+        "live_peak_bytes",
+        "reserved_peak_bytes",
+        "peak_method"
+      ]
+    }
+  }
+}

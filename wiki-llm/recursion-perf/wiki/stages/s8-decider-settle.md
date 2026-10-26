@@ -27,6 +27,13 @@ The best near-term wins remove repeated setup and keep the wallet synchronized. 
 - First experiments: E1 identifies the real decider and verifier critical path (it needs the pinned ledger verifier binary); E2 tests the domain cliff before any new pairing design; E3 separates wallet proof count, sync and per-batch economics.
 - The verbatim recl9 and stand-in decider captures this wave used are private Fenrir files. They stay on the research host and are not published.
 
+## Wave 2: C10 design and the decider domain
+
+> Raw: [findings](../../clusters/s8-decider-settle/wave-2/FINDINGS.md); [experiments](../../clusters/s8-decider-settle/wave-2/EXPERIMENTS.md); [OpenSpec draft](../../clusters/s8-decider-settle/wave-2/OPENSPEC-DRAFT.md)
+
+- C10 becomes one authenticated, persistent proving worker plus one kept-synced deployer wallet, with the k20 relation unchanged. It catches the A4 wrong-installed-VK failure before expensive work. The recorded setup saving is still only 1.080×. The 7.239× wallet figure is a separate registration counterfactual; do not multiply them.
+- **The unchanged decider does not fit k19.** Recl9 records 841,682 advice rows and 1,032,209 table rows at k20. Keeping the pairing leaves 207,448 k19 rows for the rest, against a 515,182-row remainder: a 59.73% cut is needed. A k19 decider is a redesign with a new VK, not a configuration change.
+
 ## See Also
 
 - [s1 key setup and residency](s1-keys.md)

@@ -17,3 +17,12 @@ Scheduling evidence does not establish 10× end-to-end. The best next investment
 - **Profiling (L0) earns 1.00× on its own**, but it decides whether every other bound is reachable.
 
 See also: [consensus tracker](../../CONSENSUS.md).
+
+## Wave 2: the C0 profile design
+
+> Raw: [findings](../../clusters/s9-orchestration/wave-2/FINDINGS.md); [experiments](../../clusters/s9-orchestration/wave-2/EXPERIMENTS.md); [profile schema](../../clusters/s9-orchestration/wave-2/PROFILE.schema.json); [OpenSpec draft](../../clusters/s9-orchestration/wave-2/OPENSPEC-DRAFT.md)
+
+- Implement a small feature-gated timer patch against **published midnight-proofs 0.8.3**. The crate archive SHA-256 is `19b2e4b1…6a702dcc`. Add caller timers around stdlib key operations and factory command stages. C0 claims a 1.00× speedup.
+- Published 0.8.3 interleaves synthesis, advice commitments and challenges. `multi_open` contains two commitment MSMs. Whole-method timers would double count, so each nested MSM or NTT needs one accounting owner.
+- Targets stay separate. B3 whole-command 10× means 92.0–128.8 s against its receipts. The recl9 historical target is 161.7 s, or 22.3 batches/hour.
+- The draft became the OpenSpec change `openspec/changes/recursion-phase-profile/` (RPP-001 to RPP-010).

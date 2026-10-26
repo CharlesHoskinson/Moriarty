@@ -34,3 +34,11 @@
 - C0 agreed as a prerequisite measurement, not a speedup; no speedup row agreed
 - C1, C2, C5 and C10 weakened (single sources, shared Loki priors, unlike denominators); C10's decoded-key cache may already exist in ledger main
 - The cross-stage reading was withdrawn: the assumed stage shares add up to 216-241% of one proof
+
+## [2026-10-26] ingest | wave 2: s7, s8, s9
+- Disposition: Update (wave-2 sections in three stage articles)
+- Raw: clusters/{s7-recursion,s8-decider-settle,s9-orchestration}/wave-2/FINDINGS.md; private Fenrir evidence summarized, not copied
+
+## [2026-10-26] openspec | recursion-phase-profile (C0)
+- openspec/changes/recursion-phase-profile: proposal, design, tasks, spec RPP-001 to RPP-010; `openspec validate --strict` passes
+- Next: quint-llm-kit design check (task 1.1), roadmap Phase 5, implementation
