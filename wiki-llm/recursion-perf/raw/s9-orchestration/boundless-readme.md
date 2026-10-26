@@ -1,0 +1,72 @@
+# Boundless README (boundless-xyz/boundless, main)
+> Source: https://raw.githubusercontent.com/boundless-xyz/boundless/main/README.md
+> Collected: 2026-10-26
+> Published: Unknown
+
+![Boundless Logo](Boundless_Logo%20black.png)
+
+# Boundless
+This repository contains the core primitives for Boundless.
+> \*\*Note:\*\* If you are a builder looking to build an application on Boundless, you should start with the [Boundless Foundry Template](https://github.com/boundless-xyz/boundless-foundry-template) and the [Boundless Builder Docs](https://docs.boundless.network/developers/quick-start).
+> \*\*Note:\*\* If you are a prover looking to get started, please refer to the [Boundless Prover Quick Start Guide](https://docs.boundless.network/provers/quick-start).
+## Repository Structure
+The repository is structured as a monorepo and contains Rust crates and Solidity contracts. Some key components:
+- \*\*Boundless Core Contracts\*\*: The core smart contracts for Boundless. [./contracts](./contracts)
+- \*\*Boundless SDK\*\*: Rust SDK for interacting with Boundless. [./crates/boundless-market](./crates/boundless-market)
+- \*\*Boundless CLI\*\*: Command-line interface for interacting with Boundless. [./crates/boundless-cli](./crates/boundless-cli)
+- \*\*Boundless Broker\*\*: Our sample prover implementation. [./crates/broker](./crates/broker)
+- \*\*Boundless zkVM Guests\*\*: The zkVM guests required for generating proofs on Boundless. [./crates/guest](./crates/guest) and [./crates/assessor](./crates/assessor)
+## Developing
+If you don't already have Rust installed, start by [installing Rust and rustup](https://doc.rust-lang.org/cargo/getting-started/installation.html).
+### Required system packages (Linux)
+`mold` is a required linker for this repository's Rust build configuration.
+Install it before running `cargo build`:
+```sh
+sudo apt-get update
+sudo apt-get install -y build-essential binutils lld mold
+```
+If `mold` (or linker tooling) is missing, builds can fail with linker errors like:
+`collect2: fatal error: cannot find 'ld'`.
+Then download the RISC Zero toolchain and install it using rzup:
+```sh
+curl -L https://risczero.com/install | bash
+```
+Next we can install the RISC Zero toolchain by running rzup install:
+```sh
+rzup install
+```
+You can verify the installation was successful by running:
+```sh
+cargo risczero --version
+```
+If you don't already have Forge installed, you can install it using Foundry:
+```sh
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+To build the Solidity contracts, run:
+```sh
+forge build
+```
+To build the Rust crates, run:
+```sh
+cargo build
+```
+## Documentation
+You can find the documentation in the [boundless-xyz/docs](https://github.com/boundless-xyz/docs) repo.
+## Audits
+See https://github.com/boundless-xyz/boundless-security
+## Migrating to Broker 2.0
+The following `broker.toml` config field names have been removed. Update your config to use the new names:
+| Old name | New name |
+| ------------------------------------ | ------------------------------------ |
+| `mcycle\_price` | `min\_mcycle\_price` |
+| `max\_stake` | `max\_collateral` |
+| `stake\_balance\_warn\_threshold` | `collateral\_balance\_warn\_threshold` |
+| `stake\_balance\_error\_threshold` | `collateral\_balance\_error\_threshold` |
+| `max\_concurrent\_locks` | `max\_concurrent\_proofs` |
+| `batch\_size` | `min\_batch\_size` |
+| `expired\_order\_fulfillment\_priority` | `order\_commitment\_priority` |
+## License
+The [Boundless Contracts](./contracts), Boundless Assessor Library (./crates/assessor) and Boundless Assessor Guest (./crates/guest/assessor) in this repository are licensed under the Business Source License, with conversion to Apache-2.0 at a future date. See [LICENSE-BSL](./LICENSE-BSL) for a copy of the license.
+Other source code within this repository is licensed under the Apache-2.0 license, unless otherwise stated at the file header. See [LICENSE-Apache-2.0][./LICENSE-Apache-2.0] for a copy of the license.
