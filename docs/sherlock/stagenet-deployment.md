@@ -278,3 +278,32 @@ proof-verifying ledger-9 (`20261025T072650Z-A9settle-rehearsal`, receipt
 - The honest second settle over post-C is refused locally (`SettleUnsatisfiable`).
 Native refusal happens at guaranteed-transcript apply, not at `wellFormed`. Whether the
 stagenet node refuses before inclusion is for the A9 evidence to show.
+
+## Redeployment after the host loss (2026-10-26)
+
+The old host and its deployer wallet were lost. The merged lanes changed the A3 parent key, so A4 failed against the installed contract `ac93b80e…`. On 2026-10-26 the A-chain was rebuilt (A2 and A3 PASS) and the terminal proof was prepared offline. SherlockAnchor was then redeployed from the new deployer wallet (`mn_addr_stagenet19mr7e738…gcwhe`).
+
+| | Value |
+| --- | --- |
+| Contract | `2391d62fcfbf21b35cf911f651d71cb9d435fc3e962f67e2e94f91e85e91ff3f` |
+| Deploy tx id | `009af03ef89880287f8e6bb17fa97c1e653fab235ab4b725f81548475775dac03b` |
+| Deploy tx hash | `9c605e100f6595e0fee1d5d69450757b4ec59b2fe074a37bae771ea87d8e8741` |
+| Block | **1032519** |
+| Anchor source | `4f531ce0…3252634` (unchanged) |
+| A3 parent VK | `642ef85409d8b55609b7ca5d45996b07e9ba6fdc1f8915697cfe7bd9200cb94e` |
+| Raw decider VK (k20) | `dc5fc17f75e140e6bc22a5afc23588ee9cfe6947449dbaf888cfdfcb1190d5f7` |
+| Decider relation | `9913df00292022582b29525abe053aee89f20099e37c57a6282cd96a9b2d964e` |
+| Installed tagged `acceptValidity` verifier (2,217 bytes) | `3a7f4c5fed0441777b9fb50bd33192818ace065c9d03838648457fbe4564b198` |
+| Compiled `settleValidity` verifier | `be8b0943…1c0b5c` (unchanged) |
+| instance_id | `489080d3…ecd45c00` (LE; unchanged) |
+
+The preparation `target/a4-anchor/prepared-deployment.json` is now produced by `tools/sherlock-sdk/prepare-deployment.py`. That file's producer had not been committed before. The SDK constructor dry run passed (`20261026T101939Z-A4deploy-dry`). The deployment ran under `20261026T103553Z-A4deploy` in 326.8 s at 626 MB peak RSS, using proof server `9.0.0-rc.5_experimental` (docker) and the pinned SDK set. The finalized readback matched all fields and both keys. `scripts/doctorwatson check A4` then passed against the installed key (`20261026T104216Z-A4`).
+
+**Two earlier attempts each finalized a contract and then lost its maintenance signing key.** The SDK reads the private-state password only after the deployment is final:
+
+- `f94fc52ce4d00e8540438b4962d5099bbe3ed5a412f94d0851cc0239fd1cca9c` (block 1032367, `deploy-run4`). The password file was missing.
+- `81602c6f34be0094b9d019877f4f55214efe10b128d45627a492c224bf6b4279` (block 1032453, `deploy-run5`). The SDK rejected the password: it needs at least 3 character classes, and a hex password has 2.
+
+Both orphan contracts hold correct state, and anyone can still call them, but nobody can maintain them. No receipt was written for either. Sherlock does not use them. `deploy-current.mjs`, `rollup-deploy.mjs` and `stagenet-session.mjs` now check the mode-600 password file and run the SDK's `validatePassword` before any transaction.
+
+The SDK writes the maintenance key store to `midnight-level-db/` at the repository root, which is gitignored. It is backed up outside the repository. The SDK root also had to pin `@midnightntwrk/onchain-runtime-v4` to `4.0.0-rc.3`: a fresh install resolved a second copy (rc.5), and the SDK then failed with `expected instance of ChargedState`.

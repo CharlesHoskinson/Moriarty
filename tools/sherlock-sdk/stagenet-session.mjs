@@ -36,11 +36,17 @@ export async function openStagenetSession(load, storage, {proofUrl = endpoints.p
   const {HDWallet, Roles, createKeystore, validateMnemonic, WalletFacade, ShieldedWallet, DustWallet,
     UnshieldedWallet, PublicKey, NoOpTransactionHistoryStorage} = await load('@midnightntwrk/wallet-sdk');
   const {mnemonicToSeedSync} = await load('@scure/bip39');
-  const {ttlOneHour} = await load('@midnight-ntwrk/midnight-js-utils');
+  const {ttlOneHour, validatePassword} = await load('@midnight-ntwrk/midnight-js-utils');
   const {levelPrivateStateProvider} = await load('@midnight-ntwrk/midnight-js-level-private-state-provider');
   const walletDir = join(homedir(), '.midnight/stagenet-wallet');
   const mnemonic = join(walletDir, 'stagenet-wallet.mnemonic');
   assert.equal(statSync(mnemonic).mode & 0o777, 0o600);
+  // The private-state password encrypts the contract signing keys. The SDK first reads it after a
+  // deployment is final, so a missing or rejected password loses the maintenance key. Check the file
+  // and the SDK's own password policy before any transaction.
+  assert.equal(statSync(join(walletDir, 'private-state.password')).mode & 0o777, 0o600,
+    'private-state.password (mode 600) is required before any transaction');
+  validatePassword(readFileSync(join(walletDir, 'private-state.password'), 'utf8').trim());
   const phrase = readFileSync(mnemonic, 'utf8').trim().toLowerCase().split(/\s+/).join(' ');
   assert.ok(validateMnemonic(phrase), 'invalid mnemonic');
   const hd = HDWallet.fromSeed(mnemonicToSeedSync(phrase)); assert.equal(hd.type, 'seedOk');
