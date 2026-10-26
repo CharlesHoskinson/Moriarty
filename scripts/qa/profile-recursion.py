@@ -595,9 +595,10 @@ def write_report(path, report):
 def planned_commands(args):
     require(re.fullmatch(r'[A-Za-z0-9_.-]+', args.run_id) and args.run_id not in ('.', '..'), 'invalid run ID')
     require(args.pairs >= 5, 'calibration needs at least five pairs')
-    base = ['scripts/doctorwatson', 'heavy', '--budget', BUDGETS[args.workload]]
-    if args.hypothesis:
-        base += ['--hypothesis', args.hypothesis]
+    def heavy(run_id, limit, hypothesis):
+        # Every heavy run needs its own id. Builds take minutes, so they get a wall cap of their own and never
+        # the proof budget (a2-linked-children allows 23 s).
+        return ['scripts/doctorwatson', 'heavy', '--id', run_id, *limit, '--hypothesis', args.hypothesis or hypothesis]
     require(args.workload != 'A2' or args.cache_mode == 'process_cold',
             'A2 resident_pk is unsupported: public child APIs rebuild the PK')
     binary = 'profile-a2' if args.workload == 'A2' else 'profile-recursion'
@@ -609,11 +610,15 @@ def planned_commands(args):
                  '--bin', binary]
         if variant == 'on':
             build += ['--features', 'recursion-phase-profile']
-        commands.append(base + ['--'] + build)
+        commands.append(heavy(f'C0-{args.run_id}-{args.workload}-build-{variant}', ['--max-wall', '3600'],
+                              f'Build the {variant} {binary} binary for the C0 {args.workload} profile') + ['--'] + build)
     for pair in range(args.pairs if args.command == 'calibrate' else 1):
         for variant in variants:
             sidecar = f'qa/sherlock/profiles/{args.run_id}/{args.workload}-{args.cache_mode}-{pair}-{variant}.json'
-            commands.append(base + ['--', f'tools/profile/target/{variant}/release/{binary}',
+            commands.append(heavy(f'C0-{args.run_id}-{args.workload}-{args.cache_mode}-{pair}-{variant}',
+                                  ['--budget', BUDGETS[args.workload]],
+                                  f'C0 {args.workload} profile, pair {pair}, observation {variant}')
+                            + ['--', f'tools/profile/target/{variant}/release/{binary}',
                                     '--workload', args.workload, '--cache-mode', args.cache_mode,
                                     '--sidecar', sidecar])
     return commands

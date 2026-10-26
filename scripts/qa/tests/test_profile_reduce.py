@@ -180,18 +180,29 @@ class ReduceTests(unittest.TestCase):
             self.assertEqual(self.profile.main(['one', '--workload', 'A2']), 0)
         commands = [shlex.split(line) for line in out.getvalue().splitlines()]
         self.assertEqual(len(commands), 4)
-        prefix = ['scripts/doctorwatson', 'heavy', '--budget', 'a2-linked-children', '--']
         for command in commands:
-            self.assertEqual(command[:5], prefix)
+            self.assertEqual(command[:2], ['scripts/doctorwatson', 'heavy'])
+            self.assertIn('--id', command)
+            self.assertIn('--hypothesis', command)
+        ids = [command[command.index('--id') + 1] for command in commands]
+        self.assertEqual(len(set(ids)), 4, 'every heavy run needs its own id')
+        # Builds take minutes: they get their own wall cap, never the 23 s A2 proof budget.
         for command in commands[:2]:
+            head = command[:command.index('--')]
+            self.assertNotIn('--budget', head)
+            self.assertEqual(head[head.index('--max-wall') + 1], '3600')
             self.assertIn('RUSTC_WRAPPER=', command)
             self.assertIn('CARGO_BUILD_JOBS=4', command)
             self.assertIn('profile-a2', command)
             self.assertIn('--offline', command)
+        for command in commands[2:]:
+            head = command[:command.index('--')]
+            self.assertEqual(head[head.index('--budget') + 1], 'a2-linked-children')
+            self.assertNotIn('--max-wall', head)
         self.assertNotIn('--features', commands[0])
         self.assertEqual(commands[1][-2:], ['--features', 'recursion-phase-profile'])
-        self.assertEqual(commands[2][5], 'tools/profile/target/off/release/profile-a2')
-        self.assertEqual(commands[3][5], 'tools/profile/target/on/release/profile-a2')
+        self.assertEqual(commands[2][commands[2].index('--') + 1], 'tools/profile/target/off/release/profile-a2')
+        self.assertEqual(commands[3][commands[3].index('--') + 1], 'tools/profile/target/on/release/profile-a2')
 
     def test_a2_resident_pk_is_not_falsely_planned(self):
         with patch('sys.stderr'), patch('sys.stdout'):
