@@ -2320,3 +2320,12 @@ Ideas not yet implemented:
 
 - Reserve the heavy lock per predicate chain (A2→A3→A4) so an unrelated heavy run cannot interleave and evict caches between dependent steps.
 - Record each heavy run's peak RSS against the 30 GB `capped` limit and alert at 80%, before an OOM kill becomes a Failed state.
+
+## 2026-10-26 — redeploy lessons (tick 5)
+
+- **A post-finality failure orphaned two contracts.** `deployContract` submits and waits for finality before it stores the maintenance signing key. Only then does it read the private-state password. A missing file (attempt 1) and a password that failed the SDK policy (attempt 2, hex has only two character classes) each finalized a contract with no stored key. Fix: the wallet tools check the mode-600 file and call the SDK's own `validatePassword` before any transaction. An offline signing-key round trip ran before attempt 3. Rule: before any irreversible call, exercise every step that runs after it, offline, with the real inputs.
+- **The pre-check was weaker than the real check.** Checking that the file exists was not enough; the SDK applies a policy. Pre-checks must call the same validator the later step calls.
+- **A missing producer.** `prepared-deployment.json` had a consumer but no committed producer, so it was lost with the host. `tools/sherlock-sdk/prepare-deployment.py` now derives it from the A3 and A4 artifacts. Idea: T0 should flag any schema string that is asserted in one tool and written by none.
+- **Dependency drift in a reinstalled SDK root.** A fresh `npm install` resolved `onchain-runtime-v4` 4.0.0-rc.5 at top level next to the nested rc.3. WASM classes then crossed module instances (`expected instance of ChargedState`). The dry run caught it before any wallet access. Idea: commit the SDK root's `package-lock.json`, and have the tools assert a single copy of each WASM runtime.
+- **Secrets and keys written outside the visible tree.** The SDK writes the maintenance key store to `<repo>/midnight-level-db/`, which is gitignored. It is now backed up with its password outside the repo. Idea: preflight should list every gitignored path holding key material and its backup state.
+- **Memory caps must fit the test, not the slice default.** The C6 dispatch factorial test went past a 30 GB cap, because it caches one circuit per rule. Record each test's peak RSS in its budget and size `capped` from that.
