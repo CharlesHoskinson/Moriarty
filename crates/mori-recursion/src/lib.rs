@@ -11,6 +11,8 @@ pub mod inner;
 pub mod pairing;
 pub mod parent;
 pub mod reference;
+#[cfg(feature = "sherlock-rollup")]
+pub mod rollup;
 pub mod template;
 pub mod tower;
 pub mod util;

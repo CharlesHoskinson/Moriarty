@@ -127,7 +127,7 @@ def cmd_preflight(args):
 
 
 def cmd_heavy(args):
-    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd)
+    return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd, pipe_stdin=args.pipe_stdin)
 
 
 def cmd_stop_rule(args):
@@ -188,6 +188,7 @@ def build_parser():
     p.add_argument("--id", required=True)
     p.add_argument("--budget")
     p.add_argument("--hypothesis")
+    p.add_argument("--pipe-stdin", action="store_true", help="inherit a pipe/socket on stdin without tracing input")
     p.set_defaults(fn=cmd_heavy)
 
     p = sub.add_parser("stop-rule", help="escalation rule")

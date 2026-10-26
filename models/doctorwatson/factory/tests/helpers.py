@@ -34,11 +34,11 @@ class FakeRepo(unittest.TestCase):
     def predicates(self, text):
         self.write("qa/sherlock/predicates.yaml", text)
 
-    def run_cli(self, *args, env=None, timeout=60):
+    def run_cli(self, *args, env=None, timeout=60, input=None):
         e = dict(self.env)
         e.update(env or {})
         return subprocess.run([sys.executable, "-m", "factory", *args], cwd=PKG_PARENT, env=e,
-                              capture_output=True, text=True, timeout=timeout)
+                              capture_output=True, text=True, timeout=timeout, input=input)
 
     def status(self):
         with open(self.p("qa/sherlock/status.json")) as fh:
