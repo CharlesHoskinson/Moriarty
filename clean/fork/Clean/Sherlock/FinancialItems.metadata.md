@@ -2,12 +2,10 @@
 
 `FinancialItems.lean` follows the host financial route in
 `crates/mori-core/src/stage/sherlock2.rs` and its report publisher
-`crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs` in the
-`Moriarty-wt-factory-u` worktree. Those implementation files were in progress
-at the time of the first comparison; the then-current branch head was
-`0699194f9`. Hashes and verification state are in the accompanying JSON.
-The current source comparison includes the later in-progress change at
-`c0fb7664d`: retain-fees admission checks every action segment up front.
+`crates/mori-core/src/sherlock/compile_artifact/suspension2_fin.rs`, committed
+in `815a22d87`. The financial engine, publisher and audited decode/admit
+helpers byte-match that commit and the current factory-u working tree.
+Exact hashes and verification state are in the accompanying JSON.
 
 The module uses `Init` only. Snapshot, capture and effect types are parameters
 representing complete payloads, not alternate truncated host encodings.
