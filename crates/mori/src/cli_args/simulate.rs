@@ -87,6 +87,10 @@ pub struct Args {
     /// the rules this run actually exercises (description only; no proof)
     #[arg(long, requires = "execution_profile")]
     pub native_inventory: bool,
+    /// G5: also emit the per-step host witness stream of the K-A reference
+    /// run (rule, pre/post states and digests, halted final)
+    #[arg(long, requires = "execution_profile")]
+    pub witness_stream: bool,
     /// UIREQ-033: bounded static residualization of the K-A reference step
     /// (universal, family or per-program) with its executed realization
     #[arg(long, value_name = "MODE", requires = "execution_profile")]

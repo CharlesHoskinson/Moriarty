@@ -26,7 +26,16 @@ const CAPS: [ExportRequest; 6] = [
 ];
 
 fn plans(position: u64, requests: &[ExportRequest], dir: &std::path::Path) -> Value {
-    export_plans(FACT3, CONFIG, TARGET, position, requests, dir)
+    plans_in(FACT3, position, requests, dir)
+}
+
+fn plans_in(
+    source: &str,
+    position: u64,
+    requests: &[ExportRequest],
+    dir: &std::path::Path,
+) -> Value {
+    export_plans(source, CONFIG, TARGET, position, requests, dir)
         .unwrap_or_else(|f| panic!("{}", serde_json::to_string(&f).unwrap()))
 }
 
@@ -39,7 +48,11 @@ fn temp_dir(tag: &str) -> PathBuf {
 
 /// (1-based position, reference record) of the first slice matching `pred`.
 fn select(pred: impl Fn(&Value) -> bool) -> (u64, Value) {
-    let report = reference_slices(FACT3, CONFIG, TARGET, 1)
+    select_in(FACT3, pred)
+}
+
+fn select_in(source: &str, pred: impl Fn(&Value) -> bool) -> (u64, Value) {
+    let report = reference_slices(source, CONFIG, TARGET, 1)
         .unwrap_or_else(|f| panic!("{}", serde_json::to_string(&f).unwrap()));
     for (index, slice) in report["slices"].as_array().unwrap().iter().enumerate() {
         if pred(slice) {
@@ -86,6 +99,26 @@ fn check_step(position: u64, record: &Value, want_op: &str) {
         operations.iter().any(|o| o["op"] == want_op),
         "missing {want_op} in {operations:?}"
     );
+    // Every state-path input must bind its actual value, and the checked
+    // multiplication must bind the captured left and returned right operands.
+    for operation in operations {
+        for input in operation["inputs"].as_array().unwrap() {
+            if input.get("source").is_some() {
+                assert!(input["value"].is_string(), "unbound state input {input}");
+            }
+        }
+    }
+    if want_op == "CheckedU128Mul" {
+        let mul = operations.iter().find(|o| o["op"] == want_op).unwrap();
+        let values: Vec<&str> = mul["inputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| i["value"].as_str().unwrap())
+            .collect();
+        assert_eq!(values, ["uiU(3)", "uiU(2)"], "actual mul operands");
+        assert_eq!(mul["outputs"][0]["value"], "uiU(6)");
+    }
     let covered: std::collections::BTreeSet<&str> = constraint["components"]
         .as_array()
         .unwrap()
@@ -206,5 +239,87 @@ fn position_zero_is_refused_and_no_request_writes_nothing() {
     let report = plans(1, &[], &dir);
     assert_eq!(report["exports"].as_array().unwrap().len(), 0);
     assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn scope_return_is_not_misclassified_as_pending_arithmetic() {
+    // A match arm body returns through a Scope frame (rule 195) while a
+    // Right(Mul) frame is pending below it: that step is a scope restore,
+    // not the pending multiplication. (fact has no ScopeF; use match.)
+    const SCOPED: &str = "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn value(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => value(l) } }\n  entry 2 * value(leaf(3));\n}\n";
+    let (position, _record) = select_in(SCOPED, |slice| {
+        slice["start"]["control"]
+            .as_str()
+            .is_some_and(|c| c.starts_with("uiRet("))
+            && slice["start"]["frames"][0]
+                .as_str()
+                .is_some_and(|f| f.starts_with("uiScopeF("))
+    });
+    let dir = temp_dir(&format!("{position}-scope"));
+    let report = plans_in(SCOPED, position, &CAPS, &dir);
+    let operations = report["operation_manifest"]["operations"]
+        .as_array()
+        .unwrap();
+    assert!(
+        operations.iter().all(|o| o["op"] != "CheckedU128Mul"),
+        "{operations:?}"
+    );
+    assert!(
+        operations.iter().any(|o| o["op"] == "ScopeRestore"),
+        "{operations:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn checked_mul_overflow_exports_error_typed_result() {
+    const OVERFLOW: &str = "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(n: UInt): UInt { 2 * n }\n  entry f(340282366920938463463374607431768211455);\n}\n";
+    let (position, _record) = select_in(OVERFLOW, |slice| {
+        slice["end"]["control"]
+            .as_str()
+            .is_some_and(|c| c.starts_with("uiPrimResult(uiPrimError("))
+    });
+    let dir = temp_dir(&format!("{position}-overflow"));
+    let report = plans_in(OVERFLOW, position, &CAPS, &dir);
+    let operations = report["operation_manifest"]["operations"]
+        .as_array()
+        .unwrap();
+    let mul = operations
+        .iter()
+        .find(|o| o["op"] == "CheckedU128Mul")
+        .expect("checked mul op");
+    assert_eq!(mul["outputs"][0]["type"], "CheckedU128Result", "{mul}");
+    assert!(mul["outputs"][0]["error_code"].is_string(), "{mul}");
+    assert!(
+        mul["outputs"][0]["value"]
+            .as_str()
+            .unwrap()
+            .contains("uiPrimError"),
+        "{mul}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn bool_equality_exports_generic_value_eq() {
+    const EQ: &str = "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(b: Bool): Bool { b == true }\n  entry f(true);\n}\n";
+    let (position, _record) = select_in(EQ, |slice| {
+        slice["end"]["control"] == "uiPrimResult(uiPrimValue(uiB(true)))"
+    });
+    let dir = temp_dir(&format!("{position}-eq"));
+    let report = plans_in(EQ, position, &CAPS, &dir);
+    let operations = report["operation_manifest"]["operations"]
+        .as_array()
+        .unwrap();
+    let eq = operations
+        .iter()
+        .find(|o| o["op"] == "ValueEq")
+        .expect("generic ValueEq for Bool operands");
+    assert!(
+        operations.iter().all(|o| o["op"] != "UInt128Eq"),
+        "{operations:?}"
+    );
+    assert_eq!(eq["inputs"][0]["type"], "Bool", "{eq}");
     let _ = std::fs::remove_dir_all(&dir);
 }

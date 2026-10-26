@@ -22,7 +22,7 @@ use crate::sherlock::helper_machine::shared::RunIntC;
 use crate::sherlock::reference_display::KDisplay;
 use crate::sherlock::reference_slice::{SliceStop, advance_m};
 use crate::sherlock::{
-    BinaryOp, Control, Frame, Machine, Outcome, PROFILE, Snapshot, StepRecord, Type, UnaryOp,
+    BinaryOp, Control, Frame, Machine, PROFILE, Snapshot, StepRecord, Type, UnaryOp,
     Value as KValue,
 };
 
@@ -138,88 +138,146 @@ fn typed(name: &str, ty: &str) -> Value {
     json!({"name": name, "type": ty})
 }
 
+/// A typed binding to an actual value at a named before/after state path.
+fn bound(name: &str, ty: &str, source: &str, value: &KValue) -> Value {
+    json!({"name": name, "type": ty, "source": source, "value": value.to_k()})
+}
+
+fn control_binding(snapshot: &Snapshot, source: &str) -> Value {
+    json!({
+        "name": "control",
+        "type": "Control",
+        "source": source,
+        "value": snapshot.control.as_ref().map_or_else(|| "none".to_owned(), KDisplay::to_k),
+    })
+}
+
 /// The primary operation this step performs, with its typed inputs/outputs.
+///
+/// Classification follows the executed K-A rule and the *top* frame only;
+/// pending frames below the top are not the current operation.
 fn classify(record: &StepRecord) -> (&'static str, Vec<Value>, Vec<Value>) {
     let before = &record.before;
     let after = &record.after;
-    if let Some(Control::Return(value)) = &before.control
-        && let Some(Frame::Return(ty, _)) = before.frames.first()
-    {
-        let ty = type_name(*ty);
-        return (
-            "FrameRestore",
-            vec![typed("return_value", value_type(value))],
-            vec![typed("restored_value", ty)],
-        );
-    }
-    let binary = before.frames.iter().find_map(|frame| match frame {
-        Frame::Left(op, _, _) | Frame::Right(op, _) => Some(*op),
+    let top = before.frames.first();
+    let returned = match &before.control {
+        Some(Control::Return(value)) => Some(value),
         _ => None,
-    });
-    if let Some(op) = binary {
-        let result = match &after.control {
-            Some(Control::PrimitiveResult(Ok(value))) => value_type(value),
-            _ => "UInt128",
-        };
-        return (
-            binary_op_name(op),
-            vec![
-                typed("operand_left", "UInt128"),
-                typed("operand_right", "UInt128"),
-            ],
-            vec![typed("result", result)],
-        );
+    };
+    match (record.rule_start_line, returned, top) {
+        // Rule 153: the captured left operand and the returned right operand
+        // are the actual inputs of the checked binary operation.
+        (153, Some(right), Some(Frame::Right(op, left))) => {
+            let result = match &after.control {
+                Some(Control::PrimitiveResult(Ok(value))) => bound(
+                    "result",
+                    value_type(value),
+                    "after.control.primitive_result",
+                    value,
+                ),
+                Some(Control::PrimitiveResult(Err(code))) => json!({
+                    "name": "result",
+                    "type": "CheckedU128Result",
+                    "source": "after.control.primitive_result",
+                    "value": after.control.as_ref().map_or_else(|| "none".to_owned(), KDisplay::to_k),
+                    "error_code": code.to_string(),
+                }),
+                _ => typed("result", "CheckedU128Result"),
+            };
+            (
+                // Equality is sort-generic in K-A; only UInt operands may
+                // carry the UInt128 label, other sorts use the generic name.
+                match op {
+                    BinaryOp::Eq
+                        if !matches!((left, right), (KValue::UInt(_), KValue::UInt(_))) =>
+                    {
+                        "ValueEq"
+                    }
+                    _ => binary_op_name(*op),
+                },
+                vec![
+                    bound(
+                        "operand_left",
+                        value_type(left),
+                        "before.frames[0].captured_left",
+                        left,
+                    ),
+                    bound(
+                        "operand_right",
+                        value_type(right),
+                        "before.control.return_value",
+                        right,
+                    ),
+                ],
+                vec![result],
+            )
+        }
+        // Rule 185: returning through a ReturnF frame restores its environment.
+        (185, Some(value), Some(Frame::Return(ty, _))) => (
+            "FrameRestore",
+            vec![bound(
+                "return_value",
+                value_type(value),
+                "before.control.return_value",
+                value,
+            )],
+            vec![bound(
+                "restored_value",
+                type_name(*ty),
+                "after.control.return_value",
+                value,
+            )],
+        ),
+        // Rule 195: returning through a Scope frame restores only its scope.
+        (195, Some(value), Some(Frame::Scope(_))) => (
+            "ScopeRestore",
+            vec![bound(
+                "return_value",
+                value_type(value),
+                "before.control.return_value",
+                value,
+            )],
+            vec![bound(
+                "restored_value",
+                value_type(value),
+                "after.control.return_value",
+                value,
+            )],
+        ),
+        // Rule 157: a unary operation on the returned operand.
+        (157, Some(value), Some(Frame::Unary(op))) => {
+            let (name, ty) = match op {
+                UnaryOp::Not => ("BoolNot", "Bool"),
+                UnaryOp::Leaf => ("TreeLeaf", "UInt128Tree"),
+            };
+            (
+                name,
+                vec![bound(
+                    "operand",
+                    value_type(value),
+                    "before.control.return_value",
+                    value,
+                )],
+                vec![typed("result", ty)],
+            )
+        }
+        // Rules 161/165: the returned condition selects a branch.
+        (161 | 165, Some(value), Some(Frame::If(_, _, _))) => (
+            "Select",
+            vec![bound(
+                "condition",
+                value_type(value),
+                "before.control.return_value",
+                value,
+            )],
+            vec![control_binding(after, "after.control")],
+        ),
+        _ => (
+            "ArenaRead",
+            vec![control_binding(before, "before.control")],
+            vec![control_binding(after, "after.control")],
+        ),
     }
-    if let Some(control) = &before.control {
-        let (op, inputs, outputs): (&'static str, Vec<Value>, Vec<Value>) = match control {
-            Control::Eval(expr) => match expr.as_ref() {
-                crate::sherlock::Expr::Binary(op, _, _) => (
-                    binary_op_name(*op),
-                    vec![
-                        typed("operand_left", "UInt128"),
-                        typed("operand_right", "UInt128"),
-                    ],
-                    vec![typed("result", "UInt128")],
-                ),
-                crate::sherlock::Expr::Unary(UnaryOp::Not, _) => (
-                    "BoolNot",
-                    vec![typed("operand", "Bool")],
-                    vec![typed("result", "Bool")],
-                ),
-                crate::sherlock::Expr::Unary(UnaryOp::Leaf, _) => (
-                    "TreeLeaf",
-                    vec![typed("operand", "UInt128")],
-                    vec![typed("result", "UInt128Tree")],
-                ),
-                crate::sherlock::Expr::If(_, _, _) => (
-                    "Select",
-                    vec![typed("condition", "Bool")],
-                    vec![typed("result", "UInt128")],
-                ),
-                _ => (
-                    "ArenaRead",
-                    vec![typed("control", "Control")],
-                    vec![typed("value", "UInt128")],
-                ),
-            },
-            Control::Return(value) => (
-                "FrameRestore",
-                vec![typed("return_value", value_type(value))],
-                vec![typed("restored_value", value_type(value))],
-            ),
-            _ => (
-                "ArenaRead",
-                vec![typed("control", "Control")],
-                vec![typed("value", "UInt128")],
-            ),
-        };
-        return (op, inputs, outputs);
-    }
-    (
-        "ArenaRead",
-        vec![typed("control", "Control")],
-        vec![typed("value", "UInt128")],
-    )
 }
 
 fn select_record(
@@ -312,12 +370,17 @@ pub fn export_plans(
     let (primary_op, primary_inputs, primary_outputs) = classify(&record);
 
     // OperationManifest: an arena read feeding the step's primary operation.
-    let env_inputs: Vec<Value> = record
-        .before
-        .environment
-        .iter()
-        .map(|(name, value)| typed(name, value_type(value)))
-        .collect();
+    // The state-read operation binds the complete before-state the step
+    // consumes: its control and every environment entry, by state path.
+    let mut env_inputs: Vec<Value> = vec![control_binding(&record.before, "before.control")];
+    env_inputs.extend(record.before.environment.iter().map(|(name, value)| {
+        bound(
+            name,
+            value_type(value),
+            &format!("before.environment.{name}"),
+            value,
+        )
+    }));
     let mut operations: Vec<Value> = Vec::new();
     let mut previous_id: Option<String> = None;
     for (ordering, (op, inputs, outputs)) in [

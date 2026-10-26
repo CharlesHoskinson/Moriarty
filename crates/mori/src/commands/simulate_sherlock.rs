@@ -77,7 +77,7 @@ fn reference_slices(args: &Args) -> Result<Option<serde_json::Value>, CompileFai
 /// UIREQ-031/033 sections over the real K-A reference run.
 fn plan_sections(args: &Args) -> Result<Vec<(&'static str, serde_json::Value)>, CompileFailure> {
     let mut out = Vec::new();
-    if args.residualize.is_none() && args.export_plan.is_none() {
+    if args.residualize.is_none() && args.export_plan.is_none() && !args.witness_stream {
         return Ok(out);
     }
     if args.source_profile.as_deref()
@@ -95,6 +95,12 @@ fn plan_sections(args: &Args) -> Result<Vec<(&'static str, serde_json::Value)>, 
     let source = read(&args.file, "source")?;
     let config = read(config, "config")?;
     let target = read(target, "config")?;
+    if args.witness_stream {
+        out.push((
+            "witness_stream",
+            host::draft_witness_stream::witness_stream(&source, &config, &target)?,
+        ));
+    }
     if let Some(mode) = &args.residualize {
         out.push((
             "residual",
