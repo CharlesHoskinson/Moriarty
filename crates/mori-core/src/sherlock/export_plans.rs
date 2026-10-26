@@ -185,7 +185,16 @@ fn classify(record: &StepRecord) -> (&'static str, Vec<Value>, Vec<Value>) {
                 _ => typed("result", "CheckedU128Result"),
             };
             (
-                binary_op_name(*op),
+                // Equality is sort-generic in K-A; only UInt operands may
+                // carry the UInt128 label, other sorts use the generic name.
+                match op {
+                    BinaryOp::Eq
+                        if !matches!((left, right), (KValue::UInt(_), KValue::UInt(_))) =>
+                    {
+                        "ValueEq"
+                    }
+                    _ => binary_op_name(*op),
+                },
                 vec![
                     bound(
                         "operand_left",
