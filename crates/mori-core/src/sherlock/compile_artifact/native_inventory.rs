@@ -10,8 +10,9 @@
 //! claims.
 //!
 //! The report only describes. It runs no SDK load, check, compile, proof or
-//! verification and grants no native acceptance: every listed C6 fragment is
-//! source-only, and a rule without a fragment stays an explicit gap.
+//! verification and grants no native acceptance. A listed C6 fragment is
+//! source-only unless [`RECEIPTED`] names a committed receipt of an actual
+//! compiled-and-run test run; a rule without a fragment stays an explicit gap.
 use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
@@ -536,6 +537,22 @@ pub const UNEXERCISED_C6: &[(&str, Fragment)] = &[
     ),
 ];
 
+/// Committed compiled-and-run receipts, one `<rule>.json` per receipted rule
+/// (format `moriarty-sherlock-fragment-receipt/1`).
+pub const RECEIPT_DIR: &str = "crates/mori-backend/src/sherlock_machine/testdata/receipts";
+pub const SOURCE_ONLY: &str = "source-only, uncompiled and unrun";
+pub const COMPILED_AND_RUN: &str = "compiled-and-run";
+
+/// HAND-AUTHORED: rules (and `dispatch`) whose fragment has a committed
+/// receipt in [`RECEIPT_DIR`] binding an actual factory test run (nonproving
+/// `ProofPreimage::check`) to the commit, trace and named tests. The visible
+/// test fails when this list and the committed receipt files disagree.
+pub const RECEIPTED: &[&str] = &[];
+
+pub fn receipted(rule: &str) -> bool {
+    RECEIPTED.contains(&rule)
+}
+
 /// HAND-AUTHORED: the C6 dispatch owner candidate (per-rule Core selection).
 pub const DISPATCH: Fragment = Fragment {
     file: "c6_dispatch_step.rs",
@@ -590,14 +607,19 @@ impl RuleTally {
     }
 }
 
-fn fragment_wire(f: &Fragment) -> Value {
-    json!({
+fn fragment_wire(rule: &str, f: &Fragment) -> Value {
+    let mut v = json!({
         "file": format!("{FRAGMENT_DIR}/{}", f.file),
         "entry": f.entry,
         "consumer": f.consumer.map(|c| format!("{FRAGMENT_DIR}/{c}")),
         "interface": "sherlock-c6-phys/1",
-        "evidence": "source-only, uncompiled and unrun",
-    })
+        "evidence": SOURCE_ONLY,
+    });
+    if receipted(rule) {
+        v["evidence"] = json!(COMPILED_AND_RUN);
+        v["receipt"] = json!(format!("{RECEIPT_DIR}/{rule}.json"));
+    }
+    v
 }
 
 fn row_wire(row: &Row) -> Value {
@@ -605,7 +627,7 @@ fn row_wire(row: &Row) -> Value {
         "rule": row.rule,
         "family": row.family.name(),
         "owner": row.family.owner(),
-        "fragment": row.fragment.as_ref().map(fragment_wire),
+        "fragment": row.fragment.as_ref().map(|f| fragment_wire(row.rule, f)),
         "narrow_carriers": row.narrow.iter().map(|n| json!({
             "file": format!("{FRAGMENT_DIR}/{}", n.file),
             "entry": n.entry,
@@ -617,7 +639,7 @@ fn row_wire(row: &Row) -> Value {
 
 /// The whole hand-authored table, identical for every program.
 pub fn table_wire() -> Value {
-    let mut dispatch = fragment_wire(&DISPATCH);
+    let mut dispatch = fragment_wire("dispatch", &DISPATCH);
     dispatch["rule"] = json!("dispatch");
     dispatch["supported"] = json!(
         "every enabled pure RuleIdC except the XAdtHelperPlan*/XAdtHelperBuild* helper groups"
@@ -627,7 +649,7 @@ pub fn table_wire() -> Value {
         "note": "written by hand from the fragment sources; not generated from fragments, owner metadata or runs",
         "rows": TABLE.iter().map(row_wire).collect::<Vec<_>>(),
         "unexercised_c6_fragments": UNEXERCISED_C6.iter().map(|(rule, f)| {
-            let mut v = fragment_wire(f);
+            let mut v = fragment_wire(rule, f);
             v["rule"] = json!(rule);
             v
         }).collect::<Vec<_>>(),
@@ -689,11 +711,29 @@ fn owner_wire(owner: &str) -> Value {
         "rules_with_c6_fragment": realized,
     });
     if owner == "dispatch" {
-        v["native_selection"] = json!(null);
         v["candidate"] = json!(format!("{FRAGMENT_DIR}/{}", DISPATCH.file));
-        v["status"] = json!(
-            "open: a source-only dispatch owner candidate exists (per-rule Core selection over the C6 pre carriers); native_selection stays null until its tests are compiled and run"
-        );
+        if receipted("dispatch") {
+            let consumer = DISPATCH.consumer.map(|c| format!("{FRAGMENT_DIR}/{c}"));
+            v["native_selection"] = json!({
+                "fragment": format!("{FRAGMENT_DIR}/{}", DISPATCH.file),
+                "entry": DISPATCH.entry,
+                "consumer": consumer,
+                "selects": "per-rule Core selection of the enabled RuleIdC over the C6 pre carriers",
+                "evidence": COMPILED_AND_RUN,
+                "receipt": format!("{RECEIPT_DIR}/dispatch.json"),
+            });
+            let mut section = vec![format!("{FRAGMENT_DIR}/{}", DISPATCH.file)];
+            section.extend(consumer);
+            v["section_constraints"] = json!(section);
+            v["status"] = json!(
+                "candidate: the C6 dispatch owner's tests compiled and ran under the nonproving ProofPreimage::check; no key, proof or verification"
+            );
+        } else {
+            v["native_selection"] = json!(null);
+            v["status"] = json!(
+                "open: a source-only dispatch owner candidate exists (per-rule Core selection over the C6 pre carriers); native_selection stays null until its tests are compiled and run"
+            );
+        }
     }
     v
 }

@@ -10,7 +10,8 @@ use std::path::PathBuf;
 
 use mori_core::sherlock_compile_artifact::draft_execution::run_draft_host;
 use mori_core::sherlock_compile_artifact::native_inventory::{
-    DISPATCH, OTHER_MACHINE, RuleTally, TABLE, TABLE_PROVENANCE, UNEXERCISED_C6, report,
+    COMPILED_AND_RUN, DISPATCH, OTHER_MACHINE, RECEIPT_DIR, RECEIPTED, RuleTally, SOURCE_ONLY,
+    TABLE, TABLE_PROVENANCE, UNEXERCISED_C6, report,
 };
 
 const CONFIG: &str = include_str!("fixtures/technical-chunks/config.json");
@@ -168,4 +169,74 @@ fn inventory_report_is_fixed_across_programs() {
     // fold adds the 10 BHelperMatch rules and BHelperScalarConstruct as gaps.
     assert_eq!(fold["summary"]["with_c6_fragment"], 41);
     assert_eq!(fold["summary"]["gaps"].as_array().unwrap().len(), 16);
+}
+
+#[test]
+fn receipted_fragments_match_committed_receipts() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = root.join(RECEIPT_DIR);
+    let mut on_disk: BTreeSet<String> = BTreeSet::new();
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries {
+            let name = entry.unwrap().file_name().into_string().unwrap();
+            if let Some(rule) = name.strip_suffix(".json") {
+                on_disk.insert(rule.to_owned());
+            }
+        }
+    }
+    let listed: BTreeSet<String> = RECEIPTED.iter().map(|r| r.to_string()).collect();
+    assert_eq!(
+        listed, on_disk,
+        "RECEIPTED and the committed receipt files differ"
+    );
+    let fact = report("fact(3)", &tally(FACT));
+    let table = &fact["table"];
+    let mut fragments: Vec<(String, serde_json::Value)> = Vec::new();
+    for row in table["rows"].as_array().unwrap() {
+        if !row["fragment"].is_null() {
+            fragments.push((
+                row["rule"].as_str().unwrap().into(),
+                row["fragment"].clone(),
+            ));
+        }
+    }
+    for f in table["unexercised_c6_fragments"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(table["dispatch_fragments"].as_array().unwrap())
+    {
+        fragments.push((f["rule"].as_str().unwrap().into(), f.clone()));
+    }
+    for (rule, f) in &fragments {
+        if listed.contains(rule) {
+            assert_eq!(f["evidence"], COMPILED_AND_RUN, "{rule}");
+            let path = format!("{RECEIPT_DIR}/{rule}.json");
+            assert_eq!(f["receipt"], path.as_str(), "{rule}");
+            let text = std::fs::read_to_string(root.join(&path)).unwrap();
+            let rc: serde_json::Value = serde_json::from_str(&text).unwrap();
+            assert_eq!(rc["format"], "moriarty-sherlock-fragment-receipt/1");
+            assert_eq!(rc["rule"], rule.as_str());
+            for k in ["file", "entry", "consumer"] {
+                assert_eq!(rc[k], f[k], "{rule} receipt {k}");
+            }
+            assert_eq!(rc["failed"], 0);
+        } else {
+            assert_eq!(f["evidence"], SOURCE_ONLY, "{rule}");
+            assert!(f.get("receipt").is_none(), "{rule}");
+        }
+    }
+    let dispatch = &fact["owners"]["dispatch"];
+    if listed.contains("dispatch") {
+        assert_eq!(dispatch["native_selection"]["evidence"], COMPILED_AND_RUN);
+        let sections = dispatch["section_constraints"].as_array().unwrap();
+        assert!(
+            sections
+                .iter()
+                .any(|s| s.as_str().unwrap().ends_with(DISPATCH.file))
+        );
+    } else {
+        assert!(dispatch["native_selection"].is_null());
+        assert!(dispatch["section_constraints"].is_null());
+    }
 }
