@@ -94,3 +94,16 @@ the package README was not held. The coordinator interpreted COMMON's rule as
 cargo-only; that does not satisfy the more specific full-Lake-build instruction.
 The recorded observation establishes the kernel result, not compliance with
 that required run policy. This discrepancy was reported as a blocker.
+
+**Current status: LOCKED_VERIFIED.** The coordinator subsequently ran the
+README command through DoctorWatson under the real outer `heavy.lock`, with
+preflight and `memcap 48G`. Run `20261026T035951Z-sherlock-lean-build`, committed
+in ledger `8853c8f8c`, passed all 21 package jobs. All twenty-seven current
+queries and current/run-HEAD source bytes match; eleven sets are empty and
+sixteen contain only `propext`. The JSON pins the full trace, wrapper and exact
+ledger line, and distinguishes the reported outer lock from the private
+`DW_LOCK` proxy visible in the ledger. The whole incremental build reports
+6.229 seconds and 890,322,944 bytes peak RSS; these are build observations.
+This agent inspected the artifacts and did not execute the build. Builds 1–18
+remain historical capped/unlocked observations. The required lock issue is
+resolved; no Rust, circuit, native or ledger correspondence follows.

@@ -68,3 +68,15 @@ run records are now read and pinned in the JSON. The original run names
 committed in `3fabcca1c`. That is no binary/source reproducibility result.
 Their whole-command wall/RSS numbers are not optimization performance evidence.
 This agent executed neither holdout and claims no broader semantic coverage.
+
+**Current status: LOCKED_VERIFIED.** The coordinator's README-conformant
+DoctorWatson run `20261026T035951Z-sherlock-lean-build` passed all 21 package
+jobs with preflight, `memcap 48G` and a reported real outer `heavy.lock`.
+Ledger commit `8853c8f8c` records the inner runner's private `DW_LOCK` proxy;
+the JSON distinguishes that from the separately confirmed real outer lock.
+All twenty-three queries and current/run-HEAD source bytes match: eight empty
+sets, twelve `propext`-only and three `propext`/`Quot.sound` sets. The agent
+read and pinned the complete trace, wrapper and ledger line; it did not execute
+the build. Whole incremental build measurements are 6.229 seconds and
+890,322,944 bytes peak RSS, not optimization/native performance. Builds 1–18
+remain historical capped/unlocked observations.

@@ -77,4 +77,16 @@ bus; no uncapped build was attempted. A read-only follow-up review confirmed the
 projection gap resolved at the contract-model level, with no further substantive
 issue. That review ran no builds and establishes no concrete Rust correspondence.
 
+**Current status: LOCKED_VERIFIED.** The coordinator's README-conformant
+DoctorWatson run `20261026T035951Z-sherlock-lean-build` passed the full 21-job
+package with preflight, `memcap 48G` and a reported real outer `heavy.lock`.
+Ledger commit `8853c8f8c` records the inner private `DW_LOCK` proxy; the JSON
+distinguishes it from the real outer lock confirmed by the coordinator. All
+nineteen queries and current/run-HEAD source bytes match: nine empty sets and
+ten `propext`-only sets. The agent read the complete trace, wrapper and ledger
+line; it did not execute the build. Whole incremental build measurements are
+6.229 seconds and 890,322,944 bytes peak RSS. Builds 1–18 remain historical
+capped/unlocked kernel observations. Concrete Rust/circuit/ledger obligations
+remain separate.
+
 

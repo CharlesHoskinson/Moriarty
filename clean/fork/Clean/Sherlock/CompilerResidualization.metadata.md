@@ -133,3 +133,14 @@ at `8ffed57fc`/`abc64975d`). The earlier Python examples remain historical.
 The new modules supply neither Rust refinement nor native acceptance. The U024
 replay retains its separate source and observed holdout evidence described above.
 
+**Current status: LOCKED_VERIFIED.** The coordinator's README-conformant
+DoctorWatson run `20261026T035951Z-sherlock-lean-build` passed the full 21-job
+package with preflight, `memcap 48G` and a reported real outer `heavy.lock`.
+Ledger commit `8853c8f8c` records a private inner `DW_LOCK` proxy; the JSON keeps
+that distinct from the real outer lock confirmed by the coordinator. All thirty
+queries and current/run-HEAD source bytes match: twenty empty sets and ten
+`propext`-only sets. The agent inspected the complete trace, wrapper and ledger
+line; it did not run the build. Whole incremental build measurements are
+6.229 seconds and 890,322,944 bytes peak RSS, not optimization performance.
+Builds 1–18 remain historical capped/unlocked kernel observations.
+
