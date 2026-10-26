@@ -31,6 +31,8 @@ pub mod draft_reference_slices;
 pub mod draft_report;
 #[path = "compile_artifact/draft_witness.rs"]
 pub mod draft_witness;
+#[path = "compile_artifact/draft_witness_stream.rs"]
+pub mod draft_witness_stream;
 #[path = "export_plans.rs"]
 pub mod export_plans;
 #[path = "compile_artifact/native_inventory.rs"]

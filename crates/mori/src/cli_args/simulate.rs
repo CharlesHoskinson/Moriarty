@@ -91,6 +91,10 @@ pub struct Args {
     /// run of the same draft source; --reference-slices then uses the candidate
     #[arg(long, value_name = "CANDIDATE", requires = "execution_profile")]
     pub optimization: Option<String>,
+    /// G5: also emit the per-step host witness stream of the K-A reference
+    /// run (rule, pre/post states and digests, halted final)
+    #[arg(long, requires = "execution_profile")]
+    pub witness_stream: bool,
     /// UIREQ-033: bounded static residualization of the K-A reference step
     /// (universal, family or per-program) with its executed realization
     #[arg(long, value_name = "MODE", requires = "execution_profile")]

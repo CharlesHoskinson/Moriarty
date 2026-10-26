@@ -22,7 +22,7 @@ use crate::sherlock::helper_machine::shared::RunIntC;
 use crate::sherlock::reference_display::KDisplay;
 use crate::sherlock::reference_slice::{SliceStop, advance_m};
 use crate::sherlock::{
-    BinaryOp, Control, Frame, Machine, Outcome, PROFILE, Snapshot, StepRecord, Type, UnaryOp,
+    BinaryOp, Control, Frame, Machine, PROFILE, Snapshot, StepRecord, Type, UnaryOp,
     Value as KValue,
 };
 

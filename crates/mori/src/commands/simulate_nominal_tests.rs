@@ -52,6 +52,7 @@ fn args(source: &str) -> Args {
         reference_slices: None,
         optimization: None,
         native_inventory: false,
+        witness_stream: false,
         residualize: None,
         residual_family: None,
         residual_size_limit: 64,
