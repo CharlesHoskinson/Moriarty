@@ -1,9 +1,23 @@
 """P0 source identity checks. Matching pins are not semantic approval."""
 from pathlib import Path
 import copy
+import os
 from common import Error, canonical, digest, load_json, regular, sha
 
 SCHEMA = "moriarty-fsyn-design-cut/1"
+
+def source_path(name):
+    """Resolve a local alias without changing the cut's logical identity or pins."""
+    mapping = os.environ.get("FSYN_SOURCE_MAP")
+    if mapping:
+        aliases = load_json(mapping)
+        if not isinstance(aliases, dict): raise Error("source map must be an object")
+        for original, target in aliases.items():
+            if not isinstance(original, str) or not isinstance(target, str) or not target or "\x00" in target:
+                raise Error("invalid source map entry")
+            if not Path(target).expanduser().is_absolute(): raise Error("source map targets must be absolute")
+        name = aliases.get(name, name)
+    return Path(name).expanduser()
 
 def _document(path):
     doc = load_json(path)
@@ -18,8 +32,8 @@ def _document(path):
             name = row["path"]
             if not isinstance(name, str) or not name or "\x00" in name or (name.startswith("~") and not name.startswith("~/")):
                 raise Error("invalid source path")
-            actual = Path(name).expanduser()
-            if not actual.is_absolute(): raise Error("source paths must be absolute or ~/ relative")
+            if not Path(name).expanduser().is_absolute(): raise Error("source paths must be absolute or ~/ relative")
+            actual = source_path(name)
             identity = str(actual.resolve())
             if identity in seen: raise Error("duplicate source row: " + name)
             seen.add(identity)
@@ -33,7 +47,7 @@ def check_cut(path):
     count = total = 0
     for rows in doc["groups"].values():
         for row in rows:
-            raw = regular(Path(row["path"]).expanduser())
+            raw = regular(source_path(row["path"]))
             if len(raw) != row["bytes"] or digest(raw) != row["sha256"]: raise Error("stale source: " + row["path"])
             count += 1
             total += len(raw)
@@ -47,7 +61,7 @@ def refresh_cut(path, out):
     changed = []
     for rows in doc["groups"].values():
         for row in rows:
-            raw = regular(Path(row["path"]).expanduser())
+            raw = regular(source_path(row["path"]))
             current = (len(raw), digest(raw))
             if current != (row["bytes"], row["sha256"]): changed.append(row["path"])
             row["bytes"], row["sha256"] = current

@@ -25,7 +25,8 @@ export const endpoints = Object.freeze({
   indexerWs: 'wss://indexer.stagenet.shielded.tools/api/v4/graphql/ws',
   rpc: 'wss://rpc.stagenet.shielded.tools', proof: 'http://localhost:6300',
 });
-export async function openStagenetSession(load, storage) {
+export async function openStagenetSession(load, storage, {proofUrl = endpoints.proof,
+  finalize = operation => operation()} = {}) {
   const {getNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
   assert.equal(getNetworkId(), 'stagenet');
   const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
@@ -50,7 +51,7 @@ export async function openStagenetSession(load, storage) {
   const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.NightExternal]}, getNetworkId());
   const config = {networkId: getNetworkId(),
     indexerClientConnection: {indexerHttpUrl: endpoints.indexer, indexerWsUrl: endpoints.indexerWs},
-    provingServerUrl: new URL(endpoints.proof), relayURL: new URL(endpoints.rpc)};
+    provingServerUrl: new URL(proofUrl), relayURL: new URL(endpoints.rpc)};
   const wallet = await WalletFacade.init({configuration: {...config,
     txHistoryStorage: new NoOpTransactionHistoryStorage(),
     costParameters: {additionalFeeOverhead: 300_000_000_000_000n, feeBlocksMargin: 5}},
@@ -68,8 +69,10 @@ export async function openStagenetSession(load, storage) {
     const walletProvider = {
       getCoinPublicKey: () => shieldedSecretKeys.coinPublicKey,
       getEncryptionPublicKey: () => shieldedSecretKeys.encryptionPublicKey,
-      balanceTx: async (tx, ttl = ttlOneHour()) => wallet.finalizeRecipe(
-        await wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys, dustSecretKey}, {ttl})),
+      balanceTx: async (tx, ttl = ttlOneHour()) => {
+        const recipe = await wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys, dustSecretKey}, {ttl});
+        return finalize(() => wallet.finalizeRecipe(recipe));
+      },
       submitTx: tx => wallet.submitTransaction(tx),
     };
     return {walletProvider, privateStateProvider: levelPrivateStateProvider({
