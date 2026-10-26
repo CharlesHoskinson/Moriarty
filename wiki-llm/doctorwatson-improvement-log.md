@@ -2299,3 +2299,24 @@ Keep host, native and stagenet evidence separate. A successful host execution do
 The current loop is revision13 and blocked on the applicable corrected-call assembly review or reviewer-routing change. The user appointed an actual Opus5.5 coordinator; its provider withheld the response, so it supplied no direction or approval. Stop peripheral preparation from becoming a new prerequisite to the already keyed proof/call. Preserve scoped formal and build results without counting them as target acceptance.
 
 [Current lessons](../docs/sherlock/doctorwatson-current-improvement-2026-10-24.md), [status](../docs/sherlock/stagenet-rescue-current-2026-10-24.md), and [exact-source checkpoint](../raw/audits/2026-10-24/README.md) record the current limits. The existing contract deployment finalized; a current SDK-bound recursive-proof call and synthetic rollup benchmark remain open.
+
+## 2026-10-26 — overnight loop after the host loss (ticks 1-4)
+
+The OS collapsed and WSL was rebuilt; everything below was found while restoring Sherlock, the recursion research and the site. Most failures came from state that lived only on the old host.
+
+Bugs found and fixed:
+
+- **Hooks are per branch.** `core.hooksPath=.githooks` reads hooks from each worktree's checkout, so `recursion-perf`, forked before 322c56dd2, had no commit-msg iron-rule hook. Carried over in dde8f343f. Idea: `doctorwatson preflight` should check that every worktree has both `.githooks/pre-commit` and `.githooks/commit-msg`.
+- **Private captures reached a public staging area.** Research clusters copied ten private projectfenrir files verbatim into `raw/` (recl9 sources, logs, report). They were excluded before commit, and pre-commit step 0 now rejects any staged file whose `Source:` header points into projectfenrir, and any `fenrir-*.reference.qnt`.
+- **The pre-push attribution check reported but did not gate.** A grep counted hits and the push ran regardless. Replaced by `~/.local/bin/iron-push <repo> <branch>`. It refuses when any commit not yet on an origin ref carries a Claude/Anthropic trailer, footer, noreply address or identity. It was negative-tested on a scratch repo.
+- **A headless agent waited 45 minutes on an approval nobody could give.** Muse Wonder, run with `--approval-mode on-request` and asked to write a file, used 3 s of CPU in 45 min and was killed by its runtime cap. Run reviewers read-only instead (`--disable-write --disable-shell`) and capture stdout. Idea: give `capped` a CPU-idle watchdog that stops a unit whose CPU time has not moved for 10 minutes and logs why.
+- **Large prompts exceed the argument limit.** A 205 KB review bundle failed for agy with `Argument list too long`. Point the agent at a file instead.
+- **`capped` filters the environment.** `LD_LIBRARY_PATH` set outside does not reach the unit. Set it inside the command with `env`.
+- **Build sources lived outside any repo.** The site's `build.py` and `template.html` were only in `~/.local/state`. They are now in `site/recursion-src/`, and the page rebuilds byte-identically. Rule: anything needed to regenerate an artifact goes in a repo.
+- **Gitignored evidence did not survive.** The C6 dispatch receipt trace and all `target/sherlock-a*` artifacts were lost, so U023 and the whole A-chain must be re-run. Receipts must commit their `trace_copy` under `qa/sherlock/receipt-traces/` at creation.
+- **Budgets exclude compile time.** A2's cap is 23 s of wall time, so a cold check fails on compilation alone. The A-chain script pre-builds with `--no-run` and pre-fetches the 2^20 SRS. Idea: `doctorwatson check` should run the `--no-run` build itself, outside the timed window, and record compile time separately.
+
+Ideas not yet implemented:
+
+- Reserve the heavy lock per predicate chain (A2→A3→A4) so an unrelated heavy run cannot interleave and evict caches between dependent steps.
+- Record each heavy run's peak RSS against the 30 GB `capped` limit and alert at 80%, before an OOM kill becomes a Failed state.
