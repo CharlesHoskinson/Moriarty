@@ -28,8 +28,9 @@ report adapter
 `2852e4234df3ecf247728a22d49caccf8ab5482d9e4d438332f18e85d7528dc2`
 (enforcing `remaining_work > 0` at await entry and R0 resume for SI-29,
 replacing saturating `accounting` with `checked_add -> Option`, and refusing
-`resume_epoch == u64::MAX`), committed on `factory-u` in `815a22d87`. Revisit
-these models when either source changes.
+`resume_epoch == u64::MAX`), committed on `factory-u` in `815a22d87` and
+recorded passing for `U014`–`U020` in `7efe20196` (and `C5` on the consolidation
+line in `c742e0136`). Revisit these models when either source changes.
 
 Requirements come from the U017–U020 sections of
 `openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md`
@@ -181,7 +182,7 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
 All findings were sent to `sherlock-fable`, `sherlock-u2`, `sherlock-c4` and
 `sherlock-lean-2`. Host checkpoint cases are runtime-confirmed read-only via
 `probe_financial_import.py` (`financial-import-rust-probe.json`); no accepted
-on-chain proof is claimed. The checked existing `account_effects`
-adapter distinguishes exact amounts from overflow; the newer host aggregate
-silently saturates. Concrete target phase evidence remains pending, as U020
-explicitly states.
+on-chain proof is claimed. Both the existing `account_effects` adapter and the
+repaired host aggregate (`907e5fc7` / `2852e423` in `815a22d87`) now distinguish
+exact amounts from `u128` overflow via `checked_add`. Concrete target phase
+evidence remains a separate obligation, as U020 explicitly states.
