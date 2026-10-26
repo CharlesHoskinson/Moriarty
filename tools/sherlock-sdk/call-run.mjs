@@ -109,7 +109,12 @@ const proveProvider = {
       preimage: Buffer.from(raw).toString('hex')}), 'run-prover-stderr.log', true)).trim();
     assert.match(hex, /^([0-9a-f]{2})+$/, 'prover output is hex');
     const proof = Buffer.from(hex, 'hex');
-    proofHash = sha(proof);
+    // validate_call reports the SHA-256 of the proof body: after the `midnight:proof[vN]:` tag and its
+    // compact length prefix (SCALE-style: low two bits select a 1, 2, 4 or (b >> 2) + 5 byte prefix).
+    const tag = proof.toString('latin1').match(/^midnight:proof\[v\d+\]:/);
+    assert.ok(tag, 'tagged proof');
+    const b = proof[tag[0].length], prefix = [1, 2, 4, (b >> 2) + 5][b & 3];
+    proofHash = sha(proof.subarray(tag[0].length + prefix));
     writeFileSync(join(output, 'acceptRun.tagged-proof'), proof); // public: the proof reveals no opening
     return new Uint8Array(proof);
   },
