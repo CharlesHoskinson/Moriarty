@@ -109,6 +109,11 @@ def main() -> int:
         ROOT / "crates/mori-core/tests/sherlock_technical_chunks_positive.rs",
     ]
     owner = Path.home() / "repos/Moriarty-wt-factory-u"
+    owner_head = subprocess.run(
+        ["git", "-C", str(owner), "rev-parse", "--short", "HEAD"],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=False,
+    ).stdout.strip()
+    sources += [owner / "docs/sherlock/design/suspension-and-finance.md"]
     sources += [owner / "crates/mori-core/src/sherlock" / name for name in (
         "compile_artifact/suspension2.rs",
         "compile_artifact/suspension2_fin.rs",
@@ -122,6 +127,7 @@ def main() -> int:
     (HERE / "verification.log").write_text("\n".join(log))
     (HERE / "verification-results.json").write_text(json.dumps(
         {"status": "passed" if len(results) == len(cases) and all(r["passed"] for r in results) else "failed",
+         "factoryUHead": owner_head,
          "checks": results, "sourceSha256": hashes,
          "scope": "Sampled abstract models; source projection is not a Rust execution or refinement proof."},
         indent=2) + "\n")

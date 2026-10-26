@@ -72,7 +72,10 @@ successful in this small projection. Work conservation can remain satisfied
 on such an input by moving fuel to consumed work and the reference cursor;
 checksums are public and do not establish machine reachability. The entry rule
 protects machine-produced Waiting checkpoints. FINDING messages were sent to
-`sherlock-fable` and `sherlock-u2`.
+`sherlock-fable` and `sherlock-u2`. Note: in `Moriarty-wt-factory-u`'s current
+uncommitted working tree (`suspension2.rs:674–676`, `owner_suspend.rs:423–433`),
+`suspend::check_resumable` is now called before `admit_observation` and
+`s.guard.run`, matching `--step contractCheck` once committed.
 
 ## Imported epoch overflow
 
@@ -93,7 +96,11 @@ proposed remedy, **not a claim that the current design pins an overflow refusal
 stage**. The accepted successor's `epoch = predecessor + 1` is specified in §6.2;
 the current note does not define the maximum-epoch edge case. The source-order
 trace `resumeEpoch-counterexample.itf.json` is not a Rust execution. The finding
-was sent to `sherlock-fable` and `sherlock-u2`.
+was sent to `sherlock-fable` and `sherlock-u2`. Note: in `Moriarty-wt-factory-u`'s
+current uncommitted working tree (`suspension2.rs:671–673,705–707` and
+`suspension2_fin.rs:228–230,318–320`), `header.resume_epoch == u64::MAX` is
+refused at `R0` before the guard and `checked_add(1)` is used on accept,
+matching `--step checkedAccept` once committed.
 
 The epoch model requires `--backend typescript`: Quint 0.32.0's Rust evaluator
 rejects literals outside the signed Int64 range with QNT600. The ordinary
@@ -103,12 +110,14 @@ use depth 30; runs with `contractCheck`, `checkedAccept` or `scopedStep` explici
 non-default step. The imported-input models finish after one API decision;
 short traces there are intentional, rather than protocol deadlocks.
 
-## Await lowering, post-resume SI-20 / ScopeF, and site numbering
+## Await lowering, latent post-resume SI-20 / ScopeF, and spec-level site numbering
 
 `awaitLowering.qnt` projects `draft_source.rs`, `owner_suspend.rs` and
-`owner_runtime.rs` across three U014–U016 lowering and continuation boundaries:
+`owner_runtime.rs` across three U014–U016 lowering and continuation boundaries
+(the first two are **spec-level / latent**, not holdout defects, per
+`sherlock-eval` `d50d2adc4`):
 
-1. **Post-resume `SI-20` (`reg.controlOrigin`) violation, U016 technical-cut refusal at `InnerReturn`, and await binder env leak**:
+1. **Latent post-resume `SI-20` (`reg.controlOrigin`) violation, U016 technical-cut refusal at `InnerReturn`, and await binder env retention (not CLI-observable)**:
    - `draft_source::Parser::await_expression` (`draft_source.rs:826–846`) lowers
      `await L(x: T) when G; E` to an `ExpressionRowC::Let` row (`site.expr`)
      wrapping continuation body `E` (`site.body != site.expr`).
@@ -133,7 +142,9 @@ short traces there are intentional, rather than protocol deadlocks.
      `InnerReturn` (`AtContextReturn` under `ContextReturnF`) is refused with
      `ResumeError::StepInvariant(["SI20 ..."])`. Uninterrupted CLI execution via
      `run_until_halt_or_await` does not invoke `owner_check_step_inv` on
-     intermediate `Return` steps.
+     intermediate `Return` steps, so this is latent at the CLI boundary unless a
+     post-resume technical checkpoint CLI or unit test is added (`sherlock-eval`
+     `d50d2adc4`).
    - Furthermore, when the enclosing frame does not carry `saved_env`
      (`ContextRightF`, `UnaryF`, or top-level `ContextTopEntry`; note that
      `LeftF`, `LetF`, `IfF`, `MatchF`, `ArgsF` and `ReturnF` do carry `saved_env`
@@ -142,7 +153,7 @@ short traces there are intentional, rather than protocol deadlocks.
      Pushing `ScopeF` on `resume_accept` (`--step scopedStep`) satisfies `SI-20`,
      accepts technical cuts at `InnerReturn`, and restores `CallerEnv` via
      `KMachineReturnScope`.
-2. **Sequential `await` post-order site numbering**:
+2. **Spec-level sequential `await` post-order site numbering (not a spec violation)**:
    - In `draft_source::Parser::await_expression` (`draft_source.rs:823–854`),
      `let body = self.expression(0)?;` recursively parses `body` before
      `self.awaits.push(...)`, and `draft_source.rs:556–559` assigns 1-based
@@ -152,7 +163,7 @@ short traces there are intentional, rather than protocol deadlocks.
      (`reversedSequentialSites`), whereas runtime still suspends in source
      order by label (`first` at site 2, then `second` at site 1). Design §3.2
      requires distinct 1-based per-program site numbers without pinning
-     source-order numbering (`sherlock-eval` `d50d2adc4`).
+     source-order numbering (`sherlock-eval` `d50d2adc4`, verified by `uireq-015`).
 3. **Draft `/2` surface admission gaps**:
    - `draft_source.rs:681,809` rejects `yield L;` and zero-binder
      `await L() when G; E`, and `draft_source.rs:1050,1145` records ordinary

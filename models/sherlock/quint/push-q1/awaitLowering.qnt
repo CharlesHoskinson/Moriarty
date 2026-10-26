@@ -1,6 +1,8 @@
 // Source-order projection of factory-u draft_source.rs + owner_suspend.rs + owner_runtime.rs
-// for U014-U016 await lowering, post-resume SI-20 controlOrigin / ScopeF semantics,
-// sequential await site numbering, and /2 surface admission.
+// for U014-U016 await lowering, latent post-resume SI-20 controlOrigin / ScopeF semantics
+// (not CLI-observable without a post-resume technical cut, per sherlock-eval d50d2adc4),
+// spec-level sequential await site numbering (Design §3.2 only pins 1-based per-program sites),
+// and /2 surface admission.
 module awaitLowering {
   type Context = ContextReturnF | ContextRightF | ContextTopEntry
   type Phase = AtAwaitEval | AtWaiting | AtBodyEval | AtScopeReturn | AtContextReturn | AfterContext

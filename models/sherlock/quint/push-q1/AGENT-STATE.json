@@ -3,6 +3,7 @@
   "model": "gemini-4-argon",
   "worktree": "/home/charles/repos/Moriarty-wt-sh-gq1",
   "branch": "sherlock-gq1",
+  "factoryUHead": "d50d2adc4",
   "phase": "source-watch",
   "paths": [
     "models/sherlock/quint/push-q1/"
@@ -15,20 +16,21 @@
     "samplesPerSafetyRun": 10000
   },
   "openFindings": [
-    "imported Waiting SI29 resource validation occurs after guard (suspension2.rs::resume_pure / owner_suspend.rs::resume_accept)",
-    "imported UInt64 maximum resume_epoch unchecked increment (suspension2.rs:702 / suspension2_fin.rs:306)",
-    "post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn when ScopeF is omitted in owner_suspend::resume_accept (not CLI-observable without a post-resume technical cut per sherlock-eval d50d2adc4)",
-    "draft /2 surface parser rejects zero-binder await/yield and let-bound scalar locals in guards (draft_source.rs:681,809,1050,1145)"
+    "imported Waiting SI29 resource validation occurs after guard in pre-fix projection (fixed in u2 uncommitted tree at suspension2.rs:674-676 + owner_suspend.rs:423-433 via suspend::check_resumable before guard; awaiting u2 commit)",
+    "imported UInt64 maximum resume_epoch unchecked increment in pre-fix projection (fixed in u2 uncommitted tree at suspension2.rs:671-673,705-707 + suspension2_fin.rs:228-230,318-320 via R0 refusal + checked_add(1); awaiting u2 commit)",
+    "draft /2 surface parser rejects zero-binder await/yield and let-bound scalar locals in guards (draft_source.rs:681,809,1050,1145; yield noted as not implemented in Design §16)"
   ],
-  "resolvedOrNonBlockingNotes": [
-    "sequential await post-order site numbering in draft_source.rs:823-854 assigns site 2 to first and site 1 to second; labels still suspend in source order and Design §3.2 only requires distinct 1-based per-program site numbers (sherlock-eval d50d2adc4)"
+  "specLevelOrLatent": [
+    "latent post-resume SI-20 controlOrigin violation on ControlC::Return and U016 technical-cut refusal at InnerReturn when ScopeF is omitted in owner_suspend::resume_accept (not CLI-observable without a post-resume technical cut; LeftF/LetF/IfF/MatchF/ArgsF/ReturnF carry saved_env and grammar refuses shadowing binders; sherlock-eval d50d2adc4)",
+    "spec-level sequential await post-order site numbering in draft_source.rs:823-854 assigns site 2 to first and site 1 to second; labels still suspend in source order and Design §3.2 only pins distinct 1-based per-program site numbers (not a spec/holdout violation; sherlock-eval d50d2adc4)"
   ],
   "commits": [
     "c03d399c4",
     "511297bdf",
     "6456bdac9",
-    "ba1919bf2"
+    "ba1919bf2",
+    "fba4d59ed"
   ],
-  "awaiting": "sherlock-fable DONE-ALL or sherlock-u2 U014-U016 source changes",
+  "awaiting": "sherlock-fable DONE-ALL or sherlock-u2 commit of U014-U020 tree",
   "stateLocationReason": "User restricts all edits to push-q1; target/AGENT-STATE.json not written."
 }
