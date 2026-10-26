@@ -256,12 +256,13 @@ def main() -> int:
             True,
         )
 
-        # Genuine unresealed zero-fuel Waiting checkpoint produced by start with fuel=4 (SI-29).
+        # Await-entry fuel=4 check (SI-29 repaired: publishes Exhausted(Fuel) instead of Waiting,
+        # while rolling back tentative / retaining fee_stage per E2x finding).
         config_fuel4 = copy.deepcopy(config)
         config_fuel4["fuel"] = {"kind": "Nat", "value": "4"}
         (work / "config-fuel4.json").write_text(json.dumps(config_fuel4))
         start4 = invoke(
-            "zeroFuelWaitingStart",
+            "zeroFuelAwaitEntryExhausted",
             [
                 "--action",
                 "pay",
@@ -274,29 +275,74 @@ def main() -> int:
             ],
             cfg_path="config-fuel4.json",
         )
-        assert start4["exit"] == 0 and json.loads(start4["stdout"])["status"] == "waiting"
-        _, image4, ck4 = unpack_fin_envelope((work / "waiting-fuel4.bin").read_bytes())
+        assert start4["exit"] == 1 and json.loads(start4["stdout"])["status"] == "exhausted"
+        _, image4, _ = unpack_fin_envelope((work / "waiting-fuel4.bin").read_bytes())
         start4["checkpointRemainingWork"] = image4["remaining_work"]
         start4["checkpointConsumedWork"] = image4["consumed_work"]
-        obs4 = {
-            "format": "sherlock-observation/2",
-            "checkpoint": ck4,
+
+        # Resealed remaining_work=0 with valid observation -> refused at R0 (SI-29).
+        run_resume_case(
+            "zeroRemainingRefusedAtR0",
+            {"initial_fuel": "4", "remaining_work": "0", "consumed_work": "4"},
+            True,
+        )
+
+        # Resealed remaining_work=0 with malformed observation -> reports R3 before R0 (r0LateAfterR3Observed).
+        image_r0_r3 = copy.deepcopy(base_image)
+        image_r0_r3.update({"initial_fuel": "4", "remaining_work": "0", "consumed_work": "4"})
+        blob_r0_r3, ck_r0_r3 = seal_fin_envelope(header_bytes, image_r0_r3)
+        (work / "input-r0-r3.bin").write_bytes(blob_r0_r3)
+        bad_obs = {
+            "format": "wrong-format",
+            "checkpoint": ck_r0_r3,
             "site": 1,
             "label": "second",
             "values": [{"name": "go", "value": {"type": "Bool", "value": True}}],
         }
-        (work / "obs4.json").write_text(json.dumps(obs4))
+        (work / "bad-obs.json").write_text(json.dumps(bad_obs))
         invoke(
-            "zeroFuelWaitingResumeExhausted",
+            "zeroRemainingBadObsReportsR3BeforeR0",
             [
                 "--phase-policy",
                 "retain-guaranteed-fees/1",
                 "--resume",
-                "waiting-fuel4.bin",
+                "input-r0-r3.bin",
                 "--observation",
-                "obs4.json",
+                "bad-obs.json",
             ],
-            cfg_path="config-fuel4.json",
+        )
+
+        # Resealed header with resume_epoch = u64::MAX -> refused at R0 (epochMaxRefused).
+        max_epoch_header = struct.pack("<Q", 2**64 - 1) + header_bytes[8:]
+        blob_epoch, ck_epoch = seal_fin_envelope(max_epoch_header, copy.deepcopy(base_image))
+        (work / "input-epoch-max.bin").write_bytes(blob_epoch)
+        obs_epoch = {
+            "format": "sherlock-observation/2",
+            "checkpoint": ck_epoch,
+            "site": 1,
+            "label": "second",
+            "values": [{"name": "go", "value": {"type": "Bool", "value": True}}],
+        }
+        (work / "obs-epoch.json").write_text(json.dumps(obs_epoch))
+        invoke(
+            "epochMaxRefusedAtR0",
+            [
+                "--phase-policy",
+                "retain-guaranteed-fees/1",
+                "--resume",
+                "input-epoch-max.bin",
+                "--observation",
+                "obs-epoch.json",
+            ],
+        )
+
+        # Resealed committed_effects overflowing u128::MAX -> refused at accounting (U017 checked_add).
+        overflow_effect = copy.deepcopy(base_image["committed_effects"][1])
+        overflow_effect["amount"] = U128_MAX
+        run_resume_case(
+            "checkedAccountingOverflowRefused",
+            {"committed_effects": [overflow_effect, copy.deepcopy(overflow_effect)]},
+            True,
         )
 
     (HERE / "financial-import-rust-probe.json").write_text(json.dumps(result, indent=2) + "\n")

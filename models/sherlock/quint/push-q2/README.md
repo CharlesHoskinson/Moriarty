@@ -135,13 +135,17 @@ model checking. No `quint verify` or Rust build was run for these artifacts.
    `zeroRemainingRefusedAtR0WhenObsValidTest`,
    `zeroRemainingWithBadObsReportsR3BeforeR0Test`, `maximumEpochRefusedAtR0Test`;
    candidate `acceptedWorkInv`, trace `financial-import-counters.itf.json`.
-   Runtime host confirmation on the earlier `5f2beded` / `5dccd0d8` binary
-   (`probe_financial_import.py`, recorded in `financial-import-rust-probe.json`):
+   Runtime host confirmation on the `907e5fc7` / `2852e423` binary (`6bd30b9b`,
+   `probe_financial_import.py`, recorded in `financial-import-rust-probe.json`):
    resealing `FinImage2` with `initial_fuel = 0, remaining_work = 5, consumed_work = 0`
    halts (`exit = 0`); resealing with `consumed_work = u128::MAX, remaining_work = 1`
    returns `not_ready` (`exit = 3`) on a false guard and panics in debug mode at
    `crates/mori-core/src/stage/sherlock2.rs:217` (`attempt to add with overflow`,
-   `exit = 101`) on a true guard.
+   `exit = 101`) on a true guard; resealing `remaining_work = 0` with a valid
+   observation refuses at `R0` (`exit = 4`), whereas pairing `remaining_work = 0`
+   with an invalid observation format reports `R3` instead of `R0` (`exit = 4`);
+   resealing `resume_epoch = u64::MAX` refuses at `R0` (`exit = 4`); and resealing
+   overflowing `committed_effects` fails at `accounting` (`exit = 1`).
 4. **Unvalidated imported pending segment index, capture layout, and SI-26 terminal diagnostics (financial R0/R1/R4/SI-26).** `FinImage2`
    carries `outcome = Waiting{site}`, `segment: usize`, `captures: Vec<NamedValue>`,
    `discarded_effects: Vec<Effect>`, and `retained_by_policy: Vec<Effect>`. On resume:
