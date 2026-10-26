@@ -126,7 +126,10 @@ and checked the current owned source pins; it did not run the build itself.
 Its sandbox still cannot connect `memcap` to the user scope bus, and it attempted
 no uncapped build. No native, stock-verifier or ledger evidence is claimed.
 
-Actual `mori simulate` integration for U031/U033 is still pending. The U024
-replay now has its own Rust source and observed holdout evidence as described
-above, without supplying the other compiler obligations or a refinement proof.
+Actual U031/U033 Rust implementations now exist on the integration branches.
+Their follow-up contracts live in `CompilerExportPlans` (selected-record host
+exporter at `3bb404f15`) and `CompilerResidualIR` (seven-group K-A residualizer
+at `8ffed57fc`/`abc64975d`). The earlier Python examples remain historical.
+The new modules supply neither Rust refinement nor native acceptance. The U024
+replay retains its separate source and observed holdout evidence described above.
 

@@ -1,7 +1,7 @@
 import Init
 
 /-!
-U031: source-level contract of sherlock/export_plans.rs at 32fcbce3e.
+U031: source-level contract of sherlock/export_plans.rs at 3bb404f15.
 This is the real selected-record host exporter, separate from the earlier
 Python reporting model. Classification and data-shape laws below do not prove
 Rust/JSON correspondence, executable constraints/witnesses or native acceptance.
@@ -77,13 +77,13 @@ inductive FrameKind where
   deriving DecidableEq, Repr
 
 inductive OperationKind where
-  | checkedAdd | checkedSub | checkedMul | uint128EqLabel | uint128Lt
+  | checkedAdd | checkedSub | checkedMul | uint128EqLabel | valueEq | uint128Lt
   | listCons | treeBranch | frameRestore | scopeRestore | boolNot | treeLeaf
   | select | arenaRead
   deriving DecidableEq, Repr
 
-/-- The current Eq label is mirrored literally, not endorsed for non-UInt
-operands. K-A Eq accepts arbitrary sorts; the source-label gap remains open. -/
+/-- Shape-only classifier before considering actual operand sorts. The current
+exporter refines equality through `classifyWithOperands` below. -/
 def binaryOperation : BinaryKind → OperationKind
   | .add => .checkedAdd
   | .sub => .checkedSub
@@ -98,6 +98,7 @@ def operationName : OperationKind → String
   | .checkedSub => "CheckedU128Sub"
   | .checkedMul => "CheckedU128Mul"
   | .uint128EqLabel => "UInt128Eq"
+  | .valueEq => "ValueEq"
   | .uint128Lt => "UInt128Lt"
   | .listCons => "ListCons"
   | .treeBranch => "TreeBranch"
@@ -143,6 +144,35 @@ theorem pending_return_frame_is_not_current (rule : Nat) (returned : Bool)
 inductive BindingSort where
   | uint128 | bool | uint128List | uint128Tree | control | checkedU128Result
   deriving DecidableEq, Repr
+
+/-- The four runtime value sorts admitted by K-A, excluding descriptor-only sorts. -/
+inductive OperandSort where
+  | uint128 | bool | uint128List | uint128Tree
+  deriving DecidableEq, Repr
+
+/-- Current 3bb404f15 equality labeling: only two UInt operands receive UInt128Eq.
+Other primary operations still use the same rule and top-frame classifier. -/
+def classifyWithOperands (rule : Nat) (returned : Bool) (frames : List FrameKind)
+    (left right : OperandSort) : OperationKind :=
+  match classify rule returned frames with
+  | .uint128EqLabel =>
+      if left = .uint128 ∧ right = .uint128 then .uint128EqLabel else .valueEq
+  | operation => operation
+
+theorem uint_equality_keeps_uint_label (pending : List FrameKind) :
+    classifyWithOperands 153 true (.right .eq :: pending) .uint128 .uint128 =
+      .uint128EqLabel := rfl
+
+theorem boolean_equality_uses_generic_label (pending : List FrameKind) :
+    classifyWithOperands 153 true (.right .eq :: pending) .bool .bool = .valueEq := rfl
+
+theorem mixed_equality_uses_generic_label (pending : List FrameKind) :
+    classifyWithOperands 153 true (.right .eq :: pending) .uint128 .bool = .valueEq := rfl
+
+theorem typed_classification_ignores_pending_frames (rule : Nat) (returned : Bool)
+    (top : FrameKind) (first second : List FrameKind) (left right : OperandSort) :
+    classifyWithOperands rule returned (top :: first) left right =
+      classifyWithOperands rule returned (top :: second) left right := rfl
 
 structure Atom where
   sort : BindingSort

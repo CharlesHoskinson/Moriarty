@@ -8,6 +8,10 @@ import Clean.Sherlock.CompilerExportPlans
 #print axioms Clean.Sherlock.CompilerExportPlans.checked_mul_classifies_rule153
 #print axioms Clean.Sherlock.CompilerExportPlans.return_frame_classifies_rule185
 #print axioms Clean.Sherlock.CompilerExportPlans.pending_return_frame_is_not_current
+#print axioms Clean.Sherlock.CompilerExportPlans.uint_equality_keeps_uint_label
+#print axioms Clean.Sherlock.CompilerExportPlans.boolean_equality_uses_generic_label
+#print axioms Clean.Sherlock.CompilerExportPlans.mixed_equality_uses_generic_label
+#print axioms Clean.Sherlock.CompilerExportPlans.typed_classification_ignores_pending_frames
 #print axioms Clean.Sherlock.CompilerExportPlans.legacy_error_result_has_no_bound_value
 #print axioms Clean.Sherlock.CompilerExportPlans.error_result_retains_code_and_value
 #print axioms Clean.Sherlock.CompilerExportPlans.unavailable_result_is_typed_only
