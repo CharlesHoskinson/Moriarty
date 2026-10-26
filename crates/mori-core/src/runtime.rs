@@ -702,7 +702,7 @@ fn move_funds(
     Ok(())
 }
 /// Shared scalar statement execution for legacy actions and admitted segments.
-fn execute_statement(
+pub(crate) fn execute_statement(
     program: &Program,
     stmt: &Statement,
     env: &mut BTreeMap<String, Value>,

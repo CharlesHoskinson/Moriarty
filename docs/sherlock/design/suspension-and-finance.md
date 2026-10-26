@@ -875,3 +875,16 @@ committed), E6, E1×b, E8 → `Rejected`, with 68/10 retained.
 | `keys_id` as a free input | Condition | D derives `keys_id` from the verified child keys; the anchor compares it to the sealed pin (§1.5) |
 | Note/code mismatch on `ControlC::Await` | LOW | The note now says `Await{site, expr}`, matching the code (§3.2) |
 
+
+## 16. Phase 2 host implementation notes (U014-U020)
+
+The host reference route implements slices 2 to 5 for the CLI
+(`mori simulate --execution-profile sherlock-helper-microstep/2`). These are the places where
+it departs from, or narrows, the text above:
+
+| Item | Host behaviour |
+|---|---|
+| `CK` and `OD` | SHA-256 with domain tags `SHK_CK2` and `SHK_OBS2` stands in for `transientHash` until the C6 circuits exist. `CK` covers profile 3, carrier version 2, the envelope magic `SHK2CKP1`, the route byte, the length and the body |
+| Checkpoint carrier | Pure route: the /2 header lanes plus the `C6RAWHS1` raw host snapshot. Financial route: the header plus the canonical JSON of `FinImage2`. Both are wrapped in the `SHK2CKP1` envelope with `CK` at the end |
+| `retain-guaranteed-fees/1` admission | The fees-first rule is checked over every segment of the action at start admission (exit 1, stage `admit`, code `phase_policy`), as §8 states |
+| Not implemented | `yield`; refusal of a Core/2 guard that contains a conditional (§3); the C6 `FinImageState` and circuits |

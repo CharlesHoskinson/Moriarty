@@ -2045,6 +2045,7 @@ pub mod owner_host;
 mod owner_prepare;
 pub mod owner_resume;
 mod owner_runtime;
+pub mod owner_suspend;
 pub use fin_carrier::{
     FinActionBinding, FinActionPlan, FinAdmittedExtras, FinAssetBinding, FinAssetRowId,
     FinBindError, FinBoundSource, FinCapacitiesC, FinPlan, FinPreparedStagedSource, FinScalar,

@@ -16,6 +16,10 @@ mod status_output;
 mod styles;
 
 fn main() -> ExitCode {
+    // Profile /2 suspension/finance simulation has its own argument set.
+    if let Some(code) = commands::simulate_suspend::try_run_from_env() {
+        return code;
+    }
     let cli = Cli::parse();
     let mut shell = Shell::new(cli.global.verbosity(), cli.global.color.into());
 

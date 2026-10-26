@@ -13,6 +13,7 @@ pub mod disjoint;
 mod plan;
 mod profile;
 mod report;
+pub mod sherlock2;
 mod validate;
 
 pub use crate::LOGICAL_COST_PROFILE_2;

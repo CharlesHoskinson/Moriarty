@@ -96,6 +96,28 @@ pub fn resume_technical_checkpoint(
     admitted: &Admitted,
     checkpoint: &HostSnapshot,
 ) -> Result<MachineImage, ResumeError> {
+    resume_checkpoint_with(admitted, checkpoint, &host_owner_engine())
+}
+
+/// The same rebuild for a `sherlock-helper-microstep/2` pure checkpoint: the
+/// step invariants run under the /2 engine, so SI-01 requires profile id 3
+/// and a Waiting image must satisfy SI-27. Finance stays refused.
+pub fn resume_profile2_checkpoint(
+    admitted: &Admitted,
+    checkpoint: &HostSnapshot,
+) -> Result<MachineImage, ResumeError> {
+    resume_checkpoint_with(
+        admitted,
+        checkpoint,
+        &super::owner_host::host_owner_engine_profile2(),
+    )
+}
+
+fn resume_checkpoint_with(
+    admitted: &Admitted,
+    checkpoint: &HostSnapshot,
+    engine: &impl OwnerEngine,
+) -> Result<MachineImage, ResumeError> {
     let body = &admitted.body;
     if body.fin.is_some() || body.identity.finance != FinanceInput::Absent {
         return Err(ResumeError::FinancialUnsupported);
@@ -133,16 +155,14 @@ pub fn resume_technical_checkpoint(
     };
     let pre = PreImage::bind(admitted, &image)
         .map_err(|violation| ResumeError::StepInvariant(vec![format!("{violation:?}")]))?;
-    host_owner_engine()
-        .check_step_inv(&pre)
-        .map_err(|violations| {
-            ResumeError::StepInvariant(
-                violations
-                    .iter()
-                    .map(|v| format!("{:?} {:?} {}", v.clause, v.locator, v.detail))
-                    .collect(),
-            )
-        })?;
+    engine.check_step_inv(&pre).map_err(|violations| {
+        ResumeError::StepInvariant(
+            violations
+                .iter()
+                .map(|v| format!("{:?} {:?} {}", v.clause, v.locator, v.detail))
+                .collect(),
+        )
+    })?;
     let observed = capture(admitted, &image)
         .map_err(|violation| ResumeError::Capture(format!("{violation:?}")))?;
     if observed.admission != checkpoint.admission {
