@@ -97,7 +97,7 @@ def inspect_compatibility(plugin_root, expected_roots=()):
             "pythonSupported": sys.version_info >= (3, 11),
             "platform": sys.platform,
             "hookShell": "POSIX shell with python3",
-            "runnerPlatform": "Linux with the admitted Foreman launcher and strong containment",
+            "runnerPlatform": "Linux; admitted argv launched directly in its own process group with runner-enforced timeout",
         },
     }
 

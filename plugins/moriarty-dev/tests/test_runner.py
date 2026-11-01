@@ -2,7 +2,6 @@
 import hashlib
 import json
 import os
-import shutil
 import signal
 import sqlite3
 from contextlib import closing
@@ -31,15 +30,11 @@ class BoundRunnerTests(unittest.TestCase):
         self.action = self.make_case(action_kind=kind)
         script = self.root / "approved-check.py"
         script.write_text(program or "from pathlib import Path\nPath('child-marker.txt').write_text('checked')\nprint('checked')\n")
-        node = str(Path(shutil.which("node")).resolve())
-        launcher = "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js"
         python = str(Path(sys.executable).resolve())
         self.plan = {
-            "schema": "moriarty.bound-runner/1", "action": self.action,
+            "schema": "moriarty.bound-runner/2", "action": self.action,
             "argv": [python, "approved-check.py"],
             "files": {python: digest(python), "approved-check.py": digest(script)},
-            "launcher": [node, launcher],
-            "launcherFiles": {node: digest(node), launcher: digest(launcher)},
             "timeoutSeconds": 5, "graceSeconds": 2, "outputLimitBytes": 4096,
             "chargeId": "local-verification-01", "chargedSeconds": 120,
             "accountingPath": tr.CURRENT_ACCOUNTING_REL,
@@ -51,9 +46,14 @@ class BoundRunnerTests(unittest.TestCase):
             }
         mapping = {"schema": "moriarty-dev.commands/1", "commands": {"driver": {"argv": self.plan["argv"]}}}
         tr.dump_json(self.root / "commands.json", mapping)
-        campaign_path = self.root / "evidence/moriarty-completion-program-2026-09-07/report-reconciliation/campaign-admission.json"
-        self.campaign_path = campaign_path
-        campaigns = tr.load_json(campaign_path)
+        self.campaign_path = self.root / "evidence/moriarty-completion-program-2026-09-07/report-reconciliation/campaign-admission.json"
+        self.accounting = self.root / tr.CURRENT_ACCOUNTING_REL
+        self.rebind()
+        return self.action
+
+    def rebind(self):
+        """Bind the current plan and its existing debit, as the campaign author would."""
+        campaigns = tr.load_json(self.campaign_path)
         campaign = campaigns["campaigns"]["sp01-loan-swap-grok-01"]
         binding = tr.load_json(self.root / campaign["binding"])
         # A new current binding preserves the original accepted historical file.
@@ -61,16 +61,15 @@ class BoundRunnerTests(unittest.TestCase):
         tr.dump_json(self.root / "current-binding.json", binding)
         campaign["binding"] = "current-binding.json"
         campaign["bindingSha256"] = digest(self.root / "current-binding.json")
-        tr.dump_json(campaign_path, campaigns)
-        self.accounting = self.root / tr.CURRENT_ACCOUNTING_REL
+        tr.dump_json(self.campaign_path, campaigns)
         budget = tr.load_json(self.accounting)
         self.runner_digest = hashlib.sha256(json.dumps(self.plan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         # The caller's existing budget runner debits before invoking the plugin.
+        budget["charges"] = [row for row in budget["charges"] if row.get("id") != self.plan["chargeId"]]
         budget["charges"].append({"id": self.plan["chargeId"], "seconds": self.plan["chargedSeconds"],
                                   "candidateHash": self.action["candidate"], "actionId": self.action["id"],
                                   "runnerDigest": self.runner_digest})
         tr.dump_json(self.accounting, budget)
-        return self.action
 
     def test_bound_precharged_verify_executes_once(self):
         action = self.admit()
@@ -157,7 +156,40 @@ class BoundRunnerTests(unittest.TestCase):
                 proc.kill()
             proc.communicate(timeout=10)
 
-    def test_launcher_error_keeps_reservation_unresolved(self):
+    def test_unbound_launcher_fields_are_refused(self):
+        action = self.admit()
+        self.plan["launcher"] = ["/usr/bin/env", "node"]
+        self.rebind()
+        result = self.run_cli("run", "--action", action["id"])
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertFalse(self.child_marker.exists())
+
+    def test_timeout_stops_the_process_group_and_reports_124(self):
+        action = self.admit("import subprocess, sys, time\n"
+                            "from pathlib import Path\n"
+                            "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+                            "Path('grandchild.pid').write_text(str(child.pid))\n"
+                            "time.sleep(60)\n")
+        self.plan["timeoutSeconds"] = 1
+        self.plan["graceSeconds"] = 1
+        self.rebind()
+        started = time.monotonic()
+        result = self.run_cli("run", "--action", action["id"], "--json")
+        self.assertLess(time.monotonic() - started, 20)
+        self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout)["exitCode"], 124)
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
+            status, raw = conn.execute("SELECT status, receipt_json FROM reservations").fetchone()
+        self.assertEqual(status, "failed")
+        self.assertTrue(json.loads(raw)["runnerReceipt"]["timedOut"])
+        grandchild = int((self.root / "grandchild.pid").read_text())
+        deadline = time.monotonic() + 5
+        while Path(f"/proc/{grandchild}").exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        state = Path(f"/proc/{grandchild}/stat")
+        self.assertTrue(not state.exists() or state.read_text().split()[2] == "Z", "descendant must be stopped")
+
+    def test_exit_125_keeps_reservation_unresolved(self):
         action = self.admit("raise SystemExit(125)\n")
         result = self.run_cli("run", "--action", action["id"])
         self.assertEqual(result.returncode, 4)

@@ -15,7 +15,7 @@ The supported deployment is a local Codex plugin running `python3` through a POS
 | Python | 3.11 or newer (`hashlib.file_digest` is used by the runner) | This cycle executed on Python 3.14.4; other versions are not claimed as tested |
 | Operating system | POSIX shell and Python for installed hooks | Linux/WSL tested; macOS not yet host-tested; native Windows command syntax is not supported |
 | Claude-compatible fields | Legacy aliases and `CLAUDE_PLUGIN_ROOT` | Protocol compatibility only; no claim of a tested Claude installation/session |
-| Runner | Linux, existing admitted Foreman launcher, hash-bound inputs and strong containment | Existing runner tests; the launcher path is deployment-specific, not portable configuration |
+| Runner | Linux, hash-bound inputs, direct launch in a new process group with runner-enforced timeout and grace | Existing runner tests; no namespace or cgroup containment, so a descendant that leaves the process group is not stopped |
 | Notifications | Current inspected Codex transcript adapter | Existing notification tests; other host transcript formats unsupported |
 
 The [official hook reference](https://learn.chatgpt.com/docs/hooks) describes the current host schema and both plugin root variables. Host features evolve. This plugin uses the conservative intersection observed in its supported hosts: it never rewrites tool inputs and never emits an explicit allow. Do not enable newer response fields solely because a newer reference documents them.

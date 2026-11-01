@@ -1,8 +1,15 @@
-"""Adapter for a campaign-bound, already charged Foreman invocation.
+"""Runner for a campaign-bound, already charged command.
 
 Campaign binding bytes authorize the command. The existing budget runner must
-record its debit before calling the CLI; this adapter never changes that budget.
+record its debit before calling the CLI; this runner never changes that budget.
 Child stdout is data, never authority for charges or completion metadata.
+
+The admitted argv is launched directly as a child process in its own process
+group, with stdin closed. The runner enforces the timeout itself: SIGTERM to
+the group at timeoutSeconds, SIGKILL after graceSeconds. A platform CLI lane
+(codex, grok, agy or argon-run, muse) is admitted like any other command: its
+absolute executable path and its full argv, including the model pin, are
+hash-bound in the campaign binding.
 """
 import hashlib
 import json
@@ -15,7 +22,8 @@ import time
 
 from moriarty_dev import records
 
-FOREMAN_LAUNCHER = Path("/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js")
+SCHEMA = "moriarty.bound-runner/2"
+TIMEOUT_EXIT = 124
 
 
 def _contained(root, relative):
@@ -47,8 +55,8 @@ def _check_files(root, mapping, executable):
             raise ValueError("invalid runner file commitment")
         path = Path(name)
         if path.is_absolute():
-            # External inputs are limited to the interpreter and Foreman itself.
-            if name != executable and path != FOREMAN_LAUNCHER:
+            # The only external input is the admitted executable itself.
+            if name != executable:
                 raise ValueError("unapproved external runner input")
         else:
             path = _contained(root, name)
@@ -73,11 +81,11 @@ def load_runner(root, action):
     plan = binding.get("runners", {}).get(action["id"])
     if type(plan) is not dict:
         raise ValueError("no authenticated admitted-runner authority is registered")
-    required = {"schema", "action", "argv", "files", "launcher", "launcherFiles",
+    required = {"schema", "action", "argv", "files",
                 "timeoutSeconds", "graceSeconds", "outputLimitBytes", "chargeId", "chargedSeconds", "accountingPath"}
     if set(plan) - (required | {"assertion"}) or not required.issubset(plan):
         raise ValueError("unsupported runner binding fields")
-    if plan["schema"] != "moriarty.bound-runner/1" or plan["action"] != action or campaign["candidateHash"] != action["candidate"]:
+    if plan["schema"] != SCHEMA or plan["action"] != action or campaign["candidateHash"] != action["candidate"]:
         raise ValueError("runner action/candidate binding mismatch")
     ref, fragment = action["commandRef"].split("#", 1)
     entry = _json(_contained(root, ref))["commands"][fragment]
@@ -92,14 +100,6 @@ def load_runner(root, action):
     for arg in argv[1:]:
         if not arg.startswith("-") and (root / arg).is_file() and arg not in plan["files"]:
             raise ValueError("argv file is not hash-bound: " + arg)
-    launcher = plan["launcher"]
-    if type(launcher) is not list or len(launcher) != 2 or launcher[1] != str(FOREMAN_LAUNCHER):
-        raise ValueError("runner must use the existing Foreman launcher")
-    if not Path(launcher[0]).is_absolute() or not os.access(launcher[0], os.X_OK):
-        raise ValueError("launcher executable must be absolute")
-    if str(FOREMAN_LAUNCHER) not in plan["launcherFiles"]:
-        raise ValueError("Foreman bytes are not hash-bound")
-    _check_files(root, plan["launcherFiles"], launcher[0])
     for key, low, high in (("timeoutSeconds", 1, 1800), ("graceSeconds", 1, 10), ("outputLimitBytes", 256, 1048576)):
         if type(plan[key]) is not int or not low <= plan[key] <= high:
             raise ValueError("invalid runner bound: " + key)
@@ -135,13 +135,20 @@ def load_runner(root, action):
     return plan, digest
 
 
+def _signal_group(pgid, sig):
+    try:
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass
+
+
 def execute(root, plan, digest, reservation_id):
     """Observe the actual process; retain bounded output while hashing all bytes."""
-    command = [*plan["launcher"], "--timeout", str(plan["timeoutSeconds"]),
-               "--grace", str(plan["graceSeconds"]), "--require-containment", "strong", "--", *plan["argv"]]
+    command = list(plan["argv"])
     started = time.monotonic()
     proc = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    pgid = proc.pid
     selector = selectors.DefaultSelector()
     streams = {"stdout": bytearray(), "stderr": bytearray()}
     hashes = {name: hashlib.sha256() for name in streams}
@@ -149,12 +156,22 @@ def execute(root, plan, digest, reservation_id):
     for pipe, name in ((proc.stdout, "stdout"), (proc.stderr, "stderr")):
         selector.register(pipe, selectors.EVENT_READ, name)
     limit = plan["outputLimitBytes"]
+    timeout, grace = plan["timeoutSeconds"], plan["graceSeconds"]
+    terminated_at = None
+    timed_out = False
     ambiguous = False
     try:
         while selector.get_map() or proc.poll() is None:
-            if time.monotonic() - started > plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
+            elapsed = time.monotonic() - started
+            if terminated_at is None and elapsed > timeout:
+                timed_out = True
+                terminated_at = elapsed
+                _signal_group(pgid, signal.SIGTERM)
+            if terminated_at is not None and elapsed > terminated_at + grace:
+                _signal_group(pgid, signal.SIGKILL)
+            if elapsed > timeout + grace + 30:
+                # Output pipes held open by an escaped descendant.
                 ambiguous = True
-                os.killpg(proc.pid, signal.SIGKILL)
                 break
             for key, _ in selector.select(0.1):
                 chunk = os.read(key.fileobj.fileno(), 16384)
@@ -166,21 +183,32 @@ def execute(root, plan, digest, reservation_id):
                 sizes[name] += len(chunk)
                 streams[name].extend(chunk[:max(0, limit - len(streams[name]))])
         ret = proc.wait(timeout=5)
-        # A signal, launcher failure, or namespace signal encoding does not
-        # establish completion. Foreman's confirmed timeout uses exit 124.
-        ambiguous = ambiguous or ret < 0 or ret >= 125
+        if timed_out and not ambiguous:
+            # The runner itself stopped and reaped the child: a confirmed
+            # timeout, reported as exit 124.
+            ret = TIMEOUT_EXIT
+        else:
+            # A signal or an exit code at or above 125 does not establish
+            # completion.
+            ambiguous = ambiguous or ret < 0 or ret >= 125
     finally:
+        # Remove any descendant left in the child's process group.
+        _signal_group(pgid, signal.SIGKILL)
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
         selector.close()
         proc.stdout.close()
         proc.stderr.close()
     overflow = any(size > limit for size in sizes.values())
     assertion = plan.get("assertion")
-    verified = bool(not ambiguous and not overflow and assertion and ret == assertion["exitCode"]
+    verified = bool(not ambiguous and not timed_out and not overflow and assertion and ret == assertion["exitCode"]
                     and hashes["stdout"].hexdigest() == assertion["stdoutSha256"])
     observed = {"actionId": plan["action"]["id"], "candidateHash": plan["action"]["candidate"],
                 "runnerDigest": digest, "chargeId": plan["chargeId"], "reservationId": reservation_id,
                 "argv": command, "exitCode": ret, "elapsedSeconds": time.monotonic() - started,
                 "outputSha256": {name: h.hexdigest() for name, h in hashes.items()}, "outputBytes": sizes,
+                "timedOut": timed_out,
                 "completionAmbiguous": ambiguous, "outputLimitExceeded": overflow,
                 "behavioralAssertions": [{"assertionId": assertion["id"], "candidateHash": plan["action"]["candidate"],
                                           "outcome": "defect-observed"}] if verified else []}
