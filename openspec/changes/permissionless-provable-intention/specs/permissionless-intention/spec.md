@@ -15,7 +15,7 @@ When a developer submits a supported program with valid required evidence, the p
 If project workflow metadata is absent, the public toolchain SHALL NOT reject solely because it is absent.
 
 #### Scenario: Valid boundary
-- **WHEN** A clean installation has no Foreman, RP03 or project metadata.
+- **WHEN** A clean installation has no maintainer workflow records, RP03 or project metadata.
 - **THEN** Compile, prove and submission interfaces remain available.
 
 #### Scenario: Invalid boundary

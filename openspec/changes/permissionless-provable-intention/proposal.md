@@ -11,7 +11,7 @@ Current design mixes a permissionless Midnight language with a managed multichai
 - Specify a general supported-program proof path, with signed intent and complete effects.
 - Separate APSS application, authorization, solver and settlement responsibilities.
 - Sequence Aeon-inspired obligation reports, exact refinement checks and later typed synthesis.
-- Separate internal Foreman/Pel delivery from public product acceptance.
+- Separate internal Pel delivery from public product acceptance.
 
 # Capabilities
 

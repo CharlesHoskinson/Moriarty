@@ -173,16 +173,15 @@ Record the actual goal creation result and runtime state before reporting arming
 3. Select the first eligible unchecked task in dependency order.
 4. Create an isolated implementation worktree from the accepted candidate.
 5. Freeze its five-part brief, exact commands, owned paths, and terminal predicates.
-6. Verify the existing Foreman runtime and required worker readiness.
-7. Create the immutable external Endstop contract before the first actionful worker dispatch.
-8. Dispatch through the contract-bound queue with durable process ownership.
-9. Add failing behavioral tests before implementation changes.
-10. Run the package checks and retain failures with actual resource receipts.
-11. Request independent Fable 5.1 at medium effort and GPT-6 result audits of the frozen candidate.
-12. Correct blocking findings within the existing contract limits.
-13. Recheck affected predicates and obtain updated candidate-bound verdicts.
-14. Admit only the owned, tested, audited candidate through the repository gate.
-15. Update task status, evidence, source links, and the typed checkpoint.
+6. Verify the required platform CLI workers are ready.
+7. Launch workers from the lead agent with the platform CLIs, with durable process ownership.
+8. Add failing behavioral tests before implementation changes.
+9. Run the package checks and retain failures with actual resource receipts.
+10. Request independent Fable 5.1 at medium effort and GPT-6 result audits of the frozen candidate.
+11. Correct blocking findings within the existing limits.
+12. Recheck affected predicates and obtain updated candidate-bound verdicts.
+13. Admit only the owned, tested, audited candidate through the repository gate.
+14. Update task status, evidence, source links, and the session checkpoint.
 
 The latest user request authorizes this sequence without another generic design-confirmation round.
 It does not override a failed acceptance gate or authorize unlimited retries.
@@ -190,7 +189,6 @@ Prefer the configured cross-vendor worker after readiness succeeds.
 The user-required Fable 5.1 at medium effort and GPT-6 audits replace the default auditor pairing for these packages.
 No author may approve their own result.
 If the worker route fails, retain that failure and disclose any proposed route substitution.
-Do not repair Foreman as a side task.
 
 Allowed package states are `specified-only`, `ready`, `working`, `pending-audit`, `resource-stopped`, `interface-blocked`, and `complete`.
 Only recomputed acceptance and both substantive audits permit `complete`.
@@ -201,7 +199,7 @@ Stop dependent dispatch when a required audit or runtime interface is unavailabl
 
 These are ceilings, not spending targets or automatic evidence of feasibility.
 Freeze concrete commands and smaller task limits before dispatch.
-The external Endstop contract must enforce cumulative counters across restarts and worktrees.
+The lead agent must enforce cumulative counters across restarts and worktrees and record them in the session checkpoint.
 Use one heavy build, proof, or conformance process group at a time.
 Keep memory usage within available host capacity, even below these ceilings.
 

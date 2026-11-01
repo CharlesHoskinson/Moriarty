@@ -32,7 +32,7 @@ The current local prototypes and network receipts do not satisfy this package's 
 
 ## Non-goals
 
-No A4/A5 continuation, mainnet funds, new consensus, or Foreman repair belongs to this package.
+No A4/A5 continuation, mainnet funds, or new consensus belongs to this package.
 No downstream requirement becomes complete from this package's narrower result.
 
 ## Execution contract

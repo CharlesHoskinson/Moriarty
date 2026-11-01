@@ -41,9 +41,9 @@ Where its scheduling statements conflict, this current override takes precedence
 Current working plan, updated 2026-10-21. The user names the factory **DoctorWatson**;
 Sherlock is the universal interpreter it builds. The user authorizes building and running this
 factory and requires **local CI**, because hosted CI is too expensive. GitHub
-stores source, PRs and result summaries. No Foreman or replacement scheduler is
-used. The [research review](research/sherlock/factory-2026-10-16/README.md)
-records the nine planning reviews and ten online research assignments.
+stores source, PRs and result summaries. No separate scheduler is used. The
+[research review](research/sherlock/factory-2026-10-16/README.md) records the
+nine planning reviews and ten online research assignments.
 
 ## Current delivery rule — integrate ready work first
 

@@ -86,7 +86,7 @@ Each cycle finishes with affected-source graph refresh, actual wiki-llm results
 and lessons, and fresh conservative Git cleanup. Keep unique/dirty/active work and
 all partial/unknown outcomes. AgentBus supplies optional advisory coordination;
 canonical artifacts, reviews, resources and ownership govern execution. No new
-scheduler, Foreman, per-agent branches or hosted CI is introduced.
+scheduler, per-agent branches or hosted CI is introduced.
 
 Acceptance remains the existing [SRPOC EARS](../../openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md),
 [SBENCH criteria](stagenet-recursive-rollup-experiment.md) and all retained Sherlock

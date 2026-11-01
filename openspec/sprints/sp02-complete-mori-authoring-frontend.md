@@ -69,7 +69,7 @@ npm --prefix experiments/moriarty-language test
 node experiments/moriarty-language/src/cli.ts check --profile experiments/moriarty-language/spec/successor/bounds.json experiments/moriarty-language/spec/successor/examples/loan.mori
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Project-operated proof or public-network campaigns using project resources or credentials additionally require live RP03 admission. Public compiler, prover and SDK use with developer-owned resources SHALL NOT require RP03, project reviewer receipts or Foreman/Pel records.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Project-operated proof or public-network campaigns using project resources or credentials additionally require live RP03 admission. Public compiler, prover and SDK use with developer-owned resources SHALL NOT require RP03, project reviewer receipts, maintainer workflow records or Pel records.
 
 ## Report-informed acceptance refinement
 

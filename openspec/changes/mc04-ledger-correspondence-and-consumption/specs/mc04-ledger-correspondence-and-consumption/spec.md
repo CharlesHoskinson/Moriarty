@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, Foreman/Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
+Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, maintainer workflow record, Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
 
 ### Requirement: Actual verifier compatibility
 The adapter SHALL demonstrate that the selected Midnight acceptance path verifies the exact native proof, VK, and public-input relation.

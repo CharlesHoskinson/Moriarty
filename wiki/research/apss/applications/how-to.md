@@ -14,7 +14,7 @@ tags: [moriarty, apss, research]
 
 Use this guide when reviewing an application design, library or SDK that proposes to use Moriarty. The output is a specification and evidence checklist, not deployment approval. You need the program design, the user's authorization format, expected effects and the proposed acceptance path. No working implementation is assumed.
 
-1. **Identify the program independently of the service.** Name its state, actions and supported language constructs. Remove any dependency on a maintainer identity, solver company, Foreman run or campaign ID from the product validity predicate. Keep service-specific policies in that service's contract. Verify a newly authored supported program is not excluded merely because it is outside the demonstration catalog. See [APP02](notes/APP02.md).
+1. **Identify the program independently of the service.** Name its state, actions and supported language constructs. Remove any dependency on a maintainer identity, solver company, maintainer workflow run or campaign ID from the product validity predicate. Keep service-specific policies in that service's contract. Verify a newly authored supported program is not excluded merely because it is outside the demonstration catalog. See [APP02](notes/APP02.md).
 
 2. **Write separate statements for developer and user intention.** Record the application invariant and the user's exact assets, gross debit, fees, recipients, liabilities, expiry and outcome. Mark preferences as ranking criteria. For each field that the solver chooses, write the predicate limiting that choice. Do not let favorable price compensate for an unauthorized recipient. See [APP08](notes/APP08.md).
 

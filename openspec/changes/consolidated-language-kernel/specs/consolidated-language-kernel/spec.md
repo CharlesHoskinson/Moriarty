@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: UNI-001 Permissionless public pipeline
-When a developer presents a supported program and valid required evidence, the public pipeline SHALL decide validity without project, registry, council, Foreman or hosted-service membership.
+When a developer presents a supported program and valid required evidence, the public pipeline SHALL decide validity without project, registry, council, maintainer workflow or hosted-service membership.
 
 #### Scenario: Positive witness
 - **WHEN** A clean developer authors and submits a novel supported program without project records.

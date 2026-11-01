@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, Foreman/Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
+Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, maintainer workflow record, Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
 
 ### Requirement: Mandatory acceptance
 The real acceptance path SHALL require valid evidence for all four claim types under the policy bound by the deployed contract, protocol rules and applicable participant authorization. The policy SHALL NOT require project approval of the developer or program.
@@ -98,7 +98,7 @@ Intent refinement SHALL constrain newly created or modified nominal liabilities 
 Program and transaction validation SHALL neither require internal maintainer workflow records nor accept them as substitutes for mandatory correctness evidence.
 
 #### Scenario: No project workflow records
-- **WHEN** a supported program and its transaction satisfy all required proof, authorization, financial and ledger predicates without Foreman/Pel records, RP03 admission or reviewer receipts
+- **WHEN** a supported program and its transaction satisfy all required proof, authorization, financial and ledger predicates without maintainer workflow records, Pel records, RP03 admission or reviewer receipts
 - **THEN** validation does not reject solely because those internal records are absent.
 
 #### Scenario: Approved but unproved transaction

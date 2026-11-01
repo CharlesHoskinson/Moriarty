@@ -140,10 +140,14 @@ See [the user routing record](raw/assignments/moriarty-opus-nonsecurity-routing-
 
 ## Current user workflow — October 16 DoctorWatson
 
-The user prohibits Foreman for current work. Use direct agent/model calls,
-Git/GitHub and repository-native tools. Do not invoke Foreman, its session
-runtime, campaign dispatch or Endstop. Do not replace it with another
-orchestration framework. Earlier Foreman instructions remain historical.
+The lead agent runs current work itself. It launches lanes with the platform
+CLIs (Codex, Grok, agy, Muse and Claude Code subagents) through the
+workflowskills skills, coordinates lanes on agentbus, uses the council skill
+for cross-vendor review rounds and the checkpoint skill for session
+checkpoints. Git worktrees, Git/GitHub and repository-native tools gate the
+work. Do not start campaign dispatch or add another orchestration framework.
+Foreman is retired (2026-11-01) and archived; do not invoke it. Earlier
+Foreman instructions remain historical.
 See [the current assignment](raw/assignments/moriarty-v1-factory-planning-2026-10-16.md).
 
 The current user authorizes building and running a repository-native software

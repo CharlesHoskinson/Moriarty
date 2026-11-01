@@ -5,7 +5,7 @@
 
 This file governs repository work only. It grants no authority over third-party Mori program deployment.
 
-Use the pinned Pel paper-v2 Foreman profile. Bind `artifact:approved-spec` to the exact scoped specification. Register implementer/reviewer roles and `candidate-full` with actual host verification. Static `check` is not runtime authority.
+The lead agent runs the Pel plan's lanes with the platform CLIs. Bind `artifact:approved-spec` to the exact scoped specification. Register implementer/reviewer roles and `candidate-full` with actual host verification. Static `check` is not runtime authority.
 
 Each task brief states: objective; immutable inputs; owned paths; acceptance commands and artifacts; stop conditions. A checker-only package may own its declared successor source files, tests, fragment document and new deliverable directory. It may not modify plugin, custody, ledger, sprint or Preview evidence paths. Reject out-of-scope changes before verification. Documentation corrections use a separate package and separate path list.
 

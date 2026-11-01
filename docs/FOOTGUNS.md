@@ -180,7 +180,7 @@ Use guarded CLI execution when host coverage is unverified. Do not infer interce
 10. **Keep process proportional.** Preserve authentic inputs, outputs and failed
     runs. Reuse those receipts. Add review or infrastructure only when it closes
     a named correctness or reproducibility gap; do not turn tooling repair,
-    provenance, checkpointing or Foreman development into the product. A
+    provenance, checkpointing or workflow-tool development into the product. A
     source-only review does not approve product suitability or a native result.
 
 11. **Reuse evidence with its original scope.** E00 generated a narrow Compact

@@ -2,7 +2,7 @@
 
 Status: target architecture, specified-only where not linked to implementation. Authority: user clarification, 2026-09-19.
 
-Moriarty is a programming language for all DeFi developers on Midnight. Any developer may author, compile, prove, publish and deploy programs in the supported language without approval from Moriarty maintainers, an agent council, Foreman, a hosted solver or a program registry. Objective Midnight validity rules, resource costs and asset-owner authorization still apply.
+Moriarty is a programming language for all DeFi developers on Midnight. Any developer may author, compile, prove, publish and deploy programs in the supported language without approval from Moriarty maintainers, an agent council, a maintainer workflow tool, a hosted solver or a program registry. Objective Midnight validity rules, resource costs and asset-owner authorization still apply.
 
 This document supersedes conflicting product-scope and administrative-deployment requirements in earlier designs. Historical receipts remain evidence of their original scope. It does not declare missing proof or ledger capabilities implemented.
 
@@ -56,7 +56,7 @@ Private composition states which data is hidden, what the public statement revea
 | Signature, authority, nonce and current revocation | Owner authorization |
 | Bound proof relation, verifier and state/history | Objective transaction acceptance |
 | Native fees, finality and ledger validity | Midnight execution conditions |
-| Reviewer identity, campaign budget, RP03, Foreman/Pel receipt | Internal project work only; never a public toolchain prerequisite |
+| Reviewer identity, campaign budget, RP03, maintainer workflow or Pel receipt | Internal project work only; never a public toolchain prerequisite |
 | Optional relay/adapter service policy | That service only; no universal deployment authority |
 
 Per-contract policy commits to exact claim and verifier semantics. Protocol upgrades and application governance must have explicit scope. Neither is a license for project reviewers to admit individual Mori programs.

@@ -112,39 +112,18 @@ Record requested and returned model identities separately.
 An observed `grok-4.7-build` identity does not establish equivalence to requested `grok-4.7`.
 An unavailable provider cannot approve work or trigger a silent replacement.
 
-Actionful external workers use the existing installed Foreman queue and lane runner.
-Apply [the installed Foreman skill](/home/charl/.agents/skills/foreman/SKILL.md) to its dispatch lifecycle.
-The current user model and full-candidate review instructions supersede older Foreman model defaults for this scope.
-Verify READY and the installed runtime before dispatch:
-
-```bash
-/home/charl/foreman/skills/foreman/scripts/foreman-setup.sh --profile soft
-node /home/charl/foreman/skills/foreman/runtime/dist/architecture-policy.js verify-install \
-  --skill-root /home/charl/foreman/skills/foreman
-```
-
-Require exit zero and the actual Pass verdict.
-Bind the existing Endstop contract identity, digest, candidate and action to every actionful queue request.
-Use the active family release block when that contract has an activated family.
-Do not create a new contract to continue terminal work.
-Do not infer an active profile or armed workers from these examples.
-
-The existing queue form for a contract without an activated family is:
-
-```text
-lane-queue.sh add GROUP --endstop-state-root ABS --endstop-contract-id ID
---endstop-contract-sha SHA256 --endstop-action ACTION
---endstop-candidate-sha SHA256 -- CMD [ARGS...]
-```
-
-`CMD` owns the complete round through the installed `lane-run.sh --round` entry point.
+The lead agent launches actionful external workers itself with the platform CLIs.
+Apply the codex, grok, agy and muse skills in `~/workflowskills/skills` to each launch.
+Coordinate lanes, claims and handoffs on agentbus.
+The current user model and full-candidate review instructions apply to this scope.
+Give each worker its own Git worktree.
 Supply the target's fixed verification command and an attempt-fresh report path.
-Preserve containment refusals, worktree ownership, limits, terminal events and cleanup.
+Preserve worktree ownership, limits, terminal events and cleanup.
 Process containment does not prove filesystem, network or credential isolation.
-The default installed queue caps may admit fewer than the target three Sol authors at once.
-Do not bypass those caps to claim six concurrent authors.
+Current CPU, RAM and build footprint checks may admit fewer than the target three Sol authors at once.
+Do not exceed that capacity to claim six concurrent authors.
 
-These verified CLI forms are worker payloads inside that lifecycle, not bare dispatch instructions:
+These verified CLI forms are the worker launch commands:
 
 ```text
 /home/charl/.npm-global/bin/codex exec --model gpt-6.1-sol

@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, Foreman/Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
+Product requirements below govern objective language, proof, authorization and ledger predicates. Maintainer delivery requirements govern this repository's implementation and release evidence only. No maintainer review, named model, maintainer workflow record, Pel record or RP03 campaign approval is a prerequisite for an external developer to compile, prove or deploy a supported Moriarty program. These corrected requirements specify intended behavior; this document does not establish that the behavior is implemented.
 
 ### Requirement: Internal evidence-based release completion
 Maintainer release completion SHALL require applicable product evidence, resolved blocking findings, and the independent audits selected by the current delivery assignment. Internal audit or campaign requirements SHALL NOT become developer deployment prerequisites.
@@ -72,7 +72,7 @@ The developer flow SHALL distinguish signed intent, selected plan, simulation, p
 The public toolchain SHALL support developer-owned compilation, proving and deployment without a Moriarty administrator, project reviewer or project-operated service. Actual correctness proofs, authenticated participant authority, finite bounds and target ledger validity remain required.
 
 #### Scenario: Clean external installation
-- **WHEN** a developer uses a clean installation without `.moriarty-dev`, Foreman/Pel state, campaign records or reviewer receipts to deploy a newly authored supported program
+- **WHEN** a developer uses a clean installation without `.moriarty-dev`, maintainer workflow state, Pel state, campaign records or reviewer receipts to deploy a newly authored supported program
 - **THEN** the workflow permits objective proof and ledger validation using the developer's own resources and credentials without project approval.
 
 #### Scenario: Missing mandatory proof
