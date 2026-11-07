@@ -1,0 +1,92 @@
+<!-- source: https://docs.midnight.network/relnotes/dapp-connector-api/dapp-connector-api-4-1-0.md fetched_at: 2026-11-07T20:48:46Z status: 200 untrusted -->
+
+# DApp Connector API v4.1.0 release notes
+
+> For the complete documentation index, see [llms.txt](https://docs.midnight.network/llms.txt)
+
+* **Version**: v4.1.0
+* **Date**: 5 November 2026
+
+***
+
+## High-level summary[​](#high-level-summary "Direct link to High-level summary")
+
+DApp Connector API v4.1.0 is a backwards-compatible minor release. The package now publishes under the `@midnightntwrk` npm scope, `signData` can describe ECDSA signatures, wallets get an error code for requests they can't fund, and TypeScript projects resolve the package's types correctly, including under `moduleResolution: "NodeNext"`.
+
+***
+
+## Audience[​](#audience "Direct link to Audience")
+
+This release note is relevant for developers who:
+
+* Use the DApp Connector API in their DApps.
+* Maintain wallet implementations compatible with the DApp Connector API.
+* Sign data through the connector and want to support ECDSA signatures.
+
+***
+
+## What changed (Summary of updates)[​](#what-changed-summary-of-updates "Direct link to What changed (Summary of updates)")
+
+* Published under the new `@midnightntwrk` npm scope. The legacy `@midnight-ntwrk` scope is mirrored as a transitional alias.
+* Added an optional `scheme` field to the `signData` `Signature` type.
+* Added the `InsufficientFunds` error code.
+* Added a `./globals` export path for the global type augmentations.
+* Fixed packaging so the `types` entry point resolves.
+
+***
+
+## New features[​](#new-features "Direct link to New features")
+
+### New npm scope[​](#new-npm-scope "Direct link to New npm scope")
+
+The package is now `@midnightntwrk/dapp-connector-api`. The legacy `@midnight-ntwrk/dapp-connector-api` name still receives the same releases for now, so existing installs keep working. New projects should use the new scope.
+
+```
+npm install @midnightntwrk/dapp-connector-api@4.1.0
+```
+
+### ECDSA signatures in `signData`[​](#ecdsa-signatures-in-signdata "Direct link to ecdsa-signatures-in-signdata")
+
+The `Signature` type returned by `signData` has an optional `scheme` field, either `"ecdsa_secp256k1_sha256"` or `"schnorr_bip340"`. When a wallet omits it, the scheme is `schnorr_bip340`, so existing wallets and DApps keep working unchanged. A future major version will make the field required. For background, see [MIP-0003: ECDSA support](https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/mips/mip-0003-ecdsa-support.md).
+
+### `InsufficientFunds` error code[​](#insufficientfunds-error-code "Direct link to insufficientfunds-error-code")
+
+`ErrorCodes.InsufficientFunds` covers requests that are well formed but that the wallet can't complete because it lacks the balance. Previously a wallet had to report these as `InvalidRequest`. DApps can now tell the two cases apart and ask the user to top up instead of treating the request as malformed.
+
+### Explicit global types[​](#explicit-global-types "Direct link to Explicit global types")
+
+The global type augmentations are exported at `@midnightntwrk/dapp-connector-api/globals`, so you can reference them directly:
+
+```
+/// <reference types="@midnightntwrk/dapp-connector-api/globals" />
+```
+
+`globalThis.midnight` is now typed alongside `Window.midnight`, which helps in Node and test environments.
+
+***
+
+## Bug fixes[​](#bug-fixes "Direct link to Bug fixes")
+
+* Declaration files were published under `dist/src/`, so the `types` entry point pointed at a file that didn't exist. They now sit directly in `dist/`, and the `types` condition comes first in `exports`.
+* Internal type imports use explicit `.js` extensions, so projects that use `moduleResolution: "NodeNext"` get the package's types instead of `any`.
+
+***
+
+## Breaking changes[​](#breaking-changes "Direct link to Breaking changes")
+
+No breaking changes in this release.
+
+***
+
+## Known issues[​](#known-issues "Direct link to Known issues")
+
+No new known issues in this release.
+
+***
+
+## Links and references[​](#links-and-references "Direct link to Links and references")
+
+* [GitHub release: v4.1.0](https://github.com/midnightntwrk/midnight-dapp-connector-api/releases/tag/v4.1.0)
+* [`@midnightntwrk/dapp-connector-api` on npm](https://www.npmjs.com/package/@midnightntwrk/dapp-connector-api/v/4.1.0)
+* [Full changelog: v4.0.1 to v4.1.0](https://github.com/midnightntwrk/midnight-dapp-connector-api/compare/v4.0.1...v4.1.0)
+* [DApp Connector API v4.0.1 release notes](https://docs.midnight.network/relnotes/dapp-connector-api/dapp-connector-api-4-0-1.md)

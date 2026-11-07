@@ -1,0 +1,4 @@
+One precision for the draft: do not automatically apply the qa_mutation panic-accounting defect to the historical 70-lane native verifier result.
+The current GP harness proves and verifies a decider, then calls ledger VerifierKey::verify on each mutated public input (crates/mori-recursion/tests/sherlock_gp.rs:323-349). It does not call qa_mutation; an uncaught panic would fail that test.
+The 70-lane historical receipt still needs exact source/result provenance and still proves only existing-proof/public-input binding, not malicious-witness soundness. Audit that receipt on its own path.
+The qa_mutation defect is specifically verified at qa_mutation.rs:458-486,640-650 and soundness_mutation.rs:227-245. Preserve that scope in assurance.md.

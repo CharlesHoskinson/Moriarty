@@ -1,0 +1,9 @@
+# Draft acceptance-scenario corrections
+
+These refer to the in-progress capability specifications, before formal DRAFT announcement.
+
+1. `specs/sherlock-assurance/spec.md`, SAS-011, says every `ProofVersioned::V2` artifact offered to 9.1.0.1 is refused. That is stronger than the requirement and contradicts retained version compatibility. The ledger 9.1.0.0 release notes say old v1 keys/proofs remain verifiable; the old pipeline is `ProofVersioned::V2`, the new v2 pipeline is `V3`. Replace the scenario with an artifact whose proof tag/key tag/schema conflicts with the candidate's pinned manifest and selected verifier interface. Refuse that mismatch. Do not make ledger 9 imply a universal V2 ban. Source: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 ; see this member's `issues-response.md`.
+
+2. `specs/sherlock-recursion/spec.md`, SRC-004, currently allows "synthesis or verification fails" as the successful field-wrap check. SAS-003 correctly denies constraint-rejection credit to a synthesis error. Require the malformed bounded-height witness to reach the claimed constraint/verifier boundary and be refused there, with a valid baseline. Synthesis/decoder/panic outcomes remain untested for that boundary. The scenario must match the SAS-003 rule.
+
+3. `specs/sherlock-assurance/spec.md`, SAS-013, should say explicitly that a partition known to omit a relevant guard dependency does **not** satisfy the dispatch acceptance receipt. Labelling it heuristic is honest diagnostic metadata, but does not repair a known coverage hole. A complete-dependency partition without an equivalence proof may be labelled a coverage heuristic; the concrete `equal_differ` omission cannot close the requirement. Sources: `c6_dispatch_step.rs:750-806,1189-1200`; SAS-013/SAS-014; this member's `issues-response.md`.

@@ -1,0 +1,502 @@
+diff -ru review-v1.1/assurance.md review-v2/assurance.md
+--- review-v1.1/assurance.md	2026-11-07 14:14:57.053133522 -0700
++++ review-v2/assurance.md	2026-11-07 14:23:42.164680509 -0700
+@@ -1,17 +1,17 @@
+ # Assurance strategy
+ 
+-Status: DRAFT v1. Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
+ 
+ ## 1. The argument
+ 
+ For the qualified profile `sherlock-helper-microstep/1` with committed bounds, let `R(P, s, s')` be the owner-step relation, `Enc` the relation from semantic state to `sherlock-c6-phys/1` carriers satisfying `StepInv`, and `C` the keyed leaf relation with statement `sherlock-leaf-stmt/1`. The obligations, each with its evidence class:
+ 
+-| # | Obligation | Evidence class that can close it | What cannot |
+-|---|---|---|---|
+-| O1 | Admission and genesis establish `StepInv` and `Enc` for the initial carriers | constraint check + hostile raw witnesses; later a theorem | host `checkStepInv` |
+-| O2 | Soundness per rule: every satisfying witness of `C` with `sel[r]=1` decodes to a valid `R` step by rule `r`, preserves `StepInv`, and exposes exactly the statement | hostile raw witnesses by dispatch class (SAS-013), weakened-constraint controls (SAS-004); later a theorem (SAS-009) | finite differential tests alone |
+-| O3 | Completeness per rule: every valid bounded step has a satisfying witness | differential run on every step of P1-P3 through the witness stream (SVM-007) | model agreement |
+-| O4 | Composition: the one-hot leaf checks fragment premises on the same carriers (no disconnected copies) | SAS-010 directed cases; code review of the gating | per-rule circuit passes |
++| # | Obligation (universal unless stated) | Finite release evidence required by this change | What discharges the universal claim | What cannot |
++|---|---|---|---|---|
++| O1 | Given a committed profile, layout and bounds, canonical admission and genesis establish `StepInv` and `Enc` for the initial carriers bound to `prog_d` and `init_d` | initialization cases (task 4.9): canonical genesis admitted and bound; non-canonical, inconsistent `init_d`/`prog_d`, and forged initial carriers refused at the leaf/node boundary | a theorem over the codec and genesis constraints (SAS-009) | host `checkStepInv` |
++| O2 | Soundness per rule, given `StepInv(pre)` and a valid image/configuration: every satisfying witness of `C` with `sel[r]=1` decodes to a valid `R` step by rule `r`, preserves `StepInv`, and exposes exactly the statement | hostile raw witnesses by dispatch class with a valid baseline and weakened-constraint controls (SAS-004, SAS-013), refusal observed at the constraint boundary | a theorem, or an exhaustive checked argument over the stated domain (SAS-009) | finite tests alone; `ProofPreimage::check` |
++| O3 | Completeness per rule: every valid bounded step has a satisfying witness | differential run on every step of P1, P2 and (after freeze) P3 through the witness stream (SVM-007) plus real proofs | a theorem | model agreement |
++| O4 | Composition: the one-hot leaf checks every fragment premise on the shared carriers (no disconnected copies), with `StepInv(pre)` initialization and preservation | SAS-010 directed cases per admitted rule; shared-carrier premise checks (task 4.6) | a theorem | per-rule circuit passes; "one key" by itself |
+ | O5 | Recursion: node links `post_d = next pre_d`, `h` arithmetic bounded, canonical genesis, authorized keys | SRC-004/005 raw witnesses through the final pairing; flipped-proof refusal | `ToyLeaf` tests (`sherlock_ivc.rs:68-72`) |
+ | O6 | Terminal closure: decider pins keys, pairs, derives outcome/result | SRC-006 mutations with fresh witnesses; 70-lane record labelled existing-proof binding | outer-only success |
+ | O7 | Target: result bound to chain instance, call, key, effects; unique consumption | A6-shape local acceptance, A8/A9/A10-shape manifest-bound predicates on Preview (SAS-007, SMN-004) | any `ContractCall` at the address; stagenet evidence for a mainnet claim |
+@@ -25,7 +25,8 @@
+ | Source inspection | path, hash, definitions, assumptions | authored behaviour, not execution |
+ | Model execution (K, Quint) | model/tool version, bounds, seed or exhaustive claim, reached actions, trace | that instance only; digests, binding, decider soundness are premises |
+ | Differential execution | oracle provenance, complete ordered observations, projection, first divergence (SAS-005) | finite correspondence |
+-| Constraint check (nonproving) | baseline, mutation site, reached stage, failure class (SAS-003) | no cryptographic or chain claim |
++| IR preprocessing / witness execution (`ProofPreimage::check`, implemented by `preprocess`, `repos/midnightntwrk/midnight-ledger/zkir/src/ir.rs:111-116`; `c6_dispatch_consumer.rs:244-285`) | baseline, mutation site, failure class, scope label "nonproving" | no constraint-rejection, cryptographic or chain claim; this is the class of every current fragment and dispatch receipt |
++| Constraint check (keyed relation, synthesized and verified) | baseline, mutation site, reached stage, failure class (SAS-003) | no cryptographic-binding or chain claim beyond the key |
+ | Native cryptography | proof/VK/SRS/statement/backend identities, independent verification (SRC-010), invalid controls | no ledger entitlement |
+ | Target observation | chain instance (genesis, specVersion, ledger rev), manifest, call, finalized block, pre/post state, effects (SMN-004) | that target and operation only |
+ | Formal theorem | statement, premises, domain, checkable artifact | encoded definitions only |
+@@ -50,8 +51,8 @@
+ | M0 Re-arm | F4, F11 re-earned; STOP recorded as bookkeeping (SWF-006) | factory |
+ | M1 Land change | F14 traceability, F15 pins (static); all new rows `unimplemented.sh` | factory |
+ | M2 Re-pin and re-key | A1 build; SRC-009 regression record; A2'-A4' (IVC node, decider) at new pins; A6' local acceptance + five refusals; SMN-003 template diff | native cryptography + local ledger |
+-| M3 Fragments and receipt | SVM-008 zero gaps for P1-P3; SAS-013 partition receipt; U023 scenario 1 | constraint check |
+-| M4 Universal leaf | M1' lane/row measurement; SRC-013 decision; real keygen/prove/verify of every leaf of `entry 7;`; SRC-003 hostile cases; SVM-002 hostile cases | native cryptography |
++| M3 Fragments and receipt | SVM-008 zero gaps for the frozen inventory `R`; SAS-013 partition receipt; U023 scenario 1 | IR preprocessing / witness execution (nonproving; labelled as such) |
++| M4 Universal leaf | lane/row measurement; SRC-013 decision; real keygen/prove/verify of every leaf of `entry 7;`; SRC-003, SVM-002 and initialization hostile cases at the keyed boundary | constraint check (keyed) + native cryptography |
+ | M5 Local chain | leaves -> node -> decider for `entry 7;`, fact(3), list123; SRC-004/005/006 negatives; `verify_chain` (SRC-010); `validate_call` (A6') | native cryptography + local ledger |
+ | M6 Preview | OP-PV-* operations; A4'/A8'/A9'/A10' preview rows manifest-bound; U023 scenario 2 records P1-P3; C4 flips; B rows re-earned (non-gating) | target observation |
+ | M7 Mainnet readiness | T4 tier exists; rollback rehearsal receipt; `:269` amended; owner authorization | target observation (mainnet) |
+diff -ru review-v1.1/design.md review-v2/design.md
+--- review-v1.1/design.md	2026-11-07 14:18:32.584793471 -0700
++++ review-v2/design.md	2026-11-07 14:23:42.165986411 -0700
+@@ -1,6 +1,6 @@
+ # Design: Sherlock VM and recursion (consensus 2026-11-07)
+ 
+-Status: DRAFT v1. Specifies; executes nothing. Section numbers are referenced from `requirements.md`, `tasks.md` and `traceability.md`. Base `8fd34ed79`.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Specifies; executes nothing. Section numbers are referenced from `requirements.md`, `tasks.md` and `traceability.md`. Base `8fd34ed79`.
+ 
+ ## 1. Decisions at a glance
+ 
+@@ -77,7 +77,7 @@
+ 
+ Measured at `8fd34ed79` pins: one C6-shaped digest leaf with 96 private lanes (M2, not `standin.rs`) k=13, 2.55 s, 3,824 B; node k=20, 531,989 rows, ~50 s keygen, ~95 s/step, 26.2 GB; decider k=20, 833,235 rows, ~100 s, 70 lanes mutation-refused (`stagenet-gp-recursion.md:184-201`). These numbers are re-measured at the new pins (M2).
+ 
+-### 3.2 Node fixes before new keygen (SRC-005)
++### 3.2 Node fixes before new keygen (SRC-003, SRC-004, SRC-005)
+ 
+ 1. Range checks: `prev_h`, `steps`, `h < 2^64` with `assert_lower_than_fixed` (pattern `parent.rs:665-670`); today only `steps != 0` and field addition (`ivc.rs:308-310`).
+ 2. Genesis: `is_genesis = is_zero(prev_h)`; require `prev_d == init_d` (exists, `ivc.rs:312-313`). Today `proof_acc` is scaled by `not_genesis` (`ivc.rs:343`) while the witness-supplied `prev_acc` is folded unscaled (`:318-327,364`). The normative requirement is UISEC-010: no unauthenticated deferred obligation at genesis. The implementation must either (a) constrain the supplied carry to the designated neutral encoding at genesis, or (b) constrain a zero/ignore construction (scale `prev_acc` by `not_genesis`) and justify that it cannot authorize an invalid leaf or predecessor. Tests match the chosen semantics: non-neutral refusal for (a); semantic irrelevance of a well-formed ignored carry for (b), without requiring identical folded bytes (ignored inputs may still alter transcript encodings); and invalid-leaf refusal through the final pairing for both. Retaining an unscaled supplied carry requires a separately recorded security argument. The target implementation hashes accumulator encodings before deriving folding powers (`circuits/src/verifier/accumulator.rs:177-192,315-343` at `24a1eb5a`, astra-2); this is a transcript observation, not a proof that cancellation is impossible. Malformed point-encoding refusal is classified at its actual boundary. No practical attack was demonstrated; this is hardening (astra-2, fable-2).
+@@ -88,11 +88,11 @@
+ 
+ The decider verifies the last node proof, pins `vk_N_repr`, folds and pairs the accumulator, opens `cur_d = Poseidon(SHK_SD, HALTED, result, lanes_d)` and binds `values`. The outcome tag and result are derived from the proved state, not supplied as constants (astra-2 SND-004; `sherlock_c6_child.rs:560`). `acceptRun` reads sealed `program_d` and `init_d`, refuses replay of `stmt`, writes `result` as big-endian `Bytes<16>` (`sherlock-run.compact:26-47`). The acceptRun transcript template (70 slots, `tests/fixtures/run-template.json`) is recaptured with Compact 0.36.0 / runtime 0.21.0 and diffed against `template.rs` (SMN-003).
+ 
+-### 3.4 Leaf shape decision (SRC-004)
++### 3.4 Leaf shape decision (SRC-013)
+ 
+-M2 measures the universal gated leaf (dispatch + every fragment of the frozen inventory `R`) at S=1: k, rows, RSS, keygen and prove time. If k <= 17: option U. Otherwise option F: each rule its own `IrSource` under a forced uniform `ZkStdLibArch` and k, the node checks the child's `transcript_repr` against a committed family table in-circuit (authenticated membership), and E2 holds because the table is fixed before P3 is written. Option F is defined for S=1; a mixed-rule chunk under F needs a separate constrained construction before S>1 is adopted there (astra-3). Both branches carry identical semantic obligations and the same seven-lane statement.
++Milestone M4 (task 4.4; the historical measurement label "M2" in `docs/sherlock/stagenet-gp-recursion.md` is a different numbering) measures the universal gated leaf (dispatch + every fragment of the frozen inventory `R`) at S=1: k, rows, RSS, keygen and prove time. If k <= 17: option U. Otherwise option F: each rule its own `IrSource` under a forced uniform `ZkStdLibArch` and k, the node checks the child's `transcript_repr` against a committed family table in-circuit (authenticated membership), and E2 holds because the table is fixed before P3 is written. Option F is defined for S=1; a mixed-rule chunk under F needs a separate constrained construction before S>1 is adopted there (astra-3). Both branches carry identical semantic obligations and the same seven-lane statement.
+ 
+-### 3.5 Throughput (SRC-010, optional)
++### 3.5 Throughput (SRC-011, optional)
+ 
+ Target: a committed program of at most 320 owner steps proves, folds, decides and verifies in under 2 h and under 48 GB peak on the 20-core host. Levers in order, each adopted only after the C0 phase profile (`openspec/changes/recursion-phase-profile/`) shows its share: S>1, node at k=19 (1.5% over 2^19 today), heavy concurrency (needs a second lock class with aggregate resource enforcement; optional separate work named in `workflow.md` E11), GPU MSM. A recorded shortfall closes the measurement task only.
+ 
+diff -ru review-v1.1/dissent.md review-v2/dissent.md
+--- review-v1.1/dissent.md	2026-11-07 14:18:32.799793152 -0700
++++ review-v2/dissent.md	2026-11-07 14:24:24.697307728 -0700
+@@ -1,6 +1,6 @@
+ # Dissent and recorded conditions
+ 
+-Status: DRAFT v1. Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
++Status: DRAFT v2 (revision round 1). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
+ 
+ ## Unresolved at DRAFT v1
+ 
+@@ -76,6 +76,18 @@
+ 
+ astra-2: §3.2(2) genesis text replaced (transcript observation is not a cancellation proof); §2.2 composition is a required check with initialization and shared-carrier premises; SVM-002 table and scenario synchronized (refuse or checked unreachability; a bad pre-state is not a full-run exploit).
+ 
++## Phase 4 votes
++
++### DRAFT v1 (21:15Z): fable-2 ACCEPT; astra-1 OBJECT; astra-2 OBJECT; astra-3 OBJECT; fable-3 pending at 21:20Z.
++
++Objections (soundness/assurance items marked *): astra-1 1* (finite release evidence column, premises in O1-O4, composition as a required check), 2* (genesis inference removed), 3* (IR preprocessing class for M3 receipts; SAS-013 refusal; SRC-004 boundary), 4 (task order: inventory R, P3 after freeze, S=8 after profile, SRC-014 conditional, M4 naming), 5 (receipt commit then state-commit; dependency-closure freshness; E12/E13; B5/B9), 6 (SAS-011 mismatch; SWF-010 merge; SMN-007 immutable permitted). astra-2 1*, 2* (same as above plus an initialization task), 3 (workflow runnability), nonblocking (label-forgery and nonmember-key tests; S=8 order). astra-3 1*, 2*, 3, 4, 5* (SAS-008/009 applicable-when-triggered; SRC-014 conditional), 6. fable-2 editorial 1-4 (heading IDs, SRC-004 wording, stand-in wording, 5.2 negatives) and support for the four recursion-lens fixes.
++
++### DRAFT v1.1 delta votes (21:19Z): fable-2 ACCEPT; fable-3 OBJECT (workflow runnability: receipt commit order, E7 freshness, E12, E13, B5/B9); astra-1 OBJECT pending synchronization; astra-2 OBJECT narrowed; astra-3 OBJECT with four synchronization fixes plus the optional-B gate note.
++
++### Revision round 1 -> DRAFT v2 (21:30Z)
++
++Also applied from the v1.1 delta reviews: SRC-005 relabelled consistently in requirements, spec, tasks 2.3 and 5.2 ((a) neutral encoding, (b) zero/ignore with justification; unscaled retained carry needs its own argument); SAS-002 spec and workflow E7 rewritten to dependency-closure freshness with a state-only-commit scenario and no blanket directory exclusion (astra-2); gate rule and task header no longer say "current head"; SMN-007 "immutable, recovery mode stated; disposable only without active state"; new SWF-012 / E14 `optional: true` rows so unimplemented B rows and the S>1 experiment cannot block `next` or `t3.sh` (astra-3). All items from the v1 list above applied: assurance §1 table recolumned with premises and "finite release evidence"; new evidence class "IR preprocessing / witness execution" used for M3; design §2.2 composition as a required check, §3.2(2) genesis text per astra-2, headings corrected; SRC-004/SAS-011/SAS-013 scenarios corrected; SRC-013 names M4 and adds the nonmember-key scenario; SRC-014 conditional on S>1; proposal exit treats SAS-008/009 as applicable-when-triggered; tasks 1.0/1.1 (E10 first, B5/B9 retired), 1.4 (E12 evaluator), 2.3 (genesis realization recorded before keygen), 2.4 (no stand-in), 4.4 (inventory R), 4.7/6.4 (P3 parity after authorship), 4.8 (S=8 after 5.3, conditional), 4.9 (initialization), 5.2 (label forgery, nonmember key), 6.1 (E13); SWF-005/SAS-002/E7 commit order and dependency-closure freshness; SWF-010 headings merged with observed on-chain state; SMN-007 immutable permitted.
++
+ ## Owner decisions carried out of the council
+ 
+ 1. Amend `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` (mainnet) or keep M7 blocked.
+diff -ru review-v1.1/proposal.md review-v2/proposal.md
+--- review-v1.1/proposal.md	2026-11-07 14:18:32.834813708 -0700
++++ review-v2/proposal.md	2026-11-07 14:23:42.167590153 -0700
+@@ -1,6 +1,6 @@
+ # Sherlock VM consensus change (council run `sherlock-vm-council-20261107`)
+ 
+-Status: DRAFT v1, 2026-11-07. Written by the council chair (`fable-1`) from six independent positions, cross-critiques and the issue round recorded under `research/sherlock-vm-council-20261107/`. Base: `main` at `8fd34ed79`. This change specifies; it executes nothing. Every "measured" figure cites the run or file that recorded it.
++Status: DRAFT v2 (revision round 1), 2026-11-07. Written by the council chair (`fable-1`) from six independent positions, cross-critiques and the issue round recorded under `research/sherlock-vm-council-20261107/`. Base: `main` at `8fd34ed79`. This change specifies; it executes nothing. Every "measured" figure cites the run or file that recorded it.
+ 
+ ## Why
+ 
+@@ -36,4 +36,4 @@
+ 
+ ## Exit of this change
+ 
+-This change is complete when the Preview qualification record for P1 (`fact(3)`), P2 (`list123`) and P3 (fresh program) exists under the new keys (U023 scenario 2, C4 flips) and every mandatory security and assurance gate for the claimed profile (`sherlock-helper-microstep/1`, the frozen inventory, Preview) passes: SVM-001..009, SRC-001..010, SRC-012..014, SAS-001..007, SAS-010..014, SWF-001..008, SWF-010..011, SMN-001..007. Only deferred work outside that claim may stay open: SRC-011 (throughput, optional), SAS-008/009 (optimization, formal artifact), SWF-009 and M7 (mainnet), the `/2` profile, financial and generic-ADT extensions. An explicitly open mandatory gate does not make the change complete (astra-2, astra-3). The Mainnet operation (`SWF-009`) is specified here and executed only on owner authorization after `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` is amended.
++This change is complete when the Preview qualification record for P1 (`fact(3)`), P2 (`list123`) and P3 (fresh program) exists under the new keys (U023 scenario 2, C4 flips) and every mandatory security and assurance gate for the claimed profile (`sherlock-helper-microstep/1`, the frozen inventory, Preview) passes: SVM-001..009, SRC-001..010, SRC-012, SRC-013, SAS-001..007, SAS-010..014, SWF-001..008, SWF-010..011, SMN-001..007. Conditional clauses apply whenever their trigger occurs and are then mandatory: SAS-008 whenever an optimization is enabled (otherwise recorded "not applicable: no optimization enabled"), SAS-009 whenever a formal property is claimed (otherwise "not applicable: no formal claim"), SRC-014 whenever S>1 is adopted (vacuous at S=1). Only work outside the claim may stay open: SRC-011 (throughput, optional), SWF-009 and M7 (mainnet), the `/2` profile, financial and generic-ADT extensions. An explicitly open or unexecuted applicable gate does not make the change complete (astra-2, astra-3). The Mainnet operation (`SWF-009`) is specified here and executed only on owner authorization after `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` is amended.
+diff -ru review-v1.1/requirements.md review-v2/requirements.md
+--- review-v1.1/requirements.md	2026-11-07 14:18:32.453793666 -0700
++++ review-v2/requirements.md	2026-11-07 14:23:42.168229704 -0700
+@@ -1,6 +1,6 @@
+ # EARS requirements: Sherlock VM consensus (2026-11-07)
+ 
+-Status: DRAFT v1. Forms: U = Ubiquitous, E = Event-driven, S = State-driven, X = Unwanted behaviour, O = Optional. Each requirement has a stable ID, an acceptance check that is a recorded run or a read-only check (never a review), and the clauses it refines (`UIREQ`, `UISEC`, `ZR`, `MNR`, `RPP`, `SRPOC`) or adopts (council clauses `ASR` astra-1, `SND` astra-2, `SRC` fable-2 proposed text, astra-3 scope clauses, fable-3 workflow text). Full requirement + scenario text is in `specs/<capability>/spec.md`. Design sections are in `design.md`. None of these clauses claims the code satisfies it today.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Forms: U = Ubiquitous, E = Event-driven, S = State-driven, X = Unwanted behaviour, O = Optional. Each requirement has a stable ID, an acceptance check that is a recorded run or a read-only check (never a review), and the clauses it refines (`UIREQ`, `UISEC`, `ZR`, `MNR`, `RPP`, `SRPOC`) or adopts (council clauses `ASR` astra-1, `SND` astra-2, `SRC` fable-2 proposed text, astra-3 scope clauses, fable-3 workflow text). Full requirement + scenario text is in `specs/<capability>/spec.md`. Design sections are in `design.md`. None of these clauses claims the code satisfies it today.
+ 
+ ## SVM: machine, layout, host interface (`specs/sherlock-vm/spec.md`)
+ 
+@@ -24,7 +24,7 @@
+ | SRC-002 | U | `prog_d` SHALL be the digest defined in SVM-005. | As SVM-005. | SVM-005 |
+ | SRC-003 | U | The leaf SHALL constrain `rules_d` to the digest of its selector outputs, `steps` to the count of enabled owner-step events it proves (free terminal publication included, disabled padding excluded) and SHALL chain `post_i == pre_{i+1}` internally. | A leaf with `rules_d` or `steps` differing from its internal transitions, or a broken internal chain, is refused by the keyed relation (fresh malicious witness). | UISEC-001/006; SND-001/003; `sherlock_c6_child.rs:598-608`; §2.3 |
+ | SRC-004 | X | If `prev_h`, `steps` or `h = prev_h + steps` is not below 2^64, or `steps == 0`, or `steps > S`, the node relation SHALL be unsatisfiable. | Raw witnesses with `steps = 0`, `steps = p-1`, `prev_h = 2^64-1`, `steps = S+1` reach the node's constraint/verifier boundary from a valid baseline and are refused there; a synthesis error, decoder refusal or panic leaves that boundary untested (SAS-003). | SND-003; `ivc.rs:308-310`; `parent.rs:665-670` |
+-| SRC-005 | X | If `prev_h == 0` (genesis), the node SHALL require `prev_d == init_d` and SHALL introduce no unauthenticated deferred obligation: either (a) the carried accumulator is scaled by `not_genesis` so it is irrelevant at genesis, or (b) the fold is kept and the recorded binding argument of the target accumulator (`accumulator.rs:177-192,315-343` at the pinned version) shows a chosen carry cannot cancel an invalid leaf accumulator. | Per the chosen realization: (a) two genesis proofs differing only in the carry both pass the decider; (b) neutral-input assertion or justified-ignore test; in both, a malformed carry encoding is refused by point decoding, and an invalid leaf at genesis is refused through the final pairing. No practical attack was demonstrated; this is hardening. | UISEC-010; ZR04/ZR08; SND-003; `ivc.rs:318-364`; §3.2(2) |
++| SRC-005 | X | If `prev_h == 0` (genesis), the node SHALL require `prev_d == init_d` and SHALL introduce no unauthenticated deferred obligation, by realization (a) constraining the supplied carry to the designated neutral encoding, or (b) constraining a zero/ignore construction (carry scaled by `not_genesis`) with a recorded justification that an ignored carry cannot authorize an invalid leaf or predecessor; retaining an unscaled supplied carry requires a separately recorded security argument (the `24a1eb5a` hash observation is an input to it, not the argument). | Per the chosen realization, from a valid baseline at the node constraint boundary: (a) a non-neutral carry is refused; (b) two genesis proofs differing only in a well-formed ignored carry both pass the decider (identical folded bytes not required); in both, an invalid leaf accumulator at genesis is refused through the final pairing, and a malformed carry encoding is refused at its decoder boundary (decoder evidence only). The choice is recorded before node keygen (task 2.3). No practical attack was demonstrated; this is hardening. | UISEC-010; ZR04/ZR08; SND-003; `ivc.rs:318-364`; §3.2(2) |
+ | SRC-006 | U | The run decider SHALL verify the last node proof under the node key as constants, pin `self_vk_repr`, fold and pair the carried accumulator in circuit, open `fin_d` as a halted state with a range-checked u128 result derived from the proved state, and expose exactly `[prog_d, init_d, fin_d, n_steps, result_be]`. | Each public value mutated alone refused (existing-proof public-input binding, labelled as such); decider skipped -> not final-valid; non-halted `fin_d` refused; fresh malicious-witness cases for outcome/result. | UISEC-010; SND-004; `run_decider.rs` |
+ | SRC-007 | U | `acceptRun` SHALL read sealed `program_d` and `init_d` into the transcript, refuse a `stmt` already in `runs`, and write the result as canonical big-endian `Bytes<16>`; the indexer readback and the holdout layout decoder SHALL decode the ledger's trimmed representation back to the exact u128 over the whole domain (no nonzero-low-byte restriction). | On the target network: replayed `stmt`, other-program and other-init proofs refused; accepted call's post-state `stmt`, `steps`, `result` match the manifest-bound bundle; codec/readback tests at 0, 1, 256, 2^64 and u128::MAX on local 9.1.0.1 (A6/A10 pattern). | UISEC-005/011; ZR10; `sherlock-run.compact:19-47` |
+ | SRC-008 | E | When a leaf, node, decider or contract key is generated or installed, the toolchain SHALL write a manifest (relation SHA-256, VK SHA-256, `midnight:verifier-key[vN]:` header, proofs/circuits/zk-stdlib versions, emitted ZKIR header, compiler version, zkir binary version, ledger rev, Compact and runtime versions, SRS, template SHA-256); deploy or call SHALL refuse when fresh keygen differs. | Any one manifest field changed -> `deploy-run.mjs` and the A4-style preflight refuse; manifest committed with the key. | SND-005; ASR-002; `stagenet-verifier.json` |
+@@ -32,8 +32,8 @@
+ | SRC-010 | U | Before any network call, a verifier process that is not the prover SHALL re-verify the exact leaf, node and decider bytes, reconstruct the accumulator and check every link; the record SHALL state that it shares the `midnight-proofs` implementation. | E6 record names verifier binary, library versions, bundle hashes; a one-byte mutation of any proof is refused. | UISEC-012; `verify_chain.rs`; E6 |
+ | SRC-011 | O | Where the owner enables the throughput target, a committed program of at most 320 owner steps SHALL prove, fold, decide and verify in under 2 h wall and 48 GB peak on the 20-core host, or the shortfall SHALL be recorded with its C0 phase cause; a shortfall is not a pass. | `budgets.json` rows for leaf, node, decider; C0 profile on the `entry 7;` chain before any S, concurrency or GPU choice. | RPP-001..010; CONSENSUS C0 |
+ | SRC-012 | X | If a leaf, node or decider run exceeds its `heavy` memory or wall cap, the run SHALL stop and preserve its result; no counter reset, no k increase, no substituted profile. | Cap trips appear in `runs.jsonl` with exit 4 and a trace; the next run carries `--hypothesis`. | SRPOC-008; UISEC-006 |
+-| SRC-013 | E | When M2 measures the universal gated leaf at S=1, the toolchain SHALL select option U if k <= 17 and otherwise option F (uniform arch, authenticated in-circuit key-table membership); both branches SHALL carry the same statement and semantic obligations. | M2 record with k, rows, RSS, time; the decision and its key table committed; P3 written after the keys freeze needs no new key (E2). | E2; `stagenet-gp-recursion.md:150-155`; D4 |
+-| SRC-014 | S | While a leaf proves fewer than S enabled steps (final chunk or terminal publication), its remaining slots SHALL be disabled with identity lanes and zero contribution to `steps`; the node SHALL accept `steps` in [1, S]. | A terminal step at slot j < S-1 followed by disabled slots proves and folds; `steps == j+1`. | §2.3; ISSUE 5/6 |
++| SRC-013 | E | When milestone M4 (task 4.4) measures the universal gated leaf over the frozen inventory `R` at S=1, the toolchain SHALL select option U if k <= 17 and otherwise option F (uniform arch, authenticated in-circuit key-table membership; a valid proof under a non-member key is refused); both branches SHALL carry the same statement and semantic obligations. | M4 record with k, rows, RSS, time; the decision committed as a small JSON the leaf-key predicate reads; P3 written after the freeze needs no new key (E2); under F, a nonmember-key proof is refused by the node. | E2; `stagenet-gp-recursion.md:150-155`; D4 |
++| SRC-014 | S | While S>1 is adopted and a leaf proves fewer than S enabled steps (final chunk or terminal publication), its remaining slots SHALL be disabled with identity lanes and zero contribution to `steps`; the node SHALL accept `steps` in [1, S]. At S=1 this clause is vacuous and satisfied. | A terminal step at slot j < S-1 followed by disabled slots proves and folds; `steps == j+1`. | §2.3; ISSUE 5/6; conditional on S |
+ 
+ ## SAS: assurance (`specs/sherlock-assurance/spec.md`)
+ 
+@@ -69,6 +69,7 @@
+ | SWF-009 | S | While `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` forbids mainnet submission, no mainnet operation SHALL run; the mainnet operation SHALL require `authorization: owner+checklist`, a Preview rollback rehearsal receipt, and the T4 checklist. | Operation table shows the block; `t4.sh` refuses without the rehearsal receipt. | ISSUE 1 |
+ | SWF-010 | E | When a deployment or key fails its postcondition, rollback SHALL record the address as orphaned or retired, re-pin the fixture, use maintenance update (`IrInsert`/`IrRemove`, node #2375 noted) only on maintained contracts, redeploy otherwise, and `git revert` the fixture commit; history SHALL NOT be deleted; an inserted key or a client re-pin SHALL NOT be treated as revoking an old key until the on-chain key state is observed; a contract holding active state (funds, duties, consumed statements) SHALL NOT be discarded, its recovery SHALL migrate or record the residual exposure, and only empty instances may be abandoned. | Receipt marks `orphaned`/`retired` with observed on-chain key state and active-state inventory; `runs.jsonl` append-only; the actual recovery mode is tested on Preview. | fable-3 §7; astra-2 recovery conditions |
+ | SWF-011 | U | Superseded predicate rows SHALL carry `retired: "<reason or anchor>"`; `next` and the `check --tier`/`--set` sweeps SHALL skip retired rows, `next` SHALL report a `retired` count, explicit `check <ID>` SHALL still run them, `validate` SHALL refuse an active row that depends on a retired row, and composites SHALL be rewired to replacement rows. | Factory unit test: failing retired A8 + unimplemented A8p -> `next` names A8p, lists A8 retired; `check --tier T3` and `check --set A` ignore A8; `check A8` runs; history retained. | fable-3 E10 (extended); astra-1/astra-3 |
++| SWF-012 | U | Rows marked `optional: true` (B4p, B5p, B8p, B9p, the S>1 experiment) SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the tier runner SHALL select the mandatory milestone row set and its dependencies. | Factory unit test: unimplemented optional B4p leaves the Preview gate eligible; unimplemented mandatory A8p blocks it; `check --include-optional` reports B4p. | astra-3 optional-B note; D14; `qa/tiers/t3.sh:69`, `cli.py:50-67` |
+ 
+ ## SMN: Midnight ledger 9 target (`specs/sherlock-midnight-target/spec.md`)
+ 
+@@ -80,4 +81,4 @@
+ | SMN-004 | U | Chain identity in every receipt and pins row SHALL include network name, genesis hash, `specVersion` and ledger revision; local source/binary provenance and live runtime identity SHALL be recorded separately, and the unavailability of the deployed node source for spec 2001100 SHALL be stated as a limit. | Pre-reset Preview receipt rejected; stagenet receipt rejected for a Preview claim. | SND-006; ASR-007; astra-1 target-observations |
+ | SMN-005 | E | When fees are estimated or recorded, the tooling SHALL use the 9.1.0.x parameters (`min_block_price`, validation/guaranteed/fallible factors), pay with at least two DUST spends while #838 is open, and register DUST with lead time. | B8-shape measurement on Preview; old fee figures labelled historical. | ledger-9.md; #838 |
+ | SMN-006 | X | If a deploy or call would exceed the public-input limit, the 256-operation cap or the block gas limit, the preflight SHALL refuse before submission. | Preflight refusal test with a synthetic oversize statement. | 9.1.0.1 notes |
+-| SMN-007 | X | If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it immutable/disposable and rollback SHALL be redeploy-and-retire under SWF-010's active-state rule; a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet with the on-chain key state read back. | Deploy script refuses an undeclared authority mode; rehearsal receipt with observed key state committed. | ledger-9.md; SWF-010 |
++| SMN-007 | X | If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it immutable and state its recovery mode (disposable only while it holds no active state; otherwise redeploy-and-retire under SWF-010's active-state rule; immutable deployments remain permitted); a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet with the on-chain key state read back. | Deploy script refuses an undeclared authority mode; rehearsal receipt with observed key state committed. | ledger-9.md; SWF-010 |
+diff -ru review-v1.1/specs/sherlock-assurance/spec.md review-v2/specs/sherlock-assurance/spec.md
+--- review-v1.1/specs/sherlock-assurance/spec.md	2026-11-07 14:18:32.544793531 -0700
++++ review-v2/specs/sherlock-assurance/spec.md	2026-11-07 14:23:42.171079300 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-assurance (evidence, negative tests, coverage)
+ 
+-Status: DRAFT v1, specified-only. Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
+ 
+ ## ADDED Requirements
+ 
+@@ -12,12 +12,16 @@
+ - **THEN** the schema check rejects the record.
+ 
+ ### Requirement: SAS-002 Stale evidence
+-When a declared dependency changes (HEAD, pin, key, runtime, chain instance, configuration, artifact), dependent evidence SHALL be marked stale until revalidated.
++When a declared dependency of a result changes (source closure, spec or contract file, pin, key manifest, runtime, chain instance, configuration, receipt or artifact hash), the result SHALL be marked stale until revalidated; freshness is the declared dependency closure, not HEAD equality, so an evidence-only or state-only commit preserves eligibility.
+ 
+ #### Scenario: Key change at unchanged HEAD
+ - **WHEN** the installed decider VK changes without a source commit.
+ - **THEN** A6/A8-shape evidence is stale.
+ 
++#### Scenario: State-only commit
++- **WHEN** `state-commit` advances HEAD with only `status.json` and `runs.jsonl` changed.
++- **THEN** no result becomes stale.
++
+ ### Requirement: SAS-003 Honest negative evidence
+ If a negative test fails before the claimed verifier stage, the reporter SHALL label that stage untested and refuse constraint-rejection credit.
+ 
+diff -ru review-v1.1/specs/sherlock-delivery/spec.md review-v2/specs/sherlock-delivery/spec.md
+--- review-v1.1/specs/sherlock-delivery/spec.md	2026-11-07 14:14:57.183133303 -0700
++++ review-v2/specs/sherlock-delivery/spec.md	2026-11-07 14:23:42.171505716 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-delivery (DoctorWatson factory workflow)
+ 
+-Status: DRAFT v1, specified-only. Adopts fable-3's workflow text and the E1-E10 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
+ 
+ ## ADDED Requirements
+ 
+@@ -59,10 +59,14 @@
+ - **WHEN** `t4.sh` runs without the rehearsal receipt. **THEN** it refuses.
+ 
+ ### Requirement: SWF-010 Rollback
+-When a deployment or key fails its postcondition, rollback SHALL record orphaned/retired, re-pin, use maintenance update only on maintained contracts, redeploy otherwise, and `git revert` the fixture commit without deleting history.
++When a deployment or key fails its postcondition, rollback SHALL record orphaned/retired, re-pin, use maintenance update only on maintained contracts, redeploy otherwise, and `git revert` the fixture commit without deleting history; when the contract holds active state, recovery SHALL migrate or record funds, duties and consumed statements, only empty instances may be abandoned, and a client re-pin SHALL NOT be recorded as on-chain revocation.
+ 
+ #### Scenario: Unsafe key on a maintained contract
+-- **WHEN** a key is found unsafe. **THEN** a new key is inserted, the old address is retired (insertion does not revoke), and the receipt records both.
++- **WHEN** a key is found unsafe and the declared recovery mode is maintenance replacement.
++- **THEN** the replacement is performed, the on-chain key state is read back, the receipt records whether the old key is still accepted (insertion does not revoke) and the residual exposure, and the old address is marked retired only after that observation.
++
++#### Scenario: Unsafe key with funds
++- **WHEN** an unsafe key is found on a contract holding funds. **THEN** the receipt records the observed on-chain key state, the funds' disposition and the residual exposure; the instance is not abandoned.
+ 
+ ### Requirement: SWF-011 Retired rows
+ Superseded rows SHALL carry `retired:`; `next` and `check --tier`/`--set` sweeps SHALL skip them, `next` SHALL report a `retired` count, explicit `check <ID>` SHALL still run them, `validate` SHALL refuse an active row depending on a retired row, and composites SHALL be rewired.
+@@ -71,8 +75,13 @@
+ - **WHEN** `next`, `check --tier T3`, `check --set A` and `check A8` run.
+ - **THEN** FIRST FAILING is `A8p`, `RETIRED: A8 (...)` is listed, the sweeps ignore A8, `check A8` runs and its history is retained.
+ 
+-### Requirement: SWF-010 (active state) Recovery preserves live state
+-When rollback touches a contract holding active state, recovery SHALL migrate or record funds, duties and consumed statements; only empty instances may be abandoned; a client re-pin SHALL NOT be recorded as on-chain revocation.
++### Requirement: SWF-012 Optional rows do not gate
++Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects.
++
++#### Scenario: Unimplemented optional B row
++- **WHEN** B4p is `unimplemented.sh` and every mandatory Preview row passes.
++- **THEN** `next` names no failing mandatory row, `qa/tiers/t3.sh` passes, and `check --include-optional` reports B4p failing.
++
++#### Scenario: Unimplemented mandatory row
++- **WHEN** A8p is `unimplemented.sh`. **THEN** `next` names A8p and `t3.sh` fails.
+ 
+-#### Scenario: Unsafe key with funds
+-- **WHEN** an unsafe key is found on a contract holding funds. **THEN** the receipt records the on-chain key state after the maintenance update, the funds' disposition, and the residual exposure if the old key remains accepted.
+diff -ru review-v1.1/specs/sherlock-midnight-target/spec.md review-v2/specs/sherlock-midnight-target/spec.md
+--- review-v1.1/specs/sherlock-midnight-target/spec.md	2026-11-07 14:06:51.843696334 -0700
++++ review-v2/specs/sherlock-midnight-target/spec.md	2026-11-07 14:23:42.172029139 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-midnight-target (ledger 9.1.0.x pins, networks, fees, keys)
+ 
+-Status: DRAFT v1, specified-only. Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
+ 
+ ## ADDED Requirements
+ 
+@@ -41,7 +41,10 @@
+ - **WHEN** a synthetic statement exceeds the limit read from `LedgerParameters`. **THEN** refusal before any transaction.
+ 
+ ### Requirement: SMN-007 Maintenance authority
+-If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it disposable; a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet.
++If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it immutable and state its recovery mode (disposable only while it holds no active state; otherwise redeploy-and-retire under SWF-010's active-state rule); a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet with the on-chain key state read back. Immutable deployments remain permitted.
+ 
+ #### Scenario: Rehearsal
+-- **WHEN** deploy -> bad key -> maintenance replace -> readback runs on Preview. **THEN** the rehearsal receipt is committed before `t4.sh` can pass.
++- **WHEN** deploy -> bad key -> maintenance replace -> readback runs on Preview. **THEN** the rehearsal receipt, including whether the old key is still accepted on chain, is committed before `t4.sh` can pass.
++
++#### Scenario: Immutable contract with active state
++- **WHEN** an immutable `SherlockRun` holds consumed statements or funds. **THEN** it is not marked disposable; recovery records migration or residual exposure.
+diff -ru review-v1.1/specs/sherlock-recursion/spec.md review-v2/specs/sherlock-recursion/spec.md
+--- review-v1.1/specs/sherlock-recursion/spec.md	2026-11-07 14:18:32.479793627 -0700
++++ review-v2/specs/sherlock-recursion/spec.md	2026-11-07 14:23:42.172249875 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-recursion (leaf, node, decider, contract)
+ 
+-Status: DRAFT v1, specified-only. Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Design: `../../design.md` §3.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Design: `../../design.md` §3.
+ 
+ ## ADDED Requirements
+ 
+@@ -32,15 +32,19 @@
+ - **THEN** the witness reaches the node's constraint/verifier boundary and is refused there; a synthesis error, decoder refusal or panic is recorded as "boundary untested" (SAS-003), not as a pass.
+ 
+ ### Requirement: SRC-005 Authenticated genesis
+-If `prev_h == 0`, the node SHALL require `prev_d == init_d` and SHALL introduce no unauthenticated deferred obligation, by realization (a) scaling the carried accumulator by `not_genesis` (irrelevance) or (b) keeping the fold with the recorded binding argument of the pinned accumulator.
++If `prev_h == 0`, the node SHALL require `prev_d == init_d` and SHALL introduce no unauthenticated deferred obligation, by realization (a) constraining the supplied carry to the designated neutral encoding, or (b) constraining a zero/ignore construction (carry scaled by `not_genesis`) with a recorded justification that an ignored carry cannot authorize an invalid leaf or predecessor. Retaining an unscaled supplied carry requires a separately recorded security argument.
+ 
+-#### Scenario: Realization (a), irrelevance
+-- **WHEN** two genesis node proofs differ only in the supplied carry.
+-- **THEN** both pass the run decider; the carry has no effect on acceptance.
++#### Scenario: Realization (a), neutral encoding
++- **WHEN** a genesis node witness supplies a non-neutral carry, from a valid baseline.
++- **THEN** the node constraint boundary refuses it; the neutral carry passes.
++
++#### Scenario: Realization (b), ignored carry
++- **WHEN** two genesis node proofs differ only in a well-formed ignored carry.
++- **THEN** both pass the run decider; identical folded bytes are not required.
+ 
+ #### Scenario: Invalid leaf at genesis
+ - **WHEN** a genesis node proof carries an invalid leaf accumulator and any chosen carry.
+-- **THEN** the run decider's final pairing refuses it under either realization; a malformed carry encoding is refused by point decoding. This review did not establish a practical attack; the clause is hardening.
++- **THEN** the run decider's final pairing refuses it under either realization; a malformed carry encoding is refused at its decoder boundary and counts only as decoder evidence. This review did not establish a practical attack; the clause is hardening.
+ 
+ ### Requirement: SRC-006 Decider pins and discharges
+ The run decider SHALL verify the last node proof under constant node keys, pin `self_vk_repr`, fold and pair the accumulator in circuit, open `fin_d` as a halted state with a range-checked u128 result derived from the proved state, and expose exactly `[prog_d, init_d, fin_d, n_steps, result_be]`.
+@@ -96,14 +100,18 @@
+ - **THEN** `runs.jsonl` records exit 4 with a trace and the next attempt carries `--hypothesis`.
+ 
+ ### Requirement: SRC-013 Leaf shape decision
+-When M2 measures the universal gated leaf at S=1, option U SHALL be selected if k <= 17 and option F otherwise; both branches SHALL carry the same statement and obligations.
++When milestone M4 measures the universal gated leaf over the frozen inventory at S=1, option U SHALL be selected if k <= 17 and option F otherwise; both branches SHALL carry the same statement and obligations.
+ 
+ #### Scenario: k above threshold
+ - **WHEN** the union leaf keys at k=19.
+ - **THEN** option F is recorded, the family key table is committed before P3 is written, and the node checks membership in circuit.
+ 
+-### Requirement: SRC-014 Short final chunk
+-While a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S].
++#### Scenario: Non-member key under F
++- **WHEN** a valid leaf proof is produced under a key outside the committed family table.
++- **THEN** the node refuses it.
++
++### Requirement: SRC-014 Short final chunk (conditional on S>1)
++While S>1 is adopted and a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S]. At S=1 the clause is vacuous.
+ 
+ #### Scenario: Terminal publication at slot 3 of 8
+ - **WHEN** `KAdminPublishValue` fires at slot 3.
+diff -ru review-v1.1/specs/sherlock-vm/spec.md review-v2/specs/sherlock-vm/spec.md
+--- review-v1.1/specs/sherlock-vm/spec.md	2026-11-07 14:14:57.112133423 -0700
++++ review-v2/specs/sherlock-vm/spec.md	2026-11-07 14:23:42.172911090 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-vm (machine, layout, dispatch, host interface)
+ 
+-Status: DRAFT v1, specified-only. Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Design: `../../design.md` §2.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Design: `../../design.md` §2.
+ 
+ ## ADDED Requirements
+ 
+diff -ru review-v1.1/tasks.md review-v2/tasks.md
+--- review-v1.1/tasks.md	2026-11-07 14:18:32.774793189 -0700
++++ review-v2/tasks.md	2026-11-07 14:23:42.169154983 -0700
+@@ -1,6 +1,6 @@
+ # Tasks
+ 
+-Status: DRAFT v1. Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes at the current head with a committed receipt (SWF-005). None is ticked now.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes with its declared dependency closure unchanged (SAS-002) and, for network postconditions, a committed receipt (SWF-005). Rows marked `optional: true` (B4p, B5p, B8p, B9p, the S>1 experiment) do not gate milestones (E14). None is ticked now.
+ 
+ ## M0 Re-arm the factory (T0, bookkeeping; SWF-006)
+ 
+@@ -9,21 +9,21 @@
+ 
+ ## M1 Land this change (T0)
+ 
+-- [ ] 1.0 E10 first: `retired:` field; `next` and `check --tier/--set` sweeps skip retired rows; explicit `check <ID>` still runs; `validate` refuses an active row depending on a retired row; factory unit test over `next`, `check --tier T3`, `check --set A`, `check A8`. [SWF-011] -> F16
+-- [ ] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p, F14, F15, F16; add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. [SWF-002, SWF-011] -> `validate`
++- [ ] 1.0 E10 and E14 first: `retired:` and `optional:` row fields; `next` and `check --tier/--set` sweeps skip retired rows and skip optional rows unless `--include-optional`; explicit `check <ID>` still runs both; `validate` refuses a mandatory row depending on a retired or optional row; factory unit test over `next`, `check --tier T3`, `check --set A`, `check A8`, and "unimplemented optional B4p leaves the Preview gate eligible while an unimplemented mandatory A/U row blocks it". [SWF-011, SWF-012] -> F16
++- [ ] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p (`optional: true`), F14, F15, F16; add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. [SWF-002, SWF-011] -> `validate`
+ - [ ] 1.2 E1 `scripts/qa/check-traceability.py` + F14 in `t0.sh`. [SWF-002] -> F14
+ - [ ] 1.3 E2 `qa/sherlock/target-pins.json` + `check-target-pins.py` + F15 in `t0.sh`; rows `undeployed`, `preview`, `mainnet`, `stagenet(retired)`. [SWF-007, SMN-001, SMN-004] -> F15
+ - [ ] 1.4 E12 (evaluator): rejection suite and U023 holdout parametrised by network; `U023.json` contract change; reseal. Owner of this task is the evaluator role. [SWF-003, SRC-007]
+ - [ ] 1.5 E5/E6 T4 tier, `network:` field, `validate` rule; `qa/tiers/t4.sh` skeleton that refuses without the rehearsal receipt. [SWF-008, SWF-009]
+-- [ ] 1.6 E7 freshness: dependency-closure staleness (source closure, pins, key manifests, chain identity); HEAD flag as interim signal; test that a state-only commit preserves eligibility. [SAS-002]
++- [ ] 1.6 E7 freshness: each row declares its dependency closure (source paths/globs, spec and contract files, pins row, key manifests, chain identity, receipt hashes); a result is stale iff any declared dependency changed since its run; no blanket directory exclusion; a state-only or receipt-only commit preserves eligibility; HEAD-only flag allowed only as an interim signal, never the gate. Tests: state-only commit -> eligible; source, spec, key, pins, chain-instance change -> stale. [SAS-002]
+ - [ ] 1.7 Mark MC03 superseded in its README with the obligations crosswalk; add `wiki/midnight-ledger-9-hardfork.md` reference to `wiki/midnight-repositories.md`. [proposal]
+ 
+ ## M2 Re-pin and re-key (T1/T2; A-set)
+ 
+ - [ ] 2.1 Bump `Cargo.toml` to the ledger 9.1.0.1 line (`a2b30128`), `midnight-circuits 7.3.0`, `midnight-zk-stdlib 2.4.0`, `midnight-zkir` 3.2.0 line; adapt `mori-ledger`/`mori-recursion` to storage 3.0.0 (`EncodingShape`), `AlignedValueChecked`, fallible cost API, unified signing envelope; SDK root to ledger-v9 1.0.0, onchain-runtime-v4 4.0.0, Midnight.js 5.0.0 (remove `setNetworkId` in `rollup-prepare.mjs:59`, `settle-rehearsal.mjs:35`, test harnesses), Wallet SDK 2.0.0, Compact 0.36.0, proof server 9.0.x. [SMN-001] -> A1, F15
+ - [ ] 2.2 Fix SAS-003 defects in `qa_mutation.rs` / `soundness_mutation.rs` (synthesis error != Rejected; zero-panic requirement; typed outcomes in receipt JSON). [SAS-003] -> T1
+-- [ ] 2.3 Node fixes before keygen: range checks on `prev_h`, `steps`, `h` (`ivc.rs:308-310`, pattern `parent.rs:665-670`); `steps <= S`; `prev_acc` scaled by `not_genesis` or the recorded accumulate-binding argument (`ivc.rs:318-364`); negative tests through the pairing. [SRC-004, SRC-005] -> A13
+-- [ ] 2.4 Keygen regression A11: relation and VK hashes for leaf stand-in, node, decider, parent, contract at the new pins vs manifests; regenerate the changed closure leaf -> node -> decider -> template; write manifests (SRC-008 fields incl. emitted ZKIR header, compiler version, zkir binary version). [SRC-008, SRC-009, SMN-002] -> A11
++- [ ] 2.3 Node fixes before keygen: range checks on `prev_h`, `steps`, `h` (`ivc.rs:308-310`, pattern `parent.rs:665-670`); `steps <= S`; genesis per SRC-005: select realization (a) neutral-encoding constraint or (b) zero/ignore construction with a recorded justification (an unscaled retained carry needs its own security argument; the `24a1eb5a` hash observation is an input, not the argument), confirm at `midnight-circuits 7.3.0`, record the choice before node keygen; negative tests at the constraint boundary with a valid baseline and through the final pairing. [SRC-004, SRC-005] -> A13
++- [ ] 2.4 Keygen regression A11: relation and VK hashes for the C6 digest leaf relation (M2 shape, `sherlock_c6_child.rs`; never `standin.rs`), node, decider, parent, contract at the new pins vs manifests; regenerate the changed closure leaf -> node -> decider -> template; write manifests (SRC-008 fields incl. emitted ZKIR header, compiler version, zkir binary version). [SRC-008, SRC-009, SMN-002] -> A11
+ - [ ] 2.5 Recapture acceptRun template with Compact 0.36.0 / runtime 0.21.0; diff vs `template.rs`; read public-input limit and 256-op cap from `LedgerParameters`; A6p local proof-verifying acceptance with mainnet parameters + five refusals. [SMN-003, SMN-006] -> A6p
+ - [ ] 2.6 Re-measure M3/M4 (node, decider) at new pins; `budgets.json` rows. [SRC-011] -> A3p, A4p
+ 
+@@ -40,16 +40,17 @@
+ - [ ] 4.1 M1' measurement: lanes per side at the qualification config; rows and k of three typical fragments. [SRC-013] -> A12
+ - [ ] 4.2 One-hot dispatch block (selector vector, `sum(sel)==enable`, gated fragments and post-lane writes, unsupported -> unsatisfiable); `rules_d`, `steps`, internal chain constrained (S=1 first). [SVM-003, SVM-004, SRC-003] -> A12
+ - [ ] 4.3 `prog_d` = digest(image, layout schema, bounds, profile); manifests updated. [SVM-005, SRC-002]
+-- [ ] 4.4 Key the universal leaf for P1-P3 rule set at S=1; record k, rows, RSS, time; decide U/F (k <= 17); if F, uniform arch wrapper + in-circuit key-table membership in the node. [SRC-013] -> A12
++- [ ] 4.4 Freeze the admitted inventory `R`, layout, caps and manifests (SVM-008); key the universal leaf over `R` at S=1; record k, rows, RSS, time; decide U/F (k <= 17) and commit the decision JSON; if F, uniform arch wrapper + in-circuit key-table membership in the node + nonmember-key refusal test. [SRC-013, SVM-008] -> A12
+ - [ ] 4.5 Seven-lane producer bridge (`sherlock_c6_child.rs`) -> node harness; refuse other shapes. [SRC-001] -> A13
+ - [ ] 4.6 Hostile raw-witness suite for the leaf: initialization (canonical genesis admitted, non-canonical refused), preservation under `StepInv(pre)`: A4/B002 cases + publication padding + forged selector + disabled-slot write + `/2` tags; shared-carrier premise checks; fresh proofs, SAS-004 record with reached boundary per case. [SVM-002, SVM-003, SVM-004, SVM-009, SAS-004, SAS-010] -> A13
+-- [ ] 4.7 `sherlock_digest_parity` on P1-P3 streams at new pins (T0). [SVM-007] -> F-set existing test
++- [ ] 4.7 `sherlock_digest_parity` on P1 and P2 streams at new pins (T0); P3 parity runs in 6.4 after its post-freeze authorship and before OP-PV-CALL-P3. [SVM-007] -> F-set existing test
++- [ ] 4.9 Initialization (O1, SAS-010): canonical authenticated initial carriers bound to the committed program/profile and `init_d`; non-canonical genesis, inconsistent `init_d`/`prog_d` and forged initial carriers refused at the leaf/node boundary; the inventory's relied-on premises validated per rule. [SVM-002, SAS-010] -> A13
+ - [ ] 4.8 (moved after 5.3) S=8 chained leaf as an experiment, only after the S=1 complete-path C0 profile: prover memory and k at the qualification config; short final chunk; own budget key and predicate so the measurement is a `runs.jsonl` line; retain S=1 if no measured benefit. [SRC-014, SRC-011] -> budgets row
+ 
+ ## M5 Local chain (T2; A-set) [E1-E6 locally]
+ 
+ - [ ] 5.1 `entry 7;` (6 steps): leaves -> node -> run decider -> `verify_chain` (SRC-010 record) -> `validate_call` on local 9.1.0.1. [SRC-006, SRC-010] -> A2p, A3p, A4p, A6p
+-- [ ] 5.2 fact(3) (293 steps) and list123 (303 steps) through the same chain; negatives: altered result, altered program digest, replayed stmt, skipped decider, malformed genesis carry. [SRC-005..007] -> A13
++- [ ] 5.2 fact(3) (293 steps) and list123 (303 steps) through the same chain; negatives: altered result, altered program digest, forged outcome/result labels with unchanged carriers, replayed stmt, skipped decider; genesis per SRC-005's recorded realization (under (a) a non-neutral carry refused at the node boundary; under (b) a well-formed ignored carry is irrelevant, not refused; invalid leaf at genesis refused through the pairing; malformed carry encoding refused at the decoder, decoder evidence only); under F a valid proof under a nonmember key refused. [SRC-005..007, SRC-013] -> A13
+ - [ ] 5.3 C0 phase profile on leaf, node, decider of the `entry 7;` chain (extend `scripts/qa/profile-recursion.py` workloads); record shares in `budgets.json`. [SRC-011, RPP] -> budgets
+ - [ ] 5.4 Quint model of chain invariants (linkage, bounded monotone height, unique genesis, replay set) and of the one-hot selector. [assurance §3] -> model row
+ 
+@@ -68,7 +69,7 @@
+ - [ ] 6.1 E13: network-parametrised session module (Midnight.js 5 `providers.config`, no `setNetworkId`), `--network` on `deploy-run.mjs`/`call-run.mjs`/`readback-run.mjs`, reject-suite driver, per-network wallet dir; fixture `crates/mori-recursion/tests/fixtures/preview-verifier.json`; `assemble-u023-record.py` re-pointed. The M6 operation commands above do not exist until this task lands. [SMN-004, SWF-003]
+ - [ ] 6.2 OP-PV-WALLET, OP-PV-DEPLOY; A4p. [SMN-005, SMN-007]
+ - [ ] 6.3 OP-PV-CALL-P1, P2; A8p, A10p manifest-bound; `rejections-preview` holdout (E12, evaluator-owned) -> A9p. [SRC-007, SAS-007]
+-- [ ] 6.4 P3 written after key freeze (mix of recursion, match, arithmetic); OP-PV-CALL-P3; E2 check: no new key. [SRC-013]
++- [ ] 6.4 P3 written after key freeze (mix of recursion, match, arithmetic) from the admitted domain; P3 digest parity, local proof and `verify_chain`/`validate_call` first; then OP-PV-CALL-P3; E2 check: no new key. [SRC-013, SVM-007, SVM-008]
+ - [ ] 6.5 U023 scenario 2 records (`u023-preview-e2e.json`, `-list123`, `-p3`) against the network-parametrised U023 holdout (E12, evaluator-owned); `doctorwatson check U023 U024 U028 U029 U030 U033 C4`. [UIREQ-023] -> C4
+ - [ ] 6.6 B rows: B3 local, B4p, B8p, B9p on Preview (non-gating). [D14]
+ - [ ] 6.7 OP-PV-ROLLBACK-REHEARSAL. [SWF-010, SMN-007]
+diff -ru review-v1.1/traceability.md review-v2/traceability.md
+--- review-v1.1/traceability.md	2026-11-07 14:11:12.880474696 -0700
++++ review-v2/traceability.md	2026-11-07 14:23:42.169363175 -0700
+@@ -1,6 +1,6 @@
+ # Traceability: requirement -> design -> task -> evidence -> gate
+ 
+-Status: DRAFT v1, hand-written. After task 1.2 this file is regenerated by `scripts/qa/check-traceability.py --render` from `qa/sherlock/predicates.yaml` and `qa/sherlock/status.json` (SWF-002). Evidence class names follow `assurance.md` §2. "Refines" lists the pre-existing clauses the row refines; "Adopts" lists the council clause it comes from.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). After task 1.2 this file is regenerated by `scripts/qa/check-traceability.py --render` from `qa/sherlock/predicates.yaml` and `qa/sherlock/status.json` (SWF-002). Evidence class names follow `assurance.md` §2. "Refines" lists the pre-existing clauses the row refines; "Adopts" lists the council clause it comes from.
+ 
+ | Requirement | Design | Task | Predicate | Evidence class | Gate | Refines / adopts |
+ |---|---|---|---|---|---|---|
+@@ -11,7 +11,8 @@
+ | SVM-005 | §2.4, D5 | 4.3 | A11, A12 | native cryptography (manifest) | M4 | UISEC-009; SRC-002/008 |
+ | SVM-006 | §2.5, D7 | 1.6 (labels), 2.2 | F14 (schema), T1 | source inspection | M1 | UISEC-012 |
+ | SVM-007 | §2.5 | 4.7 | existing `sherlock_digest_parity` test (T0) | differential execution | M4 | UIREQ-035 |
+-| SVM-008 | §2.6, D9 | 3.4 | U023d | constraint check (receipts) | M3 | UIREQ-023 |
++| SVM-008 | §2.6, D9 | 3.4, 4.4 | U023d, A12 | IR preprocessing (fragment receipts); inventory freeze record | M3, M4 | UIREQ-023; E2 |
++| SVM-002 (init) | §2.1 | 4.9 | A13 | constraint check (keyed) | M4 | A4; SAS-010 |
+ | SVM-009 | D8 | 4.6 | A13 | constraint check | M4 | `interfaces.md` SI-01/02/20 |
+ | SRC-001 | §3.1, D5 | 4.5 | A13 | native cryptography | M4 | UISEC-010; SND-001 |
+ | SRC-002 | §2.4 | 4.3 | A12 | native cryptography | M4 | SVM-005 |
+@@ -36,11 +37,11 @@
+ | SAS-007 | assurance §6 | 1.1 (E8), 6.3 | A8p, A10p | target observation | M6 | ASR-007 |
+ | SAS-008 | §3.5 | 4.8, 5.3 | budgets, A13 re-run | native cryptography | M5 | ASR-008; UIREQ-024 |
+ | SAS-009 | assurance §1 | 5.4 | model row | formal / model | M5 | ASR-009 |
+-| SAS-010 | §2.2 | 4.6 | A13 | constraint check | M4 | ASR-010 |
++| SAS-010 | §2.2 | 4.6, 4.9 | A13 | constraint check (keyed; initialization + preservation) | M4 | ASR-010 |
+ | SAS-011 | §5.2 | 2.4, 2.5 | A11, A6p | native + local ledger | M2 | ASR-011 |
+ | SAS-012 | assurance §2 | 1.2 (`--render`) | F14 | factory | M1 | ASR-012 |
+-| SAS-013 | §2.2, D10 | 3.2, 3.3 | U023b, U023c | constraint check (partition receipt) | M3 | astra-1/2/3 ISSUE 4 |
+-| SAS-014 | D10 | 3.1 | U023a | constraint check (diagnostic) | M3 | astra-3 scope clause |
++| SAS-013 | §2.2, D10 | 3.2, 3.3 | U023b, U023c | IR preprocessing / witness execution (nonproving partition receipt) | M3 | astra-1/2/3 ISSUE 4 |
++| SAS-014 | D10 | 3.1 | U023a | IR preprocessing (diagnostic) | M3 | astra-3 scope clause |
+ | SWF-001 | workflow §1 | 1.1 | `validate` | factory | M1 | AGENTS.md |
+ | SWF-002 | workflow §2 | 1.2 | F14 | factory | M1 | fable-3 E1 |
+ | SWF-003 | workflow §3 | tasks M6 ops | op receipts | target observation | M6 | fable-3 §3 |
+@@ -51,7 +52,8 @@
+ | SWF-008 | workflow §4 | 1.5 | `validate` | factory | M1 | fable-3 E5/E6 |
+ | SWF-009 | workflow §6 | 7.1 | `t4.sh` refusal | factory | M7 | ISSUE 1 |
+ | SWF-010 | workflow §7 | 6.7 | rollback rehearsal receipt | target observation | M6 | fable-3 §7 |
+-| SWF-011 | workflow §2 | 1.1, 1.4 | F16 | factory | M1 | fable-3 E10 |
++| SWF-011 | workflow §2 | 1.0, 1.1 | F16 | factory | M1 | fable-3 E10 |
++| SWF-012 | workflow §4, E14 | 1.0, 1.1 | F16 | factory | M1 | astra-3 optional-B note |
+ | SMN-001 | §5 | 2.1 | A1, F15 | factory / build | M2 | support matrix |
+ | SMN-002 | §5.2 | 2.4 | A11 | native cryptography | M2 | ISSUE 2 |
+ | SMN-003 | §3.3, §5.2 | 2.5 | A6p | local ledger | M2 | 9.1.0.x notes |
+diff -ru review-v1.1/workflow.md review-v2/workflow.md
+--- review-v1.1/workflow.md	2026-11-07 14:18:32.658793361 -0700
++++ review-v2/workflow.md	2026-11-07 14:23:42.170305925 -0700
+@@ -1,6 +1,6 @@
+ # DoctorWatson workflow: implementation and deployment
+ 
+-Status: DRAFT v1.1. Adopted from fable-3's `workflow-proposed.md` with the council's ISSUE resolutions. Every command exists at `8fd34ed79` unless listed in §8 "Exact additions" (E1-E13; the M6 operation commands depend on E12/E13) (verified from `scripts/doctorwatson --help`, `models/doctorwatson/factory/CONTRACT.md`, `qa/tiers/*.sh`, `.githooks/pre-commit`). Requirements SWF-001..011.
++Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopted from fable-3's `workflow-proposed.md` with the council's ISSUE resolutions. Every command exists at `8fd34ed79` unless listed in §8 "Exact additions" (E1-E13; the M6 operation commands depend on E12/E13) (verified from `scripts/doctorwatson --help`, `models/doctorwatson/factory/CONTRACT.md`, `qa/tiers/*.sh`, `.githooks/pre-commit`). Requirements SWF-001..012.
+ 
+ ## 1. Engine and truth
+ 
+@@ -28,7 +28,7 @@
+ | Field | Meaning |
+ |---|---|
+ | `op` | id, e.g. `OP-PV-DEPLOY` |
+-| `preconditions` | predicate ids passing in `status.json` at the current head |
++| `preconditions` | predicate ids passing in `status.json` with their dependency closure unchanged (not stale) |
+ | `command` | `scripts/doctorwatson heavy --id <op> --budget <key> [--hypothesis ...] -- <cmd>` |
+ | `postcondition` | the read-only predicate that becomes checkable afterwards |
+ | `authorization` | `none` (local), `owner` (public network), `owner+checklist` (mainnet, T4) |
+@@ -51,7 +51,7 @@
+ | T3 | `qa/tiers/t3.sh [--review]` | checklist, optional cold review, `check --tier T3` (read-only network predicates); new: live target identity step (E3) | per public-network milestone |
+ | T4 | new `qa/tiers/t4.sh` | mainnet checklist, owner authorization, rollback rehearsal receipt, `check --tier T4` | mainnet only |
+ 
+-Gate rule: a milestone is complete when `scripts/sherlock-next` names no failing non-retired predicate among the milestone's rows at the current head and `scripts/doctorwatson stop-rule` exits 0. A `BLOCKED-BY` row is failing.
++Gate rule: a milestone is complete when `scripts/sherlock-next` names no failing and no stale mandatory (non-retired, non-optional) predicate among the milestone's rows, every such row's declared dependency closure is unchanged since its passing run (SAS-002; the run's HEAD is provenance, not the rule), and `scripts/doctorwatson stop-rule` exits 0. A `BLOCKED-BY` row is failing. Optional rows (E14) are reported, not gating; an unfiltered whole-catalog run (`check --include-optional`) stays available as a broader report.
+ 
+ ## 5. Daily loop
+ 
+@@ -99,12 +99,13 @@
+ | E4 | Optional new set letter | `models/doctorwatson/factory/predicates.py:11` | one line; not required (new rows use A/U/B/F) |
+ | E5 | Tier T4 and runner | `predicates.py:12` (`TIERS`), `cli.py` `--tier` choices, `qa/tiers/t4.sh` | two lines + one script modelled on `t3.sh` |
+ | E6 | Optional `network:` field validated against the pins file; `validate` rule: T4 row depends on a T3 row with the same key lineage | `predicates.py` schema | small |
+-| E7 | Stale flag: a passing entry whose run `head` != HEAD, or whose pins/key-manifest hash differ from the current files, is reported `stale` by `next` | `status.py:view`, `cli.py:cmd_next` | small |
++| E7 | Freshness by declared dependency closure: each row declares `deps:` (source paths/globs, spec/contract files, pins row, key manifests, chain identity, receipt hashes); `next` reports a passing entry `stale` iff any declared dependency changed since its run (git diff over the declared paths plus hash compare for pins/manifests/receipts); no blanket directory exclusion; a state-only or receipt-only commit preserves eligibility; the run `head` is kept as provenance; a HEAD-only comparison may be shipped first as an interim conservative signal but is not the gate | `predicates.py` schema, `status.py:view`, `cli.py:cmd_next` | small-medium |
+ | E8 | Receipt-first readers; candidate by manifest, not mtime; any-call acceptance removed | `scripts/qa/check-a8.sh`, `check-a10.sh`, new `check-*p.sh` | script edits |
+ | E9 | Amend `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` or keep mainnet blocked | docs | owner decision |
+ | E10 | `retired: "<reason or anchor>"` row field; `next` skips retired rows for FIRST FAILING and prints `RETIRED: ...`; `check --tier`/`--set` sweeps skip them (`cli.py _select`); explicit `check <ID>` still runs; `validate` refuses an active row depending on a retired row; composites rewired; factory unit test covering `next`, `check --tier T3`, `check --set A`, `check A8` | `predicates.py` schema, `status.py:34-47`, `cli.py:50`, `models/doctorwatson/factory/tests/` | about 40 lines |
+ | E11 | Heavy concurrency (two proofs when the sum fits the cap) requires a second lock class with aggregate resource enforcement; out of scope unless the owner asks | `heavy.py` | named, not planned |
+ | E12 | Evaluator-owned: parametrise the rejection suite and the U023 holdout by network (`qa/holdout/run.sh:40-41` accepts only `rejections-local|rejections-stagenet`; `qa/holdout/lib/stagenet_check.py:19` hardcodes the stagenet indexer; `produce-a9.sh` is stagenet-only; `qa/holdout/contracts/U023.json` pins `network:'stagenet'`); contract change on `U023.json`; reseal `MANIFEST.sha256` under `DW_ROLE=evaluator` | `qa/holdout/` (evaluator) | contract change + reseal; tasks 6.3/6.5 name the evaluator |
++| E14 | `optional: true` row field: `next` FIRST FAILING and `check --tier`/`--set` sweeps skip optional rows unless `--include-optional`; explicit `check <ID>` runs them; `validate` refuses a mandatory row depending on an optional row; regression test: an unimplemented optional B4p leaves the Preview gate eligible, an unimplemented mandatory A/U row blocks it; applies to B4p/B5p/B8p/B9p and the S>1 experiment row (astra-3 optional-B note; `qa/tiers/t3.sh:69`, `cli.py:50-67`, `status.py:34-47`) | `predicates.py` schema, `cli.py _select`, `status.py:view`, `models/doctorwatson/factory/tests/` | about 30 lines |
+ | E13 | Network-parametrised SDK scripts: a session module built on Midnight.js 5 `providers.config{networkId,ttlSeconds}` (no `setNetworkId`), `--network` on `deploy-run.mjs`, `call-run.mjs`, `readback-run.mjs`, a reject-suite driver, per-network wallet dir and endpoints (`stagenet-session.mjs:24-26,31,41`, `deploy-run.mjs:16,42`, `call-run.mjs:29,65`, `readback-run.mjs:30` are stagenet-only today) | `tools/sherlock-sdk/` | created in task 6.1; M6 commands do not exist until then |
+ 
+ Everything else runs on existing commands.

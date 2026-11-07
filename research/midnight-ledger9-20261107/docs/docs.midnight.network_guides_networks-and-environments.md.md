@@ -1,0 +1,826 @@
+<!-- source: https://docs.midnight.network/guides/networks-and-environments.md fetched_at: 2026-11-07T20:48:46Z status: 200 untrusted -->
+
+> For the complete documentation index, see [llms.txt](https://docs.midnight.network/llms.txt)
+
+# Networks and environments
+
+Use this guide to understand the networks Midnight operates, pick the right one for the task in front of you, point your DApp at it, fund a wallet on it, and move to mainnet when you are ready. It explains the network landscape, gives you the exact endpoints and IDs to configure tools against, and walks through each task ending with a test you run to prove it worked. If you are starting from nothing, work through [Hello World](https://docs.midnight.network/getting-started/hello-world.md) first and return here when you need to choose or switch networks.
+
+## Prerequisites[​](#prerequisites "Direct link to Prerequisites")
+
+These apply to every procedure in this guide:
+
+* Node.js version 22 or higher installed.
+* Docker installed and running, for the local network and the [proof server](https://docs.midnight.network/guides/run-proof-server.md).
+* [Vitest](https://vitest.dev/) and `@midnight-ntwrk/midnight-js-network-id` installed in your test workspace, for the verification tests.
+
+<!-- -->
+
+## The Midnight networks[​](#the-midnight-networks "Direct link to The Midnight networks")
+
+Midnight operates one production network and maintains three environments for development. Every environment runs the same stack, so a DApp moves between them by changing configuration, not code.
+
+Four networks make up the landscape:
+
+* **`undeployed`** is the local development network: a Midnight node, indexer, and proof server running in Docker on your machine. Its genesis wallet is pre-funded, so you can deploy within minutes of starting it. See [Running a local network](#running-a-local-network).
+* **`preview`** is a public test network for early development and experimentation, maintained by core engineering. It runs ledger 9, the same ledger as mainnet.
+* **`preprod`** is a public test network for final validation before mainnet. It runs ledger 8 until a later upgrade, so for now it does not match mainnet, which runs ledger 9.
+* **`mainnet`** is the production network. Tokens on mainnet carry real value, and there is no faucet.
+
+Mainnet and Preview run ledger 9
+
+Mainnet has run ledger 9 since the ledger 9 network upgrade on 6 November 2026. Preview relaunched as a new chain on 7 November 2026 and moved to ledger 9. The relaunch kept no ledger 8 history, so contracts, balances, and transactions from the old Preview chain are gone. DUST registrations backed by cNIGHT on Cardano carried over. Request tNIGHT from the [Preview faucet](https://faucet.preview.midnight.network/) again, register it for DUST, and redeploy your contracts compiled for ledger 9. Preprod stays on ledger 8 (node 1.0.400, ledger 8.1.3) until a later upgrade. To test a ledger 9 DApp before Mainnet, use Preview. Mainnet and Preview DApps need Wallet SDK 2.0.0, Midnight.js 5.0.0, and an indexer that runs 4.4.101. On that indexer, a contract action subscription opened without an offset delivers only new actions; pass an explicit offset, such as height `0`, to replay history. Midnight.js 5.0.0 does this for you. The network IDs and endpoints on this page stay the same. See [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9.md) for what changed and what to do.
+
+Each public network identifies itself over RPC: the `system_chain` method returns `Midnight Preview`, `Midnight Preprod`, or `Midnight Mainnet`. Every network exposes the same three services your DApp talks to: a node (JSON-RPC over HTTPS and WebSocket), an indexer (GraphQL over HTTP and WebSocket), and a proof server. The node and indexer are network-specific; the proof server runs locally on port 6300 no matter which network you target, because it handles your private data. The [Environment reference](#environment-reference) lists every endpoint.
+
+The testnet-02 name is retired
+
+Older articles and tools sometimes reference a network named `testnet-02`. Midnight retired that network, and its endpoints, such as `rpc.testnet-02.midnight.network` and `indexer.testnet-02.midnight.network`, no longer resolve. Use `preview` or `preprod` instead, with the endpoints listed in the [Environment reference](#environment-reference).
+
+<!-- -->
+
+## Network selection at a glance[​](#network-selection-at-a-glance "Direct link to Network selection at a glance")
+
+Which network to target for a given task. Consult this before you configure anything; the setup and funding consequences of each choice are listed alongside.
+
+| Task                                                              | Network                                       | Funding                                                                                                                                                                         | Value at risk |
+| ----------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Iterating on a contract, running tests, CI                        | `undeployed`                                  | Genesis wallet is pre-funded, no faucet needed                                                                                                                                  | None          |
+| Testing against shared public infrastructure early in development | `preview`                                     | Free tNIGHT from the [Preview faucet](https://midnight-tmnight-preview.nethermind.dev/), rate limited                                                                           | None          |
+| Final validation before a production launch                       | `preview`, or `preprod` once it runs ledger 9 | Free tNIGHT from the [Preview faucet](https://midnight-tmnight-preview.nethermind.dev/) or the [Preprod faucet](https://midnight-tmnight-preprod.nethermind.dev/), rate limited | None          |
+| Running in production                                             | `mainnet`                                     | Real NIGHT, which generates DUST after registration                                                                                                                             | Real          |
+
+Start on `undeployed` for speed, move to `preview` or `preprod` when you need shared infrastructure or a persistent chain, validate on a network that runs the same ledger as mainnet before launch, and treat `mainnet` as a deliberate final step. Preview runs ledger 9 like mainnet, so validate there. Preprod runs ledger 8 until a later upgrade, so for now Preprod cannot validate a mainnet DApp. See [The Midnight networks](#the-midnight-networks). [Funding and transaction cost](#funding-and-transaction-cost) explains what each choice costs.
+
+<!-- -->
+
+## Environment reference[​](#environment-reference "Direct link to Environment reference")
+
+The endpoints, network ID, and funding source for each environment. Configure wallets, indexers, and tooling against these values; other pages link here rather than restating them.
+
+Blockfrost serves the public indexer and node RPC for `preprod` and `mainnet`, and every request needs a [Blockfrost project token](#getting-a-blockfrost-project-token) for that network. Midnight retired its own mainnet endpoints, `indexer.mainnet.midnight.network` and `rpc.mainnet.midnight.network`, and its Preprod endpoints, `indexer.preprod.midnight.network` and `rpc.preprod.midnight.network`, on 9 October 2026. Only the `preview` endpoints are Midnight-hosted and need no token.
+
+* Local (undeployed)
+* Preview
+* Preprod
+* Mainnet
+
+The local development network, run via [midnight-local-dev](https://github.com/midnightntwrk/midnight-local-dev). All services run in Docker on your machine; set it up in [Running a local network](#running-a-local-network).
+
+| Service             | Value                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Network ID          | `undeployed`                                                                                     |
+| Node RPC            | `http://localhost:9944`                                                                          |
+| Indexer (GraphQL)   | `http://localhost:8088/api/v4/graphql`                                                           |
+| Indexer (WebSocket) | `ws://localhost:8088/api/v4/graphql/ws`                                                          |
+| Proof server        | `http://localhost:6300`                                                                          |
+| Faucet              | None. The genesis wallet is pre-funded and the funding menu transfers 50,000 tNIGHT per account. |
+| Address prefixes    | `mn_addr_undeployed`, `mn_shield-addr_undeployed`, `mn_dust_undeployed`                          |
+| Block explorers     | None                                                                                             |
+
+Public test network for early development and experimentation.
+
+| Service             | Value                                                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network ID          | `preview`                                                                                                                                                     |
+| Node RPC            | `https://rpc.preview.midnight.network`                                                                                                                        |
+| Node WebSocket      | `wss://rpc.preview.midnight.network`                                                                                                                          |
+| Indexer (GraphQL)   | `https://indexer.preview.midnight.network/api/v4/graphql`                                                                                                     |
+| Indexer (WebSocket) | `wss://indexer.preview.midnight.network/api/v4/graphql/ws`                                                                                                    |
+| Proof server        | `http://localhost:6300` (always local)                                                                                                                        |
+| Faucet              | <https://faucet.preview.midnight.network/>, or <https://midnight-tmnight-preview.nethermind.dev/>                                                             |
+| Address prefixes    | `mn_addr_preview`, `mn_shield-addr_preview`, `mn_dust_preview`                                                                                                |
+| Block explorers     | [Midnight Explorer](https://preview.midnightexplorer.com/), [Subscan](https://midnight-preview.subscan.io/), [1am](https://explorer.1am.xyz/?network=preview) |
+
+Public test network for final validation before mainnet. [Blockfrost](#blockfrost-the-mainnet-indexer-and-rpc-provider) serves the public Preprod indexer and node RPC, and every request needs a Blockfrost project token appended as `?project_id=<token>`.
+
+The Midnight-hosted Preprod endpoints are retired
+
+`indexer.preprod.midnight.network` and `rpc.preprod.midnight.network` were retired at 22:00 UTC on 9 October 2026. The indexer now answers every request with HTTP `410` and an `ENDPOINT_DECOMMISSIONED` error. The RPC endpoint can still answer requests, but it can stop at any time, so do not use it. Use the Blockfrost endpoints below. See [Migrating from the Midnight-hosted endpoints](#migrating-from-the-midnight-hosted-mainnet-endpoints).
+
+| Service             | Value                                                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network ID          | `preprod`                                                                                                                                                     |
+| Node RPC            | `https://rpc.midnight-preprod.blockfrost.io?project_id=<token>`                                                                                               |
+| Node WebSocket      | `wss://rpc.midnight-preprod.blockfrost.io?project_id=<token>`                                                                                                 |
+| Indexer (GraphQL)   | `https://midnight-preprod.blockfrost.io/api/v0?project_id=<token>`                                                                                            |
+| Indexer (WebSocket) | `wss://midnight-preprod.blockfrost.io/api/v0/ws?project_id=<token>`                                                                                           |
+| Access              | A Blockfrost **Midnight Preprod** project token. See [Getting a Blockfrost project token](#getting-a-blockfrost-project-token).                               |
+| Proof server        | `http://localhost:6300` (always local)                                                                                                                        |
+| Faucet              | <https://midnight-tmnight-preprod.nethermind.dev/>                                                                                                            |
+| Address prefixes    | `mn_addr_preprod`, `mn_shield-addr_preprod`, `mn_dust_preprod`                                                                                                |
+| Block explorers     | [Midnight Explorer](https://preprod.midnightexplorer.com/), [Subscan](https://midnight-preprod.subscan.io/), [1am](https://explorer.1am.xyz/?network=preprod) |
+
+The production network. The public mainnet indexer and node RPC are served by [Blockfrost](#blockfrost-the-mainnet-indexer-and-rpc-provider), and every request needs a Blockfrost project token appended as `?project_id=<token>`.
+
+The Midnight-hosted mainnet endpoints are retired
+
+`indexer.mainnet.midnight.network` and `rpc.mainnet.midnight.network` were retired at 22:00 UTC on 9 October 2026. The shutdown was first announced for 30 September and then postponed to give teams time to migrate. The indexer now answers every request with HTTP `410` and an `ENDPOINT_DECOMMISSIONED` error. The RPC endpoint can still answer requests, but it can stop at any time, so do not use it. Use the Blockfrost endpoints below. See [Migrating from the Midnight-hosted endpoints](#migrating-from-the-midnight-hosted-mainnet-endpoints).
+
+| Service             | Value                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Network ID          | `mainnet`                                                                                                                       |
+| Node RPC            | `https://rpc.midnight-mainnet.blockfrost.io?project_id=<token>`                                                                 |
+| Node WebSocket      | `wss://rpc.midnight-mainnet.blockfrost.io?project_id=<token>`                                                                   |
+| Indexer (GraphQL)   | `https://midnight-mainnet.blockfrost.io/api/v0?project_id=<token>`                                                              |
+| Indexer (WebSocket) | `wss://midnight-mainnet.blockfrost.io/api/v0/ws?project_id=<token>`                                                             |
+| Access              | A Blockfrost **Midnight Mainnet** project token. See [Getting a Blockfrost project token](#getting-a-blockfrost-project-token). |
+| Proof server        | `http://localhost:6300` (always local)                                                                                          |
+| Faucet              | None. See [Funding and transaction cost](#funding-and-transaction-cost).                                                        |
+| Address prefixes    | `mn_addr`, `mn_shield-addr`, `mn_dust`                                                                                          |
+| cNgD DApp           | <https://midnight-dust-mainnet.nethermind.io/>                                                                                  |
+| Block explorers     | [Midnight Explorer](https://midnightexplorer.com/), [Subscan](https://midnight.subscan.io/), [1am](https://explorer.1am.xyz/)   |
+
+Addresses are Bech32m encoded, and the prefix names the address type and the network: `mainnet` uses the bare prefix, for example `mn_addr`, while every other network appends its name, for example `mn_addr_preprod`. Wallet viewing keys follow the same rule with the `mn_shield-esk` prefix.
+
+On `preview`, Midnight provides the public node and indexer endpoints for development and testing, and they need no token. On `preprod` and `mainnet`, Blockfrost is the primary public indexer and RPC provider; see [Blockfrost: the Preprod and Mainnet indexer and RPC provider](#blockfrost-the-mainnet-indexer-and-rpc-provider). For a production DApp, you can also run your own [node](https://docs.midnight.network/nodes.md) and indexer.
+
+<!-- -->
+
+## Blockfrost: the Preprod and Mainnet indexer and RPC provider[​](#blockfrost-the-mainnet-indexer-and-rpc-provider "Direct link to Blockfrost: the Preprod and Mainnet indexer and RPC provider")
+
+[Blockfrost](https://blockfrost.io) operates the public Midnight Preprod and Mainnet indexer (GraphQL over HTTP and WebSocket) and node RPC (JSON-RPC over HTTPS and WebSocket). It runs the same indexer API that the Midnight-hosted endpoints served, so a DApp moves to it by changing its endpoint URLs and adding a token, not by changing code. You connect to Blockfrost directly, with your own Blockfrost account and project.
+
+Three things differ from the Midnight-hosted endpoints:
+
+* **Every request needs a project token.** Blockfrost returns HTTP `403` for a request without a valid token; [Migrating from the Midnight-hosted endpoints](#migrating-from-the-midnight-hosted-mainnet-endpoints) lists the exact error messages. Blockfrost issues tokens per network: it rejects a Preprod token on Mainnet, and a Mainnet token on Preprod.
+* **Usage limits come from your Blockfrost plan.** Requests count against your own account, not a shared public endpoint. Check the limits of your plan on [blockfrost.io](https://blockfrost.io) before launch, and move to a paid plan, or run your own indexer, if your DApp needs more.
+* **The proof server is not a Blockfrost service.** It keeps running locally on port 6300, because it handles your private data.
+
+Running your own node and indexer is still supported; see [Nodes](https://docs.midnight.network/nodes.md).
+
+<!-- -->
+
+### Getting a Blockfrost project token[​](#getting-a-blockfrost-project-token "Direct link to Getting a Blockfrost project token")
+
+1. Sign up or sign in at [blockfrost.io](https://blockfrost.io).
+
+2. Create a project and select the **Midnight Preprod** or **Midnight Mainnet** network. Create a separate project for each network you use.
+
+3. Copy the project ID from the project dashboard. This is your token. A Midnight Preprod project ID starts with `nightpreprod`, and a Midnight Mainnet project ID starts with `nightmainnet`.
+
+4. Store it outside your source code, for example in a gitignored `.env` file:
+
+   .env
+
+   ```
+   BLOCKFROST_PROJECT_ID=<your Midnight Preprod or Midnight Mainnet project ID>
+   ```
+
+5. Check that the token works. The indexer returns a block height, and the node returns the network name.
+
+   * Preprod
+   * Mainnet
+
+   ```
+   curl -s -X POST -H 'Content-Type: application/json' \
+
+     -d '{"query":"{ block { height } }"}' \
+
+     "https://midnight-preprod.blockfrost.io/api/v0?project_id=$BLOCKFROST_PROJECT_ID"
+
+
+
+   curl -s -X POST -H 'Content-Type: application/json' \
+
+     -d '{"jsonrpc":"2.0","id":1,"method":"system_chain","params":[]}' \
+
+     "https://rpc.midnight-preprod.blockfrost.io?project_id=$BLOCKFROST_PROJECT_ID"
+   ```
+
+   The node returns `"Midnight Preprod"`.
+
+   ```
+   curl -s -X POST -H 'Content-Type: application/json' \
+
+     -d '{"query":"{ block { height } }"}' \
+
+     "https://midnight-mainnet.blockfrost.io/api/v0?project_id=$BLOCKFROST_PROJECT_ID"
+
+
+
+   curl -s -X POST -H 'Content-Type: application/json' \
+
+     -d '{"jsonrpc":"2.0","id":1,"method":"system_chain","params":[]}' \
+
+     "https://rpc.midnight-mainnet.blockfrost.io?project_id=$BLOCKFROST_PROJECT_ID"
+   ```
+
+   The node returns `"Midnight Mainnet"`.
+
+### Passing the token[​](#passing-the-token "Direct link to Passing the token")
+
+Blockfrost accepts the token either as a `project_id` request header or as a `?project_id=<token>` query parameter. Use the query parameter with the Midnight SDK: `indexerPublicDataProvider`, the wallet SDK indexer client, and the Polkadot.js `WsProvider` take plain URLs, and browser WebSockets cannot set custom headers.
+
+A small helper keeps the token out of the URLs you write by hand:
+
+config.ts
+
+```
+function withBlockfrostKey(url: string, projectId: string): string {
+
+  return `${url}${url.includes('?') ? '&' : '?'}project_id=${encodeURIComponent(projectId)}`;
+
+}
+
+
+
+function blockfrostProjectId(): string {
+
+  const projectId = process.env.BLOCKFROST_PROJECT_ID?.trim();
+
+  if (!projectId) throw new Error('BLOCKFROST_PROJECT_ID is not set.');
+
+  return projectId;
+
+}
+
+
+
+export function preprodConfig() {
+
+  const projectId = blockfrostProjectId();
+
+  return {
+
+    networkId: 'preprod',
+
+    node: withBlockfrostKey('https://rpc.midnight-preprod.blockfrost.io', projectId),
+
+    nodeWS: withBlockfrostKey('wss://rpc.midnight-preprod.blockfrost.io', projectId),
+
+    indexer: withBlockfrostKey('https://midnight-preprod.blockfrost.io/api/v0', projectId),
+
+    indexerWS: withBlockfrostKey('wss://midnight-preprod.blockfrost.io/api/v0/ws', projectId),
+
+    proofServer: 'http://localhost:6300',
+
+  } as const;
+
+}
+
+
+
+export function mainnetConfig() {
+
+  const projectId = blockfrostProjectId();
+
+  return {
+
+    networkId: 'mainnet',
+
+    node: withBlockfrostKey('https://rpc.midnight-mainnet.blockfrost.io', projectId),
+
+    nodeWS: withBlockfrostKey('wss://rpc.midnight-mainnet.blockfrost.io', projectId),
+
+    indexer: withBlockfrostKey('https://midnight-mainnet.blockfrost.io/api/v0', projectId),
+
+    indexerWS: withBlockfrostKey('wss://midnight-mainnet.blockfrost.io/api/v0/ws', projectId),
+
+    proofServer: 'http://localhost:6300',
+
+  } as const;
+
+}
+```
+
+Build the configuration when you use it, not at import time, so a missing token fails with a clear message instead of a `403` deep inside a sync. Each function needs a token for its own network, so set `BLOCKFROST_PROJECT_ID` to a Midnight Preprod project ID for `preprodConfig()` and to a Midnight Mainnet project ID for `mainnetConfig()`.
+
+Keep the token out of browser code and logs
+
+A token inside a browser-side URL is visible to anyone who loads the page, and anyone who copies it spends your quota. For a browser DApp, send indexer and RPC calls through a backend you control that adds the token on the server, or use a token you are prepared to treat as public. If your DApp takes its endpoints from the user's wallet through the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector.md) (`getConfiguration()`), the wallet decides which indexer and node it uses.
+
+Error messages and logs can include the full URL with the token in it. For example, a failed indexer request in Midnight.js reports `request to <url> failed, reason: <reason>`, and testkit-js logs its whole environment configuration when a remote test environment starts. Remove the `project_id` value from URLs and errors before you log them.
+
+<!-- -->
+
+## Migrating from the Midnight-hosted endpoints[​](#migrating-from-the-midnight-hosted-mainnet-endpoints "Direct link to Migrating from the Midnight-hosted endpoints")
+
+Midnight retired its Mainnet and Preprod indexer and RPC endpoints at 22:00 UTC on 9 October 2026. Replace each old URL with its Blockfrost equivalent and append `?project_id=<token>` from a project for the same network:
+
+* Preprod
+* Mainnet
+
+| Service             | Old (retired 9 October 2026)                               | New (Blockfrost)                                 |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| Indexer (GraphQL)   | `https://indexer.preprod.midnight.network/api/v4/graphql`  | `https://midnight-preprod.blockfrost.io/api/v0`  |
+| Indexer (WebSocket) | `wss://indexer.preprod.midnight.network/api/v4/graphql/ws` | `wss://midnight-preprod.blockfrost.io/api/v0/ws` |
+| Node RPC            | `https://rpc.preprod.midnight.network`                     | `https://rpc.midnight-preprod.blockfrost.io`     |
+| Node WebSocket      | `wss://rpc.preprod.midnight.network`                       | `wss://rpc.midnight-preprod.blockfrost.io`       |
+
+| Service             | Old (retired 9 October 2026)                               | New (Blockfrost)                                 |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| Indexer (GraphQL)   | `https://indexer.mainnet.midnight.network/api/v4/graphql`  | `https://midnight-mainnet.blockfrost.io/api/v0`  |
+| Indexer (WebSocket) | `wss://indexer.mainnet.midnight.network/api/v4/graphql/ws` | `wss://midnight-mainnet.blockfrost.io/api/v0/ws` |
+| Node RPC            | `https://rpc.mainnet.midnight.network`                     | `https://rpc.midnight-mainnet.blockfrost.io`     |
+| Node WebSocket      | `wss://rpc.mainnet.midnight.network`                       | `wss://rpc.midnight-mainnet.blockfrost.io`       |
+
+Move every consumer at the same time: application config, test harnesses, and scripts. Then check for the issues below.
+
+| Symptom                                                                                                                                                     | Cause and fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP `410` with an `ENDPOINT_DECOMMISSIONED` error, or `Response not successful: Received status code 410` from Midnight.js                                 | The configuration still points at `indexer.mainnet.midnight.network` or `indexer.preprod.midnight.network`. Both hostnames still resolve, but they answer every request with `410`, including WebSocket connections. Replace the URL with its Blockfrost equivalent from the tables above.                                                                                                                                                                                                                                                                                                                        |
+| Requests to `rpc.mainnet.midnight.network` or `rpc.preprod.midnight.network` still succeed                                                                  | The Midnight-hosted RPC endpoints are retired and can stop answering at any time. Replace each URL with its Blockfrost equivalent from the tables above.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| HTTP `403` with `Missing project token. Please include project_id in your request.`                                                                         | The URL has no token. Append `?project_id=<token>` from a project for the network you target to every indexer and RPC URL, including the WebSocket URLs.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| HTTP `403` with `Invalid project token.`                                                                                                                    | Blockfrost does not recognize the token. Check that you copied the whole project ID.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| HTTP `403` with `Network token mismatch. Are you using token for the correct network?`                                                                      | The token belongs to a project for another network, for example a project ID that starts with `nightpreprod` on a Mainnet URL, or `nightmainnet` on a Preprod URL. Use the project ID of a **Midnight Preprod** project (it starts with `nightpreprod`) for Preprod, and of a **Midnight Mainnet** project (it starts with `nightmainnet`) for Mainnet.                                                                                                                                                                                                                                                           |
+| `Response not successful: Received status code 403` from Midnight.js                                                                                        | One of the two `403` errors above. Midnight.js retries for several seconds and does not show the error message, so run the `curl` check in [Getting a Blockfrost project token](#getting-a-blockfrost-project-token) to see which one you have.                                                                                                                                                                                                                                                                                                                                                                   |
+| Wallet sync never finishes, and the log shows `values inserted non-linearly into dust generation tree` (or `zswap commitment tree`, `dust commitment tree`) | Saved sync state from the old indexer is not portable: event and transaction ids differ between indexers. This affects only wallets that saved sync state against the Midnight-hosted indexer and resume it on Blockfrost, such as `serializeState()` output, fast-sync or preseed bundles, and stored event or transaction ids. Discard that state and sync from genesis. Do not shift cursors by hand. Allow for a long first sync: a full sync on preprod takes over an hour. Wallets that sync from genesis on every start, and DApps that only read contract state or submit transactions, are not affected. |
+| `Wallet sync timeout` right after a transaction, although the funds arrived                                                                                 | On an idle subscription, the indexer sends unshielded sync progress less often, backing off to about 4 minutes between updates (up to about 5 with random jitter). Right after a transaction, the wallet's "fully synced" signal can lag by that much. This happens on Blockfrost, and some indexer releases you run yourself behave the same way. Wait for the expected balance or for spendable DUST, or allow more than 5 minutes, instead of a short synced-state timeout.                                                                                                                                    |
+| `TypeError: Invalid URL` when building a wallet                                                                                                             | The URL you pass as the wallet's relay URL is empty or a placeholder, and `new URL()` throws on it. testkit-js builds the relay URL from `nodeWS`, and some guides build it from the node URL. Set that URL to the full `wss://` Blockfrost RPC URL with your token, as in [Passing the token](#passing-the-token).                                                                                                                                                                                                                                                                                               |
+| A custom GraphQL client fails on `dustGenerations`                                                                                                          | On Blockfrost, `Subscription.dustGenerations` takes `(dustAddress, blockHash, dtimeCutoffHeight)` instead of `(dustAddress, startIndex, endIndex)`. No `@midnight-ntwrk` package uses this subscription; update only your own queries. The rest of the schema is unchanged, and Blockfrost adds extra fields.                                                                                                                                                                                                                                                                                                     |
+
+The Midnight Service Desk [Blockfrost migration runbook](https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/indexer-blockfrost-migration-runbook/indexer-blockfrost-migration-runbook.md) covers these errors in more depth, including a script that checks whether a saved cursor is portable. The script compares the old and new indexers, so it no longer works for Mainnet or Preprod.
+
+<!-- -->
+
+## Running a local network[​](#running-a-local-network "Direct link to Running a local network")
+
+Run the full Midnight stack, a node, an indexer, and a proof server, in Docker on your machine with [midnight-local-dev](https://github.com/midnightntwrk/midnight-local-dev). The tool initializes a pre-funded genesis wallet and presents a funding menu, so you can deploy and transact within minutes, with no faucet and nothing at risk.
+
+### Procedure[​](#procedure "Direct link to Procedure")
+
+1. Clone the repository and install its dependencies:
+
+   ```
+   git clone https://github.com/midnightntwrk/midnight-local-dev.git
+
+   cd midnight-local-dev
+
+   npm install
+   ```
+
+2. Start the network:
+
+   ```
+   npm start
+   ```
+
+   The command pulls the Docker images (versions are pinned in `standalone.yml`), starts the node, indexer, and proof server with health checks, initializes the genesis master wallet that holds the pre-mined NIGHT, registers it for DUST so it can pay fees, and then presents the funding menu:
+
+   ```
+   Choose an option:
+
+     [1] Fund accounts from config file (NIGHT + DUST registration)
+
+     [2] Fund accounts by public key (NIGHT transfer only)
+
+     [3] Display wallets
+
+     [4] Exit
+   ```
+
+3. Fund the wallets you develop with. Option `1` reads a JSON file of accounts (copy `accounts.example.json` to `accounts.json` and add your 24-word mnemonics), transfers tNIGHT to each, and registers each account for DUST generation. Option `2` transfers tNIGHT to Bech32m addresses you paste, and the recipients register for DUST themselves. Either way, each account receives 50,000 tNIGHT, up to 10 accounts per operation.
+
+4. If you only need the containers, skip the wallet tooling and use Docker Compose directly. In this mode you handle genesis funding and DUST registration yourself:
+
+   ```
+   docker compose -f standalone.yml up -d    # start
+
+   docker compose -f standalone.yml ps       # status
+
+   docker compose -f standalone.yml logs -f  # logs
+
+   docker compose -f standalone.yml down     # stop
+   ```
+
+### Verification[​](#verification "Direct link to Verification")
+
+The local endpoints answer: the node reports the dev chain and serves its health check, the indexer serves blocks, and the proof server accepts connections.
+
+local-network.test.ts
+
+```
+import { describe, it, expect } from 'vitest';
+
+
+
+describe('local network', () => {
+
+  it('node is healthy', async () => {
+
+    const res = await fetch('http://localhost:9944/health').then((r) => r.json());
+
+    expect(res.isSyncing).toBe(false);
+
+  });
+
+
+
+  it('indexer serves blocks', async () => {
+
+    const res = await fetch('http://localhost:8088/api/v4/graphql', {
+
+      method: 'POST',
+
+      headers: { 'Content-Type': 'application/json' },
+
+      body: JSON.stringify({ query: '{ block { height } }' }),
+
+    }).then((r) => r.json());
+
+    expect(res.data.block.height).toBeGreaterThan(0);
+
+  });
+
+
+
+  it('proof server reports ok', async () => {
+
+    const res = await fetch('http://localhost:6300/health').then((r) => r.json());
+
+    expect(res.status).toBe('ok');
+
+  });
+
+});
+```
+
+```
+ ✓ local-network.test.ts > local network > node is healthy
+
+ ✓ local-network.test.ts > local network > indexer serves blocks
+
+ ✓ local-network.test.ts > local network > proof server reports ok
+
+
+
+ Test Files  1 passed (1)
+
+      Tests  3 passed (3)
+```
+
+<!-- -->
+
+## Local network troubleshooting[​](#local-network-troubleshooting "Direct link to Local network troubleshooting")
+
+The failure modes you are most likely to hit with the local stack, and their fixes.
+
+| Symptom                                                              | Fix                                                                                                                                                                                 |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Bind for 0.0.0.0:9944 failed: port is already allocated`            | A previous run still holds the port. Run `docker compose -f standalone.yml down`, or find the holder with `lsof -i :9944`.                                                          |
+| Indexer exits on first start with `block number 1 not found`         | A startup race on a fresh chain: the indexer asked for a block the node had not produced yet. Start it again with `docker start midnight-indexer`; it latches on once blocks exist. |
+| `Operation failed: Expected undeployed address, got Preprod address` | The wallet is on the wrong network. In Lace, switch to the Undeployed network under **Settings**, then use that unshielded address.                                                 |
+| Containers do not start                                              | Confirm Docker is running, then run `docker compose -f standalone.yml pull` and `up`, and read `docker compose -f standalone.yml logs -f` for the failing service.                  |
+| Wallet sync is slow after startup                                    | The indexer is catching up with the node. Confirm the node produces blocks with `curl http://localhost:9944/health` and watch the indexer logs.                                     |
+
+<!-- -->
+
+## Connecting a DApp to a network[​](#connecting-a-dapp-to-a-network "Direct link to Connecting a DApp to a network")
+
+Point a DApp at a chosen network by setting the network ID and wiring the matching endpoints. The common trap is mixing values from different networks, for example a `preprod` network ID with a `preview` indexer URL; keep the ID and the endpoints together in one place so they cannot drift apart.
+
+### Procedure[​](#procedure-1 "Direct link to Procedure")
+
+1. Choose the target network using [Network selection at a glance](#network-selection-at-a-glance).
+
+2. Set the network ID before initializing any providers. Midnight.js reads this value when it normalizes addresses and builds transactions (the `deployContract` and `callTx` paths), so it must be set before any contract operation:
+
+   ```
+   import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+
+
+
+   setNetworkId('preprod');
+
+
+
+   /** Supported network IDs: 'mainnet', 'preview', 'preprod', 'undeployed' */
+   ```
+
+   There is no default: `getNetworkId()` throws `Network ID has not been configured` until you call `setNetworkId`. The call stores the string as-is, so a misspelled network name does not fail here; it surfaces later, in the components that consume the ID.
+
+3. Keep the network ID and its endpoints together in one configuration object, using the values from the [Environment reference](#environment-reference). Note that the proof server URL stays local for every network. The `preprod` endpoints need a Blockfrost token, so this example builds them with the `preprodConfig()` helper from [Passing the token](#passing-the-token):
+
+   ```
+   import { preprodConfig } from './config.js';
+
+
+
+   const NETWORKS = {
+
+     undeployed: () => ({
+
+       node: 'http://localhost:9944',
+
+       indexer: 'http://localhost:8088/api/v4/graphql',
+
+       indexerWS: 'ws://localhost:8088/api/v4/graphql/ws',
+
+       proofServer: 'http://localhost:6300',
+
+     }),
+
+     preview: () => ({
+
+       node: 'https://rpc.preview.midnight.network',
+
+       indexer: 'https://indexer.preview.midnight.network/api/v4/graphql',
+
+       indexerWS: 'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
+
+       proofServer: 'http://localhost:6300',
+
+     }),
+
+     preprod: preprodConfig,
+
+   } as const;
+
+
+
+   const network = NETWORKS['preprod']();
+   ```
+
+4. Pass the endpoints to your providers. The full providers object, including private state, ZK configuration, and wallet providers, is covered in [Configuring providers for a contract](https://docs.midnight.network/guides/deploy-and-operate.md#configuring-providers-for-a-contract):
+
+   ```
+   import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
+
+
+
+   const publicDataProvider = indexerPublicDataProvider(network.indexer, network.indexerWS);
+   ```
+
+### Verification[​](#verification-1 "Direct link to Verification")
+
+Each network ID round-trips through the SDK, and the configured endpoints answer with the expected chain identity and a current block height. Blockfrost serves the `preprod` and `mainnet` endpoints, and each needs a token for its own network, so the test reads two variables: set `BLOCKFROST_PREPROD_PROJECT_ID` to your Midnight Preprod project token and `BLOCKFROST_MAINNET_PROJECT_ID` to your Midnight Mainnet project token; see [Getting a Blockfrost project token](#getting-a-blockfrost-project-token). The test skips the node and indexer checks of a network that has no token. Without either token, it reports `5 passed | 4 skipped`, so you can test `preview` without a Blockfrost account.
+
+networks.test.ts
+
+```
+import { describe, it, expect } from 'vitest';
+
+import { setNetworkId, getNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+
+
+
+const token = (name: string) => encodeURIComponent(process.env[name]?.trim() ?? '');
+
+const preprodToken = token('BLOCKFROST_PREPROD_PROJECT_ID');
+
+const mainnetToken = token('BLOCKFROST_MAINNET_PROJECT_ID');
+
+
+
+const rpc = (url: string, method: string) =>
+
+  fetch(url, {
+
+    method: 'POST',
+
+    headers: { 'Content-Type': 'application/json' },
+
+    body: JSON.stringify({ jsonrpc: '2.0', method, params: [], id: 1 }),
+
+  }).then((r) => r.json());
+
+
+
+const indexerBlock = (url: string) =>
+
+  fetch(url, {
+
+    method: 'POST',
+
+    headers: { 'Content-Type': 'application/json' },
+
+    body: JSON.stringify({ query: '{ block { height } }' }),
+
+  }).then((r) => r.json());
+
+
+
+const networks = [
+
+  {
+
+    id: 'preview',
+
+    chain: 'Midnight Preview',
+
+    node: 'https://rpc.preview.midnight.network',
+
+    indexer: 'https://indexer.preview.midnight.network/api/v4/graphql',
+
+  },
+
+  {
+
+    id: 'preprod',
+
+    chain: 'Midnight Preprod',
+
+    node: `https://rpc.midnight-preprod.blockfrost.io?project_id=${preprodToken}`,
+
+    indexer: `https://midnight-preprod.blockfrost.io/api/v0?project_id=${preprodToken}`,
+
+    projectId: preprodToken,
+
+  },
+
+  {
+
+    id: 'mainnet',
+
+    chain: 'Midnight Mainnet',
+
+    node: `https://rpc.midnight-mainnet.blockfrost.io?project_id=${mainnetToken}`,
+
+    indexer: `https://midnight-mainnet.blockfrost.io/api/v0?project_id=${mainnetToken}`,
+
+    projectId: mainnetToken,
+
+  },
+
+];
+
+
+
+describe.each(networks)('$id', ({ id, chain, node, indexer, projectId }) => {
+
+  // The Blockfrost endpoints need a token; skip them when none is set.
+
+  const noToken = projectId === '';
+
+
+
+  it('sets the network ID', () => {
+
+    setNetworkId(id);
+
+    expect(getNetworkId()).toBe(id);
+
+  });
+
+
+
+  it.skipIf(noToken)('reaches the node RPC', async () => {
+
+    const res = await rpc(node, 'system_chain');
+
+    expect(res.result).toBe(chain);
+
+  });
+
+
+
+  it.skipIf(noToken)('reaches the indexer', async () => {
+
+    const res = await indexerBlock(indexer);
+
+    expect(res.data.block.height).toBeGreaterThan(0);
+
+  });
+
+});
+```
+
+```
+ ✓ networks.test.ts > 'preview' > sets the network ID
+
+ ✓ networks.test.ts > 'preview' > reaches the node RPC
+
+ ✓ networks.test.ts > 'preview' > reaches the indexer
+
+ ✓ networks.test.ts > 'preprod' > sets the network ID
+
+ ✓ networks.test.ts > 'preprod' > reaches the node RPC
+
+ ✓ networks.test.ts > 'preprod' > reaches the indexer
+
+ ✓ networks.test.ts > 'mainnet' > sets the network ID
+
+ ✓ networks.test.ts > 'mainnet' > reaches the node RPC
+
+ ✓ networks.test.ts > 'mainnet' > reaches the indexer
+
+
+
+ Test Files  1 passed (1)
+
+      Tests  9 passed (9)
+```
+
+The `undeployed` network is not in the matrix because it only exists while your local containers run. With the [local network](#running-a-local-network) up, the same checks pass against `http://localhost:9944` and `http://localhost:8088/api/v4/graphql`.
+
+<!-- -->
+
+## Funding and transaction cost[​](#funding-and-transaction-cost "Direct link to Funding and transaction cost")
+
+Every transaction on Midnight consumes DUST, and where the DUST comes from is the main practical difference between the networks. Understanding the two-token model once saves you a confused hour on each network later.
+
+NIGHT is the native utility token; holding it is what entitles you to DUST. DUST is a shielded, non-transferable resource that fees are paid in. Registered NIGHT generates DUST over time up to a cap of about 5 DUST per NIGHT, refilling in roughly a week, so a funded wallet regenerates its capacity to transact rather than spending it away permanently. [Tokens on Midnight](https://docs.midnight.network/tokens/overview.md) introduces the model and [DUST architecture](https://docs.midnight.network/concepts/dust-architecture.md) covers generation, decay, and the protocol parameters.
+
+**On the local network**, the genesis wallet is pre-funded and already registered for DUST, and the funding menu transfers tNIGHT to your own test wallets. DUST generates in about 5 minutes. There is no faucet because none is needed; see [Running a local network](#running-a-local-network).
+
+**On `preview` and `preprod`**, request free tNIGHT from the network's faucet (each request sends 5,000 tNIGHT; both faucets are rate limited), then register it for tDUST generation in your wallet. The [Funding a wallet](https://docs.midnight.network/guides/acquire-tokens.md) guide walks through the faucet, the Lace **Generate tDUST** flow, and the scriptable wallet SDK path. Test tokens carry no real value.
+
+**On `mainnet`**, there is no faucet. Today most NIGHT is held on Cardano as cNIGHT, and DUST generation is cross-chain: you register your Cardano reward address together with a Midnight DUST public key (the [cNgD DApp](https://midnight-dust-mainnet.nethermind.io/) handles this), and your cNIGHT holdings then generate DUST on Midnight. The registration must finalize on Cardano and reach a Midnight node, which takes about 12 hours, so fund your production wallet well before launch day.
+
+**After the ledger 9 network upgrade on `mainnet`**, DUST state resets once, and Mainnet users don't need to do anything. NIGHT balances don't change. The network replays every cNIGHT-backed registration automatically, straight to its full DUST cap, so you do not register your cNIGHT again. The replay takes about 48 blocks, under five minutes. Transactions submitted during it wait in the transaction pool and are included once it ends. Your wallet shows the replayed DUST once it runs Wallet SDK 2.0.0 and syncs with an indexer that runs 4.4.101. From the first block after the upgrade, a fee floor (`min_block_price`) applies, so fees rise slightly; update your fee estimation before the upgrade. NIGHT held on Midnight needs its own registration. The protocol token bridge from cNIGHT to mNIGHT ships with ledger 9 but stays off until governance enables it, with a rollout announced separately, so it isn't available at the upgrade. Preview was reset as a new ledger 9 chain on 6 November 2026, so nothing carried over there: request tNIGHT again and register it again. When Preprod moves to ledger 9 later, wallets and the faucet on Preprod register again, and the faucet pauses during the upgrade window. See [Managing DUST for transaction fees](https://docs.midnight.network/guides/manage-dust.md#dust-after-the-ledger-9-upgrade) and [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9.md).
+
+<!-- -->
+
+## Preparing a DApp for mainnet[​](#preparing-a-dapp-for-mainnet "Direct link to Preparing a DApp for mainnet")
+
+Move a DApp that works on a test network to the production network. The mechanics are the same configuration change as any other network switch; what makes mainnet different is that funding is cross-chain and slow, mistakes cost real value, and public test infrastructure guarantees do not apply.
+
+### Prerequisites[​](#prerequisites-1 "Direct link to Prerequisites")
+
+* A DApp deployed and validated on Preview, the test network that runs ledger 9, connected as in [Connecting a DApp to a network](#connecting-a-dapp-to-a-network).
+
+### Procedure[​](#procedure-2 "Direct link to Procedure")
+
+1. Validate the full deploy and interaction flow on Preview first. Preview runs ledger 9 like Mainnet, so test there with Wallet SDK 2.0.0, Midnight.js 5.0.0, and indexer 4.4.101. Preprod runs ledger 8 until a later upgrade, so it can't test a mainnet DApp yet. See [Ledger 9 upgrade](https://docs.midnight.network/relnotes/ledger-9.md).
+
+2. Fund the production wallet. Register your cNIGHT for DUST generation through the [cNgD DApp](https://midnight-dust-mainnet.nethermind.io/) and allow about 12 hours for the registration to take effect, as described in [Funding and transaction cost](#funding-and-transaction-cost). If you registered your cNIGHT before the ledger 9 network upgrade, you do not register it again. Confirm the wallet shows a DUST balance before you attempt a transaction.
+
+3. Create a Blockfrost project for **Midnight Mainnet** and store its token server-side, as in [Getting a Blockfrost project token](#getting-a-blockfrost-project-token). The public mainnet indexer and RPC reject requests without it, and they reject the Midnight Preprod token you used on `preprod`.
+
+4. Point the configuration at mainnet. Set the network ID and build the endpoints with the `mainnetConfig()` helper from [Passing the token](#passing-the-token). The helper adds your token to the node, node WebSocket, indexer, and indexer WebSocket URLs; nothing else in the DApp changes:
+
+   ```
+   import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+
+   import { mainnetConfig } from './config.js';
+
+
+
+   setNetworkId('mainnet');
+
+
+
+   const network = mainnetConfig();
+   ```
+
+   Wire the providers as in [Configuring providers for a contract](https://docs.midnight.network/guides/deploy-and-operate.md#configuring-providers-for-a-contract). If you are moving an existing mainnet DApp off the old Midnight-hosted endpoints, also work through [Migrating from the Midnight-hosted endpoints](#migrating-from-the-midnight-hosted-mainnet-endpoints).
+
+5. Decide your infrastructure. Blockfrost usage limits depend on your plan, so size the plan for your expected traffic, or run your own [node](https://docs.midnight.network/nodes.md) and indexer.
+
+6. Work through the [Mainnet readiness checklist](#mainnet-readiness-checklist) before announcing anything.
+
+### Verification[​](#verification-2 "Direct link to Verification")
+
+The mainnet endpoints answer with the production chain identity and a current block height. Run the connection test from this guide filtered to mainnet, with your Blockfrost token set:
+
+```
+BLOCKFROST_MAINNET_PROJECT_ID=<your Midnight Mainnet project ID> npx vitest run networks.test.ts -t mainnet
+```
+
+```
+ ↓ networks.test.ts > 'preview' > sets the network ID
+
+ ↓ networks.test.ts > 'preview' > reaches the node RPC
+
+ ↓ networks.test.ts > 'preview' > reaches the indexer
+
+ ↓ networks.test.ts > 'preprod' > sets the network ID
+
+ ↓ networks.test.ts > 'preprod' > reaches the node RPC
+
+ ↓ networks.test.ts > 'preprod' > reaches the indexer
+
+ ✓ networks.test.ts > 'mainnet' > sets the network ID
+
+ ✓ networks.test.ts > 'mainnet' > reaches the node RPC
+
+ ✓ networks.test.ts > 'mainnet' > reaches the indexer
+
+
+
+ Test Files  1 passed (1)
+
+      Tests  3 passed | 6 skipped (9)
+```
+
+If the summary reads `1 passed | 8 skipped`, `BLOCKFROST_MAINNET_PROJECT_ID` is not set in this shell, so the mainnet node and indexer checks did not run.
+
+<!-- -->
+
+## Mainnet readiness checklist[​](#mainnet-readiness-checklist "Direct link to Mainnet readiness checklist")
+
+Work through this list before a production launch. Each item links to the page that explains it.
+
+* [ ] **The full flow is validated on a ledger 9 network.** Deploy, interact, and observe state end to end on Preview, which runs ledger 9. Preprod runs ledger 8 until a later upgrade, so test there once it moves to ledger 9.
+* [ ] **The security checklist is complete.** Work through the [pre-deployment security checklist](https://docs.midnight.network/guides/security-best-practices.md#pre-deployment-security-checklist) for the contract and the DApp around it.
+* [ ] **The updatability decision is made.** Decide whether and how the contract can be upgraded before it holds real value. See [Contract updatability and the maintenance authority](https://docs.midnight.network/guides/deploy-and-operate.md#contract-updatability-and-the-maintenance-authority).
+* [ ] **The production wallet generates DUST.** cNIGHT is registered, the roughly 12-hour registration delay has passed, and the wallet shows a DUST balance. See [Funding and transaction cost](#funding-and-transaction-cost).
+* [ ] **Every endpoint in the configuration is a mainnet endpoint.** No `preview` or `preprod` URL remains, including a `midnight-preprod.blockfrost.io` URL or a Midnight Preprod token, and no `*.mainnet.midnight.network` indexer or RPC URL remains either: those endpoints are retired. See the [Environment reference](#environment-reference).
+* [ ] **The Blockfrost token is configured and kept private.** Every indexer and RPC URL carries a Midnight Mainnet `project_id`, read from the environment, and the token is not shipped in browser code. See [Blockfrost: the mainnet indexer and RPC provider](#blockfrost-the-mainnet-indexer-and-rpc-provider).
+* [ ] **The contract's risk is assessed.** Mainnet contract deployment is permissionless. You do not open a deployment request, and the Midnight Foundation does not review contracts before you deploy them, so the assessment is yours. The [contract deployment rubric](https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/contract-deployment-rubric.md) is optional guidance for scoring privacy, value, and state-space risk. Scoring a contract against it is not an audit.
+* [ ] **The infrastructure decision is made.** Your Blockfrost plan covers your expected traffic, or you run your own node and indexer.
+* [ ] **Key custody is settled.** The keys that control the contract and the funds have an owner, a backup, and a rotation path. See [Security and best practices](https://docs.midnight.network/guides/security-best-practices.md).
+* [ ] **You can observe the DApp in production.** You know which [block explorer](#environment-reference) and indexer queries you will use to confirm the deployment and watch activity.
+
+## Additional resources[​](#additional-resources "Direct link to Additional resources")
+
+* [Environments and endpoints](https://docs.midnight.network/relnotes/network.md): the release-notes view of the per-network endpoints.
+* [Node endpoints](https://docs.midnight.network/nodes/node-endpoints.md): RPC quickstart, common queries, and the Insomnia collection.
+* [Blockfrost: Midnight endpoints and authentication](https://blockfrost.dev/start-building/midnight/): Blockfrost's reference for the Midnight Preprod and Mainnet indexer and RPC endpoints.
+* [midnight-local-dev on GitHub](https://github.com/midnightntwrk/midnight-local-dev): the local network tool, its pinned image versions, and its README.
+* [Using the Midnight node toolkit](https://docs.midnight.network/nodes/node-toolkit.md): inspect blocks and ledger parameters, and fund test wallets on a local network from the command line.
+* [Run the proof server](https://docs.midnight.network/guides/run-proof-server.md): the local proof server every network setup depends on.
+* [Deploying and operating a contract](https://docs.midnight.network/guides/deploy-and-operate.md): the complete providers object a DApp passes to the SDK, and what comes after deployment.
+* [Funding a wallet](https://docs.midnight.network/guides/acquire-tokens.md): the faucet, the Lace registration flow, and the wallet SDK path.
+* [Security and best practices](https://docs.midnight.network/guides/security-best-practices.md): hardening a contract and DApp before mainnet.

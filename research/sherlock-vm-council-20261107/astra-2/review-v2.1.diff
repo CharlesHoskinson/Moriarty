@@ -1,0 +1,248 @@
+diff -ru review-v2/assurance.md review-v2.1/assurance.md
+--- review-v2/assurance.md	2026-11-07 14:23:42.164680509 -0700
++++ review-v2.1/assurance.md	2026-11-07 14:27:13.573037867 -0700
+@@ -1,6 +1,6 @@
+ # Assurance strategy
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
+ 
+ ## 1. The argument
+ 
+@@ -12,9 +12,9 @@
+ | O2 | Soundness per rule, given `StepInv(pre)` and a valid image/configuration: every satisfying witness of `C` with `sel[r]=1` decodes to a valid `R` step by rule `r`, preserves `StepInv`, and exposes exactly the statement | hostile raw witnesses by dispatch class with a valid baseline and weakened-constraint controls (SAS-004, SAS-013), refusal observed at the constraint boundary | a theorem, or an exhaustive checked argument over the stated domain (SAS-009) | finite tests alone; `ProofPreimage::check` |
+ | O3 | Completeness per rule: every valid bounded step has a satisfying witness | differential run on every step of P1, P2 and (after freeze) P3 through the witness stream (SVM-007) plus real proofs | a theorem | model agreement |
+ | O4 | Composition: the one-hot leaf checks every fragment premise on the shared carriers (no disconnected copies), with `StepInv(pre)` initialization and preservation | SAS-010 directed cases per admitted rule; shared-carrier premise checks (task 4.6) | a theorem | per-rule circuit passes; "one key" by itself |
+-| O5 | Recursion: node links `post_d = next pre_d`, `h` arithmetic bounded, canonical genesis, authorized keys | SRC-004/005 raw witnesses through the final pairing; flipped-proof refusal | `ToyLeaf` tests (`sherlock_ivc.rs:68-72`) |
+-| O6 | Terminal closure: decider pins keys, pairs, derives outcome/result | SRC-006 mutations with fresh witnesses; 70-lane record labelled existing-proof binding | outer-only success |
+-| O7 | Target: result bound to chain instance, call, key, effects; unique consumption | A6-shape local acceptance, A8/A9/A10-shape manifest-bound predicates on Preview (SAS-007, SMN-004) | any `ContractCall` at the address; stagenet evidence for a mainnet claim |
++| O5 | Recursion: node links `post_d = next pre_d`, `h` arithmetic bounded, authenticated genesis, authorized keys | SRC-004/005 raw witnesses at the node boundary and through the final pairing; flipped-proof refusal; nonmember-key refusal under F | a proof or recorded security argument for the IVC relation and the genesis construction | `ToyLeaf` tests (`sherlock_ivc.rs:68-72`) |
++| O6 | Terminal closure: decider pins keys, pairs, derives outcome/result | SRC-006 mutations with fresh witnesses; 70-lane record labelled existing-proof binding | a proof or recorded security argument for the decider relation and the pairing | outer-only success |
++| O7 | Target (scope-limited to the observed chain instance and operation): result bound to chain instance, call, key, effects; unique consumption | A6-shape local acceptance, A8p/A9p/A10p manifest-bound predicates on Preview (SAS-007, SMN-004) | a scope-limited target observation; no universal claim exists for O7 | any `ContractCall` at the address; stagenet evidence for a mainnet claim |
+ 
+ A formal proof names its definitions and premises (SAS-009). Finite tests give finite correspondence on their declared domain. O2 and O3 are universally quantified; no finite hostile or differential suite closes them. The release gates for this change are therefore *finite* gates with the premise `StepInv(pre)` stated: hostile classes covered, directed cases run, differential agreement on P1-P3. The universal obligations stay open and labelled until a theorem artifact exists (astra-2). No class substitutes for another (UISEC-012).
+ 
+diff -ru review-v2/design.md review-v2.1/design.md
+--- review-v2/design.md	2026-11-07 14:23:42.165986411 -0700
++++ review-v2.1/design.md	2026-11-07 14:27:13.565347988 -0700
+@@ -1,6 +1,6 @@
+ # Design: Sherlock VM and recursion (consensus 2026-11-07)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Specifies; executes nothing. Section numbers are referenced from `requirements.md`, `tasks.md` and `traceability.md`. Base `8fd34ed79`.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Specifies; executes nothing. Section numbers are referenced from `requirements.md`, `tasks.md` and `traceability.md`. Base `8fd34ed79`.
+ 
+ ## 1. Decisions at a glance
+ 
+diff -ru review-v2/dissent.md review-v2.1/dissent.md
+--- review-v2/dissent.md	2026-11-07 14:24:24.697307728 -0700
++++ review-v2.1/dissent.md	2026-11-07 14:27:13.580159874 -0700
+@@ -1,6 +1,6 @@
+ # Dissent and recorded conditions
+ 
+-Status: DRAFT v2 (revision round 1). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
++Status: DRAFT v2.1 (revision round 1 plus cleanup). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
+ 
+ ## Unresolved at DRAFT v1
+ 
+@@ -88,6 +88,12 @@
+ 
+ Also applied from the v1.1 delta reviews: SRC-005 relabelled consistently in requirements, spec, tasks 2.3 and 5.2 ((a) neutral encoding, (b) zero/ignore with justification; unscaled retained carry needs its own argument); SAS-002 spec and workflow E7 rewritten to dependency-closure freshness with a state-only-commit scenario and no blanket directory exclusion (astra-2); gate rule and task header no longer say "current head"; SMN-007 "immutable, recovery mode stated; disposable only without active state"; new SWF-012 / E14 `optional: true` rows so unimplemented B rows and the S>1 experiment cannot block `next` or `t3.sh` (astra-3). All items from the v1 list above applied: assurance §1 table recolumned with premises and "finite release evidence"; new evidence class "IR preprocessing / witness execution" used for M3; design §2.2 composition as a required check, §3.2(2) genesis text per astra-2, headings corrected; SRC-004/SAS-011/SAS-013 scenarios corrected; SRC-013 names M4 and adds the nonmember-key scenario; SRC-014 conditional on S>1; proposal exit treats SAS-008/009 as applicable-when-triggered; tasks 1.0/1.1 (E10 first, B5/B9 retired), 1.4 (E12 evaluator), 2.3 (genesis realization recorded before keygen), 2.4 (no stand-in), 4.4 (inventory R), 4.7/6.4 (P3 parity after authorship), 4.8 (S=8 after 5.3, conditional), 4.9 (initialization), 5.2 (label forgery, nonmember key), 6.1 (E13); SWF-005/SAS-002/E7 commit order and dependency-closure freshness; SWF-010 headings merged with observed on-chain state; SMN-007 immutable permitted.
+ 
++### v2 cleanup (21:30Z, within round 1)
++
++astra-1: assurance O5-O7 cells realigned to the five-column header; SMN-005 fee/parameter/DUST evidence attached to the mandatory `A8p`/`A10p` receipt, B8p stays optional; SWF-012 added to the proposal's mandatory list; evidence-only commits keep eligibility only while every declared dependency hash is unchanged. astra-3: every retained B row (B1-B3, B6, B7 and the new preview rows) is `optional: true`; the E14 regression covers failing existing B6/B7; `t3.sh:64`. astra-2: adopting a conditionally guarded feature (S>1, optimization, formal claim) removes `optional:` from its rows and makes SRC-014/SAS-008/SAS-009 mandatory. fable-3: E1 accepts retired rows' historical checks and requires `source:` on optional rows.
++
++### DRAFT v2 votes: fable-3 ACCEPT (21:25Z); fable-2 ACCEPT carried from v1.1; astra-1, astra-2, astra-3 final votes pending the cleanup above.
++
+ ## Owner decisions carried out of the council
+ 
+ 1. Amend `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` (mainnet) or keep M7 blocked.
+diff -ru review-v2/proposal.md review-v2.1/proposal.md
+--- review-v2/proposal.md	2026-11-07 14:23:42.167590153 -0700
++++ review-v2.1/proposal.md	2026-11-07 14:27:13.564417030 -0700
+@@ -1,6 +1,6 @@
+ # Sherlock VM consensus change (council run `sherlock-vm-council-20261107`)
+ 
+-Status: DRAFT v2 (revision round 1), 2026-11-07. Written by the council chair (`fable-1`) from six independent positions, cross-critiques and the issue round recorded under `research/sherlock-vm-council-20261107/`. Base: `main` at `8fd34ed79`. This change specifies; it executes nothing. Every "measured" figure cites the run or file that recorded it.
++Status: DRAFT v2.1 (revision round 1 plus cleanup), 2026-11-07. Written by the council chair (`fable-1`) from six independent positions, cross-critiques and the issue round recorded under `research/sherlock-vm-council-20261107/`. Base: `main` at `8fd34ed79`. This change specifies; it executes nothing. Every "measured" figure cites the run or file that recorded it.
+ 
+ ## Why
+ 
+@@ -36,4 +36,4 @@
+ 
+ ## Exit of this change
+ 
+-This change is complete when the Preview qualification record for P1 (`fact(3)`), P2 (`list123`) and P3 (fresh program) exists under the new keys (U023 scenario 2, C4 flips) and every mandatory security and assurance gate for the claimed profile (`sherlock-helper-microstep/1`, the frozen inventory, Preview) passes: SVM-001..009, SRC-001..010, SRC-012, SRC-013, SAS-001..007, SAS-010..014, SWF-001..008, SWF-010..011, SMN-001..007. Conditional clauses apply whenever their trigger occurs and are then mandatory: SAS-008 whenever an optimization is enabled (otherwise recorded "not applicable: no optimization enabled"), SAS-009 whenever a formal property is claimed (otherwise "not applicable: no formal claim"), SRC-014 whenever S>1 is adopted (vacuous at S=1). Only work outside the claim may stay open: SRC-011 (throughput, optional), SWF-009 and M7 (mainnet), the `/2` profile, financial and generic-ADT extensions. An explicitly open or unexecuted applicable gate does not make the change complete (astra-2, astra-3). The Mainnet operation (`SWF-009`) is specified here and executed only on owner authorization after `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` is amended.
++This change is complete when the Preview qualification record for P1 (`fact(3)`), P2 (`list123`) and P3 (fresh program) exists under the new keys (U023 scenario 2, C4 flips) and every mandatory security and assurance gate for the claimed profile (`sherlock-helper-microstep/1`, the frozen inventory, Preview) passes: SVM-001..009, SRC-001..010, SRC-012, SRC-013, SAS-001..007, SAS-010..014, SWF-001..008, SWF-010..012, SMN-001..007. Conditional clauses apply whenever their trigger occurs and are then mandatory: SAS-008 whenever an optimization is enabled (otherwise recorded "not applicable: no optimization enabled"), SAS-009 whenever a formal property is claimed (otherwise "not applicable: no formal claim"), SRC-014 whenever S>1 is adopted (vacuous at S=1). Only work outside the claim may stay open: SRC-011 (throughput, optional), SWF-009 and M7 (mainnet), the `/2` profile, financial and generic-ADT extensions. An explicitly open or unexecuted applicable gate does not make the change complete (astra-2, astra-3). The Mainnet operation (`SWF-009`) is specified here and executed only on owner authorization after `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` is amended.
+diff -ru review-v2/requirements.md review-v2.1/requirements.md
+--- review-v2/requirements.md	2026-11-07 14:23:42.168229704 -0700
++++ review-v2.1/requirements.md	2026-11-07 14:27:13.571175373 -0700
+@@ -1,6 +1,6 @@
+ # EARS requirements: Sherlock VM consensus (2026-11-07)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Forms: U = Ubiquitous, E = Event-driven, S = State-driven, X = Unwanted behaviour, O = Optional. Each requirement has a stable ID, an acceptance check that is a recorded run or a read-only check (never a review), and the clauses it refines (`UIREQ`, `UISEC`, `ZR`, `MNR`, `RPP`, `SRPOC`) or adopts (council clauses `ASR` astra-1, `SND` astra-2, `SRC` fable-2 proposed text, astra-3 scope clauses, fable-3 workflow text). Full requirement + scenario text is in `specs/<capability>/spec.md`. Design sections are in `design.md`. None of these clauses claims the code satisfies it today.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Forms: U = Ubiquitous, E = Event-driven, S = State-driven, X = Unwanted behaviour, O = Optional. Each requirement has a stable ID, an acceptance check that is a recorded run or a read-only check (never a review), and the clauses it refines (`UIREQ`, `UISEC`, `ZR`, `MNR`, `RPP`, `SRPOC`) or adopts (council clauses `ASR` astra-1, `SND` astra-2, `SRC` fable-2 proposed text, astra-3 scope clauses, fable-3 workflow text). Full requirement + scenario text is in `specs/<capability>/spec.md`. Design sections are in `design.md`. None of these clauses claims the code satisfies it today.
+ 
+ ## SVM: machine, layout, host interface (`specs/sherlock-vm/spec.md`)
+ 
+@@ -40,7 +40,7 @@
+ | ID | Form | Requirement | Acceptance check | Refines / adopts |
+ |---|---|---|---|---|
+ | SAS-001 | U | The assurance reporter SHALL record for every result: evidence class, dependency fingerprints (source closure, pins, keys, chain instance), semantic profile, tested bounds, command, tool versions, artifact hashes and remaining assumptions. | Schema test rejects missing fields; a finite model sample labelled as theorem or ledger acceptance is rejected. | UISEC-012; ASR-001 |
+-| SAS-002 | E | When a declared dependency (source closure, pin, key manifest, runtime, chain instance, configuration, artifact) of a result changes, the qualification checker SHALL mark the result stale until revalidated; freshness is defined by that dependency closure, not by HEAD equality, so a commit that only records evidence or factory state preserves eligibility; a HEAD-only flag may serve as an interim conservative signal but SHALL NOT be the release rule. | Change each dependency alone -> stale; unchanged-HEAD key change -> stale; a state-only commit -> still eligible. | ASR-002; `status.py:34-47,77-112`; astra-3 correction 2 |
++| SAS-002 | E | When a declared dependency (source closure, pin, key manifest, runtime, chain instance, configuration, artifact) of a result changes, the qualification checker SHALL mark the result stale until revalidated; freshness is defined by that dependency closure, not by HEAD equality, so a commit that only records evidence or factory state preserves eligibility while every declared dependency hash (including relied-on receipts) is unchanged; a HEAD-only flag may serve as an interim conservative signal but SHALL NOT be the release rule. | Change each dependency alone -> stale; unchanged-HEAD key change -> stale; a state-only commit -> still eligible. | ASR-002; `status.py:34-47,77-112`; astra-3 correction 2 |
+ | SAS-003 | X | If a negative test fails before reaching the claimed verifier stage (baseline failure, decoder refusal, synthesis error, panic, timeout, preprocessing refusal), the reporter SHALL label that stage untested and refuse constraint-rejection credit. | Inject each outcome; distinct labels; `assert_sound` requires zero panics; `qa_mutation` synthesis errors are not `Rejected`. | ASR-003; SND-007; `qa_mutation.rs:458-486,640-650` |
+ | SAS-004 | E | When a mutation campaign closes a constraint obligation, the report SHALL identify the reached verifier layer, the exact mutant, seed, case count, sampled/exhaustive status, mutation site, allowlist identity and a deliberately missing-constraint control; fresh malicious-witness proofs SHALL be included, not only public-input flips of an existing proof. | Campaign without a weakened control or without raw-witness cases is labelled partial. | ASR-004; SND-007 |
+ | SAS-005 | E | When a trace comparison closes a semantic obligation, the comparator SHALL compare complete ordered observations through a declared projection, not final values. | Intermediate preserved-field mutation with equal final result is detected; identical corruption of both producers is detected by the independent oracle. | ASR-005; UIREQ-021 |
+@@ -69,7 +69,7 @@
+ | SWF-009 | S | While `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` forbids mainnet submission, no mainnet operation SHALL run; the mainnet operation SHALL require `authorization: owner+checklist`, a Preview rollback rehearsal receipt, and the T4 checklist. | Operation table shows the block; `t4.sh` refuses without the rehearsal receipt. | ISSUE 1 |
+ | SWF-010 | E | When a deployment or key fails its postcondition, rollback SHALL record the address as orphaned or retired, re-pin the fixture, use maintenance update (`IrInsert`/`IrRemove`, node #2375 noted) only on maintained contracts, redeploy otherwise, and `git revert` the fixture commit; history SHALL NOT be deleted; an inserted key or a client re-pin SHALL NOT be treated as revoking an old key until the on-chain key state is observed; a contract holding active state (funds, duties, consumed statements) SHALL NOT be discarded, its recovery SHALL migrate or record the residual exposure, and only empty instances may be abandoned. | Receipt marks `orphaned`/`retired` with observed on-chain key state and active-state inventory; `runs.jsonl` append-only; the actual recovery mode is tested on Preview. | fable-3 §7; astra-2 recovery conditions |
+ | SWF-011 | U | Superseded predicate rows SHALL carry `retired: "<reason or anchor>"`; `next` and the `check --tier`/`--set` sweeps SHALL skip retired rows, `next` SHALL report a `retired` count, explicit `check <ID>` SHALL still run them, `validate` SHALL refuse an active row that depends on a retired row, and composites SHALL be rewired to replacement rows. | Factory unit test: failing retired A8 + unimplemented A8p -> `next` names A8p, lists A8 retired; `check --tier T3` and `check --set A` ignore A8; `check A8` runs; history retained. | fable-3 E10 (extended); astra-1/astra-3 |
+-| SWF-012 | U | Rows marked `optional: true` (B4p, B5p, B8p, B9p, the S>1 experiment) SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the tier runner SHALL select the mandatory milestone row set and its dependencies. | Factory unit test: unimplemented optional B4p leaves the Preview gate eligible; unimplemented mandatory A8p blocks it; `check --include-optional` reports B4p. | astra-3 optional-B note; D14; `qa/tiers/t3.sh:69`, `cli.py:50-67` |
++| SWF-012 | U | Rows marked `optional: true` (every retained B row: B1-B3, B6, B7, B4p, B5p, B8p, B9p; the S>1 experiment) SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the tier runner SHALL select the mandatory milestone row set and its dependencies; once a feature guarded by a conditional clause is adopted for the qualified candidate (S>1, an optimization, a formal claim), its rows SHALL lose `optional:` and SRC-014/SAS-008/SAS-009 become mandatory (the proposal's triggered-gate rule). | Factory unit test: unimplemented optional B4p leaves the Preview gate eligible; unimplemented mandatory A8p blocks it; `check --include-optional` reports B4p. | astra-3 optional-B note; D14; `qa/tiers/t3.sh:69`, `cli.py:50-67` |
+ 
+ ## SMN: Midnight ledger 9 target (`specs/sherlock-midnight-target/spec.md`)
+ 
+@@ -79,6 +79,6 @@
+ | SMN-002 | E | When the pins change, SRC-009 SHALL run; historical keys and receipts SHALL be kept as historical evidence, not marked false. | Regression record per relation. | SRC-009; ISSUE 2 |
+ | SMN-003 | E | When the contract is compiled with Compact 0.36.0, the acceptRun transcript template SHALL be recaptured and diffed against `template.rs`; transcripts SHALL embed canonical field values and no `noop 0`; the decider statement SHALL be checked against the public-input limit from `LedgerParameters` and the contract against the 256-operation cap. | A6-shape local acceptance on proof-verifying 9.1.0.1 with mainnet parameters passes; the limit values are recorded. | 9.1.0.0/9.1.0.1 notes |
+ | SMN-004 | U | Chain identity in every receipt and pins row SHALL include network name, genesis hash, `specVersion` and ledger revision; local source/binary provenance and live runtime identity SHALL be recorded separately, and the unavailability of the deployed node source for spec 2001100 SHALL be stated as a limit. | Pre-reset Preview receipt rejected; stagenet receipt rejected for a Preview claim. | SND-006; ASR-007; astra-1 target-observations |
+-| SMN-005 | E | When fees are estimated or recorded, the tooling SHALL use the 9.1.0.x parameters (`min_block_price`, validation/guaranteed/fallible factors), pay with at least two DUST spends while #838 is open, and register DUST with lead time. | B8-shape measurement on Preview; old fee figures labelled historical. | ledger-9.md; #838 |
++| SMN-005 | E | When fees are estimated or recorded, the tooling SHALL use the 9.1.0.x parameters (`min_block_price`, validation/guaranteed/fallible factors), pay with at least two DUST spends while #838 is open, and register DUST with lead time; the Sherlock fee, parameter and DUST evidence SHALL be recorded in the mandatory `A8p`/`A10p` operation receipt and readback (B8-shape wording may be reused), not only in the optional Fenrir B rows. | `A8p`/`A10p` receipt carries fee, `min_block_price`, factors and DUST spends; old fee figures labelled historical; optional B8p adds the batch workload. | ledger-9.md; #838; astra-1 v2 cleanup |
+ | SMN-006 | X | If a deploy or call would exceed the public-input limit, the 256-operation cap or the block gas limit, the preflight SHALL refuse before submission. | Preflight refusal test with a synthetic oversize statement. | 9.1.0.1 notes |
+ | SMN-007 | X | If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it immutable and state its recovery mode (disposable only while it holds no active state; otherwise redeploy-and-retire under SWF-010's active-state rule; immutable deployments remain permitted); a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet with the on-chain key state read back. | Deploy script refuses an undeclared authority mode; rehearsal receipt with observed key state committed. | ledger-9.md; SWF-010 |
+diff -ru review-v2/specs/sherlock-assurance/spec.md review-v2.1/specs/sherlock-assurance/spec.md
+--- review-v2/specs/sherlock-assurance/spec.md	2026-11-07 14:23:42.171079300 -0700
++++ review-v2.1/specs/sherlock-assurance/spec.md	2026-11-07 14:27:13.578843988 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-assurance (evidence, negative tests, coverage)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
+ 
+ ## ADDED Requirements
+ 
+diff -ru review-v2/specs/sherlock-delivery/spec.md review-v2.1/specs/sherlock-delivery/spec.md
+--- review-v2/specs/sherlock-delivery/spec.md	2026-11-07 14:23:42.171505716 -0700
++++ review-v2.1/specs/sherlock-delivery/spec.md	2026-11-07 14:27:13.579367555 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-delivery (DoctorWatson factory workflow)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
+ 
+ ## ADDED Requirements
+ 
+@@ -79,7 +79,7 @@
+ Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects.
+ 
+ #### Scenario: Unimplemented optional B row
+-- **WHEN** B4p is `unimplemented.sh` and every mandatory Preview row passes.
++- **WHEN** B4p is `unimplemented.sh`, existing B6/B7 are failing, and every mandatory Preview row passes.
+ - **THEN** `next` names no failing mandatory row, `qa/tiers/t3.sh` passes, and `check --include-optional` reports B4p failing.
+ 
+ #### Scenario: Unimplemented mandatory row
+diff -ru review-v2/specs/sherlock-midnight-target/spec.md review-v2.1/specs/sherlock-midnight-target/spec.md
+--- review-v2/specs/sherlock-midnight-target/spec.md	2026-11-07 14:23:42.172029139 -0700
++++ review-v2.1/specs/sherlock-midnight-target/spec.md	2026-11-07 14:27:13.579899074 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-midnight-target (ledger 9.1.0.x pins, networks, fees, keys)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
+ 
+ ## ADDED Requirements
+ 
+diff -ru review-v2/specs/sherlock-recursion/spec.md review-v2.1/specs/sherlock-recursion/spec.md
+--- review-v2/specs/sherlock-recursion/spec.md	2026-11-07 14:23:42.172249875 -0700
++++ review-v2.1/specs/sherlock-recursion/spec.md	2026-11-07 14:27:13.578147764 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-recursion (leaf, node, decider, contract)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Design: `../../design.md` §3.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Design: `../../design.md` §3.
+ 
+ ## ADDED Requirements
+ 
+diff -ru review-v2/specs/sherlock-vm/spec.md review-v2.1/specs/sherlock-vm/spec.md
+--- review-v2/specs/sherlock-vm/spec.md	2026-11-07 14:23:42.172911090 -0700
++++ review-v2.1/specs/sherlock-vm/spec.md	2026-11-07 14:27:13.577626613 -0700
+@@ -1,6 +1,6 @@
+ # Capability: sherlock-vm (machine, layout, dispatch, host interface)
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Design: `../../design.md` §2.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Design: `../../design.md` §2.
+ 
+ ## ADDED Requirements
+ 
+diff -ru review-v2/tasks.md review-v2.1/tasks.md
+--- review-v2/tasks.md	2026-11-07 14:23:42.169154983 -0700
++++ review-v2.1/tasks.md	2026-11-07 14:27:13.575078664 -0700
+@@ -1,6 +1,6 @@
+ # Tasks
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes with its declared dependency closure unchanged (SAS-002) and, for network postconditions, a committed receipt (SWF-005). Rows marked `optional: true` (B4p, B5p, B8p, B9p, the S>1 experiment) do not gate milestones (E14). None is ticked now.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes with its declared dependency closure unchanged (SAS-002) and, for network postconditions, a committed receipt (SWF-005). Rows marked `optional: true` (every B row, the S>1 experiment) do not gate milestones (E14); Sherlock fee/security evidence always has its own mandatory A/U/F row (SMN-005). None is ticked now.
+ 
+ ## M0 Re-arm the factory (T0, bookkeeping; SWF-006)
+ 
+@@ -9,8 +9,8 @@
+ 
+ ## M1 Land this change (T0)
+ 
+-- [ ] 1.0 E10 and E14 first: `retired:` and `optional:` row fields; `next` and `check --tier/--set` sweeps skip retired rows and skip optional rows unless `--include-optional`; explicit `check <ID>` still runs both; `validate` refuses a mandatory row depending on a retired or optional row; factory unit test over `next`, `check --tier T3`, `check --set A`, `check A8`, and "unimplemented optional B4p leaves the Preview gate eligible while an unimplemented mandatory A/U row blocks it". [SWF-011, SWF-012] -> F16
+-- [ ] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p (`optional: true`), F14, F15, F16; add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. [SWF-002, SWF-011] -> `validate`
++- [ ] 1.0 E10 and E14 first: `retired:` and `optional:` row fields; `next` and `check --tier/--set` sweeps skip retired rows and skip optional rows unless `--include-optional`; explicit `check <ID>` still runs both; `validate` refuses a mandatory row depending on a retired or optional row; factory unit test over `next`, `check --tier T3`, `check --set A`, `check A8`, and "an unimplemented optional B4p or a failing existing optional B6/B7 leaves the Preview gate eligible while an unimplemented mandatory A/U/F row blocks it". [SWF-011, SWF-012] -> F16
++- [ ] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p (`optional: true`), F14, F15, F16; mark the retained B1, B2, B3, B6, B7 rows `optional: true` as well (D14: no B row gates this qualification; B6/B7 are recorded failing in `status.json`); add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. [SWF-002, SWF-011] -> `validate`
+ - [ ] 1.2 E1 `scripts/qa/check-traceability.py` + F14 in `t0.sh`. [SWF-002] -> F14
+ - [ ] 1.3 E2 `qa/sherlock/target-pins.json` + `check-target-pins.py` + F15 in `t0.sh`; rows `undeployed`, `preview`, `mainnet`, `stagenet(retired)`. [SWF-007, SMN-001, SMN-004] -> F15
+ - [ ] 1.4 E12 (evaluator): rejection suite and U023 holdout parametrised by network; `U023.json` contract change; reseal. Owner of this task is the evaluator role. [SWF-003, SRC-007]
+diff -ru review-v2/traceability.md review-v2.1/traceability.md
+--- review-v2/traceability.md	2026-11-07 14:23:42.169363175 -0700
++++ review-v2.1/traceability.md	2026-11-07 14:27:13.575817959 -0700
+@@ -1,6 +1,6 @@
+ # Traceability: requirement -> design -> task -> evidence -> gate
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). After task 1.2 this file is regenerated by `scripts/qa/check-traceability.py --render` from `qa/sherlock/predicates.yaml` and `qa/sherlock/status.json` (SWF-002). Evidence class names follow `assurance.md` §2. "Refines" lists the pre-existing clauses the row refines; "Adopts" lists the council clause it comes from.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). After task 1.2 this file is regenerated by `scripts/qa/check-traceability.py --render` from `qa/sherlock/predicates.yaml` and `qa/sherlock/status.json` (SWF-002). Evidence class names follow `assurance.md` §2. "Refines" lists the pre-existing clauses the row refines; "Adopts" lists the council clause it comes from.
+ 
+ | Requirement | Design | Task | Predicate | Evidence class | Gate | Refines / adopts |
+ |---|---|---|---|---|---|---|
+@@ -58,7 +58,7 @@
+ | SMN-002 | §5.2 | 2.4 | A11 | native cryptography | M2 | ISSUE 2 |
+ | SMN-003 | §3.3, §5.2 | 2.5 | A6p | local ledger | M2 | 9.1.0.x notes |
+ | SMN-004 | §5.2 | 1.3, 6.1 | F15, A8p | target observation | M1, M6 | SND-006; ASR-007 |
+-| SMN-005 | §5.1 | 6.2, 7.2 | B8p, B8m | target observation | M6, M7 | ledger-9.md |
++| SMN-005 | §5.1 | 6.2, 6.3, 7.2, 7.3 | A8p, A10p (mandatory); B8p, B8m (optional) | target observation | M6, M7 | ledger-9.md |
+ | SMN-006 | §5.2 | 2.5 | A6p preflight | local ledger | M2 | 9.1.0.1 notes |
+ | SMN-007 | §5.2 | 6.2, 6.7 | OP-PV-DEPLOY receipt, rehearsal | target observation | M6 | ledger-9.md |
+ 
+diff -ru review-v2/workflow.md review-v2.1/workflow.md
+--- review-v2/workflow.md	2026-11-07 14:23:42.170305925 -0700
++++ review-v2.1/workflow.md	2026-11-07 14:27:13.573869530 -0700
+@@ -1,6 +1,6 @@
+ # DoctorWatson workflow: implementation and deployment
+ 
+-Status: DRAFT v2 (revision round 1, 2026-11-07 21:30Z). Adopted from fable-3's `workflow-proposed.md` with the council's ISSUE resolutions. Every command exists at `8fd34ed79` unless listed in §8 "Exact additions" (E1-E13; the M6 operation commands depend on E12/E13) (verified from `scripts/doctorwatson --help`, `models/doctorwatson/factory/CONTRACT.md`, `qa/tiers/*.sh`, `.githooks/pre-commit`). Requirements SWF-001..012.
++Status: DRAFT v2.1 (revision round 1 plus cleanup, 2026-11-07 21:30Z). Adopted from fable-3's `workflow-proposed.md` with the council's ISSUE resolutions. Every command exists at `8fd34ed79` unless listed in §8 "Exact additions" (E1-E13; the M6 operation commands depend on E12/E13) (verified from `scripts/doctorwatson --help`, `models/doctorwatson/factory/CONTRACT.md`, `qa/tiers/*.sh`, `.githooks/pre-commit`). Requirements SWF-001..012.
+ 
+ ## 1. Engine and truth
+ 
+@@ -37,7 +37,7 @@
+ 
+ Pattern in use: `doctorwatson heavy --id A4deploy -- node tools/sherlock-sdk/deploy-current.mjs`; `heavy --id A8 -- node tools/sherlock-sdk/call-current.mjs --submit` (`docs/sherlock/stagenet-deployment.md:190-191,300`). Commit order (SWF-005): the receipt is committed first (code/receipt commit, hash-bound to the check), then `scripts/doctorwatson check <postcondition>` and `scripts/doctorwatson state-commit`, which commits only `status.json` and `runs.jsonl` (`models/doctorwatson/factory/evalloop.py:39-46`). An uncommitted receipt is ineligible; a committed receipt followed by its state commit is eligible.
+ 
+-Freshness (SAS-002): eligibility follows the declared dependency closure (source closure, pins, key manifests, chain identity), not HEAD equality; a state-only or receipt-only commit preserves eligibility while the run's HEAD is kept for provenance. E7's HEAD flag is an interim conservative signal only.
++Freshness (SAS-002): eligibility follows the declared dependency closure (source closure, pins, key manifests, chain identity), not HEAD equality; a state-only or receipt-only commit preserves eligibility only while every declared dependency hash (including relied-on receipts and artifacts) is unchanged; the run's HEAD is kept for provenance. E7's HEAD flag is an interim conservative signal only.
+ 
+ Note (fable-3 W4): `validate` today checks only `id/set/tier/title/check/heavy/holdout/budget/depends` (`predicates.py:85-130`); `network:` and `retired:` rows pass validation but are inert until E6/E10 land; ids are free strings, so `A2p`, `U023a` are valid.
+ 
+@@ -105,7 +105,7 @@
+ | E10 | `retired: "<reason or anchor>"` row field; `next` skips retired rows for FIRST FAILING and prints `RETIRED: ...`; `check --tier`/`--set` sweeps skip them (`cli.py _select`); explicit `check <ID>` still runs; `validate` refuses an active row depending on a retired row; composites rewired; factory unit test covering `next`, `check --tier T3`, `check --set A`, `check A8` | `predicates.py` schema, `status.py:34-47`, `cli.py:50`, `models/doctorwatson/factory/tests/` | about 40 lines |
+ | E11 | Heavy concurrency (two proofs when the sum fits the cap) requires a second lock class with aggregate resource enforcement; out of scope unless the owner asks | `heavy.py` | named, not planned |
+ | E12 | Evaluator-owned: parametrise the rejection suite and the U023 holdout by network (`qa/holdout/run.sh:40-41` accepts only `rejections-local|rejections-stagenet`; `qa/holdout/lib/stagenet_check.py:19` hardcodes the stagenet indexer; `produce-a9.sh` is stagenet-only; `qa/holdout/contracts/U023.json` pins `network:'stagenet'`); contract change on `U023.json`; reseal `MANIFEST.sha256` under `DW_ROLE=evaluator` | `qa/holdout/` (evaluator) | contract change + reseal; tasks 6.3/6.5 name the evaluator |
+-| E14 | `optional: true` row field: `next` FIRST FAILING and `check --tier`/`--set` sweeps skip optional rows unless `--include-optional`; explicit `check <ID>` runs them; `validate` refuses a mandatory row depending on an optional row; regression test: an unimplemented optional B4p leaves the Preview gate eligible, an unimplemented mandatory A/U row blocks it; applies to B4p/B5p/B8p/B9p and the S>1 experiment row (astra-3 optional-B note; `qa/tiers/t3.sh:69`, `cli.py:50-67`, `status.py:34-47`) | `predicates.py` schema, `cli.py _select`, `status.py:view`, `models/doctorwatson/factory/tests/` | about 30 lines |
++| E14 | `optional: true` row field: `next` FIRST FAILING and `check --tier`/`--set` sweeps skip optional rows unless `--include-optional`; explicit `check <ID>` runs them; `validate` refuses a mandatory row depending on an optional row; regression test: an unimplemented optional B4p or a failing existing optional B6/B7 leaves the Preview gate eligible, an unimplemented mandatory A/U/F row blocks it; applies to every retained B row (B1-B3, B6, B7, B4p, B5p, B8p, B9p) and the S>1 experiment row; Sherlock fee/security evidence keeps its own mandatory row; when a conditionally guarded feature (S>1, an optimization, a formal claim) is adopted for the qualified candidate its rows drop `optional:` and the triggered clauses become mandatory (astra-2); E1's traceability check accepts a retired row's historical check and requires `source:` on optional rows (fable-3) (astra-3 optional-B note and v2 cleanup; `qa/tiers/t3.sh:64`, `cli.py:50-67`, `status.py:34-47`) | `predicates.py` schema, `cli.py _select`, `status.py:view`, `models/doctorwatson/factory/tests/` | about 30 lines |
+ | E13 | Network-parametrised SDK scripts: a session module built on Midnight.js 5 `providers.config{networkId,ttlSeconds}` (no `setNetworkId`), `--network` on `deploy-run.mjs`, `call-run.mjs`, `readback-run.mjs`, a reject-suite driver, per-network wallet dir and endpoints (`stagenet-session.mjs:24-26,31,41`, `deploy-run.mjs:16,42`, `call-run.mjs:29,65`, `readback-run.mjs:30` are stagenet-only today) | `tools/sherlock-sdk/` | created in task 6.1; M6 commands do not exist until then |
+ 
+ Everything else runs on existing commands.

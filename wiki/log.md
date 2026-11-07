@@ -1359,3 +1359,5 @@ Append the exact reviewed [atlas engineering receipt cut](research/sherlock-circ
 
 
 - Source12: [separate build, prospective capacity and counterfactual diagnosis](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-e669a9989d96997e6612](../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json)
+
+- 2026-11-07: Ledger 9 refresh. Mainnet ledger 9.1.0.1 since block 3346139 (2026-11-06T20:51:24Z); 84 repos re-cloned; new pins and contradictions: [[wiki/midnight-ledger-9-hardfork|Ledger 9 network upgrade]]; [[wiki/midnight-repositories|inventory]] September pins superseded.

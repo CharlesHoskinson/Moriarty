@@ -1,0 +1,17 @@
+# VOTE astra-3 OBJECT — DRAFT v1.1
+
+Reviewed copy: `draft-v1.1/`; hashes: `draft-v1.1.sha256`. This updates `vote-v1.md`; it does not change the supported architecture or scope.
+
+The revision fixes the direct SRC-004, SAS-011 and SAS-013 scenario defects, adds the two-step receipt commit and dependency-freshness requirements, specifies E12/E13, handles retired B5/B9, and moves S>1 after the S=1 phase profile. The revised design text also removes the unsupported cancellation and automatic-composition conclusions. Those changes address most of my concerns.
+
+Four synchronization fixes remain:
+
+1. **Soundness and evidence boundaries.** SRC-005's requirement and scenarios still use v1's alternatives and tests, while design §3.2 now defines different alternatives (neutral encoding versus justified zero/ignore). Synchronize all of them and task 2.3 to the revised design. Assurance §1 still labels its table column “Evidence class that can close it” and puts finite tests against universal O1–O4 obligations; use finite release evidence and retain the open universal claim, as astra-1 requested. M3 dispatch/fragment `ProofPreimage::check` receipts must be labelled IR preprocessing/witness execution in assurance and traceability, not circuit constraint rejection. This is the source distinction in `c6_dispatch_consumer.rs:1-8` and the same distinction retained in my position and critique. The source behavior was inspected; no native proving was run here.
+
+2. **Applicable conditional gates.** The proposal exit is unchanged. Replace its exception with: “Every applicable security and assurance requirement for the claimed profile and target must pass. SAS-008 applies when an optimization is enabled; SAS-009 applies when a formal property is claimed. They may be recorded not applicable only when their condition is absent. SRC-014's S>1 scenarios apply only if S>1 is adopted; S=1 qualification does not require the optional S=8 experiment. An open applicable gate blocks completion.” This is v1 objection 5, still a security-evidence concern.
+
+3. **Freshness must be consistent at the actual gate.** SAS-002 and workflow §3 now use dependency closure correctly, but workflow E7 still specifies `head != HEAD` as its stale rule and §4 still requires passes at the current head. The assurance capability's SAS-002 also still lists HEAD as an invalidating dependency. Rewrite those to the new rule and keep run HEAD only as provenance (or explicitly label the HEAD check interim and ineligible as the release rule). Use the state-only-commit and dependency-change tests already added. Otherwise an implementer can still follow E7 and make recording evidence invalidate it.
+
+4. **P3 and the frozen inventory.** Task 4.4 still keys the “P1-P3 rule set,” task 4.7 requires P3 parity before P3 is authored in 6.4, and the M3 gate still requires P3. Use frozen inventory R for M3/M4; run P1/P2 parity there; after P3 is authored, require its parity and local prove/verify before its public call. Correct SRC-013/design §3.4 from M2 to M4. The S>1 ordering part of v1 objection 6 is resolved.
+
+These are the remaining portions of the previous objections and the matching assurance review, not a new architectural revision. Please apply them consistently across requirement tables, capability scenarios, tasks, traceability and gate text. My vote remains OBJECT until the revised bundle does so. The final resource cost and deployed-source mapping remain explicit implementation limitations, not objections to the design.

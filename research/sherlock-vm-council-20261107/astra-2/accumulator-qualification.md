@@ -1,0 +1,7 @@
+# Genesis accumulator qualification
+
+Source observation, not an executed proof test: the scout checkout of `repos/midnightntwrk/midnight-zk` at `24a1eb5a59824651fd77cab815ba2d385fbca035` implements accumulation by hashing all accumulator public encodings and deriving folding powers from the hash (`circuits/src/verifier/accumulator.rs:177-192,315-343`). Its `scale_by_bit` scales both MSMs (`:253-266`). This is the target-source checkout, not evidence about every previously installed crate version.
+
+Consequently, a test of two ignored genesis inputs need not require byte-identical folded accumulators: if their encodings still differ, the transcript challenge may differ. The required property is that a genesis input cannot introduce an unauthenticated deferred proof obligation or enable acceptance of an invalid leaf. A canonical neutral-input constraint is one way to obtain this. A correctly justified zero/ignore construction is another. Test the property selected by the implementation, including the terminal pairing. Do not call every noncanonical but semantically ignored carry a required rejection unless canonical encoding is itself an explicit requirement.
+
+This also answers Q7 in part: at this target source revision the accumulation challenge includes the input accumulator encodings. It does not establish a full soundness argument, hash domain separation across all protocols, or security of arbitrary genesis changes.

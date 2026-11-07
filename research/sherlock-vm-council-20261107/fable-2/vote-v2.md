@@ -1,0 +1,5 @@
+VOTE fable-2 ACCEPT on DRAFT v2 (recursion lens; verified at 21:25Z: design.md 3.2/3.4/3.5 headings and 3.2(2); requirements SRC-005/013/014; specs/sherlock-recursion SRC-005 three scenarios and SRC-014; tasks 2.3, 2.4, 4.4, 4.7, 4.8, 4.9, 5.2, 5.3, 6.4; proposal exit).
+All five editorial items from my v1.1 vote are applied: SRC-005 realization labels consistent across design, requirements, spec and tasks; heading IDs corrected; task 4.4 keys frozen inventory R; task 2.4 names the C6 digest leaf relation, never standin.rs; SRC-014 conditional on S>1; 4.8 after 5.3 and conditional.
+No objection. No soundness or security concern open from the recursion lens.
+Carried into tasks, not an objection: task 2.3 must record the chosen genesis realization at midnight-circuits 7.3.0 before node keygen; my recommendation is (b) scale prev_acc by not_genesis with the irrelevance test, which needs no cryptographic argument.
+Non-blocking support for astra-1's two v2 cleanups (assurance O5-O7 table cells; SMN-005 fee evidence attached to a mandatory A8p receipt rather than optional B8p).
