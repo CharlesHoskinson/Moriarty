@@ -6,7 +6,7 @@ import json
 import os
 
 from . import head_sha, now_iso, repo_root, sherlock_path
-from .predicates import SETS, topo_order
+from .predicates import SETS, swept, topo_order
 
 SCHEMA = "doctorwatson.status/1"
 
@@ -31,8 +31,13 @@ def entries_of(status):
     return status["predicates"]
 
 
-def view(preds, entries):
-    """Return (counts, firstFailing) from predicate definitions plus result entries."""
+def view(preds, entries, include_optional=False):
+    """Return (counts, firstFailing) from predicate definitions plus result entries.
+
+    Retired rows (SWF-011) never count and are never FIRST FAILING. Optional rows
+    (SWF-012) count and gate only with `include_optional`.
+    """
+    preds = swept(preds, include_optional)
     counts = {s: [0, 0] for s in SETS}
     for p in preds:
         counts[p.set][1] += 1
@@ -45,6 +50,12 @@ def view(preds, entries):
             first = {"id": p.id, "check": p.check, "exit": e.get("exit")}
             break
     return counts, first
+
+
+def optional_counts(preds, entries):
+    """[passing, total] over optional, non-retired rows (reported, never gating)."""
+    rows = [p for p in preds if p.optional and p.retired is None]
+    return [sum(1 for p in rows if (entries.get(p.id) or {}).get("passes") is True), len(rows)]
 
 
 def write_atomic(p, text):

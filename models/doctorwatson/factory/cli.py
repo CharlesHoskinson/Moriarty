@@ -26,17 +26,27 @@ def cmd_next(args):
         return 1
     st = status.load()
     entries = status.entries_of(st)
-    counts, first = status.view(preds, entries)
+    counts, first = status.view(preds, entries, args.include_optional)
     by_id = {p.id: p for p in preds}
     no_results = st is None
+    retired = [{"id": p.id, "retired": p.retired} for p in preds if p.retired is not None]
+    optional = status.optional_counts(preds, entries)
     if args.json:
         ff = None
         if first:
             ff = dict(first, title=by_id[first["id"]].title)
-        print(json.dumps({"counts": counts, "firstFailing": ff, "noResults": no_results}, indent=2))
+        print(json.dumps({"counts": counts, "firstFailing": ff, "noResults": no_results,
+                          "optional": optional, "retired": retired}, indent=2))
         return 0
     for s in preds_mod.SETS:
         print(f"{s}: {counts[s][0]}/{counts[s][1]}")
+    if optional[1]:
+        gating = "gating" if args.include_optional else "not gating"
+        print(f"OPTIONAL: {optional[0]}/{optional[1]} ({gating})")
+    if retired:
+        print(f"RETIRED: {len(retired)}")
+        for r in retired:
+            print(f"RETIRED: {r['id']} ({r['retired']})")
     if no_results:
         print(NO_RESULTS_HINT)
     if first:
@@ -58,6 +68,11 @@ def _select(preds, args):
     out = []
     for p in preds_mod.topo_order(preds):
         if wanted and p.id not in wanted:
+            continue
+        # sweeps skip retired rows and, unless asked, optional rows; a named id always runs
+        if not wanted and p.retired is not None:
+            continue
+        if not wanted and p.optional and not args.include_optional:
             continue
         if args.set and p.set != args.set:
             continue
@@ -188,12 +203,16 @@ def build_parser():
 
     p = sub.add_parser("next", help="counts and first failing predicate")
     p.add_argument("--json", action="store_true")
+    p.add_argument("--include-optional", action="store_true",
+                   help="let optional rows count and be FIRST FAILING (retired rows never are)")
     p.set_defaults(fn=cmd_next)
 
     p = sub.add_parser("check", help="run predicate checks")
     p.add_argument("ids", nargs="*", metavar="ID")
     p.add_argument("--set", choices=preds_mod.SETS)
     p.add_argument("--tier", choices=preds_mod.TIERS, help="predicates whose tier is exactly this")
+    p.add_argument("--include-optional", action="store_true",
+                   help="sweeps also run optional rows (retired rows run only when named)")
     p.add_argument("--hypothesis")
     p.set_defaults(fn=cmd_check)
 

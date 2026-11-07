@@ -30,7 +30,18 @@ class Predicate:
     depends: list = field(default_factory=list)
     source: str | None = None
     holdout: bool = False
+    retired: str | None = None   # E10/SWF-011: reason or anchor; sweeps and FIRST FAILING skip the row
+    optional: bool = False       # E14/SWF-012: reported, never gating unless --include-optional
     index: int = 0
+
+    @property
+    def mandatory(self):
+        return self.retired is None and not self.optional
+
+
+def swept(preds, include_optional=False):
+    """Rows a sweep or FIRST FAILING considers: never retired; optional only on request."""
+    return [p for p in preds if p.retired is None and (include_optional or not p.optional)]
 
 
 def yaml_path(repo=None):
@@ -106,7 +117,9 @@ def validate_data(data):
             errors.append(f"{where}: title must be a non-empty string")
         if not _nonempty_str(item.get("check")):
             errors.append(f"{where}: check must be a non-empty string")
-        for flag in ("heavy", "holdout"):
+        if "retired" in item and not _nonempty_str(item.get("retired")):
+            errors.append(f"{where}: retired must be a non-empty reason or anchor string")
+        for flag in ("heavy", "holdout", "optional"):
             if flag in item and not isinstance(item[flag], bool):
                 errors.append(f"{where}: {flag} must be true or false")
         if item.get("heavy") is True and not _nonempty_str(item.get("budget")):
@@ -126,6 +139,17 @@ def validate_data(data):
                 errors.append(f"{pid}: depends on itself")
             elif d not in idset:
                 errors.append(f"{pid}: depends on unknown id {d!r}")
+    for pid, item in seen.items():
+        if "retired" in item:
+            continue  # retired rows may keep depending on retired or optional rows (history)
+        for d in deps.get(pid, []):
+            target = seen.get(d)
+            if d == pid or not isinstance(target, dict):
+                continue
+            if "retired" in target:
+                errors.append(f"{pid}: active row depends on retired row {d!r}")
+            elif target.get("optional") is True and item.get("optional") is not True:
+                errors.append(f"{pid}: mandatory row depends on optional row {d!r}")
     cyc = _find_cycles(idset, {k: [d for d in v if d != k] for k, v in deps.items()})
     if cyc:
         errors.append("dependency cycle among: " + ", ".join(cyc))
@@ -157,6 +181,7 @@ def load(repo=None):
             check=item["check"], heavy=bool(item.get("heavy", False)),
             budget=item.get("budget"), depends=list(item.get("depends") or []),
             source=item.get("source"), holdout=bool(item.get("holdout", False)),
+            retired=item.get("retired"), optional=item.get("optional") is True,
             index=n,
         ))
     return out
