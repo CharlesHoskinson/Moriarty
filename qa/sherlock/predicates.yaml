@@ -76,6 +76,7 @@ predicates:
     depends: [A7]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L22"
     holdout: false
+    retired: "stagenet (specVersion 2000000) is retired for new qualification; superseded by A8p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: A9
     set: A
     title: "The five rejection cases are refused on stagenet"
@@ -85,6 +86,7 @@ predicates:
     depends: [A8]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L11"
     holdout: true
+    retired: "stagenet (specVersion 2000000) is retired for new qualification; superseded by A9p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: A10
     set: A
     title: "Public receipts and complete effects readback of the stagenet call, independent of the submitter (SRPOC-002, SRPOC-007)"
@@ -93,6 +95,97 @@ predicates:
     heavy: false
     depends: [A9]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L11"
+    holdout: false
+    retired: "stagenet (specVersion 2000000) is retired for new qualification; superseded by A10p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
+  - id: A11
+    set: A
+    title: "Keygen regression at the ledger 9.1.0.1 pins: relation and VK hashes of the C6 leaf, node, decider, parent and contract compared with the manifests; changed closure regenerated leaf -> node -> decider -> template; manifests written (SRC-008, SRC-009, SMN-002)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A11"
+    heavy: false
+    depends: [A1]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-009"
+    holdout: false
+  - id: A12
+    set: A
+    title: "Universal gated leaf keyed over the frozen inventory R at S=1: one-hot selector, rules_d, steps and internal chain constrained, prog_d commits image, layout, bounds and profile; U/F decision committed (SVM-003..005, SRC-002, SRC-003, SRC-013)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A12"
+    heavy: false
+    depends: [A11, U023e]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-013"
+    holdout: false
+  - id: A2p
+    set: A
+    title: "entry 7; owner leaves proved under the universal leaf key at the new pins and accepted by their verifier; Preview target (SVM-001)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A2p"
+    heavy: false
+    depends: [A12]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#svm-001"
+    holdout: false
+  - id: A3p
+    set: A
+    title: "Node chain folding the entry 7; leaves through the seven-lane leaf statement, at the new pins, with measured budget; Preview target (SRC-001, SRC-011)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A3p"
+    heavy: false
+    depends: [A2p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-001"
+    holdout: false
+  - id: A4p
+    set: A
+    title: "Run decider proof over the entry 7; node chain exposing [prog_d, init_d, fin_d, n_steps, result_be], bound to the Preview verifier contract manifest (SRC-006)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A4p"
+    heavy: false
+    depends: [A3p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-006"
+    holdout: false
+  - id: A6p
+    set: A
+    title: "Local proof-verifying ledger 9.1.0.1 acceptance of the acceptRun call with mainnet parameters, recaptured Compact 0.36.0 template, public-input and 256-op limits recorded, five refusals; Preview target (SMN-003, SMN-006)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A6p"
+    heavy: false
+    depends: [A4p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#smn-003"
+    holdout: false
+  - id: A13
+    set: A
+    title: "Chain negatives: range-checked node heights, authenticated genesis per the recorded SRC-005 realization, hostile raw-witness leaf suite, fact(3)/list123 chains with altered result, program digest, forged labels, replayed stmt and skipped decider refused at the intended boundary (SVM-002, SVM-009, SRC-001, SRC-003..006, SAS-004, SAS-006, SAS-010)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A13"
+    heavy: false
+    depends: [A4p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#svm-002"
+    holdout: false
+  - id: A8p
+    set: A
+    title: "A finalized acceptRun call on the Preview SherlockRun contract bound to the manifest stmt and read through a committed receipt, with fee, min_block_price, factors and DUST spends recorded (SRC-007, SAS-007, SMN-004, SMN-005)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh A8p"
+    heavy: false
+    depends: [A6p, A13]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-007"
+    holdout: false
+  - id: A9p
+    set: A
+    title: "The five rejection cases are refused on Preview (rejections-preview holdout, evaluator-owned E12) (SRC-007)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh A9p"
+    heavy: false
+    depends: [A8p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-007"
+    holdout: false
+  - id: A10p
+    set: A
+    title: "Manifest-selected public receipts and complete effects readback of the Preview call (stmt, steps, u128 result), independent of the submitter (SRC-007, SAS-007, SMN-005)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh A10p"
+    heavy: false
+    depends: [A8p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-007"
     holdout: false
   - id: B1
     set: B
@@ -103,6 +196,7 @@ predicates:
     depends: []
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L7"
     holdout: false
+    optional: true
   - id: B2
     set: B
     title: "Independent replay of the complete state transitions of the dataset (SRPOC-003)"
@@ -112,6 +206,7 @@ predicates:
     depends: [B1]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L18"
     holdout: false
+    optional: true
   - id: B3
     set: B
     title: "One 16-transaction full batch proved and verified locally (SRPOC-004)"
@@ -122,6 +217,7 @@ predicates:
     depends: [B2, A5]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
     holdout: false
+    optional: true
   - id: B4
     set: B
     title: "The same 16-transaction batch accepted on stagenet (SRPOC-004)"
@@ -131,6 +227,7 @@ predicates:
     depends: [B3, A8]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
     holdout: false
+    retired: "stagenet (specVersion 2000000) is retired for new qualification; superseded by optional B4p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B5
     set: B
     title: "Two-, four- and six-batch prefixes run, with failures and censored measurements kept (SRPOC-004, SRPOC-008)"
@@ -141,6 +238,7 @@ predicates:
     depends: [B4]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
     holdout: false
+    retired: "depends on retired stagenet row B4; superseded by optional B5p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B6
     set: B
     title: "Per-layer circuit k, domain capacity, used rows, lookup rows and columns, with unavailable values explicit (SRPOC-005)"
@@ -150,6 +248,7 @@ predicates:
     depends: [B3]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L9"
     holdout: false
+    optional: true
   - id: B7
     set: B
     title: "Time, RSS and bytes in separate scopes, peak under decimal 32 GB with swap 0 (SRPOC-005; owner raised from 16 GB 2026-10-25)"
@@ -159,6 +258,7 @@ predicates:
     depends: [B3]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L19"
     holdout: false
+    optional: true
   - id: B8
     set: B
     title: "Fees, finalization time and settlement-readback latency reported separately from local verification time (SRPOC-006)"
@@ -168,6 +268,7 @@ predicates:
     depends: [B4]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L10"
     holdout: false
+    retired: "stagenet (specVersion 2000000) is retired for new qualification; superseded by optional B8p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B9
     set: B
     title: "Feasibility report states exact workload, sample count, observed k/resources/latency, failures and remaining gaps (SRPOC-009)"
@@ -177,6 +278,47 @@ predicates:
     depends: [B5, B6, B7, B8]
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L13"
     holdout: false
+    retired: "depends on retired stagenet rows B5 and B8; superseded by optional B9p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
+  - id: B4p
+    set: B
+    title: "The 16-transaction Fenrir batch accepted on Preview (non-gating, D14)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B4p"
+    heavy: false
+    depends: [B3, A8p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-012"
+    holdout: false
+    optional: true
+  - id: B5p
+    set: B
+    title: "Two-, four- and six-batch prefixes on Preview, with failures and censored measurements kept (non-gating, D14)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh B5p"
+    heavy: false
+    depends: [B4p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-012"
+    holdout: false
+    optional: true
+  - id: B8p
+    set: B
+    title: "Preview batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (non-gating, D14)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B8p"
+    heavy: false
+    depends: [B4p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#smn-005"
+    holdout: false
+    optional: true
+  - id: B9p
+    set: B
+    title: "Preview feasibility report: exact workload, sample count, observed k/resources/latency, failures and remaining gaps (non-gating, D14)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B9p"
+    heavy: false
+    depends: [B5p, B6, B7, B8p]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-012"
+    holdout: false
+    optional: true
   - id: U001
     set: U
     title: "UIREQ-001 Fixed interpreter relation: Two distinct programs"
@@ -384,6 +526,60 @@ predicates:
     depends: []
     source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-023-native-relation-inventory"
     holdout: true
+  - id: U023a
+    set: U
+    title: "Dispatch diagnostic: one state x one rule build time, ProofPreimage::check time and IR instruction count per dispatch circuit, labelled reduced coverage (SAS-014)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh U023a"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-014"
+    holdout: false
+  - id: U023b
+    set: U
+    title: "Dispatch-predicate partition derived mechanically from the c6_dispatch_step.rs guards (complete guard dependencies incl. equal_differ value reads), committed, with directed cases for rules and boundaries absent from P1-P3 (SAS-013)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh U023b"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-013"
+    holdout: false
+  - id: U023c
+    set: U
+    title: "Dispatch receipt: fired-rule acceptance on every step, per-class exclusivity of every supported rule, coordinated and raw mutations; testdata/receipts/dispatch.json with partition fields, scope and heuristic/justified label (SAS-013, SVM-003)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh U023c"
+    heavy: false
+    depends: [U023b]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-013"
+    holdout: false
+  - id: U023d
+    set: U
+    title: "Fragment receipts: KAdminPublishValue, BHelperValidate x4, BHelperEqual x4, BHelperMatch x10, BHelperScalarConstruct compiled and run; native_inventory.rs rows flipped (SVM-008)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh U023d"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#svm-008"
+    holdout: false
+  - id: U023e
+    set: U
+    title: "Frozen admitted inventory R: native inventory reports zero gap rows for R; layout, caps and manifests frozen before P3 is authored (SVM-008)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh U023e"
+    heavy: false
+    depends: [U023c, U023d]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#svm-008"
+    holdout: false
+  - id: U023f
+    set: U
+    title: "Rule admission evidence: every rule in R names its invariant initialization, preservation and fragment-composition premises (SAS-010)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh U023f"
+    heavy: false
+    depends: [U023e]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-010"
+    holdout: false
   - id: U024
     set: U
     title: "UIREQ-024 Optimization preservation: Frame or sharing optimization"
@@ -521,11 +717,11 @@ predicates:
     holdout: false
   - id: C4
     set: C
-    title: "Representation, arithmetic and optimizations: UIREQ-023, 024, 028..030, 033"
+    title: "Representation, arithmetic and optimizations: UIREQ-023, 024, 028..030, 033, qualified on Preview (A8p, A9p, A10p)"
     tier: T1
     check: "scripts/qa/check-c.sh"
     heavy: false
-    depends: [U023, U024, U028, U029, U030, U033]
+    depends: [U023, U024, U028, U029, U030, U033, A8p, A9p, A10p]
     source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
     holdout: false
   - id: C5
@@ -662,6 +858,24 @@ predicates:
     heavy: false
     depends: [F9]
     source: "wiki-llm/doctorwatson-agentbus/DECISION.md#v1-scope-to-be-built-now"
+    holdout: false
+  - id: F14
+    set: F
+    title: "Traceability: every requirement ID of the change maps to a row, every source: anchor resolves, every row has a visible check or holdout; --render writes traceability.md (SWF-002)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F14"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-002"
+    holdout: false
+  - id: F15
+    set: F
+    title: "Static target pins: qa/sherlock/target-pins.json agrees with Cargo.toml and the SDK lockfile (SWF-007, SMN-001, SMN-004)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F15"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-007"
     holdout: false
   - id: F16
     set: F

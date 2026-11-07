@@ -45,9 +45,16 @@ predicates:
     depends: [A2]              # predicate ids that must pass first
     source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L8"  # requirement reference
     holdout: false             # true → check runs files under qa/holdout/ (read-only to the driver)
+    retired: "<reason or anchor>"  # optional; non-empty string → superseded row (SWF-011)
+    optional: true             # optional; true or false (default false) → reported, not gating (SWF-012)
 ```
 
-- The `U` set uses ids `U001`…`U035`, one per UIREQ, each with `source` pointing at its spec.
+- `retired:` must be a non-empty string when present. `optional:` must be a boolean when present. A row is **mandatory** when it is neither retired nor optional.
+- A retired row stays in the file with its old `check`. Its results in `status.json` and `runs.jsonl` are kept. Sweeps, `counts` and `firstFailing` ignore it. `next` lists it.
+- An optional row is reported by `next` (`OPTIONAL: <passing>/<total>`) and runs when named. Sweeps, `counts` and `firstFailing` ignore it unless `--include-optional` is given.
+- `validate` refuses a non-retired row that depends on a retired row. It also refuses a mandatory row that depends on an optional row. An optional row may depend on mandatory or optional rows. A retired row may depend on any row, so retired history keeps its old `depends`.
+
+- The `U` set uses ids `U001`…`U035`, one per UIREQ, each with `source` pointing at its spec, plus the U023 receipt rows `U023a`…`U023f`.
 - A C-set item passes only when every U-predicate it `depends` on passes.
 - A predicate that has no check yet uses `check: "scripts/qa/unimplemented.sh <ID>"`. That script prints `UNIMPLEMENTED <ID>` and exits 2.
 - Exit codes for a check: 0 pass, 1 fail, 2 unimplemented, 3 host unfit (from preflight), 4 budget exceeded.
@@ -90,8 +97,8 @@ One line per run:
 
 | Command | Behavior | Exit |
 |---|---|---|
-| `next [--json]` | Print counts per set, then `FIRST FAILING: <id> — <title>` and `CHECK: <command>`. Reads `status.json` only | 0 |
-| `check [ID…] [--set S] [--tier T] [--hypothesis TEXT]` | Run the selected checks, sending heavy ones through `heavy`. Update `status.json` and append to `runs.jsonl`. Print one line per predicate | 0 all pass, 1 any fail |
+| `next [--json] [--include-optional]` | Print counts per set, then `OPTIONAL: <passing>/<total> (not gating)` when optional rows exist, `RETIRED: <n>` and one `RETIRED: <id> (<reason>)` line per retired row, then `FIRST FAILING: <id> — <title>` and `CHECK: <command>`. Counts and FIRST FAILING cover mandatory rows only; `--include-optional` adds optional rows (the line then says `gating`). Retired rows never count. `--json` adds `optional` (`[passing, total]`) and `retired` (`[{id, retired}]`). Reads `status.json` only | 0 |
+| `check [ID…] [--set S] [--tier T] [--include-optional] [--hypothesis TEXT]` | Run the selected checks, sending heavy ones through `heavy`. Update `status.json` and append to `runs.jsonl`. Print one line per predicate. **Sweep rules:** without IDs, the sweep skips retired rows always and optional rows unless `--include-optional`. A named ID always runs, retired or optional. `--set` and `--tier` also filter named IDs. A row whose dependency is not passing is recorded `BLOCKED-BY <dep>`, named or not. The `counts` and `firstFailing` written to `status.json` cover mandatory rows only | 0 all pass, 1 any fail |
 | `preflight [--json]` | Disk free on the repo filesystem ≥ 150 GiB (`DW_MIN_FREE_GIB`). 1-minute load < `os.cpu_count()`. No other process holding the heavy lock. Print the actual numbers | 0 ok, 3 unfit |
 | `heavy --id ID [--budget KEY] [--hypothesis TEXT] -- CMD…` | Take an exclusive `fcntl.flock` on `~/.cache/doctorwatson/heavy.lock`, run preflight, then measure-then-cap (wall time and peak RSS of the child via `os.wait4`). Write the full trace. **Retry rule:** if the last run of this ID failed with the same `cmd` and the same `head`, `--hypothesis` is required (exit 5 without it). Every retry is logged. Nothing is ever "consumed" | the child's exit, 3 unfit, 4 budget, 5 hypothesis required |
 | `stop-rule [--json]` | If `iterationsSinceFlip` ≥ 3, or more than 24 h have passed since `lastFlip`, print `STOP: escalate to owner` with the last failing run's trace path | 0 continue, 6 stop |
