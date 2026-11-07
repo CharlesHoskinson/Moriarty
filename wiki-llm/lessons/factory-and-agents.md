@@ -7,6 +7,13 @@ tags: [lessons, agents, codex, agentbus, doctorwatson, sandbox]
 
 # Running the factory and its agents
 
+## The 295 h STOP and its owner action (2026-11-07, M0 bookkeeping, not progress)
+- **What happened:** `scripts/doctorwatson stop-rule` said STOP (exit 6) from 2026-10-27 until 2026-11-07: "297.8 h since the last flip (limit 24 h)". The last flip was B2 at 2026-10-26T13:51:57Z. The status at that time also recorded F4 (exit 3) and F11 (exit 1) as failing.
+- **What the STOP was waiting on:** U023 scenario 1, the C6 dispatch receipt. Last failing trace: `qa/sherlock/traces/20261026T105549Z-U023-dispatch-receipt.log` (run `20261026T105549Z-U023-dispatch-receipt`, head `c87397f8`). `dispatch_selects_exactly_the_fired_rule_on_factorial` was still running when the 16,000 s wall cap stopped it (exit 4, `capExceeded: wall`, child exit 137). No receipt was written. Hypothesis that was carried forward: the factorial test is slow because it caches one dispatch circuit per supported rule and checks every rule each 16th step (`docs/sherlock/HANDOFF-2026-10-26.md:16`). The trace is gitignored and stayed on the old machine; `qa/sherlock/runs.jsonl` holds the run record.
+- **Owner action:** on 2026-11-07 the owner accepted the council consensus (`openspec/changes/sherlock-vm-consensus-20261107`, 6/6 ACCEPT at 21:29Z, commit `07f8b41f`) and armed this work loop. The consensus plan answers the STOP: M3 splits the dispatch test into T1 fired-rule acceptance and T2 per-class exclusivity (SAS-013, tasks 3.1-3.3), so it no longer runs as one multi-hour test.
+- **M0 re-arm (SWF-006):** at head `07f8b41f`, `doctorwatson validate` passed and `doctorwatson check --set F` passed 13/13. F4 (preflight) and F11 (no reviewer waits) were re-earned on the new host. F4 had failed on the old host's preflight; no code change was needed. The F11 flip at 2026-11-07T23:40:12Z reset `iterationsSinceFlip` to 0, so `stop-rule` now says CONTINUE. **This reset is bookkeeping, not progress:** no A, U or C predicate changed, and U023 still fails.
+- **Next time:** a STOP that lasts longer than a day needs an owner action recorded here at once. Do not re-run passing F rows to clear the counter. The real next flip must come from U023 (M3).
+
 
 ## Hold-and-wait between the heavy slot and the GPU lock stalls everyone (2026-10-24)
 - **What happened:** jobs took DoctorWatson `heavy.lock` and then queued for `gpu.lock` behind 10-minute fuzz slices, or the reverse. A6, W9's GPU suffix and the lab probes all waited 15–30 minutes while the load was 2–4 on 20 cores.

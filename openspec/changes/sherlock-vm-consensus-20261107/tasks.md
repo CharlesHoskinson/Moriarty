@@ -4,8 +4,8 @@ Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text uncha
 
 ## M0 Re-arm the factory (T0, bookkeeping; SWF-006)
 
-- [ ] 0.1 `scripts/doctorwatson validate`; `scripts/doctorwatson check --set F` (re-earn F4, F11 at the council head); `state-commit`. Record the 295 h STOP and the owner action in `wiki-llm/lessons/`. Not reported as progress. [SWF-006] -> F4, F11
-- [ ] 0.2 Confirm `scripts/doctorwatson preflight` OK and the heavy lock free. [SWF-004]
+- [x] 0.1 `scripts/doctorwatson validate`; `scripts/doctorwatson check --set F` (re-earn F4, F11 at the council head); `state-commit`. Record the 295 h STOP and the owner action in `wiki-llm/lessons/`. Not reported as progress. [SWF-006] -> F4, F11
+- [x] 0.2 Confirm `scripts/doctorwatson preflight` OK and the heavy lock free. [SWF-004]
 
 ## M1 Land this change (T0)
 
