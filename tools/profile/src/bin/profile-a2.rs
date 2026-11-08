@@ -76,16 +76,21 @@ fn run(
     };
     check_link_lanes(&a102.instance, &a80.instance, &shape)?;
     let children = LinkedChildren { a102, a80 };
-    if children.a102.claim.circuit_k != 13 || children.a80.claim.circuit_k != 12 {
-        return Err("A2 expected A102 k13 and A80 k12".into());
+    // A102 is k15 since task 2.1 (ledger 9.1.0.1 line, circuits 7.3.0); it was k13 before.
+    if children.a102.claim.circuit_k != 15 || children.a80.claim.circuit_k != 12 {
+        return Err(format!(
+            "A2 expected A102 k15 and A80 k12, got A102 k{} and A80 k{}",
+            children.a102.claim.circuit_k, children.a80.claim.circuit_k
+        )
+        .into());
     }
     evidence["proofs"] = json!([
-        {"shape":"A102","k":13,"vk_sha256":sha(&children.a102.vk_bytes),
-         "srs_sha256":mori_backend::parameters::PINNED_HASHES[13],"transcript":CHILD_TRANSCRIPT,
+        {"shape":"A102","k":children.a102.claim.circuit_k,"vk_sha256":sha(&children.a102.vk_bytes),
+         "srs_sha256":mori_backend::parameters::PINNED_HASHES[children.a102.claim.circuit_k as usize],"transcript":CHILD_TRANSCRIPT,
          "proof_sha256":sha(&children.a102.proof),"proof_bytes":children.a102.proof.len(),
          "public_statement_manifest_sha256":sha(&serde_json::to_vec(&children.a102.instance_hex())?)},
-        {"shape":"A80","k":12,"vk_sha256":sha(&children.a80.vk_bytes),
-         "srs_sha256":mori_backend::parameters::PINNED_HASHES[12],"transcript":CHILD_TRANSCRIPT,
+        {"shape":"A80","k":children.a80.claim.circuit_k,"vk_sha256":sha(&children.a80.vk_bytes),
+         "srs_sha256":mori_backend::parameters::PINNED_HASHES[children.a80.claim.circuit_k as usize],"transcript":CHILD_TRANSCRIPT,
          "proof_sha256":sha(&children.a80.proof),"proof_bytes":children.a80.proof.len(),
          "public_statement_manifest_sha256":sha(&serde_json::to_vec(&children.a80.instance_hex())?)}
     ]);
