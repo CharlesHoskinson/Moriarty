@@ -210,6 +210,10 @@ impl C6MatchHelperEmitter {
                     .map_err(|e| e.to_string())?;
                 em.ins.extend(arm.instructions);
                 em.gassert(en.clone(), arm.arm_found.clone());
+                // The PROG/CTX emitter refuses operands in its own temporary
+                // namespace, so the arm row's pattern index (a PROG/CTX
+                // temporary) is copied into a step-local temporary first.
+                let pattern_index = em.add(arm.arm_row[0].clone(), Em::imm(0));
                 let pat = self
                     .composed
                     .progctx_em
@@ -217,7 +221,7 @@ impl C6MatchHelperEmitter {
                         gate: en.clone(),
                         pre_prog: inputs.pre_prog.clone(),
                         caps,
-                        pattern_index: arm.arm_row[0].clone(),
+                        pattern_index,
                     })
                     .map_err(|e| e.to_string())?;
                 em.ins.extend(pat.instructions);
