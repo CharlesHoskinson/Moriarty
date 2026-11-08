@@ -1767,7 +1767,9 @@ fn raw_p3_p6_and_tail_at_bound_dispositions_precedence_and_counters_both_modes()
 
 #[test]
 fn raw_in_bounds_data_parent_and_data_child_accepted_by_bare_circuit_vs_oob_rejected_both_modes() {
-    // Fixture `Let xs = Cons(4, [5]) in 20` produces live DATA in `pre_data`:
+    // Fixture `Let xs = Cons(1 + 3, [5]) in 20` produces live DATA in `pre_data`
+    // (a literal `4` would stay a `RefC::Const` field; the `Add` result is the
+    // DATA node `U128(4)`):
     // - `Data(0)` is `DataSnapshot::U128(4)` (`[0, 4, 0, 0]`),
     // - `Data(1)` is `DataSnapshot::Cons { fields: DataFieldsSnapshot { start: 0, len: 2 } }` (`[3, 0, 2, 0]`),
     // - `data_fields[0]` is `RefC::Data(0)` (`[1, 0]`),
@@ -1776,7 +1778,11 @@ fn raw_in_bounds_data_parent_and_data_child_accepted_by_bare_circuit_vs_oob_reje
         functions: Vec::new(),
         entry: CoreExpr::Let {
             name: "xs".into(),
-            value: Box::new(bin(BinaryOp::Cons, lit_u(4), lit_list(&[5]))),
+            value: Box::new(bin(
+                BinaryOp::Cons,
+                bin(BinaryOp::Add, lit_u(1), lit_u(3)),
+                lit_list(&[5]),
+            )),
             body: Box::new(lit_tree(tree_leaf(20))),
         },
     };
