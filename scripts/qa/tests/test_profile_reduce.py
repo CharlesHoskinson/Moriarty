@@ -475,3 +475,56 @@ class EventMappingTests(unittest.TestCase):
         self.data['workload']['verification']['negative_controls'] = 'fail'
         with self.assertRaisesRegex(ValueError, 'expected rejection'):
             self.profile.map_events(self.data, 'synthetic')
+
+
+class WriteReportTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load('profile-recursion')
+
+    def test_report_with_decimal_values_from_read_sidecar_is_written(self):
+        from decimal import Decimal
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / 'report.json'
+            self.profile.write_report(out, {'cpu_percent': Decimal('97.25'), 'n': Decimal('3'), 'nested': [Decimal('0.5')]})
+            self.assertEqual(json.loads(out.read_text()), {'cpu_percent': 97.25, 'n': 3, 'nested': [0.5]})
+
+
+class OverheadBoundTests(unittest.TestCase):
+    """RPP-005: one-sided 95% upper bound of the paired on/off wall ratio, fixed before the runs."""
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load('profile-recursion')
+
+    def pairs(self, ratios, off=10_000_000_000):
+        return [(off, int(off * r)) for r in ratios]
+
+    def test_tight_pairs_below_one_percent_pass(self):
+        o = self.profile.overhead_bound(self.pairs([1.001, 1.002, 0.999, 1.000, 1.001]))
+        self.assertEqual(o['qualification'], 'pass')
+        self.assertEqual(o['pair_count'], 5)
+        self.assertLessEqual(o['paired_wall_ratio_upper95'], 1.01)
+
+    def test_mean_below_but_bound_above_is_inconclusive_never_pass(self):
+        o = self.profile.overhead_bound(self.pairs([0.97, 1.04, 0.98, 1.03, 1.00]))
+        self.assertLess(o['estimated_fraction'], 0.01)
+        self.assertGreater(o['paired_wall_ratio_upper95'], 1.01)
+        self.assertEqual(o['qualification'], 'inconclusive')
+
+    def test_mean_above_one_percent_fails(self):
+        o = self.profile.overhead_bound(self.pairs([1.05, 1.06, 1.05, 1.04, 1.05]))
+        self.assertEqual(o['qualification'], 'fail')
+
+    def test_fewer_than_five_pairs_never_pass(self):
+        o = self.profile.overhead_bound(self.pairs([1.0, 1.0, 1.0, 1.0]))
+        self.assertEqual(o['qualification'], 'inconclusive')
+
+    def test_bound_matches_hand_computed_t_interval(self):
+        import math
+        ratios = [1.01, 1.00, 1.02, 0.99, 1.00]
+        logs = [math.log(int(10_000_000_000 * r) / 10_000_000_000) for r in ratios]
+        n = len(logs); mean = sum(logs) / n
+        sd = math.sqrt(sum((x - mean) ** 2 for x in logs) / (n - 1))
+        want = math.exp(mean + 2.132 * sd / math.sqrt(n))
+        o = self.profile.overhead_bound(self.pairs(ratios))
+        self.assertAlmostEqual(o['paired_wall_ratio_upper95'], want, places=9)

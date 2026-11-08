@@ -717,8 +717,72 @@ def read_sidecar(path):
                       parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite JSON number')))
 
 
+def _json_number(value):
+    """read_sidecar parses floats as Decimal; write them back as JSON numbers."""
+    from decimal import Decimal
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    raise TypeError(f'Object of type {type(value).__name__} is not JSON serializable')
+
+
+# RPP-005 analysis, fixed before the qualifying runs (task 2.8): for each pair i the ratio
+# r_i = wall_on / wall_off of the whole command; the bound is the one-sided 95% Student-t
+# upper limit of mean(log r) mapped back by exp. pass iff pairs >= 5 and bound <= 1.01;
+# fail iff the point estimate already exceeds 1.01; otherwise inconclusive.
+T95_ONE_SIDED = {1: 6.314, 2: 2.920, 3: 2.353, 4: 2.132, 5: 2.015, 6: 1.943, 7: 1.895, 8: 1.860,
+                 9: 1.833, 10: 1.812, 11: 1.796, 12: 1.782, 13: 1.771, 14: 1.761, 15: 1.753,
+                 16: 1.746, 17: 1.740, 18: 1.734, 19: 1.729, 20: 1.725, 25: 1.708, 30: 1.697}
+OVERHEAD_LIMIT = 1.01
+OVERHEAD_METHOD = ('paired whole-command wall ratio on/off; one-sided 95% Student-t upper bound of '
+                   'mean log ratio, exp back-transform; pass iff >= 5 pairs and bound <= 1.01')
+
+
+def _t95(df):
+    # The largest tabulated df not above df: a conservative (larger) quantile.
+    return T95_ONE_SIDED[max(k for k in T95_ONE_SIDED if k <= df)]
+
+
+def overhead_bound(pairs):
+    """pairs: [(wall_off_ns, wall_on_ns), ...] -> RPP-005 overhead block."""
+    import math
+    require(len(pairs) >= 2 and all(off > 0 and on > 0 for off, on in pairs), 'overhead needs >= 2 positive pairs')
+    logs = [math.log(on / off) for off, on in pairs]
+    n = len(logs)
+    mean = sum(logs) / n
+    sd = math.sqrt(sum((x - mean) ** 2 for x in logs) / (n - 1))
+    upper = math.exp(mean + _t95(n - 1) * sd / math.sqrt(n))
+    point = math.exp(mean)
+    if n >= 5 and upper <= OVERHEAD_LIMIT:
+        verdict = 'pass'
+    elif point > OVERHEAD_LIMIT:
+        verdict = 'fail'
+    else:
+        verdict = 'inconclusive'
+    return dict(qualification=verdict, pair_count=n, estimated_fraction=point - 1,
+                paired_wall_ratio_upper95=upper, comparison_method=OVERHEAD_METHOD,
+                ratios=[on / off for off, on in pairs])
+
+
+def overhead_pairs(directory):
+    """Pair `<stem>-<i>-off.json` with `<stem>-<i>-on.json` raw sidecars of one calibrate run."""
+    found = {}
+    for path in sorted(Path(directory).glob('*.json')):
+        m = re.search(r'-(\d+)-(off|on)\.json$', path.name)
+        if not m:
+            continue
+        raw = read_sidecar(path)
+        work = raw.get('workload') or {}
+        require(work.get('exit') == 0, f'{path.name}: failed run cannot qualify overhead')
+        ver = work.get('verification') or {}
+        require(ver.get('stock_verifier', 'pass') == 'pass' and ver.get('negative_controls', 'pass') == 'pass',
+                f'{path.name}: verification did not pass')
+        found.setdefault(int(m.group(1)), {})[m.group(2)] = int(work['command_wall_ns'])
+    require(found and all(set(v) == {'off', 'on'} for v in found.values()), 'every pair needs an off and an on run')
+    return [(found[i]['off'], found[i]['on']) for i in sorted(found)]
+
+
 def write_report(path, report):
-    text = json.dumps(report, indent=2) + '\n'
+    text = json.dumps(report, indent=2, default=_json_number) + '\n'
     if path is None:
         print(text, end='')
         return
@@ -802,6 +866,9 @@ def main(argv=None):
         p.add_argument('--variant', choices=('off', 'on', 'both'), default='both')
         p.add_argument('--hypothesis')
         p.add_argument('--run', action='store_true')
+    p = sub.add_parser('overhead', help='RPP-005 bound from the off/on pairs of one calibrate run')
+    p.add_argument('--run', dest='source_run', required=True)
+    p.add_argument('--output', type=Path)
     for name in ('reduce', 'decide'):
         p = sub.add_parser(name)
         p.add_argument('sidecars', nargs='*', type=Path)
@@ -824,6 +891,13 @@ def main(argv=None):
                     result = subprocess.run(command, cwd=ROOT, check=False)
                     if result.returncode:
                         return result.returncode
+        elif args.command == 'overhead':
+            require(re.fullmatch(r'[A-Za-z0-9_.-]+', args.source_run)
+                    and args.source_run not in ('.', '..'), 'invalid run ID')
+            directory = ROOT / 'qa/sherlock/profiles' / args.source_run
+            report = dict(schema='recursion.overhead/1', run=args.source_run,
+                          **overhead_bound(overhead_pairs(directory)))
+            write_report(args.output or directory / 'overhead.json', report)
         else:
             paths = list(args.sidecars)
             output = args.output
@@ -831,7 +905,7 @@ def main(argv=None):
                 require(re.fullmatch(r'[A-Za-z0-9_.-]+', args.source_run)
                         and args.source_run not in ('.', '..'), 'invalid run ID')
                 directory = ROOT / 'qa/sherlock/profiles' / args.source_run
-                paths += sorted(p for p in directory.glob('*.json') if p.name not in ('reduce.json', 'decide.json'))
+                paths += sorted(p for p in directory.glob('*.json') if p.name not in ('reduce.json', 'decide.json', 'overhead.json'))
                 if output is None:
                     output = directory / (args.command + '.json')
             require(bool(paths), 'no sidecars supplied')
