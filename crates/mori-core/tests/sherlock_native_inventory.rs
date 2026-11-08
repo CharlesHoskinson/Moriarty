@@ -154,21 +154,37 @@ fn inventory_report_is_fixed_across_programs() {
             assert!(r["owners"][owner].is_object(), "owner {owner} missing");
         }
         assert_eq!(r["summary"]["unlisted"].as_array().unwrap().len(), 0);
-        // Honest: most exercised rules have no C6 fragment yet.
-        assert_eq!(r["summary"]["complete"], false);
     }
     assert_eq!(fact["table_sha256"], fold["table_sha256"]);
     assert_eq!(fact["table"], fold["table"]);
     assert_eq!(fact["summary"]["rules"], 46);
     assert_eq!(fold["summary"]["rules"], 57);
-    // Authored from the table: of the 46 fact rules, the 9 without a C6
-    // fragment are BHelperEqual{Entry,Pair,Different,Exit},
-    // BHelperValidate{Entry,Occurrence,Empty,Exit} and KAdminPublishValue.
-    assert_eq!(fact["summary"]["with_c6_fragment"], 37);
-    assert_eq!(fact["summary"]["gaps"].as_array().unwrap().len(), 9);
-    // fold adds the 10 BHelperMatch rules and BHelperScalarConstruct as gaps.
-    assert_eq!(fold["summary"]["with_c6_fragment"], 41);
-    assert_eq!(fold["summary"]["gaps"].as_array().unwrap().len(), 16);
+    // Authored from the table: every one of the 46 fact rules names a C6
+    // fragment, so its table coverage is complete. The fragments stay
+    // source-only and unwired (checked above); complete claims rows only.
+    assert_eq!(fact["summary"]["with_c6_fragment"], 46);
+    assert_eq!(fact["summary"]["gaps"].as_array().unwrap().len(), 0);
+    assert_eq!(fact["summary"]["complete"], true);
+    // fold's gaps are the second half of the Match helper, which no
+    // fragment owns yet.
+    assert_eq!(fold["summary"]["with_c6_fragment"], 52);
+    let gaps: Vec<&str> = fold["summary"]["gaps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|g| g.as_str().unwrap())
+        .collect();
+    assert_eq!(
+        gaps,
+        [
+            "BHelperMatchDistinct",
+            "BHelperMatchExit",
+            "BHelperMatchFailure",
+            "BHelperMatchNext",
+            "BHelperMatchSelected",
+        ]
+    );
+    assert_eq!(fold["summary"]["complete"], false);
 }
 
 #[test]

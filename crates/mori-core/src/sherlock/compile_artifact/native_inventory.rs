@@ -120,7 +120,11 @@ pub const TABLE: &[Row] = &[
     Row {
         rule: "KAdminPublishValue",
         family: Schedule,
-        fragment: None,
+        fragment: Some(Fragment {
+            file: "c6_admin_publish_step.rs",
+            entry: "emit_c6_admin_publish_block",
+            consumer: Some("c6_admin_publish_consumer.rs"),
+        }),
         narrow: &[NarrowCarrier {
             file: "b_admin_publication.rs",
             entry: "emit_k_admin_publish_value",
@@ -212,7 +216,13 @@ pub const TABLE: &[Row] = &[
             },
         ],
     },
-    gap("BHelperScalarConstruct", Scalar),
+    c6(
+        "BHelperScalarConstruct",
+        Scalar,
+        "c6_scalar_construct_step.rs",
+        "emit_c6_scalar_construct_block",
+        Some("c6_scalar_construct_consumer.rs"),
+    ),
     Row {
         rule: "BHelperScalarExit",
         family: Scalar,
@@ -461,12 +471,48 @@ pub const TABLE: &[Row] = &[
         Some("c6_return_scope_consumer.rs"),
     ),
     // DataMatch: literal validation, equality and pattern matching.
-    gap("BHelperValidateEntry", DataMatch),
-    gap("BHelperValidateOccurrence", DataMatch),
-    gap("BHelperValidateEmpty", DataMatch),
-    gap("BHelperValidateExit", DataMatch),
-    gap("BHelperEqualEntry", DataMatch),
-    gap("BHelperEqualPair", DataMatch),
+    c6(
+        "BHelperValidateEntry",
+        DataMatch,
+        "c6_validate_helper_step.rs",
+        "emit_c6_validate_helper_block",
+        Some("c6_validate_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperValidateOccurrence",
+        DataMatch,
+        "c6_validate_helper_step.rs",
+        "emit_c6_validate_helper_block",
+        Some("c6_validate_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperValidateEmpty",
+        DataMatch,
+        "c6_validate_helper_step.rs",
+        "emit_c6_validate_helper_block",
+        Some("c6_validate_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperValidateExit",
+        DataMatch,
+        "c6_validate_helper_step.rs",
+        "emit_c6_validate_helper_block",
+        Some("c6_validate_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperEqualEntry",
+        DataMatch,
+        "c6_equal_helper_step.rs",
+        "emit_c6_equal_helper_block",
+        Some("c6_equal_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperEqualPair",
+        DataMatch,
+        "c6_equal_helper_step.rs",
+        "emit_c6_equal_helper_block",
+        Some("c6_equal_helper_consumer.rs"),
+    ),
     c6(
         "BHelperEqualEmpty",
         DataMatch,
@@ -474,8 +520,20 @@ pub const TABLE: &[Row] = &[
         "emit_c6_equal_empty_step_block",
         None,
     ),
-    gap("BHelperEqualDifferent", DataMatch),
-    gap("BHelperEqualExit", DataMatch),
+    c6(
+        "BHelperEqualDifferent",
+        DataMatch,
+        "c6_equal_helper_step.rs",
+        "emit_c6_equal_helper_block",
+        Some("c6_equal_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperEqualExit",
+        DataMatch,
+        "c6_equal_helper_step.rs",
+        "emit_c6_equal_helper_block",
+        Some("c6_equal_helper_consumer.rs"),
+    ),
     c6(
         "KMachineCasesTry",
         DataMatch,
@@ -497,11 +555,41 @@ pub const TABLE: &[Row] = &[
         "emit_c6_legacy_control_block",
         Some("c6_legacy_control_consumer.rs"),
     ),
-    gap("BHelperMatchEntry", DataMatch),
-    gap("BHelperMatchArm", DataMatch),
-    gap("BHelperMatchOccurrence", DataMatch),
-    gap("BHelperMatchField", DataMatch),
-    gap("BHelperMatchBinding", DataMatch),
+    c6(
+        "BHelperMatchEntry",
+        DataMatch,
+        "c6_match_helper_step.rs",
+        "emit_c6_match_helper_block",
+        Some("c6_match_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperMatchArm",
+        DataMatch,
+        "c6_match_helper_step.rs",
+        "emit_c6_match_helper_block",
+        Some("c6_match_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperMatchOccurrence",
+        DataMatch,
+        "c6_match_helper_step.rs",
+        "emit_c6_match_helper_block",
+        Some("c6_match_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperMatchField",
+        DataMatch,
+        "c6_match_helper_step.rs",
+        "emit_c6_match_helper_block",
+        Some("c6_match_helper_consumer.rs"),
+    ),
+    c6(
+        "BHelperMatchBinding",
+        DataMatch,
+        "c6_match_helper_step.rs",
+        "emit_c6_match_helper_block",
+        Some("c6_match_helper_consumer.rs"),
+    ),
     gap("BHelperMatchDistinct", DataMatch),
     gap("BHelperMatchNext", DataMatch),
     gap("BHelperMatchSelected", DataMatch),
@@ -547,7 +635,7 @@ pub const COMPILED_AND_RUN: &str = "compiled-and-run";
 /// receipt in [`RECEIPT_DIR`] binding an actual factory test run (nonproving
 /// `ProofPreimage::check`) to the commit, trace and named tests. The visible
 /// test fails when this list and the committed receipt files disagree.
-pub const RECEIPTED: &[&str] = &["dispatch"];
+pub const RECEIPTED: &[&str] = &[];
 
 pub fn receipted(rule: &str) -> bool {
     RECEIPTED.contains(&rule)
