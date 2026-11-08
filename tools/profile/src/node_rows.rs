@@ -139,6 +139,8 @@ impl Relation for NodeRowProbe {
         let mut proof_acc =
             verifier.prepare(l, &self_vk, &[id], &[prev_pi.as_slice()], Value::unknown())?;
         AssignedAccumulator::scale_by_bit(l, scalar, &not_genesis, &mut proof_acc)?;
+        // Mirrors ivc.rs since SHKIVC05: collapsed before the fold (genesis == trivial_acc).
+        proof_acc.collapse(l, bls, scalar)?;
         self.mark(l, 1, false);
 
         self.mark(l, 2, true);
