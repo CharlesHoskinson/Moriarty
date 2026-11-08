@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # T0 (under 3 min): holdout verify, predicate validation, factory unit tests, F14
-# traceability, cargo test for touched crates, cargo fmt when .rs files are touched.
+# traceability, cargo check/fmt for touched crates, F15 when a pin file is touched.
 # Usage: qa/tiers/t0.sh [--staged | --all]
 #   --staged  (default) changes in the index
 #   --all     every uncommitted change: staged, unstaged and untracked
@@ -46,8 +46,14 @@ dw_step "F14 traceability" python3 -B scripts/qa/check-traceability.py
 declare -A seen=()
 crates=()
 touched_rs=0
+touched_pins=0
 for p in "${changed[@]}"; do
   [[ "$p" == *.rs ]] && touched_rs=1
+  case "$p" in
+    Cargo.toml | Cargo.lock | crates/*/Cargo.toml | qa/sherlock/target-pins.json) touched_pins=1 ;;
+    tools/sherlock-sdk/*.test.mjs) ;;
+    tools/sherlock-sdk/*.mjs | tools/sherlock-sdk/package.json | tools/sherlock-sdk/package-lock.json) touched_pins=1 ;;
+  esac
   if [[ "$p" == crates/*/* ]]; then
     dir="${p#crates/}"
     dir="${dir%%/*}"
@@ -72,6 +78,16 @@ if [[ $touched_rs -eq 1 ]]; then
   dw_step "cargo fmt --check" cargo fmt --all --check
 else
   dw_skip "cargo fmt" "no .rs file touched"
+fi
+
+# F15 static target pins (SWF-007: "when a commit touches pins"). It runs when a
+# pin file changes. Until task 2.1 moves the workspace off the ledger 9 release
+# candidate pins it fails, so a commit that touches pins is blocked until then;
+# other commits skip it. `scripts/doctorwatson check F15` always runs it.
+if [[ $touched_pins -eq 1 ]]; then
+  dw_step "F15 target pins" python3 -B scripts/qa/check-target-pins.py
+else
+  dw_skip "F15 target pins" "no pin file touched"
 fi
 
 dw_finish
