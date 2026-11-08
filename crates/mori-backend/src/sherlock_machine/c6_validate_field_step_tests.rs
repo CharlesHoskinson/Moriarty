@@ -851,9 +851,18 @@ fn finish_applied(
 }
 
 fn run_core(w: &FieldSpec, label: &str, make: &dyn Fn() -> CoreProgram) -> Applied {
+    run_core_fuel(64, w, label, make)
+}
+
+fn run_core_fuel(
+    fuel: u128,
+    w: &FieldSpec,
+    label: &str,
+    make: &dyn Fn() -> CoreProgram,
+) -> Applied {
     let b = generous();
-    let (admitted, mut image, pre) = reach_core(b, w, label, make);
-    let (radm, mut rimg, _) = reach_core(b, w, label, make);
+    let (admitted, mut image, pre) = reach_core_fuel(b, fuel, w, label, make);
+    let (radm, mut rimg, _) = reach_core_fuel(b, fuel, w, label, make);
     let replay = match owner_record(&radm, &mut rimg) {
         Ok(ObservedStep::Event(r)) => r,
         Ok(ObservedStep::Terminal { .. }) => panic!("{label}: replay selected step terminal"),
@@ -1529,14 +1538,18 @@ fn non_zero_expr_non_empty_frames_env_data_slots_cursor_preserved_both_modes() {
             }),
         },
     };
+    // Select the `[20]` literal in the body of `pair_sum` (entry expressions are
+    // 0..=8, the body is 9..=11): the entry's `[5]` literal is validated first,
+    // before `xs` is bound, with an empty environment. Reaching the call body
+    // takes more than 64 fuel (each helper step is charged).
     let w = FieldSpec {
         parent_kind: ConstKindWant::Cons,
         parent_marker_free: true,
         cursor: 0,
-        min_expr_id: 1,
+        min_expr_id: 9,
         min_tasks_len: 1,
     };
-    let applied = run_core(&w, "ValidateField deep non-empty state", &make);
+    let applied = run_core_fuel(256, &w, "ValidateField deep non-empty state", &make);
     let pre = &applied.record.before.image;
     let post = &applied.record.after.image;
     let ControlC::Eval { expr } = pre.control else {
