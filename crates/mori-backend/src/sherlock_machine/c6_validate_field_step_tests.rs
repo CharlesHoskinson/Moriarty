@@ -1429,7 +1429,7 @@ fn marker_child_scheduled_by_validate_field_before_later_validate_invalid_both_m
         &|| prog(lit_list_marker_head()),
     );
     let branch_m = run_core(
-        &field_spec(ConstKindWant::Branch, false, 1),
+        &field_spec(ConstKindWant::Branch, false, 0),
         "ValidateField Branch cursor=0 schedules Leaf(Marker)",
         &|| prog(lit_tree_marker_branch()),
     );
