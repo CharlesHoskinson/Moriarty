@@ -381,7 +381,11 @@ fn main() -> Result<()> {
     let mut threads = None;
     let mut srs = std::env::var_os("MORIARTY_PARENT_SRS")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("target/sherlock-srs/bls_midnight_2p20"));
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .map(|h| PathBuf::from(h).join(".cache/midnight/zk-params/bls_midnight_2p20"))
+        })
+        .ok_or("MORIARTY_PARENT_SRS or HOME is required to locate the k20 SRS")?;
     let mut node_k = std::env::var("MORIARTY_GP_NODE_K").map_or(Ok(18), |s| s.parse())?;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
