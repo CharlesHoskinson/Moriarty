@@ -2873,6 +2873,7 @@ mod tests {
             ExhaustReason::HelperTasks,
             ExhaustReason::HelperWork,
             ExhaustReason::SerializationBytes,
+            ExhaustReason::LogicalCap,
         ] {
             outcomes.push(OutcomeC::Exhausted { reason });
         }
@@ -3007,12 +3008,12 @@ mod tests {
             &caps(),
         )
         .unwrap();
-        exhaust[L_OUTCOME + 1] = 7;
+        exhaust[L_OUTCOME + 1] = 8;
         assert_eq!(
             decode(&exhaust),
             Err(C6PhysError::BadTag {
                 section: "image_section",
-                tag: 7
+                tag: 8
             })
         );
         let mut env_pad = lanes.clone();

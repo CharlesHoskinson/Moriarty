@@ -1548,9 +1548,9 @@ mod tests {
         tag::<BoundBinding>(2);
         tag::<CaseMatching>(2);
         tag::<PrimOutcome>(2);
-        tag::<OutcomeC>(4);
+        tag::<OutcomeC>(5);
         tag::<ScalarStaged>(7);
-        tag::<ControlC>(11);
+        tag::<ControlC>(12);
         tag::<FrameRowC>(10);
         tag::<HelperControlC>(11);
         tag::<HelperTaskC>(3);
