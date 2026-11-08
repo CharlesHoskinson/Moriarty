@@ -143,7 +143,8 @@ def cmd_preflight(args):
 
 def cmd_heavy(args):
     return heavy.cmd_heavy(args.id, args.budget, args.hypothesis, args.cmd, gpu=args.gpu,
-                           deadline=args.deadline, max_wall=args.max_wall, pipe_stdin=args.pipe_stdin)
+                           deadline=args.deadline, max_wall=args.max_wall, pipe_stdin=args.pipe_stdin,
+                           concurrent=args.concurrent, commands_file=args.commands, aggregate_cap=args.aggregate_cap)
 
 
 def cmd_reap(args):
@@ -228,6 +229,10 @@ def build_parser():
     p.add_argument("--gpu", action="store_true", help="also hold gpu.lock in-process (replaces `-- flock gpu.lock`)")
     p.add_argument("--deadline", type=float, help="epoch seconds by which the job must be dead")
     p.add_argument("--max-wall", type=float, help="hard wall-clock cap in seconds")
+    p.add_argument("--concurrent", type=int, metavar="P",
+                   help="E11: run P copies of CMD at once (slot in DW_SLOT) under one lock and the aggregate cap")
+    p.add_argument("--commands", metavar="FILE", help="E11: run each line of FILE at once instead of P copies")
+    p.add_argument("--aggregate-cap", metavar="SIZE", help="E11 aggregate memory cap, e.g. 100G (max and default 100G)")
     p.set_defaults(fn=cmd_heavy)
 
     queue.add_parser(sub)
@@ -304,9 +309,11 @@ def main(argv=None):
     ap = build_parser()
     args = ap.parse_args(argv)
     if args.cmd == "heavy":
-        if not cmd_tail:
+        if not cmd_tail and not args.commands:
             ap.error("heavy needs a command after `--`")
-        args.cmd = cmd_tail
+        if args.concurrent is not None and args.concurrent < 1:
+            ap.error("--concurrent needs P >= 1")
+        args.cmd = cmd_tail or []
     elif args.cmd == "spawn":
         args.extra = cmd_tail or []
     return args.fn(args)

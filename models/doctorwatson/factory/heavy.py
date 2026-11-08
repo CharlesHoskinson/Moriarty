@@ -22,6 +22,153 @@ EXIT_NOBUDGET = 6
 DEFAULT_MAX_WALL = 4 * 3600  # hard ceiling when a caller gives only a budget key or deadline
 LEASE_SCHEMA = "doctorwatson.lease/1"
 LOCK_HOOKS = []  # hook(event, lease) with event "acquired" or "released"; exceptions are swallowed
+GIB = 1024 ** 3
+MAX_RSS_CAP = 48 * GIB  # owner decision 2026-11-08: 48 GB per process (SRC-016)
+MAX_AGGREGATE_CAP = 100 * GIB  # owner decision 2026-11-08: 100 GB aggregate (SRC-016, E11)
+DEFAULT_RUST_TEST_THREADS = "4"
+_GUARD_PROBE = {}
+
+
+def default_rss_cap():
+    """DW_DEFAULT_RSS_CAP (GiB, default 48), never above MAX_RSS_CAP."""
+    try:
+        gib = float(os.environ.get("DW_DEFAULT_RSS_CAP") or 48)
+    except ValueError:
+        gib = 48.0
+    return min(int(gib * GIB), MAX_RSS_CAP)
+
+
+def clamp_rss_cap(cap_rss):
+    """Every heavy run has a memory cap: the budget cap, else the default; never above 48 GiB."""
+    if not cap_rss:
+        return default_rss_cap()
+    return min(int(cap_rss), MAX_RSS_CAP)
+
+
+def cgroup_guard_available():
+    """True when `systemd-run --user --scope` can place a job under a kernel memory limit here.
+
+    DW_MEM_GUARD=poll forces the RSS-poll fallback. The probe runs once per process.
+    """
+    if os.environ.get("DW_MEM_GUARD") == "poll":
+        return False
+    if "ok" not in _GUARD_PROBE:
+        try:
+            r = subprocess.run(["systemd-run", "--user", "--scope", "--collect", "-q",
+                                "-p", "MemoryMax=64M", "-p", "MemorySwapMax=0", "--", "true"],
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL, timeout=15)
+            _GUARD_PROBE["ok"] = r.returncode == 0
+        except (OSError, subprocess.SubprocessError):
+            _GUARD_PROBE["ok"] = False
+    return _GUARD_PROBE["ok"]
+
+
+def scope_unit(marker):
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", marker or f"{os.getpid()}-{time.time_ns()}")
+    return f"dw-{safe}.scope"
+
+
+def parse_size(text):
+    """'100G', '100GiB', '512M', '1T' (binary units) or a bare number of GiB -> bytes."""
+    m = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([KMGT]?)(?:i?B)?\s*", str(text), re.I)
+    if not m:
+        raise ValueError(f"bad size {text!r}")
+    unit = m.group(2).upper() or "G"
+    return int(float(m.group(1)) * 1024 ** "KMGT".index(unit) * 1024)
+
+
+def slice_name(marker):
+    """Transient parent slice for a concurrent run. No '-' in the stem: systemd nests slices on dashes."""
+    return "dw_" + re.sub(r"[^A-Za-z0-9_]", "_", marker) + ".slice"
+
+
+def _systemctl(*args):
+    try:
+        return subprocess.run(["systemctl", "--user", *args], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=15).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _unit_cgroup(unit):
+    """/sys/fs/cgroup path of a user unit, or None."""
+    try:
+        out = subprocess.run(["systemctl", "--user", "show", "-p", "ControlGroup", "--value", unit],
+                             stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=15).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return "/sys/fs/cgroup" + out if out else None
+
+
+def guard_argv(argv, cap_rss, unit, slice_=None):
+    """Wrap argv so the kernel enforces cap_rss (no swap) on the whole job tree; OOM kills the scope.
+
+    systemd-run execs argv in place (same pid, same session); --expand-environment=no keeps `$` literal.
+    """
+    return ["systemd-run", "--user", "--scope", "--collect", "-q", "--expand-environment=no", f"--unit={unit}",
+            *([f"--slice={slice_}"] if slice_ else []),
+            "-p", f"MemoryMax={int(cap_rss)}", "-p", "MemorySwapMax=0", "-p", "OOMPolicy=kill",
+            "--", *argv]
+
+
+def _cgroup_dir(pid, unit):
+    try:
+        with open(f"/proc/{pid}/cgroup") as fh:
+            for line in fh:
+                path = line.rstrip("\n").split(":", 2)[-1]
+                if path.endswith("/" + unit):
+                    return "/sys/fs/cgroup" + path
+    except OSError:
+        pass
+    return None
+
+
+def _cgroup_read(cgdir):
+    """Return (oom_kill count, memory.peak bytes) of a scope, None where unreadable."""
+    oom = peak = None
+    try:
+        with open(os.path.join(cgdir, "memory.events")) as fh:
+            for line in fh:
+                k, _, v = line.partition(" ")
+                if k == "oom_kill":
+                    oom = int(v)
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(os.path.join(cgdir, "memory.peak")) as fh:
+            peak = int(fh.read().split()[0])
+    except (OSError, ValueError, IndexError):
+        pass
+    return oom, peak
+
+
+def _cgroup_kill(cgdir, unit=None):
+    """SIGKILL everything left in the job's scope (cgroup v2 cgroup.kill), then stop the unit.
+
+    Escapees cannot leave a scope. The stop removes a scope that systemd did not collect.
+    """
+    if cgdir:
+        try:
+            with open(os.path.join(cgdir, "cgroup.kill"), "w") as fh:
+                fh.write("1")
+        except OSError:
+            pass
+    if unit and (cgdir is None or os.path.isdir(cgdir)):
+        try:
+            subprocess.run(["systemctl", "--user", "stop", "--no-block", unit], stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+
+def _is_cargo_test(argv):
+    names = [os.path.basename(a) for a in argv]
+    for i, n in enumerate(names):
+        if n == "cargo":
+            rest = [a for a in argv[i + 1:] if not a.startswith("+")]
+            return bool(rest) and rest[0] in ("test", "nextest")
+    return False
 
 
 class Terminated(BaseException):
@@ -113,18 +260,38 @@ def _killpg(pgid):
         pass
 
 
-def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=None, watch_parent=False, pipe_stdin=False):
+def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=None, watch_parent=False, pipe_stdin=False,
+                mem_guard=False, extra_env=None, slice_=None):
     """Run argv in its own session; tee merged stdout/stderr to trace_path (and stdout if echo).
 
-    Returns {exit, wallSeconds, maxRssBytes, exceeded} where exceeded is None, "wall" or "rss".
+    mem_guard ("cgroup", "poll", or True to probe) with a maxRssBytes cap runs the job in a systemd user scope with
+    MemoryMax=cap and MemorySwapMax=0 (the kernel kills it, not the machine), falling back
+    to the RSS poll when systemd-run is unavailable. The poll stays on as the measurement.
+
+    Returns {exit, wallSeconds, maxRssBytes, exceeded, memGuard, memCapBytes, ...} where
+    exceeded is None, "wall" or "rss".
     """
     cap = cap or {}
     cap_wall = cap.get("wallSeconds")
     cap_rss = cap.get("maxRssBytes")
+    guard = "none"
+    unit = None
+    if mem_guard and cap_rss:
+        if mem_guard == "cgroup" or (mem_guard is True and cgroup_guard_available()):
+            guard = "cgroup"
+            unit = scope_unit(marker)
+            argv = guard_argv(argv, cap_rss, unit, slice_)
+        else:
+            guard = "poll"
     os.makedirs(os.path.dirname(trace_path), exist_ok=True)
     log = open(trace_path, "wb")
     t0 = time.monotonic()
-    env = dict(os.environ, DW_JOB_ID=marker) if marker else None
+    env = None
+    if marker or extra_env:
+        env = dict(os.environ)
+        env.update(extra_env or {})
+        if marker:
+            env["DW_JOB_ID"] = marker
     ppid0 = os.getppid()
     old_handlers = {}
 
@@ -148,7 +315,8 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
         if echo:
             _echo(msg)
         _restore(old_handlers)
-        return {"exit": 127, "wallSeconds": 0.0, "maxRssBytes": 0, "exceeded": None}
+        return {"exit": 127, "wallSeconds": 0.0, "maxRssBytes": 0, "exceeded": None,
+                "memGuard": guard, "memCapBytes": cap_rss}
     pgid = proc.pid
     if on_start:
         on_start(proc.pid)
@@ -171,6 +339,20 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
     thread.start()
     exceeded = None
     peak = 0
+    cg = {"dir": None, "oom": 0, "peak": None}
+
+    def sample_cgroup():
+        if unit is None:
+            return
+        if cg["dir"] is None:
+            cg["dir"] = _cgroup_dir(proc.pid, unit)
+        if cg["dir"] is not None:
+            oom, cpeak = _cgroup_read(cg["dir"])
+            if oom is not None:
+                cg["oom"] = max(cg["oom"], oom)
+            if cpeak is not None:
+                cg["peak"] = max(cg["peak"] or 0, cpeak)
+
     try:
         if cap_wall is None and cap_rss is None and not watch_parent:
             _, st, ru = os.wait4(proc.pid, 0)
@@ -190,11 +372,15 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
                     elif cap_rss is not None and now >= next_rss:
                         next_rss = now + 0.2
                         peak = max(peak, group_rss(pgid))
-                        if peak > cap_rss:
+                        sample_cgroup()
+                        if peak > cap_rss or cg["oom"]:
                             exceeded = "rss"
                             kill_job_tree(pgid, marker)
                 time.sleep(0.02)
     except BaseException:
+        if unit is not None and cg["dir"] is None:
+            cg["dir"] = _cgroup_dir(proc.pid, unit)
+        _cgroup_kill(cg["dir"], unit)
         kill_job_tree(pgid, marker)
         try:
             os.wait4(proc.pid, 0)
@@ -205,6 +391,7 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
         wall = time.monotonic() - t0
         _restore(old_handlers)
     proc.returncode = 0  # reaped by wait4; keep Popen from warning
+    _cgroup_kill(cg["dir"], unit)
     kill_job_tree(pgid, marker)  # stragglers (also setsid escapees) that would hold the pipe or locks
     thread.join(5)
     log.close()
@@ -218,7 +405,137 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
             exceeded = "wall"
         elif cap_rss is not None and rss > cap_rss:
             exceeded = "rss"
-    return {"exit": code, "wallSeconds": round(wall, 3), "maxRssBytes": rss, "exceeded": exceeded}
+        elif guard == "cgroup" and (cg["oom"] or (code == 137 and max(rss, cg["peak"] or 0) >= 0.9 * cap_rss)):
+            exceeded = "rss"  # kernel OOM kill inside the scope (events counter, or SIGKILL at the cap)
+    res = {"exit": code, "wallSeconds": round(wall, 3), "maxRssBytes": rss, "exceeded": exceeded,
+           "memGuard": guard, "memCapBytes": cap_rss}
+    if unit is not None:
+        res.update(memScope=unit, cgroupPeakBytes=cg["peak"], oomKills=cg["oom"])
+    return res
+
+
+def run_concurrent(commands, cwd, trace_path, echo, cap, aggregate, marker, mem_guard, extra_env=None,
+                   on_start=None, watch_parent=False):
+    """E11: run the commands at once, each under the per-process cap, all under the aggregate cap.
+
+    With the cgroup guard every child scope sits in one transient slice with MemoryMax=aggregate,
+    so the kernel enforces the sum; the main thread also polls the summed RSS (the measure, and the
+    guard when the slice is unavailable). Child traces are <trace>.<slot>.log. Returns the
+    run_command shape (wallSeconds is the makespan, maxRssBytes the aggregate peak) plus children.
+    """
+    n = len(commands)
+    slice_ = None
+    if mem_guard == "cgroup":
+        name = slice_name(marker)
+        if _systemctl("set-property", "--runtime", name, f"MemoryMax={int(aggregate)}", "MemorySwapMax=0"):
+            slice_ = name
+    base = trace_path[:-4] if trace_path.endswith(".log") else trace_path
+    traces = [f"{base}.{i}.log" for i in range(n)]
+    results = [None] * n
+    pgids = {}
+    ppid0 = os.getppid()
+
+    def started(i, pid):
+        pgids[i] = pid
+        if on_start and len(pgids) == 1:
+            on_start(pid)
+
+    def worker(i):
+        env = dict(extra_env or {}, DW_SLOT=str(i), DW_SLOTS=str(n))
+        try:
+            results[i] = run_command(commands[i], cwd, traces[i], False, cap, marker=f"{marker}.{i}",
+                                     on_start=lambda pid: started(i, pid), mem_guard=mem_guard,
+                                     extra_env=env, slice_=slice_)
+        except BaseException as exc:  # a thread never raises into the runner; record as a crash
+            results[i] = {"exit": 127, "wallSeconds": 0.0, "maxRssBytes": 0, "exceeded": None,
+                          "error": repr(exc)}
+
+    def kill_all():
+        if slice_:
+            _systemctl("kill", "--signal=SIGKILL", slice_)
+        for i, pg in list(pgids.items()):
+            kill_job_tree(pg, f"{marker}.{i}")
+
+    old_handlers = {}
+
+    def _terminate(signum, _frame):
+        raise Terminated(signum)
+
+    for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        try:
+            old_handlers[sig] = signal.signal(sig, _terminate)
+        except ValueError:
+            break
+    t0 = time.monotonic()
+    threads = [threading.Thread(target=worker, args=(i,), daemon=True) for i in range(n)]
+    agg_peak = 0
+    agg_exceeded = False
+    slice_dir = None
+    slice_oom = 0
+    slice_peak = None
+    try:
+        for t in threads:
+            t.start()
+        while any(t.is_alive() for t in threads):
+            if watch_parent and os.getppid() != ppid0:
+                raise Terminated(signal.SIGHUP)
+            total = sum(group_rss(pg) for pg in list(pgids.values()))
+            agg_peak = max(agg_peak, total)
+            if slice_ and slice_dir is None and pgids:
+                d = _cgroup_dir(next(iter(pgids.values())), scope_unit(f"{marker}.{next(iter(pgids))}"))
+                slice_dir = os.path.dirname(d) if d else None
+            if slice_dir:
+                oom, pk = _cgroup_read(slice_dir)
+                slice_oom = max(slice_oom, oom or 0)
+                slice_peak = max(slice_peak or 0, pk or 0) if pk is not None else slice_peak
+            if not agg_exceeded and total > aggregate:
+                agg_exceeded = True
+                kill_all()
+            time.sleep(0.2)
+    except BaseException:
+        kill_all()
+        for t in threads:
+            t.join(10)
+        raise
+    finally:
+        wall = time.monotonic() - t0
+        _restore(old_handlers)
+        if slice_:
+            d = slice_dir or _unit_cgroup(slice_)
+            if d:
+                oom, pk = _cgroup_read(d)
+                slice_oom = max(slice_oom, oom or 0)
+                if pk is not None:
+                    slice_peak = max(slice_peak or 0, pk)
+            _systemctl("stop", slice_)
+            _systemctl("revert", slice_)
+    for t in threads:
+        t.join(5)
+    children = []
+    for i, r in enumerate(results):
+        r = r or {"exit": 127, "wallSeconds": 0.0, "maxRssBytes": 0, "exceeded": None}
+        c = {"slot": i, "cmd": shlex.join(commands[i]), "trace": os.path.relpath(traces[i], cwd)}
+        c.update({k: r[k] for k in ("exit", "wallSeconds", "maxRssBytes", "exceeded", "memScope",
+                                    "cgroupPeakBytes", "oomKills", "error") if k in r})
+        children.append(c)
+    if slice_oom and not agg_exceeded:
+        agg_exceeded = any(c["exit"] == 137 and not c.get("exceeded") for c in children)
+    exceeded = "rss" if agg_exceeded or any(c.get("exceeded") == "rss" for c in children) else (
+        "wall" if any(c.get("exceeded") == "wall" for c in children) else None)
+    code = next((c["exit"] for c in children if c["exit"] != 0), 0)
+    with open(trace_path, "w") as fh:
+        for c in children:
+            fh.write(f"slot {c['slot']}: exit={c['exit']} wall={c['wallSeconds']}s rss={c['maxRssBytes']}B "
+                     f"exceeded={c.get('exceeded')} trace={c['trace']} cmd={c['cmd']}\n")
+        fh.write(f"makespan={wall:.3f}s aggregatePeak={max(agg_peak, slice_peak or 0)}B "
+                 f"aggregateCap={int(aggregate)}B slice={slice_} aggregateExceeded={agg_exceeded}\n")
+    if echo:
+        with open(trace_path, "rb") as fh:
+            _echo(fh.read())
+    return {"exit": code, "wallSeconds": round(wall, 3), "maxRssBytes": max(agg_peak, slice_peak or 0),
+            "exceeded": exceeded, "memGuard": mem_guard, "memCapBytes": cap.get("maxRssBytes"),
+            "aggregateCapBytes": int(aggregate), "memSlice": slice_, "aggregateExceeded": agg_exceeded,
+            "sliceOomKills": slice_oom, "concurrent": n, "children": children}
 
 
 def _restore(handlers):
@@ -347,7 +664,7 @@ def _env_float(name):
 
 
 def run_heavy(pid_label, argv, cmd_str, budget_key=None, hypothesis=None, repo=None, echo=True, err=None,
-              gpu=False, deadline=None, max_wall=None, pipe_stdin=False):
+              gpu=False, deadline=None, max_wall=None, pipe_stdin=False, commands=None, aggregate_cap=None):
     """Run one heavy command, with bus visibility (advisory claim, job.start/end) around it.
 
     The bus hooks never raise, print or change the result; the flock stays authoritative.
@@ -359,13 +676,13 @@ def run_heavy(pid_label, argv, cmd_str, budget_key=None, hypothesis=None, repo=N
     hb.begin()
     try:
         return _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb,
-                          gpu, deadline, max_wall, pipe_stdin)
+                          gpu, deadline, max_wall, pipe_stdin, commands, aggregate_cap)
     finally:
         hb.close()
 
 
 def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err, hb,
-               gpu=False, deadline=None, max_wall=None, pipe_stdin=False):
+               gpu=False, deadline=None, max_wall=None, pipe_stdin=False, commands=None, aggregate_cap=None):
     """Run one heavy command. Returns {exit, run, trace, wallSeconds, maxRssBytes, message}.
 
     exit is the child's exit, 3 (host unfit), 4 (budget exceeded), 5 (hypothesis required) or 6 (no wall bound).
@@ -392,6 +709,16 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
                f"read {prior.get('trace')} and retry with --hypothesis TEXT")
         return {"exit": EXIT_HYPOTHESIS, "message": msg}
 
+    aggregate = None
+    if commands:
+        bcap = (budgets.limits_for(budget_key, repo) or {}) if budget_key else {}
+        aggregate = min(int(aggregate_cap or bcap.get("aggregateRssBytes") or MAX_AGGREGATE_CAP), MAX_AGGREGATE_CAP)
+        per = clamp_rss_cap(bcap.get("maxRssBytes"))
+        if len(commands) * per > aggregate:
+            return {"exit": EXIT_UNFIT, "message": (
+                f"host unfit: {len(commands)} x per-process cap {per / GIB:.1f} GiB = {len(commands) * per / GIB:.1f} GiB"
+                f" > aggregate cap {aggregate / GIB:.1f} GiB (lower the cap with a budget or DW_DEFAULT_RSS_CAP)")}
+    guard_mode = "cgroup" if cgroup_guard_available() else "poll"  # probe before any lock or signal window
     kinds = ["heavy", "gpu"] if gpu else ["heavy"]
     fd = preflight.open_lock()
     gfd = None
@@ -399,8 +726,10 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
     queued = False
     last_exit = [None]
     try:
+        bc = (budgets.limits_for(budget_key, repo) or {}) if budget_key else {}
+        admitted = clamp_rss_cap(bc.get("maxRssBytes")) * (len(commands) if commands else 1)
         ok, why = queue.acquire_turn(fd, pid_label, cmd_str, max_wall=eff_wall(budget_key, deadline, max_wall, repo),
-                                     budget=budget_key,
+                                     budget=budget_key, mem_cap=admitted, mem_limit=MAX_AGGREGATE_CAP,
                                      timeout=None if deadline is None else max(0.0, deadline - time.time()))
         if not ok:
             return {"exit": EXIT_UNFIT, "message": "host unfit: another process holds the heavy lock (" + (why or "queue") + ")"}
@@ -409,14 +738,20 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
             gfd = preflight.open_lock(preflight.gpu_lock_path())
             if not preflight.try_lock(gfd):
                 return {"exit": EXIT_UNFIT, "message": "host unfit: another process holds the gpu lock"}
-        pre = preflight.run(repo, lock_held_by_us=True, skip=os.environ.get("DW_SKIP_PREFLIGHT") == "1")
+        cap = budgets.limits_for(budget_key, repo) if budget_key else None
+        rss_cap = clamp_rss_cap((cap or {}).get("maxRssBytes"))
+        pre = preflight.run(repo, lock_held_by_us=True, skip=os.environ.get("DW_SKIP_PREFLIGHT") == "1",
+                            mem_need=rss_cap * len(commands) if commands else rss_cap)
         if not pre["ok"]:
             return {"exit": EXIT_UNFIT, "message": "host unfit: " + "; ".join(pre["reasons"]), "preflight": pre}
 
-        cap = budgets.limits_for(budget_key, repo) if budget_key else None
         wall_cap = effective_wall(cap, deadline, max_wall)
         run_cap = dict(cap or {})
         run_cap["wallSeconds"] = wall_cap
+        run_cap["maxRssBytes"] = rss_cap
+        extra_env = {}
+        if any(_is_cargo_test(a) for a in (commands or [argv])) and not os.environ.get("RUST_TEST_THREADS"):
+            extra_env["RUST_TEST_THREADS"] = os.environ.get("DW_RUST_TEST_THREADS") or DEFAULT_RUST_TEST_THREADS
         rid = run_id(pid_label, repo)
         trace_abs = os.path.join(repo, trace_rel(rid))
         now = time.time()
@@ -433,20 +768,35 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
             _write_lease(kinds, lease)
 
         hb.started(cap, hypothesis)
-        res = run_command(argv, repo, trace_abs, echo, run_cap, marker=rid, on_start=on_start,
-                          watch_parent=os.environ.get("DW_WATCH_PARENT") == "1",
-                          pipe_stdin=pipe_stdin)
+        if commands:
+            res = run_concurrent(commands, repo, trace_abs, echo, run_cap, aggregate, rid, guard_mode, extra_env,
+                                 on_start=on_start, watch_parent=os.environ.get("DW_WATCH_PARENT") == "1")
+        else:
+            res = run_command(argv, repo, trace_abs, echo, run_cap, marker=rid, on_start=on_start,
+                              watch_parent=os.environ.get("DW_WATCH_PARENT") == "1",
+                              pipe_stdin=pipe_stdin, mem_guard=guard_mode, extra_env=extra_env)
         code = res["exit"]
         last_exit[0] = code
-        extra = {}
+        extra = {k: res[k] for k in ("memGuard", "memCapBytes", "memScope", "cgroupPeakBytes", "oomKills",
+                                     "aggregateCapBytes", "memSlice", "aggregateExceeded", "sliceOomKills",
+                                     "concurrent", "children") if k in res}
+        extra["cgroup"] = res.get("memGuard") == "cgroup"
+        if commands:
+            extra.update(concurrency=res.get("concurrent"), aggregateRssBytes=res["maxRssBytes"])
+        if extra_env:
+            extra["env"] = extra_env
         if res["exceeded"]:
-            extra = {"childExit": code, "capExceeded": res["exceeded"]}
+            extra.update(childExit=code, capExceeded=res["exceeded"])
             code = EXIT_BUDGET
         rec = run_record(rid, pid_label, cmd_str, hypothesis, res, code, pre, head, repo, extra)
         status.append_run(rec, repo)
         hb.finished(rec)
-        if budget_key and cap is None and code == 0:
-            budgets.record_measurement(budget_key, res["wallSeconds"], res["maxRssBytes"], rid, rec["at"], repo)
+        if budget_key and (cap is None or cap.get("fixed")) and code == 0:
+            budgets.record_measurement(budget_key, res["wallSeconds"],
+                                       max((c.get("maxRssBytes") or 0) for c in res["children"]) if commands
+                                       else res["maxRssBytes"], rid, rec["at"], repo,
+                                       aggregate_rss_bytes=res["maxRssBytes"] if commands else None,
+                                       concurrency=len(commands) if commands else None)
         msg = (f"heavy {pid_label}: exit={code} wall={res['wallSeconds']}s "
                f"rss={res['maxRssBytes']}B run={rid} trace={rec['trace']}")
         if res["exceeded"]:
@@ -470,9 +820,42 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
                     os.close(f)
 
 
-def cmd_heavy(pid_label, budget_key, hypothesis, argv, gpu=False, deadline=None, max_wall=None, pipe_stdin=False):
-    """CLI entry for `heavy --id ID [--budget KEY] [--hypothesis TEXT] -- CMD...`."""
+def concurrent_commands(argv, concurrent=None, commands_file=None):
+    """E11 command list: the lines of commands_file (shell words, # comments), or P copies of argv."""
+    if commands_file:
+        with open(commands_file) as fh:
+            cmds = [shlex.split(line) for line in fh if line.strip() and not line.lstrip().startswith("#")]
+        if argv:
+            raise ValueError("give either --commands FILE or a command after --, not both")
+        if concurrent and concurrent != len(cmds):
+            raise ValueError(f"--concurrent {concurrent} but {commands_file} has {len(cmds)} commands")
+        return cmds
+    if not argv:
+        raise ValueError("heavy needs a command after `--`")
+    return [list(argv) for _ in range(concurrent)]
+
+
+def cmd_heavy(pid_label, budget_key, hypothesis, argv, gpu=False, deadline=None, max_wall=None, pipe_stdin=False,
+              concurrent=None, commands_file=None, aggregate_cap=None):
+    """CLI entry for `heavy --id ID [--budget KEY] [--hypothesis TEXT] [--concurrent P] -- CMD...`."""
     from . import predicates
+
+    commands = None
+    if concurrent or commands_file:
+        if pipe_stdin:
+            print("--pipe-stdin cannot be combined with --concurrent", file=sys.stderr)
+            return 2
+        try:
+            commands = concurrent_commands(argv, concurrent, commands_file)
+            aggregate_cap = parse_size(aggregate_cap) if aggregate_cap else None
+        except (OSError, ValueError) as exc:
+            print(f"heavy {pid_label}: {exc}", file=sys.stderr)
+            return 2
+        if len(commands) < 1:
+            print(f"heavy {pid_label}: no commands", file=sys.stderr)
+            return 2
+        if aggregate_cap and aggregate_cap > MAX_AGGREGATE_CAP:
+            print(f"heavy {pid_label}: aggregate cap clamped to {MAX_AGGREGATE_CAP // GIB} GiB", file=sys.stderr)
 
     if pipe_stdin:
         mode = os.fstat(0).st_mode
@@ -489,8 +872,11 @@ def cmd_heavy(pid_label, budget_key, hypothesis, argv, gpu=False, deadline=None,
     if not budget_key and pid_label in known:
         budget_key = known[pid_label].budget
     try:
-        r = run_heavy(pid_label, argv, shlex.join(argv), budget_key, hypothesis, repo,
-                      gpu=gpu, deadline=deadline, max_wall=max_wall, pipe_stdin=pipe_stdin)
+        cmd_str = shlex.join(argv) if commands is None else (
+            f"concurrent {len(commands)}: " + " && ".join(shlex.join(c) for c in commands))
+        r = run_heavy(pid_label, argv or commands[0], cmd_str, budget_key, hypothesis, repo,
+                      gpu=gpu, deadline=deadline, max_wall=max_wall, pipe_stdin=pipe_stdin,
+                      commands=commands, aggregate_cap=aggregate_cap)
     except Terminated as exc:
         print(f"heavy {pid_label}: terminated by signal {exc.args[0]}; job tree killed, locks released",
               file=sys.stderr)

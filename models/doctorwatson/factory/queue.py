@@ -174,12 +174,21 @@ def lock_all(fds, try_lock=None):
     return True
 
 
-def acquire_turn(fd, label, cmd, max_wall=None, try_lock=None, poll=1.0, timeout=None, after=None, budget=None):
+def admitted_caps(st):
+    """Sum of the memory caps (bytes) of running tickets (heavy and gpu)."""
+    return sum(int(t.get("memCapBytes") or 0) for t in st["tickets"] if t["state"] == "running")
+
+
+def acquire_turn(fd, label, cmd, max_wall=None, try_lock=None, poll=1.0, timeout=None, after=None, budget=None,
+                 mem_cap=None, mem_limit=None):
     """Wait for this job's turn, then take the heavy flock on fd. Returns (ok, reason).
 
     Reuses a pre-submitted queued ticket with the same label, else files one. Falls back to the
-    old non-blocking behaviour when DW_QUEUE=off.
+    old non-blocking behaviour when DW_QUEUE=off. With mem_cap/mem_limit (SRC-016) a ticket is
+    admitted only while admitted_caps + mem_cap <= mem_limit; a cap above the limit is refused.
     """
+    if mem_cap and mem_limit and mem_cap > mem_limit:
+        return False, "memory cap %d B exceeds the aggregate limit %d B" % (mem_cap, mem_limit)
     if try_lock is None:
         from . import preflight
         try_lock = preflight.try_lock
@@ -195,6 +204,8 @@ def acquire_turn(fd, label, cmd, max_wall=None, try_lock=None, poll=1.0, timeout
             t = _new(st, label, cmd, wall, 0, after, budget, None, waiter=True)
         else:
             t.update(waiterPid=os.getpid(), waiterStart=_pid_start(os.getpid()))
+        if mem_cap:
+            t["memCapBytes"] = int(mem_cap)
         tid = t["id"]
     deadline = None if timeout is None else time.monotonic() + timeout
     try:
@@ -205,7 +216,8 @@ def acquire_turn(fd, label, cmd, max_wall=None, try_lock=None, poll=1.0, timeout
                 if t["state"] != "queued":
                     return False, "ticket %s is %s: %s" % (tid, t["state"], t.get("why", ""))
                 h = head(st)
-                if h is not None and h["id"] == tid and _running(st) is None and try_lock(fd):
+                mem_ok = not (mem_cap and mem_limit) or admitted_caps(st) + mem_cap <= mem_limit
+                if h is not None and h["id"] == tid and _running(st) is None and mem_ok and try_lock(fd):
                     now = time.time()
                     t.update(state="running", pid=os.getpid(), pidStart=_pid_start(os.getpid()),
                              started=now, deadline=now + t["maxWall"], maxWall=t["maxWall"])

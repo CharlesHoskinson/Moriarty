@@ -207,3 +207,38 @@ class LockAllTests(QueueCase):
         self.assertFalse(queue.lock_all([a, b]))
         a2 = os.open(os.path.join(self._tmp.name, "a.lock"), os.O_RDWR)
         self.assertTrue(preflight.try_lock(a2))
+
+
+class MemoryAdmissionTests(QueueCase):
+    """SRC-016: a ticket is admitted only while the running caps plus its own stay <= the limit."""
+
+    GIB = 1024 ** 3
+
+    def test_admitted_caps_sum_running(self):
+        st = {"tickets": [{"state": "running", "memCapBytes": 40 * self.GIB},
+                          {"state": "done", "memCapBytes": 48 * self.GIB},
+                          {"state": "running"}]}
+        self.assertEqual(queue.admitted_caps(st), 40 * self.GIB)
+
+    def test_refuses_cap_above_limit(self):
+        fd = preflight.open_lock()
+        self.addCleanup(os.close, fd)
+        ok, why = queue.acquire_turn(fd, "M1", "x", max_wall=10, timeout=0.5,
+                                     mem_cap=101 * self.GIB, mem_limit=100 * self.GIB)
+        self.assertFalse(ok)
+        self.assertIn("aggregate limit", why)
+
+    def test_waits_while_running_caps_would_exceed(self):
+        with queue._state() as st:  # a foreign running ticket holding 60 GiB (its owner is this live process)
+            st["tickets"].append({"id": "t9999-other", "label": "other", "state": "running", "pid": os.getpid(),
+                                  "pidStart": queue._pid_start(os.getpid()), "memCapBytes": 60 * self.GIB,
+                                  "maxWall": 10, "started": time.time(), "deadline": time.time() + 10,
+                                  "prio": 0, "rank": 0.0, "after": [], "owner": "x", "submitted": time.time()})
+        fd = preflight.open_lock()
+        self.addCleanup(os.close, fd)
+        ok, why = queue.acquire_turn(fd, "M2", "x", max_wall=10, timeout=0.5, poll=0.1,
+                                     mem_cap=48 * self.GIB, mem_limit=100 * self.GIB)
+        self.assertFalse(ok)
+        self.assertIn("timeout", why)
+        t = [x for x in queue.load()["tickets"] if x["label"] == "M2"][-1]
+        self.assertEqual(t["memCapBytes"], 48 * self.GIB)
