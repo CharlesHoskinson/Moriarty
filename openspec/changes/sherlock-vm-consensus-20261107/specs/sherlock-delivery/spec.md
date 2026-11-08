@@ -82,10 +82,10 @@ Superseded rows SHALL carry `retired:`; `next` and `check --tier`/`--set` sweeps
 - **THEN** FIRST FAILING is `A8p`, `RETIRED: A8 (...)` is listed, the sweeps ignore A8, `check A8` runs and its history is retained.
 
 ### Requirement: SWF-012 Optional rows do not gate
-Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects. Since 2026-11-08 no B row is optional (SWF-013); the optional rows are the S>1 experiment and other conditionally guarded features.
+Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects. Since 2026-11-08 no B row is optional (SWF-013); the optional rows are the conditionally guarded features: the GPU rows (F23, A24-A27, A21) and the tree row (A22) until gate G-A or their kill criteria keep them, and the S-slot row A20 until G-A fixes S (amended 2026-11-08 (3); the S>1 experiment is retired, S is chosen once at G-A, SRC-014).
 
 #### Scenario: Unimplemented optional row
-- **WHEN** the S>1 experiment row is optional and `unimplemented.sh`, and every mandatory Preview row passes.
+- **WHEN** a GPU or tree row is optional and `unimplemented.sh`, and every mandatory Preview row passes.
 - **THEN** `next` names no failing mandatory row, `qa/tiers/t3.sh` passes, and `check --include-optional` reports the optional row failing.
 
 #### Scenario: Unimplemented mandatory row

@@ -48,15 +48,18 @@ Boxes record observed outcomes only. Paths are relative to the repository root. 
   Observed 2026-10-26: `RUSTC_WRAPPER= CARGO_TARGET_DIR=tools/profile/target CARGO_BUILD_JOBS=4 cargo check --offline --manifest-path tools/profile/Cargo.toml --bins` passed both without the feature and with `--features recursion-phase-profile`; 61 Python tests passed, isolation reported OK, and `prepare --check-only` verified the regenerated patch/identity. These are code checks, not proof-run evidence.
 - [ ] 5.2 Run at least five paired on/off A2 runs. Report the one-sided 95% overhead bound (RPP-005).
   Verify: `python3 -B scripts/qa/profile-recursion.py calibrate --workload A2 --pairs 5`.
+  Amended 2026-11-08 (3): this is task 2.8 of `openspec/changes/sherlock-vm-consensus-20261107/tasks.md` (row A15, part); it runs only after that change's memory guard (task 2.0, F18) has landed.
+- [ ] 5.3 GP node-chain workload (added 2026-11-08 (3) by the Sherlock speed re-plan, `research/sherlock-speed-replan-20261108/order.md` §2; task 2.7 of the consensus change, row F19): re-pin `tools/profile/Cargo.toml` to zk-stdlib 2.4.0 / circuits 7.3.0 and regenerate `tools/profile/Cargo.lock` offline after the main workspace's task 2.1; add `tools/profile/src/bin/profile-gp.rs` (the `gp_fold_and_key` chain through the public APIs: key load, `setup_pk`, each node `prove` and `verify`, decider keygen and prove, ledger verify; stand-in leaves via `MORIARTY_GP_STANDIN_STEPS`, real leaves via `MORIARTY_GP_LEAF_DIR`; `--threads` recorded in the sidecar host block; CPU% and RSS per phase; the node row count with its per-gadget breakdown); add the `GP` workload to `BUDGETS` and `planned_commands` (budget `c0-gp-chain`, seeded 1,800 s / 48 GB); add `decide` rows C11-C14 for the four levers (threads, k=19, S, GPU; tree/concurrency criteria from `tree.md` §7).
+  Verify: `prepare --check-only`, `check-profile-isolation.py`, `unittest discover -s scripts/qa/tests -p 'test_profile_*.py'`, `cargo check` of `tools/profile` with and without the feature.
 
 ## 6. Full matrix
 
-- [ ] 6.1 Profile A3 P and A4 D, process-cold and resident-PK second proof, under the existing budgets `a3-parent-k20` and `a4-terminal-d`.
+- [ ] 6.1 Profile the GP node chain (amended 2026-11-08 (3); was A3 P and A4 D, whose rows are retired): `one --workload GP --cache-mode resident_pk --variant both --run` at `RAYON_NUM_THREADS` 4, 10 and 20 (run ids `c0-gp-t4`, `c0-gp-t10`, `c0-gp-t20`) under `c0-gp-chain` and `node-threads-{4,10,20}`; then the concurrency probe (three genesis node proofs at 6 threads under `heavy --concurrent 3 --aggregate-cap 100G`, budget `node-concurrent-3`). This is task 2.9 of the consensus change (rows A15, A17, A23). The decider is profiled in the same run under `a4-terminal-d`.
 - [ ] 6.2 Profile the B3 one-batch command with all wrapper intervals.
-- [ ] 6.3 Run `decide`. Write `wiki-llm/recursion-perf/profiles/c0-first-profile.md` with the deciding metric of each row C1–C10.
+- [ ] 6.3 Run `decide`. Write `wiki-llm/recursion-perf/profiles/c0-first-profile.md` with the deciding metric of each row C1–C10 and, since 2026-11-08 (3), C11–C14 (threads, k=19, S, GPU) plus d, m, q, U, f3 and the wall per thread count that gate G-A of the consensus change reads.
   Verify: `python3 -B scripts/qa/profile-recursion.py decide --run <run>` exits 0, and every row has a metric or an explicit unresolved reason.
 
 ## 7. Regression
 
-- [ ] 7.1 Run the normal A2, A3, A4 and B3 checks with profiling off.
-  Verify: `scripts/doctorwatson check A2`, `A3`, `A4` and `B3` all pass.
+- [ ] 7.1 Run the normal regression checks with profiling off (amended 2026-11-08 (3): A3 and A4 are retired stagenet rows; the regression rows are A1, A15 and the chain rows A18, A19, A19b of the consensus change, plus B3).
+  Verify: `scripts/doctorwatson check A1 A15 B3` pass, and the chain rows pass when their milestone reaches them.

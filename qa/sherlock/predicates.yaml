@@ -191,6 +191,153 @@ predicates:
   # synthetic rollup design, we use that"; "keep them out of C4"): Sherlock's synthetic-rollup
   # qualification on FSYN data, local -> Preview -> Mainnet, outside the C4 closure. IDs are kept
   # for history. Checks that still read Fenrir files say so in their title; task 1.9 decouples them.
+  - id: A15
+    set: A
+    title: "C0 phase profile of the GP node chain at the new pins: A2 overhead qualification (5 pairs, bound <= 1.01), GP workload at 4/10/20 threads on/off with resident PK and 3 stand-in leaves, reduce and decide with the C1-C14 rows, c0-first-profile.md written with d, m, q, U, wall per thread count, node rows and k (SRC-011; budget c0-gp-chain 1,800 s / 48 GB)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A15"
+    heavy: false
+    budget: "c0-gp-chain"
+    depends: [F19, A1]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-011"
+    holdout: false
+  - id: A16
+    set: A
+    title: "Node step after the SRC-004/005 fixes and the k=19 cut: cost_model k == 19 with the range checks and steps <= S in, a 3-step fold passes, one node step <= 60 s and <= 16 GB peak RSS at the gate thread count, or the shortfall and its C0 phase cause recorded for G-A (SRC-015(a); budget node-k19-step seeded 300 s / 24 GB, fixed)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A16"
+    heavy: false
+    budget: "node-k19-step"
+    depends: [A15, F20, F21]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-015"
+    holdout: false
+  - id: A17
+    set: A
+    title: "Thread scaling of one node step: wall at RAYON_NUM_THREADS 4, 10, 20; keep 20 threads if wall(20) <= 0.7 x wall(4), else the serial phase is recorded; records U = average cores at 20 threads (SRC-011 lever 0; budgets node-threads-4/10/20 600 s / 48 GB)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A17"
+    heavy: false
+    budget: "node-threads-20"
+    depends: [A15]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-011"
+    holdout: false
+  - id: A18
+    set: A
+    title: "Throughput of the entry 7; chain (6 steps): leaves (P workers under E11) -> node chain or tree -> decider -> verify_chain -> validate_call in under 20 min, 48 GB per process, 100 GB aggregate; receipt records RAYON_NUM_THREADS, P and both peaks (SRC-011, SRC-015(b); gate G-B; budget chain-entry7 seeded 1,200 s, fixed)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A18"
+    heavy: false
+    budget: "chain-entry7"
+    depends: [A4p, A6p, F18]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-015"
+    holdout: false
+  - id: A19
+    set: A
+    title: "Throughput of fact(3) (293 steps) end to end in under 2 h, 48 GB per process, 100 GB aggregate; if the tree was built both folds run on the same leaves and the receipt records wall, aggregate peak, proof count and depth (SRC-011, SRC-015(c); gate G-C blocks OP-PV-DEPLOY; budget chain-fact3 seeded 7,200 s, fixed)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A19"
+    heavy: false
+    budget: "chain-fact3"
+    depends: [A18, A13]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-015"
+    holdout: false
+  - id: A19b
+    set: A
+    title: "Throughput of list123 (303 steps) end to end in under 2 h, 48 GB per process, 100 GB aggregate (SRC-011, SRC-015(c); gate G-C; budget chain-list123 seeded 7,200 s, fixed)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A19b"
+    heavy: false
+    budget: "chain-list123"
+    depends: [A18, A13]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-015"
+    holdout: false
+  - id: A20
+    set: A
+    title: "S-slot leaf at the S fixed at gate G-A-prime: a terminal step at slot j < S-1 followed by disabled slots proves and folds with steps == j+1; a disabled slot with post != pre or a nonzero steps contribution is refused; the node refuses steps == 0 and steps > S; leaf k, RSS and prove time at S recorded (SRC-014; optional until G-A-prime fixes S > 1; budget leaf-s-steps 600 s / 32 GB)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A20"
+    heavy: false
+    budget: "leaf-s-steps"
+    depends: [A12, F20, F21]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-014"
+    holdout: false
+    optional: true
+  - id: A21
+    set: A
+    title: "GPU node step: one node step under heavy --gpu with the gpu feature; proof bytes identical to the CPU run under a fixed RNG seed, stock verify; node_step_wall improvement at least the C0 Amdahl bound minus 20 percent, else the track closes with the shares recorded (SRC-018; optional until kept at task 2.10f; budget gpu-msm-node-step 300 s / 48 GB)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A21"
+    heavy: false
+    budget: "gpu-msm-node-step"
+    depends: [A27, A16]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
+  - id: A22
+    set: A
+    title: "Tree fold of the entry 7; leaves with the three-slot node SHKTRE01 at P=3 under heavy --concurrent 3 --aggregate-cap 100G; hash-bound manifest replayed by verify_chain; negatives: swapped children, reused leaf, height gap, non-neutral disabled-slot carry, identity-point child accumulator, manifest shape mismatch, wrong vk_repr child (SRC-017, SRC-011; optional until gate G-A opens the tree; budget tree-fold-entry7 1,200 s / 48 GB per process / 100 GB aggregate)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A22"
+    heavy: false
+    budget: "tree-fold-entry7"
+    depends: [A16, A23, F20, F21, F22]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
+    holdout: false
+    optional: true
+  - id: A23
+    set: A
+    title: "Concurrency probe: three genesis node proofs at RAYON_NUM_THREADS=6 started together under heavy --concurrent 3 --aggregate-cap 100G; records f3 = wall(one of three)/wall(solo) and the aggregate peak, which must stay under 100 GB (SRC-016, SRC-011 lever 3 and the tree criterion; budget node-concurrent-3 600 s / 48 GB per process / 100 GB aggregate)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A23"
+    heavy: false
+    budget: "node-concurrent-3"
+    depends: [A17, F18]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-016"
+    holdout: false
+  - id: A24
+    set: A
+    title: "GPU phase 2, field kernels: Rust CUDA kernels for Fq (381-bit) and Fr (255-bit) Montgomery add, sub, mul, square and inverse in crates/mori-gpu, bit-identical to the CPU field code on random vectors and the edge values 0, 1, p-1, r-1 (SRC-018; optional, opened by gate G-A when m + q >= 0.4; time box 3 working days; budget gpu-field-kernels)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A24"
+    heavy: false
+    budget: "gpu-field-kernels"
+    depends: [F23]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
+  - id: A25
+    set: A
+    title: "GPU phase 3, MSM: Pippenger G1 MSM over BLS12-381 at 2^19 and 2^20 random inputs including zero, one and r-1 scalars and the identity point, bit-identical to multi_exp; keep at >= 5x over BLST on 20 cores, kill at < 2x or any mismatch (SRC-018; optional; time box 5 working days; budget gpu-msm)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A25"
+    heavy: false
+    budget: "gpu-msm"
+    depends: [A24]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
+  - id: A26
+    set: A
+    title: "GPU phase 4, NTT: Fr NTT and inverse NTT at 2^20-2^23 bit-identical to best_fft; keep at >= 2x on the stage, kill below (SRC-018; optional; time box 5 working days; budget gpu-ntt)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A26"
+    heavy: false
+    budget: "gpu-ntt"
+    depends: [A24]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
+  - id: A27
+    set: A
+    title: "GPU phase 5, prover integration: patched midnight-proofs 0.8.3 dispatching msm_specific and best_fft to mori-gpu behind a default-off gpu feature, CPU fallback with identical bytes and receipt gpu: false, registry crate stays the default (T0 isolation), device allocations counted against the process cap; proof bytes identical to the CPU run under a fixed seed and accepted by the stock verifier (SRC-018, SRC-016, SAS-008; optional until kept)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A27"
+    heavy: false
+    budget: "gpu-proof-identity"
+    depends: [A25, A26, F18]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
   - id: B1
     set: B
     title: "Synthetic rollup, local: deterministic FSYN dataset with public seed, parameter pins and manifest regenerates byte-identically (SSRD-003; was SRPOC-003). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, FRTF v3 and design-cut sources via sources.py)"
@@ -926,3 +1073,58 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-014"
     holdout: false
+  - id: F18
+    set: F
+    title: "Memory guard (task 2.0, E11/E16/E17): factory unit tests show the default 48 GiB cap applied when a budget has no cap and no cap above 48 GiB, the systemd-run scope command built with MemoryMax and MemorySwapMax=0, OOM reported as capExceeded rss, preflight refusing low MemAvailable (cap + 20 GiB) and used swap (> 4 GiB), the aggregate admission rule (sum of admitted caps <= 100 GiB), the concurrent parent scope, fixed caps honoured and never rewritten, RUST_TEST_THREADS injected (SRC-016, SRC-015)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F18"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-016"
+    holdout: false
+  - id: F19
+    set: F
+    title: "C0 profile harness ready for the GP chain (task 2.7): tools/profile re-pinned to zk-stdlib 2.4.0 / circuits 7.3.0 with a fresh Cargo.lock, profile-gp builds with and without the feature, prepare --check-only and the isolation check pass, GP workload and C11-C14 decide rows unit-tested (SRC-011, RPP-007)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F19"
+    heavy: false
+    depends: [F18]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-011"
+    holdout: false
+  - id: F20
+    set: F
+    title: "Quint model of the general aggregation protocol (task 2.11): models/sherlock/quint/aggregation.qnt and aggregation_test.qnt with constants TREE and S; invariants I1 linkage, I2 height monotonicity and additivity, I3 exactly-once coverage, I4 identity and padding neutrality, I5 schedule independence, I6 genesis uniqueness, I7 replay, I8 program fixity, I9 shape binding, I10 liveness witness, fixed keys, Q-C scheduler under the 48/100 GB caps; quint test passes with TREE false and true, S in 1, 2, 4, 8, every seeded mutant caught (SRC-017)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F20"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
+    holdout: false
+  - id: F21
+    set: F
+    title: "Lean composition theorems (task 2.12): clean/fork/Clean/Sherlock/Aggregation.lean and AggregationAxioms.lean in SherlockSpec build with zero sorry; L1 segment soundness for every program, L2 associativity of link with the identity as unit, L3 padding neutrality, L4 exactly-once coverage, L5 height arithmetic without wrap, L6 decider pinning, L7 independence from shape, depth and S, L-C, L-D, L-E; print axioms within the declared premises (scripts/qa/check-lean-aggregation.sh; exit 2 while the toolchain is absent) (SRC-017, SAS-009)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F21"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
+    holdout: false
+  - id: F22
+    set: F
+    title: "Tree node row probe (task 2.13; tree.md T0): cost_model rows and k of the slot nodes {self, self, leaf}, {self, self}, {self, self, leaf, leaf} without an SRS, recorded in budgets.json tree-node-rows; the tree is killed at > 0.95 x 2^20 rows (SRC-017, SRC-011)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh F22"
+    heavy: false
+    depends: [A1]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
+    holdout: false
+  - id: F23
+    set: F
+    title: "GPU toolchain smoke on sm_121 (task 2.10a): CUDA 13.4.3 nvcc and the driver recorded, a Rust-driven sm_121 kernel runs and its 64-bit mulhi matches the CPU; the track proceeds only when gate G-A records m + q >= 0.4 (SRC-018; optional)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F23"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
+    holdout: false
+    optional: true
