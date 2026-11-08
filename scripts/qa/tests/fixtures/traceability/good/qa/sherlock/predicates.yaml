@@ -1,0 +1,39 @@
+version: 1
+predicates:
+  - id: F1
+    set: F
+    title: "Demo factory row"
+    tier: T0
+    check: "scripts/qa/check-f1.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/demo/requirements.md#dem-001"
+    holdout: false
+  - id: F2
+    set: F
+    title: "Demo row without a check yet"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F2"
+    heavy: false
+    depends: [F1]
+    source: "openspec/changes/demo/specs/cap/spec.md#requirement-dem-002-second-thing"
+    holdout: false
+  - id: B1
+    set: B
+    title: "Optional demo row"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh B1"
+    heavy: false
+    depends: []
+    source: "openspec/changes/demo/tasks.md#L3"
+    holdout: false
+    optional: true
+  - id: A1
+    set: A
+    title: "Retired demo row keeps its historical check"
+    tier: T3
+    check: "scripts/qa/check-gone.sh"
+    heavy: false
+    depends: []
+    holdout: false
+    retired: "superseded by F1"
