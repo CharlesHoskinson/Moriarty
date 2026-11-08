@@ -315,19 +315,29 @@ fn seconds(ns: u64) -> f64 {
     ns as f64 / 1_000_000_000.0
 }
 
+/// `profile::Phase::Transcript`.
+const TRANSCRIPT_PHASE: u16 = 19;
+
 #[derive(Debug)]
 pub struct Collector(Mutex<Observation>);
 impl BoundaryObserver for Collector {
     fn boundary(&self, event: &Event, entry: bool) {
-        let counters = Counters::read();
+        // RPP-005: transcript spans (phase 19) are fine-grained (about 9,000 per A2 run);
+        // three /proc reads at each of their boundaries cost about 2% wall (task 2.8,
+        // run c0-a2-qual-20261108). They keep their timing; their counters are not
+        // sampled and serialize as null ("boundary not observed").
+        let sampled = event.phase_id != TRANSCRIPT_PHASE;
+        let counters = sampled.then(Counters::read);
         if let Ok(mut o) = self.0.lock() {
-            o.boundary(
-                event.id,
-                if entry { event.start_ns } else { event.end_ns },
-                entry,
-                counters,
-            );
-            if !entry && event.status == 2 && event.phase_id == 19 && EXPECTED_REJECTION.get() {
+            if let Some(counters) = counters {
+                o.boundary(
+                    event.id,
+                    if entry { event.start_ns } else { event.end_ns },
+                    entry,
+                    counters,
+                );
+            }
+            if !entry && event.status == 2 && event.phase_id == TRANSCRIPT_PHASE && EXPECTED_REJECTION.get() {
                 if o.expected_rejections.len() < o.capacity {
                     o.expected_rejections.push(event.id);
                 } else {
