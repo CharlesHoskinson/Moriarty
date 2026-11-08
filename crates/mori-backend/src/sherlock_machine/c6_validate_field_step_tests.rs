@@ -71,7 +71,7 @@
 //!   `witness_validate_field_from_owner_record` internal consistency
 //!   and PS-before-P3/P6 rejections.
 
-use super::c6_push_step::C6PushStatementBindingMode;
+use super::c6_push_step::{C6PushStatementBindingMode, C6PushStepError};
 use super::{
     C6ValidateFieldConsumerError, C6ValidateFieldStepWitness, build_c6_validate_field_step_circuit,
     check_c6_validate_field_step_circuit, record_validate_field_step,
@@ -1727,17 +1727,20 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
     // 1. P6 (`StepDisposition::RefusedCapCharged` / `ExhaustReason::HelperTasks`):
     //    Non-tail `Cons([7])` at `cursor == 0` (`tasks.len() == 1`, `is_nontail == true`)
     //    with `bounds.helper_tasks == 1` and `max_helper_work == 100`.
-    //    Verified against both matching layout `helper_tasks == 1` and larger layout
-    //    `helper_tasks == 4` (`core_cfg(generous())`).
+    //    Verified against the matching layout `helper_tasks == 1`. A host config with
+    //    the larger layout `helper_tasks == 4` (`core_cfg(generous())`) is not the
+    //    retained configuration of this admission: the push-family prefix builder
+    //    refuses it (`ConfigMismatch { field: "layout" }`), non-rollback.
     {
         let w = field_spec(ConstKindWant::Cons, true, 0);
         let make = &|| prog(lit_list(&[7]));
         let b_p6 = bounds_with(100, 1);
-        for (host_cfg, cfg_label) in [
-            (core_cfg(b_p6), "matching layout helper_tasks=1"),
+        for (host_cfg, cfg_label, retained) in [
+            (core_cfg(b_p6), "matching layout helper_tasks=1", true),
             (
                 core_cfg(generous()),
                 "retained admission helper_tasks=1 vs larger layout helper_tasks=4",
+                false,
             ),
         ] {
             let full_label = format!("P6 non-tail Cons at helper_tasks=1 ({cfg_label})");
@@ -1749,10 +1752,22 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
             };
             assert_eq!(replay.before, pre);
             assert_p6(&replay, &w, &full_label);
-            let witness = record_validate_field_step(&admitted, &mut image, &host_cfg, &limits())
-                .unwrap_or_else(|e| panic!("{full_label}: P6 wrapper: {e}"));
+            let result = record_validate_field_step(&admitted, &mut image, &host_cfg, &limits());
             let post = capture(&admitted, &image).expect("P6 capture POST");
             assert_eq!(post, replay.after);
+            if !retained {
+                assert!(
+                    matches!(
+                        result,
+                        Err(C6ValidateFieldConsumerError::Push(
+                            C6PushStepError::ConfigMismatch { field: "layout" }
+                        ))
+                    ),
+                    "{full_label}: non-retained layout must be refused as ConfigMismatch(layout)"
+                );
+                continue;
+            }
+            let witness = result.unwrap_or_else(|e| panic!("{full_label}: P6 wrapper: {e}"));
             assert!(
                 witness.enable()
                     && !witness.disposition_is_refused_helper_work()
@@ -1859,11 +1874,13 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
             (|| prog(lit_list(&[7]))) as fn() -> CoreProgram,
         ),
     ] {
-        for (host_cfg, cfg_label) in [
-            (core_cfg(b_p3), "matching layout bounds"),
+        // A larger layout is not this admission's retained config: refused (as in 1.).
+        for (host_cfg, cfg_label, retained) in [
+            (core_cfg(b_p3), "matching layout bounds", true),
             (
                 core_cfg(generous()),
                 "retained admission bounds vs larger layout bounds",
+                false,
             ),
         ] {
             let full_label = format!("{label} ({cfg_label})");
@@ -1875,10 +1892,22 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
             };
             assert_eq!(replay.before, pre);
             assert_p3(&replay, &w, &full_label);
-            let witness = record_validate_field_step(&admitted, &mut image, &host_cfg, &limits())
-                .unwrap_or_else(|e| panic!("{full_label}: P3 wrapper: {e}"));
+            let result = record_validate_field_step(&admitted, &mut image, &host_cfg, &limits());
             let post = capture(&admitted, &image).expect("P3 capture POST");
             assert_eq!(post, replay.after);
+            if !retained {
+                assert!(
+                    matches!(
+                        result,
+                        Err(C6ValidateFieldConsumerError::Push(
+                            C6PushStepError::ConfigMismatch { field: "layout" }
+                        ))
+                    ),
+                    "{full_label}: non-retained layout must be refused as ConfigMismatch(layout)"
+                );
+                continue;
+            }
+            let witness = result.unwrap_or_else(|e| panic!("{full_label}: P3 wrapper: {e}"));
             assert!(
                 witness.enable()
                     && witness.disposition_is_refused_helper_work()
