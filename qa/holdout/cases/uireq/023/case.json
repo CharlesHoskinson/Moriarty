@@ -57,11 +57,11 @@
       "then": "The evidence includes actual supported source compilation, proof production and independent verification, Midnight stagenet deployment and call, and complete state/effects readback against independent expectations under pinned network/toolchain/relation identities. Unperformed stages stay not run; this scenario grants no execution authority or transfer of Preview/Fenrir evidence.",
       "status": "runnable",
       "expected": {
-        "evidence": "source compilation, proof production and independent verification, stagenet deployment and call, state/effects readback against independent expectations under pinned identities",
+        "evidence": "source compilation, proof production and independent verification, deployment and call on the selected target network (preview or mainnet), state/effects readback against independent expectations under pinned identities",
         "unperformed stages": "stay not run"
       },
       "coverage": "primary",
-      "judgment": "Evaluator reading: the evidence is a committed qualification record whose words are not trusted. Pins, source and relation hashes are recomputed, the on-chain stages are re-read from the public stagenet indexer, and the readback result is compared with an independent reference run of the same source. Stages left not-run fail honestly as SPEC GATE, so the scenario cannot pass on Preview/Fenrir or rollup-anchor evidence. Since the quint-3 finding (2026-10-26), the result is decoded from the indexed state bytes through the committed, hash-pinned compiled layout, and the pinned verifying key must be the installed key of the called entry in both the deploy and post-call states.",
+      "judgment": "Evaluator reading: the evidence is committed qualification records whose words are not trusted. Pins, source and relation hashes are recomputed, the record's network, genesis hash and ledger 9.1.0.1 are matched to the sealed network registry (qa/holdout/config/networks.json), the on-chain stages are re-read from the selected network's public indexer, and the readback result is compared with an independent reference run of the same source. Stages left not-run fail honestly as SPEC GATE, so the scenario cannot pass on Fenrir, rollup-anchor or stagenet evidence. The result is decoded from the indexed state bytes through the committed, hash-pinned compiled layout, including the ledger's trimmed big-endian representation over the whole u128 domain (SRC-007), and the pinned verifying key must be the installed key of the called entry in both the deploy and post-call states. The network is selected per run (E12); preview needs three records (fact, list123, P3; task 6.5), mainnet one; an undeployed run is a rehearsal and never passes.",
       "unasserted": [
         "proof bytes and local verification (no proof is re-verified by the holdout; verifier independence is checked by name only)",
         "compile reproducibility",
@@ -70,14 +70,20 @@
         "that the pinned verifying key was compiled from the source (only that it is the installed key of the called entry and pinned by hash)"
       ],
       "exec": {
-        "entrypoint": "committed record named by qa/holdout/contracts/U023.json + stagenet public indexer (read-only) + mori simulate reference run",
+        "entrypoint": "committed records named by qa/holdout/contracts/U023.json qualification_records[<network>] + the selected network's public indexer (read-only) + mori simulate reference run; network from run.sh --network, DW_HOLDOUT_NETWORK or the contract default_network",
         "checks": [
           {
             "kind": "native-qualification",
-            "label": "stagenet end-to-end qualification record"
+            "label": "end-to-end qualification records on the selected target network",
+            "records_required": {
+              "undeployed": 1,
+              "preview": 3,
+              "mainnet": 1
+            }
           }
         ]
-      }
+      },
+      "networkAmendment": "Owner decision 2026-11-08 (openspec/changes/sherlock-vm-consensus-20261107/dissent.md 'Resolved 2026-11-08'; workflow.md section 6; E12): the target is Mainnet and the test network is Preview; stagenet is retired. The spec text above still names stagenet; the evaluator reads 'Midnight stagenet deployment and call' as deployment and call on the selected target network (preview or mainnet). A stagenet record does not qualify."
     }
   ]
 }

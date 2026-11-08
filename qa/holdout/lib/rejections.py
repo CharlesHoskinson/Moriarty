@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rejection holdout runner. Usage: rejections.py local|stagenet
+"""Rejection holdout runner. Usage: rejections.py local|undeployed|preview|mainnet
 
 For each case in cases/rejections whose `scope` matches, either runs the real
 verifier on a mutated artifact and requires a REJECT verdict, or exits 2 with a
@@ -13,7 +13,10 @@ Exit status 0 alone is never the oracle.
 A case may add `mutation.requireReport` ({field: value}); REJECT then also requires those report fields,
 so a verifier that drops one check (e.g. the carried pairing) cannot pass by failing another.
 
-Stagenet scope is checked read-only against retained evidence and the public indexer; see stagenet_check.py.
+Network scope (E12): cases with `scope: "network"` list the `networks` they apply to; the selected
+network (config/networks.json) is checked read-only against the committed reject-operation receipt and
+that network's public indexer; see network_check.py. Stagenet is retired (owner decision 2026-11-08):
+selecting it is refused, and its `scope: "stagenet"` cases and stagenet_check.py are kept only as history.
 """
 import hashlib
 import json
@@ -143,12 +146,28 @@ def mutate(m, work, fx):
     return vk, proof, inst
 
 
+def load_cases():
+    return [json.loads((d / "case.json").read_text()) for d in sorted((HOLDOUT / "cases" / "rejections").iterdir())]
+
+
+def select_cases(scope, all_cases):
+    """Cases of a suite: `local`, or a selectable network. Retired cases never run."""
+    if scope == "local":
+        return [c for c in all_cases if c["scope"] == "local" and not c.get("retired")]
+    return [c for c in all_cases if c["scope"] == "network" and scope in c.get("networks", []) and not c.get("retired")]
+
+
 def main(scope):
-    cases = []
-    for d in sorted((HOLDOUT / "cases" / "rejections").iterdir()):
-        c = json.loads((d / "case.json").read_text())
-        if c["scope"] == scope:
-            cases.append(c)
+    sys.path.insert(0, str(HERE))
+    import networks
+    net = None
+    if scope != "local":
+        try:
+            net = networks.select(scope)
+        except (networks.Retired, networks.Unknown) as e:
+            print(f"FAIL: {e}")
+            return 1
+    cases = select_cases(scope, load_cases())
     if not cases:
         print(f"FAIL: no {scope} rejection cases")
         return 1
@@ -157,10 +176,13 @@ def main(scope):
     srs = find_srs()
     results = {"pass": [], "fail": [], "unimplemented": []}
     control_done = False
-    if scope == "stagenet":
-        sys.path.insert(0, str(HERE))
-        import stagenet_check
-        p, f, u = stagenet_check.run(cases, REPO)
+    if net is not None:
+        import network_check
+        try:
+            p, f, u = network_check.run(net[0], net[1], cases, REPO)
+        except networks.Unreachable as e:
+            print(f"HOSTUNFIT: {e}")
+            return 3
         results["pass"], results["fail"], results["unimplemented"] = p, f, u
         cases = []
     for c in cases:

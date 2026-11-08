@@ -1,0 +1,57 @@
+{
+  "format": "doctorwatson-holdout-networks/1",
+  "note": "Evaluator-owned network registry for the network-parametrised holdouts (E12). Owner decision 2026-11-08 (dissent.md 'Resolved 2026-11-08'): the target is Mainnet, the test network is Preview, stagenet is retired. Chain identities are copied by the evaluator from qa/sherlock/target-pins.json (2026-11-07) and sealed here, so an implementer edit of the pins file cannot move a holdout expectation. A null sherlockRun.address means the evaluator has not yet pinned the deployment (after the network's deploy operation and its A4-shape check); cases that need it stay unimplemented.",
+  "selectable": ["undeployed", "preview", "mainnet"],
+  "networks": {
+    "undeployed": {
+      "status": "active",
+      "networkId": "undeployed",
+      "role": "local Docker chain at ledger 9.1.0.1 (node :9944, indexer :8088, proof server :6300); rehearsal and local acceptance, never a target qualification",
+      "qualifying": false,
+      "indexer": "http://127.0.0.1:8088/api/v4/graphql",
+      "indexerEnv": "DW_UNDEPLOYED_INDEXER",
+      "ledgerVersion": "9.1.0.1",
+      "specVersion": 2001100,
+      "genesisHash": null,
+      "genesisNote": "each local Docker instance has its own genesis; the receipt records it and it must be 0x + 64 hex",
+      "rejectOperation": "OP-UD-REJECT",
+      "sherlockRun": {"address": null, "otherProgramAddress": null, "otherInitAddress": null, "acceptTx": null}
+    },
+    "preview": {
+      "status": "active",
+      "networkId": "preview",
+      "role": "public test network (ledger 9.1.0.1, new chain since 2026-11-07); Sherlock M6 qualification target",
+      "qualifying": true,
+      "indexer": "https://indexer.preview.midnight.network/api/v4/graphql",
+      "ledgerVersion": "9.1.0.1",
+      "specVersion": 2001100,
+      "genesisHash": "0x3c096de209e06a1a8c52be7bda109ee8c891a42288c0a9db5495f9616dd13796",
+      "rejectOperation": "OP-PV-REJECT",
+      "sherlockRun": {"address": null, "otherProgramAddress": null, "otherInitAddress": null, "acceptTx": null}
+    },
+    "mainnet": {
+      "status": "active",
+      "networkId": "mainnet",
+      "role": "production network (real NIGHT/DUST); T4 operations only, each owner-authorized (SWF-009); the holdout only reads",
+      "qualifying": true,
+      "indexer": "https://midnight-mainnet.blockfrost.io/api/v0",
+      "indexerTokenEnv": "DW_BLOCKFROST_MAINNET_PROJECT_ID",
+      "indexerTokenNote": "Blockfrost project id, appended as ?project_id=; supply it through `vault run`; it is never committed. Absent means host unfit (exit 3).",
+      "ledgerVersion": "9.1.0.1",
+      "specVersion": 2001100,
+      "genesisHash": "0x1941ca8e2bb88146c14dea084d3be7eb6e96ca7135429c543848b628124f2854",
+      "genesisNote": "read once from the deprecated rpc.mainnet.midnight.network; re-read through Blockfrost in task 7.2 and resealed if it differs",
+      "rejectOperation": "OP-MN-REJECT",
+      "sherlockRun": {"address": null, "otherProgramAddress": null, "otherInitAddress": null, "acceptTx": null}
+    },
+    "stagenet": {
+      "status": "retired",
+      "retired": "owner decision 2026-11-08: 'not testing on old stagenet'; no stagenet diagnostic call will be made (dissent.md 'Resolved 2026-11-08' item 3; workflow.md section 6). Its cases and lib/stagenet_check.py stay as history and are not selectable.",
+      "networkId": "stagenet",
+      "indexer": "https://indexer.stagenet.shielded.tools/api/v4/graphql",
+      "ledgerVersion": "=1.0.0 (ledger 9 release candidate)",
+      "specVersion": 2000000,
+      "genesisHash": "0x2f76825abc239fecf6107c9df99016de57037b451ae57a4394b76c8cf53a9491"
+    }
+  }
+}

@@ -745,34 +745,70 @@ def custom_optimization_preservation(c):
 # =================================================================================== U023 s2
 
 QUAL_STAGES = ("compile", "prove", "verify", "deploy", "call", "readback")
-QUAL_PINS = ("network", "ledger_version", "node_version", "toolchain", "relation_id")
+QUAL_PINS = ("network", "genesis_hash", "ledger_version", "node_version", "toolchain", "relation_id")
+QUAL_FORMAT = "moriarty-sherlock-native-qualification/2"
+LAYOUT_FORMAT = "moriarty-sherlock-state-layout/2"
 
 
-def _indexer_tx(sn, h, label):
-    t = sn.txs(h)
+def _indexer_tx(ix, h, label):
+    t = ix.txs(h)
     need(len(t) == 1 and (t[0].get("transactionResult") or {}).get("status") == "SUCCESS",
          f"{label}: transaction {str(h)[:16]} is not indexed once with SUCCESS")
-    need(sn.sha(bytes.fromhex(t[0]["raw"])) == h, f"{label}: indexed bytes do not hash to {str(h)[:16]}")
+    need(ix.sha(bytes.fromhex(t[0]["raw"])) == h, f"{label}: indexed bytes do not hash to {str(h)[:16]}")
     return t[0]
 
 
-def _action_at(sn, address, h):
-    return sn.gql('{contractAction(address:"%s",offset:{transactionOffset:{hash:"%s"}}){__typename state '
-                  'transaction{hash} ... on ContractCall{entryPoint}}}' % (address, h))["contractAction"]
+def _network(con):
+    """(name, config) of the selected network; stagenet and unknown names fail (E12)."""
+    import networks
+    try:
+        return networks.from_env(con.get("default_network"))
+    except (networks.Retired, networks.Unknown) as e:
+        raise Fail(str(e))
+
+
+def _indexer(name, cfg):
+    import networks
+    return networks.Indexer(name, cfg)
 
 
 def custom_native_qualification(c):
-    """UIREQ-023 scenario 2: verify a committed end-to-end qualification record; never trust its words."""
+    """UIREQ-023 scenario 2 on the selected network: verify every committed qualification record; never trust its words."""
+    import networks
     con = _contract("U023")
-    rp = con.get("qualification_record")
-    need(isinstance(rp, str), "contract U023 names no qualification_record")
+    name, cfg = _network(con)
+    recs = (con.get("qualification_records") or {}).get(name)
+    need(isinstance(recs, list) and recs and all(isinstance(r, str) for r in recs),
+         f"contract U023 names no qualification_records for {name}")
+    want_n = int((c.get("records_required") or {}).get(name, 1))
+    need(len(recs) >= want_n, f"contract U023 lists {len(recs)} {name} record(s); the case requires {want_n}")
     ops = U.RepoOps(engine.REPO)
-    need(ops.tracked_clean(rp), f"not-implemented: qualification record {rp} is not committed")
+    missing = [r for r in recs if not ops.tracked_clean(r)]
+    need(not missing, f"not-implemented: {name} qualification record(s) {missing} are not committed")
+    ix = _indexer(name, cfg)
+    seen_src, seen_call = set(), set()
+    for rp in recs:
+        try:
+            src_sha, call_tx = _qualify_record(c, ops, rp, name, cfg, ix)
+        except networks.Unreachable as e:
+            raise engine.HostUnfit(str(e))
+        except Fail as e:
+            raise Fail(f"{rp}: {e}")
+        need(src_sha not in seen_src, f"{rp}: source repeats another {name} record")
+        need(call_tx not in seen_call, f"{rp}: call transaction repeats another {name} record")
+        seen_src.add(src_sha); seen_call.add(call_tx)
+    if not cfg.get("qualifying"):
+        raise Fail(f"REHEARSAL OK on {name} ({len(recs)} record(s)); {name} is not a target network, so UIREQ-023 "
+                   f"scenario 2 is not qualified (select preview or mainnet)")
+
+
+def _qualify_record(c, ops, rp, name, cfg, ix):
     q = json.loads(ops.read(rp))
-    need(q.get("format") == "moriarty-sherlock-native-qualification/1", f"record: format {q.get('format')!r}")
+    need(q.get("format") == QUAL_FORMAT, f"record: format {q.get('format')!r} (want {QUAL_FORMAT})")
     cl = q.get("claims") or {}
-    need(cl.get("execution_authority") == "none" and cl.get("preview_fenrir_evidence_transferred") is False,
-         f"record: claims {cl} (no execution authority, no Preview/Fenrir transfer)")
+    need(cl.get("execution_authority") == "none" and cl.get("preview_fenrir_evidence_transferred") is False
+         and cl.get("stagenet_evidence_transferred") is False,
+         f"record: claims {cl} (no execution authority, no Preview/Fenrir or stagenet evidence transfer)")
     src = q.get("source") or {}
     need(src.get("path") and ops.tracked_clean(src["path"]), f"record: source {src.get('path')!r} is not committed")
     text = ops.read(src["path"])
@@ -780,7 +816,11 @@ def custom_native_qualification(c):
     pins = q.get("pins") or {}
     miss = [k for k in QUAL_PINS if not pins.get(k)]
     need(not miss, f"record: unpinned identities {miss}")
-    need(pins["network"] == "stagenet" and str(pins["ledger_version"]) == "9", f"record: pins {pins['network']}/{pins['ledger_version']} (stagenet, ledger 9)")
+    need(pins["network"] == name, f"record: pins.network {pins['network']!r} is not the selected network {name}")
+    need(str(pins["ledger_version"]) == cfg["ledgerVersion"], f"record: ledger_version {pins['ledger_version']!r} (want {cfg['ledgerVersion']})")
+    import networks
+    g = networks.check_genesis(cfg, pins["genesis_hash"])
+    need(g is None, f"record: {g}")
     vk = pins.get("relation_vk_path")
     need(vk and ops.tracked_clean(vk), f"record: relation verifying key {vk!r} is not committed")
     need(hashlib.sha256((engine.REPO / vk).read_bytes()).hexdigest() == pins["relation_id"], "record: relation_id is not the sha256 of the committed verifying key")
@@ -799,16 +839,15 @@ def custom_native_qualification(c):
     raw_layout = (engine.REPO / lp).read_bytes()
     need(hashlib.sha256(raw_layout).hexdigest() == pins.get("state_layout_sha256"), "record: state_layout_sha256 differs from the committed layout")
     lay = json.loads(raw_layout)
-    need(lay.get("format") == "moriarty-sherlock-state-layout/1", f"layout: format {lay.get('format')!r}")
-    import stagenet_check as sn
+    need(lay.get("format") == LAYOUT_FORMAT, f"layout: format {lay.get('format')!r} (want {LAYOUT_FORMAT})")
     need(st["deploy"]["tx"] != st["call"]["tx"], "record: deploy and call cite the same transaction")
     try:
-        _indexer_tx(sn, st["deploy"]["tx"], "deploy")
-        _indexer_tx(sn, st["call"]["tx"], "call")
-        d = _action_at(sn, st["deploy"]["address"], st["deploy"]["tx"])
-        a = _action_at(sn, st["deploy"]["address"], st["call"]["tx"])
+        _indexer_tx(ix, st["deploy"]["tx"], "deploy")
+        _indexer_tx(ix, st["call"]["tx"], "call")
+        d = ix.action_at(st["deploy"]["address"], st["deploy"]["tx"])
+        a = ix.action_at(st["deploy"]["address"], st["call"]["tx"])
     except (OSError, RuntimeError) as e:
-        raise engine.HostUnfit(f"stagenet indexer unreachable: {e}")
+        raise engine.HostUnfit(f"{name} indexer unreachable: {e}")
     need(d and d["__typename"] == "ContractDeploy", "deploy: the deploy transaction did not deploy the recorded address")
     need(a and a["__typename"] == "ContractCall" and a["entryPoint"] == st["call"].get("entry_point"),
          "call: not a ContractCall on the deployed address with the recorded entry point")
@@ -828,6 +867,7 @@ def custom_native_qualification(c):
     if "observed_result" in st["readback"]:
         need(str(st["readback"]["observed_result"]) == str(got), "readback: record's observed_result disagrees with the indexed state")
     need(st["readback"].get("effects") == [], f"readback: pure qualification program reports effects {st['readback'].get('effects')!r}")
+    return src["sha256"], st["call"]["tx"]
 
 
 VK_TAG = re.compile(rb"^midnight:verifier-key\[v\d+\]:")
@@ -845,12 +885,22 @@ def _installed_vk(state, vkfile, entry, label):
          f"relation: the pinned verifying key is not the key installed for {entry} in the {label}")
 
 
+LENGTH_PREFIX = {"u8": lambda b: b, "scale-compact": lambda b: b >> 2 if b & 3 == 0 else -1}
+
+
 def _decode_field(state, f, label):
-    need(isinstance(f, dict) and f.get("encoding") in ("u128-le", "u128-be") and str(f.get("length")) == "16"
-         and isinstance(f.get("offset"), int) and f["offset"] >= 0, f"layout: {label} window {f!r}")
-    w = state[f["offset"]: f["offset"] + 16]
-    need(len(w) == 16, f"layout: {label} window lies outside the state ({len(state)} bytes)")
-    return int.from_bytes(w, "little" if f["encoding"] == "u128-le" else "big")
+    """SRC-007: decode the ledger's trimmed big-endian Bytes<16> result to the exact u128 (whole domain)."""
+    need(isinstance(f, dict) and f.get("encoding") == "u128-be-trimmed" and f.get("length_prefix") in LENGTH_PREFIX
+         and isinstance(f.get("offset"), int) and not isinstance(f.get("offset"), bool) and f["offset"] >= 0,
+         f"layout: {label} {f!r} (want encoding u128-be-trimmed, length_prefix u8|scale-compact, offset >= 0)")
+    o = f["offset"]
+    need(o < len(state), f"layout: {label} prefix lies outside the state ({len(state)} bytes)")
+    n = LENGTH_PREFIX[f["length_prefix"]](state[o])
+    need(0 <= n <= 16, f"layout: {label} stored length prefix 0x{state[o]:02x} is not a length 0..16")
+    w = state[o + 1: o + 1 + n]
+    need(len(w) == n, f"layout: {label} window lies outside the state ({len(state)} bytes)")
+    need(n == 0 or w[-1] != 0, f"layout: {label} stored bytes {w.hex()} are not trimmed (trailing zero byte)")
+    return int.from_bytes(w + bytes(16 - n), "big")
 
 CHECKS = {
     "residual-masks": custom_residual_masks,

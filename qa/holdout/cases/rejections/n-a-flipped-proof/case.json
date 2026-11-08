@@ -1,0 +1,41 @@
+{
+  "id": "n-a-flipped-proof",
+  "suite": "rejections",
+  "scope": "network",
+  "networks": [
+    "undeployed",
+    "preview",
+    "mainnet"
+  ],
+  "category": "a-tampered-inner-proof",
+  "title": "Submit the positive-control twin with one bit of its acceptRun proof flipped",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "REJECT = the node refuses the attempt at submission with a counted ledger refusal (not a pool ban, fee, DUST, TTL or balance failure), its transaction hash is absent from the selected network's indexer, the native proof-verifying ledger 9.1.0.1 predictor (validate_call) refuses it at the stage named in networkCheck, MAIN's indexed state is unchanged across the mutants, and the same-session positive control (a fresh valid acceptRun on MAIN) finalized. A local precheck or SDK refusal never counts. Nothing passes unless the positive control finalized.",
+  "target": {
+    "kind": "network-ledger",
+    "contract": "SherlockRun (tools/sherlock-sdk/sherlock-run.compact); MAIN, OTHER-PROGRAM and OTHER-INIT addresses sealed per network in qa/holdout/config/networks.json",
+    "evidenceProducer": "the network's rejectOperation (OP-UD-REJECT, OP-PV-REJECT, OP-MN-REJECT): scripts/doctorwatson heavy --id <op> -- node tools/sherlock-sdk/call-run.mjs --network <net> --reject-suite (task 6.1, E13); receipt committed at qa/sherlock/receipt-traces/<op>/receipt.json",
+    "evidence": "sherlock-run-rejections/1 (interface in qa/holdout/lib/network_check.py)",
+    "checker": "qa/holdout/lib/network_check.py (read-only: committed receipt + the selected network's public indexer)"
+  },
+  "mutation": {
+    "description": "exact balanced bytes of the same-session twin with one bit flipped inside its acceptRun contract proof"
+  },
+  "expectedTargetBehavior": "node refuses at submission; transaction hash absent from the indexer; MAIN state unchanged; the same-session twin finalizes",
+  "seed": {
+    "status": "requirement-derived",
+    "note": "Network definitions by the evaluator, 2026-11-08 (E12), from SRC-007, the SherlockRun source and the local five-refusal check; owner decision 2026-11-08 (Preview is the test network, Mainnet the target, stagenet retired)."
+  },
+  "requirementRefs": [
+    "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-007",
+    "openspec/changes/sherlock-vm-consensus-20261107/workflow.md (section 6, Rejections row: A9p rejections-preview, A9m non-consuming cases only)",
+    "tools/sherlock-sdk/check-local-run.mjs (the same five refusals on the local ledger, A6-shape)"
+  ],
+  "unimplemented": null,
+  "rationale": "The decider proof is the only gate of acceptRun; a one-bit flip is the minimal tamper, and the twin's later acceptance isolates the bit as the cause (no dust, TTL, fee or signature confound). The refused bytes are re-derived from the indexed twin bytes. Non-consuming: the refused attempt pays nothing and changes nothing, so it also runs on mainnet.",
+  "positiveControl": "Same-session twin: a fresh valid acceptRun on MAIN, submitted after the pre-twin mutants, indexed once with SUCCESS as an acceptRun ContractCall on the sealed MAIN address; MAIN's indexed state at preActionTx hashes to the receipt's preStateSHA256 and is unchanged across the mutants.",
+  "networkCheck": {
+    "attempt": "flipped-proof",
+    "stage": "proof/contract check"
+  }
+}
