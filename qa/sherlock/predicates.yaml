@@ -264,7 +264,7 @@ predicates:
     optional: true
   - id: A21
     set: A
-    title: "GPU node step: one node step under heavy --gpu with the gpu feature; proof bytes identical to the CPU run under a fixed RNG seed, stock verify; node_step_wall improvement at least the C0 Amdahl bound minus 20 percent, else the track closes with the shares recorded (SRC-018; optional until kept at task 2.10f; budget gpu-msm-node-step 300 s / 48 GB)"
+    title: "GPU phase G6, node step (task 2.10f; gpu.md section 4.3, 6): one node step at k20 (and k19 once cut) under heavy --gpu with 0, 2 and 3 leaf workers beside it; proof bytes identical to the CPU run under a fixed RNG seed, stock verify; node_step_wall improvement at least the C0 Amdahl bound minus 20 percent, per-process RSS including device memory <= 48 GB, aggregate <= 100 GB; kill at < 1.2x, the track closes with the shares recorded and the crate is kept (SRC-018; optional until kept at task 2.10f; budget gpu-msm-node-step 300 s / 48 GB per process / 100 GB aggregate, slot gpu0)"
     tier: T2
     check: "scripts/qa/unimplemented.sh A21"
     heavy: false
@@ -296,7 +296,7 @@ predicates:
     holdout: false
   - id: A24
     set: A
-    title: "GPU phase 2, field kernels: Rust CUDA kernels for Fq (381-bit) and Fr (255-bit) Montgomery add, sub, mul, square and inverse in crates/mori-gpu, bit-identical to the CPU field code on random vectors and the edge values 0, 1, p-1, r-1 (SRC-018; optional, opened by gate G-A when m + q >= 0.4; time box 3 working days; budget gpu-field-kernels)"
+    title: "GPU phases G1-G2 (task 2.10b; gpu.md section 6): G1 sppark poc/msm-cuda and ntt compile at sm_121 on this aarch64 host and match BLST at 2^16 (kill: no compile after 2 working days -> ICICLE v2.8.0 or Yrrid sources, else own field.cuh); G2 crates/mori-gpu field.cuh (Fp 12 x 32-bit limbs, scalar field 8 x 32-bit limbs, Montgomery add, sub, mul, square, inverse) and curve.cuh (affine, XYZZ, mixed add with P == Q and identity branches, dbl) built by nvcc from build.rs behind the default-off cuda feature; unit tests vs blst on 10^6 random pairs plus 0, 1, p-1, R, R^2, XYZZ add/dbl on random, equal and identity points, recode vs a Rust reference, all bit-identical; Fp mul >= 2 G/s on a 2^24 micro-benchmark (kill: < 1 G/s after tuning) (SRC-018; optional, opened by gate G-A when m + q >= 0.4 and the owner funds it; budget gpu-field-kernels)"
     tier: T2
     check: "scripts/qa/unimplemented.sh A24"
     heavy: false
@@ -307,7 +307,7 @@ predicates:
     optional: true
   - id: A25
     set: A
-    title: "GPU phase 3, MSM: Pippenger G1 MSM over BLS12-381 at 2^19 and 2^20 random inputs including zero, one and r-1 scalars and the identity point, bit-identical to multi_exp; keep at >= 5x over BLST on 20 cores, kill at < 2x or any mismatch (SRC-018; optional; time box 5 working days; budget gpu-msm)"
+    title: "GPU phase G3, MSM (task 2.10c; gpu.md section 4.1, 5.1, 6): signed-digit Pippenger G1 MSM over BLS12-381 with sorted buckets, XYZZ accumulators and a content-keyed affine SRS cache; differential tests vs multi_exp (and a naive sum for n <= 2^12) at n in 1, 2, 3, 2^k, 2^k +- 1 for k in 10..21 with scalars 0, 1, 2, r-1, 2^(c-1) and multiples of 2^c at every window, all-zero and single-nonzero vectors, identity bases at first, last and random positions, duplicate bases, projective Z != 1, host- and device-resident inputs; equality in the group on to_affine() and compressed bytes; MIN_K measured; keep at 2^20 <= 100 ms (>= 5x over BLST 0.51 s on 20 cores), kill at > 250 ms (< 2x) after two tuning rounds or any mismatch (SRC-018; optional; justified by the MSM share m, order.md table 2.5; budget gpu-msm)"
     tier: T2
     check: "scripts/qa/unimplemented.sh A25"
     heavy: false
@@ -318,7 +318,7 @@ predicates:
     optional: true
   - id: A26
     set: A
-    title: "GPU phase 4, NTT: Fr NTT and inverse NTT at 2^20-2^23 bit-identical to best_fft; keep at >= 2x on the stage, kill below (SRC-018; optional; time box 5 working days; budget gpu-ntt)"
+    title: "GPU phase G4, NTT (task 2.10d; gpu.md section 4.2, 5.2, 6): scalar-field NTT and inverse NTT as three radix-2^r shared-memory passes with cached twiddles; differential tests vs best_fft for log_n in 1..23 with omega and omega_inv, random and structured vectors, in-place round trip, coset transforms through the patched EvaluationDomain vs the registry one, bit-exact per element; keep at 2^23 <= 40 ms and 2^20 <= 5 ms (CPU 468-544 ms and 60-78 ms at 20 threads), kill at > 200 ms at 2^23 (< 2.5x) (SRC-018; optional; justified by the NTT share q >= 0.15; budget gpu-ntt)"
     tier: T2
     check: "scripts/qa/unimplemented.sh A26"
     heavy: false
@@ -329,7 +329,7 @@ predicates:
     optional: true
   - id: A27
     set: A
-    title: "GPU phase 5, prover integration: patched midnight-proofs 0.8.3 dispatching msm_specific and best_fft to mori-gpu behind a default-off gpu feature, CPU fallback with identical bytes and receipt gpu: false, registry crate stays the default (T0 isolation), device allocations counted against the process cap; proof bytes identical to the CPU run under a fixed seed and accepted by the stock verifier (SRC-018, SRC-016, SAS-008; optional until kept)"
+    title: "GPU phase G5, prover integration (task 2.10e; gpu.md section 3, 5.3, 6): separate workspace tools/gpu-prover with a vendored midnight-proofs 0.8.3 plus the ~60-line hooks patch (OnceLock registries at msm_specific and the EvaluationDomain transforms, inert when unregistered), heavy --gpu registering mori-gpu's hooks; three-level CPU fallback with identical bytes and the fallbacks counted in the receipt's gpu block (gpu: false when never enabled); the main workspace keeps the registry crate and the T0 isolation check covers the second vendored copy; device allocations counted by the cgroup cap; proof bytes identical to the CPU run under a fixed RNG seed for the entry 7; node step, a k13 leaf below MIN_K (fallback exercised) and the decider, both accepted by the stock verifier and verify_chain; kill: a byte mismatch not explained and fixed within a week (SRC-018, SRC-016, SRC-008, SAS-008; optional until kept)"
     tier: T2
     check: "scripts/qa/unimplemented.sh A27"
     heavy: false
@@ -1120,7 +1120,7 @@ predicates:
     holdout: false
   - id: F23
     set: F
-    title: "GPU toolchain smoke on sm_121 (task 2.10a): CUDA 13.4.3 nvcc and the driver recorded, a Rust-driven sm_121 kernel runs and its 64-bit mulhi matches the CPU; the track proceeds only when gate G-A records m + q >= 0.4 (SRC-018; optional)"
+    title: "GPU phase G0, toolchain smoke on sm_121 (task 2.10a; gpu.md section 0 and section 6; the smoke ran 2026-11-08, the check script is pending): nvcc 13.4, driver and device recorded; a Rust build.rs -> nvcc -> static lib -> kernel on plain Vec<u32> memory (zero-copy) computes 32-bit-limb products with 0 mismatches against a CPU u128 reference; cudaMalloc and cudaMallocManaged of 1 GiB each raise the process RSS by at least 0.9 GiB (device memory is capped by the cgroup, Q10); exit 2 without nvcc or a device, never a vacuous pass; the track proceeds only when gate G-A records m + q >= 0.4 and the owner funds the phases (SRC-018; optional)"
     tier: T0
     check: "scripts/qa/unimplemented.sh F23"
     heavy: false

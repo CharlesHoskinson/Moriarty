@@ -31,7 +31,7 @@ Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text uncha
 | SRC-015 | §3.5 | 2.0 (E17), 2.3, 2.6, 5.5, 5.9 (G-B), 5.6, 5.10 (G-C), 6.2 | A16, A18, A19, A19b; budgets `node-k19-step`, `chain-entry7`, `chain-fact3`, `chain-list123` (`fixed: true`) | measured resources under seeded caps | M2 (A16), M5 (G-B, G-C) | `order.md` §3; owner decision 2026-11-08 (3) |
 | SRC-016 | §3.5, workflow E11/E16 | 2.0, 2.9 (A23), 5.1 | F18, A23 | factory (unit tests); measured resources | M2 (before any heavy run) | SWF-004; SRC-012; `order.md` §5; owner decision 2026-11-08 "48 GB per process, 100 GB aggregate" |
 | SRC-017 | §3.6, D13', D4 | 2.11, 2.12, 2.13, 2.14, 2.3, 4.2, 4.4, 5.4, 5.7 | F20, F21, F22, A22 (optional until G-A opens the tree) | model execution (Quint) + formal theorem (Lean); constraint check (keyed) | M2 (before 2.3), M4 (before 4.2), M5 (before 5.7) | owner decision 2026-11-08 (3) "general purpose recursion"; `tree.md` §3-§4; `prover.md` §6a-§6b; SAS-009 |
-| SRC-018 | §3.7 | 2.10a-2.10f, 5.8 | F23, A24, A25, A26, A27, A21 (all optional until kept) | constraint check (differential, bit-identity) + native cryptography (stock verify) | M2 (track), M5 (A21) | owner decision 2026-11-08 (3) "build one in rust"; `prover.md` F5-F6, §5; RPP-007; SAS-008 |
+| SRC-018 | §3.7 (aligned 2026-11-08 to `gpu.md`: Rust crate `mori-gpu` with a CUDA C++ core built by nvcc from `build.rs`; hooks patch in `tools/gpu-prover/`; MSM equality in the group, NTT bit-exact, proof bytes identical; phases G0-G6 with gpu.md's gates and kill criteria) | 2.10a (G0, smoke done 2026-11-08, check pending), 2.10b (G1-G2), 2.10c (G3), 2.10d (G4), 2.10e (G5), 2.10f (G6), 5.8 | F23, A24, A25, A26, A27, A21 (all optional until kept; the track opens at G-A m + q >= 0.4 plus the owner's funding decision) | constraint check (differential: group equality for MSM, bit-exact for NTT) + native cryptography (proof byte-identity, stock verify) + model execution / formal theorem for the Pippenger recode and XYZZ case split (SAS-009, labelled) | M2 (track), M5 (A21) | owner decision 2026-11-08 (3) "build one in rust"; `gpu.md` §0-§7; `prover.md` F5-F6; `order.md` §1 item 8, §7 Q4 (answered: device allocations are RSS); RPP-007; SAS-008 |
 | SAS-001 | assurance §2 | 1.6, 2.2 | F14 schema part | factory | M1 | ASR-001 |
 | SAS-002 | assurance §2 | 1.6 | E7 stale flag, F15 | factory | M1 | ASR-002 |
 | SAS-003 | assurance §6 | 2.2 | T1 `soundness_mutation` | constraint check | M2 | ASR-003; SND-007 |
@@ -39,7 +39,7 @@ Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text uncha
 | SAS-005 | assurance §3 | existing U021 | U021 | differential execution | existing | ASR-005 |
 | SAS-006 | assurance §1 O5/O6 | 5.2 | A13 | native cryptography | M5 | ASR-006 |
 | SAS-007 | assurance §6 | 1.1 (E8), 6.3 | A8p, A10p | target observation | M6 | ASR-007 |
-| SAS-008 | §3.5, §3.7 | 5.3, 5.8 (GPU), 2.10e | A27, A21, A13 re-run | native cryptography | M5 | ASR-008; UIREQ-024 |
+| SAS-008 | §3.5, §3.7 | 5.3, 5.8 (GPU), 2.10e (G5) | A27, A21, A13 re-run | native cryptography | M5 | ASR-008; UIREQ-024 |
 | SAS-009 | assurance §1, §3 | 2.11, 2.12, 5.4 | F20, F21 | model execution / formal theorem (premises declared) | M2 | ASR-009; SRC-017 |
 | SAS-010 | §2.2 | 4.6, 4.9 | A13 | constraint check (keyed; initialization + preservation) | M4 | ASR-010 |
 | SAS-011 | §5.2 | 2.4, 2.5 | A11, A6p | native + local ledger | M2 | ASR-011 |

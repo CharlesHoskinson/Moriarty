@@ -167,16 +167,24 @@ One key set (leaf over `R` at the keyed S, one self-recursive node, one decider,
 - **THEN** `scripts/qa/check-lean-aggregation.sh` fails F21.
 
 ### Requirement: SRC-018 GPU backend bit-identity and fallback
-If a GPU MSM (BLS12-381 G1) or NTT (Fr) backend is enabled, its results SHALL be bit-identical to the CPU path on every input (zero, one, r-1 scalars, the identity point included), so proof bytes, keys and format are unchanged and stock Midnight verifies the proofs; the backend SHALL be open-source Rust behind a default-off `gpu` feature of a patched `midnight-proofs 0.8.3` (registry crate stays the default, T0 isolation), SHALL fall back to the CPU path without a device, and SHALL count device allocations against the process cap. ICICLE and sppark are not used.
+If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and its hooks registered by `heavy --gpu`), its MSM (BLS12-381 G1) result SHALL equal the CPU path's (`msm_specific` over BLST `multi_exp`) in the group, checked on `to_affine()` and the compressed encoding that reaches the transcript, and its NTT (scalar field) result SHALL be bit-exact per element against `best_fft`, on every input (zero, one and r-1 scalars, the identity point as base and as result, duplicate bases, projective bases with Z != 1, the signed-digit exceptions, host- and device-resident inputs), so proof bytes, keys and format are unchanged and stock Midnight verifies the proofs. The backend SHALL be an open-source Rust crate owned in this repository with a small CUDA C++ kernel core compiled by nvcc from `build.rs` for sm_121 using 32-bit limbs, derived only from permissively licensed sources with headers preserved (sppark Apache-2.0, Yrrid ZPrize-2023 MIT/Apache, ICICLE v2.8.0 MIT, ec-gpu MIT/Apache; nothing from ICICLE v3+/open-icicle, gnark-cuda, Nocy, Snarkify ZPrize-1B or the WebGPU entries); neither sppark nor ICICLE SHALL be a crate dependency. The `midnight-proofs 0.8.3` hooks patch SHALL live in the separate workspace `tools/gpu-prover/` (registry crate stays the default in the main workspace, T0 isolation extended to the vendored copy). The backend SHALL fall back to the CPU path at compile time, init time (no device, driver or toolchain) and call time (small n or kernel error) with identical bytes and the fallback recorded, SHALL run under the same cgroup caps (device allocations are process RSS on this host), and SHALL accept any `n <= SRS size` and `log_n <= 32` without knowledge of the program or circuit. Design source: `research/sherlock-speed-replan-20261108/gpu.md`.
 
-#### Scenario: One differing limb
-- **WHEN** the GPU MSM differs from `multi_exp` on one of 2^20 random inputs, or on an identity-point input.
-- **THEN** A25 fails; no key, transcript or decider change may hide it; the kernel is fixed or the track is closed.
+#### Scenario: One differing point or element
+- **WHEN** the GPU MSM differs in the group from `multi_exp` on one of 2^20 random inputs or on an identity-point, duplicate-base or signed-digit edge input, or the GPU NTT differs in one element from `best_fft`.
+- **THEN** A25 or A26 fails; no key, transcript or decider change may hide it; the kernel is fixed or the phase is closed.
+
+#### Scenario: Same point, different projective coordinates
+- **WHEN** the GPU MSM returns (X, Y, Z) different from BLST's for the same group element.
+- **THEN** `to_affine()` and the compressed bytes are equal and the differential test passes; the proof bytes are unchanged because only compressed points reach the transcript.
 
 #### Scenario: No device
-- **WHEN** the prover is built with `gpu` and runs on a host without a CUDA device.
-- **THEN** it proves on the CPU path with identical bytes and the receipt records `gpu: false`.
+- **WHEN** `tools/gpu-prover` is built with `cuda` and runs on a host without a CUDA device, driver or toolchain, or an MSM has fewer than `2^MORI_GPU_MIN_K` points.
+- **THEN** it proves on the CPU path with identical bytes and the receipt records the fallback (`gpu: false` when the path was never enabled; otherwise `gpu.fallbacks` counts the calls).
 
-#### Scenario: Track opened or closed by C0
-- **WHEN** the C0 profile records MSM share m and NTT share q of the node step.
-- **THEN** the track proceeds past the toolchain smoke only if `m + q >= 0.4`; below 0.25 it is closed with the shares recorded.
+#### Scenario: Device memory under the cap
+- **WHEN** a `heavy --gpu` process allocates device memory with `cudaMalloc` or `cudaMallocManaged` under a cgroup `MemoryMax`.
+- **THEN** the allocation appears in the process RSS and counts toward the cap; the receipt records `gpu.device_bytes_peak`.
+
+#### Scenario: Track opened or closed by C0 and the owner
+- **WHEN** the C0 profile records MSM share m and NTT share q of the node step and gate G-A is written.
+- **THEN** the track proceeds past the toolchain smoke (G0) only if `m + q >= 0.4` and the owner funds the phases; below 0.25 it is closed with the shares recorded; each later phase G1-G6 passes or is killed by its own gate in `gpu.md` §6.
