@@ -1279,7 +1279,9 @@ fn raw_nominal_constructor_all_six_adt_checked_ctor_arity_bounds_and_slice_len_s
         panic!("expected Constructor constant");
     };
     assert_eq!(orig_type_id, TypeIdC(4));
-    assert_eq!(orig_ctor_id, CtorIdC(0));
+    // Constructor ids are global: the four built-in constructors (List Nil/Cons,
+    // Tree Leaf/Node) occupy ids 0..4 (admission check V9), so `MkAlpha` is id 4.
+    assert_eq!(orig_ctor_id, CtorIdC(4));
     assert_eq!(orig_fields, ConstFieldsSnapshot { start: 0, len: 1 });
 
     // Bound 1 (`type_id >= 4`):
@@ -1360,7 +1362,8 @@ fn raw_nominal_constructor_all_six_adt_checked_ctor_arity_bounds_and_slice_len_s
     // Bound 5a (`ctor_id >= t_row.ctor_start`) and 5b (`ctor_id < t_row.ctor_start + t_row.ctor_len`):
     {
         let mut p = prog1.clone();
-        p.types[orig_type_id.0].ctor_start = CtorIdC(1);
+        // `ctor_start = ctor_id + 1` keeps `ctor_id < ctor_start + ctor_len`, so only 5a fails.
+        p.types[orig_type_id.0].ctor_start = CtorIdC(orig_ctor_id.0 + 1);
         let mut s = base1.clone();
         replace_prog_in_statement(w1, &mut s, &p);
         assert_raw_rejects(
