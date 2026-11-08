@@ -1,6 +1,6 @@
 # Capability: sherlock-delivery (DoctorWatson factory workflow)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
 
 ## ADDED Requirements
 
@@ -53,10 +53,16 @@ Rows MAY carry `network:`; tiers SHALL be T0-T4; a T4 row SHALL depend on a T3 r
 - **WHEN** a T4 row has no T3 dependency. **THEN** `validate` refuses.
 
 ### Requirement: SWF-009 Mainnet blocked until authorized
-While `MORIARTY-COMPLETION-PROGRAM.md:269` forbids mainnet submission, no mainnet operation SHALL run; it SHALL require owner+checklist authorization and a Preview rollback rehearsal receipt.
+The 2026-11-08 amendment (`MORIARTY-COMPLETION-PROGRAM.md:270-283`) supersedes the `:269` mainnet ban. While any of its conditions is unmet (local Docker at 9.1.0.1 passed, Preview qualification receipts committed, Preview rollback rehearsal receipt committed, pre-deploy checklist passed), no mainnet operation SHALL run. Each mainnet operation SHALL be a T4 operation with owner+checklist authorization, SHALL have explicit owner authorization at the time it runs, and SHALL stay within the owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no specific spend.
 
 #### Scenario: Checklist without rehearsal
 - **WHEN** `t4.sh` runs without the rehearsal receipt. **THEN** it refuses.
+
+#### Scenario: Conditions met, no authorization for this operation
+- **WHEN** every amendment condition holds but the owner has not authorized this specific operation. **THEN** the operation does not run; an earlier authorization does not carry over.
+
+#### Scenario: Failed mainnet submission
+- **WHEN** a mainnet submission fails. **THEN** the operation stops; a retry needs a new owner authorization.
 
 ### Requirement: SWF-010 Rollback
 When a deployment or key fails its postcondition, rollback SHALL record orphaned/retired, re-pin, use maintenance update only on maintained contracts, redeploy otherwise, and `git revert` the fixture commit without deleting history; when the contract holds active state, recovery SHALL migrate or record funds, duties and consumed statements, only empty instances may be abandoned, and a client re-pin SHALL NOT be recorded as on-chain revocation.
@@ -76,12 +82,25 @@ Superseded rows SHALL carry `retired:`; `next` and `check --tier`/`--set` sweeps
 - **THEN** FIRST FAILING is `A8p`, `RETIRED: A8 (...)` is listed, the sweeps ignore A8, `check A8` runs and its history is retained.
 
 ### Requirement: SWF-012 Optional rows do not gate
-Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects.
+Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects. Since 2026-11-08 no B row is optional (SWF-013); the optional rows are the S>1 experiment and other conditionally guarded features.
 
-#### Scenario: Unimplemented optional B row
-- **WHEN** B4p is `unimplemented.sh`, existing B6/B7 are failing, and every mandatory Preview row passes.
-- **THEN** `next` names no failing mandatory row, `qa/tiers/t3.sh` passes, and `check --include-optional` reports B4p failing.
+#### Scenario: Unimplemented optional row
+- **WHEN** the S>1 experiment row is optional and `unimplemented.sh`, and every mandatory Preview row passes.
+- **THEN** `next` names no failing mandatory row, `qa/tiers/t3.sh` passes, and `check --include-optional` reports the optional row failing.
 
 #### Scenario: Unimplemented mandatory row
 - **WHEN** A8p is `unimplemented.sh`. **THEN** `next` names A8p and `t3.sh` fails.
+
+### Requirement: SWF-013 Fenrir on Preview, then Mainnet
+The Fenrir B rows SHALL be the required Fenrir path, run on Preview first and then on Mainnet (owner decision 2026-11-08): B1, B2, B3, B6, B7, B4p, B5p, B8p and B9p, then B4m, B5m, B8m and B9m, each mainnet row depending on its Preview counterpart. No B row SHALL target stagenet; B4, B5, B8 and B9 stay retired. No row in the Sherlock U023/C4 dependency closure SHALL depend on a B row. The Fenrir Preview and mainnet gates SHALL depend on their B rows. A mainnet B operation SHALL meet SWF-009.
+
+#### Scenario: Sherlock does not wait on Fenrir
+- **WHEN** B4p is `unimplemented.sh` and every row of the C4 closure passes.
+- **THEN** the Sherlock M6 gate, evaluated on the C4 closure (E15), is eligible, and the Fenrir Preview gate is not.
+
+#### Scenario: Mainnet before Preview
+- **WHEN** B4m is checked while B4p is not passing. **THEN** B4m is not eligible, because it depends on B4p.
+
+#### Scenario: Stagenet row
+- **WHEN** an active B row is made to depend on retired B4. **THEN** `validate` refuses.
 

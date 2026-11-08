@@ -7,6 +7,8 @@ tags: [lessons, agents, codex, agentbus, doctorwatson, sandbox]
 
 # Running the factory and its agents
 
+- **2026-11-08, STOP owner action (SWF-006):** `stop-rule` said STOP after 4 iterations without a flip (limit 3; last failing trace `qa/sherlock/traces/20261108T001621Z-F15.log`). F15 is expected to fail until task 2.1 re-pins the workspace. Owner action: "resume the work" (2026-11-08), together with the program amendment for mainnet, Fenrir on Preview then Mainnet, and no stagenet runs (`openspec/changes/sherlock-vm-consensus-20261107/dissent.md`, "Resolved 2026-11-08"). The amendment commit is bookkeeping, not progress.
+
 ## The 295 h STOP and its owner action (2026-11-07, M0 bookkeeping, not progress)
 - **What happened:** `scripts/doctorwatson stop-rule` said STOP (exit 6) from 2026-10-27 until 2026-11-07: "297.8 h since the last flip (limit 24 h)". The last flip was B2 at 2026-10-26T13:51:57Z. The status at that time also recorded F4 (exit 3) and F11 (exit 1) as failing.
 - **What the STOP was waiting on:** U023 scenario 1, the C6 dispatch receipt. Last failing trace: `qa/sherlock/traces/20261026T105549Z-U023-dispatch-receipt.log` (run `20261026T105549Z-U023-dispatch-receipt`, head `c87397f8`). `dispatch_selects_exactly_the_fired_rule_on_factorial` was still running when the 16,000 s wall cap stopped it (exit 4, `capExceeded: wall`, child exit 137). No receipt was written. Hypothesis that was carried forward: the factorial test is slow because it caches one dispatch circuit per supported rule and checks every rule each 16th step (`docs/sherlock/HANDOFF-2026-10-26.md:16`). The trace is gitignored and stayed on the old machine; `qa/sherlock/runs.jsonl` holds the run record.

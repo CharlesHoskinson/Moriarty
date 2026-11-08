@@ -1,6 +1,6 @@
 # Dissent and recorded conditions
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
 
 ## Unresolved at DRAFT v1
 
@@ -117,3 +117,12 @@ None. The concerns every member asked to carry forward are recorded as implement
 2. Whether B (Fenrir rollup) rows stay in the factory as non-gating Preview work or are dropped (ISSUE 7: all six accept non-gating).
 3. Whether a stagenet diagnostic call is ever worth the wallet and proof-server cost.
 4. Whether `SherlockRun` is deployed with a maintenance authority (SMN-007).
+
+### Resolved 2026-11-08
+
+The owner's words (2026-11-08, verbatim): "resume the work, merge, amend the program for mainnet, fenrir should test on preview and then mainnet, not testing on old stagenet, use your judgement on sherlock run".
+
+1. **Resolved 2026-11-08: amend.** `MORIARTY-COMPLETION-PROGRAM.md:270-283` supersedes the `:269` mainnet ban, and the old sentence stays visible struck through. Mainnet submissions are permitted only as T4 operations after local Docker at 9.1.0.1 has passed, the Preview qualification receipts and the Preview rollback rehearsal receipt are committed, and the pre-deploy checklist has passed. Each operation still needs explicit owner authorization when it runs, under an owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no specific spend (SWF-009, E9, task 7.1).
+2. **Resolved 2026-11-08: keep, and make mandatory.** The B rows are the required Fenrir path, Preview first and then Mainnet (new rows B4m, B5m, B8m, B9m). They stay outside the Sherlock U023/C4 dependency chain, so Sherlock qualification does not wait on Fenrir. The Fenrir gates (tasks 6.6 and 7.4) depend on them (SWF-013, D14). This replaces the council's "non-gating" outcome for ISSUE 7 by owner decision.
+3. **Resolved 2026-11-08: no.** No stagenet diagnostic call will be made, for Sherlock or for Fenrir. The stagenet rows stay retired as history (design §5.2(6), workflow §6).
+4. **Resolved 2026-11-08: deploy with a maintenance authority on Preview and on Mainnet.** The owner delegated this decision ("use your judgement on sherlock run"), and the lead made it. Reason: the rollback path (`workflow.md` §7, SWF-010) depends on maintenance key replacement, and the mainnet rollback must be rehearsed on Preview. This is a trust assumption: whoever holds the authority can install a verifier key, so the authority can change what the contract accepts. The owner holds the authority; its public identity is published in `target-pins.json`. Every maintenance update is preceded by the A11 keygen regression and produces a committed receipt of the observed on-chain key state; midnight-node #2375 is checked before any key removal. A later change may freeze or renounce the authority once the keys are stable (SMN-007, design §5.2(5), `tasks.md` "Later changes").

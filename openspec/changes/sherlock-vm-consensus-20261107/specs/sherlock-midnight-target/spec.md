@@ -1,6 +1,6 @@
 # Capability: sherlock-midnight-target (ledger 9.1.0.x pins, networks, fees, keys)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
 
 ## ADDED Requirements
 
@@ -41,10 +41,19 @@ If a deploy or call would exceed the public-input limit, the 256-operation cap o
 - **WHEN** a synthetic statement exceeds the limit read from `LedgerParameters`. **THEN** refusal before any transaction.
 
 ### Requirement: SMN-007 Maintenance authority
-If `SherlockRun` is deployed without a maintenance authority, the receipt SHALL mark it immutable and state its recovery mode (disposable only while it holds no active state; otherwise redeploy-and-retire under SWF-010's active-state rule); a maintained contract's key replacement SHALL be rehearsed on Preview before mainnet with the on-chain key state read back. Immutable deployments remain permitted.
+`SherlockRun` SHALL be deployed with a maintenance authority on Preview and on Mainnet (decision 2026-11-08, made by the lead under the owner's delegation). The authority is a trust assumption: its holder can install a verifier key and so can change what the contract accepts. The owner SHALL hold the authority, and its public identity SHALL be published in `qa/sherlock/target-pins.json`, which holds no secrets. Every maintenance update SHALL be preceded by a passing A11 keygen regression and SHALL produce a committed receipt of the observed on-chain key state. midnight-node #2375 SHALL be checked before any key removal. Key replacement SHALL be rehearsed on Preview before mainnet, with the on-chain key state read back. A later change may freeze or renounce the authority once the keys are stable.
 
 #### Scenario: Rehearsal
 - **WHEN** deploy -> bad key -> maintenance replace -> readback runs on Preview. **THEN** the rehearsal receipt, including whether the old key is still accepted on chain, is committed before `t4.sh` can pass.
 
-#### Scenario: Immutable contract with active state
-- **WHEN** an immutable `SherlockRun` holds consumed statements or funds. **THEN** it is not marked disposable; recovery records migration or residual exposure.
+#### Scenario: Deploy without the declared authority
+- **WHEN** a deploy names no maintenance authority, or names one that differs from the identity in `target-pins.json`. **THEN** the deploy script refuses before submission.
+
+#### Scenario: Maintenance update without a fresh regression
+- **WHEN** a maintenance update is prepared and A11 has not passed with its dependency closure unchanged. **THEN** the update does not run.
+
+#### Scenario: Key removal
+- **WHEN** a maintenance update removes a verifier key. **THEN** the status of midnight-node #2375 is checked and recorded first, and the receipt records the observed on-chain key state after the update.
+
+#### Scenario: Maintained contract with active state
+- **WHEN** a maintained `SherlockRun` holds consumed statements or funds and a key must be replaced. **THEN** it is not discarded; recovery records migration or residual exposure (SWF-010).

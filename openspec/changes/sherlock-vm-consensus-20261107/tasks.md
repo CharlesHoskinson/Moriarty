@@ -1,6 +1,6 @@
 # Tasks
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes with its declared dependency closure unchanged (SAS-002) and, for network postconditions, a committed receipt (SWF-005). Rows marked `optional: true` (every B row, the S>1 experiment) do not gate milestones (E14); Sherlock fee/security evidence always has its own mandatory A/U/F row (SMN-005). None is ticked now.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Ordered by milestone. Each task names its requirement IDs, its predicate row(s) and its gate. A checkbox is ticked only when the named predicate passes with its declared dependency closure unchanged (SAS-002) and, for network postconditions, a committed receipt (SWF-005). Rows marked `optional: true` (the S>1 experiment) do not gate milestones (E14). Since 2026-11-08 the B rows are mandatory but form the Fenrir gates (6.6, 7.4), outside the Sherlock C4 closure (SWF-013); Sherlock fee/security evidence always has its own mandatory A/U/F row (SMN-005). None is ticked now.
 
 ## M0 Re-arm the factory (T0, bookkeeping; SWF-006)
 
@@ -10,13 +10,14 @@ Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text uncha
 ## M1 Land this change (T0)
 
 - [x] 1.0 E10 and E14 first: `retired:` and `optional:` row fields; `next` and `check --tier/--set` sweeps skip retired rows and skip optional rows unless `--include-optional`; explicit `check <ID>` still runs both; `validate` refuses a mandatory row depending on a retired or optional row; factory unit test over `next`, `check --tier T3`, `check --set A`, `check A8`, and "an unimplemented optional B4p or a failing existing optional B6/B7 leaves the Preview gate eligible while an unimplemented mandatory A/U/F row blocks it". [SWF-011, SWF-012] -> F16
-- [x] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p (`optional: true`), F14, F15, F16; mark the retained B1, B2, B3, B6, B7 rows `optional: true` as well (D14: no B row gates this qualification; B6/B7 are recorded failing in `status.json`); add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. [SWF-002, SWF-011] -> `validate`
+- [x] 1.1 Then add every new predicate row with `check: scripts/qa/unimplemented.sh <ID>` and `source:` anchors into this change: A2p, A3p, A4p, A6p, A8p, A9p, A10p, A11, A12, A13, U023a-U023f, B4p, B5p, B8p, B9p (`optional: true`), F14, F15, F16; mark the retained B1, B2, B3, B6, B7 rows `optional: true` as well (D14: no B row gates this qualification; B6/B7 are recorded failing in `status.json`); add `retired:` to A8, A9, A10, B4, B5, B8, B9 (stagenet rows; B5 depends on B4 and B9 on B5-B8, `predicates.yaml:141,177`); rewire C4 and the new composites to preview rows. (Amended 2026-11-08: the B rows lost `optional:`, and B4m, B5m, B8m, B9m were added; see 6.6 and 7.4.) [SWF-002, SWF-011] -> `validate`
 - [x] 1.2 E1 `scripts/qa/check-traceability.py` + F14 in `t0.sh`. [SWF-002] -> F14
 - [x] 1.3 E2 `qa/sherlock/target-pins.json` + `check-target-pins.py` + F15 in `t0.sh`; rows `undeployed`, `preview`, `mainnet`, `stagenet(retired)`. [SWF-007, SMN-001, SMN-004] -> F15
 - [ ] 1.4 E12 (evaluator): rejection suite and U023 holdout parametrised by network; `U023.json` contract change; reseal. Owner of this task is the evaluator role. [SWF-003, SRC-007]
 - [ ] 1.5 E5/E6 T4 tier, `network:` field, `validate` rule; `qa/tiers/t4.sh` skeleton that refuses without the rehearsal receipt. [SWF-008, SWF-009]
 - [ ] 1.6 E7 freshness: each row declares its dependency closure (source paths/globs, spec and contract files, pins row, key manifests, chain identity, receipt hashes); a result is stale iff any declared dependency changed since its run; no blanket directory exclusion; a state-only or receipt-only commit preserves eligibility; HEAD-only flag allowed only as an interim signal, never the gate. Tests: state-only commit -> eligible; source, spec, key, pins, chain-instance change -> stale. [SAS-002]
 - [ ] 1.7 Mark MC03 superseded in its README with the obligations crosswalk; add `wiki/midnight-ledger-9-hardfork.md` reference to `wiki/midnight-repositories.md`. [proposal]
+- [ ] 1.8 E15 (added 2026-11-08): milestone-scoped tier runners, so that `t2.sh`/`t3.sh` select the C4 closure for the Sherlock M6 gate and the B rows for the Fenrir gates; factory unit test: an unimplemented mandatory B4p leaves the Sherlock M6 selection eligible and blocks the Fenrir Preview selection. [SWF-012, SWF-013]
 
 ## M2 Re-pin and re-key (T1/T2; A-set)
 
@@ -61,28 +62,31 @@ Operations (SWF-003):
 | op | preconditions | command | postcondition | authorization | receipt |
 |---|---|---|---|---|---|
 | OP-PV-WALLET | F15 | `heavy --id OP-PV-WALLET -- node tools/sherlock-sdk/preview-session.mjs --init` (new wallet, faucet, DUST registration, encrypted backup) | pins row has wallet address | owner | `receipt-traces/OP-PV-WALLET/` |
-| OP-PV-DEPLOY | A6p, A11, F15 live | `heavy --id OP-PV-DEPLOY -- node tools/sherlock-sdk/deploy-run.mjs --network preview` (Compact 0.36.0 `SherlockRun`, decider VK installed, maintenance authority declared) | A4p | owner | `receipt-traces/OP-PV-DEPLOY/` |
+| OP-PV-DEPLOY | A6p, A11, F15 live | `heavy --id OP-PV-DEPLOY -- node tools/sherlock-sdk/deploy-run.mjs --network preview` (Compact 0.36.0 `SherlockRun`, decider VK installed, maintenance authority held by the owner and equal to the pins row, SMN-007) | A4p | owner | `receipt-traces/OP-PV-DEPLOY/` |
 | OP-PV-CALL-P1/P2/P3 | A4p, A13, SRC-010 record | `heavy --id OP-PV-CALL-<P> -- node tools/sherlock-sdk/call-run.mjs --submit` | A8p, A10p | owner | `receipt-traces/OP-PV-CALL-<P>/` |
 | OP-PV-REJECT | A8p | `heavy --id OP-PV-REJECT -- node tools/sherlock-sdk/call-run.mjs --reject-suite` | A9p | owner | `receipt-traces/OP-PV-REJECT/` |
-| OP-PV-ROLLBACK-REHEARSAL | A4p | deploy -> bad key -> maintenance replace -> readback | rehearsal receipt | owner | `receipt-traces/OP-PV-ROLLBACK/` |
+| OP-PV-ROLLBACK-REHEARSAL | A4p, A11 | deploy -> bad key -> maintenance replace -> readback (#2375 checked before any key removal) | rehearsal receipt with observed on-chain key state | owner | `receipt-traces/OP-PV-ROLLBACK/` |
+| OP-PV-FENRIR-BATCH | B3, A8p | Fenrir 16-transaction batch and prefixes on Preview (command created with 6.6) | B4p, B5p, B8p | owner | `receipt-traces/OP-PV-FENRIR-BATCH/` |
 
 - [ ] 6.1 E13: network-parametrised session module (Midnight.js 5 `providers.config`, no `setNetworkId`), `--network` on `deploy-run.mjs`/`call-run.mjs`/`readback-run.mjs`, reject-suite driver, per-network wallet dir; fixture `crates/mori-recursion/tests/fixtures/preview-verifier.json`; `assemble-u023-record.py` re-pointed. The M6 operation commands above do not exist until this task lands. [SMN-004, SWF-003]
-- [ ] 6.2 OP-PV-WALLET, OP-PV-DEPLOY; A4p. [SMN-005, SMN-007]
+- [ ] 6.2 OP-PV-WALLET, OP-PV-DEPLOY; A4p. Publish the owner-held maintenance authority's public identity in the `target-pins.json` preview row (no secrets) before OP-PV-DEPLOY; that commit runs F15, so it lands after 2.1. [SMN-005, SMN-007]
 - [ ] 6.3 OP-PV-CALL-P1, P2; A8p, A10p manifest-bound; `rejections-preview` holdout (E12, evaluator-owned) -> A9p. [SRC-007, SAS-007]
 - [ ] 6.4 P3 written after key freeze (mix of recursion, match, arithmetic) from the admitted domain; P3 digest parity, local proof and `verify_chain`/`validate_call` first; then OP-PV-CALL-P3; E2 check: no new key. [SRC-013, SVM-007, SVM-008]
 - [ ] 6.5 U023 scenario 2 records (`u023-preview-e2e.json`, `-list123`, `-p3`) against the network-parametrised U023 holdout (E12, evaluator-owned); `doctorwatson check U023 U024 U028 U029 U030 U033 C4`. [UIREQ-023] -> C4
-- [ ] 6.6 B rows: B3 local, B4p, B8p, B9p on Preview (non-gating). [D14]
-- [ ] 6.7 OP-PV-ROLLBACK-REHEARSAL. [SWF-010, SMN-007]
+- [ ] 6.6 Fenrir Preview gate (mandatory since 2026-11-08; outside the C4 closure, so Sherlock M6 does not wait on it): B1, B2, B3 local, B6, B7, then OP-PV-FENRIR-BATCH and B4p, B5p, B8p, B9p on Preview. No stagenet run. [SWF-013, SMN-005] -> B1, B2, B3, B6, B7, B4p, B5p, B8p, B9p
+- [ ] 6.7 OP-PV-ROLLBACK-REHEARSAL, preceded by a passing A11. [SWF-010, SMN-007]
 
 ## M7 Mainnet readiness (T4; owner-only)
 
-- [ ] 7.1 Owner decision on `openspec/MORIARTY-COMPLETION-PROGRAM.md:269`; until amended, M7 does not start. [SWF-009]
-- [ ] 7.2 Blockfrost project; mainnet wallet; cNIGHT -> DUST registration about 12 h ahead; `target-pins.json` mainnet row with genesis. [SMN-004, SMN-005]
-- [ ] 7.3 OP-MN-DEPLOY (`owner+checklist`), OP-MN-CALL-P1, non-consuming reject cases; A8m, A9m, A10m, B8m; committed receipts. [SRC-007, SAS-007]
-- [ ] 7.4 Rollback plan executed only via §7 of `workflow.md`. [SWF-010]
+- [x] 7.1 Owner decision on `openspec/MORIARTY-COMPLETION-PROGRAM.md:269`: amended 2026-11-08 ("amend the program for mainnet"; now `:270-283`, old sentence kept struck through). Mainnet submissions are permitted only as T4 operations after local Docker at 9.1.0.1 has passed, the Preview qualification receipts and the Preview rollback rehearsal receipt are committed and the pre-deploy checklist has passed. Each mainnet operation still needs explicit owner authorization when it runs, under an owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no spend. [SWF-009]
+- [ ] 7.2 Blockfrost project; mainnet wallet; cNIGHT -> DUST registration about 12 h ahead; `target-pins.json` mainnet row with genesis, the owner-held maintenance authority identity, and a status note that cites the 2026-11-08 amendment instead of the `:269` ban. [SMN-004, SMN-005, SMN-007]
+- [ ] 7.3 OP-MN-DEPLOY (`owner+checklist`, maintenance authority per SMN-007), OP-MN-CALL-P1, non-consuming reject cases; A8m, A9m, A10m; committed receipts; each operation separately authorized by the owner when it runs. [SRC-007, SAS-007, SWF-009, SMN-007]
+- [ ] 7.4 Fenrir mainnet gate (after 6.6 and 7.3): OP-MN-FENRIR-BATCH (`owner+checklist`, owner-authorized when it runs, owner-set spend ceiling, no automatic retry); committed receipts. [SWF-013, SWF-009, SMN-005] -> B4m, B5m, B8m, B9m
+- [ ] 7.5 Rollback plan executed only via §7 of `workflow.md`; every maintenance update preceded by a passing A11 and followed by a committed receipt of the observed on-chain key state; #2375 checked before any key removal. [SWF-010, SMN-007]
 
 ## Later changes (not in this change)
 
 - `/2` profile native constraints (Await, Waiting, LogicalCap) and `sherlock-run-anchor` [D8].
 - Heavy concurrency lock class (E11).
 - Generic ADT instantiation policy, higher-order and letrec extensions (UIREQ-034 refinements).
+- Freeze or renounce the `SherlockRun` maintenance authority once the keys are stable (SMN-007, decision 2026-11-08). Until then the authority holder (the owner) can install a verifier key and so change what the contract accepts.

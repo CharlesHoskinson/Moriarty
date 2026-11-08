@@ -256,6 +256,7 @@ The ledger, proof, and complete-conformance requirements remain open beyond that
 | Public financial cases | At most 2 submissions per case; 20 minutes per attempt | Failed finality/effect gate stops that attempt |
 | Program Preview submissions | At most 24 submissions, including deploys and failed submissions | No attempt-counter reset across packages |
 | Test assets | At most 1,000 tNIGHT total gross external debit; 100 per case | Balance, fee, closure reserve, or denomination check fails |
+| Program mainnet submissions (amendment 2026-11-08) | Owner-set per operation: submission count and gross NIGHT/DUST debit, written in that operation's authorization before it runs; no automatic retries | Ceiling reached, a failed submission, or a missing authorization stops the operation; a retry needs a new owner authorization |
 | Program retained generated evidence | 2 GiB, excluding already retained dependencies/SRS | Stop before the limit; preserve failures |
 
 Count all program worker, verification, correction, and substantive-audit process time in the eight-hour ceiling.
@@ -266,7 +267,20 @@ Freeze the maximum DUST spend and closure reserve from fresh read-only estimates
 Reject submission if those estimates or required token identities are unavailable.
 Use the existing dedicated Preview wallet and externally stored secrets.
 Never print seeds, secret snapshots, or private witnesses in tracked evidence.
-Use local Docker before public attempts; make no mainnet submission.
+~~Use local Docker before public attempts; make no mainnet submission.~~ (Superseded for mainnet on 2026-11-08; the local Docker rule stays. See the amendment below.)
+Use local Docker before public attempts.
+
+Amendment (2026-11-08, owner decision: "amend the program for mainnet"):
+A mainnet submission is permitted only as a T4 operation under the consensus workflow (`openspec/changes/sherlock-vm-consensus-20261107/workflow.md` §3, §4 and §6, requirement SWF-009).
+Before any mainnet operation, all of these must be true:
+1. The local Docker chain at ledger 9.1.0.1 has passed (M5).
+2. The Preview qualification receipts are committed (M6).
+3. The Preview rollback rehearsal receipt is committed (OP-PV-ROLLBACK-REHEARSAL, SWF-010).
+4. The pre-deploy checklist (`workflow.md` §6) has passed.
+
+Each mainnet operation also needs explicit owner authorization at the time it runs.
+This amendment does not authorize any specific spend.
+The mainnet row in the table above sets the spend ceiling.
 
 Revision-01 is new work explicitly requested after the failed original R3 experiment.
 Retain the original resource record and link it as the predecessor.
