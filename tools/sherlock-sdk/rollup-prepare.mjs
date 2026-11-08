@@ -8,17 +8,17 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {anchorView, bindBatch} from './rollup-statement.mjs';
 import {pinnedRollupKeys} from './rollup-keys.mjs';
+import {midnightConfig} from './stagenet-session.mjs';
 
 const [sdk, build, b3, key, settle, output] = process.argv.slice(2);
 assert.ok(output, 'SDK_ROOT BUILD B3_DIR KEY_DIR SETTLE_KEY OUTPUT required');
 const require = createRequire(resolve(sdk, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const {ZKConfigProvider, createVerifierKey} = await load('@midnight-ntwrk/midnight-js-types');
 const types = await load('@midnight-ntwrk/midnight-js-types');
 const {ZkArtifactIntegrityError} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenDeployTx} = await load('@midnight-ntwrk/midnight-js-contracts');
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
 const runtime = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -56,10 +56,9 @@ class ExactKeys extends ZKConfigProvider {
   async getProverKey() { throw Error('offline deployment must not prove a call'); }
   async getZKIR() { throw Error('offline deployment must not prove a call'); }
 }
-setNetworkId('stagenet');
 const compiledContract = CompiledContract.make('SherlockRollupAnchor', mod.Contract).pipe(
   CompiledContract.withVacantWitnesses, CompiledContract.withCompiledFileAssets(resolve(build)));
-const dry = await createUnprovenDeployTx({zkConfigProvider: new ExactKeys(), walletProvider: {
+const dry = await createUnprovenDeployTx({zkConfigProvider: new ExactKeys(), config: midnightConfig, walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),
 }}, {compiledContract, args: constructor});
 const state = dry.public.initialContractState, view = anchorView(runtime, mod, state);

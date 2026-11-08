@@ -548,7 +548,9 @@ pub fn verify_call(
         call.fallible_transcript.as_ref(),
     )?;
     let parent: Pedersen = candidate.binding_commitment.into();
-    let pi = call.public_inputs(parent);
+    let pi = call
+        .public_inputs(parent)
+        .map_err(|_| refusal("ledger-public-input-limit"))?;
     if pi.len() != 2 || pi[1] != expected.commitment {
         return Err(refusal("ledger-public-statement"));
     }

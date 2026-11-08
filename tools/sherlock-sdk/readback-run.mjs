@@ -24,7 +24,7 @@ const output = resolve(outputArg); mkdirSync(output, {recursive: true});
 const validateCall = resolve(process.env.SHERLOCK_VALIDATE_CALL ?? 'target/release/examples/validate_call');
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const INDEXER = 'https://indexer.stagenet.shielded.tools/api/v4/graphql';

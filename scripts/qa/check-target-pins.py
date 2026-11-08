@@ -13,8 +13,8 @@ Reads qa/sherlock/target-pins.json and checks, read-only:
      - Cargo.lock: midnight-ledger-v9 version and the ZKIR v3 crate version;
      - SDK pins committed in tools/sherlock-sdk/*.mjs (package version asserts and
        proof-server /version asserts);
-     - with `--sdk-root` (or MORIARTY_SDK_ROOT): the SDK root's package.json and
-       package-lock.json.
+     - the SDK root's package.json and package-lock.json: the committed manifest in
+       tools/sherlock-sdk/, or the root named by `--sdk-root` (or MORIARTY_SDK_ROOT).
 
 Exit 0 when the structure is valid and the workspace matches the target row, 1 otherwise.
 It also prints which rows, if any, the workspace matches in full.
@@ -180,6 +180,8 @@ def observe(root, sdk_root=None):
             if '/version' in line or '.trim()' in line:
                 for version in SEMVER.findall(line):
                     obs.append(('proofServer', 'version', version, f'{rel}:{number}'))
+    if not sdk_root and (sdk / 'package.json').is_file():
+        sdk_root = sdk
     if sdk_root:
         sdk_root = Path(sdk_root)
         pkg_json = sdk_root / 'package.json'
@@ -201,9 +203,9 @@ def observe(root, sdk_root=None):
         else:
             notes.append(f'SDK root {sdk_root} has no package-lock.json')
     else:
-        notes.append('no SDK root (--sdk-root or MORIARTY_SDK_ROOT): SDK package.json and lockfile not '
-                     'compared; the repository commits no SDK package.json, only the version asserts in '
-                     f'{SDK_DIR}/*.mjs, which are compared')
+        notes.append(f'no SDK root: {SDK_DIR}/package.json is missing and neither --sdk-root nor '
+                     'MORIARTY_SDK_ROOT is set; only the version asserts in '
+                     f'{SDK_DIR}/*.mjs are compared')
     return obs, notes
 
 
@@ -311,7 +313,8 @@ def main(argv=None):
     parser.add_argument('--root', default=str(ROOT))
     parser.add_argument('--network', choices=NETWORKS, help='compare with this row instead of workspaceTarget')
     parser.add_argument('--sdk-root', default=os.environ.get('MORIARTY_SDK_ROOT'),
-                        help='installed SDK root whose package.json and package-lock.json are compared')
+                        help='SDK root whose package.json and package-lock.json are compared '
+                             f'(default: the committed manifest in {SDK_DIR}/)')
     args = parser.parse_args(argv)
     return run(args.root, args.network, args.sdk_root)
 

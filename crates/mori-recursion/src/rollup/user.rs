@@ -319,10 +319,10 @@ impl Gadgets<'_> {
             super::i1::keys::point_to_subgroup(v).unwrap_or_else(JubjubSubgroup::identity)
         });
         let point: AssignedNativePoint<Jubjub> = self.s.jubjub().assign(l, subgroup)?;
-        self.s
-            .assert_equal(l, &coords[0], &self.s.jubjub().x_coordinate(&point))?;
-        self.s
-            .assert_equal(l, &coords[1], &self.s.jubjub().y_coordinate(&point))?;
+        let x = self.s.jubjub().x(l, &point)?;
+        self.s.assert_equal(l, &coords[0], &x)?;
+        let y = self.s.jubjub().y(l, &point)?;
+        self.s.assert_equal(l, &coords[1], &y)?;
         let identity = self
             .s
             .jubjub()

@@ -124,7 +124,9 @@ fn one_artifact_checks_mutable_prefix_and_captured_let_across_native_instances()
             Op::Push {
                 value: StateValue::Cell(v),
                 ..
-            } if **v == false.into() => *v = Sp::new(true.into()),
+            } if **v == mori_ledger::ops::checked(false.into()) => {
+                *v = Sp::new(mori_ledger::ops::checked(true.into()))
+            }
             _ => {}
         }
     }
@@ -279,8 +281,10 @@ fn source_claims_cover_zero_first_repeated_and_wide_amounts() {
                 midnight_onchain_vm::ops::Op::Push {
                     value: midnight_onchain_state::state::StateValue::Cell(v),
                     ..
-                } if **v == expected.into() => {
-                    *v = midnight_storage::arena::Sp::new((expected + 1).into())
+                } if **v == mori_ledger::ops::checked(expected.into()) => {
+                    *v = midnight_storage::arena::Sp::new(mori_ledger::ops::checked(
+                        (expected + 1).into(),
+                    ))
                 }
                 _ => {}
             }
@@ -588,7 +592,9 @@ fn correlated_late_ensures_failure_and_discarded_eager_overflow_reject() {
             midnight_onchain_vm::ops::Op::Push {
                 value: midnight_onchain_state::state::StateValue::Cell(v),
                 ..
-            } if **v == 1u128.into() => *v = midnight_storage::arena::Sp::new(2u128.into()),
+            } if **v == mori_ledger::ops::checked(1u128.into()) => {
+                *v = midnight_storage::arena::Sp::new(mori_ledger::ops::checked(2u128.into()))
+            }
             _ => {}
         }
     }
@@ -669,9 +675,9 @@ fn event_emission_domain_preserves_shorter_instances_and_refuses_oversized_branc
                 storage: false,
                 value: StateValue::Array(
                     vec![
-                        mori_ledger::ops::cell(1u32.into()),
-                        mori_ledger::ops::cell((LogEventType::Misc as u8).into()),
-                        mori_ledger::ops::cell(AlignedValue::from(payload.clone())),
+                        mori_ledger::ops::pushed_cell(1u32.into()),
+                        mori_ledger::ops::pushed_cell((LogEventType::Misc as u8).into()),
+                        mori_ledger::ops::pushed_cell(AlignedValue::from(payload.clone())),
                     ]
                     .into(),
                 ),

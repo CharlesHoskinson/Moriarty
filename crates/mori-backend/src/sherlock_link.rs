@@ -467,7 +467,7 @@ impl ReturnPublicationLayout {
         let outputs = vec![IrType::Native; vals.len()];
         code.push(Instruction::Output { vals });
         let ir = IrSource {
-            version: Default::default(),
+            version: midnight_zkir_v3::ir::IrMinorVersion::V0,
             inputs: Vec::new(),
             outputs,
             do_communications_commitment: false,

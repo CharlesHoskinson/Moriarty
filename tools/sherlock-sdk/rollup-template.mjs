@@ -11,7 +11,7 @@ assert.ok(output, 'usage: rollup-template.mjs SDK_ROOT BUILD OUTPUT_JSON');
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
 const rt = await load('@midnight-ntwrk/compact-runtime');
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const le = value => Buffer.from(value.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
 const modulus = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001n;

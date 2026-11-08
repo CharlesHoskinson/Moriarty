@@ -551,6 +551,24 @@ fn admit_frame_inner(
         gas_hex: f.gas_hex.clone(),
     })
 }
+/// Whether `cost` stays within the frame gas cap. The cap bounds all four
+/// components from above. Ledger 9 `RunningCost::within_bounds` reads a
+/// declared `bytes_deleted` as a floor (the deletions a transcript must
+/// perform), so it does not express a cap.
+pub fn within_cap(cost: &RunningCost, cap: &RunningCost) -> bool {
+    cost.read_time <= cap.read_time
+        && cost.compute_time <= cap.compute_time
+        && cost.bytes_written <= cap.bytes_written
+        && cost.bytes_deleted <= cap.bytes_deleted
+}
+/// The VM gas limit for a query under the frame gas cap. It requires no
+/// deletions; callers check the deletion bound with [`within_cap`].
+pub fn vm_limit(cap: &RunningCost) -> RunningCost {
+    RunningCost {
+        bytes_deleted: 0,
+        ..*cap
+    }
+}
 pub(crate) fn frame_gas(frame: &AdmittedFrame) -> Result<RunningCost> {
     let gas: RunningCost = codec::from_hex(&frame.gas_hex)?;
     let params = &frame.ledger.parameters;

@@ -8,7 +8,7 @@ import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
+import {sdkLoader, endpoints, openStagenetSession, midnightConfig} from './stagenet-session.mjs';
 import {anchorView, bindBatch, assertPredecessor, assertSettled} from './rollup-statement.mjs';
 import {pinnedRollupKeys} from './rollup-keys.mjs';
 import {checkCompiledCall} from './rollup-compiled-check.mjs';
@@ -34,11 +34,10 @@ assert.equal(sha(readFileSync(join(key,'decider.vk'))),manifest.vk_sha256);
 assert.equal(sha(readFileSync(join(key,'decider.relation'))),manifest.relation_sha256);
 assert.equal(sha(readFileSync(join(key,'acceptValidity.verifier'))),manifest.tagged_vk_sha256);
 assert.equal(pins.keys.acceptValidity.sha256,manifest.tagged_vk_sha256);
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
 const {WebSocket} = await load('ws'); assert.equal(typeof WebSocket, 'function'); globalThis.WebSocket = WebSocket;
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const types = await load('@midnight-ntwrk/midnight-js-types');
 const {SucceedEntirely} = types;
 const {parseCoinPublicKeyToHex, ZkArtifactIntegrityError} = await load('@midnight-ntwrk/midnight-js-utils');
@@ -142,7 +141,7 @@ try {
   const predicted=await new mod.Contract({}).provableCircuits[circuit](context,...args);
   clone.data=predicted.context.callContext.currentQueryContext.state;
   expectedState=Buffer.from(clone.serialize());
-  const providers={publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
+  const providers={config:midnightConfig,publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
     ...(session?{privateStateProvider:session.privateStateProvider}:{}),midnightProvider:{submitTx:async tx=>{
       // Bootstrap from the actual public deployment action; never persist or log transaction bodies.
       const deployed=pins;

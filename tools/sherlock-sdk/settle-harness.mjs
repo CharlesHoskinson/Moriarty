@@ -29,7 +29,7 @@ import {join, resolve} from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-import {endpoints} from './stagenet-session.mjs';
+import {endpoints, NETWORK_ID} from './stagenet-session.mjs';
 
 const REPO = fileURLToPath(new URL('../../', import.meta.url));
 export const BUILD = resolve(process.env.MORIARTY_ANCHOR_BUILD ?? join(REPO, 'target/a4-anchor/deploy-run3/build'));
@@ -149,12 +149,10 @@ export async function prepareSettle({load, session, snapshot, batch, fields, add
   const report = {address, snapshotSHA256: sha(raw), predictedPostStateSHA256: sha(predictedPostState),
     stmt: settleStatement(state, batch, fields), trace: settleTrace(state, fields)};
   // (3) SDK call over the snapshot (no state provider, so no chain read), proof, wallet balancing.
-  const {getNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
-  assert.equal(getNetworkId(), 'stagenet');
-  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
-  const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
+  const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
   const {createUnprovenCallTxFromInitialStates} = await load('@midnight-ntwrk/midnight-js-contracts');
-  const {parseCoinPublicKeyToHex, deserializeCompactContractState} = await load('@midnight-ntwrk/midnight-js-utils');
+  const {parseCoinPublicKeyToHex, deserializeLedger9CompactContractState} = await load('@midnight-ntwrk/midnight-js-utils');
   const {NodeZkConfigProvider} = await load('@midnight-ntwrk/midnight-js-node-zk-config-provider');
   const {httpClientProvingProvider} = await load('@midnight-ntwrk/midnight-js-http-client-proof-provider');
   if (!ledgerParameters) ledgerParameters = await latestLedgerParameters(load);
@@ -164,8 +162,8 @@ export async function prepareSettle({load, session, snapshot, batch, fields, add
   const wallet = session.walletProvider;
   const call = await createUnprovenCallTxFromInitialStates(keys, {compiledContract, contractAddress: address,
     circuitId: 'settleValidity', args: [batch, fields],
-    coinPublicKey: parseCoinPublicKeyToHex(wallet.getCoinPublicKey(), getNetworkId()),
-    initialContractState: deserializeCompactContractState(raw, {caller: 'settle-harness'}),
+    coinPublicKey: parseCoinPublicKeyToHex(wallet.getCoinPublicKey(), NETWORK_ID),
+    initialContractState: deserializeLedger9CompactContractState(raw, {caller: 'settle-harness'}),
     initialZswapChainState: new ledger.ZswapChainState(), ledgerParameters}, wallet.getEncryptionPublicKey());
   // The SDK's ChargedState comes from another WASM module instance; cross over through the plain encoding.
   const sdkPost = rt.ContractState.deserialize(raw);
@@ -189,11 +187,11 @@ export async function prepareSettle({load, session, snapshot, batch, fields, add
 }
 
 async function latestLedgerParameters(load) {
-  const {parseHexLedgerParameters} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
+  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
   const r = await fetch(endpoints.indexer, {method: 'POST', headers: {'content-type': 'application/json'},
     body: JSON.stringify({query: '{block{ledgerParameters}}'})});
   assert.ok(r.ok, 'indexer ledgerParameters query');
   const body = await r.json();
   assert.ok(!body.errors && body.data?.block?.ledgerParameters, 'indexer ledgerParameters query');
-  return parseHexLedgerParameters(body.data.block.ledgerParameters);
+  return ledger.LedgerParameters.deserialize(Buffer.from(body.data.block.ledgerParameters, 'hex'));
 }

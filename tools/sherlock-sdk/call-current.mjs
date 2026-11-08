@@ -8,7 +8,7 @@ import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {spawn, spawnSync} from 'node:child_process';
-import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
+import {sdkLoader, endpoints, openStagenetSession, midnightConfig} from './stagenet-session.mjs';
 const [sdkRoot, build, keyed, parent, key, outputArg, circuit, mode] = process.argv.slice(2);
 assert.ok(outputArg && ['acceptValidity','settleValidity'].includes(circuit));
 assert.ok(mode === undefined || mode === '--submit');
@@ -30,12 +30,11 @@ if (process.env.MORIARTY_SHERLOCK_DEPLOYMENT === undefined) assert.equal(target,
 assert.equal(sha(readFileSync(join(parent, 'w.vk'))), pins.parent_vk_sha256);
 assert.equal(sha(readFileSync(join(key, 'decider.vk'))), pins.vk_sha256);
 assert.equal(sha(readFileSync(join(key, 'decider.relation'))), pins.relation_sha256);
-assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
+assert.ok(['9.0.0', '9.0.1'].includes((await (await fetch(endpoints.proof + '/version')).text()).trim()), 'proof server 9.0.x');
 const {WebSocket} = await load('ws'); assert.equal(typeof WebSocket, 'function'); globalThis.WebSocket = WebSocket;
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const {createVerifierKey, SucceedEntirely} = await load('@midnight-ntwrk/midnight-js-types');
 const {parseCoinPublicKeyToHex} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenCallTx, submitTx} = await load('@midnight-ntwrk/midnight-js-contracts');
@@ -191,7 +190,7 @@ try {
   const predicted=await new mod.Contract({}).provableCircuits[circuit](context,...args);
   clone.data=predicted.context.callContext.currentQueryContext.state;
   expectedState=Buffer.from(clone.serialize());
-  const providers={publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
+  const providers={config:midnightConfig,publicDataProvider,zkConfigProvider:keys,proofProvider,walletProvider,
     ...(session?{privateStateProvider:session.privateStateProvider}:{}),midnightProvider:{submitTx:async tx=>{
       // Final balanced transaction. A refusal that is about proofs or signatures, or a non-applied call,
       // blocks submission; a refusal caused only by wallet DUST/fee state absent from the blank local ledger

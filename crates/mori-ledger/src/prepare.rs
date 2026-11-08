@@ -231,7 +231,7 @@ pub fn validate_transcript(
     if candidate.gas != expected.gas {
         return Err(failure("full-readback", "partition-gas-identity"));
     }
-    if !candidate.gas.within_bounds(cap) || !actual.gas_cost.within_bounds(&candidate.gas) {
+    if !layout::within_cap(&candidate.gas, cap) || !actual.gas_cost.within_bounds(&candidate.gas) {
         return Err(failure("native-partition", "gas-ceiling"));
     }
     if candidate.effects != actual.context.effects || candidate.effects != lowered.expected_effects
@@ -488,10 +488,12 @@ pub(crate) fn prepare_admitted_signed(
     let direct = context
         .query(
             &lowered.program,
-            Some(pre.gas),
+            Some(layout::vm_limit(&pre.gas)),
             &params.cost_model.runtime_cost_model,
         )
-        .map_err(|_| failure("native-VM", "query-refusal"))?;
+        .ok()
+        .filter(|r| layout::within_cap(&r.gas_cost, &pre.gas))
+        .ok_or(failure("native-VM", "query-refusal"))?;
     validate_query(&lowered, &direct)?;
     if let Some(s) = signed.filter(|s| s.version == crate::signed::SignedVersion::ConsumingV2) {
         crate::signed::nonce::check_successor_input(
@@ -645,7 +647,7 @@ pub(crate) fn prepare_admitted_signed(
         let mut expected_gas = direct.gas_cost;
         expected_gas.compute_time += processed.noop_cost;
         if actual.gas_cost != expected_gas
-            || !processed_transcript.gas.within_bounds(&pre.gas)
+            || !layout::within_cap(&processed_transcript.gas, &pre.gas)
             || !actual.gas_cost.within_bounds(&processed_transcript.gas)
             || processed_transcript.version.as_deref() != Some(&Transcript::<InMemoryDB>::VERSION)
         {
@@ -655,7 +657,9 @@ pub(crate) fn prepare_admitted_signed(
         processed_call.guaranteed_transcript = Some(Sp::new(processed_transcript.clone()));
         let parent: midnight_transient_crypto::commitment::Pedersen =
             intent.binding_commitment.into();
-        let pi = processed_call.public_inputs(parent);
+        let pi = processed_call
+            .public_inputs(parent)
+            .map_err(|_| failure("native-relation", "public-input-limit"))?;
         let mut expected_pi = vec![pi[0], commitment];
         expected_pi.extend(processed.operation_fields);
         if expected_pi != pi {

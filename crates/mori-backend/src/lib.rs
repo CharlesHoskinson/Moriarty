@@ -1216,7 +1216,7 @@ fn lower_action_segment(
     let instruction_count = u32::try_from(builder.instructions.len())
         .map_err(|_| error("limit", "Instruction count overflow."))?;
     let ir = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: Vec::new(),
         outputs: output_types,
         do_communications_commitment: false,

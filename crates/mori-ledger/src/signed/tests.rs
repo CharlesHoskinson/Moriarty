@@ -2269,7 +2269,7 @@ fn nonce_v2_false_predicate_with_authority_write_refuses() {
             .context
             .query(
                 &program,
-                Some(b.native.gas_cap),
+                Some(crate::layout::vm_limit(&b.native.gas_cap)),
                 &b.native.params.cost_model.runtime_cost_model
             )
             .is_err()
@@ -2318,7 +2318,7 @@ fn nonce_v2_false_predicate_with_authority_write_refuses() {
 #[test]
 fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
     use midnight_onchain_state::state::StateValue;
-    use midnight_onchain_vm::ops::{Key, Op};
+    use midnight_onchain_vm::ops::Op;
     let (f, policy) = nonce_only();
     let mut q = request(&f, [0; 4]);
     q.nonce = UInt(7);
@@ -2378,7 +2378,7 @@ fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
             .context
             .query(
                 &without_write,
-                Some(result.native.gas_cap),
+                Some(crate::layout::vm_limit(&result.native.gas_cap)),
                 &result.native.params.cost_model.runtime_cost_model
             )
             .is_err()
@@ -2399,7 +2399,7 @@ fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
             .context
             .query(
                 &extra,
-                Some(result.native.gas_cap),
+                Some(crate::layout::vm_limit(&result.native.gas_cap)),
                 &result.native.params.cost_model.runtime_cost_model
             )
             .is_err()
@@ -2417,8 +2417,8 @@ fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
         cached: false,
         push_path: false,
         path: vec![
-            Key::Value(3u8.into()),
-            Key::Value(midnight_base_crypto::hash::HashOutput([3; 32]).into()),
+            crate::ops::key(3u8.into()),
+            crate::ops::key(midnight_base_crypto::hash::HashOutput([3; 32]).into()),
         ]
         .into(),
     };
@@ -2428,7 +2428,7 @@ fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
             .context
             .query(
                 &drift,
-                Some(result.native.gas_cap),
+                Some(crate::layout::vm_limit(&result.native.gas_cap)),
                 &result.native.params.cost_model.runtime_cost_model
             )
             .is_err()

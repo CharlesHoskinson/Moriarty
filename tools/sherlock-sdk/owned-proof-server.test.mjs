@@ -16,7 +16,7 @@ import {createServer} from 'node:http';
 console.log('PRIVATE_WITNESS_TEST_SENTINEL');console.error('PRIVATE_WITNESS_TEST_SENTINEL');
 if(process.env.MIDNIGHT_PROOF_SERVER_VERBOSE!=='false')process.exit(9);
 const port=Number(process.argv[process.argv.indexOf('--port')+1]);
-createServer((q,r)=>r.end(q.url==='/version'?'9.0.0-rc.5':String(process.pid))).listen(port,'127.0.0.1');
+createServer((q,r)=>r.end(q.url==='/version'?'9.0.1':String(process.pid))).listen(port,'127.0.0.1');
 `);chmodSync(binary,0o755);
   const selected=await port();
   const child=spawn(process.execPath,[new URL('./owned-proof-server.mjs',import.meta.url).pathname,binary,String(selected),root],{detached:true,env:{...process.env,MIDNIGHT_PROOF_SERVER_VERBOSE:'true'},stdio:['pipe','pipe','pipe']});

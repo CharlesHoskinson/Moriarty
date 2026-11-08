@@ -484,7 +484,7 @@ fn eager_two_duty_dfs_follows_sorted_state_openings_and_keeps_leaf_multiplicity(
             midnight_onchain_vm::ops::Op::Push {
                 value: midnight_onchain_state::state::StateValue::Cell(v),
                 ..
-            } => Some((**v).clone()),
+            } => Some(mori_ledger::ops::unchecked(v)),
             _ => None,
         })
         .collect::<Vec<_>>();

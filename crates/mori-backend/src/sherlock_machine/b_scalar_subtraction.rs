@@ -757,7 +757,7 @@ pub fn emit_public_b_scalar_arithmetic_sub(
 
     instructions.push(Instruction::Output { vals: outputs });
     let ir = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: vec![],
         outputs: vec![IrType::Native; output_fields.len()],
         do_communications_commitment: false,

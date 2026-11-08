@@ -58,7 +58,7 @@ fn transcript_declarations_are_checked_even_when_native_reexecution_accepts() {
     let changed = c
         .query(
             &missing_event,
-            Some(pre.gas),
+            Some(layout::vm_limit(&pre.gas)),
             &params.cost_model.runtime_cost_model,
         )
         .unwrap();
@@ -75,7 +75,7 @@ fn transcript_declarations_are_checked_even_when_native_reexecution_accepts() {
     let changed = c
         .query(
             &extra_duty,
-            Some(pre.gas),
+            Some(layout::vm_limit(&pre.gas)),
             &params.cost_model.runtime_cost_model,
         )
         .unwrap();
@@ -110,8 +110,10 @@ fn transcript_declarations_are_checked_even_when_native_reexecution_accepts() {
             .code,
         "transcript-version"
     );
+    // An over-declaration the VM accepts: ledger 9 refuses declared
+    // deletions the run does not perform, so only the upper bounds grow.
     let mut large = t.clone();
-    large.gas = pre.gas;
+    large.gas = layout::vm_limit(&pre.gas);
     assert!(
         c.run_transcript(&large, &params.cost_model.runtime_cost_model)
             .is_ok()
@@ -155,7 +157,11 @@ fn wrong_new_claim_and_wrong_prefix_read_are_actual_native_controls() {
     let mut c = QueryContext::new(pre.contract.data.clone(), pre.address);
     c.call_context = pre.context.clone();
     let good = c
-        .query(&l.program, Some(pre.gas), &p.cost_model.runtime_cost_model)
+        .query(
+            &l.program,
+            Some(layout::vm_limit(&pre.gas)),
+            &p.cost_model.runtime_cost_model,
+        )
         .unwrap();
     assert_eq!(good.context.effects, l.expected_effects);
     assert_eq!(
@@ -167,7 +173,11 @@ fn wrong_new_claim_and_wrong_prefix_read_are_actual_native_controls() {
     let old = l.program[index].clone();
     l.program[index] = ops::push(26u128.into());
     let wrong = c
-        .query(&l.program, Some(pre.gas), &p.cost_model.runtime_cost_model)
+        .query(
+            &l.program,
+            Some(layout::vm_limit(&pre.gas)),
+            &p.cost_model.runtime_cost_model,
+        )
         .unwrap();
     assert_ne!(wrong.context.effects, l.expected_effects);
     assert_eq!(
@@ -189,8 +199,12 @@ fn wrong_new_claim_and_wrong_prefix_read_are_actual_native_controls() {
         result: 0u128.into(),
     };
     assert!(
-        c.query(&l.program, Some(pre.gas), &p.cost_model.runtime_cost_model)
-            .is_err()
+        c.query(
+            &l.program,
+            Some(layout::vm_limit(&pre.gas)),
+            &p.cost_model.runtime_cost_model
+        )
+        .is_err()
     );
     assert!(
         l.bindings
@@ -370,14 +384,14 @@ fn admitted_long_core_event_is_refused_before_native_silent_drop() {
     let p: LedgerParameters = codec::decode_native(&f.parameters).unwrap();
     let mut c = QueryContext::new(pre.contract.data.clone(), pre.address);
     c.call_context = pre.context.clone();
-    let payload = ops::cell(midnight_base_crypto::fab::AlignedValue::from(vec![
+    let payload = ops::pushed_cell(midnight_base_crypto::fab::AlignedValue::from(vec![
         1u8;
         1500
     ]));
     let wrapper = midnight_onchain_state::state::StateValue::Array(
         vec![
-            ops::cell(1u32.into()),
-            ops::cell((midnight_onchain_vm::ops::LogEventType::Misc as u8).into()),
+            ops::pushed_cell(1u32.into()),
+            ops::pushed_cell((midnight_onchain_vm::ops::LogEventType::Misc as u8).into()),
             payload,
         ]
         .into(),
@@ -391,7 +405,11 @@ fn admitted_long_core_event_is_refused_before_native_silent_drop() {
         Op::Log,
     ]);
     let r = c
-        .query(&program, Some(pre.gas), &p.cost_model.runtime_cost_model)
+        .query(
+            &program,
+            Some(layout::vm_limit(&pre.gas)),
+            &p.cost_model.runtime_cost_model,
+        )
         .unwrap();
     assert!(r.events.is_empty());
     // Full native charged state is retained, including query accounting.

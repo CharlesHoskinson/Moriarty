@@ -17,7 +17,7 @@ assert.equal(ready.decider_key_bytes_match_b3, true);
 assert.equal(sha(readFileSync(ready.native_validator)), ready.native_validator_sha256);
 const load = sdkLoader(ready.sdk, join(run, 'readback-sdk-imports'));
 const rt = await load('@midnight-ntwrk/compact-runtime');
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const mod = await import(pathToFileURL(resolve(ready.build, 'contract/index.js')).href);
 const keyManifest = read(join(ready.key, 'manifest.json'));
 const bound = bindBatch(read(join(ready.b3, 'leaf.instance.json')), read(join(ready.b3, 'parent.instance.json')), keyManifest, rt);

@@ -999,7 +999,7 @@ fn test_scoped_rows_compose_only_with_per_branch_posts() {
 /// `3.0`, `IrSource::load`, structural equality. Not a check, compile or proof.
 fn assert_sdk_json_roundtrip(code: Vec<Instruction>) {
     let ir = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: vec![],
         outputs: vec![],
         do_communications_commitment: false,

@@ -32,8 +32,7 @@ const json = x => JSON.stringify(x, (_, v) => typeof v === 'bigint' ? v.toString
 const fixture = name => readFileSync(new URL(`./fixtures/settle/${name}`, import.meta.url));
 const log = m => console.log(`[settle-rehearsal] ${m}`);
 const pins = JSON.parse(readFileSync('crates/mori-recursion/tests/fixtures/stagenet-verifier.json'));
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const graphql = async query => {
   const r = await fetch(endpoints.indexer, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({query})});
   assert.ok(r.ok); const body = await r.json(); assert.ok(!body.errors, 'indexer query failed'); return body.data;
@@ -54,8 +53,8 @@ assert.ok(ledgerView(S0).validity_ok.member(A8_STMT));
 const I2 = BigInt('0x' + sha('sherlock A9 s-e(iv) second instance_id')) % 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001n;
 
 // Network parameters only (cost model, local ledger); contract state comes from the fixtures.
-const {parseHexLedgerParameters} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
-const ledgerParameters = parseHexLedgerParameters((await graphql('{block{ledgerParameters}}')).block.ledgerParameters);
+const ledgerParameters = ledger.LedgerParameters.deserialize(
+  Buffer.from((await graphql('{block{ledgerParameters}}')).block.ledgerParameters, 'hex'));
 
 // A session that only binds: the harness's balancing step yields the bound, unbalanced transaction.
 const session = {walletProvider: {getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),

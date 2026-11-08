@@ -7,6 +7,7 @@ import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {anchorView} from './rollup-statement.mjs';
+import {midnightConfig} from './stagenet-session.mjs';
 import {ownedWalletProver} from './owned-wallet-prover.mjs';
 import {recordSubmissionRefusal, quietSubmission} from './rollup-refusal.mjs';
 const [sdkRoot, buildArg, preparation, outputArg, mode] = process.argv.slice(2);
@@ -23,9 +24,9 @@ const load = async name => {
   return (await import(pathToFileURL(file).href)).default;
 };
 for (const [name, version] of Object.entries({
-  '@midnight-ntwrk/midnight-js-contracts': '5.0.0-beta.7',
-  '@midnightntwrk/wallet-sdk': '2.0.0-beta.2',
-  '@midnight-ntwrk/compact-runtime': '0.19.0',
+  '@midnight-ntwrk/midnight-js-contracts': '5.0.0',
+  '@midnightntwrk/wallet-sdk': '2.0.0',
+  '@midnight-ntwrk/compact-runtime': '0.21.0',
 })) assert.equal(JSON.parse(readFileSync(resolve(sdkRoot, 'node_modules', name, 'package.json'))).version, version);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const build = resolve(buildArg), output = resolve(outputArg);
@@ -35,9 +36,8 @@ assert.equal(expected.sourceSHA256, sha(readFileSync(new URL('./rollup-anchor.co
 assert.ok(expected.all12FieldsEqual && expected.setsEmpty && !expected.submitted);
 mkdirSync(output, {recursive: true, mode: 0o700});
 assert.ok(!existsSync(join(output, 'submitted.json')), 'refuse a second deployment from this output directory');
-const {setNetworkId, getNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
-const ledgerLib = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const ledgerLib = await load('@midnight-ntwrk/midnight-js-protocol/v9');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const {ZKConfigProvider, createVerifierKey} = await load('@midnight-ntwrk/midnight-js-types');
 const {createUnprovenDeployTx, deployContract} = await load('@midnight-ntwrk/midnight-js-contracts');
 const rt = await load('@midnight-ntwrk/compact-runtime');
@@ -49,7 +49,6 @@ writeFileSync(join(deployBuild, 'package.json'), '{"type":"module"}\n');
 if (!existsSync(join(deployBuild, 'node_modules')))
   symlinkSync(resolve(sdkRoot, 'node_modules'), join(deployBuild, 'node_modules'));
 const mod = await import(pathToFileURL(join(deployBuild, 'contract/index.js')).href);
-setNetworkId('stagenet');
 class ExactKeys extends ZKConfigProvider {
   async getVerifierKey(name) {
     const pin = expected.keys[name];
@@ -67,7 +66,7 @@ const compiledContract = CompiledContract.make('SherlockRollupAnchor', mod.Contr
   CompiledContract.withVacantWitnesses, CompiledContract.withCompiledFileAssets(deployBuild));
 const options = {compiledContract, args: expected.constructor.map(BigInt)};
 // Exercise the same SDK constructor/key installation used by deployContract before wallet access.
-const dry = await createUnprovenDeployTx({zkConfigProvider, walletProvider: {
+const dry = await createUnprovenDeployTx({zkConfigProvider, config: midnightConfig, walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32),
 }}, options);
 const checkState = state => {
@@ -119,10 +118,10 @@ const derived = hd.hdWallet.selectAccount(0).selectRoles([Roles.Zswap, Roles.Nig
 assert.equal(derived.type, 'keysDerived'); hd.hdWallet.clear();
 const shieldedSecretKeys = ledgerLib.ZswapSecretKeys.fromSeed(derived.keys[Roles.Zswap]);
 const dustSecretKey = ledgerLib.DustSecretKey.fromSeed(derived.keys[Roles.Dust]);
-const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.NightExternal]}, getNetworkId());
+const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.NightExternal]}, midnightConfig.networkId);
 const indexerHttpUrl = 'https://indexer.stagenet.shielded.tools/api/v4/graphql';
 const indexerWsUrl = 'wss://indexer.stagenet.shielded.tools/api/v4/graphql/ws';
-const config = {networkId: getNetworkId(), indexerClientConnection: {indexerHttpUrl, indexerWsUrl},
+const config = {networkId: midnightConfig.networkId, indexerClientConnection: {indexerHttpUrl, indexerWsUrl},
   provingServerUrl: new URL(guard.url), relayURL: new URL('wss://rpc.stagenet.shielded.tools')};
 const wallet = await WalletFacade.init({configuration: {...config,
   txHistoryStorage: new NoOpTransactionHistoryStorage(),
@@ -160,7 +159,7 @@ try {
       }
     },
   };
-  const providers = {zkConfigProvider, walletProvider, midnightProvider: walletProvider,
+  const providers = {config: midnightConfig, zkConfigProvider, walletProvider, midnightProvider: walletProvider,
     publicDataProvider: indexerPublicDataProvider(indexerHttpUrl, indexerWsUrl),
     proofProvider: httpClientProofProvider(guard.url, zkConfigProvider),
     privateStateProvider: levelPrivateStateProvider({

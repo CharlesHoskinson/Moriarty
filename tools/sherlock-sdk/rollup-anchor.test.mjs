@@ -11,7 +11,7 @@ const sdk = process.env.SHERLOCK_SDK_ROOT;
 assert.ok(sdk, 'SHERLOCK_SDK_ROOT must identify the pinned SDK package directory');
 const require = createRequire(resolve(sdk, 'package.json'));
 const rt = await import(pathToFileURL(require.resolve('@midnight-ntwrk/compact-runtime')).href);
-const native = await import(pathToFileURL(require.resolve('@midnight-ntwrk/midnight-js-protocol/ledger')).href);
+const native = await import(pathToFileURL(require.resolve('@midnight-ntwrk/midnight-js-protocol/v9')).href);
 const build = resolve(process.env.ROLLUP_ANCHOR_BUILD ?? 'target/sherlock-rollup-anchor/build');
 const mod = await import(pathToFileURL(join(build, 'contract/index.js')).href);
 assert.ok(process.env.SHERLOCK_B3_DIR, 'SHERLOCK_B3_DIR must identify a verified B3 run');

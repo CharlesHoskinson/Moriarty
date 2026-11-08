@@ -71,7 +71,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             calls.push(serde_json::json!({"address":hex::encode(call.address.0.0),
                 "entryPoint":String::from_utf8_lossy(&call.entry_point.0), "proofVersion":version,
                 "proofSHA256":hex::encode(Sha256::digest(&proof.0)),
-                "publicInputs":call.public_inputs(intent.binding_commitment.clone().into()).iter()
+                "publicInputs":call.public_inputs(intent.binding_commitment.clone().into())
+                    .map_err(|e| format!("public inputs: {e:?}"))?.iter()
                     .map(|f| hex::encode(f.as_le_bytes())).collect::<Vec<_>>()}));
         }
     }

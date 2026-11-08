@@ -146,8 +146,12 @@ impl<'a> PairingGadget<'a> {
             + ZeroInstructions<F, AG1>,
     {
         let is_id = ecc.is_zero(l, p)?;
-        let x = ecc.x_coordinate(p);
-        let y = ecc.y_coordinate(p);
+        // `prepare_g1` handles the identity through `is_id`. The replacement
+        // accessors `x`/`y` assert a non-identity point on this Weierstrass
+        // curve, which would change the relation and refuse the identity, so
+        // the raw coordinate accessors stay.
+        #[allow(deprecated)]
+        let (x, y) = (ecc.x_coordinate(p), ecc.y_coordinate(p));
         self.prepare_g1(l, &x, &y, &is_id)
     }
 

@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 pub const PROFILE: &str = "moriarty-ledger-call-preparation/1";
 pub const ABI: &str = "moriarty-ledger-public-abi/1";
-pub const SDK: &str = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14";
-pub const COMPAT: &str = "a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1";
+/// The pinned midnight-ledger revision (tag `ledger-9.1.0.1`).
+pub const SDK: &str = "a2b30128ca4b660b73a068e29b56b48ede8c9a74";
+/// The ledger's v2 compatibility crypto, now the published crates.io release.
+pub const COMPAT: &str = "crates.io:midnight-transient-crypto@2.2.0";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,17 +24,17 @@ impl Toolchain {
             compatibility: COMPAT.into(),
             rust: "1.99.0".into(),
             packages: [
-                ("ledger-v9", "1.0.0"),
-                ("onchain-runtime", "4.0.0"),
-                ("onchain-state", "4.0.0"),
-                ("onchain-vm", "4.0.0"),
-                ("base-crypto", "1.1.0"),
-                ("transient-crypto", "3.0.0"),
+                ("ledger-v9", "1.0.1"),
+                ("onchain-runtime", "4.0.1"),
+                ("onchain-state", "4.0.1"),
+                ("onchain-vm", "4.0.1"),
+                ("base-crypto", "1.1.1"),
+                ("transient-crypto", "3.0.1"),
                 ("transient-crypto-compat", "2.2.0"),
-                ("coin-structure", "3.0.0"),
-                ("storage", "2.0.1"),
-                ("serialize", "1.2.0"),
-                ("zkir-v3", "3.0.0-rc.2"),
+                ("coin-structure", "3.0.1"),
+                ("storage", "3.0.0"),
+                ("serialize", "1.2.1"),
+                ("zkir-v3", "3.2.0"),
                 ("curves", "0.3.1"),
             ]
             .into_iter()

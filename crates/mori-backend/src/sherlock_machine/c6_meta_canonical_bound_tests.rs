@@ -249,7 +249,7 @@ fn check_fr(
         inputs: statement_ops,
     });
     let ir = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: vec![],
         outputs: vec![],
         do_communications_commitment: false,

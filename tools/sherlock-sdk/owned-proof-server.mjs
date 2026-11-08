@@ -38,7 +38,7 @@ try {
     assert.ok(!exited && Date.now() < deadline, 'owned prover failed to start');
     try {
       const response = await fetch(url + '/version', {signal: AbortSignal.timeout(500)});
-      ready = response.ok && (await response.text()).trim() === '9.0.0-rc.5'
+      ready = response.ok && ['9.0.0', '9.0.1'].includes((await response.text()).trim())
         && !exited && ownsPort(server.pid, port);
     } catch { /* Startup only; no wallet request has been allowed yet. */ }
     if (!ready) await pause(100);

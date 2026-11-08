@@ -705,7 +705,7 @@ fn validate_final_intent(
     )?) != readback.charged_successor_hex
         || codec::native_hex(&actual.gas_cost)? != projection.processed_measured_gas_hex
         || codec::native_hex(&transcript.gas)? != projection.processed_declared_gas_hex
-        || !transcript.gas.within_bounds(&native.gas_cap)
+        || !crate::layout::within_cap(&transcript.gas, &native.gas_cap)
         || !actual.gas_cost.within_bounds(&transcript.gas)
         || actual
             .gas_cost
@@ -716,7 +716,9 @@ fn validate_final_intent(
         return Err(refusal("final-charged-state-or-gas"));
     }
     let parent: Pedersen = candidate.binding_commitment.into();
-    let pi = call.public_inputs(parent);
+    let pi = call
+        .public_inputs(parent)
+        .map_err(|_| refusal("final-public-input-limit"))?;
     let pi_hex: Vec<_> = pi.iter().map(|f| codec::hex(&f.as_le_bytes())).collect();
     if pi_hex != projection.public_inputs {
         return Err(refusal("final-public-inputs"));
@@ -793,7 +795,8 @@ pub fn verify_proven_call(
     <ProofMarker as ProofKind<InMemoryDB>>::proof_verify(
         operation,
         &call.proof,
-        call.public_inputs(parent),
+        call.public_inputs(parent)
+            .map_err(|_| refusal("final-public-input-limit"))?,
         call,
         ProofVerificationMode::Real,
     )

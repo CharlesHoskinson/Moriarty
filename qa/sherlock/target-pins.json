@@ -1,8 +1,8 @@
 {
   "schema": "moriarty.target-pins/1",
-  "updated": "2026-11-07",
+  "updated": "2026-11-08",
   "workspaceTarget": "preview",
-  "workspaceTargetNote": "The qualification target of sherlock-vm-consensus-20261107 (M6). The undeployed and mainnet rows carry the same software pins, so this choice changes only the chain identity. The workspace moves to these pins in task 2.1; until then F15 fails.",
+  "workspaceTargetNote": "The qualification target of sherlock-vm-consensus-20261107 (M6). The undeployed and mainnet rows carry the same software pins, so this choice changes only the chain identity. Task 2.1 moved the workspace to these pins: Cargo.toml, Cargo.lock, the committed SDK manifest (sdkManifest) and the version asserts in tools/sherlock-sdk/*.mjs.",
   "sources": {
     "hardfork": "wiki/midnight-ledger-9-hardfork.md (acquired 2026-11-07; research/midnight-ledger9-20261107/)",
     "repos": "wiki/midnight-repositories.md, section 'Current pins: ledger 9 refresh, 2026-11-07'",
@@ -14,7 +14,10 @@
     "mainnetRpc": "research/midnight-ledger9-20261107/api/mainnet-rpc-upgrade-search.json (2026-11-07T20:49:51Z; deprecated endpoint rpc.mainnet.midnight.network)",
     "stagenetRpc": "research/sherlock-vm-council-20261107/astra-1/target-observations.md (2026-11-07 about 20:57Z)",
     "stagenetStack": "openspec/changes/sherlock-vm-consensus-20261107/design.md section 5.1 'Workspace', docs/sherlock/stagenet-deployment.md (Compact 0.34.0, runtime 0.19.0, midnight-js 5.0.0-beta.7, wallet-sdk 2.0.0-beta.2, proof server 9.0.0-rc.5), docs/sherlock/midnight-sdk-seam.md (ledger-v9 1.0.0-rc.3), Cargo.toml and Cargo.lock at dc3f13cd3",
-    "workflow": "openspec/changes/sherlock-vm-consensus-20261107/workflow.md section 6"
+    "workflow": "openspec/changes/sherlock-vm-consensus-20261107/workflow.md section 6",
+    "sdkManifest": "tools/sherlock-sdk/package.json and tools/sherlock-sdk/package-lock.json (the maintainer SDK root, installed with npm ci --ignore-scripts)",
+    "mainnetAmendment": "openspec/MORIARTY-COMPLETION-PROGRAM.md lines 270-283 (owner decision 2026-11-08, which supersedes the line 269 mainnet ban)",
+    "ownerDecisions": "openspec/changes/sherlock-vm-consensus-20261107/dissent.md section 'Resolved 2026-11-08'"
   },
   "networks": {
     "undeployed": {
@@ -26,7 +29,7 @@
         "genesisHash": null,
         "genesisNote": "Each local docker instance has its own genesis; the receipt of each local run records it (SMN-004).",
         "specVersion": 2001100,
-        "specVersionNote": "Expected from node 2.1.101; the local image tag is not pinned yet (tasks 2.1, 5.1).",
+        "specVersionNote": "Expected from node 2.1.101; the local image tag is not pinned yet (task 5.1).",
         "ledgerRev": null,
         "ledgerRevNote": "Local node built or pulled at the 9.1.0.1 line; its reported revision is recorded per run.",
         "source": "workflow"
@@ -90,8 +93,8 @@
     },
     "mainnet": {
       "status": "blocked",
-      "statusNote": "No mainnet operation runs while openspec/MORIARTY-COMPLETION-PROGRAM.md:269 forbids mainnet submission (SWF-009; owner decision in task 7.1). Blockfrost is the official endpoint; endpoints are added in task 7.2.",
-      "statusSource": "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-009",
+      "statusNote": "Blocked until the conditions of the 2026-11-08 program amendment (openspec/MORIARTY-COMPLETION-PROGRAM.md:270-283, which supersedes the :269 ban) hold: local Docker at 9.1.0.1 passed, the Preview qualification receipts and the Preview rollback rehearsal receipt committed, and the pre-deploy checklist passed. Each mainnet operation is then a T4 operation that needs explicit owner authorization when it runs, under the owner-set spend ceiling with no automatic retry; the amendment authorizes no spend (SWF-009, task 7.1). Blockfrost is the official endpoint; endpoints are added in task 7.2.",
+      "statusSource": "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-009, mainnetAmendment",
       "chain": {
         "networkId": "mainnet",
         "rpc": null,
@@ -127,8 +130,8 @@
     },
     "stagenet": {
       "status": "retired",
-      "statusNote": "Retired for new qualification (SWF-011). A stagenet call is an optional diagnostic only; a stagenet pass never counts for a Preview or mainnet claim. Software pins are the client stack the Moriarty A-chain used on stagenet.",
-      "statusSource": "workflow",
+      "statusNote": "Retired (SWF-011). No stagenet call is made (owner decision 2026-11-08); a stagenet result is historical evidence only and never counts for a Preview or mainnet claim. Software pins are the client stack the Moriarty A-chain used on stagenet.",
+      "statusSource": "workflow, ownerDecisions",
       "chain": {
         "networkId": "stagenet",
         "rpc": "https://rpc.stagenet.shielded.tools",

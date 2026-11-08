@@ -155,6 +155,15 @@ class TargetPinsTests(unittest.TestCase):
         out = self.assertFails('ledgerJs.version: workspace @midnightntwrk/ledger-v9 1.0.0-rc.3 != pins 1.0.0', sdk_root=sdk)
         self.assertNotIn('NOTE: no SDK root', out)
 
+    def test_committed_sdk_manifest_is_compared(self):
+        self.write('tools/sherlock-sdk/package.json', json.dumps(
+            {'dependencies': {'@midnight-ntwrk/midnight-js-contracts': '5.0.0'}}))
+        self.write('tools/sherlock-sdk/package-lock.json', json.dumps({'packages': {
+            'node_modules/@midnight-ntwrk/midnight-js-contracts': {'version': '5.0.0'},
+            'node_modules/@midnightntwrk/onchain-runtime-v4': {'version': '4.0.1'}}}))
+        out = self.assertFails('onchainRuntime.version: workspace @midnightntwrk/onchain-runtime-v4 4.0.1 != pins 4.0.0')
+        self.assertNotIn('NOTE: no SDK root', out)
+
     def test_structure_errors(self):
         cases = [
             (lambda p: p['networks'].pop('mainnet'), 'mainnet: row missing'),

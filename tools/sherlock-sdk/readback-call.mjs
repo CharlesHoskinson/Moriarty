@@ -15,7 +15,7 @@ assert.ok(outputArg, 'usage: readback-call.mjs SDK_ROOT BUILD STATEMENT_PUBLIC_J
 const output = resolve(outputArg); mkdirSync(output, {recursive: true});
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const URL = 'https://indexer.stagenet.shielded.tools/api/v4/graphql';

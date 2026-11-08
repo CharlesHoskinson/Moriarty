@@ -81,9 +81,9 @@ else
 fi
 
 # F15 static target pins (SWF-007: "when a commit touches pins"). It runs when a
-# pin file changes. Until task 2.1 moves the workspace off the ledger 9 release
-# candidate pins it fails, so a commit that touches pins is blocked until then;
-# other commits skip it. `scripts/doctorwatson check F15` always runs it.
+# pin file changes (Cargo manifests and lockfile, target-pins.json, the SDK
+# manifest and the SDK version asserts); other commits skip it.
+# `scripts/doctorwatson check F15` always runs it.
 if [[ $touched_pins -eq 1 ]]; then
   dw_step "F15 target pins" python3 -B scripts/qa/check-target-pins.py
 else

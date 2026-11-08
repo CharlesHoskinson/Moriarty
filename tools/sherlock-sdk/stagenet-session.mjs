@@ -7,9 +7,9 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 export function sdkLoader(sdkRoot, scratch) {
   for (const [name, version] of Object.entries({
-    '@midnight-ntwrk/midnight-js-contracts': '5.0.0-beta.7',
-    '@midnightntwrk/wallet-sdk': '2.0.0-beta.2',
-    '@midnight-ntwrk/compact-runtime': '0.19.0',
+    '@midnight-ntwrk/midnight-js-contracts': '5.0.0',
+    '@midnightntwrk/wallet-sdk': '2.0.0',
+    '@midnight-ntwrk/compact-runtime': '0.21.0',
   })) assert.equal(JSON.parse(readFileSync(resolve(sdkRoot, 'node_modules', name, 'package.json'))).version, version);
   mkdirSync(scratch, {recursive: true});
   if (!existsSync(join(scratch, 'node_modules')))
@@ -20,6 +20,10 @@ export function sdkLoader(sdkRoot, scratch) {
     return (await import(pathToFileURL(file).href)).default;
   };
 }
+// Midnight.js 5 removed the global network id (`setNetworkId`); the network travels in
+// `providers.config` and in explicit arguments instead.
+export const NETWORK_ID = 'stagenet';
+export const midnightConfig = Object.freeze({networkId: NETWORK_ID, ttlSeconds: 60 * 60});
 export const endpoints = Object.freeze({
   indexer: 'https://indexer.stagenet.shielded.tools/api/v4/graphql',
   indexerWs: 'wss://indexer.stagenet.shielded.tools/api/v4/graphql/ws',
@@ -27,9 +31,7 @@ export const endpoints = Object.freeze({
 });
 export async function openStagenetSession(load, storage, {proofUrl = endpoints.proof,
   finalize = operation => operation()} = {}) {
-  const {getNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
-  assert.equal(getNetworkId(), 'stagenet');
-  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
   const Rx = await load('rxjs');
   const {WebSocket} = await load('ws');
   assert.equal(typeof WebSocket, 'function'); globalThis.WebSocket = WebSocket;
@@ -54,8 +56,8 @@ export async function openStagenetSession(load, storage, {proofUrl = endpoints.p
   assert.equal(derived.type, 'keysDerived'); hd.hdWallet.clear();
   const shieldedSecretKeys = ledger.ZswapSecretKeys.fromSeed(derived.keys[Roles.Zswap]);
   const dustSecretKey = ledger.DustSecretKey.fromSeed(derived.keys[Roles.Dust]);
-  const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.NightExternal]}, getNetworkId());
-  const config = {networkId: getNetworkId(),
+  const keystore = createKeystore({kind: 'schnorr', secret: derived.keys[Roles.NightExternal]}, NETWORK_ID);
+  const config = {networkId: NETWORK_ID,
     indexerClientConnection: {indexerHttpUrl: endpoints.indexer, indexerWsUrl: endpoints.indexerWs},
     provingServerUrl: new URL(proofUrl), relayURL: new URL(endpoints.rpc)};
   const wallet = await WalletFacade.init({configuration: {...config,

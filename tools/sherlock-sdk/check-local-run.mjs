@@ -1,6 +1,6 @@
 // G9: local ledger-9 accept/refuse check for SherlockRun.acceptRun. No wallet, network or submission.
 // Usage: node check-local-run.mjs SDK_ROOT BUILD VALIDATE_CALL OUTPUT [--bundle GP_BUNDLE PROVER_CMD]
-//   BUILD          compiled tools/sherlock-sdk/sherlock-run.compact (compact 0.34.0, --feature-zkir-v3)
+//   BUILD          compiled tools/sherlock-sdk/sherlock-run.compact (Compact 0.36.0, which emits only ZKIR v3)
 //   VALIDATE_CALL  target/release/examples/validate_call (native ledger 9, proof-verifying)
 //   default        the compiled acceptRun key, proved by the local proof server, with fixed test values. This
 //                  checks the ledger side of the binding (transcript, reads, writes, replay) only.
@@ -41,7 +41,7 @@ mkdirSync(output, {recursive: true});
 const sha = b => createHash('sha256').update(b).digest('hex');
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 if (!existsSync(join(build, 'node_modules'))) symlinkSync(resolve(sdkRoot, 'node_modules'), join(build, 'node_modules'));
 if (!existsSync(join(build, 'package.json'))) writeFileSync(join(build, 'package.json'), '{"type":"module"}\n');
@@ -50,7 +50,7 @@ const proverKey = readFileSync(join(build, 'keys/acceptRun.prover'));
 const ir = readFileSync(join(build, 'zkir/acceptRun.bzkir'));
 const vkRaw = readFileSync(bundleDir ? join(bundleDir, 'key/acceptRun.verifier') : join(build, 'keys/acceptRun.verifier'));
 assert.ok(vkRaw.subarray(0, 22).toString().startsWith('midnight:verifier-key['), 'tagged ledger verifier key');
-assert.equal((await (await fetch('http://localhost:6300/version')).text()).trim(), '9.0.0-rc.5');
+assert.ok(['9.0.0', '9.0.1'].includes((await (await fetch('http://localhost:6300/version')).text()).trim()), 'proof server 9.0.x');
 const le = x => Buffer.from(x.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');
 const fromLe = h => { assert.match(h, /^[0-9a-f]{64}$/); return BigInt('0x' + Buffer.from(h, 'hex').reverse().toString('hex')); };
 const be16 = v => new Uint8Array(Buffer.from(v.toString(16).padStart(32, '0'), 'hex'));
@@ -261,7 +261,7 @@ await refused('other-init', pre, (await prove(await callTx(deploys['other-init']
 await refused('replay', post, (await prove(await callTx(address, mainState, run))).tx, 'transcript application');
 
 const record = {schema: 'sherlock-run-local-ledger-check/2', submitted: false,
-  prover: bundleDir ? 'run decider (gp_call_prove)' : 'compiled acceptRun key via local proof server 9.0.0-rc.5',
+  prover: bundleDir ? 'run decider (gp_call_prove)' : 'compiled acceptRun key via local proof server 9.0.x',
   bindsDeciderRelation: !!bundleDir, proofsMade: proofs,
   note: bundleDir ? undefined : 'the compiled key only proves the transcript; the result/program binding to a proved run is the decider (G7)',
   bundle: bundleDir ? {dir: bundleDir, sha256: sha(readFileSync(join(bundleDir, 'bundle.json'))), standin: bundle.standin,

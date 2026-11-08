@@ -85,8 +85,7 @@ test('unsatisfiable settles throw SettleUnsatisfiable before any wallet use', as
 });
 
 test('a satisfiable settle passes the VM and only then reaches the session', async () => {
-  const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
-  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
   const ledgerParameters = ledger.LedgerParameters.initialParameters();
   await assert.rejects(prepareSettle({load, session: untouchable(), snapshot: S0, batch: 0n, fields, ledgerParameters}),
     /session touched: walletProvider/);
@@ -100,8 +99,7 @@ test('a satisfiable settle passes the VM and only then reaches the session', asy
 });
 
 test('a satisfiable settle builds the SDK call over the snapshot and asks for exactly one settleValidity proof', async () => {
-  const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
-  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+  const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
   const address = 'ab'.repeat(32), stop = Error('STOP_AT_PROOF');
   const asked = [];
   const prover = {check: (_r, loc) => { asked.push(['check', loc]); throw stop; }, lookupKey: loc => { asked.push(['key', loc]); throw stop; },

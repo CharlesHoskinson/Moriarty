@@ -3,24 +3,44 @@
 use crate::{Error, Result};
 use midnight_base_crypto::fab::AlignedValue;
 use midnight_onchain_runtime::context::ClaimedUnshieldedSpendsKey;
-use midnight_onchain_state::state::StateValue;
+use midnight_onchain_state::state::{AlignedValueChecked, StateValue};
 use midnight_onchain_vm::{
     ops::{Key, Op},
     result_mode::ResultModeVerify,
 };
 use midnight_storage::{arena::Sp, db::InMemoryDB};
 pub type NativeOp = Op<ResultModeVerify, InMemoryDB>;
+/// A state value pushed by a VM operation. Ledger 9 requires canonical field
+/// atoms in `Op::Push` and `Key::Value`.
+pub type PushedValue = StateValue<InMemoryDB, AlignedValueChecked>;
+/// A contract state cell.
 pub fn cell(value: AlignedValue) -> StateValue<InMemoryDB> {
     StateValue::Cell(Sp::new(value))
+}
+/// The checked form of a template value. Template values are encoded from
+/// host values (`UInt`, `Bool`, byte strings, digests and native field
+/// elements), whose field atoms are below the modulus, so the canonical-field
+/// check cannot fail.
+pub fn checked(value: AlignedValue) -> AlignedValueChecked {
+    AlignedValueChecked::try_from(value)
+        .expect("template values are encoded from host values, so they are canonical")
+}
+/// The plain aligned value of a checked one.
+pub fn unchecked(value: &AlignedValueChecked) -> AlignedValue {
+    value.clone().into()
+}
+/// A cell pushed by `Op::Push`.
+pub fn pushed_cell(value: AlignedValue) -> PushedValue {
+    StateValue::Cell(Sp::new(checked(value)))
 }
 pub fn push(value: AlignedValue) -> NativeOp {
     Op::Push {
         storage: false,
-        value: cell(value),
+        value: pushed_cell(value),
     }
 }
 pub fn key(value: AlignedValue) -> Key {
-    Key::Value(value)
+    Key::Value(checked(value))
 }
 pub fn abi_guard() -> Vec<NativeOp> {
     vec![
@@ -141,7 +161,7 @@ pub fn write_cell(slot: u8, k: AlignedValue, value: AlignedValue) -> Vec<NativeO
         push(k),
         Op::Push {
             storage: true,
-            value: cell(value),
+            value: pushed_cell(value),
         },
         Op::Ins {
             cached: false,
@@ -216,12 +236,12 @@ fn add(
                 Op::Push {
                     value: StateValue::Cell(v),
                     ..
-                } => v.value_only_field_size(),
+                } => unchecked(v).value_only_field_size(),
                 Op::Push {
                     value: StateValue::Array(a),
                     ..
                 } if origin == "source-event" => match a.get(2) {
-                    Some(StateValue::Cell(v)) => v.value_only_field_size(),
+                    Some(StateValue::Cell(v)) => unchecked(v).value_only_field_size(),
                     _ => 0,
                 },
                 Op::Idx {
@@ -229,7 +249,7 @@ fn add(
                     path,
                     ..
                 } if origin == "claim-prefix-member-old-new" => match path.get(0) {
-                    Some(Key::Value(v)) => v.value_only_field_size(),
+                    Some(Key::Value(v)) => unchecked(v).value_only_field_size(),
                     _ => 0,
                 },
                 Op::Popeq { result, .. } => result.value_only_field_size(),
@@ -563,18 +583,18 @@ fn lower_ops_inner(
                 }
                 Effect::Emit { name, value } => {
                     let bytes = event_payload(name, &e.action, value)?;
-                    let payload = cell(AlignedValue::from(bytes));
+                    let payload = cell(AlignedValue::from(bytes.clone()));
                     if Sp::new(payload.clone())
                         .serialize_to_node_list_bounded(midnight_onchain_vm::vm::MAX_LOG_EMITTED)
                         .is_none()
                     {
                         return Err(Error::new("native-VM", "event-emitted-byte-limit"));
                     }
-                    let wrapper = StateValue::Array(
+                    let wrapper: PushedValue = StateValue::Array(
                         vec![
-                            cell(1u32.into()),
-                            cell((LogEventType::Misc as u8).into()),
-                            payload.clone(),
+                            pushed_cell(1u32.into()),
+                            pushed_cell((LogEventType::Misc as u8).into()),
+                            pushed_cell(AlignedValue::from(bytes)),
                         ]
                         .into(),
                     );

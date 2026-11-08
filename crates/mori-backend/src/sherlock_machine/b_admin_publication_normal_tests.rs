@@ -1468,7 +1468,7 @@ fn chain_defined_outputs(code: &[Instruction]) -> Vec<String> {
 /// `3.0`, `IrSource::load`, structural equality. Not a check, compile or proof.
 fn assert_sdk_json_roundtrip(code: &[Instruction]) {
     let ir = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: vec![],
         outputs: vec![],
         do_communications_commitment: false,

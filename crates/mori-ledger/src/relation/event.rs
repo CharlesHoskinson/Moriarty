@@ -107,11 +107,11 @@ fn branch(
     });
     // Hash output is native Fr, NOT UInt128. Vec<u8> uses Compress alignment.
     let hash = Operand::Variable(output);
-    let wrapper = StateValue::Array(
+    let wrapper: ops::PushedValue = StateValue::Array(
         vec![
-            ops::cell(1u32.into()),
-            ops::cell((LogEventType::Misc as u8).into()),
-            ops::cell(AlignedValue::from(payload)),
+            ops::pushed_cell(1u32.into()),
+            ops::pushed_cell((LogEventType::Misc as u8).into()),
+            ops::pushed_cell(AlignedValue::from(payload)),
         ]
         .into(),
     );

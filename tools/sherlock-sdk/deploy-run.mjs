@@ -1,6 +1,6 @@
 // Maintainer-only stagenet deployment of SherlockRun (general-purpose recursion settlement).
 // Usage: node deploy-run.mjs SDK_ROOT BUILD RUN_DECIDER_VERIFIER PROG_D INIT_D OUTPUT [--submit]
-// BUILD is the compiled sherlock-run.compact (compact 0.34.0, --feature-zkir-v3). The acceptRun
+// BUILD is the compiled sherlock-run.compact (Compact 0.36.0, which emits only ZKIR v3). The acceptRun
 // verifier installed is RUN_DECIDER_VERIFIER (tagged ledger VerifierKey bytes of the hand-written
 // run decider), never the compiled acceptRun key. Without --submit only the SDK constructor and key
 // installation are checked, with no wallet access. Wallet material is never printed or written.
@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, cpSync, symlinkSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {sdkLoader, openStagenetSession, endpoints} from './stagenet-session.mjs';
+import {sdkLoader, openStagenetSession, endpoints, midnightConfig} from './stagenet-session.mjs';
 
 const argv = process.argv.slice(2);
 const submit = argv.includes('--submit');
@@ -27,8 +27,7 @@ const output = resolve(outputArg), build = resolve(buildArg);
 mkdirSync(output, {recursive: true, mode: 0o700});
 assert.ok(!existsSync(join(output, 'submitted.json')), 'refuse a second deployment from this output directory');
 const load = sdkLoader(sdkRoot, join(output, 'sdk-imports'));
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id');
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const {ZKConfigProvider, createVerifierKey} = await load('@midnight-ntwrk/midnight-js-types');
 const {createUnprovenDeployTx, deployContract} = await load('@midnight-ntwrk/midnight-js-contracts');
 const {indexerPublicDataProvider} = await load('@midnight-ntwrk/midnight-js-indexer-public-data-provider');
@@ -39,7 +38,6 @@ cpSync(join(build, 'contract'), join(deployBuild, 'contract'), {recursive: true}
 writeFileSync(join(deployBuild, 'package.json'), '{"type":"module"}\n');
 if (!existsSync(join(deployBuild, 'node_modules'))) symlinkSync(resolve(sdkRoot, 'node_modules'), join(deployBuild, 'node_modules'));
 const mod = await import(new URL('file://' + join(deployBuild, 'contract/index.js')).href);
-setNetworkId('stagenet');
 class ExactKeys extends ZKConfigProvider {
   async getVerifierKey(name) { assert.equal(name, 'acceptRun', 'unexpected entry point'); return createVerifierKey(vkRaw); }
   async getProverKey() { throw Error('deployment must not prove a contract call'); }
@@ -57,14 +55,14 @@ const checkState = state => {
   assert.deepEqual(Buffer.from(v.result), Buffer.from(be16(INITIAL_RESULT))); assert.equal(v.steps, 0n); assert.ok(v.runs.isEmpty());
   assert.equal(sha(state.operation('acceptRun').verifierKey), sha(vkRaw), 'installed acceptRun key');
 };
-const dry = await createUnprovenDeployTx({zkConfigProvider, walletProvider: {
+const dry = await createUnprovenDeployTx({zkConfigProvider, config: midnightConfig, walletProvider: {
   getCoinPublicKey: () => '00'.repeat(32), getEncryptionPublicKey: () => '00'.repeat(32)}}, options);
 checkState(dry.public.initialContractState);
 const dryState = Buffer.from(dry.public.initialContractState.serialize());
 writeFileSync(join(output, 'dry-contract-state.bin'), dryState);
 console.log(`PASS SDK constructor: program_d, init_d, result 1 (BE), empty runs, run-decider key installed (${vkRaw.length} bytes)`);
 if (!submit) process.exit(0);
-assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
+assert.ok(['9.0.0', '9.0.1'].includes((await (await fetch(endpoints.proof + '/version')).text()).trim()), 'proof server 9.0.x');
 const started = performance.now();
 const session = await openStagenetSession(load, output);
 try {
@@ -73,7 +71,7 @@ try {
       network: 'stagenet', purpose: 'deploy SherlockRun'}) + '\n', {flag: 'wx', mode: 0o600});
     return session.walletProvider.submitTx(tx);
   }};
-  const providers = {zkConfigProvider, walletProvider, midnightProvider: walletProvider,
+  const providers = {config: midnightConfig, zkConfigProvider, walletProvider, midnightProvider: walletProvider,
     publicDataProvider: indexerPublicDataProvider(endpoints.indexer, endpoints.indexerWs),
     proofProvider: httpClientProofProvider(endpoints.proof, zkConfigProvider),
     privateStateProvider: session.privateStateProvider};

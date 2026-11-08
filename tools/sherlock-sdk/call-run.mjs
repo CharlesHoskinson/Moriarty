@@ -21,7 +21,7 @@ import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {sdkLoader, endpoints, openStagenetSession} from './stagenet-session.mjs';
+import {sdkLoader, endpoints, openStagenetSession, midnightConfig} from './stagenet-session.mjs';
 
 const argv = process.argv.slice(2);
 const submit = argv.includes('--submit');
@@ -59,14 +59,13 @@ const reference = process.env.SHERLOCK_RUN_REFERENCE;
 assert.ok(reference !== undefined || runJson.standin === true, 'SHERLOCK_RUN_REFERENCE (mori simulate result) is required');
 if (reference !== undefined) assert.equal(BigInt(reference), run.r, 'decider result equals the mori simulate reference');
 assert.deepEqual(deployment.constructor, [runJson.prog_d, runJson.init_d], 'deployment digests equal the run');
-assert.equal((await (await fetch(endpoints.proof + '/version')).text()).trim(), '9.0.0-rc.5');
+assert.ok(['9.0.0', '9.0.1'].includes((await (await fetch(endpoints.proof + '/version')).text()).trim()), 'proof server 9.0.x');
 
 const load = sdkLoader(sdkRoot, join(output, 'sdk-imports'));
-const {setNetworkId} = await load('@midnight-ntwrk/midnight-js-network-id'); setNetworkId('stagenet');
 const {WebSocket} = await load('ws'); globalThis.WebSocket = WebSocket;
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
-const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/compact-js');
+const {CompiledContract} = await load('@midnight-ntwrk/midnight-js-protocol/v9/compact-js');
 const {createVerifierKey, SucceedEntirely} = await load('@midnight-ntwrk/midnight-js-types');
 const {parseCoinPublicKeyToHex} = await load('@midnight-ntwrk/midnight-js-utils');
 const {createUnprovenCallTx, submitTx} = await load('@midnight-ntwrk/midnight-js-contracts');
@@ -174,7 +173,7 @@ try {
   const predicted = await new mod.Contract({}).provableCircuits.acceptRun(context, ...args);
   clone.data = predicted.context.callContext.currentQueryContext.state;
   expectedState = Buffer.from(clone.serialize());
-  const providers = {publicDataProvider, zkConfigProvider: keys, proofProvider, walletProvider,
+  const providers = {config: midnightConfig, publicDataProvider, zkConfigProvider: keys, proofProvider, walletProvider,
     ...(session ? {privateStateProvider: session.privateStateProvider} : {}), midnightProvider: {submitTx: async tx => {
       if (!submit) throw prepared;
       // Final balanced transaction: a refusal about proofs or signatures, or a non-applied call, blocks submission;

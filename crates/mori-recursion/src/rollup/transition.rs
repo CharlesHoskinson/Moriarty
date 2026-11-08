@@ -365,18 +365,10 @@ pub fn transition(
     let lhs = s.jubjub().msm(l, &[ss], &[generator])?;
     let e_rk = s.jubjub().msm(l, &[es], &[rk])?;
     let rhs = EccInstructions::add(s.jubjub(), l, &r, &e_rk)?;
-    s.cond_assert_equal(
-        l,
-        &spend,
-        &s.jubjub().x_coordinate(&lhs),
-        &s.jubjub().x_coordinate(&rhs),
-    )?;
-    s.cond_assert_equal(
-        l,
-        &spend,
-        &s.jubjub().y_coordinate(&lhs),
-        &s.jubjub().y_coordinate(&rhs),
-    )?;
+    let (lhs_x, rhs_x) = (s.jubjub().x(l, &lhs)?, s.jubjub().x(l, &rhs)?);
+    s.cond_assert_equal(l, &spend, &lhs_x, &rhs_x)?;
+    let (lhs_y, rhs_y) = (s.jubjub().y(l, &lhs)?, s.jubjub().y(l, &rhs)?);
+    s.cond_assert_equal(l, &spend, &lhs_y, &rhs_y)?;
     // Public record hash, independent of witness secrets and signature bytes.
     let network: A = s.assign_fixed(l, fp::network_tag())?;
     let mut record = vec![

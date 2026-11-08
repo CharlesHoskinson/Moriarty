@@ -14,7 +14,7 @@ assert.ok(output && (mode === undefined || ['--prove', '--wrong-statement'].incl
 const proving = mode === '--prove';
 const require = createRequire(resolve(sdkRoot, 'package.json'));
 const load = name => import(pathToFileURL(require.resolve(name)).href);
-const ledger = await load('@midnight-ntwrk/midnight-js-protocol/ledger');
+const ledger = await load('@midnight-ntwrk/midnight-js-protocol/v9');
 const rt = await load('@midnight-ntwrk/compact-runtime');
 const mod = await import(pathToFileURL(resolve(build, 'contract/index.js')).href);
 const le = x => Buffer.from(x.toString(16).padStart(64, '0'), 'hex').reverse().toString('hex');

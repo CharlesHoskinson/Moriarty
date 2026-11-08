@@ -24,22 +24,25 @@ mori-parser = { path = "crates/mori-parser" }
 mori-source6 = { path = "crates/mori-source6" }
 mori-span = { path = "crates/mori-span" }
 
-# Midnight ledger crates, all from one pinned revision.
-midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-coin-structure = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-ledger = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14", package = "midnight-ledger-v9" }
-midnight-onchain-runtime = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-onchain-state = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-onchain-vm = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-storage = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-zkir-v3 = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+# Midnight ledger crates, all from one pinned revision (tag ledger-9.1.0.1).
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-coin-structure = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-ledger = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74", package = "midnight-ledger-v9" }
+midnight-onchain-runtime = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-onchain-state = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-onchain-vm = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-storage = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+# ZKIR v3 moved to its own repository; the ledger revision uses midnight-zkir 3.2.0
+# at tag zkir-3.2.0. The workspace key keeps the old name so the code imports
+# `midnight_zkir_v3` unchanged.
+midnight-zkir-v3 = { git = "https://github.com/midnightntwrk/midnight-zkir", rev = "446c7fecc6bd41dab99ebe89ab404e9d077d11a9", package = "midnight-zkir" }
 # Published crates that must match the versions the ledger revision uses.
 midnight-curves = "=0.3.1"
 midnight-proofs = "=0.8.3"
-midnight-circuits = { version = "=7.2.4", default-features = false }
-midnight-zk-stdlib = { version = "=2.3.5", default-features = false }
+midnight-circuits = { version = "=7.3.0", default-features = false }
+midnight-zk-stdlib = { version = "=2.4.0", default-features = false }
 ff = "=0.13.1"
 group = "=0.13.0"
 hex = "=0.4.3"
@@ -82,10 +85,13 @@ similar.opt-level = 3
 [profile.dev.package."*"]
 opt-level = 3
 
-# The pinned ledger's v2 compatibility path requires unpublished crypto 2.2.
-# Mirror its own workspace patches with an immutable retained release commit;
-# direct v3 dependencies remain pinned to 04c9c5d. No mutable local paths.
+# Mirror the pinned ledger's own workspace patches: midnight-zkir 3.2.0 asks
+# crates.io for base-crypto, serialize and transient-crypto 3.x, which must
+# unify with the ledger crates at the same immutable revision. The ledger's
+# v2 compatibility path (`transient-crypto-old`, ^2.0.0) resolves to the
+# published 2.2.0. No mutable local paths.
 [patch.crates-io]
-midnight-transient-crypto-old = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1", package = "midnight-transient-crypto" }
-midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-storage-core = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }

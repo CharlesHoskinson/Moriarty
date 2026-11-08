@@ -59,7 +59,7 @@ fn real_vm_read_set_groups_uint128_above_u64() {
     let r = c
         .query(
             &ops,
-            Some(bound()),
+            Some(mori_ledger::layout::vm_limit(&bound())),
             &INITIAL_PARAMETERS.cost_model.runtime_cost_model,
         )
         .unwrap();
@@ -82,7 +82,7 @@ fn membership_and_prior_value_are_actual_vm_reads() {
     assert!(
         c.query(
             &ops,
-            Some(bound()),
+            Some(mori_ledger::layout::vm_limit(&bound())),
             &INITIAL_PARAMETERS.cost_model.runtime_cost_model
         )
         .is_err()
@@ -93,7 +93,7 @@ fn membership_and_prior_value_are_actual_vm_reads() {
     assert!(
         c.query(
             &ops,
-            Some(bound()),
+            Some(mori_ledger::layout::vm_limit(&bound())),
             &INITIAL_PARAMETERS.cost_model.runtime_cost_model
         )
         .is_err()
@@ -106,7 +106,7 @@ fn abi_guard_is_nonempty_and_wrong_result_refuses() {
     let r = c
         .query(
             &ops,
-            Some(bound()),
+            Some(mori_ledger::layout::vm_limit(&bound())),
             &INITIAL_PARAMETERS.cost_model.runtime_cost_model,
         )
         .unwrap();
@@ -120,7 +120,7 @@ fn abi_guard_is_nonempty_and_wrong_result_refuses() {
     assert!(
         c.query(
             &wrong,
-            Some(bound()),
+            Some(mori_ledger::layout::vm_limit(&bound())),
             &INITIAL_PARAMETERS.cost_model.runtime_cost_model
         )
         .is_err()

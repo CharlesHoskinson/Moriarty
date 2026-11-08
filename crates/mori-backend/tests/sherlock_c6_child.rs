@@ -36,7 +36,7 @@ fn local_public_ir(lanes: usize) -> IrSource {
         inputs: published,
     });
     let ir0 = IrSource {
-        version: Default::default(),
+        version: midnight_zkir_v3::ir::IrMinorVersion::V0,
         inputs: Vec::new(),
         outputs: Vec::new(),
         do_communications_commitment: false,
