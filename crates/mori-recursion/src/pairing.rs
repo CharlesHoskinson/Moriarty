@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Compiled on the pinned stock graph; installed-key equality is checked separately.
 //! Residue-witness pairing-product check.
 //!

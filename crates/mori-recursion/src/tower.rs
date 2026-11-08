@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Compiled on the pinned stock graph; installed-key equality is checked separately.
 //! Fp2 / Fp6 / Fp12 tower arithmetic in-circuit, built only on the public API
 //! of midnight-circuits 7.2.4's emulated field chip `FieldChip<Fq, Fp, ..>`

@@ -1,18 +1,18 @@
-"""Review-driven requirements frozen before the corrected production edits."""
+"""Identity and exit-code requirements on the golden pin (SSRD-001, SSRD-003)."""
 import contextlib
-import hashlib
 import io
 import json
-import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 from common import canonical, load_json
+import golden
 from fsyn import main
 from s0 import generate, verify
 
-CUT = Path(os.environ.get("FSYN_DESIGN_CUT", str(Path(__file__).resolve().parents[4] / "openspec/changes/sherlock-synthetic-rollup-data/design-cut.json")))
-GOLDEN = Path(os.environ.get("FRTF_V3_ROOT", "/home/charl/projectfenrir/recursion/rollup-test-format/v3"))
+PIN = golden.PIN
 
 def tree_bytes(root):
     return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*") if p.is_file()}
@@ -22,55 +22,55 @@ class ReviewRegressionTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.original = CUT.read_bytes()
-        self.addCleanup(lambda: self.assertEqual(CUT.read_bytes(), self.original))
-    def test_equivalent_cut_serializations_have_identical_complete_fixtures(self):
-        doc = load_json(CUT)
-        first = self.root / "compact-cut.json"
+        self.original = PIN.read_bytes()
+        self.addCleanup(lambda: self.assertEqual(PIN.read_bytes(), self.original))
+    def test_equivalent_pin_serializations_have_identical_complete_fixtures(self):
+        doc = load_json(PIN)
+        first = self.root / "compact.json"
         first.write_bytes(canonical(doc))
-        doc["retrieved_utc"] = "receipt-only-metadata-differs"
-        second = self.root / "pretty-cut.json"
+        second = self.root / "pretty.json"
         second.write_text(json.dumps(doc, indent=4) + "\n")
-        self.assertNotEqual(hashlib.sha256(first.read_bytes()).hexdigest(), hashlib.sha256(second.read_bytes()).hexdigest())
         a, b = self.root / "a", self.root / "b"
-        left, right = generate(first, GOLDEN, a), generate(second, GOLDEN, b)
+        left, right = generate(a, pin=first), generate(b, pin=second)
         self.assertEqual(left["fixture_id"], right["fixture_id"])
         self.assertEqual(tree_bytes(a), tree_bytes(b))
-        self.assertNotIn("source_cut_sha256", load_json(a / "FIXTURE.json"))
-        self.assertEqual(verify(a, second, GOLDEN)["status"], "internal-replay-pass")
-    def test_different_canonical_source_groups_change_fixture_identity(self):
-        doc = load_json(CUT)
-        source = self.root / "new-declared-public-source.txt"
-        source.write_bytes(b"additional declared PUBLIC_SYNTHETIC source")
-        doc["groups"]["review_regression"] = [{"path": str(source), "bytes": source.stat().st_size,
-            "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}]
-        doc["cut_digest_sha256"] = hashlib.sha256(canonical(doc["groups"])).hexdigest()
-        changed = self.root / "changed-cut.json"
+        self.assertEqual(verify(a, pin=second)["status"], "internal-replay-pass")
+    def test_different_golden_pin_changes_fixture_identity(self):
+        doc = load_json(PIN)
+        doc["provenance"] = doc["provenance"] + " Review regression."
+        doc["golden_digest"] = golden._digest(doc)
+        changed = self.root / "changed.json"
         changed.write_bytes(canonical(doc))
         a, b = self.root / "original", self.root / "changed"
-        left, right = generate(CUT, GOLDEN, a), generate(changed, GOLDEN, b)
+        left, right = generate(a), generate(b, pin=changed)
         self.assertNotEqual(left["fixture_id"], right["fixture_id"])
         self.assertNotEqual((a / "MANIFEST.json").read_bytes(), (b / "MANIFEST.json").read_bytes())
-    def test_cli_tamper_is_one_and_bad_or_stale_cut_is_two(self):
+    def test_cli_tamper_is_one_and_bad_or_stale_pin_is_two(self):
         fixture = self.root / "fixture"
-        generate(CUT, GOLDEN, fixture)
+        generate(fixture)
         target = fixture / "corpus/params-v3.json"
         target.write_bytes(target.read_bytes() + b" ")
-        args = ["verify", "--fixture", str(fixture), "--cut", str(CUT), "--golden-root", str(GOLDEN)]
+        args = ["verify", "--fixture", str(fixture)]
         with contextlib.redirect_stderr(io.StringIO()) as stderr:
             self.assertEqual(main(args), 1)
         self.assertIn("corpus/params-v3.json", json.loads(stderr.getvalue())["error"])
         malformed = self.root / "malformed.json"
         malformed.write_text('{"schema":')
-        args[4] = str(malformed)
-        with contextlib.redirect_stderr(io.StringIO()): self.assertEqual(main(args), 2)
-        doc = load_json(CUT)
-        row = next(iter(doc["groups"].values()))[0]
-        row["sha256"] = "0" * 64
-        doc["cut_digest_sha256"] = hashlib.sha256(canonical(doc["groups"])).hexdigest()
+        doc = load_json(PIN)
+        doc["manifest"]["sha256"] = "0" * 64
+        doc["golden_digest"] = golden._digest(doc)
         stale = self.root / "stale.json"
         stale.write_bytes(canonical(doc))
-        args[4] = str(stale)
-        with contextlib.redirect_stderr(io.StringIO()): self.assertEqual(main(args), 2)
+        for pin in (malformed, stale):
+            with self.subTest(pin=pin.name), patch("golden.PIN", pin), patch("s0.PIN", pin):
+                with contextlib.redirect_stderr(io.StringIO()): self.assertEqual(main(args), 2)
+    def test_stale_golden_member_is_two(self):
+        tree = self.root / "s0"
+        shutil.copytree(golden.ROOT, tree)
+        (tree / "i1/genesis.json").write_bytes(b"{}")
+        with patch("s0.ROOT", tree), contextlib.redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(main(["generate", "--out", str(self.root / "out")]), 2)
+        self.assertIn("stale golden member: i1/genesis.json", json.loads(stderr.getvalue())["error"])
+        self.assertFalse((self.root / "out").exists())
 
 if __name__ == "__main__": unittest.main()

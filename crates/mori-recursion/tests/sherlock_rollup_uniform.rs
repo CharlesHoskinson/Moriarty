@@ -12,7 +12,7 @@ fn corpus() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../projectfenrir-main/recursion/rollup-test-format/v3")
+                .join("../../models/sherlock/rollup-synth/golden/s0")
         })
 }
 

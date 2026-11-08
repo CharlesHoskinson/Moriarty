@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Uses the pinned stock 0.8.3 graph; terminal validity and gadget soundness remain separate.
 //! The Sherlock linked two-child parent relation.
 //!

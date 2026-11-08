@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # T0 (under 3 min): holdout verify, predicate validation, factory unit tests, F14
-# traceability, cargo check/fmt for touched crates, F15 when a pin file is touched.
+# traceability, F17 no-Fenrir guard, cargo check/fmt for touched crates, F15 when a pin file is touched.
 # Usage: qa/tiers/t0.sh [--staged | --all]
 #   --staged  (default) changes in the index
 #   --all     every uncommitted change: staged, unstaged and untracked
@@ -41,6 +41,7 @@ dw_step "predicate validate" scripts/doctorwatson validate
 dw_step "factory unittests" bash -c 'cd models/doctorwatson && python3 -m unittest discover -s factory/tests -t .'
 dw_step "profile isolation" python3 -B scripts/qa/check-profile-isolation.py
 dw_step "F14 traceability" python3 -B scripts/qa/check-traceability.py
+dw_step "F17 no Fenrir dependency" scripts/qa/check-no-fenrir.sh
 
 # Map changed paths to workspace crates (crates/<dir>/... -> package name).
 declare -A seen=()

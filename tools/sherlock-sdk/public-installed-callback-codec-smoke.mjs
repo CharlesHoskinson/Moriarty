@@ -2,7 +2,7 @@
 // All data is synthetic/public. Proof envelopes below are NOT cryptographic proofs.
 import {
   ContractOperation, ContractCallPrototype, Intent, Transaction, CostModel, Proof,
-} from '/home/charl/projectfenrir/experiments/midnight-intents-2026-10-12/validation/testnet/node_modules/@midnightntwrk/ledger-v9/midnight_ledger_wasm_v9_fs.js';
+} from '@midnightntwrk/ledger-v9'; // the SDK's pinned package (package.json), Node entry midnight_ledger_wasm_v9_fs.js
 
 class SmokeFailure extends Error {
   constructor(code) { super(code); this.code = code; }

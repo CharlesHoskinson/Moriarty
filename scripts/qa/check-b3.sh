@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# B3: actual v3 corpus -> transition child -> recursive parent -> terminal D.
+# B3: FSYN S0 corpus (in-repository golden) -> transition child -> recursive parent -> terminal D.
 # Invoke through doctorwatson check B3 (one shared heavy slot).
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -8,13 +8,7 @@ export RAYON_NUM_THREADS=4
 export MALLOC_MMAP_THRESHOLD_=131072
 export MALLOC_TRIM_THRESHOLD_=131072
 export MALLOC_ARENA_MAX=1
-unset SHERLOCK_PROVER_ID
-# First projectfenrir checkout that exists: this host (after the 2026-10-26 rebuild), then the old layout.
-if [[ -z "${FENRIR_ROOT:-}" ]]; then
-  for d in "$HOME/code/projectfenrir" "$HOME/repos/projectfenrir-main"; do [[ -d $d ]] && { FENRIR_ROOT=$d; break; }; done
-fi
-export FENRIR_ROOT="${FENRIR_ROOT:?no projectfenrir checkout found; set FENRIR_ROOT}"
-export FRTF_V3_ROOT="${FRTF_V3_ROOT:-$FENRIR_ROOT/recursion/rollup-test-format/v3}"
+unset SHERLOCK_PROVER_ID FRTF_V3_ROOT FSYN_SOURCE_MAP FSYN_DESIGN_CUT FSYN_ARCHIVE_ROOT
 export MORIARTY_PARENT_SRS="${MORIARTY_PARENT_SRS:-$PWD/target/sherlock-srs/bls_midnight_2p20}"
 python3 -B scripts/qa/fetch-sherlock-srs.py "$MORIARTY_PARENT_SRS"
 python3 -B -m unittest discover -s scripts/qa/tests -p 'test_rollup_*.py'
@@ -25,14 +19,7 @@ cargo test --release --locked -p mori-recursion --features sherlock-rollup-prefi
 cargo build --release --locked -p mori-recursion --features sherlock-rollup-prefix --example rollup
 mkdir -p target/sherlock-b3
 run_dir="$(mktemp -d "$PWD/target/sherlock-b3/run-XXXXXXXX")"
-cut="${FSYN_DESIGN_CUT:-$PWD/openspec/changes/sherlock-synthetic-rollup-data/design-cut.json}"
-if [[ -z "${FSYN_SOURCE_MAP:-}" ]]; then
-  FSYN_SOURCE_MAP="$(python3 -B models/sherlock/rollup-synth/sources.py \
-    --cut "$cut" --fenrir-root "$FENRIR_ROOT" --cache "$PWD/target/fsyn-sources")"
-fi
-export FSYN_SOURCE_MAP
-python3 -B models/sherlock/rollup-synth/fsyn.py generate --cut "$cut" \
-  --golden-root "$FRTF_V3_ROOT" --out "$run_dir/fixture"
+python3 -B models/sherlock/rollup-synth/fsyn.py generate --out "$run_dir/fixture"
 FRTF_V3_ROOT="$run_dir/fixture/corpus"
 export FRTF_V3_ROOT
 binary="${CARGO_TARGET_DIR:-$PWD/target}/release/examples/rollup"

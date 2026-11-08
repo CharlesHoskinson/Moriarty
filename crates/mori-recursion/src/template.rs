@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Compiled on the pinned stock graph; installed-key equality is checked separately.
 //! The transcript template: the ledger-9 contract-call public-input vector
 //! `[binding_input, communication_commitment, field_repr(guaranteed ops),

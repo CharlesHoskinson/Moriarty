@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Uses the pinned stock 0.8.3 graph; terminal validity and gadget soundness remain separate.
 //! Verifying a child proof (Poseidon transcript) in circuit and off circuit,
 //! with the midnight-circuits 7.2.4 verifier gadget. Mirrors the ledger-10

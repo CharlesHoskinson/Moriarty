@@ -1,17 +1,15 @@
-"""SDK-free codec specifications. Only public synthetic golden files are read."""
+"""SDK-free codec specifications. Only the in-repository public synthetic S0 golden is read."""
 
 import copy
 import hashlib
 import json
-import os
 from pathlib import Path
 import unittest
 
 import frtf
 
 
-FIXTURES = Path(os.environ.get(
-    "FRTF_V3_ROOT", "/home/charl/projectfenrir/recursion/rollup-test-format/v3"))
+FIXTURES = Path(__file__).resolve().parents[1] / "golden/s0"
 POSITIVE = ["profile-a/minimal/minimal"] + [
     f"profile-{p}/batches/batch-{i:02}" for p in ("a", "b") for i in range(1, 7)]
 MODULUS = int("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16)

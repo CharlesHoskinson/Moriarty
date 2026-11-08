@@ -350,7 +350,7 @@ predicates:
     optional: true
   - id: B1
     set: B
-    title: "Synthetic rollup, local: deterministic FSYN dataset with public seed, parameter pins and manifest regenerates byte-identically (SSRD-003; was SRPOC-003). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, FRTF v3 and design-cut sources via sources.py)"
+    title: "Synthetic rollup, local: deterministic FSYN dataset with public seed, parameter pins and manifest regenerates byte-identically (SSRD-003; was SRPOC-003; in-repository S0 golden only, SSRD-030)"
     tier: T0
     check: "scripts/qa/check-b1.sh"
     heavy: false
@@ -359,7 +359,7 @@ predicates:
     holdout: false
   - id: B2
     set: B
-    title: "Synthetic rollup, local: independent replay of the complete state transitions of the FSYN dataset (SSRD-015; was SRPOC-003). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, design-cut sources)"
+    title: "Synthetic rollup, local: independent replay of the complete state transitions of the FSYN dataset (SSRD-015; was SRPOC-003; in-repository I1 oracle on the B1 fixture, SSRD-030)"
     tier: T1
     check: "scripts/qa/check-b2.sh"
     heavy: false
@@ -368,7 +368,7 @@ predicates:
     holdout: false
   - id: B3
     set: B
-    title: "Synthetic rollup, local: one 16-transaction FSYN batch proved and verified locally (SSRD-029; was SRPOC-004). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, FRTF v3)"
+    title: "Synthetic rollup, local: one 16-transaction FSYN batch proved and verified locally (SSRD-029; was SRPOC-004; FSYN fixture from the in-repository golden, SSRD-030)"
     tier: T2
     check: "scripts/qa/check-b3.sh"
     heavy: true
@@ -401,7 +401,7 @@ predicates:
     retired: "depends on retired stagenet row B4; superseded by B5p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B6
     set: B
-    title: "Synthetic rollup, local: per-layer circuit k, domain capacity, used rows, lookup rows and columns of the FSYN batch, with unavailable values explicit (SSRD-022; was SRPOC-005). DEPENDENCY until task 1.9: reads B3 evidence, which still comes from a Fenrir checkout"
+    title: "Synthetic rollup, local: per-layer circuit k, domain capacity, used rows, lookup rows and columns of the FSYN batch, with unavailable values explicit (SSRD-022; was SRPOC-005; reads B3 evidence on the FSYN fixture)"
     tier: T2
     check: "python3 -B scripts/qa/check-rollup-evidence.py B6"
     heavy: false
@@ -410,7 +410,7 @@ predicates:
     holdout: false
   - id: B7
     set: B
-    title: "Synthetic rollup, local: time, RSS and bytes in separate scopes, peak under decimal 32 GB with swap 0 (SSRD-022; was SRPOC-005; owner raised from 16 GB 2026-10-25). DEPENDENCY until task 1.9: reads B3 evidence, which still comes from a Fenrir checkout"
+    title: "Synthetic rollup, local: time, RSS and bytes in separate scopes, peak under decimal 32 GB with swap 0 (SSRD-022; was SRPOC-005; owner raised from 16 GB 2026-10-25; reads B3 evidence on the FSYN fixture)"
     tier: T2
     check: "python3 -B scripts/qa/check-rollup-evidence.py B7"
     heavy: false
@@ -1090,9 +1090,9 @@ predicates:
     holdout: false
   - id: F17
     set: F
-    title: "No Fenrir dependency: no tracked code, test, script, model or predicate reads a path into a Fenrir repository or the private rollup research tree (SWF-014; patterns kept in the guard script; placeholder until task 1.9 lands scripts/qa/check-no-fenrir.sh)"
+    title: "No Fenrir dependency: no tracked code, test, script, model or predicate reads a path into a Fenrir repository or the private rollup research tree (SWF-014; patterns kept in the guard script; guard scripts/qa/check-no-fenrir.sh, run in qa/tiers/t0.sh)"
     tier: T0
-    check: "scripts/qa/unimplemented.sh F17"
+    check: "scripts/qa/check-no-fenrir.sh"
     heavy: false
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-014"

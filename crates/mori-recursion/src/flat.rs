@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 //! Fp12 products computed "flat": every output coordinate (over Fp) is one
 //! signed sum of Fp products, read off the multiplication tensor of the tower.
 //! With the zk-stdlib's emulated-field chip a multiplication costs about 15

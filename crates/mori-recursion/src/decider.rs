@@ -1,4 +1,4 @@
-// Adapted from projectfenrir recursion/stagenet-strawman/recl9.
+// Adapted from the recl9 recursion strawman of the Fenrir design; this file reads no Fenrir path.
 // Compiled on the pinned stock graph; installed-key equality is checked separately.
 //! The ledger-9 decider relation D (residue pairing route, subgroup checks
 //! always on, no switch). Copied from decider/src/decider.rs; recl9 builds it
