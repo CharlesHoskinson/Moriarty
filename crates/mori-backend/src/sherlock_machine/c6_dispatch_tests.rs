@@ -139,11 +139,13 @@ fn exercise(source: &str, label: &str) -> usize {
 }
 
 #[test]
+#[ignore = "holds one dispatch circuit per rule: about 47 GB and over 90 min alone (task 2.0, SRC-016); run alone under doctorwatson heavy with --ignored --exact"]
 fn dispatch_selects_exactly_the_fired_rule_on_factorial() {
     assert!(exercise(FACT, "fact(3)") > 0);
 }
 
 #[test]
+#[ignore = "holds one dispatch circuit per rule: about 47 GB and over 90 min alone (task 2.0, SRC-016); run alone under doctorwatson heavy with --ignored --exact"]
 fn dispatch_selects_exactly_the_fired_rule_on_tree_fold() {
     assert!(exercise(FOLD, "fold") > 0);
 }

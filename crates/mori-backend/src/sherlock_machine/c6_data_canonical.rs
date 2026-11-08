@@ -1257,6 +1257,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "MockProver at k=14 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
     fn in_circuit_mockprover_synthesis_outcomes() {
         let c = caps();
         let g = c6_data_geometry(&c).unwrap();

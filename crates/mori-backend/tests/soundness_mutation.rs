@@ -799,6 +799,7 @@ fn run_scalar_failure_step(b: Budget, allow: Vec<Allow>) -> Report {
 // ------------------------------------------------------------------ tests
 
 #[test]
+#[ignore = "MockProver at k=14 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
 fn data_canonical_mutations_are_rejected() {
     let b = Budget {
         cells: 24,
@@ -809,6 +810,7 @@ fn data_canonical_mutations_are_rejected() {
 }
 
 #[test]
+#[ignore = "MockProver at k=16 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
 fn checked_value_read_mutations_are_rejected() {
     let b = Budget {
         cells: 3,
@@ -819,6 +821,7 @@ fn checked_value_read_mutations_are_rejected() {
 }
 
 #[test]
+#[ignore = "MockProver at k=18 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
 fn scalar_failure_step_mutations_are_rejected() {
     let b = Budget {
         cells: 1,

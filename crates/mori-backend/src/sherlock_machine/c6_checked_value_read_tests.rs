@@ -1308,6 +1308,7 @@ fn free_function_and_scalar_operand_view_host_alias() {
 }
 
 #[test]
+#[ignore = "MockProver at k=16 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
 fn mockprover_synthesis_positive_and_wrong_kind() {
     let prog = prog_with_constants(vec![ConstantSnapshot::U128 {
         marker_free: true,

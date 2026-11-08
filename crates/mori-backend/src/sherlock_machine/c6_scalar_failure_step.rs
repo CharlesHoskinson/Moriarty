@@ -2237,6 +2237,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "MockProver at k=18 (task 2.0, SRC-016); T1 runs it with --ignored --exact"]
     fn synthesis_distinguishes_constraint_failure() {
         let cfg = config();
         let pre = sample(2, 100);
