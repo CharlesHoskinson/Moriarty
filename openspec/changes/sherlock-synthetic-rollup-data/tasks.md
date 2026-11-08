@@ -2,6 +2,17 @@
 
 All boxes refer to observed outcomes. Nothing is checked in this draft. Paths are relative to the repository root. `$R` is `~/research/rollup-subarch-2026-10-21`. `$F` is `~/projectfenrir/recursion/rollup-test-format`. Run checks locally; hosted CI stays off.
 
+## Owner amendment 2026-11-08
+
+The owner decided (2026-11-08, verbatim): "Sherlock should not depend at all on Fenrir, We have a synthetic rollup design, we use that", and "keep them out of C4". [proposal.md](proposal.md) "Owner amendment 2026-11-08" gives the full amendment and overrides any conflicting text here.
+
+Task changes from the amendment (2026-11-08): `$R` and `$F` are history and no task reads them at build or test time.
+
+- [ ] 0.0 Write the Moriarty-owned parameter set `models/sherlock/rollup-synth/params/` (`constants.json`, `layouts.json`, `rules.json`, `bounds.json`, `profile-b.json`, `MANIFEST.json`) in this repository's own words, with no verbatim capture of a private file. Freeze the S0 golden digests under `models/sherlock/rollup-synth/golden/s0/`. [SSRD-001, SSRD-002, SSRD-005, SSRD-030]
+- [ ] 0.0a Write the in-repository Quint oracle models that P1 replays against, from the parameter set. [SSRD-013, SSRD-014, SSRD-015]
+- Superseded by the amendment: 0.2 `refresh` and 0.4 read the parameter set, not the cut; 0.8, 0.10 and 0.11 compare with the frozen S0 golden, not `rtf generate` or `rtf verify`; 1.6, 1.12 and 1.13 run in-repository equivalents or are dropped; 1.7b, 1.11 and 2.5 use the in-repository oracle models; 2.3 imports invalid cases restated as Moriarty fixtures; 2.10 runs the parameter check, not a cut check; 2.11 is dropped (no Fenrir handoff); P4 "Profile B leaves" means the synthetic production shape.
+- [ ] 0.0b Offline sync (optional, manual, never a gate): compare the parameter set with a Fenrir design out of band and propose any change as an ordinary commit. [SSRD-024]
+
 ## P0 Foundation (runs now)
 
 - [ ] 0.1 Write tests for the cut check first: `models/sherlock/rollup-synth/tests/test_cut.py`.

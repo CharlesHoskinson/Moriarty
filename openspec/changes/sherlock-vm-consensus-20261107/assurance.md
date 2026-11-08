@@ -1,6 +1,6 @@
 # Assurance strategy
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"). Requirements SAS-001..014 (`requirements.md`). Sources: UISEC-012 evidence-class table (`openspec/changes/sherlock-universal-interpreter-design/security-requirements.md:14-24`), astra-1 `assurance-proposed.md`, astra-2 `security-clauses.md`, astra-3 `proposed-text.md`, fable-2 §"Assurance strategy", fable-3 §5.
 
 ## 1. The argument
 
@@ -54,8 +54,8 @@ Every record also carries the dependency fingerprint set: HEAD, `Cargo.lock` has
 | M3 Fragments and receipt | SVM-008 zero gaps for the frozen inventory `R`; SAS-013 partition receipt; U023 scenario 1 | IR preprocessing / witness execution (nonproving; labelled as such) |
 | M4 Universal leaf | lane/row measurement; SRC-013 decision; real keygen/prove/verify of every leaf of `entry 7;`; SRC-003, SVM-002 and initialization hostile cases at the keyed boundary | constraint check (keyed) + native cryptography |
 | M5 Local chain | leaves -> node -> decider for `entry 7;`, fact(3), list123; SRC-004/005/006 negatives; `verify_chain` (SRC-010); `validate_call` (A6') | native cryptography + local ledger |
-| M6 Preview | OP-PV-* operations; A4'/A8'/A9'/A10' preview rows manifest-bound; U023 scenario 2 records P1-P3; C4 flips; Fenrir B rows on Preview (mandatory for the Fenrir gate since 2026-11-08, outside C4) | target observation |
-| M7 Mainnet readiness | T4 tier exists; rollback rehearsal receipt; `:269` amended (done 2026-11-08); owner authorization per operation; Fenrir B*m rows after their Preview rows | target observation (mainnet) |
+| M6 Preview | OP-PV-* operations; A4'/A8'/A9'/A10' preview rows manifest-bound; U023 scenario 2 records P1-P3; C4 flips; synthetic-rollup B rows on Preview (FSYN data; mandatory for the synthetic-rollup Preview gate, outside C4; amended 2026-11-08 (2)) | target observation |
+| M7 Mainnet readiness | T4 tier exists; rollback rehearsal receipt; `:269` amended (done 2026-11-08); owner authorization per operation; synthetic-rollup B*m rows after their Preview rows | target observation (mainnet) |
 
 ## 5. What does not count
 

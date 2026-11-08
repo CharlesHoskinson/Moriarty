@@ -1,6 +1,6 @@
 # Dissent and recorded conditions
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"). Unresolved disagreements are listed first; conditions that resolved an issue are kept with the member's words so the resolution can be checked. Votes and any OBJECT are appended in Phase 4.
 
 ## Unresolved at DRAFT v1
 
@@ -123,6 +123,20 @@ None. The concerns every member asked to carry forward are recorded as implement
 The owner's words (2026-11-08, verbatim): "resume the work, merge, amend the program for mainnet, fenrir should test on preview and then mainnet, not testing on old stagenet, use your judgement on sherlock run".
 
 1. **Resolved 2026-11-08: amend.** `MORIARTY-COMPLETION-PROGRAM.md:270-283` supersedes the `:269` mainnet ban, and the old sentence stays visible struck through. Mainnet submissions are permitted only as T4 operations after local Docker at 9.1.0.1 has passed, the Preview qualification receipts and the Preview rollback rehearsal receipt are committed, and the pre-deploy checklist has passed. Each operation still needs explicit owner authorization when it runs, under an owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no specific spend (SWF-009, E9, task 7.1).
-2. **Resolved 2026-11-08: keep, and make mandatory.** The B rows are the required Fenrir path, Preview first and then Mainnet (new rows B4m, B5m, B8m, B9m). They stay outside the Sherlock U023/C4 dependency chain, so Sherlock qualification does not wait on Fenrir. The Fenrir gates (tasks 6.6 and 7.4) depend on them (SWF-013, D14). This replaces the council's "non-gating" outcome for ISSUE 7 by owner decision.
+2. **Resolved 2026-11-08: keep, and make mandatory** (refined by "Resolved 2026-11-08 (2)" below; the Fenrir reading is superseded). The B rows are the required Fenrir path, Preview first and then Mainnet (new rows B4m, B5m, B8m, B9m). They stay outside the Sherlock U023/C4 dependency chain, so Sherlock qualification does not wait on Fenrir. The Fenrir gates (tasks 6.6 and 7.4) depend on them (SWF-013, D14). This replaces the council's "non-gating" outcome for ISSUE 7 by owner decision.
 3. **Resolved 2026-11-08: no.** No stagenet diagnostic call will be made, for Sherlock or for Fenrir. The stagenet rows stay retired as history (design §5.2(6), workflow §6).
 4. **Resolved 2026-11-08: deploy with a maintenance authority on Preview and on Mainnet.** The owner delegated this decision ("use your judgement on sherlock run"), and the lead made it. Reason: the rollback path (`workflow.md` §7, SWF-010) depends on maintenance key replacement, and the mainnet rollback must be rehearsed on Preview. This is a trust assumption: whoever holds the authority can install a verifier key, so the authority can change what the contract accepts. The owner holds the authority; its public identity is published in `target-pins.json`. Every maintenance update is preceded by the A11 keygen regression and produces a committed receipt of the observed on-chain key state; midnight-node #2375 is checked before any key removal. A later change may freeze or renounce the authority once the keys are stable (SMN-007, design §5.2(5), `tasks.md` "Later changes").
+
+### Resolved 2026-11-08 (2)
+
+The owner's words (2026-11-08, verbatim): "Sherlock should not depend at all on Fenrir, We have a synthetic rollup design, we use that".
+
+The owner's words on the C4 closure (2026-11-08, verbatim): "keep them out of C4".
+
+This refines decision 2 above ("fenrir should test on preview and then mainnet"), which commit 927f12956 applied by making the Fenrir B rows required, Preview then Mainnet.
+
+1. **No Fenrir dependency.** Moriarty and Sherlock carry no dependency on Fenrir: no Fenrir-owned gate, row, operation, file, repository or live Fenrir system (SWF-014, D14). Fenrir's own testing on Preview and Mainnet belongs to the Fenrir project, not to Moriarty's predicates.
+2. **The B rows are Sherlock's synthetic rollup.** The B rows keep their IDs and become Sherlock's synthetic-rollup qualification on data that FSYN generates in this repository (`openspec/changes/sherlock-synthetic-rollup-data/`, SSRD-029, SSRD-030): local first (B1, B2, B3, B6, B7), then Preview (B4p, B5p, B8p, B9p; OP-PV-SYNTH-ROLLUP), then Mainnet (B4m, B5m, B8m, B9m; OP-MN-SYNTH-ROLLUP). OP-PV-FENRIR-BATCH and OP-MN-FENRIR-BATCH are renamed accordingly (SWF-013, tasks 6.6 and 7.4).
+3. **Outside C4, by owner decision.** The earlier reason for keeping the B rows out of the C4 closure ("Sherlock should not wait on Fenrir") no longer applies, because the rows are Sherlock's own work. The owner decided to keep them out of C4 ("keep them out of C4"). C4 stays the Sherlock M6 gate for representation and arithmetic on P1-P3; the synthetic-rollup gates (tasks 6.6, 7.4) depend on the B rows.
+4. **Stagenet stays retired.** B4, B5, B8 and B9 stay retired; decision 3 above is unchanged.
+5. **Code decoupling is separate.** B1, B2 and B3 (and through B3, B6 and B7) still read a Fenrir checkout today; their rows record this. Task 1.9 replaces every such read with FSYN-generated in-repository fixtures and adds the T0 guard F17. The synthetic rollup change is amended so that FSYN is self-contained, its design-cut constants are restated as Moriarty-owned parameters, and sync with Fenrir is optional, offline and manual (its proposal, "Owner amendment 2026-11-08").

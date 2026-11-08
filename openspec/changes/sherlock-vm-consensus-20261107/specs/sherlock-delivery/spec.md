@@ -1,6 +1,6 @@
 # Capability: sherlock-delivery (DoctorWatson factory workflow)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 by the owner decisions in `dissent.md` "Resolved 2026-11-08"). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
 
 ## ADDED Requirements
 
@@ -91,12 +91,15 @@ Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `ch
 #### Scenario: Unimplemented mandatory row
 - **WHEN** A8p is `unimplemented.sh`. **THEN** `next` names A8p and `t3.sh` fails.
 
-### Requirement: SWF-013 Fenrir on Preview, then Mainnet
-The Fenrir B rows SHALL be the required Fenrir path, run on Preview first and then on Mainnet (owner decision 2026-11-08): B1, B2, B3, B6, B7, B4p, B5p, B8p and B9p, then B4m, B5m, B8m and B9m, each mainnet row depending on its Preview counterpart. No B row SHALL target stagenet; B4, B5, B8 and B9 stay retired. No row in the Sherlock U023/C4 dependency closure SHALL depend on a B row. The Fenrir Preview and mainnet gates SHALL depend on their B rows. A mainnet B operation SHALL meet SWF-009.
+### Requirement: SWF-013 Synthetic rollup: local, then Preview, then Mainnet
+The B rows SHALL be Sherlock's synthetic-rollup qualification on FSYN-generated data (synthetic rollup change SSRD-029), run locally first, then on Preview, then on Mainnet (owner decisions 2026-11-08 and 2026-11-08 (2)): B1, B2, B3, B6 and B7 locally; B4p, B5p, B8p and B9p on Preview (OP-PV-SYNTH-ROLLUP); then B4m, B5m, B8m and B9m (OP-MN-SYNTH-ROLLUP), each mainnet row depending on its Preview counterpart. No B row SHALL target stagenet; B4, B5, B8 and B9 stay retired. No row in the Sherlock U023/C4 dependency closure SHALL depend on a B row (owner decision 2026-11-08 (2): "keep them out of C4"). The synthetic-rollup Preview and Mainnet gates SHALL depend on their B rows. A mainnet B operation SHALL meet SWF-009.
 
-#### Scenario: Sherlock does not wait on Fenrir
+#### Scenario: C4 does not wait on the synthetic rollup
 - **WHEN** B4p is `unimplemented.sh` and every row of the C4 closure passes.
-- **THEN** the Sherlock M6 gate, evaluated on the C4 closure (E15), is eligible, and the Fenrir Preview gate is not.
+- **THEN** the Sherlock M6 gate, evaluated on the C4 closure (E15), is eligible, and the synthetic-rollup Preview gate is not.
+
+#### Scenario: Preview before local
+- **WHEN** B4p is checked while B3 is not passing. **THEN** B4p is not eligible, because it depends on B3.
 
 #### Scenario: Mainnet before Preview
 - **WHEN** B4m is checked while B4p is not passing. **THEN** B4m is not eligible, because it depends on B4p.
@@ -104,3 +107,11 @@ The Fenrir B rows SHALL be the required Fenrir path, run on Preview first and th
 #### Scenario: Stagenet row
 - **WHEN** an active B row is made to depend on retired B4. **THEN** `validate` refuses.
 
+### Requirement: SWF-014 No Fenrir dependency
+If any tracked code, test, script or predicate row reads a path that contains `projectfenrir` or `rollup-subarch`, the T0 guard F17 SHALL fail and name the file and line. Moriarty and Sherlock SHALL carry no Fenrir-owned gate, row, operation, file, repository or live-system dependency (owner decision 2026-11-08 (2)); the synthetic rollup data is generated in this repository (SSRD-030).
+
+#### Scenario: Test reads a Fenrir checkout
+- **WHEN** a tracked test loads `../../../projectfenrir-main/recursion/rollup-test-format/v3`. **THEN** F17 fails and names the file and line.
+
+#### Scenario: Clean host
+- **WHEN** the B1, B2 and B3 checks run on a host with no Fenrir checkout and no `~/research` directory, after task 1.9. **THEN** they run on in-repository FSYN fixtures.

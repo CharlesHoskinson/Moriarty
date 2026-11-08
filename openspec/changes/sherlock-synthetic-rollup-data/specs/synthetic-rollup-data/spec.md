@@ -2,39 +2,49 @@
 
 Status: DRAFT / PROPOSED, 2026-10-21. All scenarios are proposed acceptance contracts, not execution receipts. This additive package preserves the [stagenet experiment](../../../sherlock-stagenet-recursive-rollup/requirements.md) (SRPOC-001 to SRPOC-009), the [benchmark EARS](../../../sherlock-moriarty-benchmarks/specs/benchmarks/spec.md) (SBENCH-001 to SBENCH-010) and the [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md).
 
+## Owner amendment 2026-11-08
+
+The owner decided (2026-11-08, verbatim): "Sherlock should not depend at all on Fenrir, We have a synthetic rollup design, we use that", and "keep them out of C4". [proposal.md](../../proposal.md) "Owner amendment 2026-11-08" gives the full amendment and overrides any conflicting text here.
+
 ## ADDED Requirements
 
-### Requirement: SSRD-001 Pinned design cut
+### Requirement: SSRD-001 Synthetic parameter set (amended 2026-11-08)
 
-WHEN FSYN generates any artefact, the generator SHALL verify the byte count and SHA-256 of every entry of `design-cut.json` and SHALL refuse with exit 2 on any difference.
+WHEN FSYN generates any artefact, the generator SHALL verify the byte count and SHA-256 of every file of the in-repository synthetic parameter set against its manifest and SHALL refuse with exit 2 on any difference. It SHALL NOT read `design-cut.json` or any path outside the repository.
 
-#### Scenario: SSRD-001-01 current cut
+#### Scenario: SSRD-001-01 current parameter set
 
-- **GIVEN** every pinned file matches its byte count and SHA-256
+- **GIVEN** every parameter file matches its manifest entry
 - **WHEN** `fsyn generate` runs
-- **THEN** it records the cut digest in every `FIXTURE.json`
+- **THEN** it records the parameter-set digest in every `FIXTURE.json`
 
-#### Scenario: SSRD-001-02 stale cut
+#### Scenario: SSRD-001-02 changed parameter file
 
-- **GIVEN** `modules/DA-PROOF.md` changed after the cut
+- **GIVEN** `params/constants.json` changed without a manifest update
 - **WHEN** `fsyn generate` runs
 - **THEN** it exits 2, names the changed path, and writes no artefact
 
-### Requirement: SSRD-002 Constants from executable sources
+#### Scenario: SSRD-001-03 no Fenrir checkout
 
-The generator SHALL read every rollup constant, field order and domain tag from the extracted `constants.json`, `layouts.json` and `rules.json`, and the extractor SHALL stop with exit 1 when two sources give different values for one constant.
+- **GIVEN** a host with no Fenrir checkout and no `~/research` directory
+- **WHEN** `fsyn generate` runs
+- **THEN** it generates the same bytes as on any other host
 
-#### Scenario: SSRD-002-01 agreeing sources
+### Requirement: SSRD-002 Constants from the parameter set (amended 2026-11-08)
 
-- **GIVEN** `GAP_MAX` is 256 in `cel_auth.qnt` and in CELESTIA-AUTH section 2
-- **WHEN** the extractor runs
-- **THEN** `constants.json` holds 256 with both citations
+The generator SHALL read every rollup constant, field order, domain tag, layout and rule from the Moriarty-owned parameter set (`constants.json`, `layouts.json`, `rules.json`), and the parameter check SHALL stop with exit 1 when the parameter set and an in-repository oracle model give different values for one constant.
 
-#### Scenario: SSRD-002-02 disagreeing sources
+#### Scenario: SSRD-002-01 agreeing values
 
-- **GIVEN** a Quint constant differs from the module spec table
-- **WHEN** the extractor runs
-- **THEN** it exits 1, names both sources, and writes no constants file
+- **GIVEN** `GAP_MAX` is 256 in `params/constants.json` and in the in-repository light-client oracle model
+- **WHEN** the parameter check runs
+- **THEN** it passes and names both files
+
+#### Scenario: SSRD-002-02 disagreeing values
+
+- **GIVEN** an in-repository oracle constant differs from the parameter set
+- **WHEN** the parameter check runs
+- **THEN** it exits 1, names both files, and no fixture is generated
 
 ### Requirement: SSRD-003 Deterministic bytes
 
@@ -62,15 +72,15 @@ The generator SHALL draw each concern from its own named stream, and a change to
 - **WHEN** S1 regenerates
 - **THEN** transaction records are byte-identical and committee signatures differ
 
-### Requirement: SSRD-005 FRTF v3 reproduction
+### Requirement: SSRD-005 S0 golden reproduction (amended 2026-11-08)
 
-WHEN FSYN runs scale S0 with seed `0x5354524157`, it SHALL reproduce every FRTF v3 envelope and every `workloads.json` digest byte for byte, and `rtf verify` SHALL pass on its output.
+WHEN FSYN runs scale S0 with seed `0x5354524157`, it SHALL reproduce every envelope, view digest and `workloads.json` digest of the frozen in-repository S0 golden byte for byte, without `rtf generate`, `rtf verify` or an FRTF tree.
 
 #### Scenario: SSRD-005-01 byte identity
 
-- **GIVEN** the pinned FRTF v3 tree
-- **WHEN** FSYN writes S0 and `rtf generate` writes its own output
-- **THEN** both trees are byte-identical and b1 profile A digest is `4946d258…488e27d`
+- **GIVEN** the frozen S0 golden in `models/sherlock/rollup-synth/golden/s0/`
+- **WHEN** FSYN writes S0
+- **THEN** its output matches the golden byte for byte and b1 profile A digest is `4946d258…488e27d`
 
 #### Scenario: SSRD-005-02 drift
 
@@ -154,7 +164,7 @@ WHEN FSYN emits a light-client chain, every append SHALL satisfy `0 < B - pred(B
 
 ### Requirement: SSRD-011 Two profiles, one record set
 
-FSYN SHALL emit the Profile A and Profile B views of a batch from one core record set, and both views SHALL agree on `pre`, `post`, `in_root`, `h_first`, `h_last` and every sum field.
+Amended 2026-11-08: Profile B is the synthetic production shape whose leaf kinds, tree shape and arities come from the parameter set; it makes no claim about Fenrir's format. FSYN SHALL emit the Profile A and Profile B views of a batch from one core record set, and both views SHALL agree on `pre`, `post`, `in_root`, `h_first`, `h_last` and every sum field.
 
 #### Scenario: SSRD-011-01 agreement
 
@@ -170,7 +180,7 @@ FSYN SHALL emit the Profile A and Profile B views of a batch from one core recor
 
 ### Requirement: SSRD-012 Fidelity map
 
-Each artefact type SHALL have a fidelity row naming its interface operation, statement and Quint oracle, and FSYN SHALL NOT emit an artefact type without a row.
+Each artefact type SHALL have a fidelity row naming its interface operation, statement and in-repository Quint oracle, and FSYN SHALL NOT emit an artefact type without a row.
 
 #### Scenario: SSRD-012-01 unmapped artefact
 
@@ -180,7 +190,7 @@ Each artefact type SHALL have a fidelity row naming its interface operation, sta
 
 ### Requirement: SSRD-013 Forward Quint replay
 
-WHEN FSYN emits a scenario, it SHALL emit a Quint replay test of the same actions, and SHALL publish the scenario only if `quint test` passes with every named invariant.
+WHEN FSYN emits a scenario, it SHALL emit a Quint replay test of the same actions against the in-repository oracle models (amended 2026-11-08), and SHALL publish the scenario only if `quint test` passes with every named invariant.
 
 #### Scenario: SSRD-013-01 passing replay
 
@@ -196,7 +206,7 @@ WHEN FSYN emits a scenario, it SHALL emit a Quint replay test of the same action
 
 ### Requirement: SSRD-014 Reverse Quint replay
 
-FSYN SHALL rebuild every sampled ITF trace of each oracle model through its own rules and compare every observable state variable.
+FSYN SHALL rebuild every sampled ITF trace of each in-repository oracle model (amended 2026-11-08) through its own rules and compare every observable state variable.
 
 #### Scenario: SSRD-014-01 inexpressible trace
 
@@ -206,7 +216,7 @@ FSYN SHALL rebuild every sampled ITF trace of each oracle model through its own 
 
 ### Requirement: SSRD-015 Independent acceptance oracle
 
-The generator's own replay SHALL be labelled internal consistency, and fixture acceptance SHALL use only the pinned Quint models, Lean bounds, `rtf verify` and independently frozen expected states.
+The generator's own replay SHALL be labelled internal consistency, and fixture acceptance SHALL use only the in-repository oracle models, the bounds restated in the parameter set and independently frozen expected states (amended 2026-11-08: no Fenrir model, Lean file or `rtf verify`).
 
 #### Scenario: SSRD-015-01 self-agreement only
 
@@ -216,17 +226,17 @@ The generator's own replay SHALL be labelled internal consistency, and fixture a
 
 ### Requirement: SSRD-016 Golden vectors
 
-FSYN SHALL keep the golden vectors of design section 7.1, each bound to its source path, line or theorem and the cut hash of that source.
+FSYN SHALL keep the golden vectors of design section 7.1, each bound to its parameter-set entry and the parameter-set digest (amended 2026-11-08).
 
-#### Scenario: SSRD-016-01 source change
+#### Scenario: SSRD-016-01 parameter change
 
-- **GIVEN** `params-v3.json` changes its relation digest
-- **WHEN** the cut check runs
+- **GIVEN** the relation digest entry of the parameter set changes
+- **WHEN** the parameter check runs
 - **THEN** the golden vector and every dependent fixture are stale
 
 ### Requirement: SSRD-017 Property tests with Lean bounds
 
-For every property of design section 6.3, the suite SHALL run a property test over generated scenarios and SHALL assert the Lean-proved bound where one exists.
+For every property of design section 6.3, the suite SHALL run a property test over generated scenarios and SHALL assert the bound restated in the parameter set where one exists (amended 2026-11-08: no Lean file is read).
 
 #### Scenario: SSRD-017-01 leaf rows
 
@@ -308,19 +318,19 @@ WHEN a report gives a fleet size or a settled-TPS point, it SHALL label each val
 
 ### Requirement: SSRD-024 Stale fixtures
 
-IF the live design differs from the pinned cut, THEN FSYN SHALL mark every dependent fixture stale, and a stale fixture SHALL NOT enter a benchmark sample.
+Amended 2026-11-08. IF the in-repository parameter set changes, THEN FSYN SHALL mark every dependent fixture stale, and a stale fixture SHALL NOT enter a benchmark sample. A change to a Fenrir design or cut SHALL NOT make any fixture stale or stop generation.
 
-#### Scenario: SSRD-024-01 module spec revision
+#### Scenario: SSRD-024-01 parameter change
 
-- **GIVEN** LIVENESS-EXIT moves past revision 7 and revision 20 is regenerated
-- **WHEN** `fsyn cut check` runs in DoctorWatson
-- **THEN** fixtures that depend on the changed groups are stale until `fsyn cut refresh` and regeneration
+- **GIVEN** a commit changes `params/rules.json`
+- **WHEN** the parameter check runs in DoctorWatson
+- **THEN** fixtures that depend on the changed entries are stale until regeneration
 
-#### Scenario: SSRD-024-02 generated file out of sync
+#### Scenario: SSRD-024-02 Fenrir design moves
 
-- **GIVEN** `build-rev20.py --check` reports a difference
-- **WHEN** `fsyn cut check` runs
-- **THEN** it exits 2 and no fixture is generated
+- **GIVEN** a Fenrir module spec moves to a new revision
+- **WHEN** `fsyn generate` runs
+- **THEN** it generates as before; an optional offline sync may later propose a parameter change by commit
 
 ### Requirement: SSRD-025 Exit kinds and one exit key
 
@@ -397,3 +407,33 @@ The generator SHALL emit only key-preserving in-place rotations, and SHALL emit 
 - **GIVEN** an expired light-client store and a key-preserving rotation
 - **WHEN** `activate` replays in `lifecycle.qnt` (`lifecycle_sealed`)
 - **THEN** a fresh reset header signed under `DOM_LCRESET2` is installed and no verifier key changes
+
+### Requirement: SSRD-029 Staged synthetic-rollup qualification
+
+Added 2026-11-08. The factory B rows SHALL qualify Sherlock on FSYN-generated data only: local first (B1, B2, B3, B6, B7), then Preview (B4p, B5p, B8p, B9p), then Mainnet (B4m, B5m, B8m, B9m). Each Preview row SHALL depend on the local rows it uses and each Mainnet row on its Preview counterpart. No B row SHALL target stagenet. The B rows SHALL stay out of the Sherlock C4 closure (owner decision 2026-11-08, "keep them out of C4").
+
+#### Scenario: SSRD-029-01 order
+
+- **WHEN** B4m is checked while B4p is not passing
+- **THEN** B4m is not eligible
+
+#### Scenario: SSRD-029-02 outside C4
+
+- **WHEN** B4p is unimplemented and every row of the C4 closure passes
+- **THEN** C4 is eligible
+
+### Requirement: SSRD-030 Self-contained in Moriarty
+
+Added 2026-11-08. FSYN generation and tests and every B-row check SHALL read only tracked files of this repository, no path outside it and no path containing `projectfenrir` or `rollup-subarch`. An optional offline comparison with a Fenrir design SHALL never be a gate.
+
+#### Scenario: SSRD-030-01 clean host
+
+- **GIVEN** a host with no Fenrir checkout and no `~/research` directory
+- **WHEN** the B1, B2 and B3 checks run
+- **THEN** they run on in-repository fixtures and report the same result as on any other host
+
+#### Scenario: SSRD-030-02 guard
+
+- **GIVEN** a tracked test that loads `../../../projectfenrir-main/recursion/rollup-test-format/v3`
+- **WHEN** T0 runs F17
+- **THEN** F17 fails and names the file and line

@@ -187,33 +187,37 @@ predicates:
     depends: [A8p]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#sas-007"
     holdout: false
+  # B rows (amended 2026-11-08 (2), owner: "Sherlock should not depend at all on Fenrir, We have a
+  # synthetic rollup design, we use that"; "keep them out of C4"): Sherlock's synthetic-rollup
+  # qualification on FSYN data, local -> Preview -> Mainnet, outside the C4 closure. IDs are kept
+  # for history. Checks that still read Fenrir files say so in their title; task 1.9 decouples them.
   - id: B1
     set: B
-    title: "Deterministic Fenrir-derived dataset with public seed, source pins and manifest regenerates byte-identically (SRPOC-003)"
+    title: "Synthetic rollup, local: deterministic FSYN dataset with public seed, parameter pins and manifest regenerates byte-identically (SSRD-003; was SRPOC-003). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, FRTF v3 and design-cut sources via sources.py)"
     tier: T0
     check: "scripts/qa/check-b1.sh"
     heavy: false
     depends: []
-    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L7"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-003-deterministic-bytes"
     holdout: false
   - id: B2
     set: B
-    title: "Independent replay of the complete state transitions of the dataset (SRPOC-003)"
+    title: "Synthetic rollup, local: independent replay of the complete state transitions of the FSYN dataset (SSRD-015; was SRPOC-003). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, design-cut sources)"
     tier: T1
     check: "scripts/qa/check-b2.sh"
     heavy: false
     depends: [B1]
-    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L18"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-015-independent-acceptance-oracle"
     holdout: false
   - id: B3
     set: B
-    title: "One 16-transaction full batch proved and verified locally (SRPOC-004)"
+    title: "Synthetic rollup, local: one 16-transaction FSYN batch proved and verified locally (SSRD-029; was SRPOC-004). DEPENDENCY until task 1.9: the check still reads a Fenrir checkout (FENRIR_ROOT, FRTF v3)"
     tier: T2
     check: "scripts/qa/check-b3.sh"
     heavy: true
     budget: "b3-full-batch-local"
     depends: [B2, A5]
-    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B4
     set: B
@@ -238,21 +242,21 @@ predicates:
     retired: "depends on retired stagenet row B4; superseded by B5p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B6
     set: B
-    title: "Per-layer circuit k, domain capacity, used rows, lookup rows and columns, with unavailable values explicit (SRPOC-005)"
+    title: "Synthetic rollup, local: per-layer circuit k, domain capacity, used rows, lookup rows and columns of the FSYN batch, with unavailable values explicit (SSRD-022; was SRPOC-005). DEPENDENCY until task 1.9: reads B3 evidence, which still comes from a Fenrir checkout"
     tier: T2
     check: "python3 -B scripts/qa/check-rollup-evidence.py B6"
     heavy: false
     depends: [B3]
-    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L9"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-022-benchmark-metrics"
     holdout: false
   - id: B7
     set: B
-    title: "Time, RSS and bytes in separate scopes, peak under decimal 32 GB with swap 0 (SRPOC-005; owner raised from 16 GB 2026-10-25)"
+    title: "Synthetic rollup, local: time, RSS and bytes in separate scopes, peak under decimal 32 GB with swap 0 (SSRD-022; was SRPOC-005; owner raised from 16 GB 2026-10-25). DEPENDENCY until task 1.9: reads B3 evidence, which still comes from a Fenrir checkout"
     tier: T2
     check: "python3 -B scripts/qa/check-rollup-evidence.py B7"
     heavy: false
     depends: [B3]
-    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L19"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-022-benchmark-metrics"
     holdout: false
   - id: B8
     set: B
@@ -276,75 +280,75 @@ predicates:
     retired: "depends on retired stagenet rows B5 and B8; superseded by B9p on Preview (openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011)"
   - id: B4p
     set: B
-    title: "The 16-transaction Fenrir batch accepted on Preview (Fenrir Preview gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Preview: the 16-transaction FSYN batch accepted on Preview through OP-PV-SYNTH-ROLLUP, after the local rows (synthetic-rollup Preview gate; SSRD-029, SWF-013 and D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B4p"
     heavy: false
-    depends: [B3, A8p]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    depends: [B3, B6, B7, A8p]
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B5p
     set: B
-    title: "Two-, four- and six-batch prefixes on Preview, with failures and censored measurements kept (Fenrir Preview gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Preview: two-, four- and six-batch FSYN prefixes on Preview, with failures and censored measurements kept (synthetic-rollup Preview gate; SSRD-029, D14 as amended 2026-11-08 (2))"
     tier: T2
     check: "scripts/qa/unimplemented.sh B5p"
     heavy: false
     depends: [B4p]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B8p
     set: B
-    title: "Preview batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (Fenrir Preview gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Preview: FSYN batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (synthetic-rollup Preview gate; SSRD-029, SMN-005, D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B8p"
     heavy: false
     depends: [B4p]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#smn-005"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B9p
     set: B
-    title: "Preview feasibility report: exact workload, sample count, observed k/resources/latency, failures and remaining gaps (Fenrir Preview gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Preview: feasibility report with exact FSYN workload, sample count, observed k/resources/latency, failures and remaining gaps (synthetic-rollup Preview gate; SSRD-029, D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B9p"
     heavy: false
     depends: [B5p, B6, B7, B8p]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B4m
     set: B
-    title: "The 16-transaction Fenrir batch accepted on Mainnet under an owner-authorized T4 operation (Fenrir mainnet gate, D14 as amended 2026-11-08; tier moves to T4 when E5 lands)"
+    title: "Synthetic rollup, Mainnet: the 16-transaction FSYN batch accepted on Mainnet through OP-MN-SYNTH-ROLLUP, an owner-authorized T4 operation (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2); tier moves to T4 when E5 lands)"
     tier: T3
     check: "scripts/qa/unimplemented.sh B4m"
     heavy: false
     depends: [B4p]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B5m
     set: B
-    title: "Two-, four- and six-batch prefixes on Mainnet, with failures and censored measurements kept (Fenrir mainnet gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Mainnet: two-, four- and six-batch FSYN prefixes on Mainnet, with failures and censored measurements kept (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B5m"
     heavy: false
     depends: [B5p, B4m]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B8m
     set: B
-    title: "Mainnet batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (Fenrir mainnet gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Mainnet: FSYN batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (synthetic-rollup Mainnet gate; SSRD-029, SMN-005, D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B8m"
     heavy: false
     depends: [B8p, B4m]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#smn-005"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: B9m
     set: B
-    title: "Mainnet feasibility report: exact workload, sample count, observed k/resources/latency, failures and remaining gaps (Fenrir mainnet gate, D14 as amended 2026-11-08)"
+    title: "Synthetic rollup, Mainnet: feasibility report with exact FSYN workload, sample count, observed k/resources/latency, failures and remaining gaps (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2))"
     tier: T3
     check: "scripts/qa/unimplemented.sh B9m"
     heavy: false
     depends: [B9p, B5m, B8m]
-    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-013"
+    source: "openspec/changes/sherlock-synthetic-rollup-data/specs/synthetic-rollup-data/spec.md#requirement-ssrd-029-staged-synthetic-rollup-qualification"
     holdout: false
   - id: U001
     set: U
@@ -912,4 +916,13 @@ predicates:
     heavy: false
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-011"
+    holdout: false
+  - id: F17
+    set: F
+    title: "No Fenrir dependency: no tracked code, test, script, model or predicate reads a path into a Fenrir repository or the private rollup research tree (SWF-014; patterns kept in the guard script; placeholder until task 1.9 lands scripts/qa/check-no-fenrir.sh)"
+    tier: T0
+    check: "scripts/qa/unimplemented.sh F17"
+    heavy: false
+    depends: [F2]
+    source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-014"
     holdout: false

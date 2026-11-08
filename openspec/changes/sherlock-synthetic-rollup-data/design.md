@@ -2,6 +2,12 @@
 
 Status: DRAFT / PROPOSED, 2026-10-21. Specified only. Labels follow the repository evidence discipline: **source fact** (a pinned file says it), **repository observation**, **inference**, **plan choice** (this package decides it) and **open question**.
 
+## Owner amendment 2026-11-08
+
+The owner decided (2026-11-08, verbatim): "Sherlock should not depend at all on Fenrir, We have a synthetic rollup design, we use that", and "keep them out of C4". [proposal.md](proposal.md) "Owner amendment 2026-11-08" gives the full amendment and overrides any conflicting text here.
+
+In this design, every input of section 1 outside the repository is history, not a generation or test input; its values are restated in the Moriarty-owned parameter set. "Source fact" labels name where a value first came from. Profile B (section 5) is the synthetic production shape. Section 10 is amended below.
+
 ## 1. Inputs and sources of truth
 
 | Input | Role | Pin |
@@ -171,7 +177,7 @@ The core record set is shared. Each profile is a view of it (SSRD-011).
 | S1 | 64 A0, 16 A1, 4 A1, A2, D |
 | S3 (projection input) | 30,000 A0; arity-4 levels to 1 (4^7 < 30,000 <= 4^8, so 8 node levels), D |
 
-**Profile B** (source facts, VALIDITY section 4 and RX-56). State spine of `L_state` leaves (B = 16 steps, k = 19), 6 node levels; UPV subtree of `L_upv` leaves (4 user-proof slots, k = 20), 7 levels; TierC subtree of `TierCLeaf` leaves (one decided `SherlockProof v1` against `arbiter_vks[(interpreter_version, bounds_class, decided)]`, merged accumulator), 5 levels; then J1, W = J2 and D. Nodes are arity 4 with real children before pads. Inclusion tree INC1: `L_inc` leaves (k = 19, 8 shares), 8 arity-4 levels, walk slots (`L_wk`, at most 50 slots of at most 256 headers), J3 and `DAD`. Miss path: `DMD`.
+**Profile B, synthetic production shape** (amended 2026-11-08; first derived from VALIDITY section 4 and RX-56, now Moriarty-owned parameters, not a claim about Fenrir's format). State spine of `L_state` leaves (B = 16 steps, k = 19), 6 node levels; UPV subtree of `L_upv` leaves (4 user-proof slots, k = 20), 7 levels; TierC subtree of `TierCLeaf` leaves (one decided `SherlockProof v1` against `arbiter_vks[(interpreter_version, bounds_class, decided)]`, merged accumulator), 5 levels; then J1, W = J2 and D. Nodes are arity 4 with real children before pads. Inclusion tree INC1: `L_inc` leaves (k = 19, 8 shares), 8 arity-4 levels, walk slots (`L_wk`, at most 50 slots of at most 256 headers), J3 and `DAD`. Miss path: `DMD`.
 
 FRTF v3 Profile B differs from production in one place (source fact): its node has arity 3 (`[main leaf, TierCLeaf, TierCLeaf]`). S0 keeps arity 3 for byte identity. S1 and larger use the production arity 4.
 
@@ -333,6 +339,8 @@ Report format: `fsyn-bench-report/1` JSON (cut digest, fid list, host inventory,
 P0 to P2 need no proof, key or network. P3 is the switch that recursion turns on. Benchmark runs follow the existing native owner, resource limits and the Fenrir rule that milestone benchmarks run at sprint exits.
 
 ## 10. Interfaces with Fenrir
+
+Amended 2026-11-08: FSYN has no interface with Fenrir at build or test time. FRTF v3 is not read; S0 is reproduced against the frozen in-repository golden. The Sync bullet is replaced: an optional, offline, manual comparison may propose a parameter change by ordinary commit, and it never runs in a predicate or tier and never makes a fixture stale. The one source of truth is the Moriarty-owned parameter set; a golden vector that disagrees with it is a local defect. The original bullets below are history.
 
 - **Locations.** Code: `models/sherlock/rollup-synth/`. Small fixtures (S0, S1, S5): `models/sherlock/rollup-synth/fixtures/<fid>/`, committed. Large fixtures (S2 to S4): regenerated into `$FSYN_CACHE/<fid>/` (default `~/.cache/moriarty-fsyn/`); only `MANIFEST.json` and `FIXTURE.json` are committed. FRTF v3 is read from its pinned path and is not copied.
 - **Versioning.** Generator `fsyn/MAJOR.MINOR`: MAJOR changes any emitted byte for an unchanged cut; MINOR adds a scale, preset or case. Catalog cases cite the fid. FRTF follows Fenrir's versions (v3, v3.1 at the FX42 freeze, next version for DL-24 scoped witnesses). `frtf-x/1` stays a draft tag until Fenrir adopts a production-shape version.
