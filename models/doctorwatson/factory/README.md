@@ -16,6 +16,12 @@ Notes:
 - `--tier T` selects predicates whose tier is exactly T.
 - A predicate whose dependency fails prints `BLOCKED-BY <id>` and counts as failing,
   unless it is named on the command line.
+- E7 freshness (SAS-002): a row may declare `deps:` (`paths`, `pins`, `chain`,
+  `manifests`, `receipts`; see `freshness.py`). Each pass records `head` and a
+  `closure` of dependency hashes; `next` prints `STALE: <id> (<reasons>)` and counts a
+  stale pass as failing. A row without `deps:` depends on the whole working tree except
+  factory state (status.json, runs.jsonl, agents.jsonl, budgets.json, predicates.yaml,
+  traces/, agents/) plus its own row definition.
 - `heavy` records a budget measurement only for a run that exits 0.
 - Exit 3 (unfit) and 5 (hypothesis required) mean nothing ran; they are not logged and
   leave `status.json` untouched.

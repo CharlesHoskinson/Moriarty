@@ -44,6 +44,7 @@ class Predicate:
     retired: str | None = None   # E10/SWF-011: reason or anchor; sweeps and FIRST FAILING skip the row
     optional: bool = False       # E14/SWF-012: reported, never gating unless --include-optional
     network: str | None = None   # E6/SWF-008: undeployed | stagenet (retired rows only) | preview | mainnet
+    deps: dict | None = None     # E7/SAS-002: declared dependency closure; None -> default closure
     index: int = 0
 
     @property
@@ -132,6 +133,29 @@ def _find_cycles(ids, deps):
     return sorted(on_cycle)
 
 
+DEPS_LISTS = ("paths", "manifests", "receipts")   # repo-relative paths / globs
+DEPS_ROWS = ("pins", "chain")                      # target-pins.json network row names
+
+
+def _deps_errors(where, deps):
+    """E7: `deps:` is a mapping of the keys above; every value names something to fingerprint."""
+    if not isinstance(deps, dict):
+        return [f"{where}: deps must be a mapping"]
+    errors = []
+    for k in sorted(deps, key=str):
+        if k not in DEPS_LISTS + DEPS_ROWS:
+            errors.append(f"{where}: deps has unknown key {k!r}")
+    for k in DEPS_LISTS:
+        v = deps.get(k)
+        if k in deps and not (isinstance(v, list) and all(_nonempty_str(x) for x in v)):
+            errors.append(f"{where}: deps.{k} must be a list of non-empty strings")
+    for k in DEPS_ROWS:
+        v = deps.get(k)
+        if k in deps and not (_nonempty_str(v) or (isinstance(v, list) and v and all(_nonempty_str(x) for x in v))):
+            errors.append(f"{where}: deps.{k} must be a network name or a list of them")
+    return errors
+
+
 def validate_data(data, networks=None):
     """`networks`: names allowed by the pins file (None = not checked against a pins file)."""
     errors = []
@@ -167,6 +191,8 @@ def validate_data(data, networks=None):
                 errors.append(f"{where}: {flag} must be true or false")
         if item.get("heavy") is True and not _nonempty_str(item.get("budget")):
             errors.append(f"{where}: heavy predicate needs a budget key")
+        if "deps" in item:
+            errors.extend(_deps_errors(where, item["deps"]))
         dep = item.get("depends")
         if dep is not None and not isinstance(dep, list):
             errors.append(f"{where}: depends must be a list of ids")
@@ -249,7 +275,7 @@ def load(repo=None):
             budget=item.get("budget"), depends=list(item.get("depends") or []),
             source=item.get("source"), holdout=bool(item.get("holdout", False)),
             retired=item.get("retired"), optional=item.get("optional") is True,
-            network=item.get("network"), index=n,
+            network=item.get("network"), deps=item.get("deps"), index=n,
         ))
     return out
 

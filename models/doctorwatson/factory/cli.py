@@ -46,17 +46,18 @@ def cmd_next(args):
     if roots is None:
         return 2
     scope = preds_mod.closure(preds, roots) if roots else preds
-    counts, first = status.view(scope, entries, args.include_optional)
+    counts, first, stale = status.fresh_view(scope, entries, args.include_optional, repo_root())
     by_id = {p.id: p for p in preds}
     no_results = st is None
     retired = [{"id": p.id, "retired": p.retired} for p in preds if p.retired is not None]
-    optional = status.optional_counts(preds, entries)
+    optional = status.optional_counts(preds, entries, stale)
+    stale_list = [{"id": p.id, "reasons": stale[p.id]} for p in preds if p.id in stale]
     if args.json:
         ff = None
         if first:
             ff = dict(first, title=by_id[first["id"]].title)
         print(json.dumps({"counts": counts, "firstFailing": ff, "noResults": no_results,
-                          "optional": optional, "retired": retired}, indent=2))
+                          "optional": optional, "retired": retired, "stale": stale_list}, indent=2))
         return 0
     for s in preds_mod.SETS:
         print(f"{s}: {counts[s][0]}/{counts[s][1]}")
@@ -67,6 +68,8 @@ def cmd_next(args):
         print(f"RETIRED: {len(retired)}")
         for r in retired:
             print(f"RETIRED: {r['id']} ({r['retired']})")
+    for e in stale_list:  # E7: a pass whose declared dependency closure changed since its run
+        print(f"STALE: {e['id']} ({', '.join(e['reasons'])})")
     if no_results:
         print(NO_RESULTS_HINT)
     if first:

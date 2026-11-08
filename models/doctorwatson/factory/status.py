@@ -5,7 +5,7 @@ import fcntl
 import json
 import os
 
-from . import head_sha, now_iso, repo_root, sherlock_path
+from . import freshness, head_sha, now_iso, repo_root, sherlock_path
 from .predicates import SETS, swept, topo_order
 
 SCHEMA = "doctorwatson.status/1"
@@ -31,31 +31,46 @@ def entries_of(status):
     return status["predicates"]
 
 
-def view(preds, entries, include_optional=False):
-    """Return (counts, firstFailing) from predicate definitions plus result entries.
-
-    Retired rows (SWF-011) never count and are never FIRST FAILING. Optional rows
-    (SWF-012) count and gate only with `include_optional`.
-    """
-    preds = swept(preds, include_optional)
-    counts = {s: [0, 0] for s in SETS}
-    for p in preds:
-        counts[p.set][1] += 1
-        if (entries.get(p.id) or {}).get("passes") is True:
-            counts[p.set][0] += 1
-    first = None
-    for p in topo_order(preds):
-        e = entries.get(p.id) or {}
-        if e.get("passes") is not True:
-            first = {"id": p.id, "check": p.check, "exit": e.get("exit")}
-            break
+def view(preds, entries, include_optional=False, repo=None):
+    """Return (counts, firstFailing) from predicate definitions plus result entries."""
+    counts, first, _ = fresh_view(preds, entries, include_optional, repo)
     return counts, first
 
 
-def optional_counts(preds, entries):
-    """[passing, total] over optional, non-retired rows (reported, never gating)."""
+def fresh_view(preds, entries, include_optional=False, repo=None):
+    """Return (counts, firstFailing, stale) where stale is {id: [reasons]}.
+
+    Retired rows (SWF-011) never count and are never FIRST FAILING. Optional rows
+    (SWF-012) count and gate only with `include_optional`. A stale pass (E7, SAS-002:
+    a declared dependency changed since its run) counts as failing.
+    """
+    stale = freshness.stale_reasons(preds, entries, repo or repo_root())
+    preds = swept(preds, include_optional)
+
+    def ok(pid):
+        return (entries.get(pid) or {}).get("passes") is True and pid not in stale
+
+    counts = {s: [0, 0] for s in SETS}
+    for p in preds:
+        counts[p.set][1] += 1
+        if ok(p.id):
+            counts[p.set][0] += 1
+    first = None
+    for p in topo_order(preds):
+        if not ok(p.id):
+            e = entries.get(p.id) or {}
+            first = {"id": p.id, "check": p.check, "exit": e.get("exit")}
+            if p.id in stale:
+                first.update(stale=True, reasons=stale[p.id])
+            break
+    return counts, first, stale
+
+
+def optional_counts(preds, entries, stale=()):
+    """[passing, total] over optional, non-retired, fresh rows (reported, never gating)."""
     rows = [p for p in preds if p.optional and p.retired is None]
-    return [sum(1 for p in rows if (entries.get(p.id) or {}).get("passes") is True), len(rows)]
+    return [sum(1 for p in rows if (entries.get(p.id) or {}).get("passes") is True and p.id not in stale),
+            len(rows)]
 
 
 def write_atomic(p, text):
@@ -97,6 +112,7 @@ def _update(preds, results, increment, repo):
     old = {k: v for k, v in entries_of(prev).items() if k in ids}
     entries = dict(old)
     flipped = None
+    freshness.stamp(preds, results, repo)  # E7: record head and dependency closure on each pass
     for pid, entry in results.items():
         if entry.get("passes") is True and (old.get(pid) or {}).get("passes") is not True:
             flipped = {"id": pid, "at": entry.get("at") or now_iso()}
@@ -107,7 +123,7 @@ def _update(preds, results, increment, repo):
         since = 0
     elif increment:
         since += 1
-    counts, first = view(preds, entries)
+    counts, first = view(preds, entries, repo=repo)
     status = {
         "schema": SCHEMA,
         "updated": now_iso(),
