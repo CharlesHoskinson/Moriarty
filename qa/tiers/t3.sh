@@ -3,7 +3,7 @@
 # Usage: qa/tiers/t3.sh [--review] [--base REF] [--milestone NAME]
 #   --review    launch a non-blocking cold review in the background (never gates)
 #   --base REF  diff base for the review (default: last tag, else origin/main)
-#   --milestone sherlock-m6 (default; the C4 closure), fenrir-preview, fenrir-mainnet, or
+#   --milestone sherlock-m6 (default; the C4 closure), synthetic-rollup-preview, synthetic-rollup-mainnet, or
 #               all (the whole-tier sweep; a broader report, not a milestone gate)   (E15, SWF-012)
 set -euo pipefail
 

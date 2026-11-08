@@ -18,8 +18,8 @@ RETIRED_NETWORKS = ("stagenet",)
 # E15/SWF-012/SWF-013: milestone row sets, as the roots of a dependency closure.
 MILESTONES = {
     "sherlock-m6": ["C4"],         # Sherlock Preview qualification (tasks.md M6)
-    "fenrir-preview": ["B9p"],     # Fenrir Preview gate (task 6.6): B1-B3, B6, B7, B4p, B5p, B8p, B9p
-    "fenrir-mainnet": ["B9m"],     # Fenrir mainnet gate (task 7.4): adds B4m, B5m, B8m, B9m
+    "synthetic-rollup-preview": ["B9p"],     # synthetic-rollup Preview gate (task 6.6): B1-B3, B6, B7, B4p, B5p, B8p, B9p
+    "synthetic-rollup-mainnet": ["B9m"],     # synthetic-rollup Mainnet gate (task 7.4): adds B4m, B5m, B8m, B9m
 }
 
 

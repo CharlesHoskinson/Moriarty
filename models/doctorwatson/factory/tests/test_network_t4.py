@@ -1,5 +1,6 @@
 """E5/E6 (SWF-008, SWF-009): the `network:` row field, tier T4 and the `qa/tiers/t4.sh` refusal."""
 
+import datetime
 import json
 import os
 import shutil
@@ -10,7 +11,9 @@ import unittest
 from .helpers import FakeRepo, pred, yaml_of
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-RECEIPT = "qa/sherlock/receipt-traces/OP-PV-ROLLBACK/receipt.json"
+RECEIPT = "qa/sherlock/receipt-traces/OP-PV-ROLLBACK-REHEARSAL/receipt.json"
+OP = "OP-MN-DEPLOY"
+AUTH = f"qa/sherlock/authorizations/{OP}.json"
 
 
 class NetworkField(FakeRepo):
@@ -130,42 +133,106 @@ class T4Runner(unittest.TestCase):
         subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
                        cwd=self.d, env=env, check=True, capture_output=True)
 
-    def run_t4(self):
+    def run_t4(self, *args):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-        return subprocess.run(["bash", "qa/tiers/t4.sh"], cwd=self.d, env=env, capture_output=True,
-                              text=True, timeout=60)
+        return subprocess.run(["bash", "qa/tiers/t4.sh", *args], cwd=self.d, env=env,
+                              capture_output=True, text=True, timeout=60)
 
     def calls(self):
         p = os.path.join(self.d, ".dw-calls")
-        return open(p).read() if os.path.exists(p) else ""
+        if not os.path.exists(p):
+            return ""
+        with open(p) as fh:
+            return fh.read()
 
-    def write_receipt(self):
-        path = os.path.join(self.d, RECEIPT)
+    def put(self, rel, text, commit=True):
+        path = os.path.join(self.d, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as fh:
-            fh.write('{"op":"OP-PV-ROLLBACK-REHEARSAL"}\n')
+            fh.write(text)
+        if commit:
+            self.git("add", rel)
+            self.git("commit", "-q", "-m", rel)
+
+    def receipt(self, commit=True):
+        self.put(RECEIPT, '{"op":"OP-PV-ROLLBACK-REHEARSAL"}\n', commit)
+
+    def auth(self, commit=True, **over):
+        future = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        rec = {"op": OP, "authorizedBy": "owner", "spendCeiling": "50 DUST", "expires": future,
+               "singleUse": True}
+        rec.update(over)
+        rec = {k: v for k, v in rec.items() if v is not None}
+        self.put(AUTH, json.dumps(rec) + "\n", commit)
+
+    def assert_refused(self, r, text):
+        self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("REFUSED", r.stderr)
+        self.assertIn(text, r.stderr)
+        self.assertNotIn("check", self.calls())
+
+    def test_needs_op_id(self):
+        self.receipt()
+        self.auth()
+        r = self.run_t4()
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("usage", r.stderr)
+        self.assertEqual(self.run_t4("not-an-op").returncode, 2)
+        self.assertEqual(self.run_t4("OP-PV-DEPLOY").returncode, 2)  # T4 runs mainnet ops only
 
     def test_refuses_without_receipt(self):
-        r = self.run_t4()
-        self.assertNotEqual(r.returncode, 0)
-        self.assertIn("REFUSED", r.stderr)
-        self.assertIn(RECEIPT, r.stderr)
-        self.assertNotIn("check", self.calls())
+        self.auth()
+        self.assert_refused(self.run_t4(OP), RECEIPT)
+
+    def test_old_receipt_path_not_accepted(self):
+        self.auth()
+        self.put("qa/sherlock/receipt-traces/OP-PV-ROLLBACK/receipt.json", "{}\n")
+        self.assert_refused(self.run_t4(OP), RECEIPT)
 
     def test_refuses_with_uncommitted_receipt(self):
-        self.write_receipt()
-        r = self.run_t4()
-        self.assertNotEqual(r.returncode, 0)
-        self.assertIn("not committed", r.stderr)
-        self.assertNotIn("check", self.calls())
+        self.auth()
+        self.receipt(commit=False)
+        self.assert_refused(self.run_t4(OP), "not committed")
 
-    def test_runs_t4_checks_with_committed_receipt(self):
-        self.write_receipt()
-        self.git("add", RECEIPT)
-        self.git("commit", "-q", "-m", "receipt")
-        r = self.run_t4()
+    def test_refuses_without_authorization(self):
+        self.receipt()
+        self.assert_refused(self.run_t4(OP), AUTH)
+
+    def test_refuses_uncommitted_authorization(self):
+        self.receipt()
+        self.auth(commit=False)
+        self.assert_refused(self.run_t4(OP), "not committed")
+
+    def test_refuses_bad_authorization_fields(self):
+        self.receipt()
+        cases = [
+            ({"op": "OP-MN-CALL-P1"}, "op must be"),
+            ({"authorizedBy": ""}, "authorizedBy"),
+            ({"authorizedBy": None}, "authorizedBy"),
+            ({"spendCeiling": None}, "spendCeiling"),
+            ({"expires": "2020-01-01"}, "expired"),
+            ({"expires": "next week"}, "ISO date"),
+            ({"singleUse": False}, "singleUse"),
+            ({"singleUse": None}, "singleUse"),
+        ]
+        for over, text in cases:
+            with self.subTest(over=over):
+                self.auth(**over)
+                self.assert_refused(self.run_t4(OP), text)
+
+    def test_refuses_used_authorization(self):
+        self.receipt()
+        self.auth()
+        self.put(f"qa/sherlock/receipt-traces/{OP}/receipt.json", "{}\n")
+        self.assert_refused(self.run_t4(OP), "already used")
+
+    def test_runs_t4_checks_with_receipt_and_authorization(self):
+        self.receipt()
+        self.auth()
+        r = self.run_t4(OP)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("check --tier T4", self.calls())
+        self.assertIn(OP, r.stdout)
 
 
 if __name__ == "__main__":

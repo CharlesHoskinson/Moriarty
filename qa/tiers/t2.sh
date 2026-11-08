@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # T2: host preflight, then the T2 predicates (heavy proofs, twin rehearsal) of one milestone row set.
 # Usage: qa/tiers/t2.sh [--milestone NAME]
-#   NAME: sherlock-m6 (default; the C4 closure), fenrir-preview, fenrir-mainnet, or
+#   NAME: sherlock-m6 (default; the C4 closure), synthetic-rollup-preview, synthetic-rollup-mainnet, or
 #         all (the whole-tier sweep; a broader report, not a milestone gate)   (E15, SWF-012)
 set -euo pipefail
 

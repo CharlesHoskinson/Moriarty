@@ -1,8 +1,8 @@
 """E15 (SWF-012, SWF-013): milestone-scoped tier runners.
 
-The Sherlock M6 gate is the C4 dependency closure; the Fenrir gates are the B rows and
+The Sherlock M6 gate is the C4 dependency closure; the synthetic-rollup gates are the B rows and
 their closures. An unimplemented mandatory B4p leaves the Sherlock M6 selection eligible
-and blocks the Fenrir Preview selection.
+and blocks the synthetic-rollup Preview selection.
 """
 
 import json
@@ -49,17 +49,17 @@ class MilestoneScope(FakeRepo):
         d = json.loads(self.run_cli("next", "--json", "--milestone", "sherlock-m6").stdout)
         self.assertIsNone(d["firstFailing"])
 
-    def test_fenrir_preview_blocked_by_b4p(self):
-        r = self.run_cli("check", "--tier", "T3", "--milestone", "fenrir-preview")
+    def test_synthetic_rollup_preview_blocked_by_b4p(self):
+        r = self.run_cli("check", "--tier", "T3", "--milestone", "synthetic-rollup-preview")
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("B4p: FAIL exit=2", r.stdout)
         self.assertIn("B9p: BLOCKED-BY B4p", r.stdout)
         self.assertNotIn("B4m:", r.stdout)  # T4, outside this tier and this gate
-        d = json.loads(self.run_cli("next", "--json", "--milestone", "fenrir-preview").stdout)
+        d = json.loads(self.run_cli("next", "--json", "--milestone", "synthetic-rollup-preview").stdout)
         self.assertEqual(d["firstFailing"]["id"], "B4p")
 
-    def test_fenrir_mainnet_closure(self):
-        r = self.run_cli("check", "--tier", "T4", "--milestone", "fenrir-mainnet")
+    def test_synthetic_rollup_mainnet_closure(self):
+        r = self.run_cli("check", "--tier", "T4", "--milestone", "synthetic-rollup-mainnet")
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("B4m: BLOCKED-BY B4p", r.stdout)
         self.assertIn("B9m: BLOCKED-BY B9p", r.stdout)
@@ -87,7 +87,7 @@ class MilestoneScope(FakeRepo):
 
 
 class RealCatalogClosures(unittest.TestCase):
-    """SWF-013 on the real catalog: the C4 closure has no B row; the Fenrir gates are their B rows."""
+    """SWF-013 on the real catalog: the C4 closure has no B row; the synthetic-rollup gates are their B rows."""
 
     def closure(self, roots):
         import sys
@@ -103,13 +103,13 @@ class RealCatalogClosures(unittest.TestCase):
         self.assertIn("A8p", c)
         self.assertEqual([i for i, p in c.items() if p.set == "B"], [])
 
-    def test_fenrir_gates_contain_their_b_rows(self):
+    def test_synthetic_rollup_gates_contain_their_b_rows(self):
         from factory import predicates as pm
-        pv = self.closure(pm.MILESTONES["fenrir-preview"])
+        pv = self.closure(pm.MILESTONES["synthetic-rollup-preview"])
         for i in ("B1", "B2", "B3", "B6", "B7", "B4p", "B5p", "B8p", "B9p"):
             self.assertIn(i, pv)
         self.assertFalse(any(i.endswith("m") and i.startswith("B") for i in pv))
-        mn = self.closure(pm.MILESTONES["fenrir-mainnet"])
+        mn = self.closure(pm.MILESTONES["synthetic-rollup-mainnet"])
         for i in ("B4m", "B5m", "B8m", "B9m", "B9p"):
             self.assertIn(i, mn)
 

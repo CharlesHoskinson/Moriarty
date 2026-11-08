@@ -22,7 +22,8 @@ Common rules:
 | `qa/sherlock/status.json` | written only by `doctorwatson check` and `doctorwatson heavy` | current results, overwritten on every write |
 | `qa/sherlock/runs.jsonl` | appended only by `doctorwatson heavy` and `doctorwatson check` | one JSON line per run |
 | `qa/sherlock/traces/` | written by `heavy` (gitignored) | full stdout/stderr of each run |
-| `qa/tiers/t0.sh` `t1.sh` `t2.sh` `t3.sh` | tiers | tier runners |
+| `qa/tiers/t0.sh` `t1.sh` `t2.sh` `t3.sh` `t4.sh` | tiers | tier runners |
+| `qa/sherlock/authorizations/<OP-ID>.json` | owner | one owner authorization record per mainnet operation (SWF-009) |
 | `.githooks/pre-commit`, `scripts/qa/install-hooks.sh` | tiers | local hook; enabled with `git config core.hooksPath .githooks` |
 | `qa/holdout/` | holdout evaluator only | sealed scenarios plus `MANIFEST.sha256` |
 | `crates/mori-backend/tests/soundness_mutation.rs` and `crates/mori-backend/src/qa_mutation.rs` | fuzz | witness-mutation soundness harness |
@@ -38,7 +39,7 @@ predicates:
   - id: A3                     # unique; sets A, B, C, U (UIREQ scenarios), F (factory)
     set: A                     # A | B | C | U | F
     title: "k20 parent proof over two linked children"
-    tier: T2                   # T0 | T1 | T2 | T3 — the cheapest tier that can run the check
+    tier: T2                   # T0 | T1 | T2 | T3 | T4 — the cheapest tier that can run the check
     check: "scripts/qa/check-a3.sh"   # shell command, run from repo root; exit 0 = pass
     heavy: true                # true → must run through `doctorwatson heavy`
     budget: "a3-parent-k20"    # key into budgets.json (heavy checks only)
@@ -47,11 +48,13 @@ predicates:
     holdout: false             # true → check runs files under qa/holdout/ (read-only to the driver)
     retired: "<reason or anchor>"  # optional; non-empty string → superseded row (SWF-011)
     optional: true             # optional; true or false (default false) → reported, not gating (SWF-012)
+    network: preview           # optional; undeployed | stagenet | preview | mainnet (SWF-008)
 ```
 
 - `retired:` must be a non-empty string when present. `optional:` must be a boolean when present. A row is **mandatory** when it is neither retired nor optional.
 - A retired row stays in the file with its old `check`. Its results in `status.json` and `runs.jsonl` are kept. Sweeps, `counts` and `firstFailing` ignore it. `next` lists it.
 - An optional row is reported by `next` (`OPTIONAL: <passing>/<total>`) and runs when named. Sweeps, `counts` and `firstFailing` ignore it unless `--include-optional` is given.
+- `network:` must be one of `undeployed`, `stagenet`, `preview`, `mainnet` and, when `qa/sherlock/target-pins.json` exists, name a row in its `networks`. Stagenet is retired: only a retired row may carry `network: stagenet`. A non-retired T4 row must carry `network: mainnet`, and a non-retired `network: mainnet` row must be T4. A T4 row must depend directly on the T3 `network: preview` row of the same key lineage, which is the id with its final `m` replaced by `p` (`B4m` on `B4p`) (SWF-008).
 - `validate` refuses a non-retired row that depends on a retired row. It also refuses a mandatory row that depends on an optional row. An optional row may depend on mandatory or optional rows. A retired row may depend on any row, so retired history keeps its old `depends`.
 
 - The `U` set uses ids `U001`…`U035`, one per UIREQ, each with `source` pointing at its spec, plus the U023 receipt rows `U023a`…`U023f`.
@@ -101,8 +104,8 @@ One line per run:
 
 | Command | Behavior | Exit |
 |---|---|---|
-| `next [--json] [--include-optional]` | Print counts per set, then `OPTIONAL: <passing>/<total> (not gating)` when optional rows exist, `RETIRED: <n>` and one `RETIRED: <id> (<reason>)` line per retired row, then `FIRST FAILING: <id> — <title>` and `CHECK: <command>`. Counts and FIRST FAILING cover mandatory rows only; `--include-optional` adds optional rows (the line then says `gating`). Retired rows never count. `--json` adds `optional` (`[passing, total]`) and `retired` (`[{id, retired}]`). Reads `status.json` only | 0 |
-| `check [ID…] [--set S] [--tier T] [--include-optional] [--hypothesis TEXT]` | Run the selected checks, sending heavy ones through `heavy`. Update `status.json` and append to `runs.jsonl`. Print one line per predicate. **Sweep rules:** without IDs, the sweep skips retired rows always and optional rows unless `--include-optional`. A named ID always runs, retired or optional. `--set` and `--tier` also filter named IDs. A row whose dependency is not passing is recorded `BLOCKED-BY <dep>`, named or not. The `counts` and `firstFailing` written to `status.json` cover mandatory rows only | 0 all pass, 1 any fail |
+| `next [--json] [--include-optional] [--milestone M] [--closure ID]` | `--milestone`/`--closure` (E15) limit counts and FIRST FAILING to the milestone row set. Print counts per set, then `OPTIONAL: <passing>/<total> (not gating)` when optional rows exist, `RETIRED: <n>` and one `RETIRED: <id> (<reason>)` line per retired row, then `FIRST FAILING: <id> — <title>` and `CHECK: <command>`. Counts and FIRST FAILING cover mandatory rows only; `--include-optional` adds optional rows (the line then says `gating`). Retired rows never count. `--json` adds `optional` (`[passing, total]`) and `retired` (`[{id, retired}]`). Reads `status.json` only | 0 |
+| `check [ID…] [--set S] [--tier T] [--include-optional] [--milestone M] [--closure ID] [--hypothesis TEXT]` | Run the selected checks, sending heavy ones through `heavy`. Update `status.json` and append to `runs.jsonl`. Print one line per predicate. **Sweep rules:** without IDs, the sweep skips retired rows always and optional rows unless `--include-optional`. A named ID always runs, retired or optional. `--set` and `--tier` also filter named IDs. A row whose dependency is not passing is recorded `BLOCKED-BY <dep>`, named or not. The `counts` and `firstFailing` written to `status.json` cover mandatory rows only. **Milestone scope (E15, SWF-012):** `--closure ID` (repeatable) keeps only ID and its transitive `depends`; `--milestone M` (repeatable) is the closure of the milestone's roots: `sherlock-m6` = C4, `synthetic-rollup-preview` = B9p, `synthetic-rollup-mainnet` = B9m (`factory.predicates.MILESTONES`). A scope is a sweep: it skips retired and optional rows as above, and `--tier`/`--set` filter it. An unknown id or milestone exits 2 | 0 all pass, 1 any fail, 2 usage |
 | `preflight [--json]` | Disk free on the repo filesystem ≥ 150 GiB (`DW_MIN_FREE_GIB`). 1-minute load < `os.cpu_count()`. No other process holding the heavy lock. Print the actual numbers | 0 ok, 3 unfit |
 | `heavy --id ID [--budget KEY] [--hypothesis TEXT] -- CMD…` | Take an exclusive `fcntl.flock` on `~/.cache/doctorwatson/heavy.lock`, run preflight, then measure-then-cap (wall time and peak RSS of the child via `os.wait4`). Write the full trace. **Retry rule:** if the last run of this ID failed with the same `cmd` and the same `head`, `--hypothesis` is required (exit 5 without it). Every retry is logged. Nothing is ever "consumed" | the child's exit, 3 unfit, 4 budget, 5 hypothesis required |
 | `stop-rule [--json]` | If `iterationsSinceFlip` ≥ 3, or more than 24 h have passed since `lastFlip`, print `STOP: escalate to owner` with the last failing run's trace path | 0 continue, 6 stop |
@@ -115,8 +118,20 @@ One line per run:
 |---|---|---|
 | T0 | under 3 min | `holdout verify`; `cargo test` for crates touched by staged files; factory unittests; predicate schema validation |
 | T1 | under 20 min | `cargo test -p mori-backend --test soundness_mutation` (MockProver mutation, small k); `doctorwatson check --tier T1` |
-| T2 | measured | `doctorwatson check --tier T2` (heavy proofs, twin rehearsal) |
-| T3 | per milestone | stagenet; non-blocking cold review through `codex exec -s read-only` with a 1 h timeout |
+| T2 | measured | `doctorwatson check --tier T2 --milestone M` (heavy proofs, twin rehearsal) |
+| T3 | per milestone | Preview (stagenet is retired); `doctorwatson check --tier T3 --milestone M`; non-blocking cold review through `codex exec -s read-only` with a 1 h timeout |
+| T4 | mainnet only | `qa/tiers/t4.sh OP-MN-<NAME>`: refuses unless the rehearsal receipt and the operation's authorization are committed; mainnet checklist; `doctorwatson check --tier T4` |
+
+`t2.sh` and `t3.sh` take `--milestone M` (default `sherlock-m6`, the C4 closure; `all` is the whole-tier sweep, a report and not a gate).
+
+`t4.sh OP-ID` (OP-ID matches `OP-MN-[A-Z0-9-]+`, else exit 2) exits 9 with `REFUSED` unless (SWF-009):
+- `qa/sherlock/receipt-traces/OP-PV-ROLLBACK-REHEARSAL/receipt.json` is committed (tracked, no uncommitted change). No other path is accepted.
+- `qa/sherlock/authorizations/<OP-ID>.json` is committed and is a JSON object with: `op` equal to OP-ID; `authorizedBy`, a non-empty string; `spendCeiling`, a positive number or a non-empty string with its unit; `expires`, an ISO date (`YYYY-MM-DD`) that is today (UTC) or later; `singleUse: true`.
+- `qa/sherlock/receipt-traces/<OP-ID>/receipt.json` does not exist. A single-use authorization is spent when its operation's receipt exists; a new run needs a new record.
+
+```json
+{"op":"OP-MN-DEPLOY","authorizedBy":"owner","spendCeiling":"50 DUST","expires":"2026-11-15","singleUse":true}
+```
 
 ## The pre-commit hook
 
