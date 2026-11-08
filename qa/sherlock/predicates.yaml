@@ -1068,6 +1068,7 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-002"
     holdout: false
+    deps: {paths: ["scripts/qa/check-traceability.py", "qa/sherlock/predicates.yaml", "openspec/**", "scripts/**", "qa/holdout/**", "models/doctorwatson/**", "wiki-llm/doctorwatson-agentbus/**"]}
   - id: F15
     set: F
     title: "Static target pins: qa/sherlock/target-pins.json agrees with Cargo.toml and the SDK lockfile (SWF-007, SMN-001, SMN-004)"
@@ -1077,6 +1078,7 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#swf-007"
     holdout: false
+    deps: {paths: ["scripts/qa/check-target-pins.py", "qa/sherlock/target-pins.json", "Cargo.toml", "Cargo.lock", "crates/*/Cargo.toml", "tools/sherlock-sdk/package.json", "tools/sherlock-sdk/package-lock.json"]}
   - id: F16
     set: F
     title: "Retired and optional rows (sweeps and FIRST FAILING skip retired rows and, unless --include-optional, optional rows; named ids still run; validate refuses a mandatory row on a retired or optional row)"
@@ -1104,6 +1106,7 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-016"
     holdout: false
+    deps: {paths: ["scripts/qa/check-f18.sh", "models/doctorwatson/factory/**", "qa/tiers/t1.sh", "crates/mori-backend/tests/soundness_mutation.rs", "crates/mori-backend/src/sherlock_machine/c6_checked_value_read_tests.rs", "crates/mori-backend/src/sherlock_machine/c6_data_canonical.rs", "crates/mori-backend/src/sherlock_machine/c6_scalar_failure_step.rs", "crates/mori-backend/src/sherlock_machine/c6_dispatch_tests.rs"]}
   - id: F19
     set: F
     title: "C0 profile harness ready for the GP chain (task 2.7): tools/profile re-pinned to zk-stdlib 2.4.0 / circuits 7.3.0 with a fresh Cargo.lock, profile-gp builds with and without the feature, prepare --check-only and the isolation check pass, GP workload and C11-C14 decide rows unit-tested (SRC-011, RPP-007)"
@@ -1122,6 +1125,7 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
     holdout: false
+    deps: {paths: ["scripts/qa/check-f20.sh", "models/sherlock/quint/**"]}
   - id: F21
     set: F
     title: "Lean composition theorems (task 2.12): clean/fork/Clean/Sherlock/Aggregation.lean and AggregationAxioms.lean in SherlockSpec build with zero sorry; L1 segment soundness for every program, L2 associativity of link with the identity as unit, L3 padding neutrality, L4 exactly-once coverage, L5 height arithmetic without wrap, L6 decider pinning, L7 independence from shape, depth and S, L-C, L-D, L-E; print axioms within the declared premises (scripts/qa/check-lean-aggregation.sh; exit 2 while the toolchain is absent) (SRC-017, SAS-009)"
@@ -1131,6 +1135,7 @@ predicates:
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
     holdout: false
+    deps: {paths: ["scripts/qa/check-lean-aggregation.sh", "clean/fork/**"]}
   - id: F22
     set: F
     title: "Tree node row probe (task 2.13; tree.md T0): cost_model rows and k of the slot nodes {self, self, leaf}, {self, self}, {self, self, leaf, leaf} without an SRS, recorded in budgets.json tree-node-rows; the tree is killed at > 0.95 x 2^20 rows (SRC-017, SRC-011)"
@@ -1140,6 +1145,7 @@ predicates:
     depends: [A1]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-017"
     holdout: false
+    deps: {paths: ["scripts/qa/check-f22.sh", "crates/mori-recursion/tests/tree_node_rows.rs", "qa/sherlock/budgets.json"]}
   - id: F23
     set: F
     title: "GPU phase G0, toolchain smoke on sm_121 (task 2.10a; gpu.md section 0 and section 6; the smoke ran 2026-11-08, the check script is pending): nvcc 13.4, driver and device recorded; a Rust build.rs -> nvcc -> static lib -> kernel on plain Vec<u32> memory (zero-copy) computes 32-bit-limb products with 0 mismatches against a CPU u128 reference; cudaMalloc and cudaMallocManaged of 1 GiB each raise the process RSS by at least 0.9 GiB (device memory is capped by the cgroup, Q10); exit 2 without nvcc or a device, never a vacuous pass; the track proceeds only when gate G-A records m + q >= 0.4 and the owner funds the phases (SRC-018; optional)"

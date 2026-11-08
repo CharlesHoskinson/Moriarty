@@ -22,13 +22,16 @@ everything under it; a glob uses fnmatch, where `*` also crosses `/` (over-match
 the safe direction). `manifests` and `receipts` hash the named files directly, so a
 gitignored key manifest still counts.
 
-A row without `deps:` gets the DEFAULT closure: every working-tree path except the
-factory state files below. That is conservative (any source, spec, pins or receipt
-change makes it stale) and is not a directory exclusion.
+A row without `deps:` gets the DEFAULT closure: every working-tree path except
+factory state and DEFAULT_EXCLUDE (receipt locations, `budgets.json`, and
+`predicates.yaml`, whose per-row content the `row` hash covers). It is conservative
+(any source, spec or pins change makes it stale) and a state-only or receipt-only
+commit keeps it eligible. It behaves close to a HEAD gate, so it is an interim
+signal: `next` and `validate` report such rows as `default (undeclared)`.
 
-Factory state is never a dependency: the files the factory itself writes as results
-(STATE_FILES, STATE_DIRS) and `predicates.yaml`, whose per-row content is covered by
-the `row` hash instead.
+Run results are never a dependency of any row (STATE_FILES, STATE_DIRS): status.json,
+runs.jsonl, agents.jsonl and the gitignored traces/ and agents/ directories. A row may
+still declare `budgets.json`, `predicates.yaml` or a receipt explicitly.
 """
 
 import bisect
@@ -43,10 +46,18 @@ from . import head_sha
 PINS = "qa/sherlock/target-pins.json"
 STATE_FILES = frozenset((
     "qa/sherlock/status.json", "qa/sherlock/runs.jsonl", "qa/sherlock/agents.jsonl",
-    "qa/sherlock/budgets.json", "qa/sherlock/.status.lock", "qa/sherlock/predicates.yaml",
+    "qa/sherlock/.status.lock",
 ))
 STATE_DIRS = ("qa/sherlock/traces/", "qa/sherlock/agents/")  # gitignored run output
-DEFAULT_DEPS = {"paths": ["."]}
+# Default closure only. Receipts: the factory location (workflow.md: committed
+# qa/sherlock/receipt-traces/<op>/) and receipt-named files or directories elsewhere.
+DEFAULT_EXCLUDE = (
+    "qa/sherlock/receipt-traces/*", "*/receipts/*", "receipts/*",
+    "*/receipt.json", "receipt.json", "*-receipt.json", "*.receipt.json",
+    "qa/sherlock/budgets.json", "qa/sherlock/predicates.yaml",
+)
+DEFAULT_DEPS = {"paths": ["."], "exclude": DEFAULT_EXCLUDE}
+UNDECLARED = "default (undeclared)"
 ROW_FIELDS = ("id", "set", "tier", "check", "heavy", "budget", "depends", "holdout", "deps")
 NO_CLOSURE = "no recorded closure"
 GLOB = "*?["
@@ -80,6 +91,11 @@ def row_hash(p):
 
 def closure_of(p):
     return p.deps if p.deps is not None else DEFAULT_DEPS
+
+
+def undeclared(preds):
+    """Non-retired rows on the default closure (interim signal; declare `deps:`)."""
+    return [p.id for p in preds if p.deps is None and p.retired is None]
 
 
 class Snapshot:
@@ -164,12 +180,14 @@ class Snapshot:
                     hit.add(i)
         return sorted(hit)
 
-    def paths_hash(self, patterns):
-        key = ("paths", tuple(patterns))
+    def paths_hash(self, patterns, exclude=()):
+        key = ("paths", tuple(patterns), tuple(exclude))
         if key not in self._cache:
             paths, ids = self.files()
             h = hashlib.sha256()
             for i in self._matching(patterns):
+                if any(fnmatch.fnmatchcase(paths[i], x) for x in exclude):
+                    continue
                 h.update(f"{paths[i]}\0{ids[i]}\n".encode())
             self._cache[key] = h.hexdigest()
         return self._cache[key]
@@ -200,7 +218,7 @@ class Snapshot:
         deps = closure_of(p)
         out = {"row": row_hash(p)}
         if "paths" in deps:
-            out["paths"] = self.paths_hash(_as_list(deps["paths"]))
+            out["paths"] = self.paths_hash(_as_list(deps["paths"]), deps.get("exclude", ()))
         for name in _as_list(deps.get("pins")):
             out[f"pins:{name}"] = self.pins_row(name)
         for name in _as_list(deps.get("chain")):

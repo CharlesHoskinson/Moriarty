@@ -5,7 +5,7 @@ import json
 import os
 import sys
 
-from . import bus, evalloop, head_sha, heavy, holdout, now_iso, preflight, queue, reap, repo_root, spawn, status, stoprule
+from . import bus, evalloop, freshness, head_sha, heavy, holdout, now_iso, preflight, queue, reap, repo_root, spawn, status, stoprule
 from . import predicates as preds_mod
 
 NO_RESULTS_HINT = "(no results yet — run scripts/doctorwatson check --tier T0)"
@@ -52,12 +52,15 @@ def cmd_next(args):
     retired = [{"id": p.id, "retired": p.retired} for p in preds if p.retired is not None]
     optional = status.optional_counts(preds, entries, stale)
     stale_list = [{"id": p.id, "reasons": stale[p.id]} for p in preds if p.id in stale]
+    undeclared = freshness.undeclared(preds)  # E7 interim: rows on the default closure
     if args.json:
         ff = None
         if first:
             ff = dict(first, title=by_id[first["id"]].title)
         print(json.dumps({"counts": counts, "firstFailing": ff, "noResults": no_results,
-                          "optional": optional, "retired": retired, "stale": stale_list}, indent=2))
+                          "optional": optional, "retired": retired, "stale": stale_list,
+                          "closures": [{"id": i, "closure": freshness.UNDECLARED} for i in undeclared]},
+                         indent=2))
         return 0
     for s in preds_mod.SETS:
         print(f"{s}: {counts[s][0]}/{counts[s][1]}")
@@ -68,6 +71,9 @@ def cmd_next(args):
         print(f"RETIRED: {len(retired)}")
         for r in retired:
             print(f"RETIRED: {r['id']} ({r['retired']})")
+    if undeclared:
+        noun = "row" if len(undeclared) == 1 else "rows"
+        print(f"CLOSURE: {freshness.UNDECLARED} for {len(undeclared)} {noun}: {', '.join(undeclared)}")
     for e in stale_list:  # E7: a pass whose declared dependency closure changed since its run
         print(f"STALE: {e['id']} ({', '.join(e['reasons'])})")
     if no_results:
@@ -224,6 +230,8 @@ def cmd_validate(args):
         for e in errors:
             print(e)
         return 1
+    for pid in freshness.undeclared(preds_mod.load(repo_root())):  # E7 interim signal: warn, never fail
+        print(f"warning: {pid}: closure: {freshness.UNDECLARED}; declare deps:", file=sys.stderr)
     print("predicates OK")
     return 0
 

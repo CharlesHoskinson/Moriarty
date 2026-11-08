@@ -49,7 +49,15 @@ predicates:
     retired: "<reason or anchor>"  # optional; non-empty string → superseded row (SWF-011)
     optional: true             # optional; true or false (default false) → reported, not gating (SWF-012)
     network: preview           # optional; undeployed | stagenet | preview | mainnet (SWF-008)
+    deps: {paths: ["crates/mori-recursion/**"], pins: preview, chain: preview,
+           manifests: ["target/keys/node.manifest.json"],
+           receipts: ["qa/sherlock/receipt-traces/OP/receipt.json"]}   # optional; E7 closure (SAS-002)
 ```
+
+- `deps:` (E7, SAS-002) declares the row's dependency closure. Keys: `paths` (list of repo paths or globs: source, spec, contract files; a plain path also covers everything under it), `pins` and `chain` (a `target-pins.json` network row name or a list of names; `pins` hashes the whole row, `chain` only its `chain` object), `manifests` and `receipts` (lists of files, hashed by content, gitignored files included). `validate` refuses unknown keys and wrong types.
+- Each pass written to `status.json` carries `head` (provenance only) and `closure` (`{label: sha256}`, labels `row`, `paths`, `pins:<net>`, `chain:<net>`, `manifest:<path>`, `receipt:<path>`; `row` hashes the row's own id, set, tier, check, heavy, budget, depends, holdout and deps). A pass is **stale** iff a recorded hash differs from the current one, a `depends` row is stale or not passing, or it has no `closure`. HEAD equality plays no part. A stale pass counts as failing in `counts` and `firstFailing`; `next` prints `STALE: <id> (<reasons>)`, and `next --json` adds `stale` (`[{id, reasons}]`) and `firstFailing.stale`.
+- Run results are never a dependency: `status.json`, `runs.jsonl`, `agents.jsonl`, `.status.lock`, `traces/`, `agents/`. A state-only commit therefore keeps every pass eligible.
+- A row without `deps:` uses the **default closure**: every working-tree path except run results, receipt locations (`qa/sherlock/receipt-traces/`, `*/receipts/*`, `receipt.json`, `*-receipt.json`, `*.receipt.json`), `budgets.json` and `predicates.yaml` (the `row` hash covers its own row). A receipt-only commit keeps it eligible; any other change makes it stale. This is an interim signal close to a HEAD gate: `next` prints `CLOSURE: default (undeclared) for <n> rows: <ids>` (`--json`: `closures: [{id, closure: "default (undeclared)"}]`) and `validate` warns on stderr once per non-retired row (`warning: <id>: closure: default (undeclared)`), exit 0.
 
 - `retired:` must be a non-empty string when present. `optional:` must be a boolean when present. A row is **mandatory** when it is neither retired nor optional.
 - A retired row stays in the file with its old `check`. Its results in `status.json` and `runs.jsonl` are kept. Sweeps, `counts` and `firstFailing` ignore it. `next` lists it.

@@ -1,9 +1,11 @@
 """E7 (SAS-002): freshness by declared dependency closure, in temporary git repos."""
 
 import json
+import os
 import subprocess
+import unittest
 
-from .helpers import FakeRepo, pred, yaml_of
+from .helpers import PKG_PARENT, FakeRepo, pred, yaml_of
 
 PINS = {
     "schema": "moriarty.target-pins/1",
@@ -207,9 +209,35 @@ class DefaultClosure(GitRepo):
         self.commit("notes", "other/notes.txt")
         self.assert_stale("A1", "paths")
 
-    def test_receipt_change_stale_without_declaration(self):
+    def test_receipt_only_commit_eligible(self):
+        self.state_commit()
         self.write("qa/sherlock/receipt-traces/OP-B/receipt.json", '{"tx":"2"}\n')
-        self.assert_stale("A1", "paths")
+        self.write("qa/sherlock/receipt-traces/OP-C/trace.log", "t\n")
+        self.write("evidence/run1/receipts/call.json", "{}\n")
+        self.write("evidence/run1/audit-receipt.json", "{}\n")
+        self.write("evidence/run1/op.receipt.json", "{}\n")
+        self.commit("receipts", "qa/sherlock/receipt-traces", "evidence")
+        self.assert_eligible("A1")
+        self.assert_eligible("A2")
+
+    def test_budgets_and_predicates_file_not_in_default(self):
+        self.write("qa/sherlock/budgets.json", '{"budgets":{}}\n')
+        with open(self.p("qa/sherlock/predicates.yaml"), "a") as fh:
+            fh.write("# comment\n")
+        self.assert_eligible("A1")
+
+    def test_next_reports_default_closure(self):
+        r = self.run_cli("next")
+        self.assertIn("CLOSURE: default (undeclared) for 1 row: A1", r.stdout)
+        d = self.next_json()
+        self.assertEqual(d["closures"], [{"id": "A1", "closure": "default (undeclared)"}])
+
+    def test_validate_warns_per_default_row(self):
+        r = self.run_cli("validate")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("predicates OK", r.stdout)
+        self.assertIn("warning: A1: closure: default (undeclared)", r.stderr)
+        self.assertNotIn("A2", r.stderr)
 
     def test_stale_dependency_propagates(self):
         self.write("other/notes.txt", "n2\n")
@@ -228,6 +256,31 @@ class DefaultClosure(GitRepo):
         st["predicates"]["A1"].pop("closure")
         self.write("qa/sherlock/status.json", json.dumps(st))
         self.assert_stale("A1", "no recorded closure")
+
+
+class DeclaredStateInputs(GitRepo):
+    def test_declared_budgets_file_counts(self):
+        self.write("qa/sherlock/budgets.json", '{"budgets":{"x":1}}\n')
+        self.setup_rows(row("F22", deps='{paths: ["qa/sherlock/budgets.json"]}'))
+        self.write("qa/sherlock/budgets.json", '{"budgets":{"x":2}}\n')
+        self.assert_stale("F22", "paths")
+
+    def test_status_and_runs_never_count(self):
+        self.setup_rows(row("F1", deps='{paths: ["qa/sherlock/**"]}'))
+        self.assertEqual(self.run_cli("check", "F1").returncode, 0)
+        self.state_commit()
+        self.assert_eligible("F1")
+
+
+class RepoRows(unittest.TestCase):
+    """The critical-path F rows of the real predicates.yaml declare their closure."""
+
+    def test_critical_f_rows_declare_deps(self):
+        from factory import predicates
+        root = os.path.dirname(os.path.dirname(PKG_PARENT))
+        rows = {p.id: p for p in predicates.load(root)}
+        for pid in ("F14", "F15", "F18", "F20", "F21", "F22"):
+            self.assertTrue((rows[pid].deps or {}).get("paths"), pid)
 
 
 class NextText(GitRepo):
