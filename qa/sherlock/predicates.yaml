@@ -1148,11 +1148,12 @@ predicates:
     deps: {paths: ["scripts/qa/check-f22.sh", "crates/mori-recursion/tests/tree_node_rows.rs", "qa/sherlock/budgets.json"]}
   - id: F23
     set: F
-    title: "GPU phase G0, toolchain smoke on sm_121 (task 2.10a; gpu.md section 0 and section 6; the smoke ran 2026-11-08, the check script is pending): nvcc 13.4, driver and device recorded; a Rust build.rs -> nvcc -> static lib -> kernel on plain Vec<u32> memory (zero-copy) computes 32-bit-limb products with 0 mismatches against a CPU u128 reference; cudaMalloc and cudaMallocManaged of 1 GiB each raise the process RSS by at least 0.9 GiB (device memory is capped by the cgroup, Q10); exit 2 without nvcc or a device, never a vacuous pass; the track proceeds only when gate G-A records m + q >= 0.4 and the owner funds the phases (SRC-018; optional)"
+    title: "GPU phase G0, toolchain smoke on sm_121 (task 2.10a; gpu.md section 0 and section 6; the smoke ran 2026-11-08; tools/gpu-smoke rebuilds and reruns it): nvcc 13.4, driver and device recorded; a Rust build.rs -> nvcc -> static lib -> kernel on plain Vec<u32> memory (zero-copy) computes 32-bit-limb products with 0 mismatches against a CPU u128 reference; cudaMalloc and cudaMallocManaged of 1 GiB each raise the process RSS by at least 0.9 GiB (device memory is capped by the cgroup, Q10); exit 2 without nvcc or a device, never a vacuous pass; the track proceeds only when gate G-A records m + q >= 0.4 and the owner funds the phases (SRC-018; optional)"
     tier: T0
-    check: "scripts/qa/unimplemented.sh F23"
+    check: "scripts/qa/check-f23.sh"
     heavy: false
     depends: [F2]
     source: "openspec/changes/sherlock-vm-consensus-20261107/requirements.md#src-018"
     holdout: false
     optional: true
+    deps: {paths: ["scripts/qa/check-f23.sh", "tools/gpu-smoke/Cargo.toml", "tools/gpu-smoke/build.rs", "tools/gpu-smoke/cuda/kernels.cu", "tools/gpu-smoke/src/main.rs"]}
