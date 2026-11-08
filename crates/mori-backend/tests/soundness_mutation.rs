@@ -191,6 +191,7 @@ fn config(b: Budget, allow: Vec<Allow>) -> Config {
         max_mutations: Some(b.mutations),
         swaps: b.swaps,
         allow,
+        mutant_timeout: None,
     }
 }
 
@@ -207,6 +208,13 @@ fn run_named(
     let report = run_suite(name, &circuit, &instance, cfg)
         .unwrap_or_else(|e| panic!("{name}: harness could not start: {e}"));
     eprintln!("{} [{:.1?}]", report.summary(), start.elapsed());
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("soundness_mutation");
+    let path = dir.join(format!("{name}.receipt.json"));
+    let body = serde_json::to_string_pretty(&report.receipt()).expect("receipt json");
+    match std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, body)) {
+        Ok(()) => eprintln!("  receipt: {}", path.display()),
+        Err(e) => eprintln!("  receipt not written to {}: {e}", path.display()),
+    }
     for a in report.accepted.iter().take(3) {
         eprintln!(
             "  row context for circuit={name} column={} row={}:\n{}",
@@ -224,24 +232,13 @@ fn run_named(
     report
 }
 
+/// Every mutant reached `MockProver::verify` and was rejected there. A
+/// synthesis error, panic or timeout leaves the cell untested, so it fails
+/// the check instead of counting as a rejection (SAS-003).
 fn assert_sound(report: &Report) {
-    assert!(
-        report.cells_tested > 0,
-        "{}: no cells tested",
-        report.circuit
-    );
-    assert!(
-        report.mutations_run > 0,
-        "{}: no mutations run",
-        report.circuit
-    );
-    assert!(
-        report.accepted.is_empty(),
-        "UNDER-CONSTRAINED cells ({} accepted single-cell mutations) in {}:\n{}",
-        report.accepted.len(),
-        report.circuit,
-        report.describe_accepted()
-    );
+    if let Err(e) = report.check_sound() {
+        panic!("{e}\n{}", report.describe_accepted());
+    }
 }
 
 // ------------------------------------------------- c6_data_canonical
@@ -873,7 +870,11 @@ mod control {
     };
     use midnight_proofs::poly::Rotation;
     use midnight_transient_crypto::curve::outer::Scalar;
-    use mori_backend::qa_mutation::{Config, run_suite};
+    use mori_backend::qa_mutation::{
+        Allow, Config, HarnessError, MutantOutcome, Report, record_cells, run_suite,
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
 
     #[derive(Clone)]
     struct Cfg {
@@ -939,9 +940,25 @@ mod control {
             max_mutations: None,
             swaps: 0,
             allow: Vec::new(),
+            mutant_timeout: None,
         };
         let report = run_suite("leaky_control", &Leaky, &[], &cfg).expect("valid witness");
         assert_eq!(report.cells_total, 3);
+        assert_eq!(report.untested(), 0, "{}", report.summary());
+        assert!(report.check_sound().is_err(), "accepted cells must fail");
+        let receipt = report.receipt();
+        let labels: Vec<&str> = receipt["mutants"]
+            .as_array()
+            .expect("mutants")
+            .iter()
+            .map(|m| m["outcome"]["label"].as_str().expect("label"))
+            .collect();
+        assert_eq!(labels.len(), report.mutations_run);
+        assert_eq!(labels.iter().filter(|l| **l == "accepted").count(), 4);
+        assert_eq!(
+            labels.iter().filter(|l| **l == "rejected").count(),
+            report.rejected
+        );
         // Column 2 (`free`) accepts every kind of mutation; a and b none.
         assert!(
             report.accepted.iter().all(|a| a.column == 2 && a.row == 0),
@@ -950,5 +967,237 @@ mod control {
         );
         assert_eq!(report.accepted.len(), 4, "{}", report.describe_accepted());
         assert!(report.rejected >= 8, "{}", report.summary());
+    }
+
+    /// What [`Faulty`] does on every synthesis from call `fail_from` on.
+    #[derive(Clone, Copy)]
+    enum Fault {
+        None,
+        SynthesisError,
+        Panic,
+        Slow,
+    }
+
+    /// Proves `a * b = 6` with every cell constrained. From the
+    /// `fail_from`-th call of `synthesize` on, it injects `fault`, so the
+    /// unmutated baseline run succeeds and each mutant run fails before
+    /// `MockProver::verify` is reached.
+    struct Faulty {
+        fault: Fault,
+        calls: AtomicUsize,
+        fail_from: AtomicUsize,
+    }
+
+    #[derive(Clone)]
+    struct FaultyCfg {
+        a: Column<Advice>,
+        b: Column<Advice>,
+        q: Selector,
+    }
+
+    impl Circuit<Scalar> for Faulty {
+        type Config = FaultyCfg;
+        type FloorPlanner = SimpleFloorPlanner;
+        type Params = ();
+
+        fn without_witnesses(&self) -> Self {
+            unreachable!("Faulty is only run by MockProver with a witness")
+        }
+
+        fn configure(meta: &mut ConstraintSystem<Scalar>) -> FaultyCfg {
+            let a = meta.advice_column();
+            let b = meta.advice_column();
+            let q = meta.selector();
+            meta.create_gate("a*b=6", |meta| {
+                let a = meta.query_advice(a, Rotation::cur());
+                let b = meta.query_advice(b, Rotation::cur());
+                Constraints::with_selector(
+                    q,
+                    vec![a * b - Expression::Constant(Scalar::from(6u64))],
+                )
+            });
+            FaultyCfg { a, b, q }
+        }
+
+        fn synthesize(
+            &self,
+            cfg: FaultyCfg,
+            mut layouter: impl Layouter<Scalar>,
+        ) -> Result<(), Error> {
+            let n = self.calls.fetch_add(1, Ordering::SeqCst);
+            if n >= self.fail_from.load(Ordering::SeqCst) {
+                match self.fault {
+                    Fault::None => {}
+                    Fault::SynthesisError => {
+                        return Err(Error::Synthesis("injected synthesis error".into()));
+                    }
+                    Fault::Panic => panic!("injected panic"),
+                    Fault::Slow => std::thread::sleep(Duration::from_millis(30)),
+                }
+            }
+            layouter.assign_region(
+                || "faulty",
+                |mut region| {
+                    cfg.q.enable(&mut region, 0)?;
+                    region.assign_advice(|| "a", cfg.a, 0, || Value::known(Scalar::from(2u64)))?;
+                    region.assign_advice(|| "b", cfg.b, 0, || Value::known(Scalar::from(3u64)))?;
+                    Ok(())
+                },
+            )
+        }
+    }
+
+    /// A [`Faulty`] circuit whose baseline run passes and whose every later
+    /// run injects `fault`.
+    fn primed(fault: Fault) -> Faulty {
+        let c = Faulty {
+            fault,
+            calls: AtomicUsize::new(0),
+            fail_from: AtomicUsize::new(usize::MAX),
+        };
+        record_cells(&c, &[]).expect("baseline");
+        c.fail_from
+            .store(c.calls.swap(0, Ordering::SeqCst), Ordering::SeqCst);
+        c
+    }
+
+    fn all_cells(timeout: Option<Duration>) -> Config {
+        Config {
+            seed: 7,
+            max_cells: None,
+            max_mutations: None,
+            swaps: 0,
+            allow: Vec::new(),
+            mutant_timeout: timeout,
+        }
+    }
+
+    fn labels(report: &Report) -> Vec<String> {
+        report.receipt()["mutants"]
+            .as_array()
+            .expect("mutants")
+            .iter()
+            .map(|m| m["outcome"]["label"].as_str().expect("label").to_string())
+            .collect()
+    }
+
+    /// Every mutant ended with `label`, none reached the verifier, none is
+    /// credited as rejected and the soundness check refuses the report.
+    fn assert_all_untested(report: &Report, label: &str) {
+        assert!(report.mutations_run > 0, "{}", report.summary());
+        assert_eq!(report.rejected, 0, "{}", report.summary());
+        assert!(report.accepted.is_empty(), "{}", report.summary());
+        assert_eq!(report.untested(), report.mutations_run);
+        let labels = labels(report);
+        assert_eq!(labels.len(), report.mutations_run);
+        assert!(labels.iter().all(|l| l == label), "{labels:?}");
+        for m in report.receipt()["mutants"].as_array().expect("mutants") {
+            assert_eq!(m["outcome"]["reached_verifier"], false);
+        }
+        let err = report
+            .check_sound()
+            .expect_err("untested mutants must fail");
+        assert!(err.contains("untested"), "{err}");
+    }
+
+    #[test]
+    fn sound_control_passes_the_soundness_check() {
+        let report = run_suite("sound_control", &primed(Fault::None), &[], &all_cells(None))
+            .expect("valid witness");
+        assert!(report.mutations_run > 0);
+        assert_eq!(
+            report.rejected,
+            report.mutations_run,
+            "{}",
+            report.summary()
+        );
+        assert!(labels(&report).iter().all(|l| l == "rejected"));
+        report.check_sound().expect("sound control");
+        let receipt = report.receipt();
+        assert_eq!(receipt["seed"], 7);
+        assert_eq!(receipt["exhaustive"], true);
+        assert_eq!(receipt["counts"]["rejected"], report.rejected);
+    }
+
+    #[test]
+    fn synthesis_error_is_not_rejected() {
+        let report = run_suite(
+            "synth_err_control",
+            &primed(Fault::SynthesisError),
+            &[],
+            &all_cells(None),
+        )
+        .expect("baseline passes");
+        assert_eq!(report.synthesis_errors, report.mutations_run);
+        assert_all_untested(&report, "synthesis_error");
+        assert!(matches!(
+            report.mutants[0].outcome,
+            MutantOutcome::SynthesisError(_)
+        ));
+    }
+
+    #[test]
+    fn panic_is_caught_typed_and_not_rejected() {
+        let report = run_suite(
+            "panic_control",
+            &primed(Fault::Panic),
+            &[],
+            &all_cells(None),
+        )
+        .expect("harness must not panic");
+        assert_eq!(report.panicked, report.mutations_run);
+        assert_all_untested(&report, "panicked");
+    }
+
+    #[test]
+    fn timeout_is_typed_and_not_rejected() {
+        let report = run_suite(
+            "timeout_control",
+            &primed(Fault::Slow),
+            &[],
+            &all_cells(Some(Duration::from_millis(1))),
+        )
+        .expect("baseline passes");
+        assert_eq!(report.timed_out, report.mutations_run);
+        assert_all_untested(&report, "timed_out");
+    }
+
+    #[test]
+    fn baseline_failures_are_typed_errors_not_panics() {
+        let panics = Faulty {
+            fault: Fault::Panic,
+            calls: AtomicUsize::new(0),
+            fail_from: AtomicUsize::new(0),
+        };
+        let err = run_suite("baseline_panic", &panics, &[], &all_cells(None)).expect_err("panic");
+        assert!(matches!(err, HarnessError::BaselinePanicked(_)), "{err}");
+
+        let errs = Faulty {
+            fault: Fault::SynthesisError,
+            calls: AtomicUsize::new(0),
+            fail_from: AtomicUsize::new(0),
+        };
+        let err = run_suite("baseline_err", &errs, &[], &all_cells(None)).expect_err("error");
+        assert!(
+            matches!(err, HarnessError::BaselineSynthesisError(_)),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn allowlist_without_reason_is_an_error_not_a_panic() {
+        let mut cfg = all_cells(None);
+        cfg.allow.push(Allow {
+            column: 0,
+            rows: 0..1,
+            region_contains: "",
+            fixed_zero: &[],
+            reason: " ",
+        });
+        let err = run_suite("no_reason", &primed(Fault::None), &[], &cfg).expect_err("refused");
+        assert!(
+            matches!(err, HarnessError::AllowWithoutReason { .. }),
+            "{err}"
+        );
     }
 }

@@ -39,6 +39,17 @@
 //! Single-cell mutations must be rejected. Swaps are reported separately
 //! because a swap of two cells that a symmetric constraint treats alike
 //! (for example `a + b = c`) is legitimately accepted.
+//!
+//! # Outcomes
+//!
+//! The verifier stage is `MockProver::verify`. A mutant is
+//! [`MutantOutcome::Rejected`] only when that stage reports constraint
+//! failures. A synthesis error from `MockProver::run` (which includes the
+//! IR decoder and preprocessing refusals of `MidnightCircuit`), a panic and
+//! a run over the time budget are distinct outcomes that leave the stage
+//! untested; they never count as rejections. The harness catches every
+//! panic and returns typed values: it does not panic itself. The
+//! [`Report::receipt`] JSON records the typed outcome of every mutant.
 
 use midnight_curves::pairing::group::ff::{Field, FromUniformBytes};
 use midnight_proofs::circuit::{Layouter, Value, layouter::SyncDeps};
@@ -58,6 +69,7 @@ use std::fmt::Write as _;
 use std::ops::Range;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// One recorded advice assignment.
 #[derive(Clone, Debug)]
@@ -113,7 +125,92 @@ pub struct Config {
     /// Number of swap mutations (pairs of cells with different values).
     pub swaps: usize,
     pub allow: Vec<Allow>,
+    /// Time budget of one mutant run. `MockProver::run` cannot be
+    /// interrupted, so a run that takes longer is completed and then
+    /// labelled [`MutantOutcome::TimedOut`]; its result is discarded.
+    pub mutant_timeout: Option<Duration>,
 }
+
+/// Typed outcome of one mutant run.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MutantOutcome {
+    /// `MockProver::verify` accepted the mutated witness.
+    Accepted,
+    /// `MockProver::verify` reported this many constraint failures.
+    Rejected { failures: usize },
+    /// `MockProver::run` returned an error before verification.
+    SynthesisError(String),
+    /// The run or verification panicked; the panic was caught.
+    Panicked(String),
+    /// The run took longer than [`Config::mutant_timeout`].
+    TimedOut { elapsed_ms: u128 },
+}
+
+impl MutantOutcome {
+    /// Stable label used in the receipt JSON.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Accepted => "accepted",
+            Self::Rejected { .. } => "rejected",
+            Self::SynthesisError(_) => "synthesis_error",
+            Self::Panicked(_) => "panicked",
+            Self::TimedOut { .. } => "timed_out",
+        }
+    }
+
+    /// True when the verifier stage gave a verdict on the mutant.
+    pub fn reached_verifier(&self) -> bool {
+        matches!(self, Self::Accepted | Self::Rejected { .. })
+    }
+
+    fn detail(&self) -> serde_json::Value {
+        match self {
+            Self::Accepted => serde_json::Value::Null,
+            Self::Rejected { failures } => serde_json::json!({ "failures": failures }),
+            Self::SynthesisError(m) | Self::Panicked(m) => serde_json::json!({ "message": m }),
+            Self::TimedOut { elapsed_ms } => serde_json::json!({ "elapsed_ms": elapsed_ms }),
+        }
+    }
+}
+
+/// One mutant that was run, with its outcome.
+#[derive(Clone, Debug)]
+pub struct MutantRecord {
+    pub column: usize,
+    pub row: usize,
+    pub region: String,
+    pub kind: MutationKind,
+    pub original: String,
+    pub mutated: String,
+    pub outcome: MutantOutcome,
+}
+
+/// Why the harness could not run a suite. The unmutated baseline must reach
+/// the verifier and be accepted before any mutant is meaningful.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HarnessError {
+    BaselineSynthesisError(String),
+    BaselineNotAccepted { failures: usize },
+    BaselinePanicked(String),
+    AllowWithoutReason { column: usize },
+}
+
+impl std::fmt::Display for HarnessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BaselineSynthesisError(m) => write!(f, "valid witness synthesis error: {m}"),
+            Self::BaselineNotAccepted { failures } => {
+                write!(f, "valid witness not accepted: {failures} failure(s)")
+            }
+            Self::BaselinePanicked(m) => write!(f, "valid witness run panicked: {m}"),
+            Self::AllowWithoutReason { column } => {
+                write!(f, "allowlist entry for column {column} needs a reason")
+            }
+        }
+    }
+}
+
+impl std::error::Error for HarnessError {}
 
 /// One mutation that `MockProver` accepted.
 #[derive(Clone, Debug)]
@@ -130,15 +227,27 @@ pub struct Accepted {
 #[derive(Clone, Debug, Default)]
 pub struct Report {
     pub circuit: String,
+    pub seed: u64,
+    /// True when no cell or mutation budget truncated the single-cell sweep.
+    pub exhaustive: bool,
+    /// Reasons of the allowlist entries in force, in order.
+    pub allowlist: Vec<String>,
     pub cells_total: usize,
     pub cells_tested: usize,
     pub allowlisted_cells: usize,
     pub mutations_run: usize,
     /// Mutations skipped because they would not change the cell value.
     pub noop_skipped: usize,
+    /// Mutations the verifier stage rejected. Only these earn credit.
     pub rejected: usize,
-    /// Mutations whose run or verification panicked (counted as rejected).
+    /// Mutations whose `MockProver::run` returned an error (untested).
+    pub synthesis_errors: usize,
+    /// Mutations whose run or verification panicked (untested).
     pub panicked: usize,
+    /// Mutations over the time budget (untested).
+    pub timed_out: usize,
+    /// Every mutant run, in run order.
+    pub mutants: Vec<MutantRecord>,
     /// Single-cell mutations accepted: under-constrained cells.
     pub accepted: Vec<Accepted>,
     /// Accepted swaps (informational unless the pair is not symmetric).
@@ -146,6 +255,101 @@ pub struct Report {
 }
 
 impl Report {
+    /// Mutations that did not reach the verifier stage.
+    pub fn untested(&self) -> usize {
+        self.synthesis_errors + self.panicked + self.timed_out
+    }
+
+    /// Ok only when mutations ran, every one reached the verifier stage and
+    /// no single-cell mutation was accepted.
+    pub fn check_sound(&self) -> Result<(), String> {
+        let mut problems = Vec::new();
+        if self.cells_tested == 0 {
+            problems.push("no cells tested".to_string());
+        }
+        if self.mutations_run == 0 {
+            problems.push("no mutations run".to_string());
+        }
+        if self.untested() > 0 {
+            problems.push(format!(
+                "{} mutant(s) untested at the verifier stage (synthesis_error={} panicked={} timed_out={})",
+                self.untested(),
+                self.synthesis_errors,
+                self.panicked,
+                self.timed_out
+            ));
+        }
+        if !self.accepted.is_empty() {
+            problems.push(format!(
+                "UNDER-CONSTRAINED cells ({} accepted single-cell mutations)",
+                self.accepted.len()
+            ));
+        }
+        if problems.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("{}: {}", self.circuit, problems.join("; ")))
+        }
+    }
+
+    /// Receipt JSON: run parameters, counts and the typed outcome of every
+    /// mutant.
+    pub fn receipt(&self) -> serde_json::Value {
+        let mutants: Vec<serde_json::Value> = self
+            .mutants
+            .iter()
+            .map(|m| {
+                serde_json::json!({
+                    "column": m.column,
+                    "row": m.row,
+                    "region": m.region,
+                    "kind": format!("{:?}", m.kind),
+                    "original": m.original,
+                    "mutated": m.mutated,
+                    "outcome": {
+                        "label": m.outcome.label(),
+                        "reached_verifier": m.outcome.reached_verifier(),
+                        "detail": m.outcome.detail(),
+                    },
+                })
+            })
+            .collect();
+        serde_json::json!({
+            "schema": "mori-qa-mutation-receipt/1",
+            "circuit": self.circuit,
+            "verifier_stage": "MockProver::verify",
+            "seed": self.seed,
+            "exhaustive": self.exhaustive,
+            "allowlist": self.allowlist,
+            "counts": {
+                "cells_total": self.cells_total,
+                "cells_tested": self.cells_tested,
+                "allowlisted_cells": self.allowlisted_cells,
+                "mutations_run": self.mutations_run,
+                "noop_skipped": self.noop_skipped,
+                "rejected": self.rejected,
+                "accepted": self.accepted.len(),
+                "accepted_swaps": self.accepted_swaps.len(),
+                "synthesis_error": self.synthesis_errors,
+                "panicked": self.panicked,
+                "timed_out": self.timed_out,
+                "untested": self.untested(),
+            },
+            "sound": self.check_sound().is_ok(),
+            "mutants": mutants,
+        })
+    }
+
+    fn tally(&mut self, outcome: &MutantOutcome) {
+        match outcome {
+            MutantOutcome::Accepted => {}
+            MutantOutcome::Rejected { .. } => self.rejected += 1,
+            MutantOutcome::SynthesisError(_) => self.synthesis_errors += 1,
+            MutantOutcome::Panicked(_) => self.panicked += 1,
+            MutantOutcome::TimedOut { .. } => self.timed_out += 1,
+        }
+    }
+
     /// Human-readable listing of every accepted single-cell mutation as
     /// `(circuit, column, row)`.
     pub fn describe_accepted(&self) -> String {
@@ -162,14 +366,17 @@ impl Report {
 
     pub fn summary(&self) -> String {
         format!(
-            "{}: cells={} tested={} allowlisted={} mutations={} rejected={} (panicked={}) noop={} accepted={} accepted_swaps={}",
+            "{}: cells={} tested={} allowlisted={} mutations={} rejected={} untested={} (synthesis_error={} panicked={} timed_out={}) noop={} accepted={} accepted_swaps={}",
             self.circuit,
             self.cells_total,
             self.cells_tested,
             self.allowlisted_cells,
             self.mutations_run,
             self.rejected,
+            self.untested(),
+            self.synthesis_errors,
             self.panicked,
+            self.timed_out,
             self.noop_skipped,
             self.accepted.len(),
             self.accepted_swaps.len()
@@ -448,45 +655,43 @@ impl<F: Field, CS: Assignment<F>> Assignment<F> for MutAssign<'_, CS> {
 
 // ------------------------------------------------------------- the driver
 
-/// Outcome of one `MockProver` run.
-#[derive(Debug)]
-pub enum Outcome {
-    Accepted,
-    Rejected(String),
-    Panicked(String),
+fn panic_message(p: &(dyn DynAny + Send)) -> String {
+    p.downcast_ref::<String>()
+        .cloned()
+        .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_string()))
+        .unwrap_or_else(|| "non-string panic".into())
 }
 
-fn run_once<F, C>(
+/// Run one mutant through `MockProver` and type its outcome.
+pub fn run_mutant<F, C>(
     circuit: &C,
     instance: &[Vec<F>],
     plan: BTreeMap<(usize, usize), F>,
-) -> (Outcome, BTreeMap<(usize, usize), AdviceCell<F>>)
+    timeout: Option<Duration>,
+) -> MutantOutcome
 where
     F: Field + FromUniformBytes<64> + Ord,
     C: Circuit<F>,
 {
-    let guard = StateGuard::install::<F>(plan, false);
+    let _guard = StateGuard::install::<F>(plan, false);
     let wrapped = Mutated { inner: circuit };
+    let start = Instant::now();
     let result = catch_unwind(AssertUnwindSafe(|| {
         match MockProver::<F>::run(&wrapped, instance.to_vec()) {
             Ok(prover) => match prover.verify() {
-                Ok(()) => Outcome::Accepted,
-                Err(e) => Outcome::Rejected(format!("{} failure(s)", e.len())),
+                Ok(()) => MutantOutcome::Accepted,
+                Err(e) => MutantOutcome::Rejected { failures: e.len() },
             },
-            Err(e) => Outcome::Rejected(format!("synthesis error {e:?}")),
+            Err(e) => MutantOutcome::SynthesisError(format!("{e:?}")),
         }
     }));
-    let recorded = guard.take_recorded::<F>();
-    match result {
-        Ok(o) => (o, recorded),
-        Err(p) => {
-            let msg = p
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| p.downcast_ref::<&str>().map(|s| (*s).to_string()))
-                .unwrap_or_else(|| "non-string panic".into());
-            (Outcome::Panicked(msg), recorded)
-        }
+    let elapsed = start.elapsed();
+    let outcome = result.unwrap_or_else(|p| MutantOutcome::Panicked(panic_message(&*p)));
+    match timeout {
+        Some(t) if elapsed > t => MutantOutcome::TimedOut {
+            elapsed_ms: elapsed.as_millis(),
+        },
+        _ => outcome,
     }
 }
 
@@ -499,18 +704,21 @@ pub struct Recorded<F> {
 
 /// Run the unmutated circuit and return every advice cell it assigned.
 /// Errors when `MockProver` does not accept the valid witness.
-pub fn record_cells<F, C>(circuit: &C, instance: &[Vec<F>]) -> Result<Recorded<F>, String>
+pub fn record_cells<F, C>(circuit: &C, instance: &[Vec<F>]) -> Result<Recorded<F>, HarnessError>
 where
     F: Field + FromUniformBytes<64> + Ord,
     C: Circuit<F>,
 {
     let guard = StateGuard::install::<F>(BTreeMap::new(), true);
     let wrapped = Mutated { inner: circuit };
-    let prover = MockProver::<F>::run(&wrapped, instance.to_vec())
-        .map_err(|e| format!("valid witness synthesis error: {e:?}"))?;
-    prover
-        .verify()
-        .map_err(|e| format!("valid witness not accepted: {} failure(s)", e.len()))?;
+    let prover = catch_unwind(AssertUnwindSafe(|| {
+        MockProver::<F>::run(&wrapped, instance.to_vec())
+    }))
+    .map_err(|p| HarnessError::BaselinePanicked(panic_message(&*p)))?
+    .map_err(|e| HarnessError::BaselineSynthesisError(format!("{e:?}")))?;
+    catch_unwind(AssertUnwindSafe(|| prover.verify()))
+        .map_err(|p| HarnessError::BaselinePanicked(panic_message(&*p)))?
+        .map_err(|e| HarnessError::BaselineNotAccepted { failures: e.len() })?;
     let fixed_zero = prover
         .fixed()
         .iter()
@@ -553,13 +761,23 @@ where
 {
     let _guard = StateGuard::install::<F>(BTreeMap::new(), false);
     let wrapped = Mutated { inner: circuit };
-    let prover = MockProver::<F>::run(&wrapped, instance.to_vec()).map_err(|e| format!("{e:?}"))?;
+    let prover = catch_unwind(AssertUnwindSafe(|| {
+        MockProver::<F>::run(&wrapped, instance.to_vec())
+    }))
+    .map_err(|p| format!("panicked: {}", panic_message(&*p)))?
+    .map_err(|e| format!("{e:?}"))?;
     let mut out = String::new();
     for (i, col) in prover.advice().iter().enumerate() {
-        let _ = writeln!(out, "advice[{i}][{row}] = {}", cell_text(&col[row]));
+        let cell = col
+            .get(row)
+            .map_or_else(|| "out of range".into(), cell_text);
+        let _ = writeln!(out, "advice[{i}][{row}] = {cell}");
     }
     for (i, col) in prover.fixed().iter().enumerate() {
-        let _ = writeln!(out, "fixed[{i}][{row}] = {}", cell_text(&col[row]));
+        let cell = col
+            .get(row)
+            .map_or_else(|| "out of range".into(), cell_text);
+        let _ = writeln!(out, "fixed[{i}][{row}] = {cell}");
     }
     Ok(out)
 }
@@ -580,14 +798,19 @@ pub fn run_suite<F, C>(
     circuit: &C,
     instance: &[Vec<F>],
     cfg: &Config,
-) -> Result<Report, String>
+) -> Result<Report, HarnessError>
 where
     F: Field + FromUniformBytes<64> + Ord + std::fmt::Debug,
     C: Circuit<F>,
 {
+    if let Some(a) = cfg.allow.iter().find(|a| a.reason.trim().is_empty()) {
+        return Err(HarnessError::AllowWithoutReason { column: a.column });
+    }
     let Recorded { cells, fixed_zero } = record_cells(circuit, instance)?;
     let mut report = Report {
         circuit: circuit_name.to_string(),
+        seed: cfg.seed,
+        allowlist: cfg.allow.iter().map(|a| a.reason.to_string()).collect(),
         cells_total: cells.len(),
         ..Report::default()
     };
@@ -605,12 +828,6 @@ where
                 })
         })
     };
-    for a in &cfg.allow {
-        assert!(
-            !a.reason.trim().is_empty(),
-            "allowlist entry needs a reason"
-        );
-    }
     let (skipped, mut candidates): (Vec<_>, Vec<_>) = cells.iter().partition(|c| allowed(c));
     report.allowlisted_cells = skipped.len();
 
@@ -620,6 +837,7 @@ where
         candidates.truncate(max);
     }
     report.cells_tested = candidates.len();
+    let mut truncated = report.cells_tested < cells.len() - report.allowlisted_cells;
 
     let one = F::ONE;
     for cell in &candidates {
@@ -632,6 +850,7 @@ where
         ];
         for (kind, new) in mutants {
             if cfg.max_mutations.is_some_and(|m| report.mutations_run >= m) {
+                truncated = true;
                 break;
             }
             if new == cell.value {
@@ -639,25 +858,25 @@ where
                 continue;
             }
             let plan = BTreeMap::from([((cell.column, cell.row), new)]);
-            let (outcome, _) = run_once(circuit, instance, plan);
+            let outcome = run_mutant(circuit, instance, plan, cfg.mutant_timeout);
             report.mutations_run += 1;
-            match outcome {
-                Outcome::Rejected(_) => report.rejected += 1,
-                Outcome::Panicked(_) => {
-                    report.rejected += 1;
-                    report.panicked += 1;
-                }
-                Outcome::Accepted => report.accepted.push(Accepted {
-                    column: cell.column,
-                    row: cell.row,
-                    region: cell.region.to_string(),
-                    kind,
-                    original: describe(&cell.value),
-                    mutated: describe(&new),
-                }),
+            report.tally(&outcome);
+            let record = MutantRecord {
+                column: cell.column,
+                row: cell.row,
+                region: cell.region.to_string(),
+                kind,
+                original: describe(&cell.value),
+                mutated: describe(&new),
+                outcome,
+            };
+            if record.outcome == MutantOutcome::Accepted {
+                report.accepted.push(accepted(&record));
             }
+            report.mutants.push(record);
         }
     }
+    report.exhaustive = !truncated;
 
     // Swaps between two distinct allowed-or-not cells of different value.
     let all: Vec<&AdviceCell<F>> = cells.iter().collect();
@@ -672,26 +891,36 @@ where
         }
         done += 1;
         let plan = BTreeMap::from([((a.column, a.row), b.value), ((b.column, b.row), a.value)]);
-        let (outcome, _) = run_once(circuit, instance, plan);
+        let outcome = run_mutant(circuit, instance, plan, cfg.mutant_timeout);
         report.mutations_run += 1;
-        match outcome {
-            Outcome::Rejected(_) => report.rejected += 1,
-            Outcome::Panicked(_) => {
-                report.rejected += 1;
-                report.panicked += 1;
-            }
-            Outcome::Accepted => report.accepted_swaps.push(Accepted {
-                column: a.column,
-                row: a.row,
-                region: a.region.to_string(),
-                kind: MutationKind::Swap {
-                    column: b.column,
-                    row: b.row,
-                },
-                original: describe(&a.value),
-                mutated: describe(&b.value),
-            }),
+        report.tally(&outcome);
+        let record = MutantRecord {
+            column: a.column,
+            row: a.row,
+            region: a.region.to_string(),
+            kind: MutationKind::Swap {
+                column: b.column,
+                row: b.row,
+            },
+            original: describe(&a.value),
+            mutated: describe(&b.value),
+            outcome,
+        };
+        if record.outcome == MutantOutcome::Accepted {
+            report.accepted_swaps.push(accepted(&record));
         }
+        report.mutants.push(record);
     }
     Ok(report)
+}
+
+fn accepted(r: &MutantRecord) -> Accepted {
+    Accepted {
+        column: r.column,
+        row: r.row,
+        region: r.region.clone(),
+        kind: r.kind.clone(),
+        original: r.original.clone(),
+        mutated: r.mutated.clone(),
+    }
 }
