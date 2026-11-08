@@ -20,13 +20,33 @@ def _load_or_die():
         return None
 
 
+def _closure_roots(preds, args):
+    """E15: roots named by --closure and --milestone; None on an unknown id or milestone."""
+    roots = list(getattr(args, "closure", None) or [])
+    for m in getattr(args, "milestone", None) or []:
+        if m not in preds_mod.MILESTONES:
+            print(f"error: unknown milestone {m!r} (known: {', '.join(preds_mod.MILESTONES)})", file=sys.stderr)
+            return None
+        roots += preds_mod.MILESTONES[m]
+    known = {p.id for p in preds}
+    unknown = [i for i in roots if i not in known]
+    if unknown:
+        print(f"error: unknown predicate id(s): {', '.join(unknown)}", file=sys.stderr)
+        return None
+    return roots
+
+
 def cmd_next(args):
     preds = _load_or_die()
     if preds is None:
         return 1
     st = status.load()
     entries = status.entries_of(st)
-    counts, first = status.view(preds, entries, args.include_optional)
+    roots = _closure_roots(preds, args)
+    if roots is None:
+        return 2
+    scope = preds_mod.closure(preds, roots) if roots else preds
+    counts, first = status.view(scope, entries, args.include_optional)
     by_id = {p.id: p for p in preds}
     no_results = st is None
     retired = [{"id": p.id, "retired": p.retired} for p in preds if p.retired is not None]
@@ -64,10 +84,17 @@ def _select(preds, args):
         if unknown:
             print(f"error: unknown predicate id(s): {', '.join(unknown)}", file=sys.stderr)
             return None
+    roots = _closure_roots(preds, args)
+    if roots is None:
+        return None
+    scope = {p.id for p in preds_mod.closure(preds, roots)} if roots else None
     wanted = set(args.ids or [])
     out = []
     for p in preds_mod.topo_order(preds):
         if wanted and p.id not in wanted:
+            continue
+        # E15: a milestone selection is its dependency closure; it is a sweep, not a named id
+        if scope is not None and p.id not in scope:
             continue
         # sweeps skip retired rows and, unless asked, optional rows; a named id always runs
         if not wanted and p.retired is not None:
@@ -206,6 +233,10 @@ def build_parser():
     p.add_argument("--json", action="store_true")
     p.add_argument("--include-optional", action="store_true",
                    help="let optional rows count and be FIRST FAILING (retired rows never are)")
+    p.add_argument("--closure", action="append", metavar="ID",
+                   help="only ID and its dependency closure (E15; repeatable)")
+    p.add_argument("--milestone", action="append", choices=sorted(preds_mod.MILESTONES),
+                   help="only the milestone row set: the closure of its root rows (E15; repeatable)")
     p.set_defaults(fn=cmd_next)
 
     p = sub.add_parser("check", help="run predicate checks")
@@ -214,6 +245,10 @@ def build_parser():
     p.add_argument("--tier", choices=preds_mod.TIERS, help="predicates whose tier is exactly this")
     p.add_argument("--include-optional", action="store_true",
                    help="sweeps also run optional rows (retired rows run only when named)")
+    p.add_argument("--closure", action="append", metavar="ID",
+                   help="only ID and its dependency closure (E15; repeatable)")
+    p.add_argument("--milestone", action="append", choices=sorted(preds_mod.MILESTONES),
+                   help="only the milestone row set: the closure of its root rows (E15; repeatable)")
     p.add_argument("--hypothesis")
     p.set_defaults(fn=cmd_check)
 
