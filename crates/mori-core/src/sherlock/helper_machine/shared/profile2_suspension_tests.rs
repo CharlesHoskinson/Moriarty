@@ -182,7 +182,10 @@ fn logical_cap_exhaustion_is_profile_2_only() {
 
 #[test]
 fn waiting_image_is_not_steppable_and_unchanged() {
-    let engine = super::owner_host::host_owner_engine();
+    // Stepping is pinned to the engine's selected profile, so a /2 image is
+    // stepped by the /2 engine; the /1 engine refuses it before the Waiting
+    // rule is reached (each_engine_admits_only_its_selected_profile).
+    let engine = super::owner_host::host_owner_engine_profile2();
     let (a, mut img) = image(PROFILE_ID_MICROSTEP_2);
     suspend(&mut img, 1);
     let before = (
