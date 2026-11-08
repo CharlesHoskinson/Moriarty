@@ -7,21 +7,40 @@ import difflib
 import hashlib
 import importlib.util
 import json
+import math
+import os
 from pathlib import Path
 import re
 import shlex
 import subprocess
 import sys
 import tarfile
+import tomllib
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / 'openspec/changes/recursion-phase-profile/profile.schema.json'
 ARCHIVE_SHA256 = '19b2e4b1acb581ad741b0cb7c0e9dbdf51142f4e9518886f25fcff40a6702dcc'
-DEFAULT_ARCHIVE = Path('/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-proofs-0.8.3.crate')
+
+
+def default_archive(environ=os.environ):
+    """The published midnight-proofs 0.8.3 archive in this host's cargo registry cache."""
+    home = Path(environ['CARGO_HOME']) if environ.get('CARGO_HOME') else Path(environ.get('HOME', '~')) / '.cargo'
+    return home / 'registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-proofs-0.8.3.crate'
+
+
+DEFAULT_ARCHIVE = default_archive()
 BUDGETS = {'A2': 'a2-linked-children', 'A3': 'a3-parent-k20',
-           'A4': 'a4-terminal-d', 'B3': 'b3-full-batch-local'}
+           'A4': 'a4-terminal-d', 'B3': 'b3-full-batch-local', 'GP': 'c0-gp-chain'}
+BINARIES = {'A2': 'profile-a2', 'GP': 'profile-gp'}
+# Default cache stratum per workload: the A2 child APIs rebuild their PK; the GP chain
+# keeps the node PK resident across node steps (sherlock_gp.rs gp_fold_and_key).
+CACHE_MODES = {'A2': 'process_cold', 'GP': 'resident_pk'}
+# Crates the profile workspace must pin exactly as the root workspace does (task 2.1).
+ROOT_PINS = ('midnight-proofs', 'midnight-circuits', 'midnight-zk-stdlib', 'midnight-curves')
+GP_STEP_BOUND = 320  # SRC-011: at most 320 owner steps.
+GP_S_VALUES = (1, 2, 4, 8, 16)
 NS = 1_000_000_000
 SECRET_KEY = re.compile(r'witness|seed|wallet|private.?key|secret|challenge(?!_count)|environment|^env$|^scalars?$', re.I)
 SECRET_TEXT = re.compile(r'(?:witness(?:_values)?|rng_seed|seed|wallet|private_key|secret|environment|OPENAI_API_KEY)\s*[=:]', re.I)
@@ -73,8 +92,34 @@ def prepare(root=ROOT, archive=DEFAULT_ARCHIVE):
     errors = isolation.check_isolation(root)
     require(not errors, '; '.join(errors))
     require((directory / 'Cargo.lock').is_file(), 'profiling Cargo.lock missing')
+    pin_errors = check_pins(root)
+    require(not pin_errors, '; '.join(pin_errors))
     return {'archive_sha256': ARCHIVE_SHA256, 'patch_sha256': manifest['patch_sha256'],
             'cargo_lock_sha256': digest(directory / 'Cargo.lock'), 'isolation': 'pass'}
+
+
+def check_pins(root=ROOT):
+    """The profile workspace pins the root workspace's proof stack and locks exactly that version."""
+    root = Path(root)
+    errors = []
+    def version(spec):
+        return spec if isinstance(spec, str) else (spec or {}).get('version')
+    try:
+        workspace = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']['dependencies']
+        manifest = tomllib.loads((root / 'tools/profile/Cargo.toml').read_text())['dependencies']
+        lock = tomllib.loads((root / 'tools/profile/Cargo.lock').read_text()).get('package', [])
+    except (OSError, ValueError, KeyError) as error:
+        return [f'profile pins unreadable: {error}']
+    for name in ROOT_PINS:
+        want, have = version(workspace.get(name)), version(manifest.get(name))
+        if not want or not want.startswith('='):
+            errors.append(f'Cargo.toml: {name} is not an exact root pin')
+            continue
+        if have != want:
+            errors.append(f'tools/profile/Cargo.toml: {name} {have} != root {want}')
+        if not any(p.get('name') == name and p.get('version') == want[1:] for p in lock):
+            errors.append(f'tools/profile/Cargo.lock: no {name} {want[1:]}')
+    return errors
 
 
 def ns(value):
@@ -564,8 +609,100 @@ def decide_profiles(sidecars):
                 credited.append({'row': row['row'], 'spans': ids})
         rows.append(row)
     reject_overlapping_credit(credited)
+    rows += lever_rows(sidecars, reports)
     return {'schema': 'recursion.phase-decisions/1', 'rows': rows,
             'selection': 'First eligible baseline proof in input order; no cross-proof share transfer.'}
+
+
+def is_msm(span):
+    return 'msm' in span['phase'].lower()
+
+
+# k=19 halves every phase proportional to the domain (research order.md table 2.5):
+# quotient, the commitment MSMs, multiopen, lookup and permutation products.
+DOMAIN_OWNERS = ('quotient', 'multiopen', 'lookup', 'permutation')
+
+
+def lever_rows(sidecars, reports):
+    """Rows C11-C14 (threads, k=19, S, GPU MSM) from named GP node proofs (order.md table 2.5).
+
+    Each metric is a phase share or an Amdahl bound of one lever, not a composable gain: the
+    levers share spans (an MSM is both domain-proportional and GPU-eligible), so the rows are
+    never summed and are not entered in the overlapping-credit check of C1-C10."""
+    nodes, deciders = {}, {}
+    for sidecar, report in zip(sidecars, reports):
+        if sidecar['id'] == 'candidate':
+            continue
+        threads = sidecar['host'].get('rayon_threads')
+        for proof in report['proofs']:
+            target = {'node': nodes, 'run_decider': deciders}.get(proof['shape'])
+            if target is not None and threads is not None:
+                target.setdefault(threads, (sidecar, proof))
+    def base(name, sidecar, proof, spans):
+        return {'name': name, 'run': sidecar['run'], 'invocation_id': sidecar['invocation_id'],
+                'proof_id': proof['proof_id'], 'proof_shape': proof['shape'], 'cache_mode': proof['cache_mode'],
+                'rayon_threads': sidecar['host']['rayon_threads'], 'spans': spans, 'composable': False}
+    def row(number, status='unresolved', metric=None, reason=None):
+        return {'row': f'C{number}', 'status': status, 'metric': metric, 'measured_gain': None, 'reason': reason}
+    def share(number, name, select, bound):
+        if 20 not in nodes:
+            return row(number, reason='No named GP node proof at RAYON_NUM_THREADS=20 (shape node).')
+        sidecar, proof = nodes[20]
+        spans = [p for p in proof['partition'] if p['span_id'] is not None and select(p)]
+        if not spans:
+            return row(number, reason='No separately owned spans for this lever in the node proof.')
+        numerator, total = sum(p['wall_ns'] for p in spans), proof['total_ns']
+        metric = base(name, sidecar, proof, [p['span_id'] for p in spans])
+        metric.update(numerator_ns=numerator, denominator_ns=total)
+        metric.update(bound(numerator, total))
+        return row(number, 'arithmetic_only', metric, 'Measured phase share; no candidate gain confirmed.')
+
+    out = []
+    # C11 threads (lever 0): wall(20) <= 0.7 x wall(4) keeps 20; > 0.9 x wall(4) is serial-bound.
+    if 4 not in nodes or 20 not in nodes:
+        out.append(row(11, reason='Needs GP node proofs at RAYON_NUM_THREADS 4 and 20 (sweep 4/10/20).'))
+    else:
+        walls = {str(t): proof['total_ns'] for t, (_, proof) in sorted(nodes.items())}
+        sidecar, proof = nodes[20]
+        w4, w20 = nodes[4][1]['total_ns'], proof['total_ns']
+        decision = ('keep_20_threads' if 10 * w20 <= 7 * w4 else
+                    'serial_bound' if 10 * w20 > 9 * w4 else 'inconclusive')
+        metric = base('node_step_wall_by_threads', sidecar, proof, [proof['root_span_id']])
+        metric.update(node_step_wall_ns=walls, decision=decision,
+                      invocations={str(t): s['invocation_id'] for t, (s, _) in sorted(nodes.items())})
+        cpu = proof['cpu_core_ns']
+        metric['average_cores_at_20'] = None if cpu is None else {'numerator': cpu, 'denominator': w20}
+        if cpu is None:
+            metric['average_cores_null_reason'] = 'Node proof CPU is not fully attributed.'
+        if decision == 'serial_bound':
+            phases = {p['span_id']: p for p in sidecar['phases']}
+            ratios = [(Fraction(ns(phases[p['span_id']]['metrics']['exclusive_cpu_core_seconds']), p['wall_ns']),
+                       p['span_id']) for p in proof['partition'] if p['span_id'] is not None and p['wall_ns']
+                      and phases[p['span_id']]['metrics']['exclusive_cpu_core_seconds'] is not None]
+            metric['lowest_cpu_per_wall_span'] = min(ratios)[1] if ratios else None
+        out.append(row(11, 'arithmetic_only', metric, 'Measured thread sweep; the gate G-A sets the thread count.'))
+    # C12 k=19: d = domain-proportional share; predicted factor 1 / (1 - d/2) = 2T / (2T - N).
+    out.append(share(12, 'domain_proportional_share',
+                     lambda p: p['owner'] in DOMAIN_OWNERS or is_msm(p),
+                     lambda n, t: {'predicted_k19_factor': {'numerator': 2 * t, 'denominator': 2 * t - n}}))
+    # C13 S>1: arithmetic only; the leaf term t_leaf(S) comes from M4.
+    if 20 not in nodes:
+        out.append(row(13, reason='No named GP node proof at RAYON_NUM_THREADS=20 (shape node).'))
+    else:
+        sidecar, proof = nodes[20]
+        t_node = proof['total_ns']
+        metric = base('steps_per_leaf_arithmetic', sidecar, proof, [proof['root_span_id']])
+        decider = deciders.get(20) or next(iter(deciders.values()), None)
+        metric.update(node_step_ns=t_node, steps=GP_STEP_BOUND,
+                      decider_ns=None if decider is None else decider[1]['total_ns'],
+                      node_only_ns={str(s): math.ceil(GP_STEP_BOUND / s) * t_node for s in GP_S_VALUES},
+                      leaf_seconds=None, target_ns=5760 * NS)  # 0.8 x 7,200 s
+        out.append(row(13, metric=metric, reason='S needs t_leaf(S) and leaf k(S) of the universal leaf (M4); '
+                       'node_only_ns is a lower bound, the k=19 node time comes from A16.'))
+    # C14 GPU MSM: m = MSM share including multiopen MSMs; Amdahl bound 1 / (1 - m).
+    out.append(share(14, 'msm_share', is_msm,
+                     lambda n, t: {'amdahl_bound': {'numerator': t, 'denominator': t - n} if t > n else None}))
+    return out
 
 
 def read_sidecar(path):
@@ -599,9 +736,29 @@ def planned_commands(args):
         # Every heavy run needs its own id. Builds take minutes, so they get a wall cap of their own and never
         # the proof budget (a2-linked-children allows 23 s).
         return ['scripts/doctorwatson', 'heavy', '--id', run_id, *limit, '--hypothesis', args.hypothesis or hypothesis]
+    if args.cache_mode is None:
+        args.cache_mode = CACHE_MODES.get(args.workload, 'process_cold')
     require(args.workload != 'A2' or args.cache_mode == 'process_cold',
             'A2 resident_pk is unsupported: public child APIs rebuild the PK')
-    binary = 'profile-a2' if args.workload == 'A2' else 'profile-recursion'
+    gp = args.workload == 'GP'
+    require(gp or (args.threads is None and args.standin_steps is None and args.leaf_dir is None),
+            '--threads, --standin-steps and --leaf-dir apply to the GP workload only')
+    environment = []
+    if gp:
+        require(args.cache_mode == 'resident_pk', 'GP keeps the node PK resident; process_cold is unsupported')
+        args.threads = 20 if args.threads is None else args.threads
+        require(1 <= args.threads <= 1024, 'invalid thread count')
+        require(args.leaf_dir is None or args.standin_steps is None, 'choose stand-in leaves or a leaf directory')
+        environment = [f'RAYON_NUM_THREADS={args.threads}']
+        if args.leaf_dir is not None:
+            require(re.fullmatch(r'[A-Za-z0-9_./-]+', args.leaf_dir), 'invalid leaf directory')
+            environment.append(f'MORIARTY_GP_LEAF_DIR={args.leaf_dir}')
+        else:
+            steps = 3 if args.standin_steps is None else args.standin_steps
+            require(1 <= steps <= 320, 'invalid stand-in step count')
+            environment.append(f'MORIARTY_GP_STANDIN_STEPS={steps}')
+    stratum = f'{args.cache_mode}-t{args.threads}' if gp else args.cache_mode
+    binary = BINARIES.get(args.workload, 'profile-recursion')
     variants = ('off', 'on') if args.command == 'calibrate' or args.variant == 'both' else (args.variant,)
     commands = []
     for variant in variants:
@@ -614,13 +771,15 @@ def planned_commands(args):
                               f'Build the {variant} {binary} binary for the C0 {args.workload} profile') + ['--'] + build)
     for pair in range(args.pairs if args.command == 'calibrate' else 1):
         for variant in variants:
-            sidecar = f'qa/sherlock/profiles/{args.run_id}/{args.workload}-{args.cache_mode}-{pair}-{variant}.json'
-            commands.append(heavy(f'C0-{args.run_id}-{args.workload}-{args.cache_mode}-{pair}-{variant}',
+            sidecar = f'qa/sherlock/profiles/{args.run_id}/{args.workload}-{stratum}-{pair}-{variant}.json'
+            command = [f'tools/profile/target/{variant}/release/{binary}',
+                       '--workload', args.workload, '--cache-mode', args.cache_mode, '--sidecar', sidecar]
+            if gp:
+                command = ['env', *environment, *command, '--threads', str(args.threads)]
+            commands.append(heavy(f'C0-{args.run_id}-{args.workload}-{stratum}-{pair}-{variant}',
                                   ['--budget', BUDGETS[args.workload]],
                                   f'C0 {args.workload} profile, pair {pair}, observation {variant}')
-                            + ['--', f'tools/profile/target/{variant}/release/{binary}',
-                                    '--workload', args.workload, '--cache-mode', args.cache_mode,
-                                    '--sidecar', sidecar])
+                            + ['--', *command])
     return commands
 
 
@@ -635,7 +794,11 @@ def main(argv=None):
         p.add_argument('--workload', choices=BUDGETS, required=True)
         p.add_argument('--pairs', type=int, default=5)
         p.add_argument('--run-id', default='planned')
-        p.add_argument('--cache-mode', choices=('process_cold', 'resident_pk'), default='process_cold')
+        p.add_argument('--cache-mode', choices=('process_cold', 'resident_pk'),
+                       help='default: resident_pk for GP, process_cold otherwise')
+        p.add_argument('--threads', type=int, help='GP: RAYON_NUM_THREADS, recorded in the sidecar host block (default 20)')
+        p.add_argument('--standin-steps', type=int, help='GP: stand-in leaves (default 3)')
+        p.add_argument('--leaf-dir', help='GP: directory of real proved leaves')
         p.add_argument('--variant', choices=('off', 'on', 'both'), default='both')
         p.add_argument('--hypothesis')
         p.add_argument('--run', action='store_true')
@@ -654,7 +817,7 @@ def main(argv=None):
                 print(shlex.join(command))
             if args.run:
                 prepare()
-                binary = 'profile-a2' if args.workload == 'A2' else 'profile-recursion'
+                binary = BINARIES.get(args.workload, 'profile-recursion')
                 require((ROOT / f'tools/profile/src/bin/{binary}.rs').is_file(),
                         'profiling executable is not implemented for this workload')
                 for command in commands:

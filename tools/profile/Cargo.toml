@@ -16,19 +16,33 @@ default = []
 recursion-phase-profile = ["midnight-proofs/recursion-phase-profile"]
 
 [dependencies]
-mori-recursion = { path = "../../crates/mori-recursion", features = ["sherlock-recursion"] }
+# sherlock-ledger brings the IVC node, the run decider and the ledger verifier
+# key that profile-gp drives (crates/mori-recursion/tests/sherlock_gp.rs).
+mori-recursion = { path = "../../crates/mori-recursion", features = ["sherlock-ledger"] }
 mori-backend = { path = "../../crates/mori-backend" }
 mori-core = { path = "../../crates/mori-core" }
+# Pins follow the root workspace after task 2.1 (ledger 9.1.0.1, circuits 7.3.0,
+# zk-stdlib 2.4.0). The lockfile is seeded from the root Cargo.lock.
 midnight-proofs = "=0.8.3"
-midnight-zk-stdlib = "=2.3.5"
+midnight-circuits = { version = "=7.3.0", default-features = false }
+midnight-zk-stdlib = { version = "=2.4.0", default-features = false }
 midnight-curves = "=0.3.1"
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+ff = "=0.13.1"
+group = "=0.13.0"
+blake2b_simd = "=1.0.5"
+rand = "=0.8.8"
+rand_chacha = "=0.3.1"
 rand_core = "0.6"
 serde_json = "1"
 sha2 = "0.10"
 libc = "0.2"
 
+# The observation-patched vendor midnight-proofs, plus the root workspace's own
+# ledger patches at the same immutable revision (root Cargo.toml [patch.crates-io]).
 [patch.crates-io]
 midnight-proofs = { path = "vendor/midnight-proofs-0.8.3" }
-midnight-transient-crypto-old = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1", package = "midnight-transient-crypto" }
-midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
-midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-storage-core = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }

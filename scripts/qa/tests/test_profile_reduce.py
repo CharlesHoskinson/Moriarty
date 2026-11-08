@@ -132,7 +132,7 @@ class ReduceTests(unittest.TestCase):
 
     def test_decision_rows_without_candidates(self):
         rows = self.profile.decide_profiles([self.data])['rows']
-        self.assertEqual([r['row'] for r in rows], ['C'+str(i) for i in range(1, 11)])
+        self.assertEqual([r['row'] for r in rows], ['C'+str(i) for i in range(1, 15)])
         for row in rows:
             self.assertTrue(row.get('metric') or row.get('reason'))
             self.assertIsNone(row.get('measured_gain'))

@@ -18,6 +18,7 @@ use rand_core::{CryptoRng, RngCore};
 
 #[cfg(feature = "recursion-phase-profile")]
 pub mod counters;
+pub mod node_rows;
 pub mod sidecar;
 
 /// Scope a verifier negative control. Its transcript read errors are expected;

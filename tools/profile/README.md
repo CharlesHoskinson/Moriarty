@@ -72,6 +72,31 @@ refused: the public child APIs rebuild their PK on every proof. A3/A4/B3 runners
 and the resident-PK matrix remain future work, with execution refused when the
 corresponding executable is missing.
 
+### GP node chain (task 2.7, RPP 5.3)
+
+The workspace follows the root pins after task 2.1 (midnight-proofs 0.8.3, circuits
+7.3.0, zk-stdlib 2.4.0, ledger `a2b30128`); `tools/profile/Cargo.lock` was seeded from
+the root `Cargo.lock` and resolved offline. `prepare` refuses a profile pin or lock
+entry that differs from the root pin.
+
+```sh
+python3 -B scripts/qa/profile-recursion.py one --workload GP --threads 20 --run-id c0-gp-t20
+```
+
+`profile-gp` reproduces `gp_fold_and_key` (`crates/mori-recursion/tests/sherlock_gp.rs`)
+with caller spans around SRS and key load, `setup_pk`, each node prove and verify,
+decider keygen and prove, and the ledger verifier, plus malformed-proof and
+changed-lane controls. Leaves are stand-ins (`MORIARTY_GP_STANDIN_STEPS`, default 3
+in the plan) or proved leaves (`--leaf-dir` -> `MORIARTY_GP_LEAF_DIR`). `--threads N`
+sets `RAYON_NUM_THREADS` in the plan; the binary refuses a mismatch and records N in
+the sidecar `host` block. The node row count and its per-gadget breakdown
+(`src/node_rows.rs`: own key and state, prepare self, prepare leaf, accumulate,
+collapse) are computed by `cost_model` after the command span closes, so they never
+enter the phase partition; the probe fails if its copy of the node circuit no longer
+gives the node's own row count. The SRS is never fetched: pass `--srs` or
+`MORIARTY_PARENT_SRS`. `decide` adds rows C11-C14 (threads, k=19, S, GPU MSM) from
+the named GP node proofs.
+
 The planner names sidecars as
 `qa/sherlock/profiles/<run>/<workload>-<cache>-<pair>-<variant>.json`.
 The writer reserves a fresh sidecar and retains an incomplete marker if killed;
