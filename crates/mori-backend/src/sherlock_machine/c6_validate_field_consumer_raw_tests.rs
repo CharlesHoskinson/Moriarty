@@ -2069,7 +2069,18 @@ fn raw_wrapper_only_refusals_labelled_and_separated_from_sdk_check() {
     ));
     let mut short_frs = w.to_statement_frs();
     short_frs.pop();
-    assert!(check_raw(&c_local, &w, short_frs.clone(), None).is_err());
+    // midnight-zkir 3.2.0 (`ir_vm.rs`, `PublicInput`) slices
+    // `public_transcript_outputs` without a bounds check, so a short LocalPublic
+    // transcript panics inside `ProofPreimage::check` instead of returning `Err`.
+    // A panic is a refusal (the preimage is never accepted); the assertion stays
+    // "never accepted". The LedgerCall path bails on short `inputs` with `Err`.
+    let local = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        check_raw(&c_local, &w, short_frs.clone(), None)
+    }));
+    assert!(
+        !matches!(local, Ok(Ok(_))),
+        "short LocalPublic statement must not be accepted by the SDK check"
+    );
     assert!(check_raw(&c_ledger, &w, short_frs, None).is_err());
 }
 
