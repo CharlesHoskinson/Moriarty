@@ -35,9 +35,11 @@ pub const A102_STATEMENT_OUTPUT_FILENAME: &str = "a102_statement_and_transition.
 
 const REFERENCE_SOURCE_BYTES: &[u8] =
     include_bytes!("../../../mori-core/src/sherlock/reference.rs");
-const EXPECTED_REFERENCE_SOURCE_BYTES_LEN: usize = 16_840;
+// Pin of `reference.rs` after `ee26ef905`, which only added `Machine::from_snapshot`
+// (a constructor; `step` and the transition rules are unchanged).
+const EXPECTED_REFERENCE_SOURCE_BYTES_LEN: usize = 17_081;
 const EXPECTED_REFERENCE_SOURCE_SHA256: &str =
-    "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81";
+    "d1979372c04e22d9d002d445a9736b40f213c0d05cca526c42738c74f2709426";
 const EXPECTED_STATEMENT_LANES: usize = 2077;
 const EXPECTED_PROGRAM_LANES: usize = 707;
 const EXPECTED_STATE_LANES: usize = 683;
