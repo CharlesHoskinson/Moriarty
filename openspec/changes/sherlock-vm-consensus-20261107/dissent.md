@@ -170,6 +170,12 @@ No council member dissented from this amendment; it was an owner decision outsid
 - Asked whether CUDA C++ kernel templates adapted from sppark (Apache-2.0) or ICICLE v2.8.0 (MIT) inside the Rust crate satisfy "you'll have to build one in rust", the owner said (verbatim): "I don't care as long as the license is MIT or Apache2".
 - Carried out: code borrowed into `crates/mori-gpu` or `tools/gpu-prover/` SHALL be MIT or Apache-2.0 licensed, keep its licence and copyright headers, and be recorded with source URL and commit in the crate's provenance notes. Code under any other licence (MPL-2.0, GPL, no licence, or ICICLE v3+ terms) SHALL NOT be copied. A crate dependency on ICICLE's closed CUDA backend stays excluded. This settles gpu-align finding (a); `gpu.md` §2 already follows it.
 
+### Resolved 2026-11-08 (5): the target is Mainnet, tested on Preview
+
+- The owner said (verbatim): "We don't care about stagenet anymore, Midnight forked, this can work on mainnet. We should test on preview or preprod (whichever is the canonical test infrastructure)."
+- Carried out: the goal of this change is Sherlock on Midnight Mainnet with full general-purpose recursion. Stagenet is not a target (decision 3 of "Resolved 2026-11-08" already retired it).
+- The test network is Preview. Preview runs ledger 9.1.0.1, the same as Mainnet, as a new chain since 2026-11-07. Preprod still runs ledger 8.1.3, and toolchains 0.34-0.36 cannot deploy to it (`wiki/midnight-ledger-9-hardfork.md`, support matrix). The order stays: local Docker at 9.1.0.1 (`undeployed`), then Preview (M6), then Mainnet (M7). If Preprod moves to ledger 9, a later change may add Preprod rows; this change adds none.
+
 ### Owner decisions still open after 2026-11-08 (3)
 
 1. Whether to fund the GPU build phases (2.10b-2.10f; agent time, each time-boxed) if gate G-A opens the track (`m + q >= 0.4`). Without that decision the track closes at the smoke and the GPU rows stay optional.
