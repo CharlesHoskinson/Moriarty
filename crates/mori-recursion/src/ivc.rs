@@ -50,7 +50,7 @@ use crate::{
     util::{F, read_bytes, read_u32, vk_bytes, vk_from_bytes, write_bytes},
 };
 
-const MAGIC: &[u8; 8] = b"SHKIVC04";
+const MAGIC: &[u8; 8] = b"SHKIVC05";
 /// Name prefix of the node's own (self) fixed bases.
 pub const SELF_NAME: &str = "shk_node";
 /// State fields after the self key: prog_d, init_d, cur_d, h.
@@ -221,8 +221,11 @@ impl SherlockIvcRelation {
             >(vk.vk(), &[&[C::identity()]], &[&[&prev_inst]], &mut tr)
             .map_err(|e| format!("prepare previous node proof: {e:?}"))?;
             let bases = fixed_bases::<S>(SELF_NAME, vk.vk());
-            // Left uncollapsed, mirroring the circuit (one collapse after folding).
-            Accumulator::<S>::from_dual_msm(dual, SELF_NAME, &bases)
+            // Collapsed, mirroring the circuit: the fold challenge hashes every folded
+            // accumulator, so the genesis one must be the canonical trivial accumulator.
+            let mut a = Accumulator::<S>::from_dual_msm(dual, SELF_NAME, &bases);
+            a.collapse();
+            a
         };
         let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule, w.leaf_steps);
         let leaf_acc = prepare_offcircuit_with(
@@ -348,8 +351,14 @@ impl Relation for SherlockIvcRelation {
             witness.as_ref().map(|w| w.prev_proof.clone()),
         )?;
         AssignedAccumulator::scale_by_bit(l, scalar, &not_genesis, &mut proof_acc)?;
-        // Not collapsed here: the proof, carried and leaf accumulators are folded first and
-        // collapsed once below (one shared MSM keeps the node at k=19).
+        // Collapsed before the fold. `accumulate` derives its challenge from a hash of every
+        // folded accumulator's full encoding, bases included. Scaled by zero at genesis, the
+        // uncollapsed accumulator still carries the bases parsed from the (absent) previous
+        // proof, so the challenge would depend on them and could not match `next_acc`, which
+        // uses `trivial_acc` there. Collapsed, it is (identity, 1, zero fixed scalars): exactly
+        // `trivial_acc`. The leaf accumulator stays uncollapsed (its shape is fixed by the
+        // leaf key and mirrored off circuit) and is collapsed once with the fold below.
+        proof_acc.collapse(l, bls, scalar)?;
 
         // 4. The leaf under its fixed key, linked to (prog_d, prev_d, cur_d, h_pre).
         let leaf_inst = vec![binding, prog_d, prev_d, cur_d, rule, prev_h, steps];
@@ -385,7 +394,7 @@ impl Relation for SherlockIvcRelation {
         let mut magic = [0u8; 8];
         r.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(io::Error::other("not a SHKIVC04 node relation"));
+            return Err(io::Error::other("not a SHKIVC05 node relation"));
         }
         let mut b = [0u8; 1];
         r.read_exact(&mut b)?;

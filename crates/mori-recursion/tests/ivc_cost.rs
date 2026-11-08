@@ -13,7 +13,7 @@ fn ivc_node_rows() {
     let lk = cost_model(&leaf, None).k;
     let p: ParamsKZG<Bls12> = ParamsKZG::unsafe_setup(lk, OsRng);
     let vk = setup_vk(&p, &leaf);
-    for k in [19u32] {
+    for k in [19u32, 20] {
         let rel = SherlockIvcRelation::new(4, k, vk.clone()).unwrap();
         let m = cost_model(&rel, Some(k));
         println!(
