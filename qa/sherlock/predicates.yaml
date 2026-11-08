@@ -71,6 +71,7 @@ predicates:
     set: A
     title: "A finalized contract call exists on the pinned stagenet verifier contract (read-only indexer: ContractCall in action history)"
     tier: T3
+    network: stagenet
     check: "scripts/qa/check-a8.sh"
     heavy: false
     depends: [A7]
@@ -81,6 +82,7 @@ predicates:
     set: A
     title: "The five rejection cases are refused on stagenet"
     tier: T3
+    network: stagenet
     check: "qa/holdout/run.sh rejections-stagenet"
     heavy: false
     depends: [A8]
@@ -91,6 +93,7 @@ predicates:
     set: A
     title: "Public receipts and complete effects readback of the stagenet call, independent of the submitter (SRPOC-002, SRPOC-007)"
     tier: T3
+    network: stagenet
     check: "scripts/qa/check-a10.sh"
     heavy: false
     depends: [A9]
@@ -119,6 +122,7 @@ predicates:
     set: A
     title: "entry 7; owner leaves proved under the universal leaf key at the new pins and accepted by their verifier; Preview target (SVM-001)"
     tier: T2
+    network: preview
     check: "scripts/qa/unimplemented.sh A2p"
     heavy: false
     depends: [A12]
@@ -128,6 +132,7 @@ predicates:
     set: A
     title: "Node chain folding the entry 7; leaves through the seven-lane leaf statement, at the new pins, with measured budget; Preview target (SRC-001, SRC-011)"
     tier: T2
+    network: preview
     check: "scripts/qa/unimplemented.sh A3p"
     heavy: false
     depends: [A2p]
@@ -137,6 +142,7 @@ predicates:
     set: A
     title: "Run decider proof over the entry 7; node chain exposing [prog_d, init_d, fin_d, n_steps, result_be], bound to the Preview verifier contract manifest (SRC-006)"
     tier: T2
+    network: preview
     check: "scripts/qa/unimplemented.sh A4p"
     heavy: false
     depends: [A3p]
@@ -146,6 +152,7 @@ predicates:
     set: A
     title: "Local proof-verifying ledger 9.1.0.1 acceptance of the acceptRun call with mainnet parameters, recaptured Compact 0.36.0 template, public-input and 256-op limits recorded, five refusals; Preview target (SMN-003, SMN-006)"
     tier: T2
+    network: preview
     check: "scripts/qa/unimplemented.sh A6p"
     heavy: false
     depends: [A4p]
@@ -164,6 +171,7 @@ predicates:
     set: A
     title: "A finalized acceptRun call on the Preview SherlockRun contract bound to the manifest stmt and read through a committed receipt, with fee, min_block_price, factors and DUST spends recorded (SRC-007, SAS-007, SMN-004, SMN-005)"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh A8p"
     heavy: false
     depends: [A6p, A13]
@@ -173,6 +181,7 @@ predicates:
     set: A
     title: "The five rejection cases are refused on Preview (rejections-preview holdout, evaluator-owned E12) (SRC-007)"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh A9p"
     heavy: false
     depends: [A8p]
@@ -182,6 +191,7 @@ predicates:
     set: A
     title: "Manifest-selected public receipts and complete effects readback of the Preview call (stmt, steps, u128 result), independent of the submitter (SRC-007, SAS-007, SMN-005)"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh A10p"
     heavy: false
     depends: [A8p]
@@ -370,6 +380,7 @@ predicates:
     set: B
     title: "The same 16-transaction batch accepted on stagenet (SRPOC-004)"
     tier: T3
+    network: stagenet
     check: "scripts/qa/check-b4.sh"
     heavy: false
     depends: [B3, A8]
@@ -380,6 +391,7 @@ predicates:
     set: B
     title: "Two-, four- and six-batch prefixes run, with failures and censored measurements kept (SRPOC-004, SRPOC-008)"
     tier: T2
+    network: stagenet
     check: "scripts/qa/check-b5.sh"
     heavy: true
     budget: "b5-prefix-batches"
@@ -409,6 +421,7 @@ predicates:
     set: B
     title: "Fees, finalization time and settlement-readback latency reported separately from local verification time (SRPOC-006)"
     tier: T3
+    network: stagenet
     check: "python3 -B scripts/qa/check-rollup-performance.py"
     heavy: false
     depends: [B4]
@@ -419,6 +432,7 @@ predicates:
     set: B
     title: "Feasibility report states exact workload, sample count, observed k/resources/latency, failures and remaining gaps (SRPOC-009)"
     tier: T3
+    network: stagenet
     check: "python3 -B scripts/qa/check-rollup-feasibility.py"
     heavy: false
     depends: [B5, B6, B7, B8]
@@ -429,6 +443,7 @@ predicates:
     set: B
     title: "Synthetic rollup, Preview: the 16-transaction FSYN batch accepted on Preview through OP-PV-SYNTH-ROLLUP, after the local rows (synthetic-rollup Preview gate; SSRD-029, SWF-013 and D14 as amended 2026-11-08 (2))"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh B4p"
     heavy: false
     depends: [B3, B6, B7, A8p]
@@ -437,7 +452,8 @@ predicates:
   - id: B5p
     set: B
     title: "Synthetic rollup, Preview: two-, four- and six-batch FSYN prefixes on Preview, with failures and censored measurements kept (synthetic-rollup Preview gate; SSRD-029, D14 as amended 2026-11-08 (2))"
-    tier: T2
+    tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh B5p"
     heavy: false
     depends: [B4p]
@@ -447,6 +463,7 @@ predicates:
     set: B
     title: "Synthetic rollup, Preview: FSYN batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (synthetic-rollup Preview gate; SSRD-029, SMN-005, D14 as amended 2026-11-08 (2))"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh B8p"
     heavy: false
     depends: [B4p]
@@ -456,6 +473,7 @@ predicates:
     set: B
     title: "Synthetic rollup, Preview: feasibility report with exact FSYN workload, sample count, observed k/resources/latency, failures and remaining gaps (synthetic-rollup Preview gate; SSRD-029, D14 as amended 2026-11-08 (2))"
     tier: T3
+    network: preview
     check: "scripts/qa/unimplemented.sh B9p"
     heavy: false
     depends: [B5p, B6, B7, B8p]
@@ -463,8 +481,9 @@ predicates:
     holdout: false
   - id: B4m
     set: B
-    title: "Synthetic rollup, Mainnet: the 16-transaction FSYN batch accepted on Mainnet through OP-MN-SYNTH-ROLLUP, an owner-authorized T4 operation (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2); tier moves to T4 when E5 lands)"
-    tier: T3
+    title: "Synthetic rollup, Mainnet: the 16-transaction FSYN batch accepted on Mainnet through OP-MN-SYNTH-ROLLUP, an owner-authorized T4 operation (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2))"
+    tier: T4
+    network: mainnet
     check: "scripts/qa/unimplemented.sh B4m"
     heavy: false
     depends: [B4p]
@@ -473,7 +492,8 @@ predicates:
   - id: B5m
     set: B
     title: "Synthetic rollup, Mainnet: two-, four- and six-batch FSYN prefixes on Mainnet, with failures and censored measurements kept (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2))"
-    tier: T3
+    tier: T4
+    network: mainnet
     check: "scripts/qa/unimplemented.sh B5m"
     heavy: false
     depends: [B5p, B4m]
@@ -482,7 +502,8 @@ predicates:
   - id: B8m
     set: B
     title: "Synthetic rollup, Mainnet: FSYN batch fees against min_block_price and the 9.1.0.x factors, finalization and readback latency, reported apart from local verification time (synthetic-rollup Mainnet gate; SSRD-029, SMN-005, D14 as amended 2026-11-08 (2))"
-    tier: T3
+    tier: T4
+    network: mainnet
     check: "scripts/qa/unimplemented.sh B8m"
     heavy: false
     depends: [B8p, B4m]
@@ -491,7 +512,8 @@ predicates:
   - id: B9m
     set: B
     title: "Synthetic rollup, Mainnet: feasibility report with exact FSYN workload, sample count, observed k/resources/latency, failures and remaining gaps (synthetic-rollup Mainnet gate; SSRD-029, D14 as amended 2026-11-08 (2))"
-    tier: T3
+    tier: T4
+    network: mainnet
     check: "scripts/qa/unimplemented.sh B9m"
     heavy: false
     depends: [B9p, B5m, B8m]

@@ -1,6 +1,7 @@
 """Load, validate and order qa/sherlock/predicates.yaml."""
 
 import heapq
+import json
 import os
 from dataclasses import dataclass, field
 
@@ -9,7 +10,17 @@ import yaml
 from . import repo_root, sherlock_path
 
 SETS = ("A", "B", "C", "U", "F")
-TIERS = ("T0", "T1", "T2", "T3")
+TIERS = ("T0", "T1", "T2", "T3", "T4")
+# E6/SWF-008: deployment target of a row. Stagenet is retired (dissent.md, Resolved 2026-11-08 (5)):
+# it stays legal only on retired rows, as history.
+NETWORKS = ("undeployed", "stagenet", "preview", "mainnet")
+RETIRED_NETWORKS = ("stagenet",)
+# E15/SWF-012/SWF-013: milestone row sets, as the roots of a dependency closure.
+MILESTONES = {
+    "sherlock-m6": ["C4"],         # Sherlock Preview qualification (tasks.md M6)
+    "fenrir-preview": ["B9p"],     # Fenrir Preview gate (task 6.6): B1-B3, B6, B7, B4p, B5p, B8p, B9p
+    "fenrir-mainnet": ["B9m"],     # Fenrir mainnet gate (task 7.4): adds B4m, B5m, B8m, B9m
+}
 
 
 class PredicateError(Exception):
@@ -32,6 +43,7 @@ class Predicate:
     holdout: bool = False
     retired: str | None = None   # E10/SWF-011: reason or anchor; sweeps and FIRST FAILING skip the row
     optional: bool = False       # E14/SWF-012: reported, never gating unless --include-optional
+    network: str | None = None   # E6/SWF-008: undeployed | stagenet (retired rows only) | preview | mainnet
     index: int = 0
 
     @property
@@ -42,6 +54,36 @@ class Predicate:
 def swept(preds, include_optional=False):
     """Rows a sweep or FIRST FAILING considers: never retired; optional only on request."""
     return [p for p in preds if p.retired is None and (include_optional or not p.optional)]
+
+
+def closure(preds, roots):
+    """The roots plus every row they depend on, transitively, in file order."""
+    by_id = {p.id: p for p in preds}
+    seen = set()
+    stack = [r for r in roots if r in by_id]
+    while stack:
+        pid = stack.pop()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        stack.extend(d for d in by_id[pid].depends if d in by_id)
+    return [p for p in preds if p.id in seen]
+
+
+def lineage(pid):
+    """Key lineage stem of a network row id: `A8m`/`A8p` -> `A8` (SWF-008)."""
+    return pid[:-1] if len(pid) > 1 and pid[-1] in "pm" else pid
+
+
+def pins_networks(repo):
+    """Network names in qa/sherlock/target-pins.json, or None when the file is absent or unreadable."""
+    path = sherlock_path("target-pins.json", repo)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            nets = json.load(fh).get("networks")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return set(nets) if isinstance(nets, dict) else None
 
 
 def yaml_path(repo=None):
@@ -90,7 +132,8 @@ def _find_cycles(ids, deps):
     return sorted(on_cycle)
 
 
-def validate_data(data):
+def validate_data(data, networks=None):
+    """`networks`: names allowed by the pins file (None = not checked against a pins file)."""
     errors = []
     items = data["predicates"]
     seen = {}
@@ -127,6 +170,19 @@ def validate_data(data):
         dep = item.get("depends")
         if dep is not None and not isinstance(dep, list):
             errors.append(f"{where}: depends must be a list of ids")
+        net = item.get("network")
+        if "network" in item:
+            if net not in NETWORKS:
+                errors.append(f"{where}: network must be one of {', '.join(NETWORKS)} (got {net!r})")
+            elif net in RETIRED_NETWORKS and "retired" not in item:
+                errors.append(f"{where}: network {net} is retired; only a retired row may carry it")
+            elif networks is not None and net not in networks:
+                errors.append(f"{where}: network {net!r} has no row in qa/sherlock/target-pins.json")
+        if "retired" not in item:
+            if item.get("tier") == "T4" and net != "mainnet":
+                errors.append(f"{where}: a T4 row must carry network: mainnet")
+            elif net == "mainnet" and item.get("tier") != "T4":
+                errors.append(f"{where}: a network: mainnet row must be tier T4")
     idset = set(ids_list)
     deps = {}
     for pid, item in seen.items():
@@ -150,6 +206,17 @@ def validate_data(data):
                 errors.append(f"{pid}: active row depends on retired row {d!r}")
             elif target.get("optional") is True and item.get("optional") is not True:
                 errors.append(f"{pid}: mandatory row depends on optional row {d!r}")
+    # SWF-008: a T4 (mainnet) row depends on the T3 Preview row of the same key lineage
+    for pid, item in seen.items():
+        if item.get("tier") != "T4" or "retired" in item:
+            continue
+        stem = lineage(pid)
+        ok = any(isinstance(seen.get(d), dict) and lineage(d) == stem and d != pid
+                 and seen[d].get("tier") == "T3" and seen[d].get("network") == "preview"
+                 for d in deps.get(pid, []))
+        if not ok:
+            errors.append(f"{pid}: a T4 row must depend on its T3 Preview counterpart "
+                          f"{stem + 'p'!r} (same key lineage)")
     cyc = _find_cycles(idset, {k: [d for d in v if d != k] for k, v in deps.items()})
     if cyc:
         errors.append("dependency cycle among: " + ", ".join(cyc))
@@ -162,7 +229,7 @@ def validate(repo=None):
     data, errors = _read_raw(repo)
     if data is None:
         return errors
-    return validate_data(data)
+    return validate_data(data, pins_networks(repo))
 
 
 def load(repo=None):
@@ -171,7 +238,7 @@ def load(repo=None):
     data, errors = _read_raw(repo)
     if data is None:
         raise PredicateError(errors)
-    errors = validate_data(data)
+    errors = validate_data(data, pins_networks(repo))
     if errors:
         raise PredicateError(errors)
     out = []
@@ -182,7 +249,7 @@ def load(repo=None):
             budget=item.get("budget"), depends=list(item.get("depends") or []),
             source=item.get("source"), holdout=bool(item.get("holdout", False)),
             retired=item.get("retired"), optional=item.get("optional") is True,
-            index=n,
+            network=item.get("network"), index=n,
         ))
     return out
 
