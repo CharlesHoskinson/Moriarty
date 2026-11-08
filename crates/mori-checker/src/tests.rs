@@ -207,6 +207,11 @@ fn fixtures_resolve() {
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures");
     for entry in std::fs::read_dir(&fixtures).expect("fixtures directory exists") {
         let path = entry.expect("directory entry is readable").path();
+        // Subdirectories hold Core and contract fixtures for other targets;
+        // the beta programs are the top-level `.mori` files.
+        if !path.is_file() || path.extension().is_none_or(|ext| ext != "mori") {
+            continue;
+        }
         let source = std::fs::read_to_string(&path).expect("fixture is readable");
         let Ok(ast) = mori_parser::parse(&source) else {
             continue;

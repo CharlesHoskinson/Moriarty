@@ -567,6 +567,11 @@ fn fixtures_parse() {
     let mut checked = 0;
     for entry in std::fs::read_dir(&fixtures).expect("fixtures directory exists") {
         let path = entry.expect("directory entry is readable").path();
+        // Subdirectories hold Core and contract fixtures for other targets;
+        // the beta programs are the top-level `.mori` files.
+        if !path.is_file() || path.extension().is_none_or(|ext| ext != "mori") {
+            continue;
+        }
         let source = std::fs::read_to_string(&path).expect("fixture is readable");
         let result = parse(&source);
         if path.ends_with("invalid.mori") {
