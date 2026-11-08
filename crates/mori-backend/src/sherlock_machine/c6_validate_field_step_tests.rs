@@ -947,9 +947,7 @@ fn nominal_types() -> Vec<TypeDeclSrc> {
                 name: "MkAlpha".into(),
                 fields: vec![CtorFieldSrc {
                     name: "payload".into(),
-                    ty: TypeExprSrc::Named {
-                        name: "UInt".into(),
-                    },
+                    ty: TypeExprSrc::UInt,
                 }],
             }],
         },
@@ -969,15 +967,11 @@ fn nominal_types() -> Vec<TypeDeclSrc> {
                 fields: vec![
                     CtorFieldSrc {
                         name: "first".into(),
-                        ty: TypeExprSrc::Named {
-                            name: "UInt".into(),
-                        },
+                        ty: TypeExprSrc::UInt,
                     },
                     CtorFieldSrc {
                         name: "second".into(),
-                        ty: TypeExprSrc::Named {
-                            name: "UInt".into(),
-                        },
+                        ty: TypeExprSrc::UInt,
                     },
                 ],
             }],
