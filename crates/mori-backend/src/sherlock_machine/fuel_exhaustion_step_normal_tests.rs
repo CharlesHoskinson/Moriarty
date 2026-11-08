@@ -483,10 +483,13 @@ fn fuel_exhaustion_step_emits_exact_guards_and_preservations() {
     for row_idx in 0..schema.state_tables[5].capacity {
         let row_tag = table_op(&schema.state_tables, &inputs.pre, 5, row_idx, "tag");
         let next_idx = immediate((row_idx + 1) as u128);
-        let is_push_prefix = block
+        // `row + 1 < controlLength` can be emitted more than once (the `controlLength`
+        // range check emits `capacity < controlLength` before the row loop). Every such
+        // `LessThan` has the same operands and so the same value; accept the guard on any.
+        let is_push_prefix: Vec<Operand> = block
             .instructions
             .iter()
-            .find_map(|i| match i {
+            .filter_map(|i| match i {
                 Instruction::LessThan {
                     a,
                     b,
@@ -497,7 +500,8 @@ fn fuel_exhaustion_step_emits_exact_guards_and_preservations() {
                 }
                 _ => None,
             })
-            .expect("row + 1 < controlLength");
+            .collect();
+        assert!(!is_push_prefix.is_empty(), "row + 1 < controlLength");
         let tag_is_push = block
             .instructions
             .iter()
@@ -508,12 +512,12 @@ fn fuel_exhaustion_step_emits_exact_guards_and_preservations() {
                 _ => None,
             })
             .expect("row.tag == 2");
-        assert!(has_gated_eq(
+        assert!(is_push_prefix.iter().any(|prefix| has_gated_eq(
             &block.instructions,
             enable,
             &tag_is_push,
-            &is_push_prefix
-        ));
+            prefix
+        )));
     }
 
     assert!(has_gated_eq(
