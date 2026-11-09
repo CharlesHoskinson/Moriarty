@@ -420,7 +420,7 @@ def cmd_grade(component: str, candidate: Path | None, out: Path, target: str,
     env = {"RUST_TEST_THREADS": "1", "CARGO_TARGET_DIR": str(TARGET_ROOT / "skeleton-pilot-grader"),
            "SKELETON_PILOT_COMPONENT": component, "SKELETON_PILOT_OUT": str(out),
            "SKELETON_PILOT_TARGET": target, **extra_env}
-    cell = out.name.replace("/", "-")
+    cell = out.parent.name if out.name == "grade" else out.name
     argv = [str(REPO / "scripts/doctorwatson"), "heavy", "--id", f"SKP-{cell}",
             "--max-wall", str(max_wall), "--hypothesis",
             f"skeleton pilot grade {component} {target}: IR raw-statement mutants vs reference",
@@ -530,6 +530,51 @@ def skeleton_prompt(component: str, kind: str) -> str:
              .replace("{component}", component))
 
 
+def tokens(usage: dict) -> str:
+    """One token summary for either vendor's usage record."""
+    u = usage.get("usage") if isinstance(usage.get("usage"), dict) else usage
+    if not u:
+        return "-"
+    inp = (u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0) + \
+        (u.get("cache_creation_input_tokens") or 0)
+    out = u.get("output_tokens") or 0
+    cost = usage.get("total_cost_usd")
+    s = f"{inp / 1000:.0f}k in / {out / 1000:.1f}k out"
+    return s + (f" (${cost:.2f})" if cost else "")
+
+
+def cmd_report(rundir: Path) -> str:
+    """Markdown tables of the skeleton lanes and the builds in a run directory."""
+    rows = ["| Skeleton | Lane exit | Wall s | Tokens | Lines | Blind violations |",
+            "|---|---|---|---|---|---|"]
+    for f in sorted((rundir / "skeletons").glob("*/skeleton.json")):
+        d = json.loads(f.read_text())
+        v = json.loads((f.parent / "audit.json").read_text())
+        rows.append(f"| {f.parent.name} | {d['lane_exit']} | {d['lane_wall_seconds']} | "
+                    f"{tokens(d['usage'])} | {d['lines']} | {len(v)} |")
+    rows += ["", "| Build | Lane exit | Wall s | Tokens | Blind | Built | Complete | Static | "
+             "Soundness mutants | Mutants run / space | Instr. cand/ref | Primary |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for f in sorted(rundir.glob("*/cell.json")):
+        d = json.loads(f.read_text())
+        v = json.loads((f.parent / "audit.json").read_text())
+        g = f.parent / "grade" / "grade.json"
+        if g.exists():
+            s = json.loads(g.read_text())
+            ins = s["build"]["instructions"]
+            ratio = ", ".join(f"{x['candidate']}/{x['reference']}" for x in ins.values())
+            vd = s["verdict"]
+            st = len(s["static"]["lanes_read_by_reference_not_candidate"])
+            cols = [vd["built"], vd["complete"], st, vd["soundness_mutants"],
+                    f"{s['mutants']['run']} / {s['mutants']['space']}", ratio,
+                    "PASS" if vd["primary_pass"] else "fail"]
+        else:
+            cols = ["not graded"] + [""] * 6
+        rows.append(f"| {f.parent.name} | {d['lane_exit']} | {d['lane_wall_seconds']} | "
+                    f"{tokens(d['usage'])} | {len(v)} | " + " | ".join(str(c) for c in cols) + " |")
+    return "\n".join(rows)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -553,7 +598,11 @@ def main() -> int:
     a.add_argument("--scratch", type=Path, required=True)
     a = sp.add_parser("grade-cell"); a.add_argument("cell", type=Path)
     a.add_argument("--scratch", type=Path, required=True); a.add_argument("--max-wall", type=int, default=3600)
+    a = sp.add_parser("report"); a.add_argument("rundir", type=Path)
     x = ap.parse_args()
+    if x.cmd == "report":
+        print(cmd_report(x.rundir))
+        return 0
     if getattr(x, "component", None) and x.component not in COMPONENTS:
         raise SystemExit(f"unknown component {x.component}")
     if x.cmd == "spec":
