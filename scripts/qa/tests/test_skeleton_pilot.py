@@ -76,6 +76,12 @@ class AuditTests(unittest.TestCase):
         self.assertIn("forbidden command", v[1]["why"])
         self.assertIn("hidden file", v[2]["why"][0])
 
+    def test_vendor_skills_and_own_tool_results_are_not_violations(self):
+        home = Path.home()
+        text = self.events(f"cat {home}/.agents/skills/rust-dev/SKILL.md",
+                           f"cat {home}/.claude/projects/-tmp-x-lane/abc/tool-results/b1.txt")
+        self.assertEqual(sp.audit_events(text, self.sandbox, "c6_admin_publish"), [])
+
     def test_claude_tool_use_is_read(self):
         e = {"type": "assistant", "message": {"content": [
             {"type": "tool_use", "input": {"file_path": "/home/hoskinson/Projects/other/x"}}]}}

@@ -319,15 +319,23 @@ def cmd_lane(vendor: str, cwd: Path, prompt_file: Path, logdir: Path) -> dict:
 FORBIDDEN_CMD = re.compile(r"\bgit\b|\bcurl\b|\bwget\b|cargo\s+test|\bgh\b")
 
 
-def audit_events(text: str, sandbox: Path, component: str) -> list[dict]:
+def audit_events(text: str, sandbox: Path, component: str,
+                 meta: Path | None = None) -> list[dict]:
     """Blindness audit. A violation is a tool call that names a path outside the
     sandbox (other than the cargo home and lane target dirs), names the
-    reference repository, runs git/network/cargo test, or names a hidden file."""
+    reference repository, runs git/network/cargo test, or names a hidden file.
+    `meta` is the sandbox record saved with the cell (sandboxes are reused, so the
+    live `.pilot-sandbox.json` may belong to a later build)."""
     allowed = (str(sandbox), str(Path.home() / ".cargo"), str(TARGET_ROOT / "skeleton-pilot-lane"),
-               "/dev/null")
+               "/dev/null",
+               # The vendor CLIs' own global instructions and skills (same in every
+               # condition; no repository content).
+               str(Path.home() / ".agents/skills"), str(Path.home() / ".codex"))
     hidden = [f"{component}_tests.rs", "skeleton_pilot.rs"]
-    meta = sandbox / ".pilot-sandbox.json"
+    meta = meta or sandbox / ".pilot-sandbox.json"
+    with_ref = (sandbox / "reference").exists()
     if meta.exists():
+        with_ref = bool(json.loads(meta.read_text()).get("with_reference"))
         hidden += [Path(h).name for h in json.loads(meta.read_text())["hidden"]
                    if not h.endswith(f"{component}_step.rs")]
     out = []
@@ -349,14 +357,16 @@ def audit_events(text: str, sandbox: Path, component: str) -> list[dict]:
         for c in calls:
             why = []
             for p in re.findall(r"(/[\w.\-/]+)", c):
-                if p.startswith(("/home/", "/tmp/claude-")) and not p.startswith(allowed):
+                own_result = p.startswith(str(Path.home() / ".claude/projects/")) and "/tool-results/" in p
+                if (p.startswith(("/home/", "/tmp/claude-")) and not p.startswith(allowed)
+                        and not own_result):
                     why.append(f"outside path {p}")
             if FORBIDDEN_CMD.search(c):
                 why.append("forbidden command")
             for h in hidden:
                 if h in c:
                     why.append(f"hidden file {h}")
-            if "reference/" in c and not (sandbox / "reference").exists():
+            if "reference/" in c and not with_ref:
                 why.append("reference dir")
             if why:
                 out.append({"event": n, "call": c[:300], "why": why})
@@ -445,7 +455,9 @@ def cmd_cell(component: str, condition: str, vendor: str, seed: int, rundir: Pat
     lane = cmd_lane(vendor, sandbox, pf, cell / "lane")
     built = sandbox / meta["target"]
     shutil.copy(built, cell / "candidate.rs")
-    violations = audit_events((cell / "lane" / "events.jsonl").read_text(), sandbox, component)
+    (cell / "sandbox.json").write_text(json.dumps(meta, indent=2) + "\n")
+    violations = audit_events((cell / "lane" / "events.jsonl").read_text(), sandbox, component,
+                              cell / "sandbox.json")
     (cell / "audit.json").write_text(json.dumps(violations, indent=2) + "\n")
     rec = {"component": component, "condition": condition, "vendor": vendor, "seed": seed,
            "sandbox_head": meta["head"], "lane_exit": lane["exit"],
@@ -487,7 +499,9 @@ def cmd_skeleton(component: str, kind: str, rundir: Path, scratch: Path) -> dict
     lane = cmd_lane("claude", sandbox, pf, cell / "lane")
     out = rundir / "skeletons" / f"{component}-{cond}.rs"
     shutil.copy(sandbox / meta["target"], out)
-    violations = audit_events((cell / "lane" / "events.jsonl").read_text(), sandbox, component)
+    (cell / "sandbox.json").write_text(json.dumps(meta, indent=2) + "\n")
+    violations = audit_events((cell / "lane" / "events.jsonl").read_text(), sandbox, component,
+                              cell / "sandbox.json")
     (cell / "audit.json").write_text(json.dumps(violations, indent=2) + "\n")
     text = out.read_text()
     rec = {"component": component, "condition": cond, "kind": kind, "lane_exit": lane["exit"],
@@ -527,7 +541,7 @@ def main() -> int:
     a = sp.add_parser("lane"); a.add_argument("vendor"); a.add_argument("cwd", type=Path)
     a.add_argument("prompt", type=Path); a.add_argument("logdir", type=Path)
     a = sp.add_parser("audit"); a.add_argument("logdir", type=Path); a.add_argument("sandbox", type=Path)
-    a.add_argument("component")
+    a.add_argument("component"); a.add_argument("--meta", type=Path)
     a = sp.add_parser("grade"); a.add_argument("component"); a.add_argument("out", type=Path)
     a.add_argument("--candidate", type=Path); a.add_argument("--target", default="candidate")
     a.add_argument("--grader", type=Path, required=True); a.add_argument("--max-wall", type=int, default=3600)
@@ -553,7 +567,7 @@ def main() -> int:
     elif x.cmd == "lane":
         print(json.dumps(cmd_lane(x.vendor, x.cwd, x.prompt, x.logdir), indent=2))
     elif x.cmd == "audit":
-        v = audit_events((x.logdir / "events.jsonl").read_text(), x.sandbox, x.component)
+        v = audit_events((x.logdir / "events.jsonl").read_text(), x.sandbox, x.component, x.meta)
         print(json.dumps(v, indent=2))
         return 1 if v else 0
     elif x.cmd == "grade":
