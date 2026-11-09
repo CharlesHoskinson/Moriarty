@@ -1,0 +1,51 @@
+{
+  "component": "c6_admin_publish",
+  "condition": "C",
+  "kind": "derived",
+  "lane_exit": 0,
+  "lane_wall_seconds": 105.3,
+  "usage": {
+    "usage": {
+      "input_tokens": 22,
+      "cache_creation_input_tokens": 24439,
+      "cache_read_input_tokens": 241591,
+      "output_tokens": 11241,
+      "output_tokens_details": {
+        "thinking_tokens": 1058
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 24439,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 1141,
+          "cache_read_input_tokens": 32082,
+          "cache_creation_input_tokens": 1903,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 1903
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 0.46873820000000005,
+    "num_turns": 20,
+    "is_error": false,
+    "result": "I wrote the skeleton at `crates/mori-backend/src/sherlock_machine/c6_admin_publish_step.rs` (212 lines). `cargo check -p mori-backend --lib --offline` finishes with no errors. The only warnings from this file are unused variables and dead code, as expected for `todo!()` bodies.\n\n**Contents**\n- **Public interface:** `C6AdminPublishError` (variants `Unsupported`, `InvalidScope`, `Emit`), `ADMIN_PUBLISH_RULES: [RuleIdC; 1] = [KAdminPublishValue]`, `admin_publish_supported`, `C6AdminPublishBlock { pub instructions }`, and `C6AdminPublishEmitter` with `new` / `emit`. I also kept the reference's helper `emit_c6_admin_publish_block`. All have their real signatures.\n- **Private split, one function per concern:**\n  - `body`: the ordered conjunction of the parts below.\n  - `statement_prefix`: enable is boolean, plus the schema, version and pre-image checks.\n  - `select_publish`: P1 dispatch, meaning Running, helper and result absent, `Return`, depth 0.\n  - `write_halted_outcome`: sets `post_image[L_OUTCOME..+3]` to Halted plus the value copied from `pre_image[L_CONTROL+1..+3]`.\n  - `preserve_unwritten_image`: every other image lane stays, including work counters and frames, so the charge is 0.\n  - `preserve_data` and `preserve_helper`: those lanes stay unchanged.\n  - `canonical`: canonical-encoding checks.\n  - `identity_when_disabled`: enable = 0 means post = pre.\n- **Lane stubs:** a comment block lists which lanes are written, read for selection, and preserved. Each function's doc comment also lists the lanes it reads and the post lanes it fixes.\n- **Contracts:** each function has `Requires:`, `Ensures:` and `Check:`. The `Check:` lines point at `owner_runtime.rs:3701/3705/3710/3724/3725/3730/3739`. The `owner_step` P0/P1/P2 code is at lines 3695\u20133748.\n- **Seven global invariants:** frame coverage, disabled identity, header and enable boolean, no fuel charge, exact rule, canonicality, and temp scoping.\n\n**Contract wording**\nMy first draft overclaimed in two places, and I cor"
+  },
+  "blind_violations": 0,
+  "lines": 212,
+  "todo_bodies": 13,
+  "sha256": "0ba48fa6a4d51661539726d85353fe9a021f53395c6975e976348c8c3485a4da"
+}

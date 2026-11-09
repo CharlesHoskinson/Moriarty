@@ -600,6 +600,11 @@ pub mod c6_dispatch_consumer;
 pub mod c6_dispatch_step;
 pub mod c6_step_harness;
 mod c6_step_kit;
+// Skeleton-coding pilot grader (research/skeleton-coding-20261108/pilot-protocol.md).
+#[cfg(test)]
+mod skeleton_pilot;
+#[cfg(test)]
+mod skeleton_pilot_cand;
 // UIREQ-023 Eval schedule fragment (legacy k.machine.eval.* rows).
 pub mod c6_eval_schedule_consumer;
 pub mod c6_eval_schedule_step;

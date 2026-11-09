@@ -1,0 +1,68 @@
+{
+  "vendor": "claude",
+  "model": "claude-opus-5-5",
+  "argv": [
+    "claude",
+    "-p",
+    "--restricted",
+    "--safe-mode",
+    "--strict-mcp-config",
+    "--tools",
+    "Bash,Read,Edit,Write,Glob,Grep",
+    "--allowedTools",
+    "Read,Edit,Write,Glob,Grep,Bash(cargo check:*),Bash(cargo clippy:*),Bash(cargo fmt:*)",
+    "--permission-mode",
+    "dontAsk",
+    "--model",
+    "claude-opus-5-5",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--no-session-persistence",
+    "<prompt:research/skeleton-coding-20261108/pilot/runs/smoke/skeletons/c6_admin_publish-C/prompt.md>"
+  ],
+  "cwd": "/tmp/claude-1000/-home-hoskinson/2cb6ee55-41ca-41d1-bec5-db132e0b58c8/scratchpad/lane-skeleton-C",
+  "exit": 0,
+  "wall_seconds": 104.9,
+  "prompt_sha256": "4a4df0a6f2309e6bc46759a9445aa87f95ab66e949e735f090efbc98f88a9eef",
+  "usage": {
+    "usage": {
+      "input_tokens": 24,
+      "cache_creation_input_tokens": 33542,
+      "cache_read_input_tokens": 286558,
+      "output_tokens": 9487,
+      "output_tokens_details": {
+        "thinking_tokens": 1037
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 33542,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 935,
+          "cache_read_input_tokens": 39304,
+          "cache_creation_input_tokens": 329,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 329
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 0.5154836,
+    "num_turns": 15,
+    "is_error": false,
+    "result": "I wrote the skeleton in `crates/mori-backend/src/sherlock_machine/c6_admin_publish_step.rs` (206 lines). My file type-checks, but `cargo check -p mori-backend --lib --offline` does not pass. It stops on 2 errors in other files: `literal_complete_bridge.rs:640` and `literal_host.rs:691` both use `include_str!` on `models/sherlock/literal-step/MAPPING.md`, and that file isn't in this workspace copy. My file only adds unused-variable warnings, which the task allows.\n\n**What's in it**\n- **Public items with their real signatures:** `ADMIN_PUBLISH_RULES: [RuleIdC; 1]`, `admin_publish_supported`, `C6AdminPublishError`, `C6AdminPublishBlock { pub instructions }`, `C6AdminPublishEmitter::{new, emit}` and the one-shot `emit_c6_admin_publish_block`. The rule constant and the error, block and emitter type definitions have real content; every function body is `todo!()`.\n- **Private split, one function per concern:**\n  - `body`: runs the steps below in order.\n  - `prefix_and_validate`: carrier prefix and pre-image validity.\n  - `select_publish`: P1 selection through the composed dispatch owner.\n  - `write_halted_outcome`: post lanes 23\u201325 become `Halted` plus the value copied from pre control lanes 3\u20134.\n  - `preserve_unwritten`: every other image lane, plus DATA and HELPER, stays the same; this also gives charge 0.\n  - `compose_canonicality`: the canonical-encoding checks.\n  - `disabled_identity_guard`: with enable = 0, post equals pre.\n- **Lane stubs:** `WRITE_OUTCOME_LANES`, `READ_RETURN_VALUE_LANES` and `OUTCOME_HALTED`, plus `Reads:` and `Fixes:` comments on each function.\n- **Contracts:** `Requires:`, `Ensures:` and `Check:` on every function. The checks point to `owner_runtime.rs:3724-3730` (the `Return { value }` with empty frames to `Halted` arm), `:1784` (no family plan) and `:1345` (`EventKind::Publish`).\n- **8 global invariants:** every post lane is either written or preserved; enable = 0 is identity; enable is boolean; only the one fixed rule is accepted; no charge; l"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "component": "c6_admin_publish",
+  "condition": "A",
+  "vendor": "claude",
+  "seed": 1,
+  "sandbox_head": "b64cdb53b41a9d858996956d426dc8e07cdea2f1",
+  "lane_exit": 0,
+  "lane_wall_seconds": 100.9,
+  "usage": {
+    "usage": {
+      "input_tokens": 42,
+      "cache_creation_input_tokens": 48649,
+      "cache_read_input_tokens": 721374,
+      "output_tokens": 7551,
+      "output_tokens_details": {
+        "thinking_tokens": 1547
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 48649,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 870,
+          "cache_read_input_tokens": 54527,
+          "cache_creation_input_tokens": 213,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 213
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 0.6846547999999999,
+    "num_turns": 21,
+    "is_error": false,
+    "result": "I wrote `crates/mori-backend/src/sherlock_machine/c6_admin_publish_step.rs`, and `cargo check -p mori-backend --lib --offline` passes. Neither check nor clippy reports any warning from the new file. I haven't run the circuit tests (not allowed here), so completeness and soundness are argued from the code, not tested.\n\n**What the relation constrains** (the rule is `KAdminPublishValue`; `ADMIN_PUBLISH_RULES` has length 1):\n- **Shared steps from `c6_step_kit`:** the fixed schema and carrier version, META/PROG/CTX unchanged from pre to post, every lane limited to 128 bits, and the standard checks on the pre image including every active frame.\n- **Rule selection:** the shared dispatch owner selects the P1 value publication. That requires outcome tag Running, no helper and no result, control tag Return, and frame count 0. Fuel is not checked, so a pre-state with zero remaining work is accepted, as the spec requires.\n- **Canonical pre-state:** under enable, the Running outcome's payload lanes (24\u201325) must be zero. The Return value reference must be valid against the caps, and control lanes 3\u201316 must be zero. This follows `c6_return_left_step`.\n- **The write:** post image lane 23 is 1 (Halted), and lanes 24\u201325 are copied from the pre control's reference lanes (`k[1]`, `k[2]`).\n- **Everything else is preserved:** every other image header lane, including the work counters and reference cursor (there is no charge), every frame lane, all of DATA and all of HELPER.\n- **Closing steps:** the composed canonicality checks, then the full identity (post = pre) when enable = 0.\n\n**Things I'm unsure of:**\n- The dispatch owner only checks the outcome tag lane, so I added the zero check on pre outcome lanes 24\u201325 and the Return-control checks myself. That costs a few instructions. If the composed checks already cover the pre image's outcome and control encoding, these would be redundant, but I couldn't confirm that they do.\n- `compose_canonical` also checks canonicality of the post DATA a"
+  },
+  "blind_violations": 0,
+  "candidate_sha256": "a5366e08f059b7e1bf6a0b08c29d9d45acb1620466091c81b00a61a3e05cd7ea",
+  "grade_exit": 0,
+  "verdict": {
+    "built": true,
+    "complete": false,
+    "primary_pass": false,
+    "sound": true,
+    "soundness_mutants": 0,
+    "untested_mutants": 602
+  }
+}

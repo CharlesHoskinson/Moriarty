@@ -1,0 +1,51 @@
+{
+  "component": "c6_call_bind",
+  "condition": "B",
+  "kind": "blind",
+  "lane_exit": 0,
+  "lane_wall_seconds": 185.6,
+  "usage": {
+    "usage": {
+      "input_tokens": 42,
+      "cache_creation_input_tokens": 49864,
+      "cache_read_input_tokens": 762870,
+      "output_tokens": 13722,
+      "output_tokens_details": {
+        "thinking_tokens": 3195
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 49864,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 1146,
+          "cache_read_input_tokens": 55560,
+          "cache_creation_input_tokens": 395,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 395
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 0.8260939999999998,
+    "num_turns": 27,
+    "is_error": false,
+    "result": "I've written the skeleton at `crates/mori-backend/src/sherlock_machine/c6_call_bind_step.rs` (212 lines). `cargo check -p mori-backend --lib --offline` finishes with no errors; the only warnings from the new file are about unused variables and constants. Every body is `todo!()`.\n\n**One slip to know about:** I ran `cargo fmt -p mori-backend`, which also reformatted `c6_call_bind_consumer.rs` by dropping its trailing blank line. I put that line back by hand, so the file should be byte-for-byte as before. I didn't edit `mod.rs`. Its timestamp is a few minutes old, but it changed before `cargo fmt` ran, and it already declares both modules.\n\n**Public interface:**\n- `CALL_BIND_RULES: [RuleIdC; 3]` (the three rules, in the given order)\n- `call_bind_supported`\n- `C6CallBindEmitter::new` and `emit`, returning `C6CallBindBlock { pub instructions }`\n- error type `C6CallBindError`, which implements `Display`\n\n**Lane stubs:** named constants for:\n- the control-lane offsets of the Invoke, Enter, Bound and ScheduleNext states, taken from `c6_phys::encode_control`\n- the ReturnF frame tag\n- the helper result tags for found / missing / bind-ok / bind-bad (5, 6, 7, 8)\n- the return-type and body positions in a PROG function row\n\nThe two result-record layouts (FindFound and BindOk) are marked \"verify against\" the encoder, because I only saw them in summary.\n\n**Private functions, each with `Requires` / `Ensures` / `Check`:**\n- `body`: runs the shared kit steps in order (prefix, pre-image check, selection, control, preservation, charge, canonical checks, disabled identity)\n- `invoke_find_control`: Invoke \u2192 Enter, with the function and found bit taken from the Find result\n- `enter_bind_control`: Enter \u2192 Bound, asserting the function is present and reading its return type and body from PROG\n- `capture_function_row`: wraps the existing PROG function-row capture and asserts the row is found\n- `bound_valid_control`: Bound(Ok) \u2192 ScheduleNext with a ReturnF frame built from the pre env root and"
+  },
+  "blind_violations": 0,
+  "lines": 212,
+  "todo_bodies": 11,
+  "sha256": "661a4465f45fbc06b748fa2cbcb2a47d0dca534a0205ee04bc76fe133f9e3db2"
+}
