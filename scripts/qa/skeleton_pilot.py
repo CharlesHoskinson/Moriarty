@@ -433,6 +433,55 @@ def cmd_grade(component: str, candidate: Path | None, out: Path, target: str,
     return p.returncode
 
 
+def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: int) -> int:
+    """Grade several built cells in ONE heavy run (one queue slot). One grader export;
+    between cells the script copies in that cell's candidate and adaptor. The batch
+    export (`grader-batch`) is separate from the single-cell export (`grader`), so a
+    queued single grade is not overwritten."""
+    grader = scratch / "grader-batch"
+    export_head(grader)
+    sm = grader / SM
+    lines = ["#!/usr/bin/env bash", "set -u"]
+    for cell in cells:
+        rec = json.loads((cell / "cell.json").read_text())
+        out = (cell / "grade").resolve()
+        inst = out / "install"
+        inst.mkdir(parents=True, exist_ok=True)
+        install_candidate(grader, rec["component"], cell / "candidate.rs")
+        shutil.copy(sm / "skeleton_pilot_cand_step.rs", inst / "skeleton_pilot_cand_step.rs")
+        shutil.copy(sm / "skeleton_pilot_cand.rs", inst / "skeleton_pilot_cand.rs")
+        env = {"RUST_TEST_THREADS": "1",
+               "CARGO_TARGET_DIR": str(TARGET_ROOT / "skeleton-pilot-grader"),
+               "SKELETON_PILOT_COMPONENT": rec["component"], "SKELETON_PILOT_OUT": str(out),
+               "SKELETON_PILOT_TARGET": "candidate", "SKELETON_PILOT_SEED": str(rec["seed"]),
+               "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS}
+        lines += [f"cp {inst}/*.rs {sm}/",
+                  f"echo '== {cell.name}'",
+                  "start=$(date +%s)",
+                  f"timeout {per_cell} env " + " ".join(f"{k}={v}" for k, v in env.items())
+                  + f" cargo test --manifest-path {grader}/Cargo.toml -p mori-backend --lib --locked"
+                  " sherlock_machine::skeleton_pilot::skeleton_pilot_grade -- --ignored --exact"
+                  f" --nocapture > {out}/heavy.log 2>&1",
+                  f"echo \"{cell.name} exit $? wall $(( $(date +%s) - start ))s\""]
+    script = scratch / "grade-batch.sh"
+    script.write_text("\n".join(lines) + "\n")
+    argv = [str(REPO / "scripts/doctorwatson"), "heavy", "--id", f"SKP-batch-{len(cells)}",
+            "--max-wall", str(max_wall), "--hypothesis",
+            f"skeleton pilot batch grade of {len(cells)} cells: IR raw-statement mutants vs reference",
+            "--", "bash", str(script)]
+    p = subprocess.run(argv, cwd=REPO, capture_output=True, text=True)
+    (scratch / "grade-batch.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr)
+    for cell in cells:
+        rec = json.loads((cell / "cell.json").read_text())
+        g = cell / "grade" / "grade.json"
+        rec["grade_exit"] = 0 if g.exists() else "no receipt"
+        if g.exists():
+            rec["verdict"] = json.loads(g.read_text())["verdict"]
+        (cell / "cell.json").write_text(json.dumps(rec, indent=2) + "\n")
+    print(p.stdout[-3000:])
+    return p.returncode
+
+
 # ---------------------------------------------------------------- cell
 
 
@@ -598,11 +647,16 @@ def main() -> int:
     a.add_argument("--scratch", type=Path, required=True)
     a = sp.add_parser("grade-cell"); a.add_argument("cell", type=Path)
     a.add_argument("--scratch", type=Path, required=True); a.add_argument("--max-wall", type=int, default=3600)
+    a = sp.add_parser("grade-batch"); a.add_argument("cells", type=Path, nargs="+")
+    a.add_argument("--scratch", type=Path, required=True); a.add_argument("--max-wall", type=int, default=14400)
+    a.add_argument("--per-cell", type=int, default=3600)
     a = sp.add_parser("report"); a.add_argument("rundir", type=Path)
     x = ap.parse_args()
     if x.cmd == "report":
         print(cmd_report(x.rundir))
         return 0
+    if x.cmd == "grade-batch":
+        return cmd_grade_batch(x.cells, x.scratch, x.max_wall, x.per_cell)
     if getattr(x, "component", None) and x.component not in COMPONENTS:
         raise SystemExit(f"unknown component {x.component}")
     if x.cmd == "spec":
