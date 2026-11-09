@@ -43,6 +43,8 @@
 // the accumulator algebra (Lean L-D, F21). Model execution evidence covers these instances only.
 // Record of runs: scripts/qa/check-f20.sh (typecheck, `quint test` with TREE false/true and
 // S in {1, 2, 4, 8}, every seeded mutant caught, bounded `quint run` sweeps).
+// Council review 2.14 (2026-11-09): 108 tests pass, 18 seeded mutants caught, including
+// PlacementLR (S3, L/R placement, TREE only) and GenesisCarry (S1, I11); run 20261109T235258Z-F21-f20.
 module aggregation {
   const TREE: bool   // join and pad admitted (D13' slot node); false = linear chain only
   const S: int       // keyed steps per leaf (SRC-014), S >= 1
