@@ -511,6 +511,9 @@ pub(super) struct Plan {
     pub max_mutants: Option<usize>,
     pub seed: u64,
     pub timeout: Option<Duration>,
+    /// Wall budget for the whole grade; the mutant loop stops when it is spent
+    /// and the receipt declares the shortfall (run < planned).
+    pub wall_budget: Option<Duration>,
 }
 
 /// Grade `cand` against the component reference. Returns the summary
@@ -583,7 +586,12 @@ pub(super) fn grade(
     let mut tally: BTreeMap<&'static str, usize> = BTreeMap::new();
     let mut by_section: BTreeMap<&'static str, (BTreeSet<usize>, usize, usize)> = BTreeMap::new();
     let mut findings = Vec::new();
+    let mut stopped_by_wall_budget = false;
     for (id, m) in planned.iter().enumerate() {
+        if plan.wall_budget.is_some_and(|b| t0.elapsed() > b) {
+            stopped_by_wall_budget = true;
+            break;
+        }
         let h = &honest[m.base];
         let key = format!("{:?}", h.rule);
         let base = if m.disabled { &h.disabled } else { &h.witness }.to_statement_frs();
@@ -639,12 +647,14 @@ pub(super) fn grade(
         "stage": "ir_preprocessing: SDK ProofPreimage::check (nonproving); compiler and stdlib out of scope",
         "oracle": "reference emitter verdict on the same raw statement",
         "plan": {"per_rule": plan.per_rule, "max_mutants": plan.max_mutants, "seed": plan.seed,
-                 "timeout_ms": plan.timeout.map(|t| t.as_millis())},
+                 "timeout_ms": plan.timeout.map(|t| t.as_millis()),
+                 "wall_budget_s": plan.wall_budget.map(|t| t.as_secs())},
         "build": {"ok": built, "errors": candidate.errors, "instructions": ins_counts},
         "honest": honest_rows,
         "complete": complete,
         "static": {"private_inputs": private_inputs, "lanes_read_by_reference_not_candidate": static_findings},
         "mutants": {"space": space_len, "planned": planned.len(), "run": run,
+                    "stopped_by_wall_budget": stopped_by_wall_budget,
                     "coverage_fraction": if space_len == 0 { 0.0 } else { run as f64 / space_len as f64 },
                     "by_class": tally, "by_section": coverage},
         "findings": findings,
@@ -683,6 +693,9 @@ fn env_plan() -> Plan {
         timeout: get("SKELETON_PILOT_TIMEOUT_MS")
             .and_then(|v| v.parse().ok())
             .map(Duration::from_millis),
+        wall_budget: get("SKELETON_PILOT_WALL_BUDGET_S")
+            .and_then(|v| v.parse().ok())
+            .map(Duration::from_secs),
     }
 }
 
@@ -782,8 +795,9 @@ fn apply_changes_exactly_the_planned_lanes() {
 }
 
 /// The reference graded against itself has no finding and is complete; a
-/// weakened emitter that drops the post outcome tag is caught both by the
-/// static lane check and by the raw-statement mutants. Circuit test: run it
+/// weakened emitter that drops the post outcome tag is caught by the static
+/// lane check and by a directed raw-statement mutant (the sampled mutants may
+/// miss it: SAS-014). Circuit test: run it
 /// through `scripts/doctorwatson heavy` with RUST_TEST_THREADS=1.
 #[test]
 fn grader_finds_dropped_constraint_and_clears_reference() {
@@ -793,12 +807,25 @@ fn grader_finds_dropped_constraint_and_clears_reference() {
         max_mutants: Some(120),
         seed: 3,
         timeout: None,
+        wall_budget: None,
     };
     let (s, _) = grade(&c, c.reference, &plan).unwrap();
     assert_eq!(s["verdict"]["primary_pass"], json!(true), "{s}");
     assert_eq!(s["verdict"]["soundness_mutants"], json!(0));
     let (w, recs) = grade(&c, weakened_admin_publish, &plan).unwrap();
-    assert_eq!(w["verdict"]["complete"], json!(true), "{w}");
+    // The weakened emitter pins post outcome to Halted, so it accepts the
+    // enabled pair and rejects the disabled identity pair (post outcome there
+    // is Running): incomplete by construction, and unsound by the static check.
+    let pair = |what: &str| {
+        w["honest"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h["pair"] == json!(what))
+            .map(|h| h["candidate"]["label"].clone())
+    };
+    assert_eq!(pair("enabled"), Some(json!("accepted")), "{w}");
+    assert_eq!(pair("disabled_identity"), Some(json!("rejected")), "{w}");
     assert_eq!(w["verdict"]["sound"], json!(false));
     let lanes = w["static"]["lanes_read_by_reference_not_candidate"].to_string();
     assert!(lanes.contains("post_image."), "{lanes}");

@@ -95,5 +95,11 @@ class AdaptorTests(unittest.TestCase):
         self.assertIn("skeleton_pilot_cand_step::C6CallBindEmitter::new(scope)", a)
 
 
+class WallBudgetTests(unittest.TestCase):
+    def test_budget_leaves_build_margin_and_has_a_floor(self):
+        self.assertEqual(sp.wall_budget(3600), 3300)
+        self.assertEqual(sp.wall_budget(200), 60)
+
+
 if __name__ == "__main__":
     unittest.main()

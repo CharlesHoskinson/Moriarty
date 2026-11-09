@@ -455,7 +455,8 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
                "CARGO_TARGET_DIR": str(TARGET_ROOT / "skeleton-pilot-grader"),
                "SKELETON_PILOT_COMPONENT": rec["component"], "SKELETON_PILOT_OUT": str(out),
                "SKELETON_PILOT_TARGET": "candidate", "SKELETON_PILOT_SEED": str(rec["seed"]),
-               "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS}
+               "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS,
+               "SKELETON_PILOT_WALL_BUDGET_S": str(wall_budget(per_cell))}
         lines += [f"cp {inst}/*.rs {sm}/"]
         if self_test and cell is cells[0]:
             # Grader self-check after the first install (reference clean, weakened emitter caught), so a
@@ -534,13 +535,21 @@ def cmd_cell(component: str, condition: str, vendor: str, seed: int, rundir: Pat
 MAX_MUTANTS = "4000"
 
 
+def wall_budget(cap: int) -> int:
+    """Grader wall budget inside a `cap`-second slot: leave 300 s for the cargo
+    build and the receipt, so a slow grade still writes a receipt (with
+    run < planned declared) instead of being killed by the timeout."""
+    return max(60, cap - 300)
+
+
 def cmd_grade_cell(cell: Path, scratch: Path, max_wall: int) -> dict:
     """Grade a built cell. Run grades one at a time: they share one grader export."""
     rec = json.loads((cell / "cell.json").read_text())
     rc = cmd_grade(rec["component"], cell / "candidate.rs", cell / "grade", "candidate",
                    scratch / "grader", max_wall,
                    {"SKELETON_PILOT_SEED": str(rec["seed"]),
-                    "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS})
+                    "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS,
+                    "SKELETON_PILOT_WALL_BUDGET_S": str(wall_budget(max_wall))})
     rec["grade_exit"] = rc
     g = cell / "grade" / "grade.json"
     if g.exists():
