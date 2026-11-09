@@ -728,11 +728,18 @@ impl C6DispatchEmitter {
             validate_task,
             validate_unvisited,
         ]);
+        // The checked value reader constrains `ref_kind_is_data` to a boolean
+        // without its gate. The top task's lane 1 is a `RefC` space bit only for
+        // a Validate task (lanes 1, 3 for an Equal task); other tasks carry other
+        // values there (a Bind pair row has the parameter row). Pass the lane
+        // gated, so an ungated read never refuses a valid non-Validate state.
+        // The reader's projections are gate-normalised, so nothing else changes.
+        let va_kind = em.sel(vgate.clone(), task[1].clone(), Em::imm(0));
         let va = self
             .read_a
             .emit(&C6CheckedValueReadInputs {
                 gate: vgate.clone(),
-                ref_kind_is_data: task[1].clone(),
+                ref_kind_is_data: va_kind,
                 ref_index: task[2].clone(),
                 pre_prog: inputs.pre_prog.clone(),
                 pre_data: inputs.pre_data.clone(),
@@ -755,11 +762,13 @@ impl C6DispatchEmitter {
             equal_task,
             equal_unvisited,
         ]);
+        let left_kind = em.sel(egate.clone(), task[1].clone(), Em::imm(0));
+        let right_kind = em.sel(egate.clone(), task[3].clone(), Em::imm(0));
         let left = self
             .read_b
             .emit(&C6CheckedValueReadInputs {
                 gate: egate.clone(),
-                ref_kind_is_data: task[1].clone(),
+                ref_kind_is_data: left_kind,
                 ref_index: task[2].clone(),
                 pre_prog: inputs.pre_prog.clone(),
                 pre_data: inputs.pre_data.clone(),
@@ -771,7 +780,7 @@ impl C6DispatchEmitter {
             .read_c
             .emit(&C6CheckedValueReadInputs {
                 gate: egate.clone(),
-                ref_kind_is_data: task[3].clone(),
+                ref_kind_is_data: right_kind,
                 ref_index: task[4].clone(),
                 pre_prog: inputs.pre_prog.clone(),
                 pre_data: inputs.pre_data.clone(),
