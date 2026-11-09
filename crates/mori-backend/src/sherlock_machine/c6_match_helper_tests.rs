@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::super::c6_match_helper_step::MATCH_HELPER_RULES;
 use super::*;
 use mori_core::sherlock::helper_machine::c6_phys::{
-    C6CodecBudgets, L_CONSUMED_WORK, L_CONTROL, L_ENV_ROOT, L_HELPER_VISITS, L_HELPER_WORK,
-    L_REFERENCE_CURSOR, L_REMAINING_WORK,
+    C6CodecBudgets, L_CONSUMED_WORK, L_CONTROL, L_CONTROL_ORIGIN, L_ENV_ROOT, L_HELPER_VISITS,
+    L_HELPER_WORK, L_REFERENCE_CURSOR, L_REMAINING_WORK,
 };
 use mori_core::sherlock::helper_machine::c6_phys_helper::{L_HELPER_RECORD, L_RESULT_RECORD};
 use mori_core::sherlock::helper_machine::complete_observation::capture;
@@ -244,4 +244,30 @@ fn match_helper_rejects_mutated_pre_selection() {
         checked += 1;
     }
     assert!(checked > 5);
+}
+
+#[test]
+fn match_arm_rejects_a_non_match_control_origin() {
+    // Core `plan_match` refuses BHelperMatchArm unless the control-origin
+    // expression is `Match { plan: None }`. Tree fold has one Match expression,
+    // so a neighbouring expression index is never a Match.
+    let r = run(FOLD);
+    let mut circuits = Circuits(BTreeMap::new());
+    let mut checked = 0;
+    for (pre, post, fired) in &r.steps {
+        if *fired != RuleIdC::BHelperMatchArm {
+            continue;
+        }
+        let w = witness_from_host_pair(true, pre, post, &r.cfg, &limits()).expect("witness");
+        assert!(circuits.accepts(*fired, &w), "honest {fired:?} step");
+        let mut moved = w.clone();
+        let origin = moved.pre_image[L_CONTROL_ORIGIN];
+        moved.pre_image[L_CONTROL_ORIGIN] = if origin > 0 { origin - 1 } else { origin + 1 };
+        assert!(
+            !circuits.accepts(*fired, &moved),
+            "{fired:?} with a non-Match control origin"
+        );
+        checked += 1;
+    }
+    assert!(checked > 0, "tree fold fires BHelperMatchArm");
 }

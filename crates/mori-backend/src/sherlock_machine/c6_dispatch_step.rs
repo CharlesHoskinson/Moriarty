@@ -1224,7 +1224,15 @@ impl C6DispatchEmitter {
                 let st = em.eqc(&h(20), if rule == BHelperMatchExit { 1 } else { 2 });
                 em.and(done, st)
             }
-            BHelperMatchArm => em.eqc(&h(19), 0),
+            // Core `plan_match` refuses BHelperMatchArm unless the control-origin
+            // expression is `Match { plan: None }` (families/structural.rs), so the
+            // guard reads it here too instead of relying on the entry step alone.
+            BHelperMatchArm => {
+                let arm_phase = em.eqc(&h(19), 0);
+                let is_match = em.eqc(&f.origin_row[0], 7);
+                let no_plan = em.eqc(&f.origin_row[4], 0);
+                em.all(&[arm_phase, is_match, no_plan])
+            }
             BHelperMatchOccurrence => em.eqc(&h(19), 1),
             BHelperMatchDistinct => em.eqc(&h(19), 2),
             BHelperMatchField => em.eqc(&h(19), 3),

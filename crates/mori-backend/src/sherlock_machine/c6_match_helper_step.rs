@@ -160,7 +160,7 @@ impl C6MatchHelperEmitter {
         let bounds = inputs.source_params.admission_bounds();
         prefix(em, inputs);
         let _top = validate_pre_image(em, inputs);
-        // BISECT: select(&mut self.composed, em, rule, inputs)?;
+        select(&mut self.composed, em, rule, inputs)?;
 
         let pre_i = &inputs.pre_image;
         let post_i = &inputs.post_image;
