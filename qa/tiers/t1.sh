@@ -21,7 +21,13 @@ if [[ -f "$test_src" ]] || grep -qs 'name *= *"soundness_mutation"' crates/mori-
     sherlock_machine::c6_checked_value_read_tests::mockprover_synthesis_positive_and_wrong_kind \
     sherlock_machine::c6_data_canonical::tests::in_circuit_mockprover_synthesis_outcomes \
     sherlock_machine::c6_scalar_failure_step::tests::synthesis_distinguishes_constraint_failure
-  dw_step "cargo test --workspace" cargo test --workspace --locked
+  # The workspace run reaches ~45 GB at 3 test threads (mori_backend lib, run t1-after-2.16)
+  # and far more at the default thread count, so it runs in its own 48 GiB scope with swap off
+  # (not `heavy`, whose lock a T1 already under `heavy` holds) at 2 test threads by default,
+  # inside heavy.slice so it never adds to the app.slice pressure that systemd-oomd acts on.
+  dw_step "cargo test --workspace" systemd-run --user --scope --collect -q --expand-environment=no --slice="${DW_HEAVY_SLICE:-heavy.slice}" \
+    -p MemoryMax=48G -p MemorySwapMax=0 -- \
+    env RUST_TEST_THREADS="${RUST_TEST_THREADS:-2}" cargo test --workspace --locked
 else
   dw_skip_missing "soundness_mutation" "test target crates/mori-backend/tests/soundness_mutation.rs not found"
 fi

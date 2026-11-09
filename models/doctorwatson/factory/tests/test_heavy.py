@@ -6,8 +6,13 @@ from .helpers import FakeRepo, pred, yaml_of
 
 
 class PreflightTests(FakeRepo):
+    # A fitness test must not depend on the host's live memory (another heavy run can hold
+    # tens of GiB); the memory rule itself is covered by the MemoryGuard admission tests.
+    HOST_MEM_NEUTRAL = {"DW_DEFAULT_RSS_CAP": "1", "DW_MEM_RESERVE_GIB": "0", "DW_MAX_SWAP_GIB": "100000"}
+
     def test_ok(self):
-        r = self.run_cli("preflight", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000"})
+        r = self.run_cli("preflight", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000",
+                                              **self.HOST_MEM_NEUTRAL})
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertIn("disk free", r.stdout)
         self.assertIn("load 1m", r.stdout)
@@ -15,7 +20,8 @@ class PreflightTests(FakeRepo):
 
     def test_json(self):
         import json
-        r = self.run_cli("preflight", "--json", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000"})
+        r = self.run_cli("preflight", "--json", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000",
+                                              **self.HOST_MEM_NEUTRAL})
         d = json.loads(r.stdout)
         self.assertTrue(d["ok"])
         self.assertIn("diskFreeGiB", d)
@@ -35,7 +41,8 @@ class PreflightTests(FakeRepo):
         fd = os.open(self.lock, os.O_RDWR | os.O_CREAT)
         self.addCleanup(os.close, fd)
         fcntl.flock(fd, fcntl.LOCK_EX)
-        r = self.run_cli("preflight", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000"})
+        r = self.run_cli("preflight", env={"DW_SKIP_PREFLIGHT": "0", "DW_MIN_FREE_GIB": "0", "DW_MAX_LOAD": "100000",
+                                              **self.HOST_MEM_NEUTRAL})
         self.assertEqual(r.returncode, 3)
         self.assertIn("HELD", r.stdout)
 
@@ -355,8 +362,12 @@ class ConcurrentHeavyTests(FakeRepo):
             return fh.read()
 
     GIB = 1024 ** 3
+    # The hold must outlast the slower child's start-up: under host load the second child can
+    # allocate more than 4 s after the first, which then printed 'survived' before the aggregate
+    # crossed the cap (seen three times on 2026-11-08). The guard kills both as soon as the sum
+    # exceeds the cap, so a long hold does not slow a passing run.
     HOLD = ("python3", "-c", "import time; b = bytearray(100 * 1024 * 1024); b[::4096] = b'x' * len(b[::4096]); "
-            "time.sleep(4); print('survived')")
+            "time.sleep(60); print('survived')")
 
     def heavy(self, *args, cmd=None, env=None):
         tail = ("--", *cmd) if cmd else ()
@@ -411,7 +422,7 @@ class ConcurrentHeavyTests(FakeRepo):
         if not MemoryGuardTests.guard_available(self):
             self.skipTest("systemd-run --user --scope unavailable")
         res = self._aggregate_kill("cgroup")
-        self.assertTrue(res["memSlice"].startswith("dw_") and res["memSlice"].endswith(".slice"))
+        self.assertTrue(res["memSlice"].startswith("heavy-dw_") and res["memSlice"].endswith(".slice"))
 
     def test_commands_file(self):
         self.write("cmds.txt", "# two different jobs\necho one\n\necho two\n")

@@ -26,6 +26,11 @@ GIB = 1024 ** 3
 MAX_RSS_CAP = 48 * GIB  # owner decision 2026-11-08: 48 GB per process (SRC-016)
 MAX_AGGREGATE_CAP = 100 * GIB  # owner decision 2026-11-08: 100 GB aggregate (SRC-016, E11)
 DEFAULT_RUST_TEST_THREADS = "4"
+# Every guarded scope sits in this user slice, beside app.slice and not inside it: systemd-oomd
+# watches app.slice pressure and kills its largest-pressure child, which was the terminal (and the
+# whole agent session) on 2026-11-07, 2026-11-08 and 2026-11-09. The host defines heavy.slice with
+# an aggregate MemoryMax and no swap (~/.config/systemd/user/heavy.slice); DW_HEAVY_SLICE overrides.
+HEAVY_SLICE = os.environ.get("DW_HEAVY_SLICE", "heavy.slice")
 _GUARD_PROBE = {}
 
 
@@ -54,7 +59,7 @@ def cgroup_guard_available():
         return False
     if "ok" not in _GUARD_PROBE:
         try:
-            r = subprocess.run(["systemd-run", "--user", "--scope", "--collect", "-q",
+            r = subprocess.run(["systemd-run", "--user", "--scope", "--collect", "-q", f"--slice={HEAVY_SLICE}",
                                 "-p", "MemoryMax=64M", "-p", "MemorySwapMax=0", "--", "true"],
                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL, timeout=15)
@@ -79,8 +84,12 @@ def parse_size(text):
 
 
 def slice_name(marker):
-    """Transient parent slice for a concurrent run. No '-' in the stem: systemd nests slices on dashes."""
-    return "dw_" + re.sub(r"[^A-Za-z0-9_]", "_", marker) + ".slice"
+    """Transient parent slice for a concurrent run, nested under HEAVY_SLICE.
+
+    systemd nests slices on dashes, so '<heavy>-dw_<marker>.slice' is a child of '<heavy>.slice';
+    the marker itself keeps no '-'.
+    """
+    return HEAVY_SLICE[:-len(".slice")] + "-dw_" + re.sub(r"[^A-Za-z0-9_]", "_", marker) + ".slice"
 
 
 def _systemctl(*args):
@@ -107,7 +116,7 @@ def guard_argv(argv, cap_rss, unit, slice_=None):
     systemd-run execs argv in place (same pid, same session); --expand-environment=no keeps `$` literal.
     """
     return ["systemd-run", "--user", "--scope", "--collect", "-q", "--expand-environment=no", f"--unit={unit}",
-            *([f"--slice={slice_}"] if slice_ else []),
+            f"--slice={slice_ or HEAVY_SLICE}",
             "-p", f"MemoryMax={int(cap_rss)}", "-p", "MemorySwapMax=0", "-p", "OOMPolicy=kill",
             "--", *argv]
 
@@ -122,6 +131,19 @@ def _cgroup_dir(pid, unit):
     except OSError:
         pass
     return None
+
+
+def _slice_limit_ooms(cgdir):
+    """Times a slice hit its own MemoryMax (memory.events.local 'oom'); 0 where unreadable."""
+    try:
+        with open(os.path.join(cgdir, "memory.events.local")) as fh:
+            for line in fh:
+                key, _, val = line.partition(" ")
+                if key == "oom":
+                    return int(val)
+    except (OSError, ValueError):
+        pass
+    return 0
 
 
 def _cgroup_read(cgdir):
@@ -488,7 +510,10 @@ def run_concurrent(commands, cwd, trace_path, echo, cap, aggregate, marker, mem_
                 oom, pk = _cgroup_read(slice_dir)
                 slice_oom = max(slice_oom, oom or 0)
                 slice_peak = max(slice_peak or 0, pk or 0) if pk is not None else slice_peak
-            if not agg_exceeded and total > aggregate:
+            # The kernel can OOM-kill one child at the slice limit before this poll sees the sum
+            # cross it; the sibling then runs on. memory.events.local 'oom' counts only breaches of
+            # the slice's own limit (a child's per-process cap does not count), so it voids the run.
+            if not agg_exceeded and (total > aggregate or (slice_dir and _slice_limit_ooms(slice_dir))):
                 agg_exceeded = True
                 kill_all()
             time.sleep(0.2)
