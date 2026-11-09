@@ -2345,10 +2345,11 @@ fn raw_gated_vs_ungated_receipt_contract_by_actual_instructions_and_sdk_check() 
     }
 
     // Verify concrete values via `ProofPreimage::check` on `Pair::MkPair(11, 22)` at `cursor == 0`:
-    // `type_id = 6` (`Pair`), `ctor_id = 2` (`MkPair`), `slice_start = 0`, `slice_len = 2`,
+    // `type_id = 6` (`Pair`), `ctor_id = 6` (`MkPair`; ids are global and the four built-in
+    // constructors Nil, Cons, Leaf, Branch are ids 0..4), `slice_start = 0`, `slice_len = 2`,
     // `field_pos = 0`, `child_ref_index = child_cid`, `checked_arity = 2`, `next_cursor = 1`, `is_nontail = 1`.
     let exp_gated_en1: [u128; 37] = [
-        1, 0, 6, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 6, 2, 1, 0, 2, // reader (23)
+        1, 0, 6, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 6, 6, 1, 0, 2, // reader (23)
         1, 0, 0, parent_cid, 1,
         0, // top_task_found=1, tag=0, is_data=0, idx=parent_cid, visit=1, cursor=0
         0, 1, 0,
@@ -2356,10 +2357,16 @@ fn raw_gated_vs_ungated_receipt_contract_by_actual_instructions_and_sdk_check() 
         1, 2, 1, 1, // nominal_valid=1, checked_arity=2, next_cursor=1, is_nontail=1
     ];
     let exp_ungated_en1: [u128; 26] = [
-        7, 1, 1, 6, 2, 1, 1, 2, 3, // nominal_capture (9)
+        // nominal_capture (9): type_count=7, found, found, owning_type=6, ctor_start=6,
+        // ctor_len=1, field_start=6 (after the 5 built-in constructor fields), field_len=2,
+        // ctor_field_count=8.
+        7, 1, 1, 6, 6, 1, 6, 2, 8, // nominal_capture (9)
         2, 1,
         child_cid, // const_field_count=2, const_field_found=1, const_field_value=child_cid
-        0, 0, 0, 0, // data_field_count=0, found=0, is_data=0, index=0
+        // data_field_count=0, found=1, is_data=0, index=0: `data_field_found` is the
+        // padded-slot hit (`field_pos == slot` for a slot below `max_data_field_slots`);
+        // activeness is the separate Data-parent check `field_pos < data_field_count`.
+        0, 1, 0, 0, // data_field_count, found, is_data, index
         0, 0, 1, // is_helper_work_max=0, is_helper_tasks_refused=0, is_applied=1
         2, 0, 0, child_cid, 0, 0,
         1, // post_task_count=2, post_top_task=[0,0,child_cid,0,0], post_rewritten_parent_cursor=1
@@ -2384,10 +2391,12 @@ fn raw_gated_vs_ungated_receipt_contract_by_actual_instructions_and_sdk_check() 
     inp_en0.post_helper = inp_en0.pre_helper.clone();
     let exp_gated_en0 = [0u128; 37];
     let exp_ungated_en0: [u128; 26] = [
-        7, 1, 1, 4, 0, 0, 0, 1, 3, // nominal_capture for reader.type_id=0, reader.ctor_id=0
+        // nominal_capture for reader.type_id=0 (UInt, no constructors) and reader.ctor_id=0
+        // (built-in Nil: owning_type=2, field_start=0, field_len=0); ctor_field_count=8.
+        7, 1, 1, 2, 0, 0, 0, 0, 8, // nominal_capture (9)
         2, 1,
         child_cid, // const_field_count=2, const_field_found=1 (at field_pos_raw=0), const_field_value=child_cid
-        0, 0, 0, 0, // data_field_*
+        0, 1, 0, 0, // data_field_* (found = padded-slot hit at field_pos 0)
         0, 0, 1, // is_helper_work_max=0, is_helper_tasks_refused=0, is_applied=1
         1, 0, 0, child_cid, 0, 0,
         1, // ungated candidate wires (is_nontail_raw = 0 when enable=0 so post_task_count=1)
