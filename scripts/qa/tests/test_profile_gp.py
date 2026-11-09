@@ -240,6 +240,103 @@ class LeverRowTests(unittest.TestCase):
                 self.assertFalse(rows[name]['metric']['composable'])
 
 
+def raw_trace(threads, scale=1):
+    """A raw GP on-run trace: one stand-in leaf prove, one node prove of 100 x scale ns
+    (quotient 40, MSM 30 inside a commitment phase, witness 28, 2 unexplained, a worker NTT
+    of 20 joined inside the MSM) and a handled transcript read error."""
+    def event(i, parent, phase, accounting, start, end, status=1, thread=1):
+        return dict(id=i, parent_id=parent, phase_id=phase, accounting=accounting,
+                    start_ns=start * scale, end_ns=end * scale, thread_id=thread, status=status,
+                    advice_phase=2**64 - 1, circuit_index=2**64 - 1)
+    return dict(schema='recursion.phase-events/1', event_capacity=64, dropped_events=0,
+                timer_failures=0, reentrant_events=0, profile_valid=False, flush_wall_ns=1, events=[
+        event(1, 0, 1, 0, 1, 400),
+        event(2, 1, 4, 0, 2, 10),           # stand-in leaf prove
+        event(3, 2, 7, 1, 3, 9),
+        event(4, 1, 4, 0, 100, 200),        # node prove
+        event(5, 4, 7, 1, 100, 128),        # synthesis (witness)
+        event(6, 5, 19, 1, 110, 111, 2),    # handled read error of the absent previous proof
+        event(7, 4, 14, 1, 128, 168),       # quotient
+        event(8, 4, 9, 1, 168, 198),        # advice commitments
+        event(9, 8, 18, 1, 168, 198),       # its MSM owns all of it
+        event(10, 0, 22, 0, 170, 190, thread=2),  # worker NTT (joined, no TLS parent)
+    ], observation=dict(sampler_valid=True, measurements=[], expected_rejections=[]),
+        workload=dict(id='GP', exit=0, profile_enabled=True, host=dict(rayon_threads=threads),
+                      chain=dict(standin=True, leaves=1),
+                      verification=dict(stock_verifier='pass', negative_controls='pass'),
+                      proofs=[dict(shape='node', step=0, cache_mode='resident_pk', k=20)]))
+
+
+class RawDecideTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load('profile-recursion')
+
+    def decide(self, traces, overhead=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = []
+            for i, trace in enumerate(traces):
+                path = Path(tmp) / f'run-{i}' / 'GP-on.json'
+                path.parent.mkdir()
+                path.write_text(json.dumps(trace))
+                paths.append(path)
+            off = Path(tmp) / 'run-0' / 'GP-off.json'
+            off.write_text(json.dumps(dict(raw_trace(20), events=[], event_capacity=0,
+                                           workload=dict(raw_trace(20)['workload'], profile_enabled=False))))
+            if overhead is not None:
+                (Path(tmp) / 'overhead.json').write_text(json.dumps(overhead))
+                overhead = Path(tmp) / 'overhead.json'
+            output = Path(tmp) / 'decide.json'
+            code = self.profile.main(['decide', *map(str, paths + [off]), '--output', str(output)]
+                                     + (['--overhead', str(overhead)] if overhead else []))
+            self.assertEqual(code, 0)
+            return json.loads(output.read_text())
+
+    def test_raw_gp_traces_give_lever_rows_and_shares(self):
+        overhead = dict(schema='recursion.overhead/1', run='c0-a2-qual-20261108-n20', qualification='inconclusive',
+                        pair_count=20, estimated_fraction=0.007, paired_wall_ratio_upper95=1.017)
+        report = self.decide([raw_trace(20), raw_trace(4, 2)], overhead)
+        self.assertEqual(report['evidence']['source'], 'raw_events')
+        self.assertFalse(report['evidence']['profile_valid'])
+        self.assertEqual(len(report['skipped']), 1)
+        rows = {r['row']: r for r in report['rows']}
+        self.assertEqual([r['row'] for r in report['rows']], ['C' + str(i) for i in range(1, 15)])
+        for row in report['rows']:
+            self.assertEqual(row['overhead'], 'overhead unqualified, est +0.7%, one-sided 95% bound 1.017 '
+                                              '(task 2.8, run c0-a2-qual-20261108-n20)')
+            self.assertNotEqual(row['status'], 'confirmed')
+        # The stand-in leaf is not a workload proof: the node is the only proof root.
+        self.assertEqual(rows['C12']['metric']['proof_id'], 'node-0')
+        # d = quotient 40 + MSM 30 of 100; m = 30 of 100.
+        self.assertEqual(rows['C12']['metric']['numerator_ns'], 70)
+        self.assertEqual(rows['C14']['metric']['numerator_ns'], 30)
+        self.assertEqual(rows['C11']['metric']['node_step_wall_ns'], {'4': 200, '20': 100})
+        self.assertEqual(rows['C11']['metric']['decision'], 'keep_20_threads')
+        node = report['gp'][0]['proofs'][0]
+        self.assertEqual((node['wall_ns'], node['unexplained_ns']), (100, 2))
+        # q = quotient [128, 168) + worker NTT [170, 190) = 60; m or q = [128, 198) = 70.
+        self.assertEqual(node['q']['value'], 0.6)
+        self.assertEqual(node['m_or_q']['value'], 0.7)
+        self.assertEqual(report['gp'][0]['returned_errors']['by_context'], {'prove': 1})
+
+    def test_without_overhead_report_rows_say_unqualified(self):
+        report = self.decide([raw_trace(20)])
+        self.assertTrue(all(r['overhead'].startswith('overhead unqualified') for r in report['rows']))
+
+    def test_observer_invalid_or_mismatched_traces_are_refused(self):
+        invalid = raw_trace(20)
+        invalid['events'][7]['status'] = 2  # a failed advice commitment
+        mismatch = raw_trace(20)
+        mismatch['workload']['proofs'].append(dict(shape='run_decider', cache_mode='resident_pk'))
+        for trace, message in ((invalid, 'observer-invalid'), (mismatch, 'prove spans')):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / 'GP-on.json'
+                path.write_text(json.dumps(trace))
+                with patch('sys.stderr', new=io.StringIO()) as err:
+                    self.assertEqual(self.profile.main(['decide', str(path), '--output', str(Path(tmp) / 'd.json')]), 1)
+                self.assertIn(message, err.getvalue())
+
+
 class SchemaTests(unittest.TestCase):
     def test_gp_sidecar_validates(self):
         profile = load('profile-recursion')

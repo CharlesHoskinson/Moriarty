@@ -293,6 +293,58 @@ EVENT_PHASES = {
 }
 
 
+TRANSCRIPT_PHASE, VERIFY_PHASE = 19, 5
+HANDLED_REASON = ('Handled returned error: a transcript read failed inside an interval that itself '
+                  'succeeded, the workload exited 0 and every verifier and negative control passed; '
+                  'raw status 2 retained.')
+EXPECTED_VERIFY_REASON = ('Verifier call that returned the expected rejection inside a successful '
+                          'negative-control interval; raw status 2 retained.')
+
+
+def handled_returned_errors(raw, events, by_id, chains, expected):
+    """Returned-error intervals that do not invalidate the observer, and their counts.
+
+    The in-circuit verifier parses absent proof bytes during keygen, cost modeling and the
+    genesis step; each read returns an error that its caller handles. Such a transcript
+    interval (phase 19, status 2) is tolerated only when every ancestor succeeded (status 1),
+    the workload exited 0 and the stock verifier and negative controls passed. A verify
+    interval (phase 5, status 2) is tolerated only as an ancestor of an expected rejection
+    inside a successful verify interval. Status 0/3 and status 2 in any other phase stay
+    invalidating. Every tolerated event is counted per phase and per context."""
+    workload = raw.get('workload') or {}
+    verification = workload.get('verification') or {}
+    if not (workload.get('exit') == 0 and verification.get('stock_verifier') == 'pass'
+            and verification.get('negative_controls') == 'pass'):
+        return {}, dict(tolerated=0, by_phase={}, by_context={}, expected_rejections=len(expected))
+    tolerated = {}
+    for event_id in expected:
+        for ancestor in chains[event_id]:
+            a = by_id[ancestor]
+            if (a['phase_id'] == VERIFY_PHASE and a['status'] == 2
+                    and all(by_id[x]['status'] == 1 for x in chains[ancestor])
+                    and any(by_id[x]['phase_id'] == VERIFY_PHASE for x in chains[ancestor])):
+                tolerated[ancestor] = EXPECTED_VERIFY_REASON
+    for e in events:
+        if (e['status'] == 2 and e['phase_id'] == TRANSCRIPT_PHASE and e['id'] not in expected
+                and all(by_id[a]['status'] == 1 for a in chains[e['id']])):
+            tolerated[e['id']] = HANDLED_REASON
+    roots = {e['id'] for e in events if e['parent_id'] == 0 and e['phase_id'] == 1}
+    by_phase, by_context = defaultdict(int), defaultdict(int)
+    for event_id in tolerated:
+        e = by_id[event_id]
+        by_phase[EVENT_PHASES[e['phase_id']][0]] += 1
+        if e['parent_id'] == 0:
+            context = 'outside_command'
+        elif e['parent_id'] in roots:
+            context = 'command'
+        else:
+            top = next((by_id[a] for a in chains[event_id] if by_id[a]['parent_id'] in roots), None)
+            context = 'outside_command' if top is None else EVENT_PHASES[top['phase_id']][0]
+        by_context[context] += 1
+    return tolerated, dict(tolerated=len(tolerated), by_phase=dict(by_phase),
+                           by_context=dict(by_context), expected_rejections=len(expected))
+
+
 def map_events(raw, invocation_id):
     """Map integer intervals to schema phase fragments, retaining invalid traces.
 
@@ -343,9 +395,17 @@ def map_events(raw, invocation_id):
                 and (not raw['profile_valid'] or (raw.get('workload', {}).get('exit') == 0
                      and raw.get('workload', {}).get('verification', {}).get('negative_controls') == 'pass')),
                 'expected rejection requires a successful verifier control')
-    observer_valid = (raw['profile_valid'] and len(events) < raw['event_capacity']
+    tolerated, returned_errors = handled_returned_errors(raw, events, by_id, chains, expected)
+    # The raw flag (vendored Recorder::snapshot, then Collector::accepts in tools/profile) is all
+    # or nothing over the same inputs this reducer sees: lock poison (it then exports no events),
+    # capacity, drop/timer/reentrancy counters, event status, sampler health, workload success and
+    # the negative controls. Every one of them is re-checked below, so a false raw flag is
+    # overridden only when the tolerated returned errors are the sole failed events.
+    raw_ok = raw['profile_valid'] or (bool(tolerated) and bool(events)
+                                      and raw.get('workload', {}).get('exit') == 0)
+    observer_valid = (raw_ok and len(events) < raw['event_capacity']
                       and not any(raw[k] for k in ('dropped_events', 'timer_failures', 'reentrant_events'))
-                      and all((e['status'] == 1 or e['id'] in expected) and e['end_ns'] > e['start_ns'] for e in events))
+                      and all((e['status'] == 1 or e['id'] in expected or e['id'] in tolerated) and e['end_ns'] > e['start_ns'] for e in events))
     schema = json.loads(SCHEMA.read_text())
     reason = 'No boundary counter observations supplied for this interval.'
     measurements = {}
@@ -404,9 +464,10 @@ def map_events(raw, invocation_id):
                     dimensions={**{k: None for k in schema['$defs']['dimensions']['required']},
                                 **{k: event[k] if event[k] != 2**64 - 1 else None
                                    for k in ('advice_phase', 'circuit_index')}},
-                    metrics=metrics, status=('ok' if event['status'] == 1 or event['id'] in expected else
+                    metrics=metrics, status=('ok' if event['status'] == 1 or event['id'] in expected or event['id'] in tolerated else
                                              'incomplete' if event['status'] == 0 else 'failed'),
-                    reason=('Expected verifier rejection; raw returned-error status retained.' if event['id'] in expected else
+                    reason=('Expected verifier rejection; raw returned-error status retained.' if event['id'] in expected
+                            else tolerated[event['id']] if event['id'] in tolerated else
                             None if event['status'] == 1 else 'Observer retained an unfinished or failed interval.'))
 
     phases = [phase(e, e['start_ns'], e['end_ns'] or None, str(e['id']),
@@ -457,6 +518,7 @@ def map_events(raw, invocation_id):
                                             dropped_events=raw['dropped_events'],
                                             flush_wall_seconds=raw['flush_wall_ns'] / NS,
                                             qualification='not_run'),
+                returned_errors=returned_errors,
                 observation_summary=({k: v for k, v in observation.items() if k != 'measurements'}
                                      if observation else None),
                 workload=raw.get('workload'),
@@ -549,8 +611,11 @@ def reject_overlapping_credit(rows):
         used.update(spans)
 
 
-def decide_profiles(sidecars):
-    reports = [validate_sidecar(s) for s in sidecars]
+def decide_profiles(sidecars, reports=None):
+    """Rows C1-C14. `reports` comes from `raw_reports` for raw traces; otherwise every sidecar
+    must pass `validate_sidecar` (a qualified recursion.phase-profile/1 sidecar)."""
+    if reports is None:
+        reports = [validate_sidecar(s) for s in sidecars]
     rows = []
     reasons = {1: 'No validated fused-terminal candidate row count and same-workload comparison.',
                2: 'No mono16 or 2x8 candidate with a matched 0.8.3 baseline.',
@@ -671,6 +736,11 @@ def lever_rows(sidecars, reports):
         metric.update(node_step_wall_ns=walls, decision=decision,
                       invocations={str(t): s['invocation_id'] for t, (s, _) in sorted(nodes.items())})
         cpu = proof['cpu_core_ns']
+        if cpu is None and proof.get('root_cpu_core_ns') is not None:
+            # Raw traces: the proof root's own process-CPU boundary delta (all workers, plus the
+            # RSS sampler thread). Only one proof runs at a time, so no other job shares it.
+            cpu = proof['root_cpu_core_ns']
+            metric['average_cores_method'] = 'proof root process CPU delta (proc_pid_stat), inclusive'
         metric['average_cores_at_20'] = None if cpu is None else {'numerator': cpu, 'denominator': w20}
         if cpu is None:
             metric['average_cores_null_reason'] = 'Node proof CPU is not fully attributed.'
@@ -703,6 +773,182 @@ def lever_rows(sidecars, reports):
     out.append(share(14, 'msm_share', is_msm,
                      lambda n, t: {'amdahl_bound': {'numerator': t, 'denominator': t - n} if t > n else None}))
     return out
+
+
+def _seconds(value_ns):
+    return Fraction(value_ns, NS)
+
+
+def raw_partition(root, spans):
+    """partition() over a raw trace: the coverage block is computed, then checked by the
+    same rules as a qualified sidecar (exclusive spans disjoint, 5% bounds, CPU reconcile)."""
+    total = root['end_monotonic_ns'] - root['start_monotonic_ns']
+    owners = defaultdict(int)
+    for p in spans:
+        if p['accounting']:
+            owners[p['owner']] += p['end_monotonic_ns'] - p['start_monotonic_ns']
+    accounted = sum(owners.values())
+    coverage = dict(measured_wall_seconds=_seconds(total), accounted_exclusive_wall_seconds=_seconds(accounted),
+                    unexplained_other_seconds=_seconds(total - accounted),
+                    unattributed_wall_seconds=_seconds(total - accounted),
+                    relative_sum_error=0, overlap_error_seconds=0, accepted=True,
+                    owner_shares=[dict(owner=o, exclusive_seconds=_seconds(v),
+                                       fraction_of_named_scope=Fraction(v, total)) for o, v in owners.items()])
+    return partition(root, spans, coverage)
+
+
+def _cpu_ns(value):
+    return None if value is None else round(Fraction(str(value)) * NS)
+
+
+def raw_reports(raw, invocation_id, run):
+    """(sidecar view, report) of one observer-valid raw GP trace for `decide`.
+
+    This is the raw-event path: the trace is not a qualified recursion.phase-profile/1 sidecar
+    (no schema identity block, overhead not qualified), so every row it feeds stays
+    arithmetic_only and the output carries profile_valid false. Proof roots are the caller
+    `prove` spans directly under the command, in order: the stand-in leaves first, then the
+    workload's proof records (node steps, then the decider)."""
+    mapped = map_events(raw, invocation_id)
+    require(mapped['observer_valid'], 'observer-invalid raw trace cannot enter decide')
+    workload = raw['workload']
+    require(workload.get('exit') == 0 and workload.get('profile_enabled') is True, 'raw trace needs a successful on run')
+    phases = mapped['phases']
+    by_id = {p['span_id']: p for p in phases}
+    ancestors = {}
+    for p in phases:
+        chain, parent = set(), p['parent_span_id']
+        while parent is not None:
+            chain.add(parent)
+            parent = by_id[parent]['parent_span_id']
+        ancestors[p['span_id']] = chain
+    commands = [p for p in phases if p['phase'] == 'command' and p['parent_span_id'] is None]
+    require(len(commands) == 1, 'one command root required')
+    command = commands[0]
+    proves = sorted((p for p in phases if p['phase'] == 'prove' and p['parent_span_id'] == command['span_id']
+                     and not p['accounting']), key=lambda p: p['start_monotonic_ns'])
+    records = workload.get('proofs', [])
+    chain = workload.get('chain') or {}
+    leaves = chain.get('leaves', 0) if chain.get('standin') else 0
+    require(len(proves) == leaves + len(records), 'prove spans do not match the workload proof records')
+    proofs = []
+    for root, record in zip(proves[leaves:], records):
+        spans = [p for p in phases if root['span_id'] in ancestors[p['span_id']]]
+        result = raw_partition(root, spans)
+        result.update(proof_id=f"{record['shape']}-{record.get('step', 0)}", shape=record['shape'],
+                      step=record.get('step'), cache_mode=record['cache_mode'],
+                      root_cpu_core_ns=_cpu_ns(root['metrics']['cpu_core_seconds']))
+        proofs.append(result)
+    # Command coverage is reported, not required: the rows use proof partitions only, and the
+    # GP harness has no caller span around cost_model / relation validation (task 2.9 finding).
+    total = command['end_monotonic_ns'] - command['start_monotonic_ns']
+    accounted = sum(p['end_monotonic_ns'] - p['start_monotonic_ns'] for p in phases
+                    if p['accounting'] and command['span_id'] in ancestors[p['span_id']])
+    command_coverage = dict(total_ns=total, accounted_ns=accounted, unexplained_ns=total - accounted,
+                            unexplained=Fraction(total - accounted, total),
+                            accepted=coverage_bounds(total, accounted, total - accounted))
+    sidecar = dict(id=workload['id'], run=run, invocation_id=invocation_id, host=workload['host'],
+                   phases=phases, workload={k: v for k, v in workload.items() if k != 'proofs'})
+    report = dict(run=run, invocation_id=invocation_id, command=command_coverage,
+                  proofs=proofs, returned_errors=mapped['returned_errors'], observer_valid=True, profile_valid=False)
+    return sidecar, report, ancestors
+
+
+def _union_ns(intervals, start, end):
+    """Wall covered by the union of intervals, clipped to [start, end]."""
+    total, cursor = 0, start
+    for a, b in sorted((max(a, start), min(b, end)) for a, b in intervals):
+        if b <= cursor:
+            continue
+        total += b - max(a, cursor)
+        cursor = b
+    return total
+
+
+# prover.md table 3: q = quotient (phases 13, 14) + ntt (22) + advice_ntt (24).
+NTT_PHASES = ('vanishing', 'quotient', 'ntt', 'advice_ntt')
+
+
+def gp_summary(sidecar, report, ancestors):
+    """Per-proof walls and the shares d, m, q of each GP proof, plus average cores (raw path).
+
+    d and m use the exclusive partition (C12, C14). q is the wall covered by any quotient,
+    vanishing, NTT or advice-NTT interval of the proof (worker NTT diagnostics included); it
+    overlaps m, so m_or_q is the union and m + q is never summed."""
+    by_id = {p['span_id']: p for p in sidecar['phases']}
+    out = []
+    for proof in report['proofs']:
+        root = by_id[proof['root_span_id']]
+        start, end, total = root['start_monotonic_ns'], root['end_monotonic_ns'], proof['total_ns']
+        spans = [p for p in sidecar['phases'] if root['span_id'] in ancestors[p['span_id']]
+                 and p['end_monotonic_ns'] is not None]
+        rows = [r for r in proof['partition'] if r['span_id'] is not None]
+        msm = [(by_id[r['span_id']]['start_monotonic_ns'], by_id[r['span_id']]['end_monotonic_ns'])
+               for r in rows if is_msm(r)]
+        ntt = [(p['start_monotonic_ns'], p['end_monotonic_ns']) for p in spans if p['phase'] in NTT_PHASES]
+        d = sum(r['wall_ns'] for r in rows if r['owner'] in DOMAIN_OWNERS or is_msm(r))
+        cpu = proof['root_cpu_core_ns']
+        out.append(dict(proof_id=proof['proof_id'], shape=proof['shape'], step=proof['step'],
+                        wall_ns=total, unexplained_ns=proof['partition'][-1]['wall_ns'],
+                        d=Fraction(d, total), m=Fraction(sum(r['wall_ns'] for r in rows if is_msm(r)), total),
+                        q=Fraction(_union_ns(ntt, start, end), total),
+                        m_or_q=Fraction(_union_ns(msm + ntt, start, end), total),
+                        average_cores=None if cpu is None else Fraction(cpu, total)))
+    return dict(run=sidecar['run'], rayon_threads=sidecar['host'].get('rayon_threads'),
+                command_coverage=report['command'], proofs=out,
+                returned_errors=report['returned_errors'])
+
+
+def _plain(value):
+    """Fractions as {numerator, denominator, value} for the JSON report."""
+    if isinstance(value, Fraction):
+        return dict(numerator=value.numerator, denominator=value.denominator, value=float(value))
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_plain(v) for v in value]
+    return value
+
+
+def overhead_label(path):
+    """The RPP-005 label carried by every raw-path row (task 2.8 owns the qualification)."""
+    if path is None:
+        return dict(qualification='not_run', label='overhead unqualified (no overhead report given)')
+    o = read_sidecar(path)
+    require(o.get('schema') == 'recursion.overhead/1', 'not an overhead report')
+    estimate, upper = float(o['estimated_fraction']), float(o['paired_wall_ratio_upper95'])
+    state = 'qualified' if o['qualification'] == 'pass' else 'unqualified'
+    label = (f"overhead {state}, est {estimate:+.1%}, one-sided 95% bound {upper:.3f} "
+             f"(task 2.8, run {o['run']})")
+    return dict(qualification=o['qualification'], run=o['run'], pair_count=o['pair_count'],
+                estimated_fraction=estimate, paired_wall_ratio_upper95=upper, label=label)
+
+
+def decide_raw(raws, paths, overhead=None):
+    """decide over raw on-run traces (the GP C0 path of task 2.9). Off runs carry no events and
+    are listed as skipped. Rows stay arithmetic_only; nothing here is a qualified profile."""
+    sidecars, reports, summaries, skipped = [], [], [], []
+    for raw, path in zip(raws, paths):
+        if not (raw.get('workload') or {}).get('profile_enabled'):
+            skipped.append(dict(path=str(path), reason='observation off: no phase events'))
+            continue
+        invocation = 'events-' + digest(path)
+        sidecar, report, ancestors = raw_reports(raw, invocation, Path(path).parent.name)
+        sidecars.append(sidecar)
+        reports.append(report)
+        summaries.append(gp_summary(sidecar, report, ancestors))
+    require(bool(sidecars), 'no observation-on raw trace supplied')
+    require(len({s['invocation_id'] for s in sidecars}) == len(sidecars), 'duplicate invocation identity')
+    label = overhead_label(overhead)
+    decision = decide_profiles(sidecars, reports)
+    for row in decision['rows']:
+        row['evidence'] = 'raw_events'
+        row['overhead'] = label['label']
+    return _plain(dict(decision, evidence=dict(
+        source='raw_events', observer_valid=True, profile_valid=False, overhead=label,
+        reason='Raw event traces: no qualified recursion.phase-profile/1 sidecar; every share is '
+               'arithmetic_only and carries the overhead label.'),
+        gp=summaries, skipped=skipped))
 
 
 def read_sidecar(path):
@@ -872,8 +1118,12 @@ def main(argv=None):
     for name in ('reduce', 'decide'):
         p = sub.add_parser(name)
         p.add_argument('sidecars', nargs='*', type=Path)
-        p.add_argument('--run', dest='source_run')
+        p.add_argument('--run', dest='source_run', action='append', default=[],
+                       help='a run under qa/sherlock/profiles; repeat to combine runs (then --output is required)')
         p.add_argument('--output', type=Path)
+        if name == 'decide':
+            p.add_argument('--overhead', type=Path,
+                           help='raw traces: the RPP-005 overhead.json that labels the unqualified rows')
     args = parser.parse_args(argv)
     try:
         if args.command == 'prepare':
@@ -901,10 +1151,11 @@ def main(argv=None):
         else:
             paths = list(args.sidecars)
             output = args.output
-            if args.source_run:
-                require(re.fullmatch(r'[A-Za-z0-9_.-]+', args.source_run)
-                        and args.source_run not in ('.', '..'), 'invalid run ID')
-                directory = ROOT / 'qa/sherlock/profiles' / args.source_run
+            require(len(args.source_run) <= 1 or output is not None, 'several runs need --output')
+            for source_run in args.source_run:
+                require(re.fullmatch(r'[A-Za-z0-9_.-]+', source_run)
+                        and source_run not in ('.', '..'), 'invalid run ID')
+                directory = ROOT / 'qa/sherlock/profiles' / source_run
                 paths += sorted(p for p in directory.glob('*.json') if p.name not in ('reduce.json', 'decide.json', 'overhead.json'))
                 if output is None:
                     output = directory / (args.command + '.json')
@@ -913,10 +1164,12 @@ def main(argv=None):
             sidecars = [read_sidecar(p) for p in paths]
             raw_events = [s.get('schema') == 'recursion.phase-events/1' for s in sidecars]
             if any(raw_events):
-                require(args.command == 'reduce' and all(raw_events),
-                        'raw events can only be reduced separately; they are not qualified sidecars')
-                report = {'schema': 'recursion.phase-events-mapped/1', 'profiles':
-                          [map_events(s, 'events-' + digest(p)) for s, p in zip(sidecars, paths)]}
+                require(all(raw_events), 'raw events and qualified sidecars cannot be mixed')
+                if args.command == 'reduce':
+                    report = {'schema': 'recursion.phase-events-mapped/1', 'profiles':
+                              [map_events(s, 'events-' + digest(p)) for s, p in zip(sidecars, paths)]}
+                else:
+                    report = decide_raw(sidecars, paths, args.overhead)
             else:
                 require(len({s['invocation_id'] for s in sidecars}) == len(sidecars), 'duplicate invocation identity')
                 report = (decide_profiles(sidecars) if args.command == 'decide' else
