@@ -261,7 +261,16 @@ pub(super) fn check_step_circuit(
     {
         return Err("host prefix shape does not match circuit".into());
     }
-    let statement = witness.to_statement_frs();
+    check_step_statement(circuit, witness.to_statement_frs())
+}
+
+/// `ProofPreimage::check` of a raw statement vector, so raw-statement
+/// mutation tests can perturb any lane (including the pre/post prefix copies
+/// and the fixed schema lanes that [`C6StepWitness`] cannot express apart).
+pub(super) fn check_step_statement(
+    circuit: &C6StepCircuit,
+    statement: Vec<Fr>,
+) -> Result<Vec<Option<usize>>, String> {
     if statement.len() != circuit.statement_lane_count {
         return Err(format!(
             "statement length: expected {}, got {}",
