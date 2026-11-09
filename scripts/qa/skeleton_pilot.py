@@ -19,6 +19,11 @@ Subcommands:
   cell COMPONENT CONDITION VENDOR SEED RUNDIR
                                  one build: sandbox, lane, extract, audit
   grade-cell CELLDIR             grade a built cell (one grade at a time)
+  grade-batch CELLDIR...         grade several cells in one heavy run; each cell.json is
+                                 updated as soon as its grade finishes
+  record-cell CELLDIR --exit N   update CELLDIR/cell.json from its grade receipt
+  compare CELLDIR...             compare builds of one component on the mutant ids
+                                 that every build ran
 
 Model ids and flags are fixed here and in the protocol; change both together.
 """
@@ -443,6 +448,9 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
     export_head(grader)
     sm = grader / SM
     lines = ["#!/usr/bin/env bash", "set -u"]
+    batch_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    for cell in cells:
+        mark_pending(cell, batch_id)
     for cell in cells:
         rec = json.loads((cell / "cell.json").read_text())
         out = (cell / "grade").resolve()
@@ -454,8 +462,7 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
         env = {"RUST_TEST_THREADS": "1",
                "CARGO_TARGET_DIR": str(TARGET_ROOT / "skeleton-pilot-grader"),
                "SKELETON_PILOT_COMPONENT": rec["component"], "SKELETON_PILOT_OUT": str(out),
-               "SKELETON_PILOT_TARGET": "candidate", "SKELETON_PILOT_SEED": str(rec["seed"]),
-               "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS,
+               "SKELETON_PILOT_TARGET": "candidate", **mutant_env(rec["component"]),
                "SKELETON_PILOT_WALL_BUDGET_S": str(wall_budget(per_cell))}
         lines += [f"cp {inst}/*.rs {sm}/"]
         if self_test and cell is cells[0]:
@@ -476,7 +483,10 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
                   + f" cargo test --manifest-path {grader}/Cargo.toml -p mori-backend --lib --locked"
                   " sherlock_machine::skeleton_pilot::skeleton_pilot_grade -- --ignored --exact"
                   f" --nocapture > {out}/heavy.log 2>&1",
-                  f"echo \"{cell.name} exit $? wall $(( $(date +%s) - start ))s\""]
+                  "rc=$?",
+                  f"echo \"{cell.name} exit $rc wall $(( $(date +%s) - start ))s\"",
+                  # D4: record the cell as soon as its grade ends, not at batch end.
+                  f"python3 {Path(__file__).resolve()} record-cell {cell.resolve()} --exit $rc"]
     script = scratch / "grade-batch.sh"
     script.write_text("\n".join(lines) + "\n")
     argv = [str(REPO / "scripts/doctorwatson"), "heavy", "--id", f"SKP-batch-{len(cells)}",
@@ -486,13 +496,7 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
     p = subprocess.run(argv, cwd=REPO, capture_output=True, text=True)
     (scratch / "grade-batch.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr)
     shutil.copy(scratch / "grade-batch.log", cells[0].parent / "grade-batch.log")
-    for cell in cells:
-        rec = json.loads((cell / "cell.json").read_text())
-        g = cell / "grade" / "grade.json"
-        rec["grade_exit"] = 0 if g.exists() else "no receipt"
-        if g.exists():
-            rec["verdict"] = json.loads(g.read_text())["verdict"]
-        (cell / "cell.json").write_text(json.dumps(rec, indent=2) + "\n")
+    # Cells that the batch did not reach keep grade_exit "pending" (D4).
     print(p.stdout[-3000:])
     return p.returncode
 
@@ -532,7 +536,83 @@ def cmd_cell(component: str, condition: str, vendor: str, seed: int, rundir: Pat
     return rec
 
 
-MAX_MUTANTS = "4000"
+# Amendment 1 (D2): every build of a component is graded on the same seeded
+# prefix of N mutants. The sample seed is per component (not the build seed), so
+# mutant id i is the same mutant in every build. N is the same for every
+# component unless the lead fixes a per-component value in MUTANTS_BY_COMPONENT
+# before wave 1. If the wall budget ends before N, the grade is harness-incomplete
+# and is rerun with a longer slot; N is never lowered for one build.
+MUTANTS = int(os.environ.get("SKELETON_PILOT_MUTANTS", "400"))
+MUTANTS_BY_COMPONENT: dict[str, int] = {}
+MUTANT_SEED = 20261108
+
+
+def mutant_env(component: str) -> dict[str, str]:
+    """Grader env for the fixed mutant prefix of `component`."""
+    return {"SKELETON_PILOT_SEED": str(MUTANT_SEED),
+            "SKELETON_PILOT_MAX_MUTANTS": str(MUTANTS_BY_COMPONENT.get(component, MUTANTS))}
+
+
+def mark_pending(cell: Path, batch_id: str) -> None:
+    """Before a batch: mark the cell pending, so a killed batch leaves no stale verdict."""
+    f = cell / "cell.json"
+    rec = json.loads(f.read_text())
+    rec.pop("verdict", None)
+    rec.pop("harness", None)
+    rec["grade_exit"] = "pending"
+    rec["grade_batch"] = batch_id
+    f.write_text(json.dumps(rec, indent=2) + "\n")
+
+
+def record_cell(cell: Path, exit_code: int | str) -> dict:
+    """Update cell.json from the cell's grade receipt (D4: called per cell)."""
+    f = cell / "cell.json"
+    rec = json.loads(f.read_text())
+    g = cell / "grade" / "grade.json"
+    rec["grade_exit"] = exit_code
+    rec.pop("verdict", None)
+    rec.pop("harness", None)
+    if g.exists():
+        s = json.loads(g.read_text())
+        rec["verdict"] = s["verdict"]
+        if "harness" in s:
+            rec["harness"] = s["harness"]
+    else:
+        rec["grade_exit"] = f"{exit_code} (no receipt)"
+    f.write_text(json.dumps(rec, indent=2) + "\n")
+    return rec
+
+
+def compare(cells: list[Path]) -> dict:
+    """Compare builds of one component on the mutant ids that every build ran.
+    Valid only when all grades used the same plan (seed, N, per_rule)."""
+    plans, ran, classes = {}, {}, {}
+    for c in cells:
+        s = json.loads((c / "grade" / "grade.json").read_text())
+        plans[c.name] = (s["component"], s["plan"]["seed"], s["plan"]["max_mutants"],
+                         s["plan"]["per_rule"])
+        recs = [json.loads(line) for line in
+                (c / "grade" / "mutants.jsonl").read_text().splitlines() if line.strip()]
+        # A mutant identical to its base has no record; it counts as run when
+        # the grade reached past its id.
+        reached = s["mutants"].get("reached", max((r["id"] + 1 for r in recs), default=0))
+        ran[c.name] = set(range(reached))
+        classes[c.name] = {r["id"]: r["class"] for r in recs}
+    if len(set(plans.values())) != 1:
+        raise SystemExit(f"grades used different plans: {plans}")
+    shared = set.intersection(*ran.values()) if ran else set()
+    out = {"plan": dict(zip(["component", "seed", "max_mutants", "per_rule"],
+                            next(iter(plans.values())))),
+           "shared_ids": len(shared), "builds": {}}
+    for name, cl in classes.items():
+        tally: dict[str, int] = {}
+        for i in shared:
+            k = cl.get(i, "identical_to_base")
+            tally[k] = tally.get(k, 0) + 1
+        out["builds"][name] = {"reached": len(ran[name]), "by_class": tally,
+                               "soundness_ids": sorted(i for i in shared
+                                                       if cl.get(i) == "soundness")}
+    return out
 
 
 def wall_budget(cap: int) -> int:
@@ -547,15 +627,9 @@ def cmd_grade_cell(cell: Path, scratch: Path, max_wall: int) -> dict:
     rec = json.loads((cell / "cell.json").read_text())
     rc = cmd_grade(rec["component"], cell / "candidate.rs", cell / "grade", "candidate",
                    scratch / "grader", max_wall,
-                   {"SKELETON_PILOT_SEED": str(rec["seed"]),
-                    "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS,
+                   {**mutant_env(rec["component"]),
                     "SKELETON_PILOT_WALL_BUDGET_S": str(wall_budget(max_wall))})
-    rec["grade_exit"] = rc
-    g = cell / "grade" / "grade.json"
-    if g.exists():
-        rec["verdict"] = json.loads(g.read_text())["verdict"]
-    (cell / "cell.json").write_text(json.dumps(rec, indent=2) + "\n")
-    return rec
+    return record_cell(cell, rc)
 
 
 def cmd_skeleton(component: str, kind: str, rundir: Path, scratch: Path) -> dict:
@@ -639,7 +713,8 @@ def cmd_report(rundir: Path) -> str:
             st = len(s["static"]["lanes_read_by_reference_not_candidate"])
             cols = [vd["built"], vd["complete"], st, vd["soundness_mutants"],
                     f"{s['mutants']['run']} / {s['mutants']['space']}", ratio,
-                    "PASS" if vd["primary_pass"] else "fail"]
+                    "PASS" if vd["primary_pass"] is True
+                    else "harness error" if vd.get("harness_ok") is False else "fail"]
         else:
             cols = ["not graded"] + [""] * 6
         rows.append(f"| {f.parent.name} | {d['lane_exit']} | {d['lane_wall_seconds']} | "
@@ -662,7 +737,7 @@ def main() -> int:
     a = sp.add_parser("grade"); a.add_argument("component"); a.add_argument("out", type=Path)
     a.add_argument("--candidate", type=Path); a.add_argument("--target", default="candidate")
     a.add_argument("--grader", type=Path, required=True); a.add_argument("--max-wall", type=int, default=3600)
-    a.add_argument("--max-mutants"); a.add_argument("--seed", default="1")
+    a.add_argument("--max-mutants"); a.add_argument("--seed")
     a = sp.add_parser("skeleton"); a.add_argument("component"); a.add_argument("kind", choices=["blind", "derived"])
     a.add_argument("rundir", type=Path); a.add_argument("--scratch", type=Path, required=True)
     a = sp.add_parser("cell"); a.add_argument("component"); a.add_argument("condition", choices="ABC")
@@ -674,9 +749,19 @@ def main() -> int:
     a.add_argument("--scratch", type=Path, required=True); a.add_argument("--max-wall", type=int, default=14400)
     a.add_argument("--per-cell", type=int, default=3600)
     a = sp.add_parser("report"); a.add_argument("rundir", type=Path)
+    a = sp.add_parser("record-cell"); a.add_argument("cell", type=Path)
+    a.add_argument("--exit", required=True)
+    a = sp.add_parser("compare"); a.add_argument("cells", type=Path, nargs="+")
     x = ap.parse_args()
     if x.cmd == "report":
         print(cmd_report(x.rundir))
+        return 0
+    if x.cmd == "record-cell":
+        print(json.dumps(record_cell(x.cell, int(x.exit) if x.exit.lstrip("-").isdigit()
+                                     else x.exit), indent=2))
+        return 0
+    if x.cmd == "compare":
+        print(json.dumps(compare(x.cells), indent=2))
         return 0
     if x.cmd == "grade-batch":
         return cmd_grade_batch(x.cells, x.scratch, x.max_wall, x.per_cell)
@@ -697,7 +782,10 @@ def main() -> int:
         print(json.dumps(v, indent=2))
         return 1 if v else 0
     elif x.cmd == "grade":
-        env = {"SKELETON_PILOT_SEED": x.seed}
+        # Default: the component's fixed mutant prefix (amendment 1, D2).
+        env = mutant_env(x.component)
+        if x.seed:
+            env["SKELETON_PILOT_SEED"] = x.seed
         if x.max_mutants:
             env["SKELETON_PILOT_MAX_MUTANTS"] = x.max_mutants
         return cmd_grade(x.component, x.candidate, x.out, x.target, x.grader, x.max_wall, env)
