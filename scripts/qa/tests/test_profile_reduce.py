@@ -477,6 +477,107 @@ class EventMappingTests(unittest.TestCase):
             self.profile.map_events(self.data, 'synthetic')
 
 
+class ReturnedErrorTests(unittest.TestCase):
+    """Handled returned-error transcript reads (task 2.9: every GP on-run had 5,973 of them)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.profile = load('profile-recursion')
+
+    def setUp(self):
+        def event(i, parent, phase, accounting, start, end, status=1, thread=1):
+            return dict(id=i, parent_id=parent, phase_id=phase, accounting=accounting,
+                        start_ns=start, end_ns=end, thread_id=thread, status=status,
+                        advice_phase=2**64 - 1, circuit_index=2**64 - 1)
+        self.event = event
+        # The raw flag is false, as the vendored all-or-nothing rule writes it.
+        self.data = dict(schema='recursion.phase-events/1', event_capacity=64,
+                         dropped_events=0, timer_failures=0, reentrant_events=0,
+                         profile_valid=False, flush_wall_ns=10, events=[
+            event(1, 0, 1, 0, 1, 300),          # command
+            event(2, 1, 4, 0, 2, 100),          # genesis node prove
+            event(3, 2, 7, 1, 3, 50),           # synthesis
+            event(4, 3, 19, 1, 10, 11, 2),      # handled transcript read error
+            event(5, 2, 14, 1, 50, 99),         # quotient
+            event(6, 1, 19, 1, 110, 111, 2),    # cost-model read error directly under the command
+            event(7, 1, 5, 1, 120, 200),        # negative control (verify, returns true)
+            event(8, 7, 5, 1, 121, 199, 2),     # inner verify returned the rejection
+            event(9, 8, 19, 1, 130, 131, 2),    # expected rejection
+            event(10, 0, 19, 1, 310, 311, 2),   # row model after the command
+        ])
+        self.data['observation'] = dict(sampler_valid=True, measurements=[], expected_rejections=[9])
+        self.data['workload'] = dict(exit=0, verification=dict(stock_verifier='pass', negative_controls='pass'))
+
+    def mapped(self):
+        return self.profile.map_events(self.data, 'synthetic')
+
+    def test_handled_errors_are_counted_and_do_not_invalidate(self):
+        mapped = self.mapped()
+        self.assertTrue(mapped['observer_valid'])
+        self.assertFalse(mapped['profile_valid'])
+        errors = mapped['returned_errors']
+        self.assertEqual(errors['tolerated'], 4)
+        self.assertEqual(errors['by_phase'], {'transcript': 3, 'verify': 1})
+        self.assertEqual(errors['by_context'], {'prove': 1, 'command': 1, 'verify': 1, 'outside_command': 1})
+        self.assertEqual(errors['expected_rejections'], 1)
+        status = {p['span_id']: (p['status'], p['reason']) for p in mapped['phases']}
+        self.assertEqual(status['4'][0], 'ok')
+        self.assertIn('Handled returned error', status['4'][1])
+        self.assertIn('expected rejection', status['8'][1])
+        self.assertIn('Expected verifier rejection', status['9'][1])
+        # Handled intervals keep their accounting credit.
+        self.assertIn('4:exclusive:0', status)
+
+    def test_failed_workload_or_verifier_keeps_them_invalidating(self):
+        for change in (dict(exit=1), dict(verification=dict(stock_verifier='fail', negative_controls='pass')),
+                       dict(verification=dict(stock_verifier='pass', negative_controls='fail'))):
+            with self.subTest(change=change):
+                data = copy.deepcopy(self.data)
+                data['workload'].update(change)
+                if change.get('verification', {}).get('negative_controls') == 'fail':
+                    with self.assertRaisesRegex(ValueError, 'expected rejection'):
+                        self.profile.map_events(dict(data, profile_valid=True), 'synthetic')
+                mapped = self.profile.map_events(data, 'synthetic')
+                self.assertFalse(mapped['observer_valid'])
+                self.assertEqual(mapped['returned_errors']['tolerated'], 0)
+
+    def test_other_phases_and_statuses_stay_invalidating(self):
+        cases = {'status 2 in another phase': (4, dict(phase_id=18)),
+                 'status 0': (4, dict(status=0)), 'status 3': (4, dict(status=3)),
+                 'failed ancestor': (3, dict(status=2)),
+                 'verify error without an expected rejection': (8, dict(id=8)),
+                 'zero-length interval': (4, dict(end_ns=10))}
+        for name, (index, change) in cases.items():
+            with self.subTest(name=name):
+                data = copy.deepcopy(self.data)
+                event = next(e for e in data['events'] if e['id'] == index)
+                event.update(change)
+                if name.startswith('verify error'):
+                    data['observation']['expected_rejections'] = []
+                    next(e for e in data['events'] if e['id'] == 9)['status'] = 1
+                self.assertFalse(self.profile.map_events(data, 'synthetic')['observer_valid'])
+
+    def test_observer_health_failures_stay_invalidating(self):
+        for field in ('dropped_events', 'timer_failures', 'reentrant_events'):
+            with self.subTest(field=field):
+                data = copy.deepcopy(self.data)
+                data[field] = 1
+                self.assertFalse(self.profile.map_events(data, 'synthetic')['observer_valid'])
+        self.data['observation']['sampler_valid'] = False
+        self.assertFalse(self.mapped()['observer_valid'])
+        self.data['observation']['sampler_valid'] = True
+        self.data['event_capacity'] = len(self.data['events'])
+        self.assertFalse(self.mapped()['observer_valid'])
+
+    def test_false_raw_flag_without_tolerated_errors_stays_invalid(self):
+        for event in self.data['events']:
+            event['status'] = 1
+        self.data['observation']['expected_rejections'] = []
+        self.assertFalse(self.mapped()['observer_valid'])
+        self.data['profile_valid'] = True
+        self.assertTrue(self.mapped()['observer_valid'])
+
+
 class WriteReportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

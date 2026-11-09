@@ -42,3 +42,7 @@
 ## [2026-10-26] openspec | recursion-phase-profile (C0)
 - openspec/changes/recursion-phase-profile: proposal, design, tasks, spec RPP-001 to RPP-010; `openspec validate --strict` passes
 - Next: quint-llm-kit design check (task 1.1), roadmap Phase 5, implementation
+
+## [2026-11-09] ingest | C0 first profile (task 2.9)
+- Page: profiles/c0-first-profile.md; runs c0-gp-r4-t{4,10,20}; overhead unqualified, est +0.7% (task 2.8)
+- t20 "on" trace has 1 sampler failure: its numbers are diagnostic until c0-gp-r5-t20; T1(b) f3 not measured yet

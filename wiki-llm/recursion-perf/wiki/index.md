@@ -16,4 +16,12 @@ One article per recursion stage of the state machine in [stages.json](../stages.
 | [s6 polynomial opening](stages/s6-opening.md) | Exact-Midnight resident GPU multiopen, 1.03-1.37x overall; fflonk only inside recursion | 2026-10-26 |
 | [s8 decider and settlement](stages/s8-decider-settle.md) | Persistent prover + synced wallet first; smaller decider (k19/k18) for 1.8-2.9x decider latency | 2026-10-26 |
 
+## profiles
+
+Measured C0 profiles (task 2.9 and later). Each page names its runs and its evidence class.
+
+| Article | Summary | Updated |
+|---------|---------|---------|
+| [C0 first profile: GP node chain](../profiles/c0-first-profile.md) | Node 652,364 rows (k=20); node step 103/73/61 s at 4/10/20 threads; at 20 threads d 0.84, m 0.24, q 0.57, U 8.8 (diagnostic); f3 open | 2026-11-09 |
+
 See also the [consensus tracker](../CONSENSUS.md).
