@@ -7,7 +7,18 @@
 //! (`MORIARTY_GP_STANDIN_STEPS`, a rehearsal) or proved leaves from `MORIARTY_GP_LEAF_DIR`. After
 //! the command span closes, the node row count and its per-gadget breakdown (modeling only) are
 //! added to the sidecar. CPU and RSS per phase come from the harness counters (feature on).
-use std::{error::Error, fs, io::Cursor, path::PathBuf};
+//!
+//! Each proof record carries the caller's prove wall (`prove_wall_ns`, also in off builds) and
+//! its wall-clock interval, so the concurrency probe (`tree.md` T1(b)) can check that concurrent
+//! proofs overlap. `MORIARTY_GP_NODE_ONLY=1` stops after the node chain, its accumulator check and
+//! its negative control (no decider, no row breakdown): the probe's node-only mode.
+use std::{
+    error::Error,
+    fs,
+    io::Cursor,
+    path::PathBuf,
+    time::{Instant, SystemTime, UNIX_EPOCH},
+};
 
 use ff::{Field, PrimeField};
 use group::Curve;
@@ -175,6 +186,28 @@ fn dir_leaves(dir: PathBuf) -> Result<Leaves> {
     })
 }
 
+/// Wall-clock nanoseconds since the Unix epoch (public timing metadata only).
+fn unix_ns() -> Result<u64> {
+    Ok(u64::try_from(
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos(),
+    )?)
+}
+
+/// `MORIARTY_GP_NODE_ONLY=1`: node chain only (the concurrency probe).
+fn node_only() -> bool {
+    std::env::var("MORIARTY_GP_NODE_ONLY").as_deref() == Ok("1")
+}
+
+/// Run one prove call and add its caller interval to the proof record.
+fn timed<T>(record: &mut Value, operation: impl FnOnce() -> T) -> Result<T> {
+    let (start_unix, start) = (unix_ns()?, Instant::now());
+    let value = operation();
+    record["prove_wall_ns"] = json!(u64::try_from(start.elapsed().as_nanos())?);
+    record["prove_start_unix_ns"] = json!(start_unix);
+    record["prove_end_unix_ns"] = json!(unix_ns()?);
+    Ok(value)
+}
+
 fn template() -> Result<Template> {
     Ok(Template::from_any_json(include_bytes!(
         "../../../../crates/mori-recursion/tests/fixtures/run-template.json"
@@ -268,15 +301,26 @@ fn run(options: &Options, evidence: &mut Value) -> Result<SherlockIvcRelation> {
             h: st.h + small(&inst[6])?,
         };
         let ni = SherlockIvcRelation::instance(repr, &next, &next_acc);
-        let p = prove::<SherlockIvcRelation, Pos>(&np, &node_pk, &rel, &ni, w, &mut rng)
-            .map_err(|e| format!("node step {h} prove: {e:?}"))?;
+        let mut record = json!({});
+        let p = timed(&mut record, || {
+            prove::<SherlockIvcRelation, Pos>(&np, &node_pk, &rel, &ni, w, &mut rng)
+        })?
+        .map_err(|e| format!("node step {h} prove: {e:?}"))?;
         verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &ni, None, &p)
             .map_err(|e| format!("node step {h} verify: {e:?}"))?;
-        proofs.push(
-            json!({"shape":"node","step":h,"k":k,"transcript":"poseidon",
-            "vk_sha256":sha256_hex(&vk_bytes(&node_vk)),"proof_sha256":sha256_hex(&p),
-            "proof_bytes":p.len(),"cache_mode":"resident_pk"}),
-        );
+        for (key, value) in [
+            ("shape", json!("node")),
+            ("step", json!(h)),
+            ("k", json!(k)),
+            ("transcript", json!("poseidon")),
+            ("vk_sha256", json!(sha256_hex(&vk_bytes(&node_vk)))),
+            ("proof_sha256", json!(sha256_hex(&p))),
+            ("proof_bytes", json!(p.len())),
+            ("cache_mode", json!("resident_pk")),
+        ] {
+            record[key] = value;
+        }
+        proofs.push(record);
         st = next;
         acc = next_acc;
         proof = p;
@@ -298,6 +342,20 @@ fn run(options: &Options, evidence: &mut Value) -> Result<SherlockIvcRelation> {
         return Err("node verifier accepted a malformed proof".into());
     }
     drop(node_pk);
+    let mut chain = json!({
+        "standin": leaves.standin, "leaves": n, "machine_steps": st.h, "leaf_k": leaves.vk.k(),
+        "node_k": k, "leaf_vk_sha256": sha256_hex(&vk_bytes(&leaves.vk)), "fin_d": f_to_hex(&fin_d),
+    });
+    if node_only() {
+        // The node verifier and its negative control ran; no decider and no ledger verifier.
+        evidence["verification"]["stock_verifier"] = json!("pass");
+        evidence["verification"]["negative_controls"] = json!("pass");
+        evidence["verification"]["official_srs_authenticated"] = json!(true);
+        evidence["proofs"] = json!(proofs);
+        chain["node_only"] = json!(true);
+        evidence["chain"] = chain;
+        return Ok(rel);
+    }
 
     // Run decider key and proof, checked by the ledger's verifier key.
     let drel = RunDeciderRelation {
@@ -326,13 +384,25 @@ fn run(options: &Options, evidence: &mut Value) -> Result<SherlockIvcRelation> {
     let public = drel
         .public_inputs(F::random(OsRng), &dw)
         .ok_or("decider public inputs")?;
-    let dproof = prove::<RunDeciderRelation, B2>(&dp, &dpk, &drel, &public, dw, &mut rng)
-        .map_err(|e| format!("decider prove: {e:?}"))?;
+    let mut record = json!({});
+    let dproof = timed(&mut record, || {
+        prove::<RunDeciderRelation, B2>(&dp, &dpk, &drel, &public, dw, &mut rng)
+    })?
+    .map_err(|e| format!("decider prove: {e:?}"))?;
     verify::<RunDeciderRelation, B2>(&dp.verifier_params(), &dvk, &public, None, &dproof)
         .map_err(|e| format!("decider verify: {e:?}"))?;
-    proofs.push(json!({"shape":"run_decider","k":dk,"transcript":"blake2b",
-        "vk_sha256":sha256_hex(&vk_bytes(&dvk)),"proof_sha256":sha256_hex(&dproof),
-        "proof_bytes":dproof.len(),"cache_mode":"resident_pk"}));
+    for (key, value) in [
+        ("shape", json!("run_decider")),
+        ("k", json!(dk)),
+        ("transcript", json!("blake2b")),
+        ("vk_sha256", json!(sha256_hex(&vk_bytes(&dvk)))),
+        ("proof_sha256", json!(sha256_hex(&dproof))),
+        ("proof_bytes", json!(dproof.len())),
+        ("cache_mode", json!("resident_pk")),
+    ] {
+        record[key] = value;
+    }
+    proofs.push(record);
     evidence["verification"]["stock_verifier"] = json!("pass");
     let key = VerifierKey::from(dvk.clone());
     profile_result!(
@@ -368,11 +438,9 @@ fn run(options: &Options, evidence: &mut Value) -> Result<SherlockIvcRelation> {
     evidence["verification"]["negative_controls"] = json!("pass");
     evidence["verification"]["official_srs_authenticated"] = json!(true);
     evidence["proofs"] = json!(proofs);
-    evidence["chain"] = json!({
-        "standin": leaves.standin, "leaves": n, "machine_steps": st.h, "leaf_k": leaves.vk.k(),
-        "node_k": k, "decider_k": dk, "public_slots": public.len(),
-        "leaf_vk_sha256": sha256_hex(&vk_bytes(&leaves.vk)), "fin_d": f_to_hex(&fin_d),
-    });
+    chain["decider_k"] = json!(dk);
+    chain["public_slots"] = json!(public.len());
+    evidence["chain"] = chain;
     Ok(rel)
 }
 
@@ -430,7 +498,11 @@ fn main() -> Result<()> {
     let writer = Sidecar::start(&path)?;
     let result = profile_result!(Command, Diagnostic, run(&options, &mut evidence));
     // Modeling only, outside the command span so it never enters the phase partition.
-    let rows = result.as_ref().ok().map(node_row_breakdown);
+    let rows = result
+        .as_ref()
+        .ok()
+        .filter(|_| !node_only())
+        .map(node_row_breakdown);
     match &rows {
         Some(Ok(rows)) => evidence["node_rows"] = rows.to_json(),
         Some(Err(error)) => evidence["node_rows"] = json!({"error": error.to_string()}),
@@ -445,9 +517,11 @@ fn main() -> Result<()> {
     if let Some(Err(error)) = rows {
         return Err(error.into());
     }
-    println!(
-        "GP node chain, decider and ledger verification passed; sidecar={}",
-        path.display()
-    );
+    let scope = if node_only() {
+        "node chain (node-only)"
+    } else {
+        "node chain, decider and ledger verification"
+    };
+    println!("GP {scope} passed; sidecar={}", path.display());
     Ok(())
 }

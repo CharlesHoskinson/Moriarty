@@ -1,0 +1,7 @@
+# tree.md T1(b), task 2.9: three independent genesis node proofs at RAYON_NUM_THREADS=6, started together.
+# Run: scripts/doctorwatson heavy --id C0-t1b-concurrent-3 --budget node-concurrent-3 --concurrent 3 --aggregate-cap 90G --commands "$PWD/qa/sherlock/t1b-node-concurrent-3.commands" --hypothesis "..."
+# Each slot: one stand-in leaf, node keygen, the genesis node prove (prove_wall_ns in the sidecar), node verify and its negative control; no decider.
+# Caps: admission needs 3 x per-process cap <= aggregate, so node-concurrent-3 caps each process at 24 GiB (a node proof peaks near 17.2 GB) and the aggregate at 90 GiB (heavy.slice cuts at 92G); preflight then needs 3 x 24 + 20 GiB reserve available.
+env RAYON_NUM_THREADS=6 MORIARTY_GP_STANDIN_STEPS=1 MORIARTY_GP_NODE_ONLY=1 tools/profile/target/off/release/profile-gp --workload GP --cache-mode resident_pk --threads 6 --sidecar /home/hoskinson/Projects/Moriarty/qa/sherlock/profiles/c0-t1b-c3/GP-node-t6-slot0-off.json
+env RAYON_NUM_THREADS=6 MORIARTY_GP_STANDIN_STEPS=1 MORIARTY_GP_NODE_ONLY=1 tools/profile/target/off/release/profile-gp --workload GP --cache-mode resident_pk --threads 6 --sidecar /home/hoskinson/Projects/Moriarty/qa/sherlock/profiles/c0-t1b-c3/GP-node-t6-slot1-off.json
+env RAYON_NUM_THREADS=6 MORIARTY_GP_STANDIN_STEPS=1 MORIARTY_GP_NODE_ONLY=1 tools/profile/target/off/release/profile-gp --workload GP --cache-mode resident_pk --threads 6 --sidecar /home/hoskinson/Projects/Moriarty/qa/sherlock/profiles/c0-t1b-c3/GP-node-t6-slot2-off.json
