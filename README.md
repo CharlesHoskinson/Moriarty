@@ -406,7 +406,7 @@ owner run -> witness stream -> leaf -> node -> run decider -> SherlockRun.accept
 - **Run decider.** The decider verifies the last node proof and opens the final state. It publishes the program digest, the initial state digest, the final state digest, the step count and the result.
 - **Contract.** `SherlockRun.acceptRun` (Compact) checks the decider proof against the sealed program and initial state, refuses a replayed statement and records the result.
 
-A three-step chain and its decider prove and verify end to end on ledger 9.1.0.1. The node has 652,364 rows (k=20). With stand-in leaves the chain and decider take about 450 s at 20 threads, 500 s at 10 threads and 630 s at 4 threads, at about 17 GB of memory. A Quint model and Lean theorems describe the fold that the node implements. Witness-mutation tests check that the step circuits reject altered witnesses.
+A three-step chain and its decider prove and verify end to end on ledger 9.1.0.1. The node has 652,364 rows (k=20). With stand-in leaves the chain and decider take about 450 s at 20 threads, 500 s at 10 threads and 630 s at 4 threads, at about 17 GB of memory. A Quint model and Lean theorems describe the fold that the node implements. Witness-mutation tests check that the step circuits reject altered witnesses. Each change to a circuit also gets its own Quint model of the changed constraints, checked against the reference step. These models are in `qa/gemini-quint/`.
 
 General-purpose recursion over every supported program is a roadmap item, coming soon. It adds one universal leaf over all machine rules with several steps in each leaf, a node cut to k=19, parallel leaf provers and GPU kernels for MSM and NTT.
 
