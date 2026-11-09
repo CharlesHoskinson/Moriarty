@@ -390,6 +390,28 @@ Each claim needs an appropriate check. Semantic comparisons test selected cases;
 
 The immediate direction is to connect a newly authored bounded financial program through the public compilation and proving path to observed Midnight effects, with controls that reject altered intention, effects and history. That same relation must then extend to partial fulfillment, conditional escrow and late-result recovery. Recursion and private composition expand how compliant history can be carried between stages and participants. The requirements reference above records these obligations; the syntax and semantics reference records the language profiles available for inspection today.
 
+## Sherlock recursion processor
+
+Sherlock proves that a Moriarty program ran correctly, one machine step at a time, and lets a Midnight contract accept the result. The machine executes the bounded core of the language: literals, variables, `let`, checked UInt128 and Bool primitives, conditionals, named calls, constructors and ordered match. Each run ends as `Halted(value)`, `Rejected(code)` or `Exhausted(kind)`. Fuel and the frame and data caps bound every run.
+
+A proof follows this chain:
+
+```
+owner run -> witness stream -> leaf -> node -> run decider -> SherlockRun.acceptRun
+```
+
+- **Owner run.** `mori simulate` executes the program and captures the machine state at each step. The witness stream carries each step's witness, its rule id and the digests of the program, the initial state and the pre and post states.
+- **Leaf.** A step circuit proves one machine rule. Dispatch selects exactly one rule for the step from the pre state, and the fragment for that rule constrains the post state.
+- **Node.** The node is a self-recursive circuit. Each node proof verifies the previous node proof and one leaf, adds the leaf's steps to the height and carries the accumulator forward. At genesis the previous-proof accumulator collapses to the trivial accumulator, in the circuit and off it.
+- **Run decider.** The decider verifies the last node proof and opens the final state. It publishes the program digest, the initial state digest, the final state digest, the step count and the result.
+- **Contract.** `SherlockRun.acceptRun` (Compact) checks the decider proof against the sealed program and initial state, refuses a replayed statement and records the result.
+
+A three-step chain and its decider prove and verify end to end on ledger 9.1.0.1. The node has 652,364 rows (k=20). With stand-in leaves the chain and decider take about 450 s at 20 threads, 500 s at 10 threads and 630 s at 4 threads, at about 17 GB of memory. A Quint model and Lean theorems describe the fold that the node implements. Witness-mutation tests check that the step circuits reject altered witnesses.
+
+General-purpose recursion over every supported program is a roadmap item, coming soon. It adds one universal leaf over all machine rules with several steps in each leaf, a node cut to k=19, parallel leaf provers and GPU kernels for MSM and NTT.
+
+Heavy proving and test runs go through `scripts/doctorwatson heavy`. It checks free disk and memory first and runs each job under a fixed memory cap. The task list is in [openspec/changes/sherlock-vm-consensus-20261107/tasks.md](openspec/changes/sherlock-vm-consensus-20261107/tasks.md), and the design is in [design.md](openspec/changes/sherlock-vm-consensus-20261107/design.md) in the same folder.
+
 ## Local developer quickstart
 
 Use Node.js 24. The local demos require no wallet, faucet, network access or npm dependency installation after obtaining the repository:
