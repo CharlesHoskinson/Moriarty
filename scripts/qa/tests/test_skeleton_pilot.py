@@ -101,5 +101,64 @@ class WallBudgetTests(unittest.TestCase):
         self.assertEqual(sp.wall_budget(200), 60)
 
 
+class MutantPrefixTests(unittest.TestCase):
+    def test_mutant_env_is_per_component_not_per_build(self):
+        a = sp.mutant_env("c6_call_bind")
+        self.assertEqual(a["SKELETON_PILOT_SEED"], str(sp.MUTANT_SEED))
+        self.assertEqual(a["SKELETON_PILOT_MAX_MUTANTS"], str(sp.MUTANTS))
+
+
+class CellRecordTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def cell(self, name, recs, reached, seed=20261108, n=6):
+        c = Path(self.tmp.name) / name
+        (c / "grade").mkdir(parents=True)
+        (c / "cell.json").write_text(json.dumps({"component": "c6_x", "verdict": {"old": 1}}))
+        g = {"component": "c6_x", "plan": {"seed": seed, "max_mutants": n, "per_rule": 2},
+             "mutants": {"reached": reached}, "harness": {"ok": True, "errors": []},
+             "verdict": {"harness_ok": True, "primary_pass": True}}
+        (c / "grade" / "grade.json").write_text(json.dumps(g))
+        (c / "grade" / "mutants.jsonl").write_text(
+            "".join(json.dumps({"id": i, "class": k}) + "\n" for i, k in recs))
+        return c
+
+    def test_pending_then_record_per_cell(self):
+        c = self.cell("a", [], 0)
+        sp.mark_pending(c, "B1")
+        rec = json.loads((c / "cell.json").read_text())
+        self.assertEqual(rec["grade_exit"], "pending")
+        self.assertNotIn("verdict", rec)
+        rec = sp.record_cell(c, 0)
+        self.assertEqual(rec["grade_exit"], 0)
+        self.assertTrue(rec["verdict"]["primary_pass"])
+        self.assertTrue(rec["harness"]["ok"])
+
+    def test_record_without_receipt(self):
+        c = self.cell("b", [], 0)
+        (c / "grade" / "grade.json").unlink()
+        rec = sp.record_cell(c, 101)
+        self.assertEqual(rec["grade_exit"], "101 (no receipt)")
+        self.assertNotIn("verdict", rec)
+
+    def test_compare_uses_shared_ids_only(self):
+        a = self.cell("a", [(0, "agree_rejected"), (2, "soundness"), (3, "soundness")], 4)
+        b = self.cell("b", [(0, "agree_rejected"), (2, "agree_rejected")], 3)
+        out = sp.compare([a, b])
+        self.assertEqual(out["shared_ids"], 3)
+        self.assertEqual(out["builds"]["a"]["soundness_ids"], [2])
+        self.assertEqual(out["builds"]["a"]["by_class"]["identical_to_base"], 1)
+        self.assertEqual(out["builds"]["b"]["by_class"], {"agree_rejected": 2,
+                                                          "identical_to_base": 1})
+
+    def test_compare_refuses_different_plans(self):
+        a = self.cell("a", [], 1)
+        b = self.cell("b", [], 1, seed=1)
+        with self.assertRaises(SystemExit):
+            sp.compare([a, b])
+
+
 if __name__ == "__main__":
     unittest.main()

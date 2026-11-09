@@ -144,6 +144,15 @@ pub(super) struct Honest {
     pub disabled: C6StepWitness,
 }
 
+impl Honest {
+    /// Circuit key: (rule, program). Each program has its own retained
+    /// layout, so a circuit is built per (rule, program) and every honest
+    /// pair is checked against a circuit of its own layout (amendment 1, D1).
+    pub fn key(&self) -> String {
+        format!("{:?}@{}", self.rule, self.program)
+    }
+}
+
 /// Owner steps of `rules` over [`PROGRAMS`], at most `per_rule` per rule
 /// (the first ones in program order).
 pub(super) fn honest_steps(rules: &[RuleIdC], per_rule: usize) -> Result<Vec<Honest>, String> {
@@ -264,56 +273,78 @@ pub(super) struct Mutant {
 /// Every (base, lane, kind) mutant of the statement layout `secs`, for
 /// `bases` honest steps (each with an enabled and a disabled base).
 pub(super) fn mutant_space(secs: &[(&'static str, usize)], bases: usize) -> Vec<Mutant> {
+    let mut out = Vec::new();
+    for base in 0..bases {
+        for disabled in [false, true] {
+            push_base_mutants(&mut out, secs, base, disabled);
+        }
+    }
+    out
+}
+
+/// The mutant space of honest steps whose statement layouts can differ
+/// (steps from different programs): each base uses its own layout.
+pub(super) fn honest_mutant_space(honest: &[Honest]) -> Vec<Mutant> {
+    let mut out = Vec::new();
+    for (base, h) in honest.iter().enumerate() {
+        push_base_mutants(&mut out, &sections(&h.witness), base, false);
+        push_base_mutants(&mut out, &sections(&h.disabled), base, true);
+    }
+    out
+}
+
+fn push_base_mutants(
+    out: &mut Vec<Mutant>,
+    secs: &[(&'static str, usize)],
+    base: usize,
+    disabled: bool,
+) {
     let mut start = BTreeMap::new();
     let mut at = 0usize;
     for (s, n) in secs {
         start.insert(*s, (at, *n));
         at += n;
     }
-    let mut out = Vec::new();
-    for base in 0..bases {
-        for disabled in [false, true] {
-            for (s, n) in secs {
-                let (s0, _) = start[s];
-                for off in 0..*n {
-                    for kind in [Kind::PlusOne, Kind::MinusOne, Kind::Zero, Kind::Random] {
-                        out.push(Mutant {
-                            base,
-                            disabled,
-                            section: s,
-                            offset: off,
-                            lane: s0 + off,
-                            kind,
-                        });
-                    }
-                    if let Some(rest) = s.strip_prefix("pre_") {
-                        let post = format!("post_{rest}");
-                        if start.contains_key(post.as_str()) {
-                            out.push(Mutant {
-                                base,
-                                disabled,
-                                section: s,
-                                offset: off,
-                                lane: s0 + off,
-                                kind: Kind::PairedPlusOne,
-                            });
-                        }
-                    }
+    for (s, n) in secs {
+        let (s0, _) = start[s];
+        for off in 0..*n {
+            for kind in [Kind::PlusOne, Kind::MinusOne, Kind::Zero, Kind::Random] {
+                out.push(Mutant {
+                    base,
+                    disabled,
+                    section: s,
+                    offset: off,
+                    lane: s0 + off,
+                    kind,
+                });
+            }
+            if let Some(rest) = s.strip_prefix("pre_") {
+                let post = format!("post_{rest}");
+                if start.contains_key(post.as_str()) {
+                    out.push(Mutant {
+                        base,
+                        disabled,
+                        section: s,
+                        offset: off,
+                        lane: s0 + off,
+                        kind: Kind::PairedPlusOne,
+                    });
                 }
             }
         }
     }
-    out
 }
 
 /// Seeded stratified sample of at most `cap` mutants: shuffle inside each
 /// (disabled, section) stratum, then take round-robin across strata, so every
 /// stratum receives mutants before any stratum receives a second share.
+///
+/// The order does not depend on `cap`: the sample for `cap` N is the first N
+/// mutants of the sample for any larger cap (a seeded prefix), so mutant ids
+/// (indices in the sample) are the same in every build of a component.
 pub(super) fn sample(space: Vec<Mutant>, cap: Option<usize>, seed: u64) -> Vec<Mutant> {
     let Some(cap) = cap else { return space };
-    if cap >= space.len() {
-        return space;
-    }
+    let cap = cap.min(space.len());
     let mut strata: BTreeMap<(bool, &'static str), Vec<Mutant>> = BTreeMap::new();
     for m in space {
         strata.entry((m.disabled, m.section)).or_default().push(m);
@@ -415,7 +446,8 @@ pub(super) fn verdict(c: &C6StepCircuit, st: Vec<Fr>, timeout: Option<Duration>)
     }
 }
 
-/// Built circuits of one emitter, one per rule, with the instruction lists.
+/// Built circuits of one emitter, one per (rule, program) key
+/// ([`Honest::key`]), with the instruction lists.
 pub(super) struct Built {
     pub circuits: BTreeMap<String, C6StepCircuit>,
     pub instructions: BTreeMap<String, Vec<Instruction>>,
@@ -429,16 +461,17 @@ pub(super) fn build_all(emit: EmitFn, tag: &str, honest: &[Honest]) -> Built {
         errors: BTreeMap::new(),
     };
     for h in honest {
-        let key = format!("{:?}", h.rule);
+        let key = h.key();
         if b.circuits.contains_key(&key) || b.errors.contains_key(&key) {
             continue;
         }
         let w = &h.witness;
-        let scope = format!("{tag}{}", key.to_lowercase());
+        let rule = format!("{:?}", h.rule);
+        let scope = format!("{tag}{}_{}", rule.to_lowercase(), h.program);
         let mut captured = Vec::new();
         let r = catch_unwind(AssertUnwindSafe(|| {
             build_step_circuit(
-                format!("skeleton_pilot_{tag}_{key}"),
+                format!("skeleton_pilot_{tag}_{rule}_{}", h.program),
                 w.source_params.clone(),
                 w.host_prefix.meta.len(),
                 w.host_prefix.prog.len(),
@@ -508,16 +541,28 @@ fn outcome_json(o: &MutantOutcome) -> Value {
 /// Grading parameters.
 pub(super) struct Plan {
     pub per_rule: usize,
+    /// N: the fixed number of planned mutants (a seeded prefix of the
+    /// stratified sample). Every build of a component uses the same N and
+    /// seed, so every build is compared on the same mutants.
     pub max_mutants: Option<usize>,
+    /// Mutant sample seed. Per component, not per build (amendment 1, D2).
     pub seed: u64,
     pub timeout: Option<Duration>,
-    /// Wall budget for the whole grade; the mutant loop stops when it is spent
-    /// and the receipt declares the shortfall (run < planned).
+    /// Safety wall budget for the whole grade. When it ends before all N
+    /// planned mutants ran, the grade is harness-incomplete
+    /// (`verdict.harness_ok` false, `primary_pass` null); it never reports a
+    /// lower coverage as a result (amendment 1, D2).
     pub wall_budget: Option<Duration>,
 }
 
 /// Grade `cand` against the component reference. Returns the summary
 /// receipt and the per-mutant records (JSON lines).
+///
+/// Harness checks (amendment 1): the reference must accept every honest
+/// enabled pair and every disabled identity pair, and the mutant loop must
+/// reach all N planned mutants. If either check fails, `verdict.harness_ok`
+/// is false and `primary_pass` is null: the grade is a harness error, not a
+/// candidate result.
 pub(super) fn grade(
     c: &Component,
     cand: EmitFn,
@@ -534,6 +579,7 @@ pub(super) fn grade(
     }
     let candidate = build_all(cand, "cand", &honest);
     let mut records = Vec::new();
+    let mut harness_errors: Vec<String> = Vec::new();
 
     // Static: lanes the reference body reads that the candidate never reads.
     let mut static_findings = Vec::new();
@@ -550,19 +596,27 @@ pub(super) fn grade(
             let (cr, p) = reads(ci);
             private_inputs += p;
             for lane in rr.difference(&cr) {
-                static_findings.push(json!({"rule": key, "lane": lane}));
+                static_findings.push(json!({"circuit": key, "lane": lane}));
             }
         }
     }
 
-    // Completeness: honest enabled pairs and disabled identities.
+    // Completeness: honest enabled pairs and disabled identities, each
+    // against the circuit built for its own (rule, program) layout.
     let mut honest_rows = Vec::new();
     let mut complete = candidate.errors.is_empty();
     for h in &honest {
-        let key = format!("{:?}", h.rule);
+        let key = h.key();
         for (what, w) in [("enabled", &h.witness), ("disabled_identity", &h.disabled)] {
             let st = w.to_statement_frs();
             let r = verdict(&reference.circuits[&key], st.clone(), plan.timeout);
+            if !matches!(r, MutantOutcome::Accepted) {
+                harness_errors.push(format!(
+                    "reference does not accept honest {what} pair {key} step {}: {}",
+                    h.step,
+                    outcome_json(&r)
+                ));
+            }
             let k = candidate
                 .circuits
                 .get(&key)
@@ -570,32 +624,58 @@ pub(super) fn grade(
             let ok = matches!(k, Some(MutantOutcome::Accepted));
             complete &= ok;
             honest_rows.push(json!({
-                "program": h.program, "step": h.step, "rule": key, "pair": what,
+                "program": h.program, "step": h.step, "rule": format!("{:?}", h.rule),
+                "circuit": key, "pair": what,
                 "reference": outcome_json(&r),
                 "candidate": k.as_ref().map(outcome_json),
             }));
         }
     }
 
-    // Raw-statement mutants.
-    let secs = sections(&honest[0].witness);
-    let space = mutant_space(&secs, honest.len());
+    // Raw-statement mutants: a fixed seeded prefix of N mutants. Each base
+    // uses its own statement layout.
+    let layouts: Vec<[Vec<(&'static str, usize)>; 2]> = honest
+        .iter()
+        .map(|h| [sections(&h.witness), sections(&h.disabled)])
+        .collect();
+    let space = honest_mutant_space(&honest);
     let space_len = space.len();
     let planned = sample(space, plan.max_mutants, plan.seed);
-    let mut rng = StdRng::seed_from_u64(plan.seed ^ 0x5EED_5EED);
     let mut tally: BTreeMap<&'static str, usize> = BTreeMap::new();
-    let mut by_section: BTreeMap<&'static str, (BTreeSet<usize>, usize, usize)> = BTreeMap::new();
+    // section -> (distinct offsets, distinct (base, disabled, offset),
+    // mutants, soundness mutants)
+    type Cov = (
+        BTreeSet<usize>,
+        BTreeSet<(usize, bool, usize)>,
+        usize,
+        usize,
+    );
+    let mut by_section: BTreeMap<&'static str, Cov> = BTreeMap::new();
     let mut findings = Vec::new();
     let mut stopped_by_wall_budget = false;
-    for (id, m) in planned.iter().enumerate() {
+    let mut reached = 0usize;
+    // On a harness error the oracle is not valid: run no mutant.
+    let mutants = if harness_errors.is_empty() {
+        &planned[..]
+    } else {
+        &planned[..0]
+    };
+    for (id, m) in mutants.iter().enumerate() {
         if plan.wall_budget.is_some_and(|b| t0.elapsed() > b) {
             stopped_by_wall_budget = true;
             break;
         }
+        reached = id + 1;
         let h = &honest[m.base];
-        let key = format!("{:?}", h.rule);
+        let key = h.key();
+        let secs = &layouts[m.base][usize::from(m.disabled)];
         let base = if m.disabled { &h.disabled } else { &h.witness }.to_statement_frs();
-        let Some(st) = apply(m, &base, &secs, &mut rng) else {
+        // Per-mutant RNG: the content of mutant `id` does not depend on
+        // which mutants ran before it.
+        let mut rng = StdRng::seed_from_u64(
+            (plan.seed ^ 0x5EED_5EED).wrapping_add((id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)),
+        );
+        let Some(st) = apply(m, &base, secs, &mut rng) else {
             *tally.entry("identical_to_base").or_default() += 1;
             continue;
         };
@@ -614,12 +694,14 @@ pub(super) fn grade(
         *tally.entry(class).or_default() += 1;
         let e = by_section.entry(m.section).or_default();
         e.0.insert(m.offset);
-        e.1 += 1;
+        e.1.insert((m.base, m.disabled, m.offset));
+        e.2 += 1;
         if class == "soundness" {
-            e.2 += 1;
+            e.3 += 1;
         }
         let rec = json!({
-            "id": id, "rule": key, "program": h.program, "step": h.step,
+            "id": id, "rule": format!("{:?}", h.rule), "circuit": key,
+            "program": h.program, "step": h.step,
             "base": if m.disabled { "disabled_identity" } else { "enabled" },
             "section": m.section, "offset": m.offset, "lane": m.lane, "kind": m.kind.label(),
             "reference": outcome_json(&r), "candidate": outcome_json(&k), "class": class,
@@ -630,36 +712,64 @@ pub(super) fn grade(
         records.push(rec);
     }
     let run = records.len();
+    let all_planned_ran = harness_errors.is_empty() && reached == planned.len();
+    if stopped_by_wall_budget {
+        harness_errors.push(format!(
+            "wall budget ended after {reached} of {} planned mutants",
+            planned.len()
+        ));
+    }
     let soundness = tally.get("soundness").copied().unwrap_or(0);
     let untested = tally.get("untested").copied().unwrap_or(0);
-    let coverage: Vec<Value> = secs
+    let mut section_names: Vec<&'static str> = Vec::new();
+    for (s, _) in layouts.iter().flatten().flatten() {
+        if !section_names.contains(s) {
+            section_names.push(s);
+        }
+    }
+    let coverage: Vec<Value> = section_names
         .iter()
-        .map(|(s, n)| {
-            let (lanes, cnt, sf) = by_section.get(s).cloned().unwrap_or_default();
-            json!({"section": s, "lanes": n, "lanes_mutated": lanes.len(), "mutants": cnt, "soundness": sf})
+        .map(|s| {
+            // "lanes": the largest length of the section over the base
+            // layouts; "lane_slots": the sum over every base layout.
+            let lens: Vec<usize> = layouts
+                .iter()
+                .flatten()
+                .map(|l| l.iter().find(|(n, _)| n == s).map_or(0, |(_, k)| *k))
+                .collect();
+            let lanes = lens.iter().copied().max().unwrap_or(0);
+            let slots: usize = lens.iter().sum();
+            let (offs, slot_set, cnt, sf) = by_section.get(s).cloned().unwrap_or_default();
+            json!({"section": s, "lanes": lanes, "lanes_mutated": offs.len(),
+                   "lane_slots": slots, "lane_slots_mutated": slot_set.len(),
+                   "mutants": cnt, "soundness": sf})
         })
         .collect();
     let built = candidate.errors.is_empty();
     let sound = built && soundness == 0 && static_findings.is_empty() && private_inputs == 0;
+    let harness_ok = harness_errors.is_empty();
     let summary = json!({
-        "schema": "skeleton-pilot-grade/1",
+        "schema": "skeleton-pilot-grade/2",
         "component": c.name,
         "stage": "ir_preprocessing: SDK ProofPreimage::check (nonproving); compiler and stdlib out of scope",
         "oracle": "reference emitter verdict on the same raw statement",
         "plan": {"per_rule": plan.per_rule, "max_mutants": plan.max_mutants, "seed": plan.seed,
                  "timeout_ms": plan.timeout.map(|t| t.as_millis()),
                  "wall_budget_s": plan.wall_budget.map(|t| t.as_secs())},
+        "harness": {"ok": harness_ok, "errors": harness_errors},
         "build": {"ok": built, "errors": candidate.errors, "instructions": ins_counts},
         "honest": honest_rows,
         "complete": complete,
         "static": {"private_inputs": private_inputs, "lanes_read_by_reference_not_candidate": static_findings},
-        "mutants": {"space": space_len, "planned": planned.len(), "run": run,
+        "mutants": {"space": space_len, "planned": planned.len(), "reached": reached, "run": run,
+                    "all_planned_ran": all_planned_ran,
                     "stopped_by_wall_budget": stopped_by_wall_budget,
                     "coverage_fraction": if space_len == 0 { 0.0 } else { run as f64 / space_len as f64 },
                     "by_class": tally, "by_section": coverage},
         "findings": findings,
-        "verdict": {"built": built, "complete": complete, "sound": sound,
-                    "primary_pass": sound && complete, "soundness_mutants": soundness,
+        "verdict": {"harness_ok": harness_ok, "built": built, "complete": complete, "sound": sound,
+                    "primary_pass": if harness_ok { json!(sound && complete) } else { Value::Null },
+                    "soundness_mutants": soundness,
                     "untested_mutants": untested},
         "wall_seconds": t0.elapsed().as_secs_f64(),
     });
@@ -722,6 +832,14 @@ fn skeleton_pilot_grade() {
         "SKELETON_PILOT_VERDICT {}",
         serde_json::to_string(&summary["verdict"]).unwrap_or_default()
     );
+    // A harness error or an incomplete mutant prefix is not a candidate
+    // result: the receipt is written, and the run exits non-zero.
+    assert_eq!(
+        summary["verdict"]["harness_ok"],
+        json!(true),
+        "SKELETON_PILOT_HARNESS_ERROR {}",
+        summary["harness"]
+    );
 }
 
 /// Weakened admin publish: the post outcome tag lane is replaced by the
@@ -763,6 +881,13 @@ fn mutant_space_covers_every_section_and_sample_is_stratified() {
         "8 strata, one mutant each before any repeat"
     );
     assert_eq!(sample(space.clone(), None, 7).len(), space.len());
+    // Seeded prefix: the sample for N is the first N of any larger sample,
+    // including a cap above the space size (amendment 1, D2).
+    let long = sample(space.clone(), Some(20), 7);
+    assert_eq!(&long[..8], &a[..]);
+    let all = sample(space.clone(), Some(space.len() + 5), 7);
+    assert_eq!(all.len(), space.len());
+    assert_eq!(&all[..20], &long[..]);
 }
 
 #[test]
@@ -794,25 +919,64 @@ fn apply_changes_exactly_the_planned_lanes() {
     let _ = rng.next_u64();
 }
 
-/// The reference graded against itself has no finding and is complete; a
+/// The reference graded against itself has no finding and is complete,
+/// with `per_rule` 2 so that `c6_admin_publish` takes honest steps from two
+/// programs with different layouts (fact3 and fold; amendment 1, D1). A
 /// weakened emitter that drops the post outcome tag is caught by the static
 /// lane check and by a directed raw-statement mutant (the sampled mutants may
-/// miss it: SAS-014). Circuit test: run it
-/// through `scripts/doctorwatson heavy` with RUST_TEST_THREADS=1.
+/// miss it: SAS-014); its grade has a zero wall budget, so it must be
+/// harness-incomplete (D2). A reference that rejects an honest pair is a
+/// harness error, not a candidate result. Circuit test: run it through
+/// `scripts/doctorwatson heavy` with RUST_TEST_THREADS=1.
 #[test]
 fn grader_finds_dropped_constraint_and_clears_reference() {
     let c = component("c6_admin_publish").unwrap();
     let plan = Plan {
-        per_rule: 1,
-        max_mutants: Some(120),
+        per_rule: 2,
+        max_mutants: Some(60),
         seed: 3,
         timeout: None,
         wall_budget: None,
     };
     let (s, _) = grade(&c, c.reference, &plan).unwrap();
+    assert_eq!(s["verdict"]["harness_ok"], json!(true), "{}", s["harness"]);
     assert_eq!(s["verdict"]["primary_pass"], json!(true), "{s}");
     assert_eq!(s["verdict"]["soundness_mutants"], json!(0));
-    let (w, recs) = grade(&c, weakened_admin_publish, &plan).unwrap();
+    assert_eq!(
+        s["verdict"]["untested_mutants"],
+        json!(0),
+        "{}",
+        s["mutants"]
+    );
+    assert_eq!(s["mutants"]["all_planned_ran"], json!(true));
+    assert_eq!(s["mutants"]["reached"], json!(60));
+    let rows = s["honest"].as_array().unwrap();
+    let programs: BTreeSet<String> = rows
+        .iter()
+        .map(|h| h["program"].as_str().unwrap().to_string())
+        .collect();
+    assert!(
+        programs.len() >= 2,
+        "per_rule 2 spans programs: {programs:?}"
+    );
+    assert!(
+        rows.iter()
+            .all(|h| h["reference"]["label"] == json!("accepted")),
+        "{rows:?}"
+    );
+
+    let incomplete = Plan {
+        per_rule: 1,
+        max_mutants: Some(60),
+        seed: 3,
+        timeout: None,
+        wall_budget: Some(Duration::ZERO),
+    };
+    let (w, recs) = grade(&c, weakened_admin_publish, &incomplete).unwrap();
+    assert!(recs.is_empty());
+    assert_eq!(w["verdict"]["harness_ok"], json!(false), "{w}");
+    assert_eq!(w["verdict"]["primary_pass"], Value::Null);
+    assert_eq!(w["mutants"]["stopped_by_wall_budget"], json!(true));
     // The weakened emitter pins post outcome to Halted, so it accepts the
     // enabled pair and rejects the disabled identity pair (post outcome there
     // is Running): incomplete by construction, and unsound by the static check.
@@ -829,8 +993,26 @@ fn grader_finds_dropped_constraint_and_clears_reference() {
     assert_eq!(w["verdict"]["sound"], json!(false));
     let lanes = w["static"]["lanes_read_by_reference_not_candidate"].to_string();
     assert!(lanes.contains("post_image."), "{lanes}");
-    let sampled_hit = recs.iter().any(|r| r["class"] == json!("soundness"));
-    eprintln!("weakened: sampled soundness mutants found: {sampled_hit}");
+
+    // Harness error: a "reference" that rejects an honest pair.
+    let broken = Component {
+        name: "c6_admin_publish_broken_reference",
+        rules: c.rules,
+        reference: weakened_admin_publish,
+    };
+    let (h, hrecs) = grade(&broken, c.reference, &incomplete).unwrap();
+    assert!(hrecs.is_empty());
+    assert_eq!(h["verdict"]["harness_ok"], json!(false), "{h}");
+    assert_eq!(h["verdict"]["primary_pass"], Value::Null);
+    assert!(
+        h["harness"]["errors"]
+            .to_string()
+            .contains("reference does not accept"),
+        "{}",
+        h["harness"]
+    );
+    assert_eq!(h["mutants"]["reached"], json!(0));
+
     // Directed: post outcome tag + 1 on the honest step.
     let tag = mori_core::sherlock::helper_machine::c6_phys::L_OUTCOME;
     let honest = honest_steps(c.rules, 1).unwrap();
@@ -843,7 +1025,7 @@ fn grader_finds_dropped_constraint_and_clears_reference() {
         + tag;
     let r = build_all(c.reference, "ref", &honest);
     let k = build_all(weakened_admin_publish, "cand", &honest);
-    let key = format!("{:?}", honest[0].rule);
+    let key = honest[0].key();
     let mut st = honest[0].witness.to_statement_frs();
     st[lane] = fr_plus(st[lane], Fq::ONE);
     assert!(matches!(
