@@ -1,0 +1,61 @@
+{
+  "component": "c6_admin_publish",
+  "condition": "B",
+  "vendor": "claude",
+  "seed": 1,
+  "sandbox_head": "b64cdb53b41a9d858996956d426dc8e07cdea2f1",
+  "lane_exit": 0,
+  "lane_wall_seconds": 231.3,
+  "usage": {
+    "usage": {
+      "input_tokens": 36,
+      "cache_creation_input_tokens": 71071,
+      "cache_read_input_tokens": 832429,
+      "output_tokens": 23687,
+      "output_tokens_details": {
+        "thinking_tokens": 4351
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 71071,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 1332,
+          "cache_read_input_tokens": 76430,
+          "cache_creation_input_tokens": 732,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 732
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 1.2089378,
+    "num_turns": 20,
+    "is_error": false,
+    "result": "I've written `c6_admin_publish_step.rs`, and `cargo check -p mori-backend --lib --offline` passes with no clippy warnings for the file. I haven't run any tests (the lane rules don't allow it), so completeness and soundness rest on comparing the code with the owner machine and the shared kit. No signatures changed, and the consumer compiles against the file unchanged.\n\n**What the relation constrains**\n- **Prefix:** enable is 0 or 1. Host schema and carrier version are fixed constants. Post META/PROG/CTX equal pre in every case, and the META/CTX magic and version are checked when enabled. Every pre lane is checked to fit in 128 bits. Post lanes aren't checked again because each one is forced equal to an already-checked value.\n- **Rule selection (when enabled):** these are the dispatch owner's five conditions for this rule:\n  - outcome is Running (lane 23 = 0)\n  - no helper record and no result record\n  - control tag is Return\n  - frame count is 0\n- **Pre-state validity (when enabled):**\n  - Magic and version are correct, and the unused Running outcome lanes 24\u201325 are zero.\n  - The Return value reference is valid: kind is 0 or 1, and the index is below the constant or data-node cap.\n  - Unused control lanes 5..19 are zero.\n  - Caps on origin, env root, stack limit, alloc and segment lanes hold, and ACTIVE equals DATA lanes 3..7.\n  - Because depth is 0, every frame slot must be all zero.\n- **The write:** each of lanes 23\u201325 is computed as `enable ? new : pre`, where the new values are Halted (1), then the kind and index copied from the pre control (lanes 3 and 4).\n- **Everything else:** every other image lane, every DATA lane and every HELPER lane must equal pre, whatever enable is. That gives zero charge, and P2's fuel check is never consulted, so a pre-state with zero remaining work is accepted.\n- **Canonicality:** META (bound check over pre and post), PROG/CTX canonicality plus the CTX binding, and pre DATA and pre HELPER canonicality, all applied only when enabled.\n"
+  },
+  "blind_violations": 0,
+  "candidate_sha256": "15267f185dd595550dc17d429e437ea73f2c274203f742c8d9a443d0736bebf3",
+  "grade_exit": 0,
+  "blind_violations_before_audit_fix": 1,
+  "verdict": {
+    "built": true,
+    "complete": false,
+    "primary_pass": false,
+    "sound": true,
+    "soundness_mutants": 0,
+    "untested_mutants": 1084
+  }
+}

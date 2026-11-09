@@ -1,0 +1,68 @@
+{
+  "vendor": "claude",
+  "model": "claude-opus-5-5",
+  "argv": [
+    "claude",
+    "-p",
+    "--restricted",
+    "--safe-mode",
+    "--strict-mcp-config",
+    "--tools",
+    "Bash,Read,Edit,Write,Glob,Grep",
+    "--allowedTools",
+    "Read,Edit,Write,Glob,Grep,Bash(cargo check:*),Bash(cargo clippy:*),Bash(cargo fmt:*)",
+    "--permission-mode",
+    "dontAsk",
+    "--model",
+    "claude-opus-5-5",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--no-session-persistence",
+    "<prompt:research/skeleton-coding-20261108/pilot/runs/smoke/c6_admin_publish-C-claude-s1/prompt.md>"
+  ],
+  "cwd": "/tmp/claude-1000/-home-hoskinson/2cb6ee55-41ca-41d1-bec5-db132e0b58c8/scratchpad/lane-claude",
+  "exit": 0,
+  "wall_seconds": 133.9,
+  "prompt_sha256": "996081a94d777803c4f9400b5fb99d608a79f25f7cde276ef689879a76ea28ae",
+  "usage": {
+    "usage": {
+      "input_tokens": 34,
+      "cache_creation_input_tokens": 52710,
+      "cache_read_input_tokens": 693586,
+      "output_tokens": 15251,
+      "output_tokens_details": {
+        "thinking_tokens": 1851
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 52710,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 1023,
+          "cache_read_input_tokens": 61070,
+          "cache_creation_input_tokens": 944,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 944
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "total_cost_usd": 0.8655531999999999,
+    "num_turns": 21,
+    "is_error": false,
+    "result": "I wrote `c6_admin_publish_step.rs`. `cargo check -p mori-backend --lib --offline` passes, and neither check nor clippy reports anything for the new file. The file is formatted to match `cargo fmt --check`. I didn't change any signatures. I didn't run `cargo test`, as the rules say, so the circuit itself has not been run against owner snapshots yet.\n\n**What the relation constrains**, in the order the skeleton gives:\n1. **Header and pre image:** `prefix` plus `validate_pre_image` from the kit. Enable must be 0 or 1, the host schema and carrier version must be the fixed constants, and the META/PROG/CTX prefix and lane ranges are checked. When enabled, the pre image header and every active frame are validated and inactive frame slots must be zero.\n2. **Selection:** the shared dispatch owner selects `KAdminPublishValue`: outcome Running, no helper, no result, control tag `Return`, depth 0. Because the dispatch owner only looks at those tags, I added `pre_publish_shape`, which also requires (when enabled):\n   - the padding lanes 24\u201325 of the Running outcome are zero;\n   - the Return value reference is valid (kind is 0 or 1, index below its table's cap);\n   - control lanes 3..17 are zero.\n   This mirrors what `c6_return_left_step` does. Without it, the prover could choose an out-of-range reference that the circuit would copy straight into `Halted { value }`.\n3. **The write:** post lane 23 = 1 (Halted), and post lanes 24\u201325 = pre `L_CONTROL+1..+3`.\n4. **Everything else is preserved:** every other post image header lane and every frame slot equals its pre lane. That includes control, remaining and consumed work and the reference cursor, so the charge is 0 and there is no fuel check. All post DATA and HELPER lanes equal their pre lanes.\n5. **Canonical form:** `compose_canonical` covers pre and post META (bound to the source params), pre PROG and CTX (CTX equal to the expected context), and pre and post DATA and HELPER.\n6. **Disabled:** with enable = 0, `disabled_identity` for"
+  }
+}
