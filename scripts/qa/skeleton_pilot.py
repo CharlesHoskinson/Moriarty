@@ -433,7 +433,8 @@ def cmd_grade(component: str, candidate: Path | None, out: Path, target: str,
     return p.returncode
 
 
-def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: int) -> int:
+def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: int,
+                    self_test: bool = True) -> int:
     """Grade several built cells in ONE heavy run (one queue slot). One grader export;
     between cells the script copies in that cell's candidate and adaptor. The batch
     export (`grader-batch`) is separate from the single-cell export (`grader`), so a
@@ -455,7 +456,19 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
                "SKELETON_PILOT_COMPONENT": rec["component"], "SKELETON_PILOT_OUT": str(out),
                "SKELETON_PILOT_TARGET": "candidate", "SKELETON_PILOT_SEED": str(rec["seed"]),
                "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS}
-        lines += [f"cp {inst}/*.rs {sm}/",
+        lines += [f"cp {inst}/*.rs {sm}/"]
+        if self_test and cell is cells[0]:
+            # Grader self-check after the first install (reference clean, weakened emitter caught), so a
+            # grader defect is visible before any candidate verdict is read.
+            log = (cells[0].parent / "grader-selftest.log").resolve()
+            lines += ["echo '== grader self-test'", "start=$(date +%s)",
+                      f"timeout {per_cell} env RUST_TEST_THREADS=1"
+                      f" CARGO_TARGET_DIR={TARGET_ROOT / 'skeleton-pilot-grader'}"
+                      f" cargo test --manifest-path {grader}/Cargo.toml -p mori-backend --lib --locked"
+                      " sherlock_machine::skeleton_pilot:: -- --nocapture"
+                      f" > {log} 2>&1",
+                      "echo \"self-test exit $? wall $(( $(date +%s) - start ))s\""]
+        lines += [
                   f"echo '== {cell.name}'",
                   "start=$(date +%s)",
                   f"timeout {per_cell} env " + " ".join(f"{k}={v}" for k, v in env.items())
@@ -471,6 +484,7 @@ def cmd_grade_batch(cells: list[Path], scratch: Path, max_wall: int, per_cell: i
             "--", "bash", str(script)]
     p = subprocess.run(argv, cwd=REPO, capture_output=True, text=True)
     (scratch / "grade-batch.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr)
+    shutil.copy(scratch / "grade-batch.log", cells[0].parent / "grade-batch.log")
     for cell in cells:
         rec = json.loads((cell / "cell.json").read_text())
         g = cell / "grade" / "grade.json"
