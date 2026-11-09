@@ -193,11 +193,17 @@ module ivc_circuit {
     val chosen = selectGadget(isGenesis, w.initD, w.prevD)
     val genesisLinkOk = (chosen == w.prevD)
 
-    // Mode 2 adds Task 2.3 / SRC-004 range checks (`prev_h < HMAX`, `1 <= steps <= S_MAX`, `h < HMAX`)
+    // Mode 2 adds Task 2.3 / SRC-004 range checks (`prev_h < HMAX`, `1 <= steps <= S_MAX`, `h < HMAX`).
+    // Retargeted 2026-11-09 (council review 2.14, item 19): the checks apply to the raw witness
+    // values `w.prevH`, `w.leafSteps` and their raw sum, before the mod-P reduction. A range
+    // check on the reduced value cannot refuse attack A1 (`prevH = P` reduces to 0 and passes
+    // `0 <= prevH < HMAX`); in the circuit the lane is the previous node's range-checked `h`, so
+    // its raw value is below HMAX. The reduced `h` lane is still checked.
     val rangeChecksOk =
       if (MODE == 2) and {
-        0 <= prevH, prevH < HMAX,
-        1 <= steps, steps <= S_MAX,
+        0 <= w.prevH, w.prevH < HMAX,
+        1 <= w.leafSteps, w.leafSteps <= S_MAX,
+        w.prevH + w.leafSteps < HMAX,
         0 <= h, h < HMAX,
       } else true
 

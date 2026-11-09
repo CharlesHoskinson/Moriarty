@@ -13,13 +13,32 @@
 // reference machine (cryptographic soundness); digests are injective on the carrier domain
 // (a digest is the pair (prog, step index) of the reference trace); the in-circuit verifier,
 // the accumulator fold and the pairing are sound. The accumulator is abstracted as the ordered
-// list of folded certificate ids (the hash-bound manifest, tree.md risk 4).
+// list of folded certificate ids (`acc`).
+//
+// Manifest (S3, council review 2.14, 2026-11-09): the bundle carries a structured manifest, one
+// entry per node in children-first order with its slot bits (hasL, hasLeaf, hasR) and child
+// references. The decider (`canDecide`) does not read the manifest: on-chain soundness rests on
+// the pairing of the root accumulator and the statement chain only. The off-chain verifier
+// (`verifyChain`, SRC-010 `verify_chain`) replays the manifest; the manifest hash is bound into
+// the bundle. I9 is therefore a property of decider plus verify_chain, not of the decider alone.
+//
+// Genesis accumulator (S1, SRC-005 realization (a), lead decision 2026-11-09): a node's carried
+// accumulator is the witness-supplied `carry`; at genesis (no carried child) it is scaled by the
+// bit and collapsed to the trivial encoding, so it contributes nothing to `acc`; off genesis it is
+// the carried child's accumulator, bound by the previous proof's public input. The adversarial
+// action `genesis_carry` supplies a foreign carry at genesis; invariant I11 (`carryOk`) checks no
+// node folds a certificate outside its own subtree. The encoding-level argument is Lean L-D
+// (`genesis_collapse_both`, F21).
+//
+// Node statement (S4, lead decision 2026-11-09): the linear node (TREE = false) keeps its
+// in-node genesis check (`genesisAtNode`); the slot node (TREE = true) leaves genesis to the
+// decider. Lean `lin_refines_chain` (F21) maps the linear node statement to `link`.
 //
 // Programs: PROGS = 1..L; program p runs p owner steps and halts, so one instance covers every
 // trace length 1..L. Heights are integers below a fixed bound HMAX (SRC-004, 2^64 in the design).
 //
 // Not covered (on purpose): the circuit relations themselves (SRC-003 leaf internals, SRC-004
-// range gadgets, SRC-005 accumulator scaling at genesis, SRC-006 pairing), the Blake2b/Poseidon
+// range gadgets, the encoding of SRC-005 genesis scaling, SRC-006 pairing), the Blake2b/Poseidon
 // digest encodings, keygen and VK bytes, timing and memory of real proofs (measured rows), and
 // the accumulator algebra (Lean L-D, F21). Model execution evidence covers these instances only.
 // Record of runs: scripts/qa/check-f20.sh (typecheck, `quint test` with TREE false/true and
@@ -45,11 +64,14 @@ module aggregation {
   type OptNode = NodeRef(int) | NoNode
   type OptLeaf = LeafRef(LeafId) | NoLeaf
   type CertRef = LeafC(LeafId) | NodeC(int)
+  // One manifest entry: the node, its slot bits and its child references (S3).
+  type ManEntry = { node: int, hasL: bool, l: OptNode, hasLeaf: bool, leaf: OptLeaf,
+    hasR: bool, r: OptNode }
   type Node = { id: int, prog: int, pre: Digest, post: Digest, hLo: int, hHi: int,
     l: OptNode, leaf: OptLeaf, r: OptNode,
-    cover: Set[LeafId], acc: List[CertRef], depth: int, key: Key }
+    cover: Set[LeafId], acc: List[CertRef], man: List[ManEntry], depth: int, key: Key }
   type Stmt = { prog: int, init: Digest, fin: Digest, nSteps: int, result: int }
-  type Decision = { stmt: Stmt, root: int, manifest: List[CertRef], key: Key }
+  type Decision = { stmt: Stmt, root: int, manifest: List[ManEntry], key: Key }
   type State = {
     leaves: LeafId -> Leaf,   // leaf certificates (prover output; premise: unforgeable)
     nodes: int -> Node,       // node certificates by id (ids increase with certification)
@@ -153,34 +175,84 @@ module aggregation {
     val cr: Set[LeafId] = match r { | NodeRef(i) => st.nodes.get(i).cover | NoNode => Set() }
     cl.union(cf).union(cr)
   }
+  // Realization (a): the carried accumulator is scaled by the slot bit and collapsed before the
+  // fold. A present carried child binds it to the child's accumulator (previous proof's public
+  // input); an absent one collapses any witness-supplied carry to the trivial encoding (no entry).
+  pure def carriedAcc(st: State, l: OptNode, carry: List[CertRef]): List[CertRef] =
+    match l { | NodeRef(i) => st.nodes.get(i).acc | NoNode => [] }
   // The accumulator abstraction: fold order is children's folds in slot order, then self.
-  pure def accOf(st: State, l: OptNode, lf: OptLeaf, r: OptNode, self: int): List[CertRef] = {
-    val al: List[CertRef] = match l { | NodeRef(i) => st.nodes.get(i).acc | NoNode => [] }
+  pure def accWith(st: State, l: OptNode, lf: OptLeaf, r: OptNode, self: int,
+      carry: List[CertRef]): List[CertRef] = {
+    val al: List[CertRef] = carriedAcc(st, l, carry)
     val af: List[CertRef] = match lf { | LeafRef(x) => [LeafC(x)] | NoLeaf => [] }
     val ar: List[CertRef] = match r { | NodeRef(i) => st.nodes.get(i).acc | NoNode => [] }
     al.concat(af).concat(ar).append(NodeC(self))
   }
+  pure def accOf(st: State, l: OptNode, lf: OptLeaf, r: OptNode, self: int): List[CertRef] =
+    accWith(st, l, lf, r, self, [])
+  // The structured manifest: children's manifests in slot order, then this node's entry.
+  pure def entryOf(self: int, l: OptNode, lf: OptLeaf, r: OptNode): ManEntry =
+    { node: self, hasL: l != NoNode, l: l, hasLeaf: lf != NoLeaf, leaf: lf, hasR: r != NoNode, r: r }
+  pure def manOf(st: State, l: OptNode, lf: OptLeaf, r: OptNode, self: int): List[ManEntry] = {
+    val ml: List[ManEntry] = match l { | NodeRef(i) => st.nodes.get(i).man | NoNode => [] }
+    val mr: List[ManEntry] = match r { | NodeRef(i) => st.nodes.get(i).man | NoNode => [] }
+    ml.concat(mr).append(entryOf(self, l, lf, r))
+  }
+  // The flattened view of the first F20 draft (node ids in fold order): blind to slot placement.
+  pure def flatMan(man: List[ManEntry]): List[int] = man.foldl([], (a, e) => a.append(e.node))
   pure def depthOf(st: State, o: OptNode): int =
     match o { | NodeRef(i) => st.nodes.get(i).depth | NoNode => 0 }
-  pure def mkNode(st: State, l: OptNode, lf: OptLeaf, r: OptNode): Node = {
+  pure def mkNodeWith(st: State, l: OptNode, lf: OptLeaf, r: OptNode, carry: List[CertRef]): Node = {
     val g = compose(slotSegs(st, l, lf, r))
     { id: st.nextNode, prog: g.prog, pre: g.pre, post: g.post, hLo: g.hLo, hHi: g.hHi,
-      l: l, leaf: lf, r: r, cover: coverOf(st, l, lf, r), acc: accOf(st, l, lf, r, st.nextNode),
+      l: l, leaf: lf, r: r, cover: coverOf(st, l, lf, r),
+      acc: accWith(st, l, lf, r, st.nextNode, carry), man: manOf(st, l, lf, r, st.nextNode),
       depth: 1 + maxInt(depthOf(st, l), depthOf(st, r)), key: NodeKey }
   }
-  pure def certify(st: State, l: OptNode, lf: OptLeaf, r: OptNode): State =
-    { ...st, nodes: st.nodes.put(st.nextNode, mkNode(st, l, lf, r)), nextNode: st.nextNode + 1 }
+  pure def mkNode(st: State, l: OptNode, lf: OptLeaf, r: OptNode): Node = mkNodeWith(st, l, lf, r, [])
+  pure def certifyWith(st: State, l: OptNode, lf: OptLeaf, r: OptNode, carry: List[CertRef]): State =
+    { ...st, nodes: st.nodes.put(st.nextNode, mkNodeWith(st, l, lf, r, carry)), nextNode: st.nextNode + 1 }
+  pure def certify(st: State, l: OptNode, lf: OptLeaf, r: OptNode): State = certifyWith(st, l, lf, r, [])
   pure def refuse(st: State): State = { ...st, refused: st.refused + 1 }
 
   // ---- decider and contract
   pure def stmtOf(n: Node): Stmt =
     { prog: n.prog, init: initOf(n.prog), fin: n.post, nSteps: n.hHi, result: resultOf(n.prog) }
-  // Root accepted iff pre = init, hLo = 0, post halted, key pinned, manifest replays the fold.
-  pure def canDecide(st: State, id: int, manifest: List[CertRef]): bool =
+  // The decider: root accepted iff pre = init, hLo = 0, post halted, key pinned. It does not
+  // read the manifest (S3).
+  pure def canDecide(st: State, id: int): bool =
     st.nodes.keys().contains(id) and
     val n = st.nodes.get(id)
-    and { n.key == NodeKey, n.pre == initOf(n.prog), n.hLo == 0, halted(n.post), manifest == n.acc }
-  pure def applyDecide(st: State, id: int, manifest: List[CertRef]): State = { ...st,
+    and { n.key == NodeKey, n.pre == initOf(n.prog), n.hLo == 0, halted(n.post) }
+  // verify_chain (SRC-010): the bundled manifest replays the root's fold exactly. Every entry's
+  // slot bits agree with its references and with the certified node, every child is replayed
+  // before its parent, the last entry is the root, and the entries are the root's slot-order fold.
+  pure def bitsOk(e: ManEntry): bool = and {
+    e.hasL == (e.l != NoNode), e.hasLeaf == (e.leaf != NoLeaf), e.hasR == (e.r != NoNode) }
+  pure def refs(e: ManEntry): Set[int] = {
+    val a: Set[int] = match e.l { | NodeRef(i) => Set(i) | NoNode => Set() }
+    val b: Set[int] = match e.r { | NodeRef(i) => Set(i) | NoNode => Set() }
+    a.union(b)
+  }
+  pure def entryReplays(st: State, manifest: List[ManEntry], i: int): bool = {
+    val e = manifest[i]
+    and {
+      bitsOk(e), st.nodes.keys().contains(e.node),
+      st.nodes.get(e.node).l == e.l, st.nodes.get(e.node).leaf == e.leaf,
+      st.nodes.get(e.node).r == e.r,
+      refs(e).forall(c => manifest.indices().exists(j => j < i and manifest[j].node == c)),
+    }
+  }
+  pure def verifyChain(st: State, id: int, manifest: List[ManEntry]): bool =
+    st.nodes.keys().contains(id) and manifest.length() > 0 and and {
+      manifest[manifest.length() - 1].node == id,
+      manifest.indices().forall(i => entryReplays(st, manifest, i)),
+      manifest == st.nodes.get(id).man,
+    }
+  // A bundle is published when the decider accepts and verify_chain replays its manifest.
+  pure def canPublish(st: State, id: int, manifest: List[ManEntry]): bool =
+    canDecide(st, id) and verifyChain(st, id, manifest)
+  pure def applyDecide(st: State, id: int, manifest: List[ManEntry]): State = { ...st,
     decided: st.decided.union(Set({ stmt: stmtOf(st.nodes.get(id)), root: id,
       manifest: manifest, key: DeciderKey })) }
   pure def canAccept(st: State, x: Stmt): bool =
@@ -206,14 +278,17 @@ module aggregation {
   // Padding child: a unary node whose other slots are disabled identities; guarded by TREE.
   pure def canPad(st: State, l: int): bool = TREE and canNode(st, NodeRef(l), NoLeaf, NoNode)
   action pad(l: int): bool = all { canPad(s, l), node(NodeRef(l), NoLeaf, NoNode) }
-  action decide(id: int, manifest: List[CertRef]): bool = all {
-    canDecide(s, id, manifest), s' = applyDecide(s, id, manifest) }
+  action decide(id: int, manifest: List[ManEntry]): bool = all {
+    canPublish(s, id, manifest), s' = applyDecide(s, id, manifest) }
   action accept(x: Stmt): bool = all { canAccept(s, x), s' = applyAccept(s, x) }
   // An attempt certifies when the constraints hold and is otherwise refused and counted.
   action attempt(l: OptNode, lf: OptLeaf, r: OptNode): bool =
     if (canNode(s, l, lf, r)) s' = certify(s, l, lf, r) else s' = refuse(s)
-  action attemptDecide(id: int, manifest: List[CertRef]): bool =
-    if (canDecide(s, id, manifest)) s' = applyDecide(s, id, manifest) else s' = refuse(s)
+  action attemptDecide(id: int, manifest: List[ManEntry]): bool =
+    if (canPublish(s, id, manifest)) s' = applyDecide(s, id, manifest) else s' = refuse(s)
+  // A node attempt with a witness-supplied carried accumulator.
+  action attemptCarry(l: OptNode, lf: OptLeaf, r: OptNode, carry: List[CertRef]): bool =
+    if (canNode(s, l, lf, r)) s' = certifyWith(s, l, lf, r, carry) else s' = refuse(s)
   action attemptAccept(x: Stmt): bool =
     if (canAccept(s, x)) s' = applyAccept(s, x) else s' = refuse(s)
 
@@ -246,8 +321,8 @@ module aggregation {
   // schedule: any admissible fold, join or pad (every interleaving is a run of the model).
   action schedule = any { foldAny, joinAny, padAny }
   action decideAny = {
-    nondet id = s.nodes.keys().filter(i => canDecide(s, i, s.nodes.get(i).acc)).oneOf()
-    decide(id, s.nodes.get(id).acc)
+    nondet id = s.nodes.keys().filter(i => canPublish(s, i, s.nodes.get(i).man)).oneOf()
+    decide(id, s.nodes.get(id).man)
   }
   action acceptAny = {
     nondet x = s.decided.map(dc => dc.stmt).filter(x => canAccept(s, x)).oneOf()
@@ -286,16 +361,24 @@ module aggregation {
   action empty_node = attempt(NoNode, NoLeaf, NoNode)
   // shape_mismatch: a decidable root presented with a manifest of a different fold order.
   action shape_mismatch = {
-    nondet id = s.nodes.keys().filter(i => canDecide(s, i, s.nodes.get(i).acc)).oneOf()
-    val acc = s.nodes.get(id).acc
-    attemptDecide(id, acc.slice(1, acc.length()))
+    nondet id = s.nodes.keys().filter(i => canPublish(s, i, s.nodes.get(i).man)).oneOf()
+    val man = s.nodes.get(id).man
+    attemptDecide(id, man.slice(1, man.length()))
+  }
+  // genesis_carry (S1): a genesis fold (no carried child) with a witness-supplied carried
+  // accumulator taken from another node: an unauthenticated deferred obligation.
+  action genesis_carry = {
+    nondet lf = s.leaves.keys().filter(x => s.leaves.get(x).hPre == 0).oneOf()
+    nondet src = s.nodes.keys().oneOf()
+    attemptCarry(NoNode, LeafRef(lf), NoNode, s.nodes.get(src).acc)
   }
   // replay: a statement the contract already accepted.
   action replay = {
     nondet x = listSet(s.accepted).oneOf()
     attemptAccept(x)
   }
-  action adversary = any { forge_link, reuse_leaf, swap_children, empty_node, shape_mismatch, replay }
+  action adversary = any { forge_link, reuse_leaf, swap_children, empty_node, shape_mismatch, replay,
+    genesis_carry }
 
   action step = any { leafAny, schedule, decideAny, acceptAny, adversary }
 
@@ -376,11 +459,13 @@ module aggregation {
     nodesOf(st).forall(n => n.cover.forall(x => x.prog == n.prog)),
     st.decided.forall(dc => dc.stmt.prog == st.nodes.get(dc.root).prog),
   }
-  // I9 shape binding: the decided manifest is the root's fold order, the fold order is the
-  // slot-order concatenation of the children's, and no certificate is folded twice.
+  // I9 shape binding (decider plus verify_chain): every published manifest replays the root's
+  // structured fold, slot bits included; the manifest and the fold order are the slot-order
+  // concatenation of the children's; no certificate is folded twice.
   pure def shapeOk(st: State): bool = and {
-    st.decided.forall(dc => dc.manifest == st.nodes.get(dc.root).acc
+    st.decided.forall(dc => verifyChain(st, dc.root, dc.manifest)
       and dc.stmt == stmtOf(st.nodes.get(dc.root))),
+    nodesOf(st).forall(n => n.man == manOf(st, n.l, n.leaf, n.r, n.id)),
     nodesOf(st).forall(n => n.acc == accOf(st, n.l, n.leaf, n.r, n.id)),
     nodesOf(st).forall(n => n.acc.indices().forall(i => n.acc.indices().forall(j =>
       i == j or n.acc[i] != n.acc[j]))),
@@ -393,12 +478,22 @@ module aggregation {
       and leafKeyOk(st, n.leaf)),
     st.decided.forall(dc => dc.key == DeciderKey and st.nodes.get(dc.root).key == NodeKey),
   }
+  // I11 genesis carry (S1): no node folds a certificate outside its own subtree. The leaf
+  // entries of its accumulator are exactly its cover, and a node with no carried child folds
+  // nothing but its own slots.
+  pure def accLeaves(acc: List[CertRef]): Set[LeafId] =
+    acc.foldl(Set(), (a, c) => match c { | LeafC(x) => a.union(Set(x)) | NodeC(_) => a })
+  pure def carryOk(st: State): bool = nodesOf(st).forall(n => and {
+    accLeaves(n.acc) == n.cover,
+    n.l != NoNode or n.acc == accOf(st, n.l, n.leaf, n.r, n.id),
+  })
   // Linear shape (TREE = false): every node is link(carried?, leaf) and a prefix from genesis.
   pure def chainOnly(st: State): bool =
     TREE or nodesOf(st).forall(n => n.r == NoNode and n.leaf != NoLeaf and n.hLo == 0 and n.pre == initOf(n.prog))
   pure def rulesOk(st: State): bool = and {
     linkageOk(st), heightsOk(st), coverageOk(st), paddingOk(st), scheduleOk(st),
     genesisOk(st), replayOk(st), programOk(st), shapeOk(st), keysOk(st), chainOnly(st),
+    carryOk(st),
   }
 
   val I1_linkage = linkageOk(s)
@@ -412,6 +507,7 @@ module aggregation {
   val I9_shape = shapeOk(s)
   val fixedKeys = keysOk(s)
   val linearOnly = chainOnly(s)
+  val I11_genesisCarry = carryOk(s)
   val allInvariants = rulesOk(s)
 
   // I10 liveness witnesses (reachability; `quint run --witnesses`, and driven in the tests)
@@ -424,7 +520,7 @@ module aggregation {
   val wDeep = nodesOf(s).exists(n => n.depth >= 3)
   val wDecided = s.decided.size() > 0
   val wTwoRootsOneStmt = nodesOf(s).exists(a => nodesOf(s).exists(b =>
-    a.id != b.id and a.acc != b.acc and canDecide(s, a.id, a.acc) and canDecide(s, b.id, b.acc)))
+    a.id != b.id and a.man != b.man and canPublish(s, a.id, a.man) and canPublish(s, b.id, b.man)))
   val wAccepted = s.accepted.length() > 0
   val wRefused = s.refused > 0
 }

@@ -19,9 +19,10 @@ out="$(quint test "$tests" --main aggregation_test --max-samples "$samples" --se
   || { echo "$out" | grep -v '^    ok' | tail -40; echo "F20: quint test failed"; exit 1; }
 echo "$out" | grep -E '^  [0-9]+ (passing|failed)'
 if echo "$out" | grep -qE '^  [0-9]+ failed'; then echo "F20: tests failed"; exit 1; fi
-# One seeded mutant per invariant (I1-I10, fixed keys, TREE guard, Q-C), each listed and passed.
+# One seeded mutant per invariant (I1-I11, fixed keys, TREE guard, Q-C, S3 L/R placement), each
+# listed and passed.
 for m in Linkage Range Reuse Padding Unary Schedule Genesis Replay Program Shape Liveness Keys \
-         JoinInChain OverAdmit NodeEarly NoReserve; do
+         JoinInChain OverAdmit NodeEarly NoReserve PlacementLR GenesisCarry; do
   grep -qE "ok .*Mutant${m}CaughtTest passed" <<<"$out" || { echo "F20: mutant $m not exercised"; exit 1; }
 done
 # Both shapes and every S must be present in the passing list.
