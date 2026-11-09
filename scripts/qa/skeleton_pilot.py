@@ -17,7 +17,8 @@ Subcommands:
   skeleton COMPONENT KIND RUNDIR one skeleton-author lane (blind -> B, derived -> C),
                                  always Claude; writes RUNDIR/skeletons/COMPONENT-B|C.rs
   cell COMPONENT CONDITION VENDOR SEED RUNDIR
-                                 one build: sandbox, lane, extract, audit, grade
+                                 one build: sandbox, lane, extract, audit
+  grade-cell CELLDIR             grade a built cell (one grade at a time)
 
 Model ids and flags are fixed here and in the protocol; change both together.
 """
@@ -88,14 +89,40 @@ def export_head(out: Path) -> str:
     """Extract HEAD's workspace files into `out` (no .git). Returns the commit."""
     head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], check=True,
                           capture_output=True, text=True).stdout.strip()
-    blob = subprocess.run(["git", "-C", str(REPO), "archive", "--format=tar", head, "--",
-                           *EXPORT_PATHS], check=True, capture_output=True).stdout
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    with tarfile.open(fileobj=io.BytesIO(blob)) as t:
-        t.extractall(out, filter="data")
+
+    def extract(paths: list[str]) -> None:
+        blob = subprocess.run(["git", "-C", str(REPO), "archive", "--format=tar", head, "--",
+                               *paths], check=True, capture_output=True).stdout
+        with tarfile.open(fileobj=io.BytesIO(blob)) as t:
+            t.extractall(out, filter="data")
+
+    extract(EXPORT_PATHS)
+    extra = sorted(included_outside(out))
+    if extra:
+        extract(extra)
     return head
+
+
+INCLUDE_RE = re.compile(r'include_(?:str|bytes)!\(\s*"([^"]+)"')
+
+
+def included_outside(root: Path) -> set[str]:
+    """Files outside the exported paths that crate sources `include_str!`/`include_bytes!`,
+    as repo-relative paths that exist at HEAD (only those files, not their folders)."""
+    out = set()
+    for f in (root / "crates").rglob("*.rs"):
+        for rel in INCLUDE_RE.findall(f.read_text(errors="replace")):
+            p = os.path.normpath(f.parent / rel)
+            try:
+                r = Path(p).relative_to(root)
+            except ValueError:
+                continue
+            if not (root / r).exists() and (REPO / r).is_file():
+                out.add(str(r))
+    return out
 
 
 MOD_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;\s*$")
@@ -400,7 +427,8 @@ def cmd_grade(component: str, candidate: Path | None, out: Path, target: str,
 
 
 def cmd_cell(component: str, condition: str, vendor: str, seed: int, rundir: Path,
-             scratch: Path, max_wall: int) -> dict:
+             scratch: Path) -> dict:
+    """Build one cell (sandbox, lane, extract, audit). Grade it with grade-cell."""
     cell = rundir / f"{component}-{condition}-{vendor}-s{seed}"
     cell.mkdir(parents=True, exist_ok=True)
     stub = None
@@ -419,13 +447,26 @@ def cmd_cell(component: str, condition: str, vendor: str, seed: int, rundir: Pat
     shutil.copy(built, cell / "candidate.rs")
     violations = audit_events((cell / "lane" / "events.jsonl").read_text(), sandbox, component)
     (cell / "audit.json").write_text(json.dumps(violations, indent=2) + "\n")
-    rc = cmd_grade(component, cell / "candidate.rs", cell / "grade", "candidate",
-                   scratch / "grader", max_wall, {"SKELETON_PILOT_SEED": str(seed)})
     rec = {"component": component, "condition": condition, "vendor": vendor, "seed": seed,
            "sandbox_head": meta["head"], "lane_exit": lane["exit"],
            "lane_wall_seconds": lane["wall_seconds"], "usage": lane["usage"],
-           "blind_violations": len(violations), "grade_exit": rc,
+           "blind_violations": len(violations),
            "candidate_sha256": hashlib.sha256((cell / "candidate.rs").read_bytes()).hexdigest()}
+    (cell / "cell.json").write_text(json.dumps(rec, indent=2) + "\n")
+    return rec
+
+
+MAX_MUTANTS = "4000"
+
+
+def cmd_grade_cell(cell: Path, scratch: Path, max_wall: int) -> dict:
+    """Grade a built cell. Run grades one at a time: they share one grader export."""
+    rec = json.loads((cell / "cell.json").read_text())
+    rc = cmd_grade(rec["component"], cell / "candidate.rs", cell / "grade", "candidate",
+                   scratch / "grader", max_wall,
+                   {"SKELETON_PILOT_SEED": str(rec["seed"]),
+                    "SKELETON_PILOT_MAX_MUTANTS": MAX_MUTANTS})
+    rec["grade_exit"] = rc
     g = cell / "grade" / "grade.json"
     if g.exists():
         rec["verdict"] = json.loads(g.read_text())["verdict"]
@@ -437,7 +478,7 @@ def cmd_skeleton(component: str, kind: str, rundir: Path, scratch: Path) -> dict
     cond = {"blind": "B", "derived": "C"}[kind]
     cell = rundir / "skeletons" / f"{component}-{cond}"
     cell.mkdir(parents=True, exist_ok=True)
-    sandbox = scratch / "lane-claude"
+    sandbox = scratch / f"lane-skeleton-{cond}"
     meta = cmd_sandbox(component, sandbox, None, kind == "derived")
     task = skeleton_prompt(component, kind)
     (sandbox / "PILOT_TASK.md").write_text(task)
@@ -495,6 +536,8 @@ def main() -> int:
     a.add_argument("rundir", type=Path); a.add_argument("--scratch", type=Path, required=True)
     a = sp.add_parser("cell"); a.add_argument("component"); a.add_argument("condition", choices="ABC")
     a.add_argument("vendor"); a.add_argument("seed", type=int); a.add_argument("rundir", type=Path)
+    a.add_argument("--scratch", type=Path, required=True)
+    a = sp.add_parser("grade-cell"); a.add_argument("cell", type=Path)
     a.add_argument("--scratch", type=Path, required=True); a.add_argument("--max-wall", type=int, default=3600)
     x = ap.parse_args()
     if getattr(x, "component", None) and x.component not in COMPONENTS:
@@ -522,7 +565,9 @@ def main() -> int:
         print(json.dumps(cmd_skeleton(x.component, x.kind, x.rundir, x.scratch), indent=2))
     elif x.cmd == "cell":
         print(json.dumps(cmd_cell(x.component, x.condition, x.vendor, x.seed, x.rundir,
-                                  x.scratch, x.max_wall), indent=2))
+                                  x.scratch), indent=2))
+    elif x.cmd == "grade-cell":
+        print(json.dumps(cmd_grade_cell(x.cell, x.scratch, x.max_wall), indent=2))
     return 0
 
 
