@@ -238,6 +238,13 @@ Ways under the gate with B + slim HASH (ESTIMATE from the measured unit costs):
 - RANGE on 2 limb columns (6 rows per operation): -45,100 + 7,300; node about 915,000.
 - The placeholder digest region goes away when the state digest is a HASH request: 3 selectors, at
   most -18,000.
+
+Two limits on these estimates. First, the per-lookup cost was measured by adding lookups; using it
+for removal is an extrapolation. Second, 953,150 is a floor for a real slim chip: the stand-in leaves
+the two Poseidon selectors all zero and has no absorb gate, and filled content cost the stdlib chip
+70,168 rows. With the selector ESTIMATE (up to +12,000) the 1-limb node is about 905,000 (headroom
+about 45,000) and the 2-limb node about 927,000 (headroom about 23,000). Only the 1-limb option keeps
+a clear margin.
 Each further bus lane costs about 22,500 node rows. Under B + slim HASH + 1-limb RANGE about 57,000
 rows remain for PAGE, TRAP and more lanes: two more lanes at most.
 
@@ -319,7 +326,8 @@ about 41 walker rows (ESTIMATE). Fallback if the aligned `len` is refused: M2 (1
 M1 is 4x M3 and, provisioned per step, reaches k = 16. The node verdict with HASH is in section 3.3:
 the stdlib composition fails (999,488). The
 Poseidon-only shape fails by 3,150 (953,150). It passes with RANGE on one or two limb lookups
-(ESTIMATE 893,000 or 915,000 from measured unit costs). Build the slim chip and the 1-limb RANGE,
+(ESTIMATE 893,000 or 915,000 from measured unit costs, up to 12,000 more each once the
+Poseidon selectors are filled). Build the slim chip and the 1-limb RANGE,
 then re-measure the node over the real key.
 
 ## 4. Proposed replacement text for design.md 2.7 (text only; design.md was not edited)
