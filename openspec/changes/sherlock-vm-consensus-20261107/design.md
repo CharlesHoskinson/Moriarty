@@ -71,6 +71,41 @@ Gaps at `8fd34ed79`: `KAdminPublishValue`, `BHelperValidate` x4, `BHelperEqual` 
 
 Order (astra-1 early correction, avoids the P3 circularity): first freeze the *admitted rule inventory* `R` for profile `/1` (every supported pure rule, not only the rules P1 and P2 fire), the layout, the caps and the manifests; every rule in `R` has a fragment with a compiled-and-run receipt before the universal leaf is keyed (D9); then P3 is authored from the admitted domain and must need no new key (E2). P1/P2/P3 evidence is finite cross-program evidence, not a proof that every admitted program is sound; the per-rule obligations in `assurance.md` stand beside it.
 
+### 2.7 Leaf as a chip (proposed 2026-11-10; not adopted)
+
+Owner direction (2026-11-10): "really lean into the chip design and let's get it modular and concise". Source: `research/sherlock-processor-analogy-20261110/study.md`. Soundness check: `research/sherlock-processor-analogy-20261110/quint-check.md` (`models/sherlock/quint/chipLeaf.qnt`, commit `f5a297545`). Sizes wait for the chip experiments E0, E1 and E3 [PENDING]. Until adoption, 2.2 to 2.4 stand.
+
+2.7.1 Structure. The universal leaf is one hand-written circuit: a CPU core and the chips DEC, PAGE, MEM, ALU with RANGE, and HASH. The core carries the register file (control, outcome and counters, environment root, frame and task pointers, memory length, top frame, top task, helper and result records) across S step slots. In 2.3, `post_i == pre_{i+1}` is over the register file.
+
+2.7.2 Bus. A chip is reached only through bus tuples `(chip, key, a, b, c)`, tied by one `lookup_any` of the request columns into the provider columns. Every chip is a function of its key. The leaf uses no challenge beyond those of the proof system and one instance column. No multiset, shuffle, LogUp or timestamp argument is needed (`quint-check.md` §1).
+
+2.7.3 Memory is write-once. The data, data-field, environment and value-slot tables are append-only. This is a new layout version; it replaces "frames and helper slots zeroed on release" in `StepInv`.
+
+2.7.4 PROG rows and cells created by earlier leaves are opened against `prog_root` and the memory root in `pre_d`. PROG canonicality is a premise on `prog_root`, discharged by an admission claim [OPEN: its form]. No program row is a fixed table.
+
+2.7.5 Range checks apply to every value written and to the initial state, not to values carried from the previous `post_d`; SAS-010 states this as part of `StepInv` preservation. RANGE also bounds `len` and every address, so that `addr < len` is an integer comparison.
+
+2.7.6 Dispatch is the trap check (P0, P1, P2) and one DEC lookup. The rule's control word drives the core's micro-operations; registers it does not name are unchanged. [PENDING E0(c): otherwise 2.2 item 4 stands, applied to the register file.]
+
+2.7.7 Chip heights are constants of the circuit. A leaf ends at S steps or earlier; later slots are disabled. Closing when a chip is full is a prover rule, not a gate: a step whose requests do not fit has an unmatched request and cannot be enabled. `prog_d` of 2.4 covers `prog_root`, the layout version and the profile, and no `Bounds` or host capacity.
+
+2.7.8 Soundness constraints. The Quint model has a counterexample for each when it is missing (`quint-check.md` §5, §7):
+
+- D1 Provider-gated table side. The table expression is `q_provider * tuple`, with `q_provider` a fixed selector that is 1 only on active chip rows; the input side is `q_request * tuple`.
+- D2 One provider per key. PAGE serves `CELL` only for `index < base`, with `base = len` from `pre_d`; cells appended in this leaf are served by MEM only. [OPEN: alternatively distinct `OLD`/`NEW` tags, or a memory tree that commits its length.]
+- D3 The root covers appended rows only. The `mem_root` update hashes MEM rows `0 .. post.len - base - 1` and no others.
+- D4 Fixed chip tag per region. On provider rows the `chip` field is the region's fixed selector column, not advice.
+- D5 One enable per step. All micro-op rows of a slot share the slot's `enable`; a leaf closes only between steps.
+- D6 One base for the MEM region. `base` is one cell copied from `pre_d.len`; every MEM row's address is `base + k` with `k` a fixed column.
+- D7 One frame protocol. [OPEN: pick one] Uncached: a rewrite of the top appends `(v, link)` and moves `fp` to the new entry. Cached: `top` lives in registers, PUSH spills the old `top` with link `fp`, POP loads `mem[fp]`, and a rewrite changes only the register. In both, the stored link is the core's `fp`, never a bus value.
+- D8 No tag equals the padding tuple. Disabled and padding rows put `(0, 0, 0, 0, 0)` on the table side; no chip tag is 0.
+
+Also load-bearing (model-confirmed): `len` advances by exactly one per append; a read checks `addr < len` against the step's current `len`; the read address comes from a register, never the bus; every active ALU row satisfies its relation whether requested or not; every PAGE row opens against its root; DEC has one row per class; the next `pc` and every named register are core constraints; TRAP gates the class and a publishing step is the last enabled slot.
+
+2.7.9 Each chip has its own soundness obligation, Quint model and differential test against the per-rule fragments, which remain the reference. Gates [PENDING E3]: node at most 950,000 rows and decider at most 1,000,000 over the leaf key; `k_leaf <= 16` at S = 16.
+
+Open: the leaf leaves ZKIR, so the manifest of 2.4 names a circuit identity in place of ZKIR and stdlib versions; the depth-20 Merkle cost of `mem_root` per leaf; HASH and the cached `top` register are not yet modelled.
+
 ## 3. Recursion design
 
 ### 3.1 Chain
