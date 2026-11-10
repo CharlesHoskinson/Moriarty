@@ -460,6 +460,8 @@ fn hash_preset(name: &str) -> (usize, Vec<usize>) {
         "m3c8" => (41, rec(8)),
         "m3c16" => (47, rec(16)),
         "hash0" => (0, vec![]),
+        // E8: M3 wired for real; the hashes are the circuit's own (`mori_chip::m3`).
+        "m3" => (0, vec![]),
         _ => panic!("unknown hash preset {name}"),
     }
 }
@@ -473,6 +475,7 @@ fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
     let mut it = preset.split('+');
     let preset = it.next().unwrap();
     let (mut xl, mut xs, mut range1) = (0usize, 0usize, false);
+    let (mut one_abs, mut pack_core) = (false, false);
     for t in it {
         if let Some(n) = t.strip_prefix("xl") {
             xl = n.parse().unwrap();
@@ -480,6 +483,10 @@ fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
             xs = n.parse().unwrap();
         } else if t == "r1" {
             range1 = true;
+        } else if t == "a1" {
+            one_abs = true;
+        } else if t == "pc" {
+            pack_core = true;
         } else {
             panic!("unknown suffix {t}");
         }
@@ -490,6 +497,8 @@ fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
         extra_lookups: xl,
         extra_selectors: xs,
         range1,
+        one_abs,
+        pack_core,
         ..Default::default()
     };
     if let Some(p) = preset.strip_prefix("slim_") {
@@ -506,6 +515,7 @@ fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
         let (n2, extra) = hash_preset(p);
         let params = RfParams {
             pos_hash: true,
+            m3: p == "m3",
             ..base
         };
         return RfLeaf::new(params, s, None).with_hashes(n2, extra);
@@ -570,6 +580,34 @@ fn rf_leaf_s16_mock_prover_final_e7() {
         .unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
 }
 
+/// The final E8 leaf (B, Poseidon-only HASH with one absorb column, packed core
+/// selectors, RANGE on one limb lookup, M3 wired for real) at S = 16 with a
+/// witness: 16 steps, 6 appends, 2 padding rows.
+#[test]
+fn rf_leaf_s16_mock_prover_final_e8() {
+    let w = RfWitness::from_trace_m3(
+        &run32(genesis(), 16),
+        16,
+        std::array::from_fn(mori_chip::m3::empty_top),
+    );
+    assert_eq!(w.steps(), 16);
+    let params = RfParams {
+        arch: Arch::Narrow,
+        pos_hash: true,
+        range1: true,
+        one_abs: true,
+        pack_core: true,
+        m3: true,
+        ..Default::default()
+    };
+    let c = RfLeaf::new(params, 16, Some(w.clone()));
+    let lm = circuit_model::<F, 48, 32>(&c);
+    println!("CHIP-E8 final leaf rows={} k={}", lm.rows, lm.k);
+    let p = MockProver::run(&c, vec![vec![], w.instance()]).unwrap();
+    p.verify()
+        .unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
+}
+
 /// The keyed register-file leaves (every layout, with and without HASH) query
 /// rotations -1, 0, +1 only (`slim_m3c8`: the slim HASH key shape; `pos_*`: the
 /// Poseidon-only HASH chip; `+r1`: RANGE on one limb lookup).
@@ -583,7 +621,15 @@ fn rf_leaf_vk_rotations_are_unit() {
             "pos_m3c8",
             "pos_m3c8+r1",
             "none+r1",
+            "pos_m3c8+r1+a1",
+            "pos_m3c8+r1+a1+pc",
+            "none+pc",
+            "pos_m3+r1+a1+pc",
+            "pos_m3+r1",
         ] {
+            if arch == Arch::WideInline && preset.starts_with("pos_m3+") {
+                continue;
+            }
             let (vk, k) = vk_of(&rf_leaf(arch, 1, preset, 1));
             let cs = vk.cs();
             let mut rots: Vec<i32> = cs

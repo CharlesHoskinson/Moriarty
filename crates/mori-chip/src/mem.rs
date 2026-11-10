@@ -13,13 +13,14 @@
 //! leaves) are not here; they are PAGE's job (not in this spike).
 use midnight_proofs::{
     circuit::{AssignedCell, Region, Value},
-    plonk::{ConstraintSystem, Error, Expression, Selector},
+    plonk::{ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
 
 use crate::{
     F,
     bus::{BusConfig, CHIP_MEM, tuple},
+    vsel::{VSel, code_column},
 };
 
 /// One memory cell: three field elements.
@@ -87,6 +88,156 @@ impl MemConfig {
             }
         }
         Ok(first.expect("n >= 1"))
+    }
+}
+
+/// M3 MEM (experiment E8): the leaf's aligned segment of [`SEG`] cells at
+/// addresses `base .. base + SEG`, with an active prefix.
+///
+/// Row `i` holds `(chip, key, a, b, c)` in columns 0..5, its address in column
+/// 5, `len_end` (the core's running `len` after the last slot) in column 6 and
+/// the active flag `act` in column 7. One code column: code 1 on row 0, code 2
+/// on rows 1..SEG-1, code 3 on row SEG-1 ([`crate::vsel`]).
+///
+/// - `mem row` (every row): `act` is boolean; `chip = act * MEM` and
+///   `key = act * addr`; `(1 - act) * x = 0` for the three data words. A padding
+///   row therefore puts the zero tuple on the table side (D8), so no request
+///   (whose chip is non-zero) can read it.
+/// - `mem chain` (rows 0..SEG-2): `addr' = addr + 1`, `len_end' = len_end`,
+///   `act' <= act` (prefix), and where the prefix ends, `addr + 1 = len_end`.
+/// - `mem first`: if row 0 is padding, `addr = len_end` (no append).
+/// - `mem last`: if row SEG-1 is active, `addr + 1 = len_end` (segment full).
+///
+/// So the active rows are exactly the addresses below `len_end`: an active row
+/// above it, or a padding row below it, fails a gate (Gemini Quint verdict C4).
+/// The committed record of row `i` is `H(act, a, b, c)`: `act` is the record's
+/// tag word, 1 on every written record, so no written record (D7's sentinel
+/// spill `(0, 0, NIL)` included) hashes like padding (verdict C2).
+#[derive(Clone, Debug)]
+pub struct SegMemConfig {
+    pub q: [VSel; 3],
+    pub bus: BusConfig,
+}
+
+/// Cells per segment.
+pub const SEG: usize = 8;
+
+/// Assigned cells of the segment region.
+pub struct SegCells {
+    pub addr0: AssignedCell<F, F>,
+    pub len_end: AssignedCell<F, F>,
+    /// Per row: `[act, a, b, c]`.
+    pub rec: Vec<[AssignedCell<F, F>; 4]>,
+}
+
+impl SegMemConfig {
+    pub fn configure(meta: &mut ConstraintSystem<F>, bus: BusConfig) -> Self {
+        let qv = code_column(meta, 3);
+        let q = [qv[0], qv[1], qv[2]];
+        let col = match q[0] {
+            VSel::Code { col, .. } => col,
+            VSel::Simple(_) => unreachable!(),
+        };
+        let a = bus.cols.a;
+        let k = |v: u64| Expression::Constant(F::from(v));
+        let cur = |m: &mut VirtualCells<'_, F>, i: usize| m.query_advice(a[i], Rotation::cur());
+        let nxt = |m: &mut VirtualCells<'_, F>, i: usize| m.query_advice(a[i], Rotation::next());
+        meta.create_gate("mem row", |m| {
+            // Non-zero on every code: `q` itself.
+            let any = m.query_fixed(col, Rotation::cur());
+            let act = cur(m, 7);
+            let addr = cur(m, 5);
+            let mut v = vec![
+                any.clone() * act.clone() * (k(1) - act.clone()),
+                any.clone() * (cur(m, 0) - act.clone() * k(CHIP_MEM)),
+                any.clone() * (cur(m, 1) - act.clone() * addr),
+            ];
+            for i in 2..5 {
+                v.push(any.clone() * (k(1) - act.clone()) * cur(m, i));
+            }
+            crate::gate(v)
+        });
+        meta.create_gate("mem chain", |m| {
+            // Non-zero on codes 1 and 2, zero on 0 and 3.
+            let qq = m.query_fixed(col, Rotation::cur());
+            let on = qq.clone() * (qq - k(3));
+            let (act, act2) = (cur(m, 7), nxt(m, 7));
+            let (addr, addr2) = (cur(m, 5), nxt(m, 5));
+            let (len, len2) = (cur(m, 6), nxt(m, 6));
+            crate::gate(vec![
+                on.clone() * (addr2 - addr.clone() - k(1)),
+                on.clone() * (len2 - len.clone()),
+                on.clone() * act2.clone() * (k(1) - act.clone()),
+                on * act * (k(1) - act2) * (addr + k(1) - len),
+            ])
+        });
+        let (q1, q3) = (q[0], q[2]);
+        meta.create_gate("mem first", move |m| {
+            let s = q1.expr(m);
+            let (act, addr, len) = (cur(m, 7), cur(m, 5), cur(m, 6));
+            crate::gate(vec![s * (k(1) - act) * (addr - len)])
+        });
+        meta.create_gate("mem last", move |m| {
+            let s = q3.expr(m);
+            let (act, addr, len) = (cur(m, 7), cur(m, 5), cur(m, 6));
+            crate::gate(vec![s * act * (addr + k(1) - len)])
+        });
+        for i in 0..8 {
+            meta.enable_equality(a[i]);
+        }
+        Self { q, bus }
+    }
+
+    /// The [`SEG`] rows from `offset`: data `cells[i]`, flags `act[i]`.
+    pub fn assign(
+        &self,
+        region: &mut Region<'_, F>,
+        offset: usize,
+        base: Value<F>,
+        len_end: Value<F>,
+        cells: &[Value<Cell3>],
+        act: &[Value<F>],
+    ) -> Result<SegCells, Error> {
+        assert_eq!(cells.len(), SEG);
+        assert_eq!(act.len(), SEG);
+        let a = self.bus.cols.a;
+        let mut addr0 = None;
+        let mut len0 = None;
+        let mut rec = Vec::new();
+        for i in 0..SEG {
+            let r = offset + i;
+            let code = if i == 0 {
+                0
+            } else if i + 1 == SEG {
+                2
+            } else {
+                1
+            };
+            self.q[code].enable(region, r)?;
+            let addr = base.map(|b| b + F::from(i as u64));
+            let t = addr
+                .zip(cells[i])
+                .zip(act[i])
+                .map(|((ad, c), f)| tuple(CHIP_MEM, f * ad, c[0], c[1], c[2]));
+            let t = t.zip(act[i]).map(|(mut t, f)| {
+                t[0] *= f;
+                t
+            });
+            let tc = self.bus.provide(region, r, t)?;
+            let ad = region.assign_advice(|| "mem addr", a[5], r, || addr)?;
+            let ln = region.assign_advice(|| "mem len_end", a[6], r, || len_end)?;
+            let ac = region.assign_advice(|| "mem act", a[7], r, || act[i])?;
+            if i == 0 {
+                addr0 = Some(ad);
+                len0 = Some(ln);
+            }
+            rec.push([ac, tc[2].clone(), tc[3].clone(), tc[4].clone()]);
+        }
+        Ok(SegCells {
+            addr0: addr0.unwrap(),
+            len_end: len0.unwrap(),
+            rec,
+        })
     }
 }
 
@@ -191,5 +342,119 @@ mod tests {
             requests,
             bad_addr: Some((1, 10))
         }));
+    }
+
+    /// The M3 segment alone: `used` active rows at `base = 8`, `len_end` free.
+    #[derive(Clone)]
+    struct SegOnly {
+        cells: Vec<Cell3>,
+        used: usize,
+        len_end: u64,
+        requests: Vec<Tuple>,
+    }
+
+    impl Circuit<F> for SegOnly {
+        type Config = SegMemConfig;
+        type FloorPlanner = SimpleFloorPlanner;
+        type Params = ();
+        fn without_witnesses(&self) -> Self {
+            self.clone()
+        }
+        fn configure(meta: &mut ConstraintSystem<F>) -> SegMemConfig {
+            let cols = Cols::configure(meta);
+            let bus = BusConfig::configure(meta, cols);
+            SegMemConfig::configure(meta, bus)
+        }
+        fn synthesize(&self, cfg: SegMemConfig, mut l: impl Layouter<F>) -> Result<(), Error> {
+            l.assign_region(
+                || "seg",
+                |mut r| {
+                    let cells: Vec<_> = (0..SEG)
+                        .map(|i| {
+                            Value::known(self.cells.get(i).copied().unwrap_or([F::from(0u64); 3]))
+                        })
+                        .collect();
+                    let act: Vec<_> = (0..SEG)
+                        .map(|i| Value::known(F::from((i < self.used) as u64)))
+                        .collect();
+                    cfg.assign(
+                        &mut r,
+                        0,
+                        Value::known(F::from(8u64)),
+                        Value::known(F::from(self.len_end)),
+                        &cells,
+                        &act,
+                    )?;
+                    for (j, t) in self.requests.iter().enumerate() {
+                        cfg.bus.request(&mut r, SEG + j, Value::known(*t))?;
+                    }
+                    Ok(())
+                },
+            )
+        }
+    }
+
+    fn seg_err(c: &SegOnly) -> Option<String> {
+        let p = MockProver::run(c, vec![]).unwrap();
+        p.verify().err().map(|e| {
+            e.iter()
+                .map(|f| format!("{f}"))
+                .collect::<Vec<_>>()
+                .join(" | ")
+        })
+    }
+
+    /// Reads of written cells pass, including a written zero tuple; a read of a
+    /// padding cell (as the zero tuple or anything else) is refused by the bus,
+    /// because padding rows put the zero tuple on the table side.
+    #[test]
+    fn seg_padding_cell_is_unreadable() {
+        let cells = vec![c3(0, 0, 0), c3(7, 2, 10), c3(7, 3, 11)];
+        let ok_reqs = vec![req(8, cells[0]), req(10, cells[2])];
+        let honest = SegOnly {
+            cells: cells.clone(),
+            used: 3,
+            len_end: 11,
+            requests: ok_reqs,
+        };
+        assert_eq!(seg_err(&honest), None);
+        for (addr, c) in [(11, c3(0, 0, 0)), (15, c3(0, 0, 0)), (12, c3(7, 1, 1))] {
+            let c = SegOnly {
+                requests: vec![req(addr, c)],
+                ..honest.clone()
+            };
+            let e = seg_err(&c).expect("padding read");
+            assert!(e.contains("ookup"), "{e}");
+        }
+        // Full and empty segments.
+        let full = SegOnly {
+            cells: (0..8).map(|i| c3(1, i, 0)).collect(),
+            used: 8,
+            len_end: 16,
+            requests: vec![req(15, c3(1, 7, 0))],
+        };
+        assert_eq!(seg_err(&full), None);
+        let empty = SegOnly {
+            cells: vec![],
+            used: 0,
+            len_end: 8,
+            requests: vec![],
+        };
+        assert_eq!(seg_err(&empty), None);
+        // `len_end` off by one at either end of the prefix.
+        for (used, len_end, gate) in [
+            (0, 9, "mem first"),
+            (8, 15, "mem last"),
+            (3, 12, "mem chain"),
+        ] {
+            let c = SegOnly {
+                cells: (0..used).map(|i| c3(1, i as u64, 0)).collect(),
+                used,
+                len_end,
+                requests: vec![],
+            };
+            let e = seg_err(&c).expect("desync");
+            assert!(e.contains(gate), "{used} {len_end}: {e}");
+        }
     }
 }

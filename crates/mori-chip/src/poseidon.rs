@@ -30,6 +30,11 @@
 //!
 //! `out` of a provider row is copy-constrained to the output row's element 0.
 //! Inputs given as cells are copy-constrained into `in0`, `in1`.
+//!
+//! One absorb column (E8, `one_abs`): the three absorb selectors become codes 1
+//! (first), 2 (chain) and 3 (tail) of one fixed column ([`crate::vsel`]); each
+//! absorb gate is multiplied by the degree-3 Lagrange indicator of its code, so
+//! the gates and their names are unchanged and the key has 2 fewer fixed columns.
 use ff::Field;
 use midnight_circuits::hash::poseidon::constants::PoseidonField;
 use midnight_proofs::{
@@ -38,7 +43,11 @@ use midnight_proofs::{
     poly::Rotation,
 };
 
-use crate::{F, bus::BusConfig};
+use crate::{
+    F,
+    bus::BusConfig,
+    vsel::{VSel, code_column},
+};
 
 /// Chip id of HASH on the bus (as in [`crate::hashchip`]).
 pub const CHIP_HASH: u64 = 3;
@@ -111,9 +120,9 @@ pub struct PoseidonCfg {
     pub rc: [Column<Fixed>; WIDTH],
     pub q_full: Selector,
     pub q_part: Selector,
-    pub q_first: Selector,
-    pub q_chain: Selector,
-    pub q_tail: Selector,
+    pub q_first: VSel,
+    pub q_chain: VSel,
+    pub q_tail: VSel,
 }
 
 /// An input of a sponge: a cell to copy in, or a free value.
@@ -121,13 +130,16 @@ pub struct PoseidonCfg {
 pub enum HIn {
     Cell(AssignedCell<F, F>),
     Val(Value<F>),
+    /// Negative tests: copy-constrained to the cell, but witnessed as the value
+    /// (a prover that hashes something other than the cell it claims to).
+    CellAs(AssignedCell<F, F>, Value<F>),
 }
 
 impl HIn {
-    fn value(&self) -> Value<F> {
+    pub fn value(&self) -> Value<F> {
         match self {
             HIn::Cell(c) => c.value().copied(),
-            HIn::Val(v) => *v,
+            HIn::Val(v) | HIn::CellAs(_, v) => *v,
         }
     }
 }
@@ -148,14 +160,22 @@ pub struct Tamper {
 }
 
 impl PoseidonCfg {
-    pub fn configure(meta: &mut ConstraintSystem<F>, bus: BusConfig) -> Self {
+    /// `one_abs`: the three absorb selectors share one code column.
+    pub fn configure(meta: &mut ConstraintSystem<F>, bus: BusConfig, one_abs: bool) -> Self {
         let a = bus.cols.a;
         let rc: [Column<Fixed>; WIDTH] = std::array::from_fn(|_| meta.fixed_column());
         let q_full = meta.selector();
         let q_part = meta.selector();
-        let q_first = meta.selector();
-        let q_chain = meta.selector();
-        let q_tail = meta.selector();
+        let (q_first, q_chain, q_tail) = if one_abs {
+            let c = code_column(meta, 3);
+            (c[0], c[1], c[2])
+        } else {
+            (
+                VSel::Simple(meta.selector()),
+                VSel::Simple(meta.selector()),
+                VSel::Simple(meta.selector()),
+            )
+        };
         let mds = <F as PoseidonField>::MDS;
         let cst = |v: F| Expression::Constant(v);
         let p5 = |x: Expression<F>| x.clone() * x.clone().square().square();
@@ -195,7 +215,7 @@ impl PoseidonCfg {
         ] {
             let q_prov = bus.q_prov;
             meta.create_gate(name, move |m| {
-                let q = m.query_selector(q);
+                let q = q.expr(m);
                 let input = [
                     m.query_advice(a[2], Rotation::cur()),
                     if two {
@@ -321,6 +341,10 @@ impl PoseidonCfg {
                     Some(HIn::Cell(c)) => {
                         c.copy_advice(|| "hash in", region, col, o)?;
                     }
+                    Some(HIn::CellAs(c, v)) => {
+                        c.copy_advice(|| "hash in", region, col, o)?;
+                        region.assign_advice(|| "hash in forged", col, o, || *v)?;
+                    }
                     Some(HIn::Val(v)) => {
                         region.assign_advice(|| "hash in", col, o, || *v)?;
                     }
@@ -418,6 +442,8 @@ mod tests {
         /// Request rows (raw tuples).
         requests: Vec<Tuple>,
         tamper: Tamper,
+        /// One absorb code column (E8) instead of three selectors.
+        one: bool,
     }
 
     #[derive(Clone, Debug)]
@@ -429,14 +455,20 @@ mod tests {
     impl Circuit<F> for HashOnly {
         type Config = Cfg;
         type FloorPlanner = SimpleFloorPlanner;
-        type Params = ();
+        type Params = bool;
         fn without_witnesses(&self) -> Self {
             self.clone()
         }
-        fn configure(meta: &mut ConstraintSystem<F>) -> Cfg {
+        fn params(&self) -> bool {
+            self.one
+        }
+        fn configure(_meta: &mut ConstraintSystem<F>) -> Cfg {
+            unreachable!("configured with params")
+        }
+        fn configure_with_params(meta: &mut ConstraintSystem<F>, one: bool) -> Cfg {
             let cols = Cols::configure(meta);
             let bus = BusConfig::configure(meta, cols);
-            let h = PoseidonCfg::configure(meta, bus);
+            let h = PoseidonCfg::configure(meta, bus, one);
             let inst = meta.instance_column();
             meta.enable_equality(inst);
             Cfg { h, inst }
@@ -488,7 +520,32 @@ mod tests {
         }
     }
 
+    /// Both absorb modes must give the same verdict; the error text of the
+    /// one-column mode (the final one) is returned.
     fn run(c: &HashOnly) -> Result<(), String> {
+        let mut three = c.clone();
+        three.one = false;
+        let r3 = run1(&three);
+        let mut one = c.clone();
+        one.one = true;
+        let r1 = run1(&one);
+        assert_eq!(r1.is_ok(), r3.is_ok(), "modes disagree: {r1:?} / {r3:?}");
+        if let (Err(e1), Err(e3)) = (&r1, &r3) {
+            // The same gates fail in both modes.
+            for g in [
+                "absorb first",
+                "absorb chain",
+                "absorb tail",
+                "full round",
+                "partial round",
+            ] {
+                assert_eq!(e1.contains(g), e3.contains(g), "{g}: {e1} / {e3}");
+            }
+        }
+        r1
+    }
+
+    fn run1(c: &HashOnly) -> Result<(), String> {
         let inst: Vec<F> = c.sponges.iter().map(|s| hash_native(s)).collect();
         let p = MockProver::run(c, vec![inst]).map_err(|e| format!("{e:?}"))?;
         p.verify().map_err(|e| {
@@ -521,6 +578,7 @@ mod tests {
             served,
             requests,
             tamper: Tamper::default(),
+            one: true,
         }
     }
 
@@ -566,8 +624,11 @@ mod tests {
         let mut c = served_case(&mut g, 0);
         c.sponges = vec![rand_vec(&mut g, 3)];
         let inst = vec![hash_native(&c.sponges[0]) + F::ONE];
-        let p = MockProver::run(&c, vec![inst]).unwrap();
-        assert!(p.verify().is_err());
+        for one in [false, true] {
+            c.one = one;
+            let p = MockProver::run(&c, vec![inst.clone()]).unwrap();
+            assert!(p.verify().is_err());
+        }
     }
 
     fn sponge_case(g: &mut ChaCha20Rng, n: usize, tamper: Tamper) -> HashOnly {
@@ -576,6 +637,7 @@ mod tests {
             served: vec![],
             requests: vec![],
             tamper,
+            one: true,
         }
     }
 
