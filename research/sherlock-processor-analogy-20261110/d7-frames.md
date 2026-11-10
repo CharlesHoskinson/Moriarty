@@ -93,7 +93,9 @@ chain (as in `chipLeaf.qnt`). Exit 0 is `[ok]`; exit 1 is `[violation] Found an 
 output line was checked for each run, so no exit 1 below is a parse or runtime error).
 
 Baseline, before any change: all 15 test modules of `chipLeaf_test.qnt` pass (4 tests each, exit
-0). `chipLeaf.qnt` and `chipLeaf_test.qnt` are not changed by this work.
+0). `chipLeaf.qnt` and `chipLeaf_test.qnt` are not changed by this work. The 24-module `quint run`
+sweep of `quint-check.md` section 4 on `chipLeaf.qnt` was not re-run; `chipLeafBase invAll` was
+(below).
 
 Typecheck, exit 0 for each: `chipLeafCached.qnt`, `chipLeafChain.qnt`, `chipLeafCached_test.qnt`.
 
@@ -191,12 +193,14 @@ Each has a counterexample when it is missing (section 4 and the Gemini lane):
    (`pop_no_fp_reload`, Gemini d7 F7). Without the second, set inclusion lets later POPs reuse one
    PAGE or MEM row.
 4. `top` is in `pre_d` and `post_d` (`top_dropped`). It is already listed in the register file
-   (2.7.1) and in the Init table (`design.md` 2.4, row 18, `top` = 0).
-5. Depth 0 is `top = 0`, `fp = NIL` (Gemini d7 F5, `sentinel_unconstrained`). The Init table
-   already sets `fp = NIL` (row 16) and `top = 0` (row 18); this model takes the pre state from
-   the reference, so the obligation is on Init and on `StepInv`, not on a gate.
-6. `depth` changes by exactly one on PUSH and POP; POP and a rewrite at depth 0 are errors (Gemini
-   d7 F6). Same as for uncached.
+   (2.7.1) and in the `Init` table (`design.md` 3.2 item 5, row 18, `top` = 0).
+5. Depth 0 is `top = 0`, `fp = NIL` (Gemini d7 F5, `sentinel_unconstrained`; no mutant in this
+   model). The `Init` table already sets `fp = NIL` (row 16) and `top = 0` (row 18); this model
+   takes the pre state from the reference, so the obligation is on `Init` and on `StepInv`, not
+   on a gate.
+6. The frame count (`depth` in the model, `frame_count` in `Init` row 13) changes by exactly one
+   on PUSH and POP; POP and a rewrite at count 0 are errors (Gemini d7 F6,
+   `depth_unconstrained`; no mutant in this model). Same as for uncached.
 
 D1 to D6 and D8 apply unchanged; the two regression mutants above confirm that the copy still
 needs D1 and D2.
@@ -270,23 +274,25 @@ Prices (ESTIMATE, `study.md`):
   (depth 20) HASH rows, once per distinct cell per leaf.
 - `top` and `task` in the statement: 5 words more in each of `pre_d` and `post_d`. The boundary
   digests are 32 permutations x 25 = 800 rows for about 64 words (`study.md` 4.2), so 10 words
-  are about 5 permutations, 125 rows per leaf; `top` alone (3 words) about 50 rows per leaf.
+  are about 5 permutations, 125 rows per leaf; `top` alone (3 words per side, 6 words) about 3
+  permutations, 75 rows per leaf.
 
 Per rewrite, the uncached protocol costs 17 to 125 rows for the append, plus 200 to 500 rows the
 first time in a leaf that it rewrites a frame written by an earlier leaf, plus one MEM row of the
-fixed height. The cached protocol costs about 50 rows per leaf for `top` (125 with `task`). At
-S = 16 the cached protocol is cheaper when a leaf has more than about 1 to 7 rewrites, or one
-rewrite of an older frame. How many of the 108 rules rewrite the top frame or task, and how often
-they run, is UNMEASURED; `study.md` 2.4 lists "every rule that rewrites the top frame or task"
-among the appending rules, and its 6 to 12 appends per step include them. E0 can count them from
-the per-rule fragments.
+fixed height. The cached protocol costs about 75 rows per leaf for `top` (125 with `task`). At
+S = 16 the cached protocol is cheaper when a leaf has more than 1 to 5 rewrites of the top frame
+(75 / 125 to 75 / 17; 1 to 8 with `task`, 125 / 125 to 125 / 17), or one rewrite of a frame
+from an earlier leaf. How many of the 108 rules rewrite the top frame or task, and how often they
+run, is UNMEASURED. `study.md` 2.4 lists "every rule that rewrites the top frame or task" among
+the appending rules; that its 6 to 12 appends per step include these rewrites is an inference of
+this note, not a statement of the study. E0 can count them from the per-rule fragments.
 
 ## 8. Replacement text for `design.md` 2.7.8, D7
 
 Replace the bullet that starts "- D7 One frame protocol. [OPEN: pick one]" with:
 
 ```
-- D7 Cached frame protocol. The top frame and the top task are registers (`top`, `task`) carried in `pre_d` and `post_d`. `fp` (`tp`) is the address of the entry that holds the frame (task) below the top; at depth 0 the top is the zero record and `fp = NIL`, as in Init. PUSH appends `(top, fp)` at `len`, then sets `fp := len` and `top` to the new frame. POP returns `top`, loads `mem[fp] = (a, b)` with `fp < len`, and sets `top := a` and `fp := b`. A rewrite of the top changes only `top`: no bus request, `fp` and `len` unchanged. The stored link and the read address are the core's `fp`, never a bus value; `depth` changes by exactly one on PUSH and POP. (`d7-frames.md`: mutants `rewrite_appends`, `push_link_free`, `pop_no_reload`, `pop_no_fp_reload`, `top_dropped`.)
+- D7 Cached frame protocol. The top frame is the register `top`, carried in `pre_d` and `post_d`; `fp` is the address of the entry that holds the frame below the top. PUSH appends `(top, fp)` at `len`, then sets `fp := len` and `top` to the new frame. POP returns `top`, loads `mem[fp] = (a, b)` with `fp < len`, and sets `top := a` and `fp := b`. A rewrite of the top changes only `top`: no bus request, `fp` and `len` unchanged. The stored link is the core's `fp`, never a bus value. With `frame_count = 0`, `top` is the zero record and `fp = NIL`, as in `Init` (3.2 item 5); `frame_count` changes by exactly one on PUSH and POP, and POP and a rewrite at `frame_count = 0` are errors. The top task (`task`, `tp`) uses the same protocol [not modelled]. (`d7-frames.md`. Mutants in `chipLeafCached.qnt`: `rewrite_appends`, `push_link_free`, `pop_no_reload`, `pop_no_fp_reload`, `top_dropped`. The `frame_count = 0` and count clauses: Gemini lane `qa/gemini-quint/chipleaf-d7`, hand-built witnesses `cex_sentinel_unconstrained`, `cex_depth_unconstrained`.)
 ```
 
 If this text is adopted, these lines say the opposite and need the same change (not edited here):
@@ -300,8 +306,11 @@ If this text is adopted, these lines say the opposite and need the same change (
 - `models/sherlock/quint/chipLeaf.qnt` stays the uncached reference model; its header says so. The
   cached model is `chipLeafCached.qnt`.
 
-`design.md` 2.7.1 (register file with "top frame, top task") and the Init table in 2.4 (rows 16
-to 19: `fp`, `tp` = NIL, `top`, `task` = 0) already match the cached protocol.
+`design.md` 2.7.1 (register file with "top frame, top task") and the `Init` table in 3.2 item 5
+(rows 13, 16 to 19: `frame_count` = 0, `fp`, `tp` = NIL, `top`, `task` = 0) already match the
+cached protocol. The read address of POP is the core's `fp`; this is the "read address comes from
+a register" item of the "Also load-bearing" paragraph, confirmed on the uncached model
+(`load_key_free`) and not re-run on the cached one.
 
 ## 9. Not covered
 
