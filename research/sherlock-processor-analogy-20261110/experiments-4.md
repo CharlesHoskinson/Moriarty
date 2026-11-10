@@ -11,9 +11,14 @@ The Gemini Quint lane on layout B and M3 (`qa/gemini-quint/chipleaf-pairrow-m3/v
 `worktree-agent-abe0ec92c1cc58c8f`) arrived during this session. It found M3 sound only with its
 constraints C1 to C6. C1 to C5 are built in, and each has a MockProver test (§3). C6 is reported in §4.
 
+The Gemini Quint lane on the HASH chip (`qa/gemini-quint/chipleaf-hash/verdict.md`, on `main`) also
+arrived during this session. Its conditions H-C1 to H-C6 are handled in §3.5.
+
 Code: `crates/mori-chip/src/vsel.rs` (packed selectors), `src/m3.rs` (records, segment root, walker,
 digests), `src/mem.rs` (`SegMemConfig`), and `src/poseidon.rs`, `src/rfcore.rs`, `src/rf.rs`,
-`tests/e3_spike.rs`. Commit `6ad01ddee`. New `RfParams`: `one_abs` (cut 1), `pack_core` (cut 2), `m3`.
+`tests/e3_spike.rs`. Commits `6ad01ddee` (cuts and M3), `432729244` (degree print), `329c4ddef` (review
+follow-up tests) and `b2b4ffce7` (HASH verdict). The commits after `6ad01ddee` change tests, test knobs
+and configure-time asserts only; the measured keys are unchanged. New `RfParams`: `one_abs` (cut 1), `pack_core` (cut 2), `m3`.
 New preset suffixes in `e3_spike.rs`: `+a1`, `+pc`, and the preset `pos_m3`. Scripts are in
 `~/.cache/chip4/scripts/`, logs in `~/.cache/chip4/logs/` and outputs in `~/.cache/chip4/out/`. The run
 records are in `qa/sherlock/runs.jsonl`.
@@ -36,6 +41,12 @@ on measured numbers. All node and decider rows are `cost_model` rows over keys m
 | `20261110T230612Z-chip4-degs` | `e8_degree_and_columns` with the core gate degrees printed | 0 |
 | `20261110T230640Z-chip4-t0b` | T0 on the follow-up commit `432729244` (the degree print): the Rust and format checks pass; the factory unit test `test_aggregate_kill_cgroup_slice` (doctorwatson cgroup kill, not mori-chip) fails. The commit was made after this run by a script error (the commit did not wait for the T0 exit code) | 1 |
 | `20261110T230940Z-chip4-t0doc` | T0 on this document; the factory unit tests, `test_aggregate_kill_cgroup_slice` included, pass | 0 |
+| `20261110T231556Z-chip4-unit4` | after a review: the core negatives also on packed selectors (every layout), every register word on the final key, the generic walker gate, and padding left on the bus: 73 unit tests pass | 0 |
+| `20261110T231725Z-chip4-fmt`, `20261110T231725Z-chip4-t0c` | `cargo fmt`; T0 on the follow-up tests (commit `329c4ddef`): 8 pass, 1 skip | 0 |
+| `20261110T231943Z-chip4-unit5` | after the HASH verdict changes (§3.5): 75 unit tests pass | 0 |
+| `20261110T232039Z-chip4-spike3` | e3_spike non-ignored: 6 pass | 0 |
+| `20261110T232101Z-chip4-t0d` | T0 on the HASH verdict changes (commit `b2b4ffce7`): 8 pass, 1 skip | 0 |
+| `20261110T232314Z-chip4-t0doc2` | T0 on this document's update | 0 |
 
 ## 1. Results
 
@@ -156,7 +167,11 @@ region is gone, and the digests have 30 inputs, not 31.
 - `m3_leaves_chain`: two leaves in sequence. The second leaf's `pre_d` equals the first leaf's `post_d`:
   `len = base + 8`, and the new root is the next old root, with a non-empty sibling at level 1. Both
   leaves pass MockProver.
-- Every E5/E6/E7 test still passes (71 unit tests; 6 e3_spike tests), with genesis `len = 8`.
+- Every E5/E6/E7 test still passes (75 unit tests after unit5; 6 e3_spike tests), with genesis
+  `len = 8`. The core tests `honest_leaves_pass`, `every_register_word_is_checked`,
+  `push_link_is_the_core_fp`, `enable_is_a_prefix`, `narrow_copies_are_checked`,
+  `wrong_digest_statement_rejected` and `rotations_are_unit` run on every layout with plain and with packed
+  core selectors (unit4).
 
 ### 3.3 Negatives (MEASURED, unit3; the failing gate or argument of each refused witness)
 
@@ -180,6 +195,15 @@ refuse it.
 | Forged sibling in both walks (same levels) | same | permutation (the old root is not `pre_d`'s root) |
 | Digest not binding a register: each of the 29 words and `mem_root`, in `pre_d` and `post_d` (60 cases) | `m3_digest_binds_every_word` | permutation (the input's copy) |
 | A written zero tuple marked padding (verdict C2) | `m3_zero_record_is_tagged` | `mem chain`, `mem first`, lookup |
+| A padding row that keeps `chip = MEM`, `key = addr` on the bus, with a request for it | `mem::tests::seg_padding_cell_is_unreadable` | `mem row` (the request is served, so no lookup failure) |
+| A select that does not follow the bit (`in0 + 1`), old and new walk, levels 0, 5, 16; statement recomputed from the forged walk | `m3_walk_gate_rejects_bad_select_and_bit` | `m3 walk` only |
+| A non-boolean bit: idx 1 as bits `(-1, 1, 0, ..)`, select and accumulators consistent | same | `m3 walk` only |
+| Any of the 32 register words wrong after the last step, final key (packed selectors, M3) | `m3_every_register_word_is_checked` | `rf core` (word 16, `len`, also permutation through `len_end`) |
+
+The negatives that print their failing gates ran in unit3 and unit4 (`E8-NEG` lines in
+`~/.cache/chip4/logs/unit.log`). The read-of-padding negatives are chip-level (the segment with raw bus
+requests), not in the leaf: in the leaf a read below `len` cannot reach a padding row, and the ALU
+`addr < len` check refuses a read above it.
 
 The first test run had two test errors, not circuit errors (test1, unit1):
 - `m3_leaves_chain` gave leaf 1 a non-empty sibling for the reserved segment 0, and so leaf 2's old root
@@ -209,12 +233,44 @@ The first test run had two test errors, not circuit errors (test1, unit1):
   padding tuple is the bus's zero tuple. The two walks share sibling and bit cells. Negatives: as listed.
 - D2 is kept unchanged. There is no PAGE in the spike.
 
+### 3.5 Gemini Quint HASH verdict H-C1 to H-C6
+
+- H-C1: the build-time asserts `n >= 2` and `!provide || n == 2` in `PoseidonCfg::sponge` are unchanged.
+  Every M3 sponge has 2, 4 or 30 inputs and no provider row.
+- H-C2, H-C3: unchanged. The capacity is in the fixed `rc[2]` of the first absorb row. The absorb and round
+  gates keep their bodies; cut 1 changes only their selector (§2.2), and the E7 negatives run in both
+  modes.
+- H-C4: the `q_first * q_prov` constraints pin `chip = HASH` and `key = 2`, and `out` is copied from the
+  final output row. New negative `provider_chip_is_pinned_and_out_is_copied`: a provider row with
+  `chip = ALU`, requested as such, is refused by `hash absorb first`. A provider `out` that differs from
+  the output row, with a request for that value, is refused by the permutation argument only.
+  `provider_key_is_pinned` (E7) covers the key.
+- H-C5: chip tags are gate-pinned advice on every `q_prov` row (HASH, ALU, MEM, and the M3 segment, where
+  `chip = act * MEM`). D4 as written (a fixed column) is not met; §6 proposes the text. The E6 provider
+  rows (`params.hash`, `hash_tuple`) pin nothing. They are now refused at configure time together with
+  `pos_hash` (`e6_rows_never_with_poseidon`, a `should_panic` test). They stay only for the E6 keys of
+  `experiments-2.md`, which are measurement records, not leaves.
+- H-C6: every M3 sponge takes copied cells (MEM record words, the outputs below it, register cells) and
+  feeds a consumer: records go to the segment root, the segment root to the new walk, the walks to the
+  digests, and the digests to the instance. The walk compressions take `in0`, `in1` as advice that the
+  `m3 walk` gate fixes from copied `x`, `s` and `b` cells (`m3_walk_gate_rejects_bad_select_and_bit`).
+  With `m3` set, the free-input E7 workload is refused by an assert. The final key has no HASH provider
+  rows. No core rule requests HASH: the spike rules do not hash. A requester that gates `chip = HASH`
+  (and `key = 2`) is needed with the first rule that hashes, such as PAGE [OPEN].
+
 ## 4. C6: raw addresses in the Sherlock machine (finding, not fixed)
 
 Verdict C6: under M3, `len`, `fp`, stored links and `mem_root` depend on where the prover closes leaves. M3
 is sound only if no program-visible value and no published statement depends on a raw address. An audit
-of `crates/mori-core/src/sherlock/` and the recursion statement gave this result (read-only; paths
-relative to `crates/`):
+of `crates/mori-core/src/sherlock/` and the recursion statement gave this result. A read-only subagent
+made the audit (paths relative to `crates/`; `owner_runtime.rs` is
+`mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs`). The lead confirmed these citations by
+reading them: `RefC` derives only `Clone, Copy, PartialEq, Eq, Debug` (`shared.rs:701-705`); SI-13
+(`owner_runtime.rs:4744-4753`); the fresh-id equality (`owner_runtime.rs:3021-3028`); `fin_d =
+Poseidon(dom, halted, result, lanes_d)` with `lanes_d` a free assigned witness
+(`mori-recursion/src/run_decider.rs:279-288`); and `carrier_digest` over the raw image, data and helper
+lanes (`mori-backend/src/sherlock_c6_witness_stream.rs:216-241`). The other citations are the subagent's
+and were not re-read.
 
 - No raw address reaches a program. Machine A (`mori-core/src/sherlock/reference.rs`) has no references.
   In machine B / C6 (`helper_machine/`), handles are `RefC::{Const, Data}`, `EnvRootC` and `SliceC`.
@@ -251,6 +307,9 @@ relative to `crates/`):
   - the wire, simulate and resource-report JSON print raw references and alloc lengths (`wire.rs:1050-1058,
     1450-1456`; `resource_report.rs`).
 
+The spike leaf of this experiment has the same property. Its `pre_d` and `post_d` hash FP, TP, LEN, the
+stored links and `mem_root`, and under M3 all of these depend on where the prover closed earlier leaves.
+
 So: programs see no addresses, but the published `fin_d`, the chain digests, and the dense-allocation
 invariants SI-12 to SI-14 do depend on raw addresses. Before M3 can be adopted, the C6 machine needs
 either a logical (dense) address inside the carrier with M3 addresses only in the leaf's memory tree, or a
@@ -272,14 +331,18 @@ resolved here [OPEN].
   §3.5).
 - The node is the `ChipNode` mirror (calibrated in E3), the SRS is unsafe, and only `cost_model` rows were
   measured. No proof was made.
+- No core rule requests HASH (H-C6); the bus-served HASH path is tested only at chip level.
 - There is no Quint model of the packed selectors or of this M3 circuit, and no Gemini Quint lane was run
-  on them. The verdict above modelled M3 abstractly (C = 4 and C = 8, exact hash maps). The HASH chip and
+  on this circuit (the owner's rule wants one for every Sherlock circuit change; it is open). The verdict above modelled M3 abstractly (C = 4 and C = 8, exact hash maps). The HASH chip and
   the running-sum RANGE also still lack their own Quint model (`experiments-3.md` §4).
 
 ## 6. Proposed text for design.md 2.7 (text only; design.md was not edited)
 
 For 2.7.8, replace D3 with:
 
+> - D4 Chip tag per provider row. On every row with `q_provider = 1`, a gate pins the `chip` field to the
+>   row's own non-zero chip id (or `act * id` on a MEM segment row), and the table side is
+>   `q_provider * tuple`. (Replaces "the region's fixed selector column"; HASH verdict H-C5.)
 > - D3 Aligned segment (M3, C = 8). `base = pre_d.len` is a multiple of C, enforced in the circuit
 >   (`base = C * seg`, `seg` given by 17 boolean bits). Genesis `len` is C (the first segment is reserved),
 >   and an Init with input rows pads `len` to a multiple of C. MEM holds C rows at `base .. base + C`. A row
