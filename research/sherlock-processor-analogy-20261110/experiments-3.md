@@ -8,8 +8,8 @@ Poseidon-only HASH chip and RANGE on one limb lookup are built and measured over
 
 Code: `crates/mori-chip/src/poseidon.rs` (HASH chip), `src/range.rs` (running-sum mode),
 `src/alu.rs`, `src/rfcore.rs` (parameters `pos_hash`, `range1`, probe `extra_selectors`), tests in
-`tests/e3_spike.rs` (presets `pos_<preset>`, suffixes `+r1`, `+xs<n>`; test `chip_e7_shapes`). Commit
-`e8aad0eeb`. Outputs: `~/.cache/chip3/out/*.json`, scripts `~/.cache/chip3/scripts/`, logs
+`tests/e3_spike.rs` (presets `pos_<preset>`, suffixes `+r1`, `+xs<n>`; test `chip_e7_shapes`). Commits
+`e8aad0eeb` and the follow-up commit that adds the 2-input guard (§2.2) and distinct-row probes. Outputs: `~/.cache/chip3/out/*.json`, scripts `~/.cache/chip3/scripts/`, logs
 `~/.cache/chip3/logs/`, run records in `qa/sherlock/runs.jsonl`.
 
 Labels: MEASURED is a `cost_model`, a key or a test result from a run named here. ESTIMATE is
@@ -22,9 +22,11 @@ do not depend on the SRS). No proof was made.
 | `20261110T215704Z-chip3-job1b` | build; unit tests: 53 pass, 3 fail (`q_prov` not assigned on non-provider absorb rows) | 0 (tests failed) |
 | `20261110T215744Z-chip3-job1c` | unit tests after the fix: 56 pass | 0 |
 | `20261110T215809Z-chip3-job2` | keyed rotation guards; key shapes; node over B, B + HASH, B + HASH + 1-limb RANGE, B + 1-limb RANGE | 0 |
-| `20261110T220102Z-chip3-job3` | node over the final key with 0, 2 and 4 extra selector columns; node keygen and run decider over the final node | 0 |
+| `20261110T220102Z-chip3-job3` | node over the final key with 0, 2 and 4 extra selector columns (probe selectors on identical rows; superseded by job5); node keygen and run decider over the final node. Its lib-test step did not compile (a test literal lacked `extra_selectors`); the node step ran | 0 |
 | `20261110T221020Z-chip3-job4` | after `cargo fmt`: 56 unit tests; e3_spike non-ignored tests (rotation guards, S = 16 MockProvers): 4 pass | 0 |
 | `20261110T221047Z-chip3-t0` | T0 on the Rust commit: 8 pass, 1 skip | 0 |
+| `20261110T221418Z-chip3-t0doc` | T0 on this document | 0 |
+| `20261110T221759Z-chip3-job5` | after the 2-input guard: 56 unit tests; 5 e3_spike tests incl. `rf_leaf_s16_mock_prover_final_e7`; node over the final key (888,466 again) and over distinct-row selector probes | 0 |
 
 ## 1. Results
 
@@ -37,7 +39,8 @@ do not depend on the SRS). No proof was made.
 | `k_leaf` at S = 16, final key | 16 | 13 (6,665 rows) |
 | Keyed rotations, final key and every layout with the new options | -1, 0, +1 | -1, 0, +1 |
 
-Steps needed: 1 and 2. Step 1 alone passes with 6,534 rows of headroom, which is not a margin (one
+Steps needed: 1 and 2. The node over the committed final key was measured again after the last code change (job5): 888,466.
+Step 1 alone passes with 6,534 rows of headroom, which is not a margin (one
 filled fixed column costs about 6,000). Step 2 brings the headroom to 61,534. That is more than the
 45,000 that experiments-2 called a clear margin, so the work stopped there.
 
@@ -45,8 +48,9 @@ Step 3 (M3 aligned segment with `mem_root`) was **not built as wiring**. The fin
 C = 8 hash workload: 41 bus-served 2-input hashes, eight 3-input sponges and two 31-input sponges.
 But the sponges absorb free inputs, not copies of the MEM rows and registers. There is no Merkle
 walker, no path select and no index bits, and the state digest is still the placeholder (§4). Rows
-and k include the full M3 workload. The node rows do not include the walker's selectors. §3.3 bounds
-that cost with a measured probe.
+and k include the full M3 workload. The node rows do not include the walker's selectors. §3.3
+estimates them at about 39,000 node rows from a measured per-selector probe. That would leave about
+22,500 of headroom, less than a clear margin.
 
 ## 2. The HASH chip
 
@@ -88,7 +92,7 @@ Gates (5 selectors, 3 round-constant fixed columns, no new advice or equality co
 
 - `differential_cpu`: the chip's CPU form equals the stdlib sponge on 4 random inputs of every
   length 1 to 40 (seeded ChaCha20).
-- `differential_circuit`: in MockProver, random sponges of 1, 2, 3, 4, 8 and 31 inputs. Their
+- `differential_circuit`: in MockProver, random sponges of 2, 3, 4, 8 and 31 inputs. Their
   inputs are copied from cells, and their outputs are tied to an instance column holding
   `hash_native(inputs)`. Four random bus-served hashes serve raw request rows carrying the stdlib
   output. All pass.
@@ -109,7 +113,12 @@ Gates (5 selectors, 3 round-constant fixed columns, no new advice or equality co
     `hash absorb first`.
   - Also refused: a request with a wrong output (lookup failure), a request with swapped inputs, and
     a sponge output that differs from the instance.
-- In the leaf: `pos_hash_and_range1_leaves_pass` (MockProver, B, S = 4, 3 bus-served hashes and
+- One input is refused by construction: `sponge` asserts `n >= 2`. A 1-input sponge would use the
+  first-absorb gate, which adds `in1`, and `in1` would be free advice. A review found this after the
+  first commit, and the guard is in the follow-up commit. No use in the leaf hashes fewer than 2
+  inputs.
+- In the leaf: `rf_leaf_s16_mock_prover_final_e7` (MockProver over the final configuration at S = 16
+  with the full m3c8 hash workload; job5) and `pos_hash_and_range1_leaves_pass` (MockProver, B, S = 4, 3 bus-served hashes and
   sponges of 3 and 31 inputs, with and without the 1-limb RANGE). The existing leaf tests and
   `rf_leaf_s16_mock_prover_all_layouts` still pass.
 - Rotations: `rotations_are_unit` (configured constraint system, every layout with `pos_hash`,
@@ -136,8 +145,8 @@ against 121 with the stdlib chip. The rows cost the leaf, not the node: k stays 
 | B + HASH (`narrow,1,pos_m3c8`) | 12 | 13 | 29 | 7 | 6,521 | 13 | 943,466 | 20 |
 | B + HASH + 1-limb RANGE (`narrow,1,pos_m3c8+r1`), final | 12 | 13 | 31 | 4 | 6,665 | 13 | 888,466 | 20 |
 | B + 1-limb RANGE (`narrow,1,none+r1`) | 12 | 13 | 23 | 4 | 435 | 13 | 836,770 | 20 |
-| final + 2 filled selector columns (`+xs2`) | 12 | 13 | 33 | 4 | 6,665 | 13 | 896,019 | 20 |
-| final + 4 filled selector columns (`+xs4`) | 12 | 13 | 35 | 4 | 6,665 | 13 | 898,137 | 20 |
+| final + 2 filled selector columns (`+xs2`), distinct rows (job5) | 12 | 13 | 33 | 4 | 6,665 | 13 | 901,404 | 20 |
+| final + 4 filled selector columns (`+xs4`), distinct rows (job5) | 12 | 13 | 35 | 4 | 6,665 | 13 | 914,292 | 20 |
 
 Earlier keys from experiments-2, for comparison: B + stdlib HASH 999,488 (12/15/36/7); B +
 Poseidon-only stand-in 953,150 (12/13/31/7, two selectors all zero).
@@ -162,13 +171,16 @@ is the same as in E3 and experiments-2, as expected: the decider does not depend
 
 ### 3.3 Headroom for what is not built (ESTIMATE from the probe)
 
-Two extra filled selector columns cost 7,553 rows and four cost 9,671. The probe's selectors are
-enabled on every 7th core row only, and its per-column cost is below the 6,000 to 6,500 that the
-HASH columns cost. For a planning bound, use about 6,500 per filled fixed column (the HASH figure).
+Extra filled selector columns, each enabled on its own set of rows, cost 12,938 rows for two and
+25,826 for four (job5): 6,456 to 6,469 per column, the same as the HASH columns (6,462). A first
+probe in job3 enabled every probe column on the same rows and measured 7,553 and 9,671. Equal
+commitments seem to be shared by the node, so that probe is not a per-column measure.
 M3 wiring needs about 4 selectors: the path select with the bit check and the shift-right index
 accumulator `2 acc_t = acc_(t-1) + b_t 2^17`, the first level, the `EMPTY` segment constant, and
 `8 acc = base`. The MEM active-prefix flag needs about 2 more. Together that is about 39,000 node rows
-(ESTIMATE). It leaves about 22,500 under the gate for PAGE, TRAP and the real state digest.
+(ESTIMATE). It leaves about 22,500 under the gate for PAGE, TRAP and the real state digest. That is
+below the 45,000 that experiments-2 called a clear margin, so the gate after M3 is not yet passed
+with margin.
 Replacing the placeholder digest region with HASH requests removes its 3 selectors (about +19,500
 back). A further bus lane costs a lookup, about 22,500. So after M3, at most one more lane fits.
 
