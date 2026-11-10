@@ -160,4 +160,50 @@ module m3segTest {
     assert(not(allSatisfyRefine("no_empty_slot_check"))),
     assert(not(allSatisfyRefine("page_serves_segment")))
   }
+
+  // ---------------------------------------------------------------- Lead additions (2026-11-10)
+  // Zero-tuple spill with NIL != 0 once genesis len = 0: PUSH 0 sets fp := 0, so the next PUSH
+  // spills (top = 0, fp = 0) == ZERO_CELL at address 1. The POP that loads it is refused. NIL != 0
+  // alone does not close the completeness gap; every honest record must differ from the zero tuple.
+  pure val w_push_zero_at_addr0: ChainW = {
+    val insns1 = [
+      { op: OP_PUSH, arg: 0, tagLink: 0 },
+      { op: OP_PUSH, arg: 5, tagLink: 0 },
+      { op: OP_POP, arg: 0, tagLink: 0 },
+      { op: OP_POP, arg: 0, tagLink: 0 }
+    ]
+    val pre1 = initRegState(0, NIL_DEFAULT)
+    val b1 = buildLeafFromInsns("none", pre1, insns1, 4, emptyWrittenMap, -1, ZERO_CELL, false)
+    val b2 = buildLeafFromInsns("none", b1.leaf.post, [NO_INSN, NO_INSN, NO_INSN, NO_INSN], 0, b1.nextMap, -1, ZERO_CELL, false)
+    { progId: 0, partId: 2, nilVal: NIL_DEFAULT, leaf1: b1.leaf, leaf2: b2.leaf }
+  }
+
+  run completenessFailurePushZeroAtAddr0Test = all {
+    assert(w_push_zero_at_addr0.leaf1.memRows[1].cv == ZERO_CELL),
+    assert(not(acceptsWithMutant("none", w_push_zero_at_addr0)))
+  }
+
+  // Honest chains under M1, M3, M5, M6, M7 and M7-alone are accepted and refine, so those mutants are
+  // caught by a forged witness. M2 (append_skips) and M4 (close_len_running) are excluded: their honest
+  // run already diverges (M2 writes with a hole; under M4 the next base is unaligned).
+  // Only (program, partition) pairs whose honest chain the sound model accepts are used: Prog 1 loads
+  // the literal address 1, which under partition [1, 3] is a padding cell, so the sound model refuses it
+  // (the partition is observable through literal addresses).
+  pure val VALID_RUNS: Set[(int, int)] =
+    tuples(PROG_IDS, PART_IDS).filter(pp =>
+      acceptsWithMutant("none", buildHonestChain("none", pp._1, pp._2, NIL_DEFAULT)))
+
+  run validRunsTest = all {
+    assert(VALID_RUNS.size() == 5),
+    assert(not(VALID_RUNS.contains((1, 1))))
+  }
+
+  run honestUnderMutantsRefinesTest = all {
+    Set("padding_nonzero", "padding_read", "base_unaligned", "no_empty_slot_check",
+        "page_serves_segment", "page_serves_segment_alone").forall(mt =>
+      VALID_RUNS.forall(pp => and {
+        acceptsWithMutant(mt, buildHonestChain(mt, pp._1, pp._2, NIL_DEFAULT)),
+        refines(buildHonestChain(mt, pp._1, pp._2, NIL_DEFAULT))
+      }))
+  }
 }

@@ -14,13 +14,18 @@ The lane could not run `quint` (its sandbox refused the command), so every resul
 | Part | Verdict | Condition |
 |---|---|---|
 | 1. Layout B pair rows | SOUND | with C1 below. The spike `rfcore.rs` already meets C1. |
-| 2. M3 aligned segment, C = 8 | SOUND only with C2 to C5 | not sound as written against `rf.rs` (`NIL = 0`, genesis `len = 1`) and the current D3 text |
+| 2. M3 aligned segment, C = 8 | SOUND only with C2 to C6 | not sound as written against `rf.rs` (`NIL = 0`, genesis `len = 1`) and the current D3 text |
 
 ## 2. Required design constraints
 
-- **C1 (pair rows, scratch registers).** A register that the leaf digest leaves out (`v0..v2`, words 29..31, `NDIG = 29`) is write-only: no rule and no lane reads `Pre(v_k)`. Otherwise include it in the digest. Slot 0's `pre` of an undigested word is free, so at the start of every leaf after the first the prover chooses it (`cex_P9_scratch_read`). `rfcore.rs` `next_state` and the lane constraints read no `Pre(V0..V2)`, so the spike meets C1. A future rule set must keep it.
-- **C2 (M3, NIL and zero records).** "A read SHALL refuse the zero tuple" requires that no honest record is the zero tuple. With `NIL = 0` (`rf.rs`), D7's depth-0 sentinel spill `(top = 0, fp = NIL)` is the zero tuple, so every honest POP at depth 1 is refused (`w_d7_sentinel_nil_zero`, completeness). An untagged all-zero data record has the same failure (`w_zero_record_untagged`). Fix: `NIL != 0`, and a non-zero tag word in every written record. This is a completeness failure, not a soundness failure, but M3 cannot be adopted without it.
-- **C3 (M3, aligned base and genesis).** `base = pre_d.len` must be a multiple of C, as a circuit constraint (for example `base = C * seg` with `seg` range-checked). Genesis must start at `len = 0` (not `rf.rs`'s `len = 1`, which reserves address 0 for `NIL = 0`), and an `Init` with input rows must pad `len` to a multiple of C. If the base is not aligned, MEM row `k` is hashed at segment offset `k`, but PAGE opens `base + k` at offset `(base + k) mod C`, so a later leaf reads the wrong cell (`cex_M5_base_unaligned`).
+- **C1 (pair rows, scratch registers).** A register that the leaf digest leaves out (`v0..v2`, words 29..31, `NDIG = 29`) is write-only: no lane and no digest-covered register depends on `Pre(v_k)`. Its only use is its own carry in a disabled slot (`off * p`). Otherwise include it in the digest. Slot 0's `pre` of an undigested word is free, so at the start of every leaf after the first the prover chooses it (`cex_P9_scratch_read`). In `rfcore.rs`, `next_state` uses `Pre(V0..V2)` only in the `V0..V2` lines themselves, and no lane constraint reads them, so the spike meets C1. A future rule set must keep it.
+- **C2 (M3, no honest record is the zero tuple).** "A read SHALL refuse the zero tuple" is complete only if no honest record is the zero tuple. That includes frame and task spills.
+  - With `NIL = 0` (`rf.rs`), D7's depth-0 sentinel spill `(top = 0, fp = NIL)` is the zero tuple, so every honest POP at depth 1 is refused (`w_d7_sentinel_nil_zero`).
+  - An untagged all-zero data record fails the same way (`w_zero_record_untagged`).
+  - `NIL != 0` alone is not enough once genesis starts at `len = 0` (C3). `PUSH 0` sets `fp := 0`, and the next PUSH spills `(top = 0, fp = 0)`, the zero tuple, at address 1, so the POP that loads it is refused (`w_push_zero_at_addr0` in `m3seg_test.qnt`, lead addition, with NIL = 99).
+  - Fix: a non-zero tag word in every written record, frame and task spills included. The other way is never to allocate address 0 and keep `NIL != 0`, but that conflicts with C3's genesis `len = 0` unless the whole first segment is reserved.
+  - This is a completeness failure, not a soundness failure, but M3 cannot be adopted without it.
+- **C3 (M3, aligned base and genesis).** `base = pre_d.len` must be a multiple of C, as a circuit constraint (for example `base = C * seg` with `seg` range-checked). Genesis must start at an aligned `len`: 0, or C with the first segment reserved. `rf.rs`'s `len = 1` is not aligned. An `Init` with input rows must pad `len` to a multiple of C. If the base is not aligned, MEM row `k` is hashed at segment offset `k`, but PAGE opens `base + k` at offset `(base + k) mod C`, so a later leaf reads the wrong cell (`cex_M5_base_unaligned`).
 - **C4 (M3, D3 text).** D3 as written ("hashes MEM rows `0 .. post.len - base - 1`") marks all C rows active once `post.len = base + C`, which turns off the padding check (`cex_M1_padding_nonzero`). D3 must state:
   - the active prefix is `used = len_end - base`, where `len_end` is the running `len` after the last slot;
   - rows `used .. C - 1` are the zero tuple;
@@ -33,11 +38,17 @@ The lane could not run `quint` (its sandbox refused the command), so every resul
   - leaf close sets `post_d.len = base + C`, not the running `len` (M4);
   - the root update authenticates the empty slot at `base / C` against `pre_d.mem_root` and reuses its siblings (M6).
 
+- **C6 (M3, partition-dependent addresses).** A leaf may close early; that is the prover's choice (design 2.7.7). Under M3 every leaf allocates C addresses, a zero-append leaf too (`hw_part_2_2`, `hw_part_4_0`). So `len`, `fp`, every stored link and `mem_root` in `post_d` depend on where the prover closed the leaves. After the same two PUSHes, `fp = 4` under one partition (`hw_part_1_3`) and `fp = 1` under another. The model's reference uses the same per-leaf allocation as the circuit, so it does not catch this. Part 2 is sound only if one of these holds:
+  - no program-visible value and no published statement depends on raw addresses (addresses are opaque handles: compared only for equality, never printed, hashed into an outcome or used in arithmetic), or
+  - the claim the leaf chain proves names the partition (the reference is run with the same partition).
+  A literal address in a program makes the partition decide acceptance. Program 1 loads address 1, which under partition [1, 3] is a padding cell, so the sound model refuses that run but accepts the same program under [2, 2] (`validRunsTest`, lead addition). The Sherlock VM must state which option it takes.
+- **Cross-part note (P7 and M4).** P7 requires `post_d` to digest slot S's pre cells. M4 requires `post_d.len = base + C`, while slot S's `len` is the running `base + used`. So LEN is the one digest input that is not a copy of a slot-S cell. It must be a separate close cell, computed as `base + C`, and the digest must take that cell.
+
 D2 under M3: the model accepts PAGE without `addr < base` when C2 to C5 hold (`m3seg_M7_alone`, exit 0). Every segment at or above `base / C` is empty in `pre_d.mem_root`, so it opens only to the zero tuple, which a read refuses. Dropping both `addr < base` and the zero refusal is caught (`cex_M7_page_serves_segment`: an intra-leaf read is served a stale zero). Keep D2. It costs nothing and keeps PAGE and MEM on disjoint address ranges.
 
 Observations that change no verdict:
 - **Enable prefix.** Dropping the prefix leaves register refinement intact (`pairrow_enable_not_prefix`, exit 0). A disabled slot is the identity, because the frame gate is unconditional and the copy links are unconditional. The prefix matters for publication (the terminal step is the last enabled slot) and for slot-position commitments, not for the register file.
-- **Leaf partitions.** Under M3 every leaf allocates C addresses, a zero-append leaf too (`hw_part_2_2`, `hw_part_4_0`). So `len`, `fp` and every stored link depend on where leaves close (`hw_part_1_3`: `fp = 4` against `fp = 1` after the same two PUSHes). Two runs of one program agree only up to an aligned renaming of addresses. A statement that compares addresses across partitions must not assume bitwise-equal `post_d`. Address space at C = 8: 2^17 leaves at depth 20 (`experiments-2.md` §3.5).
+- **Address space.** At C = 8 and depth 20 there are 2^17 segments, one per leaf (`experiments-2.md` §3.5).
 
 ## 3. Attack questions and the mutants that answer them
 
@@ -56,7 +67,8 @@ Observations that change no verdict:
 | Read a padding cell as data | M3 `padding_read` | 1 | caught |
 | Desync `len` and the root | M4 `close_len_running`, M5 `base_unaligned`, M6 `no_empty_slot_check` | 1, 1, 1 | caught; C3, C5 |
 | D2 interaction | M7 `page_serves_segment` (with zero refusal off) / `M7_alone` | 1 / 0 | caught only together with the zero refusal off |
-| Completeness under `NIL = 0` | `w_d7_sentinel_nil_zero`, `w_zero_record_untagged` | test pass (rejected as expected) | finding; C2 |
+| Completeness: zero-tuple records | `w_d7_sentinel_nil_zero`, `w_zero_record_untagged`, `w_push_zero_at_addr0` | tests pass (each run refused, as asserted) | finding; C2 |
+| Partition decides addresses / acceptance | `hw_part_1_3` vs `hw_part_2_2`; `validRunsTest` | tests pass | finding; C6 |
 
 ## 4. Lead re-run
 
@@ -66,7 +78,7 @@ All commands ran from `qa/gemini-quint/chipleaf-pairrow-m3/` as `heavy-run --mem
 |---|---|---|
 | `quint typecheck` on `pairrow.qnt`, `pairrow_test.qnt`, `m3seg.qnt`, `m3seg_test.qnt` | 0 each | |
 | `quint test --main pairrow_test pairrow_test.qnt` | 0 | 16 passing |
-| `quint test --main m3segTest m3seg_test.qnt` | 0 | 15 passing |
+| `quint test --main m3segTest m3seg_test.qnt` | 0 | 18 passing |
 | `quint run pairrow.qnt --main pairrowSound --invariant invRefine` | 0 | [ok] |
 | `quint run pairrow.qnt --main pairrowSound --invariant reachAcceptedBadTamper` | 0 | [ok] |
 | `quint run pairrow.qnt --main pairrowSound --invariant reachHonestFullChain` | 1 | [violation] (non-vacuity) |
@@ -99,6 +111,12 @@ The `--main` names and the invariant names in the lane's `REPORT.md` §4 are par
 - `pairrow_test.qnt`:
   - added `honestUnderMutantsRefinesTest`: for every mutant except P7, the honest chain under the mutant is accepted and refines;
   - the P9 test now also asserts that the honest chain refines.
+- `m3seg_test.qnt`:
+  - added `w_push_zero_at_addr0` and `completenessFailurePushZeroAtAddr0Test` (C2);
+  - added `VALID_RUNS` and `validRunsTest` (C6);
+  - added `honestUnderMutantsRefinesTest`: for M1, M3, M5, M6, M7 and M7-alone, the honest chain under the mutant is accepted and refines on every run in `VALID_RUNS`. M2 and M4 are left out, because their honest runs already diverge.
+
+The commands total 33: 4 typechecks, 2 test suites (16 + 18 tests) and 27 `quint run`s. 20 exit 1 and 13 exit 0, each as expected.
 
 None of these changes weakens a constraint of the sound model. No file under `models/` was changed.
 
