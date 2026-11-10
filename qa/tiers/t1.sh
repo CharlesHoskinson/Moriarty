@@ -25,9 +25,11 @@ if [[ -f "$test_src" ]] || grep -qs 'name *= *"soundness_mutation"' crates/mori-
   # and far more at the default thread count, so it runs in its own 48 GiB scope with swap off
   # (not `heavy`, whose lock a T1 already under `heavy` holds) at 2 test threads by default,
   # inside heavy.slice so it never adds to the app.slice pressure that systemd-oomd acts on.
+  # t1-workspace-tests.py is `cargo test --workspace` with a per-test ledger: a rerun on the
+  # same tree skips the tests that already passed, so a lost run resumes (2026-11-10).
   dw_step "cargo test --workspace" systemd-run --user --scope --collect -q --expand-environment=no --slice="${DW_HEAVY_SLICE:-heavy.slice}" \
     -p MemoryMax=48G -p MemorySwapMax=0 -- \
-    env RUST_TEST_THREADS="${RUST_TEST_THREADS:-2}" cargo test --workspace --locked
+    env RUST_TEST_THREADS="${RUST_TEST_THREADS:-2}" python3 -B scripts/qa/t1-workspace-tests.py
 else
   dw_skip_missing "soundness_mutation" "test target crates/mori-backend/tests/soundness_mutation.rs not found"
 fi
