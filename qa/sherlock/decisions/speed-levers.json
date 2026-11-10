@@ -4,23 +4,108 @@
   "owner_decision": "2026-11-08: 48 GB per process, 100 GB aggregate; throughput mandatory (SRC-011); tree reopened as a measured option; general-purpose recursion reasoned about in Lean and Quint",
   "written_by": "lead",
   "c0": {
-    "run": null,
-    "d_domain_proportional_share": null,
-    "m_msm_share": null,
-    "q_ntt_share": null,
-    "U_average_cores_at_20_threads": null,
-    "f3_concurrent_slowdown": null,
-    "wall_seconds_by_threads": {"4": null, "10": null, "20": null},
-    "node_rows_at_7_3_0": null,
-    "node_k": null,
+    "run": "20261109T180334Z-C0-c0-gp-r5-t20-GP-resident_pk-t20-0-on",
+    "d_domain_proportional_share": 0.884,
+    "m_msm_share": 0.256,
+    "q_ntt_share": 0.57,
+    "U_average_cores_at_20_threads": 9.77,
+    "f3_concurrent_slowdown": [
+      1.69,
+      1.725,
+      1.736
+    ],
+    "wall_seconds_by_threads": {
+      "4": 102.96,
+      "10": 72.73,
+      "20": 64.95
+    },
+    "node_rows_at_7_3_0": 652437,
+    "node_k": 20,
     "node_step_k19_seconds": null,
-    "aggregate_peak_bytes": null,
-    "tree_node_rows": {"self-self-leaf": null, "self-self": null, "self-self-leaf-leaf": null}
+    "aggregate_peak_bytes": 47731671040,
+    "tree_node_rows": {
+      "self-self-leaf": 1078147,
+      "self-self": 730243,
+      "self-self-leaf-leaf": 1278670
+    },
+    "q_note": "q from the diagnostic r4-t20 trace (0.566-0.573 over 3 steps); decide over r5-t20 reports d, m and U only; r4-t4/t10 q 0.62-0.71",
+    "node_step_k20_seconds_shkivc06": [
+      64,
+      67
+    ],
+    "node_step_peak_bytes_shkivc06": 17600000000,
+    "sources": [
+      "wiki-llm/recursion-perf/profiles/c0-first-profile.md",
+      "qa/sherlock/profiles/c0-decide-20261109/decide.json",
+      "tasks.md 2.3 (SHKIVC06 row report)",
+      "tasks.md 2.13 (F22)"
+    ]
   },
   "gates": {
-    "G-A": {"status": "pending", "after": ["A15", "A16", "A17", "F22", "A23"], "decisions": {"rayon_threads": null, "k19": null, "gpu_track": null, "tree": null, "S_provisional": null, "leaf_workers_P": null}, "c0_metric_per_decision": {}, "at": null},
-    "G-A-prime": {"status": "pending", "after": ["A12"], "decisions": {"k_U": null, "S": null, "leaf_option": null}, "rule": "k_U + log2(S) <= 20; option F fixes S=1", "at": null},
-    "G-B": {"status": "pending", "after": ["A18"], "decisions": {"entry7_under_20_min": null, "re_decided": null}, "at": null},
-    "G-C": {"status": "pending", "after": ["A19", "A19b"], "decisions": {"fact3_under_2h": null, "list123_under_2h": null, "blocks": "OP-PV-DEPLOY"}, "at": null}
+    "G-A": {
+      "status": "decided",
+      "after": [
+        "A15",
+        "A16",
+        "A17",
+        "F22",
+        "A23"
+      ],
+      "decisions": {
+        "rayon_threads": 20,
+        "k19": "k=20 recorded",
+        "gpu_track": "open (pending owner funding per 2.10b)",
+        "tree": "kept as fallback (closed)",
+        "S_provisional": 16,
+        "leaf_workers_P": 3
+      },
+      "c0_metric_per_decision": {
+        "rayon_threads": "C11 node step wall 102.96 / 72.73 / 64.95 s at 4 / 10 / 20 threads; decide: keep_20_threads",
+        "k19": "SHKIVC06 652,437 rows, 128,145 over 2^19; collapse_self 239,577 + collapse_final 267,514 = 78%; prover.md \u00a72 candidates close about 100 rows; C12 predicted k19 factor 1.79x stays unrealized",
+        "gpu_track": "m + q = 0.256 + 0.57 = 0.83 >= 0.4 (union m or q 0.77 at t20); C14 MSM Amdahl 1.34x, C7 quotient bound 2.56x",
+        "tree": "F22: {self,self,leaf} 1,078,147 rows > 0.95 x 2^20 = 996,147 (tree killed); also f3 = 1.73 > 1.4 and U = 9.77 > 6",
+        "S_provisional": "C13 node-only time for 320 steps at 64.95 s/step: S=16 1,299 s, S=8 2,598 s, S=4 5,196 s vs target 5,760 s; S=16 = S_MAX leaves the most room for t_leaf(S), unknown until M4; final at G-A' (4.10)",
+        "leaf_workers_P": "node-concurrent-3: three 16.3 GB proofs, aggregate peak 47.7 GB under the 60 GiB cap (host heavy.slice 72G since 2026-11-09, below the 100 GB owner aggregate); throughput 3/1.73 = 1.73x"
+      },
+      "at": "2026-11-09",
+      "A16_shortfall": "A16 not run at the new pins (task 2.6). Recorded shortfall: SHKIVC06 node step 64-67 s at k=20 and 17.6 GB peak vs SRC-015(a) <= 60 s and <= 16 GB. Cause (C0): the node stays at k=20 (domain-proportional share 0.884); S and the tree carry the target (S=16)."
+    },
+    "G-A-prime": {
+      "status": "pending",
+      "after": [
+        "A12"
+      ],
+      "decisions": {
+        "k_U": null,
+        "S": null,
+        "leaf_option": null
+      },
+      "rule": "k_U + log2(S) <= 20; option F fixes S=1",
+      "at": null
+    },
+    "G-B": {
+      "status": "pending",
+      "after": [
+        "A18"
+      ],
+      "decisions": {
+        "entry7_under_20_min": null,
+        "re_decided": null
+      },
+      "at": null
+    },
+    "G-C": {
+      "status": "pending",
+      "after": [
+        "A19",
+        "A19b"
+      ],
+      "decisions": {
+        "fact3_under_2h": null,
+        "list123_under_2h": null,
+        "blocks": "OP-PV-DEPLOY"
+      },
+      "at": null
+    }
   }
 }
