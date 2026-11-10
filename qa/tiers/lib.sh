@@ -11,8 +11,13 @@ DW_FAIL=0
 DW_SKIP=0
 DW_SKIP_MISSING=0
 DW_T_START=$SECONDS
-DW_TMP="$(mktemp -d)"
-trap 'rm -rf "$DW_TMP"' EXIT
+# Step logs are kept after the runner exits, so a result survives the loss of the
+# parent process. Logs older than 14 days are deleted at the next run.
+DW_LOG_ROOT="${DW_LOG_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/doctorwatson/tier-logs}"
+mkdir -p "$DW_LOG_ROOT"
+find "$DW_LOG_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
+DW_TMP="$(mktemp -d "$DW_LOG_ROOT/${DW_TIER//[^A-Za-z0-9]/_}-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+export DW_TMP
 
 # Git exports these to hooks. Steps must not inherit them: a test that runs `git`
 # in a scratch repo would otherwise write into this repository's index.
