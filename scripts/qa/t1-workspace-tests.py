@@ -36,7 +36,10 @@ def say(msg):
 def tree_key():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     h = hashlib.sha256()
-    h.update(subprocess.check_output(['git', 'diff', 'HEAD', '--binary'], cwd=ROOT))
+    # DoctorWatson rewrites its own status and run records during a run; they are not test inputs.
+    h.update(subprocess.check_output(['git', 'diff', 'HEAD', '--binary', '--', '.',
+                                      ':(exclude)qa/sherlock/status.json',
+                                      ':(exclude)qa/sherlock/runs.jsonl'], cwd=ROOT))
     untracked = subprocess.check_output(
         ['git', 'ls-files', '--others', '--exclude-standard', '--', 'crates', 'Cargo.toml', 'Cargo.lock'],
         cwd=ROOT)
