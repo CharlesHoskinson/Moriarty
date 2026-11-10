@@ -36,9 +36,10 @@ The model abstracts the permutation as a bijection of Z_p^3 (p = 1000003), with 
   - The table side must stay `q_prov * tuple`. If it is not scaled, the free cells of a padding or round row become provider tuples (H14, caught).
   - Today every `q_prov = 1` row meets this rule:
     - HASH: `q_first`, on a 2-input provider only.
-    - ALU: `alu.rs:117`.
-    - MEM: `mem.rs:43`.
+    - ALU: the gate pins `chip` at `alu.rs:117`. `q_alu` is enabled on the same row as each `provide` call (`alu.rs:143-144`, `alu.rs:160-162`).
+    - MEM: the gate pins `chip` at `mem.rs:43`. `q_row` is enabled on every row that `provide` writes (`mem.rs:76`, `mem.rs:84`).
     - The provider rows in `cpu.rs` are test-only (`#[cfg(test)]`).
+  - If another provider did not pin its own chip id, a HASH request could receive that chip's output. The lead witness `cex_H8_hash_direction` (`mutantH8_hashDirectionTest`) shows this: ALU row 44 is relabelled HASH and requested as `(HASH, 2, 1, 2, aluOut)`. The witness is accepted under `chip_unpinned`, refused by the sound ALU pin, and does not refine.
   - The E6 provider rows (`params.hash`, `hash_tuple`, `rfcore.rs:1156-1162`) pin neither chip nor key (experiments-3 §2.1). They are not built when `pos_hash` is set, because that block returns first. They must not be combined with the Poseidon chip, or must be removed.
   - Either D4's text changes to "gate-pinned advice on every `q_prov` row", or the chip tag moves to a fixed column.
 - **C6 (wiring, not built yet).**
@@ -57,7 +58,7 @@ Provider reuse: one provider row serving several requests with the same `(in0, i
 | Capacity chosen by the prover | H5 `capacity_advice` | 1 | caught |
 | Wrong length in the capacity | H6 `len_wrong` | 1 | caught |
 | Provider row with a different key | H7 `key_unpinned` | 1 | caught |
-| Provider row with a different chip tag | H8 `chip_unpinned` | 1 | caught |
+| Provider row with a different chip tag | H8 `chip_unpinned` (HASH row served as ALU; lead test `cex_H8_hash_direction`: ALU row served as HASH) | 1 | caught |
 | Output not bound to the permutation | H9 `out_not_copied` | 1 | caught |
 | Output read from a non-final row / sponge ends early | H10 `out_from_nonfinal` | 1 | caught |
 | Provider row reused for a different request (provider on a chain row) | H11 `prov_on_chain_row` | 1 | caught; C1 |
@@ -81,7 +82,7 @@ All commands ran from `qa/gemini-quint/chipleaf-hash/` as `heavy-run --mem 4G --
 | Command | Exit | Tag |
 |---|---|---|
 | `quint typecheck hashchip.qnt`, `hashchip_test.qnt` | 0, 0 | |
-| `quint test --main hashchip_test hashchip_test.qnt` | 0 | 21 passing (includes the exhaustive single-cell, request-tuple and per-mutant folds) |
+| `quint test --main hashchip_test hashchip_test.qnt` | 0 | 22 passing (includes the exhaustive single-cell, request-tuple and per-mutant folds) |
 | `quint run hashchip.qnt --main hash_sound --invariant invRefine` | 0 | [ok] |
 | `quint run hashchip.qnt --main hash_sound --invariant reachAcceptedBadTamper` | 0 | [ok] |
 | `quint run hashchip.qnt --main hash_sound --invariant reachHashRequestServed` | 1 | [violation] (non-vacuity) |
@@ -105,7 +106,11 @@ Totals: 22 commands; 17 exit 1, each with a `[violation]` line; 5 exit 0.
    The repair: the attack now relabels HASH provider row 0 as ALU (`tamperSingleCell(mt, 0, 0, CHIP_ALU)`). The ALU request then receives a hash output. This attack needs only the HASH pin to be dropped.
 3. **Vacuity, H10 (`out_from_nonfinal`).** Under the mutant, the honest builder reads `out` from row 1 of every provider sponge, but the lane moved only provider 0's copy constraint. Provider 1's copy constraint therefore rejected the honest witness under the mutant. Both providers now copy from their row 1 under the mutant.
 
-`hashchip_test.qnt` is unchanged. No repair weakens a constraint of the sound model.
+4. **Lead addition, `hashchip_test.qnt`:** `cex_H8_hash_direction` and `mutantH8_hashDirectionTest` (H8 in the HASH direction; see C5). Otherwise the test file is the lane's.
+
+Note on repair 1: it changes the round function, not only its syntax. The repaired function is still an opaque bijection, so the claims of the model are unchanged, but this goes beyond a syntax or vacuity fix. The caller should judge it.
+
+No repair weakens a constraint of the sound model.
 
 ## 5. Limits
 
@@ -116,6 +121,8 @@ Totals: 22 commands; 17 exit 1, each with a `[violation]` line; 5 exit 0.
   - The exhaustive folds cover only this domain. Nothing here proves soundness for every witness.
 - **Collisions.** Element 0 of the output can collide mod p (probability about 1/p per comparison). No collision appears in the folds.
 - **Tamper sync.** Only provider 0 is synced into a request. Tampers on provider 1 change no request.
-- **H8's other half.** The H8 mutant drops both chip pins (HASH and ALU). The repaired witness uses the dropped HASH pin. The model does not separately show an attack through the ALU pin alone.
+- **H8 and the two pins.** The H8 mutant drops both chip pins (HASH and ALU). The repaired lane witness uses the dropped HASH pin. The lead test uses the dropped ALU pin. The sampled `quint run` of H8 can find either.
+- **Lane `REPORT.md`, superseded in part.** Its §4.1 integer S-box and its H8 attack are replaced by the repairs above. Its §5 run options (5000 or 2000 samples, 5 steps) differ from the lead's (4000 samples, 3 steps). Its claim that `quint test` gives 21 passing is now 22, with the lead test.
+- **Lead debugging.** A debug module and a copy of the model went briefly to the session scratchpad under `/tmp`, against the task's rule. They have been deleted.
 - **Equality in the gates.** The model's gates compare integers, not residues. For the small tamper domain this changes nothing.
 - **Out of scope.** The permutation itself (MDS, round constants, the stdlib differential) is not modelled; `poseidon::tests::differential_*` covers it.

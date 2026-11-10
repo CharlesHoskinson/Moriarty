@@ -162,6 +162,26 @@ module hashchip_test {
     assert(not(refinesWith("prov_zero_not_zero", cex_H14_prov_zero_not_zero))),
   }
 
+  // LEAD ADDITION: H8 in the HASH direction. Under `chip_unpinned` the ALU provider row 44 is
+  // relabelled CHIP_HASH; the ALU request on row 46 lane 1 is dropped (zero tuple) and row 47
+  // requests (HASH, 2, 1, 2, aluOut): a HASH request receives a non-sponge output. Under the sound
+  // gates the ALU pin (chip == CHIP_ALU on q_alu rows) refuses it. This is the witness for C5's
+  // premise that every other provider pins its own chip id.
+  pure val cex_H8_hash_direction: Witness = {
+    val base = buildHonestWitness("chip_unpinned")
+    val aluOut = aluRef(2, 1, 2)
+    val aluRow = base.advice[44].replaceAt(0, CHIP_HASH)
+    val req0 = [CHIP_HASH, BUS_KEY, 1, 2, base.advice[0][4], 0, 0, 0, 0, 0]
+    val req1 = [CHIP_HASH, BUS_KEY, 1, 2, aluOut, 0, 0, 0, 0, 0]
+    { advice: base.advice.replaceAt(44, aluRow).replaceAt(46, req0).replaceAt(47, req1) }
+  }
+
+  run mutantH8_hashDirectionTest = all {
+    assert(acceptsWithMutant("chip_unpinned", cex_H8_hash_direction)),
+    assert(not(acceptsWithMutant("none", cex_H8_hash_direction))),
+    assert(not(refinesWith("chip_unpinned", cex_H8_hash_direction))),
+  }
+
   // ---------------------------------------------------------------- 3. Honest Witness Under Mutants Tests
   // For the 9 mutants that relax a constraint or leave an advice cell free (H3, H5, H7, H8, H9, H11, H12, H13, H14),
   // the honest witness built under the mutant is accepted AND refines, proving the violation is a real tamper attack.
