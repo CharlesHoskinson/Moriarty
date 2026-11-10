@@ -518,7 +518,7 @@ fn universal(
         "statement_private_lanes": n,
         "per_fragment": per_fragment,
     });
-    (digest_leaf(&load(ins), g), stats)
+    (load(ins), stats)
 }
 
 /// S under gate G-A' as task 4.10 words it, and the bare inequality.
@@ -547,7 +547,7 @@ fn k_u_universal_leaf_row_probe() {
     let frags = fragments();
     let all = supported_rules();
     // Selector-only leaf (no fragment), then the full probe.
-    let (sel_leaf, _) = universal(&w, &g, &[], &all);
+    let sel_leaf = digest_leaf(&universal(&w, &g, &[], &all).0, &g);
     let (sk, sr, ss) = model(&sel_leaf);
     drop(sel_leaf);
     let mut per_leaf = BTreeMap::new();
@@ -561,8 +561,39 @@ fn k_u_universal_leaf_row_probe() {
             );
         }
     }
+    // Two-sided bound without modelling the full leaf: the leaf contains the
+    // selector-only leaf (lower bound on rows), and its instruction count is
+    // the selector plus every fragment (rows estimated from instructions).
+    if std::env::var_os("K_U_COUNT_ONLY").is_some() {
+        let mut counts = BTreeMap::new();
+        let mut total = 0usize;
+        for (i, (rule, file, build)) in frags.iter().enumerate() {
+            let n = build(&w, &format!("cf{i}"))
+                .expect("build")
+                .instructions
+                .len();
+            total += n;
+            counts.insert(
+                format!("{rule:?}"),
+                json!({"file": file, "instructions": n}),
+            );
+        }
+        println!(
+            "K-U-COUNT {}",
+            json!({
+                "selector_only_leaf": {"k": sk, "rows": sr, "seconds": ss},
+                "fragments": frags.len(),
+                "fragment_instructions": total,
+                "per_fragment": counts,
+                "per_fragment_leaf": per_leaf,
+            })
+        );
+        return;
+    }
     let with: Vec<RuleIdC> = frags.iter().map(|(r, _, _)| *r).collect();
-    let (leaf, stats) = universal(&w, &g, &frags, &with);
+    let (raw, stats) = universal(&w, &g, &frags, &with);
+    let leaf = digest_leaf(&raw, &g);
+    drop(raw);
     let (k_u, rows, secs) = model(&leaf);
     let missing: Vec<String> = all
         .iter()
@@ -585,4 +616,59 @@ fn k_u_universal_leaf_row_probe() {
             "per_fragment_leaf": per_leaf,
         })
     );
+}
+
+/// Full `cost_model` record of one relation (task 4.1a): k, rows, table rows,
+/// columns and the stdlib chip set (`Relation::used_chips`).
+fn model_full(ir: &IrSource) -> Value {
+    use midnight_zk_stdlib::Relation;
+    let t = Instant::now();
+    let m = midnight_zk_stdlib::cost_model(ir, None);
+    json!({
+        "k": m.k,
+        "rows": m.rows,
+        "table_rows": m.table_rows,
+        "nb_unusable_rows": m.nb_unusable_rows,
+        "max_deg": m.max_deg,
+        "advice_columns": m.advice_columns,
+        "fixed_columns": m.fixed_columns,
+        "lookups": m.lookups,
+        "permutations": m.permutations,
+        "arch": format!("{:?}", ir.used_chips()),
+        "instructions": ir.instructions.len(),
+        "seconds": t.elapsed().as_secs_f64(),
+    })
+}
+
+/// Task 4.1a diagnostic: `cost_model` of every per-rule C6 circuit that
+/// exists today (raw, on its own harness statement) and of the dispatch block
+/// alone (shared statement, dispatch facts and every `sel_r`, `sum == enable`),
+/// at the committed qualification config `testdata/dispatch/config.json` and
+/// the fact(3) first step. One `ROW-PROBE` line per circuit, printed as it is
+/// measured. `ROW_PROBE_FILTER=<file substring>` limits the circuits;
+/// `ROW_PROBE_NO_DISPATCH` skips the dispatch block. A projection, not a bound.
+#[test]
+#[ignore = "task 4.1a row probe (cost_model, no SRS); hours; run alone under doctorwatson heavy"]
+fn row_probe_every_c6_circuit() {
+    use std::io::Write as _;
+    let w = first_step();
+    let g = geo(&w);
+    let emit = |v: Value| {
+        println!("ROW-PROBE {v}");
+        std::io::stdout().flush().ok();
+    };
+    if std::env::var_os("ROW_PROBE_NO_DISPATCH").is_none() {
+        let raw = universal(&w, &g, &[], &supported_rules()).0;
+        emit(
+            json!({"circuit": "dispatch_block", "file": "c6_dispatch_step", "model": model_full(&raw)}),
+        );
+    }
+    let filter = std::env::var("ROW_PROBE_FILTER").unwrap_or_default();
+    for (i, (rule, file, build)) in fragments().iter().enumerate() {
+        if !file.contains(filter.as_str()) {
+            continue;
+        }
+        let ir = build(&w, &format!("rp{i}")).unwrap_or_else(|e| panic!("{rule:?}: {e}"));
+        emit(json!({"circuit": format!("{rule:?}"), "file": file, "model": model_full(&ir)}));
+    }
 }
