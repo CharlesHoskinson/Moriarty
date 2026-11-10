@@ -8,7 +8,7 @@
 #     a4-terminal-d;
 #   - the verdict: "pass" only if the node step prove wall <= 60 s, the process peak RSS
 #     <= 16 GB (16e9 bytes) and k == 19; otherwise "shortfall" with a C0 phase cause.
-# The predicate passes on "pass" or on a recorded shortfall (SRC-015(a)); the output says which.
+# A recorded shortfall is a failing row (SRC-011, lead 2026-11-10); the run still checks that its C0 cause is recorded.
 # A16_RUN=1 reruns both measurements under scripts/doctorwatson heavy (needs A16_BIN, the
 # off profile-gp binary, and A16_OUT, a new sidecar directory) and prints the run ids; the
 # record is then updated by hand from the sidecars.
@@ -77,7 +77,8 @@ print(f"A16: 3-step fold {fold['node_prove_wall_seconds']} s, decider {fold['dec
 if misses:
     cause = rec.get("cause") or ""
     if "C0" not in cause: sys.exit("A16: shortfall without a C0 phase cause")
-    print(f"A16 PASS (shortfall recorded for G-A: {', '.join(misses)} over SRC-015(a)); S carries the target")
+    print(f"A16 FAIL: shortfall recorded for G-A ({', '.join(misses)} over SRC-015(a)); S carries the target")
+    sys.exit(1)
 else:
     print("A16 PASS: SRC-015(a) bar met")
 PY
