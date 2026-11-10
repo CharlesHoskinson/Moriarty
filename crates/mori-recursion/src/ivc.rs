@@ -13,7 +13,17 @@
 //! The self part of the carried accumulator keeps its fixed-base scalars
 //! unresolved; whoever pins the node key (the decider) resolves them. The leaf
 //! key is a circuit constant and its fixed bases are resolved in circuit.
-//! At genesis (h-1 = 0) the previous proof's accumulator is scaled by zero.
+//! At genesis (h-1 = 0) the previous proof's accumulator is scaled by zero and collapsed
+//! (it then equals `trivial_acc`), and the supplied carried accumulator is constrained to
+//! the neutral encoding of `trivial_acc` (SRC-005 realization (a)), so a genesis node
+//! carries no obligation that no proof authenticates. The carried accumulator is constrained
+//! to collapsed form (scalar one per side) at every height, so the fold equals the Lean
+//! `AccAlgebra.nodeFold` of `Aggregation.lean` (`genesis_collapse_both`,
+//! `non_genesis_keeps_both`) on every accepted witness.
+//!
+//! Heights (SRC-004): `prev_h < 2^64`, `1 <= steps <= S_MAX` and `h = prev_h + steps < 2^64`
+//! are range-checked, so `h` is the integer sum and never wraps to 0 mid-chain; `h = 0`
+//! (the genesis test) holds only before the first leaf.
 //!
 //! Scope: the node is program-independent; the leaf relation is a parameter.
 //! The node grants no acceptance by itself: validity requires the final
@@ -27,9 +37,9 @@ use midnight_circuits::{
     hash::poseidon::PoseidonState,
     instructions::{
         ArithInstructions, AssertionInstructions, AssignmentInstructions, BinaryInstructions,
-        ControlFlowInstructions, PublicInputInstructions, ZeroInstructions,
+        ControlFlowInstructions, PublicInputInstructions, RangeCheckInstructions, ZeroInstructions,
     },
-    types::{AssignedNative, Instantiable},
+    types::{AssignedBit, AssignedNative, Instantiable},
     verifier::{Accumulator, AssignedAccumulator, AssignedVk, Msm, fixed_base_names, fixed_bases},
 };
 use midnight_curves::Bls12;
@@ -43,6 +53,7 @@ use midnight_proofs::{
     transcript::{CircuitTranscript, Transcript},
 };
 use midnight_zk_stdlib::{MidnightVK, Relation, ZkStdLib, ZkStdLibArch};
+use num_bigint::BigUint;
 
 use crate::{
     bls_arch,
@@ -50,7 +61,7 @@ use crate::{
     util::{F, read_bytes, read_u32, vk_bytes, vk_from_bytes, write_bytes},
 };
 
-const MAGIC: &[u8; 8] = b"SHKIVC05";
+const MAGIC: &[u8; 8] = b"SHKIVC06";
 /// Name prefix of the node's own (self) fixed bases.
 pub const SELF_NAME: &str = "shk_node";
 /// State fields after the self key: prog_d, init_d, cur_d, h.
@@ -61,6 +72,11 @@ pub const IVC_STATE: usize = 4;
 /// a free witness and constrains the other lanes. `steps` (>= 1) is the number of machine
 /// steps the leaf proves, so h counts machine steps: h = h_pre + steps.
 pub const LEAF_LANES: usize = 7;
+/// Most machine steps one leaf may prove (SRC-004; the G-A provisional S, task 2.3). A
+/// relation constant: changing it changes the node key.
+pub const S_MAX: u64 = 16;
+/// Heights are integers below 2^H_BITS (SRC-004).
+pub const H_BITS: usize = 64;
 
 /// Domain of a machine-state digest. Every leaf's pre_d/post_d is
 /// `Poseidon(dom("SHK_SD"), outcome_tag, outcome_value, lanes_d)`, with
@@ -93,6 +109,10 @@ pub struct SherlockIvcRelation {
     pub leaf_vk: MidnightVK,
     self_domain: EvaluationDomain<F>,
     self_cs: ConstraintSystem<F>,
+    /// MockProver negatives only: field values of (prev_h, steps) that replace the witness
+    /// heights, which a `u64` cannot express (a height at or above 2^64). Witness values
+    /// only; the constraint system and the key do not depend on it.
+    raw_heights: Option<(F, F)>,
 }
 
 #[derive(Clone, Debug)]
@@ -145,7 +165,16 @@ impl SherlockIvcRelation {
             leaf_vk,
             self_domain,
             self_cs,
+            raw_heights: None,
         })
+    }
+
+    /// MockProver negatives only (see `raw_heights`): the circuit assigns these field values
+    /// to `prev_h` and `steps` instead of the witness's `u64` heights.
+    #[doc(hidden)]
+    pub fn with_raw_heights(mut self, prev_h: F, steps: F) -> Self {
+        self.raw_heights = Some((prev_h, steps));
+        self
     }
 
     pub fn leaf_name(&self) -> String {
@@ -182,10 +211,53 @@ impl SherlockIvcRelation {
 
     /// The public statement of a node proof.
     pub fn instance(self_repr: F, st: &IvcState, acc: &Accumulator<S>) -> Vec<F> {
+        Self::instance_from_fields(self_repr, &st.fields(), acc)
+    }
+
+    /// The public statement from raw state fields `[prog_d, init_d, cur_d, h]`.
+    pub fn instance_from_fields(
+        self_repr: F,
+        fields: &[F; IVC_STATE],
+        acc: &Accumulator<S>,
+    ) -> Vec<F> {
         let mut v = vec![self_repr];
-        v.extend(st.fields());
+        v.extend(fields);
         v.extend(<AssignedAccumulator<S> as Instantiable<F>>::as_public_input(acc));
         v
+    }
+
+    /// True iff `acc` has the public encoding of `trivial_acc`, the only carried
+    /// accumulator a genesis node accepts (SRC-005 realization (a)).
+    pub fn is_neutral(&self, acc: &Accumulator<S>) -> bool {
+        <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(acc)
+            == <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc())
+    }
+
+    /// Positions of the lhs and rhs variable-base scalars in the public encoding of a carried
+    /// accumulator (one base per side, no lhs fixed-base scalars, every self fixed-base scalar
+    /// on the rhs): `[P, 2P + 1]` with `P` the lanes of one point.
+    pub fn carry_scalar_lanes(&self) -> [usize; 2] {
+        let lanes =
+            <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc());
+        let pts = lanes.len() - 2 - self.self_base_names().len();
+        assert!(
+            pts % 2 == 0,
+            "carried accumulator encoding: odd point lanes"
+        );
+        [pts / 2, pts + 1]
+    }
+
+    /// True iff `acc` is in collapsed form: one base per side, each with scalar one, so that
+    /// `collapse(acc) == acc` (the carried input of the Lean `nodeFold`, task 2.3).
+    pub fn is_collapsed_carry(&self, acc: &Accumulator<S>) -> bool {
+        let lanes = <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(acc);
+        let n =
+            <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc()).len();
+        lanes.len() == n
+            && self
+                .carry_scalar_lanes()
+                .iter()
+                .all(|&i| lanes[i] == F::ONE)
     }
 
     pub fn leaf_instance(st_prev: &IvcState, binding: F, cur_d: F, rule: F, steps: u64) -> Vec<F> {
@@ -207,13 +279,47 @@ impl SherlockIvcRelation {
         node_vk: Option<&MidnightVK>,
         w: &IvcWitness,
     ) -> Result<Accumulator<S>, String> {
-        let genesis = w.prev.h == 0;
+        if w.prev.h == 0 && !self.is_neutral(&w.prev_acc) {
+            return Err("genesis carried accumulator must be trivial_acc (SRC-005)".into());
+        }
+        if !self.is_collapsed_carry(&w.prev_acc) {
+            return Err(
+                "carried accumulator must be collapsed (one base, scalar one, per side)".into(),
+            );
+        }
+        let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule, w.leaf_steps);
+        self.next_acc_raw(
+            node_vk,
+            w.self_repr,
+            &w.prev.fields(),
+            &w.prev_proof,
+            &w.prev_acc,
+            &leaf_inst,
+            &w.leaf_proof,
+        )
+    }
+
+    /// `next_acc` over raw field values: the previous state fields `[prog_d, init_d, cur_d,
+    /// h]` and the leaf instance. Genesis is `h == 0` in the field, exactly as in circuit.
+    /// It checks nothing beyond the fold, so it also builds the statements of negative tests.
+    #[allow(clippy::too_many_arguments)]
+    pub fn next_acc_raw(
+        &self,
+        node_vk: Option<&MidnightVK>,
+        self_repr: F,
+        prev: &[F; IVC_STATE],
+        prev_proof: &[u8],
+        prev_acc: &Accumulator<S>,
+        leaf_inst: &[F],
+        leaf_proof: &[u8],
+    ) -> Result<Accumulator<S>, String> {
+        let genesis = prev[3] == F::ZERO;
         let proof_acc = if genesis {
             self.trivial_acc()
         } else {
             let vk = node_vk.ok_or("non-genesis step needs the node key")?;
-            let prev_inst = Self::instance(w.self_repr, &w.prev, &w.prev_acc);
-            let mut tr = CircuitTranscript::<PoseidonState<F>>::init_from_bytes(&w.prev_proof);
+            let prev_inst = Self::instance_from_fields(self_repr, prev, prev_acc);
+            let mut tr = CircuitTranscript::<PoseidonState<F>>::init_from_bytes(prev_proof);
             let dual = plonk::prepare::<
                 F,
                 KZGCommitmentScheme<Bls12>,
@@ -227,16 +333,15 @@ impl SherlockIvcRelation {
             a.collapse();
             a
         };
-        let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule, w.leaf_steps);
         let leaf_acc = prepare_offcircuit_with(
             &self.leaf_vk,
             &self.leaf_name(),
-            &leaf_inst,
-            &w.leaf_proof,
+            leaf_inst,
+            leaf_proof,
             false,
             false,
         )?;
-        let mut acc = Accumulator::accumulate(&[proof_acc, w.prev_acc.clone(), leaf_acc]);
+        let mut acc = Accumulator::accumulate(&[proof_acc, prev_acc.clone(), leaf_acc]);
         acc.collapse();
         Ok(acc)
     }
@@ -249,6 +354,71 @@ impl SherlockIvcRelation {
     ) -> bool {
         acc.check(params, &fixed_bases::<S>(SELF_NAME, node_vk.vk()))
     }
+}
+
+/// SRC-004 height checks; returns `h = prev_h + steps`. Heights are integers below 2^64,
+/// `1 <= steps <= S_MAX` (as `steps - 1` in `[0, S_MAX)`, one check for both bounds), and the
+/// sum is checked again, so `h` is the integer `prev_h + steps < 2^64`, `h >= 1`, and `h`
+/// cannot wrap to 0 (which would set `is_genesis` on a later step and drop the previous proof).
+pub fn constrain_heights(
+    std: &ZkStdLib,
+    l: &mut impl Layouter<F>,
+    prev_h: &AssignedNative<F>,
+    steps: &AssignedNative<F>,
+) -> Result<AssignedNative<F>, Error> {
+    let h_bound = BigUint::from(1u8) << H_BITS;
+    std.assert_lower_than_fixed(l, prev_h, &h_bound)?;
+    let steps_m1 = std.add_constant(l, steps, -F::ONE)?;
+    std.assert_lower_than_fixed(l, &steps_m1, &BigUint::from(S_MAX))?;
+    let h = std.add(l, prev_h, steps)?;
+    std.assert_lower_than_fixed(l, &h, &h_bound)?;
+    Ok(h)
+}
+
+/// SRC-005 realization (a): at genesis no previous proof authenticates the carried
+/// accumulator (its proof is scaled away), so its public encoding `lanes` must equal the
+/// neutral encoding of `trivial_acc`: `is_genesis * (lane - neutral) == 0` for every lane.
+/// `accumulate` hashes exactly these lanes, so at genesis the fold challenge and the folded
+/// value depend on the leaf alone: no grinding and no cancellation through the carry.
+pub fn constrain_genesis_neutral(
+    std: &ZkStdLib,
+    l: &mut impl Layouter<F>,
+    is_genesis: &AssignedBit<F>,
+    lanes: &[AssignedNative<F>],
+    neutral: &[F],
+) -> Result<(), Error> {
+    if neutral.len() != lanes.len() {
+        return Err(Error::Synthesis(
+            "carried accumulator encoding length differs from trivial_acc".into(),
+        ));
+    }
+    let g: AssignedNative<F> = is_genesis.clone().into();
+    for (x, t) in lanes.iter().zip(neutral) {
+        let d = std.add_and_mul(l, (F::ZERO, x), (-*t, &g), (F::ZERO, x), F::ZERO, F::ONE)?;
+        std.assert_zero(l, &d)?;
+    }
+    Ok(())
+}
+
+/// The carried accumulator is in collapsed form at every height: the variable-base scalar of
+/// each side (lanes `idx` of its public encoding) equals one, so `collapse(carry) == carry` and
+/// the node fold equals the Lean `nodeFold b p c l = collapse (accumulate [collapse (scale b p),
+/// collapse (scale b c), l])` without a second in-circuit MSM. Off genesis the previous node
+/// published exactly such an accumulator (`next.collapse()`); this makes it a local constraint
+/// rather than a consequence of the deferred previous proof.
+pub fn constrain_collapsed_carry(
+    std: &ZkStdLib,
+    l: &mut impl Layouter<F>,
+    lanes: &[AssignedNative<F>],
+    idx: [usize; 2],
+) -> Result<(), Error> {
+    for i in idx {
+        let x = lanes.get(i).ok_or_else(|| {
+            Error::Synthesis("carried accumulator scalar lane out of range".into())
+        })?;
+        std.assert_equal_to_fixed(l, x, F::ONE)?;
+    }
+    Ok(())
 }
 
 /// Inverse of the public accumulator encoding of a node instance tail, given the
@@ -308,13 +478,23 @@ impl Relation for SherlockIvcRelation {
         let prog_d: AssignedNative<F> = std.assign(l, wf(|w| w.prev.prog_d))?;
         let init_d: AssignedNative<F> = std.assign(l, wf(|w| w.prev.init_d))?;
         let prev_d: AssignedNative<F> = std.assign(l, wf(|w| w.prev.cur_d))?;
-        let prev_h: AssignedNative<F> = std.assign(l, wf(|w| F::from(w.prev.h)))?;
+        let raw = self.raw_heights;
+        let prev_h: AssignedNative<F> = std.assign(
+            l,
+            witness
+                .as_ref()
+                .map(|w| raw.map_or(F::from(w.prev.h), |r| r.0)),
+        )?;
         let cur_d: AssignedNative<F> = std.assign(l, wf(|w| w.cur_d))?;
         let rule: AssignedNative<F> = std.assign(l, wf(|w| w.rule))?;
         let binding: AssignedNative<F> = std.assign(l, wf(|w| w.leaf_binding))?;
-        let steps: AssignedNative<F> = std.assign(l, wf(|w| F::from(w.leaf_steps)))?;
-        std.assert_not_equal_to_fixed(l, &steps, F::ZERO)?;
-        let h = std.add(l, &prev_h, &steps)?;
+        let steps: AssignedNative<F> = std.assign(
+            l,
+            witness
+                .as_ref()
+                .map(|w| raw.map_or(F::from(w.leaf_steps), |r| r.1)),
+        )?;
+        let h = constrain_heights(std, l, &prev_h, &steps)?;
         let is_genesis = std.is_zero(l, &prev_h)?;
         let not_genesis = std.not(l, &is_genesis)?;
         let chosen = std.select(l, &is_genesis, &init_d, &prev_d)?;
@@ -334,6 +514,11 @@ impl Relation for SherlockIvcRelation {
             &self.self_base_names(),
             witness.as_ref().map(|w| w.prev_acc.clone()),
         )?;
+        let prev_acc_pi = verifier.as_public_input(l, &prev_acc)?;
+        let neutral =
+            <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc());
+        constrain_genesis_neutral(std, l, &is_genesis, &prev_acc_pi, &neutral)?;
+        constrain_collapsed_carry(std, l, &prev_acc_pi, self.carry_scalar_lanes())?;
         let mut prev_pi = verifier.as_public_input(l, &self_vk)?;
         prev_pi.extend([
             prog_d.clone(),
@@ -341,7 +526,7 @@ impl Relation for SherlockIvcRelation {
             prev_d.clone(),
             prev_h.clone(),
         ]);
-        prev_pi.extend(verifier.as_public_input(l, &prev_acc)?);
+        prev_pi.extend(prev_acc_pi);
         let id = bls.assign_fixed(l, C::identity())?;
         let mut proof_acc = verifier.prepare(
             l,
@@ -394,7 +579,7 @@ impl Relation for SherlockIvcRelation {
         let mut magic = [0u8; 8];
         r.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(io::Error::other("not a SHKIVC05 node relation"));
+            return Err(io::Error::other("not a SHKIVC06 node relation"));
         }
         let mut b = [0u8; 1];
         r.read_exact(&mut b)?;

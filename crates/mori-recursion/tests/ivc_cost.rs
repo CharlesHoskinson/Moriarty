@@ -13,14 +13,19 @@ fn ivc_node_rows() {
     let lk = cost_model(&leaf, None).k;
     let p: ParamsKZG<Bls12> = ParamsKZG::unsafe_setup(lk, OsRng);
     let vk = setup_vk(&p, &leaf);
-    for k in [19u32, 20] {
-        let rel = SherlockIvcRelation::new(4, k, vk.clone()).unwrap();
-        let m = cost_model(&rel, Some(k));
-        println!(
-            "IVCCOST k={k} model_k={} rows={} over_2^19={}",
-            m.k,
-            m.rows,
-            m.rows as i64 - (1 << 19)
-        );
+    // Task 2.3 T1 check: `SherlockIvcRelation::new(4, 19, leaf_vk)` and
+    // `cost_model(&r, Some(19)).k == 19`; candidate T2 of `prover.md` §2 is nr_pow2range_cols 3.
+    for nr_cols in [4u8, 3] {
+        for k in [19u32, 20] {
+            let rel = SherlockIvcRelation::new(nr_cols, k, vk.clone()).unwrap();
+            let m = cost_model(&rel, Some(k));
+            println!(
+                "IVCCOST nr_cols={nr_cols} k={k} model_k={} rows={} over_2^19={} k19_fits={}",
+                m.k,
+                m.rows,
+                m.rows as i64 - (1 << 19),
+                m.k <= 19
+            );
+        }
     }
 }

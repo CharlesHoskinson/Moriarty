@@ -17,7 +17,7 @@ use midnight_circuits::{
         ArithInstructions, AssertionInstructions, AssignmentInstructions, BinaryInstructions,
         ControlFlowInstructions, PublicInputInstructions, ZeroInstructions,
     },
-    types::AssignedNative,
+    types::{AssignedNative, Instantiable},
     verifier::{AssignedAccumulator, AssignedVk},
 };
 use midnight_proofs::{
@@ -30,17 +30,25 @@ use midnight_zk_stdlib::{MidnightVK, Relation, ZkStdLib, ZkStdLibArch, cost_mode
 use mori_recursion::{
     decider::bls_arch,
     inner::{C, S, verify_child_incircuit_with},
-    ivc::{SELF_NAME, SherlockIvcRelation, node_cs},
+    ivc::{
+        SELF_NAME, SherlockIvcRelation, constrain_collapsed_carry, constrain_genesis_neutral,
+        constrain_heights, node_cs,
+    },
     util::F,
 };
 
-/// The node's gadgets in circuit order (`ivc.rs` steps 1-5).
-pub const SECTIONS: [&str; 5] = [
+/// The node's gadgets in circuit order (`ivc.rs` steps 1-5). `own_key_and_state` includes the
+/// SRC-004 range checks; `carried_acc` the carried accumulator's assignment, its public
+/// encoding, the SRC-005 genesis-neutral constraint and the collapsed-carry constraint.
+pub const SECTIONS: [&str; 8] = [
     "own_key_and_state",
+    "carried_acc",
     "prepare_self",
+    "collapse_self",
     "prepare_leaf",
     "accumulate",
-    "collapse_and_publish",
+    "collapse_final",
+    "publish",
 ];
 
 #[derive(Clone, Debug)]
@@ -49,6 +57,8 @@ struct NodeRowProbe {
     leaf_vk: MidnightVK,
     leaf_name: String,
     self_base_names: Vec<String>,
+    neutral: Vec<F>,
+    carry_lanes: [usize; 2],
     self_domain: EvaluationDomain<F>,
     self_cs: ConstraintSystem<F>,
     measured: Option<usize>,
@@ -105,8 +115,7 @@ impl Relation for NodeRowProbe {
         let rule: AssignedNative<F> = std.assign(l, u())?;
         let binding: AssignedNative<F> = std.assign(l, u())?;
         let steps: AssignedNative<F> = std.assign(l, u())?;
-        std.assert_not_equal_to_fixed(l, &steps, F::ZERO)?;
-        let h = std.add(l, &prev_h, &steps)?;
+        let h = constrain_heights(std, l, &prev_h, &steps)?;
         let is_genesis = std.is_zero(l, &prev_h)?;
         let not_genesis = std.not(l, &is_genesis)?;
         let chosen = std.select(l, &is_genesis, &init_d, &prev_d)?;
@@ -127,6 +136,11 @@ impl Relation for NodeRowProbe {
             &self.self_base_names,
             Value::unknown(),
         )?;
+        let prev_acc_pi = verifier.as_public_input(l, &prev_acc)?;
+        constrain_genesis_neutral(std, l, &is_genesis, &prev_acc_pi, &self.neutral)?;
+        constrain_collapsed_carry(std, l, &prev_acc_pi, self.carry_lanes)?;
+        self.mark(l, 1, false);
+        self.mark(l, 2, true);
         let mut prev_pi = verifier.as_public_input(l, &self_vk)?;
         prev_pi.extend([
             prog_d.clone(),
@@ -134,16 +148,18 @@ impl Relation for NodeRowProbe {
             prev_d.clone(),
             prev_h.clone(),
         ]);
-        prev_pi.extend(verifier.as_public_input(l, &prev_acc)?);
+        prev_pi.extend(prev_acc_pi);
         let id = bls.assign_fixed(l, C::identity())?;
         let mut proof_acc =
             verifier.prepare(l, &self_vk, &[id], &[prev_pi.as_slice()], Value::unknown())?;
         AssignedAccumulator::scale_by_bit(l, scalar, &not_genesis, &mut proof_acc)?;
+        self.mark(l, 2, false);
         // Mirrors ivc.rs since SHKIVC05: collapsed before the fold (genesis == trivial_acc).
+        self.mark(l, 3, true);
         proof_acc.collapse(l, bls, scalar)?;
-        self.mark(l, 1, false);
+        self.mark(l, 3, false);
 
-        self.mark(l, 2, true);
+        self.mark(l, 4, true);
         let leaf_inst = vec![binding, prog_d, prev_d, cur_d, rule, prev_h, steps];
         let leaf_acc = verify_child_incircuit_with(
             std,
@@ -155,15 +171,17 @@ impl Relation for NodeRowProbe {
             false,
             false,
         )?;
-        self.mark(l, 2, false);
-
-        self.mark(l, 3, true);
-        let mut next = verifier.accumulate(l, &[proof_acc, prev_acc, leaf_acc])?;
-        self.mark(l, 3, false);
-        self.mark(l, 4, true);
-        next.collapse(l, bls, scalar)?;
-        verifier.constrain_as_public_input(l, &next)?;
         self.mark(l, 4, false);
+
+        self.mark(l, 5, true);
+        let mut next = verifier.accumulate(l, &[proof_acc, prev_acc, leaf_acc])?;
+        self.mark(l, 5, false);
+        self.mark(l, 6, true);
+        next.collapse(l, bls, scalar)?;
+        self.mark(l, 6, false);
+        self.mark(l, 7, true);
+        verifier.constrain_as_public_input(l, &next)?;
+        self.mark(l, 7, false);
         Ok(())
     }
 
@@ -218,6 +236,10 @@ pub fn node_row_breakdown(relation: &SherlockIvcRelation) -> io::Result<NodeRows
         leaf_vk: relation.leaf_vk.clone(),
         leaf_name: relation.leaf_name(),
         self_base_names: relation.self_base_names(),
+        neutral: <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(
+            &relation.trivial_acc(),
+        ),
+        carry_lanes: relation.carry_scalar_lanes(),
         self_domain: EvaluationDomain::new(self_cs.degree() as u32, k),
         self_cs,
         measured: None,
