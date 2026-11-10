@@ -524,8 +524,8 @@ pub struct RfParams {
     pub pos_hash: bool,
     /// RANGE in running-sum mode: one limb lookup instead of four (E7).
     pub range1: bool,
-    /// Node-cost probe: this many extra selector columns, each enabled on every
-    /// 7th core row with a trivially true gate (key shape only).
+    /// Node-cost probe: this many extra selector columns, column `i` enabled on
+    /// core rows `i mod 7 + 7 t` with a trivially true gate (key shape only).
     pub extra_selectors: usize,
 }
 
@@ -1063,8 +1063,9 @@ impl Circuit<F> for RfLeaf {
                         }
                     }
                 }
-                for q in &cfg.probe_sels {
-                    for rr in (0..h * (s + 1)).step_by(7) {
+                for (pi, q) in cfg.probe_sels.iter().enumerate() {
+                    // Distinct rows per probe column, so no two commitments are equal.
+                    for rr in (pi % 7..h * (s + 1)).step_by(7) {
                         q.enable(&mut r, rr)?;
                     }
                 }

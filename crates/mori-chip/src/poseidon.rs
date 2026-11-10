@@ -256,7 +256,9 @@ impl PoseidonCfg {
         perm: &mut usize,
     ) -> Result<(AssignedCell<F, F>, usize), Error> {
         let n = inputs.len();
-        assert!(n >= 1);
+        // A 1-input sponge would leave `in1` of the first absorb row free (the
+        // first-absorb gate adds it), so it is not supported.
+        assert!(n >= 2, "the chip hashes 2 or more inputs");
         assert!(!provide || n == 2, "a provider row serves 2-input hashes");
         let a = self.bus.cols.a;
         let zero = || Value::known(F::ZERO);
@@ -535,14 +537,14 @@ mod tests {
         }
     }
 
-    /// In-circuit: random sponges of 1, 2, 3, 4, 8 and 31 inputs equal the stdlib
+    /// In-circuit: random sponges of 2, 3, 4, 8 and 31 inputs equal the stdlib
     /// hash (the instance holds `hash_native`), and random bus-served 2-input
     /// hashes serve requests carrying the stdlib hash.
     #[test]
     fn differential_circuit() {
         let mut g = rng();
         let mut c = served_case(&mut g, 4);
-        c.sponges = [1usize, 2, 3, 4, 8, 31]
+        c.sponges = [2usize, 3, 4, 8, 31]
             .iter()
             .map(|&n| rand_vec(&mut g, n))
             .collect();

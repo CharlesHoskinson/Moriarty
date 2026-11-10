@@ -552,6 +552,24 @@ fn rf_leaf_s16_mock_prover_all_layouts() {
     }
 }
 
+/// The final E7 leaf (B, Poseidon-only HASH with the M3 C = 8 hash workload,
+/// RANGE on one limb lookup) at S = 16 with a witness.
+#[test]
+fn rf_leaf_s16_mock_prover_final_e7() {
+    let w = RfWitness::from_trace(&run32(genesis(), 16), 16);
+    let (n2, extra) = hash_preset("m3c8");
+    let params = RfParams {
+        arch: Arch::Narrow,
+        pos_hash: true,
+        range1: true,
+        ..Default::default()
+    };
+    let c = RfLeaf::new(params, 16, Some(w.clone())).with_hashes(n2, extra);
+    let p = MockProver::run(&c, vec![vec![], w.instance()]).unwrap();
+    p.verify()
+        .unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
+}
+
 /// The keyed register-file leaves (every layout, with and without HASH) query
 /// rotations -1, 0, +1 only (`slim_m3c8`: the slim HASH key shape; `pos_*`: the
 /// Poseidon-only HASH chip; `+r1`: RANGE on one limb lookup).
