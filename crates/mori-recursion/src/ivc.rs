@@ -16,7 +16,10 @@
 //! At genesis (h-1 = 0) the previous proof's accumulator is scaled by zero and collapsed
 //! (it then equals `trivial_acc`), and the supplied carried accumulator is constrained to
 //! the neutral encoding of `trivial_acc` (SRC-005 realization (a)), so a genesis node
-//! carries no obligation that no proof authenticates.
+//! carries no obligation that no proof authenticates. The carried accumulator is constrained
+//! to collapsed form (scalar one per side) at every height, so the fold equals the Lean
+//! `AccAlgebra.nodeFold` of `Aggregation.lean` (`genesis_collapse_both`,
+//! `non_genesis_keeps_both`) on every accepted witness.
 //!
 //! Heights (SRC-004): `prev_h < 2^64`, `1 <= steps <= S_MAX` and `h = prev_h + steps < 2^64`
 //! are range-checked, so `h` is the integer sum and never wraps to 0 mid-chain; `h = 0`
@@ -230,6 +233,33 @@ impl SherlockIvcRelation {
             == <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc())
     }
 
+    /// Positions of the lhs and rhs variable-base scalars in the public encoding of a carried
+    /// accumulator (one base per side, no lhs fixed-base scalars, every self fixed-base scalar
+    /// on the rhs): `[P, 2P + 1]` with `P` the lanes of one point.
+    pub fn carry_scalar_lanes(&self) -> [usize; 2] {
+        let lanes =
+            <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc());
+        let pts = lanes.len() - 2 - self.self_base_names().len();
+        assert!(
+            pts % 2 == 0,
+            "carried accumulator encoding: odd point lanes"
+        );
+        [pts / 2, pts + 1]
+    }
+
+    /// True iff `acc` is in collapsed form: one base per side, each with scalar one, so that
+    /// `collapse(acc) == acc` (the carried input of the Lean `nodeFold`, task 2.3).
+    pub fn is_collapsed_carry(&self, acc: &Accumulator<S>) -> bool {
+        let lanes = <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(acc);
+        let n =
+            <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc()).len();
+        lanes.len() == n
+            && self
+                .carry_scalar_lanes()
+                .iter()
+                .all(|&i| lanes[i] == F::ONE)
+    }
+
     pub fn leaf_instance(st_prev: &IvcState, binding: F, cur_d: F, rule: F, steps: u64) -> Vec<F> {
         vec![
             binding,
@@ -251,6 +281,11 @@ impl SherlockIvcRelation {
     ) -> Result<Accumulator<S>, String> {
         if w.prev.h == 0 && !self.is_neutral(&w.prev_acc) {
             return Err("genesis carried accumulator must be trivial_acc (SRC-005)".into());
+        }
+        if !self.is_collapsed_carry(&w.prev_acc) {
+            return Err(
+                "carried accumulator must be collapsed (one base, scalar one, per side)".into(),
+            );
         }
         let leaf_inst = Self::leaf_instance(&w.prev, w.leaf_binding, w.cur_d, w.rule, w.leaf_steps);
         self.next_acc_raw(
@@ -365,6 +400,27 @@ pub fn constrain_genesis_neutral(
     Ok(())
 }
 
+/// The carried accumulator is in collapsed form at every height: the variable-base scalar of
+/// each side (lanes `idx` of its public encoding) equals one, so `collapse(carry) == carry` and
+/// the node fold equals the Lean `nodeFold b p c l = collapse (accumulate [collapse (scale b p),
+/// collapse (scale b c), l])` without a second in-circuit MSM. Off genesis the previous node
+/// published exactly such an accumulator (`next.collapse()`); this makes it a local constraint
+/// rather than a consequence of the deferred previous proof.
+pub fn constrain_collapsed_carry(
+    std: &ZkStdLib,
+    l: &mut impl Layouter<F>,
+    lanes: &[AssignedNative<F>],
+    idx: [usize; 2],
+) -> Result<(), Error> {
+    for i in idx {
+        let x = lanes.get(i).ok_or_else(|| {
+            Error::Synthesis("carried accumulator scalar lane out of range".into())
+        })?;
+        std.assert_equal_to_fixed(l, x, F::ONE)?;
+    }
+    Ok(())
+}
+
 /// Inverse of the public accumulator encoding of a node instance tail, given the
 /// self fixed-base names; refuses any lanes that do not re-encode identically.
 pub fn acc_from_lanes(lanes: &[F], names: &[String]) -> Option<Accumulator<S>> {
@@ -462,6 +518,7 @@ impl Relation for SherlockIvcRelation {
         let neutral =
             <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(&self.trivial_acc());
         constrain_genesis_neutral(std, l, &is_genesis, &prev_acc_pi, &neutral)?;
+        constrain_collapsed_carry(std, l, &prev_acc_pi, self.carry_scalar_lanes())?;
         let mut prev_pi = verifier.as_public_input(l, &self_vk)?;
         prev_pi.extend([
             prog_d.clone(),

@@ -338,7 +338,8 @@ fn srs() -> ParamsKZG<Bls12> {
 /// then runs step 1 under MockProver: the honest step holds; `h = 2^64` (prev_h = 2^64 - 1)
 /// and the wrap `prev_h = -2, steps = 2` (h = 0 in the field, CEX-1) are refused. A wrong
 /// `prev_h` only defers a pairing defect for the previous proof, so each refusal comes from the
-/// range checks alone.
+/// range checks alone. A carried accumulator of the same value but not in collapsed form
+/// (scalar 2) is refused by the collapsed-carry constraint (Lean `nodeFold`).
 #[test]
 #[ignore = "real node keygen and two proofs at k20, then MockProver; heavy.lock"]
 fn ivc_node_step1_negatives() {
@@ -415,6 +416,31 @@ fn ivc_node_step1_negatives() {
         F::from(5u64),
     );
     expect_pass("step1 honest", mock(&rel, &ni, w));
+
+    // Non-collapsed carry: the same accumulator value re-encoded as (B / 2, scalar 2) on each
+    // side. `collapse` would map it back to (B, 1), so `nodeFold` needs the carry collapsed;
+    // the node refuses the re-encoding (and the host refuses it before folding).
+    let two = F::from(2u64);
+    let half = two.invert().unwrap();
+    let reenc = |m: Msm<S>| Msm::<S>::new(&[m.bases()[0] * half], &[two], &m.fixed_base_scalars());
+    let carry = Accumulator::<S>::new(reenc(acc0.lhs()), reenc(acc0.rhs()));
+    assert!(!rel.is_collapsed_carry(&carry));
+    let (li1, lp1) = fx.leaf(s1.cur_d, F::from(2u64), F::from(3u64), rule);
+    let w = witness(repr, &s1, p0.clone(), carry, &li1, 3, lp1);
+    assert!(
+        rel.next_acc(Some(&node_vk), &w).is_err(),
+        "host refuses a non-collapsed carry"
+    );
+    let (ni, _) = statement(
+        &rel,
+        Some(&node_vk),
+        repr,
+        s1.fields(),
+        &w,
+        &li1,
+        F::from(5u64),
+    );
+    expect_refused("step1 non-collapsed carry", mock(&rel, &ni, w));
 
     // h = 2^64: prev_h = 2^64 - 1 is in range, the sum is not.
     let top = IvcState {

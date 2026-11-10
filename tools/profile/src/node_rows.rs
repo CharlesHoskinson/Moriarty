@@ -31,14 +31,15 @@ use mori_recursion::{
     decider::bls_arch,
     inner::{C, S, verify_child_incircuit_with},
     ivc::{
-        SELF_NAME, SherlockIvcRelation, constrain_genesis_neutral, constrain_heights, node_cs,
+        SELF_NAME, SherlockIvcRelation, constrain_collapsed_carry, constrain_genesis_neutral,
+        constrain_heights, node_cs,
     },
     util::F,
 };
 
 /// The node's gadgets in circuit order (`ivc.rs` steps 1-5). `own_key_and_state` includes the
 /// SRC-004 range checks; `carried_acc` the carried accumulator's assignment, its public
-/// encoding and the SRC-005 genesis-neutral constraint.
+/// encoding, the SRC-005 genesis-neutral constraint and the collapsed-carry constraint.
 pub const SECTIONS: [&str; 8] = [
     "own_key_and_state",
     "carried_acc",
@@ -57,6 +58,7 @@ struct NodeRowProbe {
     leaf_name: String,
     self_base_names: Vec<String>,
     neutral: Vec<F>,
+    carry_lanes: [usize; 2],
     self_domain: EvaluationDomain<F>,
     self_cs: ConstraintSystem<F>,
     measured: Option<usize>,
@@ -136,6 +138,7 @@ impl Relation for NodeRowProbe {
         )?;
         let prev_acc_pi = verifier.as_public_input(l, &prev_acc)?;
         constrain_genesis_neutral(std, l, &is_genesis, &prev_acc_pi, &self.neutral)?;
+        constrain_collapsed_carry(std, l, &prev_acc_pi, self.carry_lanes)?;
         self.mark(l, 1, false);
         self.mark(l, 2, true);
         let mut prev_pi = verifier.as_public_input(l, &self_vk)?;
@@ -236,6 +239,7 @@ pub fn node_row_breakdown(relation: &SherlockIvcRelation) -> io::Result<NodeRows
         neutral: <AssignedAccumulator<S> as Instantiable<F>>::as_public_input(
             &relation.trivial_acc(),
         ),
+        carry_lanes: relation.carry_scalar_lanes(),
         self_domain: EvaluationDomain::new(self_cs.degree() as u32, k),
         self_cs,
         measured: None,
