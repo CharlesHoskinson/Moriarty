@@ -36,7 +36,7 @@ in `research/midnight-ledger9-20261107/api/rpc-status-20261110.json`.
 
 | Repository | Ref | Commit | Role |
 |---|---|---|---|
-| `midnightntwrk/midnight-node` | tag `node-2.1.101` | `86774edf8cc76345a5c3a4221f3fe80c094b1c33` | Deployed node release: spec 2001100, `midnight-ledger-v9 =1.0.1` from crates.io |
+| `midnightntwrk/midnight-node` | tag `node-2.1.101` | `86774edf8cc76345a5c3a4221f3fe80c094b1c33` | Public release tag: spec 2001100, `midnight-ledger-v9 =1.0.1` from crates.io. The deployed nodes report build `913ec011`, which is not a public commit |
 | `midnightntwrk/midnight-node` | `main` | `52747762cc2576aec85fdb2c08292f9eee71e369` | Head (2026-11-09) |
 | `midnightntwrk/midnight-ledger` | tag `ledger-9.1.0.1` | `a2b30128ca4b660b73a068e29b56b48ede8c9a74` | Ledger in use; tag `proof-server-9.0.1` is the same commit |
 | `midnightntwrk/midnight-ledger` | branch `ledger-9` | `8319309b0e24f84dcb99899b7476177c109f30e5` | Ledger 9 line head (2026-11-09) |
