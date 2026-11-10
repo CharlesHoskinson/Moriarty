@@ -23,12 +23,14 @@ pub mod cpu;
 pub mod dec;
 pub mod hashchip;
 pub mod leaf;
+pub mod m3;
 pub mod mem;
 pub mod poseidon;
 pub mod range;
 pub mod rf;
 pub mod rfcore;
 pub mod trace;
+pub mod vsel;
 
 use ff::PrimeField;
 use midnight_proofs::plonk::{Advice, Column, ConstraintSystem, Constraints, Expression};

@@ -48,11 +48,13 @@ use crate::{
     dec::DecConfig,
     fu,
     hashchip::{HashConfig, SlimHashShape, hash_cells, hash_free, hash_tuple},
-    mem::MemConfig,
+    m3::{M3W, WalkConfig},
+    mem::{MemConfig, SEG, SegMemConfig},
     poseidon::{HIn, PoseidonCfg, Tamper},
     range::{RangeConfig, rows_per_value},
     rf::*,
     trace::Cell as MemCell,
+    vsel::{VSel, pack},
 };
 
 /// Limb columns of RANGE (as in the spike).
@@ -446,6 +448,39 @@ pub fn core_constraints() -> Vec<(String, Ex)> {
     v
 }
 
+/// Body degree of each core gate row (0 for a row with no constraint), from a
+/// scratch constraint system.
+pub fn core_degrees(layout: &Layout, by_gate: &[Vec<usize>]) -> Vec<usize> {
+    let mut cs = ConstraintSystem::<F>::default();
+    let cols: Vec<Column<Advice>> = (0..layout.w).map(|_| cs.advice_column()).collect();
+    let mut out = Vec::new();
+    for (gi, idx) in by_gate.iter().enumerate() {
+        if idx.is_empty() {
+            out.push(0);
+            continue;
+        }
+        let o = layout.gates[gi];
+        let mut d = 0;
+        cs.create_gate("deg", |m| {
+            let cons = core_constraints();
+            let mut v = Vec::new();
+            for &ci in idx {
+                let mut get = |c: Cell| {
+                    layout
+                        .find(c, o)
+                        .map(|(col, rot)| m.query_advice(cols[col], Rotation(rot)))
+                };
+                let e = (cons[ci].1)(&mut get).expect("hosted");
+                d = d.max(e.degree());
+                v.push(e);
+            }
+            crate::gate(v)
+        });
+        out.push(d);
+    }
+    out
+}
+
 /// `post_j - next_j(pre, lanes, flags)`.
 fn next_state(g: &mut G<'_>, j: usize) -> Option<Expression<F>> {
     let f = flags(g)?;
@@ -527,6 +562,16 @@ pub struct RfParams {
     /// Node-cost probe: this many extra selector columns, column `i` enabled on
     /// core rows `i mod 7 + 7 t` with a trivially true gate (key shape only).
     pub extra_selectors: usize,
+    /// E8 cut 1: the HASH chip's three absorb selectors in one code column.
+    pub one_abs: bool,
+    /// E8 cut 2: the core gate selectors and `rf count0` packed into code
+    /// columns ([`crate::vsel::pack`]); the gate on the DEC row uses `q_dec`.
+    pub pack_core: bool,
+    /// E8: M3 wired for real ([`crate::m3`]): the aligned MEM segment with its
+    /// active prefix, records, segment root, the two top-tree walks and the
+    /// Poseidon state digests over the register cells and `mem_root`. Needs
+    /// `pos_hash`; replaces the placeholder digest and the spike MEM.
+    pub m3: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -542,12 +587,14 @@ pub struct RfConfig {
     pub bus: BusConfig,
     pub range: RangeConfig,
     pub alu: AluConfig,
-    pub mem: MemConfig,
+    pub mem: Option<MemConfig>,
+    pub seg: Option<SegMemConfig>,
+    pub walk: Option<WalkConfig>,
     pub dec: DecConfig,
-    pub gate_sels: Vec<Option<Selector>>,
+    pub gate_sels: Vec<Option<VSel>>,
     pub q_dec: Selector,
     pub dec_off: usize,
-    pub q_cnt0: Selector,
+    pub q_cnt0: VSel,
     /// Inline digest gate (Wide-inline only) and its slot row.
     pub q_dig_inline: Option<(Selector, usize)>,
     pub dig: Option<DigConfig>,
@@ -579,6 +626,8 @@ pub struct RfWitness {
     pub mem: Vec<MemCell>,
     /// Negative tests: `(slot, row, column, value)` written over the honest cell.
     pub overrides: Vec<(usize, usize, usize, F)>,
+    /// The M3 part (leaves with `params.m3`).
+    pub m3: Option<M3W>,
 }
 
 fn zero() -> Tuple {
@@ -629,7 +678,26 @@ impl RfWitness {
             mem_base: t.pre[LEN],
             mem: t.appended.clone(),
             overrides: Vec::new(),
+            m3: None,
         }
+    }
+
+    /// As [`Self::from_trace`] with an honest M3 witness: the old tree has
+    /// siblings `sibs` on the path of segment `pre.len / 8`.
+    pub fn from_trace_m3(t: &Trace32, s: usize, sibs: [F; crate::m3::TOP]) -> Self {
+        let mut w = Self::from_trace(t, s);
+        let cells: Vec<[F; 3]> = t
+            .appended
+            .iter()
+            .map(|c| [fu(c[0]), fu(c[1]), fu(c[2])])
+            .collect();
+        w.m3 = Some(M3W::honest(t.pre[LEN], t.post()[LEN], &cells, sibs));
+        w
+    }
+
+    /// Digested words of a register file.
+    pub fn words(x: &Regs32) -> Vec<F> {
+        x.iter().take(NDIG).map(|&v| fu(v)).collect()
     }
 
     pub fn s(&self) -> usize {
@@ -644,11 +712,26 @@ impl RfWitness {
     }
 
     pub fn instance(&self) -> Vec<F> {
+        let (pre_d, post_d) = match &self.m3 {
+            None => (
+                rf_digest(&self.slots[0].pre),
+                rf_digest(&self.slots[self.s()].pre),
+            ),
+            Some(m) => {
+                let pre = Self::words(&self.slots[0].pre);
+                let mut post = Self::words(&self.slots[self.s()].pre);
+                post[LEN] = m.len_post;
+                (
+                    m.digest(0, &pre, m.pre_root),
+                    m.digest(1, &post, m.new_root()),
+                )
+            }
+        };
         vec![
             F::from(0u64),
             F::from(0u64),
-            rf_digest(&self.slots[0].pre),
-            rf_digest(&self.slots[self.s()].pre),
+            pre_d,
+            post_d,
             F::from(0u64),
             F::from(0u64),
             F::from(self.steps()),
@@ -759,7 +842,18 @@ impl Circuit<F> for RfLeaf {
             RangeConfig::configure(meta, c12, RC)
         };
         let alu = AluConfig::configure(meta, bus, range.clone());
-        let mem = MemConfig::configure(meta, bus);
+        assert!(!params.m3 || (params.pos_hash && params.arch != Arch::WideInline));
+        // Gemini Quint HASH verdict H-C5: the E6 provider rows (`params.hash`) pin
+        // neither chip nor key, so they never share a key with the Poseidon chip.
+        assert!(
+            !(params.hash && params.pos_hash),
+            "the E6 provider rows pin nothing; not with the Poseidon chip"
+        );
+        let (mem, seg) = if params.m3 {
+            (None, Some(SegMemConfig::configure(meta, bus)))
+        } else {
+            (Some(MemConfig::configure(meta, bus)), None)
+        };
         // Node-cost probe: extra lookup arguments into the RANGE table on the ALU rows
         // (columns 0.. hold small tuple fields there).
         for i in 0..params.extra_lookups {
@@ -780,18 +874,53 @@ impl Circuit<F> for RfLeaf {
             by_gate[gi].push(ci);
         }
         let pad = params.pad.max(1);
+        // DEC: `(en * ctl_tag, rule id)` on the first gate row that sees them.
+        let dec_ex = ex(|g| {
+            let f = flags(g)?;
+            Some(g(Cell::Pre(CTL_TAG))? * sum(&f))
+        });
+        let dgi = layout.host(&dec_ex).expect("DEC host");
+        let dec_off = layout.gates[dgi];
+        let q_dec = meta.complex_selector();
+        // Selectors of the core gates and of `rf count0` (the last entry).
+        let mut vs: Vec<Option<VSel>> = Vec::new();
+        if params.pack_core {
+            let degs = core_degrees(&layout, &by_gate);
+            let mut items = Vec::new();
+            for (gi, idx) in by_gate.iter().enumerate() {
+                if !idx.is_empty() && gi != dgi {
+                    items.push((gi, degs[gi]));
+                }
+            }
+            let mut d: Vec<usize> = items.iter().map(|x| x.1).collect();
+            d.push(1);
+            let packed = pack(meta, &d);
+            vs = vec![None; by_gate.len() + 1];
+            for (k, (gi, _)) in items.iter().enumerate() {
+                vs[*gi] = Some(packed[k]);
+            }
+            if !by_gate[dgi].is_empty() {
+                vs[dgi] = Some(VSel::Simple(q_dec));
+            }
+            vs[by_gate.len()] = Some(packed[items.len()]);
+        } else {
+            for idx in &by_gate {
+                vs.push((!idx.is_empty()).then(|| VSel::Simple(meta.selector())));
+            }
+            vs.push(Some(VSel::Simple(meta.selector())));
+        }
+        let q_cnt0 = vs.pop().unwrap().unwrap();
         let mut gate_sels = Vec::new();
         for (gi, idx) in by_gate.iter().enumerate() {
-            if idx.is_empty() {
+            let Some(sel) = vs[gi] else {
                 gate_sels.push(None);
                 continue;
-            }
-            let sel = meta.selector();
+            };
             let o = layout.gates[gi];
             let (lay, idx, colv) = (layout.clone(), idx.clone(), cols.clone());
             meta.create_gate("rf core", move |m| {
                 let cons = core_constraints();
-                let q = m.query_selector(sel);
+                let q = sel.expr(m);
                 let mut out = Vec::new();
                 for &ci in &idx {
                     let mut get = |c: Cell| {
@@ -808,14 +937,6 @@ impl Circuit<F> for RfLeaf {
             gate_sels.push(Some(sel));
         }
 
-        // DEC: `(en * ctl_tag, rule id)` on the first gate row that sees them.
-        let dec_ex = ex(|g| {
-            let f = flags(g)?;
-            Some(g(Cell::Pre(CTL_TAG))? * sum(&f))
-        });
-        let dgi = layout.host(&dec_ex).expect("DEC host");
-        let dec_off = layout.gates[dgi];
-        let q_dec = meta.complex_selector();
         let lay = layout.clone();
         let dec = DecConfig::configure(meta, |m| {
             let q = m.query_selector(q_dec);
@@ -832,19 +953,20 @@ impl Circuit<F> for RfLeaf {
             (q.clone() * sum(&f) * tag, q * rule)
         });
 
-        let q_cnt0 = meta.selector();
         let (cnt_col, _) = layout
             .find(Cell::Cnt, layout.place[layout.canon(Cell::Cnt)].1)
             .unwrap();
         meta.create_gate("rf count0", |m| {
-            let q = m.query_selector(q_cnt0);
+            let q = q_cnt0.expr(m);
             crate::gate(vec![q * m.query_advice(cols[cnt_col], Rotation::cur())])
         });
 
         // Digest.
         let mut q_dig_inline = None;
         let mut dig = None;
-        if params.arch == Arch::WideInline {
+        if params.m3 {
+            // The Poseidon digests of `crate::m3` replace the placeholder.
+        } else if params.arch == Arch::WideInline {
             let sel = meta.selector();
             let o = layout.place[layout.canon(Cell::Dig)].1;
             let (lay, colv) = (layout.clone(), cols.clone());
@@ -931,7 +1053,10 @@ impl Circuit<F> for RfLeaf {
         let slim = params
             .slim_hash
             .then(|| SlimHashShape::configure(meta, &cols));
-        let pos = params.pos_hash.then(|| PoseidonCfg::configure(meta, bus));
+        let pos = params
+            .pos_hash
+            .then(|| PoseidonCfg::configure(meta, bus, params.one_abs));
+        let walk = params.m3.then(|| WalkConfig::configure(meta, c12));
         let probe_sels: Vec<Selector> = (0..params.extra_selectors)
             .map(|_| {
                 let q = meta.selector();
@@ -953,6 +1078,8 @@ impl Circuit<F> for RfLeaf {
             range,
             alu,
             mem,
+            seg,
+            walk,
             dec,
             gate_sels,
             q_dec,
@@ -1080,6 +1207,40 @@ impl Circuit<F> for RfLeaf {
                     o += cfg.alu.assign(&mut r, o, op)?;
                 }
                 let base = w.map_or(Value::unknown(), |w| Value::known(fu(w.mem_base)));
+                if let (Some(sc), Some(wk), Some(pc)) = (&cfg.seg, &cfg.walk, &cfg.pos) {
+                    // H-C6: every M3 sponge takes copied cells and feeds its
+                    // consumer; the free-input E7 workload is not built.
+                    assert!(self.n_hash2 == 0 && self.hash_extra.is_empty());
+                    // M3: the aligned segment, its records and root, the walks and
+                    // the Poseidon digests.
+                    let m = w.map(|w| w.m3.as_ref().expect("M3 witness"));
+                    let cells: Vec<Value<[F; 3]>> = (0..SEG)
+                        .map(|i| m.map_or(Value::unknown(), |m| Value::known(m.cells[i])))
+                        .collect();
+                    let act: Vec<Value<F>> = (0..SEG)
+                        .map(|i| m.map_or(Value::unknown(), |m| Value::known(m.act[i])))
+                        .collect();
+                    let len_end = m.map_or(Value::unknown(), |m| Value::known(m.len_end));
+                    let segc = sc.assign(&mut r, o, base, len_end, &cells, &act)?;
+                    r.constrain_equal(segc.addr0.cell(), pre_cell(0, LEN).cell())?;
+                    r.constrain_equal(segc.len_end.cell(), pre_cell(s, LEN).cell())?;
+                    o += SEG;
+                    let pre_w: Vec<_> = (0..NDIG).map(|j| pre_cell(0, j)).collect();
+                    let post_w: Vec<_> = (0..NDIG).map(|j| pre_cell(s, j)).collect();
+                    let out = crate::m3::assign(
+                        pc,
+                        wk,
+                        &mut r,
+                        &mut o,
+                        &segc,
+                        &pre_cell(0, LEN),
+                        &pre_w,
+                        &post_w,
+                        LEN,
+                        m,
+                    )?;
+                    return Ok((out.pre_d, out.post_d, steps, Vec::new()));
+                }
                 let mem: Vec<_> = match w {
                     Some(w) => w
                         .mem
@@ -1088,7 +1249,7 @@ impl Circuit<F> for RfLeaf {
                         .collect(),
                     None => vec![Value::unknown(); s],
                 };
-                let first = cfg.mem.assign(&mut r, o, s, base, &mem)?;
+                let first = cfg.mem.as_ref().unwrap().assign(&mut r, o, s, base, &mem)?;
                 r.constrain_equal(first.cell(), pre_cell(0, LEN).cell())?;
                 o += s;
 
@@ -1240,9 +1401,25 @@ mod tests {
         RfLeaf::new(p(arch), w.s(), Some(w))
     }
 
+    /// Every layout, with plain and with packed core selectors (E8 cut 2).
+    fn archs_pack() -> Vec<(Arch, bool)> {
+        ARCHS
+            .iter()
+            .flat_map(|&a| [(a, false), (a, true)])
+            .collect()
+    }
+
+    fn leafp(arch: Arch, pack: bool, w: RfWitness) -> RfLeaf {
+        let params = RfParams {
+            pack_core: pack,
+            ..p(arch)
+        };
+        RfLeaf::new(params, w.s(), Some(w))
+    }
+
     #[test]
     fn rotations_are_unit() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             for (hash, slim_hash, pos_hash, range1) in [
                 (false, false, false, false),
                 (true, false, false, false),
@@ -1260,6 +1437,8 @@ mod tests {
                     pos_hash,
                     range1,
                     extra_selectors: 0,
+                    pack_core: pack,
+                    ..Default::default()
                 }) {
                     assert!((-1..=1).contains(&r), "{arch:?} hash={hash}: rotation {r}");
                 }
@@ -1269,13 +1448,14 @@ mod tests {
 
     #[test]
     fn honest_leaves_pass() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             for s in [1, 6, 8] {
-                rf_mock(&leaf(arch, honest(s))).unwrap_or_else(|e| panic!("{arch:?} s={s}: {e}"));
+                rf_mock(&leafp(arch, pack, honest(s)))
+                    .unwrap_or_else(|e| panic!("{arch:?} s={s}: {e}"));
             }
             // 4 steps in 7 slots.
             let w = RfWitness::from_trace(&run32(genesis(), 4), 7);
-            rf_mock(&leaf(arch, w)).unwrap_or_else(|e| panic!("{arch:?} partial: {e}"));
+            rf_mock(&leafp(arch, pack, w)).unwrap_or_else(|e| panic!("{arch:?} partial: {e}"));
         }
     }
 
@@ -1284,14 +1464,14 @@ mod tests {
     /// for each of the 32 words.
     #[test]
     fn every_register_word_is_checked() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let base = honest(6);
             assert_eq!(base.slots[5].flags[POP], 1);
             for j in 0..NREG {
                 let mut w = base.clone();
                 let v = w.slots[5].post[j];
                 w.set_post(5, j, v + 1);
-                let e = rf_mock(&leaf(arch, w)).expect_err(&format!("{arch:?} word {j}"));
+                let e = rf_mock(&leafp(arch, pack, w)).expect_err(&format!("{arch:?} word {j}"));
                 assert!(e.contains("rf core"), "{arch:?} word {j}: {e}");
             }
         }
@@ -1300,7 +1480,7 @@ mod tests {
     /// D7: a push must store the core's `fp` as the link, not a free value.
     #[test]
     fn push_link_is_the_core_fp() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             // Steps 6.. start a second cycle: step 6 is a Push with fp = 0; use a leaf
             // where a pushed entry is later popped (steps 0 and 5).
             let mut w = honest(6);
@@ -1309,13 +1489,13 @@ mod tests {
             // The pop at step 5 then loads link 9 into fp.
             w.slots[5].l1[4] = F::from(9u64);
             w.set_post(5, FP, 9);
-            assert!(rf_mock(&leaf(arch, w)).is_err(), "{arch:?}");
+            assert!(rf_mock(&leafp(arch, pack, w)).is_err(), "{arch:?}");
         }
     }
 
     #[test]
     fn enable_is_a_prefix() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let t = run32(genesis(), 1);
             let mut w = RfWitness::from_trace(&t, 2);
             let s0 = w.slots[0];
@@ -1329,7 +1509,7 @@ mod tests {
                 ..s0
             };
             w.alu = vec![AluOp::eval(OP_ADD, 0, 0), w.alu[0]];
-            assert!(rf_mock(&leaf(arch, w)).is_err(), "{arch:?}");
+            assert!(rf_mock(&leafp(arch, pack, w)).is_err(), "{arch:?}");
         }
     }
 
@@ -1343,29 +1523,31 @@ mod tests {
     /// by the permutation argument.
     #[test]
     fn narrow_copies_are_checked() {
-        // Post cell of slot 2 differs from the next pre cell (no gate is wrong).
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Post(ENV), 0);
-        w.overrides.push((2, row, col, F::from(77u64)));
-        let e = rf_mock(&leaf(Arch::Narrow, w)).unwrap_err();
-        assert!(e.contains("quality") || e.contains("ermutation"), "{e}");
-        // A flag replica of slot 1 differs from the canonical flag row.
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Flag(REWRITE), 2);
-        w.overrides.push((1, row, col, F::from(0u64)));
-        assert!(rf_mock(&leaf(Arch::Narrow, w)).is_err());
-        // A routed operand replica differs from its register.
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Pre(CTL_A), 1);
-        w.overrides.push((0, row, col, F::from(5u64)));
-        assert!(rf_mock(&leaf(Arch::Narrow, w)).is_err());
+        for pack in [false, true] {
+            // Post cell of slot 2 differs from the next pre cell (no gate is wrong).
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Post(ENV), 0);
+            w.overrides.push((2, row, col, F::from(77u64)));
+            let e = rf_mock(&leafp(Arch::Narrow, pack, w)).unwrap_err();
+            assert!(e.contains("quality") || e.contains("ermutation"), "{e}");
+            // A flag replica of slot 1 differs from the canonical flag row.
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Flag(REWRITE), 2);
+            w.overrides.push((1, row, col, F::from(0u64)));
+            assert!(rf_mock(&leafp(Arch::Narrow, pack, w)).is_err());
+            // A routed operand replica differs from its register.
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Pre(CTL_A), 1);
+            w.overrides.push((0, row, col, F::from(5u64)));
+            assert!(rf_mock(&leafp(Arch::Narrow, pack, w)).is_err());
+        }
     }
 
     #[test]
     fn wrong_digest_statement_rejected() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let w = honest(3);
-            let c = leaf(arch, w.clone());
+            let c = leafp(arch, pack, w.clone());
             let mut inst = w.instance();
             inst[3] += F::from(1u64);
             let pr = midnight_proofs::dev::MockProver::run(&c, vec![vec![], inst]).unwrap();
@@ -1387,15 +1569,29 @@ mod tests {
             let c = RfLeaf::new(params, 4, Some(honest(4))).with_hashes(3, vec![3, 31]);
             rf_mock(&c).unwrap_or_else(|e| panic!("range1={range1}: {e}"));
         }
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let params = RfParams {
                 arch,
                 range1: true,
+                pack_core: pack,
                 ..Default::default()
             };
             rf_mock(&RfLeaf::new(params, 6, Some(honest(6))))
                 .unwrap_or_else(|e| panic!("{arch:?}: {e}"));
         }
+    }
+
+    /// HASH verdict H-C5: the unpinned E6 provider rows cannot be configured
+    /// together with the Poseidon chip.
+    #[test]
+    #[should_panic(expected = "the E6 provider rows pin nothing")]
+    fn e6_rows_never_with_poseidon() {
+        rotations(RfParams {
+            arch: Arch::Narrow,
+            hash: true,
+            pos_hash: true,
+            ..Default::default()
+        });
     }
 
     #[test]
@@ -1415,5 +1611,379 @@ mod tests {
         )
         .with_hashes(3, vec![4]);
         rf_mock(&c).unwrap();
+    }
+
+    // -----------------------------------------------------------------------
+    // E8: the cuts and M3 wired for real.
+
+    use crate::m3::{TOP, empty_top, h2, record_native, walk_native};
+
+    fn m3_params() -> RfParams {
+        RfParams {
+            arch: Arch::Narrow,
+            pos_hash: true,
+            range1: true,
+            one_abs: true,
+            pack_core: true,
+            m3: true,
+            ..Default::default()
+        }
+    }
+
+    /// Siblings of segment `idx` in an old tree whose segments below `idx` are
+    /// filled (stand-in values) and whose segments from `idx` up are empty.
+    fn sibs_for(idx: u64) -> [F; TOP] {
+        std::array::from_fn(|l| {
+            if (idx >> l) & 1 == 1 {
+                F::from(1000 + l as u64)
+            } else {
+                empty_top(l)
+            }
+        })
+    }
+
+    fn m3_witness(base: u128, steps: usize, s: usize) -> RfWitness {
+        let mut g = genesis();
+        g[LEN] = base;
+        let t = run32(g, steps);
+        RfWitness::from_trace_m3(&t, s, sibs_for((base / 8) as u64))
+    }
+
+    /// MockProver with every failure listed.
+    fn m3_mock(w: RfWitness) -> Result<(), String> {
+        let leaf = RfLeaf::new(m3_params(), w.s(), Some(w.clone()));
+        let p = midnight_proofs::dev::MockProver::run(&leaf, vec![vec![], w.instance()])
+            .map_err(|e| format!("{e:?}"))?;
+        p.verify().map_err(|e| {
+            let all: Vec<String> = e.iter().map(|f| format!("{f}")).collect();
+            // One line per refused witness: the distinct failing gates and arguments.
+            let mut kinds: Vec<String> = all
+                .iter()
+                .map(|f| {
+                    if let Some(i) = f.find("gate ") {
+                        f[i..].split(')').next().unwrap_or("").to_string() + ")"
+                    } else if f.contains("ookup") {
+                        "lookup".into()
+                    } else if f.contains("quality") || f.contains("ermutation") {
+                        "permutation".into()
+                    } else {
+                        f.chars().take(40).collect()
+                    }
+                })
+                .collect();
+            kinds.sort();
+            kinds.dedup();
+            println!(
+                "E8-NEG {}: {}",
+                std::thread::current().name().unwrap_or("?"),
+                kinds.join(", ")
+            );
+            all.join(" | ")
+        })
+    }
+
+    fn is_perm(e: &str) -> bool {
+        e.contains("quality") || e.contains("ermutation")
+    }
+
+    #[test]
+    fn m3_honest_leaves_pass() {
+        for (base, steps, s) in [(8, 16, 16), (40, 6, 8), (8, 0, 2), (1 << 19, 13, 16)] {
+            let w = m3_witness(base, steps, s);
+            m3_mock(w).unwrap_or_else(|e| panic!("base {base} steps {steps}: {e}"));
+        }
+        // The cuts alone, without M3, on every layout but A-inline.
+        for arch in [Arch::Wide, Arch::Narrow, Arch::Staggered] {
+            let params = RfParams {
+                arch,
+                pos_hash: true,
+                range1: true,
+                one_abs: true,
+                pack_core: true,
+                ..Default::default()
+            };
+            let c = RfLeaf::new(params, 6, Some(honest(6))).with_hashes(2, vec![3]);
+            rf_mock(&c).unwrap_or_else(|e| panic!("{arch:?}: {e}"));
+        }
+    }
+
+    /// Two leaves chain: the second leaf's `pre_d` is the first leaf's `post_d`
+    /// (`len := base + 8`, the new root is the next old root).
+    #[test]
+    fn m3_leaves_chain() {
+        // Genesis tree: every segment empty (segment 0 is reserved).
+        let empty: [F; TOP] = std::array::from_fn(empty_top);
+        let w1 = RfWitness::from_trace_m3(&run32(genesis(), 16), 16, empty);
+        m3_mock(w1.clone()).unwrap();
+        let m1 = w1.m3.as_ref().unwrap();
+        let mut g = w1.slots[16].pre;
+        g[LEN] = 16;
+        // Segment 2: left sibling at level 1 is H(seg0, seg1); the rest empty.
+        let mut sibs: [F; TOP] = std::array::from_fn(empty_top);
+        sibs[1] = h2(F::ZERO, m1.seg_root());
+        let t2 = run32(g, 16);
+        let w2 = RfWitness::from_trace_m3(&t2, 16, sibs);
+        assert_eq!(w2.m3.as_ref().unwrap().pre_root, m1.new_root());
+        assert_eq!(w2.instance()[2], w1.instance()[3]);
+        m3_mock(w2).unwrap();
+    }
+
+    /// C1: no core constraint but the scratch registers' own next state reads
+    /// `Pre(v_k)` (`v0..v2` are outside the digest), and a free slot-0 value of
+    /// them changes neither acceptance nor the statement.
+    #[test]
+    fn m3_scratch_registers_are_write_only() {
+        for (name, e) in core_constraints() {
+            for v in [V0, V1, V2] {
+                if name == format!("next {v}") {
+                    continue;
+                }
+                let mut reads = false;
+                let mut g = |c: Cell| {
+                    if c == Cell::Pre(v) {
+                        reads = true;
+                    }
+                    Some(k(1))
+                };
+                let _ = e(&mut g);
+                assert!(!reads, "`{name}` reads Pre({v})");
+            }
+        }
+        let mut w = m3_witness(8, 16, 16);
+        let inst = w.instance();
+        for v in [V0, V1, V2] {
+            w.slots[0].pre[v] = 12345;
+        }
+        assert_eq!(w.instance(), inst);
+        m3_mock(w).unwrap();
+    }
+
+    /// C2: the honest trace writes the zero tuple (D7's sentinel spill
+    /// `(top0, top1, fp) = (0, 0, NIL)`); its record carries tag 1 and differs from
+    /// padding. Marking it padding (tag 0) is refused.
+    #[test]
+    fn m3_zero_record_is_tagged() {
+        let w = m3_witness(8, 16, 16);
+        let m = w.m3.as_ref().unwrap();
+        assert_eq!(m.cells[0], [F::ZERO; 3]);
+        assert_eq!(m.act[0], F::ONE);
+        assert_ne!(
+            record_native(F::ONE, [F::ZERO; 3]),
+            record_native(F::ZERO, [F::ZERO; 3])
+        );
+        let mut w = w.clone();
+        w.m3.as_mut().unwrap().act[0] = F::ZERO;
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("ookup"), "{e}");
+    }
+
+    #[test]
+    fn m3_append_not_requested_rejected() {
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        assert_eq!(m.act, [1u64, 1, 1, 1, 1, 1, 0, 0].map(F::from));
+        m.act[6] = F::ONE;
+        m.cells[6] = [F::from(5u64); 3];
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("mem chain"), "{e}");
+        assert!(!e.contains("ookup"), "{e}");
+    }
+
+    #[test]
+    fn m3_append_skipped_rejected() {
+        // The last append's row zeroed and marked padding: its request is not
+        // served and the prefix no longer ends at `len_end`.
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        m.act[5] = F::ZERO;
+        m.cells[5] = [F::ZERO; 3];
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("mem chain") && e.contains("ookup"), "{e}");
+        // Marked padding with data: also the padding check. (The spike's
+        // honest records are all the zero tuple: every spill is the sentinel.)
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        m.act[5] = F::ZERO;
+        m.cells[5] = [F::from(3u64); 3];
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("mem row"), "{e}");
+    }
+
+    #[test]
+    fn m3_nonzero_padding_rejected() {
+        for col in 0..3 {
+            let mut w = m3_witness(8, 16, 16);
+            w.m3.as_mut().unwrap().cells[7][col] = F::ONE;
+            let e = m3_mock(w).unwrap_err();
+            assert!(e.contains("mem row"), "col {col}: {e}");
+        }
+    }
+
+    #[test]
+    fn m3_len_root_desync_rejected() {
+        // The close cell is not base + 8.
+        let mut w = m3_witness(8, 16, 16);
+        w.m3.as_mut().unwrap().len_post = F::from(24u64);
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("m3 walk first"), "{e}");
+        // An unaligned base (verdict C3): no bits give 8 idx = 9.
+        let w = m3_witness(9, 16, 16);
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("m3 walk first"), "{e}");
+        // Walk bits that are not the bits of base / 8 (the update lands in
+        // another slot).
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        m.idx = 3;
+        m.pre_root = walk_native(F::ZERO, &m.sibs, 3);
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("m3 walk first"), "{e}");
+        // An index of 18 bits (a slot outside the depth-17 top tree).
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        m.idx = 1 + (1 << 17);
+        m.pre_root = walk_native(F::ZERO, &m.sibs, m.idx);
+        let e = m3_mock(w).unwrap_err();
+        assert!(e.contains("m3 walk"), "{e}");
+        // `len_end` on the MEM rows is not the core's final `len`.
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        m.len_end += F::ONE;
+        let e = m3_mock(w).unwrap_err();
+        assert!(is_perm(&e), "{e}");
+    }
+
+    #[test]
+    fn m3_forged_sibling_rejected() {
+        for l in [0, 1, 9, TOP - 1] {
+            // New walk only: the shared sibling cell's copy breaks.
+            let mut w = m3_witness(8, 16, 16);
+            w.m3.as_mut().unwrap().sibs_new[l] += F::ONE;
+            let e = m3_mock(w).unwrap_err();
+            assert!(is_perm(&e), "level {l}: {e}");
+            assert!(!e.contains("m3 walk"), "level {l}: {e}");
+            // Both walks: the old root is no longer `pre_d`'s root.
+            let mut w = m3_witness(8, 16, 16);
+            let m = w.m3.as_mut().unwrap();
+            m.sibs[l] += F::ONE;
+            m.sibs_new[l] += F::ONE;
+            let e = m3_mock(w).unwrap_err();
+            assert!(is_perm(&e), "level {l}: {e}");
+        }
+    }
+
+    /// Every digest input (29 words and `mem_root`, in `pre_d` and `post_d`) is a
+    /// copy of its cell: a digest of anything else is refused.
+    #[test]
+    fn m3_digest_binds_every_word() {
+        let base = m3_witness(8, 6, 6);
+        for side in 0..2 {
+            for i in 0..=NDIG {
+                let mut w = base.clone();
+                w.m3.as_mut().unwrap().dig_in = Some((side, i, F::ONE));
+                let e = m3_mock(w).expect_err(&format!("side {side} input {i}"));
+                assert!(is_perm(&e), "side {side} input {i}: {e}");
+            }
+        }
+    }
+
+    /// The core's frame condition and next state on the final key (packed
+    /// selectors, M3): a wrong post value of any of the 32 words after the last
+    /// step (a `Pop`) is refused by `rf core`. Word 16 is `len` (+1 per append).
+    #[test]
+    fn m3_every_register_word_is_checked() {
+        let base = m3_witness(8, 6, 6);
+        assert_eq!(base.slots[5].flags[POP], 1);
+        for j in 0..NREG {
+            let mut w = base.clone();
+            let v = w.slots[5].post[j];
+            w.set_post(5, j, v + 1);
+            let e = m3_mock(w).expect_err(&format!("word {j}"));
+            assert!(e.contains("rf core"), "word {j}: {e}");
+        }
+    }
+
+    fn only_walk(e: &str) -> bool {
+        e.contains("('m3 walk')")
+            && !e.contains("m3 walk first")
+            && !e.contains("m3 walk last")
+            && !is_perm(e)
+            && !e.contains("ookup")
+    }
+
+    /// The generic walker gate: a select that does not follow the bit (old and new
+    /// walk, several levels) and a non-boolean bit whose select and accumulator
+    /// are consistent. The statement is recomputed from the forged walk, so only
+    /// `m3 walk` can refuse.
+    #[test]
+    fn m3_walk_gate_rejects_bad_select_and_bit() {
+        for walk in 0..2 {
+            for l in [0, 5, TOP - 1] {
+                let mut w = m3_witness(8, 16, 16);
+                let m = w.m3.as_mut().unwrap();
+                m.forge_in0 = Some((walk, l, F::ONE));
+                m.pre_root = m.old_root();
+                let e = m3_mock(w).expect_err(&format!("walk {walk} level {l}"));
+                assert!(only_walk(&e), "walk {walk} level {l}: {e}");
+            }
+        }
+        // idx 1 as bits (-1, 1, 0, ..): acc 1 -> 1 -> 0, so only `b` boolean fails.
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        let mut bits = [F::ZERO; TOP];
+        bits[0] = -F::ONE;
+        bits[1] = F::ONE;
+        m.bits = Some(bits);
+        assert_eq!(m.accs()[TOP], F::ZERO);
+        m.pre_root = m.old_root();
+        let e = m3_mock(w).unwrap_err();
+        assert!(only_walk(&e), "{e}");
+    }
+
+    /// The degree stays 6 with the cuts and M3; cut 1 removes 2 fixed columns
+    /// and cut 2 more.
+    #[test]
+    fn e8_degree_and_columns() {
+        let fixed = |p: RfParams| {
+            let mut cs = ConstraintSystem::<F>::default();
+            RfLeaf::configure_with_params(&mut cs, p);
+            (
+                cs.degree(),
+                cs.num_fixed_columns() + cs.num_selectors(),
+                cs.lookups().len(),
+            )
+        };
+        let base = RfParams {
+            arch: Arch::Narrow,
+            pos_hash: true,
+            range1: true,
+            ..Default::default()
+        };
+        let a1 = RfParams {
+            one_abs: true,
+            ..base
+        };
+        let pc = RfParams {
+            pack_core: true,
+            ..a1
+        };
+        let v: Vec<_> = [base, a1, pc, m3_params()].into_iter().map(fixed).collect();
+        println!("E8 (degree, fixed + selectors, lookups): {v:?}");
+        let lay = Layout::new(Arch::Narrow);
+        let mut by_gate = vec![Vec::new(); lay.gates.len()];
+        for (ci, (_, e)) in core_constraints().iter().enumerate() {
+            by_gate[lay.host(e).unwrap()].push(ci);
+        }
+        let n: Vec<usize> = by_gate.iter().map(|g| g.len()).collect();
+        println!(
+            "E8 core gate rows {:?}: constraints {n:?}, body degrees {:?}",
+            lay.gates,
+            core_degrees(&lay, &by_gate)
+        );
+        for x in &v {
+            assert_eq!(x.0, 6);
+        }
+        assert_eq!(v[1].1, v[0].1 - 2);
+        assert!(v[2].1 < v[1].1);
     }
 }

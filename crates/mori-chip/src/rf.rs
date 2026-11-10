@@ -89,8 +89,14 @@ pub const DEC_ROWS: [(u64, u64); NRULE] = [(1, 1), (2, 2), (3, 3), (4, 4), (5, 5
 
 pub type Regs32 = [u128; NREG];
 
+/// Cells per memory segment of M3 (`experiments-4.md`): a leaf allocates the
+/// aligned segment `base .. base + SEG_C`, `base` a multiple of `SEG_C`.
+pub const SEG_C: u128 = 8;
+
 /// The experiment start: `ctl = (PUSH, 1, 1, 5, 0)`, fuel 10^6, stack limit 8,
-/// empty frame and task stacks (`fp = tp = 0`), memory length 1.
+/// empty frame and task stacks (`fp = tp = 0`), memory length `SEG_C`. The first
+/// segment (addresses 0..8, `NIL = 0` among them) is reserved and never written,
+/// so `len` starts aligned (Gemini Quint verdict C3; it was 1 before E8).
 pub fn genesis() -> Regs32 {
     let mut x = [0u128; NREG];
     x[CTL_TAG] = T_PUSH as u128;
@@ -100,7 +106,7 @@ pub fn genesis() -> Regs32 {
     x[FUEL0] = 1_000_000;
     x[FUEL] = 1_000_000;
     x[LIMIT] = 8;
-    x[LEN] = 1;
+    x[LEN] = SEG_C;
     x
 }
 
