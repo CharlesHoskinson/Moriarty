@@ -1,6 +1,6 @@
 {
   "schema": "moriarty.target-pins/1",
-  "updated": "2026-11-08",
+  "updated": "2026-11-10",
   "workspaceTarget": "preview",
   "workspaceTargetNote": "The qualification target of sherlock-vm-consensus-20261107 (M6). The undeployed and mainnet rows carry the same software pins, so this choice changes only the chain identity. Task 2.1 moved the workspace to these pins: Cargo.toml, Cargo.lock, the committed SDK manifest (sdkManifest) and the version asserts in tools/sherlock-sdk/*.mjs.",
   "sources": {
@@ -17,7 +17,13 @@
     "workflow": "openspec/changes/sherlock-vm-consensus-20261107/workflow.md section 6",
     "sdkManifest": "tools/sherlock-sdk/package.json and tools/sherlock-sdk/package-lock.json (the maintainer SDK root, installed with npm ci --ignore-scripts)",
     "mainnetAmendment": "openspec/MORIARTY-COMPLETION-PROGRAM.md lines 270-283 (owner decision 2026-11-08, which supersedes the line 269 mainnet ban)",
-    "ownerDecisions": "openspec/changes/sherlock-vm-consensus-20261107/dissent.md section 'Resolved 2026-11-08'"
+    "ownerDecisions": "openspec/changes/sherlock-vm-consensus-20261107/dissent.md section 'Resolved 2026-11-08'",
+    "rpc20261110": "research/midnight-ledger9-20261107/api/rpc-status-20261110.json (2026-11-10T04:20:35Z; preview, preprod and mainnet all report node 2.1.101-913ec011, spec 2001100, ledger 1.0.1 rev 3e69c5e3)",
+    "nodeTag": "repos/midnightntwrk/midnight-node (local clone, gitignored) at tag node-2.1.101 = 86774edf8cc76345a5c3a4221f3fe80c094b1c33 (2026-11-08): runtime/src/lib.rs spec_version 002_001_100; Cargo.toml mn-ledger-9 = midnight-ledger-v9 =1.0.1 from crates.io",
+    "indexerTag": "repos/midnightntwrk/midnight-indexer (local clone, gitignored) at tag v4.4.101 = 0e6d8385ba573af970ec2e4313ce13ce97f5f608 (2026-11-08)",
+    "images": "Docker Hub manifest-list digests read 2026-11-10 (each has a linux/arm64 image): midnightntwrk/midnight-node:2.1.101, midnightntwrk/indexer-standalone:4.4.101, midnightntwrk/proof-server:9.0.1",
+    "supportMatrixClone": "repos/midnightntwrk/midnight-docs (local clone, gitignored) at 70e8378 (2026-11-09): docs/relnotes/support-matrix.json and support-matrix.mdx. Preview, Preprod and Mainnet list the same versions: node 2.1.101, compactc 0.36.0, compact-runtime 0.21.0, compact-js 3.0.0, onchain-runtime-v4 4.0.0, wallet-sdk 2.0.0, midnight-js 5.0.0, indexer 4.4.101, proof server 9.0.0",
+    "preprodRpc": "research/midnight-ledger9-20261107/api/rpc-status-20261110.json (2026-11-10T04:20:35Z; preview, preprod and mainnet all report node 2.1.101-913ec011, spec 2001100, ledger 1.0.1 rev 3e69c5e3)"
   },
   "networks": {
     "undeployed": {
@@ -29,7 +35,7 @@
         "genesisHash": null,
         "genesisNote": "Each local docker instance has its own genesis; the receipt of each local run records it (SMN-004).",
         "specVersion": 2001100,
-        "specVersionNote": "Expected from node 2.1.101; the local image tag is not pinned yet (task 5.1).",
+        "specVersionNote": "From node 2.1.101 (tag node-2.1.101 sets spec_version 002_001_100). The local images are pinned under localImages.",
         "ledgerRev": null,
         "ledgerRevNote": "Local node built or pulled at the 9.1.0.1 line; its reported revision is recorded per run.",
         "source": "workflow"
@@ -42,18 +48,25 @@
         "commit": "a2b30128ca4b660b73a068e29b56b48ede8c9a74",
         "source": "repos, manifest, ledgerTree"
       },
-      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, hardfork"},
+      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, hardfork, nodeTag", "tag": "node-2.1.101", "commit": "86774edf8cc76345a5c3a4221f3fe80c094b1c33"},
       "circuits": {"crate": "midnight-circuits", "version": "7.3.0", "source": "ledgerTree, smn001"},
       "zkStdlib": {"crate": "midnight-zk-stdlib", "version": "2.4.0", "source": "ledgerTree, smn001"},
       "proofs": {"crate": "midnight-proofs", "versionReq": "^0.8.2", "source": "ledgerTree"},
       "zkir": {"crate": "midnight-zkir", "version": "3.2.0", "tag": "zkir-3.2.0", "commit": "446c7fecc6bd41dab99ebe89ab404e9d077d11a9", "source": "repos, manifest, ledgerTree"},
-      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrix"},
+      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrixClone"},
       "midnightJs": {"version": "5.0.0", "source": "supportMatrix, smn001"},
       "walletSdk": {"version": "2.0.0", "source": "supportMatrix, smn001"},
-      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001"},
-      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrix, smn001"},
+      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001, sdkManifest", "note": "The chain reports the ledger crate 1.0.1; the JS package stays 1.0.0 because midnight-js-protocol 5.0.0 pins @midnightntwrk/ledger-v9 1.0.0 exactly."},
+      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrixClone, smn001, sdkManifest"},
       "proofServer": {"version": "9.0.x", "accepted": ["9.0.0", "9.0.1"], "note": "The support matrix says 9.0.0; ledger 9.1.0.1 ships proof server 9.0.1 (2026-11-07T14:30Z).", "source": "supportMatrix, hardfork"},
-      "indexer": {"version": "4.4.101", "note": "No public tag for 4.4.101.", "source": "supportMatrix, hardfork"}
+      "indexer": {"version": "4.4.101", "tag": "v4.4.101", "commit": "0e6d8385ba573af970ec2e4313ce13ce97f5f608", "source": "indexerTag, supportMatrixClone"},
+      "localImages": {
+        "node": "midnightntwrk/midnight-node:2.1.101@sha256:0c1ad548d523c1109aa1f16daab1bf72dcb78c7e17b8a8c6d97424ad0eba7b8a",
+        "indexer": "midnightntwrk/indexer-standalone:4.4.101@sha256:119f35db548ba1c390845f215bb1e928e73038bef7c315825aee0461bd54499d",
+        "proofServer": "midnightntwrk/proof-server:9.0.1@sha256:90e36a14f92c2004127f0ed1cfd6ee89d770cf1f6e9cd7f02026ffd4ecb42f37",
+        "note": "Not yet used by a compose file; task 5.1 builds the local chain from these.",
+        "source": "images"
+      }
     },
     "preview": {
       "status": "active",
@@ -66,9 +79,10 @@
         "specVersion": 2001100,
         "ledgerVersionReported": "1.0.1 (tag: crate-ledger-9.1.0.1, rev: 3e69c5e3092fa29c1e8b1728a68fc3ca98774e34)",
         "ledgerRev": "3e69c5e3092fa29c1e8b1728a68fc3ca98774e34",
-        "ledgerRevNote": "Revision reported by the deployed node; it is not fetchable from the public repo and no crate-ledger-9.1.0.1 tag exists. The deployed node source for spec 2001100 is not public (limit stated by SMN-004).",
+        "ledgerRevNote": "Revision reported by the deployed node; it is not fetchable from the public ledger repo. The public node tag node-2.1.101 (86774edf) builds spec 2001100 against midnight-ledger-v9 =1.0.1 from crates.io, which matches what the node reports.",
         "nodeSystemVersion": "2.1.101-913ec011",
-        "source": "previewRpc, stagenetRpc"
+        "source": "previewRpc, stagenetRpc, rpc20261110, nodeTag",
+        "observedAt": "2026-11-10T04:20:35Z"
       },
       "ledger": {
         "version": "9.1.0.1",
@@ -78,18 +92,18 @@
         "commit": "a2b30128ca4b660b73a068e29b56b48ede8c9a74",
         "source": "repos, manifest, ledgerTree"
       },
-      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, previewRpc"},
+      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, previewRpc, nodeTag", "tag": "node-2.1.101", "commit": "86774edf8cc76345a5c3a4221f3fe80c094b1c33"},
       "circuits": {"crate": "midnight-circuits", "version": "7.3.0", "source": "ledgerTree, smn001"},
       "zkStdlib": {"crate": "midnight-zk-stdlib", "version": "2.4.0", "source": "ledgerTree, smn001"},
       "proofs": {"crate": "midnight-proofs", "versionReq": "^0.8.2", "source": "ledgerTree"},
       "zkir": {"crate": "midnight-zkir", "version": "3.2.0", "tag": "zkir-3.2.0", "commit": "446c7fecc6bd41dab99ebe89ab404e9d077d11a9", "source": "repos, manifest, ledgerTree"},
-      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrix"},
+      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrixClone"},
       "midnightJs": {"version": "5.0.0", "source": "supportMatrix, smn001"},
       "walletSdk": {"version": "2.0.0", "source": "supportMatrix, smn001"},
-      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001"},
-      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrix, smn001"},
+      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001, sdkManifest", "note": "The chain reports the ledger crate 1.0.1; the JS package stays 1.0.0 because midnight-js-protocol 5.0.0 pins @midnightntwrk/ledger-v9 1.0.0 exactly."},
+      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrixClone, smn001, sdkManifest"},
       "proofServer": {"version": "9.0.x", "accepted": ["9.0.0", "9.0.1"], "note": "The support matrix says 9.0.0; ledger 9.1.0.1 ships proof server 9.0.1 (2026-11-07T14:30Z).", "source": "supportMatrix, hardfork"},
-      "indexer": {"version": "4.4.101", "note": "No public tag for 4.4.101.", "source": "supportMatrix, hardfork"}
+      "indexer": {"version": "4.4.101", "tag": "v4.4.101", "commit": "0e6d8385ba573af970ec2e4313ce13ce97f5f608", "source": "indexerTag, supportMatrixClone"}
     },
     "mainnet": {
       "status": "blocked",
@@ -98,14 +112,15 @@
       "chain": {
         "networkId": "mainnet",
         "rpc": null,
-        "rpcNote": "The genesis hash below was read from the deprecated rpc.mainnet.midnight.network; one observation, to be re-read through Blockfrost in task 7.2.",
+        "rpcNote": "Genesis hash, spec and ledger version re-read from rpc.mainnet.midnight.network on 2026-11-10 (rpc20261110); to be re-read through Blockfrost in task 7.2.",
         "genesisHash": "0x1941ca8e2bb88146c14dea084d3be7eb6e96ca7135429c543848b628124f2854",
         "specVersion": 2001100,
         "ledgerVersionReported": "1.0.1 (tag: crate-ledger-9.1.0.1, rev: 3e69c5e3092fa29c1e8b1728a68fc3ca98774e34)",
         "ledgerRev": "3e69c5e3092fa29c1e8b1728a68fc3ca98774e34",
-        "ledgerRevNote": "Revision reported by the deployed node; not fetchable from the public repo. The deployed node source for spec 2001100 is not public (limit stated by SMN-004).",
+        "ledgerRevNote": "Revision reported by the deployed node; it is not fetchable from the public ledger repo. The public node tag node-2.1.101 (86774edf) builds spec 2001100 against midnight-ledger-v9 =1.0.1 from crates.io, which matches what the node reports.",
         "upgradeBlock": 3346139,
-        "source": "mainnetRpc, hardfork"
+        "source": "mainnetRpc, hardfork, rpc20261110, nodeTag",
+        "observedAt": "2026-11-10T04:20:35Z"
       },
       "ledger": {
         "version": "9.1.0.1",
@@ -115,18 +130,18 @@
         "commit": "a2b30128ca4b660b73a068e29b56b48ede8c9a74",
         "source": "repos, manifest, ledgerTree"
       },
-      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, mainnetRpc"},
+      "node": {"version": "2.1.101", "runtime": "2.1.100", "specVersion": 2001100, "source": "supportMatrix, mainnetRpc, nodeTag", "tag": "node-2.1.101", "commit": "86774edf8cc76345a5c3a4221f3fe80c094b1c33"},
       "circuits": {"crate": "midnight-circuits", "version": "7.3.0", "source": "ledgerTree, smn001"},
       "zkStdlib": {"crate": "midnight-zk-stdlib", "version": "2.4.0", "source": "ledgerTree, smn001"},
       "proofs": {"crate": "midnight-proofs", "versionReq": "^0.8.2", "source": "ledgerTree"},
       "zkir": {"crate": "midnight-zkir", "version": "3.2.0", "tag": "zkir-3.2.0", "commit": "446c7fecc6bd41dab99ebe89ab404e9d077d11a9", "source": "repos, manifest, ledgerTree"},
-      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrix"},
+      "compact": {"toolchain": "0.36.0", "language": "0.28.0", "runtime": "0.21.0", "devtools": "0.5.1", "tag": "compactc-v0.36.0", "commit": "b5d9e4dfc532fe47011c4f6296e254f4853eb469", "source": "repos, supportMatrixClone"},
       "midnightJs": {"version": "5.0.0", "source": "supportMatrix, smn001"},
       "walletSdk": {"version": "2.0.0", "source": "supportMatrix, smn001"},
-      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001"},
-      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrix, smn001"},
+      "ledgerJs": {"package": "@midnightntwrk/ledger-v9", "version": "1.0.0", "source": "smn001, sdkManifest", "note": "The chain reports the ledger crate 1.0.1; the JS package stays 1.0.0 because midnight-js-protocol 5.0.0 pins @midnightntwrk/ledger-v9 1.0.0 exactly."},
+      "onchainRuntime": {"package": "@midnightntwrk/onchain-runtime-v4", "version": "4.0.0", "source": "supportMatrixClone, smn001, sdkManifest"},
       "proofServer": {"version": "9.0.x", "accepted": ["9.0.0", "9.0.1"], "note": "The support matrix says 9.0.0; ledger 9.1.0.1 ships proof server 9.0.1 (2026-11-07T14:30Z).", "source": "supportMatrix, hardfork"},
-      "indexer": {"version": "4.4.101", "note": "No public tag for 4.4.101.", "source": "supportMatrix, hardfork"}
+      "indexer": {"version": "4.4.101", "tag": "v4.4.101", "commit": "0e6d8385ba573af970ec2e4313ce13ce97f5f608", "source": "indexerTag, supportMatrixClone"}
     },
     "stagenet": {
       "status": "retired",
@@ -164,6 +179,18 @@
       "onchainRuntime": {"package": null, "version": null, "note": "Not recorded for the stagenet runs.", "source": "stagenetStack"},
       "proofServer": {"version": "9.0.0-rc.5", "accepted": ["9.0.0-rc.5"], "note": "Image tag 9.0.0-rc.5_experimental; /version answers 9.0.0-rc.5.", "source": "stagenetStack"},
       "indexer": {"version": null, "note": "Not recorded for the stagenet runs.", "source": "stagenetStack"}
+    }
+  },
+  "observedNetworks": {
+    "note": "Networks that are observed but are not Sherlock targets. The checker reads only the rows under networks.",
+    "preprod": {
+      "rpc": "https://rpc.preprod.midnight.network",
+      "genesisHash": "0xdf831b09a8baa92badf47762ce5ac439b7e47e3ed3d39600cfdd44fad552361b",
+      "specVersion": 2001100,
+      "ledgerVersionReported": "1.0.1 (tag: crate-ledger-9.1.0.1, rev: 3e69c5e3092fa29c1e8b1728a68fc3ca98774e34)",
+      "nodeSystemVersion": "2.1.101-913ec011",
+      "note": "Upgraded in place to ledger 9 on 2026-11-09; chain history, contracts and balances carried over. Same software versions as Preview and Mainnet.",
+      "source": "preprodRpc, supportMatrixClone"
     }
   }
 }

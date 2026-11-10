@@ -21,11 +21,49 @@ tags:
 
 # Midnight and Compact repository inventory
 
+## Clone refresh, 2026-11-10
+
+All 83 local clones under `repos/` (81 `midnightntwrk`, 2 `LFDT-Minokawa`) are
+fast-forwarded to their upstream default branch, shallow and blobless. No clone
+had local changes. 14 heads moved. The hardfork release tags are fetched as tags,
+and every commit that `qa/sherlock/target-pins.json` cites resolves in the clones.
+
+Preview, Preprod and Mainnet run the same stack. On 2026-11-10 at 04:20Z all
+three RPC endpoints report node `2.1.101-913ec011`, spec 2001100 and ledger
+`1.0.1 (crate-ledger-9.1.0.1, rev 3e69c5e3)`. Preprod was upgraded in place on
+2026-11-09; Preview was relaunched as a new chain on 2026-11-07. The readings are
+in `research/midnight-ledger9-20261107/api/rpc-status-20261110.json`.
+
+| Repository | Ref | Commit | Role |
+|---|---|---|---|
+| `midnightntwrk/midnight-node` | tag `node-2.1.101` | `86774edf8cc76345a5c3a4221f3fe80c094b1c33` | Deployed node release: spec 2001100, `midnight-ledger-v9 =1.0.1` from crates.io |
+| `midnightntwrk/midnight-node` | `main` | `52747762cc2576aec85fdb2c08292f9eee71e369` | Head (2026-11-09) |
+| `midnightntwrk/midnight-ledger` | tag `ledger-9.1.0.1` | `a2b30128ca4b660b73a068e29b56b48ede8c9a74` | Ledger in use; tag `proof-server-9.0.1` is the same commit |
+| `midnightntwrk/midnight-ledger` | branch `ledger-9` | `8319309b0e24f84dcb99899b7476177c109f30e5` | Ledger 9 line head (2026-11-09) |
+| `midnightntwrk/midnight-ledger` | default `ledger-8` | `55124e8feb337596b62d290ce21c96d1f09762d0` | Still the default branch |
+| `midnightntwrk/midnight-indexer` | tag `v4.4.101` | `0e6d8385ba573af970ec2e4313ce13ce97f5f608` | Indexer for all three networks |
+| `midnightntwrk/midnight-indexer` | `main` | `7fa946bd7ee1e4f97685e2fcc4f71701c5a0aa73` | Head (2026-11-09) |
+| `midnightntwrk/midnight-js` | tag `v5.0.0` | `39725c71dc5c7681b0a424efae01afcb23107b1c` | Midnight.js 5.0.0 |
+| `midnightntwrk/midnight-zkir` | tag `zkir-3.2.0` | `446c7fecc6bd41dab99ebe89ab404e9d077d11a9` | Unchanged |
+| `LFDT-Minokawa/compact` | tag `compactc-v0.36.0` | `b5d9e4dfc532fe47011c4f6296e254f4853eb469` | Unchanged toolchain |
+| `LFDT-Minokawa/compact` | `main` | `1840c99f50a8af13beed6f24d409cc5129a45d9c` | Head (2026-11-09) |
+| `midnightntwrk/midnight-docs` | `main` | `70e8378873e727accd6e85d4eb0311b1cb5c8da9` | Support matrix for the three networks |
+
+The support matrix lists the same versions for all three networks: compactc
+0.36.0, compact-runtime 0.21.0, compact-js 3.0.0, onchain-runtime-v4 4.0.0,
+wallet-sdk 2.0.0, Midnight.js 5.0.0, indexer 4.4.101 and proof server 9.0.0.
+The chain reports ledger crate 1.0.1, but the JS package `@midnightntwrk/ledger-v9`
+stays at 1.0.0 because `midnight-js-protocol` 5.0.0 pins it exactly.
+
+The local images are linux/arm64 builds: `midnightntwrk/midnight-node:2.1.101`,
+`midnightntwrk/indexer-standalone:4.4.101` and `midnightntwrk/proof-server:9.0.1`.
+Their digests are in `qa/sherlock/target-pins.json` under `localImages`.
+
 ## Current pins: ledger 9 refresh, 2026-11-07
 
 > **Superseded on 2026-11-07.** Mainnet moved to ledger 9.1.0.1 on 2026-11-06
 > (first block with runtime spec 2001100 is 3346139, at 20:51:24Z). Preview was
-> reset and runs ledger 9. Preprod stays on ledger 8.1.3. The September pins
+> reset and runs ledger 9. Preprod stayed on ledger 8.1.3 until 2026-11-09. The September pins
 > below (`ledger-8` `a8ab82b`, `zkir-v3` `2ffe2d1`, Compact `11e7ec5`) are kept
 > as history. They describe the ledger 8 stack and must not be used against
 > Mainnet or Preview. Details: [[wiki/midnight-ledger-9-hardfork|Ledger 9
