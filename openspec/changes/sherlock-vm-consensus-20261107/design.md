@@ -97,14 +97,14 @@ Owner direction (2026-11-10): "really lean into the chip design and let's get it
 - D4 Fixed chip tag per region. On provider rows the `chip` field is the region's fixed selector column, not advice.
 - D5 One enable per step. All micro-op rows of a slot share the slot's `enable`; a leaf closes only between steps.
 - D6 One base for the MEM region. `base` is one cell copied from `pre_d.len`; every MEM row's address is `base + k` with `k` a fixed column.
-- D7 One frame protocol. [OPEN: pick one] Uncached: a rewrite of the top appends `(v, link)` and moves `fp` to the new entry. Cached: `top` lives in registers, PUSH spills the old `top` with link `fp`, POP loads `mem[fp]`, and a rewrite changes only the register. In both, the stored link is the core's `fp`, never a bus value.
+- D7 Cached frame protocol. The top frame is the register `top`, carried in `pre_d` and `post_d`; `fp` is the address of the entry that holds the frame below the top. PUSH appends `(top, fp)` at `len`, then sets `fp := len` and `top` to the new frame. POP returns `top`, loads `mem[fp] = (a, b)` with `fp < len`, and sets `top := a` and `fp := b`. A rewrite of the top changes only `top`: no bus request, `fp` and `len` unchanged. The stored link is the core's `fp`, never a bus value. With `frame_count = 0`, `top` is the zero record and `fp = NIL`, as in `Init` (3.2 item 5); `frame_count` changes by exactly one on PUSH and POP, and POP and a rewrite at `frame_count = 0` are errors. The top task (`task`, `tp`) uses the same protocol [not modelled]. (`d7-frames.md`. Mutants in `chipLeafCached.qnt`: `rewrite_appends`, `push_link_free`, `pop_no_reload`, `pop_no_fp_reload`, `top_dropped`. The `frame_count = 0` and count clauses: Gemini lane `qa/gemini-quint/chipleaf-d7`, hand-built witnesses `cex_sentinel_unconstrained`, `cex_depth_unconstrained`.)
 - D8 No tag equals the padding tuple. Disabled and padding rows put `(0, 0, 0, 0, 0)` on the table side; no chip tag is 0.
 
 Also load-bearing (model-confirmed): `len` advances by exactly one per append; a read checks `addr < len` against the step's current `len`; the read address comes from a register, never the bus; every active ALU row satisfies its relation whether requested or not; every PAGE row opens against its root; DEC has one row per class; the next `pc` and every named register are core constraints; TRAP gates the class and a publishing step is the last enabled slot.
 
 2.7.9 Each chip has its own soundness obligation, Quint model and differential test against the per-rule fragments, which remain the reference. Gates [PENDING E3]: node at most 950,000 rows and decider at most 1,000,000 over the leaf key; `k_leaf <= 16` at S = 16.
 
-Open: the leaf leaves ZKIR, so the manifest of 2.4 names a circuit identity in place of ZKIR and stdlib versions; the depth-20 Merkle cost of `mem_root` per leaf; HASH and the cached `top` register are not yet modelled.
+Open: the leaf leaves ZKIR, so the manifest of 2.4 names a circuit identity in place of ZKIR and stdlib versions; the depth-20 Merkle cost of `mem_root` per leaf; HASH and the task stack are not yet modelled. D7 decided 2026-11-10 for the cached protocol (`research/sherlock-processor-analogy-20261110/d7-frames.md`; lead re-run: 9/9 deterministic tests, base invariants clean at 20,000 samples, 7/7 mutants caught).
 
 ## 3. Recursion design
 

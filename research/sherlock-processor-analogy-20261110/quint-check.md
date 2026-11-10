@@ -349,7 +349,7 @@ Constraints:
 - **D6 One base for the MEM region** (2.4; already stated). `base` is one cell copied from `pre_d.len` and every MEM
   row's address is `base + k` with `k` a fixed column. A per-row base gives two rows for one
   address and the read picks either (`base_per_row`).
-- **D7 One frame protocol** (1.3, 2.4, 7 item 2.7.3). The study mixes two: 1.3 caches `top` in
+- **D7 One frame protocol** (decided 2026-11-10: cached; see `d7-frames.md` and `design.md` 2.7.8. The text below is the original open question.) (1.3, 2.4, 7 item 2.7.3). The study mixes two: 1.3 caches `top` in
   registers with `fp` at the frame below; 2.4 appends every rewrite of the top "with the same
   link". Pick one and state it. Uncached (this model): a rewrite appends `(v, link)` and sets
   `fp` to the new entry; otherwise the next POP reads the old copy (`rewrite_no_move`). Cached
