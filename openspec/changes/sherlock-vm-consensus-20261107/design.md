@@ -73,7 +73,7 @@ Order (astra-1 early correction, avoids the P3 circularity): first freeze the *a
 
 ### 2.7 Leaf as a chip (proposed 2026-11-10; not adopted)
 
-Owner direction (2026-11-10): "really lean into the chip design and let's get it modular and concise". Source: `research/sherlock-processor-analogy-20261110/study.md`. Soundness check: `research/sherlock-processor-analogy-20261110/quint-check.md` (`models/sherlock/quint/chipLeaf.qnt`, commit `f5a297545`). Sizes wait for the chip experiments E0, E1 and E3 [PENDING]. Until adoption, 2.2 to 2.4 stand.
+Owner direction (2026-11-10): "really lean into the chip design and let's get it modular and concise". Source: `research/sherlock-processor-analogy-20261110/study.md`. Soundness check: `research/sherlock-processor-analogy-20261110/quint-check.md` (`models/sherlock/quint/chipLeaf.qnt`, commit `f5a297545`). Measured on a spike (2.7.10; `research/sherlock-processor-analogy-20261110/experiments.md`). Until adoption, 2.2 to 2.4 stand.
 
 2.7.1 Structure. The universal leaf is one hand-written circuit: a CPU core and the chips DEC, PAGE, MEM, ALU with RANGE, and HASH. The core carries the register file (control, outcome and counters, environment root, frame and task pointers, memory length, top frame, top task, helper and result records) across S step slots. In 2.3, `post_i == pre_{i+1}` is over the register file.
 
@@ -102,9 +102,27 @@ Owner direction (2026-11-10): "really lean into the chip design and let's get it
 
 Also load-bearing (model-confirmed): `len` advances by exactly one per append; a read checks `addr < len` against the step's current `len`; the read address comes from a register, never the bus; every active ALU row satisfies its relation whether requested or not; every PAGE row opens against its root; DEC has one row per class; the next `pc` and every named register are core constraints; TRAP gates the class and a publishing step is the last enabled slot.
 
-2.7.9 Each chip has its own soundness obligation, Quint model and differential test against the per-rule fragments, which remain the reference. Gates [PENDING E3]: node at most 950,000 rows and decider at most 1,000,000 over the leaf key; `k_leaf <= 16` at S = 16.
+2.7.9 Each chip has its own soundness obligation, Quint model and differential test against the per-rule fragments, which remain the reference. Gates: node at most 950,000 rows and decider at most 1,000,000 over the leaf key; `k_leaf <= 16` at S = 16. Over the spike leaf key both pass (2.7.10); a leaf that follows this section must be re-measured.
 
-Open: the leaf leaves ZKIR, so the manifest of 2.4 names a circuit identity in place of ZKIR and stdlib versions; the depth-20 Merkle cost of `mem_root` per leaf; HASH and the task stack are not yet modelled. D7 decided 2026-11-10 for the cached protocol (`research/sherlock-processor-analogy-20261110/d7-frames.md`; lead re-run: 9/9 deterministic tests, base invariants clean at 20,000 samples, 7/7 mutants caught).
+
+2.7.10 Measured on a spike, 2026-11-10 (`crates/mori-chip`, commit `548170278`; `experiments.md`). The spike has CORE, DEC, MEM, ALU and RANGE, an 8-register file, and three stand-in rules (Push, Ret, Arith); it has no PAGE, HASH or TRAP chip and no task stack, its digest is a linear placeholder, and its leaf statement constrains only `pre_d`, `post_d` and `steps`. It deviates from D2 (partial: no PAGE), D3 (absent), D4 (the chip tag is gate-set advice), D6 (addresses from a chain gate) and D7 (uncached frames).
+
+| Item | Measured | Gate |
+|---|---|---|
+| Spike leaf, S = 1 / 4 / 16 / 64 | 8 / 26 / 98 / 386 rows (6 per step), k = 13 (RANGE table 4,096 rows) | `k_leaf <= 16` at S = 16 |
+| Node over the spike leaf key, S = 1 / 16 | 768,872 / 785,128 rows, k = 20 | <= 950,000 |
+| Decider over that node | 929,166 rows, k = 20 | <= 1,000,000 |
+| Node mirror over the stand-in leaf | 652,461 rows, equal to `SHKIVC06` | calibration |
+
+ESTIMATE for the full rule set: 12 to 23 rows per step without HASH; 212 to 773 with HASH at the study's unmeasured 200 to 750; a leaf at S = 16 of 10,006 to 20,782 rows (k = 14 to 15). The decider does not depend on the leaf: it consumes only the node key, and the leaf's fixed bases are resolved in the node (`run_decider.rs:86,218,244`; `inner.rs:207,313`).
+
+Census of three programs (E0; fact(3) 293 steps, fold 196, list123 303): every step writes 2 to 5 registers; appends average 0.20 to 0.22 per step, at most 3; no step overwrites a non-zero table row or writes below the top frame or task (write-once memory and D7 hold on these runs); a window of 16 steps reads at most 6 distinct control-word PROG rows (study ceiling 32).
+
+Design consequences:
+- The in-circuit verifier of the node evaluates queries only at rotations -1, 0 and +1 (`midnight-circuits` 7.3.0 `verifier_gadget.rs:609`), so every leaf gate sees at most three consecutive rows. The check of the register file against its next state therefore needs wide rows or copy constraints [OPEN: cost unmeasured]. A regression test fixes the spike's rotations (`crates/mori-chip/tests/e3_spike.rs`, `spike_leaf_vk_rotations_are_unit`).
+- The node over S = 16 is 16,256 rows larger than over S = 1 although the two leaf constraint systems have the same shape [OPEN: cause not checked].
+- E1 (fallback for the one-hot leaf of 2.2): one shared PROG walk per step cuts a per-rule circuit from 2,674,552 rows (k = 22) to 731,523 (k = 20), 3.66x; parity 186 of 186 checks over fact(3) and fold.
+Open: the leaf leaves ZKIR, so the manifest of 2.4 names a circuit identity in place of ZKIR and stdlib versions; the depth-20 Merkle cost of `mem_root` per leaf; HASH and the task stack are not yet modelled or measured. D7 decided 2026-11-10 for the cached protocol (`research/sherlock-processor-analogy-20261110/d7-frames.md`; lead re-run: 9/9 deterministic tests, base invariants clean at 20,000 samples, 7/7 mutants caught).
 
 ## 3. Recursion design
 
