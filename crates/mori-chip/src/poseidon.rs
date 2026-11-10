@@ -157,6 +157,10 @@ pub struct Tamper {
     pub skip_absorb: Option<usize>,
     /// Key written on provider rows instead of [`BUS_KEY`].
     pub key: Option<F>,
+    /// Chip id written on provider rows instead of [`CHIP_HASH`].
+    pub chip: Option<F>,
+    /// Added to the provider row's `out` cell (its copy from the output row stays).
+    pub out: Option<F>,
 }
 
 impl PoseidonCfg {
@@ -323,12 +327,8 @@ impl PoseidonCfg {
             }
             if provide {
                 region.assign_fixed(|| "q_prov", self.bus.q_prov, o, || Value::known(F::ONE))?;
-                region.assign_advice(
-                    || "hash chip",
-                    a[0],
-                    o,
-                    || Value::known(F::from(CHIP_HASH)),
-                )?;
+                let chip = tamper.chip.unwrap_or(F::from(CHIP_HASH));
+                region.assign_advice(|| "hash chip", a[0], o, || Value::known(chip))?;
                 let key = tamper.key.unwrap_or(F::from(BUS_KEY));
                 region.assign_advice(|| "hash key", a[1], o, || Value::known(key))?;
             } else {
@@ -407,7 +407,9 @@ impl PoseidonCfg {
         }
         let out = last.expect("one permutation");
         if let Some(row) = out_slot {
-            let c = region.assign_advice(|| "hash out", a[4], row, || out.value().copied())?;
+            let d = tamper.out.unwrap_or(F::ZERO);
+            let c =
+                region.assign_advice(|| "hash out", a[4], row, || out.value().map(|v| *v + d))?;
             region.constrain_equal(c.cell(), out.cell())?;
         }
         Ok((out, o - offset))
@@ -736,6 +738,25 @@ mod tests {
         c.requests[0][1] = F::from(5u64);
         let e = run(&c).unwrap_err();
         assert!(e.contains("hash absorb first"), "{e}");
+    }
+
+    /// Gemini Quint verdict H-C4: a provider row must carry `chip = HASH`
+    /// (a request with the forged chip id would otherwise be served), and its
+    /// `out` is the copy of the output row's element 0.
+    #[test]
+    fn provider_chip_is_pinned_and_out_is_copied() {
+        let mut g = rng();
+        let mut c = served_case(&mut g, 1);
+        c.tamper.chip = Some(F::from(crate::bus::CHIP_ALU));
+        c.requests[0][0] = F::from(crate::bus::CHIP_ALU);
+        let e = run(&c).unwrap_err();
+        assert!(e.contains("hash absorb first"), "{e}");
+        let mut c = served_case(&mut g, 1);
+        c.tamper.out = Some(F::ONE);
+        c.requests[0][4] += F::ONE;
+        let e = run(&c).unwrap_err();
+        assert!(e.contains("quality") || e.contains("ermutation"), "{e}");
+        assert!(!e.contains("ookup") && !e.contains("gate"), "{e}");
     }
 
     /// A request for a hash nobody provides (inputs swapped) is refused.

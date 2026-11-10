@@ -843,6 +843,12 @@ impl Circuit<F> for RfLeaf {
         };
         let alu = AluConfig::configure(meta, bus, range.clone());
         assert!(!params.m3 || (params.pos_hash && params.arch != Arch::WideInline));
+        // Gemini Quint HASH verdict H-C5: the E6 provider rows (`params.hash`) pin
+        // neither chip nor key, so they never share a key with the Poseidon chip.
+        assert!(
+            !(params.hash && params.pos_hash),
+            "the E6 provider rows pin nothing; not with the Poseidon chip"
+        );
         let (mem, seg) = if params.m3 {
             (None, Some(SegMemConfig::configure(meta, bus)))
         } else {
@@ -1202,6 +1208,9 @@ impl Circuit<F> for RfLeaf {
                 }
                 let base = w.map_or(Value::unknown(), |w| Value::known(fu(w.mem_base)));
                 if let (Some(sc), Some(wk), Some(pc)) = (&cfg.seg, &cfg.walk, &cfg.pos) {
+                    // H-C6: every M3 sponge takes copied cells and feeds its
+                    // consumer; the free-input E7 workload is not built.
+                    assert!(self.n_hash2 == 0 && self.hash_extra.is_empty());
                     // M3: the aligned segment, its records and root, the walks and
                     // the Poseidon digests.
                     let m = w.map(|w| w.m3.as_ref().expect("M3 witness"));
@@ -1570,6 +1579,19 @@ mod tests {
             rf_mock(&RfLeaf::new(params, 6, Some(honest(6))))
                 .unwrap_or_else(|e| panic!("{arch:?}: {e}"));
         }
+    }
+
+    /// HASH verdict H-C5: the unpinned E6 provider rows cannot be configured
+    /// together with the Poseidon chip.
+    #[test]
+    #[should_panic(expected = "the E6 provider rows pin nothing")]
+    fn e6_rows_never_with_poseidon() {
+        rotations(RfParams {
+            arch: Arch::Narrow,
+            hash: true,
+            pos_hash: true,
+            ..Default::default()
+        });
     }
 
     #[test]
