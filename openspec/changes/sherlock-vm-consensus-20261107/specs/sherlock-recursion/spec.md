@@ -218,8 +218,16 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **THEN** the validation does not count (row A32 fails) until the template is recaptured.
 
 ### Requirement: SRC-021 Canonical initialization
-(Added 2026-11-10.) If a run's initial carriers are not the canonical initial state for the program image, configuration, fuel and stack limit that `prog_d` commits, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. Mechanism: [PENDING owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review"], option G1 (an in-circuit or otherwise authenticated first-leaf check selected by `h_pre == 0`; cost [PENDING experiment E3, task 4.13]) or option G2 (off-chain recomputation of `init_d` by the independent verifier, with O1 restated).
+(Added 2026-11-10; mechanism and `Init` amended 2026-11-10 by the council D1 correction, `../../design.md` §3.2(5); the owner keeps the final call on owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review".) If a run's initial state is not `Init(prog_d, input_d)`, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first segment leaf SHALL prove in circuit that its register file and table roots equal `Init(prog_d, input_d)` field by field (the 39 fields of design §3.2(5)): control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; fuel (u128, two 64-bit limbs) in both fuel registers and the stack limit from `input_d`; outcome `Running`; every other counter zero; environment pointer `None`; frame and task links `NIL`; top-frame, top-task, helper, result and scratch registers zero; the DATA and FIELDS roots and lengths equal to the canonical encoding of the run input behind `val_d` (empty when absent); the ENV and SLOTS roots empty; `prog_root` from `prog_d`; `deps_d` empty. `input_d` SHALL be `Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each limb and the stack limit below 2^64. The gate SHALL be `h_pre = 0`, not a witness flag. The seal SHALL require `h_lo = 0` and a terminal outcome. Off-chain recomputation of `init_d` (option G2) MAY be recorded as a diagnostic and SHALL NOT be acceptance authority. Cost [PENDING experiment E3, task 4.13].
 
 #### Scenario: Forged initial carriers
-- **WHEN** a run starts from carriers that open to the sealed `init_d` but are not the canonical initial state of the program.
-- **THEN** the chosen mechanism refuses it at its named boundary (row A13), and the record names the circuit or verifier that performed the check.
+- **WHEN** a run starts from a state that opens to the sealed `init_d` but is not `Init(prog_d, input_d)`.
+- **THEN** the first leaf refuses it (row A13), and the record names the circuit that performed the check.
+
+#### Scenario: Single-field deviation
+- **WHEN** the first-leaf witness differs from `Init(prog_d, input_d)` in exactly one of the 39 fields, or opens another `input_d`, or carries a fuel limb or stack limit at or above 2^64.
+- **THEN** the first leaf refuses it; the Quint model `models/sherlock/quint/init.qnt` shows this for every field, and row A37 matches `Init` against `Machine::new` and the C6 `genesis()` on fact(3), list123 and one run with input.
+
+#### Scenario: Seal without genesis
+- **WHEN** a segment chain with `h_lo != 0`, or with a `Running` outcome, is presented for sealing.
+- **THEN** the seal refuses it.
