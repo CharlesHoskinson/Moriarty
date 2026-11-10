@@ -21,9 +21,12 @@ pub mod alu;
 pub mod bus;
 pub mod cpu;
 pub mod dec;
+pub mod hashchip;
 pub mod leaf;
 pub mod mem;
 pub mod range;
+pub mod rf;
+pub mod rfcore;
 pub mod trace;
 
 use ff::PrimeField;

@@ -36,6 +36,8 @@ use midnight_zk_stdlib::{Relation, ZkStdLib, ZkStdLibArch, cost_model, setup_vk}
 use mori_chip::{
     F,
     leaf::{Leaf, LeafWitness},
+    rf::{genesis, run32},
+    rfcore::{Arch, RfLeaf, RfParams, RfWitness},
     trace::{Regs, run},
 };
 use mori_recursion::{
@@ -421,4 +423,335 @@ fn chip_e3_node_and_decider() {
     );
     emit("e3_node_decider", &json!(out));
     let _ = C::generator();
+}
+
+// ---------------------------------------------------------------------------
+// E5 (register file) and E6 (HASH): `research/sherlock-processor-analogy-20261110/experiments-2.md`.
+
+const E5_ARCHS: [(&str, Arch); 4] = [
+    ("wide", Arch::Wide),
+    ("wide_inline", Arch::WideInline),
+    ("narrow", Arch::Narrow),
+    ("staggered", Arch::Staggered),
+];
+
+fn arch_of(name: &str) -> Arch {
+    E5_ARCHS
+        .iter()
+        .find(|a| a.0 == name)
+        .unwrap_or_else(|| panic!("unknown arch {name}"))
+        .1
+}
+
+/// HASH capacity presets at S = 16: `(2-input hashes, extra hashes by input count)`.
+/// Counts and their derivation: `experiments-2.md` section 4.
+fn hash_preset(name: &str) -> (usize, Vec<usize>) {
+    let rec = |c: usize| -> Vec<usize> {
+        let mut v = vec![3; c];
+        v.extend([31, 31]);
+        v
+    };
+    match name {
+        "none" => (0, vec![]),
+        "dig" => (0, vec![31, 31]),
+        "m1c8" => (320, rec(8)),
+        "m1p3" => (1920, rec(48)),
+        "m2c8" => (64, rec(8)),
+        "m3c8" => (41, rec(8)),
+        "m3c16" => (47, rec(16)),
+        "hash0" => (0, vec![]),
+        _ => panic!("unknown hash preset {name}"),
+    }
+}
+
+/// `slim_<preset>`: the slim HASH key-shape stand-in, filled for as many
+/// permutations as the preset's hashes need (2 inputs: 1; 3: 2; 31: 16).
+fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
+    // `<preset>+xl<n>`: n extra lookup arguments (node-cost probe).
+    let (preset, xl) = match preset.split_once("+xl") {
+        Some((p, n)) => (p, n.parse::<usize>().unwrap()),
+        None => (preset, 0),
+    };
+    if let Some(p) = preset.strip_prefix("slim_") {
+        let (n2, extra) = hash_preset(p);
+        let params = RfParams {
+            arch,
+            hash: false,
+            pad,
+            slim_hash: true,
+            extra_lookups: xl,
+        };
+        let mut c = RfLeaf::new(params, s, None);
+        c.slim_perms = n2 + extra.iter().map(|n| n.div_ceil(2)).sum::<usize>();
+        return c;
+    }
+    let (n2, extra) = hash_preset(preset);
+    let params = RfParams {
+        arch,
+        hash: preset != "none",
+        pad,
+        slim_hash: false,
+        extra_lookups: xl,
+    };
+    RfLeaf::new(params, s, None).with_hashes(n2, extra)
+}
+
+fn vk_of<Ci: midnight_proofs::plonk::Circuit<F>>(c: &Ci) -> (Vk, u32) {
+    let k = circuit_model::<F, 48, 32>(c).k;
+    (keygen_vk_with_k(&params(k), c, k).unwrap(), k)
+}
+
+fn cs_json(cs: &ConstraintSystem<F>) -> J {
+    json!({
+        "advice": cs.num_advice_columns(), "fixed": cs.num_fixed_columns(),
+        "instance": cs.num_instance_columns(), "selectors": cs.num_selectors(),
+        "lookups": cs.lookups().len(), "permutation_columns": cs.permutation().get_columns().len(),
+        "degree": cs.degree(), "gates": cs.gates().len(),
+        "advice_queries": cs.advice_queries().len(), "fixed_queries": cs.fixed_queries().len(),
+    })
+}
+
+#[test]
+fn rf_leaf_s16_mock_prover_all_layouts() {
+    for (name, arch) in E5_ARCHS {
+        let w = RfWitness::from_trace(&run32(genesis(), 16), 16);
+        assert_eq!(w.steps(), 16);
+        let c = RfLeaf::new(
+            RfParams {
+                arch,
+                ..Default::default()
+            },
+            16,
+            Some(w.clone()),
+        );
+        let p = MockProver::run(&c, vec![vec![], w.instance()]).unwrap();
+        p.verify()
+            .unwrap_or_else(|e| panic!("{name}: {:?}", &e[..e.len().min(3)]));
+    }
+}
+
+/// The keyed register-file leaves (every layout, with and without HASH) query
+/// rotations -1, 0, +1 only (`slim_m3c8`: the slim HASH key shape).
+#[test]
+fn rf_leaf_vk_rotations_are_unit() {
+    for (name, arch) in E5_ARCHS {
+        for preset in ["none", "dig", "slim_m3c8"] {
+            let (vk, k) = vk_of(&rf_leaf(arch, 1, preset, 1));
+            let cs = vk.cs();
+            let mut rots: Vec<i32> = cs
+                .advice_queries()
+                .iter()
+                .map(|q| q.1.0)
+                .chain(cs.fixed_queries().iter().map(|q| q.1.0))
+                .chain(cs.instance_queries().iter().map(|q| q.1.0))
+                .collect();
+            rots.sort();
+            rots.dedup();
+            println!("CHIP-ROT {name} {preset} k={k}: {rots:?}");
+            assert!(
+                rots.iter().all(|r| (-1..=1).contains(r)),
+                "{name} {preset}: {rots:?}"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore = "E5 rows: cost_model of the register-file leaf, every layout, S = 1, 4, 16, 64 (seconds)"]
+fn chip_e5_leaf_rows() {
+    let mut out = BTreeMap::new();
+    for (name, arch) in E5_ARCHS {
+        for pad in [1usize, 4] {
+            if pad > 1 && arch != Arch::Wide {
+                continue;
+            }
+            for s in [1usize, 4, 16, 64] {
+                let c = rf_leaf(arch, pad, "none", s);
+                let t = Instant::now();
+                let m = circuit_model::<F, 48, 32>(&c);
+                let mut v = model_json(&m);
+                v["region_rows"] = json!(RfLeaf::region_rows(c.params, s, 0));
+                v["seconds"] = json!(t.elapsed().as_secs_f64());
+                let key = if pad > 1 {
+                    format!("{name}_pad{pad}_S{s}")
+                } else {
+                    format!("{name}_S{s}")
+                };
+                println!("CHIP-E5 leaf {key} {v}");
+                out.insert(key, v);
+            }
+        }
+    }
+    emit("e5_leaf_rows", &json!(out));
+}
+
+#[test]
+#[ignore = "E6 HASH rows: cost_model of the register-file leaf with N Poseidon hashes (seconds)"]
+fn chip_e6_hash_rows() {
+    let arch_name = std::env::var("CHIP_E6_ARCH").unwrap_or("staggered".into());
+    let arch = arch_of(&arch_name);
+    let mut out = BTreeMap::new();
+    let mut run = |key: String, c: RfLeaf| {
+        let m = circuit_model::<F, 48, 32>(&c);
+        let mut v = model_json(&m);
+        v["main_region_rows"] = json!(RfLeaf::region_rows(c.params, c.s, c.n_hash2));
+        v["n_hash2"] = json!(c.n_hash2);
+        v["hash_extra"] = json!(c.hash_extra);
+        println!("CHIP-E6 {key} {v}");
+        out.insert(key, v);
+    };
+    let base = |n2: usize, extra: Vec<usize>| {
+        RfLeaf::new(
+            RfParams {
+                arch,
+                hash: true,
+                pad: 1,
+                slim_hash: false,
+                extra_lookups: 0,
+            },
+            16,
+            None,
+        )
+        .with_hashes(n2, extra)
+    };
+    run("nohash_S16".into(), rf_leaf(arch, 1, "none", 16));
+    for n2 in [0usize, 1, 2, 8, 64, 256] {
+        run(format!("bus2_{n2}"), base(n2, vec![]));
+    }
+    for n in [2usize, 3, 4, 8, 31, 32] {
+        run(format!("free_arity{n}_x8"), base(0, vec![n; 8]));
+    }
+    for preset in ["dig", "m1c8", "m1p3", "m2c8", "m3c8", "m3c16"] {
+        run(format!("preset_{preset}"), rf_leaf(arch, 1, preset, 16));
+    }
+    emit(&format!("e6_hash_rows_{arch_name}"), &json!(out));
+}
+
+/// N stdlib Poseidon hashes of `arity` inputs each (calibration of the HASH rows
+/// against the stdlib's own arch).
+#[derive(Clone, Debug)]
+struct StdHashes {
+    n: usize,
+    arity: usize,
+}
+
+impl Relation for StdHashes {
+    type Instance = Vec<F>;
+    type Witness = ();
+    type Error = Error;
+
+    fn format_instance(i: &Vec<F>) -> Result<Vec<F>, Error> {
+        Ok(i.clone())
+    }
+
+    fn circuit(
+        &self,
+        std: &ZkStdLib,
+        l: &mut impl Layouter<F>,
+        _instance: Value<Vec<F>>,
+        _witness: Value<()>,
+    ) -> Result<(), Error> {
+        for t in 0..self.n {
+            let xs = (0..self.arity)
+                .map(|i| std.assign(l, Value::known(F::from((t * 100 + i) as u64))))
+                .collect::<Result<Vec<AssignedNative<F>>, Error>>()?;
+            let _ = std.poseidon(l, &xs)?;
+        }
+        Ok(())
+    }
+
+    fn used_chips(&self) -> ZkStdLibArch {
+        ZkStdLibArch {
+            poseidon: true,
+            ..ZkStdLibArch::default()
+        }
+    }
+
+    fn write_relation<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
+        w.write_all(&(self.n as u64).to_le_bytes())?;
+        w.write_all(&(self.arity as u64).to_le_bytes())
+    }
+
+    fn read_relation<R: io::Read>(_r: &mut R) -> io::Result<Self> {
+        Err(io::Error::other("measurement only"))
+    }
+}
+
+#[test]
+#[ignore = "E6 calibration: stdlib relation with N Poseidon hashes (seconds)"]
+fn chip_e6_stdlib_hash() {
+    let mut out = BTreeMap::new();
+    for (n, arity) in [
+        (1usize, 2usize),
+        (2, 2),
+        (16, 2),
+        (64, 2),
+        (16, 3),
+        (16, 4),
+        (4, 31),
+    ] {
+        let m = cost_model(&StdHashes { n, arity }, None);
+        let v = model_json(&m);
+        println!("CHIP-E6 stdlib n={n} arity={arity} {v}");
+        out.insert(format!("n{n}_arity{arity}"), v);
+    }
+    emit("e6_stdlib_hash", &json!(out));
+}
+
+/// Node (and optionally the run decider) over register-file leaf keys at S = 16.
+/// `CHIP_E5_SPECS`: `;`-separated `arch,pad,preset` (default: the four layouts,
+/// pad 1, no HASH). `CHIP_E5_DECIDER`: index of the spec whose node the decider
+/// is measured over.
+#[test]
+#[ignore = "E5/E6 node over register-file leaf keys: one k20 node cost model per spec; optional node keygen and decider"]
+fn chip_e5_node() {
+    let specs = std::env::var("CHIP_E5_SPECS")
+        .unwrap_or("wide,1,none;wide_inline,1,none;narrow,1,none;staggered,1,none".into());
+    let decider = std::env::var("CHIP_E5_DECIDER")
+        .ok()
+        .map(|v| v.parse::<usize>().unwrap());
+    let standin = standin_vk(13);
+    let base = SherlockIvcRelation::new(4, 20, standin).unwrap();
+    for (i, spec) in specs.split(';').enumerate() {
+        let f: Vec<&str> = spec.split(',').collect();
+        let (arch, pad, preset) = (arch_of(f[0]), f[1].parse::<usize>().unwrap(), f[2]);
+        let leaf = rf_leaf(arch, pad, preset, 16);
+        let t = Instant::now();
+        let lm = circuit_model::<F, 48, 32>(&leaf);
+        let (vk, k) = vk_of(&leaf);
+        let leaf_s = t.elapsed().as_secs_f64();
+        let node = ChipNode::new(base.clone(), vk.clone());
+        let t = Instant::now();
+        let m = cost_model(&node, Some(20));
+        let mut v = json!({
+            "spec": spec, "s": 16, "leaf_k": k, "leaf_model": model_json(&lm),
+            "leaf_cs": cs_json(vk.cs()), "leaf_seconds": leaf_s,
+            "node": model_json(&m), "node_seconds": t.elapsed().as_secs_f64(),
+        });
+        let name = format!("e5_node_{}", spec.replace(',', "_"));
+        println!("CHIP-E5 node {v}");
+        emit(&name, &v);
+        if decider == Some(i) {
+            let base_params = params(20);
+            let t = Instant::now();
+            let node_vk = setup_vk(&base_params, &node);
+            let keygen_s = t.elapsed().as_secs_f64();
+            let drel = RunDeciderRelation {
+                nr_cols: 4,
+                node_vk,
+                s_g2: base_params.s_g2().to_affine(),
+                template: Template::from_any_json(include_bytes!(
+                    "../../mori-recursion/tests/fixtures/run-template.json"
+                ))
+                .unwrap(),
+                cc_inputs: CC_INPUTS.to_vec(),
+            };
+            drel.validate().unwrap();
+            let dm = cost_model(&drel, None);
+            v["decider"] = json!({"node_keygen_seconds": keygen_s, "model": model_json(&dm),
+                "srs": if std::env::var_os("MORIARTY_PARENT_SRS").is_some() { "official k20" } else { "unsafe" }});
+            println!("CHIP-E5 decider {v}");
+            emit(&name, &v);
+        }
+    }
 }
