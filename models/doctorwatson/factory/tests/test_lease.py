@@ -91,7 +91,8 @@ class LeaseTests(FakeRepo):
                 f"print(json.dumps([os.path.exists('{self.lock}.lease'), os.path.exists('{glock}.lease')]))")
         p = self.popen_heavy("--id", "G1", "--gpu", cmd=("sleep", "30"))
         self.addCleanup(p.kill)
-        self.assertTrue(self.wait_for(lambda: locked(self.lock) and locked(glock)))
+        # The lease file is written just after the lock is taken; wait for both.
+        self.assertTrue(self.wait_for(lambda: locked(self.lock) and locked(glock) and os.path.exists(glock + ".lease")))
         lease = json.load(open(glock + ".lease"))
         self.assertEqual(lease["locks"], ["heavy", "gpu"])
         self.assertEqual(lease["holderPid"], p.pid)
