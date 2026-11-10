@@ -466,32 +466,54 @@ fn hash_preset(name: &str) -> (usize, Vec<usize>) {
 
 /// `slim_<preset>`: the slim HASH key-shape stand-in, filled for as many
 /// permutations as the preset's hashes need (2 inputs: 1; 3: 2; 31: 16).
+/// `pos_<preset>`: the Poseidon-only HASH chip (E7) with the preset's hashes.
+/// Suffixes: `+xl<n>` n extra lookup arguments and `+xs<n>` n extra filled
+/// selector columns (node-cost probes); `+r1` RANGE on one limb lookup (E7).
 fn rf_leaf(arch: Arch, pad: usize, preset: &str, s: usize) -> RfLeaf {
-    // `<preset>+xl<n>`: n extra lookup arguments (node-cost probe).
-    let (preset, xl) = match preset.split_once("+xl") {
-        Some((p, n)) => (p, n.parse::<usize>().unwrap()),
-        None => (preset, 0),
+    let mut it = preset.split('+');
+    let preset = it.next().unwrap();
+    let (mut xl, mut xs, mut range1) = (0usize, 0usize, false);
+    for t in it {
+        if let Some(n) = t.strip_prefix("xl") {
+            xl = n.parse().unwrap();
+        } else if let Some(n) = t.strip_prefix("xs") {
+            xs = n.parse().unwrap();
+        } else if t == "r1" {
+            range1 = true;
+        } else {
+            panic!("unknown suffix {t}");
+        }
+    }
+    let base = RfParams {
+        arch,
+        pad,
+        extra_lookups: xl,
+        extra_selectors: xs,
+        range1,
+        ..Default::default()
     };
     if let Some(p) = preset.strip_prefix("slim_") {
         let (n2, extra) = hash_preset(p);
         let params = RfParams {
-            arch,
-            hash: false,
-            pad,
             slim_hash: true,
-            extra_lookups: xl,
+            ..base
         };
         let mut c = RfLeaf::new(params, s, None);
         c.slim_perms = n2 + extra.iter().map(|n| n.div_ceil(2)).sum::<usize>();
         return c;
     }
+    if let Some(p) = preset.strip_prefix("pos_") {
+        let (n2, extra) = hash_preset(p);
+        let params = RfParams {
+            pos_hash: true,
+            ..base
+        };
+        return RfLeaf::new(params, s, None).with_hashes(n2, extra);
+    }
     let (n2, extra) = hash_preset(preset);
     let params = RfParams {
-        arch,
         hash: preset != "none",
-        pad,
-        slim_hash: false,
-        extra_lookups: xl,
+        ..base
     };
     RfLeaf::new(params, s, None).with_hashes(n2, extra)
 }
@@ -531,11 +553,19 @@ fn rf_leaf_s16_mock_prover_all_layouts() {
 }
 
 /// The keyed register-file leaves (every layout, with and without HASH) query
-/// rotations -1, 0, +1 only (`slim_m3c8`: the slim HASH key shape).
+/// rotations -1, 0, +1 only (`slim_m3c8`: the slim HASH key shape; `pos_*`: the
+/// Poseidon-only HASH chip; `+r1`: RANGE on one limb lookup).
 #[test]
 fn rf_leaf_vk_rotations_are_unit() {
     for (name, arch) in E5_ARCHS {
-        for preset in ["none", "dig", "slim_m3c8"] {
+        for preset in [
+            "none",
+            "dig",
+            "slim_m3c8",
+            "pos_m3c8",
+            "pos_m3c8+r1",
+            "none+r1",
+        ] {
             let (vk, k) = vk_of(&rf_leaf(arch, 1, preset, 1));
             let cs = vk.cs();
             let mut rots: Vec<i32> = cs
@@ -608,6 +638,7 @@ fn chip_e6_hash_rows() {
                 pad: 1,
                 slim_hash: false,
                 extra_lookups: 0,
+                ..Default::default()
             },
             16,
             None,
@@ -754,4 +785,24 @@ fn chip_e5_node() {
             emit(&name, &v);
         }
     }
+}
+
+/// E7 key shapes without the node: leaf rows, k and the keyed constraint system
+/// (columns, lookups) of each spec in `CHIP_E5_SPECS` at S = 16.
+#[test]
+#[ignore = "E7 key shapes: cost_model and keygen of register-file leaves at S = 16 (seconds)"]
+fn chip_e7_shapes() {
+    let specs = std::env::var("CHIP_E5_SPECS").unwrap_or("narrow,1,none".into());
+    let mut out = BTreeMap::new();
+    for spec in specs.split(';') {
+        let f: Vec<&str> = spec.split(',').collect();
+        let (arch, pad, preset) = (arch_of(f[0]), f[1].parse::<usize>().unwrap(), f[2]);
+        let leaf = rf_leaf(arch, pad, preset, 16);
+        let lm = circuit_model::<F, 48, 32>(&leaf);
+        let (vk, k) = vk_of(&leaf);
+        let v = json!({"spec": spec, "leaf_k": k, "leaf_model": model_json(&lm), "leaf_cs": cs_json(vk.cs())});
+        println!("CHIP-E7 shape {v}");
+        out.insert(spec.to_string(), v);
+    }
+    emit("e7_shapes", &json!(out));
 }

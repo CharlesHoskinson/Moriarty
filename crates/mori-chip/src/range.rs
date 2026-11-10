@@ -8,6 +8,15 @@
 //! The user's gate sits on the centre row of the value and reaches the limbs at
 //! rotations -1, 0 and +1 (the in-circuit verifier supports no other rotation), so
 //! a value takes at most 3 rows: `rc` is 4 or 5.
+//!
+//! Running-sum mode ([`RangeConfig::configure_running`], experiment E7): one limb
+//! column (column 11) and one lookup argument. A value takes 12 rows: row 0 holds
+//! the pad cell, rows 1..=11 the limbs from the top (`limb10`) down to `limb0`,
+//! and column 10 a Horner running sum `acc_1 = limb10`,
+//! `acc_t = 4096 acc_(t-1) + limb_(11-t)`, with `pad = 16 limb10` checked on row 1.
+//! The value is `acc_11` on row 11, which carries the user's gate. A lookup
+//! argument costs the node about 22,600 rows and the 12 rows per value cost it
+//! nothing (`experiments-2.md` 3.3).
 use midnight_proofs::{
     circuit::{Layouter, Region, Value},
     plonk::{
@@ -29,6 +38,16 @@ pub struct RangeConfig {
     pub table: TableColumn,
     pub q_rng: Selector,
     pub limb_cols: Vec<Column<Advice>>,
+    /// Running-sum mode.
+    pub run: Option<RunCfg>,
+}
+
+/// Running-sum mode: the accumulator column and its two gates.
+#[derive(Clone, Debug)]
+pub struct RunCfg {
+    pub acc: Column<Advice>,
+    pub q_first: Selector,
+    pub q_step: Selector,
 }
 
 /// Rows one 128-bit value takes with `rc` limb columns.
@@ -66,6 +85,46 @@ impl RangeConfig {
             table,
             q_rng,
             limb_cols,
+            run: None,
+        }
+    }
+
+    /// Running-sum mode: limbs in column 11, accumulator in column 10.
+    pub fn configure_running(meta: &mut ConstraintSystem<F>, cols: Cols) -> Self {
+        let table = meta.lookup_table_column();
+        let q_rng = meta.complex_selector();
+        let limb = cols.a[NCOL - 1];
+        let acc = cols.a[NCOL - 2];
+        meta.lookup("range", |m| {
+            let q = m.query_selector(q_rng);
+            let v = m.query_advice(limb, Rotation::cur());
+            vec![(q * v, table)]
+        });
+        let q_first = meta.selector();
+        let q_step = meta.selector();
+        meta.create_gate("range run", |m| {
+            let qf = m.query_selector(q_first);
+            let qs = m.query_selector(q_step);
+            let l = m.query_advice(limb, Rotation::cur());
+            let pad = m.query_advice(limb, Rotation::prev());
+            let a = m.query_advice(acc, Rotation::cur());
+            let ap = m.query_advice(acc, Rotation::prev());
+            let k = |v: u64| Expression::Constant(F::from(v));
+            crate::gate(vec![
+                qf.clone() * (a.clone() - l.clone()),
+                qf * (pad - l.clone() * k(16)),
+                qs * (a - ap * k(1 << LIMB_BITS) - l),
+            ])
+        });
+        Self {
+            table,
+            q_rng,
+            limb_cols: vec![limb],
+            run: Some(RunCfg {
+                acc,
+                q_first,
+                q_step,
+            }),
         }
     }
 
@@ -73,9 +132,22 @@ impl RangeConfig {
         self.limb_cols.len()
     }
 
+    /// Rows one value takes.
+    pub fn rows(&self) -> usize {
+        if self.run.is_some() {
+            CELLS
+        } else {
+            rows_per_value(self.rc())
+        }
+    }
+
     /// Row of a value (from its first row) that carries the user's gate.
     pub fn center(&self) -> usize {
-        (rows_per_value(self.rc()) - 1) / 2
+        if self.run.is_some() {
+            CELLS - 1
+        } else {
+            (rows_per_value(self.rc()) - 1) / 2
+        }
     }
 
     pub fn load(&self, l: &mut impl Layouter<F>) -> Result<(), Error> {
@@ -102,6 +174,9 @@ impl RangeConfig {
         offset: usize,
         v: Value<u128>,
     ) -> Result<(), Error> {
+        if self.run.is_some() {
+            return self.assign_running(region, offset, v.map(cells));
+        }
         for r in 0..rows_per_value(self.rc()) {
             self.q_rng.enable(region, offset + r)?;
         }
@@ -127,10 +202,46 @@ impl RangeConfig {
         Ok(())
     }
 
+    /// Running-sum mode: the 12 cells `c` (honest or forged) from row `offset`,
+    /// with the accumulator computed from them.
+    pub fn assign_running(
+        &self,
+        region: &mut Region<'_, F>,
+        offset: usize,
+        c: Value<[u64; CELLS]>,
+    ) -> Result<(), Error> {
+        let run = self.run.as_ref().expect("running mode");
+        let limb = self.limb_cols[0];
+        let mut acc = c.map(|_| F::from(0u64));
+        for t in 0..CELLS {
+            self.q_rng.enable(region, offset + t)?;
+            // Row 0: pad; row t >= 1: limb 11 - t.
+            let x = c.map(|c| F::from(if t == 0 { c[LIMBS] } else { c[CELLS - 1 - t] }));
+            region.assign_advice(|| "limb", limb, offset + t, || x)?;
+            if t >= 1 {
+                acc = acc.zip(x).map(|(a, x)| a * F::from(1u64 << LIMB_BITS) + x);
+            }
+            if t == 1 {
+                run.q_first.enable(region, offset + t)?;
+            } else if t >= 2 {
+                run.q_step.enable(region, offset + t)?;
+            }
+            region.assign_advice(|| "acc", run.acc, offset + t, || acc)?;
+        }
+        Ok(())
+    }
+
     /// `(sum of limbs * 2^(12 i)) , pad - 16 * limb10` over a value whose centre
     /// row is the current row: the gate of the user constrains the first to the
-    /// value and the second to zero.
+    /// value and the second to zero. Running-sum mode: `(acc, 0)` (the pad is
+    /// checked by the RANGE gate).
     pub fn recompose(&self, m: &mut VirtualCells<'_, F>) -> (Expression<F>, Expression<F>) {
+        if let Some(run) = &self.run {
+            return (
+                m.query_advice(run.acc, Rotation::cur()),
+                Expression::Constant(F::from(0u64)),
+            );
+        }
         let cell = |m: &mut VirtualCells<'_, F>, i: usize| {
             let (dr, col) = self.place(i);
             m.query_advice(col, Rotation(dr as i32 - self.center() as i32))
@@ -148,14 +259,15 @@ impl RangeConfig {
 
 #[cfg(test)]
 mod tests {
-    //! RANGE alone: a value column and its decomposition.
+    //! RANGE alone: a value column and its decomposition, in both modes.
     use midnight_proofs::{circuit::SimpleFloorPlanner, dev::MockProver, plonk::Circuit};
 
     use super::*;
     use crate::fu;
 
+    /// `RUN`: running-sum mode (1 limb column) instead of 4 limb columns.
     #[derive(Clone)]
-    struct RangeOnly {
+    struct RangeOnly<const RUN: bool> {
         value: u128,
         /// Cells to write instead of the honest decomposition.
         forged: Option<[u64; CELLS]>,
@@ -169,7 +281,7 @@ mod tests {
         q: Selector,
     }
 
-    impl Circuit<F> for RangeOnly {
+    impl<const RUN: bool> Circuit<F> for RangeOnly<RUN> {
         type Config = Cfg;
         type FloorPlanner = SimpleFloorPlanner;
         type Params = ();
@@ -178,7 +290,11 @@ mod tests {
         }
         fn configure(meta: &mut ConstraintSystem<F>) -> Cfg {
             let cols = Cols::configure(meta);
-            let range = RangeConfig::configure(meta, cols, 4);
+            let range = if RUN {
+                RangeConfig::configure_running(meta, cols)
+            } else {
+                RangeConfig::configure(meta, cols, 4)
+            };
             let q = meta.selector();
             let r2 = range.clone();
             meta.create_gate("value", |m| {
@@ -199,6 +315,7 @@ mod tests {
                     r.assign_advice(|| "v", cfg.cols.a[0], c, || Value::known(self.claimed))?;
                     match self.forged {
                         None => cfg.range.assign(&mut r, 0, Value::known(self.value)),
+                        Some(c) if RUN => cfg.range.assign_running(&mut r, 0, Value::known(c)),
                         Some(c) => {
                             for r_ in 0..3 {
                                 cfg.range.q_rng.enable(&mut r, r_)?;
@@ -215,33 +332,37 @@ mod tests {
         }
     }
 
-    fn ok(c: &RangeOnly) -> bool {
-        MockProver::run(c, vec![])
-            .map(|p| p.verify().is_ok())
-            .unwrap_or(false)
+    fn ok_mode<const RUN: bool>(value: u128, forged: Option<[u64; CELLS]>, claimed: F) -> bool {
+        MockProver::run(
+            &RangeOnly::<RUN> {
+                value,
+                forged,
+                claimed,
+            },
+            vec![],
+        )
+        .map(|p| p.verify().is_ok())
+        .unwrap_or(false)
+    }
+
+    /// The same verdict in both modes.
+    fn ok(value: u128, forged: Option<[u64; CELLS]>, claimed: F) -> bool {
+        let a = ok_mode::<false>(value, forged, claimed);
+        let b = ok_mode::<true>(value, forged, claimed);
+        assert_eq!(a, b, "modes disagree on {value} {forged:?}");
+        a
     }
 
     #[test]
     fn values_below_2_128_pass() {
         for v in [0u128, 1, 4095, 4096, u64::MAX as u128, u128::MAX] {
-            assert!(
-                ok(&RangeOnly {
-                    value: v,
-                    forged: None,
-                    claimed: fu(v)
-                }),
-                "{v}"
-            );
+            assert!(ok(v, None, fu(v)), "{v}");
         }
     }
 
     #[test]
     fn wrong_value_rejected() {
-        assert!(!ok(&RangeOnly {
-            value: 5,
-            forged: None,
-            claimed: fu(6)
-        }));
+        assert!(!ok(5, None, fu(6)));
     }
 
     #[test]
@@ -251,11 +372,7 @@ mod tests {
         c[10] = 256;
         c[11] = 4096;
         let claimed = fu(u128::MAX) + F::from(1u64);
-        assert!(!ok(&RangeOnly {
-            value: 0,
-            forged: Some(c),
-            claimed
-        }));
+        assert!(!ok(0, Some(c), claimed));
     }
 
     #[test]
@@ -263,10 +380,25 @@ mod tests {
         // 4096 = 4096 * 2^0 written as one limb.
         let mut c = [0u64; CELLS];
         c[0] = 4096;
-        assert!(!ok(&RangeOnly {
-            value: 0,
-            forged: Some(c),
-            claimed: fu(4096)
-        }));
+        assert!(!ok(0, Some(c), fu(4096)));
+    }
+
+    /// A pad cell that is in the table but not `16 * limb10`.
+    #[test]
+    fn wrong_pad_rejected() {
+        let mut c = cells(5u128 << 120);
+        assert!(ok(0, Some(c), fu(5u128 << 120)));
+        c[11] += 1;
+        assert!(!ok(0, Some(c), fu(5u128 << 120)));
+    }
+
+    /// Running mode: rows and the gate row.
+    #[test]
+    fn running_shape() {
+        let mut cs = ConstraintSystem::<F>::default();
+        let cols = Cols::configure(&mut cs);
+        let r = RangeConfig::configure_running(&mut cs, cols);
+        assert_eq!((r.rows(), r.center(), r.rc()), (12, 11, 1));
+        assert_eq!(cs.lookups().len(), 1);
     }
 }

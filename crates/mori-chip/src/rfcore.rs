@@ -49,6 +49,7 @@ use crate::{
     fu,
     hashchip::{HashConfig, SlimHashShape, hash_cells, hash_free, hash_tuple},
     mem::MemConfig,
+    poseidon::{HIn, PoseidonCfg, Tamper},
     range::{RangeConfig, rows_per_value},
     rf::*,
     trace::Cell as MemCell,
@@ -518,6 +519,14 @@ pub struct RfParams {
     pub slim_hash: bool,
     /// Node-cost probe: this many extra lookup arguments (key shape only).
     pub extra_lookups: usize,
+    /// The Poseidon-only HASH chip of [`crate::poseidon`] (E7) instead of the
+    /// stdlib composition.
+    pub pos_hash: bool,
+    /// RANGE in running-sum mode: one limb lookup instead of four (E7).
+    pub range1: bool,
+    /// Node-cost probe: this many extra selector columns, each enabled on every
+    /// 7th core row with a trivially true gate (key shape only).
+    pub extra_selectors: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -544,6 +553,8 @@ pub struct RfConfig {
     pub dig: Option<DigConfig>,
     pub hash: Option<HashConfig>,
     pub slim: Option<SlimHashShape>,
+    pub pos: Option<PoseidonCfg>,
+    pub probe_sels: Vec<Selector>,
     pub committed: Column<Instance>,
     pub instance: Column<Instance>,
 }
@@ -685,7 +696,7 @@ impl RfLeaf {
     }
 
     pub fn with_hashes(mut self, n2: usize, extra: Vec<usize>) -> Self {
-        assert!(self.params.hash || (n2 == 0 && extra.is_empty()));
+        assert!(self.params.hash || self.params.pos_hash || (n2 == 0 && extra.is_empty()));
         self.n_hash2 = n2;
         self.hash_extra = extra;
         self
@@ -699,7 +710,17 @@ impl RfLeaf {
         } else {
             6
         };
-        l.h * (s + 1) + s * rows_per_value(RC) + s + dig + n_hash2
+        let alu = if params.range1 {
+            crate::range::CELLS
+        } else {
+            rows_per_value(RC)
+        };
+        let hash = if params.pos_hash {
+            n_hash2 * crate::poseidon::ROWS_PER_PERM
+        } else {
+            n_hash2
+        };
+        l.h * (s + 1) + s * alu + s + dig + hash
     }
 }
 
@@ -732,7 +753,11 @@ impl Circuit<F> for RfLeaf {
             a: std::array::from_fn(|i| cols[i]),
         };
         let bus = BusConfig::configure(meta, c12);
-        let range = RangeConfig::configure(meta, c12, RC);
+        let range = if params.range1 {
+            RangeConfig::configure_running(meta, c12)
+        } else {
+            RangeConfig::configure(meta, c12, RC)
+        };
         let alu = AluConfig::configure(meta, bus, range.clone());
         let mem = MemConfig::configure(meta, bus);
         // Node-cost probe: extra lookup arguments into the RANGE table on the ALU rows
@@ -906,6 +931,19 @@ impl Circuit<F> for RfLeaf {
         let slim = params
             .slim_hash
             .then(|| SlimHashShape::configure(meta, &cols));
+        let pos = params.pos_hash.then(|| PoseidonCfg::configure(meta, bus));
+        let probe_sels: Vec<Selector> = (0..params.extra_selectors)
+            .map(|_| {
+                let q = meta.selector();
+                let c0 = cols[0];
+                meta.create_gate("selector probe", move |m| {
+                    let q = m.query_selector(q);
+                    let x = m.query_advice(c0, Rotation::cur());
+                    crate::gate(vec![q * (x.clone() - x)])
+                });
+                q
+            })
+            .collect();
 
         RfConfig {
             params,
@@ -924,6 +962,8 @@ impl Circuit<F> for RfLeaf {
             dig,
             hash,
             slim,
+            pos,
+            probe_sels,
             committed,
             instance,
         }
@@ -1023,6 +1063,11 @@ impl Circuit<F> for RfLeaf {
                         }
                     }
                 }
+                for q in &cfg.probe_sels {
+                    for rr in (0..h * (s + 1)).step_by(7) {
+                        q.enable(&mut r, rr)?;
+                    }
+                }
                 let cnt_row = lay.place[lay.canon(Cell::Cnt)].1;
                 cfg.q_cnt0.enable(&mut r, cnt_row)?;
                 let pre_cell = |i: usize, j: usize| cells[&(i, lay.canon(Cell::Pre(j)))].clone();
@@ -1088,6 +1133,25 @@ impl Circuit<F> for RfLeaf {
                 };
 
                 let mut hash_rows = Vec::new();
+                if let Some(pc) = &cfg.pos {
+                    // Poseidon-only HASH: bus-served 2-input hashes, then the extra
+                    // sponges, all in this region.
+                    let (tm, mut perm) = (Tamper::default(), 0);
+                    for t in 0..self.n_hash2 {
+                        let ins = [
+                            HIn::Val(Value::known(F::from(t as u64 + 1))),
+                            HIn::Val(Value::known(F::from(t as u64 + 2))),
+                        ];
+                        o += pc.sponge(&mut r, o, &ins, true, &tm, &mut perm)?.1;
+                    }
+                    for (t, &n) in self.hash_extra.iter().enumerate() {
+                        let ins: Vec<HIn> = (0..n)
+                            .map(|i| HIn::Val(Value::known(F::from((100 * t + i) as u64))))
+                            .collect();
+                        o += pc.sponge(&mut r, o, &ins, false, &tm, &mut perm)?.1;
+                    }
+                    return Ok((pre_d, post_d, steps, hash_rows));
+                }
                 for t in 0..self.n_hash2 {
                     let (x, y) = (F::from(t as u64 + 1), F::from(t as u64 + 2));
                     let tup = hash_tuple(0, x, y);
@@ -1178,13 +1242,23 @@ mod tests {
     #[test]
     fn rotations_are_unit() {
         for arch in ARCHS {
-            for (hash, slim_hash) in [(false, false), (true, false), (false, true)] {
+            for (hash, slim_hash, pos_hash, range1) in [
+                (false, false, false, false),
+                (true, false, false, false),
+                (false, true, false, false),
+                (false, false, true, false),
+                (false, false, true, true),
+                (false, false, false, true),
+            ] {
                 for r in rotations(RfParams {
                     arch,
                     hash,
                     pad: 1,
                     slim_hash,
                     extra_lookups: 0,
+                    pos_hash,
+                    range1,
+                    extra_selectors: 0,
                 }) {
                     assert!((-1..=1).contains(&r), "{arch:?} hash={hash}: rotation {r}");
                 }
@@ -1298,6 +1372,31 @@ mod tests {
         }
     }
 
+    /// E7: the Poseidon-only HASH chip in the leaf (bus-served 2-input hashes and
+    /// 3- and 31-input sponges) and RANGE on one limb lookup.
+    #[test]
+    fn pos_hash_and_range1_leaves_pass() {
+        for range1 in [false, true] {
+            let params = RfParams {
+                arch: Arch::Narrow,
+                pos_hash: true,
+                range1,
+                ..Default::default()
+            };
+            let c = RfLeaf::new(params, 4, Some(honest(4))).with_hashes(3, vec![3, 31]);
+            rf_mock(&c).unwrap_or_else(|e| panic!("range1={range1}: {e}"));
+        }
+        for arch in ARCHS {
+            let params = RfParams {
+                arch,
+                range1: true,
+                ..Default::default()
+            };
+            rf_mock(&RfLeaf::new(params, 6, Some(honest(6))))
+                .unwrap_or_else(|e| panic!("{arch:?}: {e}"));
+        }
+    }
+
     #[test]
     fn hash_chip_serves_bus_rows() {
         let w = honest(4);
@@ -1308,6 +1407,7 @@ mod tests {
                 pad: 1,
                 slim_hash: false,
                 extra_lookups: 0,
+                ..Default::default()
             },
             4,
             Some(w),

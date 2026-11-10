@@ -17,7 +17,7 @@ use crate::{
     F,
     bus::{BusConfig, CHIP_ALU, tuple},
     fu,
-    range::{RangeConfig, rows_per_value},
+    range::RangeConfig,
 };
 
 pub const OP_ADD: u64 = 1;
@@ -129,7 +129,7 @@ impl AluConfig {
     }
 
     pub fn rows_per_op(&self) -> usize {
-        rows_per_value(self.range.rc())
+        self.range.rows()
     }
 
     /// Assign one operation as a provider at `offset`; returns the rows used.
@@ -181,14 +181,15 @@ mod tests {
     use super::*;
     use crate::{Cols, bus::Tuple};
 
+    /// `RUN`: RANGE in running-sum mode.
     #[derive(Clone)]
-    struct AluOnly {
+    struct AluOnly<const RUN: bool> {
         ops: Vec<AluOp>,
         forged: Vec<AluOp>,
         requests: Vec<Tuple>,
     }
 
-    impl Circuit<F> for AluOnly {
+    impl<const RUN: bool> Circuit<F> for AluOnly<RUN> {
         type Config = AluConfig;
         type FloorPlanner = SimpleFloorPlanner;
         type Params = ();
@@ -198,7 +199,11 @@ mod tests {
         fn configure(meta: &mut ConstraintSystem<F>) -> AluConfig {
             let cols = Cols::configure(meta);
             let bus = BusConfig::configure(meta, cols);
-            let range = RangeConfig::configure(meta, cols, 4);
+            let range = if RUN {
+                RangeConfig::configure_running(meta, cols)
+            } else {
+                RangeConfig::configure(meta, cols, 4)
+            };
             AluConfig::configure(meta, bus, range)
         }
         fn synthesize(&self, cfg: AluConfig, mut l: impl Layouter<F>) -> Result<(), Error> {
@@ -223,10 +228,22 @@ mod tests {
         }
     }
 
-    fn ok(c: &AluOnly) -> bool {
+    fn ok_mode<const RUN: bool>(c: &AluOnly<RUN>) -> bool {
         MockProver::run(c, vec![])
             .map(|p| p.verify().is_ok())
             .unwrap_or(false)
+    }
+
+    /// The same verdict with 4 limb columns and with the running sum.
+    fn ok(c: &AluOnly<false>) -> bool {
+        let r = AluOnly::<true> {
+            ops: c.ops.clone(),
+            forged: c.forged.clone(),
+            requests: c.requests.clone(),
+        };
+        let (a, b) = (ok_mode(c), ok_mode(&r));
+        assert_eq!(a, b, "RANGE modes disagree");
+        a
     }
 
     #[test]

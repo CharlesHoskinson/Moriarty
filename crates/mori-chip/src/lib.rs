@@ -24,6 +24,7 @@ pub mod dec;
 pub mod hashchip;
 pub mod leaf;
 pub mod mem;
+pub mod poseidon;
 pub mod range;
 pub mod rf;
 pub mod rfcore;
