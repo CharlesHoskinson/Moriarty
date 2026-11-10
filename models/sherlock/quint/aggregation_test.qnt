@@ -18,11 +18,11 @@ module aggregation_case {
   pure def soloRoot(p: int): int = chunks(p) - 1              // root of p chained alone from node 0
   pure def stmtFor(p: int): m::Stmt =
     { prog: p, init: m::initOf(p), fin: m::d(p, p), nSteps: p, result: m::resultOf(p) }
-  def manifestOf(id: int): List[m::CertRef] = m::s.nodes.get(id).acc
+  def manifestOf(id: int): List[m::ManEntry] = m::s.nodes.get(id).man
   def nodeOf(id: int): m::Node = m::s.nodes.get(id)
-  def wrongManifest(id: int): List[m::CertRef] = manifestOf(id).slice(1, manifestOf(id).length())
+  def wrongManifest(id: int): List[m::ManEntry] = manifestOf(id).slice(1, manifestOf(id).length())
   // Action arguments may not read state, so the honest decider reads the root's manifest here.
-  action decideWith(id: int): bool = m::decide(id, m::s.nodes.get(id).acc)
+  action decideWith(id: int): bool = m::decide(id, m::s.nodes.get(id).man)
   action idle = m::s' = m::s
 
   run proveLeaves(p: int): bool = chunks(p).reps(j => m::leaf(p, j * m::S, chunkSteps(p, j)))
@@ -70,18 +70,18 @@ module aggregation_case {
       not(m::canNode(m::s, m::NodeRef(0), m::LeafRef(chunkId(2, 0)), m::NoNode)),       // reuse_leaf
       not(m::canNode(m::s, m::NodeRef(0), m::LeafRef(m::leafId(1, 0, 1)), m::NoNode)),  // program mixing
       not(m::canNode(m::s, m::NodeRef(1), m::NoLeaf, m::NoNode)),                       // missing child
-      chunks(2) == 1 or not(m::canDecide(m::s, 0, manifestOf(0))),                      // not halted
+      chunks(2) == 1 or not(m::canDecide(m::s, 0)),                      // not halted
     })
     .then(if (chunks(2) == 1) decideWith(0) else m::foldLeaf(m::NodeRef(0), chunkId(2, 1)))  // node 1: [0, 2)
     .then(if (chunks(2) == 1) m::accept(stmtFor(2))
           else if (m::TREE) m::foldLeaf(m::NoNode, chunkId(2, 1)) else idle)                   // node 2: [1, 2) (tree only)
     .expect(if (chunks(2) == 1) not(m::canAccept(m::s, stmtFor(2))) else and {
-      m::canDecide(m::s, 1, manifestOf(1)),
+      m::canPublish(m::s, 1, manifestOf(1)),
       // chain: a node without a carried child must start at genesis (SRC-005 in the node)
       m::TREE or not(m::canNode(m::s, m::NoNode, m::LeafRef(chunkId(2, 1)), m::NoNode)),
       not(m::TREE) or and {
         not(m::canNode(m::s, m::NodeRef(2), m::LeafRef(chunkId(2, 0)), m::NoNode)),  // swap_children
-        not(m::canDecide(m::s, 2, manifestOf(2))),                                   // I6: hLo != 0
+        not(m::canDecide(m::s, 2)),                                   // I6: hLo != 0
       },
     })
     .then(if (chunks(2) == 1) idle else decideWith(1))
@@ -96,8 +96,12 @@ module aggregation_case {
       m::s.decided.size() == 1, m::s.accepted.length() == 1, m::rulesOk(m::s),
     })
   run shapeAndReplayGuards = chainOf(m::L)
-    .expect(not(m::canDecide(m::s, soloRoot(m::L), wrongManifest(soloRoot(m::L))))
-      and not(m::canDecide(m::s, soloRoot(m::L), [])))
+    // The decider accepts the root whatever the manifest (it does not read it); verify_chain
+    // refuses a truncated or empty manifest, so no bundle is published with it.
+    .expect(m::canDecide(m::s, soloRoot(m::L))
+      and not(m::verifyChain(m::s, soloRoot(m::L), wrongManifest(soloRoot(m::L))))
+      and not(m::canPublish(m::s, soloRoot(m::L), wrongManifest(soloRoot(m::L))))
+      and not(m::verifyChain(m::s, soloRoot(m::L), [])))
     .then(decideWith(soloRoot(m::L)))
     .then(m::accept(stmtFor(m::L)))
     .expect(not(m::canAccept(m::s, stmtFor(m::L))))
@@ -135,7 +139,7 @@ module aggregation_case {
       not(m::canJoin(m::s, m::NodeRef(0), m::NoLeaf, 0)),                          // same child twice
       not(m::canJoin(m::s, m::NodeRef(3), m::NoLeaf, 5)),                          // overlapping segments
       m::rulesOk(m::s), m::s.nodes.keys().size() == 11,
-      roots3.indices().forall(k => m::canDecide(m::s, roots3[k], manifestOf(roots3[k]))
+      roots3.indices().forall(k => m::canPublish(m::s, roots3[k], manifestOf(roots3[k]))
         and m::stmtOf(nodeOf(roots3[k])) == stmtFor(3)),
       roots3.indices().forall(k => roots3.indices().forall(j =>
         k == j or manifestOf(roots3[k]) != manifestOf(roots3[j]))),
@@ -181,7 +185,7 @@ module aggregation_case {
   run randomBracketing = m::init.then(proveLeaves(m::L))
     .then((2 * chunks(m::L)).reps(_ => growOrIdle.expect(m::rulesOk(m::s))))
     .expect(covered(m::s, m::L) and frontier(m::s).size() == 1
-      and frontier(m::s).forall(r => m::canDecide(m::s, r, manifestOf(r)) and m::stmtOf(nodeOf(r)) == stmtFor(m::L)))
+      and frontier(m::s).forall(r => m::canPublish(m::s, r, manifestOf(r)) and m::stmtOf(nodeOf(r)) == stmtFor(m::L)))
     .then(decideFrontier)
     .then(m::accept(stmtFor(m::L)))
     .expect(m::rulesOk(m::s) and m::s.accepted == [stmtFor(m::L)])
@@ -250,12 +254,12 @@ module aggregation_case {
   action mutantGenesis = {
     val n = m::mkNode(m::s, m::NoNode, m::LeafRef(m::leafId(2, 1, 1)), m::NoNode)
     m::s' = { ...certifyRaw(m::s, n), decided: m::s.decided.union(Set({ stmt: m::stmtOf(n), root: n.id,
-      manifest: n.acc, key: m::DeciderKey })) }
+      manifest: n.man, key: m::DeciderKey })) }
   }
   run mutantGenesisCaught = m::init.then(m::leaf(2, 1, 1))
     .expect(m::canNode(m::s, m::NoNode, m::LeafRef(m::leafId(2, 1, 1)), m::NoNode) == m::TREE)
     .then(mutantGenesis)
-    .expect(not(m::canDecide(m::s, 0, manifestOf(0))) and not(m::genesisOk(m::s)) and not(m::allInvariants))
+    .expect(not(m::canDecide(m::s, 0)) and not(m::genesisOk(m::s)) and not(m::allInvariants))
 
   // M7 (I7): the contract accepts a replayed statement.
   action mutantReplay = m::s' = { ...m::s, accepted: m::s.accepted.append(stmtFor(m::L)) }
@@ -271,7 +275,7 @@ module aggregation_case {
   action mutantShape = {
     val n = nodeOf(soloRoot(m::L))
     m::s' = { ...m::s, decided: m::s.decided.union(Set({ stmt: m::stmtOf(n), root: n.id,
-      manifest: n.acc.slice(1, n.acc.length()), key: m::DeciderKey })) }
+      manifest: n.man.slice(1, n.man.length()), key: m::DeciderKey })) }
   }
   run mutantShapeCaught = chainOf(m::L).then(mutantShape)
     .expect(not(m::shapeOk(m::s)) and not(m::allInvariants))
@@ -308,6 +312,45 @@ module aggregation_case {
   }
   run mutantJoinInChainCaught = chainOf(m::L).then(mutantJoinInChain)
     .expect(not(m::chainOnly(m::s)) and not(m::allInvariants))
+
+  // MP (I9, S3): the bundled manifest moves a unary child from L to R. The decider does not
+  // read it, and the flattened manifest of the first F20 draft is identical, so only the
+  // structured manifest and verify_chain can refuse it. TREE instances only (pad).
+  pure def moveLtoR(e: m::ManEntry): m::ManEntry = { ...e, hasL: false, l: m::NoNode, hasR: true, r: e.l }
+  def placedManifest(id: int): List[m::ManEntry] = {
+    val man = manifestOf(id)
+    man.replaceAt(man.length() - 1, moveLtoR(man[man.length() - 1]))
+  }
+  action mutantPlacementLR = {
+    val id = m::s.nextNode - 1
+    m::s' = { ...m::s, decided: m::s.decided.union(Set({ stmt: m::stmtOf(nodeOf(id)), root: id,
+      manifest: placedManifest(id), key: m::DeciderKey })) }
+  }
+  run mutantPlacementLRCaught = chainOf(m::L).then(m::pad(soloRoot(m::L)))
+    .expect(and {
+      m::canDecide(m::s, m::s.nextNode - 1),
+      m::canPublish(m::s, m::s.nextNode - 1, manifestOf(m::s.nextNode - 1)),
+      not(m::verifyChain(m::s, m::s.nextNode - 1, placedManifest(m::s.nextNode - 1))),
+      placedManifest(m::s.nextNode - 1) != manifestOf(m::s.nextNode - 1),
+      m::flatMan(placedManifest(m::s.nextNode - 1)) == m::flatMan(manifestOf(m::s.nextNode - 1)),
+    })
+    .then(mutantPlacementLR)
+    .expect(not(m::shapeOk(m::s)) and not(m::allInvariants))
+
+  // MC (I11, S1): a genesis node folds the witness-supplied carried accumulator unscaled (the
+  // SHKIVC05 circuit); the carry is another node's fold, an unauthenticated obligation.
+  action mutantGenesisCarry = {
+    val n = m::mkNode(m::s, m::NoNode, m::LeafRef(c0), m::NoNode)
+    m::s' = certifyRaw(m::s, { ...n, acc: nodeOf(soloRoot(m::L)).acc.concat(n.acc) })
+  }
+  run mutantGenesisCarryCaught = chainOf(m::L).then(mutantGenesisCarry)
+    .expect(not(m::carryOk(m::s)) and not(m::allInvariants))
+  // Realization (a): the same adversarial carry through the node constraints is collapsed away.
+  run genesisCarryNeutral = chainOf(m::L).then(m::genesis_carry)
+    .expect(and {
+      m::rulesOk(m::s), m::s.nodes.keys().size() == chunks(m::L) + 1,
+      nodeOf(m::s.nextNode - 1).acc == [m::LeafC(c0), m::NodeC(m::s.nextNode - 1)],
+    })
 }
 
 // Q-C scheduler cases.
@@ -463,6 +506,17 @@ module aggregation_test {
   run treeS8MutantShapeCaughtTest = t8::mutantShapeCaught
   run treeS8MutantLivenessCaughtTest = t8::mutantLivenessCaught
   run treeS8MutantKeysCaughtTest = t8::mutantKeysCaught
+  // S3 placement and S1 genesis carry (council review 2.14)
+  run treeS1MutantPlacementLRCaughtTest = t1::mutantPlacementLRCaught
+  run treeS8MutantPlacementLRCaughtTest = t8::mutantPlacementLRCaught
+  run chainS1MutantGenesisCarryCaughtTest = c1::mutantGenesisCarryCaught
+  run chainS4MutantGenesisCarryCaughtTest = c4::mutantGenesisCarryCaught
+  run treeS1MutantGenesisCarryCaughtTest = t1::mutantGenesisCarryCaught
+  run treeS8MutantGenesisCarryCaughtTest = t8::mutantGenesisCarryCaught
+  run chainS1GenesisCarryNeutralTest = c1::genesisCarryNeutral
+  run chainS2GenesisCarryNeutralTest = c2::genesisCarryNeutral
+  run treeS1GenesisCarryNeutralTest = t1::genesisCarryNeutral
+  run treeS4GenesisCarryNeutralTest = t4::genesisCarryNeutral
   // Q-C scheduler
   run schedP1CompleteTest = q1::complete
   run schedP3CompleteTest = q3::complete

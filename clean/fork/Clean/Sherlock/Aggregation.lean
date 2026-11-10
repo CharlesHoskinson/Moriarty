@@ -201,18 +201,44 @@ structure Premises (D : Type) where
   digest_inj : ∀ s t, Carrier s → Carrier t → digest s = digest t → s = t
   /-- Premise (collision resistance of the program digest on committed programs). -/
   progDigest_inj : ∀ p q, Committed p → Committed q → progDigest p = progDigest q → p = q
-  /-- Premise (leaf soundness, SAS O2 for the S-slot leaf): an accepted leaf statement has a
-  witness run of exactly `steps` machine steps between carrier states with those digests, for the
-  committed program the leaf names. -/
-  leaf_sound : ∀ f, leafValid f → ∃ p s t, Committed p ∧ progDigest p = f.prog ∧
-    Carrier s ∧ Carrier t ∧ digest s = f.pre ∧ digest t = f.post ∧ Run (Step p) f.steps s t
+  /-- Premise (leaf soundness, SAS O2 for the S-slot leaf, SVM-002), conditional as the mid-run
+  leaf circuit enforces it: an accepted leaf statement names a committed program, and from every
+  carrier state opening to `pre_d` there is a run of exactly `steps` machine steps to a carrier
+  state opening to `post_d`. The leaf does not decode `pre_d` canonically (`decodeStep`, not
+  `decodeCanonical`), so it does not assert that a carrier pre-state exists; the carrier property
+  enters once, at genesis, and propagates (`sound_link`, `decider_pinning`). The former
+  unconditional form implies this one (`leaf_sound_of_unconditional`). -/
+  leaf_sound : ∀ f, leafValid f → ∃ p, Committed p ∧ progDigest p = f.prog ∧
+    ∀ s, Carrier s → digest s = f.pre →
+      ∃ t, Carrier t ∧ digest t = f.post ∧ Run (Step p) f.steps s t
 
-/-- Segment soundness: for every committed program with digest `s.prog`, a run of exactly
-`s.hi - s.lo` steps between carrier states with digests `s.pre` and `s.post`. -/
+/-- Segment soundness, conditional on the pre-state (S5): for every committed program with
+digest `s.prog` and every carrier state `a` opening to `s.pre`, a run of exactly `s.hi - s.lo`
+steps from `a` to a carrier state opening to `s.post`. The decider discharges the condition at
+genesis with the canonical initial state (`decider_pinning`). -/
 def Sound (P : Premises D) (s : Seg D) : Prop :=
   s.lo ≤ s.hi ∧ ∀ p, P.Committed p → P.progDigest p = s.prog →
-    ∃ a b, P.Carrier a ∧ P.Carrier b ∧ P.digest a = s.pre ∧ P.digest b = s.post ∧
-      Run (P.Step p) (s.hi - s.lo) a b
+    ∀ a, P.Carrier a → P.digest a = s.pre →
+      ∃ b, P.Carrier b ∧ P.digest b = s.post ∧ Run (P.Step p) (s.hi - s.lo) a b
+
+/-- The unconditional leaf premise of the first F21 draft (a carrier pre-state exists) implies the
+conditional `Premises.leaf_sound`, given digest injectivity: the restatement only weakens the
+premise. -/
+theorem leaf_sound_of_unconditional {State Prog : Type} (Step : Prog → State → State → Prop)
+    (digest : State → D) (Carrier : State → Prop) (progDigest : Prog → D)
+    (Committed : Prog → Prop) (leafValid : Leaf D → Prop)
+    (digest_inj : ∀ s t, Carrier s → Carrier t → digest s = digest t → s = t)
+    (h : ∀ f, leafValid f → ∃ p s t, Committed p ∧ progDigest p = f.prog ∧ Carrier s ∧
+      Carrier t ∧ digest s = f.pre ∧ digest t = f.post ∧ Run (Step p) f.steps s t) :
+    ∀ f, leafValid f → ∃ p, Committed p ∧ progDigest p = f.prog ∧
+      ∀ s, Carrier s → digest s = f.pre →
+        ∃ t, Carrier t ∧ digest t = f.post ∧ Run (Step p) f.steps s t := by
+  intro f hv
+  obtain ⟨p, s, t, hp, hpd, hs, ht, hds, hdt, run⟩ := h f hv
+  refine ⟨p, hp, hpd, fun a ha hda ↦ ?_⟩
+  have : a = s := digest_inj a s ha hs (hda.trans hds.symm)
+  subst this
+  exact ⟨t, ht, hdt, run⟩
 
 /-! ## L2: linkage is associative with the identity segment as unit -/
 
@@ -933,12 +959,10 @@ theorem sound_link {P : Premises D} {a b c : Seg D} (ha : Sound P a) (hb : Sound
     (h : link a b = some c) : Sound P c := by
   obtain ⟨h1, h2, h3, rfl⟩ := link_fields h
   obtain ⟨hlen, hle⟩ := link_len h ha.1 hb.1
-  refine ⟨hle, fun p hp hprog ↦ ?_⟩
-  obtain ⟨x, y, hx, hy, hdx, hdy, run₁⟩ := ha.2 p hp hprog
-  obtain ⟨y', z, hy', hz, hdy', hdz, run₂⟩ := hb.2 p hp (h1 ▸ hprog)
-  have hyy : y = y' := P.digest_inj y y' hy hy' (by rw [hdy, hdy', h2])
-  subst hyy
-  refine ⟨x, z, hx, hz, hdx, hdz, ?_⟩
+  refine ⟨hle, fun p hp hprog x hx hdx ↦ ?_⟩
+  obtain ⟨y, hy, hdy, run₁⟩ := ha.2 p hp hprog x hx hdx
+  obtain ⟨z, hz, hdz, run₂⟩ := hb.2 p hp (h1 ▸ hprog) y hy (hdy.trans h2)
+  refine ⟨z, hz, hdz, ?_⟩
   simp only at hlen
   rw [hlen]
   exact run₁.trans run₂
@@ -964,11 +988,12 @@ theorem sound_linkAll {P : Premises D} : ∀ (l : List (Seg D)) (c : Seg D),
 
 /-- An accepted leaf statement with `1 ≤ steps` is sound. -/
 theorem sound_leaf {P : Premises D} {f : Leaf D} (hv : P.leafValid f) : Sound P f.seg := by
-  refine ⟨Nat.le_add_right _ _, fun p hp hprog ↦ ?_⟩
-  obtain ⟨q, s, t, hq, hqd, hs, ht, hds, hdt, run⟩ := P.leaf_sound f hv
+  refine ⟨Nat.le_add_right _ _, fun p hp hprog s hs hds ↦ ?_⟩
+  obtain ⟨q, hq, hqd, hrun⟩ := P.leaf_sound f hv
   have : q = p := P.progDigest_inj q p hq hp (by rw [hqd]; exact hprog.symm)
   subst this
-  refine ⟨s, t, hs, ht, hds, hdt, ?_⟩
+  obtain ⟨t, ht, hdt, run⟩ := hrun s hs hds
+  refine ⟨t, ht, hdt, ?_⟩
   simp only [Leaf.seg, Nat.add_sub_cancel_left]
   exact run
 
@@ -1035,10 +1060,28 @@ theorem chain_sound (P : Premises D) (S : Nat) (fs : List (Leaf D)) (s : Seg D)
     (h : Certified S P.leafValid (chainOf fs) s) : Sound P s :=
   segment_sound P S (chainOf fs) s h
 
-/-! ## L6: decider pinning -/
+/-! ## L6: decider pinning (conditional)
+
+L6 is the conditional statement it proves: *if* the decider establishes the three fields of
+`Decided` and `acceptRun` reads the four equalities of `AcceptRun`, *and* the caller supplies the
+canonical initial state `s₀` of the sealed program with `digest s₀ = initD`, *then* the run
+exists. F21 does not prove that the decider circuit establishes those fields. These decider
+obligations stay outside F21, as SRC-006/SRC-007 circuit and test obligations (design §3.6,
+assurance §3):
+
+* the `fin_d` Poseidon opening of the final state (behind `Decided.halt`);
+* the halted-tag and result derivation from that state, the u128 range of the result and its
+  big-endian encoding;
+* the pin of the node key `vk_N_repr` (lane 0) to the keyed node;
+* the final pairing check of the root accumulator (behind `Decided.cert`, with the
+  certificate-tree premise of `AggregationAxioms.lean`);
+* the replay set (each accepted run consumed once);
+* that `initD` is the sealed contract value, the canonical initial state of the program
+  (authenticated genesis, task 4.9); F21 takes `s₀` and `Carrier s₀` as hypotheses. -/
 
 /-- The decider's statement: a certified root that starts at genesis and whose final digest opens
-as a halted carrier state with result `r`. -/
+as a halted carrier state with result `r`. Each field is an obligation of the decider circuit
+(see the section note), not something F21 proves. -/
 structure Decided (P : Premises D) (S : Nat) (root : Seg D) (r : P.Result) : Prop where
   cert : ∃ c, Certified S P.leafValid c root
   genesis : root.lo = 0
@@ -1064,9 +1107,12 @@ theorem non_genesis_refused (P : Premises D) (S : Nat) (root : Seg D) (r : P.Res
     (h : root.lo ≠ 0) : ¬ Decided P S root r :=
   fun hd ↦ h hd.genesis
 
-/-- **L6, decider pinning.** A decided root accepted by `acceptRun` for the sealed program `p`
-and the canonical initial state `s₀` is a run of exactly `n_steps` steps of the general machine
-for `p` from `s₀` to a halted state whose digest is `fin_d` and whose result is `r`. -/
+/-- **L6, decider pinning (conditional).** A decided root accepted by `acceptRun` for the sealed
+program `p` and a carrier state `s₀` opening to `initD` is a run of exactly `n_steps` steps of
+the general machine for `p` from `s₀` to a halted state whose digest is `fin_d` and whose result
+is `r`. `Carrier s₀` is the genesis condition that the conditional `Sound` propagates; that `s₀`
+is the canonical initial state of `p`, and every field of `Decided`, are the SRC-006/007 decider
+obligations listed above, outside F21. -/
 theorem decider_pinning (P : Premises D) (S : Nat) {root : Seg D} {r : P.Result}
     (hd : Decided P S root r) {programD initD : D} {nSteps : Nat} {finD : D}
     (ha : AcceptRun programD initD root nSteps finD) {p : P.Prog} (hp : P.Committed p)
@@ -1076,11 +1122,10 @@ theorem decider_pinning (P : Premises D) (S : Nat) {root : Seg D} {r : P.Result}
   obtain ⟨c, hc⟩ := hd.cert
   obtain ⟨hprog, hpre, hn, hfin⟩ := ha
   obtain ⟨-, hsound⟩ := segment_sound P S c root hc
-  obtain ⟨a, b, ha, hb, hda, hdb, run⟩ := hsound p hp (hpd.trans hprog.symm)
+  obtain ⟨b, hb, hdb, run⟩ := hsound p hp (hpd.trans hprog.symm) s₀ hs₀ (hd₀.trans hpre.symm)
   obtain ⟨t, ht, hdt, hhalt, hr⟩ := hd.halt
-  have hab : a = s₀ := P.digest_inj a s₀ ha hs₀ (by rw [hda, hd₀, hpre])
   have hbt : b = t := P.digest_inj b t hb ht (by rw [hdb, hdt])
-  subst hab hbt
+  subst hbt
   refine ⟨b, ?_, hhalt, hr, hfin ▸ hdb⟩
   rw [hd.genesis, Nat.sub_zero, hn] at run
   exact run
@@ -1120,8 +1165,10 @@ theorem statement_independent_of_S (P : Premises D) (S₁ S₂ : Nat)
 
 /-! ## L5: height arithmetic without wrap -/
 
-/-- The SRC-004 check pair `prev_h < 2^64 - S`, `1 ≤ steps ≤ S` keeps the next height below
-`2^64` (L-A, sufficiency; the lower bound `1 ≤ steps` is not needed here, it serves L4). -/
+/-- An alternative sufficient pair, not the circuit contract: `prev_h < 2^64 - S` with
+`steps ≤ S` keeps the next height below `2^64`. It is strictly stronger than needed (it refuses
+some sums below `2^64` when `steps < S`). The circuit contract is the direct SRC-004 triple
+(`prev_h`, `steps`, `h` each range-checked below `2^64`), whose bridge is `src004_height_bridge`. -/
 theorem height_no_wrap (S prevH steps : Nat) (hS : S ≤ 2 ^ 64) (h₁ : prevH < 2 ^ 64 - S)
     (h₂ : steps ≤ S) : prevH + steps < 2 ^ 64 := by
   omega
@@ -1146,43 +1193,313 @@ theorem field_eq_exact (p h₁ steps h₂ : Nat) (hp : 2 ^ 65 ≤ p) (h₁r : h�
   rw [field_sum_exact p h₁ steps hp h₁r hsr] at heq
   exact heq.symm
 
-/-! ## L-D: the genesis scale-by-bit lemma -/
+/-- **SRC-004 bridge (S5).** The circuit contract: `prev_h`, `steps` and `h` each range-checked
+below `2^64`, `1 ≤ steps ≤ S`, the field equation `h = prev_h + steps` over a field with
+`2^65 ≤ p`. Then the field lane `h` is the natural sum, the sum stays in the u64 lane domain, the
+height strictly increases and the step is at most `S`. This is what lets L1-L4 read range-checked
+field heights as the naturals of `Seg` (`field_eq_exact` alone does not bound `h`). -/
+theorem src004_height_bridge (p S prevH steps h : Nat) (hp : 2 ^ 65 ≤ p)
+    (hprev : prevH < 2 ^ 64) (hsr : steps < 2 ^ 64) (hh : h < 2 ^ 64) (hs1 : 1 ≤ steps)
+    (hsS : steps ≤ S) (heq : (prevH + steps) % p = h) :
+    h = prevH + steps ∧ prevH + steps < 2 ^ 64 ∧ prevH < h ∧ h - prevH ≤ S := by
+  have e := field_eq_exact p prevH steps h hp hprev hsr heq
+  omega
 
-/-- The accumulator algebra as premises: a fold with a neutral element, scaling by a bit, and a
-collapse that preserves the pairing-check value. -/
-structure AccAlgebra (A V : Type) where
-  zero : A
-  add : A → A → A
-  zero_add : ∀ a, add zero a = a
+/-- Why `prev_h` itself needs the range check (Gemini IVC model, SRC-004 counterexample): without
+it a witness `prev_h = p - 1` makes the next field height `0`, which would set `is_genesis` mid
+chain; that witness is exactly one the `prev_h < 2^64` check refuses. -/
+theorem unchecked_prev_wraps_to_genesis (p : Nat) (hp : 2 ^ 65 ≤ p) :
+    ∃ prevH, prevH < p ∧ (prevH + 1) % p = 0 ∧ ¬ prevH < 2 ^ 64 :=
+  ⟨p - 1, by omega, by rw [show p - 1 + 1 = p by omega, Nat.mod_self], by omega⟩
+
+/-! ## L-D: genesis accumulator, SRC-005 realization (a)
+
+Lead decision 2026-11-09 (S1): at genesis both the previous-proof accumulator and the carried
+accumulator are scaled by the bit and collapsed to the trivial encoding before the fold, in
+circuit and off circuit. The algebra is stated at the encoding level: `accumulate` derives its
+challenge from the full encoding of every input (bases included), so a zero-scaled but
+uncollapsed input does not drop out of the fold. The first F21 draft's law
+`scale false a = zero` is retired; it fails in the encoding model `encModel`
+(`scale_false_law_fails`). Its replacement is the collapse-after-scale law
+`AccAlgebra.collapse_scale_false`. -/
+
+/-- The accumulator algebra as premises, at the encoding level. `trivial` is `trivial_acc`
+(identity base, scalar one, zero fixed scalars); `accumulate` is `Accumulator::accumulate`;
+`valid` is the final pairing check (`Accumulator::check`). No law lets an input drop out of
+`accumulate`. -/
+structure AccAlgebra (A : Type) where
+  trivial : A
+  accumulate : List A → A
   scale : Bool → A → A
-  scale_false : ∀ a, scale false a = zero
   scale_true : ∀ a, scale true a = a
   collapse : A → A
-  pairing : A → V
-  pairing_collapse : ∀ a, pairing (collapse a) = pairing a
+  /-- Collapse after scale: a zero-scaled accumulator collapses to the trivial encoding, whatever
+  bases it was parsed with (`AssignedAccumulator::collapse` after `scale_by_bit`, SHKIVC05). -/
+  collapse_scale_false : ∀ a, collapse (scale false a) = trivial
+  valid : A → Prop
+  valid_collapse : ∀ a, valid (collapse a) ↔ valid a
+  valid_trivial : valid trivial
+  /-- Fold soundness and completeness (SRC-005/006 premise): the fold passes the pairing check iff
+  every input does. -/
+  valid_accumulate : ∀ l, valid (accumulate l) ↔ ∀ a ∈ l, valid a
 
-/-- `accumulate` folds the inputs in order. -/
-def AccAlgebra.accumulate {A V : Type} (alg : AccAlgebra A V) : List A → A
-  | [] => alg.zero
-  | a :: rest => alg.add a (alg.accumulate rest)
+/-- The node fold of realization (a): the previous-proof and the carried accumulator, each
+scaled by `not_genesis` and collapsed, then the leaf accumulator; the result is collapsed. -/
+def AccAlgebra.nodeFold {A : Type} (alg : AccAlgebra A) (notGenesis : Bool)
+    (proofAcc carried leaf : A) : A :=
+  alg.collapse (alg.accumulate
+    [alg.collapse (alg.scale notGenesis proofAcc), alg.collapse (alg.scale notGenesis carried),
+      leaf])
 
-/-- At genesis (`not_genesis = 0`, `ivc.rs` step 3) the previous-proof accumulator is scaled away
-and the fold equals the fold of the carried and leaf accumulators alone; the collapsed pairing
-value agrees. -/
-theorem genesis_scale_by_bit {A V : Type} (alg : AccAlgebra A V) (proofAcc carried leaf : A) :
-    alg.accumulate [alg.scale false proofAcc, carried, leaf] = alg.accumulate [carried, leaf] ∧
-    alg.pairing (alg.collapse (alg.accumulate [alg.scale false proofAcc, carried, leaf])) =
-      alg.pairing (alg.accumulate [carried, leaf]) := by
-  have h : alg.accumulate [alg.scale false proofAcc, carried, leaf] =
-      alg.accumulate [carried, leaf] := by
-    simp only [AccAlgebra.accumulate, alg.scale_false, alg.zero_add]
-  exact ⟨h, by rw [h, alg.pairing_collapse]⟩
+/-- **L-D, SRC-005 genesis (realization (a)).** At genesis (`not_genesis = 0`) both the
+previous-proof accumulator and the carried accumulator collapse to the trivial encoding before
+the fold. The folded accumulator therefore equals the fold of `[trivial, trivial, leaf]`: it does
+not depend on either witness-supplied accumulator (nor, therefore, does the fold challenge), and
+it passes the pairing check iff the leaf accumulator does, so no unauthenticated deferred
+obligation enters at genesis. Task 2.3 cites this lemma. -/
+theorem genesis_collapse_both {A : Type} (alg : AccAlgebra A) (proofAcc carried leaf : A) :
+    alg.nodeFold false proofAcc carried leaf =
+      alg.collapse (alg.accumulate [alg.trivial, alg.trivial, leaf]) ∧
+    (alg.valid (alg.nodeFold false proofAcc carried leaf) ↔ alg.valid leaf) := by
+  have h : alg.nodeFold false proofAcc carried leaf =
+      alg.collapse (alg.accumulate [alg.trivial, alg.trivial, leaf]) := by
+    simp only [AccAlgebra.nodeFold, alg.collapse_scale_false]
+  refine ⟨h, ?_⟩
+  rw [h, alg.valid_collapse, alg.valid_accumulate]
+  constructor
+  · intro hall
+    exact hall leaf (by simp)
+  · intro hl a ha
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+    rcases ha with rfl | rfl | rfl
+    · exact alg.valid_trivial
+    · exact alg.valid_trivial
+    · exact hl
 
-/-- Off genesis (`not_genesis = 1`) the previous proof is folded unchanged. -/
-theorem non_genesis_keeps_proof {A V : Type} (alg : AccAlgebra A V) (proofAcc carried leaf : A) :
-    alg.accumulate [alg.scale true proofAcc, carried, leaf] =
-      alg.accumulate [proofAcc, carried, leaf] := by
-  simp only [AccAlgebra.accumulate, alg.scale_true]
+/-- Genesis witness independence: two genesis nodes with the same leaf accumulator fold to the
+same accumulator, whatever previous-proof and carried accumulators the prover supplies. -/
+theorem genesis_witness_independent {A : Type} (alg : AccAlgebra A)
+    (proofAcc carried proofAcc' carried' leaf : A) :
+    alg.nodeFold false proofAcc carried leaf = alg.nodeFold false proofAcc' carried' leaf := by
+  rw [(genesis_collapse_both alg proofAcc carried leaf).1,
+    (genesis_collapse_both alg proofAcc' carried' leaf).1]
+
+/-- Off genesis (`not_genesis = 1`) the previous-proof and the carried accumulator are folded
+(collapsed, so with their canonical encodings), and the fold passes the pairing check iff all
+three inputs do. -/
+theorem non_genesis_keeps_both {A : Type} (alg : AccAlgebra A) (proofAcc carried leaf : A) :
+    alg.nodeFold true proofAcc carried leaf =
+      alg.collapse (alg.accumulate [alg.collapse proofAcc, alg.collapse carried, leaf]) ∧
+    (alg.valid (alg.nodeFold true proofAcc carried leaf) ↔
+      alg.valid proofAcc ∧ alg.valid carried ∧ alg.valid leaf) := by
+  have h : alg.nodeFold true proofAcc carried leaf =
+      alg.collapse (alg.accumulate [alg.collapse proofAcc, alg.collapse carried, leaf]) := by
+    simp only [AccAlgebra.nodeFold, alg.scale_true]
+  refine ⟨h, ?_⟩
+  rw [h, alg.valid_collapse, alg.valid_accumulate]
+  constructor
+  · intro hall
+    refine ⟨?_, ?_, hall leaf (by simp)⟩
+    · exact (alg.valid_collapse _).mp (hall _ (by simp))
+    · exact (alg.valid_collapse _).mp (hall _ (by simp))
+  · rintro ⟨hp, hc, hl⟩ a ha
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+    rcases ha with rfl | rfl | rfl
+    · exact (alg.valid_collapse _).mpr hp
+    · exact (alg.valid_collapse _).mpr hc
+    · exact hl
+
+/-- An encoding-sensitive model of `AccAlgebra` (non-vacuity of the premises): an accumulator is
+`(bases, ok)`, `accumulate` sums the base encodings (so every input's encoding reaches the
+result, as the hashed challenge does) and passes iff all inputs pass; scaling by zero keeps the
+bases and zeroes the scalars (and so passes); `collapse` replaces the bases by the trivial ones. -/
+def encModel : AccAlgebra (Nat × Bool) where
+  trivial := (0, true)
+  accumulate l := ((l.map Prod.fst).sum, l.all (·.2))
+  scale b a := if b then a else (a.1, true)
+  scale_true a := by simp
+  collapse a := (0, a.2)
+  collapse_scale_false a := by simp
+  valid a := a.2 = true
+  valid_collapse _ := Iff.rfl
+  valid_trivial := rfl
+  valid_accumulate l := by simp [List.all_eq_true]
+
+/-- The retired law `scale false a = trivial` is false in the encoding model: a zero-scaled
+accumulator keeps its parsed bases. -/
+theorem scale_false_law_fails : encModel.scale false (5, true) ≠ encModel.trivial := by
+  decide
+
+/-- Without the collapse (the SHKIVC03 circuit), the genesis fold depends on the bases parsed from
+the absent previous proof. -/
+theorem uncollapsed_genesis_depends_on_bases :
+    encModel.accumulate [encModel.scale false (5, true), encModel.trivial, (0, true)] ≠
+      encModel.accumulate [encModel.scale false (7, true), encModel.trivial, (0, true)] := by
+  decide
+
+/-- Collapsing only the previous-proof accumulator (the SHKIVC05 circuit) leaves the fold
+dependent on the unscaled, witness-supplied carried accumulator, and both choices pass the
+pairing check: the SRC-005 gap that `genesis_collapse_both` closes. -/
+theorem unscaled_carry_depends_on_witness :
+    encModel.accumulate
+        [encModel.collapse (encModel.scale false (5, true)), (3, true), (0, true)] ≠
+      encModel.accumulate
+        [encModel.collapse (encModel.scale false (5, true)), (4, true), (0, true)] ∧
+    encModel.valid (encModel.accumulate
+        [encModel.collapse (encModel.scale false (5, true)), (3, true), (0, true)]) ∧
+    encModel.valid (encModel.accumulate
+        [encModel.collapse (encModel.scale false (5, true)), (4, true), (0, true)]) :=
+  ⟨by decide, rfl, rfl⟩
+
+/-! ## Linear node refinement (S4)
+
+Lead decision 2026-11-09 (S4): the linear node keeps its statement
+`[self_vk_repr, prog_d, init_d, cur_d, h, acc]` (`ivc.rs:184-188`) with genesis decided in the
+node (`is_genesis = is_zero(prev_h)`). The lemmas below map that node to the F21 `link`: an
+accepted linear node statement `(prog, init, cur, h)` is the segment `(prog, init, cur, 0, h)`
+certified by `chainOf` of its leaves, the genesis gate fires exactly at the first node, and the
+carried slot is off exactly when `prev_h = 0`. The statement holds for the prefix chain only; a
+tree parent with `h_lo = 0` and a present left child is the F8 node, which uses explicit slot
+bits. The key lane and the accumulator lanes are outside this model (L-D covers the fold). -/
+
+/-- The public state of the linear node: `(prog_d, init_d, cur_d, h)`. -/
+structure LinStmt (D : Type) where
+  prog : D
+  init : D
+  cur : D
+  h : Nat
+  deriving DecidableEq, Repr
+
+/-- The segment a linear node statement claims: from `init_d` at height 0 to `cur_d` at `h`. -/
+def LinStmt.seg (st : LinStmt D) : Seg D := ⟨st.prog, st.init, st.cur, 0, st.h⟩
+
+/-- The linear node checker with the task 2.3 constraints, heights read as naturals
+(`src004_height_bridge` and `linNode_field_height` justify that reading). The leaf instance binds
+`(prog_d, prev_d, cur_d, prev_h, steps)`; `steps` is in `[1, S]`; at genesis (`prev.h = 0`) the
+selected start digest is `init_d`, so `prev.cur = prev.init`; the new state is
+`(prog_d, init_d, cur_d, prev_h + steps)`. -/
+def linNode (S : Nat) (prev : LinStmt D) (f : Leaf D) : Option (LinStmt D) :=
+  if f.prog = prev.prog ∧ f.pre = prev.cur ∧ f.hpre = prev.h ∧ 1 ≤ f.steps ∧ f.steps ≤ S ∧
+      (prev.h = 0 → prev.cur = prev.init) then
+    some ⟨prev.prog, prev.init, f.post, prev.h + f.steps⟩
+  else none
+
+theorem linNode_eq_some {S : Nat} {prev st : LinStmt D} {f : Leaf D} :
+    linNode S prev f = some st ↔
+      (f.prog = prev.prog ∧ f.pre = prev.cur ∧ f.hpre = prev.h ∧ 1 ≤ f.steps ∧ f.steps ≤ S ∧
+        (prev.h = 0 → prev.cur = prev.init)) ∧
+      st = ⟨prev.prog, prev.init, f.post, prev.h + f.steps⟩ := by
+  unfold linNode
+  split
+  · rename_i hc
+    constructor
+    · intro h; cases h; exact ⟨hc, rfl⟩
+    · rintro ⟨-, rfl⟩; rfl
+  · rename_i hc
+    constructor
+    · intro h; cases h
+    · rintro ⟨h, -⟩; exact absurd h hc
+
+/-- An accepted linear node proof. The previous node proof is verified only off genesis: at
+`prev.h = 0` it is scaled away (`scale_by_bit` with `not_genesis`) and the previous statement is
+witness data; at `prev.h ≠ 0` the previous statement is that of an accepted node proof
+(the cryptographic premise of `AggregationAxioms.lean`). -/
+inductive LinCert (S : Nat) (leafValid : Leaf D → Prop) : LinStmt D → Prop where
+  | mk {prev st : LinStmt D} (f : Leaf D) :
+      (prev.h ≠ 0 → LinCert S leafValid prev) → leafValid f → linNode S prev f = some st →
+      LinCert S leafValid st
+
+/-- An accepted linear node statement has a positive height. -/
+theorem LinCert.h_ne_zero {S : Nat} {leafValid : Leaf D → Prop} {st : LinStmt D}
+    (h : LinCert S leafValid st) : st.h ≠ 0 := by
+  cases h with
+  | @mk prev st' f _ _ hn =>
+    obtain ⟨⟨-, -, -, hs1, -, -⟩, rfl⟩ := linNode_eq_some.mp hn
+    show _ + f.steps ≠ 0
+    omega
+
+/-- Genesis placement: the carried slot of a linear node is off exactly when `prev_h = 0`.
+A previous statement that is itself an accepted node statement never has height 0, so the
+genesis gate never scales away a real carried proof, and every node with `prev_h ≠ 0` verifies
+its carried proof. -/
+theorem lin_certified_prev_not_genesis {S : Nat} {leafValid : Leaf D → Prop} {prev : LinStmt D}
+    (hcert : LinCert S leafValid prev) : ¬ prev.h = 0 :=
+  hcert.h_ne_zero
+
+/-- A genesis node (`prev_h = 0`) certifies exactly its leaf segment: the F21 leaf-only node. -/
+theorem lin_genesis_seg {S : Nat} {prev st : LinStmt D} {f : Leaf D}
+    (hn : linNode S prev f = some st) (h0 : prev.h = 0) :
+    NodeCert.stmt S (.node .off (some f) .off) = some st.seg := by
+  obtain ⟨⟨hp, hpre, hh, hs1, hsS, hg⟩, rfl⟩ := linNode_eq_some.mp hn
+  rw [NodeCert.leaf_only S f hs1 hsS]
+  simp only [Leaf.seg, LinStmt.seg, hp, hpre, hg h0, hh, h0]
+
+/-- A non-genesis node is the F21 `link` of the carried statement's segment and the leaf
+segment. -/
+theorem lin_step_link {S : Nat} {prev st : LinStmt D} {f : Leaf D}
+    (hn : linNode S prev f = some st) : link prev.seg f.seg = some st.seg := by
+  obtain ⟨⟨hp, hpre, hh, -, -, -⟩, rfl⟩ := linNode_eq_some.mp hn
+  refine link_eq_some_iff.mpr ⟨⟨hp.symm, hpre.symm, hh.symm⟩, ?_⟩
+  simp only [LinStmt.seg, Leaf.seg, hh]
+
+theorem chainOf_snoc (fs : List (Leaf D)) (hne : fs ≠ []) (f : Leaf D) :
+    chainOf (fs ++ [f]) = .node (chainOf fs) (some f) .off := by
+  cases fs with
+  | nil => exact absurd rfl hne
+  | cons g rest =>
+    simp only [List.cons_append, chainOf, List.foldl_append, List.foldl_cons, List.foldl_nil]
+
+/-- **S4 refinement.** Every accepted linear node statement `(prog, init, cur, h)` is the F21
+segment `(prog, init, cur, 0, h)` certified by the linear chain `chainOf` of its leaves. -/
+theorem lin_refines_chain {S : Nat} {leafValid : Leaf D → Prop} {st : LinStmt D}
+    (h : LinCert S leafValid st) :
+    ∃ fs, fs ≠ [] ∧ Certified S leafValid (chainOf fs) st.seg := by
+  induction h with
+  | @mk prev st f _ hv hn ih =>
+    by_cases h0 : prev.h = 0
+    · refine ⟨[f], by simp, lin_genesis_seg hn h0, ?_⟩
+      intro g hg
+      simp [chainOf, NodeCert.leaves] at hg
+      subst hg
+      exact hv
+    · obtain ⟨fs, hne, hstmt, hleaves⟩ := ih h0
+      obtain ⟨⟨-, -, -, hs1, hsS, -⟩, -⟩ := linNode_eq_some.mp hn
+      have hslot : NodeCert.slot S (chainOf fs) = some [prev.seg] := by
+        cases hc : chainOf fs with
+        | off => rw [hc] at hstmt; simp [NodeCert.stmt] at hstmt
+        | node a b c =>
+          rw [hc] at hstmt
+          rw [NodeCert.slot_node, hstmt]
+          rfl
+      refine ⟨fs ++ [f], by simp, ?_, ?_⟩
+      · rw [chainOf_snoc fs hne f, NodeCert.stmt_node, hslot, NodeCert.slot_off]
+        simp only [NodeCert.leafSlot, if_pos (show 1 ≤ f.steps ∧ f.steps ≤ S from ⟨hs1, hsS⟩)]
+        exact lin_step_link hn
+      · intro g hg
+        rw [chainOf_snoc fs hne f] at hg
+        simp only [NodeCert.leaves, List.mem_append, Option.toList, List.mem_singleton,
+          List.not_mem_nil, or_false] at hg
+        rcases hg with hg | rfl
+        · exact hleaves g hg
+        · exact hv
+
+/-- The linear node is sound by L1: an accepted linear node statement is a sound segment from
+height 0. -/
+theorem lin_sound (P : Premises D) (S : Nat) {st : LinStmt D}
+    (h : LinCert S P.leafValid st) : Sound P st.seg := by
+  obtain ⟨fs, -, hc⟩ := lin_refines_chain h
+  exact chain_sound P S fs _ hc
+
+/-- The linear node computes `h` in the field. With the SRC-004 triple range-checked, the field
+lane is the natural height of `linNode`, below `2^64`. -/
+theorem linNode_field_height (p S : Nat) {prev st : LinStmt D} {f : Leaf D} {hLane : Nat}
+    (hp : 2 ^ 65 ≤ p) (hn : linNode S prev f = some st) (hprev : prev.h < 2 ^ 64)
+    (hsr : f.steps < 2 ^ 64) (hh : hLane < 2 ^ 64) (heq : (prev.h + f.steps) % p = hLane) :
+    st.h = hLane ∧ st.h < 2 ^ 64 := by
+  obtain ⟨⟨-, -, -, hs1, hsS, -⟩, rfl⟩ := linNode_eq_some.mp hn
+  have := src004_height_bridge p S prev.h f.steps hLane hp hprev hsr hh hs1 hsS heq
+  show prev.h + f.steps = hLane ∧ prev.h + f.steps < 2 ^ 64
+  omega
 
 /-! ## L-E: `assert_lower_than_fixed` for a non-power-of-two bound -/
 

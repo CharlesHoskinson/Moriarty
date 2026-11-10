@@ -14,7 +14,7 @@
     "research/sherlock-speed-replan-20261108/prover.md#6b"
   ],
   "implementationSources": [
-    "crates/mori-recursion/src/ivc.rs (linear node, genesis scale_by_bit)",
+    "crates/mori-recursion/src/ivc.rs (linear node statement :184-188, in-node genesis, scale_by_bit and collapse)",
     "midnight-circuits 7.3.0 src/field/native/native_gadget.rs:275-306 (assert_lower_than_fixed)"
   ],
   "referenceCommit": "498c697bb8b3c044d69de72a237d2a5efbe3cfed",
@@ -22,13 +22,13 @@
   "sourceFiles": [
     {
       "path": "clean/fork/Clean/Sherlock/Aggregation.lean",
-      "bytes": 52199,
-      "sha256": "c2a6cabc0d84d8881b2c9deb8e0fcbecbedb560ffd522b0a010c7e4b2188b7d9"
+      "bytes": 70084,
+      "sha256": "1dd33032672ba85aaa66983a940255e11ecf6a9b67eb2de1ec9fbd57fcd0728a"
     },
     {
       "path": "clean/fork/Clean/Sherlock/AggregationAxioms.lean",
-      "bytes": 8381,
-      "sha256": "4381c21e3f89b29d3ec31b824ed77bf6944fb5aa3358e750e4058d1ae96a05d0"
+      "bytes": 12080,
+      "sha256": "bbcb81f6b60cc85757cc7f903956bd7901bda96cfd131c4e5b7ebc13a882cc9c"
     }
   ],
   "customAxioms": [],
@@ -37,10 +37,13 @@
     "Premises.Step, halted, result": "the general reference machine; the program is a parameter",
     "Premises.digest_inj": "digest injective on the carrier domain (Poseidon collision resistance, SRC-001/SAS O1)",
     "Premises.progDigest_inj": "prog_d injective on committed programs",
-    "Premises.leaf_sound": "in-circuit leaf verifier soundness under the fixed leaf key (SAS O2, SRC-005 test obligation)",
+    "Premises.leaf_sound": "conditional in-circuit leaf verifier soundness under the fixed leaf key: a carrier pre-state opening to pre_d runs steps steps to a carrier post-state (SAS O2, SVM-002, SRC-005 test obligation); Carrier enters at genesis and propagates (S5)",
     "NodeCert as witness tree": "a node proof under the self key yields the slot statements it verified (accumulator and pairing soundness, SRC-005/006, BCMS20-class)",
-    "AccAlgebra": "fold neutral element, scale-by-bit, collapse preserves the pairing value (L-D)",
-    "det, stuck": "deterministic machine with terminal halted states (result_unique, statement_independent_of_S only)"
+    "AccAlgebra": "encoding-level accumulator laws (L-D, S1): scale true is the identity, collapse after scale false is trivial_acc (replaces the retired scale false a = zero), collapse preserves validity, trivial_acc is valid, the fold is valid iff every input is; encModel is a concrete model",
+    "det, stuck": "deterministic machine with terminal halted states (result_unique, statement_independent_of_S only)",
+    "LinCert": "a linear node with prev_h != 0 carries the statement of an accepted node proof (certificate premise for the linear relation, S4)",
+    "SRC-004 range checks, 2^65 <= p": "hypotheses of src004_height_bridge and linNode_field_height; circuit obligations of task 2.3",
+    "Decider obligations SRC-006/007": "fin_d opening, halted tag and result, u128 big-endian encoding, vk_N_repr pin, final pairing, replay set, initD canonical (task 4.9): hypotheses of Decided and decider_pinning, outside F21"
   },
   "theoremGroups": {
     "L1 segment soundness for every program": [
@@ -51,7 +54,8 @@
       "Clean.Sherlock.Aggregation.chain_sound",
       "Clean.Sherlock.Aggregation.Run.trans",
       "Clean.Sherlock.Aggregation.Run.unique",
-      "Clean.Sherlock.Aggregation.Run.halt_unique"
+      "Clean.Sherlock.Aggregation.Run.halt_unique",
+      "Clean.Sherlock.Aggregation.leaf_sound_of_unconditional"
     ],
     "L2 associativity of link with the identity as unit": [
       "Clean.Sherlock.Aggregation.link_ident_left",
@@ -107,17 +111,12 @@
       "Clean.Sherlock.Aggregation.NodeCert.cert_len_pos"
     ],
     "L5 height arithmetic without wrap": [
+      "Clean.Sherlock.Aggregation.src004_height_bridge",
+      "Clean.Sherlock.Aggregation.unchecked_prev_wraps_to_genesis",
       "Clean.Sherlock.Aggregation.height_no_wrap",
       "Clean.Sherlock.Aggregation.weaker_pair_insufficient",
       "Clean.Sherlock.Aggregation.field_sum_exact",
       "Clean.Sherlock.Aggregation.field_eq_exact"
-    ],
-    "L6 decider pinning": [
-      "Clean.Sherlock.Aggregation.other_program_refused",
-      "Clean.Sherlock.Aggregation.other_init_refused",
-      "Clean.Sherlock.Aggregation.non_genesis_refused",
-      "Clean.Sherlock.Aggregation.decider_pinning",
-      "Clean.Sherlock.Aggregation.result_unique"
     ],
     "L7 independence from shape, depth and S": [
       "Clean.Sherlock.Aggregation.NodeCert.leaves_off",
@@ -130,9 +129,31 @@
     "L-C statement independence from S": [
       "Clean.Sherlock.Aggregation.statement_independent_of_S"
     ],
-    "L-D genesis scale-by-bit": [
-      "Clean.Sherlock.Aggregation.genesis_scale_by_bit",
-      "Clean.Sherlock.Aggregation.non_genesis_keeps_proof"
+    "L6 decider pinning (conditional)": [
+      "Clean.Sherlock.Aggregation.other_program_refused",
+      "Clean.Sherlock.Aggregation.other_init_refused",
+      "Clean.Sherlock.Aggregation.non_genesis_refused",
+      "Clean.Sherlock.Aggregation.decider_pinning",
+      "Clean.Sherlock.Aggregation.result_unique"
+    ],
+    "L-D genesis accumulator, SRC-005 realization (a)": [
+      "Clean.Sherlock.Aggregation.genesis_collapse_both",
+      "Clean.Sherlock.Aggregation.genesis_witness_independent",
+      "Clean.Sherlock.Aggregation.non_genesis_keeps_both",
+      "Clean.Sherlock.Aggregation.scale_false_law_fails",
+      "Clean.Sherlock.Aggregation.uncollapsed_genesis_depends_on_bases",
+      "Clean.Sherlock.Aggregation.unscaled_carry_depends_on_witness"
+    ],
+    "Linear node refinement (S4)": [
+      "Clean.Sherlock.Aggregation.linNode_eq_some",
+      "Clean.Sherlock.Aggregation.LinCert.h_ne_zero",
+      "Clean.Sherlock.Aggregation.lin_certified_prev_not_genesis",
+      "Clean.Sherlock.Aggregation.lin_genesis_seg",
+      "Clean.Sherlock.Aggregation.lin_step_link",
+      "Clean.Sherlock.Aggregation.chainOf_snoc",
+      "Clean.Sherlock.Aggregation.lin_refines_chain",
+      "Clean.Sherlock.Aggregation.lin_sound",
+      "Clean.Sherlock.Aggregation.linNode_field_height"
     ],
     "L-E assert_lower_than_fixed for a non-power-of-two bound": [
       "Clean.Sherlock.Aggregation.lower_than_fixed_correct"
@@ -305,6 +326,7 @@
       "propext",
       "Quot.sound"
     ],
+    "Clean.Sherlock.Aggregation.leaf_sound_of_unconditional": [],
     "Clean.Sherlock.Aggregation.Run.trans": [],
     "Clean.Sherlock.Aggregation.Run.unique": [
       "propext"
@@ -372,11 +394,68 @@
       "propext",
       "Quot.sound"
     ],
-    "Clean.Sherlock.Aggregation.genesis_scale_by_bit": [
+    "Clean.Sherlock.Aggregation.src004_height_bridge": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.unchecked_prev_wraps_to_genesis": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.genesis_collapse_both": [
       "propext"
     ],
-    "Clean.Sherlock.Aggregation.non_genesis_keeps_proof": [
+    "Clean.Sherlock.Aggregation.genesis_witness_independent": [
       "propext"
+    ],
+    "Clean.Sherlock.Aggregation.non_genesis_keeps_both": [
+      "propext"
+    ],
+    "Clean.Sherlock.Aggregation.scale_false_law_fails": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.uncollapsed_genesis_depends_on_bases": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.unscaled_carry_depends_on_witness": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.linNode_eq_some": [],
+    "Clean.Sherlock.Aggregation.LinCert.h_ne_zero": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.lin_certified_prev_not_genesis": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.lin_genesis_seg": [
+      "propext"
+    ],
+    "Clean.Sherlock.Aggregation.lin_step_link": [
+      "propext"
+    ],
+    "Clean.Sherlock.Aggregation.chainOf_snoc": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.lin_refines_chain": [
+      "propext",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.lin_sound": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "Clean.Sherlock.Aggregation.linNode_field_height": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
     ],
     "Clean.Sherlock.Aggregation.lower_than_fixed_correct": [
       "propext",
@@ -392,18 +471,20 @@
   "acceptance": "none",
   "buildEvidence": {
     "runner": "scripts/qa/check-lean-aggregation.sh (lake -d clean/fork build SherlockSpec; lake env lean AggregationAxioms.lean)",
-    "memoryCap": "systemd-run --user --scope MemoryMax=16G MemorySwapMax=0 (SRC-016 user scope; not under the doctorwatson heavy lock, task 2.12 needs none)",
+    "memoryCap": "systemd-run --user --scope MemoryMax=16G MemorySwapMax=0 inside doctorwatson heavy (DW_DEFAULT_RSS_CAP=16)",
     "wholePackageExit": 0,
     "jobs": 23,
-    "axiomQueryWallSeconds": 0.544,
-    "pluginAxiomCheck": "lean4 plugin check_axioms_inline.sh: 98 declarations, standard axioms only",
+    "pluginAxiomCheck": "not rerun for the 2.14 changes; the runner's #print axioms reports cover every theorem",
     "sorryGrep": "none",
-    "axiomDeclarationGrep": "none"
+    "axiomDeclarationGrep": "none",
+    "run": "20261109T234314Z-F21-lean (90 theorems, 90 axiom reports)"
   },
   "scopeNotes": [
     "Certificates are abstract: NodeCert is the witness tree; the cryptographic step (proof implies witness) and the accumulator algebra are premises (tree.md section 4), not theorems.",
-    "Heights are naturals; field_eq_exact justifies that reading for lanes range-checked below 2^64 when 2^65 <= p.",
+    "Heights are naturals; src004_height_bridge justifies that reading for lanes range-checked below 2^64 (the SRC-004 triple) when 2^65 <= p.",
     "The linear chain (chainOf) is the tree with the right slot disabled; chain_sound is segment_sound instantiated, not a separate proof.",
+    "The linear node of ivc.rs keeps its own statement (prog_d, init_d, cur_d, h) with in-node genesis; lin_refines_chain maps it to chainOf and link for the prefix chain only (S4).",
     "No Rust, circuit or native refinement is established; the module is maintainer tooling."
-  ]
+  ],
+  "councilReview": "research/sherlock-speed-replan-20261108/council-review.md section 3 (S1, S4, S5), lead decisions 2026-11-09"
 }

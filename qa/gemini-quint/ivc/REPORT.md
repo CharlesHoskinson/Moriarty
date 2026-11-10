@@ -243,3 +243,11 @@ quint run qa/gemini-quint/ivc/ivc_circuit.qnt --main ivc_hardened_task23 --invar
 ## 5. Host run (2026-11-09, quint 0.32.0)
 
 The lane could not run `quint`. `next` was renamed to `nxt` (a Quint built-in name clash), with no other change. `quint test ivc_circuit_test.qnt --main ivc_circuit_test --max-samples 100 --seed 0x2a` gives 9 passing and 1 failing. The failing test is `hardenedTask23SoundAndCompleteTest`, which checks the proposed task 2.3 hardening, so that proposal is not validated by this model. The counterexample tests for the missing range checks (SRC-004) and the unscaled genesis carry (SRC-005) pass, so the model reproduces both gaps. The CEX-3 cancellation holds in the algebraic model only. In the circuit, the fold challenge is a hash over every folded accumulator, `prev_acc` included. Task 2.3 still owes the constraint or the written argument.
+
+## 6. Retargeted range check (2026-11-09, council review 2.14 item 19)
+
+Change: in `ivc_circuit.qnt`, MODE 2 (`HARDENED_TASK23`) now applies the SRC-004 range checks to the raw witness values before the mod-P reduction: `0 <= w.prevH < HMAX`, `1 <= w.leafSteps <= S_MAX` and `w.prevH + w.leafSteps < HMAX`. The reduced `h` lane is still checked (`0 <= h < HMAX`). Before this change the check applied to `fmod(w.prevH)`. Attack A1 (`prevH = P`) reduces to 0, so it passed that check, and the test failed. In the circuit, `prev_h` is the previous node's range-checked `h`, so its raw value is below `HMAX`. The test file is unchanged.
+
+Run `20261109T235503Z-F21-ivc` (quint 0.32.0, `--max-samples 100 --seed 0x2a`, under `doctorwatson heavy`): typecheck clean. `quint test` gives 10 passing and 0 failing, `hardenedTask23SoundAndCompleteTest` included. The sweeps in §4 give the expected results: `ivc_pre_shkivc05` violates `completenessHonestInv`, `ivc_shkivc05_actual` holds `completenessHonestInv` and violates `soundnessInv`, and `ivc_hardened_task23` holds `allHardenedInvariants` with no violation (20 steps, 200 samples).
+
+Result: in this model, the task 2.3 hardening (SRC-004 range checks on the raw lanes, plus realization (a): `prev_acc` scaled by `not_genesis` and collapsed) refuses CEX-1, CEX-2 and CEX-3 and keeps the ignored-carry completeness of CEX-4. This is model evidence only. The circuit constraints of task 2.3 are still owed.
