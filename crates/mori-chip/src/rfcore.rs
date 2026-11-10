@@ -1873,6 +1873,17 @@ mod tests {
         };
         let v: Vec<_> = [base, a1, pc, m3_params()].into_iter().map(fixed).collect();
         println!("E8 (degree, fixed + selectors, lookups): {v:?}");
+        let lay = Layout::new(Arch::Narrow);
+        let mut by_gate = vec![Vec::new(); lay.gates.len()];
+        for (ci, (_, e)) in core_constraints().iter().enumerate() {
+            by_gate[lay.host(e).unwrap()].push(ci);
+        }
+        let n: Vec<usize> = by_gate.iter().map(|g| g.len()).collect();
+        println!(
+            "E8 core gate rows {:?}: constraints {n:?}, body degrees {:?}",
+            lay.gates,
+            core_degrees(&lay, &by_gate)
+        );
         for x in &v {
             assert_eq!(x.0, 6);
         }
