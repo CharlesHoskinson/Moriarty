@@ -225,3 +225,87 @@ fn c6_leaf_refuses_empty_and_private_input_relations() {
     bad.instructions = Arc::new(code);
     assert!(prepare_c6_child(&bad, "AppendHelper", &[1]).is_err());
 }
+
+/// A11 (task 2.4): key the M2-shape C6 digest leaf (the relation of
+/// `c6_leaf_is_proved_verified_and_exported`) and write its relation and key
+/// identity for the keygen regression. Keygen only, no proof. Output:
+/// `$MORIARTY_A11_OUT/leaf/{leaf.vk,leaf.relation,leaf.json}`, created new.
+#[test]
+#[ignore = "real keygen; requires pinned SRS (MORIARTY_TEST_PARAMS_DIR) and MORIARTY_A11_OUT"]
+fn a11_c6_digest_leaf_key_identity() {
+    use midnight_zk_stdlib::Relation;
+    use mori_backend::proving::{MAX_K, ProofOptions};
+    use mori_backend::sherlock_c6_child::{
+        C6DigestKey, DigestSections, StateOutcome, c6_child_relation,
+    };
+    use sha2::{Digest, Sha256};
+    let sha = |b: &[u8]| -> String {
+        Sha256::digest(b)
+            .iter()
+            .map(|x| format!("{x:02x}"))
+            .collect()
+    };
+    let options = ProofOptions {
+        params_dir: std::env::var_os("MORIARTY_TEST_PARAMS_DIR")
+            .expect("explicit pinned local SRS directory")
+            .into(),
+        max_k: MAX_K,
+    };
+    let out =
+        std::path::PathBuf::from(std::env::var_os("MORIARTY_A11_OUT").expect("MORIARTY_A11_OUT"))
+            .join("leaf");
+    std::fs::create_dir_all(out.parent().unwrap()).unwrap();
+    std::fs::create_dir(&out).expect("new leaf output directory");
+    // The M2 shape, exactly as in `c6_leaf_is_proved_verified_and_exported`.
+    let ir = local_public_ir(96);
+    let sections = DigestSections {
+        prog_lanes: 32,
+        pre_lanes: 32,
+        post_lanes: 32,
+    };
+    let statement: Vec<u128> = (0..96).map(|i| i as u128 + 1).collect();
+    let relation =
+        c6_child_relation(&ir, sections, StateOutcome::RUNNING, StateOutcome::RUNNING).unwrap();
+    let mut relation_bytes = Vec::new();
+    relation.write_relation(&mut relation_bytes).unwrap();
+    // ZKIR header of the emitted digest relation: major 3 (the v3 crate), minor from
+    // `IrSource.version` (serialized as the minor number).
+    let header = serde_json::json!({
+        "major": 3,
+        "minor": serde_json::to_value(&relation).unwrap()["version"].clone(),
+    });
+    let start = std::time::Instant::now();
+    let key = C6DigestKey::reconstruct(
+        &ir,
+        "AppendHelper",
+        &statement,
+        sections,
+        StateOutcome::RUNNING,
+        StateOutcome::RUNNING,
+        7,
+        &options,
+    )
+    .expect("C6 digest leaf keygen");
+    let keygen_seconds = start.elapsed().as_secs_f64();
+    let claim = &key.prepared().claim;
+    let summary = serde_json::json!({
+        "schema": "moriarty-a11-leaf/1",
+        "relation": "C6 digest leaf, M2 shape (local_public_ir(96), sections 32/32/32, AppendHelper, h=7)",
+        "relation_sha256": sha(&relation_bytes),
+        "relation_bytes": relation_bytes.len(),
+        "vk_sha256": key.vk_sha256(),
+        "k": claim.circuit_k,
+        "public_lanes": key.prepared().instance.len(),
+        "zkir_header": header,
+        "claim": claim,
+        "keygen_seconds": keygen_seconds,
+    });
+    std::fs::write(out.join("leaf.vk"), key.vk_bytes()).unwrap();
+    std::fs::write(out.join("leaf.relation"), &relation_bytes).unwrap();
+    std::fs::write(
+        out.join("leaf.json"),
+        serde_json::to_vec_pretty(&summary).unwrap(),
+    )
+    .unwrap();
+    println!("A11 leaf {summary}");
+}
