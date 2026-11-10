@@ -1469,6 +1469,13 @@ pub struct C6ScalarFailureStepCircuit {
     ir: IrSource,
     serialized_zkir: String,
 }
+
+impl C6ScalarFailureStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
 impl C6ScalarFailureStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params

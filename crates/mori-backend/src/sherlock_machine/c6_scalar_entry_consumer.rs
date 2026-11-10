@@ -652,6 +652,13 @@ pub struct C6ScalarEntryStepCircuit {
 }
 
 impl C6ScalarEntryStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
+
+impl C6ScalarEntryStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params
     }

@@ -320,6 +320,8 @@ fn reads_result(rule: RuleIdC) -> bool {
             | XAdtReturnCtorFieldsNext
             | XAdtReturnCtorFieldsFinal
             | XAdtMaterializeDone
+            | XAdtCasesPlanHit
+            | XAdtCasesPlanMiss
     )
 }
 
@@ -1665,3 +1667,7 @@ pub fn emit_c6_dispatch_block_dedup(
 ) -> Result<C6DispatchBlock, C6DispatchError> {
     C6DispatchEmitter::new(scope)?.emit_dedup(rule, inputs)
 }
+
+#[cfg(test)]
+#[path = "c6_dispatch_partition.rs"]
+pub(crate) mod partition;

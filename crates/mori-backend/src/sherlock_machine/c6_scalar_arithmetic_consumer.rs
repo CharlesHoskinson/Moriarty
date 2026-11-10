@@ -751,6 +751,13 @@ pub struct C6ScalarArithmeticStepCircuit {
 }
 
 impl C6ScalarArithmeticStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
+
+impl C6ScalarArithmeticStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params
     }

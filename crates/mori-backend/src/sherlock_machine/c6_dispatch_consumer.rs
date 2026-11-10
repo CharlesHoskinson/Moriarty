@@ -150,6 +150,10 @@ impl C6DispatchCircuit {
     pub fn statement_lane_count(&self) -> usize {
         self.statement_lane_count
     }
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
 }
 
 pub fn build_c6_dispatch_circuit(
