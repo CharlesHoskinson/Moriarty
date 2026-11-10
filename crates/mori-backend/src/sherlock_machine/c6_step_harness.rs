@@ -141,6 +141,13 @@ pub struct C6StepCircuit {
 }
 
 impl C6StepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
+
+impl C6StepCircuit {
     pub fn key(&self) -> &str {
         &self.key
     }

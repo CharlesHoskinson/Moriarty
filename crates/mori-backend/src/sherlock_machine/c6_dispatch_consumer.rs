@@ -288,3 +288,102 @@ pub fn check_c6_dispatch_circuit(
 #[cfg(test)]
 #[path = "c6_dispatch_tests.rs"]
 mod c6_dispatch_tests;
+
+/// Experiment E1 (chiplet study, 2026-11-10), not used by any circuit:
+/// [`build_c6_dispatch_circuit`] over the shared-walk dispatch block
+/// (`emit_c6_dispatch_block_dedup`). Same statement and checker.
+pub fn build_c6_dispatch_circuit_dedup(
+    rule: RuleIdC,
+    source_params: C6PushFamilyParams,
+    meta_len: usize,
+    prog_len: usize,
+    scope: &str,
+) -> Result<C6DispatchCircuit, C6DispatchConsumerError> {
+    let geometry = source_params.geometry();
+    let mut ins = Vec::new();
+    let mut tr = Vec::new();
+    let mut alloc = |label: &str, idx: usize, ins: &mut Vec<Instruction>| {
+        let id = Identifier(format!("%{scope}.public.{label}.{idx}"));
+        ins.push(Instruction::PublicInput {
+            guard: None,
+            val_t: IrType::Native,
+            output: id.clone(),
+        });
+        let op = Operand::Variable(id);
+        tr.push(op.clone());
+        op
+    };
+    let enable = alloc("enable", 0, &mut ins);
+    let schema = alloc("host_schema", 0, &mut ins);
+    let carrier = alloc("carrier_version", 0, &mut ins);
+    let mut vec_of = |label: &str, n: usize, ins: &mut Vec<Instruction>| {
+        (0..n).map(|i| alloc(label, i, ins)).collect::<Vec<_>>()
+    };
+    let _pre_meta = vec_of("pre_meta", meta_len, &mut ins);
+    let pre_prog = vec_of("pre_prog", prog_len, &mut ins);
+    let _pre_ctx = vec_of("pre_ctx", CTX_LANES, &mut ins);
+    let pre_image = vec_of("pre_image", geometry.image_total_lanes, &mut ins);
+    let pre_data = vec_of("pre_data", geometry.data_total_lanes, &mut ins);
+    let pre_helper = vec_of("pre_helper", geometry.helper_total_lanes, &mut ins);
+    // Schema and carrier version are fixed constants of this relation.
+    for (lane, value) in [
+        (schema, C6_HOST_SCHEMA),
+        (carrier, C6_PADDED_CARRIER_VERSION),
+    ] {
+        let id = Identifier(format!("%{scope}.local.fixed.{value}"));
+        ins.push(Instruction::CondSelect {
+            bit: enable.clone(),
+            a: lane,
+            b: Operand::Immediate(Fr::from(value)),
+            output: id.clone(),
+        });
+        ins.push(Instruction::ConstrainEq {
+            a: Operand::Variable(id),
+            b: Operand::Immediate(Fr::from(value)),
+        });
+    }
+    let block = super::c6_dispatch_step::emit_c6_dispatch_block_dedup(
+        rule,
+        &C6DispatchInputs {
+            enable,
+            caps: geometry.caps,
+            pre_prog,
+            pre_image,
+            pre_data,
+            pre_helper,
+        },
+        scope,
+    )?;
+    ins.extend(block.instructions);
+    let statement_lane_count = tr.len();
+    ins.push(Instruction::Impact {
+        guard: Operand::Immediate(Fr::from(1u64)),
+        inputs: tr,
+    });
+    let ir0 = IrSource {
+        version: IrMinorVersion::V0,
+        inputs: Vec::new(),
+        outputs: Vec::new(),
+        do_communications_commitment: false,
+        instructions: Arc::new(ins),
+    };
+    let mut disk = serde_json::to_value(&ir0).map_err(be)?;
+    disk["version"] = json!({ "major": 3, "minor": 0 });
+    let serialized = serde_json::to_string(&disk).map_err(be)?;
+    let ir = IrSource::load(serialized.as_bytes()).map_err(be)?;
+    Ok(C6DispatchCircuit {
+        rule,
+        meta_len,
+        prog_len,
+        source_params,
+        statement_lane_count,
+        ir,
+    })
+}
+
+impl C6DispatchCircuit {
+    /// The loaded IR (experiment E1 counts and models it).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}

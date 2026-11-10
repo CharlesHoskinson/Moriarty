@@ -489,6 +489,178 @@ impl C6CheckedValueReadEmitter {
     }
 }
 
+/// Experiment E1 (chiplet study, 2026-11-10), not used by any circuit.
+impl C6CheckedValueReadEmitter {
+    /// [`Self::emit`] with the constant row taken from a shared PROG walk
+    /// (`capture`, from `emit_prog_dispatch_multi_capture` over the same
+    /// `pre_prog`), no range checks of the PROG and DATA lanes (the caller emits
+    /// them once), and DATA canonicality only when `data_canonical`. Everything
+    /// after the capture is the code of `emit`.
+    pub fn emit_shared(
+        &mut self,
+        inputs: &C6CheckedValueReadInputs,
+        capture: &super::c6_program_context_canonical::C6ProgramContextConstCaptureBlock,
+        data_canonical: bool,
+    ) -> Result<C6CheckedValueReadBlock, C6CheckedValueReadError> {
+        let scope: &str = &self.scope;
+        validate_scope(scope)?;
+        if (LANE_BITS as usize) >= FR_BITS {
+            return Err(C6CheckedValueReadError::InvalidBitWidth { bits: LANE_BITS });
+        }
+        reject_reserved(scope, &inputs.gate)?;
+        reject_reserved(scope, &inputs.ref_kind_is_data)?;
+        reject_reserved(scope, &inputs.ref_index)?;
+        for op in inputs.pre_prog.iter().chain(inputs.pre_data.iter()) {
+            reject_reserved(scope, op)?;
+        }
+        let caps = inputs.caps;
+        let p = &caps.phys;
+        for cap in [
+            p.max_constants,
+            p.max_data_nodes,
+            p.max_types,
+            p.max_constructors,
+            p.max_arity,
+            p.max_expressions,
+            caps.max_data_field_slots,
+        ] {
+            if cap == usize::MAX {
+                return Err(C6CheckedValueReadError::GeometryOverflow { section: "caps" });
+            }
+        }
+        let geom = c6_data_geometry(&caps).map_err(be)?;
+
+        let mut em = Em {
+            scope,
+            next: self.next_temp,
+            ins: Vec::new(),
+        };
+        let en = inputs.gate.clone();
+        let is_data = inputs.ref_kind_is_data.clone();
+        let index = inputs.ref_index.clone();
+        em.cbool(en.clone());
+        em.cbool(is_data.clone());
+        em.cbits(index.clone());
+        // E1: PROG lanes are range-checked by the shared walk, DATA lanes by the caller.
+        let is_const = em.not(is_data.clone());
+
+        // E1: the constant row comes from the shared dispatch walk (`capture`);
+        // DATA canonicality is emitted only when `data_canonical`.
+        if data_canonical {
+            let data_block = self
+                .data_em
+                .emit(&C6DataCanonicalInputs {
+                    gate: en.clone(),
+                    data: inputs.pre_data.clone(),
+                    caps,
+                })
+                .map_err(be)?;
+            em.ins.extend(data_block.instructions);
+        }
+
+        // Membership, strict and gated per space.
+        let lt_const = em.lt128(index.clone(), capture.const_count.clone());
+        let const_gate = em.and(en.clone(), is_const.clone());
+        em.gassert(const_gate, lt_const.clone());
+        let active_data = inputs.pre_data[3].clone();
+        let lt_data = em.lt128(index.clone(), active_data);
+        let data_gate = em.and(en.clone(), is_data.clone());
+        em.gassert(data_gate, lt_data.clone());
+        let found_any = em.sel(is_data.clone(), lt_data, capture.selected_found.clone());
+
+        // DATA row selection: exact slot mux over the padded geometry.
+        let mut drow: [Operand; DATA_ROW_LANES] =
+            [Em::imm(0), Em::imm(0), Em::imm(0), Em::imm(0), Em::imm(0)];
+        for slot in 0..caps.phys.max_data_nodes {
+            let base = geom.data_base + slot * DATA_ROW_LANES;
+            let hit = em.teq(index.clone(), Em::imm(slot as u128));
+            for off in 0..DATA_ROW_LANES {
+                drow[off] = em.sel(
+                    hit.clone(),
+                    inputs.pre_data[base + off].clone(),
+                    drow[off].clone(),
+                );
+            }
+        }
+
+        // Unified raw row views. Const row lanes:
+        // [tag, marker_free, c2, c3, c4, c5]; DATA row lanes:
+        // [tag, payloadA, payloadB, slice_start, slice_len], where
+        // payloadA is n / b / type_id and payloadB is ctor_id.
+        let crow = &capture.row;
+        let raw_tag = em.sel(is_data.clone(), drow[0].clone(), crow[0].clone());
+        let payload_a = em.sel(is_data.clone(), drow[1].clone(), crow[2].clone());
+        let payload_b = em.sel(is_data.clone(), drow[2].clone(), crow[3].clone());
+        let kind_code_raw = raw_tag;
+        let is_uint = em.teq(kind_code_raw.clone(), Em::imm(0));
+        let is_bool = em.teq(kind_code_raw.clone(), Em::imm(1));
+        let is_nil = em.teq(kind_code_raw.clone(), Em::imm(2));
+        let is_cons = em.teq(kind_code_raw.clone(), Em::imm(3));
+        let is_leaf = em.teq(kind_code_raw.clone(), Em::imm(4));
+        let is_branch = em.teq(kind_code_raw.clone(), Em::imm(5));
+        let is_constructor = em.teq(kind_code_raw.clone(), Em::imm(6));
+        let is_marker = em.teq(kind_code_raw.clone(), Em::imm(7));
+        // Const constructor slice lives at c4/c5, other Const slices
+        // at c2/c3; DATA slice always at lanes 3/4.
+        let const_slice_start = em.sel(is_constructor.clone(), crow[4].clone(), crow[2].clone());
+        let const_slice_len = em.sel(is_constructor.clone(), crow[5].clone(), crow[3].clone());
+        let slice_start_raw = em.sel(is_data.clone(), drow[3].clone(), const_slice_start);
+        let slice_len_raw = em.sel(is_data.clone(), drow[4].clone(), const_slice_len);
+        let slice_present_raw = {
+            let a = em.or(is_cons.clone(), is_leaf.clone());
+            let b = em.or(a, is_branch.clone());
+            em.or(b, is_constructor.clone())
+        };
+
+        // Present-zero inactive convention, then gate-zero convention.
+        let proj = |em: &mut Em, present: Operand, raw: Operand| -> Operand {
+            let v = em.sel(present, raw, Em::imm(0));
+            em.sel(en.clone(), v, Em::imm(0))
+        };
+        let gate_bit =
+            |em: &mut Em, raw: Operand| -> Operand { em.sel(en.clone(), raw, Em::imm(0)) };
+        let uint_value = proj(&mut em, is_uint.clone(), payload_a.clone());
+        let bool_value = proj(&mut em, is_bool.clone(), payload_a.clone());
+        let type_id = proj(&mut em, is_constructor.clone(), payload_a);
+        let ctor_id = proj(&mut em, is_constructor.clone(), payload_b);
+        let slice_start = proj(&mut em, slice_present_raw.clone(), slice_start_raw);
+        let slice_len = proj(&mut em, slice_present_raw.clone(), slice_len_raw);
+        let marker_free = proj(&mut em, is_const.clone(), crow[1].clone());
+
+        let block = C6CheckedValueReadBlock {
+            instructions: Vec::new(),
+            selected_found: gate_bit(&mut em, found_any),
+            is_data: gate_bit(&mut em, is_data.clone()),
+            kind_code: gate_bit(&mut em, kind_code_raw),
+            is_uint: gate_bit(&mut em, is_uint.clone()),
+            is_bool: gate_bit(&mut em, is_bool.clone()),
+            is_nil: gate_bit(&mut em, is_nil.clone()),
+            is_cons: gate_bit(&mut em, is_cons.clone()),
+            is_leaf: gate_bit(&mut em, is_leaf.clone()),
+            is_branch: gate_bit(&mut em, is_branch.clone()),
+            is_constructor: gate_bit(&mut em, is_constructor.clone()),
+            is_marker: gate_bit(&mut em, is_marker.clone()),
+            marker_free_present: gate_bit(&mut em, is_const),
+            marker_free,
+            uint_present: gate_bit(&mut em, is_uint),
+            uint_value,
+            bool_present: gate_bit(&mut em, is_bool),
+            bool_value,
+            ctor_present: gate_bit(&mut em, is_constructor),
+            type_id,
+            ctor_id,
+            slice_present: gate_bit(&mut em, slice_present_raw),
+            slice_start,
+            slice_len,
+        };
+        self.next_temp = em.next;
+        Ok(C6CheckedValueReadBlock {
+            instructions: em.ins,
+            ..block
+        })
+    }
+}
+
 /// Single-shot convenience form at parent serial zero; see
 /// `C6CheckedValueReadEmitter` for the composition contract.
 pub fn emit_c6_checked_value_read_block(

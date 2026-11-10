@@ -1346,3 +1346,322 @@ pub fn emit_c6_dispatch_block(
 ) -> Result<C6DispatchBlock, C6DispatchError> {
     C6DispatchEmitter::new(scope)?.emit(rule, inputs)
 }
+
+/// Experiment E1 (chiplet study, 2026-11-10), not used by any circuit: the same
+/// dispatch relation with one PROG walk shared by the dispatch facts and the three
+/// checked value reads, each PROG and DATA lane range-checked once, and DATA
+/// canonicality emitted once. Paths and guards are unchanged.
+impl C6DispatchEmitter {
+    fn facts_dedup(
+        &mut self,
+        em: &mut Em,
+        inputs: &C6DispatchInputs,
+    ) -> Result<Facts, C6DispatchError> {
+        let caps = inputs.caps;
+        let img = &inputs.pre_image;
+        let hl = &inputs.pre_helper;
+        for lane in img.iter().chain(hl.iter()) {
+            em.cbits(lane.clone());
+        }
+        // E1: DATA lanes once here (each value read range-checked them again).
+        for lane in inputs.pre_data.iter() {
+            em.cbits(lane.clone());
+        }
+        let running = em.eqc(&img[L_OUTCOME], 0);
+        let k: Vec<Operand> = img[L_CONTROL..L_CONTROL + 17].to_vec();
+        let ct = k[0].clone();
+        let depth = img[L_FRAME_COUNT].clone();
+        let depth_zero = em.eqc(&depth, 0);
+        let stack_limit = img[L_STACK_LIMIT].clone();
+        let fuel_zero = em.eqc(&img[L_REMAINING_WORK], 0);
+        let frames: Vec<&[Operand]> = (0..caps.phys.max_frames)
+            .map(|i| {
+                let at = IMAGE_SECTION_HEADER_LANES + i * FRAME_LANES;
+                &img[at..at + FRAME_LANES]
+            })
+            .collect();
+        let top = em.mux_top(&depth, &frames, FRAME_LANES);
+
+        // One PROG walk: Eval expression, control-origin expression, function count.
+        let is_eval = em.eqc(&ct, 0);
+        // E1: the top task is selected first so its reference indices can be
+        // captured by the one PROG walk (task[2]: Validate and Equal left,
+        // task[4]: Equal right).
+        let tasks_e1: Vec<&[Operand]> = (0..caps.max_helper_tasks)
+            .map(|i| {
+                let at = L_TASKS + i * TASK_LANES;
+                &hl[at..at + TASK_LANES]
+            })
+            .collect();
+        let task_e1 = em.mux_top(&hl[3], &tasks_e1, TASK_LANES);
+        let (cap, consts) = self
+            .prog
+            .emit_prog_dispatch_multi_capture(
+                &C6ProgramContextDispatchCaptureInputs {
+                    gate: inputs.enable.clone(),
+                    pre_prog: inputs.pre_prog.clone(),
+                    caps,
+                    first_index: k[1].clone(),
+                    second_index: img[L_CONTROL_ORIGIN].clone(),
+                    child_index: Em::imm(0),
+                },
+                &[task_e1[2].clone(), task_e1[4].clone()],
+            )
+            .map_err(be)?;
+        em.ins.extend(cap.instructions);
+        let eval_gate = em.and(inputs.enable.clone(), is_eval.clone());
+        em.gassert(eval_gate, cap.first_found.clone());
+        let eval_row = cap.first_row;
+        let origin_row = cap.second_row;
+
+        // Site one-hot.
+        let mut site = vec![Em::imm(0); SITES];
+        let e = eval_row[0].clone();
+        for (tag, s) in [
+            (0, Site::EvalLiteral),
+            (1, Site::EvalVar),
+            (2, Site::EvalLet),
+            (3, Site::EvalBinary),
+            (4, Site::EvalUnary),
+            (5, Site::EvalIf),
+            (6, Site::EvalCall),
+            (7, Site::EvalMatch),
+            (8, Site::EvalConstruct),
+        ] {
+            let is_tag = em.eqc(&e, tag);
+            site[s as usize] = em.and(is_eval.clone(), is_tag);
+        }
+        let is_return = em.eqc(&ct, 1);
+        let depth_pos = em.not(depth_zero.clone());
+        let ret = em.and(is_return, depth_pos);
+        for (tag, s) in [
+            (0, Site::RetLet),
+            (1, Site::RetLeft),
+            (2, Site::RetRight),
+            (3, Site::RetUnary),
+            (4, Site::RetIf),
+            (5, Site::RetMatch),
+            (6, Site::RetArgs),
+            (7, Site::RetCall),
+            (8, Site::RetScope),
+            (9, Site::RetCtorFields),
+        ] {
+            let is_tag = em.eqc(&top[0], tag);
+            site[s as usize] = em.and(ret.clone(), is_tag);
+        }
+        for (tag, s) in [
+            (2, Site::Push),
+            (3, Site::Invoke),
+            (4, Site::Enter),
+            (5, Site::Bound),
+            (6, Site::Cases),
+            (7, Site::CaseResult),
+            (8, Site::Prim),
+            (10, Site::Materialize),
+        ] {
+            site[s as usize] = em.eqc(&ct, tag);
+        }
+        let site_defined = em.any(&site.clone());
+        // A Cases site reads its control-origin expression; Core errors when absent.
+        let cases_gate = em.and(inputs.enable.clone(), site[Site::Cases as usize].clone());
+        em.gassert(cases_gate, cap.second_found.clone());
+
+        let htag = hl[L_HELPER_RECORD].clone();
+        let no_helper = em.eqc(&htag, 0);
+        let h: Vec<Operand> = hl[L_HELPER_RECORD..L_HELPER_RECORD + 23].to_vec();
+        let rt = hl[L_RESULT_RECORD].clone();
+        let r1 = hl[L_RESULT_RECORD + 1].clone();
+        let no_result = em.eqc(&rt, 0);
+        let live = hl[3].clone();
+        let live_zero = em.eqc(&live, 0);
+        let live_pos = em.not(live_zero);
+        let tasks: Vec<&[Operand]> = (0..caps.max_helper_tasks)
+            .map(|i| {
+                let at = L_TASKS + i * TASK_LANES;
+                &hl[at..at + TASK_LANES]
+            })
+            .collect();
+        let _ = tasks;
+        let task = task_e1;
+
+        // Data reads, gated exactly when the guard consults them.
+        let pending = em.eqc(&h[7], 0);
+        let validate = em.eqc(&htag, H_VALIDATE);
+        let validate_task = em.eqc(&task[0], 0);
+        let validate_unvisited = em.eqc(&task[3], 0);
+        let vgate = em.all(&[
+            inputs.enable.clone(),
+            validate,
+            pending,
+            live_pos.clone(),
+            validate_task,
+            validate_unvisited,
+        ]);
+        // The checked value reader constrains `ref_kind_is_data` to a boolean
+        // without its gate. The top task's lane 1 is a `RefC` space bit only for
+        // a Validate task (lanes 1, 3 for an Equal task); other tasks carry other
+        // values there (a Bind pair row has the parameter row). Pass the lane
+        // gated, so an ungated read never refuses a valid non-Validate state.
+        // The reader's projections are gate-normalised, so nothing else changes.
+        let va_kind = em.sel(vgate.clone(), task[1].clone(), Em::imm(0));
+        let va = self
+            .read_a
+            .emit_shared(
+                &C6CheckedValueReadInputs {
+                    gate: vgate.clone(),
+                    ref_kind_is_data: va_kind,
+                    ref_index: task[2].clone(),
+                    pre_prog: inputs.pre_prog.clone(),
+                    pre_data: inputs.pre_data.clone(),
+                    caps,
+                },
+                &consts[0],
+                false,
+            )
+            .map_err(be)?;
+        em.ins.extend(va.instructions.clone());
+        em.gassert(vgate.clone(), va.selected_found.clone());
+        let validate_marker = va.is_marker.clone();
+
+        let equal = em.eqc(&htag, H_EQUAL);
+        let epending = em.eqc(&h[9], 0);
+        let equal_task = em.eqc(&task[0], 1);
+        let equal_unvisited = em.eqc(&task[5], 0);
+        let egate = em.all(&[
+            inputs.enable.clone(),
+            equal,
+            epending,
+            live_pos.clone(),
+            equal_task,
+            equal_unvisited,
+        ]);
+        // E1: DATA canonicality once, under either read's gate (they exclude).
+        let dgate = em.or(vgate, egate.clone());
+        let data_block = super::c6_data_canonical::C6DataCanonicalEmitter::new(&format!(
+            "{}.dispatchdata",
+            self.scope
+        ))
+        .map_err(be)?
+        .emit(&super::c6_data_canonical::C6DataCanonicalInputs {
+            gate: dgate,
+            data: inputs.pre_data.clone(),
+            caps,
+        })
+        .map_err(be)?;
+        em.ins.extend(data_block.instructions);
+        let left_kind = em.sel(egate.clone(), task[1].clone(), Em::imm(0));
+        let right_kind = em.sel(egate.clone(), task[3].clone(), Em::imm(0));
+        let left = self
+            .read_b
+            .emit_shared(
+                &C6CheckedValueReadInputs {
+                    gate: egate.clone(),
+                    ref_kind_is_data: left_kind,
+                    ref_index: task[2].clone(),
+                    pre_prog: inputs.pre_prog.clone(),
+                    pre_data: inputs.pre_data.clone(),
+                    caps,
+                },
+                &consts[0],
+                false,
+            )
+            .map_err(be)?;
+        em.ins.extend(left.instructions.clone());
+        let right = self
+            .read_c
+            .emit_shared(
+                &C6CheckedValueReadInputs {
+                    gate: egate.clone(),
+                    ref_kind_is_data: right_kind,
+                    ref_index: task[4].clone(),
+                    pre_prog: inputs.pre_prog.clone(),
+                    pre_data: inputs.pre_data.clone(),
+                    caps,
+                },
+                &consts[1],
+                false,
+            )
+            .map_err(be)?;
+        em.ins.extend(right.instructions.clone());
+        em.gassert(egate.clone(), left.selected_found.clone());
+        em.gassert(egate, right.selected_found.clone());
+        // shallow_differ: kind, uint and bool projections (absent projections are 0).
+        let same_kind = em.teq(left.kind_code.clone(), right.kind_code.clone());
+        let same_uint = em.teq(left.uint_value.clone(), right.uint_value.clone());
+        let same_uint_p = em.teq(left.uint_present.clone(), right.uint_present.clone());
+        let same_bool = em.teq(left.bool_value.clone(), right.bool_value.clone());
+        let same_bool_p = em.teq(left.bool_present.clone(), right.bool_present.clone());
+        let same_type = em.teq(left.type_id.clone(), right.type_id.clone());
+        let same_ctor = em.teq(left.ctor_id.clone(), right.ctor_id.clone());
+        let same = em.all(&[
+            same_kind,
+            same_uint,
+            same_uint_p,
+            same_bool,
+            same_bool_p,
+            same_type,
+            same_ctor,
+        ]);
+        let equal_differ = em.not(same);
+
+        Ok(Facts {
+            running,
+            no_helper,
+            no_result,
+            ct,
+            k,
+            depth,
+            depth_zero,
+            stack_limit,
+            fuel_zero,
+            top,
+            eval_row,
+            origin_row,
+            functions_count: cap.functions_count,
+            site,
+            site_defined,
+            htag,
+            h,
+            rt,
+            r1,
+            live_pos,
+            task,
+            validate_marker,
+            equal_differ,
+        })
+    }
+
+    /// [`Self::emit`] over [`Self::facts_dedup`].
+    pub fn emit_dedup(
+        &mut self,
+        rule: RuleIdC,
+        inputs: &C6DispatchInputs,
+    ) -> Result<C6DispatchBlock, C6DispatchError> {
+        if !dispatch_supported(rule) {
+            return Err(C6DispatchError::Unsupported(rule));
+        }
+        Self::check_lengths(inputs)?;
+        let mut em = Em {
+            scope: self.scope.clone(),
+            next: self.next,
+            ins: Vec::new(),
+        };
+        em.cbool(inputs.enable.clone());
+        let facts = self.facts_dedup(&mut em, inputs)?;
+        let selected = Self::path(&mut em, &facts, rule)?;
+        em.gassert(inputs.enable.clone(), selected);
+        self.next = em.next;
+        Ok(C6DispatchBlock {
+            instructions: em.ins,
+        })
+    }
+}
+
+/// [`emit_c6_dispatch_block`] over the E1 shared-walk facts.
+pub fn emit_c6_dispatch_block_dedup(
+    rule: RuleIdC,
+    inputs: &C6DispatchInputs,
+    scope: &str,
+) -> Result<C6DispatchBlock, C6DispatchError> {
+    C6DispatchEmitter::new(scope)?.emit_dedup(rule, inputs)
+}

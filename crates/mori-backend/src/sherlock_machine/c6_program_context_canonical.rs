@@ -2270,6 +2270,166 @@ impl C6ProgramContextCanonicalEmitter {
             child_value,
         })
     }
+    /// Experiment E1 (chiplet study, 2026-11-10), not used by any circuit: the
+    /// dispatch walk of [`Self::emit_prog_dispatch_capture`] that also captures the
+    /// CONSTANT rows at `const_indices`, so the dispatch facts and their checked
+    /// value reads share one PROG walk and one range check per PROG lane. The
+    /// expression captures are those of `emit_prog_dispatch_capture`; each constant
+    /// capture is the `selected_const` capture of the parser step, applied to the
+    /// same walk state. The returned constant blocks carry no instructions (they
+    /// are all in the dispatch block) and share one `const_count`.
+    pub fn emit_prog_dispatch_multi_capture(
+        &mut self,
+        inputs: &C6ProgramContextDispatchCaptureInputs,
+        const_indices: &[Operand],
+    ) -> Result<
+        (
+            C6ProgramContextDispatchCaptureBlock,
+            Vec<C6ProgramContextConstCaptureBlock>,
+        ),
+        C6ProgramContextCanonicalError,
+    > {
+        if (LANE_BITS as usize) >= FR_BITS {
+            return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS });
+        }
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.first_index)?;
+        reject_reserved(&self.scope, &inputs.second_index)?;
+        reject_reserved(&self.scope, &inputs.child_index)?;
+        for op in const_indices {
+            reject_reserved(&self.scope, op)?;
+        }
+        for lane in &inputs.pre_prog {
+            reject_reserved(&self.scope, lane)?;
+        }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES {
+            return Err(C6ProgramContextCanonicalError::LengthMismatch {
+                expected: PROGRAM_HEADER_LANES,
+                actual: inputs.pre_prog.len(),
+            });
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        let mut regs = Regs::zero();
+        em.cbits(inputs.first_index.clone(), LANE_BITS);
+        em.cbits(inputs.second_index.clone(), LANE_BITS);
+        em.cbits(inputs.child_index.clone(), LANE_BITS);
+        for op in const_indices {
+            em.cbits(op.clone(), LANE_BITS);
+        }
+        let mut child_row_index = Emitter::imm(0);
+        let mut child_found = Emitter::imm(0);
+        let mut child_value = Emitter::imm(0);
+        let mut expressions_count = Emitter::imm(0);
+        let mut functions_count = Emitter::imm(0);
+        let mut expression_index = Emitter::imm(0);
+        let mut first_found = Emitter::imm(0);
+        let mut second_found = Emitter::imm(0);
+        let mut first_row: [Operand; 7] = std::array::from_fn(|_| Emitter::imm(0));
+        let mut second_row: [Operand; 7] = std::array::from_fn(|_| Emitter::imm(0));
+        let n = const_indices.len();
+        let mut const_count = Emitter::imm(0);
+        let mut const_row_index = Emitter::imm(0);
+        let mut c_active: Vec<Operand> = vec![Emitter::imm(0); n];
+        let mut c_found: Vec<Operand> = vec![Emitter::imm(0); n];
+        let mut c_row: Vec<[Operand; 6]> = vec![std::array::from_fn(|_| Emitter::imm(0)); n];
+        for lane in &inputs.pre_prog {
+            em.cbits(lane.clone(), LANE_BITS);
+            let count_phase = em.eqv(regs.phase.clone(), PH_EXPR_COUNT);
+            expressions_count = em.sel(count_phase, lane.clone(), expressions_count);
+            let fn_count_phase = em.eqv(regs.phase.clone(), PH_FUNC_COUNT);
+            functions_count = em.sel(fn_count_phase, lane.clone(), functions_count);
+            let child_phase = em.eqv(regs.phase.clone(), PH_CHILD_ROW);
+            let child_eq = em.teq(child_row_index.clone(), inputs.child_index.clone());
+            let child_hit = em.and(child_phase.clone(), child_eq);
+            child_found = em.sel(child_hit.clone(), Emitter::imm(1), child_found);
+            child_value = em.sel(child_hit, lane.clone(), child_value);
+            let child_next = em.add_i(child_row_index.clone(), 1);
+            child_row_index = em.sel(child_phase, child_next, child_row_index);
+            let row_phase = em.eqv(regs.phase.clone(), PH_EXPR_ROW);
+            for (index, found, row) in [
+                (&inputs.first_index, &mut first_found, &mut first_row),
+                (&inputs.second_index, &mut second_found, &mut second_row),
+            ] {
+                let index_eq = em.teq(expression_index.clone(), index.clone());
+                let selected = em.and(row_phase.clone(), index_eq);
+                *found = em.sel(selected.clone(), Emitter::imm(1), found.clone());
+                for (column, value) in row.iter_mut().enumerate() {
+                    let at_column = em.eqv(regs.sub.clone(), column as u128);
+                    let capture = em.and(selected.clone(), at_column);
+                    *value = em.sel(capture, lane.clone(), value.clone());
+                }
+            }
+            let used = em.used_from_hold(&regs, &[2, 2, 4, 4, 3, 4, 4, 6, 7]);
+            let last_sub = em.add_i(used, -1);
+            let at_end = em.teq(regs.sub.clone(), last_sub);
+            let row_done = em.and(row_phase, at_end);
+            let incremented = em.add_i(expression_index.clone(), 1);
+            expression_index = em.sel(row_done, incremented, expression_index);
+            if n > 0 {
+                // The `selected_const` capture of `step`, once per index, over the
+                // shared walk state (`org` = `regs` before this lane's step).
+                let is_ccount = em.eqv(regs.phase.clone(), PH_CONST_COUNT);
+                const_count = em.sel(is_ccount, lane.clone(), const_count);
+                let is_crow = em.eqv(regs.phase.clone(), PH_CONST_ROW);
+                let is_start = em.eqv(regs.sub.clone(), 0);
+                let row_start = em.and(is_crow.clone(), is_start);
+                let subs: Vec<Operand> = (0..6).map(|s| em.eqv(regs.sub.clone(), s)).collect();
+                for j in 0..n {
+                    let idx_eq = em.teq(const_row_index.clone(), const_indices[j].clone());
+                    let active_here = em.sel(row_start.clone(), idx_eq, c_active[j].clone());
+                    let lane_active = em.and(is_crow.clone(), active_here.clone());
+                    c_active[j] = em.sel(is_crow.clone(), active_here, c_active[j].clone());
+                    c_found[j] = em.sel(lane_active.clone(), Emitter::imm(1), c_found[j].clone());
+                    for (s, sub) in subs.iter().enumerate() {
+                        let h = em.and(lane_active.clone(), sub.clone());
+                        c_row[j][s] = em.sel(h, lane.clone(), c_row[j][s].clone());
+                    }
+                }
+                let cused = em.used_from_hold(&regs, &[3, 3, 2, 4, 4, 4, 6, 2]);
+                let cused_m1 = em.add_i(cused, -1);
+                let c_last = em.teq(regs.sub.clone(), cused_m1);
+                let c_done = em.and(is_crow, c_last);
+                let next_idx = em.add_i(const_row_index.clone(), 1);
+                const_row_index = em.sel(c_done, next_idx, const_row_index);
+            }
+            regs = em.step(
+                &gate,
+                lane.clone(),
+                regs,
+                &inputs.caps.phys,
+                None,
+                None,
+                None,
+                None,
+            );
+        }
+        em.gated_eq(gate, regs.phase, Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        let consts = (0..n)
+            .map(|j| C6ProgramContextConstCaptureBlock {
+                instructions: Vec::new(),
+                const_count: const_count.clone(),
+                selected_found: c_found[j].clone(),
+                row: c_row[j].clone(),
+            })
+            .collect();
+        Ok((
+            C6ProgramContextDispatchCaptureBlock {
+                instructions: em.instructions,
+                expressions_count,
+                functions_count,
+                first_found,
+                first_row,
+                second_found,
+                second_row,
+                child_found,
+                child_value,
+            },
+            consts,
+        ))
+    }
     pub fn emit_prog_function_capture(
         &mut self,
         inputs: &C6ProgramContextFunctionCaptureInputs,

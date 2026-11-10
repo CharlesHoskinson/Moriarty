@@ -602,6 +602,8 @@ pub mod c6_step_harness;
 mod c6_step_kit;
 // Skeleton-coding pilot grader (research/skeleton-coding-20261108/pilot-protocol.md).
 #[cfg(test)]
+mod chip_census_tests;
+#[cfg(test)]
 mod skeleton_pilot;
 #[cfg(test)]
 mod skeleton_pilot_cand;
