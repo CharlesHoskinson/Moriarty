@@ -218,7 +218,7 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **THEN** the validation does not count (row A32 fails) until the template is recaptured.
 
 ### Requirement: SRC-021 Canonical initialization
-(Added 2026-11-10.) If a run's initial carriers are not the canonical initial state for the program image, configuration, fuel and stack limit that `prog_d` commits, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. Mechanism: [PENDING owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review"], option G1 (an in-circuit or otherwise authenticated first-leaf check selected by `h_pre == 0`; cost measured by experiment E3) or option G2 (off-chain recomputation of `init_d` by the independent verifier, with O1 restated).
+(Added 2026-11-10.) If a run's initial carriers are not the canonical initial state for the program image, configuration, fuel and stack limit that `prog_d` commits, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. Mechanism: [PENDING owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review"], option G1 (an in-circuit or otherwise authenticated first-leaf check selected by `h_pre == 0`; cost [PENDING experiment E3, task 4.13]) or option G2 (off-chain recomputation of `init_d` by the independent verifier, with O1 restated).
 
 #### Scenario: Forged initial carriers
 - **WHEN** a run starts from carriers that open to the sealed `init_d` but are not the canonical initial state of the program.
