@@ -26,6 +26,12 @@ module chipLeaf_case {
     m::HALT_INS, m::HALT_INS, m::HALT_INS,
   ]
   pure val R3: m::RefSt = m::warm(P3, 0)
+  // P4: PUSH r0 then POP from genesis: the POP reads address 0, whose true cell is (0, NIL).
+  pure val P4: List[m::Ins] = [
+    { op: m::OP_PUSH, x: 0, y: 0 }, { op: m::OP_POP, x: 1, y: 0 }, m::HALT_INS,
+    m::HALT_INS, m::HALT_INS, m::HALT_INS,
+  ]
+  pure val R4: m::RefSt = m::warm(P4, 0)
   pure val R1: m::RefSt = m::warm(P1, 2)
   pure val R2: m::RefSt = m::warm(P2, 1)
   pure def leaf(prog: List[m::Ins], r0: m::RefSt, t: int, tk: str, lk: str): m::W =
@@ -68,6 +74,10 @@ module chipLeaf_case {
     refused(leaf(P1, R1, 1, "page_forge", "cell")),
     refused(leaf(P2, R2, 1, "wrong_alu", "cell")),
     differs(P3, R3, 1, "append_via_page", "cell"), refused(leaf(P3, R3, 1, "append_via_page", "cell")),
+    // non-vacuous scenarios for the rarer tampers
+    differs(P1, R1, 2, "replay", "cell"), refused(leaf(P1, R1, 2, "replay", "cell")),
+    differs(P4, R4, 1, "pad_match", "cell"), refused(leaf(P4, R4, 1, "pad_match", "cell")),
+    differs(P2, R2, 0, "after_publish", "cell"), refused(leaf(P2, R2, 0, "after_publish", "cell")),
     refused(leaf(P1, R1, 0, "orphan_bad", "cell")),
     refused(leaf(P1, R1, 3, "after_publish", "cell")) or not(differs(P1, R1, 3, "after_publish", "cell")),
     // harmless: valid unrequested rows are accepted and sound
@@ -87,7 +97,9 @@ module chipLeaf_case {
     else if (CASE_MUTANT == "tag_unbound") caught(leaf(P1, R1, 2, "wrong_chip", "cell"), R1)
     else if (CASE_MUTANT == "table_ungated") caught(leaf(P1, R1, 2, "forged", "cell"), R1)
     else if (CASE_MUTANT == "no_inclusion") caught(leaf(P1, R1, 2, "forged", "cell"), R1)
-    else if (CASE_MUTANT == "load_key_free") caught(leaf(P1, R1, 2, "stale", "cell"), R1)
+    else if (CASE_MUTANT == "load_key_free")
+      caught(leaf(P1, R1, 2, "stale", "cell"), R1) and caught(leaf(P1, R1, 2, "replay", "cell"), R1)
+    else if (CASE_MUTANT == "tag_zero") caught(leaf(P4, R4, 1, "pad_match", "cell"), R4)
     else if (CASE_MUTANT == "per_row_enable") caught(leaf(P1, R1, 1, "mid_step", "cell"), R1)
     else if (CASE_MUTANT == "rewrite_no_move") caught(leaf(P1, R1, 0, "none", "cell"), R1)
     else if (CASE_MUTANT == "root_all_rows") caught(leaf(P1, R1, 1, "orphan_mem", "cell"), R1)
@@ -110,4 +122,5 @@ module chipLeaf_test_root_all_rows { import chipLeaf_case(CASE_MUTANT = "root_al
 module chipLeaf_test_no_read_bound { import chipLeaf_case(CASE_MUTANT = "no_read_bound").* }
 module chipLeaf_test_alu_gate_off { import chipLeaf_case(CASE_MUTANT = "alu_gate_off").* }
 module chipLeaf_test_push_link_free { import chipLeaf_case(CASE_MUTANT = "push_link_free").* }
+module chipLeaf_test_tag_zero { import chipLeaf_case(CASE_MUTANT = "tag_zero").* }
 module chipLeaf_test_dec_dup { import chipLeaf_case(CASE_MUTANT = "dec_dup").* }

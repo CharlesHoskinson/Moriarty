@@ -376,6 +376,13 @@ module chipLeaf {
     val ab = busMode(prog, pre, log, m)
     { ...plain, actual: ab, source: if (src) ab else hb, post: coreStep(pre, ab, false).post }
 
+  pure def replayPick(hb: List[Tuple], prev: List[Tuple], cellOnly: bool): { i: int, r: Tuple } =
+    hb.indices().fold({ i: -1, r: ZT }, (acc, i) =>
+      if (acc.i >= 0 and acc.i < i) acc
+      else
+        val cands = prev.select(p => p.chip == hb[i].chip and p != hb[i])
+        if (cands.length() > 0 and (not(cellOnly) or hb[i].chip == T_CELL)) { i: i, r: cands[0] } else acc)
+
   pure def tamperBus(prog: List[Ins], pre: Regs, log: List[Cell], base: int, prev: List[Tuple],
                      tk: str, lk: str): TB =
     val hb = busMode(prog, pre, log, "none")
@@ -406,12 +413,10 @@ module chipLeaf {
         val ab = busFrom(prog, pre, log, seed, "none", true)
         { ...plain, actual: ab, post: coreStep(pre, ab, true).post }
     else if (tk == "replay")
-      // replace one request by a different row of the same chip from an earlier slot
-      val pick = hb.indices().fold({ i: -1, r: ZT }, (acc, i) =>
-        if (acc.i >= 0) acc
-        else
-          val cands = prev.select(p => p.chip == hb[i].chip and p != hb[i])
-          if (cands.length() > 0) { i: i, r: cands[0] } else acc)
+      // replace one request by a different row of the same chip from an earlier slot,
+      // a CELL row (memory or frame) when there is one, else the first request with a candidate
+      val pc = replayPick(hb, prev, true)
+      val pick = if (pc.i >= 0) pc else replayPick(hb, prev, false)
       if (pick.i < 0) plain
       else
         val ab = hb.replaceAt(pick.i, pick.r)
@@ -670,6 +675,24 @@ module chipLeaf {
     ruleIn(w.slots[j], R_POP) and toSet(w.slots[j].bus).exists(r => r.chip == T_CELL and r.key < w.pre.len))
   val reachOrphanAccepted: bool = acc and (tamper == "orphan_ok" or tamper == "orphan_mem")
   val reachTamperRefused: bool = not(acc) and tamper != "none"
+  // one witness per non-harmless tamper: the tamper changed the witness and was refused
+  def refusedT(tk: str): bool = not(acc) and tamper == tk
+  val rForged: bool = refusedT("forged")
+  val rPageForge: bool = refusedT("page_forge")
+  val rWrongAlu: bool = refusedT("wrong_alu")
+  val rDecLie: bool = refusedT("dec_lie")
+  val rPadMatch: bool = refusedT("pad_match")
+  val rWrongChip: bool = refusedT("wrong_chip")
+  val rPageOverlap: bool = refusedT("page_overlap")
+  val rDupMem: bool = refusedT("dup_mem")
+  val rStale: bool = refusedT("stale")
+  val rReplay: bool = refusedT("replay")
+  val rMidStep: bool = refusedT("mid_step")
+  val rWrongPc: bool = refusedT("wrong_pc")
+  val rOverflow: bool = refusedT("overflow")
+  val rAfterPublish: bool = refusedT("after_publish")
+  val rOrphanBad: bool = refusedT("orphan_bad")
+  val rAppendViaPage: bool = refusedT("append_via_page")
 }
 
 module chipLeafBase { import chipLeaf(S = 3, N_MEM = 2, N_PAGE = 4, N_ALU = 2, MUTANT = "none").* }

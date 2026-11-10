@@ -165,3 +165,30 @@ quint run qa/gemini-quint/chipleaf/chipleaf.qnt --main chipleaf_gap_dup_mem_addr
 quint run qa/gemini-quint/chipleaf/chipleaf.qnt --main chipleaf_gap_stack_rewrite --invariant invSound
 quint run qa/gemini-quint/chipleaf/chipleaf.qnt --main chipleaf_gap_forged_link --invariant invSound
 ```
+
+---
+
+## 5. Lead verification (2026-11-10)
+
+The lane wrote the sections above; this section records what the lead ran. The report is input,
+the runs are evidence. Full reconciliation: `research/sherlock-processor-analogy-20261110/quint-check.md`
+section 6.
+
+Repairs before the model would parse (meaning unchanged): `coreTransitionsValid` lacked a closing
+brace for its `and { ... }` and needed braces around a lambda body that starts with `val`;
+`range(0, S).forall` became `0.to(S - 1).forall`; `chipleaf_test.qnt` got `from "./chipleaf"` on
+its import; `stateMachineStepSoundnessTest` uses `.expect(invSound and invTamperRefused)` in
+place of `.then(all { assert(..) })`.
+
+Results (`heavy-run --mem 4G`, Quint 0.32.0, `--max-samples 20000 --max-steps 1 --seed 20261110`):
+
+- `quint typecheck`: both files clean. `quint test --main chipleaf_test`: 19 passing.
+- `invSound` passes on `chipleafHardened`, `chipleafS2`, `chipleafS4`; `invTamperRefused` passes.
+- `reachShort`, `reachTerminalShort`, `reachFull`, `reachPushPop`: violated as intended.
+- `invSound` violated on `chipleafAsWritten` and on 12 of the 13 `chipleaf_gap_*` mutants.
+- `chipleaf_gap_dup_mem_addr`: `invSound` PASSES, so this mutant is NOT caught. The mutant drops
+  only `memAddressFixed`; its hand-built witness is also refused by `memActivePrefixBound` and
+  `memRootFoldValid`. `cex11_duplicateMemAddrTest` passes because it checks `acceptsAsWritten`,
+  not the mutant. Finding F11 is still real: the lead model's `base_per_row` mutant is caught.
+- Limit: the sampler picks from the 13 fixed counterexamples and honest witnesses over 5 start
+  values and 3 lengths, so the passes cover about 28 witnesses, not a random search.

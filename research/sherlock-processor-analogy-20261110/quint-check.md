@@ -13,14 +13,19 @@ ran as `heavy-run --mem 4G --name chip-quint -- quint ...`.
 
 ## 1. Answer
 
-Set inclusion without multiplicities is sound for this design, under eight constraints that
-`study.md` does not state (D1 to D8 below). Each constraint has a counterexample when it is
-missing. The study's claim in 1.4 ("every chip is a function of its key") is the right
+Set inclusion without multiplicities is sound for this design, under eight constraints D1 to D8
+(section 7). Six of them are new: `study.md` does not state D1, D2, D3, D5, D7 or D8. D4 makes
+explicit that the tuple's `chip` field is the study's fixed chip-selector column (1.2), and D6
+is in 2.4 already ("addr = base + fixed row index", one `base` from `pre_d`). Each constraint has
+a counterexample when it is missing. The study's claim in 1.4 ("every chip is a function of its key") is the right
 condition, but it holds only if the table side of the lookup contains provider rows alone, if no
 two providers can answer the same key, and if every MEM row that reaches the memory root was
 requested. With D1 to D8 in place, no sampled witness broke refinement, bus soundness, memory
 consistency, frame consistency, capacity or shape (20,000 samples per invariant per instance;
-section 4). Nothing in the model needs a use-once (multiplicity) argument: no row is consumed,
+section 4). That is sampled evidence over a fixed menu of 16 tampers near honest witnesses of
+a 9-instruction ISA, plus the argument behind `invFunctional`; it is not a proof. HASH rows,
+requests from one chip to another (PAGE and MEM to HASH) and the cached `top` and `task`
+registers of study 1.3 are not checked. Nothing in the model needs a use-once (multiplicity) argument: no row is consumed,
 because memory is write-once and `len` names every append address exactly once.
 
 Where multiplicities would matter, and why they do not here:
@@ -77,6 +82,12 @@ Where multiplicities would matter, and why they do not here:
   left free; added after the Gemini lane's F3).
   A read of a never-written cell is the honest behaviour of the `no_read_bound` and
   `read_bound_final` mutants.
+
+Structure: the task asked for each chip as its own module. The model keeps one Quint module and
+gives each chip its own section of pure definitions (function, row gate, bus interface:
+`aluF`/`aluRowOk`, `decF`/`DEC_ROWS`, `pageRowOk`, `memRowOk`, `committedOld`), because the
+chips share the tuple type and the witness, and Quint instances of separate modules would have
+to repeat both. HASH is a premise, not a chip region.
 
 Not modelled: field arithmetic and range checks (integers stand for range-checked values), HASH
 rows and path layout, the cached `top` and `task` registers, the 108 real rules (E0(c) is open),
@@ -142,11 +153,25 @@ instance with one constraint dropped (or, for `mem_unbounded`, the MEM height fr
 | `chipLeaf_push_link_free` | VIOL (none) | VIOL (none) | pass | VIOL (none) | VIOL (none) | pass | pass | pass | - | - |
 | `chipLeaf_prog_in_key` | pass | pass | pass | pass | pass | pass | VIOL (none) | pass | - | - |
 
-Coverage in the base instance (`--witnesses`, 20,000 traces, seed 20261110): full S steps 23.1%,
-early close by prover choice 66.7%, close because a chip is full 2.0%, publication `Halted`
-16.6%, publication of an error 25.2%, LOAD from MEM 1.6%, LOAD from PAGE 8.4%, POP after a
-rewrite 0.9%, POP of a frame from an earlier leaf 11.9%, unrequested rows accepted 15.9%, tamper
-refused 41.7%.
+Run order: the full table above ran first. The `replay` tamper was then changed to prefer a
+CELL row (before, it almost always swapped the FETCH row), and the three base instances (all ten
+invariants) and every mutant's target invariant were run again on the final model with the same
+seed: all base cells pass again, all 21 mutants are caught again (`load_key_free` now by `replay`).
+
+Coverage on the final model, base instance (`--witnesses`, 20,000 traces, seed 20261110, with
+`invAll` passing in the same run): full S steps 24.1%, early close by prover choice 67.1%, close
+because a chip is full 2.1%, publication `Halted` 17.1%, publication of an error 25.5%, LOAD
+from MEM 1.6%, LOAD from PAGE 8.8%, POP after a rewrite 0.9%, POP of a frame from an earlier leaf
+12.2%, unrequested rows accepted 15.1%, some tamper refused 40.3%.
+
+Each non-harmless tamper refused by the base relation (traces out of 20,000 in which the tamper
+changed the witness and the witness was refused): `forged` 669, `page_forge` 1263, `wrong_alu`
+138, `dec_lie` 1230, `pad_match` 165, `wrong_chip` 251, `page_overlap` 230, `dup_mem` 249,
+`stale` 110, `replay` 583, `mid_step` 1214, `wrong_pc` 1294, `overflow` 14, `after_publish` 273,
+`orphan_bad` 1231, `append_via_page` 69. None is zero, so `invTamperRefused` is not vacuous for
+any tamper; `overflow` and `append_via_page` are the thinnest. `chipLeaf_test` also checks
+`replay` (on a CELL row), `pad_match`, `after_publish` and `append_via_page` on fixed scenarios
+where each one changes the witness.
 
 Mutants: 21 seeded, 21 caught, each on its target invariant: `no_inclusion` (Refine),
 `table_ungated` (Bus), `tag_unbound` (Bus), `tag_zero` (Functional), `page_unauth` (Bus),
@@ -206,9 +231,11 @@ Confirmed constraints (already in the study):
 10. `no_len_inc`: PUSH appends at address 1 without moving `len`; the following SETTOP reads
     address 1 and appends at address 1 again. All three requests `(CELL, 1, 0, 0)` match one MEM
     row, two writes collapse into one cell and `len` stays 1 (Ref 3). This is the only use-once property the design needs, and `len + 1` provides it.
-11. `load_key_free`: POP reads address 1 (an ALLOC data cell `(0, NIL)` appended in the same
-    leaf) instead of the frame at `fp = 0`. Here the two cells hold equal values, so only
-    `invMem` sees it; in the `invRefine` counterexample the stale value reaches a register.
+11. `load_key_free` (final run, tamper `replay`): SETTOP appends the new top `(0, NIL)` at
+    address 1; the next step's `LOAD r0` should read address 0 (the old copy) but replays the
+    earlier row `(CELL, 1, 0, NIL)`. The two cells hold equal values here, so only `invMem` sees
+    the wrong address; in the first sweep's `invRefine` counterexample (tamper `stale`) the wrong
+    value reaches a register.
 12. `push_link_free`: PUSH stores link 0 instead of `fp = 3`; the committed stack skips two frames.
 13. `alu_gate_off`: ADD answers `(ALU, ADD, 0, 0, 1)`; `r0 = 1`, Ref `r0 = 0`.
 14. `dec_dup`: DEC rows `(70 -> 70)` and `(70 -> 71)` both exist; `invFunctional` fails on the
@@ -285,16 +312,18 @@ Reconciliation, every finding of either model:
 | this model only | DEC one row per class; read address from a register; TRAP class; fixed heights; program not in the key | `dec_dup`, `load_key_free`, `trap_off`, `mem_unbounded`, `prog_in_key` caught | Already in the study; confirmed |
 | this model only | Inclusion without multiplicity needs no use-once argument for frames | `invFunctional`, `invFrames` hold in base | Gemini reaches the same conclusion (its section 2 proof sketch) |
 
-No finding of either model is left open as a soundness gap once D1 to D8 are adopted.
+No finding of either model is left open as a soundness gap once D1 to D8 are adopted (D4 and
+D6 as written in the study, the other six added).
 
 
 ## 7. Required design changes
 
 Text for `study.md` 1.4, 2.3, 2.4, 2.7 and the proposed `design.md` 2.7. D1 to D8 are needed
-for soundness; the model has a counterexample for each when it is missing. The last group is
-already in the study and the model confirms that each item is load-bearing.
+for soundness; the model has a counterexample for each when it is missing. D1, D2, D3, D5, D7
+and D8 are new; D4 and D6 are in the study and need only to be stated as constraints. The last
+group is already in the study and the model confirms that each item is load-bearing.
 
-New constraints:
+Constraints:
 
 - **D1 Provider-gated table side** (1.4). The `lookup_any` table expression is
   `q_provider * tuple`, with `q_provider` a fixed selector that is 1 only on active chip rows and 0
@@ -310,14 +339,14 @@ New constraints:
 - **D3 The root covers appended rows only** (2.4). The `mem_root` update hashes MEM rows
   `0 .. post.len - base - 1` and no others; rows above are padding outside the root. Otherwise a
   MEM row that no append requested enters the next leaf's memory (`root_all_rows`).
-- **D4 Fixed chip tag per region** (1.2, 1.4). The `chip` column of a provider row is a fixed
-  column (the region's tag), not advice. Otherwise a row in the ALU region tagged `CELL` answers a
+- **D4 Fixed chip tag per region** (1.2, 1.4; clarification). The `chip` field of the bus tuple
+  is, on provider rows, the study's fixed chip-selector column (the region's tag), not advice. Otherwise a row in the ALU region tagged `CELL` answers a
   load (`tag_unbound`).
 - **D5 One enable per step** (1.5, 2.1). All micro-op rows of a slot share the slot's `enable`;
   a slot either records all requests of its rule or none, and a leaf closes only between steps.
   With per-row enables, a step that is cut after its register update but before its append
   publishes `len + 1` over an unconstrained MEM row (`per_row_enable`).
-- **D6 One base for the MEM region** (2.4). `base` is one cell copied from `pre_d.len` and every MEM
+- **D6 One base for the MEM region** (2.4; already stated). `base` is one cell copied from `pre_d.len` and every MEM
   row's address is `base + k` with `k` a fixed column. A per-row base gives two rows for one
   address and the read picks either (`base_per_row`).
 - **D7 One frame protocol** (1.3, 2.4, 7 item 2.7.3). The study mixes two: 1.3 caches `top` in
@@ -370,7 +399,9 @@ heavy-run --mem 4G --name chip-quint -- quint run chipLeaf.qnt --main <module> -
 heavy-run --mem 4G --name chip-quint -- quint run chipLeaf.qnt --main chipLeafBase --invariant invAll \
   --max-samples 20000 --max-steps 1 --seed 20261110 --witnesses reachFull reachShortChoice \
   reachCapacityEnd reachPublishHalt reachPublishErr reachLoadMem reachLoadPage \
-  reachPopAfterRewrite reachPopOldFrame reachOrphanAccepted reachTamperRefused
+  reachPopAfterRewrite reachPopOldFrame reachOrphanAccepted reachTamperRefused \
+  rForged rPageForge rWrongAlu rDecLie rPadMatch rWrongChip rPageOverlap rDupMem rStale rReplay \
+  rMidStep rWrongPc rOverflow rAfterPublish rOrphanBad rAppendViaPage
 ```
 
 `--max-steps 1`: each trace is one fresh witness (`init` and `step` both sample), as in
