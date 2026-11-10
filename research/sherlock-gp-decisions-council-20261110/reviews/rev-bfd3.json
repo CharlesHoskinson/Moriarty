@@ -1,0 +1,137 @@
+{
+  "reviewed_candidates": [
+    "cand-0c40",
+    "cand-f429",
+    "cand-fd2b"
+  ],
+  "decisions": {
+    "D1": {
+      "pick": "cand-fd2b",
+      "synthesis_of": [],
+      "option": "Authenticate canonical genesis in circuit over committed state, binding the program, input, initial fuel and stack limit, and require a genesis-start segment before sealing any GP-1 outcome. This addresses the supplied-digest check at crates/mori-recursion/src/ivc.rs:498\u2013501 and tools/sherlock-sdk/sherlock-run.compact:29\u201335; the initialization parameters are confirmed at crates/mori-core/src/sherlock/reference.rs:14\u201325.",
+      "verdict": "approved",
+      "findings": [],
+      "kill_criterion": "Reopen the placement of initialization if establishing canonical program/input state requires work that cannot fit one leaf; use authenticated initialization continuations instead. Cost alone must not reverse the requirement for authenticated genesis.",
+      "first_experiment": "Proposed: derive a field-by-field mapping from the reference constructor to committed-state Init, preserving u128 fuel, both fuel registers, empty environment/frame semantics and Pending outcome. Compare literal, add and fact(3), then measure the implemented check and test forged entry metadata, fuel, stack limit and non-genesis sealing. No experiment was run in this review."
+    },
+    "D2": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-f429",
+        "cand-fd2b"
+      ],
+      "option": "Prototype a separate, fixed-key, single-phase Halo2 chiplet leaf U: processor registers route requests to program, write-once memory/linked-stack, u128 arithmetic and hash tables through native lookup arguments, with all chips inside one proof and authenticated state commitments across segments. Start with T=16 owner steps and target k_U<=19; k_U=17 and 5\u20139 seconds per leaf, or 0.31\u20130.56 seconds per owner step, remain ESTIMATE hypotheses rather than established costs.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "cand-0c40 D2; cand-fd2b D2; Cargo.toml:43\u201345; /home/hoskinson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.4.0/src/lib.rs:1787\u20131853",
+          "problem": "The proposed implementation boundary is incomplete. An ordinary Relation cannot install arbitrary chiplet gates or lookup_any arguments: its circuit configuration comes from ZkStdLib. Cand-0c40 also cites nonexistent vendored circuits/stdlib 0.8.3 sources. A custom LogUp bus is not supported merely because the underlying prover supports lookups.",
+          "next_action": "Implement U as a custom Halo2 Circuit using the pinned gadgets, with an explicit fixed constraint system verified by R, or specify the required stdlib extension. Use native single-phase lookups initially; adopting LogUp requires a separately specified challenge schedule and recursive-verifier extension.",
+          "evidence": "The workspace pins midnight-proofs 0.8.3, midnight-circuits 7.3.0 and midnight-zk-stdlib 2.4.0. Relation exposes circuit and used_chips, while MidnightCircuit delegates configuration to ZkStdLib. Native lookup_any exists at tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/circuit.rs:1889\u20131913; the recursive verifier asserts one phase at midnight-circuits-7.3.0/src/verifier/verifier_gadget.rs:308\u2013310 and handles native lookups at :318\u2013336."
+        },
+        {
+          "location": "cand-f429 D2 bus; cand-0c40 D2 memory chiplet; tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/lookup.rs:42\u201367",
+          "problem": "Set inclusion does not establish address uniqueness, allocation freshness, read-after-write ordering or memory boundary consistency. A valid dictionary lookup can still return a future write or one of two conflicting values unless those properties are constrained. The proposals do not yet provide that relation.",
+          "next_action": "Specify tagged request tuples, unique address/value bindings, authenticated old cells, fresh allocation counters, read timing, constrained provider rows and complete boundary updates. Re-encode frame/task rewrites as persistent linked entries, and test conflicting duplicate addresses, reads before allocation, omitted writes and substituted roots. Keep program contents in authenticated witness data rather than program-specific fixed columns.",
+          "evidence": "The native lookup argument permits repeated inputs through its adjacent-equality condition. Runtime data/environment/value-slot tables append at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:3513\u20133564, but task and frame tops are rewritten and popped at :3566\u20133588. These operations need the proposed representation refinement."
+        },
+        {
+          "location": "cand-0c40 D2 row model; cand-fd2b D2 k=20/T=256; crates/mori-backend/src/parameters.rs:11\u201316,43\u201348",
+          "problem": "Neither leaf sizing estimate is established. The claimed 73-row hash cost is not a measured tagged-compression cost on the pinned implementation. Raising MAX_K alone does not enable the existing leaf path at k=20, and T=256 also changes the currently serialized step limit.",
+          "next_action": "Measure complete chip configurations, table capacity, tagged hashes, cold openings and representative worst-case rule windows. Keep the first prototype within k<=19; any k=20 path must include authenticated parameter provisioning and the pending leaf-memory measurement. Choose T only after measuring the full relation and updating the step-count contract.",
+          "evidence": "MAX_K is 19 at crates/mori-backend/src/proving.rs:22; OfflineParameters has only 20 pinned entries and rejects unsupported degrees. SRC-014 at openspec/changes/sherlock-vm-consensus-20261107/requirements.md:36 limits S_MAX to 16. The pinned Poseidon implementation uses skipped partial rounds at midnight-circuits-7.3.0/src/hash/poseidon/poseidon_chip.rs:45\u201350. The supplied measurements in BRIEF.md:9\u201315 and the inspected probes at commit 7fadf00c3 establish the old design's problem, not the replacement's cost."
+        },
+        {
+          "location": "cand-0c40 D2 G-C calculation; cand-fd2b D2 G-C calculation; openspec/changes/sherlock-vm-consensus-20261107/requirements.md:33",
+          "problem": "G-C is not demonstrated. With one R per U, 19 leaves require 19 R proofs and 18 N merges, plus C and D; cand-0c40 counts that alternative as 19 recursive steps. Leaf-worker overlap, lift cost and memory also remain unmeasured.",
+          "next_action": "Use a complete proof inventory and measured service times. For the stated binary design, account for 19 U + 19 R + 18 N + C + D, setup, independent verification and call validation. Measure concurrency before crediting overlap.",
+          "evidence": "A serial planning calculation with t_U=8 seconds, t_R=t_N=65 seconds and C+D=140 seconds gives 2,697 seconds before setup and verification, approximately 45 minutes, all ESTIMATE. SRC-011 explicitly gives unbuilt or unmeasured improvements no G-C credit. Both benchmarks require actual receipts below 7,200 seconds, 48 GB per process and 100 GB aggregate."
+        }
+      ],
+      "kill_criterion": "Reject this realization if its authenticated lookup/memory relation is unsound, if useful owner-step throughput cannot fit the supported leaf domain, or if the complete U/R/N/C/D pipeline fails G-C. Reduce segment size or redesign the bus before considering a different inner proof system; per-rule keys over the existing oversized facts block are not a demonstrated fallback.",
+      "first_experiment": "Proposed: first specify and inspect the custom Circuit-to-R interface and write-once memory invariants. Then model a minimal native-lookup leaf with authenticated old-cell reads, fresh writes, a stack rewrite and one arithmetic operation; include its actual verifier in R before extrapolating to T=16."
+    },
+    "D3": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-f429",
+        "cand-fd2b"
+      ],
+      "option": "(i) Recommend the explicit binary-composition OWNER AMENDMENT below for the separate-leaf design, while retaining literal GP-4 until it is adopted; (ii) use authenticated adapters with a uniform outer interface and preserve a path for non-stdlib constraint systems and other SRS identities. (iii) Require verification of supplied ledger proofs with the keyed Blake2b-512 transcript, and (iv) use expandable commitments with authenticated continuations rather than introducing a 32- or 64-bit storage ceiling.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "D3(i); openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:46; cand-0c40 D3(i); cand-fd2b D3(i)",
+          "problem": "Two slots holding prior proofs cannot also hold a separate new-work proof. Counting routine join/seal bookkeeping as sufficient new work is not established by the proposal. Cand-fd2b correctly identifies binary nesting as an amendment rather than claiming existing compliance.",
+          "next_action": "Keep the original obligation visible. Either implement useful inline work alongside two prior proofs, support a larger node, or obtain adoption of the explicitly marked binary-composition amendment. Do not silently substitute its wording.",
+          "evidence": "qa/sherlock/decisions/speed-levers.json:26\u201329 records 730,243 rows for self+self and 1,078,147 for self+self+leaf. crates/mori-recursion/tests/tree_node_rows.rs:5\u201321 identifies these as probes; they do not establish the cost of a hardened final node."
+        },
+        {
+          "location": "D3(ii); general-purpose.md:33\u201336; cand-f429 D3(ii); cand-fd2b D3(ii)",
+          "problem": "Registry membership does not provide an unsupported verifier. Restricting admission to stdlib configurations or the current SRS narrows the stated same-curve/same-commitment-scheme scope. A different SRS cannot simply share the existing deferred pairing obligation.",
+          "next_action": "Define class adapters that bind the complete key identity, constraint system, degree, exact instance layout, transcript and SRS. Demonstrate a non-stdlib adapter and specify the multiphase path. For another SRS, discharge its verification under its own parameters inside the adapter instead of mixing its accumulator into the current SRS accumulator.",
+          "evidence": "midnight-circuits-7.3.0/src/verifier/mod.rs:55\u201370 keeps the constraint system and domain off circuit. verifier_gadget.rs:284\u2013310 checks the actual instance-column layout, absorbs exact input lengths and requires one phase. The stdlib actually configures two instance columns at midnight-zk-stdlib-2.4.0/src/lib.rs:545\u2013548; the gadget's introductory one-column comment is stale. ParamsVerifierKZG carries s_g2 at tools/profile/vendor/midnight-proofs-0.8.3/src/poly/kzg/params.rs:235\u2013238."
+        },
+        {
+          "location": "D3(iii); cand-0c40 D3(iii); cand-fd2b D3(iii); tools/profile/vendor/midnight-proofs-0.8.3/src/transcript/implementors.rs:13\u201329",
+          "problem": "Cand-0c40 specifies the wrong transcript in its requirement text: the ledger uses keyed Blake2b with 64-byte output, not Blake2b-256. Cand-fd2b also claims the GP-3 acceptance test at the Poseidon re-proving stage, despite that stage not verifying supplied ledger proof bytes.",
+          "next_action": "Specify the exact keyed Blake2b-512 state, prefixes, absorption order, challenge reduction and encodings. Differentially check complete parsing, scalar canonicality and point/subgroup handling against the pinned ledger verifier. Label Poseidon re-proving as development evidence only.",
+          "evidence": "At ledger-9.1.0.1, transient-crypto/src/proofs.rs:65 selects blake2b_simd::State and :572\u2013574 uses it for verification. implementors.rs:18 sets hash_length(64) and the transcript key. The separate Blake2b256 implementation at :32\u201364 has different behavior. midnight-zk-stdlib-2.4.0/src/utils/plonk_api.rs:154 checks complete consumption; midnight-circuits-7.3.0/src/verifier/transcript_gadget.rs:79\u201381 and :126\u2013129 document missing trailing-byte and subgroup enforcement."
+        },
+        {
+          "location": "D3(iv); cand-f429 D3(iv); cand-0c40 requirement_text; cand-fd2b D3(iv); general-purpose.md:9\u201314",
+          "problem": "The explicit height bound does not establish a storage-address bound. Cand-f429 silently extends it to 64-bit addresses; cand-0c40 calls its depth-64 requirement non-narrowing before separately offering an amendment; cand-fd2b explicitly proposes a depth-32 narrowing. None establishes expandable capacity under the current requirement. Long-path continuations also conflict with the current prohibition on zero owner-step segments.",
+          "next_action": "Use authenticated expandable addressing and path cursors under the same key, with continuations for operations larger than a segment. Separate owner-step height from proof-work progress, bind unfinished operations into state, prevent reseeding genesis during height-zero continuations, and prohibit sealing pending work. Any fixed address ceiling must remain an explicit OWNER AMENDMENT.",
+          "evidence": "general-purpose.md:13 requires capacity independent of the key; :14 explicitly bounds only run length. crates/mori-recursion/src/ivc.rs:359\u2013374 currently requires 1<=steps<=S_MAX. research/sherlock-gp-architecture-20261110/architecture.md:264\u2013268 distinguishes owner steps from memory-opening work."
+        }
+      ],
+      "kill_criterion": "Withdraw the binary-composition amendment recommendation if a hardened node with two prior proofs and useful inline chiplet work fits the supported domain and meets throughput. Adapter or expandable-memory cost failures require redesign; they do not authorize unmarked scope reductions.",
+      "first_experiment": "Proposed: prepare a requirement-to-relation table covering all four points, including exact transcript bytes and continuation state. Then model the hardened binary and inline-work nodes, one non-stdlib adapter, and one resumed memory operation; independently compare ledger transcript challenges before implementing the full adapter."
+    },
+    "D4": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-fd2b"
+      ],
+      "option": "Provisionally prefer separate U and foreign adapters, run/foreign lifts R and F, a named-key node N, closing proof C and decider D, with chiplet execution contained inside U. Adoption requires measured lift and closing costs plus either literal GP-4 new-work support or adoption of the D3(i) OWNER AMENDMENT.",
+      "verdict": "insufficient_evidence",
+      "findings": [
+        {
+          "location": "cand-0c40 D4; cand-fd2b D4; cand-f429 D2/D4",
+          "problem": "The candidates do not compare the same redesigned processor in both placements. Oversized legacy fragments do not prove that the chiplet processor cannot fit inline, while subtracting 730,243 from the domain does not prove that it can. Adding chips changes the self-verifier workload.",
+          "next_action": "Compare one chiplet implementation with identical semantics and final statements in separate-U and inline-N configurations. Include canonical disabled slots, registry/shape commitments, continuations, all downstream verifiers and complete proof counts.",
+          "evidence": "The only checked binary baseline is the probe described at crates/mori-recursion/tests/tree_node_rows.rs:5\u201321. The recorded 652,437-row stand-in node and 741,708-row C6 node already show sensitivity to the verified circuit: qa/sherlock/decisions/speed-levers.json:22 and qa/sherlock/manifests/node.json:22. No compared chiplet configurations were measured in this review."
+        },
+        {
+          "location": "cand-0c40 D4 self-verification and timing rationale; qa/sherlock/decisions/speed-levers.json:8\u201320,66",
+          "problem": "The claim that approximately 90% of node wall time is MSM collapse is contradicted by the recorded profile. The proposed per-fixed-commitment multiplication penalty also ignores named fixed-base deferral; it cannot be charged uniformly to both recursive slots.",
+          "next_action": "Replace the timing rationale with measured phase data and count costs at their actual prepare, collapse and resolution sites. Remove the arbitrary requirement that collapse reach eight seconds before reconsidering inline execution.",
+          "evidence": "The profile records MSM share 0.256 and quotient/NTT share 0.57; the 78% figure at :66 concerns circuit rows. midnight-circuits-7.3.0/src/verifier/mod.rs:60\u201364 describes deferred fixed commitments, and verifier/msm.rs:481\u2013499 resolves them later."
+        },
+        {
+          "location": "cand-0c40 D4 key switching; cand-fd2b GPR-NODE; /home/hoskinson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.3.0/src/verifier/msm.rs:229\u2013244",
+          "problem": "Matching commitment counts is insufficient for named-key routing. Fixed-base names are absent from the public accumulator encoding, so a key selector must also constrain coefficient destinations and statement types. The complete R/F/N/C/D cost and adversarial evidence are missing.",
+          "next_action": "Use identical finalized verifier configurations for shared slots; constrain one-hot key selection, statement tags and fixed-base routing together; preserve inherited obligations; canonicalize disabled slots; and pin every named key at closure. Measure R, F, N, C and D, then test wrong-key, wrong-name and tampered-carry cases.",
+          "evidence": "AssignedVk contains only an assigned transcript representation plus off-circuit configuration at verifier/mod.rs:55\u201370. Accumulator serialization includes fixed-base scalar values but not their names at verifier/msm.rs:229\u2013244. The existing final pairing is tied to s_g2 at crates/mori-recursion/src/run_decider.rs:272\u2013276."
+        }
+      ],
+      "kill_criterion": "Switch to inline execution if the same sound chiplet workload fits beside two hardened predecessor verifiers at k=20 and its measured end-to-end pipeline is preferable within G-C. Reject the separate configuration if any required lift or closure exceeds supported limits or its full pipeline misses G-C.",
+      "first_experiment": "Proposed: paired row models of the same chiplet slice in U\u2192R\u2192N and directly in N, with final statement widths and disabled-slot normalization. Include C/D and fixed-base resolution before scheduling comparative proofs."
+    }
+  },
+  "chiplets_assessment": "The owner's direction addresses the measured duplication of program walks, value scans and range checks. Specialised regions within one proof are an established chiplet pattern, as documented in the [Miden chiplet implementation](https://docs.rs/miden-vm/latest/miden_vm/trace/chiplets/struct.Chiplets.html), but its performance does not transfer to this stack. The best initial realization here uses native single-phase Halo2 lookups with explicit dictionary and memory invariants, keeping all chiplets in U and linking segments through authenticated state and continuation commitments. Separate chip proofs would require an additional cross-proof bus protocol; matching bus digests alone would not establish request/response consistency. Chiplets do not by themselves decide whether U should ultimately remain separate from N.",
+  "proposed_requirement_text": [
+    "WHEN a run is introduced at genesis, its proof SHALL authenticate the canonical initial state from the committed program, machine version, input and execution parameters, preserving the specified fuel width and initialization semantics; equality with a caller-supplied init_d SHALL NOT suffice.",
+    "WHEN a segment is sealed as a run claim, the sealing relation SHALL establish authenticated genesis, no pending initialization or memory operation, and a terminal outcome of Halted(v), Rejected(code) or Exhausted(kind), with canonical outcome encoding and authenticated dependencies.",
+    "WHEN the processor issues a chiplet request, the leaf SHALL constrain its operation, operands, result, table identity and activation; memory requests SHALL additionally establish unique address bindings, allocation validity, read timing and consistency with authenticated segment boundaries.",
+    "WHEN an authenticated-memory operation exceeds one segment's work capacity, the proof SHALL carry its complete continuation state under the same key; continuation work SHALL preserve owner-step and fuel semantics, SHALL make authenticated progress, and SHALL NOT impose a new fixed storage-capacity ceiling.",
+    "WHEN a foreign circuit is admitted, the proof SHALL authenticate the foreign key and adapter identity, including the constraint system, degree, exact instance layout, transcript, format and SRS; an incompatible SRS obligation SHALL be discharged under its own parameters before entering the common accumulator.",
+    "WHEN a claim states that supplied ledger proof bytes were verified, its adapter SHALL enforce the pinned keyed Blake2b-512 transcript, canonical encodings, required point checks and complete parsing; Poseidon re-proving SHALL NOT satisfy that claim or close the final GP-3 acceptance gate.",
+    "WHEN a node selects a named verification key, the same constrained selector SHALL select the permitted statement type and every deferred fixed-base coefficient destination; closure SHALL pin all named keys and discharge every carried obligation.",
+    "WHEN G-C is evaluated, the measurement SHALL include every leaf, lift, merge, closing and decider proof, setup, independent verification and call validation, with measured contention and both memory peaks; estimates SHALL NOT constitute a passing result.",
+    "OWNER AMENDMENT \u2014 GP-4, proposed and not effective unless adopted: WHEN a node combines proofs, it SHALL accept at least two proof slots, each containing a prior-node proof or newly proved work; combining two prior proofs with additional proved work MAY use multiple nodes under the same fixed key set. Chain, tree and DAG support, shape binding, constant final proof size and depth-independent verification cost SHALL remain required."
+  ]
+}

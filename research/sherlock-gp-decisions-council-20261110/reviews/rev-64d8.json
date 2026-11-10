@@ -1,0 +1,106 @@
+{
+  "reviewed_candidates": [
+    "cand-0c40",
+    "cand-d600",
+    "cand-fd2b"
+  ],
+  "decisions": {
+    "D1": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-fd2b"
+      ],
+      "option": "When h_pre = 0, the universal leaf constrains its fixed register file and its empty program, memory and stack roots to Init(prog_d, input_d), where input_d commits the run input, the initial fuel as a u128 and the stack limit, and the seal in R or N accepts the segment only for h_lo = 0 and an outcome of Halted, Rejected or Exhausted. The independent verifier may recompute init_d as a diagnostic; the acceptance check is this in-circuit Init constraint.",
+      "verdict": "approved",
+      "findings": [],
+      "kill_criterion": "Reopen if a fresh witness can satisfy h_pre = 0 with a non-Init register, a non-empty store, a fuel or stack limit outside input_d, or a Running outcome at seal, or if the gated check cannot sit in the same leaf as one owner step without a variable-length carrier scan. A multi-chunk INIT continuation on the same leaf key, with owner-step height held at 0 until INIT completes, replaces the single-leaf gate only in that scan case.",
+      "first_experiment": "Add the h_pre = 0 register and root equalities to the D2 slice and record midnight_zk_stdlib::cost_model rows with the gate on and off, then refuse two malicious witnesses (non-canonical u128 fuel at h_pre = 0; an Init image reused at h_pre > 0). Compare the admitted image with Machine::new for the literal and add programs. Do not read experiment E3's whole-carrier number as this cost."
+    },
+    "D2": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-d600",
+        "cand-fd2b"
+      ],
+      "option": "U is one fixed midnight-zk-stdlib 2.4.0 Relation: a register trace of S owner steps, S the largest of 16, 8 and 4 whose measured leaf fits k_U <= 19, with opcode transitions and four chips in that same circuit (PROG, memory, 128-bit ALU, Poseidon) joined by midnight-proofs 0.8.3 lookup_any and permutation; the memory chip enforces conservation, order and read-after-write, the bus closes inside U, and only the register digest and program and memory roots cross leaves. Expected k_U is ESTIMATE 16 to 19 at S = 16; fact(3) and list123 are 19 leaf proofs and 19 node proofs, ESTIMATE 19 to 22 min of node service at the measured 61 to 67 s node step if leaf service stays off that path, and G-C is the later measurement of that packing under SRC-011.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "cand-0c40 D2 row budget; midnight-circuits 7.3.0 hash/poseidon/poseidon_chip.rs:50 and hash/poseidon/constants/mod.rs:17-26",
+          "problem": "The 66,552-row, k_U = 17, 5-9 s leaf budget uses 73 rows per Poseidon compression and a vendor tree midnight-circuits 0.8.3 / midnight-zk-stdlib 0.8.3 that is not the pin. The chip is width 3, rate 2, 8 full rounds and 60 partial rounds with NB_SKIPS_CIRCUIT = 5, which is 18 round rows per permutation before absorption and output. Cargo.toml pins midnight-circuits 7.3.0 and midnight-zk-stdlib 2.4.0; only midnight-proofs 0.8.3 is under tools/profile/vendor. LogUp is not a library API; circuit.rs:1860 and circuit.rs:1889 are halo2 lookup and lookup_any.",
+          "next_action": "Size U only from cost_model of a Relation that uses lookup_any, permutation and PoseidonChip. Keep S in {16, 8, 4} and k_U <= 19 (proving.rs:22, ivc.rs:77). Treat 16..=19 and the 19-to-22 min node figure as the planning band, not as a keying input.",
+          "evidence": "poseidon_chip.rs:50 NB_SKIPS_CIRCUIT = 5; constants/mod.rs:17-26 WIDTH = 3, RATE = 2, NB_FULL_ROUNDS = 8, NB_PARTIAL_ROUNDS = 60; partial rows = 60/6 = 10, plus 8 full rounds = 18. Cargo.toml:43-45. proving.rs:22 MAX_K = 19. ivc.rs:77 S_MAX = 16. speed-levers.json:43 node_step_k20_seconds_a16 = 61.07; line 112 records 16.58 GB and the prior 17.6 GB. SRC-011 at requirements.md:33 withholds credit from an unmeasured lever. tasks.md:67-69 leave E3 and E4 pending."
+        },
+        {
+          "location": "cand-fd2b D2, T = 256 and k_U = 20",
+          "problem": "Two hundred fifty-six owner steps in one leaf exceeds S_MAX = 16, which constrain_heights enforces, and k_U = 20 exceeds the leaf wrapper cap. Raising either constant is a protocol change, not the first packing.",
+          "next_action": "Count chip rows per owner step inside a leaf whose public steps field is still in 1..=16. Raise MAX_K or S_MAX only if no S in {16, 8, 4} measures at k_U <= 19.",
+          "evidence": "ivc.rs:77 S_MAX = 16; ivc.rs:370-372 asserts steps-1 < S_MAX. proving.rs:22 MAX_K = 19. requirements.md SRC-014 sets S_MAX = 16, S >= 8 as the planning target, and S <= 2 as a redesign trigger."
+        }
+      ],
+      "kill_criterion": "Abandon this packing if the S = 16 slice, after the memory chip coalesces touches inside the leaf, still has k_U > 19, and S = 8 and S = 4 also miss k_U <= 19 or the 48 GB process cap. Also abandon it if a memory witness can break read-after-write or publish a root that disagrees with the net writes. Per-rule keys and an inline copy of today's fragments are already excluded by the brief's k = 23 rule rows and by speed-levers.json:28 (730,243 rows for two verifiers). A different inner proof system is a later revisit under SRC-014, after those measurements.",
+      "first_experiment": "cost_model one Relation with a 16-step register trace, one lookup_any bus, one permutation memory region, one PoseidonChip permutation, one 128-bit operation and one PROG lookup, before coding all 108 rules. Record rows, k, advice columns and lookups. Then add the eight fact(3) rules that include a match and a call or return, and extrapolate rows per owner step."
+    },
+    "D3": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-d600",
+        "cand-fd2b"
+      ],
+      "option": "Meet the current GP text with no amendment: (i) N verifies two proofs and in the same circuit runs the compliance predicate, which is the new work (shape binding, seal, dependency discharge, claim-set union), while a VM segment enters as R and a foreign proof as F; (ii) each foreign verifier class is a registry adapter key, and an inner accumulator is folded only for the same SRS; (iii) a ledger Compact claim is verified in the adapter against Blake2bState, including prefixes, full byte consumption, canonical scalars and subgroup checks, and a Poseidon re-proof does not close that claim; (iv) program and memory roots use active Merkle depth 1..=64 under the one vk_U.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "general-purpose.md:46; cand-fd2b D3(i) replacement bullet; cand-0c40 D3(i) optional amendment",
+          "problem": "The bullet requires two prior proofs plus new work, and the same file records that a three-verifier node is k = 21 and closed. Reading the compliance predicate as the new work meets the acceptance test (chain, tree, DAG, depth >= 8, equal proof size, one key set). Replacing the bullet so that each slot is either a prior proof or new work, or treating a VM segment inside N as required, either narrows the bullet or collides with the measured two-verifier row count.",
+          "next_action": "Keep the GP-4 bullet. Add the EARS sentence that names the compliance predicate as the in-node new work and places VM segments and foreign proofs in the R and F slots. Do not adopt cand-fd2b's replacement bullet.",
+          "evidence": "general-purpose.md:46-52 states the bullet and the acceptance test; line 52 says the uniform three-slot node needs k = 21 and is closed. speed-levers.json:27-28: self-self-leaf 1,078,147 rows, self-self 730,243 rows. tree_node_rows.rs:56 KILL_ROWS = 996,147."
+        },
+        {
+          "location": "cand-0c40 D3(ii) OWNER AMENDMENT; cand-fd2b D3(ii) OWNER AMENDMENT; verifier_gadget.rs:16-20 and :310; zk-stdlib lib.rs:547-548",
+          "problem": "Both amendments shrink GP-3. The requirement already covers Compact and other PLONK/halo2 circuits on the same curve and commitment scheme. The gadget keeps domain and constraint system off-circuit (assign_vk_as_public_input at verifier_gadget.rs:207-228), asserts one phase (line 310), and the stdlib relation allocates a committed-instance column and one ordinary instance column (lib.rs:547-548). Those are adapter-class parameters, not a licence to drop multi-phase same-curve circuits or to require a universal verifier interpreter.",
+          "next_action": "Admit each class by a registry adapter key with no core-key change. Fold the inner accumulator only when the SRS matches the outer proof; otherwise the adapter checks the pairing and publishes no inner accumulator.",
+          "evidence": "general-purpose.md:33-38. verifier_gadget.rs:207-228 assigns only transcript_repr; line 310 assert_eq!(cs.phases().count(), 1); native verifier.rs:85 iterates every phase. lib.rs:547-548 creates both instance columns. Public-input length is absorbed at verifier.rs:69-74 and verifier_gadget.rs:303-306."
+        },
+        {
+          "location": "cand-0c40 D3(iii) row estimate; cand-fd2b D3(iii) stage-1 acceptance; zk-stdlib external/blake2b.rs:101-117; midnight-proofs transcript/implementors.rs:13-29",
+          "problem": "The public Blake2b helpers are one-shot and pass an empty key. The ledger transcript is incremental Blake2bState with hash length 64, key \"Domain separator for transcript\", and absorb/squeeze prefixes. A 2,500-3,500-row-per-block estimate and a k = 19 adapter fit are not measurements. Claiming the GP-3 acceptance row on a Poseidon re-proof would accept a proof the holder re-made instead of the supplied bytes. The gadget also skips trailing-byte enforcement and prime-subgroup checks (transcript_gadget.rs:79-81 and :126-129).",
+          "next_action": "Specify the adapter transcript against Blake2bState, including prefixes, exact consumption, canonical scalars and subgroup checks, before any row target. If one adapter exceeds k = 20, split parsing and openings into two registry adapter proofs that still perform those checks.",
+          "evidence": "implementors.rs:17-28. blake2b.rs:86 accepts a key; blake2b_256_digest and blake2b_512_digest call hash with key &[] at lines 107 and 117. transcript_gadget.rs:79-81 and :126-129. general-purpose.md:38 acceptance is an in-circuit Compact proof against the registry."
+        },
+        {
+          "location": "cand-fd2b D3(iv) depth-32 OWNER AMENDMENT; general-purpose.md:13-14",
+          "problem": "A fixed depth-32 arena adds a 2^32 capacity bound the GP-1 text does not contain. The text forbids a ladder of capacity keys and bounds run length by the height field below 2^64. Variable active depth 1..=64 under one vk_U matches that word. Cross-proof path continuations are unnecessary while one 64-level path is a padded Poseidon loop inside U.",
+          "next_action": "Specify active depth 1..=64, root extension by one compression when the allocation grows, and a fixed chiplet cycle budget with inactive padding. Do not adopt the depth-32 replacement bullet.",
+          "evidence": "general-purpose.md:13-14. ivc.rs:79 H_BITS = 64. Poseidon permutation row lower bound is 18 round rows (poseidon_chip.rs:50, constants/mod.rs:17-26), so a 64-level path is a few thousand rows inside a k <= 19 leaf."
+        }
+      ],
+      "kill_criterion": "Reverse (i) if the two-slot node plus the compliance predicate measures above 996,147 rows, or if the owner requires an owner VM step in the same circuit as two enabled predecessor proofs. Reverse (ii) if a same-curve, same-commitment Compact circuit cannot be admitted without a new core key. Reverse (iii) if a split adapter still cannot match Blake2bState challenges without dropping consumption or subgroup checks. Reverse (iv) if a depth-64 opening cannot be a padded loop under the unchanged vk_U.",
+      "first_experiment": "cost_model the hardened two-slot node with one-hot key selection over one shared constraint-system shape and the seal, dependency and shape constraints, and compare the row count with 996,147. In parallel, feed one stored Compact proof through the host Blake2bState in implementors.rs and record the challenge bytes; defer gadget rows until that vector matches."
+    },
+    "D4": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-0c40",
+        "cand-fd2b"
+      ],
+      "option": "The VM is the chiplet leaf U, lifted by R; each foreign class is an adapter lifted by F; N verifies two proofs under the one thin constraint-system shape shared by N, R and F and runs the compliance predicate; C binds the named bases and D pins C and pairs. The core key set is {U, R, F, N, C, D}, and adapter keys remain registry data.",
+      "verdict": "approved",
+      "findings": [],
+      "kill_criterion": "Move the chiplet trace into N only if a measured node that verifies two predecessors and performs a checked owner operation fits under 996,147 rows and then beats the separate-leaf packing on a full G-C run, including lifts and closing, inside 2 h and 48 GB per process. Until that measurement, the two-verifier baseline of 730,243 rows and the decider's 119,410-row headroom under 2^20 stay the planning bounds.",
+      "first_experiment": "cost_model the same small chiplet trace in two placements: alone as U, and inlined beside two verifier slots. Record rows, commitment counts and k for U, for R verifying that U, and for N over the thin {N, R, F} shape. Refuse a wrong-key slot and an unfinished continuation at the decider boundary in the model before any SRS load."
+    }
+  },
+  "chiplets_assessment": "The chiplet leaf fits this stack when the register trace and the four chips are one Relation under one vk_U. midnight-proofs 0.8.3 supplies lookup, lookup_any and permutation inside a single ConstraintSystem; it has no LogUp API, so the bus closes inside the leaf and later leaves link only by register and root commitments. A separate proof per chip would add a combiner that verifies those proofs, which is the cost the node budget does not have: two self-verifications are already 730,243 rows. Poseidon here is 18 round rows per permutation after five-round skips, so hashing belongs in a chip, and the 73-row compression figure should be discarded. Chips stay out of vk_N so the self-verifier and the 929,166-row decider keep the thin BLS12-381 plus Poseidon shape; genesis is a fixed Init check on the first leaf because the roots start empty.",
+  "proposed_requirement_text": [
+    "When h_pre = 0, the universal leaf SHALL constrain its pre-state register file and its program, memory and stack roots to Init(prog_d, input_d). input_d SHALL commit the run input, the initial fuel as a u128 and the stack limit. When a segment is sealed, the sealing circuit SHALL require h_lo = 0 and an outcome of Halted, Rejected or Exhausted. Equality with a supplied init_d alone SHALL NOT satisfy this requirement.",
+    "The universal leaf U SHALL have one fixed verifying key over a fixed register file and the rule inventory. It SHALL prove between 1 and S owner steps, where S is the largest of 16, 8 and 4 for which the measured leaf fits k <= 19. Program reads, memory, 128-bit arithmetic and Poseidon SHALL be chips inside that same circuit, joined by the library lookup and permutation arguments, which SHALL close inside the leaf. The memory chip SHALL enforce operation conservation, ordering, initialization and read-after-write, and the published roots SHALL match the net writes. State that crosses a leaf boundary SHALL be the register digest and the program and memory roots.",
+    "The node N SHALL verify two proofs under one shared constraint-system shape and SHALL, in the same circuit, bind the composition shape, seal a completed segment, discharge dependencies and union claim sets. That predicate is the new work required beside the two proofs. A VM segment SHALL enter as a run-lift proof and a foreign proof SHALL enter as a foreign-lift proof.",
+    "When a foreign proof is admitted, the registry SHALL bind its verifier class: constraint-system shape, k, exact public-input count, transcript and SRS identity. An adapter key for that class SHALL be registry data, and admitting one SHALL NOT change the core key set {U, R, F, N, C, D}. The foreign lift SHALL fold the adapter's inner accumulator only when the foreign proof uses the outer SRS; otherwise the adapter SHALL check the pairing and publish no inner accumulator.",
+    "When a claim states that ledger-format Compact proof bytes were verified, the adapter SHALL enforce the incremental Blake2b transcript of hash length 64, keyed with the transcript domain separator, including its absorb and squeeze prefixes, complete consumption of the proof bytes, canonical scalar bounds and prime-subgroup checks on received points. A re-proof under a Poseidon transcript SHALL NOT satisfy that claim.",
+    "Program and memory commitments SHALL use an active Merkle depth from 1 to 64 under the single leaf key. When allocation grows past the active depth, the leaf SHALL extend the root by one in-circuit compression and increment the depth. A change of program size, value size, call depth or helper depth SHALL NOT require a new key."
+  ]
+}

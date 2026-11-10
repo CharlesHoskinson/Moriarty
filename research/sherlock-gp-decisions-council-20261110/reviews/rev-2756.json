@@ -1,0 +1,142 @@
+{
+  "reviewed_candidates": [
+    "cand-0c40",
+    "cand-d600",
+    "cand-f429"
+  ],
+  "decisions": {
+    "D1": {
+      "pick": "cand-f429",
+      "synthesis_of": [],
+      "option": "Mechanism (c) over committed memory: the first segment proves in-circuit that its fixed-width register file and empty memory root equal Init(prog_d, input_d) (control Eval at the entry opened from prog_d, fuel and stack limit from input_d, empty frame/task links, pending outcome, empty append-log root), and sealing requires segment start height 0; a caller-supplied init_d is never the evidence.",
+      "verdict": "approved",
+      "findings": [],
+      "kill_criterion": "Init cannot be opened from prog_d and input_d alone on literal, add, and the first step of fact(3), or the init constraints need a scan whose row count grows with the program image; either reverses this to a dedicated init continuation.",
+      "first_experiment": "Host-only differential, no prover: for literal, add, and fact(3), build the reference Machine::new snapshot and the proposed Init digest from program root, fuel, and stack limit and compare openings; then one cost_model of only the init constraints. Evidence checked: node forces prev_d == init_d only at genesis (crates/mori-recursion/src/ivc.rs:500-501), contract constructor accepts any nonzero digest (tools/sherlock-sdk/sherlock-run.compact:29-35), Lean decider_pinning takes the genesis carrier as a premise (clean/fork/Clean/Sherlock/Aggregation.lean:1110-1125), and initialization takes fuel and stack limit (crates/mori-core/src/sherlock/reference.rs:14)."
+    },
+    "D2": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-d600",
+        "cand-f429"
+      ],
+      "option": "A chiplet processor inside the node circuit N at k=20: one fixed register file issuing tagged requests on a single halo2 lookup_any set-inclusion bus (not LogUp) to in-circuit ROM, append-only memory, 128-bit range, and Poseidon regions, with frames/tasks re-encoded as linked write-once entries, the bus closed per node with operation conservation, ordering, and read-after-write consistency, long operations continued across nodes, and S (target 16) set only from measured rows of the complete key cascade.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "qa/sherlock/decisions/speed-levers.json:26-29; crates/mori-recursion/src/ivc.rs:149-152; crates/mori-recursion/src/lib.rs:23-30; qa/sherlock/manifests/run-decider.json:20",
+          "problem": "The 265,904-row headroom (996,147 - 730,243) is derived from a two-self probe over the current node_cs (ZkStdLib configured from bls_arch: bls12_381+poseidon+pow2range only, no lookup tables). Adding chiplet columns and commitments enlarges vk_N, both self-verifier instances inside N, and the decider, which already models at 929,166 rows over the current node key (67k rows under the 996,147 fit line). The picked design's row total is therefore a fixed point nobody has measured.",
+          "next_action": "Run cand-d600's structural cascade probe before adopting any S or k: cost_model of N with intended columns/lookups, both self-verifiers over the new cs, canonical disabled slots, and D over the actual new node key.",
+          "evidence": "speed-levers.json tree_node_rows self-self=730243, self-self-leaf=1078147; node_cs at ivc.rs:149-152 is ZkStdLib::configure(bls_arch); run-decider model_rows 929166 at k=20."
+        },
+        {
+          "location": "tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/circuit.rs:1889; crates/mori-recursion/src/ivc.rs:149-152",
+          "problem": "No candidate shows custom chiplet lookup tables are expressible where they must live. lookup_any exists at the ConstraintSystem level, but a midnight-zk-stdlib Relation synthesizes against a cs configured from ZkStdLibArch; neither the table definition at configure time nor how node_cs and the decider reconstruct that cs for self-verification is specified. LogUp, used in cand-0c40's variant, does not exist in the pinned proof library (no LogUp/logup anywhere in midnight-proofs-0.8.3/src), and the recursive verifier gadget implements only the standard lookup/permutation vanishing checks.",
+          "next_action": "Run cand-f429 probe (2) first: one hand-written circuit combining the verifier gadget with a single lookup_any into a fixed table, modeled as a node; record whether the combined cs synthesizes and what the gadget accepts.",
+          "evidence": "circuit.rs:1889 lookup_any exists; grep for LogUp in tools/profile/vendor/midnight-proofs-0.8.3/src returns nothing; verifier gadget assumes one phase (midnight-circuits-7.3.0 verifier_gadget.rs:16-20, asserted :308-310) and does read lookups (:530-545)."
+        },
+        {
+          "location": "crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:3513-3588; openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:13",
+          "problem": "Set inclusion alone does not authenticate the bus tables. ROM table rows must be bound to prog_d per distinct row (fixed columns would make the key per-program, violating GP-1), append-only memory needs address uniqueness so a read cannot pick a stale or duplicate write-once row, and cells written in an earlier node need authenticated page-in against the memory root. Cand-f429 asserts soundness for write-once rows without the uniqueness/sorting argument; cand-d600 correctly requires conservation and ordering but does not cost them.",
+          "next_action": "Specify and cost the memory argument explicitly: sorted-by-address uniqueness or an equivalent permutation check in-region, Merkle opening per distinct ROM/memory row against prog_d/memory root via the Poseidon region, and page-in counts measured from fact(3) cell ages.",
+          "evidence": "owner_runtime.rs shows data/env/value tables only push (:3513-3564) while tasks/frames rewrite-top and pop in place (:3566-3588), confirming the write-once re-encoding is necessary but not by itself sufficient."
+        },
+        {
+          "location": "openspec/changes/sherlock-vm-consensus-20261107/requirements.md:33 (SRC-011)",
+          "problem": "Gate G-C is claimed on unmeasured numbers, which SRC-011 expressly forbids: a lever not built and measured gets no credit in G-C. Cand-f429's 2^14 rows/step at S=16 leaves 3,760 rows of the 265,904 remainder for all bus overhead; cand-d600's average 8 steps/chunk and 60-node cap are assumed. Poseidon row cost is unmeasured (68 rounds, width 3, rate 2).",
+          "next_action": "Measure one owner step (cand-f429 probe (3), KMachineReturnRight over registers and bus) and the cascade probe, then recompute G-C wall/RSS from measured rows only; until then state G-C as unproven, not met.",
+          "evidence": "requirements.md:33: 'a lever that is not built and measured SHALL get no credit in G-C'; Poseidon constants NB_FULL_ROUNDS=8, NB_PARTIAL_ROUNDS=60, WIDTH=3, RATE=2 (midnight-circuits-7.3.0 hash/poseidon/constants/mod.rs:16-26), row cost per permutation unmeasured in all three candidates."
+        }
+      ],
+      "kill_criterion": "The complete-cascade cost_model exceeds 996,147 rows for N or 2^20 for D over the new node key, one owner step exceeds the measured remainder beside two self slots, or the verifier gadget rejects the combined lookup constraint system. Any of these reverses placement to a separate chiplet leaf U at k<=19 using lookup_any (cand-0c40's placement, re-specified without LogUp and with lifts priced), which then requires the D3(i) owner amendment.",
+      "first_experiment": "Model-only, cheapest first: (1) verifier-gadget plus one lookup_any circuit modeled as a node; (2) full cascade probe (N with chiplet columns/lookups, two self-verifiers over the new cs, D over the new vk_N) against 996,147 and 1,048,576 rows; (3) one KMachineReturnRight owner step over the register file and bus. No SRS, no proof."
+    },
+    "D3": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-d600",
+        "cand-f429"
+      ],
+      "option": "(i) GP-4 stands literally: one N at k=20 verifies two predecessor proofs and does nonempty inline processor work in the same circuit; no third proof slot. (ii) GP-3 scope stands: registry identity binds arch, k, exact public-input count, cs descriptor, transcript, SRS, and statement adapter; classes the verifier gadget implements use it, other same-curve/same-commitment classes are verified by a chunked verifier program in the work region continued across nodes, with no new core key. (iii) GP-3 completion means verifying unmodified ledger-format Compact proof bytes under the keyed Blake2b transcript with exact public inputs, complete consumption, and point/subgroup checks; Poseidon re-proving is a probe only. (iv) Expandable authenticated storage under one key: path length is a witness in 1..=64, an unfinished path resumes from a cursor bound in the state commitment, and no fixed depth or capacity key ladder is introduced.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "(i) openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:46-52; qa/sherlock/decisions/speed-levers.json:26-29",
+          "problem": "The literal reading fits only if the D2 cascade probe passes; today that is unmeasured. The three-slot alternative is measured closed (1,078,147 > 2^20). Adopting (i) now without a pre-drafted fallback leaves GP-4 with no compliant path if the probe fails.",
+          "next_action": "Gate (i) on the D2 cascade probe and pre-draft the conditional OWNER AMENDMENT (new work may enter as a proof in one of two slots, two-prior joins in a separate step) to be used only if the kill criterion fires; cand-0c40's D3(i) amendment text is an acceptable draft of that fallback.",
+          "evidence": "general-purpose.md:52 records the three-slot tree node at k=21 as closed; speed-levers self-self-leaf=1078147 vs fit line 996147."
+        },
+        {
+          "location": "(ii) midnight-circuits-7.3.0/src/verifier/verifier_gadget.rs:16-20,308-310; openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:33",
+          "problem": "The generic path for circuits outside the stdlib configuration is asserted, not designed: the gadget fixes cs and k off-circuit, assumes exactly one instance column and one challenge phase, so a 'verifier program in the work region' still needs a specified evaluator for foreign gate expressions as authenticated data, a chunked MSM/pairing schedule, and a row estimate. Cand-d600's extension to foreign proofs under different KZG parameters also goes beyond GP-3's 'same curve and commitment scheme' and should not silently become a requirement.",
+          "next_action": "Specify the foreign-verifier program (expression representation, chunk boundaries, accumulator handling) and trace one small same-curve circuit outside the stdlib configuration off-circuit before claiming (ii); bind SRS identity in the registry entry rather than promising cross-SRS completion.",
+          "evidence": "verifier_gadget.rs:16-20 'We assume vk.cs.num_challenges = 1... exactly one instance column'; :308-310 assert_eq!(cs.phases().count(), 1); architecture.md:32-39 AssignedVk keeps domain and cs off-circuit."
+        },
+        {
+          "location": "(iii) midnight-circuits-7.3.0/src/verifier/transcript_gadget.rs:76-84,123; midnight-zk-stdlib-2.4.0/src/lib.rs:35-38 and external/blake2b.rs:101-108; repos/midnightntwrk/midnight-ledger/transient-crypto/src/proofs.rs:64,575",
+          "problem": "All three candidates understate what exists and what is missing. A Blake2bChip already exists in the pinned stdlib and its hash() takes a key, but the blake2b_256_digest wrapper is unkeyed, the ledger transcript is keyed with explicit prefixes, and enabling the chip changes the arch/cs of the hosting circuit. The existing transcript gadget by its own comments does not enforce complete byte consumption or prime-subgroup membership of received points, so byte-exact ledger compatibility needs those checks plus vk binding, none costed.",
+          "next_action": "Differential test first: recompute ledger challenges from one captured Compact proof off-circuit against native VerifierKey::verify, then cost_model the keyed Blake2b transcript region (prefix absorption, exact PI length absorption, canonical scalar bounds, subgroup checks) inside the work region.",
+          "evidence": "transcript_gadget.rs:76-84 'will not be able to verify that the proof did not include extra bytes'; :123 'received points are not enforced to be part of the relevant prime order subgroup'; ledger TranscriptHash = blake2b_simd::State (proofs.rs:64) used at :575; transcript init is keyed Params hash_length 64 (midnight-proofs-0.8.3 transcript/implementors.rs:13-24)."
+        },
+        {
+          "location": "(iv) openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:13-14; crates/mori-recursion/src/ivc.rs:77-79",
+          "problem": "Depth 64 is defensible only as the same 2^64 machine word that already bounds height; stated as a tree-depth cap it reads as a new capacity limit. The resumed-path design also fails if the cursor is not bound into the state commitment or a partial operation can seal, and the page-in rate for cells from earlier nodes is unmeasured, so the per-node work budget for deep paths is unknown.",
+          "next_action": "Word the bound as address width 64 under the existing height bound, bind (address, root, direction sequence, cursor) into the state commitment with sealing refused while an operation is pending, and measure cross-node cell-age/page-in frequency on fact(3) before fixing per-node budgets.",
+          "evidence": "GP-1 bounds run length below 2^64 and forbids capacity key ladders (general-purpose.md:13-14); ivc.rs S_MAX=16 and H_BITS=64 already serialize that word size."
+        }
+      ],
+      "kill_criterion": "(i) cascade probe fails as in D2; (ii) one foreign verification cannot be chunked into node-acceptable pieces under unchanged core keys; (iii) in-circuit challenges differ from native ledger verification on a captured proof or malformed encodings are accepted; (iv) a resumed path can be accepted with cursor advanced and root unchanged, or a larger valid store needs a second key. Each converts only its own point to the corresponding marked OWNER AMENDMENT.",
+      "first_experiment": "Three model/off-circuit probes: the D2 cascade model with two enabled predecessors and one enabled work step; off-circuit reproduction of native accept/reject and full challenge sequence on one captured ledger-format Compact proof; one append plus one 64-level opening with cursor resumption modeled for rows. No proving."
+    },
+    "D4": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-d600",
+        "cand-f429"
+      ],
+      "option": "Inline processor with core keys {N, D}: the D2 chiplets are selector-tagged regions of the single node circuit N (never separate chip proofs, since the pinned stack has no cross-proof bus challenge), foreign verification is chunked work inside N, unfinished continuations are statement-distinguished from completed claims, shape and slot bits are bound into the statement, and D pins the root node key, folds the carried accumulator, and performs the final pairing. Separate leaf plus run/foreign lifts {U,R,F,N,C,D} is the documented fallback only if the D2 kill criterion fires, together with the D3(i) owner amendment.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "crates/mori-recursion/src/run_decider.rs:208-246; qa/sherlock/manifests/run-decider.json:20; qa/sherlock/decisions/speed-levers.json:26-29",
+          "problem": "The {N,D} cascade is the load-bearing unknown: D verifies N via assign_fixed_vk over the node cs and already models at 929,166 rows over the current lookup-free node key. Every chiplet commitment added to vk_N grows both self-verifications in N and the single verification in D, and neither inline candidate prices D over the actual new key (cand-d600 flags 'fit remains uncertain'; cand-f429 reuses the 70.35s decider measured over the old key).",
+          "next_action": "Include D over the new vk_N in the first cascade probe and treat D exceeding 2^20 as a kill of the inline placement, equal in standing to N exceeding 996,147.",
+          "evidence": "run_decider.rs:208-246 assigns the node vk fixed, folds carried accumulator, collapses, pairs; decider prove 70.35s and node steps 59.6-63.6s measured over current keys (speed-levers A16 fold3_decider)."
+        },
+        {
+          "location": "cand-d600 D4 risks; openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:44-50",
+          "problem": "Arbitrary-depth PCD soundness for this accumulator construction is not argued by any candidate; constant proof size does not establish it, and the cited straightline-extractor literature gives sufficient conditions, not a proof for this implementation. Continuation kinds (init, execution, foreign verification, partial path) must be unforgeably distinguished from completed claims in the statement, or D can be shown an unfinished root.",
+          "next_action": "Write the statement/schema argument before keying: shape commitment binding slot bits, operation/continuation kind, segment bracketing and dependency closure; state which extractor/accumulation conditions are assumed as premises in the Lean/Quint models (SRC-017) rather than claimed.",
+          "evidence": "GP-4 acceptance requires chain, tree, and shared-ancestor DAG at depth >= 8 with equal final proof size (general-purpose.md:50); current node statement is only [prog_d, init_d, cur_d, h] plus accumulator (ivc.rs:67-79), with no segment range, shape, or claim-set fields."
+        },
+        {
+          "location": "cand-0c40 D2/D4 (rejected alternative and fallback spec); tools/profile/vendor/ (only midnight-proofs-0.8.3 present); crates/mori-core/src/sherlock/reference_types.rs:168",
+          "problem": "The fallback cannot be adopted as written in cand-0c40, so the kill criterion currently triggers into a void: its G-C arithmetic prices 19 folds while describing 19 R lifts plus 18 N merges; it specifies LogUp, absent from the pinned stack; it cites nonexistent paths (tools/profile/vendor/midnight-circuits-0.8.3, midnight-zk-stdlib-0.8.3, zkir-v3-0.2.0) where the pinned versions are midnight-circuits 7.3.0 / midnight-zk-stdlib 2.4.0 per qa/sherlock/manifests/node.json; and it binds fuel as u64 where the machine's fuel is u128. Its D3(ii) amendment also narrows GP-3 from 'other PLONK/halo2 circuits on the same curve and commitment scheme' to single-phase stdlib/ZKIR classes, acceptable only as an explicit owner amendment, not as compliance.",
+          "next_action": "Re-specify the separate-leaf fallback on lookup_any with lift counts priced explicitly (chain shape needs no per-leaf R where a node slot accepts the leaf directly, as SHKIVC06 does today at ivc.rs:548-562), correct fuel to u128, and keep its GP-3/GP-4 amendments marked and separate.",
+          "evidence": "ls tools/profile/vendor shows only midnight-proofs-0.8.3; node.json versions midnight-circuits 7.3.0, midnight-zk-stdlib 2.4.0, midnight-proofs 0.8.3; remaining_fuel: u128 at reference_types.rs:168; current node verifies one self proof and one leaf in one step (ivc.rs:548-565)."
+        },
+        {
+          "location": "qa/sherlock/decisions/speed-levers.json:12-16,62-70 (C0 d=0.884, f3 1.69-1.74)",
+          "problem": "Inline placement makes every pure join pay a full k=20 node with idle processor regions and removes the cheap parallel leaf stage; the candidates assume this is free because proving is domain-proportional, and assume base segments parallelize at P=3, but neither is measured for a lookup-heavy cs (lookup/quotient work may not scale like the current node's phase profile).",
+          "next_action": "Model a neutral-slot base segment and an idle-work two-predecessor join for rows and statement width (cand-f429 D4 experiment), and re-derive the concurrency assumption from the lookup-heavy phase profile before using P=3 in any G-C projection.",
+          "evidence": "C0: domain-proportional share 0.884, three concurrent node provers at aggregate peak 47.7GB with slowdown 1.69-1.74, all measured on the current lookup-free SHKIVC06 node."
+        }
+      ],
+      "kill_criterion": "Reverse to the re-specified separate chiplet leaf plus lifts if the cascade probe shows N over 996,147 rows or D over 2^20 over the new key, if one useful owner step cannot coexist with two enabled predecessors under one key, or if a separate chiplet leaf demonstrably beats the inline design on complete measured G-C cost including all lifts and closing while preserving GP-3's generic path.",
+      "first_experiment": "Compare the same small chiplet processor in both placements by cost_model only: inline in the complete binary node plus D over the resulting key, versus a standalone k<=19 chiplet leaf with every required recursive verification and closing step included; include malformed disabled-slot carries and attempted finalization of unfinished continuations as negative statement checks."
+    }
+  },
+  "chiplets_assessment": "The owner's chiplet direction is the right response to the measured failure: the cost sits in shared facts applied to every carrier lane (dispatch facts range-check all image/helper lanes and walk PROG per step, c6_dispatch_step.rs:608-647), so a small register core delegating to ROM, memory, range, and hash regions attacks the actual term. On this stack the chips must be regions of one circuit, not separate proofs: midnight-proofs 0.8.3 has lookup_any set inclusion but no LogUp, and the recursive verifier gadget has no spare challenge phase to bind a cross-proof bus. Set inclusion is sound for ROM and write-once memory only with added address-uniqueness/ordering and per-row authentication against prog_d and the memory root, which no candidate has yet specified or costed. The decisive risk is the self-verification fixed point: chiplet commitments enlarge vk_N, both in-node verifiers, and the decider (already 929,166 rows), so modularity is achievable but the complete cascade probe, not per-chip estimates, decides whether the concise design fits k=20.",
+  "proposed_requirement_text": [
+    "WHEN a segment starts at height 0, the node relation SHALL prove that the register file and memory root equal Init(prog_d, input_d), including the entry opened from prog_d, fuel (u128) and stack limit from input_d, empty frame/task links, a pending outcome, and the empty memory root; a caller-supplied init_d SHALL NOT by itself establish the initial state, and the decider SHALL require the decided root to start at height 0.",
+    "THE deployed proving keys SHALL be the node key and the decider key; neither key SHALL depend on the program, input, run length, memory size, registry contents, shape, or depth.",
+    "WHEN both predecessor slots are enabled, one node proof under the node key SHALL verify both predecessors and constrain nonempty local processor work in the same circuit; a node with both slots disabled and empty work SHALL be refused, and disabled slots SHALL fold the canonical neutral accumulator.",
+    "New work SHALL be a register-file processor whose memory and program operations are requests on one set-inclusion lookup bus served by ROM, append-only memory, range, and hash regions of the same circuit in one challenge phase; the proof SHALL establish operation conservation, address uniqueness, ordering, and read-after-write consistency, authenticate each distinct table row against prog_d or the memory root, and store frames and helper tasks as linked write-once entries.",
+    "WHILE an operation spans node proofs, each proof SHALL authenticate its complete continuation state (including any authentication-path cursor) in the state commitment; a chunk boundary SHALL NOT consume semantic fuel, increment owner-step height without a completed owner step, or expose an unfinished continuation as a completed claim.",
+    "One key SHALL serve every memory size up to the 64-bit address/height word already bounding run length; authentication path length SHALL be a witness, and no keyed depth, carrier-size, or page-count limit SHALL impose an additional program, input, or storage capacity bound.",
+    "WHEN a foreign proof is admitted, the node SHALL prove registry membership of an identity binding the verifying key, arch, degree, exact public-input count, constraint-system descriptor, transcript, SRS, and statement adapter; verification of a class outside the verifier gadget's configuration SHALL be node work continued across nodes without changing the core key set.",
+    "WHEN ledger-format Compact proof bytes are claimed verified, the node SHALL verify the supplied bytes and exact public inputs under the registered key and the keyed Blake2b transcript with complete parsing, canonical scalar bounds, and point subgroup checks, without the original witness; re-proving with a Poseidon transcript SHALL NOT satisfy this requirement.",
+    "THE decided statement SHALL carry the claim-set commitment and a shape commitment binding slot bits, continuation kind, segment bracketing, and dependency closure; WHEN the decider accepts a root, every reachable claim SHALL have completed initialization, computation, dependency, and cryptographic obligations, and the final proof SHALL be one decider proof of the same size for every shape and depth.",
+    "OWNER AMENDMENT (conditional, only if the D2/D4 cascade kill criterion fires; amends GP-4 in general-purpose.md:46): 'two prior proofs plus new work in one node' is satisfied by a binary node whose two slots each accept either a prior node proof or a lifted work proof (universal leaf segment or foreign proof), with inline claim sealing and dependency discharge in the node; raw VM steps need not execute in the same circuit as two prior node proofs."
+  ]
+}

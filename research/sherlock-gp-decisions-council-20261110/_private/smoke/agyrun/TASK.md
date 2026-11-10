@@ -1,0 +1,1 @@
+What is 1+1? Write exactly the single character 2 into the file /tmp/claude-1000/-home-hoskinson/bf7f2166-954b-4468-a773-77b23f490f1f/scratchpad/council/smoke/agyrun/answer.txt and nothing else. Do not run any command other than writing that file.

@@ -1,0 +1,149 @@
+{
+  "reviewed_candidates": [
+    "cand-d600",
+    "cand-f429",
+    "cand-fd2b"
+  ],
+  "decisions": {
+    "D1": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-fd2b",
+        "cand-f429"
+      ],
+      "option": "Enforce canonical genesis in-circuit on the first segment leaf (gated on h_pre == 0) over the committed-state representation: prove pre_d == Init(prog_d, input_d), where the fixed register file holds Eval(entry) opened against prog_root in prog_d, initial and remaining fuel and stack_limit opened from input_d, Pending/Running outcome, zeroed helper/result registers and counters, empty frame/task hash-stack roots, canonical initial memory roots binding the input value from input_d, and empty deps_d. Require h_lo == 0 at run sealing, and keep off-chain recomputation of init_d in the independent verifier as a diagnostic only.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "cand-fd2b D1, cand-f429 D1, openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:11-16, crates/mori-core/src/sherlock/reference.rs:14-27",
+          "problem": "Both cand-fd2b and cand-f429 extract only fuel and stack_limit from input_d at genesis and constrain all memory/environment roots to empty, omitting how a non-empty run input (required by GP-1 acceptance) enters the initial environment or arena state.",
+          "next_action": "Define Init(prog_d, input_d) so input_d = H(IN, input_val_d, fuel, stack_limit) binds the initial input commitment into the initial environment/arena root (or dedicated input root register) when h_pre == 0.",
+          "evidence": "general-purpose.md:11,16 requires public statement lane input_d as data and acceptance of a run with input; reference.rs:14-27 initializes Machine::new with fuel and stack_limit but empty Environment::new(), which must be extended for GP-1 run input."
+        },
+        {
+          "location": "cand-fd2b D1, cand-f429 D1, crates/mori-core/src/sherlock/helper_machine/c6_phys_data.rs:11-18, crates/mori-core/src/sherlock/helper_machine/c6_phys_helper.rs:62-70",
+          "problem": "The genesis state specifications in cand-fd2b and cand-f429 omit three of the four append-only tables (data_fields, env, value_slots alongside data) and the 23-lane helper record and 4-lane result record.",
+          "next_action": "Include all four append-table roots/lengths, both hash-stack roots (frames and helper tasks), the helper/result registers, and deps_d == EMPTY_DEPS in the canonical Init(prog_d, input_d) constraint at h_pre == 0.",
+          "evidence": "c6_phys_data.rs:11-18 and shared/owner_runtime.rs:3513-3564 define four separate append tables (data, data_fields, env, value_slots), and c6_phys_helper.rs:64-70 defines 23 helper lanes, 4 result lanes, and 7-lane task entries."
+        },
+        {
+          "location": "cand-d600 D1",
+          "problem": "cand-d600 proposes a multi-chunk streaming INIT computation inside the recursive node N to normalize variable-length program images across proof chunks, adding unnecessary parser state and continuation surface to the soundness boundary.",
+          "next_action": "Commit the normalized program table as a Merkle root prog_root inside prog_d and verify only the entry opening and O(1) register/root initialization in the first leaf at h_pre == 0.",
+          "evidence": "research/sherlock-gp-decisions-council-20261110/BRIEF.md:7 and crates/mori-backend/src/sherlock_c6_child.rs:551-576 show variable genesis length (290 vs 271 lanes) is an artifact of hashing flat C6 carriers; under committed memory, initial state size is O(1)."
+        }
+      ],
+      "kill_criterion": "If the register-and-commitment Init(prog_d, input_d) check in the D2 leaf adds more than 5% ESTIMATE to leaf rows in cost_model or cannot bind entry, input_val_d, fuel, and stack_limit from prog_d and input_d in O(1) constraints without program-size scaling, split genesis into a dedicated one-time Init proof.",
+      "first_experiment": "Run a host differential check comparing Init(prog_d, input_d) register/root openings against Machine::new on literal, add, and fact(3), then run cost_model and MockProver on the D2 leaf slice with the h_pre == 0 gate enabled and with mutated fuel, stack_limit, entry, and h_pre > 0 replay."
+    },
+    "D2": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-fd2b",
+        "cand-f429",
+        "cand-d600"
+      ],
+      "option": "Build the universal leaf U as a standalone multi-step chiplet circuit (k_U = 19..20, proving up to T consecutive microsteps per segment, T = 64..256 ESTIMATE) with a compact main processor register trace (control, fuel, outcome, top frame/task, table roots/counters) that routes operations over Halo2's single-phase lookup_any bus to in-circuit chiplets (PROG ROM, write-once/sorted memory, 128-bit limb arithmetic/range, and Poseidon hash). Authenticate cross-segment state via Merkle roots for the program and four append-only tables plus Poseidon hash chains for frames and helper tasks, feeding U into the recursion layer via run-lift R.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "cand-fd2b D2, tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/circuit.rs:1889-1909, tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/lookup.rs:39-67, research/sherlock-gp-architecture-20261110/architecture.md:173",
+          "problem": "cand-fd2b specifies a LogUp bus for the chiplet leaf, but LogUp requires a second challenge phase to sample the rational-sum evaluation point after committing multiplicities, whereas the pinned midnight-circuits 7.3.0 in-circuit VerifierGadget asserts a single challenge phase and supports Halo2's native single-phase lookup_any.",
+          "next_action": "Replace LogUp in U with Halo2's single-phase ConstraintSystem::lookup_any (as in cand-f429), keying each bus request by a unique (clk, slot_id) pair so set inclusion in the chiplet table is injective per active request.",
+          "evidence": "midnight-proofs-0.8.3/src/plonk/circuit.rs:1889-1900 and lookup.rs:39-67 implement single-phase Plookup set inclusion; architecture.md:173 and astra/design-2.md:186 (citing verifier_gadget.rs:308-310,538-539) confirm the recursive verifier gadget asserts one challenge phase and reads standard lookups."
+        },
+        {
+          "location": "cand-d600 D2, cand-f429 D2, qa/sherlock/decisions/speed-levers.json:26-29,66, qa/sherlock/manifests/run-decider.json:20",
+          "problem": "cand-d600 and cand-f429 place the chiplet processor inline inside the binary node N, where two self-verifiers already consume 730,243 rows (leaving <= 265,904 rows below 996,147), and every chiplet advice column and lookup_any product (3 commitments per lookup) added to N increases N's own VK commitments, adding 2x variable-base MSM cost in N and 1x in D (already at 929,166 rows, only 119,410 rows below 2^20); cand-f429 also counts only 19 node proofs for S=16 while claiming parallel base segments plus a binary join tree (which requires 19 base + 18 join = 37 node proofs).",
+          "next_action": "Place the chiplet processor and lookup_any tables in the separate leaf circuit U (as in cand-fd2b) so U gets 100% of a k=19..20 domain for T=64..256 steps per proof, its chiplet commitments are resolved once in run-lift R, and N, C, and D remain lean recursion circuits.",
+          "evidence": "speed-levers.json:28 records 730,243 rows for {self,self} with one 7-lane statement and no lookup tables; prover.md:155 records ~3-4k rows per variable base in the collapse MSM; run-decider.json:20 records 929,166 rows for D."
+        },
+        {
+          "location": "cand-fd2b D2, cand-f429 D2, crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:3513-3590",
+          "problem": "Set-inclusion lookup_any alone does not enforce read-after-write memory consistency or prevent double-writes to the same address within a segment, and frames/tasks are mutated in place by RewriteTop and Pop.",
+          "next_action": "Enforce monotonic allocation-counter indexing on writes to the four append-only tables (data, data_fields, env, value_slots), represent frames and helper tasks as top-in-register Poseidon hash chains (or monotonic versioned entries), and authenticate cold reads/segment boundary updates against the pre/post Merkle roots.",
+          "evidence": "owner_runtime.rs:3513-3564 shows data, data_fields, env, and value_slots are strictly append-only, whereas owner_runtime.rs:3566-3590 mutates tasks and frames via Push, RewriteTop, and Pop."
+        },
+        {
+          "location": "cand-fd2b D2, crates/mori-backend/src/proving.rs:22, crates/mori-backend/src/sherlock_c6_child.rs:868-880, crates/mori-backend/src/parameters.rs:16,46-48",
+          "problem": "cand-fd2b states that raising MAX_K = 19 in proving.rs:22 suffices to prove a k=20 leaf U, but OfflineParameters::load in crates/mori-backend/src/parameters.rs:16,46-48 only pins 20 SRS hashes (degrees 0..=19) and rejects k=20.",
+          "next_action": "Implement U as a native midnight_zk_stdlib::Relation (like ivc.rs) rather than a ZKIR child, and if U uses k=20 through mori-backend parameter loading, append the bls_midnight_2p20 SHA-256 (1cc62978558fdc1e445cd70cfd9a86ec3c2e2151b6d74811232d37faf9133ff1 from qa/sherlock/manifests/node.json:31) to PINNED_HASHES and raise MAX_PARAMETER_BYTES as needed.",
+          "evidence": "crates/mori-backend/src/parameters.rs:16 defines pub const PINNED_HASHES: [&str; 20] covering k in 0..20 only, returning 'No pinned SRS for the circuit degree' at line 48 when k == 20."
+        }
+      ],
+      "kill_criterion": "If a cost_model vertical slice of U (main register trace + PROG, memory, 128-bit arithmetic, and Poseidon chiplets over lookup_any for 8 representative rules) exceeds 8,192 rows per microstep ESTIMATE (failing to fit T >= 64 steps in k=19 or T >= 128 in k=20), or if R over U's VK exceeds 996,147 rows at k=20, reduce chiplet column width via time-multiplexed shared advice columns before any fallback.",
+      "first_experiment": "Count per-step table reads/writes and hash invocations across the 293-step fact(3) and 303-step list123 reference traces on the host, then run cost_model (no SRS, no proving) on an 8-rule vertical slice of U at T=64 with lookup_any chiplets and on R verifying U's resulting VK."
+    },
+    "D3": {
+      "pick": "synthesis",
+      "synthesis_of": [
+        "cand-fd2b",
+        "cand-d600",
+        "cand-f429"
+      ],
+      "option": "For (i), adopt cand-fd2b's OWNER AMENDMENT to GP-4 so the k=20 node N verifies two polymorphic proof slots from {N, R, F} (reaching two prior proofs plus new work by two-node nesting under one fixed key set, with a tiny inline claim/cursor transition budget in N if rows permit); for (ii), use cand-fd2b's registry-admitted per-class adapters A_c under F for Midnight stdlib circuits and pair cand-fd2b's clarifying OWNER AMENDMENT with cand-d600's general fallback of executing non-stdlib/other-SRS verifiers as authenticated programs over U. For (iii), keep GP-3 unamended by using Stage 1 Poseidon re-proving (`reproved` claim tag) strictly as an integration milestone and requiring Stage 2 keyed-Blake2b adapter verification (`ledger` claim tag, with exact public-input length and subgroup/completeness checks) before claiming GP-3 acceptance; for (iv), keep GP-1 unamended by supporting variable path depths up to 64 (matching the 2^64 height bound, with cold paths paged or continued across segments of U) unless the owner elects cand-fd2b's depth-32 OWNER AMENDMENT.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "D3(i): cand-d600 D3(i), cand-f429 D3(i), cand-fd2b D3(i), openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:46, qa/sherlock/decisions/speed-levers.json:27-28",
+          "problem": "Three verifier slots in one node require 1,078,147 rows (k=21), while forcing full VM and foreign-verifier execution inline beside two self-verifier slots (730,243 rows in cand-d600 and cand-f429) starves VM throughput and bloats N and D; conversely, cand-fd2b's two-slot node N over {N, R, F} requires two nodes for two prior proofs plus new work and therefore requires an explicit OWNER AMENDMENT to GP-4.",
+          "next_action": "Adopt cand-fd2b's explicit OWNER AMENDMENT for GP-4 bullet 1 so N takes two proofs from {N, R, F} at k=20 under one fixed key set, keeping all GP-4 acceptance tests (chain, balanced tree, shared-ancestor DAG at depth >= 8 with constant final proof size) intact.",
+          "evidence": "general-purpose.md:46-50; speed-levers.json:27-28 ({self,self,leaf} = 1,078,147 rows > 2^20; {self,self} = 730,243 rows)."
+        },
+        {
+          "location": "D3(ii): cand-f429 D3(ii), cand-fd2b D3(ii), cand-d600 D3(ii), openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:33-38, tools/profile/vendor/midnight-proofs-0.8.3/src/plonk/verifier.rs:69-74, tools/profile/vendor/midnight-proofs-0.8.3/src/poly/kzg/params.rs:235-239",
+          "problem": "cand-f429 claims GP-3 needs no amendment while restricting foreign proofs to 'this KZG setup' (an unmarked narrowing of GP-3's 'same curve and commitment scheme') and relying on an unbuilt inline verifier inside N's <266k-row remainder; cand-fd2b properly marks an OWNER AMENDMENT for per-class stdlib adapters A_c but leaves non-stdlib halo2 circuits without a path until a new gadget is written.",
+          "next_action": "Adopt cand-fd2b's per-class registry-data adapters A_c verified by F as the fast path for Midnight stdlib configurations (binding arch, k, exact public-input length, format versions, transcript, and SRS in vk_id), and either adopt cand-fd2b's OWNER AMENDMENT or run non-stdlib / foreign-SRS PLONK verifiers (including in-circuit pairing for foreign s_g2) as authenticated programs across segments of U (cand-d600).",
+          "evidence": "midnight-proofs-0.8.3/src/plonk/verifier.rs:69-74 absorbs instance.len() into the transcript; params.rs:235-239 ties KZG opening verification to s_g2; architecture.md:32-39,165-176 confirms AssignedVk fixes domain and cs off-circuit."
+        },
+        {
+          "location": "D3(iii): cand-fd2b D3(iii), cand-d600 D3(iii), cand-f429 D3(iii), openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:38, repos/midnightntwrk/midnight-ledger/transient-crypto/src/proofs.rs:64,575, tools/profile/vendor/midnight-proofs-0.8.3/src/transcript/implementors.rs:13-30",
+          "problem": "cand-fd2b claims GP-3's acceptance test can be ticked on Stage 1 (Poseidon re-proving of a Compact circuit) without marking an OWNER AMENDMENT, even though Stage 1 requires the secret witness and cannot verify a Compact proof produced for the ledger (which uses keyed Blake2b-512 with domain separator 'Domain separator for transcript' and prefixes).",
+          "next_action": "Keep Stage 1 (`reproved`) and Stage 2 (`ledger`) domain-separated in the claim hash as cand-fd2b proposes, but require Stage 2 (keyed Blake2b transcript, exact public-input length, complete byte consumption, and curve/subgroup checks on supplied ledger proof bytes without the witness) to pass before ticking the GP-3 acceptance gate (as in cand-d600 and cand-f429).",
+          "evidence": "repos/midnightntwrk/midnight-ledger/transient-crypto/src/proofs.rs:64,575 sets TranscriptHash = blake2b_simd::State; midnight-proofs-0.8.3/src/transcript/implementors.rs:17-29 initializes 64-byte Blake2b keyed with b\"Domain separator for transcript\" and absorbs BLAKE2B_PREFIX_COMMON / BLAKE2B_PREFIX_CHALLENGE."
+        },
+        {
+          "location": "D3(iv): cand-fd2b D3(iv), cand-d600 D3(iv), cand-f429 D3(iv), openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md:13-14, crates/mori-recursion/src/ivc.rs:77-79,363-375",
+          "problem": "cand-fd2b fixes Merkle tree depths to 32 (requiring an OWNER AMENDMENT to GP-1), whereas GP-1 already bounds run height below 2^64 and forbids key-dependent capacity below the machine's 64-bit counter width.",
+          "next_action": "Parameterize Merkle path openings in U by a witnessed tree depth d in 1..=64 (authenticated by the root descriptor, with cold multi-level paths paged at segment boundaries or continued across segments if needed) so capacity matches the 2^64 height bound without an amendment, or adopt cand-fd2b's explicit OWNER AMENDMENT if fixing depth to 32.",
+          "evidence": "general-purpose.md:13-14 forbids key-dependent capacity and bounds run length only by the height field (< 2^64); ivc.rs:78-79,369-375 range-checks heights to H_BITS = 64."
+        }
+      ],
+      "kill_criterion": "If the Stage 2 keyed-Blake2b adapter A_c exceeds 2^20 rows for a single Compact proof verification, split transcript challenge generation and KZG opening preparation across two chained adapter proofs (or execute the transcript phase in U) rather than weakening parsing, subgroup checks, or the GP-3 requirement.",
+      "first_experiment": "Run an off-circuit transcript parity test that reproduces Blake2bState challenges and acceptance on a captured ZKIR v3 Compact proof from proofs.rs:575, then run cost_model on the keyed Blake2b transcript gadget and on distinct (arch, k, public_inputs_len) classes of the repository's Compact contracts."
+    },
+    "D4": {
+      "pick": "cand-fd2b",
+      "synthesis_of": [],
+      "option": "Adopt the separate chiplet leaf plus named lifts architecture with six fixed core keys {U, R, F, N, C, D}: U proves multi-step VM segments using the D2 chiplet processor, R lifts 1..2 U proofs and resolves U's fixed bases, F lifts foreign adapter proofs and proves registry membership of both the adapter key and inner key, N is a binary node over named keys {N, R, F}, C resolves the three deferred fixed-base name sets, and D verifies C and checks the final pairing.",
+      "verdict": "changes_requested",
+      "findings": [
+        {
+          "location": "cand-fd2b D4, crates/mori-recursion/src/ivc.rs:538-546, crates/mori-recursion/tests/tree_node_rows.rs:199-203,280-281, qa/sherlock/decisions/speed-levers.json:28,66",
+          "problem": "cand-fd2b relies on the 730,243-row {self,self} probe to argue N fits k=20, but that probe performs only one final collapse and does not normalize disabled-slot proof accumulators before accumulate; in ivc.rs:546, normalizing a disabled genesis slot via an extra in-circuit collapse_self costs 239,577 rows, so doing per-slot collapses in a two-slot node N would add ~480k rows and overflow 2^20.",
+          "next_action": "In N, never call in-circuit collapse on per-slot prepared accumulators before accumulate; instead, during the public-API accumulator re-assignment for {N, R, F} name routing (architecture.md:428-435), select the canonical neutral accumulator encoding lanes when a slot bit is 0 so N performs only one collapse at the end of the circuit.",
+          "evidence": "speed-levers.json:66 records collapse_self = 239,577 rows and collapse_final = 267,514 rows (78% of SHKIVC06); tree_node_rows.rs:199-203,280-281 reaches 730,243 rows only because it calls collapse once at line 281."
+        },
+        {
+          "location": "cand-fd2b requirement_text GPR-NODE, crates/mori-recursion/src/run_decider.rs:229-245, research/sherlock-gp-architecture-20261110/architecture.md:223-224",
+          "problem": "cand-fd2b's GPR-NODE states that closing proof C resolves the named bases of N, R, and F and decider D pins C's key, but omits that N and C each carry a deferred accumulator in their public instance that C and D respectively must authenticate and fold alongside the verified proof's own accumulator.",
+          "next_action": "Specify in GPR-NODE that C verifies the root N proof, pins n_repr/r_repr/f_repr, folds N's own proof obligation with N's published carried accumulator, resolves the fixed bases of N, R, and F, and publishes the collapsed accumulator, and that D verifies C, folds C's own obligation with C's published accumulator, resolves C's fixed bases, and checks the pairing.",
+          "evidence": "run_decider.rs:222-245 shows D must prepare own (the verified node proof), assign carried from the public instance tail, accumulate(&[own, carried]), resolve_fixed_bases, and collapse before pairing; architecture.md:223-224 notes this explicitly for C then D."
+        }
+      ],
+      "kill_criterion": "If cost_model of the hardened binary node N (with {N, R, F} name routing, canonical disabled-slot encoding selection without per-slot collapse, and final statement width) or of R, F, C, or D exceeds 996,147 rows (0.95 * 2^20), merge R into U (making U node-class) to reduce the named base sets from three to two ({N, F}), or move the offending stage to k=21.",
+      "first_experiment": "Run cost_model (Experiment 1 and 2 of architecture.md \u00a75, no SRS or proving) on N (with public-API {N, R, F} name routing and single-collapse disabled-slot normalization), R (1 and 2 U leaves), F (1 adapter + 40 witnessed bases + 2 registry paths), C (root N + 3 name sets), and D over C."
+    }
+  },
+  "chiplets_assessment": "A modular chiplet architecture is the right technical solution for D2 because the measured C6 leaf bottleneck (k >= 22 for dispatch alone, k = 21..23 per rule) comes from repeating full-carrier range checks, frame/task multiplexers, PROG walks, and full-carrier Poseidon hashes rather than rule-specific transition logic. On midnight-proofs 0.8.3 (Halo2/KZG) and midnight-circuits 7.3.0, all chiplets (PROG ROM, memory/stacks, 128-bit arithmetic/range, and Poseidon) must reside as modular regions inside a single circuit connected by Halo2's native single-phase ConstraintSystem::lookup_any bus, because the in-circuit VerifierGadget asserts a single challenge phase (ruling out a multi-phase LogUp bus without a gadget fork) and cross-proof buses would multiply 250k-row non-native MSM verifiers. Crucially, this chiplet processor belongs in a separate multi-step segment leaf U (feeding run-lift R under core keys {U, R, F, N, C, D}) rather than inline inside the binary node N: every chiplet advice column and lookup product added to N enlarges N's own verifying key and adds 2x variable bases to N's self-verifier MSM (already 730,243 rows) and 1x to D (already 929,166 rows), whereas isolating the chiplets in U gives the VM 100% of a k=19..20 domain for T=64..256 steps per proof and keeps N, C, and D small and chiplet-agnostic.",
+  "proposed_requirement_text": [
+    "SRC-021 (genesis): When h_pre == 0, the segment leaf U SHALL prove in circuit that its pre-state commitment equals Init(prog_d, input_d), binding Eval(entry) opened from prog_root in prog_d, initial and remaining fuel, stack_limit, and the initial input commitment opened from input_d, Pending/Running outcome, zeroed helper/result registers and counters, empty frame and helper-task hash chains, canonical initial roots for all four append tables (data, data_fields, env, value_slots), and empty deps_d; the seal rule SHALL require h_lo == 0, and equality with a caller-supplied init_d or off-chain recomputation SHALL NOT be acceptance authority.",
+    "GP-001 / SRC-013 / SRC-014 (chiplet leaf U): The universal leaf U SHALL be one fixed relation keyed over a fixed processor register file and rule transition table that proves a segment of up to T consecutive microsteps (1 <= steps <= T, disabled tail rows constrained to identity with zero step contribution) at k_U <= 20 by routing program reads, memory/stack operations, 128-bit arithmetic/range checks, and Poseidon hashes over a single-phase lookup_any bus to in-circuit chiplet regions, authenticating all cross-segment state against pre_d and post_d commitments.",
+    "GPR-MEMORY (chiplet bus and memory integrity): Each active lookup_any bus request in U SHALL be uniquely keyed by its (step_index, slot_id) and bound to a verified chiplet row; writes to the four append-only tables (data, data_fields, env, value_slots) SHALL enforce monotonic allocation-counter indexing and read-after-write consistency, and frames and helper tasks SHALL be authenticated as Poseidon hash chains with top entries in registers.",
+    "GP-004 arity \u2014 OWNER AMENDMENT: Replace the first bullet of GP-4 in general-purpose.md with: 'A node N at k=20 takes at least two proofs (arity >= 2), each either a prior node proof (N) or new work proved under a core lift key (R or F), so any combination of prior proofs and new work is reached by nesting under the same fixed key set {U, R, F, N, C, D}; every node shape is served by the same key set with no per-depth or per-level key.'",
+    "GP-003 scope \u2014 OWNER AMENDMENT: Add to GP-3 in general-purpose.md: 'Circuits on the same curve, commitment scheme, and SRS whose constraint system is a Midnight stdlib configuration (an (arch, k, public_inputs_len, transcript) class with two instance columns and one challenge phase) are verified through one class adapter key admitted to the registry as data without changing any core key or contract; circuits outside that configuration are verified either when an adapter for their configuration is admitted as registry data or by executing an authenticated verifier program across segments of U.'",
+    "GPR-ADAPTER-LEDGER (GP-3 Compact proofs): Where a foreign claim asserts verification of a Compact proof for GP-3 acceptance, the adapter A_c SHALL verify the supplied ledger-format proof[v5] bytes under the registered verifier-key[v7] without the circuit witness, enforcing the keyed 64-byte Blake2b ledger transcript (with domain separator and common/challenge prefixes), exact public-input length, complete byte consumption, and curve/subgroup checks, and SHALL tag the claim kind as `ledger`; Poseidon re-proofs under the same key SHALL be tagged `reproved` and SHALL serve only as intermediate integration tests.",
+    "GPR-STORAGE-DEPTH (GP-1 capacity): Committed memory trees in U SHALL support witnessed path depths up to the 64-bit machine address/height bound (or, if the owner adopts an OWNER AMENDMENT to GP-1, a fixed depth of 32 for the program and data tables alongside unbounded hash chains for frames and helper tasks) under a single fixed key set.",
+    "GPR-NODE-CLOSING (named lifts and two-stage closing): The node N SHALL verify up to two proofs under {N, R, F} using one-hot key and fixed-base name selection, normalizing disabled slots to the canonical neutral accumulator encoding by lane selection without per-slot in-circuit MSM collapse; the closing proof C SHALL verify the root N proof, fold N's own and carried accumulators, and resolve the fixed bases of N, R, and F, and the decider D SHALL verify C, pin C's key, fold C's own and carried accumulators, resolve C's fixed bases, and check the final KZG pairing."
+  ]
+}
