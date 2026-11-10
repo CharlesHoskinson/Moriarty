@@ -1,11 +1,19 @@
 # Capability: sherlock-recursion (leaf, node, decider, contract)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Design: `../../design.md` §3.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Amended 2026-11-10 by the design review (`research/sherlock-recursion-design-review-20261110/review.md` §5; SRC-001, SRC-010, SRC-011, SRC-013, SRC-014, SRC-017 edited; SRC-019..021 added) and by the owner definition `../../general-purpose.md`; not council text. Design: `../../design.md` §3.
 
 ## ADDED Requirements
 
 ### Requirement: SRC-001 Leaf statement schema
-Leaf, node and decider SHALL consume one versioned statement `sherlock-leaf-stmt/1 = [binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`; any other lane count or order SHALL be refused before proving.
+Leaf, node and decider SHALL consume one versioned statement `sherlock-leaf-stmt/1 = [binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`; any other lane count or order SHALL be refused before proving. (Amended 2026-11-10.) `rules_d` SHALL be `Poseidon(dom("SHK_RULES"), rid_0, ..., rid_{S-1})` over exactly S slot rule lanes in slot order with `rid_j = sum_r sel_j[r] * lane(r)`, so a disabled slot carries the reserved id 0, which SHALL NOT be the lane of any rule in `R`; no special case for S=1 or one enabled slot. The enabled slots SHALL form a prefix; a publishing step SHALL be the last enabled slot; the outcome tag and result inside `pre_d` and `post_d` SHALL be derived from the constrained carriers; `prog_d` SHALL be the identity of SVM-005.
+
+#### Scenario: Disabled slot encoded as a rule
+- **WHEN** a raw witness encodes a disabled slot of `rules_d` with the lane of an admitted rule, or leaves a gap in the enable prefix, or enables a slot after a publishing step.
+- **THEN** the keyed leaf refuses it; the Quint slot model (F24) catches the matching mutant.
+
+#### Scenario: Outcome supplied as a constant
+- **WHEN** a raw witness proves a step with an outcome tag or result inside `post_d` that differs from the post carriers.
+- **THEN** the keyed leaf refuses it (today the C6 bridge takes the tag and value as constants, `sherlock_c6_child.rs:560-561,571-572`).
 
 #### Scenario: Six-lane export
 - **WHEN** the current C6 digest export (six lanes, `sherlock_c6_child.rs:817-834`) is fed to the node harness.
@@ -79,14 +87,14 @@ When a ledger, circuits, zk-stdlib or zkir pin changes, the toolchain SHALL rege
 - **THEN** node, decider and template are regenerated; the leaf key is reused; `validate_call` accepts the new bundle and refuses the five mutations.
 
 ### Requirement: SRC-010 Independent verification of the exact bundle
-Before any network call, a verifier process that is not the prover SHALL re-verify the exact bytes to be submitted, reconstruct the accumulator and check every link, and the record SHALL state the shared `midnight-proofs` implementation.
+(Amended 2026-11-10.) Before any network call, a verifier process that is not the prover SHALL re-verify every leaf, node and decider proof of the versioned GP bundle (SRC-019), reconstruct the accumulator and check every link, and the record SHALL state the shared `midnight-proofs` implementation. The legacy `examples/verify_chain.rs` (historical A102/A80 pair) and a check of the final node proof alone SHALL NOT satisfy it.
 
 #### Scenario: One flipped byte
-- **WHEN** one byte of the node proof in the bundle is flipped.
-- **THEN** `verify_chain` refuses and the E6 record shows the refusal.
+- **WHEN** one byte of any leaf, node or decider proof in the bundle is flipped.
+- **THEN** the independent verifier refuses and the E6 record shows the refusal (row A31).
 
 ### Requirement: SRC-011 Throughput target (Mandatory since 2026-11-08 (3))
-A committed program of at most 320 owner steps SHALL prove its leaves, fold them through the node chain or the tree, prove the run decider, pass `verify_chain` and the local `validate_call` in under 2 h wall, under 48 GB peak RSS per process and under 100 GB aggregate peak RSS across the concurrently running heavy processes of the run (owner decision 2026-11-08: "48 GB per process, 100 GB aggregate"), on the 20-core 120 GB host. The receipt SHALL record `RAYON_NUM_THREADS`, the concurrency P and both peaks. The C0 phase profile SHALL be committed before any S, concurrency, GPU or tree adoption, and `qa/sherlock/decisions/speed-levers.json` SHALL cite the C0 metric behind each adopted lever. A shortfall is a failing row.
+A committed program of at most 320 owner steps SHALL prove its leaves, fold them through the node chain or the tree, prove the run decider, pass the independent verifier (SRC-010) and the local `validate_call` (SRC-020) in under 2 h wall, under 48 GB peak RSS per process and under 100 GB aggregate peak RSS across the concurrently running heavy processes of the run (owner decision 2026-11-08: "48 GB per process, 100 GB aggregate"), on the 20-core 120 GB host. The receipt SHALL record `RAYON_NUM_THREADS`, the concurrency P and both peaks. The C0 phase profile SHALL be committed before any S, concurrency, GPU or tree adoption, and `qa/sherlock/decisions/speed-levers.json` SHALL cite the C0 metric behind each adopted lever. A shortfall is a failing row. (Amended 2026-11-10.) A projection SHALL use total wall = setup + max(node service, leaf service) under measured mixed contention + decider + independent verification + call validation; a lever not built and measured SHALL get no credit in G-C.
 
 #### Scenario: Shortfall is a failure
 - **WHEN** fact(3) at the chosen S takes more than 2 h, or any process exceeds 48 GB, or the aggregate exceeds 100 GB.
@@ -104,22 +112,18 @@ If a run exceeds its `heavy` memory or wall cap, it SHALL stop and preserve its 
 - **THEN** `runs.jsonl` records exit 4 with a trace and the next attempt carries `--hypothesis`.
 
 ### Requirement: SRC-013 Leaf shape decision
-When milestone M4 probes the rows of the universal gated leaf over the frozen inventory at S=1 (task 4.1, modeling only) and keys it at the S chosen at gate G-A (task 4.4), option U SHALL be selected if `k_U <= 17` at S=1 and the keyed leaf has `k <= 17 + log2(S)`, and option F otherwise; both branches SHALL carry the same statement and obligations. Under F a leaf proves one rule, so F fixes S=1 (amended 2026-11-08 (3)).
+(Amended 2026-11-10; was "U if `k <= 17 + log2 S`, otherwise F".) When milestone M4 probes and keys the universal gated leaf over the frozen inventory (tasks 4.1a, 4.2b, 4.1, 4.4), the toolchain SHALL use option U and SHALL record rows, k, RSS and prove time of the leaf at the chosen S, and the `cost_model` rows of the node and decider keyed over a leaf of its arch. Option F (finite family, in-circuit key membership) is defined and not planned: it fixes S=1, which fails SRC-011 at the measured node step; it MAY be used as a diagnostic.
 
-#### Scenario: k above threshold
-- **WHEN** the universal leaf probes at `k_U = 19` at S=1.
-- **THEN** option F is recorded with S=1, the family key table is committed before P3 is written, the node checks membership in circuit, and the throughput target rests on k=19, concurrency, the GPU track and the tree.
+#### Scenario: Diagnostic probe first
+- **WHEN** task 4.1a runs `IrSource::model()` over every existing per-rule C6 circuit and the dispatch block alone.
+- **THEN** rows, table rows, arch and minimum k are written to `speed-levers.json` `G-A-prime.probe`, labelled a projection with reduced coverage (SAS-014), and no S is chosen from it alone.
 
-#### Scenario: Non-member key under F
-- **WHEN** a valid leaf proof is produced under a key outside the committed family table.
-- **THEN** the node refuses it.
+#### Scenario: Decider headroom
+- **WHEN** the node keyed over a leaf of the universal leaf's arch pushes the decider above 2^20 rows.
+- **THEN** the record shows the decider k next to the leaf k, and S is chosen from the full envelope (leaf, node and decider), not from `k_U + log2 S` alone (experiment E2, task 4.12).
 
-#### Scenario: S from k_U
-- **WHEN** 4.1 records `k_U = 16` and G-A is open.
-- **THEN** G-A records S=8 (`16 + 3 <= 20`) and 4.2 builds the leaf with 8 slots; 4.4 keys it once.
-
-### Requirement: SRC-014 S-slot leaf with a keyed S (amended 2026-11-08 (3))
-S SHALL be a keyed constant of the leaf relation, chosen once at gate G-A by `k_U + log2(S) <= 20` and fixed before the leaf is keyed; S=1 is the one-enabled-slot case of the same relation. When a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S] and refuse `steps == 0` and `steps > S`. The slot semantics SHALL equal the `Leaf` of the Lean composition theorems (SRC-017).
+### Requirement: SRC-014 S-slot leaf with a keyed S (amended 2026-11-08 (3); 2026-11-10)
+S SHALL be a keyed constant of the leaf relation, chosen once at gate G-A' and fixed before the leaf is keyed; S=1 is the one-enabled-slot case of the same relation. S SHALL be the largest power of two, at most `S_MAX` = 16, for which the measured leaf, node and decider fit their k and memory caps; `k_U + log2 S <= K_LEAF_MAX` is a first sizing estimate (`K_LEAF_MAX` = [PENDING experiment E4, task 4.11]); S >= 8 is the planning target; S=4 SHALL be chosen only with a measured leaf time; S <= 2 is a redesign trigger; if no S >= 4 fits, the leaf design SHALL be revisited before any key. `S_MAX` SHALL be a serialized field of the node relation. When a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S] and refuse `steps == 0` and `steps > S`. The slot contract is specified by the Quint slot model (F24); Lean proves boundary composition only until a Lean refinement from S-slot execution to the boundary `Leaf` exists.
 
 #### Scenario: Terminal publication at slot 3 of 8
 - **WHEN** `KAdminPublishValue` fires at slot 3.
@@ -128,6 +132,14 @@ S SHALL be a keyed constant of the leaf relation, chosen once at gate G-A by `k_
 #### Scenario: Disabled slot that writes
 - **WHEN** a raw witness sets `enable == 0` on slot 5 and `post_5 != pre_5`, or counts the slot in `steps`.
 - **THEN** the keyed leaf refuses it (row A20).
+
+#### Scenario: S from the measured envelope
+- **WHEN** the measured leaf at S=8 fits 16 GB and `K_LEAF_MAX`, and the node and decider keyed over its arch fit their caps.
+- **THEN** G-A' records S=8 with each input labelled measured or forecast, and 4.4 keys the leaf once with `S_MAX` serialized equal to 8.
+
+#### Scenario: S_MAX changed
+- **WHEN** two node relations differ only in `S_MAX`.
+- **THEN** their `write_relation` bytes differ and the key cascade runs.
 
 ### Requirement: SRC-015 Staged throughput gates
 After the node fixes and the k=19 cut, one node step SHALL prove in at most 60 s and 16 GB at the qualification thread count, or the shortfall and C0 cause SHALL be recorded and S raised at G-A (A16); the `entry 7;` chain SHALL complete end to end in under 20 min (A18, gate G-B); fact(3) and list123 SHALL each complete in under 2 h (A19, A19b, gate G-C); every row at 48 GB per process and 100 GB aggregate; caps are seeded requirement caps, never measured-then-doubled.
@@ -152,6 +164,8 @@ Every `heavy` process SHALL run under a cgroup v2 `MemoryMax` equal to its cap (
 - **THEN** `acquire_turn` refuses the fourth until one finishes (78 + 26 > 100).
 
 ### Requirement: SRC-017 General-purpose recursion: fixed keys and formal gates
+(Amended 2026-11-10, owner: "It needs to be general purpose recursion. Make sure we understand what that means. And universal".) The target SHALL be GP-1 to GP-4 as defined in `../../general-purpose.md` (GP-001..GP-004); the design of this change is the first milestone toward GP-1, and its open gaps are listed in `../../design.md` §3.6. The text below states what the first milestone SHALL meet.
+
 One key set (leaf over `R` at the keyed S, one self-recursive node, one decider, one acceptRun template) SHALL serve every committed program, step count, fold schedule and tree shape; per-program, per-depth or per-level keys are refused. The aggregation protocol SHALL have a Quint model (`models/sherlock/quint/aggregation.qnt`, constants `TREE` and S) whose invariants pass with every seeded mutant caught, and Lean theorems (`clean/fork/Clean/Sherlock/Aggregation.lean`, library `SherlockSpec`) that build with zero `sorry` and declared premises only: segment soundness for every program, associativity, padding neutrality, exactly-once coverage, height arithmetic, decider pinning, independence from shape, depth and S. F20, F21 and the council review SHALL pass before 2.3, 4.2 and 5.7 are implemented.
 
 #### Scenario: Program-dependent constant
@@ -188,3 +202,24 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 #### Scenario: Track opened or closed by C0 and the owner
 - **WHEN** the C0 profile records MSM share m and NTT share q of the node step and gate G-A is written.
 - **THEN** the track proceeds past the toolchain smoke (G0) only if `m + q >= 0.4` and the owner funds the phases; below 0.25 it is closed with the shares recorded; each later phase G1-G6 passes or is killed by its own gate in `gpu.md` §6.
+
+### Requirement: SRC-019 Versioned GP bundle
+(Added 2026-11-10, task 5.1a.) A proving run SHALL write a versioned bundle that keeps every leaf, node and decider proof, every key manifest, the fold order and the run statement, bound by one manifest hash; no proof SHALL be discarded before SRC-010 and SRC-020 have run.
+
+#### Scenario: Missing node proof
+- **WHEN** the bundle of `entry 7;` lacks one intermediate node proof or one artifact hash differs from its file.
+- **THEN** the bundle reader refuses it (row A30); today the GP harness keeps only the last node proof (`tests/sherlock_gp.rs:289-291`).
+
+### Requirement: SRC-020 Full local call validation
+(Added 2026-11-10, task 5.1c.) Before any network call, the decider proof SHALL pass full local `validate_call` of the acceptRun call with the template recaptured under Compact 0.36.0 on a local proof-verifying ledger 9.1.0.1 with mainnet parameters, and the five mutations SHALL be refused.
+
+#### Scenario: Stale template
+- **WHEN** the template predates the re-pin or its compiler version is unobserved.
+- **THEN** the validation does not count (row A32 fails) until the template is recaptured.
+
+### Requirement: SRC-021 Canonical initialization
+(Added 2026-11-10.) If a run's initial carriers are not the canonical initial state for the program image, configuration, fuel and stack limit that `prog_d` commits, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. Mechanism: [PENDING owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review"], option G1 (an in-circuit or otherwise authenticated first-leaf check selected by `h_pre == 0`; cost measured by experiment E3) or option G2 (off-chain recomputation of `init_d` by the independent verifier, with O1 restated).
+
+#### Scenario: Forged initial carriers
+- **WHEN** a run starts from carriers that open to the sealed `init_d` but are not the canonical initial state of the program.
+- **THEN** the chosen mechanism refuses it at its named boundary (row A13), and the record names the circuit or verifier that performed the check.
