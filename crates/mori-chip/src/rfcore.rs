@@ -1392,9 +1392,25 @@ mod tests {
         RfLeaf::new(p(arch), w.s(), Some(w))
     }
 
+    /// Every layout, with plain and with packed core selectors (E8 cut 2).
+    fn archs_pack() -> Vec<(Arch, bool)> {
+        ARCHS
+            .iter()
+            .flat_map(|&a| [(a, false), (a, true)])
+            .collect()
+    }
+
+    fn leafp(arch: Arch, pack: bool, w: RfWitness) -> RfLeaf {
+        let params = RfParams {
+            pack_core: pack,
+            ..p(arch)
+        };
+        RfLeaf::new(params, w.s(), Some(w))
+    }
+
     #[test]
     fn rotations_are_unit() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             for (hash, slim_hash, pos_hash, range1) in [
                 (false, false, false, false),
                 (true, false, false, false),
@@ -1412,6 +1428,7 @@ mod tests {
                     pos_hash,
                     range1,
                     extra_selectors: 0,
+                    pack_core: pack,
                     ..Default::default()
                 }) {
                     assert!((-1..=1).contains(&r), "{arch:?} hash={hash}: rotation {r}");
@@ -1422,13 +1439,14 @@ mod tests {
 
     #[test]
     fn honest_leaves_pass() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             for s in [1, 6, 8] {
-                rf_mock(&leaf(arch, honest(s))).unwrap_or_else(|e| panic!("{arch:?} s={s}: {e}"));
+                rf_mock(&leafp(arch, pack, honest(s)))
+                    .unwrap_or_else(|e| panic!("{arch:?} s={s}: {e}"));
             }
             // 4 steps in 7 slots.
             let w = RfWitness::from_trace(&run32(genesis(), 4), 7);
-            rf_mock(&leaf(arch, w)).unwrap_or_else(|e| panic!("{arch:?} partial: {e}"));
+            rf_mock(&leafp(arch, pack, w)).unwrap_or_else(|e| panic!("{arch:?} partial: {e}"));
         }
     }
 
@@ -1437,14 +1455,14 @@ mod tests {
     /// for each of the 32 words.
     #[test]
     fn every_register_word_is_checked() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let base = honest(6);
             assert_eq!(base.slots[5].flags[POP], 1);
             for j in 0..NREG {
                 let mut w = base.clone();
                 let v = w.slots[5].post[j];
                 w.set_post(5, j, v + 1);
-                let e = rf_mock(&leaf(arch, w)).expect_err(&format!("{arch:?} word {j}"));
+                let e = rf_mock(&leafp(arch, pack, w)).expect_err(&format!("{arch:?} word {j}"));
                 assert!(e.contains("rf core"), "{arch:?} word {j}: {e}");
             }
         }
@@ -1453,7 +1471,7 @@ mod tests {
     /// D7: a push must store the core's `fp` as the link, not a free value.
     #[test]
     fn push_link_is_the_core_fp() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             // Steps 6.. start a second cycle: step 6 is a Push with fp = 0; use a leaf
             // where a pushed entry is later popped (steps 0 and 5).
             let mut w = honest(6);
@@ -1462,13 +1480,13 @@ mod tests {
             // The pop at step 5 then loads link 9 into fp.
             w.slots[5].l1[4] = F::from(9u64);
             w.set_post(5, FP, 9);
-            assert!(rf_mock(&leaf(arch, w)).is_err(), "{arch:?}");
+            assert!(rf_mock(&leafp(arch, pack, w)).is_err(), "{arch:?}");
         }
     }
 
     #[test]
     fn enable_is_a_prefix() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let t = run32(genesis(), 1);
             let mut w = RfWitness::from_trace(&t, 2);
             let s0 = w.slots[0];
@@ -1482,7 +1500,7 @@ mod tests {
                 ..s0
             };
             w.alu = vec![AluOp::eval(OP_ADD, 0, 0), w.alu[0]];
-            assert!(rf_mock(&leaf(arch, w)).is_err(), "{arch:?}");
+            assert!(rf_mock(&leafp(arch, pack, w)).is_err(), "{arch:?}");
         }
     }
 
@@ -1496,29 +1514,31 @@ mod tests {
     /// by the permutation argument.
     #[test]
     fn narrow_copies_are_checked() {
-        // Post cell of slot 2 differs from the next pre cell (no gate is wrong).
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Post(ENV), 0);
-        w.overrides.push((2, row, col, F::from(77u64)));
-        let e = rf_mock(&leaf(Arch::Narrow, w)).unwrap_err();
-        assert!(e.contains("quality") || e.contains("ermutation"), "{e}");
-        // A flag replica of slot 1 differs from the canonical flag row.
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Flag(REWRITE), 2);
-        w.overrides.push((1, row, col, F::from(0u64)));
-        assert!(rf_mock(&leaf(Arch::Narrow, w)).is_err());
-        // A routed operand replica differs from its register.
-        let mut w = honest(6);
-        let (row, col) = cell_of(Arch::Narrow, Cell::Pre(CTL_A), 1);
-        w.overrides.push((0, row, col, F::from(5u64)));
-        assert!(rf_mock(&leaf(Arch::Narrow, w)).is_err());
+        for pack in [false, true] {
+            // Post cell of slot 2 differs from the next pre cell (no gate is wrong).
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Post(ENV), 0);
+            w.overrides.push((2, row, col, F::from(77u64)));
+            let e = rf_mock(&leafp(Arch::Narrow, pack, w)).unwrap_err();
+            assert!(e.contains("quality") || e.contains("ermutation"), "{e}");
+            // A flag replica of slot 1 differs from the canonical flag row.
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Flag(REWRITE), 2);
+            w.overrides.push((1, row, col, F::from(0u64)));
+            assert!(rf_mock(&leafp(Arch::Narrow, pack, w)).is_err());
+            // A routed operand replica differs from its register.
+            let mut w = honest(6);
+            let (row, col) = cell_of(Arch::Narrow, Cell::Pre(CTL_A), 1);
+            w.overrides.push((0, row, col, F::from(5u64)));
+            assert!(rf_mock(&leafp(Arch::Narrow, pack, w)).is_err());
+        }
     }
 
     #[test]
     fn wrong_digest_statement_rejected() {
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let w = honest(3);
-            let c = leaf(arch, w.clone());
+            let c = leafp(arch, pack, w.clone());
             let mut inst = w.instance();
             inst[3] += F::from(1u64);
             let pr = midnight_proofs::dev::MockProver::run(&c, vec![vec![], inst]).unwrap();
@@ -1540,10 +1560,11 @@ mod tests {
             let c = RfLeaf::new(params, 4, Some(honest(4))).with_hashes(3, vec![3, 31]);
             rf_mock(&c).unwrap_or_else(|e| panic!("range1={range1}: {e}"));
         }
-        for arch in ARCHS {
+        for (arch, pack) in archs_pack() {
             let params = RfParams {
                 arch,
                 range1: true,
+                pack_core: pack,
                 ..Default::default()
             };
             rf_mock(&RfLeaf::new(params, 6, Some(honest(6))))
@@ -1842,6 +1863,59 @@ mod tests {
                 assert!(is_perm(&e), "side {side} input {i}: {e}");
             }
         }
+    }
+
+    /// The core's frame condition and next state on the final key (packed
+    /// selectors, M3): a wrong post value of any of the 32 words after the last
+    /// step (a `Pop`) is refused by `rf core`. Word 16 is `len` (+1 per append).
+    #[test]
+    fn m3_every_register_word_is_checked() {
+        let base = m3_witness(8, 6, 6);
+        assert_eq!(base.slots[5].flags[POP], 1);
+        for j in 0..NREG {
+            let mut w = base.clone();
+            let v = w.slots[5].post[j];
+            w.set_post(5, j, v + 1);
+            let e = m3_mock(w).expect_err(&format!("word {j}"));
+            assert!(e.contains("rf core"), "word {j}: {e}");
+        }
+    }
+
+    fn only_walk(e: &str) -> bool {
+        e.contains("('m3 walk')")
+            && !e.contains("m3 walk first")
+            && !e.contains("m3 walk last")
+            && !is_perm(e)
+            && !e.contains("ookup")
+    }
+
+    /// The generic walker gate: a select that does not follow the bit (old and new
+    /// walk, several levels) and a non-boolean bit whose select and accumulator
+    /// are consistent. The statement is recomputed from the forged walk, so only
+    /// `m3 walk` can refuse.
+    #[test]
+    fn m3_walk_gate_rejects_bad_select_and_bit() {
+        for walk in 0..2 {
+            for l in [0, 5, TOP - 1] {
+                let mut w = m3_witness(8, 16, 16);
+                let m = w.m3.as_mut().unwrap();
+                m.forge_in0 = Some((walk, l, F::ONE));
+                m.pre_root = m.old_root();
+                let e = m3_mock(w).expect_err(&format!("walk {walk} level {l}"));
+                assert!(only_walk(&e), "walk {walk} level {l}: {e}");
+            }
+        }
+        // idx 1 as bits (-1, 1, 0, ..): acc 1 -> 1 -> 0, so only `b` boolean fails.
+        let mut w = m3_witness(8, 16, 16);
+        let m = w.m3.as_mut().unwrap();
+        let mut bits = [F::ZERO; TOP];
+        bits[0] = -F::ONE;
+        bits[1] = F::ONE;
+        m.bits = Some(bits);
+        assert_eq!(m.accs()[TOP], F::ZERO);
+        m.pre_root = m.old_root();
+        let e = m3_mock(w).unwrap_err();
+        assert!(only_walk(&e), "{e}");
     }
 
     /// The degree stays 6 with the cuts and M3; cut 1 removes 2 fixed columns

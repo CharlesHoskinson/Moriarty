@@ -351,6 +351,8 @@ mod tests {
         used: usize,
         len_end: u64,
         requests: Vec<Tuple>,
+        /// Padding row that keeps `chip = MEM`, `key = addr` on the bus.
+        forge_pad: Option<usize>,
     }
 
     impl Circuit<F> for SegOnly {
@@ -385,6 +387,12 @@ mod tests {
                         &cells,
                         &act,
                     )?;
+                    if let Some(row) = self.forge_pad {
+                        let a = cfg.bus.cols.a;
+                        let ad = F::from(8 + row as u64);
+                        r.assign_advice(|| "chip", a[0], row, || Value::known(F::from(CHIP_MEM)))?;
+                        r.assign_advice(|| "key", a[1], row, || Value::known(ad))?;
+                    }
                     for (j, t) in self.requests.iter().enumerate() {
                         cfg.bus.request(&mut r, SEG + j, Value::known(*t))?;
                     }
@@ -416,6 +424,7 @@ mod tests {
             used: 3,
             len_end: 11,
             requests: ok_reqs,
+            forge_pad: None,
         };
         assert_eq!(seg_err(&honest), None);
         for (addr, c) in [(11, c3(0, 0, 0)), (15, c3(0, 0, 0)), (12, c3(7, 1, 1))] {
@@ -432,6 +441,7 @@ mod tests {
             used: 8,
             len_end: 16,
             requests: vec![req(15, c3(1, 7, 0))],
+            forge_pad: None,
         };
         assert_eq!(seg_err(&full), None);
         let empty = SegOnly {
@@ -439,8 +449,17 @@ mod tests {
             used: 0,
             len_end: 8,
             requests: vec![],
+            forge_pad: None,
         };
         assert_eq!(seg_err(&empty), None);
+        // A padding row that still offers `(MEM, addr, 0, 0, 0)` on the bus.
+        let c = SegOnly {
+            forge_pad: Some(5),
+            requests: vec![req(13, c3(0, 0, 0))],
+            ..honest.clone()
+        };
+        let e = seg_err(&c).expect("padding on the bus");
+        assert!(e.contains("mem row") && !e.contains("ookup"), "{e}");
         // `len_end` off by one at either end of the prefix.
         for (used, len_end, gate) in [
             (0, 9, "mem first"),
@@ -452,6 +471,7 @@ mod tests {
                 used,
                 len_end,
                 requests: vec![],
+                forge_pad: None,
             };
             let e = seg_err(&c).expect("desync");
             assert!(e.contains(gate), "{used} {len_end}: {e}");

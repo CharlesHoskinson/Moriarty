@@ -164,6 +164,26 @@ pub struct M3W {
     /// `(digest, input, delta)`: digest 0 (`pre_d`) or 1 (`post_d`) hashes input
     /// `input` as its cell plus `delta` (the copy constraint stays).
     pub dig_in: Option<(usize, usize, F)>,
+    /// Negative tests: the walk bits as field elements (the bits of `idx` when
+    /// `None`); the accumulators follow `acc_out = (acc_in - b) / 2`.
+    pub bits: Option<[F; TOP]>,
+    /// Negative tests: `(walk, level, delta)` adds `delta` to `in0` of that
+    /// compression (walk 0 old, 1 new); the hash is of the forged input.
+    pub forge_in0: Option<(usize, usize, F)>,
+}
+
+/// A walk with field bits and an optional forged `in0` at one level.
+pub fn walk_field(x: F, sibs: &[F], bits: &[F], forge: Option<(usize, F)>) -> F {
+    sibs.iter().enumerate().fold(x, |x, (l, &s)| {
+        let b = bits[l];
+        let mut in0 = x + b * (s - x);
+        if let Some((fl, d)) = forge {
+            if fl == l {
+                in0 += d;
+            }
+        }
+        h2(in0, s + b * (x - s))
+    })
 }
 
 impl M3W {
@@ -188,7 +208,37 @@ impl M3W {
             pre_root: walk_native(F::ZERO, &sibs, idx),
             len_post: crate::fu(base + SEG as u128),
             dig_in: None,
+            bits: None,
+            forge_in0: None,
         }
+    }
+
+    /// The walk bits.
+    pub fn bit_vals(&self) -> [F; TOP] {
+        self.bits
+            .unwrap_or_else(|| std::array::from_fn(|l| F::from((self.idx >> l) & 1)))
+    }
+
+    /// `acc_in` of each level: `idx`, then `(acc_in - b) / 2`.
+    pub fn accs(&self) -> [F; TOP + 1] {
+        let b = self.bit_vals();
+        let half = F::from(2u64).invert().unwrap();
+        let mut a = [F::ZERO; TOP + 1];
+        a[0] = F::from(self.idx);
+        for l in 0..TOP {
+            a[l + 1] = (a[l] - b[l]) * half;
+        }
+        a
+    }
+
+    fn forge(&self, walk: usize) -> Option<(usize, F)> {
+        self.forge_in0
+            .and_then(|(wk, l, d)| (wk == walk).then_some((l, d)))
+    }
+
+    /// `mem_root` before the leaf, as the circuit's old walk computes it.
+    pub fn old_root(&self) -> F {
+        walk_field(F::ZERO, &self.sibs, &self.bit_vals(), self.forge(0))
     }
 
     pub fn seg_root(&self) -> F {
@@ -200,7 +250,12 @@ impl M3W {
 
     /// `mem_root` after the leaf, as the circuit computes it.
     pub fn new_root(&self) -> F {
-        walk_native(self.seg_root(), &self.sibs_new, self.idx)
+        walk_field(
+            self.seg_root(),
+            &self.sibs_new,
+            &self.bit_vals(),
+            self.forge(1),
+        )
     }
 
     /// The digest inputs: `words` then the root; `side` 0 is `pre_d`, 1 `post_d`.
@@ -276,7 +331,7 @@ pub fn assign(
         let mut x: Option<AssignedCell<F, F>> = None;
         for l in 0..TOP {
             let r = *o;
-            let bit = w.map(|w| F::from((w.idx >> l) & 1));
+            let bit = w.map(|w| w.bit_vals()[l]);
             let s_val = w.map(|w| if walk == 0 { w.sibs[l] } else { w.sibs_new[l] });
             // x
             let xc = match (&x, walk) {
@@ -300,7 +355,7 @@ pub fn assign(
                     || "acc_out",
                     a[9],
                     r,
-                    || known(w.map(|w| F::from(w.idx >> (l + 1)))),
+                    || known(w.map(|w| w.accs()[l + 1])),
                 )?;
                 (sc, bc, ai, ao)
             } else {
@@ -337,7 +392,11 @@ pub fn assign(
             let xv = xc.value().copied();
             let sv = known(s_val);
             let bv = known(bit);
-            let in0 = xv.zip(sv).zip(bv).map(|((x, s), b)| x + b * (s - x));
+            let fd = w
+                .and_then(|w| w.forge_in0)
+                .and_then(|(wk, fl, d)| (wk == walk && fl == l).then_some(d))
+                .unwrap_or(F::ZERO);
+            let in0 = xv.zip(sv).zip(bv).map(|((x, s), b)| x + b * (s - x) + fd);
             let in1 = xv.zip(sv).zip(bv).map(|((x, s), b)| s + b * (x - s));
             let (out, n) = pc.sponge(
                 region,
