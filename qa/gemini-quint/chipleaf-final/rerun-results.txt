@@ -1,0 +1,65 @@
+# Lead re-run, quint 0.32.0, each command as heavy-run --mem 4G -- quint ..., run from qa/gemini-quint/chipleaf-final/ (2026-11-10)
+## packsel (no repairs)
+exit=0 other :: quint typecheck packsel.qnt
+exit=0 other :: quint typecheck packsel_test.qnt
+exit=0 16 passing :: quint test --main packsel_test packsel_test.qnt
+exit=0 [ok] :: quint run packsel.qnt --main packsel_sound --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run packsel.qnt --main packsel_sound --invariant reachAcceptedBadTamper --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_sound --invariant reachNarrowMultiSlot --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_sound --invariant reachWideLayout --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_sound --invariant reachStaggeredSharedCol --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_sound --invariant reachStaggeredSplitCols --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_same_code --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_cnt_collides --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_lagrange_skips_zero --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_pack_bound_7 --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_chain_on_last --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_walk_lagrange1 --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_walk_code_shift --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_dec_packed --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run packsel.qnt --main packsel_abs_two_codes --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+## range (after the lead repair of range_test.qnt)
+exit=0 other :: quint typecheck range.qnt
+exit=0 other :: quint typecheck range_test.qnt
+exit=0 15 passing :: quint test --main range_test range_test.qnt
+exit=0 [ok] :: quint run range.qnt --main range_sound --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run range.qnt --main range_sound --invariant reachAcceptedBadTamper --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_sound --invariant reachHonestTwoOps --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_sound --invariant reachMaxRangeValue --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_no_first --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_first_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_pad_unchecked --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_pad_row_no_lookup --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_extra_step --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_gate_off_centre --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_gate_row10 --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_shared_sum --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run range.qnt --main range_step_on_pad_row --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run range.qnt --main range_small_p --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+## m3 (after the lead repair of cex_M4_walk_last_dropped in m3.qnt)
+exit=0 other :: quint typecheck m3.qnt
+exit=0 other :: quint typecheck m3_test.qnt
+exit=1 20 passing; 2 failed :: quint test --main m3_test m3_test.qnt
+exit=0 [ok] :: quint run m3.qnt --main m3_sound --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run m3.qnt --main m3_sound --invariant reachAcceptedBadTamper --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_sound --invariant reachHonestZeroAndPartial --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_sound --invariant reachHonestFullAndPartial --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_sound --invariant reachHonestBothFull --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run m3.qnt --main m3_sound_c8 --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M1_sib_not_shared --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M2_bit_not_shared --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M3_acc_not_chained --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M4_walk_last_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M5_bit_not_boolean --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M6_x_zero_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M7_base_unaligned --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M8_close_running --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=0 [ok] :: quint run m3.qnt --main m3_M9_first_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M10_last_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M11_prefix_end_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M12_tag_dropped --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M13_chip_unscaled --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M14_len_end_free --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+exit=1 [violation] :: quint run m3.qnt --main m3_M15_digest_skips_root --invariant invRefine --max-samples 4000 --max-steps 3 --seed 0x20261110
+## lead addition
+exit=0 3 passing :: quint test --main m3_lead_test m3_lead_test.qnt
