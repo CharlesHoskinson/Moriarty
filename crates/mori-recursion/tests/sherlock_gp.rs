@@ -10,7 +10,10 @@ use std::{fs, io::Cursor, path::PathBuf, time::Instant};
 use ff::{Field, PrimeField};
 use group::Curve;
 use midnight_curves::Bls12;
-use midnight_proofs::{poly::kzg::params::ParamsKZG, utils::SerdeFormat};
+use midnight_proofs::{
+    poly::{commitment::Params, kzg::params::ParamsKZG},
+    utils::SerdeFormat,
+};
 use midnight_transient_crypto::{
     curve::Fr,
     proofs::{PARAMS_VERIFIER, Proof, ProofPreimage, VerifierKey},
@@ -49,6 +52,58 @@ fn srs() -> ParamsKZG<Bls12> {
     );
     let mut c = Cursor::new(bytes);
     ParamsKZG::read_custom(&mut c, SerdeFormat::RawBytesUnchecked).unwrap()
+}
+
+/// k = 21 measurement: the ceremony SRS at `MORIARTY_GP_SRS` (k20 or k21 file of
+/// `MIDNIGHT_SRS_CATALOG.md`), else the pinned k20 file of `srs()`.
+fn srs_any() -> ParamsKZG<Bls12> {
+    let Some(p) = std::env::var_os("MORIARTY_GP_SRS") else {
+        return srs();
+    };
+    let bytes = fs::read(PathBuf::from(p)).unwrap();
+    let h = sha256_hex(&bytes);
+    assert!(
+        [
+            "1cc62978558fdc1e445cd70cfd9a86ec3c2e2151b6d74811232d37faf9133ff1",
+            "9cf1644a87f0f027ae5fc6278f91d823a6334ff3e338a29e2f2ef57d071ed64d",
+        ]
+        .contains(&h.as_str()),
+        "official k20 or k21 ceremony SRS, got {h}"
+    );
+    let mut c = Cursor::new(bytes);
+    ParamsKZG::read_custom(&mut c, SerdeFormat::RawBytesUnchecked).unwrap()
+}
+
+/// Peak resident set of this process since the last `hwm_reset` (VmHWM, bytes).
+fn hwm() -> u64 {
+    let s = fs::read_to_string("/proc/self/status").unwrap();
+    let l = s.lines().find(|l| l.starts_with("VmHWM:")).unwrap();
+    l.split_whitespace().nth(1).unwrap().parse::<u64>().unwrap() * 1024
+}
+
+fn hwm_reset() {
+    fs::write("/proc/self/clear_refs", "5").unwrap();
+}
+
+fn model_json(m: &midnight_proofs::dev::cost_model::CircuitModel) -> Value {
+    json!({
+        "k": m.k, "rows": m.rows, "table_rows": m.table_rows, "nb_unusable_rows": m.nb_unusable_rows,
+        "max_deg": m.max_deg, "advice_columns": m.advice_columns, "fixed_columns": m.fixed_columns,
+        "lookups": m.lookups, "permutations": m.permutations, "column_queries": m.column_queries,
+        "point_sets": m.point_sets, "proof_size": m.size,
+    })
+}
+
+/// Append one measurement record (a JSON line) to `<out>/measure.jsonl` and stdout.
+fn record(out: &std::path::Path, v: Value) {
+    use std::io::Write;
+    println!("GPJSON {v}");
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(out.join("measure.jsonl"))
+        .unwrap();
+    writeln!(f, "{v}").unwrap();
 }
 
 fn at_k(base: &ParamsKZG<Bls12>, k: u32) -> ParamsKZG<Bls12> {
@@ -164,7 +219,13 @@ const CC_INPUTS: [u32; 6] = [CC_STMT, V_PROG, V_INIT, V_STEPS, V_FIN, V_RESULT];
 fn gp_fold_and_key() {
     let out = env("MORIARTY_GP_OUT");
     fs::create_dir(&out).unwrap();
-    let base = srs();
+    hwm_reset();
+    let base = srs_any();
+    let forced_k = std::env::var("MORIARTY_GP_NODE_K").is_ok();
+    record(
+        &out,
+        json!({"phase": "srs", "srs_max_k": base.max_k(), "peak_rss_bytes": hwm()}),
+    );
     let t = Instant::now();
     let leaves = match std::env::var("MORIARTY_GP_STANDIN_STEPS") {
         Ok(n) => standin_leaves(&base, n.parse().unwrap(), 6),
@@ -219,18 +280,28 @@ fn gp_fold_and_key() {
         let m = cost_model(&r, Some(k));
         println!("GP node try k={k} model_k={} rows={}", m.k, m.rows);
         if m.k <= k {
+            record(
+                &out,
+                json!({"phase": "node_model", "self_k": k, "model": model_json(&m)}),
+            );
             break r;
         }
+        assert!(!forced_k, "node does not fit the forced k={k}");
         k += 1;
-        assert!(k <= 20, "node exceeds k20");
+        assert!(k <= base.max_k(), "node exceeds the SRS");
     };
     let np = at_k(&base, k);
+    hwm_reset();
     let t = Instant::now();
     let node_vk = setup_vk(&np, &rel);
+    let vk_s = t.elapsed().as_secs_f64();
     let node_pk = setup_pk(&rel, &node_vk);
-    println!(
-        "GP node_k={k} keygen_seconds={:.3}",
-        t.elapsed().as_secs_f64()
+    let keygen_s = t.elapsed().as_secs_f64();
+    println!("GP node_k={k} keygen_seconds={keygen_s:.3}");
+    record(
+        &out,
+        json!({"phase": "node_keygen", "k": k, "vk_seconds": vk_s, "keygen_seconds": keygen_s,
+               "vk_k": node_vk.k(), "peak_rss_bytes": hwm()}),
     );
     let vp = np.verifier_params();
     let repr = node_vk.vk().transcript_repr();
@@ -263,12 +334,21 @@ fn gp_fold_and_key() {
             h: st.h + small(&inst[6]),
         };
         let ni = SherlockIvcRelation::instance(repr, &next, &next_acc);
+        hwm_reset();
         let t = Instant::now();
         let p = prove::<SherlockIvcRelation, Pos>(&np, &node_pk, &rel, &ni, w, &mut rng).unwrap();
+        let prove_s = t.elapsed().as_secs_f64();
+        let prove_peak = hwm();
+        let t = Instant::now();
         verify::<SherlockIvcRelation, Pos>(&vp, &node_vk, &ni, None, &p).unwrap();
-        println!(
-            "GP fold step={h} prove_seconds={:.3}",
-            t.elapsed().as_secs_f64()
+        let verify_s = t.elapsed().as_secs_f64();
+        println!("GP fold step={h} prove_seconds={prove_s:.3}");
+        record(
+            &out,
+            json!({"phase": "node_prove", "k": k, "step": h, "prove_seconds": prove_s,
+                   "verify_seconds": verify_s, "proof_bytes": p.len(),
+                   "peak_rss_bytes_since_reset": prove_peak,
+                   "rss_note": "VmHWM reset before prove; includes the resident node PK"}),
         );
         st = next;
         acc = next_acc;
@@ -292,6 +372,10 @@ fn gp_fold_and_key() {
     let mut rb = Vec::new();
     rel.write_relation(&mut rb).unwrap();
     fs::write(out.join("node/node.relation"), rb).unwrap();
+    if std::env::var("MORIARTY_GP_NODE_ONLY").as_deref() == Ok("1") {
+        println!("GP node-only stop");
+        return;
+    }
 
     // Run decider key and an offline proof checked by the ledger reader.
     let drel = RunDeciderRelation {
@@ -302,14 +386,32 @@ fn gp_fold_and_key() {
         cc_inputs: CC_INPUTS.to_vec(),
     };
     drel.validate().unwrap();
-    let dk = cost_model(&drel, None).k;
-    println!("GP decider model_k={dk}");
-    assert!(dk <= 20);
+    let dm_opt = cost_model(&drel, None);
+    record(
+        &out,
+        json!({"phase": "decider_model_optimal", "model": model_json(&dm_opt)}),
+    );
+    let dk = std::env::var("MORIARTY_GP_DECIDER_K").map_or(dm_opt.k, |s| s.parse().unwrap());
+    let dm = cost_model(&drel, Some(dk));
+    record(
+        &out,
+        json!({"phase": "decider_model", "k": dk, "model": model_json(&dm)}),
+    );
+    println!("GP decider model_k={} forced_k={dk}", dm_opt.k);
+    assert!(dm.k <= dk && dk <= base.max_k());
     let dp = at_k(&base, dk);
+    hwm_reset();
     let t = Instant::now();
     let dvk = setup_vk(&dp, &drel);
     let dpk = setup_pk(&drel, &dvk);
-    println!("GP decider keygen_seconds={:.3}", t.elapsed().as_secs_f64());
+    let dkeygen_s = t.elapsed().as_secs_f64();
+    println!("GP decider keygen_seconds={dkeygen_s:.3}");
+    record(
+        &out,
+        json!({"phase": "decider_keygen", "k": dk, "vk_k": dvk.k(), "keygen_seconds": dkeygen_s,
+               "peak_rss_bytes": hwm()}),
+    );
+    let reps: usize = std::env::var("MORIARTY_GP_DECIDER_REPS").map_or(1, |s| s.parse().unwrap());
     let dw = RunDeciderWitness {
         w_instance: ni.clone(),
         w_proof: proof.clone(),
@@ -319,21 +421,50 @@ fn gp_fold_and_key() {
         comm_rand: F::random(OsRng),
     };
     let public = drel.public_inputs(F::random(OsRng), &dw).unwrap();
-    let t = Instant::now();
-    let dproof = prove::<RunDeciderRelation, B2>(&dp, &dpk, &drel, &public, dw, &mut rng).unwrap();
-    println!(
-        "GP decider prove_seconds={:.3} proof_bytes={}",
-        t.elapsed().as_secs_f64(),
-        dproof.len()
-    );
-    verify::<RunDeciderRelation, B2>(&dp.verifier_params(), &dvk, &public, None, &dproof).unwrap();
+    let mut dproof = Vec::new();
+    for rep in 0..reps {
+        hwm_reset();
+        let t = Instant::now();
+        dproof = prove::<RunDeciderRelation, B2>(&dp, &dpk, &drel, &public, dw.clone(), &mut rng)
+            .unwrap();
+        let prove_s = t.elapsed().as_secs_f64();
+        let peak = hwm();
+        let t = Instant::now();
+        verify::<RunDeciderRelation, B2>(&dp.verifier_params(), &dvk, &public, None, &dproof)
+            .unwrap();
+        let verify_s = t.elapsed().as_secs_f64();
+        println!(
+            "GP decider prove_seconds={prove_s:.3} proof_bytes={}",
+            dproof.len()
+        );
+        record(
+            &out,
+            json!({"phase": "decider_prove", "k": dk, "rep": rep, "prove_seconds": prove_s,
+                   "verify_seconds_library": verify_s, "proof_bytes": dproof.len(),
+                   "peak_rss_bytes_since_reset": peak}),
+        );
+    }
+    fs::create_dir_all(out.join("key")).unwrap();
+    fs::write(out.join("key/decider.proof"), &dproof).unwrap();
+    fs::write(
+        out.join("key/decider.public.json"),
+        hexes(&public).to_string(),
+    )
+    .unwrap();
     let key = VerifierKey::from(dvk.clone());
+    let t = Instant::now();
     key.verify(
         &PARAMS_VERIFIER,
         &Proof(dproof.clone()),
         public.iter().copied().map(Fr),
     )
     .unwrap();
+    record(
+        &out,
+        json!({"phase": "decider_ledger_verify_inprocess", "k": dk,
+               "function": "midnight_transient_crypto::proofs::VerifierKey::verify(&PARAMS_VERIFIER) (workspace pin a2b30128)",
+               "verify_seconds": t.elapsed().as_secs_f64(), "result": "Ok"}),
+    );
     for lane in 0..public.len() {
         let mut bad = public.clone();
         bad[lane] += F::ONE;
@@ -349,7 +480,6 @@ fn gp_fold_and_key() {
     }
     let mut tagged = Vec::new();
     midnight_serialize::tagged_serialize(&key, &mut tagged).unwrap();
-    fs::create_dir(out.join("key")).unwrap();
     fs::write(out.join("key/decider.vk"), vk_bytes(&dvk)).unwrap();
     let mut drb = Vec::new();
     drel.write_relation(&mut drb).unwrap();
