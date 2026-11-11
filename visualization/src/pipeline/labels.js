@@ -15,20 +15,23 @@ export class LabelLayer {
     this.root = container;
     this.els = new Map();
     this.queue = [];
+    this.fixed = [];   // rects {x0,y0,x1,y1} of fixed shell elements that labels keep clear of (location indicator, later)
     this._v = new THREE.Vector3();
   }
 
   begin() { this.queue.length = 0; }
 
   // pos: world-space Vector3. opts: kind (colour meaning), carrier (not counted in the cap of six).
-  show(id, html, pos, { kind = 'neutral', carrier = false } = {}) {
-    this.queue.push({ id, html, pos: pos.clone(), kind: KINDS.has(kind) ? kind : 'neutral', carrier });
+  show(id, html, pos, { kind = 'neutral', carrier = false, compact = false } = {}) {
+    this.queue.push({ id, html, pos: pos.clone(), kind: KINDS.has(kind) ? kind : 'neutral', carrier, compact });
   }
 
-  // Projects the queued labels with `camera` for a stage of w by h CSS pixels.
+  // Projects the queued labels with `camera` for a stage of w by h CSS pixels, keeps every label inside the
+  // stage and moves a label up when it would cover one that is already placed (carrier labels are placed first).
   flush(camera, w, h) {
     camera.updateMatrixWorld();
     const seen = new Set();
+    const items = [];
     let scene = 0;
     for (const q of this.queue) {
       if (!q.carrier && ++scene > MAX_SCENE_LABELS) continue;
@@ -42,7 +45,7 @@ export class LabelLayer {
       }
       const txt = el.lastChild;
       if (txt._html !== q.html) { txt.innerHTML = q.html; txt._html = q.html; }
-      const cls = `pl-label pl-k-${q.kind}`;
+      const cls = `pl-label pl-k-${q.kind}${q.compact ? ' pl-compact' : ''}`;
       if (el._cls !== cls) { el.className = cls; el._cls = cls; }
       const cam = this._v.copy(q.pos).applyMatrix4(camera.matrixWorldInverse);
       const behind = cam.z >= -camera.near;
@@ -54,9 +57,37 @@ export class LabelLayer {
         visible = x > -40 && x < w + 40 && y > -20 && y < h + 20;
       }
       el.style.display = visible ? '' : 'none';
-      if (visible) el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if (visible) items.push({ el, x, y, carrier: q.carrier });
       seen.add(q.id);
     }
     for (const [id, el] of this.els) if (!seen.has(id)) el.style.display = 'none';
+    // Placement. Integer pixels: a fractional offset rasterises differently between runs.
+    items.sort((a, b) => (b.carrier ? 1 : 0) - (a.carrier ? 1 : 0));
+    const placed = this.fixed.slice();
+    const GAP = 3;
+    for (const it of items) {
+      const bw = it.el.offsetWidth, bh = it.el.offsetHeight;
+      let x0 = it.x - Math.round(bw / 2);
+      let y0 = it.y - bh - 6;                       // margin-top of the label is -6
+      x0 = Math.max(4, Math.min(w - bw - 4, x0));
+      y0 = Math.max(4, Math.min(h - bh - 4, y0));
+      if (!it.carrier) {
+        // First free spot among: same place, then up and down in label-height steps, each with small sideways shifts.
+        const free = (cx, cy) => cx >= 4 && cx + bw <= w - 4 && cy >= 4 && cy + bh <= h - 4
+          && !placed.some((r) => cx < r.x1 + GAP && cx + bw > r.x0 - GAP && cy < r.y1 + GAP && cy + bh > r.y0 - GAP);
+        let found = false;
+        for (let n = 0; n <= 8 && !found; n++) {
+          for (const sy of n === 0 ? [0] : [-1, 1]) {
+            for (const sx of [0, 0.55, -0.55]) {
+              const cx = Math.max(4, Math.min(w - bw - 4, x0 + Math.round(sx * bw))), cy = y0 + sy * n * (bh + GAP);
+              if (free(cx, cy)) { x0 = cx; y0 = cy; found = true; break; }
+            }
+            if (found) break;
+          }
+        }
+      }
+      placed.push({ x0, y0, x1: x0 + bw, y1: y0 + bh });
+      it.el.style.transform = `translate(${x0}px, ${y0 + 6}px)`;
+    }
   }
 }

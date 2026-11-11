@@ -81,8 +81,15 @@ export class Parts {
   makeDimmer(root, live = []) {
     const list = [];
     const seen = new Set();
+    const own = new Map();   // shared kit materials are cloned once per dimmed group, so dimming stays local
+    const mine = (m) => {
+      if (!m.userData.shared) return m;
+      if (!own.has(m)) { const c = m.clone(); c.userData = { ...c.userData, shared: false }; this.mats.push(c); own.set(m, c); }
+      return own.get(m);
+    };
     root.traverse((o) => {
       if (!o.material) return;
+      if (Array.isArray(o.material)) o.material = o.material.map(mine); else o.material = mine(o.material);
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
         if (seen.has(m) || !m.color) continue;
         seen.add(m);

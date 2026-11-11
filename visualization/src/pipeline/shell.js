@@ -79,9 +79,14 @@ async function loadScenes() {
 // ------------------------------------------------------------------ start
 export async function start() {
   const q = new URLSearchParams(location.search);
-  const forceWebGL = q.has('webgl');
+  // WebGPU needs an adapter, not only navigator.gpu: without one the page runs on the WebGL2 backend by itself.
+  let gpuOK = false;
+  try { gpuOK = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (_) { gpuOK = false; }
+  const forceWebGL = q.has('webgl') || !gpuOK;
   const seekMode = q.has('scene') || q.has('beat') || q.has('t');
 
+  // Under the URL contract nothing may animate: no CSS transition or animation can be caught mid-flight.
+  if (seekMode) document.documentElement.classList.add('pl-static');
   const stageEl = $('stage');
   const canvas = $('gl');
   const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -162,10 +167,10 @@ export async function start() {
   tray.material.depthTest = false; tray.renderOrder = 997;
   carrierGroup.add(tray);
   const CARRIER = [
-    { name: 'prog_d', family: 'program', content: 'prog_d' },
-    { name: 'input_d', family: 'input', content: 'input_d' },
-    { name: 'outcome_d', family: 'outcome', content: 'outcome_d' },
-    { name: 'n_steps', family: 'state', content: 'n_steps' },
+    { name: 'prog_d', family: 'program', content: 'prog:main' },
+    { name: 'input_d', family: 'input', content: 'input:main' },
+    { name: 'outcome_d', family: 'outcome', content: 'outcome:main' },
+    { name: 'n_steps', family: 'state', content: 'n_steps:main' },
   ].map((c) => {
     const tok = makeDigestToken({ family: c.family, content: c.content, size: 1, overlay: true });
     tok.userData.baseContent = c.content;
@@ -173,6 +178,9 @@ export async function start() {
     return { ...c, tok, amount: 0, auto: 0 };
   });
   const carrierByName = Object.fromEntries(CARRIER.map((c) => [c.name, c]));
+  // Carrier layout for this frame: side of the stage ('left' default, 'right') and whether the token names show.
+  // A beat declares it as `beat.carrier = { side, labels }`; a scene may also call ctx.carrier.layout in seek.
+  const carrierLayout = { side: 'left', labels: true };
   const carrierDefault = (si) => ({ prog_d: si >= 1 ? 1 : 0, input_d: si >= 1 ? 1 : 0, outcome_d: si >= 5 ? 1 : 0, n_steps: si >= 5 ? 1 : 0 });
 
   // Per-scene state and ctx.
@@ -218,7 +226,13 @@ export async function start() {
           const c = carrierByName[name];
           if (!c) return;
           c.amount = clamp01(amount);
-          if (content !== undefined) c.tok.userData.setContent(content);
+          if (content !== undefined) { c.shown = content; c.tok.userData.setContent(content); }
+        },
+        // Reserve the lower-left of the stage for scene content: { side: 'left' | 'right', labels: boolean }.
+        layout: (o = {}) => {
+          if (!st.live) return;
+          if (o.side === 'left' || o.side === 'right') carrierLayout.side = o.side;
+          if (o.labels !== undefined) carrierLayout.labels = !!o.labels;
         },
       },
       // Call inside seek: fog range for this frame (reset each frame; default 140 to 700, wide 800 to 9000).
@@ -268,26 +282,30 @@ export async function start() {
   // ---------------- per-frame application
   let stageW = 1, stageH = 1;
   const tmpV = new THREE.Vector3();
-  let carrierStagger = false, carrierUnit = 0;
+  let carrierStagger = false, carrierUnit = 0, narrow = false;
   function layoutCarrier() {
     const dist = 6;
     const halfH = dist * Math.tan(camera.fov * rad / 2);
     const halfW = halfH * camera.aspect;
     const s = halfH * 0.1;
-    const slot = Math.min(s * 2.5, (halfW * 2 - s * 2) / 4);
-    carrierStagger = (slot / (halfW * 2)) * stageW < 92;   // adjacent labels would overlap
+    narrow = stageW < 560;
+    // On a phone the four tokens spread over the whole stage width so the four names fit side by side.
+    const slot = narrow ? (halfW * 2 - s * 3.2) / 4 : Math.min(s * 2.5, (halfW * 2 - s * 2) / 4);
+    carrierStagger = false;
     carrierUnit = s;
+    const right = carrierLayout.side === 'right';
+    const x0 = right ? halfW - s * 1.6 - slot * 4 : -halfW + s * 1.6;
     let any = 0;
     CARRIER.forEach((c, k) => {
       c.tok.visible = c.amount > 0.001;
       const sc = s * 2 * (0.4 + 0.6 * easeInOut(c.amount));
       c.tok.scale.setScalar(sc);
-      c.tok.position.set(-halfW + s * 1.6 + slot * (k + 0.5), -halfH + s * 2.0, -dist);
+      c.tok.position.set(x0 + slot * (k + 0.5), -halfH + s * 2.0, -dist);
       any = Math.max(any, c.amount);
     });
     tray.visible = any > 0.001;
     tray.scale.set(slot * 4 + s * 0.6, s * 1.6, 1);
-    tray.position.set(-halfW + s * 1.6 + slot * 2, -halfH + s * 2.0 - s * 1.25, -dist);
+    tray.position.set(x0 + slot * 2, -halfH + s * 2.0 - s * 1.25, -dist);
     carrierGroup.updateMatrixWorld(true);
   }
 
@@ -325,13 +343,37 @@ export async function start() {
     codeList.parentElement.scrollTop = first < 0 ? 0 : Math.max(0, (first - 2) * LINE_PX);
   }
 
+  // Level of detail for the wide pull-back (ctx.showAll): after the camera is set, every mesh of the other
+  // stations whose projected radius is under LOD_PX pixels is hidden for this frame and restored after the render.
+  const LOD_PX = 2.4;
+  const lodHidden = [];
+  const lodSphere = new THREE.Sphere();
+  function applyLOD(skipGroup) {
+    const halfTan = Math.tan(camera.fov * rad / 2);
+    const k = (stageH / 2) / halfTan;
+    for (const st of states) {
+      if (st.group === skipGroup || !st.group.visible) continue;
+      st.group.updateMatrixWorld(true);
+      st.group.traverse((o) => {
+        if (!o.isMesh || !o.visible) return;
+        const g = o.geometry;
+        if (!g.boundingSphere) g.computeBoundingSphere();
+        lodSphere.copy(g.boundingSphere).applyMatrix4(o.matrixWorld);
+        const d = Math.max(0.1, lodSphere.center.distanceTo(camera.position));
+        if (lodSphere.radius / d * k < LOD_PX) { o.visible = false; lodHidden.push(o); }
+      });
+    }
+  }
+  function restoreLOD() { for (const o of lodHidden) o.visible = true; lodHidden.length = 0; }
+
   let curSi = -1;
   function applyTime(T) {
     const loc = locate(T);
     const { si, sc } = loc;
     // Stepped mode shows the hold pose at the end of the beat.
-    const tScene = stepped ? loc.b.local + loc.b.dur : loc.tScene;
-    const tBeat = stepped ? loc.b.dur : loc.tBeat;
+    // (a hair before the end: at exactly the end, beatAt would return the next beat)
+    const tScene = stepped ? loc.b.local + loc.b.dur - 1e-3 : loc.tScene;
+    const tBeat = stepped ? loc.b.dur - 1e-3 : loc.tBeat;
     curSi = si;
     states.forEach((st, i) => { st.group.visible = i === si; st.wide = false; st.fog = null; });
     pendingCode = null;
@@ -339,9 +381,11 @@ export async function start() {
 
     labels.begin();
     const def = carrierDefault(si);
-    CARRIER.forEach((c) => { c.amount = def[c.name]; c.tok.userData.setContent(c.content); });
+    CARRIER.forEach((c) => { c.amount = def[c.name]; c.shown = c.content; c.tok.userData.setContent(c.content); });
     st.ctx.reducedMotion = stepped;
     st.live = true;
+    carrierLayout.side = loc.b.def.carrier?.side || 'left';
+    carrierLayout.labels = loc.b.def.carrier?.labels !== false;
     if (st.ok) {
       try { sc.def.seek(tScene); } catch (e) { console.error(`scene ${si + 1} seek failed`, e); }
     }
@@ -386,17 +430,19 @@ export async function start() {
     camera.fov = 2 * Math.atan(Math.tan(pose.fov * rad / 2) * Math.max(1, BASE_ASPECT / aspect)) / rad;
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
+    if (st.wide) applyLOD(st.group);
 
     // Carrier labels.
     layoutCarrier();
     for (const [ci, c] of CARRIER.entries()) {
       if (!c.tok.visible || c.amount < 0.999) continue;
       c.tok.userData.anchor.getWorldPosition(tmpV);
-      if (carrierStagger && ci % 3) tmpV.addScaledVector(camera.up.clone().transformDirection(camera.matrixWorld), carrierUnit * 2.3 * (ci % 3));
-      labels.show(`c:${c.name}`, `<code>${c.name}</code>`, tmpV, { kind: c.family, carrier: true });
+      if (!carrierLayout.labels) continue;
+      labels.show(`c:${c.name}`, `<code>${c.name}</code>`, tmpV, { kind: c.family, carrier: true, compact: true });
     }
     labels.flush(camera, stageW, stageH);
     renderer.render(world, camera);
+    restoreLOD();
     return loc;
   }
 
@@ -551,11 +597,19 @@ export async function start() {
   updateUI(loc0);
   try { await renderer.compileAsync(world, camera); } catch (_) { /* compile is an optimisation */ }
   applyTime(T);
-  await Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]);
+  // Fonts come from Google Fonts. Under the URL contract the page waits for every face it draws with, so a capture
+  // never catches a fallback face or a half-loaded icon font; interactive use waits at most 2.5 s.
+  const faces = ['400 14px "Roboto Flex"', '500 14px "Roboto Flex"', '500 12px "Roboto Mono"', '400 24px "Material Symbols Rounded"'];
+  const fontsDone = document.fonts
+    ? Promise.all(faces.map((f) => document.fonts.load(f).catch(() => null)))
+      .then(() => (seekMode ? Promise.all([...document.fonts].map((f) => f.load().catch(() => null))) : null))
+      .then(() => document.fonts.ready)
+    : Promise.resolve();
+  await Promise.race([fontsDone, new Promise((r) => setTimeout(r, seekMode ? 20000 : 2500))]);
   applyTime(T);
   requestAnimationFrame(frame);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  window.__pipeline = { get time() { return T; }, setTime, setPlaying, timeline: tl, locate };
+  window.__pipeline = { get time() { return T; }, setTime, setPlaying, timeline: tl, locate, states, applyTime, carrier: () => CARRIER.map((c) => ({ name: c.name, amount: +c.amount.toFixed(3), content: c.shown })) };
   // Probe for checks the capture tool cannot run: render cost, seek cost, seek-order independence.
   const snap = document.createElement('canvas');
   const hashPixels = () => {
@@ -597,7 +651,12 @@ export async function start() {
     applyTime(T0);
     const hashB = hashPixels();
     applyTime(T0);
-    return { scene: loc.si + 1, beat: loc.bi, t: +loc.tBeat.toFixed(2), drawCalls, triangles, seekMs: +ms[ms.length >> 1].toFixed(4), seekOrderEqual: hashA === hashB, hashA, hashB };
+    const geos = new Set(), mats = new Set();
+    st.group.traverse((o) => {
+      if (o.geometry) geos.add(o.geometry);
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => mats.add(m));
+    });
+    return { scene: loc.si + 1, beat: loc.bi, t: +loc.tBeat.toFixed(2), drawCalls, triangles, geometries: geos.size, materials: mats.size, seekMs: +ms[ms.length >> 1].toFixed(4), seekOrderEqual: hashA === hashB, hashA, hashB };
   };
   window.__ready = true;
 

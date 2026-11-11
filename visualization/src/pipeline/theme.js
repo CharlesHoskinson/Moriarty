@@ -123,25 +123,49 @@ function faceTexture(content) {
   return tex;
 }
 
+// Shared token resources. Geometry and materials are cached by shape, family and content, so thirty
+// tokens build one body geometry, one face geometry, one rim material per family, one cap material and
+// one face material per content string. A token that a scene tints on its own passes `own: true` and
+// gets private copies of the three material kinds (the cached geometry stays shared).
+const tokenCache = { geo: new Map(), rim: new Map(), cap: new Map(), face: new Map() };
+const memo = (map, key, make) => { let v = map.get(key); if (!v) { v = make(); map.set(key, v); } return v; };
+const tokenMaterials = (family, content, overlay, own) => {
+  const mk = () => ({
+    rim: materials.family(family, { roughness: 0.45, metalness: 0.2 }),
+    cap: materials.ceramic({ roughness: 0.7 }),
+    face: new THREE.MeshBasicMaterial({ map: faceTexture(content), toneMapped: false }),
+  });
+  let out;
+  if (own) out = mk();
+  else out = {
+    rim: memo(tokenCache.rim, `${family}|${overlay}`, () => materials.family(family, { roughness: 0.45, metalness: 0.2 })),
+    cap: memo(tokenCache.cap, `${overlay}`, () => materials.ceramic({ roughness: 0.7 })),
+    face: memo(tokenCache.face, `${content}|${overlay}`, () => new THREE.MeshBasicMaterial({ map: faceTexture(content), toneMapped: false })),
+  };
+  if (overlay) for (const m of Object.values(out)) m.depthTest = false;
+  for (const m of Object.values(out)) m.userData.shared = !own;
+  return out;
+};
+
 // Returns a Group (radius 0.5 * size, thickness 0.18 * size, face toward +z).
 // group.userData.setContent(str) changes the face. group.userData.anchor is an Object3D above the token.
-export function makeDigestToken({ family = 'state', content = '', size = 1, overlay = false } = {}) {
+export function makeDigestToken({ family = 'state', content = '', size = 1, overlay = false, own = false } = {}) {
   const grp = new THREE.Group();
   const r = 0.5 * size;
   const h = 0.18 * size;
-  const rimMat = materials.family(family, { roughness: 0.45, metalness: 0.2 });
-  const capMat = materials.ceramic({ roughness: 0.7 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 6), [rimMat, capMat, capMat]);
+  if (overlay) own = true;   // the carrier changes its faces in place
+  const mt = tokenMaterials(family, content, overlay, own);
+  const bodyGeo = memo(tokenCache.geo, `b${size}`, () => new THREE.CylinderGeometry(r, r, h, 6));
+  const body = new THREE.Mesh(bodyGeo, [mt.rim, mt.cap, mt.cap]);
   body.rotation.x = Math.PI / 2;
   body.rotation.y = Math.PI / 6;
   grp.add(body);
-  const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(content), toneMapped: false });
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(r * 1.45, r * 1.45), faceMat);
+  const faceGeo = memo(tokenCache.geo, `f${size}`, () => new THREE.PlaneGeometry(r * 1.45, r * 1.45));
+  const face = new THREE.Mesh(faceGeo, mt.face);
   face.position.z = h / 2 + 0.004 * size;
   grp.add(face);
   if (overlay) {
     // Drawn over everything (token carrier).
-    for (const m of [rimMat, capMat, faceMat]) m.depthTest = false;
     body.renderOrder = 998;
     face.renderOrder = 999;
   }
@@ -152,7 +176,13 @@ export function makeDigestToken({ family = 'state', content = '', size = 1, over
   grp.userData.radius = r;
   grp.userData.setContent = (c) => {
     const tex = faceTexture(c);
-    if (faceMat.map !== tex) { faceMat.map = tex; faceMat.needsUpdate = true; }
+    if (own) {
+      if (face.material.map !== tex) { face.material.map = tex; face.material.needsUpdate = true; }
+      return;
+    }
+    const fm = memo(tokenCache.face, `${c}|${overlay}`, () => new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    fm.userData.shared = true;
+    if (face.material !== fm) face.material = fm;
   };
   return grp;
 }

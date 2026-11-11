@@ -164,7 +164,12 @@ export default {
     rootP.tr.go(T(0, 2.0), T(0, 4.0), [[-8, BASE, 0]]);
     rootMats = [];
     const seen = new Set();
+    const cloned = new Map();   // kit materials are shared; the root slab dims on its own, so it takes clones
     rootSlab.traverse((o) => {
+      if (o.material && o.material.userData.shared) {
+        if (!cloned.has(o.material)) { const c = o.material.clone(); c.userData = { ...c.userData, shared: false }; cloned.set(o.material, c); extraDisposables.push(() => c.dispose()); }
+        o.material = cloned.get(o.material);
+      }
       if (o.material && !seen.has(o.material)) { seen.add(o.material); rootMats.push({ m: o.material, c: o.material.color.clone() }); }
     });
     rootSlab.userData.ring.updateMatrixWorld();
@@ -598,12 +603,12 @@ export default {
 
   seek(t) {
     const b = ctx.beatAt(t);
-    rig.update(t);
-
+    // selectors first: rig.update writes the instance matrices from them (set after, they lag one seek behind)
     // frame flashes: lit for 0.3 s after the frame appears, then plain gold
     for (const fr of frames) fr.p.sel = t >= fr.t0 && t < fr.t0 + 0.3 ? 1 : 0;
     // hatch on the Running cell
     runP.sel = t >= runP.hatchAt ? 1 : 0;
+    rig.update(t);
 
     // hash block glow
     hashMat.emissive.setHex(PALETTE.goldBright);

@@ -8,11 +8,15 @@ import { PLACE } from './scene7/labels.js';
 // function of scene time through the keyframe rig in scene7/rig.js.
 const CARRIER = [['prog_d', 'prog:main'], ['input_d', 'input:main'], ['outcome_d', 'outcome:main'], ['n_steps', 'n_steps:main']];
 
+// Beats whose content fills the lower left: the shell docks the token carrier at the lower right.
+const CARRIER_RIGHT = new Set([4, 5, 11]);
+
 const beats = TEXT.map((b, i) => ({
   id: b.id,
   title: b.title,
   duration: DUR[i],
   narration: b.narration,
+  carrier: CARRIER_RIGHT.has(i) ? { side: 'right' } : undefined,
   labels: PLACE[i].map((p, j) => {
     if (!p) return null;
     const [where, kind, dy, from, to] = p;
