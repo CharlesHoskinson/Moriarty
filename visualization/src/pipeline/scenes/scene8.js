@@ -93,7 +93,7 @@ const LABELS = [
   ],
 ];
 
-const DURATIONS = [23, 24, 22, 25, 25, 27, 24, 32];
+const DURATIONS = [26, 26, 22, 25, 25, 27, 24, 32];
 
 // ---- helpers ---------------------------------------------------------------------------------
 const park = (g, k) => { g.visible = k > 0.001; g.scale.setScalar(Math.max(k, 0.001)); };
@@ -156,7 +156,7 @@ function hashRun(h, u) {
 export default {
   id: 'network',
   title: 'The network',
-  beats: BEAT_TEXT.map((b, i) => ({ id: b.id, title: b.title, duration: DURATIONS[i], narration: b.narration, labels: LABELS[i] })),
+  beats: BEAT_TEXT.map((b, i) => ({ id: b.id, title: b.title, duration: DURATIONS[i], narration: b.narration, where: [0, 1, 2, 5, 6, 7, 8].includes(i) ? 'on' : 'off', labels: LABELS[i] })),
 
   build(c) {
     const ctx = c;

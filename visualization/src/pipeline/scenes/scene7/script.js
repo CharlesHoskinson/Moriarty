@@ -6,7 +6,7 @@ import { makeEnv, makeDrawer, makeCabinet, makeDeck, makeTray, DRW_CLOSED, DRW_O
 
 const PI = Math.PI;
 const FLAT = -PI / 2;
-export const DUR = [25, 27, 21, 22, 22, 22, 24, 29, 26, 31, 24, 26, 25, 25, 25, 22, 26, 28, 26, 29, 25];
+export const DUR = [33, 27, 21, 29, 22, 22, 24, 29, 26, 31, 24, 26, 25, 25, 25, 22, 26, 28, 26, 29, 25];
 export const T0 = DUR.reduce((a, d, i) => (a.push(i ? a[i - 1] + DUR[i - 1] : 0), a), []);
 const B = (i, s) => T0[i] + s;
 

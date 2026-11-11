@@ -70,6 +70,7 @@ function buildBeats() {
     title: c.title,
     duration: c.duration,
     narration: c.narration,
+    where: 'off',
     labels: c.labels.map((l, k) => {
       const r = LAB[i][k];
       const e = { id: `l${k}`, text: l.text, anchor: r[0], kind: l.kind || r[1], dy: r[2] };

@@ -27,7 +27,7 @@ export const TEXT = [
     "on": "the cabinet"
    }
   ],
-  "narration": "The transaction reaches <code>acceptRun</code>, the contract operation that accepts a proved run. It checks the decider proof against the contract's verifier key, the public key that defines the accepted proof relation, and the call transcript. A failed check refuses the call, so a sender cannot pass off a proof of an unrelated relation. The same verifier key serves every program and input."
+  "narration": "From here the work is on-chain. The transaction reaches <code>acceptRun</code>, the contract operation that accepts a proved run. It checks the decider proof against the contract's verifier key, the public key that defines the accepted proof relation, and the call transcript. A failed check refuses the call, so a sender cannot pass off a proof of an unrelated relation. The same decider verifier key serves every program and input. The contract verifies this one proof and never runs the Sherlock chip."
  },
  {
   "id": "derive-the-claim",
@@ -102,7 +102,7 @@ export const TEXT = [
     "on": "the cabinet"
    }
   ],
-  "narration": "For a fresh <code>claim_d</code>, the contract stores <code>outcome_d</code> and <code>n_steps</code> under that key. These are the values that the verified proof binds, so the record preserves both the result identity and the authenticated step count. The contract stores no state digest. Memory roots, tail digests, memory lengths and addresses remain inside the proof."
+  "narration": "For a fresh <code>claim_d</code>, the contract stores <code>outcome_d</code> and <code>n_steps</code> under that key. These are the values the verified proof binds, so the record preserves both the result identity and the authenticated step count. The contract stores no state digest. One proof verification, the computation of <code>claim_d</code>, one lookup and one insert are the whole on-chain work of a call. Memory roots, tail digests, memory lengths and addresses remain inside the proof."
  },
  {
   "id": "refuse-the-same-proof",

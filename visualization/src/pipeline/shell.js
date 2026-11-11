@@ -9,6 +9,14 @@ const SPACING = 40;         // distance between station centres along x
 const SCENE_COUNT = 8;
 const BASE_ASPECT = 1.6;    // aspect the shot spans are written for
 const $ = (id) => document.getElementById(id);
+const GATE_X = 5 * SPACING;   // world x of the boundary gate: centre of station 6
+// Location of a beat: 'off' (your machine), 'cross' (the transaction), 'on' (Midnight). The scene's beat data sets it.
+const WHERE = {
+  off: { icon: 'computer', text: 'Off-chain: your machine', short: 'Off-chain' },
+  cross: { icon: 'send', text: 'Crossing: the transaction', short: 'Crossing' },
+  on: { icon: 'hub', text: 'On-chain: Midnight', short: 'On-chain' },
+};
+const whereOf = (si, b) => (b && WHERE[b.where] ? b.where : si < 6 ? 'off' : 'on');
 
 // ------------------------------------------------------------------ camera shots
 const rad = Math.PI / 180;
@@ -91,6 +99,7 @@ export async function start() {
   const canvas = $('gl');
   const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   let stepped = mqReduce.matches || q.has('stepped');
+  document.documentElement.classList.toggle('pl-stepped', stepped);
 
   // ---------------- renderer, scene, lights, bench
   const renderer = new THREE.WebGPURenderer({ canvas, antialias: true, alpha: true, forceWebGL });
@@ -130,9 +139,39 @@ export async function start() {
     else if (i > 5) mk(materials.slate(), SPACING - 0.2, 0);
     else { mk(materials.paper(), SPACING / 2 - 0.1, -SPACING / 4); mk(materials.slate(), SPACING / 2 - 0.1, SPACING / 4); }
   }
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(SPACING * SCENE_COUNT, 0.35, 0.45), materials.titanium());
-  rail.position.set(SPACING * (SCENE_COUNT - 1) / 2, 0.02, BENCH_D / 2 + 0.2);
-  bench.add(rail);
+  // Front rail in two zone colours, split at the gate; the gate itself (floor strip, two posts, lintel).
+  const zoneMat = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.6, metalness: 0.1 });
+  const zone = { off: zoneMat(PALETTE.zoneOff), on: zoneMat(PALETTE.zoneOn), offStrip: zoneMat(PALETTE.zoneOff), onStrip: zoneMat(PALETTE.zoneOn) };
+  const railX0 = -SPACING / 2, railX1 = SPACING * (SCENE_COUNT - 0.5);
+  const railPart = (x0, x1, mat) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.35, 0.45), mat);
+    m.position.set((x0 + x1) / 2, 0.02, BENCH_D / 2 + 0.2);
+    bench.add(m);
+  };
+  railPart(railX0, GATE_X, zone.off);
+  railPart(GATE_X, railX1, zone.on);
+  const gate = new THREE.Group();
+  gate.position.set(GATE_X, 0, 0);
+  const gbox = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); gate.add(m); };
+  gbox(0.2, 0.08, 14, -0.1, 0.04, 0, zone.offStrip);
+  gbox(0.2, 0.08, 14, 0.1, 0.04, 0, zone.onStrip);
+  const ti = materials.titanium();
+  gbox(0.3, 7, 0.3, 0, 3.5, -7, ti);
+  gbox(0.3, 7, 0.3, 0, 3.5, 7, ti);
+  gbox(0.3, 0.3, 14.3, 0, 7, 0, ti);
+  bench.add(gate);
+  const gateLabelPos = [new THREE.Vector3(GATE_X - 2, 7, 7), new THREE.Vector3(GATE_X + 2, 7, 7)];
+  const glowOf = { off: [zone.off], gate: [zone.offStrip, zone.onStrip], on: [zone.on] };
+  const glowAmt = { off: 0, gate: 0, on: 0 };
+  const glowHex = { off: PALETTE.zoneOff, gate: PALETTE.gold, on: PALETTE.zoneOn };
+  function applyGlow() {
+    for (const k of Object.keys(glowOf)) {
+      for (const m of glowOf[k]) {
+        m.emissive.setHex(glowHex[k]);
+        m.emissiveIntensity = 0.5 * glowAmt[k];
+      }
+    }
+  }
   // Handoff plates at every station boundary.
   const plateX = (k) => -SPACING / 2 + k * SPACING;
   for (let k = 0; k <= SCENE_COUNT; k++) {
@@ -235,6 +274,9 @@ export async function start() {
           if (o.labels !== undefined) carrierLayout.labels = !!o.labels;
         },
       },
+      // Call inside seek: light a zone for this frame, amount 0..1 (emissive 0.5 at 1). zone: 'off' (off-chain rail),
+      // 'gate' (the gate's floor strip, gold) or 'on' (on-chain rail). Reset every frame.
+      zone: { glow: (name, amount = 1) => { if (st.live && name in glowAmt) glowAmt[name] = clamp01(amount); } },
       // Call inside seek: fog range for this frame (reset each frame; default 140 to 700, wide 800 to 9000).
       setFog: (near, far) => { if (st.live) st.fog = [near, far]; },
       // Code card over the stage. show(lines, { highlight: [1-based line numbers], start = 1, title }) inside seek.
@@ -366,6 +408,56 @@ export async function start() {
   }
   function restoreLOD() { for (const o of lodHidden) o.visible = true; lodHidden.length = 0; }
 
+  // ---------------- location chip, inventory card
+  const whereChip = $('whereChip'), whereIcon = $('whereIcon'), whereText = $('whereText');
+  const whereCard = $('whereCard');
+  let shownWhere = '', cardSig = '', cardEls = [];
+  function setWhere(w) {
+    if (w === shownWhere) return;
+    const first = shownWhere === '';
+    shownWhere = w;
+    const m = WHERE[w];
+    whereChip.dataset.where = w;
+    whereIcon.textContent = m.icon;
+    whereText.textContent = m.text;
+    if (!first && !seekMode && !stepped) { whereChip.classList.remove('swap'); void whereChip.offsetWidth; whereChip.classList.add('swap'); }
+  }
+  function renderCard(inv, tBeat) {
+    if (!inv) { whereCard.hidden = true; return; }
+    const sig = JSON.stringify(inv);
+    if (sig !== cardSig) {
+      cardSig = sig;
+      whereCard.innerHTML = '';
+      cardEls = [];
+      const cols = document.createElement('div'); cols.className = 'pl-wcols';
+      for (const c of inv.columns) {
+        const col = document.createElement('div'); col.className = 'pl-wcol';
+        const chip = document.createElement('div'); chip.className = 'pl-where'; chip.dataset.where = c.where;
+        chip.innerHTML = `<span class="ms" aria-hidden="true">${WHERE[c.where].icon}</span><span class="pl-wt"></span>`;
+        chip.lastChild.textContent = WHERE[c.where].text;
+        const ul = document.createElement('ul');
+        for (const it of c.items) { const li = document.createElement('li'); li.innerHTML = it; ul.appendChild(li); }
+        col.append(chip, ul);
+        cols.appendChild(col);
+        cardEls.push({ el: col, from: c.from ?? 0 });
+      }
+      whereCard.appendChild(cols);
+      if (inv.compare) {
+        const cmp = document.createElement('div'); cmp.className = 'pl-wcmp';
+        for (const cell of inv.compare.cells) {
+          const d = document.createElement('div');
+          const h3 = document.createElement('h3'); h3.textContent = cell.title;
+          const p = document.createElement('p'); p.innerHTML = cell.text;
+          d.append(h3, p); cmp.appendChild(d);
+        }
+        whereCard.appendChild(cmp);
+        cardEls.push({ el: cmp, from: inv.compare.from ?? 0 });
+      }
+    }
+    whereCard.hidden = false;
+    for (const c of cardEls) c.el.classList.toggle('on', stepped || tBeat >= c.from);
+  }
+
   let curSi = -1;
   function applyTime(T) {
     const loc = locate(T);
@@ -380,6 +472,7 @@ export async function start() {
     const st = states[si];
 
     labels.begin();
+    glowAmt.off = glowAmt.gate = glowAmt.on = 0;
     const def = carrierDefault(si);
     CARRIER.forEach((c) => { c.amount = def[c.name]; c.shown = c.content; c.tok.userData.setContent(c.content); });
     st.ctx.reducedMotion = stepped;
@@ -403,6 +496,9 @@ export async function start() {
     }
     st.live = false;
     renderCode(pendingCode);
+    setWhere(whereOf(si, loc.b.def));
+    renderCard(loc.b.def.inventory, tBeat);
+    applyGlow();
 
     if (st.wide) {
       states.forEach((o, i) => {
@@ -440,6 +536,15 @@ export async function start() {
       if (!carrierLayout.labels) continue;
       labels.show(`c:${c.name}`, `<code>${c.name}</code>`, tmpV, { kind: c.family, carrier: true, compact: true });
     }
+    // Zone labels on the front post of the gate, whenever the gate is in frame. They do not count toward the six.
+    labels.show('z:off', 'Off-chain', gateLabelPos[0], { kind: 'zoneoff', carrier: true });
+    labels.show('z:on', 'On-chain', gateLabelPos[1], { kind: 'zoneon', carrier: true });
+    labels.fixed.length = 0;
+    for (const e of [$('stageBadge'), whereChip]) {
+      const r = e.getBoundingClientRect(), sr = stageEl.getBoundingClientRect();
+      labels.fixed.push({ x0: r.left - sr.left - 4, y0: r.top - sr.top - 4, x1: r.right - sr.left + 4, y1: r.bottom - sr.top + 4 });
+    }
+    if (!whereCard.hidden) labels.fixed.push({ x0: 0, y0: stageH * 0.38, x1: stageW, y1: stageH });
     labels.flush(camera, stageW, stageH);
     renderer.render(world, camera);
     restoreLOD();
@@ -470,6 +575,16 @@ export async function start() {
       ticks.appendChild(d);
     }
   }
+  // Scrubber band: the location of every beat along the timeline, in three runs.
+  {
+    const col = { off: 'var(--md-sys-color-secondary-container)', cross: 'var(--md-sys-color-primary-container)', on: 'var(--md-sys-color-tertiary-container)' };
+    const runs = [];
+    for (const s of tl.scenes) for (const b of s.beats) {
+      const w = whereOf(s.idx, b.def), a = (s.start + b.local) / tl.total, z = (s.start + b.local + b.dur) / tl.total;
+      if (runs.length && runs[runs.length - 1].w === w) runs[runs.length - 1].z = z; else runs.push({ w, a, z });
+    }
+    $('whereBand').style.background = `linear-gradient(to right, ${runs.map((r) => `${col[r.w]} ${(r.a * 100).toFixed(3)}% ${(r.z * 100).toFixed(3)}%`).join(', ')})`;
+  }
   const sceneBtns = tl.scenes.map((s) => {
     const li = document.createElement('li');
     const b = document.createElement('button');
@@ -481,6 +596,12 @@ export async function start() {
     b.setAttribute('aria-label', `Scene ${s.idx + 1}: ${s.def.title}`);
     b.addEventListener('click', () => { setTime(s.start); });
     li.appendChild(b);
+    if (s.idx === 0 || s.idx === 6) {
+      const sect = document.createElement('li');
+      sect.className = 'pl-sect';
+      sect.textContent = s.idx === 0 ? 'Off-chain' : 'On-chain';
+      sceneList.appendChild(sect);
+    }
     sceneList.appendChild(li);
     return b;
   });
@@ -496,7 +617,7 @@ export async function start() {
       narr.innerHTML = '';
       const h = document.createElement('h2'); h.textContent = b.title || humanize(b.id); narr.appendChild(h);
       const meta = document.createElement('p'); meta.className = 'pl-meta';
-      meta.textContent = `${loc.sc.def.title}, scene ${loc.si + 1} of ${SCENE_COUNT}, beat ${loc.bi + 1} of ${loc.sc.beats.length}`;
+      meta.textContent = `${WHERE[whereOf(loc.si, b)].short}. ${loc.sc.def.title}, scene ${loc.si + 1} of ${SCENE_COUNT}, beat ${loc.bi + 1} of ${loc.sc.beats.length}`;
       narr.appendChild(meta);
       for (const para of String(b.narration || '').split(/\n\s*\n/)) {
         const p = document.createElement('p'); p.className = 'pl-para'; p.innerHTML = para.trim(); narr.appendChild(p);
@@ -547,7 +668,7 @@ export async function start() {
     if (e.target && e.target.matches && e.target.matches('button, input')) e.target.blur();
     fn();
   });
-  mqReduce.addEventListener?.('change', (e) => { stepped = e.matches || q.has('stepped'); dirty = true; });
+  mqReduce.addEventListener?.('change', (e) => { stepped = e.matches || q.has('stepped'); document.documentElement.classList.toggle('pl-stepped', stepped); dirty = true; });
 
   new ResizeObserver(() => {
     const r = stageEl.getBoundingClientRect();

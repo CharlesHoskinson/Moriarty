@@ -3,8 +3,8 @@ export const BEATS = [
  {
   "id": "root-arrival",
   "title": "Root arrival",
-  "duration": 21,
-  "narration": "The root slab and its accumulator enter the decider, the circuit that completes verification and publishes the run statement. It verifies the root proof under pinned node keys and authenticates its boundary values and carry. With pinned keys, no prover can swap in a node circuit that accepts an invalid run.",
+  "duration": 24,
+  "narration": "The decider is the last off-chain step. The root slab and its accumulator enter the decider, the circuit that completes verification and publishes the run statement. It verifies the root proof under pinned node keys and authenticates its boundary values and carry. With pinned keys, no prover can swap in a node circuit that accepts an invalid run.",
   "labels": [
    {
     "id": "l0",
@@ -514,8 +514,8 @@ export const BEATS = [
  {
   "id": "publish-only-the-statement",
   "title": "Public statement",
-  "duration": 24,
-  "narration": "The decider publishes exactly <code>[prog_d, input_d, outcome_d, n_steps]</code>. No state digest, memory root, tail digest, memory length or address becomes public. Those fields describe physical execution boundaries and storage. Leaf cuts choose which boundaries appear inside the proof. With those fields outside the public statement, the claim is independent of those cuts and of the value's storage layout.",
+  "duration": 29,
+  "narration": "The decider publishes exactly <code>[prog_d, input_d, outcome_d, n_steps]</code>. No state digest, memory root, tail digest, memory length or address becomes public. Those fields describe physical execution boundaries and storage. Leaf cuts choose which boundaries appear inside the proof. The private input, the witness stream and the execution trace stay on the machine. With those fields outside the public statement, the claim is independent of those cuts and of the value's storage layout.",
   "labels": [
    {
     "id": "l0",

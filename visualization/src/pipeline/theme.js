@@ -21,6 +21,7 @@ export const PALETTE = {
   resolve: M.outcome, resolveBright: M.outcomeBright, envCyan: M.outcomeBright,
   heat: M.step, heatBright: M.stepBright,
   errorRed: M.errorRed,
+  zoneOff: M.zoneOff, zoneOn: M.zoneOn,
 };
 const hexCss = (n) => '#' + n.toString(16).padStart(6, '0');
 

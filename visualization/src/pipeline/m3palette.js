@@ -24,13 +24,15 @@ export const M3_CANVAS = {
   step: 0xffb782,
   stepBright: 0xffdbc5,
   errorRed: 0xffb3aa,
+  zoneOff: 0xd4c5a1,   // secondary tone 80: off-chain, structure only (rail, gate, tray rim)
+  zoneOn: 0xafca79,    // tertiary tone 80: on-chain, structure only; 44 degrees of hue and 0.084 OKLab from the outcome teal
 };
 
 export const M3_ROLES = {
   primary: 0xe9c348,
   primaryContainer: 0x5a4400,
   secondary: 0xd4c5a1,
-  tertiary: 0xaccfae,
+  tertiary: 0xafca79,
   error: 0xffb3aa,
   surface: 0x15130e,
   outline: 0x989080,

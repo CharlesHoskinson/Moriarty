@@ -19,6 +19,7 @@ const beats = BEATS.map((b, i) => ({
   title: b.title,
   duration: b.duration,
   narration: b.narration,
+  where: 'off',
   labels: b.labels.map((l, k) => ({ l, p: LP[i][k] })).filter(({ p }) => !p.skip).map(({ l, p }, k) => (
     { id: `l${k}`, text: l.text, kind: p.kind || l.kind || 'neutral', at: [p.at[0], p.at[1], p.at[2]], dy: p.dy ?? 0.8, from: p.from, to: p.to })),
 }));

@@ -3,8 +3,8 @@ export const TEXT = [
   {
     "id": "source-and-input",
     "title": "Source and input",
-    "duration": 22,
-    "narration": "Moriarty source enters with an input value named input. The program saves that value, calls lift to add increment and compares the result with ceiling. A conditional selects the next value. Further named calls create intermediate values, and the selected branch then adds the saved input. The main run passes every arithmetic and resource check."
+    "duration": 29,
+    "narration": "The work starts off-chain, on the user's machine or on a proving service the user picks. Moriarty source enters with an input value named input. The program saves that value, calls lift to add increment and compares the result with ceiling. A conditional selects the next value. Further named calls create intermediate values, and the selected branch then adds the saved input. The main run passes every arithmetic and resource check."
   },
   {
     "id": "source-to-rom",

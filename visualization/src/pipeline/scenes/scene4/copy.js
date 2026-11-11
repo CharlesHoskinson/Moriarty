@@ -1,8 +1,8 @@
 // Beat copy of scene 4, taken from the storyboard text. Narration, titles and label text are final.
 export const COPY = [
   {
-    id: "leaf-arrival", title: "Leaf arrival", duration: 22,
-    narration: "Leaf proofs arrive with their authenticated public values. The node treats each proof as a segment, a consecutive interval of the run. Its self-recursive circuit verifies leaf proofs and proofs of its own circuit under pinned keys: keys that the verifier fixes. The circuit size setting is <code>k = 20</code> throughout the tree.",
+    id: "leaf-arrival", title: "Leaf arrival", duration: 27,
+    narration: "Node proving runs off-chain as well, on the same machine or proving service. Leaf proofs arrive with their authenticated public values. The node treats each proof as a segment, a consecutive interval of the run. Its self-recursive circuit verifies leaf proofs and proofs of its own circuit under pinned keys: keys that the verifier fixes. The circuit size setting is <code>k = 20</code> throughout the tree.",
     labels: [
       { text: "Leaf proof", kind: null },
       { text: "Node proof", kind: null },

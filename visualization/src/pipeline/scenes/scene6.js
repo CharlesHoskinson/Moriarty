@@ -23,7 +23,7 @@ const RACK = [3, 4.2, -5.4];
 const LINT_Y = 2.2;                     // underside of the door lintel
 const CONTENT = { prog_d: 'prog:main', input_d: 'input:main', outcome_d: 'outcome:main', n_steps: 'n_steps:main' };
 
-const D = [30, 23, 20, 20];
+const D = [32, 23, 27, 30];
 const T = {
   arrive: { sealA: 2, sealB: 4, tok0: 4.4, tokStep: 0.3, tokDur: 1.1, lockA: 11, lockB: 11.6, sweepB: 12, tabB: 12.3 },
 };
@@ -194,6 +194,7 @@ export default {
       id: 'pack-the-call',
       title: 'The call',
       duration: D[0],
+      where: 'off',
       narration: NARRATION[0],
       labels: [
         { id: 'seal', text: 'Decider proof', anchor: 'aSeal', kind: 'state', dy: 0.6 },
@@ -208,6 +209,7 @@ export default {
       id: 'refuse-a-swapped-value',
       title: 'Swapped value refused',
       duration: D[1],
+      where: 'off',
       narration: NARRATION[1],
       labels: [
         { id: 'transcript', text: 'Call transcript', anchor: 'strip1', kind: 'neutral', dy: 0.6 },
@@ -220,6 +222,7 @@ export default {
       id: 'keep-the-contract',
       title: 'One contract',
       duration: D[2],
+      where: 'off',
       narration: NARRATION[2],
       labels: [
         { id: 'prog', text: ident('prog_d'), anchor: 'tok0', kind: 'program', dy: 0.8, from: 3.2 },
@@ -232,6 +235,7 @@ export default {
       id: 'cross-to-slate',
       title: 'Crossing to the chain',
       duration: D[3],
+      where: 'cross',
       narration: NARRATION[3],
       labels: [
         { id: 'dust', text: 'DUST', anchor: 'dust', kind: 'state', dy: 0.9, from: 0.6 },

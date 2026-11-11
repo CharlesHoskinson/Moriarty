@@ -309,6 +309,7 @@ export default {
     duration: b.duration,
     narration: b.narration,
     labels: LABELS[i],
+    where: 'off',
     carrier: i === 5 ? { side: 'right' } : undefined,   // beat 2.6: tape frames sit at the lower left
   })),
 

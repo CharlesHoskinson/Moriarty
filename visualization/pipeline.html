@@ -8,9 +8,10 @@
   <title>From program to accepted claim — Sherlock pipeline</title>
   <meta name="description" content="Eight stations show how a Moriarty program becomes an accepted claim on Midnight: program, run, leaf, node, decider, transaction, contract, network." />
   <link rel="icon" href="data:," />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..600&family=Roboto+Mono:wght@400;500&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet" />
+  <link rel="preload" href="./vendor/fonts/RobotoFlex-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="./vendor/fonts/RobotoMono-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="./vendor/fonts/MaterialSymbolsRounded-fallback.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="./vendor/fonts/fonts.css" />
   <link rel="stylesheet" href="./src/pipeline/m3.css" />
   <script type="importmap">
     {
@@ -54,9 +55,37 @@
     .pl-stage { position: relative; overflow: hidden; margin: 0 16px; aspect-ratio: 4 / 3; border-radius: var(--md-sys-shape-corner-large); background-color: var(--md-sys-color-surface-container-high); }
     .pl-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     .pl-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    .pl-badge { position: absolute; top: 12px; left: 12px; font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-small); padding: 4px 12px; pointer-events: none; box-shadow: var(--md-sys-elevation-level1); }
+    .pl-whereline { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
+    @container stage (max-width: 479px) { .pl-whereline { flex-direction: column; align-items: flex-start; gap: 4px; } }
+    .pl-stage { container: stage / inline-size; }
+    .pl-badge { font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-small); padding: 4px 12px; pointer-events: none; box-shadow: var(--md-sys-elevation-level1); }
+    /* Location chip: M3 assist chip, 32px, one container role per location. */
+    .pl-where { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 16px 0 8px; border-radius: var(--md-sys-shape-corner-small); font: var(--md-sys-typescale-label-large); box-shadow: var(--md-sys-elevation-level1); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); transition: background-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized), color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized); }
+    .pl-where[data-where="cross"] { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+    .pl-where[data-where="on"] { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+    .pl-where .ms { font-size: 18px; width: 18px; height: 18px; }
+    .pl-where .pl-wt { display: inline-block; }
+    .pl-where.swap .pl-wt { animation: pl-fade var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized); }
+    @keyframes pl-fade { from { opacity: 0; } to { opacity: 1; } }
+    .pl-k-zoneoff { --chip: var(--md-sys-color-secondary); } .pl-k-zoneon { --chip: var(--md-sys-color-tertiary); }
+    /* Inventory card of the last beat: three columns of real text over the lower 62 percent of the stage. */
+    .pl-wcard { position: absolute; left: 16px; right: 16px; bottom: 16px; height: calc(62% - 16px); overflow: auto; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); border-radius: var(--md-sys-shape-corner-medium); font: var(--md-sys-typescale-body-medium); box-shadow: var(--md-sys-elevation-level2); }
+    .pl-wcard[hidden] { display: none; }
+    .pl-wcols { display: grid; grid-template-columns: 5fr 3fr 4fr; gap: 16px; }
+    .pl-wcol { min-width: 0; opacity: 0; transition: opacity var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized); }
+    .pl-wcol.on, .pl-wcmp.on { opacity: 1; }
+    .pl-wcol .pl-where { margin-bottom: 8px; box-shadow: none; }
+    .pl-wcol ul { display: flex; flex-direction: column; gap: 4px; }
+    .pl-wcol li { padding-left: 12px; position: relative; }
+    .pl-wcol li::before { content: ''; position: absolute; left: 0; top: 0.6em; width: 4px; height: 4px; border-radius: 50%; background: var(--md-sys-color-outline); }
+    .pl-wcmp { opacity: 0; transition: opacity var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized); border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pl-wcmp h3 { font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface-variant); margin: 0 0 4px; }
+    .pl-wcard code { background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-extra-small); padding: 0 4px; font-size: 0.9em; }
+    @container stage (max-width: 599px) { .pl-wcols, .pl-wcmp { grid-template-columns: 1fr; } }
+    /* Rail and chip-row section labels, scrubber band. */
+    .pl-scenes .pl-sect { font: var(--md-sys-typescale-label-medium); color: var(--md-sys-color-on-surface-variant); align-self: center; padding: 0 4px; }
+    .pl-band { position: absolute; left: 10px; right: 10px; top: 30px; height: 4px; border-radius: 2px; pointer-events: none; }
     .pl-label { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; font: var(--md-sys-typescale-label-medium); letter-spacing: 0.02em; color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-small); padding: 4px 8px 4px 6px; margin-top: -6px; box-shadow: var(--md-sys-elevation-level1); }
-    @media (max-width: 559px) { .pl-badge { display: none; } }
     .pl-label.pl-compact { padding: 2px 5px; gap: 4px; }
     .pl-label.pl-compact code { font-size: 11px; line-height: 14px; }
     .pl-label.pl-compact .pl-chip { width: 6px; height: 6px; }
@@ -120,6 +149,8 @@
     .pl-legend h2 { font: var(--md-sys-typescale-title-small); color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; }
     .pl-legend ul { display: flex; flex-wrap: wrap; gap: 8px; }
     .pl-assist { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-small); font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface); }
+    .pl-static .pl-where.swap .pl-wt, .pl-stepped .pl-where.swap .pl-wt { animation: none; }
+    .pl-stepped *, .pl-stepped *::before, .pl-stepped *::after { transition: none !important; animation: none !important; }
     .pl-assist i { width: 10px; height: 10px; border-radius: 50%; background: var(--chip); }
     .pl-keys { font: var(--md-sys-typescale-body-small); color: var(--md-sys-color-on-surface-variant); }
 
@@ -130,6 +161,7 @@
       .pl-stagecol { order: 0; min-height: 0; }
       .pl-stage { flex: 1; aspect-ratio: auto; min-height: 0; margin: 0 0 0 0; }
       .pl-panel { order: 0; overflow-y: auto; padding: 0 24px 24px 24px; }
+      .pl-scenes .pl-sect { width: 88px; text-align: center; padding: 8px 0 0; }
       .pl-scenes { flex-direction: column; gap: 12px; padding: 0; overflow: visible; align-items: center; }
       .pl-dest { flex-direction: column; justify-content: flex-start; gap: 4px; height: auto; width: 88px; padding: 4px 0; border: 0; border-radius: var(--md-sys-shape-corner-large); background: none; font: var(--md-sys-typescale-label-medium); --layer-inset: 0 12px auto; }
       .pl-dest::before { inset: 4px 16px auto; height: 32px; border-radius: var(--md-sys-shape-corner-full); }
@@ -159,7 +191,11 @@
         <div class="pl-stage" id="stage">
           <canvas id="gl" role="img" aria-label="Pipeline stage"></canvas>
           <div class="pl-labels" id="labels" aria-hidden="true"></div>
-          <div class="pl-badge" id="stageBadge"></div>
+          <div class="pl-whereline">
+            <div class="pl-badge" id="stageBadge"></div>
+            <div class="pl-where" id="whereChip" data-where="off" aria-live="polite"><span class="ms" id="whereIcon" aria-hidden="true">computer</span><span class="pl-wt" id="whereText">Off-chain: your machine</span></div>
+          </div>
+          <section class="pl-wcard" id="whereCard" aria-label="What lives where" hidden></section>
           <section class="pl-code" id="codeCard" aria-label="Code listing" hidden>
             <h2 id="codeTitle" hidden></h2>
             <div class="pl-code-scroll"><ol id="codeList"></ol></div>
@@ -176,6 +212,7 @@
           <span class="pl-time" id="timeText" aria-live="off">0:00 / 0:00</span>
           <div class="pl-scrubwrap" id="scrubwrap">
             <input id="scrub" type="range" min="0" max="1" step="0.1" value="0" aria-label="Timeline position" />
+            <div class="pl-band" id="whereBand" aria-hidden="true"></div>
             <div class="pl-ticks" id="ticks" aria-hidden="true"></div>
           </div>
         </div>
@@ -191,6 +228,8 @@
             <li class="pl-assist" style="--chip: var(--md-custom-step)"><i></i>Running step</li>
             <li class="pl-assist" style="--chip: var(--md-sys-color-primary)"><i></i>Hash, proof, key</li>
             <li class="pl-assist" style="--chip: var(--md-sys-color-error)"><i></i>Refusal</li>
+            <li class="pl-assist" style="--chip: var(--md-sys-color-secondary)"><i></i>Off-chain</li>
+            <li class="pl-assist" style="--chip: var(--md-sys-color-tertiary)"><i></i>On-chain</li>
           </ul>
         </section>
         <p class="pl-keys">Space plays and pauses. Left and right arrows step a beat. Up and down arrows step a scene.</p>

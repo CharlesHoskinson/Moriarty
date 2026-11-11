@@ -3,8 +3,8 @@ export const BEATS = [
  {
   "id": "tape-to-slices",
   "title": "Tape to slices",
-  "duration": 23,
-  "narration": "The witness tape arrives with its Halted outcome frame attached. The leaf cuts the tape into slices of <code>S = 16</code> step slots, each entering the same circuit under one leaf key. A full slice uses every slot. A shorter slice keeps its unused suffix inactive, so state holds still and the proof covers the recorded steps.",
+  "duration": 34,
+  "narration": "Leaf proving runs off-chain. The Sherlock chip is this leaf circuit with its proving key, and it lives on the prover's machine and never runs on Midnight. The witness tape arrives with its Halted outcome frame attached. The leaf cuts the tape into slices of <code>S = 16</code> step slots, each entering the same circuit under one leaf key. A full slice uses every slot. A shorter slice keeps its unused suffix inactive, so state holds still and the proof covers the recorded steps.",
   "labels": [
    {
     "text": "Witness stream"
@@ -807,8 +807,8 @@ export const BEATS = [
  {
   "id": "leaf-slabs-handoff",
   "title": "Leaf slabs handoff",
-  "duration": 24,
-  "narration": "The checked slices leave as leaf proof slabs, each with its seven public pins. Each proof binds the executed rules, authenticated data and initial and final state of its slice. Neighboring slabs carry the endpoint digests and step intervals that linking needs. The handoff plate takes the slabs to the node, and <code>prog_d</code> and <code>input_d</code> stay with the run.",
+  "duration": 29,
+  "narration": "The checked slices leave as leaf proof slabs, each with its seven public pins. Each proof binds the executed rules, authenticated data and initial and final state of its slice. Neighboring slabs carry the endpoint digests and step intervals that linking needs. Independent leaves let the machine prove them in parallel on its CPU cores. The handoff plate takes the slabs to the node, and <code>prog_d</code> and <code>input_d</code> stay with the run.",
   "labels": [
    {
     "text": "Leaf proofs",

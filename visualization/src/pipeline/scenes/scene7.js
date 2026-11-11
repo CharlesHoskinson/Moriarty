@@ -16,6 +16,7 @@ const beats = TEXT.map((b, i) => ({
   title: b.title,
   duration: DUR[i],
   narration: b.narration,
+  where: i <= 5 || i === 20 ? 'on' : 'off',
   carrier: CARRIER_RIGHT.has(i) ? { side: 'right' } : undefined,
   labels: PLACE[i].map((p, j) => {
     if (!p) return null;

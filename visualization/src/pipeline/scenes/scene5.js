@@ -122,7 +122,7 @@ function hashRun(b, s0, items, out) {
 export default {
   id: 'decider',
   title: 'The decider',
-  beats: BEATS,
+  beats: BEATS.map((b) => ({ ...b, where: 'off' })),
 
   build(c) {
     ctx = c;

@@ -3,12 +3,12 @@ export const BEAT_TEXT = [
   {
     "id": "check-at-each-node",
     "title": "Check at each node",
-    "narration": "The stored claim reaches network validation as the result of the transaction's contract state transition. Midnight nodes on ledger 9.1.0.1 each verify the transaction independently. Each uses the contract's verifier key and checks the bound public values and contract operations against ledger state. Each node rejects an invalid proof or a replay on its own checks."
+    "narration": "Every Midnight node does this on-chain work itself. The stored claim reaches network validation as the result of the transaction's contract state transition. Midnight nodes on ledger 9.1.0.1 each verify the transaction independently. Each uses the contract's verifier key and checks the bound public values and contract operations against ledger state. Each node rejects an invalid proof or a replay on its own checks."
   },
   {
     "id": "keep-verification-fixed",
     "title": "Fixed verification cost",
-    "narration": "Each node uses the same verifier key for every program. It checks the final decider proof. It does not execute the witness tape or check each leaf. The proof remains about 6.4 KB. The cost of checking that proof does not depend on the length of the run. Longer execution adds prover work and leaves the node's run-verification work unchanged."
+    "narration": "Each node uses the same verifier key for every program. It checks the final decider proof. It does not execute the witness tape, check each leaf or run the Sherlock chip. The proof remains about 6.4 KB. The cost of checking that proof does not depend on the length of the run. Longer execution adds prover work and leaves the node's run-verification work unchanged."
   },
   {
     "id": "accept-the-run-fact",

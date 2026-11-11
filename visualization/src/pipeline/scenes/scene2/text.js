@@ -3,8 +3,8 @@ export const BEATS = [
   {
     "id": "machine-arrival",
     "title": "Machine arrival",
-    "duration": 23,
-    "narration": "<code>mori simulate</code> receives the ROM program, the input value and the resource policy that <code>input_d</code> binds. It runs a CEK-style machine, which keeps the current computation, the variable bindings and the saved continuations explicit. The reference machine <code>sherlock-k-a/1</code> defines every transition. The run produces the detailed evidence that the leaf checks. The simulator's own record certifies nothing."
+    "duration": 28,
+    "narration": "The run executes off-chain, as native execution on the user's machine. <code>mori simulate</code> receives the ROM program, the input value and the resource policy that <code>input_d</code> binds. It runs a CEK-style machine, which keeps the current computation, the variable bindings and the saved continuations explicit. The reference machine <code>sherlock-k-a/1</code> defines every transition. The run produces the detailed evidence that the leaf checks. The simulator's own record certifies nothing."
   },
   {
     "id": "machine-state",

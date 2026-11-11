@@ -8,7 +8,7 @@ export const sup = (base, exp) => `${base}<sup>${exp}</sup>`;
 export const pow2 = (n) => sup('2', n);
 export const ident = (name) => `<code>${name}</code>`;
 
-const KINDS = new Set(['program', 'input', 'outcome', 'step', 'state', 'error', 'neutral']);
+const KINDS = new Set(['program', 'input', 'outcome', 'step', 'state', 'error', 'neutral', 'zoneoff', 'zoneon']);
 
 export class LabelLayer {
   constructor(container) {

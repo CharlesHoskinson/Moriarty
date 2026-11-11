@@ -243,3 +243,36 @@ export function makeClaimPlate({ claim = 'claim:main', outcome = 'outcome:main',
   attachDispose(grp);
   return grp;
 }
+
+// ---- decider verifier key card ------------------------------------------------------------------
+// The one key that is on-chain: a gold key card at scale 0.6 inside a titanium frame 0.12 thick, with one
+// ink notch. The proving keys (leaf, node, decider) are plain gold key cards and never appear on-chain.
+// setState({ lit }) lights the card (0..1). Footprint about 1.2 by 0.84, standing in the xy plane (face toward +z).
+export function makeVerifierKeyCard({ size = 1 } = {}) {
+  const grp = new THREE.Group();
+  const cardMat = materials.gold();
+  const CW = 1.6 * 0.6, CH = 1.0 * 0.6, F = 0.12;
+  const card = box(CW, CH, 0.08, cardMat);
+  grp.add(card);
+  const ti = sharedMat('titanium', () => materials.titanium());
+  for (const [w, h, x, y] of [[CW + 2 * F, F, 0, CH / 2 + F / 2], [CW + 2 * F, F, 0, -CH / 2 - F / 2], [F, CH, -CW / 2 - F / 2, 0], [F, CH, CW / 2 + F / 2, 0]]) {
+    const b = box(w, h, 0.14, ti);
+    b.position.set(x, y, 0);
+    grp.add(b);
+  }
+  const notch = box(0.13, 0.1, 0.04, sharedMat('ink', () => materials.ink()));
+  notch.position.set(0, -CH / 2 + 0.12, 0.05);
+  grp.add(notch);
+  const anchor = new THREE.Object3D();
+  anchor.position.set(0, CH / 2 + F + 0.15, 0);
+  grp.add(anchor);
+  grp.userData.anchor = anchor;
+  grp.userData.setState = ({ lit = 0 } = {}) => {
+    cardMat.emissive.setHex(PALETTE.goldBright);
+    cardMat.emissiveIntensity = 0.8 * clamp01(lit);
+  };
+  grp.userData.setState();
+  grp.scale.setScalar(size);
+  attachDispose(grp);
+  return grp;
+}

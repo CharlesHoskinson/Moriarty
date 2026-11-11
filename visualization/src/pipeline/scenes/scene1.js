@@ -185,7 +185,7 @@ export default {
         { text: 'Program image', anchor: 'romLabel', kind: 'program', dy: 0.6 },
       ],
     },
-  ],
+  ].map((b) => ({ ...b, where: 'off' })),
 
   build(c) {
     ctx = c;
