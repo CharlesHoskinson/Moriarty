@@ -15,10 +15,11 @@ Non-goals: Profile B as a built path, continuation mode 2, semantic profile `/2`
 ```text
                  published run statement [prog_d, input_d, outcome_d, n_steps]
                                        ^
-                                  DECIDER (seal checks, terminal opening)
+                                  DECIDER (opens the sealed SET head)   LEDGER CONTRACT (one ledger)
                                        ^
   GP-2 hook (claims) ---> NODE INTEGRATION <--- GP-3 hook, GP-3 general verifier
-                          (verify children, link heights, pre_d/post_d)
+                          (verify children, link heights, pre_d/post_d,
+                           the only seal; ADMIT-WORK, VIEW-WORK)
                                        ^  <--- GP-4 hook (shape, MERGE-WORK, JOIN)
                                        ^  <--- CONTINUATION + HOST CHECKPOINT STORE (host)
         leaf public lanes [binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]
@@ -64,7 +65,7 @@ Named ports (section 1.3): `Window`, append chain with `len_at`, `AuthRec`, `Aut
 | dense Merkle | Horner | not offered |
 | ZmLogUp | Poseidon | not offered |
 
-Seam 1 is the trait `MemBackend` (`persist`, `cold_read`, one block-line method) with an opaque token. Seam 2 is one trait over the serialized boundary cells: a capacity-tagged body digest and a six-input pinned header over `outcome_tag`, `outcome_payload`, `input_d`, `deps_d`, `body_d`. NODE INTEGRATION and DECIDER read the header with `open_state_header` (X10 measures its cost). A swap changes only the backend files, the token width and, for Profile B, the leaf statement, node, seal and continuation. Two profiles never share a verifying key.
+Seam 1 is the trait `MemBackend` (`persist`, `cold_read`, one block-line method) with an opaque token. Seam 2 is one trait over the serialized boundary cells: a capacity-tagged body digest and a six-input pinned header over `outcome_tag`, `outcome_payload`, `input_d`, `deps_d`, `body_d`. The NODE seal modes read the header with `open_state_header` (X10 measures its cost); the run decider opens the sealed SET head and reads no header. A swap changes only the backend files, the token width and, for Profile B, the leaf statement, node, seal and continuation. Two profiles never share a verifying key.
 
 ## 5. Leaf shape
 
@@ -72,7 +73,7 @@ Seam 1 is the trait `MemBackend` (`persist`, `cold_read`, one block-line method)
 
 ## 6. Trust boundaries and failure handling
 
-- In circuit: every kit of the leaf, NODE INTEGRATION, DECIDER, the GP hooks and the general verifier. Their guarantees rest on the constraint tests, the Quint models and the Lean obligations.
+- In circuit: every kit of the leaf, NODE INTEGRATION, DECIDER, the GP hooks and the general verifier. On chain: LEDGER CONTRACT (one contract, one ledger state). Their guarantees rest on the constraint tests, the Quint models and the Lean obligations.
 - Host, trusted diagnostics only: REFERENCE BRIDGE. It finds divergences and proves nothing.
 - Host, not a soundness dependency: HOST CHECKPOINT STORE. A corrupted store can stop the prover. It cannot make the prover prove a false statement, because each leaf constrains its reads against `pre_d`.
 - Hypotheses that stay hypotheses: `digest_inj`, `stuck`, the hash injectivity premises (O7), lookup soundness (O2), accumulation and pairing soundness.
@@ -96,7 +97,7 @@ Semantic guarantees are the requirements of `specs/`. Feasibility is the row gat
 | L | leaf integration in `RfLeaf`, whole-leaf harness with zero coverage gaps, leaf rows and k (X5) | 4, R complete |
 | 5 | NODE INTEGRATION (with `open_state_header`, X10) | L |
 | 6 | DECIDER, HOST CHECKPOINT STORE then CONTINUATION, GP-3 hook, GP-4 hook | 5 |
-| 7 | GP-2 hook | 6, X12 |
+| 7 | GP-2 hook; LEDGER CONTRACT | 6, X12; N-11 and the template recapture for LEDGER CONTRACT |
 | 8 | GP-3 general verifier: FV-SCHED first, then FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL | 6, X14 |
 
 Profile B kits are in no group. Agents can start a later group early against mocks once group F is done.
@@ -117,7 +118,7 @@ Integration: the whole-leaf harness `crates/mori-chip/tests/diff_leaf_vs_sherloc
 
 ## 10. Lean obligations
 
-The consolidated table of `FD/ARCHITECTURE.md` section 2 has 67 rows: P1 to P14 proved in C3, O1 to O53 open. P7, P9, P10 and P14 hold only for leaves of at most 8 appends. P2 and P3 cover bus tuples only. P1 is not evidence for the landed bus. O21, O22 and O30 belong to Profile B and are not scheduled. Each spec scenario names the obligation id and its status.
+The consolidated table of `FD/ARCHITECTURE.md` section 2 has 69 rows: P1 to P14 proved in C3, O1 to O55 open. P7, P9, P10 and P14 hold only for leaves of at most 8 appends. P2 and P3 cover bus tuples only. P1 is not evidence for the landed bus. O21, O22 and O30 belong to Profile B and are not scheduled. Each spec scenario names the obligation id and its status.
 
 ## 11. Open decisions
 

@@ -15,8 +15,8 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 - [ ] X.7 Measure the binary node shapes: leaf key direct against a one-leaf lift (N-1), the MERGE-WORK node with two enabled prior proofs and one real owner step (N-6), and the decider with and without a closing proof (N-5). Gate: `cost_model` run ids against 950,000 and 1,000,000 rows.
 - [ ] X.8 Probe one Compact adapter class and the foreign lift relation. Gate: a recorded probe result. Decides the native GP-3 scope (N-10).
 - [ ] X.9 Prototype the HASH constant-start mode with a differential test against `sponge_native` and a key-shape check. Gate: the differential passes and the fixed-column count is recorded. Decides V-5 (HSH-004).
-- [ ] X.10 Measure `open_state_header` with the six-input library sponge inside NODE and inside DECIDER, against `boundary_header_leaf_vs_std`. Gate: rows and table rows with run ids. Decides OD-19 and N-2.
-- [ ] X.11 Measure the input admission forms on the reference machine and a leaf prototype: added appends and reads per step, owner-event count against `apply(prog, x)`, a wide constructor input, and the loading-prefix form. Gate: a recorded table. Input to OD-17 and OD-18 (OWNER).
+- [ ] X.10 Measure `open_state_header` with the six-input library sponge inside the NODE seal modes, and the SET head opening of the run decider, against `boundary_header_leaf_vs_std`. Gate: rows and table rows with run ids. Decides OD-19 and N-2.
+- [ ] X.11 Measure the input admission forms on the reference machine and a leaf prototype: for by-digest admission, the `AuthIn` read cost per step, the VIEW-WORK cost per entered record and any reference charge for `Literal(x)` cells, owner-event count against `apply(prog, x)`, a wide constructor input, and the loading-prefix form. Gate: a recorded table. Input to OD-17 and OD-18 (OWNER).
 - [ ] X.12 Write `models/sherlock/quint/claimConsumption.qnt` with the SET grammar, DESCEND, DL-STEP and both seals, run it in a Quint lane, and re-run it as the lead. Then measure the rows of each mode in the node. Gate: a verdict file with the six invariants of CLM-001 to CLM-005. Decides N-3.
 - [ ] X.13 Count every projection gap kind over the corpus, and the 18 rules that the X1 corpus did not fire. Gate: a census file. Sizes the REFERENCE BRIDGE work and is input to OD-21.
 - [ ] X.14 Write a costed operation inventory for one PLONK or halo2 verifier, and find the largest unit that fits the node beside one child verification. Gate: the inventory with costs. Decides the FV-SCHED unit budget and OD-22.
@@ -40,7 +40,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 - [ ] F.7 Amend SRC-007 and the contract templates for universal program acceptance and collection opening. Gate: N-11 answered by the owner.
 - [ ] F.8 Name the semantic reference for the full language in the governing change. Gate: OD-21 answered by the owner.
 - [ ] F.9 Add a mid-run consume rule to the governing VM specification only if OD-20 selects it. Gate: OD-20 answered by the owner.
-- [ ] F.10 Write the contract and template work: the run contract template with `prog_d` as call data, the claims contract with root acceptance and collection opening, and the template recapture (SRC-020). Gate: F.7 and the SRC-020 `validate_call` check with the five mutations refused.
+- [ ] F.10 Write the contract and template work: one contract (kit LEDGER CONTRACT) with two entry points over one `runs` map, `acceptRun` with `prog_d` as call data and `acceptCollection` with `descend` and `openClaim`, and the template recapture (SRC-020) with the operation count per Poseidon that sizes `K_open`. Gate: F.7 and the SRC-020 `validate_call` check with the five mutations refused.
 
 ## 0. Group 0
 
@@ -67,7 +67,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 ## 3. Group 3
 
 - [ ] 3.1 Implement kit PAGE/ROM block cache (`specs/sherlock-chip-page-cache`, PAGE-001 to PAGE-006). Gate: its positives and mutants, the `denseLineCache.qnt` verdict, Lean O17 to O20, T0. Entry: group 2, X.4, X.15.
-- [ ] 3.2 Implement the CORE framework (`specs/sherlock-chip-core`, CORE-001 to CORE-010): slots, ports, frame condition, append chain, read port, `rules_d`, definite assignment. Gate: its positives, mutants and controls, the framework part of the `processorCore.qnt` verdict, Lean O10, O44, O45, T0. Entry: group 2. O8 is over the full rule set and is a gate of L.1.
+- [ ] 3.2 Implement the CORE framework (`specs/sherlock-chip-core`, CORE-001 to CORE-010, and CORE-013 if OD-17 selects form (b)): slots, ports, frame condition, append chain, read port, `rules_d`, definite assignment. Gate: its positives, mutants and controls, the framework part of the `processorCore.qnt` verdict, Lean O10, O44, O45, T0. Entry: group 2. O8 is over the full rule set and is a gate of L.1.
 
 ## 4. Group 4
 
@@ -88,7 +88,7 @@ Each family task implements CORE-011 and CORE-012 for the rules of its family, a
 - [ ] 4.13 Implement CORE rule family: ADT Build group. Gate: the family gate above for every rule of the family. Entry: 3.2, R.1, X.6.
 - [ ] 4.14 Implement CORE rule family: ADT Plan group. Gate: the family gate above for every rule of the family. Entry: 3.2, R.1.
 - [ ] 4.15 Implement kit BOUNDARY COMMITMENT (`specs/sherlock-chip-boundary`, BND-001 to BND-004). Gate: its positives and mutants, `boundary_header_leaf_vs_std`, the `boundaryCommitment.qnt` verdict, Lean O28, O29, O48, T0. Entry: 3.2.
-- [ ] 4.16 Implement kit INIT (`specs/sherlock-init-admission`, INIT-001 to INIT-005). Gate: its positives, mutants and controls, the extended `init.qnt` verdict, Lean O49 and O50, T0. Entry: 4.15. The input part also waits for OD-17, OD-18 and X.11.
+- [ ] 4.16 Implement kit INIT (`specs/sherlock-init-admission`, INIT-001 to INIT-005, and INIT-006 if OD-17 selects form (b)). Gate: its positives, mutants and controls, the extended `init.qnt` verdict, Lean O49 and O50, T0. Entry: 4.15. The input part also waits for OD-17, OD-18 and X.11.
 
 ## L. Leaf integration
 
@@ -97,28 +97,29 @@ Each family task implements CORE-011 and CORE-012 for the rules of its family, a
 
 ## 5. Group 5
 
-- [ ] 5.1 Implement kit NODE INTEGRATION (`specs/sherlock-node-integration`, NODE-001 to NODE-007), with `open_state_header`, `S_MAX` in the relation and the `rules_d` lane rename. Gate: its positives, mutants and host refusal, the `nodeIntegration.qnt` verdict, Lean O31 to O33, node rows at or below 950,000, T0. Entry: L.1, X.7, X.10.
+- [ ] 5.1 Implement kit NODE INTEGRATION (`specs/sherlock-node-integration`, NODE-001 to NODE-011, and NODE-012 and NODE-013 if OD-17 selects form (b)), with `open_state_header`, `S_MAX` in the relation, the `rules_d` lane rename, the `reg_root` equality across slots, the seal admission check and the ADMIT-WORK mode (and the VIEW-WORK mode under form (b)). Gate: its positives, mutants and host refusal, the `nodeIntegration.qnt` verdict, Lean O31 to O33 and O54 (O55 under form (b)), node rows at or below 950,000, T0. Entry: L.1, X.7, X.10.
 
 ## 6. Group 6
 
-- [ ] 6.1 Implement kit DECIDER (`specs/sherlock-decider`, DCD-001 to DCD-005). Gate: its positives and mutants, the `deciderOutcome.qnt` verdict, Lean O34 and O35, decider rows at or below 1,000,000 with no new range tag, T0. Entry: 5.1.
+- [ ] 6.1 Implement kit DECIDER (`specs/sherlock-decider`, DCD-001 to DCD-007 (DCD-007 only if OD-20 selects option (b)); the run entry opens a sealed SET head and the M4 path runs one SEAL node before the decider). Gate: its positives and mutants, the `deciderOutcome.qnt` verdict, Lean O34, decider rows at or below 1,000,000 with no new range tag, T0. Entry: 5.1.
 - [ ] 6.2 Implement kit HOST CHECKPOINT STORE (`specs/sherlock-checkpoint-store`, CKPT-001 to CKPT-003). Gate: its host tests and host refusals, T0. Entry: 5.1.
 - [ ] 6.3 Implement kit CONTINUATION (`specs/sherlock-continuation`, CONT-001 to CONT-004). Gate: its positives, mutants and host refusals, the `continuation.qnt` verdict, Lean O36 and O37, T0. Entry: 6.2.
 - [ ] 6.4 Implement the native path of kit GP-3 hook (`specs/sherlock-foreign-registry`, FREG-001 to FREG-004). Gate: its positives and mutants, the `foreignRegistry.qnt` verdict, Lean O39, T0. Entry: 5.1, X.8. This task is a milestone and does not tick GP-003.
-- [ ] 6.5 Implement kit GP-4 hook (`specs/sherlock-proof-shape`, SHP-001 to SHP-004). Gate: its positives and mutants, the `pcdGraph.qnt` verdict, Lean O40 and O41, T0. Entry: 5.1, X.7. If X.7 does not fit, GP-004 stays open and the owner decides (N-6).
+- [ ] 6.5 Implement kit GP-4 hook (`specs/sherlock-proof-shape`, SHP-001 to SHP-006). Gate: its positives and mutants, the `pcdGraph.qnt` verdict, Lean O40 and O41, T0. Entry: 5.1, X.7. If X.7 does not fit, GP-004 stays open and the owner decides (N-6).
 - [ ] 6.6 Run the key cascade: key the node and the decider over the new leaf key. Gate: the key manifest with the leaf, node and decider keys recorded (SRC-008). Entry: L.2, 5.1, 6.1.
 
 ## 7. Group 7
 
-- [ ] 7.1 Implement kit GP-2 hook (`specs/sherlock-claim-consumption`, CLM-001 to CLM-006). Gate: its positives and mutants, the X.12 verdict, Lean O38, O51 and O52, T0. Entry: group 6, X.12. Scope per OD-20.
+- [ ] 7.1 Implement kit GP-2 hook (`specs/sherlock-claim-consumption`, CLM-001 to CLM-007). Gate: its positives and mutants, the X.12 verdict, Lean O38, O51 and O52, T0. Entry: group 6, X.12. Scope per OD-20.
+- [ ] 7.2 Implement kit LEDGER CONTRACT (`specs/sherlock-ledger-contract`, LDG-001 to LDG-005): one Compact contract with one shared ledger state. Gate: its local contract tests and named refusals, the Quint verdict for `ClaimSettledOnceAcrossEntries`, `DiamondAncestorOpenedAtMostOnce` and `EveryJoinedClaimOpens`, Lean O35 (LDG-L1), T0. Entry: 6.1, 7.1 (SET grammar), F.10.
 
 ## 8. Group 8
 
-- [ ] 8.1 Implement subkit FV-SCHED of the GP-3 general verifier (`specs/sherlock-foreign-verifier`, FVR-001, FVR-002, FVR-004). Gate: its mutants, the extended `foreignRegistry.qnt` verdict, T0. Entry: 6.4, X.14.
-- [ ] 8.2 Implement subkit FV-PARSE (FVR-001). Gate: its mutants (`fv_skip_proof_element`, `fv_trailing_element_ignored`, `fv_point_not_on_curve`), T0. Entry: 8.1.
-- [ ] 8.3 Implement subkit FV-TRANSCRIPT (FVR-002). Gate: `fv_challenge_not_from_transcript`, T0. Entry: 8.1.
-- [ ] 8.4 Implement subkit FV-ARITH (FVR-001). Gate: the differential against a host verifier, T0. Entry: 8.1.
-- [ ] 8.5 Implement subkit FV-FINAL (FVR-003). Gate: `pos_fv_plonk_proof_same_srs`, `pos_fv_plonk_proof_other_srs`, `fv_other_srs_folded_into_core_acc`, T0. Entry: 8.1.
+- [ ] 8.1 Implement subkit FV-SCHED of the GP-3 general verifier (`specs/sherlock-foreign-verifier`, FVR-001, FVR-002, FVR-004, FVR-005: the `work_root` index schema and its initialization). Gate: its mutants, the extended `foreignRegistry.qnt` verdict, T0. Entry: 6.4, X.14.
+- [ ] 8.2 Implement subkit FV-PARSE (FVR-001, FVR-005 writes). Gate: its mutants (`fv_skip_proof_element`, `fv_trailing_element_ignored`, `fv_point_not_on_curve`), T0. Entry: 8.1.
+- [ ] 8.3 Implement subkit FV-TRANSCRIPT (FVR-002, FVR-005 writes). Gate: `fv_challenge_not_from_transcript`, `fv_challenge_index_swapped`, T0. Entry: 8.1.
+- [ ] 8.4 Implement subkit FV-ARITH (FVR-001, FVR-005 reads). Gate: the differential against a host verifier, `fv_operand_substituted`, T0. Entry: 8.1.
+- [ ] 8.5 Implement subkit FV-FINAL (FVR-003, FVR-005 reads). Gate: `pos_fv_plonk_proof_same_srs`, `pos_fv_plonk_proof_other_srs`, `fv_other_srs_folded_into_core_acc`, T0. Entry: 8.1.
 - [ ] 8.6 Complete GP-3: the GP-3 hook and all five subkits pass together. Gate: `pos_gp3_sherlock_plus_compact`, `pos_fv_plonk_proof_same_srs` and `pos_fv_plonk_proof_other_srs` as real proofs, Lean O53 (GP3-L2, completion gate and stream integrity). Entry: 6.4, 8.1 to 8.5.
 
 ## A. GP acceptance matrix and qualification

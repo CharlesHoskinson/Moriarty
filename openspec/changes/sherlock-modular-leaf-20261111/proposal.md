@@ -10,19 +10,19 @@ The change can move the terminal evidence-gated decision of `sherlock-vm-consens
 
 ## What Changes
 
-- One capability spec per module kit (23 kits, list below), each with requirement IDs per kit.
+- One capability spec per module kit (24 kits, list below), each with requirement IDs per kit.
 - The frozen bus schema `(chip, key, a, b, c)` with two request lanes and one provider table, the chip registry, the tagged fixed table for RANGE and DEC, and the named copy-constrained ports (`FD/ARCHITECTURE.md` sections 1.2 and 1.3).
 - Profile A as the built path: dense tail-buffered Merkle memory with 8-record PAGE and ROM cache lines, and a Poseidon header-and-body boundary digest (decisions L-1, M-1, E-1).
 - Hash-chain FRAMES and TASKS stacks with the compound stack step (R-3, revision B2 finding 2).
 - `sherlock-value/1` unchanged (L-3).
 - Continuations: tier 1 segment tree and the retained-memory checkpoint mode 1 only (R-7).
 - The GP-2, GP-3 and GP-4 hooks, the GP-3 general verifier, INIT, the REFERENCE BRIDGE and the HOST CHECKPOINT STORE (revision B2).
-- The Lean obligations per kit (consolidated table of `FD/ARCHITECTURE.md` section 2: 14 proved in C3, 53 open).
+- The Lean obligations per kit (consolidated table of `FD/ARCHITECTURE.md` section 2: 14 proved in C3, 55 open).
 - Replacement of D2, D3, D6 and D7 of `openspec/changes/sherlock-vm-consensus-20261107/design.md:95-100` by the dense memory and hash-stack rules. This edit is made as a task of this change in the governing change, not silently here.
 
 ## Scope
 
-In scope: the 23 kits of `FD/ARCHITECTURE.md` section 2.
+In scope: the 24 kits of `FD/ARCHITECTURE.md` section 2.
 
 | Spec folder | Kit | ID prefix |
 |---|---|---|
@@ -49,6 +49,7 @@ In scope: the 23 kits of `FD/ARCHITECTURE.md` section 2.
 | `sherlock-foreign-registry` | GP-3 hook | FREG |
 | `sherlock-proof-shape` | GP-4 hook | SHP |
 | `sherlock-foreign-verifier` | GP-3 general verifier (five subkits) | FVR |
+| `sherlock-ledger-contract` | LEDGER CONTRACT (Compact; one contract, one ledger) | LDG |
 
 The spec folder names are the names of `FD/ARCHITECTURE.md` section 5.2. The ID prefixes do not collide with GP, SRC, SVM, SAS or SWF, or with the Lean labels (for example DEC-L1 is a DECIDER obligation, not a kit DEC requirement).
 
@@ -80,20 +81,21 @@ The amendments of the governing change that this change needs are tasks of group
 | OD-5 (R-9) | Status of dissent D-1 (linked slices), measured by X6 | CORE-011, task 4.13 |
 | OD-6 | S above 16 needs an SRC-014 amendment | CORE-006, NODE-002 |
 | OD-13, OD-19 | The fallback leaf statement `sherlock-leaf-stmt/2`, only if X10 fails | BND-003, NODE-003 |
-| OD-14 | `decl_schema_d` normal form and the PROG canonicality premise | PAGE-004, INIT-003 |
+| OD-14 | `decl_schema_d` normal form inside the admission check (the premise is discharged at the seal by ADMIT-WORK) | PAGE-004, INIT-003, NODE-011 |
 | OD-16 (N-12) | Exhaust kind 7 against profile `/1` | DEC-002, DCD-001 |
-| OD-17 | Input admission form (recommended: by digest, empty genesis memory), measured by X11 | INIT-004, INIT-005, task F.3 |
+| OD-17 | Input admission form (recommended: by digest, empty genesis memory, certified input view), measured by X11; under it the I7 question and the seal read path of `view_root` | INIT-004, INIT-005, INIT-006, CORE-013, NODE-012, NODE-013, task F.3 |
 | OD-18 | SRC-021 one-arena Init field list | INIT-001, task F.2 |
-| OD-20 | Whether GP-2 also needs a mid-run consume rule or a genesis-bound dependency | CLM-006 |
+| OD-20 | Whether GP-2 also needs a mid-run consume rule or a genesis-bound dependency | CLM-006, DCD-007 |
 | OD-21 | The normative semantic reference for the full language, sized by X13 | RFB-001 |
 | OD-22 | A second deferred accumulator per SRS, only if the owner wants it | FVR-003 |
 | N-6 | GP-4 "arity at least 2 plus new work" in one node, measured by X7 | SHP-003 |
 | N-7 | Bracketing disclosure in `shape_d` (dissent D-6), only if it changes GP-4 text | SHP-002 |
-| N-11 | Contract surface: `acceptRun` with `prog_d` as call data, claims contract | tasks F.7, F.10 |
+| N-11 | Contract surface: one contract with two entry points over one ledger (`acceptRun` with `prog_d` as call data, collection acceptance and claim opening); the sealed `program_d` of SRC-007 | LDG-001, LDG-002, tasks F.7, F.10, 7.2 |
+| OD-23 | Consumer of `rules_d` after the leaf, or a reserved zero lane (SRC-001 amendment) | CORE-006 |
 
 ## Impact
 
-- Code: `crates/mori-chip` (leaf kits), `crates/mori-recursion` (node, decider, continuation, checkpoint store, GP hooks, general verifier), `crates/mori-core/src/sherlock/` (REFERENCE BRIDGE).
+- Code: `crates/mori-chip` (leaf kits), `crates/mori-recursion` (node, decider, continuation, checkpoint store, GP hooks, general verifier), `crates/mori-core/src/sherlock/` (REFERENCE BRIDGE), `tools/sherlock-sdk/` (LEDGER CONTRACT).
 - Models: `models/sherlock/quint/` (new and extended models per kit, verdict files under `qa/gemini-quint/`).
 - Proofs: `clean/fork/Clean/Sherlock/` (new Lean files per kit, axiom-report companions).
 - Keys: the node and decider keys change with the leaf key (key cascade task).

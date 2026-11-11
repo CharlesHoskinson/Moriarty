@@ -34,7 +34,7 @@ Opening heap or ROM lines SHALL NOT change `(len, root, tail_d)`, `pre_d`, `post
 - **THEN** the post token and the digests are equal (positive `line_boundary_invariance`), the Quint invariant `BoundaryIndependentOfLines` holds, and O17 (`PageCache.lean`, boundary invariance) is open
 
 ### Requirement: PAGE-004 ROM lines under `prog_root`
-ROM SHALL have its own chip id. Its key SHALL be `tbl 2^D_row + row`, with bits from the walk, and its leaf and node tags SHALL differ from the heap tags and carry heights. Padding SHALL be canonical. ROM SHALL trust row content only through the PROG canonicality premise (OD-14). `D_row` SHALL cover every table index of the language (OD-12).
+ROM SHALL have its own chip id. Its key SHALL be `tbl 2^D_row + row`, with bits from the walk, and its leaf and node tags SHALL differ from the heap tags and carry heights. Padding SHALL be canonical. ROM SHALL trust row content only through the PROG canonicality premise, which the seal discharges with the `ADM` claim (NODE-010). `D_row` SHALL cover every table index of the language (OD-12).
 
 #### Scenario: Table alias or row overflow
 - **WHEN** a row of one table is served under another table's key, or the requested row overflows `D_row`

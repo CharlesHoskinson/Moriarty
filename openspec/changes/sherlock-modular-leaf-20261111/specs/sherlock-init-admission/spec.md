@@ -23,7 +23,7 @@ The genesis selector SHALL be `g = is_zero(h_pre)` from the public lane `h_pre`,
 - **THEN** the controls `ctl_init_gate_from_witness_flag` and `ctl_init_supplied_digest_only` accept a wrong genesis state, which the correct circuit refuses
 
 ### Requirement: INIT-003 `prog_d` and `input_d` are opened and bound
-INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each of the three limbs below `2^64`. PROG canonicality SHALL stay the named premise `ProgCanonical(prog_root)` until OD-14 is settled.
+INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each of the three limbs below `2^64`. PROG canonicality SHALL be the named premise `ProgCanonical(prog_root)` of the leaf. The seal SHALL discharge it with the `ADM` claim (NODE-010).
 
 #### Scenario: Root or input not opened
 - **WHEN** `prog_root` is not the root inside `prog_d`, a fuel limb is `2^64`, `input_d` is not opened, the stack limit is unbound, or the opening of another `input_d` is used
@@ -54,3 +54,10 @@ Any input admission form SHALL meet I1 to I6 of the kit: no scan of the input, n
 #### Scenario: Form not yet decided
 - **WHEN** the input part of INIT is offered for a freeze before OD-17 and X11
 - **THEN** the input part stays open, and the rest of the kit is built and tested with the empty genesis memory (`init_memory_not_genesis` against the empty arena, Quint invariant `GenesisMemCanonical`)
+
+### Requirement: INIT-006 Under form (b) the input type is checked on inspected nodes
+Under input admission form (b) (OD-17, OWNER), INIT SHALL set the `view_root` body word from the witness, or to `VIEW_NONE` when `val_d` is the absent-input constant; `read_input` SHALL refuse `VIEW_NONE`. `in_ty` admissibility SHALL be checked on inspected nodes only (I7); an uninspected subtree SHALL be carried by digest. A full check of `ty(x) == in_ty` by VIEW-WORK SHALL be used only by owner decision.
+
+#### Scenario: Inspected node of the wrong type
+- **WHEN** a step reads an input node through `AuthIn` whose tag or `ty_d` is not the one its rule requires
+- **THEN** the correct circuit refuses the witness (mutant `init_entry_input_mismatch`)

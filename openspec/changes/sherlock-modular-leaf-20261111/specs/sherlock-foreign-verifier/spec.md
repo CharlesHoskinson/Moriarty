@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: FVR-001 General foreign verification runs in bounded, authenticated work units
-The general verifier SHALL verify a proof of any registered PLONK or halo2 circuit on the same curve and commitment scheme in FV-WORK units. Each unit SHALL continue `fv_state_d = H(SHK_FV, entry_d, phase, cursor, transcript_d, acc_d, pi_d, consumed_d)` of its child and SHALL do at most the unit budget of X14. All units SHALL consume one proof stream in order.
+The general verifier SHALL verify a proof of any registered PLONK or halo2 circuit on the same curve and commitment scheme in FV-WORK units. Each unit SHALL continue `fv_state_d = H(SHK_FV, entry_d, phase, cursor, transcript_d, acc_d, pi_d, consumed_d, work_root)` of its child and SHALL do at most the unit budget of X14. All units SHALL consume one proof stream in order.
 
 #### Scenario: Forked state or skipped element
 - **WHEN** a unit continues a state other than its child's, skips a proof element, ignores a trailing element, or swaps the registry entry mid-run
@@ -31,3 +31,10 @@ FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before 
 #### Scenario: No unit size fits
 - **WHEN** X14 finds no unit size that fits the node gate
 - **THEN** GP-003 stays open, the general path stays in the change, and the result is reported to the owner
+
+### Requirement: FVR-005 A later phase reads only the values absorbed earlier
+`work_root` SHALL be an indexed store of typed records `(index, kind, value)`, empty at the first unit. FV-PARSE SHALL write each element at index `cursor`. FV-TRANSCRIPT SHALL write each challenge at its schema index. FV-ARITH and FV-FINAL SHALL read elements and challenges only by openings against `work_root`. FV-SCHED SHALL own the index schema per `transcript_id` and SHALL allow `DONE` only with every scheduled record written.
+
+#### Scenario: Substituted operand or swapped challenge
+- **WHEN** an MSM term uses a commitment other than the one absorbed, or a challenge is read from another schema index
+- **THEN** the unit is unsatisfiable (mutants `fv_operand_substituted`, `fv_challenge_index_swapped`), and the Quint invariant `LaterPhaseReadsAbsorbedValue` of `foreignRegistry.qnt` holds

@@ -287,3 +287,63 @@ Grep results on the viewer text (titles, labels, narration):
 - "open" appears 5 times, every time as the mechanism verb.
 
 Humanizer pass: no changes beyond the six titles.
+
+## STORYBOARD-AMEND-1.md (14 changed beats, new beat 8.9)
+
+Kind: explanation for the narration. The location chip, labels and inventory card follow the promo/motion row. The original is saved as `STORYBOARD-AMEND-1.orig.md`. Two narration sentences changed. Every stated duration still equals words / 2.5, rounded up.
+
+rhythm_check (narration of 15 beats), after:
+
+```
+Sentences: 82  mean 13.6  sd 7.3  median 13.0  max 57
+Tic patterns: absolutes×5
+Numbers: 4  per paragraph mean 0.27  max 2  paragraphs over two 0 of 15
+Flags:
+  - Paragraphs are nearly uniform in length.
+```
+
+Notes on the counts:
+- absolutes: "never runs on Midnight", "never go on-chain" and "never runs the Sherlock chip" state the location rule of the amendment. They stay.
+- Uniform paragraphs: each beat has a fixed word count per its duration.
+- The 57-word sentence in 8.9 is the inventory list and matches the card. It is a true enumeration, so it stays.
+
+Edits:
+1. 3.1, a one-line closer (humanizer §2): "...and it lives on the prover's machine. It never runs on Midnight." → "...and it lives on the prover's machine and never runs on Midnight."
+2. 6.3, a run-on sentence of 33 words (Z-30): "...serve every program and every input, so the program identity selects no contract and no key, and a new program deploys nothing." → "...serve every program and every input. The program identity selects no contract and no verifier key, and a new program deploys nothing."
+
+Checks on the narration, labels, titles and inventory text:
+- The dash grep prints nothing.
+- The register grep prints nothing; "open" does not occur.
+- Every label has four words or fewer.
+
+voice-verify (A = ARCHITECTURE.md line):
+
+| # | Claim | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Contract state holds `runs` keyed by `claim_d`, collection roots, the registry root (8.9) | VERIFIED | A:2526 `runs`, `verified_roots`, `reg_root` |
+| 2 | One contract and one decider verifier key serve every program; a new program deploys nothing (6.3, 8.9) | VERIFIED | BRIEF §2 "One contract"; A:2772 GP-001 |
+| 3 | Proving keys, witness, private input and trace stay off-chain; only the decider proof and the four values cross (5.13, 6.4) | VERIFIED | BRIEF §3.5, §3.6 |
+| 4 | "One proof verification, one lookup of `claim_d` and one insert are the whole on-chain work of a call" (7.4) | OVERCLAIM | A:2531 `acceptRun` also recomputes `claim_d` (one Poseidon), and beat 7.2 shows that step. The sentence leaves it out. |
+| 5 | "on a proving service the user picks" (1.1, 4.1, 8.9) | NOT FOUND | Not in BRIEF or ARCHITECTURE |
+| 6 | "the wallet on the user's machine" builds the transaction (6.1) | NOT FOUND | Not in BRIEF or ARCHITECTURE |
+| 7 | Leaves proved in parallel "across its CPU cores and GPU streams" (3.35, label, 8.9 card) | NOT FOUND | BRIEF §3.4 gives only "three provers in parallel give 1.73x" |
+| 8 | "Sherlock chip" as the name for the leaf circuit with its proving key (3.1, 6.4, 7.1, 8.2, 8.9) | NOT FOUND (term) | No source uses this term |
+| 9 | The run "executes ... as native code" (2.1) | NOT FOUND | BRIEF names `mori simulate` and a CEK-style machine, with no word on native code |
+| 10 | A native Compact contract puts one verifier key on-chain for each exported circuit (8.9 narration and comparison row) | NOT FOUND | Not in BRIEF or ARCHITECTURE. It needs a Midnight or Compact source. |
+| 11 | JOIN and `shape_d` are computed off-chain; collections settle in the contract (1.1 table) | VERIFIED | A:2105; A:2519 `acceptCollection` |
+
+Humanizer pass: no further changes.
+
+### STORYBOARD-AMEND-1.md: lead rulings applied
+
+All changed beats keep their stated durations (words / 2.5, rounded up): 2.1 is 28 s, 3.35 is 29 s, 7.4 is 29 s and 8.9 is 56 s.
+
+1. 7.4: the overclaim is fixed. The new sentence reads "One proof verification, the computation of `claim_d`, one lookup and one insert are the whole on-chain work of a call." This follows A:2527-2531. To keep the duration, "These are the values that the verified proof binds" became "These are the values the verified proof binds".
+2. 2.1: "as native code" became "as native execution".
+3. 3.35: "The machine proves leaves in parallel, across its CPU cores and GPU streams." became "Independent leaves let the machine prove them in parallel on its CPU cores." The label became `CPU cores`. Source: BRIEF §3.3 (partition independence) and ARCHITECTURE.md SRC-023 (line 1613). The GPU part waits for the elastic multicore chip design round.
+4. 8.9: the card row "CPU cores and GPU" became "CPU cores". The narration changed from "the CPU cores and GPU that do the proving. One transaction crosses." to "the CPU cores that do the proving. One transaction crosses the boundary." The added "the boundary" keeps the duration.
+5. The rest are kept as the lead ruled; each is now VERIFIED or HELD:
+   - "proving service the user picks": the proof server, `midnight-ledger/proof-server/src/endpoints.rs:245,328` (ledger-9).
+   - "the wallet": `midnight-dapp-connector-api/SPECIFICATION.md`.
+   - Native Compact keys, one verifier key per entry point: `midnight-ledger/onchain-state/src/state.rs:997,1136-1170`.
+   - "Sherlock chip": the owner's term.

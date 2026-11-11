@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
-### Requirement: CLM-001 The SET grammar has four typed forms
-A `set_root` SHALL be the pinned-sponge hash of exactly one of `LEAF(claim_d, n_steps)`, `DEP(claim_d, n_steps, cover_root, in_link)`, `JOIN(l, r)` and `FOREIGN(fclaim_d)`, with four distinct domain words that differ from `SHK_RUN`, `SHK_DEPS` and every state and memory domain. This protocol SHALL NOT freeze before X12 passes (N-3).
+### Requirement: CLM-001 The SET grammar has typed forms with distinct domains
+A `set_root` SHALL be the pinned-sponge hash of exactly one of `LEAF(claim_d, n_steps)`, `DEP(claim_d, n_steps, cover_root, in_link)`, `JOIN(l, r)`, `FOREIGN(fclaim_d)`, `ADM(adm_d)` and `VIEW(vw_d)`, with distinct domain words that differ from `SHK_RUN`, `SHK_DEPS` and every state and memory domain. This protocol SHALL NOT freeze before X12 passes (N-3).
 
 #### Scenario: Wrong domain opening
 - **WHEN** a `LEAF` hash is opened as a `JOIN`, a JOIN root is offered as if it had a head claim, or `n_steps` is forged in a SET leaf
@@ -57,3 +57,10 @@ The built path SHALL be input consumption at the seal (OD-20 option a), with the
 #### Scenario: Owner decision pending
 - **WHEN** the GP-2 hook is offered as complete for GP-002 while OD-20 is open
 - **THEN** `pos_gp2_b_consumes_a_halted` and `pos_gp2_three_runs_collection` count as milestone evidence only, and the GP-002 target stays open until OD-20 is answered
+
+### Requirement: CLM-007 A seal premise enters a discharge list only as the premise element
+`DL` SHALL be `(chain_d, cover_root, in_link, prem_root)`. The premise element SHALL be the first element of a DL that a seal uses. It SHALL set `prem_root` and SHALL leave `chain_d`, `cover_root` and `in_link` unchanged. A chain element or an input-link element SHALL take only a `LEAF`, `DEP` or `FOREIGN` head.
+
+#### Scenario: Premise in the chain
+- **WHEN** an `ADM` or `VIEW` head is appended to `chain_d` or used as an input link
+- **THEN** the node is unsatisfiable (mutant `claim_premise_in_chain`), and a run with no dependency still seals to a `LEAF` (positive `pos_gp2_empty_deps_plain_seal`)

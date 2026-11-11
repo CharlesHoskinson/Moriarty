@@ -41,7 +41,7 @@ The stored `vd` SHALL be computed from the tag and the child `vd` lanes of kind-
 - **THEN** the correct circuit refuses the witness (mutants `scalar_out_of_range`, `bool_nonboolean_selection`, `raw_type_id_in_digest`, `constructor_ordinal_unbound`, `running_has_outcome`, `padding_as_value`, `digest_not_copied_to_record`)
 
 ### Requirement: VDG-005 Bounded value opening
-`open_value_node` SHALL open a value held by digest one node per call. A constructor field SHALL be usable only after its opening fold reaches the digest.
+`open_value_node` SHALL open a value held by digest one node per call. A constructor field SHALL be usable only after its opening fold reaches the digest. Under input admission form (b) (OD-17), an input field SHALL be read through `AuthIn` under the certified `view_root` instead.
 
 #### Scenario: Field used before the fold completes
 - **WHEN** a field is used before the fold completes, or an opened child digest differs from the hashed one

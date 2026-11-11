@@ -43,3 +43,17 @@ A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its 
 #### Scenario: Free leaf shape
 - **WHEN** a leaf child's shape word is not derived from its lanes, or a disabled slot's shape is not `SHAPE_OFF`
 - **THEN** the node is unsatisfiable (mutants `graph_leaf_shape_free`, `graph_disabled_slot_shape_not_off`)
+
+### Requirement: SHP-005 Each output type has a fixed `(out_a, out_b)` pair
+`(out_a, out_b)` SHALL be `(h_lo, h_hi)` for a SEG output, `(set_root, 0)` for a SET, `(chain_d, cover_root)` for a DL, `(set_root, sub_root)` for a SUB and `(0, 0)` for an FV output. A FOREIGN SET at FV completion SHALL use the SET rule `(set_root, 0)`. `fv_state_d` SHALL NOT enter `shape_d`.
+
+#### Scenario: FV state in the shape
+- **WHEN** an FV output has `(out_a, out_b)` other than `(0, 0)`, for example `fv_state_d` in `out_a`
+- **THEN** the node is unsatisfiable (mutant `shape_fv_state_in_shape`)
+
+### Requirement: SHP-006 The inline kernel has one encoding of the machine relation
+The inline kernel SHALL be built from the same kit `configure` and `assign` functions as the leaf (CORE, DEC, ALU, RANGE, HASH, STACKS, MEM, the memory backend, VALUE DIGEST, INIT), instantiated in the node's constraint system. A separate node emitter SHALL NOT be used. If the kernel does not fit the node gate, the owner SHALL decide under N-6 and GP-4 SHALL NOT be narrowed.
+
+#### Scenario: Second encoding of the machine relation
+- **WHEN** an inline kernel does not instantiate the leaf kits' `configure` and `assign` functions, for example an emitter checked only against differential vectors
+- **THEN** the build check `graph_inline_kernel_separate_encoding` refuses it
