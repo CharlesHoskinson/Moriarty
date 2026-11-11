@@ -2,8 +2,8 @@
 title: "Continuations (stop and resume of one run)"
 type: concept
 tags: [continuations, gp-2, gp-4, c6, lead-decision]
-sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft]
-last_updated: 2026-11-10
+sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, sherlock-architecture, arch-audit-astra, arch-audit-response]
+last_updated: 2026-11-11
 ---
 
 # Continuations (stop and resume of one run)
@@ -30,8 +30,18 @@ How a long run is proved in pieces, and across proving sessions, under one key s
 - Mode 2 (address-free checkpoint with lazy `UNFOLD`) is not defined well enough: large slices do not fit the 15-row window, addresses differ after resume, no proof carries the checkpoint work, `cont_claim` has no mode field. The consensus claim that mode 2 "closes SRC-021 [OPEN]" is removed ([[runlength-consensus-audit]] finding 5). So the Init mechanism question stays open ([[OpenOwnerQuestions]]).
 - With a run-wide LogUp backend, a prefix keeps an unresolved memory obligation; an epoch bridge is an open construction; a Horner fingerprint is not a portable checkpoint digest ([[astra-area2-memory-draft]], [[astra-area3-recursion-draft]]).
 
+## Architecture revision B2: CONTINUATION and HOST CHECKPOINT STORE
+
+Proposed design, not built ([[sherlock-architecture]]):
+
+- CONTINUATION is the scheduler: tier 1 carry stack of proven SEGs merged by NODE MERGE, one SEAL at the end; mode 1 resume has the first suffix leaf at `h_pre = h` with `pre_d` equal to the record's `post_d`. 0 added circuit rows in mode 1 (ESTIMATE). Mode 2 stays open research with the six gaps of the run-length audit. Profile B is not supported.
+- The B1 text said the store was "the memory store as written by `MemBackend::persist`"; the audit found that `persist` writes nothing durable and no `StoreHandle` exists (finding 13) ([[arch-audit-astra]]).
+- New kit HOST CHECKPOINT STORE: a `RunStore` (append log of every record, both stacks as full lists, register state, program image, input preimage) and `CheckpointV1` in the versioned codec `sherlock-ckpt/1` (header with manifest hash, identity, state, memory log, stacks, program and input, proof carry stack, record digest under `SHK_CKPT`). Restore validates in six steps (codec and manifest; prefix proofs verify and cover `[0, h)`; the log rebuilds `(len, root, tail_d)`; stacks rebuild their heads; `body_d` and `state_d` equal `post_d`; program and input hash to `prog_d` and `input_d`) before any proving ([[arch-audit-response]]).
+- Two failure kinds are kept apart: a constraint failure (no proof exists) and a host integrity failure (refused at restore). "Soundness never depends on the store: a corrupted store can only stop the prover." A changed record that no later leaf reads is caught by restore validation, not by a constraint (`ckpt_tampered_unused_cell`).
+- Whether the checkpoint tag is also needed in circuit is open (N-4).
+
 ## Contradictions
 
 - [[runlength-consensus]] presents mode 2 as agreed by 5 of 5 and tier 2 as GP-2 composition; [[runlength-consensus-audit]] contradicts both. The lead adopted the audit's correction (R-7).
 
-See also [[DenseTailMemory]], [[RunLengthCeiling]], [[GeneralPurposeRecursion]], [[RunDecider]].
+See also [[ModularArchitecture]], [[DenseTailMemory]], [[RunLengthCeiling]], [[GeneralPurposeRecursion]], [[RunDecider]].

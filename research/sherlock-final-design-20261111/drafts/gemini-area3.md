@@ -999,3 +999,221 @@ pub fn run_mutant_spec<C: midnight_proofs::plonk::Circuit<F> + Clone>(
 - **WHEN** a negative mutant triggers a Rust panic or `Error::Synthesis` instead of `ConstraintNotSatisfied` / `Lookup`
 - **THEN** `run_mutant_spec` returns `Err(PanicMaskingConstraint)` (`SAS-003`, `SAS-004`)
 ```
+
+---
+
+## 5. System-Wide Module Dependency Graph & Parallel Build Order (`MODULARITY.md:11`)
+
+### 5.1 Complete 12-Module System Architecture Across Areas 1, 2, and 3
+
+Every module communicates exclusively through frozen bus tuples `(chip, key, a, b, c)`, named copy-constrained cells, or versioned public-instance structs (`MODULARITY.md:7-9`). Merging `ALU + RANGE` (`M3`) is justified because ALU carries/comparisons are the primary consumer of byte/limb range decompositions inside the same step row budget; separating `MEMORY BACKEND` (`M5a`/`M5b`) and `BOUNDARY COMMITMENT` (`M8a`/`M8b`) from `MEM` (`M4`) satisfies `MODULARITY.md:9` so both profiles build and benchmark without touching `CORE` or `MEM`:
+
+```mermaid
+flowchart TD
+    B0["B0: BUS & TaggedTable Schema (Area 1)"]
+    BH["BoundaryTrait: Leaf-to-Node Header (Area 2/3)"]
+
+    subgraph Area1["Area 1: Processor"]
+        M1["M1: CORE (39-field RF, S-slot, Init, GP-2 hook)"]
+        M2["M2: DEC (Program Decode & prog_root)"]
+        M3["M3: ALU + RANGE (u64/u128 & Byte Lookups)"]
+        M6["M6: HASH (In-Leaf Poseidon Bus Provider)"]
+    end
+
+    subgraph Area2["Area 2: Memory, Values & Boundary"]
+        M4["M4: MEM (15-row Window, 8-cell Tail, Stacks)"]
+        M5A["M5a: DensePageBackend (Profile A Merkle)"]
+        M5B["M5b: ZmLogUpBackend (Profile B Write-Once LogUp)"]
+        M7["M7: VALUE DIGEST (sherlock-value/1 & outcome_d)"]
+        M8A["M8a: PoseidonBoundary (Profile A pre_d/post_d)"]
+        M8B["M8b: HornerBoundary (Profile B Instance(0) + Sums)"]
+    end
+
+    subgraph Area3["Area 3: Recursion & System"]
+        M10["M10: NODE INTEGRATION (RunLift R, Foreign F, Node N, C_close)"]
+        M11["M11: DECIDER (RunDecider, ClaimDecider, Ledger 9.1.0.1)"]
+        M9["M9: CONTINUATION (3x6t Scheduler & Mode-1 SEG Checkpoint)"]
+        M12["M12: HARNESS (Whole-Leaf/Run Diff vs sherlock-k-a/1 & Mutants)"]
+    end
+
+    B0 --> M1 & M2 & M3 & M4 & M6 & M7
+    B0 --> M5A & M5B & M8A & M8B
+    BH --> M8A & M8B & M10 & M9
+    M4 --> M5A & M5B
+    M5A --> M8A
+    M5B --> M8B
+    M1 & M2 & M3 & M4 & M6 & M7 --> M12
+    M8A & M8B --> M10 & M12
+    M10 --> M11 & M9 & M12
+    M11 & M9 --> M12
+```
+
+### 5.2 Wave-by-Wave Parallel Build Order & Interface Freeze Gates
+
+| Wave | Parallel Coding Lanes (Zero Shared Internal Files) | Inputs Consumed | Freeze Gate Output |
+|---|---|---|---|
+| **Wave 0: Trait & Bus Skeleton Freeze** *(Sequential, 1–2 sessions)* | **Lane 0A:** `B0: BUS` (`crates/mori-chip/src/bus.rs`: `(chip, key, a, b, c)` schema, `TaggedTableConfig`, `vsel` bitmask rules) + `MemBackend` / `BoundaryCommitment` Rust traits (`crates/mori-chip/src/membackend.rs`).<br>**Lane 0B:** `InCircuitBoundaryLink` + `RunPublicStatement` + `LogicalStepObservation` traits (`crates/mori-recursion/src/boundary.rs`, `crates/mori-chip/src/harness.rs`). | `MODULARITY.md:7-12`, `design.md` §2.7, this architecture. | **`FG-0 (Interface Freeze)`:** `cargo check --workspace` compiles all module trait stubs with zero implementation bodies (`todo!()`). |
+| **Wave 1: Blind Single-Module Implementation** *(Up to **11 parallel lanes**!)* | **Area 1 (4 lanes):** `M1: CORE`, `M2: DEC`, `M3: ALU+RANGE`, `M6: HASH`.<br>**Area 2 (4 lanes):** `M4: MEM`, `M5a+M8a: Profile A Backend/Boundary`, `M5b+M8b: Profile B Backend/Boundary`, `M7: VALUE DIGEST`.<br>**Area 3 (3 lanes):** `M10: NODE INTEGRATION` (tested against synthetic mock `U` leaf of target `(adv, fix, eq, lookups)`), `M11: DECIDER` (tested against mock `Node`/`C_close`), `M9: CONTINUATION` (tested against mock `R`/`N` receipts) + `M12: HARNESS` core runner. | Frozen `FG-0` traits + each module's isolated kit (§6). | **`FG-1 (Unit & Mutant Freeze)`:** Each module passes its standalone `MockProver` positive tests, `SAS-003/004` `MutantSpec` suite, and per-module Quint model. |
+| **Wave 2: Whole-Leaf Assembly & Prototype Bake-Off (`P1`–`P3`)** *(3 parallel lanes)* | **Lane 2A:** Wire `ChipLeaf<ProfileA>` & `ChipLeaf<ProfileB>` into `M12: HARNESS` (`diff_leaf_vs_sherlock_ka1`) across all 4 `PartitionSchedule`s (`P1..P8`).<br>**Lane 2B:** Run `cost_model` & prover experiments `P1`–`P3` (§7.4) to pick `Profile A` vs `Profile B`, freeze `S` (`G-A'`), and verify 2-leaf `RunLift` `R` + `RunDecider` `table_rows == 1,032,467`.<br>**Lane 2C:** Lean `ModularRefinement.lean` (Obligations 1–4). | Wave 1 modules + `sherlock-k-a/1` oracle. | **`FG-2 (Leaf Architecture & `S` Freeze)`:** `ChipLeaf` `(adv, fix, eq, lookups)` and `S` frozen; `diff_leaf_vs_sherlock_ka1` green in CI on every PR. |
+| **Wave 3: Recursion Cascade, Compact Templates & Lean DAG** *(3 parallel lanes)* | **Lane 3A:** Key cascade `U -> R -> F -> N -> C_close -> D` (`SRC-008`, `SRC-009`), recapture Compact `0.36.0` `SherlockRun` & `SherlockClaims` templates (`SMN-003`).<br>**Lane 3B:** Wire `M9: CONTINUATION` `3×6t` scheduler + Mode-1 `SHKSCK01` checkpointing into `diff_run_vs_sherlock_ka1`.<br>**Lane 3C:** Lean `Aggregation.lean` 2-leaf update + `ClaimDag.lean` (Obligation 5: `GP-2`, `GP-3`, `GP-4`, Mode-1 continuations). | Frozen `FG-2` `ChipLeaf` VK + Wave 1 Area 3 modules. | **`FG-3 (Key & Formal Freeze)`:** `lake build SherlockSpec` (`0` `sorry`, clean `#print axioms`), `quint test` green, `table_rows == 1,032,467` verified on real keys. |
+| **Wave 4: Heavy End-to-End & Ledger `9.1.0.1` Qualification** *(Sequential gated operations)* | Run `doctorwatson heavy` on `entry 7` (`< 20 min`), `fact(3)` and `list123` (`< 2 h`, `<= 100 GiB` aggregate RSS, `SRC-011`, `SRC-015`), out-of-process `SRC-010` bundle verification, `0.8.3 -> 0.8.2` `validate_call` (`SRC-020`), `GP-2/3/4` acceptance vectors (`A34..A36`), then Preview (`T3`) and owner-authorized Mainnet (`T4`, `SWF-009`). | Frozen `FG-3` bundle + `bls_midnight_2p20` SRS. | **`FG-4 (Release Qualification)`:** Committed `SRC-019` bundles and `SWF-005` receipts. |
+
+---
+
+## 6. Canonical Module Kit Template (`ARCH-BRIEF.md:21`, `MODULARITY.md:10`)
+
+Derived from the repository's blind skeleton-coding protocol (`research/skeleton-coding-20261108/pilot-protocol.md:1-227` and `research/skeleton-coding-20261108/pilot/prompts/skeleton-blind.md:1-39`), every module (`B0`, `M1`..`M12`) is handed to an isolated coding session as a single kit document following the exact schema below. The implementing session sees **only** its owned file(s) and frozen trait headers — never sibling chip internals.
+
+````markdown
+# Module Kit: `M<ID>: <MODULE_NAME>`
+
+## 0. Blind-Lane Execution Rules (Mandatory)
+1. **Owned Files Only:** Edit ONLY `<owned_src_paths>` and `<owned_test_paths>`. Do not modify bus traits, sibling modules, `Cargo.toml`, or harness definitions.
+2. **Context Ceiling & Forbidden Reads:** Read ONLY the files listed in §8 ("MUST Read", <= 1,500 lines total). NEVER read files listed in §8 ("MUST NOT Read"). If an interface appears ambiguous, stop and report an `INTERFACE_GAP` against the frozen trait header rather than inspecting another module's internals.
+3. **Proof-System Hard Rules:**
+   - Single challenge phase only (`cs.phases().count() == 1`); never emit `Expression::Challenge(_)`.
+   - Gate and lookup rotations restricted strictly to `{-1, 0, +1}`.
+   - In any `mori-recursion` node/decider relation, decompose bounded integers ONLY via `assigned_to_le_bytes(layouter, &v, Some(n_bytes))` (`+0` `Pow2Range` `table_rows`; `table_rows == 1,032,467` invariant).
+   - Under `Profile B`, witness committed-instance `G1` points ONLY via subgroup-checked `AssignmentInstructions::assign`.
+
+## 1. Purpose
+<Exactly two sentences stating (a) what mathematical/execution relation the module proves or orchestrates, and (b) what complexity it hides from the rest of the system.>
+
+## 2. Frozen Interface
+| Direction | Bus Tuple `(chip, key, a, b, c)` / Copy Cell / Public Instance | Field Semantics | Valid Bit-Range | Range-Check Owner |
+|---|---|---|---|---|
+| Requests / Consumes | `...` | `...` | `[0, 2^k - 1]` | `M<owner>` |
+| Provides / Exposes | `...` | `...` | `[0, 2^k - 1]` | `M<self>` |
+
+## 3. Invariants
+- **Guaranteed by `M<ID>`:** Numbered soundness and completeness properties (`INV-<MOD>-1..k`).
+- **Assumed from Peers:** Exact preconditions guaranteed by `B0` or upstream providers (checked at composition in `ModularRefinement.lean`).
+
+## 4. Row & Column Budget (`ESTIMATE` / Gate)
+- Advice cols: `<= X`, Fixed cols: `<= Y`, Copy-eq cols: `<= Z`, Lookups: `<= L`, Rows per step/proof: `<= R` (`ESTIMATE` vs hard CI `cost_model` ceiling).
+
+## 5. Verification Suite
+1. **Quint Model:** `models/sherlock/quint/<module>.qnt` — state variables, invariant names, and seeded model mutants (`quint test` must exit 0 on main model and fail on each mutant).
+2. **`MockProver` Positive Vectors:** Named deterministic tests covering boundary values (`0`, `1`, `2^64 - 1`, disabled padding slots, empty vs full capacity).
+3. **Named Negative Mutants (`SAS-003` / `SAS-004`):** Each mutant registered as a `MutantSpec` with:
+   - post-synthesis raw-witness cell override (`apply_raw_witness_mutation` — ZERO panics or `Error::Synthesis`),
+   - weakened-constraint control (`build_weakened_control_circuit` — MUST pass `MockProver` when the specific constraint is toggled off),
+   - expected `ReachedRejectionStage` (`MockProverGateConstraint`, `MockProverLookup`, `MockProverPermutation`, or `KzgPairingOrTranscript`).
+
+## 6. Lean Obligations (`clean/fork/Clean/Sherlock/`)
+- **Theorem Name & Plain-English Statement:** `<theorem_name>` in `Clean/Sherlock/<File>.lean`.
+- **Relied-On Premises:** Only explicit typeclass fields from `AggregationAxioms.lean` (`0` `sorry`, `0` new `axiom` declarations; verified by `scripts/qa/check-lean-aggregation.sh`).
+- **Contract Discharged:** Maps 1-to-1 to §3 Guaranteed Invariants.
+
+## 7. Code Skeleton (`Requires` / `Ensures` / `Check` / `Global invariants`)
+```rust
+/// Requires: <exact caller/bus precondition>
+/// Ensures: <exact polynomial/state postcondition proved in circuit>
+/// Check: <positive test + MutantSpec ID + Lean theorem>
+/// Global invariants: <rotations in {-1,0,+1}; phase == 1; table_rows == 1,032,467 if recursion>
+pub fn configure_or_assign(/* exact frozen types */) -> Result<Out, Error>;
+```
+
+## 8. Agent Context Boundary
+- **MUST Read:** Exact `path:start-end` list (`<= 1,500` lines).
+- **MUST NOT Read:** Explicit denylist of sibling modules (`crates/mori-chip/src/<others>`, etc.).
+
+## 9. Completion Checklist (All Must Pass Before Marking Task `[x]`)
+- [ ] `cargo test -p <crate> --test <module_unit_and_mutants>` passes (`0` panics, all `MutantSpec` controls corroborated per `SAS-003`/`SAS-004`).
+- [ ] `cargo test -p mori-chip --test diff_leaf_vs_sherlock_ka1` passes across all 4 `PartitionSchedule`s (`MODULARITY.md:12`).
+- [ ] `cost_model` assertions hold (and `table_rows == 1_032_467` if touching `mori-recursion`).
+- [ ] `quint test models/sherlock/quint/<module>.qnt` passes + catches every seeded mutant.
+- [ ] `lake build SherlockSpec` passes with `0` `sorry` and clean `#print axioms`.
+- [ ] OpenSpec scenarios in `specs/<module>/spec.md` verified with recorded receipt (`SAS-001`).
+````
+
+---
+
+## 7. Complete Post-Prototype OpenSpec 1.17.0 Change Specification Blueprint (`ARCH-BRIEF.md:62-68`)
+
+Once prototype experiments `P1`–`P5` (§7.4) complete, implementation is governed by a **new, standalone OpenSpec 1.17.0 change** (`openspec` CLI `1.17.0`), cleanly separated from the exploratory `sherlock-vm-consensus-20261107` change (`ARCH-BRIEF.md:64`).
+
+### 7.1 Change Identity and `proposal.md` Scope
+- **Change Directory:** `openspec/changes/sherlock-modular-chip-gp-20261112/`
+- **`proposal.md` Scope:**
+  - **Why:** Replace the monolithic C6 ZKIR leaf (`2.64M` rows, `k = 22`) and single-program linear chain (`SHKIVC06` / 5-input `SHKRUND1`) with the 12-module `ChipLeaf` + polymorphic `GP-1..GP-4` recursion stack at `k = 20`, structured so each module kit is independently implementable, mutant-verified, and formally connected in Lean (`Clean/Sherlock/`).
+  - **What Changes:** Introduces 12 modular capability specs (`specs/<module>/spec.md`), freezes the winner of `Profile A` vs `Profile B` (keeping the runner-up behind the swappable trait as a benchmarked fallback), delivers `GP-1` universal VM + Mode-1 `SEG` continuations, `GP-2` cross-run claim consumption, `GP-3` registry foreign proofs via `ForeignLift` `F` + `A_c`, `GP-4` arbitrary-shape binary `Node` `N` + uncapped diamond `SET` union, updates `RunDecider` / `ClaimDecider` + Compact `0.36.0` contracts on Midnight Ledger `9.1.0.1`, and retires superseded C6-leaf predicate rows in `qa/sherlock/predicates.yaml` via `SWF-011` `retired:` anchors (preserving `SAS-*`, `SWF-*`, and `SMN-*` assurance/workflow gates unchanged).
+  - **Explicit Out-of-Scope (Deferred Changes):** Mode-2 portable value-only checkpointing (`sherlock-ckpt/1` + lazy `UNFOLD`, `AUDIT.md:33-38`), semantic profile `/2` (`Await`/`Waiting`, `SVM-009`), and CUDA `sm_121` prover hooks (`crates/mori-gpu`, already tracked under optional `SRC-018` rows `F23`, `A24..A27`).
+
+### 7.2 Directory Layout and 12 Capability Specs (`specs/<module>/spec.md`)
+Every requirement statement in `specs/<module>/spec.md` is strictly `< 500` characters, uses RFC 2119 `SHALL` / `SHALL NOT`, and carries concrete `#### Scenario:` (`WHEN` / `THEN`) blocks mapping directly to `MockProver` tests, `MutantSpec` IDs, Quint invariants, and Lean theorems (`ARCH-BRIEF.md:66`):
+
+```text
+openspec/changes/sherlock-modular-chip-gp-20261112/
+├── proposal.md                                  # Scope, GP-1..GP-4 preservation, SWF-011 retirement map
+├── design.md                                    # Merged ARCHITECTURE.md + P1..P5 measured tables
+├── tasks.md                                     # Wave 0..4 build order: 1 task per module kit, ticked ONLY on passing evidence
+└── specs/
+    ├── sherlock-bus/spec.md                     # B0: (chip,key,a,b,c) schema, TaggedTable, vsel rules
+    ├── sherlock-core/spec.md                    # M1: 39-field RF, S-slot prefix, Init(h_pre=0), VerifySherlockClaim
+    ├── sherlock-dec/spec.md                     # M2: Instruction decode & prog_root Merkle/lookup access
+    ├── sherlock-alu-range/spec.md               # M3: u64/u128 arithmetic, comparisons, Clean ALU/RANGE proofs
+    ├── sherlock-hash/spec.md                    # M6: In-leaf Poseidon sponge/compression bus provider
+    ├── sherlock-mem/spec.md                     # M4: 15-row window, 8-cell dense tail, FRAMES/TASKS hash-stacks
+    ├── sherlock-memory-backend/spec.md          # M5: MemBackend trait (DensePageBackend & ZmLogUpBackend; Lean Obl. 1 & 2)
+    ├── sherlock-value-digest/spec.md            # M7: sherlock-value/1 canonicity & terminal outcome_d (Lean Obl. 4)
+    ├── sherlock-boundary-commitment/spec.md     # M8: BoundaryCommitment trait (PoseidonBoundary & HornerBoundary)
+    ├── sherlock-continuation/spec.md            # M9: 3x6t O(log L) scheduler & Mode-1 SEG checkpoint (§3.9; Lean Obl. 5b)
+    ├── sherlock-node-integration/spec.md        # M10: RunLift R, ForeignLift F, Node N, Closing C_close (§1.9; Lean Obl. 3 & 5a)
+    ├── sherlock-decider/spec.md                 # M11: RunDecider, ClaimDecider, table_rows=1,032,467, Ledger 9.1.0.1 (§2.9)
+    └── sherlock-harness/spec.md                 # M12: Whole-leaf/run diff vs sherlock-k-a/1 & SAS-003/004 mutants (§4.9)
+```
+
+### 7.3 `tasks.md` Structure (One Task Per Module Kit, Evidence-Only Ticking)
+`tasks.md` mirrors §5.2 Waves 0–4 with one atomic checkbox per module kit (`T0.1` `B0+Traits`, `T1.1` `M1: CORE`, ..., `T1.11` `M11: DECIDER`, `T2.1` `M12: HARNESS Whole-Leaf Gate`, `T3.1` `Lean ModularRefinement & ClaimDag`, `T4.1` `Heavy Qualification & Ledger 9.1.0.1`). Per `ARCH-BRIEF.md:67` and `SAS-012` (`requirements.md:76`), a task `[ ]` transitions to `[x]` **if and only if** its `doctorwatson check <ROW>` predicate exits `0` with a committed receipt naming the test binary, `MutantSpec` count, Quint verdict, and Lean `#print axioms` output.
+
+### 7.4 Pre-OpenSpec Prototype Experiments (`P1`–`P5`) & Exact Decision Matrix (`ARCH-BRIEF.md:68`)
+Before freezing `openspec/changes/sherlock-modular-chip-gp-20261112/design.md` and `specs/*/spec.md`, five bounded measurements MUST finish:
+
+| Experiment | What Is Built & Measured | Exact Decision Rule Controlled by Result |
+|---|---|---|
+| **`P1`: Memory & Boundary Backend Bake-Off** | Implement `M5a+M8a` (`Profile A`: `DensePageBackend` depth-61/paged Merkle + `PoseidonBoundary`) and `M5b+M8b` (`Profile B`: `ZmLogUpBackend` + `HornerBoundary` + 2-pass `commit_to_instances` + subgroup-checked $C_i$ in `RunLift`) on a representative allocating program (`list123` + `>8`-field constructor). Measure leaf rows, leaf `k`, 1-pass vs 2-pass RSS/wall-clock, and Node rows. | - **Default M4 Backend:** Choose `Profile B` **only if** (i) 2-pass leaf + subgroup-checked Node beats `Profile A` end-to-end wall-clock by `>= 20%` under `3×6t` contention AND (ii) 2-leaf `RunLift` stays `< 1,048,570` rows (`k = 20`) AND (iii) Lean Obligation 1 (`ZmLogUp` write-once soundness) is complete. Otherwise freeze **`Profile A`** as M4 primary (better Mode-1 checkpoint ergonomics and zero torsion-check rows) and retain `Profile B` behind `MemBackend` for throughput R&D. |
+| **`P2`: Composed Leaf Rows & `S` Gate (`G-A'`)** | Assemble `ChipLeaf` (`B0 + M1..M8`) with `TaggedTableConfig` (`3` lookups) and measure `cost_model` `(rows, adv, fix, eq, lookups)`, peak RSS (`<= 16 GiB` leaf cap), and prove time at `S in {8, 16, 32, 64}`. | - Freezes `S` for M4 (`SRC-014`: largest power of 2 `<= 16` fitting `k_leaf <= 20` and `<= 16 GiB`, expected `S = 16` at `k_leaf = 14..16`), or schedules `S = 64` if `S = 64` fits `k_leaf <= 19` within `16 GiB`.<br>- Freezes exact `leaf_arch` `(adv, fix, eq, lookups)` fed into `P3`. |
+| **`P3`: Recursion Node & Decider Row/Table Probe** | Run `cost_model` + 1 real `bls_midnight_2p20` prove on: (a) 2-leaf `RunLift` `R` vs 1-leaf `RunLift` `R` over `P2`'s `leaf_arch`; (b) 2-slot polymorphic `Node` `N` over `{N, R, F}` with canonical neutral disabled slots; (c) `ClosingProof` `C_close` + `ClaimDecider` vs 1-stage `Decider`. Assert `table_rows == 1,032,467` on all deciders. | - **2-Leaf vs 1-Leaf `RunLift`:** Freeze **2-leaf `RunLift` `R`** if `R.rows <= 1,035,000` (`>= 13.5k` safety buffer below `1,048,570` at `k = 20`); otherwise fall back to **1-leaf `RunLift` `R`** (`~794k–830k` rows) with zero interface change to `N`.<br>- **1-Stage vs 2-Stage End:** Confirms 2-stage `(C_close -> ClaimDecider)` for `GP-2..GP-4` (`architecture.md:220-224`) vs 1-stage `RunDecider` if M4 ships a preliminary `GP-1`-only key before `F`. |
+| **`P4`: `GP-3` Compact Adapter Class `A_c` & Transcript Probe** | Build one Compact `0.36.0` adapter circuit `A_c` (`architecture.md:177-185,307`) in two variants: Stage-1 (Poseidon inner proof from witness holder) and Stage-2 (in-circuit keyed Blake2b transcript + point checks over raw ledger proof bytes). Measure `A_c` and `ForeignLift` `F` rows. | - If Stage-2 keyed-Blake2b `A_c` fits `k <= 20` within `< 90 s` prove time, include raw ledger-bytes Compact proof ingestion in initial `GP-3` spec; otherwise ship Stage-1 Poseidon `A_c` in v1 and track Stage-2 Blake2b adapter as an additive registry entry (requiring **no** change to core keys `{U, R, F, N, C_close, D}`!). |
+| **`P5`: `0.8.3 -> 0.8.2` Verifier & `sherlock-value/1` Schema Freeze** | (a) Verify one `0.8.3`-proved `k = 20` decider proof inside a standalone binary compiled at `ledger-9.1.0.1`'s `midnight-proofs 0.8.2` lockfile (`review.md:201,246`); (b) resolve open schema items `decl_schema_d` (`dissent.md:204-208` `D-2`) and absent-input `val_d` (`SRC-021`, `requirements.md:46`). | - Unblocks freezing `M7: VALUE DIGEST`, `M1: CORE` `Init`, and `M11: DECIDER` keys. If `0.8.3` vs `0.8.2` diverges in transcript/serialization, pins workspace prover or patches serialization *before* any M4 key ceremony. |
+
+---
+
+## 8. Open Decisions in Area 3 (`ARCH-BRIEF.md:35`)
+
+| ID | Decision | Options | Recommendation |
+|---|---|---|---|
+| **`D-A3-1`** | **Leaf-Lift Arity (`RunLift` `R`): 2-Leaf (`U + U -> SEG`) vs 1-Leaf (`U -> SEG`)** | **(A)** 2-Leaf `RunLift` `R` with 1-leaf tail mode (`~994.8k–1,022k` rows `ESTIMATE` under `Profile A`; `~1,013k–1,062k` under `Profile B`).<br>**(B)** 1-Leaf `ChipNode` (`~794.4k–830.1k` rows `ESTIMATE`). | **Recommend Option (A) under `Profile A`** (halves leaf-lift node invocations from $L$ to $\lceil L/2 \rceil$, saving ~33% total node proofs in binary trees), gated by `P3` confirming `R.rows <= 1,035,000` at `k = 20`. If `Profile B` is selected and pushes 2-leaf `R` above `1,035,000`, drop `R` to 1-leaf (`Option B`) without changing `N`. |
+| **`D-A3-2`** | **Core Key Topology: Unified `{U, R, F, N, C_close, D}` from Day 1 vs Staged `{U, Node_M4, RunDecider}` -> `{U, R, F, N, C_close, D}`** | **(A)** Build the named-key `{U, R, F, N, C_close, D}` core set once so `GP-1..GP-4` share one permanent key architecture (`architecture.md:105-107`).<br>**(B)** Ship single-key `{U, ChipNode, RunDecider}` for M4 (`GP-1` + Mode-1 checkpointing), then replace keys for `GP-2..GP-4`. | **Recommend Option (A) in codebase structure, with M4 gate allowed to run `R + N + C_close + D` directly** (`F`'s VK slot pinned to a valid `ForeignLift` key even before foreign adapters are registered). This avoids throwing away M4 keys and Lean `Aggregation.lean` proofs when activating `GP-2..GP-4`. |
+| **`D-A3-3`** | **`GP-4` Literal Reading of "Arity >= 2 Plus New Work" (`general-purpose.md:46`, `architecture.md:156-164`)** | **(A)** Two polymorphic verifier slots in `N` over `{N, R, F}` at `k = 20` (combining two prior `N` proofs + new `R`/`F` work takes two `k = 20` nodes).<br>**(B)** Two `N` verifier slots + inline processor rules inside `N` at `k = 20` (`~820k–1,000k` rows `ESTIMATE`, duplicates leaf processor in `N`).<br>**(C)** 3-verifier-slot `N` (`1,078,147` rows -> `k = 21`, ~2× prover time/RSS, needs `bls_midnight_2p21` SRS). | **Recommend Option (A), surfaced explicitly to the owner per `general-purpose.md:58`** so the owner confirms whether two `k = 20` binary nodes satisfy `GP-4` or mandates `k = 21` (`Option C`). Reject `Option B` on modularity grounds (`MODULARITY.md:7-10`: duplicating VM rules inside `N` destroys leaf/node separation). |
+| **`D-A3-4`** | **Contract Entrypoint Surface: Dual-Template (`acceptRun` + `acceptRoot`/`openClaim`) vs `SherlockClaims` Only (`architecture.md:403-405`, `SRC-007`)** | **(A)** Keep both Compact `0.36.0` templates over the same decider architecture: `SherlockRun.acceptRun(prog_d, input_d, outcome_d, n_steps)` (1-tx single-run UX, `prog_d` as call data for `GP-1`) and `SherlockClaims.{acceptRoot, openClaim, admitKey}` (batch/DAG UX).<br>**(B)** `SherlockClaims` only (every single run requires `acceptRoot` + `openClaim`, 2 calls or combined circuit). | **Recommend Option (A):** `acceptRun` with `prog_d` and `input_d` as call data satisfies `GP-1` in a single transaction while `SherlockClaims` serves `GP-2..GP-4` batches and DAGs (`architecture.md:404-405`). |
+| **`D-A3-5`** | **Public Visibility of `shape_d` (`GP-004`, `dissent.md:218-222` `D-6`)** | **(A)** Expose address-free `shape_d` in `DECIDER` public inputs (`requirements.md:59`), never consulting it for acceptance or replay.<br>**(B)** Omit `shape_d` so recursion is zero-knowledge of fold bracketing (`dissent.md:218-222` `D-6`). | **Recommend Option (A)** to honor `GP-004` (`requirements.md:59`) verbatim unless the owner explicitly amends `GP-4` under `dissent.md` `D-6`. |
+| **`D-A3-6`** | **`reg_root` Lifecycle Policy (`GP-3`, `architecture.md:302-304`)** | **(A)** Monotonic append-only `roots_history: Set<Field>` for `reg_root` with an explicit `revoked_roots: Set<Field>` guard so in-flight long runs survive routine adapter admissions.<br>**(B)** Latest `reg_root` equality only (any `admitKey` invalidates in-flight runs). | **Recommend Option (A):** Long multi-hour runs (`M9` Mode-1 checkpoints) MUST NOT be invalidated when a new foreign key is admitted, provided the run's `reg_root` belongs to unrevoked `roots_history`. |
+
+---
+
+## 9. Conflicts with Existing Spec or Studies (`ARCH-BRIEF.md:36`)
+
+| Source & Exact Lines | Existing Statement / Code | Conflict & Required Resolution in Area 3 |
+|---|---|---|
+| `research/sherlock-gp-architecture-20261110/architecture.md:89,100,103` and `research/sherlock-runlength-consensus-20261111/CONSENSUS.md:54,238` | Defines `SET = (set_root, n_claims)` where "`n_claims` counts occurrences, not distinct claims", exposes `n_claims` in `D`, and proposes range-checking `n_claims < 2^64`. | **Violates `GP-4` (`AUDIT.md:19-22`):** A depth-64 diamond claim DAG has $2^{64}$ path occurrences of a shared root claim across ~128 proofs (`n_claims = 2^64` fails `< 2^64`, while un-ranged `n_claims` wraps mod $r$ at depth 255). **Resolution:** Delete `n_claims` from `SET` and `ClaimDecider` (§1.2, §2.2); enforce per-claim uniqueness via `claim_d` nullifiers in `openClaim`. |
+| `research/sherlock-runlength-consensus-20261111/CONSENSUS.md:46,54,218` | Labels cross-session stop/resume checkpoint composition as "`GP-2` claim chaining". | **Violates `GP-001` (`requirements.md:56`) and `GP-002` (`requirements.md:57`), flagged in `AUDIT.md:39-42`:** `GP-002` forbids accepting segment statements or state digests as claims; checkpoints are `Running` segments, not terminal runs. **Resolution:** Mode-1 checkpoints compose strictly via `N(SegMerge): SEG + SEG -> SEG` (§3.2). |
+| `research/sherlock-runlength-consensus-20261111/CONSENSUS.md:46-47,216-235` | Treats Mode-2 portable value-only checkpointing (`sherlock-ckpt/1` + lazy `UNFOLD`) as a settled Tier-2 continuation mechanism. | **Unresolved soundness/step-count gaps (`AUDIT.md:33-38`):** `m > 8` slice materialization in a 15-row window, `n_steps` invariance (`GP-001`), and 39-field root coverage are unsolved. **Resolution:** Quarantine Mode-2 behind non-default `experimental-mode2-ckpt` (§3.2) and ship Mode-1 `SEG` checkpoints in M4. |
+| `research/sherlock-gp-architecture-20261110/architecture.md:99` vs `openspec/changes/sherlock-vm-consensus-20261107/requirements.md:32` & `dissent.md:209-212` (`D-3`) | `architecture.md:99` writes `out_d = H(outcome_kind, value_d, n_steps)` inside `claim`, whereas `SRC-007` (`requirements.md:32`) defines `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` with `n_steps` alongside it. | **Mismatch in `claim_d` preimage (`D-3`):** Hashing `n_steps` into `claim_d` conflicts with `SRC-007` and `review.md:150`. **Resolution:** Follow `SRC-007` (`claim_d = Poseidon("SHK_RUN", 1, prog_d, input_d, outcome_d)`); expose `n_steps` alongside `outcome_d` in `RunPublicStatement` (§1.2, §2.2). |
+| `crates/mori-recursion/src/run_decider.rs:53-58,279-301` and `tools/sherlock-sdk/sherlock-run.compact:19-47` | Exposes 5 public values `[prog_d, init_d, fin_d, n_steps, result_be]` (`u128` `Halted`-only) and keys contract replay on `fin_d`-containing `stmt`. | **Directly violates C6 `SRC-006`, `SRC-007`, `SRC-022`, `SRC-023` (`requirements.md:31-32,47-48`):** Leaks physical `init_d`/`fin_d` and rejects `Rejected`/`Exhausted`/non-`u128` outcomes. **Resolution:** Replace with `SHKRUND2` 4-scalar `[prog_d, input_d, outcome_d, n_steps]` and `claim_d` replay set (§2.2, §2.7). |
+| `crates/mori-recursion/src/ivc.rs:69-74,548-562,571-576` | Consumes 7-lane `[binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]` without `input_d`/`deps_d`/`outcome_d`, verifies only 1 fixed leaf + self, and `write_relation` (`:571-576`) omits `S_MAX`. | **Violates `SRC-014` (`requirements.md:39`: "`S_MAX` SHALL be a serialized field of the node relation") and `GP-1..GP-4`.** **Resolution:** Serialize `s_max` in `write_relation` and adopt the extended leaf header + `{R, F, N, C_close}` relations (§1.2, §1.7). |
+| `openspec/changes/sherlock-vm-consensus-20261107/requirements.md:32` (`SRC-007` note) vs `:56` (`GP-001`) | `SRC-007` keeps `program_d` sealed per contract instance ("one contract serves one program"), whereas `GP-001` requires "one deployed verifier contract" for all programs. | **Milestone vs GP-1 target split (`review.md:154`):** **Resolution:** Make `prog_d` call data in `SherlockRun` (and `claim_d` inside `SherlockClaims`) for the `GP-1` contract while optionally supporting an owner-pinned `Option<Field>` program filter if desired (§2.2, §8 `D-A3-4`). |
+| `clean/fork/Clean/Sherlock/Aggregation.lean:49,74-101,1085-1094` | Models 3-slot `NodeCert.node L (Option Leaf) R` (`k = 21` shape), single-program `Seg`, and `AcceptRun` exposing `init_d` and `fin_d`. | **Out of sync with binary `k = 20` node, C6 `SRC-006`, and `GP-2..GP-4`.** **Resolution:** Update `Aggregation.lean` to 1/2-leaf `RunLiftCert` + 2-slot `SegCert` + `fin_d`-erasing `Seal`, and add `ModularRefinement.lean` + `ClaimDag.lean` (§1.6, §2.6, §3.6). |
+| `Cargo.lock:2137-2138` vs `L9:Cargo.lock:3509-3510` (`review.md:201,246`) | Workspace pins `midnight-proofs 0.8.3`; Midnight Ledger `9.1.0.1` (`node-2.1.101`) resolves `midnight-proofs 0.8.2`. | **Unqualified cross-patch verifier (`review.md:246`):** **Resolution:** Mandatory pre-OpenSpec experiment `P5` and gate `SRC-020` verifying `0.8.3` decider proofs inside a `0.8.2`-locked ledger verifier (§2.2, §7.4). |
+
+---
+
+## 10. What Was Not Checked (`ARCH-BRIEF.md:38`)
+
+Per operational rules (`ARCH-BRIEF.md:42-43`), **no builds, `cargo test` runs, `cost_model` executions, key generations, Quint runs, or Lean builds were executed** while drafting this specification:
+1. **Unmeasured Circuit & Table Row Estimates:** Exact `cost_model` row counts for 2-leaf `RunLift` `R` (`~994,820–1,022,000` `ESTIMATE` under `Profile A`; `~1,013,000–1,062,400` `ESTIMATE` under `Profile B`), 2-slot named-key `Node` `N` (`~760,000–855,000` `ESTIMATE`), `ForeignLift` `F` (`~550,000–750,000` `ESTIMATE`), `ClosingProof` `C_close` (`~700,000–950,000` `ESTIMATE`), and `ClaimDecider` (`~810,000–860,000` `ESTIMATE`) are analytical projections from E8 (`design.md:129-134`), E2/E4 (`experiments/e2-e4.md:5-36`), and `architecture.md:204-224` — to be measured in `P1`–`P4` (§7.4).
+2. **`midnight-proofs 0.8.2` Source Diff vs `0.8.3`:** Only `midnight-proofs-0.8.3` and `midnight-circuits-7.3.0` registry sources were inspected locally; wire-level proof/VK compatibility against `ledger-9.1.0.1`'s `0.8.2` verifier was not executed (`P5`).
+3. **Compact `0.36.0` Transcript Slot Count & Hash Primitive:** `compactc 0.36.0` was not invoked to recapture the exact public-input slot counts of the revised C6 `SherlockRun.acceptRun` and `SherlockClaims.{acceptRoot, openClaim}` contracts or to benchmark `openClaim`'s depth-64 Poseidon path inside Compact (`architecture.md:388-393`).
+4. **Arbitrary-Depth PCD Extractor Concrete Security Bound:** As noted in `architecture.md:191-195`, Lean (`AggregationAxioms.lean`) models KZG accumulator collapse knowledge soundness axiomatically per node; concrete knowledge-error degradation as a function of unbounded DAG depth $d$ without straightline extraction was not derived.
+5. **Sibling Area Drafts:** Area 1 and Area 2 drafts in `research/sherlock-final-design-20261111/drafts/` were strictly not read; cross-area boundaries rely exclusively on `ARCH-BRIEF.md`, `MODULARITY.md`, `crates/mori-chip/src/membackend.rs`, and the completed consensus/audit studies.

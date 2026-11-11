@@ -3,7 +3,7 @@ title: "Draft: area 1 processor modules (Astra)"
 type: source
 tags: [draft, final-design, processor, chip-leaf]
 sources: [astra-area1-processor-draft]
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 date: 2026-11-10
 source_file: ~/Projects/Moriarty/research/sherlock-final-design-20261111/drafts/astra-area1.md
 source_url: local
@@ -13,7 +13,7 @@ source_url: local
 
 ## Summary
 
-Draft, not adopted. Astra's area 1 draft for run `sherlock-final-design-20261111` defines the processor modules CORE, DEC, ALU with RANGE, HASH and BUS, for a later merge into the final architecture. It is a proposed architecture: no file written, no build, test, model or proof run, and the signatures are not compiled. It was written before [[runlength-consensus]] existed ("The run-length `CONSENSUS.md` was absent when checked") and cites the round 2 lane files instead. Memory, boundary commitments and recursion are separate areas ([[astra-area2-memory-draft]], [[astra-area3-recursion-draft]]).
+Draft, not adopted. Astra's area 1 draft for run `sherlock-final-design-20261111` defines the processor modules CORE, DEC, ALU with RANGE, HASH and BUS, for a later merge into the final architecture (merged into [[sherlock-architecture]], 2026-11-11). It is a proposed architecture: no file written, no build, test, model or proof run, and the signatures are not compiled. It was written before [[runlength-consensus]] existed ("The run-length `CONSENSUS.md` was absent when checked") and cites the round 2 lane files instead. Memory, boundary commitments and recursion are separate areas ([[astra-area2-memory-draft]], [[astra-area3-recursion-draft]]).
 
 ## Key Claims
 

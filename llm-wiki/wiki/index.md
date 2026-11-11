@@ -7,9 +7,11 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (24)
+## Sources (30)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
+- [Astra audit of the architecture merge (B1)](sources/arch-audit-astra.md): Read-only audit by GPT-6 Astra of the B1 text of `ARCHITECTURE.md` (2,776 lines before revision B2; sherlock-architecture), at baseline commit `b85b00213`.
+- [Response to the architecture audit (B2)](sources/arch-audit-response.md): Night-plan step B2.
 - [Draft: area 1 processor modules (Astra)](sources/astra-area1-processor-draft.md): Draft, not adopted.
 - [Draft: area 2 memory and values (Astra)](sources/astra-area2-memory-draft.md): Draft, not adopted.
 - [Draft: area 3 recursion and system architecture (Astra)](sources/astra-area3-recursion-draft.md): Draft, not adopted.
@@ -20,6 +22,9 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Dissent record: C6 outcome-only review section](sources/dissent-c6-section.md): The section "C6 outcome-only review (2026-11-10)" of `dissent.md` records the dissent and open items of c6-outcome-ledger9-review.
 - [Experiments E2 to E4: node headroom, genesis cost, k=20 leaf](sources/e2-e4-experiments.md): Experiments of the recursion design review, run through `scripts/doctorwatson heavy` on 2026-11-10.
 - [Lead decisions overnight 2026-11-11 (pending owner review)](sources/final-design-decisions.md): Lead decisions, not owner rulings.
+- [Draft: area 1 processor modules (Gemini)](sources/gemini-area1-processor-draft.md): Draft, not adopted.
+- [Draft: area 2 memory and values (Gemini)](sources/gemini-area2-memory-draft.md): Draft, not adopted.
+- [Draft: area 3 recursion and system architecture (Gemini)](sources/gemini-area3-recursion-draft.md): Draft, not adopted.
 - [General-purpose recursion definition (GP-1 to GP-4)](sources/general-purpose-definition.md): The owner's definition of the target for the Sherlock recursion, recorded on 2026-11-10.
 - [GP architecture study (sherlock-gp-architecture-20261110)](sources/gp-architecture.md): Brief ingest of section 1 only (the recommended architecture); sections 2 to 6 (options, dissent, migration, experiments, proposed text) are not summarised here.
 - [land-3x merge: dispatch partition and U023c receipt](sources/land-3x-merge.md): Main commit `e39bc7af8` (2026-11-10 23:08 local) merges branch `land-3x`: the dispatch partition, the dispatch receipt...
@@ -33,6 +38,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Run-length consensus (sherlock-runlength-consensus-20261111)](sources/runlength-consensus.md): Final report of the five Gemini 4 Carbon High lanes (A to E, two rounds) on the run-length bound, the D3 memory ceiling and continuations, asked for in runlength-consensus-brief.
 - [Audit of the run-length consensus (Fable 5.2)](sources/runlength-consensus-audit.md): Fable 5.2 audit of runlength-consensus, read-only at `9ffc2fe76` (no build, test, proof or model run).
 - [Brief: run length and memory ceiling consensus](sources/runlength-consensus-brief.md): Brief of run `sherlock-runlength-consensus-20261111`.
+- [Architecture of the modular Sherlock leaf and recursion (revision B2)](sources/sherlock-architecture.md): `ARCHITECTURE.md` of run `sherlock-final-design-20261111`, night-plan step B1, revised as "revision B2" after the Astra audit (arch-audit-astra, arch-audit-response).
 
 ## Entities (5)
 
@@ -42,7 +48,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [mori-chip crate](entities/MoriChip.md): `crates/mori-chip` holds the chip leaf spike: `rf.rs` (32-word register file and spike rules), `rfcore.rs` (layouts and leaf), `poseidon.rs` (Poseidon-only HASH chip),...
 - [Run decider](entities/RunDecider.md): The terminal proof of a run (`crates/mori-recursion/src/run_decider.rs`).
 
-## Concepts (9)
+## Concepts (10)
 
 - [Block cache: 8-record PAGE and ROM cache lines in the chip leaf](concepts/BlockCache.md): The "processor cache" the owner asked for (lookup-cache-brief).
 - [C6 outcome-only publication](concepts/C6OutcomeOnlyPublication.md): Owner decision, 2026-11-10: "go with publishing only the outcome for C6 after gemini carbon and fable and astra review that".
@@ -50,6 +56,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Continuations (stop and resume of one run)](concepts/Continuations.md): How a long run is proved in pieces, and across proving sessions, under one key set and with one public statement.
 - [Dense tail-buffered memory (replacing D3)](concepts/DenseTailMemory.md): The memory design direction that replaces D3's padded aligned segments.
 - [General-purpose recursion: GP-1 to GP-4](concepts/GeneralPurposeRecursion.md): Owner ruling, 2026-11-10: general purpose and universal means all four properties below.
+- [Modular architecture: module kits, seams and build order](concepts/ModularArchitecture.md): How the Sherlock leaf and recursion are split so that one agent builds and checks one module against a frozen interface.
 - [Owner rules](concepts/OwnerRules.md): Standing rules from the factory charter and the owner's GP definition.
 - [Run-length ceiling (D3 against GP-1)](concepts/RunLengthCeiling.md): The conflict between the proposed chip leaf memory (D3) and the owner's GP-1.
 - [Value digest sherlock-value/1](concepts/ValueDigest.md): The canonical value encoding of the C6 review, used for both `input_d` and `outcome_d` (SRC-022, SRC-021 amended) (c6-outcome-ledger9-review).
@@ -57,4 +64,4 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 ## Syntheses (2)
 
 - [Open owner questions](syntheses/OpenOwnerQuestions.md): Questions the owner must settle.
-- [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-11 02:45 local.
+- [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-11 04:20 local.

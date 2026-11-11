@@ -2,7 +2,7 @@
 title: "Value digest sherlock-value/1"
 type: concept
 tags: [c6, digest]
-sources: [c6-outcome-ledger9-review, dissent-c6-section, lookup-cache-consensus, lookup-cache-audit, final-design-decisions]
+sources: [c6-outcome-ledger9-review, dissent-c6-section, lookup-cache-consensus, lookup-cache-audit, final-design-decisions, sherlock-architecture, arch-audit-astra, arch-audit-response]
 last_updated: 2026-11-11
 ---
 
@@ -25,7 +25,13 @@ The canonical value encoding of the C6 review, used for both `input_d` and `outc
 ## Open
 
 - D-2: the type identity `ty_d` inside a constructor digest. The normal form of `decl_schema_d` must be fixed before any key is frozen ([[dissent-c6-section]]).
-- The Init mechanism that relates `val_d` to the initial memory (lazy unfold or load steps); it must not scan the input in the Init check ([[c6-outcome-ledger9-review]]).
+- The Init mechanism that relates `val_d` to the initial memory (lazy unfold or load steps); it must not scan the input in the Init check ([[c6-outcome-ledger9-review]]). Revision B2 gives it an owner, kit INIT, and a contract (no scan, no input-size bound, every used node authenticated against `val_d`); the form is OD-17 (OWNER), recommended by-digest admission with an empty genesis memory, measured by X11 ([[sherlock-architecture]], [[ModularArchitecture]]).
+
+## Architecture revision B2 (VALUE DIGEST kit)
+
+- VALUE DIGEST issues no bus request: every child record and ROM row arrives as an `AuthRec` or `AuthRom` token of CORE's read port, with `addr < len_cur` at the read point ([[arch-audit-astra]] finding 4, [[sherlock-architecture]]).
+- It adds a bounded opening `open_value_node` (one node per call; a constructor field is usable only after its opening fold reaches the digest), used by INIT's input admission.
+- Capacity tag `iv = 0`: E-2 tags are for memory hashes only. Costs ESTIMATE: 210 rows for UInt, Bool, Leaf, Cons, Branch without the HASH constant-start mode; 70 with it (X9 decides). Where `vd` is carried stays open (V-7).
 
 ## Contradictions
 

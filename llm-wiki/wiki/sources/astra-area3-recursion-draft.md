@@ -3,7 +3,7 @@ title: "Draft: area 3 recursion and system architecture (Astra)"
 type: source
 tags: [draft, final-design, recursion, gp-2, gp-3, gp-4]
 sources: [astra-area3-recursion-draft]
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 date: 2026-11-10
 source_file: ~/Projects/Moriarty/research/sherlock-final-design-20261111/drafts/astra-area3.md
 source_url: local
@@ -13,7 +13,7 @@ source_url: local
 
 ## Summary
 
-Draft, not adopted. Astra's area 3 draft for run `sherlock-final-design-20261111` proposes the modules NODE INTEGRATION, DECIDER, CONTINUATION, CLAIM CONSUMPTION, FOREIGN ADMISSION and GRAPH COMPOSITION, a whole-leaf differential harness, a build order and a module kit template, for a later merge. Interfaces are proposed; nothing built or run. It was written before [[runlength-consensus]] existed and cites the lane files. The first integrated backend is dense Merkle memory with Poseidon boundaries; the C6 statement `[prog_d, input_d, outcome_d, n_steps]` and `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` stay unchanged.
+Draft, not adopted. Astra's area 3 draft for run `sherlock-final-design-20261111` proposes the modules NODE INTEGRATION, DECIDER, CONTINUATION, CLAIM CONSUMPTION, FOREIGN ADMISSION and GRAPH COMPOSITION, a whole-leaf differential harness, a build order and a module kit template, for a later merge (merged into [[sherlock-architecture]], 2026-11-11). Interfaces are proposed; nothing built or run. It was written before [[runlength-consensus]] existed and cites the lane files. The first integrated backend is dense Merkle memory with Poseidon boundaries; the C6 statement `[prog_d, input_d, outcome_d, n_steps]` and `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` stay unchanged.
 
 ## Key Claims
 

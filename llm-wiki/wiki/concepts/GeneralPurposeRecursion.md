@@ -2,8 +2,8 @@
 title: "General-purpose recursion: GP-1 to GP-4"
 type: concept
 tags: [gp, owner-rule]
-sources: [general-purpose-definition, gp-architecture, c6-outcome-ledger9-review, dissent-c6-section, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area3-recursion-draft]
-last_updated: 2026-11-10
+sources: [general-purpose-definition, gp-architecture, c6-outcome-ledger9-review, dissent-c6-section, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area3-recursion-draft, sherlock-architecture, arch-audit-astra, arch-audit-response, rule-maxima-experiment]
+last_updated: 2026-11-11
 ---
 
 # General-purpose recursion: GP-1 to GP-4
@@ -35,8 +35,18 @@ The owner's GP-1 row above is unchanged. What follows is a proposal, not an owne
 - **Lead decision R-2, pending owner review:** use the audit's text, not the consensus text ([[final-design-decisions]]). The decision record says "Applied in night-plan step D3" (a night-plan step, not the D3 memory constraint). The lead applied the audit text (AUDIT section 5) to `general-purpose.md` lines 14 and 16, the GP-001 row and the GP spec mirror (one scenario added), in the same commit as this wiki update; `openspec validate` and the F14 traceability check passed (run 20261111T061635Z-F14).
 - GP-4 claim counter: no `n_claims < 2^64` bound in GP-001 (R-5, OWNER to confirm). The area 3 draft also says not to carry an authoritative occurrence count ([[astra-area3-recursion-draft]]).
 
+## Architecture revision B2: the GP hooks
+
+Proposed design, lead decisions pending owner review; nothing built or measured ([[sherlock-architecture]], [[arch-audit-response]]):
+
+- GP-1: the leaf covers the 120 enabled step rules (M-4); TOP = 63 is enough with at most 3 appends per step (M-2), if one logical record is one physical cell (A-5) ([[final-design-decisions]], [[rule-maxima-experiment]]). REFERENCE BRIDGE must cover the full language before the whole-leaf harness is a gate ([[ModularArchitecture]]).
+- GP-2: a typed SET grammar (`LEAF`, `DEP`, `JOIN`, `FOREIGN`), a `SHK_DEPS` chain `deps_d` in the consumer, DESCEND and head opening to find a claim inside any verified SET, a discharge list built by DL-STEP, chain equality at SEAL-WITH-DEPS, and an input link that ties a consumer's input to a producer's Halted value. The built path is input consumption at the seal; the reference machine has no consume rule. Whether GP-2 also needs a mid-run consume rule is OD-20 (OWNER). The protocol is in no draft; X12 (Quint model) gates the spec.
+- GP-3: the native adapter path (registry entry `sherlock-reg-entry/1`, adapter statement, foreign lift) is a milestone, probe X8. The full scope needs the new kit **GP-3 general verifier**: statement `FV = (reg_root, fv_state_d)`, bounded work units (node row FV-WORK) over an authenticated state `fv_state_d = H(SHK_FV, entry_d, phase, cursor, transcript_d, acc_d, pi_d, consumed_d)`, five subkits FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL, FV-SCHED; no claim before `DONE`; a proof under another SRS is checked fully in circuit, never folded into the core accumulator (OD-22). Row budget unknown; X14 decides the operation inventory and unit size. If no unit fits the node gate, GP-3 stays incomplete, not reduced to adapter classes.
+- GP-4: the MERGE-WORK node row (two enabled prior SEGs plus `k >= 1` real owner steps in one node), JOIN with no count, and a shape commitment `shape_d` with base cases for leaf, foreign and disabled children. Two successive nodes do not meet "arity at least 2 plus new work"; X7 measures fit (N-6, OWNER if it fails).
+- Claim counter (OD-2): no count in any public statement; `set_root` binds the claim DAG; OWNER to confirm.
+
 ## Contradictions
 
 - [[runlength-consensus]] GP-001 text against the current GP-001 and [[general-purpose-definition]] ("every program ... every input"); the lead adopted the audit's correction (R-2).
 
-See also [[OpenOwnerQuestions]], [[Continuations]].
+See also [[OpenOwnerQuestions]], [[Continuations]], [[ModularArchitecture]].

@@ -2,7 +2,7 @@
 title: "Block cache: 8-record PAGE and ROM cache lines in the chip leaf"
 type: concept
 tags: [memory, cache, lookup, chip-leaf, lead-decision]
-sources: [lookup-cache-consensus, lookup-cache-audit, final-design-decisions, lookup-cache-brief, c1-dense-memory-experiment]
+sources: [lookup-cache-consensus, lookup-cache-audit, final-design-decisions, lookup-cache-brief, c1-dense-memory-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, rule-maxima-experiment]
 last_updated: 2026-11-11
 ---
 
@@ -50,10 +50,17 @@ CORE obligations with it: every read takes its address from a register, constrai
 - ROM depth: a fixed depth bounds program size against GP-001 "every program"; the depth, leaf domain, padding and path mapping are not stated ([[lookup-cache-audit]] finding 12). No lead decision records it.
 - The block-line method on `MemBackend` is not built; nothing of the cache is measured.
 
+## After the rule maxima and architecture revision B2
+
+- One step reads at most 4 distinct heap records in up to 4 old segments (a code-reading bound; 2 observed), so a step fits only if `k_page + n_cold >= 4`; `K_rom` has no bound (up to 6 ADT view row sites in 4 tables by one site class); X15 closes it ([[rule-maxima-experiment]], [[sherlock-architecture]]).
+- The line method is `open_line` on `MemBackend`, with backend capabilities `CAPS` fixed at configuration time; ROM is chip id 4 (proposed); the ROM row is ranged by CORE's `read_rom` on the request side, by the ROM line on the provider side ([[arch-audit-response]]).
+- Item 7's genesis root is now provided by kit INIT (condition C4); the first build repeats the kind gate on line rows until INIT is built (V-3) ([[ModularArchitecture]]).
+- ROM depth is stated over physical rows; a smaller or per-program depth is rejected under this change (OD-12, V-1).
+
 ## Contradictions
 
 - The consensus freezes `K_page = 4`, `K_rom = 2` and replaces the scalar cold read; the audit (blocker 1) and lead L-2 do not ([[lookup-cache-consensus]], [[lookup-cache-audit]]).
 - The consensus's leaf figures (42,100 to 45,600 rows for one arena; four arenas "fit" at 51,800 to 56,400) against the audit's composition (about 50,700 to 51,800; about 67,500 to 85,100), all ESTIMATE.
 - The consensus says the ROM tree "handles arbitrary program size"; the audit says the fixed depth bounds it.
 
-See also [[ChipLeaf]], [[ValueDigest]], [[MoriChip]].
+See also [[ModularArchitecture]], [[ChipLeaf]], [[ValueDigest]], [[MoriChip]].

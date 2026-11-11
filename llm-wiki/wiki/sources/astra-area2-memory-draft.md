@@ -3,7 +3,7 @@ title: "Draft: area 2 memory and values (Astra)"
 type: source
 tags: [draft, final-design, memory, value-digest]
 sources: [astra-area2-memory-draft]
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 date: 2026-11-10
 source_file: ~/Projects/Moriarty/research/sherlock-final-design-20261111/drafts/astra-area2.md
 source_url: local
@@ -13,7 +13,7 @@ source_url: local
 
 ## Summary
 
-Draft, not adopted. Astra's area 2 draft for run `sherlock-final-design-20261111` proposes the modules MEM, MEMORY BACKEND, VALUE DIGEST and BOUNDARY COMMITMENT, for a later merge. All new row budgets are ESTIMATE; no file written, nothing built or run. It was written before [[runlength-consensus]] and the lookup cache consensus existed ("absent when checked") and cites the lane reports as proposals.
+Draft, not adopted. Astra's area 2 draft for run `sherlock-final-design-20261111` proposes the modules MEM, MEMORY BACKEND, VALUE DIGEST and BOUNDARY COMMITMENT, for a later merge (merged into [[sherlock-architecture]], 2026-11-11). All new row budgets are ESTIMATE; no file written, nothing built or run. It was written before [[runlength-consensus]] and the lookup cache consensus existed ("absent when checked") and cites the lane reports as proposals.
 
 ## Key Claims
 

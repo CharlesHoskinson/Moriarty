@@ -2,7 +2,7 @@
 title: "Dense tail-buffered memory (replacing D3)"
 type: concept
 tags: [memory, d3, run-length, chip-leaf, lead-decision]
-sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft, astra-area2-memory-draft, dissent-c6-section, design-2-7-chip-leaf, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit]
+sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft, astra-area2-memory-draft, dissent-c6-section, design-2-7-chip-leaf, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, sherlock-architecture, arch-audit-astra, arch-audit-response, rule-maxima-experiment]
 last_updated: 2026-11-11
 ---
 
@@ -36,6 +36,14 @@ From [[runlength-consensus]], with the audit's conditions ([[runlength-consensus
 - **D-1.** The consensus rejects the linked-slice form; D-1 stays open until measured (R-9, task 4.18). The dense design is a third candidate form ([[runlength-consensus-audit]] finding 13, [[dissent-c6-section]]).
 - **Backend.** Run-wide write-once LogUp (Profile B) does not replace dense Merkle; it stays behind the `MemBackend` seam as benchmark-only, not built before M4, because it cannot stop and resume without reloading live memory and changes the leaf statement, node, seal and continuation (lead L-5, [[lookup-cache-audit]] finding 9). The run-length consensus rejected offline LogUp on the pinned stack; the area 2 draft keeps it as a measured alternative ([[runlength-consensus]], [[astra-area2-memory-draft]]).
 
+## After the rule maxima and architecture revision B2
+
+- Tree depth: X1 found at most 3 appended cells per step (M-2), so TOP = 61 is too small and TOP = 63 is enough, with room for a genesis length below 2^64; the exact condition is `len_0 + a e 2^64 <= 2^(TOP+3) - 1`, so TOP = 63 holds only if one logical record is one physical cell (A-5, OD-11). OD-1 keeps the OWNER mark; the lower-bound option is no longer offered as an acceptance path (A-6) ([[final-design-decisions]], [[sherlock-architecture]]).
+- Arenas: the non-interleaving check holds for all 120 rules (M-1), so one arena stands ([[rule-maxima-experiment]]).
+- Capacity: a W = 1 leaf holds `8 W + 7 - r_pre` new records (up to 15), not 8; the C3 partition theorems hold only under `FitsLeaf` (at most 8 appends per leaf), and `FitsWindow` (O14, O47) is open ([[arch-audit-astra]] finding 8).
+- `TOP == 1` fix (commit `f36eb714d`): the backend is sound for every `TOP >= 1`; no row or column changed ([[sherlock-architecture]]).
+- Genesis (condition C4) is now owned by kit INIT: the genesis memory is `(0, empty_at(TOP + 3), tail_d([]))` under the recommended input form ([[ModularArchitecture]]).
+
 ## Figures
 
 Row and throughput figures in the study are ESTIMATE and not of this design (R-10) ([[final-design-decisions]]). They are not quoted here as results.
@@ -58,4 +66,4 @@ The lookup consensus labels the C1 cold-read rows (4,621 to 4,761) ESTIMATE; C1 
 - Memory key encodings differ between [[astra-area1-processor-draft]] and [[astra-area2-memory-draft]]; the lookup consensus proposes a third, `(arena << 64) | addr`, which the audit finds not injective at TOP = 63; lead L-4 keeps the landed `8 addr + kind`.
 - Arena count: lead L-9 (one arena) against the lookup audit and the run-length audit (keep open or four by default) and the lookup consensus (four by default).
 
-See also [[RunLengthCeiling]], [[Continuations]], [[ChipLeaf]], [[MoriChip]].
+See also [[ModularArchitecture]], [[RunLengthCeiling]], [[Continuations]], [[ChipLeaf]], [[MoriChip]].

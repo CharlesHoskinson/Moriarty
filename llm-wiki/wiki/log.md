@@ -184,3 +184,39 @@
 - Corrects the `[2026-11-11 03:36] qa` entry: "up to 9 ROM rows per step by call sites" is withdrawn. Nine rules log more ROM reads than their counted sites (for example `BHelperScalarTag`), since value reads can land on constant rows and selection reads are not counted.
 - The 6 ADT view row sites in 4 tables (`XAdtHelperPlanSwitch`) stand as a count of that site class only; total ROM rows per step and `K_rom` blocks are open.
 - Files: `rule-maxima-experiment` page, `research/sherlock-final-design-20261111/EXPERIMENTS-MAXIMA.md`.
+
+## [2026-11-11 04:18] ingest | Architecture revision B2: 23 module kits, OD-1 to OD-22, Lean 14 proved and 53 open
+- Ingested `sherlock-architecture` (ARCHITECTURE.md, file time 04:10): Fable 5.2 merge of six drafts, revised after the Astra audit; 23 kits, two seams (MEMORY BACKEND, BOUNDARY COMMITMENT), build groups F to 8, X1 and X2 done, X3 to X15 open.
+- Lead decisions with OWNER marks: OD-1 (TOP >= 63), OD-2 (no claim count), OD-17, OD-18, OD-20, OD-21 and others; nothing built, modelled or measured by the revision.
+- Files: wiki/sources/sherlock-architecture.md, raw/SOURCES.tsv.
+- Next: ingest the audit and its response; concept page ModularArchitecture.
+
+## [2026-11-11 04:18] ingest | Astra audit of the B1 architecture: adopt with changes
+- Ingested `arch-audit-astra` (file time 03:32, before the newest earlier entry; logged at ingest time): GPT-6 Astra, read-only, 4 blocker, 15 major, 1 minor.
+- Blockers: scratch enforcement, one stack operation per slot, no Init owner, incomplete GP-2 discharge.
+- Files: wiki/sources/arch-audit-astra.md, raw/SOURCES.tsv.
+- Next: the response.
+
+## [2026-11-11 04:18] ingest | Response to the architecture audit: all 20 findings fixed as design text
+- Ingested `arch-audit-response` (file time 04:11): every finding admissible; kits INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE, GP-3 general verifier added; X10 to X15 new.
+- Limits: design text only; OD-17, OD-18, OD-21 left to the owner; two fixes leave open Lean obligations.
+- Files: wiki/sources/arch-audit-response.md, raw/SOURCES.tsv.
+- Next: update the decisions page with M-1 to M-4 and A-1 to A-6.
+
+## [2026-11-11 04:18] ingest | Lead decisions M-1 to M-4 and A-1 to A-6 added
+- Updated `final-design-decisions` (DECISIONS.md, file time 04:12): rule maxima M-1 to M-4 and architecture audit A-1 to A-6; lead decisions pending owner review, not owner rulings.
+- New OWNER items: M-2 (TOP = 63), A-2 (OD-20), A-3 (OD-17, OD-18), A-4 (OD-21); contradiction flagged between R-4's lower-bound option and A-6.
+- Files: wiki/sources/final-design-decisions.md, raw/SOURCES.tsv row refreshed.
+- Next: Gemini draft source pages.
+
+## [2026-11-11 04:18] ingest | Gemini area drafts 1 to 3 (labelled drafts)
+- Ingested `gemini-area1-processor-draft`, `gemini-area2-memory-draft`, `gemini-area3-recursion-draft` (file times 02:50, 02:51, 02:47); drafts, not adopted, merged into the architecture.
+- Main divergences from decided inputs: split chip ids, other memory keys, two-column tagged table, four requests per step, 2-leaf RunLift, Profile B as co-equal or default.
+- Files: three source pages, raw/SOURCES.tsv.
+- Next: concept and synthesis pages.
+
+## [2026-11-11 04:21] plan | Concept and synthesis pages for architecture B2
+- New concept `ModularArchitecture` (23 kits, seams, build order, freeze prerequisites, INIT and REFERENCE BRIDGE sections); B2 sections added to Continuations, GeneralPurposeRecursion, ValueDigest, DenseTailMemory, BlockCache.
+- OpenOwnerQuestions: OD-17, OD-18, OD-20, OD-21 added; OD-1 (TOP >= 63, M-2) and OD-2 (claim counter) cross-referenced; earlier questions kept.
+- WorkstreamStatus and overview refreshed (final design at revision B2, nothing built); Astra draft pages marked merged.
+- Next: lint, then owner review of the OD items and the X10 to X15 experiments.
