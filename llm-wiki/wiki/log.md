@@ -167,3 +167,9 @@
 - Six Quint attacks had left derived cells stale (read-port record hash and walk, f = 0 new walks, one row hash); helpers `rederiveRead` and `rederiveNewWalks` fix them; `non_canonical_tail` now drops the mask on both row kinds. Re-run: 30 of 30 lines match, 34 `quint test` passing, all 23 mutants caught.
 - Files: qa/gemini-quint/c1-dense/verdict.md, dense.qnt, rerun-results.txt; crates/mori-chip/src/dense.rs, dense/tests.rs; source `c1-dense-memory-experiment` updated.
 - Next: carry conditions C1 to C4 into the MEM and CORE contracts; the clippy errors in other mori-chip files are still open.
+
+## [2026-11-11 03:23] ingest | Per-rule memory maxima and the one-arena non-interleaving check
+- Ingested EXPERIMENTS-MAXIMA.md as `rule-maxima-experiment`: test-only mori-core module, static scan of all 120 enabled rules plus 6,668 corpus steps.
+- Result: at most 3 appends, 4 distinct heap records (all can be old), 1 frame or 1 task op plus rewrite per step; one-arena non-interleaving holds, no counterexample (induction step is a code reading).
+- Files: wiki/sources/rule-maxima-experiment.md, raw/SOURCES.tsv; research/sherlock-final-design-20261111/maxima/.
+- Next: freeze K_page against the bound of 4 in C4; fire the 18 unfired rules from raw images.

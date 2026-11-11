@@ -7,7 +7,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (23)
+## Sources (24)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
 - [Draft: area 1 processor modules (Astra)](sources/astra-area1-processor-draft.md): Draft, not adopted.
@@ -29,6 +29,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Quint verdict: final chip leaf (packed selectors, RANGE, M3)](sources/quint-chipleaf-final.md): Lead verdict on three Gemini Quint lanes of 2026-11-10 over `crates/mori-chip/src/` at main `f59ef318f`.
 - [Quint verdict: Poseidon-only HASH chip](sources/quint-chipleaf-hash.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for the Poseidon-only HASH chip (`crates/mori-chip/src/poseidon.rs` and its bus use) and constraints D1, D4 and D8 of design...
 - [Quint verdict: layout B pair rows and M3 aligned segments](sources/quint-chipleaf-pairrow-m3.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for layout B pair rows and the M3 aligned-segment memory root (C = 8).
+- [Per-rule memory maxima and the one-arena non-interleaving check](sources/rule-maxima-experiment.md): Experiment asked for by decisions R-6, L-2, L-9 and E-3 (final-design-decisions), run-length audit finding 6 (runlength-consensus-audit) and lookup audit blocker 1 and finding...
 - [Run-length consensus (sherlock-runlength-consensus-20261111)](sources/runlength-consensus.md): Final report of the five Gemini 4 Carbon High lanes (A to E, two rounds) on the run-length bound, the D3 memory ceiling and continuations, asked for in runlength-consensus-brief.
 - [Audit of the run-length consensus (Fable 5.2)](sources/runlength-consensus-audit.md): Fable 5.2 audit of runlength-consensus, read-only at `9ffc2fe76` (no build, test, proof or model run).
 - [Brief: run length and memory ceiling consensus](sources/runlength-consensus-brief.md): Brief of run `sherlock-runlength-consensus-20261111`.
