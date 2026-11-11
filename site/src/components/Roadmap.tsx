@@ -54,11 +54,16 @@ export function Roadmap() {
         These historical tracks identify separate evidence questions. Current
         sequencing and dependencies are defined by U0–U7. One asks whether the successor specification can be
         completed and executed in K. The native track asks whether the
-        recursive proof backend can verify a history: the GP design now uses
-        a universal gated leaf proving S consecutive steps per leaf, an IVC
-        node at k=20 and a k=20 run decider over the 5/6-lane digest
-        instance with arity-4 Poseidon (B group 9/9 on the consolidation
-        line). The third asks
+        recursive proof backend can verify a history: a leaf proves S
+        consecutive steps, an IVC node at k=20 folds each leaf proof, and a
+        k=20 run decider seals the run over the 5/6-lane digest instance
+        with arity-4 Poseidon (B group 9/9 on the consolidation line). The
+        leaf design proposed on 2026-11-10 is a small processor: a core
+        with a 32-word register file, and chips that it reaches only through
+        a lookup bus. On a spike, a 16-step leaf is 6,511 rows at k=13, and
+        the node and decider over its key are 823,466 and 929,166 rows,
+        inside their k=20 gates; these are cost-model rows, and no proof
+        over the new leaf has been made. The third asks
         whether the accepted atomic subset can settle real loan and swap
         effects on the public network.
       </p>
