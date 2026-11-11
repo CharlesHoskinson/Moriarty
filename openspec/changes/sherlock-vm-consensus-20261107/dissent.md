@@ -223,6 +223,8 @@ Source: `research/sherlock-c6-outcome-ledger9-review-20261110/review.md` (member
 
 **Carbon's SRS dissent in Q2 (recorded as wrong).** (`review.md:233`.) Carbon said that the practical ceiling is k = 20, set by the ceremony prover SRS `bls_midnight_2p20`. Astra found that the ledger's data catalogue lists ceremony files through `bls_midnight_2p25`, and the lead confirmed it (`base-crypto/src/data_provider.rs:182-209` of `repos/midnightntwrk/midnight-ledger` at tag `ledger-9.1.0.1`). The SRS does not exclude k = 21. The project's row gates and prover cost exclude it. Carbon's design conclusion (compute the value digest in the leaf, not in the decider) still stands on the row gate alone. Two smaller Q2 points are recorded: Carbon read `midnight-zk` at `HEAD`, not the pinned crates, and Carbon did not see that the ledger and node tags lock `midnight-proofs` 0.8.2 (`review.md:234-235`; task 2.17).
 
+**Exhaust kind 7 (`LogicalCap`) against SVM-009 (open conflict).** The `Exhausted(kind)` encoding of SRC-022 lists kind 7 = `LogicalCap` (`review.md:120`). SVM-009 refuses exhaust reason 7 in profile `/1`. This record does not reconcile the two.
+
 **Owner question from the C6 review: the D3 run ceiling against GP-1 (open; GP-1 conflict).**
 - Fact (`review.md:40`): under D3, `base / 8 < 2^17`, every leaf takes one segment (a leaf with zero appends too), and the node requires at least one step per leaf. So a run has fewer than 2^17 leaves and 2^20 cells. GP-1 states a bound of 2^64 steps for one fixed key set (`general-purpose.md` GP-1; GP-001).
 - This is an open conflict with GP-1. The C6 decision does not repair it. The prover can only fail to prove a long run. It cannot change the outcome (`review.md:99`).
