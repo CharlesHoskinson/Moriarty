@@ -1,7 +1,7 @@
 ---
-title: "Pending study: run length and memory ceiling consensus"
+title: "Brief: run length and memory ceiling consensus"
 type: source
-tags: [pending, run-length, gp-1]
+tags: [brief, run-length, gp-1]
 sources: [runlength-consensus-brief]
 last_updated: 2026-11-10
 date: 2026-11-11
@@ -9,11 +9,11 @@ source_file: ~/Projects/Moriarty/research/sherlock-runlength-consensus-20261111/
 source_url: local
 ---
 
-# Pending study: run length and memory ceiling consensus
+# Brief: run length and memory ceiling consensus
 
 ## Summary
 
-**Status: pending.** Run `sherlock-runlength-consensus-20261111` is running. Only its brief is ingested; no lane output and no result is ingested. Five Gemini 4 Carbon High lanes study the run-length bound, then a consensus, then a Fable 5.2 audit. Its folder is `research/sherlock-runlength-consensus-20261111/`. See [[RunLengthCeiling]].
+Brief of run `sherlock-runlength-consensus-20261111`. **Status: done.** The result is ingested as [[runlength-consensus]] and its audit as [[runlength-consensus-audit]]; the lead's decisions are in [[final-design-decisions]]. Five Gemini 4 Carbon High lanes study the run-length bound, then a consensus, then a Fable 5.2 audit. Its folder is `research/sherlock-runlength-consensus-20261111/`. See [[RunLengthCeiling]].
 
 ## Key Claims
 
@@ -35,6 +35,7 @@ Owner statements recorded in the brief (2026-11-11):
 
 - [[RunLengthCeiling]], [[OpenOwnerQuestions]], [[GeneralPurposeRecursion]].
 - Sister study: [[lookup-cache-brief]].
+- Result: [[runlength-consensus]]; audit: [[runlength-consensus-audit]].
 
 ## Contradictions
 

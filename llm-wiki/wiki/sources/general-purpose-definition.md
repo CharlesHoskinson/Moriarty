@@ -33,9 +33,9 @@ The owner's definition of the target for the Sherlock recursion, recorded on 202
 ## Connections
 
 - [[GeneralPurposeRecursion]] summarises the four properties.
-- [[RunLengthCeiling]] is the open conflict between the D3 memory ceiling and the GP-1 run-length bullet.
+- [[RunLengthCeiling]] is the conflict between the D3 memory ceiling and the GP-1 run-length bullet; answered by the run-length study, with lead decisions pending owner review ([[final-design-decisions]]).
 - [[OwnerRules]] carries the no-narrowing rule.
 
 ## Contradictions
 
-- The D3 ceiling of fewer than 2^17 leaves and 2^20 cells per run conflicts with the GP-1 bound of 2^64 steps ([[dissent-c6-section]], [[c6-outcome-ledger9-review]]). Open; see [[OpenOwnerQuestions]].
+- The D3 ceiling of fewer than 2^17 leaves and 2^20 cells per run conflicts with the GP-1 bound of 2^64 steps ([[dissent-c6-section]], [[c6-outcome-ledger9-review]]). Answered by [[runlength-consensus]] and [[runlength-consensus-audit]]; the lead decisions are pending owner review, so it stays on [[OpenOwnerQuestions]].

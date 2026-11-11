@@ -50,7 +50,7 @@ E3, run `20261110T161809Z-e24-e3`, exit 0:
 ## Connections
 
 - [[IvcNode]], [[RunDecider]], [[ChipLeaf]].
-- The running study [[runlength-consensus-brief]] lists the E4 figures among the measured numbers its lanes can rely on.
+- The run-length study brief [[runlength-consensus-brief]] (now done, [[runlength-consensus]]) lists the E4 figures among the measured numbers its lanes can rely on.
 
 ## Contradictions
 

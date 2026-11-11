@@ -2,7 +2,7 @@
 title: "Chip leaf"
 type: concept
 tags: [chip-leaf, design]
-sources: [design-2-7-chip-leaf, chip-spike-experiments, quint-chipleaf-final, quint-chipleaf-hash, quint-chipleaf-pairrow-m3, c6-outcome-ledger9-review, lookup-cache-brief]
+sources: [design-2-7-chip-leaf, chip-spike-experiments, quint-chipleaf-final, quint-chipleaf-hash, quint-chipleaf-pairrow-m3, c6-outcome-ledger9-review, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft]
 last_updated: 2026-11-10
 ---
 
@@ -39,11 +39,13 @@ All figures below are `cost_model` rows over keys made on an unsafe SRS; no proo
 ## Open
 
 - SI-12 under C = 8 blocks D3 adoption for the C6 machine (D-1, [[dissent-c6-section]]).
-- The D3 run ceiling against GP-1 ([[RunLengthCeiling]]).
+- The D3 run ceiling against GP-1 ([[RunLengthCeiling]]). Lead decision R-3, pending owner review, replaces D3 with dense tail-buffered memory and hash-chain stacks ([[DenseTailMemory]], [[final-design-decisions]]).
+- The Astra area 1 draft proposes the processor modules CORE, DEC, ALU with RANGE, HASH and BUS ([[astra-area1-processor-draft]]); a draft for a later merge.
 - A lookup cache study is pending ([[lookup-cache-brief]]).
 
 ## Contradictions
 
 - [[design-2-7-chip-leaf]] still marks a Quint lane over the packed-selector circuit as OPEN, while [[quint-chipleaf-final]] reports it done.
+- The D3 memory and the D7 cached frame protocol of the mechanism above are what the run-length study replaces. The audit notes that the new hash-chain stacks are not D7 (D7 links frames by an address in memory, and only that form is modelled) and that new chip models are a condition of adoption ([[runlength-consensus-audit]] finding 8, [[runlength-consensus]]).
 
 See also [[C6OutcomeOnlyPublication]], [[MoriChip]], [[IvcNode]], [[RunDecider]].

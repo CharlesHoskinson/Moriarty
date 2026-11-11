@@ -40,3 +40,4 @@ Brief ingest of section 1 only (the recommended architecture); sections 2 to 6 (
 
 - `out_d` includes `n_steps` (`architecture.md:98`); D-3 of [[dissent-c6-section]] takes `n_steps` out of the claim and says this line needs the matching edit (task 4.20).
 - `shape_d` binds segment bracketing and a "local statement"; D-6 is open on whether bracketing is public, and on whether the local statement may contain `pre_d` or `post_d` ([[c6-outcome-ledger9-review]]).
+- `SET.n_claims` counts occurrences (`architecture.md:100`). The run-length audit finds that a range check on it refuses honest DAGs (2^64 at depth 64, about 128 proofs) and that an occurrence count must not carry soundness; count distinct claims or carry no count ([[runlength-consensus-audit]] blocker 2). Lead decision R-5, OWNER to confirm ([[final-design-decisions]]). The Astra area 3 draft agrees ([[astra-area3-recursion-draft]]).

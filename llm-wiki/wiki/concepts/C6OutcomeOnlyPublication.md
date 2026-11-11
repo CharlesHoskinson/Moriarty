@@ -28,7 +28,7 @@ SRC-006 and SRC-007 (statement and replay key), SVM-010 (logical accounting), SR
 ## Open, not solved by this decision
 
 - SI-12 under C = 8 (D-1).
-- The ceiling of 2^17 leaves per run against GP-1 ([[RunLengthCeiling]]).
+- The ceiling of 2^17 leaves per run against GP-1 ([[RunLengthCeiling]]); answered by the run-length study, lead decisions pending owner review.
 - The type identity in a constructor digest (D-2).
 - The Init mechanism for an input.
 - D-6, the leaf partition in the GP-4 shape commitment; exhaust kind 7 against SVM-009 ([[dissent-c6-section]]).

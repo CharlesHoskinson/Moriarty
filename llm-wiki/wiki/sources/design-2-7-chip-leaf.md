@@ -37,7 +37,7 @@ Figures of 2.7.11. The design heads the column "Measured". The experiment files 
 - Per leaf at S = 16, M3 is 87 Poseidon permutations (6,090 rows).
 - C6 decided 2026-11-10: outcome-only publication, with the review's conditions of adoption (SRC-006, SRC-007, SRC-021, SRC-022, SRC-023, SVM-010 to SVM-012, GP-002). See [[C6OutcomeOnlyPublication]].
 - Scope: the decision does not adopt the chip leaf or D3. SI-12 under C = 8 blocks D3 adoption for the C6 machine.
-- The run ceiling of D3 (fewer than 2^17 leaves and 2^20 cells per run) conflicts with the GP-1 bound of 2^64 steps. It is an open owner question, and GP-1 is not narrowed ([[RunLengthCeiling]]).
+- The run ceiling of D3 (fewer than 2^17 leaves and 2^20 cells per run) conflicts with the GP-1 bound of 2^64 steps. It stays on the owner question list: the run-length study answered it and the lead decisions (dense memory replacing D3) are pending owner review; GP-1 is not narrowed ([[RunLengthCeiling]], [[final-design-decisions]]).
 - Still stand-ins: the three spike rules, no PAGE, PROG, TRAP or Init region, test siblings, a leaf statement that does not cover `prog_root`.
 
 ## Key Quotes
@@ -57,3 +57,4 @@ Figures of 2.7.11. The design heads the column "Measured". The experiment files 
 
 - 2.7.11 says "[OPEN: a Quint model and Gemini lane over this exact circuit with packed selectors.]" [[quint-chipleaf-final]] is that lane (packed selectors SOUND WITH CONDITIONS, running-sum RANGE SOUND, M3 as built SOUND WITH CONDITIONS). The design text was not updated to say so.
 - The design labels the 2.7.10 and 2.7.11 figures "Measured"; [[c6-outcome-ledger9-review]] labels the decider figure "cost model over the chip-leaf node key, unsafe SRS". Both describe the same `cost_model` numbers; no proof exists.
+- D3 (aligned padded segments, depth-17 top tree) and D7 (frames linked by an address in memory) are replaced in the run-length study by dense tail-buffered memory and hash-chain stacks; the audit says the new stacks are not D7. Lead decision R-3, pending owner review ([[runlength-consensus]], [[runlength-consensus-audit]], [[DenseTailMemory]]).

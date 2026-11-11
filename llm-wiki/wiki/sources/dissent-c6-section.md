@@ -42,4 +42,5 @@ The section "C6 outcome-only review (2026-11-10)" of `dissent.md` records the di
 
 - Exhaust kind 7 (`LogicalCap`, SRC-022 encoding) against SVM-009 (refuses reason 7 in profile `/1`). Also flagged on [[ValueDigest]].
 - D-3 against `architecture.md:98` ([[gp-architecture]]), which puts `n_steps` in `out_d`.
-- The D3 ceiling against GP-1 ([[general-purpose-definition]]).
+- The D3 ceiling against GP-1 ([[general-purpose-definition]]). Answered by the run-length study; lead decisions pending owner review ([[RunLengthCeiling]], [[final-design-decisions]]).
+- D-1: [[runlength-consensus]] rejects the linked-slice form 5 of 5 from a code reading. [[runlength-consensus-audit]] (finding 13) says the record requires a measurement first and that the dense design is a third candidate form. The lead adopted the audit: D-1 stays open until measured (R-9, task 4.18).

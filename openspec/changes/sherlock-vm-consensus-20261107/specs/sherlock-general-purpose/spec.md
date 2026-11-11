@@ -9,9 +9,15 @@ One fixed key set SHALL prove the execution of every program of the Sherlock lan
 
 (Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:166`. The text above is unchanged.) When a supported run exceeds one leaf's storage or hashing capacity, the prover SHALL continue through authenticated memory and recursive decomposition under the same key set, subject only to the run-length bound of GP-1.
 
+(Added 2026-11-11 by the run-length consensus and its audit, `research/sherlock-runlength-consensus-20261111/AUDIT.md`. The text above is unchanged.) The bound 2^64 is the range of the step counter of SRC-004. It SHALL NOT be a circuit size, and no circuit domain, key, final proof size or on-chain verification cost SHALL depend on the run length. No leaf count, memory address counter, segment index or other circuit constant SHALL make a run of fewer than 2^64 steps unprovable. A step that allocates no memory SHALL consume no memory address. The proving of one run MAY stop and resume under the same key set; the resumed run SHALL give the same `prog_d`, `input_d`, `outcome_d` and `n_steps` as the uninterrupted run. An intermediate proof SHALL NOT be accepted as a run (SRC-006) or as a claim of another run (GP-002). Tested run lengths SHALL be recorded as tested bounds (SAS-001) and SHALL NOT be stated as limits of this requirement.
+
 #### Scenario: Programs the keys were not built from
 - **WHEN** one key set and one deployed verifier contract receive proofs of three programs the key set was not built from, including one program larger than one leaf's carriers, one run with input, and one run of each outcome kind.
 - **THEN** every proof is accepted with no new key and no new contract (row A33).
+
+#### Scenario: Run length is not a circuit size
+- **WHEN** one run of more than one leaf allocates more memory than one leaf's window, builds a constructor of more than 8 fields across a leaf boundary, and is proved under three leaf partitions and with one stop and resume.
+- **THEN** the final proof has the byte length of a one-leaf proof, every proof gives equal `outcome_d` and `n_steps` and one `claim_d` (SRC-023, row A38), and node boundary tests accept `h = 2^64 - 1` and refuse `h = 2^64` (SRC-004).
 
 ### Requirement: GP-002 Cross-run composition
 A proven run SHALL be consumable by another proof, with the consumed claim `(prog_d', input_d', outcome_d')` checked in-circuit, not trusted; independent runs of the same or different programs SHALL aggregate into one proof whose statement commits to the set of claims.
