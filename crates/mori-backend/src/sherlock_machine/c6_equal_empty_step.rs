@@ -1078,6 +1078,13 @@ pub struct C6EqualEmptyStepCircuit {
     ir: IrSource,
     serialized_zkir: String,
 }
+
+impl C6EqualEmptyStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
 impl C6EqualEmptyStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params

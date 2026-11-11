@@ -207,6 +207,13 @@ pub struct C6ReturnLeftStepCircuit {
 }
 
 impl C6ReturnLeftStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
+
+impl C6ReturnLeftStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params
     }

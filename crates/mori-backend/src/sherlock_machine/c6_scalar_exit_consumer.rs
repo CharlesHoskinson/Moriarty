@@ -803,6 +803,13 @@ pub struct C6ScalarExitStepCircuit {
 }
 
 impl C6ScalarExitStepCircuit {
+    /// The loaded ZKIR (row probes, diagnostics).
+    pub fn ir(&self) -> &IrSource {
+        &self.ir
+    }
+}
+
+impl C6ScalarExitStepCircuit {
     pub fn source_params(&self) -> &C6PushFamilyParams {
         &self.source_params
     }

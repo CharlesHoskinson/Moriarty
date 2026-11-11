@@ -600,6 +600,8 @@ pub mod c6_dispatch_consumer;
 pub mod c6_dispatch_step;
 pub mod c6_step_harness;
 mod c6_step_kit;
+#[cfg(test)]
+mod c6_universal_probe_tests;
 // Skeleton-coding pilot grader (research/skeleton-coding-20261108/pilot-protocol.md).
 #[cfg(test)]
 mod chip_census_tests;
