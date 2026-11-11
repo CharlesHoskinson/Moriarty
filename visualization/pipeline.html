@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#15130e" />
+  <title>From program to accepted claim — Sherlock pipeline</title>
+  <meta name="description" content="Eight stations show how a Moriarty program becomes an accepted claim on Midnight: program, run, leaf, node, decider, transaction, contract, network." />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..600&family=Roboto+Mono:wght@400;500&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./src/pipeline/m3.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.webgpu.js",
+        "three/webgpu": "./vendor/three.webgpu.js",
+        "three/tsl": "./vendor/three.tsl.js"
+      }
+    }
+  </script>
+  <link rel="modulepreload" href="./vendor/three.webgpu.js" />
+  <link rel="modulepreload" href="./vendor/three.core.js" />
+  <link rel="modulepreload" href="./src/pipeline/shell.js" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); scrollbar-color: var(--md-sys-color-outline-variant) transparent; scrollbar-width: thin; }
+    body { margin: 0; font: var(--md-sys-typescale-body-large); -webkit-font-smoothing: antialiased; }
+    ::selection { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+    h1, h2, p, ol, ul { margin: 0; padding: 0; }
+    ol, ul { list-style: none; }
+    code { font-family: var(--md-ref-typeface-mono); font-size: 0.9em; }
+    .ms { font-family: 'Material Symbols Rounded'; font-weight: 400; font-style: normal; font-size: 24px; line-height: 1; width: 24px; height: 24px; display: inline-block; overflow: hidden; white-space: nowrap; letter-spacing: normal; text-transform: none; font-feature-settings: 'liga'; -webkit-font-feature-settings: 'liga'; font-variation-settings: 'FILL' 0, 'opsz' 24; user-select: none; }
+
+    /* State layers (hover 8%, focus 10%, pressed 10%) and the focus ring. */
+    .pl-state { position: relative; isolation: isolate; -webkit-tap-highlight-color: transparent; }
+    .pl-state::before { content: ''; position: absolute; inset: var(--layer-inset, 0); border-radius: var(--layer-radius, inherit); background: currentColor; opacity: 0; z-index: -1; transition: opacity var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard); pointer-events: none; }
+    .pl-state:hover::before { opacity: var(--md-sys-state-hover-opacity); }
+    .pl-state:focus-visible::before { opacity: var(--md-sys-state-focus-opacity); }
+    .pl-state:active::before { opacity: var(--md-sys-state-pressed-opacity); }
+    :focus-visible { outline: 3px solid var(--md-sys-color-secondary); outline-offset: 2px; }
+    button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+
+    .pl-app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+    .pl-appbar { display: flex; align-items: center; gap: 4px; height: 64px; padding: 0 4px; flex: none; }
+    .pl-appbar h1 { font: var(--md-sys-typescale-title-large); font-size: 22px; line-height: 28px; }
+    .pl-iconbtn { display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--md-sys-shape-corner-full); color: var(--md-sys-color-on-surface-variant); text-decoration: none; --layer-inset: 4px; --layer-radius: 50%; flex: none; }
+    .pl-iconbtn:hover { color: var(--md-sys-color-on-surface); }
+    .pl-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    .pl-stagecol { display: flex; flex-direction: column; min-width: 0; order: 1; }
+    .pl-stage { position: relative; overflow: hidden; margin: 0 16px; aspect-ratio: 4 / 3; border-radius: var(--md-sys-shape-corner-large); background-color: var(--md-sys-color-surface-container-high); }
+    .pl-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .pl-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .pl-badge { position: absolute; top: 12px; left: 12px; font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-small); padding: 4px 12px; pointer-events: none; box-shadow: var(--md-sys-elevation-level1); }
+    .pl-label { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; font: var(--md-sys-typescale-label-medium); letter-spacing: 0.02em; color: var(--md-sys-color-on-surface); background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-small); padding: 4px 8px 4px 6px; margin-top: -6px; box-shadow: var(--md-sys-elevation-level1); will-change: transform; }
+    .pl-label code { font: 500 12px/16px var(--md-ref-typeface-mono); }
+    .pl-label sup { font-size: 0.7em; line-height: 0; }
+    .pl-chip { width: 8px; height: 8px; border-radius: var(--md-sys-shape-corner-full); background: var(--chip, var(--md-sys-color-outline)); flex: none; }
+    .pl-k-program { --chip: var(--md-custom-program); } .pl-k-input { --chip: var(--md-custom-input); } .pl-k-outcome { --chip: var(--md-custom-outcome); }
+    .pl-k-step { --chip: var(--md-custom-step); } .pl-k-state { --chip: var(--md-sys-color-primary); } .pl-k-error { --chip: var(--md-sys-color-error); }
+
+    .pl-ctl { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; padding: 12px 16px 8px; }
+    .pl-ctl .grp { display: flex; gap: 4px; align-items: center; }
+    .pl-fab { width: 80px; height: 80px; border-radius: var(--md-sys-shape-corner-extra-large); background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); display: grid; place-items: center; box-shadow: var(--md-sys-elevation-level3); transition: box-shadow var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard); margin: 0 4px; }
+    .pl-fab:hover { box-shadow: var(--md-sys-elevation-level4); }
+    .pl-fab .ms { font-size: 36px; width: 36px; height: 36px; font-variation-settings: 'FILL' 1, 'opsz' 40; }
+    .pl-time { font: var(--md-sys-typescale-label-large); font-variant-numeric: tabular-nums; color: var(--md-sys-color-on-surface-variant); flex: 1 1 100%; text-align: center; order: 4; }
+    .pl-scrubwrap { position: relative; flex: 1 1 100%; height: 48px; order: 5; }
+    .pl-scrubwrap { --fill: 0%; }
+    #scrub { position: absolute; inset: 0; width: 100%; height: 48px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+    #scrub:focus-visible { outline: none; }
+    #scrub::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--md-sys-color-primary) var(--fill), var(--md-sys-color-surface-container-highest) var(--fill)); }
+    #scrub::-moz-range-track { height: 4px; border-radius: 2px; background: var(--md-sys-color-surface-container-highest); }
+    #scrub::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--md-sys-color-primary); }
+    #scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; margin-top: -8px; background: var(--md-sys-color-primary); border: 0; box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent); transition: box-shadow var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard); }
+    #scrub::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--md-sys-color-primary); border: 0; }
+    #scrub:hover::-webkit-slider-thumb { box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent); }
+    #scrub:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent), 0 0 0 3px var(--md-sys-color-secondary); }
+    #scrub:active::-webkit-slider-thumb { box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent); }
+    .pl-ticks { position: absolute; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none; }
+    .pl-ticks i { position: absolute; top: 22px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; left: calc(10px + (100% - 20px) * var(--p)); background: var(--md-sys-color-surface); opacity: 0.9; }
+    .pl-ticks i.scene { top: 16px; height: 16px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--md-sys-color-outline); opacity: 1; }
+
+    /* Scene navigation: chips on narrow screens, rail on wide screens. */
+    .pl-rail { order: 2; }
+    .pl-scenes { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px 4px; scrollbar-width: none; }
+    .pl-scenes li { flex: none; }
+    .pl-dest { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px 0 8px; border-radius: var(--md-sys-shape-corner-small); border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant); font: var(--md-sys-typescale-label-large); white-space: nowrap; }
+    .pl-dest::after { content: ''; position: absolute; inset: -4px 0; }
+    .pl-dest .pl-ind { display: grid; place-items: center; width: 24px; height: 24px; }
+    .pl-dest .ms { font-size: 18px; width: 18px; height: 18px; }
+    .pl-dest.on { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+    .pl-dest.on .ms { font-variation-settings: 'FILL' 1, 'opsz' 24; }
+
+    .pl-panel { order: 3; padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .pl-narr { background: var(--md-sys-color-surface-container-low); border-radius: var(--md-sys-shape-corner-large); padding: 24px; }
+    .pl-narr h2 { font: var(--md-sys-typescale-title-large); font-size: 22px; line-height: 28px; color: var(--md-sys-color-on-surface); text-wrap: balance; }
+    .pl-meta { font: var(--md-sys-typescale-body-medium); color: var(--md-sys-color-on-surface-variant); margin: 4px 0 16px; }
+    .pl-para { font: var(--md-sys-typescale-body-large); letter-spacing: 0.01em; color: var(--md-sys-color-on-surface); max-width: 68ch; }
+    .pl-para + .pl-para { margin-top: 12px; }
+    .pl-narr code { background: var(--md-sys-color-surface-container-highest); border-radius: var(--md-sys-shape-corner-extra-small); padding: 1px 4px; }
+    .pl-legend h2 { font: var(--md-sys-typescale-title-small); color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; }
+    .pl-legend ul { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pl-assist { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-small); font: var(--md-sys-typescale-label-large); color: var(--md-sys-color-on-surface); }
+    .pl-assist i { width: 10px; height: 10px; border-radius: 50%; background: var(--chip); }
+    .pl-keys { font: var(--md-sys-typescale-body-small); color: var(--md-sys-color-on-surface-variant); }
+
+    @media (min-width: 840px) {
+      .pl-app { height: 100vh; height: 100dvh; }
+      .pl-body { display: grid; grid-template-columns: 96px minmax(0, 1fr) 400px; grid-template-rows: minmax(0, 1fr); }
+      .pl-rail { order: 0; padding-top: 8px; }
+      .pl-stagecol { order: 0; min-height: 0; }
+      .pl-stage { flex: 1; aspect-ratio: auto; min-height: 0; margin: 0 0 0 0; }
+      .pl-panel { order: 0; overflow-y: auto; padding: 0 24px 24px 24px; }
+      .pl-scenes { flex-direction: column; gap: 12px; padding: 0; overflow: visible; align-items: center; }
+      .pl-dest { flex-direction: column; justify-content: flex-start; gap: 4px; height: auto; width: 88px; padding: 4px 0; border: 0; border-radius: var(--md-sys-shape-corner-large); background: none; font: var(--md-sys-typescale-label-medium); --layer-inset: 0 12px auto; }
+      .pl-dest::before { inset: 4px 16px auto; height: 32px; border-radius: var(--md-sys-shape-corner-full); }
+      .pl-dest::after { inset: 0; }
+      .pl-dest .pl-ind { width: 56px; height: 32px; border-radius: var(--md-sys-shape-corner-full); transition: background-color var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard); }
+      .pl-dest .ms { font-size: 24px; width: 24px; height: 24px; }
+      .pl-dest.on { background: none; color: var(--md-sys-color-on-surface); }
+      .pl-dest.on .pl-ind { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+      .pl-dest.on .pl-lab { font-weight: 600; }
+      .pl-fab { width: 96px; height: 96px; }
+      .pl-ctl { padding: 12px 24px 8px 24px; }
+      .pl-time { flex: none; order: 0; margin-left: 12px; min-width: 6em; text-align: left; }
+      .pl-scrubwrap { margin: 0 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="pl-app">
+    <header class="pl-appbar">
+      <a class="pl-iconbtn pl-state" href="./index.html" aria-label="Back to the Sherlock workbench" title="Back to the workbench"><span class="ms" aria-hidden="true">arrow_back</span></a>
+      <h1>From program to accepted claim</h1>
+    </header>
+    <div class="pl-body">
+      <nav class="pl-rail" aria-label="Scenes"><ol class="pl-scenes" id="sceneList"></ol></nav>
+      <section class="pl-stagecol" aria-label="Animation">
+        <div class="pl-stage" id="stage">
+          <canvas id="gl" role="img" aria-label="Pipeline stage"></canvas>
+          <div class="pl-labels" id="labels" aria-hidden="true"></div>
+          <div class="pl-badge" id="stageBadge"></div>
+        </div>
+        <div class="pl-ctl" role="group" aria-label="Playback controls">
+          <div class="grp">
+            <button class="pl-iconbtn pl-state" id="prevScene" type="button" aria-label="Previous scene" title="Previous scene (Up)"><span class="ms" aria-hidden="true">first_page</span></button>
+            <button class="pl-iconbtn pl-state" id="prevBeat" type="button" aria-label="Previous beat" title="Previous beat (Left)"><span class="ms" aria-hidden="true">skip_previous</span></button>
+            <button class="pl-fab pl-state" id="playBtn" type="button" aria-label="Play" title="Play or pause (Space)"><span class="ms" id="playIcon" aria-hidden="true">play_arrow</span></button>
+            <button class="pl-iconbtn pl-state" id="nextBeat" type="button" aria-label="Next beat" title="Next beat (Right)"><span class="ms" aria-hidden="true">skip_next</span></button>
+            <button class="pl-iconbtn pl-state" id="nextScene" type="button" aria-label="Next scene" title="Next scene (Down)"><span class="ms" aria-hidden="true">last_page</span></button>
+          </div>
+          <span class="pl-time" id="timeText" aria-live="off">0:00 / 0:00</span>
+          <div class="pl-scrubwrap" id="scrubwrap">
+            <input id="scrub" type="range" min="0" max="1" step="0.1" value="0" aria-label="Timeline position" />
+            <div class="pl-ticks" id="ticks" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+      <aside class="pl-panel" aria-label="Narration">
+        <article class="pl-narr" id="narration" aria-live="off"></article>
+        <section class="pl-legend" aria-label="Color key">
+          <h2>Color key</h2>
+          <ul>
+            <li class="pl-assist" style="--chip: var(--md-custom-program)"><i></i>Program</li>
+            <li class="pl-assist" style="--chip: var(--md-custom-input)"><i></i>Input</li>
+            <li class="pl-assist" style="--chip: var(--md-custom-outcome)"><i></i>Outcome</li>
+            <li class="pl-assist" style="--chip: var(--md-custom-step)"><i></i>Running step</li>
+            <li class="pl-assist" style="--chip: var(--md-sys-color-primary)"><i></i>Hash, proof, key</li>
+            <li class="pl-assist" style="--chip: var(--md-sys-color-error)"><i></i>Refusal</li>
+          </ul>
+        </section>
+        <p class="pl-keys">Space plays and pauses. Left and right arrows step a beat. Up and down arrows step a scene.</p>
+      </aside>
+    </div>
+  </div>
+  <noscript><p style="padding:16px">This page needs JavaScript and WebGL.</p></noscript>
+  <script type="module">
+    import { start } from './src/pipeline/shell.js';
+    start().catch((e) => { console.error(e); window.__error = String(e); });
+  </script>
+</body>
+</html>
