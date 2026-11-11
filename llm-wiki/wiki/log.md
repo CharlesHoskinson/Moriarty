@@ -226,3 +226,8 @@
 - Source `openspec-modular-leaf`; the architecture page no longer says the change is not created.
 - README Sherlock section rewritten for the modular design, dense memory and the C1 measurements.
 - Next: morning report and owner review of the OWNER decisions.
+
+## [2026-11-11 04:40] note | Night plan finished; morning report written
+- 17 of 18 night-plan steps ticked; C2 stays open (boundary commitment designed, not built, so no Quint model yet).
+- Morning report: ~/Projects/Moriarty/research/sherlock-final-design-20261111/MORNING-REPORT.md lists the OWNER questions OD-1, OD-2, OD-17, OD-18, OD-20, OD-21.
+- Next: owner review; then the interface freeze experiments X3 to X15.
