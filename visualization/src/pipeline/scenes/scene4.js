@@ -131,8 +131,7 @@ function buildSlab(variant, kinds) {
   s.visible = false;
   ctx.scene.add(s);
   O.slabs.push(s);
-  const live = s.userData.pins.map((p) => p.children[0].material);
-  s.userData.dim = P.makeDimmer(s, live);
+  s.userData.dim = P.makeDimmer(s);
   return s;
 }
 

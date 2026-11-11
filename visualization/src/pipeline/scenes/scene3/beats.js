@@ -833,6 +833,10 @@ export const BEATS = [
    {
     "text": "<code>input_d</code>",
     "kind": "input"
+   },
+   {
+    "text": "CPU cores",
+    "kind": "neutral"
    }
   ]
  }

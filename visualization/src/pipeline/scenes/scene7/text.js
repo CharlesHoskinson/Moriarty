@@ -11,7 +11,7 @@ export const TEXT = [
     "on": "the contract entrance"
    },
    {
-    "text": "Verifier key",
+    "text": "Decider verifier key",
     "on": "the fixed gold key card"
    },
    {

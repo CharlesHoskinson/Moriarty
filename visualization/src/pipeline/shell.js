@@ -295,6 +295,42 @@ export async function start() {
     catch (e) { console.error(`scene ${st.i + 1} build failed`, e); st.ok = false; }
   }
 
+  // ---------------- material welding
+  // Scenes create many materials that never change and are equal (a plain gold here and there). For a scene
+  // over the budget of 40 unique materials, seek is sampled every 0.25 s (shorter than any pulse), the
+  // materials whose look never changes are grouped by look, and each group keeps one material. Materials
+  // that change at any sample, and materials a scene swaps in during seek (pools), are left alone.
+  const matSig = (m) => [m.type, m.color && m.color.getHex(), m.emissive && m.emissive.getHex(), m.emissiveIntensity, m.roughness, m.metalness,
+    m.opacity, m.transparent, m.side, m.depthTest, m.depthWrite, m.map && m.map.uuid, m.vertexColors, m.flatShading, m.toneMapped, m.fog, m.wireframe].join('|');
+  function weld(st) {
+    const uniq = () => { const u = new Set(); st.group.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => u.add(m)); }); return u; };
+    if (uniq().size <= 40 || !st.ok) return 0;
+    const start = uniq();
+    const series = new Map([...start].map((m) => [m, []]));
+    st.live = true;
+    for (let t = 0; t <= st.s.dur; t += 0.25) {
+      try { st.s.def.seek(Math.min(t, st.s.dur)); } catch (_) { /* seek errors show in the first frame */ }
+      for (const [m, a] of series) a.push(matSig(m));
+    }
+    const end = uniq();
+    st.live = false;
+    const keep = new Map();
+    const swap = new Map();
+    for (const [m, a] of series) {
+      if (!end.has(m) || m.userData.shared) continue;   // swapped away during seek, or a pooled material
+      const sig = a.join('/');                          // equal at every sample: the same material
+      if (!keep.has(sig)) keep.set(sig, m); else swap.set(m, keep.get(sig));
+    }
+    st.group.traverse((o) => {
+      if (!o.material) return;
+      o.material = Array.isArray(o.material) ? o.material.map((m) => swap.get(m) || m) : (swap.get(o.material) || o.material);
+    });
+    for (const m of swap.keys()) m.dispose();
+    return swap.size;
+  }
+
+  const weldedCount = states.map((st) => (q.has("noweld") ? 0 : weld(st)));
+
   // ---------------- timeline lookup
   function locate(T) {
     T = Math.min(Math.max(T, 0), tl.total);
@@ -730,7 +766,7 @@ export async function start() {
   applyTime(T);
   requestAnimationFrame(frame);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  window.__pipeline = { get time() { return T; }, setTime, setPlaying, timeline: tl, locate, states, applyTime, carrier: () => CARRIER.map((c) => ({ name: c.name, amount: +c.amount.toFixed(3), content: c.shown })) };
+  window.__pipeline = { get time() { return T; }, setTime, setPlaying, timeline: tl, locate, states, applyTime, welded: weldedCount, carrier: () => CARRIER.map((c) => ({ name: c.name, amount: +c.amount.toFixed(3), content: c.shown })) };
   // Probe for checks the capture tool cannot run: render cost, seek cost, seek-order independence.
   const snap = document.createElement('canvas');
   const hashPixels = () => {

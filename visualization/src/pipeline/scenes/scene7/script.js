@@ -1,6 +1,7 @@
 // Scene 7 choreography: creates every object once and writes its keys (pure function of scene time).
 import * as THREE from 'three/webgpu';
 import { PALETTE } from '../../theme.js';
+import { makeVerifierKeyCard } from '../../kit.js';
 import { ObjTarget, InstTarget, ConnTarget } from './rig.js';
 import { makeEnv, makeDrawer, makeCabinet, makeDeck, makeTray, DRW_CLOSED, DRW_OUT, SEAT_OUT, SEAT_COLLAR, SOCK_X } from './builders.js';
 
@@ -105,10 +106,19 @@ export function buildScript(ctx, P, rig) {
     sc.add(t);
   });
 
-  // verifier key card, tilted so a top view reads it
-  const vkMat = P.ownGold();
-  const vk = prim(P.card(m.gold, [0], vkMat), false);
-  vk.it.at(0, { x: -11, y: 2.3, z: -3.0, s: 1.4, rx: -1.0 });
+  // decider verifier key card (kit, AMEND-1 section 1.4), tilted so a top view reads it. The frame and
+  // notch take the scene's titanium and ink; the card keeps its own gold for the lit pulse.
+  const vkCard = makeVerifierKeyCard();
+  const kitTi = vkCard.children[1].material;
+  vkCard.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.material.userData.shared) o.material = o.material === kitTi ? m.ti : m.ink;
+    else P.M(o.material);   // geometry stays in the kit cache
+  });
+  const vkSt = { lit: 0 };
+  vkCard.userData.fx = (st) => { vkSt.lit = st.lit; vkCard.userData.setState(vkSt); };
+  const vk = prim(vkCard, false);
+  vk.it.at(0, { x: -11, y: 2.0, z: -3.0, s: 1.8, rx: 0.57 });
   vk.it.pulse(B(0, 11.0), 0.4, 0.5, 0.9);
   A.vk = vk.o;
 

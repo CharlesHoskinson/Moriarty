@@ -57,7 +57,7 @@ export class LabelLayer {
         visible = x > -40 && x < w + 40 && y > -20 && y < h + 20;
       }
       el.style.display = visible ? '' : 'none';
-      if (visible) items.push({ el, x, y, carrier: q.carrier });
+      if (visible) items.push({ el, x, y, carrier: q.carrier, fixedSpot: q.id.startsWith('c:') });
       seen.add(q.id);
     }
     for (const [id, el] of this.els) if (!seen.has(id)) el.style.display = 'none';
@@ -71,20 +71,24 @@ export class LabelLayer {
       let y0 = it.y - bh - 6;                       // margin-top of the label is -6
       x0 = Math.max(4, Math.min(w - bw - 4, x0));
       y0 = Math.max(4, Math.min(h - bh - 4, y0));
-      if (!it.carrier) {
-        // First free spot among: same place, then up and down in label-height steps, each with small sideways shifts.
-        const free = (cx, cy) => cx >= 4 && cx + bw <= w - 4 && cy >= 4 && cy + bh <= h - 4
-          && !placed.some((r) => cx < r.x1 + GAP && cx + bw > r.x0 - GAP && cy < r.y1 + GAP && cy + bh > r.y0 - GAP);
-        let found = false;
-        for (let n = 0; n <= 8 && !found; n++) {
+      if (!it.fixedSpot) {
+        // Free spot nearest the anchor: same place, then up and down in label-height steps, each with sideways
+        // shifts; with no free spot, the candidate that covers the least area.
+        const inside = (cx, cy) => cx >= 4 && cx + bw <= w - 4 && cy >= 4 && cy + bh <= h - 4;
+        const cover = (cx, cy) => placed.reduce((sum, r) => sum + Math.max(0, Math.min(cx + bw, r.x1 + GAP) - Math.max(cx, r.x0 - GAP)) * Math.max(0, Math.min(cy + bh, r.y1 + GAP) - Math.max(cy, r.y0 - GAP)), 0);
+        let best = null;
+        search: for (let n = 0; n <= 30; n++) {
           for (const sy of n === 0 ? [0] : [-1, 1]) {
-            for (const sx of [0, 0.55, -0.55]) {
-              const cx = Math.max(4, Math.min(w - bw - 4, x0 + Math.round(sx * bw))), cy = y0 + sy * n * (bh + GAP);
-              if (free(cx, cy)) { x0 = cx; y0 = cy; found = true; break; }
+            for (const sx of [0, 0.55, -0.55, 1.1, -1.1]) {
+              const cx = Math.max(4, Math.min(w - bw - 4, x0 + Math.round(sx * bw))), cy = y0 + sy * n * ((bh + GAP) / 3);
+              if (!inside(cx, cy)) continue;
+              const c = cover(cx, cy);
+              if (c === 0) { best = { cx, cy, c }; break search; }
+              if (!best || c < best.c) best = { cx, cy, c };
             }
-            if (found) break;
           }
         }
+        if (best) { x0 = best.cx; y0 = best.cy; }
       }
       placed.push({ x0, y0, x1: x0 + bw, y1: y0 + bh });
       it.el.style.transform = `translate(${x0}px, ${y0 + 6}px)`;

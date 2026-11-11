@@ -3,7 +3,7 @@
 // Every motion is a pure function of the beat index and the time inside the beat (STORYBOARD scene 6).
 import * as THREE from 'three/webgpu';
 import { PALETTE, materials, makeDigestToken, phase, ramp, lerp, clamp01 } from '../theme.js';
-import { makeProofSlab } from '../kit.js';
+import { makeProofSlab, makeVerifierKeyCard } from '../kit.js';
 import { ident } from '../labels.js';
 import { NARRATION } from './scene6/text.js';
 
@@ -19,7 +19,9 @@ const TOKEN_Y = 0.432;                  // token centre on a socket
 const CALL_Y = 0.402;                   // token centre on the call-data strip
 const LID_Y = 0.7;                     // lid centre when closed
 const DOOR = [13, 1.1, 0];
-const RACK = [3, 4.2, -5.4];
+const RACK = [-9, 4.2, -5.4];          // proving key rack, off-chain side
+const VK = [13, 3.0, -2.6];             // decider verifier key card beside the door
+const ROW_Z = -3.2;                     // row of objects that stay off-chain (beat 6.4)
 const LINT_Y = 2.2;                     // underside of the door lintel
 const CONTENT = { prog_d: 'prog:main', input_d: 'input:main', outcome_d: 'outcome:main', n_steps: 'n_steps:main' };
 
@@ -38,12 +40,15 @@ let door = null;
 let dust = null;
 let lid = null;
 let lineData = null;
-let lineRack = [];
+let lineVk = null;
+let vkCard = null;
+let row = null;
+let stopBar = null;
 let lineTick = null;
-let barSeam = null;
 let anchors = {};
 
 const dummy = new THREE.Object3D();
+const VK_STATE = { lit: 0 };          // reused so seek allocates nothing
 const q1 = new THREE.Quaternion();
 const vA = new THREE.Vector3();
 const vB = new THREE.Vector3();
@@ -227,8 +232,9 @@ export default {
       labels: [
         { id: 'prog', text: ident('prog_d'), anchor: 'tok0', kind: 'program', dy: 0.8, from: 3.2 },
         { id: 'call', text: 'Call data', anchor: 'cstrip', kind: 'neutral', dy: 0.7, from: 3.2 },
-        { id: 'keys', text: 'Shared key set', anchor: 'rack', kind: 'state', dy: 1.3, from: 0.8 },
-        { id: 'door', text: ident('SherlockRun'), anchor: 'door', kind: 'neutral', dy: 1.9, from: 0.8 },
+        { id: 'keys', text: 'Proving keys stay', anchor: 'rackCard', kind: 'state', dy: 0.5, from: 0.8 },
+        { id: 'vk', text: 'Decider verifier key', anchor: 'vk', kind: 'state', dy: 0.4, from: 0.8 },
+        { id: 'door', text: ident('SherlockRun'), anchor: 'doorFront', kind: 'neutral', dy: 0.5, from: 0.8 },
       ],
     },
     {
@@ -238,10 +244,12 @@ export default {
       where: 'cross',
       narration: NARRATION[3],
       labels: [
-        { id: 'dust', text: 'DUST', anchor: 'dust', kind: 'state', dy: 0.9, from: 0.6 },
-        { id: 'seal', text: 'Decider proof', anchor: 'aSeal', kind: 'state', dy: 0.5, from: 4.4 },
-        { id: 'addr', text: ident('SherlockRun.acceptRun'), anchor: 'tab', kind: 'neutral', dy: 0.7, from: 4.4 },
-        { id: 'tx', text: 'Transaction', anchor: 'envTop', kind: 'neutral', dy: 0.5, from: 4.4 },
+        { id: 'dust', text: 'DUST', anchor: 'dust', kind: 'neutral', dy: 0.9, from: 0.6, to: 6.0 },
+        { id: 'chip', text: 'Stays: Sherlock chip', anchor: 'housing', kind: 'neutral', dy: 0.5, from: 0.6, to: 8.0 },
+        { id: 'keys', text: 'Stays: proving keys', anchor: 'rackCard', kind: 'state', dy: 0.5, from: 0.6, to: 8.0 },
+        { id: 'tape', text: 'Stays: input, witness, trace', anchor: 'tapeRow', kind: 'input', dy: 0.5, from: 0.6, to: 8.0 },
+        { id: 'seal', text: 'Crosses: decider proof', anchor: 'aSeal', kind: 'state', dy: 0.5, from: 6.0 },
+        { id: 'vals', text: 'Crosses: four public values', anchor: 'sockets', kind: 'neutral', dy: 0.5, from: 6.0 },
       ],
     },
   ],
@@ -267,6 +275,7 @@ export default {
       cards: materials.gold(),
       doorRim: materials.titanium(),
       line: sealMat,
+      inputMat: materials.family('input'),
     };
     res.RING.rotateX(PI / 2);
     res.sweep.emissive.setHex(PALETTE.goldBright);
@@ -274,9 +283,6 @@ export default {
     res.tabMat.emissive.setHex(PALETTE.goldBright);
     res.cards.emissive.setHex(PALETTE.goldBright);
     res.doorRim.emissive.setHex(PALETTE.goldBright);
-
-    // Threshold bar on the seam (12 long so it stays inside the station).
-    barSeam = mk(res.UB, res.ti, 0.3, 0.12, 12, 0, 0.06, 0, root);
 
     const seal1 = makeSeal();
     E = makeEnvelope(true, () => seal1, false);
@@ -339,10 +345,35 @@ export default {
       [-0.18, 0.18, 1.4, 1.46, -2.45, 2.45], [-0.2, 0.2, -1.1, -1.04, -2.45, -2.05], [-0.2, 0.2, -1.1, -1.04, 2.05, 2.45],
     ], door);
     root.add(door);
+    // Decider verifier key card on a post beside the door (the one key on-chain).
+    vkCard = makeVerifierKeyCard({ size: 1 });
+    vkCard.position.set(...VK);
+    mk(res.UB, res.ti, 0.12, VK[1] - 0.42, 0.12, 0, -(VK[1] - 0.42) / 2 - 0.42, 0, vkCard);
+    root.add(vkCard);
+
+    // Beat 6.4: the row of objects that stay off-chain.
+    row = new THREE.Group();
+    const hz = ROW_Z;
+    // Leaf housing with its lid and the board outline, scene 3 drawn at scale 0.12.
+    mk(res.UB, res.ceramic, 3.24, 0.3, 0.96, -12, 0.15, hz, row);
+    mk(res.UB, res.ti, 3.3, 0.06, 1.0, -12, 0.33, hz, row);
+    inst(res.UB, res.ink, [
+      [-13.92, -10.08, 0, 0.03, hz - 0.72, hz - 0.68], [-13.92, -10.08, 0, 0.03, hz + 0.68, hz + 0.72],
+      [-13.92, -13.88, 0, 0.03, hz - 0.68, hz + 0.68], [-10.12, -10.08, 0, 0.03, hz - 0.68, hz + 0.68],
+    ], row);
+    // Input cube.
+    mk(res.UB, res.inputMat, 0.6, 0.6, 0.6, -8.5, 0.3, hz, row);
+    // Tape strip of four frames at scale 0.5 with a break mark.
+    const fr = [];
+    for (let i = 0; i < 4; i++) fr.push([-5.5 + (i - 1.5) * 0.5 - 0.225, -5.5 + (i - 1.5) * 0.5 + 0.225, 0.05, 0.08, hz - 0.3, hz + 0.3]);
+    inst(res.UB, res.ceramic, fr, row);
+    inst(res.UB, res.ink, [[-4.56, -4.5, 0.1, 0.13, hz - 0.35, hz + 0.35], [-4.4, -4.34, 0.1, 0.13, hz - 0.35, hz + 0.35]], row);
+    root.add(row);
+    stopBar = mk(res.UB, res.ti, 0.2, 0.5, 4, -3.2, 0.25, hz, root);
 
     // Connectors.
     lineData = mk(res.UB, res.line, 0.07, 0.07, 1, 0, 0, 0, root);
-    lineRack = [0, 1, 2].map(() => mk(res.UB, res.line, 0.07, 0.07, 1, 0, 0, 0, root));
+    lineVk = mk(res.UB, res.line, 0.07, 0.07, 1, 0, 0, 0, root);
 
     // Anchors for labels.
     const at = (parent, x, y2, z) => { const a = new THREE.Object3D(); a.position.set(x, y2, z); parent.add(a); return a; };
@@ -351,7 +382,8 @@ export default {
       aSeal2: at(E2.seal, 0, 0.5, 0),
       tok0: E.tokens[0], tok1: E.tokens[1], tok2: E.tokens[2], collar: E.collar,
       tab: E.tab, strip1: E.strip, cstrip: at(E.group, CALL_AT[0], 0.35, CALL_AT[1]),
-      rack, door, dust,
+      rack, door, dust, vk: vkCard.userData.anchor, rackCard: at(rack, 0, -0.2, 0.1), doorFront: at(door, 0, 1.5, 2.2),
+      housing: at(row, -12, 0.4, ROW_Z), tapeRow: at(row, -5.5, 0.15, ROW_Z), sockets: at(E.group, -0.35, 0.6, SOCK_Z),
       changed: E2.changed, refused: E2.refused, envTop: at(E.group, 1.8, 0.8, 1.8),
     };
     Object.entries(anchors).forEach(([k, v]) => ctx.labels.anchor(k, v));
@@ -360,10 +392,10 @@ export default {
     ctx.camera.track([
       { t: 0, pose: s.establish([-10, 1, 0], 30), dur: 2 },
       { t: 9, pose: s.inspect([-9, 0, 0], 9, 'top'), dur: 1.5 },
-      { t: 30, pose: s.inspect([-9, 0, 2.0], 13, 'top'), dur: 1.5 },
-      { t: 53, pose: s.establish([1, 1, 0], 36), dur: 1.5 },
-      { t: 73, pose: s.follow([-9, 0.3, 0], [-5, 8, 15]), dur: 1.5 },
-      { t: 79, pose: s.follow([20, 0.3, 0], [-5, 8, 15]), dur: 4 },
+      { t: 32, pose: s.inspect([-9, 0, 2.0], 13, 'top'), dur: 1.5 },
+      { t: 55, pose: s.establish([1, 1, 0], 36), dur: 1.5 },
+      { t: 82, pose: s.follow([-8, 0.8, -1.6], [-3, 11, 16]), dur: 1.5 },
+      { t: 88, pose: s.follow([20, 0.3, 0], [-5, 8, 15]), dur: 4 },
     ]);
   },
 
@@ -450,15 +482,24 @@ export default {
     // ---- rack, door and connectors
     const ra = bi < 2 ? 0 : bi === 2 ? phase(bt, 0, 0.4) : 1;
     const lit = bi < 2 ? 0 : bi === 2 ? phase(bt, 0.6, 1.2) : 1;
-    for (const o of [rack, door]) { o.visible = ra > 0.001; o.scale.setScalar(Math.max(ra, 0.001)); }
+    for (const o of [rack, door, vkCard]) { o.visible = ra > 0.001; o.scale.setScalar(Math.max(ra, 0.001)); }
     res.cards.emissiveIntensity = 0.45 * lit;
     res.doorRim.emissiveIntensity = 0.45 * lit;
     const ck = bi === 2 ? phase(bt, 4, 5) : bi === 3 ? 1 - phase(bt, 0, 1.4) : 0;
     const wx = E.group.position.x;
     segment([wx + CALL_AT[0], 0.55, CALL_AT[1]], [DOOR[0], LINT_Y, 0], ck, lineData);
-    [-2.2, 0, 2.2].forEach((dx, i) => {
-      segment([RACK[0] + dx, RACK[1] - 1.15, RACK[2]], [DOOR[0], LINT_Y, (i - 1) * 1.2], ck, lineRack[i]);
-    });
+    VK_STATE.lit = lit;
+    vkCard.userData.setState(VK_STATE);
+    segment([VK[0], VK[1] - 0.45, VK[2] + 0.1], [DOOR[0], LINT_Y + 0.3, -1.4], ck, lineVk);
+
+    // ---- row that stays off-chain and the stop bar (beat 4)
+    const rw = bi === 3 ? phase(bt, 0.4, 0.8) : 0;
+    row.visible = rw > 0.001;
+    row.scale.set(1, Math.max(rw, 0.001), 1);
+    const sb = bi === 3 ? phase(bt, 6.0, 6.6) : 0;
+    stopBar.visible = sb > 0.001;
+    stopBar.scale.y = 0.5 * Math.max(sb, 0.001);
+    stopBar.position.y = 0.25 * sb;
 
     // ---- fee and lid (beat 4)
     const dv = bi === 3;
@@ -483,8 +524,7 @@ export default {
       });
       ctx.scene.remove(root);
     }
-    ctx = root = res = E = E2 = rack = door = dust = lid = lineData = lineTick = barSeam = null;
-    lineRack = [];
+    ctx = root = res = E = E2 = rack = door = dust = lid = lineData = lineTick = lineVk = vkCard = row = stopBar = null;
     anchors = {};
   },
 };

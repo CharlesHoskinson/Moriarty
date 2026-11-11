@@ -11,6 +11,13 @@ const CARRIER = [['prog_d', 'prog:main'], ['input_d', 'input:main'], ['outcome_d
 // Beats whose content fills the lower left: the shell docks the token carrier at the lower right.
 const CARRIER_RIGHT = new Set([4, 5, 11]);
 
+// AMEND-1: the label "Off-chain" stands at the back left corner of ptray while the tray is up
+// (beats 7.7 to 7.20). Beats that already show six labels at once get it only for a window before
+// the sixth label appears (to: seconds into the beat).
+const OFF_AT = [-4.6, 0.3, 0.5];
+const OFF_TO = { 12: 2.4, 13: 2.4, 17: 3.0, 19: 3.6 };
+const offLabel = (i) => (i >= 6 && i <= 19 ? [{ id: 'loff', text: 'Off-chain', kind: 'zoneoff', at: OFF_AT, dy: 0.1, ...(OFF_TO[i] != null ? { to: OFF_TO[i] } : {}) }] : []);
+
 const beats = TEXT.map((b, i) => ({
   id: b.id,
   title: b.title,
@@ -26,7 +33,7 @@ const beats = TEXT.map((b, i) => ({
     if (from != null) l.from = from;
     if (to != null) l.to = to;
     return l;
-  }).filter(Boolean),
+  }).filter(Boolean).concat(offLabel(i)),
 }));
 
 let ctx = null;

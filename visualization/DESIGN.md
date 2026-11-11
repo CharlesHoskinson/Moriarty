@@ -9,7 +9,9 @@ colors:
   secondary: "#d4c5a1"
   secondary-container: "#50462a"
   on-secondary-container: "#f1e1bb"
-  tertiary: "#accfae"
+  tertiary: "#afca79"
+  tertiary-container: "#404e21"
+  on-tertiary-container: "#d5e5ba"
   error: "#ffb3aa"
   surface: "#15130e"
   surface-container-lowest: "#100e09"
@@ -157,10 +159,10 @@ A warm-neutral dark scheme with a gold primary and four harmonized meaning color
 - **Proof Gold** (#e9c348): hashes, digests of state, proofs, keys, the accumulator, the slider and the active track. Container form (#5a4400 with #ffe086) holds the play FAB.
 
 ### Secondary
-- **Parchment Dust** (#d4c5a1): focus rings. Its container (#50462a with #f1e1bb) marks the active scene.
+- **Parchment Dust** (#d4c5a1): focus rings and the off-chain zone (rail, gate half, tray rim, colour-key dot). Its container (#50462a with #f1e1bb) marks the active scene and the off-chain location chip.
 
 ### Tertiary
-- **Lichen** (#accfae): reserved by the scheme; the page does not use it.
+- **Lichen** (#afca79, OKLCH hue 124): the on-chain zone (rail, gate half, colour-key dot). Container #404e21 with #d5e5ba is the on-chain location chip (6.76:1). The scheme default at hue 146 sat 22 degrees from the outcome teal (#77d9b6, hue 168) and 0.045 away in OKLab; hue 124 is 44 degrees and 0.084 away, so the zone colour cannot be read as the outcome family. Tertiary on the dark ground is 7.9:1 on surface-container-high and 10.6:1 on surface-container-lowest. The zone colours are structural: no token, cell, slab or label chip takes them.
 
 ### Meaning colors (custom, harmonized toward the seed hue by at most 15 degrees)
 - **Program Violet** (#cdbdff): source, program image, ROM, `prog_d`.
@@ -229,6 +231,13 @@ The M3 shape scale: 4, 8, 12, 16, 28 and full. Stage and narration card use 16. 
 
 ### Navigation
 - **Rail (840px and wider):** 96px wide, eight destinations with icon, a 56 by 32 indicator pill (secondary-container when active) and a label-medium label. Icons: description, directions_run, memory, account_tree, verified, send, gavel, hub.
+
+### Location chip
+- **Where chip (`#whereChip`):** assist chip in the stage, 32px high, 8px radius (small), 8px left and 16px right padding, an 18px Material Symbols Rounded icon and label-large text, directly right of the stage badge with an 8px gap (under it with 4px below 480px stage width). One container role per location: off-chain (`computer`, "Off-chain: your machine") secondary-container, crossing (`send`, "Crossing: the transaction") primary-container, on-chain (`hub`, "On-chain: Midnight") tertiary-container, each with its on-container text role. A change cross-fades colour and text over 300ms with the emphasized easing, at once in stepped mode. The text is real DOM text with `aria-live="polite"`.
+- **Beyond the chip:** the narration line starts with the short name ("Off-chain. The node, scene 4 of 8, beat 1 of 17"); the rail and the phone chip row carry the section words "Off-chain" above Program and "On-chain" above Contract; a 4px band under the slider shows the location of every beat in the three container roles; the colour key has an Off-chain and an On-chain entry.
+
+### Inventory card
+- **Where card (`#whereCard`):** surface-container-high, 12px radius (medium), level-2 shadow, over the lower 62 percent of the stage with 16px insets, body-medium. Three columns in the ratio 5 to 3 to 4 (stacked and scrolling below 600px stage width), each headed by a location chip, then a bullet list; a comparison row of two cells under a 1px outline-variant hairline. Columns and the row fade in at the beat times in the beat's `inventory` data. Only the last beat uses it. Scene labels keep clear of it.
 
 ### Slider
 - 4px track, 20px round handle, primary active track on surface-container-highest. Beat boundaries show as 4px dots, scene boundaries as 2 by 16px bars. Hover and focus add a 20px halo at 8% and 10% primary.

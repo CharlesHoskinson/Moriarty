@@ -97,27 +97,40 @@ const PIN_COUNT = { leaf: 7, node: 5, decider: 4 };
 
 function makePin(kind, mat) {
   const g = new THREE.Group();
+  g.userData.bodies = [];
   if (kind === 'collar' || kind === 'capcollar') {
     const c = new THREE.Mesh(sharedGeo('collar', () => new THREE.CylinderGeometry(0.17, 0.17, 0.3, 6)), mat);
     c.rotation.x = Math.PI / 2;
     g.add(c);
+    g.userData.bodies.push(c);
     if (kind === 'capcollar') {
       const ring = new THREE.Mesh(sharedGeo('capring', () => new THREE.TorusGeometry(0.21, 0.03, 6, 20)), sharedMat('gold', () => materials.gold()));
       ring.position.z = 0.15;
       g.add(ring);
     }
   } else if (kind === 'bar') {
-    g.add(box(0.34, 0.06, 0.3, mat));
+    const b = box(0.34, 0.06, 0.3, mat);
+    g.add(b);
+    g.userData.bodies.push(b);
   } else {
-    g.add(box(0.22, 0.22, 0.3, mat));
+    const b = box(0.22, 0.22, 0.3, mat);
+    g.add(b);
+    g.userData.bodies.push(b);
   }
   return g;
 }
 
-export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [] } = {}) {
+// Pooled materials of a slab whose scene does not tint it on its own: pin colours (one per family and titanium),
+// the lit edge in quarter steps and the closing arc (plain, lit). `own: true` gives the slab private materials
+// instead (scenes 4 and 5 dim their slabs by rewriting material colours).
+const lvl = (v) => Math.round(clamp01(v) * 4);
+const edgeMatOf = (level) => sharedMat(`edge${level}`, () => { const m = materials.gold(); m.emissive.setHex(PALETTE.goldBright); m.emissiveIntensity = 0.8 * level / 4; return m; });
+const pinMatOf = (fam) => sharedMat(`pin${fam || 'ti'}`, () => (fam ? materials.titanium({ roughness: 0.5, color: (FAMILY[fam] || FAMILY.state).hex }) : materials.titanium({ roughness: 0.5 })));
+
+export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [], own = false } = {}) {
   const n = PIN_COUNT[variant] || 7;
   const grp = new THREE.Group();
-  const edgeMat = materials.gold();
+  const edgeMat = own ? materials.gold() : edgeMatOf(0);
   const edge = box(3.14, 0.1, 2.14, edgeMat);
   edge.position.y = 0.05;
   const body = box(3.0, 0.3, 2.0, sharedMat('titanium', () => materials.titanium()));
@@ -128,7 +141,7 @@ export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [] } = {
   const pinMats = [];
   const pinAnchors = [];
   for (let i = 0; i < n; i++) {
-    const mat = materials.titanium({ roughness: 0.5 });
+    const mat = own ? materials.titanium({ roughness: 0.5 }) : pinMatOf(null);
     const pin = makePin(pinKinds[i] || 'box', mat);
     pin.position.set(n > 1 ? -1.3 + (i * 2.6) / (n - 1) : 0, 0.25, 1.15);
     grp.add(pin);
@@ -140,7 +153,8 @@ export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [] } = {
 
   // Accumulator ring: 330 degree arc, a 30 degree unclosed joint toward +z, and the closing arc.
   const ringMat = sharedMat('gold', () => materials.gold());
-  const closeMat = materials.gold();
+  const closeMat = own ? materials.gold() : sharedMat('gold', () => materials.gold());
+  const closeLit = own ? null : edgeMatOf(4);
   const mkArc = (arcDeg, startDeg) => sharedGeo(`arc${arcDeg}|${startDeg}`, () => {
     const geo = new THREE.TorusGeometry(0.7, 0.08, 8, 48, rad(arcDeg));
     geo.rotateZ(rad(startDeg));
@@ -181,13 +195,16 @@ export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [] } = {
   grp.userData.setState = ({ pins: pc = [], verify = 0, edgeLit = 0, ring: rs = { show: 0, folds: 0, closed: 0 } } = {}) => {
     for (let i = 0; i < n; i++) {
       const f = pc[i];
-      pinMats[i].color.setHex(f ? (FAMILY[f] || FAMILY.state).hex : PALETTE.titanium);
+      if (own) pinMats[i].color.setHex(f ? (FAMILY[f] || FAMILY.state).hex : PALETTE.titanium);
+      else { const pm = pinMatOf(f || null); for (const m of pins[i].userData.bodies) m.material = pm; }
     }
     const v = clamp01(verify);
     sweep.visible = v > 0 && v < 1;
     sweep.position.x = lerp(-1.5, 1.5, v);
-    edgeMat.emissive.setHex(PALETTE.goldBright);
-    edgeMat.emissiveIntensity = 0.8 * clamp01(edgeLit);
+    if (own) {
+      edgeMat.emissive.setHex(PALETTE.goldBright);
+      edgeMat.emissiveIntensity = 0.8 * clamp01(edgeLit);
+    } else edge.material = edgeMatOf(lvl(edgeLit));
     const show = clamp01(rs.show ?? 0);
     ring.visible = show > 0.001;
     ring.scale.setScalar(Math.max(show, 0.001));
@@ -196,8 +213,10 @@ export function makeProofSlab({ variant = 'leaf', scale = 1, pinKinds = [] } = {
     const c = clamp01(rs.closed ?? 0);
     closer.visible = c > 0.001;
     closer.scale.setScalar(Math.max(c, 0.001));
-    closeMat.emissive.setHex(PALETTE.goldBright);
-    closeMat.emissiveIntensity = c > 0 && c < 1 ? 0.8 : 0;
+    if (own) {
+      closeMat.emissive.setHex(PALETTE.goldBright);
+      closeMat.emissiveIntensity = c > 0 && c < 1 ? 0.8 : 0;
+    } else closer.material = c > 0 && c < 1 ? closeLit : closeMat;
   };
   grp.userData.variant = variant;
   grp.userData.pins = pins;

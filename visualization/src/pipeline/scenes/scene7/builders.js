@@ -123,7 +123,7 @@ export function makeTray(P) {
   const { m, bx } = P;
   const root = new THREE.Group();
   root.add(bx(m.paper, 20, 0.1, 5.4));
-  root.add(bx(m.ti, 20, 0.08, 0.1, 0, 0.09, -2.65), bx(m.ti, 20, 0.08, 0.1, 0, 0.09, 2.65));
-  root.add(bx(m.ti, 0.1, 0.08, 5.4, -9.95, 0.09, 0), bx(m.ti, 0.1, 0.08, 5.4, 9.95, 0.09, 0));
+  root.add(bx(m.rimOff, 20, 0.08, 0.1, 0, 0.09, -2.65), bx(m.rimOff, 20, 0.08, 0.1, 0, 0.09, 2.65));
+  root.add(bx(m.rimOff, 0.1, 0.08, 5.4, -9.95, 0.09, 0), bx(m.rimOff, 0.1, 0.08, 5.4, 9.95, 0.09, 0));
   return root;
 }

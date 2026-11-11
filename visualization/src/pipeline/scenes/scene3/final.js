@@ -62,6 +62,8 @@ function pinWorld(i, n, out) {
 
 export function drawDock() {
   const bi = T.b;
+  // Beat 3.35: the three slabs are verified at the same time, one sweep over each (CPU cores in parallel).
+  const vPar = bi === 34 ? rp(34, 4.4, 6.0) : 0;
   for (let i = 0; i < 3; i++) {
     const k = slabPose(i, P);
     const s = slabs[i];
@@ -69,8 +71,14 @@ export function drawDock() {
     s.position.set(P[0], P[1], P[2]);
     s.scale.set(1, Math.max(k, 0.001), 1);
     if (i === 0) {
-      const v = bi === 31 ? rp(31, 5.0, 5.7) : 0;
-      slabs[0].userData.setState({ pins: PIN_FAM, verify: v, edgeLit: bi === 31 && v >= 1 ? 1 - rp(31, 5.7, 6.0) : 0 });
+      const v = bi === 31 ? rp(31, 5.0, 5.7) : bi === 34 ? vPar : 0;
+      const edge = bi === 31 && v >= 1 ? 1 - rp(31, 5.7, 6.0) : bi === 34 && v >= 1 ? 1 - rp(34, 6.0, 6.3) : 0;
+      slabs[0].userData.setState({ pins: PIN_FAM, verify: v, edgeLit: edge });
+    } else {
+      // The two clones share geometry and materials with slab 0; their sweep bar (the last child) runs on its own.
+      const bar = s.children[s.children.length - 1];
+      bar.visible = vPar > 0 && vPar < 1;
+      bar.position.x = lerp(-1.5, 1.5, vPar);
     }
   }
   D.dim(0);

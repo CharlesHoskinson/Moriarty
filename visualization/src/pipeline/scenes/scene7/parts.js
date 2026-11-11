@@ -31,6 +31,7 @@ export function createParts() {
     cap: M(materials.ceramic({ roughness: 0.7 })),
     slate: M(materials.slate()),
     paper: M(materials.paper()),
+    rimOff: M(materials.ceramic({ color: PALETTE.zoneOff, roughness: 0.6, metalness: 0.1 })),   // off-chain tray rim
     err: M(materials.family('error', { lit: 0.6 })),
     input: M(materials.family('input')),
     outcome: M(materials.family('outcome')),
@@ -56,27 +57,24 @@ export function createParts() {
     x.emissiveIntensity = 0;
     return x;
   };
-  const litFx = (o, mat) => { o.userData.fx = (st) => { mat.emissiveIntensity = st.lit; }; return o; };
+  // Lit gold objects share six pooled materials (emissive 0 to 1.2 in steps of 0.2) instead of one each.
+  const litPool = new Map();
+  const litMat = (v) => {
+    const k = Math.max(0, Math.min(6, Math.round(v * 5)));
+    if (!litPool.has(k)) { const x = M(materials.gold()); x.emissive = new THREE.Color(PALETTE.goldBright); x.emissiveIntensity = k / 5; litPool.set(k, x); }
+    return litPool.get(k);
+  };
+  const bindLit = (o, mat) => {
+    const ms = [];
+    o.traverse((c) => { if (c.isMesh && c.material === mat) ms.push(c); });
+    for (const c of ms) c.material = litMat(0);
+    return (v) => { const x = litMat(v); for (const c of ms) c.material = x; };
+  };
+  const litFx = (o, mat) => { const set = bindLit(o, mat); o.userData.fx = (st) => set(st.lit); return o; };
 
   // ---- digest tokens at size 1 with shared geometry and shared materials; scale them with the rig
-  const faceMats = new Map();
-  let tokBody = null;
-  let tokFace = null;
   function tok(family, content) {
-    const t = makeDigestToken({ family, content, size: 1 });
-    const [body, face] = t.children;
-    if (!tokBody) { tokBody = G(body.geometry); tokFace = G(face.geometry); } else {
-      body.geometry.dispose(); body.geometry = tokBody;
-      face.geometry.dispose(); face.geometry = tokFace;
-    }
-    new Set(body.material).forEach((x) => x.dispose());
-    body.material = [rims[family] || rims.state, m.cap, m.cap];
-    const key = String(content);
-    if (faceMats.has(key)) { face.material.dispose(); face.material = faceMats.get(key); } else {
-      faceMats.set(key, face.material);
-      mats.push(face.material);
-    }
-    return t;
+    return makeDigestToken({ family, content, size: 1 });   // geometry, rim, cap and faces are shared in theme.js
   }
 
   // ---- proof slabs
@@ -104,7 +102,7 @@ export function createParts() {
     const own = edge === 'gold' ? ownGold() : null;
     const root = grp(bx(own || m.ti, 3.14, 0.1, 2.14, 0, 0.05, 0), bx(m.ti, 3, 0.3, 2, 0, 0.25, 0));
     for (let i = 0; i < pins; i++) root.add(bx(m.pin, 0.22, 0.22, 0.3, pins > 1 ? -1.3 + (i * 2.6) / (pins - 1) : 0, 0.25, 1.15));
-    if (own) root.userData.fx = (st) => { own.emissiveIntensity = 0.8 * st.e; };
+    if (own) { const set = bindLit(root, own); root.userData.fx = (st) => set(0.8 * st.e); }
     return root;
   }
 

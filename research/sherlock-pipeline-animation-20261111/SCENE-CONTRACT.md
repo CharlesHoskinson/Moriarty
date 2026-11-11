@@ -116,7 +116,7 @@ The builder's final message lists: the files written, the result of each check, 
 
 ## 6. Capture URL lists
 
-Beat indices are 0-based. The still pose of beat B is at `t = duration - 1`. The lists below give the URL pattern and the number of beats; the durations are in `STORYBOARD.md` at each beat heading.
+Beat indices are 0-based. The still pose of beat B is at `t = duration - 1`. The lists below give the URL pattern and the number of beats; the durations are in `STORYBOARD.md` at each beat heading and in the table below, which includes the changes of `STORYBOARD-AMEND-1.md`.
 
 ```
 BASE=http://127.0.0.1:4377/pipeline.html
@@ -126,16 +126,18 @@ phone:  $BASE?scene=N&beat=B&t=<duration-1>&webgl           390 844
 step:   $BASE?scene=N&beat=B&webgl&stepped                 1600 900
 ```
 
-| Scene | `id` | Beats | Beat indices | Durations in beat order (s) | Captures (wide + mid + phone) |
-|---:|---|---:|---|---|---:|
-| 1 | `program` | 6 | 0 to 5 | 22 22 22 22 29 25 | 18 |
-| 2 | `run` | 10 | 0 to 9 | 23 24 24 24 24 23 23 21 23 24 | 30 |
-| 3 | `leaf` | 35 | 0 to 34 | 23 23 25 22 24 24 29 24 31 34 25 24 24 24 22 22 24 24 24 24 24 24 24 23 24 24 24 24 25 25 24 24 24 24 24 | 105 |
-| 4 | `node` | 17 | 0 to 16 | 22 24 22 16 20 19 22 23 22 18 20 27 25 23 24 23 20 | 51 |
-| 5 | `decider` | 14 | 0 to 13 | 21 22 24 22 19 22 24 20 24 22 24 23 24 20 | 42 |
-| 6 | `transaction` | 4 | 0 to 3 | 30 23 20 20 | 12 |
-| 7 | `contract` | 21 | 0 to 20 | 25 27 21 22 22 22 24 29 26 31 24 26 25 25 25 22 26 28 26 29 25 | 63 |
-| 8 | `network` | 8 | 0 to 7 | 23 24 22 25 25 27 24 32 | 24 |
+| Scene | `id` | Beats | Beat indices | Durations in beat order (s) | `where` per beat | Captures (wide + mid + phone) |
+|---:|---|---:|---|---|---|---:|
+| 1 | `program` | 6 | 0 to 5 | 29 22 22 22 29 25 | all `off` | 18 |
+| 2 | `run` | 10 | 0 to 9 | 28 24 24 24 24 23 23 21 23 24 | all `off` | 30 |
+| 3 | `leaf` | 35 | 0 to 34 | 34 23 25 22 24 24 29 24 31 34 25 24 24 24 22 22 24 24 24 24 24 24 24 23 24 24 24 24 25 25 24 24 24 24 29 | all `off` | 105 |
+| 4 | `node` | 17 | 0 to 16 | 27 24 22 16 20 19 22 23 22 18 20 27 25 23 24 23 20 | all `off` | 51 |
+| 5 | `decider` | 14 | 0 to 13 | 24 22 24 22 19 22 24 20 24 22 24 23 29 20 | all `off` | 42 |
+| 6 | `transaction` | 4 | 0 to 3 | 32 23 27 30 | `off` `off` `off` `cross` | 12 |
+| 7 | `contract` | 21 | 0 to 20 | 33 27 21 29 22 22 24 29 26 31 24 26 25 25 25 22 26 28 26 29 25 | beats 0 to 5 `on`, 6 to 19 `off`, 20 `on` | 63 |
+| 8 | `network` | 9 | 0 to 8 | 26 26 22 25 25 27 24 32 56 | beats 0 to 2 `on`, 3 and 4 `off`, 5 to 8 `on` | 27 |
+
+`STORYBOARD-AMEND-1.md` wins over `STORYBOARD.md`: 116 beats, 2,874 s (47:54). Scene 8 has nine beats; the ninth, `what-lives-where` (index 8, 56 s), carries the inventory card and holds the 8.8 wide pose. The captures of 8.8 and 8.9 are taken with the gate and both rail colours in frame; the chip must read the value in the `where` column, and the zone labels show whenever the gate is in frame. Check 4 adds: the chip text of a capture equals the text of its `where` value (`Off-chain: your machine`, `Crossing: the transaction`, `On-chain: Midnight`), and no scene draws a threshold bar of its own.
 
 A loop that makes the wide set for one scene, with the durations taken from the scene module itself:
 

@@ -78,27 +78,45 @@ export class Parts {
 
   // ---- dimming: lerp every colour of a group toward the ground by 0.6 * k. `live` materials
   // are rewritten by setState each frame, so the dimmer reads their current colour as the base.
+  // Dimming: every colour of a group lerps toward the ground by 0.6 * k. A shared material (token and slab
+  // pools) is never written: the group's meshes swap to a pooled dimmed variant of it, one per material and
+  // dim step (four steps), so all dimmed groups share the same few variants. A private material is lerped in place.
   makeDimmer(root, live = []) {
     const list = [];
+    const meshes = [];
     const seen = new Set();
-    const own = new Map();   // shared kit materials are cloned once per dimmed group, so dimming stays local
-    const mine = (m) => {
-      if (!m.userData.shared) return m;
-      if (!own.has(m)) { const c = m.clone(); c.userData = { ...c.userData, shared: false }; this.mats.push(c); own.set(m, c); }
-      return own.get(m);
-    };
     root.traverse((o) => {
       if (!o.material) return;
-      if (Array.isArray(o.material)) o.material = o.material.map(mine); else o.material = mine(o.material);
+      meshes.push(o);
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        if (seen.has(m) || !m.color) continue;
+        if (m.userData.shared || seen.has(m) || !m.color) continue;
         seen.add(m);
         list.push({ m, base: m.color.clone(), live: live.includes(m) });
       }
     });
     const dim = this.dimColor;
     const tmp = this.tmpColor;
+    const variants = this.variants || (this.variants = new Map());
+    const variant = (b, lvl) => {
+      const key = `${b.uuid}|${lvl}`;
+      let v = variants.get(key);
+      if (!v) {
+        v = b.clone();
+        v.userData = { dimBase: b, shared: false };
+        if (v.color) v.color.lerp(dim, 0.6 * lvl / 4);
+        this.mats.push(v);
+        variants.set(key, v);
+      }
+      return v;
+    };
     return (k) => {
+      const lvl = Math.round(clamp01(k) * 4);
+      const swap = (m) => {
+        const b = m.userData.dimBase || m;
+        if (!b.userData.shared && !m.userData.dimBase) return m;
+        return lvl === 0 ? b : variant(b, lvl);
+      };
+      for (const o of meshes) o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
       for (const e of list) {
         if (e.live) { tmp.copy(e.m.color).lerp(dim, 0.6 * k); e.m.color.copy(tmp); }
         else e.m.color.copy(e.base).lerp(dim, 0.6 * k);

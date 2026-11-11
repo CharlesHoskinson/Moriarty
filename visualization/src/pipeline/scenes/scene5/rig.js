@@ -243,39 +243,13 @@ export class Link {
   }
 }
 
-// ---- shared digest tokens ---------------------------------------------------------------------------
-// makeDigestToken builds three materials and two geometries per token. Scene 5 draws about thirty tokens, so
-// each family shares one rim material, all share one cap material and one body geometry, and each content
-// string shares one face material. The extra objects that the helper creates are freed at once.
-const shared = { rim: {}, cap: null, body: null, face: null, faceMat: {} };
-
-export function shareToken(grp, family, content) {
-  const body = grp.children[0];
-  const face = grp.children[1];
-  const [rim, cap1, cap2] = body.material;
-  if (!shared.rim[family]) shared.rim[family] = rim; else rim.dispose();
-  if (!shared.cap) shared.cap = cap1;
-  else { cap1.dispose(); }
-  cap2.dispose();
-  if (!shared.body) shared.body = body.geometry; else body.geometry.dispose();
-  if (!shared.face) shared.face = face.geometry; else face.geometry.dispose();
-  if (!shared.faceMat[content]) shared.faceMat[content] = face.material; else face.material.dispose();
-  body.material = [shared.rim[family], shared.cap, shared.cap];
-  body.geometry = shared.body;
-  face.geometry = shared.face;
-  face.material = shared.faceMat[content];
-  return grp;
-}
+// ---- digest tokens ------------------------------------------------------------------------------------
+// theme.js shares token geometry, rim, cap and the face atlas material across every token, so a token here
+// is a plain makeDigestToken.
+export function shareToken(grp) { return grp; }
 
 export function makeTok(family, content) {
-  return shareToken(makeDigestToken({ family, content, size: 1 }), family, content);
+  return makeDigestToken({ family, content, size: 1 });
 }
 
-export function disposeShared() {
-  for (const k of Object.keys(shared.rim)) shared.rim[k].dispose();
-  if (shared.cap) shared.cap.dispose();
-  if (shared.body) shared.body.dispose();
-  if (shared.face) shared.face.dispose();
-  for (const k of Object.keys(shared.faceMat)) shared.faceMat[k].dispose();
-  shared.rim = {}; shared.cap = null; shared.body = null; shared.face = null; shared.faceMat = {};
-}
+export function disposeShared() { /* nothing to free: token resources belong to theme.js */ }

@@ -158,7 +158,7 @@ export default {
     statA('sealBase', -8, BASE, -1.0);
 
     // ---- root slab (arrives on the in plate) ---------------------------------------------------------
-    rootSlab = makeProofSlab({ variant: 'node', pinKinds: ['collar', 'capcollar', 'capcollar', 'bar', 'bar'] });
+    rootSlab = makeProofSlab({ variant: 'node', pinKinds: ['collar', 'capcollar', 'capcollar', 'bar', 'bar'], own: true });
     rootP = rig.prop([-20, 0.2, 0, 1]);
     rootP.node.add(rootSlab);
     rootP.tr.go(T(0, 2.0), T(0, 4.0), [[-8, BASE, 0]]);

@@ -124,6 +124,56 @@ function faceTexture(content) {
   return tex;
 }
 
+// ---- face atlas ------------------------------------------------------------------------------------
+// Every shared token face is a cell of one atlas texture (12 by 12 cells of 160 px, a second page when full),
+// so all shared tokens use one face material per page and one unit face geometry per cell. A cell is a pure
+// function of its content string; the cell index only depends on the order of first use.
+const ATLAS_PX = 2048, CELL_PX = 160, GRID = ATLAS_PX / CELL_PX | 0;
+const atlasPages = [];
+const atlasCells = new Map();
+function atlasCell(content) {
+  const key = String(content);
+  let c = atlasCells.get(key);
+  if (c) return c;
+  let page = atlasPages[atlasPages.length - 1];
+  if (!page || page.n >= GRID * GRID) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = ATLAS_PX;
+    const g = cv.getContext('2d');
+    g.fillStyle = hexCss(PALETTE.ceramic);
+    g.fillRect(0, 0, ATLAS_PX, ATLAS_PX);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
+    mat.userData.shared = true;
+    page = { cv, g, tex, mat, n: 0 };
+    atlasPages.push(page);
+  }
+  const col = page.n % GRID, row = (page.n / GRID) | 0;
+  page.n++;
+  const g = page.g, x0 = col * CELL_PX, y0 = row * CELL_PX;
+  g.fillStyle = hexCss(PALETTE.ceramic);
+  g.fillRect(x0, y0, CELL_PX, CELL_PX);
+  g.fillStyle = hexCss(PALETTE.ink);
+  const bits = digestPattern(key);
+  const cell = CELL_PX / 6;
+  for (let i = 0; i < 25; i++) {
+    if (!bits[i]) continue;
+    g.beginPath();
+    g.arc(x0 + cell * (1 + (i % 5)), y0 + cell * (1 + Math.floor(i / 5)), cell * 0.3, 0, Math.PI * 2);
+    g.fill();
+  }
+  page.tex.needsUpdate = true;
+  // Unit plane whose uv covers this cell (canvas row 0 is the top of the texture).
+  const geo = new THREE.PlaneGeometry(1, 1);
+  const u0 = x0 / ATLAS_PX, u1 = (x0 + CELL_PX) / ATLAS_PX, v1 = 1 - y0 / ATLAS_PX, v0 = 1 - (y0 + CELL_PX) / ATLAS_PX;
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v1, u1, v1, u0, v0, u1, v0], 2));
+  c = { geo, mat: page.mat };
+  atlasCells.set(key, c);
+  return c;
+}
+
 // Shared token resources. Geometry and materials are cached by shape, family and content, so thirty
 // tokens build one body geometry, one face geometry, one rim material per family, one cap material and
 // one face material per content string. A token that a scene tints on its own passes `own: true` and
@@ -141,10 +191,11 @@ const tokenMaterials = (family, content, overlay, own) => {
   else out = {
     rim: memo(tokenCache.rim, `${family}|${overlay}`, () => materials.family(family, { roughness: 0.45, metalness: 0.2 })),
     cap: memo(tokenCache.cap, `${overlay}`, () => materials.ceramic({ roughness: 0.7 })),
-    face: memo(tokenCache.face, `${content}|${overlay}`, () => new THREE.MeshBasicMaterial({ map: faceTexture(content), toneMapped: false })),
+    face: atlasCell(content).mat,
   };
   if (overlay) for (const m of Object.values(out)) m.depthTest = false;
-  for (const m of Object.values(out)) m.userData.shared = !own;
+  if (own) for (const m of Object.values(out)) m.userData.shared = false;
+  else { out.rim.userData.shared = true; out.cap.userData.shared = true; }
   return out;
 };
 
@@ -161,8 +212,9 @@ export function makeDigestToken({ family = 'state', content = '', size = 1, over
   body.rotation.x = Math.PI / 2;
   body.rotation.y = Math.PI / 6;
   grp.add(body);
-  const faceGeo = memo(tokenCache.geo, `f${size}`, () => new THREE.PlaneGeometry(r * 1.45, r * 1.45));
+  const faceGeo = own ? memo(tokenCache.geo, `f${size}`, () => new THREE.PlaneGeometry(r * 1.45, r * 1.45)) : atlasCell(content).geo;
   const face = new THREE.Mesh(faceGeo, mt.face);
+  if (!own) face.scale.setScalar(r * 1.45);
   face.position.z = h / 2 + 0.004 * size;
   grp.add(face);
   if (overlay) {
@@ -176,14 +228,14 @@ export function makeDigestToken({ family = 'state', content = '', size = 1, over
   grp.userData.anchor = anchor;
   grp.userData.radius = r;
   grp.userData.setContent = (c) => {
-    const tex = faceTexture(c);
     if (own) {
+      const tex = faceTexture(c);
       if (face.material.map !== tex) { face.material.map = tex; face.material.needsUpdate = true; }
       return;
     }
-    const fm = memo(tokenCache.face, `${c}|${overlay}`, () => new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
-    fm.userData.shared = true;
-    if (face.material !== fm) face.material = fm;
+    const cellOf = atlasCell(c);
+    face.geometry = cellOf.geo;
+    face.material = cellOf.mat;
   };
   return grp;
 }
