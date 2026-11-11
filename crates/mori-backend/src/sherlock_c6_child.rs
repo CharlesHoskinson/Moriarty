@@ -18,7 +18,7 @@
 //! stagenet qualification are separate work, not claimed here.
 //! Compile/keygen/prove/verify: UNOBSERVED.
 use crate::parameters::OfflineParameters;
-use crate::proving::{MAX_K, MAX_PROOF_BYTES, ProofOptions, hex};
+use crate::proving::{C6_LEAF_MAX_K, MAX_K, MAX_PROOF_BYTES, ProofOptions, hex};
 use crate::sherlock_child::{ChildTranscript, check_child_statement, child_witness, field_hex};
 use crate::{Error, LEDGER_REVISION, ZKIR_VERSION, error};
 use midnight_circuits::hash::poseidon::PoseidonState;
@@ -242,7 +242,8 @@ pub fn prepare_c6_child(
     };
     crate::proving::validate_json_profile(&claim)?;
     let circuit_k = ir.k();
-    if circuit_k == 0 || circuit_k > MAX_K {
+    // The raw C6 key path still refuses k > MAX_K through `options.max_k`.
+    if circuit_k == 0 || circuit_k > C6_LEAF_MAX_K {
         return Err(error(
             "limit",
             format!("Circuit k={circuit_k} exceeds the explicit native k cap."),
@@ -865,8 +866,8 @@ impl C6DigestKey {
         height: u64,
         options: &ProofOptions,
     ) -> Result<Self, Error> {
-        if options.max_k == 0 || options.max_k > MAX_K {
-            return Err(error("limit", "Native k cap must be between 1 and 19."));
+        if options.max_k == 0 || options.max_k > C6_LEAF_MAX_K {
+            return Err(error("limit", "C6 leaf k cap must be between 1 and 20."));
         }
         let prepared = prepare_digest_c6_child(
             ir,
@@ -939,9 +940,18 @@ impl C6DigestKey {
     }
 
     pub fn prove(&self) -> Result<C6ChildProof, Error> {
+        self.prove_timed().map(|(proof, _)| proof)
+    }
+
+    /// `prove` with wall seconds of (witness check, setup_pk, prove, verify).
+    pub fn prove_timed(&self) -> Result<(C6ChildProof, [f64; 4]), Error> {
+        let clock = std::time::Instant::now();
+        let lap = || clock.elapsed().as_secs_f64();
         let p = &self.prepared;
         let witness = p.witness()?;
+        let t_witness = lap();
         let pk = setup_pk(&p.ir, &self.vk);
+        let t_pk = lap();
         let kzg: &ParamsKZG<Bls12> = &self.params.0;
         let proof = stdlib_prove::<IrSource, ChildTranscript>(
             kzg,
@@ -952,6 +962,7 @@ impl C6DigestKey {
             rand::rngs::OsRng,
         )
         .map_err(|e| error("proving", format!("{e:?}")))?;
+        let t_prove = lap();
         if proof.is_empty() || proof.len() > MAX_PROOF_BYTES {
             return Err(error(
                 "limit",
@@ -959,12 +970,22 @@ impl C6DigestKey {
             ));
         }
         self.verify(&p.instance, &proof)?;
-        Ok(C6ChildProof {
-            claim: p.claim.clone(),
-            instance: p.instance.clone(),
-            vk_bytes: self.vk_bytes.clone(),
-            proof,
-        })
+        let t_verify = lap();
+        let laps = [
+            t_witness,
+            t_pk - t_witness,
+            t_prove - t_pk,
+            t_verify - t_prove,
+        ];
+        Ok((
+            C6ChildProof {
+                claim: p.claim.clone(),
+                instance: p.instance.clone(),
+                vk_bytes: self.vk_bytes.clone(),
+                proof,
+            },
+            laps,
+        ))
     }
 }
 

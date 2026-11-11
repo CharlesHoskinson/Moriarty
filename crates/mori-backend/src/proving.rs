@@ -20,6 +20,10 @@ use std::path::PathBuf;
 
 pub const MAX_PROOF_BYTES: usize = 262_144;
 pub const MAX_K: u8 = 19;
+/// E4 (2026-11-10): degree cap of the C6 digest leaf prover. Every other native
+/// path keeps `MAX_K`. Raised to 20 to measure one k = 20 stand-in leaf against
+/// the 16 GB leaf budget (design review 2026-11-10, C1/C3).
+pub const C6_LEAF_MAX_K: u8 = 20;
 pub const PROOF_FORMAT: &str = "moriarty-native-transition-proof/3";
 pub const BINDING_VERSION: &str = "moriarty-native-transition-binding/3";
 const KEY_LOCATION: &str = "moriarty-local-native-transition/3";

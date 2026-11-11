@@ -10,6 +10,14 @@ use std::{
 
 /// Largest SRS file read, in bytes.
 pub const MAX_PARAMETER_BYTES: u64 = 128 * 1024 * 1024;
+
+/// E4 (2026-11-10): SHA-256 of the official ceremony `bls_midnight_2p20`, the
+/// same pin as `mori-recursion/tests/sherlock_keygen_regression.rs` `SRS_SHA256`.
+/// Only the C6 digest leaf path asks for k = 20 (`proving::C6_LEAF_MAX_K`).
+pub const PINNED_HASH_2P20: &str =
+    "1cc62978558fdc1e445cd70cfd9a86ec3c2e2151b6d74811232d37faf9133ff1";
+/// Byte cap for the k = 20 file (201,326,980 bytes).
+pub const MAX_PARAMETER_BYTES_2P20: u64 = 256 * 1024 * 1024;
 /// SHA-256 of `bls_midnight_2p{k}` for each degree `k` in `0..20`.
 // Copied as data from ledger revision 04c9c5d9bcebb8d4427d8589fb54d58a55599c14,
 // base-crypto/src/data_provider.rs EXPECTED_DATA. Never trust a supplied digest.
@@ -43,9 +51,15 @@ impl OfflineParameters {
     pub(crate) fn load(directory: &Path, k: u8) -> Result<Self, Error> {
         #[cfg(test)]
         crate::proving::task4_native_driver::charge("params_load");
-        let expected = PINNED_HASHES
-            .get(k as usize)
-            .ok_or_else(|| error("parameters", "No pinned SRS for the circuit degree."))?;
+        let (expected, max_bytes) = match k {
+            20 => (&PINNED_HASH_2P20, MAX_PARAMETER_BYTES_2P20),
+            _ => (
+                PINNED_HASHES
+                    .get(k as usize)
+                    .ok_or_else(|| error("parameters", "No pinned SRS for the circuit degree."))?,
+                MAX_PARAMETER_BYTES,
+            ),
+        };
         let path = directory.join(format!("bls_midnight_2p{k}"));
         // Nonblocking open avoids waiting for a FIFO writer before we can
         // inspect the opened descriptor. A pre-open stat alone has a race.
@@ -69,11 +83,14 @@ impl OfflineParameters {
             return Err(error("parameters", "SRS must be a regular file."));
         }
         let mut bytes = Vec::new();
-        file.take(MAX_PARAMETER_BYTES + 1)
+        file.take(max_bytes + 1)
             .read_to_end(&mut bytes)
             .map_err(|e| error("parameters", e.to_string()))?;
-        if bytes.len() as u64 > MAX_PARAMETER_BYTES {
-            return Err(error("parameters", "SRS exceeds the 128 MiB byte cap."));
+        if bytes.len() as u64 > max_bytes {
+            return Err(error(
+                "parameters",
+                "SRS exceeds the byte cap for its degree.",
+            ));
         }
         let actual = crate::proving::hex(&Sha256::digest(&bytes));
         if actual != *expected {
