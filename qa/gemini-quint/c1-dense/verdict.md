@@ -22,7 +22,7 @@ Lane: Gemini `gemini-4-argon-high` via argon-run, 2026-11-11 (unit `quint-c1-den
    |---|---|---|---|
    | `non_canonical_tail` | 2: a non-pad digest above `r` in leaf 2's post tail | `"dense mask"` on imported and active rows (now both; it is one gate in Rust) | `c1_mut_non_canonical_tail`. Rust forges the pre tail, the model the post tail. A forged pre tail on leaf 1 cannot break `refinesChain`, because the model does not compare leaf 1's pre state with the reference, and leaf 2's pre state is stitched. The same gate refuses both forms. |
    | `address_reuse_window_row` | 7: window row 1 reuses row 0's address and serves `d0 = 999` to a read of address 4 | `addr' = addr + 1` of `"mem win first"` / `"mem win chain"` | `c1_mut_address_reuse_window_row` (refused by `"mem win first"`) |
-   | `pad_row_on_bus` | 16: inactive row 3 offers `(MEM, key(8, DATA), 999, ..)` and serves leaf 2's read of address 8 | the `(1 - act)` zeroing of `chip`, `key` and data in `"mem win row"` | `c1_mut_pad_row_on_bus`. The Rust test sets only `chip`. In the model, dropping only `chip` is not exploitable: the tuple `(MEM, 0, 0, 0, 0)` matches no request, because key 0 needs kind 0. |
+   | `pad_row_on_bus` | 16: inactive row 3 offers `(MEM, key(8, DATA), 999, ..)` and serves leaf 2's read of address 8 | the `(1 - act)` zeroing of `chip`, `key` and data in `"mem win row"` | `c1_mut_pad_row_on_bus`. The Rust test sets only `chip`, so it checks a subset of what the model drops. In Rust a forged `(MEM, 0, 0, 0, 0)` tuple can only serve key 0 (address 0, kind 0), and the `kfix` of a port is in 1..=4; this was not run in the model. |
    | `kind_out_of_range` | 17: rows 0 and 1 use kinds 9 and -7 to swap the bus keys of two appends | the kind range `kind * (kind - 1) .. (kind - 4) = 0` | `c1_mut_kind_out_of_range` (refused by `"mem win row"`) |
    | `arena_kind_pinned` | 18: arena 2 (`kfix = FIELD`) writes a DATA record that arena 1 reads | `act * kfix * (kind - kfix)` in `"mem win row"`, and `kind == kfix` in `"core append"` | `c1_mut_arena_kind_pinned` |
    | `append_value_mismatch` | 20: window row 0 holds `d0 = 999` while the append requests `d0 = 30` | the bus lookup of the append request | `c1_mut_append_value_mismatch` (refused by the lookup) |
@@ -40,4 +40,6 @@ Lane: Gemini `gemini-4-argon-high` via argon-run, 2026-11-11 (unit `quint-c1-den
 
 ## Open
 
-- `cargo clippy -p mori-chip --all-targets -- -D warnings` fails on errors in other files (`rfcore.rs`, `m3.rs`, `poseidon.rs`, `cpu.rs`, `mem.rs`, `mori-lexer`, `mori-recursion`). There are none in `dense.rs` or `dense/tests.rs`.
+- `cargo clippy -p mori-chip --all-targets -- -D warnings` fails on errors in files this change does not touch (`rfcore.rs`, `m3.rs`, `poseidon.rs`, `cpu.rs`, `mem.rs`, `mori-lexer`, `mori-recursion`; run `20261111T101707Z-c1-top1-clippy`). The lib does not compile under clippy, so the test targets were not linted.
+- `REPORT-dense.md` section 4 is lane output and is not changed: it describes the pre-fix code, and its test spec is wrong for SEGC = 8 (see above).
+- Only the 33 `dense::tests` ran after the fix. No other code in `crates/` uses `DenseCfg`, `DenseLeafW` or `UnitW`.
