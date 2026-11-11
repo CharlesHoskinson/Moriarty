@@ -405,17 +405,25 @@ impl Index {
         if !v.is_empty() {
             return v;
         }
-        let all: Vec<usize> = (0..self.fns.len())
+        // Defined only in other modules: follow every definition (an
+        // over-approximation when the name is ambiguous).
+        (0..self.fns.len())
             .filter(|i| self.fns[*i].name == name)
-            .collect();
-        if all.len() == 1 { all } else { Vec::new() }
+            .collect()
     }
 
-    /// Rule-sliced reachable text from `entry` (module, fn name), with the
-    /// names of the functions reached.
-    pub fn region(&self, rule: &str, entry: (&'static str, &str)) -> (String, Vec<String>) {
+    /// Rule-sliced reachable text from `entry` (module, fn name), the names
+    /// of the functions reached, and the free-call names with no definition
+    /// in the scanned files.
+    pub fn region(
+        &self,
+        rule: &str,
+        entry: (&'static str, &str),
+    ) -> (String, Vec<String>, BTreeSet<String>) {
         let mut seen = BTreeSet::new();
+        let mut unresolved = BTreeSet::new();
         let mut work: Vec<usize> = self.find(Some(entry.0), entry.0, entry.1);
+        assert!(!work.is_empty(), "entry {}::{} not found", entry.0, entry.1);
         let mut text = String::new();
         let mut reached = Vec::new();
         let mut guards_done = BTreeSet::new();
@@ -427,9 +435,11 @@ impl Index {
             reached.push(format!("{}::{}", d.module, d.name));
             let body = prune(&d.body, rule, &self.rules);
             for (m, n) in free_calls(&body) {
-                for g in self.find(m.as_deref(), d.module, &n) {
-                    work.push(g);
+                let found = self.find(m.as_deref(), d.module, &n);
+                if found.is_empty() {
+                    unresolved.insert(n);
                 }
+                work.extend(found);
             }
             for recv in ["reads", "adt_reads()"] {
                 for n in method_calls(&body, recv) {
@@ -449,7 +459,7 @@ impl Index {
             text.push_str(&body);
             text.push('\n');
         }
-        (text, reached)
+        (text, reached, unresolved)
     }
 }
 

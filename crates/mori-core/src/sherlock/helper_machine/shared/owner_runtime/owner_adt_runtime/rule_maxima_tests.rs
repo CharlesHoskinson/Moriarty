@@ -33,6 +33,7 @@ mod scan;
 const SRC_SHARED: &str = include_str!("../../../shared.rs");
 const SRC_OWNER: &str = include_str!("../../owner_runtime.rs");
 const SRC_ADT: &str = include_str!("../owner_adt_runtime.rs");
+const SRC_ADT_RT: &str = include_str!("../../adt_runtime.rs");
 const SRC_F_LEGACY: &str = include_str!("../../../families/legacy.rs");
 const SRC_FR_LEGACY: &str = include_str!("../../../fragments/legacy.proposed.rs");
 const SRC_F_SCALAR: &str = include_str!("../../../families/scalar.rs");
@@ -460,6 +461,11 @@ struct Static {
     loops: Vec<String>,
     mentions_active_slots: bool,
     mentions_active_fields: bool,
+    /// free-call names with no definition in the scanned files
+    unresolved: Vec<String>,
+    /// ADT runtime direct ROM row reads: call sites and tables
+    s_view_rows: usize,
+    view_tables: Vec<String>,
 }
 
 impl Static {
@@ -567,6 +573,10 @@ fn modules() -> Vec<scan::Module> {
             name: "owner_runtime",
             texts: vec![SRC_OWNER],
         },
+        scan::Module {
+            name: "adt_runtime",
+            texts: vec![SRC_ADT_RT],
+        },
     ]
 }
 
@@ -596,6 +606,37 @@ fn fn_body(idx: &scan::Index, module: &str, name: &str) -> String {
         .unwrap_or_else(|| panic!("fn {module}::{name}"))
 }
 
+/// Row reads `view . <table> [..]` or `view . <table> . get(..)` (any
+/// whitespace between tokens) in rule-sliced text; `.len()` is metadata.
+fn view_rom_rows(text: &str) -> (usize, BTreeSet<String>) {
+    let ident = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    let mut rows = 0;
+    let mut tables = BTreeSet::new();
+    for (i, _) in text.match_indices("view") {
+        if text[..i].ends_with(ident) || text[i + 4..].starts_with(ident) {
+            continue;
+        }
+        let rest = text[i + 4..].trim_start();
+        let Some(rest) = rest.strip_prefix('.') else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        let t: String = rest.chars().take_while(|c| ident(*c)).collect();
+        if t.is_empty() {
+            continue;
+        }
+        let after = rest[t.len()..].trim_start();
+        let is_get = after
+            .strip_prefix('.')
+            .is_some_and(|a| a.trim_start().starts_with("get("));
+        if after.starts_with('[') || is_get {
+            rows += 1;
+            tables.insert(t);
+        }
+    }
+    (rows, tables)
+}
+
 fn analyse_static(idx: &scan::Index, r: RuleIdC) -> Static {
     let name = rule_name(&r);
     let mut s = Static::default();
@@ -606,8 +647,14 @@ fn analyse_static(idx: &scan::Index, r: RuleIdC) -> Static {
     }
     let fam = family_of_rule(&r);
     s.family = format!("{fam:?}");
-    let (text, reached) = idx.region(&name, family_entry(fam));
+    let (text, reached, unresolved) = idx.region(&name, family_entry(fam));
     s.reached = reached;
+    s.unresolved = unresolved.into_iter().collect();
+    // The ADT runtime also reads ROM rows through `program_view()` fields
+    // (`view.<table>[..]` or `view.<table>.get(..)`); `.len()` is metadata.
+    let (rows, tables) = view_rom_rows(&text);
+    s.s_view_rows = rows;
+    s.view_tables = tables.into_iter().collect();
     s.alloc_data = scan::sets_field(&text, "alloc_data");
     for v in ["U128", "Bool", "Nil", "Cons", "Leaf", "Branch"] {
         if text.contains(&format!("AllocDataWrite::{v}")) {
@@ -1794,14 +1841,18 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
         "dy_old_read_seen",
         "hash_calls_no_cold",
         "hash_calls_per_cold_read",
+        "st_view_rom_row_sites",
+        "st_view_rom_tables",
     ];
     csv.push_str(&cols.join(","));
     csv.push('\n');
     let mut md = String::new();
-    md.push_str("| rule | 108 | fired | app D/F/E/S (st) | app tot st / dy | frame st | task st | heap read bound st | heap reads dy | old segs 1a dy | segs all 1a dy | ROM reads dy | hash calls st |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+    md.push_str("| rule | 108 | fired | app D/F/E/S (st) | app tot st / dy | frame st | task st | heap read bound st | heap reads dy | old segs 1a dy | segs all 1a dy | ROM reads dy | hash calls st | ADT view ROM st |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
     let mut max_st = [0usize; 8];
     let mut max_dy = Obs::default();
     let mut max_st_108 = [0usize; 8];
+    let mut max_view_rows = 0usize;
+    let mut max_view_tables = 0usize;
     for (r, in108) in &uni.rules {
         let n = rule_name(r);
         let s = &stat[&n];
@@ -1887,6 +1938,10 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
         line.push(b(o.old_seen).into());
         line.push(hash.to_string());
         line.push("1+TOP+3".into());
+        line.push(s.s_view_rows.to_string());
+        line.push(s.view_tables.join(" "));
+        max_view_rows = max_view_rows.max(s.s_view_rows);
+        max_view_tables = max_view_tables.max(s.view_tables.len());
         csv.push_str(&line.join(","));
         csv.push('\n');
         let dash = |x: usize| {
@@ -1898,7 +1953,7 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
         };
         let _ = writeln!(
             md,
-            "| {n} | {} | {} | {}/{}/{}/{} | {tot} / {} | {}{}{} | {}{}{} | {}{} | {} | {} | {} | {} | {hash} |",
+            "| {n} | {} | {} | {}/{}/{}/{} | {tot} / {} | {}{}{} | {}{}{} | {}{} | {} | {} | {} | {} | {hash} | {} |",
             if *in108 { "y" } else { "n" },
             o.fired,
             a[0],
@@ -1922,6 +1977,11 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
             dash(o.seg_old_1),
             dash(o.seg_all_1),
             dash(o.rd_rom),
+            if s.view_tables.is_empty() {
+                String::new()
+            } else {
+                format!("{} in {}", s.s_view_rows, s.view_tables.join(" "))
+            },
         );
     }
     let fired_108 = uni
@@ -1972,6 +2032,8 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
             "dynamic_above_static": checks.static_violations,
         },
         "runs": runs.iter().map(|r| serde_json::json!({"program": r.name, "status": r.status, "steps": r.steps, "outcome": r.outcome})).collect::<Vec<_>>(),
+        "static_view_rom": {"row_sites_max": max_view_rows, "tables_max": max_view_tables},
+        "unresolved_calls": stat.iter().map(|(k, s)| (k.clone(), serde_json::json!(s.unresolved))).collect::<BTreeMap<_, _>>(),
         "reached": stat.iter().map(|(k, s)| (k.clone(), serde_json::json!(s.reached))).collect::<BTreeMap<_, _>>(),
     });
     if let Ok(dir) = std::env::var("MAXIMA_OUT") {
