@@ -20,3 +20,24 @@ Sources: `research/sherlock-runlength-consensus-20261111/CONSENSUS.md` (5 lanes,
 ## Other overnight actions
 
 - O-1. Branch `land-3x` merged into main with a true merge (`e39bc7af8`) so the receipt's bound commit `2947727d6` stays valid. No task ticked: U023a, U023b and U023c are still `unimplemented.sh`, and the task 3.4 receipts and inventory flips are not written.
+
+## From experiment C1 (dense memory backend, `EXPERIMENTS.md`)
+
+- E-1. **TOP = 63 is cheap.** Measured +280 rows per flush and +140 per old-memory read, no new column, no change of k in any leaf size (run `20261111T071045Z-c1-rows`). This supports R-4 (TOP >= 63); still OWNER to confirm.
+- E-2. **Domain tags in the sponge capacity, not the first input.** Same separation at 0 extra permutations; first-input tags would cost about 2x on every tree node (ESTIMATE). Accepted for the prototype; the C1 Quint lane checks equivalence (question 8).
+- E-3. **Arenas lean to one arena.** One arena with one flush unit: 12,281 backend rows; four arenas: 49,172 (measured). At S = 16 four arenas leave room for only 2 old-memory reads (or 6 with shared flush units, not built). Final choice in C4 after the non-interleaving check.
+
+## From the lookup-cache study and its audit
+
+Sources: `research/sherlock-lookup-cache-20261111/CONSENSUS.md` (5 lanes, Gemini 4 Carbon High) and `AUDIT.md` (Fable 5.2: adopt with changes; 3 blocker, 11 major, 9 minor).
+
+- L-1. **Memory, PROG and type tables stay on the dense tail-buffered Merkle design (R-3), plus a small number of 8-record cache lines per leaf opened against the pre-state root and served on the bus (Profile A).** One-pass, Poseidon boundary digests. Run-wide write-once LogUp does not replace it. The ten block-cache rules of AUDIT section 5.1 become MEM / PAGE contract items.
+- L-2. **The scalar `cold_read` stays.** An isolated old read costs less with the scalar walk (4,761 rows) than with a line (6,020, ESTIMATE). Cache-line counts per leaf (`K_page`, `K_rom`) are not frozen until the per-rule maximum table (run-length AUDIT finding 6, lookup AUDIT blocker 1) is measured; a step must never need more lines than a leaf has (GP-1).
+- L-3. **Value digest: the study's single precomputed sponge prefix is rejected.** The sponge puts the input length in its initial state, so it needs one constant per preimage length (AUDIT blocker 2). The VALUE DIGEST module computes exactly `sherlock-value/1`; no 2-input bus re-hash.
+- L-4. **The landed C1 interface is the MEM interface** (`membackend.rs`, `dense.rs`, key `8 addr + kind`). The study's section 3 interface (key `(arena << 64) | addr`, `WindowBoundary`, `FlushPort`, `StateTok`) is not adopted (AUDIT blocker 3).
+- L-5. **Profile B (ZmLogUp + Horner) is benchmark-only behind the seam; not built before milestone M4.** It needs no fork, but it changes the leaf statement, node, seal and continuation and replaces the `digest_inj` premise, so it is not a two-trait swap.
+- L-6. **Tagged DEC + RANGE lookup: the three-column form** (sound without conditions; about 22,600 node rows saved, ESTIMATE). The two-column form needs a bound on `ctrl`/`syn` and is not adopted.
+- L-7. **ALU keeps the overflow flag in its tuple**, so overflow (`Rejected(10)`) stays provable. Ops are only the machine's ops (no division, signed or bitwise ops that lane C says the machine lacks).
+- L-8. **Row 6 promotion (4 bus requests per step) needs a new layout plan** (rows 5 and 7 read its lane copies); not adopted until planned and measured.
+- L-9. **Arenas (R-6, E-3): one arena.** Four arenas with 4 + 2 cache lines do not fit `k_leaf <= 16` (about 67,500 to 85,100 rows, ESTIMATE); one arena is about 50,700 to 51,800 (ESTIMATE). The non-interleaving check is still required before the spec freezes this.
+- L-10. **Items the study invented are dropped**: `SRC-025`, `Value::Tuple/Record/Array`, `specs/quint/`. The 2-leaf `RunLift` is unbuilt and not part of the design until measured.

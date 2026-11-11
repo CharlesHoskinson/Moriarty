@@ -2,8 +2,8 @@
 title: "Chip leaf"
 type: concept
 tags: [chip-leaf, design]
-sources: [design-2-7-chip-leaf, chip-spike-experiments, quint-chipleaf-final, quint-chipleaf-hash, quint-chipleaf-pairrow-m3, c6-outcome-ledger9-review, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft]
-last_updated: 2026-11-10
+sources: [design-2-7-chip-leaf, chip-spike-experiments, quint-chipleaf-final, quint-chipleaf-hash, quint-chipleaf-pairrow-m3, c6-outcome-ledger9-review, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft, lookup-cache-consensus, lookup-cache-audit]
+last_updated: 2026-11-11
 ---
 
 # Chip leaf
@@ -41,11 +41,13 @@ All figures below are `cost_model` rows over keys made on an unsafe SRS; no proo
 - SI-12 under C = 8 blocks D3 adoption for the C6 machine (D-1, [[dissent-c6-section]]).
 - The D3 run ceiling against GP-1 ([[RunLengthCeiling]]). Lead decision R-3, pending owner review, replaces D3 with dense tail-buffered memory and hash-chain stacks ([[DenseTailMemory]], [[final-design-decisions]]).
 - The Astra area 1 draft proposes the processor modules CORE, DEC, ALU with RANGE, HASH and BUS ([[astra-area1-processor-draft]]); a draft for a later merge.
-- A lookup cache study is pending ([[lookup-cache-brief]]).
+- The lookup cache study is done ([[lookup-cache-brief]], [[lookup-cache-consensus]], audit adopt with changes [[lookup-cache-audit]]). Lead decisions L-1 to L-10, pending owner review ([[final-design-decisions]]): a block cache of 8-record PAGE and ROM lines on dense memory ([[BlockCache]]); scalar `cold_read` kept and line counts not frozen until the per-rule maximum table exists (L-2); the landed C1 interface (L-4); the three-column tagged DEC + RANGE lookup, about 22,600 node rows saved, ESTIMATE (L-6); the ALU keeps its overflow flag (L-7); row 6 promotion needs a layout plan (L-8); one arena (L-9); Profile B benchmark-only (L-5); the 2-leaf `RunLift` out of the design until measured (L-10).
 
 ## Contradictions
 
 - [[design-2-7-chip-leaf]] still marks a Quint lane over the packed-selector circuit as OPEN, while [[quint-chipleaf-final]] reports it done.
 - The D3 memory and the D7 cached frame protocol of the mechanism above are what the run-length study replaces. The audit notes that the new hash-chain stacks are not D7 (D7 links frames by an address in memory, and only that form is modelled) and that new chip models are a condition of adoption ([[runlength-consensus-audit]] finding 8, [[runlength-consensus]]).
 
-See also [[C6OutcomeOnlyPublication]], [[MoriChip]], [[IvcNode]], [[RunDecider]].
+- The lookup consensus says row 6 of `Arch::Narrow` is a passive copy replica and its promotion costs "+0 node rows"; the audit says rows 5 and 7 read its lane copies and a new layout is needed (finding 11, [[lookup-cache-audit]]).
+
+See also [[BlockCache]], [[C6OutcomeOnlyPublication]], [[MoriChip]], [[IvcNode]], [[RunDecider]].

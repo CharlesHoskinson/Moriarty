@@ -1,19 +1,19 @@
 ---
-title: "Pending study: lookup cache for the chip leaf"
+title: "Brief: lookup cache study for the chip leaf"
 type: source
-tags: [pending, chip-leaf, lookup]
-sources: [lookup-cache-brief]
-last_updated: 2026-11-10
+tags: [brief, chip-leaf, lookup]
+sources: [lookup-cache-brief, lookup-cache-consensus, lookup-cache-audit, final-design-decisions]
+last_updated: 2026-11-11
 date: 2026-11-11
 source_file: ~/Projects/Moriarty/research/sherlock-lookup-cache-20261111/BRIEF.md
 source_url: local
 ---
 
-# Pending study: lookup cache for the chip leaf
+# Brief: lookup cache study for the chip leaf
 
 ## Summary
 
-**Status: pending.** Run `sherlock-lookup-cache-20261111` is running. Only its brief is ingested; no lane output and no result is ingested. Five Gemini 4 Carbon High lanes explore a lookup "cache" in the chip leaf, then a consensus, then a Fable 5.2 audit. Its folder is `research/sherlock-lookup-cache-20261111/`. See [[ChipLeaf]].
+**Status: done.** Run `sherlock-lookup-cache-20261111` finished: five Gemini 4 Carbon High lanes, a consensus ([[lookup-cache-consensus]]) and a Fable 5.2 audit, adopt with changes ([[lookup-cache-audit]]). The lead's decisions on it are L-1 to L-10, pending owner review ([[final-design-decisions]]); the mechanism is on [[BlockCache]]. This page records the brief. Its folder is `research/sherlock-lookup-cache-20261111/`. See [[ChipLeaf]].
 
 ## Key Claims
 
@@ -31,7 +31,8 @@ Questions the study asks: Q1 what the cache should hold (memory read cache, offl
 
 - [[ChipLeaf]], [[MoriChip]], [[C6OutcomeOnlyPublication]].
 - Sister study: [[runlength-consensus-brief]].
+- Outcome: [[lookup-cache-consensus]], [[lookup-cache-audit]], [[BlockCache]].
 
 ## Contradictions
 
-None recorded.
+- The brief's Q5 asks for one design to prototype first; the consensus orders five measurements P1 to P5, and the audit says not to put P5 (Profile B) before milestone M4 ([[lookup-cache-consensus]], [[lookup-cache-audit]]).

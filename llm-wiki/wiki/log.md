@@ -138,3 +138,26 @@
 - Three mutants now fail only at their named gate; MEM decomposes both lengths itself; new positive test at the last segment with two flush units (run 20261111T071031Z-c1-test, 30 passed).
 - Rows unchanged (run 20261111T071045Z-c1-rows); four-arena leaf rows estimated in `c1-dense-memory-experiment`.
 - Next: Gemini Quint lane over the C1 gates; decide the arena count in C4.
+
+## [2026-11-11 02:46] ingest | Lookup-cache consensus (five Gemini 4 Carbon High lanes)
+- Ingested `lookup-cache-consensus`: Profile A dense Merkle memory plus 8-record PAGE and ROM cache lines and a Poseidon boundary; Profile B ZmLogUp + Horner kept behind the interface; all study figures ESTIMATE.
+- Result: new concept page BlockCache; `lookup-cache-brief` no longer pending; ChipLeaf, DenseTailMemory and ValueDigest updated.
+- Files: wiki/sources/lookup-cache-consensus.md, lookup-cache-brief.md, wiki/concepts/BlockCache.md.
+- Next: ingest the Fable 5.2 audit.
+
+## [2026-11-11 02:46] ingest | Fable 5.2 audit of the lookup-cache consensus
+- Ingested `lookup-cache-audit`: adopt with changes; 3 blocker (no per-step cache bound, value digest prefix, section 3 interface and non-injective key), 11 major, 9 minor.
+- Result: contradictions flagged on both study pages, BlockCache and the C1 page (cold-read label, row figures, four-arena fit).
+- Files: wiki/sources/lookup-cache-audit.md, wiki/sources/c1-dense-memory-experiment.md.
+- Next: ingest the new lead decisions.
+
+## [2026-11-11 02:46] ingest | Lead decisions E-1 to E-3 and L-1 to L-10 (pending owner review)
+- Updated `final-design-decisions` with the C1 decisions E-1 to E-3 and the lookup-cache decisions L-1 to L-10; lead decisions while the owner is asleep, not owner rulings.
+- Result: L-9 (one arena) flagged against R-6, E-3, both audits and the consensus; L-2 (scalar cold read kept, line counts not frozen) against consensus P2.
+- Files: wiki/sources/final-design-decisions.md, OpenOwnerQuestions (L-2, L-9 added; R-4, R-5 open), WorkstreamStatus, overview, raw/SOURCES.tsv.
+- Next: lint.
+
+## [2026-11-11 02:46] lint | Wiki lint after the lookup-cache and decisions ingests
+- Ran lint.py --write-index, then lint.py: 39 pages, 26 SOURCES.tsv rows.
+- Result: PASS, no failures, no orphans.
+- Next: the lead reviews llm-wiki/; owner review of L-2, L-9, R-4 and R-5.

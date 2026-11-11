@@ -7,10 +7,10 @@ The lead (Claude, the loop) drives this file. Tick a step only on evidence (file
 ## Phase A: studies and drafts
 - [x] A1 Run-length study `CONSENSUS.md` written (agy pane w1:pC).  Evidence: CONSENSUS.md 11,684 words, written 2026-11-11.
 - [x] A2 Fable 5.2 audit of A1 -> `research/sherlock-runlength-consensus-20261111/AUDIT.md`.  Evidence: AUDIT.md (adopt with changes; 3 blocker, 10 major, 7 minor); decisions R-1..R-10 in DECISIONS.md.
-- [ ] A3 Lookup-cache study rerun in pane w1:pC (keep lanes/B/round1.md; lanes A, C, D, E round 1; round 2 with LEAD-NOTE-ROUND2.md; CONSENSUS.md).
-- [ ] A4 Fable 5.2 audit of A3 -> `research/sherlock-lookup-cache-20261111/AUDIT.md`.
+- [x] A3 Lookup-cache study rerun in pane w1:pC (keep lanes/B/round1.md; lanes A, C, D, E round 1; round 2 with LEAD-NOTE-ROUND2.md; CONSENSUS.md).  Evidence: CONSENSUS.md 2,895 words; all 10 lane files (A-E round1, round2); Profile A (dense Merkle + 8-record PAGE/ROM block cache + Poseidon boundary) recommended 5/5, Profile B (ZmLogUp + Horner) kept behind the interfaces.
+- [x] A4 Fable 5.2 audit of A3 -> `research/sherlock-lookup-cache-20261111/AUDIT.md`.  Evidence: AUDIT.md (adopt with changes; 3 blocker, 11 major, 9 minor); decisions L-1..L-10.
 - [x] A5 Three Astra drafts `drafts/astra-area{1,2,3}.md` (units astra-area1..3).  Evidence: units exited 0 at 05:38, 05:40, 05:43Z; 7467/7137/8182 words.
-- [ ] A6 Three Gemini drafts `drafts/gemini-area{1,2,3}.md` (pane w1:pC subagents).
+- [x] A6 Three Gemini drafts `drafts/gemini-area{1,2,3}.md` (pane w1:pC subagents).  Evidence: gemini-area1.md 7,333, gemini-area2.md 11,299, gemini-area3.md 12,240 words (02:44-02:45).
 
 ## Phase B: merged architecture
 - [ ] B1 Fable 5.2 merge of A1-A6 -> `ARCHITECTURE.md` (modules per MODULARITY.md; Lean obligations and the OpenSpec outline per ARCH-BRIEF.md addendum); dissent kept; decisions in `DECISIONS.md`.
@@ -18,9 +18,9 @@ The lead (Claude, the loop) drives this file. Tick a step only on evidence (file
 - [ ] B3 Commit and push (docs commit), wiki ingest.
 
 ## Phase C: experiments that decide the open choices
-- [ ] C1 Prototype both memory backends behind one MEM interface in `crates/mori-chip` (dense tail-buffered Merkle; write-once LogUp if B1 keeps it as a candidate): cost-model leaf rows at S = 16, 64, 128 and node rows; MockProver positive and negative tests. Through `scripts/doctorwatson heavy`, T0 before commit.
-- [ ] C2 Quint models for the chosen memory and boundary designs, run by a Gemini Quint lane (argon-run) and re-run by the lead.
-- [ ] C3 Lean: statements (and proofs where they close in the night) for the partition-independence and modular-composition obligations in `clean/fork/Clean/Sherlock/`; `lake build` green with no new `sorry` outside a marked obligations file.
+- [ ] C1 Prototype both memory backends behind one MEM interface in `crates/mori-chip` (dense tail-buffered Merkle; write-once LogUp if B1 keeps it as a candidate): cost-model leaf rows at S = 16, 64, 128 and node rows; MockProver positive and negative tests. Through `scripts/doctorwatson heavy`, T0 before commit.  Progress: dense backend done (9973d633b on main): MemBackend trait, 9 positive tests, 21 mutants refused; measured flush unit 8,541/8,821 rows and old-memory read 4,621/4,761 at TOP 61/63; leaf rows ESTIMATE 14,942 (S=16), 36,543 (S=64), 58,565 (S=128). Open: LogUp backend, stacks, RfLeaf wiring, node rows measured.
+- [ ] C2 Quint models for the chosen memory and boundary designs, run by a Gemini Quint lane (argon-run) and re-run by the lead.  Progress: dense-memory lane running (unit quint-c1-dense, folder ~/.cache/gemini-lanes/c1-dense).
+- [x] C3 Lean: statements (and proofs where they close in the night) for the partition-independence and modular-composition obligations in `clean/fork/Clean/Sherlock/`; `lake build` green with no new `sorry` outside a marked obligations file.  Evidence: d6304b4f0 on main; 52 theorems proved (PartitionIndependence.lean 41, ModularComposition.lean 11), no sorry, no new axiom; lake build SherlockSpec green (heavy c3-lake); F21 green at 90; EXPERIMENTS-C3.md. Open: leaf_sound not derived from the module theorem; 8-appends-per-leaf limit; len < 2^64; LogUp Schwartz-Zippel.
 - [ ] C4 Record results in `EXPERIMENTS.md`; update `DECISIONS.md` (memory backend, boundary commitment, S).
 
 ## Phase D: implementation spec (OpenSpec 1.17.0)

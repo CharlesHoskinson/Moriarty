@@ -2,7 +2,7 @@
 title: "Experiment C1: dense tail-buffered memory backend (measured)"
 type: source
 tags: [memory, dense-tail, experiment, measured, chip-leaf, run-length]
-sources: [c1-dense-memory-experiment, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft]
+sources: [c1-dense-memory-experiment, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, lookup-cache-consensus, lookup-cache-audit]
 last_updated: 2026-11-11
 date: 2026-11-11
 source_file: ~/Projects/Moriarty/research/sherlock-final-design-20261111/EXPERIMENTS.md
@@ -40,3 +40,4 @@ First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffe
 ## Contradictions
 
 - None with the audit. The consensus's 4,480-row cold read omits the record hash (measured 4,621, as [[astra-area2-memory-draft]] said).
+- [[lookup-cache-consensus]] labels the cold-read rows 4,621 to 4,761 ESTIMATE and does not cite this experiment; this page and [[lookup-cache-audit]] label them measured. The audit recomposes the lookup study's leaf figures from these parts.

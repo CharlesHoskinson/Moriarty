@@ -2,8 +2,8 @@
 title: "Open owner questions"
 type: synthesis
 tags: [open-questions]
-sources: [dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft]
-last_updated: 2026-11-10
+sources: [dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, lookup-cache-consensus, lookup-cache-audit, c1-dense-memory-experiment]
+last_updated: 2026-11-11
 ---
 
 # Open owner questions
@@ -20,7 +20,9 @@ Questions the owner must settle. Keep each until a source settles it. See [[Work
 | 6 | Init mechanism for an input under the new digest | Open | [[ValueDigest]], [[c6-outcome-ledger9-review]] |
 | R-4 | Tree depth: TOP >= 63, or accept a memory bound below the step bound | Open, OWNER (lead recommends TOP >= 63) | [[DenseTailMemory]], [[final-design-decisions]] |
 | R-5 | Claim counter: no `n_claims < 2^64` bound in GP-001 | Open, OWNER (lead recommends distinct count or no count) | [[GeneralPurposeRecursion]], [[final-design-decisions]] |
-| R-6 | Arenas: one tagged arena or four | Open; experiment C1 measures both, decide in C4 | [[DenseTailMemory]], [[final-design-decisions]] |
+| R-6 | Arenas: one tagged arena or four | Lead decision L-9 (one arena), pending owner review; non-interleaving check still required | [[DenseTailMemory]], [[final-design-decisions]] |
+| L-2 | Cache-line counts per leaf (`K_page`, `K_rom`) and keeping the scalar `cold_read` | Lead decision, pending owner review; counts not frozen until the per-rule maximum table is measured | [[BlockCache]], [[final-design-decisions]] |
+| L-9 | Arena decision: one arena | Lead decision, pending owner review; non-interleaving check still required before the spec freezes it | [[DenseTailMemory]], [[final-design-decisions]] |
 
 ## 1. The D3 run ceiling against GP-1
 
@@ -59,4 +61,12 @@ With occurrence counts summed through joins, a shared DAG reaches 2^64 at depth 
 
 ## R-6. Arenas
 
-One arena (3 lanes) against four arenas (2 lanes). The one-arena variant depends on a 108-rule non-interleaving claim that is a code reading. Lead: the MEM interface hides the arena count; experiment C1 measures both and checks the claim mechanically; decide in C4. Not marked OWNER in the decision record ([[final-design-decisions]], [[DenseTailMemory]]).
+One arena (3 lanes) against four arenas (2 lanes) in the run-length study. The one-arena variant depends on a 108-rule non-interleaving claim that is a code reading. Lead R-6: the MEM interface hides the arena count; experiment C1 measures both and checks the claim mechanically; decide in C4. C1 measured 12,281 backend rows for one arena against 49,172 for four (E-3). The lead has since taken L-9 (one arena); see below. Not marked OWNER in the decision record ([[final-design-decisions]], [[DenseTailMemory]]).
+
+## L-2. Cache-line count
+
+The lookup consensus froze `K_page = 4` and `K_rom = 2` lines per leaf at S = 16 and replaced the scalar cold read ([[lookup-cache-consensus]]). The audit (blocker 1) says a step that needs more lines than the leaf has is unprovable, which narrows GP-1, and asks for a per-rule table (bus requests, distinct old segments, distinct ROM blocks per table, appends, stack spills) before any count is frozen ([[lookup-cache-audit]]). Lead L-2: the scalar `cold_read` stays; an isolated old read costs 4,761 rows with the scalar walk against 6,020 with a line (ESTIMATE); `K_page` and `K_rom` are not frozen until the table is measured. A lead decision pending owner review, not marked OWNER in the decision record ([[final-design-decisions]], [[BlockCache]]).
+
+## L-9. Arena decision
+
+Lead L-9: one arena. Four arenas with 4 + 2 cache lines do not fit `k_leaf <= 16` (about 67,500 to 85,100 rows, ESTIMATE); one arena is about 50,700 to 51,800 (ESTIMATE). The non-interleaving check is still required before the spec freezes this ([[final-design-decisions]]). Against it: the lookup audit keeps the arena count open until C4 (finding 8, item 28), the run-length audit would make four arenas the default meanwhile, and the lookup consensus defaults to four ([[lookup-cache-audit]], [[runlength-consensus-audit]], [[lookup-cache-consensus]]). A lead decision pending owner review, not marked OWNER in the decision record.

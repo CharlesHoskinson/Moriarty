@@ -7,7 +7,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (21)
+## Sources (23)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
 - [Draft: area 1 processor modules (Astra)](sources/astra-area1-processor-draft.md): Draft, not adopted.
@@ -23,7 +23,9 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [General-purpose recursion definition (GP-1 to GP-4)](sources/general-purpose-definition.md): The owner's definition of the target for the Sherlock recursion, recorded on 2026-11-10.
 - [GP architecture study (sherlock-gp-architecture-20261110)](sources/gp-architecture.md): Brief ingest of section 1 only (the recommended architecture); sections 2 to 6 (options, dissent, migration, experiments, proposed text) are not summarised here.
 - [land-3x merge: dispatch partition and U023c receipt](sources/land-3x-merge.md): Main commit `e39bc7af8` (2026-11-10 23:08 local) merges branch `land-3x`: the dispatch partition, the dispatch receipt...
-- [Pending study: lookup cache for the chip leaf](sources/lookup-cache-brief.md): Status: pending.
+- [Audit of the lookup cache consensus (Fable 5.2)](sources/lookup-cache-audit.md): Read-only audit (no build, test, proof or model run) of lookup-cache-consensus at checkout `9973d633b`, on the final file of 84,457 bytes.
+- [Brief: lookup cache study for the chip leaf](sources/lookup-cache-brief.md): Status: done.
+- [Lookup cache consensus (five Gemini 4 Carbon High lanes)](sources/lookup-cache-consensus.md): Round 3 synthesis of run `sherlock-lookup-cache-20261111` over lanes A to E, which answers the brief lookup-cache-brief.
 - [Quint verdict: final chip leaf (packed selectors, RANGE, M3)](sources/quint-chipleaf-final.md): Lead verdict on three Gemini Quint lanes of 2026-11-10 over `crates/mori-chip/src/` at main `f59ef318f`.
 - [Quint verdict: Poseidon-only HASH chip](sources/quint-chipleaf-hash.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for the Poseidon-only HASH chip (`crates/mori-chip/src/poseidon.rs` and its bus use) and constraints D1, D4 and D8 of design...
 - [Quint verdict: layout B pair rows and M3 aligned segments](sources/quint-chipleaf-pairrow-m3.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for layout B pair rows and the M3 aligned-segment memory root (C = 8).
@@ -39,8 +41,9 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [mori-chip crate](entities/MoriChip.md): `crates/mori-chip` holds the chip leaf spike: `rf.rs` (32-word register file and spike rules), `rfcore.rs` (layouts and leaf), `poseidon.rs` (Poseidon-only HASH chip),...
 - [Run decider](entities/RunDecider.md): The terminal proof of a run (`crates/mori-recursion/src/run_decider.rs`).
 
-## Concepts (8)
+## Concepts (9)
 
+- [Block cache: 8-record PAGE and ROM cache lines in the chip leaf](concepts/BlockCache.md): The "processor cache" the owner asked for (lookup-cache-brief).
 - [C6 outcome-only publication](concepts/C6OutcomeOnlyPublication.md): Owner decision, 2026-11-10: "go with publishing only the outcome for C6 after gemini carbon and fable and astra review that".
 - [Chip leaf](concepts/ChipLeaf.md): The proposed universal Sherlock leaf: one hand-written circuit with a CPU core and the chips DEC, PAGE, MEM, ALU with RANGE, and HASH, reached through one lookup bus of tuples...
 - [Continuations (stop and resume of one run)](concepts/Continuations.md): How a long run is proved in pieces, and across proving sessions, under one key set and with one public statement.
@@ -53,4 +56,4 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 ## Syntheses (2)
 
 - [Open owner questions](syntheses/OpenOwnerQuestions.md): Questions the owner must settle.
-- [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-10 23:24 local.
+- [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-11 02:45 local.
