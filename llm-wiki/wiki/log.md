@@ -162,17 +162,17 @@
 - Result: PASS, no failures, no orphans.
 - Next: the lead reviews llm-wiki/; owner review of L-2, L-9, R-4 and R-5.
 
-## [2026-11-11 03:25] qa | C1 Gemini Quint lane final: TOP = 1 gap fixed, six mutant models repaired
-- The TOP = 1 gap (`WALK_LAST` shadowed `WALK_EMPTY`, so `x0 = EMPTY_SEG` was unconstrained) is fixed in commit `f36eb714d` with no new gate or row; new tests `c1_top1_positive` and `c1_gap_top1_empty_seg_forgery` (accepted before, run 20261111T101257Z-c1-top1-prefix; refused after, run 20261111T101433Z-c1-top1-fix); C1-ROWS at TOP = 61 and 63 byte-identical.
-- Six Quint attacks had left derived cells stale (read-port record hash and walk, f = 0 new walks, one row hash); helpers `rederiveRead` and `rederiveNewWalks` fix them; `non_canonical_tail` now drops the mask on both row kinds. Re-run: 30 of 30 lines match, 34 `quint test` passing, all 23 mutants caught.
-- Files: qa/gemini-quint/c1-dense/verdict.md, dense.qnt, rerun-results.txt; crates/mori-chip/src/dense.rs, dense/tests.rs; source `c1-dense-memory-experiment` updated.
-- Next: carry conditions C1 to C4 into the MEM and CORE contracts; the clippy errors in other mori-chip files are still open.
-
 ## [2026-11-11 03:23] ingest | Per-rule memory maxima and the one-arena non-interleaving check
 - Ingested EXPERIMENTS-MAXIMA.md as `rule-maxima-experiment`: test-only mori-core module, static scan of all 120 enabled rules plus 6,668 corpus steps.
 - Result: at most 3 appends, 4 distinct heap records (all can be old), 1 frame or 1 task op plus rewrite per step; one-arena non-interleaving holds, no counterexample (induction step is a code reading).
 - Files: wiki/sources/rule-maxima-experiment.md, raw/SOURCES.tsv; research/sherlock-final-design-20261111/maxima/.
 - Next: freeze K_page against the bound of 4 in C4; fire the 18 unfired rules from raw images.
+
+## [2026-11-11 03:25] qa | C1 Gemini Quint lane final: TOP = 1 gap fixed, six mutant models repaired
+- The TOP = 1 gap (`WALK_LAST` shadowed `WALK_EMPTY`, so `x0 = EMPTY_SEG` was unconstrained) is fixed in commit `f36eb714d` with no new gate or row; new tests `c1_top1_positive` and `c1_gap_top1_empty_seg_forgery` (accepted before, run 20261111T101257Z-c1-top1-prefix; refused after, run 20261111T101433Z-c1-top1-fix); C1-ROWS at TOP = 61 and 63 byte-identical.
+- Six Quint attacks had left derived cells stale (read-port record hash and walk, f = 0 new walks, one row hash); helpers `rederiveRead` and `rederiveNewWalks` fix them; `non_canonical_tail` now drops the mask on both row kinds. Re-run: 30 of 30 lines match, 34 `quint test` passing, all 23 mutants caught.
+- Files: qa/gemini-quint/c1-dense/verdict.md, dense.qnt, rerun-results.txt; crates/mori-chip/src/dense.rs, dense/tests.rs; source `c1-dense-memory-experiment` updated.
+- Next: carry conditions C1 to C4 into the MEM and CORE contracts; the clippy errors in other mori-chip files are still open.
 
 ## [2026-11-11 03:36] qa | Rule-maxima review fixes: ADT view ROM rows and scan soundness
 - The rule-maxima scan now follows every definition of an ambiguous call, scans `adt_runtime.rs`, asserts each family entry is found and lists unresolved calls; it also counts ADT ROM row reads through `program_view()`.
