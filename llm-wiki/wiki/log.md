@@ -237,3 +237,18 @@
 - README and morning report now state the Lean scope (leaves of at most 8 appends; abstract one-lane bus) and depth 63 as proposed, pending OD-1.
 - ARCHITECTURE.md reconciled with the late Gemini draft text (B2a) and the stale X1/X2 text removed; design.md 2.7 of sherlock-vm-consensus-20261107 carries a dated superseding note.
 - Next: owner review; the OpenSpec change still lacks the harness spec of outline 5.2.3.
+
+## [2026-11-11 11:50] decision | Node and decider at k = 21; recalibration round queued
+- Owner: "expand to K=21 and recalibrate our design and all optimizations under it including the lookups", then examine six optimizations.
+- Brief and run order: ~/Projects/Moriarty/research/sherlock-k21-recalibration-20261111/ (BRIEF.md, QUEUE.md); measurement lane M started.
+- Next: design lanes (Opus, Astra, Gemini) once M, S1, N1b and the 12 elastic chip proposals exist.
+
+## [2026-11-11 12:00] decision | Zero knowledge end to end is a hard requirement
+- Owner: "we need to make this zero knowledge or else its useless".
+- Added as section 4a of the k = 21 brief; concept page [[ZeroKnowledge]]; owner rule 8.
+- Next: the recalibration lanes design and price it.
+
+## [2026-11-11 12:15] ingest | Animation version 2 record, terminology, k = 21 brief
+- Wrote `animation-v2-notes`, `sherlock-terminology`, `k21-recalibration-brief`; new pages [[AnimationV2]] and [[ZeroKnowledge]].
+- Owner: "keep a log in wiki-llm for version 2 of the animation that reflects all the new design and the compact and ZK compatibility".
+- Next: add each landing design round to [[AnimationV2]]; ingest the compact feasibility, cost and elastic chip rounds.

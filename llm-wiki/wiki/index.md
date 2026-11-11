@@ -7,9 +7,10 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (31)
+## Sources (34)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
+- [Sherlock co-processor animation, version 2 notes](sources/animation-v2-notes.md): Working notes for version 2 of the Sherlock animation, started at the owner's request.
 - [Astra audit of the architecture merge (B1)](sources/arch-audit-astra.md): Read-only audit by GPT-6 Astra of the B1 text of `ARCHITECTURE.md` (2,776 lines before revision B2; sherlock-architecture), at baseline commit `b85b00213`.
 - [Response to the architecture audit (B2)](sources/arch-audit-response.md): Night-plan step B2.
 - [Draft: area 1 processor modules (Astra)](sources/astra-area1-processor-draft.md): Draft, not adopted.
@@ -27,6 +28,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Draft: area 3 recursion and system architecture (Gemini)](sources/gemini-area3-recursion-draft.md): Draft, not adopted.
 - [General-purpose recursion definition (GP-1 to GP-4)](sources/general-purpose-definition.md): The owner's definition of the target for the Sherlock recursion, recorded on 2026-11-10.
 - [GP architecture study (sherlock-gp-architecture-20261110)](sources/gp-architecture.md): Brief ingest of section 1 only (the recommended architecture); sections 2 to 6 (options, dissent, migration, experiments, proposed text) are not summarised here.
+- [Recalibration round brief: the Sherlock chip at k = 21](sources/k21-recalibration-brief.md): The owner moved the node and the decider to k = 21 and asked for the design and every optimization, lookups included, to be recalibrated, then for six named optimizations to be...
 - [land-3x merge: dispatch partition and U023c receipt](sources/land-3x-merge.md): Main commit `e39bc7af8` (2026-11-10 23:08 local) merges branch `land-3x`: the dispatch partition, the dispatch receipt...
 - [Audit of the lookup cache consensus (Fable 5.2)](sources/lookup-cache-audit.md): Read-only audit (no build, test, proof or model run) of lookup-cache-consensus at checkout `9973d633b`, on the final file of 84,457 bytes.
 - [Brief: lookup cache study for the chip leaf](sources/lookup-cache-brief.md): Status: done.
@@ -40,6 +42,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Audit of the run-length consensus (Fable 5.2)](sources/runlength-consensus-audit.md): Fable 5.2 audit of runlength-consensus, read-only at `9ffc2fe76` (no build, test, proof or model run).
 - [Brief: run length and memory ceiling consensus](sources/runlength-consensus-brief.md): Brief of run `sherlock-runlength-consensus-20261111`.
 - [Architecture of the modular Sherlock leaf and recursion (revision B2)](sources/sherlock-architecture.md): `ARCHITECTURE.md` of run `sherlock-final-design-20261111`, night-plan step B1, revised as "revision B2" after the Astra audit (arch-audit-astra, arch-audit-response).
+- [Sherlock terminology](sources/sherlock-terminology.md): The category name and the term table for Sherlock, written at the owner's request ("We need some terminology", then "don't lose the terminology").
 
 ## Entities (5)
 
@@ -49,7 +52,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [mori-chip crate](entities/MoriChip.md): `crates/mori-chip` holds the chip leaf spike: `rf.rs` (32-word register file and spike rules), `rfcore.rs` (layouts and leaf), `poseidon.rs` (Poseidon-only HASH chip),...
 - [Run decider](entities/RunDecider.md): The terminal proof of a run (`crates/mori-recursion/src/run_decider.rs`).
 
-## Concepts (10)
+## Concepts (11)
 
 - [Block cache: 8-record PAGE and ROM cache lines in the chip leaf](concepts/BlockCache.md): The "processor cache" the owner asked for (lookup-cache-brief).
 - [C6 outcome-only publication](concepts/C6OutcomeOnlyPublication.md): Owner decision, 2026-11-10: "go with publishing only the outcome for C6 after gemini carbon and fable and astra review that".
@@ -61,8 +64,10 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Owner rules](concepts/OwnerRules.md): Standing rules from the factory charter and the owner's GP definition.
 - [Run-length ceiling (D3 against GP-1)](concepts/RunLengthCeiling.md): The conflict between the proposed chip leaf memory (D3) and the owner's GP-1.
 - [Value digest sherlock-value/1](concepts/ValueDigest.md): The canonical value encoding of the C6 review, used for both `input_d` and `outcome_d` (SRC-022, SRC-021 amended) (c6-outcome-ledger9-review).
+- [Zero knowledge end to end](concepts/ZeroKnowledge.md): Owner ruling, 2026-11-11: "we need to make this zero knowledge or else its useless" (k21-recalibration-brief).
 
-## Syntheses (2)
+## Syntheses (3)
 
+- [Animation version 2: running record](syntheses/AnimationV2.md): Owner, 2026-11-11: "keep a log in wiki-llm for version 2 of the animation that reflects all the new design and the compact and ZK compatibility".
 - [Open owner questions](syntheses/OpenOwnerQuestions.md): Questions the owner must settle.
 - [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-11 04:20 local.

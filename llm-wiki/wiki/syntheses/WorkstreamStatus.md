@@ -2,7 +2,7 @@
 title: "Workstream status"
 type: synthesis
 tags: [status]
-sources: [c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft]
+sources: [animation-v2-notes, k21-recalibration-brief, c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft]
 last_updated: 2026-11-11
 ---
 
@@ -32,3 +32,5 @@ State as of 2026-11-11 04:20 local. The last recorded `origin/main` push is `e39
 ## Open questions
 
 See [[OpenOwnerQuestions]]: the D3 run ceiling (answered, pending owner), R-4 / OD-1 tree depth (TOP = 63 backed by M-2), R-5 / OD-2 claim counter (no count), R-6 and L-9 arenas (one arena, check done), L-2 cache-line counts, OD-17 input admission (the Init mechanism), OD-18 one-arena SRC-021 text, OD-20 GP-2 scope, OD-21 semantic reference, D-1, D-2, D-6 and exhaust kind 7.
+| k = 21 recalibration and zero knowledge | Owner decisions 2026-11-11: node and decider at k = 21; zero knowledge end to end. Brief written, measurement lane running | Design lanes after M, S1, N1b and the elastic chip proposals; merge, verify, apply | [[k21-recalibration-brief]], [[ZeroKnowledge]] |
+| Pipeline animation version 1 and version 2 | Version 1: scenes 1 to 8 built on branch `pipeline-anim`, integration running. Version 2: notes and running record started | Version 1: integration, location amendment, Terra QA, fix round, merge. Version 2: add each landing design round | [[AnimationV2]], [[animation-v2-notes]] |
