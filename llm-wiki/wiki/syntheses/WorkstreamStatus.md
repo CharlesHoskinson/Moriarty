@@ -2,8 +2,8 @@
 title: "Workstream status"
 type: synthesis
 tags: [status]
-sources: [c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft]
-last_updated: 2026-11-10
+sources: [c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment]
+last_updated: 2026-11-11
 ---
 
 # Workstream status
@@ -13,7 +13,7 @@ State as of 2026-11-10 23:24 local. `origin/main` is at `e39bc7af8` (the land-3x
 | Workstream | State | Next step | Pages |
 |---|---|---|---|
 | C6 outcome-only publication | Adopted into the spec, on `main` and pushed (`333cbe05a`, follow-up `d9c4e6edd`) | Contract, template and key cascade; value digest experiment; refinement model | [[C6OutcomeOnlyPublication]], [[c6-outcome-ledger9-review]] |
-| Chip leaf | Proposed, not adopted. Final spike key recorded in design 2.7.11; Quint lanes done. Lead R-3 replaces D3 memory in the design direction | SI-12 under C = 8; PAGE, PROG, TRAP, Init; real rules; a proof; experiment C1 | [[ChipLeaf]], [[design-2-7-chip-leaf]], [[DenseTailMemory]] |
+| Chip leaf | Proposed, not adopted. Final spike key recorded in design 2.7.11; Quint lanes done. Lead R-3 replaces D3 memory in the design direction | SI-12 under C = 8; PAGE, PROG, TRAP, Init; real rules; a proof; C1 dense backend built and measured as a spike chip ([[c1-dense-memory-experiment]]), LogUp backend and leaf wiring open | [[ChipLeaf]], [[design-2-7-chip-leaf]], [[DenseTailMemory]] |
 | Chip page animation | On `main` and pushed (`67e6e6cab`) | none recorded | [[ChipLeaf]] |
 | README Sherlock section | Updated for outcome-only publication and the chip leaf, on `main` and pushed (`150810932`) | none recorded | [[C6OutcomeOnlyPublication]] |
 | E4 leaf cap k=20 | On `main` and pushed (`f8208f582`; runs recorded in `3bf2a740e`). `C6_LEAF_MAX_K = 20` for the C6 digest leaf path only; `MAX_K` stays 19 elsewhere | Task 4.13 genesis prove time | [[e2-e4-experiments]] |

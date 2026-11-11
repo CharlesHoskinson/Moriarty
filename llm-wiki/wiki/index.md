@@ -7,12 +7,13 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (20)
+## Sources (21)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
 - [Draft: area 1 processor modules (Astra)](sources/astra-area1-processor-draft.md): Draft, not adopted.
 - [Draft: area 2 memory and values (Astra)](sources/astra-area2-memory-draft.md): Draft, not adopted.
 - [Draft: area 3 recursion and system architecture (Astra)](sources/astra-area3-recursion-draft.md): Draft, not adopted.
+- [Experiment C1: dense tail-buffered memory backend (measured)](sources/c1-dense-memory-experiment.md): First backend of night-plan step C1.
 - [Review: C6 outcome-only publication and ledger 9 fit](sources/c6-outcome-ledger9-review.md): Run `sherlock-c6-outcome-ledger9-review-20261110`.
 - [Chip spike experiments E0 to E8](sources/chip-spike-experiments.md): Four sessions of run `sherlock-processor-analogy-20261110` (2026-11-10) that sized the proposed chip leaf in `crates/mori-chip`.
 - [Design 2.7: leaf as a chip (proposed, not adopted)](sources/design-2-7-chip-leaf.md): Section 2.7 of the Sherlock VM design proposes the universal leaf as one hand-written circuit: a CPU core plus the chips DEC, PAGE, MEM, ALU with RANGE, and HASH, reached...

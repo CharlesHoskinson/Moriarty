@@ -95,8 +95,18 @@ pub fn round_native(r: usize, s: [F; WIDTH]) -> [F; WIDTH] {
 
 /// The fixed-length sponge on the CPU, in this chip's form.
 pub fn sponge_native(inputs: &[F]) -> F {
+    sponge_native_iv(inputs, F::ZERO)
+}
+
+/// The sponge with a domain constant `iv` added to the capacity element (which
+/// starts at the input length). `iv = 0` is [`sponge_native`]. The capacity is
+/// fixed by the circuit (folded into the absorb row's round constant), so a
+/// domain tag here costs no permutation. Tags are multiples of 2^32 and input
+/// lengths are below 2^32, so distinct `(iv, length)` pairs never share a start
+/// state.
+pub fn sponge_native_iv(inputs: &[F], iv: F) -> F {
     assert!(!inputs.is_empty());
-    let mut st = [F::ZERO, F::ZERO, F::from(inputs.len() as u64)];
+    let mut st = [F::ZERO, F::ZERO, F::from(inputs.len() as u64) + iv];
     for chunk in inputs.chunks(2) {
         for (i, x) in chunk.iter().enumerate() {
             st[i] += x;
@@ -279,6 +289,22 @@ impl PoseidonCfg {
         tamper: &Tamper,
         perm: &mut usize,
     ) -> Result<(AssignedCell<F, F>, usize), Error> {
+        self.sponge_iv(region, offset, inputs, F::ZERO, provide, tamper, perm)
+    }
+
+    /// [`Self::sponge`] with the domain constant `iv` of [`sponge_native_iv`]
+    /// added to the fixed capacity constant of the first absorb row.
+    #[allow(clippy::too_many_arguments)]
+    pub fn sponge_iv(
+        &self,
+        region: &mut Region<'_, F>,
+        offset: usize,
+        inputs: &[HIn],
+        iv: F,
+        provide: bool,
+        tamper: &Tamper,
+        perm: &mut usize,
+    ) -> Result<(AssignedCell<F, F>, usize), Error> {
         let n = inputs.len();
         // A 1-input sponge would leave `in1` of the first absorb row free (the
         // first-absorb gate adds it), so it is not supported.
@@ -286,7 +312,7 @@ impl PoseidonCfg {
         assert!(!provide || n == 2, "a provider row serves 2-input hashes");
         let a = self.bus.cols.a;
         let zero = || Value::known(F::ZERO);
-        let mut st: Value<[F; WIDTH]> = Value::known([F::ZERO, F::ZERO, F::from(n as u64)]);
+        let mut st: Value<[F; WIDTH]> = Value::known([F::ZERO, F::ZERO, F::from(n as u64) + iv]);
         let mut o = offset;
         let mut out_slot = None;
         let mut last = None;
@@ -315,7 +341,7 @@ impl PoseidonCfg {
             sel.enable(region, o)?;
             let mut c0 = rc0();
             if ci == 0 {
-                c0[2] += F::from(n as u64);
+                c0[2] += F::from(n as u64) + iv;
             }
             for i in 0..WIDTH {
                 region.assign_fixed(

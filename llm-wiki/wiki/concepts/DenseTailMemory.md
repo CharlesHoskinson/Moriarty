@@ -2,13 +2,13 @@
 title: "Dense tail-buffered memory (replacing D3)"
 type: concept
 tags: [memory, d3, run-length, chip-leaf, lead-decision]
-sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft, astra-area2-memory-draft, dissent-c6-section, design-2-7-chip-leaf]
-last_updated: 2026-11-10
+sources: [runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area1-processor-draft, astra-area2-memory-draft, dissent-c6-section, design-2-7-chip-leaf, c1-dense-memory-experiment]
+last_updated: 2026-11-11
 ---
 
 # Dense tail-buffered memory (replacing D3)
 
-The memory design direction that replaces D3's padded aligned segments. Status: **lead decision R-3, pending owner review** ([[final-design-decisions]]); not an owner ruling, not built, not measured. The chip leaf itself stays proposed, not adopted ([[ChipLeaf]]).
+The memory design direction that replaces D3's padded aligned segments. Status: **lead decision R-3, pending owner review** ([[final-design-decisions]]); not an owner ruling. The backend is built and measured as a spike chip in experiment C1 ([[c1-dense-memory-experiment]]), not in the leaf. The chip leaf itself stays proposed, not adopted ([[ChipLeaf]]).
 
 ## Why D3 is replaced
 
@@ -37,7 +37,15 @@ From [[runlength-consensus]], with the audit's conditions ([[runlength-consensus
 
 ## Figures
 
-Row and throughput figures in the study are ESTIMATE and not of this design (R-10); experiment C1 measures leaf and node rows ([[final-design-decisions]]). They are not quoted here as results.
+Row and throughput figures in the study are ESTIMATE and not of this design (R-10) ([[final-design-decisions]]). They are not quoted here as results.
+
+Experiment C1 built the dense backend as a spike chip behind a `MemBackend` interface and measured it ([[c1-dense-memory-experiment]]):
+
+- measured: flush unit 8,541 rows at TOP = 61, 8,821 at TOP = 63; cold read 4,621 / 4,761; window slot 203; `persist` 12,137 rows at one flush unit (W = 1), +10,161 per extra unit;
+- measured: TOP = 63 adds 280 rows per flush and 140 per cold read and no column, so the node does not grow with TOP;
+- measured: four arenas with one flush unit each, 49,172 harness rows against 12,281 for one arena;
+- estimated: leaf rows 14,942 / 36,543 / 58,565 at S = 16 / 64 / 128 (W = 1 / 3 / 5) without cold reads, +4,751 per cold read; node about 847,500 rows (+4 fixed columns);
+- not done: the LogUp backend, hash-chain stacks, wiring into the real leaf, the non-interleaving check.
 
 ## Contradictions
 

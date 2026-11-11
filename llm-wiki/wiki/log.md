@@ -127,3 +127,9 @@
 - New `clean/fork/Clean/Sherlock/PartitionIndependence.lean` and `ModularComposition.lean` (with Axioms companions): 52 theorems, no sorry, no axiom, standard axioms only; lake build and F21 green.
 - Tail-buffered memory: every cut of N steps gives `abs (next^[N] s)`; `det` discharged for the physical step (`premises_det`); D3 padding has no deterministic physical step on reachable states (`d3_no_det_run`), per audit finding 10.
 - Results: `research/sherlock-final-design-20261111/EXPERIMENTS-C3.md`. Next: C4 records them; module kits instantiate `Contract`.
+
+## [2026-11-11 00:05] ingest | Experiment C1 dense tail-buffered memory measured
+- MemBackend trait and dense Merkle backend built in crates/mori-chip (membackend.rs, dense.rs); 8 positive tests and 21 named mutants pass MockProver (run 20261111T065515Z-c1-test).
+- Measured at TOP = 61 / 63: flush unit 8,541 / 8,821 rows, cold read 4,621 / 4,761, window slot 203 (run 20261111T065836Z-c1-rows); leaf and node rows estimated.
+- Source `c1-dense-memory-experiment` written; DenseTailMemory updated.
+- Next: LogUp backend, hash-chain stacks, wiring into RfLeaf, Gemini Quint lane over the C1 gates.
