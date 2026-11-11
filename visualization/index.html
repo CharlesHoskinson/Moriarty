@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./src/styles.css" />
+  <link rel="stylesheet" href="./src/leaf/leafChip.css" />
   <script type="importmap">
     {
       "imports": {
@@ -59,10 +60,10 @@
 
       <article class="primer-card">
         <div class="primer-card-top">
-          <span class="primer-index">03 &middot; The 39 silicon floor modules (A080&ndash;A225)</span>
-          <strong class="primer-lead">Every step fires exactly one physical rule module on the chamber floor.</strong>
+          <span class="primer-index">03 &middot; The leaf circuit and the rule floor</span>
+          <strong class="primer-lead">The reference machine defines each step; the leaf circuit proves sixteen at a time.</strong>
         </div>
-        <p>Drop inside the chip via <strong>Inside Hollow Chip</strong> and look down at the chamber floor: those <strong>39 gold-socketed 3D silicon chiplets</strong> are Sherlock&rsquo;s complete transition table (<code>sherlock-k-a/1</code>). On each tick, the single rule governing that step (such as <code>A135 PushFrame</code>, <code>A149 RightOp</code>, or <code>A080 Done</code>) physically rises from its socket and lights its status bar while the prior step&rsquo;s module glows in trail mode.</p>
+        <p>The stage opens on the <strong>leaf circuit</strong> proposed on 2026-11-10: a small CPU core with a 32-word register file, and chips that it reaches only through a lookup bus. Switch to <strong>Reference machine</strong> for the 3D chamber. Its floor holds the 39 rules of <code>sherlock-k-a/1</code>, the meaning that every proof has to match. On each tick, the rule that governs the step (such as <code>A135 PushFrame</code>, <code>A149 RightOp</code> or <code>A080 Done</code>) rises from its socket while the previous step&rsquo;s module keeps a trail glow.</p>
       </article>
 
       <article class="primer-card">
@@ -70,14 +71,14 @@
           <span class="primer-index">04 &middot; Why every single step is counted</span>
           <strong class="primer-lead">Arithmetic alone is not authority &mdash; the path matters.</strong>
         </div>
-        <p>A final answer of <code>10</code> could conceal an unauthorized recipient, an inflated solver fee, or a skipped guard. The <strong>10-sector center dial</strong> shows the active control state, the <strong>39-rule floor</strong> proves which rule justified the transition, and the <strong>outer rim</strong> drains <code>1</code> unit of fuel per charged step so <code>WitnessPlan</code> and <code>ConstraintPlan</code> can lock the entire trace into a Midnight proof.</p>
+        <p>A final answer of <code>10</code> could conceal an unauthorized recipient, an inflated solver fee, or a skipped guard. The <strong>10-sector center dial</strong> shows the active control state, the <strong>39-rule floor</strong> shows which rule of the reference machine justified the transition, and the <strong>outer rim</strong> drains <code>1</code> unit of fuel per charged step so <code>WitnessPlan</code> and <code>ConstraintPlan</code> can lock the entire trace into a Midnight proof.</p>
       </article>
     </section>
 
-    <!-- Pipeline strip: the current Sherlock pipeline, from source to settled root (state as of 2026-10-25) -->
+    <!-- Pipeline strip: the Sherlock pipeline, from source to settled root (stages as of 2026-10-25; leaf circuit as of 2026-11-10) -->
     <section class="pipeline-strip" id="pipelineStrip" aria-label="Sherlock pipeline, current state">
       <style>
-        .pipeline-strip{max-width:1400px;margin:14px auto;padding:14px 16px;border:1px solid rgba(120,100,70,.25);border-radius:14px;background:#fffdf8}
+        .pipeline-strip{box-sizing:border-box;width:100%;max-width:1400px;margin:14px auto;padding:14px 16px;border:1px solid rgba(120,100,70,.25);border-radius:14px;background:#fffdf8}
         .pipeline-strip h2{margin:0 0 4px;font-size:15px;letter-spacing:.02em}
         .pipeline-strip .pl-sub{margin:0 0 10px;font-size:12.5px;opacity:.8}
         .pl-track{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;list-style:none;margin:0;counter-reset:pl}
@@ -94,16 +95,17 @@
         @media (prefers-reduced-motion:reduce){.pl-stage{transition:none}}
       </style>
       <h2>The pipeline as built</h2>
-      <p class="pl-sub">One program travels left to right. The lit stage is a demo pointer that steps along; the tags show where each stage stands today.</p>
+      <p class="pl-sub">One program travels left to right. The lit stage is a demo pointer that steps along; the tags show where each stage stood on 2026-10-25, and the leaf circuit where it stood on 2026-11-10.</p>
       <ol class="pl-track" id="plTrack">
         <li class="pl-stage pl-done"><b>1 &middot; Source</b><small>Draft text parsed and typed into a ProgramImage (U001&ndash;U012).</small><span class="pl-tag">LANDED</span></li>
         <li class="pl-stage pl-done"><b>2 &middot; 39-rule machine</b><small>One StepRecord per step; profile /1 unchanged.</small><span class="pl-tag">LANDED</span></li>
         <li class="pl-stage pl-part"><b>3 &middot; Chunks &amp; Waiting</b><small>Technical cuts done; profile /2 Await, Waiting and resume on the reference machine (U014, U015).</small><span class="pl-tag">PARTIAL</span></li>
         <li class="pl-stage pl-part"><b>4 &middot; Finance</b><small>Core/2 await, commit and resume rules; acceptance U017&ndash;U020 pending.</small><span class="pl-tag">PARTIAL</span></li>
         <li class="pl-stage pl-part"><b>5 &middot; Native C6 + Clean</b><small>Dispatch owner and fragments; Lean/Clean stage package (U023, U026).</small><span class="pl-tag">PARTIAL</span></li>
-        <li class="pl-stage pl-done"><b>6 &middot; Recursive proof</b><small>A102 and A80 children, k20 parent, decider D, five rejections refused.</small><span class="pl-tag">A 10/10</span></li>
-        <li class="pl-stage pl-part"><b>7 &middot; Rollup batch</b><small>16-transaction batch leaf, parent, decider; prefixes and report open (B 7/9).</small><span class="pl-tag">PARTIAL</span></li>
-        <li class="pl-stage pl-done"><b>8 &middot; Settled root</b><small>Accept/settle anchor on stagenet; ledger 9 unchanged.</small><span class="pl-tag">LANDED</span></li>
+        <li class="pl-stage pl-part"><b>6 &middot; Leaf circuit</b><small>Proposed 2026-11-10: a CPU core and chips on a lookup bus. Spike leaf 6,511 rows (k13) for 16 steps; node 823,466, decider 929,166 (k20).</small><span class="pl-tag">SPIKE</span></li>
+        <li class="pl-stage pl-done"><b>7 &middot; Recursive proof</b><small>A102 and A80 children, k20 parent, decider D, five rejections refused.</small><span class="pl-tag">A 10/10</span></li>
+        <li class="pl-stage pl-part"><b>8 &middot; Rollup batch</b><small>16-transaction batch leaf, parent, decider; prefixes and report open (B 7/9).</small><span class="pl-tag">PARTIAL</span></li>
+        <li class="pl-stage pl-done"><b>9 &middot; Settled root</b><small>Accept/settle anchor on stagenet; ledger 9 unchanged.</small><span class="pl-tag">LANDED</span></li>
       </ol>
       <p class="pl-wait">A Waiting checkpoint is an ordinary root: a batch that ends in a wait settles like any other, and the resume observation is disclosed with the call that settles it.</p>
       <script>
@@ -173,6 +175,30 @@
         <div class="stage-preset-strip" id="stagePresetStrip" role="group" aria-label="Quick preset switcher"></div>
 
         <div class="stage-viewport-card">
+          <div class="stage-view-bar" role="tablist" aria-label="Stage view">
+            <button type="button" role="tab" id="stageTabLeaf" data-stage-view="leaf" aria-controls="leafChipView" aria-selected="true">Leaf circuit</button>
+            <button type="button" role="tab" id="stageTabMachine" data-stage-view="machine" aria-selected="false" tabindex="-1">Reference machine</button>
+          </div>
+
+          <!-- Leaf circuit: the chip leaf of design 2.7 (proposed 2026-11-10), animated over the spike trace -->
+          <div class="leaf-view" id="leafChipView" role="tabpanel" aria-labelledby="stageTabLeaf">
+            <div class="leaf-head">
+              <h2>One leaf circuit, sixteen steps</h2>
+              <div class="leaf-controls" role="group" aria-label="Leaf animation controls">
+                <button type="button" data-leaf-play aria-pressed="true">Pause</button>
+                <button type="button" data-leaf-step>Step</button>
+                <button type="button" data-leaf-end>Leaf end</button>
+                <button type="button" data-leaf-restart>Restart</button>
+              </div>
+            </div>
+            <p class="leaf-status">The leaf proposed on 2026-11-10 (design &sect;2.7), run on the spike&rsquo;s six stand-in rules. PAGE, PROG, TRAP and Init are not built yet; the one-hot leaf of &sect;2.2 stands until this design is adopted.</p>
+            <div class="leaf-svg-host" data-leaf-svg></div>
+            <div class="leaf-caption" data-leaf-caption aria-live="off">
+              <strong data-leaf-cap-title>Slot 1 of 16 &middot; decode</strong>
+              <p data-leaf-cap-text>The core reads its control tag and looks it up in DEC, a fixed table in the key.</p>
+            </div>
+          </div>
+
           <div class="canvas-holder">
             <canvas id="sherlockCanvas"></canvas>
           </div>
@@ -192,7 +218,7 @@
               <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchBoreUpBtn" title="Rise toward 6 Rings" aria-label="Rise toward 6 Rings">
                 &uarr; Rings
               </button>
-              <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchBoreDownBtn" title="Descend toward 39-Rule Floor" aria-label="Descend toward 39-Rule Floor">
+              <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchBoreDownBtn" title="Descend toward the rule floor" aria-label="Descend toward the rule floor">
                 &darr; Floor
               </button>
             </div>
@@ -247,7 +273,7 @@
             <button type="button" data-preset="overview" class="active" aria-pressed="true">Overview</button>
             <button type="button" data-preset="quineling" aria-pressed="false">Quineling</button>
             <button type="button" data-preset="interior" aria-pressed="false">Inside Chip</button>
-            <button type="button" data-preset="interior_floor" aria-pressed="false">39 Floor</button>
+            <button type="button" data-preset="interior_floor" aria-pressed="false">Rule floor</button>
             <button type="button" data-preset="interior_up" aria-pressed="false">Look Up</button>
             <button type="button" data-preset="well" aria-pressed="false">Top Rings</button>
             <button type="button" data-preset="frames" aria-pressed="false">Cutaway</button>
@@ -356,22 +382,57 @@
 
         <article class="prose-card">
           <span class="panel-index">04 &middot; Inside the Hollow Vault</span>
-          <h3>The 39-rule decoder floor &amp; the unbroken <code>StepRecord</code> chain</h3>
-          <p>Switch the camera to <strong>Inside Hollow Chip</strong> or <strong>Cross-Section</strong> to inspect the <code>6 &times; 7</code> matrix of <strong>39 physical 3D silicon rule modules</strong> (<code>A080..A225</code>) on the vault floor (<code>y = &minus;3.38</code>). Instead of hiding interpreter logic in host software, <code>sherlock-k-a/1</code> defines every legal transition as one of these 39 elementary rules across six categories.</p>
-          <p>On every tick, Sherlock emits a <code>StepRecord</code> and the justifying floor module physically rises out of its gold socket and lights its south-lip beacon, while the previous step&rsquo;s module retains a decaying trail glow. That visible handoff represents the exact mathematical chain where <code>Step[i].after == Step[i+1].before</code>: the <strong><code>WitnessPlan</code></strong> arranges the private <code>StepRecord</code> values for the prover, and the <strong><code>ConstraintPlan</code></strong> enforces the fixed algebraic equations of the active rule.</p>
+          <h3>The reference rule floor &amp; the unbroken <code>StepRecord</code> chain</h3>
+          <p>Switch the stage to <strong>Reference machine</strong> and the camera to <strong>Inside Chip</strong> or <strong>Cutaway</strong> to inspect the <code>6 &times; 7</code> matrix of <strong>39 rule modules</strong> (<code>A080..A225</code>) on the vault floor (<code>y = &minus;3.38</code>). Instead of hiding interpreter logic in host software, <code>sherlock-k-a/1</code> defines every legal transition as one of these 39 elementary rules across six categories.</p>
+          <p>On every tick, Sherlock emits a <code>StepRecord</code> and the justifying floor module rises out of its gold socket and lights its south-lip beacon, while the previous step&rsquo;s module retains a decaying trail glow. That handoff is the chain <code>Step[i].after == Step[i+1].before</code>: the <strong><code>WitnessPlan</code></strong> arranges the private <code>StepRecord</code> values for the prover, and the <strong><code>ConstraintPlan</code></strong> enforces the equations of the active rule. The leaf circuit proves the same chain sixteen steps at a time: each slot&rsquo;s post row is copy-linked to the next slot&rsquo;s pre row, and each leaf&rsquo;s <code>post_d</code> is the next leaf&rsquo;s <code>pre_d</code>.</p>
         </article>
       </div>
+
+      <!-- Leaf circuit: design 2.7 (proposed 2026-11-10), numbers from experiments-4.md and design 2.7.10-2.7.11 -->
+      <section class="cek-table-wrap leaf-prose" aria-labelledby="leafProseTitle">
+        <div class="m3-table-header">
+          <div>
+            <span class="panel-index">Design &sect;2.7 &middot; proposed 2026-11-10 &middot; measured on a spike</span>
+            <h3 class="m3-table-title" id="leafProseTitle">The leaf circuit: a small processor that proves steps</h3>
+          </div>
+        </div>
+        <div class="leaf-prose-grid">
+          <div>
+            <p>A Sherlock run is proved in leaves. One leaf circuit proves S = 16 consecutive steps, and its statement carries the state digest before the first step (<code>pre_d</code>) and after the last (<code>post_d</code>). The leaf is laid out as a small processor. Its core carries a register file of 32 words: the control record, outcome, fuel and counters, the environment root, the frame and task pointers <code>fp</code> and <code>tp</code>, the memory length <code>len</code>, the cached top frame and top task, and the helper and result records. Each word is a pre/post pair of cells in a 12-column row, and each post cell is copy-constrained to the same register&rsquo;s pre cell in the next slot, because the recursion node&rsquo;s verifier reads only rotations &minus;1, 0 and +1.</p>
+            <p>The core reaches everything else through one lookup bus. A request is a tuple <code>(chip, key, a, b, c)</code>, and it is valid when some provider row holds the same tuple. Every chip is a function of its key, so set inclusion is enough and no multiset, LogUp or timestamp argument is needed. <code>DEC</code> maps the control tag to the rule. <code>ALU</code> does checked 128-bit arithmetic and comparison, and <code>RANGE</code> bounds every written value with one limb lookup. <code>MEM</code> is a write-once log: an append goes to address <code>len</code> and <code>len</code> advances by one, and a read checks <code>addr &lt; len</code> with the address taken from a register. <code>PAGE</code> serves program rows and cells written by earlier leaves, opened against <code>prog_root</code> and the memory root. <code>TRAP</code> is the publication and halt check, made as gates in the core. <code>HASH</code> is a Poseidon chip.</p>
+            <p>A <code>PUSH</code> shows the parts working together. The core looks up its control tag in <code>DEC</code>, asks the <code>ALU</code> whether the frame count is below the stack limit, and appends the old top frame with its link <code>fp</code> to <code>MEM</code> at <code>len</code>. It then sets <code>fp</code> to that address, caches the new frame in <code>top</code>, and adds one to <code>len</code> and to the frame count. A <code>POP</code> reverses this: it reads the cell at <code>fp</code> and restores <code>top</code> and <code>fp</code> from it. A rewrite of the top frame changes only <code>top</code> and puts nothing on the bus.</p>
+            <p>Memory is allocated in aligned segments of eight cells per leaf. At the end of a leaf the unused rows of the segment are zero padding, each row becomes a record <code>H(tag, a, b, c)</code>, the records hash to a segment root, and a depth-17 Merkle walk proves the segment&rsquo;s slot empty in the old memory root and gives the new one. The state digest is Poseidon over the 29 digested register words and <code>mem_root</code>; the scratch registers <code>v0..v2</code> stay out. A recursion node at k = 20 folds each leaf proof, and a run decider at k = 20 seals the run.</p>
+            <p>The one-hot leaf of &sect;2.2 re-derives facts about the whole 1,726-lane state on every step: single-rule circuits reach k = 21 to 23 (<code>BHelperMatchArm</code> is 5,670,286 rows), against a node and decider at k = 20. Real programs touch little state per step. Over <code>fact(3)</code>, <code>fold</code> and <code>list123</code>, each step writes 2 to 5 registers and appends 0.20 to 0.22 cells on average, which is the work a register file and an append log are built for.</p>
+            <p><strong>Status.</strong> The numbers are cost-model rows from the spike in <code>crates/mori-chip</code>: six stand-in rules, keys on an unsafe SRS, and no proof generated. <code>PAGE</code>, <code>PROG</code>, <code>TRAP</code> and <code>Init</code> are stand-ins or absent. Under aligned segments, raw addresses depend on where leaves close, and the C6 machine still hashes them into its published digest (open item C6, &sect;2.7.11). The one-hot leaf of &sect;2.2 stands until this design is adopted.</p>
+          </div>
+          <div class="leaf-table-wrap" tabindex="0" role="region" aria-label="Measured sizes of the leaf, node and decider">
+          <table class="cek-table leaf-table">
+            <thead>
+              <tr><th scope="col">Measured 2026-11-10</th><th scope="col" class="num">Rows</th><th scope="col" class="num">k</th><th scope="col" class="num">Gate</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Leaf, S = 16 steps</td><td class="num">6,511</td><td class="num">13</td><td class="num">k &le; 16</td></tr>
+              <tr><td>Poseidon in that leaf (87 permutations)</td><td class="num">6,090</td><td class="num"></td><td class="num"></td></tr>
+              <tr><td>Recursion node over the leaf key</td><td class="num">823,466</td><td class="num">20</td><td class="num">950,000</td></tr>
+              <tr><td>Run decider over that node</td><td class="num">929,166</td><td class="num">20</td><td class="num">1,000,000</td></tr>
+              <tr><td>One-hot single-rule circuit (&sect;2.2), <code>BHelperMatchArm</code></td><td class="num">5,670,286</td><td class="num">23</td><td class="num"></td></tr>
+              <tr><td colspan="4">Leaf key: 12 advice, 13 equality and 20 fixed columns, 4 lookups, degree 6, rotations &minus;1, 0, +1. The node grows with the leaf&rsquo;s columns and lookups, not its rows.</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </section>
 
       <!-- Tier 2A: Dedicated 6-Category 39-Rule Floor Guide Card -->
       <section class="floor-guide-card" aria-label="39-Rule Decoder Floor Guide">
         <div class="m3-table-header">
           <div>
             <span class="panel-index">Inside Hollow Chip &middot; Vault Floor at y = &minus;3.38</span>
-            <h3 class="m3-table-title">The 39-Rule Silicon Decoder Floor (<code>sherlock-k-a/1</code>) &mdash; What the 39 Floor Modules Are</h3>
+            <h3 class="m3-table-title">The reference machine&rsquo;s rule floor (<code>sherlock-k-a/1</code>)</h3>
           </div>
         </div>
 
-        <p class="floor-guide-intro">When you enter <strong>Inside Chip</strong> (drag down or scroll down the vertical elevator) or view <strong>Cutaway</strong>, the floor of the chamber exposes <strong>39 gold-bezeled 3D silicon rule modules</strong> arranged in 6 columns by 7 rows (with the <code>SHERLOCK &middot; K-A/1 &middot; 39-RULE ROM</code> plaque in the lower-right corner). Together, these 39 modules form Sherlock&rsquo;s entire instruction set: every single transition in a recursive calculation or financial agreement must fire <strong>exactly one</strong> module from these six categories:</p>
+        <p class="floor-guide-intro">In the <strong>Reference machine</strong> view, <strong>Inside Chip</strong> (drag down or scroll down the vertical elevator) or <strong>Cutaway</strong> shows the chamber floor: <strong>39 gold-bezeled rule modules</strong> in 6 columns by 7 rows, with the <code>SHERLOCK &middot; K-A/1 &middot; REFERENCE RULES</code> plaque in the lower-right corner. These rules are the reference machine&rsquo;s instruction set: every transition in a recursive calculation or financial agreement fires <strong>exactly one</strong> of them. The leaf circuit that proves a run has no module per rule; it looks up the control tag in <code>DEC</code> and drives one shared core.</p>
 
         <div class="floor-category-grid">
           <article class="floor-cat-item">
@@ -515,7 +576,12 @@
             <tr>
               <td><code>StepRecord</code> &amp; 39-Rule Decoder Table (<code>A080..A225</code>)</td>
               <td>ISA microcode ROM &amp; audit trace</td>
-              <td>Laid out as <strong>39 3D silicon chiplets in gold sockets</strong> across a <code>6 &times; 7</code> floor grid at <code>y = &minus;3.38</code> inside the hollow vault, badged in the Inspector as <code>Rule Axxx</code>. On each step, the active rule chiplet elevates and lights its status bar while the prior step&rsquo;s chiplet glows in trail mode, showing the step-by-step transition chain fed into <code>WitnessPlan</code> and checked by <code>ConstraintPlan</code>.</td>
+              <td>Laid out in the <strong>Reference machine</strong> view as <strong>39 rule modules in gold sockets</strong> across a <code>6 &times; 7</code> floor grid at <code>y = &minus;3.38</code> inside the hollow vault, badged in the Inspector as <code>Rule Axxx</code>. On each step, the active rule chiplet elevates and lights its status bar while the prior step&rsquo;s chiplet glows in trail mode, showing the step-by-step transition chain fed into <code>WitnessPlan</code> and checked by <code>ConstraintPlan</code>.</td>
+            </tr>
+            <tr>
+              <td>Leaf circuit (design &sect;2.7, proposed 2026-11-10)</td>
+              <td>CPU core, register file &amp; chiplets on a bus</td>
+              <td>The <strong>Leaf circuit</strong> view: <code>CORE</code> with 32 register words in pre/post pair rows, <code>DEC</code>, <code>PAGE</code>, <code>MEM</code>, <code>ALU</code> with <code>RANGE</code> and <code>HASH</code>; sixteen step slots, the segment close and state digest at the leaf end, and the fold into the recursion node and run decider.</td>
             </tr>
             <tr>
               <td><code>ProgramImage</code> AST &amp; Live Morphogenesis (<code>Quinelings QDL v1</code>)</td>
@@ -566,7 +632,7 @@
               </tr>
               <tr>
                 <td><strong>4. Cryptographic Proof Machinery</strong></td>
-                <td>Zero-knowledge mathematical proof generation. Current GP recursion design (2026-10-26): a universal gated leaf proves S consecutive steps per leaf, folded by an IVC node at k=20 with a k=20 run decider; the public instance is the 5/6-lane digest instance [binding, prog_d, pre_d, post_d, rule, h_pre] bound with arity-4 Poseidon.</td>
+                <td>Zero-knowledge mathematical proof generation. A leaf proves S consecutive steps, a recursion node at k=20 folds each leaf proof, and a run decider at k=20 seals the run. Leaf proposed 2026-11-10 (design &sect;2.7): a CPU core and chips on a lookup bus; on the spike, 6,511 rows (k=13) at S=16, node 823,466 rows, decider 929,166 rows. The one-hot leaf of &sect;2.2 stands until adoption.</td>
                 <td>Private execution trace (<strong><code>WitnessPlan</code></strong>) &amp; fixed transition equations (<strong><code>ConstraintPlan</code></strong>)</td>
                 <td>Compact zero-knowledge proof bound to public program, state &amp; effect commitments</td>
               </tr>
@@ -641,6 +707,10 @@
     </section>
   </div>
 
+  <script type="module">
+    import { initStageViews } from './src/leaf/leafChip.js';
+    window.__leafViews = initStageViews();
+  </script>
   <script type="module" src="./src/app.js"></script>
 </body>
 </html>

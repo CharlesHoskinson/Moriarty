@@ -1236,7 +1236,8 @@ function animate(now) {
     const stepFraction = clampedPlayhead - currentIdx;
     const stepState = getOrBuildStepState(currentIdx, stepFraction, dt);
 
-    stage.render(stepState);
+    // The leaf circuit view covers the canvas; skip the 3D frame while it is shown.
+    if (document.documentElement.dataset.stageView !== 'leaf') stage.render(stepState);
 
     if (currentIdx !== state.lastRenderedStepIdx) {
       syncStepUI(currentIdx, stepState);

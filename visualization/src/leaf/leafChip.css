@@ -1,0 +1,536 @@
+/* Leaf circuit view (design 2.7). Uses the page tokens of styles.css. */
+
+.stage-view-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 7;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: rgba(252, 249, 242, 0.94);
+  border: 1px solid rgba(120, 113, 102, 0.38);
+  box-shadow: 0 2px 8px rgba(24, 24, 22, 0.12);
+}
+
+.stage-view-bar button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  cursor: pointer;
+  transition: background-color 150ms var(--md-sys-motion-easing-standard), color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.stage-view-bar button:hover {
+  color: var(--ink);
+  background: rgba(140, 79, 8, 0.08);
+}
+
+.stage-view-bar button[aria-selected='true'] {
+  background: var(--active-slate);
+  color: #fbf8f2;
+}
+
+.stage-view-bar button:focus-visible,
+.leaf-controls button:focus-visible {
+  outline: 2px solid var(--active-amber);
+  outline-offset: 2px;
+}
+
+/* In leaf view the card grows to the drawing; the 3D canvas stays sized and hidden. */
+.stage-viewport-card.is-leaf {
+  height: auto;
+  min-height: 0;
+}
+
+.stage-viewport-card.is-leaf .canvas-holder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: min(68vh, 640px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stage-viewport-card.is-leaf .stage-touch-hud {
+  display: none;
+}
+
+.stage-column.is-leaf-view .stage-caption,
+.stage-column.is-leaf-view .transport-bar,
+.stage-column.is-leaf-view .lens-bar {
+  display: none;
+}
+
+.leaf-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 56px 16px 16px;
+}
+
+.leaf-view[hidden] {
+  display: none;
+}
+
+.leaf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.leaf-head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.leaf-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  max-width: 62ch;
+}
+
+.leaf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.leaf-controls button {
+  appearance: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 1px solid var(--control-border);
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 150ms var(--md-sys-motion-easing-standard), border-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.leaf-controls button:hover {
+  border-color: var(--active-amber);
+  background: #fff8ec;
+}
+
+.leaf-controls button[data-leaf-play] {
+  background: var(--active-slate);
+  border-color: var(--active-slate);
+  color: #fbf8f2;
+  min-width: 76px;
+}
+
+.leaf-svg-host {
+  width: 100%;
+  min-width: 0;
+}
+
+.leaf-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--font-sans);
+}
+
+.leaf-caption {
+  min-height: 92px;
+  padding: 12px 14px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.leaf-caption strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-sys-color-secondary);
+  margin-bottom: 4px;
+}
+
+.leaf-caption p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  max-width: 78ch;
+}
+
+/* SVG parts */
+.leaf-box {
+  fill: var(--md-sys-color-surface-container-lowest);
+  stroke: rgba(120, 113, 102, 0.55);
+  stroke-width: 1;
+  transition: stroke 200ms ease, fill 200ms ease;
+}
+
+.leaf-core {
+  fill: #fbf8f1;
+  stroke: var(--active-slate);
+  stroke-width: 1.4;
+}
+
+.leaf-box.is-active {
+  stroke: var(--active-amber);
+  stroke-width: 2;
+  fill: #fff8ec;
+}
+
+.leaf-core.is-active {
+  stroke: var(--active-slate);
+  fill: #fbf8f1;
+}
+
+.leaf-ghost {
+  fill: transparent;
+  stroke: #9a9285;
+  stroke-dasharray: 5 4;
+}
+
+.leaf-ghost-text {
+  fill: #6b665d;
+}
+
+.leaf-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: var(--active-slate);
+}
+
+.leaf-chipname {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: var(--ink);
+}
+
+.leaf-sub {
+  font-size: 11px;
+  fill: var(--ink-soft);
+}
+
+.leaf-micro {
+  font-size: 10px;
+  fill: var(--ink-soft);
+}
+
+.leaf-mono,
+.leaf-val,
+.leaf-reg-name,
+.leaf-num,
+.leaf-packet-text {
+  font-family: var(--font-mono);
+}
+
+.leaf-mono-lg {
+  font-size: 11.5px;
+  fill: var(--ink);
+}
+
+.leaf-reg-name {
+  font-size: 9.5px;
+  fill: var(--ink-soft);
+}
+
+.leaf-reg-scratch {
+  fill: #6b665d;
+  font-style: italic;
+}
+
+.leaf-val {
+  font-size: 9.5px;
+  fill: var(--ink);
+}
+
+.leaf-num {
+  font-size: 19px;
+  font-weight: 600;
+  fill: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.leaf-cell {
+  stroke-width: 1;
+  transition: fill 220ms ease, stroke 220ms ease;
+}
+
+.leaf-pre {
+  fill: #e9f4f2;
+  stroke: rgba(13, 148, 136, 0.45);
+}
+
+.leaf-post {
+  fill: #f6efe2;
+  stroke: rgba(140, 79, 8, 0.35);
+}
+
+.leaf-cell.is-scratch {
+  fill: url(#leafHatch);
+}
+
+.leaf-hatch-line {
+  stroke: rgba(78, 75, 69, 0.22);
+  stroke-width: 2;
+}
+
+.leaf-post.is-written {
+  fill: #f8d9a8;
+  stroke: var(--active-amber);
+  stroke-width: 1.6;
+}
+
+.leaf-post.is-linking {
+  stroke: var(--env-return);
+  stroke-width: 1.6;
+}
+
+.leaf-pre.is-copied {
+  fill: #bfe6e0;
+  stroke: var(--env-return);
+  stroke-width: 1.6;
+}
+
+.leaf-frow {
+  fill: rgba(140, 79, 8, 0.22);
+}
+
+.leaf-lrow {
+  fill: rgba(30, 41, 59, 0.2);
+}
+
+.leaf-slot {
+  fill: #ece5d8;
+  transition: fill 200ms ease;
+}
+
+.leaf-slot.is-done {
+  fill: #9fb4c9;
+}
+
+.leaf-slot.is-on {
+  fill: var(--active-amber);
+}
+
+.leaf-decrow {
+  fill: #f3eee4;
+  stroke: rgba(120, 113, 102, 0.35);
+}
+
+.leaf-decrow.is-on {
+  fill: #f8d9a8;
+  stroke: var(--active-amber);
+  stroke-width: 1.6;
+}
+
+.leaf-memcell {
+  fill: #f3eee4;
+  stroke: rgba(120, 113, 102, 0.4);
+  stroke-dasharray: 3 2;
+}
+
+.leaf-memcell.is-written {
+  fill: #e1e9f3;
+  stroke: var(--active-slate);
+  stroke-dasharray: none;
+}
+
+.leaf-memcell.is-padding {
+  fill: #ffffff;
+  stroke: #9a9285;
+  stroke-dasharray: none;
+}
+
+.leaf-memcell.is-hit {
+  fill: #f8d9a8;
+  stroke: var(--active-amber);
+  stroke-width: 2;
+}
+
+.leaf-bus {
+  stroke: var(--active-slate);
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.leaf-bus-ghost {
+  stroke: #9a9285;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.leaf-bus-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.leaf-lookup {
+  fill: none;
+  stroke: var(--md-sys-color-secondary);
+  stroke-width: 2;
+}
+
+.leaf-copywire {
+  fill: none;
+  stroke: var(--env-return);
+  stroke-width: 1.6;
+  stroke-dasharray: 2 4;
+  stroke-linecap: round;
+  opacity: 0.55;
+  transition: opacity 200ms ease;
+}
+
+.leaf-copywire.is-active {
+  opacity: 1;
+  animation: leaf-flow 0.9s linear infinite;
+}
+
+@keyframes leaf-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.leaf-digest {
+  fill: #f3eee4;
+  stroke: rgba(120, 113, 102, 0.45);
+  transition: fill 260ms ease, stroke 260ms ease;
+}
+
+.leaf-digest.is-on {
+  fill: #d7eeea;
+  stroke: var(--env-return);
+  stroke-width: 1.6;
+}
+
+.leaf-bar-bg {
+  fill: #ece5d8;
+}
+
+.leaf-bar {
+  fill: var(--active-amber);
+}
+
+.leaf-gate {
+  stroke: var(--heat);
+  stroke-width: 1.6;
+}
+
+.leaf-foldlink {
+  stroke: var(--active-slate);
+  stroke-width: 2;
+}
+
+.leaf-packet rect {
+  fill: var(--active-slate);
+  filter: drop-shadow(0 2px 3px rgba(24, 24, 22, 0.25));
+}
+
+.leaf-packet-text {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: #fbf8f2;
+}
+
+@media (max-width: 600px) {
+  .leaf-view {
+    padding: 54px 10px 12px;
+  }
+  .leaf-head h2 {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf-copywire.is-active {
+    animation: none;
+  }
+  .leaf-box,
+  .leaf-cell,
+  .leaf-slot,
+  .leaf-digest {
+    transition: none;
+  }
+}
+
+/* Leaf circuit prose section */
+.leaf-prose {
+  margin-top: 4px;
+}
+
+.leaf-prose .leaf-prose-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding: 18px 20px 22px;
+}
+
+.leaf-prose p {
+  max-width: 72ch;
+  margin: 0 0 12px;
+  line-height: 1.55;
+}
+
+.leaf-prose p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .leaf-prose .leaf-prose-grid {
+    padding: 14px 14px 18px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .leaf-prose .leaf-prose-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.leaf-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.leaf-table-wrap:focus-visible {
+  outline: 2px solid var(--active-amber);
+  outline-offset: 2px;
+}
+
+.leaf-table {
+  min-width: 460px;
+}
+
+.leaf-table td.num,
+.leaf-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
