@@ -12,7 +12,7 @@ Questions the owner must settle. Keep each until a source settles it. See [[Work
 
 | # | Question | State | Pages |
 |---|---|---|---|
-| 1 | D3 run ceiling against GP-1 | Open; two studies running | [[RunLengthCeiling]], [[dissent-c6-section]] |
+| 1 | D3 run ceiling against GP-1 | Open; one running study is on the bound | [[RunLengthCeiling]], [[dissent-c6-section]] |
 | 2 | D-1 SI-12 to SI-14 under C = 8 | Open; no form measured | [[dissent-c6-section]], [[ChipLeaf]] |
 | 3 | D-2 type identity in a constructor digest | Open | [[ValueDigest]], [[dissent-c6-section]] |
 | 4 | D-6 leaf partition in the GP-4 shape commitment | Open, against GPR-016 | [[dissent-c6-section]], [[gp-architecture]] |
@@ -25,8 +25,8 @@ Questions the owner must settle. Keep each until a source settles it. See [[Work
 - The 2^64 is the step-counter width in SRC-004, not a circuit size: SRC-004 makes the node unsatisfiable if `prev_h`, `steps` or `h = prev_h + steps` is not below 2^64. "No circuit has 2^64 rows." ([[runlength-consensus-brief]]).
 - Owner, 2026-11-11: "2^64 is physically impossible" and "I'm not understanding what 2^64 is, is it a limit or a something we calculate? We cannot calculate a 2^64 circuit" ([[runlength-consensus-brief]]).
 - Question recorded in the dissent file: "which change to the memory design removes the ceiling, so that one key set proves runs up to 2^64 steps?" Task 4.19 records the candidates; the lead makes no recommendation ([[dissent-c6-section]]).
-- GP-1 is not narrowed. Any change to the GP-1 text needs an explicit owner decision ([[OwnerRules]]).
-- Pending: [[runlength-consensus-brief]] (Q1 asks for replacement GP-1 and GP-001 text that does not narrow GP-1) and [[lookup-cache-brief]]. No result is ingested.
+- GP-1 is not narrowed. "A narrowing needs an explicit owner decision" ([[general-purpose-definition]], [[OwnerRules]]).
+- Pending: [[runlength-consensus-brief]] studies the bound (Q1 asks for replacement GP-1 and GP-001 text that does not narrow GP-1). [[lookup-cache-brief]] studies hashing cost and must say where its design touches the run-length study. No result is ingested.
 
 ## 2. D-1 SI-12 to SI-14
 

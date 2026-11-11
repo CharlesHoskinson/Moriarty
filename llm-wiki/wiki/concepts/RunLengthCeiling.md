@@ -30,6 +30,6 @@ Source: [[runlength-consensus-brief]].
 
 ## Status
 
-Pending. Two studies on the bound are running: [[runlength-consensus-brief]] (the bound itself) and [[lookup-cache-brief]] (which must say where its design touches the run-length study). No result is ingested. The question is on [[OpenOwnerQuestions]].
+Pending. Two studies are running. [[runlength-consensus-brief]] is on the bound itself. [[lookup-cache-brief]] is on a lookup cache in the leaf and must say where its design touches the run-length study. No result is ingested. The question is on [[OpenOwnerQuestions]].
 
 See also [[GeneralPurposeRecursion]], [[ChipLeaf]].

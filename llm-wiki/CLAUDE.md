@@ -97,7 +97,7 @@ Sources live in the main checkout of the repository and are written from the hom
 - `qa/gemini-quint/`: Gemini Quint lanes and their lead verdicts (`verdict.md` in each lane folder).
 - `docs/sherlock/`: Sherlock documentation, deployment records and status notes.
 
-`qa/sherlock/status.json` is generated state. Never commit it, and never ingest it as a source.
+Never commit `qa/sherlock/status.json`.
 
 ## Standing owner rules
 

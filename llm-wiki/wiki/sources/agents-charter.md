@@ -4,7 +4,7 @@ type: source
 tags: [owner-rule, factory]
 sources: [agents-charter]
 last_updated: 2026-11-10
-date: 2026-11-10
+date: 2026-10-24
 source_file: ~/Projects/Moriarty/AGENTS.md
 source_url: local
 ---

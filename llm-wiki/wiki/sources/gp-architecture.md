@@ -34,7 +34,7 @@ Brief ingest of section 1 only (the recommended architecture); sections 2 to 6 (
 ## Connections
 
 - [[GeneralPurposeRecursion]], [[IvcNode]], [[RunDecider]].
-- [[c6-outcome-ledger9-review]] reads lines 96 to 101 and 349 to 367 for D-3 and D-6.
+- [[c6-outcome-ledger9-review]] cites lines 96 to 101, 349 to 353 and 367 for D-6, and line 98 for D-3.
 
 ## Contradictions
 

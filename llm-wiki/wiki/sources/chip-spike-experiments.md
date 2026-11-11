@@ -15,6 +15,8 @@ source_url: local
 
 Four sessions of run `sherlock-processor-analogy-20261110` (2026-11-10) that sized the proposed chip leaf in `crates/mori-chip`. Labels in all four files: MEASURED is a `cost_model`, key or count from a named run; ESTIMATE is arithmetic on measured numbers. All node and decider rows are `cost_model` rows over keys made on an unsafe SRS (rows do not depend on the SRS). No proof was made. See [[ChipLeaf]].
 
+Scope of this ingest: the results tables, limits, census and estimate sections of each file, and §3.1, §4 and §5 of `experiments-4.md`. The other sections were not read in full.
+
 ## Key Claims
 
 `experiments.md` (E0, E1, E3, MEASURED unless marked):

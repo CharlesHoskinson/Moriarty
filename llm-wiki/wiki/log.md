@@ -48,3 +48,8 @@
 - WorkstreamStatus lists C6 in the spec, the chip page animation, the README and the E4 k=20 cap as on main and pushed (origin/main at c57351dd4).
 - The land-3x dispatch branch is landing; its U023c receipt passing 6 of 6 is reported by the lead and not yet recorded in any repository file.
 - Next: confirm the U023c receipt on the next sync.
+
+## [2026-11-10 21:36] note | Corrections after review of the first wiki commit
+- Corrects the entries of 21:29 to 21:31: GP-1 rule quoted as written; only the run-length study is on the bound; status line no longer goes stale; AGENTS.md dated 2026-10-24.
+- Unsourced lines removed; E2 figures labelled (unlabeled) or "Measured model rows" as their sources say; scope line added to `chip-spike-experiments`.
+- U023c 6 of 6 is still not found in commits on land-3x or in the main checkout.

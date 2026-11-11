@@ -8,7 +8,7 @@ last_updated: 2026-11-10
 
 # Workstream status
 
-State as of 2026-11-10. `main` and `origin/main` are both at `c57351dd4`.
+State as of 2026-11-10. The commits marked "on `main` and pushed" are contained in `origin/main` at `c57351dd4`.
 
 | Workstream | State | Next step | Pages |
 |---|---|---|---|
@@ -24,7 +24,7 @@ State as of 2026-11-10. `main` and `origin/main` are both at `c57351dd4`.
 ## 3.x dispatch partition
 
 - Branch `land-3x` carries the dispatch partition, the split dispatch tests and the k_U probe (tasks 3.1 to 3.3 and 4.1; commits `506bd78af` to `2947727d6`).
-- The lead reported that its U023c receipt passed 6 of 6. No file in the repository records that result yet. The `tasks.md` 3.3 note on `land-3x` still lists the T2 runs and the receipt `testdata/receipts/dispatch.json` as open, and that receipt file does not exist on the branch. Confirm on the next sync.
+- The lead reported that its U023c receipt passed 6 of 6. That result was not found in commits on `land-3x` or in the main checkout. The `tasks.md` 3.3 note on `land-3x` still lists the T2 runs and the receipt `testdata/receipts/dispatch.json` as open, and that receipt file does not exist on the branch. Confirm on the next sync.
 
 ## Open questions
 
