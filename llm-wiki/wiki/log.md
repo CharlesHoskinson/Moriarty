@@ -252,3 +252,58 @@
 - Wrote `animation-v2-notes`, `sherlock-terminology`, `k21-recalibration-brief`; new pages [[AnimationV2]] and [[ZeroKnowledge]].
 - Owner: "keep a log in wiki-llm for version 2 of the animation that reflects all the new design and the compact and ZK compatibility".
 - Next: add each landing design round to [[AnimationV2]]; ingest the compact feasibility, cost and elastic chip rounds.
+
+## [2026-11-11 12:20] lane-done | Compact feasibility Gemini lane and elastic chip Gemini B
+- Compact feasibility: all three lanes done (proposals/fable.md, astra.md, gemini.md under ~/Projects/Moriarty/research/sherlock-compact-feasibility-20261111/).
+- Elastic chip: B-gemini.md done; A-gemini and D-gemini still running.
+- Next: merge of the feasibility lanes into MERGED.md, with the ledger 9 constants re-checked and one zero-knowledge section.
+
+## [2026-11-11 09:32] note | Pipeline animation run started
+- late entry (time from commit `680d2b5af`).
+- Owner asked for a three.js walkthrough of the eight steps with Fable 5.2 as creative director over 3 Gemini, 3 Astra, 10 Terra and 10 Sonnet agents, and a council review of the design.
+- Shell and brief committed on branch `pipeline-anim` (worktree ~/Projects/Moriarty-wt/pipeline-anim, folder research/sherlock-pipeline-animation-20261111/).
+- Next: content, concepts, storyboard, scene builds.
+
+## [2026-11-11 10:24] note | Compact repository graph built
+- late entry (time from graph.json).
+- LFDT-Minokawa/compact `a36ebaa`: 6,907 nodes, 13,202 edges, 356 communities, with a nanopass extractor (tools/scheme_extract.py).
+- ~/Projects/Moriarty/research/compact-graph-20261111/graphify-out/.
+- Next: Compact feasibility round on the graph.
+
+## [2026-11-11 11:02] note | Compact feasibility first pass read ledger 8
+- late entry (time from fable.ledger8.md).
+- Owner: "Midnight is on ledger 9, you are out of date". The midnight-ledger checkout moved to branch `ledger-9` at `f15fb9d`; first-pass reports kept as proposals/*.ledger8.md; lanes revised on ledger 9.
+- ~/Projects/Moriarty/research/sherlock-compact-feasibility-20261111/BRIEF.md ("Ledger version").
+
+## [2026-11-11 11:05] note | Animation scenes 1 to 8 committed
+- late entry (time from commit `3adece369`).
+- Storyboard, scene contract, eight scenes and the council synthesis on branch `pipeline-anim`.
+- Open build items in ~/.cache/pipeline-anim/BUILD-NOTES.md; integration lane started.
+
+## [2026-11-11 11:12] note | Native Compact circuit sizes measured (N1)
+- late entry (time from N1-native-circuits.md).
+- compactc 0.36.0: entry points from k 7 (68 rows) to k 15 (`zerocash spend`, 24,025 rows), measured; verifier keys 2,121 bytes.
+- ~/Projects/Moriarty/research/sherlock-cost-optimization-20261111/measured/N1-native-circuits.md.
+- Next: N1b proving time against k, S1 Sherlock step profile.
+
+## [2026-11-11 11:24] note | Council revisions committed
+- late entry (time from commit `f372ab74c`).
+- Council blocker C5 (`reg_root` across child slots) and majors fixed; DECISIONS P-1 to P-10; new spec sherlock-ledger-contract; OD-23 new owner question; openspec validate passes.
+- On branch `pipeline-anim` only until merge.
+
+## [2026-11-11 11:30] note | Cost round lanes and prover graph done; elastic chip round started
+- late entry (times from proposal and graph files).
+- Cost round (owner: "the 1000 to 10,000 times cheaper is not a number you just say"): Fable estimates 10,400 to 31,300x in rows for `spend`; Astra finds the node 98.42 percent of rows (estimated).
+- Prover graph of midnight-ledger ledger-9, midnight-zk and midnight-zkir: 21,437 nodes (~/Projects/Moriarty/research/prover-graph-20261111/).
+- Elastic multicore chip round: 12 lanes, areas A to D (~/Projects/Moriarty/research/sherlock-elastic-chip-20261111/BRIEF.md).
+
+## [2026-11-11 11:48] note | Elastic chip Fable and Astra lanes done
+- late entry (times from proposal files).
+- Area A: row cores beat column cores (241,000 to 254,000 node rows per column core, estimated). Area B: `b` parallel block chains. Area C: memory limits this host (k = 20 node 16.3 GB, measured). Area D: quotient and NTT 57 to 71 percent of a node proof (measured).
+- Prover findings for the wiki: stock seeded proofs depend on thread count; midnight-zk HEAD draws blinders from `OsRng`; ledger 9 pins midnight-proofs 0.8.2 against our 0.8.3.
+- Next: Gemini lanes, then merge under k = 21.
+
+## [2026-11-11 12:25] note | Owner: keep a living log
+- Owner: "make sure we keep a living log in wiki-llm so nothing is lost".
+- Rule: every lane start and finish, owner decision, measurement and commit gets a log entry when it happens; this block backfills the morning.
+- Next: ingest the day's round reports as source pages.
