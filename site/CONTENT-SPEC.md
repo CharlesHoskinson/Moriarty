@@ -1239,8 +1239,14 @@ Parallel tracks run now: **SP01→SP02→SP03** (language),
 **accepted atomic + loan/swap subset→SP05** (financial Preview integration).
 
 The tracks are parallel because their blocking questions are independent. One asks whether the successor specification can be completed and executed in K. The native track asks whether Midnight's recursive proof
-backend can verify a Moriarty history at all, which is open after the first
-experiment ran out of rows at k17. The Preview track asks whether the accepted
+backend can verify a Moriarty history. A leaf proves S consecutive steps, an
+IVC node at k=20 folds each leaf proof, and a run decider at k=20 seals the
+run. The leaf design proposed on 2026-11-10 (Sherlock design §2.7) is a small
+processor: a core with a 32-word register file, and chips that it reaches only
+through a lookup bus. On a spike, a 16-step leaf is 6,511 rows at k=13, and the
+node and decider over its key are 823,466 and 929,166 rows, inside their k=20
+gates (950,000 and 1,000,000 rows). These are cost-model rows; no proof was
+made, and the one-hot leaf stands until the design is adopted. The Preview track asks whether the accepted
 atomic subset can settle real loan and swap effects on the public network.
 Each has an acceptance boundary where it must wait before the mandatory-proof
 sprint can begin.

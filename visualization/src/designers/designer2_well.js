@@ -1312,7 +1312,7 @@ function createStatic39RuleFloorOverlayTexture(gridConfig) {
   ctx.font = '700 28px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('SHERLOCK · K-A/1 · 39-RULE ROM', hx0 + hubWpx * 0.5, hy0 + hubDpx * 0.5);
+  ctx.fillText('SHERLOCK · K-A/1 · REFERENCE RULES', hx0 + hubWpx * 0.5, hy0 + hubDpx * 0.5);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -2390,10 +2390,10 @@ export function createWellSubsystem() {
   tagInspectable(floorGroup, {
     type: 'k-decoder-bus-hub',
     id: 'k-a-1-decoder-bus-hub',
-    title: 'sherlock-k-a/1 39-Rule 3D Silicon Decoder Floor (y = -3.38)',
-    subtitle: 'Instanced 39-Rule 3D Silicon Chiplets (A080..A225)',
+    title: 'sherlock-k-a/1 reference machine rule floor (y = -3.38)',
+    subtitle: 'The 39 rules of the reference machine (A080..A225); the leaf circuit proves them',
     details: [
-      '39 Physical 3D Silicon Rule Chiplets with machined gold socket bezels & south-lip status bars',
+      '39 rule modules of sherlock-k-a/1, one per rule; the proof circuit is the leaf (Leaf circuit view)',
       'Active State: Active rule chiplet elevates physically and illuminates its semantic status bar',
       'Hover or click any individual floor chiplet to inspect its rule line and fuel charge',
     ],
