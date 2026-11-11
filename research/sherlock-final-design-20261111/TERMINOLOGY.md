@@ -29,3 +29,17 @@ One line: Sherlock is a universal, elastic proving co-processor for Midnight. It
 | Run | One execution of a program on an input |
 | Claim | What the chain accepts: the public statement, recorded under `claim_d` |
 | Off-chain, On-chain | Where a part lives: the user's machine (and helper hosts), or Midnight |
+
+## The bridge to Midnight
+
+Owner, 2026-11-11: "name the mathematical structure we are developing or modifying", then "yes". The textbook category is proof composition with field switching (STARK-to-SNARK wrapping).
+
+| Term | Meaning |
+|---|---|
+| Sherlock bridge | The whole structure: a small-field STARK (FRI over a 31-bit field and its extension) composed with a PLONK-KZG proof over the BLS12-381 scalar field, joined at one layer |
+| Bridge layer | The last STARK layer, modified for native verification in BLS12-381: its trace stays in the small field; its Merkle commitments and Fiat-Shamir transcript use Poseidon over the BLS12-381 scalar field, with small-field elements packed and a high blowup with few FRI queries |
+| Wrap | A blinded PLONK-KZG circuit over BLS12-381 that verifies the bridge layer as a private witness and publishes only the claim; the zero-knowledge step and the proof the Midnight ledger 9 verifier checks |
+| Deferred field log | A commitment to the BLS12-381 arithmetic a program needs (Compact `Field`, `transientHash`, Jubjub, value digests): the STARK records the operations, the wrap checks them natively in a batch |
+| STARK engine | The prover of the leaves and nodes: OpenVM stark-backend with its CUDA prover (owner, 2026-11-11: "openvm seems to be the winner"); Plonky3 is the fallback |
+
+If the bridge round replaces the middle with another structure (an embedded-curve layer, lattice folding), "bridge layer" keeps its role and gains a precise name.
