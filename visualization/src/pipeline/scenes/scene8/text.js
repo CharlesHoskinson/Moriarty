@@ -39,5 +39,28 @@ export const BEAT_TEXT = [
     "id": "follow-the-whole-path",
     "title": "The whole path",
     "narration": "Moriarty source becomes the ROM program image with <code>prog_d</code> and <code>input_d</code>. Execution hands over the witness tape and its outcome frame. Leaf proving turns slices into slabs with their public pins. Nodes join the slabs into a root slab carrying its accumulator ring. The decider hands over a seal and <code>[prog_d, input_d, outcome_d, n_steps]</code>. The transaction carries them in an envelope. The contract produces the stored claim drawer. Midnight nodes accept the claim, with the same public values bound throughout."
+    },
+  {
+    "id": "what-lives-where",
+    "title": "What lives where",
+    "narration": "Everything off-chain is on the user's machine or a proving service the user picks: the compiler, the program and its input, the native execution trace, the witness stream, the private input, the Sherlock chip circuit, the leaf, node and decider proving keys, the leaf and node proofs, and the CPU cores that do the proving. One transaction crosses the boundary. It carries the decider proof and <code>[prog_d, input_d, outcome_d, n_steps]</code>.\n\nOn-chain, Midnight holds one ledger contract with <code>acceptRun</code>, one decider verifier key, the claim set <code>runs</code> keyed by <code>claim_d</code>, the collection roots and the registry root. For each call, the nodes verify one proof, then check and insert <code>claim_d</code>. A native Compact contract puts one verifier key on-chain for each circuit it exports. Sherlock keeps one decider verifier key for all programs, and a new program deploys nothing."
   }
 ];
+
+// Inventory card of beat 8.9 (STORYBOARD-AMEND-1 section 3), read by the shell (#whereCard).
+const c = (id) => `<code>${id}</code>`;
+export const INVENTORY = {
+  columns: [
+    { where: 'off', from: 2.0, items: [
+      'Moriarty compiler', 'Program and input', 'Native execution trace', 'Witness stream', 'Private input',
+      'Sherlock chip circuit', 'Leaf, node and decider proving keys', 'Leaf and node proofs', 'CPU cores'] },
+    { where: 'cross', from: 6.0, items: ['Decider proof', c('prog_d'), c('input_d'), c('outcome_d'), c('n_steps')] },
+    { where: 'on', from: 10.0, items: [
+      `One ledger contract with ${c('acceptRun')}`, 'One decider verifier key', `Claim set ${c('runs')}, keyed by ${c('claim_d')}`,
+      'Collection roots', 'Registry root', 'For each call: one proof verification', `For each call: ${c('claim_d')} check and insert`] },
+  ],
+  compare: { from: 16.0, cells: [
+    { title: 'Native Compact', text: 'One verifier key on-chain for each exported circuit of each contract' },
+    { title: 'Sherlock', text: 'One decider verifier key for every program; a new program deploys nothing' },
+  ] },
+};

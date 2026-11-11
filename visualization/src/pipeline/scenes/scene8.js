@@ -4,8 +4,8 @@
 import * as THREE from 'three/webgpu';
 import { PALETTE, FAMILY, materials, makeDigestToken, phase, ramp, lerp, clamp01 } from '../theme.js';
 import { ident } from '../labels.js';
-import { makeClaimPlate, makeProofSlab } from '../kit.js';
-import { BEAT_TEXT } from './scene8/text.js';
+import { makeClaimPlate, makeProofSlab, makeVerifierKeyCard } from '../kit.js';
+import { BEAT_TEXT, INVENTORY } from './scene8/text.js';
 
 const HALF = Math.PI / 2;
 const NODE_X = [0, 1, 2, 3, 4, 5].map((i) => -12 + 3.6 * i);
@@ -23,6 +23,7 @@ const POST = [9.4, -2.4];
 const TRACE_X0 = -300;
 const TRACE_X1 = 20;
 const A_CON = [0.5, 0.95, 2.05];
+const TRAY = { x: 11.2, z: -0.8, w: 8.8, d: 9.0, top: 0.1 };
 
 const ln = (x, y, z) => new THREE.Vector3(x, y, z);
 const _o = new THREE.Object3D();
@@ -38,14 +39,14 @@ const LABELS = [
   [
     L('nodes', 'Midnight nodes', 'nodesTop', 'neutral', 0.3),
     L('ledger', 'Ledger 9.1.0.1', 'station', 'neutral', 0.3),
-    L('key', 'Shared verifier key', 'card4', 'state', 0.5, 8.6),
+    L('key', 'Decider verifier key', 'card4', 'state', 0.5, 8.6),
     L('indep', 'Independent verification', 'tracks', 'neutral', 0.3, 7.0),
     L('stored', 'Stored claim', 'record', 'outcome', 1.2),
   ],
   [
     L('seal', 'Decider proof', 'sealOpen', 'state', 0.3),
     L('kb', 'About 6.4 KB', 'annot', 'state', 0.3),
-    L('key', 'Shared verifier key', 'card2', 'state', 0.5),
+    L('key', 'Decider verifier key', 'card2', 'state', 0.5),
     L('tape', 'Witness tape', 'tapeFar', 'neutral', 0.9),
   ],
   [
@@ -63,12 +64,14 @@ const LABELS = [
     L('right', 'Right collection', 'setRb', 'state', 0),
     L('root', ident('set_root'), 'setLRb', 'state', 0, 5.4),
     L('open', 'Membership openings', 'pathAn', 'neutral', 0),
+    L('off', 'Off-chain', 'trayCorner', 'zoneoff', 0, 0.6),
   ],
   [
     L('graph', 'Proof graph', 'graph', 'neutral', 0.5),
     L('dep', 'Shared dependency', 'dep', 'state', 0.5),
     L('desc', 'Authenticated descriptors', 'descTray', 'state', 0.4, 3.2, 6.0),
     L('shape', ident('shape_d'), 'tShape', 'state', 0.9, 6.0),
+    L('off', 'Off-chain', 'trayCorner', 'zoneoff', 0),
   ],
   [
     L('stmt', 'Collection statement', 'sealStrip', 'state', 0.5),
@@ -91,15 +94,20 @@ const LABELS = [
     L('claim', ident('claim_d'), 'claimFront', 'state', 0.5, null, 5.0),
     L('acc', 'Accepted claim', 'plinth', 'state', 0.6),
   ],
+  [
+    L('acc', 'Accepted claim', 'plinth', 'state', 0.6),
+  ],
 ];
 
-const DURATIONS = [26, 26, 22, 25, 25, 27, 24, 32];
+const DURATIONS = [26, 26, 22, 25, 25, 27, 24, 32, 56];
+const STARTS = DURATIONS.map((d, i) => DURATIONS.slice(0, i).reduce((a, b) => a + b, 0));
 
 // ---- helpers ---------------------------------------------------------------------------------
 const park = (g, k) => { g.visible = k > 0.001; g.scale.setScalar(Math.max(k, 0.001)); };
 const putW = (o, x, y, z) => {
   const p = o.parent === S.ctx.scene ? ZERO : o.parent.position;
-  o.position.set(x - p.x, y - p.y, z - p.z);
+  // Children of a group carried by colTray keep their height above the tray surface.
+  o.position.set(x - p.x, o.parent.userData.carried ? y : y - p.y, z - p.z);
 };
 const flatY = (size, surface) => surface + 0.09 * size + 0.004;
 const arc = (k, h) => Math.sin(Math.PI * clamp01(k)) * h;
@@ -156,7 +164,7 @@ function hashRun(h, u) {
 export default {
   id: 'network',
   title: 'The network',
-  beats: BEAT_TEXT.map((b, i) => ({ id: b.id, title: b.title, duration: DURATIONS[i], narration: b.narration, where: [0, 1, 2, 5, 6, 7, 8].includes(i) ? 'on' : 'off', labels: LABELS[i] })),
+  beats: BEAT_TEXT.map((b, i) => ({ id: b.id, title: b.title, duration: DURATIONS[i], narration: b.narration, where: [0, 1, 2, 5, 6, 7, 8].includes(i) ? 'on' : 'off', labels: LABELS[i], ...(i === 8 ? { inventory: INVENTORY } : {}) })),
 
   build(c) {
     const ctx = c;
@@ -199,12 +207,11 @@ export default {
     const matFlash = M(materials.gold());
     matFlash.emissive = new THREE.Color(PALETTE.goldBright);
     matFlash.emissiveIntensity = 1;
-    const ringMats = [0, 1, 2].map(() => {
-      const m = M(materials.gold());
-      m.emissive = new THREE.Color(PALETTE.goldBright);
-      m.emissiveIntensity = 0;
-      return m;
-    });
+    // One ring material: the three ring flashes (8.3, 8.6, 8.7) never overlap in time.
+    const matRing = M(materials.gold());
+    matRing.emissive = new THREE.Color(PALETTE.goldBright);
+    matRing.emissiveIntensity = 0;
+    const ringMats = [matRing, matRing, matRing];
     Object.assign(S, { matEnv, matRule, matCap, matEdge, matHash, ringMats, matGold, matTi });
 
     const add = (parent, geo, mat, sx, sy, sz, x, y, z) => {
@@ -229,24 +236,7 @@ export default {
     };
 
     // ---- digest tokens with shared geometry and materials ------------------------------------
-    const sh = { rim: new Map(), face: new Map() };
-    const share = (g) => {
-      const [body, face] = g.children;
-      const key = body.material[0].color.getHex();
-      if (!sh.cyl) { sh.cyl = body.geometry; sh.plane = face.geometry; sh.cap = body.material[1]; S.geos.push(sh.cyl, sh.plane); S.mats.push(sh.cap); }
-      else { body.geometry.dispose(); face.geometry.dispose(); body.geometry = sh.cyl; face.geometry = sh.plane; }
-      let rim = sh.rim.get(key);
-      if (!rim) { rim = body.material[0]; sh.rim.set(key, rim); S.mats.push(rim); }
-      const cap = sh.cap;
-      if (body.material[1] !== cap) { body.material[1].dispose(); body.material[2].dispose(); }
-      if (body.material[0] !== rim) body.material[0].dispose();
-      body.material = [rim, cap, cap];
-      const fk = face.material.map.uuid;
-      let fm = sh.face.get(fk);
-      if (!fm) { fm = face.material; sh.face.set(fk, fm); S.mats.push(fm); }
-      else if (fm !== face.material) { face.material.dispose(); face.material = fm; }
-      return g;
-    };
+    const share = (g) => g;   // token geometry, rim, cap and faces are shared in theme.js
     const tok = (parent, family, content, size) => {
       const g = share(makeDigestToken({ family, content, size: 1 }));
       g.scale.setScalar(size);
@@ -269,7 +259,6 @@ export default {
     S.envs = [];
     S.rims = [];
     S.cards = [];
-    S.cardMats = [];
     S.sweeps = [];
     for (let k = 0; k < 6; k++) {
       const env = group(nodes, NODE_X[k], 0.8, NODE_Z[k] + 0.15);
@@ -280,15 +269,12 @@ export default {
       add(env, unit, matCer, 2.4, 0.05, 1.4, 0, 0.985, 0);
       S.envs.push(env);
       S.rims.push(rimMat);
-      const card = group(nodes, NODE_X[k], 1.85, NODE_Z[k] - 0.92);
-      card.scale.setScalar(0.7);
-      const cm = M(materials.gold());
-      cm.emissive = new THREE.Color(PALETTE.goldBright);
-      cm.emissiveIntensity = 0;
-      add(card, unit, cm, 1.6, 1.0, 0.08, 0, 0, 0);
-      add(card, unit, matInk, 0.3, 0.18, 0.1, 0, -0.34, 0.01);
+      // Decider verifier key card (AMEND-1 section 1.4): no gold proving key on the on-chain side.
+      const card = makeVerifierKeyCard({ size: 0.95 });
+      card.position.set(NODE_X[k], 1.85, NODE_Z[k] - 0.92);
+      nodes.add(card);
+      S.kit.push(card);
       S.cards.push(card);
-      S.cardMats.push(cm);
       const sw = add(nodes, unit, matSweep, 0.05, 0.03, 0.95, NODE_X[k], 1.2, NODE_Z[k] + 0.15);
       sw.visible = false;
       S.sweeps.push(sw);
@@ -417,8 +403,21 @@ export default {
     S.sweep.visible = false;
     ctx.labels.anchor('ringClaim', S.ringClaim);
 
+    // ---- off-chain tray colTray (8.4, 8.5; AMEND-1 section 2) ---------------------------------
+    const colTray = group(scene, TRAY.x, 0.05, TRAY.z);
+    const matZoneOff = M(new THREE.MeshStandardMaterial({ color: PALETTE.zoneOff, roughness: 0.6, metalness: 0.1 }));
+    add(colTray, unit, matPaper, TRAY.w, 0.1, TRAY.d, 0, 0, 0);
+    const RIM = 0.14, RH = 0.12, ry = 0.05 + RH / 2;
+    add(colTray, unit, matZoneOff, TRAY.w, RH, RIM, 0, ry, -(TRAY.d - RIM) / 2);
+    add(colTray, unit, matZoneOff, TRAY.w, RH, RIM, 0, ry, (TRAY.d - RIM) / 2);
+    add(colTray, unit, matZoneOff, RIM, RH, TRAY.d - 2 * RIM, -(TRAY.w - RIM) / 2, ry, 0);
+    add(colTray, unit, matZoneOff, RIM, RH, TRAY.d - 2 * RIM, (TRAY.w - RIM) / 2, ry, 0);
+    anchor('trayCorner', colTray, -TRAY.w / 2 + 0.6, 0.2, -TRAY.d / 2 + 0.7);
+    S.colTray = colTray;
+
     // ---- join (8.4) -------------------------------------------------------------------------
     const gC1 = group(scene, ...C1);
+    gC1.userData.carried = true;
     S.gC1 = gC1;
     const hashBlock = (parent, x, z) => {
       const g = group(parent);
@@ -489,6 +488,7 @@ export default {
     };
     const rel = (arr, o) => arr.map((p) => [p[0] - o[0], p[1] - o[2]]);
     const gC2 = group(scene, ...C2);
+    gC2.userData.carried = true;
     S.gC2 = gC2;
     const GP = [[8.2, -2.0], [10.0, -2.0], [12.2, -2.0], [14.0, -2.0], [9.1, -3.3], [13.1, -3.3], [11.1, -4.6]];
     S.graphPos = GP;
@@ -519,8 +519,8 @@ export default {
     S.dep.visible = true;
     ctx.labels.anchor('dep', S.dep);
     S.hash2 = hashBlock(gC2, 11, -0.4);
-    S.descTray = add(gC2, unit, matTi, 3.4, 0.05, 0.6, 0, 0, 0);
-    putW(S.descTray, 7.4, 0.025, -0.4);
+    S.descTray = add(gC2, unit, matTi, 2.5, 0.05, 0.6, 0, 0, 0);
+    putW(S.descTray, 8.25, 0.025, -0.4);
     ctx.labels.anchor('descTray', S.descTray);
     const gAnch = anchor('graph', gC2, 0, 0.1, 0);
     putW(gAnch, 11.1, 0.1, -3.3);
@@ -600,18 +600,23 @@ export default {
 
     // ---- camera ------------------------------------------------------------------------------
     const s = ctx.camera.shots;
-    const WIDE = s.establish([-140, 0, 0], 330);
+    // The pull-back pose of 8.8, held through 8.9: the bench sits in the upper part of the frame, above
+    // the inventory card of 8.9 (lower 62 percent of the stage).
+    const W0 = s.establish([-140, 0, 0], 400);
+    const WIDE = { ...W0, pos: [W0.pos[0], W0.pos[1] - 85, W0.pos[2]], target: [W0.target[0], W0.target[1] - 85, W0.target[2]] };
+    const B = STARTS;
+    // Beat 8.9 adds no key: it holds the WIDE pose that 8.8 ends on.
     ctx.camera.track([
       { t: 0, pose: s.establish([-10, 1, 0], 30), dur: 2 },
       { t: 6, pose: s.establish([-3, 0.8, -2.5], 24), dur: 1.5 },
-      { t: 23, pose: s.establish([-4.8, 0.8, -4.0], 7), dur: 1.5 },
-      { t: 47, pose: s.establish([-1, 0.6, 2.4], 13), dur: 1.5 },
-      { t: 69, pose: s.inspect([10.5, 0, 1.4], 11, 'top'), dur: 1.5 },
-      { t: 94, pose: s.inspect([11, 0, -2.0], 12, 'top'), dur: 1.5 },
-      { t: 119, pose: s.establish([11.5, 0.6, -0.5], 13), dur: 1.5 },
-      { t: 146, pose: s.establish([2, 0.6, 1.5], 22), dur: 1.5 },
-      { t: 170, pose: s.establish([-1, 0.6, 2.4], 13), dur: 1.5 },
-      { t: 173, pose: WIDE, dur: 5 },
+      { t: B[1], pose: s.establish([-4.8, 0.8, -4.0], 7), dur: 1.5 },
+      { t: B[2], pose: s.establish([-1, 0.6, 2.4], 13), dur: 1.5 },
+      { t: B[3], pose: s.inspect([11, 0, -0.6], 14.5, 'top'), dur: 1.5 },
+      { t: B[4], pose: s.inspect([11, 0, -2.0], 12, 'top'), dur: 1.5 },
+      { t: B[5], pose: s.establish([11.5, 0.6, -0.5], 13), dur: 1.5 },
+      { t: B[6], pose: s.establish([2, 0.6, 1.5], 22), dur: 1.5 },
+      { t: B[7], pose: s.establish([-1, 0.6, 2.4], 13), dur: 1.5 },
+      { t: B[7] + 3, pose: WIDE, dur: 5 },
     ]);
   },
 
@@ -650,7 +655,7 @@ export default {
       if (sw > 0) sweep.position.set(NODE_X[k] + lerp(-0.7, 0.7, sw), 1.2, NODE_Z[k] + 0.15);
       const g = i > 0 ? 1 : ramp(bt, s0 + 0.4, s0 + 0.5);
       S.rims[k].color.setHex(PALETTE.titanium).lerp(_c.setHex(PALETTE.gold), g);
-      S.cardMats[k].emissiveIntensity = 0.9 * (i === 0 && bt >= s0 + 0.4 && bt < s0 + 0.7 ? 1 : 0);
+      S.cards[k].userData.setState({ lit: i === 0 && bt >= s0 + 0.4 && bt < s0 + 0.7 ? 1 : 0 });
       S.envs[k].scale.setScalar(k === 2 ? 0.3 * Math.max(1 - openK, 0.001) : 0.3);
       S.envs[k].visible = k !== 2 || openK < 0.999;
     }
@@ -659,7 +664,7 @@ export default {
     park(S.gOpen, openK);
     const seal = S.seal;
     const sealOpen = openK > 0.001;
-    const collK = P(5, 0, 0.4) * (1 - P(6, 0, 0.4));
+    const collK = P(5, 0.6, 1.0) * (1 - P(6, 0, 0.4));
     const cal = P(1, 2, 3);
     S.calL.forEach((m, j) => { m.position.x = -lerp(1.15, 0.8, cal) + (j ? 0.15 : 0); });
     S.calR.forEach((m, j) => { m.position.x = lerp(1.15, 0.8, cal) - (j ? 0.15 : 0); });
@@ -736,7 +741,6 @@ export default {
       const rOn = i > 2 || (i === 2 && bt >= 4.0);
       S.ringOut.visible = rOn;
       S.ringSteps.visible = rOn;
-      S.ringMats[0].emissiveIntensity = 0.5 * box(2, 4.0, 4.3);
     }
     {
       const k = i === 2 && bt > 5.2 && bt < 5.6 ? (bt - 5.2) / 0.4 : 0;
@@ -748,6 +752,14 @@ export default {
       S.matCap.emissiveIntensity = 0.6 * R(2, 7, 7.3);
     }
 
+    // ---- off-chain tray: rises at the start of 8.4, lowers and hides at the start of 8.6 ---------
+    const trayK = P(3, 0, 0.6) * (1 - P(5, 0, 0.6));
+    const lift = TRAY.top * trayK;
+    S.colTray.visible = trayK > 0.001;
+    S.colTray.position.y = lerp(-0.2, 0.05, trayK);
+    S.gC1.position.y = lift;
+    S.gC2.position.y = lift;
+
     // ---- join (8.4) -------------------------------------------------------------------------
     const col1 = P(3, 0, 0.6) * (1 - P(4, 0, 0.5));
     park(S.gC1, col1);
@@ -757,7 +769,7 @@ export default {
         { o: S.copyL, from: [9.45, 0.476, 2.05], file: [7.3, 0.5, 0.4], s: 0.8 },
         { o: S.copyR, from: [11.55, 0.476, 2.05], file: [6.4, 0.5, 0.4], s: 0.8 }] };
       S.H2 = { slotIn: [9.8, 0.5, -0.4], slotOut: [12.2, 0.5, -0.4], out: S.tShape, outSize: 1.2, ins: S.cells.map((o, q) => ({
-        o, from: [8.8 - 0.7 * q, 0.5, -0.4], file: [8.8 - 0.7 * q, 0.5, -0.4], s: 1 })) };
+        o, from: [9.25 - 0.55 * q, 0.5, -0.4], file: [9.25 - 0.55 * q, 0.5, -0.4], s: 1 })) };
     }
     let hashPulse = 0;
     {
@@ -778,10 +790,10 @@ export default {
         putW(S.setLR, lerp(13.3, 10.5, ks), lerp(0.5, flatY(1.2, 0.4), ks) + arc(ks, 0.8), lerp(0.4, 2.15, ks));
       }
       const p8 = i < 5;
-      const pk = p8 ? col1 : P(5, 0.5, 1.3) * (1 - P(6, 0, 0.4));
+      const pk = p8 ? col1 : P(5, 0.6, 1.4) * (1 - P(6, 0, 0.4));
       const pos = p8 ? [9.45, 0.4, 2.05, 11.55] : [12.4, 0, 0.2, 14.0];
-      S.pathL.position.set(pos[0], pos[1], pos[2]);
-      S.pathR.position.set(pos[3], pos[1], pos[2]);
+      S.pathL.position.set(pos[0], pos[1] + (p8 ? lift : 0), pos[2]);
+      S.pathR.position.set(pos[3], pos[1] + (p8 ? lift : 0), pos[2]);
       for (const p of [S.pathL, S.pathR]) park(p, pk * (p8 ? 1 : 0.7));
     }
 
@@ -795,14 +807,14 @@ export default {
       if (i === 4 && u >= 0) {
         hashPulse = hashRun(S.H2, u);
         const kd = P(4, 6, 7);
-        S.tShape.position.y = lerp(0.5, flatY(1.2, 0), kd);
+        S.tShape.position.y = lerp(0.5, flatY(1.2, 0), kd) + lift;
       } else if (i === 4) {
         const kl = phase(bt, 2, 3);
         S.cells.forEach((o, q) => {
           o.visible = bt >= 2;
           o.scale.setScalar(1);
           const f = S.H2.ins[q].file;
-          putW(o, lerp(GP[src[q]][0], f[0], kl), lerp(0.3, f[1], kl) + arc(kl, 0.5), lerp(GP[src[q]][1], f[2], kl));
+          putW(o, lerp(GP[src[q]][0], f[0], kl), lerp(0.3, f[1], kl) + arc(kl, 0.5) + lift, lerp(GP[src[q]][1], f[2], kl));
         });
         S.tShape.visible = false;
       } else {
@@ -821,9 +833,9 @@ export default {
       const st = [[6.6, -1.0], [8.4, -1.0], [13.8, -0.4]];
       toks.forEach((T, j) => {
         if (i < 5 || (j === 2 && i === 4)) { if (j < 2) T.visible = false; return; }
-        const ap = j < 2 ? P(5, 0, 0.4) : 1;
+        const ap = j < 2 ? P(5, 0.6, 1.0) : 1;
         T.visible = fade * ap > 0.001;
-        T.position.set(lerp(st[j][0], PIN_X[j], mv), lerp(flatY(1.2, 0), 0.55, mv) + arc(mv, 1.0), lerp(st[j][1], SEAL[1] + 1.5, mv));
+        T.position.set(lerp(st[j][0], PIN_X[j], mv), lerp(flatY(1.2, 0) + lift, 0.55, mv) + arc(mv, 1.0), lerp(st[j][1], SEAL[1] + 1.5, mv));
         T.rotation.set(-HALF * (1 - mv), 0, 0);
         T.scale.setScalar(Math.max(1.2 * lerp(1, 0.8 / 1.2, mv) * ap * fade, 0.001));
       });
@@ -831,9 +843,8 @@ export default {
       S.regCopy.visible = i === 5 && bt >= 4.0 && bt < 5.0;
       S.regCopy.position.set(lerp(PIN_X[0], POST[0], rk), lerp(0.55, 1.3, rk), lerp(SEAL[1] + 1.5, POST[1], rk));
       S.regCopy.scale.setScalar(0.8);
-      park(S.gPost, P(5, 0, 0.4) * fade);
+      park(S.gPost, P(5, 0.6, 1.0) * fade);
       S.ringReg.visible = i > 5 || (i === 5 && bt >= 5.0);
-      S.ringMats[1].emissiveIntensity = 0.5 * box(5, 5.0, 5.3);
     }
 
     // ---- claim identity (8.7) ---------------------------------------------------------------
@@ -850,20 +861,20 @@ export default {
         }
       });
       S.ringClaim.visible = i > 6 || (i === 6 && bt >= 3.2);
-      S.ringMats[2].emissiveIntensity = 0.5 * box(6, 3.2, 3.5);
+      S.ringMats[0].emissiveIntensity = 0.5 * (box(2, 4.0, 4.3) + box(5, 5.0, 5.3) + box(6, 3.2, 3.5));
     }
 
     // ---- the whole path (8.8) ---------------------------------------------------------------
     {
-      if (i === 7 && bt >= 3) ctx.showAll(true);
+      if ((i === 7 && bt >= 3) || i === 8) ctx.showAll(true);
       const len = (TRACE_X1 - TRACE_X0) * R(7, 8, 14);
-      const w = i === 7 ? lerp(0.12, 1.4, phase(bt, 3, 8)) : 0.12;
-      const th = i === 7 ? lerp(0.04, 0.2, phase(bt, 3, 8)) : 0.04;
+      const w = lerp(0.12, 1.4, P(7, 3, 8));
+      const th = lerp(0.04, 0.2, P(7, 3, 8));
       S.trace.visible = len > 0.01;
       S.trace.position.set(TRACE_X0 + len / 2, th / 2, 5.6);
       S.trace.scale.set(Math.max(len, 0.001), th, w);
       // From the end of the pull-back the fine detail is below one pixel: it leaves the draw list.
-      const fine = !(i === 7 && bt >= 8);
+      const fine = !(i > 7 || (i === 7 && bt >= 8));
       S.envs.forEach((e, k) => { if (k !== 2) e.visible = fine; });
       S.cards.forEach((cd) => { cd.visible = fine; });
       S.cart[0].visible = S.cart[0].visible && fine;
@@ -873,6 +884,14 @@ export default {
         const tk = 8 + 6 * ((20 - 40 * k - TRACE_X0) / (TRACE_X1 - TRACE_X0));
         r.visible = i === 7 && bt >= tk && bt < tk + 0.3;
       });
+    }
+
+    // ---- what lives where (8.9): the wide pose holds; the two rails and the gate light in turn --------
+    if (i === 8) {
+      const win = (a) => phase(bt, a, a + 0.25) * (1 - phase(bt, a + 0.95, a + 1.2));
+      ctx.zone.glow('off', win(2.0));
+      ctx.zone.glow('gate', win(6.0));
+      ctx.zone.glow('on', win(10.0));
     }
   },
 
