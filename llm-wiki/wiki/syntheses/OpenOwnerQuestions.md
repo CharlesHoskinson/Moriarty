@@ -2,7 +2,7 @@
 title: "Open owner questions"
 type: synthesis
 tags: [open-questions]
-sources: [dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, lookup-cache-consensus, lookup-cache-audit, c1-dense-memory-experiment, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response]
+sources: [dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, lookup-cache-consensus, lookup-cache-audit, c1-dense-memory-experiment, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, council-findings, council-revisions, cost-lane-fable, cost-lane-gemini]
 last_updated: 2026-11-11
 ---
 
@@ -14,20 +14,23 @@ Questions the owner must settle. Keep each until a source settles it. See [[Work
 |---|---|---|---|
 | 1 | D3 run ceiling against GP-1 | Answered by the study and audit; lead decisions R-1 to R-3 and R-7 pending owner review; residual parts are R-4 and R-5 | [[RunLengthCeiling]], [[final-design-decisions]] |
 | 2 | D-1 SI-12 to SI-14 under C = 8 (OD-5) | Open; no form measured; the architecture proposes contiguous dense slices as a third candidate, X6 measures; OWNER for the status change | [[dissent-c6-section]], [[ChipLeaf]] |
-| 3 | D-2 type identity in a constructor digest (OD-14) | Open, OWNER | [[ValueDigest]], [[dissent-c6-section]] |
+| 3 | D-2 type identity in a constructor digest (OD-14) | Open, OWNER; council P-5 (branch `pipeline-anim`) narrows OD-14 to the `ty_d` normal form inside the program admission claim ([[council-revisions]]) | [[ValueDigest]], [[dissent-c6-section]] |
 | 4 | D-6 leaf partition in the GP-4 shape commitment (N-7) | Open, against GPR-016; the architecture binds intervals, disclosure stays open | [[dissent-c6-section]], [[gp-architecture]] |
 | 5 | Exhaust kind 7 against SVM-009 (OD-16, N-12) | Open conflict, OWNER; DEC refuses kind 7 under `/1` meanwhile | [[ValueDigest]], [[dissent-c6-section]] |
-| 6 | Init mechanism for an input under the new digest (OD-17) | Open, OWNER; kit INIT owns it; lead recommends by-digest admission with an empty genesis memory; X11 pending | [[ValueDigest]], [[c6-outcome-ledger9-review]] |
+| 6 | Init mechanism for an input under the new digest (OD-17) | Open, OWNER; kit INIT owns it; lead recommends by-digest admission with an empty genesis memory; X11 pending. Council P-6 writes VIEW-WORK as the mechanism of form (b) with the Owner cell unchanged, and adds the I7 question (check `in_ty` on inspected nodes only, or the whole input) ([[council-revisions]]) | [[ValueDigest]], [[c6-outcome-ledger9-review]] |
 | R-4 | Tree depth: TOP >= 63, or accept a memory bound below the step bound | Open, OWNER (OD-1). TOP = 63 now backed by M-2 (at most 3 appends per step); holds only if one record is one physical cell (A-5, OD-11); the lower-bound option is no longer offered as an acceptance path (A-6) | [[DenseTailMemory]], [[final-design-decisions]] |
 | R-5 | Claim counter: no `n_claims < 2^64` bound in GP-001 | Open, OWNER (OD-2). The merge chose no count in any public statement; `set_root` binds the DAG; OWNER to confirm | [[GeneralPurposeRecursion]], [[final-design-decisions]] |
 | R-6 | Arenas: one tagged arena or four | Lead decision L-9 (one arena), pending owner review; the non-interleaving check is done and holds (M-1) | [[DenseTailMemory]], [[final-design-decisions]] |
 | L-2 | Cache-line counts per leaf (`K_page`, `K_rom`) and keeping the scalar `cold_read` | Lead decision, pending owner review; per-rule table done for heap reads (`k_page + n_cold >= 4`, M-3), `K_rom` open (X15) | [[BlockCache]], [[final-design-decisions]] |
 | L-9 | Arena decision: one arena | Lead decision, pending owner review; non-interleaving check done (M-1, OD-4 decided by the lead) | [[DenseTailMemory]], [[final-design-decisions]] |
 | OD-18 | One-arena Init field list in SRC-021 (one `(len, root, tail_d)` in place of four `(root, length)` pairs) | Open, OWNER; lead recommends amending SRC-021 after OD-17 | [[ModularArchitecture]], [[sherlock-architecture]] |
-| OD-20 | Scope of GP-2: input consumption at the seal only, or also a mid-run consume rule; bind the dependency at genesis or at the seal | Open, OWNER, first among the new owner questions; lead built path is input consumption, "the lead's reading, not a settled fact" | [[GeneralPurposeRecursion]], [[arch-audit-response]] |
+| OD-20 | Scope of GP-2: input consumption at the seal only, or also a mid-run consume rule; bind the dependency at genesis or at the seal | Open, OWNER, first among the new owner questions; lead built path is input consumption, "the lead's reading, not a settled fact". Council: option (b) also changes the decider (C4) and needs the run-entry `reg_root` rule P-9 ([[council-findings]], [[council-revisions]]) | [[GeneralPurposeRecursion]], [[arch-audit-response]] |
+| OD-23 | `rules_d` consumer: give it a consumer in the LEAF base case of `shape_d`, or amend SRC-001 to a reserved zero lane | Open, OWNER (council P-10, branch `pipeline-anim`); no kit text changed ([[council-findings]] C7, [[council-revisions]]) | [[ModularArchitecture]], [[council-revisions]] |
 | OD-21 | The normative semantic reference for the full language | Open, OWNER; lead recommends a separate evaluator over `moriarty-sherlock-nominal/1`; X13 sizes it | [[ModularArchitecture]], [[sherlock-architecture]] |
 
-Other items the architecture marks OWNER without a row here: OD-6 (only if S changes), OD-10 (only if a rule is to stay out), OD-13 and OD-19 (only if X10 fails and a new leaf statement is needed), OD-22 (only if a second accumulator per SRS is wanted), N-6 (GP-4 inline work if X7 fails), N-11 (contract surface, SRC-007 per-program contract). See [[sherlock-architecture]].
+Other items the architecture marks OWNER without a row here: OD-6 (only if S changes), OD-10 (only if a rule is to stay out), OD-13 and OD-19 (only if X10 fails and a new leaf statement is needed), OD-22 (only if a second accumulator per SRS is wanted), N-6 (GP-4 inline work if X7 fails; council P-4 removes the separate-emitter fallback, so a misfit goes to the owner under N-6), N-11 (contract surface, SRC-007 per-program contract; council P-8 rewords the recommendation to two entry points of one contract, Owner mark kept). See [[sherlock-architecture]], [[council-revisions]].
+
+Items the cost round lanes name for the owner (lane labels, not owner words; proposals, not merged): an SRC-014 amendment of `S_MAX` for a larger leaf (OD-6) ([[cost-lane-fable]] L1, [[cost-lane-gemini]] L3); a second acceptance path, direct leaf acceptance for one-leaf runs ([[cost-lane-fable]] L3b, "a design question for the owner"), or `acceptDirectLeaf`, which needs an OWNER exception to GP-001 proof-size uniformity ([[cost-lane-gemini]]). Both stand against the one seal path and one contract of council P-3 and P-8.
 
 ## 1. The D3 run ceiling against GP-1
 
@@ -95,3 +98,7 @@ Option (a): input consumption only; a consumer takes a producer's Halted value a
 ## OD-21. Normative semantic reference
 
 Options: (a) extend the dedicated `sherlock-k-a/1` evaluator `reference.rs`; (b) a separate full-language evaluator over `moriarty-sherlock-nominal/1`, the dedicated grammar unchanged (lead recommendation); (c) declare the owner machine its own reference, which would compare the owner machine with itself for exactly the forms GP-001 names. It decides what "the reference machine" is for GP-1's "every program of the Sherlock language". X13 first. OWNER ([[sherlock-architecture]], [[final-design-decisions]] A-4).
+
+## OD-23. `rules_d` consumer
+
+C7: `rules_d` (lane 5 of the leaf statement) has no consumer after the leaf; rule selection is already constrained inside the leaf by DEC and CORE. Options: give it a consumer by putting `rules_d` into the LEAF base case of `shape_d` (one word in `leaf_shape`), or amend SRC-001 so lane 5 is a reserved zero lane and drop the CORE sponge and its three mutants, saving about 9 permutations per leaf at S = 16, about 630 rows (ESTIMATE). Removing it edits an owner spec. Low priority. OWNER ([[council-findings]], [[council-revisions]] P-10).

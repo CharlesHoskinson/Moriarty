@@ -2,7 +2,7 @@
 title: "Value digest sherlock-value/1"
 type: concept
 tags: [c6, digest]
-sources: [c6-outcome-ledger9-review, dissent-c6-section, lookup-cache-consensus, lookup-cache-audit, final-design-decisions, sherlock-architecture, arch-audit-astra, arch-audit-response]
+sources: [c6-outcome-ledger9-review, dissent-c6-section, lookup-cache-consensus, lookup-cache-audit, final-design-decisions, sherlock-architecture, arch-audit-astra, arch-audit-response, council-findings, council-revisions]
 last_updated: 2026-11-11
 ---
 
@@ -32,6 +32,12 @@ The canonical value encoding of the C6 review, used for both `input_d` and `outc
 - VALUE DIGEST issues no bus request: every child record and ROM row arrives as an `AuthRec` or `AuthRom` token of CORE's read port, with `addr < len_cur` at the read point ([[arch-audit-astra]] finding 4, [[sherlock-architecture]]).
 - It adds a bounded opening `open_value_node` (one node per call; a constructor field is usable only after its opening fold reaches the digest), used by INIT's input admission.
 - Capacity tag `iv = 0`: E-2 tags are for memory hashes only. Costs ESTIMATE: 210 rows for UInt, Bool, Leaf, Cons, Branch without the HASH constant-start mode; 70 with it (X9 decides). Where `vd` is carried stays open (V-7).
+
+## Council revisions (branch `pipeline-anim`)
+
+- C1: PROG canonicality (ROM `ty_d` and constant `vd`) had no discharge point once `prog_d` is call data. P-5: ADMIT-WORK walks the ROM tables once per program (constant `vd`, `ty_d` from the `decl_schema_d` normal form, constructor arity, canonical padding) and emits an admission claim that SEAL checks; OD-14 decides only the `ty_d` normal form inside it ([[council-findings]], [[council-revisions]]).
+- C2: by-digest input admission had no schedule for a constructor whose fields need the completion hash in one step. P-6: VIEW-WORK builds a certified read-only view `view_root`; CORE reads input nodes through `AuthIn` against it, 20 to 64 hashes per read (ESTIMATE); VDG-005 keeps the bottom-up fold for construction only. OD-17 and the I7 admissibility choice stay OWNER ([[council-revisions]]).
+- Open points: the seal read path for `view_root` (a body word the node does not re-hash) and the non-canonical `view_root` of a lazy view ([[council-revisions]]).
 
 ## Contradictions
 

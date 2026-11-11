@@ -2,7 +2,7 @@
 title: "Modular architecture: module kits, seams and build order"
 type: concept
 tags: [architecture, module-kits, final-design, lead-decision]
-sources: [sherlock-architecture, arch-audit-astra, arch-audit-response, final-design-decisions, rule-maxima-experiment, c1-dense-memory-experiment, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft]
+sources: [sherlock-architecture, arch-audit-astra, arch-audit-response, final-design-decisions, rule-maxima-experiment, c1-dense-memory-experiment, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft, council-findings, council-revisions]
 last_updated: 2026-11-11
 ---
 
@@ -42,6 +42,19 @@ Gates per kit: MockProver positives and named mutants with weakened controls; a 
 - **REFERENCE BRIDGE (semantic reference and projection).** Host-side; adds no constraint. Today's `reference.rs` has no constructor values and the projection returns `UnsupportedGeneric` for nominal constructs, planned matches and constructor state, so it cannot run the GP-001 corpus (a constructor of more than 8 fields across a leaf boundary). Deliverables R1 full-language evaluator, R2 explicit event map (`n_steps` counts enabled owner events), R3 total projection, R4 coverage report where a gap fails the gate. Which artifact is normative is OD-21 (OWNER; recommended a separate evaluator over `moriarty-sherlock-nominal/1`); X13 sizes the work. Trusted host diagnostics, not a proof ([[sherlock-architecture]], [[arch-audit-astra]] finding 14).
 - **HOST CHECKPOINT STORE.** The host store and versioned codec `sherlock-ckpt/1` that CONTINUATION needs; see [[Continuations]].
 - **GP-3 general verifier (five subkits).** Bounded-work foreign verification; see [[GeneralPurposeRecursion]].
+
+## Council revisions P-1 to P-10 (branch `pipeline-anim`, not on `main`)
+
+The pipeline-animation council found one blocker and five major gaps in the design ([[council-findings]]); the fixes are design text in `ARCHITECTURE.md`, `DECISIONS.md` and the OpenSpec change on branch `pipeline-anim`, commit `f372ab74c`, until merged ([[council-revisions]]):
+
+- 24 kits: a new LEDGER CONTRACT kit owns claim settlement (P-8, [[AcceptRunContract]]).
+- One seal path; the run decider opens a SET head (P-3, [[RunDecider]]).
+- `reg_root` equal across child slots (P-1), FV shape case (P-2), inline kernel from the leaf kit code (P-4).
+- Program admission ADMIT-WORK discharges PROG canonicality at the seal (P-5); certified input view VIEW-WORK with read port `AuthIn` as the mechanism of OD-17 form (b) (P-6, OWNER cell unchanged); `work_root` operand store for the GP-3 general verifier (P-7) ([[ValueDigest]]).
+- New owner question OD-23 on `rules_d` (P-10, [[OpenOwnerQuestions]]).
+- Lean tally on the branch: 14 proved, 55 open, 69 total. `openspec validate --strict` passes.
+
+On `main` the figures of the sections above (23 kits, 53 open) still hold.
 
 ## Not narrowing
 

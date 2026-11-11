@@ -307,3 +307,76 @@
 - Owner: "make sure we keep a living log in wiki-llm so nothing is lost".
 - Rule: every lane start and finish, owner decision, measurement and commit gets a log entry when it happens; this block backfills the morning.
 - Next: ingest the day's round reports as source pages.
+
+## [2026-11-11 12:35] lane-done | Animation integration (Sonnet 10)
+- Commit `2e6aa8c8b` on branch `pipeline-anim`: label determinism fixed, carrier collisions cleared, 8.8 wide shot 317 to 227 draw calls (budget 260), stepped mode and WebGL2 fallback checked, impeccable detect clean.
+- Open: materials over budget in scenes 4, 5, 7, 8 (139, 59, 83, 63 against 40); a 1 px side-panel text flake from web fonts; one overlapping phone label pair at 7.18.
+- Report: ~/.cache/pipeline-anim/INTEGRATION.md.
+- Next: STORYBOARD-AMEND-1 (location chip, rail, gate, new beats), material atlas, vendored fonts, then Terra QA.
+
+## [2026-11-11 12:38] lane-start | Animation amendment build (Sonnet 10)
+- STORYBOARD-AMEND-1: location chip, rail, boundary gate, 14 new narration beats, beat 8.9 (116 beats, 2,874 s); AA location colours distinct from the outcome teal.
+- Also the material atlas (scenes 4, 5, 7, 8 to 40 or fewer), vendored fonts for the text flake, the 7.18 phone overlap, and the DESIGN, SCENE-API and SCENE-CONTRACT updates.
+- Next: Terra 1 to 10 QA on the amended build.
+
+## [2026-11-11 12:33] note | Correction: times of the 12:35 and 12:38 entries
+- late entry. The entries "Animation integration (Sonnet 10)" and "Animation amendment build (Sonnet 10)" carry times later than the events; both happened before 12:32 local.
+- Native proving time N1b measured up to k = 19 (19.5 s, 7.5 GB, 471,433 rows); k = 20 at the 16 GB cap was throttled (132.8 s) and is being re-run at 40 GB with k = 21 and k = 22.
+- ~/Projects/Moriarty/research/sherlock-cost-optimization-20261111/measured/N1b-native-proving-time.md.
+
+## [2026-11-11 14:10] incident | Network outage stopped every Claude agent
+- About 12:40 to 14:08 the API server was unreachable (EAI_AGAIN); seven agents stopped: k = 21 measurement, N1b, S1, Compact merge, wiki ingest, animation Sonnet 10 and its scene 7 helper.
+- systemd units kept running: the k = 20 and k = 21 node runs finished (rc 0, ~/.cache/k21-measure/run-gp.unit.log); the animation commit `72d93f2bb` (location system, vendored fonts) landed before the outage.
+- All seven agents resumed at 14:10.
+
+## [2026-11-11 14:10] lane-done | Elastic chip Gemini A; all 12 chip proposals done
+- A-gemini.md is complete (sections 1 to 6, written by 12:07); its argon run hung after that and the unit was stopped.
+- All 12 proposals now exist in ~/Projects/Moriarty/research/sherlock-elastic-chip-20261111/proposals/.
+- Next: the k = 21 design lanes, once M-k21.md, S1 and N1b k = 21 exist.
+
+## [2026-11-11 14:10] ingest | Council findings and revisions (pipeline-anim)
+- Wrote `council-findings` (C1 to C10: changes_requested, blocker C5, major C1 to C4 and C6, C10 refuted) and `council-revisions` (P-1 to P-10, 24 kits, Lean 14 proved and 55 open); both files are on branch `pipeline-anim` only.
+- Updated ModularArchitecture, ValueDigest, IvcNode, RunDecider, AcceptRunContract, OpenOwnerQuestions (new OD-23), AnimationV2, WorkstreamStatus, overview.
+- Next: merge of `pipeline-anim` into `main`; owner on OD-23 and OD-17 with I7.
+
+## [2026-11-11 14:10] ingest | Cost round brief, N1, N1b and three lanes
+- Wrote `cost-round-brief`, `n1-native-circuits`, `n1b-native-proving-time`, `cost-lane-fable`, `cost-lane-astra`, `cost-lane-gemini`.
+- Native `spend` k = 15, 24,025 rows, 1.755 s (measured); lanes put Sherlock at about 10^4 times native in rows (estimated) and disagree on 10x and 2x; contradictions recorded on each lane page.
+- N1b k = 20 to 22 rows were unfilled placeholders as read; S1 not in `measured/`.
+- Next: lead merge of the cost lanes; re-ingest N1b when complete; S1.
+
+## [2026-11-11 14:10] ingest | Compact and prover graphs
+- Wrote `compact-graph` (6,907 nodes, 13,202 edges, manifest 909 entries) and `prover-graph` (21,437 nodes, 57,968 edges; no manifest in the folder).
+- Health notes: Compact corpus-size warning and six import cycles; prover corpus check reads about 0 words, 20 one-file import cycles.
+- Next: ingest the Compact feasibility round.
+
+## [2026-11-11 14:10] ingest | Elastic chip round brief
+- Wrote `elastic-chip-brief`: 12 lanes, areas A to D, one key set for every program and host, proofs byte for byte as the stock prover.
+- The 12 proposals get one page from the lead's merge.
+
+## [2026-11-11 14:10] ingest | Elastic chip area D Fable lane (GPU backend, F-D1 to F-D3)
+- Wrote `elastic-chip-gpu-fable`: five GPU kits; F-D1 seeded proofs depend on the rayon thread count, F-D2 HEAD draws quotient blinders from `OsRng`, F-D3 proof format change and the 0.8.2 against 0.8.3 pin.
+- Linked from ZeroKnowledge (fresh blinders in production, seeded proofs as a test mode) and MidnightLedger9 (k = 20 decider verification confirmed from sources).
+- Next: X-D1, X-D8, X-D0 in the merged round.
+
+## [2026-11-11 14:12] lane-done | S1 Sherlock step profile measured
+- Hand-translated Compact circuits on the reference machine (measured): tiny set 21 zkir instructions, 1,846 proved steps; vote$commit 132 instructions, 11,116 proved steps (about 85 steps per instruction; hash and Impact builtins are stubs).
+- Hot spot: BHelperEnvGetCell 3,868 of 11,116 steps in vote$commit (environment lookup); PushFrame 389 of 2,239 reference steps.
+- ~/Projects/Moriarty/research/sherlock-cost-optimization-20261111/measured/S1-sherlock-steps.md.
+- Next: profile input for superinstructions and straight-line mode in the k = 21 round.
+
+## [2026-11-11 14:14] lane-done | Compact feasibility merged
+- Verdict: feasible with named modules, no ledger change; conditions XC-9 (a k = 20 proof verifies on ledger 9, untested) and E-1 (one key for every entry leaves the entry label unbound).
+- Tap at `Lflattened` after `optimize-circuit2`; tier 1 kits COMPACT FRONTEND, ABI, SEAL, HOST, TX PLAN, FIELD, SHA256; rules 120 to 134-146 (estimated); zero-knowledge rules Z-1 to Z-10, end-to-end zero knowledge not yet established (XC-7).
+- ~/Projects/Moriarty/research/sherlock-compact-feasibility-20261111/MERGED.md; now a source of the k = 21 brief.
+- Next: ingest MERGED.md and fill the Compact section of [[AnimationV2]]; owner points listed in the next answer.
+
+## [2026-11-11 14:18] lane-done | k = 21 measurements (lane M)
+- Node rows flat across k (chip node 823,466 to 823,470, cost model); node proof 71.7 s to 113.4 s (1.58x) and 16.25 to 31.64 GB; decider 929,170 rows fits k = 20; free range-table space stays about 16,102 rows at both k (measured).
+- A k = 21 decider proof verified through the ledger 9 VerifierKey::verify; tampered inputs rejected; the full transaction path not run.
+- ~/Projects/Moriarty/research/sherlock-k21-recalibration-20261111/measured/M-k21.md; harness on branch `k21-measure` (`208a9e9be`).
+
+## [2026-11-11 14:18] lane-start | k = 21 design lanes
+- Opus agent, GPT-6 Astra high (unit k21-astra), Gemini 4 Carbon High (unit k21-gemini), one shared brief ~/.cache/k21-recal/brief-lane.md.
+- Outputs: research/sherlock-k21-recalibration-20261111/proposals/{opus,astra,gemini}.md.
+- Next: merge, blinded verifier, apply to the design and specs.
