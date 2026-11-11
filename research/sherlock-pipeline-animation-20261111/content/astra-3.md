@@ -21,13 +21,13 @@ Labels:
 - `n_steps` | on: the step-count position in the carrier
 - `SherlockRun.acceptRun` | on: the envelope address
 
-Numbers used: Four public values — BRIEF.md §3, steps 5 and 6. The version in `sherlock-value/1` — §3, steps 1 and 5. About 6.4 KB — §3, step 6.
+Numbers used: Four public values: BRIEF.md §3, steps 5 and 6. The version in `sherlock-value/1`: §3, steps 1 and 5. About 6.4 KB: §3, step 6.
 
 ### Beat 6.2: refuse-a-swapped-value (23 s)
 
 On screen: Inspect a comparison envelope beside the unchanged original. The comparison envelope holds the same seal but an `outcome_d` token with a different engraved face. It stops at the verification boundary, returns slightly and receives a red hatch. The original envelope holds still beside the refused substitution.
 
-Narration: The call transcript, the ordered data bound to the proof, includes these exact public values. A sender replaces `outcome_d` while keeping the proof. Verification against the altered transcript fails. The transaction is refused. Changing `prog_d`, `input_d` or `n_steps` has the same effect. This binding prevents a valid proof from authorizing a different claim or step count.
+Narration: The call transcript, the ordered data bound to the proof, includes these exact public values. When a sender replaces `outcome_d` and keeps the proof, verification against the altered transcript fails and the transaction is refused. A changed `prog_d`, `input_d` or `n_steps` meets the same refusal. A valid proof therefore authorizes only its own claim and step count.
 
 Labels:
 
@@ -42,7 +42,7 @@ Numbers used: none.
 
 On screen: Inspect the original envelope beneath the stationary gold key rack. Its `prog_d` token slides into the call-data position aligned with the contract entrance. The token remains visibly part of the envelope, while the contract housing and key cards hold their positions.
 
-Narration: The contract receives `prog_d` as call data, a value carried by the invocation. The program identity does not select a new contract or verifier key. One contract and one key set serve every program and every input. The proof binds the supplied program digest to the execution it proves.
+Narration: The contract receives `prog_d` as call data, a value carried by the invocation. One contract and one key set serve every program and every input, so the program identity selects no contract and no verifier key. The proof binds the supplied program digest to the execution it proves.
 
 Labels:
 
@@ -51,7 +51,7 @@ Labels:
 - Shared key set | on: the gold key rack
 - `SherlockRun` | on: the contract entrance
 
-Numbers used: One contract and one key set — BRIEF.md §2, “One contract.”
+Numbers used: One contract and one key set: BRIEF.md §2, “One contract.”
 
 ### Beat 6.4: cross-to-slate (20 s)
 
@@ -78,7 +78,7 @@ Scene length: 534 s (target 100 s)
 
 On screen: Establish the slate contract station with the incoming envelope in its previous pose. A gold verifier key card remains fixed above the exposed seal and call-data strip. A verification sweep crosses the seal and its bound values, leaving a short bright-gold edge. The envelope rests beside the `runs` cabinet.
 
-Narration: The transaction reaches `acceptRun`, the contract operation that accepts a proved run. It checks the decider proof against the contract's verifier key, the public key that defines the accepted proof relation, and the call transcript. A failed check refuses the call. This prevents a sender from substituting a proof of an unrelated relation. The same verifier key serves every program and input.
+Narration: The transaction reaches `acceptRun`, the contract operation that accepts a proved run. It checks the decider proof against the contract's verifier key, the public key that defines the accepted proof relation, and the call transcript. A failed check refuses the call, so a sender cannot pass off a proof of an unrelated relation. The same verifier key serves every program and input.
 
 Labels:
 
@@ -96,7 +96,7 @@ On screen: Inspect the contract’s gold Poseidon block. The domain marker, vers
 
 Narration: The contract recomputes `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)`. Poseidon is the digest function. `SHK_RUN` marks the run-claim domain, separating this digest from other kinds of digest, and `1` is the claim version. The remaining inputs come from the verified call.
 
-Deriving the identity from these values prevents the sender from assigning a fresh identity to an existing result. The step count stays outside this identity.
+With the identity derived from these values, no sender can give an existing result a fresh identity. The step count stays outside this identity.
 
 Labels:
 
@@ -106,13 +106,13 @@ Labels:
 - `claim_d` | on: the emerging gold-rimmed token
 - `n_steps` | on: the stationary step-count position
 
-Numbers used: Claim version 1 — BRIEF.md §3, step 5.
+Numbers used: Claim version 1: BRIEF.md §3, step 5.
 
 ### Beat 7.3: look-up-the-claim (21 s)
 
 On screen: Inspect the `runs` cabinet index. The recomputed `claim_d` token slides to the lookup position beside the stored engraved claim faces. Its destination is an unused drawer position, with no matching stored face. Hold the token beside that empty position.
 
-Narration: The contract looks up the recomputed `claim_d` in `runs`, its record of accepted run claims. It compares this digest with the stored claim keys. An absent key passes the freshness check. An existing key refuses the call. This lookup stops a valid proof from creating another acceptance of the same claim.
+Narration: The contract looks up the recomputed `claim_d` in `runs`, its record of accepted run claims. It compares this digest with the stored claim keys. An absent key passes the freshness check. An existing key refuses the call. The lookup stops a valid proof from creating a second acceptance of the same claim.
 
 Labels:
 
@@ -126,7 +126,7 @@ Numbers used: none.
 
 On screen: The fresh drawer carries `claim_d` on its front. The `outcome_d` token and step-count object slide together into the drawer’s storage recess. The program and input tokens remain visible in the carrier outside the recess. Hold on the stored payload and its claim key.
 
-Narration: For a fresh `claim_d`, the contract stores `outcome_d` and `n_steps` under that key. These are the values bound by the verified proof. The record therefore preserves both the result identity and the authenticated step count. The contract stores no state digest. Memory roots, tail digests, memory lengths and addresses remain inside the proof.
+Narration: For a fresh `claim_d`, the contract stores `outcome_d` and `n_steps` under that key. These are the values that the verified proof binds, so the record preserves both the result identity and the authenticated step count. The contract stores no state digest. Memory roots, tail digests, memory lengths and addresses remain inside the proof.
 
 Labels:
 
@@ -141,7 +141,7 @@ Numbers used: none.
 
 On screen: A repeated envelope sits at the cabinet entrance with the same seal and public-value faces. Its claim face matches the occupied drawer’s face. The envelope stops, returns slightly and receives the fixed red refusal hatch. The occupied drawer and its contents remain still.
 
-Narration: A sender submits the same proof again with the same public values. Proof verification still succeeds, but the contract derives the same `claim_d`. Its lookup finds the existing record and refuses the repeated call. The stored outcome and step count remain unchanged. A valid proof grants no permission to accept its claim repeatedly.
+Narration: A sender submits the same proof again with the same public values. Proof verification succeeds again, the contract derives the same `claim_d`, and its lookup finds the existing record and refuses the repeated call. The stored outcome and step count remain unchanged. A valid proof lets its claim be accepted once, never repeatedly.
 
 Labels:
 
@@ -156,7 +156,7 @@ Numbers used: none.
 
 On screen: A comparison envelope arrives with a differently engraved proof seal. Behind it, stationary tape strips show different leaf boundaries without numeric cut positions. Its public-value faces and claim face match those of the stored claim. The comparison envelope stops at the occupied drawer, returns slightly and receives a red hatch.
 
-Narration: The sender proves the same run again with different boundaries between leaves. The proof changes, but `prog_d`, `input_d`, `outcome_d` and `n_steps` stay equal. The contract recomputes the same `claim_d` and refuses the call. Leaf boundaries, proof randomness and aggregation shape never enter this identity, so changing the proof's construction cannot bypass replay refusal.
+Narration: The sender proves the same run again with different boundaries between leaves. The proof changes, while `prog_d`, `input_d`, `outcome_d` and `n_steps` stay equal. The contract recomputes the same `claim_d` and refuses the call. Leaf boundaries, proof randomness and aggregation shape never enter this identity, so changing the proof's construction cannot bypass replay refusal.
 
 Labels:
 
@@ -171,7 +171,7 @@ Numbers used: none.
 
 On screen: Inspect an authenticated collection slab beside the accepted claim. Its child-proof connections and claim-opening path are visible as fixed structural tracks. A verification sweep crosses the slab and leaves its gold edge bright. Hold on the authenticated structure without a claim-count register or count label.
 
-Narration: The public statement carries no count of claims. A count does not establish that a particular claim is valid or present. Proof checks establish validity, digest openings establish membership, and `claim_d` controls replay refusal. Collections combine authenticated children without adding a claim counter, so shared dependencies require no count that grows with every path through the proof graph.
+Narration: The public statement carries no count of claims. A count says nothing about whether a particular claim is valid or present. Proof checks establish validity, digest openings establish membership, and `claim_d` controls replay refusal. Collections combine authenticated children without adding a claim counter, so shared dependencies require no count that grows with every path through the proof graph.
 
 Labels:
 
@@ -185,7 +185,7 @@ Numbers used: none.
 
 On screen: Inspect the producer’s collection proof on the paper-side proof rail, with the accepted drawer still visible across the boundary. An exploded path connects its root to the requested claim. At the selected path link, opening inputs enter the fixed Poseidon block and reproduce the parent token’s engraved face. Hold the completed path with the sealed claim at its end.
 
-Narration: A later run consumes this claim at its own seal. Consume means authenticate a claim for use as a dependency. The producer supplies a verified SET, a digest commitment to sealed claims. Hash openings connect the requested claim to that verified root, through joined collections or dependency coverage. Every opening must reproduce its parent digest. This rejects an unrelated claim, an unfinished segment or a state digest offered as a result.
+Narration: A later run consumes this claim at its own seal. Consume means authenticate a claim for use as a dependency. The producer supplies a verified SET, a digest commitment to sealed claims. Hash openings connect the requested claim to that verified root, through joined collections or dependency coverage. Every opening must reproduce its parent digest. An unrelated claim, an unfinished segment or a state digest offered as a result fails here.
 
 Labels:
 
@@ -200,7 +200,7 @@ Numbers used: none.
 
 On screen: The later run’s final-header opening sits beside a discharge-chain token on the paper-side inspection tray. The `deps_d` token and discharge-chain token slide onto the same position. Their equal engraved faces merge into a single outline. The producer membership evidence remains attached to the discharge chain.
 
-Narration: The later run uses SEAL-WITH-DEPS, the seal mode that checks dependencies. Its `deps_d` commits to the ordered dependency list, including repeated uses. The proof constructs a discharge chain from authenticated claims and requires that chain to equal the `deps_d` opened from the run's final state header. This equality rejects missing, added, reordered or removed repetitions. Plain SEAL accepts only an empty dependency list.
+Narration: The later run uses SEAL-WITH-DEPS, the seal mode that checks dependencies. Its `deps_d` commits to the ordered dependency list, including repeated uses. The proof constructs a discharge chain from authenticated claims and requires that chain to equal the `deps_d` opened from the run's final state header. Missing, added or reordered entries and removed repetitions fail this equality. Plain SEAL accepts only an empty dependency list.
 
 Labels:
 
@@ -228,7 +228,7 @@ Labels:
 - Equal value digests | on: the merged value-digest outline
 - SEAL-WITH-DEPS | on: the consumer’s seal mode plate
 
-Numbers used: The version in `sherlock-value/1` — BRIEF.md §3, steps 1 and 5.
+Numbers used: The version in `sherlock-value/1`: BRIEF.md §3, steps 1 and 5.
 
 ### Beat 7.11: retain-dependency-evidence (24 s)
 
@@ -266,7 +266,7 @@ Numbers used: none.
 
 On screen: Inspect the authenticated registry entry as an exploded row of named cells beside the foreign key card. The supplied interpretation and registered interpretation occupy aligned tracks. A verification sweep crosses the aligned fields. Hold on the matching interpretation with its connection to `reg_root` intact.
 
-Narration: The registry entry fixes the proof system, the curve used for group arithmetic and the commitment scheme that binds the proof's algebraic data. It also fixes setup parameters, the shared cryptographic parameters used by those commitments. The node checks the supplied verification interpretation against this authenticated entry. Matching a key digest alone is insufficient: substituted arithmetic or commitment rules cannot pass this check.
+Narration: The registry entry fixes the proof system, the curve used for group arithmetic and the commitment scheme that binds the proof's algebraic data. It also fixes setup parameters, the shared cryptographic parameters used by those commitments. The node checks the supplied verification interpretation against this authenticated entry. Substituted arithmetic or commitment rules fail this check, even under a matching key digest.
 
 Labels:
 
@@ -283,7 +283,7 @@ Numbers used: none.
 
 On screen: Inspect the remaining fields of the same registry entry. The foreign proof’s supplied input interpretation sits in a parallel track. A verification sweep crosses the schema, transcript and adapter bindings together. Hold the authenticated fields without displaying a numeric input count or format value.
 
-Narration: The entry also binds the transcript rules, public-input schema and exact input count, adapter digest, format version and admission policy. The schema specifies how the public inputs are interpreted. The foreign verifier checks these supplied details against the registered entry. This prevents a sender from changing input order, omitting an input or substituting a different translation while retaining the registered key.
+Narration: The entry also binds the transcript rules, public-input schema and exact input count, adapter digest, format version and admission policy. The schema specifies how the public inputs are interpreted. The foreign verifier checks these supplied details against the registered entry. A sender who keeps the registered key still cannot change the input order, omit an input or substitute a different translation.
 
 Labels:
 
@@ -300,7 +300,7 @@ Numbers used: none.
 
 On screen: The foreign slab has an exposed strip of encoded proof elements beside its registered format card. A verification sweep crosses the element strip and its end boundary. The accepted elements retain a gold edge, with no loose element beyond the boundary. Hold on the parsed proof and the authenticated format card.
 
-Narration: The proof parser decodes the foreign proof under the registered format. It checks curve points against the curve equation and required subgroup, the allowed group of points. It checks scalars, the field numbers used in proof arithmetic, against their canonical encodings. It refuses missing or trailing proof data. These checks prevent malformed encodings and unconsumed data from acquiring the meaning of a valid proof.
+Narration: The proof parser decodes the foreign proof under the registered format. It checks curve points against the curve equation and required subgroup, the allowed group of points. It checks scalars, the field numbers used in proof arithmetic, against their canonical encodings. It refuses missing or trailing proof data. Malformed encodings and unconsumed data never acquire the meaning of a valid proof.
 
 Labels:
 
@@ -316,7 +316,7 @@ Numbers used: none.
 
 On screen: Inspect an ordered row of parsed proof elements and public-input cells. Their transcript-derived challenge cells sit at the end of the row, connected to the registered transcript rules. A verification sweep crosses this ordered structure. Hold on the challenge cells attached to the transcript that derives them.
 
-Narration: The foreign transcript verifier processes the proof elements and public inputs in the registered order. It derives challenges, the field values that select the proof's verification equations, from that transcript. The arithmetic checks use those derived challenges. A prover-supplied replacement challenge fails the relation. This prevents the sender from choosing favorable equations after seeing the proof data.
+Narration: The foreign transcript verifier processes the proof elements and public inputs in the registered order. It derives challenges, the field values that select the proof's verification equations, from that transcript. The arithmetic checks use those derived challenges. A prover-supplied replacement challenge fails the relation. The sender cannot choose favorable equations after seeing the proof data.
 
 Labels:
 
@@ -347,7 +347,7 @@ Numbers used: none.
 
 On screen: Proof slabs for adjacent verification work units rest along the paper-side rail. The predecessor’s committed-state token and the successor’s required starting-state token slide onto the same position and merge into one outline. The state’s named fields remain exposed in a fixed inspection tray. Hold with the continuation link complete and the foreign-claim output position still empty.
 
-Narration: Foreign verification proceeds in bounded work units, each proving a portion of the registered verifier. Every unit authenticates its predecessor's committed state before continuing. That state binds the registry entry, phase, proof position, transcript, partial arithmetic and consumed proof elements. A mismatched continuation fails. The schedule prevents skipped, repeated or replaced elements and releases no claim before every phase completes. Verification work adds no machine steps to the run.
+Narration: Foreign verification proceeds in bounded work units, each proving a portion of the registered verifier. Every unit authenticates its predecessor's committed state before continuing. That state binds the registry entry, phase, proof position, transcript, partial arithmetic and consumed proof elements. A mismatched continuation fails. The schedule admits no skipped, repeated or replaced element and releases no claim before every phase completes. Verification work adds no machine steps to the run.
 
 Labels:
 
@@ -379,7 +379,7 @@ Numbers used: none.
 
 On screen: The authenticated adapter relation and verified foreign inputs rest beside the completed foreign proof. Its claim token carries an engraved face distinct from the run-claim family. The foreign proof slab slides into the node’s FOREIGN child position with its adapter and foreign verification obligations attached. Hold on the admitted child and its intact evidence connections.
 
-Narration: The authenticated adapter consumes the verified foreign public inputs and derives the foreign claim. The claim binds the foreign key, adapter and translated output in a domain distinct from run claims. This prevents an arbitrary foreign field from masquerading as a Sherlock value digest. The proof enters a node as a FOREIGN child, the child type for authenticated foreign claims. The node retains both the adapter's verification obligation and the foreign proof's verification obligation.
+Narration: The authenticated adapter consumes the verified foreign public inputs and derives the foreign claim. The claim binds the foreign key, adapter and translated output in a domain distinct from run claims. An arbitrary foreign field cannot pass for a Sherlock value digest. The proof enters a node as a FOREIGN child, the child type for authenticated foreign claims. The node retains both the adapter's verification obligation and the foreign proof's verification obligation.
 
 Labels:
 
@@ -419,7 +419,7 @@ Scene length: 203 s (target 80 s)
 
 On screen: Establish the network station with the stored drawer in the incoming handoff pose. Slate validation trays hold representations of the same transaction, each beneath the same engraved verifier key card. Verification sweeps cross the trays independently in parallel. Hold on their matching accepted state transitions, with the original drawer still in view.
 
-Narration: The stored claim reaches network validation as the result of the transaction's contract state transition. Midnight nodes on ledger 9.1.0.1 each verify the transaction independently. Each uses the contract's verifier key and checks the bound public values and contract operations against ledger state. A node rejects an invalid proof or replay without relying on another node's assurance.
+Narration: The stored claim reaches network validation as the result of the transaction's contract state transition. Midnight nodes on ledger 9.1.0.1 each verify the transaction independently. Each uses the contract's verifier key and checks the bound public values and contract operations against ledger state. Each node rejects an invalid proof or a replay on its own checks.
 
 Labels:
 
@@ -429,13 +429,13 @@ Labels:
 - Independent verification | on: the validation tracks
 - Stored claim | on: the incoming drawer
 
-Numbers used: Ledger 9.1.0.1 — BRIEF.md §3, step 8.
+Numbers used: Ledger 9.1.0.1: BRIEF.md §3, step 8.
 
 ### Beat 8.2: keep-verification-fixed (24 s)
 
 On screen: Inspect a node’s validation tray with the final seal under its gold key card. The witness tape remains on the distant paper-side rail, marked by a break rather than a frame count. A verification sweep crosses only the final seal and bound call values. Hold on the unchanged seal footprint and verifier key.
 
-Narration: Each node uses the same verifier key for every program. It checks the final decider proof rather than executing the witness tape or checking every leaf separately. The proof remains about 6.4 KB. The cost of checking that proof does not depend on the length of the run. Longer execution increases the prover's work without increasing the node's run-verification work.
+Narration: Each node uses the same verifier key for every program. It checks the final decider proof. It does not execute the witness tape or check each leaf. The proof remains about 6.4 KB. The cost of checking that proof does not depend on the length of the run. Longer execution adds prover work and leaves the node's run-verification work unchanged.
 
 Labels:
 
@@ -444,7 +444,7 @@ Labels:
 - Shared verifier key | on: the node’s key card
 - Witness tape | on: the stationary paper-side tape
 
-Numbers used: About 6.4 KB — BRIEF.md §3, step 6.
+Numbers used: About 6.4 KB: BRIEF.md §3, step 6.
 
 ### Beat 8.3: accept-the-run-fact (22 s)
 
@@ -484,7 +484,7 @@ Numbers used: none.
 
 On screen: A static proof graph shows joined branches and a shared dependency, with break marks for omitted structure. Its authenticated relation and child descriptors line up at the gold Poseidon block. The hash motion produces `shape_d`, which rests beside the collection proof. The graph remains visible behind the token without exposing memory-state fields.
 
-Narration: Runs join in any tree or DAG, a directed graph without cycles that permits shared dependencies. `shape_d` commits to the proof graph through relation types, enabled child positions, key selections, child shapes and authenticated work descriptors. Each node derives these fields from its checked children and work. This prevents a proof from claiming another graph. The shape contains no physical state commitment or address.
+Narration: Runs join in any tree or DAG, a directed graph without cycles that permits shared dependencies. `shape_d` commits to the proof graph through relation types, enabled child positions, key selections, child shapes and authenticated work descriptors. Each node derives these fields from its checked children and work. A proof cannot claim another graph. The shape contains no physical state commitment or address.
 
 Labels:
 
@@ -515,7 +515,7 @@ Numbers used: none.
 
 On screen: Different stationary collection graphs lead to the same engraved member-claim face. The member tokens slide onto the accepted drawer’s claim-key position and merge into one outline. The collection-root and shape tokens remain separate in their own tracks. Hold on the shared claim identity and the unchanged stored record.
 
-Narration: Different groupings of the same claims can produce different collection roots and shape digests. These commitments describe the collection without replacing each member's `claim_d`. Acceptance, replay refusal and consumption use claim identity. A shared claim can feed several branches, but another path to it grants no additional settlement. Collection verification creates no repeated per-claim effect keyed by collection shape.
+Narration: Different groupings of the same claims can produce different collection roots and shape digests. These commitments describe the collection. Each member keeps its `claim_d`. Acceptance, replay refusal and consumption use claim identity. A shared claim can feed several branches, and a second path grants no second settlement. Collection verification creates no repeated per-claim effect keyed by collection shape.
 
 Labels:
 
@@ -555,27 +555,27 @@ Numbers used: none.
 
 - **Motion:** Use physical coincidence for equality, a sweep followed by a brief gold edge for successful verification, and a stop, small return movement and red hatch for refusal. Every Poseidon operation uses the same ordered-input hash-block motion. Keep graph structure and explanatory fields still during the key motion. Every beat ends with a legible still hold.
 
-- **Source disagreement — README.md, Sherlock section:** Its older pipeline publishes initial and final state digests and describes a contract bound to sealed program and initial-state fields. It also says the built replay identity includes the final state digest. The script publishes only `[prog_d, input_d, outcome_d, n_steps]`, passes `prog_d` as call data, derives `claim_d` from the canonical run formula, and stores no state digest.
+- **Source disagreement: README.md, Sherlock section:** Its older pipeline publishes initial and final state digests and describes a contract bound to sealed program and initial-state fields. It also says the built replay identity includes the final state digest. The script publishes only `[prog_d, input_d, outcome_d, n_steps]`, passes `prog_d` as call data, derives `claim_d` from the canonical run formula, and stores no state digest.
 
-- **Source disagreement — README.md, Sherlock section:** Its historical implementation describes a linear chain and treats universal recursion and broader composition as later work. Its older discussion also says execution commitments depend on leaf boundaries, while its dense-memory discussion describes partition independence. The script follows BRIEF.md: the system runs with universal keys, supports collections and shared dependencies, and refuses replay after a change of leaf partition.
+- **Source disagreement: README.md, Sherlock section:** Its historical implementation describes a linear chain and treats universal recursion and broader composition as later work. Its older discussion also says execution commitments depend on leaf boundaries, while its dense-memory discussion describes partition independence. The script follows BRIEF.md: the system runs with universal keys, supports collections and shared dependencies, and refuses replay after a change of leaf partition.
 
-- **Source disagreement — openspec/changes/sherlock-vm-consensus-20261107/design.md, decider and contract section; requirements.md, SRC-007; llm-wiki/wiki/entities/AcceptRunContract.md:** These retain a sealed program identity and describe a contract serving a particular program. The script follows BRIEF.md §2: `prog_d` is call data, and the same contract and key set serve every program and input.
+- **Source disagreement: openspec/changes/sherlock-vm-consensus-20261107/design.md, decider and contract section; requirements.md, SRC-007; llm-wiki/wiki/entities/AcceptRunContract.md:** These retain a sealed program identity and describe a contract serving a particular program. The script follows BRIEF.md §2: `prog_d` is call data, and the same contract and key set serve every program and input.
 
-- **Source disagreement — docs/sherlock/stagenet-gp-recursion.md:** The historical call signature includes initial and final state fields and a directly encoded result. Its replay identity also includes the older statement fields. The script names `SherlockRun.acceptRun` without reproducing that obsolete signature and uses the canonical public values, replay identity and stored payload.
+- **Source disagreement: docs/sherlock/stagenet-gp-recursion.md:** The historical call signature includes initial and final state fields and a directly encoded result. Its replay identity also includes the older statement fields. The script names `SherlockRun.acceptRun` without reproducing that obsolete signature and uses the canonical public values, replay identity and stored payload.
 
-- **Source disagreement — llm-wiki/wiki/entities/AcceptRunContract.md; llm-wiki/wiki/entities/MidnightLedger9.md; README.md:** These describe missing network acceptance and incomplete transaction qualification. The script follows the requested working-system premise and BRIEF.md §3, step 8: Midnight nodes on ledger 9.1.0.1 validate the transaction and accept the claim.
+- **Source disagreement: llm-wiki/wiki/entities/AcceptRunContract.md; llm-wiki/wiki/entities/MidnightLedger9.md; README.md:** These describe missing network acceptance and incomplete transaction qualification. The script follows the requested working-system premise and BRIEF.md §3, step 8: Midnight nodes on ledger 9.1.0.1 validate the transaction and accept the claim.
 
-- **Source disagreement — llm-wiki/wiki/concepts/C6OutcomeOnlyPublication.md and older passages of design.md:** These explain replay problems through physical layouts that vary with leaf partitioning. The script uses the canonical partition-independent run and memory semantics. Replay identity excludes physical commitments regardless.
+- **Source disagreement: llm-wiki/wiki/concepts/C6OutcomeOnlyPublication.md and older passages of design.md:** These explain replay problems through physical layouts that vary with leaf partitioning. The script uses the canonical partition-independent run and memory semantics. Replay identity excludes physical commitments regardless.
 
-- **Source disagreement — research/sherlock-final-design-20261111/ARCHITECTURE.md and the modular-leaf specifications:** These retain unresolved status language around dependency consumption, foreign verification, graph shape and claim-count removal. The script presents the mechanisms as running and carries no claim count, following BRIEF.md.
+- **Source disagreement: research/sherlock-final-design-20261111/ARCHITECTURE.md and the modular-leaf specifications:** These retain unresolved status language around dependency consumption, foreign verification, graph shape and claim-count removal. The script presents the mechanisms as running and carries no claim count, following BRIEF.md.
 
-- **Source disagreement — ARCHITECTURE.md, dependency-consumption kit, and requirements.md, input admission:** These distinguish seal-time input linking from a possible execution-time consumption rule and discuss authenticating dependencies at genesis. The script follows BRIEF.md’s seal-time choice. It checks the ordered dependency commitment and separately checks an input link when the producer’s Halted value supplies the consumer’s input. It introduces no execution-time consume instruction.
+- **Source disagreement: ARCHITECTURE.md, dependency-consumption kit, and requirements.md, input admission:** These distinguish seal-time input linking from a possible execution-time consumption rule and discuss authenticating dependencies at genesis. The script follows BRIEF.md’s seal-time choice. It checks the ordered dependency commitment and separately checks an input link when the producer’s Halted value supplies the consumer’s input. It introduces no execution-time consume instruction.
 
-- **Source disagreement — ARCHITECTURE.md and requirements.md, input commitment formulas:** These include resource-policy fields in an input commitment formula. BRIEF.md names `input_d` as the input value digest. The script preserves that public description and explains input composition through the value digest authenticated by `input_d`, without introducing another public-input schema.
+- **Source disagreement: ARCHITECTURE.md and requirements.md, input commitment formulas:** These include resource-policy fields in an input commitment formula. BRIEF.md names `input_d` as the input value digest. The script preserves that public description and explains input composition through the value digest authenticated by `input_d`, without introducing another public-input schema.
 
-- **Source disagreement — general-purpose.md and design.md:** Their historical gap sections describe restricted keys, missing foreign admission and limited aggregation shapes. The script follows BRIEF.md’s universal key set, registered FOREIGN children and arbitrary trees or DAGs.
+- **Source disagreement: general-purpose.md and design.md:** Their historical gap sections describe restricted keys, missing foreign admission and limited aggregation shapes. The script follows BRIEF.md’s universal key set, registered FOREIGN children and arbitrary trees or DAGs.
 
-- **Source disagreement — ARCHITECTURE.md module graph and README.md memory discussion:** These retain an alternative memory backend and boundary commitment. Neither appears in this script. The closing path uses only the canonical program image, witness tape, leaf slabs, root slab, decider seal, transaction envelope and stored claim.
+- **Source disagreement: ARCHITECTURE.md module graph and README.md memory discussion:** These retain an alternative memory backend and boundary commitment. Neither appears in this script. The closing path uses only the canonical program image, witness tape, leaf slabs, root slab, decider seal, transaction envelope and stored claim.
 
 - **Quantities intentionally shown without numeric values:** DUST fee amount; total transaction size; verifier-key size; contract storage size; verifier operation counts and execution times; number of network nodes; number of stored claims; number, depth and repetition of dependencies; membership-path lengths; registry population and membership depth; foreign public-input count; registry format value; proof-element counts; subgroup size; arithmetic-operation counts; verification work-unit size, budget and count; graph depth, branch count and collection size. Collection proof size is described as independent of graph depth and claim count without assigning it the run proof’s byte figure.
 

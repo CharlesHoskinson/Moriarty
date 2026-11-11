@@ -103,7 +103,7 @@ export async function start() {
   const slate = new THREE.Color(PALETTE.wellSlate);
   const ground = paper.clone();
   world.fog = new THREE.Fog(paper.clone(), 140, 700);
-  const camera = new THREE.PerspectiveCamera(35, 1.6, 0.1, 3000);
+  const camera = new THREE.PerspectiveCamera(35, 1.6, 0.1, 9000);
   world.add(camera);
 
   world.add(new THREE.HemisphereLight(0xfff3dc, 0x6b6556, 1.5));
@@ -176,11 +176,12 @@ export async function start() {
   const carrierDefault = (si) => ({ prog_d: si >= 1 ? 1 : 0, input_d: si >= 1 ? 1 : 0, outcome_d: si >= 5 ? 1 : 0, n_steps: si >= 5 ? 1 : 0 });
 
   // Per-scene state and ctx.
+  let pendingCode = null;
   const states = tl.scenes.map((s, i) => {
     const group = new THREE.Group();
     group.position.x = i * SPACING;
     world.add(group);
-    const st = { i, s, group, live: false, wide: false, track: [], anchors: new Map(), lastT: null, ok: true };
+    const st = { i, s, group, live: false, wide: false, fog: null, track: [], anchors: new Map(), lastT: null, ok: true };
     const toWorld = (v) => new THREE.Vector3(v[0] ?? v.x, v[1] ?? v.y, v[2] ?? v.z).add(group.position);
     st.toWorld = toWorld;
     st.ctx = {
@@ -219,6 +220,13 @@ export async function start() {
           c.amount = clamp01(amount);
           if (content !== undefined) c.tok.userData.setContent(content);
         },
+      },
+      // Call inside seek: fog range for this frame (reset each frame; default 140 to 700, wide 800 to 9000).
+      setFog: (near, far) => { if (st.live) st.fog = [near, far]; },
+      // Code card over the stage. show(lines, { highlight: [1-based line numbers], start = 1, title }) inside seek.
+      code: {
+        show: (lines, opts = {}) => { if (st.live) pendingCode = { lines, ...opts }; },
+        hide: () => { if (st.live) pendingCode = null; },
       },
       // Call inside seek: draw every station (the wide shot of scene 8).
       showAll: (flag = true) => { if (st.live) st.wide = !!flag; },
@@ -283,6 +291,40 @@ export async function start() {
     carrierGroup.updateMatrixWorld(true);
   }
 
+  // Code card: surface-container-high card with line numbers and highlighted lines.
+  const codeEl = $('codeCard');
+  const codeList = $('codeList');
+  const codeTitle = $('codeTitle');
+  let codeSig = '';
+  const LINE_PX = 18;
+  function renderCode(c) {
+    if (!c) { codeEl.hidden = true; return; }
+    const start = c.start ?? 1;
+    const sig = JSON.stringify([c.lines, start, c.title || '']);
+    if (sig !== codeSig) {
+      codeSig = sig;
+      codeList.innerHTML = '';
+      c.lines.forEach((text, k) => {
+        const li = document.createElement('li');
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = String(start + k);
+        const t = document.createElement('span'); t.className = 't'; t.textContent = text;
+        li.append(n, t);
+        codeList.appendChild(li);
+      });
+      codeTitle.textContent = c.title || '';
+      codeTitle.hidden = !c.title;
+    }
+    const hl = new Set(c.highlight || []);
+    let first = -1;
+    [...codeList.children].forEach((li, k) => {
+      const on = hl.has(start + k);
+      if (on && first < 0) first = k;
+      li.classList.toggle('hl', on);
+    });
+    codeEl.hidden = false;
+    codeList.parentElement.scrollTop = first < 0 ? 0 : Math.max(0, (first - 2) * LINE_PX);
+  }
+
   let curSi = -1;
   function applyTime(T) {
     const loc = locate(T);
@@ -291,7 +333,8 @@ export async function start() {
     const tScene = stepped ? loc.b.local + loc.b.dur : loc.tScene;
     const tBeat = stepped ? loc.b.dur : loc.tBeat;
     curSi = si;
-    states.forEach((st, i) => { st.group.visible = i === si; st.wide = false; });
+    states.forEach((st, i) => { st.group.visible = i === si; st.wide = false; st.fog = null; });
+    pendingCode = null;
     const st = states[si];
 
     labels.begin();
@@ -315,6 +358,7 @@ export async function start() {
       labels.show(`b${si}:${loc.bi}:${l.id ?? li}`, l.text, p, { kind: l.kind });
     }
     st.live = false;
+    renderCode(pendingCode);
 
     if (st.wide) {
       states.forEach((o, i) => {
@@ -328,6 +372,8 @@ export async function start() {
     const mix = si < 5 ? 0 : si > 5 ? 1 : easeInOut(tScene / sc.dur);
     ground.copy(paper).lerp(slate, mix);
     world.fog.color.copy(ground);
+    const fg = st.fog || (st.wide ? [800, 9000] : [140, 700]);
+    world.fog.near = fg[0]; world.fog.far = fg[1];
     stageEl.style.backgroundColor = `#${ground.getHexString()}`;
 
     // Camera.
@@ -510,6 +556,49 @@ export async function start() {
   requestAnimationFrame(frame);
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   window.__pipeline = { get time() { return T; }, setTime, setPlaying, timeline: tl, locate };
+  // Probe for checks the capture tool cannot run: render cost, seek cost, seek-order independence.
+  const snap = document.createElement('canvas');
+  const hashPixels = () => {
+    snap.width = canvas.width; snap.height = canvas.height;
+    const g = snap.getContext('2d', { willReadFrequently: true });
+    g.drawImage(canvas, 0, 0);
+    const px = new Uint32Array(g.getImageData(0, 0, snap.width, snap.height).data.buffer);
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < px.length; i++) { h ^= px[i]; h = Math.imul(h, 16777619) >>> 0; }
+    return h.toString(16);
+  };
+  window.__probe = async () => {
+    const T0 = T;
+    const loc = locate(T0);
+    const st = states[loc.si];
+    const sc = loc.sc;
+    applyTime(T0);
+    const info = renderer.info.render;
+    const drawCalls = info.drawCalls ?? info.calls;
+    const triangles = info.triangles;
+    // 600 seek calls spread over the scene, timed in 30 batches of 20 (the clock is coarse); median batch mean.
+    const N = 600, B = 20, ms = [];
+    labels.begin();
+    st.live = true;
+    for (let k = 0; k < N / B; k++) {
+      const a = performance.now();
+      for (let i = 0; i < B; i++) {
+        try { sc.def.seek((sc.dur * (k * B + i + 0.5)) / N); } catch (e) { console.error(e); }
+      }
+      ms.push((performance.now() - a) / B);
+    }
+    st.live = false; st.wide = false; st.fog = null;
+    ms.sort((x, y) => x - y);
+    applyTime(T0);
+    const hashA = hashPixels();
+    applyTime(sc.start + sc.dur);
+    applyTime(sc.start + sc.dur * 0.37);
+    applyTime(sc.start);
+    applyTime(T0);
+    const hashB = hashPixels();
+    applyTime(T0);
+    return { scene: loc.si + 1, beat: loc.bi, t: +loc.tBeat.toFixed(2), drawCalls, triangles, seekMs: +ms[ms.length >> 1].toFixed(4), seekOrderEqual: hashA === hashB, hashA, hashB };
+  };
   window.__ready = true;
 
   addEventListener('pagehide', () => { for (const st of states) { try { st.s.def.dispose(); } catch (_) { /* ignore */ } } });

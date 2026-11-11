@@ -24,7 +24,7 @@ fn main(input) =
   if below then settled + saved else saved
 ```
 
-Narration: Moriarty source enters with an input value named input. The program saves that value, calls lift to add increment, and compares the result with ceiling. A conditional selects the next value. Further named calls create intermediate values before the selected branch adds the saved input. The main run satisfies every arithmetic and resource check.
+Narration: Moriarty source enters with an input value named input. The program saves that value, calls lift to add increment and compares the result with ceiling. A conditional selects the next value. Further named calls create intermediate values, and the selected branch then adds the saved input. The main run passes every arithmetic and resource check.
 
 Labels:
 
@@ -39,7 +39,7 @@ Numbers used: none.
 
 On screen: The source sheet moves through a ceramic compiler housing and emerges as a violet ROM rack. Its shelves distinguish expressions, functions, argument references and supporting type and constant tables. A verification sweep crosses the rack, which stops beside the source sheet.
 
-Narration: The compiler turns the source into a program image, the machine language stored in ROM, or read-only memory. Its tables hold expressions, function entries, argument references, types, constructors and constants. A rule reads the table and row named by its instruction. Authentication connects that row to this image, preventing substitution of another operation or constant.
+Narration: The compiler turns the source into a program image: the machine language, stored in ROM (read-only memory). Its tables hold expressions, function entries, argument references, types, constructors and constants. A rule reads the table and row that its instruction names. Each row is authenticated against this image, so nobody can substitute another operation or constant.
 
 Labels:
 
@@ -54,7 +54,7 @@ Numbers used: none.
 
 On screen: The image’s encoded cells line up in their canonical order and slide through the gold Poseidon block. A violet-rimmed hexagonal token emerges with an engraved face and settles into the front carrier. The ROM rack remains beside it, connected to the token by a fine line.
 
-Narration: Poseidon, the hash function used by Sherlock, digests the program image into `prog_d`. The image includes the code tables and their entry information in a fixed encoding. Changing an encoded operation, constant, function body or entry changes what the digest commits to. Later program reads prove membership under this commitment, preventing execution of substituted code.
+Narration: Poseidon, the hash function of Sherlock, digests the program image into `prog_d`. The image holds the code tables and their entry information in a fixed encoding. Changing any encoded operation, constant, function body or entry changes what the digest commits to. Later program reads prove membership under this commitment, so substituted code cannot run.
 
 Labels:
 
@@ -68,7 +68,7 @@ Numbers used: none.
 
 On screen: The input’s canonical value cells slide through the same Poseidon block and produce a blue-rimmed token. A stationary inset shows shared and separately stored versions of the same structure, with matching engraved digest faces. Those matching tokens slide into physical coincidence and hold as a single outline.
 
-Narration: The input becomes `input_d` under `sherlock-value/1`, the canonical value digest. Canonical means that the same value has the same encoding for hashing. Type, value form and ordered contents determine that encoding. References contribute the digest of their target, so moving records or sharing equal substructures preserves the digest. Changing the value changes the committed input.
+Narration: The input becomes `input_d` under `sherlock-value/1`, the canonical value digest. Canonical means that equal values hash from one encoding, fixed by type, value form and ordered contents. A reference contributes the digest of its target, so moving records or sharing equal substructures keeps the digest. A different value gives a different committed input.
 
 Labels:
 
@@ -77,13 +77,13 @@ Labels:
 - `input_d` | on: the blue-rimmed token
 - Equal value | on: the coincident inset tokens
 
-Numbers used: `1` in `sherlock-value/1` — BRIEF.md §3, step 1.
+Numbers used: `1` in `sherlock-value/1`: BRIEF.md §3, step 1.
 
 ### Beat 1.5: fixed-key-handoff (25 s)
 
 On screen: The wall rack holds the leaf, node and decider key cards. A second program image rests beneath the same rack with a different violet token, while the key cards remain unchanged. The main program’s ROM rack and token carrier slide together onto the handoff plate and hold.
 
-Narration: The ROM rack and the tokens `prog_d` and `input_d` identify the run. Three key cards serve it: leaf, node and decider. A key fixes a proof circuit, the constraints that check its witness. Every program and input uses this same set because the circuit reads authenticated program data from ROM. Substituting another program changes the program token without changing the keys.
+Narration: The ROM rack and the tokens `prog_d` and `input_d` identify the run. Three key cards serve it: leaf, node and decider. A key fixes a proof circuit, the constraints that check its witness. Every program and input uses this key set, because the circuit reads authenticated program data from ROM. A second program changes the program token and leaves the keys unchanged.
 
 Labels:
 
@@ -94,7 +94,7 @@ Labels:
 - `prog_d` | on: the violet token
 - `input_d` | on: the blue token
 
-Numbers used: Three keys — BRIEF.md §3, step 1.
+Numbers used: Three keys: BRIEF.md §3, step 1.
 
 ## Step 2: The run
 
@@ -106,7 +106,7 @@ Scene length: 232 s (target 110 s)
 
 On screen: The ROM rack arrives in the same pose as the preceding handoff. It slides into the machine’s program socket while the token carrier remains at the front edge. The machine rests ready to execute, with an empty witness-tape path beside it.
 
-Narration: `mori simulate` receives the ROM program and the input identified by `input_d`. It executes a CEK-style machine, which keeps the current computation, variable bindings and saved continuations explicit. The reference machine `sherlock-k-a/1` defines every transition. Execution produces the detailed evidence that the leaf checks. The simulator's record alone gives no authority to certify the result.
+Narration: `mori simulate` receives the ROM program and the input that `input_d` identifies. It runs a CEK-style machine, which keeps the current computation, the variable bindings and the saved continuations explicit. The reference machine `sherlock-k-a/1` defines every transition. The run produces the detailed evidence that the leaf checks. The simulator's own record certifies nothing.
 
 Labels:
 
@@ -115,13 +115,13 @@ Labels:
 - `sherlock-k-a/1` | on: the machine’s reference plate
 - Witness stream | on: the empty tape path
 
-Numbers used: `1` in `sherlock-k-a/1` — BRIEF.md §2, Semantics.
+Numbers used: `1` in `sherlock-k-a/1`: BRIEF.md §2, Semantics.
 
 ### Beat 2.2: machine-state (24 s)
 
 On screen: The machine housing lifts to reveal its six state compartments. Register cubes occupy control, environment and fuel positions; linked tokens represent the stacks, and ceramic tiles represent memory. The exploded assembly holds with every compartment visible and no data moving.
 
-Narration: The machine has six state parts. Control identifies the expression, return or helper action in progress. The environment maps variable names to values. The frame stack holds suspended computation and return context. The task stack holds unfinished helper work. Memory stores immutable records. Fuel counters track available work and consumption, alongside the logical resource counters that execution updates.
+Narration: The machine state has six parts. Control names the expression, return or helper action in progress. The environment maps variable names to values. The frame stack holds suspended computation and return context, and the task stack holds unfinished helper work. Memory stores immutable records. Fuel counters track available and consumed work, beside the logical resource counters that execution updates.
 
 Labels:
 
@@ -132,13 +132,13 @@ Labels:
 - Memory | on: the ceramic record trays
 - Fuel counters | on: the resource register compartment
 
-Numbers used: Six state parts — BRIEF.md §3, step 2, enumerated state list.
+Numbers used: Six state parts: BRIEF.md §3, step 2, enumerated state list.
 
 ### Beat 2.3: enabled-rule (24 s)
 
 On screen: The rule table sits beside the current state, with 120 rule positions. A verification sweep crosses the state and instruction inputs, leaving the selected rule in heat orange. Only that rule connects to the next-state cells in the final pose.
 
-Narration: Each step fires exactly one rule from the inventory of 120 rules. Enabled means that the rule's conditions hold for the current state and authenticated instruction under the reference priority. Exactly one means that the selected rule determines every permitted update, while other state stays unchanged. A claimed transition cannot combine writes from different rules or choose a convenient branch.
+Narration: Each step fires exactly one rule out of 120. A rule is enabled when its conditions hold for the current state and authenticated instruction, under the reference priority. Exactly one means that the selected rule fixes every permitted update and other state stays unchanged. A claimed transition cannot mix writes from two rules or pick a convenient branch.
 
 Labels:
 
@@ -148,13 +148,13 @@ Labels:
 - Selected rule | on: the active rule position
 - Next state | on: the outgoing register bank
 
-Numbers used: One selected rule and 120 rules — BRIEF.md §3, step 2.
+Numbers used: One selected rule and 120 rules: BRIEF.md §3, step 2.
 
 ### Beat 2.4: named-call-context (24 s)
 
 On screen: At the call to lift, the caller’s continuation moves into the frame stack. The source sheet remains visible with the call, addition and comparison connected to their state positions. The saved-input record stays in memory, with its environment reference intact.
 
-Narration: The call to lift saves the caller's continuation in a frame, so returning restores the correct environment and next expression. Its addition produces the raised value. The comparison produces the Boolean that selects the conditional branch. Named calls continue from that selection. The saved input remains available through its environment reference until the final addition reads it again.
+Narration: The call to lift saves the caller's continuation in a frame, so returning restores the environment and next expression. The addition inside lift produces the raised value. The comparison produces the Boolean that selects the conditional branch, and named calls continue from that choice. The saved input stays reachable through its environment reference until the final addition reads it.
 
 Labels:
 
@@ -170,7 +170,7 @@ Numbers used: none.
 
 On screen: The rule’s required charge aligns beside the remaining-fuel register. A verification sweep crosses the comparison and its resulting resource registers. The final pose retains the initial budget, remaining allowance and consumed work as distinct cubes.
 
-Narration: Fuel starts from the run's initial work budget. Each rule applies its specified charge to remaining fuel and consumed work. Helper counters track traversal and construction, while resource limits bound stack growth and allocations. The checks compare the requested work with the remaining allowance. This prevents free computation, concealed allocations and counter wrap from extending the authorized run.
+Narration: Fuel starts at the run's initial work budget. Each rule applies its specified charge to remaining fuel and to consumed work. Helper counters track traversal and construction, and resource limits bound stack growth and allocation. Each check compares the requested work with the remaining allowance, so no free computation, hidden allocation or counter wrap can extend the authorized run.
 
 Labels:
 
@@ -186,7 +186,7 @@ Numbers used: none.
 
 On screen: A completed witness frame slides onto the tape with its rule plate between before-state and after-state cells. The preceding after-state and the new before-state slide into physical coincidence. The tape holds with matching boundary cells sharing a single outline.
 
-Narration: Each fired rule records a frame on the witness stream, the private execution tape. A frame contains the rule id, the state before and the state after. The next frame begins with the preceding frame's final state. That equality prevents an unexplained change between recorded steps. The leaf checks both this continuity and the rule's actual transition.
+Narration: Each fired rule records one frame on the witness stream, the private execution tape. A frame holds the rule id, the state before and the state after. Each frame begins in the state where the previous frame ended. An unexplained change between recorded steps breaks that equality. The leaf checks this continuity and the rule's actual transition.
 
 Labels:
 
@@ -202,7 +202,7 @@ Numbers used: none.
 
 On screen: The witness tape extends behind a break mark as the step counter advances with the active frame. A separate ruler marks the counter range without expanding the machine geometry. The final pose shows `n_steps` beside the tape and the counter limit beside the ruler.
 
-Narration: A 64-bit counter counts the fired steps, including terminal publication. The run has up to 2^64 - 1 steps, and its total is `n_steps`. The value 2^64 describes the counter's range, not the size of a circuit. Counter checks prevent wrapping a long execution into a smaller claimed count. Fuel charges and step counts remain distinct.
+Narration: A 64-bit counter counts the fired steps, terminal publication included. A run has up to 2^64 - 1 steps, and its total is `n_steps`. The value 2^64 is the counter's range, not the size of a circuit. Counter checks stop a long execution from wrapping into a smaller claimed count. Fuel charges and step counts stay separate.
 
 Labels:
 
@@ -211,13 +211,13 @@ Labels:
 - 2^64 − 1 steps | on: the counter limit
 - Counter range | on: the range ruler
 
-Numbers used: 64-bit counter, 2^64 − 1 maximum steps and 2^64 counter range — BRIEF.md §3, step 2.
+Numbers used: 64-bit counter, 2^64 − 1 maximum steps and 2^64 counter range: BRIEF.md §3, step 2.
 
 ### Beat 2.8: arithmetic-rejection (21 s)
 
 On screen: An inset of the addition’s overflow branch sits beside the stationary main tape. Its arithmetic result stops, moves slightly back and acquires a red hatch. The inset holds on a Rejected outcome frame carrying code 10, while the main run remains unchanged.
 
-Narration: An overflowing addition ends with Rejected and code 10. Its payload identifies arithmetic overflow, and the proof checks that the arithmetic actually overflows. The wrapped arithmetic result does not become a successful return value. This terminal branch belongs to the same rule system and the same proof key as the successful branch.
+Narration: An addition that overflows ends the run as Rejected with code 10, the payload for arithmetic overflow. The proof checks that the arithmetic really overflows, and the wrapped result never becomes a successful return value. This ending uses the same rule system and the same proof key as the successful one.
 
 Labels:
 
@@ -225,13 +225,13 @@ Labels:
 - Rejected | on: the terminal tag
 - Code 10 | on: the terminal payload
 
-Numbers used: Rejection code 10 — BRIEF.md §3, step 2.
+Numbers used: Rejection code 10: BRIEF.md §3, step 2.
 
 ### Beat 2.9: fuel-exhaustion (23 s)
 
 On screen: A resource-check inset aligns a required charge with an insufficient remaining allowance. The operation stops, moves slightly back and receives a red hatch. The inset holds on an Exhausted frame with Fuel as its payload.
 
-Narration: When the next required work charge exceeds the remaining fuel, the run ends with Exhausted and the kind Fuel. The payload names the exhausted resource. The check compares the required charge with the remaining allowance, preventing a fabricated exhaustion claim. Filling a leaf's proving capacity only changes the tape cut and does not produce this outcome.
+Narration: When the next required work charge exceeds the remaining fuel, the run ends as Exhausted with the kind Fuel. The payload names the resource. The check compares the required charge with the remaining allowance, so no prover can fake exhaustion. A leaf that fills its proving capacity only moves the tape cut and never produces this outcome.
 
 Labels:
 
@@ -246,7 +246,7 @@ Numbers used: none.
 
 On screen: The main tape ends with a Halted frame and its teal result cube. The completed tape slides onto the handoff plate, preserving the outcome frame at its right end. The program and input tokens remain visible in their front carrier throughout the transfer.
 
-Narration: The main run returns the selected value after reading the saved input and completing its final addition. Returning through the frame stack restores the suspended contexts. At the outer return, publication records Halted with the result value as its payload. The witness tape ends at that outcome frame and carries `n_steps` as the run's step count into leaf proving.
+Narration: The main run reads the saved input, completes its final addition and returns the selected value. Each return through the frame stack restores a suspended context. At the outer return, publication records Halted with the result value as its payload. The witness tape ends at that outcome frame and carries `n_steps`, the run's step count, into leaf proving.
 
 Labels:
 
@@ -269,7 +269,7 @@ Scene length: 856 s (target 240 s)
 
 On screen: The witness tape arrives in its preceding handoff pose. A slice slides into a leaf housing with 16 step positions, beneath the unchanged leaf key card. The terminal slice remains visible farther along the tape, with an inactive suffix after its outcome frame.
 
-Narration: The witness tape arrives with its Halted outcome frame still attached. The leaf cuts the tape into slices with `S = 16` step slots. Each slice enters the same circuit under the same leaf key. A full slice uses every slot. A shorter slice keeps its unused suffix inactive, preserving state while proving the actual recorded steps.
+Narration: The witness tape arrives with its Halted outcome frame attached. The leaf cuts the tape into slices of `S = 16` step slots, each entering the same circuit under one leaf key. A full slice uses every slot. A shorter slice keeps its unused suffix inactive, so state holds still and the proof covers the recorded steps.
 
 Labels:
 
@@ -279,13 +279,13 @@ Labels:
 - Active slice | on: the inserted tape segment
 - Inactive suffix | on: the unused terminal positions
 
-Numbers used: `S = 16`, one circuit and one leaf key — BRIEF.md §3, step 3.
+Numbers used: `S = 16`, one circuit and one leaf key: BRIEF.md §3, step 3.
 
 ### Beat 3.2: core-register-chain (23 s)
 
 On screen: The leaf housing exposes a floor plan with CORE beside the provider modules and the BUS route between them. CORE’s register bank expands into consecutive rule slots. The after-state of a selected slot slides onto the following before-state, ending in physical coincidence.
 
-Narration: CORE, the module that checks machine transitions, holds the persistent registers and the rule slots. Its registers encode the control, environment reference, cached stack tops, helper work, result, outcome and resource counters. Each slot's final register cells equal the next slot's initial cells. Registers outside the selected rule's write set keep their previous values, preventing hidden changes.
+Narration: CORE, the module that checks machine transitions, holds the persistent registers and the rule slots. Its registers encode control, environment reference, cached stack tops, helper work, result, outcome and resource counters. Each slot's final register cells equal the next slot's initial cells. Registers outside the selected rule's write set keep their values and hide no change.
 
 Labels:
 
@@ -301,7 +301,7 @@ Numbers used: none.
 
 On screen: The current state’s dispatch cells align with DEC’s fixed table. A verification sweep selects the matching control-word row, whose cells connect directly to CORE’s operation and write controls. The final pose retains those connections and dims the unselected table rows.
 
-Narration: DEC, the decoder, derives a rule control word from a fixed table. It checks the current control and outcome, authenticated instruction, stack tags and comparison results against the rule's conditions. Reference priority selects exactly one matching rule. The returned word fixes the rule id, operation order and write set. Bounded fields prevent a different word from masquerading as that table entry.
+Narration: DEC, the decoder, derives a rule control word from a fixed table. It checks the current control and outcome, the authenticated instruction, stack tags and comparison results against each rule's conditions, and reference priority selects exactly one matching rule. The returned word fixes the rule id, operation order and write set. Bounded fields stop any other word passing for that entry.
 
 Labels:
 
@@ -311,13 +311,13 @@ Labels:
 - Control word | on: the selected row
 - Write set | on: CORE’s permitted-write cells
 
-Numbers used: Exactly one selected rule — BRIEF.md §3, step 2.
+Numbers used: Exactly one selected rule: BRIEF.md §3, step 2.
 
 ### Beat 3.4: active-prefix (22 s)
 
 On screen: A verification sweep crosses the slice from its first active slot through terminal publication. The following slots retain identical before-state and after-state cells, with blank request sockets. The final pose shows a continuous active prefix and an inactive suffix.
 
-Narration: Active slots form a continuous prefix. Each active slot counts as a step, while its internal operations add no extra steps. An inactive slot preserves every persistent register and makes no request. Terminal publication ends the active prefix. These checks prevent skipped transitions, padded step counts and continued execution after Halted, Rejected or Exhausted.
+Narration: Active slots form one continuous prefix. Each active slot counts as one step, and its internal operations add no steps. An inactive slot keeps every persistent register and makes no request. Terminal publication ends the active prefix. A prover cannot skip a transition, pad the step count or keep executing after Halted, Rejected or Exhausted.
 
 Labels:
 
@@ -326,13 +326,13 @@ Labels:
 - Inactive suffix | on: the remaining slots
 - State preserved | on: the suffix register cells
 
-Numbers used: One counted step per active slot — BRIEF.md §3, steps 2–3.
+Numbers used: One counted step per active slot: BRIEF.md §3, steps 2 to 3.
 
 ### Beat 3.5: bus-tuple (24 s)
 
 On screen: A bar of cubes leaves CORE and enters the BUS route, with positions for `(chip, key, a, b, c)`. The provider housings display their fixed chip ids beside the route’s request channels. The packet stops at the junction, with its destination and payload positions legible.
 
-Narration: BUS connects CORE requests to checked provider tuples `(chip, key, a, b, c)`. The chip identifies the operation family, the key selects its operation or record, and the remaining cells carry its data. Chip ids are 1 for ALU, 2 for MEM, 3 for HASH and 4 for ROM. CORE alone issues requests through the two request channels.
+Narration: BUS connects CORE requests to checked provider tuples `(chip, key, a, b, c)`. The chip names the operation family, the key selects the operation or record, and the other cells carry the data. Chip ids are 1 for ALU, 2 for MEM, 3 for HASH and 4 for ROM. CORE alone issues requests, through the two request channels.
 
 Labels:
 
@@ -343,13 +343,13 @@ Labels:
 - HASH 3 | on: the HASH provider
 - ROM 4 | on: the ROM provider
 
-Numbers used: Chip ids 1, 2, 3 and 4; two request channels — BRIEF.md §3, step 3.
+Numbers used: Chip ids 1, 2, 3 and 4; two request channels: BRIEF.md §3, step 3.
 
 ### Beat 3.6: request-meets-provider (24 s)
 
 On screen: The ADD packet travels from CORE to the ALU provider row. Its complete tuple slides onto the provider tuple, merging their outlines when they coincide. The checked packet returns along the same route to CORE and holds beside the receiving cells.
 
-Narration: CORE places the addition's operation, operands and claimed result in a BUS request. The entire tuple must equal a checked ALU provider tuple. Every provider satisfies its operation constraints even when unused. Repeated requests can match the same provider, but requests cannot authenticate each other. This prevents a prover from circulating an invented answer without a valid computation.
+Narration: CORE puts the addition's operation, operands and claimed result into a BUS request. The whole tuple must equal a checked ALU provider tuple. Every provider satisfies its operation constraints, even when no request uses it. Several requests can match the same provider, but requests cannot authenticate each other. An invented answer therefore has no valid computation to match.
 
 Labels:
 
@@ -364,7 +364,7 @@ Numbers used: none.
 
 On screen: The ALU exposes operand, result and overflow-flag cubes. A verification sweep crosses the main run’s ADD equation and leaves the clear overflow flag connected to CORE’s successful transition. A stationary inset connects the set flag to a red-hatched Rejected payload carrying code 10.
 
-Narration: ALU, the arithmetic module, proves the exact unsigned addition of the value and increment. It constrains both operands, the result and the overflow flag. A carry beyond the permitted integer width sets that flag. CORE connects the flag to Rejected with code 10. For the main run, the clear flag permits the ordinary result and prevents silent arithmetic wrap. The same ALU also checks subtraction, multiplication and equality under their machine rules.
+Narration: ALU, the arithmetic module, proves the exact unsigned addition of the value and increment. It constrains both operands, the result and the overflow flag, and a carry past the permitted integer width sets the flag. CORE connects a set flag to Rejected with code 10. In the main run the flag is clear, and the ordinary result passes unwrapped. The same ALU checks subtraction, multiplication and equality under their machine rules.
 
 Labels:
 
@@ -375,13 +375,13 @@ Labels:
 - Overflow flag | on: the flag cube
 - Code 10 | on: the rejection payload
 
-Numbers used: Rejection code 10 — BRIEF.md §3, step 2.
+Numbers used: Rejection code 10: BRIEF.md §3, step 2.
 
 ### Beat 3.8: checked-comparison (24 s)
 
 On screen: The LT packet aligns the raised value and ceiling with ALU’s comparison cells. A verification sweep crosses the comparison and its Boolean output. The output cube holds in physical coincidence with CORE’s conditional-control cell.
 
-Narration: The LT request asks ALU whether the raised value is less than ceiling. ALU constrains its Boolean result to that comparison of the authenticated operands. CORE uses the same result cell to choose the conditional branch. Changing the Boolean without changing the operands fails the comparison check, so the prover cannot select whichever branch gives a preferred outcome.
+Narration: The LT request asks ALU whether the raised value is less than ceiling. ALU constrains its Boolean result to that comparison of the authenticated operands, and CORE uses the same result cell to choose the conditional branch. A Boolean changed without a change to the operands fails the comparison check, so the prover cannot pick the branch it prefers.
 
 Labels:
 
@@ -397,7 +397,7 @@ Numbers used: none.
 
 On screen: A checked integer cube expands into limb cubes beside RANGE’s fixed table. A verification sweep crosses the limb membership checks, the narrower highest piece and the reconstructed value. The reconstructed cube settles onto the original caller’s cube, while distinct table tags separate RANGE from DEC.
 
-Narration: RANGE proves that integer cells fit their required widths. It reconstructs each checked cell from 12-bit limbs, small integer pieces checked against a fixed table. The highest piece also obeys the exact width of the original integer. The reconstruction equals the caller's cell. This rules out oversized operands and modular arithmetic tricks that imitate valid integer equations. Fixed table tags keep RANGE queries separate from DEC queries, preventing either check from borrowing the other's table entries.
+Narration: RANGE proves that integer cells fit their required widths. It reconstructs each checked cell from 12-bit limbs, small integer pieces checked against a fixed table, and the highest piece also obeys the exact width of the original integer. The reconstruction equals the caller's cell. Oversized operands and modular arithmetic tricks that imitate valid integer equations fail here. Fixed table tags keep RANGE queries apart from DEC queries, so neither check can borrow the other's table entries.
 
 Labels:
 
@@ -407,13 +407,13 @@ Labels:
 - Equal reconstruction | on: the coincident original and reconstructed cubes
 - Fixed table tags | on: the table’s separated query ports
 
-Numbers used: 12-bit limbs — BRIEF.md §3, step 3.
+Numbers used: 12-bit limbs: BRIEF.md §3, step 3.
 
 ### Beat 3.10: poseidon-relations (34 s)
 
 On screen: HASH exposes its ordered input port and gold Poseidon block. Caller cells slide into the block in order, producing an engraved digest token at the output. Direct input connections remain visible for the longer hash, alongside the separate BUS provider socket.
 
-Narration: HASH computes Poseidon from the caller's ordered input cells. It constrains the initial state, absorption, permutation rounds and final output. Fixed domain tags distinguish memory records, tree levels, stacks and state bodies. Public digest formats retain their specified encoding. A copied input equality prevents hashing substituted data, while domain separation prevents treating a stack link as a memory node. Longer hashes use direct ports with copied input cells and a fixed input order. Chaining short BUS hashes does not reproduce the specified whole-message hash.
+Narration: HASH computes Poseidon over the caller's ordered input cells. It constrains the initial state, absorption, permutation rounds and final output. Fixed domain tags tell memory records, tree levels, stacks and state bodies apart, so a stack link cannot pass for a memory node. Public digest formats keep their specified encoding. Each input copies the caller's cell, so substituted data cannot be hashed. Longer hashes use direct ports with copied input cells in a fixed order. Chained short BUS hashes differ from the whole-message hash.
 
 Labels:
 
@@ -430,7 +430,7 @@ Numbers used: none.
 
 On screen: CORE’s append events form a line from the incoming length cube to the outgoing length cube. A verification sweep follows consecutive addresses and the MEM request attached to each event. The final pose shows every new record connected to its own address and provider row.
 
-Narration: CORE owns the append chain, the ordered sequence of new memory addresses. The first append starts at the incoming length. Each active append advances that length to the next address, and the final length equals the outgoing memory length. Every appended record also matches a MEM provider through BUS. Together these checks prevent skipped addresses, repeated allocation and substituted record contents.
+Narration: CORE owns the append chain, the ordered sequence of new memory addresses. The first append starts at the incoming length, each active append advances the length to the next address, and the final length equals the outgoing memory length. Every appended record also matches a MEM provider through BUS. No address is skipped or allocated twice, and no record's contents are swapped.
 
 Labels:
 
@@ -446,7 +446,7 @@ Numbers used: none.
 
 On screen: The MEM window separates inherited tail tiles from newly appended tiles in a continuous tray. A new record slides into the next unused position while padding remains visually distinct and disconnected from BUS. The tray holds with its incoming and outgoing length markers aligned to the corresponding record boundaries.
 
-Narration: The MEM window holds the imported partial tail and this leaf's new records in a single arena. Each logical record occupies a cell. Active records form a continuous prefix, and imported records end exactly at the incoming length. Rules append at most 3 cells per step. Padding serves no read, so unused capacity cannot become invented program data.
+Narration: The MEM window holds the imported partial tail and this leaf's new records, in a single arena. Each logical record occupies one cell. Active records form a continuous prefix, and the imported records end exactly at the incoming length. Rules append at most 3 cells per step. Padding serves no read. Unused capacity therefore holds no invented program data.
 
 Labels:
 
@@ -456,13 +456,13 @@ Labels:
 - Padding | on: the unused positions
 - At most 3 cells | on: the per-step append port
 
-Numbers used: One arena, one cell per logical record and at most 3 appended cells per step — BRIEF.md §2, Arenas, Tree depth and Appends per step.
+Numbers used: One arena, one cell per logical record and at most 3 appended cells per step: BRIEF.md §2, Arenas, Tree depth and Appends per step.
 
 ### Beat 3.13: authenticated-tail (24 s)
 
 On screen: The example’s call and binding records occupy the tail tray in append order. The inherited tiles and their fixed padding feed the Poseidon block, whose output token slides onto the incoming tail token. The tray holds full with 8 cells, while the coincident tokens certify the inherited portion.
 
-Narration: The named calls and intermediate bindings append records in execution order until the 8-cell tail fills. The dense MEMORY BACKEND authenticates the imported tail by recomputing its digest and matching the incoming tail token. Unused tail positions contain fixed padding. This prevents replacement of inherited records or a different encoding of the same partial tail at a leaf boundary.
+Narration: The named calls and intermediate bindings append records in execution order until the 8-cell tail is full. The dense MEMORY BACKEND authenticates the imported tail: it recomputes the tail's digest and matches the incoming tail token. Unused tail positions hold fixed padding. At a leaf boundary, inherited records cannot be replaced and a partial tail cannot take a second encoding.
 
 Labels:
 
@@ -472,13 +472,13 @@ Labels:
 - Fixed padding | on: the tail-opening padding cells
 - Equal tail digest | on: the coincident tokens
 
-Numbers used: 8-cell tail — BRIEF.md §2, Flush.
+Numbers used: 8-cell tail: BRIEF.md §2, Flush.
 
 ### Beat 3.14: segment-flush (24 s)
 
 On screen: The full tray aligns beneath the next segment position in the tree. A verification sweep follows the empty-position path and the replacement path, with their address bits and sibling tokens visibly shared. The new segment token holds at the selected position with the outgoing root above it.
 
-Narration: The dense MEMORY BACKEND turns the full 8-cell tail into a segment. Its flush proves that the next segment position is empty under the current tree root. The replacement segment follows the same address path and sibling hashes to compute the new root. Matching these paths prevents overwriting an occupied segment or inserting the new records at another address.
+Narration: The dense MEMORY BACKEND turns the full 8-cell tail into a segment. Its flush proves that the next segment position is empty under the current tree root. The new segment follows the same address path and sibling hashes to compute the new root. The matching paths stop the flush from overwriting an occupied segment or placing records elsewhere.
 
 Labels:
 
@@ -488,13 +488,13 @@ Labels:
 - Shared siblings | on: the sibling tokens
 - New root | on: the outgoing root token
 
-Numbers used: 8-cell segment — BRIEF.md §2, Tree depth and Flush.
+Numbers used: 8-cell segment: BRIEF.md §2, Tree depth and Flush.
 
 ### Beat 3.15: memory-outlasts-counter (22 s)
 
 On screen: The tree column uses a break mark and a depth ruler instead of repeated literal levels. A verification sweep crosses the address bound and the capacity inequality beside the tree. The final pose compares the memory-capacity ruler with the step-counter ruler.
 
-Narration: The memory tree has depth 63 over segments and capacity 2^66 cells. Rules append at most 3 cells per step. Since 3 x 2^64 < 2^66, memory outlasts the step counter even at the maximum append rate. Address checks keep each record inside that space, so field arithmetic cannot disguise an address outside the tree.
+Narration: The memory tree has depth 63 over segments, a capacity of 2^66 cells. Rules append at most 3 cells per step, and 3 x 2^64 < 2^66, so memory outlasts the step counter even at the maximum append rate. Address checks keep each record inside that space, so field arithmetic cannot disguise an outside address.
 
 Labels:
 
@@ -504,13 +504,13 @@ Labels:
 - Capacity inequality | on: the arithmetic inset
 - Address bound | on: the checked address cube
 
-Numbers used: Depth 63, 2^66 cells, at most 3 cells per step and `3 x 2^64 < 2^66` — BRIEF.md §2, Tree depth and Appends per step. The 64-bit counter — BRIEF.md §3, step 2.
+Numbers used: Depth 63, 2^66 cells, at most 3 cells per step and `3 x 2^64 < 2^66`: BRIEF.md §2, Tree depth and Appends per step. The 64-bit counter: BRIEF.md §3, step 2.
 
 ### Beat 3.16: capacity-closes-slice (22 s)
 
 On screen: The current leaf’s flush unit and remaining window capacity stay visible beside the tape. The cut marker moves to the boundary before a step that needs more capacity. The waiting step rests at the next slice’s entrance, with the machine-state tokens unchanged across the cut.
 
-Narration: A leaf has one flush unit. Its remaining capacity depends on the imported tail and the work already assigned to the slice. If the next step exceeds that capacity, the leaf ends before the step. Execution resumes in the next leaf without an extra charge. The unused suffix stays inactive, preserving the same machine state.
+Narration: A leaf has one flush unit. Its remaining capacity depends on the imported tail and the work already in the slice. When the next step exceeds that capacity, the leaf ends before it, and execution resumes in the next leaf with no extra charge. The unused suffix stays inactive and preserves the machine state.
 
 Labels:
 
@@ -520,13 +520,13 @@ Labels:
 - Next step | on: the waiting frame
 - State preserved | on: the matching state tokens
 
-Numbers used: One flush unit per leaf — BRIEF.md §2, Flush.
+Numbers used: One flush unit per leaf: BRIEF.md §2, Flush.
 
 ### Beat 3.17: read-address-and-time (24 s)
 
 On screen: CORE’s requested address, expected record kind and current append-chain position align at the read port. A verification sweep checks the address source, kind equality and running-length bound. The final pose shows the permitted record behind the current-length marker and later appends beyond it.
 
-Narration: Every read passes through CORE's authenticated read port. The requested address equals the address held by the requesting register or preceding operation. The record kind equals the kind required by that rule. The address must be below the running memory length at that exact read point. These checks forbid reading a later append, substituting another reference or confusing record kinds.
+Narration: Every read goes through CORE's authenticated read port. The requested address equals the address in the requesting register or preceding operation, and the record kind equals the kind the rule requires. The address must lie below the running memory length at that exact read point. A read cannot reach a later append, take another reference or confuse record kinds.
 
 Labels:
 
@@ -542,7 +542,7 @@ Numbers used: none.
 
 On screen: The saved-input record sits in a completed segment behind the current leaf. Its record hash follows a Merkle path through sibling tokens to a computed root, using the standard Poseidon motion. That root slides onto the pre-state root token and holds in physical coincidence; the record connects directly to CORE’s read port.
 
-Narration: The final use of saved input requests an old record from a completed segment. A scalar cold read, an isolated authenticated memory read, hashes the record and follows its Merkle opening. That opening supplies sibling hashes along the address path. Its computed root must equal the leaf's pre-state root, which prevents a forged payload, wrong kind or substituted address.
+Narration: The last use of the saved input requests an old record from a completed segment. A scalar cold read, one isolated authenticated memory read, hashes the record and follows its Merkle opening: the sibling hashes along the address path. The computed root must equal the leaf's pre-state root, which rules out a forged payload, wrong kind or substituted address.
 
 Labels:
 
@@ -558,7 +558,7 @@ Numbers used: none.
 
 On screen: PAGE/ROM presents an 8-record line from an old completed segment beside the stationary scalar-read diagram. A verification sweep crosses the line’s record hashes, its path to the pre-state root and its position before the imported tail. The authenticated line holds with its record cells connected to MEM provider sockets on BUS.
 
-Narration: PAGE/ROM also supplies old memory through an 8-record cache line. The dense MEMORY BACKEND hashes the line and checks its path against the same pre-state root. The line's segment must precede the imported tail. Its checked record cells become MEM providers on BUS. This authenticates repeated reads without allowing the cache to invent contents or overlap the window.
+Narration: PAGE/ROM also serves old memory as an 8-record cache line. The dense MEMORY BACKEND hashes the line and checks its path against the same pre-state root. The line's segment must lie before the imported tail. Its checked record cells become MEM providers on BUS. Repeated reads are authenticated, and the cache can neither invent contents nor overlap the window.
 
 Labels:
 
@@ -568,13 +568,13 @@ Labels:
 - Old segment | on: the segment-position marker
 - MEM providers | on: the line’s BUS sockets
 
-Numbers used: 8-record cache line — BRIEF.md §2, Old reads.
+Numbers used: 8-record cache line: BRIEF.md §2, Old reads.
 
 ### Beat 3.20: authenticated-rom-line (24 s)
 
 On screen: A ROM line rests between the violet program rack and the ROM provider socket. A verification sweep follows its table and row position through the authentication path to the program root. The final pose shows the requested row coincident with its checked provider cells and `prog_d` still in the front carrier.
 
-Narration: ROM lines authenticate program table rows against the program root bound by `prog_d`. CORE fixes the requested table and range-checks its row index. PAGE/ROM derives each provider key from the authenticated path and row position. The served cells equal the hashed cells. These checks prevent a row from another table or program from supplying an instruction, type or constant.
+Narration: ROM lines authenticate program table rows against the program root that `prog_d` binds. CORE fixes the requested table and range-checks the row index. PAGE/ROM derives each provider key from the authenticated path and row position, and the served cells equal the hashed cells. A row from another table or another program cannot supply an instruction, type or constant.
 
 Labels:
 
@@ -590,7 +590,7 @@ Numbers used: none.
 
 On screen: The named call’s previous frame top, depth cube and preceding chain token line up at the Poseidon block. They slide through the block to produce a new FRAMES link beneath the incoming cached top. TASKS remains visible as a separate stationary chain with its own domain marker.
 
-Narration: STACKS represents FRAMES and TASKS as Poseidon hash chains with cached top records. FRAMES stores continuations, and TASKS stores helper work. Pushing during the named call hashes the previous top, its depth and the preceding chain into a new link. The new frame becomes the cached top. Separate hash domains prevent a task record from substituting for a frame.
+Narration: STACKS keeps FRAMES and TASKS as Poseidon hash chains with cached top records. FRAMES stores continuations and TASKS stores helper work. Pushing during the named call hashes the previous top, its depth and the preceding chain into a new link, and the new frame becomes the cached top. Separate hash domains stop a task record posing as a frame.
 
 Labels:
 
@@ -607,7 +607,7 @@ Numbers used: none.
 
 On screen: The supplied restored frame, its depth and predecessor token feed the Poseidon block. The computed link slides onto the stored FRAMES link and merges into a single outline. The restored frame holds at the cached-top position, with the predecessor chain exposed below it.
 
-Narration: Returning from lift pops the frame stack. STACKS recomputes the current chain link from the supplied restored frame, its depth and its predecessor digest. That hash must equal the stored link before the frame becomes the cached top. Counts and empty-stack constants constrain the endpoints. A forged return context, wrong predecessor or restored frame at another depth fails this equality.
+Narration: Returning from lift pops FRAMES. STACKS recomputes the current chain link from the restored frame supplied, its depth and its predecessor digest. That hash must equal the stored link before the frame becomes the cached top. Counts and empty-stack constants fix the endpoints. A forged return context, wrong predecessor or frame restored at another depth fails this equality.
 
 Labels:
 
@@ -623,7 +623,7 @@ Numbers used: none.
 
 On screen: A TASKS helper inset shows the updated parent cursor already in its top record, with the former cursor marked as superseded. The updated parent feeds the Poseidon block as the child becomes the cached top. The final pose preserves the updated parent beneath the child, connected to the same machine-step frame.
 
-Narration: Helper work uses the same checked chain protocol on TASKS. When a helper advances a parent cursor and pushes a child task, the top rewrite precedes the push. The chain therefore commits to the updated parent. Popping the child restores that updated record. CORE checks this order as a single machine event, preventing repeated work or a lost cursor update.
+Narration: Helper work uses the same checked chain protocol on TASKS. When a helper advances a parent cursor and pushes a child, the top rewrite precedes the push, so the chain commits to the updated parent. Popping the child restores that updated record. CORE checks this order as one machine event, so no work repeats and no cursor update is lost.
 
 Labels:
 
@@ -633,13 +633,13 @@ Labels:
 - Cursor | on: the updated progress cube
 - Same machine step | on: the associated tape frame
 
-Numbers used: One counted machine event — BRIEF.md §3, step 2.
+Numbers used: One counted machine event: BRIEF.md §3, step 2.
 
 ### Beat 3.24: value-digest-at-creation (23 s)
 
 On screen: VALUE DIGEST receives the new value’s form and authenticated contents through CORE’s read ports. The ordered cells slide through Poseidon and produce a named engraved value token. That token settles onto the digest position of the newly appended record.
 
-Narration: VALUE DIGEST computes `sherlock-value/1` whenever a rule creates a value. The value form, scalar contents and authenticated child digests determine the hash. CORE supplies the child records and ROM data through its checked read ports. The resulting digest equals the digest stored with the new record. This prevents a correct-looking record from carrying an invented semantic value.
+Narration: VALUE DIGEST computes `sherlock-value/1` whenever a rule creates a value. The value form, scalar contents and authenticated child digests determine the hash. CORE supplies the child records and ROM data through its checked read ports. The resulting digest equals the digest stored with the new record, so a correct-looking record cannot carry an invented semantic value.
 
 Labels:
 
@@ -649,13 +649,13 @@ Labels:
 - Value digest | on: the output token
 - New record | on: the appended tile
 
-Numbers used: `1` in `sherlock-value/1` — BRIEF.md §3, step 1.
+Numbers used: `1` in `sherlock-value/1`: BRIEF.md §3, step 1.
 
 ### Beat 3.25: structured-value-checks (24 s)
 
 On screen: A mechanism inset presents ordered child digest tokens beneath a constructor record. A verification sweep crosses the constructor identity, field progression and completion check. Shared and relocated representations hold beside it with equal value-token faces, while their memory arrangements remain different.
 
-Narration: VALUE DIGEST checks scalar bounds, Boolean values, constructor identity, field order and field count. Structured values combine their children's digests, and constructor processing preserves its checked fold state across steps. Completion checks that every field contributes before the value is used. References retain their target digest. Sharing and relocation therefore preserve value identity, while missing or substituted fields fail authentication.
+Narration: VALUE DIGEST checks scalar bounds, Boolean values, constructor identity, field order and field count. A structured value combines its children's digests, and constructor processing carries checked fold state across steps. Completion confirms that every field contributes before the value is used. A reference keeps its target's digest. Sharing and relocation keep value identity, and a missing or substituted field fails.
 
 Labels:
 
@@ -671,7 +671,7 @@ Numbers used: none.
 
 On screen: BOUNDARY COMMITMENT receives ordered cells from CORE, STACKS and MEMORY BACKEND through direct connections. The body cells slide through Poseidon and produce `body_d`. The final pose retains visible connections from the memory length, root and tail digest to the ordered body.
 
-Narration: BOUNDARY COMMITMENT binds the state that execution needs to continue. Its body hashes the persistent registers, constructor progress, stack hashes and counts, and memory `(len, root, tail_d)`. Here len is the allocated length, root commits completed segments, and tail_d commits the partial tail. Each input equals its owning module's checked cell, preventing the commitment from describing a different state.
+Narration: BOUNDARY COMMITMENT binds the state that execution needs to continue. Its body hashes the persistent registers, constructor progress, stack hashes and counts, and memory `(len, root, tail_d)`. Here len is the allocated length, root commits completed segments and tail_d commits the partial tail. Each input equals its owning module's checked cell, so the commitment cannot describe another state.
 
 Labels:
 
@@ -687,7 +687,7 @@ Numbers used: none.
 
 On screen: The header fields align in their stated order above the stationary `body_d` token. They slide through Poseidon with the body token in its final header position. The resulting state token holds beside the still-readable header fields.
 
-Narration: The boundary header holds `outcome_tag`, `outcome_payload`, `input_d`, `deps_d` and `body_d`. The outcome fields carry the execution status and its value digest, rejection code or exhaustion kind. The dependency digest binds consumed claims. Poseidon hashes this header in its fixed order. Its digest binds the readable outcome fields to the complete body without exposing every register when the header is checked.
+Narration: The boundary header holds `outcome_tag`, `outcome_payload`, `input_d`, `deps_d` and `body_d`. The outcome fields carry the execution status and its value digest, rejection code or exhaustion kind. The dependency digest binds consumed claims. Poseidon hashes the header in this fixed order. Its digest binds the readable outcome fields to the complete body, and checking the header leaves the registers hidden.
 
 Labels:
 
@@ -704,7 +704,7 @@ Numbers used: none.
 
 On screen: The entry and exit state tokens align with the leaf’s corresponding public-pin sockets. Each computed token slides onto its public value in physical coincidence. A stationary scratch inset shows only within-slot producer-to-consumer connections, with no scratch connection crossing the leaf boundary.
 
-Narration: The entry header digest becomes `pre_d`, and the exit header digest becomes `post_d`. Each public token equals its computed hash output. Equal boundary tokens bind equal committed states through Poseidon's collision resistance. Temporary scratch stays outside the boundary only because each use depends on a value produced earlier within the same slot. Unconstrained incoming scratch cannot change persistent execution.
+Narration: The entry header digest becomes `pre_d` and the exit header digest becomes `post_d`. Each public token equals its computed hash output. By Poseidon's collision resistance, equal boundary tokens bind equal committed states. Temporary scratch stays outside the boundary because each use depends on a value produced earlier in the same slot. Incoming scratch is unconstrained and cannot change persistent execution.
 
 Labels:
 
@@ -720,7 +720,7 @@ Numbers used: none.
 
 On screen: The first slice rests beside INIT with its height displayed as `h_pre = 0`. A verification sweep crosses its entry control, outcome, counters, empty stack chains and empty memory tray. The initial-state digest holds connected to those checked cells and to the program and input tokens.
 
-Narration: INIT checks the initial state only when `h_pre = 0`. It proves `Init(prog_d, input_d)` by matching the entry control, Running outcome, resource counters, empty stacks and empty genesis memory to their prescribed initial values. It authenticates the program and input commitments. The selector comes from the height check, preventing a prover from disabling initialization and starting from a convenient intermediate state.
+Narration: INIT checks the initial state only when `h_pre = 0`. It proves `Init(prog_d, input_d)`: the entry control, Running outcome, resource counters, empty stacks and empty genesis memory match their prescribed initial values. It also authenticates the program and input commitments. The height check drives the INIT selector, so a prover cannot switch initialization off and start from a convenient intermediate state.
 
 Labels:
 
@@ -731,13 +731,13 @@ Labels:
 - Empty stacks | on: the initial chain endpoints
 - Initial state | on: the checked entry registers
 
-Numbers used: Genesis height 0 — BRIEF.md §2, Input admission, and §3, step 3.
+Numbers used: Genesis height 0: BRIEF.md §2, Input admission, and §3, step 3.
 
 ### Beat 3.30: input-by-digest (24 s)
 
 On screen: The input token remains beside empty genesis memory, with a digest reference in the machine state. An inspected input node’s canonical contents pass through Poseidon, and the resulting token slides onto the expected value digest. The authenticated node holds beside the append port, ready to enter memory through the ordinary record path.
 
-Narration: Input admission holds the value by digest in that empty genesis state. When execution inspects an input node, VALUE DIGEST recomputes its canonical digest and matches the expected digest before use. Records enter memory through the checked append chain. This admits the input without loading its entire structure at genesis and prevents unauthenticated input contents from influencing any transition.
+Narration: Input admission keeps the value as a digest in that empty genesis state. When execution inspects an input node, VALUE DIGEST recomputes its canonical digest and matches it to the expected digest before use. Records enter memory through the checked append chain. The input enters without loading its whole structure at genesis, and unauthenticated input contents cannot influence any transition.
 
 Labels:
 
@@ -753,7 +753,7 @@ Numbers used: none.
 
 On screen: The slot rule plates line up in execution order, including the fixed inactive entries. They slide through Poseidon to produce `rules_d`, beside the checked `h_pre` and `steps` cubes. Those public values hold at their pin positions on the emerging slab.
 
-Narration: CORE computes `rules_d` by hashing the selected rule identifiers in slot order, including the fixed inactive entries. It also constrains `steps` to the active slot count and `h_pre` to the slice's starting height. The resulting height stays within the step counter's range. These bindings prevent a prover from claiming another rule sequence or an inconsistent interval for the same slice.
+Narration: CORE computes `rules_d` by hashing the selected rule identifiers in slot order, fixed inactive entries included. It also constrains `steps` to the active slot count and `h_pre` to the slice's starting height, and the resulting height stays within the step counter's range. With these bindings a prover cannot claim another rule sequence or an inconsistent interval for the slice.
 
 Labels:
 
@@ -769,7 +769,7 @@ Numbers used: none.
 
 On screen: A titanium slab with seven front pins holds above the completed leaf floor plan. A verification sweep crosses the slab and gives its gold edge a brief bright finish. Labels identify the binding, program and endpoint pins; the remaining pins keep the order established in the preceding beat.
 
-Narration: The seven public pins are `[binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`. The binding value connects the proof to its transcript, the data the proof protocol authenticates. The program digest fixes the executed image. The boundary digests fix the endpoints. The rule digest fixes slot choices, and the height and step count locate the slice within the run.
+Narration: The seven public pins are `[binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`. The binding value connects the proof to its transcript, the data the proof protocol authenticates. The program digest fixes the executed image, and the boundary digests fix the endpoints. The rule digest fixes each slot's choice, and the height and step count place the slice in the run.
 
 Labels:
 
@@ -779,13 +779,13 @@ Labels:
 - `pre_d` | on: the entry-state pin
 - `post_d` | on: the exit-state pin
 
-Numbers used: Seven public pins — BRIEF.md §3, step 3.
+Numbers used: Seven public pins: BRIEF.md §3, step 3.
 
 ### Beat 3.33: partition-independence (24 s)
 
 On screen: Matching copies of the same witness tape rest under different slice boundaries. Each ends beside the same completed-segment arrangement and partial tail. Their final memory tokens slide into physical coincidence, leaving a single outline while the differing cuts remain visible.
 
-Narration: Changing the cuts preserves memory after the same executed steps. Real appends alone advance its length, full segments enter the tree at their sequential positions, and partial tails carry forward unchanged. Closing a leaf adds no record or charge. Cache choices change no state. Thus every valid partition reaches the same final memory and supports the same eventual run claim.
+Narration: Changing the cuts leaves memory unchanged after the same executed steps. Only real appends advance its length, full segments enter the tree at their sequential positions, and partial tails carry forward unchanged. Closing a leaf adds no record or charge. Cache choices change no state. Every valid partition reaches the same final memory and supports the same run claim.
 
 Labels:
 
@@ -801,7 +801,7 @@ Numbers used: none.
 
 On screen: The flush unit and scalar old-read unit sit over calibrated row rulers. A verification sweep crosses their cost plates and the complete leaf’s row-capacity frame. The long witness tape remains behind a break mark, while the leaf housing keeps its fixed footprint.
 
-Narration: At depth 63, a flush costs 8,821 rows and an old-memory read costs 4,761 rows. Rows are positions in the circuit's constraint layout. The complete leaf fits 2^16 rows. Its fixed capacity covers the checks for its slice, while successive leaves cover the long run. Neither the tape's total length nor the memory tree's capacity expands an individual leaf circuit.
+Narration: At depth 63 a flush costs 8,821 rows and an old-memory read costs 4,761 rows. Rows are positions in the circuit's constraint layout, and the complete leaf fits 2^16 rows. That fixed capacity covers one slice's checks, and successive leaves cover the long run. Neither the tape's length nor the memory tree's capacity makes a single leaf circuit larger.
 
 Labels:
 
@@ -811,13 +811,13 @@ Labels:
 - 2^16 rows | on: the complete leaf’s capacity ruler
 - Leaf circuit | on: the fixed housing
 
-Numbers used: Depth 63, flush cost 8,821 rows, old-memory read cost 4,761 rows and leaf capacity 2^16 rows — BRIEF.md §3, step 3.
+Numbers used: Depth 63, flush cost 8,821 rows, old-memory read cost 4,761 rows and leaf capacity 2^16 rows: BRIEF.md §3, step 3.
 
 ### Beat 3.35: leaf-slabs-handoff (24 s)
 
 On screen: The completed leaf slabs slide together onto the handoff plate, each with the same footprint and seven front pins. Their endpoint tokens and height cells remain aligned with their own slabs. The final establishing pose holds on the slabs, with the program and input carrier at the front edge and the node station ahead.
 
-Narration: The checked slices leave as leaf proof slabs, each carrying its seven public pins. The proof binds the executed rules, authenticated data, initial state and final state for that slice. Neighboring slabs retain the endpoint digests and step intervals needed for linking. The handoff plate carries these slabs to the node, while `prog_d` and `input_d` remain with the run.
+Narration: The checked slices leave as leaf proof slabs, each with its seven public pins. Each proof binds the executed rules, authenticated data and initial and final state of its slice. Neighboring slabs carry the endpoint digests and step intervals that linking needs. The handoff plate takes the slabs to the node, and `prog_d` and `input_d` stay with the run.
 
 Labels:
 
@@ -828,17 +828,17 @@ Labels:
 - `prog_d` | on: the violet carrier token
 - `input_d` | on: the blue carrier token
 
-Numbers used: Seven public pins per leaf — BRIEF.md §3, step 3.
+Numbers used: Seven public pins per leaf: BRIEF.md §3, step 3.
 
 ## Notes for the director
 
-- **Timing.** Durations use whitespace-separated narration words, including identifiers and mathematical tokens, divided by 2.5 and rounded up. All narration passages contain 30–90 words. The scene totals are **113 s**, **232 s** and **856 s**. Every scene exceeds its target by more than a quarter. The additional time carries the requested mechanisms, checks and consequences of omitted checks.
+- **Timing.** Durations use whitespace-separated narration words, including identifiers and mathematical tokens, divided by 2.5 and rounded up. All narration passages contain 30 to 90 words. The scene totals are **113 s**, **232 s** and **856 s**. Every scene exceeds its target by more than a quarter. The additional time carries the requested mechanisms, checks and consequences of omitted checks.
 - **Display conventions.** Render powers with superscripts. Every digest is an engraved hexagonal token, never a hexadecimal string. The token carrier remains visible throughout, but its text labels disappear during close inspections when necessary to keep the visible label count within six.
 - **Symbolic example.** The source sheet uses symbolic functional notation. Increment and ceiling are named program constants. The main input satisfies the comparisons, arithmetic bounds and resource allowances that lead to Halted. The Rejected and Exhausted beats are separate branch insets, not additional endings attached to the main tape. The task-stack and structured-value insets explain module behavior without adding those operations to the scalar source program.
-- **Arithmetic width.** The requested example uses unsigned 128-bit arithmetic, as the architecture’s ALU kit specifies. BRIEF.md §§2–3 does not include that width. The visible script therefore says “unsigned” and “permitted integer width” without displaying the number.
+- **Arithmetic width.** The requested example uses unsigned 128-bit arithmetic, as the architecture’s ALU kit specifies. BRIEF.md §§2 to 3 does not include that width. The visible script therefore says “unsigned” and “permitted integer width” without displaying the number.
 - **Input identity disagreement.** `research/sherlock-final-design-20261111/ARCHITECTURE.md`, the VALUE DIGEST and INIT kits, and `openspec/changes/sherlock-vm-consensus-20261107/design.md` define `input_d` as an input-envelope hash containing a canonical value digest, fuel components and a stack limit. BRIEF.md §3, step 1 calls `input_d` the input value’s digest under `sherlock-value/1`. The script follows the brief and does not display the conflicting envelope formula. Resource initialization remains described as a field-by-field INIT check; the script does not invent a replacement resource-parameter commitment.
 - **Program identity disagreement.** The older consensus design and requirements include layout, qualification bounds and profile identity in the program-digest preimage. The architecture’s INIT kit also describes those opening fields. BRIEF.md §3, step 1 defines `prog_d` as the Poseidon digest of the program image. The script follows that definition and shows the image’s code tables and entry information without profile names or qualification-bound commitments.
-- **Genesis disagreement.** The older consensus design and requirements describe input records already present in initial data tables. The architecture discusses several admission forms and leaves parts conditional. BRIEF.md §2 selects admission by digest with empty genesis memory. Beats 3.29–3.30 use that selected mechanism.
+- **Genesis disagreement.** The older consensus design and requirements describe input records already present in initial data tables. The architecture discusses several admission forms and leaves parts conditional. BRIEF.md §2 selects admission by digest with empty genesis memory. Beats 3.29 to 3.30 use that selected mechanism.
 - **Memory-record disagreement.** The architecture’s MEM window kit discusses logical records spanning consecutive physical cells. BRIEF.md §2 states that one logical record is one cell. Beat 3.12 and every memory tray use the brief’s cell interpretation.
 - **Memory configuration disagreement.** The architecture and README retain alternatives, conditional tree-depth wording and older per-leaf append descriptions. The script uses only the brief’s single arena, depth-63 dense tree, 8-cell tail and one flush unit per leaf. It does not equate one flush unit with a fixed total number of appends per leaf: imported-tail occupancy and cumulative capacity determine the cut.
 - **Leaf-size disagreement.** The older consensus design discusses other slice sizes and larger circuit limits, and the README gives prototype sizes. The script uses `S = 16` step slots and the complete leaf’s 2^16-row capacity from BRIEF.md §3, step 3. Partial slices preserve the same circuit and key.

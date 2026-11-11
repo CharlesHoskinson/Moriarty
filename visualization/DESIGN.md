@@ -120,6 +120,12 @@ components:
     textColor: "{colors.on-surface}"
     rounded: "{rounded.large}"
     padding: "24px"
+  code-card:
+    backgroundColor: "{colors.surface-container-high}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.code}"
+    rounded: "{rounded.medium}"
+    padding: "12px"
   stage-label:
     backgroundColor: "{colors.surface-container-highest}"
     textColor: "{colors.on-surface}"
@@ -229,6 +235,9 @@ The M3 shape scale: 4, 8, 12, 16, 28 and full. Stage and narration card use 16. 
 
 ### Cards
 - **Narration card:** surface-container-low, 16px radius, 24px padding. Beat title in title-large, scene line in body-medium, paragraphs in body-large.
+
+### Code card
+- Surface-container-high, 12px radius, 12px padding, level-1 shadow, top right of the stage (56% wide, at most 30rem). Roboto Mono 12px on 18px lines, tabular line numbers in on-surface-variant, highlighted lines on secondary-container. It shows source and machine-language listings and never takes pointer events.
 
 ### In-scene labels
 - DOM text anchored to 3D points, projected every frame. Surface-container-highest, 8px radius, label-medium, mono for identifiers, a round chip in the meaning color. At most six scene labels at once, plus the four carrier labels.

@@ -1,58 +1,73 @@
-import * as THREE from 'three/webgpu';
-import { materials, makeDigestToken, lerp, phase } from '../theme.js';
+import { createParts } from './scene7/parts.js';
+import { Rig } from './scene7/rig.js';
+import { buildScript, DUR, T0 } from './scene7/script.js';
+import { TEXT } from './scene7/text.js';
+import { PLACE } from './scene7/labels.js';
 
-// Placeholder scene 7. The interface is documented in scene1.js and ../SCENE-API.md.
+// Scene 7: the contract. Content, timing and labels follow STORYBOARD.md; motion is a pure
+// function of scene time through the keyframe rig in scene7/rig.js.
+const CARRIER = [['prog_d', 'prog:main'], ['input_d', 'input:main'], ['outcome_d', 'outcome:main'], ['n_steps', 'n_steps:main']];
+
+const beats = TEXT.map((b, i) => ({
+  id: b.id,
+  title: b.title,
+  duration: DUR[i],
+  narration: b.narration,
+  labels: PLACE[i].map((p, j) => {
+    if (!p) return null;
+    const [where, kind, dy, from, to] = p;
+    const l = { id: `l${j}`, text: b.labels[j].text, kind, dy };
+    if (typeof where === 'string') l.anchor = where; else l.at = where;
+    if (from != null) l.from = from;
+    if (to != null) l.to = to;
+    return l;
+  }).filter(Boolean),
+}));
+
 let ctx = null;
-let box = null;
-let token = null;
+let parts = null;
+let rig = null;
 
 export default {
-  id: "contract",
-  title: "The contract",
-  beats: [
-    {
-      id: 'arrive',
-      title: 'What arrives',
-      duration: 12,
-      narration: "acceptRun verifies the proof against its verifier key and recomputes claim_d. It refuses a claim_d that is already in runs, also when the same run is proved again under another leaf partition.",
-      labels: [{ id: 'title', text: "SherlockRun", anchor: 'box', kind: "state", dy: 2.2 }],
-    },
-    {
-      id: 'inspect',
-      title: 'What the station does',
-      duration: 14,
-      narration: "It stores outcome_d and n_steps under claim_d. A later run can consume this claim at its seal, and a proof from another system enters through the registry.",
-      labels: [{ id: 'id', text: '<code>' + "claim_d" + '</code>', anchor: 'token', kind: "state", dy: 0.9 }],
-    },
-  ],
+  id: 'contract',
+  title: 'The contract',
+  beats,
 
   build(c) {
     ctx = c;
-    box = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 3), materials.family("state"));
-    box.position.y = 1.5;
-    ctx.scene.add(box);
-    token = makeDigestToken({ family: "state", content: "contract", size: 2 });
-    token.position.set(0, 4.5, 0);
-    ctx.scene.add(token);
-    ctx.labels.anchor('box', box);
-    ctx.labels.anchor('token', token);
+    parts = createParts();
+    rig = new Rig();
+    const { A } = buildScript(ctx, parts, rig);
+   
+    for (const [name, obj] of Object.entries(A)) if (obj && obj.isObject3D) ctx.labels.anchor(name, obj);
+    // adapter-digest token of beat 7.14 sits in the entry row: anchor by position
     const s = ctx.camera.shots;
-    ctx.camera.track([
-      { t: 0, pose: s.establish([0, 1.5, 0], 34), dur: 1.6 },
-      { t: 12, pose: s.inspect([0, 3, 0], 12, 'front'), dur: 2 },
-    ]);
+    const S = {
+      IN: s.establish([-10, 1, 0], 30),
+      DECK: s.inspect([-11, 0, -1], 9, 'top'),
+      HASHC: s.inspect([-7.1, 0, -1.2], 13, 'top'),
+      CAB: s.establish([3, 1.6, -2.6], 13),
+      DRW: s.establish([3, 1.5, -2.2], 7),
+      TL: s.inspect([0.5, 0.1, 3], 12, 'top'),
+      TC: s.inspect([5, 0.1, 3], 13, 'top'),
+      TR: s.inspect([10, 0.1, 3], 12, 'top'),
+      BOTH: s.establish([4, 1, 0], 26),
+      OUT: s.establish([10, 1, 0], 30),
+    };
+    const pose = ['IN', 'HASHC', 'CAB', 'DRW', 'CAB', 'CAB', 'TL', 'TL', 'TC', 'TC', 'BOTH', 'TR', 'TR', 'TR', 'TC', 'TC', 'TC', 'TC', 'TC', 'TR', 'BOTH'];
+    const keys = [{ t: 0, pose: S.IN, dur: 2 }, { t: T0[0] + 9, pose: S.DECK, dur: 1.5 }];
+    for (let i = 1; i < pose.length; i++) if (pose[i] !== pose[i - 1]) keys.push({ t: T0[i], pose: S[pose[i]], dur: 1.5 });
+    keys.push({ t: T0[20] + 8, pose: S.OUT, dur: 1.5 });
+    ctx.camera.track(keys);
   },
 
   seek(t) {
-    const b = ctx.beatAt(t);
-    box.position.x = b.index === 0 ? lerp(-10, 0, phase(b.t, 0.5, 2.5)) : 0;
-    token.visible = b.index === 1;
-    token.scale.setScalar(b.index === 1 ? 0.2 + 0.8 * phase(b.t, 0.5, 1.5) : 1);
+    rig.apply(t);
+    for (const [name, content] of CARRIER) ctx.carrier.show(name, 1, content);
   },
 
   dispose() {
-    ctx = null;
-    box = null;
-    token = null;
+    if (parts) parts.dispose();
+    ctx = null; parts = null; rig = null;
   },
 };
