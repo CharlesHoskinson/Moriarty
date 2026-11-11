@@ -590,10 +590,15 @@ impl DenseCfg {
                     [sc, bc, ai, ao]
                 }
             };
-            let g = if l + 1 == n {
-                WALK_LAST
-            } else if l == 0 && first == First::Empty {
+            // `WALK_EMPTY` takes precedence over `WALK_LAST`, so `x0 = EMPTY_SEG`
+            // holds for every TOP >= 1. At n = 1 this row then has no
+            // `acc_out = 0` check of its own: the new walk of the same unit
+            // (`First::Plain`, `shared`) copies `acc_out`, and its only row is
+            // `WALK_LAST`.
+            let g = if l == 0 && first == First::Empty {
                 WALK_EMPTY
+            } else if l + 1 == n {
+                WALK_LAST
             } else {
                 WALK
             };
@@ -671,9 +676,13 @@ impl MemBackend for DenseCfg {
         }
         // Flush units.
         lap(*o, "persist.segments");
+        assert!(w.top >= 1, "dense backend: TOP >= 1");
         let mut root = pre_root.clone();
         let mut idx = win.q_pre.clone();
         for (j, u) in w.units.iter().enumerate() {
+            // The walk length is the tree depth: a shorter walk would open a node
+            // above the segment slots.
+            assert_eq!(u.sibs.len(), w.top, "flush unit {j}: TOP siblings");
             let f = &win.rows[SEGC * j + SEGC - 1].act;
             if j > 0 {
                 idx = self.add(r, o, &idx, f)?;

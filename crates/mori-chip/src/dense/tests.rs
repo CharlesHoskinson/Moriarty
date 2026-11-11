@@ -635,6 +635,31 @@ fn c1_mut_empty_seg_forgery() {
     expect_err(&leaf1(T, c), "dense walk empty");
 }
 
+/// TOP = 1 (one walk level): the honest leaf of the gap test below. Five
+/// records, three appends, so segment 0 flushes.
+#[test]
+fn c1_top1_positive() {
+    let mut m = model(1, 5);
+    let c = case(&mut m, &recs(10, 3), 1, &[]);
+    assert_ne!(c.post.root, c.pre.root);
+    run(&leaf1(1, c)).unwrap();
+}
+
+/// gap_top1_empty_seg_forgery (Gemini Quint lane, REPORT-dense.md section 4):
+/// `empty_seg_forgery` at TOP = 1, where the only level of the old walk is
+/// also its last. Slot 0 is occupied; the old walk starts at the occupying
+/// segment root and reaches the pre root.
+#[test]
+fn c1_gap_top1_empty_seg_forgery() {
+    let mut m = model(1, 5);
+    let seg: [Rec; 8] = std::array::from_fn(|i| rec(1, 900 + i as u64));
+    m.insert_seg(0, seg);
+    let occ = tree8(&seg.iter().map(rec_d).collect::<Vec<_>>());
+    let mut c = case(&mut m, &recs(10, 3), 1, &[]);
+    c.leaf.units[0].x0 = Some(occ);
+    expect_err(&leaf1(1, c), "dense walk empty");
+}
+
 /// address_reuse_window: window row 1 claims row 0's address.
 #[test]
 fn c1_mut_address_reuse_window_row() {
