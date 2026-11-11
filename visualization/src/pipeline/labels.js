@@ -88,6 +88,7 @@ export class LabelLayer {
             }
           }
         }
+        if (best && best.c > 0 && w < 600 && !it.carrier) { it.el.style.display = 'none'; continue; }   // phone: no free spot, no label
         if (best) { x0 = best.cx; y0 = best.cy; }
       }
       placed.push({ x0, y0, x1: x0 + bw, y1: y0 + bh });
