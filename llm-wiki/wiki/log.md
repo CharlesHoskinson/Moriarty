@@ -179,3 +179,8 @@
 - Earlier columns unchanged. New STATIC result: ADT rules read up to 6 ROM row call sites in 4 tables in one step (`XAdtHelperPlanSwitch`), up to 9 ROM rows per step by call sites; `K_rom` blocks per table stay open. Heap bound 4 relabelled STATIC for 116 rules, READ for 4. T0 passed (`20261111T103539Z-maxima-t0`).
 - Files: `rule-maxima-experiment` page, `research/sherlock-final-design-20261111/EXPERIMENTS-MAXIMA.md`, `maxima/`.
 - Next: log the ADT view rows in `LogView` to observe `K_rom` blocks.
+
+## [2026-11-11 03:40] note | Withdraw the ROM total in the 03:36 rule-maxima entry
+- Corrects the `[2026-11-11 03:36] qa` entry: "up to 9 ROM rows per step by call sites" is withdrawn. Nine rules log more ROM reads than their counted sites (for example `BHelperScalarTag`), since value reads can land on constant rows and selection reads are not counted.
+- The 6 ADT view row sites in 4 tables (`XAdtHelperPlanSwitch`) stand as a count of that site class only; total ROM rows per step and `K_rom` blocks are open.
+- Files: `rule-maxima-experiment` page, `research/sherlock-final-design-20261111/EXPERIMENTS-MAXIMA.md`.
