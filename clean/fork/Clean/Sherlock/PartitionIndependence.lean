@@ -36,7 +36,7 @@ Results:
   any `Premises` whose states represent `PState` injectively.
 * `d3_partition_dependent`, `d3_no_det_run`: under D3 padding the cuts `[2]` and `[1, 1]` of a
   two-append trace give different physical states, and no deterministic step relation makes every
-  padded leaf a k-step `Run`. This is audit finding 10's reading: D3 does not falsify
+  padded leaf from a reachable state a k-step `Run` (`tail_det_run` is the positive twin). This is audit finding 10's reading: D3 does not falsify
   `statement_independent_of_S`; it makes its `det` premise impossible to discharge at the physical
   level.
 
@@ -519,20 +519,43 @@ theorem tail_same_example :
     runPart closeFlush effOne [2] s₀ (abs s₀) = runPart closeFlush effOne [1, 1] s₀ (abs s₀) := by
   decide
 
-/-- **D3 has no deterministic physical step.** No deterministic step relation on the padded
-physical state makes every padded leaf (1 or 2 steps, any witness and pre-state) a `Run` of
-exactly its number of steps. So `det` together with the `Run` form of `leaf_sound` cannot be
-discharged at the physical level under D3 (audit finding 10). -/
+theorem runPart_append {M : Type} (close : Win C M F T R → PState M F T R)
+    (eff : LState C F T R → Effect C F T R) : ∀ (ks ks' : List Nat) (s : LState C F T R)
+    (P : PState M F T R), runPart close eff (ks ++ ks') s P =
+      runPart close eff ks' (iter (LState.next eff) ks.sum s) (runPart close eff ks s P)
+  | [], ks', s, P => rfl
+  | k :: ks, ks', s, P => by
+    rw [List.cons_append, runPart, runPart, runPart_append close eff ks ks', List.sum_cons,
+      iter_add]
+
+/-- **D3 has no deterministic physical step on reachable states.** No deterministic step relation
+on the padded physical state makes every padded leaf of 1 or 2 steps, taken from a state reached
+by honest padded leaves from genesis with its consistent witness, a `Run` of exactly its number
+of steps. So `det` together with the `Run` form of `leaf_sound` cannot be discharged at the
+physical level under D3 (audit finding 10). `tail_det_run` is the positive twin for the
+tail-buffered layout. -/
 theorem d3_no_det_run : ¬ ∃ step : PState (List (Option Unit)) Unit Unit Unit →
     PState (List (Option Unit)) Unit Unit Unit → Prop,
     (∀ a b c, step a b → step a c → b = c) ∧
-    ∀ k s P, 1 ≤ k → k ≤ 2 → Run step k P (leaf closePad effOne k s P) := by
+    ∀ (ks : List Nat) (k : Nat), 1 ≤ k → k ≤ 2 →
+      Run step k (runPart closePad effOne ks s₀ P₀) (runPart closePad effOne (ks ++ [k]) s₀ P₀) := by
   rintro ⟨step, hdet, hrun⟩
-  have h2 := hrun 2 s₀ P₀ (by decide) (by decide)
-  have h1 := hrun 1 s₀ P₀ (by decide) (by decide)
-  have h1' := hrun 1 (iter (LState.next effOne) 1 s₀) (leaf closePad effOne 1 s₀ P₀)
-    (by decide) (by decide)
-  have := Run.unique hdet h2 (Run.trans h1 h1')
-  exact (d3_partition_dependent).1 (by simpa [runPart] using this)
+  have h2 := hrun [] 2 (by decide) (by decide)
+  have h1 := hrun [] 1 (by decide) (by decide)
+  have h1' := hrun [1] 1 (by decide) (by decide)
+  exact (d3_partition_dependent).1 (Run.unique hdet h2 (Run.trans h1 h1'))
+
+/-- **The tail-buffered layout has one.** For every effect function, `PStep` is deterministic and
+every leaf of the circuit rule from a reachable state (any cut `ks` from `abs s`, each leaf with at
+most 8 appends) is a `Run` of exactly its number of steps. -/
+theorem tail_det_run (eff : LState C F T R → Effect C F T R) :
+    ∃ step : PState (Mem C) F T R → PState (Mem C) F T R → Prop,
+    (∀ a b c, step a b → step a c → b = c) ∧
+    ∀ (s : LState C F T R) (ks : List Nat) (k : Nat), FitsLeaf eff ks s →
+      (appsOf eff k (iter (LState.next eff) ks.sum s)).length ≤ 8 →
+      Run step k (runPart closeFlush eff ks s (abs s)) (runPart closeFlush eff (ks ++ [k]) s (abs s)) := by
+  refine ⟨PStep eff, pstep_det eff, fun s ks k hks hk ↦ ?_⟩
+  rw [runPart_append, partition_independent_flush eff ks s hks, runPart, runPart]
+  exact leaf_run eff k _ hk
 
 end Clean.Sherlock.Partition

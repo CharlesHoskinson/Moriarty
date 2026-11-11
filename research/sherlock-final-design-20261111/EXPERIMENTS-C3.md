@@ -7,11 +7,11 @@ Two new modules in `clean/fork/Clean/Sherlock/`, each with an axiom-report compa
 | File | Content |
 |---|---|
 | `PartitionIndependence.lean` | Dense tail-buffered memory, the reference machine, the leaf, partitions, the `det` bridge and the D3 counterexample |
-| `PartitionIndependenceAxioms.lean` | `#print axioms` for all 39 theorems |
+| `PartitionIndependenceAxioms.lean` | `#print axioms` for all 41 theorems |
 | `ModularComposition.lean` | Modules, bus contracts and the composition theorem, with a toy CORE + ALU instance |
 | `ModularCompositionAxioms.lean` | `#print axioms` for all 11 theorems |
 
-Status: all 50 theorems are proved. There is no `sorry` and no `axiom`. Every axiom report contains only `propext`, `Quot.sound` and `Classical.choice`, or no axiom at all. No statement was left open, so no obligations file was created. `lake build SherlockSpec` is green (27 jobs; DoctorWatson heavy runs `20261111T064428Z-c3-lake`). `scripts/qa/check-lean-aggregation.sh` (F21) is still green with 90 theorems (run `20261111T064437Z-c3-lake`). The library imports only `Init`, with no Mathlib.
+Status: all 52 theorems are proved. There is no `sorry` and no `axiom`. Every axiom report contains only `propext`, `Quot.sound` and `Classical.choice`, or no axiom at all. No statement was left open, so no obligations file was created. `lake build SherlockSpec` is green (27 jobs, through `scripts/doctorwatson heavy --id c3-lake`). `scripts/qa/check-lean-aggregation.sh` (F21) is still green with 90 theorems. The library imports only `Init`, with no Mathlib.
 
 ### 1. Partition independence (SRC-023)
 
@@ -54,8 +54,10 @@ D3 (audit finding 10):
 | Theorem | Statement |
 |---|---|
 | `d3_partition_dependent` | On a trace that appends one cell per step, the cuts `[2]` and `[1, 1]` give different physical memories: `len` is 8 against 16. Decided by the kernel. |
+| `tail_det_run` | The positive twin: for every effect function, `PStep` is deterministic, and every circuit-rule leaf from a reachable state is a `Run` of exactly its number of steps. |
+| `runPart_append` | Running the cut `ks ++ ks'` is running `ks` and then `ks'`. |
 | `tail_same_example` | The same trace gives one state for both cuts under the tail rule. |
-| `d3_no_det_run` | No deterministic step relation on the padded physical state makes every padded leaf a `Run` of exactly its number of steps. So under D3, `det` and the `Run` form of `leaf_sound` cannot both hold at the physical level. D3 does not falsify `statement_independent_of_S`; it makes that theorem's premise impossible to discharge. |
+| `d3_no_det_run` | No deterministic step relation on the padded physical state makes every padded leaf a `Run` of exactly its number of steps, even when only reachable states are considered: a pre-state reached by honest padded leaves from genesis, with its consistent witness. So under D3, `det` and the `Run` form of `leaf_sound` cannot both hold at the physical level. D3 does not falsify `statement_independent_of_S`; it makes that theorem's premise impossible to discharge. |
 
 Still assumed, as hypotheses and not as axioms:
 - `digest_inj`: collision resistance, which lifts equal physical states to equal `post_d` and back.

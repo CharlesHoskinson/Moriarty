@@ -42,4 +42,6 @@ the standard Lean axioms `propext`, `Quot.sound`, `Classical.choice`. -/
 #print axioms Clean.Sherlock.Partition.result_unique_tail
 #print axioms Clean.Sherlock.Partition.d3_partition_dependent
 #print axioms Clean.Sherlock.Partition.tail_same_example
+#print axioms Clean.Sherlock.Partition.runPart_append
 #print axioms Clean.Sherlock.Partition.d3_no_det_run
+#print axioms Clean.Sherlock.Partition.tail_det_run

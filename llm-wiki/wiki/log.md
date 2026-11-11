@@ -122,3 +122,8 @@
 - openspec validate passes; F14 PASS (run 20261111T061635Z-F14); traceability.md re-rendered.
 - Pages updated: GeneralPurposeRecursion, WorkstreamStatus. Source: `runlength-consensus-audit`.
 - Next: owner review of R-2, R-4 and R-5.
+
+## [2026-11-10 23:57] qa | C3 Lean: partition independence and modular composition proved
+- New `clean/fork/Clean/Sherlock/PartitionIndependence.lean` and `ModularComposition.lean` (with Axioms companions): 52 theorems, no sorry, no axiom, standard axioms only; lake build and F21 green.
+- Tail-buffered memory: every cut of N steps gives `abs (next^[N] s)`; `det` discharged for the physical step (`premises_det`); D3 padding has no deterministic physical step on reachable states (`d3_no_det_run`), per audit finding 10.
+- Results: `research/sherlock-final-design-20261111/EXPERIMENTS-C3.md`. Next: C4 records them; module kits instantiate `Contract`.
