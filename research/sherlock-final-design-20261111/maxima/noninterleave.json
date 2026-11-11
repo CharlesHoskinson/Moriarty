@@ -1,0 +1,1147 @@
+{
+  "applied_steps": 6668,
+  "dynamic_checks": {
+    "A_step_local_violations": [],
+    "B_slice_contiguity_violations": [],
+    "dynamic_above_static": [],
+    "entry_capture_violations": [],
+    "helper_exclusivity_violations": []
+  },
+  "dynamic_max_all": {
+    "app": [
+      1,
+      2,
+      1,
+      1
+    ],
+    "app_total": 3,
+    "frame_pop": 1,
+    "frame_push": 1,
+    "frame_rewrite": 1,
+    "max_read_age_steps": 507,
+    "old_read_seen": true,
+    "rd": [
+      2,
+      2,
+      1,
+      1
+    ],
+    "rd_heap": 4,
+    "rd_rom": 3,
+    "rd_sel_heap": 2,
+    "rom_blocks8": 3,
+    "rom_tables": 3,
+    "seg_all_1a": 3,
+    "seg_all_4a": 2,
+    "seg_app_1a": 2,
+    "seg_app_4a": 2,
+    "seg_old_1a": 2,
+    "seg_old_4a": 2,
+    "seg_read_1a": 3,
+    "seg_read_4a": 2,
+    "task_pop": 1,
+    "task_push": 1,
+    "task_rewrite": 1
+  },
+  "fired_rules_108": 90,
+  "fired_rules_all": 102,
+  "format": "moriarty-sherlock-rule-maxima/1",
+  "max_cells_per_step_dynamic": 3,
+  "premises": [
+    {
+      "detail": "[\"img.data_fields.push\", \"img.data.push\", \"img.data_fields.push\", \"img.data.push\", \"img.env.push\", \"img.value_slots.push\"]",
+      "holds": true,
+      "premise": "S1 apply order (owner_apply_validated text): alloc_data fields, alloc_data node, alloc_data_field, alloc_constructor, env, slot"
+    },
+    {
+      "detail": "[]",
+      "holds": true,
+      "premise": "S2 every Append-helper rule (entry and group) appends SLOTS only; every Build-helper rule appends FIELDS and the closing constructor only; SLOTS only in the Append group; Build writes only in XAdtHelperBuildField; no rule mixes alloc_data with a Build write; entries append nothing"
+    },
+    {
+      "detail": "append_entry=true build_entry=true",
+      "holds": true,
+      "premise": "S3 entries capture the active length: BHelperAppendEntry reads active().value_slots, XAdtHelperBuildEntry reads active().data_fields (text)"
+    },
+    {
+      "detail": "[]",
+      "holds": true,
+      "premise": "S4 owner_select: an active helper selects only from helper_group(kind) (text), and dynamically on every corpus step"
+    }
+  ],
+  "reached": {
+    "BBookkeepingTaskRelease": [
+      "environment::plan_bookkeeping_release",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error"
+    ],
+    "BHelperAppendCell": [
+      "environment::plan_append",
+      "environment::append_cell",
+      "environment::preserved_effects",
+      "environment::arithmetic",
+      "environment::effect_error",
+      "environment::wrong",
+      "environment::helper_copy"
+    ],
+    "BHelperAppendCopy": [
+      "environment::plan_append",
+      "environment::append_copy",
+      "environment::preserved_effects",
+      "environment::arithmetic",
+      "environment::effect_error",
+      "environment::wrong",
+      "environment::helper_copy"
+    ],
+    "BHelperAppendEmpty": [
+      "environment::plan_append",
+      "environment::append_empty",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperAppendEntry": [
+      "environment::plan_append",
+      "environment::entry_common",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::append_entry",
+      "environment::preserved_effects",
+      "adt_constructor::append_entry",
+      "owner_adt_runtime::constructor_append",
+      "owner_adt_runtime::impl_constructor_append"
+    ],
+    "BHelperAppendExit": [
+      "environment::plan_append",
+      "environment::append_exit",
+      "environment::preserved_effects",
+      "environment::arithmetic",
+      "environment::effect_error",
+      "environment::wrong",
+      "environment::helper_copy"
+    ],
+    "BHelperAppendTail": [
+      "environment::plan_append",
+      "environment::append_tail",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperBindArity": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindDuplicate": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "guard::GBindDupHit",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindEmpty": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindEntry": [
+      "structural::plan_bind",
+      "structural::bind_entry_payload",
+      "structural::common",
+      "structural::empty_plan",
+      "structural::wrong_variant"
+    ],
+    "BHelperBindExit": [
+      "structural::plan_bind",
+      "structural::plan_bind_terminal",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindFailure": [
+      "structural::plan_bind",
+      "structural::plan_bind_terminal",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindInsert": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindPair": [
+      "structural::plan_bind",
+      "structural::bind_pair_payload",
+      "structural::wrong_variant",
+      "structural::helper_copy"
+    ],
+    "BHelperBindPropagate": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperBindType": [
+      "structural::plan_bind",
+      "structural::bind_unwind_payload",
+      "guard::GBindTypeReject",
+      "structural::wrong_variant",
+      "structural::foreign_rule"
+    ],
+    "BHelperEnvGetCell": [
+      "environment::plan_env_get",
+      "environment::env_get_cell",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEnvGetEmpty": [
+      "environment::plan_env_get",
+      "environment::env_get_empty",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEnvGetEntry": [
+      "environment::plan_env_get",
+      "environment::entry_common",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::env_get_entry",
+      "environment::preserved_effects"
+    ],
+    "BHelperEnvGetExit": [
+      "environment::plan_env_get",
+      "environment::env_get_exit",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEnvGetFailure": [
+      "environment::plan_env_get",
+      "environment::env_get_failure",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEnvPutEntry": [
+      "environment::plan_env_put",
+      "environment::entry_common",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::env_put_entry",
+      "environment::preserved_effects"
+    ],
+    "BHelperEnvPutExit": [
+      "environment::plan_env_put",
+      "environment::env_put_exit",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEnvPutInsert": [
+      "environment::plan_env_put",
+      "environment::env_put_insert",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperEqualDifferent": [
+      "structural::plan_equal",
+      "structural::plan_equal_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperEqualEmpty": [
+      "structural::plan_equal",
+      "structural::plan_equal_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperEqualEntry": [
+      "structural::plan_equal",
+      "structural::equal_entry_payload",
+      "structural::common",
+      "structural::empty_plan",
+      "structural::wrong_variant"
+    ],
+    "BHelperEqualExit": [
+      "structural::plan_equal",
+      "structural::plan_equal_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperEqualField": [
+      "structural::plan_equal",
+      "structural::plan_equal_nonentry",
+      "guard::GEqualFieldNontail",
+      "structural::plan",
+      "structural::increment",
+      "structural::wrong_variant",
+      "structural::task_copy",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperEqualPair": [
+      "structural::plan_equal",
+      "structural::plan_equal_nonentry",
+      "guard::GEqualPairLeaf",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::task_copy",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperFindEmpty": [
+      "environment::plan_find",
+      "environment::find_empty",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperFindEntry": [
+      "environment::plan_find",
+      "environment::entry_common",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::find_entry",
+      "environment::preserved_effects"
+    ],
+    "BHelperFindExit": [
+      "environment::plan_find",
+      "environment::find_exit",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperFindFailure": [
+      "environment::plan_find",
+      "environment::find_failure",
+      "environment::preserved_effects",
+      "environment::wrong",
+      "environment::effect_error",
+      "environment::helper_copy"
+    ],
+    "BHelperFindRow": [
+      "environment::plan_find",
+      "environment::find_row",
+      "environment::preserved_effects",
+      "environment::arithmetic",
+      "environment::effect_error",
+      "environment::wrong",
+      "environment::helper_copy"
+    ],
+    "BHelperMatchArm": [
+      "structural::plan_match",
+      "structural::match_arm_payload",
+      "structural::wrong_variant",
+      "structural::helper_copy"
+    ],
+    "BHelperMatchBinding": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchDistinct": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchEntry": [
+      "structural::plan_match",
+      "structural::match_entry_payload",
+      "structural::common",
+      "structural::empty_plan",
+      "structural::wrong_variant"
+    ],
+    "BHelperMatchExit": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchFailure": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchField": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchNext": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchOccurrence": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperMatchSelected": [
+      "structural::plan_match",
+      "structural::plan_match_postarm",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperScalarArithmetic": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "scalar::scalar_payload_error",
+      "scalar::checked_word_result",
+      "owner_runtime::new",
+      "scalar::scalar_operand_b",
+      "scalar::scalar_helper"
+    ],
+    "BHelperScalarConstruct": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "scalar::scalar_payload_error",
+      "scalar::scalar_operand_b",
+      "scalar::scalar_helper"
+    ],
+    "BHelperScalarEntry": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "scalar::scalar_payload_error",
+      "adt_constructor::scalar_entry",
+      "owner_adt_runtime::constructor_scalar",
+      "owner_adt_runtime::impl_constructor_scalar"
+    ],
+    "BHelperScalarExit": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "guard::GScalarAllocNode",
+      "guard::GScalarFields1",
+      "guard::GScalarFields2",
+      "scalar::scalar_payload_error",
+      "scalar::scalar_operand_b",
+      "scalar::scalar_helper"
+    ],
+    "BHelperScalarFailure": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "scalar::scalar_payload_error",
+      "scalar::scalar_helper"
+    ],
+    "BHelperScalarTag": [
+      "scalar::dispatch",
+      "scalar::plan_scalar",
+      "scalar::plan_scalar_lowered",
+      "scalar::scalar_payload_error",
+      "scalar::scalar_helper"
+    ],
+    "BHelperValidateEmpty": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperValidateEntry": [
+      "structural::plan_validate",
+      "structural::validate_entry_payload",
+      "structural::common",
+      "structural::empty_plan",
+      "structural::wrong_variant"
+    ],
+    "BHelperValidateExit": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperValidateFailure": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperValidateField": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "guard::GValidateFieldNontail",
+      "structural::plan",
+      "structural::increment",
+      "structural::wrong_variant",
+      "structural::task_copy",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperValidateInvalid": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "BHelperValidateOccurrence": [
+      "structural::plan_validate",
+      "structural::plan_validate_nonentry",
+      "guard::GValidateOccLeaf",
+      "structural::plan",
+      "structural::wrong_variant",
+      "structural::task_copy",
+      "structural::helper_copy",
+      "structural::foreign_rule"
+    ],
+    "KAdminPublishError": [],
+    "KAdminPublishExhausted": [],
+    "KAdminPublishValue": [],
+    "KMachineBoundInvalid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineBoundValid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineCasesEmpty": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineCasesHit": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineCasesMiss": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineCasesTry": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_tail",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineEnterBind": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineEnterMissing": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineEvalBinary": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalCallArguments": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_tail",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalCallEmpty": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalIf": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalLet": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalLiteralInvalid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineEvalLiteralValid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalMatch": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalUnary": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_eval_expr"
+    ],
+    "KMachineEvalVariableAbsent": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineEvalVariablePresent": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachineInvokeFind": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachinePrimitiveError": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachinePrimitiveValue": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachinePushAccept": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error"
+    ],
+    "KMachinePushRefuse": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineReturnArgumentsFinal": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnArgumentsNext": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_tail",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnCallInvalid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineReturnCallValid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnIfFalse": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnIfInvalid": [
+      "legacy::dispatch",
+      "legacy::plan_legacy"
+    ],
+    "KMachineReturnIfTrue": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnLeft": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_return_value",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnLet": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnMatch": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_return_value",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnRight": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_prim_result",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnScope": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "KMachineReturnUnary": [
+      "legacy::dispatch",
+      "legacy::plan_legacy",
+      "legacy::legacy_prim_result",
+      "legacy::legacy_payload_error",
+      "legacy::legacy_frame"
+    ],
+    "XAdtCasesPlanHit": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::plan_hit",
+      "owner_adt_runtime::impl_plan_hit",
+      "owner_runtime::oob",
+      "owner_runtime::hv"
+    ],
+    "XAdtCasesPlanMiss": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::application_error",
+      "owner_adt_runtime::impl_application_error"
+    ],
+    "XAdtEvalConstructFields": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::construct_fields",
+      "owner_adt_runtime::impl_construct_fields",
+      "owner_runtime::arith",
+      "owner_runtime::hv",
+      "owner_runtime::oob",
+      "owner_adt_runtime::adt_checked_ctor_arity"
+    ],
+    "XAdtEvalConstructNullary": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::nullary_construct",
+      "owner_adt_runtime::impl_nullary_construct",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_adt_runtime::adt_checked_ctor_arity",
+      "owner_runtime::arith"
+    ],
+    "XAdtHelperBuildCell": [
+      "adt_build::dispatch",
+      "owner_adt_runtime::build_cell",
+      "owner_adt_runtime::impl_build_cell",
+      "owner_adt_runtime::record_build_state",
+      "owner_runtime::arith",
+      "owner_runtime::hv"
+    ],
+    "XAdtHelperBuildEntry": [
+      "adt_build::dispatch",
+      "owner_adt_runtime::build_entry",
+      "owner_adt_runtime::impl_build_entry",
+      "owner_adt_runtime::adt_checked_ctor_arity",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith"
+    ],
+    "XAdtHelperBuildExit": [
+      "adt_build::dispatch",
+      "owner_adt_runtime::build_done",
+      "owner_adt_runtime::impl_build_done"
+    ],
+    "XAdtHelperBuildField": [
+      "adt_build::dispatch",
+      "guard::GBuildLast",
+      "owner_adt_runtime::build_field",
+      "owner_adt_runtime::impl_build_field",
+      "owner_adt_runtime::record_build_state",
+      "owner_runtime::arith",
+      "owner_runtime::hv"
+    ],
+    "XAdtHelperPlanBind": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_node",
+      "owner_adt_runtime::impl_plan_node",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith",
+      "owner_adt_runtime::plan_node_source_match",
+      "owner_adt_runtime::plan_bind",
+      "owner_adt_runtime::impl_plan_bind",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtHelperPlanEntry": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_entry",
+      "owner_adt_runtime::impl_plan_entry",
+      "owner_adt_runtime::impl_plan_node",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith",
+      "owner_adt_runtime::plan_node_source_match"
+    ],
+    "XAdtHelperPlanExit": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_matched",
+      "owner_adt_runtime::impl_plan_matched",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtHelperPlanFailure": [
+      "adt_plan::dispatch"
+    ],
+    "XAdtHelperPlanNoMatch": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_state",
+      "owner_adt_runtime::impl_plan_state",
+      "owner_adt_runtime::impl_plan_node",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith",
+      "owner_adt_runtime::plan_node_source_match",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtHelperPlanSelect": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_state",
+      "owner_adt_runtime::impl_plan_state",
+      "owner_adt_runtime::impl_plan_node",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith",
+      "owner_adt_runtime::plan_node_source_match",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtHelperPlanSwitch": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_node",
+      "owner_adt_runtime::impl_plan_node",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith",
+      "owner_adt_runtime::plan_node_source_match",
+      "owner_adt_runtime::plan_switch",
+      "owner_adt_runtime::impl_plan_switch",
+      "owner_adt_runtime::kind_ctor_class",
+      "owner_adt_runtime::adt_checked_ctor_arity",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtHelperPlanWalk": [
+      "adt_plan::dispatch",
+      "owner_adt_runtime::plan_walk",
+      "owner_adt_runtime::impl_plan_walk",
+      "owner_runtime::arith",
+      "owner_runtime::hv",
+      "owner_runtime::oob",
+      "owner_adt_runtime::extract_plan_state",
+      "owner_adt_runtime::record_plan_state"
+    ],
+    "XAdtMaterializeDone": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::materialized_value",
+      "owner_adt_runtime::impl_materialized_value"
+    ],
+    "XAdtReturnCtorFieldsFinal": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::constructor_final",
+      "owner_adt_runtime::impl_constructor_final",
+      "owner_adt_runtime::adt_checked_ctor_arity",
+      "owner_runtime::oob",
+      "owner_runtime::hv",
+      "owner_runtime::arith"
+    ],
+    "XAdtReturnCtorFieldsMistyped": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::application_error",
+      "owner_adt_runtime::impl_application_error"
+    ],
+    "XAdtReturnCtorFieldsNext": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::constructor_next",
+      "owner_adt_runtime::impl_constructor_next",
+      "owner_runtime::arith",
+      "owner_runtime::hv",
+      "owner_runtime::oob",
+      "owner_adt_runtime::adt_checked_ctor_arity"
+    ],
+    "XAdtReturnCtorFieldsTyped": [
+      "legacy::dispatch",
+      "adt_constructor::dispatch",
+      "owner_adt_runtime::constructor_frame",
+      "owner_adt_runtime::impl_constructor_frame"
+    ]
+  },
+  "rules_108": 108,
+  "rules_total": 120,
+  "rules_unreached_enum_variants": [
+    "BHelperEnvPutCell",
+    "BHelperEnvPutEmpty",
+    "BHelperEnvPutFailure",
+    "BHelperAppendFailure",
+    "BHelperValidateDeclaration",
+    "BHelperEqualFailure",
+    "BHelperMatchDiscard",
+    "BHelperMatchEmpty",
+    "BBookkeepingTaskEnqueue",
+    "BBookkeepingResumeStore",
+    "BBookkeepingResumeRestore",
+    "KAdminStartupValid",
+    "KAdminStartupInvalid"
+  ],
+  "runs": [
+    {
+      "outcome": "Halted { value: Data(12) }",
+      "program": "fact",
+      "status": "ok",
+      "steps": 371
+    },
+    {
+      "outcome": "Halted { value: Data(6) }",
+      "program": "treefold",
+      "status": "ok",
+      "steps": 333
+    },
+    {
+      "outcome": "Halted { value: Data(5) }",
+      "program": "listsum",
+      "status": "ok",
+      "steps": 303
+    },
+    {
+      "outcome": "Halted { value: Data(24) }",
+      "program": "listbuild",
+      "status": "ok",
+      "steps": 999
+    },
+    {
+      "outcome": "Halted { value: Data(21) }",
+      "program": "treebuild",
+      "status": "ok",
+      "steps": 930
+    },
+    {
+      "outcome": "Halted { value: Data(4) }",
+      "program": "args3",
+      "status": "ok",
+      "steps": 204
+    },
+    {
+      "outcome": "Halted { value: Data(3) }",
+      "program": "letif",
+      "status": "ok",
+      "steps": 87
+    },
+    {
+      "outcome": "Halted { value: Const(0) }",
+      "program": "literal",
+      "status": "ok",
+      "steps": 6
+    },
+    {
+      "outcome": "Halted { value: Data(1) }",
+      "program": "constlist",
+      "status": "ok",
+      "steps": 34
+    },
+    {
+      "outcome": "Halted { value: Data(4) }",
+      "program": "eqlist",
+      "status": "ok",
+      "steps": 82
+    },
+    {
+      "outcome": "Halted { value: Data(6) }",
+      "program": "eqtree",
+      "status": "ok",
+      "steps": 140
+    },
+    {
+      "outcome": "Rejected { code: 10 }",
+      "program": "underflow",
+      "status": "ok",
+      "steps": 20
+    },
+    {
+      "outcome": "Rejected { code: 10 }",
+      "program": "overflow",
+      "status": "ok",
+      "steps": 20
+    },
+    {
+      "outcome": "Rejected { code: 4 }",
+      "program": "stack",
+      "status": "ok",
+      "steps": 237
+    },
+    {
+      "outcome": "Exhausted { reason: Fuel }",
+      "program": "fuel",
+      "status": "ok",
+      "steps": 61
+    },
+    {
+      "outcome": "Exhausted { reason: DataNodes }",
+      "program": "cap",
+      "status": "ok",
+      "steps": 858
+    },
+    {
+      "outcome": "Halted { value: Data(18) }",
+      "program": "wide10",
+      "status": "ok",
+      "steps": 626
+    },
+    {
+      "outcome": "Halted { value: Data(0) }",
+      "program": "wideconst",
+      "status": "ok",
+      "steps": 256
+    },
+    {
+      "outcome": "Halted { value: Data(3) }",
+      "program": "choice",
+      "status": "ok",
+      "steps": 202
+    },
+    {
+      "outcome": "Rejected { code: 9 }",
+      "program": "choicemiss",
+      "status": "ok",
+      "steps": 75
+    },
+    {
+      "outcome": "Halted { value: Data(3) }",
+      "program": "nested",
+      "status": "ok",
+      "steps": 132
+    },
+    {
+      "outcome": "Halted { value: Const(1) }",
+      "program": "wildcard",
+      "status": "ok",
+      "steps": 82
+    },
+    {
+      "outcome": "Halted { value: Data(0) }",
+      "program": "call0",
+      "status": "ok",
+      "steps": 50
+    },
+    {
+      "outcome": "Halted { value: Const(0) }",
+      "program": "boolconst",
+      "status": "ok",
+      "steps": 6
+    },
+    {
+      "outcome": "Halted { value: Data(4) }",
+      "program": "treeconst",
+      "status": "ok",
+      "steps": 55
+    },
+    {
+      "outcome": "Halted { value: Data(3) }",
+      "program": "nullary",
+      "status": "ok",
+      "steps": 225
+    },
+    {
+      "outcome": "Halted { value: Data(0) }",
+      "program": "boxconst",
+      "status": "ok",
+      "steps": 22
+    },
+    {
+      "outcome": "Halted { value: Data(3) }",
+      "program": "adtlist",
+      "status": "ok",
+      "steps": 280
+    }
+  ],
+  "slices_checked": 9031,
+  "static_max_108": {
+    "app_data": 1,
+    "app_env": 1,
+    "app_fields": 2,
+    "app_slots": 1,
+    "app_total": 3,
+    "frame_op": 1,
+    "heap_read_bound": 9,
+    "task_op": 1
+  },
+  "static_max_all": {
+    "app_data": 1,
+    "app_env": 1,
+    "app_fields": 2,
+    "app_slots": 1,
+    "app_total": 3,
+    "frame_op": 1,
+    "heap_read_bound": 9,
+    "task_op": 1
+  },
+  "steps": 6696
+}

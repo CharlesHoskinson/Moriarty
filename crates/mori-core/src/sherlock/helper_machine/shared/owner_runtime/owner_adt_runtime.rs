@@ -2223,3 +2223,6 @@ pub(crate) fn check_generic_program_view(v: &ProgramView) -> Result<(), HostViol
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod rule_maxima_tests;
