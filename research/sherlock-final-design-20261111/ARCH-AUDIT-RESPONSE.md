@@ -120,3 +120,63 @@ Changed: X1 and X2 are marked done with their results; X3 is done for dense memo
 - No build, test, proof, model run, commit or push. `scripts/sherlock-next` was not run.
 - `DECISIONS.md`, `NIGHT-PLAN.md` and `llm-wiki/` were not written; the wiki ingest of this revision is left to the lead.
 - `O/design.md` section 2.4 (the exact `prog_d` preimage) and sections 6.1, 6.3 and 6.4 of `ARCHITECTURE.md` were not read line by line; the latter were searched for every phrase the revision changed.
+
+## Late draft text (B2a)
+
+Asked by the lead after the response above. The merge (B1) started at 02:46:54 while the Gemini drafts were still growing. Read for this step: every added or changed line of `git diff 338c9a6e5 9a7cf1446 -- research/sherlock-final-design-20261111/drafts/` (area 3 first): `gemini-area3.md` +218 lines (sections 5 to 10 of that draft), `gemini-area1.md` +716 lines (its DEC, ALU + RANGE and HASH kits, spec outline, open decisions, conflicts), `gemini-area2.md` 119 lines (one typo fix, the LogUp bound, and sections 5 to 9: comparison matrix, SRC-023 argument, spec outline, experiments, open decisions, conflicts). Decided inputs win over draft text.
+
+Finding on coverage: the B1 merge had already used the late area 1 and area 3 text. `ARCHITECTURE.md` cites `gemini-area1.md` up to line 1167 and `gemini-area3.md` up to line 1207 (`grep -o 'G:1[0-2][0-9][0-9]' ARCHITECTURE.md | sort -u` gives G:1067 to G:1206; the DEC, ALU and HASH kits cite `gemini-area1.md:528-1116`). So most of the late text was already taken or rejected, with rows in sections 6.1, 6.2 and 6.4. The items below are what this step added or re-decided.
+
+### Taken
+
+| Source (late text) | What | Where in `ARCHITECTURE.md` |
+|---|---|---|
+| `gemini-area1.md`, section 5.2 B (capacity-IV registry) | the bit layout of the capacity word (count, `sub`, `dom`; `dom` never 0) and proposed numbers for the domains that are not landed: 5 ROM node, 7 ROM row leaf, 8 state body, 9 frame chain, 10 task chain | kit HASH, Interface, family 2 |
+| `gemini-area1.md`, open decision OD-3 | the narrow 12-column slot geometry; the wide form costs about +124,000 to +155,000 node rows (ESTIMATE) and stays a spike variant | section 6.4, B2a rows (kit CORE already assumes 12 advice columns) |
+| `gemini-area2.md`, sections 5 and 6.1 | a sealed marker trait so that the Horner boundary compiles only with a backend that precommits its words, and a compile-fail test | section 1.4 (after the profile matrix); kit BOUNDARY COMMITMENT, Code skeleton |
+| `gemini-area2.md`, section 9 item 3 | the on-disk format of retained memory is host work outside the circuit kits | agrees with kit HOST CHECKPOINT STORE; section 6.4 row |
+| `gemini-area3.md`, sections 6 and 7.2 | the harness record of a mutant (raw-witness override, control circuit, expected rejection stage) and a harness capability spec | section 3.2 (hostile witnesses); section 5.2.3 `specs/sherlock-harness/spec.md` |
+
+### Rejected, with the deciding input
+
+| Source (late text) | What it says | Why not |
+|---|---|---|
+| `gemini-area1.md`, section 3.2 A, conflict C-4, OD-2 | 134 variants, 121 active step rules plus 2 startup rules | X1 (M-4) asserts 120; `hm/shared.rs:400-534` has 12 `XAdtHelper*` variants (4 Build, 8 Plan), the draft counts 9 Plan. The draft's point that the 108 are not enough is kept (OD-10) |
+| the same | the startup rules as an `h == 0` admission step with DEC rows | X1: no step; kit INIT binds `prog_d` and `input_d` at `h_pre = 0` |
+| `gemini-area1.md`, ALU kit | `CHIP_ALU = 2`, signed arithmetic and sign extraction | L-4 (landed ids), L-7 (only the machine's operations). Already rejected in B1 (section 6.1) |
+| `gemini-area1.md`, registry rows 6, 11, 12 and the dynamic `CHIP_HASH = 6` | `DOM_TAIL8`, `SHK_VAL`, `DOM_CLAIM`, a dynamic hash pool | landed tail hashing; L-3 (pinned value digests); L-4. `claim_d` with `n_steps` inside conflicts with SRC-007 |
+| `gemini-area1.md`, section 6.3; `gemini-area2.md`, section 6.2; `gemini-area3.md`, section 7.4 | experiments P1 to P5 with fixed thresholds (for example, choose Profile B at a 20% wall-clock gain; choose ZM-LogUp if the node stays below 920,000 rows; freeze the 2-leaf lift below 1,035,000 rows) | L-5 (Profile B benchmark-only, not before M4), L-10 (no 2-leaf lift), R-10 (draft figures are not results). The measurements are X4, X5, X7, X8; P5 (the 0.8.3 proof under the 0.8.2 verifier) was already a qualification check in section 5.4 |
+| `gemini-area2.md`, section 2 | LogUp bound for two challenge pairs (below `2^-375`), four challenges | LC AUDIT finding 9: one pair by default |
+| `gemini-area2.md`, section 5.1 | leaf and node row figures for both profiles; six leaf lanes | R-10; the seven lanes of SRC-001 (rows already in section 6.3) |
+| `gemini-area2.md`, sections 5.2 and 7.3 | early close always makes progress because a step issues at most 4 bus requests, fitting `K_page >= 4`, `K_rom >= 2` | X1 (M-3): the heap half has a bound from the rules (4 records), the ROM half has none (X15) |
+| `gemini-area2.md`, section 6.1 | split ids `CHIP_MEM_ALLOC`, `CHIP_MEM_READ`, `CHIP_ROM = 5`; `WindowBoundary`, `FlushPort`; `SRC-025`; a separate change `sherlock-area2-memory-values` | L-4, L-10; one change, named by the night plan |
+| `gemini-area2.md`, section 7 items 1 and 2 | arenas and TOP as open | decided: M-1 (one arena), M-2 (TOP = 63, OWNER to confirm) |
+| `gemini-area3.md`, section 5 | 12 modules, waves 0 to 4, `ALU + RANGE` as one module, 2-leaf `RunLift` in the graph | the brief's module list (RANGE apart), L-10; groups F to 8 of section 3.1 |
+| `gemini-area3.md`, section 6 | kit template with a 1,500-line reading ceiling and Profile B proof-system rules | already dropped in section 3.4 (no source for the ceiling; L-5) |
+| `gemini-area3.md`, D-A3-3 | two nodes satisfy GP-4's "two prior proofs plus new work"; inline work rejected on modularity grounds | narrows GP-4; N-6 keeps inline work (MERGE-WORK) and marks it OWNER |
+| `gemini-area3.md`, D-A3-1 | 2-leaf lift recommended | L-10 |
+
+Unchanged and already covered by B1 rows: D-A3-2 (N-13), D-A3-4 (N-11), D-A3-5 (N-7), D-A3-6 (N-8), the `S_MAX` serialization, the claim counter, mode 2, the contract surface, the `Aggregation.lean` edit, the two Poseidon round counts, the dissent line numbers.
+
+### Stale B1 text removed (lead item 2)
+
+Sections 4.3, 6.3 and 7.3 and five other places still said that the rule inventory, the per-rule maxima or the non-interleaving check were unknown or required. Each now agrees with section 5.4 (X1 and X2 done; ROM maxima open, X15):
+
+| Place | Before | After |
+|---|---|---|
+| section 1.5 | "not frozen until the per-rule maximum table exists" | `w_flush = 1` derived; `k_page + n_cold >= 4`; `k_rom` waits for X15 |
+| kit BUS, row budget | "`N_dec` is not known until the rule inventory is frozen" | inventory known (120); `N_dec` waits for the guard list (OD-9) |
+| kit DEC, Dependencies | "the frozen rule inventory (experiment X1)" | X1 done; the guard list is not part of X1 |
+| OD-1 option (a) | "3 appends per step (unverified)" | measured by X1 (M-2) |
+| OD-8, OD-9 | "X1 (requests per rule)", "X1 (rule inventory and guard list)" | what X1 did and did not measure |
+| section 4.3, V-4 | "values from the per-rule table" with no state | the state after X1; X15 then X4 decide |
+| section 4.3, closing paragraph | "one arena pending the non-interleaving check" | removed (decided, M-1); TOP = 63 with M-2 |
+| section 6.1 row `g2:875` | "no per-rule maximum exists" | heap bound from X1, ROM open |
+| section 6.3 rows (arenas; `K_page`) | "the non-interleaving check is still required"; "until the per-rule maximum table exists" | decided (M-1); X1 and X15 |
+| section 7.3 | "the per-rule maxima, the rule inventory, the non-interleaving claim ... are not known" | what is known since X1 and X2, and what is still open |
+
+Check: `grep -n 'still required\|(unverified)\|pending the non-interleaving\|until the per-rule maximum table exists\|not known until the rule inventory\|the rule inventory, the non-interleaving claim' ARCHITECTURE.md` gives no line. The remaining mentions of "108" are the `supported_rules()` count inside the statement of the 120 (OD-10, section 6.1, section 6.5 item 1, kit DEC reads).
+
+Line numbers in the table of findings above were taken before this step; the edits of B2a add 28 lines, so line numbers after 164 are shifted by up to that amount. The counts and the patterns are unchanged.
+
+No commit, build, test or model run was made for B2a.

@@ -231,3 +231,9 @@
 - 17 of 18 night-plan steps ticked; C2 stays open (boundary commitment designed, not built, so no Quint model yet).
 - Morning report: ~/Projects/Moriarty/research/sherlock-final-design-20261111/MORNING-REPORT.md lists the OWNER questions OD-1, OD-2, OD-17, OD-18, OD-20, OD-21.
 - Next: owner review; then the interface freeze experiments X3 to X15.
+
+## [2026-11-11 04:58] note | Corrections after the final review of the night output
+- Night plan count is 16 of 18 ticked (C1 and C2 partial), not 17 as the 04:40 entry says.
+- README and morning report now state the Lean scope (leaves of at most 8 appends; abstract one-lane bus) and depth 63 as proposed, pending OD-1.
+- ARCHITECTURE.md reconciled with the late Gemini draft text (B2a) and the stale X1/X2 text removed; design.md 2.7 of sherlock-vm-consensus-20261107 carries a dated superseding note.
+- Next: owner review; the OpenSpec change still lacks the harness spec of outline 5.2.3.

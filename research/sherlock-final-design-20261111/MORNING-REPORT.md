@@ -1,6 +1,6 @@
 # Morning report, 2026-11-11
 
-The night plan (`NIGHT-PLAN.md`) is done except two items that cannot finish before the code they check exists (C1 second backend, C2 boundary model; see "Not done"). Everything is on `main` and pushed (last commit `5c090e9d2`). Every decision taken while you slept is in `DECISIONS.md`, and the ones that need you are listed at the end.
+The night plan (`NIGHT-PLAN.md`) is done except two items that cannot finish before the code they check exists: C1 is partial (the dense backend is built; the second backend is not, by decision) and C2 is partial (no boundary model yet). See "Not done". Everything is on `main` and pushed (last commit `5c090e9d2`). Every decision taken while you slept is in `DECISIONS.md`, and the ones that need you are listed at the end.
 
 ## What you have now
 
@@ -18,7 +18,7 @@ The night plan (`NIGHT-PLAN.md`) is done except two items that cannot finish bef
 | Architecture audit (GPT-6 Astra) | Adopt with changes (4 blocker, 15 major, 1 minor); all 20 checked against the code and fixed in the design text (`ARCH-AUDIT-RESPONSE.md`) |
 | C1: dense memory backend built (`crates/mori-chip/src/membackend.rs`, `dense.rs`) | MockProver: honest tests pass, 22 named mutants refused. Measured: flush 8,821 rows, old-memory read 4,761 rows at depth 63 (+280 / +140 over depth 61, no new column) |
 | C1 Quint lane (Gemini Argon) and lead re-run | 30 of 30 commands as expected, 34 tests pass, every mutant caught. The lane found a real gap at tree depth 1 (unreachable at 61 or 63); fixed in `f36eb714d` |
-| C3: Lean (`PartitionIndependence.lean`, `ModularComposition.lean`) | 52 theorems, no `sorry`, no new axiom, `lake build` green: memory state is the same for every cut of a run into leaves; the old D3 layout is not; modules that meet their bus contracts compose into a leaf that follows the step function |
+| C3: Lean (`PartitionIndependence.lean`, `ModularComposition.lean`) | 52 theorems, no `sorry`, no new axiom, `lake build` green: memory state is the same for every cut of a run into leaves of at most 8 appends; the old D3 layout is not partition-independent; composition holds for an abstract module graph with one ordered bus. Larger leaves and the landed two-lane bus are open obligations (Astra findings 7 and 8) |
 | X1, X2: per-rule maxima and one-arena check (120 rules) | At most 3 appends per step; one arena holds for all 120 rules (premises mechanical, last induction by code reading) |
 | 3.x dispatch branch | Merged (`e39bc7af8`); dispatch receipt 6/6 under the SDK check; five fragment groups pass. No task ticked: the U023a/b/c checks are still stubs, and the 3.4 receipts and inventory flips are not written |
 
@@ -30,13 +30,21 @@ The night plan (`NIGHT-PLAN.md`) is done except two items that cannot finish bef
 - Boundary commitment is a Poseidon digest (header plus body). Write-once LogUp with Horner fingerprints stays behind the same interface as a benchmark only, not built before M4.
 - Continuations: segment tree plus the retained-memory checkpoint; the address-free checkpoint stays research.
 
+## Limits of the validation
+
+- **Row fits are ESTIMATE.** The leaf fit under `k_leaf <= 16` and the node under the 950,000-row gate are estimates built from measured parts. No leaf has the dense memory wired in yet, and node rows over such a leaf are not measured (X5, X7).
+- **The B2 additions have had no independent audit.** The four kits added after the Astra audit (INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE, GP-3 general verifier), the GP-2 discharge protocol and the header-plus-body state commitment were written in the revision that answered the audit.
+- **The OpenSpec change is validated for form.** `openspec validate --strict` checks structure, not content. Some scenarios name evidence the architecture leaves unnamed (the seam test, per-family CORE tests, HASH differential vectors), and the host-only kits (REFERENCE BRIDGE, HOST CHECKPOINT STORE) cite host tests, not MockProver or Lean.
+- **Late draft text.** The merge started while the Gemini drafts were still being written (last writes 02:47 to 02:51). The late text is now reconciled (`ARCH-AUDIT-RESPONSE.md`, section "Late draft text (B2a)"): HASH domain numbers, a compile-time profile guard for Horner, the harness mutant record and 11 conflict rows were taken; nine items were rejected against decided inputs. The architecture outline now lists a harness spec (5.2.3) that the OpenSpec change does not have yet.
+- `design.md` section 2.7 of `sherlock-vm-consensus-20261107` still describes the D3 padded memory. It now carries a dated note that the proposed design replaces it, pending your adoption.
+
 ## Not done
 
 - **C1 second backend (write-once LogUp).** Not built, by decision L-5 (benchmark-only, after M4).
 - **C2 boundary model.** The Quint model covers the memory backend. The boundary commitment (header plus body) is designed but not built, so it has no model yet.
 - Lean: 14 obligations proved, 53 open (listed per kit in the architecture).
 - Experiments still open before the interface freeze: X3 (hash stacks), X4 to X15, among them X15 (ROM rows per step, which fixes `K_rom`) and X10 (opening the state header in the node and decider).
-- `ARCHITECTURE.md` sections 4.3, 6.3 and 7.3 still call the rule inventory and the one-arena check open; section 5.4 and DECISIONS M-1 to M-4 record both as done.
+- Carried from earlier work: the task 2.5 worktree is still uncommitted; the T1 rerun for task 2.16 (its script needs recreating); the genesis-check prove time for task 4.13; the lead decision for task 2.8.
 - Workspace clippy with `-D warnings` is red on files the night did not touch (`rfcore.rs`, `m3.rs`, `cpu.rs`, `mem.rs`, `poseidon.rs`, `mori-lexer`, `mori-recursion`).
 
 ## Questions for you
