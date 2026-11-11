@@ -34,7 +34,7 @@ source_url: local
 - Open decisions OD-1 to OD-22, plus N-1 to N-14 (recursion) and V-1 to V-10 (PAGE/ROM, ZmLogUp, VALUE DIGEST, BOUNDARY). OWNER marks: OD-1 (confirm TOP >= 63), OD-2 (claim counter), OD-5 (D-1 status), OD-6 (only if S changes), OD-10 (only if a rule stays out), OD-13 (only on fallback), OD-14, OD-16, OD-17, OD-18, OD-19 (only on fallback), OD-20, OD-21, OD-22 (only if option b); N-6, N-7 (if it changes GP-4 text), N-9, N-11.
 - Lean tally: 14 obligations proved in C3 (P1 to P14), 53 open (O1 to O53), 67 in total. P9 and P14 hold only under `FitsLeaf` (at most 8 appends in a leaf); the window's capacity needs the open `FitsWindow` rows O14 and O47.
 - GP-1 to GP-4 are not narrowed by anything in the file; narrowing options (OD-1 c, V-1 b and c, two-node GP-4, adapter-only GP-3) are "not an acceptance path of this change".
-- OpenSpec outline for a new change `sherlock-modular-leaf-20261111` (not yet created): one capability spec per kit, one per CORE rule family, explicit amendments of `sherlock-vm-consensus-20261107`.
+- OpenSpec outline for a new change `sherlock-modular-leaf-20261111` (created 2026-11-11, see [[openspec-modular-leaf]]): one capability spec per kit, one per CORE rule family, explicit amendments of `sherlock-vm-consensus-20261107`.
 
 ## Key Quotes
 

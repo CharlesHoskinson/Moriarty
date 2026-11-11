@@ -220,3 +220,9 @@
 - OpenOwnerQuestions: OD-17, OD-18, OD-20, OD-21 added; OD-1 (TOP >= 63, M-2) and OD-2 (claim counter) cross-referenced; earlier questions kept.
 - WorkstreamStatus and overview refreshed (final design at revision B2, nothing built); Astra draft pages marked merged.
 - Next: lint, then owner review of the OD items and the X10 to X15 experiments.
+
+## [2026-11-11 04:31] ingest | OpenSpec change sherlock-modular-leaf-20261111
+- New implementation spec: 23 capability specs, 119 requirements, 203 scenarios, 84 tasks; validate --strict passes.
+- Source `openspec-modular-leaf`; the architecture page no longer says the change is not created.
+- README Sherlock section rewritten for the modular design, dense memory and the C1 measurements.
+- Next: morning report and owner review of the OWNER decisions.

@@ -7,7 +7,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (30)
+## Sources (31)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
 - [Astra audit of the architecture merge (B1)](sources/arch-audit-astra.md): Read-only audit by GPT-6 Astra of the B1 text of `ARCHITECTURE.md` (2,776 lines before revision B2; sherlock-architecture), at baseline commit `b85b00213`.
@@ -31,6 +31,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Audit of the lookup cache consensus (Fable 5.2)](sources/lookup-cache-audit.md): Read-only audit (no build, test, proof or model run) of lookup-cache-consensus at checkout `9973d633b`, on the final file of 84,457 bytes.
 - [Brief: lookup cache study for the chip leaf](sources/lookup-cache-brief.md): Status: done.
 - [Lookup cache consensus (five Gemini 4 Carbon High lanes)](sources/lookup-cache-consensus.md): Round 3 synthesis of run `sherlock-lookup-cache-20261111` over lanes A to E, which answers the brief lookup-cache-brief.
+- [OpenSpec change sherlock-modular-leaf-20261111 (implementation spec)](sources/openspec-modular-leaf.md): The implementation spec of the modular Sherlock leaf and recursion.
 - [Quint verdict: final chip leaf (packed selectors, RANGE, M3)](sources/quint-chipleaf-final.md): Lead verdict on three Gemini Quint lanes of 2026-11-10 over `crates/mori-chip/src/` at main `f59ef318f`.
 - [Quint verdict: Poseidon-only HASH chip](sources/quint-chipleaf-hash.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for the Poseidon-only HASH chip (`crates/mori-chip/src/poseidon.rs` and its bus use) and constraints D1, D4 and D8 of design...
 - [Quint verdict: layout B pair rows and M3 aligned segments](sources/quint-chipleaf-pairrow-m3.md): Lead verdict on the Gemini Quint lane of 2026-11-10 for layout B pair rows and the M3 aligned-segment memory root (C = 8).

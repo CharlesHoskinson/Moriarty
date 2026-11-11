@@ -24,10 +24,10 @@ The lead (Claude, the loop) drives this file. Tick a step only on evidence (file
 - [x] C4 Record results in `EXPERIMENTS.md`; update `DECISIONS.md` (memory backend, boundary commitment, S).  Evidence: EXPERIMENTS.md (C1), EXPERIMENTS-C3.md, EXPERIMENTS-MAXIMA.md (X1, X2); DECISIONS.md E-1..E-3, M-1..M-4: memory backend dense Merkle (ZmLogUp benchmark-only), boundary Poseidon, S = 16 kept, one arena, TOP = 63 recommended (OWNER).
 
 ## Phase D: implementation spec (OpenSpec 1.17.0)
-- [ ] D1 New OpenSpec change `sherlock-modular-leaf-20261111`: proposal.md, design.md (= ARCHITECTURE.md as decided), one `specs/<module>/spec.md` per module (requirements under 500 characters, WHEN/THEN scenarios tied to MockProver mutants, Quint models, Lean obligations), tasks.md (module build order, one task per module kit).
-- [ ] D2 `openspec validate sherlock-modular-leaf-20261111 --strict` passes with no warnings.
+- [x] D1 New OpenSpec change `sherlock-modular-leaf-20261111`: proposal.md, design.md (= ARCHITECTURE.md as decided), one `specs/<module>/spec.md` per module (requirements under 500 characters, WHEN/THEN scenarios tied to MockProver mutants, Quint models, Lean obligations), tasks.md (module build order, one task per module kit).  Evidence: openspec/changes/sherlock-modular-leaf-20261111/: proposal.md, design.md, 23 specs (119 requirements, 203 scenarios), tasks.md (84 tasks).
+- [x] D2 `openspec validate sherlock-modular-leaf-20261111 --strict` passes with no warnings.  Evidence: `openspec validate sherlock-modular-leaf-20261111 --strict`: "Change 'sherlock-modular-leaf-20261111' is valid" (re-run by the lead).
 - [x] D3 GP-1 / GP-001 text in `sherlock-vm-consensus-20261107` replaced per A1 + A2 (no narrowing), traceability updated, F14 check passes, `openspec validate` passes.  Evidence: AUDIT.md section 5 text applied (general-purpose.md lines 14 and 16, GP-001 row, spec mirror plus one scenario); openspec validate passes; F14 PASS run 20261111T061635Z-F14; traceability.md re-rendered.
-- [ ] D4 Commit, push, README Sherlock section and wiki updated.
+- [x] D4 Commit, push, README Sherlock section and wiki updated.  Evidence: this commit (README Sherlock section, wiki source openspec-modular-leaf, lint PASS).
 
 ## Phase E: morning report
 - [ ] E1 `MORNING-REPORT.md` in this folder: what is decided, what is measured, what is validated, open owner questions, links.
