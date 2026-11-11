@@ -77,7 +77,7 @@ Mainnet (2026-11-08 amendment, `openspec/MORIARTY-COMPLETION-PROGRAM.md:270-283`
 | Local acceptance/refusal | A6-shape (`validate_call`, proof-verifying on) | required before deploy | required before deploy |
 | Deploy | op, `none` | `OP-PV-DEPLOY`, `owner` | `OP-MN-DEPLOY`, `owner+checklist` |
 | Call | op | `OP-PV-CALL` | `OP-MN-CALL` |
-| Inclusion | A8-shape bound to `stmt` | `A8p` | `A8m` |
+| Inclusion | A8-shape bound to the replay key `claim_d` (SRC-007; amended 2026-11-10 by the C6 review) | `A8p` | `A8m` |
 | Rejections | A9-shape holdout | `A9p` (`rejections-preview`) | `A9m` (non-consuming cases only) |
 | Readback | A10-shape, manifest-selected | `A10p` | `A10m` |
 | Fees | B8-shape vs `min_block_price` and factors (Sherlock evidence in the A8-shape receipt, SMN-005) | `A8p`; synthetic rollup `B8p` | `A8m`; synthetic rollup `B8m` |

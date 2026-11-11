@@ -1,6 +1,6 @@
 # Capability: sherlock-recursion (leaf, node, decider, contract)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Amended 2026-11-10 by the design review (`research/sherlock-recursion-design-review-20261110/review.md` §5; SRC-001, SRC-010, SRC-011, SRC-013, SRC-014, SRC-017 edited; SRC-019..021 added) and by the owner definition `../../general-purpose.md`; not council text. Design: `../../design.md` §3.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Amended 2026-11-10 by the design review (`research/sherlock-recursion-design-review-20261110/review.md` §5; SRC-001, SRC-010, SRC-011, SRC-013, SRC-014, SRC-017 edited; SRC-019..021 added) and by the owner definition `../../general-purpose.md`; amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SRC-006 and SRC-007 replaced, SRC-021 amended, SRC-022 and SRC-023 added); not council text. Design: `../../design.md` §3.
 
 ## ADDED Requirements
 
@@ -55,22 +55,36 @@ If `prev_h == 0`, the node SHALL require `prev_d == init_d` and SHALL introduce 
 - **THEN** the run decider's final pairing refuses it under either realization; a malformed carry encoding is refused at its decoder boundary and counts only as decoder evidence. This review did not establish a practical attack; the clause is hardening.
 
 ### Requirement: SRC-006 Decider pins and discharges
-The run decider SHALL verify the last node proof under constant node keys, pin `self_vk_repr`, fold and pair the accumulator in circuit, open `fin_d` as a halted state with a range-checked u128 result derived from the proved state, and expose exactly `[prog_d, init_d, fin_d, n_steps, result_be]`.
+(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:148`. The old text exposed `[prog_d, init_d, fin_d, n_steps, result_be]`.) The run decider SHALL verify the last node proof under the node key as constants, pin `self_vk_repr`, fold and pair the carried accumulator in circuit, open the final state digest as a terminal state (`Halted`, `Rejected` or `Exhausted`) whose outcome tag and payload are derived from the proved state, compute `outcome_d` from that tag and payload, and expose exactly `[prog_d, input_d, outcome_d, n_steps]`. The decider SHALL NOT expose `fin_d`, `init_d`, `pre_d`, `post_d`, `mem_root`, `lanes_d`, `len`, a reference, or any value that depends on a memory address. If the final state is `Running`, then the decider SHALL refuse.
+
+#### Scenario: Running final state
+(drafted by lead from review.md §Q1 verdict 1)
+- **WHEN** the last node proof opens to a final state whose outcome is `Running`.
+- **THEN** the decider refuses it.
+
+#### Scenario: No state digest in the public values
+(drafted by lead from review.md §Q1 verdict 1)
+- **WHEN** the decider instance is read.
+- **THEN** it has exactly the four values `[prog_d, input_d, outcome_d, n_steps]`, and each value mutated alone is refused.
 
 #### Scenario: Outer-only success
 - **WHEN** the node chain verifies but the decider is skipped.
 - **THEN** the result is not reported final-valid (UISEC-010).
 
 ### Requirement: SRC-007 Ledger binding and replay
-`acceptRun` SHALL read sealed `program_d` and `init_d` into the transcript, refuse a `stmt` already in `runs`, and write the result as canonical big-endian `Bytes<16>`; readback SHALL decode the ledger's trimmed representation to the exact u128 over the whole domain.
+(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:150,154`. The old text sealed `init_d`, refused a replayed `stmt` and wrote a u128 result as `Bytes<16>`.) When `acceptRun` accepts a run, it SHALL bind `prog_d`, `input_d`, `outcome_d` and `n_steps` to the verified call transcript, SHALL read the sealed `program_d` into the transcript so that a proof of another program is refused, SHALL refuse a `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` already in `runs`, and SHALL store `outcome_d` and `n_steps`. `input_d` SHALL be call data bound by the proof, not a sealed field. A change of leaf partition, proof randomness, physical layout or aggregation shape SHALL NOT create a new `claim_d`. The contract SHALL NOT take or store a state digest.
+
+Note (`review.md:154`): the sealed `program_d` stays, so this contract serves one program and every input of that program. One contract for every program (GP-1) needs `prog_d` as call data. That is the GP-1 contract change and is not part of this decision.
 
 #### Scenario: Replay on the target
-- **WHEN** the same `stmt` is submitted twice on Preview.
+(drafted by lead from review.md §Q1 verdict 1)
+- **WHEN** the same `claim_d` is submitted twice on Preview, the second time from a proof under another leaf partition.
 - **THEN** the second call is refused and the indexer shows one accepted call bound to the manifest.
 
-#### Scenario: Result domain
-- **WHEN** runs halt with results 0, 1, 256, 2^64 and u128::MAX on a local 9.1.0.1 ledger.
-- **THEN** deploy/call/readback decodes each exactly; no nonzero-low-byte restriction applies (`sherlock-run.compact:40-47` has none).
+#### Scenario: Other program or altered statement
+(drafted by lead from review.md §Q1 verdict 1)
+- **WHEN** a call carries a proof of another program, or an altered `input_d`, `outcome_d` or `n_steps`.
+- **THEN** the call is refused, and the contract state holds no state digest.
 
 ### Requirement: SRC-008 Verifier manifest
 When a key is generated or installed, the toolchain SHALL write the manifest fields listed in `requirements.md`; deploy or call SHALL refuse when fresh keygen differs.
@@ -218,7 +232,7 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **THEN** the validation does not count (row A32 fails) until the template is recaptured.
 
 ### Requirement: SRC-021 Canonical initialization
-(Added 2026-11-10; mechanism and `Init` amended 2026-11-10 by the council D1 correction, `../../design.md` §3.2(5); the owner keeps the final call on owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review".) If a run's initial state is not `Init(prog_d, input_d)`, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first segment leaf SHALL prove in circuit that its register file and table roots equal `Init(prog_d, input_d)` field by field (the 39 fields of design §3.2(5)): control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; fuel (u128, two 64-bit limbs) in both fuel registers and the stack limit from `input_d`; outcome `Running`; every other counter zero; environment pointer `None`; frame and task links `NIL`; top-frame, top-task, helper, result and scratch registers zero; the DATA and FIELDS roots and lengths equal to the canonical encoding of the run input behind `val_d` (empty when absent); the ENV and SLOTS roots empty; `prog_root` from `prog_d`; `deps_d` empty. The well-formedness of the input encoding behind `val_d` is a premise of this check, not proved by it [OPEN: input admission claim]; `StepInv` at genesis (SAS-010) rests on it, as it rests on PROG canonicality behind `prog_root`. `input_d` SHALL be `Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each limb and the stack limit below 2^64. The gate SHALL be `h_pre = 0`, not a witness flag. The seal SHALL require `h_lo = 0` and a terminal outcome. Off-chain recomputation of `init_d` (option G2) MAY be recorded as a diagnostic and SHALL NOT be acceptance authority. Cost 27,736 rows on the C6 digest leaf (E3 2026-11-10: 2,637,481 to 2,665,217 rows, k=22 both; standalone check 55,877 rows, k=16; prove time not measured; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`).
+(Added 2026-11-10; mechanism and `Init` amended 2026-11-10 by the council D1 correction, `../../design.md` §3.2(5); the owner keeps the final call on owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review".) If a run's initial state is not `Init(prog_d, input_d)`, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first segment leaf SHALL prove in circuit that its register file and table roots equal `Init(prog_d, input_d)` field by field (the 39 fields of design §3.2(5)): control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; fuel (u128, two 64-bit limbs) in both fuel registers and the stack limit from `input_d`; outcome `Running`; every other counter zero; environment pointer `None`; frame and task links `NIL`; top-frame, top-task, helper, result and scratch registers zero; the DATA and FIELDS roots and lengths equal to the canonical encoding of the run input behind `val_d` (empty when absent); the ENV and SLOTS roots empty; `prog_root` from `prog_d`; `deps_d` empty. The well-formedness of the input encoding behind `val_d` is a premise of this check, not proved by it [OPEN: input admission claim]; `StepInv` at genesis (SAS-010) rests on it, as it rests on PROG canonicality behind `prog_root`. `input_d` SHALL be `Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each limb and the stack limit below 2^64. (Amended 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:164`.) `val_d` SHALL be `vd(x)` of `sherlock-value/1` (SRC-022) for an input `x`. When the first execution segment begins, the proof SHALL authenticate the input value, the dependency claims and every resource-policy parameter that can affect the outcome. The mechanism that relates `val_d` to the initial memory is open (lazy unfold or load steps); it SHALL NOT scan the input in the Init check (kill criterion of `../../design.md` §3.2(5)). [OPEN since the C6 review (`review.md:94,124,164`): the DATA and FIELDS roots and lengths above, `ref_x`, and the `val_d` of an absent input under `sherlock-value/1`.] The gate SHALL be `h_pre = 0`, not a witness flag. The seal SHALL require `h_lo = 0` and a terminal outcome. Off-chain recomputation of `init_d` (option G2) MAY be recorded as a diagnostic and SHALL NOT be acceptance authority. Cost 27,736 rows on the C6 digest leaf (E3 2026-11-10: 2,637,481 to 2,665,217 rows, k=22 both; standalone check 55,877 rows, k=16; prove time not measured; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`).
 
 #### Scenario: Forged initial carriers
 - **WHEN** a run starts from a state that opens to the sealed `init_d` but is not `Init(prog_d, input_d)`.
@@ -231,3 +245,27 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 #### Scenario: Seal without genesis
 - **WHEN** a segment chain with `h_lo != 0`, or with a `Running` outcome, is presented for sealing.
 - **THEN** the seal refuses it.
+
+### Requirement: SRC-022 Outcome and value encoding `sherlock-value/1`
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:152`. The encoding table is at `review.md:104-121` and in `../../design.md` §3.2(5).) The published outcome of a run SHALL be `outcome_d = H(O, 1, 0, vd(v))` for `Halted(v)`, `H(O, 1, 1, code)` for `Rejected(code)` and `H(O, 1, 2, kind)` for `Exhausted(kind)`, where `vd` is the value digest `sherlock-value/1` of this review. The digest of a reference SHALL be the digest of the value it refers to. A table index, an address, a type-table index or a constructor-table index SHALL NOT be an input of `vd`. The proof SHALL authenticate every value record, constructor ordinal, field position and child digest used to compute `vd`. [OPEN: the normal form of `decl_schema_d` inside `ty_d`, to be fixed before any key is frozen (`review.md:61,117`; `../../dissent.md` D-2).]
+
+#### Scenario: Host and circuit vectors
+(drafted by lead from review.md §The canonical encoding and its cost)
+- **WHEN** host and circuit compute `vd` and `outcome_d` for every builtin form, a constructor with 0, 1 and 3 fields, every `Rejected` code and every `Exhausted` kind.
+- **THEN** the digests are equal (row A39).
+
+#### Scenario: Index as a hash input
+(drafted by lead from review.md §The canonical encoding and its cost)
+- **WHEN** a witness hashes a raw `TypeIdC`, a raw `CtorIdC` or an address into `vd`, or presents a dangling reference, a padding record, an out-of-range scalar or a wrong arity as a value.
+- **THEN** the leaf refuses it (row A39).
+
+### Requirement: SRC-023 Partition independence
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:156`.) If two accepted proofs have the same `prog_d` and `input_d`, then their `outcome_d` and `n_steps` SHALL be equal for every choice of leaf boundaries. When two value representations differ only in constant or data storage, addresses, padding, or sharing of equal subvalues, their `vd` SHALL be equal.
+
+#### Scenario: Three partitions
+- **WHEN** one program is proved under at least three partitions (all leaves full, one step per leaf, mixed).
+- **THEN** the three proofs give equal `prog_d`, `input_d`, `outcome_d` and `n_steps`, and the second submission is refused as a replay (row A38).
+
+#### Scenario: Sharing
+- **WHEN** a value is stored once with a shared subvalue and once with that subvalue duplicated.
+- **THEN** the two representations give one `vd`.

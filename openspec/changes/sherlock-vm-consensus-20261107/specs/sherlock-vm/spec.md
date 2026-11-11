@@ -1,6 +1,6 @@
 # Capability: sherlock-vm (machine, layout, dispatch, host interface)
 
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Design: `../../design.md` §2.
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SVM-010..SVM-012 added); not council text. Design: `../../design.md` §2.
 
 ## ADDED Requirements
 
@@ -78,3 +78,32 @@ While this change's qualification runs, `sherlock-helper-microstep/1` SHALL be t
 #### Scenario: Await tag in a /1 leaf
 - **WHEN** a witness carries control tag 11, outcome tag 4 or exhaust reason 7.
 - **THEN** the leaf refuses (SI-02/SI-20) and the record points to the later `/2` change.
+
+### Requirement: SVM-010 Opaque addresses
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:158`.) No machine rule SHALL compute a UInt, a Bool, a branch condition, an error code, an exhaust kind or a published value from a memory address, from `len`, `fp`, `tp` or a segment index. When a leaf closes, fuel and every logical resource counter SHALL remain unchanged. If physical proving capacity is unavailable, then the prover SHALL NOT encode that condition as a `Rejected` or `Exhausted` outcome.
+
+#### Scenario: Address space exhausted
+(drafted by lead from review.md §Q1 agreement 3)
+- **WHEN** a run needs more segments than the address space of D3 holds.
+- **THEN** the prover makes no proof, and no `Rejected` or `Exhausted` outcome is published for the run.
+
+#### Scenario: Counter changed at a leaf close
+(drafted by lead from review.md §Q1 verdict 2)
+- **WHEN** a leaf witness changes fuel or a logical resource counter at the leaf close.
+- **THEN** the leaf refuses it.
+
+### Requirement: SVM-011 Refinement of the logical state
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:160`.) When an enabled chip step executes, its decoded logical post-state SHALL equal the reference transition from its decoded logical pre-state. When a leaf closes, its decoded logical state SHALL remain unchanged.
+
+#### Scenario: Reference without per-leaf allocation
+(drafted by lead from review.md §Q1 verdict 5)
+- **WHEN** the Quint refinement model runs with a reference that does not allocate per leaf.
+- **THEN** every enabled chip step refines one reference step, a leaf close is a stutter step, and each seeded mutant is caught (row F25).
+
+### Requirement: SVM-012 Value digest at creation
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:162`.) When a step creates a data value, it SHALL compute that value's `vd` from its tag and the authenticated `vd` of its fields and SHALL bind it to the value's write-once record. A digest supplied by the host without that constraint SHALL NOT be accepted.
+
+#### Scenario: Forged digest
+(drafted by lead from review.md §The canonical encoding and its cost)
+- **WHEN** a witness binds a `vd` to a new record that differs from the digest of its tag and its authenticated child digests.
+- **THEN** the leaf refuses it (row A39).
