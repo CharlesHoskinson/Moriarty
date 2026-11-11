@@ -161,3 +161,9 @@
 - Ran lint.py --write-index, then lint.py: 39 pages, 26 SOURCES.tsv rows.
 - Result: PASS, no failures, no orphans.
 - Next: the lead reviews llm-wiki/; owner review of L-2, L-9, R-4 and R-5.
+
+## [2026-11-11 03:25] qa | C1 Gemini Quint lane final: TOP = 1 gap fixed, six mutant models repaired
+- The TOP = 1 gap (`WALK_LAST` shadowed `WALK_EMPTY`, so `x0 = EMPTY_SEG` was unconstrained) is fixed in commit `f36eb714d` with no new gate or row; new tests `c1_top1_positive` and `c1_gap_top1_empty_seg_forgery` (accepted before, run 20261111T101257Z-c1-top1-prefix; refused after, run 20261111T101433Z-c1-top1-fix); C1-ROWS at TOP = 61 and 63 byte-identical.
+- Six Quint attacks had left derived cells stale (read-port record hash and walk, f = 0 new walks, one row hash); helpers `rederiveRead` and `rederiveNewWalks` fix them; `non_canonical_tail` now drops the mask on both row kinds. Re-run: 30 of 30 lines match, 34 `quint test` passing, all 23 mutants caught.
+- Files: qa/gemini-quint/c1-dense/verdict.md, dense.qnt, rerun-results.txt; crates/mori-chip/src/dense.rs, dense/tests.rs; source `c1-dense-memory-experiment` updated.
+- Next: carry conditions C1 to C4 into the MEM and CORE contracts; the clippy errors in other mori-chip files are still open.

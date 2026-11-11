@@ -13,7 +13,7 @@ source_url: local
 
 ## Summary
 
-First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffered Merkle backend were built as Halo2 chips in the spike crate `crates/mori-chip` (`membackend.rs`, `dense.rs`), with a harness (MEM window, backend, CORE stand-in) that passes MockProver (9 positive tests) and refuses 21 named mutants. Rows were measured at TOP = 61 and 63. The LogUp backend, the hash-chain stacks and the wiring into the real leaf are not built. Run `20261111T065836Z-c1-rows` ([[DenseTailMemory]], [[final-design-decisions]]).
+First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffered Merkle backend were built as Halo2 chips in the spike crate `crates/mori-chip` (`membackend.rs`, `dense.rs`), with a harness (MEM window, backend, CORE stand-in) that passes MockProver (10 positive tests) and refuses 22 named mutants (the 22nd and the tenth positive are the TOP = 1 gap test and its honest case, added after the Gemini Quint lane). Rows were measured at TOP = 61 and 63. The LogUp backend, the hash-chain stacks and the wiring into the real leaf are not built. Run `20261111T065836Z-c1-rows` ([[DenseTailMemory]], [[final-design-decisions]]).
 
 ## Key Claims
 
@@ -24,6 +24,8 @@ First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffe
 - ESTIMATE (composed): leaf rows at S = 16 / 64 / 128 with W = 1 / 3 / 5 and no cold read: 14,942 / 36,543 / 58,565 at TOP = 61; each cold read adds 4,751. At S = 16 the gate `k_leaf <= 16` holds up to about 10 cold reads per leaf.
 - ESTIMATE (composed): four arenas at S = 16, TOP = 61: 52,205 rows with one flush unit per arena (2 cold reads fit `k_leaf <= 16`), 35,123 with two shared flush units (6 fit).
 - ESTIMATE: node about +24,000 rows (net +4 fixed columns at 6,004 each), so about 847,500 against the 950,000 gate; not measured.
+- MEASURED: the Gemini Quint lane (`qa/gemini-quint/c1-dense/verdict.md`) found a real gap at TOP = 1: `WALK_LAST` took precedence over `WALK_EMPTY`, so the old walk start was not bound to `EMPTY_SEG`. Fixed in commit `f36eb714d` (`WALK_EMPTY` first; the shared new walk keeps `acc_out = 0`); the forgery was accepted before (run `20261111T101257Z-c1-top1-prefix`) and is refused after (run `20261111T101433Z-c1-top1-fix`); rows at TOP = 61 and 63 are byte-identical. Production TOP (61, 63) never reached the gap.
+- MEASURED: after the lead repairs, the Quint model catches all 23 mutants with a real accepted and tampered witness; the honest witness passes under each; 30 of 30 re-run lines match, 34 `quint test` passing.
 - Domain tags sit in the sponge capacity and cost no permutation; first-input tags would double the node hash cost (flush unit 17,080, ESTIMATE).
 - The AUDIT finding 8 invariants are gates: both lengths decomposed into TOP + 3 bits, canonical tail (PAD above `r`), tail opened on every leaf and passed through when no append, kind tag in the bus key and as the first record-hash input, tagged hashes, `EMPTY_SEG != 0`.
 

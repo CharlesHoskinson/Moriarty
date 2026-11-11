@@ -698,12 +698,15 @@ module dense {
       lvls[0].accIn == idx,
       lvls.indices().forall(l => {
         val w = lvls[l]
-        // Exact selector priority from `dense.rs:593-599`:
-        // `if l + 1 == n { WALK_LAST } else if l == 0 && first == First::Empty { WALK_EMPTY } else { WALK }`
-        // Under `top1_walk_empty_shadowed` (or when `n == 1`), `isLast` is true at `l == 0`,
-        // which shadows `WALK_EMPTY`!
+        // Selector priority of `DenseCfg::walk` after the TOP == 1 fix (commit f36eb714d):
+        // `if l == 0 && first == First::Empty { WALK_EMPTY } else if l + 1 == n { WALK_LAST } else { WALK }`.
+        // A `WALK_EMPTY` row that is also the last row (n == 1) has no `acc_out == 0` check of its
+        // own; the new walk of the unit copies `acc_out` and checks it (shared cells in `checkPersist`).
+        // `top1_walk_empty_shadowed` is the regression mutant of the pre-fix priority
+        // (`WALK_LAST` first): at TOP == 1 it drops the `EMPTY_SEG` check. The model has TOP == 2,
+        // so the mutant drops that check directly.
         val isLast = (l + 1 == n)
-        val isWalkEmpty = (not(isLast) and not(mt == "top1_walk_empty_shadowed") and l == 0 and isEmptyFirst)
+        val isWalkEmpty = (not(mt == "top1_walk_empty_shadowed") and l == 0 and isEmptyFirst)
         and {
           w.b == 0 or w.b == 1,
           w.in0 == w.x + w.b * (w.s - w.x),
@@ -712,7 +715,7 @@ module dense {
           w.out == nodeH(mt, h0 + l, w.in0, w.in1),
           if (l > 0) (w.x == lvls[l - 1].out and w.accIn == lvls[l - 1].accOut) else true,
           if (isWalkEmpty and mt != "empty_seg_forgery") w.x == emptySeg(mt) else true,
-          if (isLast) w.accOut == 0 else true
+          if (isLast and not(l == 0 and isEmptyFirst)) w.accOut == 0 else true
         }
       })
     }
@@ -730,8 +733,11 @@ module dense {
       }),
       // Pre tail mask (`"dense mask"`) and `treeSeg`
       lf.mImp.length() == SEGC,
+      // `"dense mask"` is one gate for the imported and the active rows; `non_canonical_tail`
+      // drops it on both.
       lf.mImp.indices().forall(i =>
-        lf.mImp[i] == padD(mt) + lf.winRows[i].imp * (lf.recHashes[i] - padD(mt))
+        if (mt == "non_canonical_tail") true
+        else lf.mImp[i] == padD(mt) + lf.winRows[i].imp * (lf.recHashes[i] - padD(mt))
       ),
       lf.tPre == treeSeg(mt, lf.mImp),
       // Tail opening equality (`dense.rs:661`)
@@ -1029,6 +1035,36 @@ module dense {
     }
   }
 
+  // ---------------------------------------------------------------- Tamper helpers
+  // An attack changes some cells; the prover then recomputes every cell that the circuit derives
+  // from them and that the mutant does not weaken. These helpers do that recomputation.
+
+  // `cold_read` runs on every read port (gated by `enable`): its record hash and walk follow the
+  // claimed record words. The walk keeps the port's siblings.
+  pure def rederiveRead(mt: str, rd: ReadPortW): ReadPortW = {
+    val emptyS: List[int] = []
+    val sibs = rd.coldLevels.foldl(emptyS, (acc, lv) => acc.append(lv.s))
+    val h = recD(mt, { kind: rd.kind, d0: rd.d0, d1: rd.d1, d2: rd.d2w })
+    val lvls = buildWalkLevels(mt, h, 1, rd.addr, sibs)
+    { ...rd, coldRecHash: h, coldLevels: lvls, coldRoot: lvls[NB - 1].out }
+  }
+
+  // The new walk of flush unit `j` starts at `ts[j]` (same siblings and index); the root chain and
+  // `post.root` follow it.
+  pure def rederiveNewWalks(mt: str, lf: ArenaLeafW): ArenaLeafW = {
+    val emptyU: List[FlushUnitCircuit] = []
+    val emptyS: List[int] = []
+    val res = range(0, lf.units.length()).foldl({ root: lf.pre.root, us: emptyU }, (st, j) => {
+      val u = lf.units[j]
+      val sibs = u.oldLevels.foldl(emptyS, (acc, lv) => acc.append(lv.s))
+      val nl = buildWalkLevels(mt, lf.ts[j], 3, u.idx, sibs)
+      val nr = nl[TOP - 1].out
+      val rout = st.root + u.f * (nr - st.root)
+      { root: rout, us: st.us.append({ ...u, newLevels: nl, newRoot: nr, rin: st.root, rout: rout }) }
+    })
+    { ...lf, units: res.us, post: { ...lf.post, root: res.root } }
+  }
+
   // Attack / Tamper constructor (`tKind in 0..23`):
   //   0: Honest base scenario
   //   1: `forged_tail_across_leaf_boundary` (Leaf 2 imports forged tail record at row 0 and recomputes post tail)
@@ -1087,13 +1123,13 @@ module dense {
       val badMAct = lf2.mAct.replaceAt(2, 999)
       val badTs0 = treeSeg(mt, [badMAct[0], badMAct[1], badMAct[2], badMAct[3]])
       val badTs = lf2.ts.replaceAt(0, badTs0)
-      val lf2Mut: ArenaLeafW = {
+      val lf2Mut: ArenaLeafW = rederiveNewWalks(mt, {
         ...lf2,
         mAct: badMAct,
         ts: badTs,
         tPost: badTs0,
         post: { ...lf2.post, tailDigest: badTs0 }
-      }
+      })
       { ...base, leaf2: lf2Mut }
     } else if (tKind == 3) {
       // 3. `flush_skipped`: Leaf 1 crosses segment boundary (`f = 1`) but keeps `rout = pre.root`
@@ -1184,13 +1220,13 @@ module dense {
         bus: { ...lf.winRows[1].bus, bkey: busKey(4, KIND_DATA) }
       }
       val winMut = lf.winRows.replaceAt(1, rw1)
-      val rd0: ReadPortW = {
+      val rd0: ReadPortW = rederiveRead(mt, {
         ...lf.reads[0],
         d0: 999,
         d1: 1099,
         d2w: 7,
         req: { chip: CHIP_MEM, bkey: busKey(4, KIND_DATA), d0: 999, d1: 1099, d2: 7 }
-      }
+      })
       val lfMut: ArenaLeafW = { ...lf, winRows: winMut, reads: [rd0] }
       val b2 = buildHonestArenaLeaf(mt, b1.refPost, 0, 1, [], [])
       {
@@ -1341,14 +1377,17 @@ module dense {
         ...lf2.winRows[3],
         bus: forgedTuple
       }
-      val rd0: ReadPortW = {
+      val rd0: ReadPortW = rederiveRead(mt, {
         ...lf2.reads[0],
         d0: 999,
         req: forgedTuple
-      }
+      })
+      // Row 3 is hashed (only the last window row is not); its hash follows the forged words.
+      val h3 = recD(mt, { kind: rw3.kind, d0: 999, d1: 130, d2: 7 })
       val lf2Mut: ArenaLeafW = {
         ...lf2,
         winRows: lf2.winRows.replaceAt(3, rw3),
+        recHashes: lf2.recHashes.replaceAt(3, h3),
         reads: [rd0]
       }
       { ...base, leaf2: lf2Mut }
@@ -1382,7 +1421,7 @@ module dense {
       val recHMut = lf2.recHashes.replaceAt(0, h0).replaceAt(1, h1)
       val mActMut = lf2.mAct.replaceAt(0, h0).replaceAt(1, h1)
       val ts0Mut = treeSeg(mt, [mActMut[0], mActMut[1], mActMut[2], mActMut[3]])
-      val lf2Mut: ArenaLeafW = {
+      val lf2Mut: ArenaLeafW = rederiveNewWalks(mt, {
         ...lf2,
         winRows: winMut,
         recHashes: recHMut,
@@ -1390,7 +1429,7 @@ module dense {
         ts: lf2.ts.replaceAt(0, ts0Mut),
         tPost: ts0Mut,
         post: { ...lf2.post, tailDigest: ts0Mut }
-      }
+      })
       {
         ...base,
         leaf2: lf2Mut,
@@ -1410,13 +1449,13 @@ module dense {
       val refA2Pre = refAppendList(mt, r0, [mkRec(KIND_FIELD, 50)])
       val bA2Honest = buildHonestArenaLeaf(mt, refA2Pre, KIND_FIELD, 1, [mkRec(KIND_FIELD, 51)], [])
       val bA2Forged = buildHonestArenaLeaf(mt, refA2Pre, KIND_FIELD, 1, [mkRec(KIND_DATA, 999)], [])
-      val rdA1: ReadPortW = {
+      val rdA1: ReadPortW = rederiveRead(mt, {
         ...bA1.leaf.reads[0],
         d0: 999,
         d1: 1099,
         d2w: 7,
         req: { chip: CHIP_MEM, bkey: busKey(1, KIND_DATA), d0: 999, d1: 1099, d2: 7 }
-      }
+      })
       val lf1Mut: ArenaLeafW = { ...bA1.leaf, reads: [rdA1] }
       {
         scenId: 0,
@@ -1463,12 +1502,12 @@ module dense {
       val recHMut = lf2.recHashes.replaceAt(0, h0)
       val mActMut = lf2.mAct.replaceAt(0, h0)
       val ts0Mut = treeSeg(mt, [mActMut[0], mActMut[1], mActMut[2], mActMut[3]])
-      val rd0: ReadPortW = {
+      val rd0: ReadPortW = rederiveRead(mt, {
         ...lf2.reads[0],
         d0: 999,
         req: { ...lf2.reads[0].req, d0: 999 }
-      }
-      val lf2Mut: ArenaLeafW = {
+      })
+      val lf2Mut: ArenaLeafW = rederiveNewWalks(mt, {
         ...lf2,
         winRows: lf2.winRows.replaceAt(0, rw0),
         recHashes: recHMut,
@@ -1477,7 +1516,7 @@ module dense {
         tPost: ts0Mut,
         post: { ...lf2.post, tailDigest: ts0Mut },
         reads: [rd0]
-      }
+      })
       { ...base, leaf2: lf2Mut }
     } else if (tKind == 21) {
       // 21. `new_walk_unshared_sibs`: In Leaf 1's flush unit 0 (`f = 1`), the new walk uses forged sibling `s + 1` at level 0
