@@ -13,7 +13,7 @@ source_url: local
 
 ## Summary
 
-First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffered Merkle backend were built as Halo2 chips in the spike crate `crates/mori-chip` (`membackend.rs`, `dense.rs`), with a harness (MEM window, backend, CORE stand-in) that passes MockProver and refuses 21 named mutants. Rows were measured at TOP = 61 and 63. The LogUp backend, the hash-chain stacks and the wiring into the real leaf are not built. Run `20261111T065836Z-c1-rows` ([[DenseTailMemory]], [[final-design-decisions]]).
+First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffered Merkle backend were built as Halo2 chips in the spike crate `crates/mori-chip` (`membackend.rs`, `dense.rs`), with a harness (MEM window, backend, CORE stand-in) that passes MockProver (9 positive tests) and refuses 21 named mutants. Rows were measured at TOP = 61 and 63. The LogUp backend, the hash-chain stacks and the wiring into the real leaf are not built. Run `20261111T065836Z-c1-rows` ([[DenseTailMemory]], [[final-design-decisions]]).
 
 ## Key Claims
 
@@ -22,6 +22,7 @@ First backend of night-plan step C1. A `MemBackend` trait and a dense tail-buffe
 - MEASURED: the circuit pays the window capacity (203 rows per slot) whether a slot is used or not; a used slot adds 3 CORE rows.
 - MEASURED: four arenas with one flush unit each: 49,172 harness rows against 12,281 for one arena (W = 1).
 - ESTIMATE (composed): leaf rows at S = 16 / 64 / 128 with W = 1 / 3 / 5 and no cold read: 14,942 / 36,543 / 58,565 at TOP = 61; each cold read adds 4,751. At S = 16 the gate `k_leaf <= 16` holds up to about 10 cold reads per leaf.
+- ESTIMATE (composed): four arenas at S = 16, TOP = 61: 52,205 rows with one flush unit per arena (2 cold reads fit `k_leaf <= 16`), 35,123 with two shared flush units (6 fit).
 - ESTIMATE: node about +24,000 rows (net +4 fixed columns at 6,004 each), so about 847,500 against the 950,000 gate; not measured.
 - Domain tags sit in the sponge capacity and cost no permutation; first-input tags would double the node hash cost (flush unit 17,080, ESTIMATE).
 - The AUDIT finding 8 invariants are gates: both lengths decomposed into TOP + 3 bits, canonical tail (PAD above `r`), tail opened on every leaf and passed through when no append, kind tag in the bus key and as the first record-hash input, tagged hashes, `EMPTY_SEG != 0`.

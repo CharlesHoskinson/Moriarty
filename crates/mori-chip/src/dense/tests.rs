@@ -176,16 +176,19 @@ impl Circuit<F> for Leaf {
                         log_rows(label, o - *mark);
                         *mark = o;
                     };
-                    let lp = cfg.win.bits(r, &mut o, &Src::known(c.pre.len), nb)?;
-                    let lq = cfg.win.bits(r, &mut o, &Src::known(c.post.len), nb)?;
-                    let (vpre, q_pre, vpost) = (lp[0].clone(), lp[3].clone(), lq[0].clone());
-                    names.push((format!("{tag}.len_pre"), vpre.clone()));
-                    names.push((format!("{tag}.len_post"), vpost.clone()));
-                    lap(o, &mut mark, "mem.frontier");
                     let wnd = cfg.win.window(
-                        r, &mut o, &vpre, &vpost, &q_pre, c.kfix, &c.win, &mut names, &tag,
+                        r,
+                        &mut o,
+                        &Src::known(c.pre.len),
+                        &Src::known(c.post.len),
+                        self.top,
+                        c.kfix,
+                        &c.win,
+                        &mut names,
+                        &tag,
                     )?;
-                    lap(o, &mut mark, "mem.window");
+                    let (vpre, vpost) = (wnd.len_pre.clone(), wnd.len_post.clone());
+                    lap(o, &mut mark, "mem.frontier_and_window");
                     // CORE stand-in: appends at len_pre, len_pre + 1, ...
                     let mut addr = vpre.clone();
                     for rec in &c.appends {
@@ -471,6 +474,19 @@ fn c1_two_flush_units() {
     run(&leaf1(T, c)).unwrap();
 }
 
+/// The last segment with two flush units: neither unit flushes, and the index
+/// chain keeps every walk index below 2^61 (TOP = 61, `len_pre = 2^64 - 2`).
+#[test]
+fn c1_last_segment_two_units() {
+    let mut m = DenseModel::at_len(61, (1u128 << 64) - 8);
+    for i in 0..6 {
+        m.append(rec(1, i));
+    }
+    let c = case(&mut m, &recs(9, 1), 2, &[]);
+    assert_eq!(m.len, (1u128 << 64) - 1);
+    run(&leaf1(61, c)).unwrap();
+}
+
 /// SRC-023 at memory level: the boundary after a run of appends is the same for
 /// any partition into leaves (native model, then each leaf in the circuit).
 #[test]
@@ -550,8 +566,15 @@ fn c1_mut_forged_tail_across_leaf_boundary() {
     let _ = case(&mut m, &recs(10, 3), 1, &[]);
     let mut c2 = case(&mut m, &recs(20, 2), 1, &[]);
     c2.win.rows[1].d[0] += F::ONE;
+    // The post tail is recomputed from the forged rows, so the only broken link
+    // is the tail opening against `pre.tail_d`.
+    let post: Vec<Rec> = c2.win.rows[..5]
+        .iter()
+        .map(|w| [F::from(w.kind), w.d[0], w.d[1], w.d[2]])
+        .collect();
+    c2.post.tail = tail_d(&post);
     let e = run(&leaf1(T, c2)).expect_err("forged tail");
-    assert!(e.contains("Equality") || e.contains("quality"), "{e}");
+    assert!(e.contains("quality") && !e.contains("gate"), "{e}");
 }
 
 /// non_canonical_tail: the pre tail commits a non-pad record above `r`.
@@ -618,8 +641,15 @@ fn c1_mut_address_reuse_window_row() {
     let mut m = model(T, 16);
     let c = case(&mut m, &recs(10, 3), 1, &[]);
     let mut l = leaf1(T, c);
+    // The key follows the forged address, so the row gate holds.
     l.muts.push(("a0.win1.addr".into(), F::from(16u64)));
-    expect_err(&l, "mem win");
+    l.muts
+        .push(("a0.win1.key".into(), bus_key(F::from(16u64), F::from(4u64))));
+    let e = run(&l).expect_err("address reuse");
+    assert!(
+        e.contains("mem win first") && !e.contains("mem win row"),
+        "{e}"
+    );
 }
 
 /// read_at_len: a read of `addr = len_cur`.
@@ -726,8 +756,16 @@ fn c1_mut_kind_out_of_range() {
     let mut m = model(T, 16);
     let c = case(&mut m, &recs(12, 2), 1, &[]);
     let mut l = leaf1(T, c);
+    // Key 8 * 16 + 9 = 8 * 17 + 1: the row would serve (17, DATA). The key is
+    // consistent with the kind, so only the kind range constraint is broken.
     l.muts.push(("a0.win0.kind".into(), F::from(9u64)));
-    expect_err(&l, "mem win row");
+    l.muts
+        .push(("a0.win0.key".into(), bus_key(F::from(16u64), F::from(9u64))));
+    let e = run(&l).expect_err("kind range");
+    assert!(
+        e.contains("mem win row") && !e.contains("mem win first"),
+        "{e}"
+    );
 }
 
 /// arena_kind_pinned: in the four-arena variant a row of the DATA arena holds a

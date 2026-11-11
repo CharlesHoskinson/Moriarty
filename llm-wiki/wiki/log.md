@@ -133,3 +133,8 @@
 - Measured at TOP = 61 / 63: flush unit 8,541 / 8,821 rows, cold read 4,621 / 4,761, window slot 203 (run 20261111T065836Z-c1-rows); leaf and node rows estimated.
 - Source `c1-dense-memory-experiment` written; DenseTailMemory updated.
 - Next: LogUp backend, hash-chain stacks, wiring into RfLeaf, Gemini Quint lane over the C1 gates.
+
+## [2026-11-11 00:12] qa | C1 mutants isolated, frontier moved into MEM, four-arena leaf rows
+- Three mutants now fail only at their named gate; MEM decomposes both lengths itself; new positive test at the last segment with two flush units (run 20261111T071031Z-c1-test, 30 passed).
+- Rows unchanged (run 20261111T071045Z-c1-rows); four-arena leaf rows estimated in `c1-dense-memory-experiment`.
+- Next: Gemini Quint lane over the C1 gates; decide the arena count in C4.

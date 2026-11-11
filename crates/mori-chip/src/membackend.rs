@@ -15,8 +15,8 @@
 //!   backend uses `[root, tail_d]`; a write-once LogUp backend would put its
 //!   obligation cells there.
 //!
-//! MEM guarantees to the backend (each is a gate here; mutant names in
-//! `dense::tests`):
+//! MEM guarantees to the backend (each is a gate of [`WindowCfg::window`], which
+//! also decomposes both lengths; mutant names in `dense::tests`):
 //! - `len_pre` and `len_post` are integers below `2^(TOP + 3)` (TOP + 3 boolean
 //!   bits each); `q_pre = floor(len_pre / 8)` is the high part of `len_pre`;
 //! - row `i` has address `8 q_pre + i` (one row per address);
@@ -367,20 +367,28 @@ impl WindowCfg {
         Ok(y)
     }
 
-    /// The window rows from `*o`.
+    /// The frontier and the window rows from `*o`. `len_pre` and `len_post` (from
+    /// the boundary and from CORE) are decomposed here into `top + 3` bits each,
+    /// so every user of MEM gets the range checks; the returned [`Window`]
+    /// carries the decomposed cells, which the caller copies to the boundary.
     #[allow(clippy::too_many_arguments)]
     pub fn window(
         &self,
         r: &mut Region<'_, F>,
         o: &mut usize,
-        len_pre: &Cell,
-        len_post: &Cell,
-        q_pre: &Cell,
+        len_pre: &Src,
+        len_post: &Src,
+        top: usize,
         kfix: u64,
         w: &WinW,
         names: &mut Names,
         tag: &str,
     ) -> Result<Window, Error> {
+        let start = *o;
+        let lp = self.bits(r, o, len_pre, top + 3)?;
+        let lq = self.bits(r, o, len_post, top + 3)?;
+        log_rows("mem.frontier", *o - start);
+        let (len_pre, q_pre, len_post) = (&lp[0], &lp[3], &lq[0]);
         let a = self.cols.a;
         let nw = w.rows.len();
         assert!(nw >= 2 && nw.is_multiple_of(SEGC));

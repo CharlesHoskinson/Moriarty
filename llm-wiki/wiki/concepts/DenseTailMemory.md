@@ -45,6 +45,7 @@ Experiment C1 built the dense backend as a spike chip behind a `MemBackend` inte
 - measured: TOP = 63 adds 280 rows per flush and 140 per cold read and no column, so the node does not grow with TOP;
 - measured: four arenas with one flush unit each, 49,172 harness rows against 12,281 for one arena;
 - estimated: leaf rows 14,942 / 36,543 / 58,565 at S = 16 / 64 / 128 (W = 1 / 3 / 5) without cold reads, +4,751 per cold read; node about 847,500 rows (+4 fixed columns);
+- estimated: four arenas at S = 16 cost 52,205 rows with a flush unit per arena (2 cold reads fit `k_leaf <= 16`) or 35,123 with two shared units (6 fit), against 14,942 for one arena (10 fit);
 - not done: the LogUp backend, hash-chain stacks, wiring into the real leaf, the non-interleaving check.
 
 ## Contradictions
