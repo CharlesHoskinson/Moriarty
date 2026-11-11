@@ -11,12 +11,15 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   `pub` has a witness of `WrapRel`. Knowledge soundness of midnight-proofs PLONK with KZG over
   BLS12-381 in the algebraic group model with a q-type assumption, as for today's decider.
 * (A2) `lastLayerSound`: a reference verification of `L` that accepts yields an accepted root AIR
-  with some log digest. WHIR (SWIRL) round-by-round soundness in the list-decoding regime of
-  `config.rs:244-262`, Fiat-Shamir in the random-oracle model, the `eq` binding of `pv` (error
-  at most `c m / |EF|`, Thaler Lemma 1) and the 5-digit squeeze bias (at most `2^-100`). It has two
+  with some log digest. The proximity-gap part is the proven Johnson-radius statement, BCHKS25
+  Theorem 1.5 as stated (`m >= 3`), with Theorems 4.5 and 4.6, in the parameters of
+  `ProvenRegime` (owner decision 2026-11-11: folding and `mu` PoW 21 bits, 100.2 and 102.3
+  bits at `m = 3`); the unproved p.23 remark is not a premise. Then WHIR (SWIRL) round-by-round
+  soundness, Fiat-Shamir in the random-oracle model, the `eq` binding of `pv` (error
+  at most `c m / |EF|`, Thaler Lemma 1) and the 5-digit squeeze bias (at most `2^-100`). It has three
   hypotheses that `bridge_sound` discharges: `PackedHashInj` (proved from A2b by
-  `packed_hash_inj`: packing with checked length and range) and `pvFirst vkL.sched` (from the
-  static key check: `pv` is absorbed before the first challenge).
+  `packed_hash_inj`: packing with checked length and range), `pvFirst vkL.sched` and
+  `ProvenRegime vkL.whir` (both from the static key check).
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
   Merkle hash of `L`, and the public digest form `PoseidonFr(tag, pack d2)`), guarded by the
   carrier `FrDom`. Separate from A5.
@@ -38,7 +41,8 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   used by `wrap_view_only_claim`. `indist_symm` and `indist_trans` say that indistinguishability
   is an equivalence.
 * `vkL_ok`: not cryptographic. Static facts of the frozen key of `L` (`pvFirst` of its transcript
-  schedule and the bound `< r` of every compiled expression), decided on the concrete key.
+  schedule, `ProvenRegime` of its WHIR parameters, and the bound `< r` of every compiled
+  expression), decided on the concrete key.
 
 The carriers `P2Dom` and `FrDom` are abstract on purpose: a hash with a finite digest is not
 injective on all inputs, so an unguarded injectivity premise would be false in Lean and make every
@@ -64,7 +68,7 @@ def consistent : Premises where
   B := 0
   X := { frPerm := id, frSponge := fun _ => 0, jubjubMul := fun _ q => q, jubjubGen := (0, 0),
          p2 := fun _ => List.replicate 8 0, p2_width := fun _ => by simp }
-  vkL := { checks := [.arith (.const 0) (.const 1)], sched := [.absorbPv] }
+  vkL := { checks := [.arith (.const 0) (.const 1)], sched := [.absorbPv], whir := s4Whir }
   P2Dom := fun _ => False
   FrDom := fun _ => False
   LedgerProof := Unit
@@ -73,14 +77,14 @@ def consistent : Premises where
   RecAccepts := fun _ _ => False
   RunOps := fun _ _ => False
   Run := fun _ => True
-  vkL_ok := ⟨rfl, by
+  vkL_ok := ⟨rfl, s4_proven, by
     intro c hc
     simp only [List.mem_singleton] at hc
     subst hc
     exact ⟨by decide, by decide⟩⟩
   wrapKnowledgeSound := fun _ _ h => h.elim
   lastLayerSound := by
-    intro _ _ s pv π h
+    intro _ _ _ s pv π h
     have := (h _ (List.mem_singleton_self _)).2
     change 0 % pBB = 1 % pBB at this
     exact absurd this (by decide)
@@ -178,3 +182,7 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.public_digest_binds
 #print axioms Clean.Sherlock.Bridge.lPreamble_pvFirst
 #print axioms Clean.Sherlock.Bridge.late_pv_rejected
+#print axioms Clean.Sherlock.Bridge.s4_mult_three
+#print axioms Clean.Sherlock.Bridge.s4_proven
+#print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven
+#print axioms Clean.Sherlock.Bridge.remark_m1_not_proven

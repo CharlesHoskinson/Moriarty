@@ -57,10 +57,49 @@ def pvFirst : List TEv → Bool
   | .challenge :: _ => false
   | .commit :: t => pvFirst t
 
+/-- The WHIR parameters of `L` that its soundness argument reads. -/
+structure WhirParams where
+  /-- `log2` of the inverse rate (`rho = 2^-logBlowup`); even, so `sqrt rho = 2^-(logBlowup/2)`. -/
+  logBlowup : Nat
+  /-- Johnson-radius slack `eta = etaNum / etaDen` (`gamma = 1 - sqrt rho - eta`). -/
+  etaNum : Nat
+  etaDen : Nat
+  /-- Guruswami-Sudan multiplicity used in the soundness bound. -/
+  mult : Nat
+  /-- Proof-of-work bits: folding, `mu` batching, queries. -/
+  foldPow : Nat
+  muPow : Nat
+  queryPow : Nat
+
+/-- The multiplicity that BCHKS25 Theorem 1.5 sets as stated:
+`m = max(ceil(sqrt(rho) / (2 eta)), 3)`. -/
+def thm15Mult (w : WhirParams) : Nat :=
+  max ((w.etaDen + 2 ^ (w.logBlowup / 2) * 2 * w.etaNum - 1) / (2 ^ (w.logBlowup / 2) * 2 * w.etaNum)) 3
+
+/-- The proven regime of the owner decision (2026-11-11, option b of the paper review): the
+Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
+unproved p.23 remark that allows `m = 1` is not used), with folding and `mu` proof of work of at
+least 21 bits and query proof of work of at least 20 bits. -/
+def ProvenRegime (w : WhirParams) : Bool :=
+  w.logBlowup % 2 == 0 && w.etaNum != 0 && w.mult == thm15Mult w && 21 ≤ w.foldPow &&
+    21 ≤ w.muPow && 20 ≤ w.queryPow
+
+/-- Configuration S4 after the owner decision: log blowup 4, `eta = 1/8`, `m = 3`, PoW 21/21/20. -/
+def s4Whir : WhirParams := ⟨4, 1, 8, 3, 21, 21, 20⟩
+
+theorem s4_mult_three : thm15Mult s4Whir = 3 := by decide
+theorem s4_proven : ProvenRegime s4Whir = true := by decide
+/-- The former 15-bit folding and `mu` proof of work is outside the proven regime. -/
+theorem s4_pow15_not_proven : ProvenRegime { s4Whir with foldPow := 15, muPow := 15 } = false := by
+  decide
+/-- The `m = 1` reading (the p.23 remark) is outside the proven regime. -/
+theorem remark_m1_not_proven : ProvenRegime { s4Whir with mult := 1 } = false := by decide
+
 /-- The frozen key of `L` (universal: one for every program). -/
 structure KeyL where
   checks : List Check
   sched : List TEv
+  whir : WhirParams
 
 /-- The reference semantics of one check. -/
 def Check.Ref (X : Prims) (env : List Nat) : Check → Prop
@@ -87,8 +126,10 @@ def Check.StaticOK : Check → Prop
   | .arith l r => ArithOK l r
   | _ => True
 
-/-- Static facts of the frozen key: `pv` first, and every bound below `r`. -/
-def KeyOK (vk : KeyL) : Prop := pvFirst vk.sched = true ∧ ∀ c ∈ vk.checks, c.StaticOK
+/-- Static facts of the frozen key: `pv` first, the proven WHIR regime, and every bound
+below `r`. -/
+def KeyOK (vk : KeyL) : Prop :=
+  pvFirst vk.sched = true ∧ ProvenRegime vk.whir = true ∧ ∀ c ∈ vk.checks, c.StaticOK
 
 /-- The reference verifier of `L` on statement `s`, public values `pv` and proof `π`. -/
 def VerifyL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
@@ -144,7 +185,7 @@ theorem wrap_refines {X : Prims} {B : Nat} {vk : KeyL} {pub : List Nat} {w : Wra
     VerifyL X vk pub w.pv w.π ∧ w.T.length = B ∧ (∀ e ∈ w.T, e.WF ∧ Valid X pub e) ∧
       w.pv = encode w.T := by
   obtain ⟨hcells, hchk, hlen, hent, hpv, hrep⟩ := h
-  refine ⟨fun c hc => check_refines hcells (hok.2 c hc) (hchk c hc), hlen, ?_, hpv⟩
+  refine ⟨fun c hc => check_refines hcells (hok.2.2 c hc) (hchk c hc), hlen, ?_, hpv⟩
   intro e he
   obtain ⟨h1, h2, h3⟩ := hent e he
   have hc : ∀ v ∈ e.vals, Canon v := fun v hv => canon_check_sound (h3 v hv)
@@ -199,10 +240,17 @@ structure Premises where
   vkL_ok : KeyOK vkL
   /-- (A1) Knowledge soundness of midnight-proofs PLONK with KZG (AGM, q-type assumption). -/
   wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf → ∃ w, WrapRel X B vkL pub w
-  /-- (A2) Soundness of `L` (WHIR round-by-round soundness in the list-decoding regime,
-  Fiat-Shamir in the random-oracle model, `eq` binding of `pv` with error `c m / |EF|`, squeeze
-  bias), for the packed Fr hash and a transcript that absorbs `pv` before any challenge. -/
+  /-- (A2) Soundness of `L`. The proximity-gap part is the proven Johnson-radius statement:
+  BCHKS25 (ECCC TR25-169) Theorem 1.5 as stated, with `m = max(ceil(sqrt(rho)/(2 eta)), 3)`,
+  Theorem 4.5 (batching) and Theorem 4.6 (mutual correlated agreement), in the parameters of
+  `ProvenRegime` (100.2 bits folding, 102.3 bits `mu` batching at S4 with 21-bit PoW, per the
+  paper review). The unproved remark on p.23 (`m < 3`) is not assumed. The rest: WHIR round-by-
+  round soundness, Fiat-Shamir in the random-oracle model (non-interactive error
+  `Q_RO 2^-100 + 3 (Q_RO^2 + 1) / 2^kappa`, SWIRL Cor 4.2.6), the `eq` binding of `pv`
+  (`c m / |EF|`), the squeeze bias. Hypotheses: the packed Fr hash is injective, the transcript
+  absorbs `pv` before any challenge, and the key is in the proven regime. -/
   lastLayerSound : PackedHashInj X FrDom → pvFirst vkL.sched = true →
+    ProvenRegime vkL.whir = true →
     ∀ s pv π, VerifyL X vkL s pv π → ∃ d, RootAccepts pv d s
   /-- (A2b) Collision resistance of Midnight Poseidon over Fr, carrier-guarded. -/
   frSpongeInj : FrInj X FrDom
@@ -239,7 +287,7 @@ theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
   obtain ⟨w, hw⟩ := P.wrapKnowledgeSound pub prf h
   obtain ⟨hV, hTlen, hTok, hpv⟩ := wrap_refines P.vkL_ok hw
   obtain ⟨d, hroot⟩ :=
-    P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 pub w.pv w.π hV
+    P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv w.π hV
   obtain ⟨hrec, t, ⟨htlen, htwf, htin⟩, henc, hdig⟩ := P.rootBinds _ _ _ hroot
   have hpad : pad P.B t.flatten = w.T :=
     encode_inj (by rw [pad_length htlen, hTlen]) (pad_wf htwf) (fun e he => (hTok e he).1)
