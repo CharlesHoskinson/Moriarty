@@ -406,9 +406,25 @@ owner run -> witness stream -> leaf -> node -> run decider -> SherlockRun.accept
 - **Run decider.** The decider verifies the last node proof and opens the final state. It publishes the program digest, the initial state digest, the final state digest, the step count and the result.
 - **Contract.** `SherlockRun.acceptRun` (Compact) checks the decider proof against the sealed program and initial state, refuses a replayed statement and records the result.
 
-A three-step chain and its decider prove and verify end to end on ledger 9.1.0.1. The node has 652,437 rows (k=20). One node step takes 65 s at 20 threads, 73 s at 10 threads and 103 s at 4 threads, at about 17 GB of memory. Three node proofs run side by side in 1.73x the time of one, at 48 GB together. A Quint model and Lean theorems describe the fold that the node implements. The Lean proof covers the genesis collapse of both accumulators, the height range contract and the link from the node statement to the chain theorem, with no unproved steps. Witness-mutation tests check that the step circuits reject altered witnesses. Each change to a circuit also gets its own Quint model of the changed constraints, checked against the reference step. These models are in `qa/gemini-quint/`.
+The spec publishes only the outcome of a run. The public values are `[prog_d, input_d, outcome_d, n_steps]`. The replay key is `claim_d`, a hash of a version tag and the program, input and outcome digests. `outcome_d` erases addresses and sharing.
+
+Execution state commitments, such as `pre_d`, `post_d` and `mem_root`, depend on where the prover closes leaves. They stay inside the recursion and are never public inputs or replay keys. The built decider and contract still publish the final state digest and use it in the replay key.
+
+A three-step chain and its decider prove end to end. The node has 652,437 rows (k=20). The decider proof verifies with the ledger 9.1.0.1 verifier library, linked in the workspace.
+
+Nothing in ledger 9.1.0.1 blocks the design. No ledger 9.1.0.1 node has accepted an `acceptRun` transaction yet. The workspace proves with `midnight-proofs` 0.8.3, but the ledger and node resolve 0.8.2. A 0.8.3 proof against the 0.8.2 verifier is not yet checked. Outcome-only publication needs changes to the contract, the decider statement, the transcript template and the transaction builder.
+
+One node step takes 65 s at 20 threads, 73 s at 10 threads and 103 s at 4 threads, at about 17 GB of memory. Three node proofs run side by side in 1.73x the time of one, at 48 GB together. A Quint model and Lean theorems describe the fold that the node implements. The Lean proof covers the genesis collapse of both accumulators, the height range contract and the link from the node statement to the chain theorem, with no unproved steps. Witness-mutation tests check that the step circuits reject altered witnesses. Each change to a circuit also gets its own Quint model of the changed constraints, checked against the reference step. These models are in `qa/gemini-quint/`.
 
 General-purpose recursion over every supported program is a roadmap item, coming soon. It adds one universal leaf over all machine rules with up to 16 steps in each leaf, three parallel leaf provers and GPU kernels for MSM and NTT.
+
+The proposed universal leaf is a chip design. A CPU core carries a register file across the step slots. It reaches the chips DEC, PAGE, MEM, ALU with RANGE, and HASH only through a lookup bus. Memory is write-once and grows in aligned segments of eight cells. The design is proposed and not adopted, and the current leaf stands until adoption.
+
+A prototype with stand-in rules gives cost-model sizes. No proof over it exists yet. At 16 steps the prototype leaf has 6,511 rows (k=13). The node over that leaf key has 823,466 rows (k=20), and the decider over that node has 929,166 rows (k=20).
+
+Quint models of the final prototype check its packed selectors, its RANGE chip and its memory commitment. RANGE is sound, and the other two are sound under stated conditions (`qa/gemini-quint/chipleaf-final/`). The Leaf circuit view of the [visualization](visualization/index.html) animates this leaf over the prototype trace.
+
+Open items include the addressing of a field slice longer than one segment and the type identity inside a constructor digest. The segmented memory also sets a run ceiling: fewer than 2^17 leaves and 2^20 cells. The general-purpose requirement is 2^64 steps for one key set. That conflict is open, and the requirement stands unchanged. The open items are in [dissent.md](openspec/changes/sherlock-vm-consensus-20261107/dissent.md).
 
 Heavy proving and test runs go through `scripts/doctorwatson heavy`. It checks free disk and memory first and runs each job under a fixed memory cap. The task list is in [openspec/changes/sherlock-vm-consensus-20261107/tasks.md](openspec/changes/sherlock-vm-consensus-20261107/tasks.md), and the design is in [design.md](openspec/changes/sherlock-vm-consensus-20261107/design.md) in the same folder.
 
