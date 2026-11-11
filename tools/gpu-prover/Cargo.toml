@@ -1,0 +1,43 @@
+# GPU path of the Sherlock wrap prover (design 3.7, gpu.md F6). A separate workspace
+# with its own Cargo.lock: the vendored, hook-patched midnight-proofs 0.8.3 is
+# patched in here only, never in the root workspace (RPP-007). The lockfile is seeded
+# from tools/profile/Cargo.lock so every other version equals the root pins.
+[workspace]
+resolver = "3"
+members = ["."]
+exclude = ["vendor/midnight-proofs-0.8.3-gpu"]
+
+[package]
+name = "mori-gpu-prover"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+mori-gpu = { path = "../../crates/mori-gpu", features = ["cuda"] }
+mori-recursion = { path = "../../crates/mori-recursion", features = ["sherlock-ledger"] }
+midnight-proofs = "=0.8.3"
+midnight-circuits = { version = "=7.3.0", default-features = false }
+midnight-zk-stdlib = { version = "=2.4.0", default-features = false }
+midnight-curves = "=0.3.1"
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+ff = "=0.13.1"
+group = "=0.13.0"
+blake2b_simd = "=1.0.5"
+rand = "=0.8.8"
+rand_chacha = "=0.3.1"
+serde_json = "1"
+sha2 = "0.10"
+hex = "0.4"
+
+[patch.crates-io]
+midnight-proofs = { path = "vendor/midnight-proofs-0.8.3-gpu" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+midnight-storage-core = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a2b30128ca4b660b73a068e29b56b48ede8c9a74" }
+
+[profile.release]
+debug = 1
