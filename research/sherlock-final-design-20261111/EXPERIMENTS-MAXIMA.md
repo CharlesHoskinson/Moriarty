@@ -23,18 +23,19 @@ Labels used below:
 | frame operations | 1 (push, pop or rewrite-top) | push: `KMachinePushAccept`; pop: return rules; rewrite: `KMachineReturnLet`, `KMachineReturnLeft`, `KMachineReturnArgumentsNext`, `XAdtReturnCtorFieldsTyped`, `XAdtReturnCtorFieldsNext` | STATIC = OBSERVED |
 | task operations | 1 push or pop, plus 1 rewrite-top in the same step | push + rewrite: `BHelperValidateField`, `BHelperEqualField` | STATIC (OBSERVED for `BHelperEqualField`) |
 | frame and task operation in one step | none | | STATIC |
-| distinct heap records read (DATA, FIELDS, ENV, SLOTS) | 4 | `BHelperEqualField` (left row, left field cell, right row, right field cell) | OBSERVED 4; READ 4; STATIC call-site bound 9 |
+| distinct heap records read (DATA, FIELDS, ENV, SLOTS) | 4 | `BHelperEqualField` (left row, left field cell, right row, right field cell) | STATIC for 116 rules (call-site bound at most 4); READ for the 4 rules whose call-site bound is above 4 (`BHelperScalarTag` 7, `BHelperValidateField` 5, `BHelperEqualPair` 5, `BHelperEqualField` 9); OBSERVED 4 |
 | distinct heap records read during selection only | 2 | `BHelperEqualPair` (Equal `shallow_differ` reads of the group) | OBSERVED |
 | distinct old (flushed) one-arena segments read | 2 observed; at most 4 | `BHelperEqualPair`, `BHelperEqualField`, `BHelperMatchField`, `XAdtHelperPlanWalk` | OBSERVED 2; READ bound 4 (one per record) |
 | distinct one-arena segments touched (reads and appends) | 3 observed; at most 4 + 2 | `BHelperEqualField` | OBSERVED 3; DERIVED bound 6 |
 | distinct four-arena segments touched | 2 observed | several | OBSERVED |
-| ROM rows read (family code) | 3 rows in 3 tables, 3 blocks of 8 | `BHelperMatchArm`, `XAdtEvalConstructFields`, `XAdtHelperPlanSwitch` | OBSERVED; selection adds at most 2 PROG expression rows (READ, see below) |
+| ROM reads logged (family code) | 3 entries in 3 tables, 3 blocks of 8 | `BHelperMatchArm`, `XAdtEvalConstructFields`, `XAdtHelperPlanSwitch` | OBSERVED, a lower bound: the log counts one `program_view()` call as one entry, so the ADT rows below are not in it; selection adds at most 2 PROG expression rows (READ, see below) |
+| ADT ROM row reads through `program_view()` | 6 call sites in 4 tables | `XAdtHelperPlanSwitch` (`constructors`, `plan_cases`, `plan_nodes`, `types`); 4 sites in `XAdtEvalConstructFields` and `XAdtReturnCtorFieldsNext` (`constructors`, `ctor_fields`, `types`) | STATIC (call sites `view.<table>[..]` and `view.<table>.get(..)` in the kept text, no loop); 11 ADT rules read ROM this way |
 | read age | 507 steps | `BHelperMatchField` | OBSERVED: reads reach cells written hundreds of steps earlier |
 | hash calls without cold reads | 3 | `BHelperScalarExit` (3 record hashes) | DERIVED |
 | hash calls per cold read | 1 record hash + `TOP + 3` node hashes | every rule with a heap read | DERIVED |
 
 - Non-interleaving: **holds** for all 120 rules. No counterexample. The premises S1 to S4 below are checked mechanically (static over all rules, and dynamically on every corpus step); the induction that joins them is a code reading. 9,031 slices of two or more elements were checked on 6,668 applied steps with no violation.
-- Coverage: 90 of the 108 rules and 102 of the 120 fired on the corpus. The 18 rules that did not fire are failure paths that the type checker or admission excludes for the corpus programs (list in "Open"); they have STATIC values only, and all of them have zero appends.
+- Coverage: 90 of the 108 rules and 102 of the 120 fired on the corpus. 16 of the 18 rules that did not fire are failure or refusal paths that the corpus programs do not reach; the other 2 (`BHelperValidateField`, `BHelperBindPropagate`) are not failure paths and the corpus did not reach them (list in "Open"). The 18 have STATIC values only, and all of them have zero appends (STATIC).
 
 ## Method
 
@@ -50,12 +51,13 @@ The 108 are built as `supported_rules()` builds them: the three publications, `h
 
 ### Static scan (STATIC)
 
-For each rule, the scan starts at the family entry that `family_of_rule` names (for example `environment::plan_append`, `legacy::dispatch`). In every `match` it removes the arms whose pattern names only other rules, and a `_` arm when a pure arm names this rule. It follows free calls inside the scanned files (families, both fragments, `owner_adt_runtime.rs`, `owner_runtime.rs`), `reads.<method>` calls into the ADT runtime, and `GuardId::<name>` uses into the arms of `OwnerGuards::eval_guard`. Every branch not excluded by a rule pattern stays in, so the kept text over-approximates the code the rule can run.
+For each rule, the scan starts at the family entry that `family_of_rule` names (for example `environment::plan_append`, `legacy::dispatch`). In every `match` it removes the arms whose pattern names only other rules, and a `_` arm when a pure arm names this rule. It follows free calls inside the scanned files (families, both fragments, `owner_adt_runtime.rs`, `adt_runtime.rs`, `owner_runtime.rs`), `reads.<method>` calls into the ADT runtime, and `GuardId::<name>` uses into the arms of `OwnerGuards::eval_guard`. A call resolves to the named module, then to the calling module, and otherwise to every definition of that name in the scanned files (an over-approximation when the name is ambiguous). The test asserts that every rule's family entry is found. Free-call names with no definition in the scanned files are listed per rule in `noninterleave.json` (`unresolved_calls`); over all rules they are only constructors, enum variants and standard methods (`Const`, `CtorIdC`, `Data`, `Err`, `Ok`, `Push`, `RewriteTop`, `Set`, `Some`, `checked_add`, `checked_mul`, `checked_sub`, `default`, `empty`, `from`, `normalized`). Every branch not excluded by a rule pattern stays in, so the kept text over-approximates the code the rule can run.
 
 From the kept text:
 
 - Writes: whether `alloc_data` (and which `AllocDataWrite` variants), `alloc_data_field`, `alloc_constructor`, `alloc_env`, `alloc_value_slot`, `task_rewrite_top` are set to something other than `None`, and whether `FrameWrite::{Push, Pop, RewriteTop}` and `TaskOp::{Push, Pop}` occur. Each `alloc_*` field is one `Option`, and `alloc_data` carries at most 2 fields, so this bounds the appends: DATA + FIELDS is `1 + field_len` for `alloc_data` or `1 + 1` for a Build field with its constructor (`owner_validate_plan` refuses the two together), plus 1 ENV and 1 SLOTS.
 - Reads: call sites of the `PreImageView` read methods, summed over all kept branches, in the family text and separately in the `select_when` arms of the rule and of every rule before it in its group (the order `owner_select` evaluates them). A value read (`deref_borrowed`, `kind_of`, `u128_of`, `bool_of`, `scalar_test_type_ok`) counts 1 record, `field_at` counts 2 (row and field cell). The sum is an upper bound when the kept text has no loop; the scan found no `for`, `while`, `loop` or iterator in any rule's kept text.
+- ADT ROM rows: the ADT runtime reads ROM rows directly from the `ProgramView` that `program_view()` returns. The scan counts the call sites `view.<table>[..]` and `view.<table>.get(..)` (any spacing; `.len()` is table metadata and is not counted) and records the tables (CSV columns `st_view_rom_row_sites`, `st_view_rom_tables`).
 - Publications (`KAdminPublish*`) do not reach a family; `owner_step` P1/P2 writes only the outcome (READ, `owner_runtime.rs` `owner_step`).
 
 ### Dynamic trace (OBSERVED)
@@ -72,7 +74,7 @@ The test asserts, for every fired rule, that the observed appends and stack oper
 
 ## Commands and runs
 
-Every build and test ran through `scripts/doctorwatson heavy` with `CARGO_TARGET_DIR=~/.cache/final-design/maxima/target`, one at a time, with `heavy.slice` `memory.current` below 34 GB before each run. Run ids are in `qa/sherlock/runs.jsonl`, traces in `qa/sherlock/traces/`, logs in `~/.cache/final-design/maxima/logs/`.
+Every build and test ran through `scripts/doctorwatson heavy` with `CARGO_TARGET_DIR=~/.cache/final-design/maxima/target`, one at a time. `heavy.slice` `memory.current` was read by hand before 8 of the 14 runs (readings 29.5 GB to 33.5 GB, all under the 40 GiB limit); the `doctorwatson` preflight passed on every run. Run ids are in `qa/sherlock/runs.jsonl`, traces in `qa/sherlock/traces/`, logs in `~/.cache/final-design/maxima/logs/`.
 
 | Run id | Command | Result |
 |---|---|---|
@@ -82,14 +84,18 @@ Every build and test ran through `scripts/doctorwatson heavy` with `CARGO_TARGET
 | `20261111T101235Z-maxima-test` | same, corpus fixed and extended | pass |
 | `20261111T101322Z-maxima-clippy` | `cargo clippy -p mori-core --all-targets --locked -- -D warnings` | exit 101 in `mori-lexer` (`collapsible_if`, a file this change did not touch; also noted in `EXPERIMENTS.md` C1) |
 | `20261111T101421Z-maxima-clippy` | `cargo clippy -p mori-core --no-deps --all-targets --locked -- -D warnings` | 3 findings in the new module, the rest in untouched files |
-| `20261111T101511Z-maxima-clippy` | same, after the fix | 0 findings in the new module; 330 findings remain in files this change did not touch, under the pinned toolchain |
-| `20261111T101710Z-maxima-test` | as `101235Z` | pass; the tables in `maxima/` come from this run |
+| `20261111T101511Z-maxima-clippy` | same, after the fix | 0 findings in the new module; cargo ends with "could not compile `mori-core` (lib) due to 271 previous errors" and "could not compile `mori-core` (lib test) due to 320 previous errors", all in files this change did not touch, under the pinned toolchain |
+| `20261111T101710Z-maxima-test` | as `101235Z` | pass; first tables |
 | `20261111T101724Z-maxima-t0` | `bash qa/tiers/t0.sh` | fail in the factory test `test_aggregate_kill_cgroup_slice` (cgroup timing, nothing staged yet) |
 | `20261111T101920Z-maxima-t0` | same, files staged | pass (8 passed, 1 skipped) |
+| `20261111T103010Z-maxima-test` | as `101235Z`, scan follows ambiguous calls and `adt_runtime.rs`, counts ADT view rows | pass; all earlier columns unchanged |
+| `20261111T103123Z-maxima-test` | same, view-row matcher accepts line breaks between tokens | pass; the tables in `maxima/` come from this run |
+| `20261111T103325Z-maxima-t0` | `bash qa/tiers/t0.sh` | fail: `cargo fmt --check` on the new module |
+| `20261111T103539Z-maxima-t0` | same, after `rustfmt` (layout only) | pass (8 passed, 1 skipped) |
 
 ## Per-rule table
 
-The full table is `maxima/rule_maxima.csv` (one row per rule, 57 columns: `st_*` STATIC, `dy_*` OBSERVED, `hash_*` DERIVED) and `maxima/rule_maxima.md`. Rows with any append, any stack operation or any heap read:
+The full table is `maxima/rule_maxima.csv` (one row per rule, 59 columns: `st_*` STATIC, `dy_*` OBSERVED, `hash_*` DERIVED) and `maxima/rule_maxima.md`. Rows with any append, any stack operation or any heap read:
 
 | Rule | 108 | Fired | Appends D/F/E/S (STATIC) | Appends total STATIC / OBSERVED | Frame | Task | Heap read bound STATIC | Heap records OBSERVED | Old segs 1-arena OBSERVED | Hash calls DERIVED |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -138,7 +144,7 @@ Notes on the read columns:
 - "Can the address be older than the leaf window": **yes for every rule with a heap read** (READ). Every heap read address comes from a register value (control `Return` value, helper fields, the top task, the top frame or an environment root), and those values can name any cell written earlier. OBSERVED: all 16 rules with a heap read on the corpus read an old segment at S = 1 at least once, and the largest read age was 507 steps. Appends never read.
 - The STATIC heap bound sums call sites over branches. The distinct-record maximum by code reading is 4 (`BHelperEqualField`: two `field_at`, rows re-read by the guard `GEqualFieldNontail` and by the `shallow_differ` select reads of the earlier group rules), 2 for `BHelperEqualPair`, `BHelperValidateField`, `BHelperMatchField` and `XAdtHelperPlanWalk`, and 1 for the scalar rules (one operand per step) (READ, `families/structural.rs` lines 153 to 195, `fragments/scalar.proposed.rs` lines 93 to 210).
 - `BHelperValidateField` reads a constant in the corpus (literal validation reads ROM), but its reference is not restricted to constants by the code, so it is counted as a heap read.
-- ROM: the selection reads at most the Eval expression row and the control-origin expression row (`owner_site`, `owner_helper_plan`; READ, `owner_runtime.rs` lines 1207 to 1311; these use `PreImage` directly and are not logged). This matches the two PROG rows of the dispatch facts in `c6_dispatch_partition.rs`. Family ROM reads OBSERVED: at most 3 rows in 3 tables per step.
+- ROM: the selection reads at most the Eval expression row and the control-origin expression row (`owner_site`, `owner_helper_plan`; READ, `owner_runtime.rs` lines 1207 to 1311; these use `PreImage` directly and are not logged). This matches the two PROG rows of the dispatch facts in `c6_dispatch_partition.rs`. Family ROM reads OBSERVED: at most 3 log entries in 3 tables per step, where one `program_view()` call is one entry. The ADT rules also read rows directly from that view: STATIC at most 6 call sites in 4 tables in one step (`XAdtHelperPlanSwitch`), with no loop in the kept text. A STATIC bound on all ROM rows of a step is the ROM method call sites plus the view row sites: at most 9 for `XAdtHelperPlanSwitch` (3 + 6, where the 3 include the `program_view()` calls), 7 for `XAdtEvalConstructFields`.
 
 Hash calls (DERIVED, design of `research/sherlock-runlength-consensus-20261111/CONSENSUS.md` 1.2.3 and the C1 build in `EXPERIMENTS.md`): one record hash per appended cell, one chain hash per frame or task push or pop (the top stays in registers, so a rewrite-top costs none), and per cold read one record hash plus `TOP + 3` node hashes (64 at `TOP = 61`). Leaf-level work (tail open and close, flush walk) is per leaf, not per step, and is not in the column. Maximum per step without cold reads: 3. Hash invocations of the present C6 carrier circuits were not counted.
 
@@ -176,14 +182,15 @@ The one-arena non-interleaving property holds for all 120 enabled rules. No coun
 
 - `W_flush = 1` per step is safe in one arena: a step appends at most 3 consecutive cells, so it crosses at most one segment boundary (DERIVED). The per-leaf argument of the run-length AUDIT finding 8 is unchanged.
 - At S = 1 one step needs up to 4 old heap records, in up to 4 distinct segments in one arena (READ bound; 2 OBSERVED), or up to 2 per arena in four arenas (DATA 2 and FIELDS 2 for `BHelperEqualField`). So `K_page >= 4` (one arena) is required for a step to fit with line caching, or 4 scalar cold reads per step with `cold_read`. This supersedes `K_page = 4` as a guess: it is now the bound from the rules, not yet a measured leaf.
-- ROM: at most 3 family ROM rows plus 2 selection expression rows per step. The per-table block count for `K_rom` is OBSERVED as 3 tables and 3 blocks; it is not a code-reading bound.
+- ROM: one step reads at most 9 ROM rows by family and ADT call sites (STATIC, `XAdtHelperPlanSwitch`, in up to 4 ADT tables plus the family tables) plus 2 selection expression rows (READ). The per-table block count for `K_rom` is not bounded by this experiment: the 3 tables and 3 blocks are OBSERVED from a log that counts a `program_view()` call as one entry.
 
 ## Open
 
-- 18 of the 108 did not fire: `BHelperEnvGetFailure`, `BHelperEnvGetEmpty`, `BHelperFindFailure`, `BHelperFindEmpty`, `BHelperBindFailure`, `BHelperBindArity`, `BHelperBindPropagate`, `BHelperValidateFailure`, `BHelperValidateInvalid`, `BHelperValidateField`, `KMachineEvalLiteralInvalid`, `KMachineEvalVariableAbsent`, `KMachineReturnIfInvalid`, `KMachineReturnCallInvalid`, `KMachineEnterMissing`, `KMachineBoundInvalid`, `KMachineCasesEmpty`, `XAdtReturnCtorFieldsMistyped`. Their values are STATIC only. All have zero appends; `BHelperValidateField` has 2 heap records by code reading. Raw images (not source programs) would be needed to fire them.
-- The STATIC read bound is a call-site sum, not a distinct-record bound; the distinct maximum 4 is OBSERVED and READ. A per-path count (maximum over branches) would make it mechanical.
+- 18 of the 108 did not fire: `BHelperEnvGetFailure`, `BHelperEnvGetEmpty`, `BHelperFindFailure`, `BHelperFindEmpty`, `BHelperBindFailure`, `BHelperBindArity`, `BHelperBindPropagate`, `BHelperValidateFailure`, `BHelperValidateInvalid`, `BHelperValidateField`, `KMachineEvalLiteralInvalid`, `KMachineEvalVariableAbsent`, `KMachineReturnIfInvalid`, `KMachineReturnCallInvalid`, `KMachineEnterMissing`, `KMachineBoundInvalid`, `KMachineCasesEmpty`, `XAdtReturnCtorFieldsMistyped`. Their values are STATIC only. All have zero appends; `BHelperValidateField` has 2 heap records by code reading. 16 are failure or refusal paths. `BHelperValidateField` and `BHelperBindPropagate` are not: the corpus has no step that validates a field of a structured constant (the `constlist` and `wideconst` programs halt on `Data` references), and no step propagates a Bind. Whether source programs can reach the 18, or only hand-built images can, is open.
+- The STATIC read bound is a call-site sum, not a distinct-record bound. The distinct maximum 4 is STATIC for the 116 rules whose call-site bound is at most 4, and READ for `BHelperScalarTag`, `BHelperValidateField`, `BHelperEqualPair` and `BHelperEqualField`. A per-path count (maximum over branches) would make it mechanical.
 - The step from premises S1 to S4 to property (B) is a code reading. A Quint model or an assertion in `owner_apply_validated` would mechanise it.
-- ROM blocks per table (`K_rom`) are OBSERVED only, on 28 programs.
+- ROM blocks per table (`K_rom`) are open: the ADT view row sites are counted, but the rows they name (and so the blocks of 8) are not logged. Logging each `view.<table>` row read in `LogView` would give OBSERVED blocks per table.
 - Hash counts are DERIVED from the design; no circuit with hash-chain stacks exists to measure them.
 - Equality of the backend `supported_rules()` list with the Core groups is READ; the test rebuilds the 108 from the Core tables.
-- The 330 clippy findings in untouched `mori-core` files and the `mori-lexer` findings under the pinned toolchain are unchanged.
+- The clippy errors in untouched `mori-core` files (271 lib, 320 lib test, cargo's own count) and the `mori-lexer` findings under the pinned toolchain are unchanged.
+- The wiki lint (`python3 llm-wiki/tools/lint.py`) fails in the agent worktree until this change is merged, because the wiki's `~/Projects/Moriarty/...` source path resolves to the main checkout; with the path mapped to the worktree it passes.

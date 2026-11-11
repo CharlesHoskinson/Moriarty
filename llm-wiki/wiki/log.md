@@ -173,3 +173,9 @@
 - Result: at most 3 appends, 4 distinct heap records (all can be old), 1 frame or 1 task op plus rewrite per step; one-arena non-interleaving holds, no counterexample (induction step is a code reading).
 - Files: wiki/sources/rule-maxima-experiment.md, raw/SOURCES.tsv; research/sherlock-final-design-20261111/maxima/.
 - Next: freeze K_page against the bound of 4 in C4; fire the 18 unfired rules from raw images.
+
+## [2026-11-11 03:36] qa | Rule-maxima review fixes: ADT view ROM rows and scan soundness
+- The rule-maxima scan now follows every definition of an ambiguous call, scans `adt_runtime.rs`, asserts each family entry is found and lists unresolved calls; it also counts ADT ROM row reads through `program_view()`.
+- Earlier columns unchanged. New STATIC result: ADT rules read up to 6 ROM row call sites in 4 tables in one step (`XAdtHelperPlanSwitch`), up to 9 ROM rows per step by call sites; `K_rom` blocks per table stay open. Heap bound 4 relabelled STATIC for 116 rules, READ for 4. T0 passed (`20261111T103539Z-maxima-t0`).
+- Files: `rule-maxima-experiment` page, `research/sherlock-final-design-20261111/EXPERIMENTS-MAXIMA.md`, `maxima/`.
+- Next: log the ADT view rows in `LogView` to observe `K_rom` blocks.

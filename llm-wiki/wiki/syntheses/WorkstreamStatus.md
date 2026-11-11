@@ -2,7 +2,7 @@
 title: "Workstream status"
 type: synthesis
 tags: [status]
-sources: [c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit]
+sources: [c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, rule-maxima-experiment]
 last_updated: 2026-11-11
 ---
 
@@ -21,7 +21,7 @@ State as of 2026-11-11 02:45 local. `origin/main` is at `e39bc7af8` (the land-3x
 | Run-length ceiling study | Done: consensus (5 lanes) and Fable 5.2 audit (adopt with changes). Lead decisions R-1 to R-10 | Owner review of R-4 (TOP >= 63) and R-5 (claim counter); experiment C1 for rows and arenas (R-6, decide in C4) | [[runlength-consensus]], [[runlength-consensus-audit]], [[RunLengthCeiling]] |
 | GP-1 and GP-001 wording | Lead R-2: use the audit's corrected text, "applied in night-plan step D3" (a night-plan step, not the D3 memory constraint). Applied to `general-purpose.md`, GP-001 and the spec mirror in the commit with this wiki update; openspec validate and F14 pass | Owner review | [[GeneralPurposeRecursion]], [[final-design-decisions]] |
 | Final design (run `sherlock-final-design-20261111`) | Three Astra area drafts written before the run-length consensus existed; drafts only, for a later merge | Architecture merge (B1); reconcile with R-3 to R-7 | [[astra-area1-processor-draft]], [[astra-area2-memory-draft]], [[astra-area3-recursion-draft]] |
-| Lookup cache study | Done: consensus (5 lanes, Profile A dense Merkle plus 8-record PAGE and ROM lines, Profile B ZmLogUp + Horner behind the interface) and Fable 5.2 audit (adopt with changes; 3 blocker, 11 major, 9 minor). Lead decisions L-1 to L-10, pending owner review | Per-rule maximum table before `K_page`, `K_rom` are frozen (L-2); non-interleaving check (L-9); owner review of L-2 and L-9; measurements of the block cache | [[lookup-cache-consensus]], [[lookup-cache-audit]], [[BlockCache]], [[final-design-decisions]] |
+| Lookup cache study | Done: consensus (5 lanes, Profile A dense Merkle plus 8-record PAGE and ROM lines, Profile B ZmLogUp + Horner behind the interface) and Fable 5.2 audit (adopt with changes; 3 blocker, 11 major, 9 minor). Lead decisions L-1 to L-10, pending owner review | Per-rule maximum table and one-arena non-interleaving check done ([[rule-maxima-experiment]]: non-interleaving holds, `K_page >= 4` as a code-reading bound, `K_rom` blocks per table open); owner review of L-2 and L-9; measurements of the block cache | [[lookup-cache-consensus]], [[lookup-cache-audit]], [[rule-maxima-experiment]], [[BlockCache]], [[final-design-decisions]] |
 
 ## 3.x dispatch partition
 
