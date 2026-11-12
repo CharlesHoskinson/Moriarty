@@ -7,6 +7,7 @@ use std::{env, path::PathBuf, process::Command};
 fn main() {
     println!("cargo:rerun-if-changed=kernel/src");
     println!("cargo:rerun-if-changed=kernel/Cargo.toml");
+    println!("cargo:rerun-if-env-changed=MORI_MSM_KFEAT");
     if env::var_os("CARGO_FEATURE_CUDA").is_none() {
         return;
     }
@@ -29,6 +30,11 @@ fn main() {
             "--message-format",
             "short",
         ])
+        .args(
+            env::var("MORI_MSM_KFEAT")
+                .ok()
+                .map(|f| format!("--features={f}")),
+        )
         .status()
         .expect("cargo for kernel");
     assert!(st.success(), "kernel build failed");

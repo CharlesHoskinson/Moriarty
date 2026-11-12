@@ -83,6 +83,9 @@ impl Xyzz {
         }
     }
 
+    /// Inlined too: a call returns the point through local memory, and the merge with
+    /// the hot path then keeps the accumulator in local memory.
+    #[inline(always)]
     pub fn dbl(&self) -> Xyzz {
         if self.is_inf() {
             return *self;
@@ -103,6 +106,7 @@ impl Xyzz {
         }
     }
 
+    #[inline(always)]
     fn mdbl(a: &Affine) -> Xyzz {
         let u = a.y.dbl();
         let v = u.sqr();
@@ -120,7 +124,9 @@ impl Xyzz {
         }
     }
 
-    /// self + a (mixed addition).
+    /// self + a (mixed addition), inlined: an out-of-line call passes the points
+    /// through local memory (the stack frame).
+    #[inline(always)]
     pub fn add_affine(&self, a: &Affine) -> Xyzz {
         if a.is_inf() {
             return *self;
@@ -148,7 +154,8 @@ impl Xyzz {
         }
     }
 
-    /// self + o.
+    /// self + o, inlined like `add_affine`.
+    #[inline(always)]
     pub fn add(&self, o: &Xyzz) -> Xyzz {
         if o.is_inf() {
             return *self;
@@ -190,5 +197,80 @@ impl Xyzz {
             }
         }
         r
+    }
+}
+
+// Word-wise global loads and stores. A plain `*p` of a point is a memcpy in LLVM, and
+// nvptx expands it into a byte loop through local memory; these keep every limb in a
+// register.
+
+#[inline(always)]
+unsafe fn ld6(s: *const u64) -> Fp {
+    unsafe { Fp([*s, *s.add(1), *s.add(2), *s.add(3), *s.add(4), *s.add(5)]) }
+}
+
+#[inline(always)]
+unsafe fn st6(d: *mut u64, v: &Fp) {
+    unsafe {
+        *d = v.0[0];
+        *d.add(1) = v.0[1];
+        *d.add(2) = v.0[2];
+        *d.add(3) = v.0[3];
+        *d.add(4) = v.0[4];
+        *d.add(5) = v.0[5];
+    }
+}
+
+#[inline(always)]
+pub unsafe fn ld_fp(p: *const Fp) -> Fp {
+    unsafe { ld6(p as *const u64) }
+}
+
+#[inline(always)]
+pub unsafe fn st_fp(p: *mut Fp, v: &Fp) {
+    unsafe { st6(p as *mut u64, v) }
+}
+
+#[inline(always)]
+pub unsafe fn ld_aff(p: *const Affine) -> Affine {
+    let s = p as *const u64;
+    unsafe {
+        Affine {
+            x: ld6(s),
+            y: ld6(s.add(6)),
+        }
+    }
+}
+
+#[inline(always)]
+pub unsafe fn st_aff(p: *mut Affine, v: &Affine) {
+    let d = p as *mut u64;
+    unsafe {
+        st6(d, &v.x);
+        st6(d.add(6), &v.y);
+    }
+}
+
+#[inline(always)]
+pub unsafe fn ld_xyzz(p: *const Xyzz) -> Xyzz {
+    let s = p as *const u64;
+    unsafe {
+        Xyzz {
+            x: ld6(s),
+            y: ld6(s.add(6)),
+            zz: ld6(s.add(12)),
+            zzz: ld6(s.add(18)),
+        }
+    }
+}
+
+#[inline(always)]
+pub unsafe fn st_xyzz(p: *mut Xyzz, v: &Xyzz) {
+    let d = p as *mut u64;
+    unsafe {
+        st6(d, &v.x);
+        st6(d.add(6), &v.y);
+        st6(d.add(12), &v.zz);
+        st6(d.add(18), &v.zzz);
     }
 }

@@ -13,7 +13,7 @@
 //! 5. `bucket_scatter`, `bucket_reduce`, `sum_groups`, `horner`: window sums and the
 //!    final combination.
 #![no_std]
-#![feature(abi_ptx, stdarch_nvptx)]
+#![feature(abi_ptx, stdarch_nvptx, asm_experimental_arch)]
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::nvptx;
@@ -23,7 +23,7 @@ pub mod ec;
 pub mod fp;
 pub mod fr;
 
-use ec::{Affine, INF, Xyzz};
+use ec::{Affine, INF, Xyzz, ld_aff, ld_fp, ld_xyzz, st_aff, st_fp, st_xyzz};
 use fp::Fp;
 
 pub const NONE: u32 = u32::MAX;
@@ -348,19 +348,19 @@ pub unsafe extern "ptx-kernel" fn seg_reduce_affine(
     // Software pipeline: the gather of point j + 1 is issued before the addition of
     // point j, so its memory latency overlaps the arithmetic.
     let mut v = unsafe { *svals.add(lo) };
-    let mut p = unsafe { *bases.add((v & !SIGN) as usize) };
+    let mut p = unsafe { ld_aff(bases.add((v & !SIGN) as usize)) };
     for j in lo..hi {
         let key = unsafe { *skeys.add(j) };
         let (vn, pn) = if j + 1 < hi {
             let vn = unsafe { *svals.add(j + 1) };
-            (vn, unsafe { *bases.add((vn & !SIGN) as usize) })
+            (vn, unsafe { ld_aff(bases.add((vn & !SIGN) as usize)) })
         } else {
             (v, p)
         };
         if key != cur {
             unsafe {
                 *okeys.add(o) = cur;
-                *opts.add(o) = acc;
+                st_xyzz(opts.add(o), &acc);
             }
             o += 1;
             cur = key;
@@ -375,7 +375,7 @@ pub unsafe extern "ptx-kernel" fn seg_reduce_affine(
     }
     unsafe {
         *okeys.add(o) = cur;
-        *opts.add(o) = acc;
+        st_xyzz(opts.add(o), &acc);
     }
 }
 
@@ -408,17 +408,17 @@ pub unsafe extern "ptx-kernel" fn seg_reduce_xyzz(
         if key != cur {
             unsafe {
                 *okeys.add(o) = cur;
-                *opts.add(o) = acc;
+                st_xyzz(opts.add(o), &acc);
             }
             o += 1;
             cur = key;
             acc = INF;
         }
-        acc = acc.add(unsafe { &*pts.add(j) });
+        acc = acc.add(&unsafe { ld_xyzz(pts.add(j)) });
     }
     unsafe {
         *okeys.add(o) = cur;
-        *opts.add(o) = acc;
+        st_xyzz(opts.add(o), &acc);
     }
 }
 
@@ -437,13 +437,13 @@ pub unsafe extern "ptx-kernel" fn run_scatter(
     while j < l {
         let key = unsafe { *keys.add(j) };
         if j == 0 || unsafe { *keys.add(j - 1) } != key {
-            let mut acc = unsafe { *pts.add(j) };
+            let mut acc = unsafe { ld_xyzz(pts.add(j)) };
             let mut t = j + 1;
             while t < l && unsafe { *keys.add(t) } == key {
-                acc = acc.add(unsafe { &*pts.add(t) });
+                acc = acc.add(&unsafe { ld_xyzz(pts.add(t)) });
                 t += 1;
             }
-            unsafe { *buckets.add(key as usize) = acc };
+            unsafe { st_xyzz(buckets.add(key as usize), &acc) };
         }
         j += gsize();
     }
@@ -500,11 +500,11 @@ pub unsafe extern "ptx-kernel" fn run_sum(
     } else {
         l as usize
     };
-    let mut acc = unsafe { *pts.add(lo) };
+    let mut acc = unsafe { ld_xyzz(pts.add(lo)) };
     for t in lo + 1..hi {
-        acc = acc.add(unsafe { &*pts.add(t) });
+        acc = acc.add(&unsafe { ld_xyzz(pts.add(t)) });
     }
-    unsafe { *buckets.add(*keys.add(lo) as usize) = acc };
+    unsafe { st_xyzz(buckets.add(*keys.add(lo) as usize), &acc) };
 }
 
 /// One level of the weighted bucket sum. Window w holds `cnt` points at
@@ -539,12 +539,12 @@ pub unsafe extern "ptx-kernel" fn wsum_level(
     let mut b = hi;
     while b > lo {
         b -= 1;
-        run = run.add(unsafe { &*base.add(b) });
+        run = run.add(&unsafe { ld_xyzz(base.add(b)) });
         sum = sum.add(&run);
     }
     unsafe {
-        *out_u.add(j) = sum;
-        *out_r.add(j) = run;
+        st_xyzz(out_u.add(j), &sum);
+        st_xyzz(out_r.add(j), &run);
     }
 }
 
@@ -571,7 +571,7 @@ pub unsafe extern "ptx-kernel" fn sum_rows(
     let base = unsafe { inp.add(w * stride as usize) };
     let mut acc = INF;
     for e in lo..hi {
-        acc = acc.add(unsafe { &*base.add(e) });
+        acc = acc.add(&unsafe { ld_xyzz(base.add(e)) });
     }
     unsafe { *out.add(j) = acc };
 }
@@ -589,10 +589,10 @@ pub unsafe extern "ptx-kernel" fn sum_rows(
 unsafe fn pa_point(j: usize, vals: *const u32, bases: *const Affine, pts: *const Affine) -> Affine {
     unsafe {
         if vals.is_null() {
-            *pts.add(j)
+            ld_aff(pts.add(j))
         } else {
             let v = *vals.add(j);
-            let p = *bases.add((v & !SIGN) as usize);
+            let p = ld_aff(bases.add((v & !SIGN) as usize));
             if v & SIGN != 0 { p.neg() } else { p }
         }
     }
@@ -684,10 +684,10 @@ pub unsafe extern "ptx-kernel" fn inv_up(
     let hi = core::cmp::min(lo + g as usize, n as usize);
     let mut acc = fp::ONE;
     for i in lo..hi {
-        acc = acc.mul(unsafe { &*v.add(i) });
-        unsafe { *pre.add(i) = acc };
+        acc = acc.mul(&unsafe { ld_fp(v.add(i)) });
+        unsafe { st_fp(pre.add(i), &acc) };
     }
-    unsafe { *tot.add(t) = acc };
+    unsafe { st_fp(tot.add(t), &acc) };
 }
 
 /// Batch inversion, top: every value inverted on its own (Fermat), in place.
@@ -695,7 +695,7 @@ pub unsafe extern "ptx-kernel" fn inv_up(
 pub unsafe extern "ptx-kernel" fn inv_fermat(v: *mut Fp, n: u32) {
     let i = gid();
     if i < n as usize {
-        unsafe { *v.add(i) = (*v.add(i)).inv() };
+        unsafe { st_fp(v.add(i), &ld_fp(v.add(i)).inv()) };
     }
 }
 
@@ -716,18 +716,18 @@ pub unsafe extern "ptx-kernel" fn inv_down(
     }
     let lo = t * g as usize;
     let hi = core::cmp::min(lo + g as usize, n as usize);
-    let mut inv = unsafe { *tinv.add(t) }; // (v_lo ... v_i)^-1, starting at i = hi - 1
+    let mut inv = unsafe { ld_fp(tinv.add(t)) }; // (v_lo ... v_i)^-1, starting at i = hi - 1
     let mut i = hi;
     while i > lo {
         i -= 1;
-        let vi = unsafe { *v.add(i) };
+        let vi = unsafe { ld_fp(v.add(i)) };
         let r = if i > lo {
-            inv.mul(unsafe { &*pre.add(i - 1) })
+            inv.mul(&unsafe { ld_fp(pre.add(i - 1)) })
         } else {
             inv
         };
         inv = inv.mul(&vi);
-        unsafe { *v.add(i) = r };
+        unsafe { st_fp(v.add(i), &r) };
     }
 }
 
@@ -756,7 +756,7 @@ pub unsafe extern "ptx-kernel" fn pa_apply(
         if b == usize::MAX {
             unsafe {
                 *okeys.add(o) = ka;
-                *opts.add(o) = pa;
+                st_aff(opts.add(o), &pa);
             }
         } else {
             let pb = unsafe { pa_point(b, vals, bases, pts) };
@@ -764,9 +764,9 @@ pub unsafe extern "ptx-kernel" fn pa_apply(
             if ka != kb {
                 unsafe {
                     *okeys.add(o) = ka;
-                    *opts.add(o) = pa;
+                    st_aff(opts.add(o), &pa);
                     *okeys.add(o + 1) = kb;
-                    *opts.add(o + 1) = pb;
+                    st_aff(opts.add(o + 1), &pb);
                 }
             } else {
                 let dx = pb.x.sub(&pa.x);
@@ -778,14 +778,14 @@ pub unsafe extern "ptx-kernel" fn pa_apply(
                     // P + P or P + (-P): exact XYZZ path with its own inversion (rare).
                     Xyzz::from_affine(&pa).add_affine(&pb).to_affine()
                 } else {
-                    let lam = pb.y.sub(&pa.y).mul(unsafe { &*dinv.add(q) });
+                    let lam = pb.y.sub(&pa.y).mul(&unsafe { ld_fp(dinv.add(q)) });
                     let x3 = lam.sqr().sub(&pa.x).sub(&pb.x);
                     let y3 = lam.mul(&pa.x.sub(&x3)).sub(&pa.y);
                     Affine { x: x3, y: y3 }
                 };
                 unsafe {
                     *okeys.add(o) = ka;
-                    *opts.add(o) = r;
+                    st_aff(opts.add(o), &r);
                 }
             }
         }
