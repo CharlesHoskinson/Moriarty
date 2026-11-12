@@ -380,3 +380,9 @@
 - Opus agent, GPT-6 Astra high (unit k21-astra), Gemini 4 Carbon High (unit k21-gemini), one shared brief ~/.cache/k21-recal/brief-lane.md.
 - Outputs: research/sherlock-k21-recalibration-20261111/proposals/{opus,astra,gemini}.md.
 - Next: merge, blinded verifier, apply to the design and specs.
+
+## [2026-11-12 00:20] measurement | D10 trace heights of L (branch d10-heights)
+- L tracegen over one real node proof at the OD-19 sets (child at internal UD blowup 3, L keyed and proved with the BN254 root engine at UD blowup 3): w_stack 18 with the cached child DAG (26 without), T 21, 14 distinct heights, max height 2^16, 17.26 M cells; the L proof verifies (measured).
+- Old set (leaf-parameter child): w_stack 26 / 34, T 22, 16 heights. L heights do not move with the child workload (W1 2^16, arity 1: same heights).
+- D3 at w_stack 18: weakest 101.1427 (query), mu 102.5401; G4 wrap mid 634,707, high 666,513 rows: k = 20 holds; w_stack stays far below the OD-3 bound 48. UD terms rest on discharged results; the MCA caveat (OD-19) applies to the old LD rows only.
+- research/sherlock-stark-framework-20261111/D10-HEIGHTS.md.
