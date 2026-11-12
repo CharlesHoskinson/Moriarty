@@ -380,3 +380,9 @@
 - Opus agent, GPT-6 Astra high (unit k21-astra), Gemini 4 Carbon High (unit k21-gemini), one shared brief ~/.cache/k21-recal/brief-lane.md.
 - Outputs: research/sherlock-k21-recalibration-20261111/proposals/{opus,astra,gemini}.md.
 - Next: merge, blinded verifier, apply to the design and specs.
+
+## [2026-11-12 00:30] lane-done | MCA Lean phase 1 (OD-19 b)
+- Lake project `formal/mca-lean/` on branch `mca-lean`: Lean v4.35.0, ArkLib `011391e5` pinned as dependency, Mathlib `56a00585` through ArkLib; first build 9458 jobs, success.
+- Finding (measured, `#print axioms`): ArkLib `CodingTheory.rs_mcaError_le_in_johnson_range` (BCHKS25 Thm 4.6 printed constant, line), `rs_mcaError_le_johnsonExceptionCount` (DKT26 raw count) and the curve theorems `exists_johnson_curve_exactPowerAgreement_of_fintype`, `mcaError_powers_le_of_exactPowerAgreement` depend only on propext, Classical.choice, Quot.sound.
+- Finding (float estimate, `formal/mca-lean/scripts/rb.py`): the ArkLib count gives 1.0 to 2.2 bits more than PROOF.md `a*_M` at the checked frozen rows; open point is the linear-subcode form that Corollary 8.2 (mu batching) needs.
+- PROOF.md Thm 7.1, Cor 8.2, Lemma 9.0, 9.0b, Def 9.1b, Cor 9.2 stated in `formal/mca-lean/MCA/Proof.lean` (sorry); details `formal/mca-lean/SURVEY.md`. Next: phase 2 proofs, ArkLib route against PROOF.md route for Thm 7.1.

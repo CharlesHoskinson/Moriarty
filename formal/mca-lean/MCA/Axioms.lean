@@ -5,8 +5,8 @@ ArkLib modules are loaded. Run with `lake env lean MCA/Axioms.lean`.
 import MCA
 
 -- ArkLib results that phase 2 builds on (survey check).
-#print axioms CodingTheory.ReedSolomon.rs_mcaError_le_in_johnson_range
-#print axioms CodingTheory.ReedSolomon.rs_mcaError_le_johnsonExceptionCount
+#print axioms CodingTheory.rs_mcaError_le_in_johnson_range
+#print axioms CodingTheory.rs_mcaError_le_johnsonExceptionCount
 #print axioms ProximityGap.exists_johnson_curve_exactPowerAgreement_of_fintype
 #print axioms ProximityGap.mcaError_powers_le_of_exactPowerAgreement
 
@@ -15,3 +15,10 @@ import MCA
 #print axioms MCA.mca_fold_johnson
 #print axioms MCA.hasMCA_curve_four_thirds
 #print axioms MCA.layer_mca_bits
+
+-- PROOF.md targets (phase 1: `sorryAx`).
+#print axioms MCA.thm_7_1
+#print axioms MCA.cor_8_2
+#print axioms MCA.lemma_9_0
+#print axioms MCA.lemma_9_0b
+#print axioms MCA.cor_9_2

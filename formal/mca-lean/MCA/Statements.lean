@@ -6,6 +6,10 @@ pending a check against `research/sherlock-mca-proof-20261111/STATEMENT.md`. Whe
 pins a statement, the statement here changes to match it.
 
 No statement takes the Johnson-range exception bound as a hypothesis.
+
+The primary Lean target is now PROOF.md Theorem 7.1, Corollary 8.2 and Lemma 9.0, in
+`MCA/Proof.lean`. The statements here are the printed BCHKS25 Thm 4.6 form (target T of
+STATEMENT.md, Corollary 9.1).
 -/
 import MCA.Defs
 

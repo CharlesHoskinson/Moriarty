@@ -9,8 +9,8 @@ Johnson-range MCA theorem for RS codes on the affine line that it marks proved: 
 [BCHKS25, Thm. 4.6] constant, derived from the sharper [DKT26] count (Dao, Kominers, Thaler,
 eprint 2026/2056, Nov 2026 revision). This project uses ArkLib as a pinned dependency.
 
-The axiom check of the cone is in "Axiom check" below. Until it is clean, "proved" is ArkLib's
-claim only.
+The axiom check (below) is clean: the line and curve theorems depend only on `propext`,
+`Classical.choice` and `Quot.sound`.
 
 ## Pins
 
@@ -42,11 +42,11 @@ claim only.
 - `CoreDefinitions.AffineLineGenerator F = fun x => ![1, x]`, `univariatePowersGenerator F k =
   fun x i => x ^ i` (`Fin (k + 1)` outputs).
 - `ReedSolomon.code domain deg`: `degreeLT F deg` mapped by evaluation (the same as WHIR Def 4.1).
-- `CodingTheory.ReedSolomon.rs_mcaError_le_in_johnson_range`
+- `CodingTheory.rs_mcaError_le_in_johnson_range`
   (`ProximityGap/CapacityBounds.lean:235`): for `1 < k`, `δ < 1 - √((k-1)/n)`,
   `mcaError (AffineLineGenerator F) (code domain k) δ ≤ a / |F|`, where `a` is the printed
   BCHKS25 constant at `ρ = (k-1)/n` and `m = max(⌈√ρ / (1 - √ρ - δ)⌉, 3)`.
-- `CodingTheory.ReedSolomon.rs_mcaError_le_johnsonExceptionCount` (line 192): the raw DKT26
+- `CodingTheory.rs_mcaError_le_johnsonExceptionCount` (line 192): the raw DKT26
   count, which is sharper than the printed constant.
 - `ProximityGap.exists_johnson_curve_exactPowerAgreement_of_fintype`
   (`ProximityGap/BCIKS20/CurveBridge.lean:40`) and `mcaError_powers_le_of_exactPowerAgreement`
@@ -76,7 +76,18 @@ the DKT26 count, not the BCHKS25 sketch, is the proof that is checked.
 
 `MCA/Axioms.lean` (classic file, so proof bodies load):
 
-(pending the first build)
+Run 1 (2026-11-11, log `~/.cache/mca-lean/axioms-2.log`):
+
+- `ProximityGap.exists_johnson_curve_exactPowerAgreement_of_fintype`: `propext`,
+  `Classical.choice`, `Quot.sound`. Clean.
+- `ProximityGap.mcaError_powers_le_of_exactPowerAgreement`: `propext`, `Classical.choice`,
+  `Quot.sound`. Clean.
+- `CodingTheory.rs_mcaError_le_in_johnson_range` and `CodingTheory.rs_mcaError_le_johnsonExceptionCount`:
+  `propext`, `Classical.choice`, `Quot.sound`. Clean (run 2, `~/.cache/mca-lean/build-3.log`).
+
+So the ArkLib Johnson-range MCA results that this project can build on are proved with the
+standard axioms only.
+- This project's targets: `sorryAx`, as expected in phase 1.
 
 ## Findings for STATEMENT.md
 
@@ -99,3 +110,27 @@ the DKT26 count, not the BCHKS25 sketch, is the proof that is checked.
 4. **Which theorem.** SWIRL Thm 4.2.4 batches with BCHKS25 Thm 4.5 (weighted CA for subspaces,
    not MCA). WHIR folding consumes MCA (WHIR Def 4.9) for `Gen(2; α)` on the even and odd parts
    (`MCA.fold_eq_combine`).
+
+## Route comparison at the frozen rows (2026-11-11, after PROOF.md)
+
+PROOF.md proves `|E| ≤ a*_M` (Theorem 7.1) by its own route. ArkLib already claims a proof of a
+sharper count on the full RS code: `johnsonExceptionCount` (factor 1 on the line, `2M` on a degree
+`M` curve), at radius `g = n - ceil((4/3) sqrt(2^mu n))` and `D = k = 2^mu - 1`. Float estimate
+(`python3 -I scripts/rb.py research/sherlock-mca-proof-20261111/bits.py`, `F = log2 |BabyBear^4| = 123.628`), bits before PoW:
+
+| Row | `M` | ArkLib route | PROOF.md `a*_M` |
+|---|---:|---:|---:|
+| `L` r0 f1 (`mu = 19`, `beta = 4`) | 1 | 90.98 | 88.99 |
+| `L` r2 f4 (`mu = 8`, `beta = 10`) | 1 | 90.17 | 87.98 |
+| internal r0 f1 (`mu = 18`, `beta = 3`) | 1 | 94.09 | 92.15 |
+| internal r2 f4 (`mu = 7`, `beta = 9`) | 1 | 93.16 | 90.98 |
+| `L` mu (`mu = 20`, `beta = 4`) | 47 | 83.43 | 82.42 |
+| internal mu (`mu = 19`, `beta = 3`) | 511 | 83.09 | 82.12 |
+
+So on every row checked the ArkLib route gives 1 to 2.2 bits more than `a*_M`, even with the
+factor `2M`. The open point for this route is the subcode form: ArkLib's curve theorem is for the
+full code `RS_k`, while PROOF.md Corollary 8.2 (SWIRL mu batching on the constrained code) needs
+Theorem 7.1 for every linear subcode `C' = ker λ`. ArkLib's `HasExactPowerAgreement` gives,
+outside the exceptional set, per-challenge coefficient polynomials `P_j`; it does not give
+`P_j ∈ C'`. Phase 2 checks `ReedSolomon/Constrained.lean` and the Lemma 7.0 interpolation
+argument (M + 1 good challenges with a common factor) for a way to get it.

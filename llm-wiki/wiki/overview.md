@@ -3,7 +3,7 @@ title: "Overview"
 type: synthesis
 tags: []
 sources: [agents-charter, general-purpose-definition, c6-outcome-ledger9-review, design-2-7-chip-leaf, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, sherlock-architecture, arch-audit-astra, arch-audit-response, rule-maxima-experiment, council-findings, council-revisions, cost-lane-fable, cost-lane-astra, cost-lane-gemini, n1-native-circuits, elastic-chip-brief, elastic-chip-gpu-fable, n1b-native-proving-time]
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 ---
 
 # Overview

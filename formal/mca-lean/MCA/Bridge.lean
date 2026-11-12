@@ -3,7 +3,7 @@ OD-19 (b): bridges between `MCA/Defs.lean` and ArkLib (Verified-zkEVM/ArkLib at
 011391e592df184540b4b52edc2c64ee300b00ab). Phase 1 leaves the proofs as `sorry`.
 
 ArkLib proves (sorry-free, see SURVEY.md) a Johnson-range MCA bound for the affine line
-(`CodingTheory.ReedSolomon.rs_mcaError_le_in_johnson_range`, the printed [BCHKS25, Thm. 4.6]
+(`CodingTheory.rs_mcaError_le_in_johnson_range`, the printed [BCHKS25, Thm. 4.6]
 constant) and an exceptional-set bound for polynomial curves
 (`ProximityGap.exists_johnson_curve_exactPowerAgreement_of_fintype`, factor `2 ℓ`). Phase 2
 proves targets (i) and (ii) from them through these bridges.

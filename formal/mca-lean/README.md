@@ -33,12 +33,18 @@ changes.
 4. An instantiation theorem at the frozen `L` and internal parameters proves the bit bound that the
    calculator uses.
 
+Note (coordinator, 2026-11-11): OD-19 now runs unique decoding in production. This proof is for
+bringing list decoding back later (k = 19). The definition of done is unchanged.
+
 ## Layout
 
 - `MCA/Defs.lean`: definitions written from the papers over Mathlib only (RS code on an evaluation
   domain, relative Hamming distance and agreement, correlated agreement, MCA as WHIR Def 4.9, the
   fold generator, the degree `w - 1` curve generator).
-- `MCA/Statements.lean`: the target theorems (bad-challenge set cardinality bounds).
+- `MCA/Proof.lean`: the PROOF.md targets: Theorem 7.1 (`thm_7_1`, `|E| ≤ a*_M` under (H1) to
+  (H6) for every linear subcode and curve degree), Corollary 8.2 (`cor_8_2`, affine subcodes) and
+  Lemma 9.0 (`lemma_9_0`, (H1) to (H6) at the 26 frozen rows).
+- `MCA/Statements.lean`: the printed BCHKS25 Thm 4.6 form (target T), bad-set cardinality bounds.
 - `MCA/Bridge.lean`: equivalence between `MCA/Defs.lean` and ArkLib's `IsMCA` / `mcaError`.
 - `MCA/Instantiation.lean`: the bit bound at the frozen parameters (stub until STATEMENT.md pins
   them).
