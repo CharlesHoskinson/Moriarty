@@ -20,5 +20,6 @@ Moriarty: Sherlock VM, general-purpose recursion and the Doctor Watson factory: 
 8. Owner questions now: OD-1 TOP >= 63 (backed by M-2), OD-2 no claim counter, OD-17 input admission, OD-18 one-arena SRC-021, OD-20 GP-2 scope, OD-21 semantic reference, OD-23 `rules_d` consumer, plus L-2, L-9 and the older D-1, D-2, D-6 and exhaust kind 7 items ([[OpenOwnerQuestions]]).
 9. Cost against native Compact: `spend` is k = 15, 24,025 rows and proves in 1.755 s (measured, [[n1b-native-proving-time]]); Sherlock is about 10^4 times that in rows today, dominated by the node (ESTIMATE, three unmerged lanes). The elastic chip round (12 lanes) is merging; its GPU lane finds seeded proofs reproducible only at a fixed thread count. The land-3x dispatch partition is on `main` (`e39bc7af8`), no task ticked ([[n1-native-circuits]], [[cost-lane-fable]], [[elastic-chip-gpu-fable]], [[land-3x-merge]]).
 10. The design runs on Midnight ledger 9 with changes; no blocker in the ledger ([[MidnightLedger9]]).
+11. S10x (2026-11-12, measured): at the OD-19 internal set a STARK node over app leaf proofs fits arity 4 (padded 2^19, the set's stacked-height cap) for a leaf of stacked width 19; the RANGE table changes no node height (`research/sherlock-s10x-20261112/RESULTS.md`, lead decisions owner to confirm).
 
 Current state: [[WorkstreamStatus]].

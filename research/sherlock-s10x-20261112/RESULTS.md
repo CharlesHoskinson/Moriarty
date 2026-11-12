@@ -6,7 +6,7 @@ Labels: MEASURED is read from a run record in `s10x/`. DERIVED is computed by a 
 
 ## Verdict
 
-1. **Multi-leaf node.** Over W1 leaf proofs (2^20 rows, app parameters), the tallest AIR of the internal node is `FinalPolyQueryEvalAir`, with exactly 117,800 valid rows per child proof (MEASURED at arity 1 to 12). At the OD-19 internal set the binding cap is not k = 21. It is the stacked height `2^(l_skip + n_stack)` = 2^19 of that set. **The largest arity that fits is 4**: 471,200 valid rows, padded height 2^19 = 524,288, margin 53,088 rows (10.1 percent) to the 2^19 cap and 1,258,285 rows to the k = 21 gate. That node proves and verifies at the OD-19 set (MEASURED). Arity 5 and above fail the stacked layout with `LayoutHeightExceeded { log_height: 20, log_stacked_height: 19 }` (MEASURED). By trace height alone, arity 8 is the largest at padded height <= 1,782,573 (2^20; MEASURED tracegen). Arity 12 pads to 2^21 = 2,097,152 rows, above the k = 21 gate, and the sweep stopped there as the stop rule requires (MEASURED).
+1. **Multi-leaf node.** Over W1 leaf proofs (2^20 rows, app parameters), the tallest AIR of the internal node is `FinalPolyQueryEvalAir`, with exactly 117,800 valid rows per child proof (MEASURED at arity 1 to 12). At the OD-19 internal set the binding cap is not k = 21. It is the stacked height `2^(l_skip + n_stack)` = 2^19 of that set. **For this leaf (stacked width 19), the largest arity that fits is 4**: 471,200 valid rows, padded height 2^19 = 524,288, margin 53,088 rows (10.1 percent) to the 2^19 cap and 1,258,285 rows to the k = 21 gate. That node proves and verifies at the OD-19 set (MEASURED). The bound holds for app leaves of stacked width at most about 336; a wider leaf makes `InitialOpenedValuesAir` the tallest AIR (DERIVED, section 2 scope notes). Arity 5 and above fail the stacked layout with `LayoutHeightExceeded { log_height: 20, log_stacked_height: 19 }` (MEASURED). By trace height alone, arity 8 is the largest at padded height <= 1,782,573 (2^20; MEASURED tracegen). Arity 12 pads to 2^21 = 2,097,152 rows, above the k = 21 gate (MEASURED). **The gate rule fired**: the sweep stopped at arity 12, and arities 15, 16 and 32 did not run. Experiment 2 started in the same second (04:21:00, `s10x/runs.log`), because the run script ran the two experiments in sequence; see LD-S10x-5.
 2. **Fixed-size range table.** The FP-1 RANGE table (`(x, w)`, `w` in 0..=16) is the stock `VariableRangeCheckerAir` at `range_max_bits` 16: 131,072 rows (2^17), 4 main columns, 0 preprocessed columns, 1 interaction (MEASURED). It does not change the tallest AIR of the node at any arity, and so it does not change the largest arity (4). It raises a leaf below 2^17 rows to 2^17, adds 589,824 main cells to each leaf (table plus test sender), adds 63,042 node cells per child and at most 1 stacked column to the node (MEASURED).
 3. **No result needs k = 22.** The one row above the gate (arity 12, padded 2^21) is a probe outside every admitted shape.
 
@@ -18,7 +18,7 @@ Chain, as in D10 (`Moriarty-wt/d10-heights/research/sherlock-stark-framework-202
 
 1. `N` distinct W1 leaf proofs (Poseidon2 AIR, `app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT)`: log blowup 1, `l_skip` 4, `n_stack` 20, queries 193/88/81/81, final polynomial 2^8), each proved and verified on the CPU engine. Fixed-size shards: every leaf of one run has the same shape.
 2. Node `VerifierSubCircuit::<N>` over the leaf key at the OD-19 internal set: unique decoding, log blowup 3, queries 97/82/81, folding PoW 0, `mu` PoW 9, query PoW 21, LogUp PoW 18, `l_skip` 2, `n_stack` 17, `w_stack` 512. Keygen, then tracegen (`generate_proving_ctxs_base`, child DAG as a cached trace).
-3. Per AIR: padded height, valid rows (the last row with a nonzero cell plus one; the recursion trace generators fill padding with zeros), widths and interactions. The stacked layout uses `StackedLayout::new(l_skip, l_skip + n_stack, ...)` as the verifier does. An error from it is recorded, and the stacked height is not raised.
+3. Per AIR: padded height, valid rows (the last row with a nonzero cell plus one), widths and interactions. Most recursion trace generators fill padding with zeros, so this count is the valid row count for them (for `FinalPolyQueryEvalAir` it equals the formula of section 2). `Poseidon2Air` and `ExpBitsLenAir` have nonzero padding rows: their count equals the padded height at every arity, so their valid rows are not known from these runs. The stacked layout uses `StackedLayout::new(l_skip, l_skip + n_stack, ...)` as the verifier does. An error from it is recorded, and the stacked height is not raised.
 4. Arities ascend. The run stops after the first arity whose tallest padded AIR is over the gate 1,782,573 rows (85 percent of `2^21 - 7`).
 
 Cross-check: the arity-2 node has 37,512,232 main cells, which is the D10 anchor value (D10-HEIGHTS section 1), MEASURED.
@@ -51,15 +51,17 @@ Rules, DERIVED from the table:
 - At the OD-19 internal set the cap is 2^19 = 524,288 rows: `a <= 4` (4 x 117,800 = 471,200; 5 x 117,800 = 589,000 > 524,288).
 - By padded height against the k = 21 gate: `a <= 8`. By valid rows against the gate, `a <= 15` (1,767,000 rows, margin 15,573), but a STARK trace is padded to a power of two, so this bound has no use.
 
+**Lead decision LD-S10x-5, owner to confirm.** The k = 21 gate event of arity 12 was a probe above every admitted shape, and the stop rule ended that sweep. Experiment 2 is independent of it and ran after it. It is kept as a result.
+
 **Lead decision LD-S10x-1, owner to confirm.** For a BabyBear trace, "k" is the log2 of the padded trace height, and the gate test uses the padded height. The EXPERIMENTS hard-rule line already says a BabyBear height of 2^22 is a STARK scaling point, not a circuit k; the binding STARK limit is the stacked height of the layer's parameter set.
 
-**Lead decision LD-S10x-2, owner to confirm.** The universal internal node over leaf proofs has fixed arity at most 4 at the OD-19 internal set, and the set keeps `n_stack` 17. Raising `n_stack` to 18 (arity 8) changes the frozen internal set, so D3 must run again. The NODE INTEGRATION kit has two child slots (arity 2), which is inside the bound. The per-leaf figure "6.50 s per 2^20 leaf under arity-8 nodes" (PROPOSAL section 2; ARCHITECTURE NODE row budget) uses arity 8, and that node does not fit the OD-19 set. Recommended: replace it with an arity-4 figure when the GPU node cell runs (PENDING).
+**Lead decision LD-S10x-2, owner to confirm.** The universal internal node over leaf proofs has fixed arity at most 4 at the OD-19 internal set, and the set keeps `n_stack` 17. Arity 4 is MEASURED for a child of stacked width 19; the plan's shape menu must keep every leaf shape at or below the width limit of the chosen arity (336 at arity 4, 672 at arity 2, DERIVED), or the node arity drops for wide shapes. This holds only after the wide-leaf run of section 5. Raising `n_stack` to 18 (arity 8) changes the frozen internal set, so D3 must run again. The NODE INTEGRATION kit has two child slots (arity 2), which is inside the bound. The per-leaf figure "6.50 s per 2^20 leaf under arity-8 nodes" (PROPOSAL section 2; ARCHITECTURE NODE row budget) uses arity 8, and that node does not fit the OD-19 set. Recommended: replace it with an arity-4 figure when the GPU node cell runs (PENDING).
 
 Scope notes:
 
 - The children are app-parameter leaf proofs. A node over node proofs (children at the internal set) has a different per-child row count. That was not measured here; D10 section 2 shows that the child's parameter set drives the heights.
 - In the full tree, the layer that verifies app leaves can also be the leaf-aggregation set (log blowup 2, `l_skip` 4, `n_stack` 17: stacked height 2^21, PROPOSAL section 11.2). Node heights depend on the children and not on the node's own parameters (D10 section 1), so at that set arity 8 fits (2^20) and arity 9 to 15 pad to 2^21, which is inside the set but over the gate. DERIVED; not proved at that set.
-- Every leaf in the sweep has 2^20 rows. The query vector is fixed by the app set, so a taller app leaf (stacked height up to 2^24) changes Merkle depth (`MerkleVerifyAir`, 2^16 at arity 4), not the tallest AIR. ESTIMATE; not measured.
+- **The bound depends on the leaf's stacked width.** Both leaves of this lane stack to the app set's stacked height 2^24, so `MerkleVerifyAir` has the same rows for a 2^16 and a 2^20 child (31,796 at arity 2, MEASURED). The term that moves is `InitialOpenedValuesAir`: 3,088 rows per child at child stacked width 2 and 9,264 at width 19 (MEASURED), which fits `193 x 16 x ceil(w / 8)` (DERIVED from these two points). At arity 4 it reaches the 2^19 cap at `ceil(w / 8)` = 43, so arity 4 holds for app leaves of stacked width at most 336 (DERIVED); the app set admits `w_stack` 2,048. At arity 2 the width limit is 672 (DERIVED). `Poseidon2Air` may also grow with width; its valid rows are not known (section 1 item 3). A wide-leaf run is open (section 5).
 
 ## 3. Experiment 2: fixed-size range table
 
@@ -101,7 +103,7 @@ All MEASURED. The two extra child AIRs (table and sender) change only small node
 
 With the table at zero multiplicity and no sender (mode 1, W1 2^14, arity 2), the leaf proves and verifies, and the node tracegen gives the same heights. But the node proof fails verification with `BatchConstraintError(SumClaimMismatch)`, MEASURED (`s10x/smoke-range1-zero-mult-14.jsonl`). The same node over W1 alone (`smoke-range0-14.jsonl`) and over W1 + table + sender (`smoke-range2-14.jsonl`) verifies, MEASURED. The cause was not isolated. The error class is the one of the generic child key with absent preprocessed AIRs (`F/bench/RESULTS.md:109`).
 
-**Lead decision LD-S10x-4, owner to confirm.** Every leaf shape of the plan's menu gets a node-proof test in the shape test suite, including the case of an unused chip, before the leaf key freezes. Until the cause is known, `sherlock plan` gives every shape that carries the RANGE table at least one RANGE lookup (the RANGE kit is the level-0 provider of every kit, so a real leaf does this already).
+**Lead decision LD-S10x-4, owner to confirm.** Every leaf shape of the plan's menu gets a node-proof test in the shape test suite, including the case of an unused chip, before the leaf key freezes. Until the cause is known, `sherlock plan` gives every shape that carries the RANGE table at least one RANGE lookup (the RANGE kit is the level-0 provider of every kit, so a real leaf does this already). This workaround is not tested: the passing case had a sender AIR and 65,536 lookups, not one lookup.
 
 ## 4. Effect on the design
 
@@ -113,7 +115,8 @@ With the table at zero multiplicity and no sender (mode 1, W1 2^14, arity 2), th
 
 - GPU node cell at arity 4 over 2^20 leaves at the OD-19 set (seconds per leaf with node share), to replace the arity-8 figure.
 - Node over node children at the internal set: rows per child and the largest arity of an internal-over-internal node.
-- Cause of the zero-lookup `SumClaimMismatch` (section 3.3).
+- Cause of the zero-lookup `SumClaimMismatch` (section 3.3), and a test with one lookup.
+- Wide-leaf run: node over app leaves of stacked width near 336 at arity 4, to measure `InitialOpenedValuesAir` and `Poseidon2Air` against the 2^19 cap.
 
 ## Files
 
