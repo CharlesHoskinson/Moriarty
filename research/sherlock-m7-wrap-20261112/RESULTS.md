@@ -153,7 +153,45 @@ Raw record: `lfr/l_fr.json` (`~/.cache/m7-wrap/lfr/l_fr.json`).
 - What `L_Fr` must verify is now MEASURED: one 430,073-byte `L` proof with 263 queries over Midnight Poseidon Merkle trees. The Fr hashing inside `L_Fr` is native, so its trace carries the BabyBear arithmetic of `L`'s verifier and the Merkle paths at one Poseidon per node.
 - `L_Fr`'s soundness terms are MEASURED by the D3 calculator at the Fr field (section 2b.2).
 
-## 2c. The benchmark `L` cannot qualify production rows
+## 2c. Option E build plan (for the owner's OD-24 weighing; no option adopted)
+
+Every effort figure is ESTIMATE, for one engineer with agent help. The facts behind each estimate are CODE (read 2026-11-12) unless marked.
+
+**What exists to reuse.**
+
+- `Bls12381Fr`, a p3 0.4.3 field over `midnight_curves::Fq` with a 2-adic generator, tested against the ff type (MEASURED, section 2b.3).
+- The Midnight Poseidon rules of PROPOSAL 3.6 (leaf, node, transcript), tested against midnight-circuits (MEASURED).
+- The D3 calculator at the Fr field (MEASURED, section 2b.2).
+- midnight-circuits 7.3.0 chips for the wrap: `NativeChip`, the 19-row Poseidon chip and pow2range, all inside a `ZkStdLibArch` that ledger 9 reads.
+- The ledger toy harness `m7_ledger_toy.rs` for the acceptance gate.
+- OpenVM's halo2 `openvm-static-verifier` (about 12,000 lines; WHIR, batch-constraint, stacked-reduction and proof-shape stages) as a template for a PLONK verifier of a SWIRL proof.
+- No OpenVM native or root config helps with the base field. Every v2 config, BN254 root included, has a BabyBear base and changes only the hash.
+
+**Blockers found in the code.**
+
+- stark-backend fixes the base field to 64 bits: `StarkProtocolConfig::F: TwoAdicField + PrimeField64` (`crates/stark-backend/src/config.rs:22`).
+- 48 sites in `stark-backend/src` and `cpu-backend/src` use `PrimeField64`, `as_canonical_u64` or `ORDER_U64`, among them `sample_bits` and `grind` (`transcript/traits.rs:46-82`), the proof decoder (`verifier/transcript_extractor.rs`) and the soundness glue (`soundness/mod.rs:18`). Another 28 sites in `stark-backend/src` use 32-bit field calls.
+- The OpenVM recursion circuit (`crates/recursion`, 35,297 lines) is written over BabyBear. It has BabyBear-native constraints and Poseidon2-BabyBear sub-AIRs, so it cannot verify `L` from an Fr base without a rewrite.
+
+| Step | Component | Reuse | Gate | Effort (ESTIMATE) |
+|---|---|---|---|---|
+| E1 | stark-backend and cpu-backend with an Fr base field. Relax `PrimeField64` to `PrimeField` at the 48 sites. Sampling and grinding for a 255-bit field. `EF = F` (degree 1). A native Fr duplex transcript and Midnight Poseidon Merkle trees (u = 1, 2, 3). | `Bls12381Fr`; the section 3.6 rules; the Fr D3 test | A small AIR proves and verifies end to end at the Fr base, with negative controls. The D3 terms at the configured parameters equal section 2b.2. | 3 to 6 days |
+| E2 | Fr recursion AIR set `L_Fr` that verifies one `L` proof: BabyBear and EF arithmetic emulated in Fr (range-checked reduction mod p), a Midnight Poseidon sub-AIR, proof-shape, GKR, zerocheck, stacked-reduction and WHIR AIRs. Either a port of OpenVM's 35,297-line recursion crate or a dedicated `L` verifier. | OpenVM recursion as the structural template; the real 430,073-byte `L` proof as the test input | `L_Fr` proves over the real `L` proof and the stock verifier accepts. Negative controls refuse a changed `L` proof byte and a changed public word. Heights MEASURED, then D3 at the measured shape. | 6 to 12 weeks |
+| E3 | The full interface carried through `L_Fr`: the 12,164 public words of `L` taken in and exposed (packed), the log AIRs and the non-`NOP` reservation `R`, and an optional log replay in native Fr | E2 | An all-non-`NOP` log case and a forced-overflow case pass. The wrap's statement words equal the native ones. | 1 to 2 weeks |
+| E4 | Prover speed of `L_Fr`: 255-bit NTT and Poseidon over Fr on the GPU (kernel K0 is shared with the wrap plan) | `crates/mori-gpu` sppark NTT for BLS12-381 Fr | Measured `L_Fr` prove time and memory against the call-time budget | 2 to 3 weeks (CPU-only first is possible) |
+| E5 | Stdlib-architecture wrap that verifies `L_Fr` natively in Fr: `ZkStdLibArch` with `poseidon` and pow2range, Fr Merkle paths, sumcheck and WHIR verifier, Fr transcript replay, 1,026 public inputs | midnight-circuits chips; the static-verifier stages as a template; the model rows of section 2b.2 | `MockProver` rows within the k = 21 gate (the model: 879,472 mid). Key at most 50,000 bytes in the `MidnightVK` framing. Ledger 9 `VerifierKey::verify` accepts a blinded proof; the toy harness is ready. Negative controls on a public input and a proof byte. | 3 to 5 weeks |
+| E6 | Keys and integration: the `L_Fr` key joins the universal key set; a new hash tag for `L_Fr`'s Fr transcript (OD-18); a soundness premise for the Fr STARK beside A2; Lean wording; a D3 rerun; the devnet deploy and call on the XC-9 path, then Preview | XC-9 and the Preview rehearsal | Devnet call included and refusals R1 to R3 pass; the D3 gates pass at the measured shapes | 1 to 2 weeks |
+
+Order: E1, then E2 (the long pole; it needs E1), then E3 and E5 in parallel (E5 can start on a synthetic `L_Fr` proof from E1), then E4, then E6. Total about 3 to 5 months, dominated by E2.
+
+For the same weighing (ESTIMATE, rougher):
+
+- Option A: the G4 wrap circuit (M7a and M7b, 4 to 8 weeks), plus an upstream `ZkStdLibArch` lane flag and a ledger release, whose calendar time Midnight sets.
+- Option C: the same G4 circuit, plus a stdlib decider over the G4 proof (1 to 2 weeks on the existing decider); two BLS12-381 layers.
+
+**Step E1 tonight: not started.** It is self-contained and testable, but the 48-site `PrimeField64` relaxation and the new sampling and grinding code cannot be done and tested in about 2 hours (ESTIMATE 3 to 6 days). Per the instruction, it stops here.
+
+## 2d. The benchmark `L` cannot qualify production rows
 
 The audit is right: `L_cached` is the bench `VerifierSubCircuit::<1>` over a 2-child bench node, keyed only, with 0 public values, no log AIRs and no proof. Every row above inherits that. The full-interface `L` adds, against the keyed structure:
 
