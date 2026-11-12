@@ -43,13 +43,22 @@ inductive Check where
   /-- A Merkle opening over Midnight's two-input hash. -/
   | merkle (leaf : Nat) (bits : List Nat) (sibs : List Nat) (root : Nat)
 
-/-- The proof-of-work checks of SWIRL and WHIR. -/
+/-- The proof-of-work checks of SWIRL and WHIR: one per fold (round `i`, fold `s`, 1-based), one
+for `mu` batching, one per round before its queries, one for LogUp. -/
 inductive PowKind where
-  | fold
+  | fold (round step : Nat)
   | mu
-  | query
+  | query (round : Nat)
   | logup
   deriving DecidableEq
+
+def PowKind.isFold : PowKind → Bool
+  | .fold _ _ => true
+  | _ => false
+
+def PowKind.isQuery : PowKind → Bool
+  | .query _ => true
+  | _ => false
 
 /-- One operation of the Fiat-Shamir transcript of `L` (a duplex over Midnight Poseidon on Fr). -/
 inductive TOp where
@@ -113,11 +122,27 @@ Computed from the transcript program itself. -/
 def pvFirstT (lo n : Nat) (ops : List TOp) : Bool :=
   (List.range' lo n).all (fun i => (absorbedBeforeChallenge ops).contains i)
 
-/-- The proof-of-work bits of one kind in the transcript program. -/
-def powList (k : PowKind) : List TOp → List Nat
+/-- The proof-of-work bits of the kinds that `k` selects, in transcript order. -/
+def powList (k : PowKind → Bool) : List TOp → List Nat
   | [] => []
-  | .pow _ b k' :: ops => if k' = k then b :: powList k ops else powList k ops
+  | .pow _ b k' :: ops => if k k' then b :: powList k ops else powList k ops
   | _ :: ops => powList k ops
+
+/-- The folding proof-of-work steps of the transcript program, in order: `(round, fold, bits)`. -/
+def foldSteps : List TOp → List (Nat × Nat × Nat)
+  | [] => []
+  | .pow _ b (.fold i s) :: ops => (i, s, b) :: foldSteps ops
+  | _ :: ops => foldSteps ops
+
+/-- The query proof-of-work steps of the transcript program, in order: `(round, bits)`. -/
+def querySteps : List TOp → List (Nat × Nat)
+  | [] => []
+  | .pow _ b (.query i) :: ops => (i, b) :: querySteps ops
+  | _ :: ops => querySteps ops
+
+/-- The fold positions of `M` WHIR rounds of `k` folds, in protocol order. -/
+def foldSlots (M k : Nat) : List (Nat × Nat) :=
+  (List.range M).flatMap fun i => (List.range k).map fun j => (i, j + 1)
 
 /-- The weakest proof of work of a kind (`0` if the transcript has none). -/
 def powMin : List Nat → Nat
@@ -155,20 +180,27 @@ structure KeyL where
   /-- The declared WHIR analysis parameters (unique decoding). -/
   whir : UDSet
 
-/-- The proof-of-work values of `L` read from its transcript program: each kind's weakest check
-(`0` if the transcript has none, so a missing check earns no credit). The fold and query values
-apply to every fold and every round. One OOD sample per round (WHIR Construction 5.1). -/
+/-- The proof-of-work values of `L` read from its transcript program: the folding vector, one
+value per fold step in transcript order; the query vector, one value per round; the weakest
+`mu` and LogUp check (`0` if the transcript has none, so a missing check earns no credit). One
+OOD sample per round (WHIR Construction 5.1). -/
 def powVecOf (u : UDSet) (ops : List TOp) : PowVec :=
-  ⟨List.replicate (u.kWhir * u.rounds) (powMin (powList .fold ops)), powMin (powList .mu ops),
-    List.replicate u.rounds (powMin (powList .query ops)), powMin (powList .logup ops),
-    List.replicate (u.rounds - 1) 1⟩
+  ⟨(foldSteps ops).map (·.2.2), powMin (powList (· == .mu) ops), (querySteps ops).map (·.2),
+    powMin (powList (· == .logup) ops), List.replicate (u.rounds - 1) 1⟩
+
+/-- The transcript carries exactly one folding PoW step per fold, at its position in protocol
+order (round-major), and one query PoW step per round, in round order. -/
+def powShapeOK (u : UDSet) (ops : List TOp) : Bool :=
+  (foldSteps ops).map (fun x => (x.1, x.2.1)) == foldSlots u.rounds u.kWhir &&
+    (querySteps ops).map (·.1) == List.range u.rounds
 
 /-- Gate G4, the proven regime of owner decision OD-19: unique decoding (list size 1) with the
 error terms of WHIR Lemma 4.10, Corollary 4.11, Theorem 4.8 (unique decoding branch),
 Theorem 5.2 and Lemma 4.25, and SWIRL Theorems 4.2.4 (unique decoding branch) and 4.2.1, over
 `|EF| = p^4`, with the proof-of-work values read from the transcript program
 (`UDSet.gate`: every grindable term at least 101 bits, every other term at least 100). -/
-def ProvenRegime (vk : KeyL) : Bool := vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
+def ProvenRegime (vk : KeyL) : Bool :=
+  powShapeOK vk.whir vk.transcript && vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
 
 /-- The list decoding regime of the owner decision of 2026-11-11 (option b of the paper review): the
 Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
@@ -177,8 +209,9 @@ of the transcript at least 21 bits, every query proof of work at least 20 bits. 
 bits are read from the transcript program. Superseded for `L` by OD-19 (`ProvenRegime`). -/
 def ProvenRegimeLD (w : WhirParams) (vk : KeyL) : Bool :=
   w.logBlowup % 2 == 0 && w.etaNum != 0 && w.mult == thm15Mult w &&
-    21 ≤ powMin (powList .fold vk.transcript) && 21 ≤ powMin (powList .mu vk.transcript) &&
-    20 ≤ powMin (powList .query vk.transcript)
+    21 ≤ powMin (powList PowKind.isFold vk.transcript) &&
+    21 ≤ powMin (powList (· == .mu) vk.transcript) &&
+    20 ≤ powMin (powList PowKind.isQuery vk.transcript)
 
 /-- The reference semantics of one check. -/
 def Check.Ref (X : Prims) (env : List Nat) : Check → Prop
@@ -445,38 +478,70 @@ theorem public_digest_binds {X : Prims} {FrDom : List Nat → Prop} (h : FrInj X
   simp only [List.cons.injEq, true_and, and_true] at this
   exact pack_injective (ha.trans hb.symm) (by omega) hra hrb this
 
+/-- One WHIR round of the example transcript of `L`: the commitment of round `i >= 1`, then the
+`k` folds (a squeezed folding challenge and the PoW step of that fold), then the query PoW and
+the query challenge. Round `i` uses environment indices `100 + 50 i ..`. -/
+def lRound (k : Nat) (pfold pquery : List Nat) (i : Nat) : List TOp :=
+  let b := 100 + 50 * i
+  (if i = 0 then [] else [.absorbFr [b + 24]]) ++
+  ((List.range k).flatMap fun j =>
+    [.squeeze (List.range' (b + 6 * j) 5), .pow (b + 6 * j + 5) (pfold.getD (k * i + j) 0) (.fold i (j + 1))]) ++
+  [.pow (b + 45) (pquery.getD i 0) (.query i), .squeeze (List.range' (b + 44) 1)]
+
 /-- A transcript skeleton of `L` in the order of stark-backend's verifier preamble
-(`verifier/mod.rs:128-175`): commitments, then the public values, then challenges, with the LogUp,
-`mu`, folding and query proof of work. Indices: statement `0..1`, `pv` `2..5`, proof from `6`. -/
-def lTranscript (pfold pmu pquery plogup : Nat) : List TOp :=
+(`verifier/mod.rs:128-175`): commitments, then the public values, then challenges, with the LogUp
+and `mu` proof of work; then 3 WHIR rounds of 4 folds, each fold with its PoW step, and the
+query PoW of each round. Indices: statement `0..1`, `pv` `2..5`, proof from `6`. -/
+def lTranscript (pfold : List Nat) (pmu : Nat) (pquery : List Nat) (plogup : Nat) : List TOp :=
   [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 26 plogup .logup,
-   .squeeze [27, 28, 29, 30, 31], .pow 12 pmu .mu,
-   .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold .fold,
-   .squeeze [20, 21, 22, 23, 24], .pow 25 pquery .query]
+   .squeeze [27, 28, 29, 30, 31], .pow 12 pmu .mu, .squeeze [13, 14, 15, 16, 17]] ++
+  (List.range 3).flatMap (lRound 4 pfold pquery)
+
+/-- The OD-19 transcript: folding PoW 0 on all 12 folds, `mu` 6, query 20 per round, LogUp 18. -/
+def lTranscriptUD : List TOp := lTranscript (List.replicate 12 0) 6 [20, 20, 20] 18
 
 /-- The example key at the OD-19 set: two statement words, four `pv` words. -/
-def lKey (pfold pmu pquery plogup : Nat) : KeyL :=
-  ⟨[], lTranscript pfold pmu pquery plogup, 2, 4, lUD⟩
+def lKey (T : List TOp) : KeyL := ⟨[], T, 2, 4, lUD⟩
 
-/-- Gate G4 on the OD-19 key: `pv` is absorbed before the first challenge, and the transcript's
-proof of work (folding 0, `mu` 6, query 20, LogUp 18) passes `ProvenRegime`. -/
-theorem lKey_ok : pvFirstT 2 4 (lTranscript 0 6 20 18) = true ∧
-    ProvenRegime (lKey 0 6 20 18) = true := by decide
+/-- Gate G4 on the OD-19 key: `pv` is absorbed before the first challenge, the transcript has one
+PoW step per fold and per round, and its proof of work passes `ProvenRegime`. -/
+theorem lKey_ok : pvFirstT 2 4 lTranscriptUD = true ∧ ProvenRegime (lKey lTranscriptUD) = true := by
+  decide
+
+/-- The PoW vector the gate reads is the transcript's own. -/
+theorem lKey_powVec : powVecOf lUD lTranscriptUD = lPow := by decide
 
 /-- The transcript's proof of work is what the gate reads: `mu` PoW 5 fails it. -/
-theorem lKey_mu5_not_proven : ProvenRegime (lKey 0 5 20 18) = false := by decide
+theorem lKey_mu5_not_proven :
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 5 [20, 20, 20] 18)) = false := by decide
 
-/-- Query PoW 19 fails it. -/
-theorem lKey_query19_not_proven : ProvenRegime (lKey 0 6 19 18) = false := by decide
+/-- Query PoW 19 in one round (round 1) fails it. -/
+theorem lKey_query19_not_proven :
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 19, 20] 18)) = false := by decide
 
-/-- A transcript without its LogUp proof of work (here 17 bits, below the frozen 18) fails it. -/
-theorem lKey_logup17_not_proven : ProvenRegime (lKey 0 6 20 17) = false := by decide
+/-- LogUp PoW 17, below the frozen 18, fails it. -/
+theorem lKey_logup17_not_proven :
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 20, 20] 17)) = false := by decide
+
+/-- A transcript with only 2 WHIR rounds of fold steps (8 fold steps for 12 folds) fails it. -/
+theorem lKey_missing_folds_not_proven :
+    ProvenRegime (lKey ([.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11],
+      .pow 26 18 .logup, .squeeze [27, 28, 29, 30, 31], .pow 12 6 .mu] ++
+      (List.range 2).flatMap (lRound 4 (List.replicate 12 0) [20, 20, 20]) ++
+      [.pow 245 20 (.query 2)])) = false := by decide
+
+/-- Fold steps in the wrong order (round 0 fold 2 before fold 1) fail it. -/
+theorem lKey_fold_order_not_proven :
+    ProvenRegime (lKey ([.pow 26 18 .logup, .pow 12 6 .mu, .pow 101 0 (.fold 0 2),
+      .pow 102 0 (.fold 0 1)] ++ (lTranscriptUD.filter fun
+        | .pow _ _ (.fold 0 1) => false | .pow _ _ (.fold 0 2) => false | _ => true))) = false := by
+  decide
 
 /-- The list decoding transcript of round 2 (21-bit folding and `mu`, 20-bit query PoW). -/
 def lTranscriptLD (pfold pmu pquery : Nat) : List TOp :=
   [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 12 pmu .mu,
-   .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold .fold,
-   .squeeze [20, 21, 22, 23, 24], .pow 25 pquery .query]
+   .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold (.fold 0 1),
+   .squeeze [20, 21, 22, 23, 24], .pow 25 pquery (.query 0)]
 
 /-- S4 after the owner decision of 2026-11-11: log blowup 4, `eta = 1/8`, `m = 3`. -/
 def s4Whir : WhirParams := ⟨4, 1, 8, 3⟩

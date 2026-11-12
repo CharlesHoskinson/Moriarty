@@ -72,7 +72,7 @@ def consistent : Premises where
   X := { frPerm := id, frSponge := fun _ => 0, jubjubMul := fun _ q => q, jubjubGen := (0, 0),
          p2 := fun _ => List.replicate 8 0, p2_width := fun _ => by simp,
          frSponge_lt := fun _ => by decide }
-  vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscript 0 6 20 18,
+  vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscriptUD,
            nStmt := 2, pvLen := 4, whir := lUD }
   P2Dom := fun _ => False
   FrDom := fun _ => False
@@ -211,9 +211,12 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.merkle_binding_or_collision
 #print axioms Clean.Sherlock.Bridge.public_digest_binds
 #print axioms Clean.Sherlock.Bridge.lKey_ok
+#print axioms Clean.Sherlock.Bridge.lKey_powVec
 #print axioms Clean.Sherlock.Bridge.lKey_mu5_not_proven
 #print axioms Clean.Sherlock.Bridge.lKey_query19_not_proven
 #print axioms Clean.Sherlock.Bridge.lKey_logup17_not_proven
+#print axioms Clean.Sherlock.Bridge.lKey_missing_folds_not_proven
+#print axioms Clean.Sherlock.Bridge.lKey_fold_order_not_proven
 #print axioms Clean.Sherlock.Bridge.s4_mult_three
 #print axioms Clean.Sherlock.Bridge.lKeyLD_ok
 #print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven

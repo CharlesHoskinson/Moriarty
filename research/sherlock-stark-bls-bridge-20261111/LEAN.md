@@ -58,11 +58,13 @@ Two witnesses for the same claim (different logs, used-entry counts, splits, pro
 
 `Prims` gained one data fact, `frSponge_lt` (the Fr sponge output is below `r`), which the squeeze refinement needs. It is a property of the function's type in the real system, not a cryptographic assumption.
 
-The carriers `P2Dom` and `FrDom` are abstract, as `Carrier` is in `Aggregation.lean`. An unguarded injectivity premise for a hash with a finite digest would be false in Lean (pigeonhole) and would make every theorem vacuous. `BridgeAxioms.consistent` is a model of all premises (a trivial one: nothing is accepted, with the transcript of the OD-19 example key `lKey 0 6 20 18`, `nStmt = 2`, `pvLen = 4`, set `lUD`), which shows they are jointly satisfiable. It does not show that the real primitives meet them.
+The carriers `P2Dom` and `FrDom` are abstract, as `Carrier` is in `Aggregation.lean`. An unguarded injectivity premise for a hash with a finite digest would be false in Lean (pigeonhole) and would make every theorem vacuous. `BridgeAxioms.consistent` is a model of all premises (a trivial one: nothing is accepted, with the transcript of the OD-19 example key `lTranscriptUD`, `nStmt = 2`, `pvLen = 4`, set `lUD`), which shows they are jointly satisfiable. It does not show that the real primitives meet them.
 
 ### 2.1 Gate G4: the unique decoding parameter check
 
-`ProvenRegime vk = vk.whir.gate efSize (powVecOf vk.whir vk.transcript)`. `UDSet` holds the declared analysis parameters (log blowup `b`, polynomial size `2^m` with `m = n_stack + l_skip`, `k_whir`, the per-round query vector, `w_stack`, the interaction bound, the frozen LogUp PoW, the radius slack `sigma`); `PowVec` holds the proof-of-work values and OOD sample counts, read from the transcript program. `|F| = |EF| = p^4`. Each term is an exact rational `num / den`; "at least `B` bits" is the Nat fact `2^B num <= den`, and "reaches `B` bits" adds `den < 2^(B+1) num`.
+`ProvenRegime vk = powShapeOK vk.whir vk.transcript && vk.whir.gate efSize (powVecOf vk.whir vk.transcript)`. `UDSet` holds the declared analysis parameters (log blowup `b`, polynomial size `2^m` with `m = n_stack + l_skip`, `k_whir`, the per-round query vector, `w_stack`, the interaction bound, the frozen LogUp PoW, the radius slack `sigma`); `PowVec` holds the proof-of-work values and OOD sample counts, read from the transcript program.
+
+Per-fold proof of work (OD-1 to OD-3, kept under OD-19 with value 0): `PowKind.fold i s` tags the PoW step of fold `s` of round `i`, `PowKind.query i` the query PoW of round `i`. `foldSteps` and `querySteps` list them in transcript order. `powShapeOK` requires exactly one folding PoW step per fold position, in protocol order (`foldSlots M k`: round-major, folds `1 .. k`), and one query PoW step per round in round order. `powVecOf` takes the folding vector and the query vector from those steps, so the bits of fold `(i, s)` in the gate are the bits of that fold's own step. The weakest `mu` and LogUp step give the `mu` and LogUp values. With required fold PoW 0 a gate that only took a minimum would pass a transcript with no folding PoW step at all; the position check refuses it (`lKey_missing_folds_not_proven`). `|F| = |EF| = p^4`. Each term is an exact rational `num / den`; "at least `B` bits" is the Nat fact `2^B num <= den`, and "reaches `B` bits" adds `den < 2^(B+1) num`.
 
 | Term | Result (G5-PAPER-MAP) | Error in Lean | Gate |
 |---|---|---|---|
@@ -82,7 +84,7 @@ Bit counts, kernel-checked (`lUD_bits`, `intUD_bits`), with the D3 calculator fi
 | `L`: blowup 3, `m = 20`, `k = 4`, queries 98/83/82, `w_stack` 48, fold PoW 0, `mu` PoW 6, query PoW 20, LogUp PoW 18, 1 OOD | 101 (101.6276) | 101 (101.0730) | 101 / 101 / 101 (101.3466 / 101.1427 / 101.7684) | 108 / 112 (108.6276 / 112.6276) | 116 / 117 (116.9982) |
 | Internal: blowup 3, `m = 19`, queries 97/82/81, `w_stack` 512, fold PoW 0, `mu` PoW 9, query PoW 21, LogUp PoW 18, 1 OOD | 102 (102.6276) | 101 (101.6304) | 101 / 101 / 101 (101.5158 / 101.1643 / 101.7705) | 109 / 113 (109.6276) | 117 / 117 (117.0129) |
 
-`lUD_gate` and `intUD_gate` decide the whole gate on each set. Negative lemmas: `lUD_mu5_fails` (`mu` PoW 5 gives 100 bits), `lUD_q97_fails` (97 round-0 queries give 100 bits), `lUD_no_ood_fails` (a round without an OOD sample). `lUD_two_ood`: two OOD samples per round also pass (216 and 224 bits). On the key: `lKey_ok` (the OD-19 example key passes), `lKey_mu5_not_proven`, `lKey_query19_not_proven`, `lKey_logup17_not_proven` (the gate reads the transcript's PoW).
+`lUD_gate` and `intUD_gate` decide the whole gate on each set. Negative lemmas: `lUD_mu5_fails` (`mu` PoW 5 gives 100 bits), `lUD_q97_fails` (97 round-0 queries give 100 bits), `lUD_no_ood_fails` (a round without an OOD sample). `lUD_two_ood`: two OOD samples per round also pass (216 and 224 bits). On the key: `lKey_ok` (the OD-19 example key `lKey lTranscriptUD`, 3 rounds of 4 folds with a PoW step each, passes), `lKey_powVec` (the vector the gate reads from that transcript is `lPow`), `lKey_mu5_not_proven`, `lKey_query19_not_proven` (one round at 19), `lKey_logup17_not_proven`, `lKey_missing_folds_not_proven` (8 fold steps for 12 folds), `lKey_fold_order_not_proven` (fold 2 before fold 1).
 
 ## 3. Where each soundness point sits
 
@@ -99,7 +101,7 @@ Bit counts, kernel-checked (`lUD_bits`, `intUD_bits`), with the D3 calculator fi
 | Canonical logged values | `CanonGadget`: 9 limbs `< 2^30`, lexicographically below the limbs of `r`; `EntryGadget` | `canon_check_sound`, `replay_sound`, `pvOf_inj` | `dec_inj`, `canon_mod_inj`, `limb_embed_inj` | `alias_without_canon`: limbs of `5` and of `5 + r` recompose to the same Fr element |
 | Squeezed challenge digits (amendment 3) | `TOp.squeeze` in the transcript; `runGadget` uses `SqueezeGadget` (5 digits `< p`, recomposition `< r`), `runRef` the reference digits | `squeeze_digits_sound` inside `run_refines` | | `squeeze_alias`: the digits of `r` recompose `0` in Fr |
 | Log entries absorbed before the first challenge | `KeyL.transcript : List TOp`; `absorbedBeforeChallenge`; `pvFirstT nStmt pvLen transcript`, computed from the transcript; `VerifyL` places `pv` at indices `nStmt .. nStmt + pvLen - 1` and runs `runRef` | A2's second hypothesis, discharged by `vkL_ok.1` | `pv_absorbed_before_challenge` (every word of an accepted `pv` is absorbed before the first challenge), `lKey_ok` (the stark-backend preamble order) | `late_pv_rejected`, `partial_pv_rejected` |
-| Proven regime, unique decoding (OD-19, gate G4) | `ProvenRegime vk`: `UDSet.gate efSize (powVecOf ...)`; the PoW values of each kind read from the transcript (`powList`, `powMin`); `runRef` checks each `TOp.pow` | A2's third hypothesis, discharged by `vkL_ok.2.1` | `lUD_gate`, `intUD_gate`, `lUD_bits`, `intUD_bits`, `lUD_fold_min`, `lUD_two_ood`, `lKey_ok` | `lUD_mu5_fails`, `lUD_q97_fails`, `lUD_no_ood_fails`, `lKey_mu5_not_proven`, `lKey_query19_not_proven`, `lKey_logup17_not_proven` |
+| Proven regime, unique decoding (OD-19, gate G4), per-fold PoW | `ProvenRegime vk`: `powShapeOK` (one PoW step per fold position and per round, in order) and `UDSet.gate efSize (powVecOf ...)`; the folding and query vectors and the `mu` and LogUp values read from the transcript (`foldSteps`, `querySteps`, `powList`, `powMin`); `runRef` checks each `TOp.pow` | A2's third hypothesis, discharged by `vkL_ok.2.1` | `lUD_gate`, `intUD_gate`, `lUD_bits`, `intUD_bits`, `lUD_fold_min`, `lUD_two_ood`, `lKey_ok`, `lKey_powVec` | `lUD_mu5_fails`, `lUD_q97_fails`, `lUD_no_ood_fails`, `lKey_mu5_not_proven`, `lKey_query19_not_proven`, `lKey_logup17_not_proven`, `lKey_missing_folds_not_proven`, `lKey_fold_order_not_proven` |
 | List decoding regime of round 2 (kept) | `ProvenRegimeLD w vk`: `m = thm15Mult`, folding and `mu` PoW at least 21, query PoW at least 20 | none | `s4_mult_three`, `lKeyLD_ok` | `s4_pow15_not_proven`, `remark_m1_not_proven` |
 | Fixed log capacity and fixed `pv` length (amendment 4), overflow to STARK shards | `WrapRel`: `w.T.length = B`, `(encode w.T).length <= pvLen`, `w.pv = pvOf pvLen w.T`; `VerifyL`: `pv.length = pvLen`; `LogTree.Carrier`: at most `B` entries; `pad`; `RunWith`: each operation deferred or emulated | `pad_length`, `pad_wf`, `pvOf_length`, `pvOf_inj`, `digest_inj`, `runWith_all_valid` | `spill_equiv`, `discharge_sound` (any split of a valid run, and a discharge shard, give the same claim) | n/a |
 | Empty onion is a hash output (amendment 1) | `onion X [] = X.p2 [tagEmpty]` | `digest_inj` | `onion_empty` | n/a |
@@ -149,7 +151,7 @@ Limits of this modeling that the lead should know:
 
 ## 6. Axioms
 
-Output of `lake build` for `Clean/Sherlock/BridgeAxioms.lean` (log `~/.cache/bridge-lean/item1.log`):
+Output of `lake build` for `Clean/Sherlock/BridgeAxioms.lean` (log `~/.cache/bridge-lean/item2.log`):
 
 ```
 'Clean.Sherlock.Bridge.bridge_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
@@ -157,7 +159,7 @@ Output of `lake build` for `Clean/Sherlock/BridgeAxioms.lean` (log `~/.cache/bri
 'Clean.Sherlock.Bridge.PvBinding.pv_binding_count' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
 
-All 125 theorems of `FrLog.lean`, `UDBits.lean`, `Bridge.lean` and `PvBinding.lean` are queried: 23 depend on no axioms, 29 on `[propext]`, 46 on `[propext, Quot.sound]`, 27 on `[propext, Classical.choice, Quot.sound]`. None uses another axiom (no `Lean.ofReduceBool`, so no `native_decide`). The cryptographic assumptions are not axioms: they are the `Premises` fields of section 2, hypotheses of every theorem that uses them.
+All 128 theorems of `FrLog.lean`, `UDBits.lean`, `Bridge.lean` and `PvBinding.lean` are queried: 23 depend on no axioms, 32 on `[propext]`, 46 on `[propext, Quot.sound]`, 27 on `[propext, Classical.choice, Quot.sound]`. None uses another axiom (no `Lean.ofReduceBool`, so no `native_decide`). The cryptographic assumptions are not axioms: they are the `Premises` fields of section 2, hypotheses of every theorem that uses them.
 
 ## 7. Open items
 
