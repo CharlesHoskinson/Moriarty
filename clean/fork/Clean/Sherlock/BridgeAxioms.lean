@@ -11,7 +11,8 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   `pub` has a witness of `WrapRel`. Knowledge soundness of midnight-proofs PLONK with KZG over
   BLS12-381 in the algebraic group model with a q-type assumption, as for today's decider.
 * (A2) `lastLayerSound`: a reference verification of `L` that accepts yields an accepted root AIR
-  with some log digest. The proximity-gap part is the proven Johnson-radius statement, BCHKS25
+  with some log digest. The proximity-gap part is the proven Johnson-radius statement (citations per
+  the paper review `REVIEW.md` section 4, not read by the Lean lane), BCHKS25
   Theorem 1.5 as stated (`m >= 3`), with Theorems 4.5 and 4.6, in the parameters of
   `ProvenRegime` (owner decision 2026-11-11: folding and `mu` PoW 21 bits, 100.2 and 102.3
   bits at `m = 3`); the unproved p.23 remark is not a premise. Then WHIR (SWIRL) round-by-round

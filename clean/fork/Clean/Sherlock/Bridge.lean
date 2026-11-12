@@ -240,8 +240,9 @@ structure Premises where
   vkL_ok : KeyOK vkL
   /-- (A1) Knowledge soundness of midnight-proofs PLONK with KZG (AGM, q-type assumption). -/
   wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf → ∃ w, WrapRel X B vkL pub w
-  /-- (A2) Soundness of `L`. The proximity-gap part is the proven Johnson-radius statement:
-  BCHKS25 (ECCC TR25-169) Theorem 1.5 as stated, with `m = max(ceil(sqrt(rho)/(2 eta)), 3)`,
+  /-- (A2) Soundness of `L`. The proximity-gap part is the proven Johnson-radius statement
+  (citations per `research/sherlock-design-paper-review-20261111/REVIEW.md`, not read by the
+  Lean lane): BCHKS25 (ECCC TR25-169) Theorem 1.5 as stated, with `m = max(ceil(sqrt(rho)/(2 eta)), 3)`,
   Theorem 4.5 (batching) and Theorem 4.6 (mutual correlated agreement), in the parameters of
   `ProvenRegime` (100.2 bits folding, 102.3 bits `mu` batching at S4 with 21-bit PoW, per the
   paper review). The unproved remark on p.23 (`m < 3`) is not assumed. The rest: WHIR round-by-
