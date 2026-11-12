@@ -380,3 +380,9 @@
 - Opus agent, GPT-6 Astra high (unit k21-astra), Gemini 4 Carbon High (unit k21-gemini), one shared brief ~/.cache/k21-recal/brief-lane.md.
 - Outputs: research/sherlock-k21-recalibration-20261111/proposals/{opus,astra,gemini}.md.
 - Next: merge, blinded verifier, apply to the design and specs.
+
+## [2026-11-12 04:33] lane-done | S10x multi-leaf node and fixed-size range table
+- Node over 2^20 app leaves at the OD-19 internal set: tallest AIR 117,800 valid rows per child; largest arity 4 (471,200 rows, padded 2^19, the set's stacked-height cap); arity 5 and above fail the layout; arity 12 pads to 2^21, over the k = 21 gate, so the sweep stopped (MEASURED). The arity-4 node proves and verifies.
+- RANGE table (stock VariableRangeCheckerAir, 2^17 rows, 4 columns): no change to the node's tallest AIR or arity; leaf floor 2^17; +63,042 node cells per child; a table with no lookups gives a node SumClaimMismatch (MEASURED).
+- research/sherlock-s10x-20261112/RESULTS.md; lead decisions LD-S10x-1 to LD-S10x-4, owner to confirm.
+- Next: GPU node cell at arity 4; node over node children.
