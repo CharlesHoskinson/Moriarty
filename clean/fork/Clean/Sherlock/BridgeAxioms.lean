@@ -12,17 +12,17 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   `pub` has a witness of `WrapRel`. Knowledge soundness of midnight-proofs PLONK with KZG over
   BLS12-381 in the algebraic group model with a q-type assumption, as for today's decider.
 * (A2) `lastLayerSound`: a reference verification of `L` that accepts yields an accepted root AIR
-  with some log digest. The proximity-gap part is the proven Johnson-radius statement (citations per
-  the paper review `REVIEW.md` section 4, not read by the Lean lane), BCHKS25
-  Theorem 1.5 as stated (`m >= 3`), with Theorems 4.5 and 4.6, in the parameters of
-  `ProvenRegime` (owner decision 2026-11-11: folding and `mu` PoW 21 bits, 100.2 and 102.3
-  bits at `m = 3`); the unproved p.23 remark is not a premise. Then WHIR (SWIRL) round-by-round
-  soundness, Fiat-Shamir in the random-oracle model, the `eq` binding of `pv` (error
-  at most `c m / |EF|`, Thaler Lemma 1) and the 5-digit squeeze bias (at most `2^-100`). It has three
-  hypotheses that `bridge_sound` discharges: `PackedHashInj` (proved from A2b by
-  `packed_hash_inj`: packing with checked length and range), `pvFirstT` and `ProvenRegime`
-  (both static key checks; `pvFirstT` and the proof-of-work bits are computed from the key's
-  transcript program, the WHIR analysis parameters are declared).
+  with some log digest. Unique decoding (owner decision OD-19), statements as recorded in
+  `research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md`: WHIR Theorem 5.2 with list
+  size 1, mutual correlated agreement from WHIR Lemma 4.10, Corollary 4.11 and the unique
+  decoding branch of Theorem 4.8, OOD from WHIR Lemma 4.25, `mu` batching from SWIRL
+  Theorem 4.2.4 (unique decoding branch), LogUp from SWIRL Theorem 4.2.1 (total interactions
+  below `p`), composition by SWIRL Theorem 4.2.5, Fiat-Shamir in the random-oracle model (SWIRL
+  Corollary 4.2.6), the `eq` binding of `pv` (error at most `c m / |EF|`) and the 5-digit
+  squeeze bias. It has three hypotheses that `bridge_sound` discharges: `PackedHashInj` (proved
+  from A2b by `packed_hash_inj`), `pvFirstT` and `ProvenRegime` (gate G4: `UDSet.gate` on the
+  declared parameter set with the proof of work read from the key's transcript program; every
+  folding, `mu` and query term at least 101 bits, every OOD and `gamma` term at least 100).
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
   Merkle hash of `L`, and the public digest form `PoseidonFr(tag, pack d2)`), guarded by the
   carrier `FrDom`. Separate from A5.
@@ -72,8 +72,8 @@ def consistent : Premises where
   X := { frPerm := id, frSponge := fun _ => 0, jubjubMul := fun _ q => q, jubjubGen := (0, 0),
          p2 := fun _ => List.replicate 8 0, p2_width := fun _ => by simp,
          frSponge_lt := fun _ => by decide }
-  vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscript 21 21 20,
-           nStmt := 2, pvLen := 4, whir := s4Whir }
+  vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscript 0 6 20 18,
+           nStmt := 2, pvLen := 4, whir := lUD }
   P2Dom := fun _ => False
   FrDom := fun _ => False
   LedgerProof := Unit
@@ -82,7 +82,7 @@ def consistent : Premises where
   RecAccepts := fun _ _ => False
   RunOps := fun _ _ => False
   Run := fun _ => True
-  vkL_ok := ⟨by decide, by decide, by
+  vkL_ok := ⟨lKey_ok.1, lKey_ok.2, by
     intro c hc
     simp only [List.mem_singleton] at hc
     subst hc
@@ -106,7 +106,7 @@ def consistent : Premises where
   indist_trans := fun _ _ _ _ _ => trivial
   wrapZK := fun _ _ _ => trivial
 
--- Every theorem of FrLog.lean, Bridge.lean and PvBinding.lean.
+-- Every theorem of FrLog.lean, UDBits.lean, Bridge.lean, PvBinding.lean.
 #print axioms Clean.Sherlock.Bridge.pBB_eq
 #print axioms Clean.Sherlock.Bridge.pBB_pos
 #print axioms Clean.Sherlock.Bridge.limb_fits
@@ -191,6 +191,15 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.spill_equiv
 #print axioms Clean.Sherlock.Bridge.runWith_all_valid
 #print axioms Clean.Sherlock.Bridge.discharge_sound
+#print axioms Clean.Sherlock.Bridge.lUD_gate
+#print axioms Clean.Sherlock.Bridge.intUD_gate
+#print axioms Clean.Sherlock.Bridge.lUD_bits
+#print axioms Clean.Sherlock.Bridge.lUD_fold_min
+#print axioms Clean.Sherlock.Bridge.intUD_bits
+#print axioms Clean.Sherlock.Bridge.lUD_mu5_fails
+#print axioms Clean.Sherlock.Bridge.lUD_q97_fails
+#print axioms Clean.Sherlock.Bridge.lUD_no_ood_fails
+#print axioms Clean.Sherlock.Bridge.lUD_two_ood
 #print axioms Clean.Sherlock.Bridge.run_refines
 #print axioms Clean.Sherlock.Bridge.pv_absorbed_before_challenge
 #print axioms Clean.Sherlock.Bridge.getD_lt
@@ -201,8 +210,12 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.wrap_view_only_claim
 #print axioms Clean.Sherlock.Bridge.merkle_binding_or_collision
 #print axioms Clean.Sherlock.Bridge.public_digest_binds
-#print axioms Clean.Sherlock.Bridge.s4_mult_three
 #print axioms Clean.Sherlock.Bridge.lKey_ok
+#print axioms Clean.Sherlock.Bridge.lKey_mu5_not_proven
+#print axioms Clean.Sherlock.Bridge.lKey_query19_not_proven
+#print axioms Clean.Sherlock.Bridge.lKey_logup17_not_proven
+#print axioms Clean.Sherlock.Bridge.s4_mult_three
+#print axioms Clean.Sherlock.Bridge.lKeyLD_ok
 #print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven
 #print axioms Clean.Sherlock.Bridge.remark_m1_not_proven
 #print axioms Clean.Sherlock.Bridge.late_pv_rejected

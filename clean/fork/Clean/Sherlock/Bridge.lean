@@ -1,4 +1,4 @@
-import Clean.Sherlock.FrLog
+import Clean.Sherlock.UDBits
 
 /-!
 Soundness of the Sherlock bridge candidate (`research/sherlock-stark-bls-bridge-20261111/
@@ -22,8 +22,9 @@ The objects:
 
 Two static key facts gate premise A2 and are computed from the key's own transcript program:
 `pvFirstT` (every word of `pv` is absorbed before the first challenge or proof of work) and the
-proof-of-work part of `ProvenRegime`. The WHIR analysis parameters (`logBlowup`, `eta`, `m`)
-stay declared metadata; `WhirParams` says why.
+proof-of-work part of `ProvenRegime`, the gate G4 in unique decoding (`UDBits.lean`). The WHIR
+analysis parameters (`UDSet`: blowup, polynomial size, folds, queries, `w_stack`) stay declared
+metadata of the key. The list decoding gate of round 2 is kept as `ProvenRegimeLD`.
 -/
 
 set_option linter.unusedSectionVars false
@@ -42,11 +43,12 @@ inductive Check where
   /-- A Merkle opening over Midnight's two-input hash. -/
   | merkle (leaf : Nat) (bits : List Nat) (sibs : List Nat) (root : Nat)
 
-/-- The three proof-of-work checks of WHIR. -/
+/-- The proof-of-work checks of SWIRL and WHIR. -/
 inductive PowKind where
   | fold
   | mu
   | query
+  | logup
   deriving DecidableEq
 
 /-- One operation of the Fiat-Shamir transcript of `L` (a duplex over Midnight Poseidon on Fr). -/
@@ -122,8 +124,8 @@ def powMin : List Nat → Nat
   | [] => 0
   | b :: bs => bs.foldl min b
 
-/-- The WHIR analysis parameters of `L`. They are not verifier operations: `mult` (the
-Guruswami-Sudan multiplicity) and `eta` (the slack below the Johnson radius) occur only in the
+/-- The list decoding analysis parameters of round 2 (kept for `ProvenRegimeLD`). They are not
+verifier operations: `mult` (the Guruswami-Sudan multiplicity) and `eta` (the slack below the Johnson radius) occur only in the
 soundness proof, and `logBlowup` occurs in the verifier only through the domain constants of the
 `arith` checks, which this model does not tie to a code. So they stay declared metadata of the
 key, checked against Theorem 1.5 by `thm15Mult`. -/
@@ -150,15 +152,31 @@ structure KeyL where
   nStmt : Nat
   /-- Fixed `pv` length `W` in BabyBear words (lead amendment 4). -/
   pvLen : Nat
-  whir : WhirParams
+  /-- The declared WHIR analysis parameters (unique decoding). -/
+  whir : UDSet
 
-/-- The proven regime of the owner decision (2026-11-11, option b of the paper review): the
+/-- The proof-of-work values of `L` read from its transcript program: each kind's weakest check
+(`0` if the transcript has none, so a missing check earns no credit). The fold and query values
+apply to every fold and every round. One OOD sample per round (WHIR Construction 5.1). -/
+def powVecOf (u : UDSet) (ops : List TOp) : PowVec :=
+  ⟨List.replicate (u.kWhir * u.rounds) (powMin (powList .fold ops)), powMin (powList .mu ops),
+    List.replicate u.rounds (powMin (powList .query ops)), powMin (powList .logup ops),
+    List.replicate (u.rounds - 1) 1⟩
+
+/-- Gate G4, the proven regime of owner decision OD-19: unique decoding (list size 1) with the
+error terms of WHIR Lemma 4.10, Corollary 4.11, Theorem 4.8 (unique decoding branch),
+Theorem 5.2 and Lemma 4.25, and SWIRL Theorems 4.2.4 (unique decoding branch) and 4.2.1, over
+`|EF| = p^4`, with the proof-of-work values read from the transcript program
+(`UDSet.gate`: every grindable term at least 101 bits, every other term at least 100). -/
+def ProvenRegime (vk : KeyL) : Bool := vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
+
+/-- The list decoding regime of the owner decision of 2026-11-11 (option b of the paper review): the
 Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
 unproved p.23 remark that allows `m = 1` is not used), and every folding and `mu` proof of work
 of the transcript at least 21 bits, every query proof of work at least 20 bits. The proof-of-work
-bits are read from the transcript program. -/
-def ProvenRegime (vk : KeyL) : Bool :=
-  vk.whir.logBlowup % 2 == 0 && vk.whir.etaNum != 0 && vk.whir.mult == thm15Mult vk.whir &&
+bits are read from the transcript program. Superseded for `L` by OD-19 (`ProvenRegime`). -/
+def ProvenRegimeLD (w : WhirParams) (vk : KeyL) : Bool :=
+  w.logBlowup % 2 == 0 && w.etaNum != 0 && w.mult == thm15Mult w &&
     21 ≤ powMin (powList .fold vk.transcript) && 21 ≤ powMin (powList .mu vk.transcript) &&
     20 ≤ powMin (powList .query vk.transcript)
 
@@ -321,17 +339,19 @@ structure Premises where
   vkL_ok : KeyOK vkL
   /-- (A1) Knowledge soundness of midnight-proofs PLONK with KZG (AGM, q-type assumption). -/
   wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf → ∃ w, WrapRel X B vkL pub w
-  /-- (A2) Soundness of `L`. The proximity-gap part is the proven Johnson-radius statement
-  (citations per `research/sherlock-design-paper-review-20261111/REVIEW.md`, not read by the
-  Lean lane): BCHKS25 (ECCC TR25-169) Theorem 1.5 as stated, with `m = max(ceil(sqrt(rho)/(2 eta)), 3)`,
-  Theorem 4.5 (batching) and Theorem 4.6 (mutual correlated agreement), in the parameters of
-  `ProvenRegime` (100.2 bits folding, 102.3 bits `mu` batching at S4 with 21-bit PoW, per the
-  paper review). The unproved remark on p.23 (`m < 3`) is not assumed. The rest: WHIR round-by-
-  round soundness, Fiat-Shamir in the random-oracle model (non-interactive error
-  `Q_RO 2^-100 + 3 (Q_RO^2 + 1) / 2^kappa`, SWIRL Cor 4.2.6), the `eq` binding of `pv`
-  (`c m / |EF|`), the squeeze bias. Hypotheses: the packed Fr hash is injective, the transcript
-  absorbs every word of `pv` before any challenge (`pvFirstT`, computed from the transcript),
-  and the key is in the proven regime (proof of work read from the transcript). -/
+  /-- (A2) Soundness of `L` (statements as recorded in
+  `research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md`, which reads the full papers).
+  WHIR round-by-round soundness (WHIR Theorem 5.2 with list size 1) with mutual correlated
+  agreement in unique decoding (WHIR Lemma 4.10, Corollary 4.11, Theorem 4.8 unique decoding
+  branch), the OOD samples of each round (WHIR Lemma 4.25), `mu` batching (SWIRL Theorem 4.2.4,
+  unique decoding branch), LogUp (SWIRL Theorem 4.2.1, total interactions below `p`), the
+  composition of SWIRL Theorem 4.2.5, Fiat-Shamir in the random-oracle model (non-interactive
+  error `Q_RO 2^-100 + 3 (Q_RO^2 + 1) / 2^kappa`, SWIRL Corollary 4.2.6), the `eq` binding of `pv`
+  (`c m / |EF|`, counting core `pv_binding_count`), the squeeze bias. Every term of the WHIR and
+  `mu` part is computed by `UDSet.gate` and checked at 101 bits (grindable) or 100 bits on the
+  key; the bit counts of the frozen set are `lUD_bits`. Hypotheses: the packed Fr hash is
+  injective, the transcript absorbs every word of `pv` before any challenge (`pvFirstT`), and
+  the key passes `ProvenRegime` (proof of work read from the transcript). -/
   lastLayerSound : PackedHashInj X FrDom → pvFirstT vkL.nStmt vkL.pvLen vkL.transcript = true →
     ProvenRegime vkL = true →
     ∀ s pv π, VerifyL X vkL s pv π → ∃ d, RootAccepts pv d s
@@ -426,33 +446,54 @@ theorem public_digest_binds {X : Prims} {FrDom : List Nat → Prop} (h : FrInj X
   exact pack_injective (ha.trans hb.symm) (by omega) hra hrb this
 
 /-- A transcript skeleton of `L` in the order of stark-backend's verifier preamble
-(`verifier/mod.rs:128-175`): commitments, then the public values, then challenges; WHIR rounds
-with 21-bit folding and `mu` proof of work and 20-bit query proof of work. Indices: statement
-`0..1`, `pv` `2..5`, proof from `6`. -/
-def lTranscript (pfold pmu pquery : Nat) : List TOp :=
+(`verifier/mod.rs:128-175`): commitments, then the public values, then challenges, with the LogUp,
+`mu`, folding and query proof of work. Indices: statement `0..1`, `pv` `2..5`, proof from `6`. -/
+def lTranscript (pfold pmu pquery plogup : Nat) : List TOp :=
+  [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 26 plogup .logup,
+   .squeeze [27, 28, 29, 30, 31], .pow 12 pmu .mu,
+   .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold .fold,
+   .squeeze [20, 21, 22, 23, 24], .pow 25 pquery .query]
+
+/-- The example key at the OD-19 set: two statement words, four `pv` words. -/
+def lKey (pfold pmu pquery plogup : Nat) : KeyL :=
+  ⟨[], lTranscript pfold pmu pquery plogup, 2, 4, lUD⟩
+
+/-- Gate G4 on the OD-19 key: `pv` is absorbed before the first challenge, and the transcript's
+proof of work (folding 0, `mu` 6, query 20, LogUp 18) passes `ProvenRegime`. -/
+theorem lKey_ok : pvFirstT 2 4 (lTranscript 0 6 20 18) = true ∧
+    ProvenRegime (lKey 0 6 20 18) = true := by decide
+
+/-- The transcript's proof of work is what the gate reads: `mu` PoW 5 fails it. -/
+theorem lKey_mu5_not_proven : ProvenRegime (lKey 0 5 20 18) = false := by decide
+
+/-- Query PoW 19 fails it. -/
+theorem lKey_query19_not_proven : ProvenRegime (lKey 0 6 19 18) = false := by decide
+
+/-- A transcript without its LogUp proof of work (here 17 bits, below the frozen 18) fails it. -/
+theorem lKey_logup17_not_proven : ProvenRegime (lKey 0 6 20 17) = false := by decide
+
+/-- The list decoding transcript of round 2 (21-bit folding and `mu`, 20-bit query PoW). -/
+def lTranscriptLD (pfold pmu pquery : Nat) : List TOp :=
   [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 12 pmu .mu,
    .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold .fold,
    .squeeze [20, 21, 22, 23, 24], .pow 25 pquery .query]
 
-/-- S4 after the owner decision: log blowup 4, `eta = 1/8`, `m = 3`. -/
+/-- S4 after the owner decision of 2026-11-11: log blowup 4, `eta = 1/8`, `m = 3`. -/
 def s4Whir : WhirParams := ⟨4, 1, 8, 3⟩
 
-/-- The example key: two statement words, four `pv` words. -/
-def lKey (pfold pmu pquery : Nat) (w : WhirParams) : KeyL :=
-  ⟨[], lTranscript pfold pmu pquery, 2, 4, w⟩
+def lKeyLD (pfold pmu pquery : Nat) : KeyL := ⟨[], lTranscriptLD pfold pmu pquery, 2, 4, lUD⟩
 
 theorem s4_mult_three : thm15Mult s4Whir = 3 := by decide
 
-/-- The example key absorbs `pv` before its first challenge and is in the proven regime. -/
-theorem lKey_ok : pvFirstT 2 4 (lTranscript 21 21 20) = true ∧
-    ProvenRegime (lKey 21 21 20 s4Whir) = true := by decide
+/-- The round 2 key is in the list decoding regime. -/
+theorem lKeyLD_ok : ProvenRegimeLD s4Whir (lKeyLD 21 21 20) = true := by decide
 
-/-- The former 15-bit folding and `mu` proof of work is outside the proven regime. -/
-theorem s4_pow15_not_proven : ProvenRegime (lKey 15 15 20 s4Whir) = false := by decide
+/-- The former 15-bit folding and `mu` proof of work is outside the list decoding regime. -/
+theorem s4_pow15_not_proven : ProvenRegimeLD s4Whir (lKeyLD 15 15 20) = false := by decide
 
-/-- The `m = 1` reading (the p.23 remark) is outside the proven regime. -/
-theorem remark_m1_not_proven : ProvenRegime (lKey 21 21 20 { s4Whir with mult := 1 }) = false := by
-  decide
+/-- The `m = 1` reading (the p.23 remark) is outside the list decoding regime. -/
+theorem remark_m1_not_proven :
+    ProvenRegimeLD { s4Whir with mult := 1 } (lKeyLD 21 21 20) = false := by decide
 
 /-- A transcript that draws a challenge before absorbing `pv` fails the key check. -/
 theorem late_pv_rejected :
