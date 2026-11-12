@@ -400,3 +400,10 @@
 - BabyBear: 239 of 239 suite tests pass before and after; 4 BabyBear proofs byte-identical (MEASURED). Downstream stark-bench-ovm --features bls checks clean.
 - Fr: Fibonacci and LogUp fixtures prove and verify on both engines; 256 of 256 byte flips and 3 of 3 public-value changes refused; D3 terms from the config equal M7 2b.2 to 4 decimals in 4 cases (MEASURED). At the L_Fr set a 2^12-row AIR proves in 173 to 175 s on a loaded host, proof 300,269 bytes.
 - sample_bits at Fr: statistical distance (1 - 2^-bits) / r < 2^-254 (DERIVED, r = 1 mod 2^32). Open: OD-18 separate L_Fr tags. Next: E2. Source: research/sherlock-e1-fr-backend-20261112/RESULTS.md on branch e1-fr-backend.
+
+## [2026-11-12 09:30] measurement | E2: L_Fr increments I0 to I5b pass; route = dedicated L verifier on a tape
+- Route (PLAN.md): dedicated verifier of the L vk with the L shape pinned in the L_Fr key (LEAD D-1), as a straight-line tape over generic Fr AIRs; not a port of OpenVM recursion. L_Fr tags u = 5, 6, 7 (LEAD D-3, OD-18).
+- I0: real L fixture on disk (430,073 bytes, heights equal D10), verifies from disk, 8 of 8 byte flips refused. I1: L_Fr domains bound in both directions (backend e8223ed).
+- I2 to I5 (openvm e8fdf87): BabyBear and EF4 in Fr with canonical range checks, Midnight Poseidon AIR (175 columns), write-once memory tape, L transcript on the tape (Pack, unique 5-digit Split); every negative control refused (MEASURED).
+- I5b (96a1897): the stock verifier's transcript on the real L proof is 17,267 observes, 5 commits, 1,500 samples; on the tape 1,192 Perm, 2,275 Pack, 362 Split; all samples equal; proved and verified (MEASURED).
+- Backend fix 5f698b5: per-bus trace-height bound was the low 32 bits of the field order (1 at Fr); BabyBear bytes unchanged. Next: I6 tape generator (shape pin, preamble, GKR). Source: research/sherlock-e2-lfr-20261112/RESULTS.md on branch e2-lfr.

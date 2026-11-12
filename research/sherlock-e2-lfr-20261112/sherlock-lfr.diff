@@ -1,0 +1,3632 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 0f154bf..193e060 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -7636,6 +7636,25 @@ dependencies = [
+  "lazy_static",
+ ]
+ 
++[[package]]
++name = "sherlock-lfr"
++version = "2.1.0"
++dependencies = [
++ "bitcode",
++ "itertools 0.14.0",
++ "midnight-circuits",
++ "num-bigint 0.4.6",
++ "openvm-cpu-backend",
++ "openvm-poseidon2-air",
++ "openvm-recursion-circuit",
++ "openvm-stark-backend",
++ "openvm-stark-sdk",
++ "p3-baby-bear",
++ "p3-field",
++ "rand 0.9.2",
++ "serde_json",
++]
++
+ [[package]]
+ name = "shlex"
+ version = "1.3.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index a90d8c7..17abd4f 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -76,6 +76,7 @@ members = [
+   "crates/static-verifier",
+   "scripts",
+   "crates/stark-bench-ovm",
++  "crates/sherlock-lfr",
+ ]
+ # Keep this in sync with `members`, except for `openvm-certified-verifier`. That crate requires the
+ # pinned Lean toolchain and is built and tested by `.github/workflows/certified-verifier.yml`.
+diff --git a/crates/sherlock-lfr/Cargo.toml b/crates/sherlock-lfr/Cargo.toml
+new file mode 100644
+index 0000000..49d01d8
+--- /dev/null
++++ b/crates/sherlock-lfr/Cargo.toml
+@@ -0,0 +1,33 @@
++[package]
++name = "sherlock-lfr"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++description = "Sherlock E2: the Fr recursion AIR set L_Fr that verifies one L proof"
++
++[dependencies]
++openvm-stark-backend = { workspace = true }
++openvm-stark-sdk = { workspace = true, features = ["cpu-backend", "bls12381-fr-poseidon"] }
++openvm-cpu-backend = { workspace = true }
++p3-baby-bear = { workspace = true }
++p3-field = { workspace = true }
++itertools = { workspace = true }
++num-bigint = { workspace = true }
++rand = { workspace = true, features = ["std", "std_rng"] }
++serde_json = { workspace = true }
++bitcode = { workspace = true }
++midnight-circuits = { version = "=7.3.0", default-features = false }
++# fixtures: the bench chain W1 -> node -> L (examples and tests)
++openvm-recursion-circuit = { workspace = true }
++openvm-poseidon2-air = { workspace = true }
++
++[features]
++default = ["parallel"]
++parallel = [
++  "openvm-stark-backend/parallel",
++  "openvm-stark-sdk/parallel",
++  "openvm-cpu-backend/parallel",
++  "openvm-recursion-circuit/parallel",
++  "openvm-poseidon2-air/parallel",
++]
+diff --git a/crates/sherlock-lfr/examples/l_fixture.rs b/crates/sherlock-lfr/examples/l_fixture.rs
+new file mode 100644
+index 0000000..7191ea9
+--- /dev/null
++++ b/crates/sherlock-lfr/examples/l_fixture.rs
+@@ -0,0 +1,170 @@
++//! I0: make the real `L` proof (M7 `l_fr.rs` chain, OD-19 sets) and write it to the fixture
++//! directory with the `L` vk and the node vk. Then re-read the files and verify the proof from
++//! disk with the stock verifier. Prints one JSON object on stdout.
++//!
++//! Usage: `l_fixture` (directory `$E2_FIXTURE_DIR` or `~/.cache/e2-lfr/fixture`).
++
++use std::{sync::Arc, time::Instant};
++
++use openvm_cpu_backend::CpuBackend;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    keygen::types::MultiStarkVerifyingKey,
++    p3_field::PrimeCharacteristicRing,
++    proof::Proof,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    AirRef, StarkEngine,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
++    baby_bear_poseidon2::{
++        default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
++        DuplexSpongeRecorder,
++    },
++    MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use serde_json::json;
++use sherlock_lfr::fixture::{self, internal_ud, l_ud, NodeSC, LSC};
++
++type F = BabyBear;
++type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
++type RootEng = BabyBearBls12381PoseidonCpuEngine;
++
++fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<Proof<NodeSC>>) {
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
++    let engine = Eng::new(app_params_with_100_bits_security(
++        MAX_APP_LOG_STACKED_HEIGHT,
++    ));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let mut proofs = vec![];
++    for _ in 0..n {
++        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
++            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++            .collect();
++        let trace = chip.generate_trace(inputs);
++        let cm = ColMajorMatrix::from_row_major(&trace);
++        let ctx = ProvingContext::new(vec![(
++            0,
++            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
++        )]);
++        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
++        engine.verify(&vk, &proof).expect("w1 verify");
++        proofs.push(proof);
++    }
++    (vk, proofs)
++}
++
++fn node_proof(
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    proofs: &[Proof<NodeSC>],
++) -> (MultiStarkVerifyingKey<NodeSC>, Proof<NodeSC>) {
++    let engine = Eng::new(internal_ud());
++    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
++        Arc::new(child_vk.clone()),
++        Default::default(),
++    );
++    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
++    let airs = circuit.airs::<NodeSC>();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(child_pcs),
++        proofs,
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let proof = engine
++        .prove(
++            &d_pk,
++            ProvingContext::new(ctxs.into_iter().enumerate().collect()),
++        )
++        .expect("node prove");
++    engine.verify(&vk, &proof).expect("node verify");
++    (vk, proof)
++}
++
++fn main() {
++    let t0 = Instant::now();
++    let (w1_vk, proofs) = w1_proofs(2, 20);
++    let (node_vk, node_pf) = node_proof(&w1_vk, &proofs);
++    drop(proofs);
++    eprintln!("node proof done {:.1}s", t0.elapsed().as_secs_f64());
++    let node_vk = Arc::new(node_vk);
++
++    let engine = RootEng::new(l_ud(48));
++    let cfg = VerifierConfig {
++        has_cached: true,
++        ..Default::default()
++    };
++    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(
++        node_vk.clone(),
++        cfg,
++    );
++    let airs = AggregationSubCircuit::airs::<LSC>(&l);
++    let (pk, l_vk) = engine.keygen(&airs);
++    let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
++    let ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        &node_vk,
++        cached,
++        std::slice::from_ref(&node_pf),
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let t = Instant::now();
++    let l_proof = engine
++        .prove(
++            &d_pk,
++            ProvingContext::new(ctxs.into_iter().enumerate().collect()),
++        )
++        .expect("L prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    engine.verify(&l_vk, &l_proof).expect("L verify");
++    eprintln!("L prove {prove_s:.1}s");
++
++    let d = fixture::dir();
++    let nbytes = fixture::write(&d, &l_vk, &l_proof, &node_vk).expect("write fixture");
++
++    // Re-read from disk and verify with the stock verifier.
++    let fx = fixture::load(&d).expect("load fixture");
++    let t = Instant::now();
++    let ok = engine.verify(&fx.l_vk, &fx.l_proof);
++    let verify_s = t.elapsed().as_secs_f64();
++    assert!(ok.is_ok(), "L proof from disk refused: {ok:?}");
++    let lh: Vec<Option<usize>> = fx
++        .l_proof
++        .trace_vdata
++        .iter()
++        .map(|v| v.as_ref().map(|v| v.log_height))
++        .collect();
++    let out = json!({
++        "dir": d.display().to_string(),
++        "l_proof_bytes": nbytes,
++        "l_vk_bytes": std::fs::metadata(d.join(fixture::L_VK)).map(|m| m.len()).unwrap_or(0),
++        "node_vk_bytes": std::fs::metadata(d.join(fixture::NODE_VK)).map(|m| m.len()).unwrap_or(0),
++        "l_num_airs": fx.l_vk.inner.per_air.len(),
++        "l_log_heights": lh,
++        "l_pre_hash": format!("{:?}", fx.l_vk.pre_hash),
++        "l_prove_s": prove_s,
++        "l_verify_from_disk_s": verify_s,
++        "verify_from_disk_ok": true,
++        "wall_s": t0.elapsed().as_secs_f64(),
++        "rayon_threads": std::env::var("RAYON_NUM_THREADS").ok(),
++    });
++    std::fs::write(
++        d.join(fixture::L_JSON),
++        serde_json::to_string_pretty(&out).unwrap(),
++    )
++    .expect("write json");
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/sherlock-lfr/src/alu.rs b/crates/sherlock-lfr/src/alu.rs
+new file mode 100644
+index 0000000..263ffa0
+--- /dev/null
++++ b/crates/sherlock-lfr/src/alu.rs
+@@ -0,0 +1,275 @@
++//! `BbAlu`: BabyBear and `EF4` add, sub and mul emulated in Fr, one op per row.
++//!
++//! Every value is a canonical BabyBear representative in `[0, p)` held in one Fr cell; an `EF4`
++//! value is 4 cells. A row computes `c = a op b` coefficient-wise as the Fr identity
++//!
++//! ```text
++//! e_k(a, b) = q_k * p + c_k,     q_k = l0 + 2^16 l1 + 2^32 l2,     c_k = lo + 2^16 hi
++//! ```
++//!
++//! with `e_k = a_k + b_k` (add), `a_k - b_k + p` (sub), or the `k`-th coefficient of the
++//! convolution of `a` and `b` reduced by `x^4 = 11` (mul). A BabyBear op is an `EF4` op whose
++//! inputs have zero coefficients 1 to 3.
++//!
++//! **Why the Fr identity is an integer identity.** For canonical inputs, `0 <= e_k < 34 p^2 <
++//! 2^68`. The 16-bit lookups give `q_k < 2^48` and `c_k < 2^32`, so `q_k p + c_k < 2^80`. Both
++//! sides are integers below the Fr modulus `r > 2^254`, so equality mod `r` is equality of
++//! integers. **Why `c_k` is canonical.** `lo`, `hi` and `0x7800 - hi` are each in `[0, 2^16)`,
++//! so `hi <= 0x7800`; and `hi = 0x7800` forces `lo = 0` (an is-zero gadget on `hi - 0x7800`).
++//! So `c_k <= 0x7800_0000 = p - 1`. With `c_k < p` and the integer identity, `c_k = e_k mod p`
++//! is unique; the quotient is then unique too.
++//!
++//! Columns per row (43): selectors `add, sub, mul`; `a[4], b[4], c[4]`; `q` limbs `[4][3]`;
++//! `lo[4], hi[4]`; `inv[4], is_max[4]`. 24 lookups on [`RANGE_BUS`] per row (count 1, so padding
++//! rows look up their zeros and `0x7800` too). Constraint degree 3.
++
++use openvm_stark_backend::{
++    interaction::InteractionBuilder,
++    p3_air::{Air, BaseAir},
++    p3_field::{Field, PrimeCharacteristicRing},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++
++use crate::{
++    bb::{ef4_mul_unreduced, P, P_MINUS_1_HI, W},
++    range::{RangeCounts, RANGE_BUS},
++};
++
++pub const SEL_ADD: usize = 0;
++pub const SEL_SUB: usize = 1;
++pub const SEL_MUL: usize = 2;
++pub const A: usize = 3;
++pub const B: usize = A + 4;
++pub const C: usize = B + 4;
++pub const QL: usize = C + 4;
++pub const LO: usize = QL + 12;
++pub const HI: usize = LO + 4;
++pub const INV: usize = HI + 4;
++pub const IS_MAX: usize = INV + 4;
++pub const ALU_WIDTH: usize = IS_MAX + 4;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum AluKind {
++    Add,
++    Sub,
++    Mul,
++}
++
++#[derive(Clone, Copy, Debug)]
++pub struct AluOp {
++    pub kind: AluKind,
++    pub a: [u64; 4],
++    pub b: [u64; 4],
++}
++
++impl AluOp {
++    /// The unreduced integers `e_k`.
++    pub fn unreduced(&self) -> [u128; 4] {
++        match self.kind {
++            AluKind::Add => std::array::from_fn(|k| (self.a[k] + self.b[k]) as u128),
++            AluKind::Sub => std::array::from_fn(|k| (self.a[k] + P - self.b[k]) as u128),
++            AluKind::Mul => ef4_mul_unreduced(&self.a, &self.b),
++        }
++    }
++
++    pub fn result(&self) -> [u64; 4] {
++        let e = self.unreduced();
++        std::array::from_fn(|k| (e[k] % P as u128) as u64)
++    }
++}
++
++#[derive(Clone, Copy, Debug, Default)]
++pub struct BbAluAir;
++
++impl<F> BaseAir<F> for BbAluAir {
++    fn width(&self) -> usize {
++        ALU_WIDTH
++    }
++}
++impl<F> BaseAirWithPublicValues<F> for BbAluAir {}
++impl<F> PartitionedBaseAir<F> for BbAluAir {}
++
++impl<AB: InteractionBuilder> Air<AB> for BbAluAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x = |i: usize| -> AB::Expr { r[i].into() };
++        let c = AB::Expr::from_u64;
++        let (add, sub, mul) = (x(SEL_ADD), x(SEL_SUB), x(SEL_MUL));
++        builder.assert_bool(add.clone());
++        builder.assert_bool(sub.clone());
++        builder.assert_bool(mul.clone());
++        builder.assert_bool(add.clone() + sub.clone() + mul.clone());
++
++        let a: [AB::Expr; 4] = std::array::from_fn(|k| x(A + k));
++        let b: [AB::Expr; 4] = std::array::from_fn(|k| x(B + k));
++        for k in 0..4 {
++            // Convolution coefficient k, reduced by x^4 = W.
++            let mut conv = AB::Expr::ZERO;
++            for i in 0..4 {
++                for j in 0..4 {
++                    if i + j == k {
++                        conv += a[i].clone() * b[j].clone();
++                    } else if i + j == k + 4 {
++                        conv += a[i].clone() * b[j].clone() * c(W);
++                    }
++                }
++            }
++            let e = add.clone() * (a[k].clone() + b[k].clone())
++                + sub.clone() * (a[k].clone() - b[k].clone() + c(P))
++                + mul.clone() * conv;
++            let q = x(QL + 3 * k) + x(QL + 3 * k + 1) * c(1 << 16) + x(QL + 3 * k + 2) * c(1 << 32);
++            let ck = x(C + k);
++            builder.assert_eq(e, q * c(P) + ck.clone());
++            eval_canonical(builder, ck, x(LO + k), x(HI + k), x(INV + k), x(IS_MAX + k));
++            for l in 0..3 {
++                builder.push_interaction(RANGE_BUS, [x(QL + 3 * k + l)], AB::Expr::ONE, 1);
++            }
++        }
++    }
++}
++
++/// `c = lo + 2^16 hi` with `c < p`: `lo`, `hi` and `0x7800 - hi` are 16-bit lookups (count 1),
++/// `hi = 0x7800 -> lo = 0` through the is-zero gadget `is_max = 1 - (hi - 0x7800) inv`.
++pub fn eval_canonical<AB: InteractionBuilder>(
++    builder: &mut AB,
++    c: AB::Expr,
++    lo: AB::Expr,
++    hi: AB::Expr,
++    inv: AB::Expr,
++    is_max: AB::Expr,
++) {
++    let k = AB::Expr::from_u64;
++    builder.assert_eq(c, lo.clone() + hi.clone() * k(1 << 16));
++    let z = hi.clone() - k(P_MINUS_1_HI);
++    builder.assert_eq(is_max.clone(), AB::Expr::ONE - z.clone() * inv);
++    builder.assert_zero(z * is_max.clone());
++    builder.assert_zero(is_max * lo.clone());
++    builder.push_interaction(RANGE_BUS, [lo], AB::Expr::ONE, 1);
++    builder.push_interaction(RANGE_BUS, [hi.clone()], AB::Expr::ONE, 1);
++    builder.push_interaction(RANGE_BUS, [k(P_MINUS_1_HI) - hi], AB::Expr::ONE, 1);
++}
++
++/// Witness cells `(lo, hi, inv, is_max)` of the canonical gadget for an integer `c < 2^32`.
++pub fn canonical_cells<F: Field>(c: u64) -> [F; 4] {
++    let (lo, hi) = (c & 0xffff, c >> 16);
++    let z = F::from_u64(hi) - F::from_u64(P_MINUS_1_HI);
++    let (inv, is_max) = if z.is_zero() {
++        (F::ZERO, F::ONE)
++    } else {
++        (z.inverse(), F::ZERO)
++    };
++    [F::from_u64(lo), F::from_u64(hi), inv, is_max]
++}
++
++/// One ALU row as integers (before conversion to field cells). Tests change these to build
++/// invalid witnesses.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct AluRow {
++    pub sel: [u64; 3],
++    pub a: [u64; 4],
++    pub b: [u64; 4],
++    pub c: [u64; 4],
++    pub ql: [[u64; 3]; 4],
++    pub lo: [u64; 4],
++    pub hi: [u64; 4],
++}
++
++impl AluRow {
++    pub fn padding() -> Self {
++        Self {
++            sel: [0; 3],
++            a: [0; 4],
++            b: [0; 4],
++            c: [0; 4],
++            ql: [[0; 3]; 4],
++            lo: [0; 4],
++            hi: [0; 4],
++        }
++    }
++
++    /// The honest row of an op.
++    pub fn from_op(op: &AluOp) -> Self {
++        let e = op.unreduced();
++        let mut row = Self::padding();
++        row.sel = match op.kind {
++            AluKind::Add => [1, 0, 0],
++            AluKind::Sub => [0, 1, 0],
++            AluKind::Mul => [0, 0, 1],
++        };
++        row.a = op.a;
++        row.b = op.b;
++        for k in 0..4 {
++            let q = (e[k] / P as u128) as u64;
++            let ck = (e[k] % P as u128) as u64;
++            row.c[k] = ck;
++            row.ql[k] = [q & 0xffff, (q >> 16) & 0xffff, q >> 32];
++            row.lo[k] = ck & 0xffff;
++            row.hi[k] = ck >> 16;
++        }
++        row
++    }
++
++    /// Cells of the row; `inv` and `is_max` are derived from `hi`. A limb that does not fit is
++    /// written as is (the lookup then fails).
++    pub fn cells<F: Field>(&self) -> Vec<F> {
++        let mut v = vec![F::ZERO; ALU_WIDTH];
++        let f = |x: u64| F::from_u64(x);
++        for i in 0..3 {
++            v[SEL_ADD + i] = f(self.sel[i]);
++        }
++        for k in 0..4 {
++            v[A + k] = f(self.a[k]);
++            v[B + k] = f(self.b[k]);
++            v[C + k] = f(self.c[k]);
++            for l in 0..3 {
++                v[QL + 3 * k + l] = f(self.ql[k][l]);
++            }
++            v[LO + k] = f(self.lo[k]);
++            v[HI + k] = f(self.hi[k]);
++            let z = f(self.hi[k]) - f(P_MINUS_1_HI);
++            if z.is_zero() {
++                v[IS_MAX + k] = F::ONE;
++            } else {
++                v[INV + k] = z.inverse();
++            }
++        }
++        v
++    }
++
++    /// The 24 range lookups of the row, in [`BbAluAir`] order. The values are field elements
++    /// mapped back to `u64` only when they fit, so a negative `0x7800 - hi` is reported as `None`.
++    pub fn lookups(&self) -> Vec<Option<u64>> {
++        let mut out = vec![];
++        for k in 0..4 {
++            out.push(Some(self.lo[k]));
++            out.push(Some(self.hi[k]));
++            out.push(P_MINUS_1_HI.checked_sub(self.hi[k]));
++            for l in 0..3 {
++                out.push(Some(self.ql[k][l]));
++            }
++        }
++        out
++    }
++}
++
++/// Trace of the ALU rows padded to a power of two (at least 2), and the range counts they need.
++/// A lookup value outside `[0, 2^16)` is not counted (so the bus does not balance).
++pub fn alu_trace<F: Field>(rows: &[AluRow], counts: &mut RangeCounts) -> RowMajorMatrix<F> {
++    let h = rows.len().next_power_of_two().max(2);
++    let pad = AluRow::padding();
++    let mut v = Vec::with_capacity(h * ALU_WIDTH);
++    for i in 0..h {
++        let row = rows.get(i).unwrap_or(&pad);
++        for x in row.lookups().into_iter().flatten() {
++            if (x as usize) < crate::range::RANGE_SIZE {
++                counts.add(x);
++            }
++        }
++        v.extend(row.cells::<F>());
++    }
++    let m = RowMajorMatrix::new(v, ALU_WIDTH);
++    debug_assert_eq!(m.height(), h);
++    m
++}
+diff --git a/crates/sherlock-lfr/src/bb.rs b/crates/sherlock-lfr/src/bb.rs
+new file mode 100644
+index 0000000..8ba7af9
+--- /dev/null
++++ b/crates/sherlock-lfr/src/bb.rs
+@@ -0,0 +1,44 @@
++//! BabyBear and `EF4 = BabyBear[x] / (x^4 - 11)` as integers, for trace generation.
++//!
++//! In `L_Fr` a BabyBear value is one Fr cell that holds its canonical representative in `[0, p)`.
++//! An `EF4` value is 4 such cells (coefficients of `1, x, x^2, x^3`).
++
++use p3_baby_bear::BabyBear;
++use p3_field::{
++    extension::BinomialExtensionField, BasedVectorSpace, PrimeCharacteristicRing, PrimeField32,
++};
++
++/// The BabyBear modulus `p = 2^31 - 2^27 + 1`.
++pub const P: u64 = 2_013_265_921;
++/// `p - 1 = 0x7800_0000`: the high 16-bit limb of `p - 1` is `0x7800` and its low limb is 0.
++pub const P_MINUS_1_HI: u64 = 0x7800;
++/// `EF4` is `BabyBear[x] / (x^4 - W)`.
++pub const W: u64 = 11;
++
++pub type Ef4 = BinomialExtensionField<BabyBear, 4>;
++
++/// The integer convolution of `a * b` reduced by `x^4 = W`, before reduction mod p.
++/// Each entry is below `34 p^2 < 2^68`.
++pub fn ef4_mul_unreduced(a: &[u64; 4], b: &[u64; 4]) -> [u128; 4] {
++    let mut c = [0u128; 4];
++    for i in 0..4 {
++        for j in 0..4 {
++            let t = a[i] as u128 * b[j] as u128;
++            if i + j < 4 {
++                c[i + j] += t;
++            } else {
++                c[i + j - 4] += W as u128 * t;
++            }
++        }
++    }
++    c
++}
++
++pub fn to_ef4(a: &[u64; 4]) -> Ef4 {
++    Ef4::from_basis_coefficients_fn(|i| BabyBear::from_u64(a[i]))
++}
++
++pub fn from_ef4(a: Ef4) -> [u64; 4] {
++    let c: &[BabyBear] = a.as_basis_coefficients_slice();
++    std::array::from_fn(|i| c[i].as_canonical_u32() as u64)
++}
+diff --git a/crates/sherlock-lfr/src/fixture.rs b/crates/sherlock-lfr/src/fixture.rs
+new file mode 100644
+index 0000000..7f267d7
+--- /dev/null
++++ b/crates/sherlock-lfr/src/fixture.rs
+@@ -0,0 +1,126 @@
++//! I0: the real `L` proof as a fixture on disk.
++//!
++//! The chain is M7's `l_fr.rs` unchanged: two W1 proofs (`Poseidon2SubAir`, app params, 2^20
++//! rows) -> node `VerifierSubCircuit::<2>` at the OD-19 internal set -> `L_cached`
++//! (`VerifierSubCircuit::<1>`, `has_cached = true`) at the OD-19 `L` set with the BabyBear-base,
++//! Midnight-Poseidon-Fr config (u = 1, 2, 3). The example `l_fixture` writes the files below;
++//! [`load`] reads them back.
++
++use std::{
++    fs,
++    path::{Path, PathBuf},
++};
++
++use openvm_stark_backend::{
++    codec::{Decode, Encode},
++    keygen::types::MultiStarkVerifyingKey,
++    proof::Proof,
++    SystemParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonConfig,
++    baby_bear_poseidon2::BabyBearPoseidon2Config, params_with_100_bits_security,
++};
++
++/// Config of `L` (BabyBear base, `EF4`, Midnight Poseidon over Fr, u = 1, 2, 3).
++pub type LSC = BabyBearBls12381PoseidonConfig;
++/// Config of the node below `L` (stock BabyBear Poseidon2).
++pub type NodeSC = BabyBearPoseidon2Config;
++
++pub const L_VK: &str = "l_vk.bitcode";
++pub const L_PROOF: &str = "l_proof.bin";
++pub const NODE_VK: &str = "node_vk.bitcode";
++pub const L_JSON: &str = "l_fixture.json";
++
++/// Fixture directory: `$E2_FIXTURE_DIR`, else `~/.cache/e2-lfr/fixture`.
++pub fn dir() -> PathBuf {
++    if let Ok(d) = std::env::var("E2_FIXTURE_DIR") {
++        return PathBuf::from(d);
++    }
++    let home = std::env::var("HOME").expect("HOME");
++    Path::new(&home).join(".cache/e2-lfr/fixture")
++}
++
++#[allow(clippy::too_many_arguments)]
++pub fn ud_params(
++    b: usize,
++    l_skip: usize,
++    n_stack: usize,
++    w_stack: usize,
++    mu: usize,
++    qpow: usize,
++    queries: &[usize],
++    logup: usize,
++) -> SystemParams {
++    let mut p = params_with_100_bits_security(
++        b,
++        l_skip,
++        n_stack,
++        w_stack,
++        0,
++        mu,
++        WhirProximityStrategy::UniqueDecoding,
++        4,
++        qpow,
++        4,
++    );
++    assert_eq!(p.whir.rounds.len(), queries.len(), "WHIR round count");
++    for (r, &q) in p.whir.rounds.iter_mut().zip(queries) {
++        r.num_queries = q;
++    }
++    p.logup.pow_bits = logup;
++    p
++}
++
++/// OD-19 internal set (UD-SIZING.md 5.1).
++pub fn internal_ud() -> SystemParams {
++    ud_params(3, 2, 17, 512, 9, 21, &[97, 82, 81], 18)
++}
++
++/// OD-19 `L` set (UD-SIZING.md 5.1) at a `w_stack` bound.
++pub fn l_ud(w_stack: usize) -> SystemParams {
++    ud_params(3, 2, 18, w_stack, 6, 20, &[98, 83, 82], 18)
++}
++
++/// The `L` fixture read from disk.
++pub struct LFixture {
++    pub l_vk: MultiStarkVerifyingKey<LSC>,
++    pub l_proof: Proof<LSC>,
++    pub l_proof_bytes: Vec<u8>,
++    pub node_vk: MultiStarkVerifyingKey<NodeSC>,
++}
++
++pub fn write(
++    d: &Path,
++    l_vk: &MultiStarkVerifyingKey<LSC>,
++    l_proof: &Proof<LSC>,
++    node_vk: &MultiStarkVerifyingKey<NodeSC>,
++) -> std::io::Result<usize> {
++    fs::create_dir_all(d)?;
++    let bytes = l_proof.encode_to_vec()?;
++    fs::write(d.join(L_PROOF), &bytes)?;
++    fs::write(
++        d.join(L_VK),
++        bitcode::serialize(l_vk).expect("vk serialize"),
++    )?;
++    fs::write(
++        d.join(NODE_VK),
++        bitcode::serialize(node_vk).expect("vk serialize"),
++    )?;
++    Ok(bytes.len())
++}
++
++pub fn load(d: &Path) -> std::io::Result<LFixture> {
++    let l_proof_bytes = fs::read(d.join(L_PROOF))?;
++    let l_proof = Proof::<LSC>::decode_from_bytes(&l_proof_bytes)?;
++    let l_vk = bitcode::deserialize(&fs::read(d.join(L_VK))?)
++        .map_err(|e| std::io::Error::other(format!("l_vk: {e}")))?;
++    let node_vk = bitcode::deserialize(&fs::read(d.join(NODE_VK))?)
++        .map_err(|e| std::io::Error::other(format!("node_vk: {e}")))?;
++    Ok(LFixture {
++        l_vk,
++        l_proof,
++        l_proof_bytes,
++        node_vk,
++    })
++}
+diff --git a/crates/sherlock-lfr/src/fr.rs b/crates/sherlock-lfr/src/fr.rs
+new file mode 100644
+index 0000000..841a6cd
+--- /dev/null
++++ b/crates/sherlock-lfr/src/fr.rs
+@@ -0,0 +1,88 @@
++//! I5: Fr-word ops of the multi-field transcript of `L`.
++//!
++//! - **Pack**: `sum_i b_i 2^(31 i)` of 1 to 8 canonical BabyBear words (`pack_f_to_sf`).
++//! - **Split**: the 5 low base-`p` digits of a canonical Fr word `x` (`extract_samples`):
++//!   `x = sum_{i<5} d_i p^i + p^5 h` as integers, `d_i` canonical BabyBear.
++//!
++//! **Uniqueness of the split.** The AIR checks the identity in Fr, so a witness could represent
++//! `x + r` instead of `x`. It is refused by bounding the integer `T = low + p^5 h` (`low = sum
++//! d_i p^i < p^5`) below `r`: with `H = floor((r - 1) / p^5)` and `L = (r - 1) - p^5 H`, the AIR
++//! range-checks `h` and `H - h` to 112 bits (so `0 <= h <= H`, since `H < 2^101`), and when
++//! `h = H` it range-checks `L - low` to 160 bits (so `low <= L`). Then `T <= r - 1`, and `T = x
++//! mod r` with `0 <= x < r` gives `T = x`: the digits are the stock digits.
++
++use num_bigint::BigUint;
++use openvm_stark_backend::p3_field::{Field, PrimeCharacteristicRing, PrimeField};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++
++use crate::bb::P;
++
++/// Limbs of `h` and of `H - h` (16 bits each: 112 bits).
++pub const H_LIMBS: usize = 7;
++/// Limbs of `L - low` when `h = H` (160 bits).
++pub const V_LIMBS: usize = 10;
++
++pub fn fr_from_big(x: &BigUint) -> Fr {
++    Fr::from_biguint(x.clone()).expect("below r")
++}
++
++pub fn pack(words: &[u64]) -> Fr {
++    assert!(words.len() <= 8 && words.iter().all(|&w| w < P));
++    let base = Fr::from_u64(1 << 31);
++    words
++        .iter()
++        .rev()
++        .fold(Fr::ZERO, |acc, &w| acc * base + Fr::from_u64(w))
++}
++
++pub struct SplitConsts {
++    /// `p^i` for `i = 0..=5`.
++    pub p_pow: [BigUint; 6],
++    pub h_max: BigUint,
++    pub low_max: BigUint,
++}
++
++pub fn split_consts() -> SplitConsts {
++    let r = Fr::order();
++    let p = BigUint::from(P);
++    let p_pow: [BigUint; 6] = std::array::from_fn(|i| p.pow(i as u32));
++    let rm1 = &r - 1u32;
++    let h_max = &rm1 / &p_pow[5];
++    let low_max = &rm1 - &h_max * &p_pow[5];
++    assert!(h_max.bits() <= 16 * H_LIMBS as u64);
++    assert!(p_pow[5].bits() <= 16 * V_LIMBS as u64);
++    SplitConsts {
++        p_pow,
++        h_max,
++        low_max,
++    }
++}
++
++/// The stock digits and the high part `h`.
++pub fn split(x: Fr) -> ([u64; 5], BigUint) {
++    let p = BigUint::from(P);
++    let mut v = x.as_canonical_biguint();
++    let d = std::array::from_fn(|_| {
++        let r = (&v % &p).to_u64_digits().first().copied().unwrap_or(0);
++        v /= &p;
++        r
++    });
++    (d, v)
++}
++
++/// 16-bit limbs of `x` (little-endian), `n` of them; panics if `x` does not fit.
++pub fn limbs16(x: &BigUint, n: usize) -> Vec<u64> {
++    assert!(x.bits() <= 16 * n as u64, "value does not fit {n} limbs");
++    let mut v = x.clone();
++    (0..n)
++        .map(|_| {
++            let l = (&v & BigUint::from(0xffffu32))
++                .to_u64_digits()
++                .first()
++                .copied()
++                .unwrap_or(0);
++            v >>= 16u32;
++            l
++        })
++        .collect()
++}
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+new file mode 100644
+index 0000000..58dbbdc
+--- /dev/null
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -0,0 +1,17 @@
++//! Sherlock E2: the Fr recursion AIR set `L_Fr` that verifies one `L` proof.
++//!
++//! Plan: `research/sherlock-e2-lfr-20261112/PLAN.md` (Moriarty). Route: a dedicated verifier of
++//! the `L` vk with the `L` shape pinned (D-1), run as a tape over generic Fr AIRs.
++
++#![allow(clippy::needless_range_loop)] // index loops mirror the arithmetic of the AIRs
++
++pub mod alu;
++pub mod bb;
++pub mod fixture;
++pub mod fr;
++pub mod machine;
++pub mod poseidon;
++pub mod range;
++pub mod tape;
++pub mod testing;
++pub mod transcript;
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+new file mode 100644
+index 0000000..6a8aaaa
+--- /dev/null
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -0,0 +1,768 @@
++//! The tape machine: every AIR that runs a [`Tape`], built from the tape (the key) and filled
++//! from its executed memory (the witness).
++//!
++//! AIRs (only those with at least one op are present; `Range16` is always last):
++//! `InputAir` (BabyBear and `EF4` inputs and constants), `FrInputAir`, `BbAluProgAir`,
++//! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `Range16Air`. All talk over the
++//! write-once memory bus [`MEM_BUS`] and the 16-bit range bus.
++
++use std::sync::Arc;
++
++use num_bigint::BigUint;
++use openvm_stark_backend::{
++    interaction::InteractionBuilder,
++    p3_air::{Air, BaseAir, PairBuilder},
++    p3_field::{Field, PrimeCharacteristicRing},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    AirRef, BaseAirWithPublicValues, PartitionedBaseAir,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++
++use crate::{
++    alu::{canonical_cells, eval_canonical},
++    fr::{fr_from_big, limbs16, split, split_consts, H_LIMBS, V_LIMBS},
++    poseidon::{eval_rounds, poseidon_row, IN, OUT, POSEIDON_WIDTH},
++    range::{Range16Air, RangeCounts, RANGE_BUS},
++    tape::{padded, Addr, BbAluProgAir, InputAir, Op, Tape, Val, MEM_BUS},
++    testing::SC,
++};
++
++fn mem_msg<E: Clone + PrimeCharacteristicRing>(addr: E, v: &[E]) -> Vec<E> {
++    let mut m = vec![addr];
++    m.extend(v.iter().cloned());
++    while m.len() < 5 {
++        m.push(E::ZERO);
++    }
++    m
++}
++
++fn fu(x: u64) -> Fr {
++    Fr::from_u64(x)
++}
++
++fn get(mem: &[Option<Val>], a: Addr) -> Val {
++    mem[a as usize].expect("unwritten address")
++}
++
++macro_rules! air_boiler {
++    ($t:ty, $w:expr, $pw:expr) => {
++        impl BaseAir<Fr> for $t {
++            fn width(&self) -> usize {
++                $w
++            }
++            fn preprocessed_trace(&self) -> Option<RowMajorMatrix<Fr>> {
++                Some(self.pre())
++            }
++        }
++        impl BaseAirWithPublicValues<Fr> for $t {}
++        impl PartitionedBaseAir<Fr> for $t {}
++        impl $t {
++            pub const PRE_WIDTH: usize = $pw;
++        }
++    };
++}
++
++fn rows_to_matrix(rows: Vec<Vec<Fr>>, n: usize, w: usize, pad: Vec<Fr>) -> RowMajorMatrix<Fr> {
++    let h = padded(n);
++    let mut v = Vec::with_capacity(h * w);
++    for i in 0..h {
++        let r = rows.get(i).unwrap_or(&pad);
++        assert_eq!(r.len(), w);
++        v.extend_from_slice(r);
++    }
++    RowMajorMatrix::new(v, w)
++}
++
++// ------------------------------------------------------------------------------------------
++// FrInputAir: pre [addr, mult, is_const, k]; main [v].
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct FrInputProg {
++    pub addr: Addr,
++    pub mult: u64,
++    pub konst: Option<Fr>,
++}
++
++#[derive(Clone, Debug)]
++pub struct FrInputAir {
++    pub prog: Arc<Vec<FrInputProg>>,
++}
++air_boiler!(FrInputAir, 1, 4);
++
++impl FrInputAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                vec![
++                    fu(p.addr as u64),
++                    fu(p.mult),
++                    fu(p.konst.is_some() as u64),
++                    p.konst.unwrap_or(Fr::ZERO),
++                ]
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 4, vec![Fr::ZERO; 4])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| vec![get(mem, p.addr).fr()])
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 1, vec![Fr::ZERO])
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for FrInputAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..4).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let v: AB::Expr = r[0].into();
++        drop(r);
++        builder.assert_zero(p[2].clone() * (v.clone() - p[3].clone()));
++        builder.push_interaction(MEM_BUS, mem_msg(p[0].clone(), &[v]), p[1].clone(), 1);
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// PoseidonProgAir: pre [in_addr[3], out_addr[3], out_mult[3], active]; main = PoseidonFr row.
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct PermProg {
++    pub ins: [Addr; 3],
++    pub outs: [Addr; 3],
++    pub mults: [u64; 3],
++}
++
++#[derive(Clone, Debug)]
++pub struct PoseidonProgAir {
++    pub prog: Arc<Vec<PermProg>>,
++}
++air_boiler!(PoseidonProgAir, POSEIDON_WIDTH, 10);
++
++impl PoseidonProgAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let mut r: Vec<Fr> = p.ins.iter().chain(&p.outs).map(|&a| fu(a as u64)).collect();
++                r.extend(p.mults.iter().map(|&m| fu(m)));
++                r.push(Fr::ONE);
++                r
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 10, vec![Fr::ZERO; 10])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| poseidon_row(p.ins.map(|a| get(mem, a).fr()), 0))
++            .collect();
++        rows_to_matrix(
++            rows,
++            self.prog.len(),
++            POSEIDON_WIDTH,
++            poseidon_row([Fr::ZERO; 3], 0),
++        )
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PoseidonProgAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..10).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..POSEIDON_WIDTH).map(|i| r[i].into()).collect();
++        drop(r);
++        eval_rounds(builder, &x);
++        for i in 0..3 {
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[i].clone(), &[x[IN + i].clone()]),
++                -p[9].clone(),
++                1,
++            );
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[3 + i].clone(), &[x[OUT + i].clone()]),
++                p[6 + i].clone(),
++                1,
++            );
++        }
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// PackAir: pre [addr_b[8], use[8], addr_out, mult_out]; main [b[8], out].
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct PackProg {
++    pub ins: Vec<Addr>,
++    pub out: Addr,
++    pub mult: u64,
++}
++
++#[derive(Clone, Debug)]
++pub struct PackAir {
++    pub prog: Arc<Vec<PackProg>>,
++}
++air_boiler!(PackAir, 9, 18);
++
++impl PackAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let mut r = vec![Fr::ZERO; 18];
++                for (i, &a) in p.ins.iter().enumerate() {
++                    r[i] = fu(a as u64);
++                    r[8 + i] = Fr::ONE;
++                }
++                r[16] = fu(p.out as u64);
++                r[17] = fu(p.mult);
++                r
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 18, vec![Fr::ZERO; 18])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let mut r = vec![Fr::ZERO; 9];
++                for (i, &a) in p.ins.iter().enumerate() {
++                    r[i] = fu(get(mem, a).bb()[0]);
++                }
++                r[8] = get(mem, p.out).fr();
++                r
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 9, vec![Fr::ZERO; 9])
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PackAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..18).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..9).map(|i| r[i].into()).collect();
++        drop(r);
++        let mut acc = AB::Expr::ZERO;
++        for i in (0..8).rev() {
++            builder.assert_zero((AB::Expr::ONE - p[8 + i].clone()) * x[i].clone());
++            acc = acc * AB::Expr::from_u64(1 << 31) + x[i].clone();
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[i].clone(), &[x[i].clone()]),
++                -p[8 + i].clone(),
++                1,
++            );
++        }
++        builder.assert_eq(x[8].clone(), acc);
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[16].clone(), &[x[8].clone()]),
++            p[17].clone(),
++            1,
++        );
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// SplitAir: pre [addr_x, addr_d[5], mult_d[5], active];
++// main [x, d[5], canon(d)[5][4], hl[7], gl[7], inv_e, is_eq, vl[10]].
++// ------------------------------------------------------------------------------------------
++
++pub const SP_X: usize = 0;
++pub const SP_D: usize = 1;
++pub const SP_DC: usize = 6;
++pub const SP_HL: usize = SP_DC + 20;
++pub const SP_GL: usize = SP_HL + H_LIMBS;
++pub const SP_INV: usize = SP_GL + H_LIMBS;
++pub const SP_EQ: usize = SP_INV + 1;
++pub const SP_VL: usize = SP_EQ + 1;
++pub const SPLIT_WIDTH: usize = SP_VL + V_LIMBS;
++
++#[derive(Clone, Debug)]
++pub struct SplitProg {
++    pub x: Addr,
++    pub outs: [Addr; 5],
++    pub mults: [u64; 5],
++}
++
++#[derive(Clone, Debug)]
++pub struct SplitAir {
++    pub prog: Arc<Vec<SplitProg>>,
++}
++air_boiler!(SplitAir, SPLIT_WIDTH, 12);
++
++/// A split witness: digits `d`, high part `h` (the honest one is [`split`]).
++#[derive(Clone, Debug)]
++pub struct SplitWitness {
++    pub x: Fr,
++    pub d: [u64; 5],
++    pub h: BigUint,
++}
++
++impl SplitWitness {
++    pub fn honest(x: Fr) -> Self {
++        let (d, h) = split(x);
++        Self { x, d, h }
++    }
++    pub fn cells(&self) -> Vec<Fr> {
++        let c = split_consts();
++        let mut r = vec![Fr::ZERO; SPLIT_WIDTH];
++        r[SP_X] = self.x;
++        for i in 0..5 {
++            r[SP_D + i] = fu(self.d[i]);
++            let cc = canonical_cells::<Fr>(self.d[i]);
++            for j in 0..4 {
++                r[SP_DC + 4 * i + j] = cc[j];
++            }
++        }
++        for (j, l) in limbs16(&self.h, H_LIMBS).into_iter().enumerate() {
++            r[SP_HL + j] = fu(l);
++        }
++        let g = if self.h <= c.h_max {
++            &c.h_max - &self.h
++        } else {
++            BigUint::ZERO
++        };
++        for (j, l) in limbs16(&g, H_LIMBS).into_iter().enumerate() {
++            r[SP_GL + j] = fu(l);
++        }
++        let e = fr_from_big(&c.h_max) - fr_from_big(&self.h);
++        let is_eq = e.is_zero();
++        r[SP_INV] = if is_eq { Fr::ZERO } else { e.inverse() };
++        r[SP_EQ] = fu(is_eq as u64);
++        if is_eq {
++            let low: BigUint = (0..5).map(|i| BigUint::from(self.d[i]) * &c.p_pow[i]).sum();
++            let v = if low <= c.low_max {
++                &c.low_max - low
++            } else {
++                BigUint::ZERO
++            };
++            for (j, l) in limbs16(&v, V_LIMBS).into_iter().enumerate() {
++                r[SP_VL + j] = fu(l);
++            }
++        }
++        r
++    }
++}
++
++impl SplitAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let mut r = vec![fu(p.x as u64)];
++                r.extend(p.outs.iter().map(|&a| fu(a as u64)));
++                r.extend(p.mults.iter().map(|&m| fu(m)));
++                r.push(Fr::ONE);
++                r
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 12, vec![Fr::ZERO; 12])
++    }
++    pub fn witnesses(&self, mem: &[Option<Val>]) -> Vec<SplitWitness> {
++        self.prog
++            .iter()
++            .map(|p| SplitWitness::honest(get(mem, p.x).fr()))
++            .collect()
++    }
++    pub fn trace_from(&self, w: &[SplitWitness]) -> RowMajorMatrix<Fr> {
++        let rows = w.iter().map(|w| w.cells()).collect();
++        rows_to_matrix(
++            rows,
++            self.prog.len(),
++            SPLIT_WIDTH,
++            SplitWitness::honest(Fr::ZERO).cells(),
++        )
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        self.trace_from(&self.witnesses(mem))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for SplitAir {
++    fn eval(&self, builder: &mut AB) {
++        let c = split_consts();
++        let k = |v: &BigUint| -> AB::Expr { AB::Expr::from(fr_from_big(v)) };
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..12).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..SPLIT_WIDTH).map(|i| r[i].into()).collect();
++        drop(r);
++        let limbs = |base: usize, n: usize| -> AB::Expr {
++            (0..n).rev().fold(AB::Expr::ZERO, |acc, j| {
++                acc * AB::Expr::from_u64(1 << 16) + x[base + j].clone()
++            })
++        };
++        let low = (0..5).fold(AB::Expr::ZERO, |acc, i| {
++            acc + x[SP_D + i].clone() * k(&c.p_pow[i])
++        });
++        let h = limbs(SP_HL, H_LIMBS);
++        builder.assert_eq(x[SP_X].clone(), low.clone() + h.clone() * k(&c.p_pow[5]));
++        let e = k(&c.h_max) - h;
++        builder.assert_eq(e.clone(), limbs(SP_GL, H_LIMBS));
++        let is_eq = x[SP_EQ].clone();
++        builder.assert_eq(is_eq.clone(), AB::Expr::ONE - e.clone() * x[SP_INV].clone());
++        builder.assert_zero(e * is_eq.clone());
++        builder.assert_eq(is_eq * (k(&c.low_max) - low), limbs(SP_VL, V_LIMBS));
++        for i in 0..5 {
++            let b = SP_DC + 4 * i;
++            eval_canonical(
++                builder,
++                x[SP_D + i].clone(),
++                x[b].clone(),
++                x[b + 1].clone(),
++                x[b + 2].clone(),
++                x[b + 3].clone(),
++            );
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[1 + i].clone(), &[x[SP_D + i].clone()]),
++                p[6 + i].clone(),
++                1,
++            );
++        }
++        for j in 0..H_LIMBS {
++            builder.push_interaction(RANGE_BUS, [x[SP_HL + j].clone()], AB::Expr::ONE, 1);
++            builder.push_interaction(RANGE_BUS, [x[SP_GL + j].clone()], AB::Expr::ONE, 1);
++        }
++        for j in 0..V_LIMBS {
++            builder.push_interaction(RANGE_BUS, [x[SP_VL + j].clone()], AB::Expr::ONE, 1);
++        }
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[0].clone(), &[x[SP_X].clone()]),
++            -p[11].clone(),
++            1,
++        );
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// ReshapeAir: pre [addr_ef, addr_bb[4], is_compose, is_decompose, mult_ef, mult_bb[4]]; main v[4].
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct ReshapeProg {
++    pub ef: Addr,
++    pub bb: [Addr; 4],
++    pub compose: bool,
++    pub mult_ef: u64,
++    pub mult_bb: [u64; 4],
++}
++
++#[derive(Clone, Debug)]
++pub struct ReshapeAir {
++    pub prog: Arc<Vec<ReshapeProg>>,
++}
++air_boiler!(ReshapeAir, 4, 12);
++
++impl ReshapeAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let mut r = vec![fu(p.ef as u64)];
++                r.extend(p.bb.iter().map(|&a| fu(a as u64)));
++                r.push(fu(p.compose as u64));
++                r.push(fu(!p.compose as u64));
++                r.push(fu(p.mult_ef));
++                r.extend(p.mult_bb.iter().map(|&m| fu(m)));
++                r
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 12, vec![Fr::ZERO; 12])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| get(mem, p.ef).cells().to_vec())
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 4, vec![Fr::ZERO; 4])
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for ReshapeAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..12).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let v: Vec<AB::Expr> = (0..4).map(|i| r[i].into()).collect();
++        drop(r);
++        let (comp, decomp) = (p[5].clone(), p[6].clone());
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[0].clone(), &v),
++            comp.clone() * p[7].clone() - decomp.clone(),
++            1,
++        );
++        for i in 0..4 {
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[1 + i].clone(), &[v[i].clone()]),
++                decomp.clone() * p[8 + i].clone() - comp.clone(),
++                1,
++            );
++        }
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// Machine
++// ------------------------------------------------------------------------------------------
++
++/// The AIRs of one tape, in the fixed order of the module comment.
++#[derive(Clone)]
++pub struct Machine {
++    pub input: Option<InputAir>,
++    pub fr_input: Option<FrInputAir>,
++    pub alu: Option<BbAluProgAir>,
++    pub poseidon: Option<PoseidonProgAir>,
++    pub pack: Option<PackAir>,
++    pub split: Option<SplitAir>,
++    pub reshape: Option<ReshapeAir>,
++}
++
++fn some<T>(v: Vec<T>) -> Option<Arc<Vec<T>>> {
++    (!v.is_empty()).then(|| Arc::new(v))
++}
++
++impl Machine {
++    pub fn new(tape: &Tape) -> Self {
++        let reads = tape.reads();
++        let m = |a: &Addr| reads[*a as usize];
++        let (mut fr_in, mut perm, mut pack, mut split, mut reshape) =
++            (vec![], vec![], vec![], vec![], vec![]);
++        let mut inp = vec![];
++        let mut alu = vec![];
++        for op in &tape.ops {
++            match op {
++                Op::Input { kind, out } => inp.push(crate::tape::InputProg {
++                    addr: *out,
++                    mult: m(out),
++                    bb: *kind == crate::tape::ValKind::Bb,
++                    konst: None,
++                }),
++                Op::Const { kind, val, out } => inp.push(crate::tape::InputProg {
++                    addr: *out,
++                    mult: m(out),
++                    bb: *kind == crate::tape::ValKind::Bb,
++                    konst: Some(*val),
++                }),
++                Op::Alu { kind, a, b, out } => alu.push(crate::tape::AluProg {
++                    kind: *kind,
++                    a: *a,
++                    b: *b,
++                    out: *out,
++                    mult: m(out),
++                }),
++                Op::FrInput { out } => fr_in.push(FrInputProg {
++                    addr: *out,
++                    mult: m(out),
++                    konst: None,
++                }),
++                Op::FrConst { val, out } => fr_in.push(FrInputProg {
++                    addr: *out,
++                    mult: m(out),
++                    konst: Some(*val),
++                }),
++                Op::Perm { ins, outs } => perm.push(PermProg {
++                    ins: *ins,
++                    outs: *outs,
++                    mults: outs.map(|a| m(&a)),
++                }),
++                Op::Pack { ins, out } => pack.push(PackProg {
++                    ins: ins.clone(),
++                    out: *out,
++                    mult: m(out),
++                }),
++                Op::Split { x, outs } => split.push(SplitProg {
++                    x: *x,
++                    outs: *outs,
++                    mults: outs.map(|a| m(&a)),
++                }),
++                Op::Compose { ins, out } => reshape.push(ReshapeProg {
++                    ef: *out,
++                    bb: *ins,
++                    compose: true,
++                    mult_ef: m(out),
++                    mult_bb: [0; 4],
++                }),
++                Op::Decompose { x, outs } => reshape.push(ReshapeProg {
++                    ef: *x,
++                    bb: *outs,
++                    compose: false,
++                    mult_ef: 0,
++                    mult_bb: outs.map(|a| m(&a)),
++                }),
++            }
++        }
++        Self {
++            input: some(inp).map(|prog| InputAir { prog }),
++            fr_input: some(fr_in).map(|prog| FrInputAir { prog }),
++            alu: some(alu).map(|prog| BbAluProgAir { prog }),
++            poseidon: some(perm).map(|prog| PoseidonProgAir { prog }),
++            pack: some(pack).map(|prog| PackAir { prog }),
++            split: some(split).map(|prog| SplitAir { prog }),
++            reshape: some(reshape).map(|prog| ReshapeAir { prog }),
++        }
++    }
++
++    /// AIRs in order, `Range16` last.
++    pub fn airs(&self) -> Vec<AirRef<SC>> {
++        let mut v: Vec<AirRef<SC>> = vec![];
++        if let Some(a) = &self.input {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.fr_input {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.alu {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.poseidon {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.pack {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.split {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.reshape {
++            v.push(Arc::new(a.clone()));
++        }
++        v.push(Arc::new(Range16Air));
++        v
++    }
++
++    /// AIR names in [`Machine::airs`] order.
++    pub fn names(&self) -> Vec<&'static str> {
++        let mut v = vec![];
++        for (present, n) in [
++            (self.input.is_some(), "Input"),
++            (self.fr_input.is_some(), "FrInput"),
++            (self.alu.is_some(), "BbAlu"),
++            (self.poseidon.is_some(), "PoseidonFr"),
++            (self.pack.is_some(), "Pack"),
++            (self.split.is_some(), "Split"),
++            (self.reshape.is_some(), "Reshape"),
++        ] {
++            if present {
++                v.push(n);
++            }
++        }
++        v.push("Range16");
++        v
++    }
++
++    /// Honest main traces of every AIR except `Range16` (filled by
++    /// [`crate::testing::prove_verify_range`]).
++    pub fn traces(&self, mem: &[Option<Val>]) -> Vec<RowMajorMatrix<Fr>> {
++        let mut v = vec![];
++        let mut dummy = RangeCounts::default();
++        if let Some(a) = &self.input {
++            let vals: Vec<[u64; 4]> = a.prog.iter().map(|p| get(mem, p.addr).bb()).collect();
++            v.push(a.trace(&vals, &mut dummy));
++        }
++        if let Some(a) = &self.fr_input {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.alu {
++            let bb: Vec<[u64; 4]> = mem
++                .iter()
++                .map(|x| match x {
++                    Some(Val::Bb(b)) => *b,
++                    _ => [0; 4],
++                })
++                .collect();
++            v.push(a.trace(&a.rows(&bb), &mut dummy));
++        }
++        if let Some(a) = &self.poseidon {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.pack {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.split {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.reshape {
++            v.push(a.trace(mem));
++        }
++        v
++    }
++
++    /// Rows and cells per AIR: (name, rows padded, main width, preprocessed width).
++    pub fn shape(&self) -> Vec<(&'static str, usize, usize, usize)> {
++        let mut v = vec![];
++        let mut push =
++            |n: &'static str, len: usize, w: usize, pw: usize| v.push((n, padded(len), w, pw));
++        if let Some(a) = &self.input {
++            push(
++                "Input",
++                a.prog.len(),
++                crate::tape::IN_WIDTH,
++                crate::tape::IN_PRE_WIDTH,
++            );
++        }
++        if let Some(a) = &self.fr_input {
++            push("FrInput", a.prog.len(), 1, 4);
++        }
++        if let Some(a) = &self.alu {
++            push(
++                "BbAlu",
++                a.prog.len(),
++                crate::alu::ALU_WIDTH,
++                crate::tape::ALU_PRE_WIDTH,
++            );
++        }
++        if let Some(a) = &self.poseidon {
++            push("PoseidonFr", a.prog.len(), POSEIDON_WIDTH, 10);
++        }
++        if let Some(a) = &self.pack {
++            push("Pack", a.prog.len(), 9, 18);
++        }
++        if let Some(a) = &self.split {
++            push("Split", a.prog.len(), SPLIT_WIDTH, 12);
++        }
++        if let Some(a) = &self.reshape {
++            push("Reshape", a.prog.len(), 4, 12);
++        }
++        v.push(("Range16", crate::range::RANGE_SIZE, 2, 0));
++        v
++    }
++}
+diff --git a/crates/sherlock-lfr/src/poseidon.rs b/crates/sherlock-lfr/src/poseidon.rs
+new file mode 100644
+index 0000000..1a62a93
+--- /dev/null
++++ b/crates/sherlock-lfr/src/poseidon.rs
+@@ -0,0 +1,192 @@
++//! `PoseidonFr`: the Midnight Poseidon permutation over BLS12-381 Fr, one row per permutation.
++//!
++//! Permutation (midnight-circuits 7.3.0 constants, as `m7_bls_fr.rs` `reference_perm`): width 3,
++//! 68 rounds; round `r` adds `RC[r]`, applies `x^5` to all 3 cells in a full round (`r < 4` or
++//! `r >= 64`) and to cell 2 in a partial round, then multiplies by `MDS`.
++//!
++//! Row layout: `in[3]`, then per S-box (8 x 3 full + 60 partial = 84 S-boxes) the two cells
++//! `t = x^2` and `y = x^5 = t^2 x`, then `out[3]` and `mult`. The S-box input `x` and every state
++//! cell between S-boxes are linear expressions of earlier cells (no column), so each S-box costs 2
++//! columns and 2 constraints of degree at most 3. Width 3 + 168 + 3 + 1 = 175.
++//!
++//! The row receives `[in, out]` on [`POSEIDON_BUS`] with multiplicity `mult`: a caller sends the
++//! 6 words of each permutation it uses.
++
++use std::sync::OnceLock;
++
++use midnight_circuits::hash::poseidon::constants::PoseidonField;
++use openvm_stark_backend::{
++    interaction::{BusIndex, InteractionBuilder},
++    p3_air::{Air, BaseAir},
++    p3_field::PrimeCharacteristicRing,
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{Bls12381Fr, MidnightFq};
++
++type Fr = Bls12381Fr;
++
++pub const POSEIDON_BUS: BusIndex = 1;
++pub const ROUNDS: usize = 68;
++pub const SBOXES: usize = 8 * 3 + 60;
++pub const IN: usize = 0;
++pub const SB: usize = 3;
++pub const OUT: usize = SB + 2 * SBOXES;
++pub const MULT: usize = OUT + 3;
++pub const POSEIDON_WIDTH: usize = MULT + 1;
++
++pub fn is_full(r: usize) -> bool {
++    !(4..64).contains(&r)
++}
++
++pub struct Constants {
++    pub rc: [[Fr; 3]; ROUNDS],
++    pub mds: [[Fr; 3]; 3],
++}
++
++pub fn constants() -> &'static Constants {
++    static C: OnceLock<Constants> = OnceLock::new();
++    C.get_or_init(|| {
++        let rc = <MidnightFq as PoseidonField>::ROUND_CONSTANTS;
++        let mds = <MidnightFq as PoseidonField>::MDS;
++        assert_eq!(rc.len(), ROUNDS);
++        Constants {
++            rc: std::array::from_fn(|r| std::array::from_fn(|i| Fr::from_ff(rc[r][i]))),
++            mds: std::array::from_fn(|i| std::array::from_fn(|j| Fr::from_ff(mds[i][j]))),
++        }
++    })
++}
++
++/// The permutation with every S-box input, for trace generation: returns (out, sbox inputs).
++pub fn permute_trace(input: [Fr; 3]) -> ([Fr; 3], Vec<Fr>) {
++    let c = constants();
++    let mut s = input;
++    let mut xs = Vec::with_capacity(SBOXES);
++    for r in 0..ROUNDS {
++        for i in 0..3 {
++            s[i] += c.rc[r][i];
++        }
++        for i in 0..3 {
++            if is_full(r) || i == 2 {
++                xs.push(s[i]);
++                s[i] = s[i].square().square() * s[i];
++            }
++        }
++        let t = s;
++        for i in 0..3 {
++            s[i] = c.mds[i][0] * t[0] + c.mds[i][1] * t[1] + c.mds[i][2] * t[2];
++        }
++    }
++    (s, xs)
++}
++
++#[derive(Clone, Copy, Debug, Default)]
++pub struct PoseidonFrAir;
++
++impl<F> BaseAir<F> for PoseidonFrAir {
++    fn width(&self) -> usize {
++        POSEIDON_WIDTH
++    }
++}
++impl<F> BaseAirWithPublicValues<F> for PoseidonFrAir {}
++impl<F> PartitionedBaseAir<F> for PoseidonFrAir {}
++
++/// The round constraints of one row: `in -> out` through the 84 S-box cells.
++pub fn eval_rounds<AB: InteractionBuilder<F = Fr>>(builder: &mut AB, x: &[AB::Expr]) {
++    let c = constants();
++    let k = |v: Fr| -> AB::Expr { AB::Expr::from(v) };
++    let mut s: [AB::Expr; 3] = std::array::from_fn(|i| x[IN + i].clone());
++    let mut sb = 0;
++    for r in 0..ROUNDS {
++        for i in 0..3 {
++            s[i] = s[i].clone() + k(c.rc[r][i]);
++        }
++        for i in 0..3 {
++            if is_full(r) || i == 2 {
++                let (t, y) = (x[SB + 2 * sb].clone(), x[SB + 2 * sb + 1].clone());
++                builder.assert_eq(t.clone(), s[i].clone() * s[i].clone());
++                builder.assert_eq(y.clone(), t.clone() * t * s[i].clone());
++                s[i] = y;
++                sb += 1;
++            }
++        }
++        let t = s.clone();
++        s = std::array::from_fn(|i| {
++            t[0].clone() * k(c.mds[i][0])
++                + t[1].clone() * k(c.mds[i][1])
++                + t[2].clone() * k(c.mds[i][2])
++        });
++    }
++    debug_assert_eq!(sb, SBOXES);
++    for i in 0..3 {
++        builder.assert_eq(x[OUT + i].clone(), s[i].clone());
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for PoseidonFrAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let row = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..POSEIDON_WIDTH).map(|i| row[i].into()).collect();
++        drop(row);
++        eval_rounds(builder, &x);
++        let msg: Vec<AB::Expr> = (0..3)
++            .map(|i| x[IN + i].clone())
++            .chain((0..3).map(|i| x[OUT + i].clone()))
++            .collect();
++        builder.push_interaction(POSEIDON_BUS, msg, -x[MULT].clone(), 1);
++    }
++}
++
++/// One honest row: the permutation of `input`, received `mult` times.
++pub fn poseidon_row(input: [Fr; 3], mult: u64) -> Vec<Fr> {
++    let (out, xs) = permute_trace(input);
++    let mut v = vec![Fr::ZERO; POSEIDON_WIDTH];
++    v[IN..IN + 3].copy_from_slice(&input);
++    for (j, xj) in xs.iter().enumerate() {
++        let t = xj.square();
++        v[SB + 2 * j] = t;
++        v[SB + 2 * j + 1] = t.square() * *xj;
++    }
++    v[OUT..OUT + 3].copy_from_slice(&out);
++    v[MULT] = Fr::from_u64(mult);
++    v
++}
++
++/// Trace of the given rows, padded to a power of two (at least 2) with the zero-state
++/// permutation at multiplicity 0.
++pub fn poseidon_trace(rows: Vec<Vec<Fr>>) -> RowMajorMatrix<Fr> {
++    let h = rows.len().next_power_of_two().max(2);
++    let pad = poseidon_row([Fr::ZERO; 3], 0);
++    let mut v = Vec::with_capacity(h * POSEIDON_WIDTH);
++    for i in 0..h {
++        v.extend_from_slice(rows.get(i).unwrap_or(&pad));
++    }
++    let m = RowMajorMatrix::new(v, POSEIDON_WIDTH);
++    debug_assert_eq!(m.height(), h);
++    m
++}
++
++/// Test caller: sends `[in, out]` on [`POSEIDON_BUS`] once per row with `is_real = 1`.
++/// Columns `[is_real, in[3], out[3]]`.
++#[derive(Clone, Copy, Debug, Default)]
++pub struct PoseidonCallerAir;
++
++pub const CALLER_WIDTH: usize = 7;
++
++impl<F> BaseAir<F> for PoseidonCallerAir {
++    fn width(&self) -> usize {
++        CALLER_WIDTH
++    }
++}
++impl<F> BaseAirWithPublicValues<F> for PoseidonCallerAir {}
++impl<F> PartitionedBaseAir<F> for PoseidonCallerAir {}
++
++impl<AB: InteractionBuilder> Air<AB> for PoseidonCallerAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let row = main.row_slice(0).expect("row");
++        builder.assert_bool(row[0]);
++        builder.push_interaction(POSEIDON_BUS, row[1..7].iter().copied(), row[0], 1);
++    }
++}
+diff --git a/crates/sherlock-lfr/src/range.rs b/crates/sherlock-lfr/src/range.rs
+new file mode 100644
+index 0000000..3d1a3b1
+--- /dev/null
++++ b/crates/sherlock-lfr/src/range.rs
+@@ -0,0 +1,78 @@
++//! `Range16`: the 16-bit lookup table, one row per value `0 .. 2^16`.
++//!
++//! Columns `[value, mult]`. `value` starts at 0, steps by 1 and ends at `2^16 - 1`; since a trace
++//! height is a power of two, the last-row constraint pins the height to `2^16`. The table receives
++//! `[value]` on [`RANGE_BUS`] with multiplicity `mult`.
++
++use openvm_stark_backend::{
++    interaction::{BusIndex, InteractionBuilder},
++    p3_air::{Air, AirBuilder, BaseAir},
++    p3_field::{Field, PrimeCharacteristicRing},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++
++/// Bus of 16-bit range lookups `[x]`.
++pub const RANGE_BUS: BusIndex = 0;
++pub const RANGE_BITS: usize = 16;
++pub const RANGE_SIZE: usize = 1 << RANGE_BITS;
++
++#[derive(Clone, Copy, Debug, Default)]
++pub struct Range16Air;
++
++impl<F> BaseAir<F> for Range16Air {
++    fn width(&self) -> usize {
++        2
++    }
++}
++impl<F> BaseAirWithPublicValues<F> for Range16Air {}
++impl<F> PartitionedBaseAir<F> for Range16Air {}
++
++impl<AB: InteractionBuilder> Air<AB> for Range16Air {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let local = main.row_slice(0).expect("local row");
++        let next = main.row_slice(1).expect("next row");
++        let (value, mult) = (local[0], local[1]);
++        let next_value = next[0];
++        builder.when_first_row().assert_zero(value);
++        builder
++            .when_transition()
++            .assert_eq(next_value, value.into() + AB::Expr::ONE);
++        builder
++            .when_last_row()
++            .assert_eq(value, AB::Expr::from_u64((RANGE_SIZE - 1) as u64));
++        builder.push_interaction(RANGE_BUS, [value], -mult.into(), 1);
++    }
++}
++
++/// Multiplicity counter for the table.
++#[derive(Clone, Debug)]
++pub struct RangeCounts(pub Vec<u64>);
++
++impl Default for RangeCounts {
++    fn default() -> Self {
++        Self(vec![0; RANGE_SIZE])
++    }
++}
++
++impl RangeCounts {
++    /// Count one lookup of `x`. Panics if `x >= 2^16` (trace generation of a valid witness).
++    pub fn add(&mut self, x: u64) {
++        self.0[usize::try_from(x)
++            .ok()
++            .filter(|&v| v < RANGE_SIZE)
++            .expect("range value")] += 1;
++    }
++
++    pub fn trace<F: Field>(&self) -> RowMajorMatrix<F> {
++        let mut v = Vec::with_capacity(2 * RANGE_SIZE);
++        for (i, &m) in self.0.iter().enumerate() {
++            v.push(F::from_u64(i as u64));
++            v.push(F::from_u64(m));
++        }
++        let m = RowMajorMatrix::new(v, 2);
++        debug_assert_eq!(m.height(), RANGE_SIZE);
++        m
++    }
++}
+diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
+new file mode 100644
+index 0000000..e2a29ca
+--- /dev/null
++++ b/crates/sherlock-lfr/src/tape.rs
+@@ -0,0 +1,568 @@
++//! I4: the tape (a straight-line program fixed by the key) and its write-once memory.
++//!
++//! Every tape value has one address and is written once. A writer sends `[addr, v0, v1, v2, v3]`
++//! on [`MEM_BUS`] with the multiplicity `mult` = the number of reads of `addr` in the tape; each
++//! read sends the same message with count `-1`. Addresses, op kinds and multiplicities are
++//! preprocessed columns, so the key fixes the program; only the values are witness.
++//!
++//! AIRs:
++//! - [`InputAir`]: tape inputs (values of the `L` proof) and constants. Preprocessed `[addr,
++//!   mult, z1, z2, z3, is_const, k0..k3]`; main `v[4]` and a canonical gadget per coefficient
++//!   (`lo, hi, inv, is_max`). Each coefficient is canonical BabyBear; `z_k = 1` forces
++//!   coefficient `k` to 0 (a BabyBear value); `is_const = 1` forces `v = k`.
++//! - [`BbAluProgAir`]: the `BbAlu` row with its op, operand addresses and result multiplicity
++//!   preprocessed: `[add, sub, mul, addr_a, addr_b, addr_c, mult_c]`. The main selectors equal
++//!   the preprocessed ones; it reads `a` and `b` (count `-active`) and writes `c` (count
++//!   `mult_c`).
++
++use std::sync::Arc;
++
++use openvm_stark_backend::{
++    interaction::{BusIndex, InteractionBuilder},
++    p3_air::{Air, BaseAir, PairBuilder},
++    p3_field::Field,
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use p3_field::PrimeCharacteristicRing;
++
++use crate::{
++    alu::{
++        alu_trace, canonical_cells, eval_canonical, AluKind, AluOp, AluRow, BbAluAir, A, B, C,
++        SEL_ADD,
++    },
++    bb::P,
++    range::RangeCounts,
++};
++
++pub const MEM_BUS: BusIndex = 2;
++pub type Addr = u32;
++
++/// Value type of a tape input.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum ValKind {
++    Bb,
++    Ef4,
++}
++
++/// A memory value: BabyBear or `EF4` (4 canonical coefficients; BabyBear has 3 zero ones), or
++/// one Fr word. On the bus both are `[addr, v0, v1, v2, v3]`; an Fr word is `[addr, v, 0, 0, 0]`.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Val {
++    Bb([u64; 4]),
++    Fr(Fr),
++}
++
++impl Val {
++    pub fn bb(&self) -> [u64; 4] {
++        match self {
++            Val::Bb(v) => *v,
++            Val::Fr(_) => panic!("Fr value read as BabyBear"),
++        }
++    }
++    pub fn fr(&self) -> Fr {
++        match self {
++            Val::Fr(v) => *v,
++            Val::Bb(_) => panic!("BabyBear value read as Fr"),
++        }
++    }
++    pub fn cells(&self) -> [Fr; 4] {
++        match self {
++            Val::Bb(v) => std::array::from_fn(|k| Fr::from_u64(v[k])),
++            Val::Fr(v) => [*v, Fr::ZERO, Fr::ZERO, Fr::ZERO],
++        }
++    }
++}
++
++#[derive(Clone, Debug)]
++pub enum Op {
++    Input {
++        kind: ValKind,
++        out: Addr,
++    },
++    Const {
++        kind: ValKind,
++        val: [u64; 4],
++        out: Addr,
++    },
++    Alu {
++        kind: AluKind,
++        a: Addr,
++        b: Addr,
++        out: Addr,
++    },
++    /// A free Fr word (a value of the `L` proof, such as a commitment).
++    FrInput {
++        out: Addr,
++    },
++    FrConst {
++        val: Fr,
++        out: Addr,
++    },
++    /// The Midnight Poseidon permutation of 3 Fr words.
++    Perm {
++        ins: [Addr; 3],
++        outs: [Addr; 3],
++    },
++    /// `sum_i b_i 2^(31 i)` of 1 to 8 BabyBear words (multi-field packing).
++    Pack {
++        ins: Vec<Addr>,
++        out: Addr,
++    },
++    /// The 5 low base-`p` digits of an Fr word (multi-field squeeze).
++    Split {
++        x: Addr,
++        outs: [Addr; 5],
++    },
++    /// 4 BabyBear words -> one `EF4` value.
++    Compose {
++        ins: [Addr; 4],
++        out: Addr,
++    },
++    /// One `EF4` value -> its 4 coefficients as BabyBear words.
++    Decompose {
++        x: Addr,
++        outs: [Addr; 4],
++    },
++}
++
++/// A straight-line program over BabyBear and `EF4` values.
++#[derive(Clone, Debug, Default)]
++pub struct Tape {
++    pub ops: Vec<Op>,
++    next: Addr,
++}
++
++impl Tape {
++    fn fresh(&mut self) -> Addr {
++        self.next += 1; // address 0 is never used (padding rows carry it with count 0)
++        self.next
++    }
++    pub fn input(&mut self, kind: ValKind) -> Addr {
++        let out = self.fresh();
++        self.ops.push(Op::Input { kind, out });
++        out
++    }
++    pub fn constant(&mut self, kind: ValKind, val: [u64; 4]) -> Addr {
++        assert!(val.iter().all(|&v| v < P));
++        assert!(kind == ValKind::Ef4 || val[1..] == [0; 3]);
++        let out = self.fresh();
++        self.ops.push(Op::Const { kind, val, out });
++        out
++    }
++    pub fn alu(&mut self, kind: AluKind, a: Addr, b: Addr) -> Addr {
++        assert!(
++            a <= self.next && b <= self.next && a > 0 && b > 0,
++            "read before write"
++        );
++        let out = self.fresh();
++        self.ops.push(Op::Alu { kind, a, b, out });
++        out
++    }
++    pub fn add(&mut self, a: Addr, b: Addr) -> Addr {
++        self.alu(AluKind::Add, a, b)
++    }
++    pub fn sub(&mut self, a: Addr, b: Addr) -> Addr {
++        self.alu(AluKind::Sub, a, b)
++    }
++    pub fn mul(&mut self, a: Addr, b: Addr) -> Addr {
++        self.alu(AluKind::Mul, a, b)
++    }
++    pub fn num_addrs(&self) -> usize {
++        self.next as usize + 1
++    }
++    fn check(&self, a: Addr) {
++        assert!(a > 0 && a <= self.next, "read before write");
++    }
++    pub fn fr_input(&mut self) -> Addr {
++        let out = self.fresh();
++        self.ops.push(Op::FrInput { out });
++        out
++    }
++    pub fn fr_const(&mut self, val: Fr) -> Addr {
++        let out = self.fresh();
++        self.ops.push(Op::FrConst { val, out });
++        out
++    }
++    pub fn perm(&mut self, ins: [Addr; 3]) -> [Addr; 3] {
++        ins.iter().for_each(|&a| self.check(a));
++        let outs = [self.fresh(), self.fresh(), self.fresh()];
++        self.ops.push(Op::Perm { ins, outs });
++        outs
++    }
++    pub fn pack(&mut self, ins: &[Addr]) -> Addr {
++        assert!(!ins.is_empty() && ins.len() <= 8);
++        ins.iter().for_each(|&a| self.check(a));
++        let out = self.fresh();
++        self.ops.push(Op::Pack {
++            ins: ins.to_vec(),
++            out,
++        });
++        out
++    }
++    pub fn split(&mut self, x: Addr) -> [Addr; 5] {
++        self.check(x);
++        let outs = std::array::from_fn(|_| self.fresh());
++        self.ops.push(Op::Split { x, outs });
++        outs
++    }
++    pub fn compose(&mut self, ins: [Addr; 4]) -> Addr {
++        ins.iter().for_each(|&a| self.check(a));
++        let out = self.fresh();
++        self.ops.push(Op::Compose { ins, out });
++        out
++    }
++    pub fn decompose(&mut self, x: Addr) -> [Addr; 4] {
++        self.check(x);
++        let outs = std::array::from_fn(|_| self.fresh());
++        self.ops.push(Op::Decompose { x, outs });
++        outs
++    }
++
++    /// Read counts per address.
++    pub fn reads(&self) -> Vec<u64> {
++        let mut r = vec![0u64; self.num_addrs()];
++        let mut rd = |a: &Addr| r[*a as usize] += 1;
++        for op in &self.ops {
++            match op {
++                Op::Alu { a, b, .. } => {
++                    rd(a);
++                    rd(b);
++                }
++                Op::Perm { ins, .. } => ins.iter().for_each(&mut rd),
++                Op::Pack { ins, .. } => ins.iter().for_each(&mut rd),
++                Op::Split { x, .. } => rd(x),
++                Op::Compose { ins, .. } => ins.iter().for_each(&mut rd),
++                Op::Decompose { x, .. } => rd(x),
++                Op::Input { .. } | Op::Const { .. } | Op::FrInput { .. } | Op::FrConst { .. } => {}
++            }
++        }
++        r
++    }
++
++    /// Run a BabyBear and `EF4` tape on the input values (in order of the `Input` ops).
++    pub fn execute(&self, inputs: &[[u64; 4]]) -> Vec<[u64; 4]> {
++        let ins: Vec<Val> = inputs.iter().map(|v| Val::Bb(*v)).collect();
++        self.execute_vals(&ins)
++            .into_iter()
++            .map(|v| v.map(|v| v.bb()).unwrap_or([0; 4]))
++            .collect()
++    }
++
++    /// Run the tape on the input values (in order of the `Input` and `FrInput` ops). Returns
++    /// every value (`None` at address 0).
++    pub fn execute_vals(&self, inputs: &[Val]) -> Vec<Option<Val>> {
++        let mut mem: Vec<Option<Val>> = vec![None; self.num_addrs()];
++        let mut it = inputs.iter();
++        let get = |mem: &Vec<Option<Val>>, a: &Addr| mem[*a as usize].expect("unwritten address");
++        for op in &self.ops {
++            match op {
++                Op::Input { kind, out } => {
++                    let v = it.next().expect("too few inputs").bb();
++                    assert!(v.iter().all(|&x| x < P), "input not canonical");
++                    assert!(*kind == ValKind::Ef4 || v[1..] == [0; 3], "BabyBear input");
++                    mem[*out as usize] = Some(Val::Bb(v));
++                }
++                Op::Const { val, out, .. } => mem[*out as usize] = Some(Val::Bb(*val)),
++                Op::Alu { kind, a, b, out } => {
++                    let op = AluOp {
++                        kind: *kind,
++                        a: get(&mem, a).bb(),
++                        b: get(&mem, b).bb(),
++                    };
++                    mem[*out as usize] = Some(Val::Bb(op.result()));
++                }
++                Op::FrInput { out } => {
++                    mem[*out as usize] = Some(Val::Fr(it.next().expect("too few inputs").fr()))
++                }
++                Op::FrConst { val, out } => mem[*out as usize] = Some(Val::Fr(*val)),
++                Op::Perm { ins, outs } => {
++                    let (o, _) = crate::poseidon::permute_trace(ins.map(|a| get(&mem, &a).fr()));
++                    for i in 0..3 {
++                        mem[outs[i] as usize] = Some(Val::Fr(o[i]));
++                    }
++                }
++                Op::Pack { ins, out } => {
++                    let words: Vec<u64> = ins.iter().map(|a| get(&mem, a).bb()[0]).collect();
++                    mem[*out as usize] = Some(Val::Fr(crate::fr::pack(&words)));
++                }
++                Op::Split { x, outs } => {
++                    let d = crate::fr::split(get(&mem, x).fr()).0;
++                    for i in 0..5 {
++                        mem[outs[i] as usize] = Some(Val::Bb([d[i], 0, 0, 0]));
++                    }
++                }
++                Op::Compose { ins, out } => {
++                    let v = ins.map(|a| get(&mem, &a).bb()[0]);
++                    mem[*out as usize] = Some(Val::Bb(v));
++                }
++                Op::Decompose { x, outs } => {
++                    let v = get(&mem, x).bb();
++                    for i in 0..4 {
++                        mem[outs[i] as usize] = Some(Val::Bb([v[i], 0, 0, 0]));
++                    }
++                }
++            }
++        }
++        assert!(it.next().is_none(), "too many inputs");
++        mem
++    }
++
++    /// The preprocessed programs of the two AIRs.
++    pub fn programs(&self) -> (InputAir, BbAluProgAir) {
++        let reads = self.reads();
++        let mut inp = vec![];
++        let mut alu = vec![];
++        for op in &self.ops {
++            match op {
++                Op::Input { kind, out } => inp.push(InputProg {
++                    addr: *out,
++                    mult: reads[*out as usize],
++                    bb: *kind == ValKind::Bb,
++                    konst: None,
++                }),
++                Op::Const { kind, val, out } => inp.push(InputProg {
++                    addr: *out,
++                    mult: reads[*out as usize],
++                    bb: *kind == ValKind::Bb,
++                    konst: Some(*val),
++                }),
++                Op::Alu { kind, a, b, out } => alu.push(AluProg {
++                    kind: *kind,
++                    a: *a,
++                    b: *b,
++                    out: *out,
++                    mult: reads[*out as usize],
++                }),
++                _ => panic!("programs() is for BabyBear and EF4 tapes; use machine::Machine"),
++            }
++        }
++        (
++            InputAir {
++                prog: Arc::new(inp),
++            },
++            BbAluProgAir {
++                prog: Arc::new(alu),
++            },
++        )
++    }
++}
++
++pub fn padded(n: usize) -> usize {
++    n.next_power_of_two().max(2)
++}
++
++// ------------------------------------------------------------------------------------------
++// InputAir
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct InputProg {
++    pub addr: Addr,
++    pub mult: u64,
++    pub bb: bool,
++    pub konst: Option<[u64; 4]>,
++}
++
++#[derive(Clone, Debug)]
++pub struct InputAir {
++    pub prog: Arc<Vec<InputProg>>,
++}
++
++pub const IN_PRE_WIDTH: usize = 10;
++pub const IN_WIDTH: usize = 20;
++
++impl<F: Field> BaseAir<F> for InputAir {
++    fn width(&self) -> usize {
++        IN_WIDTH
++    }
++    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
++        let h = padded(self.prog.len());
++        let mut v = vec![F::ZERO; h * IN_PRE_WIDTH];
++        for (i, p) in self.prog.iter().enumerate() {
++            let r = &mut v[i * IN_PRE_WIDTH..(i + 1) * IN_PRE_WIDTH];
++            r[0] = F::from_u32(p.addr);
++            r[1] = F::from_u64(p.mult);
++            if p.bb {
++                r[2] = F::ONE;
++                r[3] = F::ONE;
++                r[4] = F::ONE;
++            }
++            if let Some(k) = p.konst {
++                r[5] = F::ONE;
++                for j in 0..4 {
++                    r[6 + j] = F::from_u64(k[j]);
++                }
++            }
++        }
++        Some(RowMajorMatrix::new(v, IN_PRE_WIDTH))
++    }
++}
++impl<F: Field> BaseAirWithPublicValues<F> for InputAir {}
++impl<F: Field> PartitionedBaseAir<F> for InputAir {}
++
++impl<AB: InteractionBuilder + PairBuilder> Air<AB> for InputAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre row");
++        let p = |i: usize| -> AB::Expr { pr[i].into() };
++        let pv: Vec<AB::Expr> = (0..IN_PRE_WIDTH).map(p).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..IN_WIDTH).map(|i| r[i].into()).collect();
++        drop(r);
++        for k in 0..4 {
++            let v = x[k].clone();
++            eval_canonical(
++                builder,
++                v.clone(),
++                x[4 + k].clone(),
++                x[8 + k].clone(),
++                x[12 + k].clone(),
++                x[16 + k].clone(),
++            );
++            if k > 0 {
++                builder.assert_zero(pv[1 + k].clone() * v.clone());
++            }
++            builder.assert_zero(pv[5].clone() * (v - pv[6 + k].clone()));
++        }
++        let msg: Vec<AB::Expr> = std::iter::once(pv[0].clone())
++            .chain(x[0..4].iter().cloned())
++            .collect();
++        builder.push_interaction(MEM_BUS, msg, pv[1].clone(), 1);
++    }
++}
++
++impl InputAir {
++    /// Main trace from the value of each row (in program order). Canonical cells are computed
++    /// from the values as given, so a test can pass a non-canonical value.
++    pub fn trace<F: Field>(
++        &self,
++        vals: &[[u64; 4]],
++        counts: &mut RangeCounts,
++    ) -> RowMajorMatrix<F> {
++        assert_eq!(vals.len(), self.prog.len());
++        let h = padded(self.prog.len());
++        let mut v = vec![F::ZERO; h * IN_WIDTH];
++        for i in 0..h {
++            let val = vals.get(i).copied().unwrap_or([0; 4]);
++            let row = &mut v[i * IN_WIDTH..(i + 1) * IN_WIDTH];
++            for k in 0..4 {
++                row[k] = F::from_u64(val[k]);
++                let cc = canonical_cells::<F>(val[k]);
++                for j in 0..4 {
++                    row[4 + 4 * j + k] = cc[j];
++                }
++                let (lo, hi) = (val[k] & 0xffff, val[k] >> 16);
++                for x in [Some(lo), Some(hi), 0x7800u64.checked_sub(hi)]
++                    .into_iter()
++                    .flatten()
++                {
++                    if x < (1 << 16) {
++                        counts.add(x);
++                    }
++                }
++            }
++        }
++        RowMajorMatrix::new(v, IN_WIDTH)
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// BbAluProgAir
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct AluProg {
++    pub kind: AluKind,
++    pub a: Addr,
++    pub b: Addr,
++    pub out: Addr,
++    pub mult: u64,
++}
++
++#[derive(Clone, Debug)]
++pub struct BbAluProgAir {
++    pub prog: Arc<Vec<AluProg>>,
++}
++
++pub const ALU_PRE_WIDTH: usize = 7;
++
++impl<F: Field> BaseAir<F> for BbAluProgAir {
++    fn width(&self) -> usize {
++        crate::alu::ALU_WIDTH
++    }
++    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
++        let h = padded(self.prog.len());
++        let mut v = vec![F::ZERO; h * ALU_PRE_WIDTH];
++        for (i, p) in self.prog.iter().enumerate() {
++            let r = &mut v[i * ALU_PRE_WIDTH..(i + 1) * ALU_PRE_WIDTH];
++            let s = match p.kind {
++                AluKind::Add => 0,
++                AluKind::Sub => 1,
++                AluKind::Mul => 2,
++            };
++            r[s] = F::ONE;
++            r[3] = F::from_u32(p.a);
++            r[4] = F::from_u32(p.b);
++            r[5] = F::from_u32(p.out);
++            r[6] = F::from_u64(p.mult);
++        }
++        Some(RowMajorMatrix::new(v, ALU_PRE_WIDTH))
++    }
++}
++impl<F: Field> BaseAirWithPublicValues<F> for BbAluProgAir {}
++impl<F: Field> PartitionedBaseAir<F> for BbAluProgAir {}
++
++impl<AB: InteractionBuilder + PairBuilder> Air<AB> for BbAluProgAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre row");
++        let pv: Vec<AB::Expr> = (0..ALU_PRE_WIDTH).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..crate::alu::ALU_WIDTH).map(|i| r[i].into()).collect();
++        drop(r);
++        // The ALU identities (selectors from main) ...
++        <BbAluAir as Air<AB>>::eval(&BbAluAir, builder);
++        // ... with the selectors fixed by the program.
++        for s in 0..3 {
++            builder.assert_eq(x[SEL_ADD + s].clone(), pv[s].clone());
++        }
++        let active = pv[0].clone() + pv[1].clone() + pv[2].clone();
++        let msg = |addr: AB::Expr, base: usize| -> Vec<AB::Expr> {
++            std::iter::once(addr)
++                .chain(x[base..base + 4].iter().cloned())
++                .collect()
++        };
++        builder.push_interaction(MEM_BUS, msg(pv[3].clone(), A), -active.clone(), 1);
++        builder.push_interaction(MEM_BUS, msg(pv[4].clone(), B), -active, 1);
++        builder.push_interaction(MEM_BUS, msg(pv[5].clone(), C), pv[6].clone(), 1);
++    }
++}
++
++impl BbAluProgAir {
++    /// Honest rows from the executed memory.
++    pub fn rows(&self, mem: &[[u64; 4]]) -> Vec<AluRow> {
++        self.prog
++            .iter()
++            .map(|p| {
++                AluRow::from_op(&AluOp {
++                    kind: p.kind,
++                    a: mem[p.a as usize],
++                    b: mem[p.b as usize],
++                })
++            })
++            .collect()
++    }
++
++    pub fn trace<F: Field>(&self, rows: &[AluRow], counts: &mut RangeCounts) -> RowMajorMatrix<F> {
++        let m = alu_trace::<F>(rows, counts);
++        assert_eq!(m.height(), padded(self.prog.len()));
++        m
++    }
++}
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+new file mode 100644
+index 0000000..0f321e8
+--- /dev/null
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -0,0 +1,172 @@
++//! Prove-and-verify helpers for the increment tests, at the `L_Fr` domains (u = 5, 6, 7).
++
++use std::panic::{catch_unwind, AssertUnwindSafe};
++
++use num_bigint::BigUint;
++use openvm_stark_backend::{
++    air_builders::symbolic::SymbolicConstraints,
++    codec::Encode,
++    interaction::debug::{generate_logical_interactions, LogicalInteractions},
++    interaction::LogUpSecurityParameters,
++    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    p3_field::PrimeField,
++    p3_matrix::dense::RowMajorMatrix,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    AirRef, StarkEngine, SystemParams, WhirConfig, WhirParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    Bls12381FrPoseidonConfig, Bls12381FrPoseidonLfrCpuEngine, F,
++};
++
++use crate::range::{RangeCounts, RANGE_BUS, RANGE_SIZE};
++
++pub type SC = Bls12381FrPoseidonConfig;
++pub type Engine = Bls12381FrPoseidonLfrCpuEngine;
++
++/// Small Fr test set: UD, log blowup 1, `l_skip` 2, `n_stack` 14 (stacked height 2^16, so the
++/// 2^16-row range table fits), `k_whir` 4, every grinding site on at a few bits.
++pub fn small_params(max_constraint_degree: usize) -> SystemParams {
++    let (l_skip, n_stack, k_whir, log_blowup) = (2, 14, 4, 1);
++    let whir_params = WhirParams {
++        k: k_whir,
++        log_final_poly_len: (l_skip + n_stack) % k_whir,
++        query_phase_pow_bits: 6,
++        folding_pow_bits: 5,
++        mu_pow_bits: 4,
++        proximity: WhirProximityStrategy::UniqueDecoding,
++    };
++    SystemParams {
++        l_skip,
++        n_stack,
++        w_stack: 64,
++        log_blowup,
++        whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
++        logup: LogUpSecurityParameters {
++            max_interaction_count: 1 << 30,
++            log_max_message_length: 7,
++            pow_bits: 7,
++        },
++        max_constraint_degree,
++    }
++}
++
++/// Outcome of one prove-and-verify run.
++#[derive(Debug)]
++pub enum Outcome {
++    /// Proved and the stock verifier accepted; proof bytes.
++    Accepted(usize),
++    /// The stock verifier refused the proof.
++    VerifierRefused(String),
++    /// The prover stopped (panic) on the witness.
++    ProverRefused(String),
++}
++
++impl Outcome {
++    pub fn accepted(&self) -> bool {
++        matches!(self, Outcome::Accepted(_))
++    }
++}
++
++/// Keygen, prove and verify `airs` on `traces` (one per AIR, in order, no public values).
++pub fn prove_verify(
++    params: SystemParams,
++    airs: Vec<AirRef<SC>>,
++    traces: Vec<RowMajorMatrix<F>>,
++) -> Outcome {
++    let engine = Engine::new(params);
++    let (pk, vk) = engine.keygen(&airs);
++    prove_verify_keyed(&engine, &pk, &vk, traces)
++}
++
++/// The `Range16` multiplicities that balance the range bus for the main traces of
++/// `airs[..n-1]` (the last AIR is `Range16`). A looked-up value at or above `2^16` is left
++/// out, so its bus does not balance.
++pub fn range_trace(
++    pk: &MultiStarkProvingKey<SC>,
++    airs: &[AirRef<SC>],
++    traces: &[RowMajorMatrix<F>],
++) -> RowMajorMatrix<F> {
++    let mut li = LogicalInteractions::<F>::default();
++    for (i, (air, t)) in airs.iter().zip(traces).enumerate() {
++        let sc = SymbolicConstraints::from(&pk.per_air[i].vk.symbolic_constraints);
++        let pre = air.preprocessed_trace();
++        let pre_view = pre.as_ref().map(|m| m.as_view());
++        generate_logical_interactions(i, &sc.interactions, &pre_view, &[t.as_view()], &[], &mut li);
++    }
++    let mut counts = RangeCounts::default();
++    if let Some(bus) = li.at_bus.get(&RANGE_BUS) {
++        for (fields, conns) in bus {
++            let v = fields[0].as_canonical_biguint();
++            if v < BigUint::from(RANGE_SIZE as u64) {
++                let idx = v.to_u64_digits().first().copied().unwrap_or(0) as usize;
++                let total: F = conns.iter().map(|(_, c)| *c).sum();
++                // Counts are small non-negative integers for an honest or tampered trace.
++                let n = total
++                    .as_canonical_biguint()
++                    .to_u64_digits()
++                    .first()
++                    .copied()
++                    .unwrap_or(0);
++                counts.0[idx] += n;
++            }
++        }
++    }
++    counts.trace()
++}
++
++/// Keygen, fill the `Range16` table (last AIR), prove and verify.
++pub fn prove_verify_range(
++    params: SystemParams,
++    airs: Vec<AirRef<SC>>,
++    mut traces: Vec<RowMajorMatrix<F>>,
++) -> (Outcome, MultiStarkVerifyingKey<SC>) {
++    let engine = Engine::new(params);
++    let (pk, vk) = engine.keygen(&airs);
++    assert_eq!(traces.len() + 1, airs.len());
++    traces.push(range_trace(&pk, &airs, &traces));
++    (prove_verify_keyed(&engine, &pk, &vk, traces), vk)
++}
++
++/// Prove and verify under an existing key.
++pub fn prove_verify_keyed(
++    engine: &Engine,
++    pk: &MultiStarkProvingKey<SC>,
++    vk: &MultiStarkVerifyingKey<SC>,
++    traces: Vec<RowMajorMatrix<F>>,
++) -> Outcome {
++    let d_pk = engine.device().transport_pk_to_device(pk);
++    let res = catch_unwind(AssertUnwindSafe(|| {
++        let ctx = ProvingContext::new(
++            traces
++                .iter()
++                .enumerate()
++                .map(|(i, t)| {
++                    let cm = ColMajorMatrix::from_row_major(t);
++                    (
++                        i,
++                        AirProvingContext::simple_no_pis(
++                            engine.device().transport_matrix_to_device(&cm),
++                        ),
++                    )
++                })
++                .collect(),
++        );
++        engine.prove(&d_pk, ctx)
++    }));
++    let proof = match res {
++        Err(e) => {
++            let msg = e
++                .downcast_ref::<String>()
++                .cloned()
++                .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
++                .unwrap_or_default();
++            return Outcome::ProverRefused(msg);
++        }
++        Ok(Err(e)) => return Outcome::ProverRefused(format!("{e:?}")),
++        Ok(Ok(p)) => p,
++    };
++    match engine.verify(vk, &proof) {
++        Ok(()) => Outcome::Accepted(proof.encode_to_vec().map(|b| b.len()).unwrap_or(0)),
++        Err(e) => Outcome::VerifierRefused(format!("{e:?}")),
++    }
++}
+diff --git a/crates/sherlock-lfr/src/transcript.rs b/crates/sherlock-lfr/src/transcript.rs
+new file mode 100644
+index 0000000..5920f82
+--- /dev/null
++++ b/crates/sherlock-lfr/src/transcript.rs
+@@ -0,0 +1,122 @@
++//! I5: the transcript of `L` on the tape.
++//!
++//! [`TapeTranscript`] emits the tape ops of the stock `MultiFieldTranscript<BabyBear, Fr,
++//! MidnightPoseidonFr, 3, 2>` from the initial state `(0, 0, 2^64 + u 2^66)` (u = 3 for `L`):
++//! the overwrite duplex (an absorb replaces a state cell; a full block or a squeeze after an
++//! absorb permutes), observe buffering of 8 BabyBear words per Fr word (`Pack`), and 5 base-`p`
++//! digits per squeezed Fr word (`Split`). Every transition follows
++//! `stark-backend/src/transcript/{multi_field,duplex_sponge}.rs` line by line. The tape addresses
++//! of the state cells move; no op is needed for an overwrite.
++
++use openvm_stark_sdk::config::bls12381_fr_poseidon::cap_var;
++use p3_field::PrimeCharacteristicRing;
++
++use crate::tape::{Addr, Tape};
++
++const RATE: usize = 2;
++const OBS_PER_ELEM: usize = 8;
++const SAMPLES_PER_ELEM: usize = 5;
++
++#[derive(Clone, Debug)]
++pub struct TapeTranscript {
++    state: [Addr; 3],
++    absorb_idx: usize,
++    sample_idx: usize,
++    observe_buf: Vec<Addr>,
++    /// Pending digits, in pop order (the next digit is the last).
++    sample_buf: Vec<Addr>,
++}
++
++impl TapeTranscript {
++    pub fn new(tape: &mut Tape, u_transcript: u128) -> Self {
++        let zero = tape.fr_const(openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr::ZERO);
++        let cap = tape.fr_const(cap_var(u_transcript));
++        Self {
++            state: [zero, zero, cap],
++            absorb_idx: 0,
++            sample_idx: 0,
++            observe_buf: vec![],
++            sample_buf: vec![],
++        }
++    }
++
++    fn permute(&mut self, tape: &mut Tape) {
++        self.state = tape.perm(self.state);
++        self.absorb_idx = 0;
++        self.sample_idx = RATE;
++    }
++
++    fn absorb(&mut self, tape: &mut Tape, x: Addr) {
++        self.state[self.absorb_idx] = x;
++        self.absorb_idx += 1;
++        if self.absorb_idx == RATE {
++            self.permute(tape);
++        }
++    }
++
++    fn squeeze(&mut self, tape: &mut Tape) -> Addr {
++        if self.absorb_idx != 0 || self.sample_idx == 0 {
++            self.permute(tape);
++        }
++        self.sample_idx -= 1;
++        self.state[self.sample_idx]
++    }
++
++    fn flush_observe_buf(&mut self, tape: &mut Tape) {
++        if !self.observe_buf.is_empty() {
++            let packed = tape.pack(&self.observe_buf);
++            self.absorb(tape, packed);
++            self.observe_buf.clear();
++        }
++    }
++
++    /// Observe one BabyBear word.
++    pub fn observe(&mut self, tape: &mut Tape, w: Addr) {
++        self.sample_buf.clear();
++        self.observe_buf.push(w);
++        if self.observe_buf.len() == OBS_PER_ELEM {
++            let packed = tape.pack(&self.observe_buf);
++            self.absorb(tape, packed);
++            self.observe_buf.clear();
++        }
++    }
++
++    /// Observe an `EF4` value: its 4 coefficients in order.
++    pub fn observe_ext(&mut self, tape: &mut Tape, x: Addr) {
++        for w in tape.decompose(x) {
++            self.observe(tape, w);
++        }
++    }
++
++    /// Observe a commitment (one Fr word).
++    pub fn observe_commit(&mut self, tape: &mut Tape, d: Addr) {
++        self.sample_buf.clear();
++        self.flush_observe_buf(tape);
++        self.absorb(tape, d);
++    }
++
++    /// Sample one BabyBear word.
++    pub fn sample(&mut self, tape: &mut Tape) -> Addr {
++        if let Some(v) = self.sample_buf.pop() {
++            return v;
++        }
++        self.flush_observe_buf(tape);
++        let sq = self.squeeze(tape);
++        let mut d = tape.split(sq).to_vec();
++        assert_eq!(d.len(), SAMPLES_PER_ELEM);
++        d.reverse();
++        self.sample_buf = d;
++        self.sample_buf.pop().expect("digits")
++    }
++
++    /// Sample an `EF4` value from 4 words (coefficient order).
++    pub fn sample_ext(&mut self, tape: &mut Tape) -> Addr {
++        let w = [
++            self.sample(tape),
++            self.sample(tape),
++            self.sample(tape),
++            self.sample(tape),
++        ];
++        tape.compose(w)
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/i0_fixture.rs b/crates/sherlock-lfr/tests/i0_fixture.rs
+new file mode 100644
+index 0000000..ad703f1
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i0_fixture.rs
+@@ -0,0 +1,39 @@
++//! I0 gate: the `L` fixture on disk decodes, the stock verifier accepts it, and a changed proof
++//! byte is refused. Needs the fixture (`cargo run --release --example l_fixture`); the test is
++//! ignored by default because it reads `~/.cache/e2-lfr/fixture`.
++
++#![allow(clippy::needless_range_loop)]
++
++use openvm_stark_backend::{codec::Decode, proof::Proof, StarkEngine};
++use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine;
++use sherlock_lfr::fixture::{self, l_ud, LSC};
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i0_fixture_verifies_from_disk() {
++    let fx = fixture::load(&fixture::dir()).expect("load fixture");
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_ud(48));
++    engine
++        .verify(&fx.l_vk, &fx.l_proof)
++        .expect("L proof from disk verifies");
++    assert_eq!(fx.l_vk.inner.per_air.len(), 39);
++    // Byte flips at 8 spread positions: each is refused by the decoder or the verifier.
++    let b = &fx.l_proof_bytes;
++    let (mut dec, mut ver) = (0, 0);
++    for k in 0..8 {
++        let pos = 40 + k * (b.len() - 80) / 7;
++        let mut bad = b.clone();
++        bad[pos] ^= 0x01;
++        match Proof::<LSC>::decode_from_bytes(&bad) {
++            Err(_) => dec += 1,
++            Ok(p) => {
++                assert!(
++                    engine.verify(&fx.l_vk, &p).is_err(),
++                    "flip at {pos} accepted"
++                );
++                ver += 1;
++            }
++        }
++    }
++    println!("I0: L proof {} bytes verifies from disk; 8 of 8 byte flips refused ({dec} decoder, {ver} verifier)", b.len());
++}
+diff --git a/crates/sherlock-lfr/tests/i2_alu.rs b/crates/sherlock-lfr/tests/i2_alu.rs
+new file mode 100644
+index 0000000..2f6721f
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i2_alu.rs
+@@ -0,0 +1,197 @@
++//! I2 gate: `BbAlu` and `Range16` (BabyBear and `EF4` arithmetic emulated in Fr) prove and
++//! verify at the small Fr set with the stock verifier; the results equal p3 BabyBear and `EF4`;
++//! five invalid witnesses are refused.
++
++#![allow(clippy::needless_range_loop)]
++
++use std::sync::Arc;
++
++use openvm_stark_backend::AirRef;
++use p3_baby_bear::BabyBear;
++use p3_field::PrimeCharacteristicRing;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use sherlock_lfr::{
++    alu::{alu_trace, AluKind, AluOp, AluRow, BbAluAir, ALU_WIDTH},
++    bb::{from_ef4, to_ef4, P},
++    range::{Range16Air, RangeCounts},
++    testing::{prove_verify, small_params, Outcome, SC},
++};
++
++fn airs() -> Vec<AirRef<SC>> {
++    vec![Arc::new(BbAluAir), Arc::new(Range16Air)]
++}
++
++fn run(rows: &[AluRow]) -> Outcome {
++    let mut counts = RangeCounts::default();
++    let alu = alu_trace(rows, &mut counts);
++    prove_verify(small_params(3), airs(), vec![alu, counts.trace()])
++}
++
++fn ops(n: usize) -> Vec<AluOp> {
++    let mut rng = StdRng::seed_from_u64(0xe2_a1);
++    let mut v = vec![
++        // Edge cases: results p - 1 (the is_max branch), 0, and maximal inputs.
++        AluOp {
++            kind: AluKind::Add,
++            a: [P - 1, 0, 0, 0],
++            b: [0; 4],
++        },
++        AluOp {
++            kind: AluKind::Sub,
++            a: [0; 4],
++            b: [1, 0, 0, 0],
++        },
++        AluOp {
++            kind: AluKind::Add,
++            a: [P - 1; 4],
++            b: [1; 4],
++        },
++        AluOp {
++            kind: AluKind::Mul,
++            a: [P - 1; 4],
++            b: [P - 1; 4],
++        },
++        AluOp {
++            kind: AluKind::Sub,
++            a: [5; 4],
++            b: [5; 4],
++        },
++        AluOp {
++            kind: AluKind::Mul,
++            a: [0; 4],
++            b: [P - 1; 4],
++        },
++    ];
++    for i in 0..n {
++        let kind = [AluKind::Add, AluKind::Sub, AluKind::Mul][i % 3];
++        let bb_only = i % 4 == 0;
++        let mut g = || -> [u64; 4] {
++            std::array::from_fn(|k| {
++                if bb_only && k > 0 {
++                    0
++                } else {
++                    rng.random_range(0..P)
++                }
++            })
++        };
++        let (a, b) = (g(), g());
++        v.push(AluOp { kind, a, b });
++    }
++    v
++}
++
++#[test]
++fn i2_alu_results_equal_p3() {
++    for op in ops(3000) {
++        let (a, b) = (to_ef4(&op.a), to_ef4(&op.b));
++        let want = match op.kind {
++            AluKind::Add => a + b,
++            AluKind::Sub => a - b,
++            AluKind::Mul => a * b,
++        };
++        assert_eq!(op.result(), from_ef4(want), "{op:?}");
++        let row = AluRow::from_op(&op);
++        assert_eq!(row.c, op.result());
++        // BabyBear-only ops stay in the base field.
++        if op.a[1..] == [0; 3] && op.b[1..] == [0; 3] {
++            let (x, y) = (BabyBear::from_u64(op.a[0]), BabyBear::from_u64(op.b[0]));
++            let w = match op.kind {
++                AluKind::Add => x + y,
++                AluKind::Sub => x - y,
++                AluKind::Mul => x * y,
++            };
++            assert_eq!(from_ef4(to_ef4(&[0; 4]) + w)[0], op.result()[0]);
++            assert_eq!(op.result()[1..], [0; 3]);
++        }
++    }
++}
++
++#[test]
++fn i2_alu_honest_proves() {
++    let ops = ops(500);
++    let rows: Vec<AluRow> = ops.iter().map(AluRow::from_op).collect();
++    let out = run(&rows);
++    println!(
++        "I2 honest: {} ops ({} rows padded, {ALU_WIDTH} columns, 24 lookups per row): {out:?}",
++        rows.len(),
++        rows.len().next_power_of_two()
++    );
++    assert!(out.accepted(), "honest ALU trace refused: {out:?}");
++}
++
++/// The first mul row with `q_0 >= 1` and `c_0 + p < 2^31` (so `c_0 + p` has 16-bit limbs).
++fn pick(rows: &[AluRow]) -> usize {
++    rows.iter()
++        .position(|r| {
++            let q = r.ql[0][0] + (r.ql[0][1] << 16) + (r.ql[0][2] << 32);
++            r.sel[2] == 1 && q >= 1 && r.c[0] + P < (1 << 31) && r.hi[0] >= 1
++        })
++        .expect("a row for the negative controls")
++}
++
++fn set_c(r: &mut AluRow, k: usize, c: u64) {
++    r.c[k] = c;
++    r.lo[k] = c & 0xffff;
++    r.hi[k] = c >> 16;
++}
++
++fn set_q(r: &mut AluRow, k: usize, q: u64) {
++    r.ql[k] = [q & 0xffff, (q >> 16) & 0xffff, q >> 32];
++}
++
++fn q_of(r: &AluRow, k: usize) -> u64 {
++    r.ql[k][0] + (r.ql[k][1] << 16) + (r.ql[k][2] << 32)
++}
++
++#[test]
++fn i2_alu_negative_controls() {
++    let ops = ops(200);
++    let honest: Vec<AluRow> = ops.iter().map(AluRow::from_op).collect();
++    let i = pick(&honest);
++    let mut cases: Vec<(&str, Vec<AluRow>)> = vec![];
++
++    // 1. Non-canonical result c + p with q - 1: the integer identity holds, hi > 0x7800.
++    let mut r = honest.clone();
++    let (c, q) = (r[i].c[0], q_of(&r[i], 0));
++    set_c(&mut r[i], 0, c + P);
++    set_q(&mut r[i], 0, q - 1);
++    cases.push(("non-canonical c + p", r));
++
++    // 2. Wrong quotient q + 1.
++    let mut r = honest.clone();
++    set_q(&mut r[i], 0, q + 1);
++    cases.push(("wrong quotient", r));
++
++    // 3. Wrong result c + 1 (limbs consistent with it).
++    let mut r = honest.clone();
++    set_c(&mut r[i], 0, (c + 1) % P);
++    cases.push(("wrong result", r));
++
++    // 4. Limb out of range: lo + 2^16, hi - 1 (same c, so every identity holds).
++    let mut r = honest.clone();
++    r[i].lo[0] += 1 << 16;
++    r[i].hi[0] -= 1;
++    cases.push(("limb out of range", r));
++
++    // 5. The value p itself as a result: add(p - 1, 1) honestly gives q = 1, c = 0; the witness
++    // q = 0, c = p = 0x7800_0001 has 16-bit limbs (hi = 0x7800, lo = 1) and is refused only by
++    // the hi = 0x7800 -> lo = 0 rule.
++    let mut r = honest.clone();
++    r.push(AluRow::from_op(&AluOp {
++        kind: AluKind::Add,
++        a: [P - 1, 0, 0, 0],
++        b: [1, 0, 0, 0],
++    }));
++    let j = r.len() - 1;
++    assert_eq!((r[j].c[0], q_of(&r[j], 0)), (0, 1));
++    set_c(&mut r[j], 0, P);
++    set_q(&mut r[j], 0, 0);
++    assert_eq!((r[j].hi[0], r[j].lo[0]), (0x7800, 1));
++    cases.push(("c = p with 16-bit limbs", r));
++
++    for (name, rows) in cases {
++        let out = run(&rows);
++        println!("I2 negative {name}: {out:?}");
++        assert!(!out.accepted(), "{name} accepted");
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/i3_poseidon.rs b/crates/sherlock-lfr/tests/i3_poseidon.rs
+new file mode 100644
+index 0000000..e4b9c8f
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i3_poseidon.rs
+@@ -0,0 +1,115 @@
++//! I3 gate: the `PoseidonFr` AIR equals Midnight's permutation (midnight-circuits 7.3.0
++//! `permutation_cpu`, through `MidnightPoseidonFr`) and proves with the stock verifier; a changed
++//! output and a changed S-box cell are refused.
++
++#![allow(clippy::needless_range_loop)]
++
++use std::sync::Arc;
++
++use openvm_stark_backend::{p3_matrix::dense::RowMajorMatrix, p3_symmetric::Permutation, AirRef};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    cap_fixed, cap_var, Bls12381Fr, MidnightPoseidonFr,
++};
++use p3_field::PrimeCharacteristicRing;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use sherlock_lfr::{
++    poseidon::{
++        permute_trace, poseidon_row, poseidon_trace, PoseidonCallerAir, PoseidonFrAir,
++        CALLER_WIDTH, OUT, POSEIDON_WIDTH, SB,
++    },
++    testing::{prove_verify, small_params, Outcome, SC},
++};
++
++type Fr = Bls12381Fr;
++
++fn rand_fr(rng: &mut StdRng) -> Fr {
++    Fr::from_u64(rng.random::<u64>()) * Fr::from_u64(rng.random::<u64>())
++        + Fr::from_u64(rng.random::<u64>())
++}
++
++fn inputs() -> Vec<[Fr; 3]> {
++    let mut rng = StdRng::seed_from_u64(0xe2_a3);
++    let mut v = vec![
++        [Fr::ZERO; 3],
++        [Fr::ONE, Fr::TWO, Fr::from_u64(3)],
++        [-Fr::ONE; 3],
++        [Fr::ZERO, Fr::ZERO, cap_var(3)],
++        [Fr::ZERO, Fr::ZERO, cap_fixed(1, 36)],
++    ];
++    for _ in 0..59 {
++        v.push([rand_fr(&mut rng), rand_fr(&mut rng), rand_fr(&mut rng)]);
++    }
++    v
++}
++
++#[test]
++fn i3_poseidon_equals_midnight() {
++    let perm = MidnightPoseidonFr::new();
++    for inp in inputs() {
++        let mut want = inp;
++        perm.permute_mut(&mut want);
++        assert_eq!(permute_trace(inp).0, want);
++        let row = poseidon_row(inp, 1);
++        assert_eq!(row[OUT..OUT + 3], want);
++    }
++    assert_eq!(POSEIDON_WIDTH, 175);
++}
++
++fn caller_trace(ios: &[([Fr; 3], [Fr; 3])]) -> RowMajorMatrix<Fr> {
++    let h = ios.len().next_power_of_two().max(2);
++    let mut v = vec![Fr::ZERO; h * CALLER_WIDTH];
++    for (i, (a, b)) in ios.iter().enumerate() {
++        v[i * CALLER_WIDTH] = Fr::ONE;
++        v[i * CALLER_WIDTH + 1..i * CALLER_WIDTH + 4].copy_from_slice(a);
++        v[i * CALLER_WIDTH + 4..i * CALLER_WIDTH + 7].copy_from_slice(b);
++    }
++    RowMajorMatrix::new(v, CALLER_WIDTH)
++}
++
++fn airs() -> Vec<AirRef<SC>> {
++    vec![Arc::new(PoseidonFrAir), Arc::new(PoseidonCallerAir)]
++}
++
++fn run(rows: Vec<Vec<Fr>>, ios: &[([Fr; 3], [Fr; 3])]) -> Outcome {
++    prove_verify(
++        small_params(3),
++        airs(),
++        vec![poseidon_trace(rows), caller_trace(ios)],
++    )
++}
++
++#[test]
++fn i3_poseidon_proves_and_refuses() {
++    let ins = inputs();
++    let ios: Vec<([Fr; 3], [Fr; 3])> = ins.iter().map(|&a| (a, permute_trace(a).0)).collect();
++    let rows: Vec<Vec<Fr>> = ins.iter().map(|&a| poseidon_row(a, 1)).collect();
++    let out = run(rows.clone(), &ios);
++    println!(
++        "I3 honest: {} permutations, {POSEIDON_WIDTH} columns: {out:?}",
++        ins.len()
++    );
++    assert!(out.accepted(), "honest Poseidon trace refused: {out:?}");
++
++    // 1. Changed output in both the AIR row and the caller (the bus balances; the round
++    // constraints refuse).
++    let (mut r, mut io) = (rows.clone(), ios.clone());
++    r[7][OUT] += Fr::ONE;
++    io[7].1[0] += Fr::ONE;
++    let o1 = run(r, &io);
++    // 2. Changed output in the caller only (the bus refuses).
++    let mut io = ios.clone();
++    io[9].1[2] += Fr::ONE;
++    let o2 = run(rows.clone(), &io);
++    // 3. Changed S-box output cell y of a partial round.
++    let mut r = rows.clone();
++    r[11][SB + 2 * 40 + 1] += Fr::ONE;
++    let o3 = run(r, &ios);
++    for (name, o) in [
++        ("output in AIR and caller", o1),
++        ("output in caller only", o2),
++        ("partial S-box cell", o3),
++    ] {
++        println!("I3 negative {name}: {o:?}");
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/i4_tape.rs b/crates/sherlock-lfr/tests/i4_tape.rs
+new file mode 100644
+index 0000000..2d1b1ca
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i4_tape.rs
+@@ -0,0 +1,147 @@
++//! I4 gate: a fixed tape (Horner evaluation of an `EF4` polynomial, with a BabyBear constant)
++//! runs on `InputAir` + `BbAluProgAir` + `Range16` over the write-once memory bus and proves with
++//! the stock verifier; a changed read value, a read of an unwritten address and a non-canonical
++//! input are refused.
++
++#![allow(clippy::needless_range_loop)]
++
++use std::sync::Arc;
++
++use openvm_stark_backend::AirRef;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use sherlock_lfr::{
++    alu::{AluOp, AluRow},
++    bb::{from_ef4, to_ef4, Ef4, P},
++    range::{Range16Air, RangeCounts},
++    tape::{AluProg, BbAluProgAir, InputAir, Tape, ValKind},
++    testing::{prove_verify, small_params, Outcome, SC},
++};
++
++const DEG: usize = 40;
++
++/// Horner: acc = c_DEG; acc = acc * x + c_i; then out = acc * 7 + x.
++fn horner_tape() -> (Tape, u32) {
++    let mut t = Tape::default();
++    let cs: Vec<u32> = (0..=DEG).map(|_| t.input(ValKind::Ef4)).collect();
++    let x = t.input(ValKind::Ef4);
++    let seven = t.constant(ValKind::Bb, [7, 0, 0, 0]);
++    let mut acc = cs[DEG];
++    for i in (0..DEG).rev() {
++        let m = t.mul(acc, x);
++        acc = t.add(m, cs[i]);
++    }
++    let m = t.mul(acc, seven);
++    let out = t.add(m, x);
++    let out = t.sub(out, seven);
++    (t, out)
++}
++
++fn inputs() -> Vec<[u64; 4]> {
++    let mut rng = StdRng::seed_from_u64(0xe2_a4);
++    (0..DEG + 2)
++        .map(|_| std::array::from_fn(|_| rng.random_range(0..P)))
++        .collect()
++}
++
++/// Values of the InputAir rows in program order (inputs and constants).
++fn input_rows(t: &Tape, mem: &[[u64; 4]], inp: &InputAir) -> Vec<[u64; 4]> {
++    let _ = t;
++    inp.prog.iter().map(|p| mem[p.addr as usize]).collect()
++}
++
++fn run(inp: &InputAir, alu: &BbAluProgAir, in_vals: &[[u64; 4]], rows: &[AluRow]) -> Outcome {
++    let mut counts = RangeCounts::default();
++    let ti = inp.trace(in_vals, &mut counts);
++    let ta = alu.trace(rows, &mut counts);
++    let airs: Vec<AirRef<SC>> = vec![
++        Arc::new(inp.clone()),
++        Arc::new(alu.clone()),
++        Arc::new(Range16Air),
++    ];
++    prove_verify(small_params(3), airs, vec![ti, ta, counts.trace()])
++}
++
++#[test]
++fn i4_tape_executes_and_proves() {
++    let (t, out) = horner_tape();
++    let ins = inputs();
++    let mem = t.execute(&ins);
++    // Reference: p3 EF4 Horner.
++    let x = to_ef4(&ins[DEG + 1]);
++    let mut acc = to_ef4(&ins[DEG]);
++    for i in (0..DEG).rev() {
++        acc = acc * x + to_ef4(&ins[i]);
++    }
++    let seven = Ef4::from(p3_baby_bear::BabyBear::new(7));
++    assert_eq!(mem[out as usize], from_ef4(acc * seven + x - seven));
++
++    let (inp, alu) = t.programs();
++    let in_vals = input_rows(&t, &mem, &inp);
++    let rows = alu.rows(&mem);
++    let o = run(&inp, &alu, &in_vals, &rows);
++    println!(
++        "I4 honest: {} ops ({} inputs and constants, {} ALU rows): {o:?}",
++        t.ops.len(),
++        inp.prog.len(),
++        rows.len()
++    );
++    assert!(o.accepted(), "honest tape refused: {o:?}");
++
++    // 1. Changed read value: ALU row 5 uses a' = a + 1 (its own identities recomputed, so only
++    // the memory bus can refuse).
++    let mut r = rows.clone();
++    let p = &alu.prog[5];
++    let mut a = mem[p.a as usize];
++    a[0] = (a[0] + 1) % P;
++    r[5] = AluRow::from_op(&AluOp {
++        kind: p.kind,
++        a,
++        b: mem[p.b as usize],
++    });
++    let o1 = run(&inp, &alu, &in_vals, &r);
++
++    // 2. A program that reads an address no op writes.
++    let mut prog = (*alu.prog).clone();
++    prog[3] = AluProg {
++        a: 100_000,
++        ..prog[3].clone()
++    };
++    let bad_alu = BbAluProgAir {
++        prog: Arc::new(prog),
++    };
++    let o2 = run(&inp, &bad_alu, &in_vals, &rows);
++
++    // 3. A non-canonical input coefficient v + p (< 2^31), used consistently by its readers.
++    let j = (0..DEG + 1)
++        .find(|&j| ins[j][0] + P < (1 << 31))
++        .expect("small coefficient");
++    let addr = inp.prog[j].addr;
++    let mut iv = in_vals.clone();
++    iv[j][0] += P;
++    let mut mem2 = mem.clone();
++    mem2[addr as usize][0] += P;
++    let r3: Vec<AluRow> = alu
++        .prog
++        .iter()
++        .map(|p| {
++            AluRow::from_op(&AluOp {
++                kind: p.kind,
++                a: mem2[p.a as usize],
++                b: mem2[p.b as usize],
++            })
++        })
++        .collect();
++    // Same results mod p, so every later value is unchanged.
++    for (x, y) in r3.iter().zip(&rows) {
++        assert_eq!(x.c, y.c);
++    }
++    let o3 = run(&inp, &alu, &iv, &r3);
++    for (name, o) in [
++        ("changed read value", o1),
++        ("unwritten address", o2),
++        ("non-canonical input", o3),
++    ] {
++        println!("I4 negative {name}: {o:?}");
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/i5_l_transcript.rs b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+new file mode 100644
+index 0000000..3548c4b
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+@@ -0,0 +1,117 @@
++//! I5b: the full transcript of the stock verifier on the real `L` proof, replayed on the tape.
++//!
++//! A recording wrapper around the stock `L` transcript logs every observe, commitment observe
++//! and sample while `verifier::verify` accepts the fixture. The log drives [`TapeTranscript`]
++//! (observed values as tape inputs); every sample on the tape equals the stock sample. The op
++//! counts of the `L` transcript are printed (MEASURED), and the tape proves on the machine AIRs
++//! with the stock verifier. Ignored by default: needs the fixture.
++
++use openvm_stark_backend::{verifier::verify, FiatShamirTranscript, StarkEngine};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::{
++        default_transcript, BabyBearBls12381PoseidonConfig, BabyBearBls12381PoseidonCpuEngine,
++        Bls12381Fr, Transcript,
++    },
++    bls12381_fr_poseidon::U_TRANSCRIPT,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::PrimeField32;
++use sherlock_lfr::{
++    fixture::{self, l_ud},
++    machine::Machine,
++    tape::{Op, Tape, Val, ValKind},
++    testing::{prove_verify_range, small_params},
++    transcript::TapeTranscript,
++};
++
++type Lsc = BabyBearBls12381PoseidonConfig;
++
++#[derive(Clone, Debug)]
++enum Ev {
++    Obs(BabyBear),
++    Commit(Bls12381Fr),
++    Sample(BabyBear),
++}
++
++#[derive(Clone)]
++struct Rec {
++    inner: Transcript,
++    log: std::sync::Arc<std::sync::Mutex<Vec<Ev>>>,
++}
++
++impl FiatShamirTranscript<Lsc> for Rec {
++    fn observe(&mut self, v: BabyBear) {
++        self.log.lock().unwrap().push(Ev::Obs(v));
++        FiatShamirTranscript::<Lsc>::observe(&mut self.inner, v);
++    }
++    fn sample(&mut self) -> BabyBear {
++        let v = FiatShamirTranscript::<Lsc>::sample(&mut self.inner);
++        self.log.lock().unwrap().push(Ev::Sample(v));
++        v
++    }
++    fn observe_commit(&mut self, d: [Bls12381Fr; 1]) {
++        self.log.lock().unwrap().push(Ev::Commit(d[0]));
++        FiatShamirTranscript::<Lsc>::observe_commit(&mut self.inner, d);
++    }
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i5_l_transcript_on_tape() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_ud(48));
++    let mut rec = Rec {
++        inner: default_transcript(),
++        log: Default::default(),
++    };
++    verify(engine.config(), &fx.l_vk, &fx.l_proof, &mut rec).expect("L verifies");
++    let log = rec.log.lock().unwrap().clone();
++
++    let mut tape = Tape::default();
++    let mut tt = TapeTranscript::new(&mut tape, U_TRANSCRIPT);
++    let mut inputs = vec![];
++    let mut checks = vec![];
++    let (mut n_obs, mut n_commit, mut n_sample) = (0usize, 0usize, 0usize);
++    for e in &log {
++        match e {
++            Ev::Obs(v) => {
++                let a = tape.input(ValKind::Bb);
++                inputs.push(Val::Bb([v.as_canonical_u32() as u64, 0, 0, 0]));
++                tt.observe(&mut tape, a);
++                n_obs += 1;
++            }
++            Ev::Commit(d) => {
++                let a = tape.fr_input();
++                inputs.push(Val::Fr(*d));
++                tt.observe_commit(&mut tape, a);
++                n_commit += 1;
++            }
++            Ev::Sample(v) => {
++                checks.push((tt.sample(&mut tape), v.as_canonical_u32() as u64));
++                n_sample += 1;
++            }
++        }
++    }
++    let mem = tape.execute_vals(&inputs);
++    for (i, (a, want)) in checks.iter().enumerate() {
++        assert_eq!(mem[*a as usize].unwrap().bb()[0], *want, "sample {i}");
++    }
++    let count = |f: fn(&Op) -> bool| tape.ops.iter().filter(|o| f(o)).count();
++    let perms = count(|o| matches!(o, Op::Perm { .. }));
++    let packs = count(|o| matches!(o, Op::Pack { .. }));
++    let splits = count(|o| matches!(o, Op::Split { .. }));
++    println!(
++        "I5b L transcript: {} events: {n_obs} observes, {n_commit} commitment observes, {n_sample} samples; all samples equal on the tape; tape ops: {perms} Perm, {packs} Pack, {splits} Split; machine shape {:?}",
++        log.len(),
++        Machine::new(&tape).shape()
++    );
++    // Prove the transcript tape of the real L verification on the machine AIRs.
++    let m = Machine::new(&tape);
++    let t = std::time::Instant::now();
++    let (o, _) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
++    println!(
++        "I5b prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(o.accepted(), "L transcript tape refused: {o:?}");
++}
+diff --git a/crates/sherlock-lfr/tests/i5_transcript.rs b/crates/sherlock-lfr/tests/i5_transcript.rs
+new file mode 100644
+index 0000000..1f81a5f
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i5_transcript.rs
+@@ -0,0 +1,208 @@
++//! I5 gate: the transcript of `L` on the tape. A random schedule of observes, commitment
++//! observes, samples and `EF4` observes and samples gives the same samples on the tape as the
++//! stock `L` transcript (`baby_bear_bls12381_poseidon::Transcript`, u = 3); the tape proves on the
++//! machine AIRs with the stock verifier; refused: the squeeze split witness of `x + r`, a changed
++//! digit, a changed packed word.
++
++#![allow(clippy::needless_range_loop)]
++
++use openvm_stark_backend::{p3_field::PrimeField, FiatShamirTranscript};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::{default_transcript, BabyBearBls12381PoseidonConfig, Bls12381Fr},
++    bls12381_fr_poseidon::U_TRANSCRIPT,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::{BasedVectorSpace, Field, PrimeCharacteristicRing, PrimeField32};
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use sherlock_lfr::{
++    bb::{from_ef4, Ef4, P},
++    fr::{fr_from_big, split, split_consts},
++    machine::{Machine, SplitWitness},
++    tape::{Addr, Tape, Val, ValKind},
++    testing::{prove_verify_range, small_params},
++    transcript::TapeTranscript,
++};
++
++type Lsc = BabyBearBls12381PoseidonConfig;
++type Fr = Bls12381Fr;
++
++enum Step {
++    Obs(u64),
++    ObsExt([u64; 4]),
++    Commit(Fr),
++    Sample,
++    SampleExt,
++    /// Observe the last sampled word again (a read of a split digit).
++    ObsLastSample,
++}
++
++fn schedule(n: usize) -> Vec<Step> {
++    let mut rng = StdRng::seed_from_u64(0xe2_a5);
++    let mut v = vec![];
++    for _ in 0..n {
++        v.push(match rng.random_range(0..12) {
++            0..=3 => Step::Obs(rng.random_range(0..P)),
++            4 => Step::ObsExt(std::array::from_fn(|_| rng.random_range(0..P))),
++            5 => Step::Commit(
++                Fr::from_u64(rng.random()) * Fr::from_u64(rng.random())
++                    + Fr::from_u64(rng.random()),
++            ),
++            6..=8 => Step::Sample,
++            9 => Step::SampleExt,
++            10 => Step::ObsLastSample,
++            _ => Step::Obs(P - 1),
++        });
++    }
++    v
++}
++
++struct Built {
++    tape: Tape,
++    inputs: Vec<Val>,
++    /// (tape address, stock value) of every sample.
++    samples: Vec<(Addr, [u64; 4])>,
++}
++
++fn build(steps: &[Step]) -> Built {
++    let mut tape = Tape::default();
++    let mut tt = TapeTranscript::new(&mut tape, U_TRANSCRIPT);
++    let mut st = default_transcript();
++    let mut inputs = vec![];
++    let mut samples = vec![];
++    let mut last: Option<(Addr, u64)> = None;
++    for s in steps {
++        match s {
++            Step::Obs(w) => {
++                let a = tape.input(ValKind::Bb);
++                inputs.push(Val::Bb([*w, 0, 0, 0]));
++                tt.observe(&mut tape, a);
++                FiatShamirTranscript::<Lsc>::observe(&mut st, BabyBear::from_u64(*w));
++            }
++            Step::ObsExt(v) => {
++                let a = tape.input(ValKind::Ef4);
++                inputs.push(Val::Bb(*v));
++                tt.observe_ext(&mut tape, a);
++                let e = Ef4::from_basis_coefficients_fn(|i| BabyBear::from_u64(v[i]));
++                FiatShamirTranscript::<Lsc>::observe_ext(&mut st, e);
++            }
++            Step::Commit(d) => {
++                let a = tape.fr_input();
++                inputs.push(Val::Fr(*d));
++                tt.observe_commit(&mut tape, a);
++                FiatShamirTranscript::<Lsc>::observe_commit(&mut st, [*d]);
++            }
++            Step::Sample => {
++                let a = tt.sample(&mut tape);
++                let v = FiatShamirTranscript::<Lsc>::sample(&mut st).as_canonical_u32() as u64;
++                samples.push((a, [v, 0, 0, 0]));
++                last = Some((a, v));
++            }
++            Step::SampleExt => {
++                let a = tt.sample_ext(&mut tape);
++                let v = FiatShamirTranscript::<Lsc>::sample_ext(&mut st);
++                samples.push((a, from_ef4(v)));
++            }
++            Step::ObsLastSample => {
++                if let Some((a, v)) = last {
++                    tt.observe(&mut tape, a);
++                    FiatShamirTranscript::<Lsc>::observe(&mut st, BabyBear::from_u64(v));
++                }
++            }
++        }
++    }
++    // A final sample, so the schedule ends on a squeeze.
++    let a = tt.sample(&mut tape);
++    samples.push((
++        a,
++        [
++            FiatShamirTranscript::<Lsc>::sample(&mut st).as_canonical_u32() as u64,
++            0,
++            0,
++            0,
++        ],
++    ));
++    Built {
++        tape,
++        inputs,
++        samples,
++    }
++}
++
++#[test]
++fn i5_transcript_equals_stock_and_proves() {
++    let b = build(&schedule(400));
++    let mem = b.tape.execute_vals(&b.inputs);
++    for (i, (a, want)) in b.samples.iter().enumerate() {
++        assert_eq!(mem[*a as usize].unwrap().bb(), *want, "sample {i}");
++    }
++    let m = Machine::new(&b.tape);
++    println!(
++        "I5: {} samples equal the stock transcript; machine shape {:?}",
++        b.samples.len(),
++        m.shape()
++    );
++    let traces = m.traces(&mem);
++    let (o, _) = prove_verify_range(small_params(3), m.airs(), traces.clone());
++    println!("I5 honest: {o:?}");
++    assert!(o.accepted(), "honest transcript tape refused: {o:?}");
++
++    let names = m.names();
++    let si = names.iter().position(|n| *n == "Split").unwrap();
++    let pi = names.iter().position(|n| *n == "Pack").unwrap();
++    let split_air = m.split.as_ref().unwrap();
++    let reads = b.tape.reads();
++    // A split whose digits nobody reads, so only its own constraints can refuse a tamper.
++    let j = split_air
++        .prog
++        .iter()
++        .position(|p| p.mults == [0; 5])
++        .expect("an unread split");
++
++    // 1. The split witness of x + r: digits and high part of the integer x + r.
++    let mut ws = split_air.witnesses(&mem);
++    let x = ws[j].x;
++    let xr = x.as_canonical_biguint() + Fr::order();
++    let p = num_bigint::BigUint::from(P);
++    let mut v = xr.clone();
++    let d: [u64; 5] = std::array::from_fn(|_| {
++        let r = (&v % &p).to_u64_digits().first().copied().unwrap_or(0);
++        v /= &p;
++        r
++    });
++    let c = split_consts();
++    let low: num_bigint::BigUint = (0..5)
++        .map(|i| num_bigint::BigUint::from(d[i]) * &c.p_pow[i])
++        .sum();
++    assert_eq!(
++        fr_from_big(&(low % Fr::order()))
++            + fr_from_big(&(&v % Fr::order())) * fr_from_big(&c.p_pow[5]),
++        x,
++        "x + r split holds in Fr"
++    );
++    assert_ne!(d, split(x).0, "x + r gives other digits");
++    ws[j] = SplitWitness { x, d, h: v };
++    let mut t1 = traces.clone();
++    t1[si] = split_air.trace_from(&ws);
++    let (o1, _) = prove_verify_range(small_params(3), m.airs(), t1);
++
++    // 2. A changed digit (d_0 + 1), the other cells honest.
++    let mut ws = split_air.witnesses(&mem);
++    ws[j].d[0] = (ws[j].d[0] + 1) % P;
++    let mut t2 = traces.clone();
++    t2[si] = split_air.trace_from(&ws);
++    let (o2, _) = prove_verify_range(small_params(3), m.airs(), t2);
++
++    // 3. A changed packed word in the Pack row (cell 0 of row 0).
++    let mut t3 = traces.clone();
++    t3[pi].values[0] += Fr::ONE;
++    let (o3, _) = prove_verify_range(small_params(3), m.airs(), t3);
++    let _ = reads;
++    for (name, o) in [
++        ("split of x + r", o1),
++        ("changed digit", o2),
++        ("changed packed word", o3),
++    ] {
++        println!("I5 negative {name}: {o:?}");
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
