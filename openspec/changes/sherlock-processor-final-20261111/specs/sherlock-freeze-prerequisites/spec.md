@@ -105,7 +105,7 @@ The freeze proposal SHALL NOT freeze the public statement codec while these fact
 
 #### Scenario: FP-8 before FP-3
 - **WHEN** a universal key freeze is requested while one FP-3 fact is open
-- **THEN** the freeze is refused (LEAD FZ-4)
+- **THEN** the freeze is refused (FZ-4, owner confirmed 2026-11-12)
 
 ### Requirement: FPR-010 Public digests of the run
 The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))`, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))`, `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))` and `claim_pub = transientHash([C_P, input_pub, outcome_pub])`. The salt SHALL be 8 words from the user's CSPRNG in `input_d`, fixed for the run at INIT (LEAD F-7, F-10).
@@ -130,7 +130,7 @@ Every internal digest SHALL be `P2(tag, words)` with the tag code of FP-4, the t
 - **THEN** the proof is refused (mutants `digest_tag_swapped`, `digest_constant_as_claim`)
 
 ### Requirement: FPR-012 `view_root` is a header word of the state commitment
-`state_d` SHALL be `P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`. `view_root` SHALL be `VIEW_NONE` under forms (a) and (c) of AD-17 and for an absent input. INIT SHALL set it, and no rule SHALL write it. SEAL and SEAL-WITH-DEPS SHALL compare the opened `view_root` with the `view_root` of the `VIEW` claim (LEAD F-11; AD-17 stays OWNER).
+`state_d` SHALL be `P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`. INIT SHALL set `view_root` from the witness under AD-17 form (b) (owner decision 2026-11-12), and to `VIEW_NONE` for an absent input; no rule SHALL write it. SEAL and SEAL-WITH-DEPS SHALL compare the opened `view_root` with the `view_root` of the `VIEW` claim (LEAD F-11).
 
 #### Scenario: Forged view root
 - **WHEN** the seal opens a `view_root` that is not the committed header word, or a rule writes `view_root`
@@ -169,11 +169,11 @@ The freeze interfaces SHALL be reported proved only when `bus_enc_inj`, `node_lo
 - **THEN** each of the eight lemmas is open, and `horner_inj`, `digest_inj`, `onion_snoc`, `discharge_sound`, `packed_hash_inj`, `public_digest_binds` and `wrap_view_only_claim`, on which they build, are proved at `bdb92973a`
 
 ### Requirement: FPR-017 One freeze status for every interface
-Every co-processor interface, kit interface and universal key SHALL have one status in `FD/ARCHITECTURE.md` section 1.12: FROZEN, when every input is settled in the named design text, or FREEZE-PENDING with its named gates (lead decision FZ-1). No row SHALL reach FROZEN by a choice of the freeze itself. The FROZEN rows SHALL be interface version 1. No universal key SHALL be FROZEN before FP-8 closes, (FPR-019).
+Every co-processor interface, kit interface and universal key SHALL have one status in `FD/ARCHITECTURE.md` section 1.12: FROZEN, when every input is settled in the named design text, or FREEZE-PENDING with its named gates (FZ-1, owner confirmed 2026-11-12). No row SHALL reach FROZEN by a choice of the freeze itself. The FROZEN rows SHALL be interface version 1. No universal key SHALL be FROZEN before FP-8 closes, (FPR-019).
 
 #### Scenario: Gate names
 - **WHEN** a row is FREEZE-PENDING
-- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, the encoding gates ENC-1 to ENC-5, the owner decision OD-24 (M7-0), and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
+- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, the option E steps E3 to E6 of OD-24 (E5 is the production qualification of FZ-3), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, the encoding gates ENC-1 to ENC-5, the machine-level work that the owner rulings of 2026-11-12 leave (AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18), and the owner items N-6, N-8 and N-11
 
 #### Scenario: Change after sign-off
 - **WHEN** a FROZEN interface changes after the owner signs off version 1
@@ -181,7 +181,7 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 
 #### Scenario: Wrap key status
 - **WHEN** the status of the wrap key, `L_TX`, the log capacity and `layout_d` is read
-- **THEN** each is FREEZE-PENDING M7 and FP-8, and the wrap shape is the open BLOCKER of M7-0: ledger 9 rebuilds a `ZkStdLib` constraint system from the key bytes (`ML/transient-crypto/src/proofs.rs:533`) and refuses a key with G4 lane gates, MEASURED on a toy key, and the path is owner decision OD-24 with no adopted default
+- **THEN** each is FREEZE-PENDING the option E steps E3 to E6 and FP-8: ledger 9 rebuilds a `ZkStdLib` constraint system from the key bytes (`ML/transient-crypto/src/proofs.rs:533`) and refuses a key with G4 lane gates, MEASURED on a toy key (M7-0), and owner decision OD-24 (2026-11-12) takes option E, a `ZkStdLib`-architecture wrap over `L_Fr`
 
 #### Scenario: Encodings not written
 - **WHEN** the status of the public digest tag values, `enc(e)`, the `layout_d` serialization, the stack cell layouts or the `plan_d` word lists is read
@@ -189,14 +189,14 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 
 #### Scenario: Leaf public values
 - **WHEN** the status of the 54-word leaf public values is read
-- **THEN** the layout is FREEZE-PENDING X10, the seal-time opening of the `post_d` header, and the lane `rules_d` stays in both AD-23 options (lead decision FZ-2)
+- **THEN** the layout is FREEZE-PENDING X10, the seal-time opening of the `post_d` header, and the lane `rules_d` is consumed in the LEAF base case of `shape_d` (AD-23 (a); FZ-2)
 
 #### Scenario: Key set
 - **WHEN** the status of the internal-recursive and `L` keys is read
 - **THEN** both are FREEZE-PENDING FP-8, the `L` key also D10 and the path C `h_pre` code check of the `DOM_KEYDAG` leaf
 
 ### Requirement: FPR-018 DISCHARGE replaces concatenation by proved removal
-DISCHARGE SHALL be exempt from the concatenation rule of FPR-005. Its invariant SHALL be: every entry of the flattened slot-0 log satisfies `Valid`, proved in the discharge leaf; the output log is `(D_EMPTY, 0)`; and every output word other than `log_d` and `log_n` equals the word of slot 0 (LEAD FZ-6). Lean `node_discharge_sound` SHALL state this invariant.
+DISCHARGE SHALL be exempt from the concatenation rule of FPR-005. Its invariant SHALL be: every entry of the flattened slot-0 log satisfies `Valid`, proved in the discharge leaf; the output log is `(D_EMPTY, 0)`; and every output word other than `log_d` and `log_n` equals the word of slot 0 (FZ-6, owner confirmed 2026-11-12). Lean `node_discharge_sound` SHALL state this invariant.
 
 #### Scenario: Discharge of a non-empty log
 - **WHEN** slot 0 has a log with `log_n` = 3 and the discharge leaf proves each of the three entries `Valid`
@@ -207,7 +207,7 @@ DISCHARGE SHALL be exempt from the concatenation rule of FPR-005. Its invariant 
 - **THEN** the proof is refused (mutants `node_discharge_invalid_entry`, `node_discharge_word_changed`)
 
 ### Requirement: FPR-019 FP-8 waits on every embedded interface
-FP-8 SHALL NOT close while an interface that a universal key embeds is FREEZE-PENDING: FP-3 facts 1 to 3 with their closure tests, the path C key binding of I-17, M7 on a chosen OD-24 path, D10 and ENC-1 to ENC-5 (LEAD FZ-4).
+FP-8 SHALL NOT close while an interface that a universal key embeds is FREEZE-PENDING: FP-3 facts 1 to 3 with their closure tests, the path C key binding of I-17, the option E path of OD-24 through E5, D10 and ENC-1 to ENC-5 (FZ-4, owner confirmed 2026-11-12).
 
 #### Scenario: Encoding open at freeze
 - **WHEN** the universal keys are offered for freeze while ENC-3 is open

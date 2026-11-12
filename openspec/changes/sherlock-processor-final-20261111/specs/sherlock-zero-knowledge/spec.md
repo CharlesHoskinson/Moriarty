@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
 ### Requirement: ZK-001 Every prover layer runs on the user's machine
-Leaves, nodes, `L` and the wrap prover SHALL run on the user's machine. Local devices and GPUs on hosts that the user owns SHALL count as the user's machine (OD-9). STARK proofs, prover checkpoints and the shard plan of a private program SHALL be treated as secrets like the witness.
+Leaves, nodes, `L`, `L_Fr` and the wrap prover SHALL run on the user's machine. Local devices and GPUs on hosts that the user owns SHALL count as the user's machine (OD-9). STARK proofs, prover checkpoints and the shard plan of a private program SHALL be treated as secrets like the witness.
 
 #### Scenario: Remote STARK prover
-- **WHEN** a configuration sends a leaf, node or `L` job to a host that the user does not own
+- **WHEN** a configuration sends a leaf, node, `L` or `L_Fr` job to a host that the user does not own
 - **THEN** the prover refuses the configuration, and the Quint property "no STARK proof, checkpoint or plan leaves the user's machine" of the placement model holds
 
 ### Requirement: ZK-002 The wrap is the only published proof
@@ -26,7 +26,7 @@ Every wrap proof SHALL take fresh CSPRNG blinders. A seeded blinder SHALL be acc
 - **THEN** their bytes differ and the ledger 9 verifier accepts both
 
 ### Requirement: ZK-004 Nothing from the transcript of `L` is public
-No value derived from the transcript of `L` SHALL become a public input or a constant of the wrap. `X`, `mode`, `j`, `k` and `run_tag` SHALL be public values of `L` only. The wrap SHALL take them as private witness.
+No value derived from the transcript of `L` or of `L_Fr` SHALL become a public input or a constant of the wrap. `X`, `mode`, `j`, `k` and `run_tag` SHALL be public values of `L` only, carried packed in the public values of `L_Fr`. The wrap SHALL take them as private witness.
 
 #### Scenario: Transcript value in the wrap key
 - **WHEN** a wrap key fixes a challenge, a query position or `X` as a constant or a public input

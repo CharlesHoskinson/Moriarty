@@ -4,7 +4,7 @@ Status: S2, specified only. This file points at the design. It does not copy it.
 
 ## 1. Goals and non-goals
 
-Goal: one proof path from any Sherlock run to the ledger 9.1.0.1 verifier (the ledger-readable wrap form is owner decision OD-24), zero knowledge end to end, under one universal key set, with each co-processor kit built and checked by one agent against its interface.
+Goal: one proof path from any Sherlock run to the ledger 9.1.0.1 verifier (the ledger-readable wrap form is owner decision OD-24, option E: the Fr-native layer `L_Fr` and one `ZkStdLib`-architecture wrap), zero knowledge end to end, under one universal key set, with each co-processor kit built and checked by one agent against its interface.
 
 Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profile B, continuation mode 2, any change of the GP-001 to GP-004 text, the interface freeze (plan step 11) and Mainnet.
 
@@ -28,7 +28,7 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 ## 3. Inputs, outputs and dependencies
 
-- Inputs of a call: the program image and its plan (`prog_d`, `key_root`), the input behind the salted `input_d`, and the tape. Inputs of the design: owner rules, OD-19 (owner decision), OD-4 to OD-18 and FZ-1, FZ-2 (lead decisions, owner to confirm), AD-1 to AD-23 and the experiments D1 to D15.
+- Inputs of a call: the program image and its plan (`prog_d`, `key_root`), the input behind the salted `input_d`, and the tape. Inputs of the design: owner rules, OD-19 (owner decision), OD-4 to OD-18, OD-24, FZ-1 to FZ-6 and LD-S10x-2 to LD-S10x-5 (owner decisions of 2026-11-12), AD-1 to AD-23 (with the owner rulings of 2026-11-12 in `FD/ARCHITECTURE.md` section 4.1) and the experiments D1 to D15.
 - Outputs: one blinded wrap proof and the call vector of `2 + L_TX` words. Nothing else leaves the user's machine.
 - Dependencies between the specs follow the kit dependencies of `FD/ARCHITECTURE.md` section 3.1: L AND WRAP needs NODE INTEGRATION, the stark-backend parameter code (build step 4) and the call vector of COMPACT FRONTEND. ZERO KNOWLEDGE needs L AND WRAP and HOST CHECKPOINT STORE. COMPACT FRONTEND needs CORE and DEC for `R_SL_*`.
 
@@ -36,7 +36,7 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 - The user's machine (devices and GPUs the user owns, OD-9) holds the witness, the shard plan of a private program, every STARK proof and every checkpoint.
 - The ledger sees the call vector and one blinded wrap proof. It trusts only `VerifierKey::verify`.
-- Proof-system premises stay named hypotheses: A1 to A7 and `vkL_ok` of `bridge_sound` (`FD/ARCHITECTURE.md` section 1.9). No premise is an `axiom` in Lean.
+- Proof-system premises stay named hypotheses: A1 to A7, A2' (`lfrSound`) and the static checks `vkL_ok` and `vkLFr_ok` of `bridge_sound` (`FD/ARCHITECTURE.md` section 1.9). No premise is an `axiom` in Lean.
 
 ## 5. Failure handling
 
@@ -49,14 +49,14 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 Semantic guarantees are the requirements of `specs/`. Feasibility is the derived gates (DG-001 to DG-007) and the measured cost in seconds per proved step. Every number in the specs is MEASURED with its record, DERIVED, ESTIMATE with its inputs, PENDING or LEAD, as in `FD/ARCHITECTURE.md`.
 
-The `L` key bound is `w_stack` at most 48 with `mu` PoW 6 (LEAD under OD-19, owner to confirm). The D3 unique decoding sweep (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`, and the keyed `L` structure points to about 36. D10 may tighten the bound.
+The `L` key bound is `w_stack` at most 48 with `mu` PoW 6 (LEAD under OD-19, owner to confirm). The D3 unique decoding sweep (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`. D10 (branch `d10-heights`, commit `3b979bd5c`) measured `w_stack` 18 on `L_cached` and 26 without the cache, inside the bound. The leaf-aggregation set takes LogUp PoW 17: its LogUp term is 84.7207 bits at PoW 0 and 101.7206 bits at PoW 17, MEASURED (`~/.cache/ud-sizing/leaf-logup.log`).
 
 ## 7. Lean status
 
 | Obligation | Spec | Status |
 |---|---|---|
-| BR-L1 `bridge_sound`, `wrap_view_only_claim` | LW-015 | built at `bdb92973a` (0 sorry, standard axioms only, 112 theorems) under premises A1 to A7 and `vkL_ok`, against the older `ProvenRegime` |
-| BR-L2 restatement (unique decoding `ProvenRegime` with the frozen query vectors, one OOD sample, `w_stack` bound, two-table `pv`, DAG key check and anchor checks in `wrap_refines`, two Fr sponge algorithms) | LW-015, SQG-012, FLG-009, HDM-010, SPL-010 | open |
+| BR-L1 `bridge_sound`, `wrap_view_only_claim` | LW-015 | built at `6661325d4` (0 sorry, standard axioms only, 146 theorems) under premises A1 to A7, A2' and the static checks `vkL_ok` and `vkLFr_ok`; the wrap relation verifies `L_Fr` |
+| BR-L2 restatement (unique decoding `ProvenRegime` with the frozen query vectors, one OOD sample, `w_stack` bound, two-table `pv`, DAG key check and anchor checks in `wrap_refines`, two Fr sponge algorithms) | LW-015, SQG-012, FLG-009, HDM-010, SPL-010 | the unique decoding `ProvenRegime` with the exact error terms of the `L`, internal, app and leaf-aggregation sets is built at `6661325d4`; open: the leaf-aggregation entry at LogUp PoW 17, the `L_Fr` parameter gate, `encode` on the two-table `pv`, the DAG key check and the anchor statement checks in the wrap relation |
 | BR-L3 lemma 23 and the transcript-derived key checks | LW-015, FLG-009 | built at `bdb92973a` |
 | BR-L4 `ReduceRel` in place of `ArithGadget` | LW-015 | open |
 | DEC-L1 (O34) outcome-only statement | LW-007, LW-015 | open |
@@ -69,7 +69,7 @@ The GPU wrap prover, the prover daemon, the Midnight side and the derived gates 
 
 ## 8. Open items carried into the interface freeze
 
-The one list of freeze items is the freeze-prerequisite table of `FD/ARCHITECTURE.md` section 3.1 (FP-1 to FP-8, from the final council of loop step S9, `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` on main). `FD/ARCHITECTURE.md` section 1.11 and spec `sherlock-freeze-prerequisites` (FPR-001 to FPR-016) close FP-1, FP-2 and FP-4 to FP-7 with LEAD choices F-1 to F-13 (`FD/DECISIONS.md`), owner to confirm. The universal key set freezes only after G1 to G4 pass with G5 and the owner confirms OD-4, OD-17 and OD-18, with the OD-19 sets (FP-8). `FD/ARCHITECTURE.md` section 1.12 gives the freeze status of every interface (FPR-017). Open items:
+The one list of freeze items is the freeze-prerequisite table of `FD/ARCHITECTURE.md` section 3.1 (FP-1 to FP-8, from the final council of loop step S9, `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` on main). `FD/ARCHITECTURE.md` section 1.11 and spec `sherlock-freeze-prerequisites` (FPR-001 to FPR-016) close FP-1, FP-2 and FP-4 to FP-7 with LEAD choices F-1 to F-13 (`FD/DECISIONS.md`), owner to confirm. The universal key set freezes only after G1 to G4 pass with G5, after the option E steps of OD-24 through E5, and with the sets of OD-4, OD-17, OD-18 and OD-19 (FP-8). `FD/ARCHITECTURE.md` section 1.12 gives the freeze status of every interface (FPR-017). Open items:
 
 - FP-3 (FPR-009): the carrier of the effect region and `comm` from a multi-shard terminal state to the call vector of `L`; the call-vector lanes of the run statement and of the collection statement (LW-009), which follow from the compiled LEDGER CONTRACT; the contract-side form of a collection opening under `sherlock-value/2`. The opening layer (`L`, FPR-007), the public program identity `C_P` (FPR-010, owner item N-11) and the index table of the public values of `L` (FPR-008) are closed as LEAD choices.
 - The order of the machine-level kits against the build phases of `FD/ARCHITECTURE.md` section 3.0.

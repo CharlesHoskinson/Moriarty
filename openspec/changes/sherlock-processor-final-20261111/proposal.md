@@ -4,7 +4,7 @@ Status: S2 (written design, specified only). Step 7 of `research/sherlock-proces
 
 ## Why
 
-Sherlock is a universal, elastic proving co-processor for Midnight. The specs of `sherlock-vm-consensus-20261107` and `sherlock-modular-leaf-20261111` describe a halo2 leaf, a halo2 node and a halo2 run decider with row gates. The final design replaces that proof stack. Leaves and nodes are small-field STARK shards on the user's GPU. One bridge layer `L` compresses the tree. One blinded PLONK-KZG wrap verifies `L` and is the only proof that the unchanged ledger 9.1.0.1 verifier checks.
+Sherlock is a universal, elastic proving co-processor for Midnight. The specs of `sherlock-vm-consensus-20261107` and `sherlock-modular-leaf-20261111` describe a halo2 leaf, a halo2 node and a halo2 run decider with row gates. The final design replaces that proof stack. Leaves and nodes are small-field STARK shards on the user's GPU. One bridge layer `L` compresses the tree. One Fr-native STARK layer `L_Fr` verifies `L`. One blinded PLONK-KZG wrap with a `ZkStdLib`-architecture key verifies `L_Fr` and is the only proof that the unchanged ledger 9.1.0.1 verifier checks (OD-24 option E).
 
 This change specifies the new and changed co-processor kits, makes zero knowledge end to end a requirement at the level of GP-001 to GP-004, and replaces the halo2 row gates by the derived gates of `FD/ARCHITECTURE.md` section 3.3. It can move the terminal evidence-gated decision of `sherlock-vm-consensus-20261107` because every GP acceptance line now has one proof path to the ledger, and every kit has its tests, its Lean obligations with their status and its measurements as gates.
 
@@ -53,11 +53,11 @@ Each item below keeps its history in git. The last revision with the old text is
 
 ## Decisions that this change depends on
 
-OD-4 to OD-18 are lead decisions with the recommended option, owner to confirm (`FD/DECISIONS.md`). OD-19 is an owner decision (2026-11-11) and closes OD-1 to OD-3, the internal part of OD-4 and OD-20. None of them binds before the owner confirms it. A requirement that depends on one names its id.
+OD-4 to OD-18 are owner decisions of 2026-11-12, each with option (a) (`FD/DECISIONS.md`). OD-19 is an owner decision (2026-11-11) and supersedes OD-1 to OD-3, the internal part of OD-4 and OD-20. OD-24 is an owner decision (2026-11-12): option E. A requirement that depends on one names its id.
 
 | Id | Decision | Requirements |
 |---|---|---|
-| OD-24 | ledger-readable wrap path, owner decision with no default (M7-0 BLOCKER) | LW-013, LW-014, LW-016, LW-017, MID-001, CPR-004 |
+| OD-24 | ledger-readable wrap path: option E, the Fr-native layer `L_Fr` and one `ZkStdLib`-architecture wrap (closes the M7-0 BLOCKER) | LW-013, LW-014, LW-016, LW-017, LW-018, LW-019, MID-001, CPR-004 |
 | OD-19 | unique decoding internal and `L` sets, one OOD sample | SQG-002, SQG-003, SQG-005, SQG-012, HDM-006, LW-002, DG-005 |
 | OD-4 | proven rule on inner layers and the margin rule | SQG-002, SQG-004 |
 | OD-5 | E-1 placement V with V+ | CF-008, CF-009, LW-005 |
@@ -66,18 +66,18 @@ OD-4 to OD-18 are lead decisions with the recommended option, owner to confirm (
 | OD-8 | hybrid native and Sherlock contracts | ANC-009, MID-005 |
 | OD-9 | elastic trust domain: devices the user owns | ZK-001, PRD-003 |
 | OD-10 | wait for the Fr Poseidon GPU kernel | GPW-006 |
-| OD-11 | no second Fr proving engine | GPW-006, LW-014 |
+| OD-11 | no second Fr proving engine as a call-time hedge (`L_Fr` of OD-24 is the ledger-readability path) | GPW-006, LW-014 |
 | OD-12 | opt-in user batches | ZK-009 |
 | OD-13 | resident prover daemon | PRD-001, PRD-002 |
 | OD-14 | Compact `Field` stays emulated | CF-005 |
 | OD-15 | one call-vector layout | LW-003, LW-007 |
 | OD-16 | anchor lock and native prologue | ANC-002, ANC-003, ANC-009, LW-005 |
 | OD-17 | `pv` encoding and entry capacity | FLG-003, FLG-004, FLG-006 |
-| OD-18 | hash domains and transcript algorithm | HDM-001 to HDM-005 |
+| OD-18 | hash domains and transcript algorithm, with the `L_Fr` use codes u = 5, 6, 7 | HDM-001 to HDM-005 |
 
 ## Impact
 
 - Code (proposed paths of the kits): `crates/mori-recursion/src/wrap/`, stark-backend parameter code, `crates/sherlock-prover/src/`, `tools/sherlock-compact/`, `crates/mori-core/src/sherlock/sl/`.
-- Proofs: `clean/fork/Clean/Sherlock/` (the restatement BR-L2 on the round 2 files of branch `bridge-lean`, commit `bdb92973a`).
-- Keys: the universal key set (internal-recursive, `L`, wrap) and the per-program keys under `key_root`. No universal key freezes before the security qualification gate passes.
+- Proofs: `clean/fork/Clean/Sherlock/` (the restatement BR-L2 builds at commit `6661325d4` of branch `bridge-lean`: 146 theorems, 0 sorry, the unique decoding `ProvenRegime`, premise A2' for `L_Fr`).
+- Keys: the universal key set (internal-recursive, `L`, `L_Fr`, wrap) and the per-program keys under `key_root`. No universal key freezes before the security qualification gate passes.
 - Specs: `sherlock-modular-leaf-20261111` corrected in place. `sherlock-vm-consensus-20261107` through task G.1.
