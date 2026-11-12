@@ -28,17 +28,18 @@ Brief: `BRIEF.md` beside this file. Gate: `L_Fr` proves over the real `L` proof 
 | Wrap rows | `L_Fr` has about 39 AIRs (OpenVM layout), each a wrap cost | few AIRs, so fewer commitments, openings and DAG nodes for the wrap (E5) |
 | Universality | one key verifies any `L` shape | one key per pinned `L` shape; `L` is one universal key, so one `L_Fr` key |
 
-**LEAD decisions (owner to confirm).**
+**Decisions.** D-1 to D-3 are LEAD (owner to confirm); D-4 is decided.
 
 - D-1 Shape pin. The `L_Fr` key fixes the `L` vk and the `L` trace heights (per AIR, presence included). `L_Fr` constrains every `log_height` and presence bit observed in the transcript to equal the pinned values. A proof of another shape is refused. A different `L` shape needs a new `L_Fr` key. If the production `L` shows proof-dependent heights, a bounded set of pinned shapes (one key each) or a shape-generic tape (dynamic loop bounds) is the fallback.
 - D-2 Public values of `L_Fr`: the `L` vk pre-hash (one Fr word), then the public values of `L` (BabyBear words packed 8 per Fr, in vk order). The bench `L` has 0 public values, so the public-word control on the real `L` changes the pre-hash word, and the control on a changed `L` public value runs on a small fixture with public values.
 - D-3 Hash tags of `L_Fr`'s own proof: leaf u = 5, node u = 6, transcript u = 7 (config fields `FrDomains`), distinct from `L`'s u = 1, 2, 3 and from u = 0 and u = 4 (PROPOSAL 3.6, OD-18). Inside the tape, `L`'s hashes keep u = 1, 2, 3.
+- D-4 **DECIDED (owner ruling 2026-11-12).** One shared program table: every preprocessed program of every `L_Fr` machine AIR is in ONE `ProgramTable` AIR, so an `L_Fr` proof has 2 commitments (common main and the table), the count that the E5 wrap estimate (879,472 mid rows) assumes. Done in I5c; MEASURED 2 on the I5b tape (`RESULTS.md` section 8b). Every AIR added in I6 to I10 takes its program from this table.
 
 ## 3. Architecture of `L_Fr`
 
 Values in the tape: Fr words (native), BabyBear words (canonical, in `[0, p)`), `EF4` elements (4 canonical BabyBear coefficients, `x^4 = 11`).
 
-As built (I2 to I5; `RESULTS.md` sections 5 to 8). Each execution AIR carries its own slice of the tape as preprocessed columns (op kind, operand and result addresses, result multiplicities), so the key fixes the tape.
+As built (I2 to I5c; `RESULTS.md` sections 5 to 8b). Each execution AIR carries its slice of the tape (op kind, operand and result addresses, result multiplicities, constants) as main columns after its other columns, and receives each row on the program bus from the one preprocessed `ProgramTable` AIR (D-4), so the key fixes the tape and the proof has 2 commitments.
 
 | AIR | Rows | Job |
 |---|---|---|
@@ -49,10 +50,11 @@ As built (I2 to I5; `RESULTS.md` sections 5 to 8). Each execution AIR carries it
 | `Pack` | one per packed Fr word | `sum b_i 2^(31 i)` of up to 8 BabyBear words (transcript observes; later the u = 1 leaves) |
 | `Split` | one per squeeze | 5 base-`p` digits and a high part, unique by the bound of the integer below `r` |
 | `Reshape` | one per `EF4` compose or decompose | `sample_ext` and `observe_ext` |
+| `ProgramTable` | one per op, plus one nop row per AIR kind | the only preprocessed trace: `[tag, cells[18], count]`; sends each program row with count 1 and the nop row with the padding count of its AIR kind; every execution row receives `[tag, its program cells]` with count 1 |
 | `Range16` | 2^16 | the 16-bit lookup table (LogUp) |
 | memory bus | (no AIR) | write-once: each tape value has one address and one writer, which sends it with the fixed read count; each read sends it with count `-1` |
 
-To add in I6 to I9: a `sample_bits` and bit-decomposition op (grinding, query indices), `EF4` inversion as `a * a^-1 = 1`, and a Merkle path AIR (u = 1 leaves, u = 2 nodes, direction bits). The transcript is not an AIR: `TapeTranscript` emits `Perm`, `Pack` and `Split` ops. Open LEAD item: the commitment count (one preprocessed commitment per execution AIR; `RESULTS.md` section 10).
+Added in I6: `AssertEq` (every verifier check) and `LowBits` (`sample_bits`). To add in I9: `Halve` (index bits), `FrAdd` (leaf sponge), `CSwap` (Merkle path order); no `EF4` inversion is needed (I6 to I8 use only key-constant inverses; WHIR's `x^-1` comes from the index bits). The transcript is not an AIR: `TapeTranscript` emits `Perm`, `Pack` and `Split` ops.
 
 The row and cell counts of the full tape are MEASURED only after the tape exists (increment I6 onward).
 
@@ -70,6 +72,7 @@ Code: the `L_Fr` crate `crates/sherlock-lfr` in the openvm checkout, branch `e2-
 | I3 | `PoseidonFr` AIR | outputs equal `MidnightPoseidonFr` on random states; refused: a changed output, a changed intermediate S-box value |
 | I4 | The tape and the write-once memory bus (`Input`, `BbAlu` with preprocessed programs) | a toy tape (Horner over `EF4`, a hash) proves; refused: a changed read value, a read of an unwritten address |
 | I5 | `Transcript` AIR | its absorb and squeeze trace equals the stock `MultiFieldTranscript` on a recorded `L` transcript; refused: the squeeze witness `N + r` (non-unique split), a changed digit |
+| I5c | D-4: one shared `ProgramTable` AIR holds every program; execution AIRs receive their rows on a program bus | the I5b test on the real `L` proof: 1,500 of 1,500 samples equal, proves; the I4 and I5 negative controls still refused; new: a changed program cell in an execution row and a forged write from padding rows refused; commitment count MEASURED at 2 |
 | I6 | Tape generator, part 1: shape pin, preamble, LogUp GKR | on the small fixtures and the real `L`, every observed and sampled value equals the stock verifier's transcript record; op counts MEASURED |
 | I7 | Part 2: zerocheck and constraint batching, including the DAG of every `L` AIR | as I6 |
 | I8 | Part 3: stacked reduction | as I6 |
