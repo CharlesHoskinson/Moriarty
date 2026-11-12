@@ -394,3 +394,9 @@
 - L_cached at OD-19: prove 206.2 s CPU (loaded host), peak RSS 2.11 GB, proof 430,073 bytes, verify 0.78 s, 4 of 4 byte flips refused; heights equal D10 (w_stack 18, T 21) (MEASURED).
 - D3 at the Fr field for L_Fr: weakest term query 101.1435, all field terms at least 215.9 bits with PoW 0 except query (MEASURED).
 - L_Fr not built: needs an Fr-base stark-backend and an Fr recursion AIR set. Source: research/sherlock-m7-wrap-20261112/RESULTS.md 2b.3 to 2b.4.
+
+## [2026-11-12 08:10] measurement | E1: stark-backend at a BLS12-381 Fr base field (EF = F), gate PASS
+- Branch e1-fr-base in ~/.cache/m7-wrap/src/openvm-org_stark-backend (3040761): PrimeField64 relaxed to PrimeField (21 lines in 5 files, not 48); sample_bits and grinding generic; config bls12381_fr_poseidon (Midnight Poseidon, u = 1, 2, 3 as FrDomains fields).
+- BabyBear: 239 of 239 suite tests pass before and after; 4 BabyBear proofs byte-identical (MEASURED). Downstream stark-bench-ovm --features bls checks clean.
+- Fr: Fibonacci and LogUp fixtures prove and verify on both engines; 256 of 256 byte flips and 3 of 3 public-value changes refused; D3 terms from the config equal M7 2b.2 to 4 decimals in 4 cases (MEASURED). At the L_Fr set a 2^12-row AIR proves in 173 to 175 s on a loaded host, proof 300,269 bytes.
+- sample_bits at Fr: statistical distance (1 - 2^-bits) / r < 2^-254 (DERIVED, r = 1 mod 2^32). Open: OD-18 separate L_Fr tags. Next: E2. Source: research/sherlock-e1-fr-backend-20261112/RESULTS.md on branch e1-fr-backend.
