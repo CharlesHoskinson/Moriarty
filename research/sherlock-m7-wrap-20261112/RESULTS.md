@@ -56,7 +56,7 @@ Under A the G4 key goes on chain and M7c to M7e run as planned. Under C the on-c
 
 ## 2b. Ledger-compatible wrap paths (coordinator request, 2026-11-12)
 
-Constraints: OD-19 set, k <= 21, ZK, one universal key set, ledger 9.1.0.1 unchanged, key at most 50,000 bytes, one BLS12-381 layer. All rows ESTIMATE (`wrap_model.py` shape 1 with the 19-row stdlib Poseidon, OD-19 set, `L_cached`, the log at the OD-6 capacity 256/256/0 unless stated). Script: `split.py` beside `s1ud.py` (same patching as `~/.cache/ud-sizing/wrap_ud.py`).
+No option is recommended or adopted here: A changes the ledger, and C or any chain of stdlib wraps (P3 below) gives more than one BLS12-381 wrap proof. The choice is the owner's. Constraints: OD-19 set, k <= 21, ZK, one universal key set, ledger 9.1.0.1 unchanged, key at most 50,000 bytes, one BLS12-381 wrap. All rows ESTIMATE (`wrap_model.py` shape 1 with the 19-row stdlib Poseidon, OD-19 set, `L_cached`, the log at the OD-6 capacity 256/256/0 unless stated). Script: `split.py` beside `s1ud.py` (same patching as `~/.cache/ud-sizing/wrap_ud.py`).
 
 **Where the single-lane rows go** (mid, scenario `w_stack`, log 1,024/1,024/16, total 2,620,323): EF products (32 rows each) 1.02 M; base products 0.44 M; Poseidon 22,161 permutations x 19 = 0.42 M; by line: final-polynomial Horner at 263 queries 552,415; stacked reduction 423,476; round-0 Merkle 290,041; folds 203,562; constraint DAG 192,992; round-0 batching 137,984. WHIR query work (Merkle, folds, batching, Horner) is 1.41 M of it.
 
@@ -78,7 +78,51 @@ Constraints: OD-19 set, k <= 21, ZK, one universal key set, ledger 9.1.0.1 uncha
 - Ledger: unchanged. The chain uses the same claim mechanism as chunked calls (`CO/ATOMIC-CHUNKS.md`); a failed chunk drops the whole segment (1F) or invalidates the transaction (1G).
 - Not checked: whether one exported entry can name a chain of three keys, or each chunk needs its own entry label (E-1 binding, PROPOSAL 7.2); transaction bytes for three calls (today one call is 10,421 bytes of 1,048,576); the fee of three calls.
 
-**Recommendation (lead decision, owner to confirm): P3 at k = 21 with 3 chunks**, with the P2 rewrites inside the chunks for margin. It is the only candidate found that meets every listed constraint with margin in every case (largest chunk 60 percent of the gate, so it holds even if the stdlib gadgets cost 1.6 times the model). Its price is call time and fee: three k = 21 proofs per logical call. Option A (a G4 architecture in midnight-zk-stdlib, a ledger change) remains the performance target and is filed as an upstream request, not a dependency.
+P3 meets the row and ledger constraints but gives three BLS12-381 PLONK proofs per call, so it breaks the one-wrap rule; it is listed for the owner, not proposed.
+
+### 2b.1 Option B on the D10 MEASURED inputs
+
+D10 (`~/Projects/Moriarty-wt/d10-heights/research/sherlock-stark-framework-20261111/D10-HEIGHTS.json`, `primary.L_cached_bn254_ud`): `w_stack` 18, `T` 21, 14 distinct heights, maximum height 2^16, 17,263,856 main cells, MEASURED. Shape 1 (single lane, stdlib 19-row Poseidon) with those inputs, OD-19 set, `L_cached` structure; script `s1d10.py` (imports `d10_wrap.py`; its G4 column reproduces D10's 634,707 mid):
+
+| Log capacity | Low | Mid | High | Mid against the k = 21 gate 1,782,573 |
+|---|---:|---:|---:|---:|
+| 1,024 / 1,024 / 16 | 2,369,556 | 2,596,249 | 2,696,547 | 145.6 percent |
+| 256 / 256 / 0 (OD-6) | 2,262,952 | 2,457,645 | 2,557,943 | 137.9 percent |
+
+Rows ESTIMATE (model) on MEASURED inputs. Option B fails k = 21 in every case, by 480,000 rows at the low end.
+
+### 2b.2 Option E: an Fr-terminal layer `L_Fr` between `L` and the wrap
+
+`L_Fr` is a STARK whose base field is BLS12-381 Fr, with Midnight Poseidon Merkle trees and transcript. It verifies `L` (emulating BabyBear in Fr), takes `L`'s 12,164 public words, and the wrap verifies `L_Fr` natively in Fr: no extension field, no BabyBear reduction, no packing. The wrap stays one stdlib-architecture BLS12-381 PLONK proof, which the unchanged ledger reads. `L_Fr` is hash-based, so it adds no BLS12-381 layer. No stark-backend configuration with an Fr base field exists (stark-sdk has BabyBear and BabyBear-with-BN254-hash configs only; `bn254_poseidon2.rs` holds permutations, not a base field).
+
+**Wrap rows behind `L_Fr`** (script `optE.py`; ESTIMATE): `wrap_model.py` shape 1 lines re-costed for native Fr (one `NativeChip` row per product, adds at 2 per row, no range or `Canon` rows for transcript words, no packing; Fr Merkle leaves hash 2 values per permutation, so the round-0 leaf hash is `ceil(w_stack / 2)` permutations per row); OD-19 queries 98/83/82 and depths; D10 MEASURED heights and `w_stack` 18; the log at 256/256/0 kept in the wrap; `L`'s MEASURED AIR structure as a proxy for `L_Fr`'s (both are STARK-verifier AIR sets; `L_Fr`'s own structure is NOT MEASURED).
+
+| Public words of `L` absorbed | Low | Mid | High | k |
+|---|---:|---:|---:|---|
+| 0 (the bench `L`) | 670,434 | 865,014 | 961,952 | 21 (high is 54 percent of the gate); k = 20 only at low |
+| 12,164 (full interface, packed 8 per Fr) | 684,894 | 879,472 | 976,410 | 21 (55 percent of the gate) |
+
+Mid lines: round-0 Merkle 432,729 (Fr leaves at `w_stack` 18 cost 9 permutations per row), final-polynomial Horner 138,530, rounds 1 and 2 Merkle 158,989, round-0 batching 28,224, transcript 24,857. Merkle hashing is now most of the wrap; the EF arithmetic that dominates option B is gone.
+
+**Security terms of `L_Fr`** (DERIVED, not run): the query term does not depend on the field, so 98/83/82 with query PoW 20 keeps 101.1427 bits at log blowup 3. Each field-size term gains `log2 |Fr| - log2 |EF|` = 254.857 - 123.628 = 131.23 bits over the BabyBear D3 values (`D10-HEIGHTS.md` section 8.1): LogUp 216.0 without PoW, GKR sumcheck 253.3, GKR batching 254.9, zerocheck 251.0, constraint batching 244.9, stacked reduction 242.9, folding 232.9, `gamma` 248.2, OOD 239.9, `mu` about 227.8 without PoW. So only the query PoW is needed. This assumes each term is `log2 |F|` minus a field-independent amount; the D3 calculator must be rerun on an Fr configuration to make it MEASURED.
+
+**Security terms of `L_Fr`, MEASURED by the D3 calculator** (2026-11-12): test `m7_fr_d3.rs` (copy of D10's `d10_d3.rs` in `~/.cache/m7-wrap/sb-d3`, the D3-patched stark-backend v2.1.0, with `base_field_order = r` and `challenge_field_bits = log2 r = 254.857`, no extension); output `fr-d3.out`. Shape bounds as PROPOSAL 11.2, heights 2^20 and 2^22, `w_stack` 18 and 48, UD, 1 OOD sample, every PoW 0 except query PoW 20:
+
+| Term (b3, 98/83/82, h 2^22, `w_stack` 48) | Bits |
+|---|---:|
+| LogUp (PoW 0) | 215.9502 |
+| GKR sumcheck / batching | 253.2721 / 254.8571 |
+| zerocheck | 250.9502 |
+| constraint batching | 244.8841 |
+| stacked reduction | 242.8913 |
+| `mu` (PoW 0) | 226.3025 |
+| folding (PoW 0) | 232.8571 |
+| query (rounds 101.3473 / 101.1435 / 101.7692) | 101.1435 |
+| `gamma` / OOD | 248.2277 / 239.8571 |
+
+Every gate passes in all 4 height and `w_stack` cases; the weakest term is always the query term, which does not depend on the field. The smallest query sets with every query term at least 101 bits are the same as for BabyBear `L`: 196/89/82 (b1), 120/85/82 (b2), 98/83/82 (b3), 89/82/82 (b4). So `L_Fr` needs no folding, `mu` or LogUp grinding, and the DERIVED figures above agree with the calculator to 0.1 bit (`mu` 226.3 against 227.8).
+
+**What option E costs** (NOT MEASURED): a second proving engine (an Fr base field for stark-backend: NTT over Fr, whose two-adicity 32 covers the domain, and Poseidon over Fr; no GPU kernels exist); the `L_Fr` trace, which does the BabyBear-in-Fr verifier work that option B puts in PLONK rows (about 2.46 M stdlib-row equivalents of operations, ESTIMATE, at unknown AIR width); its prove time; and its own soundness premises (A2 for an Fr STARK). The deferred-log replay could move from the wrap into `L_Fr`, where Fr is native; that would cut the 76,264 log rows of the wrap (not modelled).
 
 ## 2c. The benchmark `L` cannot qualify production rows
 
