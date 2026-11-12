@@ -2,27 +2,28 @@ import Clean.Sherlock.FrLog
 
 /-!
 Soundness of the Sherlock bridge candidate (`research/sherlock-stark-bls-bridge-20261111/
-CANDIDATE.md`, section 11): a ledger-accepted wrap proof implies the run's claim.
+CANDIDATE.md`, section 11, with the owner decisions and lead amendments at its end): a
+ledger-accepted wrap proof implies the run's claim.
 
 The objects:
 
-* `KeyL`: the frozen key of the last STARK layer `L`, as a list of verifier checks (BabyBear
-  equalities over the constraint DAG, Fr-sponge hashes of packed BabyBear values, squeezed
-  challenge digits, Merkle openings) and the order of its transcript events.
-* `VerifyL`: the reference verifier of `L` (BabyBear arithmetic, hash `frSponge ∘ packChunks`).
-* `WrapRel`: the constraint semantics of the wrap `W`: the same checks compiled into Fr cells with
-  lazy arithmetic and bounded quotients, a log table of exactly `B` entries with the canonical
-  check on every value, `pv = encode T`, and native replay of every entry. Its public input is
+* `KeyL`: the frozen key of the last STARK layer `L`: the verifier checks (BabyBear equalities
+  over the constraint DAG, Fr-sponge hashes of packed BabyBear values, Merkle openings), the
+  Fiat-Shamir transcript program (`TOp`: absorbs, challenge squeezes, proof-of-work checks), the
+  fixed statement length, the fixed `pv` length, and the analysis parameters of WHIR.
+* `VerifyL`: the reference verifier of `L` (BabyBear arithmetic, hash `frSponge ∘ packChunks`,
+  the transcript run from the empty state).
+* `WrapRel`: the constraint semantics of the wrap `W`: the same checks and transcript compiled
+  into Fr cells (lazy arithmetic with bounded quotients, packing gadget, digit gadget with the
+  canonical check), a log table of exactly `B` entries with the canonical check on every value,
+  `pv = pvOf W T` of the fixed length `W`, and native replay of every entry. Its public input is
   the statement only.
-* `Premises`: the named assumptions A1 to A7 as fields (no `axiom`), documented in
-  `BridgeAxioms.lean`.
+* `Premises`: the named assumptions as fields (no `axiom`), documented in `BridgeAxioms.lean`.
 
-`bridge_sound` composes them. Every soundness point of the design is a clause of a definition
-that the proof uses: the bounded quotient (`ArithGadget`, `arith_refines`), packing with checked
-length (`packed_hash_inj`, used to discharge A2's hypothesis), the canonical check
-(`CanonGadget`, `canon_check_sound`), `pv` before the first challenge (`pvFirst`, A2's other
-hypothesis), the fixed capacity (`WrapRel`'s `T.length = B`, `LogTree.Carrier`, `pad`) with the
-overflow to STARK shards (`RunWith`, `runWith_all_valid`), and the ZK boundary (A7).
+Two static key facts gate premise A2 and are computed from the key's own transcript program:
+`pvFirstT` (every word of `pv` is absorbed before the first challenge or proof of work) and the
+proof-of-work part of `ProvenRegime`. The WHIR analysis parameters (`logBlowup`, `eta`, `m`)
+stay declared metadata; `WhirParams` says why.
 -/
 
 set_option linter.unusedSectionVars false
@@ -36,28 +37,96 @@ namespace Clean.Sherlock.Bridge
 inductive Check where
   /-- BabyBear equality of two expressions (constraint DAG, sumcheck, folding, `eq` binding). -/
   | arith (l r : Expr)
-  /-- `out = frSponge (packChunks ins)`: leaf hashes and transcript absorbs of BabyBear values. -/
+  /-- `out = frSponge (packChunks ins)`: leaf hashes of BabyBear values. -/
   | hash (ins : List Nat) (out : Nat)
-  /-- The 5 base-`p` digits of a squeezed Fr value. -/
-  | squeeze (src : Nat) (dsts : List Nat)
   /-- A Merkle opening over Midnight's two-input hash. -/
   | merkle (leaf : Nat) (bits : List Nat) (sibs : List Nat) (root : Nat)
 
-/-- Transcript events of `L`'s Fiat-Shamir transcript. -/
-inductive TEv where
-  | commit
-  | absorbPv
-  | challenge
+/-- The three proof-of-work checks of WHIR. -/
+inductive PowKind where
+  | fold
+  | mu
+  | query
   deriving DecidableEq
 
-/-- `pv` is absorbed before the first challenge is drawn. -/
-def pvFirst : List TEv → Bool
-  | [] => false
-  | .absorbPv :: _ => true
-  | .challenge :: _ => false
-  | .commit :: t => pvFirst t
+/-- One operation of the Fiat-Shamir transcript of `L` (a duplex over Midnight Poseidon on Fr). -/
+inductive TOp where
+  /-- Absorb BabyBear words (public values, opened values), packed 8 per Fr element. -/
+  | absorbBB (vars : List Nat)
+  /-- Absorb Fr elements (Merkle roots). -/
+  | absorbFr (vars : List Nat)
+  /-- Draw a challenge: the 5 base-`p` digits of the sponge output. -/
+  | squeeze (dsts : List Nat)
+  /-- A proof-of-work check: the sponge output after absorbing the nonce has `bits` low zero
+  bits. -/
+  | pow (nonce : Nat) (bits : Nat) (kind : PowKind)
 
-/-- The WHIR parameters of `L` that its soundness argument reads. -/
+/-- The reference transcript run from state `st` (all Fr elements absorbed so far). -/
+def runRef (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
+  | _, [] => True
+  | st, .absorbBB vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
+      runRef X env (st ++ packChunks (vs.map (env.getD · 0))) ops
+  | st, .absorbFr vs :: ops => runRef X env (st ++ vs.map (env.getD · 0)) ops
+  | st, .squeeze ds :: ops => ds.map (env.getD · 0) = digitsOf pBB 5 (X.frSponge st) ∧
+      runRef X env (st ++ [X.frSponge st]) ops
+  | st, .pow n b _ :: ops => X.frSponge (st ++ [env.getD n 0]) % 2 ^ b = 0 ∧
+      runRef X env (st ++ [env.getD n 0]) ops
+
+/-- The wrap's transcript gadgets: the packing gadget, the digit gadget with the canonical check,
+and a bit decomposition for the proof of work. -/
+def runGadget (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
+  | _, [] => True
+  | st, .absorbBB vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
+      runGadget X env (st ++ packChunksR (vs.map (env.getD · 0))) ops
+  | st, .absorbFr vs :: ops => runGadget X env (st ++ vs.map (env.getD · 0)) ops
+  | st, .squeeze ds :: ops => SqueezeGadget (X.frSponge st) (ds.map (env.getD · 0)) ∧
+      runGadget X env (st ++ [X.frSponge st]) ops
+  | st, .pow n b _ :: ops => (∃ hi, X.frSponge (st ++ [env.getD n 0]) = hi * 2 ^ b) ∧
+      runGadget X env (st ++ [env.getD n 0]) ops
+
+/-- The compiled transcript refines the reference transcript. -/
+theorem run_refines (X : Prims) (env : List Nat) : ∀ (st : List Nat) (ops : List TOp),
+    runGadget X env st ops → runRef X env st ops
+  | _, [], _ => trivial
+  | st, .absorbBB vs :: ops, h => by
+    simp only [runGadget, packChunksR_eq] at h
+    exact ⟨h.1, run_refines X env _ ops h.2⟩
+  | st, .absorbFr vs :: ops, h => run_refines X env _ ops h
+  | st, .squeeze ds :: ops, h =>
+    ⟨squeeze_digits_sound (X.frSponge_lt st) h.1, run_refines X env _ ops h.2⟩
+  | st, .pow n b _ :: ops, h => by
+    obtain ⟨⟨hi, hh⟩, h2⟩ := h
+    exact ⟨by rw [hh, Nat.mul_mod_left], run_refines X env _ ops h2⟩
+
+/-- The variables absorbed before the first challenge or proof of work. -/
+def absorbedBeforeChallenge : List TOp → List Nat
+  | [] => []
+  | .absorbBB vs :: ops => vs ++ absorbedBeforeChallenge ops
+  | .absorbFr vs :: ops => vs ++ absorbedBeforeChallenge ops
+  | .squeeze _ :: _ => []
+  | .pow _ _ _ :: _ => []
+
+/-- `pv` (environment indices `lo, ..., lo + n - 1`) is absorbed before the first challenge.
+Computed from the transcript program itself. -/
+def pvFirstT (lo n : Nat) (ops : List TOp) : Bool :=
+  (List.range' lo n).all (fun i => (absorbedBeforeChallenge ops).contains i)
+
+/-- The proof-of-work bits of one kind in the transcript program. -/
+def powList (k : PowKind) : List TOp → List Nat
+  | [] => []
+  | .pow _ b k' :: ops => if k' = k then b :: powList k ops else powList k ops
+  | _ :: ops => powList k ops
+
+/-- The weakest proof of work of a kind (`0` if the transcript has none). -/
+def powMin : List Nat → Nat
+  | [] => 0
+  | b :: bs => bs.foldl min b
+
+/-- The WHIR analysis parameters of `L`. They are not verifier operations: `mult` (the
+Guruswami-Sudan multiplicity) and `eta` (the slack below the Johnson radius) occur only in the
+soundness proof, and `logBlowup` occurs in the verifier only through the domain constants of the
+`arith` checks, which this model does not tie to a code. So they stay declared metadata of the
+key, checked against Theorem 1.5 by `thm15Mult`. -/
 structure WhirParams where
   /-- `log2` of the inverse rate (`rho = 2^-logBlowup`); even, so `sqrt rho = 2^-(logBlowup/2)`. -/
   logBlowup : Nat
@@ -66,47 +135,38 @@ structure WhirParams where
   etaDen : Nat
   /-- Guruswami-Sudan multiplicity used in the soundness bound. -/
   mult : Nat
-  /-- Proof-of-work bits: folding, `mu` batching, queries. -/
-  foldPow : Nat
-  muPow : Nat
-  queryPow : Nat
 
 /-- The multiplicity that BCHKS25 Theorem 1.5 sets as stated:
 `m = max(ceil(sqrt(rho) / (2 eta)), 3)`. -/
 def thm15Mult (w : WhirParams) : Nat :=
-  max ((w.etaDen + 2 ^ (w.logBlowup / 2) * 2 * w.etaNum - 1) / (2 ^ (w.logBlowup / 2) * 2 * w.etaNum)) 3
-
-/-- The proven regime of the owner decision (2026-11-11, option b of the paper review): the
-Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
-unproved p.23 remark that allows `m = 1` is not used), with folding and `mu` proof of work of at
-least 21 bits and query proof of work of at least 20 bits. -/
-def ProvenRegime (w : WhirParams) : Bool :=
-  w.logBlowup % 2 == 0 && w.etaNum != 0 && w.mult == thm15Mult w && 21 ≤ w.foldPow &&
-    21 ≤ w.muPow && 20 ≤ w.queryPow
-
-/-- Configuration S4 after the owner decision: log blowup 4, `eta = 1/8`, `m = 3`, PoW 21/21/20. -/
-def s4Whir : WhirParams := ⟨4, 1, 8, 3, 21, 21, 20⟩
-
-theorem s4_mult_three : thm15Mult s4Whir = 3 := by decide
-theorem s4_proven : ProvenRegime s4Whir = true := by decide
-/-- The former 15-bit folding and `mu` proof of work is outside the proven regime. -/
-theorem s4_pow15_not_proven : ProvenRegime { s4Whir with foldPow := 15, muPow := 15 } = false := by
-  decide
-/-- The `m = 1` reading (the p.23 remark) is outside the proven regime. -/
-theorem remark_m1_not_proven : ProvenRegime { s4Whir with mult := 1 } = false := by decide
+  max ((w.etaDen + 2 ^ (w.logBlowup / 2) * 2 * w.etaNum - 1) /
+    (2 ^ (w.logBlowup / 2) * 2 * w.etaNum)) 3
 
 /-- The frozen key of `L` (universal: one for every program). -/
 structure KeyL where
   checks : List Check
-  sched : List TEv
+  transcript : List TOp
+  /-- Fixed statement length (words of the claim). -/
+  nStmt : Nat
+  /-- Fixed `pv` length `W` in BabyBear words (lead amendment 4). -/
+  pvLen : Nat
   whir : WhirParams
+
+/-- The proven regime of the owner decision (2026-11-11, option b of the paper review): the
+Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
+unproved p.23 remark that allows `m = 1` is not used), and every folding and `mu` proof of work
+of the transcript at least 21 bits, every query proof of work at least 20 bits. The proof-of-work
+bits are read from the transcript program. -/
+def ProvenRegime (vk : KeyL) : Bool :=
+  vk.whir.logBlowup % 2 == 0 && vk.whir.etaNum != 0 && vk.whir.mult == thm15Mult vk.whir &&
+    21 ≤ powMin (powList .fold vk.transcript) && 21 ≤ powMin (powList .mu vk.transcript) &&
+    20 ≤ powMin (powList .query vk.transcript)
 
 /-- The reference semantics of one check. -/
 def Check.Ref (X : Prims) (env : List Nat) : Check → Prop
   | .arith l r => (∀ i ∈ l.vars ++ r.vars, env.getD i 0 < pBB) ∧ l.evalP env = r.evalP env
   | .hash ins out => (∀ i ∈ ins, env.getD i 0 < pBB) ∧
       env.getD out 0 = X.frSponge (packChunks (ins.map (env.getD · 0)))
-  | .squeeze src dsts => dsts.map (env.getD · 0) = digitsOf pBB 5 (env.getD src 0)
   | .merkle leaf bits sibs root =>
       merkleRoot X (env.getD leaf 0) (bits.map (fun i => env.getD i 0 == 1))
         (sibs.map (env.getD · 0)) = env.getD root 0
@@ -116,7 +176,6 @@ def Check.Gadget (X : Prims) (env : List Nat) : Check → Prop
   | .arith l r => ArithGadget env l r
   | .hash ins out => (∀ i ∈ ins, env.getD i 0 < pBB) ∧
       env.getD out 0 = X.frSponge (packChunksR (ins.map (env.getD · 0)))
-  | .squeeze src dsts => SqueezeGadget (env.getD src 0) (dsts.map (env.getD · 0))
   | .merkle leaf bits sibs root =>
       merkleRoot X (env.getD leaf 0) (bits.map (fun i => env.getD i 0 == 1))
         (sibs.map (env.getD · 0)) = env.getD root 0
@@ -126,14 +185,31 @@ def Check.StaticOK : Check → Prop
   | .arith l r => ArithOK l r
   | _ => True
 
-/-- Static facts of the frozen key: `pv` first, the proven WHIR regime, and every bound
-below `r`. -/
+/-- Static facts of the frozen key: `pv` absorbed first (from the transcript), the proven WHIR
+regime (proof of work from the transcript), and every bound below `r`. -/
 def KeyOK (vk : KeyL) : Prop :=
-  pvFirst vk.sched = true ∧ ProvenRegime vk.whir = true ∧ ∀ c ∈ vk.checks, c.StaticOK
+  pvFirstT vk.nStmt vk.pvLen vk.transcript = true ∧ ProvenRegime vk = true ∧
+    ∀ c ∈ vk.checks, c.StaticOK
 
 /-- The reference verifier of `L` on statement `s`, public values `pv` and proof `π`. -/
 def VerifyL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
-  ∀ c ∈ vk.checks, c.Ref X (s ++ pv ++ π)
+  s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ c ∈ vk.checks, c.Ref X (s ++ pv ++ π)) ∧
+    runRef X (s ++ pv ++ π) [] vk.transcript
+
+/-- What `pvFirstT` means for an accepted verification: every word of `pv` sits at an
+environment index that the transcript absorbs before its first challenge. -/
+theorem pv_absorbed_before_challenge {X : Prims} {vk : KeyL} {s pv π : List Nat}
+    (hk : pvFirstT vk.nStmt vk.pvLen vk.transcript = true) (hv : VerifyL X vk s pv π) :
+    ∀ j < pv.length, vk.nStmt + j ∈ absorbedBeforeChallenge vk.transcript ∧
+      (s ++ pv ++ π).getD (vk.nStmt + j) 0 = pv.getD j 0 := by
+  intro j hj
+  obtain ⟨hs, hp, _, _⟩ := hv
+  refine ⟨?_, ?_⟩
+  · have := List.all_eq_true.mp hk (vk.nStmt + j) (List.mem_range'_1.mpr ⟨by omega, by omega⟩)
+    simpa using this
+  · rw [← hs, List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD, List.append_assoc,
+      List.getElem?_append_right (by omega), Nat.add_sub_cancel_left,
+      List.getElem?_append_left hj]
 
 theorem getD_lt {env : List Nat} (h : ∀ x ∈ env, x < rFr) (i : Nat) : env.getD i 0 < rFr := by
   rw [List.getD_eq_getElem?_getD]
@@ -143,7 +219,7 @@ theorem getD_lt {env : List Nat} (h : ∀ x ∈ env, x < rFr) (i : Nat) : env.ge
 
 /-- Lemmas 10 to 13 (`sponge_refines`, `merkle_path_refines`, the `arith` instances): every
 compiled check refines its reference check. -/
-theorem check_refines {X : Prims} {env : List Nat} {c : Check} (hcells : ∀ x ∈ env, x < rFr)
+theorem check_refines {X : Prims} {env : List Nat} {c : Check}
     (hok : c.StaticOK) (h : c.Gadget X env) : c.Ref X env := by
   cases c with
   | arith l r => exact arith_refines hok h
@@ -151,7 +227,6 @@ theorem check_refines {X : Prims} {env : List Nat} {c : Check} (hcells : ∀ x �
     simp only [Check.Gadget] at h
     simp only [Check.Ref]
     exact ⟨h.1, by rw [h.2, packChunksR_eq]⟩
-  | squeeze src dsts => exact squeeze_digits_sound (getD_lt hcells src) h
   | merkle leaf bits sibs root => exact h
 
 /-! ## The wrap -/
@@ -168,24 +243,30 @@ operation, and the canonical check on every value. -/
 def EntryGadget (e : Entry) : Prop :=
   (∀ x ∈ e.op.code, x < pBB) ∧ e.vals.length = e.op.arity ∧ ∀ v ∈ e.vals, CanonGadget v
 
-/-- The constraint semantics of the wrap with capacity `B`. Its public input `pub` is the
-statement only; everything else is private witness. -/
+/-- The constraint semantics of the wrap with capacity `B` entries and `pv` length
+`vk.pvLen`. Its public input `pub` is the statement only; everything else is private witness. -/
 def WrapRel (X : Prims) (B : Nat) (vk : KeyL) (pub : List Nat) (w : WrapWit) : Prop :=
+  pub.length = vk.nStmt ∧
   (∀ x ∈ pub ++ w.pv ++ w.π, x < rFr) ∧
   (∀ c ∈ vk.checks, c.Gadget X (pub ++ w.pv ++ w.π)) ∧
+  runGadget X (pub ++ w.pv ++ w.π) [] vk.transcript ∧
   w.T.length = B ∧
   (∀ e ∈ w.T, EntryGadget e) ∧
-  w.pv = encode w.T ∧
+  (encode w.T).length ≤ vk.pvLen ∧
+  w.pv = pvOf vk.pvLen w.T ∧
   (∀ e ∈ w.T, ReplayGadget X pub e)
 
 /-- Lemma 16 (`wrap_refines`): an accepted wrap witness is an accepting reference verification of
-`L` on the statement, with a table of exactly `B` well-formed, valid entries encoded as `pv`. -/
+`L` on the statement, with a table of exactly `B` well-formed, valid entries whose padded
+encoding of the fixed length is `pv`. -/
 theorem wrap_refines {X : Prims} {B : Nat} {vk : KeyL} {pub : List Nat} {w : WrapWit}
     (hok : KeyOK vk) (h : WrapRel X B vk pub w) :
     VerifyL X vk pub w.pv w.π ∧ w.T.length = B ∧ (∀ e ∈ w.T, e.WF ∧ Valid X pub e) ∧
-      w.pv = encode w.T := by
-  obtain ⟨hcells, hchk, hlen, hent, hpv, hrep⟩ := h
-  refine ⟨fun c hc => check_refines hcells (hok.2.2 c hc) (hchk c hc), hlen, ?_, hpv⟩
+      w.pv = pvOf vk.pvLen w.T := by
+  obtain ⟨hpl, _, hchk, hrun, hlen, hent, henc, hpv, hrep⟩ := h
+  refine ⟨⟨hpl, by rw [hpv]; exact pvOf_length henc,
+    fun c hc => check_refines (hok.2.2 c hc) (hchk c hc), run_refines X _ [] _ hrun⟩,
+    hlen, ?_, hpv⟩
   intro e he
   obtain ⟨h1, h2, h3⟩ := hent e he
   have hc : ∀ v ∈ e.vals, Canon v := fun v hv => canon_check_sound (h3 v hv)
@@ -249,15 +330,16 @@ structure Premises where
   round soundness, Fiat-Shamir in the random-oracle model (non-interactive error
   `Q_RO 2^-100 + 3 (Q_RO^2 + 1) / 2^kappa`, SWIRL Cor 4.2.6), the `eq` binding of `pv`
   (`c m / |EF|`), the squeeze bias. Hypotheses: the packed Fr hash is injective, the transcript
-  absorbs `pv` before any challenge, and the key is in the proven regime. -/
-  lastLayerSound : PackedHashInj X FrDom → pvFirst vkL.sched = true →
-    ProvenRegime vkL.whir = true →
+  absorbs every word of `pv` before any challenge (`pvFirstT`, computed from the transcript),
+  and the key is in the proven regime (proof of work read from the transcript). -/
+  lastLayerSound : PackedHashInj X FrDom → pvFirstT vkL.nStmt vkL.pvLen vkL.transcript = true →
+    ProvenRegime vkL = true →
     ∀ s pv π, VerifyL X vkL s pv π → ∃ d, RootAccepts pv d s
   /-- (A2b) Collision resistance of Midnight Poseidon over Fr, carrier-guarded. -/
   frSpongeInj : FrInj X FrDom
   /-- (A3) The root AIR binds `pv` to a carrier log tree with that digest, padded to `B`. -/
   rootBinds : ∀ pv d s, RootAccepts pv d s → RecAccepts d s ∧
-    ∃ t : LogTree, t.Carrier X P2Dom B ∧ encode (pad B t.flatten) = pv ∧ t.digest X = d
+    ∃ t : LogTree, t.Carrier X P2Dom B ∧ pvOf vkL.pvLen (pad B t.flatten) = pv ∧ t.digest X = d
   /-- (A4) Recursion soundness of leaves, discharge shards and nodes. -/
   recSound : ∀ d s, RecAccepts d s → ∃ t : LogTree, t.Carrier X P2Dom B ∧ t.digest X = d ∧
     RunWith X RunOps t.flatten s
@@ -291,7 +373,7 @@ theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
     P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv w.π hV
   obtain ⟨hrec, t, ⟨htlen, htwf, htin⟩, henc, hdig⟩ := P.rootBinds _ _ _ hroot
   have hpad : pad P.B t.flatten = w.T :=
-    encode_inj (by rw [pad_length htlen, hTlen]) (pad_wf htwf) (fun e he => (hTok e he).1)
+    pvOf_inj (by rw [pad_length htlen, hTlen]) (pad_wf htwf) (fun e he => (hTok e he).1)
       (henc.trans hpv)
   obtain ⟨t', ⟨_, htwf', htin'⟩, hdig', hrun⟩ := P.recSound d pub hrec
   have htt : t' = t := digest_inj P.p2Inj htwf' htwf htin' htin (hdig'.trans hdig.symm)
@@ -343,13 +425,43 @@ theorem public_digest_binds {X : Prims} {FrDom : List Nat → Prop} (h : FrInj X
   simp only [List.cons.injEq, true_and, and_true] at this
   exact pack_injective (ha.trans hb.symm) (by omega) hra hrb this
 
-/-- The preamble of stark-backend's verifier (`verifier/mod.rs:128-175`): commitments, then the
-public values, then the first challenge. -/
-def lPreamble : List TEv := [.commit, .commit, .absorbPv, .challenge, .commit, .challenge]
+/-- A transcript skeleton of `L` in the order of stark-backend's verifier preamble
+(`verifier/mod.rs:128-175`): commitments, then the public values, then challenges; WHIR rounds
+with 21-bit folding and `mu` proof of work and 20-bit query proof of work. Indices: statement
+`0..1`, `pv` `2..5`, proof from `6`. -/
+def lTranscript (pfold pmu pquery : Nat) : List TOp :=
+  [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 12 pmu .mu,
+   .absorbFr [13], .squeeze [14, 15, 16, 17, 18], .pow 19 pfold .fold,
+   .squeeze [20, 21, 22, 23, 24], .pow 25 pquery .query]
 
-theorem lPreamble_pvFirst : pvFirst lPreamble = true := rfl
+/-- S4 after the owner decision: log blowup 4, `eta = 1/8`, `m = 3`. -/
+def s4Whir : WhirParams := ⟨4, 1, 8, 3⟩
+
+/-- The example key: two statement words, four `pv` words. -/
+def lKey (pfold pmu pquery : Nat) (w : WhirParams) : KeyL :=
+  ⟨[], lTranscript pfold pmu pquery, 2, 4, w⟩
+
+theorem s4_mult_three : thm15Mult s4Whir = 3 := by decide
+
+/-- The example key absorbs `pv` before its first challenge and is in the proven regime. -/
+theorem lKey_ok : pvFirstT 2 4 (lTranscript 21 21 20) = true ∧
+    ProvenRegime (lKey 21 21 20 s4Whir) = true := by decide
+
+/-- The former 15-bit folding and `mu` proof of work is outside the proven regime. -/
+theorem s4_pow15_not_proven : ProvenRegime (lKey 15 15 20 s4Whir) = false := by decide
+
+/-- The `m = 1` reading (the p.23 remark) is outside the proven regime. -/
+theorem remark_m1_not_proven : ProvenRegime (lKey 21 21 20 { s4Whir with mult := 1 }) = false := by
+  decide
 
 /-- A transcript that draws a challenge before absorbing `pv` fails the key check. -/
-theorem late_pv_rejected : pvFirst [.commit, .challenge, .absorbPv] = false := rfl
+theorem late_pv_rejected :
+    pvFirstT 2 4 [.absorbFr [6], .squeeze [7, 8, 9, 10, 11], .absorbBB [2, 3, 4, 5]] = false := by
+  decide
+
+/-- A transcript that absorbs only part of `pv` before the first challenge fails too. -/
+theorem partial_pv_rejected :
+    pvFirstT 2 4 [.absorbBB [2, 3], .squeeze [7, 8, 9, 10, 11], .absorbBB [4, 5]] = false := by
+  decide
 
 end Clean.Sherlock.Bridge

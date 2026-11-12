@@ -537,18 +537,182 @@ theorem horner_refines {env : List Nat} {x y : Nat} {cs : List Nat}
   have := (arith_refines hok h).2
   simpa [Expr.evalP_eq, Expr.eval, hornerExpr_eval] using this
 
-/-- One sumcheck round check `g(0) + g(1) = claim` for `g = sum_j c_j X^j`. -/
-def sumcheckExpr : List Nat → Expr
+/-- The sum of variables. -/
+def sumExpr : List Nat → Expr
   | [] => .const 0
-  | c :: cs => .add (.var c) (sumcheckExpr cs)
+  | c :: cs => .add (.var c) (sumExpr cs)
 
-/-- Lemma 11 (`sumcheck_round_refines`): `g(0) + g(1) = c_0 + sum_j c_j`. -/
-theorem sumcheck_round_refines {env : List Nat} {c0 claim : Nat} {cs : List Nat}
-    (hok : ArithOK (.add (.var c0) (sumcheckExpr (c0 :: cs))) (.var claim))
-    (h : ArithGadget env (.add (.var c0) (sumcheckExpr (c0 :: cs))) (.var claim)) :
-    (env.getD c0 0 + (sumcheckExpr (c0 :: cs)).eval env) % pBB = env.getD claim 0 % pBB := by
+theorem sumExpr_eval (env : List Nat) : ∀ cs : List Nat,
+    (sumExpr cs).eval env = (cs.map (env.getD · 0)).sum
+  | [] => rfl
+  | c :: cs => by simp [sumExpr, Expr.eval, sumExpr_eval env cs]
+
+/-- `g(0) + g(1)` for `g = sum_j c_j X^j`: `c_0 + sum_j c_j`. -/
+def roundSumExpr : List Nat → Expr
+  | [] => .const 0
+  | c :: cs => .add (.var c) (sumExpr (c :: cs))
+
+theorem roundSumExpr_eval (env : List Nat) (cs : List Nat) :
+    (roundSumExpr cs).eval env = horner 0 (cs.map (env.getD · 0)) +
+      horner 1 (cs.map (env.getD · 0)) := by
+  have h0 : ∀ l : List Nat, horner 0 l = l.headD 0 := by
+    intro l; cases l <;> simp [horner]
+  have h1 : ∀ l : List Nat, horner 1 l = l.sum := by
+    intro l; induction l with
+    | nil => rfl
+    | cons a l ih => simp [horner, ih]
+  cases cs with
+  | nil => simp [roundSumExpr, Expr.eval, horner]
+  | cons c cs => simp [roundSumExpr, Expr.eval, sumExpr_eval, h0, h1]
+
+/-- One sumcheck round of `L` (WHIR runs `k_whir` of them per round): the coefficient variables
+of the round polynomial `g`, the challenge variable `alpha`, the incoming claim and the outgoing
+claim. -/
+structure SumcheckRound where
+  cs : List Nat
+  alpha : Nat
+  claim : Nat
+  next : Nat
+
+/-- Lemma 11 (`sumcheck_round_refines`): the two wrap checks of a round give the reference
+relations `g(0) + g(1) = claim` and `g(alpha) = next` in BabyBear. -/
+theorem sumcheck_round_refines {env : List Nat} {r : SumcheckRound}
+    (hok₁ : ArithOK (roundSumExpr r.cs) (.var r.claim))
+    (h₁ : ArithGadget env (roundSumExpr r.cs) (.var r.claim))
+    (hok₂ : ArithOK (hornerExpr r.alpha r.cs) (.var r.next))
+    (h₂ : ArithGadget env (hornerExpr r.alpha r.cs) (.var r.next)) :
+    (horner 0 (r.cs.map (env.getD · 0)) + horner 1 (r.cs.map (env.getD · 0))) % pBB =
+      env.getD r.claim 0 % pBB ∧
+    horner (env.getD r.alpha 0) (r.cs.map (env.getD · 0)) % pBB = env.getD r.next 0 % pBB := by
+  refine ⟨?_, horner_refines hok₂ h₂⟩
+  have := (arith_refines hok₁ h₁).2
+  simpa [Expr.evalP_eq, Expr.eval, roundSumExpr_eval] using this
+
+/-- Lemma 11 (`whir_round_refines`): a WHIR round is a chain of sumcheck rounds, each round's
+outgoing claim the next round's incoming claim. If the wrap accepts every round's two checks,
+the reference sumcheck relations hold along the whole chain. -/
+theorem whir_round_refines {env : List Nat} : ∀ (rs : List SumcheckRound),
+    (∀ r ∈ rs, ArithOK (roundSumExpr r.cs) (.var r.claim) ∧
+      ArithGadget env (roundSumExpr r.cs) (.var r.claim) ∧
+      ArithOK (hornerExpr r.alpha r.cs) (.var r.next) ∧
+      ArithGadget env (hornerExpr r.alpha r.cs) (.var r.next)) →
+    ∀ r ∈ rs, (horner 0 (r.cs.map (env.getD · 0)) + horner 1 (r.cs.map (env.getD · 0))) % pBB =
+        env.getD r.claim 0 % pBB ∧
+      horner (env.getD r.alpha 0) (r.cs.map (env.getD · 0)) % pBB = env.getD r.next 0 % pBB := by
+  intro rs h r hr
+  obtain ⟨a, b, c, d⟩ := h r hr
+  exact sumcheck_round_refines a b c d
+
+/-- Chained rounds: the claim of round `j + 1` is `g_j(alpha_j)`. -/
+def Chained : List SumcheckRound → Prop
+  | r :: s :: rest => r.next = s.claim ∧ Chained (s :: rest)
+  | _ => True
+
+/-- Along a chained WHIR round the reference claims propagate: each round's `g(0) + g(1)` is the
+previous round's `g(alpha)` (mod `p`). -/
+theorem whir_round_chain {env : List Nat} : ∀ (r s : SumcheckRound) (rest : List SumcheckRound),
+    Chained (r :: s :: rest) →
+    (∀ t ∈ r :: s :: rest, ArithOK (roundSumExpr t.cs) (.var t.claim) ∧
+      ArithGadget env (roundSumExpr t.cs) (.var t.claim) ∧
+      ArithOK (hornerExpr t.alpha t.cs) (.var t.next) ∧
+      ArithGadget env (hornerExpr t.alpha t.cs) (.var t.next)) →
+    horner (env.getD r.alpha 0) (r.cs.map (env.getD · 0)) % pBB =
+      (horner 0 (s.cs.map (env.getD · 0)) + horner 1 (s.cs.map (env.getD · 0))) % pBB := by
+  intro r s rest hc h
+  have hr := whir_round_refines _ h r (by simp)
+  have hs := whir_round_refines _ h s (by simp)
+  rw [hr.2, hs.1, hc.1]
+
+/-- One binary fold at the coset `{x, -x}` (WHIR folds `2^k_whir` to 1 as `k_whir` binary
+folds): `2 x y = x (f(x) + f(-x)) + beta (f(x) - f(-x))`, the division-free form of
+`y = (f(x) + f(-x)) / 2 + beta (f(x) - f(-x)) / (2 x)`. Subtraction is `+ (p - 1) *`. -/
+def foldLhs (x y : Nat) : Expr := .mul (.const 2) (.mul (.var x) (.var y))
+def foldRhs (x fx fnx beta : Nat) : Expr :=
+  .add (.mul (.var x) (.add (.var fx) (.var fnx)))
+    (.mul (.var beta) (.add (.var fx) (.mul (.const (pBB - 1)) (.var fnx))))
+
+/-- Lemma 11 (`coset_fold_refines`): the wrap's fold check implies the reference fold relation
+in BabyBear. -/
+theorem coset_fold_refines {env : List Nat} {x y fx fnx beta : Nat}
+    (hok : ArithOK (foldLhs x y) (foldRhs x fx fnx beta))
+    (h : ArithGadget env (foldLhs x y) (foldRhs x fx fnx beta)) :
+    (2 * (env.getD x 0 * env.getD y 0)) % pBB =
+      (env.getD x 0 * (env.getD fx 0 + env.getD fnx 0) +
+        env.getD beta 0 * (env.getD fx 0 + (pBB - 1) * env.getD fnx 0)) % pBB := by
   have := (arith_refines hok h).2
-  simpa [Expr.evalP_eq, Expr.eval] using this
+  simpa [Expr.evalP_eq, Expr.eval, foldLhs, foldRhs] using this
+
+/-- The honest fold passes: for `f(t) = a + b t`, `y = a + beta b` satisfies the fold relation
+(as an identity over the integers, so also mod `p`). -/
+theorem fold_complete (a b x beta : Int) :
+    2 * (x * (a + beta * b)) = x * ((a + b * x) + (a - b * x)) + beta * ((a + b * x) - (a - b * x)) :=
+  by grind
+
+/-! ### The `eq` binding of `pv` -/
+
+/-- `eq(rho, bits)` as an expression: factor `rho_j` for a bit 1, `1 - rho_j` (written
+`1 + (p - 1) rho_j`) for a bit 0. -/
+def eqExpr : List Nat → List Bool → Expr
+  | r :: rs, b :: bs =>
+      .mul (if b then .var r else .add (.const 1) (.mul (.const (pBB - 1)) (.var r))) (eqExpr rs bs)
+  | _, _ => .const 1
+
+/-- The reference value of `eq(rho, bits)` (unreduced). -/
+def eqVal : List Nat → List Bool → Nat
+  | r :: rs, b :: bs => (if b then r else 1 + (pBB - 1) * r) * eqVal rs bs
+  | _, _ => 1
+
+theorem eqExpr_eval (env : List Nat) : ∀ (rs : List Nat) (bs : List Bool),
+    (eqExpr rs bs).eval env = eqVal (rs.map (env.getD · 0)) bs
+  | [], _ => rfl
+  | _ :: _, [] => rfl
+  | r :: rs, b :: bs => by
+    cases b <;> simp [eqExpr, eqVal, Expr.eval, eqExpr_eval env rs bs]
+
+/-- `sum_i eq(rho, bits_i) pv_i` over a table of (index bits, `pv` variable). -/
+def eqSumExpr (rho : List Nat) : List (List Bool × Nat) → Expr
+  | [] => .const 0
+  | (bs, v) :: t => .add (.mul (eqExpr rho bs) (.var v)) (eqSumExpr rho t)
+
+/-- Its reference value. -/
+def eqSumVal (rho : List Nat) (env : List Nat) : List (List Bool × Nat) → Nat
+  | [] => 0
+  | (bs, v) :: t => eqVal rho bs * env.getD v 0 + eqSumVal rho env t
+
+theorem eqSumExpr_eval (env : List Nat) (rho : List Nat) : ∀ tbl : List (List Bool × Nat),
+    (eqSumExpr rho tbl).eval env = eqSumVal (rho.map (env.getD · 0)) env tbl
+  | [] => rfl
+  | (bs, v) :: t => by simp [eqSumExpr, eqSumVal, Expr.eval, eqExpr_eval, eqSumExpr_eval env rho t]
+
+/-- Lemma 13 (`pv_eq_refines`): the wrap's check `sum_i eq(rho, i) pv_i = claim` at the
+batch-constraint point `rho` implies the reference evaluation of the multilinear extension of
+`pv`. -/
+theorem pv_eq_refines {env : List Nat} {rho : List Nat} {tbl : List (List Bool × Nat)} {claim : Nat}
+    (hok : ArithOK (eqSumExpr rho tbl) (.var claim))
+    (h : ArithGadget env (eqSumExpr rho tbl) (.var claim)) :
+    eqSumVal (rho.map (env.getD · 0)) env tbl % pBB = env.getD claim 0 % pBB := by
+  have := (arith_refines hok h).2
+  simpa [Expr.evalP_eq, Expr.eval, eqSumExpr_eval] using this
+
+/-- On Boolean points `eq` is the indicator: `eq(rho, bits) = 1` if `rho` is `bits`, else `0`
+(mod `p`). So `sum_i eq(rho, i) pv_i` is the multilinear extension of the table `pv`. -/
+theorem eqVal_bool : ∀ (rho : List Nat) (bs : List Bool), rho.length = bs.length →
+    (∀ r ∈ rho, r ≤ 1) →
+    eqVal rho bs % pBB = if rho = bs.map (fun b => if b then 1 else 0) then 1 else 0
+  | [], [], _, _ => by decide
+  | [], _ :: _, hl, _ => by simp at hl
+  | _ :: _, [], hl, _ => by simp at hl
+  | r :: rs, b :: bs, hl, hr => by
+    have ih := eqVal_bool rs bs (by simpa using hl) (fun x hx => hr x (by simp [hx]))
+    have hr0 : r ≤ 1 := hr r (by simp)
+    simp only [eqVal]
+    rw [Nat.mul_mod, ih]
+    have hf : (if b then r else 1 + (pBB - 1) * r) % pBB = if r = (if b then 1 else 0) then 1 else 0 := by
+      rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hr0 with rfl | rfl <;> cases b <;> decide
+    rw [hf]
+    simp only [List.map_cons, List.cons.injEq]
+    by_cases h1 : r = (if b then 1 else 0) <;>
+      by_cases h2 : rs = bs.map (fun b => if b then 1 else 0) <;> simp [h1, h2] <;> decide
 
 /-! ## Squeezing challenges from Fr -/
 
@@ -583,6 +747,7 @@ structure Prims where
   jubjubGen : Nat × Nat
   p2 : List Nat → List Nat
   p2_width : ∀ a, (p2 a).length = 8
+  frSponge_lt : ∀ a, frSponge a < rFr
 
 /-- Midnight's two-input hash (Merkle compression, `H2`). -/
 def Prims.frH2 (X : Prims) (a b : Nat) : Nat := X.frSponge [a, b]
@@ -704,6 +869,33 @@ theorem encode_inj : ∀ {a b : List Entry}, a.length = b.length → (∀ e ∈ 
       (fun x hx => hb x (by simp [hx])) h1.2
     rw [h1.1, ih]
 
+/-- `encode` is prefix-free over tables with the same number of entries. -/
+theorem encode_append_inj : ∀ {a b : List Entry} {s t : List Nat}, a.length = b.length →
+    (∀ e ∈ a, e.WF) → (∀ e ∈ b, e.WF) → encode a ++ s = encode b ++ t → a = b ∧ s = t
+  | [], [], _, _, _, _, _, h => ⟨rfl, by simpa [encode] using h⟩
+  | [], _ :: _, _, _, hl, _, _, _ => by simp at hl
+  | _ :: _, [], _, _, hl, _, _, _ => by simp at hl
+  | e :: a, f :: b, s, t, hl, ha, hb, h => by
+    simp only [encode, List.map_cons, List.flatten_cons, List.append_assoc] at h
+    have h1 := enc_append_inj (ha e (by simp)) (hb f (by simp)) h
+    have ih := encode_append_inj (s := s) (t := t) (by simpa using hl)
+      (fun x hx => ha x (by simp [hx])) (fun x hx => hb x (by simp [hx])) h1.2
+    exact ⟨by rw [h1.1, ih.1], ih.2⟩
+
+/-- The public-value vector of `L` with the fixed word length `W` of the key: the encoding of
+the table, zero-padded to `W` (lead amendment 4). -/
+def pvOf (W : Nat) (l : List Entry) : List Nat :=
+  encode l ++ List.replicate (W - (encode l).length) 0
+
+theorem pvOf_length {W : Nat} {l : List Entry} (h : (encode l).length ≤ W) :
+    (pvOf W l).length = W := by
+  simp [pvOf]; omega
+
+/-- `pvOf` is injective on well-formed tables with the same number of entries. -/
+theorem pvOf_inj {W : Nat} {a b : List Entry} (hl : a.length = b.length) (ha : ∀ e ∈ a, e.WF)
+    (hb : ∀ e ∈ b, e.WF) (h : pvOf W a = pvOf W b) : a = b :=
+  (encode_append_inj hl ha hb h).1
+
 theorem pad_wf {B : Nat} {l : List Entry} (h : ∀ e ∈ l, e.WF) : ∀ e ∈ pad B l, e.WF := by
   intro e he
   simp only [pad, List.mem_append] at he
@@ -785,6 +977,9 @@ def onion (X : Prims) (l : List Entry) : List Nat := onionRev X l.reverse
 theorem onion_snoc (X : Prims) (l : List Entry) (e : Entry) :
     onion X (l ++ [e]) = X.p2 (tagStep :: (onion X l ++ X.p2 (tagEnt :: e.enc))) := by
   simp [onion, onionRev]
+
+/-- The empty onion is a hash output, `P2(TAG_EMPTY)` (lead amendment 1). -/
+theorem onion_empty (X : Prims) : onion X [] = X.p2 [tagEmpty] := rfl
 
 /-- Digest of a log tree. -/
 def LogTree.digest (X : Prims) : LogTree → List Nat

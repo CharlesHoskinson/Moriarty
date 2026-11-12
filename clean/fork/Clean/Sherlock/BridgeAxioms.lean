@@ -1,4 +1,5 @@
 import Clean.Sherlock.Bridge
+import Clean.Sherlock.PvBinding
 
 /-!
 Premise file of `Clean.Sherlock.Bridge` and `Clean.Sherlock.FrLog` (bridge round, QUEUE.md
@@ -19,8 +20,9 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   soundness, Fiat-Shamir in the random-oracle model, the `eq` binding of `pv` (error
   at most `c m / |EF|`, Thaler Lemma 1) and the 5-digit squeeze bias (at most `2^-100`). It has three
   hypotheses that `bridge_sound` discharges: `PackedHashInj` (proved from A2b by
-  `packed_hash_inj`: packing with checked length and range), `pvFirst vkL.sched` and
-  `ProvenRegime vkL.whir` (both from the static key check).
+  `packed_hash_inj`: packing with checked length and range), `pvFirstT` and `ProvenRegime`
+  (both static key checks; `pvFirstT` and the proof-of-work bits are computed from the key's
+  transcript program, the WHIR analysis parameters are declared).
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
   Merkle hash of `L`, and the public digest form `PoseidonFr(tag, pack d2)`), guarded by the
   carrier `FrDom`. Separate from A5.
@@ -41,8 +43,8 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   distribution equals the simulator's on the public input alone. Not used by `bridge_sound`;
   used by `wrap_view_only_claim`. `indist_symm` and `indist_trans` say that indistinguishability
   is an equivalence.
-* `vkL_ok`: not cryptographic. Static facts of the frozen key of `L` (`pvFirst` of its transcript
-  schedule, `ProvenRegime` of its WHIR parameters, and the bound `< r` of every compiled
+* `vkL_ok`: not cryptographic. Static facts of the frozen key of `L` (`pvFirstT` of its
+  transcript program, `ProvenRegime`, and the bound `< r` of every compiled
   expression), decided on the concrete key.
 
 The carriers `P2Dom` and `FrDom` are abstract on purpose: a hash with a finite digest is not
@@ -68,8 +70,10 @@ consistency only, not that the real primitives satisfy them. -/
 def consistent : Premises where
   B := 0
   X := { frPerm := id, frSponge := fun _ => 0, jubjubMul := fun _ q => q, jubjubGen := (0, 0),
-         p2 := fun _ => List.replicate 8 0, p2_width := fun _ => by simp }
-  vkL := { checks := [.arith (.const 0) (.const 1)], sched := [.absorbPv], whir := s4Whir }
+         p2 := fun _ => List.replicate 8 0, p2_width := fun _ => by simp,
+         frSponge_lt := fun _ => by decide }
+  vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscript 21 21 20,
+           nStmt := 2, pvLen := 4, whir := s4Whir }
   P2Dom := fun _ => False
   FrDom := fun _ => False
   LedgerProof := Unit
@@ -78,7 +82,7 @@ def consistent : Premises where
   RecAccepts := fun _ _ => False
   RunOps := fun _ _ => False
   Run := fun _ => True
-  vkL_ok := ⟨rfl, s4_proven, by
+  vkL_ok := ⟨by decide, by decide, by
     intro c hc
     simp only [List.mem_singleton] at hc
     subst hc
@@ -86,7 +90,7 @@ def consistent : Premises where
   wrapKnowledgeSound := fun _ _ h => h.elim
   lastLayerSound := by
     intro _ _ _ s pv π h
-    have := (h _ (List.mem_singleton_self _)).2
+    have := (h.2.2.1 _ (List.mem_singleton_self _)).2
     change 0 % pBB = 1 % pBB at this
     exact absurd this (by decide)
   frSpongeInj := fun _ _ h => h.elim
@@ -102,7 +106,7 @@ def consistent : Premises where
   indist_trans := fun _ _ _ _ _ => trivial
   wrapZK := fun _ _ _ => trivial
 
--- Every theorem of FrLog.lean and Bridge.lean.
+-- Every theorem of FrLog.lean, Bridge.lean and PvBinding.lean.
 #print axioms Clean.Sherlock.Bridge.pBB_eq
 #print axioms Clean.Sherlock.Bridge.pBB_pos
 #print axioms Clean.Sherlock.Bridge.limb_fits
@@ -149,7 +153,17 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.ef_mul_sound
 #print axioms Clean.Sherlock.Bridge.hornerExpr_eval
 #print axioms Clean.Sherlock.Bridge.horner_refines
+#print axioms Clean.Sherlock.Bridge.sumExpr_eval
+#print axioms Clean.Sherlock.Bridge.roundSumExpr_eval
 #print axioms Clean.Sherlock.Bridge.sumcheck_round_refines
+#print axioms Clean.Sherlock.Bridge.whir_round_refines
+#print axioms Clean.Sherlock.Bridge.whir_round_chain
+#print axioms Clean.Sherlock.Bridge.coset_fold_refines
+#print axioms Clean.Sherlock.Bridge.fold_complete
+#print axioms Clean.Sherlock.Bridge.eqExpr_eval
+#print axioms Clean.Sherlock.Bridge.eqSumExpr_eval
+#print axioms Clean.Sherlock.Bridge.pv_eq_refines
+#print axioms Clean.Sherlock.Bridge.eqVal_bool
 #print axioms Clean.Sherlock.Bridge.squeeze_digits_sound
 #print axioms Clean.Sherlock.Bridge.squeeze_alias
 #print axioms Clean.Sherlock.Bridge.Op.code_length
@@ -159,10 +173,14 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.flatten_append_inj
 #print axioms Clean.Sherlock.Bridge.enc_append_inj
 #print axioms Clean.Sherlock.Bridge.encode_inj
+#print axioms Clean.Sherlock.Bridge.encode_append_inj
+#print axioms Clean.Sherlock.Bridge.pvOf_length
+#print axioms Clean.Sherlock.Bridge.pvOf_inj
 #print axioms Clean.Sherlock.Bridge.pad_wf
 #print axioms Clean.Sherlock.Bridge.replay_sound
 #print axioms Clean.Sherlock.Bridge.nop_pad_valid
 #print axioms Clean.Sherlock.Bridge.onion_snoc
+#print axioms Clean.Sherlock.Bridge.onion_empty
 #print axioms Clean.Sherlock.Bridge.onionRev_length
 #print axioms Clean.Sherlock.Bridge.onionRev_inj
 #print axioms Clean.Sherlock.Bridge.onionRev_cases
@@ -173,6 +191,8 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.spill_equiv
 #print axioms Clean.Sherlock.Bridge.runWith_all_valid
 #print axioms Clean.Sherlock.Bridge.discharge_sound
+#print axioms Clean.Sherlock.Bridge.run_refines
+#print axioms Clean.Sherlock.Bridge.pv_absorbed_before_challenge
 #print axioms Clean.Sherlock.Bridge.getD_lt
 #print axioms Clean.Sherlock.Bridge.check_refines
 #print axioms Clean.Sherlock.Bridge.wrap_refines
@@ -181,9 +201,21 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.wrap_view_only_claim
 #print axioms Clean.Sherlock.Bridge.merkle_binding_or_collision
 #print axioms Clean.Sherlock.Bridge.public_digest_binds
-#print axioms Clean.Sherlock.Bridge.lPreamble_pvFirst
-#print axioms Clean.Sherlock.Bridge.late_pv_rejected
 #print axioms Clean.Sherlock.Bridge.s4_mult_three
-#print axioms Clean.Sherlock.Bridge.s4_proven
+#print axioms Clean.Sherlock.Bridge.lKey_ok
 #print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven
 #print axioms Clean.Sherlock.Bridge.remark_m1_not_proven
+#print axioms Clean.Sherlock.Bridge.late_pv_rejected
+#print axioms Clean.Sherlock.Bridge.partial_pv_rejected
+#print axioms Clean.Sherlock.Bridge.PvBinding.euclid_of_prime
+#print axioms Clean.Sherlock.Bridge.PvBinding.mle_mod
+#print axioms Clean.Sherlock.Bridge.PvBinding.points_length
+#print axioms Clean.Sherlock.Bridge.PvBinding.countP_le_one
+#print axioms Clean.Sherlock.Bridge.PvBinding.line_roots
+#print axioms Clean.Sherlock.Bridge.PvBinding.flat_count
+#print axioms Clean.Sherlock.Bridge.PvBinding.mul_pow_pred_le
+#print axioms Clean.Sherlock.Bridge.PvBinding.pv_binding_count
+#print axioms Clean.Sherlock.Bridge.PvBinding.noDivFrom_sound
+#print axioms Clean.Sherlock.Bridge.PvBinding.prime_of_noDiv
+#print axioms Clean.Sherlock.Bridge.PvBinding.pBB_prime
+#print axioms Clean.Sherlock.Bridge.PvBinding.pv_binding_count_babybear
