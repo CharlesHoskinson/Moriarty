@@ -1,0 +1,23 @@
+[package]
+name = "mori-msm-kernel"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+description = "Device code of the Rust MSM (BLS12-381 G1), compiled to PTX for nvptx64-nvidia-cuda"
+
+# Own workspace: this crate builds only for the nvptx64 target.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+
+[profile.dev]
+panic = "abort"
