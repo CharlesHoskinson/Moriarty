@@ -36,21 +36,74 @@ changes.
 Note (coordinator, 2026-11-11): OD-19 now runs unique decoding in production. This proof is for
 bringing list decoding back later (k = 19). The definition of done is unchanged.
 
+## Status (phase 2, route (a))
+
+Route (a) is the proof. **PROOF.md Theorem 7.1 is not formalized. ArkLib's proved Johnson curve
+count replaces it.** ArkLib's
+`ProximityGap.exists_johnson_curve_exactPowerAgreement_of_fintype` is sorry-free and uses only the
+standard axioms. It bounds the exceptional set of a degree `M` power curve by
+`2 M · johnsonExceptionCount`. At each frozen row, this count (plus the subcode term `M · L` for
+Corollary 8.2) is at most PROOF.md's `a*_M`. A closed integer check (`rowOk`, `codeOk`,
+`decide +kernel`) proves this. So the Lean theorems prove the PROOF.md bits through ArkLib's count.
+(H1) to (H6) (Lemmas 9.0 and 9.0b) are still proved as integer facts, but no theorem consumes them.
+
+The "proved in Lean" column is the bit level that `row_bits` / `row_subcode_bits` prove: the bound
+is `a*_M(g)`, with `a*_M · 2^bits ≤ p^4`. The "ArkLib route count" column is
+`log2(p^4 / (2M·count + M·L))`: the bit level that ArkLib's count alone would give, if the theorem
+were stated with the count instead of `a*_M`. Rows with `M = 1` are folds. The two others are the
+`L` and internal mu rows.
+
+| mu | beta | M | n | g | PROOF.md a*_M bits (proved in Lean) | ArkLib route count bits |
+|---|---|---|---|---|---|---|
+| 19 | 4 | 1 | 8388608 | 5592405 | 88 | 89.98 |
+| 18 | 4 | 1 | 4194304 | 2796202 | 89 | 90.98 |
+| 17 | 4 | 1 | 2097152 | 1398101 | 90 | 91.98 |
+| 16 | 4 | 1 | 1048576 | 699050 | 91 | 92.98 |
+| 15 | 7 | 1 | 4194304 | 3700000 | 87 | 88.13 |
+| 14 | 7 | 1 | 2097152 | 1850000 | 88 | 89.13 |
+| 13 | 7 | 1 | 1048576 | 925000 | 89 | 90.13 |
+| 12 | 7 | 1 | 524288 | 462500 | 90 | 91.13 |
+| 11 | 10 | 1 | 2097152 | 2009770 | 84 | 86.17 |
+| 10 | 10 | 1 | 1048576 | 1004885 | 85 | 87.17 |
+| 9 | 10 | 1 | 524288 | 502442 | 86 | 88.17 |
+| 8 | 10 | 1 | 262144 | 251221 | 87 | 89.17 |
+| 18 | 3 | 1 | 2097152 | 1108545 | 92 | 93.09 |
+| 17 | 3 | 1 | 1048576 | 554272 | 93 | 94.09 |
+| 16 | 3 | 1 | 524288 | 277136 | 94 | 95.09 |
+| 15 | 3 | 1 | 262144 | 138568 | 95 | 96.09 |
+| 14 | 6 | 1 | 1048576 | 873813 | 89 | 91.07 |
+| 13 | 6 | 1 | 524288 | 436906 | 90 | 92.07 |
+| 12 | 6 | 1 | 262144 | 218453 | 91 | 93.08 |
+| 11 | 6 | 1 | 131072 | 109226 | 92 | 94.08 |
+| 10 | 9 | 1 | 524288 | 493394 | 87 | 89.16 |
+| 9 | 9 | 1 | 262144 | 246697 | 88 | 90.16 |
+| 8 | 9 | 1 | 131072 | 123348 | 89 | 91.16 |
+| 7 | 9 | 1 | 65536 | 61674 | 90 | 92.16 |
+| 20 | 4 | 47 | 16777216 | 11184810 | 82 | 83.43 |
+| 19 | 3 | 511 | 4194304 | 2217090 | 82 | 83.09 |
+
 ## Layout
 
 - `MCA/Defs.lean`: definitions written from the papers over Mathlib only (RS code on an evaluation
-  domain, relative Hamming distance and agreement, correlated agreement, MCA as WHIR Def 4.9, the
-  fold generator, the degree `w - 1` curve generator).
-- `MCA/Proof.lean`: the PROOF.md targets: Theorem 7.1 (`thm_7_1`, `|E| ≤ a*_M` under (H1) to
-  (H6) for every linear subcode and curve degree), Corollary 8.2 (`cor_8_2`, affine subcodes) and
-  Lemma 9.0 (`lemma_9_0`, (H1) to (H6) at the 26 frozen rows).
-- `MCA/Statements.lean`: the printed BCHKS25 Thm 4.6 form (target T), bad-set cardinality bounds.
-- `MCA/Bridge.lean`: equivalence between `MCA/Defs.lean` and ArkLib's `IsMCA` / `mcaError`.
-- `MCA/Instantiation.lean`: the bit bound at the frozen parameters (stub until STATEMENT.md pins
-  them).
+  domain, agreement, MCA as WHIR Def 4.9, the fold and power-curve generators, `mcaErr`, `HasMCA`).
+- `MCA/Bridge.lean`: the definitions are ArkLib's (`ReedSolomon.code`, `univariatePowersGenerator`,
+  `AffineLineGenerator`, `IsMCA`, `mcaError`).
+- `MCA/Johnson.lean`: ArkLib's `johnsonExceptionCount` at an integer threshold `A`, as the natural
+  number `countNum / (A - k)`, under the integer conditions `JOk`.
+- `MCA/Route.lean`: `curve_card_le` (full code, any curve degree `M`; `M = 1` is the fold),
+  `vandermonde_mem`, and `cor_8_2` (affine subcodes, PROOF.md Corollary 8.2).
+- `MCA/Proof.lean`: `aStar`, (H1) to (H6) (`Hyps`), Lemma 9.0 (`lemma_9_0`, 26 rows), Lemma 9.0b
+  (`lemma_9_0b`, 30 codes, all `g ≤ g_end`), Definition 9.1b (`errStar`) and Corollary 9.2
+  (`cor_9_2`, fold MCA with error `errStar` at every radius), with the row and code data.
+- `MCA/Instantiation.lean`: `row_bits`, `row_mcaError_bits` (ArkLib `mcaError` form) and
+  `row_subcode_bits` at the 26 frozen rows over `|F| = p^4`.
 - `MCA/Axioms.lean`: `#print axioms` checks. It is a classic file (no `module` header), because a
   module importer does not load proof bodies.
 - `SURVEY.md`: the libraries that exist, with pinned commits, versions, axioms and sorry status.
+
+The phase 1 file `MCA/Statements.lean` (the printed BCHKS25 Thm 4.6 form with factor `w - 1`) has
+been deleted. ArkLib's curve bound has the factor `2 M`, which does not prove that form. The frozen
+rows do not need it.
 
 ## Build
 

@@ -27,6 +27,9 @@ noncomputable def evalOn (dom : ι ↪ F) : F[X] →ₗ[F] (ι → F) where
   map_add' p q := by funext i; simp
   map_smul' c p := by funext i; simp
 
+@[simp] theorem evalOn_apply (dom : ι ↪ F) (p : F[X]) (i : ι) : evalOn dom p i = p.eval (dom i) :=
+  rfl
+
 /-- [WHIR, Def. 4.1] The Reed-Solomon code `RS[F, L, d]`: the evaluations on `L` of the
 polynomials of degree strictly less than `d`. The rate is `d / |L|`.
 

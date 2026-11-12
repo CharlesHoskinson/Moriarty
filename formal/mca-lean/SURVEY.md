@@ -134,3 +134,21 @@ Theorem 7.1 for every linear subcode `C' = ker λ`. ArkLib's `HasExactPowerAgree
 outside the exceptional set, per-challenge coefficient polynomials `P_j`; it does not give
 `P_j ∈ C'`. Phase 2 checks `ReedSolomon/Constrained.lean` and the Lemma 7.0 interpolation
 argument (M + 1 good challenges with a common factor) for a way to get it.
+
+## Phase 2 resolution (2026-11-12): route (a) taken
+
+- **PROOF.md Theorem 7.1 is replaced by ArkLib's count.** No Lean theorem proves or assumes
+  Theorem 7.1. Every bound comes from `exists_johnson_curve_exactPowerAgreement_of_fintype`
+  (`2 M · johnsonExceptionCount`). Lean uses factor `2 M` for the folds too (`M = 1`), not the
+  line theorem's factor 1. That costs one bit against the table above, and every row stays above
+  `a*_M`.
+- **Subcode step (Corollary 8.2).** This is solved without `ReedSolomon/Constrained.lean`.
+  Outside the exceptional set, each bad challenge `z` gives a coefficient tuple `(P_j)`. A tuple
+  that serves `M + 1` challenges has every `P_j` in `C''_{v_j}`, by the Vandermonde step
+  (`vandermonde_mem`). The far hypothesis rules that out, so each tuple serves at most `M`
+  challenges. Distinct tuples have common agreement sets that meet in at most `k` points. So
+  ArkLib's `Finset.card_mul_sq_sub_card_mul_le_of_inter_card_le` bounds the number of tuples by
+  `L = ⌊n (A - k) / (A² - n k)⌋`. Total: `2 M · count + M · L` (`MCA.cor_8_2`). `L` is 5 at the
+  `L` mu row and 3 at the internal mu row.
+- **Per-row bits.** README.md, section "Status", gives the bits for all 26 rows, under both
+  `a*_M` (proved) and the ArkLib count.
