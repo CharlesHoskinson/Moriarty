@@ -840,10 +840,10 @@ index 0000000..c2dd7a8
 +pub mod transcript;
 diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
 new file mode 100644
-index 0000000..58a0cbe
+index 0000000..3d768eb
 --- /dev/null
 +++ b/crates/sherlock-lfr/src/lverify.rs
-@@ -0,0 +1,1213 @@
+@@ -0,0 +1,1568 @@
 +//! I6: the tape generator for the `L` verifier, part 1 (shape pin, preamble, LogUp PoW, LogUp
 +//! GKR, the GKR claim checks). A mirror of `stark-backend/src/verifier/mod.rs` (preamble),
 +//! `batch_constraints.rs` (steps 1 to 3) and `fractional_sumcheck_gkr.rs`, line by line.
@@ -907,6 +907,7 @@ index 0000000..58a0cbe
 +    pub tt: TapeTranscript,
 +    pub inputs: Vec<Val>,
 +    consts: HashMap<[u64; 4], Addr>,
++    fr_consts: Vec<(Fr, Addr)>,
 +}
 +
 +impl Default for Gen {
@@ -924,6 +925,7 @@ index 0000000..58a0cbe
 +            tt,
 +            inputs: vec![],
 +            consts: HashMap::new(),
++            fr_consts: vec![],
 +        }
 +    }
 +
@@ -2057,12 +2059,365 @@ index 0000000..58a0cbe
 +        commits,
 +    })
 +}
++
++// ==========================================================================================
++// I9: part 4, WHIR (whir.rs).
++// ==========================================================================================
++
++impl Gen {
++    /// An Fr constant of the key (one op per distinct value).
++    pub fn frk(&mut self, v: Fr) -> Addr {
++        if let Some(&(_, a)) = self.fr_consts.iter().find(|(x, _)| *x == v) {
++            return a;
++        }
++        let a = self.tape.fr_const(v);
++        self.fr_consts.push((v, a));
++        a
++    }
++    /// `n` bits of `x` (little-endian), with the chain end asserted 0 (`x < 2^n`).
++    pub fn bits(&mut self, x: Addr, n: usize) -> Vec<Addr> {
++        let mut cur = x;
++        let mut out = vec![];
++        for _ in 0..n {
++            let (b, r) = self.tape.halve(cur);
++            out.push(b);
++            cur = r;
++        }
++        let zero = self.kbb(0);
++        self.assert_eq(cur, zero);
++        out
++    }
++    /// `prod_j (bit_j ? c_j : 1)` for key constants `c_j` (`1 + bit (c - 1)`).
++    pub fn select_prod(&mut self, bits: &[Addr], cs: &[BabyBear]) -> Addr {
++        let one = self.kbb(1);
++        let mut acc = one;
++        for (&b, &c) in bits.iter().zip(cs) {
++            let k = self.kbb(bb_u64(c - BabyBear::ONE));
++            let t = self.mul(b, k);
++            let f = self.add(t, one);
++            acc = self.mul(acc, f);
++        }
++        acc
++    }
++    /// `MidnightMerkleHasher::hash_slice` (u = 1) of BabyBear word addresses.
++    pub fn leaf_hash(&mut self, words: &[Addr]) -> Addr {
++        use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::{cap_fixed, U_LEAF};
++        let l = words.len().div_ceil(8);
++        let zero = self.frk(Fr::ZERO);
++        let cap = self.frk(cap_fixed(U_LEAF, l as u128));
++        let mut state = [zero, zero, cap];
++        let mut first = true;
++        for block in words.chunks(16) {
++            for (i, w8) in block.chunks(8).enumerate() {
++                let p = self.tape.pack(w8);
++                state[i] = if first {
++                    p
++                } else {
++                    self.tape.fr_add(state[i], p)
++                };
++            }
++            state = self.tape.perm(state);
++            first = false;
++        }
++        state[0]
++    }
++    /// `MidnightMerkleHasher::compress` (u = 2).
++    pub fn compress(&mut self, l: Addr, r: Addr) -> Addr {
++        use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::{cap_fixed, U_NODE};
++        let cap = self.frk(cap_fixed(U_NODE, 2));
++        self.tape.perm([l, r, cap])[0]
++    }
++    /// `merkle_verify` with the index bits; the root must equal `root`.
++    pub fn merkle_verify(&mut self, root: Addr, bits: &[Addr], leaf: Addr, path: &[Fr]) {
++        assert_eq!(bits.len(), path.len());
++        let mut cur = leaf;
++        for (&b, &sib) in bits.iter().zip(path) {
++            let s = self.fr_in(sib);
++            let (l, r) = self.tape.cswap(b, cur, s);
++            cur = self.compress(l, r);
++        }
++        self.assert_eq(cur, root);
++    }
++}
++
++/// Part 4 of the `L` verifier on the tape: WHIR.
++pub fn gen_part4(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    proof: &Proof<LSC>,
++    p3: &Part3,
++) -> Result<(), ShapeError> {
++    use p3_field::TwoAdicField;
++    let params = &vk.inner.params;
++    let wp = &proof.whir_proof;
++    let widths: Vec<usize> = p3.stacking_openings.iter().map(|v| v.len()).collect();
++    let k = params.k_whir();
++    let rounds = params.num_whir_rounds();
++    let m = params.l_skip + params.n_stack;
++    let mut log_rs = m + params.log_blowup;
++    let one = g.kbb(1);
++    if wp.whir_sumcheck_polys.len() != rounds * k
++        || wp.folding_pow_witnesses.len() != rounds * k
++        || wp.query_phase_pow_witnesses.len() != rounds
++        || wp.codeword_commits.len() != rounds - 1
++        || wp.ood_values.len() != rounds - 1
++        || wp.final_poly.len() != 1 << params.log_final_poly_len()
++        || wp.initial_round_opened_rows.len() != widths.len()
++        || wp.initial_round_merkle_proofs.len() != widths.len()
++        || wp.codeword_opened_values.len() != rounds - 1
++        || wp.codeword_merkle_proofs.len() != rounds - 1
++    {
++        return Err(ShapeError::Lengths("WHIR proof"));
++    }
++
++    let w = g.bb_in(wp.mu_pow_witness);
++    g.check_witness(params.whir.mu_pow_bits, w);
++    let mu = g.sample_ext();
++    let total: usize = widths.iter().sum();
++    let mut mu_pows = vec![one];
++    while mu_pows.len() < total {
++        let l = *mu_pows.last().unwrap();
++        mu_pows.push(g.mul(l, mu));
++    }
++    let mut claim = g.kbb(0);
++    for (&o, &mp) in p3.stacking_openings.iter().flatten().zip(&mu_pows) {
++        let a = g.mul(mp, o);
++        claim = g.add(claim, a);
++    }
++
++    let mut sc_iter = wp.whir_sumcheck_polys.iter();
++    let mut fold_pow_iter = wp.folding_pow_witnesses.iter();
++    let (mut gammas, mut zs, mut z0s, mut alphas) = (vec![], vec![], vec![], vec![]);
++    let mut final_poly: Vec<Addr> = vec![];
++    let mut codeword_commits: Vec<Addr> = vec![];
++    for (wr, round_params) in params.whir.rounds.iter().enumerate() {
++        let is_initial = wr == 0;
++        let is_final = wr == rounds - 1;
++        let mut alphas_round = vec![];
++        for _ in 0..k {
++            let [e1, e2] = sc_iter.next().unwrap().map(|x| g.ef_in(x));
++            g.observe_ext(e1);
++            g.observe_ext(e2);
++            let pw = g.bb_in(*fold_pow_iter.next().unwrap());
++            g.check_witness(params.whir.folding_pow_bits, pw);
++            let alpha = g.sample_ext();
++            alphas_round.push(alpha);
++            let e0 = g.sub(claim, e1);
++            claim = g.quad012([e0, e1, e2], alpha);
++        }
++        let y0 = if is_final {
++            final_poly = wp.final_poly.iter().map(|&c| g.ef_in(c)).collect();
++            for &c in &final_poly {
++                g.observe_ext(c);
++            }
++            None
++        } else {
++            let c = g.fr_in(wp.codeword_commits[wr][0]);
++            codeword_commits.push(c);
++            g.observe_commit(c);
++            z0s.push(g.sample_ext());
++            let y0 = g.ef_in(wp.ood_values[wr]);
++            g.observe_ext(y0);
++            Some(y0)
++        };
++        let qw = g.bb_in(wp.query_phase_pow_witnesses[wr]);
++        g.check_witness(params.whir.query_phase_pow_bits, qw);
++
++        let nq = round_params.num_queries;
++        let nbits = log_rs - k;
++        let omega = BabyBear::two_adic_generator(log_rs);
++        let wpows: Vec<BabyBear> = (0..nbits).map(|j| omega.exp_power_of_2(j)).collect();
++        let winv: Vec<BabyBear> = wpows.iter().map(|x| x.inverse()).collect();
++        let omega_k = BabyBear::two_adic_generator(k);
++        let half = BabyBear::TWO.inverse();
++        let (mut zs_round, mut ys_round) = (vec![], vec![]);
++        for q in 0..nq {
++            let idx = g.sample_bits(nbits as u32);
++            let bits = g.bits(idx, nbits);
++            let zi_root = g.select_prod(&bits, &wpows);
++            let zi_root_inv = g.select_prod(&bits, &winv);
++            let mut zi = zi_root;
++            for _ in 0..k {
++                zi = g.mul(zi, zi);
++            }
++            let values: Vec<Addr> = if is_initial {
++                let zero = g.kbb(0);
++                let mut cv = vec![zero; 1 << k];
++                let mut mp_iter = mu_pows.iter();
++                for (ci, &wd) in widths.iter().enumerate() {
++                    let rows = &wp.initial_round_opened_rows[ci][q];
++                    let path = &wp.initial_round_merkle_proofs[ci][q];
++                    if rows.len() != 1 << k || path.len() != nbits {
++                        return Err(ShapeError::Lengths("WHIR initial query"));
++                    }
++                    let row_addrs: Vec<Vec<Addr>> = rows
++                        .iter()
++                        .map(|r| {
++                            assert_eq!(r.len(), wd);
++                            r.iter().map(|&x| g.bb_in(x)).collect()
++                        })
++                        .collect();
++                    let leaves: Vec<Addr> = row_addrs.iter().map(|r| g.leaf_hash(r)).collect();
++                    let digest = tree_compress(g, leaves);
++                    let path: Vec<Fr> = path.iter().map(|d| d[0]).collect();
++                    g.merkle_verify(p3.commits[ci], &bits, digest, &path);
++                    for c in 0..wd {
++                        let mp = *mp_iter.next().unwrap();
++                        for j in 0..1 << k {
++                            let a = g.mul(mp, row_addrs[j][c]);
++                            cv[j] = g.add(cv[j], a);
++                        }
++                    }
++                }
++                cv
++            } else {
++                let ov = &wp.codeword_opened_values[wr - 1][q];
++                let path = &wp.codeword_merkle_proofs[wr - 1][q];
++                if ov.len() != 1 << k || path.len() != nbits {
++                    return Err(ShapeError::Lengths("WHIR query"));
++                }
++                let vals: Vec<Addr> = ov.iter().map(|&x| g.ef_in(x)).collect();
++                let leaves: Vec<Addr> = vals
++                    .iter()
++                    .map(|&v| {
++                        let words = g.tape.decompose(v);
++                        g.leaf_hash(&words)
++                    })
++                    .collect();
++                let digest = tree_compress(g, leaves);
++                let path: Vec<Fr> = path.iter().map(|d| d[0]).collect();
++                g.merkle_verify(codeword_commits[wr - 1], &bits, digest, &path);
++                vals
++            };
++            // binary_k_fold(values, alphas_round, zi_root)
++            let mut vals = values;
++            let x_pows = g.pow2s(zi_root, k);
++            let x_inv_pows = g.pow2s(zi_root_inv, k);
++            for (j, &alpha) in alphas_round.iter().enumerate() {
++                let mm = (1 << k) >> (j + 1);
++                for i in 0..mm {
++                    let tw = g.kbb(bb_u64(omega_k.exp_u64((i << j) as u64)));
++                    let t = g.mul(tw, x_pows[j]);
++                    let itw = g.kbb(bb_u64(omega_k.inverse().exp_u64((i << j) as u64) * half));
++                    let t_inv_h = g.mul(itw, x_inv_pows[j]);
++                    let a = g.sub(alpha, t);
++                    let d = g.sub(vals[i], vals[i + mm]);
++                    let a = g.mul(a, d);
++                    let a = g.mul(a, t_inv_h);
++                    vals[i] = g.add(vals[i], a);
++                }
++            }
++            zs_round.push(zi);
++            ys_round.push(vals[0]);
++        }
++        let gamma = g.sample_ext();
++        if let Some(y0) = y0 {
++            let a = g.mul(y0, gamma);
++            claim = g.add(claim, a);
++        }
++        let mut gp = g.mul(gamma, gamma);
++        for &yi in &ys_round {
++            let a = g.mul(yi, gp);
++            claim = g.add(claim, a);
++            gp = g.mul(gp, gamma);
++        }
++        gammas.push(gamma);
++        zs.push(zs_round);
++        alphas.extend(alphas_round);
++        log_rs -= 1;
++    }
++
++    // Final check.
++    let t = k * rounds;
++    // verifier/mod.rs: WHIR takes `u_cube` = (u_0^(2^i) for i < l_skip) then u_1, .., u_n_stack.
++    let mut u = g.pow2s(p3.u[0], params.l_skip);
++    u.extend_from_slice(&p3.u[1..]);
++    assert_eq!(u.len(), m);
++    let mut prefix = one;
++    for i in 0..t {
++        // (1 - 2 u_i)(1 - a_i) + u_i a_i
++        let two = g.kbb(2);
++        let u2 = g.mul(u[i], two);
++        let w0 = g.sub(one, u2);
++        let oma = g.sub(one, alphas[i]);
++        let a = g.mul(w0, oma);
++        let b = g.mul(u[i], alphas[i]);
++        let f = g.add(a, b);
++        prefix = g.mul(prefix, f);
++    }
++    // eval_mle_evals_at_point(final_poly, u[t..])
++    let mut ev = final_poly.clone();
++    let mut len = ev.len();
++    for &xj in u[t..].iter().rev() {
++        len >>= 1;
++        let omx = g.sub(one, xj);
++        for i in 0..len {
++            let a = g.mul(ev[i], omx);
++            let b = g.mul(ev[i + len], xj);
++            ev[i] = g.add(a, b);
++        }
++    }
++    let mut acc = g.mul(prefix, ev[0]);
++    let mut j = k;
++    for i in 0..rounds {
++        let alpha_slc = alphas[j..t].to_vec();
++        let slc_len = (t - j) + 1;
++        if i != rounds - 1 {
++            let zp = g.pow2s(z0s[i], slc_len);
++            let (max, left) = zp.split_last().unwrap();
++            let e = g.eq_mle(&alpha_slc, left);
++            let h = g.horner(&final_poly, *max);
++            let a = g.mul(gammas[i], e);
++            let a = g.mul(a, h);
++            acc = g.add(acc, a);
++        }
++        let mut gp = g.mul(gammas[i], gammas[i]);
++        for &zi in &zs[i] {
++            let zp = g.pow2s(zi, slc_len);
++            let (max, left) = zp.split_last().unwrap();
++            let e = g.eq_mle(&alpha_slc, left);
++            let h = g.horner(&final_poly, *max);
++            let a = g.mul(gp, e);
++            let a = g.mul(a, h);
++            acc = g.add(acc, a);
++            gp = g.mul(gp, gammas[i]);
++        }
++        j += k;
++    }
++    g.assert_eq(acc, claim);
++    Ok(())
++}
++
++/// `MerkleHasher::tree_compress` of digest addresses.
++fn tree_compress(g: &mut Gen, mut hashes: Vec<Addr>) -> Addr {
++    assert!(hashes.len().is_power_of_two());
++    while hashes.len() > 1 {
++        hashes = hashes
++            .chunks_exact(2)
++            .map(|p| g.compress(p[0], p[1]))
++            .collect();
++    }
++    hashes[0]
++}
++
++/// The whole `L` verifier on the tape (parts 1 to 4).
++pub fn gen_verifier(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &Proof<LSC>,
++) -> Result<(), ShapeError> {
++    let p1 = gen_part1(g, vk, shape, proof)?;
++    let p2 = gen_part2(g, vk, shape, proof, &p1)?;
++    let p3 = gen_part3(g, vk, shape, proof, &p1, &p2)?;
++    gen_part4(g, vk, proof, &p3)
++}
 diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
 new file mode 100644
-index 0000000..cfb2ac7
+index 0000000..8b4a150
 --- /dev/null
 +++ b/crates/sherlock-lfr/src/machine.rs
-@@ -0,0 +1,1003 @@
+@@ -0,0 +1,1310 @@
 +//! The tape machine: every AIR that runs a [`Tape`], built from the tape (the key) and filled
 +//! from its executed memory (the witness).
 +//!
@@ -2091,8 +2446,8 @@ index 0000000..cfb2ac7
 +    fr::{fr_from_big, limbs16, split, split_consts, H_LIMBS, V_LIMBS},
 +    poseidon::{eval_rounds, poseidon_row, IN, OUT, POSEIDON_WIDTH},
 +    program::{
-+        receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_ASSERT_EQ, TAG_BITS, TAG_FR_INPUT,
-+        TAG_INPUT, TAG_PACK, TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
++        receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_ASSERT_EQ, TAG_BITS, TAG_CSWAP,
++        TAG_FR_ADD, TAG_FR_INPUT, TAG_HALVE, TAG_INPUT, TAG_PACK, TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
 +    },
 +    range::{Range16Air, RangeCounts, RANGE_BUS},
 +    tape::{padded, Addr, BbAluProgAir, InputAir, Op, Tape, Val, MEM_BUS},
@@ -2759,6 +3114,245 @@ index 0000000..cfb2ac7
 +}
 +
 +// ------------------------------------------------------------------------------------------
++// FrAddAir: program [addr_a, addr_b, addr_out, mult_out, active]; main [x, y, z], z = x + y.
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct FrAddProg {
++    pub a: Addr,
++    pub b: Addr,
++    pub out: Addr,
++    pub mult: u64,
++}
++
++#[derive(Clone, Debug)]
++pub struct FrAddAir {
++    pub prog: Arc<Vec<FrAddProg>>,
++}
++air_boiler!(FrAddAir, 3, 5);
++
++impl FrAddAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                vec![
++                    fu(p.a as u64),
++                    fu(p.b as u64),
++                    fu(p.out as u64),
++                    fu(p.mult),
++                    Fr::ONE,
++                ]
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 5, vec![Fr::ZERO; 5])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let (x, y) = (get(mem, p.a).cells()[0], get(mem, p.b).cells()[0]);
++                vec![x, y, x + y]
++            })
++            .collect();
++        self.finish(rows_to_matrix(rows, self.prog.len(), 3, vec![Fr::ZERO; 3]))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for FrAddAir {
++    fn eval(&self, builder: &mut AB) {
++        let (x, p) = split_row(builder, TAG_FR_ADD, 3, 5);
++        builder.assert_eq(x[2].clone(), x[0].clone() + x[1].clone());
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[0].clone(), &[x[0].clone()]),
++            -p[4].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[1].clone(), &[x[1].clone()]),
++            -p[4].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[2].clone(), &[x[2].clone()]),
++            p[3].clone(),
++            1,
++        );
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// HalveAir: program [addr_x, addr_bit, addr_rest, mult_bit, mult_rest, active];
++// main [x, bit, rest]: x = 2 rest + bit, bit boolean. A chain of n steps from x < 2^n that ends
++// in rest = 0 (an `AssertEq` of the tape) gives the unique binary form of x.
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct HalveProg {
++    pub x: Addr,
++    pub bit: Addr,
++    pub rest: Addr,
++    pub mult_bit: u64,
++    pub mult_rest: u64,
++}
++
++#[derive(Clone, Debug)]
++pub struct HalveAir {
++    pub prog: Arc<Vec<HalveProg>>,
++}
++air_boiler!(HalveAir, 3, 6);
++
++impl HalveAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                vec![
++                    fu(p.x as u64),
++                    fu(p.bit as u64),
++                    fu(p.rest as u64),
++                    fu(p.mult_bit),
++                    fu(p.mult_rest),
++                    Fr::ONE,
++                ]
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 6, vec![Fr::ZERO; 6])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let x = get(mem, p.x).bb()[0];
++                vec![fu(x), fu(x & 1), fu(x >> 1)]
++            })
++            .collect();
++        self.finish(rows_to_matrix(rows, self.prog.len(), 3, vec![Fr::ZERO; 3]))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for HalveAir {
++    fn eval(&self, builder: &mut AB) {
++        let (x, p) = split_row(builder, TAG_HALVE, 3, 6);
++        builder.assert_bool(x[1].clone());
++        builder.assert_eq(x[0].clone(), x[2].clone() * AB::Expr::TWO + x[1].clone());
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[0].clone(), &[x[0].clone()]),
++            -p[5].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[1].clone(), &[x[1].clone()]),
++            p[3].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[2].clone(), &[x[2].clone()]),
++            p[4].clone(),
++            1,
++        );
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// CSwapAir: program [addr_bit, addr_a, addr_b, addr_l, addr_r, mult_l, mult_r, active];
++// main [bit, a, b, l, r]: (l, r) = (a, b) if bit = 0, (b, a) if bit = 1 (Merkle path order).
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct CSwapProg {
++    pub bit: Addr,
++    pub a: Addr,
++    pub b: Addr,
++    pub l: Addr,
++    pub r: Addr,
++    pub mult_l: u64,
++    pub mult_r: u64,
++}
++
++#[derive(Clone, Debug)]
++pub struct CSwapAir {
++    pub prog: Arc<Vec<CSwapProg>>,
++}
++air_boiler!(CSwapAir, 5, 8);
++
++impl CSwapAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                vec![
++                    fu(p.bit as u64),
++                    fu(p.a as u64),
++                    fu(p.b as u64),
++                    fu(p.l as u64),
++                    fu(p.r as u64),
++                    fu(p.mult_l),
++                    fu(p.mult_r),
++                    Fr::ONE,
++                ]
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 8, vec![Fr::ZERO; 8])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                let bit = get(mem, p.bit).cells()[0];
++                let (a, b) = (get(mem, p.a).cells()[0], get(mem, p.b).cells()[0]);
++                let (l, r) = if bit == Fr::ONE { (b, a) } else { (a, b) };
++                vec![bit, a, b, l, r]
++            })
++            .collect();
++        self.finish(rows_to_matrix(rows, self.prog.len(), 5, vec![Fr::ZERO; 5]))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for CSwapAir {
++    fn eval(&self, builder: &mut AB) {
++        let (x, p) = split_row(builder, TAG_CSWAP, 5, 8);
++        let (bit, a, b) = (x[0].clone(), x[1].clone(), x[2].clone());
++        builder.assert_bool(bit.clone());
++        builder.assert_eq(
++            x[3].clone(),
++            a.clone() + bit.clone() * (b.clone() - a.clone()),
++        );
++        builder.assert_eq(
++            x[4].clone(),
++            b.clone() + bit.clone() * (a.clone() - b.clone()),
++        );
++        for (i, v) in [bit, a, b].into_iter().enumerate() {
++            builder.push_interaction(MEM_BUS, mem_msg(p[i].clone(), &[v]), -p[7].clone(), 1);
++        }
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[3].clone(), &[x[3].clone()]),
++            p[5].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[4].clone(), &[x[4].clone()]),
++            p[6].clone(),
++            1,
++        );
++    }
++}
++
++// ------------------------------------------------------------------------------------------
 +// Machine
 +// ------------------------------------------------------------------------------------------
 +
@@ -2774,6 +3368,9 @@ index 0000000..cfb2ac7
 +    pub reshape: Option<ReshapeAir>,
 +    pub assert_eq: Option<AssertEqAir>,
 +    pub bits: Option<BitsAir>,
++    pub fr_add: Option<FrAddAir>,
++    pub halve: Option<HalveAir>,
++    pub cswap: Option<CSwapAir>,
 +}
 +
 +fn some<T>(v: Vec<T>) -> Option<Arc<Vec<T>>> {
@@ -2789,6 +3386,7 @@ index 0000000..cfb2ac7
 +        let mut inp = vec![];
 +        let mut alu = vec![];
 +        let (mut asserts, mut bits) = (vec![], vec![]);
++        let (mut fr_add, mut halve, mut cswap) = (vec![], vec![], vec![]);
 +        for op in &tape.ops {
 +            match op {
 +                Op::Input { kind, out } => inp.push(crate::tape::InputProg {
@@ -2856,6 +3454,28 @@ index 0000000..cfb2ac7
 +                    mult: m(out),
 +                    n: *n,
 +                }),
++                Op::FrAdd { a, b, out } => fr_add.push(FrAddProg {
++                    a: *a,
++                    b: *b,
++                    out: *out,
++                    mult: m(out),
++                }),
++                Op::Halve { x, bit, rest } => halve.push(HalveProg {
++                    x: *x,
++                    bit: *bit,
++                    rest: *rest,
++                    mult_bit: m(bit),
++                    mult_rest: m(rest),
++                }),
++                Op::CSwap { bit, a, b, l, r } => cswap.push(CSwapProg {
++                    bit: *bit,
++                    a: *a,
++                    b: *b,
++                    l: *l,
++                    r: *r,
++                    mult_l: m(l),
++                    mult_r: m(r),
++                }),
 +            }
 +        }
 +        Self {
@@ -2868,6 +3488,9 @@ index 0000000..cfb2ac7
 +            reshape: some(reshape).map(|prog| ReshapeAir { prog }),
 +            assert_eq: some(asserts).map(|prog| AssertEqAir { prog }),
 +            bits: some(bits).map(|prog| BitsAir { prog }),
++            fr_add: some(fr_add).map(|prog| FrAddAir { prog }),
++            halve: some(halve).map(|prog| HalveAir { prog }),
++            cswap: some(cswap).map(|prog| CSwapAir { prog }),
 +        }
 +    }
 +
@@ -2901,6 +3524,15 @@ index 0000000..cfb2ac7
 +        }
 +        if let Some(a) = &self.bits {
 +            push(TAG_BITS, a.prog_rows());
++        }
++        if let Some(a) = &self.fr_add {
++            push(TAG_FR_ADD, a.prog_rows());
++        }
++        if let Some(a) = &self.halve {
++            push(TAG_HALVE, a.prog_rows());
++        }
++        if let Some(a) = &self.cswap {
++            push(TAG_CSWAP, a.prog_rows());
 +        }
 +        v
 +    }
@@ -2940,6 +3572,15 @@ index 0000000..cfb2ac7
 +        if let Some(a) = &self.bits {
 +            v.push(Arc::new(a.clone()));
 +        }
++        if let Some(a) = &self.fr_add {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.halve {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.cswap {
++            v.push(Arc::new(a.clone()));
++        }
 +        v.push(Arc::new(self.table()));
 +        v.push(Arc::new(Range16Air));
 +        v
@@ -2958,6 +3599,9 @@ index 0000000..cfb2ac7
 +            (self.reshape.is_some(), "Reshape"),
 +            (self.assert_eq.is_some(), "AssertEq"),
 +            (self.bits.is_some(), "Bits"),
++            (self.fr_add.is_some(), "FrAdd"),
++            (self.halve.is_some(), "Halve"),
++            (self.cswap.is_some(), "CSwap"),
 +        ] {
 +            if present {
 +                v.push(n);
@@ -3008,6 +3652,15 @@ index 0000000..cfb2ac7
 +        if let Some(a) = &self.bits {
 +            v.push(a.trace(mem));
 +        }
++        if let Some(a) = &self.fr_add {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.halve {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.cswap {
++            v.push(a.trace(mem));
++        }
 +        v.push(self.table().trace());
 +        v
 +    }
@@ -3054,6 +3707,15 @@ index 0000000..cfb2ac7
 +        }
 +        if let Some(a) = &self.bits {
 +            push("Bits", a.prog.len(), BITS_WIDTH + 5, 0);
++        }
++        if let Some(a) = &self.fr_add {
++            push("FrAdd", a.prog.len(), 3 + 5, 0);
++        }
++        if let Some(a) = &self.halve {
++            push("Halve", a.prog.len(), 3 + 6, 0);
++        }
++        if let Some(a) = &self.cswap {
++            push("CSwap", a.prog.len(), 5 + 8, 0);
 +        }
 +        let t = self.table();
 +        v.push((
@@ -3266,10 +3928,10 @@ index 0000000..1a62a93
 +}
 diff --git a/crates/sherlock-lfr/src/program.rs b/crates/sherlock-lfr/src/program.rs
 new file mode 100644
-index 0000000..1798e35
+index 0000000..5cec759
 --- /dev/null
 +++ b/crates/sherlock-lfr/src/program.rs
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,155 @@
 +//! The shared program table (owner ruling 2026-11-12): every program of every execution AIR is
 +//! one preprocessed trace, so an `L_Fr` proof has 2 commitments (common main and this table).
 +//!
@@ -3315,6 +3977,9 @@ index 0000000..1798e35
 +pub const TAG_RESHAPE: u64 = 7;
 +pub const TAG_ASSERT_EQ: u64 = 8;
 +pub const TAG_BITS: u64 = 9;
++pub const TAG_FR_ADD: u64 = 10;
++pub const TAG_HALVE: u64 = 11;
++pub const TAG_CSWAP: u64 = 12;
 +
 +/// `[tag, cols.., 0 ..]` of length `1 + PROG_W`.
 +pub fn prog_msg<E: Clone + PrimeCharacteristicRing>(tag: u64, cols: &[E]) -> Vec<E> {
@@ -3570,10 +4235,10 @@ index 0000000..aa7d7f4
 +}
 diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
 new file mode 100644
-index 0000000..2daa786
+index 0000000..c7efcf4
 --- /dev/null
 +++ b/crates/sherlock-lfr/src/tape.rs
-@@ -0,0 +1,644 @@
+@@ -0,0 +1,718 @@
 +//! I4: the tape (a straight-line program fixed by the key) and its write-once memory.
 +//!
 +//! Every tape value has one address and is written once. A writer sends `[addr, v0, v1, v2, v3]`
@@ -3717,6 +4382,26 @@ index 0000000..2daa786
 +        n: u32,
 +        out: Addr,
 +    },
++    /// Fr addition (the additive absorb of the leaf sponge).
++    FrAdd {
++        a: Addr,
++        b: Addr,
++        out: Addr,
++    },
++    /// `x = 2 rest + bit` (index bits, low bit first).
++    Halve {
++        x: Addr,
++        bit: Addr,
++        rest: Addr,
++    },
++    /// `(l, r) = bit ? (b, a) : (a, b)` (Merkle path order).
++    CSwap {
++        bit: Addr,
++        a: Addr,
++        b: Addr,
++        l: Addr,
++        r: Addr,
++    },
 +}
 +
 +/// A straight-line program over BabyBear and `EF4` values.
@@ -3816,6 +4501,28 @@ index 0000000..2daa786
 +        self.check(b);
 +        self.ops.push(Op::AssertEq { a, b });
 +    }
++    pub fn fr_add(&mut self, a: Addr, b: Addr) -> Addr {
++        self.check(a);
++        self.check(b);
++        let out = self.fresh();
++        self.ops.push(Op::FrAdd { a, b, out });
++        out
++    }
++    /// `(bit, rest)` of `x`.
++    pub fn halve(&mut self, x: Addr) -> (Addr, Addr) {
++        self.check(x);
++        let (bit, rest) = (self.fresh(), self.fresh());
++        self.ops.push(Op::Halve { x, bit, rest });
++        (bit, rest)
++    }
++    pub fn cswap(&mut self, bit: Addr, a: Addr, b: Addr) -> (Addr, Addr) {
++        self.check(bit);
++        self.check(a);
++        self.check(b);
++        let (l, r) = (self.fresh(), self.fresh());
++        self.ops.push(Op::CSwap { bit, a, b, l, r });
++        (l, r)
++    }
 +    pub fn low_bits(&mut self, x: Addr, n: u32) -> Addr {
 +        assert!(n <= 31);
 +        self.check(x);
@@ -3844,6 +4551,16 @@ index 0000000..2daa786
 +                    rd(b);
 +                }
 +                Op::LowBits { x, .. } => rd(x),
++                Op::FrAdd { a, b, .. } => {
++                    rd(a);
++                    rd(b);
++                }
++                Op::Halve { x, .. } => rd(x),
++                Op::CSwap { bit, a, b, .. } => {
++                    rd(bit);
++                    rd(a);
++                    rd(b);
++                }
 +                Op::Input { .. } | Op::Const { .. } | Op::FrInput { .. } | Op::FrConst { .. } => {}
 +            }
 +        }
@@ -3863,7 +4580,10 @@ index 0000000..2daa786
 +    /// every value (`None` at address 0). Panics if an `AssertEq` fails.
 +    pub fn execute_vals(&self, inputs: &[Val]) -> Vec<Option<Val>> {
 +        let (mem, failed) = self.execute_checked(inputs);
-+        assert!(failed.is_empty(), "tape assertions failed at ops {failed:?}");
++        assert!(
++            failed.is_empty(),
++            "tape assertions failed at ops {failed:?}"
++        );
 +        mem
 +    }
 +
@@ -3880,6 +4600,25 @@ index 0000000..2daa786
 +                    if get(&mem, a) != get(&mem, b) {
 +                        failed.push(idx);
 +                    }
++                }
++                Op::FrAdd { a, b, out } => {
++                    let v = get(&mem, a).fr() + get(&mem, b).fr();
++                    mem[*out as usize] = Some(Val::Fr(v));
++                }
++                Op::Halve { x, bit, rest } => {
++                    let v = get(&mem, x).bb()[0];
++                    mem[*bit as usize] = Some(Val::Bb([v & 1, 0, 0, 0]));
++                    mem[*rest as usize] = Some(Val::Bb([v >> 1, 0, 0, 0]));
++                }
++                Op::CSwap { bit, a, b, l, r } => {
++                    let (va, vb) = (get(&mem, a), get(&mem, b));
++                    let (vl, vr) = if get(&mem, bit).bb()[0] == 1 {
++                        (vb, va)
++                    } else {
++                        (va, vb)
++                    };
++                    mem[*l as usize] = Some(vl);
++                    mem[*r as usize] = Some(vr);
 +                }
 +                Op::LowBits { x, n, out } => {
 +                    let v = get(&mem, x).bb()[0];
@@ -6025,5 +6764,176 @@ index 0000000..be8f4b7
 +        assert!(!stock_ok);
 +        assert!(!failed_t.is_empty());
 +        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/i9_whir.rs b/crates/sherlock-lfr/tests/i9_whir.rs
+new file mode 100644
+index 0000000..f928417
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i9_whir.rs
+@@ -0,0 +1,165 @@
++//! I9 gate: the whole `L` verifier on the tape (parts 1 to 4; part 4: WHIR with the `mu`,
++//! folding and query PoW checks, the query indices and their bits, the Merkle paths at u = 1
++//! leaves and u = 2 nodes against the commitments, the k-fold of every query, the `gamma`
++//! batching and the final polynomial check) on the real `L` proof. All transcript events of one
++//! `L` verification equal the stock record, in order; no tape assertion fails; op counts and the
++//! machine shape are printed (MEASURED); the tape proves on the machine with 2 commitments.
++//! Refused: a changed opened row word, a changed Merkle sibling and a changed final-polynomial
++//! coefficient (by the stock verifier and the plain-Rust tape run; the prover also runs on the
++//! Merkle-sibling control). Ignored by default: needs the fixture.
++
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use sherlock_lfr::{
++    bb::Ef4,
++    fixture::{self, LSC},
++    lverify::{gen_verifier, Gen, LShape},
++    machine::Machine,
++    record::{stock_log, Ev},
++    tape::Op,
++    testing::{preprocessed_airs, prove_verify_range, small_params_n, Outcome},
++    transcript::TEv,
++};
++
++/// Test set: stacked height `2^(2 + N_STACK)`.
++const N_STACK: usize = 17;
++
++type LProof = openvm_stark_backend::proof::Proof<LSC>;
++
++fn build(
++    vk: &openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &LProof,
++) -> Gen {
++    let mut g = Gen::new();
++    gen_verifier(&mut g, vk, shape, proof).expect("pinned shape");
++    g
++}
++
++fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
++    let m = Machine::new(&g.tape);
++    let (o, vk) = prove_verify_range(small_params_n(3, N_STACK), m.airs(), m.traces(mem));
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
++    o
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i9_whole_verifier_on_real_l() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let (log, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let g = build(&fx.l_vk, &shape, &fx.l_proof);
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++
++    // Every event equals the stock record, in order.
++    let bb = |a: u32| mem[a as usize].unwrap().bb();
++    let (mut n_obs, mut n_commit, mut n_sample) = (0, 0, 0);
++    assert_eq!(
++        g.tt.log.len(),
++        log.len(),
++        "every event of the L verification"
++    );
++    for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
++        match (t, s) {
++            (TEv::Obs(a), Ev::Obs(v)) => {
++                assert_eq!(
++                    bb(*a),
++                    [v.as_canonical_u32() as u64, 0, 0, 0],
++                    "observe {i}"
++                );
++                n_obs += 1;
++            }
++            (TEv::Commit(a), Ev::Commit(v)) => {
++                assert_eq!(mem[*a as usize].unwrap().fr(), *v, "commit {i}");
++                n_commit += 1;
++            }
++            (TEv::Sample(a), Ev::Sample(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "sample {i}");
++                n_sample += 1;
++            }
++            _ => panic!("event {i}: kind differs: tape {t:?}, stock {s:?}"),
++        }
++    }
++    let dag_nodes: usize = fx
++        .l_vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.constraints.nodes.len())
++        .sum();
++    println!("I9 L DAG nodes (all 39 AIRs): {dag_nodes}");
++
++    let count = |f: fn(&Op) -> bool| g.tape.ops.iter().filter(|o| f(o)).count();
++    let m = Machine::new(&g.tape);
++    println!(
++        "I9 whole verifier: {} events equal the stock record ({n_obs} observes, {n_commit} commitment observes, {n_sample} samples) of {} in one L verification; ops: {} total, {} Input, {} FrInput, {} Const/FrConst, {} Alu, {} Perm, {} Pack, {} Split, {} Compose, {} Decompose, {} AssertEq, {} LowBits, {} FrAdd, {} Halve, {} CSwap; table rows {}; machine shape {:?}",
++        g.tt.log.len(),
++        log.len(),
++        g.tape.ops.len(),
++        count(|o| matches!(o, Op::Input { .. })),
++        count(|o| matches!(o, Op::FrInput { .. })),
++        count(|o| matches!(o, Op::Const { .. } | Op::FrConst { .. })),
++        count(|o| matches!(o, Op::Alu { .. })),
++        count(|o| matches!(o, Op::Perm { .. })),
++        count(|o| matches!(o, Op::Pack { .. })),
++        count(|o| matches!(o, Op::Split { .. })),
++        count(|o| matches!(o, Op::Compose { .. })),
++        count(|o| matches!(o, Op::Decompose { .. })),
++        count(|o| matches!(o, Op::AssertEq { .. })),
++        count(|o| matches!(o, Op::LowBits { .. })),
++        count(|o| matches!(o, Op::FrAdd { .. })),
++        count(|o| matches!(o, Op::Halve { .. })),
++        count(|o| matches!(o, Op::CSwap { .. })),
++        m.table().rows.len(),
++        m.shape()
++    );
++    let t = std::time::Instant::now();
++    let o = prove(&g, &mem);
++    println!(
++        "I9 prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(o.accepted(), "honest part 1 refused: {o:?}");
++    assert_eq!(o.commits(), Some(2));
++
++    // Negative controls: the same key (shape and vk), changed proof values.
++    let mut p1 = fx.l_proof.clone();
++    p1.whir_proof.initial_round_opened_rows[0][7][3][2] += p3_baby_bear::BabyBear::ONE;
++    let mut p2 = fx.l_proof.clone();
++    p2.whir_proof.initial_round_merkle_proofs[0][11][4][0] += Fr::ONE;
++    let mut p3 = fx.l_proof.clone();
++    p3.whir_proof.final_poly[1] += Ef4::ONE;
++    // The prover runs on the Merkle-sibling control only (each prove at 2^19 rows takes minutes).
++    for (name, p, run_prover) in [
++        ("changed opened row word", p1, false),
++        ("changed Merkle sibling", p2, true),
++        ("changed final-polynomial coefficient", p3, false),
++    ] {
++        let (_, stock_ok) = stock_log(&fx.l_vk, &p);
++        let gt = build(&fx.l_vk, &shape, &p);
++        assert_eq!(
++            format!("{:?}", gt.tape.ops),
++            format!("{:?}", g.tape.ops),
++            "same tape (the key)"
++        );
++        let (mem_t, failed_t) = gt.tape.execute_checked(&gt.inputs);
++        let o = run_prover.then(|| prove(&gt, &mem_t));
++        println!(
++            "I9 negative {name}: stock verifier accepts {stock_ok}; tape assertions failed at {} ops (first {:?}); prover: {o:?}",
++            failed_t.len(),
++            failed_t.first()
++        );
++        assert!(!stock_ok);
++        assert!(!failed_t.is_empty());
++        if let Some(o) = o {
++            assert!(!o.accepted(), "{name} accepted");
++        }
 +    }
 +}

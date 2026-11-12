@@ -54,7 +54,7 @@ As built (I2 to I5c; `RESULTS.md` sections 5 to 8b). Each execution AIR carries 
 | `Range16` | 2^16 | the 16-bit lookup table (LogUp) |
 | memory bus | (no AIR) | write-once: each tape value has one address and one writer, which sends it with the fixed read count; each read sends it with count `-1` |
 
-Added in I6: `AssertEq` (every verifier check) and `LowBits` (`sample_bits`). To add in I9: `Halve` (index bits), `FrAdd` (leaf sponge), `CSwap` (Merkle path order); no `EF4` inversion is needed (I6 to I8 use only key-constant inverses; WHIR's `x^-1` comes from the index bits). The transcript is not an AIR: `TapeTranscript` emits `Perm`, `Pack` and `Split` ops.
+Added in I6: `AssertEq` (every verifier check) and `LowBits` (`sample_bits`). Added in I9: `Halve` (index bits), `FrAdd` (leaf sponge), `CSwap` (Merkle path order); no `EF4` inversion is needed (I6 to I9 use only key-constant inverses; WHIR's `x^-1` comes from the index bits). The transcript is not an AIR: `TapeTranscript` emits `Perm`, `Pack` and `Split` ops.
 
 The row and cell counts of the full tape are MEASURED only after the tape exists (increment I6 onward).
 

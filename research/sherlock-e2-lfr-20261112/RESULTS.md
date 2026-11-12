@@ -4,7 +4,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E; E1
 
 ## 1. Status
 
-**E2 gate: NOT REACHED.** Increments I0 to I8 of `PLAN.md` section 4 pass their test gates. Every program is in one shared program table, and an `L_Fr` proof has 2 commitments, MEASURED (I5c, owner ruling 2026-11-12, `PLAN.md` D-4). The tape generator runs the `L` verifier on the real `L` proof through the preamble, LogUp GKR, the batched zerocheck with the DAG of all 39 `L` AIRs, and the stacked reduction (I6 to I8): 17,299 of the 18,772 transcript events of one `L` verification equal the stock record, every check of these stages is a tape assertion, and the tape proves with 2 commitments. I9 (WHIR) is next.
+**E2 gate: NOT REACHED.** Increments I0 to I9 of `PLAN.md` section 4 pass their test gates. Every program is in one shared program table, and an `L_Fr` proof has 2 commitments, MEASURED (I5c, owner ruling 2026-11-12, `PLAN.md` D-4). The tape generator runs the whole `L` verifier on the real `L` proof (I6 to I9): preamble, LogUp GKR, the batched zerocheck with the DAG of all 39 `L` AIRs, the stacked reduction and WHIR. All 18,772 transcript events of one `L` verification equal the stock record, every check of the verifier is a tape assertion, and the tape (442,805 ops) proves with 2 commitments, MEASURED. I10 (the gate at the `L_Fr` set) is next.
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -19,7 +19,8 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E; E1
 | I6 | Tape generator part 1: shape pin, preamble, LogUp PoW (`LowBits`), LogUp GKR, GKR claim checks (`AssertEq`) | PASS | section 8c |
 | I7 | Part 2: batched zerocheck, the DAG of the 39 `L` AIRs, interaction evaluations | PASS | section 8d |
 | I8 | Part 3: stacked reduction | PASS | section 8e |
-| I9, I10 | WHIR (Merkle paths, queries, folds, final polynomial), then the gate | not started | section 10 |
+| I9 | Part 4: WHIR (`mu`, folding and query PoW, query bits, Merkle paths at u = 1 and 2, folds, final polynomial) | PASS | section 8f |
+| I10 | E2 gate at the `L_Fr` set | not started | section 10 |
 
 Route (`PLAN.md` section 2): a dedicated verifier of the `L` vk with the `L` shape pinned in the `L_Fr` key (LEAD D-1), run as a straight-line tape over generic Fr AIRs. Not a port of OpenVM's recursion crate.
 
@@ -28,7 +29,7 @@ Route (`PLAN.md` section 2): a dedicated verifier of the `L` vk with the `L` sha
 | Repository (all not pushed) | Branch | Commits |
 |---|---|---|
 | backend `~/.cache/m7-wrap/src/openvm-org_stark-backend` | `e2-lfr` (from `e1-fr-base` 3040761) | e8223ed I1 domain tags; 5f698b5 per-bus bound fix (section 9) |
-| openvm `~/.cache/m7-wrap/src/openvm-org_openvm` | `e2-lfr` (from `main` 05f3b73) | 3cc1849 the M7 bench crate `stark-bench-ovm` (the existing uncommitted changes); e8fdf87 `sherlock-lfr` with I0, I2 to I5; 96a1897 I5b; 02bb7ff I5c program table; be38351 I6; e43c763 I7; db8bbd5 I8 |
+| openvm `~/.cache/m7-wrap/src/openvm-org_openvm` | `e2-lfr` (from `main` 05f3b73) | 3cc1849 the M7 bench crate `stark-bench-ovm` (the existing uncommitted changes); e8fdf87 `sherlock-lfr` with I0, I2 to I5; 96a1897 I5b; 02bb7ff I5c program table; be38351 I6; e43c763 I7; db8bbd5 I8; d46a137 I9 |
 | Moriarty `~/Projects/Moriarty-wt/e2-lfr` | `e2-lfr` | this directory |
 
 **2a. Crate `crates/sherlock-lfr`** (openvm workspace; dependencies only from the openvm lock: the lock adds the crate itself and no other package, MEASURED by `git diff Cargo.lock`).
@@ -43,15 +44,15 @@ Route (`PLAN.md` section 2): a dedicated verifier of the `L` vk with the `L` sha
 | `src/tape.rs` | `Tape`, `Val`, `Op`, `InputAir`, `BbAluProgAir`, the memory bus |
 | `src/fr.rs`, `src/machine.rs` | `Pack`, `Split`, `FrInputAir`, `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`; `Machine` (all AIRs of one tape) |
 | `src/transcript.rs` | `TapeTranscript`: the `L` transcript on the tape |
-| `src/lverify.rs` | I6 to I8: the tape generator (`LShape`, `Gen`, `gen_part1`, `gen_part2`, `gen_part3`) |
+| `src/lverify.rs` | I6 to I9: the tape generator (`LShape`, `Gen`, `gen_part1` to `gen_part4`, `gen_verifier`) |
 | `src/record.rs` | the recording wrapper around the stock `L` transcript (`stock_log`) |
 | `src/program.rs` | I5c: `ProgramTableAir` (the only preprocessed trace), the program bus, the AIR tags |
 | `src/testing.rs` | small Fr parameter set; prove, verify and refusal helpers; `Range16` fill from the logical interactions; commitment count of a proof; per-bus balance check |
-| `tests/i0_fixture.rs` to `tests/i5_transcript.rs`, `tests/i5_l_transcript.rs`, `tests/i6_part1.rs`, `tests/i7_part2.rs`, `tests/i8_part3.rs` | the gates |
+| `tests/i0_fixture.rs` to `tests/i5_transcript.rs`, `tests/i5_l_transcript.rs`, `tests/i6_part1.rs`, `tests/i7_part2.rs`, `tests/i8_part3.rs`, `tests/i9_whir.rs` | the gates |
 
-Saved beside this file: `backend-e2.diff` (backend `git diff 3040761 5f698b5`), `sherlock-lfr.diff` (openvm `git diff 3cc1849 db8bbd5`), `run.sh` and `i0.sh` (the runners).
+Saved beside this file: `backend-e2.diff` (backend `git diff 3040761 5f698b5`), `sherlock-lfr.diff` (openvm `git diff 3cc1849 d46a137`), `run.sh`, `i0.sh` and `i9.sh` (the runners).
 
-Runner: `~/.cache/e2-lfr/run.sh <stage> <mem> <dir> cmd...` (`flock ~/.cache/cost-opt/measure/heavy.lock heavy-run --mem <mem> --name e2-<stage>`, `CARGO_TARGET_DIR=~/.cache/e2-lfr/target`, `RUSTFLAGS=-C target-cpu=native`, logs `~/.cache/e2-lfr/logs/`). I0 ran as the systemd user unit `e2-i0` (`~/.cache/e2-lfr/i0.sh`).
+Runner: `~/.cache/e2-lfr/run.sh <stage> <mem> <dir> cmd...` (`flock ~/.cache/cost-opt/measure/heavy.lock heavy-run --mem <mem> --name e2-<stage>`, `CARGO_TARGET_DIR=~/.cache/e2-lfr/target`, `RUSTFLAGS=-C target-cpu=native`, logs `~/.cache/e2-lfr/logs/`). I0 ran as the systemd user unit `e2-i0` (`~/.cache/e2-lfr/i0.sh`), I9 as `e2-i9` (`~/.cache/e2-lfr/i9.sh`) and `e2-i9-final`.
 
 Test parameters (`testing::small_params`): `L_Fr` domains (u = 5, 6, 7), UD, log blowup 1, `l_skip` 2, `n_stack` 14 (stacked height 2^16, so the 2^16-row range table fits), `k_whir` 4, query PoW 6, folding PoW 5, `mu` PoW 4, LogUp PoW 7, max constraint degree 3. A negative control counts as refused when the stock verifier returns an error or the prover stops on the witness (the error is printed in the log).
 
@@ -193,27 +194,49 @@ All 12 `sherlock-lfr` tests (I0 and the fixture tests I5b, I6, I7, I8 included) 
 
 ALU cost per stage (DERIVED from the op counts): part 1 5,638, part 2 40,271, part 3 40,320. Part 3 recomputes `eq_mle(u, b)` per stacked column (about 1,537 columns times up to 18 products); a shared product tree over the row bits would remove most of it (optimization, not done).
 
+## 8f. I9: part 4, WHIR (MEASURED)
+
+`gen_part4` mirrors `verifier/whir.rs` after `gen_part3`; `gen_verifier` runs parts 1 to 4. The tape does the `mu` batching and its PoW, per round the sumcheck with folding PoW, the observed codeword commitment, `gamma`, the query PoW and the query indices (`sample_bits`, `LowBits`), then per query:
+- Index bits: a chain of `Halve` ops (`x = 2 rest + bit`, `bit` boolean) and `AssertEq(rest, 0)`; the bits are the unique binary form because `x < 2^n` (DERIVED). `omega^index` is `prod_j (1 + b_j (w^(2^j) - 1))` with key constants (`select_prod`); no field inversion.
+- Merkle path: leaf hash at u = 1 (`leaf_hash`: 8 words per Fr word by `Pack`, 2 Fr words per permutation, later blocks absorbed by `FrAdd`), node hash at u = 2 (`compress`), path order by `CSwap` on the index bits, the leaf-to-query digest order of `tree_compress` in `stark-backend/src/hasher.rs`, and `AssertEq` of the root with the commitment address.
+- `binary_k_fold` on the ALU (twiddles and `1/2` are key constants).
+
+The final check uses `eval_mobius_eq_mle`, `eval_mle_evals_at_point` of the final polynomial and Horner. Bug found and fixed during I9: the final check needs the cube point `u_cube = (u_0, u_0^2, .., u_0^(2^(l_skip-1)), u_1, ..)`, not `u`.
+
+New ops (each a small AIR that takes its program from the table): `FrAdd` (tag 10), `Halve` (tag 11), `CSwap` (tag 12).
+
+| Quantity (test `i9_whole_verifier_on_real_l`, logs `i9-test.log`, `i9-final.log`) | Value |
+|---|---|
+| Transcript events equal to the stock record | 18,772 of 18,772 (17,267 observes, 5 commitment observes, 1,500 samples) |
+| Tape ops | 442,805: 34,773 Input, 6,616 FrInput, 317 constants, 347,887 ALU, 20,563 Perm, 11,187 Pack, 362 Split, 308 Compose, 6,936 Decompose, 658 AssertEq, 268 LowBits, 1,568 FrAdd, 4,750 Halve, 6,612 CSwap; program table 442,817 rows |
+| Machine shape (rows/main width) | BbAlu 524,288/47, ProgramTable 524,288/1 (preprocessed 20), PoseidonFr 32,768/185, Input 65,536/30, Range16 65,536/2, Pack 16,384/27, FrInput 8,192/5, Reshape 8,192/16, Halve 8,192/9, CSwap 8,192/13, FrAdd 2,048/8, AssertEq 1,024/7, Bits 512/69, Split 512/64 |
+| Prove and verify (`small_params_n(3, 17)`: stacked height 2^19) | accepted, 2 commitments, 3,854,274 bytes, 302.8 s |
+| Changed opened row word | stock verifier refuses; tape: 2 assertions fail (first at op 108,442) |
+| Changed Merkle sibling | stock verifier refuses; tape: 1 assertion fails (op 113,996); prover refuses (`LogupZerocheck(NonZeroRootSum)`) |
+| Changed final-polynomial coefficient | stock verifier refuses; tape: 84 assertions fail (first at op 266,940) |
+
+The prover runs on one control only (the Merkle sibling): each prove at 2^19 rows takes about 5 minutes. A failed tape assertion is the same witness failure for the other two controls (the `AssertEq` AIR constrains `a = b`); the prover refusal of a failed `AssertEq` row is MEASURED in I6 to I8.
+
+All 13 `sherlock-lfr` tests pass on the I9 tree; `cargo clippy -D warnings` clean (log `i9-final.log`).
+
+ALU cost per stage (DERIVED from the op counts): parts 1 to 3 86,229, part 4 (WHIR) 261,658; permutations: parts 1 to 3 1,084, part 4 19,479 (the wrap model ESTIMATE was 22,161). BbAlu at 2^19 rows sets the tape height; the ALU work of WHIR (folds and the `omega^index` products per query) is the first target for size.
+
 ## 9. Backend fix found by I2
 
 At keygen the per-bus trace-height bound was `SC::F::order().to_u32_digits()[0]`, the low 32 bits of the field order. At BLS12-381 Fr that is 1 (`r = 1 mod 2^32`), so every AIR with an interaction count weight was refused (`TraceHeightsTooLarge`). E1 did not see it: its LogUp fixture (`InteractionsFixture11`, `DummyInteractionAir::new`) has count weight 0, so the per-bus sum was 0 and passed the bound of 1. Fix (5f698b5, `stark-backend/src/keygen/mod.rs`): the order capped at `u32::MAX`, a stronger bound for a field above `2^32`, the same value for BabyBear. Checks (MEASURED): `cargo clippy -D warnings` of stark-backend and stark-sdk (Fr feature, all targets) clean; BabyBear suite 239 of 239 pass; the 4 BabyBear proofs of `e1_bb_bytes` at 1 thread are byte-identical to the E1 baseline `~/.cache/e1-fr/bb-base/` (`cmp`); test `e2_fr_per_bus_threshold`.
 
-## 10. Next increment: I9 (WHIR)
+## 10. Next increment: I10 (the E2 gate)
 
-I9 is part 4 of the tape generator: a mirror of `verifier/whir.rs` after `gen_part3` (inputs: `Part3.u`, `Part3.stacking_openings`, `Part3.commits`). Gate: on the real `L`, all 18,772 transcript events equal the stock record, the tape proves with 2 commitments, and a changed opened row, a changed Merkle sibling and a changed final-polynomial coefficient are refused by the stock verifier, by the plain-Rust tape run and by the prover.
+I10 proves the whole tape of the real `L` proof at the `L_Fr` parameter set and runs the gate of `PLAN.md` section 4: the stock verifier accepts the `L_Fr` proof; refused: a changed `L` proof byte and a changed public word; heights MEASURED; D3 rerun at the measured shape.
 
-Work, with the ops it needs (each new op is a small AIR that takes its program from the table):
-- `mu` PoW, folding PoW per sumcheck round, query PoW per WHIR round: `check_witness` as in I6. Query indices: `sample_bits(log_rs_domain_size - k_whir)` (`LowBits`).
-- Index bits: a `Halve` op (`x = 2 rest + bit`, `bit` boolean; program `[x, bit, rest, mult_bit, mult_rest, active]`); after `n` steps assert `rest = 0`, which makes the bits the unique binary form because `x < 2^n` (DERIVED).
-- `zi_root = omega^index` and its inverse from the bits with key constants: `prod_j (1 + b_j (w^(2^j) - 1))`; no field inversion is needed.
-- Leaf hash (u = 1): `hash_slice` packs 8 words per Fr word and absorbs 2 Fr words per permutation by addition from `(0, 0, cap_fixed(1, l))`; a later block needs Fr addition: an `FrAdd` op. Node hash (u = 2): `compress(l, r)` is one permutation of `(l, r, cap_fixed(2, 2))`; the path order needs a `CSwap` op (`l = a + bit (b - a)`, `r = b + bit (a - b)`). Check `tree_compress` in `stark-backend/src/hasher.rs` for the leaf-to-query-digest order. Root: `AssertEq` with the commitment address.
-- `binary_k_fold` (twiddles and `halve` are key constants), the `gamma` batching, and the final check (`eval_mobius_eq_mle`, `eval_mle_evals_at_point` of the final polynomial, `exp_powers_of_2`, Horner) on the ALU.
-- Size (ESTIMATE): 263 queries; about 20,000 to 25,000 permutations (the wrap model's 22,161), so `PoseidonFr` about 2^15 rows; the tape will need `n_stack` 16 or more at the small test set.
-
-Then I10 (the gate at the `L_Fr` set: public values D-2, the `L_Fr` parameters, heights MEASURED, D3 rerun).
+Work:
+- Public values of `L_Fr` (`PLAN.md` D-2): the `L` vk pre-hash (one Fr word), then the `L` public values packed 8 per Fr, bound to their tape addresses. The bench `L` has 0 public values, so the public-word control on the real `L` changes the pre-hash word (D-2).
+- The `L_Fr` parameter set (175 s per proof regardless of trace size, E1) in place of `small_params_n`; check that every AIR fits the `L_Fr` constraint degree (4) and the per-AIR bounds of PROPOSAL 11.2.
+- Heights at 2^19 rows for BbAlu and the table (MEASURED in I9) are below the 2^20 budget; the D3 rerun uses the measured shape.
 
 Items still open:
 
 - The public values of `L_Fr` (D-2) are not wired yet; the public-word negative control belongs to I10. `L` has 0 public values; `gen_part1` already reads public values as `Input` ops, and part 2 stops on an `Entry::Public` variable (unimplemented until a fixture has public values).
 - The `L_Fr` set has max constraint degree 4; every AIR here is degree 3.
-- The ALU dominates the tape (86,229 of 97,944 ops after I8); the stacked-reduction `eq_mle` sharing above is the first optimization.
+- The ALU dominates the tape (347,887 of 442,805 ops after I9; 261,658 in WHIR); the stacked-reduction `eq_mle` sharing (section 8e) and the WHIR fold work (section 8f) are the first optimizations.
 - Heights and the D3 rerun at the measured `L_Fr` shape wait for I10.
