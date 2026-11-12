@@ -39,6 +39,21 @@ PTX JIT, MEASURED: loading the module with an empty driver cache (`CUDA_CACHE_DI
 
 32-bit limbs with PTX carry chains (enhancement 3 candidate), MEASURED under load (load average about 30, outside the lock, development only): `mad.lo.cc` / `madc.hi.cc` chains compile on sm_121 to IMAD plus separate IADD carry instructions (per limb row 55 IMAD and 80 IADD), and run at 0.40 to 0.42 G Fp mul/s, the same as the 6 x 64-bit version with IMAD.WIDE. No gain on this GPU; the 64-bit version stays. The device issues about 0.5 T integer instructions per second at 754 MHz in this state, so fewer instructions per point addition (batch-affine) and fewer additions are the remaining arithmetic levers.
 
+## 3. Correctness gates (MEASURED, 2026-11-12, under the heavy lock)
+
+Synthetic vectors, 2^10 to 2^21: `tests/msm.rs` with `MORI_MSM_TEST_MAX_LG=21`, `MORI_GPU_MIN_K=0`, `--features sppark` (binary `~/.cache/msm-rust/bin/msm-test`, committed kernel 79dbce1dd, affine passes off). `drop_in_gate`, `small_and_edge` and `sizes_random_and_skewed` pass: mori-msm raw and masked equal BLST and sppark for random and 90 percent skewed scalars at every size. 57 s, load average 12.6 at start.
+
+k = 20 wrap proof on the stdlib run decider (the gpu-wrap `wrap_prove` path, bundle `~/.cache/k21-measure/out-k21-20261111T193356Z`, `GW_DET=1`, seed 20261111), one process, CPU reference first. Run `~/.cache/msm-rust/runs/k20-20261112T001954/`.
+
+| config | proof sha256 (prefix) | byte identical | library verify | ledger 9 verify | negative control rejected | gpu_path_valid | MSM calls | fallbacks | MSM s | prove s | load avg (1 min) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| cpu | 1cb0edf55b343f00 | reference | true | true | true | true | 0 | 0 | 0 | 316.4 | 24.7 |
+| msmrs | 1cb0edf55b343f00 | true | true | true | true | true | 45 | 0 | 50.2 | 232.1 | 21.0 |
+| msm (sppark, masked) | 1cb0edf55b343f00 | true | true | true | true | true | 45 | 0 | 27.2 | 253.3 | 26.3 |
+| msmrs, ntt, coset, quotient | 1cb0edf55b343f00 | true | true | true | true | true | 45 | 0 | 46.6 | 132.5 | 12.6 |
+
+The correctness gate passes. All 45 MSM calls of the proof go to the Rust kernel with no fallback, and the proof bytes equal the CPU proof, so the kernel is exact on the real witness columns too. The CPU config records those columns to `~/.cache/msm-rust/columns-k20/` (237 calls, 7.3 GB, test seed only). Timing under load (SM clock 754 MHz, throttle 0x400): in the proof the Rust MSM (masked, committed defaults k1 = 32, seg = 64) takes 50.2 s against 27.2 s for sppark masked. The Rust kernel is 1.8 times slower than sppark in the proof.
+
 ## Owner question: the skew mask now costs time
 
 The mask `MSM(s + r) - MSM(r)` was added because sppark gives one thread per bucket. The Rust kernel never does, and on skewed columns it is faster without the mask: development timing at 2^20, 90 percent one value, about 0.28 s raw against about 1.8 s masked (outside the lock, host load about 28; the gate benchmark below repeats it under the lock on recorded columns). The mask is kept, as instructed. Question for the owner: may the Rust path drop the mask (`MORI_GPU_MSM_MASK=0` for `msmrs`) once the recorded-column benchmark confirms the raw kernel is skew robust? The mask is witness independent and changes no proof bytes, so the choice affects only speed.
