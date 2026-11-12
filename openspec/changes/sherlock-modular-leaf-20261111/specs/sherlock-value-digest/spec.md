@@ -41,7 +41,7 @@ The stored `vd` SHALL be computed from the tag and the child `vd` lanes of kind-
 - **THEN** the correct circuit refuses the witness (mutants `scalar_out_of_range`, `bool_nonboolean_selection`, `raw_type_id_in_digest`, `constructor_ordinal_unbound`, `running_has_outcome`, `padding_as_value`, `digest_not_copied_to_record`)
 
 ### Requirement: VDG-005 Bounded value opening
-`open_value_node` SHALL open a value held by digest one node per call. A constructor field SHALL be usable only after its opening fold reaches the digest.
+`open_value_node` SHALL open a value held by digest one node per call. A constructor field SHALL be usable only after its opening fold reaches the digest. Under input admission form (b) (AD-17), an input field SHALL be read through `AuthIn` under the certified `view_root` instead.
 
 #### Scenario: Field used before the fold completes
 - **WHEN** a field is used before the fold completes, or an opened child digest differs from the hashed one
@@ -57,3 +57,10 @@ Constants and data of one value, and shared and unfolded structure, SHALL have e
 #### Scenario: Lean injectivity obligations
 - **WHEN** the kit is offered for completion
 - **THEN** O23 (encoding injectivity), O24 (equal `vd` implies equal values, under collision resistance) and O27 (VALUE DIGEST as a `Module`) are proved, the Quint invariant `VdFormsDisjoint` holds, and today O23, O24 and O27 are open
+
+### Requirement: VDG-007 The co-processor digests are of the `sherlock-value/2` form
+Under `sherlock-processor-final-20261111` the co-processor digests SHALL be of the `sherlock-value/2` form: Poseidon2 over BabyBear inside the STARK layers and `PoseidonFr(tag, pack(d2))` at the Fr boundary, with salted `input_d` and `outcome_d` (HDM-001, HDM-002, ZK-006, SPL-003). The `sherlock-value/1` form of VDG-001 is the halo2 prototype form and SHALL NOT be a co-processor digest. VALUE DIGEST SHALL compute the `vd` rows of the FP-4 table of `FD/ARCHITECTURE.md` section 1.11 (FPR-011).
+
+#### Scenario: Prototype digest offered as a co-processor digest
+- **WHEN** a co-processor public digest is computed with the `sherlock-value/1` zk-stdlib sponge in place of the `sherlock-value/2` form
+- **THEN** it differs from the `PoseidonFr(tag, pack(d2))` value that the wrap checks (HDM-002), so the co-processor uses the FP-4 table (FPR-011) and refuses the `sherlock-value/1` value (mutant `digest_tag_swapped`)

@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: RFB-001 The semantic reference covers the full language
-The REFERENCE BRIDGE SHALL supply a semantic evaluator (R1) for nominal types, constructors of any arity, planned matches, structured inputs and every outcome. The normative artifact SHALL be the choice of OD-21 (OWNER), with the recommendation a separate evaluator over `moriarty-sherlock-nominal/1`. The work SHALL be sized by X13 first. The language SHALL NOT be cut to a supported subset.
+The REFERENCE BRIDGE SHALL supply a semantic evaluator (R1) for nominal types, constructors of any arity, planned matches, structured inputs and every outcome. The normative artifact SHALL be the choice of AD-21 (OWNER), with the recommendation a separate evaluator over `moriarty-sherlock-nominal/1`. The work SHALL be sized by X13 first. The language SHALL NOT be cut to a supported subset.
 
 #### Scenario: Corpus with wide constructors and structured input
 - **WHEN** the corpus runs, including a constructor of more than 8 fields across a leaf boundary, a structured input, a planned match and every outcome
