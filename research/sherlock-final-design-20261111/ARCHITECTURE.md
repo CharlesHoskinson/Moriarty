@@ -10,9 +10,10 @@ Conventions:
 
 - Paths are relative to the repository root. `FD/` is `research/sherlock-final-design-20261111/`. `PR` is `research/sherlock-processor-final-20261111/PROPOSAL.md`. `O/` is `openspec/changes/sherlock-vm-consensus-20261107/`. `RL/` is `research/sherlock-runlength-consensus-20261111/`. `LC/` is `research/sherlock-lookup-cache-20261111/`. `CO/` is `research/sherlock-compact-open-problems-20261111/`. `CT/` is `research/sherlock-call-time-opt-20261111/`. `chip/` is `crates/mori-chip/src/`. `lean/` is `clean/fork/Clean/Sherlock/`. `qnt/` is `models/sherlock/quint/`. Draft citations `A:` and `G:` are `FD/drafts/astra-area*.md` and `FD/drafts/gemini-area*.md`.
 - MEASURED: a number with its record. ESTIMATE: a derived number with named inputs. PENDING: a measurement that has not run (`FD/EXPERIMENTS.md`). LEAD: a constant that a co-processor decision sets, binding only after the owner confirms it.
-- The machine-level kits were prototyped as halo2 chips in `crates/mori-chip` and `crates/mori-recursion`. Their invariants, Lean obligations, Quint models and named mutants are statements about the machine and carry to the STARK AIRs of the leaf shards. Their row figures are halo2 prototype figures (MEASURED in experiment C1 or ESTIMATE); the STARK leaf and node have no fixed row gate, and their cost is measured in seconds per proved step on the GPU (section 1.6).
+- The machine-level kits were prototyped as halo2 chips in `crates/mori-chip` and `crates/mori-recursion`. Their invariants, Lean obligations, Quint models and named mutants are statements about the machine; how each kit maps onto the STARK AIRs of the leaf shards is open work of the specs. Their row figures are halo2 prototype figures (MEASURED in experiment C1 or ESTIMATE); the STARK leaf and node have no fixed row gate, and their cost is measured in seconds per proved step on the GPU (section 1.6).
 - "Proved in C3": the theorem is named in `FD/EXPERIMENTS-C3.md`. Every other Lean obligation is open. A "proved in C3" row states the premises of the Lean statement; a proved theorem is not credited with a claim that its statement does not make.
 - `chip/dense.rs` line numbers are of commit `f36eb714d` unless a citation names commit `b85b00213`.
+- "B2 finding N" names finding N of the architecture audit `FD/ARCH-AUDIT-astra.md`; `FD/ARCH-AUDIT-RESPONSE.md` gives the check for each. "The B1 text" is the first merged form of this file that the audit read.
 - Mutant protocol (one wording for the whole file): a named negative mutant is a malicious witness that the correct circuit refuses at a constraint, lookup or permutation boundary. Its control is a deliberately weakened circuit (the constraint under test removed) that accepts the same witness. "Refused" never means that a weakened circuit is refused.
 - GP-1 to GP-4 (`O/general-purpose.md`) are not narrowed by anything in this file. Where a design constant could narrow them (tree depth, cache-line counts, ROM depth, claim counter, log capacity, `L_TX`) the item is a decision with an owner mark, and the design keeps a path with no bound (the spill rule of section 1.8, chunked calls of kit COMPACT FRONTEND).
 
@@ -210,7 +211,7 @@ On the full tree the first universal node checks each child's key commitment by 
 
 The interpreted rule inventory is the 120 enabled step rules of decision M-4 (X1). It stays for general programs (GP-1). Compact Stage 1 adds the straight-line family `R_SL_*`, about 14 rules (ALU, FIELD, SELECT, RANGE, LT, EQ, DIVMOD2, TAPE, EFF, SPONGE, SHA256, EC, ASSERT, ENTRY): `pc` indexes the per-program instruction table, operands are register records and results are appends, one CPU row plus 2 to 3 interactions per step, 42 to 340 times fewer steps than the interpreted path, ESTIMATE (`PR` sections 6.1 and 7.1; `CO/FRONTEND.md` section 2.4). The arithmetic and hash families of Compact become opcodes of chip AIRs (FIELD-EMU, POSEIDON-FR-EMU, SHA2, JUBJUB-EMU, the log writer) that the CPU row reaches over the bus. Superinstructions may bind all their arguments in one row; a fused rule advances the height by the events it replaces.
 
-On the STARK engine a rule costs 0 to 1 selector column, or an AIR of height 0 when unused, so the rule count is not a cost driver. New rules and chips change the per-program app, leaf-layer and internal-for-leaf keys that `sherlock plan` commits under `prog_d`; they change no universal key. The `R_SL_*` family and the chips define the machine version `sherlock-k-a/2`. `prog_d` binds `machine_version`, so the keys of old programs stay valid when the rule family grows. Kits DEC and CORE take the inventory as the 120 interpreted rules plus the `R_SL_*` family under `machine_version`; the DEC control word layout freezes with that list.
+On the STARK engine a rule costs 0 to 1 selector column, or an AIR of height 0 when unused, so the rule count is not a cost driver. New rules and chips change the per-program app, leaf-layer and internal-for-leaf keys that `sherlock plan` commits under `prog_d`; they change no universal key. The `R_SL_*` family and the chips define the machine version `sherlock-k-a/2`. `prog_d` binds `machine_version`, so the keys of old programs stay valid when the rule family grows.
 
 ### 1.8 Deferred field log, call vector, hash domains
 
@@ -287,7 +288,7 @@ The ledger checks each `ContractCall` with `midnight_transient_crypto::proofs::V
 
 Every kit has the same nine items: purpose; interface; invariants; row budget; verification; Lean obligations; code skeleton; what the implementing agent reads and must not need to read; dependencies. Signatures are sketches and were not compiled. A kit is implemented by one agent in one session against its interface only.
 
-Revision B2 added four kits after the GP-4 hook: INIT (genesis and input admission), REFERENCE BRIDGE, HOST CHECKPOINT STORE, and the GP-3 general verifier (five subkits). LEDGER CONTRACT (a Compact contract, after HOST CHECKPOINT STORE) owns the contract-state properties. There are 24 kits: 19 from the merge, the four of revision B2 and LEDGER CONTRACT.
+Four kits follow the GP-4 hook: INIT (genesis and input admission), REFERENCE BRIDGE, HOST CHECKPOINT STORE, and the GP-3 general verifier (five subkits). LEDGER CONTRACT (a Compact contract, after HOST CHECKPOINT STORE) owns the contract-state properties. There are 24 kits: 19 from the merge, the four of revision B2 and LEDGER CONTRACT.
 
 ### Kit: BUS
 
@@ -324,7 +325,7 @@ Assumed from providers: provider rules 1 to 5 of section 1.2. Assumed from CORE:
 #### Row budget
 
 - Dynamic bus: 0 rows of its own. A pair of requests takes one request row unless it sits on an existing CORE row; a provider tuple sits on the provider's operation row.
-- Tagged table: `2^12 + N_dec + 2` fixed rows (the zero row and the DEC idle row), overlapping the advice region in the domain. The rule inventory is known: the 120 interpreted rules of X1 plus the `R_SL_*` family under `machine_version` (section 1.7); `N_dec` is the number of dispatch classes, which is not known until the guard list of AD-9 is fixed (ESTIMATE below 2,048, from `gemini-area1.md:541`).
+- Tagged table: `2^12 + N_dec + 2` fixed rows (the zero row and the DEC idle row), overlapping the advice region in the domain. The interpreted rule inventory is known (120 rules, X1; section 1.7); `N_dec` is the number of dispatch classes, which is not known until the guard list of AD-9 is fixed (ESTIMATE below 2,048, from `gemini-area1.md:541`).
 - Node effect of the merge of DEC and RANGE: one lookup argument less, about -22,600 node rows (ESTIMATE, LC AUDIT finding 6; the three-column form keeps three table columns, so the -29,062 figure of `gemini-area1.md:149` does not apply).
 - A third bus lane would cost about +22,600 node rows (ESTIMATE, `O/design.md:134` fit). More requests per step take more rows, not more lookup arguments.
 
@@ -605,7 +606,7 @@ Collision resistance of the pinned permutation is a premise, not a theorem.
 
 `rows_for(N) = 70 ceil(N / 2)` for `N >= 2` (`chip/poseidon.rs:123-125`, landed layout). Measured in C1 as parts of larger units: a `Tree8` is 7 compressions (490 rows), a record hash 2 permutations (140 rows). Callers count their slots; HASH has no budget of its own beyond the bus providers CORE needs (per-rule table).
 
-Tags as a first hash input instead of the capacity word would double every tree node (ESTIMATE, flush unit 17,080 rows, cold read 9,100 rows at TOP = 61, `FD/EXPERIMENTS.md:106`); not used.
+Tags as a first hash input instead of the capacity word would double every tree node (ESTIMATE, flush unit 17,080 rows, cold read 9,100 rows at TOP = 61, `FD/EXPERIMENTS.md` section 5, C1 deviations); not used.
 
 #### Verification
 
@@ -743,7 +744,7 @@ Status of the table (experiment X1, `FD/EXPERIMENTS-MAXIMA.md`, `FD/maxima/rule_
 
 #### Row budget
 
-The landed spike slot is 13 rows for 32 words on 12 advice columns (`chip/rfcore.rs:215`); the E8 leaf without memory is 421 rows at S = 16, 26.3 rows per step (`FD/EXPERIMENTS.md:110`, composed). ESTIMATE for the full schema: `2 ceil(words / 6) + 1` rows per slot plus operand routing, request rows and rule-local rows; a state of 128 to 256 words gives 45 to 87 base rows per slot (`astra-area1.md:452-460`). The 7-row slot with four requests of `gemini-area1.md:326-340` is not adopted (L-8); it remains a layout experiment with the acceptance "no new column, all rules placed" (LC AUDIT finding 11). ESTIMATE: the `rules_d` sponge, 630 rows per leaf at S = 16; the read port, 134 rows per read at TOP = 63 (MEASURED for the C1 stand-in, `FD/EXPERIMENTS.md:87-102`); one request slot per append (up to 3 per step), which is half a request row each on the landed two-lane layout.
+The landed spike slot is 13 rows for 32 words on 12 advice columns (`chip/rfcore.rs:215`); the E8 leaf without memory is 421 rows at S = 16, 26.3 rows per step (`FD/EXPERIMENTS.md` section 5, C1 leaf rows, composed). ESTIMATE for the full schema: `2 ceil(words / 6) + 1` rows per slot plus operand routing, request rows and rule-local rows; a state of 128 to 256 words gives 45 to 87 base rows per slot (`astra-area1.md:452-460`). The 7-row slot with four requests of `gemini-area1.md:326-340` is not adopted (L-8); it remains a layout experiment with the acceptance "no new column, all rules placed" (LC AUDIT finding 11). ESTIMATE: the `rules_d` sponge, 630 rows per leaf at S = 16; the read port, 134 rows per read at TOP = 63 (MEASURED for the C1 stand-in, `FD/EXPERIMENTS.md` section 5, C1 measured rows); one request slot per append (up to 3 per step), which is half a request row each on the landed two-lane layout.
 
 #### Verification
 
@@ -950,7 +951,7 @@ Assumed (the conditions of the C1 Quint lane that MEM cannot establish locally; 
 
 #### Row budget
 
-MEASURED (C1, run `20261111T065836Z-c1-rows`, `FD/EXPERIMENTS.md:83-104`): frontier (two length decompositions) 128 rows at TOP = 61 and 132 at TOP = 63; one append in the CORE stand-in 3 rows; the window rows themselves are inside the per-slot figure "one window slot 203 rows" which also holds the backend's record hash, mask and 1/8 of `Tree8`. The circuit pays the window capacity (fixed by W) whether a slot is used or not. No new advice or equality column and no lookup; MEM adds the fixed column `kfix` and 3 packed code columns (`FD/EXPERIMENTS.md:136`).
+MEASURED (C1, run `20261111T065836Z-c1-rows`, `FD/EXPERIMENTS.md` section 5, C1 measured rows): frontier (two length decompositions) 128 rows at TOP = 61 and 132 at TOP = 63; one append in the CORE stand-in 3 rows; the window rows themselves are inside the per-slot figure "one window slot 203 rows" which also holds the backend's record hash, mask and 1/8 of `Tree8`. The circuit pays the window capacity (fixed by W) whether a slot is used or not. No new advice or equality column and no lookup; MEM adds the fixed column `kfix` and 3 packed code columns (`FD/EXPERIMENTS.md` section 5, C1 node rows).
 
 #### Verification
 
@@ -1058,7 +1059,7 @@ Not a soundness condition: `q_post = q_pre + sum f_j` is not a separate gate; it
 
 #### Row budget
 
-MEASURED (C1, `FD/EXPERIMENTS.md:87-102`; harness key shape 12 advice, 13 equality, 28 fixed, 2 lookups, degree 6):
+MEASURED (C1, `FD/EXPERIMENTS.md` section 5, C1 measured rows; harness key shape 12 advice, 13 equality, 28 fixed, 2 lookups, degree 6):
 
 | Item | TOP = 61 | TOP = 63 |
 |---|---:|---:|
@@ -1074,7 +1075,7 @@ MEASURED (C1, `FD/EXPERIMENTS.md:87-102`; harness key shape 12 advice, 13 equali
 
 `persist(W) = 12,417 + 10,441 (W - 1)` at TOP = 63. TOP = 63 costs 280 rows per flush unit and 140 per cold read and changes no k (E-1).
 
-ESTIMATE, composed from the measured parts (`FD/EXPERIMENTS.md:108-132`): leaf at S = 16, W = 1, TOP = 63: 15,226 rows with no cold read, 34,806 with 4, 54,386 with 8 (all `k_leaf <= 16`); S = 64, W = 3: 37,387 with none; `k_leaf <= 16` holds at S = 16 up to about 10 cold reads. With 4 heap lines and 2 ROM lines, value digest, stack spills and bound checks the one-arena leaf is about 50,700 to 51,800 rows (ESTIMATE, LC AUDIT finding 7). Node: net +4 fixed columns, about +24,016 rows, from 823,466 to about 847,494 (ESTIMATE, gate 950,000). The backend is not wired into `RfLeaf`; no leaf or node figure with it is measured. The tables exclude hash-stack spills, PROG and Init openings, TRAP and the range table rows.
+ESTIMATE, composed from the measured parts (`FD/EXPERIMENTS.md` section 5, C1 leaf rows): leaf at S = 16, W = 1, TOP = 63: 15,226 rows with no cold read, 34,806 with 4, 54,386 with 8 (all `k_leaf <= 16`); S = 64, W = 3: 37,387 with none; `k_leaf <= 16` holds at S = 16 up to about 10 cold reads. With 4 heap lines and 2 ROM lines, value digest, stack spills and bound checks the one-arena leaf is about 50,700 to 51,800 rows (ESTIMATE, LC AUDIT finding 7). Node: net +4 fixed columns, about +24,016 rows, from 823,466 to about 847,494 (ESTIMATE, gate 950,000). The backend is not wired into `RfLeaf`; no leaf or node figure with it is measured. The tables exclude hash-stack spills, PROG and Init openings, TRAP and the range table rows.
 
 #### Verification
 
@@ -1833,7 +1834,7 @@ CORE (register schema, R-8), MEM (`len`), the dense backend token, hash-chain st
 - Leaf statement: the seven lanes `[binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]` of `sherlock-leaf-stmt/1`, genesis gate `h_pre == 0`. SRC-001 defines the fifth lane as the hash `rules_d` (`openspec/changes/sherlock-vm-consensus-20261107/requirements.md:26`); the spike code carries a lane named `rule` (`crates/mori-recursion/src/ivc.rs:70-74`). CORE computes `rules_d` (kit CORE), and NODE INTEGRATION treats lane 5 as that hash and renames the lane in `ivc.rs`. Both drafts add lanes (A:80-93, G:42-53); that conflicts with the landed lanes and is open (section 4.2, N-2). The kits below use only the seven lanes. Values that a seal needs and that are not lanes (`input_d`, the dependency commitment, the terminal kind and payload) are read with `open_state_header` on the final state digest `post_d` (kit BOUNDARY COMMITMENT; recommendation N-2).
 - Segment statement `SEG = (prog_d, pre_d, post_d, h_lo, h_hi)`: the `Seg` of `clean/fork/Clean/Sherlock/Aggregation.lean:27`. Sealed statement `SET = (set_root)`, with the typed grammar of the GP-2 hook. Two more statement types serve dependency discharge (GP-2 hook): `SUB = (set_root, sub_root)` and `DL = (chain_d, cover_root, in_link)`. The GP-3 general verifier adds `FV = (fv_state_d)`; its registry root is the node's `reg_root` lane. Program admission adds `AW = (adm_state_d)` (mode ADMIT-WORK of NODE INTEGRATION). The input view adds `VW = (view_state_d)` (mode VIEW-WORK, input admission form (b), AD-17). Run statement `[prog_d, input_d, outcome_d, n_steps]`; `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` (SRC-007, `requirements.md:32`).
 - Claim count (R-5, merge decision): the public statement carries NO claim count. `set_root` binds the claim DAG. If a count is wanted for telemetry, it is a count of distinct claims, it is not range-checked and it carries no soundness (OWNER to confirm).
-- Profile B (ZmLogUp memory + Horner boundary) is benchmark-only (L-5), not built before M4. It appears only in the extension points marked "PROFILE B EXTENSION POINT (benchmark-only)" in NODE INTEGRATION and L AND WRAP. It has no stop/resume, so CONTINUATION does not support it.
+- Profile B (ZmLogUp memory + Horner boundary) is benchmark-only (L-5), not built before M4. It appears only in the extension point marked "PROFILE B EXTENSION POINT (benchmark-only)" in NODE INTEGRATION. It has no stop/resume, so CONTINUATION does not support it.
 - Row figures for this design are ESTIMATE. The spike figures (node 823,466 rows, decider 929,166 rows; `openspec/changes/sherlock-vm-consensus-20261107/design.md:129-131`) were measured on the spike key, not on this design, and are used only as ESTIMATE inputs. Only C1 rows in `FD/EXPERIMENTS.md` are MEASURED (R-10).
 - Lean: no area 3 obligation is proved. C3 theorems (`FD/EXPERIMENTS-C3.md`) appear only as premises. Pre-C3 theorems of `Aggregation.lean` (for example `linkAll_append`, `bracket_independent`, `decider_pinning`, `result_unique`) exist but are not "proved in C3".
 
@@ -1926,7 +1927,7 @@ Assumed:
 - The recursion is sound (premise A4 of section 1.9).
 
 #### Row budget
-A STARK node has no fixed row gate; its cost is seconds per proof on the GPU. MEASURED (OpenVM, 20 host threads, `PR` section 2): arity 2 over 2^20 children 1.809 s; arity 4 over 2^16 children 2.595 s; arity 8 over 2^16 children 4.682 s. Node cost is nearly flat in child height, so leaves are tall (2^20 rows or more), and a 2^20 leaf under arity-8 nodes costs 6.50 s with its node share, ESTIMATE. The node's shape bounds are those of the internal set of section 1.9 (height at most 2^19; 1,000 constraints and 100 interactions per AIR, 50 AIRs, 2,000 columns); keygen refuses a node outside them. The key-root inclusion check is a small-field Poseidon2 path per child; its cost and byte-equal internal-recursive keys across two chip sets are PENDING (frontend M2a). The seal glue (outcome wrapper, `claim_d`, `set_root`, the admission and view checks), ADMIT-WORK and VIEW-WORK units, and MERGE-WORK with one real owner step are unmeasured on the STARK node; X7 and X10 measure them in seconds per proof against the node's shape bounds.
+A STARK node has no fixed row gate; its cost is seconds per proof on the GPU. MEASURED (OpenVM, 20 host threads, `PR` section 2): arity 2 over 2^20 children 1.809 s; arity 4 over 2^16 children 2.595 s; arity 8 over 2^16 children 4.682 s. Node cost is nearly flat in child height, so leaves are tall (2^20 rows or more), and a 2^20 leaf under arity-8 nodes costs 6.50 s with its node share, ESTIMATE. The node's shape bounds are those of the internal set of section 1.9 (height at most 2^19; 1,000 constraints and 100 interactions per AIR, 50 AIRs, 2,000 columns); keygen refuses a node outside them. The key-root inclusion check is a small-field Poseidon2 path per child; its cost and byte-equal internal-recursive keys across two chip sets are PENDING (frontend M2a). The seal glue (outcome wrapper, `claim_d`, `set_root`, the admission and view checks), ADMIT-WORK and VIEW-WORK units, and MERGE-WORK with one real owner step are unmeasured on the STARK node; X7 and X10 measure them.
 
 #### Verification
 Quint: existing `models/sherlock/quint/aggregation.qnt` (abstracts verification and accumulation, older slot shape; A:258-260). New `models/sherlock/quint/nodeIntegration.qnt` (A:260; G:116 calls it `node_pcd_dag.qnt`): typed slots, key routing, MERGE/SEAL interval coverage, seal requires genesis and terminal, seal erases physical fields.
@@ -1992,7 +1993,7 @@ Compress the shard tree into the bridge layer `L` and wrap `L` in the one blinde
 #### Interface
 No bus tuples. Inputs and outputs across proof boundaries:
 - `L` takes: the node root proof (full tree) or the leaf-layer proof (path C); the flattened deferred field log and its tree shape as private witness; the `key_root` inclusion path of the leaf `P2(DOM_KEYDAG, entry, path, enc(X))`.
-- `L` exposes as public values: the statement words; the anchor statement `(mode, j, k, a_in, a_out)`; `run_tag` for a chunk; `layout_d` of V+; `pv` of `W_pv` words (section 1.8); the DAG commitment `X`; the call vector of `2 + L_TX` words. For a general run the node root is a SET root sealed by NODE INTEGRATION (the one seal path); `L` recomputes `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and opens the SET head with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`; a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root is refused at this entry, and the run statement `[prog_d, input_d, outcome_d, n_steps]` is written into the effect words (OD-15). A collection writes `[reg_root, set_root, shape_d]` into the effect words, with no claim count.
+- `L` exposes as public values: the statement words; the anchor statement `(mode, j, k, a_in, a_out)`; `run_tag` for a chunk; `layout_d` of V+; `pv` of `W_pv` words (section 1.8); the DAG commitment `X`; the call vector of `2 + L_TX` words. A general run is a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]` (OD-15). Open item of the interface freeze: which layer opens the sealed SET head of a general run (as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`, refusing a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root), and the effect-word form of the collection statement `[reg_root, set_root, shape_d]`. Until it is fixed, the test names `decider_seg_root_as_run`, `decider_set_head_forged`, `pos_decider_all_outcomes` and `pos_decider_collection_three_runs` and obligation DEC-L1 keep their meaning and belong to this kit.
 - The wrap takes the proof of `L` with its Merkle roots, PoW witnesses, query positions, the log, `pv` and the onion digests as private witness, and has exactly the call vector as public inputs.
 - Wrap key constants: `B`, `V`, `P`, `E`; `L_TX`; the anchor template words; `layout_d`; the hash domains; the `L` key schedule `sched`.
 - Forbidden public inputs: `X`, `mode`, `j`, `k`, `run_tag`, `key_root`, plain `prog_d`, `pre_d`, `post_d`, any memory root, tail digest, length or address, and anything derived from the transcript of `L`.
@@ -2017,7 +2018,7 @@ Usable wrap rows are `2^k - 7`: 2,097,145 at k = 21 and 1,048,569 at k = 20, MEA
 | G4, no limb overlap and 60 percent packing | 846,821 | 1,045,846 | 1,391,069 | ESTIMATE; fits k = 21 |
 | G4 with the wrap-rows bundle and radius 4/3 | | about 364,000 | | ESTIMATE; 82 percent of the k = 19 gate |
 
-The key's k is the smallest of 19, 20 and 21 at which the measured G4 rows fit the gate; M7 (D15) measures them. The wrap-rows bundle assumes OD-1, OD-3 and OD-6. G4: 4 identical lanes of 8 advice columns over about 14 shared fixed columns, 18 permutation columns, rotations within {-1, 0, +1}, no foreign-field, pairing or SHA chip; one lane takes one query of Merkle work, one extension-field coefficient and one log slot. Added rows: the anchor lanes as key constants and one `L_TX`, about 780 rows; `layout_d` at most 120; the DAG key check about 120; the two OOD samples about 12,000 (all ESTIMATE). `L`: 2.0 x 10^7 Fr permutations of hashing plus 1.5 x 10^7 of grinding, ESTIMATE; one child is about 2^23 main cells, below the 2^24 that `w_stack` = 16 allows.
+The key's k is the smallest of 19, 20 and 21 at which the measured G4 rows fit the gate; M7 (D15) measures them. The wrap-rows bundle assumes OD-1, OD-3 and OD-6. G4: 4 identical lanes of 8 advice columns over about 14 shared fixed columns, 18 permutation columns, rotations within {-1, 0, +1}, no foreign-field, pairing or SHA chip; one lane takes one query of Merkle work, one extension-field coefficient and one log slot. The anchor lanes as key constants and one `L_TX` save about 780 rows (`PR` section 6.3). Added rows: `layout_d` at most 120; the DAG key check about 120; the two OOD samples about 12,000 (all ESTIMATE). `L`: 2.0 x 10^7 Fr permutations of hashing plus 1.5 x 10^7 of grinding, ESTIMATE; one child is about 2^23 main cells, below the 2^24 that `w_stack` = 16 allows.
 
 GPU wrap kernels in build order: K0 Fr field header shared with the Fr Poseidon kernel of `L`; K1 NTT over Fr; K2 MSM on G1; K3 coset-tiled quotient numerator; K4 grand products; K5 evaluations and multiopen; K6 lookup sort. ESTIMATE: whole wrap 3 to 7.5 s at k = 19 with today's residual, 1.9 s (1.44 to 2.34 s) with the full-device pipeline and the rewritten MSM; memory about 5 GB at k = 19; proof about 8 to 9 kB. MEASURED: on the real decider at k = 20 the GPU quotient numerator matches the CPU in all 4,194,304 extended-domain values. The MSM stays split between CPU and GPU while the GPU MSM is above 0.2 s per 2^20. Fallback triggers for an Fr-terminal layer between `L` and the wrap: rows over budget after M7, a measured GPU wrap above 8 s at the chosen k after K1 to K5, or an owner request for a larger log capacity; form A of that layer is not built (OD-11).
 
@@ -2207,7 +2208,7 @@ Admit proofs of circuits other than the Sherlock leaf (Compact contract circuits
 
 #### Interface
 No bus tuples. Named cells and lanes:
-- `reg_root`: full field. NODE INTEGRATION requires it equal in every enabled NODE or FOREIGN child and in the parent (kit NODE INTEGRATION, `node_reg_root_mixed`). `L` reads it from the collection statement, which the contract checks against its state.
+- `reg_root`: full field. NODE INTEGRATION requires it equal in every enabled NODE or FOREIGN child and in the parent (kit NODE INTEGRATION, `node_reg_root_mixed`). How the collection statement carries it to the contract under the one call-vector layout is an open item of the interface freeze.
 - Registry entry preimage: binds the full verification interpretation, not only a key digest: proof system, curve, commitment scheme, SRS id, verifying-key digest, transcript id, public-input schema and exact count, adapter digest, format version, policy (A:817-832). Membership proof against `reg_root` at a fixed depth that is part of the registry schema (A:889).
 - Foreign lift relation (FOREIGN key kind of NODE): verifies one adapter-class proof under a witnessed key, proves membership of both the adapter key and the inner foreign key in `reg_root`, folds the adapter accumulator and the inner accumulator it publishes, and emits a one-claim SET over a foreign claim `H(SHK_CLAIM, KIND_FOREIGN, vk_id_inner, adapter_id, out_d)` (G:62). Foreign claim domain disjoint from `SHK_RUN` (A:171).
 - The Sherlock run's key identity is also checked against the registry where the aggregate needs both claims checked (A:879; G:68; GP-003 acceptance).
@@ -2317,7 +2318,7 @@ NODE INTEGRATION; CORE (inline work); L AND WRAP (collection statement; interfac
 
 ### Kit: GP-3 general verifier (five subkits)
 
-Added by revision B2 (finding 15). The GP-3 hook above is the native adapter path. This kit is the general path that the full GP-3 scope needs; it is several sessions and is split into five subkits, each with one agent. Nothing in it is built or measured.
+B2 finding 15. The GP-3 hook above is the native adapter path. This kit is the general path that the full GP-3 scope needs; it is several sessions and is split into five subkits, each with one agent. Nothing in it is built or measured.
 
 #### Purpose
 Verify, in circuit and in bounded work units spread over several nodes, a proof of any registered PLONK/halo2 circuit on the same curve and commitment scheme, under the verification interpretation of its registry entry, and emit its foreign claim only when the whole verification has completed.
@@ -2380,7 +2381,7 @@ NODE INTEGRATION (FV-WORK row, key routing), GP-3 hook (registry, adapter, forei
 
 ### Kit: INIT (genesis and input admission)
 
-Added by revision B2 (finding 3). In the B1 text CORE assumed a canonical Init, the memory kits assumed an empty or proved genesis root, PAGE/ROM delegated the `prog_d` opening to an unnamed owner, VALUE DIGEST assumed an authenticated `val_d`, and NODE treated genesis as proved. This kit is the one owner of all of these. It also provides condition C4 of the C1 Quint lane.
+B2 finding 3. In the B1 text CORE assumed a canonical Init, the memory kits assumed an empty or proved genesis root, PAGE/ROM delegated the `prog_d` opening to an unnamed owner, VALUE DIGEST assumed an authenticated `val_d`, and NODE treated genesis as proved. This kit is the one owner of all of these. It also provides condition C4 of the C1 Quint lane.
 
 #### Purpose
 When `h_pre = 0`, prove in the leaf that the first pre state is `Init(prog_d, input_d)` field by field (SRC-021, `O/requirements.md:46`; `O/design.md:172-262`), with the program and the run input authenticated by opening `prog_d` and `input_d`. Equality with a supplied digest is not that check.
@@ -2487,7 +2488,7 @@ BOUNDARY COMMITMENT (cells of the first pre state), HASH, RANGE, CORE (state sch
 
 ### Kit: REFERENCE BRIDGE (semantic reference and projection)
 
-Added by revision B2 (finding 14). The whole-leaf harness of section 3.2 compares the circuit with a reference. The reference it nominated cannot represent the corpus it requires, and no kit closed the gap.
+B2 finding 14. The whole-leaf harness of section 3.2 compares the circuit with a reference. The reference it nominated cannot represent the corpus it requires, and no kit closed the gap.
 
 #### Purpose
 Supply a semantic reference for every program of the target language and the map from circuit events to reference steps, so that the whole-leaf differential harness is an executable acceptance gate. It is a host-side kit: it adds no constraint.
@@ -2538,7 +2539,7 @@ None on circuit kits. It is a prerequisite of leaf integration (group L) and of 
 
 ### Kit: HOST CHECKPOINT STORE
 
-Added by revision B2 (finding 13). CONTINUATION referred to a persistence interface of `MemBackend` that the code does not have.
+B2 finding 13. CONTINUATION referred to a persistence interface of `MemBackend` that the code does not have.
 
 #### Purpose
 Hold, outside the circuit, every witness resource a prover needs to continue a run, write it as a versioned checkpoint, and restore it only after checking it against the committed state. It is the host counterpart of the MEM, MEMORY BACKEND, STACKS and BOUNDARY COMMITMENT kits.
@@ -2753,7 +2754,7 @@ Compile a Compact contract to the Sherlock machine so that its entries run as Sh
 - `abi.json` per entry: the straight-line step count `N_e`, the effect words `L_e`, the tape length, the counts per builtin (FMUL, FADD, FINV, sponge permutations with input lengths, SHA blocks, ECADD, ECMUL, ECMULG).
 - Lowering: Stage 1 in straight-line mode (`R_SL_*`, section 1.7). Field arithmetic on FIELD-EMU (OD-14: Compact `Field` stays emulated); `transientHash` as `SPONGE(n)` in the log or POSEIDON-FR-EMU inline; `persistentHash` on the OpenVM `sha2` chip; `ecMul` and `ecMulGenerator` as log entries while `E` slots last, otherwise JUBJUB-EMU. A native call with no kit is a compile error that names the kit.
 - Tape: `Cons(salt, Cons(selector, args ++ comm_rand ++ witness, read and callee results in program order))`, static in length and layout per entry. Ledger reads are `popeq` values from the tape, which the ledger replays and refuses when stale. Writes are effect words at static indices; a guarded-off impact writes zeros, and the host inserts the same `Noop` merges as the native transaction builder.
-- Call vector: the layout of section 1.8. An entry with `L_e > L_TX - A` runs as a chunked call.
+- Call vector: the layout of section 1.8. An entry with `L_e > L_TX - A` is a compile error that names the entry and its `L_e` until the frontend's chunked mode exists; then it runs as a chunked call.
 - E-1, placement V (OD-5): the ledger computes `binding_input = le31(SHA256(m))` from public transaction bytes `m`; the label window starts at byte offset 58 for every call. `bind_label(e)` reads `m` from the private tape, pins `m[0 .. 26) = "midnight:binding-input[v1]"` and `m[58 .. 58 + |enc(e)|) = enc(e)`, computes SHA-256 on the `sha2` chip and writes `bind = le31(digest)` into the outcome; the wrap requires lane 0 equal to `bind`. V+: `bind_label` reads the domain bytes, their length and the label offset from the tape, uses exactly those for the window checks, and writes `layout_d = P2(DOM_LAYOUT, |domain|, domain, offset)` as one statement word, which the wrap pins to a key constant. A ledger layout change then replaces one wrap key constant and no `prog_d`.
 - Chunked calls: one logical call runs as `k` contract calls in one intent of one transaction on the unmodified ledger, with a forward claim chain (chunk `j` claims chunk `j+1`) and an anchor lock. Mode 1F (default): all chunks fallible-only, in one segment; a middle failure leaves contract state unchanged and the transaction is included with its fee paid. Mode 1G: all chunks guaranteed-only, for a callee of a guaranteed caller; a failure makes the transaction invalid. Mixed chains are refused. Rules: R-phase (one phase for all chunks), R-cut (cut only where the native run has stack depth exactly 3, at a boundary the run certifies; the slice shard checks the cut), R-ctx (hoist every read of context slot 0 and effects slot 1 into a prologue in chunk 1), R-outcome (1F all or none applied with fee paid; 1G all applied or invalid).
 - Anchor values (OD-16): `A_0 = A_k = C_P`; `A_j = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d, run_tag, j)))` for `1 <= j < k`, with `run_tag` a fresh salted value per run. The anchor statement per case:
@@ -2883,7 +2884,7 @@ One row per obligation. An obligation that several kits use is counted once. "Pr
 | O54 | NODE | NODE-L4 program admission discharges `ProgCanonical(prog_root)` | new `BinaryNode.lean` | open |
 | O55 | NODE | NODE-L5 input view (form (b) of AD-17) | new `BinaryNode.lean` | open |
 
-Tally (O54 and O55 cover program admission and the input view): 14 obligations proved in C3 (P1 to P14), 55 open (O1 to O55), 69 in total. O42 to O53 restated O2, O10, O11, O12, O14, O15 and O21; they change no status, and they narrow what P1, P2, P6, P7, P9 and P14 are credited with to the premises of their Lean statements. Of the open rows, O2 and O7 are premise statements, and O21, O22 and O30 belong to Profile B and are not scheduled before M4.
+Tally of the machine and recursion obligations (O54 and O55 cover program admission and the input view): 14 obligations proved in C3 (P1 to P14), 55 open (O1 to O55), 69 in total. The co-processor obligations are listed in their kits and counted apart: BR-L1 and ZK-L1 built at commit `f54eb39f5` (the same build, with premises A1 to A7), BR-L2 to BR-L4, ZK-L2, CF-L1 and CF-L2 open; 8 in total. O42 to O53 restated O2, O10, O11, O12, O14, O15 and O21; they change no status, and they narrow what P1, P2, P6, P7, P9 and P14 are credited with to the premises of their Lean statements. Of the open rows, O2 and O7 are premise statements, and O21, O22 and O30 belong to Profile B and are not scheduled before M4.
 
 The five obligations of the ARCH-BRIEF addendum: (1) write-once memory soundness: O21, open, only if Profile B is built; (2) partition independence: P7, P9, P10, P14 proved for leaves of at most 8 appends and one stack operation per step; O12, O14, O15, O46, O47 open; (3) modular composition: P2, P3, P4 proved in generic form for bus tuples; O42 (ports), O43, O9 and the module instances open; (4) value digest canonicity: O23 to O25 open; (5) claim chaining: O36, O38, O51, O52 open.
 
@@ -2925,7 +2926,7 @@ Each step is useful whatever later experiments show. Heavy jobs run one at a tim
 17. E-1 T4 to T6 on the real wrap; atomic chunks T3 with universal-key chunks.
 18. Preview deploy and call of the wrap key.
 
-The machine-level kits of section 3.1 build beside phases 1 and 2: their reference semantics and Quint models first, then their AIRs on the STARK engine under the shard plan.
+The order of the machine-level kits of section 3.1 against these phases is an open item of the specs.
 
 ### 3.1 Dependencies and order
 
@@ -2972,16 +2973,17 @@ Build order. One implementing agent per kit; kits in one group are built in para
 | L | leaf integration by the lead: all kits in `RfLeaf`, whole-leaf harness green with zero coverage gaps, leaf rows and k measured (X5) | 4; R complete |
 | 5 | NODE INTEGRATION (with `open_state_header`, X10) | L |
 | 6 | L AND WRAP, HOST CHECKPOINT STORE then CONTINUATION, GP-3 hook, GP-4 hook | 5 |
+| C | COMPACT FRONTEND (M0 and M1, E-1, chunked calls; phase 1 of section 3.0), then ZERO KNOWLEDGE with L AND WRAP | F for the frontend; ZERO KNOWLEDGE with group 6 |
 | 7 | GP-2 hook; LEDGER CONTRACT | 6; X12 (GP-2 hook); N-11 and the template recapture (LEDGER CONTRACT) |
 | 8 | GP-3 general verifier: FV-SCHED first, then FV-PARSE, FV-TRANSCRIPT, FV-ARITH and FV-FINAL in parallel | 6 (GP-3 hook); X14 |
 
-Freeze prerequisites (one list; B2 finding 18 found that the B1 text named X1 and B2 in one place and X1 and X2 in another, and scheduled none of the missing interfaces). Group F starts only when each line has its evidence:
+Freeze prerequisites (one list; B2 finding 18). Group F starts only when each line has its evidence:
 
 | Prerequisite | Evidence | State |
 |---|---|---|
 | X1 rule inventory and per-rule maxima | `FD/EXPERIMENTS-MAXIMA.md`, `FD/maxima/rule_maxima.md` | done for the inventory (120 rules), appends, stack operations and heap reads; ROM rows per step open (X15) |
 | X2 one-arena non-interleaving | `FD/maxima/noninterleave.json`, decision M-1 | done (premises mechanical, the induction a code reading) |
-| B2 audit of this file answered | `FD/ARCH-AUDIT-RESPONSE.md` | done with this revision |
+| B2 audit of this file answered | `FD/ARCH-AUDIT-RESPONSE.md` | done |
 | Init relation and its owner | kit INIT; AD-18 for the one-arena field list | specified; the input part waits for AD-17 and X11 |
 | Boundary commitment structure and opening interface | kit BOUNDARY COMMITMENT (`open_state_header`) | specified; X10 measures it before the NODE spec freezes |
 | Dependency discharge protocol | GP-2 hook, items 1 to 7 | specified; X12 (model) before the GP-2 spec freezes; not a prerequisite of the leaf freeze |
@@ -3082,7 +3084,7 @@ Each entry has its options, the recommendation, what decides it, and an OWNER ma
 | AD-6 | S (steps per leaf) | 16 (SRC-014, `S_MAX = 16`, `crates/mori-recursion/src/ivc.rs:77`); 64; 128 | 16 for the first build. S is a `LeafShape` parameter; every kit is written for any S. ESTIMATE leaf rows at TOP = 63 with no cold read: 15,226 (S = 16, W = 1), 37,387 (S = 64, W = 3), 59,969 (S = 128, W = 5). A larger S changes the node key and needs an SRC-014 amendment and the multi-flush theorem | X5 (measured leaf and node rows with the backend wired into `RfLeaf`) and the early-close rate from X1 | **OWNER** if S changes (spec amendment) |
 | AD-7 (L-5) | Profile B (ZmLogUp + Horner) | build now; benchmark-only after M4; drop | benchmark-only behind the seam, not before M4. It cannot stop and resume without reloading live memory | a benchmark after M4, only if Profile A misses a throughput target | no |
 | AD-8 (L-8) | Requests per step and slot layout | two lanes, more rows per request (landed); row-6 promotion to four requests on a shorter slot | landed layout. Promotion is a layout experiment with the acceptance "no new column, all rules placed, rows 5 and 7 still reach their lane copies" | the bus requests per rule (X1 measured appends, heap reads and stack operations per rule; ALU, range and ROM requests per rule are not in it: X15 for ROM, the rule-family contracts for the rest), then a layout spike with `cost_model` rows | no |
-| AD-9 | DEC key construction and control word layout | (a) priority network to a finite class; (b) packed key of normalized guard fields | (a) for the first build; the control word layout is frozen with the guard list of the rule inventory of section 1.7 | the guard list (the inventory is done, X1; the guards per rule are not part of X1) | no |
+| AD-9 | DEC key construction and control word layout | (a) priority network to a finite class; (b) packed key of normalized guard fields | (a) for the first build; the control word layout is frozen with the guard list of the 120 rules | the guard list (the inventory is done, X1; the guards per rule are not part of X1) | no |
 | AD-10 (M-4) | Rule inventory | `RuleIdC` has 133 variants (`shared.rs:400-534`); 7 disabled and 4 extension leave 122 (`owner_runtime.rs:70-90`); 2 of those are `KAdminStartup*` rules that are no step; `supported_rules()` counts 108 (`O/tasks.md:67`); drafts said 108, 123 and "120 + 2" | Resolved by X1 (M-4): the inventory is the 120 enabled step rules, which are the 108 of `supported_rules()` plus the 12 `XAdtHelperBuild*` and `XAdtHelperPlan*` rules; the test asserts that the 13 other variants are exactly the 7 disabled, the 4 extension and the 2 startup rules. The frozen interpreted list is these 120, explicit, versioned and ordered; Compact Stage 1 adds the `R_SL_*` family under `machine_version`, which changes per-program keys only (section 1.7). GP-1 says every program of the language: a rule that is enabled in the reference machine and unsupported in the circuit is a gap to close, never a language restriction (`astra-area1.md:1130`). 18 of the 108 did not fire on the X1 corpus (16 failure or refusal paths); each needs a constructed case (kit REFERENCE BRIDGE). That the backend's `supported_rules()` list equals the Core groups is a code reading | done (X1); the 18 unfired rules by the REFERENCE BRIDGE corpus | no; **OWNER** only if a rule is to stay out |
 | AD-11 | Record layouts per kind and the state schema lane count | three-word records at consecutive addresses (landed key); wider records by a second lane in the key (Astra) | three-word records, consecutive addresses; schema file frozen before CORE rule families start | a schema review against `O/design.md:220-267` and the value forms | no |
 | AD-12 | ROM depth and the program-size bound | a fixed depth is a circuit constant that bounds the program tables (16, 29 and 32 were drafted) | state the depth over physical rows and show that `D_row` is at least the index width of the language's program tables plus the sub-row bits of a wide row. A smaller depth and a per-program depth key are rejected alternatives under this change: if the required depth does not fit, GP-1 is incomplete (LC AUDIT finding 12; B2 finding 9) | a reading of the program table index types and the wide-row layout (V-2); kit PAGE/ROM | no for this change (the narrowing options are not offered); an amendment of GP-1 would be the owner's own decision |
@@ -3114,7 +3116,7 @@ N-2. Leaf statement lanes.
 
 N-3. GP-2 dependency discharge format.
 - Options: (a) G: running chain `deps_d` from 0, discharged at seal by equality with a SET root (G:51,69); as written the two hash structures differ; (b) the B1 proposal: the dependency commitment is a SET hash built by a dependency-join in consume order; the audit showed that this is not a protocol (a consumed claim can sit inside a JOIN or a DEP with its own ancestors, and empty dependencies, order, repetition, claim extraction and `n_steps` were undefined; B2 finding 6); (c) A: bind a dependency root before execution with membership openings (A:733), which conflicts with empty dependencies at Init (`requirements.md:46`); (d) the protocol of the GP-2 hook, items 1 to 7: a typed SET grammar, a `SHK_DEPS` chain in the consumer, DESCEND and head opening to authenticate a claim inside any verified SET, a discharge list DL built by DL-STEP, and chain equality at SEAL-WITH-DEPS.
-- Decision: (d) replaces (b). It keeps Init empty and deferred discharge, needs no batching shape of the producer, and is bounded per node. It is proposed by revision B2 and is in neither draft.
+- Decision: (d) replaces (b). It keeps Init empty and deferred discharge, needs no batching shape of the producer, and is bounded per node. It is in neither draft.
 - Decided by: X12 (the Quint model `claimConsumption.qnt` with the invariants of the GP-2 hook, then rows of DESCEND, DL-STEP and SEAL-WITH-DEPS). The GP-2 spec does not freeze before X12 passes. AD-20 (OWNER) settles whether a mid-run consume rule is added.
 
 N-4. Checkpoint domain tag in mode 1.
@@ -3255,7 +3257,7 @@ The change does not exist yet (`openspec/changes/sherlock-modular-leaf-20261111/
 
 - Why: the leaf of `O/design.md` 2.7 is one circuit description. This change specifies it as module kits with frozen interfaces, so that one agent builds and checks one kit, and so that the memory backend and the boundary commitment can be swapped behind one seam each.
 - Amendments of the governing specification `sherlock-vm-consensus-20261107` that this change needs. Each is an explicit task of section 5.3 and is made in that change, not silently here: SRC-021 and the Init table to the one-arena field list (AD-18, OWNER); the input-admission open item of `O/design.md:194` (AD-17, OWNER); `O/design.md:80` to "one schema, two lanes"; D2, D3, D6 and D7 of `O/design.md:95-100` replaced by the dense memory and hash-stack rules, with the compound stack step; SRC-014 `S_MAX` in the relation bytes (already required; the code change is NODE's); SRC-007 and the contract templates for universal program acceptance and collection opening (N-11, OWNER); the semantic reference for the full language (AD-21, OWNER); a consume rule only if AD-20 chooses it.
-- What changes: one capability spec per kit (24 kits), plus one spec per CORE rule family; the frozen bus schema and ports; Profile A (dense tail-buffered Merkle memory with 8-record cache lines, Poseidon boundary digest) as the built path; hash-chain FRAMES and TASKS stacks; `sherlock-value/1` unchanged; continuations tier 1 and retained-memory mode 1; the GP-2, GP-3 and GP-4 hooks; the Lean obligations per kit; replacement of D2, D3, D6 and D7 of `O/design.md:95-100` by the dense memory and hash-stack rules.
+- What changes: one capability spec per kit (26 kits), plus one spec per CORE rule family; the frozen bus schema and ports; Profile A (dense tail-buffered Merkle memory with 8-record cache lines, Poseidon boundary digest) as the built path; hash-chain FRAMES and TASKS stacks; `sherlock-value/1` unchanged; continuations tier 1 and retained-memory mode 1; the GP-2, GP-3 and GP-4 hooks; the Lean obligations per kit; replacement of D2, D3, D6 and D7 of `O/design.md:95-100` by the dense memory and hash-stack rules.
 - Out of scope: Profile B (ZmLogUp, Horner) beyond its seam and a benchmark-only spec; continuation mode 2; semantic profile `/2`; any change of GP-1 to GP-4 text; time and throughput gates (they stay in SRC-011 and SRC-015 rows after measurement).
 - `design.md` of the change is this file as decided after the B2 audit and experiment C4, with the measured tables.
 - Impact: `crates/mori-chip`, `crates/mori-recursion`, `models/sherlock/quint/`, `clean/fork/Clean/Sherlock/`; the per-program leaf keys change with the leaf AIRs under `key_root`; the universal internal-recursive, `L` and wrap keys do not (section 1.6).
@@ -3373,7 +3375,7 @@ Scenario wording follows the mutant protocol of the conventions: a scenario stat
 - Requirement: An old read opens the record and its kind against the pre-state root.
   - WHEN the value or the kind of an old record is forged THEN refused -> `cold_value_forged`, `wrong_kind_cold`, `cold_read_uses_running_root`; Lean O16.
 
-The specs of the other kits are outlined by the helpers that digested them; they follow in 5.2.1 and 5.2.2. The four kits added by revision B2 follow in 5.2.3.
+The specs of the other kits are outlined by the helpers that digested them; they follow in 5.2.1 and 5.2.2. The kits INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE and the GP-3 general verifier follow in 5.2.3.
 
 
 #### 5.2.1 PAGE/ROM block cache, ZmLogUp, VALUE DIGEST, BOUNDARY COMMITMENT
@@ -3558,7 +3560,7 @@ Each requirement is to stay under 500 characters; scenarios carry examples.
 - Requirement: Leaf, foreign and disabled children have canonical shape encodings.
   - Scenario: WHEN a leaf child's shape word is not derived from its lanes, or a disabled slot's is not the constant THEN unsatisfiable -> `graph_leaf_shape_free`, `graph_disabled_slot_shape_not_off`.
 
-#### 5.2.3 Kits added by revision B2
+#### 5.2.3 Kits INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE, GP-3 general verifier
 
 `specs/sherlock-init-admission/spec.md`
 - Requirement: At `h_pre = 0` the pre state is `Init(prog_d, input_d)`, field by field.
@@ -3614,7 +3616,7 @@ Each requirement is to stay under 500 characters; scenarios carry examples.
 
 ### 5.3 `tasks.md`
 
-`tasks.md` is the build order of section 3.1: one task per kit (24 kits; the five GP-3 general verifier subkits are five tasks), in groups F, 0 to 4, R, L, 5 to 8, plus:
+`tasks.md` is the build order of section 3.1: one task per kit (26 kits; the five GP-3 general verifier subkits are five tasks), in groups F, 0 to 4, R, L, 5 to 8, plus:
 
 - one task per freeze prerequisite of section 3.1 that is still open, each with an owner;
 - one task per CORE rule family (the families of section 5.2);
@@ -3710,9 +3712,9 @@ Conditions of the C1 Quint lane (`qa/gemini-quint/c1-dense/REPORT-dense.md:77-10
 
 ### 6.3 Not checked
 
-- Revision B2 made no build, test, proof or model run either. It read the cited code and Lean lines (listed per finding in `FD/ARCH-AUDIT-RESPONSE.md`) and quotes the C1 Quint verdict and the X1 and X2 results from their files. `scripts/sherlock-next` was not run: the step is a document revision with two output files.
-- Proposed by revision B2 and in no draft or decided input: the header-and-body state commitment and the domain `SHK_SD2`; `AuthRec`, `AuthRom` and the read-port signatures; the compound `StackStep`; the DEC idle row; the GP-2 protocol (SET grammar, `SHK_DEPS`, `SUB`, `DL`, DESCEND, DL-STEP, input link); the node relation table and the shape base cases; the registry entry encoding and the `FV` state; the kits INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE and GP-3 general verifier with their file names; the codec name `sherlock-ckpt/1`; every new mutant, invariant and theorem name. None is built, modelled or measured. Every row figure that revision B2 added is ESTIMATE.
-- Not read by revision B2: `O/design.md` section 2.4 (the exact preimage of `prog_d`; kit INIT refers to it and gives no word count), the SAS rows, `O/dissent.md` in full, and sections 6.1, 6.3 and 6.4 of this file line by line (they were searched for the phrases that revision B2 changed).
+- The B2 audit response made no build, test, proof or model run either. It read the cited code and Lean lines (listed per finding in `FD/ARCH-AUDIT-RESPONSE.md`) and quotes the C1 Quint verdict and the X1 and X2 results from their files. `scripts/sherlock-next` was not run: the step is a document revision with two output files.
+- In no draft or decided input: the header-and-body state commitment and the domain `SHK_SD2`; `AuthRec`, `AuthRom` and the read-port signatures; the compound `StackStep`; the DEC idle row; the GP-2 protocol (SET grammar, `SHK_DEPS`, `SUB`, `DL`, DESCEND, DL-STEP, input link); the node relation table and the shape base cases; the registry entry encoding and the `FV` state; the kits INIT, REFERENCE BRIDGE, HOST CHECKPOINT STORE and GP-3 general verifier with their file names; the codec name `sherlock-ckpt/1`; every new mutant, invariant and theorem name. None is built, modelled or measured. Every row figure that revision B2 added is ESTIMATE.
+- Not read by the B2 audit response: `O/design.md` section 2.4 (the exact preimage of `prog_d`; kit INIT refers to it and gives no word count), the SAS rows, `O/dissent.md` in full line by line (they were searched for the phrases that revision B2 changed).
 - The step semantics of a rewrite or a pop on an empty stack is read from `owner_runtime.rs:3566-3577` only; whether a rule can reach it was not checked.
 - No build, test, proof or model run was made for this merge. The MEASURED rows are quoted from `FD/EXPERIMENTS.md`; the "proved in C3" status is quoted from `FD/EXPERIMENTS-C3.md`. Neither was re-run.
 - The two study `CONSENSUS.md` files were not read in full. Their content enters only through the two audits and `FD/DECISIONS.md`, which override them.
