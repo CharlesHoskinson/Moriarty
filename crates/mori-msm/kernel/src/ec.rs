@@ -48,7 +48,10 @@ impl Xyzz {
         if self.is_inf() {
             return Affine { x: ZERO, y: ZERO };
         }
-        Affine { x: self.x.mul(&self.zz.inv()), y: self.y.mul(&self.zzz.inv()) }
+        Affine {
+            x: self.x.mul(&self.zz.inv()),
+            y: self.y.mul(&self.zzz.inv()),
+        }
     }
 
     #[inline(always)]

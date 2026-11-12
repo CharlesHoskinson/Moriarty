@@ -39,9 +39,9 @@ impl Cfg {
         let c = env_u32("MORI_MSM_C").unwrap_or((lg.saturating_sub(4)).clamp(8, 16));
         Cfg {
             c,
-            k1: env_u32("MORI_MSM_K1").unwrap_or(32),
+            k1: env_u32("MORI_MSM_K1").unwrap_or(64),
             k2: env_u32("MORI_MSM_K2").unwrap_or(16),
-            seg: env_u32("MORI_MSM_SEG").unwrap_or(64).min(1 << (c - 1)),
+            seg: env_u32("MORI_MSM_SEG").unwrap_or(16).min(1 << (c - 1)),
             affine_passes: env_u32("MORI_MSM_AFFINE").unwrap_or(0),
         }
     }
@@ -436,9 +436,23 @@ fn run_ws(
     // 5. Run-aligned final accumulation into the dense bucket array.
     let mut buckets = ws.u64(s, "buckets", nb * XYZZ)?;
     s.memset_zeros(&mut buckets.slice_mut(0..nb * XYZZ))?;
+    mark("bucket_zero")?;
     let l32 = l as u32;
     let p = cp.take().unwrap();
-    launch!(r, "run_scatter", cfg_strided(l); &ck, &p, &l32, &mut buckets);
+    if std::env::var_os("MORI_MSM_RUN_SCATTER").is_some() {
+        launch!(r, "run_scatter", cfg_strided(l); &ck, &p, &l32, &mut buckets);
+    } else {
+        let mut fl = ws.u32(s, "cnt", l)?;
+        launch!(r, "run_flags", cfg_strided(l); &ck, &l32, &mut fl);
+        let mut off = ws.u32(s, "off", l)?;
+        let (nr, _, _) = r.scan(ws, &fl, &mut off, l)?;
+        let mut st = ws.u32(s, "starts", nr as usize)?;
+        launch!(r, "run_compact", cfg_strided(l); &ck, &l32, &off, &mut st);
+        launch!(r, "run_sum", cfg1(nr as usize, 64); &ck, &p, &st, &nr, &l32, &mut buckets);
+        ws.put32("cnt", fl);
+        ws.put32("off", off);
+        ws.put32("starts", st);
+    }
     ws.put32(KN[1 - slot], ck);
     ws.put64(PN[1 - slot], p);
     mark("buckets")?;

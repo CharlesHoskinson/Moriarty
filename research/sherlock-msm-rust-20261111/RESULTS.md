@@ -54,6 +54,19 @@ k = 20 wrap proof on the stdlib run decider (the gpu-wrap `wrap_prove` path, bun
 
 The correctness gate passes. All 45 MSM calls of the proof go to the Rust kernel with no fallback, and the proof bytes equal the CPU proof, so the kernel is exact on the real witness columns too. The CPU config records those columns to `~/.cache/msm-rust/columns-k20/` (237 calls, 7.3 GB, test seed only). Timing under load (SM clock 754 MHz, throttle 0x400): in the proof the Rust MSM (masked, committed defaults k1 = 32, seg = 64) takes 50.2 s against 27.2 s for sppark masked. The Rust kernel is 1.8 times slower than sppark in the proof.
 
+## 4. Speed passes at 2^20 (MEASURED under the heavy lock, host load average 21 to 43, SM clock 754 MHz, throttle 0x400)
+
+Every cell is 3 reps and equals BLST. The values are min / median in seconds. All of these are timings under load, not quiet-host numbers.
+
+- Batch-affine passes (`MORI_MSM_AFFINE`, 0 to 6 passes, k1 32 and 128): no gain. Random raw is 0.97 to 1.00 s with 0 passes and 0.97 to 1.15 s with 1 to 6 passes. Skew raw gets worse, from 0.20 to 0.23 s up to 0.25 to 0.34 s. The grid-wide inversion and the extra passes cost more than the saved multiplications. The default stays 0. Log: `~/.cache/msm-rust/sweep-aff.log`.
+- Gather prefetch in round 1 (the load of point j + 1 is issued before the addition of point j): within noise. Random raw is 0.92 to 0.94 / 0.93 to 0.95 against 0.89 to 0.97 / 0.96 to 0.98 without it. It is kept because it costs nothing. Log: `~/.cache/msm-rust/ab-pf.log`.
+- One thread per key run in the final bucket pass (`run_flags`, scan, `run_compact`, `run_sum`, in place of the grid-stride `run_scatter`, which stays available with `MORI_MSM_RUN_SCATTER=1`): the stage median goes from 102 ms to 89 ms. The total is within noise (random raw 0.90 to 0.98 s). Tests to 2^18 with the sppark comparison pass. Log: `~/.cache/msm-rust/ab-rs.log`.
+- New defaults from the k1/seg sweep: k1 = 64, seg = 16.
+
+Stage profile, random 2^20, median of the new configuration: round 1 703 ms, final bucket pass 89 ms, weighted sums 91 ms, digits plus scatter 37 ms, everything else under 5 ms. Round 1 does 16.7 M mixed additions in 0.70 s, which is 24 M additions per second or about 0.24 G Fp multiplications per second. That is about 60 percent of the 0.40 to 0.43 G/s Fp multiplication peak measured on this device. Round 1 is the whole remaining gap to sppark (0.45 to 0.50 s total under load). The next levers are in round 1: occupancy (registers per thread and the 64-thread blocks), a cheaper reduction in the multiplication, and fewer additions per point (a larger c for 2^20 and above).
+
+Benchmark gate (2^16 to 2^21, random, skew and recorded `columns-k20`, against sppark and BLST): not run yet. The coordinator put new timed runs on hold to give the heavy lock to the M7 critical path. The script `~/.cache/msm-rust/bench-gate.sh` is ready and is not queued.
+
 ## Owner question: the skew mask now costs time
 
 The mask `MSM(s + r) - MSM(r)` was added because sppark gives one thread per bucket. The Rust kernel never does, and on skewed columns it is faster without the mask: development timing at 2^20, 90 percent one value, about 0.28 s raw against about 1.8 s masked (outside the lock, host load about 28; the gate benchmark below repeats it under the lock on recorded columns). The mask is kept, as instructed. Question for the owner: may the Rust path drop the mask (`MORI_GPU_MSM_MASK=0` for `msmrs`) once the recorded-column benchmark confirms the raw kernel is skew robust? The mask is witness independent and changes no proof bytes, so the choice affects only speed.

@@ -345,8 +345,18 @@ pub unsafe extern "ptx-kernel" fn seg_reduce_affine(
     let mut o = unsafe { *off.add(t) } as usize;
     let mut cur = unsafe { *skeys.add(lo) };
     let mut acc = INF;
+    // Software pipeline: the gather of point j + 1 is issued before the addition of
+    // point j, so its memory latency overlaps the arithmetic.
+    let mut v = unsafe { *svals.add(lo) };
+    let mut p = unsafe { *bases.add((v & !SIGN) as usize) };
     for j in lo..hi {
         let key = unsafe { *skeys.add(j) };
+        let (vn, pn) = if j + 1 < hi {
+            let vn = unsafe { *svals.add(j + 1) };
+            (vn, unsafe { *bases.add((vn & !SIGN) as usize) })
+        } else {
+            (v, p)
+        };
         if key != cur {
             unsafe {
                 *okeys.add(o) = cur;
@@ -356,12 +366,12 @@ pub unsafe extern "ptx-kernel" fn seg_reduce_affine(
             cur = key;
             acc = INF;
         }
-        let v = unsafe { *svals.add(j) };
-        let mut p = unsafe { *bases.add((v & !SIGN) as usize) };
         if v & SIGN != 0 {
             p = p.neg();
         }
         acc = acc.add_affine(&p);
+        v = vn;
+        p = pn;
     }
     unsafe {
         *okeys.add(o) = cur;
@@ -437,6 +447,64 @@ pub unsafe extern "ptx-kernel" fn run_scatter(
         }
         j += gsize();
     }
+}
+
+/// Run starts of a sorted key array: flags[j] = 1 when j starts a run.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn run_flags(keys: *const u32, l: u32, flags: *mut u32) {
+    let l = l as usize;
+    let mut j = gid();
+    while j < l {
+        let f = j == 0 || unsafe { *keys.add(j - 1) != *keys.add(j) };
+        unsafe { *flags.add(j) = f as u32 };
+        j += gsize();
+    }
+}
+
+/// Compaction of the run starts: starts[off[j]] = j for each run start j.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn run_compact(
+    keys: *const u32,
+    l: u32,
+    off: *const u32,
+    starts: *mut u32,
+) {
+    let l = l as usize;
+    let mut j = gid();
+    while j < l {
+        if j == 0 || unsafe { *keys.add(j - 1) != *keys.add(j) } {
+            unsafe { *starts.add(*off.add(j) as usize) = j as u32 };
+        }
+        j += gsize();
+    }
+}
+
+/// Final pass of the bucket accumulation with one thread per key run (all lanes busy):
+/// run i covers [starts[i], starts[i + 1]) and is at most RUN_MAX long.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn run_sum(
+    keys: *const u32,
+    pts: *const Xyzz,
+    starts: *const u32,
+    nr: u32,
+    l: u32,
+    buckets: *mut Xyzz,
+) {
+    let i = gid();
+    if i >= nr as usize {
+        return;
+    }
+    let lo = unsafe { *starts.add(i) } as usize;
+    let hi = if i + 1 < nr as usize {
+        (unsafe { *starts.add(i + 1) }) as usize
+    } else {
+        l as usize
+    };
+    let mut acc = unsafe { *pts.add(lo) };
+    for t in lo + 1..hi {
+        acc = acc.add(unsafe { &*pts.add(t) });
+    }
+    unsafe { *buckets.add(*keys.add(lo) as usize) = acc };
 }
 
 /// One level of the weighted bucket sum. Window w holds `cnt` points at
@@ -544,7 +612,13 @@ fn pa_unit(q: usize, par: u32, m: usize) -> (usize, usize) {
 
 /// Output count of each unit: 1 when the two entries pair (same key), else the entries.
 #[unsafe(no_mangle)]
-pub unsafe extern "ptx-kernel" fn pa_count(keys: *const u32, m: u32, par: u32, nq: u32, cnt: *mut u32) {
+pub unsafe extern "ptx-kernel" fn pa_count(
+    keys: *const u32,
+    m: u32,
+    par: u32,
+    nq: u32,
+    cnt: *mut u32,
+) {
     let q = gid();
     if q >= nq as usize {
         return;
@@ -594,7 +668,14 @@ pub unsafe extern "ptx-kernel" fn pa_denom(
 /// Batch inversion, up sweep: chunk t of g values gets prefix products in `pre` and its
 /// total in `tot[t]`.
 #[unsafe(no_mangle)]
-pub unsafe extern "ptx-kernel" fn inv_up(v: *const Fp, n: u32, g: u32, pre: *mut Fp, tot: *mut Fp, nt: u32) {
+pub unsafe extern "ptx-kernel" fn inv_up(
+    v: *const Fp,
+    n: u32,
+    g: u32,
+    pre: *mut Fp,
+    tot: *mut Fp,
+    nt: u32,
+) {
     let t = gid();
     if t >= nt as usize {
         return;
@@ -621,7 +702,14 @@ pub unsafe extern "ptx-kernel" fn inv_fermat(v: *mut Fp, n: u32) {
 /// Batch inversion, down sweep: with `tinv[t]` the inverse of the chunk total, writes
 /// the inverse of every value of the chunk into `v` (pre holds the prefix products).
 #[unsafe(no_mangle)]
-pub unsafe extern "ptx-kernel" fn inv_down(v: *mut Fp, n: u32, g: u32, pre: *const Fp, tinv: *const Fp, nt: u32) {
+pub unsafe extern "ptx-kernel" fn inv_down(
+    v: *mut Fp,
+    n: u32,
+    g: u32,
+    pre: *const Fp,
+    tinv: *const Fp,
+    nt: u32,
+) {
     let t = gid();
     if t >= nt as usize {
         return;
@@ -633,7 +721,11 @@ pub unsafe extern "ptx-kernel" fn inv_down(v: *mut Fp, n: u32, g: u32, pre: *con
     while i > lo {
         i -= 1;
         let vi = unsafe { *v.add(i) };
-        let r = if i > lo { inv.mul(unsafe { &*pre.add(i - 1) }) } else { inv };
+        let r = if i > lo {
+            inv.mul(unsafe { &*pre.add(i - 1) })
+        } else {
+            inv
+        };
         inv = inv.mul(&vi);
         unsafe { *v.add(i) = r };
     }
