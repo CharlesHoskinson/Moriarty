@@ -43,6 +43,14 @@ pub const INF: Xyzz = Xyzz {
 };
 
 impl Xyzz {
+    /// Affine form with its own inversion (slow path, rare).
+    pub fn to_affine(&self) -> Affine {
+        if self.is_inf() {
+            return Affine { x: ZERO, y: ZERO };
+        }
+        Affine { x: self.x.mul(&self.zz.inv()), y: self.y.mul(&self.zzz.inv()) }
+    }
+
     #[inline(always)]
     pub fn is_inf(&self) -> bool {
         self.zz.is_zero()

@@ -25,6 +25,8 @@ pub struct Cfg {
     pub k2: u32,
     /// Buckets per thread in the bucket reduction.
     pub seg: u32,
+    /// Most batch-affine passes before the XYZZ rounds (0 disables them).
+    pub affine_passes: u32,
 }
 
 fn env_u32(k: &str) -> Option<u32> {
@@ -40,6 +42,7 @@ impl Cfg {
             k1: env_u32("MORI_MSM_K1").unwrap_or(32),
             k2: env_u32("MORI_MSM_K2").unwrap_or(16),
             seg: env_u32("MORI_MSM_SEG").unwrap_or(64).min(1 << (c - 1)),
+            affine_passes: env_u32("MORI_MSM_AFFINE").unwrap_or(0),
         }
     }
 }
@@ -173,6 +176,45 @@ impl Run<'_> {
     }
 }
 
+/// Fp words of one device field element.
+const FPW: usize = 6;
+const INV_NAMES: [(&str, &str); 6] = [
+    ("inv_pre0", "inv_tot0"),
+    ("inv_pre1", "inv_tot1"),
+    ("inv_pre2", "inv_tot2"),
+    ("inv_pre3", "inv_tot3"),
+    ("inv_pre4", "inv_tot4"),
+    ("inv_pre5", "inv_tot5"),
+];
+
+/// In-place inversion of `n` nonzero field elements: chunks of 32 prefix products
+/// level by level, a Fermat inversion per value at the top (at most 4,096 of them).
+fn batch_invert(
+    r: &Run<'_>,
+    ws: &mut Ws,
+    v: &mut CudaSlice<u64>,
+    n: usize,
+    lvl: usize,
+) -> Result<(), DriverError> {
+    let n32 = n as u32;
+    if n <= 4096 || lvl + 1 == INV_NAMES.len() {
+        launch!(r, "inv_fermat", cfg1(n, 64); &mut *v, &n32);
+        return Ok(());
+    }
+    let g = 32u32;
+    let nt = n.div_ceil(g as usize);
+    let nt32 = nt as u32;
+    let (pn, tn) = INV_NAMES[lvl];
+    let mut pre = ws.u64(r.s, pn, n * FPW)?;
+    let mut tot = ws.u64(r.s, tn, nt * FPW)?;
+    launch!(r, "inv_up", cfg1(nt, 64); &*v, &n32, &g, &mut pre, &mut tot, &nt32);
+    batch_invert(r, ws, &mut tot, nt, lvl + 1)?;
+    launch!(r, "inv_down", cfg1(nt, 64); &mut *v, &n32, &g, &pre, &tot, &nt32);
+    ws.put64(pn, pre);
+    ws.put64(tn, tot);
+    Ok(())
+}
+
 /// Counters of the last run (receipts and tests).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Trace {
@@ -181,6 +223,8 @@ pub struct Trace {
     pub max_bucket: usize,
     pub rounds: u32,
     pub first_round_out: usize,
+    pub affine_passes: u32,
+    pub affine_out: usize,
 }
 
 /// Longest key run the final run-aligned pass accepts.
@@ -267,10 +311,79 @@ fn run_ws(
     ws.put32("offs", offs);
     mark("scatter")?;
 
+    // 3b. Batch-affine passes: pairs of equal keys added in affine coordinates with one
+    //     batch inversion per pass. Stops when a pass would remove under 10 percent.
+    let null = 0u64;
+    let (mut pk, mut pk_name) = (skeys, "skeys");
+    let mut paff: Option<(CudaSlice<u64>, &'static str)> = None;
+    let mut l0 = m;
+    let mut bound0 = maxb;
+    for pass in 0..cfg.affine_passes {
+        let par = pass % 2;
+        let nq = if par == 0 { l0.div_ceil(2) } else { l0 / 2 + 1 };
+        let (l32, nq32) = (l0 as u32, nq as u32);
+        let mut cnt = ws.u32(s, "pa_cnt", nq)?;
+        launch!(r, "pa_count", cfg1(nq, 128); &pk, &l32, &par, &nq32, &mut cnt);
+        let mut off = ws.u32(s, "pa_off", nq)?;
+        let (lo, _, _) = r.scan(ws, &cnt, &mut off, nq)?;
+        ws.put32("pa_cnt", cnt);
+        let lo = lo as usize;
+        if lo * 10 > l0 * 9 {
+            ws.put32("pa_off", off);
+            break;
+        }
+        let mut den = ws.u64(s, "pa_den", nq * FPW)?;
+        match &paff {
+            None => {
+                launch!(r, "pa_denom", cfg_strided(nq); &pk, &svals, &t.pts, &null, &l32, &par, &nq32, &mut den)
+            }
+            Some((p, _)) => {
+                launch!(r, "pa_denom", cfg_strided(nq); &pk, &null, &null, p, &l32, &par, &nq32, &mut den)
+            }
+        }
+        batch_invert(&r, ws, &mut den, nq, 0)?;
+        let on: [(&str, &str); 2] = [("pa_k0", "pa_p0"), ("pa_k1", "pa_p1")];
+        let (kn, pn) = on[pass as usize % 2];
+        let mut ok = ws.u32(s, kn, lo)?;
+        let mut op = ws.u64(s, pn, lo * AFF)?;
+        match &paff {
+            None => {
+                launch!(r, "pa_apply", cfg_strided(nq); &pk, &svals, &t.pts, &null, &l32, &par, &nq32, &den, &off, &mut ok, &mut op)
+            }
+            Some((p, _)) => {
+                launch!(r, "pa_apply", cfg_strided(nq); &pk, &null, &null, p, &l32, &par, &nq32, &den, &off, &mut ok, &mut op)
+            }
+        }
+        ws.put64("pa_den", den);
+        ws.put32("pa_off", off);
+        ws.put32(pk_name, pk);
+        if let Some((p, name)) = paff.take() {
+            ws.put64(name, p);
+        }
+        (pk, pk_name) = (ok, kn);
+        paff = Some((op, pn));
+        l0 = lo;
+        // A run of x entries keeps at most ceil(x / 2) + 1 after a pass.
+        bound0 = bound0.div_ceil(2) + 1;
+        tr.affine_passes += 1;
+        tr.affine_out = lo;
+        mark("affine")?;
+    }
+    // Explicit affine points are the "bases" of the first XYZZ round, indexed by iota.
+    let mut ident: Option<CudaSlice<u32>> = None;
+    if paff.is_some() {
+        let mut v = ws.u32(s, "iota", l0)?;
+        let l32 = l0 as u32;
+        launch!(r, "iota", cfg_strided(l0); &mut v, &l32);
+        ident = Some(v);
+    }
+    let first_vals = ident.as_ref().unwrap_or(&svals);
+    let first_bases = paff.as_ref().map(|(p, _)| p).unwrap_or(&t.pts);
+
     // 4. Load-balanced segmented reduction rounds. A run of length x becomes at most
     //    ceil(x / k) + 1 entries per round; stop when every run is at most RUN_MAX.
-    let mut bound = maxb;
-    let (mut ck, mut cp, mut l) = (skeys, None::<CudaSlice<u64>>, m);
+    let mut bound = bound0;
+    let (mut ck, mut cp, mut l) = (pk, None::<CudaSlice<u64>>, l0);
     let mut slot = 0usize;
     const KN: [&str; 2] = ["rk0", "rk1"];
     const PN: [&str; 2] = ["rp0", "rp1"];
@@ -289,7 +402,7 @@ fn run_ws(
         let mut op = ws.u64(s, PN[slot], l2 * XYZZ)?;
         match &cp {
             None => {
-                launch!(r, "seg_reduce_affine", cfg1(nt, 64); &ck, &svals, &l32, &k, &shift, &nt32, &t.pts, &off, &mut ok, &mut op)
+                launch!(r, "seg_reduce_affine", cfg1(nt, 64); &ck, first_vals, &l32, &k, &shift, &nt32, first_bases, &off, &mut ok, &mut op)
             }
             Some(p) => {
                 launch!(r, "seg_reduce_xyzz", cfg1(nt, 64); &ck, p, &l32, &k, &shift, &nt32, &off, &mut ok, &mut op)
@@ -298,7 +411,7 @@ fn run_ws(
         ws.put32("off", off);
         // Return the input buffers to the pool.
         if tr.rounds == 0 {
-            ws.put32("skeys", ck);
+            ws.put32(pk_name, ck);
             tr.first_round_out = l2;
         } else {
             ws.put32(KN[1 - slot], ck);
@@ -311,6 +424,12 @@ fn run_ws(
         bound = bound.div_ceil(k as usize) + 1;
         tr.rounds += 1;
         mark("round")?;
+    }
+    if let Some(v) = ident {
+        ws.put32("iota", v);
+    }
+    if let Some((p, name)) = paff {
+        ws.put64(name, p);
     }
     ws.put32("svals", svals);
 
@@ -374,8 +493,8 @@ fn run_ws(
     mark("final")?;
     if prof {
         eprintln!(
-            "mori-msm n={n} c={c} m={m} buckets={distinct} maxb={maxb} rounds={} r1out={} ms={marks:?}",
-            tr.rounds, tr.first_round_out
+            "mori-msm n={n} c={c} m={m} buckets={distinct} maxb={maxb} affine={}/{} rounds={} r1out={} ms={marks:?}",
+            tr.affine_passes, tr.affine_out, tr.rounds, tr.first_round_out
         );
     }
     Ok((res, tr))

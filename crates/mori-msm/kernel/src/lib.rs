@@ -508,6 +508,209 @@ pub unsafe extern "ptx-kernel" fn sum_rows(
     unsafe { *out.add(j) = acc };
 }
 
+// ---------------------------------------------------------------- batch-affine passes
+//
+// One pass pairs sorted entries (2q + par, 2q + 1 + par) with equal keys and adds each
+// pair in affine coordinates, lambda = (y2 - y1) / (x2 - x1), with all denominators of
+// the pass inverted together (Montgomery batch inversion: 3 multiplications per element
+// plus one Fermat inversion per top-level value). An affine addition then costs about
+// 6 multiplications against 10 for the mixed XYZZ addition (ZKProphet p.10).
+
+/// Point j of a pass input: a signed base (pass 1, `vals` given) or an explicit point.
+#[inline(always)]
+unsafe fn pa_point(j: usize, vals: *const u32, bases: *const Affine, pts: *const Affine) -> Affine {
+    unsafe {
+        if vals.is_null() {
+            *pts.add(j)
+        } else {
+            let v = *vals.add(j);
+            let p = *bases.add((v & !SIGN) as usize);
+            if v & SIGN != 0 { p.neg() } else { p }
+        }
+    }
+}
+
+/// Unit q of a pass: entries 2q - par and 2q + 1 - par (par in {0, 1}); unit 0 with
+/// par = 1 is the single entry 0. Returns (first, second or NONE).
+#[inline(always)]
+fn pa_unit(q: usize, par: u32, m: usize) -> (usize, usize) {
+    let a = (2 * q).wrapping_sub(par as usize);
+    if par == 1 && q == 0 {
+        return (0, usize::MAX);
+    }
+    let b = a + 1;
+    (a, if b < m { b } else { usize::MAX })
+}
+
+/// Output count of each unit: 1 when the two entries pair (same key), else the entries.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn pa_count(keys: *const u32, m: u32, par: u32, nq: u32, cnt: *mut u32) {
+    let q = gid();
+    if q >= nq as usize {
+        return;
+    }
+    let (a, b) = pa_unit(q, par, m as usize);
+    let c = if b == usize::MAX {
+        1
+    } else if unsafe { *keys.add(a) == *keys.add(b) } {
+        1
+    } else {
+        2
+    };
+    unsafe { *cnt.add(q) = c };
+}
+
+/// Denominator x2 - x1 of each pairing unit, ONE elsewhere and for equal x (slow path).
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn pa_denom(
+    keys: *const u32,
+    vals: *const u32,
+    bases: *const Affine,
+    pts: *const Affine,
+    m: u32,
+    par: u32,
+    nq: u32,
+    den: *mut Fp,
+) {
+    let mut q = gid();
+    while q < nq as usize {
+        let (a, b) = pa_unit(q, par, m as usize);
+        let mut d = fp::ONE;
+        if b != usize::MAX && unsafe { *keys.add(a) == *keys.add(b) } {
+            let pa = unsafe { pa_point(a, vals, bases, pts) };
+            let pb = unsafe { pa_point(b, vals, bases, pts) };
+            if !pa.is_inf() && !pb.is_inf() {
+                let x = pb.x.sub(&pa.x);
+                if !x.is_zero() {
+                    d = x;
+                }
+            }
+        }
+        unsafe { *den.add(q) = d };
+        q += gsize();
+    }
+}
+
+/// Batch inversion, up sweep: chunk t of g values gets prefix products in `pre` and its
+/// total in `tot[t]`.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn inv_up(v: *const Fp, n: u32, g: u32, pre: *mut Fp, tot: *mut Fp, nt: u32) {
+    let t = gid();
+    if t >= nt as usize {
+        return;
+    }
+    let lo = t * g as usize;
+    let hi = core::cmp::min(lo + g as usize, n as usize);
+    let mut acc = fp::ONE;
+    for i in lo..hi {
+        acc = acc.mul(unsafe { &*v.add(i) });
+        unsafe { *pre.add(i) = acc };
+    }
+    unsafe { *tot.add(t) = acc };
+}
+
+/// Batch inversion, top: every value inverted on its own (Fermat), in place.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn inv_fermat(v: *mut Fp, n: u32) {
+    let i = gid();
+    if i < n as usize {
+        unsafe { *v.add(i) = (*v.add(i)).inv() };
+    }
+}
+
+/// Batch inversion, down sweep: with `tinv[t]` the inverse of the chunk total, writes
+/// the inverse of every value of the chunk into `v` (pre holds the prefix products).
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn inv_down(v: *mut Fp, n: u32, g: u32, pre: *const Fp, tinv: *const Fp, nt: u32) {
+    let t = gid();
+    if t >= nt as usize {
+        return;
+    }
+    let lo = t * g as usize;
+    let hi = core::cmp::min(lo + g as usize, n as usize);
+    let mut inv = unsafe { *tinv.add(t) }; // (v_lo ... v_i)^-1, starting at i = hi - 1
+    let mut i = hi;
+    while i > lo {
+        i -= 1;
+        let vi = unsafe { *v.add(i) };
+        let r = if i > lo { inv.mul(unsafe { &*pre.add(i - 1) }) } else { inv };
+        inv = inv.mul(&vi);
+        unsafe { *v.add(i) = r };
+    }
+}
+
+/// Applies a pass: each unit writes its affine sum (pairs) or its entries to the output
+/// at `off[q]`. `dinv` holds the inverted denominators.
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn pa_apply(
+    keys: *const u32,
+    vals: *const u32,
+    bases: *const Affine,
+    pts: *const Affine,
+    m: u32,
+    par: u32,
+    nq: u32,
+    dinv: *const Fp,
+    off: *const u32,
+    okeys: *mut u32,
+    opts: *mut Affine,
+) {
+    let mut q = gid();
+    while q < nq as usize {
+        let (a, b) = pa_unit(q, par, m as usize);
+        let o = unsafe { *off.add(q) } as usize;
+        let pa = unsafe { pa_point(a, vals, bases, pts) };
+        let ka = unsafe { *keys.add(a) };
+        if b == usize::MAX {
+            unsafe {
+                *okeys.add(o) = ka;
+                *opts.add(o) = pa;
+            }
+        } else {
+            let pb = unsafe { pa_point(b, vals, bases, pts) };
+            let kb = unsafe { *keys.add(b) };
+            if ka != kb {
+                unsafe {
+                    *okeys.add(o) = ka;
+                    *opts.add(o) = pa;
+                    *okeys.add(o + 1) = kb;
+                    *opts.add(o + 1) = pb;
+                }
+            } else {
+                let dx = pb.x.sub(&pa.x);
+                let r = if pa.is_inf() {
+                    pb
+                } else if pb.is_inf() {
+                    pa
+                } else if dx.is_zero() {
+                    // P + P or P + (-P): exact XYZZ path with its own inversion (rare).
+                    Xyzz::from_affine(&pa).add_affine(&pb).to_affine()
+                } else {
+                    let lam = pb.y.sub(&pa.y).mul(unsafe { &*dinv.add(q) });
+                    let x3 = lam.sqr().sub(&pa.x).sub(&pb.x);
+                    let y3 = lam.mul(&pa.x.sub(&x3)).sub(&pa.y);
+                    Affine { x: x3, y: y3 }
+                };
+                unsafe {
+                    *okeys.add(o) = ka;
+                    *opts.add(o) = r;
+                }
+            }
+        }
+        q += gsize();
+    }
+}
+
+/// vals[j] = j (explicit points as a "base table" for the XYZZ rounds).
+#[unsafe(no_mangle)]
+pub unsafe extern "ptx-kernel" fn iota(v: *mut u32, n: u32) {
+    let mut j = gid();
+    while j < n as usize {
+        unsafe { *v.add(j) = j as u32 };
+        j += gsize();
+    }
+}
+
 /// Calibration: 8 independent u32 multiply-add chains, `reps` rounds.
 #[unsafe(no_mangle)]
 pub unsafe extern "ptx-kernel" fn imad_test(out: *mut u32, reps: u32) {

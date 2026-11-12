@@ -34,4 +34,28 @@ fn main() {
     assert!(st.success(), "kernel build failed");
     let ptx = tdir.join("nvptx64-nvidia-cuda/release/mori_msm_kernel.ptx");
     std::fs::copy(&ptx, out.join("mori_msm_kernel.ptx")).expect("copy ptx");
+    // Ahead-of-time SASS for this host's GPU, so a process never pays the driver's PTX
+    // JIT (126 s with an empty cache). MORI_MSM_ARCH overrides; no ptxas means PTX only.
+    println!("cargo:rerun-if-env-changed=MORI_MSM_ARCH");
+    println!("cargo:rustc-check-cfg=cfg(mori_msm_cubin)");
+    let arch = env::var("MORI_MSM_ARCH").unwrap_or_else(|_| "sm_121".into());
+    let ptxas = ["ptxas", "/opt/cuda/bin/ptxas"].into_iter().find(|p| {
+        Command::new(p)
+            .arg("--version")
+            .output()
+            .is_ok_and(|o| o.status.success())
+    });
+    let cubin = out.join("mori_msm_kernel.cubin");
+    if let Some(ptxas) = ptxas {
+        let st = Command::new(ptxas)
+            .args(["-O3", &format!("-arch={arch}")])
+            .arg(&ptx)
+            .arg("-o")
+            .arg(&cubin)
+            .status()
+            .expect("ptxas");
+        assert!(st.success(), "ptxas failed");
+        println!("cargo:rustc-cfg=mori_msm_cubin");
+        println!("cargo:rustc-env=MORI_MSM_ARCH={arch}");
+    }
 }

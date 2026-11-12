@@ -12,6 +12,8 @@ build = "build.rs"
 default = []
 # Build kernel/ to PTX and load it through the CUDA driver (cudarc).
 cuda = ["dep:cudarc"]
+# Tests and bench also compare with the sppark path of mori-gpu (needs nvcc).
+sppark = ["cuda", "dep:mori-gpu"]
 
 [dependencies]
 cudarc = { version = "=0.19.10", default-features = false, features = ["std", "driver", "nvrtc", "cuda-version-from-build-system", "dynamic-loading"], optional = true }
@@ -19,6 +21,7 @@ midnight-curves = "=0.3.1"
 blst = "=0.3.17"
 ff = "=0.13.1"
 group = "=0.13.0"
+mori-gpu = { path = "../mori-gpu", features = ["cuda"], optional = true }
 
 [dev-dependencies]
 rand = "=0.8.8"

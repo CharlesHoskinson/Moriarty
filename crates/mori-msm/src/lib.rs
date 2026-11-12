@@ -13,11 +13,29 @@ pub mod mask;
 #[cfg(feature = "cuda")]
 pub mod msm;
 
+/// Smallest log size sent to the GPU: `MORIARTY_GPU_MIN_K` or `MORI_GPU_MIN_K`,
+/// default 14, the same rule as `mori_gpu::min_k`.
+pub fn min_k() -> u32 {
+    static K: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    *K.get_or_init(|| {
+        std::env::var("MORIARTY_GPU_MIN_K")
+            .or_else(|_| std::env::var("MORI_GPU_MIN_K"))
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(14)
+    })
+}
+
 /// Drop-in for `mori_gpu::msm_g1`: `sum scalars[i] * bases[i]` with the skew mask
 /// (bases may be longer; the prefix is used). `None` means "not taken": run BLST.
+/// Not taken below 2^min_k, when n > bases.len(), or without a device.
 pub fn msm_g1(scalars: &[Fq], bases: &[G1Projective]) -> Option<G1Projective> {
     #[cfg(feature = "cuda")]
     {
+        let n = scalars.len();
+        if n == 0 || n > bases.len() || n < (1usize << min_k()) {
+            return None;
+        }
         mask::msm_g1(scalars, bases)
     }
     #[cfg(not(feature = "cuda"))]

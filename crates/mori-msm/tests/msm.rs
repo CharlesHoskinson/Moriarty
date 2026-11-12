@@ -25,8 +25,18 @@ fn check(s: &[Fq], b: &[G1Projective], what: &str) {
     let want = G1Projective::multi_exp(&b[..s.len()], s);
     let raw = mori_msm::msm::msm_raw(s, b).unwrap_or_else(|| panic!("{what}: not taken"));
     assert_eq!(raw.to_affine(), want.to_affine(), "{what}: raw");
-    let masked = mori_msm::msm_g1(s, b).unwrap_or_else(|| panic!("{what}: masked not taken"));
+    let masked = mori_msm::mask::msm_g1(s, b).unwrap_or_else(|| panic!("{what}: masked not taken"));
     assert_eq!(masked.to_affine(), want.to_affine(), "{what}: masked");
+    #[cfg(feature = "sppark")]
+    if s.len() >= 1 << mori_gpu::min_k() {
+        let sp = mori_gpu::msm_g1(s, b).unwrap_or_else(|| panic!("{what}: sppark not taken"));
+        assert_eq!(sp.to_affine(), want.to_affine(), "{what}: sppark");
+        assert_eq!(
+            sp.to_affine(),
+            raw.to_affine(),
+            "{what}: sppark against rust"
+        );
+    }
 }
 
 fn max_lg() -> u32 {
@@ -34,6 +44,22 @@ fn max_lg() -> u32 {
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(16)
+}
+
+#[test]
+fn drop_in_gate() {
+    let b = points(1 << 10, 3);
+    let s = vec![Fq::ONE; 1 << 10];
+    if mori_msm::min_k() > 10 {
+        assert!(
+            mori_msm::msm_g1(&s, &b).is_none(),
+            "below min_k is not taken"
+        );
+    }
+    assert!(
+        mori_msm::msm_g1(&s, &b[..100]).is_none(),
+        "n > bases is not taken"
+    );
 }
 
 #[test]

@@ -9,7 +9,8 @@
 //!   GW_SRS      ceremony SRS file (bls_midnight_2p20 or 2p21)
 //!   GW_BUNDLE   a `gp_fold_and_key` output directory (node/, key/decider.relation, bundle.json)
 //!   GW_K        decider k (20 or 21)
-//!   GW_CONFIGS  ';'-separated phase lists, first is the reference (default "cpu;all")
+//!   GW_CONFIGS  ;-separated phase lists, first is the reference (default "cpu;all");
+//!               phases msm, ntt, coset, quotient, msmrs (MSM on the Rust kernel)
 //!   GW_REPS     proofs per config (default 1)
 //!   GW_SEED     u64 test seed (default 20261111)
 //!   GW_DET      1: fixed lookup leftover order and, unless GW_CHIP_SEED is set, a fixed
@@ -237,6 +238,7 @@ fn run<R: Relation<Instance = Vec<F>>>(
             let need = |bit: u32, n: u64| mask & bit == 0 || n > 0;
             let valid = st.fallbacks == 0
                 && need(mori_gpu_prover::MSM, st.msm_calls)
+                && need(mori_gpu_prover::MSM_RUST, st.msm_calls)
                 && need(mori_gpu_prover::NTT, st.ntt_calls)
                 && need(mori_gpu_prover::COSET, st.coset_calls)
                 && need(mori_gpu_prover::QUOTIENT, st.quotient_calls);
