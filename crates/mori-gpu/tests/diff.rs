@@ -149,6 +149,31 @@ fn msm_heavy_repeated_scalars() {
 }
 
 #[test]
+fn msm_witness_like_repeats() {
+    gpu();
+    // Range-checked columns: 1,024 small values, each repeated 256 times, below the
+    // n / 64 threshold of the old guard. Also zeros and a few random values.
+    let n = 1 << 18;
+    let b = rnd_points(n, 41);
+    let r = rnd_scalars(n, 42);
+    let s: Vec<Fq> = (0..n)
+        .map(|i| match i % 8 {
+            7 => r[i],
+            6 => Fq::ZERO,
+            _ => Fq::from((i % 1024) as u64),
+        })
+        .collect();
+    let t = std::time::Instant::now();
+    check_msm(&s, &b, "witness-like repeats");
+    eprintln!("witness-like repeats 2^18: {:?}", t.elapsed());
+    assert!(
+        t.elapsed().as_secs_f64() < 5.0,
+        "skew mask: {:?}",
+        t.elapsed()
+    );
+}
+
+#[test]
 fn msm_large_sizes() {
     gpu();
     let base = rnd_points((1 << 21) + 1, 31);

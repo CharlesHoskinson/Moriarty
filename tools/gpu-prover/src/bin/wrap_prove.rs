@@ -12,7 +12,9 @@
 //!   GW_CONFIGS  ';'-separated phase lists, first is the reference (default "cpu;all")
 //!   GW_REPS     proofs per config (default 1)
 //!   GW_SEED     u64 test seed (default 20261111)
-//!   GW_DET      1: fixed lookup leftover order (needed for byte identity across runs)
+//!   GW_DET      1: fixed lookup leftover order and, unless GW_CHIP_SEED is set, a fixed
+//!               foreign-ECC incomplete-addition point (GW_CHIP_SEED = GW_SEED); both are
+//!               needed for byte identity across runs and are test-only
 //!   GW_OUT      output directory (measure.jsonl, proofs)
 use std::{fs, io::Cursor, io::Write, path::PathBuf, time::Instant};
 
@@ -83,12 +85,17 @@ fn main() {
     let configs = std::env::var("GW_CONFIGS").unwrap_or_else(|_| "cpu;all".into());
     let det = std::env::var("GW_DET").as_deref() == Ok("1");
     midnight_proofs::hooks::DETERMINISTIC_LOOKUP.store(det, std::sync::atomic::Ordering::Relaxed);
+    if det && std::env::var("GW_CHIP_SEED").is_err() {
+        // SAFETY: set before any thread is spawned.
+        unsafe { std::env::set_var("GW_CHIP_SEED", seed.to_string()) };
+    }
+    let chip_seed = std::env::var("GW_CHIP_SEED").ok();
     let qcheck = std::env::var("GW_QCHECK").as_deref() == Ok("1");
     midnight_proofs::hooks::QUOTIENT_CHECK.store(qcheck, std::sync::atomic::Ordering::Relaxed);
 
     let info = mori_gpu_prover::install(0);
     rec(
-        json!({"phase": "start", "k": k, "seed": seed, "deterministic_lookup": det,
+        json!({"phase": "start", "k": k, "seed": seed, "deterministic_lookup": det, "chip_seed": chip_seed,
                "rayon_threads": rayon_threads(), "gpu": info.map(|i| format!("{i:?}")),
                "configs": configs}),
     );
@@ -190,6 +197,12 @@ fn run<R: Relation<Instance = Vec<F>>>(
     let dvk = setup_vk(dp, rel);
     let dpk = setup_pk(rel, &dvk);
     let vk_sha = sha256_hex(&mori_recursion::util::vk_bytes(&dvk));
+    let hexes: Vec<String> = public.iter().map(mori_recursion::util::f_to_hex).collect();
+    fs::write(
+        out.join(format!("public-k{k}.json")),
+        serde_json::to_vec(&hexes).unwrap(),
+    )
+    .unwrap();
     let dom = dvk.vk().get_domain();
     rec(
         json!({"phase": "keygen", "k": k, "vk_k": dvk.k(), "seconds": t.elapsed().as_secs_f64(),
@@ -267,6 +280,7 @@ fn run<R: Relation<Instance = Vec<F>>>(
                        "byte_identical_to_reference": same, "gpu_path_valid": valid,
                        "msm_table_builds_total": mori_gpu::table_builds(),
                        "quotient_shape_calcs_slots_lookups_sets_resident": *midnight_proofs::hooks::LAST_QUOTIENT_SHAPE.lock().unwrap(),
+                       "phase_seconds_advice_trace_nu_finalise": *midnight_proofs::hooks::PHASE_SECONDS.lock().unwrap(),
                        "quotient_check_diffs_total": midnight_proofs::hooks::quotient_check_diffs(), "library_verify": lib_ok,
                        "ledger9_verify": ledger_ok, "ledger9_verify_seconds": ledger_s,
                        "negative_control_rejected": neg_rejected,

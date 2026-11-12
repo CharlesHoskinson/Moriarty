@@ -102,7 +102,10 @@ where
 
     let instance = compute_instances(params, pk, instances, nb_committed_instances, transcript)?;
 
+    let t_adv = std::time::Instant::now();
     let (advice, challenges) = parse_advices(params, pk, circuits, instances, transcript, rng)?;
+    crate::hooks::phase_set(0, t_adv);
+    let t_rest = std::time::Instant::now();
 
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: F = transcript.squeeze_challenge();
@@ -217,6 +220,7 @@ where
         })
         .collect::<Vec<_>>();
 
+    crate::hooks::phase_set(1, t_rest);
     Ok(ProverTrace {
         advice_polys,
         instance_polys,
@@ -264,7 +268,10 @@ where
 
     let domain = pk.get_vk().get_domain();
 
+    let t_nu = std::time::Instant::now();
     let nu_poly = compute_nu_poly(pk, &trace);
+    crate::hooks::phase_set(2, t_nu);
+    let t_fin = std::time::Instant::now();
 
     let ProverTrace {
         advice_polys,
@@ -335,7 +342,9 @@ where
         x,
     );
 
-    CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
+    let r = CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure);
+    crate::hooks::phase_set(3, t_fin);
+    r
 }
 
 /// This creates a proof for the provided `circuit` when given the public

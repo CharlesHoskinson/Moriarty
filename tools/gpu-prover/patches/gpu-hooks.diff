@@ -1,9 +1,9 @@
-diff --git a/midnight-proofs-0.8.3/src/hooks.rs b/midnight-proofs-0.8.3/src/hooks.rs
+diff --git c/src/hooks.rs i/src/hooks.rs
 new file mode 100644
-index 0000000..a3c2c94
+index 0000000..af5ca98
 --- /dev/null
-+++ b/midnight-proofs-0.8.3/src/hooks.rs
-@@ -0,0 +1,235 @@
++++ i/src/hooks.rs
+@@ -0,0 +1,245 @@
 +//! GPU hooks (Moriarty gpu-wrap patch, design 3.7 / gpu.md F6).
 +#![allow(unsafe_code)]
 +//!
@@ -100,6 +100,16 @@ index 0000000..a3c2c94
 +/// Shape of the last quotient job: (gate calculations, scratch slots, lookups,
 +/// permutation sets, device-resident cosets).
 +pub static LAST_QUOTIENT_SHAPE: std::sync::Mutex<(u32, u32, u32, u32, u32)> = std::sync::Mutex::new((0, 0, 0, 0, 0));
++
++/// Wall seconds of the last proof by phase: [advice (synthesis and advice commits),
++/// rest of the trace (lookups, permutation and trash products, their commits),
++/// quotient numerator `compute_nu_poly`, finalise without the numerator (h(X)
++/// commits, evaluations, multiopen)].
++pub static PHASE_SECONDS: std::sync::Mutex<[f64; 4]> = std::sync::Mutex::new([0.0; 4]);
++
++pub(crate) fn phase_set(i: usize, t: std::time::Instant) {
++    PHASE_SECONDS.lock().unwrap()[i] = t.elapsed().as_secs_f64();
++}
 +
 +/// Run-time switch for the quotient hook (to measure phases separately).
 +pub static QUOTIENT_ON: AtomicBool = AtomicBool::new(true);
@@ -239,10 +249,10 @@ index 0000000..a3c2c94
 +    pub scratch: *mut Fq,
 +    pub stride: u64,
 +}
-diff --git a/midnight-proofs-0.8.3/src/lib.rs b/midnight-proofs-0.8.3/src/lib.rs
+diff --git c/src/lib.rs i/src/lib.rs
 index b5ca644..f67c331 100644
---- a/midnight-proofs-0.8.3/src/lib.rs
-+++ b/midnight-proofs-0.8.3/src/lib.rs
+--- c/src/lib.rs
++++ i/src/lib.rs
 @@ -9,6 +9,7 @@
  #![deny(unsafe_code)]
  
@@ -251,10 +261,10 @@ index b5ca644..f67c331 100644
  pub mod plonk;
  pub mod poly;
  pub mod transcript;
-diff --git a/midnight-proofs-0.8.3/src/plonk/evaluation.rs b/midnight-proofs-0.8.3/src/plonk/evaluation.rs
+diff --git c/src/plonk/evaluation.rs i/src/plonk/evaluation.rs
 index 1371a0a..079efe2 100644
---- a/midnight-proofs-0.8.3/src/plonk/evaluation.rs
-+++ b/midnight-proofs-0.8.3/src/plonk/evaluation.rs
+--- c/src/plonk/evaluation.rs
++++ i/src/plonk/evaluation.rs
 @@ -819,3 +819,266 @@ pub fn evaluate<F: Field, B: PolynomialRepresentation>(
      });
      values
@@ -522,10 +532,10 @@ index 1371a0a..079efe2 100644
 +        })
 +    }
 +}
-diff --git a/midnight-proofs-0.8.3/src/plonk/lookup/prover.rs b/midnight-proofs-0.8.3/src/plonk/lookup/prover.rs
+diff --git c/src/plonk/lookup/prover.rs i/src/plonk/lookup/prover.rs
 index b2d8ef4..52aec35 100644
---- a/midnight-proofs-0.8.3/src/plonk/lookup/prover.rs
-+++ b/midnight-proofs-0.8.3/src/plonk/lookup/prover.rs
+--- c/src/plonk/lookup/prover.rs
++++ i/src/plonk/lookup/prover.rs
 @@ -427,7 +427,12 @@ where
          .collect::<Result<Vec<_>, _>>()?;
  
@@ -540,11 +550,52 @@ index b2d8ef4..52aec35 100644
          for _ in 0..*count {
              permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
          }
-diff --git a/midnight-proofs-0.8.3/src/plonk/prover.rs b/midnight-proofs-0.8.3/src/plonk/prover.rs
-index 4b6fbbf..be92e43 100644
---- a/midnight-proofs-0.8.3/src/plonk/prover.rs
-+++ b/midnight-proofs-0.8.3/src/plonk/prover.rs
-@@ -610,6 +610,22 @@ pub(super) fn compute_nu_poly<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommit
+diff --git c/src/plonk/prover.rs i/src/plonk/prover.rs
+index 4b6fbbf..2be6b8a 100644
+--- c/src/plonk/prover.rs
++++ i/src/plonk/prover.rs
+@@ -102,7 +102,10 @@ where
+ 
+     let instance = compute_instances(params, pk, instances, nb_committed_instances, transcript)?;
+ 
++    let t_adv = std::time::Instant::now();
+     let (advice, challenges) = parse_advices(params, pk, circuits, instances, transcript, rng)?;
++    crate::hooks::phase_set(0, t_adv);
++    let t_rest = std::time::Instant::now();
+ 
+     // Sample theta challenge for keeping lookup columns linearly independent
+     let theta: F = transcript.squeeze_challenge();
+@@ -217,6 +220,7 @@ where
+         })
+         .collect::<Vec<_>>();
+ 
++    crate::hooks::phase_set(1, t_rest);
+     Ok(ProverTrace {
+         advice_polys,
+         instance_polys,
+@@ -264,7 +268,10 @@ where
+ 
+     let domain = pk.get_vk().get_domain();
+ 
++    let t_nu = std::time::Instant::now();
+     let nu_poly = compute_nu_poly(pk, &trace);
++    crate::hooks::phase_set(2, t_nu);
++    let t_fin = std::time::Instant::now();
+ 
+     let ProverTrace {
+         advice_polys,
+@@ -335,7 +342,9 @@ where
+         x,
+     );
+ 
+-    CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
++    let r = CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure);
++    crate::hooks::phase_set(3, t_fin);
++    r
+ }
+ 
+ /// This creates a proof for the provided `circuit` when given the public
+@@ -610,6 +619,22 @@ pub(super) fn compute_nu_poly<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommit
          y,
          ..
      } = &trace;
@@ -567,10 +618,10 @@ index 4b6fbbf..be92e43 100644
      // Calculate the advice and instance cosets
      let advice_cosets: Vec<Vec<Polynomial<F, ExtendedLagrangeCoeff>>> = advice_polys
          .iter()
-diff --git a/midnight-proofs-0.8.3/src/poly/domain.rs b/midnight-proofs-0.8.3/src/poly/domain.rs
+diff --git c/src/poly/domain.rs i/src/poly/domain.rs
 index dccaea8..e1c33cf 100644
---- a/midnight-proofs-0.8.3/src/poly/domain.rs
-+++ b/midnight-proofs-0.8.3/src/poly/domain.rs
+--- c/src/poly/domain.rs
++++ i/src/poly/domain.rs
 @@ -5,7 +5,19 @@ use std::marker::PhantomData;
  
  use ff::WithSmallOrderMulGroup;
@@ -651,10 +702,10 @@ index dccaea8..e1c33cf 100644
      /// Get the size of the domain
      pub fn k(&self) -> u32 {
          self.k
-diff --git a/midnight-proofs-0.8.3/src/poly/kzg/msm.rs b/midnight-proofs-0.8.3/src/poly/kzg/msm.rs
+diff --git c/src/poly/kzg/msm.rs i/src/poly/kzg/msm.rs
 index 927647c..dc8940e 100644
---- a/midnight-proofs-0.8.3/src/poly/kzg/msm.rs
-+++ b/midnight-proofs-0.8.3/src/poly/kzg/msm.rs
+--- c/src/poly/kzg/msm.rs
++++ i/src/poly/kzg/msm.rs
 @@ -161,6 +161,17 @@ where
  #[allow(unsafe_code)]
  /// Wrapper over the MSM function to use the blstrs underlying function

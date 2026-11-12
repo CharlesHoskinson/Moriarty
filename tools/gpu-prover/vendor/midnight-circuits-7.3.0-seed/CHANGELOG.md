@@ -1,0 +1,379 @@
+# Changelog
+
+We use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+* MAJOR: Incremented on incompatible API changes
+* MINOR: Incremented on backward-compatible API changes that may affect the VKs
+* PATCH: Incremented on minor changes and bug fixes that do not alter the VKs
+
+## [Unreleased]
+### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
+## [7.3.0]
+### Added
+* Added the `is_collapsed` function to [#553](https://github.com/midnightntwrk/midnight-zk/pull/553/)
+* Added `EccInstructions::x` and `y`, which take a layouter and, on Weierstrass curves, assert that the point is not the identity; `x_coordinate` and `y_coordinate` are deprecated [#612](https://github.com/midnightntwrk/midnight-zk/issues/612)
+
+### Changed
+* `assign_as_public_input` always performs the in-circuit checks of `assign` (affects the VKs of circuits with byte, Jubjub point or BLS12-381 point public inputs) [#598](https://github.com/midnightntwrk/midnight-zk/pull/598)
+* `DivisionInstructions::div_rem` and `rem` panic when `divisor * (dividend_bound / divisor + 1)` exceeds the field modulus, in particular when no bound is given; `DivisionInstructions` is deprecated [#606](https://github.com/midnightntwrk/midnight-zk/pull/606)
+* In-circuit `as_public_input` outputs a canonical encoding for foreign-field elements and foreign Weierstrass points (including the identity) (affects the VKs of circuits with such public inputs) [#612](https://github.com/midnightntwrk/midnight-zk/issues/612)
+
+### Fixed
+* Foreign-field `mul` no longer ignores the multiplying constant when one of the operands is a fixed one [#605](https://github.com/midnightntwrk/midnight-zk/pull/605)
+* `div` and `inv` of `AssignedScalarOfNativeCurve` now enforce a non-zero divisor in-circuit and accept non-canonical inputs (affects the VKs of circuits using Jubjub scalar division or inversion) [#603](https://github.com/midnightntwrk/midnight-zk/pull/603)
+* `PartialEq` for `AssignedBigUint` no longer treats a limb vector and its proper prefix as equal [#601](https://github.com/midnightntwrk/midnight-zk/pull/601)
+* Lower bound of the foreign Edwards addition identity for `sign = -1` (affects the VKs of circuits using foreign Edwards curves) [#609](https://github.com/midnightntwrk/midnight-zk/pull/609)
+* In-circuit `as_public_input` of Jubjub scalars encodes the canonical value, as `Instantiable::as_public_input` does (affects the VKs of circuits with Jubjub scalar public inputs) [#611](https://github.com/midnightntwrk/midnight-zk/pull/611)
+
+## [7.2.4]
+### Changed
+* Make `Instantiable::from_public_inputs` fallible [#485](https://github.com/midnightntwrk/midnight-zk/pull/485)
+
+## [7.2.3]
+### Changed
+* Require `midnight-proofs` >= 0.8.2 for the verifier per-proof length check [#482](https://github.com/midnightntwrk/midnight-zk/pull/482)
+
+## [7.2.2]
+### Fixed
+* Fix `InnerValue` for `AssignedScalarOfNativeCurve` [#451](https://github.com/midnightntwrk/midnight-zk/pull/451)
+
+## [7.2.1]
+### Fixed
+* Bug fix in midnight-curves [#434](https://github.com/midnightntwrk/midnight-zk/pull/434)
+
+## [7.2.0]
+### Added
+* `Instantiable::from_public_input`: inverse of `as_public_input` for decoding values from their public input representation [#408](https://github.com/midnightntwrk/midnight-zk/pull/408)
+* Expose `to_biguint`, `to_canonical_biguint` and `from_biguint` in native Edwards chip [#408](https://github.com/midnightntwrk/midnight-zk/pull/408)
+
+## [7.1.0]
+### Changed
+* Modify `is_identity` flag encoding in Weierstrass chip: append as a dedicated public input element instead of packing into the first limb [#398](https://github.com/midnightntwrk/midnight-zk/pull/398)
+
+## [7.0.0]
+
+### Added
+* Add functions to mark the region of a circuit to be measured for cost modelling [#296](https://github.com/midnightntwrk/midnight-zk/pull/296)
+* Add `resolve_fixed_bases` to `Msm`, `AssignedMsm`, `Accumulator` and `AssignedAccumulator` [#302](https://github.com/midnightntwrk/midnight-zk/pull/302)
+* Expose `fixed_base_names`, `fixed_commitment_name` and `perm_commitment_name` helper functions [#302](https://github.com/midnightntwrk/midnight-zk/pull/302)
+* Fix redundant explicit intra-doc links in `parsing::scanner::substring` [#311](https://github.com/midnightntwrk/midnight-zk/pull/311)
+* Add `assign_without_subgroup_check` to `EccInstructions` and `SelfEmulation` traits [#284](https://github.com/midnightntwrk/midnight-zk/pull/284)
+* Add Curve25519 [#181](https://github.com/midnightntwrk/midnight-zk/pull/181)
+* Expose helper functions directly in `verifier_gadget` [#227](https://github.com/midnightntwrk/midnight-zk/pull/227)
+* `CircuitField` refactor: remove helpers, add `ScalarField` in `CircuitCurve` [#201](https://github.com/midnightntwrk/midnight-zk/pull/201)
+* Add method to assign a verifying key as a constant [#202](https://github.com/midnightntwrk/midnight-zk/pull/202)
+* RIPEMD160 chip [#156](https://github.com/midnightntwrk/midnight-zk/pull/156)
+* `CircuitField` refactor: remove helpers, add `ScalarExt` in `CircuitCurve` [#201](https://github.com/midnightntwrk/midnight-zk/pull/201)
+* Support non-fixed input commitments in verifier gadget [#212](https://github.com/midnightntwrk/midnight-zk/pull/212)
+* Add BN poseidon constants [#222](https://github.com/midnightntwrk/midnight-zk/pull/222)
+* Add `CircuitField` implementations for `k256::Fp` and `k256::Fq` [#192](https://github.com/midnightntwrk/midnight-zk/pull/192)
+* Add `square`, `mod_square` operations in `BigUintGadget` [#259](https://github.com/midnightntwrk/midnight-zk/pull/259)
+* Add `PartialEq` impl for `AssignedBigUint` [#259](https://github.com/midnightntwrk/midnight-zk/pull/259)
+* Update READMEs and add badges [#261](https://github.com/midnightntwrk/midnight-zk/pull/261)
+* Implementation of substring checks [#229](https://github.com/midnightntwrk/midnight-zk/pull/229)
+* Foreign arithmetic over twisted Edwards curves [#241](https://github.com/midnightntwrk/midnight-zk/pull/241)
+* Custom gate for foreign point addition over twisted Edwards curves [#242](https://github.com/midnightntwrk/midnight-zk/pull/242)
+* Add `p256` as curve dependency [#269](https://github.com/midnightntwrk/midnight-zk/pull/269)
+* Add emulations of base/scalar fields of `p256` over `bls12-381` scalar field [#270](https://github.com/midnightntwrk/midnight-zk/pull/270)
+* add MSMCompletenessFluke error [#277](https://github.com/midnightntwrk/midnight-zk/pull/277)
+* Scanner chip: dynamic regex support and lazy automaton loading [#232](https://github.com/midnightntwrk/midnight-zk/pull/232)
+* Scanner chip: ICAO 9303 TD3 DG1 passport parser [#233](https://github.com/midnightntwrk/midnight-zk/pull/233)
+* Add implementation of `p256` as foreign Weierstrass chip [#291](https://github.com/midnightntwrk/midnight-zk/pull/291)
+* Scanner chip: parallel lookups [#234](https://github.com/midnightntwrk/midnight-zk/pull/234)
+* Example for in-circuit verification of Ed25519 signatures [#310](https://github.com/midnightntwrk/midnight-zk/pull/310)
+* Implement `AssertionInstructions`, `EqualityInstructions`, `ZeroInstructions`, `ControlFlowInstructions` and `ArithInstructions` for `AssignedScalarOfNativeCurve` on `EccChip` [#383](https://github.com/midnightntwrk/midnight-zk/pull/383)
+
+### Changed
+* Reorganize foreign ECC gates into `weierstrass/` and `edwards/` subdirectories [#298](https://github.com/midnightntwrk/midnight-zk/pull/298)
+* Filter out compile-time identity points in MSM [#256](https://github.com/midnightntwrk/midnight-zk/pull/256)
+* Sort point sets deterministically in KZG multiopen for in-circuit verification [#256](https://github.com/midnightntwrk/midnight-zk/pull/256)
+* Move advice queries before instance queries in verifier gadget [#256](https://github.com/midnightntwrk/midnight-zk/pull/256)
+* Optimize assignment of collapsed accumulators [#253](https://github.com/midnightntwrk/midnight-zk/pull/253)
+* Share MSM randomness across all MSMs in foreign ECC chip [#253](https://github.com/midnightntwrk/midnight-zk/pull/253)
+* Optimize foreign-field range-check bounds [#251](https://github.com/midnightntwrk/midnight-zk/pull/251)
+* Batch foreign field limbs when constraining as public inputs [#235](https://github.com/midnightntwrk/midnight-zk/pull/235)
+* Refactor of the automaton chip, now called scanner chip [#240](https://github.com/midnightntwrk/midnight-zk/pull/240)
+* Optimize `msm_by_bounded_scalars` in foreign ECC chip [#227](https://github.com/midnightntwrk/midnight-zk/pull/227)
+* Make handling of fixed_bases more robust in verifier gadget [#212](https://github.com/midnightntwrk/midnight-zk/pull/212)
+* Change nr of bits to represent JubJub scalar field modulus from 255 -> 252 [#179](https://github.com/midnightntwrk/midnight-zk/pull/179)
+* Adapt Poseidon variable length hash to agree with its CPU version [#162](https://github.com/midnightntwrk/midnight-zk/pull/162)
+* Refactor `hash` and `varhash` tests [#162](https://github.com/midnightntwrk/midnight-zk/pull/162)
+* Add explicit subgroup membership guarantees for `AssignedNativePoint` [#175](https://github.com/midnightntwrk/midnight-zk/pull/175)
+* Add methods to access zeta values in  `CircuitCurve` [#186](https://github.com/midnightntwrk/midnight-zk/pull/186)
+* Remove zeta consti in  `CircuitCurve` [#186](https://github.com/midnightntwrk/midnight-zk/pull/186)
+* Uniform input sizes for hash cost-model [#183](https://github.com/midnightntwrk/midnight-zk/pull/183)
+* Updated Rust toolchain to 1.90.0 [#210](https://github.com/midnightntwrk/midnight-zk/pull/210)
+* CircuitField fixes [#214](https://github.com/midnightntwrk/midnight-zk/pull/214)
+* Replace native `secp256k1` types with `k256` [#192](https://github.com/midnightntwrk/midnight-zk/pull/192)
+* `CircuitField::modulus()` computed from field arith instead of parsing `PrimeField::MODULUS` [#192](https://github.com/midnightntwrk/midnight-zk/pull/192)
+* Fix `from_bytes_le` [#226](https://github.com/midnightntwrk/midnight-zk/pull/226)
+* Optimize `mul` operation in `BigUintGadget` [#259](https://github.com/midnightntwrk/midnight-zk/pull/259)
+* Optimize `linear_combination` in `NativeChip` [#260](https://github.com/midnightntwrk/midnight-zk/pull/260)
+* Optimize `mul` and `square` in `BigUintGadget` with `F::add_and_mul` [#260](https://github.com/midnightntwrk/midnight-zk/pull/260)
+* Adapt `foreign_params_gen.py` to general Weierstrass equations [#282](https://github.com/midnightntwrk/midnight-zk/pull/282)
+* Fix `assigned_to_le` functions in field chip [#303](https://github.com/midnightntwrk/midnight-zk/pull/303)
+* Add `from/to_canonical_compressed_bytes` to foreign Edwards chip [#354](https://github.com/midnightntwrk/midnight-zk/pull/354)
+* `FromScratch::configure_from_scratch` now takes shared `advice_columns` and `fixed_columns` pools [#306](https://github.com/midnightntwrk/midnight-zk/pull/306)
+* Optimize foreign Edwards MSM: windowed scalar multiplication and improved point addition [#305](https://github.com/midnightntwrk/midnight-zk/pull/305)
+* Refactoring static specs to handle more identity-related examples [#330](https://github.com/midnightntwrk/midnight-zk/pull/330)
+* Boxing assigned vectors to assign overflows [#331](https://github.com/midnightntwrk/midnight-zk/pull/331)
+* Variable length automata and substring checks [#332](https://github.com/midnightntwrk/midnight-zk/pull/332)
+
+### Fixed
+* Fix `assign_without_subgroup_check` in Edwards chip to assert the point is on the curve [#298](https://github.com/midnightntwrk/midnight-zk/pull/298)
+* Revisit specification of `from_xy` and `coordinates()` in `CircuitCurve` and update implementations accordingly [#298](https://github.com/midnightntwrk/midnight-zk/pull/298)
+
+### Removed
+* Move external implementations to zk-stdlib [#178](https://github.com/midnightntwrk/midnight-zk/pull/178)
+* Remove native `secp256k1` `CircuitCurve` and `WeierstrassCurve` implementations [#216](https://github.com/midnightntwrk/midnight-zk/pull/216)
+
+## [6.1.0]
+### Changed
+* `ForeignEccChip::new` samples the windowed-MSM blinding point at construction time [#307](https://github.com/midnightntwrk/midnight-zk/pull/307)
+
+## [6.0.0] - 18-12-2025
+### Added
+* SHA512 chip [#96](https://github.com/midnightntwrk/midnight-zk/pull/96)
+* Introduce `is_not_equal` and `is_not_equal_to_fixed` [#130](https://github.com/midnightntwrk/midnight-zk/pull/130)
+* Add `to_bytes` and `from_bytes` for `BigUint` [#136](https://github.com/midnightntwrk/midnight-zk/pull/136)
+* Blind limbs of quotient polynomial and ensure ZK [#161](https://github.com/midnightntwrk/midnight-zk/pull/161)
+* Adds support for external crates Keccak and Blake2b [#135](https://github.com/midnightntwrk/midnight-zk/pull/135)
+
+### Changed
+* Optimize `bigint_to_fe` [#115](https://github.com/midnightntwrk/midnight-zk/pull/115)
+* Fix `is_equal` and `is_equal_to_fixed` in `native_chip` [#117](https://github.com/midnightntwrk/midnight-zk/pull/117)
+* Address feedback from ZK Sec audit 3 [#125](https://github.com/midnightntwrk/midnight-zk/pull/125)
+* Rename `ScalarVar` => `AssignedScalarOfNativeCurve` [#120](https://github.com/midnightntwrk/midnight-zk/pull/120)
+* Made bench_macros and criterion dev dependencies [#134](https://github.com/midnightntwrk/midnight-zk/pull/134)
+* Optimize `assigned_to_le_bits` in `NativeGadget` [#131](https://github.com/midnightntwrk/midnight-zk/pull/131)
+* Bn256 curves emulation parameters feature-gated under "dev-curves" [#139](https://github.com/midnightntwrk/midnight-zk/pull/139)
+
+### Removed
+* Halo2curves dependency [#139](https://github.com/midnightntwrk/midnight-zk/pull/139)
+* Pasta curves emulation parameters [#139](https://github.com/midnightntwrk/midnight-zk/pull/139)
+* Move `compact_std_lib` to a new crate [#155](https://github.com/midnightntwrk/midnight-zk/pull/155)*
+
+## [5.0.1] - 19-09-2025
+### Added
+
+### Changed
+* Rerun goldenfiles after fix on min_k [#114](https://github.com/midnightntwrk/midnight-zk/pull/114)
+
+### Removed
+
+## [5.0.0] - 19-09-2025
+### Added
+* Add CommittedInstanceInstructions [#63](https://github.com/midnightntwrk/midnight-zk/pull/63)
+* Add goldenfiles with examples cost-model [#89](https://github.com/midnightntwrk/midnight-zk/pull/89)
+* New SHA256 chip [#39](https://github.com/midnightntwrk/midnight-zk/pull/39)
+* Variable-length SHA256 gadget [#98](https://github.com/midnightntwrk/midnight-zk/pull/98)
+* Add Schnorr signature example [#55](https://github.com/midnightntwrk/midnight-zk/pull/55)
+* Feature to run internal benchmarks [#93](https://github.com/midnightntwrk/midnight-zk/pull/93)
+* Add function to return number of points involved in a proof [#102](https://github.com/midnightntwrk/midnight-zk/pull/102)
+* Cache of range-checked cells in native_gadget [#109](https://github.com/midnightntwrk/midnight-zk/pull/109)
+* Add crendential enrollment proof [#81](https://github.com/midnightntwrk/midnight-zk/pull/81)
+
+### Changed
+* Refactored crate to prepare for edition 2024.
+* Zswap example was moved to a benchmark [#46](https://github.com/midnightntwrk/midnight-zk/pull/46)
+* Poseidon `full_round` custom ids now have degree 4 (instead of 6) [#44](https://github.com/midnightntwrk/midnight-zk/pull/44)
+* Rebase to new API for custom constraints [#53](https://github.com/midnightntwrk/midnight-zk/pull/53)
+* Reduce poseidon identities degree to 5 with an additive selector [#59](https://github.com/midnightntwrk/midnight-zk/pull/59)
+* Updated bincode to v2.0.0 - This is a breaking change [#82](https://github.com/midnightntwrk/midnight-zk/pull/82)
+* Adapted in-circuit verifier to changes of off-circuit counterpart [#76](https://github.com/midnightntwrk/midnight-zk/pull/76)
+* Clarified the default directory to download SRS [#95](https://github.com/midnightntwrk/midnight-zk/pull/95)
+* Load only necessary bit_lens in pow2range_chip [#90](https://github.com/midnightntwrk/midnight-zk/pull/90)
+* Reduce degree of foreign/ecc_chip lookup from 6 to 5 [#91](https://github.com/midnightntwrk/midnight-zk/pull/91)
+* Optimize `cond_swap` via an extra arith identity [#103](https://github.com/midnightntwrk/midnight-zk/pull/103)
+* Optimisation of Automaton configuration and serialisation of the parsing library [#73](https://github.com/midnightntwrk/midnight-zk/pull/73)
+* Rebase to new cost-model with improved K computation [#104](https://github.com/midnightntwrk/midnight-zk/pull/104)
+* Explicitly used Apache license for crate [#107](https://github.com/midnightntwrk/midnight-zk/pull/107)
+* Compute optimal `max_bit_len` in `compact_std_lib` [#106](https://github.com/midnightntwrk/midnight-zk/pull/106)
+* Rename `ScalarVar` -> `AssignedScalarOfNativeCurve` [#120](https://github.com/midnightntwrk/midnight-zk/pull/120)
+
+
+### Removed
+
+
+## [4.0.0] - 18-07-2025
+
+### Added
+* Add Url-Safe Base64 support [#540](https://github.com/midnightntwrk/midnight-circuits/pull/540)
+* verifier: TranscriptGadget [#545](https://github.com/midnightntwrk/midnight-circuits/pull/545)
+* verifier: MSMs & Acc module [#550](https://github.com/midnightntwrk/midnight-circuits/pull/550)
+* verifier: KZG multiopen module [#552](https://github.com/midnightntwrk/midnight-circuits/pull/552)
+* Add Base64Instructions trait [#556](https://github.com/midnightntwrk/midnight-circuits/pull/556)
+* verifier: permutation & lookup & vanishing modules [#554](https://github.com/midnightntwrk/midnight-circuits/pull/554)
+* verifier: Verifier Gadget [#558](https://github.com/midnightntwrk/midnight-circuits/pull/558)
+* Adds automaton-based parsing circuit [#547](https://github.com/midnightntwrk/midnight-circuits/pull/547)
+* Add VectorInstructions, Base64VarInstructions and Vectorizable traits [#568](https://github.com/input-output-hk/midnight-circuits/pull/568)
+* IVC example [#564](https://github.com/midnightntwrk/midnight-circuits/pull/564)
+* Instance commitments [#572](https://github.com/midnightntwrk/midnight-circuits/pull/572)
+* Adds support for multiple hard-coded automata in a single configurated circuit [#569](https://github.com/midnightntwrk/midnight-circuits/pull/569)
+* EqualityInstructions & AssertionInstructions implementation for AssignedVectors [#574](https://github.com/midnightntwrk/midnight-circuits/pull/574)
+* DivisionInstructions [#574](https://github.com/midnightntwrk/midnight-circuits/pull/574)
+* Add Base64Vec intialization instruction + fix alignment bug [#20](https://github.com/midnightntwrk/midnight-zk/pull/20)
+* Add a deserialisation function that does not need to know the relation [#18](https://github.com/midnightntwrk/midnight-zk/pull/18/commits/973467fecd6c31c6b57d06c89dfa0c7dd00bef2b)
+* Add `trim_beginning` in `VectorInstructions` [#19](https://github.com/midnightntwrk/midnight-zk/pull/19)
+* Expose `VectorInstructions` in `ZkstdLib` [#19](https://github.com/midnightntwrk/midnight-zk/pull/19)
+* Extra functions in `verifier` for the light aggregator [#25](https://github.com/midnightntwrk/midnight-zk/pull/25)
+* Add `VectorGadget` [#28](https://github.com/midnightntwrk/midnight-zk/pull/28)
+* Adds input extraction feature to the automaton chip [#16](https://github.com/midnightntwrk/midnight-zk/pull/16)
+* Expose automaton chip and JWT parsing in std_lib [#30](https://github.com/midnightntwrk/midnight-zk/pull/30)
+
+### Changed
+* Increase # of pow2range cols in json_verification example [#58](https://github.com/midnightntwrk/midnight-zk/pull/58)
+* Add additional identities to gates in `edwards_chip`such that max degree is 5 [#49](https://github.com/midnightntwrk/midnight-zk/pull/49)
+* Modify `pow2range` chip: make number of parallel lookups variable [#38](https://github.com/midnightntwrk/midnight-zk/pull/38)
+* Add holder key check on credential example [#542](https://github.com/midnightntwrk/midnight-circuits/pull/542)
+* Normalize after various foreign field ops if bound limit is close [#546](https://github.com/midnightntwrk/midnight-circuits/pull/546)
+* Fix optimized `assign_many` from `NativeChip` [#551](https://github.com/midnightntwrk/midnight-circuits/pull/551)
+* Fix issue on Base64Chip raised by zkSecurity [#549](https://github.com/midnightntwrk/midnight-circuits/pull/549)
+* Representation of VK - we now add a version to the serialisation. This is a breaking change [#562](https://github.com/midnightntwrk/midnight-circuits/pull/562)
+* verifier: verifier gadget handles h commitments as in the good old days (with the homomorphic property) [#565](https://github.com/midnightntwrk/midnight-circuits/pull/565)
+* Optimize `assign_many` for `AssignedBit` and `AssignedByte` in `NativeGadget` [#561](https://github.com/midnightntwrk/midnight-circuits/pull/561)
+* Improve readability and efficiency of Poseidon after audit's remarks [#557](https://github.com/midnightntwrk/midnight-circuits/pull/557)
+* Change PoseidonChip dependency (from NativeGadget to NativeChip) [#12](https://github.com/midnightntwrk/midnight-zk/pull/12)
+* ZkStdLib API is not generic on the hash function for Fiat-Shamir [#13](https://github.com/midnightntwrk/midnight-zk/pull/13)
+* Fix minor issue with is_id flag in Fiat-Shamir with foreign points [#15](https://github.com/midnightntwrk/midnight-zk/pull/15)
+* Generalized VerifierGadget with a new `SelfEmulation` trait [#24](https://github.com/midnightntwrk/midnight-zk/pull/24)
+* Clean up identities with & instead of clones [#52](https://github.com/midnightntwrk/midnight-zk/pull/52)
+* Fixed completeness bug in NativeGadget's `sgn0` [#26](https://github.com/midnightntwrk/midnight-zk/pull/26)
+* Optimize `sgn0` [#27](https://github.com/midnightntwrk/midnight-zk/pull/27)
+* Make `check_vk` tests optional (for speeding up CI) [#31](https://github.com/midnightntwrk/midnight-zk/pull/31)
+* Update dependency names [#32](https://github.com/midnightntwrk/midnight-zk/pull/32)
+* Fix versions of crates in monorepo [#33](https://github.com/midnightntwrk/midnight-zk/pull/33)
+* Change transcript ends up empty in `compact_std_lib` verification functions [#34](https://github.com/midnightntwrk/midnight-zk/pull/34)
+* Optimize `compact_std_lib::batch_very` [#34](https://github.com/midnightntwrk/midnight-zk/pull/34)
+
+### Removed
+* Bit and Byte off-circuit types [#548](https://github.com/midnightntwrk/midnight-circuits/pull/548)
+
+## [3.0.0] - 06-03-2025
+
+### Added
+* SageMath script for `field_to_weierstrass` and drawing the distribution of points as outputs of map_to_jubjub [#490](https://github.com/midnightntwrk/midnight-circuits/pull/490)
+* Export halo2curves and halo2_proofs [#492](https://github.com/midnightntwrk/midnight-circuits/pull/492)
+* Introduce `SRS_DIR` env variable [#487](https://github.com/midnightntwrk/midnight-circuits/pull/487)
+* Midnight keys types (with read and write functions) [#499](https://github.com/midnightntwrk/midnight-circuits/pull/499)
+* ParserGadget [#501](https://github.com/midnightntwrk/midnight-circuits/pull/501)
+* Various emulation params for BN254 [#504](https://github.com/midnightntwrk/midnight-circuits/pull/504)
+* Data type operations for ParserGadget [#503](https://github.com/midnightntwrk/midnight-circuits/pull/503)
+* Zswap-output example [#505](https://github.com/midnightntwrk/midnight-circuits/pull/505)
+* Add new function `downsize_srs_for_relation` [#514](https://github.com/midnightntwrk/midnight-circuits/pull/514)
+* Support for more date formats in ParserGadget [#511](https://github.com/midnightntwrk/midnight-circuits/pull/511)
+* Add Base64Chip and ParserGadget to ZkStdLib [#513](https://github.com/midnightntwrk/midnight-circuits/pull/513)
+* Implement `WeierstrassCurve` for BN254 [#523](https://github.com/midnightntwrk/midnight-circuits/pull/523)
+* New implementation of Poseidon (introduced in [#498](https://github.com/midnightntwrk/midnight-circuits/pull/498), now replacing the previous one) [#521](https://github.com/midnightntwrk/midnight-circuits/pull/521)
+* `cargo bench` now runs Poseidon's cpu benchmarks
+* Introduce `add_constants` [#527](https://github.com/midnightntwrk/midnight-circuits/pull/527)
+* Expose `ControlFlowInstructions` in compact_std_lib [#537](https://github.com/midnightntwrk/midnight-circuits/pull/537)
+
+### Changed
+* Fix issues raised on `sha256/table16` by zkSecurity [#522](https://github.com/midnightntwrk/midnight-circuits/pull/522)
+* Fix issues raised on `sha256/table11` by zkSecurity [#508](https://github.com/midnightntwrk/midnight-circuits/pull/508)
+* Make `fe_to_le_bits` variable length (optimization) [#485](https://github.com/midnightntwrk/midnight-circuits/pull/485)
+* Configurable ZkStdLib [#488](https://github.com/midnightntwrk/midnight-circuits/pull/488)
+* Fix issues raised on FFA by zkSecurity [#489](https://github.com/midnightntwrk/midnight-circuits/pull/489)
+* Optimize `sgn0` for native gadget [#491](https://github.com/midnightntwrk/midnight-circuits/pull/491)
+* CompactStdLib api (change verify_proof output type)
+* Add explicit randomness to `prove` in compact_std_lib [#496](https://github.com/midnightntwrk/midnight-circuits/pull/496)
+* Add self to `k` and `used_gadgets` of `Relation` [#496](https://github.com/midnightntwrk/midnight-circuits/pull/496)
+* Change `hash_to_curve` input type to slice [#496](https://github.com/midnightntwrk/midnight-circuits/pull/496)
+* Change input type of `verify` and `batch_verify` to take `ParamsVerifierKZG` instead of `ParamsKZG` [#497](https://github.com/midnightntwrk/midnight-circuits/pull/497)
+* Serialize `Relation` in prover keys [#500](https://github.com/midnightntwrk/midnight-circuits/pull/500)
+* Fix issue with number of PIs (verification now fails if the number of PIs differs from the one declared during "synthesize") [#506](https://github.com/midnightntwrk/midnight-circuits/pull/506)
+* Update `check_vk` to account for the whole `MidnightVK` and not just its halo2 component [#507](https://github.com/midnightntwrk/midnight-circuits/pull/507)
+* Add warning on `assign_as_public_input` [#515](https://github.com/midnightntwrk/midnight-circuits/pull/515)
+* Change to the new Halo2 version ([#502](https://github.com/midnightntwrk/midnight-circuits/pull/502), [516](https://github.com/midnightntwrk/midnight-circuits/pull/516), [517](https://github.com/midnightntwrk/midnight-circuits/pull/517))
+* The check on consistent VKs is now run with `cargo test` [#509](https://github.com/midnightntwrk/midnight-circuits/pull/509)
+* Made proof generation return Result instead of panic if generations fails [#525](https://github.com/midnightntwrk/midnight-circuits/pull/525)
+* Poseidon upgraded to 60 rounds, and S-boxes a different input cell during partial rounds [#521](https://github.com/midnightntwrk/midnight-circuits/pull/521), [#526](https://github.com/midnightntwrk/midnight-circuits/pull/526)
+* Add property checks in Atala credential example [#518](https://github.com/midnightntwrk/midnight-circuits/pull/518)
+* Remove big_machine examples [#527](https://github.com/midnightntwrk/midnight-circuits/pull/527)
+* Optimize jubjub addition and doubling [#529](https://github.com/midnightntwrk/midnight-circuits/pull/529)
+* Remove `AssignedBoundedBigUint` [#536](https://github.com/midnightntwrk/midnight-circuits/pull/536)
+* Update Checkmark yaml [#535](https://github.com/midnightntwrk/midnight-circuits/pull/535)
+* Add AssignedVector type [#531](https://github.com/midnightntwrk/midnight-circuits/pull/531)
+* Add variable-length hashing in PoseidonChip [#531](https://github.com/midnightntwrk/midnight-circuits/pull/531)
+
+
+### Removed
+* Remove Spoonge instructions for SHA [#528](https://github.com/midnightntwrk/midnight-circuits/pull/528)
+
+## [2.0.0] - 18-11-2024
+
+### Added
+* SageMath script for generating hash to Jubjub params [#452](https://github.com/midnightntwrk/midnight-circuits/pull/452)
+* Suite for Hash to twisted Edwards curves [#419](https://github.com/midnightntwrk/midnight-circuits/pull/419)
+* Edwards ECC chip [#419](https://github.com/midnightntwrk/midnight-circuits/pull/419)
+* Public input interface [#404](https://github.com/midnightntwrk/midnight-circuits/pull/404),
+  [#408](https://github.com/midnightntwrk/midnight-circuits/pull/408)
+  [#410](https://github.com/midnightntwrk/midnight-circuits/pull/410)
+* Set membership/non-membership proof [#403](https://github.com/midnightntwrk/midnight-circuits/pull/403)[#413](https://github.com/midnightntwrk/midnight-circuits/pull/413)
+* Hardcoded VKs for checking circuit breaking changes [#407](https://github.com/midnightntwrk/midnight-circuits/pull/407)
+* add `square` and `pow` (by constants) to `ArithmeticInstructions` with blanket implementations [#411](https://github.com/midnightntwrk/midnight-circuits/pull/411).
+* implement `PartialEq`, `Eq` and `Hash` for assigned types.
+* Self-emulation params for Blstrs
+* Introduce `msm_by_bounded_scalars` [#418](https://github.com/midnightntwrk/midnight-circuits/pull/418).
+* Emulation params for Pluto over BLS12-381 [#424](https://github.com/midnightntwrk/midnight-circuits/pull/424).
+* Emulation params for Secp over blstrs [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* Moved poseidon from halo2 to midnight-circuits [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* JSON verification example [#436](https://github.com/midnightntwrk/midnight-circuits/pull/436).
+* Added poseidon interface and implemented it for SHA [#438](https://github.com/midnightntwrk/midnight-circuits/pull/438)
+* Examples are now run with Filecoin's SRS [#444](https://github.com/midnightntwrk/midnight-circuits/pull/444)
+* Base64 encoded JSON verification example [#450](https://github.com/midnightntwrk/midnight-circuits/pull/450).
+* Check static VKs on PRs [#451](https://github.com/midnightntwrk/midnight-circuits/pull/451)
+* BigUintGadget (for RSA) [#453](https://github.com/midnightntwrk/midnight-circuits/pull/453)
+* Checkmarkx to CI [#457](https://github.com/midnightntwrk/midnight-circuits/pull/457)
+* Add map gadget to ZkStdLib [#460](https://github.com/midnightntwrk/midnight-circuits/pull/460)
+* Commit "assets" directory via .gitignore [#465](https://github.com/midnightntwrk/midnight-circuits/pull/465)
+* ecc/mul_by_constant [#469](https://github.com/midnightntwrk/midnight-circuits/pull/469)
+* Secp256k1 to compact_std_lib [#475](https://github.com/midnightntwrk/midnight-circuits/pull/475)
+* Implement PublicInputInstructions for ScalarVar [#477](https://github.com/midnightntwrk/midnight-circuits/pull/477)
+* Generic tests for PublicInputInstructions [#481](https://github.com/midnightntwrk/midnight-circuits/pull/481)
+
+### Changed
+* Generalize typesystem of HTC over EccInstructions [#406](https://github.com/midnightntwrk/midnight-circuits/pull/406)
+* Foreign-field MSM now supports identity points as bases [#414](https://github.com/midnightntwrk/midnight-circuits/pull/414)
+* Optimize foreign-field MSMs (compare scalars to fixed-one) [#416](https://github.com/midnightntwrk/midnight-circuits/pull/416)
+* Minor change on debug_assert [#417](https://github.com/midnightntwrk/midnight-circuits/pull/417)
+* Fix issue on order of cached bases and scalars in foreign MSM [#422](https://github.com/midnightntwrk/midnight-circuits/pull/422)
+* Added a lint for unused assigned variables [#425](https://github.com/midnightntwrk/midnight-circuits/pull/425)
+* Midnight lib now can only be called with an inner Edwards curve [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* Examples run with BLS12-381 curve [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* Hash interface changes (takes and returns assigned bytes) [#431](https://github.com/midnightntwrk/midnight-circuits/pull/431)
+* New PoseidonGadget implementing the recently added SpongeInstructions and HashInstructions [#440](https://github.com/midnightntwrk/midnight-circuits/pull/440)
+* Visibility of circuit operation add_and_mul
+* Refactor HTC, it is now generic w.r.t. the ecc chip and the hashing chip (this includes non-native EC and any hashing beyond Poseidon) [#435](https://github.com/midnightntwrk/midnight-circuits/pull/435)
+* Jubjub was hard-coded in midnight_lib [#442](https://github.com/midnightntwrk/midnight-circuits/pull/442)
+* Refactor CircuitLib (include Witness and Instance) [#443](https://github.com/midnightntwrk/midnight-circuits/pull/443)
+* Exports of the library, and naming of the std_lib [#446](https://github.com/midnightntwrk/midnight-circuits/pull/446)
+* Rename EccPoint -> AssignedNativePoint + pass on Edwards Chip.
+* Remove CurveAffine from EC operations. [#456](https://github.com/midnightntwrk/midnight-circuits/pull/456)
+* Bound for `BoundedElement` changed to `F::NUM_BITS - 2` [#454](https://github.com/midnightntwrk/midnight-circuits/pull/454)
+* Ensure that assigned points are part of the JubJub subgroup [#458](https://github.com/midnightntwrk/midnight-circuits/pull/458)
+* Extend `BigUintGadget`, implement most traits [#463](https://github.com/midnightntwrk/midnight-circuits/pull/463)
+* Fixed multi-thread issues with goldenfiles [#473](https://github.com/midnightntwrk/midnight-circuits/pull/473)
+* Bumped blstrs and halo2 dependencies [#472](https://github.com/midnightntwrk/midnight-circuits/pull/472)
+* Do not use FromScratch in doc tests [#478](https://github.com/midnightntwrk/midnight-circuits/pull/478)
+* Simplify Pow2Range configure [#479](https://github.com/midnightntwrk/midnight-circuits/pull/479)
+* Implement ControlFlowInstructions for AssignedByte [#493](https://github.com/midnightntwrk/midnight-circuits/pull/493)
+* Add Base64 Chip [#493](https://github.com/midnightntwrk/midnight-circuits/pull/493)
+
+### Removed
+* Existing ECC chip [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* Existing Hash to curve [#428](https://github.com/midnightntwrk/midnight-circuits/pull/428)
+* Support for Pleris [#462](https://github.com/midnightntwrk/midnight-circuits/pull/462)
+* Batching of PI in FieldChip [#474](https://github.com/midnightntwrk/midnight-circuits/pull/474)
+
+## [1.0.0] - 13-08-2024
+
+First release of the library

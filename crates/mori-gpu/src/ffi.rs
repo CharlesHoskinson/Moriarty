@@ -95,6 +95,31 @@ unsafe impl Send for Ctx {}
 /// against the first and last point so a reused allocation is never served stale.
 static TABLES: Mutex<Option<HashMap<(usize, usize), Ctx>>> = Mutex::new(None);
 
+/// Mask vectors and their MSMs, keyed by (table key, scalar count). Dropped with the
+/// table entry only implicitly: a table rebuilt under the same key gets fresh bases,
+/// so the entry is cleared in `msm_g1` when a table is rebuilt.
+#[allow(clippy::type_complexity)]
+static MASKS: Mutex<Option<HashMap<((usize, usize), usize), (Vec<Fq>, G1Projective)>>> =
+    Mutex::new(None);
+
+/// A fixed pseudo-random scalar vector (splitmix64, 254-bit values, no witness input).
+fn mask_vector(n: usize) -> Vec<Fq> {
+    let mut x: u64 = 0x6d6f_7269_6770_7531;
+    let mut next = || {
+        x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
+    };
+    (0..n)
+        .map(|_| {
+            let l = [next(), next(), next(), next() >> 2];
+            Fq::from_raw(l)
+        })
+        .collect()
+}
+
 fn fingerprint(p: &G1Projective) -> [u8; 96] {
     let a = p.to_affine();
     let mut out = [0u8; 96];
@@ -123,6 +148,9 @@ pub(crate) fn msm_g1(scalars: &[Fq], bases: &[G1Projective]) -> Option<G1Project
                 "mori-gpu: msm table build key={key:?} cached={}",
                 tables.len()
             );
+        }
+        if let Some(m) = MASKS.lock().unwrap().as_mut() {
+            m.retain(|(k, _), _| *k != key);
         }
         if let Some(old) = tables.remove(&key) {
             unsafe { crate::ffi::mori_msm_ctx_free(old.0) };
@@ -156,12 +184,30 @@ pub(crate) fn msm_g1(scalars: &[Fq], bases: &[G1Projective]) -> Option<G1Project
         }
         Some(out)
     };
-    let out = match split_heavy(scalars) {
-        None => run(scalars)?,
-        Some((s1, s2)) => {
-            crate::note_heavy_split();
-            run(&s1)? + run(&s2)?
+    let out = if std::env::var("MORI_GPU_MSM_MASK").as_deref() == Ok("0") {
+        match split_heavy(scalars) {
+            None => run(scalars)?,
+            Some((s1, s2)) => {
+                crate::note_heavy_split();
+                run(&s1)? + run(&s2)?
+            }
         }
+    } else {
+        // Skew mask: MSM(s) = MSM(s + r) - MSM(r) for a fixed pseudo-random r that
+        // does not depend on the witness. s + r has uniform digits, so no bucket is
+        // hot, whatever the witness repeats. MSM(r) is computed once per table and
+        // length. The result is the same group element, so proofs do not change.
+        let n = scalars.len();
+        let mut masks = MASKS.lock().unwrap();
+        let masks = masks.get_or_insert_with(HashMap::new);
+        if !masks.contains_key(&(key, n)) {
+            let r = mask_vector(n);
+            let rr = run(&r)?;
+            masks.insert((key, n), (r, rr));
+        }
+        let (r, rr) = masks.get(&(key, n)).unwrap();
+        let masked: Vec<Fq> = scalars.iter().zip(r).map(|(a, b)| *a + b).collect();
+        run(&masked)? - rr
     };
     if std::env::var_os("MORI_GPU_DEBUG").is_some() {
         use ff::Field;

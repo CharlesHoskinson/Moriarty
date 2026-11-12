@@ -95,6 +95,16 @@ pub fn quotient_check_diffs() -> u64 {
 /// permutation sets, device-resident cosets).
 pub static LAST_QUOTIENT_SHAPE: std::sync::Mutex<(u32, u32, u32, u32, u32)> = std::sync::Mutex::new((0, 0, 0, 0, 0));
 
+/// Wall seconds of the last proof by phase: [advice (synthesis and advice commits),
+/// rest of the trace (lookups, permutation and trash products, their commits),
+/// quotient numerator `compute_nu_poly`, finalise without the numerator (h(X)
+/// commits, evaluations, multiopen)].
+pub static PHASE_SECONDS: std::sync::Mutex<[f64; 4]> = std::sync::Mutex::new([0.0; 4]);
+
+pub(crate) fn phase_set(i: usize, t: std::time::Instant) {
+    PHASE_SECONDS.lock().unwrap()[i] = t.elapsed().as_secs_f64();
+}
+
 /// Run-time switch for the quotient hook (to measure phases separately).
 pub static QUOTIENT_ON: AtomicBool = AtomicBool::new(true);
 
