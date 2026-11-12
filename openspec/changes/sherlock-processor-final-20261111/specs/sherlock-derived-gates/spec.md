@@ -16,7 +16,7 @@ The wrap SHALL fit 85 percent of the `2^k - 7` usable rows at the smallest k of 
 
 #### Scenario: Rows before M7
 - **WHEN** a wrap row figure is reported before M7
-- **THEN** it is ESTIMATE, such as 434,692 rows mid for G4 on the keyed `L` structure
+- **THEN** it is ESTIMATE, such as 434,692 rows mid for G4 on the keyed `L` structure (`FD/ARCHITECTURE.md` kit L AND WRAP, wrap-row table; `PR` section 3.5)
 
 ### Requirement: DG-003 The wrap verifier key fits the ledger
 The wrap verifier key SHALL be at most 50,000 bytes (MID-003).

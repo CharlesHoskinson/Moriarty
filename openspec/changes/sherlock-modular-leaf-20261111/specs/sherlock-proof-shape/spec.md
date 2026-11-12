@@ -45,7 +45,7 @@ A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its 
 - **THEN** the node is unsatisfiable (mutants `graph_leaf_shape_free`, `graph_disabled_slot_shape_not_off`)
 
 ### Requirement: SHP-005 Each output type has a fixed `(out_a, out_b)` pair
-`(out_a, out_b)` SHALL be `(h_lo, h_hi)` for a SEG output, `(set_root, 0)` for a SET, `(chain_d, cover_root)` for a DL, `(set_root, sub_root)` for a SUB and `(0, 0)` for an FV output. A FOREIGN SET at FV completion SHALL use the SET rule `(set_root, 0)`. `fv_state_d` SHALL NOT enter `shape_d`.
+`(out_a, out_b)` SHALL be `(h_lo, h_hi)` for a SEG output, `(set_root, 0)` for a SET, `(chain_d, cover_root)` for a DL, `(set_root, sub_root)` for a SUB and `(0, 0)` for an FV, AW or VW output. A FOREIGN SET at FV completion, and an `ADM` or `VIEW` SET at the completion of ADMIT-WORK or VIEW-WORK, SHALL use the SET rule `(set_root, 0)` (`FD/ARCHITECTURE.md` kit GP-4 hook). `fv_state_d` SHALL NOT enter `shape_d`.
 
 #### Scenario: FV state in the shape
 - **WHEN** an FV output has `(out_a, out_b)` other than `(0, 0)`, for example `fv_state_d` in `out_a`

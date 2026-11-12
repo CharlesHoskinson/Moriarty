@@ -44,7 +44,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 
 ## 0. Group 0
 
-- [ ] 0.1 Implement kit BUS (`specs/sherlock-chip-bus`, BUS-001 to BUS-007): tagged table, ports manifest, row-role allocator. Gate: its constraint-checker positives and mutants, the `busContract.qnt` verdict, Lean O1 and O42 proved, T0. Entry: F.1.
+- [ ] 0.1 Implement kit BUS (`specs/sherlock-chip-bus`, BUS-001 to BUS-008): tagged table, ports manifest, row-role allocator. Gate: its constraint-checker positives and mutants, the `busContract.qnt` verdict, Lean O1 and O42 proved, T0. Entry: F.1.
 
 ## R. Group R (host, beside groups 0 to 4)
 
@@ -53,7 +53,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 ## 1. Group 1
 
 - [ ] 1.1 Implement kit RANGE (`specs/sherlock-chip-range`, RNG-001 to RNG-003): 64-bit shape and tagged query. Gate: its positives and mutants, Lean O3, T0. Entry: 0.1.
-- [ ] 1.2 Implement kit HASH (`specs/sherlock-chip-hash`, HSH-001 to HSH-004): domain registry. Gate: its differential vectors and mutants, the `hashProtocol.qnt` verdict, Lean O7 stated, T0. Entry: 0.1.
+- [ ] 1.2 Implement kit HASH (`specs/sherlock-chip-hash`, HSH-001 to HSH-005): domain registry. Gate: its differential vectors and mutants, the `hashProtocol.qnt` verdict, Lean O7 stated, T0. Entry: 0.1.
 - [ ] 1.3 Conform kit MEM window (`specs/sherlock-chip-mem`, MEM-001 to MEM-007) to the frozen ports and move the C1 model to `denseMemory.qnt`. Gate: the landed and added positives and mutants, the dense-model verdict re-run, Lean O12, O13, O43, O47 proved, T0. Entry: 0.1, AD-1 for TOP.
 
 ## 2. Group 2
@@ -62,7 +62,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 - [ ] 2.2 Implement kit DEC (`specs/sherlock-chip-dec`, DEC-001 to DEC-004) over the 120-rule inventory. Gate: its positives, mutants and configuration failures, the `decDispatch.qnt` verdict, Lean O5 and O6, T0. Entry: group 1.
 - [ ] 2.3 Implement kit STACKS (`specs/sherlock-chip-stacks`, STK-001 to STK-005). Gate: its positives and mutants, the X.3 verdict, Lean O11 and O46, T0. Entry: group 1, X.3.
 - [ ] 2.4 Conform kit MEMORY BACKEND dense (`specs/sherlock-chip-membackend`, MBK-001 to MBK-005) and add the seam test and the new mutants. Gate: its positives and mutants, the dense-model verdict, Lean O14, O15, O16, T0. Entry: group 1.
-- [ ] 2.5 Implement kit VALUE DIGEST (`specs/sherlock-value-digest`, VDG-001 to VDG-006). Gate: `vd_differential_every_form`, its positives and mutants, the `valueDigest.qnt` verdict, Lean O23 to O27, T0. Entry: group 1, X.9 for the constant-start mode.
+- [ ] 2.5 Implement kit VALUE DIGEST (`specs/sherlock-value-digest`, VDG-001 to VDG-007). Gate: `vd_differential_every_form`, its positives and mutants, the `valueDigest.qnt` verdict, Lean O23 to O27, T0. Entry: group 1, X.9 for the constant-start mode.
 
 ## 3. Group 3
 
@@ -88,7 +88,7 @@ Each family task implements CORE-011 and CORE-012 for the rules of its family, a
 - [ ] 4.13 Implement CORE rule family: ADT Build group. Gate: the family gate above for every rule of the family. Entry: 3.2, R.1, X.6.
 - [ ] 4.14 Implement CORE rule family: ADT Plan group. Gate: the family gate above for every rule of the family. Entry: 3.2, R.1.
 - [ ] 4.15 Implement kit BOUNDARY COMMITMENT (`specs/sherlock-chip-boundary`, BND-001 to BND-004). Gate: its positives and mutants, `boundary_header_leaf_vs_std`, the `boundaryCommitment.qnt` verdict, Lean O28, O29, O48, T0. Entry: 3.2.
-- [ ] 4.16 Implement kit INIT (`specs/sherlock-init-admission`, INIT-001 to INIT-005, and INIT-006 if AD-17 selects form (b)). Gate: its positives, mutants and controls, the extended `init.qnt` verdict, Lean O49 and O50, T0. Entry: 4.15. The input part also waits for AD-17, AD-18 and X.11.
+- [ ] 4.16 Implement kit INIT (`specs/sherlock-init-admission`, INIT-001 to INIT-005 and INIT-007, and INIT-006 if AD-17 selects form (b)). Gate: its positives, mutants and controls, the extended `init.qnt` verdict, Lean O49 and O50, T0. Entry: 4.15. The input part also waits for AD-17, AD-18 and X.11.
 
 ## L. Leaf integration
 
@@ -97,7 +97,7 @@ Each family task implements CORE-011 and CORE-012 for the rules of its family, a
 
 ## 5. Group 5
 
-- [ ] 5.1 Implement kit NODE INTEGRATION (`specs/sherlock-node-integration`, NODE-001 to NODE-011, and NODE-012 and NODE-013 if AD-17 selects form (b)), with `open_state_header`, `S_MAX` in the relation, the `rules_d` lane rename, the `reg_root` equality across slots, the seal admission check and the ADMIT-WORK mode (and the VIEW-WORK mode under form (b)). Gate: its positives, mutants and host refusal, the `nodeIntegration.qnt` verdict, Lean O31 to O33 and O54 (O55 under form (b)), node rows at or below 950,000, T0. Entry: L.1, X.7, X.10.
+- [ ] 5.1 Implement kit NODE INTEGRATION (`specs/sherlock-node-integration`, NODE-001 to NODE-011, and NODE-012 and NODE-013 if AD-17 selects form (b)), with `open_state_header`, `S_MAX` in the relation, the `rules_d` lane rename, the `reg_root` equality across slots, the seal admission check and the ADMIT-WORK mode (and the VIEW-WORK mode under form (b)). Gate: its positives, mutants and host refusal, the `nodeIntegration.qnt` verdict, Lean O31 to O33 and O54 (O55 under form (b)), a fixed STARK node shape inside the bounds of its layer (DG-004 and DG-006 of `sherlock-processor-final-20261111`; the halo2 gate of 950,000 node rows is history, DG-007), T0. Entry: L.1, X.7, X.10.
 
 ## 6. Group 6
 

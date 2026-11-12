@@ -30,7 +30,7 @@ The wrap SHALL be qualified on chain by its own records: verifier-key bytes, pro
 
 #### Scenario: Wrap figures pending
 - **WHEN** the wrap figures are reported before M2b
-- **THEN** verifier-key bytes, proof bytes (8 to 9 kB, ESTIMATE), verify time and fee are PENDING
+- **THEN** verifier-key bytes, proof bytes (8 to 9 kB, ESTIMATE, `PR` sections 8 and 9), verify time and fee are PENDING
 
 ### Requirement: MID-005 Small entries may stay native
 A small entry of a hybrid contract MAY route native under its own key at compile time, outside the Sherlock key set (OD-8). A native-routed entry SHALL run the anchor prologue of ANC-009.

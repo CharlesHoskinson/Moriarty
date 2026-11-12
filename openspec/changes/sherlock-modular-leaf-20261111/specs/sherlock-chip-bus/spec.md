@@ -76,3 +76,10 @@ Every argument about the landed bus SHALL use membership (`LookupSound`) only. N
 #### Scenario: Selector roles overlap
 - **WHEN** two row roles overlap in the packed selector, or a gate exceeds degree 6
 - **THEN** configuration fails (configuration failures `vsel_overlapping_roles`, `vsel_degree_overflow`, recorded apart from constraint refusals)
+
+### Requirement: BUS-008 The tuple freezes in its BabyBear encoding
+The schema of BUS-001 over `Fq` SHALL be the halo2 prototype form. The STARK leaves are over BabyBear (SPL-001). The canonical BabyBear limb encoding of every key and payload, the injectivity lemma over those limbs and the LogUp interaction bounds that replace BUS-007 are freeze prerequisite FP-1 of `FD/ARCHITECTURE.md` section 3.1. The tuple SHALL NOT be frozen before FP-1 closes.
+
+#### Scenario: Packed key in one BabyBear element
+- **WHEN** a MEM key `8 addr + kind` or a 128-bit ALU operand is placed in one BabyBear element
+- **THEN** distinct tuples can alias modulo p, so the injectivity bound of BUS-001 does not hold, and the encoding of FP-1 is required

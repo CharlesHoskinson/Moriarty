@@ -1,6 +1,6 @@
 # Design: modular Sherlock leaf and recursion
 
-Status: S2, specified only. This file is the authoritative short form of the design. The full architecture, with the nine items of every kit, the conflicts and the traceability, is `research/sherlock-final-design-20261111/ARCHITECTURE.md` (revision B2, 3,536 lines), below `FD/ARCHITECTURE.md`. Where the two differ, `FD/ARCHITECTURE.md` is the source of truth, and the text of this change is corrected to it.
+Status: S2, specified only. This file is the authoritative short form of the design. The full architecture, with the nine items of every kit, the conflicts and the traceability, is `research/sherlock-final-design-20261111/ARCHITECTURE.md` (revision B2), below `FD/ARCHITECTURE.md`. Where the two differ, `FD/ARCHITECTURE.md` is the source of truth, and the text of this change is corrected to it.
 
 Inputs: `FD/DECISIONS.md` (R-1..R-10, E-1..E-3, L-1..L-10, M-1..M-4, A-1..A-6), `FD/ARCH-AUDIT-RESPONSE.md` (20 of 20 findings fixed as design text), experiments C1 (`FD/EXPERIMENTS.md`), C3 (`FD/EXPERIMENTS-C3.md`), X1 and X2 (`FD/EXPERIMENTS-MAXIMA.md`), and the C1 Quint verdict `qa/gemini-quint/c1-dense/verdict.md`. Governing change: `openspec/changes/sherlock-vm-consensus-20261107/` (below `O/`).
 

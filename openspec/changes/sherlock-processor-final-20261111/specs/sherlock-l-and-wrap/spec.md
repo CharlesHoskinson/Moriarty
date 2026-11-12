@@ -55,7 +55,7 @@ The wrap SHALL check `Canon` on the limbs of `X`. The wrap SHALL require `X` to 
 - **THEN** the wrap circuit refuses the witness (mutant `wrap_x_not_cached_commitment`)
 
 ### Requirement: LW-007 A general run writes its run statement as effect words
-A general run SHALL be a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]` (OD-15), with `n_steps` in `[1, 2^64)` (SRC-006). The statement SHALL refuse Running. No state digest, memory root, tail digest, length, address or `result_be` SHALL be public. The form of `prog_d` in the effect words SHALL be fixed at the interface freeze, because LW-003 and ZK-002 keep plain `prog_d` off the ledger.
+A general run SHALL be a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]` (OD-15), with `n_steps` in `[1, 2^64)` (SRC-006). The statement SHALL refuse Running. No state digest, memory root, tail digest, length, address or `result_be` SHALL be public. The form of `prog_d` in the effect words SHALL be fixed at the interface freeze, because LW-003 and ZK-002 keep plain `prog_d` off the ledger (owner item N-11, freeze prerequisite FP-3).
 
 #### Scenario: Every outcome
 - **WHEN** a sealed Halted, Rejected or Exhausted run is proved with every admitted rejection code and exhaustion kind
@@ -66,14 +66,14 @@ A general run SHALL be a Sherlock program whose effect words write its run state
 - **THEN** the proof is refused (mutants `decider_steps_in_claim`, `decider_public_state_digest`, `decider_nsteps_2p64`)
 
 ### Requirement: LW-008 The run statement comes from a sealed SET head
-The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. The layer that opens the head SHALL be fixed at the interface freeze.
+The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. `L` SHALL be the layer that opens the head (`FD/ARCHITECTURE.md` section 1.3 and kits BOUNDARY COMMITMENT and NODE INTEGRATION).
 
 #### Scenario: Unsealed root or forged head
 - **WHEN** a SEG root is offered as a run, or the SET head preimage differs from the run statement
 - **THEN** the proof is refused (mutants `decider_seg_root_as_run`, `decider_set_head_forged`), and the seal predicates stay in NODE INTEGRATION (NODE-003)
 
 ### Requirement: LW-009 The collection statement carries no claim count
-A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect words, with a schema separate from the run statement. No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The effect-word form SHALL be fixed at the interface freeze.
+A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect words, with a schema separate from the run statement. No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The effect-word form SHALL be fixed at the interface freeze (freeze prerequisite FP-3).
 
 #### Scenario: Three runs joined
 - **WHEN** three sealed runs of different programs are joined and wrapped

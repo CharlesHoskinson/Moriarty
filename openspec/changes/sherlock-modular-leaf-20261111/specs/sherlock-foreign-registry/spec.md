@@ -12,7 +12,7 @@ A foreign proof SHALL enter only through an entry `entry_d` of the version `sher
 - **THEN** the lift is unsatisfiable (mutants `foreign_key_digest_only`, `foreign_swap_transcript`, `foreign_swap_srs`, `foreign_wrong_input_count`, `foreign_wrong_registry_root`), and the Quint invariant `StaleOrForeignRegRootRefused` of `foreignRegistry.qnt` holds
 
 ### Requirement: FREG-002 Both adapter key and inner key are registered
-The foreign lift SHALL prove membership of both the adapter key and the inner foreign key in `reg_root`, SHALL fold the adapter accumulator and the inner accumulator it publishes, and SHALL emit `fclaim_d = H(SHK_CLAIM, KIND_FOREIGN, vk_id_inner, adapter_id, out_d)` with a domain disjoint from `SHK_RUN`.
+The foreign lift SHALL prove membership of both the adapter key and the inner foreign key in `reg_root`, SHALL require the adapter verification and the inner verification to complete in circuit (FVR-003) with no accumulator folded, and SHALL emit `fclaim_d = H(SHK_CLAIM, KIND_FOREIGN, vk_id_inner, adapter_id, out_d)` with a domain disjoint from `SHK_RUN`.
 
 #### Scenario: Inner key absent
 - **WHEN** the inner key or the adapter is absent from `reg_root`, or the inner obligation is dropped
@@ -30,7 +30,7 @@ The adapter SHALL consume the verified public inputs as `pi_d` and SHALL derive 
 - **THEN** the constraint checker accepts each (positives `pos_gp3_two_keys_one_class`, `pos_gp3_distinct_adapters`)
 
 ### Requirement: FREG-004 The native adapter path is a milestone and never ticks GP-3
-The native adapter path SHALL be a milestone task, scoped by X8 (N-10). A proof under an SRS other than the core SRS SHALL NOT be folded into the core accumulator. GP-3 SHALL be reported complete only with the general verifier evidence of `sherlock-foreign-verifier`. An adapter-only GP-3 SHALL NOT be an acceptance path.
+The native adapter path SHALL be a milestone task, scoped by X8 (N-10). No foreign proof SHALL be folded into an accumulator, under any SRS (FVR-003). GP-3 SHALL be reported complete only with the general verifier evidence of `sherlock-foreign-verifier`. An adapter-only GP-3 SHALL NOT be an acceptance path.
 
 #### Scenario: Native path passes alone
 - **WHEN** `pos_gp3_sherlock_plus_compact` passes and `pos_fv_plonk_proof_same_srs` or `pos_fv_plonk_proof_other_srs` has not passed

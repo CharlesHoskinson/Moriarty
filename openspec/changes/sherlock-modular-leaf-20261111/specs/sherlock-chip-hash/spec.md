@@ -35,3 +35,10 @@ A HASH constant-start mode that folds a per-length and per-form start state into
 #### Scenario: X9 decides the mode
 - **WHEN** the constant-start mode is proposed
 - **THEN** X9 records a differential test against `sponge_native` and a key-shape check of the fixed columns, and O26 (`ValueDigest.lean`, constant-start equivalence, open) is its Lean evidence
+
+### Requirement: HSH-005 The co-processor digests are of the `sherlock-value/2` form
+Under `sherlock-processor-final-20261111` the co-processor digests SHALL be of the `sherlock-value/2` form: Poseidon2 over BabyBear inside the STARK layers and `PoseidonFr(tag, pack(d2))` at the Fr boundary, with salted `input_d` and `outcome_d` (HDM-001, HDM-002, ZK-006, SPL-003). The `sherlock-value/1` form of HSH-001 is the halo2 prototype form and SHALL NOT be a co-processor digest. Its restatement over `sherlock-value/2` is freeze prerequisite FP-4 of `FD/ARCHITECTURE.md` section 3.1.
+
+#### Scenario: Prototype digest offered as a co-processor digest
+- **WHEN** a co-processor public digest is computed with the `sherlock-value/1` zk-stdlib sponge in place of the `sherlock-value/2` form
+- **THEN** it differs from the `PoseidonFr(tag, pack(d2))` value that the wrap checks (HDM-002), and the interface does not freeze until FP-4 gives the one digest table

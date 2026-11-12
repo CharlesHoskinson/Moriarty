@@ -19,10 +19,10 @@ FV-SCHED SHALL emit the foreign SET in the `FOREIGN` form only at `phase = DONE`
 - **THEN** the unit is unsatisfiable (mutants `fv_claim_at_unfinished_phase`, `fv_adapter_on_unverified_inputs`, `fv_challenge_not_from_transcript`, `fv_point_not_on_curve`), the Quint invariant `NoClaimBeforeDone` holds, and O53 (GP3-L2, `ForeignVerify.lean`) is open
 
 ### Requirement: FVR-003 A proof under another SRS is fully checked in circuit
-FV-FINAL SHALL fold a proof under the core SRS into the core accumulator, and SHALL check a proof under another SRS fully in circuit in work units with the verifier parameters of its registry entry, with nothing deferred to the decider (AD-22 option a). A second deferred accumulator per SRS SHALL be used only by owner decision.
+FV-FINAL SHALL check every foreign proof, under the core SRS or under another SRS, fully in circuit in work units with the verifier parameters of its registry entry, with nothing deferred to `L` or the wrap (AD-22 option a). The STARK node folds no accumulator (NODE-004, NODE-007), so no foreign obligation SHALL be folded into an accumulator. A second deferred accumulator per SRS SHALL be used only by owner decision.
 
-#### Scenario: Other SRS folded into the core accumulator
-- **WHEN** a proof under another SRS has its obligation folded into the core accumulator
+#### Scenario: Foreign obligation folded or deferred
+- **WHEN** a foreign proof under any SRS has its obligation folded into an accumulator or deferred to `L` or the wrap
 - **THEN** the unit is unsatisfiable (mutant `fv_other_srs_folded_into_core_acc`), and the positives `pos_fv_plonk_proof_same_srs` and `pos_fv_plonk_proof_other_srs` pass against a host verifier
 
 ### Requirement: FVR-004 The subkits wait for X14 and the general path is never dropped

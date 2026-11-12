@@ -54,7 +54,7 @@ The anchor lane SHALL carry `C_P` or a lock value `A_j`. Plain `prog_d` SHALL NO
 - **THEN** the frontend refuses the deploy
 
 ### Requirement: ZK-008 The run shape stays private
-Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` and leaf counts SHALL follow fixed padding rules. Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
+Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` and leaf counts SHALL follow fixed padding rules. The padding rule of the public `n_steps`, against the exact height `n_steps = h_hi` that SEAL forwards (NODE-003), is the owner's `n_steps` rule and freeze prerequisite FP-6. Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
 
 #### Scenario: Secret branch changes the length
 - **WHEN** two inputs of one chunked entry take branches of different transcript length

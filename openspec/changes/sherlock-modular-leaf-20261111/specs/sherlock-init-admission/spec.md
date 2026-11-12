@@ -61,3 +61,10 @@ Under input admission form (b) (AD-17, OWNER), INIT SHALL set the `view_root` bo
 #### Scenario: Inspected node of the wrong type
 - **WHEN** a step reads an input node through `AuthIn` whose tag or `ty_d` is not the one its rule requires
 - **THEN** the correct circuit refuses the witness (mutant `init_entry_input_mismatch`)
+
+### Requirement: INIT-007 The co-processor forms of `prog_d` and `input_d`
+Under `sherlock-processor-final-20261111`, `prog_d` SHALL be `H2(DOM_PROG, image_d, plan_d, key_root, machine_version)` (SPL-003) and `input_d` SHALL be salted (ZK-006). The forms of INIT-003 are the halo2 prototype forms. The opening of `prog_d` through `image_d` to `prog_root` and the salted `input_d` preimage are freeze prerequisite FP-4 of `FD/ARCHITECTURE.md` section 3.1.
+
+#### Scenario: Prototype opening
+- **WHEN** INIT opens `prog_d` to the SVM-005 preimage without `plan_d` and `key_root`, or opens an unsalted `input_d`
+- **THEN** the opened value is not the co-processor `prog_d` or `input_d`, and the interface does not freeze until FP-4 fixes the opening

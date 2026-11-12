@@ -20,7 +20,7 @@ One line: Sherlock is a universal, elastic proving co-processor for Midnight. It
 
 ## Hard rules
 
-Never k = 22; every proof is a fixed-size shard; zero knowledge end to end, with every STARK layer on the user's machine; proven 100-bit security with no unproved conjecture, which the design claims only after the security qualification gate G1 to G5 passes; GP-1 to GP-4 never narrowed; one universal key set; the ledger 9.1.0.1 verifier unchanged.
+Never k = 22; every proof is a fixed-size shard; per-program, witness-independent preprocessing bound to `prog_d`; zero knowledge end to end, with every STARK layer on the user's machine and no helper that sees the plain witness; proven 100-bit security with no unproved conjecture, claimed only after the security qualification gate G1 to G5 passes (status: not passed); GP-1 to GP-4 never narrowed; one universal key set; the ledger 9.1.0.1 verifier unchanged and a verifier key of at most 50,000 bytes.
 
 ## Terms
 
