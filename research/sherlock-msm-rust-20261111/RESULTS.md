@@ -65,7 +65,56 @@ Every cell is 3 reps and equals BLST. The values are min / median in seconds. Al
 
 Stage profile, random 2^20, median of the new configuration: round 1 703 ms, final bucket pass 89 ms, weighted sums 91 ms, digits plus scatter 37 ms, everything else under 5 ms. Round 1 does 16.7 M mixed additions in 0.70 s, which is 24 M additions per second or about 0.24 G Fp multiplications per second. That is about 60 percent of the 0.40 to 0.43 G/s Fp multiplication peak measured on this device. Round 1 is the whole remaining gap to sppark (0.45 to 0.50 s total under load). The next levers are in round 1: occupancy (registers per thread and the 64-thread blocks), a cheaper reduction in the multiplication, and fewer additions per point (a larger c for 2^20 and above).
 
-Benchmark gate (2^16 to 2^21, random, skew and recorded `columns-k20`, against sppark and BLST): not run yet. The coordinator put new timed runs on hold to give the heavy lock to the M7 critical path. The script `~/.cache/msm-rust/bench-gate.sh` is ready and is not queued.
+The benchmark gate ran later (section 6).
+
+## 5. Round 1 fixes (commit f84a06f99)
+
+- 32-bit even/odd Fp multiplication (ZKProphet IV-B2, the sppark `mont_t` scheme): x takes the products of the even limbs of a and p, and y takes the odd limbs one limb up. The lo and hi halves of each product land in adjacent limbs of one carry chain, and each row folds y[0] into x[0] with that carry entering the odd chain. ptxas now fuses each lo/hi pair into one `IMAD.WIDE.U32.X` (240 of them in the multiplication test kernel). The section 2 attempt put the lo and hi chains apart, and ptxas emitted 55 IMAD plus 80 IADD per row. The algorithm is checked first in a Python model (3000 random pairs plus edge cases), then on the device against BLST. Kernel feature `fp64` keeps the 6 x 64-bit CIOS.
+- Point loads and stores: a plain `*p` of an `Affine` or `Xyzz` is an LLVM memcpy, which nvptx expands into a byte loop through local memory (the base gather in round 1 was 96 single-byte loads and stores). Word-wise helpers replace them.
+- Out-of-line EC calls: `dbl` and `mdbl` were calls whose results merge with the hot path, so the accumulator lived in local memory (384 to 576 byte stack frames). With `add`, `add_affine`, `dbl` and `mdbl` inlined, the round kernels, `run_sum` and `sum_rows` have no stack frame and no local memory (ptxas -v), at 228 to 236 registers.
+- Bucket zeroing is 1.2 to 1.4 ms of the profile, so it stays.
+
+## 6. Benchmark gate (MEASURED 2026-11-12 03:33 to 03:52 under the heavy lock, after M7 cleared the lock)
+
+Kernel f84a06f99 (`~/.cache/msm-rust/bin/bench-fp32`), defaults k1 = 64, seg = 16, affine passes off. Each cell is 3 reps, min / median in seconds. SM clock 754 MHz in every cell (throttle mask 0x400, max 3003 MHz). Host load average 20 to 36, so all of these are timings under load. Every one of the 20 cells equals BLST (all implementations). The recorded rows are 8 calls of the k = 20 proof (`~/.cache/msm-rust/columns-k20`, test seed). Log: `~/.cache/msm-rust/bench-gate.log`.
+
+| input | log n | Rust raw | Rust masked | sppark raw | sppark masked | BLST | load avg |
+|---|---|---|---|---|---|---|---|
+| random | 16 | 0.050 / 0.052 | 0.056 / 0.056 | 0.062 / 0.064 | 0.072 / 0.090 | 0.387 / 0.429 | 23.26 |
+| random | 17 | 0.071 / 0.071 | 0.092 / 0.132 | 0.107 / 0.114 | 0.121 / 0.126 | 0.818 / 0.996 | 22.75 |
+| random | 18 | 0.321 / 0.327 | 0.317 / 0.357 | 0.492 / 0.542 | 0.538 / 0.540 | 1.223 / 1.244 | 22.46 |
+| random | 19 | 0.246 / 0.270 | 0.222 / 0.255 | 0.307 / 0.308 | 0.547 / 0.572 | 2.449 / 2.633 | 22.77 |
+| random | 20 | 0.894 / 0.902 | 0.905 / 0.914 | 0.731 / 0.734 | 0.486 / 0.706 | 3.906 / 4.262 | 25.27 |
+| random | 21 | 0.736 / 0.876 | 0.760 / 1.385 | 2.074 / 2.076 | 2.137 / 2.188 | 6.679 / 7.801 | 30.91 |
+| skew | 16 | 0.084 / 0.088 | 0.125 / 0.136 | 0.326 / 0.336 | 0.158 / 0.171 | 0.146 / 0.152 | 26.11 |
+| skew | 17 | 0.112 / 0.120 | 0.185 / 0.187 | 0.355 / 0.376 | 0.156 / 0.212 | 0.214 / 0.268 | 27.23 |
+| skew | 18 | 0.038 / 0.039 | 0.127 / 0.132 | 0.752 / 0.793 | 0.264 / 0.329 | 0.568 / 0.613 | 30.25 |
+| skew | 19 | 0.045 / 0.054 | 0.399 / 0.482 | 0.810 / 0.891 | 0.345 / 0.592 | 1.217 / 1.275 | 33.87 |
+| skew | 20 | 0.164 / 0.193 | 0.912 / 0.913 | 1.853 / 2.157 | 0.574 / 0.712 | 1.267 / 1.335 | 34.99 |
+| skew | 21 | 0.228 / 0.229 | 1.673 / 1.685 | 4.521 / 6.643 | 1.022 / 1.364 | 2.471 / 2.551 | 36.51 |
+| call-0000 | 20 | 0.891 / 0.915 | 0.922 / 0.927 | 0.968 / 1.261 | 0.538 / 0.711 | 3.092 / 3.760 | 34.06 |
+| call-0010 | 20 | 0.314 / 0.314 | 0.329 / 0.329 | 0.445 / 0.459 | 0.529 / 0.554 | 3.483 / 4.828 | 34.71 |
+| call-0040 | 20 | 0.018 / 0.028 | 0.333 / 0.443 | 0.076 / 0.081 | 0.518 / 0.599 | 0.338 / 0.366 | 33.69 |
+| call-0080 | 20 | 0.314 / 0.381 | 0.328 / 0.328 | 0.464 / 0.466 | 0.470 / 0.619 | 3.078 / 3.175 | 33.55 |
+| call-0120 | 20 | 0.336 / 0.504 | 0.336 / 0.402 | 0.840 / 0.881 | 0.458 / 0.490 | 2.651 / 2.990 | 33.14 |
+| call-0160 | 20 | 0.290 / 0.290 | 0.332 / 0.338 | 99.365 / 151.118 | 0.502 / 0.726 | 2.864 / 3.200 | 31.95 |
+| call-0200 | 20 | 0.053 / 0.053 | 0.418 / 0.449 | 0.589 / 0.638 | 1.270 / 1.340 | 0.649 / 0.699 | 20.77 |
+| call-0230 | 20 | 0.352 / 0.461 | 0.342 / 0.402 | 0.521 / 0.683 | 0.709 / 0.751 | 3.244 / 4.095 | 23.82 |
+
+
+The run has GPU contention that the lock does not cover (browser GPU processes are present, and GPU utilization is 48 percent while idle). The non-monotonic cells show it: random 2^20 takes 0.89 s against 0.74 s at 2^21, and one sppark raw cell takes 99 s. The same-binary A/B below, with identical non-EC stage times as an in-run control, is the cleaner comparison.
+
+A/B at 2^20 random raw, run back to back (BLST skipped, MORI_MSM_PROFILE=1), median stage ms:
+
+| kernel | total min / median s | digits | scatter | round 1 | final bucket pass | weighted sums |
+|---|---|---|---|---|---|---|
+| f84a06f99, 32-bit Fp | 0.314 / 0.349 | 8.0 | 29.2 | 218 | 14 | 41 |
+| f84a06f99 with the `fp64` cubin | 0.516 / 0.601 | 8.0 | 29.2 | 454 | 19 | 69 |
+| 3e610fe44 (committed before) | 2.382 / 2.413 | 24.3 | 88.3 | 1746 | 241 | 253 |
+
+The fp32 and fp64 rows have equal digits and scatter times, so they saw the same GPU conditions. The 32-bit multiplication halves round 1 (454 to 218 ms). The 3e610fe44 row is slowed about 3 times in every stage, including the non-EC ones (digits 24 against 8 ms), so it ran during contention. Against its uncontended section 4 profile (round 1 703 ms, total 0.90 to 0.98 s), the load and inline fixes plus the multiplication take round 1 from 703 to 218 ms and the total from about 0.93 to 0.31 to 0.35 s.
+
+Reading of the gate: the Rust raw MSM is at or below sppark masked (the current default) in 18 of 20 cells. The two exceptions are random 2^20 (0.89 against 0.49) and recorded call-0000 (0.89 against 0.54), and both are in the contended window; the A/B gives 0.31 to 0.35 s for random 2^20. The Rust masked MSM is slower than sppark masked in 6 cells: random 2^20, call-0000, and skew at 2^17, 2^19, 2^20 and 2^21 (2^21: 1.67 against 1.02 s). The mask turns a skewed column into a random one, and raw Rust handles skew directly: on skewed scalars, raw Rust is 3 to 20 times faster than any masked option (2^21: 0.23 s against 1.02 s for sppark masked). This strengthens the owner question below.
 
 ## Owner question: the skew mask now costs time
 
