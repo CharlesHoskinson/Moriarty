@@ -81,7 +81,7 @@ The STARK node SHALL have a fixed arity and SHALL stay inside the shape bounds o
 - **THEN** the node is unsatisfiable (mutant `node_reg_root_mixed`), and the Quint invariant `RegRootEqualAcrossSlots` of `nodeIntegration.qnt` holds
 
 ### Requirement: NODE-009 Each key kind has a fixed set of permitted statement tags
-The key selector SHALL permit `LEAF -> {SEG}`, `FOREIGN -> {SET}` and `NODE -> {SEG, SET, SUB, DL, FV, AW, VW}`. The FV payload SHALL be `(fv_state_d)` only. The registry root of an FV statement SHALL be the node's `reg_root` lane.
+The key selector SHALL permit `LEAF -> {SEG, LG}` (LG for the discharge child only, FPR-006), `FOREIGN -> {SET}` and `NODE -> {SEG, SET, SUB, DL, FV, AW, VW}`. The FV payload SHALL be `(fv_state_d)` only. The registry root of an FV statement SHALL be the node's `reg_root` lane.
 
 #### Scenario: Statement tag outside the key kind
 - **WHEN** a LEAF child offers a SET, or a FOREIGN child offers a SEG

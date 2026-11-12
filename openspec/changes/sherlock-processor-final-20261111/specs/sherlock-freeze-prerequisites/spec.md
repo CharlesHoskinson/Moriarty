@@ -66,6 +66,10 @@ For a LEAF child, the node SHALL open `prog_d` to `key_root` and SHALL prove the
 - **WHEN** the discharge leaf proves a log other than the log of slot 0
 - **THEN** the proof is refused (mutant `node_discharge_other_log`), and `pos_node_discharge` passes on the equal log
 
+#### Scenario: Discharge child
+- **WHEN** the slot-1 LEAF of a DISCHARGE node is of the discharge shape
+- **THEN** the node reads `(dis_d, dis_n)` from its 9 public words, finds its key leaf in the `key_root` of slot 0, permits `LEAF -> {SEG, LG}`, and keeps the `shape_d` of slot 0
+
 ### Requirement: FPR-007 `L` opens the sealed SET head
 `L` SHALL open the sealed SET head of a general run with one Poseidon2 hash over BabyBear and SHALL recompute `claim_d` from its witnessed preimage (LW-008, LEAD F-6). The wrap SHALL compute no BabyBear Poseidon2 for the head.
 
@@ -81,7 +85,7 @@ For a LEAF child, the node SHALL open `prog_d` to `key_root` and SHALL prove the
 - **THEN** lane 0 does not equal the bind of `acceptCollection`, and the call is refused (CF-008)
 
 ### Requirement: FPR-009 FP-3 open facts stay open
-The interface freeze proposal SHALL NOT freeze the public statement codec while these facts are missing, and SHALL name them: the carrier of the effect region and `comm` from the terminal state of a run of more than one shard to the call vector of `L`; the call-vector lanes of the run statement and of the collection statement, which follow from the compiled LEDGER CONTRACT; and the contract-side form of a collection opening under `sherlock-value/2`.
+The freeze proposal SHALL NOT freeze the public statement codec while these facts are missing, and SHALL name them: the carrier of the effect region and `comm` from the terminal state of a run of more than one shard to the call vector of `L`; the call-vector lanes of the run statement and of the collection statement, which follow from the compiled LEDGER CONTRACT; and the contract-side form of a collection opening under `sherlock-value/2`, with the `openClaim` key and its public `n_steps`.
 
 #### Scenario: Freeze proposal written
 - **WHEN** the interface freeze proposal is written at loop step S11
@@ -117,7 +121,7 @@ Every internal digest SHALL be `P2(tag, words)` with the tag code of FP-4, the t
 - **THEN** the proof is refused (mutants `seal_view_root_forged`, `view_root_written_by_rule`)
 
 ### Requirement: FPR-013 `n_steps` is not public
-`n_steps` SHALL NOT be in the run statement, the call vector, `acceptRun` or the `runs` map. It SHALL stay private as `h_hi` of the sealed segment inside the SET forms `LEAF` and `DEP` (LEAD F-12; the `n_steps` rule and the amendments of SRC-006, SRC-007 and LDG-001 are owner items).
+`n_steps` SHALL NOT be in the run statement, the call vector, `acceptRun` or the `runs` map. It SHALL stay private as `h_hi` of the sealed segment inside the SET forms `LEAF` and `DEP`. For a collection this SHALL hold only when FPR-009 fixes the contract-side opening (LEAD F-12; the `n_steps` rule and the amendments of SRC-006, SRC-007 and LDG-001 are owner items).
 
 #### Scenario: Public n_steps
 - **WHEN** a wrap key puts `n_steps` in the call vector

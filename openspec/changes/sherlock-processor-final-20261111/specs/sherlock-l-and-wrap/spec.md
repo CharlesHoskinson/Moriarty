@@ -91,7 +91,7 @@ The replay identity SHALL be `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_
 - **THEN** the second call is refused, and the Quint invariant `PartitionReplayRefusedByClaimD` holds
 
 ### Requirement: LW-011 Mid-run consumption binds the registry root
-If AD-20 selects option (b), the run statement SHALL either refuse a `DEP` head whose cover holds a FOREIGN member, or check `reg_root` read from contract state. The four run values SHALL NOT change. Under option (a) this requirement SHALL have no effect.
+If AD-20 selects option (b), the run statement SHALL either refuse a `DEP` head whose cover holds a FOREIGN member, or check `reg_root` read from contract state. The three run values SHALL NOT change. Under option (a) this requirement SHALL have no effect.
 
 #### Scenario: Foreign member under another root
 - **WHEN** AD-20 option (b) is taken and a `DEP` head has a FOREIGN member lifted under another registry root

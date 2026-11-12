@@ -125,7 +125,7 @@ Each rule SHALL charge fuel and counters exactly as the reference does on every 
 - **THEN** the constraint checker accepts the leaf (a per-rule maximal-step positive, checked against the row of `FD/maxima/rule_maxima.md`)
 
 ### Requirement: CORE-013 Input nodes are read through `AuthIn` under the certified view
-Under input admission form (b) (AD-17, OWNER), `read_input` SHALL return an `AuthIn` token for the input root or for field `k < m` of an earlier token, opened by a Merkle path of depth `D_view` against the `view_root` body word. A read SHALL add no MEM append and SHALL charge no DataNodes or DataFields cap, unless X11 shows a reference charge; then the charge SHALL be a constant per read stated in the rule contract.
+Under input admission form (b) (AD-17, OWNER), `read_input` SHALL return an `AuthIn` token for the input root or for field `k < m` of an earlier token, opened by a Merkle path of depth `D_view` against the `view_root` header word (FPR-012). A read SHALL add no MEM append and SHALL charge no DataNodes or DataFields cap, unless X11 shows a reference charge; then the charge SHALL be a constant per read stated in the rule contract.
 
 #### Scenario: Read outside the view
 - **WHEN** a rule uses an input record that is not under `view_root`, or an index that is not reached from the input root

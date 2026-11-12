@@ -56,7 +56,7 @@ Any input admission form SHALL meet I1 to I6 of the kit: no scan of the input, n
 - **THEN** the input part stays open, and the rest of the kit is built and tested with the empty genesis memory (`init_memory_not_genesis` against the empty arena, Quint invariant `GenesisMemCanonical`)
 
 ### Requirement: INIT-006 Under form (b) the input type is checked on inspected nodes
-Under input admission form (b) (AD-17, OWNER), INIT SHALL set the `view_root` body word from the witness, or to `VIEW_NONE` when `val_d` is the absent-input constant; `read_input` SHALL refuse `VIEW_NONE`. `in_ty` admissibility SHALL be checked on inspected nodes only (I7); an uninspected subtree SHALL be carried by digest. A full check of `ty(x) == in_ty` by VIEW-WORK SHALL be used only by owner decision.
+Under input admission form (b) (AD-17, OWNER), INIT SHALL set the `view_root` header word (FPR-012) from the witness, or to `VIEW_NONE` when `val_d` is the absent-input constant; `read_input` SHALL refuse `VIEW_NONE`. `in_ty` admissibility SHALL be checked on inspected nodes only (I7); an uninspected subtree SHALL be carried by digest. A full check of `ty(x) == in_ty` by VIEW-WORK SHALL be used only by owner decision.
 
 #### Scenario: Inspected node of the wrong type
 - **WHEN** a step reads an input node through `AuthIn` whose tag or `ty_d` is not the one its rule requires

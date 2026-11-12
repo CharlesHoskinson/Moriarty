@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: DCD-001 The run statement is published by kit L AND WRAP
-DCD-001 SHALL be met by LW-007 of `sherlock-processor-final-20261111`. A general run SHALL publish `[prog_d, input_d, outcome_d, n_steps]` as effect words of the call vector. Kind 7 under `/1` SHALL follow AD-16. No halo2 run decider SHALL be built (superseded 2026-11-11, old text at commit `0ab8cd79d`).
+DCD-001 SHALL be met by LW-007 of `sherlock-processor-final-20261111`. A general run SHALL publish `[C_P, input_pub, outcome_pub]` as effect words of the call vector (FPR-010, FPR-013). Kind 7 under `/1` SHALL follow AD-16. No halo2 run decider SHALL be built (superseded 2026-11-11, old text at commit `0ab8cd79d`).
 
 #### Scenario: Every outcome
 - **WHEN** a sealed Halted, Rejected or Exhausted run is wrapped
-- **THEN** the effect words carry exactly the four values (positives `pos_decider_all_outcomes`, `pos_decider_halted_scalar_and_struct`, `pos_decider_set_head_leaf_and_dep` in kit L AND WRAP), the Quint invariant `NoStateDigestOnChain` of `deciderOutcome.qnt` holds, and O34 (DEC-L1) is open
+- **THEN** the effect words carry exactly the three values (positives `pos_decider_all_outcomes`, `pos_decider_halted_scalar_and_struct`, `pos_decider_set_head_leaf_and_dep` in kit L AND WRAP), the Quint invariant `NoStateDigestOnChain` of `deciderOutcome.qnt` holds, and O34 (DEC-L1) is open
 
 ### Requirement: DCD-002 The wrap verifies `L` in place of the pairing of a carried accumulator
 DCD-002 SHALL be met by LW-002 to LW-006 of `sherlock-processor-final-20261111`. No accumulator SHALL be carried to the ledger proof. The wrap SHALL verify `L` under the frozen `L` key and SHALL bind every public word to the call vector.

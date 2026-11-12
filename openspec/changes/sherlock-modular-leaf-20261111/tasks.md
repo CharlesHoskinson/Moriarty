@@ -130,7 +130,7 @@ Each task is one line of the GP acceptance matrix of `FD/ARCHITECTURE.md` sectio
 - [ ] A.2 GP-001: among them one program larger than one leaf's carriers, one run with input, and one run of each outcome kind. Gate: the same test.
 - [ ] A.3 GP-001: one run of more than one leaf that allocates more memory than one leaf holds and builds a constructor of more than 8 fields across a leaf boundary. Gate: the same test, with R.1 complete.
 - [ ] A.4 GP-001: the final proof has the same byte length as a one-leaf proof. Gate: byte lengths recorded.
-- [ ] A.5 GP-001: the allocating run under three partitions and with one stop and resume gives the same four values, and the second submission is refused by `claim_d`. Gate: CONTINUATION and HOST CHECKPOINT STORE tests, SRC-023.
+- [ ] A.5 GP-001: the allocating run under three partitions and with one stop and resume gives the same run statement and private `n_steps`, and the second submission is refused by `claim_pub`. Gate: CONTINUATION and HOST CHECKPOINT STORE tests, SRC-023.
 - [ ] A.6 GP-001: at the constraint boundary `2^64 - 1` is accepted and `2^64` refused. Gate: `pos_node_height_2p64_minus_1`, `node_height_wrap`.
 - [ ] A.7 GP-002 (a): a run of B whose input is the verified result of a run of A, accepted once on chain. Gate: `pos_gp2_b_consumes_a_halted` as a real proof.
 - [ ] A.8 GP-002 (b): one proof that aggregates at least three runs of different programs, accepted once on chain, with each claim opened. Gate: `pos_decider_collection_three_runs` as a real proof.

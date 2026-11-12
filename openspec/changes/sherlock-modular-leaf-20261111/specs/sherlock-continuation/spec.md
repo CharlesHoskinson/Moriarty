@@ -12,7 +12,7 @@ A run stopped at height `h` and resumed from a validated checkpoint SHALL give t
 
 #### Scenario: Allocating run stopped once
 - **WHEN** the allocating GP-001 acceptance run is stopped once, at a power-of-two leaf boundary and at an odd leaf, and resumed
-- **THEN** the four values and `claim_d` equal the uninterrupted run (positives `pos_mode1_stop_resume_allocating_run`, `pos_mode1_resume_nonempty_tail`, `pos_mode1_resume_nested_frames_tasks`), the Quint invariant `ResumeProducesIdenticalClaimD` holds, and O36 (CONT-L1) is open
+- **THEN** the run statement, the private `n_steps` and `claim_d` equal the uninterrupted run (positives `pos_mode1_stop_resume_allocating_run`, `pos_mode1_resume_nonempty_tail`, `pos_mode1_resume_nested_frames_tasks`), the Quint invariant `ResumeProducesIdenticalClaimD` holds, and O36 (CONT-L1) is open
 
 #### Scenario: Suffix tampered
 - **WHEN** fuel, input or height is changed in the suffix, a predecessor is skipped, or a record that the suffix reads is changed with restore validation off

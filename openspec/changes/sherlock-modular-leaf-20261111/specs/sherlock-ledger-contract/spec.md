@@ -29,7 +29,7 @@ The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: 
 - **THEN** it is opened by successive `descend` calls (positive `ledger_open_depth_beyond_one_call`), the Quint invariant `EveryJoinedClaimOpens` holds, and a call from an unverified root or with more than `K_open` openings is refused (tests `ledger_descend_unverified_root`, `ledger_descend_over_op_cap`)
 
 ### Requirement: LDG-005 `openClaim` inserts a head claim once and refuses non-claims
-`openClaim(sub_root, head)` SHALL require `sub_root` in `verified_roots` and SHALL check one head hash of the `LEAF`, `DEP` or `FOREIGN` form. It SHALL insert `claim_d` into `runs` or `fclaim_d` into `foreign`, and SHALL change nothing if the key is present. It SHALL refuse a `JOIN` root and an `ADM` or `VIEW` head.
+`openClaim(sub_root, head)` SHALL require `sub_root` in `verified_roots` and SHALL check one head hash of the `LEAF`, `DEP` or `FOREIGN` form. It SHALL insert `claim_d` into `runs` or `fclaim_d` into `foreign`, and SHALL change nothing if the key is present. It SHALL refuse a `JOIN` root and an `ADM` or `VIEW` head. Its contract-side form and its `runs` key SHALL follow FPR-009 (open).
 
 #### Scenario: Diamond-shared claim
 - **WHEN** one claim has two paths in `set_root` and both are opened
