@@ -380,3 +380,10 @@
 - Opus agent, GPT-6 Astra high (unit k21-astra), Gemini 4 Carbon High (unit k21-gemini), one shared brief ~/.cache/k21-recal/brief-lane.md.
 - Outputs: research/sherlock-k21-recalibration-20261111/proposals/{opus,astra,gemini}.md.
 - Next: merge, blinded verifier, apply to the design and specs.
+
+## [2026-11-12] measurement | M7-0: ledger 9 refuses any non-stdlib key; G4 needs a ledger change or a decider layer
+- `MidnightVK::read` rebuilds the constraint system from `ZkStdLib::configure(arch, k - 1)`; key bytes carry chip flags, not gates (CODE).
+- Toy `tools/gpu-prover/src/bin/m7_ledger_toy.rs` (one G4 lane, degree-5 gate, lookup, 1,026 public inputs): library verify accepts, ledger `VerifierKey::verify` gives `problem reading the verifier key` under 3 headers (MEASURED).
+- Single-lane stdlib wrap at OD-19: 2.37 M to 3.05 M rows, over the k = 21 gate (ESTIMATE).
+- Lead decision, owner to confirm: option C (G4 off chain, stdlib decider on chain) near term; option A (G4 arch in zk-stdlib) as target.
+- Source: research/sherlock-m7-wrap-20261112/RESULTS.md on branch m7-wrap.
