@@ -14,8 +14,9 @@ The objects:
 * `VerifyL`: the reference verifier of `L` (BabyBear arithmetic, hash `frSponge ∘ packChunks`,
   the transcript run from the empty state).
 * `EmulL`: the checks and transcript of `L` compiled into Fr cells (lazy arithmetic with bounded
-  quotients, packing gadget, digit gadget with the canonical check): the relation that the
-  Fr-native layer `L_Fr` enforces for one `L` proof (option E, owner decision OD-24).
+  quotients, packing gadget, digit gadget with the canonical check): a sufficient relation for
+  the Fr-native layer `L_Fr` to enforce for one `L` proof (option E, owner decision OD-24);
+  `lfrSound_of_emul` shows it discharges A2'.
 * `KeyLFr`, `VerifyLFr`: the layer `L_Fr`, abstract while its shape is built (step E2): an Fr
   transcript program with its own hash domain (use codes disjoint from `L`'s), and abstract native
   checks.
@@ -97,8 +98,8 @@ def runRef (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
   | st, .oodAnswer _ vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
       runRef X env (st ++ packChunks (vs.map (env.getD · 0))) ops
 
-/-- The wrap's transcript gadgets: the packing gadget, the digit gadget with the canonical check,
-and a bit decomposition for the proof of work. -/
+/-- The Fr-cell transcript gadgets (inside `EmulL`): the packing gadget, the digit gadget with the
+canonical check, and a bit decomposition for the proof of work. -/
 def runGadget (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
   | _, [] => True
   | st, .absorbBB vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
@@ -274,7 +275,7 @@ def Check.Ref (X : Prims) (env : List Nat) : Check → Prop
       merkleRoot X (env.getD leaf 0) (bits.map (fun i => env.getD i 0 == 1))
         (sibs.map (env.getD · 0)) = env.getD root 0
 
-/-- The wrap's gadget for one check (Fr cells). -/
+/-- The Fr-cell gadget for one check (inside `EmulL`). -/
 def Check.Gadget (X : Prims) (env : List Nat) : Check → Prop
   | .arith l r => ArithGadget env l r
   | .hash ins out => (∀ i ∈ ins, env.getD i 0 < pBB) ∧
@@ -353,7 +354,7 @@ theorem pv_absorbed_before_challenge {X : Prims} {vk : KeyL} {s pv π : List Nat
 `sum_j gamma^(j+1) v_j` over the OOD answers and the shift values, `gamma * poly_v(gamma)`. -/
 def oodBatchExpr (gamma : Nat) (vs : List Nat) : Expr := .mul (.var gamma) (hornerExpr gamma vs)
 
-/-- The wrap's check of the batched OOD claim gives the reference value mod `p`. -/
+/-- The Fr-cell check of the batched OOD claim gives the reference value mod `p`. -/
 theorem ood_batch_refines {env : List Nat} {gamma c : Nat} {vs : List Nat}
     (hok : ArithOK (oodBatchExpr gamma vs) (.var c))
     (h : ArithGadget env (oodBatchExpr gamma vs) (.var c)) :
@@ -388,10 +389,11 @@ theorem check_refines {X : Prims} {env : List Nat} {c : Check}
 
 /-! ## The emulation of `L` inside `L_Fr` -/
 
-/-- The Fr-cell emulation of the verifier of `L` on `(s, pv, π)`: the relation that `L_Fr`'s
-AIRs enforce for one `L` proof (owner decision OD-24, option E). The same gadgets as the wrap of
-round 2: range checks, lazy Fr arithmetic with bounded quotients, the packing gadget, the digit
-gadget with the canonical check, the bit decomposition for proof of work. -/
+/-- The Fr-cell emulation of the verifier of `L` on `(s, pv, π)`: a sufficient relation for
+`L_Fr`'s AIRs to enforce for one `L` proof (owner decision OD-24, option E), with the gadgets of
+the round 2 wrap: range checks, lazy Fr arithmetic with bounded quotients, the packing gadget,
+the digit gadget with the canonical check, the bit decomposition for proof of work. The real
+shape of `L_Fr` is built in step E2; A2' does not depend on this relation. -/
 def EmulL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
   s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ x ∈ s ++ pv ++ π, x < rFr) ∧
     (∀ c ∈ vk.checks, c.Gadget X (s ++ pv ++ π)) ∧
@@ -509,6 +511,17 @@ theorem transcripts_separated {X : Prims} {FrDom : List Nat → Prop} (hinj : �
   rw [trStart_eq_cap, trStart_eq_cap] at this
   exact tags_separated h ht (by decide : lTTag ∈ lUses) (by decide) (by decide) this.1
 
+/-- A2' from the emulation: if every accepting `L_Fr` verification has an `L` proof whose Fr-cell
+emulation holds, then (by `emulL_refines`) it has one that the reference verifier of `L` accepts,
+with the same statement and public values. -/
+theorem lfrSound_of_emul {X : Prims} {acc : List Nat → Prop} {vkL : KeyL} {vk : KeyLFr}
+    (hok : KeyOK vkL)
+    (h : ∀ s pv π, VerifyLFr X acc vk s pv π → ∃ πL, EmulL X vkL s pv πL) :
+    ∀ s pv π, VerifyLFr X acc vk s pv π → ∃ πL, VerifyL X vkL s pv πL := by
+  intro s pv π hv
+  obtain ⟨πL, hE⟩ := h s pv π hv
+  exact ⟨πL, emulL_refines hok hE⟩
+
 /-! ## The wrap -/
 
 /-- The private witness of the wrap: the public values of `L` (the log words), the proof of
@@ -611,12 +624,12 @@ structure Premises where
   wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf →
     ∃ w, WrapRel X B LFrAccept vkLFr pub w
   /-- (A2') Soundness of `L_Fr` (option E, OD-24): if the reference verifier of `L_Fr` accepts
-  `(s, pv, π)`, an `L` proof `πL` exists whose Fr-cell emulation `EmulL` holds with the same
-  statement and public values (knowledge soundness of the Fr STARK `L_Fr` for the relation its
-  AIRs enforce). Hypotheses: A2b, and the static key facts of `L_Fr` (`pv` absorbed first, tag
-  separation from `L`'s hash domains). -/
+  `(s, pv, π)`, the reference verifier of `L` accepts an embedded `L` proof `πL` with the same
+  statement and public values (knowledge soundness of the Fr STARK `L_Fr`). Hypotheses: A2b, and
+  the static key facts of `L_Fr` (`pv` absorbed first, tag separation from `L`'s hash domains).
+  `lfrSound_of_emul`: an `L_Fr` that enforces `EmulL` meets it. -/
   lfrSound : FrInj X FrDom → KeyOKFr vkL vkLFr →
-    ∀ s pv π, VerifyLFr X LFrAccept vkLFr s pv π → ∃ πL, EmulL X vkL s pv πL
+    ∀ s pv π, VerifyLFr X LFrAccept vkLFr s pv π → ∃ πL, VerifyL X vkL s pv πL
   /-- (A2) Soundness of `L` (statements as recorded in
   `research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md`, which reads the full papers).
   WHIR round-by-round soundness (WHIR Theorem 5.2 with list size 1) with mutual correlated
@@ -661,13 +674,6 @@ structure Premises where
 
 /-! ## The main theorem -/
 
-/-- What A2' gives with the refinement of the emulation: if `L_Fr` accepts, the reference
-verifier of `L` accepts an `L` proof with the same statement and public values. -/
-theorem lfr_accepts_L (P : Premises) {s pv π : List Nat}
-    (h : VerifyLFr P.X P.LFrAccept P.vkLFr s pv π) : ∃ πL, VerifyL P.X P.vkL s pv πL := by
-  obtain ⟨πL, hE⟩ := P.lfrSound P.frSpongeInj P.vkLFr_ok s pv π h
-  exact ⟨πL, emulL_refines P.vkL_ok hE⟩
-
 /-- Lemma 22 (`bridge_sound`): a proof that ledger 9 accepts for public input `pub` implies the
 claim `pub` of the reference machine. The path: the wrap (A1) verifies `L_Fr`, `L_Fr` (A2')
 verifies `L`, `L` (A2) verifies the root. -/
@@ -675,7 +681,7 @@ theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
     (h : P.LedgerAccepts pub prf) : P.Run pub := by
   obtain ⟨w, hw⟩ := P.wrapKnowledgeSound pub prf h
   obtain ⟨hVFr, hTlen, hTok, hpv⟩ := wrap_refines hw
-  obtain ⟨πL, hV⟩ := lfr_accepts_L P hVFr
+  obtain ⟨πL, hV⟩ := P.lfrSound P.frSpongeInj P.vkLFr_ok pub w.pv w.π hVFr
   obtain ⟨d, hroot⟩ :=
     P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv πL hV
   obtain ⟨hrec, t, ⟨htlen, htwf, htin⟩, henc, hdig⟩ := P.rootBinds _ _ _ hroot

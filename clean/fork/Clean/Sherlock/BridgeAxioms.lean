@@ -5,7 +5,7 @@ import Clean.Sherlock.PvBinding
 Premise file of `Clean.Sherlock.Bridge` and `Clean.Sherlock.FrLog` (bridge round, QUEUE.md
 step 3; CANDIDATE.md section 11.3).
 
-No `axiom` is declared in any of the three files. Every assumption is a field of
+No `axiom` is declared in any of the bridge files. Every assumption is a field of
 `Clean.Sherlock.Bridge.Premises` and enters `bridge_sound` as a hypothesis, by name:
 
 * (A1) `wrapKnowledgeSound`: a proof that ledger 9 `VerifierKey::verify` accepts for public input
@@ -23,11 +23,12 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   from A2b by `packed_hash_inj`), `pvFirstT` and `ProvenRegime` (gate G4: `UDSet.gate` on the
   declared parameter set with the proof of work read from the key's transcript program; every
   folding, `mu` and query term at least 101 bits, every OOD and `gamma` term at least 100).
-* (A2') `lfrSound`: if the reference verifier of `L_Fr` accepts `(s, pv, π)`, an `L` proof exists
-  whose Fr-cell emulation `EmulL` holds with the same statement and public values (knowledge
-  soundness of the Fr STARK `L_Fr`). Hypotheses that `bridge_sound` discharges: A2b and
-  `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s).
-  `emulL_refines` (a theorem) turns the emulation into a reference verification of `L`.
+* (A2') `lfrSound`: if the reference verifier of `L_Fr` accepts `(s, pv, π)`, the reference
+  verifier of `L` accepts an embedded `L` proof with the same statement and public values
+  (knowledge soundness of the Fr STARK `L_Fr`). Hypotheses that `bridge_sound` discharges: A2b
+  and `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s).
+  `lfrSound_of_emul` (a theorem) shows that an `L_Fr` enforcing the Fr-cell emulation `EmulL`
+  meets it.
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
   Merkle hash of `L`, and the public digest form `PoseidonFr(tag, pack d2)`), guarded by the
   carrier `FrDom`. Separate from A5.
@@ -211,6 +212,10 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lUD_q97_fails
 #print axioms Clean.Sherlock.Bridge.lUD_no_ood_fails
 #print axioms Clean.Sherlock.Bridge.lUD_two_ood
+#print axioms Clean.Sherlock.Bridge.appUD_gate
+#print axioms Clean.Sherlock.Bridge.leafUD_gate
+#print axioms Clean.Sherlock.Bridge.appUD_bits
+#print axioms Clean.Sherlock.Bridge.leafUD_bits
 #print axioms Clean.Sherlock.Bridge.run_refines
 #print axioms Clean.Sherlock.Bridge.trStart_eq_cap
 #print axioms Clean.Sherlock.Bridge.cap_inj
@@ -223,9 +228,9 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.runFr_refines
 #print axioms Clean.Sherlock.Bridge.tags_separated
 #print axioms Clean.Sherlock.Bridge.transcripts_separated
+#print axioms Clean.Sherlock.Bridge.lfrSound_of_emul
 #print axioms Clean.Sherlock.Bridge.wrap_refines
 #print axioms Clean.Sherlock.Bridge.packed_hash_inj
-#print axioms Clean.Sherlock.Bridge.lfr_accepts_L
 #print axioms Clean.Sherlock.Bridge.bridge_sound
 #print axioms Clean.Sherlock.Bridge.wrap_view_only_claim
 #print axioms Clean.Sherlock.Bridge.merkle_binding_or_collision

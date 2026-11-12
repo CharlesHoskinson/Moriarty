@@ -234,7 +234,7 @@ theorem pack_length_check_needed : pack [1] = pack [1, 0] ∧ ([1] : List Nat) �
 theorem pack_range_check_needed : pack [2 ^ 31] = pack [0, 1] ∧ ([2 ^ 31] : List Nat) ≠ [0, 1] :=
   by decide
 
-/-- The wrap's packing gadget (Fr arithmetic) computes `pack`. -/
+/-- The Fr-cell packing gadget (Fr arithmetic) computes `pack`. -/
 theorem pack_gadget_refines (v : List Nat) : hornerR packBase v = pack v := by
   simp [pack, hornerR_eq]
 
@@ -255,7 +255,7 @@ theorem chunks8_cons {v : List Nat} (h : v ≠ []) : chunks8 v = v.take 8 :: chu
 /-- Pack each chunk: the absorb format of the Fr transcript of `L`. -/
 def packChunks (v : List Nat) : List Nat := (chunks8 v).map pack
 
-/-- The same in the wrap: each chunk packed with Fr arithmetic. -/
+/-- The same in Fr cells: each chunk packed with Fr arithmetic. -/
 def packChunksR (v : List Nat) : List Nat := (chunks8 v).map (hornerR packBase)
 
 theorem packChunksR_eq (v : List Nat) : packChunksR v = packChunks v := by
@@ -432,7 +432,7 @@ theorem eval_le_bound (env : List Nat) : ∀ e : Expr, (∀ i ∈ e.vars, env.ge
 
 end Expr
 
-/-- The wrap's gadget for one equality check `l = r` of `L`: range checks on every variable,
+/-- The Fr-cell gadget for one equality check `l = r` of `L`: range checks on every variable,
 lazy Fr evaluation of both sides, and one bounded-quotient reduction per side to a common
 residue `c`. -/
 def ArithGadget (env : List Nat) (l r : Expr) : Prop :=
@@ -455,7 +455,7 @@ theorem reduce_side {env : List Nat} {e : Expr} {c q : Nat} (hv : ∀ i ∈ e.va
     omega
   exact bounded_quotient_sound (by omega) hc hq' h
 
-/-- Lemma 12 (`constraint_dag_refines`): an accepted wrap gadget for `l = r` implies the
+/-- Lemma 12 (`constraint_dag_refines`): an accepted Fr-cell gadget for `l = r` implies the
 reference BabyBear equality, provided the key's static bound check holds. -/
 theorem arith_refines {env : List Nat} {l r : Expr} (hok : ArithOK l r)
     (h : ArithGadget env l r) :
@@ -530,7 +530,7 @@ theorem hornerExpr_eval (env : List Nat) (x : Nat) : ∀ cs : List Nat,
   | [] => rfl
   | c :: cs => by simp [hornerExpr, Expr.eval, horner, hornerExpr_eval env x cs]
 
-/-- Lemma 11 (`horner_refines`): a wrap check `poly(x) = y` implies the reference evaluation. -/
+/-- Lemma 11 (`horner_refines`): an Fr-cell check `poly(x) = y` implies the reference evaluation. -/
 theorem horner_refines {env : List Nat} {x y : Nat} {cs : List Nat}
     (hok : ArithOK (hornerExpr x cs) (.var y)) (h : ArithGadget env (hornerExpr x cs) (.var y)) :
     horner (env.getD x 0) (cs.map (env.getD · 0)) % pBB = env.getD y 0 % pBB := by
@@ -574,7 +574,7 @@ structure SumcheckRound where
   claim : Nat
   next : Nat
 
-/-- Lemma 11 (`sumcheck_round_refines`): the two wrap checks of a round give the reference
+/-- Lemma 11 (`sumcheck_round_refines`): the two Fr-cell checks of a round give the reference
 relations `g(0) + g(1) = claim` and `g(alpha) = next` in BabyBear. -/
 theorem sumcheck_round_refines {env : List Nat} {r : SumcheckRound}
     (hok₁ : ArithOK (roundSumExpr r.cs) (.var r.claim))
@@ -631,7 +631,7 @@ def foldRhs (x fx fnx beta : Nat) : Expr :=
   .add (.mul (.var x) (.add (.var fx) (.var fnx)))
     (.mul (.var beta) (.add (.var fx) (.mul (.const (pBB - 1)) (.var fnx))))
 
-/-- Lemma 11 (`coset_fold_refines`): the wrap's fold check implies the reference fold relation
+/-- Lemma 11 (`coset_fold_refines`): the Fr-cell fold check implies the reference fold relation
 in BabyBear. -/
 theorem coset_fold_refines {env : List Nat} {x y fx fnx beta : Nat}
     (hok : ArithOK (foldLhs x y) (foldRhs x fx fnx beta))
@@ -684,7 +684,7 @@ theorem eqSumExpr_eval (env : List Nat) (rho : List Nat) : ∀ tbl : List (List 
   | [] => rfl
   | (bs, v) :: t => by simp [eqSumExpr, eqSumVal, Expr.eval, eqExpr_eval, eqSumExpr_eval env rho t]
 
-/-- Lemma 13 (`pv_eq_refines`): the wrap's check `sum_i eq(rho, i) pv_i = claim` at the
+/-- Lemma 13 (`pv_eq_refines`): the Fr-cell check `sum_i eq(rho, i) pv_i = claim` at the
 batch-constraint point `rho` implies the reference evaluation of the multilinear extension of
 `pv`. -/
 theorem pv_eq_refines {env : List Nat} {rho : List Nat} {tbl : List (List Bool × Nat)} {claim : Nat}
@@ -716,7 +716,7 @@ theorem eqVal_bool : ∀ (rho : List Nat) (bs : List Bool), rho.length = bs.leng
 
 /-! ## Squeezing challenges from Fr -/
 
-/-- The wrap's digit gadget for a squeeze: 5 range-checked digits and a high part recomposing
+/-- The Fr-cell digit gadget for a squeeze: 5 range-checked digits and a high part recomposing
 the Fr cell `x`, with the canonical check that the recomposition is below `r`. -/
 def SqueezeGadget (x : Nat) (ds : List Nat) : Prop :=
   ds.length = 5 ∧ (∀ d ∈ ds, d < pBB) ∧ ∃ h, horner pBB ds + pBB ^ 5 * h < rFr ∧

@@ -216,4 +216,40 @@ theorem lUD_two_ood : lUD.gate efSize { lPow with ood := [2, 2] } = true ∧
     (lUD.oodErr efSize { lPow with ood := [2, 2] } 1).reaches 216 ∧
     (lUD.oodErr efSize { lPow with ood := [2, 2] } 2).reaches 224 := by decide
 
+/-! ## The app and leaf-aggregation sets (PROPOSAL section 11.2, unique decoding) -/
+
+/-- App layer (leaf shards): log blowup 1, `n_stack + l_skip = 20 + 4`, 4 rounds, queries
+193/88/81/81, `w_stack` 2048, LogUp PoW 18. -/
+def appUD : UDSet := ⟨1, 24, 4, [193, 88, 81, 81], 2048, pBB - 1, 18, 40⟩
+
+/-- App PoW: folding 5 on all 16 folds, `mu` 15, query 21, LogUp 18, one OOD sample. -/
+def appPow : PowVec := ⟨List.replicate 16 5, 15, [21, 21, 21, 21], 18, [1, 1, 1]⟩
+
+/-- Leaf-aggregation layer: log blowup 2, `n_stack + l_skip = 17 + 4`, queries 118/84/81,
+`w_stack` 2048. PROPOSAL section 11.2 lists no LogUp PoW for this set, so the LogUp entry is `0`
+and the gate does not constrain it here. -/
+def leafUD : UDSet := ⟨2, 21, 4, [118, 84, 81], 2048, pBB - 1, 0, 40⟩
+
+/-- Leaf PoW: folding 4, `mu` 13, query 21, one OOD sample. -/
+def leafPow : PowVec := ⟨List.replicate 12 4, 13, [21, 21, 21], 0, [1, 1]⟩
+
+theorem appUD_gate : appUD.gate efSize appPow = true := by decide
+
+theorem leafUD_gate : leafUD.gate efSize leafPow = true := by decide
+
+/-- App bit counts (D3 figures in brackets, `G5-PAPER-MAP.md` section 1, `UD-SIZING.md` 1.4):
+`mu` `102` (102.63), the weakest query term, round 2, `101` (101.0891), every fold at least
+`101`. -/
+theorem appUD_bits : (appUD.muErr efSize appPow).reaches 102 ∧
+    (appUD.queryErr efSize appPow 2).reaches 101 ∧
+    (appUD.foldErrs efSize appPow).all (·.ge 101) = true := by
+  decide
+
+/-- Leaf bit counts: `mu` `102` (102.63), the weakest query term, round 0, `101` (101.0110),
+every fold at least `101`. -/
+theorem leafUD_bits : (leafUD.muErr efSize leafPow).reaches 102 ∧
+    (leafUD.queryErr efSize leafPow 0).reaches 101 ∧
+    (leafUD.foldErrs efSize leafPow).all (·.ge 101) = true := by
+  decide
+
 end Clean.Sherlock.Bridge
