@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: SHP-001 Join is total at any depth with no claim count
-JOIN SHALL compute `set_root = H(SHK_SET_JOIN, l.set_root, r.set_root)` with no counter and no range check, at any depth (R-5, OD-2 OWNER to confirm). A claim MAY be reused in two branches. One key set SHALL prove a chain, a balanced tree and a DAG with equal final proof size.
+JOIN SHALL compute `set_root = H(SHK_SET_JOIN, l.set_root, r.set_root)` with no counter and no range check, at any depth (R-5, AD-2 OWNER to confirm). A claim MAY be reused in two branches. One key set SHALL prove a chain, a balanced tree and a DAG with equal final proof size.
 
 #### Scenario: Diamond reuse at depth 8 or more
 - **WHEN** one claim feeds two consumers at depth >= 8 and the branches are joined
@@ -35,7 +35,7 @@ MERGE-WORK SHALL take two enabled prior SEG proofs plus `k >= 1` real owner step
 
 #### Scenario: Two nodes offered as evidence
 - **WHEN** a run of two successive nodes is offered as evidence for MERGE-WORK
-- **THEN** the acceptance check refuses it (`graph_two_nodes_for_merge_work`), and if X7 does not fit 950,000 rows GP-4 stays incomplete and the owner decides
+- **THEN** the acceptance check refuses it (`graph_two_nodes_for_merge_work`), and if X7 does not fit the shape bounds of the internal set GP-4 stays incomplete and the owner decides
 
 ### Requirement: SHP-004 Leaf, foreign and disabled children have canonical shape encodings
 A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its authenticated lanes. A FOREIGN child SHALL forward `H(SHK_SHAPE, T_FOREIGN, fclaim_d)`. A disabled slot SHALL have the fixed non-zero constant `SHAPE_OFF = H(SHK_SHAPE, T_OFF, 0)`.

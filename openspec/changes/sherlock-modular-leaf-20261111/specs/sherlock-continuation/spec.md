@@ -19,14 +19,14 @@ A run stopped at height `h` and resumed from a validated checkpoint SHALL give t
 - **THEN** the suffix cannot join the prefix (mutants `cont_refresh_fuel`, `cont_change_input`, `cont_reset_height`, `cont_skip_predecessor`), and the leaf is unsatisfiable (mutant `cont_tampered_read_cell_unvalidated`)
 
 ### Requirement: CONT-003 A checkpoint is never a run or a claim
-A prefix SEG with a Running state SHALL NOT be sealed, sent to the decider or consumed as a claim. Exhausted SHALL be terminal and SHALL NOT trigger a checkpoint.
+A prefix SEG with a Running state SHALL NOT be sealed, sent to `L` as a run or consumed as a claim. Exhausted SHALL be terminal and SHALL NOT trigger a checkpoint.
 
 #### Scenario: Checkpoint published
-- **WHEN** a checkpoint SEG is passed to the decider or to a GP-2 consumer
+- **WHEN** a checkpoint SEG is passed to `L` as a run or to a GP-2 consumer
 - **THEN** it is refused (mutants `cont_publish_as_run`, `cont_ckpt_as_gp2_claim`), the Quint invariant `CheckpointRejectedBySealAndGP2` holds, and O37 (CONT-L2) is open
 
 ### Requirement: CONT-004 The resume refuses a different key set
-The resume SHALL refuse, before any proving, a checkpoint whose manifest differs from the key manifest or whose bundle lacks a proof. Continuation mode 1 SHALL require Profile A. Mode 2 SHALL stay out of scope (OD-15).
+The resume SHALL refuse, before any proving, a checkpoint whose manifest differs from the key manifest or whose bundle lacks a proof. Continuation mode 1 SHALL require Profile A. Mode 2 SHALL stay out of scope (AD-15).
 
 #### Scenario: Manifest mismatch
 - **WHEN** the checkpoint manifest differs from the key manifest, or a bundle proof is missing

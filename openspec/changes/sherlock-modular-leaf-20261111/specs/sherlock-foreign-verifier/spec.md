@@ -19,14 +19,14 @@ FV-SCHED SHALL emit the foreign SET in the `FOREIGN` form only at `phase = DONE`
 - **THEN** the unit is unsatisfiable (mutants `fv_claim_at_unfinished_phase`, `fv_adapter_on_unverified_inputs`, `fv_challenge_not_from_transcript`, `fv_point_not_on_curve`), the Quint invariant `NoClaimBeforeDone` holds, and O53 (GP3-L2, `ForeignVerify.lean`) is open
 
 ### Requirement: FVR-003 A proof under another SRS is fully checked in circuit
-FV-FINAL SHALL fold a proof under the core SRS into the core accumulator, and SHALL check a proof under another SRS fully in circuit in work units with the verifier parameters of its registry entry, with nothing deferred to the decider (OD-22 option a). A second deferred accumulator per SRS SHALL be used only by owner decision.
+FV-FINAL SHALL fold a proof under the core SRS into the core accumulator, and SHALL check a proof under another SRS fully in circuit in work units with the verifier parameters of its registry entry, with nothing deferred to the decider (AD-22 option a). A second deferred accumulator per SRS SHALL be used only by owner decision.
 
 #### Scenario: Other SRS folded into the core accumulator
 - **WHEN** a proof under another SRS has its obligation folded into the core accumulator
 - **THEN** the unit is unsatisfiable (mutant `fv_other_srs_folded_into_core_acc`), and the positives `pos_fv_plonk_proof_same_srs` and `pos_fv_plonk_proof_other_srs` pass against a host verifier
 
 ### Requirement: FVR-004 The subkits wait for X14 and the general path is never dropped
-FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before X14 gives the operation inventory and the unit budget. One unit plus the verification of one `FV` child SHALL fit 950,000 rows. If no unit size fits, GP-3 SHALL stay incomplete and the scope SHALL NOT be reduced to adapter classes.
+FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before X14 gives the operation inventory and the unit budget. One unit plus the verification of one `FV` child SHALL fit the node shape bounds of the internal set. If no unit size fits, GP-3 SHALL stay incomplete and the scope SHALL NOT be reduced to adapter classes.
 
 #### Scenario: No unit size fits
 - **WHEN** X14 finds no unit size that fits the node gate

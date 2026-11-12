@@ -27,7 +27,7 @@ The adapter SHALL consume the verified public inputs as `pi_d` and SHALL derive 
 
 #### Scenario: Several keys and adapters
 - **WHEN** two keys of one adapter class, or two distinct adapters, are used
-- **THEN** MockProver accepts each (positives `pos_gp3_two_keys_one_class`, `pos_gp3_distinct_adapters`)
+- **THEN** the constraint checker accepts each (positives `pos_gp3_two_keys_one_class`, `pos_gp3_distinct_adapters`)
 
 ### Requirement: FREG-004 The native adapter path is a milestone and never ticks GP-3
 The native adapter path SHALL be a milestone task, scoped by X8 (N-10). A proof under an SRS other than the core SRS SHALL NOT be folded into the core accumulator. GP-3 SHALL be reported complete only with the general verifier evidence of `sherlock-foreign-verifier`. An adapter-only GP-3 SHALL NOT be an acceptance path.

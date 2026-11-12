@@ -38,7 +38,7 @@ DESCEND SHALL derive `SUB(R, x)` from a verified SET `R` by one-hash openings of
 
 #### Scenario: Repeated and empty dependencies
 - **WHEN** one claim is consumed twice, one producer feeds two consumers, or a run has no dependency
-- **THEN** MockProver accepts each (positives `pos_gp2_repeated_consumption`, `pos_gp2_one_producer_two_consumers`, `pos_gp2_empty_deps_plain_seal`)
+- **THEN** the constraint checker accepts each (positives `pos_gp2_repeated_consumption`, `pos_gp2_one_producer_two_consumers`, `pos_gp2_empty_deps_plain_seal`)
 
 ### Requirement: CLM-005 The input link binds the consumer's input to the producer's Halted value
 If `DL.in_link = c_A` is set, SEAL-WITH-DEPS SHALL re-hash the consumer's `input_d` and `c_A` and SHALL require `outcome_d' == H(O, 1, 0, val_d)`. A Rejected or Exhausted claim SHALL be consumable as a chain element only, never as an input link or a value.
@@ -49,14 +49,14 @@ If `DL.in_link = c_A` is set, SEAL-WITH-DEPS SHALL re-hash the consumer's `input
 
 #### Scenario: Rejected claim as metadata
 - **WHEN** a Rejected claim is consumed as a chain element, or a structured value passes across programs
-- **THEN** MockProver accepts it (positives `pos_gp2_rejected_as_metadata`, `pos_gp2_struct_value_across_programs`, `pos_gp2_three_runs_collection`)
+- **THEN** the constraint checker accepts it (positives `pos_gp2_rejected_as_metadata`, `pos_gp2_struct_value_across_programs`, `pos_gp2_three_runs_collection`)
 
-### Requirement: CLM-006 The scope of GP-2 is gated on OD-20
-The built path SHALL be input consumption at the seal (OD-20 option a), with the circuit side of a mid-run consume rule specified so that it needs no new node relation. If the owner reads GP-2 as requiring a mid-run consume rule or a genesis-bound dependency, that work SHALL be required by this change and option (a) SHALL be only a milestone.
+### Requirement: CLM-006 The scope of GP-2 is gated on AD-20
+The built path SHALL be input consumption at the seal (AD-20 option a), with the circuit side of a mid-run consume rule specified so that it needs no new node relation. If the owner reads GP-2 as requiring a mid-run consume rule or a genesis-bound dependency, that work SHALL be required by this change and option (a) SHALL be only a milestone.
 
 #### Scenario: Owner decision pending
-- **WHEN** the GP-2 hook is offered as complete for GP-002 while OD-20 is open
-- **THEN** `pos_gp2_b_consumes_a_halted` and `pos_gp2_three_runs_collection` count as milestone evidence only, and the GP-002 target stays open until OD-20 is answered
+- **WHEN** the GP-2 hook is offered as complete for GP-002 while AD-20 is open
+- **THEN** `pos_gp2_b_consumes_a_halted` and `pos_gp2_three_runs_collection` count as milestone evidence only, and the GP-002 target stays open until AD-20 is answered
 
 ### Requirement: CLM-007 A seal premise enters a discharge list only as the premise element
 `DL` SHALL be `(chain_d, cover_root, in_link, prem_root)`. The premise element SHALL be the first element of a DL that a seal uses. It SHALL set `prem_root` and SHALL leave `chain_d`, `cover_root` and `in_link` unchanged. A chain element or an input-link element SHALL take only a `LEAF`, `DEP` or `FOREIGN` head.

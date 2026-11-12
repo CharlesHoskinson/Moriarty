@@ -1,58 +1,50 @@
 ## ADDED Requirements
 
-### Requirement: DCD-001 The run decider publishes only `[prog_d, input_d, outcome_d, n_steps]`
-The run decider SHALL verify the root proof under pinned node keys and SHALL publish exactly `[prog_d, input_d, outcome_d, n_steps]` with `n_steps` in `[1, 2^64)` (SRC-006). It SHALL refuse Running. It SHALL NOT publish `init_d`, `fin_d`, `pre_d`, `post_d`, a memory root, a tail digest, `len`, an address or `result_be`. Kind 7 under `/1` SHALL follow OD-16.
+### Requirement: DCD-001 The run statement is published by kit L AND WRAP
+DCD-001 SHALL be met by LW-007 of `sherlock-processor-final-20261111`. A general run SHALL publish `[prog_d, input_d, outcome_d, n_steps]` as effect words of the call vector. Kind 7 under `/1` SHALL follow AD-16. No halo2 run decider SHALL be built (superseded 2026-11-11, old text at commit `0ab8cd79d`).
 
 #### Scenario: Every outcome
-- **WHEN** a sealed Halted, Rejected or Exhausted run is decided, with every admitted rejection code and exhaustion kind
-- **THEN** the public inputs are exactly the four values and no state digest (positives `pos_decider_all_outcomes`, `pos_decider_halted_scalar_and_struct`, `pos_decider_set_head_leaf_and_dep`), the Quint invariant `NoStateDigestOnChain` of `deciderOutcome.qnt` holds, and O34 (DEC-L1, `OutcomeStatement.lean`) is open
+- **WHEN** a sealed Halted, Rejected or Exhausted run is wrapped
+- **THEN** the effect words carry exactly the four values (positives `pos_decider_all_outcomes`, `pos_decider_halted_scalar_and_struct`, `pos_decider_set_head_leaf_and_dep` in kit L AND WRAP), the Quint invariant `NoStateDigestOnChain` of `deciderOutcome.qnt` holds, and O34 (DEC-L1) is open
 
-#### Scenario: Forged statement
-- **WHEN** `n_steps` enters the claim, a state digest is public, or `n_steps = 2^64`
-- **THEN** the decider is unsatisfiable (mutants `decider_steps_in_claim`, `decider_public_state_digest`, `decider_nsteps_2p64`)
+### Requirement: DCD-002 The wrap verifies `L` in place of the pairing of a carried accumulator
+DCD-002 SHALL be met by LW-002 to LW-006 of `sherlock-processor-final-20261111`. No accumulator SHALL be carried to the ledger proof. The wrap SHALL verify `L` under the frozen `L` key and SHALL bind every public word to the call vector.
 
-### Requirement: DCD-002 Every carried obligation reaches the pairing
-The decider SHALL pin the root key, SHALL fold and pair every carried accumulator in circuit, and SHALL bind every public value to the exact ledger call transcript.
-
-#### Scenario: Carry dropped or pairing skipped
-- **WHEN** the root carry is dropped, the pairing is skipped, the root key is unpinned, or a call value is unbound
-- **THEN** the decider is unsatisfiable (mutants `decider_drop_root_carry`, `decider_skip_pairing`, `decider_unpinned_root_key`, `decider_unbound_call_value`), and at integration each flipped public value is refused by `validate_call` (SRC-020)
+#### Scenario: Unbound call value
+- **WHEN** one public word of a real wrap proof is flipped
+- **THEN** `validate_call` refuses the call (SRC-020), and the wrap mutants of LW-004 to LW-006 are refused
 
 ### Requirement: DCD-003 Replay is refused by `claim_d` only
-The replay identity SHALL be `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023).
+DCD-003 SHALL be met by LW-010 of `sherlock-processor-final-20261111`. The replay identity SHALL be `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023).
 
 #### Scenario: Second partition
 - **WHEN** the same run is proved under a second leaf partition and submitted
-- **THEN** the second call is refused (integration test, SRC-023), and the Quint invariant `PartitionReplayRefusedByClaimD` holds
+- **THEN** the second call is refused, and the Quint invariant `PartitionReplayRefusedByClaimD` holds
 
-### Requirement: DCD-004 The collection decider publishes `[reg_root, set_root, shape_d]` and no claim count
-The collection decider SHALL publish `[reg_root, set_root, shape_d]` with a schema separate from the run entry. No claim count SHALL be public, range-checked or used for soundness (OD-2, OWNER to confirm). The collection entry SHALL publish no per-claim value. Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).
+### Requirement: DCD-004 The collection statement carries no claim count
+DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_root, set_root, shape_d]` with no claim count (AD-2, OWNER to confirm). Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).
 
 #### Scenario: Three runs joined
-- **WHEN** three sealed runs are joined and decided
-- **THEN** the decider publishes exactly `[reg_root, set_root, shape_d]` (positive `pos_decider_collection_three_runs`, run at group 6 integration), and each claim opens from `set_root` through the LEDGER CONTRACT (LDG-004)
+- **WHEN** three sealed runs are joined and wrapped
+- **THEN** the statement is exactly `[reg_root, set_root, shape_d]` (positive `pos_decider_collection_three_runs` in kit L AND WRAP), and each claim opens through the LEDGER CONTRACT (LDG-004)
 
-#### Scenario: Stale registry root
-- **WHEN** the transcript carries a registry root other than the contract's
-- **THEN** the call is refused (Quint invariant `StaleOrForeignRegRootRefused`)
+### Requirement: DCD-005 The derived gates replace the decider row gate
+DCD-005 SHALL be met by DG-001 and DG-002 of `sherlock-processor-final-20261111`. The decider gate of 1,000,000 rows SHALL NOT apply. The wrap SHALL fit 85 percent of `2^k - 7` usable rows at the smallest k of 19, 20 and 21, with one fixed 2^16-row range table.
 
-### Requirement: DCD-005 The decider adds no range-table tag and stays under its row gate
-The decider SHALL use 8-bit byte decomposition only and SHALL add no range-table tag. It SHALL stay at or below 1,000,000 rows with its table rows and usable domain recorded with headroom. A closing proof SHALL be added only if the measured decider exceeds the gate (N-5).
+#### Scenario: Wrap rows measured
+- **WHEN** M7 measures the G4 wrap rows
+- **THEN** the k of the wrap key is the smallest of 19, 20 and 21 at which the rows fit the gate, and no circuit is above k = 21
 
-#### Scenario: Cost model on both deciders
-- **WHEN** `cost_model` runs on the run decider and the collection decider
-- **THEN** rows are at or below 1,000,000 and table rows do not grow (positive `pos_decider_table_rows`), and a new range tag is refused by the cost model (`decider_new_range_tag`)
-
-### Requirement: DCD-006 The run entry opens a sealed SET head and checks no seal predicate
-The run root SHALL be a SET root sealed by NODE. The decider SHALL recompute `claim_d` from the four values and SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse every other root. It SHALL NOT open a state header. On the M4 linear path one SEAL node SHALL run before the decider.
+### Requirement: DCD-006 The run statement comes from a sealed SET head
+DCD-006 SHALL be met by LW-008 of `sherlock-processor-final-20261111`. The run root SHALL be a SET root sealed by NODE and opened with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. No seal predicate SHALL be checked again after NODE.
 
 #### Scenario: Unsealed root or forged head
-- **WHEN** a SEG root (Running or terminal) is offered to the run entry, the SET head preimage differs from the published values, or a root of another SET form is opened as a run head
-- **THEN** the decider is unsatisfiable (mutants `decider_seg_root_as_run`, `decider_set_head_forged`), and the seal predicates are refused in NODE (mutants `node_seal_running`, `node_seal_nonzero_hlo`, `node_seal_header_word_forged`, `node_seal_nonempty_deps`)
+- **WHEN** a SEG root is offered as a run, or the SET head preimage differs from the run statement
+- **THEN** the proof is refused (mutants `decider_seg_root_as_run`, `decider_set_head_forged` in kit L AND WRAP), and the seal predicates are refused in NODE (mutants `node_seal_running`, `node_seal_nonzero_hlo`, `node_seal_header_word_forged`, `node_seal_nonempty_deps`)
 
-### Requirement: DCD-007 Under mid-run consumption the run entry binds the registry root
-If OD-20 selects option (b), the run entry SHALL either refuse a `DEP` head whose cover holds a FOREIGN member, or SHALL read `reg_root` into the run-entry transcript from contract state and check it there. The four published run values SHALL NOT change. Under option (a) this requirement SHALL have no effect.
+### Requirement: DCD-007 Under mid-run consumption the run statement binds the registry root
+DCD-007 SHALL be met by LW-011 of `sherlock-processor-final-20261111`. If AD-20 selects option (b), a `DEP` head with a FOREIGN member SHALL be refused or SHALL be checked against the contract's `reg_root`. Under option (a) this requirement SHALL have no effect.
 
 #### Scenario: Foreign member under another root
-- **WHEN** OD-20 option (b) is taken and a `DEP` head offered to the run entry has a FOREIGN member lifted under a root other than the contract's
-- **THEN** the decider or the contract refuses it (mutant `decider_dep_foreign_other_reg_root`)
+- **WHEN** AD-20 option (b) is taken and a `DEP` head has a FOREIGN member lifted under another registry root
+- **THEN** the wrap or the contract refuses it (mutant `decider_dep_foreign_other_reg_root`)

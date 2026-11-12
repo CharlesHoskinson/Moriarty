@@ -20,7 +20,7 @@ With `enable = 1`, a slot SHALL be the transition of `sherlock-k-a/1` for the ru
 
 #### Scenario: Height edge
 - **WHEN** `h_pre = 2^64 - 2` and one step is proved
-- **THEN** MockProver accepts the leaf (positive `core_height_edge`)
+- **THEN** the constraint checker accepts the leaf (positive `core_height_edge`)
 
 ### Requirement: CORE-003 No step follows a terminal outcome and closing a leaf changes nothing
 No enabled step SHALL start from a terminal outcome, and a publishing step SHALL be the last enabled step. Closing a leaf SHALL change no counter, fuel, outcome or length. A step that does not fit the remaining capacity SHALL NOT be enabled and SHALL NOT produce `Rejected` or `Exhausted` (SVM-010).
@@ -53,10 +53,10 @@ CORE SHALL own the append chain with conditions A1 to A4: the first append addre
 
 #### Scenario: Zero-allocation loop
 - **WHEN** a loop that allocates nothing runs over a full leaf
-- **THEN** MockProver accepts the leaf and no address is consumed (CORE positive, zero-allocation loop)
+- **THEN** the constraint checker accepts the leaf and no address is consumed (CORE positive, zero-allocation loop)
 
 ### Requirement: CORE-006 `rules_d` is the SRC-001 hash of the S slot rule lanes
-CORE SHALL compute `rules_d = Poseidon(dom("SHK_RULES"), rid_0, ..., rid_(S-1))` over exactly S lanes in slot order in one whole-sponge HASH slot, with `rid_j = 0` for a disabled slot, and SHALL copy it to leaf public lane 5. There SHALL be no special case for S = 1. S SHALL be 16 for the first build (OD-6).
+CORE SHALL compute `rules_d = Poseidon(dom("SHK_RULES"), rid_0, ..., rid_(S-1))` over exactly S lanes in slot order in one whole-sponge HASH slot, with `rid_j = 0` for a disabled slot, and SHALL copy it to leaf public lane 5. There SHALL be no special case for S = 1. S SHALL be 16 for the first build (AD-6).
 
 #### Scenario: Forged or reordered rules digest
 - **WHEN** lane 5 is not that hash, the lanes are reordered, a disabled slot has a non-zero lane, or at S = 1 the single lane is published without the hash
@@ -92,7 +92,7 @@ CORE SHALL issue only the requests of its inventory: ALU, MEM read, MEM append, 
 - **THEN** the correct circuit refuses the witness (mutants `core_unused_lane_nonzero`, `core_value_digest_host_supplied`)
 
 ### Requirement: CORE-010 Leaf shape capacities fit every rule maximum
-`LeafShape { s, w_flush, k_page, k_rom, n_cold }` SHALL fit the largest single step of every rule over every branch at one step per leaf and every tail occupancy. A shape below a rule maximum SHALL be refused before key generation. `k_page`, `k_rom` and `n_cold` SHALL NOT be frozen before X15 and X5 (OD-3, L-2).
+`LeafShape { s, w_flush, k_page, k_rom, n_cold }` SHALL fit the largest single step of every rule over every branch at one step per leaf and every tail occupancy. A shape below a rule maximum SHALL be refused before key generation. `k_page`, `k_rom` and `n_cold` SHALL NOT be frozen before X15 and X5 (AD-3, L-2).
 
 #### Scenario: Shape below a rule maximum
 - **WHEN** a `LeafShape` is below a rule maximum of the per-rule table
@@ -103,7 +103,7 @@ CORE SHALL issue only the requests of its inventory: ALU, MEM read, MEM append, 
 - **THEN** `s = 16`, `w_flush = 1` and `k_page + n_cold >= 4` hold by the X1 table `FD/maxima/rule_maxima.md` (M-2, M-3), a shape with `8 W` below the append maximum is refused (`mem_shape_step_exceeds_window`), and `k_rom` waits for X15
 
 ### Requirement: CORE-011 Each rule of a rule family is its reference transition
-Each rule family sub-kit SHALL be generated from the `RuleContract`s of its rules (read set, write set, ordered plan, charge behaviour, effect bounds). Each rule SHALL be its reference transition on every branch, checked against the REFERENCE BRIDGE kit. A family that builds constructors SHALL wait for X6 (OD-5).
+Each rule family sub-kit SHALL be generated from the `RuleContract`s of its rules (read set, write set, ordered plan, charge behaviour, effect bounds). Each rule SHALL be its reference transition on every branch, checked against the REFERENCE BRIDGE kit. A family that builds constructors SHALL wait for X6 (AD-5).
 
 #### Scenario: One positive per branch
 - **WHEN** the rule fires on each branch of its reference code
@@ -122,10 +122,10 @@ Each rule SHALL charge fuel and counters exactly as the reference does on every 
 
 #### Scenario: Maximal branch at one step per leaf
 - **WHEN** the rule runs its maximal branch at one step per leaf
-- **THEN** MockProver accepts the leaf (a per-rule maximal-step positive, checked against the row of `FD/maxima/rule_maxima.md`)
+- **THEN** the constraint checker accepts the leaf (a per-rule maximal-step positive, checked against the row of `FD/maxima/rule_maxima.md`)
 
 ### Requirement: CORE-013 Input nodes are read through `AuthIn` under the certified view
-Under input admission form (b) (OD-17, OWNER), `read_input` SHALL return an `AuthIn` token for the input root or for field `k < m` of an earlier token, opened by a Merkle path of depth `D_view` against the `view_root` body word. A read SHALL add no MEM append and SHALL charge no DataNodes or DataFields cap, unless X11 shows a reference charge; then the charge SHALL be a constant per read stated in the rule contract.
+Under input admission form (b) (AD-17, OWNER), `read_input` SHALL return an `AuthIn` token for the input root or for field `k < m` of an earlier token, opened by a Merkle path of depth `D_view` against the `view_root` body word. A read SHALL add no MEM append and SHALL charge no DataNodes or DataFields cap, unless X11 shows a reference charge; then the charge SHALL be a constant per read stated in the rule contract.
 
 #### Scenario: Read outside the view
 - **WHEN** a rule uses an input record that is not under `view_root`, or an index that is not reached from the input root

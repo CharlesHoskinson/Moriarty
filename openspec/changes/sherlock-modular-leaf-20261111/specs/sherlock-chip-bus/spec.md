@@ -13,7 +13,7 @@ The leaf SHALL use one bus tuple schema `(chip, key, a, b, c)` over `Fq` with tw
 
 #### Scenario: All chips on both lanes
 - **WHEN** ALU, MEM, HASH and ROM requests use both lanes in one region, with the same numeric key on two chips
-- **THEN** MockProver accepts the leaf (positive `bus_both_lanes_all_chips`), and an unused provider row with a repeated request is legal (positive `bus_unused_provider_and_repeated_request`)
+- **THEN** the constraint checker accepts the leaf (positive `bus_both_lanes_all_chips`), and an unused provider row with a repeated request is legal (positive `bus_unused_provider_and_repeated_request`)
 
 ### Requirement: BUS-002 Provider rows pin a non-zero chip id and padding is the zero tuple
 An active provider row SHALL pin the fixed non-zero chip id of its provider. A padding provider row SHALL be the zero tuple in all five cells or SHALL be off the provider selector. An unused request lane SHALL be zero in all five cells. Every provider row SHALL satisfy its relation whether or not a request uses it.
@@ -35,14 +35,14 @@ RANGE and DEC SHALL share one tagged fixed table `(tag, key, val)` in the three-
 
 #### Scenario: RANGE and DEC in one table
 - **WHEN** RANGE and DEC queries run in one leaf
-- **THEN** MockProver accepts the leaf (positive `tagged_range_and_dec_coexist`)
+- **THEN** the constraint checker accepts the leaf (positive `tagged_range_and_dec_coexist`)
 
 ### Requirement: BUS-004 A disabled DEC slot matches only the idle row
 A disabled DEC slot SHALL keep the fixed tag `TAG_DEC` and SHALL query only the DEC idle row `(TAG_DEC, 0, 0)`. An enabled slot SHALL NOT match the idle row. A full leaf and a leaf with a disabled suffix SHALL prove under one key.
 
 #### Scenario: Full and partial leaf under one key
 - **WHEN** a leaf with every slot enabled and a leaf with a disabled suffix are proved under one key
-- **THEN** MockProver accepts both (positive `tagged_full_and_partial_leaf_same_key`), and the Quint invariant `decIdleOnlyWhenDisabled` holds
+- **THEN** the constraint checker accepts both (positive `tagged_full_and_partial_leaf_same_key`), and the Quint invariant `decIdleOnlyWhenDisabled` holds
 
 #### Scenario: Disabled slot with a control word
 - **WHEN** a disabled slot has `dec_key = 0` and a non-zero control word, or an enabled slot queries the idle row

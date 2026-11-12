@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: DEC-001 Exactly one enabled rule per enabled slot, in reference priority
-DEC SHALL select exactly one rule of the frozen inventory for each enabled slot, in the priority of the reference machine, and SHALL return its `rule_lane` and bounded control parts through the DEC port. The inventory SHALL be the 120 enabled step rules of X1 (OD-10, M-4), explicit, versioned and ordered.
+DEC SHALL select exactly one rule of the frozen inventory for each enabled slot, in the priority of the reference machine, and SHALL return its `rule_lane` and bounded control parts through the DEC port. The inventory SHALL be the 120 enabled step rules of X1 (AD-10, M-4), explicit, versioned and ordered.
 
 #### Scenario: Two rules or none
 - **WHEN** two rules are selected, none is selected with `enable = 1`, or the priority is swapped
@@ -9,10 +9,10 @@ DEC SHALL select exactly one rule of the frozen inventory for each enabled slot,
 
 #### Scenario: Every enabled rule
 - **WHEN** each of the 120 enabled rules is decoded
-- **THEN** MockProver accepts each (positive `dec_every_enabled_rule_roundtrip`), including `dec_publication_with_zero_fuel` and `dec_comparator_boundaries`
+- **THEN** the constraint checker accepts each (positive `dec_every_enabled_rule_roundtrip`), including `dec_publication_with_zero_fuel` and `dec_comparator_boundaries`
 
 ### Requirement: DEC-002 Disabled and extension rules have no row
-The DEC table SHALL hold no row for a disabled rule or a `/2` extension rule. DEC SHALL enforce the profile `/1`. The treatment of exhaust kind 7 under `/1` SHALL follow the resolution of OD-16 (OWNER) and SHALL be refused until then.
+The DEC table SHALL hold no row for a disabled rule or a `/2` extension rule. DEC SHALL enforce the profile `/1`. The treatment of exhaust kind 7 under `/1` SHALL follow the resolution of AD-16 (OWNER) and SHALL be refused until then.
 
 #### Scenario: Disabled or extension rule queried
 - **WHEN** a slot queries the pre-state of a disabled rule or a `/2` rule

@@ -19,7 +19,7 @@ The memory backend SHALL implement the `MemBackend` trait (`crates/mori-chip/src
 - **THEN** the C1 lane model mutant `domain_tag_dropped` violates `invRefine`, and the correct circuit refuses the witness (mutant `domain_tag_swapped_node_height`)
 
 ### Requirement: MBK-003 A flush happens iff a segment boundary is crossed, into an empty slot, at every TOP
-`persist` SHALL flush a segment exactly when `floor(len / 8)` grows, into an empty tree slot, with old and new walks that share siblings. It SHALL hold at every `TOP >= 1`. The working depth SHALL be TOP = 63, gated on OD-1 (OWNER).
+`persist` SHALL flush a segment exactly when `floor(len / 8)` grows, into an empty tree slot, with old and new walks that share siblings. It SHALL hold at every `TOP >= 1`. The working depth SHALL be TOP = 63, gated on AD-1 (OWNER).
 
 #### Scenario: Skipped, spurious or occupied flush
 - **WHEN** a flush is skipped, spurious, onto an occupied slot, or forges an empty segment, also at TOP = 1

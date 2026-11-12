@@ -8,14 +8,14 @@ The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: 
 - **THEN** `runs` holds the claim once and the second call changes nothing (positive `ledger_accept_run_then_open_same_claim_is_noop`), and a contract with two maps is refused by the control test `ledger_double_settle_two_entries`
 
 ### Requirement: LDG-002 `acceptRun` settles a run claim at most once
-`acceptRun(prog_d, input_d, outcome_d, n_steps)` SHALL verify the run decider proof on the four values with `prog_d` as call data (SRC-007; N-11, OWNER). It SHALL compute `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and SHALL refuse a `claim_d` that is already in `runs`.
+`acceptRun(prog_d, input_d, outcome_d, n_steps)` SHALL verify the wrap proof whose effect words carry the four values with `prog_d` as call data (SRC-007; N-11, OWNER). It SHALL compute `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and SHALL refuse a `claim_d` that is already in `runs`.
 
 #### Scenario: Replay of a settled run
 - **WHEN** a second `acceptRun` call carries a `claim_d` that is already in `runs`, from any partition
 - **THEN** the call is refused, and the Quint invariant `ClaimSettledOnceAcrossEntries` holds
 
 ### Requirement: LDG-003 `acceptCollection` accepts a root and writes no claim
-`acceptCollection(reg_root, set_root, shape_d)` SHALL verify the collection decider proof, SHALL check `reg_root` against the registry state (history per N-8), and SHALL insert `set_root` into `verified_roots`. It SHALL make no per-claim write and no write keyed by `shape_d`.
+`acceptCollection(reg_root, set_root, shape_d)` SHALL verify the wrap proof of the collection statement, SHALL check `reg_root` against the registry state (history per N-8), and SHALL insert `set_root` into `verified_roots`. It SHALL make no per-claim write and no write keyed by `shape_d`.
 
 #### Scenario: Collection settlement
 - **WHEN** a collection of three runs is accepted

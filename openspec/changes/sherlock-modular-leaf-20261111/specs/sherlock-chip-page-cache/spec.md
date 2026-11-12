@@ -13,7 +13,7 @@ A heap line SHALL authenticate its 8 records as `H_REC` leaves of `Tree8` and a 
 
 #### Scenario: All 8 records and TOP = 63
 - **WHEN** a line serves all 8 records at TOP = 63, beside a scalar cold read in the same leaf
-- **THEN** MockProver accepts the leaf (positives `ok_line_all_8_records`, `ok_line_top63`, `ok_line_and_scalar_cold_read_same_leaf`)
+- **THEN** the constraint checker accepts the leaf (positives `ok_line_all_8_records`, `ok_line_top63`, `ok_line_and_scalar_cold_read_same_leaf`)
 
 ### Requirement: PAGE-002 Disabled, duplicate and unordered lines
 A line with `en = 0` SHALL serve the zero tuple and SHALL turn off its root equality. Duplicate or unordered lines SHALL need no extra constraint, and two lines that open one block SHALL serve identical tuples.
@@ -24,7 +24,7 @@ A line with `en = 0` SHALL serve the zero tuple and SHALL turn off its root equa
 
 #### Scenario: Two lines open one block
 - **WHEN** two lines open one block with equal records, and with different records
-- **THEN** MockProver accepts the first (positive `ok_duplicate_and_unordered_lines`) and the correct circuit refuses the second (mutant `line_dup_block_two_values`)
+- **THEN** the constraint checker accepts the first (positive `ok_duplicate_and_unordered_lines`) and the correct circuit refuses the second (mutant `line_dup_block_two_values`)
 
 ### Requirement: PAGE-003 Lines change no boundary value
 Opening heap or ROM lines SHALL NOT change `(len, root, tail_d)`, `pre_d`, `post_d` or the public statement.
@@ -34,7 +34,7 @@ Opening heap or ROM lines SHALL NOT change `(len, root, tail_d)`, `pre_d`, `post
 - **THEN** the post token and the digests are equal (positive `line_boundary_invariance`), the Quint invariant `BoundaryIndependentOfLines` holds, and O17 (`PageCache.lean`, boundary invariance) is open
 
 ### Requirement: PAGE-004 ROM lines under `prog_root`
-ROM SHALL have its own chip id. Its key SHALL be `tbl 2^D_row + row`, with bits from the walk, and its leaf and node tags SHALL differ from the heap tags and carry heights. Padding SHALL be canonical. ROM SHALL trust row content only through the PROG canonicality premise, which the seal discharges with the `ADM` claim (NODE-010). `D_row` SHALL cover every table index of the language (OD-12).
+ROM SHALL have its own chip id. Its key SHALL be `tbl 2^D_row + row`, with bits from the walk, and its leaf and node tags SHALL differ from the heap tags and carry heights. Padding SHALL be canonical. ROM SHALL trust row content only through the PROG canonicality premise, which the seal discharges with the `ADM` claim (NODE-010). `D_row` SHALL cover every table index of the language (AD-12).
 
 #### Scenario: Table alias or row overflow
 - **WHEN** a row of one table is served under another table's key, or the requested row overflows `D_row`
@@ -46,10 +46,10 @@ ROM SHALL have its own chip id. Its key SHALL be `tbl 2^D_row + row`, with bits 
 
 #### Scenario: Each table and the last partial line
 - **WHEN** a ROM line is opened for each table and for the last partial line
-- **THEN** MockProver accepts each (positives `ok_rom_line_each_table`, `ok_rom_last_partial_line`)
+- **THEN** the constraint checker accepts each (positives `ok_rom_line_each_table`, `ok_rom_last_partial_line`)
 
 ### Requirement: PAGE-005 Line capacity covers every rule and waits for X4 and X15
-`K_page + n_cold`, `K_rom` and the lane count SHALL be at least the per-step maxima of every branch of every rule. A shape below them SHALL be refused before key generation. `K_rom` SHALL NOT be frozen before X15, and the line cost and ROM depth SHALL NOT be frozen before X4 (OD-3, OD-12).
+`K_page + n_cold`, `K_rom` and the lane count SHALL be at least the per-step maxima of every branch of every rule. A shape below them SHALL be refused before key generation. `K_rom` SHALL NOT be frozen before X15, and the line cost and ROM depth SHALL NOT be frozen before X4 (AD-3, AD-12).
 
 #### Scenario: Shape below a rule maximum
 - **WHEN** a `LeafShape` is below a rule maximum

@@ -2,11 +2,19 @@
 
 Status: S2 (written design, specified only). Night-plan steps D1 and D2 of `research/sherlock-final-design-20261111/NIGHT-PLAN.md`, 2026-11-11. Nothing in this change is built, keyed or proved by this change. The full architecture is `research/sherlock-final-design-20261111/ARCHITECTURE.md` (revision B2), below called `FD/ARCHITECTURE.md`. The decisions taken while the owner was AFK are in `FD/DECISIONS.md`. The audit answers are in `FD/ARCH-AUDIT-RESPONSE.md`.
 
+Superseded 2026-11-11 by `openspec/changes/sherlock-processor-final-20261111/` (the final co-processor design). The text of this change before the correction is at commit `0ab8cd79d`. Corrected in place:
+
+- Kit DECIDER (spec `sherlock-decider`, DCD-001 to DCD-007) is superseded by kit L AND WRAP (LW-002 to LW-011, DG-001, DG-002). Each DCD requirement now names its successor. The test names and obligation DEC-L1 keep their meaning and belong to kit L AND WRAP.
+- The halo2 row gates (`k_leaf <= 16` at S = 16, node at most 950,000 rows, decider at most 1,000,000 rows) are replaced by the derived gates DG-001 to DG-007.
+- NODE INTEGRATION verifies STARK children with the recursion verifier and checks each child key against `key_root`. It folds no accumulator (NODE-004, NODE-007).
+- The constraint tests of the kits run the stark-backend debug constraint checker on STARK AIRs and MockProver on halo2 prototypes (DG-008).
+- The machine-level decisions are named AD-1 to AD-23, as in `FD/ARCHITECTURE.md` section 4.1. OD-1 to OD-18 now name the co-processor decisions of `FD/DECISIONS.md`.
+
 ## Why
 
 The leaf of `openspec/changes/sherlock-vm-consensus-20261107/design.md` section 2.7 is one circuit description. One agent cannot build or check it in one session, and the memory backend and the boundary commitment cannot change without a change to every other part. This change specifies the leaf and the recursion as 23 module kits with frozen interfaces (`FD/ARCHITECTURE.md` sections 1 and 2). One agent builds and checks one kit against its interface. The memory backend and the boundary commitment each sit behind one seam.
 
-The change can move the terminal evidence-gated decision of `sherlock-vm-consensus-20261107` because it turns the GP-1 to GP-4 acceptance lines into per-kit evidence (MockProver tests and named mutants, Quint verdict files, Lean theorems with axiom reports) and a build order with gates. A kit or a GP target is reported complete only on that evidence.
+The change can move the terminal evidence-gated decision of `sherlock-vm-consensus-20261107` because it turns the GP-1 to GP-4 acceptance lines into per-kit evidence (constraint tests and named mutants, Quint verdict files, Lean theorems with axiom reports) and a build order with gates. A kit or a GP target is reported complete only on that evidence.
 
 ## What Changes
 
@@ -42,7 +50,7 @@ In scope: the 24 kits of `FD/ARCHITECTURE.md` section 2.
 | `sherlock-init-admission` | INIT (genesis and input admission) | INIT |
 | `sherlock-reference-bridge` | REFERENCE BRIDGE | RFB |
 | `sherlock-node-integration` | NODE INTEGRATION | NODE |
-| `sherlock-decider` | DECIDER | DCD |
+| `sherlock-decider` | DECIDER (superseded by kit L AND WRAP, see below) | DCD |
 | `sherlock-checkpoint-store` | HOST CHECKPOINT STORE | CKPT |
 | `sherlock-continuation` | CONTINUATION | CONT |
 | `sherlock-claim-consumption` | GP-2 hook | CLM |
@@ -53,50 +61,50 @@ In scope: the 24 kits of `FD/ARCHITECTURE.md` section 2.
 
 The spec folder names are the names of `FD/ARCHITECTURE.md` section 5.2. The ID prefixes do not collide with GP, SRC, SVM, SAS or SWF, or with the Lean labels (for example DEC-L1 is a DECIDER obligation, not a kit DEC requirement).
 
-Profile B (ZmLogUp memory and Horner boundary) is benchmark-only. It is not built before milestone M4, it is in no build group, and its one task is not part of the completion of this change (L-5, OD-7).
+Profile B (ZmLogUp memory and Horner boundary) is benchmark-only. It is not built before milestone M4, it is in no build group, and its one task is not part of the completion of this change (L-5, AD-7).
 
-Out of scope: continuation mode 2 (OD-15), semantic profile `/2`, any change of the GP-1 to GP-4 text, and time and throughput gates (they stay in the SRC-011 and SRC-015 rows after measurement).
+Out of scope: continuation mode 2 (AD-15), semantic profile `/2`, any change of the GP-1 to GP-4 text, and time and throughput gates (they stay in the SRC-011 and SRC-015 rows after measurement).
 
 ## Relation to `sherlock-vm-consensus-20261107`
 
-This change implements the leaf and recursion design of `sherlock-vm-consensus-20261107`. That change keeps the requirements GP-*, SRC-*, SVM-* and SAS-* and its open items. No requirement of this change replaces, narrows or reinterprets GP-1 to GP-4 (`openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md`). A narrowing option is never an acceptance path of this change: OD-1 option (c), V-1 options (b) and (c), a two-node GP-4 and an adapter-only GP-3 (decision A-6).
+This change implements the leaf and recursion design of `sherlock-vm-consensus-20261107`. That change keeps the requirements GP-*, SRC-*, SVM-* and SAS-* and its open items. No requirement of this change replaces, narrows or reinterprets GP-1 to GP-4 (`openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md`). A narrowing option is never an acceptance path of this change: AD-1 option (c), V-1 options (b) and (c), a two-node GP-4 and an adapter-only GP-3 (decision A-6).
 
 The amendments of the governing change that this change needs are tasks of group F in `tasks.md`. Each is made in `sherlock-vm-consensus-20261107`:
 
-- SRC-021 and the Init table to the one-arena field list (OD-18, OWNER).
-- The input-admission open item of `design.md:194` (OD-17, OWNER).
+- SRC-021 and the Init table to the one-arena field list (AD-18, OWNER).
+- The input-admission open item of `design.md:194` (AD-17, OWNER).
 - `design.md:80` to "one schema, two lanes".
 - D2, D3, D6 and D7 of `design.md:95-100` to the dense memory and hash-stack rules, with the compound stack step.
 - SRC-014 `S_MAX` in the relation bytes (already required, the code change is in kit NODE INTEGRATION).
 - SRC-007 and the contract templates for universal program acceptance and collection opening (N-11, OWNER).
-- The semantic reference for the full language (OD-21, OWNER).
-- A mid-run consume rule, only if OD-20 selects it (OWNER).
+- The semantic reference for the full language (AD-21, OWNER).
+- A mid-run consume rule, only if AD-20 selects it (OWNER).
 
 ## OWNER decisions that gate parts of this change
 
 | Id | Decision | What it gates |
 |---|---|---|
-| OD-1 (R-4, M-2) | Confirm TOP >= 63 (TOP = 63 holds only with one physical cell per record, OD-11) | MEM-002, MBK-003 |
-| OD-2 (R-5, N-9) | Confirm: no claim count in the public statement | DCD-004, SHP-001 |
-| OD-5 (R-9) | Status of dissent D-1 (linked slices), measured by X6 | CORE-011, task 4.13 |
-| OD-6 | S above 16 needs an SRC-014 amendment | CORE-006, NODE-002 |
-| OD-13, OD-19 | The fallback leaf statement `sherlock-leaf-stmt/2`, only if X10 fails | BND-003, NODE-003 |
-| OD-14 | `decl_schema_d` normal form inside the admission check (the premise is discharged at the seal by ADMIT-WORK) | PAGE-004, INIT-003, NODE-011 |
-| OD-16 (N-12) | Exhaust kind 7 against profile `/1` | DEC-002, DCD-001 |
-| OD-17 | Input admission form (recommended: by digest, empty genesis memory, certified input view), measured by X11; under it the I7 question and the seal read path of `view_root` | INIT-004, INIT-005, INIT-006, CORE-013, NODE-012, NODE-013, task F.3 |
-| OD-18 | SRC-021 one-arena Init field list | INIT-001, task F.2 |
-| OD-20 | Whether GP-2 also needs a mid-run consume rule or a genesis-bound dependency | CLM-006, DCD-007 |
-| OD-21 | The normative semantic reference for the full language, sized by X13 | RFB-001 |
-| OD-22 | A second deferred accumulator per SRS, only if the owner wants it | FVR-003 |
+| AD-1 (R-4, M-2) | Confirm TOP >= 63 (TOP = 63 holds only with one physical cell per record, AD-11) | MEM-002, MBK-003 |
+| AD-2 (R-5, N-9) | Confirm: no claim count in the public statement | DCD-004, SHP-001 |
+| AD-5 (R-9) | Status of dissent D-1 (linked slices), measured by X6 | CORE-011, task 4.13 |
+| AD-6 | S above 16 needs an SRC-014 amendment | CORE-006, NODE-002 |
+| AD-13, AD-19 | The fallback leaf statement `sherlock-leaf-stmt/2`, only if X10 fails | BND-003, NODE-003 |
+| AD-14 | `decl_schema_d` normal form inside the admission check (the premise is discharged at the seal by ADMIT-WORK) | PAGE-004, INIT-003, NODE-011 |
+| AD-16 (N-12) | Exhaust kind 7 against profile `/1` | DEC-002, DCD-001 |
+| AD-17 | Input admission form (recommended: by digest, empty genesis memory, certified input view), measured by X11; under it the I7 question and the seal read path of `view_root` | INIT-004, INIT-005, INIT-006, CORE-013, NODE-012, NODE-013, task F.3 |
+| AD-18 | SRC-021 one-arena Init field list | INIT-001, task F.2 |
+| AD-20 | Whether GP-2 also needs a mid-run consume rule or a genesis-bound dependency | CLM-006, DCD-007 |
+| AD-21 | The normative semantic reference for the full language, sized by X13 | RFB-001 |
+| AD-22 | A second deferred accumulator per SRS, only if the owner wants it | FVR-003 |
 | N-6 | GP-4 "arity at least 2 plus new work" in one node, measured by X7 | SHP-003 |
 | N-7 | Bracketing disclosure in `shape_d` (dissent D-6), only if it changes GP-4 text | SHP-002 |
 | N-11 | Contract surface: one contract with two entry points over one ledger (`acceptRun` with `prog_d` as call data, collection acceptance and claim opening); the sealed `program_d` of SRC-007 | LDG-001, LDG-002, tasks F.7, F.10, 7.2 |
-| OD-23 | Consumer of `rules_d` after the leaf, or a reserved zero lane (SRC-001 amendment) | CORE-006 |
+| AD-23 | Consumer of `rules_d` after the leaf, or a reserved zero lane (SRC-001 amendment) | CORE-006 |
 
 ## Impact
 
 - Code: `crates/mori-chip` (leaf kits), `crates/mori-recursion` (node, decider, continuation, checkpoint store, GP hooks, general verifier), `crates/mori-core/src/sherlock/` (REFERENCE BRIDGE), `tools/sherlock-sdk/` (LEDGER CONTRACT).
 - Models: `models/sherlock/quint/` (new and extended models per kit, verdict files under `qa/gemini-quint/`).
 - Proofs: `clean/fork/Clean/Sherlock/` (new Lean files per kit, axiom-report companions).
-- Keys: the node and decider keys change with the leaf key (key cascade task).
+- Keys: the per-program leaf keys change with the leaf AIRs under `key_root`. The universal internal-recursive, `L` and wrap keys do not.
 - Specs: tasks in group F edit `openspec/changes/sherlock-vm-consensus-20261107/` as listed above.
