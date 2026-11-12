@@ -225,11 +225,16 @@ impl Relation for ChipNode {
             assigned_bases.insert(n, bls.assign_fixed(l, base)?);
         }
         let committed = [bls.assign_fixed(l, C::identity())?];
+        // A doubled (2-core stand-in) leaf key has 2 x (committed + public) instance
+        // columns; the extra columns take the same lanes (key-shape measurement).
+        let extra = pvk.cs().num_instance_columns().saturating_sub(2);
+        let insts: Vec<&[AssignedNative<F>]> =
+            std::iter::repeat_n(leaf_inst.as_slice(), 1 + extra).collect();
         let mut leaf_acc = verifier.prepare(
             l,
             &assigned_vk,
             &committed,
-            &[leaf_inst.as_slice()],
+            &insts,
             witness.as_ref().map(|w| w.leaf_proof.clone()),
         )?;
         leaf_acc.resolve_fixed_bases(&assigned_bases);
@@ -533,6 +538,49 @@ fn vk_of<Ci: midnight_proofs::plonk::Circuit<F>>(c: &Ci) -> (Vk, u32) {
     (keygen_vk_with_k(&params(k), c, k).unwrap(), k)
 }
 
+/// k = 21 measurement: the node's own k (`CHIP_NODE_K`, default 20).
+fn node_k() -> u32 {
+    std::env::var("CHIP_NODE_K").map_or(20, |s| s.parse().unwrap())
+}
+
+/// Key-shape stand-in for a 2-core leaf: the inner circuit configured twice, so every
+/// column, lookup and instance column of the leaf key appears twice.
+#[derive(Clone, Debug)]
+struct Doubled<Ci>(Ci);
+
+impl<Ci: midnight_proofs::plonk::Circuit<F>> midnight_proofs::plonk::Circuit<F> for Doubled<Ci>
+where
+    Ci::Params: Clone,
+{
+    type Config = (Ci::Config, Ci::Config);
+    type FloorPlanner = Ci::FloorPlanner;
+    type Params = Ci::Params;
+
+    fn without_witnesses(&self) -> Self {
+        Doubled(self.0.without_witnesses())
+    }
+
+    fn params(&self) -> Ci::Params {
+        self.0.params()
+    }
+
+    fn configure_with_params(meta: &mut ConstraintSystem<F>, p: Ci::Params) -> Self::Config {
+        (
+            Ci::configure_with_params(meta, p.clone()),
+            Ci::configure_with_params(meta, p),
+        )
+    }
+
+    fn configure(_meta: &mut ConstraintSystem<F>) -> Self::Config {
+        unreachable!("configure_with_params")
+    }
+
+    fn synthesize(&self, cfg: Self::Config, mut l: impl Layouter<F>) -> Result<(), Error> {
+        self.0.synthesize(cfg.0, l.namespace(|| "core 0"))?;
+        self.0.synthesize(cfg.1, l.namespace(|| "core 1"))
+    }
+}
+
 fn cs_json(cs: &ConstraintSystem<F>) -> J {
     json!({
         "advice": cs.num_advice_columns(), "fixed": cs.num_fixed_columns(),
@@ -806,28 +854,38 @@ fn chip_e5_node() {
         .ok()
         .map(|v| v.parse::<usize>().unwrap());
     let standin = standin_vk(13);
-    let base = SherlockIvcRelation::new(4, 20, standin).unwrap();
+    let nk = node_k();
+    let double = std::env::var("CHIP_E5_DOUBLE").as_deref() == Ok("1");
+    let base = SherlockIvcRelation::new(4, nk, standin).unwrap();
     for (i, spec) in specs.split(';').enumerate() {
         let f: Vec<&str> = spec.split(',').collect();
         let (arch, pad, preset) = (arch_of(f[0]), f[1].parse::<usize>().unwrap(), f[2]);
         let leaf = rf_leaf(arch, pad, preset, 16);
         let t = Instant::now();
-        let lm = circuit_model::<F, 48, 32>(&leaf);
-        let (vk, k) = vk_of(&leaf);
+        let (lm, (vk, k)) = if double {
+            let d = Doubled(leaf);
+            (circuit_model::<F, 48, 32>(&d), vk_of(&d))
+        } else {
+            (circuit_model::<F, 48, 32>(&leaf), vk_of(&leaf))
+        };
         let leaf_s = t.elapsed().as_secs_f64();
         let node = ChipNode::new(base.clone(), vk.clone());
         let t = Instant::now();
-        let m = cost_model(&node, Some(20));
+        let m = cost_model(&node, Some(nk));
         let mut v = json!({
-            "spec": spec, "s": 16, "leaf_k": k, "leaf_model": model_json(&lm),
+            "spec": spec, "node_k": nk, "doubled_leaf": double, "s": 16, "leaf_k": k, "leaf_model": model_json(&lm),
             "leaf_cs": cs_json(vk.cs()), "leaf_seconds": leaf_s,
             "node": model_json(&m), "node_seconds": t.elapsed().as_secs_f64(),
         });
-        let name = format!("e5_node_{}", spec.replace(',', "_"));
+        let name = format!(
+            "e5_node_{}_k{nk}{}",
+            spec.replace(',', "_"),
+            if double { "_doubled" } else { "" }
+        );
         println!("CHIP-E5 node {v}");
         emit(&name, &v);
         if decider == Some(i) {
-            let base_params = params(20);
+            let base_params = params(nk);
             let t = Instant::now();
             let node_vk = setup_vk(&base_params, &node);
             let keygen_s = t.elapsed().as_secs_f64();
@@ -843,7 +901,10 @@ fn chip_e5_node() {
             };
             drel.validate().unwrap();
             let dm = cost_model(&drel, None);
+            let dk = std::env::var("CHIP_DECIDER_K").map_or(nk, |s| s.parse().unwrap());
+            let dmk = cost_model(&drel, Some(dk));
             v["decider"] = json!({"node_keygen_seconds": keygen_s, "model": model_json(&dm),
+                "model_at_forced_k": model_json(&dmk), "forced_k": dk,
                 "srs": if std::env::var_os("MORIARTY_PARENT_SRS").is_some() { "official k20" } else { "unsafe" }});
             println!("CHIP-E5 decider {v}");
             emit(&name, &v);

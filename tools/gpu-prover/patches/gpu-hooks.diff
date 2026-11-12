@@ -1,0 +1,726 @@
+diff --git c/src/hooks.rs i/src/hooks.rs
+new file mode 100644
+index 0000000..af5ca98
+--- /dev/null
++++ i/src/hooks.rs
+@@ -0,0 +1,245 @@
++//! GPU hooks (Moriarty gpu-wrap patch, design 3.7 / gpu.md F6).
++#![allow(unsafe_code)]
++//!
++//! A registry of optional accelerator functions, consulted by `msm_specific`, the
++//! `EvaluationDomain` transforms and `compute_nu_poly`. With nothing registered the
++//! crate behaves exactly as registry midnight-proofs 0.8.3. Every hook may decline
++//! (returns `None` / `false`), and the stock CPU code then runs. Only the BLS12-381
++//! scalar field `Fq` and `G1` are hooked; other types never reach a hook.
++use std::{
++    any::{Any, TypeId},
++    sync::{
++        OnceLock,
++        atomic::{AtomicBool, Ordering},
++    },
++};
++
++use midnight_curves::{Fq, G1Projective};
++
++/// A buffer of `len` field elements owned by the accelerator (freed when dropped).
++pub struct DevBuf {
++    /// Device-readable pointer to the elements.
++    pub ptr: *const Fq,
++    /// Number of elements.
++    pub len: usize,
++    /// The accelerator's owner object; dropping it frees the buffer.
++    pub owner: Box<dyn Any + Send + Sync>,
++}
++
++impl std::fmt::Debug for DevBuf {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        write!(f, "DevBuf({:p}, {})", self.ptr, self.len)
++    }
++}
++
++unsafe impl Send for DevBuf {}
++unsafe impl Sync for DevBuf {}
++
++/// The accelerator functions. Each is optional.
++#[derive(Default, Clone, Copy, Debug)]
++pub struct GpuHooks {
++    /// `sum scalars[i] * bases[i]`; `bases` may be longer than `scalars`.
++    pub msm_g1: Option<fn(&[Fq], &[G1Projective]) -> Option<G1Projective>>,
++    /// `best_fft(a, omega, log_n)`.
++    pub fft: Option<fn(&mut [Fq], Fq, u32) -> bool>,
++    /// `best_fft(a, omega_inv, log_n)` then `a[i] *= divisor`.
++    pub ifft: Option<fn(&mut [Fq], Fq, u32, Fq) -> bool>,
++    /// `coeff_to_extended(coeffs)` into `out` (k, extended k, [zeta, zeta^2]).
++    pub coeff_to_extended: Option<fn(&[Fq], &mut [Fq], u32, u32, [Fq; 2]) -> bool>,
++    /// `coeff_to_extended(coeffs)` into an accelerator-owned buffer.
++    pub dev_coeff_to_extended: Option<fn(&[Fq], u32, u32, [Fq; 2]) -> Option<DevBuf>>,
++    /// Quotient numerator: runs `job` (graphs need `nslots` scratch slots) into `out`.
++    pub quotient: Option<unsafe fn(*mut QuotientJob, u32, &mut [Fq]) -> bool>,
++}
++
++static HOOKS: OnceLock<GpuHooks> = OnceLock::new();
++
++/// Registers the accelerator once per process. Returns `false` if already set.
++pub fn install(h: GpuHooks) -> bool {
++    HOOKS.set(h).is_ok()
++}
++
++/// The registered hooks, if any.
++pub fn get() -> Option<&'static GpuHooks> {
++    HOOKS.get()
++}
++
++/// Test-only determinism switch: iterate the lookup leftover table in sorted order
++/// instead of `HashMap` order (which depends on a per-process random hash seed).
++/// Any leftover order gives a valid proof; a fixed order makes proof bytes a function
++/// of (key, witness, RNG seed, rayon pool size). Off by default (stock behaviour).
++pub static DETERMINISTIC_LOOKUP: AtomicBool = AtomicBool::new(false);
++
++pub(crate) fn deterministic_lookup() -> bool {
++    DETERMINISTIC_LOOKUP.load(Ordering::Relaxed)
++}
++
++/// Test-only: when set, `compute_nu_poly` also runs the CPU numerator and compares.
++pub static QUOTIENT_CHECK: AtomicBool = AtomicBool::new(false);
++static QUOTIENT_CHECK_DIFFS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
++
++pub(crate) fn quotient_check() -> bool {
++    QUOTIENT_CHECK.load(Ordering::Relaxed)
++}
++
++pub(crate) fn record_quotient_check(ndiff: usize) {
++    QUOTIENT_CHECK_DIFFS.fetch_add(ndiff as u64, Ordering::Relaxed);
++}
++
++/// Differing numerator elements seen by the check mode since process start.
++pub fn quotient_check_diffs() -> u64 {
++    QUOTIENT_CHECK_DIFFS.load(Ordering::Relaxed)
++}
++
++/// Shape of the last quotient job: (gate calculations, scratch slots, lookups,
++/// permutation sets, device-resident cosets).
++pub static LAST_QUOTIENT_SHAPE: std::sync::Mutex<(u32, u32, u32, u32, u32)> = std::sync::Mutex::new((0, 0, 0, 0, 0));
++
++/// Wall seconds of the last proof by phase: [advice (synthesis and advice commits),
++/// rest of the trace (lookups, permutation and trash products, their commits),
++/// quotient numerator `compute_nu_poly`, finalise without the numerator (h(X)
++/// commits, evaluations, multiopen)].
++pub static PHASE_SECONDS: std::sync::Mutex<[f64; 4]> = std::sync::Mutex::new([0.0; 4]);
++
++pub(crate) fn phase_set(i: usize, t: std::time::Instant) {
++    PHASE_SECONDS.lock().unwrap()[i] = t.elapsed().as_secs_f64();
++}
++
++/// Run-time switch for the quotient hook (to measure phases separately).
++pub static QUOTIENT_ON: AtomicBool = AtomicBool::new(true);
++
++#[inline]
++pub(crate) fn is_fq<F: 'static>() -> bool {
++    TypeId::of::<F>() == TypeId::of::<Fq>()
++}
++
++#[inline]
++pub(crate) fn as_fq_mut<F: 'static>(a: &mut [F]) -> &mut [Fq] {
++    debug_assert!(is_fq::<F>());
++    unsafe { &mut *(a as *mut [F] as *mut [Fq]) }
++}
++
++#[inline]
++pub(crate) fn as_fq<F: 'static>(a: &[F]) -> &[Fq] {
++    debug_assert!(is_fq::<F>());
++    unsafe { &*(a as *const [F] as *const [Fq]) }
++}
++
++#[inline]
++pub(crate) fn to_fq<F: 'static + Copy>(a: F) -> Fq {
++    debug_assert!(is_fq::<F>());
++    unsafe { std::mem::transmute_copy(&a) }
++}
++
++// ------------------------------------------------------------------ quotient ABI
++// C layout of mori-gpu `cuda/quotient.cuh` (QUOTIENT_ABI 1).
++
++/// Job layout version.
++pub const QUOTIENT_ABI: u32 = 1;
++
++/// A value source of a graph calculation.
++#[repr(C)]
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct QSrc {
++    /// 0 const, 1 intermediate, 2 fixed, 3 advice, 4 instance, 5 challenge, 6 beta,
++    /// 7 gamma, 8 theta, 9 trash challenge, 10 y, 11 previous value
++    pub kind: u32,
++    /// Index (constant, scratch slot, column, challenge).
++    pub a: u32,
++    /// Rotation (columns).
++    pub rot: i32,
++}
++
++/// A calculation (`op`: 0 add, 1 sub, 2 mul, 3 square, 4 double, 5 negate, 6 horner,
++/// 7 store; horner: `x` start, `y` factor, parts in `parts[off..off+len]`).
++#[repr(C)]
++#[derive(Clone, Copy, Debug, Default)]
++pub struct QCalc {
++    /// Operation.
++    pub op: u32,
++    /// Scratch slot written.
++    pub target: u32,
++    /// First operand.
++    pub x: QSrc,
++    /// Second operand.
++    pub y: QSrc,
++    /// Horner parts offset.
++    pub parts_off: u32,
++    /// Horner parts count.
++    pub parts_len: u32,
++}
++
++/// A flattened `GraphEvaluator`.
++#[repr(C)]
++#[derive(Clone, Copy, Debug)]
++pub struct QGraph {
++    /// Calculations in stock order.
++    pub calcs: *const QCalc,
++    /// Count.
++    pub ncalcs: u32,
++    /// Slot of the last calculation.
++    pub result_slot: u32,
++    /// Horner parts.
++    pub parts: *const QSrc,
++    /// Constants.
++    pub constants: *const Fq,
++}
++
++/// One lookup argument.
++#[repr(C)]
++#[derive(Clone, Copy, Debug)]
++pub struct QLookup {
++    /// Its graph.
++    pub graph: QGraph,
++    /// Product coset.
++    pub product: *const Fq,
++    /// Permuted input coset.
++    pub permuted_input: *const Fq,
++    /// Permuted table coset.
++    pub permuted_table: *const Fq,
++}
++
++/// One trashcan argument.
++#[repr(C)]
++#[derive(Clone, Copy, Debug)]
++pub struct QTrash {
++    /// Its graph.
++    pub graph: QGraph,
++    /// Trash coset.
++    pub trash: *const Fq,
++    /// Fixed column of the selector.
++    pub selector_col: u32,
++}
++
++/// The quotient job (pointers must stay live for the call).
++#[repr(C)]
++#[derive(Clone, Copy, Debug)]
++#[allow(missing_docs)]
++pub struct QuotientJob {
++    pub out: *mut Fq,
++    pub n: u64,
++    pub rot_scale: i32,
++    pub fixed: *const *const Fq,
++    pub advice: *const *const Fq,
++    pub instance: *const *const Fq,
++    pub challenges: *const Fq,
++    pub sc: *const Fq,
++    pub gates: QGraph,
++    pub nsets: u32,
++    pub chunk_len: u32,
++    pub ncols: u32,
++    pub perm_products: *const *const Fq,
++    pub col_kind: *const u32,
++    pub col_index: *const u32,
++    pub perm_sigma: *const *const Fq,
++    pub last_rot: i32,
++    pub l0: *const Fq,
++    pub l_last: *const Fq,
++    pub l_active: *const Fq,
++    pub nlookups: u32,
++    pub ntrash: u32,
++    pub lookups: *const QLookup,
++    pub trash: *const QTrash,
++    pub scratch: *mut Fq,
++    pub stride: u64,
++}
+diff --git c/src/lib.rs i/src/lib.rs
+index b5ca644..f67c331 100644
+--- c/src/lib.rs
++++ i/src/lib.rs
+@@ -9,6 +9,7 @@
+ #![deny(unsafe_code)]
+ 
+ pub mod circuit;
++pub mod hooks;
+ pub mod plonk;
+ pub mod poly;
+ pub mod transcript;
+diff --git c/src/plonk/evaluation.rs i/src/plonk/evaluation.rs
+index 1371a0a..079efe2 100644
+--- c/src/plonk/evaluation.rs
++++ i/src/plonk/evaluation.rs
+@@ -819,3 +819,266 @@ pub fn evaluate<F: Field, B: PolynomialRepresentation>(
+     });
+     values
+ }
++
++// ---------------------------------------------------------------------------------
++// gpu-wrap patch: the quotient numerator on the accelerator (hooks::QuotientJob).
++// The job is the stock `Evaluator` flattened, so the device computes the same field
++// values in the same `value * y + term` chain as `evaluate_numerator` above.
++#[allow(unsafe_code)]
++pub(crate) mod gpu {
++    use std::marker::PhantomData;
++
++    use ff::WithSmallOrderMulGroup;
++    use midnight_curves::Fq;
++
++    use super::{Calculation, GraphEvaluator, ValueSource};
++    use crate::{
++        hooks::{self, DevBuf, QCalc, QGraph, QLookup, QSrc, QTrash, QuotientJob},
++        plonk::{traces::ProverTrace, Any, Expression, ProvingKey},
++        poly::{commitment::PolynomialCommitmentScheme, Coeff, ExtendedLagrangeCoeff, Polynomial},
++    };
++
++    struct Flat {
++        calcs: Vec<QCalc>,
++        parts: Vec<QSrc>,
++        constants: Vec<Fq>,
++        nslots: u32,
++        result_slot: u32,
++    }
++
++    fn operands(c: &Calculation) -> Vec<&ValueSource> {
++        match c {
++            Calculation::Add(a, b) | Calculation::Sub(a, b) | Calculation::Mul(a, b) => vec![a, b],
++            Calculation::Square(a)
++            | Calculation::Double(a)
++            | Calculation::Negate(a)
++            | Calculation::Store(a) => vec![a],
++            Calculation::Horner(s, parts, f) => {
++                let mut v = vec![s, f];
++                v.extend(parts.iter());
++                v
++            }
++        }
++    }
++
++    fn flatten<F: WithSmallOrderMulGroup<3>>(g: &GraphEvaluator<F>) -> Flat {
++        let n = g.calculations.len();
++        for (pos, c) in g.calculations.iter().enumerate() {
++            assert_eq!(c.target, pos, "calculation targets are positions");
++        }
++        let mut last = vec![usize::MAX; n];
++        for (pos, c) in g.calculations.iter().enumerate() {
++            for v in operands(&c.calculation) {
++                if let ValueSource::Intermediate(i) = v {
++                    last[*i] = pos;
++                }
++            }
++        }
++        let mut slot = vec![0u32; n];
++        let (mut free, mut next) = (Vec::<u32>::new(), 0u32);
++        let mut calcs = Vec::with_capacity(n);
++        let mut parts = Vec::new();
++        for (pos, c) in g.calculations.iter().enumerate() {
++            let src = |v: &ValueSource, slot: &[u32]| -> QSrc {
++                let (kind, a, rot) = match *v {
++                    ValueSource::Constant(i) => (0, i as u32, 0),
++                    ValueSource::Intermediate(i) => (1, slot[i], 0),
++                    ValueSource::Fixed(c, r) => (2, c as u32, g.rotations[r]),
++                    ValueSource::Advice(c, r) => (3, c as u32, g.rotations[r]),
++                    ValueSource::Instance(c, r) => (4, c as u32, g.rotations[r]),
++                    ValueSource::Challenge(i) => (5, i as u32, 0),
++                    ValueSource::Beta() => (6, 0, 0),
++                    ValueSource::Gamma() => (7, 0, 0),
++                    ValueSource::Theta() => (8, 0, 0),
++                    ValueSource::TrashChallenge() => (9, 0, 0),
++                    ValueSource::Y() => (10, 0, 0),
++                    ValueSource::PreviousValue() => (11, 0, 0),
++                };
++                QSrc { kind, a, rot }
++            };
++            let mut q = QCalc::default();
++            match &c.calculation {
++                Calculation::Add(a, b) => (q.op, q.x, q.y) = (0, src(a, &slot), src(b, &slot)),
++                Calculation::Sub(a, b) => (q.op, q.x, q.y) = (1, src(a, &slot), src(b, &slot)),
++                Calculation::Mul(a, b) => (q.op, q.x, q.y) = (2, src(a, &slot), src(b, &slot)),
++                Calculation::Square(a) => (q.op, q.x) = (3, src(a, &slot)),
++                Calculation::Double(a) => (q.op, q.x) = (4, src(a, &slot)),
++                Calculation::Negate(a) => (q.op, q.x) = (5, src(a, &slot)),
++                Calculation::Horner(s, ps, f) => {
++                    (q.op, q.x, q.y) = (6, src(s, &slot), src(f, &slot));
++                    q.parts_off = parts.len() as u32;
++                    q.parts_len = ps.len() as u32;
++                    parts.extend(ps.iter().map(|p| src(p, &slot)));
++                }
++                Calculation::Store(a) => (q.op, q.x) = (7, src(a, &slot)),
++            }
++            // Free operands whose last use is here (the kernel reads operands before
++            // it writes the target, so the target may take one of their slots).
++            let mut seen = Vec::new();
++            for v in operands(&c.calculation) {
++                if let ValueSource::Intermediate(i) = v {
++                    if last[*i] == pos && *i != n - 1 && !seen.contains(i) {
++                        seen.push(*i);
++                        free.push(slot[*i]);
++                    }
++                }
++            }
++            slot[pos] = free.pop().unwrap_or_else(|| {
++                next += 1;
++                next - 1
++            });
++            q.target = slot[pos];
++            calcs.push(q);
++            if last[pos] == usize::MAX && pos != n - 1 {
++                free.push(slot[pos]);
++            }
++        }
++        Flat {
++            calcs,
++            parts,
++            constants: g.constants.iter().map(|c| hooks::to_fq(*c)).collect(),
++            nslots: next,
++            result_slot: if n > 0 { slot[n - 1] } else { 0 },
++        }
++    }
++
++    fn qgraph(f: &Flat) -> QGraph {
++        QGraph {
++            calcs: f.calcs.as_ptr(),
++            ncalcs: f.calcs.len() as u32,
++            result_slot: f.result_slot,
++            parts: f.parts.as_ptr(),
++            constants: f.constants.as_ptr(),
++        }
++    }
++
++    fn host<F>(p: &Polynomial<F, ExtendedLagrangeCoeff>) -> *const Fq {
++        p.values.as_ptr() as *const Fq
++    }
++
++    /// `compute_nu_poly` on the accelerator, or `None` (the CPU path then runs).
++    pub(crate) fn nu_poly<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommitmentScheme<F>>(
++        pk: &ProvingKey<F, CS>,
++        trace: &ProverTrace<F>,
++    ) -> Option<Polynomial<F, ExtendedLagrangeCoeff>> {
++        if !hooks::is_fq::<F>() || !hooks::QUOTIENT_ON.load(std::sync::atomic::Ordering::Relaxed) {
++            return None;
++        }
++        let h = hooks::get()?;
++        let (qrun, dev) = (h.quotient?, h.dev_coeff_to_extended?);
++        if trace.advice_polys.len() != 1 {
++            return None;
++        }
++        let domain = &pk.vk.domain;
++        let cs = &pk.vk.cs;
++        let (k, ext_k) = (domain.k(), domain.extended_k());
++        let z = domain.coset_zetas();
++        let z = [hooks::to_fq(z[0]), hooks::to_fq(z[1])];
++        let to_dev = |p: &Polynomial<F, Coeff>| -> Option<DevBuf> { dev(hooks::as_fq(&p.values), k, ext_k, z) };
++
++        // Device-resident extended cosets of every committed polynomial of this proof.
++        let advice: Vec<DevBuf> = trace.advice_polys[0].iter().map(to_dev).collect::<Option<_>>()?;
++        let instance: Vec<DevBuf> = trace.instance_polys[0].iter().map(to_dev).collect::<Option<_>>()?;
++        let perm = &trace.permutations[0];
++        let products: Vec<DevBuf> = perm.sets.iter().map(|s| to_dev(&s.permutation_product_poly)).collect::<Option<_>>()?;
++        let mut lk_bufs = Vec::new();
++        for l in trace.lookups[0].iter() {
++            lk_bufs.push((to_dev(&l.product_poly)?, to_dev(&l.permuted_input_poly)?, to_dev(&l.permuted_table_poly)?));
++        }
++        let trash_bufs: Vec<DevBuf> = trace.trashcans[0].iter().map(|t| to_dev(&t.trash_poly)).collect::<Option<_>>()?;
++
++        let fixed: Vec<*const Fq> = pk.fixed_cosets.iter().map(host).collect();
++        let advice_p: Vec<*const Fq> = advice.iter().map(|b| b.ptr).collect();
++        let instance_p: Vec<*const Fq> = instance.iter().map(|b| b.ptr).collect();
++        let products_p: Vec<*const Fq> = products.iter().map(|b| b.ptr).collect();
++        let sigma_p: Vec<*const Fq> = pk.permutation.cosets.iter().map(host).collect();
++        let (mut col_kind, mut col_index) = (Vec::new(), Vec::new());
++        for c in cs.permutation.columns.iter() {
++            col_kind.push(match c.column_type() {
++                Any::Advice(_) => 0u32,
++                Any::Fixed => 1,
++                Any::Instance => 2,
++            });
++            col_index.push(c.index() as u32);
++        }
++        let challenges: Vec<Fq> = trace.challenges.iter().map(|c| hooks::to_fq(*c)).collect();
++        let sc: Vec<Fq> = [
++            trace.beta,
++            trace.gamma,
++            trace.theta,
++            trace.trash_challenge,
++            trace.y,
++            trace.beta * domain.g_coset,
++            F::DELTA,
++            domain.get_extended_omega(),
++        ]
++        .iter()
++        .map(|c| hooks::to_fq(*c))
++        .collect();
++
++        let gates = flatten(&pk.ev.custom_gates);
++        let lflat: Vec<Flat> = pk.ev.lookups.iter().map(flatten).collect();
++        let tflat: Vec<Flat> = pk.ev.trashcans.iter().map(flatten).collect();
++        let nslots = std::iter::once(&gates).chain(&lflat).chain(&tflat).map(|f| f.nslots).max().unwrap_or(0);
++        let lookups: Vec<QLookup> = lflat
++            .iter()
++            .zip(&lk_bufs)
++            .map(|(f, (p, i, t))| QLookup {
++                graph: qgraph(f),
++                product: p.ptr,
++                permuted_input: i.ptr,
++                permuted_table: t.ptr,
++            })
++            .collect();
++        let mut trash = Vec::new();
++        for ((f, b), arg) in tflat.iter().zip(&trash_bufs).zip(cs.trashcans.iter()) {
++            let Expression::Fixed(q) = arg.selector() else { return None };
++            trash.push(QTrash {
++                graph: qgraph(f),
++                trash: b.ptr,
++                selector_col: q.column_index as u32,
++            });
++        }
++        let ext_n = domain.extended_len();
++        let resident = advice.len() + instance.len() + products.len() + 3 * lk_bufs.len() + trash_bufs.len();
++        *hooks::LAST_QUOTIENT_SHAPE.lock().unwrap() =
++            (gates.calcs.len() as u32, nslots, lk_bufs.len() as u32, products.len() as u32, resident as u32);
++        let mut job = QuotientJob {
++            out: std::ptr::null_mut(),
++            n: ext_n as u64,
++            rot_scale: 1 << (ext_k - k),
++            fixed: fixed.as_ptr(),
++            advice: advice_p.as_ptr(),
++            instance: instance_p.as_ptr(),
++            challenges: challenges.as_ptr(),
++            sc: sc.as_ptr(),
++            gates: qgraph(&gates),
++            nsets: products_p.len() as u32,
++            chunk_len: (cs.degree() - 2) as u32,
++            ncols: col_kind.len() as u32,
++            perm_products: products_p.as_ptr(),
++            col_kind: col_kind.as_ptr(),
++            col_index: col_index.as_ptr(),
++            perm_sigma: sigma_p.as_ptr(),
++            last_rot: -((cs.blinding_factors() + 1) as i32),
++            l0: host(&pk.l0),
++            l_last: host(&pk.l_last),
++            l_active: host(&pk.l_active_row),
++            nlookups: lookups.len() as u32,
++            ntrash: trash.len() as u32,
++            lookups: lookups.as_ptr(),
++            trash: trash.as_ptr(),
++            scratch: std::ptr::null_mut(),
++            stride: 0,
++        };
++        let mut values = vec![F::ZERO; ext_n];
++        let ok = unsafe { qrun(&mut job, nslots, hooks::as_fq_mut(&mut values)) };
++        if !ok {
++            return None;
++        }
++        Some(Polynomial {
++            values,
++            _marker: PhantomData,
++        })
++    }
++}
+diff --git c/src/plonk/lookup/prover.rs i/src/plonk/lookup/prover.rs
+index b2d8ef4..52aec35 100644
+--- c/src/plonk/lookup/prover.rs
++++ i/src/plonk/lookup/prover.rs
+@@ -427,7 +427,12 @@ where
+         .collect::<Result<Vec<_>, _>>()?;
+ 
+     // Populate permuted table at unfilled rows with leftover table elements
+-    for (coeff, count) in leftover_table_map.iter() {
++    // gpu-wrap patch: optional fixed leftover order (test-only determinism switch).
++    let mut leftovers: Vec<(&F, &u32)> = leftover_table_map.iter().collect();
++    if crate::hooks::deterministic_lookup() {
++        leftovers.sort_unstable_by(|a, b| a.0.cmp(b.0));
++    }
++    for (coeff, count) in leftovers {
+         for _ in 0..*count {
+             permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
+         }
+diff --git c/src/plonk/prover.rs i/src/plonk/prover.rs
+index 4b6fbbf..2be6b8a 100644
+--- c/src/plonk/prover.rs
++++ i/src/plonk/prover.rs
+@@ -102,7 +102,10 @@ where
+ 
+     let instance = compute_instances(params, pk, instances, nb_committed_instances, transcript)?;
+ 
++    let t_adv = std::time::Instant::now();
+     let (advice, challenges) = parse_advices(params, pk, circuits, instances, transcript, rng)?;
++    crate::hooks::phase_set(0, t_adv);
++    let t_rest = std::time::Instant::now();
+ 
+     // Sample theta challenge for keeping lookup columns linearly independent
+     let theta: F = transcript.squeeze_challenge();
+@@ -217,6 +220,7 @@ where
+         })
+         .collect::<Vec<_>>();
+ 
++    crate::hooks::phase_set(1, t_rest);
+     Ok(ProverTrace {
+         advice_polys,
+         instance_polys,
+@@ -264,7 +268,10 @@ where
+ 
+     let domain = pk.get_vk().get_domain();
+ 
++    let t_nu = std::time::Instant::now();
+     let nu_poly = compute_nu_poly(pk, &trace);
++    crate::hooks::phase_set(2, t_nu);
++    let t_fin = std::time::Instant::now();
+ 
+     let ProverTrace {
+         advice_polys,
+@@ -335,7 +342,9 @@ where
+         x,
+     );
+ 
+-    CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure)
++    let r = CS::multi_open(params, &queries, transcript).map_err(|_| Error::ConstraintSystemFailure);
++    crate::hooks::phase_set(3, t_fin);
++    r
+ }
+ 
+ /// This creates a proof for the provided `circuit` when given the public
+@@ -610,6 +619,22 @@ pub(super) fn compute_nu_poly<F: WithSmallOrderMulGroup<3>, CS: PolynomialCommit
+         y,
+         ..
+     } = &trace;
++    // gpu-wrap patch: the whole numerator on the accelerator when it takes the job.
++    let gpu_nu = crate::plonk::evaluation::gpu::nu_poly(pk, trace);
++    if let Some(nu) = gpu_nu {
++        if !crate::hooks::quotient_check() {
++            return nu;
++        }
++        // Test-only: compute the stock numerator too and report the first difference.
++        crate::hooks::QUOTIENT_ON.store(false, std::sync::atomic::Ordering::Relaxed);
++        let cpu = compute_nu_poly(pk, trace);
++        crate::hooks::QUOTIENT_ON.store(true, std::sync::atomic::Ordering::Relaxed);
++        let first = nu.values.iter().zip(cpu.values.iter()).position(|(a, b)| a != b);
++        let ndiff = nu.values.iter().zip(cpu.values.iter()).filter(|(a, b)| a != b).count();
++        eprintln!("gpu-wrap quotient check: len={} first_diff={first:?} ndiff={ndiff}", cpu.values.len());
++        crate::hooks::record_quotient_check(ndiff);
++        return cpu;
++    }
+     // Calculate the advice and instance cosets
+     let advice_cosets: Vec<Vec<Polynomial<F, ExtendedLagrangeCoeff>>> = advice_polys
+         .iter()
+diff --git c/src/poly/domain.rs i/src/poly/domain.rs
+index dccaea8..e1c33cf 100644
+--- c/src/poly/domain.rs
++++ i/src/poly/domain.rs
+@@ -5,7 +5,19 @@ use std::marker::PhantomData;
+ 
+ use ff::WithSmallOrderMulGroup;
+ use group::ff::{BatchInvert, Field};
+-use midnight_curves::fft::best_fft;
++use midnight_curves::fft::best_fft as stock_best_fft;
++
++// gpu-wrap patch: transforms over BLS12-381 Fq are offered to the accelerator first.
++fn best_fft<F: Field>(a: &mut [F], omega: F, log_n: u32) {
++    if crate::hooks::is_fq::<F>() {
++        if let Some(f) = crate::hooks::get().and_then(|h| h.fft) {
++            if f(crate::hooks::as_fq_mut(a), crate::hooks::to_fq(omega), log_n) {
++                return;
++            }
++        }
++    }
++    stock_best_fft(a, omega, log_n)
++}
+ 
+ use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
+ use crate::utils::{arithmetic::parallelize, rational::Rational};
+@@ -254,6 +266,25 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
+     ) -> Polynomial<F, ExtendedLagrangeCoeff> {
+         assert_eq!(a.values.len(), 1 << self.k);
+ 
++        if crate::hooks::is_fq::<F>() {
++            if let Some(f) = crate::hooks::get().and_then(|h| h.coeff_to_extended) {
++                let mut out = vec![F::ZERO; self.extended_len()];
++                let z = [crate::hooks::to_fq(self.g_coset), crate::hooks::to_fq(self.g_coset_inv)];
++                if f(
++                    crate::hooks::as_fq(&a.values),
++                    crate::hooks::as_fq_mut(&mut out),
++                    self.k,
++                    self.extended_k,
++                    z,
++                ) {
++                    return Polynomial {
++                        values: out,
++                        _marker: PhantomData,
++                    };
++                }
++            }
++        }
++
+         self.distribute_powers_zeta(&mut a.values, true);
+         a.values.resize(self.extended_len(), F::ZERO);
+         best_fft(&mut a.values, self.extended_omega, self.extended_k);
+@@ -365,7 +396,19 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
+     }
+ 
+     fn ifft(a: &mut [F], omega_inv: F, log_n: u32, divisor: F) {
+-        best_fft(a, omega_inv, log_n);
++        if crate::hooks::is_fq::<F>() {
++            if let Some(f) = crate::hooks::get().and_then(|h| h.ifft) {
++                if f(
++                    crate::hooks::as_fq_mut(a),
++                    crate::hooks::to_fq(omega_inv),
++                    log_n,
++                    crate::hooks::to_fq(divisor),
++                ) {
++                    return;
++                }
++            }
++        }
++        stock_best_fft(a, omega_inv, log_n);
+         parallelize(a, |a, _| {
+             for a in a {
+                 // Finish iFFT
+@@ -374,6 +417,11 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
+         });
+     }
+ 
++    /// gpu-wrap patch: the coset factors of `distribute_powers_zeta` into the coset.
++    pub(crate) fn coset_zetas(&self) -> [F; 2] {
++        [self.g_coset, self.g_coset_inv]
++    }
++
+     /// Get the size of the domain
+     pub fn k(&self) -> u32 {
+         self.k
+diff --git c/src/poly/kzg/msm.rs i/src/poly/kzg/msm.rs
+index 927647c..dc8940e 100644
+--- c/src/poly/kzg/msm.rs
++++ i/src/poly/kzg/msm.rs
+@@ -161,6 +161,17 @@ where
+ #[allow(unsafe_code)]
+ /// Wrapper over the MSM function to use the blstrs underlying function
+ pub fn msm_specific<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C::Curve]) -> C::Curve {
++    // gpu-wrap patch: offer BLS12-381 G1 to the accelerator before the CPU path
++    // (zero scalars are accepted by it; the result is a group element either way).
++    if TypeId::of::<C>() == TypeId::of::<midnight_curves::G1Affine>() {
++        if let Some(f) = crate::hooks::get().and_then(|h| h.msm_g1) {
++            let s = unsafe { &*(coeffs as *const _ as *const [Fq]) };
++            let b = unsafe { &*(bases as *const _ as *const [G1Projective]) };
++            if let Some(res) = f(s, b) {
++                return unsafe { std::mem::transmute_copy(&res) };
++            }
++        }
++    }
+     // We remove zeros (keep only non-zero coefficients)
+     let (coeffs, bases): (Vec<C::Scalar>, Vec<C::Curve>) = coeffs
+         .iter()

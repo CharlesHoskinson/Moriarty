@@ -5,7 +5,7 @@
 //! The crate has no tree node yet (`ivc.rs` folds one self proof and one leaf). `TreeNodeProbe`
 //! is the closest stand-in built from the same gadgets as `SherlockIvcRelation::circuit`, per the
 //! segment statement of `tree.md` F8:
-//! - own key as public input (`assign_vk_as_public_input`, node domain and cs at `SELF_K`);
+//! - own key as public input (`assign_vk_as_public_input`, node domain and cs at `self_k()` (default 20));
 //! - per self child: slot bit, child instance `[self_repr, prog_d, pre_d, post_d, h_lo, h_hi,
 //!   acc...]`, carried accumulator (`AssignedAccumulator::assign` over the self fixed-base
 //!   names), `verifier.prepare` under the self key, both accumulators `scale_by_bit` by the slot
@@ -51,7 +51,10 @@ use rand::rngs::OsRng;
 use mori_recursion::util::F;
 
 /// The tree node keeps k=20 (`tree.md` F4); its own domain is fixed at this k.
-const SELF_K: u32 = 20;
+/// k = 21 measurement: `TREE_SELF_K` overrides it.
+fn self_k() -> u32 {
+    std::env::var("TREE_SELF_K").map_or(20, |s| s.parse().unwrap())
+}
 const NR_COLS: u8 = 4;
 const KILL_ROWS: u64 = 996_147; // floor(0.95 * 2^20)
 
@@ -66,8 +69,8 @@ struct TreeNodeProbe {
 
 impl TreeNodeProbe {
     fn new(n_self: usize, n_leaf: usize, leaf_vk: MidnightVK) -> Self {
-        let self_cs = node_cs(NR_COLS, SELF_K);
-        let self_domain = EvaluationDomain::new(self_cs.degree() as u32, SELF_K);
+        let self_cs = node_cs(NR_COLS, self_k());
+        let self_domain = EvaluationDomain::new(self_cs.degree() as u32, self_k());
         Self {
             n_self,
             n_leaf,
@@ -304,15 +307,15 @@ fn tree_node_rows() {
     let vk = setup_vk(&p, &leaf);
 
     // Calibration: the existing linear node {self, leaf} and the probe of the same shape.
-    for k in [19u32, 20] {
+    for k in [19u32, 20, 21] {
         let rel = SherlockIvcRelation::new(NR_COLS, k, vk.clone()).unwrap();
         let m = cost_model(&rel, Some(k));
         println!(
-            "TREEROWS shape=ivc_linear(self+carried+leaf) self_k={k} rows={} k={}",
-            m.rows, m.k
+            "TREEROWS shape=ivc_linear(self+carried+leaf) self_k={k} rows={} table_rows={} k={}",
+            m.rows, m.table_rows, m.k
         );
     }
-    let base = cost_model(&TreeNodeProbe::new(1, 1, vk.clone()), Some(SELF_K));
+    let base = cost_model(&TreeNodeProbe::new(1, 1, vk.clone()), Some(self_k()));
     println!(
         "TREEROWS shape=probe{{self,leaf}} rows={} k={}",
         base.rows, base.k
@@ -326,13 +329,15 @@ fn tree_node_rows() {
     ] {
         let m = cost_model(
             &TreeNodeProbe::new(n_self, n_leaf, vk.clone()),
-            Some(SELF_K),
+            Some(self_k()),
         );
         let over = m.rows as u64 > KILL_ROWS;
         killed |= over && n_leaf == 1;
         println!(
-            "TREEROWS shape=probe{label} rows={} k={} margin_to_2^20={:.1}% over_0.95x2^20={over}",
+            "TREEROWS shape=probe{label} self_k={} rows={} table_rows={} k={} margin_to_2^20={:.1}% over_0.95x2^20={over}",
+            self_k(),
             m.rows,
+            m.table_rows,
             m.k,
             100.0 * (1.0 - m.rows as f64 / f64::from(1u32 << 20))
         );

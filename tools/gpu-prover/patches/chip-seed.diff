@@ -1,0 +1,20 @@
+--- /home/hoskinson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.3.0/src/ecc/foreign/weierstrass_chip.rs	2006-07-23 19:21:28.000000000 -0600
++++ vendor/midnight-circuits-7.3.0-seed/src/ecc/foreign/weierstrass_chip.rs	2026-11-11 17:19:52.073090451 -0700
+@@ -1000,8 +1000,15 @@
+         native_gadget: &N,
+         scalar_field_chip: &S,
+     ) -> Self {
+-        let mut rng = OsRng;
+-        let random_point = C::random(&mut rng).into_subgroup();
++        // gpu-wrap test hook: GW_CHIP_SEED fixes the incomplete-addition point so two
++        // syntheses of one witness give one assignment (byte-identity tests only).
++        let random_point = match std::env::var("GW_CHIP_SEED").ok().and_then(|s| s.parse::<u64>().ok()) {
++            Some(seed) => {
++                use rand::SeedableRng;
++                C::random(&mut rand::rngs::StdRng::seed_from_u64(seed)).into_subgroup()
++            }
++            None => C::random(&mut OsRng).into_subgroup(),
++        };
+ 
+         let base_field_chip = FieldChip::new(&config.base_field_config, native_gadget);
+ 
