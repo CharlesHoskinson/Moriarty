@@ -1,12 +1,92 @@
-# Experiments of the final-design night plan (2026-11-11)
+# Sherlock design experiments
 
-Labels: MEASURED is a `circuit_model` row count or an assignment offset of a circuit that was built and passed MockProver. ESTIMATE is a computation from measured parts or from an earlier fit; the inputs are named.
+This file holds the deciding experiments of the co-processor design (`research/sherlock-processor-final-20261111/PROPOSAL.md`, applied in `ARCHITECTURE.md`) and the record of the machine-level experiment C1.
 
-## C1 dense tail-buffered memory
+Marks: MEASURED is a number with the record that holds it. DERIVED is computed by a stated rule from MEASURED numbers. ESTIMATE is a computation with named inputs. PENDING is an experiment that has not run.
 
-First backend of night-plan step C1: the dense tail-buffered Merkle memory of `research/sherlock-runlength-consensus-20261111/CONSENSUS.md` 1.2.3 item 2, with the invariants of `AUDIT.md` finding 8, behind a MEM interface that a write-once LogUp backend can implement later. The second backend is not built.
+Prefixes: `CT/` is `research/sherlock-call-time-opt-20261111/`; `CO/` is `research/sherlock-compact-open-problems-20261111/`; `SB/` is `repos/stark/openvm-org_stark-backend/`.
 
-### What was built
+Hard rules for every experiment: never k = 22 (no BLS12-381 circuit above k = 21; a BabyBear trace of height 2^22 is a STARK scaling point, not a circuit k); every proof is a fixed-size shard; zero knowledge end to end, with every STARK layer on the user's machine and seeded proofs in test mode only; proven 100-bit security with no unproved conjecture, claimed only after the security qualification gate G1 to G5 passes; GP-1 to GP-4 never narrowed; one universal key set; the ledger 9.1.0.1 verifier unchanged. Heavy jobs run one at a time under `heavy-run`, with load average and GPU occupancy recorded.
+
+## 1. Deciding experiments D1 to D15
+
+Source of the rows: `CT/RESULT.md` section 6. Every bit count of the design is an ESTIMATE until D3 runs on the frozen parameter sets; every wrap and `L` cell is an ESTIMATE until D10 and D15 run.
+
+| # | Experiment | Size | Decides | Status |
+|---:|---|---|---|---|
+| D1 | Midnight Poseidon permutation loop on 1, 10 and 20 threads, then a seeded 21-bit grind on 20 threads | about 1 minute, under 1 GB | the CPU `L` rate and core count of path 1 | MEASURED under load 15 to 40 (`CT/measured/L-hash-wrap-setup.md` section 1): 37.54 us per permutation on one Cortex-X925 core, 252.96 us on one Cortex-A725 core; 228,746 to 253,270 permutations per second on the whole host, about 8.6 to 9.5 X925-core equivalents; one 21-bit check 8.88 s median and 11.18 s mean on 20 threads over 20 trials. A quiet-host repeat is PENDING; the quiet bound is 305,907 permutations per second, DERIVED from the single-thread rates |
+| D2 | `bench msm` and `bench ntt` with the GPU exclusive and the host idle, then under `nsys` | minutes | idle sppark MSM against the loaded 0.479 s per 2^20; fixed and marginal cost per call | PENDING |
+| D3 | The stock soundness calculator, after the parameter code of build step 4, on every parameter set of `ARCHITECTURE.md` section 1.9 at its shape bounds, on the frozen query vectors, and for `L` at the `w_stack` that D10 measures | CPU, minutes | every bit count; gate check G2 | PENDING |
+| D4 | E-1 T0: rebuild `m` from the saved XC-9 call bytes and compare `le31(SHA256(m))` with `public_inputs[0]`; rebuild with a new TTL and with the DUST intent added | CPU seconds | the no-rebuild claim behind placement V; the host keeps the order prove, then `balanceUnbound`, until it passes | PENDING |
+| D5 | `wrap_prove` at k = 16, config `msm`, `MORI_GPU_DEBUG=1` | 1 minute | bucket skew as the cause of the in-prover MSM defect | PENDING |
+| D6 | The k = 20 decider pinned to the X925 cores only, the A725 cores only and all 20 cores | about 15 minutes, no build | static chunking against the memory bus; the A725 speed | PENDING |
+| D7 | Fr Poseidon `.cu` microbench over sppark `fr_t`: 2^24 permutations and a grind loop at 11 to 22 bits | one nvcc compile, 2 minutes of GPU | the rate of the Fr Poseidon GPU kernel for `L`: target 5 to 15 M permutations per second | PENDING; no GPU Poseidon over Fr exists today (`CT/measured/L-hash-wrap-setup.md` section 1) |
+| D8 | Wrap setup timers around `srs_any()`, `setup_pk` and `prove` on a quiet host; warm against cold in one process | about 3 to 15 minutes | the cold setup row | MEASURED once under load (`CT/measured/L-hash-wrap-setup.md` section 2): wrap setup of the XC-9 path 82.87 s at k = 21 and 79.99 s at k = 20; peak RSS 30.24 GB at k = 21. The quiet value 22.2 s at k = 21 is DERIVED from the same-run contention factor 3.73 and holds only if `setup_pk` slows as `prove` does; the k = 20 cross-check fails that condition. The quiet-host run is PENDING |
+| D9 | sppark one-batch patch and window from the call size, then D2 again | days of build | path 2 against path 3 | PENDING |
+| D10 | Keygen of `L` (`VerifierSubCircuit::<1>` at root parameters) with the per-AIR dump, then `levers.py L-STRUCTURE.json` | keygen only, minutes | the `L` shape, `w_stack`, the high row case at k = 19. A `w_stack` above 16 reruns D3 and raises the `mu` and LogUp PoW before the `L` key freezes | PENDING |
+| D11 | Direct advice writer for the k = 20 decider against its `synthesize` | about 1 week of build | the 0.1 to 0.3 s wrap advice fill (stock layouter 7.15 s, MEASURED) | PENDING |
+| D12 | Path C cells: leaf at stacked height 17, 18, 20 and 24; node of arity 1 at internal parameters | about 15 minutes of GPU after one bench rebuild | the 1.3 to 3.2 s STARK part of path C | PENDING |
+| D13 | GPU wrap at k = 20 with configs `cpu;all`, 2 repetitions, idle host | about 15 minutes | the first whole-prover GPU wall time with today's kernels | PENDING |
+| D14 | NVRTC quotient numerator for the k = 20 decider graph at 0 differences | about 1 week of build | 7.94 s against 0.34 to 0.67 s | PENDING |
+| D15 | M7: the G4 wrap circuit with the wrap-rows bundle, V+, the anchor statement checks, the DAG key check and the direct writer; its cost model on the real `L` shape; one proof through the ledger 9 verifier | the wrap build | the k of the wrap key and every wrap row figure | PENDING |
+
+## 2. Transcript vectors T-FS
+
+Gate check G3 needs them. Each vector gives the same digits and the same final state (`SB/crates/stark-backend/src/transcript/multi_field.rs:82-100`) on the CPU prover, the GPU prover, the stark-backend verifier and the wrap's verifier of `L` under the mock prover. One fixed vector per transition of the `L` transcript (`ARCHITECTURE.md` section 1.8):
+
+1. the key pre-hash, then one sample;
+2. 1 to 8 words observed, then a sample (each partial pack);
+3. 16 words, then a sample (no added permutation);
+4. 9 words, then a commitment (flush, then the digest);
+5. 11 samples in a row (digit refill at the 6th, a permutation at `sample_idx` 0 at the 11th);
+6. sample, observe, sample (dropped digits);
+7. one non-final WHIR round of `L` with both OOD points, both answers, the query PoW, the query indices and `gamma`;
+8. the full transcript of one `L` proof from D10;
+9. one vector each for the fixed-length hashes `u` = 1, 2 and 4 against Midnight's CPU sponge with the Sherlock initial capacity.
+
+Status: PENDING.
+
+## 3. Native-routed anchor controls T2-N and T2-N0
+
+They run with the atomic-chunk test T2 on the XC-9 devnet (`chunky.compact`). OD-8 (hybrid contracts) is gated on T2-N.
+
+- **T2-N.** `chunky.compact` gains an entry `nat`, routed native under its own key, with the native anchor prologue (`ARCHITECTURE.md`, kit COMPACT FRONTEND). A `nat` call placed between chunks `c1` and `c2` is refused: either no proof exists for its prologue (the anchor holds `A_1`), or a proof made against the state before the run fails the anchor `popeq` on the ledger.
+- **T2-N0 (control).** The same entry without the prologue, between `c1` and `c2`, is included and its write lands inside the run. This shows that T2-N can detect an interleaving.
+
+Status: PENDING.
+
+## 4. Pending evidence
+
+Source: `PROPOSAL.md` section 13.
+
+| Item | What is missing |
+|---|---|
+| Bench write-up | every Plonky3 cell, the remaining OpenVM CPU cells, CPU thread scaling, CPU nodes; ranking by seconds per proved leaf step |
+| E-1 devnet test | T0 to T6 results; harness files in the `e1-test` worktree |
+| Atomic chunks | T1 and T2 results in the `atomic-chunks` worktree, with the native-routed controls T2-N and T2-N0; T3 after frontend M5; the source of the claim address and `ep_hash` per chunk under placement V |
+| GPU wrap | the results table at k = 19, 20 and 21; end-to-end speedup on a quiet host; the in-prover MSM defect (D5); idle MSM (D2, D9) |
+| G4 wrap rows | M7 (D15): the real wrap circuit and cost model; the k of the key |
+| `L` structure | D10: keygen of `L` with the per-AIR dump |
+| Soundness calculator | D3 on every parameter set at its shape bounds, `L` at the measured `w_stack` |
+| Lean | commit and build log of the working-copy files; the restatement after OD-1 to OD-3 |
+| Security qualification | gate checks G1 to G5 (`ARCHITECTURE.md` section 1.9) |
+| Theorem mapping (G5) | fetch WHIR (ACFY24, ePrint 2024/1586) and read it in full, with BCGM26; then the mapping from WHIR Theorem 5.2 and the mutual correlated agreement theorem to every frozen set, the two-OOD protocol included |
+| Transcript vectors T-FS | section 2 |
+| Papers | WHIR, BCGM26, Jagged PCS, LogUp-GKR, Twist and Shout, WARP, Arc, Blaze, LatticeFold+, Neo, StarkPack, Accumulation Without Homomorphism full version: not on disk, not cited |
+| Fr Poseidon kernel rate | D7: 5 to 15 M permutations per second |
+| Preprocessing savings | the cached trace on and off; a planned shard against a generic shard in seconds per proved step (M13) |
+| GP-3 cost | foreign-proof shards (M11) |
+| Wrap on chain | verifier-key bytes against the 50,000-byte limit, proof bytes, verify time and fee at `2 + L_TX` public inputs; devnet and Preview deploy of the wrap key |
+
+## 5. Machine-level experiment C1
+
+C1 is a halo2 prototype of the dense memory backend in the spike crate `crates/mori-chip`. Its MockProver tests and row counts measure that prototype circuit. They carry over to the machine-level kits as tested invariants of the memory mechanism; the row counts and the gate `k_leaf <= 16` below are figures of the halo2 prototype and are not gates of the STARK leaf shards.
+
+### C1 dense tail-buffered memory
+
+First memory backend: the dense tail-buffered Merkle memory of `research/sherlock-runlength-consensus-20261111/CONSENSUS.md` 1.2.3 item 2, with the invariants of `AUDIT.md` finding 8, behind a MEM interface that a write-once LogUp backend can implement later. The second backend is not built.
+
+#### What was built
 
 Code in `crates/mori-chip/src/` (spike crate; nothing in the production leaf changed):
 
@@ -26,7 +106,7 @@ Design as built (one arena; the four-arena variant is four copies with the kind 
 - Flush unit `j` is on iff `f_j = act(row 8j + 7)`, that is iff `floor(len_post / 8) > q_pre + j`. Its old walk starts at `EMPTY_SEG` (gate) and must reach the running root when `f_j = 1`; its new walk from `T_j` copies the old walk's siblings, bits and accumulators; `root' = root + f_j (new - root)`. The walk index is `idx_0 = q_pre`, `idx_j = idx_(j-1) + f_j`, decomposed into TOP bits by the walk accumulator (last `acc_out = 0`).
 - Cold read: record hash, then `TOP + 3` levels whose bits are the bits of `addr` (accumulator chain from the copied `addr`), result equal to `pre.root` when `enable = 1`. The CORE stand-in routes a read to cold iff `addr < base` (a range-checked difference) and checks `addr < len_cur` (range-checked `len_cur - 1 - addr`).
 
-### Commands and runs
+#### Commands and runs
 
 Every build and test ran through `scripts/doctorwatson heavy` with `CARGO_TARGET_DIR=~/.cache/final-design/c1/target`. Run ids are in `qa/sherlock/runs.jsonl` and traces in `qa/sherlock/traces/`.
 
@@ -41,7 +121,7 @@ Every build and test ran through `scripts/doctorwatson heavy` with `CARGO_TARGET
 | `20261111T071045Z-c1-rows` | as `065836Z` | identical rows; log `~/.cache/final-design/c1/logs/c1-rows.txt` |
 | `20261111T071101Z-c1-clippy` | as `065751Z` | no finding in the C1 code |
 
-### Tests
+#### Tests
 
 Positive (MockProver accepts):
 
@@ -80,7 +160,7 @@ Named mutants (MockProver refuses; the test asserts the failing gate or argument
 | `close_advances_len` (`len_post` one above the appends) | window and append-chain constraints |
 | `append_value_mismatch` (window value differs from the append request) | bus lookup |
 
-### Measured rows (MEASURED, run `20261111T065836Z-c1-rows`)
+#### Measured rows (MEASURED, run `20261111T065836Z-c1-rows`)
 
 Sections are assignment offsets inside the harness region; totals are `circuit_model` rows. Harness key shape: 12 advice, 13 equality, 28 fixed (incl. permutation columns), 2 lookups (the bus), degree 6, rotations -1/0/+1. TOP does not change the key shape: the walk gates are per row.
 
@@ -105,7 +185,7 @@ So `persist(W) = 12,137 + 10,161 (W - 1)` at TOP = 61 and `12,417 + 10,441 (W - 
 
 Tag variant not built: a tag as the first hash input makes each node 3 inputs, 2 permutations. ESTIMATE from the same parts: flush unit 17,080 rows, cold read 9,100 rows at TOP = 61. The capacity tag costs nothing.
 
-### Leaf rows at S = 16, 64, 128 (ESTIMATE, composed from the measured parts)
+#### Leaf rows at S = 16, 64, 128 (ESTIMATE, composed from the measured parts)
 
 Inputs: CORE and the rest of the leaf from the E8 leaf (6,511 rows at S = 16, of which M3 is 6,090; so 421 rows, 26.3 per step, scaled linearly to S = 64 and 128, ESTIMATE); two state digests over 29 register words plus `root` and `tail_d` (31 inputs, 2 x 1,120 rows, ESTIMATE); frontier, window and `persist` MEASURED; cold reads at 4,751 (TOP = 61) or 4,895 (TOP = 63) rows each with the read port, MEASURED. W from the append census of `experiments-2.md` 3.2 (MEASURED there): at most 8 appends in a 16-step window and 18 in a 64-step window, plus at most 7 tail records: W = 1 at S = 16, W = 3 at S = 64, W = 5 at S = 128 (128-step maximum taken as 2 x 18 = 36, ESTIMATE). A leaf that needs more closes early (design 2.7.7). `N_page` (cold reads per leaf) has no census; the table gives 0, 4 and 8.
 
@@ -131,21 +211,21 @@ The tables exclude hash-stack spills (FRAMES, TASKS), PROG and Init openings, TR
 
 At S = 16 the gate `k_leaf <= 16` holds up to about 10 cold reads per leaf at either TOP. The cold reads dominate: each costs as much as 23 window slots. TOP = 63 adds 284 to 2,556 rows across the table, and no k changes between TOP = 61 and 63 in any cell.
 
-### Node rows (ESTIMATE, not measured)
+#### Node rows (ESTIMATE, not measured)
 
 The node grows with the leaf's columns and lookups, and by about 4 rows per bit of leaf k (design 2.7.11 fit: 6,004 rows per fixed column, 7,298 per advice column, 8,189 per equality column, about 22,600 per lookup). MEM and the backend add no advice column, no equality column (the leaf already has all 12 advice columns in the permutation) and no lookup (the window uses the existing bus). They add 6 fixed columns: `kfix` and 3 packed code columns (MEM), 2 packed code columns (backend). They remove the 2 code columns of M3 (`SegMemConfig`, `WalkConfig`). Net +4 fixed columns: about +24,016 node rows, and +12 for leaf k 13 to 16, so the node goes from 823,466 to about 847,494 rows (gate 950,000). TOP adds nothing to the node. Packing the new codes into the leaf's existing code columns could remove part of the +4; not tried. The node was not run over a leaf with this backend: that needs the backend wired into `RfLeaf` in place of M3.
 
-### Arenas (R-6)
+#### Arenas (R-6)
 
 MEASURED: four arenas with one flush unit each cost 4 x 12,137 rows of `persist` (49,172 harness rows), against 12,281 for one arena. ESTIMATE: four arenas sharing two flush units (lanes A, B) would be 4 x (12,137 - 8,541) + 2 x 8,541 = 31,466 rows plus the arena-select multiplexers (not built). The one-arena variant with tagged records is 12,137 at W = 1. Not done: the mechanical check of the 108-rule non-interleaving claim over the reference machine. It stays open (needs an assertion in `mori-core` run on the corpus, or a Quint model).
 
-### Deviations from the audit text (for `DECISIONS.md`)
+#### Deviations from the audit text (for `DECISIONS.md`)
 
 - Domain tags are in the sponge capacity, not in the first input as AUDIT finding 8 says. Same separation (the capacity is fixed by the circuit and differs per domain, height and input length); cost 0 permutations against about 2x on every node hash (flush unit 17,080 and cold read 9,100 rows at TOP = 61, ESTIMATE).
 - An active window row with kind 0 is allowed (no reader can request kind 0, and its key is still injective).
 - `q_post = q_pre + sum f_j` is not a separate gate: it follows from the `act` prefix, the address chain and the decomposition of `len_post`.
 
-### Quint lane (Gemini, argon-run) for this circuit change
+#### Quint lane (Gemini, argon-run) for this circuit change
 
 Modules: MEM frontier and window (`membackend.rs`, `WindowCfg`), dense `persist` and `cold_read` (`dense.rs`), the CORE port assumptions of the harness (append chain from `len_pre` to `len_post`, read route and `addr < len_cur`, kind from the rule). Properties:
 
@@ -158,7 +238,7 @@ Modules: MEM frontier and window (`membackend.rs`, `WindowCfg`), dense `persist`
 7. `len <= 2^(TOP + 3) - 1`; at TOP = 61 `2^64 - 1` is reachable and `2^64` is not; a leaf at the last segment is provable for any W.
 8. Appends and new window rows correspond one to one (rests on CORE's append chain).
 
-### Not covered and open
+#### Not covered and open
 
 - The LogUp backend (C1 second half) is not built. The trait keeps the token opaque so that it can return obligation cells.
 - Hash-chain FRAMES and TASKS stacks are not built.

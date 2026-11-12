@@ -51,3 +51,7 @@ Use `research/sherlock-final-design-20261111/TERMINOLOGY.md` as written: Sherloc
 - Privacy: a split view, the user's machine with the witness against what a helper host and the chain see.
 - The prover: tasks queued, resumed after a crash, only the decider on the transaction path.
 - Compact: a Compact contract compiled to Sherlock and accepted by the same `SherlockRun` contract.
+
+## 7. Design merge: the co-processor architecture (2026-11-11)
+
+The design folder now follows `research/sherlock-processor-final-20261111/PROPOSAL.md`. Scenes 1 and 2 gain the per-program plan (`sherlock plan`, `prog_d` with `key_root`, the salted anchor `C_P`) and the Compact compile path with the `R_SL_*` straight-line rules. Scenes 3 and 4 show OpenVM STARK leaf shards of fixed shapes on the user's GPU and universal nodes of fixed arity that merge the deferred field log, in place of halo2 leaves and k = 21 nodes. Scene 5 replaces the decider with the bridge layer `L` (Poseidon over Fr) and the blinded G4 wrap at k 19 to 21, which replays the log. Scene 6 shows the call vector of `2 + L_TX` words with lane 0 bound by E-1, and atomic chunked calls with the anchor lock. Scenes 7 and 8 keep the unchanged ledger 9.1.0.1 verifier and one universal wrap key per entry, and helper hosts leave the story: every STARK layer stays on the user's machine.
