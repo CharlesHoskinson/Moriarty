@@ -173,7 +173,7 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 
 #### Scenario: Gate names
 - **WHEN** a row is FREEZE-PENDING
-- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, the encoding gates ENC-1 to ENC-5, the owner decision OD-21 (M7-0), and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
+- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, the encoding gates ENC-1 to ENC-5, the owner decision OD-24 (M7-0), and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
 
 #### Scenario: Change after sign-off
 - **WHEN** a FROZEN interface changes after the owner signs off version 1
@@ -181,7 +181,7 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 
 #### Scenario: Wrap key status
 - **WHEN** the status of the wrap key, `L_TX`, the log capacity and `layout_d` is read
-- **THEN** each is FREEZE-PENDING M7 and FP-8, and the wrap shape is the open BLOCKER of M7-0: ledger 9 rebuilds a `ZkStdLib` constraint system from the key bytes (`ML/transient-crypto/src/proofs.rs:533`) and refuses a key with G4 lane gates, MEASURED on a toy key, and the path is owner decision OD-21 with no adopted default
+- **THEN** each is FREEZE-PENDING M7 and FP-8, and the wrap shape is the open BLOCKER of M7-0: ledger 9 rebuilds a `ZkStdLib` constraint system from the key bytes (`ML/transient-crypto/src/proofs.rs:533`) and refuses a key with G4 lane gates, MEASURED on a toy key, and the path is owner decision OD-24 with no adopted default
 
 #### Scenario: Encodings not written
 - **WHEN** the status of the public digest tag values, `enc(e)`, the `layout_d` serialization, the stack cell layouts or the `plan_d` word lists is read
@@ -207,7 +207,7 @@ DISCHARGE SHALL be exempt from the concatenation rule of FPR-005. Its invariant 
 - **THEN** the proof is refused (mutants `node_discharge_invalid_entry`, `node_discharge_word_changed`)
 
 ### Requirement: FPR-019 FP-8 waits on every embedded interface
-FP-8 SHALL NOT close while an interface that a universal key embeds is FREEZE-PENDING: FP-3 facts 1 to 3 with their closure tests, the path C key binding of I-17, M7 on a chosen OD-21 path, D10 and ENC-1 to ENC-5 (LEAD FZ-4).
+FP-8 SHALL NOT close while an interface that a universal key embeds is FREEZE-PENDING: FP-3 facts 1 to 3 with their closure tests, the path C key binding of I-17, M7 on a chosen OD-24 path, D10 and ENC-1 to ENC-5 (LEAD FZ-4).
 
 #### Scenario: Encoding open at freeze
 - **WHEN** the universal keys are offered for freeze while ENC-3 is open

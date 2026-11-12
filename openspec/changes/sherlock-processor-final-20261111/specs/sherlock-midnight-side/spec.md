@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
 ### Requirement: MID-001 The ledger verifies the wrap as it is
-The ledger SHALL check each Sherlock `ContractCall` with `midnight_transient_crypto::proofs::VerifierKey::verify` on the key installed under the entry label. The wrap SHALL be a midnight-proofs PLONK proof with KZG over BLS12-381 and the Blake2b transcript, with a key that the ledger's `MidnightVK::read` reads. Ledger 9 reads only `ZkStdLib`-architecture keys and refuses a G4 key (M7-0), so the wrap form follows OD-21 (CPR-004, LW-017).
+The ledger SHALL check each Sherlock `ContractCall` with `midnight_transient_crypto::proofs::VerifierKey::verify` on the key installed under the entry label. The wrap SHALL be a midnight-proofs PLONK proof with KZG over BLS12-381 and the Blake2b transcript, with a key that the ledger's `MidnightVK::read` reads. Ledger 9 reads only `ZkStdLib`-architecture keys and refuses a G4 key (M7-0), so the wrap form follows OD-24 (CPR-004, LW-017).
 
-#### Scenario: Wrap on the ledger of the OD-21 path
-- **WHEN** a wrap proof of the OD-21 path is submitted on a local devnet
+#### Scenario: Wrap on the ledger of the OD-24 path
+- **WHEN** a wrap proof of the OD-24 path is submitted on a local devnet
 - **THEN** ledger 9.1.0.1 verifies it unchanged under options C and E, or the ledger release of option A verifies it (frontend M2b and M3)
 
 ### Requirement: MID-002 Every exported entry holds the universal wrap key

@@ -105,14 +105,14 @@ Every wrap proof SHALL use fresh CSPRNG blinders. A seeded wrap proof SHALL exis
 - **THEN** their bytes differ and the ledger 9 verifier accepts both (EQ-ZK)
 
 ### Requirement: LW-013 The wrap has the G4 shape
-Under OD-21 option A, and for the first layer of option C, the wrap SHALL have 4 identical lanes of 8 advice columns over shared fixed columns, rotations within `{-1, 0, +1}`, every gate and lookup of degree at most 5, the 19-row Poseidon layout over Fr, and one fixed 2^16-row range table with at most 4 lookups of input degree 2. It SHALL have no foreign-field, pairing or SHA chip (LW-017).
+Under OD-24 option A, and for the first layer of option C, the wrap SHALL have 4 identical lanes of 8 advice columns over shared fixed columns, rotations within `{-1, 0, +1}`, every gate and lookup of degree at most 5, the 19-row Poseidon layout over Fr, and one fixed 2^16-row range table with at most 4 lookups of input degree 2. It SHALL have no foreign-field, pairing or SHA chip (LW-017).
 
 #### Scenario: Degree-6 gate
 - **WHEN** the 70-row Poseidon chip with its degree-6 gate is placed in the wrap
 - **THEN** the shape check refuses the wrap key, because the extended domain doubles
 
 ### Requirement: LW-014 Keygen refusals and the fallback layer
-Wrap keygen SHALL refuse a log capacity that does not hold the largest reservation `R`, and an `L` key whose query vector or shape bounds differ from the frozen set. An Fr-terminal layer between `L` and the wrap SHALL be built only on a fallback trigger. Its form A SHALL NOT be built (OD-11) unless OD-21 selects option E, which reopens OD-11.
+Wrap keygen SHALL refuse a log capacity that does not hold the largest reservation `R`, and an `L` key whose query vector or shape bounds differ from the frozen set. An Fr-terminal layer between `L` and the wrap SHALL be built only on a fallback trigger. Its form A SHALL NOT be built (OD-11) unless OD-24 selects option E, which reopens OD-11.
 
 #### Scenario: Fallback trigger
 - **WHEN** the wrap rows exceed the gate after M7, the measured GPU wrap exceeds 8 s at the chosen k after K1 to K5, or the owner asks for a larger log capacity
@@ -130,15 +130,15 @@ The kit SHALL be reported complete only when BR-L2, BR-L4 and DEC-L1 are proved 
 - **THEN** BR-L2 (the restatement: `ProvenRegime` in the unique decoding regime with the frozen query vector, the PoW constants, one OOD sample per round and the `w_stack` bound, `encode` on the two-table `pv`, `wrap_refines` with the DAG key check and the anchor checks, the two Fr sponge algorithms named), BR-L4 (`ReduceRel` in place of `ArithGadget`) and DEC-L1 (O34) are open
 
 ### Requirement: LW-016 Production qualification of the wrap
-The wrap SHALL be qualified on the OD-21 path over the complete `L` interface (12,164 public words, log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (LEAD FZ-3).
+The wrap SHALL be qualified on the OD-24 path over the complete `L` interface (12,164 public words, log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (LEAD FZ-3).
 
 #### Scenario: Benchmark offered as qualification
 - **WHEN** wrap rows measured on `L_cached` with an all-`NOP` log are offered for DG-002, LW-013 or the key freeze
 - **THEN** the gate stays open
 
 ### Requirement: LW-017 The wrap path waits on the ledger key reader
-The G4 shape SHALL NOT freeze, and no G4 figure SHALL be reported as ledger-accepted, before owner decision OD-21 selects a ledger-readable path. Ledger 9 refuses a key with G4 lane gates (M7-0, MEASURED on a toy key).
+The G4 shape SHALL NOT freeze, and no G4 figure SHALL be reported as ledger-accepted, before owner decision OD-24 selects a ledger-readable path. Ledger 9 refuses a key with G4 lane gates (M7-0, MEASURED on a toy key).
 
 #### Scenario: G4 key at the unchanged ledger
 - **WHEN** a G4 wrap key is installed on ledger 9 without a change to `midnight-zk-stdlib`
-- **THEN** `VerifierKey::verify` refuses it at key parsing, and the path is one of the OD-21 options A, C or E
+- **THEN** `VerifierKey::verify` refuses it at key parsing, and the path is one of the OD-24 options A, C or E
