@@ -57,7 +57,7 @@ The `R_SL_*` family and its chips SHALL define the machine version `sherlock-k-a
 - **THEN** the keys of old programs stay valid and no universal key changes
 
 ### Requirement: SPL-009 What freezes with the universal keys
-The log operation list, the capacity with the encoding of `pv` (OD-6, OD-17), the limb encoding, `L_TX` and the public-table layout (OD-7, OD-15), the anchor template words and the anchor statement (OD-16), the hash domains (OD-18), the per-layer parameter sets and shape bounds (OD-1 to OD-4), the public value `X` and the constant fields of the internal layer SHALL freeze with the universal keys, and only after the security gate passes (SQG-011).
+The log operation list, the capacity with the encoding of `pv` (OD-6, OD-17), the limb encoding, `L_TX` and the public-table layout (OD-7, OD-15), the anchor template words and the anchor statement (OD-16), the hash domains (OD-18), the per-layer parameter sets and shape bounds (OD-4, OD-19), the public value `X` and the constant fields of the internal layer SHALL freeze with the universal keys, and only after the security gate passes (SQG-011).
 
 #### Scenario: Partial freeze
 - **WHEN** one of these items changes after the universal keys freeze

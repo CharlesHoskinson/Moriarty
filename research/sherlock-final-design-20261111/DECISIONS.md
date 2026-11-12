@@ -1,21 +1,21 @@
 # Sherlock design decisions
 
-Each entry records one decision with its source. Only owner words are canon. A decision the lead took while the owner was away is marked: "lead decision, owner to confirm" for the co-processor decisions OD-1 to OD-18, OWNER for the machine-level items. The owner can reverse any of them; a reversal changes the rows named in its "Touches" column.
+Each entry records one decision with its source. Only owner words are canon. A decision the lead took while the owner was away is marked: "lead decision, owner to confirm" for the co-processor decisions OD-1 to OD-18 and the freeze choices FZ-1 and FZ-2, OWNER for the machine-level items. The owner can reverse any of them; a reversal changes the rows named in its "Touches" column.
 
-Two numbered series exist. OD-1 to OD-18 are the co-processor decisions of `research/sherlock-processor-final-20261111/PROPOSAL.md` section 12 and `DECISIONS-ASK.md`. AD-1 to AD-23 are the machine-level decisions of `ARCHITECTURE.md` section 4.1.
+Two numbered series exist. OD-1 to OD-20 are the co-processor decisions of `research/sherlock-processor-final-20261111/PROPOSAL.md` section 12 and `DECISIONS-ASK.md`. AD-1 to AD-23 are the machine-level decisions of `ARCHITECTURE.md` section 4.1.
 
-Hard rules, kept by every decision: never k = 22; every proof is a fixed-size shard; per-program, witness-independent preprocessing bound to `prog_d`; zero knowledge end to end, with every STARK layer on the user's machine and no helper that sees the plain witness; proven 100-bit security with no unproved conjecture, claimed only after the security qualification gate G1 to G5 passes (status: not passed); GP-1 to GP-4 never narrowed; one universal key set; the ledger 9.1.0.1 verifier unchanged and a verifier key of at most 50,000 bytes.
+Hard rules, kept by every decision: never k = 22; every proof is a fixed-size shard; per-program, witness-independent preprocessing bound to `prog_d`; zero knowledge end to end, with every STARK layer on the user's machine and no helper that sees the plain witness; proven 100-bit security with no unproved conjecture, claimed only after the security qualification gate passes: G1 to G4 open, G5 discharged at the paper level (status: not passed); GP-1 to GP-4 never narrowed; one universal key set; the ledger 9.1.0.1 verifier unchanged and a verifier key of at most 50,000 bytes.
 
-## Co-processor decisions OD-1 to OD-18
+## Co-processor decisions OD-1 to OD-20
 
 Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (choice and status). Every row is a lead decision with the recommended option, owner to confirm. None of them binds before the owner confirms it.
 
 | # | Decision | Choice | Status | Touches |
 |---|---|---|---|---|
-| OD-1 | OOD closure under the m = 3 list reading | (a) two OOD samples per round, bound derived and proved in Lean | lead decision, owner to confirm | `L` key, wrap rows (about 12,000, ESTIMATE, `CT/RESULT.md:220-222`), Lean premise A2 |
-| OD-2 | `L` PoW rule | (a) per-fold vector at T = 101, top value 22 bits; D3 prints 101.1727 bits | lead decision, owner to confirm. It differs from the owner's earlier wording of 21 bits on every fold: one fold needs 22 bits. Option (b) keeps every fold at or below 21 bits at T = 100 | `L` key, Lean `ProvenRegime` |
-| OD-3 | `L` parameter set | (a) blowup 4, radius (4/3) sqrt(rho), queries 52/27/18, `w_stack` at most 48 with `mu` PoW 22; D3 gives 101.1727 bits at `w_stack` 48 with `mu` PoW 22, and `mu` PoW 21 holds only to `w_stack` 37, DERIVED (D3 section 8, commit `81abb8f7a`); D10 may tighten the bound | lead decision, owner to confirm | `L` key, D3 |
-| OD-4 | Proven rule on inner layers and the margin rule | (a) every layer, every term at least 100 bits, 1 bit of margin on grindable terms, query PoW 21 with frozen query vectors on the app, leaf-aggregation and internal sets, internal LogUp PoW 20, one internal OOD sample. D3 prints the internal OOD term at 100.0129 bits, so (a) holds with 0.013 bits of slack; (b) as (a) with two internal OOD samples, so every internal term reaches 101 bits (that term 208.6404 bits), at a change of the recursion verifier AIRs and the internal key | lead decision, owner to confirm | internal key, D3 |
+| OD-1 | OOD closure under the m = 3 list reading | (a) two OOD samples per round, bound derived and proved in Lean | closed by OD-19 (owner decision, 2026-11-11): unique decoding on the `L` layer | `L` key, wrap rows (about 12,000, ESTIMATE, `CT/RESULT.md:220-222`), Lean premise A2 |
+| OD-2 | `L` PoW rule | (a) per-fold vector at T = 101, top value 22 bits; D3 prints 101.1727 bits | closed by OD-19 (owner decision, 2026-11-11): unique decoding on the `L` layer | `L` key, Lean `ProvenRegime` |
+| OD-3 | `L` parameter set | (a) blowup 4, radius (4/3) sqrt(rho), queries 52/27/18, `w_stack` at most 48 with `mu` PoW 22; D3 gives 101.1727 bits at `w_stack` 48 with `mu` PoW 22, and `mu` PoW 21 holds only to `w_stack` 37, DERIVED (D3 section 8, commit `81abb8f7a`); D10 may tighten the bound | closed by OD-19 (owner decision, 2026-11-11): unique decoding on the `L` layer | `L` key, D3 |
+| OD-4 | Proven rule on inner layers and the margin rule | (a) every layer, every term at least 100 bits, 1 bit of margin on grindable terms, query PoW 21 with frozen query vectors on the app, leaf-aggregation and internal sets, internal LogUp PoW 20, one internal OOD sample. D3 prints the internal OOD term at 100.0129 bits, so (a) holds with 0.013 bits of slack; (b) as (a) with two internal OOD samples, so every internal term reaches 101 bits (that term 208.6404 bits), at a change of the recursion verifier AIRs and the internal key | lead decision, owner to confirm; its internal part (radius, PoW, LogUp PoW, OOD count) is closed by OD-19 | internal key, D3 |
 | OD-5 | E-1 placement | (a) placement V with the V+ layout word | lead decision, owner to confirm | leaf AIR, frontend |
 | OD-6 | Log capacity in the wrap key | (a) `V = P = 256`, `E = 0`, Jubjub inline, spill to tier E | lead decision, owner to confirm | wrap key constant |
 | OD-7 | `L_TX` and the key menu | (a) one value, 1,024, frozen with the wrap key after M7 | lead decision, owner to confirm | wrap key, frontend |
@@ -30,6 +30,8 @@ Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (c
 | OD-16 | Anchor lock and native prologue | (a) `A_0 = A_k = C_P`, salted locks, one anchor statement in the wrap, `anchor_home` for hybrid contracts | lead decision, owner to confirm | wrap, compiler |
 | OD-17 | `pv` encoding and entry capacity | (a) `B = V = 256`, `W_pv` = 2,816, reservation `R` before discretionary operations | lead decision, owner to confirm | wrap key constant |
 | OD-18 | Hash domains and transcript algorithm | (a) the use codes and tags of `PROPOSAL.md` section 3.6, transcript initial capacity `2^64 + 3 * 2^66` | lead decision, owner to confirm | `L` transcript, stark-backend change |
+| OD-19 | Proven bound for the internal and `L` layers | (a) unique decoding: `L` at log blowup 3, queries 98/83/82, folding PoW 0, `mu` PoW 6, query PoW 20, LogUp PoW 18, one OOD sample, weakest term 101.0730 bits; internal at log blowup 3, queries 97/82/81, `mu` PoW 9, query PoW 21, one OOD sample, weakest term 101.1643 bits; wrap at k = 20 on the G4 model row, k = 21 on the worst row | owner decision, 2026-11-11 | `L` key, internal key, wrap rows, D3, Lean; closes OD-1 to OD-3 and the internal part of OD-4 |
+| OD-20 | List size `D_Y` | withdrawn: unique decoding uses no list size bound | closed by OD-19 | none |
 
 Owner actions outside the decisions (`DECISIONS-ASK.md`): fetch the ePrint papers, with WHIR (ePrint 2024/1586) added, because gate check G5 needs full readings of WHIR and of the mutual correlated agreement paper. The Preview pin records the node build `2.1.101-bbd616b1` that the Preview node reports (`qa/sherlock/target-pins.json`, main working copy).
 
@@ -133,3 +135,10 @@ Source: `ARCHITECTURE.md` section 1.11. Each item is a LEAD choice where the sou
 - F-11. **`view_root` is a header word.** `state_d = P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`, 42 words; `VIEW_NONE` under forms (a) and (c). Replaces "body word" of P-6. AD-17 stays OWNER.
 - F-12. **`n_steps` is not public.** It stays private in the SET forms `LEAF` and `DEP`. For collections it holds only when FP-3 fact 3 fixes the contract-side opening of `openClaim`. Owner amendments of SRC-006, SRC-007 and LDG-001; the `n_steps` rule stays OWNER.
 - F-13. **`bind_label` computes the claim address and `ep_hash` inside the chunk's run.** `addr_c = m[|domain| .. |domain| + 32)` with `offset = |domain| + 32`; `ep_hash = SHA256("midnight:entry-point" and 12 zero bytes, raw label)`; the varlen preimage is padded to `M_B(e)` with `len_m` on the tape, and the digest is selected after block `ceil((len_m + 9) / 64)`. Replaces the binding shard of placement B.
+
+## From the interface freeze (S11)
+
+Source: `ARCHITECTURE.md` section 1.12. Lead decisions, owner to confirm.
+
+- FZ-1. **One status word per interface.** FROZEN means every input is settled in the named design text; the FROZEN rows are interface version 1, and after sign-off a change is a new version with its own keys. FREEZE-PENDING names its gates: FP-3 facts, FP-8, M7 (with M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, and named AD and N items. No row is made FROZEN by a new choice.
+- FZ-2. **The leaf public-value layout keeps the lane `rules_d`.** Both options of AD-23 keep lane 32 (a consumer in the LEAF base case of `shape_d`, or a reserved zero lane), so the 54-word layout does not wait for AD-23; only the value of the lane does. The layout itself waits on X10 (row I-12).

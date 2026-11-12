@@ -53,13 +53,11 @@ Each item below keeps its history in git. The last revision with the old text is
 
 ## Decisions that this change depends on
 
-OD-1 to OD-18 are lead decisions with the recommended option, owner to confirm (`FD/DECISIONS.md`). None of them binds before the owner confirms it. A requirement that depends on one names its id.
+OD-4 to OD-18 are lead decisions with the recommended option, owner to confirm (`FD/DECISIONS.md`). OD-19 is an owner decision (2026-11-11) and closes OD-1 to OD-3, the internal part of OD-4 and OD-20. None of them binds before the owner confirms it. A requirement that depends on one names its id.
 
 | Id | Decision | Requirements |
 |---|---|---|
-| OD-1 | two OOD samples per round for `L` | SQG-003, HDM-006, LW-002 |
-| OD-2 | per-fold PoW vector of `L` | SQG-003, SQG-012 |
-| OD-3 | `L` parameter set | SQG-002, SQG-005 |
+| OD-19 | unique decoding internal and `L` sets, one OOD sample | SQG-002, SQG-003, SQG-005, SQG-012, HDM-006, LW-002, DG-005 |
 | OD-4 | proven rule on inner layers and the margin rule | SQG-002, SQG-004 |
 | OD-5 | E-1 placement V with V+ | CF-008, CF-009, LW-005 |
 | OD-6 | log capacity `V = P = 256`, `E = 0` | FLG-003, FLG-005 |

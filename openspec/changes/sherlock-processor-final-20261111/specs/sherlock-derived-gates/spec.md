@@ -16,7 +16,7 @@ The wrap SHALL fit 85 percent of the `2^k - 7` usable rows at the smallest k of 
 
 #### Scenario: Rows before M7
 - **WHEN** a wrap row figure is reported before M7
-- **THEN** it is ESTIMATE, such as 434,692 rows mid for G4 on the keyed `L` structure (`FD/ARCHITECTURE.md` kit L AND WRAP, wrap-row table; `PR` section 3.5)
+- **THEN** it is ESTIMATE, such as 728,763 rows mid for G4 on the keyed `L` set of OD-19 at `w_stack` 48 (`FD/ARCHITECTURE.md` kit L AND WRAP, wrap-row table)
 
 ### Requirement: DG-003 The wrap verifier key fits the ledger
 The wrap verifier key SHALL be at most 50,000 bytes (MID-003).
@@ -33,7 +33,7 @@ Every STARK shard SHALL have a fixed shape from the plan menu. Keygen SHALL refu
 - **THEN** keygen refuses the app key
 
 ### Requirement: DG-005 The height and stacked width of `L`
-`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 22 (OD-3). A tighter bound from D10 SHALL rerun D3 before the `L` key freezes (SQG-005).
+`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 6 (OD-19). A tighter bound from D10 SHALL rerun D3 before the `L` key freezes (SQG-005).
 
 #### Scenario: Height above the bound
 - **WHEN** `L` tracegen gives a height of `2^21`

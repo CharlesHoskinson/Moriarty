@@ -15,7 +15,7 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 | `sherlock-general-purpose` (GP-ZK, CPR) | `FD/ARCHITECTURE.md` header (hard rules), `FD/TERMINOLOGY.md` "Hard rules", `openspec/changes/sherlock-vm-consensus-20261107/general-purpose.md` |
 | `sherlock-shard-plan` | section 1.6 (layer stack, keys, binding the plan, the shard plan, what freezes), section 1.7 |
 | `sherlock-field-log` | section 1.8 (log entries, capacity and encoding, reservation and capacity rule) |
-| `sherlock-hash-domains` | section 1.8 (hash domains), section 1.9 (two OOD samples), `FD/EXPERIMENTS.md` section 2 (T-FS) |
+| `sherlock-hash-domains` | section 1.8 (hash domains), section 1.9 (one OOD sample in the stock WHIR order), `FD/EXPERIMENTS.md` section 2 (T-FS) |
 | `sherlock-security-gate` | section 1.9 (target, parameter sets, margin rule, premises, gate G1 to G5), `FD/EXPERIMENTS.md` D3 and D10 |
 | `sherlock-l-and-wrap` | kit L AND WRAP, section 1.1 |
 | `sherlock-gpu-wrap` | kit L AND WRAP, row budget (kernels, estimates, measured byte identity, MSM skew, fallback triggers), `PR` section 8 |
@@ -28,7 +28,7 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 ## 3. Inputs, outputs and dependencies
 
-- Inputs of a call: the program image and its plan (`prog_d`, `key_root`), the input behind the salted `input_d`, and the tape. Inputs of the design: owner rules, OD-1 to OD-18 (lead decisions, owner to confirm), AD-1 to AD-23 and the experiments D1 to D15.
+- Inputs of a call: the program image and its plan (`prog_d`, `key_root`), the input behind the salted `input_d`, and the tape. Inputs of the design: owner rules, OD-19 (owner decision), OD-4 to OD-18 and FZ-1, FZ-2 (lead decisions, owner to confirm), AD-1 to AD-23 and the experiments D1 to D15.
 - Outputs: one blinded wrap proof and the call vector of `2 + L_TX` words. Nothing else leaves the user's machine.
 - Dependencies between the specs follow the kit dependencies of `FD/ARCHITECTURE.md` section 3.1: L AND WRAP needs NODE INTEGRATION, the stark-backend parameter code (build step 4) and the call vector of COMPACT FRONTEND. ZERO KNOWLEDGE needs L AND WRAP and HOST CHECKPOINT STORE. COMPACT FRONTEND needs CORE and DEC for `R_SL_*`.
 
@@ -49,14 +49,14 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 Semantic guarantees are the requirements of `specs/`. Feasibility is the derived gates (DG-001 to DG-007) and the measured cost in seconds per proved step. Every number in the specs is MEASURED with its record, DERIVED, ESTIMATE with its inputs, PENDING or LEAD, as in `FD/ARCHITECTURE.md`.
 
-The `L` key bound is `w_stack` at most 48 with `mu` PoW 22 (LEAD, OD-3, owner to confirm). D3 section 8 (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`, and the keyed `L` structure points to about 36. D10 may tighten the bound.
+The `L` key bound is `w_stack` at most 48 with `mu` PoW 6 (LEAD under OD-19, owner to confirm). The D3 unique decoding sweep (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`, and the keyed `L` structure points to about 36. D10 may tighten the bound.
 
 ## 7. Lean status
 
 | Obligation | Spec | Status |
 |---|---|---|
 | BR-L1 `bridge_sound`, `wrap_view_only_claim` | LW-015 | built at `bdb92973a` (0 sorry, standard axioms only, 112 theorems) under premises A1 to A7 and `vkL_ok`, against the older `ProvenRegime` |
-| BR-L2 restatement (per-fold PoW vector in `ProvenRegime`, two-OOD bound, `w_stack` bound, two-table `pv`, DAG key check and anchor checks in `wrap_refines`, two Fr sponge algorithms) | LW-015, SQG-012, FLG-009, HDM-010, SPL-010 | open |
+| BR-L2 restatement (unique decoding `ProvenRegime` with the frozen query vectors, one OOD sample, `w_stack` bound, two-table `pv`, DAG key check and anchor checks in `wrap_refines`, two Fr sponge algorithms) | LW-015, SQG-012, FLG-009, HDM-010, SPL-010 | open |
 | BR-L3 lemma 23 and the transcript-derived key checks | LW-015, FLG-009 | built at `bdb92973a` |
 | BR-L4 `ReduceRel` in place of `ArithGadget` | LW-015 | open |
 | DEC-L1 (O34) outcome-only statement | LW-007, LW-015 | open |
@@ -69,7 +69,7 @@ The GPU wrap prover, the prover daemon, the Midnight side and the derived gates 
 
 ## 8. Open items carried into the interface freeze
 
-The one list of freeze items is the freeze-prerequisite table of `FD/ARCHITECTURE.md` section 3.1 (FP-1 to FP-8, from the final council of loop step S9, `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` on main). `FD/ARCHITECTURE.md` section 1.11 and spec `sherlock-freeze-prerequisites` (FPR-001 to FPR-016) close FP-1, FP-2 and FP-4 to FP-7 with LEAD choices F-1 to F-13 (`FD/DECISIONS.md`), owner to confirm. The universal key set freezes only after G1 to G5 pass and the owner confirms OD-1 to OD-4, OD-17 and OD-18 (FP-8). Open items:
+The one list of freeze items is the freeze-prerequisite table of `FD/ARCHITECTURE.md` section 3.1 (FP-1 to FP-8, from the final council of loop step S9, `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` on main). `FD/ARCHITECTURE.md` section 1.11 and spec `sherlock-freeze-prerequisites` (FPR-001 to FPR-016) close FP-1, FP-2 and FP-4 to FP-7 with LEAD choices F-1 to F-13 (`FD/DECISIONS.md`), owner to confirm. The universal key set freezes only after G1 to G4 pass with G5 and the owner confirms OD-4, OD-17 and OD-18, with the OD-19 sets (FP-8). `FD/ARCHITECTURE.md` section 1.12 gives the freeze status of every interface (FPR-017). Open items:
 
 - FP-3 (FPR-009): the carrier of the effect region and `comm` from a multi-shard terminal state to the call vector of `L`; the call-vector lanes of the run statement and of the collection statement (LW-009), which follow from the compiled LEDGER CONTRACT; the contract-side form of a collection opening under `sherlock-value/2`. The opening layer (`L`, FPR-007), the public program identity `C_P` (FPR-010, owner item N-11) and the index table of the public values of `L` (FPR-008) are closed as LEAD choices.
 - The order of the machine-level kits against the build phases of `FD/ARCHITECTURE.md` section 3.0.

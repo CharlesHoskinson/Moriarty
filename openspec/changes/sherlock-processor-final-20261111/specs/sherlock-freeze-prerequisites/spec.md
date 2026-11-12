@@ -88,8 +88,8 @@ For a LEAF child, the node SHALL open `prog_d` to `key_root` and SHALL prove the
 The freeze proposal SHALL NOT freeze the public statement codec while these facts are missing, and SHALL name them: the carrier of the effect region and `comm` from the terminal state of a run of more than one shard to the call vector of `L`; the call-vector lanes of the run statement and of the collection statement, which follow from the compiled LEDGER CONTRACT; and the contract-side form of a collection opening under `sherlock-value/2`, with the `openClaim` key and its public `n_steps`.
 
 #### Scenario: Freeze proposal written
-- **WHEN** the interface freeze proposal is written at loop step S11
-- **THEN** FP-3 is marked open with these three facts, and FP-1, FP-2 and FP-4 to FP-7 are marked closed
+- **WHEN** the freeze index of `FD/ARCHITECTURE.md` section 1.12 is written
+- **THEN** each interface that waits on one of these three facts is marked FREEZE-PENDING with the fact, and FP-1, FP-2 and FP-4 to FP-7 are closed
 
 ### Requirement: FPR-010 Public digests of the run
 The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))`, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))`, `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))` and `claim_pub = transientHash([C_P, input_pub, outcome_pub])`. The salt SHALL be 8 words from the user's CSPRNG in `input_d`, fixed for the run at INIT (LEAD F-7, F-10).
@@ -151,3 +151,27 @@ The freeze interfaces SHALL be reported proved only when `bus_enc_inj`, `node_lo
 #### Scenario: Obligation status
 - **WHEN** the status is reported
 - **THEN** each of the seven lemmas is open, and `horner_inj`, `digest_inj`, `onion_snoc`, `discharge_sound`, `packed_hash_inj`, `public_digest_binds` and `wrap_view_only_claim`, on which they build, are proved at `bdb92973a`
+
+### Requirement: FPR-017 One freeze status for every interface
+Every co-processor interface, kit interface and universal key SHALL have one status in `FD/ARCHITECTURE.md` section 1.12: FROZEN, when every input is settled in the named design text, or FREEZE-PENDING with its named gates (lead decision FZ-1). No row SHALL reach FROZEN by a choice of the freeze itself. The FROZEN rows SHALL be interface version 1. No universal key SHALL be FROZEN before FP-8 closes.
+
+#### Scenario: Gate names
+- **WHEN** a row is FREEZE-PENDING
+- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
+
+#### Scenario: Change after sign-off
+- **WHEN** a FROZEN interface changes after the owner signs off version 1
+- **THEN** the change is a new interface version with its own keys
+
+#### Scenario: Wrap key status
+- **WHEN** the status of the wrap key, `L_TX`, the log capacity and `layout_d` is read
+- **THEN** each is FREEZE-PENDING M7 and FP-8, and the G4 shape waits on check M7-0, because ledger 9 reads a verifier key by rebuilding a `ZkStdLib` constraint system (`ML/transient-crypto/src/proofs.rs:533`)
+
+#### Scenario: Leaf public values
+- **WHEN** the status of the 54-word leaf public values is read
+- **THEN** the layout is FREEZE-PENDING X10, the seal-time opening of the `post_d` header, and the lane `rules_d` stays in both AD-23 options (lead decision FZ-2)
+
+#### Scenario: Key set
+- **WHEN** the status of the internal-recursive and `L` keys is read
+- **THEN** both are FREEZE-PENDING FP-8, the `L` key also D10 and the path C `h_pre` code check of the `DOM_KEYDAG` leaf
+

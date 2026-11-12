@@ -12,7 +12,7 @@
 - **THEN** the constraint checker refuses the trace of `L`
 
 ### Requirement: LW-002 The wrap verifies `L` under the key schedule
-The wrap SHALL verify the proof of `L` under the frozen `L` key. The verifier of `L` in the wrap SHALL follow the key schedule `sched`, the transcript algorithm of HDM-004 and the two-OOD order of HDM-006 (OD-1, OD-18). It SHALL NOT follow the structure of the proof.
+The wrap SHALL verify the proof of `L` under the frozen `L` key. The verifier of `L` in the wrap SHALL follow the key schedule `sched`, the transcript algorithm of HDM-004 and the one-sample WHIR order of HDM-006 (OD-18, OD-19). It SHALL NOT follow the structure of the proof.
 
 #### Scenario: Verifier follows the proof
 - **WHEN** the verifier of `L` takes its flush points from the proof and not from `sched`
@@ -127,4 +127,4 @@ The kit SHALL be reported complete only when BR-L2, BR-L4 and DEC-L1 are proved 
 
 #### Scenario: Open obligations
 - **WHEN** the open obligations are listed
-- **THEN** BR-L2 (the restatement: per-fold PoW vector in `ProvenRegime`, separate multiplicities, the two-OOD bound against the transcript order, the `w_stack` bound, `encode` on the two-table `pv`, `wrap_refines` with the DAG key check and the anchor checks, the two Fr sponge algorithms named), BR-L4 (`ReduceRel` in place of `ArithGadget`) and DEC-L1 (O34) are open
+- **THEN** BR-L2 (the restatement: `ProvenRegime` in the unique decoding regime with the frozen query vector, the PoW constants, one OOD sample per round and the `w_stack` bound, `encode` on the two-table `pv`, `wrap_refines` with the DAG key check and the anchor checks, the two Fr sponge algorithms named), BR-L4 (`ReduceRel` in place of `ArithGadget`) and DEC-L1 (O34) are open

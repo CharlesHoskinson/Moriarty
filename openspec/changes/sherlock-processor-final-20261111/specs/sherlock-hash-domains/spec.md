@@ -35,11 +35,11 @@ The key schedule `sched` SHALL fix the count of words between any two flushes. T
 - **WHEN** a verifier of `L` flushes where the proof places a commitment and not where `sched` does
 - **THEN** the wrap refuses the witness (mutant `wrap_l_transcript_from_proof`)
 
-### Requirement: HDM-006 Two OOD samples in one transcript order
-Each round of `L` SHALL take two OOD samples in one order: observe the round commitment, sample `z_(i,1)` then `z_(i,2)`, and observe `y_(i,1)` then `y_(i,2)`. The query PoW, the query indices and `gamma` SHALL follow as stock. The batched claim SHALL be `y_(i,1) gamma + y_(i,2) gamma^2 + sum_j v_(i,j) gamma^(j+3)` (OD-1).
+### Requirement: HDM-006 One OOD sample in the stock WHIR order
+Each non-final round of `L` SHALL take one OOD sample in the stock order of WHIR Construction 5.1: observe the round commitment, sample one OOD point, observe its answer, then the query PoW, the query indices and `gamma` as stock, with the answer batched with the query answers under one `gamma` (`q_i + 1` claims) (OD-19).
 
-#### Scenario: Sample order swapped
-- **WHEN** a prover samples `z_(i,2)` before `z_(i,1)` or observes the answers in another order
+#### Scenario: Answer observed late
+- **WHEN** a prover observes the OOD answer after the query PoW
 - **THEN** the T-FS vector 7 differs and the verifier refuses the proof
 
 ### Requirement: HDM-007 BabyBear-side tags
@@ -64,7 +64,7 @@ The nine transcript vectors T-FS of `FD/EXPERIMENTS.md` section 2 SHALL give the
 - **THEN** gate check G3 fails and no `L` key freezes (SQG-008)
 
 ### Requirement: HDM-010 Lean obligations of the hash domains and the transcript
-The hash domains and the transcript SHALL be reported proved only when BR-L2 names the two Fr sponge algorithms on the one permutation and proves the two-OOD bound against the order of HDM-006. Premises A2b (`frSpongeInj`) and A5 (`p2Inj`) SHALL stay named hypotheses.
+The hash domains and the transcript SHALL be reported proved only when BR-L2 names the two Fr sponge algorithms on the one permutation and follows the one-sample order of HDM-006. Premises A2b (`frSpongeInj`) and A5 (`p2Inj`) SHALL stay named hypotheses.
 
 #### Scenario: Proved theorems
 - **WHEN** the status is reported
@@ -72,4 +72,4 @@ The hash domains and the transcript SHALL be reported proved only when BR-L2 nam
 
 #### Scenario: Open obligations
 - **WHEN** the open obligations are listed
-- **THEN** the two-OOD bound and the naming of the two Fr sponge algorithms (both part of BR-L2) are open
+- **THEN** the naming of the two Fr sponge algorithms and the one-sample order (both part of BR-L2) are open
