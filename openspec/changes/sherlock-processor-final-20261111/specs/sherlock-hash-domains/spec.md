@@ -8,7 +8,7 @@ Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3
 - **THEN** their initial capacities differ by the use code, and the T-FS vector 9 checks each against Midnight's CPU sponge
 
 ### Requirement: HDM-002 Public digest tags
-A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18).
+A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18). The Fr value of each tag SHALL be published with a differential vector before the hash domains freeze (ENC-1); until then the tag rows are FREEZE-PENDING.
 
 #### Scenario: Digest with another tag
 - **WHEN** a `DIGEST` entry names a tag outside the frozen list

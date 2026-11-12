@@ -40,7 +40,7 @@ One universal key set SHALL accept every program: the internal-recursive key, th
 - **THEN** only its per-program keys under `key_root` change, and the internal-recursive, `L` and wrap keys stay byte-equal (frontend M2a)
 
 ### Requirement: CPR-004 Ledger 9.1.0.1 verifier unchanged
-The co-processor SHALL need no change of the ledger 9.1.0.1 verifier. The wrap SHALL be checked by `VerifierKey::verify` as the ledger runs it today.
+The co-processor SHALL need no change of the ledger 9.1.0.1 verifier. The wrap SHALL be checked by `VerifierKey::verify` as the ledger runs it today. Ledger 9 refuses a key with the G4 lane gates (M7-0); OD-21 option A would change this rule, and the owner decides (LW-017).
 
 #### Scenario: Ledger change requested
 - **WHEN** a kit needs a ledger change to verify its proof

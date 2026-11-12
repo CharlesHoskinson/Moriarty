@@ -4,7 +4,7 @@ Status: S2, specified only. This file points at the design. It does not copy it.
 
 ## 1. Goals and non-goals
 
-Goal: one proof path from any Sherlock run to the unchanged ledger 9.1.0.1 verifier, zero knowledge end to end, under one universal key set, with each co-processor kit built and checked by one agent against its interface.
+Goal: one proof path from any Sherlock run to the ledger 9.1.0.1 verifier (the ledger-readable wrap form is owner decision OD-21), zero knowledge end to end, under one universal key set, with each co-processor kit built and checked by one agent against its interface.
 
 Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profile B, continuation mode 2, any change of the GP-001 to GP-004 text, the interface freeze (plan step 11) and Mainnet.
 

@@ -7,7 +7,7 @@ Tick rule: tick a task only when a `scripts/doctorwatson check <ID>` predicate p
 ## G. Governance
 
 - [ ] G.1 Replace the halo2 gates of `openspec/changes/sherlock-vm-consensus-20261107/design.md` section 2.7.9 by a dated pointer to DG-001 to DG-007. Keep sections 2.7.10 and 2.7.11 as dated history. Gate: `openspec validate sherlock-vm-consensus-20261107` passes, as for tasks F.4 and F.5 of `sherlock-modular-leaf-20261111`. Strict validation of that change is an owner item, because its council and GP requirement texts are longer than the strict limit and no word of them may change.
-- [ ] G.2 Collect the owner answers to OD-4 to OD-18, F-1 to F-13 and FZ-1, FZ-2. Owner: the owner. Gate: each answer recorded in `research/sherlock-final-design-20261111/DECISIONS.md`, and every requirement that names a reversed decision updated.
+- [ ] G.2 Collect the owner answers to OD-4 to OD-18, F-1 to F-13 FZ-1 to FZ-6, and the owner decision OD-21 (the ledger-readable wrap path of M7-0, no default). Owner: the owner. Gate: each answer recorded in `research/sherlock-final-design-20261111/DECISIONS.md`, and every requirement that names a reversed decision updated.
 - [ ] G.3 Fetch WHIR (ePrint 2024/1586) and BCGM26 and read both in full. Owner: the owner fetches. Gate: the papers on disk and a reading record. Feeds SQG-010.
 
 ## 1. Phase 1: first build items, no heavy job
@@ -25,16 +25,21 @@ Tick rule: tick a task only when a `scripts/doctorwatson check <ID>` predicate p
 - [ ] 2.1 The Fr Poseidon GPU kernel for `L`, starting with the microbench D7. Gate: D7 recorded against 5 to 15 M permutations per second. OD-10 applies if it slips.
 - [ ] 2.2 CPU wrap items: affine SRS, cached twiddles and parallel bit reversal, dynamic chunks, limb sort, multiopen fix. Gate: GPW-003 byte identity after each item.
 - [ ] 2.3 sppark one-batch patch and window from the call size, then D9. Gate: GPW-005 recorded.
-- [ ] 2.4 Frontend M2a: base chip set leaf AIRs, the planner, `key_root` under `prog_d`, byte-equal internal-recursive keys across two chip sets. Gate: SPL-002 to SPL-005 and CPR-003 scenarios.
+- [ ] 2.4 Frontend M2a: base chip set leaf AIRs, the planner, `key_root` under `prog_d`, byte-equal internal-recursive keys across two chip sets. Gate: SPL-002 to SPL-005, SPL-011, SPL-012 and CPR-003 scenarios.
 - [ ] 2.5 Atomic chunks T2 on the XC-9 devnet with T2-N and T2-N0. Gate: ANC-009 and ANC-010 scenarios.
 
 ## 3. Phase 3: the wrap
 
-- [ ] 3.1 D10: `L` tracegen over one node proof for the trace heights, then `w_stack` and the high row case. A bound tighter than 48 reruns D3. Gate: SQG-005 and DG-005.
-- [ ] 3.2 M7 (D15): the G4 wrap circuit with the wrap-rows bundle, V+, the anchor statement checks, the DAG key check and the direct writer, then the cost model on the real `L` shape. Output: `crates/mori-recursion/src/wrap/`. Gate: LW-002 to LW-006, LW-013, DG-002, DG-003. Freeze k, `L_TX`, the capacity with the `pv` encoding, the hash domains and the anchor template with the wrap key only after task 3.5.
+- [ ] 3.1 D10: `L` tracegen for the trace heights on the full-tree root and on path C at the worst admitted leaf-layer shape, then `w_stack` and the high row case on both. D3 reruns at the measured `w_stack`. Gate: SQG-005, DG-005 and LW-016.
+- [ ] 3.2 M7 (D15), after OD-21: M7-0 is done (ledger 9 refuses a G4 key, MEASURED); the owner selects option A, C or E. Then the wrap circuit of that path with the wrap-rows bundle, V+, the anchor statement checks, the DAG key check and the direct writer, then the cost model. The run on `L_cached` (no log AIRs, all-`NOP` log) is a benchmark and qualifies no gate (FZ-3). Output: `crates/mori-recursion/src/wrap/`. Gate: LW-002 to LW-006, LW-013, DG-002, DG-003. Freeze k, `L_TX`, the capacity with the `pv` encoding, the hash domains and the anchor template with the wrap key only after task 3.5.
 - [ ] 3.3 Batched MSM on the MSM skew mask, then the NVRTC numerator (D14). Gate: GPW-004.
 - [ ] 3.4 Frontend M2b: one wrap proof that the ledger 9 verifier accepts with `2 + L_TX` public inputs, the negative controls and EQ-ZK. Gate: LW-003, LW-012, ZK-003, MID-001.
-- [ ] 3.5 Security qualification gate: G1 to G4 pass with G5 (discharged at the paper level). Gate: SQG-006 to SQG-010. Then freeze the universal keys (SQG-011, SPL-009).
+- [ ] 3.5 Security qualification gate: G1 to G4 pass with G5 (discharged at the paper level). Gate: SQG-006 to SQG-010. Then freeze the universal keys (SQG-011, SPL-009) only after tasks 3.6 to 3.10 pass and the I-17 code check is decided (FPR-019, FZ-4).
+- [ ] 3.6 FP-3 fact 1: specify the effect carrier of a run of two or more shards. Gate: `pos_fp3_effect_multishard` passes and `fp3_effect_forged` is refused (FPR-009).
+- [ ] 3.7 FP-3 fact 2: build the LEDGER CONTRACT entries `acceptRun` and `acceptCollection`, compile them, and read the call-vector lanes from `abi.json`. Gate: `fp3_cross_entry_replay` is refused in both orders (FPR-009).
+- [ ] 3.8 FP-3 fact 3: specify the contract-side collection form with one replay key shared with `claim_pub`. Gate: `fp3_collection_private` passes and the Quint invariant `ClaimSettledOnceAcrossEntries` holds (FPR-009).
+- [ ] 3.9 M7 production qualification on the OD-21 path: the complete `L` interface, `R` as real non-`NOP` entries, full tree and path C at the worst admitted shapes, rows and k from keygen, serialized ledger key against 50,000 bytes, then G2 on the frozen sets. Gate: LW-016, LW-017, DG-002, DG-003.
+- [ ] 3.10 Encodings ENC-1 to ENC-5: the Fr tag values, `enc(e)` per operation, the typed `layout_d` serialization, the typed stack cell layouts and the `plan_d` word lists with the code of `DOM_PLAN`, each with a differential vector. Gate: FPR-017 encoding scenario, HDM-002, SPL-012.
 
 ## 4. Phase 4: on chain and coverage
 

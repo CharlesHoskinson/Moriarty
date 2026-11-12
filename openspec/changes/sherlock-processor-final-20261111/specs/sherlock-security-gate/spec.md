@@ -75,7 +75,7 @@ G5 SHALL pass only when a written mapping shows that each hypothesis of WHIR The
 - **THEN** it is discharged at the paper level for every layer (`research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md` sections 1, 2 and 6), and the capacity regime of the WHIR reference code is excluded
 
 ### Requirement: SQG-011 No universal key freezes before the gate
-No universal key SHALL freeze before G1 to G4 pass with G5. The frozen items of SPL-009 SHALL freeze only after the gate passes.
+No universal key SHALL freeze before G1 to G4 pass with G5 and FP-8 closes (FPR-019). The frozen items of SPL-009 SHALL freeze only after the gate passes.
 
 #### Scenario: Freeze request before the gate
 - **WHEN** a freeze of the wrap key is requested while one gate check is open

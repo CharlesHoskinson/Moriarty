@@ -40,7 +40,11 @@ The log SHALL be padded with `NOP` to its fixed capacity. The call vector SHALL 
 - **THEN** both wraps have the same public inputs and the same proof length, and ZK-L2 (padding uniqueness) is open
 
 ### Requirement: ZK-006 Statement digests are salted
-The salt of `input_d` SHALL come from the user's CSPRNG: 8 BabyBear elements in the STARK and a full Fr element in public. The hiding commitment in `outcome_d` and the salted `prog_d` of a private program SHALL be inputs of `d2` inside `PoseidonFr(tag, pack(d2))`. The shard plan SHALL bind to the unsalted program digest inside the STARK layers only.
+The run salt SHALL be 8 BabyBear words from the user's CSPRNG, placed first in the preimage of `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` and fixed for the run at INIT. The salt SHALL NOT be published in public values, the call vector, a log entry or any other form, except inside the digests of ZK-011. `outcome_d` SHALL carry no salt of its own. The public digests SHALL follow ZK-011.
+
+#### Scenario: Salt published
+- **WHEN** a frontend or prover writes the salt words, or `input_d` unhashed, to a public value, the call vector or a log entry
+- **THEN** the run is refused (mutant `zk_salt_published`)
 
 #### Scenario: Unsalted input digest
 - **WHEN** `input_d` is computed without a salt, or the salt comes from a seeded generator outside the test mode
@@ -54,7 +58,7 @@ The anchor lane SHALL carry `C_P` or a lock value `A_j`. Plain `prog_d` SHALL NO
 - **THEN** the frontend refuses the deploy
 
 ### Requirement: ZK-008 The run shape stays private
-Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` SHALL NOT be public (FPR-013, LEAD F-12 under the owner's `n_steps` rule): the exact height `n_steps = h_hi` that SEAL forwards (NODE-003) SHALL stay private inside the SET forms. Leaf counts SHALL follow the public padding `N_pub` of the plan. Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
+Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` SHALL NOT be public (FPR-013, LEAD F-12 under the owner's `n_steps` rule): the exact height `n_steps = h_hi` that SEAL forwards (NODE-003) SHALL stay private inside the SET forms. Leaf counts SHALL follow the padding rule of the scheduling policy (SPL-011). Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
 
 #### Scenario: Secret branch changes the length
 - **WHEN** two inputs of one chunked entry take branches of different transcript length
@@ -73,3 +77,10 @@ The kit SHALL be reported complete only when ZK-L1 and ZK-L2 are proved with axi
 #### Scenario: Obligation status
 - **WHEN** the kit status is reported
 - **THEN** ZK-L1 (`wrap_view_only_claim`) is built at `bdb92973a` with premise A7, and ZK-L2 (the encoding of a log in `pv` is unique and does not depend on the used count beyond the call vector) is open
+
+### Requirement: ZK-011 Public digests hide the salt
+The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))` with `r_P` 8 words per deployment, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))` and `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))`, so the outcome is hidden under the salt inside `input_d` (FP-4, FPR-010). The shard plan SHALL bind to the unsalted `prog_d` inside the STARK layers only. ZK-001 and LW-012 keep proofs local and blinders fresh.
+
+#### Scenario: Outcome without the salt
+- **WHEN** `outcome_pub` is computed over `outcome_d` alone
+- **THEN** two runs with one outcome give one `outcome_pub` (control `outcome_pub_unsalted`), and the ZK-011 form gives two

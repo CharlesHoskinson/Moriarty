@@ -7,15 +7,19 @@ The co-processor SHALL prove a run in the layers of `FD/ARCHITECTURE.md` section
 - **WHEN** a run is proved end to end
 - **THEN** the field changes from BabyBear to BLS12-381 Fr only between `L` and the wrap
 
-### Requirement: SPL-002 The shard plan is witness-free and once per program
-`sherlock plan` SHALL run once per program with no witness. It SHALL output the instruction table of each entry as a preprocessed trace, the chip set and leaf shape of each leaf, the cut points and tree padded to a public shard count `N_pub`, the log layout with `R` first, the placement of discharge shards and of tier E and GP-3 chips, and the per-program keys under `key_root`.
+### Requirement: SPL-002 The static plan is witness-free and once per program
+`sherlock plan` SHALL run once per program with no witness. It SHALL output the static plan: the instruction tables, the shape menu, the scheduling policy, the log layout rule with `R` first, the placement rule of discharge shards and of tier E and GP-3 chips, and the per-program keys under `key_root`. It SHALL NOT output the cut points, tree or shard count of a general run (SPL-011, LEAD FZ-5).
+
+#### Scenario: Policy content
+- **WHEN** the scheduling policy of the static plan is read
+- **THEN** it holds the cut points as a function of `N_e` for Stage 1 Compact, and for general programs the per-rule maximum table, the cut rule and the list of admitted padded shard counts
 
 #### Scenario: Two witnesses of one program
 - **WHEN** the plan is run for one program with two different inputs in mind
 - **THEN** the plan and `plan_d` are byte-equal
 
 ### Requirement: SPL-003 `prog_d` binds the plan
-`prog_d` SHALL be `H2(DOM_PROG, image_d, plan_d, key_root, machine_version)` under `sherlock-value/2`. A public program SHALL publish `(prog_d, r_P)` in its manifest. A private program SHALL keep both secret.
+`prog_d` SHALL be `H2(DOM_PROG, image_d, plan_d, key_root, machine_version)` under `sherlock-value/2`. `plan_d` SHALL follow SPL-012. A public program SHALL publish `(prog_d, r_P)` in its manifest. A private program SHALL keep both secret.
 
 #### Scenario: Plan swapped
 - **WHEN** a prover uses keys of another plan for the same image
@@ -57,7 +61,7 @@ The `R_SL_*` family and its chips SHALL define the machine version `sherlock-k-a
 - **THEN** the keys of old programs stay valid and no universal key changes
 
 ### Requirement: SPL-009 What freezes with the universal keys
-The log operation list, the capacity with the encoding of `pv` (OD-6, OD-17), the limb encoding, `L_TX` and the public-table layout (OD-7, OD-15), the anchor template words and the anchor statement (OD-16), the hash domains (OD-18), the per-layer parameter sets and shape bounds (OD-4, OD-19), the public value `X` and the constant fields of the internal layer SHALL freeze with the universal keys, and only after the security gate passes (SQG-011).
+The log operation list, the capacity with the encoding of `pv` (OD-6, OD-17), the limb encoding, `L_TX` and the public-table layout (OD-7, OD-15), the anchor template words and the anchor statement (OD-16), the hash domains (OD-18), the per-layer parameter sets and shape bounds (OD-4, OD-19), the public value `X` and the constant fields of the internal layer SHALL freeze with the universal keys, and only after the security gate passes (SQG-011) and FP-8 closes (FPR-019).
 
 #### Scenario: Partial freeze
 - **WHEN** one of these items changes after the universal keys freeze
@@ -69,3 +73,21 @@ The plan binding SHALL be reported proved only when BR-L2 adds the DAG key check
 #### Scenario: Obligation status
 - **WHEN** the status is reported
 - **THEN** the DAG key check in `wrap_refines` (part of BR-L2) is open, and no other Lean obligation is listed for this module in the design
+
+### Requirement: SPL-011 The per-run schedule is outside `plan_d`
+The prover SHALL make the per-run schedule from a metered run under the scheduling policy: the cut points, the tree, the padded shard count from the admitted list, the positions of the discharge shards, and each suspension and resume. The schedule SHALL stay on the user's machine. Soundness SHALL NOT depend on it: each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (LEAD FZ-5).
+
+#### Scenario: Schedules under one plan
+- **WHEN** one program runs at two run lengths, in two partitions of one run, and once with a suspension and resume, under one `plan_d`, one `key_root` and the universal keys
+- **THEN** every run is accepted, the runs of one input give one `claim_pub`, and the longer run keeps its `prog_d` (positive `pos_plan_schedules`)
+
+#### Scenario: Shape outside the menu
+- **WHEN** a schedule uses a leaf shape that is not in the shape menu
+- **THEN** the node refuses the leaf (mutant `plan_schedule_outside_policy`)
+
+### Requirement: SPL-012 The preimage of `plan_d`
+`plan_d` SHALL be `P2(DOM_PLAN, 1: u16, itab_d, menu_d, policy_d, layout_rule_d, place_d)`, each digest the `P2` hash of the canonical word list of one part of the static plan, in that order. `plan_d` SHALL NOT bind a per-run schedule. The word lists and the code of `DOM_PLAN` are FREEZE-PENDING ENC-5.
+
+#### Scenario: Schedule in the plan digest
+- **WHEN** a planner writes cut points of one run into `policy_d`
+- **THEN** two runs of different length get two `plan_d`, and the plan check refuses it (mutant `plan_d_binds_schedule`)

@@ -57,6 +57,7 @@ OD-4 to OD-18 are lead decisions with the recommended option, owner to confirm (
 
 | Id | Decision | Requirements |
 |---|---|---|
+| OD-21 | ledger-readable wrap path, owner decision with no default (M7-0 BLOCKER) | LW-013, LW-014, LW-016, LW-017, MID-001, CPR-004 |
 | OD-19 | unique decoding internal and `L` sets, one OOD sample | SQG-002, SQG-003, SQG-005, SQG-012, HDM-006, LW-002, DG-005 |
 | OD-4 | proven rule on inner layers and the margin rule | SQG-002, SQG-004 |
 | OD-5 | E-1 placement V with V+ | CF-008, CF-009, LW-005 |

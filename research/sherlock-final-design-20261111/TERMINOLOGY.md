@@ -16,7 +16,7 @@ Sherlock is a **universal, elastic proving co-processor for Midnight**.
 
 Words kept out of the name: "recursion" (the internal mechanism of leaves, nodes and `L`) and "modular" (how the design is built, in kits). Both stay correct inside the architecture documents.
 
-One line: Sherlock is a universal, elastic proving co-processor for Midnight. It runs any program off-chain, on the user's own hardware, and Midnight accepts the result with one universal key set and the unchanged ledger 9.1.0.1 verifier.
+One line: Sherlock is a universal, elastic proving co-processor for Midnight. It runs any program off-chain, on the user's own hardware, and Midnight accepts the result with one universal key set through the ledger 9.1.0.1 verifier; whether that verifier changes depends on owner decision OD-21.
 
 ## Hard rules
 

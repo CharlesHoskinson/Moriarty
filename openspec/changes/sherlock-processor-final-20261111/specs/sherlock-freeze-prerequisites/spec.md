@@ -45,7 +45,7 @@ Each bus of ids 1 to 6 SHALL be a `LookupBus`: a request with a boolean count, a
 - **THEN** the verifier refuses the proof (refusal `bus_height_constraint_over_p`)
 
 ### Requirement: FPR-005 The node statement has 74 public words and one log rule
-Every node proof SHALL expose the 74 words of FP-2: `stmt_tag`, a 32-word payload, `key_root`, `reg_root`, `shape_d`, `log_d`, `log_n` and `keys_d`. A log with `log_n = 0` SHALL be `(D_EMPTY, 0)`. The output log SHALL be `merge(merge(c_0, c_1), w)`: an empty operand is neutral, two non-empty logs give `(P2(TAG_NODE, d_a, d_b), n_a + n_b)`, and the output `n` is below `2^16`. A disabled slot SHALL contribute `(D_EMPTY, 0)`, and administrative modes no entry (LEAD F-3).
+Every node proof SHALL expose the 74 words of FP-2: `stmt_tag`, a 32-word payload, `key_root`, `reg_root`, `shape_d`, `log_d`, `log_n` and `keys_d`. A log with `log_n = 0` SHALL be `(D_EMPTY, 0)`. The output log SHALL be `merge(merge(c_0, c_1), w)` in every mode but DISCHARGE (FPR-018): an empty operand is neutral, two non-empty logs give `(P2(TAG_NODE, d_a, d_b), n_a + n_b)`,, output `n` below `2^16`. A disabled slot SHALL contribute `(D_EMPTY, 0)`, and administrative modes no entry (LEAD F-3).
 
 #### Scenario: Unary pass-through
 - **WHEN** one child has the log `(d, n)` and the other slot is disabled
@@ -90,6 +90,22 @@ The freeze proposal SHALL NOT freeze the public statement codec while these fact
 #### Scenario: Freeze proposal written
 - **WHEN** the freeze index of `FD/ARCHITECTURE.md` section 1.12 is written
 - **THEN** each interface that waits on one of these three facts is marked FREEZE-PENDING with the fact, and FP-1, FP-2 and FP-4 to FP-7 are closed
+
+#### Scenario: Fact 1 closure
+- **WHEN** the effect carrier of a run of two or more shards is specified
+- **THEN** fact 1 closes only when `pos_fp3_effect_multishard` passes and `fp3_effect_forged` (effect words or `comm` other than those of the terminal state) is refused
+
+#### Scenario: Fact 2 closure
+- **WHEN** the call-vector lanes are read from the compiled `abi.json` of `acceptRun` and `acceptCollection`
+- **THEN** fact 2 closes only when `fp3_cross_entry_replay` (one claim through `acceptRun`, then through `acceptCollection`, `descend` or `openClaim`, and the reverse order) is refused
+
+#### Scenario: Fact 3 closure
+- **WHEN** the contract-side form of a collection is specified
+- **THEN** fact 3 closes only when the form has one replay key with `claim_pub` and `fp3_collection_private` shows that no collection transcript holds `n_steps`, plain `claim_d` or a word from which either is computed without the salt
+
+#### Scenario: FP-8 before FP-3
+- **WHEN** a universal key freeze is requested while one FP-3 fact is open
+- **THEN** the freeze is refused (LEAD FZ-4)
 
 ### Requirement: FPR-010 Public digests of the run
 The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))`, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))`, `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))` and `claim_pub = transientHash([C_P, input_pub, outcome_pub])`. The salt SHALL be 8 words from the user's CSPRNG in `input_d`, fixed for the run at INIT (LEAD F-7, F-10).
@@ -146,18 +162,18 @@ Under placement V, `m` SHALL be a tape byte array of the per-entry length `M_B(e
 - **THEN** the digest is selected after block 2, 3, 3, 4, 8, 16 and 32 and equals `persistent_hash`, and a wrong block is refused (mutant `bind_len_select_wrong_block`)
 
 ### Requirement: FPR-016 Lean obligations of the freeze
-The freeze interfaces SHALL be reported proved only when `bus_enc_inj`, `node_log_merge`, `node_key_route`, `digest_table_inj`, `header_open_sound`, `run_view_no_nsteps` and `bind_label_sound` are proved with an axiom report that holds only `propext`, `Quot.sound` and `Classical.choice`, with premises A4 and A5 as hypotheses.
+The freeze interfaces SHALL be reported proved only when `bus_enc_inj`, `node_log_merge` (every mode except DISCHARGE), `node_discharge_sound`, `node_key_route`, `digest_table_inj`, `header_open_sound`, `run_view_no_nsteps` and `bind_label_sound` are proved with an axiom report that holds only `propext`, `Quot.sound` and `Classical.choice`, with premises A4 and A5 as hypotheses.
 
 #### Scenario: Obligation status
 - **WHEN** the status is reported
-- **THEN** each of the seven lemmas is open, and `horner_inj`, `digest_inj`, `onion_snoc`, `discharge_sound`, `packed_hash_inj`, `public_digest_binds` and `wrap_view_only_claim`, on which they build, are proved at `bdb92973a`
+- **THEN** each of the eight lemmas is open, and `horner_inj`, `digest_inj`, `onion_snoc`, `discharge_sound`, `packed_hash_inj`, `public_digest_binds` and `wrap_view_only_claim`, on which they build, are proved at `bdb92973a`
 
 ### Requirement: FPR-017 One freeze status for every interface
-Every co-processor interface, kit interface and universal key SHALL have one status in `FD/ARCHITECTURE.md` section 1.12: FROZEN, when every input is settled in the named design text, or FREEZE-PENDING with its named gates (lead decision FZ-1). No row SHALL reach FROZEN by a choice of the freeze itself. The FROZEN rows SHALL be interface version 1. No universal key SHALL be FROZEN before FP-8 closes.
+Every co-processor interface, kit interface and universal key SHALL have one status in `FD/ARCHITECTURE.md` section 1.12: FROZEN, when every input is settled in the named design text, or FREEZE-PENDING with its named gates (lead decision FZ-1). No row SHALL reach FROZEN by a choice of the freeze itself. The FROZEN rows SHALL be interface version 1. No universal key SHALL be FROZEN before FP-8 closes, (FPR-019).
 
 #### Scenario: Gate names
 - **WHEN** a row is FREEZE-PENDING
-- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
+- **THEN** its gates are among FP-3 facts 1 to 3, FP-8, M7 (with check M7-0), D10, the experiments X7, X8, X10, X12, X14 and the N-4 model, the encoding gates ENC-1 to ENC-5, the owner decision OD-21 (M7-0), and the owner items AD-1, AD-2, AD-9, AD-11, AD-12 with X15, AD-14, AD-17, AD-18, AD-20, AD-22, AD-23, N-6, N-8 and N-11
 
 #### Scenario: Change after sign-off
 - **WHEN** a FROZEN interface changes after the owner signs off version 1
@@ -165,7 +181,11 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 
 #### Scenario: Wrap key status
 - **WHEN** the status of the wrap key, `L_TX`, the log capacity and `layout_d` is read
-- **THEN** each is FREEZE-PENDING M7 and FP-8, and the G4 shape waits on check M7-0, because ledger 9 reads a verifier key by rebuilding a `ZkStdLib` constraint system (`ML/transient-crypto/src/proofs.rs:533`)
+- **THEN** each is FREEZE-PENDING M7 and FP-8, and the wrap shape is the open BLOCKER of M7-0: ledger 9 rebuilds a `ZkStdLib` constraint system from the key bytes (`ML/transient-crypto/src/proofs.rs:533`) and refuses a key with G4 lane gates, MEASURED on a toy key, and the path is owner decision OD-21 with no adopted default
+
+#### Scenario: Encodings not written
+- **WHEN** the status of the public digest tag values, `enc(e)`, the `layout_d` serialization, the stack cell layouts or the `plan_d` word lists is read
+- **THEN** each row that uses one is FREEZE-PENDING ENC-1, ENC-2, ENC-3, ENC-4 or ENC-5, until the constants or layouts are published with a differential vector
 
 #### Scenario: Leaf public values
 - **WHEN** the status of the 54-word leaf public values is read
@@ -175,3 +195,20 @@ Every co-processor interface, kit interface and universal key SHALL have one sta
 - **WHEN** the status of the internal-recursive and `L` keys is read
 - **THEN** both are FREEZE-PENDING FP-8, the `L` key also D10 and the path C `h_pre` code check of the `DOM_KEYDAG` leaf
 
+### Requirement: FPR-018 DISCHARGE replaces concatenation by proved removal
+DISCHARGE SHALL be exempt from the concatenation rule of FPR-005. Its invariant SHALL be: every entry of the flattened slot-0 log satisfies `Valid`, proved in the discharge leaf; the output log is `(D_EMPTY, 0)`; and every output word other than `log_d` and `log_n` equals the word of slot 0 (LEAD FZ-6). Lean `node_discharge_sound` SHALL state this invariant.
+
+#### Scenario: Discharge of a non-empty log
+- **WHEN** slot 0 has a log with `log_n` = 3 and the discharge leaf proves each of the three entries `Valid`
+- **THEN** the node accepts and outputs the slot-0 statement with `(D_EMPTY, 0)` (positive `pos_node_discharge_nonempty`)
+
+#### Scenario: Invalid entry or changed word
+- **WHEN** one entry fails `Valid`, or an output word other than the log differs from slot 0
+- **THEN** the proof is refused (mutants `node_discharge_invalid_entry`, `node_discharge_word_changed`)
+
+### Requirement: FPR-019 FP-8 waits on every embedded interface
+FP-8 SHALL NOT close while an interface that a universal key embeds is FREEZE-PENDING: FP-3 facts 1 to 3 with their closure tests, the path C key binding of I-17, M7 on a chosen OD-21 path, D10 and ENC-1 to ENC-5 (LEAD FZ-4).
+
+#### Scenario: Encoding open at freeze
+- **WHEN** the universal keys are offered for freeze while ENC-3 is open
+- **THEN** the freeze is refused
