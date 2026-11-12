@@ -13,9 +13,9 @@ Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (c
 | # | Decision | Choice | Status | Touches |
 |---|---|---|---|---|
 | OD-1 | OOD closure under the m = 3 list reading | (a) two OOD samples per round, bound derived and proved in Lean | lead decision, owner to confirm | `L` key, wrap rows (about 12,000), Lean premise A2 |
-| OD-2 | `L` PoW rule | (a) per-fold vector at T = 101, top value 22 bits | lead decision, owner to confirm. It differs from the owner's earlier wording of 21 bits on every fold: one fold needs 22 bits. Option (b) keeps every fold at or below 21 bits at T = 100 | `L` key, Lean `ProvenRegime` |
-| OD-3 | `L` parameter set | (a) blowup 4, radius (4/3) sqrt(rho), queries 52/27/18, `w_stack` at most 16 | lead decision, owner to confirm | `L` key, D3 |
-| OD-4 | Proven rule on inner layers and the margin rule | (a) every layer, every term at least 100 bits, 1 bit of margin on grindable terms, query PoW 21 with frozen query vectors on the app, leaf-aggregation and internal sets, one internal OOD sample; (b) if D3 prints an internal OOD term below 100.00 bits | lead decision, owner to confirm | internal key, D3 |
+| OD-2 | `L` PoW rule | (a) per-fold vector at T = 101, top value 22 bits; D3 prints 101.1727 bits | lead decision, owner to confirm. It differs from the owner's earlier wording of 21 bits on every fold: one fold needs 22 bits. Option (b) keeps every fold at or below 21 bits at T = 100 | `L` key, Lean `ProvenRegime` |
+| OD-3 | `L` parameter set | (a) blowup 4, radius (4/3) sqrt(rho), queries 52/27/18, `w_stack` at most 16; D3 passes at `w_stack` 16 and 18 | lead decision, owner to confirm | `L` key, D3 |
+| OD-4 | Proven rule on inner layers and the margin rule | (a) every layer, every term at least 100 bits, 1 bit of margin on grindable terms, query PoW 21 with frozen query vectors on the app, leaf-aggregation and internal sets, internal LogUp PoW 20, one internal OOD sample. D3 prints the internal OOD term at 100.0129 bits, so (a) holds with 0.013 bits of slack; (b) two internal OOD samples give that term 208.6404 bits if more slack is wanted | lead decision, owner to confirm | internal key, D3 |
 | OD-5 | E-1 placement | (a) placement V with the V+ layout word | lead decision, owner to confirm | leaf AIR, frontend |
 | OD-6 | Log capacity in the wrap key | (a) `V = P = 256`, `E = 0`, Jubjub inline, spill to tier E | lead decision, owner to confirm | wrap key constant |
 | OD-7 | `L_TX` and the key menu | (a) one value, 1,024, frozen with the wrap key after M7 | lead decision, owner to confirm | wrap key, frontend |
@@ -31,7 +31,7 @@ Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (c
 | OD-17 | `pv` encoding and entry capacity | (a) `B = V = 256`, `W_pv` = 2,816, reservation `R` before discretionary operations | lead decision, owner to confirm | wrap key constant |
 | OD-18 | Hash domains and transcript algorithm | (a) the use codes and tags of `PROPOSAL.md` section 3.6, transcript initial capacity `2^64 + 3 * 2^66` | lead decision, owner to confirm | `L` transcript, stark-backend change |
 
-Owner actions outside the decisions (`DECISIONS-ASK.md`): fetch the ePrint papers, with WHIR (ePrint 2024/1586) added, because gate check G5 needs full readings of WHIR and of the mutual correlated agreement paper; confirm the pin update for the Preview node build `2.1.101-bbd616b1` against the pinned `913ec011`.
+Owner actions outside the decisions (`DECISIONS-ASK.md`): fetch the ePrint papers, with WHIR (ePrint 2024/1586) added, because gate check G5 needs full readings of WHIR and of the mutual correlated agreement paper. The Preview pin records the node build `2.1.101-bbd616b1` that the Preview node reports (`qa/sherlock/target-pins.json`, main working copy).
 
 The machine-level owner items AD-1, AD-2, AD-17, AD-18, AD-20, AD-21 and AD-23, the `n_steps` rule, witness values in `input_d`, the public-input cap per call, and column against row cores stay open owner items of `research/sherlock-processor-final-20261111/PLAN.md` step 5.
 

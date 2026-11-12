@@ -49,12 +49,12 @@ The night plan (`NIGHT-PLAN.md`) is done except two items that cannot finish bef
 
 ## Questions for you
 
-1. **OD-1: tree depth 63** (2^66 cells) so memory never binds before the step counter. Measured cost: +280 rows per flush, +140 per old read. Holds if one logical record is one cell (OD-11); two cells per record would need 64.
-2. **OD-2: no claim counter in the public statement.** An occurrence count summed through joins reaches 2^64 at depth 64 with about 128 proofs, which would limit GP-4's DAGs of any depth.
-3. **OD-20: GP-2 scope.** No consume rule exists in the owner machine today. Recommended built path: consume input claims at the seal. Do you also want a consume rule mid-run? If so, it is required work, not a narrowing.
-4. **OD-17: input admission** by digest with an empty genesis memory (recommended), then **OD-18**: amend SRC-021 to the one-arena Init field list.
-5. **OD-21: semantic reference** for the full language. The current reference machine has no constructor values or expressions. Recommended: a separate evaluator over `moriarty-sherlock-nominal/1`.
-6. Carried from before: D3 wording (i)/(iv), D4 inline vs separate, the run-ceiling question in `dissent.md` (now answered by the design, pending your review), exhaust kind 7 (OD-16).
+1. **AD-1: tree depth 63** (2^66 cells) so memory never binds before the step counter. Measured cost: +280 rows per flush, +140 per old read. Holds if one logical record is one cell (AD-11); two cells per record would need 64.
+2. **AD-2: no claim counter in the public statement.** An occurrence count summed through joins reaches 2^64 at depth 64 with about 128 proofs, which would limit GP-4's DAGs of any depth.
+3. **AD-20: GP-2 scope.** No consume rule exists in the owner machine today. Recommended built path: consume input claims at the seal. Do you also want a consume rule mid-run? If so, it is required work, not a narrowing.
+4. **AD-17: input admission** by digest with an empty genesis memory (recommended), then **AD-18**: amend SRC-021 to the one-arena Init field list.
+5. **AD-21: semantic reference** for the full language. The current reference machine has no constructor values or expressions. Recommended: a separate evaluator over `moriarty-sherlock-nominal/1`.
+6. Carried from before: D3 wording (i)/(iv), D4 inline vs separate, the run-ceiling question in `dissent.md` (now answered by the design, pending your review), exhaust kind 7 (AD-16).
 
 ## Links
 
