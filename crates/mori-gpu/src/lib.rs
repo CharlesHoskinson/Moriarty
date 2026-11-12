@@ -94,6 +94,17 @@ pub fn table_builds() -> u64 {
     TABLE_BUILDS.load(Relaxed)
 }
 
+/// Counts an MSM taken by another backend (the Rust MSM in `mori-msm`) in these stats,
+/// so receipts read one set of counters whichever MSM ran. `ok = false` is a fallback.
+pub fn record_msm(ok: bool, ns: u64) {
+    if ok {
+        MSM_CALLS.fetch_add(1, Relaxed);
+        MSM_NS.fetch_add(ns, Relaxed);
+    } else {
+        note_fallback();
+    }
+}
+
 pub(crate) fn note_fallback() {
     FALLBACKS.fetch_add(1, Relaxed);
 }
