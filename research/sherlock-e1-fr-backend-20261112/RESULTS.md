@@ -27,7 +27,7 @@ Backend clone `~/.cache/m7-wrap/src/openvm-org_stark-backend`, branch `e1-fr-bas
 | 975721c | the Fr config, feature `bls12381-fr-poseidon`, and test `crates/stark-sdk/tests/e1_fr.rs` |
 | 3040761 | the exact statistical-distance statement in the `sample_bits` documentation |
 
-Saved beside this file: `e1.diff` (`git diff a16c9b3 3040761`, the E1 change on top of M7b), `Cargo.lock.e1` (the backend lock; `Cargo.lock` is ignored by the clone's `.gitignore`), and `run-tests.sh` (the test runner). The field crate `~/.cache/m7-wrap/src/p3-bls12-381-fr` is not changed by E1; its copy is in `research/sherlock-m7-wrap-20261112/lfr/`.
+Saved beside this file: `e1.diff` (`git diff a16c9b3 3040761`, the E1 change on top of M7b), `Cargo.lock.e1` (the backend lock; `Cargo.lock` is ignored by the clone's `.gitignore`), and `run-tests.sh` (the test runner). The field crate `~/.cache/m7-wrap/src/p3-bls12-381-fr` is not changed by E1: its `src/lib.rs` and `Cargo.toml` are byte-identical to `research/sherlock-m7-wrap-20261112/lfr/p3_bls12_381_fr_lib.rs` and `p3_bls12_381_fr_Cargo.toml` (MEASURED, `cmp`).
 
 **Lock file.** The M7b `Cargo.toml` change made the backend lock stale. `cargo metadata --offline` added 34 packages and changed none. 4 of the 34 resolved to versions not in the openvm lock, and were pinned back with `cargo update --offline --precise` to the openvm versions (base64ct 1.8.0, blst 0.3.15, const-oid 0.10.2, hybrid-array 0.4.12). After that, every added package (name and version) is in `~/.cache/m7-wrap/src/openvm-org_openvm/Cargo.lock` (MEASURED by script). Nothing was downloaded or installed.
 
@@ -35,7 +35,7 @@ Saved beside this file: `e1.diff` (`git diff a16c9b3 3040761`, the E1 change on 
 
 `StarkProtocolConfig::F: TwoAdicField + PrimeField64` becomes `TwoAdicField + PrimeField` (`crates/stark-backend/src/config.rs:22`).
 
-**Site count.** At a6b4761, `PrimeField64`, `as_canonical_u64` and `ORDER_U64` occur on 21 lines in 5 files of `stark-backend/src` and `cpu-backend/src`, and on 0 lines in `cpu-backend/src` (MEASURED, grep). The "48 sites" of M7 section 2c is not reproduced. After the relaxation, the compiler shows no other site: `cargo check` and `cargo clippy -D warnings` of stark-backend, cpu-backend and stark-sdk (all targets, with the Fr feature) are clean (MEASURED). The 28 `PrimeField32` sites (codec, multi-field transcript, multi-field hasher) are bounded helpers that only the BabyBear configs call; they are unchanged.
+**Site count.** At a6b4761, `PrimeField64`, `as_canonical_u64` and `ORDER_U64` occur on 21 lines in 5 files of `stark-backend/src` and `cpu-backend/src`, and on 0 lines in `cpu-backend/src` (MEASURED, grep). The "48 sites" of M7 section 2c is not reproduced. After the relaxation, the compiler shows no other site: `cargo check` and `cargo clippy -D warnings` of stark-backend, cpu-backend and stark-sdk (all targets, with the Fr feature) are clean (MEASURED). The 28 lines with `PrimeField32`, `as_canonical_u32` or `ORDER_U32` in `stark-backend/src` (MEASURED, grep; codec, multi-field transcript, multi-field hasher) are bounded helpers that only the BabyBear configs call; they are unchanged.
 
 | Site | Change |
 |---|---|
@@ -45,17 +45,19 @@ Saved beside this file: `e1.diff` (`git diff a16c9b3 3040761`, the E1 change on 
 | `soundness/mod.rs` `base_field_order` | `p` as an `f64` from the `BigUint` order (exact for BabyBear) |
 | `test_utils/mod.rs` | the Fibonacci helpers compute in `F`, so the fixtures work at any field |
 
-**BabyBear identity (MEASURED).** Baseline = a detached worktree at 7f50d96 (`~/.cache/e1-fr/base`), the same commands and target directory.
+**BabyBear identity (MEASURED).** Baseline = a detached worktree at 7f50d96 (removed after the runs), the same commands and target directory. Its proofs are kept in `~/.cache/e1-fr/bb-base/` and its logs in `~/.cache/e1-fr/logs/base-*.log`.
 
 - `cargo nextest run --release` of stark-backend, stark-sdk and cpu-backend: 239 of 239 pass before and after; the sorted test lists are equal.
 - `e1_bb_bytes` proves a Fibonacci AIR and an interaction fixture with the BabyBear reference engine (stock `grind`) and the BabyBear CPU engine (p3 `DuplexChallenger` grind), at LogUp PoW 7, folding PoW 5, `mu` PoW 4 and query PoW 6, verifies each and writes the encoded proofs. At `RAYON_NUM_THREADS=1` the 4 proofs are byte-identical to the baseline and between two runs (`cmp`): 42,357 bytes (FNV-1a `6b4fc7ffed5c3310`) and 42,557 bytes (`3eaa8b2ca41e5c53`). The reference and CPU engines give the same bytes.
-- Grinding uses `find_any` under rayon, so with several threads the PoW witness, and so the proof bytes, can differ between runs. The identity check is therefore made single-threaded. This is a stock property, not an E1 change.
+- Grinding uses `find_any` under rayon, so with several threads the PoW witness, and so the proof bytes, can differ between runs (DERIVED from the `find_any` contract; not measured). The identity check is therefore made single-threaded. This is a stock property, not an E1 change.
 
-**Downstream.** The openvm checkout `~/.cache/m7-wrap/src/openvm-org_openvm` patches this clone by path. `cargo check --release --locked -p stark-bench-ovm --features bls --all-targets` (which builds openvm-recursion-circuit and the M7b `l_fr` example) passes with the relaxed bound (MEASURED). `cuda-backend` uses the concrete BabyBear `F` (`cuda-backend/src/utils.rs:47`) and was not built (no CUDA toolchain on this host).
+**Other profiles and configs (MEASURED).** A dev-profile (`opt-level` 1, debug assertions on) `cargo check --all-targets` of the three crates with the Fr and BN254 features is clean, and the 9 non-ignored `e1_fr` tests pass in the dev profile (`~/.cache/e1-fr/logs/dev-fr.log`). The M7b test `m7_bls_fr` (the BabyBear-base Midnight Poseidon config that produces `L`, whose transcript uses the changed default `sample_bits` and `grind`) passes 6 of 6 on this branch through the openvm checkout (`~/.cache/e1-fr/logs/m7-bls-fr.log`). The BabyBear-BN254 config is compile-checked only.
+
+**Downstream.** The openvm checkout `~/.cache/m7-wrap/src/openvm-org_openvm` patches this clone by path. `cargo check --release --locked -p stark-bench-ovm --features bls --all-targets` (which builds openvm-recursion-circuit and the M7b `l_fr` example) passes with the relaxed bound (MEASURED). `cuda-backend` uses the concrete BabyBear `F` (`cuda-backend/src/utils.rs:47`) and was not built in E1 (`/opt/cuda/bin/nvcc` is present; the GPU path is E4).
 
 ## 4. Sampling and grinding for a 255-bit field
 
-Let `r` be the BLS12-381 Fr modulus, `log2 r = 254.857`, and `bits < 32` (asserted).
+Let `r` be the BLS12-381 Fr modulus, `log2 r = 254.857` (MEASURED by `e1_field_facts` from the configured order), and `bits < 32` (asserted).
 
 1. **`2^32` divides `r - 1`** (two-adicity 32; test `e1_field_facts` asserts `r mod 2^32 = 1`). So for every `bits < 32`, `r = c 2^bits + 1` with `c = floor(r / 2^bits)` (test `e1_sample_bits_counts` asserts this for `bits` 1, 4, 20, 31).
 2. **Distribution of `sample_bits`.** Model the sampled Fr element `x` as uniform on `[0, r)` (the sponge premise, as for BabyBear). `sample_bits` returns `x mod 2^bits`. Residue 0 has `c + 1` preimages and each other residue has `c`. So `P(0) = (c + 1) / r` and `P(v) = c / r` for `v != 0`. The statistical distance from the uniform distribution on `[0, 2^bits)` is `(1/2) sum |P(v) - 2^-bits| = (1 - 2^-bits) / r < 2^-254` (DERIVED). This is the same structure as BabyBear (one heavy residue), with a far smaller bias. The query-phase term of the D3 calculator already uses these residue probabilities (`sample_bits_residue_probs` with the configured order).
