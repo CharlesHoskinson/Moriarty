@@ -67,7 +67,7 @@ Bus tuples SHALL have levels: tagged-table rows at level 0, ALU, HASH and ROM at
 - **THEN** `provided_valid` and `requested_valid` (P2, proved in C3, bus tuples only) apply, and O1 (`BusContract.lean`), O2 (`LookupSound` premise), O42 (port composition, `leaf_refines_ports` with `toy_ports`) and O43 (`MemHist`) are open and gate kit completion
 
 ### Requirement: BUS-007 The landed bus is a membership lookup
-Every argument about the landed bus SHALL use membership (`LookupSound`) only. No argument SHALL use `BusBalanced` for the landed bus. The circuit SHALL use no challenge, no second phase, rotations `-1, 0, +1` only and degree at most 6 including the packed selector.
+Every argument about the landed halo2 bus SHALL use membership (`LookupSound`) only. No argument SHALL use `BusBalanced` for the landed bus. The halo2 circuit SHALL use no challenge, no second phase, rotations `-1, 0, +1` only and degree at most 6 including the packed selector. Over BabyBear the LogUp bounds of FPR-004 (`FD/ARCHITECTURE.md` section 1.11, FP-1) SHALL replace these rules.
 
 #### Scenario: Balanced-bus theorem not credited
 - **WHEN** a kit receipt cites `balanced_lookup` (P1, proved in C3)
@@ -78,7 +78,7 @@ Every argument about the landed bus SHALL use membership (`LookupSound`) only. N
 - **THEN** configuration fails (configuration failures `vsel_overlapping_roles`, `vsel_degree_overflow`, recorded apart from constraint refusals)
 
 ### Requirement: BUS-008 The tuple freezes in its BabyBear encoding
-The schema of BUS-001 over `Fq` SHALL be the halo2 prototype form. The STARK leaves are over BabyBear (SPL-001). The canonical BabyBear limb encoding of every key and payload, the injectivity lemma over those limbs and the LogUp interaction bounds that replace BUS-007 are freeze prerequisite FP-1 of `FD/ARCHITECTURE.md` section 3.1. The tuple SHALL NOT be frozen before FP-1 closes.
+The schema of BUS-001 over `Fq` SHALL be the halo2 prototype form. The frozen tuple SHALL be the BabyBear form of `FD/ARCHITECTURE.md` section 1.11, FP-1: one typed lane for each field in 16-bit little-endian limbs (FPR-001), one LogUp bus index for each chip id (FPR-002), ports as shared columns or permutation buses (FPR-003) and the LogUp bounds of FPR-004. Lean `bus_enc_inj` is open.
 
 #### Scenario: Packed key in one BabyBear element
 - **WHEN** a MEM key `8 addr + kind` or a 128-bit ALU operand is placed in one BabyBear element

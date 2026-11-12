@@ -31,7 +31,7 @@ Conventions:
                                     +--------------------+
                                     |  L (bridge layer)  |  verifies the node root; exposes the statement,
                                     +--------------------+  the anchor statement, pv (W_pv words) and X
-                                              ^   run statement [prog_d, input_d, outcome_d, n_steps] as effect words
+                                              ^   run statement [C_P, input_pub, outcome_pub] as effect words
           GP-2 hook ---->  +--------------------------------------+  <---- GP-3 hook (foreign keys, registry)
           (claims)         |           NODE INTEGRATION           |  <---- GP-4 hook (any shape)
                            |  verifies leaf / node proofs, links   |
@@ -80,9 +80,9 @@ Reading rules for the graph:
 - Not drawn: INIT (genesis and input admission) sits between BOUNDARY COMMITMENT and CORE and is gated by `h_pre == 0`; it is a kit of section 2. The host-side kits REFERENCE BRIDGE and HOST CHECKPOINT STORE and the GP-3 general verifier kits are outside the leaf circuit.
 - Everything below the double line is one leaf shard of one chip set, proved under that chip set's per-program app key, which `key_root` binds into `prog_d` (section 1.6). NODE INTEGRATION, CONTINUATION and the GP hooks are the recursion and claim kits; kit L AND WRAP holds the bridge layer `L` and the wrap; kits ZERO KNOWLEDGE and COMPACT FRONTEND are not drawn.
 
-### 1.2 Bus tuple schema (prototype form, not frozen)
+### 1.2 Bus tuple schema (halo2 prototype form)
 
-Freeze status: this section is the halo2 prototype form over `Fq`. The STARK leaves are over BabyBear, so the tuple freezes only in its BabyBear limb encoding, freeze prerequisite FP-1 (section 3.1). The packing bounds below (for example `8 addr + kind` far below about 2^255, 128-bit ALU operands in one cell) hold over `Fq` only.
+Freeze status: this section is the halo2 prototype form over `Fq`. The frozen form is the BabyBear encoding of section 1.11, FP-1: one lane for each typed field, 16-bit limbs, one LogUp bus index for each chip id. The packing bounds below (for example `8 addr + kind` far below about 2^255, 128-bit ALU operands in one cell) hold over `Fq` only and are not part of the frozen interface.
 
 One schema `(chip, key, a, b, c)` over the proof field `Fq` (`chip/lib.rs`), five cells, two request lanes that look up one provider table (`chip/bus.rs:40-68`). "One bus" means one schema and one provider namespace; the leaf has three lookup arguments: two bus lanes and one tagged fixed table (the spike has four: two bus lanes, DEC, RANGE; L-6 merges the last two).
 
@@ -137,7 +137,7 @@ Provider rules (every provider kit must state how it meets each one; they keep D
 | `ColdRead` (`chip/membackend.rs:87`) | CORE read port | MEMORY BACKEND | `enable`, `addr`, `rec[4] = (kind, a, b, c)` |
 | state cells | CORE | BOUNDARY COMMITMENT | every persistent register in schema order |
 | stack cells | STACKS | CORE, BOUNDARY COMMITMENT, INIT | `frame_count`, `task_count`, `frames_below`, `tasks_below`, cached tops |
-| state header cells (new, B2 finding 5) | BOUNDARY COMMITMENT | INIT (in the leaf); the NODE INTEGRATION seal modes (by re-hashing the header of the public lane `post_d`; kit L AND WRAP opens the sealed SET head (the layer, `L` or the wrap, is open: FP-3), not the header) | `outcome_tag`, `outcome_payload`, `input_d`, `deps_d`, `body_d` |
+| state header cells (new, B2 finding 5) | BOUNDARY COMMITMENT | INIT (in the leaf); the NODE INTEGRATION seal modes (by re-hashing the header of the public lane `post_d`; `L` opens the sealed SET head (section 1.11, FP-3), not the header) | `outcome_tag`, `outcome_payload`, `input_d`, `deps_d`, `view_root`, `body_d` (section 1.11, FP-5) |
 | whole-sponge slot | VALUE DIGEST, STACKS, MEMORY BACKEND, BOUNDARY COMMITMENT | HASH | ordered input cells (copied), one digest cell; fixed length and fixed capacity word per call site |
 | RANGE port | any module | RANGE | a source cell and a static width; returns the same cell, range-checked |
 | DEC port | CORE | DEC | key parts in, bounded control parts out |
@@ -207,7 +207,7 @@ On the full tree the first universal node checks each child's key commitment by 
 
 **The shard plan.** `sherlock plan` runs once per program, with no witness, and produces: the straight-line instruction table of each entry as a preprocessed trace; the chip set and leaf shape (chip set, area bucket) of each leaf, with three chip sets for Compact (base: CPU, ALU, range, Poseidon2, SHA2, log writer; base plus FIELD-EMU and POSEIDON-FR-EMU; base plus JUBJUB-EMU); the cut points and tree, padded to a public shard count `N_pub`; the log layout with the reservation `R` first; the placement of discharge shards and of tier E and GP-3 chips; and the per-program keys under `key_root` (`PR` section 4.2).
 
-**What freezes with the universal keys** (`PR` section 4.4): the log operation list, the capacity `(B, V, P, E)` with the encoding of `pv` and its per-operation bounds, the 9 by 30-bit limb encoding, `L_TX` and the public-table layout, the anchor template words with the anchor statement, the hash domains of section 1.8, the per-layer parameter sets and shape bounds of section 1.9, the public value `X` of `L`, and the internal layer's constant fields (AIR count and order, cached and preprocessed layout, interactions per row, public-value layout). They freeze only after the security qualification gate passes. The freeze is in two steps: the interface shapes (bus tuple, ports, public statement, `claim_d`) freeze at loop step S11 once FP-1 to FP-7 of section 3.1 close; the universal key set freezes only after G1 to G5 pass and the owner confirms OD-1 to OD-4, OD-17 and OD-18 (FP-8).
+**What freezes with the universal keys** (`PR` section 4.4): the log operation list, the capacity `(B, V, P, E)` with the encoding of `pv` and its per-operation bounds, the 9 by 30-bit limb encoding, `L_TX` and the public-table layout, the anchor template words with the anchor statement, the hash domains of section 1.8, the per-layer parameter sets and shape bounds of section 1.9, the public value `X` of `L`, and the internal layer's constant fields (AIR count and order, cached and preprocessed layout, interactions per row, public-value layout). They freeze only after the security qualification gate passes. The freeze is in two steps: the interface shapes (bus tuple, ports, public statement, `claim_d`) freeze at loop step S11 in the form of section 1.11, which closes FP-1, FP-2 and FP-4 to FP-7 of section 3.1 and gives the open facts of FP-3; the universal key set freezes only after G1 to G5 pass and the owner confirms OD-1 to OD-4, OD-17 and OD-18 (FP-8).
 
 ### 1.7 Rule inventory and machine version
 
@@ -245,7 +245,7 @@ On the STARK engine a rule costs 0 to 1 selector column, or an AIR of height 0 w
 | `2+A .. 2+A+L_e` | effect words |
 | rest | constrained zero |
 
-A general run is a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]`, so the general path and the Compact path share the one wrap key.
+A general run is a Sherlock program whose effect words write its run statement `[C_P, input_pub, outcome_pub]` (section 1.11, FP-3 and FP-6), so the general path and the Compact path share the one wrap key.
 
 **Hash domains (OD-18).** Fr side, Midnight Poseidon permutation, width 3, rate 2: the initial capacity is `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. Use codes: `u` = 0 program operations (`PERM`, `H2`, `SPONGE(n)`, `PATH(d)`, unchanged native Midnight definitions); `u` = 1 Merkle leaf of `L` (BabyBear words packed 8 per Fr element); `u` = 2 Merkle node of `L`; `u` = 3 the Fr transcript of `L`; `u` = 4 public digests `(tag, pack(d2))`. Public digest tags: `SHK_PROGC` (`C_P`), `SHK_LOCK` (lock values `A_j`), `SHK_INPUT` (`input_d`), `SHK_OUTCOME` (`outcome_d`). The fixed-length hashes use Midnight's fixed-length sponge, which replaces the stock template's leaf hasher and truncated-permutation compression for `u` = 1 and 2. The transcript of `L` is the stark-backend multi-field overwrite duplex over Fr with Midnight's permutation, stock in every transition, with one change: the initial capacity cell `s_2 = 2^64 + 3 * 2^66`. The key schedule `sched` fixes the count of words between any two flushes, and the wrap's verifier of `L` follows `sched`, not the proof. The wrap implements the duplex on its 19-row permutation layout and exposes the bare permutation. BabyBear side: every Sherlock-defined Poseidon2 hash absorbs its tag word first, with the total length in the first capacity word; tags `TAG_EMPTY`, `tagStep`, `tagEnt`, `TAG_NODE` (log onion and tree), `DOM_PROG`, `DOM_PROGC`, `DOM_LOCK`, `DOM_KEYTRIPLE`, `DOM_KEYDAG`, `DOM_KEYNODE`, `DOM_LAYOUT`; each new digest takes a new tag. The leaf, leaf-layer and internal layers keep the stock OpenVM hashes and challenger (premise A4). Full tables: `PR` section 3.6.
 
@@ -285,6 +285,222 @@ A general run is a Sherlock program whose effect words write its run statement `
 The ledger checks each `ContractCall` with `midnight_transient_crypto::proofs::VerifierKey::verify` on the key installed under the entry label. The wrap is a midnight-proofs PLONK circuit with KZG over BLS12-381 and the Blake2b transcript, the same proof system as today's k = 21 decider, so ledger 9.1.0.1 needs no change. Every exported Sherlock entry holds the same universal wrap key. Limits: verifier key at most 50,000 bytes (today's decider key 2,217 bytes, MEASURED); at most 65,536 public inputs per call (the wrap has 1,026); `VERIFIER_MAX_DEGREE` 14 bounds the public inputs, not the circuit k; transaction at most 1,048,576 bytes. The path through the unchanged ledger is MEASURED for today's k = 21 decider: a local devnet call (block 237, submit to inclusion 3.79 s) and a Preview deploy and call at blocks 71100 and 71431, with refusals for a changed result, a flipped proof bit and a proof for another program digest (`PR` section 9). The Preview node reports build `2.1.101-bbd616b1`, and the Preview pin records the same build. The same local ledger accepts the cross-entry attack E-1: a decider proof of one entry's transcript, in a call labelled with a second entry that holds the same key, is included at block 1,085 with the first entry's write, MEASURED (`PR` section 7.2). The wrap's verifier-key bytes, proof bytes (8 to 9 kB, ESTIMATE), verify time and fee at `2 + L_TX` public inputs are PENDING.
 
 **Call time** (`PR` section 6.3, all ESTIMATE). The prove stages of one warm Compact call on the full GPU path take 9.45 s (6.74 to 18.34 s); the whole warm call with witness fill, transaction prebuild, the balance and DUST proof and submit to inclusion is 19.6 s (11.5 to 47.2 s), with the wrap at k = 19, a GPU Fr Poseidon kernel for `L` and a rewritten MSM kernel, neither of which has a prototype. The wrap part of paths 2 and 3 is ESTIMATE conditional on the fused quotient kernel and the MSM rewrite; the MEASURED baseline with today's kernels is the GPU wrap table of kit L AND WRAP (155.2 s on the GPU against 441.7 s on the CPU at k = 21 under load). The CPU-only path is 174.7 s mid (155.9 to 207.9 s) with the measured CPU `L` rate under load (D1). Below about 20 s the floor is fixed per-call work: the balance and DUST proof (3.05 s, DERIVED), submit to inclusion (3.92 s mid, 3.79 s MEASURED), trace generation (1.95 s) and the BabyBear part of `L` (1.81 s).
+
+### 1.11 Interface freeze over BabyBear (FP-1 to FP-7)
+
+This section gives the BabyBear form of the interfaces that freeze at loop step S11: the bus tuple and the ports (FP-1), the node statement envelope (FP-2), the public statement codec (FP-3), the one digest table (FP-4), the seal read of `view_root` (FP-5), the public `n_steps` rule (FP-6) and the chunk and E-1 bindings (FP-7). Where it differs from the halo2 prototype text of sections 1.2 and 1.3 and of the kits of section 2, this section applies. A rule that the sources leave open is marked LEAD and is one of the owner items F-1 to F-13 of `FD/DECISIONS.md`. A Lean name marked "open" is proposed here and is not proved. Hash outputs are not written here; each digest is pinned by its preimage word list and a named differential vector.
+
+#### FP-1 Bus tuple and ports
+
+**Word types** (LEAD F-1). Every lane of a bus message, a port message, a public value and a digest preimage has one type of the table below. A word is an element of BabyBear, `p = 2^31 - 2^27 + 1`, in its canonical representative in `[0, p)`. A multi-limb integer is little-endian: limb 0 is the least significant.
+
+| Type | Words | Encoding | Range check and owner |
+|---|---:|---|---|
+| `bit` | 1 | 0 or 1 | the writing AIR, `b (b - 1) = 0` |
+| `tag(w)`, `w <= 16` (op, flag, kind, table id, form, outcome kind, `stmt_tag`, mode) | 1 | the integer | the writer, by RANGE `(x, w)` or by a gate |
+| `u16` | 1 | the integer | RANGE `(x, 16)` |
+| `u32` | 2 | 16-bit limbs | RANGE on each limb |
+| `u64` | 4 | 16-bit limbs | RANGE on each limb |
+| `addr`, below `2^(TOP+3)` | `n_a = ceil((TOP + 3) / 16)`, 5 at TOP = 63 | 16-bit limbs; the top limb is below `2^(TOP + 3 - 16 (n_a - 1))`, 4 at TOP = 63 | MEM on the frontier; CORE's read port for `addr < len_cur` |
+| `u128` | 8 | 16-bit limbs | ALU, on operands and results |
+| `digest` | 8 | one Poseidon2 output over BabyBear (`DIGEST_SIZE` = 8, `SB/crates/stark-sdk/src/config/baby_bear_poseidon2.rs:24-25`) | none: every word is canonical by representation |
+| `fr` | 9 | 30-bit limbs with `Canon` (section 1.8) | the leaf at the log write; the wrap |
+
+Every 16-bit limb is below `2^16 < p`, so no limb wraps. No word holds two parts: the packed keys of section 1.2 (`8 addr + kind`, `tbl 2^D_row + row`, `op + 8 flag`) and the 128-bit operand in one cell are halo2 prototype forms only, and over BabyBear each part is its own lane.
+
+**Bus registry** (LEAD F-2). Each chip id of section 1.2 is one LogUp bus index of stark-backend (`BusIndex = u16`, `SB/crates/stark-backend/src/interaction/mod.rs:13`). The bus index is part of the LogUp message, so tuples on two buses never alias, and the `chip` cell of the prototype tuple is not a lane. A disabled request has count 0, which replaces the zero tuple of chip id 0. The index of chip id `c` is `BUS_BASE + c`. `BUS_BASE` is a constant of the chip-set configuration above every bus index that a stock OpenVM chip of the same chip set uses (the `sha2` chip, the Poseidon2 chip). Keygen refuses a chip set in which one bus index carries two message layouts.
+
+| id | Bus | Message, in order | Words at TOP = 63 | Provider | Requesters |
+|---:|---|---|---:|---|---|
+| 1 | ALU | `op: tag(4)`, `flag: bit`, `x: u128`, `y: u128`, `z: u128` | 26 | ALU | CORE |
+| 2 | MEM | `kind: tag(3)` with `kind` in `1..=4`, `addr: addr`, `rec`: the `W_rec` typed lanes of the record layout of the kind (AD-11) | `6 + W_rec` | MEM window for `addr >= q_pre`; heap lines of PAGE/ROM for `addr < q_pre` | CORE |
+| 3 | HASH | `tag: u16`, `x: digest`, `y: digest`, `h: digest` with `h = P2(tag, x, y)` | 25 | HASH | CORE, where the operation is exactly one two-input hash |
+| 4 | ROM | `tbl: tag(D_tbl)`, `row: u32`, `rec`: the `W_rom` typed lanes of the row layout of `tbl` | `3 + W_rom` | PAGE/ROM block cache | CORE |
+| 5 | RANGE | `x`, `w: tag(5)` with `0 <= w <= 16` | 2 | the RANGE table: one preprocessed row `(x, w)` for each `w` in `0..=16` and `x < 2^w`, `2^17 - 1` rows | every kit |
+| 6 | DEC | `dec_key`, `dec_val`, in `u16` parts (AD-9) | per AD-9 | the DEC table with the idle row `(0, 0)` | CORE, one query per step slot |
+| 7 to 15 | reserved | none | | no AIR | a request is unsatisfiable (BUS-001) |
+
+The record and ROM-row layouts (`W_rec`, `W_rom` and the type of each lane) are the separate prerequisite AD-11 of section 3.1; every layout keeps `1 + message words <= 128`. The tagged table of L-6 is two bus indices over BabyBear: the tag is the bus index, a constant of the interaction, never a witness. Every DEC slot, enabled or not, queries the DEC bus with count 1 from a fixed selector, and a disabled slot queries the idle row, so a full leaf and a partial leaf prove under one key (kit BUS).
+
+**Ports** (LEAD F-2). A port of section 1.3 whose producer and consumer are columns of one AIR is a set of shared columns of one row, with no interaction. A port between two AIRs is one stark-backend `PermutationCheckBus` of index `BUS_BASE + 16 + j`, with `j` the position of the port in the ports manifest (`chip/ports.rs`). The producer sends `(seq, cells)` once with count `act`; the consumer receives the same message once with count `act`; `seq: u32` is the leaf-local event index of the instance. The LogUp multiset equality gives one consumer instance for each producer instance. A port certificate (section 1.1) is the producer's relation over the message cells, and the consumer uses it through this equality in place of the halo2 copy equalities.
+
+**Leaf public values** (the lanes of `sherlock-leaf-stmt/1` over BabyBear, then the log commitment of FP-2): `binding: digest` at word 0, `prog_d: digest` at 8, `pre_d: digest` at 16, `post_d: digest` at 24, `rules_d: digest` at 32, `h_pre: u64` at 40, `steps: u16` at 44 with `1 <= steps <= S_MAX < 2^16`, `log_d: digest` at 45, `log_n: u16` at 53. Total 54 words.
+
+**LogUp bounds, in place of BUS-007.** The bus keeps membership semantics. Each bus of ids 1 to 6 is a stark-backend `LookupBus`: a request uses `lookup_key` with a boolean count and `count_weight` 1, and a provider row uses `add_key_with_lookups` with a witness multiplicity and `count_weight` 0 (`SB/crates/stark-backend/src/interaction/mod.rs:91-125`). The enabled request multiset is then a subset of the provider keys, if these bounds hold:
+
+1. Every message with its bus index has at most `2^7 = 128` words (`log_max_message_length = 7`, `SB/crates/stark-sdk/src/config/log_up_params.rs:25`); keygen refuses a longer interaction (`SB/crates/stark-backend/src/keygen/mod.rs:141-152`).
+2. For each bus index, the sum over the AIRs of (the `count_weight` sum of the AIR's interactions on that bus) times (the AIR's height) is below `p`. Keygen writes this as a trace-height constraint, and the verifier checks it (`SB/crates/stark-backend/src/keygen/mod.rs:132-186`).
+3. The sum over the AIRs of (the AIR's interaction count) times (its height) is below `max_interaction_count = p` (`SB/crates/stark-sdk/src/config/log_up_params.rs:24`).
+4. The AIR stays inside the app shape bounds of section 1.9 (1,000 interactions per AIR, 100 AIRs). The plan chooses leaf shapes that meet bounds 2 and 3; keygen and the verifier refuse every other shape.
+5. A request count is a boolean that the requester constrains. A provider multiplicity is a witness. Unused provider rows and repeated requests are legal (section 1.1).
+
+The append transport of provider rule 6 does not change: the copy-linked address chain is the append-chain port, and each append is one MEM request. Provider rule 7 is a halo2 rule; over stark-backend an AIR reads its local row and its next row only, stays inside the shape bounds of its layer, and draws no challenge of its own (the LogUp challenges are those of stark-backend).
+
+**AIR interfaces, in place of the halo2 `Layouter<F>` signatures.** The kit skeletons of section 2 (`configure`, `assign`, `Region`, `Layouter`) are the halo2 prototype. Each kit spec maps them onto the two traits below.
+
+```rust
+pub struct BusRegistry {
+    pub alu: LookupBus, pub mem: LookupBus, pub hash: LookupBus, pub rom: LookupBus,
+    pub range: LookupBus, pub dec: LookupBus, pub ports: Vec<PermutationCheckBus>,
+}
+/// One kit AIR. It owns its columns and talks only through the buses of `BusRegistry`.
+/// Every kit also implements `Air<AB>` for `AB: InteractionBuilder`.
+pub trait KitAir<F: Field>: BaseAir<F> + BaseAirWithPublicValues<F> + PartitionedBaseAir<F> {
+    fn buses(&self) -> &BusRegistry;
+}
+/// Requires: `enable` is boolean (the caller constrains it). Ensures: if enable = 1, msg is a provider key of `bus`.
+pub fn request<AB: InteractionBuilder>(bus: LookupBus, b: &mut AB, msg: impl IntoIterator<Item = AB::Expr>, enable: AB::Expr);
+/// Ensures: msg is offered `mult` times; the provider relation holds on the row whether or not mult = 0.
+pub fn provide<AB: InteractionBuilder>(bus: LookupBus, b: &mut AB, msg: impl IntoIterator<Item = AB::Expr>, mult: AB::Var);
+/// Requires: `act` is boolean. Ensures: exactly one `port_recv` with the same (seq, cells) when act = 1.
+pub fn port_send<AB: InteractionBuilder>(port: PermutationCheckBus, b: &mut AB, seq: [AB::Expr; 2], cells: impl IntoIterator<Item = AB::Expr>, act: AB::Expr);
+pub fn port_recv<AB: InteractionBuilder>(port: PermutationCheckBus, b: &mut AB, seq: [AB::Expr; 2], cells: impl IntoIterator<Item = AB::Expr>, act: AB::Expr);
+/// Witness generation: one trace for each AIR from the leaf's event records. It holds no bus logic.
+pub trait KitTrace<F: Field> { type Records; fn generate_trace(&self, r: &Self::Records) -> RowMajorMatrix<F>; }
+```
+
+**Invariant and Lean.** The encoding is injective on each bus: two messages that are equal on one bus have equal typed fields. Lemma `bus_enc_inj` (new `lean/BusEncoding.lean`; open): for one message layout (a list of the types above) whose limbs are in range, the map from typed fields to words is injective. The proof reduces each multi-limb field to `horner_inj` (`FrLog.lean:93` at `bdb92973a`, proved) with base `2^16` and the bound `2^16 < pBB`. The LogUp soundness of the bus under bounds 1 to 3 is part of premise A4 (section 1.9), not a Sherlock lemma.
+
+**Checks.** Vector `bus_enc_vectors`: `u64` `2^64 - 1` gives `[65535, 65535, 65535, 65535]`; `u64` `0x0001000200030004` gives `[4, 3, 2, 1]`; `addr` `2^65 + 1` at TOP = 63 gives `[1, 0, 0, 0, 2]`; `u128` `2^127` gives `[0, 0, 0, 0, 0, 0, 0, 32768]`. Mutants: `bus_limb_over_range` (a limb equal to `2^16`), `bus_addr_top_limb_over` (top limb 4 at TOP = 63), `bus_key_packed_alias` (control: an AIR with the packed key `8 addr + kind` in one word accepts two `(addr, kind)` pairs with one key word), `bus_port_received_twice` (a second `port_recv` of one producer instance). Keygen and verifier refusals: `bus_message_too_long` (128 words and the bus index), `bus_height_constraint_over_p` (a proof whose heights break bound 2).
+
+#### FP-2 Node statement envelope
+
+**Layout** (LEAD F-3). The public values of every node proof, in order (74 words):
+
+| Word | Field | Type |
+|---:|---|---|
+| 0 | `stmt_tag`: SEG 1, SET 2, SUB 3, DL 4, FV 5, AW 6, VW 7, LG 8 | `tag(4)` |
+| 1 | payload, 32 words, unused words 0 | see below |
+| 33 | `key_root` | `digest` |
+| 41 | `reg_root` | `digest` |
+| 49 | `shape_d` | `digest` |
+| 57 | `log_d` | `digest` |
+| 65 | `log_n` | `u16` |
+| 66 | `keys_d`: the commitment `P2(DOM_UKEYS, c_node, c_foreign)` of the universal node and foreign-lift keys; it replaces `keys_repr` | `digest` |
+
+Payloads (word offsets inside the payload): SEG `prog_d` 0, `pre_d` 8, `post_d` 16, `h_lo: u64` 24, `h_hi: u64` 28; SET `set_root` 0; SUB `set_root` 0, `sub_root` 8; DL `chain_d` 0, `cover_root` 8, `in_link` 16, `prem_root` 24; FV `fv_state_d` 0; AW `adm_state_d` 0; VW `view_state_d` 0; LG `dis_d` 0, `dis_n: u16` 8. A LEAF child counts as the SEG `(prog_d, pre_d, post_d, h_pre, h_pre + steps)` with its leaf log `(log_d, log_n)`.
+
+**Log update rule, every mode.** Let `D_EMPTY = P2(TAG_EMPTY)` (section 1.8). The merge of two logs is `merge((d_a, n_a), (d_b, n_b)) = (d_b, n_b)` if `n_a = 0`, `(d_a, n_a)` if `n_b = 0`, and `(P2(TAG_NODE, d_a, d_b), n_a + n_b)` otherwise; the node range-checks the output `n` below `2^16`. A statement with `n = 0` has `d = D_EMPTY`: a leaf with no entry has the empty onion, and the merge keeps it. So the tree shape that `L` takes as witness has at most `log_n` segments, and an empty shard adds no work to `L`. The output log of a node is `merge(merge(c_0, c_1), w)`, with `c_j` the log of slot `j` (`(D_EMPTY, 0)` for a disabled slot) and `w` the log of the inline work (`(D_EMPTY, 0)` with no inline work).
+
+| Mode | Output log |
+|---|---|
+| MERGE, MERGE-WORK | the rule above; MERGE-WORK adds the onion of its inline segment as `w` |
+| SEAL, SEAL-WITH-DEPS | `merge(c_0, c_1)`: the SET carries the run's log, and the premise SET adds its own log (empty for `ADM` and `VIEW`) |
+| JOIN, DL-STEP, DESCEND | the merge of the enabled children; DESCEND keeps the log of its SET child, so a claim consumed twice merges its log twice (GP-4) |
+| FV-WORK, ADMIT-WORK, VIEW-WORK | `c_0`: an administrative unit writes no log entry |
+| DISCHARGE (new mode, LEAD F-4) | `(D_EMPTY, 0)`, after the check below |
+
+DISCHARGE: slot 0 holds any statement `S`, and slot 1 a LEAF child of the discharge shape with `stmt_tag` LG. The node requires `dis_d = S.log_d` and `dis_n = S.log_n`, and outputs `S` with the log `(D_EMPTY, 0)`. The discharge shape is a fixed leaf shape of the plan (`PR` section 4.2 item 5): it takes the entries and the tree shape as witness, recomputes `(dis_d, dis_n)` and proves `Valid(e)` for each entry with tier E chips (`discharge_sound`, `FrLog.lean:1125`, proved). The node relation table gains the row DISCHARGE (slot 0 any, slot 1 LG, no inline work, output the type of slot 0).
+
+**Key rule** (LEAD F-5). For a LEAF child, the node opens `prog_d = P2(DOM_PROG, image_d, plan_d, key_root, machine_version)` from witnessed words (one hash), requires the opened `key_root` to equal the output `key_root`, and proves an inclusion path of fixed depth `D_key = 16` from the child's key leaf `P2(DOM_KEYTRIPLE, set_id: u16, c_app, c_leaf, c_ifl)` to that root, with internal nodes `P2(DOM_KEYNODE, l, r)`. An enabled NODE child with a SEG statement has the output `key_root`. A SET, SUB, DL, FV, AW, VW or LG output takes the `key_root` of slot 0; a sealed claim binds `prog_d`, and so `key_root`, through `claim_d`, and the forwarded root serves only the DAG key check of `L`. With no enabled child, the node takes `key_root` from the `prog_d` opening of its inline work, or the zero digest when that work has no `prog_d` (VIEW-WORK, FV-WORK). Every enabled NODE child has the output `keys_d`. `reg_root` keeps the rule of kit NODE INTEGRATION.
+
+**Consumed by `L`.** `L` verifies the root proof under the internal key, requires `keys_d` to equal its key constant, requires `log_n <= B`, recomputes `log_d` from the flattened log and the tree shape (private witness), binds the log to `pv` (section 1.8), and proves the DAG key leaf `P2(DOM_KEYDAG, entry: u32, path: tag(2), enc(X): fr)` in the root `key_root`. On path C, `L` opens `prog_d` to `key_root` itself from the leaf-layer statement.
+
+**Lean.** `node_log_merge` (`BinaryNode.lean`; open): the flattened output log of every mode is the left-to-right concatenation of the flattened logs of the enabled children and of the inline work, and `digest_inj` (`FrLog.lean:1056`, proved) with `onion_snoc` (`FrLog.lean:977`, proved) gives one flattened log per output `log_d`. `node_key_route` (`BinaryNode.lean`; open; the STARK form of NODE-L3): every enabled LEAF child's key leaf is in the `key_root` opened from its `prog_d`, and every enabled NODE child has the parent's `keys_d`.
+
+**Checks.** Positives `pos_node_log_unary_passthrough` (the vector `merge((D_EMPTY, 0), (d, n)) = (d, n)`), `pos_node_log_two_children`, `pos_node_discharge`. Mutants `node_log_child_dropped`, `node_log_slots_swapped`, `node_log_count_over` (`n = 2^16`), `node_log_empty_not_neutral` (an empty child that changes `d`), `node_key_root_other_prog`, `node_leaf_key_outside_root`, `node_keys_d_other`, `node_discharge_other_log`.
+
+#### FP-3 Public statement codec
+
+- **The layer that opens the SET head is `L`** (LEAD F-6, decision C-2). The SET forms are Poseidon2 hashes over BabyBear, and `L` is a BabyBear STARK; the wrap has no native Poseidon2 over BabyBear and would pay 2,000 to 4,000 rows for each value (`B/CANDIDATE.md:252`). For a run root, `L` requires `stmt_tag` SET, opens `set_root` with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)` (every other form fails the equality under premise A5), recomputes `claim_d` from its witnessed preimage `(prog_d, input_d, outcome_d)` and checks no seal predicate (LW-008).
+- **Public form of the program identity: `C_P`** (LEAD F-7, owner item N-11). Plain `prog_d` is never call data (ZK-002).
+- **Public run statement:** `[C_P, input_pub, outcome_pub]`, three Fr words, each the output of a mandatory `DIGEST` entry of the reservation `R` (section 1.8), with the forms of FP-4. `n_steps` is not public (FP-6).
+- **Discriminator** (LEAD F-8): the entry label. The run statement and the collection statement are the call vectors of two entries of the LEDGER CONTRACT (`acceptRun`, `acceptCollection`), and lane 0 binds the label of the call (E-1), so a statement of one kind cannot be accepted by the entry of the other.
+- **Public values of `L`, index table** (LEAD F-8):
+
+| Word | Field | Words | Encoding |
+|---:|---|---:|---|
+| 0 | `root_stmt`: the node statement of FP-2 (on path C, the leaf-layer statement in the same layout with `stmt_tag` SEG) | 74 | FP-2 |
+| 74 | anchor statement: `mode: tag(1)` (ORD 0, CHUNK 1), `j: u32`, `k: u32`, `e_in: u16`, `e_out: u16` (the entry rows of the `DIGEST` entries whose outputs are `a_in` and `a_out`) | 7 | FP-1 types |
+| 81 | `run_tag` | 8 | `digest` |
+| 89 | `layout_d` | 8 | `digest` |
+| 97 | `X` | 9 | `fr` |
+| 106 | lane map: 4 pairs `(lane: u16, entry: u16)`; the wrap requires lane `lane` of the call vector to equal the output of `DIGEST` entry `entry`; an unused pair is `(0, 0)` and is ignored | 8 | `u16` |
+| 114 | `pv` | `2B + 9V` = 2,816 | section 1.8 |
+| 2,930 | call vector, lanes 0 to `1 + L_TX` | `9 (2 + L_TX)` = 9,234 | `fr`; a lane in the lane map holds zero limbs here |
+
+Total 12,164 words at `B = V = 256` and `L_TX` = 1,024.
+
+Open, the exact missing facts (FP-3 stays open):
+1. The carrier of the effect region `E` and of `comm` from the terminal state of a run of more than one shard to the call-vector table of `L`. `CO/FRONTEND.md` section 1.4 and its merge relation name only "the root's public values" of a one-root execution; the node statement of FP-2 carries no effect word, and no source defines a carrier.
+2. The call-vector lanes of the run statement and of the collection statement. They follow from the compiled transcript of the LEDGER CONTRACT entries `acceptRun` and `acceptCollection` (`abi.json` of `sherlock compile`), and that contract is not built.
+3. The public and contract-side form of a collection. `acceptCollection`, `descend` and `openClaim` (LDG-003 to LDG-005) recompute SET openings in a Compact contract, and under `sherlock-value/2` the SET grammar is Poseidon2 over BabyBear, which a Compact contract does not compute natively.
+
+#### FP-4 One digest table
+
+Internal digests are `P2(tag, words)`: Poseidon2 over BabyBear, width 16, rate 8, the tag word first, the total length `1 + l` in the first capacity word, the last rate block padded with zeros, output one `digest` (section 1.8, `PR` section 3.6). Public digests are `PoseidonFr_4(tag, pack(d2))`, the Midnight fixed-length sponge with capacity `cap(4, 2)` (section 1.8). The ledger contract uses Compact `transientHash`, the native Midnight Poseidon of use code `u` = 0.
+
+**BabyBear tag codes** (LEAD F-9, under OD-18): 1 `TAG_EMPTY`, 2 `tagStep`, 3 `TAG_NODE`, 4 `tagEnt` (the codes of `FrLog.lean:952-955`); 5 `DOM_PROG`; 6 `DOM_PROGC`; 7 `DOM_LOCK`; 8 `DOM_KEYTRIPLE`; 9 `DOM_KEYDAG`; 10 `DOM_KEYNODE`; 11 `DOM_LAYOUT`; 12 `SHK_IMAGE`; 13 `SHK_VALUE_V2`; 14 `SHK_OUTCOME_V2`; 15 `SHK_IN`; 16 `SHK_RUN`; 17 `SHK_CLAIM`; 18 `SHK_SET_LEAF`; 19 `SHK_SET_DEP`; 20 `SHK_SET_JOIN`; 21 `SHK_SET_FOREIGN`; 22 `SHK_SET_ADM`; 23 `SHK_SET_VIEW`; 24 `SHK_ADM`; 25 `SHK_ADM_STATE`; 26 `SHK_VIEW`; 27 `SHK_VIEW_STATE`; 28 `SHK_DEPS`; 29 `SHK_SD2`; 30 `DOM_STATE_BODY`; 31 `DOM_OUTHIDE`; 32 `DOM_UKEYS`. The memory, stack and ROM domains of the HASH registry (HSH-002) and every later Sherlock digest take the next free codes, in registry order; a used code is never reused.
+
+**Constants** (LEAD F-9). Each is the hash of its tag alone, so its preimage length (1) differs from that of every digest with the same tag, and under premise A5 it equals no such digest: `D_EMPTY = P2(TAG_EMPTY)`, `EMPTY_DEPS = P2(SHK_DEPS)`, `NO_INPUT_LINK = P2(SHK_RUN)`, `NO_PREMISE = P2(SHK_SET_ADM)`, `VIEW_NONE = P2(SHK_VIEW)`, and the absent-input constant `VAL_NONE = P2(SHK_VALUE_V2)`.
+
+**The table** (the `sherlock-value/2` forms; the forms of kits VALUE DIGEST, HASH and INIT over `Fq` are the halo2 prototype):
+
+| Digest | Field and sponge | Tag | Preimage after the tag, in order (types of FP-1) | Words with the tag | Salt |
+|---|---|---|---|---:|---|
+| `image_d` | BabyBear, `P2` | `SHK_IMAGE` | `prog_root: digest`, `layout_version: u16`, `profile_id: u16`, `entry_kind: tag(1)` (0 `Expr`, 1 `Main`), `entry_a: u32` (`e0` or `in_fn`), `in_ty: digest` (`ty_d` for `Main`, zero for `Expr`) | 22 | none |
+| `prog_d` | BabyBear, `P2` | `DOM_PROG` | `image_d: digest`, `plan_d: digest`, `key_root: digest`, `machine_version: u16` | 26 | none in the STARK; public only as `C_P` |
+| `vd` | BabyBear, `P2` | `SHK_VALUE_V2` | `2: u16` (version), `form: tag(3)`, `arity: u32`, then the fields: `UInt n` (0, 0, `n: u128`); `Bool b` (1, 0, `b: bit`); `Nil` (2, 0); `Cons(h, t)` (3, 2, `vd(h)`, `vd(t)`); `Leaf(x)` (4, 1, `vd(x)`); `Branch(l, r)` (5, 2, `vd(l)`, `vd(r)`); constructor field step (7, 2, `acc_k`, `vd(f_k)`) with `acc_0` the zero digest; constructor completion (6, `m`, `ty_d: digest`, `c: u32`, `acc_m`) | 13 to 29 | none |
+| `val_d` | as `vd` | | the `vd` of the input value, or `VAL_NONE` | | none of its own |
+| `input_d` | BabyBear, `P2` | `SHK_IN` | `salt: 8 words`, `val_d: digest`, `fuel_lo: u64`, `fuel_hi: u64`, `stack_limit: u64` | 29 | `salt`: 8 uniform words from the user's CSPRNG, fixed for the run at INIT |
+| `outcome_d` | BabyBear, `P2` | `SHK_OUTCOME_V2` | `2: u16`, `kind: tag(2)`, `payload: digest`: Halted (0, `vd(v)`), Rejected (1, `[code, 0, 0, 0, 0, 0, 0, 0]`), Exhausted (2, `[kind, 0, 0, 0, 0, 0, 0, 0]`) | 11 | none; hidden in public by `DOM_OUTHIDE` |
+| `claim_d` | BabyBear, `P2` | `SHK_RUN` | `1: u16`, `prog_d`, `input_d`, `outcome_d` | 26 | through `input_d` |
+| `fclaim_d` | BabyBear, `P2` | `SHK_CLAIM` | `KIND_FOREIGN: u16` = 2, `vk_id_inner: digest`, `adapter_id: u16`, `out_d: digest` | 19 | none |
+| `adm_d`, `vw_d` | BabyBear, `P2` | `SHK_ADM`, `SHK_VIEW` | `1: u16`, `prog_d`; `1: u16`, `val_d`, `view_root` | 10, 18 | none |
+| SET forms | BabyBear, `P2` | `SHK_SET_*` | the forms of the GP-2 hook, item 1, with `n_steps: u64` | 13 to 37 | through `claim_d` |
+| `deps_d` step | BabyBear, `P2` | `SHK_DEPS` | `deps_d`, `claim_d` | 17 | none |
+| `state_d`, `body_d` | BabyBear, `P2` | `SHK_SD2`, `DOM_STATE_BODY` | FP-5 | 42, per schema | none |
+| `C_P` | Fr, `PoseidonFr_4` | `SHK_PROGC` | `pack(P2(DOM_PROGC, r_P, prog_d))`, `r_P`: 8 words | 2 | `r_P`, one per deployment |
+| `input_pub` | Fr, `PoseidonFr_4` | `SHK_INPUT` | `pack(input_d)` | 2 | the salt inside `input_d` |
+| `outcome_pub` | Fr, `PoseidonFr_4` | `SHK_OUTCOME` | `pack(P2(DOM_OUTHIDE, input_d, outcome_d))` | 2 | `input_d`, which holds the salt and is never public (LEAD F-10) |
+| `claim_pub` | Fr, Compact `transientHash` | none | `[C_P, input_pub, outcome_pub]` | 3 | through `input_pub` (LEAD F-10) |
+
+`claim_pub` is the replay key of the ledger contract (LDG-002, LW-010). Every partition of one run has the same salt, because INIT fixes it in `input_d`, so the second partition of a run gives the same `claim_pub` and is refused. A new salt gives another input and another claim.
+
+**Restated kits.** VALUE DIGEST computes the `vd` rows above in place of the `sherlock-value/1` rows of its table, with the same forms, the same field order and the version word 2. HASH computes `P2` with the tag word first; the pinned sponge and the capacity-tagged sponge of the prototype (HASH families 1 and 2) are one form over BabyBear. INIT opens `prog_d` to `image_d` and `image_d` to `prog_root` and the entry metadata (two hashes), opens `input_d` (one hash), range-checks `fuel_lo`, `fuel_hi` and `stack_limit` as `u64` limbs, and leaves the salt words unconstrained.
+
+**Lean.** `digest_table_inj` (new `lean/DigestTable.lean`; open): under `P2Inj` (premise A5, `FrLog.lean:1006`), two digests of the table are equal only if their tags, lengths and preimages are equal; so each constant differs from every digest of its tag. The public forms use `packed_hash_inj` and `public_digest_binds` (`Bridge.lean:290,419` at `bdb92973a`, proved) with `pack_injective` (`FrLog.lean:218`, proved).
+
+**Checks.** `digest_table_vectors`: one differential vector for each row, with the preimage word list of the row, computed by the Rust `P2` against the stark-sdk Poseidon2 (`SB/crates/stark-sdk/src/config/baby_bear_poseidon2.rs`) and against the AIR, on the CPU and the GPU. Hand-computable preimage check: `input_d` with salt `[1, 2, 3, 4, 5, 6, 7, 8]`, `val_d = VAL_NONE`, fuel `2^64` and stack limit `2^16` has the limbs `fuel_lo = [0, 0, 0, 0]`, `fuel_hi = [1, 0, 0, 0]`, `stack_limit = [0, 1, 0, 0]`. Mutants: `digest_tag_swapped` (a `claim_d` computed with `SHK_CLAIM`), `digest_constant_as_claim` (`NO_INPUT_LINK` offered as a claim), `input_salt_changed_midrun`, `outcome_pub_unsalted` (the control: an `outcome_pub` over `outcome_d` alone).
+
+#### FP-5 Seal read of `view_root`
+
+`view_root` is a header word of the state commitment (LEAD F-11; AD-17 stays OWNER):
+
+```text
+state_d = P2(SHK_SD2, outcome_tag: tag(2), outcome_payload: digest, input_d: digest,
+             deps_d: digest, view_root: digest, body_d: digest)                     42 words, 6 permutations
+body_d  = P2(DOM_STATE_BODY, schema_id: u16, body words in keyed order)
+```
+
+`outcome_payload` is the `vd`, or the code or kind in word 0 with zeros after it. `view_root` leaves the body. Under form (a) or (c) of AD-17, and for an absent input, the header word is `VIEW_NONE`. INIT sets it at genesis (from the witness under form (b)); no rule writes it (mutant `core_unlisted_register_changed`). `read_input` reads the header cell inside the leaf. `open_state_header` returns `StateOpeningCells { outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d }`, and SEAL and SEAL-WITH-DEPS compare the opened `view_root` with the `view_root` of the `VIEW` claim. The node never re-hashes the body. Reason: `body_d` is a flat sponge with no selective opening (kit BOUNDARY COMMITMENT), so a body word has no defined opening in the node, and the header is the one typed opening that exists. X10 measures the six-word header opening.
+
+**Lean.** `header_open_sound` (`BinaryNode.lean`; open; the "Header opening" row of kit BOUNDARY COMMITMENT): if `P2(SHK_SD2, w) = post_d` for the authenticated lane `post_d`, then `w` is the header of the committed state (premise A5).
+
+**Checks.** `boundary_header_leaf_vs_std`: the header digest of the leaf AIR equals the stark-sdk Poseidon2 on the same 42 words, zero words included. `pos_node_header_opening_all_outcomes` covers the `view_root` word. Mutants `seal_view_root_forged` (an opened `view_root` that is not the committed header word), `view_root_written_by_rule`.
+
+#### FP-6 Public `n_steps`
+
+`n_steps` is not public (LEAD F-12; the owner's `n_steps` rule). It is not in the run statement, the call vector, `acceptRun` or the `runs` map. It stays authenticated private metadata: `n_steps = h_hi` of the sealed segment, range-checked by NODE, inside the SET forms `LEAF` and `DEP` (NODE-003). Reasons: the exact height leaks private control flow (`K21/BRIEF.md:53`), so the exact public height breaks zero knowledge end to end; no source defines a padding rule for a public `n_steps`; removal is the decision of the recalibration proposals that decide it (`K21/proposals/opus.md:486-496`; `K21/proposals/gemini.md:570-576`). A collection publishes `set_root` only through FP-3, and `set_root` hides `n_steps` because `claim_d` holds the salted `input_d`. The leaf count and the shard shapes follow the public padding `N_pub` of the plan (section 1.6). The GP-1 acceptance "the same `n_steps` under three partitions" is checked on the private value by the integration harness (section 3.2). Owner amendments: SRC-006 (the run entry), SRC-007 (`acceptRun`), LDG-001 (the `runs` map).
+
+**Lean.** `run_view_no_nsteps` (`Bridge.lean`; open): the published view of a run call is a function of the call vector, which holds no `n_steps`; it follows from `wrap_view_only_claim` (`Bridge.lean:392` at `bdb92973a`, proved) once the call vector of FP-3 is fixed.
+
+**Checks.** Keygen refusal `decider_nsteps_public` (a wrap key whose call vector carries `n_steps`; forbidden-input check of LW-003). Positive `pos_run_nsteps_private` (the harness reads the same private `n_steps` from the SET leaf under three partitions).
+
+#### FP-7 Chunk and E-1 bindings
+
+Under placement V, `bind_label` runs inside each chunk's own run and takes the private tape bytes `m` with the V+ layout parameters `(|domain|, domain, offset)` (LEAD F-13):
+
+- `bind = le31(SHA256(m))`, written to the outcome; the wrap requires lane 0 to equal it (CF-008).
+- The claim address `addr_c = m[|domain| .. |domain| + 32)`: the 32-byte contract address follows the domain bytes in the binding preimage (`ML/ledger/src/verify.rs:2151-2156`). `bind_label` requires `offset = |domain| + 32`, so `addr_c` is the address of the called contract.
+- The claim `ep_hash = SHA256(EP_OPEN || lab)`, with `EP_OPEN` the 32 bytes `"midnight:entry-point"` and 12 zero bytes, and `lab` the raw label bytes: `enc(e)` of the pinned window without its SCALE length prefix (`ML/onchain-state/src/state.rs:913-918`; `ML/base-crypto/src/hash.rs:98-102`; `ML/base-crypto/src/repr.rs:66-69`). It is computed on the `sha2` chip from the window, so the claim targets the same entry label.
+- For a chunk `j < k`, the run writes `(addr_c, ep_hash, comm_(j+1))` into the effect words of its `claimContractCall` at the static indices of the entry template; the slice shard fixes `comm_(j+1)`, `(j, k)` and the slice bounds (`CO/ATOMIC-CHUNKS.md:120-127`). This replaces the binding shard of placement B (`CO/ATOMIC-CHUNKS.md:272`).
+
+E-1 window under a variable-length preimage. The right alignment is a property of the midnight-circuits `sha2_256_varlen` gadget (`E1:129`), which only placement S uses. Under placement V, `m` is a tape byte array of the per-entry length `M_B(e)` with the true length `len_m: u32` as a tape word and zero bytes after it; the window offsets are absolute byte positions in `m`; `bind_label` runs exactly `N_blk(e) = ceil((M_B(e) + 9) / 64)` SHA-256 compressions over the standard SHA-256 padding of the first `len_m` bytes and selects the chaining value after block `ceil((len_m + 9) / 64)` as the digest, so the step count `N_e` stays static (CF-004). `M_B(e)` is a constant of `abi.json`: the largest binding preimage of the entry's static transcript layout. This is the form of the binding shard of `CO/FRONTEND.md` section 1.9 (`m` padded to `M_B` with the true length as witness and standard SHA padding), moved into the run.
+
+**Lean.** `bind_label_sound` (new `clean/fork/Clean/Sherlock/BindLabel.lean`; open): with the windows pinned, `bind = le31(SHA256(m))` and `addr_c`, `ep_hash` computed from the windows, a call whose label or address differs gives `m' != m`, or a collision of SHA-256 truncated to 248 bits. CF-L2 (open) uses it for the claim chain.
+
+**Checks.** T0 with the window at offset 58 (MEASURED, `PR` section 7.2). `ep_hash_vs_ledger`: `ep_hash` for the labels `acceptRun` and `acceptRunB` and for labels of 1, 55, 56 and 64 bytes against `EntryPointBuf::ep_hash`. `bind_len_select`: `len_m` in {119, 131, 183, 247, 503, 1,015, 2,039} bytes (2, 3, 3, 4, 8, 16 and 32 blocks, the preimage lengths of `E1` section 5) against `persistent_hash`, at one `M_B` of 2,039 bytes. Mutants `chunk_claim_addr_free` (`CO/ATOMIC-CHUNKS.md:357`), `chunk_ep_hash_other_label`, `bind_len_select_wrong_block`. PENDING evidence, not design: T0 on calls with a fallible transcript or non-empty effects, the remaining T2 mutants, T3 to T6.
 
 ## 2. Module kits
 
@@ -1131,7 +1347,7 @@ BUS, HASH, MEM window. BOUNDARY COMMITMENT consumes the token. INIT provides the
 
 The next ten kits were digested by helper agents from the drafts named in the provenance note, under the same decided inputs. The lead did not read these kits line by line: they were checked by search for rejected terms, for the nine kit items and for status claims, and patched where the lead notes below say so. Three points join them to the kits above:
 
-1. Leaf lanes and the boundary schema (LC AUDIT item 27; N-2 and N-14 in section 4.2; V-6 in section 4.3). The leaf keeps the seven landed lanes. `input_d`, the dependency commitment `deps_d`, the terminal kind and the terminal payload are the words of a short header of the state commitment, so the seal (NODE SEAL and SEAL-WITH-DEPS, the only seal path; kit L AND WRAP opens the sealed SET head (the layer, `L` or the wrap, is open: FP-3)) reads them by re-hashing that header against `post_d` with one fixed-length sponge (as `crates/mori-recursion/src/ivc.rs:81-84` and `run_decider.rs:285-288` do for the outcome tag and value today, where the header is `[dom, tag, value, lanes_d]`). The B1 text said "top-level words of a flat sponge at fixed positions"; a flat sponge gives no selective opening, and the design uses the header and body form of kit BOUNDARY COMMITMENT (B2 finding 5). CORE never writes `input_d` after INIT (it is in no rule's write set; mutant `core_unlisted_register_changed`). If measurement (X10) shows that this opening does not fit the node, the fallback is a new versioned leaf statement, which needs an SRC-001 amendment.
+1. Leaf lanes and the boundary schema (LC AUDIT item 27; N-2 and N-14 in section 4.2; V-6 in section 4.3). The leaf keeps the seven landed lanes. `input_d`, the dependency commitment `deps_d`, the terminal kind and the terminal payload are the words of a short header of the state commitment, so the seal (NODE SEAL and SEAL-WITH-DEPS, the only seal path; `L` opens the sealed SET head (section 1.11, FP-3)) reads them by re-hashing that header against `post_d` with one fixed-length sponge (as `crates/mori-recursion/src/ivc.rs:81-84` and `run_decider.rs:285-288` do for the outcome tag and value today, where the header is `[dom, tag, value, lanes_d]`). The B1 text said "top-level words of a flat sponge at fixed positions"; a flat sponge gives no selective opening, and the design uses the header and body form of kit BOUNDARY COMMITMENT (B2 finding 5). CORE never writes `input_d` after INIT (it is in no rule's write set; mutant `core_unlisted_register_changed`). If measurement (X10) shows that this opening does not fit the node, the fallback is a new versioned leaf statement, which needs an SRC-001 amendment.
 2. ROM chip id 4 is the id of section 1.2. No `CHIP_*` constant other than ALU 1, MEM 2 and HASH 3 exists in `chip/` (checked).
 3. The block-line method is named `open_line` in the PAGE/ROM kit. It is the one new method of `MemBackend` (LC AUDIT item 24).
 
@@ -1680,20 +1896,20 @@ BOUNDARY COMMITMENT binds every state cell that is needed to continue execution,
 
 #### Interface
 
-`BoundarySchema`: a fixed, keyed, ordered list of words, in two parts: five header words (item 5) and the body words (items 1 to 4):
+`BoundarySchema`: a fixed, keyed, ordered list of words, in two parts: six header words (item 5) and the body words (items 1 to 4):
 1. The CORE persistent registers, every one that is readable in the future. Area 1 gives the full schema. The spike's 29 words are not the final count.
 2. The constructor fold cells.
 3. The FRAMES and TASKS hash-chain heads (R-3) and their counts.
 4. The memory state of the one arena: `(len, root, tail_d)`, with `len` from MEM and `[root, tail_d]` from the dense token. With four arenas (not the default, L-9) the triple appears per arena. Under Profile B there is no `root` or `tail_d`: the memory words are `len` and the imported tail records (or their committed entries), and memory correctness rests on the run-wide sum at the seal.
 
-5. Header words (lead merge decision, section 2 lead notes; N-2, N-14, V-6; revised by B2 finding 5): the terminal kind `outcome_tag`, the terminal payload `outcome_payload` (the `vd`, the code or the kind that `outcome_d` wraps), `input_d`, and the dependency commitment `deps_d`. They are CORE registers; this item fixes that they are the header of the commitment and are never packed, nested or moved into the body. `prog_d` and `prog_root` are body words; `prog_d` is also leaf lane 1, and the leaf constrains the lane to equal the body word in every leaf. `input_d`, `prog_d` and `prog_root` are in no rule's write set. Under input admission form (b) (AD-17) the body also holds `view_root`, the root of the certified input view (kit INIT); INIT sets it at genesis from the witness, it is in no rule's write set, and the read port `read_input` reads it inside the leaf.
+5. Header words (lead merge decision, section 2 lead notes; N-2, N-14, V-6; revised by B2 finding 5): the terminal kind `outcome_tag`, the terminal payload `outcome_payload` (the `vd`, the code or the kind that `outcome_d` wraps), `input_d`, the dependency commitment `deps_d`, and `view_root` (section 1.11, FP-5). They are CORE registers; this item fixes that they are the header of the commitment and are never packed, nested or moved into the body. `prog_d` and `prog_root` are body words; `prog_d` is also leaf lane 1, and the leaf constrains the lane to equal the body word in every leaf. `input_d`, `prog_d` and `prog_root` are in no rule's write set. `view_root` is the root of the certified input view under input admission form (b) (AD-17, kit INIT) and `VIEW_NONE` under forms (a) and (c) or for an absent input; INIT sets it at genesis, it is in no rule's write set, and the read port `read_input` reads it inside the leaf.
 
 Scratch `v0..v2` are outside the schema only under the independence-from-incoming-scratch obligation of CORE (invariant 8). Zeroing at a boundary or at slot 0 does not replace it.
 
 **Poseidon (default): a header and body commitment.** A flat sponge over all words gives no selective opening: to read one word a verifier must re-hash every word. The landed decider opens the outcome with one short hash only because the landed digest is `Poseidon(dom("SHK_SD"), outcome_tag, outcome_value, lanes_d)` with an opaque `lanes_d` (`crates/mori-recursion/src/ivc.rs:81-84`, `run_decider.rs:284-288`). The design keeps that structure and widens the header:
 
 - `body_d = H_iv(DOM_STATE_BODY, schema_id; body words)`: the capacity-tagged internal sponge (HASH family 2) over the body words in keyed order. The tag is a capacity word, so it costs 0 permutations; its value differs from every memory, stack and ROM tag (the `StateBody` entry of the domain registry). `schema_id` identifies the schema and the profile.
-- `state_d = Poseidon(dom("SHK_SD2"), outcome_tag, outcome_payload, input_d, deps_d, body_d)`: the pinned sponge (HASH family 1), six inputs, domain word first, three permutations. `pre_d` and `post_d` are `state_d` of the first pre state and of the last post state. The domain word `SHK_SD2` is new and differs from the landed `SHK_SD`, because the header has more words (name proposed here).
+- `state_d = Poseidon(dom("SHK_SD2"), outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`: the halo2 prototype form of the header. The frozen BabyBear form is `P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`, 42 words, 6 permutations (section 1.11, FP-5). `pre_d` and `post_d` are `state_d` of the first pre state and of the last post state. The domain word `SHK_SD2` is new and differs from the landed `SHK_SD`, because the header has more words (name proposed here).
 - Equality constraints: each header word and each body word is a copied cell of its owner (CORE, STACKS, MEM, the backend token); `body_d` is the copied output of the body sponge; the lane cells `pre_d` and `post_d` are the copied outputs of the header sponges.
 - Why the header is pinned and not capacity-tagged: NODE INTEGRATION (SEAL and SEAL-WITH-DEPS, the only seal path) recomputes it with the library sponge (`std.poseidon`, as `run_decider.rs:287` does), which has no capacity-tag input. LC AUDIT item 25 asks for a capacity-tagged boundary digest; the body keeps that form and the header deviates from it for this reason (`FD/ARCH-AUDIT-RESPONSE.md`).
 - Inputs are copied cells. The input lengths are fixed by the schema.
@@ -1705,7 +1921,7 @@ Typed opening interface (the three uses the B1 text named without a signature):
 | Use | Where | What it does | Cost |
 |---|---|---|---|
 | INIT | in the leaf | no opening: INIT reads the header and body cells directly, because the leaf computes `pre_d` from those cells (`BoundaryCells`, returned by `commit`) | 0 |
-| Terminal sealing | NODE INTEGRATION (SEAL, SEAL-WITH-DEPS) only; kit L AND WRAP opens a SET head (the layer, `L` or the wrap, is open: FP-3), not a state header | `open_state_header(state_d, witness) -> StateOpeningCells { outcome_tag, outcome_payload, input_d, deps_d, body_d }`: assigns the five words, computes `std.poseidon([dom("SHK_SD2"), ...five words])` and asserts equality with the authenticated lane `post_d` | one six-input library sponge, 3 permutations (the landed opening is a four-input sponge, 2 permutations); ESTIMATE, measured by X10 |
+| Terminal sealing | NODE INTEGRATION (SEAL, SEAL-WITH-DEPS) only; `L` opens a SET head (section 1.11, FP-3), not a state header | `open_state_header(state_d, witness) -> StateOpeningCells { outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d }`: assigns the six header words, computes `P2(SHK_SD2, header words)` and asserts equality with the authenticated lane `post_d` | one 42-word Poseidon2 sponge over BabyBear, 6 permutations (section 1.11, FP-5); ESTIMATE, measured by X10 |
 | Continuation | host only (mode 1) | no circuit opening: the suffix leaf's `pre_d` lane equals the prefix `post_d` by NODE MERGE; the host recomputes `body_d` and `state_d` when it validates a restored checkpoint (kit HOST CHECKPOINT STORE) | 0 circuit rows |
 
 The bridge between leaf cells and recursion cells is the public lane: the recursive verifier authenticates the leaf's `post_d` lane, and the recursion re-hashes the header with the library sponge over the same field and the same pinned parameters as the leaf's `sponge`. The test of the bridge is a differential vector `boundary_header_leaf_vs_std` (the leaf chip's header digest equals `std.poseidon` on the same six words, including zero words). A full re-hash of the body in the node is never needed and is not budgeted.
@@ -1741,7 +1957,7 @@ Assumed: CORE, MEM and the backend expose their true boundary cells and omit not
   - `N_body = 34` (adding `len` and two stack heads): 2,380 + 420 rows (ESTIMATE).
 
   The final `N_body` comes from the Area 1 schema.
-- Opening in NODE INTEGRATION (SEAL and SEAL-WITH-DEPS): one six-input library sponge per opened state (ESTIMATE). `L` opens no state header; kit L AND WRAP opens the sealed SET head (the layer, `L` or the wrap, is open: FP-3). The landed decider's four-input opening is inside the measured 929,166 rows and is removed. Measured by X10 inside the node.
+- Opening in NODE INTEGRATION (SEAL and SEAL-WITH-DEPS): one 42-word header sponge per opened state (section 1.11, FP-5; ESTIMATE). `L` opens no state header; `L` opens the sealed SET head (section 1.11, FP-3). The landed decider's four-input opening is inside the measured 929,166 rows and is removed. Measured by X10 inside the node.
 - Horner: up to `4N + O(1)` rows (ESTIMATE, `astra-area2.md:1000`), plus the committed binding.
 - Node: Poseidon adds nothing; Horner is part of the Profile B node changes.
 
@@ -1800,12 +2016,13 @@ pub trait BoundaryCommitment {
     fn commit(&self, l: &mut impl Layouter<F>, words: &SerializedBoundaryCells) -> Result<StateDigestCells, Error>;
 }
 /// Native header digest, shared by the leaf witness generator, the recursion and the host store.
-pub fn state_digest_native(header: [F; 4], body_d: F) -> F;
+pub fn state_digest_native(header: [F; 5], body_d: F) -> F;
 
 // crates/mori-recursion/src/state_open.rs (new): the recursion side of the opening.
 pub struct StateOpeningCells { pub outcome_tag: AssignedNative<F>, pub outcome_payload: AssignedNative<F>,
-                               pub input_d: AssignedNative<F>, pub deps_d: AssignedNative<F>, pub body_d: AssignedNative<F> }
-/// Assign the five words, hash [dom("SHK_SD2"), words] with the library sponge, assert equality with state_d.
+                               pub input_d: AssignedNative<F>, pub deps_d: AssignedNative<F>, pub view_root: AssignedNative<F>,
+                               pub body_d: AssignedNative<F> }
+/// Assign the six header words, hash [dom("SHK_SD2"), words] with the library sponge, assert equality with state_d.
 pub fn open_state_header(cx: &mut RecursionContext<'_>, state_d: &AssignedNative<F>, w: &HeaderWitness) -> Result<StateOpeningCells, Error>;
 pub struct PoseidonBoundaryConfig { /* private */ }        // Profile A
 /// Sealed marker: the backend copies its boundary words into the committed instance before any challenge.
@@ -1853,7 +2070,7 @@ Requests (per child slot `j` in {0, 1}):
 - `en_j`: bit. `key_sel_j`: one-hot over {LEAF, NODE, FOREIGN}, summing to `en_j` (G:64; A:194 with the 2-leaf lift kind removed, L-10). NODE INTEGRATION constrains booleanity and the sum. The selector also fixes the permitted `stmt_tag` of the child: `LEAF -> {SEG}`, `FOREIGN -> {SET}`, `NODE -> {SEG, SET, SUB, DL, FV, AW, VW}`.
 - The child's instance lanes. A LEAF child gives the seven landed lanes. A NODE child gives the node statement below. A FOREIGN child gives the GP-3 hook's output statement.
 - Whether a LEAF child enters a NODE slot directly or through a one-leaf lift relation (the landed `SHKIVC06` shape) is open (section 4.2, N-1). The two-leaf lift is not part of the design (L-10).
-- From BOUNDARY COMMITMENT (seal modes only): `open_state_header(post_d, witness)` returns `StateOpeningCells { outcome_tag, outcome_payload, input_d, deps_d, body_d }` by one six-input library sponge asserted equal to the authenticated `post_d` (kit BOUNDARY COMMITMENT, typed opening interface). NODE uses the returned cells. The signature exists in `crates/mori-recursion/src/state_open.rs`; the B1 text referred to an opening signature that no kit defined (B2 finding 5).
+- From BOUNDARY COMMITMENT (seal modes only): `open_state_header(post_d, witness)` returns `StateOpeningCells { outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d }` by one header sponge (section 1.11, FP-5) asserted equal to the authenticated `post_d` (kit BOUNDARY COMMITMENT, typed opening interface). NODE uses the returned cells. The signature exists in `crates/mori-recursion/src/state_open.rs`; the B1 text referred to an opening signature that no kit defined (B2 finding 5).
 - From VALUE DIGEST (seal mode only): the `outcome_d` formula of SRC-022 (`requirements.md:47`) applied to the opened kind and payload. Interface only.
 
 Provides (node statement, ordered; final order frozen before keygen):
@@ -1904,7 +2121,7 @@ Input view (VIEW-WORK; input admission form (b) of AD-17, which stays OWNER). It
 - One unit: for records in index order, at most the unit budget: open the record and its `m` child-vd leaves against `view_root`; recompute its `vd` from `tag`, `c`, `ty_d` and the child `vd_k` by the formulas of VALUE DIGEST (a constructor of `m` fields folds over units in `fold_d`); require `vd == val_d` for record 0; for an entered child require the child record's `vd == vd_k`; require that `child_pos` is the running count of child-vd leaves (so no two records share a leaf) and that every index is below `n_rec`.
 - Completion: after record `n_rec - 1` the unit emits the SET `VIEW(vw_d)`. No unit emits it earlier.
 - A record is entered only when VIEW-WORK reaches it, so the work grows with the entered part of the input. The full view (every node entered, in breadth-first order) is canonical per `val_d`. A lazy view enters only the nodes that the run reads; it is sound for the same reason, but its `view_root` depends on the prover's choice, so the boundary values at a common cut are equal across partitions only when every partition uses the same view; the public statement does not depend on it. Whether both forms are allowed, and the depth `D_view` (it must not bound the input, I2), are open points of AD-17.
-- Seal read path: the seal compares the `VIEW` claim's `view_root` with the run's `view_root` body word, but `open_state_header` returns `body_d` only, and the node does not re-hash the body. How the seal reads `view_root` is an open point of AD-17 (for example a header word, which changes the six-input header and X10).
+- Seal read path: the seal compares the `VIEW` claim's `view_root` with the `view_root` header word that `open_state_header` returns (section 1.11, FP-5). The node does not re-hash the body.
 
 PROFILE B EXTENSION POINT (benchmark-only, L-5): under Profile B the leaf gains a committed-instance column and challenge lanes. MERGE would require equal challenges and add the two LogUp partial sums; SEAL would require both sums zero and the challenges equal the hash of the commitment root; a witnessed committed-instance point must use the subgroup-checked assign (G:44, G:53, G:67-68, G:83; lookup AUDIT finding 9). This changes the leaf statement, node, seal and continuation and replaces the `digest_inj` premise. It is not built before M4 and no other kit depends on it.
 
@@ -1918,7 +2135,7 @@ Guaranteed:
 - SEAL refuses Running and `h_lo != 0`; the SET carries no physical state field (G:82).
 - Program admission: a SET in the `ADM` form for `prog_d` exists only after ADMIT-WORK has checked every ROM row under the `prog_root` of `prog_d`, and SEAL and SEAL-WITH-DEPS require it, so no run of an unadmitted program is sealed (tests `node_seal_unadmitted_prog`, `node_seal_admission_other_prog`, the `admit_*` mutants; Lean NODE-L4).
 - Input view (form (b) of AD-17): a SET in the `VIEW` form for `(val_d, view_root)` exists only after VIEW-WORK has checked every record and child-vd leaf of the view against `sherlock-value/1` with record 0 equal to `val_d`, and the seal requires it for the sealed `input_d`, so every `AuthIn` read of the run returns a node of the input (tests `seal_view_other_input`, `view_record_forged`, `view_claim_before_done`, `in_read_outside_view`; Lean NODE-L5).
-- One seal path: SEAL and SEAL-WITH-DEPS are the only place where seal predicates are checked. kit L AND WRAP opens the sealed SET head (the layer, `L` or the wrap, is open: FP-3) and repeats no seal predicate; on the M4 linear path one SEAL node runs before the decider (kit L AND WRAP).
+- One seal path: SEAL and SEAL-WITH-DEPS are the only place where seal predicates are checked. `L` opens the sealed SET head (section 1.11, FP-3) and repeats no seal predicate; on the M4 linear path one SEAL node runs before the decider (kit L AND WRAP).
 - Every enabled child's proof is verified in the node by the recursion verifier, which reads the child's constraint DAG as a cached trace; each child's key commitment has an inclusion path into `key_root`; the children's log digests `(d, n)` merge by `TAG_NODE` (`PR` sections 2 and 3.2).
 - The relation serializes every keyed capacity, including `S_MAX`. Today `write_relation` writes only magic, column count, k and leaf key (`ivc.rs:571-576`; checked); SRC-014 requires `S_MAX` in the relation bytes (`requirements.md:39`; checked).
 Assumed:
@@ -1941,14 +2158,14 @@ Parser refusals are recorded apart from constraint refusals (A:285).
 #### Lean obligations
 - NODE-L1. Every binary SEG certificate (MERGE over LEAF children) gives a run of exactly `h_hi - h_lo` reference steps from any canonical state opening to `pre_d` to one opening to `post_d`, and the SEG is the same for every bracketing of the same leaves. File: new `clean/fork/Clean/Sherlock/BinaryNode.lean` (name proposed here), importing `Aggregation.lean` and reusing `Seg`, `link`, `linkAll_append`, `bracket_independent`, `sound_linkAll`. Premises: `Premises.leaf_sound`, `digest_inj`, `progDigest_inj`; `det` as hypothesis, discharged for dense memory by `premises_det` (C3). Contract: MERGE soundness, SRC-004, SRC-023 at segment level. Status: open.
 - NODE-L2. SEAL soundness: a SET leaf `claim_d` from SEAL implies a run from `Init(prog_d, input_d)` to a terminal state with that outcome digest in `n_steps` steps. File: `BinaryNode.lean`. Premises: NODE-L1, `decider_pinning` shape, `stuck` hypothesis, `digest_inj`, outcome digest injectivity (VALUE DIGEST obligation 4). Contract: SEAL. Status: open.
-- NODE-L3 (halo2 prototype statement; the STARK node folds no accumulator, so its STARK form is part of FP-2). Named-key routing: with one-hot selectors and per-key coefficient routing, the folded accumulator is valid iff every enabled child's proof verifies under its selected key. File: new `clean/fork/Clean/Sherlock/NamedAccumulator.lean` (name proposed here), extending `AccAlgebra` (`Aggregation.lean:1230`). Premise: accumulation soundness as a hypothesis structure (no `axiom`). Contract: key routing, SRC-005 neutral slots. Status: open.
+- NODE-L3 (halo2 prototype statement; the STARK node folds no accumulator, so its STARK form is `node_key_route` of section 1.11, FP-2). Named-key routing: with one-hot selectors and per-key coefficient routing, the folded accumulator is valid iff every enabled child's proof verifies under its selected key. File: new `clean/fork/Clean/Sherlock/NamedAccumulator.lean` (name proposed here), extending `AccAlgebra` (`Aggregation.lean:1230`). Premise: accumulation soundness as a hypothesis structure (no `axiom`). Contract: key routing, SRC-005 neutral slots. Status: open.
 - NODE-L4. Program admission: if ADMIT-WORK units chain from the first unit to the `ADM(adm_d)` SET for `prog_d`, then every ROM row under the `prog_root` of `prog_d` satisfies the PROG canonicality premise `ProgCanonical(prog_root)`. File: `BinaryNode.lean`. Premises: hash injectivity for `SHK_ADM`, `SHK_ADM_STATE` and the ROM domains; the `ty_d` normal form of AD-14 as a hypothesis. Contract: the seal admission check; it discharges `ProgCanonical` for NODE-L2. Status: open.
 - NODE-L5. Input view (form (b) of AD-17): if VIEW-WORK units chain to the `VIEW(vw_d)` SET, then every record reached from record 0 through child-vd leaves under `view_root` is a node of the value whose digest is `val_d`, with that node's tag, fields and `vd`. File: `BinaryNode.lean`. Premises: VALUE DIGEST obligation 4 (injectivity), hash injectivity for `SHK_VIEW`, `SHK_VIEW_STATE` and the view tree. Contract: the seal view check and the `AuthIn` read port; it discharges I3 of kit INIT under form (b). Status: open.
 
 #### Code skeleton
 Files: `crates/mori-recursion/src/node.rs`, `node_slot.rs`, `seal.rs` (new; G:150 and A:291-296 differ on layout, flat files follow the existing crate). `ivc.rs` stays as the M4 linear path until parity; its `write_relation` gains `S_MAX`.
 
-This skeleton is the halo2 prototype form (`AssignedNative<F>`, `PinnedKeyReprs`, accumulator cells). The STARK node verifies children with no accumulator; its statement envelope (the deferred-log `(d, n)`, the forwarded `key_root` and the update rule of every mode) is freeze prerequisite FP-2.
+This skeleton is the halo2 prototype form (`AssignedNative<F>`, `PinnedKeyReprs`, accumulator cells). The STARK node verifies children with no accumulator; its statement envelope (the deferred-log `(d, n)`, the forwarded `key_root`, `keys_d` and the update rule of every mode) is section 1.11, FP-2.
 
 ```rust
 pub enum KeyKind { Leaf, Node, Foreign }            // Leaf = direct leaf or one-leaf lift (N-1)
@@ -1998,7 +2215,7 @@ Compress the shard tree into the bridge layer `L` and wrap `L` in the one blinde
 #### Interface
 No bus tuples. Inputs and outputs across proof boundaries:
 - `L` takes: the node root proof (full tree) or the leaf-layer proof (path C); the flattened deferred field log and its tree shape as private witness; the `key_root` inclusion path of the leaf `P2(DOM_KEYDAG, entry, path, enc(X))`.
-- `L` exposes as public values: the statement words; the anchor statement `(mode, j, k, a_in, a_out)`; `run_tag` for a chunk; `layout_d` of V+; `pv` of `W_pv` words (section 1.8); the DAG commitment `X`; the call vector of `2 + L_TX` words. A general run is a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]` (OD-15). Open items of the interface freeze (FP-3): which layer opens the sealed SET head of a general run (as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`, refusing a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root; LW-008), the public form of `prog_d` in the run statement (owner item N-11), the effect-word form of the collection statement `[reg_root, set_root, shape_d]`, and the index table of the public values of `L` (word offset and limb width of each field). Until it is fixed, the test names `decider_seg_root_as_run`, `decider_set_head_forged`, `pos_decider_all_outcomes` and `pos_decider_collection_three_runs` and obligation DEC-L1 keep their meaning and belong to this kit.
+- `L` exposes as public values the index table of section 1.11, FP-3: the root statement (74 words, FP-2), the anchor statement `(mode, j, k, e_in, e_out)`, `run_tag`, `layout_d`, `X`, the lane map, `pv` (section 1.8) and the call vector of `2 + L_TX` lanes. `L` opens the sealed SET head of a general run as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)` and refuses a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root (LW-008). A general run is a Sherlock program whose effect words write its run statement `[C_P, input_pub, outcome_pub]` (OD-15, FP-4, FP-6). Open (FP-3): the carrier of the effect region and `comm` from a multi-shard terminal state to the call vector, the call-vector lanes of the run and collection statements, and the contract-side form of a collection. The test names `decider_seg_root_as_run`, `decider_set_head_forged`, `pos_decider_all_outcomes` and `pos_decider_collection_three_runs` and obligation DEC-L1 belong to this kit.
 - The wrap takes the proof of `L` with its Merkle roots, PoW witnesses, query positions, the log, `pv` and the onion digests as private witness, and has exactly the call vector as public inputs.
 - Wrap key constants: `B`, `V`, `P`, `E`; `L_TX`; the anchor template words; `layout_d`; the hash domains; the `L` key schedule `sched`.
 - Forbidden public inputs: `X`, `mode`, `j`, `k`, `run_tag`, `key_root`, plain `prog_d`, `pre_d`, `post_d`, any memory root, tail digest, length or address, and anything derived from the transcript of `L`.
@@ -2638,14 +2855,14 @@ Accept run statements and collection statements on chain, and settle each claim 
 #### Interface
 One contract, one shared state. No bus tuples and no circuit cells; the inputs are the public values of the L AND WRAP entries and ledger call data.
 - State:
-  - `runs: Map<claim_d, (outcome_d, n_steps)>`: settled run claims.
+  - `runs: Map<claim_pub, outcome_pub>`: settled run claims, keyed by `claim_pub` (section 1.11, FP-4); no `n_steps` (FP-6).
   - `foreign: Map<fclaim_d, ()>`: settled foreign claims.
   - `verified_roots: Set<Field>`: collection roots and sub-roots reached from a verified root.
   - the registry root `reg_root`, with the history and revocation rule of N-8 (open).
-- `acceptRun(prog_d, input_d, outcome_d, n_steps)`: verifies the wrap proof whose effect words carry the four values (call vector of section 1.8) (SRC-007 with `prog_d` as call data; whether a sealed `program_d` per contract stays is N-11, OWNER), computes `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and refuses a `claim_d` already in `runs`; else inserts it.
+- `acceptRun(C_P, input_pub, outcome_pub)`: verifies the wrap proof whose effect words carry the three values (section 1.11, FP-3), computes `claim_pub = transientHash([C_P, input_pub, outcome_pub])` and refuses a `claim_pub` already in `runs`; else inserts it. Plain `prog_d` and `n_steps` are not call data (ZK-002, FP-6; amendments of SRC-007 and LDG-001 are owner item F-12; the public program identity `C_P` is N-11, OWNER).
 - `acceptCollection(reg_root, set_root, shape_d)`: verifies the wrap proof of the collection statement, checks `reg_root` against the registry state, and inserts `set_root` into `verified_roots`. It makes no per-claim write and no write keyed by `shape_d`.
 - `descend(root, openings)`: requires `root` in `verified_roots`; checks up to `K_open` one-hash openings of `JOIN` or `DEP` nodes of the SET grammar (GP-2 hook) along one path, and inserts the reached sub-root into `verified_roots`. `K_open` is a constant sized so that one call stays within `MAX_CONTRACT_OPERATIONS = 256` (`O/tasks.md:44`); a deeper path takes several calls.
-- `openClaim(sub_root, head)`: requires `sub_root` in `verified_roots`; checks one head hash of the `LEAF`, `DEP` or `FOREIGN` form; inserts `claim_d` with `(outcome_d, n_steps)` into `runs`, or `fclaim_d` into `foreign`. It is idempotent: a key already present is not written again and the call changes nothing. It refuses an `ADM` or `VIEW` head (seal premises, never claims) and a `JOIN` root (no head claim).
+- `openClaim(sub_root, head)`: requires `sub_root` in `verified_roots`; checks one head hash of the `LEAF`, `DEP` or `FOREIGN` form; inserts the claim into `runs`, or `fclaim_d` into `foreign` (the contract-side form of these openings is open: section 1.11, FP-3, fact 3). It is idempotent: a key already present is not written again and the call changes nothing. It refuses an `ADM` or `VIEW` head (seal premises, never claims) and a `JOIN` root (no head claim).
 - Domains: the SET domain words of the GP-2 hook, `SHK_RUN` and `SHK_CLAIM`, computed with the same pinned Poseidon as the recursion.
 
 #### Invariants
@@ -2673,12 +2890,12 @@ Named refusals (contract tests with a weakened control): `ledger_double_settle_t
 Files: `tools/sherlock-sdk/sherlock-ledger.compact` (new; one contract), beside the existing `tools/sherlock-sdk/sherlock-run.compact` (the C6 per-program milestone contract, kept until N-11 is answered).
 ```
 // Compact sketch; not compiled.
-ledger runs: Map<Field, RunEntry>;          // claim_d -> (outcome_d, n_steps)
+ledger runs: Map<Field, Field>;             // claim_pub -> outcome_pub (section 1.11, FP-4, FP-6)
 ledger foreign: Map<Field, Boolean>;        // fclaim_d
 ledger verified_roots: Set<Field>;
 ledger reg_root: Field;                     // history per N-8
-// Requires: the wrap proof verifies with the four values in its effect words. Ensures: claim_d inserted once, or refused.
-export circuit acceptRun(prog_d: Field, input_d: Field, outcome_d: Field, n_steps: Uint<64>): [];
+// Requires: the wrap proof verifies with the three values in its effect words. Ensures: claim_pub inserted once, or refused.
+export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [];   // section 1.11, FP-3, FP-4, FP-6
 // Requires: the wrap proof of the collection statement verifies; reg_root is current. Ensures: set_root in verified_roots; no claim write.
 export circuit acceptCollection(reg_root: Field, set_root: Field, shape_d: Field): [];
 // Requires: root in verified_roots; at most K_open JOIN or DEP openings. Ensures: the reached sub-root in verified_roots.
@@ -2713,7 +2930,7 @@ No bus tuples. Rules that bind the other kits:
 - The anchor lane carries `C_P` or a lock value `A_j`, both salted digests. Plain `prog_d` never reaches the ledger.
 - `X`, `mode`, `j`, `k` and `run_tag` are public values of `L` only; the wrap takes them as private witness.
 - Statement digests: the salt of `input_d` comes from the user's CSPRNG (8 BabyBear elements in the STARK, a full Fr element in public). The hiding commitment in `outcome_d` and the salted `prog_d` of a private program are inputs of the small-field digest `d2` inside `PoseidonFr(tag, pack(d2))`; the salts are private words of `DIGEST` entries and private witness of the wrap. The shard plan binds to the unsalted program digest inside the STARK layers only.
-- Shape: per-AIR heights and the set of AIRs present stay inside the user's trust boundary. `n_steps` and leaf counts follow fixed padding rules. A chunked call's chunk count is a function of the public transcript length; where a secret branch changes the length, filler chunks pad it to the entry bound.
+- Shape: per-AIR heights and the set of AIRs present stay inside the user's trust boundary. `n_steps` is never public (section 1.11, FP-6); leaf counts follow the public padding `N_pub` of the plan. A chunked call's chunk count is a function of the public transcript length; where a secret branch changes the length, filler chunks pad it to the entry bound.
 - Never allowed: a helper that proves a STARK layer or `L`; a remote unmasked MSM, NTT, quotient or Merkle hash; the full sponge state on a helper; reuse of a blinding slot; a helper-made slot.
 - Aggregation: no aggregator receives STARK proofs. One wrap settles one `ContractCall`. A user's own batch (OD-12, one batch digest per `acceptRun`, opt-in) keeps every witness local.
 - Prover daemon: the resident Sherlock prover (OD-13) listens on a local socket and holds a pool of one-use blinding slots.
@@ -2998,13 +3215,13 @@ Freeze prerequisites (one list; B2 finding 18). Group F starts only when each li
 | Reference coverage | kit REFERENCE BRIDGE; X13 | open; a prerequisite of group L, not of the leaf interface freeze |
 | Record layouts and physical cells per record | AD-11 | open |
 | ROM depth over physical rows and `K_rom` | AD-12, X15 | open |
-| FP-1 Bus tuple and ports over BabyBear | the canonical limb encoding of every key and payload, the injectivity lemma over the limbs, LogUp interaction bounds in place of BUS-007, AIR interfaces in place of the halo2 `Layouter<F>` signatures (S9 council: all three lanes) | open |
-| FP-2 Recursive statement envelope of the STARK node | the deferred-log commitment `(d, n)` and the forwarded `key_root` in the node statement, with the update rule of every mode (disabled slot, SEAL, JOIN, discharge), consumed exactly by `L` (S9 council) | open |
-| FP-3 Public statement codec | which layer (`L` or the wrap) opens the sealed SET head (LW-008), the run and collection effect-word indices and discriminator in the `2 + L_TX` call vector, the index table of the public values of `L`, and the public form of `prog_d` (owner item N-11; ZK-002 keeps plain `prog_d` off the ledger) | open; N-11 is an owner item |
-| FP-4 One digest table | one definition (field, sponge, tag, preimage order, salt) of `input_d`, `outcome_d`, `prog_d` through `image_d`, `claim_d` and `fclaim_d` under `sherlock-value/2`; the tags `SHK_RUN`, `SHK_CLAIM`, `SHK_SET_LEAF`, `SHK_ADM`, `SHK_VIEW` registered under OD-18; VALUE DIGEST, HASH and INIT restated from their `sherlock-value/1` prototype forms (S9 council: all three lanes) | open |
-| FP-5 Seal read of `view_root` | a typed authenticated opening of `view_root` from the state (header word or body opening) for both seal modes under AD-17 form (b) | open; AD-17 is an owner item |
-| FP-6 Public `n_steps` | exact height (NODE-003) or a padded value (ZK-008) | open; the `n_steps` rule is an owner item |
-| FP-7 Chunk and E-1 bindings | the claim address and `ep_hash` per chunk under placement V (ANC-010); the window offset of E-1 under a variable-length SHA-256 (CF-010) | open |
+| FP-1 Bus tuple and ports over BabyBear | the canonical limb encoding of every key and payload, the injectivity lemma over the limbs, LogUp interaction bounds in place of BUS-007, AIR interfaces in place of the halo2 `Layouter<F>` signatures (S9 council: all three lanes) | closed: section 1.11, FP-1; Lean `bus_enc_inj` open; LEAD F-1, F-2 |
+| FP-2 Recursive statement envelope of the STARK node | the deferred-log commitment `(d, n)` and the forwarded `key_root` in the node statement, with the update rule of every mode (disabled slot, SEAL, JOIN, discharge), consumed exactly by `L` (S9 council) | closed: section 1.11, FP-2; Lean `node_log_merge`, `node_key_route` open; LEAD F-3 to F-5 |
+| FP-3 Public statement codec | which layer (`L` or the wrap) opens the sealed SET head (LW-008), the run and collection effect-word indices and discriminator in the `2 + L_TX` call vector, the index table of the public values of `L`, and the public form of `prog_d` (owner item N-11; ZK-002 keeps plain `prog_d` off the ledger) | open: section 1.11, FP-3 closes the opening layer (`L`), `C_P`, the discriminator and the index table of `L` (LEAD F-6 to F-8); missing facts: the carrier of the effect region and `comm` from a multi-shard terminal state to the call vector, the call-vector lanes of `acceptRun` and `acceptCollection` (contract not built), the contract-side form of a collection under `sherlock-value/2`; N-11 is an owner item |
+| FP-4 One digest table | one definition (field, sponge, tag, preimage order, salt) of `input_d`, `outcome_d`, `prog_d` through `image_d`, `claim_d` and `fclaim_d` under `sherlock-value/2`; the tags `SHK_RUN`, `SHK_CLAIM`, `SHK_SET_LEAF`, `SHK_ADM`, `SHK_VIEW` registered under OD-18; VALUE DIGEST, HASH and INIT restated from their `sherlock-value/1` prototype forms (S9 council: all three lanes) | closed: section 1.11, FP-4; Lean `digest_table_inj` open; LEAD F-9, F-10 |
+| FP-5 Seal read of `view_root` | a typed authenticated opening of `view_root` from the state (header word or body opening) for both seal modes under AD-17 form (b) | closed: section 1.11, FP-5 (header word); Lean `header_open_sound` open; LEAD F-11; AD-17 stays an owner item |
+| FP-6 Public `n_steps` | exact height (NODE-003) or a padded value (ZK-008) | closed: section 1.11, FP-6 (not public); Lean `run_view_no_nsteps` open; LEAD F-12, the `n_steps` rule is an owner item |
+| FP-7 Chunk and E-1 bindings | the claim address and `ep_hash` per chunk under placement V (ANC-010); the window offset of E-1 under a variable-length SHA-256 (CF-010) | closed: section 1.11, FP-7; Lean `bind_label_sound` and CF-L2 open; LEAD F-13 |
 | FP-8 Universal key set | G1 to G5 passed; owner confirmation of OD-1 to OD-4, OD-17 and OD-18, with the OD-2 choice between 22-bit and 21-bit PoW | open; gate not passed |
 | SRC-023 at the window's capacity (`FitsWindow`, O14 and O47) | the Lean theorems, no `sorryAx` | open. It does not block the interface freeze; it blocks reporting SRC-023 as proved for the circuit rule. Until then the claim is stated with its evidence: C3 for leaves of at most 8 appends, MockProver and the Quint lane beyond |
 
@@ -3110,7 +3327,7 @@ Each entry has its options, the recommendation, what decides it, and an OWNER ma
 | AD-16 | Exhaust kind 7 against profile `/1` | the encoding lists it; SVM-009 refuses it (`O/dissent.md:226`) | DEC enforces the profile; the spec conflict stays recorded | the existing spec change | **OWNER** (existing open item) |
 | AD-17 (B2 finding 3) | Input admission: how the value behind `val_d` becomes readable by the run (`O/design.md:194`, open since the C6 review; SRC-021, owner question 1 of `O/dissent.md`) | (a) a loading prefix that writes `enc(x)` into memory before `Eval(ENTRY)`; (b) by-digest admission with an empty genesis memory and a certified read-only input view: the input is a reference by digest, a step reads an input node through `AuthIn` under the `view_root` body word, and the seal requires the `VIEW(val_d, view_root)` claim of VIEW-WORK (kit NODE INTEGRATION); (c) an input constant table under a committed root with a digest check per row read | (b). It is the only candidate that meets the contract I1 to I7 of kit INIT without a scan of the input and without a new input-size limit; it makes the genesis memory the two empty constants, which is the simplest form of condition C4. (a) needs a scan at genesis or counted loading steps that change `n_steps`. Under (b) the mechanism for wide constructors and input reads is VIEW-WORK with the `AuthIn` read port (no fold in a step, no MEM append per read). Open points of (b): the depth `D_view`; whether a lazy view is allowed beside the full view; how the seal reads the `view_root` body word (the header opening returns `body_d` only); and the owner question of I7: `in_ty` checked on inspected nodes only (recommended), or a VIEW-WORK check of `ty(x) == in_ty` over the whole input | X11 (the cost of `read_input` per step and of VIEW-WORK per entered record; whether the reference charges `Literal(x)` cells for an input read; step count against the reference run of `apply(prog, x)`; a constructor input of more than 8 fields) | **OWNER** (it settles an open item of the governing specification) |
 | AD-18 (B2 finding 3) | The one-arena Init field list: SRC-021 and `O/design.md:222-266` name 39 fields with four `(root, length)` pairs; L-9 and M-1 decide one arena | (a) amend SRC-021 and the Init table to the one-arena list of kit INIT: one `(len, root, tail_d)`, the two stack constants in place of `NIL` links, `input_d` and `deps_d` as header words; (b) keep four roots, which contradicts L-9 | (a) | a spec edit of `sherlock-vm-consensus-20261107`, after AD-17 | **OWNER** (SRC-021 text; the owner keeps the final call on it) |
-| AD-19 (B2 finding 5) | Structure of the state commitment | (a) a flat sponge over all words, re-hashed in full wherever a word is opened; (b) a header and body commitment: a capacity-tagged body digest and a six-input pinned header | (b), specified in kit BOUNDARY COMMITMENT. It keeps the landed opening pattern and costs one small sponge per opening. It deviates from the letter of LC AUDIT item 25 for the header only (`FD/ARCH-AUDIT-RESPONSE.md`) | X10 (the opening measured inside the NODE seal modes; kit L AND WRAP opens a SET head only (the layer, `L` or the wrap, is open: FP-3)) | no; **OWNER** only if X10 fails and the fallback leaf statement `sherlock-leaf-stmt/2` is needed (AD-13) |
+| AD-19 (B2 finding 5) | Structure of the state commitment | (a) a flat sponge over all words, re-hashed in full wherever a word is opened; (b) a header and body commitment: a body digest and a seven-input header (section 1.11, FP-5) | (b), specified in kit BOUNDARY COMMITMENT. It keeps the landed opening pattern and costs one small sponge per opening. It deviates from the letter of LC AUDIT item 25 for the header only (`FD/ARCH-AUDIT-RESPONSE.md`) | X10 (the opening measured inside the NODE seal modes; `L` opens a SET head only (section 1.11, FP-3)) | no; **OWNER** only if X10 fails and the fallback leaf statement `sherlock-leaf-stmt/2` is needed (AD-13) |
 | AD-20 (B2 finding 6) | Mid-run claim consumption | (a) input consumption only: a consumer takes a producer's Halted value as its input, checked by the input link at the seal; no owner-machine rule; (b) add an owner-machine consume rule to the profile, with the `deps_d` chain | (a) as the built path of this change, with the circuit side of (b) (chain, DL-STEP, SEAL-WITH-DEPS) specified so that (b) needs no new node relation. (a) meets the two acceptance lines of GP-002 as written, and the reference machine has no consume rule. Whether (a) alone is the whole of GP-2 is the lead's reading and is not settled here: field 39 of the Init table (`deps`, "no consumed claim") shows that consumption inside a run was contemplated, and SRC-021 says that the proof authenticates "the dependency claims" when the first execution segment begins (`O/requirements.md:46`), which this design does at the seal (the input link) and not at genesis. GP-1 to GP-4 are never narrowed: if the owner reads GP-2 as requiring (b), or requires the dependency to be bound at genesis, then (b) and that binding are required work of this change and (a) is only the first milestone. Dependency of (b) on the run entry: under (a) an input link is a `SHK_RUN` claim, so no foreign claim reaches a run claim; under (b) a FOREIGN claim can enter the `deps_d` chain and a `DEP` cover, so the run entry of kit L AND WRAP changes with (b) in one of two ways: (i) refuse a `DEP` head whose cover holds a FOREIGN member, or (ii) read `reg_root` into the run-entry transcript from contract state, as the collection entry does, and check it there (the four published run values do not change). Which one is chosen with (b) | X12; the owner's reading of GP-002 and of the SRC-021 sentence | **OWNER** (first among the machine-level owner questions: it decides the scope of GP-2 in this change, and option (b) adds a rule to the governing VM specification) |
 | AD-21 (B2 finding 14) | The normative semantic reference for the full language (nominal types, constructors of any arity, planned matches, structured inputs) | (a) extend the dedicated `sherlock-k-a/1` evaluator `reference.rs` and its types; (b) a separate full-language evaluator over the source language `moriarty-sherlock-nominal/1`, with the dedicated grammar unchanged; (c) declare the owner machine its own reference for these forms | (b). (c) makes the differential harness compare the owner machine with itself for exactly the forms GP-001 names | X13 (the census of projection gaps on the corpus) | **OWNER** (it decides what "the reference machine" is for GP-1's "every program of the Sherlock language") |
 | AD-22 (B2 finding 15) | Supported foreign proofs that cannot share the core accumulation SRS | (a) complete their final check in circuit, in bounded work units (FV-FINAL); (b) a second deferred accumulator per SRS, paired in the wrap | (a). (b) puts one constant per SRS into the wrap key, so a new SRS would need a new key | X14 (cost of the in-circuit final check per unit) | no; **OWNER** only if (b) is wanted |
@@ -3128,7 +3345,7 @@ N-1. How leaf proofs enter the binary node.
 N-2. Leaf statement lanes.
 - Options: (a) keep the landed seven lanes and carry `input_d`, `deps_d`, terminal kind and payload inside the state committed by `pre_d`/`post_d`, read by opening `post_d` at seal (CORE never writes `input_d` after Init); (b) a new versioned statement `sherlock-leaf-stmt/2` with extra lanes (A:80-93, G:42-53), which needs an SRC-001 amendment.
 - Recommendation: (a). It keeps the landed interface (`FD/DECISIONS.md`, lookup AUDIT finding 22) and adds no node column. Proposed here, not by either draft.
-- Decided by: X10 (the six-input header opening measured inside the NODE seal modes; kit BOUNDARY COMMITMENT specifies it) and node rows for (b). Spec amendment if (b). Lane 5 is the SRC-001 hash `rules_d`, which CORE computes (kit CORE); the lane named `rule` in `ivc.rs:70` is renamed with that change. This is a required computation, not a naming question (B2 finding 12).
+- Decided by: X10 (the header opening of section 1.11, FP-5, measured inside the NODE seal modes; kit BOUNDARY COMMITMENT specifies it) and node rows for (b). Spec amendment if (b). Lane 5 is the SRC-001 hash `rules_d`, which CORE computes (kit CORE); the lane named `rule` in `ivc.rs:70` is renamed with that change. This is a required computation, not a naming question (B2 finding 12).
 
 N-3. GP-2 dependency discharge format.
 - Options: (a) G: running chain `deps_d` from 0, discharged at seal by equality with a SET root (G:51,69); as written the two hash structures differ; (b) the B1 proposal: the dependency commitment is a SET hash built by a dependency-join in consume order; the audit showed that this is not a protocol (a consumed claim can sit inside a JOIN or a DEP with its own ancestors, and empty dependencies, order, repetition, claim extraction and `n_steps` were undefined; B2 finding 6); (c) A: bind a dependency root before execution with membership openings (A:733), which conflicts with empty dependencies at Init (`requirements.md:46`); (d) the protocol of the GP-2 hook, items 1 to 7: a typed SET grammar, a `SHK_DEPS` chain in the consumer, DESCEND and head opening to authenticate a claim inside any verified SET, a discharge list DL built by DL-STEP, and chain equality at SEAL-WITH-DEPS.
@@ -3185,7 +3402,7 @@ N-13. Staged or unified key set.
 - Decided by: node and decider rows of the binary node (N-1, N-5).
 
 N-14. Cross-area ask to BOUNDARY COMMITMENT (blocks the SEAL interface).
-- With the seven landed lanes, SEAL and SEAL-WITH-DEPS read `input_d`, the dependency commitment `deps_d`, the terminal kind and the terminal payload by opening `post_d`. Answered: BOUNDARY COMMITMENT commits these four words as the header of a header-and-body commitment (as `ivc.rs:81-84` does for the outcome tag and value) and gives the typed opening `open_state_header`, one six-input sponge; CORE never writes `input_d` after INIT. X10 measures the opening. If it does not fit, N-2 option (b) (a versioned leaf statement) is needed.
+- With the seven landed lanes, SEAL and SEAL-WITH-DEPS read `input_d`, the dependency commitment `deps_d`, the terminal kind and the terminal payload by opening `post_d`. Answered: BOUNDARY COMMITMENT commits these four words as the header of a header-and-body commitment (as `ivc.rs:81-84` does for the outcome tag and value) and gives the typed opening `open_state_header`, one header sponge (section 1.11, FP-5); CORE never writes `input_d` after INIT. X10 measures the opening. If it does not fit, N-2 option (b) (a versioned leaf statement) is needed.
 
 Note for the spec writer: lane 5 is `rule` in `crates/mori-recursion/src/ivc.rs:70` and `rules_d` in SRC-001 (`requirements.md:26`). SRC-001 defines it as `Poseidon(dom("SHK_RULES"), rid_0, ..., rid_(S-1))`; kit CORE owns the hash, its HASH slot, the public equality and the reserved zero lane.
 
@@ -3480,7 +3697,7 @@ The boundary SHALL serialize every future-readable CORE register, the fold cells
   - Scenario: WHEN incoming scratch is set to any value THEN `pre_d`, `post_d` and acceptance are unchanged (`core_scratch_incoming_free`).
 
 - Requirement: Poseidon header and body commitment is the default
-`pre_d` and `post_d` SHALL be the pinned six-input header digest over the terminal kind, the terminal payload, `input_d`, `deps_d` and a capacity-tagged body digest of the other schema words, in one pass with no challenges. They SHALL be published in the seven leaf lanes with the genesis gate `h_pre == 0`.
+`pre_d` and `post_d` SHALL be the header digest of section 1.11, FP-5, over the terminal kind, the terminal payload, `input_d`, `deps_d`, `view_root` and a body digest of the other schema words, in one pass with no challenges. They SHALL be published in the seven leaf lanes with the genesis gate `h_pre == 0`.
   - Scenario: WHEN two leaves stitch THEN `post_d` equals the next `pre_d` iff all words match (`ok_boundary_poseidon_two_leaf_stitch`); Lean O29.
   - Scenario: WHEN a header word is hashed only inside the body, or `body_d` is not the body sponge output THEN refused (`header_word_moved_to_body`, `header_body_d_unlinked`).
 
@@ -3517,7 +3734,7 @@ Each requirement is to stay under 500 characters; scenarios carry examples.
   - Scenario: WHEN a relation file lacks `S_MAX` THEN deserialization is refused -> host refusal test `node_relation_missing_smax`.
 
 `specs/sherlock-decider/spec.md` (G:568 name)
-- Requirement: The run decider publishes only `[prog_d, input_d, outcome_d, n_steps]`.
+- Requirement: The run decider publishes only `[C_P, input_pub, outcome_pub]` (section 1.11, FP-6).
   - Scenario: WHEN a sealed Halted, Rejected or Exhausted run is decided THEN the public inputs are exactly the four values and no state digest -> `pos_decider_all_outcomes`; Quint `NoStateDigestOnChain`; Lean DEC-L1.
   - Scenario: WHEN a SEG root, Running or terminal, or a forged SET head is offered to the run entry THEN unsatisfiable -> `decider_seg_root_as_run`, `decider_set_head_forged`.
 - Requirement: Every carried obligation reaches the pairing.
@@ -3660,7 +3877,7 @@ A task is ticked only on passing evidence: a `scripts/doctorwatson check <ID>` p
 | X7 | Binary node shapes: leaf key direct against a one-leaf lift (N-1); the MERGE-WORK node, two enabled prior proofs plus one real owner step with its memory, stack and value-digest work in one node (N-6; two successive nodes are not this measurement); decider with and without a closing proof (N-5) | N-1, N-5, N-6, N-13 | the NODE INTEGRATION, L AND WRAP and GP-4 specs |
 | X8 | Foreign adapter probe: one Compact adapter class and the foreign lift relation | the scope of the GP-3 native path (N-10) | the GP-3 spec |
 | X9 | HASH constant-start mode for VALUE DIGEST with a differential test and a key-shape check | V-5 (whether the per-form constants save permutations at no fixed column) | the VALUE DIGEST spec row budget |
-| X10 (new, B2 finding 5) | The state header opening inside the NODE seal modes (kit L AND WRAP opens a SET head only (the layer, `L` or the wrap, is open: FP-3)): `open_state_header` with the six-input library sponge, against the leaf chip's header digest (`boundary_header_leaf_vs_std`), with node and decider rows and table rows | AD-19 and N-2 (does the seal-time opening fit; else the fallback leaf statement, AD-13) | the BOUNDARY COMMITMENT, NODE INTEGRATION and L AND WRAP specs |
+| X10 (new, B2 finding 5) | The state header opening inside the NODE seal modes (`L` opens a SET head only (section 1.11, FP-3)): `open_state_header` with the 42-word header sponge of section 1.11, FP-5, against the leaf chip's header digest (`boundary_header_leaf_vs_std`), with node and decider rows and table rows | AD-19 and N-2 (does the seal-time opening fit; else the fallback leaf statement, AD-13) | the BOUNDARY COMMITMENT, NODE INTEGRATION and L AND WRAP specs |
 | X11 (new, B2 finding 3) | Input admission forms on the reference machine and a leaf prototype: for by-digest admission, the cost of the `AuthIn` read port per step and of VIEW-WORK per entered record, and whether the reference charges `Literal(x)` cells for an input read; the owner-event count against the reference run of `apply(prog, x)`; a constructor input of more than 8 fields; the loading-prefix form for comparison | AD-17 (the form), then AD-18 (the Init values of fields 23, 24, 26, 27, 34, 35) | the INIT spec (its input part) and the SRC-021 amendment |
 | X12 (new, B2 finding 6) | GP-2 discharge: the Quint model `claimConsumption.qnt` of the SET grammar, DESCEND, DL-STEP and both seals with the invariants of the GP-2 hook, run by a Quint lane and re-run by the lead; then rows of each mode in the node | N-3 (the protocol of the GP-2 hook stands or is revised); AD-20 input | the GP-2 spec |
 | X13 (new, B2 finding 14) | Reference coverage census: every gap kind of the projection (`UnsupportedGeneric`, `UnmappedRule`, the others) counted over the corpus, and the 18 rules the X1 corpus did not fire | the size and order of the REFERENCE BRIDGE work; AD-21 input | the REFERENCE BRIDGE task; group L |
@@ -3699,7 +3916,7 @@ State of the freeze blockers: X1 and X2 are done; the remaining freeze prerequis
 | 22 | HASH: capacity tags; no unconstrained provider output; disabled permutation off the bus | HASH |
 | 23 | VALUE DIGEST: `sherlock-value/1` unchanged; constants per preimage length; whole-sponge slots | VALUE DIGEST; HASH |
 | 24 | `MemBackend` keeps `persist`, gains one block-line method; token opaque; W a parameter | MEMORY BACKEND; PAGE/ROM block cache |
-| 25 | boundary default: Poseidon digest over registers, stack hashes and `(len, root, tail_d)`, capacity-tagged | BOUNDARY COMMITMENT: the body digest is capacity-tagged; the six-input header is pinned (deviation in `FD/ARCH-AUDIT-RESPONSE.md`) |
+| 25 | boundary default: Poseidon digest over registers, stack hashes and `(len, root, tail_d)`, capacity-tagged | BOUNDARY COMMITMENT: the body digest is capacity-tagged; the header is pinned (section 1.11, FP-5; deviation in `FD/ARCH-AUDIT-RESPONSE.md`) |
 | 26 | Profile B conditions | MEMORY BACKEND variant ZmLogUp; NODE INTEGRATION and L AND WRAP extension points |
 | 27 | leaf public lanes reconciled with `ivc.rs:70-74` and the `h_pre == 0` genesis gate | NODE INTEGRATION; BOUNDARY COMMITMENT; AD-13 |
 | 28 | `LeafShape { s, w_flush, k_page, k_rom }` and the arena count stay parameters | section 1.5 (one `LeafShape`, with `n_cold` as a fifth field); CORE skeleton; AD-3, AD-4 |

@@ -64,7 +64,7 @@ A hybrid contract SHALL have a second cell `anchor_home` that deploy sets to `C_
 - **THEN** the call is refused (T2-N), and the same entry without the prologue is included with its write inside the run (control T2-N0)
 
 ### Requirement: ANC-010 Chunk tests and open items
-The chunk tests SHALL run in order: T1 at ledger level with 13 cases and no proofs, T2 on the XC-9 devnet with `chunky.compact` and the controls T2-N and T2-N0, then T3 with universal-key chunks after frontend M5. The source of the claim address and `ep_hash` per chunk under placement V SHALL stay open until the chunk specification fixes it.
+The chunk tests SHALL run in order: T1 at ledger level with 13 cases and no proofs, T2 on the XC-9 devnet with `chunky.compact` and the controls T2-N and T2-N0, then T3 with universal-key chunks after frontend M5. Under placement V, `bind_label` SHALL compute the claim address and `ep_hash` of each chunk from the pinned windows (FPR-014, LEAD F-13), and the run SHALL write `(addr_c, ep_hash, comm_(j+1))` into the effect words of its `claimContractCall`.
 
 #### Scenario: T3 with a full log
 - **WHEN** T3 runs chunk 1, chunk `j` and chunk `k` whose discretionary operations fill the log

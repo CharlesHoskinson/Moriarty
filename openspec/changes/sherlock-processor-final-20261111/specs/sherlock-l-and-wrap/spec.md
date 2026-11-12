@@ -55,25 +55,25 @@ The wrap SHALL check `Canon` on the limbs of `X`. The wrap SHALL require `X` to 
 - **THEN** the wrap circuit refuses the witness (mutant `wrap_x_not_cached_commitment`)
 
 ### Requirement: LW-007 A general run writes its run statement as effect words
-A general run SHALL be a Sherlock program whose effect words write its run statement `[prog_d, input_d, outcome_d, n_steps]` (OD-15), with `n_steps` in `[1, 2^64)` (SRC-006). The statement SHALL refuse Running. No state digest, memory root, tail digest, length, address or `result_be` SHALL be public. The form of `prog_d` in the effect words SHALL be fixed at the interface freeze, because LW-003 and ZK-002 keep plain `prog_d` off the ledger (owner item N-11, freeze prerequisite FP-3).
+A general run SHALL be a Sherlock program whose effect words write its run statement `[C_P, input_pub, outcome_pub]` (OD-15), with the public digest forms of FPR-010. The statement SHALL refuse Running. `n_steps` SHALL NOT be public (FPR-013). No state digest, memory root, tail digest, length, address, plain `prog_d` or `result_be` SHALL be public (LW-003, ZK-002). The public program identity `C_P` is LEAD F-7 under owner item N-11.
 
 #### Scenario: Every outcome
 - **WHEN** a sealed Halted, Rejected or Exhausted run is proved with every admitted rejection code and exhaustion kind
-- **THEN** the effect words carry exactly the four values (positive `pos_decider_all_outcomes`), and DEC-L1 (O34, `OutcomeStatement.lean`) is open
+- **THEN** the effect words carry exactly the three values (positive `pos_decider_all_outcomes`), and DEC-L1 (O34, `OutcomeStatement.lean`) is open
 
 #### Scenario: Forged statement
-- **WHEN** `n_steps` enters the claim, a state digest is public, or `n_steps = 2^64`
-- **THEN** the proof is refused (mutants `decider_steps_in_claim`, `decider_public_state_digest`, `decider_nsteps_2p64`)
+- **WHEN** `n_steps` enters the claim or the call vector, a state digest is public, or `n_steps = 2^64`
+- **THEN** the proof or the wrap key is refused (mutants `decider_steps_in_claim`, `decider_public_state_digest`, `decider_nsteps_2p64`, keygen refusal `decider_nsteps_public`)
 
 ### Requirement: LW-008 The run statement comes from a sealed SET head
-The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. The layer that opens the head SHALL be fixed at the interface freeze (freeze prerequisite FP-3).
+The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. The opening layer SHALL be `L` (FPR-007, LEAD F-6).
 
 #### Scenario: Unsealed root or forged head
 - **WHEN** a SEG root is offered as a run, or the SET head preimage differs from the run statement
 - **THEN** the proof is refused (mutants `decider_seg_root_as_run`, `decider_set_head_forged`), and the seal predicates stay in NODE INTEGRATION (NODE-003)
 
 ### Requirement: LW-009 The collection statement carries no claim count
-A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect words, with a schema separate from the run statement. No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The effect-word form SHALL be fixed at the interface freeze (freeze prerequisite FP-3).
+A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect words, with a schema separate from the run statement. No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The call-vector lanes and the contract-side form of a collection are open (FPR-009).
 
 #### Scenario: Three runs joined
 - **WHEN** three sealed runs of different programs are joined and wrapped
@@ -84,7 +84,7 @@ A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect wo
 - **THEN** the call is refused (Quint invariant `StaleOrForeignRegRootRefused`)
 
 ### Requirement: LW-010 Replay is refused by `claim_d` only
-The replay identity SHALL be `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023).
+The replay identity SHALL be `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023). The contract SHALL key it by its public image `claim_pub = transientHash([C_P, input_pub, outcome_pub])` (FPR-010). Every partition of one run SHALL have the salt of its `input_d`, so every partition SHALL have one `claim_pub`.
 
 #### Scenario: Second partition
 - **WHEN** the same run is proved under a second leaf partition and submitted

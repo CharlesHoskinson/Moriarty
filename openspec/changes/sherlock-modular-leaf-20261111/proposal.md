@@ -19,7 +19,7 @@ The change can move the terminal evidence-gated decision of `sherlock-vm-consens
 ## What Changes
 
 - One capability spec per module kit (24 kits, list below), each with requirement IDs per kit.
-- The bus schema `(chip, key, a, b, c)` (halo2 prototype form over `Fq`; it freezes in its BabyBear limb encoding, freeze prerequisite FP-1 of `FD/ARCHITECTURE.md` section 3.1) with two request lanes and one provider table, the chip registry, the tagged fixed table for RANGE and DEC, and the named copy-constrained ports (`FD/ARCHITECTURE.md` sections 1.2 and 1.3).
+- The bus schema `(chip, key, a, b, c)` (halo2 prototype form over `Fq`; its frozen form is the BabyBear encoding of `FD/ARCHITECTURE.md` section 1.11, FP-1, spec `sherlock-freeze-prerequisites` of `sherlock-processor-final-20261111`) with two request lanes and one provider table, the chip registry, the tagged fixed table for RANGE and DEC, and the named copy-constrained ports (`FD/ARCHITECTURE.md` sections 1.2 and 1.3).
 - Profile A as the built path: dense tail-buffered Merkle memory with 8-record PAGE and ROM cache lines, and a Poseidon header-and-body boundary digest (decisions L-1, M-1, E-1).
 - Hash-chain FRAMES and TASKS stacks with the compound stack step (R-3, revision B2 finding 2).
 - `sherlock-value/1` unchanged (L-3).

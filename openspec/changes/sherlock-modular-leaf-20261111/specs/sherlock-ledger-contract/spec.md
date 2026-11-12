@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: LDG-001 One contract holds one ledger of settled claims
-The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: claim_d -> (outcome_d, n_steps)`, `foreign: fclaim_d -> ()`, `verified_roots` and the registry root. Every entry point SHALL read and write this one state. Two contracts with separate ledgers SHALL NOT be used.
+The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: claim_pub -> outcome_pub` (FPR-010, FPR-013; amendment of `n_steps` out of the map, owner item F-12), `foreign: fclaim_d -> ()`, `verified_roots` and the registry root. Every entry point SHALL read and write this one state. Two contracts with separate ledgers SHALL NOT be used.
 
 #### Scenario: Same claim through two entry points
 - **WHEN** a run is accepted by `acceptRun` and the same `claim_d` is later opened from a collection by `openClaim`
 - **THEN** `runs` holds the claim once and the second call changes nothing (positive `ledger_accept_run_then_open_same_claim_is_noop`), and a contract with two maps is refused by the control test `ledger_double_settle_two_entries`
 
 ### Requirement: LDG-002 `acceptRun` settles a run claim at most once
-`acceptRun(prog_d, input_d, outcome_d, n_steps)` SHALL verify the wrap proof whose effect words carry the four values with `prog_d` as call data (SRC-007; N-11, OWNER). Plain `prog_d` SHALL NOT be call data (ZK-002): the `prog_d` argument and the `prog_d` input of `claim_d` are the public form of the program identity that owner item N-11 and freeze prerequisite FP-3 fix. It SHALL compute `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and SHALL refuse a `claim_d` that is already in `runs`.
+`acceptRun(C_P, input_pub, outcome_pub)` SHALL verify the wrap proof whose effect words carry the three values (FPR-010). Plain `prog_d` and `n_steps` SHALL NOT be call data (ZK-002, FPR-013); `C_P` is LEAD F-7 under N-11, OWNER. It SHALL compute `claim_pub = transientHash([C_P, input_pub, outcome_pub])` and SHALL refuse a `claim_pub` that is already in `runs`.
 
 #### Scenario: Replay of a settled run
 - **WHEN** a second `acceptRun` call carries a `claim_d` that is already in `runs`, from any partition

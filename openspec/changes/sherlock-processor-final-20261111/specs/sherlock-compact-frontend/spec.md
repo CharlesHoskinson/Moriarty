@@ -68,7 +68,7 @@ An entry with `L_e > L_TX - A` SHALL be a compile error that names the entry and
 - **THEN** one wrap key constant changes and no `prog_d` changes
 
 ### Requirement: CF-010 E-1 evidence gates the design
-T0 SHALL gate placement V. The frontend SHALL record T0 to T6. The open items SHALL stay open until measured: the remaining T2 mutants, the `label_d` link, T3 to T6, T0 on calls with a fallible transcript or non-empty effects, and the window position under a variable-length SHA-256.
+T0 SHALL gate placement V. The frontend SHALL record T0 to T6. The open items SHALL stay open until measured: the remaining T2 mutants, the `label_d` link, T3 to T6, and T0 on calls with a fallible transcript or non-empty effects. The window position under a variable-length SHA-256 SHALL follow FPR-015.
 
 #### Scenario: T0 and T1 on the local devnet
 - **WHEN** T0 rebuilds `m` from public transaction bytes and T1 runs the attack on a local ledger 9.1.0.1 devnet

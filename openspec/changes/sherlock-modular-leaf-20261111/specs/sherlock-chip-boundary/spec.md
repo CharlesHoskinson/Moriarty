@@ -16,7 +16,7 @@ The boundary SHALL serialize every future-readable CORE register, the fold cells
 - **THEN** O28 (`BoundaryCommitment.lean`, the serialization is injective and complete) is proved, and today it is open
 
 ### Requirement: BND-002 Poseidon header and body commitment is the default
-`pre_d` and `post_d` SHALL be the pinned six-input header digest over the terminal kind, the terminal payload, `input_d`, `deps_d` and a capacity-tagged body digest of the other schema words, in one pass with no challenge (AD-19). They SHALL be published in the seven leaf lanes. Leaf lane 1 SHALL equal the `prog_d` body word.
+`pre_d` and `post_d` SHALL be the header digest `P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)` with `body_d` a digest of the other schema words, in one pass with no challenge (AD-19, FPR-012). They SHALL be published in the seven leaf lanes. Leaf lane 1 SHALL equal the `prog_d` body word.
 
 #### Scenario: Two-leaf stitch
 - **WHEN** two leaves stitch
@@ -31,7 +31,7 @@ The boundary SHALL serialize every future-readable CORE register, the fold cells
 - **THEN** the correct circuit refuses the witness (mutants `boundary_tag_equals_memory_tag`, `boundary_commitment_substituted`)
 
 ### Requirement: BND-003 Typed header opening for the seal
-`open_state_header` SHALL return the four header words and `body_d` of the state that an authenticated `post_d` commits, with one six-input library sponge. The seal modes of NODE INTEGRATION SHALL be its only users. Kit L AND WRAP SHALL open a SET head only. Its fit inside NODE INTEGRATION SHALL be measured by X10 before the NODE spec freezes. If X10 fails, the fallback leaf statement SHALL be a new versioned statement (AD-13, OWNER).
+`open_state_header` SHALL return the five header words and `body_d` of the state that an authenticated `post_d` commits, with one header sponge (FPR-012). The seal modes of NODE INTEGRATION SHALL be its only users. Kit L AND WRAP SHALL open a SET head only. Its fit inside NODE INTEGRATION SHALL be measured by X10 before the NODE spec freezes. If X10 fails, the fallback leaf statement SHALL be a new versioned statement (AD-13, OWNER).
 
 #### Scenario: Leaf against library sponge
 - **WHEN** the leaf header digest and the library sponge are computed on the same words

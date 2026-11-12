@@ -23,7 +23,7 @@ NODE SHALL range-check `h_lo` and `h_hi` below `2^64` with 8-bit byte decomposit
 - **THEN** the node is unsatisfiable (mutants `node_height_wrap`, `node_steps_zero`, `node_steps_gt_smax`)
 
 ### Requirement: NODE-003 Seal requires genesis and a terminal state and erases physical fields
-SEAL SHALL require `h_lo == 0`, a terminal opened `outcome_tag` and `deps_d == EMPTY_DEPS` from `open_state_header(post_d)`. It SHALL output `set_root = H(SHK_SET_LEAF, claim_d, n_steps)` with `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and `n_steps = h_hi`, and no physical state field. The opening SHALL be measured by X10 (AD-19). SEAL and SEAL-WITH-DEPS SHALL be the only seal path. Kit L AND WRAP SHALL open the sealed SET head and SHALL NOT check a seal predicate again.
+SEAL SHALL require `h_lo == 0`, a terminal opened `outcome_tag` and `deps_d == EMPTY_DEPS` from `open_state_header(post_d)`. It SHALL output `set_root = H(SHK_SET_LEAF, claim_d, n_steps)` with `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and `n_steps = h_hi`, and no physical state field. The opening SHALL be measured by X10 (AD-19). SEAL and SEAL-WITH-DEPS SHALL be the only seal path. `L` SHALL open the sealed SET head and SHALL NOT check a seal predicate again (FPR-007, FPR-013).
 
 #### Scenario: Seal of every outcome
 - **WHEN** a SEG with `h_lo == 0` and a Halted, Rejected or Exhausted state is sealed
@@ -109,7 +109,7 @@ Under input admission form (b) (AD-17, OWNER), VIEW-WORK SHALL continue `view_st
 - **THEN** the unit is unsatisfiable (mutants `view_record_forged`, `view_claim_before_done`), and NODE-L5 (`BinaryNode.lean`) is open
 
 ### Requirement: NODE-013 A seal with an input requires the view of that input
-Under form (b), for every re-hashed `val_d` other than the absent-input constant, the seal premise SHALL open as `JOIN(ADM(adm_d), VIEW(vw_d))`. `vw_d` SHALL equal `H(SHK_VIEW, 1, val_d, view_root)`, with `val_d` from the re-hashed `input_d` preimage and `view_root` the run's body word. The seal read path of `view_root` SHALL be decided under AD-17 before this requirement freezes.
+Under form (b), for every re-hashed `val_d` other than the absent-input constant, the seal premise SHALL open as `JOIN(ADM(adm_d), VIEW(vw_d))`. `vw_d` SHALL equal `H(SHK_VIEW, 1, val_d, view_root)`, with `val_d` from the re-hashed `input_d` preimage and `view_root` the header word that `open_state_header` returns (FPR-012).
 
 #### Scenario: View of another input
 - **WHEN** the `VIEW` claim names another `val_d` or another `view_root`, or a run with a present input seals with an `ADM`-only premise

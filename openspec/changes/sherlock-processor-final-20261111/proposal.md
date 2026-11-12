@@ -33,10 +33,11 @@ This change specifies the new and changed co-processor kits, makes zero knowledg
 | `sherlock-midnight-side` | Midnight side | MID | 1.10 |
 | `sherlock-shard-plan` | layer stack, shard plan and keys | SPL | 1.6, 1.7 |
 | `sherlock-derived-gates` | derived gates and constraint tests | DG | 3.3 |
+| `sherlock-freeze-prerequisites` | the BabyBear interfaces of freeze prerequisites FP-1 to FP-7 | FPR | 1.11 |
 
 The ID prefixes do not collide with the prefixes of `sherlock-vm-consensus-20261107` and `sherlock-modular-leaf-20261111`. The Lean labels BR-L1 to BR-L4, ZK-L1, ZK-L2, CF-L1, CF-L2 and DEC-L1 are obligations, not requirement IDs.
 
-Out of scope: the machine-level leaf kits (they stay in `sherlock-modular-leaf-20261111`), Profile B, continuation mode 2, any change of the GP-001 to GP-004 text, Mainnet operations, and the interface freeze itself (plan step 11).
+Out of scope: the machine-level leaf kits (they stay in `sherlock-modular-leaf-20261111`), Profile B, continuation mode 2, any change of the GP-001 to GP-004 text, Mainnet operations, and the interface freeze itself (plan step 11). The interfaces that the freeze proposal freezes are in scope as FPR-001 to FPR-016; FP-3 stays open with three missing facts (FPR-009).
 
 ## Supersedes
 
