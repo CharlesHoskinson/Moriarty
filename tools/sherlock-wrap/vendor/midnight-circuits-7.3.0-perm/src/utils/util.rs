@@ -1,0 +1,214 @@
+// This file is part of MIDNIGHT-ZK.
+// Copyright (C) Midnight Foundation
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// TODO: We should add docs to all of this utilities.
+#![allow(missing_docs)]
+
+#[cfg(any(test, feature = "testing"))]
+use midnight_proofs::plonk::Error;
+use num_bigint::{BigInt as BI, BigUint, Sign};
+use num_integer::Integer;
+use num_traits::{One, Signed, Zero};
+#[cfg(any(test, feature = "testing"))]
+use {
+    midnight_proofs::circuit::Layouter,
+    midnight_proofs::plonk::{Advice, Column, ConstraintSystem, Fixed, Instance},
+};
+
+use crate::CircuitField;
+
+/// Returns a quadratic non-residue of the given field.
+pub fn qnr<F: CircuitField>() -> F {
+    debug_assert!(bool::from(F::MULTIPLICATIVE_GENERATOR.sqrt().is_none()));
+    F::MULTIPLICATIVE_GENERATOR
+}
+
+pub fn big_to_fe<F: CircuitField>(e: BigUint) -> F {
+    let modulus = F::modulus();
+    let e = e % modulus;
+    F::from_str_vartime(&e.to_str_radix(10)[..]).unwrap()
+}
+
+/// Panics if the conversion is not possible.
+pub fn fe_to_u32<F: CircuitField>(fe: F) -> u32 {
+    let u32_digits = fe.to_biguint().to_u32_digits();
+    assert!(u32_digits.len() <= 1);
+    u32_digits.first().cloned().unwrap_or(0)
+}
+
+/// Panics if the conversion is not possible.
+pub fn fe_to_u64<F: CircuitField>(fe: F) -> u64 {
+    let u64_digits = fe.to_biguint().to_u64_digits();
+    assert!(u64_digits.len() <= 1);
+    u64_digits.first().cloned().unwrap_or(0)
+}
+
+/// Panics if the conversion is not possible.
+pub fn fe_to_u128<F: CircuitField>(fe: F) -> u128 {
+    let u64_digits = fe.to_biguint().to_u64_digits();
+    assert!(u64_digits.len() <= 2);
+    ((u64_digits.get(1).cloned().unwrap_or(0) as u128) << 64)
+        | (u64_digits.first().cloned().unwrap_or(0) as u128)
+}
+
+pub fn u32_to_fe<F: CircuitField>(x: u32) -> F {
+    F::from(x as u64)
+}
+
+pub fn u64_to_fe<F: CircuitField>(x: u64) -> F {
+    F::from(x)
+}
+
+pub fn u128_to_fe<F: CircuitField>(x: u128) -> F {
+    F::from_u128(x)
+}
+
+fn from_u64_le_digits<F: CircuitField>(digits: &[u64]) -> F {
+    if digits.is_empty() {
+        return F::ZERO;
+    }
+
+    let mut acc = F::from(*digits.last().unwrap());
+    for digit in digits.iter().rev().skip(1) {
+        for _ in 0..64 {
+            acc = acc.double();
+        }
+        acc += F::from(*digit)
+    }
+    acc
+}
+
+pub fn bigint_to_fe<F: CircuitField>(value: &BI) -> F where
+{
+    let (sign, u64_chunks) = value.to_u64_digits();
+    let res = from_u64_le_digits::<F>(&u64_chunks);
+
+    if sign == Sign::Minus {
+        -res
+    } else {
+        res
+    }
+}
+
+/// Off-circuit GLV scalar decomposition.
+/// Given a scalar `x`, and the cubic-root `zeta`, returns `(s1, x1), (s2, x2)`
+/// with x = ±x1 + zeta * (±x2), where the sign in front of `x1`
+/// (resp. `x2`) depends on `s1` (resp. `s2`) as `+ if s1 else -`.
+///
+/// The resulting `x1` and `x2` are half-size, i.e. they can be expressed
+/// with at most `ceil(F::NUM_BITS / 2)` bits.
+pub fn glv_scalar_decomposition<F: CircuitField>(x: &F, zeta: &F) -> ((bool, F), (bool, F)) {
+    // We follow Algorithm 3.74 from "Guide to Elliptic Curve Cryptography",
+    // Hankerson, Menezes, Vanstone, 2004.
+
+    let n: BI = F::modulus().into();
+    let lambda: BI = zeta.to_biguint().into();
+    let k: BI = x.to_biguint().into();
+
+    // xgcd:
+    //  Input: Positive integers a, b with a >= b.
+    // Output: Three sequences r, s, t such that for every i,
+    //         si * a + ti * b = ri
+    //         and (r0, s0, t0) = (a, 1, 0)
+    //         and (r1, s1, t1) = (b, 0, 1)
+    let xgcd = |a: &BI, b: &BI| -> (Vec<BI>, Vec<BI>, Vec<BI>) {
+        let mut rs = vec![a.clone(), b.clone()];
+        let mut ss = vec![BI::one(), BI::zero()];
+        let mut ts = vec![BI::zero(), BI::one()];
+
+        loop {
+            if rs[rs.len() - 1].is_zero() {
+                break;
+            }
+
+            let q = rs[rs.len() - 2].clone() / rs[rs.len() - 1].clone();
+            let r = rs[rs.len() - 2].clone() % rs[rs.len() - 1].clone();
+            let s = ss[rs.len() - 2].clone() - q.clone() * ss[rs.len() - 1].clone();
+            let t = ts[rs.len() - 2].clone() - q.clone() * ts[rs.len() - 1].clone();
+
+            rs.push(r);
+            ss.push(s);
+            ts.push(t);
+        }
+
+        (rs, ss, ts)
+    };
+
+    let (rs, _ss, ts) = xgcd(&n, &lambda);
+
+    // Let l be the greatest index such that rs[l] >= sqrt(n).
+    let l = rs.iter().position(|r: &BI| r.pow(2) < n).unwrap() - 1;
+
+    let cond = rs[l].pow(2) + ts[l].pow(2) <= rs[l + 2].pow(2) + ts[l + 2].pow(2);
+    let ll = if cond { l } else { l + 2 };
+
+    let a1 = rs[l + 1].clone();
+    let b1 = -ts[l + 1].clone();
+    let a2 = rs[ll].clone();
+    let b2 = -ts[ll].clone();
+
+    let div_with_rounding = |a: &BI, b: &BI| -> BI {
+        let (q, r) = a.div_rem(b);
+        q + BI::from(if r.clone() + r > b.clone() { 1 } else { 0 })
+    };
+
+    let c1 = div_with_rounding(&(b2.clone() * k.clone()), &n);
+    let c2 = div_with_rounding(&(-b1.clone() * k.clone()), &n);
+
+    let k1 = k - c1.clone() * a1 - c2.clone() * a2;
+    let k2 = -c1 * b1 - c2 * b2;
+
+    let s1 = k1.is_positive();
+    let s2 = k2.is_positive();
+    let x1 = if s1 { k1 } else { -k1 };
+    let x2 = if s2 { k2 } else { -k2 };
+
+    // Throw an error if the x1 or x2 do not fit in the desired number of bits.
+    // This should never happen. Anyway, if this could happen, that would be a
+    // completeness issue (not soundness).
+    let max_length = F::NUM_BITS.div_ceil(2) as u64;
+    if x1.bits() > max_length || x2.bits() > max_length {
+        panic!(
+            "Oops, an error occurred in GLV decomposition. \
+             Please, open an issue to report this problem: \
+             https://github.com/midnightntwrk/midnight-circuits/issues"
+        )
+    };
+
+    ((s1, bigint_to_fe(&x1)), (s2, bigint_to_fe(&x2)))
+}
+
+/// A trait for configuring and instantiating chips in a simple way, without
+/// sharing resources with other chips.
+/// Only call `load_from_scratch` on chips/gadgets that were created with
+/// `new_from_scratch`.
+#[cfg(any(test, feature = "testing"))]
+pub trait FromScratch<F: CircuitField> {
+    type Config: Clone + std::fmt::Debug;
+
+    fn new_from_scratch(config: &Self::Config) -> Self;
+
+    /// Configure the chip/gadget from scratch.
+    ///
+    /// `advice_columns` and `fixed_columns` are shared column pools.
+    /// Implementations should use the columns already present and only grow the
+    /// vectors when they need more columns than currently available.
+    fn configure_from_scratch(
+        meta: &mut ConstraintSystem<F>,
+        advice_columns: &mut Vec<Column<Advice>>,
+        fixed_columns: &mut Vec<Column<Fixed>>,
+        instance_columns: &[Column<Instance>; 2],
+    ) -> Self::Config;
+
+    fn load_from_scratch(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error>;
+}

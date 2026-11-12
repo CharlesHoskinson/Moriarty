@@ -1,0 +1,40 @@
+diff -ru /midnight-circuits-7.3.0/src/hash/poseidon/poseidon_chip.rs midnight-circuits-7.3.0-perm/src/hash/poseidon/poseidon_chip.rs
+--- /midnight-circuits-7.3.0/src/hash/poseidon/poseidon_chip.rs	2006-07-23 19:21:28.000000000 -0600
++++ midnight-circuits-7.3.0-perm/src/hash/poseidon/poseidon_chip.rs	2026-11-12 13:54:31.943916239 -0700
+@@ -52,7 +52,8 @@
+ // A recurring type representing a set of assigned registers, representing the
+ // internal state of Poseidon's computation. Does not account for the additional
+ // registers needed in skipped rounds.
+-pub(super) type AssignedRegister<F> = [AssignedNative<F>; WIDTH];
++/// Assigned Poseidon register (`WIDTH` cells); public for the Sherlock E5 permutation access.
++pub type AssignedRegister<F> = [AssignedNative<F>; WIDTH];
+ 
+ /// In-circuit Poseidon state.
+ #[derive(Clone, Debug)]
+@@ -419,7 +420,7 @@
+     /// Poseidon permutation (`NB_FULL_ROUNDS` full rounds, separated in the
+     /// middle by `NB_PARTIAL_ROUNDS` partial rounds, possibly with
+     /// optimized skips).
+-    pub(super) fn permutation(
++    pub fn permutation(
+         &self,
+         layouter: &mut impl Layouter<F>,
+         inputs: &AssignedRegister<F>,
+diff -ru /midnight-zk-stdlib-2.4.0/src/lib.rs midnight-zk-stdlib-2.4.0-perm/src/lib.rs
+--- /midnight-zk-stdlib-2.4.0/src/lib.rs	2006-07-23 19:21:28.000000000 -0600
++++ midnight-zk-stdlib-2.4.0-perm/src/lib.rs	2026-11-12 13:12:22.080077205 -0700
+@@ -758,6 +758,14 @@
+         &self.biguint_gadget
+     }
+ 
++    /// Poseidon chip (Sherlock E5 vendored patch, visibility only: gives the bare
++    /// permutation; `configure` is unchanged).
++    pub fn poseidon_chip(&self) -> &PoseidonChip<F> {
++        self.poseidon_gadget
++            .as_ref()
++            .unwrap_or_else(|| panic!("ZkStdLibArch must enable poseidon"))
++    }
++
+     /// Gadget for performing map and non-map checks
+     pub fn map_gadget(&self) -> &MapGadget<F, NG, PoseidonChip<F>> {
+         self.map_gadget

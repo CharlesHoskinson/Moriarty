@@ -1,0 +1,43 @@
+# Sherlock E5: the one BLS12-381 wrap (ZkStdLib architecture) that verifies an L_Fr
+# proof natively in Fr. A separate workspace with its own Cargo.lock (as tools/gpu-prover):
+# the vendored midnight-circuits and midnight-zk-stdlib carry a visibility-only patch
+# (patches/perm-access.diff: the bare Poseidon permutation); `configure` is unchanged, so
+# the stock ledger reads the same constraint system (checked by ledger-check/).
+# The lockfile is seeded from tools/gpu-prover/Cargo.lock.
+[workspace]
+resolver = "3"
+members = ["."]
+exclude = ["vendor/midnight-circuits-7.3.0-perm", "vendor/midnight-zk-stdlib-2.4.0-perm", "ledger-check"]
+
+[package]
+name = "sherlock-wrap"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+midnight-proofs = { version = "=0.8.3", features = ["circuit-params", "committed-instances"] }
+midnight-circuits = "=7.3.0"
+midnight-zk-stdlib = "=2.4.0"
+midnight-curves = "=0.3.1"
+ff = "=0.13.1"
+group = "=0.13.0"
+blake2b_simd = "=1.0.5"
+rand = "=0.8.8"
+rand_chacha = "=0.3.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+num-bigint = "0.4"
+
+[patch.crates-io]
+midnight-circuits = { path = "vendor/midnight-circuits-7.3.0-perm" }
+midnight-zk-stdlib = { path = "vendor/midnight-zk-stdlib-2.4.0-perm" }
+
+[profile.release]
+debug = 1
+
+[profile.test]
+opt-level = 3
