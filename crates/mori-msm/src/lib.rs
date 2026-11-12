@@ -4,5 +4,25 @@
 //! the CUDA driver (cudarc). Feature `cuda` off: every call returns `None`.
 #![allow(unsafe_code)]
 
+use midnight_curves::{Fq, G1Projective};
+
 #[cfg(feature = "cuda")]
 pub mod dev;
+#[cfg(feature = "cuda")]
+pub mod mask;
+#[cfg(feature = "cuda")]
+pub mod msm;
+
+/// Drop-in for `mori_gpu::msm_g1`: `sum scalars[i] * bases[i]` with the skew mask
+/// (bases may be longer; the prefix is used). `None` means "not taken": run BLST.
+pub fn msm_g1(scalars: &[Fq], bases: &[G1Projective]) -> Option<G1Projective> {
+    #[cfg(feature = "cuda")]
+    {
+        mask::msm_g1(scalars, bases)
+    }
+    #[cfg(not(feature = "cuda"))]
+    {
+        let _ = (scalars, bases);
+        None
+    }
+}
