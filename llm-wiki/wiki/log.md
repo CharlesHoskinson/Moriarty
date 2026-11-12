@@ -385,5 +385,6 @@
 - `MidnightVK::read` rebuilds the constraint system from `ZkStdLib::configure(arch, k - 1)`; key bytes carry chip flags, not gates (CODE).
 - Toy `tools/gpu-prover/src/bin/m7_ledger_toy.rs` (one G4 lane, degree-5 gate, lookup, 1,026 public inputs): library verify accepts, ledger `VerifierKey::verify` gives `problem reading the verifier key` under 3 headers (MEASURED).
 - Single-lane stdlib wrap at OD-19: 2.37 M to 3.05 M rows, over the k = 21 gate (ESTIMATE).
-- Lead decision, owner to confirm: option C (G4 off chain, stdlib decider on chain) near term; option A (G4 arch in zk-stdlib) as target.
+- Lead decision, owner to confirm: no on-chain path chosen; M7c to M7e paused. Options: A G4 arch in zk-stdlib (ledger change), C stdlib decider over G4 (two BLS layers, NOT CHECKED), E Fr-terminal layer (OD-11, NOT CHECKED); B and D rejected.
+- Ledger-compatible path (lead decision, owner to confirm): P3, the stdlib wrap split into 3 chunk proofs at k = 21 as chained calls in one transaction; largest chunk 1.07 M rows, 60 percent of the gate (ESTIMATE).
 - Source: research/sherlock-m7-wrap-20261112/RESULTS.md on branch m7-wrap.
