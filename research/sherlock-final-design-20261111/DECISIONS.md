@@ -111,7 +111,7 @@ Sources: `research/sherlock-pipeline-animation-20261111/council/COUNCIL.md` (thr
 Source: `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` (main working copy): three blinded lanes, each `changes_requested`. Lead consistency fixes, owner to confirm; none is a new rule.
 
 - C-1. **The five freeze objects are not frozen.** The interface shapes freeze at S11 once FP-1 to FP-7 of `ARCHITECTURE.md` section 3.1 close; the universal key set freezes only after G1 to G5 pass and the owner confirms OD-1 to OD-4, OD-17 and OD-18 (FP-8).
-- C-2. **`L` opens the sealed SET head of a general run.** Section 1.3, kits BOUNDARY COMMITMENT and NODE INTEGRATION and NODE-003 already said so; LW-008 and kit L AND WRAP now agree.
+- C-2. **Which layer opens the sealed SET head stays open (FP-3).** Section 1.3, kits BOUNDARY COMMITMENT and NODE INTEGRATION and X10 said `L`; LW-008 left the layer to the freeze. Those sentences now say kit L AND WRAP and mark the layer as open. Owner item.
 - C-3. **No foreign proof is folded into an accumulator, under any SRS.** The STARK node has no accumulator (NODE-004, NODE-007); FV-FINAL checks every foreign proof in circuit (FVR-003, FREG-002, FREG-004). The cost of the same-SRS check in circuit is not measured (X14).
 - C-4. **The co-processor digests are of the `sherlock-value/2` form.** The `sherlock-value/1` forms of VALUE DIGEST, HASH and INIT are the halo2 prototype forms; the one digest table is FP-4.
-- C-5. **Plain `prog_d` of a private program is never call data of `acceptRun`** (ZK-002). Its public form is owner item N-11 (FP-3).
+- C-5. **Plain `prog_d` is never call data of `acceptRun`** (ZK-002). Its public form is owner item N-11 (FP-3).

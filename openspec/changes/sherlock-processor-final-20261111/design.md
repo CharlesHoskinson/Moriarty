@@ -71,8 +71,8 @@ The GPU wrap prover, the prover daemon, the Midnight side and the derived gates 
 
 The one list of open freeze items is the freeze-prerequisite table of `FD/ARCHITECTURE.md` section 3.1 (FP-1 to FP-8, from the final council of loop step S9, `research/sherlock-processor-final-20261111/COUNCIL-FINAL.md` on main). The interface shapes freeze at S11 once FP-1 to FP-7 close; the universal key set freezes only after G1 to G5 pass and the owner confirms OD-1 to OD-4, OD-17 and OD-18 (FP-8). The items below are part of that list.
 
-- The effect-word form of the collection statement (LW-009) and the index table of the public values of `L` (FP-3). `L` opens the sealed SET head of a general run (LW-008).
-- The form of `prog_d` in the run statement of a general run. `FD/ARCHITECTURE.md` kit L AND WRAP puts `[prog_d, input_d, outcome_d, n_steps]` in the effect words, and kit ZERO KNOWLEDGE says that plain `prog_d` never reaches the ledger. The design does not reconcile the two. The freeze fixes it under owner item N-11 (FP-3); until then plain `prog_d` of a private program is never call data (ZK-002, LDG-002).
+- Which layer opens the sealed SET head of a general run (LW-008), the effect-word form of the collection statement (LW-009) and the index table of the public values of `L` (FP-3).
+- The form of `prog_d` in the run statement of a general run. `FD/ARCHITECTURE.md` kit L AND WRAP puts `[prog_d, input_d, outcome_d, n_steps]` in the effect words, and kit ZERO KNOWLEDGE says that plain `prog_d` never reaches the ledger. The design does not reconcile the two. The freeze fixes it under owner item N-11 (FP-3); until then plain `prog_d` is never call data (ZK-002, LDG-002).
 - The source of the claim address and `ep_hash` per chunk under placement V (ANC-010).
 - The window position of E-1 under a variable-length SHA-256 (CF-010).
 - The order of the machine-level kits against the build phases of `FD/ARCHITECTURE.md` section 3.0.

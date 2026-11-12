@@ -47,7 +47,7 @@ If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel 
 - **THEN** the trigger of LW-014 is recorded and goes to the owner
 
 ### Requirement: GPW-007 Time figures need a run record
-A wrap time figure SHALL be reported MEASURED only with its run record and host load. Heavy jobs SHALL run one at a time under `heavy-run`. The k = 21 and k = 19 rows and a quiet-host repeat SHALL stay PENDING until measured.
+A wrap time figure SHALL be reported MEASURED only with its run record and host load. Heavy jobs SHALL run one at a time under `heavy-run`. A quiet-host repeat SHALL stay PENDING until measured. The wrap times of call-time paths 2 and 3 SHALL be reported as ESTIMATE conditional on the fused quotient kernel and the MSM rewrite, with the table of `PR` section 8 (k = 19 proxy, 20 and 21, MEASURED under load) as the baseline.
 
 #### Scenario: Figure from a loaded host
 - **WHEN** a time is measured at load average 16 to 24

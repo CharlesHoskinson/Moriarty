@@ -66,7 +66,7 @@ A general run SHALL be a Sherlock program whose effect words write its run state
 - **THEN** the proof is refused (mutants `decider_steps_in_claim`, `decider_public_state_digest`, `decider_nsteps_2p64`)
 
 ### Requirement: LW-008 The run statement comes from a sealed SET head
-The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. `L` SHALL be the layer that opens the head (`FD/ARCHITECTURE.md` section 1.3 and kits BOUNDARY COMMITMENT and NODE INTEGRATION).
+The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. The layer that opens the head SHALL be fixed at the interface freeze (freeze prerequisite FP-3).
 
 #### Scenario: Unsealed root or forged head
 - **WHEN** a SEG root is offered as a run, or the SET head preimage differs from the run statement

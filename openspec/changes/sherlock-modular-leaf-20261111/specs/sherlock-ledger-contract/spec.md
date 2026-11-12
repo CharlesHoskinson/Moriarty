@@ -8,7 +8,7 @@ The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: 
 - **THEN** `runs` holds the claim once and the second call changes nothing (positive `ledger_accept_run_then_open_same_claim_is_noop`), and a contract with two maps is refused by the control test `ledger_double_settle_two_entries`
 
 ### Requirement: LDG-002 `acceptRun` settles a run claim at most once
-`acceptRun(prog_d, input_d, outcome_d, n_steps)` SHALL verify the wrap proof whose effect words carry the four values with `prog_d` as call data (SRC-007; N-11, OWNER). For a private program, plain `prog_d` SHALL NOT be call data (ZK-002); the public form of the program identity in the call data and in `claim_d` is owner item N-11 and freeze prerequisite FP-3. It SHALL compute `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and SHALL refuse a `claim_d` that is already in `runs`.
+`acceptRun(prog_d, input_d, outcome_d, n_steps)` SHALL verify the wrap proof whose effect words carry the four values with `prog_d` as call data (SRC-007; N-11, OWNER). Plain `prog_d` SHALL NOT be call data (ZK-002): the `prog_d` argument and the `prog_d` input of `claim_d` are the public form of the program identity that owner item N-11 and freeze prerequisite FP-3 fix. It SHALL compute `claim_d = H(SHK_RUN, 1, prog_d, input_d, outcome_d)` and SHALL refuse a `claim_d` that is already in `runs`.
 
 #### Scenario: Replay of a settled run
 - **WHEN** a second `acceptRun` call carries a `claim_d` that is already in `runs`, from any partition
