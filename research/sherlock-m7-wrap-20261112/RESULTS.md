@@ -124,6 +124,35 @@ Every gate passes in all 4 height and `w_stack` cases; the weakest term is alway
 
 **What option E costs** (NOT MEASURED): a second proving engine (an Fr base field for stark-backend: NTT over Fr, whose two-adicity 32 covers the domain, and Poseidon over Fr; no GPU kernels exist); the `L_Fr` trace, which does the BabyBear-in-Fr verifier work that option B puts in PLONK rows (about 2.46 M stdlib-row equivalents of operations, ESTIMATE, at unknown AIR width); its prove time; and its own soundness premises (A2 for an Fr STARK). The deferred-log replay could move from the wrap into `L_Fr`, where Fr is native; that would cut the 76,264 log rows of the wrap (not modelled).
 
+### 2b.3 A real `L` proof with the Midnight Poseidon Fr hash (MEASURED, 2026-11-12)
+
+This is the first half of M7b, and it holds under every option. Code (copies under `~/.cache/m7-wrap/src/`; the files are saved in `lfr/` beside this file):
+
+- `p3-bls12-381-fr`: a p3 0.4.3 field type `Bls12381Fr`, a transparent wrapper over `midnight_curves::Fq`, so every operation is the ff type's own.
+- stark-sdk config `baby_bear_bls12381_poseidon.rs` (feature `baby-bear-bls12381-poseidon`): BabyBear base, EF degree 4, packing 8 BabyBear per Fr, 5 digits per squeeze. The permutation is midnight-circuits 7.3.0 `permutation_cpu`. The section 3.6 rules: leaf hash `(0, 0, l + 2^66)` with additive blocks of 2; node hash `(left, right, 2 + 2 * 2^66)`; transcript = stock `MultiFieldTranscript` from `(0, 0, 2^64 + 3 * 2^66)`. It needed one small stark-backend addition (`DuplexSponge::new_with_state`, `MultiFieldTranscript::new_with_sponge_state`, `packing_constants`; `lfr/stark-backend.diff`).
+- Tests `m7_bls_fr.rs`, 6 of 6 pass (`lfr/tests.log`): the field against the ff type; the packing constants; the permutation against an independent no-skip implementation from midnight's constants; the u = 0 sponge against midnight's `PoseidonChip::hash` for lengths 0 to 8; the leaf, node and transcript rules; a small AIR proved, verified and refused after a tampered commitment.
+- Program `l_fr.rs`: D10's chain (W1 2 x 2^20, then the node at the OD-19 internal set, then `L_cached` at the OD-19 `L` set with this engine), checked by the stock verifier. Run in systemd unit `m7-lfr` under the heavy lock, `RAYON_NUM_THREADS` 20, at load 11 to 35 (other jobs running).
+
+| Quantity | Value |
+|---|---|
+| `L` parameters | UD, log blowup 3, queries 98/83/82 (263), folding PoW 0, `mu` PoW 6, query PoW 20, LogUp PoW 18, `l_skip` 2, `n_stack` 18, `w_stack` bound 48 |
+| Heights | 39 AIRs, maximum 2^16, 14 distinct heights, `T` 21 (`n_logup` 19), 17,263,856 main cells, `w_stack` needed 18; equal to D10's BN254 run AIR by AIR (`heights_match_d10` true) |
+| `L` prove | 206.2 s on the CPU (D10's BN254-hash `L`: 119.7 s at load above 30; this run had other jobs on the host, so the ratio is not a hash cost) |
+| `L` keygen / tracegen | 0.23 s / 0.37 s |
+| Peak RSS of `L` keygen, tracegen and prove | 2.11 GB (VmHWM after a reset); whole process 11.67 GB including the leaf and node stages |
+| `L` proof bytes | 430,073 (the model's ESTIMATE was 498.3 KiB at the scenario `w_stack` and 682.5 KiB at 48) |
+| Verify | accepts, 0.78 s; 4 of 4 single-byte flips refused (one fails decoding, three `WhirError`); `L_cached` has no public values, so the public-value negative does not apply |
+| Node (child) | arity 2, OD-19 internal set (97/82/81), proved in 24.2 s and verified |
+
+Raw record: `lfr/l_fr.json` (`~/.cache/m7-wrap/lfr/l_fr.json`).
+
+### 2b.4 What this changes for option E
+
+- `L_Fr` itself was not built or proved. It needs a stark-backend whose base field is Fr. The new `Bls12381Fr` type is a p3 field, but it has not been tried as a STARK base field. It also needs a recursion AIR set over Fr that verifies a BabyBear-plus-Fr-hash STARK; OpenVM's recursion circuits are written for BabyBear. Neither exists, and neither fits in one night.
+- So the option E wrap rows of section 2b.2 cannot be recomputed from a measured `L_Fr` shape. Their `L`-side inputs are now MEASURED on the real Fr-hash `L` (heights, `T`, `w_stack` 18, the same as D10), so 684,894 / 879,472 / 976,410 stands unchanged (ESTIMATE; `L_Fr`'s AIR structure is still proxied by `L`'s).
+- What `L_Fr` must verify is now MEASURED: one 430,073-byte `L` proof with 263 queries over Midnight Poseidon Merkle trees. The Fr hashing inside `L_Fr` is native, so its trace carries the BabyBear arithmetic of `L`'s verifier and the Merkle paths at one Poseidon per node.
+- `L_Fr`'s soundness terms are MEASURED by the D3 calculator at the Fr field (section 2b.2).
+
 ## 2c. The benchmark `L` cannot qualify production rows
 
 The audit is right: `L_cached` is the bench `VerifierSubCircuit::<1>` over a 2-child bench node, keyed only, with 0 public values, no log AIRs and no proof. Every row above inherits that. The full-interface `L` adds, against the keyed structure:
@@ -146,7 +175,7 @@ So the production rows need one keygen and one proof of the full-interface `L` a
 |---|---|
 | M7-0 blocking checks | done: both checks hold (sections 1.1 to 1.3) |
 | M7a gadget skeleton and row counter | not started; G4 only under options A and C |
-| M7b full circuit on a real `L` proof | not started; its first half (Fr configuration and one real `L` proof) holds under every option and is the resume point; it needs a stark-backend Fr configuration (BLS12-381 Fr field for p3 0.4.3 and the Midnight Poseidon permutation), which does not exist in any checkout |
+| M7b full circuit on a real `L` proof | first half done (section 2b.3): Fr-hash config, tests and one real `L` proof, MEASURED; the wrap circuit itself waits on the owner's OD-24 choice; it needed a stark-backend Fr configuration (BLS12-381 Fr field for p3 0.4.3 and the Midnight Poseidon permutation), which does not exist in any checkout |
 | M7c, M7d, M7e | blocked on the option choice |
 
 ## Log

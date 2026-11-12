@@ -388,3 +388,9 @@
 - Lead decision, owner to confirm: no on-chain path chosen; M7c to M7e paused. Options: A G4 arch in zk-stdlib (ledger change), C stdlib decider over G4 (two BLS layers, NOT CHECKED), E Fr-terminal layer (OD-11, NOT CHECKED); B and D rejected.
 - No option adopted (owner's choice). Option B on D10 MEASURED inputs: 2,457,645 mid rows at 256/256/0, 137.9 percent of the k = 21 gate (ESTIMATE). Option E (Fr-terminal L_Fr): wrap 684,894 / 879,472 / 976,410 rows with the 12,164 public words, k = 21 (ESTIMATE, L_Fr structure proxied by L); field-size terms gain 131.2 bits at Fr (DERIVED, D3 not rerun). P3 (3 stdlib chunks) fits but breaks the one-wrap rule.
 - Source: research/sherlock-m7-wrap-20261112/RESULTS.md on branch m7-wrap.
+
+## [2026-11-12 02:10] measurement | M7b first half: real L proof with the Midnight Poseidon Fr hash
+- Config baby_bear_bls12381_poseidon (p3 Bls12381Fr over midnight_curves::Fq, midnight permutation_cpu, PROPOSAL 3.6 u=1,2,3); 6 of 6 tests pass.
+- L_cached at OD-19: prove 206.2 s CPU (loaded host), peak RSS 2.11 GB, proof 430,073 bytes, verify 0.78 s, 4 of 4 byte flips refused; heights equal D10 (w_stack 18, T 21) (MEASURED).
+- D3 at the Fr field for L_Fr: weakest term query 101.1435, all field terms at least 215.9 bits with PoW 0 except query (MEASURED).
+- L_Fr not built: needs an Fr-base stark-backend and an Fr recursion AIR set. Source: research/sherlock-m7-wrap-20261112/RESULTS.md 2b.3 to 2b.4.

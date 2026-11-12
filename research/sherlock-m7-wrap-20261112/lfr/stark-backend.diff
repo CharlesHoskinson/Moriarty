@@ -1,0 +1,107 @@
+diff --git i/crates/stark-backend/src/transcript/duplex_sponge.rs w/crates/stark-backend/src/transcript/duplex_sponge.rs
+index 83b20ff..738580c 100644
+--- i/crates/stark-backend/src/transcript/duplex_sponge.rs
++++ w/crates/stark-backend/src/transcript/duplex_sponge.rs
+@@ -40,6 +40,19 @@ impl<F: Default + Copy, P, const WIDTH: usize, const RATE: usize> From<P>
+ }
+ 
+ impl<F, P, const WIDTH: usize, const RATE: usize> DuplexSponge<F, P, WIDTH, RATE> {
++    /// Sherlock M7: a sponge with a given initial state (for example a domain tag in the
++    /// capacity cell). `absorb_idx` and `sample_idx` start at 0 as in [`From<P>`]; every
++    /// transition is unchanged. With an all-zero state this equals `DuplexSponge::from(perm)`.
++    pub fn new_with_state(perm: P, state: [F; WIDTH]) -> Self {
++        Self {
++            perm,
++            state,
++            absorb_idx: 0,
++            sample_idx: 0,
++            last_op_perm: false,
++        }
++    }
++
+     pub fn state(&self) -> &[F; WIDTH] {
+         &self.state
+     }
+diff --git i/crates/stark-backend/src/transcript/multi_field.rs w/crates/stark-backend/src/transcript/multi_field.rs
+index 7bcbc37..a95ec74 100644
+--- i/crates/stark-backend/src/transcript/multi_field.rs
++++ w/crates/stark-backend/src/transcript/multi_field.rs
+@@ -77,6 +77,24 @@ where
+         }
+     }
+ 
++    /// Sherlock M7: a transcript whose sponge starts from `state` (for example a domain tag in
++    /// the capacity cell) instead of all zeros. Every other rule is that of [`Self::new`].
++    pub fn new_with_sponge_state(perm: P, state: [SF; WIDTH]) -> Self {
++        let num_obs_per_elem = checked_num_packed_f_elms::<F, SF>();
++        let num_samples_per_elem = compute_num_samples_per_elem::<F, SF>();
++        assert!(
++            num_samples_per_elem > 0,
++            "SF::bits() must be > 1 + BIAS_BITS + F::bits() for base-F::ORDER sampling"
++        );
++        Self {
++            sponge: DuplexSponge::new_with_state(perm, state),
++            observe_buf: Vec::with_capacity(num_obs_per_elem),
++            sample_buf: Vec::with_capacity(num_samples_per_elem),
++            num_obs_per_elem,
++            num_samples_per_elem,
++        }
++    }
++
+     // --- Read-only accessors (for device synchronization) ---
+ 
+     pub fn sponge_state(&self) -> &[SF; WIDTH] {
+@@ -95,6 +113,11 @@ where
+         &self.observe_buf
+     }
+ 
++    /// Sherlock M7: base-field words packed per sponge element, and digits per squeeze.
++    pub fn packing_constants(&self) -> (usize, usize) {
++        (self.num_obs_per_elem, self.num_samples_per_elem)
++    }
++
+     pub fn sample_buf(&self) -> &[F] {
+         &self.sample_buf
+     }
+diff --git i/crates/stark-sdk/Cargo.toml w/crates/stark-sdk/Cargo.toml
+index 04184a4..7876031 100644
+--- i/crates/stark-sdk/Cargo.toml
++++ w/crates/stark-sdk/Cargo.toml
+@@ -18,6 +18,9 @@ p3-field = { workspace = true }
+ p3-poseidon2 = { workspace = true, optional = true }
+ p3-bn254 = { workspace = true, optional = true }
+ zkhash = { workspace = true, optional = true }
++# Sherlock M7: BLS12-381 Fr field and Midnight Poseidon
++p3-bls12-381-fr = { path = "../../../p3-bls12-381-fr", optional = true }
++midnight-circuits = { version = "=7.3.0", default-features = false, optional = true }
+ 
+ hex-literal.workspace = true
+ itertools.workspace = true
+@@ -61,6 +64,12 @@ baby-bear-bn254-poseidon2 = [
+   "dep:num-bigint",
+   "openvm-stark-backend/multi-field-transcript",
+ ]
++baby-bear-bls12381-poseidon = [
++  "dep:p3-bls12-381-fr",
++  "dep:midnight-circuits",
++  "dep:num-bigint",
++  "openvm-stark-backend/multi-field-transcript",
++]
+ cpu-backend = ["dep:openvm-cpu-backend"]
+ parallel = ["openvm-stark-backend/parallel", "openvm-cpu-backend?/parallel"]
+ mimalloc = ["openvm-stark-backend/mimalloc"]
+diff --git i/crates/stark-sdk/src/config/mod.rs w/crates/stark-sdk/src/config/mod.rs
+index 2611978..35ad1e0 100644
+--- i/crates/stark-sdk/src/config/mod.rs
++++ w/crates/stark-sdk/src/config/mod.rs
+@@ -12,6 +12,10 @@ use crate::config::{
+ /// `Poseidon2<Bn254>`.
+ #[cfg(feature = "baby-bear-bn254-poseidon2")]
+ pub mod baby_bear_bn254_poseidon2;
++/// Sherlock M7: STARK config where the base field is BabyBear, extension field is BabyBear^4, and
++/// the hasher and transcript are Midnight Poseidon over BLS12-381 Fr (PROPOSAL 3.6 domains).
++#[cfg(feature = "baby-bear-bls12381-poseidon")]
++pub mod baby_bear_bls12381_poseidon;
+ /// STARK config where the base field is BabyBear, extension field is BabyBear^4, and the hasher is
+ /// `Poseidon2<BabyBear>`.
+ pub mod baby_bear_poseidon2;
