@@ -9,7 +9,7 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
 `Clean.Sherlock.Bridge.Premises` and enters `bridge_sound` as a hypothesis, by name:
 
 * (A1) `wrapKnowledgeSound`: a proof that ledger 9 `VerifierKey::verify` accepts for public input
-  `pub` has a witness of `WrapRel`. Knowledge soundness of midnight-proofs PLONK with KZG over
+  `pub` has a witness of `WrapRel`, the wrap that verifies `L_Fr` (option E, OD-24). Knowledge soundness of midnight-proofs PLONK with KZG over
   BLS12-381 in the algebraic group model with a q-type assumption, as for today's decider.
 * (A2) `lastLayerSound`: a reference verification of `L` that accepts yields an accepted root AIR
   with some log digest. Unique decoding (owner decision OD-19), statements as recorded in
@@ -23,6 +23,11 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
   from A2b by `packed_hash_inj`), `pvFirstT` and `ProvenRegime` (gate G4: `UDSet.gate` on the
   declared parameter set with the proof of work read from the key's transcript program; every
   folding, `mu` and query term at least 101 bits, every OOD and `gamma` term at least 100).
+* (A2') `lfrSound`: if the reference verifier of `L_Fr` accepts `(s, pv, π)`, an `L` proof exists
+  whose Fr-cell emulation `EmulL` holds with the same statement and public values (knowledge
+  soundness of the Fr STARK `L_Fr`). Hypotheses that `bridge_sound` discharges: A2b and
+  `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s).
+  `emulL_refines` (a theorem) turns the emulation into a reference verification of `L`.
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
   Merkle hash of `L`, and the public digest form `PoseidonFr(tag, pack d2)`), guarded by the
   carrier `FrDom`. Separate from A5.
@@ -46,6 +51,8 @@ No `axiom` is declared in any of the three files. Every assumption is a field of
 * `vkL_ok`: not cryptographic. Static facts of the frozen key of `L` (`pvFirstT` of its
   transcript program, `ProvenRegime`, and the bound `< r` of every compiled
   expression), decided on the concrete key.
+* `vkLFr_ok`: not cryptographic. `KeyOKFr vkL vkLFr`: `pvFirstFr`, `tagSep`, and the statement and
+  `pv` lengths of `L`.
 
 The carriers `P2Dom` and `FrDom` are abstract on purpose: a hash with a finite digest is not
 injective on all inputs, so an unguarded injectivity premise would be false in Lean and make every
@@ -74,6 +81,8 @@ def consistent : Premises where
          frSponge_lt := fun _ => by decide }
   vkL := { checks := [.arith (.const 0) (.const 1)], transcript := lTranscriptUD,
            nStmt := 2, pvLen := 4, whir := lUD }
+  vkLFr := lfrKey
+  LFrAccept := fun _ => False
   P2Dom := fun _ => False
   FrDom := fun _ => False
   LedgerProof := Unit
@@ -87,7 +96,9 @@ def consistent : Premises where
     simp only [List.mem_singleton] at hc
     subst hc
     exact ⟨by decide, by decide⟩⟩
+  vkLFr_ok := lfrKey_ok
   wrapKnowledgeSound := fun _ _ h => h.elim
+  lfrSound := fun _ _ _ _ _ h => h.2.2.2.1.elim
   lastLayerSound := by
     intro _ _ _ s pv π h
     have := (h.2.2.1 _ (List.mem_singleton_self _)).2
@@ -201,13 +212,20 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lUD_no_ood_fails
 #print axioms Clean.Sherlock.Bridge.lUD_two_ood
 #print axioms Clean.Sherlock.Bridge.run_refines
+#print axioms Clean.Sherlock.Bridge.trStart_eq_cap
+#print axioms Clean.Sherlock.Bridge.cap_inj
 #print axioms Clean.Sherlock.Bridge.pv_absorbed_before_challenge
 #print axioms Clean.Sherlock.Bridge.ood_batch_refines
 #print axioms Clean.Sherlock.Bridge.ood_point_digits
 #print axioms Clean.Sherlock.Bridge.getD_lt
 #print axioms Clean.Sherlock.Bridge.check_refines
+#print axioms Clean.Sherlock.Bridge.emulL_refines
+#print axioms Clean.Sherlock.Bridge.runFr_refines
+#print axioms Clean.Sherlock.Bridge.tags_separated
+#print axioms Clean.Sherlock.Bridge.transcripts_separated
 #print axioms Clean.Sherlock.Bridge.wrap_refines
 #print axioms Clean.Sherlock.Bridge.packed_hash_inj
+#print axioms Clean.Sherlock.Bridge.lfr_accepts_L
 #print axioms Clean.Sherlock.Bridge.bridge_sound
 #print axioms Clean.Sherlock.Bridge.wrap_view_only_claim
 #print axioms Clean.Sherlock.Bridge.merkle_binding_or_collision
@@ -226,6 +244,8 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lKeyLD_ok
 #print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven
 #print axioms Clean.Sherlock.Bridge.remark_m1_not_proven
+#print axioms Clean.Sherlock.Bridge.lfrKey_ok
+#print axioms Clean.Sherlock.Bridge.lfr_tag_reuse_rejected
 #print axioms Clean.Sherlock.Bridge.late_pv_rejected
 #print axioms Clean.Sherlock.Bridge.partial_pv_rejected
 #print axioms Clean.Sherlock.Bridge.PvBinding.euclid_of_prime

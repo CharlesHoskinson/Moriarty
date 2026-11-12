@@ -13,11 +13,16 @@ The objects:
   fixed statement length, the fixed `pv` length, and the analysis parameters of WHIR.
 * `VerifyL`: the reference verifier of `L` (BabyBear arithmetic, hash `frSponge ∘ packChunks`,
   the transcript run from the empty state).
-* `WrapRel`: the constraint semantics of the wrap `W`: the same checks and transcript compiled
-  into Fr cells (lazy arithmetic with bounded quotients, packing gadget, digit gadget with the
-  canonical check), a log table of exactly `B` entries with the canonical check on every value,
-  `pv = pvOf W T` of the fixed length `W`, and native replay of every entry. Its public input is
-  the statement only.
+* `EmulL`: the checks and transcript of `L` compiled into Fr cells (lazy arithmetic with bounded
+  quotients, packing gadget, digit gadget with the canonical check): the relation that the
+  Fr-native layer `L_Fr` enforces for one `L` proof (option E, owner decision OD-24).
+* `KeyLFr`, `VerifyLFr`: the layer `L_Fr`, abstract while its shape is built (step E2): an Fr
+  transcript program with its own hash domain (use codes disjoint from `L`'s), and abstract native
+  checks.
+* `WrapRel`: the constraint semantics of the one BLS12-381 wrap `W`: the checks and transcript of
+  `L_Fr`, native in Fr, a log table of exactly `B` entries with the canonical check on every
+  value, `pv = pvOf W T` of the fixed length `W`, and native replay of every entry. Its public
+  input is the statement only.
 * `Premises`: the named assumptions as fields (no `axiom`), documented in `BridgeAxioms.lean`.
 
 Two static key facts gate premise A2 and are computed from the key's own transcript program:
@@ -289,10 +294,45 @@ def KeyOK (vk : KeyL) : Prop :=
   pvFirstT vk.nStmt vk.pvLen vk.transcript = true ∧ ProvenRegime vk = true ∧
     ∀ c ∈ vk.checks, c.StaticOK
 
-/-- The reference verifier of `L` on statement `s`, public values `pv` and proof `π`. -/
+/-! ## Hash domains on the Fr side (PROPOSAL section 3.6, owner decision OD-18) -/
+
+/-- The initial capacity cell of a fixed-length Fr hash with use code `u` and length `l`. -/
+def capInit (u l : Nat) : Nat := l + u * 2 ^ 66
+
+/-- The initial capacity cell of a transcript with use code `u`: `2^64 + u 2^66`. -/
+def trStart (u : Nat) : Nat := 2 ^ 64 + u * 2 ^ 66
+
+/-- The use codes of `L` and of native and public hashes: 0 (native operations), 1 and 2
+(Merkle leaves and nodes of `L`), 3 (the transcript of `L`), 4 (public digests). -/
+def lUses : List Nat := [0, 1, 2, 3, 4]
+
+/-- The use code of the transcript of `L`. -/
+def lTTag : Nat := 3
+
+theorem trStart_eq_cap (u : Nat) : trStart u = capInit u (2 ^ 64) := by
+  simp [trStart, capInit]
+
+/-- No two uses share an initial capacity: `(u, l)` is recovered from `l + u 2^66` for every
+length `l < 2^66`. -/
+theorem cap_inj {u u' l l' : Nat} (hl : l < 2 ^ 66) (hl' : l' < 2 ^ 66)
+    (h : capInit u l = capInit u' l') : u = u' ∧ l = l' := by
+  unfold capInit at h
+  have h1 : (l + u * 2 ^ 66) / 2 ^ 66 = u := by
+    rw [Nat.add_mul_div_right _ _ (by decide), Nat.div_eq_of_lt hl, Nat.zero_add]
+  have h2 : (l' + u' * 2 ^ 66) / 2 ^ 66 = u' := by
+    rw [Nat.add_mul_div_right _ _ (by decide), Nat.div_eq_of_lt hl', Nat.zero_add]
+  have h3 : (l + u * 2 ^ 66) % 2 ^ 66 = l := by rw [Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hl]
+  have h4 : (l' + u' * 2 ^ 66) % 2 ^ 66 = l' := by
+    rw [Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hl']
+  refine ⟨?_, ?_⟩
+  · rw [← h1, ← h2, h]
+  · rw [← h3, ← h4, h]
+
+/-- The reference verifier of `L` on statement `s`, public values `pv` and proof `π`. The
+transcript starts from the capacity `trStart lTTag`. -/
 def VerifyL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
   s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ c ∈ vk.checks, c.Ref X (s ++ pv ++ π)) ∧
-    runRef X (s ++ pv ++ π) [] vk.transcript
+    runRef X (s ++ pv ++ π) [trStart lTTag] vk.transcript
 
 /-- What `pvFirstT` means for an accepted verification: every word of `pv` sits at an
 environment index that the transcript absorbs before its first challenge. -/
@@ -346,10 +386,133 @@ theorem check_refines {X : Prims} {env : List Nat} {c : Check}
     exact ⟨h.1, by rw [h.2, packChunksR_eq]⟩
   | merkle leaf bits sibs root => exact h
 
+/-! ## The emulation of `L` inside `L_Fr` -/
+
+/-- The Fr-cell emulation of the verifier of `L` on `(s, pv, π)`: the relation that `L_Fr`'s
+AIRs enforce for one `L` proof (owner decision OD-24, option E). The same gadgets as the wrap of
+round 2: range checks, lazy Fr arithmetic with bounded quotients, the packing gadget, the digit
+gadget with the canonical check, the bit decomposition for proof of work. -/
+def EmulL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
+  s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ x ∈ s ++ pv ++ π, x < rFr) ∧
+    (∀ c ∈ vk.checks, c.Gadget X (s ++ pv ++ π)) ∧
+    runGadget X (s ++ pv ++ π) [trStart lTTag] vk.transcript
+
+/-- Lemma 16 for `L_Fr` (`emulL_refines`): the emulated verification is an accepting reference
+verification of `L` with the same statement and public values. -/
+theorem emulL_refines {X : Prims} {vk : KeyL} {s pv π : List Nat} (hok : KeyOK vk)
+    (h : EmulL X vk s pv π) : VerifyL X vk s pv π := by
+  obtain ⟨hs, hp, _, hchk, hrun⟩ := h
+  exact ⟨hs, hp, fun c hc => check_refines (hok.2.2 c hc) (hchk c hc), run_refines X _ _ _ hrun⟩
+
+/-! ## The layer `L_Fr` (abstract) -/
+
+/-- One operation of the Fr transcript of `L_Fr`: a native Fr duplex (no packing, whole-element
+challenges). -/
+inductive TOpFr where
+  | absorb (vars : List Nat)
+  | squeeze (dst : Nat)
+  | pow (nonce bits : Nat)
+
+/-- The reference transcript run of `L_Fr`. -/
+def runFr (X : Prims) (env : List Nat) : List Nat → List TOpFr → Prop
+  | _, [] => True
+  | st, .absorb vs :: ops => runFr X env (st ++ vs.map (env.getD · 0)) ops
+  | st, .squeeze d :: ops => env.getD d 0 = X.frSponge st ∧ runFr X env (st ++ [X.frSponge st]) ops
+  | st, .pow n b :: ops => X.frSponge (st ++ [env.getD n 0]) % 2 ^ b = 0 ∧
+      runFr X env (st ++ [env.getD n 0]) ops
+
+/-- The wrap's native gadget for the transcript of `L_Fr` (proof of work by bit decomposition). -/
+def runFrGadget (X : Prims) (env : List Nat) : List Nat → List TOpFr → Prop
+  | _, [] => True
+  | st, .absorb vs :: ops => runFrGadget X env (st ++ vs.map (env.getD · 0)) ops
+  | st, .squeeze d :: ops => env.getD d 0 = X.frSponge st ∧
+      runFrGadget X env (st ++ [X.frSponge st]) ops
+  | st, .pow n b :: ops => (∃ hi, X.frSponge (st ++ [env.getD n 0]) = hi * 2 ^ b) ∧
+      runFrGadget X env (st ++ [env.getD n 0]) ops
+
+theorem runFr_refines (X : Prims) (env : List Nat) : ∀ (st : List Nat) (ops : List TOpFr),
+    runFrGadget X env st ops → runFr X env st ops
+  | _, [], _ => trivial
+  | st, .absorb vs :: ops, h => runFr_refines X env _ ops h
+  | st, .squeeze d :: ops, h => ⟨h.1, runFr_refines X env _ ops h.2⟩
+  | st, .pow n b :: ops, h => by
+    obtain ⟨⟨hi, hh⟩, h2⟩ := h
+    exact ⟨by rw [hh, Nat.mul_mod_left], runFr_refines X env _ ops h2⟩
+
+def absorbedBeforeChallengeFr : List TOpFr → List Nat
+  | [] => []
+  | .absorb vs :: ops => vs ++ absorbedBeforeChallengeFr ops
+  | .squeeze _ :: _ => []
+  | .pow _ _ :: _ => []
+
+/-- `pv` is absorbed by `L_Fr`'s transcript before its first challenge. -/
+def pvFirstFr (lo n : Nat) (ops : List TOpFr) : Bool :=
+  (List.range' lo n).all (fun i => (absorbedBeforeChallengeFr ops).contains i)
+
+/-- The key of `L_Fr`, abstract while its shape is built (step E2): the transcript program, the
+fixed statement and `pv` lengths (those of `L`), and the Fr use codes of its hashes. Its other
+checks (constraints, Merkle openings, WHIR arithmetic, all native in Fr) are the abstract
+predicate `LFrAccept` of `Premises`. -/
+structure KeyLFr where
+  transcript : List TOpFr
+  nStmt : Nat
+  pvLen : Nat
+  /-- The Fr use codes `u` of `L_Fr`'s hashes (Merkle leaves, nodes, transcript). -/
+  uses : List Nat
+  /-- The use code of `L_Fr`'s transcript. -/
+  tTag : Nat
+
+/-- Tag separation: `L_Fr`'s transcript code is one of its use codes, no use code of `L_Fr` is a
+use code of `L` (or of a native or public hash), and every initial capacity is an Fr element. -/
+def tagSep (vk : KeyLFr) : Bool :=
+  vk.uses.contains vk.tTag && vk.uses.all (fun u => !lUses.contains u && u < 2 ^ 186)
+
+/-- Static facts of the key of `L_Fr`: `pv` absorbed first, tag separation, and the statement
+and `pv` lengths of `L`. -/
+def KeyOKFr (vkL : KeyL) (vk : KeyLFr) : Prop :=
+  pvFirstFr vk.nStmt vk.pvLen vk.transcript = true ∧ tagSep vk = true ∧ vk.nStmt = vkL.nStmt ∧
+    vk.pvLen = vkL.pvLen
+
+/-- The reference verifier of `L_Fr` on statement `s`, public values `pv` and proof `π`, with the
+abstract native checks `acc`. Its transcript starts from `trStart vk.tTag`. -/
+def VerifyLFr (X : Prims) (acc : List Nat → Prop) (vk : KeyLFr) (s pv π : List Nat) : Prop :=
+  s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ x ∈ s ++ pv ++ π, x < rFr) ∧
+    acc (s ++ pv ++ π) ∧ runFr X (s ++ pv ++ π) [trStart vk.tTag] vk.transcript
+
+/-- Tag separation, in the capacity cell: no initial state of an `L_Fr` hash is the initial state
+of an `L` (or native or public) hash, for every length below `2^66` (transcripts use
+`l = 2^64`, `trStart_eq_cap`). -/
+theorem tags_separated {vk : KeyLFr} (h : tagSep vk = true) {u u' l l' : Nat} (hu : u ∈ vk.uses)
+    (hu' : u' ∈ lUses) (hl : l < 2 ^ 66) (hl' : l' < 2 ^ 66) : capInit u l ≠ capInit u' l' := by
+  intro he
+  have := (cap_inj hl hl' he).1
+  subst this
+  simp only [tagSep, Bool.and_eq_true, List.all_eq_true] at h
+  have := (h.2 u hu)
+  simp only [Bool.and_eq_true, Bool.not_eq_true', decide_eq_true_eq] at this
+  rw [List.contains_eq_any_beq] at this
+  simp only [List.any_eq_false, beq_iff_eq] at this
+  exact this.1 u hu' rfl
+
+/-- The transcripts of `L_Fr` and `L` never give the same sponge output on carrier inputs:
+under A2b, equal outputs would need equal initial capacities, which tag separation excludes. -/
+theorem transcripts_separated {X : Prims} {FrDom : List Nat → Prop} (hinj : ∀ a b, FrDom a →
+    FrDom b → X.frSponge a = X.frSponge b → a = b) {vk : KeyLFr} (h : tagSep vk = true)
+    {a b : List Nat} (ha : FrDom (trStart vk.tTag :: a)) (hb : FrDom (trStart lTTag :: b)) :
+    X.frSponge (trStart vk.tTag :: a) ≠ X.frSponge (trStart lTTag :: b) := by
+  intro he
+  have := hinj _ _ ha hb he
+  simp only [List.cons.injEq] at this
+  have ht : vk.tTag ∈ vk.uses := by
+    simp only [tagSep, Bool.and_eq_true] at h
+    exact List.contains_iff_mem.mp h.1
+  rw [trStart_eq_cap, trStart_eq_cap] at this
+  exact tags_separated h ht (by decide : lTTag ∈ lUses) (by decide) (by decide) this.1
+
 /-! ## The wrap -/
 
-/-- The private witness of the wrap: the public values of `L`, the proof of `L` and the log
-table. -/
+/-- The private witness of the wrap: the public values of `L` (the log words), the proof of
+`L_Fr` and the log table. -/
 structure WrapWit where
   pv : List Nat
   π : List Nat
@@ -360,13 +523,16 @@ operation, and the canonical check on every value. -/
 def EntryGadget (e : Entry) : Prop :=
   (∀ x ∈ e.op.code, x < pBB) ∧ e.vals.length = e.op.arity ∧ ∀ v ∈ e.vals, CanonGadget v
 
-/-- The constraint semantics of the wrap with capacity `B` entries and `pv` length
-`vk.pvLen`. Its public input `pub` is the statement only; everything else is private witness. -/
-def WrapRel (X : Prims) (B : Nat) (vk : KeyL) (pub : List Nat) (w : WrapWit) : Prop :=
+/-- The constraint semantics of the one BLS12-381 wrap under option E (OD-24): it verifies
+`L_Fr` natively in Fr (the native checks `acc` and the transcript of the key `vk` of `L_Fr`),
+with capacity `B` entries and `pv` length `vk.pvLen`. Its public input `pub` is the statement
+only; everything else is private witness. -/
+def WrapRel (X : Prims) (B : Nat) (acc : List Nat → Prop) (vk : KeyLFr) (pub : List Nat)
+    (w : WrapWit) : Prop :=
   pub.length = vk.nStmt ∧
   (∀ x ∈ pub ++ w.pv ++ w.π, x < rFr) ∧
-  (∀ c ∈ vk.checks, c.Gadget X (pub ++ w.pv ++ w.π)) ∧
-  runGadget X (pub ++ w.pv ++ w.π) [] vk.transcript ∧
+  acc (pub ++ w.pv ++ w.π) ∧
+  runFrGadget X (pub ++ w.pv ++ w.π) [trStart vk.tTag] vk.transcript ∧
   w.T.length = B ∧
   (∀ e ∈ w.T, EntryGadget e) ∧
   (encode w.T).length ≤ vk.pvLen ∧
@@ -374,15 +540,14 @@ def WrapRel (X : Prims) (B : Nat) (vk : KeyL) (pub : List Nat) (w : WrapWit) : P
   (∀ e ∈ w.T, ReplayGadget X pub e)
 
 /-- Lemma 16 (`wrap_refines`): an accepted wrap witness is an accepting reference verification of
-`L` on the statement, with a table of exactly `B` well-formed, valid entries whose padded
+`L_Fr` on the statement, with a table of exactly `B` well-formed, valid entries whose padded
 encoding of the fixed length is `pv`. -/
-theorem wrap_refines {X : Prims} {B : Nat} {vk : KeyL} {pub : List Nat} {w : WrapWit}
-    (hok : KeyOK vk) (h : WrapRel X B vk pub w) :
-    VerifyL X vk pub w.pv w.π ∧ w.T.length = B ∧ (∀ e ∈ w.T, e.WF ∧ Valid X pub e) ∧
+theorem wrap_refines {X : Prims} {B : Nat} {acc : List Nat → Prop} {vk : KeyLFr}
+    {pub : List Nat} {w : WrapWit} (h : WrapRel X B acc vk pub w) :
+    VerifyLFr X acc vk pub w.pv w.π ∧ w.T.length = B ∧ (∀ e ∈ w.T, e.WF ∧ Valid X pub e) ∧
       w.pv = pvOf vk.pvLen w.T := by
-  obtain ⟨hpl, _, hchk, hrun, hlen, hent, henc, hpv, hrep⟩ := h
-  refine ⟨⟨hpl, by rw [hpv]; exact pvOf_length henc,
-    fun c hc => check_refines (hok.2.2 c hc) (hchk c hc), run_refines X _ [] _ hrun⟩,
+  obtain ⟨hpl, hr, hacc, hrun, hlen, hent, henc, hpv, hrep⟩ := h
+  refine ⟨⟨hpl, by rw [hpv]; exact pvOf_length henc, hr, hacc, runFr_refines X _ _ _ hrun⟩,
     hlen, ?_, hpv⟩
   intro e he
   obtain ⟨h1, h2, h3⟩ := hent e he
@@ -419,6 +584,10 @@ structure Premises where
   X : Prims
   /-- The frozen key of `L`. -/
   vkL : KeyL
+  /-- The key of `L_Fr` (option E, OD-24). -/
+  vkLFr : KeyLFr
+  /-- The native Fr checks of `L_Fr` other than its transcript (abstract until step E2). -/
+  LFrAccept : List Nat → Prop
   /-- Carrier domain of the small-field hash premise (inputs of Poseidon2 over BabyBear). -/
   P2Dom : List Nat → Prop
   /-- Carrier domain of the Fr hash premise (inputs of Midnight Poseidon over Fr). -/
@@ -436,8 +605,18 @@ structure Premises where
   Run : List Nat → Prop
   /-- Static facts of the frozen key of `L` (decided on the concrete key). -/
   vkL_ok : KeyOK vkL
+  /-- Static facts of the key of `L_Fr`. -/
+  vkLFr_ok : KeyOKFr vkL vkLFr
   /-- (A1) Knowledge soundness of midnight-proofs PLONK with KZG (AGM, q-type assumption). -/
-  wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf → ∃ w, WrapRel X B vkL pub w
+  wrapKnowledgeSound : ∀ pub prf, LedgerAccepts pub prf →
+    ∃ w, WrapRel X B LFrAccept vkLFr pub w
+  /-- (A2') Soundness of `L_Fr` (option E, OD-24): if the reference verifier of `L_Fr` accepts
+  `(s, pv, π)`, an `L` proof `πL` exists whose Fr-cell emulation `EmulL` holds with the same
+  statement and public values (knowledge soundness of the Fr STARK `L_Fr` for the relation its
+  AIRs enforce). Hypotheses: A2b, and the static key facts of `L_Fr` (`pv` absorbed first, tag
+  separation from `L`'s hash domains). -/
+  lfrSound : FrInj X FrDom → KeyOKFr vkL vkLFr →
+    ∀ s pv π, VerifyLFr X LFrAccept vkLFr s pv π → ∃ πL, EmulL X vkL s pv πL
   /-- (A2) Soundness of `L` (statements as recorded in
   `research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md`, which reads the full papers).
   WHIR round-by-round soundness (WHIR Theorem 5.2 with list size 1) with mutual correlated
@@ -478,19 +657,29 @@ structure Premises where
   indist_trans : ∀ a b c, Indist a b → Indist b c → Indist a c
   /-- (A7) Zero knowledge of the blinded wrap: for a true statement the proof distribution is
   simulated from the public input alone. -/
-  wrapZK : ∀ pub w, WrapRel X B vkL pub w → Indist (prove pub w) (sim pub)
+  wrapZK : ∀ pub w, WrapRel X B LFrAccept vkLFr pub w → Indist (prove pub w) (sim pub)
 
 /-! ## The main theorem -/
 
+/-- What A2' gives with the refinement of the emulation: if `L_Fr` accepts, the reference
+verifier of `L` accepts an `L` proof with the same statement and public values. -/
+theorem lfr_accepts_L (P : Premises) {s pv π : List Nat}
+    (h : VerifyLFr P.X P.LFrAccept P.vkLFr s pv π) : ∃ πL, VerifyL P.X P.vkL s pv πL := by
+  obtain ⟨πL, hE⟩ := P.lfrSound P.frSpongeInj P.vkLFr_ok s pv π h
+  exact ⟨πL, emulL_refines P.vkL_ok hE⟩
+
 /-- Lemma 22 (`bridge_sound`): a proof that ledger 9 accepts for public input `pub` implies the
-claim `pub` of the reference machine. -/
+claim `pub` of the reference machine. The path: the wrap (A1) verifies `L_Fr`, `L_Fr` (A2')
+verifies `L`, `L` (A2) verifies the root. -/
 theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
     (h : P.LedgerAccepts pub prf) : P.Run pub := by
   obtain ⟨w, hw⟩ := P.wrapKnowledgeSound pub prf h
-  obtain ⟨hV, hTlen, hTok, hpv⟩ := wrap_refines P.vkL_ok hw
+  obtain ⟨hVFr, hTlen, hTok, hpv⟩ := wrap_refines hw
+  obtain ⟨πL, hV⟩ := lfr_accepts_L P hVFr
   obtain ⟨d, hroot⟩ :=
-    P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv w.π hV
+    P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv πL hV
   obtain ⟨hrec, t, ⟨htlen, htwf, htin⟩, henc, hdig⟩ := P.rootBinds _ _ _ hroot
+  rw [P.vkLFr_ok.2.2.2] at hpv
   have hpad : pad P.B t.flatten = w.T :=
     pvOf_inj (by rw [pad_length htlen, hTlen]) (pad_wf htwf) (fun e he => (hTok e he).1)
       (henc.trans hpv)
@@ -506,10 +695,12 @@ theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
 /-! ## Zero-knowledge boundary -/
 
 /-- The ledger's view depends on the claim only: two wrap witnesses for the same public input
-(different logs, used-entry counts, deferred-or-emulated splits, proofs of `L`) give
+(different logs, used-entry counts, deferred-or-emulated splits, proofs of `L_Fr` and so of
+`L`) give
 indistinguishable proofs. -/
 theorem wrap_view_only_claim (P : Premises) {pub : List Nat} {w₁ w₂ : WrapWit}
-    (h₁ : WrapRel P.X P.B P.vkL pub w₁) (h₂ : WrapRel P.X P.B P.vkL pub w₂) :
+    (h₁ : WrapRel P.X P.B P.LFrAccept P.vkLFr pub w₁)
+    (h₂ : WrapRel P.X P.B P.LFrAccept P.vkLFr pub w₂) :
     P.Indist (P.prove pub w₁) (P.prove pub w₂) :=
   P.indist_trans _ _ _ (P.wrapZK pub w₁ h₁) (P.indist_symm _ _ (P.wrapZK pub w₂ h₂))
 
@@ -647,6 +838,17 @@ theorem s4_pow15_not_proven : ProvenRegimeLD s4Whir (lKeyLD 15 15 20) = false :=
 /-- The `m = 1` reading (the p.23 remark) is outside the list decoding regime. -/
 theorem remark_m1_not_proven :
     ProvenRegimeLD { s4Whir with mult := 1 } (lKeyLD 21 21 20) = false := by decide
+
+/-- An example key of `L_Fr` (not frozen; step E2 builds the real one): statement `0..1`, `pv`
+`2..5`, a commitment, then challenges; use codes 5, 6 and 7 with the transcript on 7. -/
+def lfrKey : KeyLFr := ⟨[.absorb [0, 1, 2, 3, 4, 5, 6], .squeeze 7, .pow 8 20, .squeeze 9], 2, 4,
+  [5, 6, 7], 7⟩
+
+theorem lfrKey_ok : KeyOKFr (lKey lTranscriptUD) lfrKey := ⟨by decide, by decide, rfl, rfl⟩
+
+/-- A key of `L_Fr` that reuses `L`'s transcript code 3 fails tag separation. -/
+theorem lfr_tag_reuse_rejected : tagSep { lfrKey with uses := [5, 6, 3], tTag := 3 } = false := by
+  decide
 
 /-- A transcript that draws a challenge before absorbing `pv` fails the key check. -/
 theorem late_pv_rejected :
