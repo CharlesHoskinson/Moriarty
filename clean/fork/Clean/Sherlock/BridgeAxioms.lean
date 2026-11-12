@@ -202,6 +202,8 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lUD_two_ood
 #print axioms Clean.Sherlock.Bridge.run_refines
 #print axioms Clean.Sherlock.Bridge.pv_absorbed_before_challenge
+#print axioms Clean.Sherlock.Bridge.ood_batch_refines
+#print axioms Clean.Sherlock.Bridge.ood_point_digits
 #print axioms Clean.Sherlock.Bridge.getD_lt
 #print axioms Clean.Sherlock.Bridge.check_refines
 #print axioms Clean.Sherlock.Bridge.wrap_refines
@@ -216,6 +218,9 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lKey_query19_not_proven
 #print axioms Clean.Sherlock.Bridge.lKey_logup17_not_proven
 #print axioms Clean.Sherlock.Bridge.lKey_missing_folds_not_proven
+#print axioms Clean.Sherlock.Bridge.lKey2_ok
+#print axioms Clean.Sherlock.Bridge.ood_interleaved_rejected
+#print axioms Clean.Sherlock.Bridge.lKey_no_ood_not_proven
 #print axioms Clean.Sherlock.Bridge.lKey_fold_order_not_proven
 #print axioms Clean.Sherlock.Bridge.s4_mult_three
 #print axioms Clean.Sherlock.Bridge.lKeyLD_ok

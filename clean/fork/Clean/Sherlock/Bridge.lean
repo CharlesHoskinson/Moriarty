@@ -71,6 +71,11 @@ inductive TOp where
   /-- A proof-of-work check: the sponge output after absorbing the nonce has `bits` low zero
   bits. -/
   | pow (nonce : Nat) (bits : Nat) (kind : PowKind)
+  /-- An out-of-domain point of WHIR round `i`: a challenge squeezed as by `squeeze`. -/
+  | oodPoint (round : Nat) (dsts : List Nat)
+  /-- The prover's answer at an OOD point of round `i`: BabyBear words absorbed as by
+  `absorbBB`. -/
+  | oodAnswer (round : Nat) (vars : List Nat)
 
 /-- The reference transcript run from state `st` (all Fr elements absorbed so far). -/
 def runRef (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
@@ -82,6 +87,10 @@ def runRef (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
       runRef X env (st ++ [X.frSponge st]) ops
   | st, .pow n b _ :: ops => X.frSponge (st ++ [env.getD n 0]) % 2 ^ b = 0 ∧
       runRef X env (st ++ [env.getD n 0]) ops
+  | st, .oodPoint _ ds :: ops => ds.map (env.getD · 0) = digitsOf pBB 5 (X.frSponge st) ∧
+      runRef X env (st ++ [X.frSponge st]) ops
+  | st, .oodAnswer _ vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
+      runRef X env (st ++ packChunks (vs.map (env.getD · 0))) ops
 
 /-- The wrap's transcript gadgets: the packing gadget, the digit gadget with the canonical check,
 and a bit decomposition for the proof of work. -/
@@ -94,6 +103,10 @@ def runGadget (X : Prims) (env : List Nat) : List Nat → List TOp → Prop
       runGadget X env (st ++ [X.frSponge st]) ops
   | st, .pow n b _ :: ops => (∃ hi, X.frSponge (st ++ [env.getD n 0]) = hi * 2 ^ b) ∧
       runGadget X env (st ++ [env.getD n 0]) ops
+  | st, .oodPoint _ ds :: ops => SqueezeGadget (X.frSponge st) (ds.map (env.getD · 0)) ∧
+      runGadget X env (st ++ [X.frSponge st]) ops
+  | st, .oodAnswer _ vs :: ops => (∀ i ∈ vs, env.getD i 0 < pBB) ∧
+      runGadget X env (st ++ packChunksR (vs.map (env.getD · 0))) ops
 
 /-- The compiled transcript refines the reference transcript. -/
 theorem run_refines (X : Prims) (env : List Nat) : ∀ (st : List Nat) (ops : List TOp),
@@ -108,6 +121,11 @@ theorem run_refines (X : Prims) (env : List Nat) : ∀ (st : List Nat) (ops : Li
   | st, .pow n b _ :: ops, h => by
     obtain ⟨⟨hi, hh⟩, h2⟩ := h
     exact ⟨by rw [hh, Nat.mul_mod_left], run_refines X env _ ops h2⟩
+  | st, .oodPoint _ ds :: ops, h =>
+    ⟨squeeze_digits_sound (X.frSponge_lt st) h.1, run_refines X env _ ops h.2⟩
+  | st, .oodAnswer _ vs :: ops, h => by
+    simp only [runGadget, packChunksR_eq] at h
+    exact ⟨h.1, run_refines X env _ ops h.2⟩
 
 /-- The variables absorbed before the first challenge or proof of work. -/
 def absorbedBeforeChallenge : List TOp → List Nat
@@ -116,6 +134,8 @@ def absorbedBeforeChallenge : List TOp → List Nat
   | .absorbFr vs :: ops => vs ++ absorbedBeforeChallenge ops
   | .squeeze _ :: _ => []
   | .pow _ _ _ :: _ => []
+  | .oodPoint _ _ :: _ => []
+  | .oodAnswer _ vs :: ops => vs ++ absorbedBeforeChallenge ops
 
 /-- `pv` (environment indices `lo, ..., lo + n - 1`) is absorbed before the first challenge.
 Computed from the transcript program itself. -/
@@ -139,6 +159,31 @@ def querySteps : List TOp → List (Nat × Nat)
   | [] => []
   | .pow _ b (.query i) :: ops => (i, b) :: querySteps ops
   | _ :: ops => querySteps ops
+
+/-- The OOD points of round `i` in the transcript program. -/
+def oodPoints (i : Nat) : List TOp → Nat
+  | [] => 0
+  | .oodPoint j _ :: ops => (if j = i then 1 else 0) + oodPoints i ops
+  | _ :: ops => oodPoints i ops
+
+/-- The OOD answers of round `i` in the transcript program. -/
+def oodAnswers (i : Nat) : List TOp → Nat
+  | [] => 0
+  | .oodAnswer j _ :: ops => (if j = i then 1 else 0) + oodAnswers i ops
+  | _ :: ops => oodAnswers i ops
+
+/-- Every OOD point of round `i` is squeezed before the first answer of round `i` is absorbed
+(the order WHIR Lemma 4.25 needs for `s` samples drawn together). -/
+def oodPointsFirst (i : Nat) : List TOp → Bool
+  | [] => true
+  | .oodAnswer j _ :: ops => if j = i then oodPoints i ops == 0 else oodPointsFirst i ops
+  | _ :: ops => oodPointsFirst i ops
+
+/-- The OOD shape of the transcript: in every round `1 .. M - 1`, one answer per point, and all
+points before any answer. -/
+def oodShapeOK (u : UDSet) (ops : List TOp) : Bool :=
+  (List.range (u.rounds - 1)).all fun i =>
+    oodAnswers (i + 1) ops == oodPoints (i + 1) ops && oodPointsFirst (i + 1) ops
 
 /-- The fold positions of `M` WHIR rounds of `k` folds, in protocol order. -/
 def foldSlots (M k : Nat) : List (Nat × Nat) :=
@@ -182,11 +227,12 @@ structure KeyL where
 
 /-- The proof-of-work values of `L` read from its transcript program: the folding vector, one
 value per fold step in transcript order; the query vector, one value per round; the weakest
-`mu` and LogUp check (`0` if the transcript has none, so a missing check earns no credit). One
-OOD sample per round (WHIR Construction 5.1). -/
+`mu` and LogUp check (`0` if the transcript has none, so a missing check earns no credit); the
+OOD sample count of each round `1 .. M - 1`, counted from the transcript's `oodPoint` steps. -/
 def powVecOf (u : UDSet) (ops : List TOp) : PowVec :=
   ⟨(foldSteps ops).map (·.2.2), powMin (powList (· == .mu) ops), (querySteps ops).map (·.2),
-    powMin (powList (· == .logup) ops), List.replicate (u.rounds - 1) 1⟩
+    powMin (powList (· == .logup) ops),
+    (List.range (u.rounds - 1)).map fun i => oodPoints (i + 1) ops⟩
 
 /-- The transcript carries exactly one folding PoW step per fold, at its position in protocol
 order (round-major), and one query PoW step per round, in round order. -/
@@ -200,7 +246,8 @@ Theorem 5.2 and Lemma 4.25, and SWIRL Theorems 4.2.4 (unique decoding branch) an
 `|EF| = p^4`, with the proof-of-work values read from the transcript program
 (`UDSet.gate`: every grindable term at least 101 bits, every other term at least 100). -/
 def ProvenRegime (vk : KeyL) : Bool :=
-  powShapeOK vk.whir vk.transcript && vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
+  powShapeOK vk.whir vk.transcript && oodShapeOK vk.whir vk.transcript &&
+    vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
 
 /-- The list decoding regime of the owner decision of 2026-11-11 (option b of the paper review): the
 Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
@@ -261,6 +308,25 @@ theorem pv_absorbed_before_challenge {X : Prims} {vk : KeyL} {s pv π : List Nat
   · rw [← hs, List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD, List.append_assoc,
       List.getElem?_append_right (by omega), Nat.add_sub_cancel_left,
       List.getElem?_append_left hj]
+
+/-- The batched OOD claim of a WHIR round (WHIR Construction 5.1, decision 2c):
+`sum_j gamma^(j+1) v_j` over the OOD answers and the shift values, `gamma * poly_v(gamma)`. -/
+def oodBatchExpr (gamma : Nat) (vs : List Nat) : Expr := .mul (.var gamma) (hornerExpr gamma vs)
+
+/-- The wrap's check of the batched OOD claim gives the reference value mod `p`. -/
+theorem ood_batch_refines {env : List Nat} {gamma c : Nat} {vs : List Nat}
+    (hok : ArithOK (oodBatchExpr gamma vs) (.var c))
+    (h : ArithGadget env (oodBatchExpr gamma vs) (.var c)) :
+    env.getD gamma 0 * horner (env.getD gamma 0) (vs.map (env.getD · 0)) % pBB =
+      env.getD c 0 % pBB := by
+  have := (arith_refines hok h).2
+  simpa [oodBatchExpr, Expr.evalP_eq, Expr.eval, hornerExpr_eval] using this
+
+/-- What the OOD steps mean for an accepted verification: the digits of each OOD point are the
+digits of the sponge output on everything absorbed before it, so a later answer cannot steer it. -/
+theorem ood_point_digits {X : Prims} {env st : List Nat} {i : Nat} {ds : List Nat}
+    {ops : List TOp} (h : runRef X env st (.oodPoint i ds :: ops)) :
+    ds.map (env.getD · 0) = digitsOf pBB 5 (X.frSponge st) := h.1
 
 theorem getD_lt {env : List Nat} (h : ∀ x ∈ env, x < rFr) (i : Nat) : env.getD i 0 < rFr := by
   rw [List.getD_eq_getElem?_getD]
@@ -478,27 +544,34 @@ theorem public_digest_binds {X : Prims} {FrDom : List Nat → Prop} (h : FrInj X
   simp only [List.cons.injEq, true_and, and_true] at this
   exact pack_injective (ha.trans hb.symm) (by omega) hra hrb this
 
-/-- One WHIR round of the example transcript of `L`: the commitment of round `i >= 1`, then the
-`k` folds (a squeezed folding challenge and the PoW step of that fold), then the query PoW and
-the query challenge. Round `i` uses environment indices `100 + 50 i ..`. -/
-def lRound (k : Nat) (pfold pquery : List Nat) (i : Nat) : List TOp :=
+/-- One WHIR round of the example transcript of `L`: for `i >= 1` the commitment of round `i`,
+its `s` OOD points, then their `s` answers (4 words each); then the `k` folds (a squeezed folding
+challenge and the PoW step of that fold), then the query PoW and the query challenge. Round `i`
+uses environment indices `100 + 50 i ..` (`s <= 2`). -/
+def lRound (k s : Nat) (pfold pquery : List Nat) (i : Nat) : List TOp :=
   let b := 100 + 50 * i
-  (if i = 0 then [] else [.absorbFr [b + 24]]) ++
+  (if i = 0 then [] else
+    [.absorbFr [b + 24]] ++ (List.range s).map (fun j => .oodPoint i (List.range' (b + 25 + 5 * j) 5)) ++
+      (List.range s).map (fun j => .oodAnswer i (List.range' (b + 35 + 4 * j) 4))) ++
   ((List.range k).flatMap fun j =>
     [.squeeze (List.range' (b + 6 * j) 5), .pow (b + 6 * j + 5) (pfold.getD (k * i + j) 0) (.fold i (j + 1))]) ++
   [.pow (b + 45) (pquery.getD i 0) (.query i), .squeeze (List.range' (b + 44) 1)]
 
 /-- A transcript skeleton of `L` in the order of stark-backend's verifier preamble
 (`verifier/mod.rs:128-175`): commitments, then the public values, then challenges, with the LogUp
-and `mu` proof of work; then 3 WHIR rounds of 4 folds, each fold with its PoW step, and the
-query PoW of each round. Indices: statement `0..1`, `pv` `2..5`, proof from `6`. -/
-def lTranscript (pfold : List Nat) (pmu : Nat) (pquery : List Nat) (plogup : Nat) : List TOp :=
+and `mu` proof of work; then 3 WHIR rounds of 4 folds, each fold with its PoW step, `s` OOD
+samples in rounds 1 and 2, and the query PoW of each round. Indices: statement `0..1`, `pv` `2..5`, proof from `6`. -/
+def lTranscript (pfold : List Nat) (pmu : Nat) (pquery : List Nat) (plogup s : Nat) : List TOp :=
   [.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11], .pow 26 plogup .logup,
    .squeeze [27, 28, 29, 30, 31], .pow 12 pmu .mu, .squeeze [13, 14, 15, 16, 17]] ++
-  (List.range 3).flatMap (lRound 4 pfold pquery)
+  (List.range 3).flatMap (lRound 4 s pfold pquery)
 
-/-- The OD-19 transcript: folding PoW 0 on all 12 folds, `mu` 6, query 20 per round, LogUp 18. -/
-def lTranscriptUD : List TOp := lTranscript (List.replicate 12 0) 6 [20, 20, 20] 18
+/-- The OD-19 transcript: folding PoW 0 on all 12 folds, `mu` 6, query 20 per round, LogUp 18,
+one OOD sample per round. -/
+def lTranscriptUD : List TOp := lTranscript (List.replicate 12 0) 6 [20, 20, 20] 18 1
+
+/-- The same with two OOD samples per round (points `z_0, z_1`, then answers `y_0, y_1`). -/
+def lTranscriptUD2 : List TOp := lTranscript (List.replicate 12 0) 6 [20, 20, 20] 18 2
 
 /-- The example key at the OD-19 set: two statement words, four `pv` words. -/
 def lKey (T : List TOp) : KeyL := ⟨[], T, 2, 4, lUD⟩
@@ -513,22 +586,37 @@ theorem lKey_powVec : powVecOf lUD lTranscriptUD = lPow := by decide
 
 /-- The transcript's proof of work is what the gate reads: `mu` PoW 5 fails it. -/
 theorem lKey_mu5_not_proven :
-    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 5 [20, 20, 20] 18)) = false := by decide
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 5 [20, 20, 20] 18 1)) = false := by decide
 
 /-- Query PoW 19 in one round (round 1) fails it. -/
 theorem lKey_query19_not_proven :
-    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 19, 20] 18)) = false := by decide
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 19, 20] 18 1)) = false := by decide
 
 /-- LogUp PoW 17, below the frozen 18, fails it. -/
 theorem lKey_logup17_not_proven :
-    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 20, 20] 17)) = false := by decide
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 20, 20] 17 1)) = false := by decide
 
 /-- A transcript with only 2 WHIR rounds of fold steps (8 fold steps for 12 folds) fails it. -/
 theorem lKey_missing_folds_not_proven :
     ProvenRegime (lKey ([.absorbFr [6], .absorbBB [2, 3, 4, 5], .squeeze [7, 8, 9, 10, 11],
       .pow 26 18 .logup, .squeeze [27, 28, 29, 30, 31], .pow 12 6 .mu] ++
-      (List.range 2).flatMap (lRound 4 (List.replicate 12 0) [20, 20, 20]) ++
+      (List.range 2).flatMap (lRound 4 1 (List.replicate 12 0) [20, 20, 20]) ++
       [.pow 245 20 (.query 2)])) = false := by decide
+
+/-- The key with two OOD samples per round passes the gate, with the OOD counts read from the
+transcript (OOD terms 216 and 224 bits, `lUD_two_ood`). -/
+theorem lKey2_ok : pvFirstT 2 4 lTranscriptUD2 = true ∧ ProvenRegime (lKey lTranscriptUD2) = true ∧
+    (powVecOf lUD lTranscriptUD2).ood = [2, 2] := by decide
+
+/-- Interleaved OOD steps (`z_0, y_0, z_1, y_1`) fail the order check. -/
+theorem ood_interleaved_rejected :
+    oodPointsFirst 1 [.oodPoint 1 [0], .oodAnswer 1 [1], .oodPoint 1 [2], .oodAnswer 1 [3]] = false ∧
+    oodPointsFirst 1 [.oodPoint 1 [0], .oodPoint 1 [2], .oodAnswer 1 [1], .oodAnswer 1 [3]] = true := by
+  decide
+
+/-- A transcript whose rounds 1 and 2 have no OOD sample fails the gate. -/
+theorem lKey_no_ood_not_proven :
+    ProvenRegime (lKey (lTranscript (List.replicate 12 0) 6 [20, 20, 20] 18 0)) = false := by decide
 
 /-- Fold steps in the wrong order (round 0 fold 2 before fold 1) fail it. -/
 theorem lKey_fold_order_not_proven :
