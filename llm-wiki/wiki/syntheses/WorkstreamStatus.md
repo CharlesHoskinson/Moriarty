@@ -3,7 +3,7 @@ title: "Workstream status"
 type: synthesis
 tags: [status]
 sources: [animation-v2-notes, k21-recalibration-brief, c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft, council-findings, council-revisions, cost-round-brief, n1-native-circuits, cost-lane-fable, cost-lane-astra, cost-lane-gemini, compact-graph, prover-graph, elastic-chip-brief, elastic-chip-gpu-fable, n1b-native-proving-time]
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 ---
 
 # Workstream status
@@ -38,3 +38,4 @@ State as of 2026-11-11 14:10 local (cost, Compact graph, council and elastic chi
 ## Open questions
 
 See [[OpenOwnerQuestions]]: the D3 run ceiling (answered, pending owner), R-4 / OD-1 tree depth (TOP = 63 backed by M-2), R-5 / OD-2 claim counter (no count), R-6 and L-9 arenas (one arena, check done), L-2 cache-line counts, OD-17 input admission (the Init mechanism), OD-18 one-arena SRC-021 text, OD-20 GP-2 scope, OD-21 semantic reference, OD-23 `rules_d` consumer (council P-10), D-1, D-2, D-6 and exhaust kind 7.
+| MCA Lean proof (OD-19 b) | Phase 1 on branch `mca-lean`: lake project `formal/mca-lean/` (ArkLib `011391e5`, Lean v4.35.0) builds; PROOF.md Thm 7.1, Cor 8.2, Lemma 9.0, 9.0b, Cor 9.2 stated with `sorry`. ArkLib's Johnson-range line and curve MCA theorems are axiom-clean (propext, Classical.choice, Quot.sound). Production runs unique decoding; this is for list decoding later | Phase 2: choose the ArkLib route or the PROOF.md route for Thm 7.1; the subcode form for Cor 8.2; Lemma 9.0 by `norm_num` | none yet (see `formal/mca-lean/SURVEY.md`) |
