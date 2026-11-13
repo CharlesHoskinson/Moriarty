@@ -17,9 +17,10 @@ The objects:
   quotients, packing gadget, digit gadget with the canonical check): a sufficient relation for
   the Fr-native layer `L_Fr` to enforce for one `L` proof (option E, owner decision OD-24);
   `lfrSound_of_emul` shows it discharges A2'.
-* `KeyLFr`, `VerifyLFr`: the layer `L_Fr`, abstract while its shape is built (step E2): an Fr
-  transcript program with its own hash domain (use codes disjoint from `L`'s), and abstract native
-  checks.
+* `KeyLFr`, `VerifyLFr`: the layer `L_Fr` (built and measured in steps E2 and E3), kept
+  abstract here: an Fr transcript program with its own hash domains (OD-18, owner decision
+  2026-11-12: use codes `u = 5, 6, 7` for Merkle leaves, nodes and the transcript, disjoint from
+  `L`'s `u = 0` to `4`; the transcript starts at `trStart 7`), and abstract native checks.
 * `WrapRel`: the constraint semantics of the one BLS12-381 wrap `W`: the checks and transcript of
   `L_Fr`, native in Fr, a log table of exactly `B` entries with the canonical check on every
   value, `pv = pvOf W T` of the fixed length `W`, and native replay of every entry. Its public
@@ -253,7 +254,7 @@ Theorem 5.2 and Lemma 4.25, and SWIRL Theorems 4.2.4 (unique decoding branch) an
 (`UDSet.gate`: every grindable term at least 101 bits, every other term at least 100). -/
 def ProvenRegime (vk : KeyL) : Bool :=
   powShapeOK vk.whir vk.transcript && oodShapeOK vk.whir vk.transcript &&
-    vk.whir.gate efSize (powVecOf vk.whir vk.transcript)
+    vk.whir.gate bbF (powVecOf vk.whir vk.transcript)
 
 /-- The list decoding regime of the owner decision of 2026-11-11 (option b of the paper review): the
 Johnson-radius proximity-gap theorem applied as stated (`m` from `thm15Mult`, so `m >= 3`; the
@@ -392,8 +393,9 @@ theorem check_refines {X : Prims} {env : List Nat} {c : Check}
 /-- The Fr-cell emulation of the verifier of `L` on `(s, pv, π)`: a sufficient relation for
 `L_Fr`'s AIRs to enforce for one `L` proof (owner decision OD-24, option E), with the gadgets of
 the round 2 wrap: range checks, lazy Fr arithmetic with bounded quotients, the packing gadget,
-the digit gadget with the canonical check, the bit decomposition for proof of work. The real
-shape of `L_Fr` is built in step E2; A2' does not depend on this relation. -/
+the digit gadget with the canonical check, the bit decomposition for proof of work. The
+measured `L_Fr` (steps E2 and E3) is a tape over generic Fr AIRs, not this relation; A2' does not
+depend on it. -/
 def EmulL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
   s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ x ∈ s ++ pv ++ π, x < rFr) ∧
     (∀ c ∈ vk.checks, c.Gadget X (s ++ pv ++ π)) ∧
@@ -413,15 +415,23 @@ challenges). -/
 inductive TOpFr where
   | absorb (vars : List Nat)
   | squeeze (dst : Nat)
-  | pow (nonce bits : Nat)
+  /-- A proof-of-work check, tagged with its WHIR or SWIRL position as in `L`. -/
+  | pow (nonce bits : Nat) (kind : PowKind)
+  /-- An OOD point of WHIR round `i` (a whole Fr element). -/
+  | oodPoint (round : Nat) (dst : Nat)
+  /-- The answer at an OOD point of round `i` (Fr elements absorbed). -/
+  | oodAnswer (round : Nat) (vars : List Nat)
 
 /-- The reference transcript run of `L_Fr`. -/
 def runFr (X : Prims) (env : List Nat) : List Nat → List TOpFr → Prop
   | _, [] => True
   | st, .absorb vs :: ops => runFr X env (st ++ vs.map (env.getD · 0)) ops
   | st, .squeeze d :: ops => env.getD d 0 = X.frSponge st ∧ runFr X env (st ++ [X.frSponge st]) ops
-  | st, .pow n b :: ops => X.frSponge (st ++ [env.getD n 0]) % 2 ^ b = 0 ∧
+  | st, .pow n b _ :: ops => X.frSponge (st ++ [env.getD n 0]) % 2 ^ b = 0 ∧
       runFr X env (st ++ [env.getD n 0]) ops
+  | st, .oodPoint _ d :: ops => env.getD d 0 = X.frSponge st ∧
+      runFr X env (st ++ [X.frSponge st]) ops
+  | st, .oodAnswer _ vs :: ops => runFr X env (st ++ vs.map (env.getD · 0)) ops
 
 /-- The wrap's native gadget for the transcript of `L_Fr` (proof of work by bit decomposition). -/
 def runFrGadget (X : Prims) (env : List Nat) : List Nat → List TOpFr → Prop
@@ -429,23 +439,30 @@ def runFrGadget (X : Prims) (env : List Nat) : List Nat → List TOpFr → Prop
   | st, .absorb vs :: ops => runFrGadget X env (st ++ vs.map (env.getD · 0)) ops
   | st, .squeeze d :: ops => env.getD d 0 = X.frSponge st ∧
       runFrGadget X env (st ++ [X.frSponge st]) ops
-  | st, .pow n b :: ops => (∃ hi, X.frSponge (st ++ [env.getD n 0]) = hi * 2 ^ b) ∧
+  | st, .pow n b _ :: ops => (∃ hi, X.frSponge (st ++ [env.getD n 0]) = hi * 2 ^ b) ∧
       runFrGadget X env (st ++ [env.getD n 0]) ops
+  | st, .oodPoint _ d :: ops => env.getD d 0 = X.frSponge st ∧
+      runFrGadget X env (st ++ [X.frSponge st]) ops
+  | st, .oodAnswer _ vs :: ops => runFrGadget X env (st ++ vs.map (env.getD · 0)) ops
 
 theorem runFr_refines (X : Prims) (env : List Nat) : ∀ (st : List Nat) (ops : List TOpFr),
     runFrGadget X env st ops → runFr X env st ops
   | _, [], _ => trivial
   | st, .absorb vs :: ops, h => runFr_refines X env _ ops h
   | st, .squeeze d :: ops, h => ⟨h.1, runFr_refines X env _ ops h.2⟩
-  | st, .pow n b :: ops, h => by
+  | st, .pow n b _ :: ops, h => by
     obtain ⟨⟨hi, hh⟩, h2⟩ := h
     exact ⟨by rw [hh, Nat.mul_mod_left], runFr_refines X env _ ops h2⟩
+  | st, .oodPoint _ d :: ops, h => ⟨h.1, runFr_refines X env _ ops h.2⟩
+  | st, .oodAnswer _ vs :: ops, h => runFr_refines X env _ ops h
 
 def absorbedBeforeChallengeFr : List TOpFr → List Nat
   | [] => []
   | .absorb vs :: ops => vs ++ absorbedBeforeChallengeFr ops
   | .squeeze _ :: _ => []
-  | .pow _ _ :: _ => []
+  | .pow _ _ _ :: _ => []
+  | .oodPoint _ _ :: _ => []
+  | .oodAnswer _ vs :: ops => vs ++ absorbedBeforeChallengeFr ops
 
 /-- `pv` is absorbed by `L_Fr`'s transcript before its first challenge. -/
 def pvFirstFr (lo n : Nat) (ops : List TOpFr) : Bool :=
@@ -463,17 +480,36 @@ structure KeyLFr where
   uses : List Nat
   /-- The use code of `L_Fr`'s transcript. -/
   tTag : Nat
+  /-- The declared WHIR analysis parameters of `L_Fr` (unique decoding over Fr). -/
+  whir : UDSet
+
+/-- The shape of an `L_Fr` transcript operation as an `L` operation, for the static PoW and OOD
+reading (`powShapeOK`, `oodShapeOK`, `powVecOf` look only at the kinds and the order). -/
+def TOpFr.toTOp : TOpFr → TOp
+  | .absorb vs => .absorbFr vs
+  | .squeeze d => .squeeze [d]
+  | .pow n b k => .pow n b k
+  | .oodPoint i d => .oodPoint i [d]
+  | .oodAnswer i vs => .oodAnswer i vs
+
+/-- Gate G4 for `L_Fr`: the unique decoding gate over `|F| = r` (`frF`) with the proof of work
+and the OOD counts read from `L_Fr`'s transcript program, and one PoW step per fold position and
+per round, in order. -/
+def ProvenRegimeFr (vk : KeyLFr) : Bool :=
+  powShapeOK vk.whir (vk.transcript.map TOpFr.toTOp) &&
+    oodShapeOK vk.whir (vk.transcript.map TOpFr.toTOp) &&
+    vk.whir.gate frF (powVecOf vk.whir (vk.transcript.map TOpFr.toTOp))
 
 /-- Tag separation: `L_Fr`'s transcript code is one of its use codes, no use code of `L_Fr` is a
 use code of `L` (or of a native or public hash), and every initial capacity is an Fr element. -/
 def tagSep (vk : KeyLFr) : Bool :=
   vk.uses.contains vk.tTag && vk.uses.all (fun u => !lUses.contains u && u < 2 ^ 186)
 
-/-- Static facts of the key of `L_Fr`: `pv` absorbed first, tag separation, and the statement
-and `pv` lengths of `L`. -/
+/-- Static facts of the key of `L_Fr`: `pv` absorbed first, tag separation, the statement and
+`pv` lengths of `L`, and gate G4 (`ProvenRegimeFr`). -/
 def KeyOKFr (vkL : KeyL) (vk : KeyLFr) : Prop :=
   pvFirstFr vk.nStmt vk.pvLen vk.transcript = true ∧ tagSep vk = true ∧ vk.nStmt = vkL.nStmt ∧
-    vk.pvLen = vkL.pvLen
+    vk.pvLen = vkL.pvLen ∧ ProvenRegimeFr vk = true
 
 /-- The reference verifier of `L_Fr` on statement `s`, public values `pv` and proof `π`, with the
 abstract native checks `acc`. Its transcript starts from `trStart vk.tTag`. -/
@@ -625,10 +661,16 @@ structure Premises where
     ∃ w, WrapRel X B LFrAccept vkLFr pub w
   /-- (A2') Soundness of `L_Fr` (option E, OD-24): if the reference verifier of `L_Fr` accepts
   `(s, pv, π)`, the reference verifier of `L` accepts an embedded `L` proof `πL` with the same
-  statement and public values (knowledge soundness of the Fr STARK `L_Fr`). Hypotheses: A2b, and
-  the static key facts of `L_Fr` (`pv` absorbed first, tag separation from `L`'s hash domains).
-  `lfrSound_of_emul`: an `L_Fr` that enforces `EmulL` meets it. -/
-  lfrSound : FrInj X FrDom → KeyOKFr vkL vkLFr →
+  statement and public values (knowledge soundness of the Fr STARK `L_Fr`). The soundness of
+  `L_Fr` rests on the same unique decoding results as A2 (WHIR Theorem 5.2 with list size 1,
+  Lemma 4.10, Corollary 4.11, Theorem 4.8, Lemma 4.25; SWIRL Theorems 4.2.4, 4.2.1, 4.2.5 and
+  Corollary 4.2.6), over `|F| = r` with no extension field. Hypotheses: A2b, the static key
+  facts of `L_Fr` (`pv` absorbed first, tag separation from `L`'s hash domains: use codes
+  `u = 5, 6, 7`, transcript on `u = 7`, OD-18), and gate G4 for `L_Fr`: `ProvenRegimeFr vkLFr`
+  (every term computed over `r`; the bit counts of the measured set are `lfrUD_bits`, query
+  101.1435 bits weakest, the same at the E2 I10 key and the E3 J5 key). `lfrSound_of_emul`: an `L_Fr` that enforces
+  `EmulL` meets it. -/
+  lfrSound : FrInj X FrDom → KeyOKFr vkL vkLFr → ProvenRegimeFr vkLFr = true →
     ∀ s pv π, VerifyLFr X LFrAccept vkLFr s pv π → ∃ πL, VerifyL X vkL s pv πL
   /-- (A2) Soundness of `L` (statements as recorded in
   `research/sherlock-design-paper-review-20261111/G5-PAPER-MAP.md`, which reads the full papers).
@@ -681,11 +723,11 @@ theorem bridge_sound (P : Premises) {pub : List Nat} {prf : P.LedgerProof}
     (h : P.LedgerAccepts pub prf) : P.Run pub := by
   obtain ⟨w, hw⟩ := P.wrapKnowledgeSound pub prf h
   obtain ⟨hVFr, hTlen, hTok, hpv⟩ := wrap_refines hw
-  obtain ⟨πL, hV⟩ := P.lfrSound P.frSpongeInj P.vkLFr_ok pub w.pv w.π hVFr
+  obtain ⟨πL, hV⟩ := P.lfrSound P.frSpongeInj P.vkLFr_ok P.vkLFr_ok.2.2.2.2 pub w.pv w.π hVFr
   obtain ⟨d, hroot⟩ :=
     P.lastLayerSound (packed_hash_inj P.frSpongeInj) P.vkL_ok.1 P.vkL_ok.2.1 pub w.pv πL hV
   obtain ⟨hrec, t, ⟨htlen, htwf, htin⟩, henc, hdig⟩ := P.rootBinds _ _ _ hroot
-  rw [P.vkLFr_ok.2.2.2] at hpv
+  rw [P.vkLFr_ok.2.2.2.1] at hpv
   have hpad : pad P.B t.flatten = w.T :=
     pvOf_inj (by rw [pad_length htlen, hTlen]) (pad_wf htwf) (fun e he => (hTok e he).1)
       (henc.trans hpv)
@@ -845,12 +887,37 @@ theorem s4_pow15_not_proven : ProvenRegimeLD s4Whir (lKeyLD 15 15 20) = false :=
 theorem remark_m1_not_proven :
     ProvenRegimeLD { s4Whir with mult := 1 } (lKeyLD 21 21 20) = false := by decide
 
-/-- An example key of `L_Fr` (not frozen; step E2 builds the real one): statement `0..1`, `pv`
-`2..5`, a commitment, then challenges; use codes 5, 6 and 7 with the transcript on 7. -/
-def lfrKey : KeyLFr := ⟨[.absorb [0, 1, 2, 3, 4, 5, 6], .squeeze 7, .pow 8 20, .squeeze 9], 2, 4,
-  [5, 6, 7], 7⟩
+/-- One WHIR round of the example `L_Fr` transcript: for `i >= 1` the commitment, one OOD point
+and its answer; the 4 folds, each a challenge and its PoW step; the query PoW and challenge. -/
+def lfrRound (pfold pquery : List Nat) (i : Nat) : List TOpFr :=
+  let b := 100 + 50 * i
+  (if i = 0 then [] else [.absorb [b + 24], .oodPoint i (b + 25), .oodAnswer i [b + 35]]) ++
+  ((List.range 4).flatMap fun j =>
+    [.squeeze (b + 6 * j), .pow (b + 6 * j + 5) (pfold.getD (4 * i + j) 0) (.fold i (j + 1))]) ++
+  [.pow (b + 45) (pquery.getD i 0) (.query i), .squeeze (b + 44)]
 
-theorem lfrKey_ok : KeyOKFr (lKey lTranscriptUD) lfrKey := ⟨by decide, by decide, rfl, rfl⟩
+/-- The transcript skeleton of `L_Fr` at the E2 I10 set: statement `0..1`, `pv` `2..5` and a
+commitment absorbed first, then the LogUp and `mu` PoW steps (0 bits), then 3 WHIR rounds with
+fold PoW 0, query PoW 20 and one OOD sample in rounds 1 and 2. -/
+def lfrTranscript (pquery : List Nat) : List TOpFr :=
+  [.absorb [0, 1, 2, 3, 4, 5, 6], .squeeze 7, .pow 8 0 .logup, .squeeze 9, .pow 10 0 .mu,
+   .squeeze 11] ++ (List.range 3).flatMap (lfrRound (List.replicate 12 0) pquery)
+
+/-- The example key of `L_Fr`: the E2 I10 parameter set `lfrUD`; use codes 5, 6 and 7 with the
+transcript on 7. -/
+def lfrKey : KeyLFr := ⟨lfrTranscript [20, 20, 20], 2, 4, [5, 6, 7], 7, lfrUD⟩
+
+/-- Gate G4 holds for `L_Fr`: the measured E2 parameter set with the transcript's proof of work
+and OOD counts passes `ProvenRegimeFr`, and the vector it reads is `lfrPow`. -/
+theorem lfrKey_regime : ProvenRegimeFr lfrKey = true ∧
+    powVecOf lfrUD ((lfrTranscript [20, 20, 20]).map TOpFr.toTOp) = lfrPow := by decide
+
+/-- Query PoW 19 in round 1 of the `L_Fr` transcript fails its gate. -/
+theorem lfrKey_query19_not_proven :
+    ProvenRegimeFr { lfrKey with transcript := lfrTranscript [20, 19, 20] } = false := by decide
+
+theorem lfrKey_ok : KeyOKFr (lKey lTranscriptUD) lfrKey :=
+  ⟨by decide, by decide, rfl, rfl, lfrKey_regime.1⟩
 
 /-- A key of `L_Fr` that reuses `L`'s transcript code 3 fails tag separation. -/
 theorem lfr_tag_reuse_rejected : tagSep { lfrKey with uses := [5, 6, 3], tTag := 3 } = false := by
