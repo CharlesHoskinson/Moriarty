@@ -14,7 +14,9 @@ use crate::{
     native::F,
     smoke::wrap_arch,
     transcript::Transcript,
-    verifier::{ProofData, Shape, part1, part2},
+    stacked::{StackShape, part3},
+    verifier::{ProofData, Shape, commit_cells, part1, part2},
+    whir::{WhirShape, part4},
 };
 
 #[derive(Clone, Debug)]
@@ -23,6 +25,10 @@ pub struct Part1Relation {
     pub n_samples: usize,
     /// I4: also run `part2` and take one more sample (the first stacked-reduction sample).
     pub part2: bool,
+    /// I4b: also run the stacked reduction (implies `part2`, no extra sample).
+    pub stack: Option<StackShape>,
+    /// I5: also run WHIR after the stacked reduction (needs `stack`).
+    pub whir: Option<WhirShape>,
 }
 
 impl Relation for Part1Relation {
@@ -45,7 +51,16 @@ impl Relation for Part1Relation {
         let mut t = Transcript::new(&mut a, self.shape.u_transcript)?;
         let pv = witness.as_ref().map(|w| &w.0);
         let p1 = part1(&mut a, &mut t, &self.shape, &pv)?;
-        if self.part2 {
+        if let Some(ss) = &self.stack {
+            let op = part2(&mut a, &mut t, &self.shape, &pv, &p1)?;
+            let sv = pv.map(|p| &p.stack);
+            let (u, q) = part3(&mut a, &mut t, &self.shape, ss, &sv, &p1.rs, &op)?;
+            if let Some(ws) = &self.whir {
+                let commits = commit_cells(&mut a, &self.shape, &p1)?;
+                let wv = pv.map(|p| &p.whir);
+                part4(&mut a, &mut t, ws, &wv, &q, &commits, &u, self.shape.l_skip)?;
+            }
+        } else if self.part2 {
             part2(&mut a, &mut t, &self.shape, &pv, &p1)?;
             t.sample(&mut a)?;
         }

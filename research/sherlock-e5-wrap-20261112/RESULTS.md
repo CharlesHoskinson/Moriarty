@@ -4,7 +4,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 
 ## 1. Status
 
-**E5 gate: NOT REACHED.** I0 to I3 and I4a pass their test gates. The stock ledger 9.1.0.1 (`a2b30128`) reads a key built with the vendored permutation access and accepts a blinded proof with 1,026 public inputs (MEASURED, section 3). I4b (stacked reduction) is next; its code is written (`src/stacked.rs`, not yet built).
+**E5 gate: PASS (I6b, section 6f; final circuit section 6g).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr. With levers L1 and L2 it is 1,436,529 rows at k = 21, 80.6 percent of the k = 21 gate (1,782,573). The key is 1,325 bytes in the `MidnightVK` framing. The stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte. Keygen takes 84.6 s and the blinded prove 183.8 s in an exclusive heavy slot. All figures are MEASURED. The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7).
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -13,16 +13,17 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | I2 | Merkle paths | PASS | section 5 |
 | I3 | Preamble, LogUp PoW, GKR, zerocheck rounds | PASS | section 6a |
 | I4a | Column openings, DAG, interactions, final batch-constraint claim | PASS | section 6b |
-| I4b | Stacked reduction | written, not built or tested | section 8 |
-| I5 | WHIR | not started | section 8 |
-| I6 | Full circuit, keygen, ledger | not started | section 8 |
+| I4b | Stacked reduction | PASS | section 6c |
+| I5 | WHIR (whole verifier) | PASS | section 6d |
+| I6a | Full relation, keygen, blinded proof, stock ledger, on `mix-small` | PASS | section 6e |
+| I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | PASS | section 6f |
 
 ## 2. Code
 
 | Repository (not pushed) | Branch | Content |
 |---|---|---|
 | Moriarty `~/Projects/Moriarty-wt/e5-wrap` | `e5-wrap` (from `e2-lfr` 6fc8e3c21) | `tools/sherlock-wrap`: the wrap crate in its own workspace and lock; `tools/sherlock-wrap/ledger-check`: the stock ledger 9.1.0.1 check in a second workspace; this directory |
-| openvm `~/.cache/m7-wrap/src/openvm-e5` (a git worktree of the openvm clone, so the `../openvm-org_stark-backend` path patch resolves) | `e5-wrap` (from `e2-lfr` d46a137) | crate `crates/sherlock-wrap-export`: the exporter (`src/lib.rs`) and the fixtures (`examples/fixtures.rs`) |
+| openvm `~/.cache/m7-wrap/src/openvm-e5` (a git worktree of the openvm clone, so the `../openvm-org_stark-backend` path patch resolves) | `e5-wrap`, rebased onto `e2-lfr` c4bd312 (the E2 gate) for the `lfr-real` export | crate `crates/sherlock-wrap-export`: the exporter (`src/lib.rs`), the fixtures (`examples/fixtures.rs`), `examples/lfr_e4.rs` (fixture `lfr-real` from the E4 CPU-baseline proof and key cache of the I10 tape, no new prove) and `examples/lfr_real.rs` (the same with a new keygen and prove) |
 
 **`tools/sherlock-wrap`** (the M7 place: a standalone workspace beside `tools/gpu-prover`):
 
@@ -37,11 +38,13 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | `src/poly.rs` | `poly_common` helpers over `Alg` (eq, interpolation at 0..1, 0..2 and 0..3, Horner, powers) |
 | `src/verifier.rs` | the `L_Fr` verifier over `Alg`: `Shape::from_wrapin` (the pin: params, presence, heights, trace order, per-AIR DAG and interactions, opening widths from the key), `ProofData`, `part1` (preamble, LogUp PoW, GKR, zerocheck rounds), `part2` (`batch_constraints.rs` steps 7 to 9) |
 | `src/verifier_test.rs` | test relation: `part1` (and `part2`) with every sample asserted equal to the stock sample |
-| `src/stacked.rs` | I4b `part3`, a port of `stacked_reduction.rs` (not yet in `lib.rs`) |
+| `src/stacked.rs` | `StackShape` (layouts from the key shape), `StackData`, `part3`: a port of `stacked_reduction.rs` (rotation kernel, `eq` prism and the `n < 0` indicator cached per `(n, need_rot)`) |
+| `src/whir.rs` | `WhirShape`, `WhirData`, `part4`: a port of `whir.rs` (`mu` PoW and batching, folding sumchecks, OOD, query PoW, round-0 openings per commitment with leaf hash, tree compress and Merkle path, codeword rounds, `binary_k_fold` with `omega^index` and `omega^-index` taken from the index bit cells, final check) |
+| `src/wrap.rs`, `src/bin/wrap.rs` | I6 `WrapRelation` (statement 1,026 words by `PublicMap`) and its run: cost model, MockProver, keygen, blinded proof, files for `ledger-check` |
 | `src/wrapin.rs` | reader of the exported file |
 | `src/smoke.rs`, `src/bin/smoke.rs` | I0 smoke relation and its prove and key writer |
 | `src/replay.rs`, `src/merkle_test.rs` | I1 and I2 test relations |
-| `tests/i0_native.rs`, `tests/i1_transcript.rs`, `tests/i2_merkle.rs`, `tests/i3_part1.rs`, `tests/i4_part2.rs` | the gates |
+| `tests/i0_native.rs`, `tests/i1_transcript.rs`, `tests/i2_merkle.rs`, `tests/i3_part1.rs`, `tests/i4_part2.rs`, `tests/i4b_stacked.rs`, `tests/i5_whir.rs` | the gates |
 | `ledger-check/` | stock `midnight-transient-crypto` at rev `a2b30128` (tag `ledger-9.1.0.1`); no vendored midnight crate in its graph |
 
 **Exporter (`wrapin` v1, JSON).** `export()` runs the stock `verifier::verify` with a recording transcript and writes `vk` and `proof` (serde form; an Fr value is 32 little-endian canonical bytes), the `layouts` of `verify_proof_shape`, the derived parameters, the domain codes and the transcript log (`o`, `c`, `s` events with 64-digit big-endian hex). Fixtures in `~/.cache/e5-wrap/fixtures/`: `MixtureFixture::standard(6)` (Fibonacci with public values, LogUp interactions, cached main, preprocessed trace, self interactions) proved with `Bls12381FrPoseidonLfrCpuEngine` (u = 5, 6, 7):
@@ -108,7 +111,74 @@ The univariate coefficient count uses `params.max_constraint_degree` (the first 
 
 Log: `~/.cache/e5-wrap/logs/i4.log` (with I3 rerun).
 
-## 6c. Row budget at the measured `L_Fr` shape (DERIVED)
+## 6c. I4b: stacked reduction (MEASURED)
+
+| Test | Result |
+|---|---|
+| `i4b_stacked_native_equals_stock` | both fixtures: the stacked final sum holds, 0 failed checks; samples equal the stock record through `u_{n_stack}` (109 on `mix-small`, 118 on `mix-lfr`); 150 column claims over 4 commitments; key-derived univariate count and stacked widths equal the proof's. Refused: 8 of 8 changed stacking openings (first and last of each commitment), univariate coefficients 0 and 1, a round polynomial value |
+| `i4b_stacked_mockprover` (`mix-small`, k = 17) | 16,017 rows for parts 1 to 3; accepted; a changed stacking opening refused |
+
+## 6d. I5: WHIR, the whole verifier (MEASURED)
+
+| Test | Result |
+|---|---|
+| `i5_whole_verifier_native_equals_stock` | `mix-small`: accepted, 252 of 252 stock samples equal in order, 19,571 permutations, queries 82/38; `mix-lfr`: accepted, 402 of 402 equal, 28,260 permutations, queries 98/83/82. Refused on both: a changed initial row value (first and last commitment), initial sibling, codeword value, codeword sibling, codeword commitment, OOD value, WHIR sumcheck value, final polynomial coefficient, stacking opening, common main commitment (11 of 11); a changed query PoW witness (6 and 20 bits) |
+| `i5_whole_verifier_mockprover` (`mix-small`, k = 19) | 519,158 rows; accepted; a changed opened row refused |
+| `i5_rows_at_lfr_params` (cost model, `mix-lfr`, k = 21) | 898,562 rows, 50.4 percent of the k = 21 gate (DERIVED from the MEASURED rows). This is the `L_Fr` parameter set but the mixture's stacked widths (1 per commitment, 4 commitments), not the E2 widths 33 + 10; `lfr-real` measures those |
+
+The round-0 roots are the observed cells (common main, cached) and the key constants (preprocessed); a codeword round's root is the cell observed in the previous round. Log: `~/.cache/e5-wrap/logs/i5.log`.
+
+## 6e. I6a: the full wrap of `mix-small` and the stock ledger (MEASURED)
+
+`WrapRelation` (`src/wrap.rs`) runs `part1` to `part4` on the gadget back end; the `L_Fr` shape is pinned as circuit constants; the statement is 1,026 words by `PublicMap` (LEAD: the `L_Fr` public values in AIR order, the rest constrained zero; `mix-small` has its Fibonacci public values). Run `~/.cache/e5-wrap/i6.sh mix-small 20` (log `i6-small.log`):
+
+| Quantity | Value |
+|---|---|
+| Cost model, k = 20 | 518,774 rows (29.1 percent of the k = 21 gate, DERIVED), 8 advice and 27 fixed columns, 1 lookup |
+| `MockProver` | honest accepted; a changed public input refused; a changed opened WHIR row refused (13.9 s) |
+| Keygen (ceremony SRS `bls_midnight_2p20`), prove (`OsRng`, Blake2b) | 51.0 s and 70.0 s on a shared host (not a clean timing); proof 2,912 bytes; library verify accepts |
+| Key bytes in the `MidnightVK` framing | 1,325 |
+| Ledger 9.1.0.1 `VerifierKey::verify` (stock crates, `ledger-check`) | `Ok(())` in 0.077 s; a changed public input refused (first, middle, last of 1,026); a flipped proof byte refused (first, middle, last) |
+
+The key size does not depend on the circuit beyond the architecture and k, so the 50,000-byte limit holds with a wide margin at any k up to 21 (DERIVED from the I0 and I6a keys, both 1,325 bytes).
+
+## 6f. I6b: the wrap of the real `L_Fr` proof, the E5 gate (MEASURED)
+
+Fixture `lfr-real`: the E2 I10 `L_Fr` proof of the whole `L` verifier on the real bench `L` proof, at the `L_Fr` set (UD, log blowup 3, `l_skip` 2, `n_stack` 18, `k_whir` 4, queries 98/83/82, query PoW 20). It is exported by `examples/lfr_e4.rs` from the E4 key cache and CPU-baseline proof of the unchanged tree (openvm c4bd312), read only, with no new prove; the stock verifier accepts the pair (57.4 s, log `export-e4.log`). 2 commitments, stacked widths 33 and 10, 15 traces with `n` per trace 17, 17, 14, 14, 13, 12, 11, 11, 11, 11, 9, 8, 7, 7, -1; 3,123 transcript events; 1 public value (the `L` vk pre-hash, D-2).
+
+| Check | Result |
+|---|---|
+| `i5_lfr_real_native` (log `i5real.log`) | the whole verifier accepts; 649 of 649 stock samples equal in order; 50,682 permutations; refused: a changed preprocessed row, a changed opening of the `n = -1` trace, a changed public value |
+| Cost model, k = 21 (log `i6-real.log`) | **1,592,979 rows**, 89.4 percent of the k = 21 gate 1,782,573 (DERIVED from the MEASURED rows); 8 advice and 27 fixed columns, 1 lookup, table rows 1,056,771 |
+| `MockProver`, k = 21 | honest accepted; a changed public input refused; a changed opened WHIR row refused (69.8 s) |
+| Keygen (`bls_midnight_2p21`), blinded prove (`OsRng`, Blake2b) | 123.1 s and 210.3 s on a shared host (not a clean timing); proof 2,912 bytes; library verify accepts |
+| Key bytes in the `MidnightVK` framing | **1,325** (limit 50,000) |
+| Ledger 9.1.0.1 `VerifierKey::verify` (stock crates, `ledger-check`) | **`Ok(())`** in 0.079 s; a changed public input refused (first, middle, last of 1,026); a flipped proof byte refused (first, middle, last) |
+
+The public-value carrier of E3 (about 1,522 Fr words for the full `L` interface) will grow `L_Fr` and these rows; with 189,594 rows of headroom (10.6 percent) the levers of section 8 matter.
+
+## 6g. Row levers on `lfr-real` (MEASURED, cost model at k = 21)
+
+Each lever is applied alone on top of the one before; each is checked by the I3 to I5 tests (native on all three fixtures, `MockProver` on `mix-small`) before its rows are taken.
+
+| Lever | Rows | Percent of gate | Change |
+|---|---:|---:|---:|
+| none (I6b) | 1,592,979 | 89.4 | |
+| L1 fused multiply-add: `Alg::mul_add` is the native chip's one-row `add_and_mul` (`x*y + z`), used in the WHIR `mu` batching, the final-polynomial Horner, the `gamma` and final-check sums, `binary_k_fold`, the DAG `lambda` sum, the interaction sums and the stacked sums. Needs a visibility-only accessor `ZkStdLib::native_gadget()` (patch `patches/perm-access.diff`; `configure` unchanged). Log `lever-fma.log` | 1,453,425 | 81.5 | -139,554 |
+| L2 `omega^index` chains: the `omega^(2^j)` constants assigned once per round (not per query and chain); `zi = zi_root^(2^k)` by k squarings; `zi^-1` witnessed and pinned by `zi_root * zi_inv = 1` (was three select chains of key constants per query). Log `lever-omega.log` | 1,436,529 | 80.6 | -16,896 |
+
+Final circuit (L1 + L2), run `i6.sh lfr-real 21` under `heavy-slot --exclusive` (log `i6-excl.log`; heavy-slot gave the job the host alone among slot jobs, host load 30 to 37 from work outside the slots, so the times are the cleanest available, not an idle host):
+
+| Quantity | Value |
+|---|---|
+| Cost model, k = 21 | 1,436,529 rows (80.6 percent of the gate; 346,044 rows of headroom), 8 advice and 27 fixed columns |
+| `MockProver` | honest accepted; a changed public input refused; a changed opened WHIR row refused (37.2 s) |
+| Keygen (`bls_midnight_2p21`) | 84.6 s |
+| Blinded prove (`OsRng`, Blake2b) | 183.8 s; proof 2,912 bytes; library verify accepts |
+| Key bytes in the `MidnightVK` framing | 1,325 |
+| Ledger 9.1.0.1 `VerifierKey::verify` (stock) | `Ok(())` in 0.107 s; a changed public input refused (3 positions); a flipped proof byte refused (3 positions) |
+
+## 6h. Row budget at the measured `L_Fr` shape (DERIVED)
 
 E2 I10 (`e2-lfr` RESULTS.md section 8g, openvm `e2-lfr` c4bd312): 15 AIRs, 2 commitments, stacked widths 33 (main) and 10 (preprocessed program table) at log stacked height 20, proof 2,516,530 bytes. The wrap model of M7 assumed width 18; the figures below use 33 + 10.
 
@@ -130,12 +200,16 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - `low_bits` is a canonical full decomposition, so `x + r` is refused.
 - The PoW check asserts each sampled low bit is 0 (`assert_bit_false`).
 - In I1 and I2 the roots and samples are witness cells (test relations). In the full circuit they come from the transcript (samples) and from the vk constants or the observed commitments (roots).
+- The shape pin. `Shape::from_wrapin` takes the parameters, the DAGs, the interactions, the widths, the preprocessed commitments and the pre-hash from the `L_Fr` key. It takes the trace heights, the presence of optional AIRs and the cached-commitment counts from the fixture proof's `trace_vdata`, and the stacked layouts from `verify_proof_shape` on that proof. These are fixed for the `L_Fr` machine (E2 pins the tape shape), so they are circuit constants: a proof of another shape is refused, not verified. The wrap key is therefore tied to one `L_Fr` key and one `L_Fr` height profile.
+- `omega^index` and `omega^-index` in `binary_k_fold` are products of key constants selected by the index bit cells, so no inversion is witnessed.
+- A codeword round's Merkle root is the commitment cell observed in the round before; the round-0 roots are the observed common-main and cached cells and the key's preprocessed constants.
+- The statement: the `L_Fr` public-value cells (the cells observed in the preamble) are the public inputs; the rest of the 1,026 words are constant-zero cells (`PublicMap`, LEAD).
 
 ## 8. Next increments (for the next agent)
 
 1. **I3 (done).** Write `gkr.rs` over `Alg`, a port of `verifier/fractional_sumcheck_gkr.rs` (observe `q0_claim`, layer claims, cubic interpolation at 0..3, the `eq` update, `mu` and `lambda` samples), and the zerocheck rounds of `batch_constraints.rs` steps 1 to 6 (LogUp PoW, `alpha`, `beta`, `xi`, `lambda`, `mu`, the univariate round with the `step_by(2^l_skip)` sum, the multilinear rounds with constant inverse factorials). Test: the native back end on `mix-small` and `mix-lfr` reproduces every recorded sample in order up to the column openings, and the final GKR claims; refused: a changed layer claim, a changed round polynomial. `MockProver` once on `mix-small`.
-2. **I4a (done); I4b: `stacked_reduction.rs`, written in `src/stacked.rs` (register it in `lib.rs`, make `eq_uni` pub and add `eq_uni_at_one` in `verifier.rs`, test as I4a: native final sum, the first WHIR sample equal, negatives on stacking openings and round polys).** The DAG evaluator (`verifier/evaluator.rs`: nodes in order, `is_first_row`, `is_last_row`, `is_transition` at the lifted point with the `n < 0` case), interactions (message by powers of `beta`, bus index plus 1), `eq_3b`, `eq_ns`, `eq_sharp_ns`, the final `evaluated_claim`; then `stacked_reduction.rs`. The vk DAG is in `wrapin.vk.inner.per_air[i].symbolic_constraints` (serde form of `SymbolicConstraintsDag`).
-3. **I5.** `whir.rs`: `mu` PoW and batching, folding sumchecks, OOD, query PoW and indices (`sample_bits(log_rs - k_whir)`), round-0 openings per commitment (the I2 code), `binary_k_fold` (twiddles and `1/2` are key constants; `omega^index` from the index bits as `prod (1 + b_j (w^(2^j) - 1))`), `gamma`, the final check.
+2. **I4a, I4b (done); was I4b: `stacked_reduction.rs`, written in `src/stacked.rs` (register it in `lib.rs`, make `eq_uni` pub and add `eq_uni_at_one` in `verifier.rs`, test as I4a: native final sum, the first WHIR sample equal, negatives on stacking openings and round polys).** The DAG evaluator (`verifier/evaluator.rs`: nodes in order, `is_first_row`, `is_last_row`, `is_transition` at the lifted point with the `n < 0` case), interactions (message by powers of `beta`, bus index plus 1), `eq_3b`, `eq_ns`, `eq_sharp_ns`, the final `evaluated_claim`; then `stacked_reduction.rs`. The vk DAG is in `wrapin.vk.inner.per_air[i].symbolic_constraints` (serde form of `SymbolicConstraintsDag`).
+3. **I5 (done).** `whir.rs`: `mu` PoW and batching, folding sumchecks, OOD, query PoW and indices (`sample_bits(log_rs - k_whir)`), round-0 openings per commitment (the I2 code), `binary_k_fold` (twiddles and `1/2` are key constants; `omega^index` from the index bits as `prod (1 + b_j (w^(2^j) - 1))`), `gamma`, the final check.
 4. **I6.** Full relation: the shape from the `L_Fr` key (E2 I10 key; export it with `sherlock-wrap-export` from the E2 machine proof, as a third fixture), public inputs by `PublicMap` (PLAN section 4, LEAD), `MockProver` rows, keygen at the smallest k up to 21, key bytes, blinded proof, `ledger-check`.
 
 ## Log
@@ -144,3 +218,9 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 14:35. First `mix-lfr` export stopped (single-threaded, no `parallel` features); fixed and rerun (320.9 s).
 - 2026-11-12 15:05. I0 to I2 pass (log `i0c.log`); ledger 9.1.0.1 accepts the smoke wrap.
 - 2026-11-12 17:33. I3 and I4a pass (log `i4.log`; the job waited about 2 hours for the heavy lock).
+- 2026-11-12 17:52. I4b and I5 pass (log `i5.log`); the whole verifier reproduces every stock sample on both fixtures. Builds move to `heavy-slot` (owner rule change). Openvm `e5-wrap` rebased onto E2 `c4bd312` for the `lfr-real` export.
+- 2026-11-12 18:45. I6a passes on `mix-small` (log `i6-small.log`): ledger 9.1.0.1 accepts the whole-verifier wrap.
+- 2026-11-12 19:39. I6b passes (log `i6-real.log`): 1,592,979 rows at k = 21; ledger 9.1.0.1 accepts the wrap of the real `L_Fr` proof. E5 gate PASS.
+- 2026-11-12 19:40. Lever L1 (fused multiply-add): 1,453,425 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-fma.log`).
+- 2026-11-12 20:37. Lever L2 (`omega^index`): 1,436,529 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-omega.log`).
+- 2026-11-12 21:56. Final circuit (L1 + L2) under `heavy-slot --exclusive`: 1,436,529 rows, keygen 84.6 s, prove 183.8 s, ledger 9.1.0.1 accepts (log `i6-excl.log`).

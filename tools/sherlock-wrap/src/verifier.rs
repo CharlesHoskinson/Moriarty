@@ -208,6 +208,10 @@ pub struct ProofData {
     pub sumcheck_round_polys: Vec<Vec<F>>,
     /// Per present trace (sorted order), per part (common main, preprocessed, cached), values.
     pub column_openings: Vec<Vec<Vec<F>>>,
+    /// The stacking proof (I4b).
+    pub stack: crate::stacked::StackData,
+    /// The WHIR proof (I5).
+    pub whir: crate::whir::WhirData,
 }
 
 impl ProofData {
@@ -250,6 +254,8 @@ impl ProofData {
                 .iter()
                 .map(|t| t.as_array().unwrap().iter().map(frs).collect())
                 .collect(),
+            stack: crate::stacked::StackData::from_wrapin(w),
+            whir: crate::whir::WhirData::from_wrapin(w),
         }
     }
 }
@@ -267,6 +273,9 @@ pub struct Part1<V> {
     pub public_values: Vec<Vec<V>>,
     pub numerator_term_per_air: Vec<V>,
     pub denominator_term_per_air: Vec<V>,
+    /// The observed commitment cells: common main, and per AIR (vk order) the cached ones.
+    pub common_main_commit: V,
+    pub cached: Vec<Vec<V>>,
 }
 
 fn wits<A: Alg>(a: &mut A, pv: &Value<&ProofData>, n: usize, f: impl Fn(&ProofData, usize) -> F) -> Result<Vec<A::V>, Error> {
@@ -287,6 +296,7 @@ pub fn part1<A: Alg>(
     let cmc = a.wit(pv.map(|p| p.common_main_commit))?;
     t.observe(a, &cmc)?;
     let mut pvals = vec![];
+    let mut cached_cells = vec![];
     for (i, air) in s.airs.iter().enumerate() {
         if !air.is_required {
             let b = a.cst(if air.log_height.is_some() { one } else { F::ZERO })?;
@@ -306,8 +316,11 @@ pub fn part1<A: Alg>(
             }
             let cached = wits(a, pv, air.num_cached, |p, j| p.cached[i][j])?;
             t.observe_all(a, &cached)?;
+            cached_cells.push(cached);
             vals = wits(a, pv, air.num_public_values, |p, j| p.public_values[i][j])?;
             t.observe_all(a, &vals)?;
+        } else {
+            cached_cells.push(vec![]);
         }
         pvals.push(vals);
     }
@@ -414,7 +427,22 @@ pub fn part1<A: Alg>(
         public_values: pvals,
         numerator_term_per_air: num,
         denominator_term_per_air: den,
+        common_main_commit: cmc,
+        cached: cached_cells,
     })
+}
+
+/// The round-0 WHIR roots in commitment order: common main, then per trace (sorted order)
+/// the preprocessed commitment (a key constant) and the cached ones (observed cells).
+pub fn commit_cells<A: Alg>(a: &mut A, s: &Shape, p1: &Part1<A::V>) -> Result<Vec<A::V>, Error> {
+    let mut v = vec![p1.common_main_commit.clone()];
+    for &air in &s.trace_to_air {
+        if let Some(c) = s.airs[air].preprocessed_commit {
+            v.push(a.cst(c)?);
+        }
+        v.extend(p1.cached[air].iter().cloned());
+    }
+    Ok(v)
 }
 
 /// LogUp GKR (`verify_gkr`): returns `(p(xi), q(xi), xi)`.
@@ -487,7 +515,7 @@ fn gkr<A: Alg>(
 pub type Openings<V> = Vec<Vec<Vec<(V, V)>>>;
 
 /// `eq_D(x, y)` of `poly_common::eval_eq_uni`.
-fn eq_uni<A: Alg>(a: &mut A, l: usize, x: &A::V, y: &A::V) -> Result<A::V, Error> {
+pub fn eq_uni<A: Alg>(a: &mut A, l: usize, x: &A::V, y: &A::V) -> Result<A::V, Error> {
     let xp = exp_powers_of_2(a, x, l.max(1))?;
     let yp = exp_powers_of_2(a, y, l.max(1))?;
     let mut res = a.cst(F::ONE)?;
@@ -498,6 +526,18 @@ fn eq_uni<A: Alg>(a: &mut A, l: usize, x: &A::V, y: &A::V) -> Result<A::V, Error
         let y1 = a.add_c(&yp[i], -F::ONE)?;
         let v = a.mul(&x1, &y1)?;
         res = a.add(&u, &v)?;
+    }
+    let half_l = F::from(2u64).invert().unwrap().pow_vartime([l as u64]);
+    a.mul_c(&res, half_l)
+}
+
+/// `eq_D(x, 1)` of `poly_common::eval_eq_uni_at_one`: `prod_i (x^(2^i) + 1) / 2^l`.
+pub fn eq_uni_at_one<A: Alg>(a: &mut A, l: usize, x: &A::V) -> Result<A::V, Error> {
+    let xp = exp_powers_of_2(a, x, l.max(1))?;
+    let mut res = a.cst(F::ONE)?;
+    for x in xp.iter().take(l) {
+        let t = a.add_c(x, F::ONE)?;
+        res = a.mul(&res, &t)?;
     }
     let half_l = F::from(2u64).invert().unwrap().pow_vartime([l as u64]);
     a.mul_c(&res, half_l)
@@ -693,8 +733,7 @@ pub fn part2<A: Alg>(
         }
         let mut expr = a.cst(F::ZERO)?;
         for (k, &idx) in ash.constraint_idx.iter().enumerate() {
-            let x = a.mul(&nodes[idx], &lambda_pows[k])?;
-            expr = a.add(&expr, &x)?;
+            expr = a.mul_add(&nodes[idx], &lambda_pows[k], &expr)?;
         }
         cons_evals.push(a.mul(&eq_ns[n_lift], &expr)?);
         let mut num = a.cst(F::ZERO)?;
@@ -702,15 +741,12 @@ pub fn part2<A: Alg>(
         for (j, it) in ash.interactions.iter().enumerate() {
             let mut d = a.cst(F::ZERO)?;
             for (m, &idx) in it.message.iter().enumerate() {
-                let x = a.mul(&nodes[idx], &beta_pows[m])?;
-                d = a.add(&d, &x)?;
+                d = a.mul_add(&nodes[idx], &beta_pows[m], &d)?;
             }
             let x = a.mul_c(&beta_pows[it.message.len()], F::from(it.bus + 1))?;
             d = a.add(&d, &x)?;
-            let x = a.mul(&eq_3b[ti][j], &nodes[it.count])?;
-            num = a.add(&num, &x)?;
-            let x = a.mul(&eq_3b[ti][j], &d)?;
-            den = a.add(&den, &x)?;
+            num = a.mul_add(&eq_3b[ti][j], &nodes[it.count], &num)?;
+            den = a.mul_add(&eq_3b[ti][j], &d, &den)?;
         }
         let x = a.mul(&num, &eq_sharp_ns[n_lift])?;
         inter_evals.push(a.mul_c(&x, norm)?);
@@ -719,8 +755,7 @@ pub fn part2<A: Alg>(
     let mut acc = a.cst(F::ZERO)?;
     let mut mp = a.cst(F::ONE)?;
     for e in inter_evals.iter().chain(&cons_evals) {
-        let x = a.mul(e, &mp)?;
-        acc = a.add(&acc, &x)?;
+        acc = a.mul_add(e, &mp, &acc)?;
         mp = a.mul(&mp, &p1.mu)?;
     }
     a.assert_eq(&acc, &p1.cur_sum, "batch constraint final claim")?;

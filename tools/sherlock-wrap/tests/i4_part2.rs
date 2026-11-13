@@ -84,7 +84,7 @@ fn i4_part2_mockprover() {
     let s = Shape::from_wrapin(&w);
     let p = ProofData::from_wrapin(&w);
     let (_, smp) = native(&s, &p);
-    let rel = Part1Relation { shape: s.clone(), n_samples: smp.len(), part2: true };
+    let rel = Part1Relation { shape: s.clone(), n_samples: smp.len(), part2: true, stack: None, whir: None };
     let k = 17;
     let m = cost_model(&rel, Some(k));
     println!("E5I4 mock mix-small: rows {}", m.rows);

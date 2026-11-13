@@ -39,6 +39,8 @@ pub trait Alg {
     fn add_c(&mut self, a: &Self::V, c: F) -> Result<Self::V, Error> {
         self.lin(&[(F::ONE, a.clone())], c)
     }
+    /// `x * y + z` (one native-chip row on the gadget back end).
+    fn mul_add(&mut self, x: &Self::V, y: &Self::V, z: &Self::V) -> Result<Self::V, Error>;
     fn assert_eq(&mut self, a: &Self::V, b: &Self::V, what: &str) -> Result<(), Error>;
     fn assert_eq_c(&mut self, a: &Self::V, c: F, what: &str) -> Result<(), Error>;
     fn permute(&mut self, s: &[Self::V; WIDTH]) -> Result<[Self::V; WIDTH], Error>;
@@ -94,6 +96,9 @@ impl Alg for Native {
     }
     fn lin(&mut self, terms: &[(F, Value<F>)], k: F) -> Result<Value<F>, Error> {
         Ok(terms.iter().fold(Value::known(k), |acc, (c, x)| acc + x.map(|x| x * c)))
+    }
+    fn mul_add(&mut self, x: &Value<F>, y: &Value<F>, z: &Value<F>) -> Result<Value<F>, Error> {
+        Ok(*x * *y + *z)
     }
     fn assert_eq(&mut self, a: &Value<F>, b: &Value<F>, what: &str) -> Result<(), Error> {
         self.check(a.zip(*b).map(|(a, b)| a == b), what);
@@ -167,6 +172,17 @@ impl<L: Layouter<F>> Alg for Gadget<'_, L> {
     }
     fn lin(&mut self, terms: &[(F, Self::V)], k: F) -> Result<Self::V, Error> {
         self.std.linear_combination(&mut *self.l, terms, k)
+    }
+    fn mul_add(&mut self, x: &Self::V, y: &Self::V, z: &Self::V) -> Result<Self::V, Error> {
+        // 0*x + 0*y + 1*z + 0 + 1*x*y
+        self.std.native_gadget().add_and_mul(
+            &mut *self.l,
+            (F::ZERO, x),
+            (F::ZERO, y),
+            (F::ONE, z),
+            F::ZERO,
+            F::ONE,
+        )
     }
     fn assert_eq(&mut self, a: &Self::V, b: &Self::V, _: &str) -> Result<(), Error> {
         self.std.assert_equal(&mut *self.l, a, b)

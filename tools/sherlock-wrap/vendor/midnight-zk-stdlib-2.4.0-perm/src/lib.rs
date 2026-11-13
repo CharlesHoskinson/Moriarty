@@ -766,6 +766,12 @@ impl ZkStdLib {
             .unwrap_or_else(|| panic!("ZkStdLibArch must enable poseidon"))
     }
 
+    /// Native gadget (Sherlock E5 vendored patch, visibility only: gives the one-row
+    /// `add_and_mul` of the native chip; `configure` is unchanged).
+    pub fn native_gadget(&self) -> &NG {
+        &self.native_gadget
+    }
+
     /// Gadget for performing map and non-map checks
     pub fn map_gadget(&self) -> &MapGadget<F, NG, PoseidonChip<F>> {
         self.map_gadget

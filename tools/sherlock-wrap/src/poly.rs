@@ -82,10 +82,12 @@ pub fn interpolate_cubic_at_0123<A: Alg>(a: &mut A, e: &[A::V; 4], x: &A::V) -> 
 
 /// Horner: `sum c_i x^i`.
 pub fn horner<A: Alg>(a: &mut A, coeffs: &[A::V], x: &A::V) -> Result<A::V, Error> {
-    let mut acc = a.cst(F::ZERO)?;
-    for c in coeffs.iter().rev() {
-        let t = a.mul(&acc, x)?;
-        acc = a.add(&t, c)?;
+    let Some((last, rest)) = coeffs.split_last() else {
+        return a.cst(F::ZERO);
+    };
+    let mut acc = last.clone();
+    for c in rest.iter().rev() {
+        acc = a.mul_add(&acc, x, c)?;
     }
     Ok(acc)
 }

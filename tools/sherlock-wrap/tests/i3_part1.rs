@@ -76,7 +76,7 @@ fn i3_part1_mockprover() {
     let s = Shape::from_wrapin(&w);
     let p = ProofData::from_wrapin(&w);
     let (_, smp) = native(&s, &p);
-    let rel = Part1Relation { shape: s.clone(), n_samples: smp.len(), part2: false };
+    let rel = Part1Relation { shape: s.clone(), n_samples: smp.len(), part2: false, stack: None, whir: None };
     let k = 16;
     let m = cost_model(&rel, Some(k));
     println!("E5I3 mock mix-small: rows {}", m.rows);
