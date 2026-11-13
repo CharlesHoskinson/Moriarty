@@ -78,3 +78,7 @@ MEASURED so far (trees: sb `0004791`, ovm `b34cbc5`, Moriarty `c8c718040`):
 | fix-iface | `iface_fixture` into `~/.cache/t1/fix/e3` | pass (51 min, shared slots) | `~/.cache/t1/logs/fix-iface.log` |
 
 Still running in units `t1-ovm` and `t1-sb` at handback: lfr-suite (i0, i5_l, i9 and the rest with `--include-ignored`), the exports, the wrap suite, i10 gate, j5 gate, m7-bls, lfr-gpu, and the stark-backend stages (waiting for a heavy slot). Results land in `~/.cache/t1/logs/runs.log`; the lead fills the remaining rows. The late merges touched only `qa/` and `research/` plus the files listed in the commit log; any code they changed needs the wrap suite rerun on the new tip.
+
+### lfr-suite result (MEASURED, 09:35 to 09:55, ovm `b34cbc5`, fixtures `~/.cache/t1/fix/{e2,e3}`)
+
+`cargo test --release --locked --offline --no-fail-fast -p sherlock-lfr --lib --tests -- --include-ignored --test-threads=1 --skip i10_gate_at_lfr_params --skip j5_gate_at_lfr_params`, log `~/.cache/t1/logs/lfr-suite.log`: 34 tests pass, among them the heavy gates `i0_fixture_verifies_from_disk`, `i5_l_transcript_on_tape` and `i9_whole_verifier_on_real_l`. 1 fails: `e4_profile_lfr_prove` panics at `crates/sherlock-lfr/src/machine.rs:1189` ("expose the public words with Tape::expose"). Cause: the e4-gpu profile test was written on the E2 tape, and E3 later made `Tape::expose` mandatory. This is a cross-lane API change, not a merge error, so it is listed for the lead (the test needs the E3 expose call, and it stays on plain keygen, see section 2).
