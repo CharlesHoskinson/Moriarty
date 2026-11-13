@@ -343,7 +343,7 @@ The lead decided (AFK pick) that the wrap statement must equal the stock D-9 one
 | `MockProver`, full wrap | honest OK (46.2 s); changed public input and changed proof value refused |
 | Exclusive slot (`r3-i6-excl.log`) | keygen 86.1 s; blinded prove 137.5 s; proof 2,912 bytes; key 1,325 bytes; library verify OK |
 | Stock ledger 9.1.0.1 | `Ok(())` in 0.079 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
-| Gemini Quint lane round 3 (`argon-run` lane `e5-decode-r3`, report to `qa/gemini-quint/e5-decode-r3/`) | lane running, verdict pending (2026-11-13 07:55: the lane is still writing `decode.qnt`; no REPORT yet) |
+| Gemini Quint lane round 3 (`qa/gemini-quint/e5-decode-r3/`) | Lane verdict: SOUND and COMPLETE on all 7 questions, caveat only the deliberate `pw[0] == sh.pre_hash` pin. Lead rerun (`RERUN.md`, MEASURED): typecheck OK; the rust backend hits its recursion limit, so the typescript backend is used; 12 of 14 tests pass, and `corpus_sound_and_complete_test` and `catch_mut_no_m_range_test` fail; `SOUND_AND_COMPLETE` is violated at seeds 1 and 2, and all 7 mutant invariants are violated. Cause: a model artifact. The toy field 359 is below the 2^9 slot range bound, so the model's range check accepts `rem = -1`. Over Fr the circuit refuses it. The verdict is **not confirmed by the lead runs** until the model is repaired and rerun |
 
 ## 7. Soundness points (as built)
 
@@ -386,3 +386,4 @@ The lead decided (AFK pick) that the wrap statement must equal the stock D-9 one
 - 2026-11-13 05:35. Full wrap on the new `lfr-e3`: 1,610,038 rows at k = 21; exclusive keygen 83.7 s, prove 138.5 s; ledger 9.1.0.1 accepts (logs `r2-i8.log`, `r2-i6-excl.log`).
 - 2026-11-13 05:55. Gemini Quint lane round 2 on the ported decoder: SOUND and COMPLETE; lead runs pass, 8 of 8 mutants caught (`qa/gemini-quint/e5-decode-r2/`).
 - 2026-11-13 06:32. Full native replay (section 6m): I7 30 of 30 equal; 1,668,323 rows at k = 21; exclusive keygen 86.1 s, prove 137.5 s; ledger 9.1.0.1 accepts (logs `r3-i9.log`, `r3-i8.log`, `r3-i6-excl.log`).
+- 2026-11-13 08:09. Gemini Quint lane round 3: lane verdict SOUND and COMPLETE; the lead rerun fails 2 of 14 tests and `SOUND_AND_COMPLETE` through a toy-field artifact of the model (`qa/gemini-quint/e5-decode-r3/RERUN.md`); verdict not confirmed until the model is repaired.
