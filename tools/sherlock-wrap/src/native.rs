@@ -105,6 +105,11 @@ impl NativeTranscript {
     }
 }
 
+/// The canonical representative as an integer.
+pub fn to_big(x: &F) -> num_bigint::BigUint {
+    num_bigint::BigUint::from_bytes_le(x.to_repr().as_ref())
+}
+
 /// Low 64 bits of the canonical representative.
 pub fn low_u64(x: &F) -> u64 {
     let r = x.to_repr();

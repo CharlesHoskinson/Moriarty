@@ -3,9 +3,11 @@
 //! layouts, WHIR rounds, preprocessed commitments, vk pre-hash) is pinned in the circuit as
 //! constants, so it is fixed by the key.
 //!
-//! E6: the statement is the E3 call vector read from the `L_Fr` public words (`callvec.rs`), in
-//! place of the E5 `PublicMap` placeholder. The `L` key pre-hash (public word 0) is pinned from
-//! the fixture the relation is built from (the key fixture).
+//! The statement map. A fixture with a `decode` section (the E3 `L_Fr`, openvm e3-iface
+//! 2f09caf) uses the E3 map: the D-9 decoder (`decode.rs`) on the `L_Fr` public values, after
+//! `part4` on the same transcript; the statement is the call vector (1,026 lanes). Other
+//! fixtures keep `PublicMap` (LEAD, PLAN section 4): the first `n` words are the `L_Fr` public
+//! values in AIR order, the other `1,026 - n` words are constrained zero.
 
 use std::io;
 
@@ -17,8 +19,8 @@ use midnight_proofs::{
 use midnight_zk_stdlib::{Relation, ZkStdLib, ZkStdLibArch};
 
 use crate::{
-    alg::Gadget,
-    callvec,
+    alg::{Alg, Gadget, Native},
+    decode::{DecodeShape, Dims, decode},
     native::F,
     smoke::{NPI, wrap_arch},
     stacked::{StackShape, part3},
@@ -34,8 +36,8 @@ pub struct WrapRelation {
     pub stack: StackShape,
     pub whir: WhirShape,
     pub nr_cols: u8,
-    /// The `L` key pre-hash (`L_Fr` public word 0), a key constant.
-    pub l_pre_hash: F,
+    /// The E3 map (`None`: `PublicMap`).
+    pub map: Option<DecodeShape>,
 }
 
 impl WrapRelation {
@@ -44,19 +46,38 @@ impl WrapRelation {
         let stack = StackShape::from_wrapin(w, &shape);
         let whir = WhirShape::from_wrapin(w, &stack.widths);
         let n: usize = shape.airs.iter().map(|a| if a.log_height.is_some() { a.num_public_values } else { 0 }).sum();
-        assert_eq!(n, callvec::PACKED, "L_Fr public words");
-        let p = ProofData::from_wrapin(w);
-        let l_pre_hash = p.public_values.iter().flatten().copied().next().unwrap();
-        WrapRelation { shape, stack, whir, nr_cols, l_pre_hash }
+        let map = w.doc.get("decode").filter(|d| !d.is_null()).map(|dd| {
+            let g = |k: &str| dd["dims"][k].as_u64().unwrap() as usize;
+            let d = Dims { b: g("b"), v: g("v"), p: g("p"), l_tx: g("l_tx") };
+            assert_eq!(d.lanes(), NPI, "E3 map: the call vector is the statement");
+            assert_eq!(n, d.n_public(), "E3 map: L_Fr public values");
+            let p = ProofData::from_wrapin(w);
+            DecodeShape { d, pre_hash: p.public_values.iter().flatten().copied().next().unwrap() }
+        });
+        if map.is_none() {
+            assert!(n <= NPI, "PublicMap: {n} public values exceed {NPI} words");
+        }
+        WrapRelation { shape, stack, whir, nr_cols, map }
     }
 
-    /// The statement of a proof: the call vector; panics if the native decoder refuses.
+    /// The statement of a proof: the native decoder (E3 map) or `PublicMap`.
     pub fn instance(&self, p: &ProofData) -> Vec<F> {
-        let pv: Vec<F> = p.public_values.iter().flatten().copied().collect();
-        let (s, failed) = callvec::call_vector_native(&pv, self.l_pre_hash);
-        assert!(failed.is_empty(), "call vector refused: {failed:?}");
-        assert_eq!(s.len(), NPI);
-        s
+        let mut v: Vec<F> = p.public_values.iter().flatten().copied().collect();
+        if let Some(sh) = &self.map {
+            let mut a = Native::default();
+            let mut t = Transcript::new(&mut a, self.shape.u_transcript).unwrap();
+            let pv: Vec<Value<F>> = v.iter().map(|x| Value::known(*x)).collect();
+            t.observe_all(&mut a, &pv).unwrap();
+            let s = decode(&mut a, &mut t, sh, &pv).unwrap();
+            assert!(a.failures.is_empty(), "decoder refused: {:?}", a.failures);
+            let mut out = vec![];
+            for x in s {
+                x.map(|x| out.push(x));
+            }
+            return out;
+        }
+        v.resize(NPI, F::from(0u64));
+        v
     }
 }
 
@@ -86,9 +107,14 @@ impl Relation for WrapRelation {
             let (u, q) = part3(&mut a, &mut t, &self.shape, &self.stack, &pv.map(|p| &p.stack), &p1.rs, &op)?;
             let commits = commit_cells(&mut a, &self.shape, &p1)?;
             part4(&mut a, &mut t, &self.whir, &pv.map(|p| &p.whir), &q, &commits, &u, self.shape.l_skip)?;
-            let pv: Vec<_> = p1.public_values.iter().flatten().cloned().collect();
-            cells = callvec::call_vector(&mut a, &pv, self.l_pre_hash)?;
-            assert_eq!(cells.len(), NPI);
+            let pw: Vec<_> = p1.public_values.iter().flatten().cloned().collect();
+            if let Some(sh) = &self.map {
+                cells = decode(&mut a, &mut t, sh, &pw)?;
+            } else {
+                cells.extend(pw);
+                let zero = a.cst(F::from(0u64))?;
+                cells.resize(NPI, zero);
+            }
         }
         for c in &cells {
             std.constrain_as_public_input(l, c)?;
@@ -102,7 +128,7 @@ impl Relation for WrapRelation {
 
     fn write_relation<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
         // The relation is rebuilt from the pinned `L_Fr` key, not from these bytes.
-        w.write_all(b"sherlock-wrap-v2-callvec")
+        w.write_all(b"sherlock-wrap-v1")
     }
 
     fn read_relation<R: io::Read>(_r: &mut R) -> io::Result<Self> {
