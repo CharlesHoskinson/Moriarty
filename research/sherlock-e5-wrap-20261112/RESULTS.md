@@ -23,7 +23,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | Repository (not pushed) | Branch | Content |
 |---|---|---|
 | Moriarty `~/Projects/Moriarty-wt/e5-wrap` | `e5-wrap` (from `e2-lfr` 6fc8e3c21) | `tools/sherlock-wrap`: the wrap crate in its own workspace and lock; `tools/sherlock-wrap/ledger-check`: the stock ledger 9.1.0.1 check in a second workspace; this directory |
-| openvm `~/.cache/m7-wrap/src/openvm-e5` (a git worktree of the openvm clone, so the `../openvm-org_stark-backend` path patch resolves) | `e5-wrap` (from `e2-lfr` d46a137) | crate `crates/sherlock-wrap-export`: the exporter (`src/lib.rs`) and the fixtures (`examples/fixtures.rs`) |
+| openvm `~/.cache/m7-wrap/src/openvm-e5` (a git worktree of the openvm clone, so the `../openvm-org_stark-backend` path patch resolves) | `e5-wrap`, rebased onto `e2-lfr` c4bd312 (the E2 gate) for the `lfr-real` export | crate `crates/sherlock-wrap-export`: the exporter (`src/lib.rs`), the fixtures (`examples/fixtures.rs`), `examples/lfr_e4.rs` (fixture `lfr-real` from the E4 CPU-baseline proof and key cache of the I10 tape, no new prove) and `examples/lfr_real.rs` (the same with a new keygen and prove) |
 
 **`tools/sherlock-wrap`** (the M7 place: a standalone workspace beside `tools/gpu-prover`):
 
@@ -136,7 +136,7 @@ The round-0 roots are the observed cells (common main, cached) and the key const
 |---|---|
 | Cost model, k = 20 | 518,774 rows (29.1 percent of the k = 21 gate, DERIVED), 8 advice and 27 fixed columns, 1 lookup |
 | `MockProver` | honest accepted; a changed public input refused; a changed opened WHIR row refused (13.9 s) |
-| Keygen (ceremony SRS `bls_midnight_2p20`), prove (`OsRng`, Blake2b) | 51.0 s and 70.0 s; proof 2,912 bytes; library verify accepts |
+| Keygen (ceremony SRS `bls_midnight_2p20`), prove (`OsRng`, Blake2b) | 51.0 s and 70.0 s on a shared host (not a clean timing); proof 2,912 bytes; library verify accepts |
 | Key bytes in the `MidnightVK` framing | 1,325 |
 | Ledger 9.1.0.1 `VerifierKey::verify` (stock crates, `ledger-check`) | `Ok(())` in 0.077 s; a changed public input refused (first, middle, last of 1,026); a flipped proof byte refused (first, middle, last) |
 
@@ -164,6 +164,10 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - `low_bits` is a canonical full decomposition, so `x + r` is refused.
 - The PoW check asserts each sampled low bit is 0 (`assert_bit_false`).
 - In I1 and I2 the roots and samples are witness cells (test relations). In the full circuit they come from the transcript (samples) and from the vk constants or the observed commitments (roots).
+- The shape pin. `Shape::from_wrapin` takes the parameters, the DAGs, the interactions, the widths, the preprocessed commitments and the pre-hash from the `L_Fr` key. It takes the trace heights, the presence of optional AIRs and the cached-commitment counts from the fixture proof's `trace_vdata`, and the stacked layouts from `verify_proof_shape` on that proof. These are fixed for the `L_Fr` machine (E2 pins the tape shape), so they are circuit constants: a proof of another shape is refused, not verified. The wrap key is therefore tied to one `L_Fr` key and one `L_Fr` height profile.
+- `omega^index` and `omega^-index` in `binary_k_fold` are products of key constants selected by the index bit cells, so no inversion is witnessed.
+- A codeword round's Merkle root is the commitment cell observed in the round before; the round-0 roots are the observed common-main and cached cells and the key's preprocessed constants.
+- The statement: the `L_Fr` public-value cells (the cells observed in the preamble) are the public inputs; the rest of the 1,026 words are constant-zero cells (`PublicMap`, LEAD).
 
 ## 8. Next increments (for the next agent)
 

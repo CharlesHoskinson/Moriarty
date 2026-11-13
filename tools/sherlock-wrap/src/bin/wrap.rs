@@ -36,6 +36,7 @@ fn main() {
     println!("E5JSON {}", json!({"phase": "cost_model", "fixture": a[1], "k": k, "rows": model.rows,
         "k21_gate": K21_GATE, "within_gate": model.rows <= K21_GATE, "table_rows": model.table_rows,
         "advice_columns": model.advice_columns, "fixed_columns": model.fixed_columns, "lookups": model.lookups}));
+    assert!(model.rows <= K21_GATE, "rows {} above the k = 21 gate {K21_GATE}", model.rows);
 
     if mock {
         let run = |pi: &Vec<F>, p: &ProofData| {
