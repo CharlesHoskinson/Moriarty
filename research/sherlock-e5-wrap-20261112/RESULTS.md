@@ -4,7 +4,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 
 ## 1. Status
 
-**E5 gate: NOT REACHED.** I0 to I5 pass their test gates: the whole `L_Fr` verifier runs over `Alg`, and on both fixtures the native run reproduces every stock sample (252 of 252, 402 of 402) and refuses every changed proof part tried. The stock ledger 9.1.0.1 (`a2b30128`) reads a key built with the vendored permutation access and accepts a blinded proof with 1,026 public inputs (MEASURED, section 3). I6a passes: the whole-verifier wrap of `mix-small` is accepted by the stock ledger 9.1.0.1 with a 1,325-byte key and 1,026 public inputs (section 6e). I6b, the same run on the real E2 I10 `L_Fr` proof (fixture `lfr-real`, export queued), decides the gate rows.
+**E5 gate: PASS (I6b, section 6f).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr: 1,592,979 rows at k = 21, 89.4 percent of the k = 21 gate (1,782,573); key 1,325 bytes in the `MidnightVK` framing; the stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte (all MEASURED). The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7). Open: the clean exclusive timing and the row levers (section 8).
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -16,7 +16,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | I4b | Stacked reduction | PASS | section 6c |
 | I5 | WHIR (whole verifier) | PASS | section 6d |
 | I6a | Full relation, keygen, blinded proof, stock ledger, on `mix-small` | PASS | section 6e |
-| I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | export queued | section 8 |
+| I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | PASS | section 6f |
 
 ## 2. Code
 
@@ -142,7 +142,22 @@ The round-0 roots are the observed cells (common main, cached) and the key const
 
 The key size does not depend on the circuit beyond the architecture and k, so the 50,000-byte limit holds with a wide margin at any k up to 21 (DERIVED from the I0 and I6a keys, both 1,325 bytes).
 
-## 6f. Row budget at the measured `L_Fr` shape (DERIVED)
+## 6f. I6b: the wrap of the real `L_Fr` proof, the E5 gate (MEASURED)
+
+Fixture `lfr-real`: the E2 I10 `L_Fr` proof of the whole `L` verifier on the real bench `L` proof, at the `L_Fr` set (UD, log blowup 3, `l_skip` 2, `n_stack` 18, `k_whir` 4, queries 98/83/82, query PoW 20). It is exported by `examples/lfr_e4.rs` from the E4 key cache and CPU-baseline proof of the unchanged tree (openvm c4bd312), read only, with no new prove; the stock verifier accepts the pair (57.4 s, log `export-e4.log`). 2 commitments, stacked widths 33 and 10, 15 traces with `n` per trace 17, 17, 14, 14, 13, 12, 11, 11, 11, 11, 9, 8, 7, 7, -1; 3,123 transcript events; 1 public value (the `L` vk pre-hash, D-2).
+
+| Check | Result |
+|---|---|
+| `i5_lfr_real_native` (log `i5real.log`) | the whole verifier accepts; 649 of 649 stock samples equal in order; 50,682 permutations; refused: a changed preprocessed row, a changed opening of the `n = -1` trace, a changed public value |
+| Cost model, k = 21 (log `i6-real.log`) | **1,592,979 rows**, 89.4 percent of the k = 21 gate 1,782,573 (DERIVED from the MEASURED rows); 8 advice and 27 fixed columns, 1 lookup, table rows 1,056,771 |
+| `MockProver`, k = 21 | honest accepted; a changed public input refused; a changed opened WHIR row refused (69.8 s) |
+| Keygen (`bls_midnight_2p21`), blinded prove (`OsRng`, Blake2b) | 123.1 s and 210.3 s on a shared host (not a clean timing); proof 2,912 bytes; library verify accepts |
+| Key bytes in the `MidnightVK` framing | **1,325** (limit 50,000) |
+| Ledger 9.1.0.1 `VerifierKey::verify` (stock crates, `ledger-check`) | **`Ok(())`** in 0.079 s; a changed public input refused (first, middle, last of 1,026); a flipped proof byte refused (first, middle, last) |
+
+The public-value carrier of E3 (about 1,522 Fr words for the full `L` interface) will grow `L_Fr` and these rows; with 189,594 rows of headroom (10.6 percent) the levers of section 8 matter.
+
+## 6g. Row budget at the measured `L_Fr` shape (DERIVED)
 
 E2 I10 (`e2-lfr` RESULTS.md section 8g, openvm `e2-lfr` c4bd312): 15 AIRs, 2 commitments, stacked widths 33 (main) and 10 (preprocessed program table) at log stacked height 20, proof 2,516,530 bytes. The wrap model of M7 assumed width 18; the figures below use 33 + 10.
 
@@ -184,3 +199,4 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 17:33. I3 and I4a pass (log `i4.log`; the job waited about 2 hours for the heavy lock).
 - 2026-11-12 17:52. I4b and I5 pass (log `i5.log`); the whole verifier reproduces every stock sample on both fixtures. Builds move to `heavy-slot` (owner rule change). Openvm `e5-wrap` rebased onto E2 `c4bd312` for the `lfr-real` export.
 - 2026-11-12 18:45. I6a passes on `mix-small` (log `i6-small.log`): ledger 9.1.0.1 accepts the whole-verifier wrap.
+- 2026-11-12 19:39. I6b passes (log `i6-real.log`): 1,592,979 rows at k = 21; ledger 9.1.0.1 accepts the wrap of the real `L_Fr` proof. E5 gate PASS.
