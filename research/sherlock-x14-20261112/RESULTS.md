@@ -19,7 +19,22 @@ One operation per row, OpenVM `FieldExpr` (mod-builder), 8-bit limbs, the stock 
 | `g1_add` (affine, x1 != x2) | 48 | 772 | 292 | 579 | 2 | no | no |
 | `g1_double` (affine, y != 0) | 48 | 869 | 389 | 772 | 2 | no | no |
 
-With the 16-bit RANGE table of LD-S10x-3 (owner confirmed 2026-11-12) in place of the mod-builder default of 17 bits: `fr_mul` and `fp_mul` do not change, `g1_add` goes to 1,063 columns and 870 interactions, `g1_double` to 1,160 columns and 1,063 interactions (MEASURED). Larger limbs do not reduce the count. With 12-bit and 16-bit limbs, trace generation refuses: the carries go over the range checker (`range exceeded: 393215 >= 262144`, MEASURED). The interactions grow with the limb count, about 4 per limb (DERIVED: 129 = 4 x 32 + 1, 193 = 4 x 48 + 1).
+With the 16-bit RANGE table of LD-S10x-3 (owner confirmed 2026-11-12) in place of the mod-builder default of 17 bits: `fr_mul` and `fp_mul` do not change, `g1_add` goes to 1,063 columns and 870 interactions, `g1_double` to 1,160 columns and 1,063 interactions (MEASURED).
+
+Limb sweep (MEASURED, `out/x14-ops.jsonl`, `out/x14-ops2.jsonl` and their `.err` logs). The interactions grow with the limb count, about 4 per limb (DERIVED: 129 = 4 x 32 + 1, 193 = 4 x 48 + 1):
+
+| Limb bits, range bits | `fr_mul` width / interactions | `fp_mul` width / interactions | Range table height |
+|---|---|---|---|
+| 8, 17 (stock) | 194 / 129 | 290 / 193 | 2^18 |
+| 8, 16 (LD-S10x-3) | 194 / 129 | 290 / 193 | 2^17 |
+| 10, 17 | 158 / 105 | trace generation refused (`range exceeded: 393144 >= 262144`) | 2^18 |
+| 10, 18 | 158 / 105 | 236 / 157 | 2^19 (the internal height bound) |
+| 12, 17 and 16, 17 | trace generation refused (`range exceeded`) | refused | |
+| 12, 18 | refused (`range exceeded: 787248 >= 524288`) | refused | |
+
+So wider limbs do not get any operation under 100 interactions: a range table above 18 bits passes the 2^19 height bound, and at 18 bits the best is 105 (`fr_mul`, 10-bit limbs). A RANGE table wider than 16 bits would also leave LD-S10x-3.
+
+The bounds are the stated assumptions of the 100-bit security analysis of the parameter set, not a keygen check of this backend. stark-sdk `config/mod.rs` lists them under "Assumptions for 100-bit security": at most 1,000 constraints per AIR, 50 AIRs, 100 interactions per AIR, and 2,000 trace columns "unstacked, total across all AIRs" (READ, `openvm-org_stark-backend/crates/stark-sdk/src/config/mod.rs`, the `root_params_with_100_bits_security` comment; PROPOSAL line 200 cites lines 203-208). A unit node above them is outside the proven 100-bit analysis of the internal set (ARCHITECTURE section 1.9), even though it proves and verifies.
 
 ### The unit node (MEASURED, `out/x14-run.jsonl`)
 
@@ -33,7 +48,7 @@ The unit node is arity 1 at the internal set. Its child is one internal-set node
 | + `g1_add` | 41 | 2,313 | 579 | range checker 2^18 | 42 / 60 / 132 / 229 / 422 | yes |
 | + `g1_double` | 41 | 2,410 | 772 | range checker 2^18 | 43 / 63 / 144 / 253 / 470 | yes |
 
-Keygen and the prover accept AIRs above 100 interactions and above 2,000 total columns. The written bounds of the internal set (ARCHITECTURE line 2265: "keygen refuses a node outside them") are design bounds, and this backend does not enforce them (READ from the run). The stacked layout fits at every height to 2^18 (MEASURED). Only 2^16 was proved.
+Keygen and the prover accept AIRs above 100 interactions and above 2,000 total columns (MEASURED). The bounds are soundness assumptions (see above), and ARCHITECTURE line 2265 ("keygen refuses a node outside them") is a requirement for the production keygen gate, which this bench does not have. The stacked layout fits at every height to 2^18 (MEASURED). Only 2^16 was proved. Not measured: a parent node that verifies one of these unit nodes.
 
 ### Operation inventory of one halo2 verifier (ESTIMATE)
 
@@ -55,7 +70,7 @@ DERIVED unit budget: once the interaction and column bounds are set aside, one u
 The 100-interaction bound per AIR and the 2,000-column bound are the internal-set shape bounds (ARCHITECTURE section 1.9, DG-004). No stock BLS12-381 operation AIR meets them.
 
 1. **Re-encode the operation AIRs to fit the bounds (recommended).** Check two 8-bit limbs per bus message with a tuple range checker of 2 x 8 bits (OpenVM `RangeTupleChecker`, a 2^16-row table, same crate, no new dependency). Build each G1 operation as a short sequence of `fp_mul`-class rows chained over a bus, not as one wide row. DERIVED: about (129 - 1) / 2 + 1 = 65 interactions for `fr_mul` and (193 - 1) / 2 + 1 = 97 for `fp_mul`, with widths under 300. G1 addition is then about 3 `fp_mul`-class rows and doubling about 4, so the MSM becomes about 80,000 rows of one AIR (2 units at 2^16). This is new AIR code, not a stock chip, and it is unmeasured. It keeps the node key set and the bounds unchanged.
-2. **Raise the per-AIR interaction bound of the internal set** (for example to 200, which fits stock `fr_mul` and `fp_mul`, with G1 operations decomposed as in option 1), and keep 2,000 columns. Cost: every node key changes before FP-8 freezes the key set. The cost to the next node of verifying a unit node whose AIRs have 193 interactions is unmeasured (this run measured the unit node itself, not its parent).
+2. **Raise the per-AIR interaction bound of the internal set** (for example to 200, which fits stock `fr_mul` and `fp_mul`, with G1 operations decomposed as in option 1), and keep 2,000 columns. Cost: the bound is an assumption of the 100-bit analysis, so D3 must recompute the internal set's terms (LogUp and the others that depend on interactions) and keep every term at 100 bits or more. Every node key changes before FP-8 freezes the key set. The cost to the next node of verifying a unit node whose AIRs have 193 interactions is unmeasured (this run measured the unit node itself, not its parent).
 3. **Split each operation across two AIRs** (half the limbs each, joined by a bus). This halves the interactions per AIR and uses 2 of the 11 free AIR slots per operation kind (X7 residual). It costs more AIRs than option 1 and fewer code changes than option 1's G1 decomposition.
 
 Recommendation: option 1. The node bounds stay as written, so GP-3 is not narrowed. The next measurement is the tuple-checked `fp_mul` AIR in the unit node.
@@ -65,6 +80,8 @@ Recommendation: option 1. The node bounds stay as written, so GP-3 is not narrow
 - **GP-3 general verifier (FV-SCHED unit budget):** NOT closed. Unit budget MEASURED with the interaction and column bounds set aside (one operation AIR at 2^16 proved, 2^18 laid out); within the written bounds, 0 stock operation AIRs fit. FREEZE-PENDING on the choice above.
 - **AD-22 (a) cost:** about 20,000 `fp_mul` rows per final check, so 1 unit per foreign SRS (ESTIMATE). The owner's ruling stands; the encoding is open.
 - **Transcript and expression evaluation:** PENDING (no AIR for the midnight transcript hash; no gate count).
+
+Gemini Quint lane: none due for X14. The operation AIRs are stock OpenVM mod-builder chips used unchanged, and no Sherlock circuit changed. The re-encoded AIRs of option 1 are new circuits, and each one gets a lane when it is built.
 
 ## Method
 
@@ -76,5 +93,5 @@ Recommendation: option 1. The node bounds stay as written, so GP-3 is not narrow
 
 - `out/x14-inv.log`: the two `CircuitModel` lines.
 - `out/x14-run.jsonl`, `out/x14-run.err`: operation AIR shapes, child node, unit node base, unit nodes with each operation at five heights.
-- `out/x14-ops.jsonl`, `out/x14-ops.sh`: the limb and range sweep.
+- `out/x14-ops.jsonl`, `out/x14-ops.err`, `out/x14-ops.sh`, `out/x14-ops2.jsonl`, `out/x14-ops2.err`, `out/x14-ops2.sh`: the limb and range sweeps.
 - `src/x_exp_node.rs`: bench source.

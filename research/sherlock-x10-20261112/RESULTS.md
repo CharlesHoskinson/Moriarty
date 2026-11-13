@@ -24,6 +24,8 @@ The opening fits the node with a large margin. One AIR of 8 rows does it, and th
 
 The node is arity 2 over two W1 app leaves of 2^16 rows (one Poseidon2 AIR each), at the OD-19 internal set (`internal_ud()`, the s10x parameters). Prove times were 23.9 s and 23.0 s on a shared machine (not timings).
 
+The column bound is 2,000 trace columns in total across all AIRs, unstacked (stark-sdk `config/mod.rs`, "Assumptions for 100-bit security"; PROPOSAL line 200). The sum of AIR widths in the tables is that count.
+
 Checks:
 
 - **Parity with the reference sponge (MEASURED).** `header_trace` gives the same 8-word digest as stark-sdk `PaddingFreeSponge<Poseidon2, 16, 8, 8>` over the 42 words for a random header, a header with a zero payload, and a header that is zero after the domain word (3 of 3 equal).

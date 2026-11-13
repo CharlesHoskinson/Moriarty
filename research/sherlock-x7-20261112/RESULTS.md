@@ -17,6 +17,8 @@ All shapes are STARK nodes at the OD-19 internal set (`internal_ud()`, the s10x 
 
 The tallest AIR is `FinalPolyQueryEvalAir` in every row. It needs 2^17 rows per app-leaf child (117,800 valid rows, as s10x measured) and 2^16 rows per internal-set node child (DERIVED from the heights). So a node child costs about half of a leaf child in the tallest AIR.
 
+The column bound is 2,000 trace columns in total across all AIRs, unstacked (stark-sdk `config/mod.rs`, "Assumptions for 100-bit security"; PROPOSAL line 200). The sum of AIR widths in the tables is that count.
+
 ### N-1: leaf key direct (a) or one-leaf lift (b)
 
 - Both shapes fit the internal set. Leaf direct at arity 2: 2^18 of 2^19 rows, 39 of 50 AIRs, 1,543 of 2,000 columns. Lift path: the arity-2 node over two lifts is smaller (2^17, 1,549 columns), but each leaf needs one extra arity-1 lift proof (2^17, 1,531 columns). MEASURED.
