@@ -26,7 +26,8 @@ No `axiom` is declared in any of the bridge files. Every assumption is a field o
 * (A2') `lfrSound`: if the reference verifier of `L_Fr` accepts `(s, pv, π)`, the reference
   verifier of `L` accepts an embedded `L` proof with the same statement and public values
   (knowledge soundness of the Fr STARK `L_Fr`). Hypotheses that `bridge_sound` discharges: A2b
-  and `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s).
+  and `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s), and
+  `ProvenRegimeFr` (gate G4 for `L_Fr` over `|F| = r`, the unique decoding results of A2).
   `lfrSound_of_emul` (a theorem) shows that an `L_Fr` enforcing the Fr-cell emulation `EmulL`
   meets it.
 * (A2b) `frSpongeInj`: collision resistance of Midnight Poseidon over Fr (the transcript and
@@ -52,8 +53,8 @@ No `axiom` is declared in any of the bridge files. Every assumption is a field o
 * `vkL_ok`: not cryptographic. Static facts of the frozen key of `L` (`pvFirstT` of its
   transcript program, `ProvenRegime`, and the bound `< r` of every compiled
   expression), decided on the concrete key.
-* `vkLFr_ok`: not cryptographic. `KeyOKFr vkL vkLFr`: `pvFirstFr`, `tagSep`, and the statement and
-  `pv` lengths of `L`.
+* `vkLFr_ok`: not cryptographic. `KeyOKFr vkL vkLFr`: `pvFirstFr`, `tagSep`, the statement and
+  `pv` lengths of `L`, and gate G4 for `L_Fr` (`ProvenRegimeFr`, unique decoding over `r`).
 
 The carriers `P2Dom` and `FrDom` are abstract on purpose: a hash with a finite digest is not
 injective on all inputs, so an unguarded injectivity premise would be false in Lean and make every
@@ -99,7 +100,7 @@ def consistent : Premises where
     exact ⟨by decide, by decide⟩⟩
   vkLFr_ok := lfrKey_ok
   wrapKnowledgeSound := fun _ _ h => h.elim
-  lfrSound := fun _ _ _ _ _ h => h.2.2.2.1.elim
+  lfrSound := fun _ _ _ _ _ _ h => h.2.2.2.1.elim
   lastLayerSound := by
     intro _ _ _ s pv π h
     have := (h.2.2.1 _ (List.mem_singleton_self _)).2
@@ -216,6 +217,11 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.leafUD_gate
 #print axioms Clean.Sherlock.Bridge.appUD_bits
 #print axioms Clean.Sherlock.Bridge.leafUD_bits
+#print axioms Clean.Sherlock.Bridge.leafUD_logup_low_fails
+#print axioms Clean.Sherlock.Bridge.lUD_int_logup_bits
+#print axioms Clean.Sherlock.Bridge.lfrUD_gate
+#print axioms Clean.Sherlock.Bridge.lfrUD_bits
+#print axioms Clean.Sherlock.Bridge.lfrUD_query19_fails
 #print axioms Clean.Sherlock.Bridge.run_refines
 #print axioms Clean.Sherlock.Bridge.trStart_eq_cap
 #print axioms Clean.Sherlock.Bridge.cap_inj
@@ -249,6 +255,8 @@ def consistent : Premises where
 #print axioms Clean.Sherlock.Bridge.lKeyLD_ok
 #print axioms Clean.Sherlock.Bridge.s4_pow15_not_proven
 #print axioms Clean.Sherlock.Bridge.remark_m1_not_proven
+#print axioms Clean.Sherlock.Bridge.lfrKey_regime
+#print axioms Clean.Sherlock.Bridge.lfrKey_query19_not_proven
 #print axioms Clean.Sherlock.Bridge.lfrKey_ok
 #print axioms Clean.Sherlock.Bridge.lfr_tag_reuse_rejected
 #print axioms Clean.Sherlock.Bridge.late_pv_rejected
