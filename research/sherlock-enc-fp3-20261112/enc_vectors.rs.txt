@@ -1,0 +1,926 @@
+//! Sherlock ENC-1 to ENC-3 and G3: the exact encodings of the public digests, the field-log entry
+//! `enc(e)` and the V+ layout word, with test vectors, and the transcript vectors of `L`
+//! (u = 3, multi-field duplex over Fr with BabyBear observations) and `L_Fr` (u = 7, native Fr
+//! duplex). Design text: `research/sherlock-enc-fp3-20261112/RESULTS.md` (Moriarty, branch
+//! `enc-fp3`); `FD/ARCHITECTURE.md` sections 1.8, 1.11 FP-1, FP-4, FP-7 and 1.12.
+//!
+//! Every digest is computed twice: through the configuration code (`fixed_len_hash`,
+//! `pack_words`, the stark-sdk transcripts, `poseidon2_compress_with_capacity`) and through a
+//! hand-rolled sponge on the bare permutation. `u = 0` is checked against midnight-circuits
+//! `PoseidonChip::hash`. The pinned values in `PIN` are the outputs of this code (MEASURED);
+//! `ENC_PRINT=1` prints every vector.
+//!
+//! Run: `cargo test -p openvm-stark-sdk --release --features bls12381-fr-poseidon --test enc_vectors`.
+#![cfg(feature = "bls12381-fr-poseidon")]
+
+use midnight_circuits::{hash::poseidon::PoseidonChip, instructions::hash::HashCPU};
+use num_bigint::BigUint;
+use openvm_stark_backend::{p3_symmetric::Permutation, FiatShamirTranscript};
+use openvm_stark_sdk::config::{
+    baby_bear_bls12381_poseidon::{
+        self as lcfg, cap_fixed, cap_var, fixed_len_hash, pack_words,
+        BabyBearBls12381PoseidonConfig, Bls12381Fr, MidnightFq, MidnightPoseidonFr,
+    },
+    baby_bear_poseidon2::{poseidon2_compress_with_capacity, poseidon2_perm},
+    bls12381_fr_poseidon::{self as frcfg, Bls12381FrPoseidonConfig, U_LFR_TRANSCRIPT},
+};
+use p3_baby_bear::BabyBear;
+use p3_field::{PrimeCharacteristicRing, PrimeField, PrimeField32};
+
+type Fr = Bls12381Fr;
+type B = BabyBear;
+
+// ---------------------------------------------------------------------------------------------
+// Constants (FD/ARCHITECTURE.md 1.11 FP-4 BabyBear tag codes; PR 3.6 use codes)
+// ---------------------------------------------------------------------------------------------
+
+const TAG_EMPTY: u32 = 1;
+const TAG_STEP: u32 = 2;
+const TAG_NODE: u32 = 3;
+const TAG_ENT: u32 = 4;
+const DOM_PROGC: u32 = 6;
+const DOM_LOCK: u32 = 7;
+const DOM_LAYOUT: u32 = 11;
+const SHK_VALUE_V2: u32 = 13;
+const SHK_OUTCOME_V2: u32 = 14;
+const SHK_IN: u32 = 15;
+const SHK_RUN: u32 = 16;
+const DOM_OUTHIDE: u32 = 31;
+
+/// Use code of the public digests (`DIGEST`).
+const U_PUB: u128 = 4;
+
+/// ENC-1: the frozen list of public digest tags, in the order of PR 3.6. The `DIGEST` entry's
+/// `param` is the index into this list.
+const PUB_TAGS: [&str; 4] = ["SHK_PROGC", "SHK_LOCK", "SHK_INPUT", "SHK_OUTCOME"];
+
+/// ENC-1 rule: the Fr value of a public digest tag is the ASCII name, at most 16 bytes, zero
+/// padded to 16 bytes, read as a little-endian `u128` (the landed rule `dom()` of
+/// `crates/mori-recursion/src/parent.rs:115`).
+fn tag_fr(name: &str) -> Fr {
+    assert!(name.len() <= 16 && name.is_ascii());
+    let mut b = [0u8; 16];
+    b[..name.len()].copy_from_slice(name.as_bytes());
+    Fr::from_u128(u128::from_le_bytes(b))
+}
+
+// ---------------------------------------------------------------------------------------------
+// P2: Sherlock-defined Poseidon2 over BabyBear (FP-4 form; absorption pick of RESULTS.md)
+// ---------------------------------------------------------------------------------------------
+
+/// `P2(tag, x_1 .. x_l)`: state of 16 words, all zero except the first capacity word
+/// `state[8] = 1 + l`; the words `[tag, x_1 .. x_l]` in blocks of 8, the last block padded with
+/// zeros; each block overwrites `state[0..8]`, then one permutation; output `state[0..8]`.
+fn p2(tag: u32, xs: &[B]) -> [B; 8] {
+    let mut words = vec![B::from_u32(tag)];
+    words.extend_from_slice(xs);
+    let total = words.len();
+    let mut st = [B::ZERO; 16];
+    st[8] = B::from_u32(total as u32);
+    for blk in words.chunks(8) {
+        for i in 0..8 {
+            st[i] = if i < blk.len() { blk[i] } else { B::ZERO };
+        }
+        poseidon2_perm().permute_mut(&mut st);
+    }
+    st[..8].try_into().unwrap()
+}
+
+/// The same hash through the stock `poseidon2_compress_with_capacity` (left = the rate block,
+/// right = the capacity half carried from the previous call).
+fn p2_alt(tag: u32, xs: &[B]) -> [B; 8] {
+    let mut words = vec![B::from_u32(tag)];
+    words.extend_from_slice(xs);
+    let mut cap = [B::ZERO; 8];
+    cap[0] = B::from_u32(words.len() as u32);
+    let mut out = [B::ZERO; 8];
+    for blk in words.chunks(8) {
+        let mut left = [B::ZERO; 8];
+        left[..blk.len()].copy_from_slice(blk);
+        let (o, c) = poseidon2_compress_with_capacity(left, cap);
+        out = o;
+        cap = c;
+    }
+    out
+}
+
+fn p2c(tag: u32, xs: &[B]) -> [B; 8] {
+    let a = p2(tag, xs);
+    assert_eq!(a, p2_alt(tag, xs), "P2 two paths, tag {tag}");
+    a
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fr side: pack, PoseidonFr_4, limbs
+// ---------------------------------------------------------------------------------------------
+
+fn pack_alt(ws: &[B]) -> Fr {
+    let mut acc = BigUint::from(0u32);
+    for (i, w) in ws.iter().enumerate() {
+        acc += BigUint::from(w.as_canonical_u32()) << (31 * i);
+    }
+    Fr::from_biguint(acc).unwrap()
+}
+
+fn pack(ws: &[B]) -> Fr {
+    assert!(ws.len() <= 8);
+    let a = pack_words(ws);
+    assert_eq!(a, pack_alt(ws));
+    a
+}
+
+/// `PoseidonFr_4(tag, x)`: Midnight's fixed-length sponge, capacity `cap(4, 2)`.
+fn pfr4(perm: &MidnightPoseidonFr, tag: Fr, x: Fr) -> Fr {
+    let a = fixed_len_hash(perm, U_PUB, &[tag, x]);
+    let mut s = [tag, x, Fr::from_u128(2 + (4u128 << 66))];
+    perm.permute_mut(&mut s);
+    assert_eq!(a, s[0]);
+    a
+}
+
+/// Native Midnight hash (u = 0), checked against midnight-circuits.
+fn h0(perm: &MidnightPoseidonFr, xs: &[Fr]) -> Fr {
+    let a = fixed_len_hash(perm, 0, xs);
+    let ff: Vec<MidnightFq> = xs.iter().map(|x| x.to_ff()).collect();
+    let b = <PoseidonChip<MidnightFq> as HashCPU<MidnightFq, MidnightFq>>::hash(&ff);
+    assert_eq!(a, Fr::from_ff(b), "u = 0 against PoseidonChip");
+    a
+}
+
+/// 9 limbs of 30 bits, little-endian, of the canonical integer (FP-1 type `fr`).
+fn limbs(x: Fr) -> [u32; 9] {
+    let mut v = x.as_canonical_biguint();
+    let m = BigUint::from((1u32 << 30) - 1);
+    let mut o = [0u32; 9];
+    for l in o.iter_mut() {
+        *l = u32::try_from(&v & &m).unwrap();
+        v >>= 30;
+    }
+    assert_eq!(v, BigUint::from(0u32));
+    o
+}
+
+fn hex(x: Fr) -> String {
+    format!("0x{:064x}", x.as_canonical_biguint())
+}
+fn words(d: &[B]) -> String {
+    let v: Vec<String> = d.iter().map(|w| w.as_canonical_u32().to_string()).collect();
+    format!("[{}]", v.join(", "))
+}
+fn bw(xs: &[u32]) -> Vec<B> {
+    xs.iter().map(|&x| B::from_u32(x)).collect()
+}
+fn u32w(x: u32) -> [u32; 2] {
+    [x & 0xffff, x >> 16]
+}
+fn u64w(x: u64) -> [u32; 4] {
+    [0, 1, 2, 3].map(|i| ((x >> (16 * i)) & 0xffff) as u32)
+}
+
+// ---------------------------------------------------------------------------------------------
+// ENC-2: field-log entries
+// ---------------------------------------------------------------------------------------------
+
+#[derive(Clone)]
+enum Op {
+    Nop,
+    Perm,
+    H2,
+    Sponge(u32),
+    Path(u32),
+    Pub(u32),
+    Digest(u32),
+}
+
+impl Op {
+    fn code(&self) -> [u32; 2] {
+        match *self {
+            Op::Nop => [0, 0],
+            Op::Perm => [1, 0],
+            Op::H2 => [2, 0],
+            Op::Sponge(n) => [3, n],
+            Op::Path(d) => [4, d],
+            Op::Pub(i) => [7, i],
+            Op::Digest(t) => [8, t],
+        }
+    }
+    fn vals(&self) -> usize {
+        match *self {
+            Op::Nop => 0,
+            Op::Perm => 6,
+            Op::H2 => 3,
+            Op::Sponge(n) => n as usize + 1,
+            Op::Path(_) => 3,
+            Op::Pub(_) => 1,
+            Op::Digest(_) => 2,
+        }
+    }
+}
+
+struct Entry {
+    op: Op,
+    vals: Vec<Fr>,
+}
+
+/// ENC-2: `enc(e) = [op, param] ++ limbs(v_0) ++ .. ++ limbs(v_(k-1))`, `2 + 9 k` words.
+fn enc(e: &Entry) -> Vec<B> {
+    assert_eq!(e.vals.len(), e.op.vals());
+    let mut w = bw(&e.op.code());
+    for v in &e.vals {
+        w.extend(bw(&limbs(*v)));
+    }
+    w
+}
+
+/// The onion `d_0 = P2(TAG_EMPTY)`, `d_(i+1) = P2(tagStep, d_i, P2(tagEnt, enc(e_i)))`.
+fn onion(es: &[Entry]) -> [B; 8] {
+    let mut d = p2c(TAG_EMPTY, &[]);
+    for e in es {
+        let h = p2c(TAG_ENT, &enc(e));
+        let mut x = d.to_vec();
+        x.extend_from_slice(&h);
+        d = p2c(TAG_STEP, &x);
+    }
+    d
+}
+
+/// `pv`: the entry table (`B` rows of `(op, param)`), then the value table (`V` rows of 9 limbs).
+fn pv(es: &[Entry], bb: usize, vv: usize) -> Vec<u32> {
+    let mut ent = Vec::new();
+    let mut val = Vec::new();
+    for e in es {
+        ent.extend(e.op.code());
+        for v in &e.vals {
+            val.extend(limbs(*v));
+        }
+    }
+    assert!(es.len() <= bb && val.len() <= 9 * vv);
+    ent.resize(2 * bb, 0);
+    val.resize(9 * vv, 0);
+    ent.extend(val);
+    ent
+}
+
+// ---------------------------------------------------------------------------------------------
+// The vector set
+// ---------------------------------------------------------------------------------------------
+
+struct Out(Vec<(String, String)>);
+impl Out {
+    fn put(&mut self, k: &str, v: String) {
+        self.0.push((k.to_string(), v));
+    }
+}
+
+fn compute() -> Out {
+    let perm = MidnightPoseidonFr::new();
+    let mut o = Out(Vec::new());
+
+    // ENC-1: tag values by rule, all distinct, and below 2^128.
+    for (i, n) in PUB_TAGS.iter().enumerate() {
+        o.put(&format!("enc1.tag[{i}].{n}"), hex(tag_fr(n)));
+    }
+    let r_p = bw(&[101, 102, 103, 104, 105, 106, 107, 108]);
+    let prog_d = bw(&[201, 202, 203, 204, 205, 206, 207, 208]);
+    let run_tag = bw(&[301, 302, 303, 304, 305, 306, 307, 308]);
+
+    // C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d))).
+    let d2_progc = p2c(DOM_PROGC, &[r_p.clone(), prog_d.clone()].concat());
+    let c_p = pfr4(&perm, tag_fr("SHK_PROGC"), pack(&d2_progc));
+    o.put("enc1.d2_progc", words(&d2_progc));
+    o.put("enc1.C_P", hex(c_p));
+
+    // A_1 = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d, run_tag, j: u32))), j = 1.
+    let lock_pre = [r_p.clone(), prog_d.clone(), run_tag.clone(), bw(&u32w(1))].concat();
+    assert_eq!(lock_pre.len() + 1, 27);
+    let d2_lock = p2c(DOM_LOCK, &lock_pre);
+    let a_1 = pfr4(&perm, tag_fr("SHK_LOCK"), pack(&d2_lock));
+    o.put("enc1.d2_lock_j1", words(&d2_lock));
+    o.put("enc1.A_1", hex(a_1));
+
+    // input_d (FP-4 hand-computable check): salt 1..8, VAL_NONE, fuel 2^64, stack limit 2^16.
+    let val_none = p2c(SHK_VALUE_V2, &[]);
+    let fuel: u128 = 1 << 64;
+    let (fuel_lo, fuel_hi) = (u64w(fuel as u64), u64w((fuel >> 64) as u64));
+    assert_eq!(fuel_lo, [0, 0, 0, 0]);
+    assert_eq!(fuel_hi, [1, 0, 0, 0]);
+    let sl = u64w(1 << 16);
+    assert_eq!(sl, [0, 1, 0, 0]);
+    let in_pre = [
+        bw(&[1, 2, 3, 4, 5, 6, 7, 8]),
+        val_none.to_vec(),
+        bw(&fuel_lo),
+        bw(&fuel_hi),
+        bw(&sl),
+    ]
+    .concat();
+    assert_eq!(in_pre.len() + 1, 29);
+    let input_d = p2c(SHK_IN, &in_pre);
+    let input_pub = pfr4(&perm, tag_fr("SHK_INPUT"), pack(&input_d));
+    o.put("enc1.VAL_NONE", words(&val_none));
+    o.put("enc1.input_d", words(&input_d));
+    o.put("enc1.input_pub", hex(input_pub));
+
+    // outcome_d = Rejected(code 7); outcome_pub over P2(DOM_OUTHIDE, input_d, outcome_d).
+    let out_pre = bw(&[2, 1, 7, 0, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(out_pre.len() + 1, 11);
+    let outcome_d = p2c(SHK_OUTCOME_V2, &out_pre);
+    let hide = p2c(
+        DOM_OUTHIDE,
+        &[input_d.to_vec(), outcome_d.to_vec()].concat(),
+    );
+    let outcome_pub = pfr4(&perm, tag_fr("SHK_OUTCOME"), pack(&hide));
+    o.put("enc1.outcome_d", words(&outcome_d));
+    o.put("enc1.outhide_d2", words(&hide));
+    o.put("enc1.outcome_pub", hex(outcome_pub));
+    // The control of FP-4 mutant outcome_pub_unsalted gives another value.
+    assert_ne!(
+        outcome_pub,
+        pfr4(&perm, tag_fr("SHK_OUTCOME"), pack(&outcome_d))
+    );
+
+    // claim_d = P2(SHK_RUN, 1: u16, prog_d, input_d, outcome_d), 26 words.
+    let claim_pre = [
+        bw(&[1]),
+        prog_d.clone(),
+        input_d.to_vec(),
+        outcome_d.to_vec(),
+    ]
+    .concat();
+    assert_eq!(claim_pre.len() + 1, 26);
+    o.put("enc1.claim_d", words(&p2c(SHK_RUN, &claim_pre)));
+
+    // One d2 under the four tags: four distinct outputs.
+    let d2 = bw(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    let mut seen = Vec::new();
+    for n in PUB_TAGS {
+        let y = pfr4(&perm, tag_fr(n), pack(&d2));
+        assert!(!seen.contains(&y));
+        seen.push(y);
+        o.put(&format!("enc1.digest_1to8.{n}"), hex(y));
+    }
+
+    // ENC-2: one entry of each landed kind, enc(e), the onion and pv at B = V = 256.
+    let (a, b, c) = (Fr::from_u64(3), Fr::from_u64(5), Fr::from_u64(7));
+    let mut ps = [a, b, c];
+    perm.permute_mut(&mut ps);
+    let es = vec![
+        Entry {
+            op: Op::Digest(0),
+            vals: vec![pack(&d2_progc), c_p],
+        },
+        Entry {
+            op: Op::H2,
+            vals: vec![a, b, h0(&perm, &[a, b])],
+        },
+        Entry {
+            op: Op::Sponge(3),
+            vals: vec![a, b, c, h0(&perm, &[a, b, c])],
+        },
+        Entry {
+            op: Op::Perm,
+            vals: vec![a, b, c, ps[0], ps[1], ps[2]],
+        },
+        Entry {
+            op: Op::Pub(1),
+            vals: vec![Fr::from_u64(0x1234)],
+        },
+        Entry {
+            op: Op::Digest(2),
+            vals: vec![pack(&input_d), input_pub],
+        },
+    ];
+    for (i, e) in es.iter().enumerate() {
+        let w = enc(e);
+        assert_eq!(w.len(), 2 + 9 * e.op.vals());
+        o.put(&format!("enc2.enc[{i}]"), words(&w));
+    }
+    // -1 mod r has the largest canonical limbs: Canon holds, limb 8 is below 2^30.
+    o.put("enc2.limbs(r-1)", format!("{:?}", limbs(-Fr::ONE)));
+    assert_eq!(
+        enc(&Entry {
+            op: Op::Nop,
+            vals: vec![]
+        }),
+        bw(&[0, 0])
+    );
+    let _ = Op::Path(1).code();
+    let d0 = p2c(TAG_EMPTY, &[]);
+    o.put("enc2.D_EMPTY", words(&d0));
+    let d = onion(&es);
+    o.put("enc2.onion6", words(&d));
+    let (da, db) = (onion(&es[..2]), onion(&es[2..]));
+    o.put(
+        "enc2.node(2,4)",
+        words(&p2c(TAG_NODE, &[da.to_vec(), db.to_vec()].concat())),
+    );
+    let t = pv(&es, 256, 256);
+    assert_eq!(t.len(), 2816);
+    // Running sums: values used 2 + 3 + 4 + 6 + 1 + 2 = 18 rows.
+    assert!(t[512 + 9 * 18..].iter().all(|&x| x == 0));
+    o.put("enc2.pv[0..12]", format!("{:?}", &t[..12]));
+    o.put("enc2.pv.p2_fingerprint", words(&p2c(TAG_ENT, &bw(&t))));
+
+    // ENC-3: layout_d = P2(DOM_LAYOUT, len: u16, domain bytes one per word, offset: u32).
+    let dom = b"midnight:binding-input[v1]";
+    assert_eq!(dom.len(), 26);
+    let mut lp = vec![B::from_u32(dom.len() as u32)];
+    lp.extend(dom.iter().map(|&x| B::from_u32(x as u32)));
+    lp.extend(bw(&u32w(58)));
+    assert_eq!(lp.len() + 1, 30);
+    o.put("enc3.layout_d", words(&p2c(DOM_LAYOUT, &lp)));
+
+    // u = 0 PERM/H2 vector against midnight-circuits on a second input.
+    o.put("u0.h2(3,5)", hex(h0(&perm, &[a, b])));
+
+    transcripts(&perm, &mut o);
+    o
+}
+
+// ---------------------------------------------------------------------------------------------
+// G3: transcript vectors
+// ---------------------------------------------------------------------------------------------
+
+/// Hand model of the stock multi-field transcript (stark-backend `multi_field.rs`) over Fr.
+struct MfModel<'a> {
+    perm: &'a MidnightPoseidonFr,
+    s: [Fr; 3],
+    ai: usize,
+    si: usize,
+    obs: Vec<B>,
+    smp: Vec<B>,
+}
+impl<'a> MfModel<'a> {
+    fn new(perm: &'a MidnightPoseidonFr, u: u128) -> Self {
+        Self {
+            perm,
+            s: [Fr::ZERO, Fr::ZERO, cap_var(u)],
+            ai: 0,
+            si: 0,
+            obs: vec![],
+            smp: vec![],
+        }
+    }
+    fn absorb(&mut self, x: Fr) {
+        self.s[self.ai] = x;
+        self.ai += 1;
+        if self.ai == 2 {
+            self.perm.permute_mut(&mut self.s);
+            self.ai = 0;
+            self.si = 2;
+        }
+    }
+    fn squeeze(&mut self) -> Fr {
+        if self.ai != 0 || self.si == 0 {
+            self.perm.permute_mut(&mut self.s);
+            self.ai = 0;
+            self.si = 2;
+        }
+        self.si -= 1;
+        self.s[self.si]
+    }
+    fn flush(&mut self) {
+        if !self.obs.is_empty() {
+            let x = pack_alt(&self.obs);
+            self.obs.clear();
+            self.absorb(x);
+        }
+    }
+    fn observe(&mut self, w: B) {
+        self.smp.clear();
+        self.obs.push(w);
+        if self.obs.len() == 8 {
+            self.flush();
+        }
+    }
+    fn observe_commit(&mut self, x: Fr) {
+        self.smp.clear();
+        self.flush();
+        self.absorb(x);
+    }
+    fn sample(&mut self) -> B {
+        if !self.smp.is_empty() {
+            return self.smp.remove(0);
+        }
+        self.flush();
+        let mut v = self.squeeze().as_canonical_biguint();
+        let p = BigUint::from(B::ORDER_U32);
+        for _ in 0..5 {
+            self.smp.push(B::from_u32(u32::try_from(&v % &p).unwrap()));
+            v /= &p;
+        }
+        self.smp.remove(0)
+    }
+}
+
+/// Hand model of the native Fr overwrite duplex (`L_Fr`).
+struct FrModel<'a> {
+    perm: &'a MidnightPoseidonFr,
+    s: [Fr; 3],
+    ai: usize,
+    si: usize,
+}
+impl<'a> FrModel<'a> {
+    fn new(perm: &'a MidnightPoseidonFr, u: u128) -> Self {
+        Self {
+            perm,
+            s: [Fr::ZERO, Fr::ZERO, cap_var(u)],
+            ai: 0,
+            si: 0,
+        }
+    }
+    fn observe(&mut self, x: Fr) {
+        self.s[self.ai] = x;
+        self.ai += 1;
+        if self.ai == 2 {
+            self.perm.permute_mut(&mut self.s);
+            self.ai = 0;
+            self.si = 2;
+        }
+    }
+    fn sample(&mut self) -> Fr {
+        if self.ai != 0 || self.si == 0 {
+            self.perm.permute_mut(&mut self.s);
+            self.ai = 0;
+            self.si = 2;
+        }
+        self.si -= 1;
+        self.s[self.si]
+    }
+}
+
+type Lsc = BabyBearBls12381PoseidonConfig;
+type Fsc = Bls12381FrPoseidonConfig;
+
+enum LStep {
+    Obs(u32),
+    Commit(u64),
+    Sample,
+}
+
+fn run_l(perm: &MidnightPoseidonFr, steps: &[LStep]) -> Vec<u32> {
+    let mut t = lcfg::Transcript::new(perm.clone());
+    let mut m = MfModel::new(perm, 3);
+    let mut out = Vec::new();
+    for s in steps {
+        match *s {
+            LStep::Obs(w) => {
+                FiatShamirTranscript::<Lsc>::observe(&mut t, B::from_u32(w));
+                m.observe(B::from_u32(w));
+            }
+            LStep::Commit(x) => {
+                FiatShamirTranscript::<Lsc>::observe_commit(&mut t, [Fr::from_u64(x)]);
+                m.observe_commit(Fr::from_u64(x));
+            }
+            LStep::Sample => {
+                let a = FiatShamirTranscript::<Lsc>::sample(&mut t);
+                assert_eq!(a, m.sample(), "L transcript against the hand model");
+                out.push(a.as_canonical_u32());
+            }
+        }
+    }
+    // Same final state (the T-FS rule): sponge state and absorb index.
+    assert_eq!(*t.inner().sponge_state(), m.s, "L final state");
+    assert_eq!(t.inner().absorb_idx(), m.ai, "L final absorb index");
+    out
+}
+
+enum FStep {
+    Obs(u64),
+    Sample,
+}
+
+fn run_lfr(perm: &MidnightPoseidonFr, steps: &[FStep]) -> Vec<String> {
+    let mut t = frcfg::Transcript::new(perm.clone(), U_LFR_TRANSCRIPT);
+    let mut m = FrModel::new(perm, 7);
+    let mut out = Vec::new();
+    for s in steps {
+        match *s {
+            FStep::Obs(x) => {
+                FiatShamirTranscript::<Fsc>::observe(&mut t, Fr::from_u64(x));
+                m.observe(Fr::from_u64(x));
+            }
+            FStep::Sample => {
+                let a = FiatShamirTranscript::<Fsc>::sample(&mut t);
+                assert_eq!(a, m.sample(), "L_Fr transcript against the hand model");
+                out.push(hex(a));
+            }
+        }
+    }
+    assert_eq!(*t.sponge().state(), m.s, "L_Fr final state");
+    out
+}
+
+fn transcripts(perm: &MidnightPoseidonFr, o: &mut Out) {
+    use FStep as F;
+    use LStep::*;
+    // Initial capacities: L u = 3, L_Fr u = 7.
+    assert_eq!(cap_var(3), Fr::from_u128((1u128 << 64) + (3u128 << 66)));
+    assert_eq!(cap_var(7), Fr::from_u128((1u128 << 64) + (7u128 << 66)));
+    assert_eq!(
+        frcfg::Transcript::initial_state(U_LFR_TRANSCRIPT)[2],
+        cap_var(7)
+    );
+    assert_ne!(cap_fixed(7, 2), cap_var(7));
+    o.put("g3.L.s2", hex(cap_var(3)));
+    o.put("g3.Lfr.s2", hex(cap_var(7)));
+
+    // L: six samples from the fresh state (5 digits per squeeze, then a second squeeze).
+    o.put(
+        "g3.L.fresh6",
+        format!(
+            "{:?}",
+            run_l(perm, &[Sample, Sample, Sample, Sample, Sample, Sample])
+        ),
+    );
+    // L: a partial observe buffer of k = 1 .. 8 words, then one sample.
+    for k in 1..=8u32 {
+        let mut st: Vec<LStep> = (1..=k).map(Obs).collect();
+        st.push(Sample);
+        o.put(
+            &format!("g3.L.obs{k}_sample"),
+            format!("{:?}", run_l(perm, &st)),
+        );
+    }
+    // L: 16 words (two packed elements complete a block and permute), then 2 samples: the
+    // squeeze uses that permutation.
+    let mut st: Vec<LStep> = (1..=16).map(Obs).collect();
+    st.extend([Sample, Sample]);
+    o.put("g3.L.obs16_sample2", format!("{:?}", run_l(perm, &st)));
+    // L: 3 words, a commitment observe (flush, then the digest), then 2 samples.
+    o.put(
+        "g3.L.obs3_commit_sample2",
+        format!(
+            "{:?}",
+            run_l(perm, &[Obs(1), Obs(2), Obs(3), Commit(99), Sample, Sample])
+        ),
+    );
+    // L: a sample, an observe (drops the 4 buffered digits), a sample.
+    o.put(
+        "g3.L.sample_obs_sample",
+        format!("{:?}", run_l(perm, &[Sample, Obs(5), Sample])),
+    );
+    // T-FS: the key pre-hash (a commitment observe) then one sample; 9 words then a
+    // commitment then a sample; 11 samples in a row (digit refill at the 6th, a permutation at
+    // sample_idx 0 at the 11th).
+    o.put(
+        "g3.L.prehash_sample",
+        format!("{:?}", run_l(perm, &[Commit(0xabcdef), Sample])),
+    );
+    let mut st: Vec<LStep> = (1..=9).map(Obs).collect();
+    st.extend([Commit(77), Sample]);
+    o.put("g3.L.obs9_commit_sample", format!("{:?}", run_l(perm, &st)));
+    let st: Vec<LStep> = (0..11).map(|_| Sample).collect();
+    o.put("g3.L.samples11", format!("{:?}", run_l(perm, &st)));
+    // T-FS u = 1 (leaf of 20 BabyBear words) and u = 2 (node) against a hand sponge.
+    let mh = lcfg::MidnightMerkleHasher::new(perm.clone());
+    let leaf: Vec<B> = (1..=20).map(B::from_u32).collect();
+    let l = leaf.len().div_ceil(8);
+    let mut s = [Fr::ZERO, Fr::ZERO, Fr::from_u128(l as u128 + (1u128 << 66))];
+    let packed: Vec<Fr> = leaf.chunks(8).map(pack_alt).collect();
+    for blk in packed.chunks(2) {
+        for (c, x) in s.iter_mut().zip(blk) {
+            *c += *x;
+        }
+        perm.permute_mut(&mut s);
+    }
+    let lh = openvm_stark_backend::hasher::MerkleHasher::hash_slice(&mh, &leaf)[0];
+    assert_eq!(lh, s[0], "u = 1 leaf");
+    o.put("g3.L.u1_leaf20", hex(lh));
+    let nh = openvm_stark_backend::hasher::MerkleHasher::compress(
+        &mh,
+        [Fr::from_u64(7)],
+        [Fr::from_u64(9)],
+    )[0];
+    let mut s = [
+        Fr::from_u64(7),
+        Fr::from_u64(9),
+        Fr::from_u128(2 + (2u128 << 66)),
+    ];
+    perm.permute_mut(&mut s);
+    assert_eq!(nh, s[0], "u = 2 node");
+    o.put("g3.L.u2_node(7,9)", hex(nh));
+
+    // L_Fr: fresh, three samples; one observe then a sample; a full block then three samples.
+    o.put(
+        "g3.Lfr.fresh3",
+        format!("{:?}", run_lfr(perm, &[F::Sample, F::Sample, F::Sample])),
+    );
+    o.put(
+        "g3.Lfr.obs1_sample",
+        format!("{:?}", run_lfr(perm, &[F::Obs(11), F::Sample])),
+    );
+    o.put(
+        "g3.Lfr.obs2_sample3",
+        format!(
+            "{:?}",
+            run_lfr(
+                perm,
+                &[F::Obs(11), F::Obs(12), F::Sample, F::Sample, F::Sample]
+            )
+        ),
+    );
+    // L and L_Fr from the same first squeeze differ (domain separation u = 3 against u = 7).
+    let mut s3 = [Fr::ZERO, Fr::ZERO, cap_var(3)];
+    let mut s7 = [Fr::ZERO, Fr::ZERO, cap_var(7)];
+    perm.permute_mut(&mut s3);
+    perm.permute_mut(&mut s7);
+    assert_ne!(s3[1], s7[1]);
+}
+
+/// Pinned vectors (MEASURED, the outputs of this file at commit time).
+const PIN: &[(&str, &str)] = &[
+    (
+        "enc1.tag[0].SHK_PROGC",
+        r#"0x000000000000000000000000000000000000000000000043474f52505f4b4853"#,
+    ),
+    (
+        "enc1.tag[1].SHK_LOCK",
+        r#"0x0000000000000000000000000000000000000000000000004b434f4c5f4b4853"#,
+    ),
+    (
+        "enc1.tag[2].SHK_INPUT",
+        r#"0x00000000000000000000000000000000000000000000005455504e495f4b4853"#,
+    ),
+    (
+        "enc1.tag[3].SHK_OUTCOME",
+        r#"0x000000000000000000000000000000000000000000454d4f4354554f5f4b4853"#,
+    ),
+    (
+        "enc1.d2_progc",
+        r#"[520957427, 984145394, 1989647505, 623846375, 1856043986, 928030188, 771931842, 1420568668]"#,
+    ),
+    (
+        "enc1.C_P",
+        r#"0x65f6874b0be5aaa5a42b2e3b6b94ee9adf10dad60d7eff1211c65e3331ff2994"#,
+    ),
+    (
+        "enc1.d2_lock_j1",
+        r#"[721127855, 143940948, 962073650, 1915216605, 359226632, 630925463, 808849877, 370162181]"#,
+    ),
+    (
+        "enc1.A_1",
+        r#"0x37adc0f165135af5f670e5ba16a4d473c4a6ec42847cb53833acaecdb08e82a2"#,
+    ),
+    (
+        "enc1.VAL_NONE",
+        r#"[177090646, 988898068, 1058487993, 1357020063, 70888938, 1990745353, 257326398, 976638622]"#,
+    ),
+    (
+        "enc1.input_d",
+        r#"[1844765863, 1946263212, 480254560, 1610161683, 900750315, 731375867, 384171174, 1479089448]"#,
+    ),
+    (
+        "enc1.input_pub",
+        r#"0x675781f2fdaf30f1e06631db92a4806ee474b86159f82f31d650f648fb6fc555"#,
+    ),
+    (
+        "enc1.outcome_d",
+        r#"[1050408218, 1118957329, 591472421, 1582239, 1404349968, 1660012201, 1063109601, 1001026748]"#,
+    ),
+    (
+        "enc1.outhide_d2",
+        r#"[526154039, 1594846096, 1669988065, 971873550, 747720088, 1215261023, 1984080422, 588103289]"#,
+    ),
+    (
+        "enc1.outcome_pub",
+        r#"0x5eeb4e2b1dd1044fcbb1391358218509b3b3623b96682a5ec4ca8e71183ee5fe"#,
+    ),
+    (
+        "enc1.claim_d",
+        r#"[305136256, 440959392, 205775117, 793323288, 1408360988, 1841990927, 316644702, 1120322470]"#,
+    ),
+    (
+        "enc1.digest_1to8.SHK_PROGC",
+        r#"0x4e5ebfb63419246bf08041fbd42eeb9f224456652546bc7ee6d132d3b7e1db97"#,
+    ),
+    (
+        "enc1.digest_1to8.SHK_LOCK",
+        r#"0x3cc27fe1afbd021f2cb5bd0bd801bc31497c0a09ccd0dfbd2f467a945db3d923"#,
+    ),
+    (
+        "enc1.digest_1to8.SHK_INPUT",
+        r#"0x6aff6cb8d8b241d7b9185ce576f20e1f029253bf0616f7aa68355d165e03565b"#,
+    ),
+    (
+        "enc1.digest_1to8.SHK_OUTCOME",
+        r#"0x71d60d6aea20059dcd39489435709a56c6e1c2cccc5cd54ba28259ef8b265028"#,
+    ),
+    (
+        "enc2.enc[0]",
+        r#"[8, 0, 520957427, 894548964, 442397253, 695803711, 705674532, 705936795, 11514011, 370421294, 169, 838805908, 119109836, 401600801, 70694275, 351181535, 750316974, 447371842, 567460601, 26102]"#,
+    ),
+    (
+        "enc2.enc[1]",
+        r#"[2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 896113146, 784613466, 431182669, 803416965, 904681512, 293542663, 195727974, 553360930, 1269]"#,
+    ),
+    (
+        "enc2.enc[2]",
+        r#"[3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 85126114, 1020193057, 361614848, 122023460, 916505395, 456495311, 99162074, 830497103, 16048]"#,
+    ),
+    (
+        "enc2.enc[3]",
+        r#"[1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 410746129, 95516374, 387261003, 338021762, 744320218, 795927927, 480870288, 201710777, 1459, 371170474, 911039206, 891211070, 1022311449, 994535175, 237304103, 967423568, 199074205, 20017, 11192908, 20493665, 677816640, 840428165, 1072766586, 890357495, 84174289, 294070533, 14758]"#,
+    ),
+    ("enc2.enc[4]", r#"[7, 1, 4660, 0, 0, 0, 0, 0, 0, 0, 0]"#),
+    (
+        "enc2.enc[5]",
+        r#"[8, 2, 771024039, 671300953, 847276419, 1070133401, 453361339, 855449453, 964635029, 344888342, 176, 997180757, 423876899, 528675613, 489560150, 612396772, 415723082, 856628742, 545046379, 26455]"#,
+    ),
+    (
+        "enc2.limbs(r-1)",
+        r#"[0, 1073741820, 1072021487, 795410623, 567805267, 660611110, 399803187, 701811303, 29677]"#,
+    ),
+    (
+        "enc2.D_EMPTY",
+        r#"[1601720553, 1813189633, 533296967, 1863848096, 1186913909, 1231646054, 526551043, 780997282]"#,
+    ),
+    (
+        "enc2.onion6",
+        r#"[365509232, 1748783776, 666338835, 1517722680, 393187787, 100716010, 257089906, 1188286804]"#,
+    ),
+    (
+        "enc2.node(2,4)",
+        r#"[1861935416, 1473206511, 373632707, 288003179, 369101355, 824888920, 854619332, 110820133]"#,
+    ),
+    ("enc2.pv[0..12]", r#"[8, 0, 2, 0, 3, 3, 1, 0, 7, 1, 8, 2]"#),
+    (
+        "enc2.pv.p2_fingerprint",
+        r#"[659008248, 843852195, 1068560976, 1822016248, 1282828672, 396502030, 1857230502, 1970668340]"#,
+    ),
+    (
+        "enc3.layout_d",
+        r#"[1120272538, 1014741024, 1563488800, 1022622642, 354000869, 288819430, 75200499, 498114873]"#,
+    ),
+    (
+        "u0.h2(3,5)",
+        r#"0x04f583ee7888baa926645fc6c1f5ec5828bf8cae159b3534dbb11016b56999fa"#,
+    ),
+    (
+        "g3.L.s2",
+        r#"0x00000000000000000000000000000000000000000000000d0000000000000000"#,
+    ),
+    (
+        "g3.Lfr.s2",
+        r#"0x00000000000000000000000000000000000000000000001d0000000000000000"#,
+    ),
+    (
+        "g3.L.fresh6",
+        r#"[1363105379, 892007186, 735613566, 1339319426, 1207660350, 392318480]"#,
+    ),
+    ("g3.L.obs1_sample", r#"[1036001612]"#),
+    ("g3.L.obs2_sample", r#"[975083760]"#),
+    ("g3.L.obs3_sample", r#"[1831231216]"#),
+    ("g3.L.obs4_sample", r#"[1387334005]"#),
+    ("g3.L.obs5_sample", r#"[511085693]"#),
+    ("g3.L.obs6_sample", r#"[102922085]"#),
+    ("g3.L.obs7_sample", r#"[1743404485]"#),
+    ("g3.L.obs8_sample", r#"[468850959]"#),
+    ("g3.L.obs16_sample2", r#"[1428490671, 1363299102]"#),
+    ("g3.L.obs3_commit_sample2", r#"[275738974, 544771868]"#),
+    ("g3.L.sample_obs_sample", r#"[1363105379, 1479302139]"#),
+    ("g3.L.prehash_sample", r#"[1136280182]"#),
+    ("g3.L.obs9_commit_sample", r#"[102412516]"#),
+    (
+        "g3.L.samples11",
+        r#"[1363105379, 892007186, 735613566, 1339319426, 1207660350, 392318480, 119967817, 878318772, 1931888973, 1626463949, 844166059]"#,
+    ),
+    (
+        "g3.L.u1_leaf20",
+        r#"0x062a4499d81463f421748920dd5c0af3047c94e1e0371f476903cdcfc8469427"#,
+    ),
+    (
+        "g3.L.u2_node(7,9)",
+        r#"0x43a5edbf03e9e21278a71b42cd00852382f7d8d5bfaf8c74e4ac395d458dc266"#,
+    ),
+    (
+        "g3.Lfr.fresh3",
+        r#"["0x39860bcfe756854514595b63ce95d5c2c2fd4edfcb369b711ec14a1f76acda89", "0x6b65309e059b3d01d40576c9f1f962ea91bccb4e0583c469b1589c26555ec999", "0x21790135f388b123857958f8b61cd542ef96277f118fd0d9fe5c183c65b5b100"]"#,
+    ),
+    (
+        "g3.Lfr.obs1_sample",
+        r#"["0x71b1bed2cd66b39c069db59e7c827ac7626c61b928dcc3610d0773c366de355d"]"#,
+    ),
+    (
+        "g3.Lfr.obs2_sample3",
+        r#"["0x08a4bccbdcfc1aeee6e31a3902b75e7ec0c744ee6a42ca2aa7dbab0c93caece8", "0x6e2e334d21a05391c7600b357ada7f1cd77bc56250914df86355863048101c19", "0x0669914356acda504ea5af22e1ed3c3905e69dffcf6305f7406f071bd05e60fa"]"#,
+    ),
+];
+
+#[test]
+fn enc_vectors() {
+    let o = compute();
+    if std::env::var("ENC_PRINT").is_ok() {
+        for (k, v) in &o.0 {
+            println!("VEC {k} = {v}");
+        }
+    }
+    for (k, v) in PIN {
+        let got =
+            o.0.iter()
+                .find(|(a, _)| a == k)
+                .unwrap_or_else(|| panic!("missing {k}"));
+        assert_eq!(&got.1, v, "vector {k}");
+    }
+    assert_eq!(PIN.len(), o.0.len(), "every vector pinned");
+}
