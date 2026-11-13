@@ -1,0 +1,84 @@
+$ quint typecheck qa/gemini-quint/x10-header/header_open.qnt
+rc=0
+$ quint typecheck qa/gemini-quint/x10-header/header_open_test.qnt
+rc=0
+$ quint test qa/gemini-quint/x10-header/header_open_test.qnt --main=header_open_test --max-samples=100 --seed=0x10
+    ok mutantM3NoDomainCaughtTest passed 1 test(s)
+    ok mutantM4OutputOnRow7CaughtTest passed 1 test(s)
+    ok mutantM5SelectorNotOnehotCaughtTest passed 1 test(s)
+    ok mutantM6FirstCapacityFreeCaughtTest passed 1 test(s)
+
+  13 passing (4064ms)
+rc=0
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_sound --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+
+[ok] No violation found (2572ms at 78 traces/second).
+Trace length statistics: max=11, min=11, average=11.00
+You may increase --max-samples and --max-steps.
+Use --verbosity to produce more (or less) output.
+Use --seed=0x52f2 --backend=rust to reproduce.
+rc=0
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_sound --invariant=invNoAcceptedHonest --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (127ms at 8 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x10 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_sound --invariant=invNoAcceptedZeroPayload --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (167ms at 18 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0xe0 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_no_capacity_chain --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (243ms at 8 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x76 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_no_partial_keep --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (267ms at 7 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x76 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_no_domain --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (136ms at 7 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x10 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_output_on_row7 --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (175ms at 6 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x10 --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_selector_not_onehot --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (201ms at 25 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x1bf --backend=rust to reproduce.
+error: Invariant violated
+rc=1
+$ quint run qa/gemini-quint/x10-header/header_open.qnt --main=hdr_first_capacity_free --invariant=invOpen --max-steps=10 --max-samples=200 --seed=0x10
+}
+
+[violation] Found an issue (136ms at 7 traces/second).
+Use --verbosity=3 to show executions.
+Use --seed=0x10 --backend=rust to reproduce.
+error: Invariant violated
+rc=1

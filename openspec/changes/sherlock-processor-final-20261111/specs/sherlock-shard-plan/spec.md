@@ -8,7 +8,7 @@ The co-processor SHALL prove a run in the layers of `FD/ARCHITECTURE.md` section
 - **THEN** the field changes from BabyBear to BLS12-381 Fr only between `L` and the wrap
 
 ### Requirement: SPL-002 The static plan is witness-free and once per program
-`sherlock plan` SHALL run once per program with no witness. It SHALL output the static plan: the instruction tables, the shape menu, the scheduling policy, the log layout rule with `R` first, the placement rule of discharge shards and of tier E and GP-3 chips, and the per-program keys under `key_root`. It SHALL NOT output the cut points, tree or shard count of a general run (SPL-011, LEAD FZ-5).
+`sherlock plan` SHALL run once per program with no witness. It SHALL output the static plan: the instruction tables, the shape menu, the scheduling policy, the log layout rule with `R` first, the placement rule of discharge shards and of tier E and GP-3 chips, and the per-program keys under `key_root`. It SHALL NOT output the cut points, tree or shard count of a general run (SPL-011, FZ-5).
 
 #### Scenario: Policy content
 - **WHEN** the scheduling policy of the static plan is read
@@ -75,7 +75,7 @@ The plan binding SHALL be reported proved only when BR-L2 adds the DAG key check
 - **THEN** the DAG key check in `wrap_refines` (part of BR-L2) is open, and no other Lean obligation is listed for this module in the design
 
 ### Requirement: SPL-011 The per-run schedule is outside `plan_d`
-The prover SHALL make the per-run schedule from a metered run under the scheduling policy: the cut points, the tree, the padded shard count from the admitted list, the positions of the discharge shards, and each suspension and resume. The schedule SHALL stay on the user's machine. Soundness SHALL NOT depend on it: each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (LEAD FZ-5).
+The prover SHALL make the per-run schedule from a metered run under the scheduling policy: the cut points, the tree, the padded shard count from the admitted list, the positions of the discharge shards, and each suspension and resume. The schedule SHALL stay on the user's machine. Soundness SHALL NOT depend on it: each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (FZ-5).
 
 #### Scenario: Schedules under one plan
 - **WHEN** one program runs at two run lengths, in two partitions of one run, and once with a suspension and resume, under one `plan_d`, one `key_root` and the universal keys

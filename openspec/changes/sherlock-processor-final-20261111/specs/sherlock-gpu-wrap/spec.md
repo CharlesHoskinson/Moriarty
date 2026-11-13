@@ -19,18 +19,22 @@ Under `GW_DET=1`, every CPU and GPU configuration SHALL give one proof SHA-256. 
 
 #### Scenario: Measured on the k = 20 decider
 - **WHEN** seven CPU and GPU configurations prove the k = 20 decider under the test seed
-- **THEN** all seven give one SHA-256 and the GPU numerator matches the CPU in all 4,194,304 extended-domain values (MEASURED, `PR` section 8), and the G4 wrap repeats the test after K1 to K5
+- **THEN** all seven give one SHA-256 and the GPU numerator matches the CPU in all 4,194,304 extended-domain values (MEASURED, `PR` section 8), and the stdlib wrap of `L_Fr` repeats the test after K1 to K5
 
 #### Scenario: Different bytes
 - **WHEN** one configuration gives other proof bytes under `GW_DET=1`
 - **THEN** that configuration is not released
 
 ### Requirement: GPW-004 The MSM skew mask
-The wrap prover SHALL compute `MSM(s)` as `MSM(s + r) - MSM(r)` with a fixed vector `r` and `MSM(r)` cached per base table and length. The mask SHALL be witness-independent. It SHALL run on the user's GPU. It SHALL leave the proof bytes unchanged.
+On the sppark MSM path the wrap prover SHALL compute `MSM(s)` as `MSM(s + r) - MSM(r)` with a fixed vector `r` and `MSM(r)` cached per base table and length. The mask SHALL be witness-independent. It SHALL run on the user's GPU. It SHALL leave the proof bytes unchanged. The Rust MSM path SHALL drop the mask after one re-time on a quiet GPU (owner ruling 2026-11-12).
 
 #### Scenario: Skewed witness columns
 - **WHEN** witness columns repeat small range-checked values
 - **THEN** the masked MSM gives the same proof bytes as the unmasked MSM, and on the k = 20 decider the 45 calls take 23.2 s against 622 to 647 s (MEASURED once under load)
+
+#### Scenario: Mask on the Rust MSM
+- **WHEN** the Rust MSM kernel runs skewed input at 2^21 points with and without the mask
+- **THEN** the mask costs time (1.67 s against 1.02 s, MEASURED, `research/sherlock-msm-rust-20261111/RESULTS.md` in the `msm-rust` worktree), and the Rust path drops it after the quiet-GPU re-time
 
 ### Requirement: GPW-005 MSM split between CPU and GPU
 The MSM SHALL stay split between CPU and GPU while the GPU MSM takes more than 0.2 s per `2^20` points.
@@ -40,7 +44,7 @@ The MSM SHALL stay split between CPU and GPU while the GPU MSM takes more than 0
 - **THEN** the split stays
 
 ### Requirement: GPW-006 Fallbacks of the GPU path
-If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel (OD-10). No second Fr proving engine SHALL be built (OD-11). A measured GPU wrap above 8 s at the chosen k after K1 to K5 SHALL be a fallback trigger of LW-014.
+If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel (OD-10). No second Fr proving engine SHALL be built as a call-time hedge (OD-11); `L_Fr` of OD-24 option E is the ledger-readability path, and its prover shares the Fr field header K0 (step E4). A measured GPU wrap above 8 s at the chosen k after K1 to K5 SHALL be a fallback trigger of LW-014.
 
 #### Scenario: Wrap above 8 s
 - **WHEN** the GPU wrap takes more than 8 s at the chosen k after K1 to K5

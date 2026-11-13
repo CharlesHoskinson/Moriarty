@@ -354,6 +354,37 @@ pub(super) fn count_method(text: &str, name: &str) -> usize {
     text.matches(&pat).count()
 }
 
+/// X15: ROM (program table) rows read by the local call sites of `t`, with
+/// rows per site: one row for each table accessor of `PreImageView`, two
+/// (the type and constructor rows) for `checked_arity` and `checked_sort`,
+/// one constant row for a value read (its reference may be a constant),
+/// three for `scalar_test_type_ok` (constant, type, constructor), two for
+/// `field_at` (constant row and constant field cell), and one for each
+/// `view.<table>[..]` or `view.<table>.get(..)` site. `occurrence_path`
+/// reads a slice; its sites are returned separately (`.1`).
+pub(super) fn rom_local(t: &str) -> (usize, usize) {
+    const ONE: [&str; 10] = [
+        "expr",
+        "child",
+        "function_row",
+        "parameter",
+        "arm",
+        "pattern",
+        "occurrence",
+        "constant_borrowed",
+        "constant_field",
+        "marker_free",
+    ];
+    const VAL: [&str; 4] = ["deref_borrowed", "kind_of", "u128_of", "bool_of"];
+    let mut n: usize = ONE.iter().map(|m| count_method(t, m)).sum();
+    n += 2 * (count_method(t, "checked_arity") + count_method(t, "checked_sort"));
+    n += VAL.iter().map(|m| count_method(t, m)).sum::<usize>();
+    n += 3 * count_method(t, "scalar_test_type_ok");
+    n += 2 * count_method(t, "field_at");
+    n += super::view_rom_rows(t).0;
+    (n, count_method(t, "occurrence_path"))
+}
+
 pub(super) struct Index {
     pub fns: Vec<FnDef>,
     pub rules: BTreeSet<String>,
@@ -410,6 +441,100 @@ impl Index {
         (0..self.fns.len())
             .filter(|i| self.fns[*i].name == name)
             .collect()
+    }
+
+    /// X15: static bound on the ROM rows that one call of `entry` reads for
+    /// `rule`, with call multiplicity: the local sites (`rom_local`) plus,
+    /// per call site, the bound of the callee (the largest definition when a
+    /// name resolves to several). `None` on a call cycle. The second value is
+    /// the number of `occurrence_path` slice reads, counted the same way.
+    pub fn rom_bound(&self, rule: &str, entry: (&'static str, &str)) -> Option<(usize, usize)> {
+        let mut memo = BTreeMap::new();
+        let mut best = Some((0, 0));
+        for f in self.find(Some(entry.0), entry.0, entry.1) {
+            let w = self.rom_fn(f, rule, &mut memo, &mut Vec::new());
+            best = max2(best, w);
+        }
+        best
+    }
+
+    /// X15: the same bound for a text (the select_when arms of a group
+    /// prefix), with its free calls resolved from module `here`.
+    pub fn rom_text(&self, rule: &str, here: &'static str, text: &str) -> Option<(usize, usize)> {
+        let mut memo = BTreeMap::new();
+        self.rom_body(text, here, rule, &mut memo, &mut Vec::new())
+    }
+
+    fn rom_fn(
+        &self,
+        f: usize,
+        rule: &str,
+        memo: &mut BTreeMap<usize, Option<(usize, usize)>>,
+        stack: &mut Vec<usize>,
+    ) -> Option<(usize, usize)> {
+        if let Some(w) = memo.get(&f) {
+            return *w;
+        }
+        if stack.contains(&f) {
+            let names: Vec<String> = stack
+                .iter()
+                .chain(std::iter::once(&f))
+                .map(|g| format!("{}::{}", self.fns[*g].module, self.fns[*g].name))
+                .collect();
+            println!("X15-CYCLE {rule}: {}", names.join(" -> "));
+            return None;
+        }
+        stack.push(f);
+        let d = &self.fns[f];
+        let body = prune(&d.body, rule, &self.rules);
+        let w = self.rom_body(&body, d.module, rule, memo, stack);
+        stack.pop();
+        memo.insert(f, w);
+        w
+    }
+
+    fn rom_body(
+        &self,
+        body: &str,
+        here: &'static str,
+        rule: &str,
+        memo: &mut BTreeMap<usize, Option<(usize, usize)>>,
+        stack: &mut Vec<usize>,
+    ) -> Option<(usize, usize)> {
+        let mut w = Some(rom_local(body));
+        for (m, n) in free_calls(body) {
+            // A type-qualified call (`Type::f(..)`, not `Self::`) to a type outside the
+            // scanned modules is a value constructor or arithmetic helper (for example
+            // `ArithmeticLowering::new`); it is not resolved by name to an unrelated `f`.
+            if let Some(q) = m.as_deref()
+                && q != "Self"
+                && q.starts_with(|c: char| c.is_ascii_uppercase())
+            {
+                continue;
+            }
+            let mut best = Some((0, 0));
+            for g in self.find(m.as_deref(), here, &n) {
+                best = max2(best, self.rom_fn(g, rule, memo, stack));
+            }
+            w = add2(w, best);
+        }
+        for recv in ["reads", "adt_reads()"] {
+            for n in method_calls(body, recv) {
+                let mut best = Some((0, 0));
+                for g in self.find(Some("owner_adt_runtime"), "owner_adt_runtime", &n) {
+                    best = max2(best, self.rom_fn(g, rule, memo, stack));
+                }
+                w = add2(w, best);
+            }
+        }
+        for (gname, garm) in &self.guard_arms {
+            let k = body.matches(&format!("GuardId::{gname}")).count();
+            for _ in 0..k {
+                let g = self.rom_body(garm, "owner_runtime", rule, memo, stack);
+                w = add2(w, g);
+            }
+        }
+        w
     }
 
     /// Rule-sliced reachable text from `entry` (module, fn name), the names
@@ -490,4 +615,12 @@ pub(super) fn sets_field(text: &str, field: &str) -> bool {
         }
     }
     false
+}
+
+fn add2(a: Option<(usize, usize)>, b: Option<(usize, usize)>) -> Option<(usize, usize)> {
+    a.zip(b).map(|(x, y)| (x.0 + y.0, x.1 + y.1))
+}
+
+fn max2(a: Option<(usize, usize)>, b: Option<(usize, usize)>) -> Option<(usize, usize)> {
+    a.zip(b).map(|(x, y)| (x.0.max(y.0), x.1.max(y.1)))
 }

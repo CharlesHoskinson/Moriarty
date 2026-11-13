@@ -1,0 +1,60 @@
+### l-add
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-l-add/l_add.qnt | 
+rc=1 exp=0 MISMATCH | quint typecheck qa/gemini-quint/x14-l-add/l_add_test.qnt | error: parsing failed 
+rc=1 exp=0 MISMATCH | quint test qa/gemini-quint/x14-l-add/l_add_test.qnt --main=l_add_test | error: parsing failed 
+rc=0 exp=0 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invRow --max-samples=1000 --seed=0x14a001 | [ok] No violation found (23045ms at 43 traces/second). 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invNoAcceptedChain --max-samples=100 --seed=0x14a001 | [violation] Found an issue (299ms at 3 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_recv_p2 --invariant=invRow --max-samples=1000 --seed=0x14a001 | [violation] Found an issue (1123ms at 1 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_send_wrong_x --invariant=invRow --max-samples=1000 --seed=0x14a001 | [violation] Found an issue (776ms at 1 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_id --invariant=invRow --max-samples=1000 --seed=0x14a001 | [violation] Found an issue (243ms at 4 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_div_constraint --invariant=invRow --max-samples=1000 --seed=0x14a001 | [violation] Found an issue (810ms at 1 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_valid_free --invariant=invRow --max-samples=1000 --seed=0x14a001 | [violation] Found an issue (314ms at 3 traces/second). error: Invariant violated 
+### l-dbl
+rc=1 exp=0 MISMATCH | quint typecheck qa/gemini-quint/x14-l-dbl/l_dbl.qnt | error: typechecking failed 
+rc=1 exp=0 MISMATCH | quint typecheck qa/gemini-quint/x14-l-dbl/l_dbl_test.qnt | error: typechecking failed 
+rc=1 exp=0 MISMATCH | quint test qa/gemini-quint/x14-l-dbl/l_dbl_test.qnt | error: typechecking failed 
+rc=1 exp=0 MISMATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=l_dbl --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=l_dbl --invariant=invNonVacuous --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=m_no_recv_s --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=m_send_y_as_x2 --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=m_wrong_const --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=m_no_id --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-l-dbl/l_dbl.qnt --main=m_valid_free --invariant=invRow --max-samples=200 --max-steps=10 --seed=0x14db1 | error: typechecking failed 
+### sq
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-sq/sq.qnt | 
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-sq/sq_test.qnt | 
+rc=0 exp=0 MATCH | quint test --main=sq_test --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq_test.qnt |   7 passing (2439ms) 
+rc=0 exp=0 MATCH | quint run --main=sq --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [ok] No violation found (303ms at 330 traces/second). 
+rc=1 exp=1 MATCH | quint run --main=sq --invariant=invNonVacuous --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (151ms at 7 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run --main=m_no_recv --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (231ms at 4 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run --main=m_send_other_x --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (386ms at 3 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run --main=m_no_id --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (212ms at 5 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run --main=m_wrong_square --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (716ms at 1 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run --main=m_valid_free --invariant=invRow --max-samples=100 --seed=0x14ea qa/gemini-quint/x14-sq/sq.qnt | [violation] Found an issue (175ms at 6 traces/second). error: Invariant violated 
+### x3
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-x3/x3.qnt | 
+rc=1 exp=0 MISMATCH | quint typecheck qa/gemini-quint/x14-x3/x3_test.qnt | error: parsing failed 
+rc=1 exp=0 MISMATCH | quint test qa/gemini-quint/x14-x3/x3_test.qnt --main=x3_test --max-samples=100 --seed=0x14 | error: parsing failed 
+rc=0 exp=0 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=x3_sound --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [ok] No violation found (6333ms at 32 traces/second). 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=x3_sound --invariant=invNoAcceptedHonest --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (233ms at 4 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=x3_sound --invariant=invNoAcceptedAdd --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (209ms at 5 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=x3_sound --invariant=invNoAcceptedDbl --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (565ms at 5 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=m_no_recv_x2 --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (690ms at 4 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=m_sign_flip --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (680ms at 3 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=m_no_id_send --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (487ms at 2 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=m_recv_swapped --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (222ms at 5 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-x3/x3.qnt --main=m_valid_free --invariant=invRow --max-steps=10 --max-samples=200 --seed=0x14 | [violation] Found an issue (659ms at 2 traces/second). error: Invariant violated 
+### y3
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-y3/y3.qnt | 
+rc=0 exp=0 MATCH | quint typecheck qa/gemini-quint/x14-y3/y3_test.qnt | 
+rc=0 exp=0 MATCH | quint test qa/gemini-quint/x14-y3/y3_test.qnt --main=y3_test |   15 passing (8567ms) 
+rc=0 exp=0 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=y3 --invariant=invRow --max-samples=500 --max-steps=10 --seed=42 | [ok] No violation found (3530ms at 142 traces/second). 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=y3 --invariant=invNonVacuous --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (181ms at 6 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=y3 --invariant=invNoAcceptedAdd --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (580ms at 2 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=y3 --invariant=invNoAcceptedDbl --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (170ms at 18 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=y3 --invariant=invNoAcceptedPadding --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (153ms at 7 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=m_no_recv_x3 --invariant=invRow --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (174ms at 6 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=m_out_wrong_x --invariant=invRow --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (591ms at 2 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=m_no_recv_y1 --invariant=invRow --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (311ms at 3 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=m_sign_flip --invariant=invRow --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (381ms at 3 traces/second). error: Invariant violated 
+rc=1 exp=1 MATCH | quint run qa/gemini-quint/x14-y3/y3.qnt --main=m_valid_free --invariant=invRow --max-samples=200 --max-steps=10 --seed=42 | [violation] Found an issue (175ms at 6 traces/second). error: Invariant violated 

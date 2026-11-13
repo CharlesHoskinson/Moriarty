@@ -40,6 +40,35 @@ fn fin_unsupported(op: FinUnsupportedOp) -> HostViolation {
         locator: Some("financial beyond genesis".to_string()),
     }
 }
+/// Experiment X15 probe: every program-table (ROM) row that a step reads.
+/// Test builds only; `rom_hit` is an empty inline function otherwise.
+#[cfg(test)]
+pub(crate) mod rom_probe {
+    use std::cell::{Cell, RefCell};
+    thread_local! {
+        static ON: Cell<bool> = const { Cell::new(false) };
+        static LOG: RefCell<Vec<(&'static str, usize)>> = const { RefCell::new(Vec::new()) };
+    }
+    pub(crate) fn hit(t: &'static str, i: usize) {
+        if ON.with(Cell::get) {
+            LOG.with(|l| l.borrow_mut().push((t, i)));
+        }
+    }
+    pub(crate) fn start() {
+        LOG.with(|l| l.borrow_mut().clear());
+        ON.with(|o| o.set(true));
+    }
+    pub(crate) fn stop() -> Vec<(&'static str, usize)> {
+        ON.with(|o| o.set(false));
+        LOG.with(|l| std::mem::take(&mut *l.borrow_mut()))
+    }
+}
+#[inline(always)]
+pub(crate) fn rom_hit(_t: &'static str, _i: usize) {
+    #[cfg(test)]
+    rom_probe::hit(_t, _i);
+}
+
 fn pure_view<'a>(pre: &PreImage<'a>) -> Result<&'a ProgramView, HostViolation> {
     pre.admitted
         .body
@@ -201,12 +230,14 @@ impl<'a> PreImageView for PreImage<'a> {
         self.img.alloc
     }
     fn expr(&self, id: &usize) -> Result<&ExpressionRowC, HostViolation> {
+        rom_hit("expressions", *id);
         pure_view(self)?
             .expressions
             .get(*id)
             .ok_or_else(|| oob("prog.expressions"))
     }
     fn child(&self, pos: &usize) -> Result<usize, HostViolation> {
+        rom_hit("children", *pos);
         pure_view(self)?
             .children
             .get(*pos)
@@ -214,6 +245,7 @@ impl<'a> PreImageView for PreImage<'a> {
             .ok_or_else(|| oob("prog.children"))
     }
     fn function_row(&self, id: &usize) -> Result<&FunctionRowC, HostViolation> {
+        rom_hit("functions", *id);
         pure_view(self)?
             .functions
             .get(*id)
@@ -223,24 +255,28 @@ impl<'a> PreImageView for PreImage<'a> {
         pure_view(self).map(|view| view.functions.len())
     }
     fn parameter(&self, pos: &usize) -> Result<&ParameterRowC, HostViolation> {
+        rom_hit("parameters", *pos);
         pure_view(self)?
             .parameters
             .get(*pos)
             .ok_or_else(|| oob("prog.parameters"))
     }
     fn arm(&self, id: &usize) -> Result<&ArmRowC, HostViolation> {
+        rom_hit("arms", *id);
         pure_view(self)?
             .arms
             .get(*id)
             .ok_or_else(|| oob("prog.arms"))
     }
     fn pattern(&self, id: &usize) -> Result<&PatternRowC, HostViolation> {
+        rom_hit("patterns", *id);
         pure_view(self)?
             .patterns
             .get(*id)
             .ok_or_else(|| oob("prog.patterns"))
     }
     fn occurrence(&self, id: &usize) -> Result<&OccurrenceRowC, HostViolation> {
+        rom_hit("occurrences", *id);
         pure_view(self)?
             .occurrences
             .get(*id)
@@ -257,6 +293,9 @@ impl<'a> PreImageView for PreImage<'a> {
             .start
             .checked_add(s.len)
             .ok_or_else(|| arith("occurrence path end"))?;
+        for k in s.start..end {
+            rom_hit("occurrence_paths", k);
+        }
         pure_view(self)?
             .occurrence_paths
             .get(s.start..end)
@@ -266,6 +305,7 @@ impl<'a> PreImageView for PreImage<'a> {
         &self,
         id: &usize,
     ) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation> {
+        rom_hit("constants", *id);
         pure_view(self)?
             .constants
             .get(*id)
@@ -273,6 +313,7 @@ impl<'a> PreImageView for PreImage<'a> {
             .ok_or_else(|| oob("prog.constants"))
     }
     fn constant_field(&self, id: &usize) -> Result<usize, HostViolation> {
+        rom_hit("constant_fields", *id);
         pure_view(self)?
             .constant_fields
             .get(*id)
@@ -280,6 +321,7 @@ impl<'a> PreImageView for PreImage<'a> {
             .ok_or_else(|| oob("prog.constantFields"))
     }
     fn marker_free(&self, id: &usize) -> Result<bool, HostViolation> {
+        rom_hit("constants", *id);
         pure_view(self)?
             .constants
             .get(*id)
@@ -300,6 +342,7 @@ impl<'a> PreImageView for PreImage<'a> {
     fn field_at(&self, r: &RefC, i: &usize) -> Result<RefC, HostViolation> {
         match r {
             RefC::Const(id) => {
+                rom_hit("constants", *id);
                 let row = pure_view(self)?
                     .constants
                     .get(*id)

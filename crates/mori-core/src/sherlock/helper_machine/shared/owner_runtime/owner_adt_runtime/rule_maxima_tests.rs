@@ -466,6 +466,24 @@ struct Static {
     /// ADT runtime direct ROM row reads: call sites and tables
     s_view_rows: usize,
     view_tables: Vec<String>,
+    /// X15: static ROM row bound of the family plan, of the select_when
+    /// arms of the group prefix and of owner_select's own reads
+    /// (owner_site, owner_helper_plan, selected_for); `.1` counts
+    /// occurrence_path slice reads. `None`: a call cycle.
+    rom_fam: Option<(usize, usize)>,
+    rom_sel: Option<(usize, usize)>,
+    rom_select: Option<(usize, usize)>,
+}
+
+impl Static {
+    /// X15: rows of one step, all three parts; `None` if any part is.
+    fn rom_bound(&self) -> Option<usize> {
+        let (a, b, c) = (self.rom_fam?, self.rom_sel?, self.rom_select?);
+        if a.1 + b.1 + c.1 > 0 {
+            return None;
+        }
+        Some(a.0 + b.0 + c.0)
+    }
 }
 
 impl Static {
@@ -643,6 +661,9 @@ fn analyse_static(idx: &scan::Index, r: RuleIdC) -> Static {
     if PUBLISH.contains(&r) {
         // P1/P2 of owner_step: outcome write only, no family, no select_when.
         s.family = "owner_step publish (P1/P2)".into();
+        s.rom_fam = Some((0, 0));
+        s.rom_sel = Some((0, 0));
+        s.rom_select = Some((0, 0));
         return s;
     }
     let fam = family_of_rule(&r);
@@ -650,6 +671,7 @@ fn analyse_static(idx: &scan::Index, r: RuleIdC) -> Static {
     let (text, reached, unresolved) = idx.region(&name, family_entry(fam));
     s.reached = reached;
     s.unresolved = unresolved.into_iter().collect();
+    s.rom_fam = idx.rom_bound(&name, family_entry(fam));
     // The ADT runtime also reads ROM rows through `program_view()` fields
     // (`view.<table>[..]` or `view.<table>.get(..)`); `.len()` is metadata.
     let (rows, tables) = view_rom_rows(&text);
@@ -726,6 +748,14 @@ fn analyse_static(idx: &scan::Index, r: RuleIdC) -> Static {
     s.s_sel_field_at = scan::count_method(&sel_text, "field_at");
     s.s_sel_env = scan::count_method(&sel_text, "env_cell");
     s.s_sel_slot = scan::count_method(&sel_text, "value_slot");
+    s.rom_sel = idx.rom_text(&name, "owner_runtime", &sel_text);
+    let mut direct = Some((0, 0));
+    for f in ["owner_site", "owner_helper_plan", "selected_for"] {
+        direct = direct
+            .zip(idx.rom_bound(&name, ("owner_runtime", f)))
+            .map(|(x, y)| (x.0 + y.0, x.1 + y.1));
+    }
+    s.rom_select = direct;
     s
 }
 
@@ -795,6 +825,13 @@ struct Obs {
     seg_all_4: usize,
     max_age: i64,
     old_seen: bool,
+    /// X15 (probe): distinct ROM rows, distinct (table, block of 8) lines,
+    /// distinct tables, the most lines in one table, and the selection rows
+    x_rows: usize,
+    x_lines: usize,
+    x_tables: usize,
+    x_lines_one_table: usize,
+    x_sel_rows: usize,
 }
 
 impl Obs {
@@ -829,7 +866,12 @@ impl Obs {
             seg_old_4,
             seg_app_4,
             seg_all_4,
-            max_age
+            max_age,
+            x_rows,
+            x_lines,
+            x_tables,
+            x_lines_one_table,
+            x_sel_rows
         );
         self.old_seen |= o.old_seen;
     }
@@ -843,6 +885,10 @@ struct Planned {
     reads: Vec<Rd>,
     sel_reads: Vec<Rd>,
     pre_helper: Option<HelperKind>,
+    /// X15 probe: ROM rows of owner_select and the select_when replay, and
+    /// of the family plan
+    x_sel: BTreeSet<(&'static str, usize)>,
+    x_fam: BTreeSet<(&'static str, usize)>,
 }
 
 fn call_family_logged(
@@ -875,6 +921,7 @@ fn plan_logged(
     fam: &HostFamilyPlans,
     g: &OwnerGuards,
 ) -> Result<Planned, HostViolation> {
+    super::super::rom_probe::start();
     let sel = owner_select(pre, g)?;
     let lv = LogView::new(pre);
     if let Some(h) = pre.helper() {
@@ -900,7 +947,13 @@ fn plan_logged(
         }
     }
     let sel_reads = lv.take();
-    let plan = call_family_logged(fam, &sel, &lv, g)?;
+    let x_sel: BTreeSet<(&'static str, usize)> =
+        super::super::rom_probe::stop().into_iter().collect();
+    super::super::rom_probe::start();
+    let plan = call_family_logged(fam, &sel, &lv, g);
+    let x_fam: BTreeSet<(&'static str, usize)> =
+        super::super::rom_probe::stop().into_iter().collect();
+    let plan = plan?;
     let reads = lv.take();
     let w = &plan.writes;
     let mut appends = Vec::new();
@@ -941,6 +994,8 @@ fn plan_logged(
         reads,
         sel_reads,
         pre_helper: pre.helper().map(helper_kind_of),
+        x_sel,
+        x_fam,
     })
 }
 
@@ -1020,6 +1075,11 @@ struct Checks {
     entry_violations: Vec<String>,
     static_violations: Vec<String>,
     max_cells_per_step: usize,
+    /// X15: per table, the most rows and the most lines (blocks of 8) one
+    /// step read, and the largest table length in the corpus
+    x_tbl: BTreeMap<&'static str, (usize, usize, usize)>,
+    x_violations: Vec<String>,
+    x_steps: usize,
 }
 
 fn check_contiguous(a: &Arena, k: Mem, what: &str, s: SliceC, ctx: &str, out: &mut Checks) {
@@ -1065,6 +1125,73 @@ fn kind_runs_ok(order: &[Mem]) -> bool {
 
 fn rom_table(r: Rom) -> usize {
     r as usize
+}
+
+/// X15: the program tables of `ProgramView` (the ROM) and their lengths.
+fn x_table_lens(v: &ProgramView) -> Vec<(&'static str, usize)> {
+    vec![
+        ("expressions", v.expressions.len()),
+        ("occurrences", v.occurrences.len()),
+        ("occurrence_paths", v.occurrence_paths.len()),
+        ("children", v.children.len()),
+        ("functions", v.functions.len()),
+        ("parameters", v.parameters.len()),
+        ("arms", v.arms.len()),
+        ("patterns", v.patterns.len()),
+        ("pattern_children", v.pattern_children.len()),
+        ("types", v.types.len()),
+        ("type_args", v.type_args.len()),
+        ("constructors", v.constructors.len()),
+        ("ctor_fields", v.ctor_fields.len()),
+        ("decl_param_counts", v.decl_param_counts.len()),
+        ("decl_ctor_counts", v.decl_ctor_counts.len()),
+        ("decl_templates", v.decl_templates.len()),
+        ("plan_nodes", v.plan_nodes.len()),
+        ("plan_cases", v.plan_cases.len()),
+        ("field_paths", v.field_paths.len()),
+        ("constants", v.constants.len()),
+        ("constant_fields", v.constant_fields.len()),
+        ("names", v.names.len()),
+    ]
+}
+
+/// X15: ROM rows and lines of one planned step, against the static bound.
+fn x_step(
+    pl: &Planned,
+    rname: &str,
+    stat: &BTreeMap<String, Static>,
+    ctx: &str,
+    cur: &mut Obs,
+    checks: &mut Checks,
+) {
+    checks.x_steps += 1;
+    let all: BTreeSet<(&'static str, usize)> = pl.x_sel.union(&pl.x_fam).copied().collect();
+    let mut per: BTreeMap<&'static str, (BTreeSet<usize>, BTreeSet<usize>)> = BTreeMap::new();
+    for (t, i) in &all {
+        let e = per.entry(t).or_default();
+        e.0.insert(*i);
+        e.1.insert(i / 8);
+    }
+    cur.x_rows = all.len();
+    cur.x_lines = per.values().map(|(_, b)| b.len()).sum();
+    cur.x_tables = per.len();
+    cur.x_lines_one_table = per.values().map(|(_, b)| b.len()).max().unwrap_or(0);
+    cur.x_sel_rows = pl.x_sel.len();
+    for (t, (r, b)) in &per {
+        let e = checks.x_tbl.entry(t).or_default();
+        e.0 = e.0.max(r.len());
+        e.1 = e.1.max(b.len());
+    }
+    match stat.get(rname).map(Static::rom_bound) {
+        Some(Some(bound)) if cur.x_rows <= bound => {}
+        Some(Some(bound)) => checks.x_violations.push(format!(
+            "{ctx}: {rname} ROM rows {} > static {bound}: {all:?}",
+            cur.x_rows
+        )),
+        _ => checks
+            .x_violations
+            .push(format!("{ctx}: {rname} no static ROM bound")),
+    }
 }
 
 struct Program {
@@ -1361,6 +1488,12 @@ fn run_program(
             return run;
         }
     };
+    if let Some(v) = admitted.body.view.as_ref() {
+        for (name, len) in x_table_lens(v) {
+            let e = checks.x_tbl.entry(name).or_default();
+            e.2 = e.2.max(len);
+        }
+    }
     let mut img = match host_owner_engine().admit_run(
         &admitted,
         &RunIntC::Nat(p.fuel),
@@ -1436,6 +1569,7 @@ fn run_program(
                     .exclusivity_violations
                     .push(format!("{ctx}: helper {k:?} active, fired {rname}"));
             }
+            x_step(pl, &rname, stat, &ctx, &mut cur, checks);
         }
         if ev.disposition == StepDisposition::Applied {
             let pl = planned
@@ -2036,6 +2170,67 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
         "unresolved_calls": stat.iter().map(|(k, s)| (k.clone(), serde_json::json!(s.unresolved))).collect::<BTreeMap<_, _>>(),
         "reached": stat.iter().map(|(k, s)| (k.clone(), serde_json::json!(s.reached))).collect::<BTreeMap<_, _>>(),
     });
+    // X15: ROM rows and lines per step, static bound against the probe.
+    let opt =
+        |x: Option<(usize, usize)>| x.map_or("cycle".to_string(), |(a, b)| format!("{a}+{b}occ"));
+    let mut x_csv = String::from(
+        "rule,in_108,fired,st_rom_family,st_rom_select_when,st_rom_owner_select,st_rom_bound,dy_rows,dy_sel_rows,dy_lines8,dy_tables,dy_lines8_one_table\n",
+    );
+    let mut x_max_st = (0usize, String::new());
+    let mut x_max_dy = Obs::default();
+    for (r, in108) in &uni.rules {
+        let k = rule_name(r);
+        let s = &stat[&k];
+        let o = obs.get(&k).cloned().unwrap_or_default();
+        let bound = s.rom_bound();
+        if let Some(b) = bound
+            && b > x_max_st.0
+        {
+            x_max_st = (b, k.clone());
+        }
+        x_max_dy.merge(&o);
+        let _ = writeln!(
+            x_csv,
+            "{k},{},{},{},{},{},{},{},{},{},{},{}",
+            b(*in108),
+            o.fired,
+            opt(s.rom_fam),
+            opt(s.rom_sel),
+            opt(s.rom_select),
+            bound.map_or("none".into(), |b| b.to_string()),
+            o.x_rows,
+            o.x_sel_rows,
+            o.x_lines,
+            o.x_tables,
+            o.x_lines_one_table
+        );
+    }
+    let mut x_tbl_csv =
+        String::from("table,dy_max_rows_per_step,dy_max_lines8_per_step,max_table_len_corpus\n");
+    for (t, (r, l, n)) in &checks.x_tbl {
+        let _ = writeln!(x_tbl_csv, "{t},{r},{l},{n}");
+    }
+    println!(
+        "X15-ROM steps={} st_max_rows={} ({}) dy_max_rows={} dy_max_sel_rows={} dy_max_lines8={} dy_max_tables={} dy_max_lines8_one_table={} violations={}",
+        checks.x_steps,
+        x_max_st.0,
+        x_max_st.1,
+        x_max_dy.x_rows,
+        x_max_dy.x_sel_rows,
+        x_max_dy.x_lines,
+        x_max_dy.x_tables,
+        x_max_dy.x_lines_one_table,
+        checks.x_violations.len()
+    );
+    for v in checks.x_violations.iter().take(40) {
+        println!("X15-VIOLATION {v}");
+    }
+    if let Ok(dir) = std::env::var("MAXIMA_OUT") {
+        let d = std::path::Path::new(&dir);
+        std::fs::create_dir_all(d).unwrap_or_else(|e| panic!("{e}"));
+        std::fs::write(d.join("x15_rom_rules.csv"), &x_csv).unwrap_or_else(|e| panic!("{e}"));
+        std::fs::write(d.join("x15_rom_tables.csv"), &x_tbl_csv).unwrap_or_else(|e| panic!("{e}"));
+    }
     if let Ok(dir) = std::env::var("MAXIMA_OUT") {
         let d = std::path::Path::new(&dir);
         std::fs::create_dir_all(d).unwrap_or_else(|e| panic!("{e}"));
@@ -2075,6 +2270,11 @@ fn rule_maxima_table_and_one_arena_noninterleaving() {
         checks.static_violations.is_empty(),
         "{:?}",
         checks.static_violations
+    );
+    assert!(
+        checks.x_violations.is_empty(),
+        "X15 ROM rows above the static bound: {:?}",
+        checks.x_violations
     );
     assert!(premises.iter().all(|(_, ok, _)| *ok), "{premises:?}");
     assert!(checks.applied > 0);

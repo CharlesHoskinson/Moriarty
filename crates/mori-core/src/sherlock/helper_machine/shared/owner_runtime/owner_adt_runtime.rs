@@ -47,7 +47,9 @@ pub(super) fn adt_checked_ctor_arity(
     if type_id.0 < 4 {
         return Err(arith("dedicated type_id in constructor kind"));
     }
+    rom_hit("types", type_id.0);
     let t_row = view.types.get(type_id.0).ok_or_else(|| oob("prog.types"))?;
+    rom_hit("constructors", ctor_id.0);
     let c_row = view
         .constructors
         .get(ctor_id.0)
@@ -197,6 +199,7 @@ fn impl_nullary_construct<T: AdtPreImageAccess + ?Sized>(
     if arity != 0 {
         return Err(wrong("nullary_construct arity != 0"));
     }
+    rom_hit("constants", cid);
     let c_row = view
         .constants
         .get(cid)
@@ -244,7 +247,9 @@ fn impl_construct_fields<T: AdtPreImageAccess + ?Sized>(
         return Err(wrong("construct_fields arity mismatch"));
     }
     let first = pre.child(&fields.start)?;
+    rom_hit("constructors", ctor_id.0);
     let c_row = &view.constructors[ctor_id.0];
+    rom_hit("ctor_fields", c_row.field_start);
     let cf_row = view
         .ctor_fields
         .get(c_row.field_start)
@@ -354,11 +359,13 @@ fn impl_constructor_next<T: AdtPreImageAccess + ?Sized>(
     if next_index >= arity {
         return Err(oob("prog.ctorFields"));
     }
+    rom_hit("constructors", ctor_id.0);
     let c_row = &view.constructors[ctor_id.0];
     let cf_pos = c_row
         .field_start
         .checked_add(next_index)
         .ok_or_else(|| arith("field_start + next_index"))?;
+    rom_hit("ctor_fields", cf_pos);
     let cf_row = view
         .ctor_fields
         .get(cf_pos)
@@ -806,6 +813,7 @@ fn impl_plan_node<T: AdtPreImageAccess + ?Sized>(
     id: &usize,
 ) -> Result<PlanNodeC, HostViolation> {
     let view = pre.program_view()?;
+    rom_hit("plan_nodes", *id);
     let row = *view
         .plan_nodes
         .get(*id)
@@ -844,6 +852,7 @@ fn impl_plan_node<T: AdtPreImageAccess + ?Sized>(
             if p_end > view.field_paths.len() {
                 return Err(oob("prog.fieldPaths"));
             }
+            rom_hit("types", type_id.0);
             let t_row = view.types.get(type_id.0).ok_or_else(|| oob("prog.types"))?;
             let c_end = cases
                 .start
@@ -900,6 +909,7 @@ fn impl_plan_walk<T: AdtPreImageAccess + ?Sized>(
         .start
         .checked_add(state.path_cursor)
         .ok_or_else(|| arith("plan_walk fp_pos"))?;
+    rom_hit("field_paths", fp_pos);
     let field_idx = *view
         .field_paths
         .get(fp_pos)
@@ -950,6 +960,7 @@ fn impl_plan_switch<T: AdtPreImageAccess + ?Sized>(
         return Err(wrong("plan_switch node"));
     };
     let view = pre.program_view()?;
+    rom_hit("types", type_id.0);
     let t_row = view.types.get(type_id.0).ok_or_else(|| oob("prog.types"))?;
     if cases.len != t_row.ctor_len {
         return Err(oob("prog.planCases"));
@@ -968,6 +979,7 @@ fn impl_plan_switch<T: AdtPreImageAccess + ?Sized>(
                 .start
                 .checked_add(offset)
                 .ok_or_else(|| arith("cases.start + offset"))?;
+            rom_hit("plan_cases", pos);
             let target = *view
                 .plan_cases
                 .get(pos)

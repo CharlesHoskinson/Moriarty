@@ -8,21 +8,21 @@ No BLS12-381 circuit of the co-processor SHALL be keyed above k = 21 (CPR-001).
 - **THEN** keygen refuses it
 
 ### Requirement: DG-002 The wrap row gate
-The wrap SHALL fit 85 percent of the `2^k - 7` usable rows at the smallest k of 19, 20 and 21 at which the measured G4 rows fit. Every gate and lookup SHALL have degree at most 5. The wrap SHALL use one fixed 2^16-row range table. The k of the key SHALL be fixed by the measured rows of M7 (D15).
+The wrap SHALL fit 85 percent of the `2^k - 7` usable rows at the smallest k of 19, 20 and 21 at which the measured wrap rows fit. The wrap SHALL use the `ZkStdLib` chips (LW-013). The k of the key SHALL be fixed by the measured rows of the stdlib wrap of `L_Fr` at step E5 (M7, D15).
 
 #### Scenario: Rows over the gate at k = 21
-- **WHEN** M7 measures wrap rows above 85 percent of 2,097,145
+- **WHEN** E5 measures wrap rows above 85 percent of 2,097,145
 - **THEN** the wrap key is not frozen, and a fallback trigger of LW-014 is recorded
 
-#### Scenario: Rows before M7
-- **WHEN** a wrap row figure is reported before M7
-- **THEN** it is ESTIMATE, such as 728,763 rows mid for G4 on the keyed `L` set of OD-19 at `w_stack` 48 (`FD/ARCHITECTURE.md` kit L AND WRAP, wrap-row table)
+#### Scenario: Rows before E5
+- **WHEN** a wrap row figure is reported before E5
+- **THEN** it is ESTIMATE, such as 879,472 rows mid for the stdlib wrap of `L_Fr` over the full interface (`FD/ARCHITECTURE.md` kit L AND WRAP, row budget)
 
 ### Requirement: DG-003 The wrap verifier key fits the ledger
 The wrap verifier key SHALL be at most 50,000 bytes (MID-003).
 
 #### Scenario: Key bytes measured
-- **WHEN** the wrap key is generated at M7
+- **WHEN** the wrap key is generated at E5
 - **THEN** its byte length is recorded against 50,000, and until then it is PENDING
 
 ### Requirement: DG-004 STARK shards have fixed shapes inside the bounds of their layer
@@ -33,7 +33,7 @@ Every STARK shard SHALL have a fixed shape from the plan menu. Keygen SHALL refu
 - **THEN** keygen refuses the app key
 
 ### Requirement: DG-005 The height and stacked width of `L`
-`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 6 (OD-19). A tighter bound from D10 SHALL rerun D3 before the `L` key freezes (SQG-005).
+`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 6 (OD-19). D10 measured `w_stack` 18 on `L_cached`; a tighter bound SHALL rerun D3 before the `L` key freezes (SQG-005).
 
 #### Scenario: Height above the bound
 - **WHEN** `L` tracegen gives a height of `2^21`
