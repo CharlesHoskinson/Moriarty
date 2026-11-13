@@ -1,0 +1,34 @@
+# E3 plan: the full `L` interface carried through `L_Fr`
+
+Loop item E3 of `research/sherlock-e-path-20261112/LOOP.md`. Scope: the E3 row of the E1 to E6 table in `research/sherlock-m7-wrap-20261112/RESULTS.md` (worktree `~/Projects/Moriarty-wt/m7-wrap`): the 12,164 public words of `L` taken in and exposed (packed) by `L_Fr`, the log AIRs and the non-`NOP` reservation `R`, and an optional log replay in native Fr. Gate: an all-non-`NOP` log case and a forced-overflow case pass, and the wrap's statement words equal the native ones.
+
+Inputs: E2 (`research/sherlock-e2-lfr-20261112/`, gate PASS at I10, openvm `e2-lfr` c4bd312); ARCHITECTURE 1.8 and 1.11 FP-3 (branch `final-design`); PROPOSAL 3.2, 3.6 and 9; owner rulings 2026-11-12 (OD-17: `B = V = 256`, `W_pv` = 2,816, `R` before discretionary operations; OD-18: `L_Fr` tags u = 5, 6, 7).
+
+## 1. What exists and what does not (CODE, read 2026-11-12)
+
+- No `L` with public values or log AIRs exists. The E2 fixture is the bench `L_cached` (39 AIRs, 0 public values). The two log AIRs of `L` exist only as the wrap-model add-on `LOG_ADDON` (2 AIRs, 69 columns, ESTIMATE, `research/sherlock-stark-framework-20261111/wrap_model.py:313`).
+- No written specification of the log AIRs: `B/CANDIDATE.md` 3.2 item 4 says only that `L` recomputes the onion `d` and binds its log table to `pv` by `T(x) = sum_i eq(x, i) pv_i`. ENC-1 (the Fr tag values) and ENC-2 (`enc(e)` word by word) are not written (lane `enc-fp3`, plan only).
+- The stock stark-backend has no row-indexed public values and no challenge phase for AIRs: a public value enters a constraint as a constant on every row (`verifier/evaluator.rs:92`). So the MLE binding of `B/CANDIDATE.md` needs a backend change. E3 uses a stock-only carrier instead (D-6).
+- `L_Fr` (E2): `Entry::Public` in the DAG of part 2 is `unimplemented!`; `PublicAir` holds at most 17 words in its one row (`PUBLIC_MAX`).
+
+## 2. Decisions (LEAD unless marked; owner to confirm)
+
+- D-5 Which `L` is under test. `L_iface` = the bench `L` (the 39 AIRs of `L_cached`, same node child, same OD-19 `L` set) plus 4 interface AIRs that carry the 12,164 public words: `StmtAir` (words 0 to 113), `LogEntryAir` (the entry table, words 114 to 625), `LogValueAir` (the value table, words 626 to 2,929) and `CallAir` (the call vector, words 2,930 to 12,163). In vk order the public values of `L_iface` are the index table of ARCHITECTURE 1.11 FP-3 word for word. The two log AIRs check the structural rules of 1.8 (op one-hot with `E = 0`, parameter bounds, `NOP` padding, running sums of values and permutation slots, totals at most `V` and `P`, value rows after `off_n` zero). They do not recompute the onion `d` and do not tie `pv` to a node statement: that is the production `L` (FP-3, M7b), not E3. `L_iface` is a stand-in for the interface, not the production `L`.
+- D-6 The public-value carrier (both layers). An AIR of `H = h1 h2` rows carries `n` public words, `w` per row: selector columns `a[h1]` (cyclic one-hot) and `b[h2]` (one-hot that advances when `a` wraps, and is 0 after row `H - 1`), and per value column `c` the degree-3 constraint `v_c = sum_(i,j) a_i b_j pv[(j h1 + i) w + c]` (indices at or above `n` dropped, so those cells are 0). First-row and transition constraints make `a` and `b` unique, and the last-row constraint `a_(h1-1) b_(h2-1) = 1` pins the height to `H`. Each public word is a constant times a selector cell, so the DAG grows by about `2n` nodes. Stock backend only, no preprocessed trace (the `L_Fr` table stays the only one).
+- D-2' The `L_Fr` public words: the `L` vk pre-hash, then the 12,164 public words of `L` packed 8 per Fr in vk order: 1 + 1,521 = 1,522 words (D-2 of E2 at the full interface). `PublicAir` becomes the D-6 carrier with `w = 48`, `H = 32`; the tape copies the words to consecutive addresses so one program cell (the base address) serves a row.
+- D-7 `R` in `L_Fr`. For an ordinary call (`mode` 0 at word 74) the first 3 entries are `DIGEST` with the tags `SHK_PROGC`, `SHK_INPUT`, `SHK_OUTCOME` (tag indices 0, 2, 3); `L_Fr` asserts the mode word and these 6 entry words against key constants. A log without one of them is refused by `L_Fr`. The chunk mode is not built.
+- D-8 Placeholders for the open encodings: the `DIGEST` Fr tag of tag index `k` is `Fr(k + 1)` and the call-vector lane value of a `DIGEST` output is the output itself (ENC-1 and ENC-2 open). These enter only the native reference and the test data, never an `L_Fr` constraint.
+- D-9 "The wrap's statement words equal the native ones": the E5 wrap does not exist. The check is a plain-Rust decoder of the `L_Fr` public words (the wrap's reading: unpack, recompose the call-vector lanes, apply the lane map from the `DIGEST` outputs, check each `PUB(i)` against lane `i`) compared with the native statement computed directly from the run. It is reported as that, not as a wrap gate.
+
+## 3. Increments and test gates
+
+| # | Increment | Test gate |
+|---|---|---|
+| J1 | Per-AIR public addresses from part 1; `Entry::Public` in part 2; the D-6 carrier in `L` (`iface_l.rs`) and in `L_Fr` (`PublicAir`); small `L_iface` fixture at small parameters | the tape of a small `L_iface` proof equals the stock transcript record and proves; refused: a changed `L` public value (stock verifier, tape, prover), and on the `L_Fr` carrier a changed first, middle and last word and two swapped words |
+| J2 | Native reference (`iface.rs`): layout, log entries with Midnight Poseidon values, planner (`R` first, capacity rule, spill to tier E), `pv` encoding, the decoder of D-9 | unit tests: values equal midnight-circuits; capacity cases (fill `V` exactly, fill `P` exactly, overflow); decoder round trip |
+| J3 | `L_iface` fixture at the OD-19 `L` set (example `iface_fixture`, directory `~/.cache/e3-iface/fixture/`): one key, cases full-V, full-P, overflow, and missing-`R` | stock verifier accepts every case; the shape of every case is the same |
+| J4 | `R` check in `L_Fr` (D-7); op counts of the full tape in plain Rust | tape of each case executes with no failed assertion except missing-`R`; decoder statement equals native |
+| J5 | Gate at `testing::lfr_params` (systemd unit): keygen once, prove the full-V and overflow cases, the missing-`R` case refused; heights MEASURED; D3 at the measured key; 2 commitments | as stated |
+| J6 | Optional: log replay and `Canon` in native Fr inside `L_Fr` | only if J5 passes with time left |
+
+Rules: builds through `flock ~/.cache/cost-opt/measure/heavy.lock heavy-run`, `CARGO_TARGET_DIR=~/.cache/e3-iface/target`, logs `~/.cache/e3-iface/logs/`; over 30 minutes a `systemd-run --user --collect` unit. Code in the openvm worktree `~/.cache/m7-wrap/src/openvm-e3`, branch `e3-iface` from `e2-lfr` c4bd312. The E2 fixture directory is not written.
