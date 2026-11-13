@@ -7,7 +7,7 @@ use ff::Field;
 use midnight_circuits::{
     instructions::{
         ArithInstructions, AssertionInstructions, AssignmentInstructions, ControlFlowInstructions,
-        ConversionInstructions, DecompositionInstructions,
+        ConversionInstructions, DecompositionInstructions, RangeCheckInstructions,
     },
     types::{AssignedBit, AssignedNative},
 };
@@ -16,6 +16,7 @@ use midnight_proofs::{
     plonk::Error,
 };
 use midnight_zk_stdlib::ZkStdLib;
+use num_bigint::BigUint;
 
 use crate::native::{self, F, WIDTH};
 
@@ -52,6 +53,10 @@ pub trait Alg {
     fn bit_v(&mut self, b: &Self::B) -> Result<Self::V, Error>;
     /// Host view of a value (known only with a witness).
     fn val(&self, a: &Self::V) -> Value<F>;
+    /// A private witness bit (constrained boolean on the gadget back end).
+    fn wit_bit(&mut self, b: Value<bool>) -> Result<Self::B, Error>;
+    /// `x < bound` on the canonical representative (range check).
+    fn range(&mut self, x: &Self::V, bound: &BigUint, what: &str) -> Result<(), Error>;
 }
 
 /// Native back end: values and a list of failed checks.
@@ -136,6 +141,13 @@ impl Alg for Native {
     fn val(&self, a: &Value<F>) -> Value<F> {
         *a
     }
+    fn wit_bit(&mut self, b: Value<bool>) -> Result<Value<bool>, Error> {
+        Ok(b)
+    }
+    fn range(&mut self, x: &Value<F>, bound: &BigUint, what: &str) -> Result<(), Error> {
+        self.check(x.map(|x| native::to_big(&x) < *bound), what);
+        Ok(())
+    }
 }
 
 /// `ZkStdLib` back end.
@@ -209,5 +221,11 @@ impl<L: Layouter<F>> Alg for Gadget<'_, L> {
     }
     fn val(&self, a: &Self::V) -> Value<F> {
         a.value().copied()
+    }
+    fn wit_bit(&mut self, b: Value<bool>) -> Result<Self::B, Error> {
+        self.std.assign(&mut *self.l, b)
+    }
+    fn range(&mut self, x: &Self::V, bound: &BigUint, _: &str) -> Result<(), Error> {
+        self.std.native_gadget().assert_lower_than_fixed(&mut *self.l, x, bound)
     }
 }

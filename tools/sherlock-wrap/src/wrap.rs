@@ -3,8 +3,11 @@
 //! layouts, WHIR rounds, preprocessed commitments, vk pre-hash) is pinned in the circuit as
 //! constants, so it is fixed by the key.
 //!
-//! `PublicMap` (LEAD, PLAN section 4, to be replaced by the E3 map): the first `n` words are
-//! the `L_Fr` public values in AIR order, the other `1,026 - n` words are constrained zero.
+//! The statement map. A fixture with a `decode` section (the E3 `L_Fr`, openvm e3-iface
+//! 2f09caf) uses the E3 map: the D-9 decoder (`decode.rs`) on the `L_Fr` public values, after
+//! `part4` on the same transcript; the statement is the call vector (1,026 lanes). Other
+//! fixtures keep `PublicMap` (LEAD, PLAN section 4): the first `n` words are the `L_Fr` public
+//! values in AIR order, the other `1,026 - n` words are constrained zero.
 
 use std::io;
 
@@ -16,7 +19,8 @@ use midnight_proofs::{
 use midnight_zk_stdlib::{Relation, ZkStdLib, ZkStdLibArch};
 
 use crate::{
-    alg::{Alg, Gadget},
+    alg::{Alg, Gadget, Native},
+    decode::{DecodeShape, Dims, decode},
     native::F,
     smoke::{NPI, wrap_arch},
     stacked::{StackShape, part3},
@@ -32,6 +36,8 @@ pub struct WrapRelation {
     pub stack: StackShape,
     pub whir: WhirShape,
     pub nr_cols: u8,
+    /// The E3 map (`None`: `PublicMap`).
+    pub map: Option<DecodeShape>,
 }
 
 impl WrapRelation {
@@ -40,13 +46,36 @@ impl WrapRelation {
         let stack = StackShape::from_wrapin(w, &shape);
         let whir = WhirShape::from_wrapin(w, &stack.widths);
         let n: usize = shape.airs.iter().map(|a| if a.log_height.is_some() { a.num_public_values } else { 0 }).sum();
-        assert!(n <= NPI, "PublicMap: {n} public values exceed {NPI} words");
-        WrapRelation { shape, stack, whir, nr_cols }
+        let map = w.doc.get("decode").filter(|d| !d.is_null()).map(|dd| {
+            let g = |k: &str| dd["dims"][k].as_u64().unwrap() as usize;
+            let d = Dims { b: g("b"), v: g("v"), p: g("p"), l_tx: g("l_tx") };
+            assert_eq!(d.lanes(), NPI, "E3 map: the call vector is the statement");
+            assert_eq!(n, d.n_public(), "E3 map: L_Fr public values");
+            let p = ProofData::from_wrapin(w);
+            DecodeShape { d, pre_hash: p.public_values.iter().flatten().copied().next().unwrap() }
+        });
+        if map.is_none() {
+            assert!(n <= NPI, "PublicMap: {n} public values exceed {NPI} words");
+        }
+        WrapRelation { shape, stack, whir, nr_cols, map }
     }
 
-    /// The statement of a proof under `PublicMap`.
+    /// The statement of a proof: the native decoder (E3 map) or `PublicMap`.
     pub fn instance(&self, p: &ProofData) -> Vec<F> {
         let mut v: Vec<F> = p.public_values.iter().flatten().copied().collect();
+        if let Some(sh) = &self.map {
+            let mut a = Native::default();
+            let mut t = Transcript::new(&mut a, self.shape.u_transcript).unwrap();
+            let pv: Vec<Value<F>> = v.iter().map(|x| Value::known(*x)).collect();
+            t.observe_all(&mut a, &pv).unwrap();
+            let s = decode(&mut a, &mut t, sh, &pv).unwrap();
+            assert!(a.failures.is_empty(), "decoder refused: {:?}", a.failures);
+            let mut out = vec![];
+            for x in s {
+                x.map(|x| out.push(x));
+            }
+            return out;
+        }
         v.resize(NPI, F::from(0u64));
         v
     }
@@ -78,9 +107,14 @@ impl Relation for WrapRelation {
             let (u, q) = part3(&mut a, &mut t, &self.shape, &self.stack, &pv.map(|p| &p.stack), &p1.rs, &op)?;
             let commits = commit_cells(&mut a, &self.shape, &p1)?;
             part4(&mut a, &mut t, &self.whir, &pv.map(|p| &p.whir), &q, &commits, &u, self.shape.l_skip)?;
-            cells.extend(p1.public_values.iter().flatten().cloned());
-            let zero = a.cst(F::from(0u64))?;
-            cells.resize(NPI, zero);
+            let pw: Vec<_> = p1.public_values.iter().flatten().cloned().collect();
+            if let Some(sh) = &self.map {
+                cells = decode(&mut a, &mut t, sh, &pw)?;
+            } else {
+                cells.extend(pw);
+                let zero = a.cst(F::from(0u64))?;
+                cells.resize(NPI, zero);
+            }
         }
         for c in &cells {
             std.constrain_as_public_input(l, c)?;

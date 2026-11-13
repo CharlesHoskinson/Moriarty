@@ -128,12 +128,22 @@ fn i5_rows_at_lfr_params() {
 #[test]
 #[ignore = "needs the lfr-real fixture (the E2 I10 L_Fr proof)"]
 fn i5_lfr_real_native() {
-    let f = load("lfr-real");
+    real_native("lfr-real");
+}
+
+#[test]
+#[ignore = "needs the lfr-e3 fixture (the E3 all-entries L_Fr proof)"]
+fn i5_lfr_e3_native() {
+    real_native("lfr-e3");
+}
+
+fn real_native(name: &str) {
+    let f = load(name);
     let (fails, smp, perms) = native(&f, &f.p);
-    assert!(fails.is_empty(), "lfr-real: {fails:?}");
-    assert_eq!(smp, f.stock, "lfr-real: every stock sample");
+    assert!(fails.is_empty(), "{name}: {fails:?}");
+    assert_eq!(smp, f.stock, "{name}: every stock sample");
     let ns: Vec<isize> = f.s.n_per_trace.clone();
-    println!("E5I5 lfr-real: whole verifier accepts; {} of {} stock samples equal; {perms} permutations; {} traces, n per trace {:?}, widths {:?}, queries {:?}",
+    println!("E5I5 {name}: whole verifier accepts; {} of {} stock samples equal; {perms} permutations; {} traces, n per trace {:?}, widths {:?}, queries {:?}",
         smp.len(), f.stock.len(), f.s.trace_to_air.len(), ns, f.ws.widths, f.ws.num_queries);
     let mut bad = f.p.clone();
     bad.whir.initial_rows[1][3][2][0] += F::ONE;
@@ -145,5 +155,5 @@ fn i5_lfr_real_native() {
     let mut bad = f.p.clone();
     bad.public_values.iter_mut().find(|v| !v.is_empty()).unwrap()[0] += F::ONE;
     assert!(!native(&f, &bad).0.is_empty(), "changed public value");
-    println!("E5I5 lfr-real: refused a changed preprocessed row, a changed opening of the smallest trace, a changed public value");
+    println!("E5I5 {name}: refused a changed preprocessed row, a changed opening of the smallest trace, a changed public value");
 }
