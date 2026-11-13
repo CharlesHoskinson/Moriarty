@@ -16,6 +16,7 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 | J6 | optional replay of every entry | not built: does not fit the key (DERIVED) | section 8 |
 | J7 | ENC-1/ENC-2, `R` with `claim_pub` and chunk anchors, replay of `R` | PASS (with J8, full rerun) | sections 9, 10 |
 | J8 | the log onion in `L`, tied to `log_d`, `log_n` (bench form: one segment, no node tie) | PASS: fixture, J4, J5 at the E2 shape; D3 101.1435 | section 10 |
+| J9 | `j`, `k` range rule in the `R` check and the reader; native `TAG_NODE` merge; Gemini Quint lanes on `OnionAir` and the `R` replay | words-level test, J4 PASS; J5 rerun see section 12; lanes round 1 done, round 2 running | section 12 |
 
 ## 2. Code
 
@@ -23,6 +24,7 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 |---|---|---|
 | openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2; 71bf0f1 J3 and J4; 2f09caf `PublicAir` row binding, all-entries case; 6d70a45 J7 |
 | openvm worktree `~/.cache/m7-wrap/src/openvm-e3-onion` | `e3-iface-onion` (from 6d70a45); `e3-iface` fast-forwarded to it | ab0e88a J8; f725b15 J4 shape guard, bus check, small tape delta |
+| openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` | 95ed47b J9 `j`, `k` range rule, `log_merge` |
 | Moriarty `~/Projects/Moriarty-wt/e3-iface` | `e3-iface` (from `e2-lfr` fbba858f1) | 8bcb491b9 plan and J1; this file |
 
 Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO_TARGET_DIR=~/.cache/e3-iface/target`, logs `~/.cache/e3-iface/logs/`).
@@ -142,7 +144,7 @@ The tape is fixed per key, while the values of entry `i` start at the data-depen
 
 ## 9. J7: ENC-1/ENC-2, `R` after FP-3, chunk anchors, replay of `R` (MEASURED on the words)
 
-Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j5_gate.rs`). Decisions D-8', D-10, D-11 of the plan.
+Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j5_gate.rs`). Decisions D-8', D-10 (**FOR OWNER CONFIRMATION**), D-11 (**FOR OWNER CONFIRMATION**) of the plan.
 
 - ENC-1 values: `tagFr(SHK_PROGC)` = `0x43474f52505f4b4853` and `tagFr(SHK_OUTCOME)` equal the ENC table; `PoseidonFr_4(tagFr(SHK_INPUT), pack(input_d))` equals the pinned `enc1.input_pub` (unit test `enc1_tags_and_input_pub_vector`).
 - Cases (one key): full-V, full-P, overflow, all-entries (now 249 entries: `R` of 5 entries and 12 values, then 244 `PUB`), chunk 1 of 3, chunk 2 of 3, chunk 3 of 3; negatives missing-`R`, anchor tag swapped (`wrap_anchor_tag_swapped`: chunk 2 with `a_in` under `SHK_PROGC`, its value recomputed), forged `DIGEST` (the `C_P` output changed, `claim_pub` recomputed to match).
@@ -151,7 +153,7 @@ Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j
 
 ## 10. J8: the log onion in `L` (MEASURED)
 
-Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12.
+Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12 (**FOR OWNER CONFIRMATION**).
 
 - Native: `P2(TAG_EMPTY)` equals `enc2.D_EMPTY` and the onion of the 6-entry ENC-2 log equals `enc2.onion6` (unit test `enc2_onion_vectors`).
 - Small `L_iface` (`Dims { 32, 64, 32, 62 }`, `small_params_n(4, 8)`, a stand-in key table on the permute bus, onion height 256): accepted full-V, all-entries, chunk 2 of 3, missing-`R` (the onion binds whatever log is in `pv`); refused by the prover (`LogupZerocheck(NonZeroRootSum)`): `log_d` changed, one value changed with `log_d` kept, `log_n` changed.
@@ -172,9 +174,33 @@ Headroom left in the 2^19 table: about 21,000 rows (DERIVED).
 
 ## 11. Open items and next step
 
-- The production tie of the root statement to the verified node (the bench node is not FP-2), more than one log segment (`TAG_NODE`), check (i) on the operands of `R` (an `L` obligation), the opening-proof `R` with `DIGEST(SHK_SET)`, the `popeq` lane check in the wrap, in-circuit limb range and `Canon`, and the `PATH` node order.
+- The production tie of the root statement to the verified node (the bench node is not FP-2), more than one log segment in `L` (`TAG_NODE`; native `log_merge` is built and tested in J9, the in-circuit form needs the witness tree form of the log, a design choice), check (i) on the operands of `R` (an `L` obligation), the opening-proof `R` with `DIGEST(SHK_SET)`, the `popeq` lane check in the wrap, in-circuit limb range and `Canon`, and the `PATH` node order.
 - The `a_out` anchor of a chunk: its `DIGEST` output is bound to no lane (the 4 lane-map pairs are `a_in`, `claim_pub` twice, `outcome_pub`), while the spec writes `ins anchor := a_out` in the effect region: the same 4 against 5 pair question as `openClaim` (ENC section 10).
-- The anchor words `j`, `k`: no range check and no `1 <= j <= k` (the `Stmt` AIR only carries words).
+- Closed in J9 (section 12): the range of the anchor words `j`, `k` and `1 <= j <= k` for a chunk. Open, for the owner: whether an ordinary call must also have `j = k = 0` (J9 checks only the 16-bit range there).
 - Negative coverage: at the `L_Fr` set on f725b15 only the forged `DIGEST` was proved and refused; missing-`R` and anchor tag swapped are refused by the tape and the decoder (missing-`R` also by the prover on 2f09caf); the onion forgeries are refused at small scale with a stand-in key table; no wrong-permutation negative.
-- No Gemini Quint lane has run on `OnionAir` or the replay of `R` (owner rule for Sherlock circuit changes).
-- Confirmations: D-10 (`R` order), D-11 (replay of `R` only), D-12 (onion form).
+- Gemini Quint lanes: round 1 on `OnionAir` and on the `R` replay done (section 12); round 2 (skills readable, the built `j`, `k` rule, a stronger onion adversary) running.
+- **FOR OWNER CONFIRMATION** (taken as built by the coordinator, 2026-11-13): D-10 (`R` order and anchor rule, section 9), D-11 (replay of `R` only in `L_Fr`, section 9), D-12 (onion form in the bench `L`, section 10).
+
+## 12. J9: the `j`, `k` rule, the `TAG_NODE` merge, the Gemini Quint lanes
+
+Code: openvm `e3-iface` 95ed47b (`lverify.rs::gen_r_check`, `iface.rs::{anchor_tags, log_merge, seg_log}`, `tests/j5_gate.rs::j9_jk_range_on_words`). No owner choice was needed for these items.
+
+**`j`, `k` rule.** In both modes each of the 4 limbs passes `LowBits(x, 16) == x` (the `BitsAir` decomposition, so `x < 2^16`). For a chunk (`mode` 1): `j >= 1` by a zero test of `j_lo + j_hi` (below 2^17 < p, so 0 only for `j = 0`), masked by `mode`; `j <= k` by an advice borrow bit `c` with `mode (k_lo - j_lo + 2^16 c)` and `mode (k_hi - j_hi - c)` both 16-bit (each an integer in (-2^17, 2^17), so the 16-bit test is the integer test, and `k - j` is their base-2^16 value). The reader `anchor_tags` refuses the same words.
+
+| Check | Result (MEASURED) |
+|---|---|
+| `iface` unit tests (`anchor_jk_range`: 13 head words; `enc2_node_merge`) | pass |
+| `j9_jk_range_on_words` (full words of each case through `gen_r_check`) | 2,977 ops in every case (2,943 + 34); positives chunk 1 of 1, `j = 0xffff, k = 0x10000`, `j = 0x10000, k = 0x10001`, `j = 2, k = 0x20000`, `j = k = 2^32 - 1`: 0 failed assertions; negatives (from chunk 2 of 3, anchor tags unchanged, so only the new rule can refuse) `j = 0`, `j > k` in the low limb, `j > k` in the high limb, `j_lo = 2^16` (the aliasing case of the lane), `k_hi = 2^16`: 1, 1, 1, 1, 2 failed assertions, each also refused by the reader |
+| J4 on fixture-j8 (L unchanged) | pass; 33,690 events; tape 502,910 ops (f725b15: 502,877; +33); `LowBits` 274, `AssertEq` 724; `BbAlu` and `ProgramTable` 2^19; all 10 cases as in section 10 (log `~/.cache/e3-iface/logs/j9-j4.log`) |
+| J5 at `lfr_params` (new key, the tape changed) | running (unit `e3-j9-j5`, log `~/.cache/e3-iface/logs/j9-j5.log`) |
+
+**`TAG_NODE` merge (native only).** `log_merge` is the ARCHITECTURE 1.11 rule (either empty side returns the other, else `(P2(TAG_NODE, d_a, d_b), n_a + n_b)`, `None` unless the output `n < 2^16`). `merge(seg(es[..2]), seg(es[2..]))` of the 6-entry ENC-2 log equals `enc2.node(2,4)` with `n = 6`; the empty identities hold; segment order and tree shape change `d`; `n = 2^16 - 1` is accepted and `2^16` refused. The in-circuit merge in `L` is not built: `L` takes the tree shape as witness (ARCHITECTURE 1.11), and the form of that witness is a design choice.
+
+**Gemini Quint lanes** (owner rule; `~/.cache/gemini-lanes/e3-onion`, `e3-rreplay`; reports in `qa/gemini-quint/e3-onion/` and `qa/gemini-quint/e3-rreplay/` of this worktree). Lead setup defect in round 1: `.lane-skills/` held symlinks to a path outside the checkout, so neither lane could read the skills; round 2 has real copies. The lead ran every quint command (the lanes cannot).
+
+| Lane | Verdicts (round 1) | Lead runs |
+|---|---|---|
+| `e3-onion` (`OnionAir`, f725b15) | Q1 row grammar, Q2 absorption, Q3 values and order, Q4 chaining, Q6 wrap-around: SOUND; Q5: COMPLETE | after typecheck fixes and a non-overflowing ideal permutation: 13 tests pass (TypeScript backend; the Rust evaluator crashed); `SOUND_AND_COMPLETE` no violation; lead tamper adversary (random one-cell changes, 3,000 samples) no violation; each of the 7 mutants (`mut_no_off_chain`, `mut_fa_reads_w0`, `mut_no_last_count`, `mut_fin_on_b1`, `mut_cap_not_chained`, `mut_cnt_no_b2`, `mut_d_not_chained`) violated, so caught |
+| `e3-rreplay` (`gen_r_check`, f725b15) | Q1 zero tests and mode bit, Q2 entries and offsets, Q3 replay and the entry-5 `CSwap`: SOUND; Q4 limbs: SOUND with the reader (the tape alone takes limbs mod r; D-9); Q5: COMPLETE; Q6: UNSOUND without a `j`, `k` rule (`j = 0`, `j > k`, limb aliasing such as `j = (2^16, 0)`, `k = (0, 1)`) | 13 tests pass; `inv_sound_and_complete` and `inv_jk_range_strengthened` no violation; the Q6 property on the old check violated (`j = 6 > k = 2` at base 4); all 6 mutants caught |
+
+Defect found: Q6 of `e3-rreplay`, the missing `j`, `k` rule; fixed in 95ed47b (above). No defect in `OnionAir`.
