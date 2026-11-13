@@ -17,9 +17,10 @@ The objects:
   quotients, packing gadget, digit gadget with the canonical check): a sufficient relation for
   the Fr-native layer `L_Fr` to enforce for one `L` proof (option E, owner decision OD-24);
   `lfrSound_of_emul` shows it discharges A2'.
-* `KeyLFr`, `VerifyLFr`: the layer `L_Fr`, abstract while its shape is built (step E2): an Fr
-  transcript program with its own hash domain (use codes disjoint from `L`'s), and abstract native
-  checks.
+* `KeyLFr`, `VerifyLFr`: the layer `L_Fr` (built and measured in steps E2 and E3), kept
+  abstract here: an Fr transcript program with its own hash domains (OD-18, owner decision
+  2026-11-12: use codes `u = 5, 6, 7` for Merkle leaves, nodes and the transcript, disjoint from
+  `L`'s `u = 0` to `4`; the transcript starts at `trStart 7`), and abstract native checks.
 * `WrapRel`: the constraint semantics of the one BLS12-381 wrap `W`: the checks and transcript of
   `L_Fr`, native in Fr, a log table of exactly `B` entries with the canonical check on every
   value, `pv = pvOf W T` of the fixed length `W`, and native replay of every entry. Its public
@@ -392,8 +393,9 @@ theorem check_refines {X : Prims} {env : List Nat} {c : Check}
 /-- The Fr-cell emulation of the verifier of `L` on `(s, pv, π)`: a sufficient relation for
 `L_Fr`'s AIRs to enforce for one `L` proof (owner decision OD-24, option E), with the gadgets of
 the round 2 wrap: range checks, lazy Fr arithmetic with bounded quotients, the packing gadget,
-the digit gadget with the canonical check, the bit decomposition for proof of work. The real
-shape of `L_Fr` is built in step E2; A2' does not depend on this relation. -/
+the digit gadget with the canonical check, the bit decomposition for proof of work. The
+measured `L_Fr` (steps E2 and E3) is a tape over generic Fr AIRs, not this relation; A2' does not
+depend on it. -/
 def EmulL (X : Prims) (vk : KeyL) (s pv π : List Nat) : Prop :=
   s.length = vk.nStmt ∧ pv.length = vk.pvLen ∧ (∀ x ∈ s ++ pv ++ π, x < rFr) ∧
     (∀ c ∈ vk.checks, c.Gadget X (s ++ pv ++ π)) ∧
@@ -663,9 +665,10 @@ structure Premises where
   `L_Fr` rests on the same unique decoding results as A2 (WHIR Theorem 5.2 with list size 1,
   Lemma 4.10, Corollary 4.11, Theorem 4.8, Lemma 4.25; SWIRL Theorems 4.2.4, 4.2.1, 4.2.5 and
   Corollary 4.2.6), over `|F| = r` with no extension field. Hypotheses: A2b, the static key
-  facts of `L_Fr` (`pv` absorbed first, tag separation from `L`'s hash domains), and gate G4 for
-  `L_Fr`: `ProvenRegimeFr vkLFr` (every term computed over `r`; the bit counts of the measured
-  E2 set are `lfrUD_bits`, query 101 bits weakest). `lfrSound_of_emul`: an `L_Fr` that enforces
+  facts of `L_Fr` (`pv` absorbed first, tag separation from `L`'s hash domains: use codes
+  `u = 5, 6, 7`, transcript on `u = 7`, OD-18), and gate G4 for `L_Fr`: `ProvenRegimeFr vkLFr`
+  (every term computed over `r`; the bit counts of the measured set are `lfrUD_bits`, query
+  101.1435 bits weakest, the same at the E2 I10 key and the E3 J5 key). `lfrSound_of_emul`: an `L_Fr` that enforces
   `EmulL` meets it. -/
   lfrSound : FrInj X FrDom → KeyOKFr vkL vkLFr → ProvenRegimeFr vkLFr = true →
     ∀ s pv π, VerifyLFr X LFrAccept vkLFr s pv π → ∃ πL, VerifyL X vkL s pv πL

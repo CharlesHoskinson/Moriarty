@@ -26,7 +26,8 @@ No `axiom` is declared in any of the bridge files. Every assumption is a field o
 * (A2') `lfrSound`: if the reference verifier of `L_Fr` accepts `(s, pv, π)`, the reference
   verifier of `L` accepts an embedded `L` proof with the same statement and public values
   (knowledge soundness of the Fr STARK `L_Fr`). Hypotheses that `bridge_sound` discharges: A2b
-  and `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s), and
+  and `KeyOKFr` (`pv` absorbed first, tag separation of `L_Fr`'s hash domains from `L`'s: use
+  codes `u = 5, 6, 7`, transcript on `u = 7`, OD-18), and
   `ProvenRegimeFr` (gate G4 for `L_Fr` over `|F| = r`, the unique decoding results of A2).
   `lfrSound_of_emul` (a theorem) shows that an `L_Fr` enforcing the Fr-cell emulation `EmulL`
   meets it.
