@@ -4,7 +4,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 
 ## 1. Status
 
-**E5 gate: PASS (I6b, section 6f).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr: 1,592,979 rows at k = 21, 89.4 percent of the k = 21 gate (1,782,573); key 1,325 bytes in the `MidnightVK` framing; the stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte (all MEASURED). The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7). Open: the clean exclusive timing and the row levers (section 8).
+**E5 gate: PASS (I6b, section 6f; final circuit section 6g).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr. With levers L1 and L2 it is 1,436,529 rows at k = 21, 80.6 percent of the k = 21 gate (1,782,573). The key is 1,325 bytes in the `MidnightVK` framing. The stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte. Keygen takes 84.6 s and the blinded prove 183.8 s in an exclusive heavy slot. All figures are MEASURED. The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7).
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -167,6 +167,17 @@ Each lever is applied alone on top of the one before; each is checked by the I3 
 | L1 fused multiply-add: `Alg::mul_add` is the native chip's one-row `add_and_mul` (`x*y + z`), used in the WHIR `mu` batching, the final-polynomial Horner, the `gamma` and final-check sums, `binary_k_fold`, the DAG `lambda` sum, the interaction sums and the stacked sums. Needs a visibility-only accessor `ZkStdLib::native_gadget()` (patch `patches/perm-access.diff`; `configure` unchanged). Log `lever-fma.log` | 1,453,425 | 81.5 | -139,554 |
 | L2 `omega^index` chains: the `omega^(2^j)` constants assigned once per round (not per query and chain); `zi = zi_root^(2^k)` by k squarings; `zi^-1` witnessed and pinned by `zi_root * zi_inv = 1` (was three select chains of key constants per query). Log `lever-omega.log` | 1,436,529 | 80.6 | -16,896 |
 
+Final circuit (L1 + L2), run `i6.sh lfr-real 21` under `heavy-slot --exclusive` (log `i6-excl.log`; heavy-slot gave the job the host alone among slot jobs, host load 30 to 37 from work outside the slots, so the times are the cleanest available, not an idle host):
+
+| Quantity | Value |
+|---|---|
+| Cost model, k = 21 | 1,436,529 rows (80.6 percent of the gate; 346,044 rows of headroom), 8 advice and 27 fixed columns |
+| `MockProver` | honest accepted; a changed public input refused; a changed opened WHIR row refused (37.2 s) |
+| Keygen (`bls_midnight_2p21`) | 84.6 s |
+| Blinded prove (`OsRng`, Blake2b) | 183.8 s; proof 2,912 bytes; library verify accepts |
+| Key bytes in the `MidnightVK` framing | 1,325 |
+| Ledger 9.1.0.1 `VerifierKey::verify` (stock) | `Ok(())` in 0.107 s; a changed public input refused (3 positions); a flipped proof byte refused (3 positions) |
+
 ## 6h. Row budget at the measured `L_Fr` shape (DERIVED)
 
 E2 I10 (`e2-lfr` RESULTS.md section 8g, openvm `e2-lfr` c4bd312): 15 AIRs, 2 commitments, stacked widths 33 (main) and 10 (preprocessed program table) at log stacked height 20, proof 2,516,530 bytes. The wrap model of M7 assumed width 18; the figures below use 33 + 10.
@@ -212,3 +223,4 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 19:39. I6b passes (log `i6-real.log`): 1,592,979 rows at k = 21; ledger 9.1.0.1 accepts the wrap of the real `L_Fr` proof. E5 gate PASS.
 - 2026-11-12 19:40. Lever L1 (fused multiply-add): 1,453,425 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-fma.log`).
 - 2026-11-12 20:37. Lever L2 (`omega^index`): 1,436,529 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-omega.log`).
+- 2026-11-12 21:56. Final circuit (L1 + L2) under `heavy-slot --exclusive`: 1,436,529 rows, keygen 84.6 s, prove 183.8 s, ledger 9.1.0.1 accepts (log `i6-excl.log`).
