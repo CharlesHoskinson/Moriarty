@@ -6,6 +6,8 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 
 **E5 gate: PASS (I6b, section 6f; final circuit section 6g).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr. With levers L1 and L2 it is 1,436,529 rows at k = 21, 80.6 percent of the k = 21 gate (1,782,573). The key is 1,325 bytes in the `MidnightVK` framing. The stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte. Keygen takes 84.6 s and the blinded prove 183.8 s in an exclusive heavy slot. All figures are MEASURED. The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7).
 
+**E3 map: PASS (I7, I8, section 6i).** On the E3 all-entries `L_Fr` proof (openvm e3-iface 2f09caf, 1,522 public words), PublicMap is replaced by the E3 map: the D-9 decoder in the circuit, and the statement is the decoded call vector (1,026 lanes). The wrap is 1,605,413 rows at k = 21, 90.1 percent of the gate, with 177,160 rows of headroom. Keygen takes 82.6 s and the blinded prove 131.6 s under `heavy-slot --exclusive`. The stock ledger 9.1.0.1 returns `Ok(())` in 0.062 s. All figures are MEASURED. **For owner confirmation:** the scope (every decoder check in the circuit; no J6 replay) and the pinned pre-hash (section 6i).
+
 | # | Increment | Status | Evidence |
 |---|---|---|---|
 | I0 | Crate, vendored permutation access, ledger smoke (1,026 public inputs) | PASS | section 3 |
@@ -17,6 +19,8 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | I5 | WHIR (whole verifier) | PASS | section 6d |
 | I6a | Full relation, keygen, blinded proof, stock ledger, on `mix-small` | PASS | section 6e |
 | I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | PASS | section 6f |
+| I7 | The E3 map: D-9 decoder over `Alg`; native verdicts equal stock on 11 cases; gadget `MockProver` | PASS | section 6i |
+| I8 | The full wrap of the E3 all-entries `L_Fr` proof (`lfr-e3`) on the E3 map, exclusive timing, stock ledger | PASS | section 6i |
 
 ## 2. Code
 
@@ -194,6 +198,40 @@ Unit costs (DERIVED from the MEASURED cost models): a permutation is at most 19.
 
 So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than the M7 model (879,472 mid). Round-0 leaf hashing at width 43 is about 70 percent of the total. It scales with the stacked width, so a wider `L_Fr` (E3 adds the public-value carrier, about 1,522 rows' worth for 12,164 words) moves it up. The public-value count stays a parameter. Levers if needed: fewer preprocessed columns in `L_Fr`, leaf additions folded into fewer rows, a smaller `k_whir` at round 0. The I6 `MockProver` replaces this estimate.
 
+## 6i. I7 and I8: the E3 map on the E3 all-entries proof (MEASURED)
+
+**Fixture.** `lfr_e3` is in openvm `e5-wrap` e147918, rebased on E3 2f09caf. It reruns the E3 J5 all-entries case (seed 14) and proves `L_Fr` at `lfr_params`: keygen 303.5 s, prove 732.7 s, 2 commitments, widths 33 + 10, 1,522 public words. The fixture is `~/.cache/e5-wrap/fixtures/lfr-e3.json`. The `decode` section holds the stock `iface::decode` verdict on the honest words and on 10 changed word vectors (`lfr-e3-decode.json`). Script: `export-e3.sh`.
+
+**Decoder (`src/decode.rs`).** It is a port of `iface::decode`, and every check is a constraint:
+
+1. Unpack. Each packed Fr is the sum of its 31-bit words (8 x 31 = 248 bits, so the sum cannot wrap, and high bits are refused). A limb word must be `< 2^30`; every other word must be `< P`.
+2. `dec`. Each of the 1,026 lanes and 256 logged values is 9 limbs. `Canon` is a borrow chain of `(r - 1) - L`: 9 range checks below `2^30` and 8 borrow bits, with the last borrow fixed at 0.
+3. Entries. The op is a one-hot over the 7 admitted codes. The bounds are `param - lo` and `hi - param` `< 2^11`. A used entry after a `NOP` is refused by a monotone `NOP` bit. The value counts and permutation counts accumulate (`ceil(param / 2)` from `2q = param + e`), and the capacity `off_n <= V`, `np <= P` is checked. Each value after `off_n` is zero (a monotone bit vector with count `V - off_n`).
+4. Lane map, in stock order. A pair `(0, 0)` is skipped by an `is_zero` on `lane + 1026 ent`. Otherwise one-hots over the 1,026 lanes and 256 entries check that the entry is a `DIGEST`, that `s[lane] == 0`, and then set `s[lane] = vs[off + 1]`.
+5. `PUB`. One log-derivative lookup holds the tables `(j, vs_j)` and `(256 + l, s_l)`. Here `s` is taken after the lane map. Each `PUB` entry queries `(off_i, v_i)` and `(256 + param_i, v_i)`, and each lane-map pair queries `(off + 1, val)`. The 1,282 multiplicities and the 260 queried values are observed into the wrap transcript after `part4`. The two challenges come after them. The `L_Fr` public values were observed earlier, in the preamble.
+
+**Unit costs (MEASURED, cost model, `nr_pow2range_cols` 1).** A range check below `2^30` costs 3 rows with its assign; below `P` (not a power of two), 6 rows; a bit, 1 row. With 4 range columns the costs are 2 and 5 rows. The 4-column option is not used, because it changes the arch.
+
+| Check (I7, `i7.sh`, log `i7.log`) | Result |
+|---|---|
+| Native verdict against stock `iface::decode`: honest, `free_lane_changed` (accepted); `pub_lane_changed`, `value_limb_out_of_range`, `lane_not_canonical`, `word_not_babybear`, `op_not_admitted`, `param_out_of_bound`, `used_entry_after_nop`, `lane_map_not_digest`, `packed_high_bits` (refused) | 11 of 11 equal; honest statement equal to stock |
+| Gadget decoder alone (1,522 assigned words, own transcript) | 162,381 rows |
+| `MockProver`, decoder alone, k = 18 | honest OK; changed statement, `PUB` mismatch, non-canonical lane refused |
+
+| Full wrap on `lfr-e3` (I8, `i8.sh` and `i6.sh lfr-e3 21 1`, logs `i8.log`, `i8-excl.log`) | Result |
+|---|---|
+| Native verifier core | 649 of 649 stock samples equal; 51,497 permutations; 15 traces, n per trace [17,17,14,14,13,12,11,11,11,11,9,8,7,7,5]; queries [98,83,82]; changed preprocessed row, changed smallest-trace opening, changed public value refused |
+| Rows, k = 21 (E3 map) | 1,605,413 (gate 1,782,573; 90.1 percent; headroom 177,160); table rows 1,256,451; 8 advice, 27 fixed columns |
+| Verifier core rows (DERIVED: total minus the decoder alone) | about 1.44 M, the same as `lfr-real` (1,436,529) |
+| `MockProver` | honest OK (44.8 s); changed public input and changed proof value refused |
+| Exclusive slot (`heavy-slot --exclusive`) | keygen 82.6 s; blinded prove 131.6 s (OsRng); proof 2,912 bytes; key 1,325 bytes (`MidnightVK`); library verify OK |
+| Stock ledger 9.1.0.1 (`ledger-check`) | `Ok(())` in 0.062 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
+
+**Recommended options (for owner confirmation).**
+- The scope: `decode()` is ported exactly, with no check dropped. The native-Fr replay of the log values (E3 J6) is not in the wrap; it stays open.
+- The `L` vk pre-hash (`L_Fr` public value 0) is pinned as a key constant, so the wrap key commits to one `L` key.
+- The statement head words (0 to 113, other than the lane map) are range checked only (`< P`). Nothing reads them yet; that is open.
+
 ## 7. Soundness points (as built)
 
 - Direction bits of a Merkle path are the low-bit cells of the sample cell (`merkle_verify` takes them from `low_bits`), not separate witnesses.
@@ -203,7 +241,7 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - The shape pin. `Shape::from_wrapin` takes the parameters, the DAGs, the interactions, the widths, the preprocessed commitments and the pre-hash from the `L_Fr` key. It takes the trace heights, the presence of optional AIRs and the cached-commitment counts from the fixture proof's `trace_vdata`, and the stacked layouts from `verify_proof_shape` on that proof. These are fixed for the `L_Fr` machine (E2 pins the tape shape), so they are circuit constants: a proof of another shape is refused, not verified. The wrap key is therefore tied to one `L_Fr` key and one `L_Fr` height profile.
 - `omega^index` and `omega^-index` in `binary_k_fold` are products of key constants selected by the index bit cells, so no inversion is witnessed.
 - A codeword round's Merkle root is the commitment cell observed in the round before; the round-0 roots are the observed common-main and cached cells and the key's preprocessed constants.
-- The statement: the `L_Fr` public-value cells (the cells observed in the preamble) are the public inputs; the rest of the 1,026 words are constant-zero cells (`PublicMap`, LEAD).
+- The statement. On a fixture with a `decode` section (E3 map), the public inputs are the 1,026 lanes that the in-circuit decoder computes from the `L_Fr` public-value cells, the same cells observed in the preamble (section 6i). The lookup challenges are sampled after its multiplicities and queried values are observed. On older fixtures it is `PublicMap` (LEAD): the public-value cells, then constant-zero cells.
 
 ## 8. Next increments (for the next agent)
 
@@ -224,3 +262,7 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 19:40. Lever L1 (fused multiply-add): 1,453,425 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-fma.log`).
 - 2026-11-12 20:37. Lever L2 (`omega^index`): 1,436,529 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-omega.log`).
 - 2026-11-12 21:56. Final circuit (L1 + L2) under `heavy-slot --exclusive`: 1,436,529 rows, keygen 84.6 s, prove 183.8 s, ledger 9.1.0.1 accepts (log `i6-excl.log`).
+- 2026-11-12 23:36. Openvm `e5-wrap` rebased onto E3 2f09caf; `lfr-e3` exported (log `export-e3.log`).
+- 2026-11-12 23:54. I7 passes (log `i7.log`): decoder verdicts equal stock on 11 cases; gadget decoder 162,381 rows.
+- 2026-11-13 00:10. I8 cost model: 1,605,413 rows on `lfr-e3` with the E3 map (log `i8.log`); commit 7a4dfb308.
+- 2026-11-13 00:49. I8 under `heavy-slot --exclusive`: keygen 82.6 s, prove 131.6 s, ledger 9.1.0.1 accepts (log `i8-excl.log`).
