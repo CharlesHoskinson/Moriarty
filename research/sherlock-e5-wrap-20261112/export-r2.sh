@@ -3,7 +3,7 @@
 # enc-wrap-decode, the lfr-e3 decode cases (no prove), then the all-entries L_Fr proof of the
 # E3 J8 fixture (E3_FIXTURE_DIR fixture-j8).
 set -euxo pipefail
-cd $HOME/.cache/m7-wrap/src/openvm-e5
+cd $HOME/.cache/m7-wrap/src/openvm-tested
 export E3_FIXTURE_DIR=$HOME/.cache/e3-iface/fixture-j8
 cp Cargo.lock $HOME/.cache/e5-wrap/openvm-lock.before
 cargo build --release --offline --locked -p sherlock-wrap-export --example enc_wrap --example lfr_e3 2>&1 | grep -v Compiling | tail -30

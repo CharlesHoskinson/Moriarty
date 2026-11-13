@@ -1,5 +1,5 @@
 import importlib.util, sys
-SRC = "/home/hoskinson/Projects/Moriarty-wt/m7-wrap/research/sherlock-stark-framework-20261111"
+SRC = "/home/hoskinson/Projects/Moriarty-wt/tested/research/sherlock-stark-framework-20261111"
 spec = importlib.util.spec_from_file_location("wrap_model", SRC + "/wrap_model.py")
 wm = importlib.util.module_from_spec(spec); spec.loader.exec_module(wm)
 for ws in (None, 36, 48):

@@ -5,7 +5,7 @@ structure of L stands in (both are STARK-verifier AIR sets). Stdlib single-lane 
 no packing; Fr Merkle leaves hash 2 field elements per permutation. D10 MEASURED heights.
 Run: python3 -I optE.py"""
 import importlib.util, json, math, sys, os
-D = "/home/hoskinson/Projects/Moriarty-wt/d10-heights/research/sherlock-stark-framework-20261111"
+D = "/home/hoskinson/Projects/Moriarty-wt/tested/research/sherlock-stark-framework-20261111"
 spec = importlib.util.spec_from_file_location("d10w", D + "/d10_wrap.py")
 d10 = importlib.util.module_from_spec(spec); sys.argv = [""]; spec.loader.exec_module(d10)
 wm = d10.wm

@@ -41,7 +41,7 @@ use sherlock_wrap::{
 const BB_P: u64 = 0x7800_0001;
 
 fn enc_dir() -> String {
-    format!("{}/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112", std::env::var("HOME").unwrap())
+    format!("{}/Projects/Moriarty-wt/tested/research/sherlock-enc-fp3-20261112", std::env::var("HOME").unwrap())
 }
 
 fn pins(path: &str) -> HashMap<String, String> {

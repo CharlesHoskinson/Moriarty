@@ -2,7 +2,7 @@
 # M7 L-fr: build + tests + L proof. Resumable: each stage leaves a .ok marker; rerun skips done stages.
 set -uo pipefail
 export PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-C target-cpu=native" CARGO_TARGET_DIR=$HOME/.cache/m7-wrap/target-ovm
-D=$HOME/.cache/m7-wrap/lfr; W=$HOME/.cache/m7-wrap/src/openvm-org_openvm
+D=$HOME/.cache/m7-wrap/lfr; W=$HOME/.cache/m7-wrap/src/openvm-tested
 L=$HOME/.cache/cost-opt/measure/heavy.lock; HR=/home/hoskinson/.local/bin/heavy-run
 cd $W
 stage() { # name mem cmd...

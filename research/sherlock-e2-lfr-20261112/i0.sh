@@ -1,7 +1,7 @@
 #!/bin/bash
 # I0: build the sherlock-lfr fixture example and test, make the L fixture, check it from disk.
 set -uo pipefail
-R=$HOME/.cache/e2-lfr/run.sh; W=$HOME/.cache/m7-wrap/src/openvm-org_openvm
+R=$HOME/.cache/e2-lfr/run.sh; W=$HOME/.cache/m7-wrap/src/openvm-tested
 export RUSTFLAGS="-C target-cpu=native"
 $R i0-build 48G $W cargo build --release --locked --message-format short -p sherlock-lfr --example l_fixture --tests || exit 1
 if [ ! -s $HOME/.cache/e2-lfr/fixture/l_fixture.json ]; then
