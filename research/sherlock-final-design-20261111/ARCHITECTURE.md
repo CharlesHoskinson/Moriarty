@@ -569,7 +569,7 @@ Status words (FZ-1, owner confirmed 2026-11-12):
 | I-25 | Carrier of the effect region and `comm` from the terminal state of a run of more than one shard to the call vector of `L`: the Compact outcome `Halted([comm, E...])`, check (i) for general runs | 1.11 FP-3 fact 1 | FROZEN (owner ruling FP3-1 (C); closure tests `pos_fp3_effect_multishard`, `fp3_effect_forged`) |
 | I-26 | Call-vector lane roles: lane 0 `binding_input`, lane 1 `comm`, the anchor prefix, the effect words, constrained zeros | 1.8 call vector (OD-15) | FROZEN |
 | I-27 | Call-vector length `2 + L_TX`, `L_TX` = 1,024 | 1.8 (OD-7) | FREEZE-PENDING E5 (the binding rows per call-vector word in the stdlib wrap of `L_Fr`, OD-24 option E) and FP-8 (it is a wrap-key constant) |
-| I-28 | Public values of `L`, the index table of 12,164 words, taken in and exposed by `L_Fr` | 1.11 FP-3 (F-8) | FREEZE-PENDING E3 (the 12,164 words carried through `L_Fr`, OD-24 option E) and FP-8 (its length follows `B`, `V` and `L_TX`) |
+| I-28 | Public values of `L`, the index table of 12,164 words, taken in and exposed by `L_Fr` | 1.11 FP-3 (F-8) | FREEZE-PENDING FP-3 fact 1, E3 (the 12,164 words carried through `L_Fr`, OD-24 option E) and FP-8 (its length follows `B`, `V` and `L_TX`) |
 | I-29 | Field log: the operation list and codes, the entry and value tables of `pv`, the per-operation bounds, the padding rule, the reservation `R`, the onion digest `(d, n)` | 1.8 (OD-17) | FREEZE-PENDING ENC-2 (the operation list, codes, tables, bounds, padding, `R` and the onion are settled; `enc(e)` is not written word by word) |
 | I-30 | Log capacity `B = V = P = 256`, `E = 0`, `W_pv` = 2,816 | 1.8 (OD-6, OD-17) | FREEZE-PENDING E3 and E5 (the log through `L_Fr` and the wrap's replay, OD-24 option E) and FP-8 (wrap-key constants) |
 | I-31 | Anchor statement `(mode, j, k, e_in, e_out)` and the anchor values `A_0 = A_k = C_P`, `A_j` under `SHK_LOCK` and `DOM_LOCK` | 1.11 FP-3 table, `PR` section 7.3 (OD-16, F-8) | FREEZE-PENDING ENC-1 (the value of `SHK_LOCK`) |
@@ -598,16 +598,16 @@ Status words (FZ-1, owner confirmed 2026-11-12):
 | VALUE DIGEST | `vd` rows of I-14 over `AuthRec` and `AuthRom` | FREEZE-PENDING the AD-11 record schema (through I-9) |
 | BOUNDARY COMMITMENT | `state_d` header of I-14 and I-35 | FREEZE-PENDING X10 for the header (N-14), the `ty_d` normal form through I-14; `body_d` with I-15 |
 | NODE INTEGRATION | I-13, I-16 | FREEZE-PENDING with I-13; I-16 FROZEN |
-| L AND WRAP | I-26 to I-34, I-37 | FREEZE-PENDING the option E steps E3 to E6, FP-8; the mid-run consume rule of AD-20 (b), built later, changes the run entry and is a new interface version |
+| L AND WRAP | I-26 to I-34, I-37 | FREEZE-PENDING the option E steps E3 to E6, FP-8, FP-3 facts 1 and 2; the mid-run consume rule of AD-20 (b), built later, changes the run entry and is a new interface version |
 | CONTINUATION | the SEG statement of I-13 | FREEZE-PENDING N-4 (`continuation.qnt`) |
-| GP-2 hook | SET forms of I-14, `claim_d` of I-18 | FREEZE-PENDING X12 in the circuit (the GP-2 spec does not freeze before X12; AD-20 (a) is built now) |
+| GP-2 hook | SET forms of I-14, `claim_d` of I-18 | FREEZE-PENDING X12 in the circuit (the GP-2 spec does not freeze before X12; AD-20 (a) is built now), FP-3 fact 3 on the contract side |
 | GP-3 hook | FV payload of I-13, `fclaim_d` of I-14, `reg_root` | FREEZE-PENDING X8 and N-8 (`reg_root` lifecycle) |
 | GP-4 hook | node modes of I-13 | FREEZE-PENDING X7 and N-6 |
 | GP-3 general verifier | FV statement of I-13 | FREEZE-PENDING X14 (the cost of the in-circuit final check of AD-22 (a) is PENDING, M11) |
 | INIT | `image_d`, `prog_d`, `input_d` openings of I-14, `AuthIn` of I-10 | FREEZE-PENDING `D_view` and the view form (I-10), the SRC-021 amendment of AD-18 |
 | REFERENCE BRIDGE | host side; the projection onto the digests of I-14 | FREEZE-PENDING the `ty_d` normal form (with I-14) |
 | HOST CHECKPOINT STORE | host side; the checkpoint over the SEG statement of I-13 | FREEZE-PENDING N-4 |
-| LEDGER CONTRACT | entries `acceptRun`, `acceptCollection`, `descend`, `openClaim` | FREEZE-PENDING N-11 (contract surface); no claim count in the public statement (AD-2 (c), owner decision 2026-11-12) |
+| LEDGER CONTRACT | entries `acceptRun`, `acceptCollection`, `descend`, `openClaim` | FREEZE-PENDING FP-3 facts 2 and 3 and N-11 (contract surface); no claim count in the public statement (AD-2 (c), owner decision 2026-11-12) |
 | ZERO KNOWLEDGE | the public-input rules of LW-003 and ZK-002, I-22 | FROZEN for the rules; I-22 FREEZE-PENDING ENC-1 |
 | COMPACT FRONTEND | `abi.json` per entry, I-26, I-31 to I-33 | FREEZE-PENDING ENC-1 and ENC-3 (I-31, I-33) and E5 (`L_TX`, I-27); I-26 FROZEN |
 
