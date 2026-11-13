@@ -265,12 +265,14 @@ Measured at the ledger 9.1.0.1 pins (amended 2026-11-10, review §5 design edit 
 
    Notes on the table:
    - `NIL` is the empty-stack link. No allocated address and no hash-chain head takes this value. Address 0 is the first append when `len = 0`, so as an address `NIL != 0`. For hash-chain stacks, `NIL` is the `EMPTY_STACK` constant.
-   - `EMPTY(t)` is the root of the empty table `t`, and it is different for each table. If MEM is one append log (study §2.4), its root SHALL open to these four `(root, length)` pairs. The tree shape stays open.
+   - `EMPTY(t)` is the root of the empty table `t`, and it is different for each table. The one-arena amendment below replaces the four `(root, length)` pairs.
    - `v0..v2` are scratch registers outside `pre_d`. Init requires them to be zero at slot 0, so no value enters the first step without a check.
    - `run_id` (`owner_prepare.rs:2810-2814`) maps to `(prog_d, input_d)`.
    - Init drops these checks of C6 `genesis_image` (`owner_prepare.rs:2801-2872`). R2: negative inputs cannot be written in unsigned limbs, so the genesis-invalid form `Error { code: 1 }` cannot occur. R3 (`fuel <= max_reference_work`), R4 (`stack_limit <= Bounds.frames`) and R5 (`fuel <= value_slots`): these are key capacities, which GP-1 removes. Resource limits stay in-run outcomes (`Exhausted`, `Rejected(4)`).
    - Model evidence: `models/sherlock/quint/init.qnt` (`quint test --main init`). Over 128 statements (with and without input, fuel at 0 and at the two-limb maximum with the limb scaled to 2^16, non-canonical fuel limbs and stack limit, input shape mismatches), the check accepts exactly the model's `Init`. The model shows that the check is complete over the 39 fields; it does not show that the `Init` values equal `Machine::new`, which is row A37. It refuses every single-field deviation, a swapped input or program opening, and a witness genesis flag used in place of `h_pre == 0`. All 47 mutants (39 field mutants, 8 check and seal mutants) are caught.
    - Host differential: task 4.15, row A37.
+
+   **One-arena amendment (owner decisions AD-18 (a) and AD-17 (b), 2026-11-12).** SRC-021 uses the one-arena Init field list of kit INIT (`research/sherlock-final-design-20261111/ARCHITECTURE.md`, kit INIT). Rows 26 to 29 and 34 to 37 become one arena with genesis memory `(len, root, tail_d) = (0, empty_at(TOP + 3), tail_d([]))`. Rows 16 and 17 take the empty-stack constants `EMPTY_F` and `EMPTY_T` of the hash-chain stacks. The input is admitted by digest: it is not loaded into memory, so rows 23, 24, 26 and 27 are 0, and steps read input nodes through the certified input view under the header word `view_root` (from the witness, `VIEW_NONE` for an absent input). `input_d`, `deps_d` and `view_root` are header words of the state commitment, and `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words fixed for the run. The table above is the reference mapping of the 39 fields; where it differs, this amendment holds.
 
 ### 3.3 Decider and contract
 

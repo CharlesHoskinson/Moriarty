@@ -116,7 +116,7 @@ The wrap SHALL be one `ZkStdLib`-architecture circuit (OD-24 option E) that ledg
 - **THEN** they are ESTIMATE, 684,894 / 879,472 / 976,410 rows (low / mid / high), at most 55 percent of the k = 21 gate (`research/sherlock-m7-wrap-20261112/RESULTS.md` section 2b.2), and E5 replaces them by `MockProver` rows at the measured `L_Fr` widths
 
 ### Requirement: LW-014 Keygen refusals and the fallback layer
-Wrap keygen SHALL refuse a log capacity that does not hold the largest reservation `R`, and an `L` or `L_Fr` key whose query vector or shape bounds differ from the frozen set. The Fr-native layer between `L` and the wrap SHALL be `L_Fr` of OD-24 option E. No second Fr proving engine SHALL be built as a call-time hedge (OD-11).
+Wrap keygen SHALL refuse a log capacity that does not hold the largest reservation `R`, and an `L` or `L_Fr` key whose query vector or shape bounds differ from the frozen set. The Fr-native layer between `L` and the wrap SHALL be `L_Fr` of OD-24 option E. No second Fr proving engine SHALL be built as a call-time fallback (OD-11, owner decision 2026-11-12); `L_Fr` is part of the one proving path.
 
 #### Scenario: Fallback trigger
 - **WHEN** the wrap rows exceed the gate after E5, the measured GPU wrap exceeds 8 s at the chosen k after K1 to K5, or the owner asks for a larger log capacity

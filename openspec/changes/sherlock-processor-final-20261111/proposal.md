@@ -66,7 +66,7 @@ OD-4 to OD-18 are owner decisions of 2026-11-12, each with option (a) (`FD/DECIS
 | OD-8 | hybrid native and Sherlock contracts | ANC-009, MID-005 |
 | OD-9 | elastic trust domain: devices the user owns | ZK-001, PRD-003 |
 | OD-10 | wait for the Fr Poseidon GPU kernel | GPW-006 |
-| OD-11 | no second Fr proving engine as a call-time hedge (`L_Fr` of OD-24 is the ledger-readability path) | GPW-006, LW-014 |
+| OD-11 | no second Fr proving engine as a call-time fallback; `L_Fr` of OD-24 is part of the one proving path (owner decision 2026-11-12) | GPW-006, LW-014 |
 | OD-12 | opt-in user batches | ZK-009 |
 | OD-13 | resident prover daemon | PRD-001, PRD-002 |
 | OD-14 | Compact `Field` stays emulated | CF-005 |

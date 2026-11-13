@@ -33,7 +33,7 @@ Every STARK shard SHALL have a fixed shape from the plan menu. Keygen SHALL refu
 - **THEN** keygen refuses the app key
 
 ### Requirement: DG-005 The height and stacked width of `L`
-`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 6 (OD-19). D10 measured `w_stack` 18 on `L_cached`; a tighter bound SHALL rerun D3 before the `L` key freezes (SQG-005).
+`L` SHALL have a height of at most `2^20`. Its stacked width SHALL be at most 48 with `mu` PoW 6 (OD-19; frozen by owner decision 2026-11-12), with D10's measured `w_stack` 18 on `L_cached` inside it (SQG-005).
 
 #### Scenario: Height above the bound
 - **WHEN** `L` tracegen gives a height of `2^21`
