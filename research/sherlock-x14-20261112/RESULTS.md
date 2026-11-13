@@ -237,7 +237,7 @@ Final unit shapes (without the sink):
 
 Two more open points (DERIVED):
 
-- `PointsIn` sends and range-checks with multiplicity 1 on every row and has no `is_valid` column. A unit therefore works only at exactly 2^h operations. A partly filled unit needs an `is_valid` column in `PointsIn` (one column, a boolean constraint, and the sends multiplied by it).
+- `PointsIn` had no `is_valid` column, so a unit worked only at exactly 2^h operations. Resolved in (e).
 - A unit with both chains is now 3,236 + 291 + 243 = 3,770 columns before any producer (DERIVED from the measured widths). So the schedule of one kind per unit from (c) holds more strongly.
 
 **Gemini Quint lanes of the condition rows** (`qa/gemini-quint/x14-inv`, `x14-inv-y`, `x14-points-in`, `x14-chain-id`): lead quint runs in `out/x14cond-lanes-quint1.txt` (first pass) and `out/x14cond-lanes-quint-final.txt` (final), with a lead-results table in each lane REPORT. Final status: every command of all four lanes gives the expected exit code (typecheck, tests, the sound invariant, non-vacuity, all 5 mutants each).
@@ -247,6 +247,43 @@ Two more open points (DERIVED):
   - id = row index: SOUND and COMPLETE with conditions. It took one lane fix turn for the test file. The lead ran the suite with `--match='_test$'` because the test names do not match quint's default pattern, and ran `invRow` with 1,000 samples.
   - The `L_add` test file of (c) is fixed (lane fix turn 3): it parses, 11 tests pass, and every `L_add` command matches.
 
+### (e) Padding and the identity-point flag path (MEASURED, `out/x14pad-neg.jsonl`, `out/x14pad-neg-noinvy.jsonl`, `out/x14pad-g1-add.jsonl`, `out/x14pad-g1-dbl.jsonl`)
+
+**Padding.** `PointsIn` has a boolean `v` column, and its valid rows form a prefix (`next.v (1 - v) = 0`). The point messages go with multiplicity `e` (see below). A unit holds any number of operations up to 2^h: the chain rows of a padding id have `is_valid = 0`. Finding (READ, `check_carry_to_zero.rs`): the stock `FieldExpr` carry constraints are not gated by `is_valid`. Only its range checks and the chain messages are gated. So a padding chain row must still hold a satisfying witness. The trace builds a dummy one with a throwaway range checker and then sets `is_valid = 0`, as the stock `core_chip` does. An all-zero `INV` row fails (`w (x2 - x1) = 1` has a constant term).
+
+**Identity flag path (AFK design pick).** Each input point has a boolean flag `f_i`. A flagged point has all limbs zero (`f_i limb = 0`), so O has one encoding, (0, 0, f = 1). The chain runs only when `e = 1`, with `e = v (1 - f_0)(1 - f_1)` for the add chain (through `g = (1 - f_0)(1 - f_1)`) and `e = v (1 - f_0)` for the double chain. When an input is O (`v = 1`, `e = 0`), `PointsIn` sends the result itself on the OUT bus with multiplicity `v - e`. For add, the result is `sel = P1 + f_0 (P2 - P1)` with flag `f_0 f_1`, which gives O + P = P, P + O = P and O + O = O. For double, the result is the point with flag `f_0` (2 O = O). `Y3` sends its results with flag 0, because a chain result is never O (the inverse rows make P + (-P) unprovable). The consumer receives (id, x, y, f).
+
+Why this option: in a bucket MSM only input points can be O, because the accumulators start from an offset. Skipping the chain for an identity input costs 5 columns and 1 interaction in `PointsIn` and no new AIR. The alternative, a selection row after the chain, would cost a new row kind of about 290 columns. The truth of each flag must be bound by the producer of the points (the transcript or commitment encoding of O). That producer is not built yet. This AFK pick is marked for owner confirmation.
+
+Negative tests (2^4 rows; MEASURED; double chain without `INV_y` in `out/x14pad-neg-noinvy.jsonl`, with `INV_y` in `out/x14pad-neg.jsonl`):
+
+| Case | add | double |
+|---|---|---|
+| honest, full unit | verified | verified |
+| partly filled unit (11 of 16 operations) | verified | verified |
+| padding hole (row 3 padding, later rows valid) | fails only `PointsIn` (prefix), verify rejects | same |
+| padding row of `PointsIn` with its chain rows marked valid | LogUp unbalanced, prover refuses (`NonZeroRootSum`) | same |
+| O + P, P + O, O + O (add); 2 O (double) | verified | verified |
+| flag set on a real point (non-zero limbs) | fails only `PointsIn`, verify rejects | same |
+| consumer takes the chain sum in place of P2 for O + P | LogUp unbalanced, prover refuses | n/a |
+
+The earlier cases of (d) give the same results with the new `PointsIn` (same_pt, dup_id, y_zero with `INV_y`). Without `INV_y`, (0, 0) still verifies, so the double unit's producer must check that points are on the curve.
+
+New `PointsIn` shape: add 198 columns, 200 constraints, 195 interactions, degree 3; double 100 columns, 102 constraints, 99 interactions, degree 3. The range checker already has degree 3, so the unit's maximum degree does not change.
+
+**Final unit shapes** (arity 1 over one internal-set node, `g1c 16 ... 12,14,16,17 16`; without the 99-column sink; MEASURED):
+
+| Unit | AIRs | Columns | Max interactions | Stacked width at 2^12 / 2^14 / 2^16 / 2^17 | Proved and verified at 2^16 | Bound |
+|---|---:|---:|---:|---|---|---|
+| add chain: `L_add`, `X3`, `Y3`, `INV`, `PointsIn` (2 points, padding, flags), range | 45 | 3,143 | 200 | 49 / 89 / 248 / 461 | yes | within 3,300 (AFK pick, owner confirmation) |
+| double chain without `INV_y`: `SQ`, `L_dbl`, `X3`, `Y3`, `PointsIn` (1 point, padding, flag), range | 45 | 2,949 | 199 | 48 / 83 / 224 / 412 | yes | within the owner's 3,000 |
+
+**Gemini Quint lanes of (e)** (`qa/gemini-quint/x14-pad`, `qa/gemini-quint/x14-identity`, `argon-run`, both DONE 2026-11-13 07:1x):
+
+- Padding (`x14-pad`): SOUND and COMPLETE with conditions. The consumer of the OUT bus must constrain its receive multiplicity to be boolean and bind `id` (the harness `SinkAir` does neither), and padding chain rows must hold a dummy satisfying carry witness with `is_valid = 0`, as `g1_chain` does. The lane models 5 mutants; it finds `m_range_mult_v` an allowed variant for operational soundness.
+- Identity flag path (`x14-identity`): SOUND and COMPLETE with conditions. The producer must bind both the flags and the limbs to the transcript encoding of O, and an active `add` row needs `x1 != x2`.
+- Lead quint runs: not run. The lane sandbox refused `quint`, so neither lane ran its own commands; the expected exit codes in each REPORT are not yet confirmed.
+
 ### X14 gate under the new bounds
 
 | Check | Result | Label |
@@ -254,13 +291,13 @@ Two more open points (DERIVED):
 | stock `fr_mul` (129) and `fp_mul` (193) within 200 interactions | yes | MEASURED |
 | G1 addition and doubling as `fp_mul`-class rows within 200 | yes, at most 199 without the condition rows; at most 200 with them (`L_add`, `L_dbl` at the bound) | MEASURED |
 | condition rows (non-zero denominator, id = row index, input range checks) reject forged traces | yes, all 4 negative cases rejected, honest cases verify | MEASURED |
-| unit node within 64 AIRs and 3,000 columns | `fr_mul` 41 / 1,735; `fp_mul` 41 / 1,831: yes. With the condition rows: add chain 45 / 3,138: **no** (needs 3,300, AFK pick for owner confirmation); double chain without `INV_y` 45 / 2,946: yes (46 / 3,189 with `INV_y`). Without the condition rows: 43 / 2,654 and 44 / 2,849 | MEASURED (chains: DERIVED without the sink) |
+| unit node within 64 AIRs and 3,000 columns | `fr_mul` 41 / 1,735; `fp_mul` 41 / 1,831: yes. With the condition rows: add chain 45 / 3,143 with padding and identity flags (e): **no** (needs 3,300, AFK pick for owner confirmation); double chain without `INV_y` 45 / 2,949: yes. Without the condition rows: 43 / 2,654 and 44 / 2,849 | MEASURED (chains: DERIVED without the sink) |
 | D3 at 3,300 and 3,500 columns | weakest 101.1643, PASS (only the stacked term moves) | MEASURED (calculator) |
 | one operation AIR at 2^16 beside one child verification | proved and verified for all four | MEASURED |
 | the parent over such a unit | about +1 % main cells | MEASURED |
 | D3 at the new bounds | weakest 101.1643, PASS | MEASURED (calculator) |
 
-**GP-3 general verifier, FV-SCHED unit budget:** one unit holds 2^16 operations of one kind (2^17 laid out, not proved). For one `ivc_node` proof (ESTIMATE): the MSM is a bucket MSM with about 23,000 additions in 1 addition unit plus 1 doubling unit, and the final check (AD-22 (a)) is about 20,000 `fp_mul` rows in 1 unit. That is 3 arithmetic units before transcript and expression evaluation, which stay PENDING. Status: the arithmetic part of the unit budget is MEASURED. The gate stays **FREEZE-PENDING** on (1) owner confirmation of the AFK pick of 3,300 columns for the FV work units (the add unit is 3,138; the double unit fits 3,000 without `INV_y`, with an on-curve check at its point producer) and sign-off of the 17-bit range checker (a departure from LD-S10x-3), (2) the infinity flag path for identity points in proofs, (3) the transcript and expression-evaluation AIRs. The Gemini lanes of the condition rows and the `L_add` test file are done (see (d)).
+**GP-3 general verifier, FV-SCHED unit budget:** one unit holds 2^16 operations of one kind (2^17 laid out, not proved). For one `ivc_node` proof (ESTIMATE): the MSM is a bucket MSM with about 23,000 additions in 1 addition unit plus 1 doubling unit, and the final check (AD-22 (a)) is about 20,000 `fp_mul` rows in 1 unit. That is 3 arithmetic units before transcript and expression evaluation, which stay PENDING. Status: the arithmetic part of the unit budget is MEASURED. The gate stays **FREEZE-PENDING** on (1) owner confirmation of the AFK pick of 3,300 columns for the FV work units (the add unit is 3,138; the double unit fits 3,000 without `INV_y`, with an on-curve check at its point producer) and sign-off of the 17-bit range checker (a departure from LD-S10x-3), (2) owner confirmation of the identity flag path of (e) and a producer that binds the flags to the transcript encoding, (3) the transcript and expression-evaluation AIRs. The Gemini lanes of the condition rows and the `L_add` test file are done (see (d)).
 
 ### ARCHITECTURE rows that must change (not edited here; `efb0eb78a` text)
 
@@ -270,5 +307,5 @@ Two more open points (DERIVED):
 - X14 row of the experiments table (line 4008) and AD-22 (line 3457): the cost of the final check per SRS.
 - N-6 (line 3489) and N-10 (line 3508): the rulings.
 - AD-3 (line 3438), the kit PAGE/ROM block cache text at line 1481 ("`K_rom` ... not frozen"), V-4 (line 3562), the decision index row at line 3341 and X15 (line 4009): `K_rom = 15` FROZEN by the owner (2026-11-12 20:35).
-- GP-3 general verifier and kit FV-SCHED (lines 2689, 2698): the G1 chain with its condition rows (`INV`, `INV_y`, id = row index, `PointsIn`): an addition is 4 rows plus the point producer, a doubling 5; the add unit is 45 AIRs / 3,138 columns and the double unit without `INV_y` 45 / 2,946 (MEASURED); the column bound of the FV work units is 3,300 as an AFK pick for owner confirmation (D3 unchanged at 101.1643); the double unit's point producer checks that inputs are on the curve; the point at infinity is avoided by the MSM schedule (random or offset accumulator) and needs a flag path for identity points in proofs.
+- GP-3 general verifier and kit FV-SCHED (lines 2689, 2698): the G1 chain with its condition rows (`INV`, `INV_y`, id = row index, `PointsIn`): an addition is 4 rows plus the point producer, a doubling 5; the add unit is 45 AIRs / 3,143 columns and the double unit without `INV_y` 45 / 2,949, both with padding and identity flags (MEASURED); the column bound of the FV work units is 3,300 as an AFK pick for owner confirmation (D3 unchanged at 101.1643); the double unit's point producer checks that inputs are on the curve; the accumulator never reaches the point at infinity (offset start), and identity input points take the flag path of X14 (e).
 - The RANGE table text of LD-S10x-3: the FV work units use a 17-bit range checker of their own. This is an AFK pick that departs from the ruling and is marked for owner sign-off; do not change the text before the owner signs off.

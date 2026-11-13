@@ -646,6 +646,7 @@ enum Ref {
     Id,
     In(usize),
     Var(usize),
+    Zero,
 }
 #[derive(Clone, Debug)]
 struct Msg {
@@ -689,6 +690,7 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Chai
                     Ref::Id => f.push(id.clone().into()),
                     Ref::In(i) => f.extend(cols.inputs[*i].iter().map(|v| v.clone().into())),
                     Ref::Var(j) => f.extend(cols.vars[*j].iter().map(|v| v.clone().into())),
+                    Ref::Zero => f.push(AB::Expr::ZERO),
                 }
             }
             let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(m.bus);
@@ -738,18 +740,31 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Sour
     }
 }
 
-/// Producer of the input points: columns id, then `nv` values of 48 limbs. It range-checks every
-/// limb to 8 bits on RANGE_BUS (FieldExpr does not range-check its inputs) and sends the point
-/// messages. id = row index, as in ChainAir.
+/// Producer of the input points. Columns: id, v (is_valid), f_0..f_{npts-1} (identity flags, one
+/// per point), g = prod (1 - f_i) (only for 2 points), e (the operation runs in the chain), then
+/// `nv` values of 48 limbs (2 values per point). Constraints: id = row index; v, f_i boolean;
+/// valid rows are a prefix (next.v (1 - v) = 0); e = v g (2 points) or e = v (1 - f_0) (1 point);
+/// a flagged point has all limbs zero (f_i limb = 0). Every limb is range-checked to 8 bits on
+/// RANGE_BUS. The point messages to the chain go with multiplicity e. When the operation does not
+/// run (v = 1, e = 0: an identity input), PointsIn itself sends the result on the OUT bus with
+/// multiplicity v - e: add: sel = P1 + f_0 (P2 - P1) (so P2 if P1 = O, P1 if P2 = O) with flag
+/// f_0 f_1; dbl: the point itself (zero limbs) with flag f_0 (2 O = O).
 struct PointsIn {
     nv: usize,
     nl: usize,
     rb: usize,
+    npts: usize,
     msgs: Vec<(u16, Vec<Option<usize>>)>,
+    out_bus: u16,
+}
+impl PointsIn {
+    fn off(&self) -> usize {
+        3 + self.npts + usize::from(self.npts == 2)
+    }
 }
 impl<T> BaseAir<T> for PointsIn {
     fn width(&self) -> usize {
-        1 + self.nv * self.nl
+        self.off() + self.nv * self.nl
     }
 }
 impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for PointsIn {}
@@ -761,22 +776,85 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Poin
         let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
         let next: Vec<AB::Var> = main.row_slice(1).expect("next").to_vec();
         drop(main);
-        builder.when_first_row().assert_zero(local[0].clone());
-        builder.when_transition().assert_eq(next[0].clone(), local[0].clone().into() + AB::Expr::ONE);
-        let rbus = VariableRangeCheckerBus::new(RANGE_BUS, self.rb);
-        for v in &local[1..] {
-            rbus.range_check(v.clone(), 8).eval(builder, AB::Expr::ONE);
+        let one = AB::Expr::ONE;
+        let (off, nl) = (self.off(), self.nl);
+        let ex = |c: &AB::Var| -> AB::Expr { c.clone().into() };
+        let (id, v, e) = (ex(&local[0]), ex(&local[1]), ex(&local[off - 1]));
+        let f: Vec<AB::Expr> = (0..self.npts).map(|i| ex(&local[2 + i])).collect();
+        builder.when_first_row().assert_zero(id.clone());
+        builder.when_transition().assert_eq(ex(&next[0]), id.clone() + one.clone());
+        builder.assert_bool(v.clone());
+        for fi in &f {
+            builder.assert_bool(fi.clone());
         }
-        for (bus, refs) in &self.msgs {
-            let mut f: Vec<AB::Expr> = vec![];
-            for r in refs {
-                match r {
-                    None => f.push(local[0].clone().into()),
-                    Some(k) => f.extend(local[1 + k * self.nl..1 + (k + 1) * self.nl].iter().map(|v| v.clone().into())),
+        builder.when_transition().assert_zero(ex(&next[1]) * (one.clone() - v.clone()));
+        if self.npts == 2 {
+            let g = ex(&local[2 + self.npts]);
+            builder.assert_eq(g.clone(), (one.clone() - f[0].clone()) * (one.clone() - f[1].clone()));
+            builder.assert_eq(e.clone(), v.clone() * g);
+        } else {
+            builder.assert_eq(e.clone(), v.clone() * (one.clone() - f[0].clone()));
+        }
+        let val = |k: usize| -> Vec<AB::Expr> { local[off + k * nl..off + (k + 1) * nl].iter().map(ex).collect() };
+        for i in 0..self.npts {
+            for k in [2 * i, 2 * i + 1] {
+                for l in val(k) {
+                    builder.assert_zero(f[i].clone() * l);
                 }
             }
-            openvm_stark_backend::interaction::PermutationCheckBus::new(*bus).send(builder, f, AB::Expr::ONE);
         }
+        let rbus = VariableRangeCheckerBus::new(RANGE_BUS, self.rb);
+        for c in &local[off..] {
+            rbus.range_check(c.clone(), 8).eval(builder, one.clone());
+        }
+        for (bus, refs) in &self.msgs {
+            let mut m: Vec<AB::Expr> = vec![];
+            for r in refs {
+                match r {
+                    None => m.push(id.clone()),
+                    Some(k) => m.extend(val(*k)),
+                }
+            }
+            openvm_stark_backend::interaction::PermutationCheckBus::new(*bus).send(builder, m, e.clone());
+        }
+        let mut m: Vec<AB::Expr> = vec![id.clone()];
+        if self.npts == 2 {
+            for k in 0..2 {
+                m.extend(val(k).into_iter().zip(val(2 + k)).map(|(a, b)| a.clone() + f[0].clone() * (b - a)));
+            }
+            m.push(f[0].clone() * f[1].clone());
+        } else {
+            m.extend(val(0));
+            m.extend(val(1));
+            m.push(f[0].clone());
+        }
+        openvm_stark_backend::interaction::PermutationCheckBus::new(self.out_bus).send(builder, m, v - e);
+    }
+}
+
+/// Test harness only: the consumer of the output point (the MSM accumulator in a real verifier).
+/// Columns: id, v, f (identity flag of the output), x (48 limbs), y (48 limbs). Receives
+/// (id, x, y, f) on the OUT bus with multiplicity v.
+struct SinkAir {
+    nl: usize,
+    bus: u16,
+}
+impl<T> BaseAir<T> for SinkAir {
+    fn width(&self) -> usize {
+        3 + 2 * self.nl
+    }
+}
+impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for SinkAir {}
+impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for SinkAir {}
+impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for SinkAir {
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        drop(main);
+        let mut m: Vec<AB::Expr> = vec![local[0].clone().into()];
+        m.extend(local[3..].iter().map(|c| c.clone().into()));
+        m.push(local[2].clone().into());
+        openvm_stark_backend::interaction::PermutationCheckBus::new(self.bus).receive(builder, m, local[1].clone());
     }
 }
 
@@ -953,11 +1031,10 @@ fn g1_chain(kind: &str, log_rows: usize, neg: &str) -> (Vec<AirRef<SC>>, Vec<Row
     if no_inv_y {
         l_msgs.pop();
     }
-    let sink_msgs = vec![(o + 7, false, vec![None, Some(0), Some(1)])];
     let sq_msgs = vec![m(o + 8, false, vec![id, i(0)]), m(o + 9, true, vec![id, v(0), i(0)])];
     let x_msgs = vec![m(o + 2, false, vec![id, i(0), i(1)]), m(o + 3, false, vec![id, i(2)]), m(o + 6, true, vec![id, v(0)])];
     let y_msgs = vec![m(o + 4, false, vec![id, i(0), i(1)]), m(o + 5, false, vec![id, i(3)]), m(o + 6, false, vec![id, i(2)]),
-                      m(o + 7, true, vec![id, i(2), v(0)])];
+                      m(o + 7, true, vec![id, i(2), v(0), Ref::Zero])];
     // host values
     let gx = BigUint::parse_bytes(b"17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb", 16).unwrap();
     let gy = BigUint::parse_bytes(b"08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1", 16).unwrap();
@@ -983,12 +1060,36 @@ fn g1_chain(kind: &str, log_rows: usize, neg: &str) -> (Vec<AirRef<SC>>, Vec<Row
     let mut tx = F::zero_vec(n * (widths[1] + 1));
     let mut ty = F::zero_vec(n * (widths[2] + 1));
     let mut tw = F::zero_vec(n * (widths[4] + 1));
-    let pw = 1 + pin_nv * nl;
+    let npts = if add { 2 } else { 1 };
+    let poff = 3 + npts + usize::from(npts == 2);
+    let pw = poff + pin_nv * nl;
     let mut tp = F::zero_vec(n * pw);
-    let sw = 1 + 2 * nl;
+    let sw = 3 + 2 * nl;
     let mut ts = F::zero_vec(n * sw);
     let zero = BigUint::from(0u32);
+    // padding and identity plan (see g1neg): v = PointsIn row valid; f1, f2 identity flags
+    let n_valid = if neg == "partial" || neg == "pad_forge" { 11 } else { n };
+    let inf_case = neg == "inf" || neg == "inf_lie" || neg == "inf_out";
     for r in 0..n {
+        let v = if neg == "pad_hole" { r != 3 } else { r < n_valid };
+        let (f1, f2) = if !inf_case {
+            (false, false)
+        } else if add {
+            match r {
+                0 => (true, false),
+                1 if neg == "inf" => (false, true),
+                2 if neg == "inf" => (true, true),
+                _ => (false, false),
+            }
+        } else {
+            (r == 0, false)
+        };
+        let e = v && !f1 && !f2;
+        let chain_on = e || (neg == "pad_forge" && r == 11);
+        // padding chain rows: a dummy satisfying witness (the carry constraints are not gated by
+        // is_valid), generated with a throwaway range checker, then is_valid = 0 (as core_chip does)
+        let tmp_rc = VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(RANGE_BUS, rb));
+        let rcr: &VariableRangeCheckerChip = if chain_on { rc.as_ref() } else { &tmp_rc };
         let forged = r == 0 && ((add && neg == "same_pt") || (!add && neg == "y_zero"));
         let (x1, y1, x2, y2) = if add {
             let (a, b) = (&pts[r % 2], &pts[2 + r % 2]);
@@ -1011,45 +1112,88 @@ fn g1_chain(kind: &str, log_rows: usize, neg: &str) -> (Vec<AirRef<SC>>, Vec<Row
         let wi = if add { vec![x1.clone(), x2.clone()] } else { vec![y1.clone()] };
         if !add {
             let row = &mut tq[r * (widths[3] + 1)..(r + 1) * (widths[3] + 1)];
-            sq_expr.generate_subrow((rc.as_ref(), vec![x1.clone()], vec![]), &mut row[..widths[3]]);
+            sq_expr.generate_subrow((rcr, vec![x1.clone()], vec![]), &mut row[..widths[3]]);
+            if !chain_on {
+                row[0] = F::ZERO;
+            }
             row[widths[3]] = idf;
         }
         let row = &mut tl[r * (widths[0] + 1)..(r + 1) * (widths[0] + 1)];
-        if forged {
+        if chain_on && forged {
             forge_subrow(&l_expr, rc.as_ref(), &li, &[lam.clone()], &mut row[..widths[0]]);
         } else {
-            l_expr.generate_subrow((rc.as_ref(), li, vec![]), &mut row[..widths[0]]);
+            l_expr.generate_subrow((rcr, li, vec![]), &mut row[..widths[0]]);
+        }
+        if !chain_on {
+            row[0] = F::ZERO;
         }
         row[widths[0]] = idf;
         let row = &mut tw[r * (widths[4] + 1)..(r + 1) * (widths[4] + 1)];
         if no_inv_y {
-        } else if forged {
+        } else if chain_on && forged {
             forge_subrow(&inv_expr, rc.as_ref(), &wi, &[zero.clone()], &mut row[..widths[4]]);
         } else {
-            inv_expr.generate_subrow((rc.as_ref(), wi, vec![]), &mut row[..widths[4]]);
+            inv_expr.generate_subrow((rcr, wi, vec![]), &mut row[..widths[4]]);
+            if !chain_on {
+                row[0] = F::ZERO;
+            }
         }
         row[widths[4]] = idf;
         let row = &mut tx[r * (widths[1] + 1)..(r + 1) * (widths[1] + 1)];
-        x_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
+        x_expr.generate_subrow((rcr, vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
+        if !chain_on {
+            row[0] = F::ZERO;
+        }
         row[widths[1]] = idf;
         let row = &mut ty[r * (widths[2] + 1)..(r + 1) * (widths[2] + 1)];
-        y_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
+        y_expr.generate_subrow((rcr, vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
+        if !chain_on {
+            row[0] = F::ZERO;
+        }
         row[widths[2]] = idf;
+        // PointsIn row: identity points have zero limbs (inf_lie keeps the real P1 limbs); padding rows are zero
+        let keep = |flag: bool| v && (!flag || neg == "inf_lie");
+        let (px1, py1) = if keep(f1) { (x1.clone(), y1.clone()) } else { (zero.clone(), zero.clone()) };
+        let (px2, py2) = if keep(f2) { (x2.clone(), y2.clone()) } else { (zero.clone(), zero.clone()) };
         let row = &mut tp[r * pw..(r + 1) * pw];
         row[0] = idf;
-        let vals: Vec<&BigUint> = if add { vec![&x1, &y1, &x2, &y2] } else { vec![&x1, &y1] };
+        row[1] = F::from_bool(v);
+        row[2] = F::from_bool(f1);
+        if add {
+            row[3] = F::from_bool(f2);
+            let g = !f1 && !f2;
+            row[4] = F::from_bool(g);
+            row[5] = F::from_bool(v && g);
+        } else {
+            row[3] = F::from_bool(v && !f1);
+        }
+        let vals: Vec<&BigUint> = if add { vec![&px1, &py1, &px2, &py2] } else { vec![&px1, &py1] };
         for (k, val) in vals.iter().enumerate() {
             let ls = limbs_of(val, nl);
             for l in &ls {
                 rc.add_count(l.as_canonical_u32(), 8);
             }
-            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&ls);
+            row[poff + k * nl..poff + (k + 1) * nl].copy_from_slice(&ls);
         }
+        // sink row
         let row = &mut ts[r * sw..(r + 1) * sw];
         row[0] = idf;
-        for (k, val) in [&x3, &y3].iter().enumerate() {
-            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&limbs_of(val, nl));
-        }
+        let (sv, sf, ox, oy) = if chain_on {
+            (true, false, x3.clone(), y3.clone())
+        } else if v {
+            if add {
+                let (sx, sy) = if f1 { (px2.clone(), py2.clone()) } else { (px1.clone(), py1.clone()) };
+                if neg == "inf_out" && r == 0 { (true, f1 && f2, x3.clone(), y3.clone()) } else { (true, f1 && f2, sx, sy) }
+            } else {
+                (true, f1, px1.clone(), py1.clone())
+            }
+        } else {
+            (false, false, zero.clone(), zero.clone())
+        };
+        row[1] = F::from_bool(sv);
+        row[2] = F::from_bool(sf);
+        row[3..3 + nl].copy_from_slice(&limbs_of(&ox, nl));
+        row[3 + nl..3 + 2 * nl].copy_from_slice(&limbs_of(&oy, nl));
     }
     let rt = rc.generate_trace::<F>();
     let mut airs: Vec<AirRef<SC>> = vec![
@@ -1057,9 +1201,9 @@ fn g1_chain(kind: &str, log_rows: usize, neg: &str) -> (Vec<AirRef<SC>>, Vec<Row
         Arc::new(ChainAir { ew: widths[1], expr: x_expr, msgs: x_msgs }),
         Arc::new(ChainAir { ew: widths[2], expr: y_expr, msgs: y_msgs }),
         Arc::new(ChainAir { ew: widths[4], expr: inv_expr, msgs: inv_msgs }),
-        Arc::new(PointsIn { nv: pin_nv, nl, rb, msgs: pin_msgs }),
+        Arc::new(PointsIn { nv: pin_nv, nl, rb, npts: if add { 2 } else { 1 }, msgs: pin_msgs, out_bus: o + 7 }),
         Arc::new(rc.air),
-        Arc::new(SourceAir { nv: 2, nl, msgs: sink_msgs }),
+        Arc::new(SinkAir { nl, bus: o + 7 }),
     ];
     let mut traces = vec![
         RowMajorMatrix::new(tl, widths[0] + 1),
