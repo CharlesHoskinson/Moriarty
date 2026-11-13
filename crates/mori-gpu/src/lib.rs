@@ -18,6 +18,8 @@ use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use ff::{Field, PrimeField};
 use midnight_curves::{Fq, G1Projective};
 
+pub mod frac;
+pub mod poseidon;
 pub mod quotient;
 
 #[cfg(feature = "cuda")]
