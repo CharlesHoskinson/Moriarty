@@ -1,0 +1,135 @@
+//! Sherlock FP-8 item 4: D3 (the stock stark-backend `SoundnessCalculator`, one OOD sample) on
+//! every STARK key of the FP-8 key set, at three shapes:
+//! - `measured`: the key's AIR count, columns, constraints, degree; the measured largest trace
+//!   height and stacked width of its proof (from `chain.json`);
+//! - `vk`: `calculate_from_vk` (the key's own verifier-side bounds);
+//! - `bounds`: the frozen set's shape bounds (`sherlock_lfr::frozen`).
+//! Gate: every term at least 100 bits, every grindable term (LogUp, `mu`, folding, query) at
+//! least 101 bits.
+//! usage: fp8_d3 <chain dir> [extra node vk bitcode files ...]
+use std::{fs, path::PathBuf};
+
+use openvm_stark_backend::{
+    keygen::types::MultiStarkVerifyingKey,
+    soundness::{base_field_order, challenge_field_bits, SoundnessCalculator},
+    StarkProtocolConfig,
+};
+use serde_json::{json, Value};
+use sherlock_lfr::{
+    fixture::{NodeSC, LSC},
+    frozen::{self, FrozenSet},
+};
+use sherlock_wrap_export::SC as FrSC;
+
+fn log2c(x: usize) -> usize {
+    if x <= 1 {
+        0
+    } else {
+        (usize::BITS - (x - 1).leading_zeros()) as usize
+    }
+}
+
+fn n_logup(l_skip: usize, mic: usize, airs: usize, ipa: usize, h: usize) -> usize {
+    let a = if mic == 0 { 0 } else { log2c(mic).saturating_sub(l_skip) };
+    let b = if airs == 0 || ipa == 0 { 0 } else { (log2c(airs) + log2c(ipa) + h).saturating_sub(l_skip) };
+    a.min(b)
+}
+
+fn terms(s: &SoundnessCalculator) -> Value {
+    let w = &s.whir_details;
+    let t = [
+        ("logup", s.logup_bits, true),
+        ("gkr_sumcheck", s.gkr_sumcheck_bits, false),
+        ("gkr_batching", s.gkr_batching_bits, false),
+        ("zerocheck", s.zerocheck_sumcheck_bits, false),
+        ("constraint_batching", s.constraint_batching_bits, false),
+        ("stacked", s.stacked_reduction_bits, false),
+        ("mu", w.mu_batching_bits, true),
+        ("fold", w.fold_rbr_bits, true),
+        ("query", w.query_bits, true),
+        ("shift", w.shift_rbr_bits, false),
+        ("gamma", w.gamma_batching_bits, false),
+        ("ood", w.ood_rbr_bits, false),
+    ];
+    let (wn, wb) = t.iter().fold(("", f64::INFINITY), |a, x| if x.1 < a.1 { (x.0, x.1) } else { a });
+    let pass = t.iter().all(|x| x.1 >= 100.0) && t.iter().filter(|x| x.2).all(|x| x.1 >= 101.0);
+    let mut m = serde_json::Map::new();
+    for (n, b, _) in t {
+        m.insert(n.into(), json!((b * 10000.0).round() / 10000.0));
+    }
+    m.insert("weakest".into(), json!(format!("{wn} {wb:.4}")));
+    m.insert("total".into(), json!((s.total_bits * 10000.0).round() / 10000.0));
+    m.insert("gate".into(), json!(if pass { "PASS" } else { "FAIL" }));
+    Value::Object(m)
+}
+
+fn d3<SC: StarkProtocolConfig>(
+    name: &str,
+    set: &FrozenSet,
+    vk: &MultiStarkVerifyingKey<SC>,
+    log_heights: Option<&Value>,
+    stacked: Option<&Value>,
+) -> Value {
+    let p = &vk.inner.params;
+    let sh = frozen::shape(vk);
+    let (bo, cb) = (base_field_order::<SC>(), challenge_field_bits::<SC>());
+    let mic = p.logup.max_interaction_count as usize;
+    let mut out = json!({"key": name, "set": set.name, "pre_hash": format!("{:?}", vk.pre_hash),
+        "airs": sh.airs, "columns": sh.columns, "max_constraints": sh.max_constraints,
+        "max_interactions": sh.max_interactions, "degree": p.max_constraint_degree,
+        "vk": terms(&SoundnessCalculator::calculate_from_vk(vk))});
+    if let (Some(h), Some(sw)) = (log_heights, stacked) {
+        let h = h.as_array().unwrap().iter().filter_map(|x| x.as_u64()).max().unwrap() as usize;
+        let w: usize = sw.as_array().unwrap().iter().map(|x| x.as_u64().unwrap() as usize).sum();
+        let s = SoundnessCalculator::calculate(
+            p, bo, cb, sh.max_constraints, sh.airs, p.max_constraint_degree, h, sh.columns, w,
+            n_logup(p.l_skip, mic, sh.airs, sh.max_interactions, h),
+        );
+        out["measured"] = terms(&s);
+        out["measured_shape"] = json!({"max_log_height": h, "stacked_columns": w});
+    }
+    let b = &set.bounds;
+    let s = SoundnessCalculator::calculate(
+        p, bo, cb, b.max_constraints_per_air, b.max_airs, p.max_constraint_degree,
+        b.max_log_height.min(p.log_stacked_height()), b.max_columns, p.w_stack,
+        n_logup(p.l_skip, mic, b.max_airs, b.max_interactions_per_air, b.max_log_height.min(p.log_stacked_height())),
+    );
+    out["bounds"] = terms(&s);
+    println!("FP8D3 {name}: measured {} | vk {} | bounds {}",
+        out.get("measured").map(|m| format!("{} {}", m["weakest"], m["gate"])).unwrap_or("-".into()),
+        format!("{} {}", out["vk"]["weakest"], out["vk"]["gate"]),
+        format!("{} {}", out["bounds"]["weakest"], out["bounds"]["gate"]));
+    out
+}
+
+fn main() {
+    let a: Vec<String> = std::env::args().collect();
+    let d = PathBuf::from(&a[1]);
+    let chain: Value = serde_json::from_slice(&fs::read(d.join("chain.json")).unwrap()).unwrap();
+    let rd = |f: &str| fs::read(d.join(f)).unwrap();
+    let app: MultiStarkVerifyingKey<NodeSC> = bitcode::deserialize(&rd("app_vk.bitcode")).unwrap();
+    let leaf: MultiStarkVerifyingKey<NodeSC> = bitcode::deserialize(&rd("leaf_vk.bitcode")).unwrap();
+    let node: MultiStarkVerifyingKey<NodeSC> = bitcode::deserialize(&rd("node_vk.bitcode")).unwrap();
+    let l: MultiStarkVerifyingKey<LSC> = bitcode::deserialize(&rd("l_vk.bitcode")).unwrap();
+    let fx: Value = serde_json::from_slice(&rd("lfr-fp8.json")).unwrap();
+    let lfr: MultiStarkVerifyingKey<FrSC> = serde_json::from_value(fx["vk"].clone()).unwrap();
+    let sw = &chain["stacked_widths"];
+    let mut res = vec![
+        d3("app", &frozen::APP, &app, Some(&chain["app_log_heights"]), sw.get("app")),
+        d3("leaf<1>", &frozen::LEAF_AGG, &leaf, Some(&chain["leaf_log_heights"]), sw.get("leaf")),
+        d3("node1<2> (over leaf)", &frozen::INTERNAL, &bitcode::deserialize::<MultiStarkVerifyingKey<NodeSC>>(&rd("node1_vk.bitcode")).unwrap(), Some(&chain["node1_log_heights"]), sw.get("node1")),
+        d3("node2<2>", &frozen::INTERNAL, &bitcode::deserialize::<MultiStarkVerifyingKey<NodeSC>>(&rd("node2_vk.bitcode")).unwrap(), None, None),
+        d3("node3<2> (internal-recursive, fixed point)", &frozen::INTERNAL, &node, Some(&chain["node_log_heights"]), sw.get("node")),
+        d3("L_iface", &frozen::L, &l, Some(&chain["l_log_heights"]), Some(&chain["l_stacked_widths"])),
+        d3("L_Fr", &frozen::LFR, &lfr, Some(&json!([chain["heights"]["L_Fr"]["max_log_height"]])), Some(&chain["lfr_stacked_widths"])),
+    ];
+    for f in a.iter().skip(2) {
+        let vk: MultiStarkVerifyingKey<NodeSC> = bitcode::deserialize(&fs::read(f).unwrap()).unwrap();
+        res.push(d3(f, &frozen::INTERNAL, &vk, None, None));
+    }
+    fs::write(d.join("d3.json"), serde_json::to_string_pretty(&res).unwrap()).unwrap();
+    let all = res.iter().all(|r| {
+        ["measured", "vk", "bounds"].iter().all(|k| r.get(*k).map(|m| m["gate"] == "PASS").unwrap_or(true))
+    });
+    println!("FP8D3 all gates: {}", if all { "PASS" } else { "FAIL" });
+}

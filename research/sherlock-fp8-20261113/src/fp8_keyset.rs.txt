@@ -1,0 +1,717 @@
+//! Sherlock FP-8: the universal key set under the frozen sets of G1 (`sherlock_lfr::frozen`) and
+//! the node bounds of the owner rulings 2026-11-12 20:35 (internal set: 200 interactions per AIR,
+//! 64 AIRs, 3,000 columns).
+//!
+//! Chain (bench topology of E6 with the OpenVM leaf layer added):
+//!   app leaf W1 (Poseidon2 AIR, frozen app set, per program)
+//!   -> leaf layer `VerifierSubCircuit<1>` (frozen leaf-aggregation set, per program)
+//!   -> node `VerifierSubCircuit<2>` (internal set)
+//!   -> `L_iface` (bench `L` + 4 interface AIRs, `Dims::FULL`, frozen `L` set)
+//!   -> `L_Fr` (E3 J5 tape, frozen `L_Fr` set) -> the wrap (Moriarty `tools/sherlock-wrap`).
+//!
+//! usage:
+//!   fp8_keyset keys  OUT    keygen only: E6 baseline, cause-by-cause variants, node menu, G1
+//!                           checks, universality, key_root and prog_d; writes OUT/keys.json
+//!   fp8_keyset chain OUT    the proofs W1 -> leaf -> node -> L_iface (all-entries case, seed 14)
+//!                           -> L_Fr keygen and proof; writes OUT/lfr-fp8.json (wrapin v1 with
+//!                           the D-9 decode cases), OUT/*.bitcode vks, OUT/chain.json
+use std::{fs, path::PathBuf, sync::Arc, time::Instant};
+
+use num_bigint::BigUint;
+use openvm_cpu_backend::CpuBackend;
+use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
+use openvm_recursion_circuit::system::{
+    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
+};
+use openvm_stark_backend::{
+    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+    p3_field::{Field, PrimeCharacteristicRing, PrimeField32},
+    p3_symmetric::Permutation,
+    proof::Proof,
+    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
+    AirRef, StarkEngine, StarkProtocolConfig,
+};
+use openvm_stark_sdk::config::{
+    app_params_with_100_bits_security,
+    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+    baby_bear_poseidon2::{
+        default_duplex_sponge_recorder, poseidon2_perm, BabyBearPoseidon2CpuEngine, DuplexSponge,
+        DuplexSpongeRecorder,
+    },
+    bls12381_fr_poseidon::Bls12381Fr as Fr,
+    MAX_APP_LOG_STACKED_HEIGHT,
+};
+use p3_baby_bear::BabyBear;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use serde_json::{json, Value};
+use sherlock_lfr::{
+    fixture::{NodeSC, LSC},
+    frozen::{self, FrozenSet, KeyShape},
+    iface::{self, Case, Dims, ECMUL, LANE_MAP, LIMBS, NOP, PUB, STMT},
+    iface_l,
+    lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
+    machine::Machine,
+    record::stock_log,
+    testing::{range_trace, Engine},
+};
+use sherlock_wrap_export::{export, hex_be};
+
+type F = BabyBear;
+type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+type RootEng = BabyBearBls12381PoseidonCpuEngine;
+const BB_P: u64 = 0x7800_0001;
+
+// ------------------------------------------------------------------ G1 keygen with a record
+fn shape_json(s: &KeyShape) -> Value {
+    json!({"airs": s.airs, "columns": s.columns, "max_constraints": s.max_constraints,
+           "max_interactions": s.max_interactions, "max_degree": s.max_degree,
+           "total_constraints": s.total_constraints, "total_interactions": s.total_interactions,
+           "preprocessed_airs": s.preprocessed_airs, "public_values": s.public_values})
+}
+
+fn vk_json<SC: StarkProtocolConfig>(vk: &MultiStarkVerifyingKey<SC>) -> Value
+where
+    SC::Digest: std::fmt::Debug,
+{
+    let bytes = bitcode::serialize(vk).expect("vk serialize");
+    json!({
+        "pre_hash": format!("{:?}", vk.pre_hash),
+        "vk_bitcode_bytes": bytes.len(),
+        "vk_bitcode_sha256": sha256_hex(&bytes),
+        "queries": vk.inner.params.whir.rounds.iter().map(|r| r.num_queries).collect::<Vec<_>>(),
+        "query_pow": vk.inner.params.whir.query_phase_pow_bits,
+        "logup_pow": vk.inner.params.logup.pow_bits,
+        "shape": shape_json(&frozen::shape(vk)),
+    })
+}
+
+fn sha256_hex(b: &[u8]) -> String {
+    use std::process::{Command, Stdio};
+    let mut c = Command::new("sha256sum")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("sha256sum");
+    std::io::Write::write_all(c.stdin.as_mut().unwrap(), b).unwrap();
+    let o = c.wait_with_output().unwrap();
+    String::from_utf8(o.stdout).unwrap().split_whitespace().next().unwrap().to_string()
+}
+
+/// Keygen through G1; on a refusal, record it and key anyway (so the shape is still measured).
+fn kg<E: StarkEngine>(
+    set: &FrozenSet,
+    engine: &E,
+    airs: &[AirRef<E::SC>],
+    label: &str,
+    log: &mut Vec<Value>,
+) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>)
+where
+    <E::SC as StarkProtocolConfig>::Digest: std::fmt::Debug,
+{
+    match frozen::keygen_checked(set, engine, airs) {
+        Ok((pk, vk, _)) => {
+            let mut v = vk_json(&vk);
+            v["key"] = json!(label);
+            v["set"] = json!(set.name);
+            v["g1"] = json!("accepted");
+            log.push(v);
+            (pk, vk)
+        }
+        Err(e) => {
+            let (pk, vk) = engine.keygen(airs);
+            let mut v = vk_json(&vk);
+            v["key"] = json!(label);
+            v["set"] = json!(set.name);
+            v["g1"] = json!(format!("REFUSED: {e:?}"));
+            eprintln!("FP8 G1 refused {label}: {e:?}");
+            log.push(v);
+            (pk, vk)
+        }
+    }
+}
+
+// ------------------------------------------------------------------ chain pieces
+fn w1_airs(copies: usize) -> (Poseidon2SubChip<F, 1>, Vec<AirRef<NodeSC>>) {
+    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+    let airs = (0..copies).map(|_| chip.air.clone() as AirRef<NodeSC>).collect();
+    (chip, airs)
+}
+
+fn w1_prove(
+    engine: &Eng,
+    pk: &MultiStarkProvingKey<NodeSC>,
+    vk: &MultiStarkVerifyingKey<NodeSC>,
+    chip: &Poseidon2SubChip<F, 1>,
+    n: usize,
+    log_rows: usize,
+) -> Vec<Proof<NodeSC>> {
+    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+    let d_pk = engine.device().transport_pk_to_device(pk);
+    (0..n)
+        .map(|_| {
+            let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
+                .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
+                .collect();
+            let trace = chip.generate_trace(inputs);
+            let cm = ColMajorMatrix::from_row_major(&trace);
+            let ctx = ProvingContext::new(vec![(
+                0,
+                AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
+            )]);
+            let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
+            engine.verify(vk, &proof).expect("w1 verify");
+            proof
+        })
+        .collect()
+}
+
+/// A verifier circuit of arity N over `child`, keyed under `set`.
+fn agg_key<const N: usize>(
+    set: &FrozenSet,
+    child: &MultiStarkVerifyingKey<NodeSC>,
+    label: &str,
+    log: &mut Vec<Value>,
+) -> (VerifierSubCircuit<N>, Eng, MultiStarkProvingKey<NodeSC>, MultiStarkVerifyingKey<NodeSC>) {
+    let engine = Eng::new(set.params());
+    let circuit = <VerifierSubCircuit<N> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
+        Arc::new(child.clone()),
+        Default::default(),
+    );
+    let airs = circuit.airs::<NodeSC>();
+    let (pk, vk) = kg(set, &engine, &airs, label, log);
+    (circuit, engine, pk, vk)
+}
+
+fn agg_prove<const N: usize>(
+    circuit: &VerifierSubCircuit<N>,
+    engine: &Eng,
+    pk: &MultiStarkProvingKey<NodeSC>,
+    vk: &MultiStarkVerifyingKey<NodeSC>,
+    child_vk: &MultiStarkVerifyingKey<NodeSC>,
+    proofs: &[Proof<NodeSC>],
+) -> Proof<NodeSC> {
+    let child_pcs = circuit.commit_child_vk(engine, child_vk);
+    let d_pk = engine.device().transport_pk_to_device(pk);
+    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+        child_vk,
+        CachedTraceCtx::PcsData(child_pcs),
+        proofs,
+        &(),
+        default_duplex_sponge_recorder(),
+    );
+    let proof = engine
+        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+        .expect("agg prove");
+    engine.verify(vk, &proof).expect("agg verify");
+    proof
+}
+
+fn l_key(
+    node_vk: &MultiStarkVerifyingKey<NodeSC>,
+    label: &str,
+    log: &mut Vec<Value>,
+) -> (VerifierSubCircuit<1>, RootEng, MultiStarkProvingKey<LSC>, MultiStarkVerifyingKey<LSC>, usize) {
+    let engine = RootEng::new(frozen::L.params());
+    let cfg = VerifierConfig { has_cached: true, ..Default::default() };
+    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(
+        Arc::new(node_vk.clone()),
+        cfg,
+    );
+    let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
+    let n_bench = airs.len();
+    airs.extend(iface_l::airs(&Dims::FULL));
+    let (pk, vk) = kg(&frozen::L, &engine, &airs, label, log);
+    (l, engine, pk, vk, n_bench)
+}
+
+fn heights<SC: StarkProtocolConfig>(p: &Proof<SC>) -> Vec<Option<usize>> {
+    p.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect()
+}
+
+fn height_check(set: &FrozenSet, p: &[Option<usize>]) -> Value {
+    match frozen::check_heights(set, p) {
+        Ok(m) => json!({"max_log_height": m, "bound": set.bounds.max_log_height, "g1": "accepted"}),
+        Err(e) => json!({"g1": format!("REFUSED: {e:?}")}),
+    }
+}
+
+// ------------------------------------------------------------------ P2, key_root, prog_d
+/// `P2(tag, x)` of ENC (FP-4 form, absorption pick P-3: overwrite), as `enc_vectors.rs`.
+fn p2(tag: u32, xs: &[F]) -> [F; 8] {
+    let mut words = vec![F::from_u32(tag)];
+    words.extend_from_slice(xs);
+    let mut st = [F::ZERO; 16];
+    st[8] = F::from_u32(words.len() as u32);
+    for blk in words.chunks(8) {
+        for i in 0..8 {
+            st[i] = if i < blk.len() { blk[i] } else { F::ZERO };
+        }
+        poseidon2_perm().permute_mut(&mut st);
+    }
+    st[..8].try_into().unwrap()
+}
+
+const DOM_PROG: u32 = 5;
+const DOM_KEYTRIPLE: u32 = 8;
+const DOM_KEYNODE: u32 = 10;
+const TAG_EMPTY: u32 = 1;
+
+/// `key_root` leaf of one chip set (LEAD encoding): `P2(DOM_KEYTRIPLE, chip_set, app, leaf, ifl)`
+/// with each key as its 8-word vk pre-hash.
+fn key_triple(chip_set: u32, app: &[F; 8], leaf: &[F; 8], ifl: &[F; 8]) -> [F; 8] {
+    let mut x = vec![F::from_u32(chip_set)];
+    x.extend_from_slice(app);
+    x.extend_from_slice(leaf);
+    x.extend_from_slice(ifl);
+    p2(DOM_KEYTRIPLE, &x)
+}
+
+/// Binary tree with `P2(DOM_KEYNODE, l, r)` nodes, padded with `P2(TAG_EMPTY)` to a power of two
+/// (at least 2 leaves).
+fn key_root(leaves: &[[F; 8]]) -> [F; 8] {
+    let mut lv = leaves.to_vec();
+    let n = lv.len().next_power_of_two().max(2);
+    lv.resize(n, p2(TAG_EMPTY, &[]));
+    while lv.len() > 1 {
+        lv = lv
+            .chunks(2)
+            .map(|c| {
+                let mut x = c[0].to_vec();
+                x.extend_from_slice(&c[1]);
+                p2(DOM_KEYNODE, &x)
+            })
+            .collect();
+    }
+    lv[0]
+}
+
+/// `prog_d = P2(DOM_PROG, image_d, plan_d, key_root, machine_version)` (`PR` 4.3).
+fn prog_d(image_d: &[F; 8], plan_d: &[F; 8], kr: &[F; 8], mv: u32) -> [F; 8] {
+    let mut x = image_d.to_vec();
+    x.extend_from_slice(plan_d);
+    x.extend_from_slice(kr);
+    x.push(F::from_u32(mv));
+    p2(DOM_PROG, &x)
+}
+
+fn dhex(d: &[F; 8]) -> String {
+    d.iter().map(|x| format!("{:08x}", x.as_canonical_u32())).collect::<Vec<_>>().join("")
+}
+
+fn stand_in(seed: u32) -> [F; 8] {
+    std::array::from_fn(|i| F::from_u32(seed * 100 + i as u32 + 1))
+}
+
+// ------------------------------------------------------------------ keys mode
+fn keys(out: &PathBuf) {
+    let mut log: Vec<Value> = vec![];
+    let fx = PathBuf::from(format!("{}/.cache/e3-iface/fixture", std::env::var("HOME").unwrap()));
+    let e6_node: MultiStarkVerifyingKey<NodeSC> =
+        bitcode::deserialize(&fs::read(fx.join("node_vk.bitcode")).unwrap()).unwrap();
+    let e6_l: MultiStarkVerifyingKey<LSC> =
+        bitcode::deserialize(&fs::read(fx.join("l_vk.bitcode")).unwrap()).unwrap();
+
+    // (0) E6 baseline: W1 at the stock app set -> node<2> -> L_iface.
+    let (_, w1) = w1_airs(1);
+    let stock = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
+    let (_, b_app) = kg(&frozen::APP, &stock, &w1, "e6/app (stock app set)", &mut log);
+    let (_, _, _, b_node) = agg_key::<2>(&frozen::INTERNAL, &b_app, "e6/node<2>", &mut log);
+    let (_, _, _, b_l, _) = l_key(&b_node, "e6/L_iface", &mut log);
+    let baseline = json!({
+        "node_equal_e6": b_node.pre_hash == e6_node.pre_hash,
+        "l_equal_e6": b_l.pre_hash == e6_l.pre_hash,
+        "e6_node_pre_hash": format!("{:?}", e6_node.pre_hash),
+        "e6_l_pre_hash": format!("{:?}", e6_l.pre_hash),
+    });
+    eprintln!("FP8 baseline {baseline}");
+
+    // (1) cause 1: the frozen app set, same topology.
+    let fapp = Eng::new(frozen::APP.params());
+    let (_, a_app) = kg(&frozen::APP, &fapp, &w1, "c1/app (frozen app set)", &mut log);
+    let (_, _, _, a_node) = agg_key::<2>(&frozen::INTERNAL, &a_app, "c1/node<2> over app", &mut log);
+    let (_, _, _, _a_l, _) = l_key(&a_node, "c1/L_iface", &mut log);
+
+    // (2) cause 2: the leaf layer (FP-8 topology).
+    let (_, _, _, leaf) = agg_key::<1>(&frozen::LEAF_AGG, &a_app, "fp8/leaf<1>", &mut log);
+    let (_, _, _, node) = agg_key::<2>(&frozen::INTERNAL, &leaf, "fp8/node<2> over leaf", &mut log);
+    let (_, _, _, l, _) = l_key(&node, "fp8/L_iface", &mut log);
+
+    // (3) the new bounds: the same keys checked against the old internal bounds.
+    let old = |vk: &MultiStarkVerifyingKey<NodeSC>| match frozen::check_vk_bounds(
+        &frozen::INTERNAL,
+        &frozen::INTERNAL_OLD_BOUNDS,
+        vk,
+    ) {
+        Ok(_) => "accepted".to_string(),
+        Err(e) => format!("REFUSED: {e:?}"),
+    };
+    let bounds = json!({"node<2> under the old bounds": old(&node),
+                        "note": "the bounds are admission checks; no key field holds them"});
+
+    // (4) node menu: arities 1..4 over the leaf layer, and node over node (internal-recursive).
+    macro_rules! menu {
+        ($child:expr, $tag:expr, $($n:literal),*) => {{
+            let mut v = vec![];
+            $( let (_, _, _, k) = agg_key::<$n>(&frozen::INTERNAL, $child, &format!("{}<{}>", $tag, $n), &mut log);
+               v.push(k.pre_hash); )*
+            v
+        }};
+    }
+    let over_leaf = menu!(&leaf, "menu/node over leaf", 1, 2, 3, 4);
+    let over_node = menu!(&node, "menu/node over node<2>", 1, 2, 3, 4);
+    // node over node over node: does the internal-recursive key reach a fixed point?
+    let (_, _, _, nn2) = agg_key::<2>(&frozen::INTERNAL, &node, "fix/nn<2>", &mut log);
+    let (_, _, _, nnn2) = agg_key::<2>(&frozen::INTERNAL, &nn2, "fix/nnn<2>", &mut log);
+
+    // (5) universality: the same node arity over a second program's leaf layer (app = 2 W1 AIRs).
+    let (_, w1b) = w1_airs(2);
+    let (_, app_b) = kg(&frozen::APP, &fapp, &w1b, "prog B/app (2 AIRs)", &mut log);
+    let (_, _, _, leaf_b) = agg_key::<1>(&frozen::LEAF_AGG, &app_b, "prog B/leaf<1>", &mut log);
+    let (_, _, _, node_b) = agg_key::<2>(&frozen::INTERNAL, &leaf_b, "prog B/node<2> over leaf", &mut log);
+    let (_, _, _, nn_b) = agg_key::<2>(&frozen::INTERNAL, &node_b, "prog B/nn<2>", &mut log);
+    let (_, _, _, nnn_b) = agg_key::<2>(&frozen::INTERNAL, &nn_b, "prog B/nnn<2>", &mut log);
+    let (_, _, _, l_b, _) = l_key(&node_b, "prog B/L_iface over node<2>", &mut log);
+    let (_, _, _, l_nn, _) = l_key(&nn2, "L_iface over nn<2>", &mut log);
+    let (_, _, _, l_nnb, _) = l_key(&nn_b, "prog B/L_iface over nn<2>", &mut log);
+    let universal = json!({
+        "node_over_leaf A == B": node.pre_hash == node_b.pre_hash,
+        "nn A == B": nn2.pre_hash == nn_b.pre_hash,
+        "nnn A == B": nnn2.pre_hash == nnn_b.pre_hash,
+        "nn == nnn (fixed point)": nn2.pre_hash == nnn2.pre_hash,
+        "L over node A == B": l.pre_hash == l_b.pre_hash,
+        "L over nn A == B": l_nn.pre_hash == l_nnb.pre_hash,
+        "menu over leaf arities distinct": over_leaf.windows(2).all(|w| w[0] != w[1]),
+        "menu over node arities distinct": over_node.windows(2).all(|w| w[0] != w[1]),
+    });
+    eprintln!("FP8 universal {universal}");
+
+    // (6) key_root and prog_d: the per-program keys (app, leaf layer, internal-for-leaf).
+    let pre = |vk: &MultiStarkVerifyingKey<NodeSC>| -> [F; 8] { vk.pre_hash };
+    let kr_a = key_root(&[key_triple(0, &pre(&a_app), &pre(&leaf), &pre(&node))]);
+    let kr_b = key_root(&[key_triple(0, &pre(&app_b), &pre(&leaf_b), &pre(&node_b))]);
+    let (img, plan) = (stand_in(1), stand_in(2));
+    let pd_a = prog_d(&img, &plan, &kr_a, 1);
+    let pd_b = prog_d(&img, &plan, &kr_b, 1);
+    let pd_a2 = prog_d(&img, &plan, &kr_a, 1);
+    let prog = json!({
+        "encoding": "LEAD: key_root leaf P2(8, chip_set, app pre_hash, leaf pre_hash, ifl pre_hash); nodes P2(10, l, r), padded with P2(1); prog_d = P2(5, image_d, plan_d, key_root, machine_version); image_d and plan_d stand-ins",
+        "key_root_A": dhex(&kr_a), "prog_d_A": dhex(&pd_a),
+        "key_root_B": dhex(&kr_b), "prog_d_B": dhex(&pd_b),
+        "prog_d deterministic": pd_a == pd_a2,
+        "changed per-program key changes prog_d": pd_a != pd_b,
+        "app preprocessed AIRs": frozen::shape(&a_app).preprocessed_airs,
+    });
+
+    let doc = json!({"baseline": baseline, "bounds": bounds, "universal": universal,
+                     "prog_d": prog, "keys": log});
+    fs::write(out.join("keys.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    for k in doc["keys"].as_array().unwrap() {
+        println!(
+            "FP8KEY {:42} set={:9} g1={} bytes={} airs={} cols={} maxc={} maxi={} pre={}",
+            k["key"].as_str().unwrap(),
+            k["set"].as_str().unwrap(),
+            k["g1"].as_str().unwrap(),
+            k["vk_bitcode_bytes"],
+            k["shape"]["airs"],
+            k["shape"]["columns"],
+            k["shape"]["max_constraints"],
+            k["shape"]["max_interactions"],
+            &k["pre_hash"].as_str().unwrap()[..40.min(k["pre_hash"].as_str().unwrap().len())]
+        );
+    }
+    println!("FP8 baseline {}", doc["baseline"]);
+    println!("FP8 universal {}", doc["universal"]);
+    println!("FP8 prog_d {}", doc["prog_d"]);
+    println!("FP8 bounds {}", doc["bounds"]);
+}
+
+// ------------------------------------------------------------------ decode cases (as lfr_e3)
+fn fr_of(b: &BigUint) -> Fr {
+    let mut acc = Fr::ZERO;
+    for d in b.to_u64_digits().iter().rev() {
+        acc = acc * Fr::from_u64(1 << 32) * Fr::from_u64(1 << 32) + Fr::from_u64(*d);
+    }
+    acc
+}
+
+fn repack(pre: Fr, w: &[u64]) -> Vec<Fr> {
+    let mut out = vec![pre];
+    for c in w.chunks(8) {
+        let mut b = BigUint::from(0u32);
+        for (k, &x) in c.iter().enumerate() {
+            b += BigUint::from(x) << (31 * k);
+        }
+        out.push(fr_of(&b));
+    }
+    out
+}
+
+fn hexes(v: &[Fr]) -> Vec<String> {
+    v.iter().map(hex_be).collect()
+}
+
+fn case(name: &str, d: &Dims, words: Vec<Fr>) -> Value {
+    let r = iface::decode(d, &words);
+    json!({"name": name, "words": hexes(&words), "ok": r.is_ok(),
+           "error": r.as_ref().err().cloned(), "statement": r.ok().map(|s| hexes(&s))})
+}
+
+fn decode_cases(d: &Dims, pw: &[Fr]) -> Value {
+    let w = iface::unpack(pw, d.words()).expect("honest words unpack");
+    let pre = pw[0];
+    let mut cases = vec![case("honest", d, pw.to_vec())];
+    let (pub_i, lane) = (0..d.b)
+        .find(|&i| w[STMT + 2 * i] == PUB)
+        .map(|i| (i, w[STMT + 2 * i + 1] as usize))
+        .expect("a PUB entry");
+    let lane_at = d.call_at() + LIMBS * lane;
+    let mut t = w.clone();
+    t[lane_at] ^= 1;
+    cases.push(case("pub_lane_changed", d, repack(pre, &t)));
+    let read: Vec<usize> = (0..d.b)
+        .filter(|&i| w[STMT + 2 * i] == PUB)
+        .map(|i| w[STMT + 2 * i + 1] as usize)
+        .collect();
+    if let Some(free) = (5..d.lanes()).find(|l| !read.contains(l)) {
+        let mut t = w.clone();
+        t[d.call_at() + LIMBS * free] ^= 1;
+        cases.push(case("free_lane_changed", d, repack(pre, &t)));
+    }
+    let mut t = w.clone();
+    t[d.values_at() + 3] = 1 << 30;
+    cases.push(case("value_limb_out_of_range", d, repack(pre, &t)));
+    let r = Fr::order();
+    let mut t = w.clone();
+    for k in 0..LIMBS {
+        let limb = (&r >> (30 * k)) & BigUint::from((1u64 << 30) - 1);
+        t[lane_at + k] = limb.to_u64_digits().first().copied().unwrap_or(0);
+    }
+    cases.push(case("lane_not_canonical", d, repack(pre, &t)));
+    let mut t = w.clone();
+    t[d.call_at() + 2] = BB_P;
+    cases.push(case("word_not_babybear", d, repack(pre, &t)));
+    let mut t = w.clone();
+    t[STMT + 2 * pub_i] = ECMUL;
+    cases.push(case("op_not_admitted", d, repack(pre, &t)));
+    let mut t = w.clone();
+    t[STMT + 2 * pub_i + 1] = d.lanes() as u64;
+    cases.push(case("param_out_of_bound", d, repack(pre, &t)));
+    let mut t = w.clone();
+    t[STMT + 2 * 5] = NOP;
+    t[STMT + 2 * 5 + 1] = 0;
+    cases.push(case("used_entry_after_nop", d, repack(pre, &t)));
+    let mut t = w.clone();
+    t[LANE_MAP + 1] = pub_i as u64;
+    cases.push(case("lane_map_not_digest", d, repack(pre, &t)));
+    let mut hi = pw.to_vec();
+    hi[3] += fr_of(&(BigUint::from(1u32) << 250));
+    cases.push(case("packed_high_bits", d, hi));
+    json!({"dims": {"b": d.b, "v": d.v, "p": d.p, "l_tx": d.l_tx}, "cases": cases})
+}
+
+// ------------------------------------------------------------------ chain mode
+fn chain(out: &PathBuf) {
+    let t0 = Instant::now();
+    let mut log: Vec<Value> = vec![];
+    let mut times = serde_json::Map::new();
+    let mut tick = |name: &str, t: Instant| {
+        times.insert(name.into(), json!(t.elapsed().as_secs_f64()));
+    };
+    let (chip, w1) = w1_airs(1);
+    let fapp = Eng::new(frozen::APP.params());
+    let (app_pk, app_vk) = kg(&frozen::APP, &fapp, &w1, "app", &mut log);
+    let t = Instant::now();
+    let w1p = w1_prove(&fapp, &app_pk, &app_vk, &chip, 2, 20);
+    tick("app_prove_2", t);
+    let h_app = height_check(&frozen::APP, &heights(&w1p[0]));
+    let sw = |p: &Proof<NodeSC>| -> Vec<usize> { p.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect() };
+    let mut stacked = serde_json::Map::new();
+    stacked.insert("app".into(), json!(sw(&w1p[0])));
+    drop(app_pk);
+
+    let (lc, le, lpk, leaf_vk) = agg_key::<1>(&frozen::LEAF_AGG, &app_vk, "leaf<1>", &mut log);
+    let t = Instant::now();
+    let leaf_p: Vec<_> =
+        w1p.iter().map(|p| agg_prove(&lc, &le, &lpk, &leaf_vk, &app_vk, std::slice::from_ref(p))).collect();
+    tick("leaf_prove_2", t);
+    let h_leaf = height_check(&frozen::LEAF_AGG, &heights(&leaf_p[0]));
+    stacked.insert("leaf".into(), json!(sw(&leaf_p[0])));
+    let leaf_heights = heights(&leaf_p[0]);
+    let app_heights = heights(&w1p[0]);
+    drop((lpk, w1p));
+
+    let (nc, ne, npk, node_vk) = agg_key::<2>(&frozen::INTERNAL, &leaf_vk, "node<2>", &mut log);
+    let t = Instant::now();
+    let node_pf = agg_prove(&nc, &ne, &npk, &node_vk, &leaf_vk, &leaf_p);
+    tick("node_prove", t);
+    let h_node = height_check(&frozen::INTERNAL, &heights(&node_pf));
+    stacked.insert("node1".into(), json!(sw(&node_pf)));
+    drop((npk, leaf_p));
+    let n1_vk = node_vk.clone();
+    let n1_heights = heights(&node_pf);
+    // Node over node to the fixed point (depth 3 equals depth 4, `fixpoint` mode): N2, N3.
+    let (c2, e2, pk2, n2_vk) = agg_key::<2>(&frozen::INTERNAL, &n1_vk, "node2<2> over node1", &mut log);
+    let t = Instant::now();
+    let n2_pf = agg_prove(&c2, &e2, &pk2, &n2_vk, &n1_vk, &[node_pf.clone(), node_pf]);
+    tick("node2_prove", t);
+    drop(pk2);
+    let (c3, e3, pk3, n3_vk) = agg_key::<2>(&frozen::INTERNAL, &n2_vk, "node3<2> over node2", &mut log);
+    let t = Instant::now();
+    let n3_pf = agg_prove(&c3, &e3, &pk3, &n3_vk, &n2_vk, &[n2_pf.clone(), n2_pf]);
+    tick("node3_prove", t);
+    drop(pk3);
+    let (_, _, _, n4_vk) = agg_key::<2>(&frozen::INTERNAL, &n3_vk, "node4<2> over node3 (fixed point check)", &mut log);
+    assert_eq!(n4_vk.pre_hash, n3_vk.pre_hash, "internal-recursive key at its fixed point");
+    let h_node = json!({"node1": h_node, "node3": height_check(&frozen::INTERNAL, &heights(&n3_pf))});
+    stacked.insert("node".into(), json!(sw(&n3_pf)));
+    let node_vk = n3_vk.clone();
+    let node_pf = n3_pf;
+
+    let dims = Dims::FULL;
+    let (l, engine, pk, l_vk, n_bench) = l_key(&node_vk, "L_iface", &mut log);
+    let (run, _) = iface::case_run(&dims, Case::AllEntries, 14);
+    let words = run.words();
+    let d_pk = engine.device().transport_pk_to_device(&pk);
+    let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
+    let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+        &node_vk,
+        cached,
+        std::slice::from_ref(&node_pf),
+        &(),
+        default_duplex_sponge_recorder(),
+    );
+    assert_eq!(ctxs.len(), n_bench);
+    for (tr, pv) in iface_l::traces::<F>(&dims, &words) {
+        let cm = ColMajorMatrix::from_row_major(&tr);
+        ctxs.push(AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv));
+    }
+    let t = Instant::now();
+    let l_proof = engine
+        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+        .expect("L_iface prove");
+    tick("l_prove", t);
+    engine.verify(&l_vk, &l_proof).expect("L_iface verify");
+    let h_l = height_check(&frozen::L, &heights(&l_proof));
+    let l_stacked: Vec<usize> =
+        l_proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect();
+    drop((d_pk, pk));
+
+    let (_, ok) = stock_log(&l_vk, &l_proof);
+    assert!(ok, "stock verifier accepts L");
+    let shape = LShape::of(&l_proof);
+    let mut g = Gen::new();
+    let (lw, l_pub) = gen_verifier_full(&mut g, &l_vk, &shape, &l_proof).expect("pinned shape");
+    gen_r_check(&mut g, &l_pub);
+    g.tape.expose(&lw);
+    let (mem, failed) = g.tape.execute_checked(&g.inputs);
+    assert!(failed.is_empty(), "tape assertions failed");
+    let m = Machine::new(&g.tape);
+    let pw = m.public_values(&mem).concat();
+    assert_eq!(pw.len(), 1 + dims.words().div_ceil(8));
+    assert_eq!(iface::decode(&dims, &pw).unwrap(), run.statement(), "honest decode");
+    let dec = decode_cases(&dims, &pw);
+
+    let lfr = Engine::new(frozen::LFR.params());
+    let fairs = m.airs();
+    let t = Instant::now();
+    let (fpk, fvk) = kg(&frozen::LFR, &lfr, &fairs, "L_Fr", &mut log);
+    tick("lfr_keygen", t);
+    let mut traces = m.traces(&mem);
+    traces.push(range_trace(&fpk, &fairs, &traces));
+    let mut pis = m.public_values(&mem);
+    pis.resize(traces.len(), vec![]);
+    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
+    let ctx = ProvingContext::new(
+        traces
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                let cm = ColMajorMatrix::from_row_major(t);
+                (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&cm), pis[i].clone()))
+            })
+            .collect(),
+    );
+    drop(traces);
+    let fpk_bytes = bitcode::serialize(&fpk).map(|b| b.len()).unwrap_or(0);
+    drop(fpk);
+    let t = Instant::now();
+    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
+    tick("lfr_prove", t);
+    let h_lfr = height_check(&frozen::LFR, &heights(&proof));
+    let mut doc = export("lfr-fp8", lfr.config(), &fvk, &proof);
+    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses L_Fr");
+    doc["decode"] = dec;
+    fs::write(out.join("lfr-fp8.json"), serde_json::to_vec(&doc).unwrap()).unwrap();
+    fs::write(out.join("app_vk.bitcode"), bitcode::serialize(&app_vk).unwrap()).unwrap();
+    fs::write(out.join("leaf_vk.bitcode"), bitcode::serialize(&leaf_vk).unwrap()).unwrap();
+    fs::write(out.join("node_vk.bitcode"), bitcode::serialize(&node_vk).unwrap()).unwrap();
+    fs::write(out.join("node1_vk.bitcode"), bitcode::serialize(&n1_vk).unwrap()).unwrap();
+    fs::write(out.join("node2_vk.bitcode"), bitcode::serialize(&n2_vk).unwrap()).unwrap();
+    fs::write(out.join("l_vk.bitcode"), bitcode::serialize(&l_vk).unwrap()).unwrap();
+    fs::write(out.join("lfr_vk.bitcode"), bitcode::serialize(&fvk).unwrap()).unwrap();
+    let summary = json!({
+        "keys": log,
+        "heights": {"app": h_app, "leaf": h_leaf, "node": h_node, "L": h_l, "L_Fr": h_lfr},
+        "l_log_heights": heights(&l_proof),
+        "node_log_heights": heights(&node_pf),
+        "node1_log_heights": n1_heights,
+        "leaf_log_heights": leaf_heights,
+        "app_log_heights": app_heights,
+        "stacked_widths": stacked,
+        "l_stacked_widths": l_stacked,
+        "lfr_stacked_widths": proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
+        "lfr_public_words": pw.len(),
+        "lfr_pk_bitcode_bytes": fpk_bytes,
+        "times_s": times,
+        "wall_s": t0.elapsed().as_secs_f64(),
+    });
+    fs::write(out.join("chain.json"), serde_json::to_string_pretty(&summary).unwrap()).unwrap();
+    println!("FP8CHAIN {}", serde_json::to_string(&summary["heights"]).unwrap());
+    println!("FP8CHAIN times {}", serde_json::to_string(&summary["times_s"]).unwrap());
+    for k in summary["keys"].as_array().unwrap() {
+        println!("FP8KEY {} g1={} pre={} bytes={}", k["key"], k["g1"], k["pre_hash"], k["vk_bitcode_bytes"]);
+    }
+}
+
+/// Node over node: the depth at which the internal-recursive key reaches a fixed point, and which
+/// vk fields differ between consecutive depths.
+fn fixpoint(out: &PathBuf) {
+    let mut log: Vec<Value> = vec![];
+    let (_, w1) = w1_airs(1);
+    let fapp = Eng::new(frozen::APP.params());
+    let (_, app) = kg(&frozen::APP, &fapp, &w1, "app", &mut log);
+    let (_, _, _, leaf) = agg_key::<1>(&frozen::LEAF_AGG, &app, "leaf<1>", &mut log);
+    let (_, _, _, mut cur) = agg_key::<2>(&frozen::INTERNAL, &leaf, "depth 1", &mut log);
+    let mut rows = vec![];
+    for depth in 2..=7 {
+        let (_, _, _, next) = agg_key::<2>(&frozen::INTERNAL, &cur, &format!("depth {depth}"), &mut log);
+        let a = serde_json::to_value(&cur.inner).unwrap();
+        let b = serde_json::to_value(&next.inner).unwrap();
+        let mut diff = vec![];
+        if a["params"] != b["params"] { diff.push("params".to_string()); }
+        if a["trace_height_constraints"] != b["trace_height_constraints"] { diff.push("trace_height_constraints".to_string()); }
+        for (i, (x, y)) in a["per_air"].as_array().unwrap().iter().zip(b["per_air"].as_array().unwrap()).enumerate() {
+            if x != y {
+                let fields: Vec<String> = x.as_object().unwrap().keys().filter(|k| x[k.as_str()] != y[k.as_str()]).cloned().collect();
+                diff.push(format!("air {i}: {fields:?}"));
+            }
+        }
+        let same = cur.pre_hash == next.pre_hash;
+        println!("FP8FIX depth {} -> {}: equal={} diff={:?}", depth - 1, depth, same, diff);
+        rows.push(json!({"from": depth - 1, "to": depth, "equal": same, "diff": diff}));
+        cur = next;
+    }
+    fs::write(out.join("fixpoint.json"), serde_json::to_string_pretty(&json!({"rows": rows, "keys": log})).unwrap()).unwrap();
+}
+
+fn main() {
+    let a: Vec<String> = std::env::args().collect();
+    let out = PathBuf::from(&a[2]);
+    fs::create_dir_all(&out).unwrap();
+    match a[1].as_str() {
+        "keys" => keys(&out),
+        "chain" => chain(&out),
+        "fixpoint" => fixpoint(&out),
+        _ => panic!("mode keys or chain"),
+    }
+}

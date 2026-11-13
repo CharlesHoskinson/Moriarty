@@ -1,0 +1,114 @@
+//! FP-8 G1: the frozen sets are the ones every keygen call site uses, and keygen refuses a key
+//! with another parameter set or outside the bounds.
+use std::sync::Arc;
+
+use openvm_cpu_backend::CpuBackend;
+use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
+use openvm_recursion_circuit::system::{AggregationSubCircuit, VerifierSubCircuit, VerifierTraceGen};
+use openvm_stark_backend::{AirRef, StarkEngine, WhirProximityStrategy};
+use openvm_stark_sdk::config::{
+    app_params_with_100_bits_security,
+    baby_bear_poseidon2::{BabyBearPoseidon2CpuEngine, DuplexSponge},
+    params_with_100_bits_security, MAX_APP_LOG_STACKED_HEIGHT,
+};
+use p3_baby_bear::BabyBear;
+use sherlock_lfr::{
+    fixture::{internal_ud, l_ud, ud_params, NodeSC},
+    frozen::{self, Bounds, G1Error},
+    testing::lfr_params,
+};
+
+type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+
+fn w1() -> Vec<AirRef<NodeSC>> {
+    let chip = Poseidon2SubChip::<BabyBear, 1>::new(Poseidon2Config::<BabyBear>::default().constants);
+    vec![chip.air.clone()]
+}
+
+#[test]
+fn g1_sets_equal_the_pre_fp8_formulas() {
+    // The internal, L and L_Fr sets keep the exact params of E2 to E6 (no key change from G1 there).
+    assert_eq!(internal_ud(), ud_params(3, 2, 17, 512, 9, 21, &[97, 82, 81], 18));
+    assert_eq!(l_ud(48), ud_params(3, 2, 18, 48, 6, 20, &[98, 83, 82], 18));
+    let mut p = params_with_100_bits_security(3, 2, 18, 48, 0, 0, WhirProximityStrategy::UniqueDecoding, 4, 20, 4);
+    for (r, n) in p.whir.rounds.iter_mut().zip([98, 83, 82]) {
+        r.num_queries = n;
+    }
+    p.logup.pow_bits = 0;
+    assert_eq!(lfr_params(), p);
+    for s in frozen::ALL {
+        frozen::check_params(s, &s.params()).unwrap();
+    }
+}
+
+#[test]
+fn g1_app_set_differs_from_stock() {
+    let stock = app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT);
+    // The stock set already has the frozen vector 193/88/81/81 (derived at query PoW 20); it
+    // differs in the query PoW only (20 against the OD-4 value 21).
+    let e = frozen::check_params(&frozen::APP, &stock).unwrap_err();
+    assert_eq!(e, G1Error::Params { set: "app", field: "query_pow" });
+    let q: Vec<usize> = stock.whir.rounds.iter().map(|r| r.num_queries).collect();
+    assert_eq!(stock.whir.query_phase_pow_bits, 20);
+    assert_eq!(q, frozen::APP.queries);
+    // The stock derivation at query PoW 21 gives a smaller vector, which G1 refuses.
+    let p21 = params_with_100_bits_security(1, 4, 20, 2048, 5, 15, WhirProximityStrategy::UniqueDecoding, 3, 21, 4);
+    let e = frozen::check_params(&frozen::APP, &p21).unwrap_err();
+    assert!(matches!(e, G1Error::QueryVector { .. }), "{e:?}");
+    eprintln!("G1 stock derivation at query PoW 21: {e:?}");
+}
+
+#[test]
+fn g1_refuses_changed_parameters() {
+    let base = frozen::INTERNAL.params();
+    let mut p = base.clone();
+    p.whir.rounds[1].num_queries -= 1;
+    assert!(matches!(frozen::check_params(&frozen::INTERNAL, &p), Err(G1Error::QueryVector { .. })));
+    let mut p = base.clone();
+    p.whir.query_phase_pow_bits = 20;
+    assert_eq!(frozen::check_params(&frozen::INTERNAL, &p), Err(G1Error::Params { set: "internal", field: "query_pow" }));
+    let mut p = base.clone();
+    p.logup.pow_bits = 17;
+    assert_eq!(frozen::check_params(&frozen::INTERNAL, &p), Err(G1Error::Params { set: "internal", field: "logup_pow" }));
+    let mut p = base.clone();
+    p.whir.mu_pow_bits = 8;
+    assert_eq!(frozen::check_params(&frozen::INTERNAL, &p), Err(G1Error::Params { set: "internal", field: "mu_pow" }));
+    let mut p = frozen::LEAF_AGG.params();
+    p.logup.pow_bits = 0;
+    assert_eq!(frozen::check_params(&frozen::LEAF_AGG, &p), Err(G1Error::Params { set: "leaf_agg", field: "logup_pow" }));
+    // keygen_checked refuses an engine on the stock app set.
+    let stock = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
+    assert_eq!(
+        frozen::keygen_checked(&frozen::APP, &stock, &w1()).err(),
+        Some(G1Error::Params { set: "app", field: "query_pow" })
+    );
+}
+
+#[test]
+fn g1_refuses_keys_outside_the_bounds() {
+    let app = Eng::new(frozen::APP.params());
+    let (_, app_vk, s) = frozen::keygen_checked(&frozen::APP, &app, &w1()).unwrap();
+    assert_eq!((s.airs, s.columns), (1, 299));
+    let tight = |f: &dyn Fn(&mut Bounds)| {
+        let mut b = frozen::APP.bounds;
+        f(&mut b);
+        frozen::check_vk_bounds(&frozen::APP, &b, &app_vk)
+    };
+    assert!(matches!(tight(&|b| b.max_columns = 298), Err(G1Error::Columns { got: 299, .. })));
+    assert!(matches!(tight(&|b| b.max_constraints_per_air = 281), Err(G1Error::Constraints { got: 282, .. })));
+    assert!(matches!(tight(&|b| b.max_airs = 0), Err(G1Error::Airs { .. })));
+    // A node: its largest AIR has 77 interactions; inside 200 (and the old 100), refused at 76.
+    let eng = Eng::new(frozen::INTERNAL.params());
+    let c = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
+        Arc::new(app_vk),
+        Default::default(),
+    );
+    let (_, node_vk, s) = frozen::keygen_checked(&frozen::INTERNAL, &eng, &AggregationSubCircuit::airs::<NodeSC>(&c)).unwrap();
+    assert!(s.max_interactions <= 200 && s.airs <= 64 && s.columns <= 3000);
+    let mut b = frozen::INTERNAL.bounds;
+    b.max_interactions_per_air = s.max_interactions - 1;
+    assert!(matches!(frozen::check_vk_bounds(&frozen::INTERNAL, &b, &node_vk), Err(G1Error::Interactions { .. })));
+    // Heights: a proof with an AIR at 2^20 is outside the internal bound 2^19.
+    assert!(matches!(frozen::check_heights(&frozen::INTERNAL, &[Some(19), Some(20)]), Err(G1Error::Height { got: 20, .. })));
+    assert_eq!(frozen::check_heights(&frozen::INTERNAL, &[Some(19), None]), Ok(19));
+}

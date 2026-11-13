@@ -1,0 +1,17 @@
+#!/bin/bash
+# FP-8 chain: keys + proofs W1 -> leaf -> N1 -> N2 -> N3 -> L_iface -> L_Fr, D3 per key, wrap cost, wrap key + proof, stock ledger check.
+set -uo pipefail
+export PATH=$HOME/.cargo/bin:$PATH RUSTUP_AUTO_INSTALL=0
+L=$HOME/.cache/fp8/logs; O=$HOME/.cache/fp8/out/chain; W=$HOME/.cache/fp8/out/wrap; HS=$HOME/.local/bin/heavy-slot
+T=$HOME/.cache/fp8/target/release/examples; WT=$HOME/.cache/fp8/wtarget/release
+mkdir -p $O $W
+step() { echo "# $(date -Is) $1 start" >> $L/runs.log; }
+fin() { echo "# $(date -Is) $1 end rc=$2" >> $L/runs.log; [ $2 -eq 0 ] || exit $2; }
+step chain; $HS --mem 64G --name fp8-chain -- $T/fp8_keyset chain $O > $L/chain.log 2> $L/chain.err; fin chain $?
+step d3; $HS --mem 8G --name fp8-d3 -- $T/fp8_d3 $O > $L/d3.log 2>&1; fin d3 $?
+cd ~/Projects/Moriarty-wt/fp8/tools/sherlock-wrap
+step wrapcost; $HS --mem 24G --name fp8-wrapcost -- $WT/wrap $O/lfr-fp8.json $W 21 cost > $L/wrapcost.log 2>&1; fin wrapcost $?
+step wrapkey; $HS --mem 48G --name fp8-wrapkey -- $WT/wrap $O/lfr-fp8.json $W 21 1 > $L/wrapkey.log 2>&1; fin wrapkey $?
+step ledger; $HS --mem 8G --name fp8-ledger -- $WT/sherlock-wrap-ledger-check $W > $L/ledger.log 2>&1; fin ledger $?
+sha256sum $W/wrap.vk $HOME/.cache/e5-wrap/out/lfr-e3-k21/wrap.vk >> $L/runs.log
+echo "# $(date -Is) all done" >> $L/runs.log

@@ -1,0 +1,390 @@
+//! FP-8 gate G1: the frozen parameter sets and shape bounds of every layer, fixed in the
+//! key-generation code (`FD/ARCHITECTURE.md` section 1.9, `PR` section 11.2; owner decisions
+//! OD-4, OD-17, OD-18, OD-19, OD-24 option E; owner rulings 2026-11-12 20:35: the internal set
+//! takes 200 interactions per AIR, 64 AIRs and 3,000 columns).
+//!
+//! Every Sherlock keygen call site takes its `SystemParams` from [`FrozenSet::params`] and runs
+//! keygen through [`keygen_checked`]. That refuses:
+//! - an engine whose parameters differ from the frozen set in any field (blowup, `l_skip`,
+//!   `n_stack`, `w_stack`, WHIR `k`, the explicit per-round query vector, folding, `mu`, query
+//!   and LogUp PoW, proximity strategy, maximum constraint degree, LogUp interaction bound);
+//! - a key whose shape is outside the bounds of the set (AIR count, total columns, constraints
+//!   and interactions per AIR, constraint degree).
+//!
+//! The trace-height bound is a property of a proof, not of a key; [`check_heights`] checks it.
+//! The bounds are admission checks: no bound value is written into a key.
+
+use openvm_stark_backend::{
+    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+    AirRef, StarkEngine, StarkProtocolConfig, SystemParams, WhirProximityStrategy,
+};
+use openvm_stark_sdk::config::params_with_100_bits_security;
+
+/// BabyBear `p = 2^31 - 2^27 + 1`: the global interaction bound of the BabyBear layers.
+pub const BABYBEAR_P: u64 = 0x7800_0001;
+
+/// The layers of the chain of a call.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Layer {
+    /// App (leaf shards), per program.
+    App,
+    /// OpenVM leaf layer (leaf aggregation), per program.
+    LeafAgg,
+    /// Internal (internal-recursive nodes; the leaf layer on path C), universal.
+    Internal,
+    /// `L`, universal.
+    L,
+    /// `L_Fr`, universal (BLS12-381 Fr base field, `EF = F`).
+    LFr,
+}
+
+/// Shape bounds of one set (the assumptions of its 100-bit analysis).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Bounds {
+    pub max_log_height: usize,
+    pub max_constraints_per_air: usize,
+    pub max_interactions_per_air: usize,
+    pub max_airs: usize,
+    pub max_columns: usize,
+    pub max_constraint_degree: usize,
+}
+
+/// One frozen set: parameters with the explicit query vector, and its bounds.
+#[derive(Clone, Debug)]
+pub struct FrozenSet {
+    pub layer: Layer,
+    pub name: &'static str,
+    pub log_blowup: usize,
+    pub l_skip: usize,
+    pub n_stack: usize,
+    pub w_stack: usize,
+    pub folding_pow: usize,
+    pub mu_pow: usize,
+    pub query_pow: usize,
+    pub logup_pow: usize,
+    pub queries: &'static [usize],
+    pub bounds: Bounds,
+}
+
+/// App set: OD-4 (a), query PoW 21 with the frozen vector 193/88/81/81; LogUp 18 (code rule).
+pub const APP: FrozenSet = FrozenSet {
+    layer: Layer::App,
+    name: "app",
+    log_blowup: 1,
+    l_skip: 4,
+    n_stack: 20,
+    w_stack: 2048,
+    folding_pow: 5,
+    mu_pow: 15,
+    query_pow: 21,
+    logup_pow: 18,
+    queries: &[193, 88, 81, 81],
+    bounds: Bounds {
+        max_log_height: 24,
+        max_constraints_per_air: 5000,
+        max_interactions_per_air: 1000,
+        max_airs: 100,
+        max_columns: 30000,
+        max_constraint_degree: 3,
+    },
+};
+
+/// OpenVM leaf layer (leaf aggregation): OD-4 (a) query PoW 21, 118/84/81; LogUp PoW 17
+/// (owner ruling 2026-11-12, D3 84.72 bits at PoW 0).
+pub const LEAF_AGG: FrozenSet = FrozenSet {
+    layer: Layer::LeafAgg,
+    name: "leaf_agg",
+    log_blowup: 2,
+    l_skip: 4,
+    n_stack: 17,
+    w_stack: 2048,
+    folding_pow: 4,
+    mu_pow: 13,
+    query_pow: 21,
+    logup_pow: 17,
+    queries: &[118, 84, 81],
+    bounds: Bounds {
+        max_log_height: 21,
+        max_constraints_per_air: 1000,
+        max_interactions_per_air: 100,
+        max_airs: 50,
+        max_columns: 2000,
+        max_constraint_degree: 4,
+    },
+};
+
+/// Internal set: OD-19, 97/82/81 at query PoW 21, `mu` PoW 9, LogUp 18; bounds of the owner
+/// rulings 2026-11-12 20:35 (X14 option 2: 200 interactions per AIR; N-6 option 2: 64 AIRs,
+/// 3,000 columns).
+pub const INTERNAL: FrozenSet = FrozenSet {
+    layer: Layer::Internal,
+    name: "internal",
+    log_blowup: 3,
+    l_skip: 2,
+    n_stack: 17,
+    w_stack: 512,
+    folding_pow: 0,
+    mu_pow: 9,
+    query_pow: 21,
+    logup_pow: 18,
+    queries: &[97, 82, 81],
+    bounds: Bounds {
+        max_log_height: 19,
+        max_constraints_per_air: 1000,
+        max_interactions_per_air: 200,
+        max_airs: 64,
+        max_columns: 3000,
+        max_constraint_degree: 4,
+    },
+};
+
+/// The internal bounds before the 2026-11-12 20:35 rulings (for comparison runs only).
+pub const INTERNAL_OLD_BOUNDS: Bounds = Bounds {
+    max_log_height: 19,
+    max_constraints_per_air: 1000,
+    max_interactions_per_air: 100,
+    max_airs: 50,
+    max_columns: 2000,
+    max_constraint_degree: 4,
+};
+
+/// `L` set: OD-19, 98/83/82 at query PoW 20, `mu` PoW 6, LogUp 18, `w_stack` 48 (frozen at
+/// most 48, owner 2026-11-12).
+pub const L: FrozenSet = FrozenSet {
+    layer: Layer::L,
+    name: "L",
+    log_blowup: 3,
+    l_skip: 2,
+    n_stack: 18,
+    w_stack: 48,
+    folding_pow: 0,
+    mu_pow: 6,
+    query_pow: 20,
+    logup_pow: 18,
+    queries: &[98, 83, 82],
+    bounds: Bounds {
+        max_log_height: 20,
+        max_constraints_per_air: 1000,
+        max_interactions_per_air: 100,
+        max_airs: 50,
+        max_columns: 2000,
+        max_constraint_degree: 4,
+    },
+};
+
+/// `L_Fr` set: OD-24 option E, the `L` vector at query PoW 20, no folding, `mu` or LogUp PoW.
+pub const LFR: FrozenSet = FrozenSet {
+    layer: Layer::LFr,
+    name: "L_Fr",
+    log_blowup: 3,
+    l_skip: 2,
+    n_stack: 18,
+    w_stack: 48,
+    folding_pow: 0,
+    mu_pow: 0,
+    query_pow: 20,
+    logup_pow: 0,
+    queries: &[98, 83, 82],
+    bounds: Bounds {
+        max_log_height: 20,
+        max_constraints_per_air: 1000,
+        max_interactions_per_air: 100,
+        max_airs: 50,
+        max_columns: 2000,
+        max_constraint_degree: 4,
+    },
+};
+
+pub const ALL: [&FrozenSet; 5] = [&APP, &LEAF_AGG, &INTERNAL, &L, &LFR];
+
+impl FrozenSet {
+    /// The `SystemParams` of the set, with the explicit query vector in place of the derived one.
+    pub fn params(&self) -> SystemParams {
+        let mut p = params_with_100_bits_security(
+            self.log_blowup,
+            self.l_skip,
+            self.n_stack,
+            self.w_stack,
+            self.folding_pow,
+            self.mu_pow,
+            WhirProximityStrategy::UniqueDecoding,
+            self.bounds.max_constraint_degree,
+            self.query_pow,
+            4,
+        );
+        assert_eq!(p.whir.rounds.len(), self.queries.len(), "{}: WHIR round count", self.name);
+        for (r, &q) in p.whir.rounds.iter_mut().zip(self.queries) {
+            r.num_queries = q;
+        }
+        p.logup.pow_bits = self.logup_pow;
+        p
+    }
+}
+
+/// Why G1 refuses a key.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum G1Error {
+    QueryVector { set: &'static str, got: Vec<usize>, frozen: Vec<usize> },
+    Params { set: &'static str, field: &'static str },
+    Airs { set: &'static str, got: usize, bound: usize },
+    Columns { set: &'static str, got: usize, bound: usize },
+    Constraints { set: &'static str, air: usize, got: usize, bound: usize },
+    Interactions { set: &'static str, air: usize, got: usize, bound: usize },
+    Degree { set: &'static str, air: usize, got: usize, bound: usize },
+    Height { set: &'static str, air: usize, got: usize, bound: usize },
+}
+
+impl std::fmt::Display for G1Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "G1 refuses: {self:?}")
+    }
+}
+
+/// Check every field of `p` against the frozen set.
+pub fn check_params(set: &FrozenSet, p: &SystemParams) -> Result<(), G1Error> {
+    let q: Vec<usize> = p.whir.rounds.iter().map(|r| r.num_queries).collect();
+    if q != set.queries {
+        return Err(G1Error::QueryVector { set: set.name, got: q, frozen: set.queries.to_vec() });
+    }
+    let f = set.params();
+    let e = |field| Err(G1Error::Params { set: set.name, field });
+    if p.log_blowup != f.log_blowup {
+        return e("log_blowup");
+    }
+    if p.l_skip != f.l_skip {
+        return e("l_skip");
+    }
+    if p.n_stack != f.n_stack {
+        return e("n_stack");
+    }
+    if p.w_stack != f.w_stack {
+        return e("w_stack");
+    }
+    if p.whir.k != f.whir.k {
+        return e("k_whir");
+    }
+    if p.whir.folding_pow_bits != f.whir.folding_pow_bits {
+        return e("folding_pow");
+    }
+    if p.whir.mu_pow_bits != f.whir.mu_pow_bits {
+        return e("mu_pow");
+    }
+    if p.whir.query_phase_pow_bits != f.whir.query_phase_pow_bits {
+        return e("query_pow");
+    }
+    if p.whir.proximity != f.whir.proximity {
+        return e("proximity");
+    }
+    if p.logup.pow_bits != f.logup.pow_bits {
+        return e("logup_pow");
+    }
+    if p.logup.max_interaction_count != f.logup.max_interaction_count {
+        return e("max_interaction_count");
+    }
+    if p.logup.log_max_message_length != f.logup.log_max_message_length {
+        return e("log_max_message_length");
+    }
+    if p.max_constraint_degree != f.max_constraint_degree {
+        return e("max_constraint_degree");
+    }
+    // Any other field (e.g. the final polynomial length): the whole struct must be equal.
+    if p != &f {
+        return e("other");
+    }
+    Ok(())
+}
+
+/// Measured shape of a key (the quantities the bounds speak about).
+#[derive(Clone, Debug, Default)]
+pub struct KeyShape {
+    pub airs: usize,
+    pub columns: usize,
+    pub max_constraints: usize,
+    pub max_interactions: usize,
+    pub max_degree: usize,
+    pub total_constraints: usize,
+    pub total_interactions: usize,
+    pub preprocessed_airs: usize,
+    pub public_values: usize,
+}
+
+pub fn shape<SC: StarkProtocolConfig>(vk: &MultiStarkVerifyingKey<SC>) -> KeyShape {
+    let mut s = KeyShape { airs: vk.inner.per_air.len(), ..Default::default() };
+    for a in &vk.inner.per_air {
+        let c = a.symbolic_constraints.constraints.constraint_idx.len();
+        let i = a.symbolic_constraints.interactions.len();
+        s.columns += a.params.width.total_width();
+        s.max_constraints = s.max_constraints.max(c);
+        s.max_interactions = s.max_interactions.max(i);
+        s.max_degree = s.max_degree.max(a.max_constraint_degree as usize);
+        s.total_constraints += c;
+        s.total_interactions += i;
+        s.preprocessed_airs += a.preprocessed_data.is_some() as usize;
+        s.public_values += a.params.num_public_values;
+    }
+    s
+}
+
+/// Check a key against the bounds `b` of `set` (the set's own bounds in [`check_vk`]).
+pub fn check_vk_bounds<SC: StarkProtocolConfig>(
+    set: &FrozenSet,
+    b: &Bounds,
+    vk: &MultiStarkVerifyingKey<SC>,
+) -> Result<KeyShape, G1Error> {
+    check_params(set, &vk.inner.params)?;
+    let s = shape(vk);
+    if s.airs > b.max_airs {
+        return Err(G1Error::Airs { set: set.name, got: s.airs, bound: b.max_airs });
+    }
+    if s.columns > b.max_columns {
+        return Err(G1Error::Columns { set: set.name, got: s.columns, bound: b.max_columns });
+    }
+    for (air, a) in vk.inner.per_air.iter().enumerate() {
+        let c = a.symbolic_constraints.constraints.constraint_idx.len();
+        let i = a.symbolic_constraints.interactions.len();
+        let d = a.max_constraint_degree as usize;
+        if c > b.max_constraints_per_air {
+            return Err(G1Error::Constraints { set: set.name, air, got: c, bound: b.max_constraints_per_air });
+        }
+        if i > b.max_interactions_per_air {
+            return Err(G1Error::Interactions { set: set.name, air, got: i, bound: b.max_interactions_per_air });
+        }
+        if d > b.max_constraint_degree {
+            return Err(G1Error::Degree { set: set.name, air, got: d, bound: b.max_constraint_degree });
+        }
+    }
+    Ok(s)
+}
+
+pub fn check_vk<SC: StarkProtocolConfig>(
+    set: &FrozenSet,
+    vk: &MultiStarkVerifyingKey<SC>,
+) -> Result<KeyShape, G1Error> {
+    check_vk_bounds(set, &set.bounds, vk)
+}
+
+/// Keygen under G1: the engine must run the frozen set, and the key must be inside its bounds.
+pub fn keygen_checked<E: StarkEngine>(
+    set: &FrozenSet,
+    engine: &E,
+    airs: &[AirRef<E::SC>],
+) -> Result<(MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>, KeyShape), G1Error> {
+    check_params(set, engine.params())?;
+    let (pk, vk) = engine.keygen(airs);
+    let s = check_vk(set, &vk)?;
+    Ok((pk, vk, s))
+}
+
+/// The trace-height bound of a proof: every AIR's log height at most the set's bound.
+pub fn check_heights(set: &FrozenSet, log_heights: &[Option<usize>]) -> Result<usize, G1Error> {
+    let mut max = 0;
+    for (air, h) in log_heights.iter().enumerate() {
+        if let Some(h) = *h {
+            if h > set.bounds.max_log_height {
+                return Err(G1Error::Height { set: set.name, air, got: h, bound: set.bounds.max_log_height });
+            }
+            max = max.max(h);
+        }
+    }
+    Ok(max)
+}
