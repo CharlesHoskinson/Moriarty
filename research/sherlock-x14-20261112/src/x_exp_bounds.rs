@@ -41,6 +41,8 @@ fn x_exp_internal_bounds() {
     for (name, cons, airs, cols, ipa) in [
         ("frozen bounds 1000c/50airs/2000cols/100int", 1000usize, 50usize, 2000usize, 100usize),
         ("ruling bounds 1000c/64airs/3000cols/200int", 1000, 64, 3000, 200),
+        ("x14 condition rows 1000c/64airs/3300cols/200int", 1000, 64, 3300, 200),
+        ("x14 condition rows 1000c/64airs/3500cols/200int", 1000, 64, 3500, 200),
     ] {
         let mut p = internal();
         let s = calc(&p, h, &ext, cons, airs, cols, ipa);

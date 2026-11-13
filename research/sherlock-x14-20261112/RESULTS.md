@@ -163,22 +163,99 @@ Without the harness, both units are inside 64 AIRs and 3,000 columns (DERIVED by
 Findings:
 
 - **One kind per unit.** A unit with both chains (`L_add`, `L_dbl`, `SQ`, shared `X3` and `Y3`, range) has 1,537 + 387 + 339 + 243 + 339 + 387 + 4 = 3,236 columns, over 3,000 (DERIVED). So the MSM schedule needs units of one kind: addition units, then one doubling unit (for example a bucket MSM: bucket and window sums are additions, and the 255 doublings that combine the windows come last). FV-SCHED must use this schedule (DERIVED).
-- **Range checker of the units.** With the 16-bit RANGE table of LD-S10x-3, these row kinds need up to 3 modular constraints each (MEASURED: the one-constraint assertion fails with 3, `out/x14c-rb16.err`). The work units therefore keep their own 17-bit range checker (2^18 rows, under the 2^19 height bound). LD-S10x-3 fixes the RANGE table of the leaf kits. Recommendation, **for owner confirmation**: the FV work units use a 17-bit range checker of their own.
+- **Range checker of the units: an AFK pick that departs from an owner ruling.** With the 16-bit RANGE table of owner ruling LD-S10x-3, these row kinds need up to 3 modular constraints each (MEASURED: the one-constraint assertion fails with 3, `out/x14c-rb16.err`), which breaks the one-constraint-per-row design and the 200-interaction bound. Every measurement in (c) and (d) therefore uses a 17-bit range checker of the unit's own (2^18 rows, under the 2^19 height bound). This departs from LD-S10x-3 (16-bit RANGE table). It is an AFK pick, not a ruling: it **needs explicit owner sign-off**. If the owner keeps 16 bits for the FV units too, the G1 rows must be redesigned (3 constraints per row kind, or narrower limbs) and every figure in (c) and (d) must be measured again.
 - **Gemini Quint lanes** (`qa/gemini-quint/x14-l-add`, `x14-l-dbl`, `x14-sq`, `x14-x3`, `x14-y3`): every lane finds the row kinds SOUND and COMPLETE only under conditions that the chain as built does not yet enforce. (1) The denominator must be non-zero: for `L_add` with x1 = x2 and y1 = y2, `lambda` is free (a soundness failure); with x1 = x2 and y1 != y2 there is no witness (a completeness failure for P + (-P)); `L_dbl` needs y != 0. (2) Every `id` must be unique: `id` is not constrained, so two rows with the same `id` can swap inputs on a split message. (3) The producer must range-check input limbs: `FieldExpr` range-checks only its outputs, quotient and carries. (4) No point at infinity is representable. Lead quint runs (`out/x14-lanes-quint*.txt`, final tables in each lane REPORT): after two lane fix turns and two mechanical lead edits (described in the reports), `SQ`, `L_dbl`, `X3` and `Y3` pass every command (typecheck, tests, the sound invariant, non-vacuity, all 5 mutants each). For `L_add` the model passes every check, including all 5 mutants, but its test file `l_add_test.qnt` does not parse (it names points the model does not define); that file is open.
-- **What the conditions cost (DERIVED, recommendation for owner confirmation).** Add one inverse-witness row per addition and per doubling (`w (x2 - x1) = 1`, or `w y = 1`; one `fp_mul`-class row, about 195 interactions): an addition becomes 4 rows and a doubling 5. Constrain `id` as the row index (first row 0, next = local + 1: one transition constraint, no interaction). The producer of the points (MSM bucket logic) range-checks limbs, or receives them from rows that did. For the point at infinity, use a flag column with the identity handled by selection, or a schedule that never adds a point to itself or its negation. The extra row kind adds about 300 columns to a unit: 2,654 + about 300 = about 2,950 for the addition unit, which is just under 3,000 (ESTIMATE, not measured).
+- **What the conditions cost.** Built and measured in (d). The earlier ESTIMATE in this place (about 2,950 columns for the addition unit, under 3,000) was wrong: it left out the producer of the points. The measured unit is over the 3,000-column bound; see (d).
+
+### (d) The condition rows (MEASURED, `out/x14cond-neg.jsonl`, `out/x14cond-g1.jsonl`)
+
+The lanes of (c) found four conditions. The chain now enforces three of them with new rows and constraints (`src/x_exp_node.rs`, `g1_chain`, `PointsIn`, `forge_subrow`, `g1neg`):
+
+| Condition | Mechanism | AIR change |
+|---|---|---|
+| Non-zero denominator, addition | `INV`: one `FieldExpr` row `w = 1 / (x2 - x1)` (`new_const(1) / (x2 - x1)`), constraint `w (x2 - x1) = 1`. `L_add` sends (id, x1, x2) on bus o+10, `INV` receives it. | new row kind; `L_add` 199 to 200 interactions |
+| Non-zero denominator, doubling | `INV_y`: `w = 1 / y`, constraint `w y = 1`. `L_dbl` sends (id, y) on o+10. | new row kind; `L_dbl` 199 to 200 interactions |
+| Unique `id` | In every `ChainAir` and in `PointsIn`: first row id = 0, transition next.id = id + 1 (id = row index). | 2 constraints per AIR (98 to 100), no interaction |
+| Input range checks | `PointsIn`: columns id and the input points; it range-checks every limb to 8 bits on the unit's range bus and sends the point messages. The chain rows receive their inputs only from `PointsIn`. | new AIR; the old `SourceAir` harness now only receives the output (a 97-column sink) |
+| Point at infinity | No new AIR. The inverse rows make the exceptional cases (P1 = P2, P1 = -P2, y = 0) unprovable, so the chain is sound on them and incomplete. An honest MSM must stay away from them: a random or offset accumulator start makes an exceptional case occur with negligible probability (complete with negligible failure, DERIVED). Identity points that appear as proof elements need a flag path. | open (DERIVED) |
+
+Row kinds, standalone at 2^4 rows (MEASURED; both chains prove and verify):
+
+| Chain | AIR | Width | Constraints | Interactions | Degree |
+|---|---|---:|---:|---:|---:|
+| add | `L_add` | 387 | 100 | 200 | 2 |
+| | `X3`, `Y3` | 339, 387 | 100 | 196, 197 | 2 |
+| | `INV` | 291 | 100 | 194 | 2 |
+| | `PointsIn` (4 values) | 193 | 2 | 194 | 2 |
+| double | `SQ`, `L_dbl` | 243, 339 | 100 | 195, 200 | 2 |
+| | `X3`, `Y3` | 339, 387 | 100 | 196, 197 | 2 |
+| | `INV_y` | 243 | 100 | 194 | 2 |
+| | `PointsIn` (2 values) | 97 | 2 | 98 | 2 |
+
+Every AIR is at or under 200 interactions. `L_add` and `L_dbl` are exactly at the bound.
+
+**Negative tests** (mode `g1neg`, 2^4 rows, app set; MEASURED). The forged rows are built with `forge_subrow`, which computes q, carries and range counts from the forged values, so the only failing check is the one under test. Per case: the AIRs whose constraints fail (stock debug checker, run per AIR), the LogUp multiset check, and prove plus verify:
+
+| Case | Constraint failures | LogUp balanced | Prove and verify |
+|---|---|---|---|
+| add, honest | none | yes | verified |
+| add, P2 = P1, forged lambda = 5, forged w = 0 | `INV` only | yes | verify rejects (`SumClaimMismatch`) |
+| add, row 1 with id 0 in every AIR | the id constraint of `L_add`, `X3`, `Y3`, `INV`, `PointsIn` | yes | verify rejects |
+| dbl, honest | none | yes | verified |
+| dbl, P = (0, 0), forged lambda = 5, forged w = 0 | `INV_y` only | yes | verify rejects |
+| dbl, row 1 with id 0 in every AIR | the id constraint of `L_dbl`, `X3`, `Y3`, `INV_y`, `PointsIn`, `SQ` | yes | verify rejects |
+
+In the P2 = P1 case, `L_add` itself passes with the forged lambda (its constraint degenerates to 0 = 0). That is the soundness gap of (c), and `INV` alone closes it.
+
+**The unit node with the condition rows** (arity 1 over one internal-set node, `g1c 16 add,dbl 12,14,16,17 16`; MEASURED):
+
+| Unit | AIRs (without the sink) | Columns (without the 97-column sink) | Max interactions | Stacked width at 2^12 / 2^14 / 2^16 / 2^17 | Proved and verified at 2^16 |
+|---|---:|---:|---:|---|---|
+| add chain | 46 (45) | 3,235 (3,138) | 200 | 49 / 89 / 247 / 459 | yes |
+| double chain | 47 (46) | 3,286 (3,189) | 200 | 49 / 90 / 254 / 472 | yes |
+
+`PointsIn` is part of the design here, not the harness, so it is counted. The prove runs were not `--exclusive`, so no prove time is reported.
+
+**Finding: with the condition rows, both units are over the 3,000-column bound of ruling N-6 option 2** (add by 138 columns, double by 189; MEASURED widths, DERIVED differences). The bound is a soundness assumption of the calculator, not a keygen check, so the units still prove. Under the ruling they do not fit. The options (DERIVED from the measured widths; none built):
+
+1. **Raise the column bound of the FV work units to 3,300.** D3 with the internal set at 1,000 constraints, 64 AIRs, 200 interactions (`out/d3-bounds-cols.log`, MEASURED by the calculator): 3,000 columns: stacked 111.0768, weakest 101.1643; 3,300: stacked 110.9393, weakest 101.1643; 3,500: stacked 110.8544, weakest 101.1643. Only the stacked term moves. Every term stays at least 100 and the grindable terms at least 101, with no PoW change. Both units fit under 3,300.
+2. **Drop `PointsIn` where the inputs already come from range-checked rows.** In a real MSM, most inputs are outputs of earlier chain rows (saved vars, which `FieldExpr` range-checks). Only the external points (SRS and proof points) need a producer, and that producer can live in another unit. Add unit 3,138 - 193 = 2,945 (fits). Double unit 3,189 - 97 = 3,092 (still over).
+3. **Drop `INV_y` once every input point is checked to be on the curve.** BLS12-381 G1 (y^2 = x^3 + 4) has no point with y = 0: -4 is not a cube in Fp (p = 1 mod 3; (-4)^((p-1)/3) != 1), and the curve order h r is odd (DERIVED, checked in Python). So on curve points y != 0, and doubling an on-curve point gives an on-curve point. With options 2 and 3, the double unit is 3,092 - 243 = 2,849 (fits). This moves the condition to an on-curve check at the point producer, which the chain does not have yet.
+
+**Cuts tried to fit under 3,000 (lead direction, 2026-11-13).**
+
+- **Double unit: drop `INV_y` (option 3), MEASURED** (`X14_NO_INV_Y=1`, `out/x14cond-noinvy.jsonl`, `out/x14cond-noinvy-neg.jsonl`). The unit is 46 AIRs and 3,043 columns with the sink, or **45 AIRs and 2,946 columns without it: within 3,000**. Max interactions 199. Stacked width 47 / 83 / 223 / 411 at 2^12 / 2^14 / 2^16 / 2^17. Proved and verified at 2^16. The cost is a new condition: without `INV_y`, the forged (0, 0) doubling of (d) **verifies** (MEASURED: no constraint fails, LogUp balances, verify accepts). So the producer of the doubling unit's input points must check that they are on the curve. That check lives outside the unit, at the point producer. Inputs that are outputs of earlier chain rows need no check: they are on the curve when the chain's inputs are.
+- **Add unit: no cheap cut fits (DERIVED from the measured widths).** The sink is already left out of the counts. Dropping it changes nothing. Merging `INV` into `L_add` would share the 96 input columns (580 columns instead of 678), but the merged AIR has two modular constraints and about 392 interactions, over the 200 bound. Taking one input point from the chain's own output (accumulator feedback in a bucket MSM) shrinks `PointsIn` from 4 values to 2: 3,138 - 96 = 3,042, still over by 42, and it needs a feedback bus that is not built. Dropping `INV` reopens the soundness gap of (c), and dropping `PointsIn` leaves the inputs unchecked. So the add unit with its conditions is 45 AIRs and 3,138 columns.
+- **AFK pick, FOR OWNER CONFIRMATION:** the FV work units take a column bound of **3,300**, in place of the owner's 3,000 (ruling N-6 option 2), so the add unit (3,138) fits. D3 at 3,300 (internal set, 1,000 constraints, 64 AIRs, 200 interactions): stacked 110.9393, weakest 101.1643, every term at least 100, grindable terms at least 101, no PoW change (MEASURED by the calculator, `out/d3-bounds-cols.log`). The double unit fits under the owner's 3,000 without `INV_y`. If the owner keeps 3,000 for every unit, the add chain needs a redesign (for example a feedback bus with a smaller producer and a further cut of about 42 columns), which is not designed.
+
+Final unit shapes (without the sink):
+
+| Unit | AIRs | Columns | Max interactions | Bound it needs | Label |
+|---|---:|---:|---:|---|---|
+| add chain: `L_add`, `X3`, `Y3`, `INV`, `PointsIn` (4 values), range | 45 | 3,138 | 200 | 3,300 (AFK pick, owner confirmation) | MEASURED |
+| double chain: `SQ`, `L_dbl`, `X3`, `Y3`, `PointsIn` (2 values, on-curve checked by the producer), range | 45 | 2,946 | 199 | 3,000 (owner value) | MEASURED |
+
+Two more open points (DERIVED):
+
+- `PointsIn` sends and range-checks with multiplicity 1 on every row and has no `is_valid` column. A unit therefore works only at exactly 2^h operations. A partly filled unit needs an `is_valid` column in `PointsIn` (one column, a boolean constraint, and the sends multiplied by it).
+- A unit with both chains is now 3,236 + 291 + 243 = 3,770 columns before any producer (DERIVED from the measured widths). So the schedule of one kind per unit from (c) holds more strongly.
+
+**Gemini Quint lanes of the condition rows** (`qa/gemini-quint/x14-inv`, `x14-inv-y`, `x14-points-in`, `x14-chain-id`): first pass done, lead quint runs and fix turns in progress; the results follow in the next commit.
 
 ### X14 gate under the new bounds
 
 | Check | Result | Label |
 |---|---|---|
 | stock `fr_mul` (129) and `fp_mul` (193) within 200 interactions | yes | MEASURED |
-| G1 addition and doubling as `fp_mul`-class rows within 200 | yes, at most 199 | MEASURED |
-| unit node within 64 AIRs and 3,000 columns | `fr_mul` 41 / 1,735; `fp_mul` 41 / 1,831; add chain 43 / 2,654; double chain 44 / 2,849 | MEASURED (chains: DERIVED without the harness) |
+| G1 addition and doubling as `fp_mul`-class rows within 200 | yes, at most 199 without the condition rows; at most 200 with them (`L_add`, `L_dbl` at the bound) | MEASURED |
+| condition rows (non-zero denominator, id = row index, input range checks) reject forged traces | yes, all 4 negative cases rejected, honest cases verify | MEASURED |
+| unit node within 64 AIRs and 3,000 columns | `fr_mul` 41 / 1,735; `fp_mul` 41 / 1,831: yes. With the condition rows: add chain 45 / 3,138: **no** (needs 3,300, AFK pick for owner confirmation); double chain without `INV_y` 45 / 2,946: yes (46 / 3,189 with `INV_y`). Without the condition rows: 43 / 2,654 and 44 / 2,849 | MEASURED (chains: DERIVED without the sink) |
+| D3 at 3,300 and 3,500 columns | weakest 101.1643, PASS (only the stacked term moves) | MEASURED (calculator) |
 | one operation AIR at 2^16 beside one child verification | proved and verified for all four | MEASURED |
 | the parent over such a unit | about +1 % main cells | MEASURED |
 | D3 at the new bounds | weakest 101.1643, PASS | MEASURED (calculator) |
 
-**GP-3 general verifier, FV-SCHED unit budget:** one unit holds 2^16 operations of one kind (2^17 laid out, not proved). For one `ivc_node` proof (ESTIMATE): the MSM is a bucket MSM with about 23,000 additions in 1 addition unit plus 1 doubling unit, and the final check (AD-22 (a)) is about 20,000 `fp_mul` rows in 1 unit. That is 3 arithmetic units before transcript and expression evaluation, which stay PENDING. Status: the arithmetic part of the unit budget is MEASURED. The gate stays **FREEZE-PENDING** on (1) the non-zero, `id` and infinity rows above (unmeasured), (2) the transcript and expression-evaluation AIRs, and (3) the `L_add` lane test file.
+**GP-3 general verifier, FV-SCHED unit budget:** one unit holds 2^16 operations of one kind (2^17 laid out, not proved). For one `ivc_node` proof (ESTIMATE): the MSM is a bucket MSM with about 23,000 additions in 1 addition unit plus 1 doubling unit, and the final check (AD-22 (a)) is about 20,000 `fp_mul` rows in 1 unit. That is 3 arithmetic units before transcript and expression evaluation, which stay PENDING. Status: the arithmetic part of the unit budget is MEASURED. The gate stays **FREEZE-PENDING** on (1) owner confirmation of the AFK pick of 3,300 columns for the FV work units (the add unit is 3,138; the double unit fits 3,000 without `INV_y`, with an on-curve check at its point producer) and sign-off of the 17-bit range checker (a departure from LD-S10x-3), (2) the infinity flag path for identity points in proofs, (3) the transcript and expression-evaluation AIRs, and (4) the Gemini lanes of the condition rows (see (d)).
 
 ### ARCHITECTURE rows that must change (not edited here; `efb0eb78a` text)
 
@@ -188,3 +265,5 @@ Findings:
 - X14 row of the experiments table (line 4008) and AD-22 (line 3457): the cost of the final check per SRS.
 - N-6 (line 3489) and N-10 (line 3508): the rulings.
 - AD-3 (line 3438), the kit PAGE/ROM block cache text at line 1481 ("`K_rom` ... not frozen"), V-4 (line 3562), the decision index row at line 3341 and X15 (line 4009): `K_rom = 15` FROZEN by the owner (2026-11-12 20:35).
+- GP-3 general verifier and kit FV-SCHED (lines 2689, 2698): the G1 chain with its condition rows (`INV`, `INV_y`, id = row index, `PointsIn`): an addition is 4 rows plus the point producer, a doubling 5; the add unit is 45 AIRs / 3,138 columns and the double unit without `INV_y` 45 / 2,946 (MEASURED); the column bound of the FV work units is 3,300 as an AFK pick for owner confirmation (D3 unchanged at 101.1643); the double unit's point producer checks that inputs are on the curve; the point at infinity is avoided by the MSM schedule (random or offset accumulator) and needs a flag path for identity points in proofs.
+- The RANGE table text of LD-S10x-3: the FV work units use a 17-bit range checker of their own. This is an AFK pick that departs from the ruling and is marked for owner sign-off; do not change the text before the owner signs off.
