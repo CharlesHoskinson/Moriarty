@@ -16,7 +16,7 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 | J6 | optional replay of every entry | not built: does not fit the key (DERIVED) | section 8 |
 | J7 | ENC-1/ENC-2, `R` with `claim_pub` and chunk anchors, replay of `R` | PASS (with J8, full rerun) | sections 9, 10 |
 | J8 | the log onion in `L`, tied to `log_d`, `log_n` (bench form: one segment, no node tie) | PASS: fixture, J4, J5 at the E2 shape; D3 101.1435 | section 10 |
-| J9 | `j`, `k` range rule in the `R` check and the reader; native `TAG_NODE` merge; Gemini Quint lanes on `OnionAir` and the `R` replay | words-level test, J4 PASS; J5 rerun see section 12; lanes round 1 done, round 2 running | section 12 |
+| J9 | `j`, `k` range rule in the `R` check and the reader; native `TAG_NODE` merge; Gemini Quint lanes on `OnionAir` and the `R` replay | PASS: words-level test, J4, J5 (D3 101.1435); lanes rounds 1 and 2 done, no open defect | sections 12, 13 |
 
 ## 2. Code
 
@@ -178,7 +178,7 @@ Headroom left in the 2^19 table: about 21,000 rows (DERIVED).
 - The `a_out` anchor of a chunk: its `DIGEST` output is bound to no lane (the 4 lane-map pairs are `a_in`, `claim_pub` twice, `outcome_pub`), while the spec writes `ins anchor := a_out` in the effect region: the same 4 against 5 pair question as `openClaim` (ENC section 10).
 - Closed in J9 (section 12): the range of the anchor words `j`, `k` and `1 <= j <= k` for a chunk. Open, for the owner: whether an ordinary call must also have `j = k = 0` (J9 checks only the 16-bit range there).
 - Negative coverage: at the `L_Fr` set on f725b15 only the forged `DIGEST` was proved and refused; missing-`R` and anchor tag swapped are refused by the tape and the decoder (missing-`R` also by the prover on 2f09caf); the onion forgeries are refused at small scale with a stand-in key table; no wrong-permutation negative.
-- Gemini Quint lanes: round 1 on `OnionAir` and on the `R` replay done (section 12); round 2 (skills readable, the built `j`, `k` rule, a stronger onion adversary) running.
+- Gemini Quint lanes: rounds 1 and 2 on `OnionAir` and on the `R` replay done (section 12), no open defect; the lane-map lane of section 13 running.
 - **FOR OWNER CONFIRMATION** (taken as built by the coordinator, 2026-11-13): D-10 (`R` order and anchor rule, section 9), D-11 (replay of `R` only in `L_Fr`, section 9), D-12 (onion form in the bench `L`, section 10).
 
 ## 12. J9: the `j`, `k` rule, the `TAG_NODE` merge, the Gemini Quint lanes
@@ -192,7 +192,7 @@ Code: openvm `e3-iface` 95ed47b (`lverify.rs::gen_r_check`, `iface.rs::{anchor_t
 | `iface` unit tests (`anchor_jk_range`: 13 head words; `enc2_node_merge`) | pass |
 | `j9_jk_range_on_words` (full words of each case through `gen_r_check`) | 2,977 ops in every case (2,943 + 34); positives chunk 1 of 1, `j = 0xffff, k = 0x10000`, `j = 0x10000, k = 0x10001`, `j = 2, k = 0x20000`, `j = k = 2^32 - 1`: 0 failed assertions; negatives (from chunk 2 of 3, anchor tags unchanged, so only the new rule can refuse) `j = 0`, `j > k` in the low limb, `j > k` in the high limb, `j_lo = 2^16` (the aliasing case of the lane), `k_hi = 2^16`: 1, 1, 1, 1, 2 failed assertions, each also refused by the reader |
 | J4 on fixture-j8 (L unchanged) | pass; 33,690 events; tape 502,910 ops (f725b15: 502,877; +33); `LowBits` 274, `AssertEq` 724; `BbAlu` and `ProgramTable` 2^19; all 10 cases as in section 10 (log `~/.cache/e3-iface/logs/j9-j4.log`) |
-| J5 at `lfr_params` (new key, the tape changed) | running (unit `e3-j9-j5`, log `~/.cache/e3-iface/logs/j9-j5.log`) |
+| J5 at `lfr_params` (new key, the tape changed; unit `e3-j9-j5`, log `~/.cache/e3-iface/logs/j9-j5.log`; shared slots, times are not clean timings) | pass: keygen 199.4 s; overflow, all-entries, chunk 2 of 3 accepted, 2 commitments (widths 33 and 10), 2,571,250 bytes, prove 684 to 744 s, verify 1.9 to 4.2 s, 0 failed tape assertions; forged `DIGEST`: prover refuses (`LogupZerocheck(NonZeroRootSum)`); D3 101.1435 bits (unchanged); shape as in section 10 |
 
 **`TAG_NODE` merge (native only).** `log_merge` is the ARCHITECTURE 1.11 rule (either empty side returns the other, else `(P2(TAG_NODE, d_a, d_b), n_a + n_b)`, `None` unless the output `n < 2^16`). `merge(seg(es[..2]), seg(es[2..]))` of the 6-entry ENC-2 log equals `enc2.node(2,4)` with `n = 6`; the empty identities hold; segment order and tree shape change `d`; `n = 2^16 - 1` is accepted and `2^16` refused. The in-circuit merge in `L` is not built: `L` takes the tree shape as witness (ARCHITECTURE 1.11), and the form of that witness is a design choice.
 
@@ -204,3 +204,21 @@ Code: openvm `e3-iface` 95ed47b (`lverify.rs::gen_r_check`, `iface.rs::{anchor_t
 | `e3-rreplay` (`gen_r_check`, f725b15) | Q1 zero tests and mode bit, Q2 entries and offsets, Q3 replay and the entry-5 `CSwap`: SOUND; Q4 limbs: SOUND with the reader (the tape alone takes limbs mod r; D-9); Q5: COMPLETE; Q6: UNSOUND without a `j`, `k` rule (`j = 0`, `j > k`, limb aliasing such as `j = (2^16, 0)`, `k = (0, 1)`) | 13 tests pass; `inv_sound_and_complete` and `inv_jk_range_strengthened` no violation; the Q6 property on the old check violated (`j = 6 > k = 2` at base 4); all 6 mutants caught |
 
 Defect found: Q6 of `e3-rreplay`, the missing `j`, `k` rule; fixed in 95ed47b (above). No defect in `OnionAir`.
+
+**Round 2** (skills readable; reports in `qa/gemini-quint/<area>/r2/`). The lead ran every command.
+
+| Lane | Verdicts | Lead runs |
+|---|---|---|
+| `e3-rreplay` r2 (the built `j`, `k` rule, 95ed47b; `log_merge`) | Q1 `r16` range, Q2 order and wrap mod p (both `c`), Q3 tape equals reader, Q5 `log_merge` equals the spec rule, Q6 no regression: SOUND; Q4: COMPLETE (every `1 <= j <= k < 2^32`, ORD) | 10 tests pass (exhaustive limb and borrow enumeration); `inv_sound_and_complete` 5,000 samples no violation; 5 mutants (`mut_no_r16_jhi`, `mut_borrow_not_bit`, `mut_order_unmasked`, `mut_j_ge_1_dropped`, `mut_plus_c_in_hi`) caught |
+| `e3-onion` r2 (audit of the round-1 model against `eval`, an adversarial trace generator not derived from honest traces) | all questions SOUND, COMPLETE; round 1's stronger-than-Rust `val_mult >= 0` side condition removed with no attack found; `x[O_E] * y[O_OFF] = 0` shown redundant (kept as defence in depth) | 21 tests pass (TypeScript backend; the Rust evaluator crashed); `SOUND_AND_COMPLETE` and `TAMPER_SOUND` no violation; the non-vacuity witness violated as expected (the generator reaches accepted adversarial traces); 12 mutants caught |
+
+Notes for the owner from round 2: an ordinary call keeps any 16-bit `j`, `k` words (not forced to 0); the node circuit that implements `log_merge` must take an `n = 0` statement only with `d = D_EMPTY` (a node obligation, not built in E3).
+
+## 13. E5 port: ENC-1 tag rule and the `SPONGE(3)` lane map (AFK changes, FOR OWNER CONFIRMATION)
+
+Asked by the coordinator after the E5 wrap-side ENC vectors (E5 RESULTS sections 6j and 6k).
+
+1. **ENC-1 tag values (rule P-1).** Already in E3 since openvm 6d70a45 (J7): `tag_fr` is the ASCII name as a little-endian `u128`, and the `DIGEST` parameter is the tag index 0 to 3 in PR 3.6 order (`SHK_PROGC`, `SHK_LOCK`, `SHK_INPUT`, `SHK_OUTCOME`); `L_Fr` (`gen_r_check`) uses these constants, so J5 on f725b15 and 95ed47b already proved with them. The placeholder `k + 1` values were those of 2f09caf. New test (openvm 52a538c, `enc1_all_vectors`, MEASURED pass): every ENC-1 vector of `research/sherlock-enc-fp3-20261112/VECTORS.txt` that `iface` computes equals the pinned value: the 4 tag values, `digest_1to8` under each of the 4 tags, `d2_progc`, `C_P`, `d2_lock_j1`, `A_1` (plus `input_pub` in the older test).
+2. **Lane map with `SPONGE(3)` (D-9).** The reader accepted `DIGEST` or any `SPONGE` since 6d70a45; openvm 099d6d8 narrows it to `DIGEST` or `SPONGE(3)` and refuses every other op, `SPONGE(n)` with `n != 3` included. Test `lane_map_sponge_entries` (MEASURED pass): the two `claim_pub` lanes of a full-V run come from entry 3 and equal its output; pairs pointing at a `PUB`, `PERM`, `H2` or `SPONGE(n != 3)` entry, a lane mapped twice, and a changed `SPONGE(3)` output are refused. The tape of `L_Fr` does not change (the reader is plain Rust), so no re-prove is needed.
+
+Commits for the E5 port (openvm `e3-iface`, not pushed): 6d70a45 (ENC-1 `tag_fr`, `TAG_NAMES`, DIGEST tag indices, the replay of `R`), 52a538c (the ENC-1 vector test), 099d6d8 (the `SPONGE(3)` lane map). A Gemini Quint lane on the lane map (`e3-lanemap`) is running.
