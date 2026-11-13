@@ -11,8 +11,12 @@
 //! Part B, `pv` binding and lane map. `enc_wrap` (openvm `sherlock-wrap-export`) builds `L`
 //! words whose `pv` is the pinned ENC-2 log and checks its `P2` fingerprint against the
 //! pinned one. Its lane map is non-empty: lane 2 takes `C_P` from `DIGEST(0)`, lane 3
-//! `input_pub` from `DIGEST(2)`, and lane 1 carries `PUB(1)`. The wrap decoder must give
-//! the stock D-9 verdict and statement on every case, and `MockProver` runs on 3 of them.
+//! `input_pub` from `DIGEST(2)`, and lane 1 carries `PUB(1)`. At E3 9539418 the stock decoder
+//! also checks `R` (plan D-10), and the ENC-2 log is not an `R` log (entry 1 is `H2`): stock
+//! refuses every case at `R entry 1`, and so must the wrap. The lane map is then checked
+//! against the stock lane-map step alone (`apply_lane_map`): its verdict and statement equal
+//! the wrap's lane-map refusals and statement; a changed mapped `DIGEST` output is refused by
+//! the wrap's replay of the mapped entry. `MockProver` refuses the honest vector.
 use std::{collections::HashMap, fs, io};
 
 use ff::{Field, PrimeField};
@@ -336,6 +340,8 @@ struct Case {
     words: Vec<F>,
     ok: bool,
     statement: Option<Vec<F>>,
+    lane_map_ok: Option<bool>,
+    lane_map_statement: Option<Vec<F>>,
 }
 
 fn hexes(v: &J) -> Vec<F> {
@@ -371,6 +377,8 @@ fn i9_enc_pv_lane_map() {
             words: hexes(&c["words"]),
             ok: c["ok"].as_bool().unwrap(),
             statement: c["statement"].as_array().map(|_| hexes(&c["statement"])),
+            lane_map_ok: c["lane_map_ok"].as_bool(),
+            lane_map_statement: c["lane_map_statement"].as_array().map(|_| hexes(&c["lane_map_statement"])),
         })
         .collect();
     let honest = cs.iter().find(|c| c.name == "honest").unwrap();
@@ -388,36 +396,37 @@ fn i9_enc_pv_lane_map() {
         }
     }
     assert_eq!(words[114..d.call_at()].to_vec(), pv, "pv words");
+    let lane_map_fail = |f: &Vec<String>| f.iter().any(|x| x.contains("lane map") && !x.contains("native replay"));
+    let mut n_lm = 0;
     for c in &cs {
         let (fails, s) = native_decode(&sh, &c.words);
         let ok = fails.is_empty();
         println!("E5ENC decode {}: stock {} wrap {} {:?}", c.name, c.ok, ok, fails.iter().take(2).collect::<Vec<_>>());
         assert_eq!(ok, c.ok, "verdict of {}", c.name);
-        if let Some(st) = &c.statement {
-            assert_eq!(&s, st, "statement of {}", c.name);
+        assert!(!c.ok && c.statement.is_none() && fails.iter().any(|f| f == "R entry 1"), "{}: R entry 1", c.name);
+        if let Some(lm) = c.lane_map_ok {
+            assert_eq!(!lane_map_fail(&fails), lm, "lane-map step of {}", c.name);
+            if let Some(st) = &c.lane_map_statement {
+                assert_eq!(&s, st, "lane-map statement of {}", c.name);
+            }
+            n_lm += 1;
         }
     }
-    let st = honest.statement.clone().unwrap();
+    let st = honest.lane_map_statement.clone().unwrap();
     assert_eq!(st[2], hx(&pin.p["enc1.C_P"]));
     assert_eq!(st[3], hx(&pin.p["enc1.input_pub"]));
     assert_eq!(st[1], F::from(0x1234u64));
-    // No DIGEST replay in D-9 (E3 J6 open): a changed logged C_P decodes, into another lane 2.
+    // The mapped DIGEST(0) is replayed: a changed logged C_P is refused (stock: at its replay).
     let dc = cs.iter().find(|c| c.name == "digest_output_changed").unwrap();
-    assert!(dc.ok && dc.statement.as_ref().unwrap()[2] != st[2], "a changed DIGEST output changes the statement");
+    let (fails, _) = native_decode(&sh, &dc.words);
+    assert!(fails.iter().any(|f| f == "lane map entry: native replay"), "mapped DIGEST replay");
     let k = 18;
     let rel = DecodeRelation { sh: sh.clone() };
-    let run = |w: &Vec<F>, pi: &Vec<F>| {
-        let c = MidnightCircuit::new(&rel, Value::known(pi.clone()), Value::known(w.clone()), Some(k));
-        MockProver::<F>::run(&c, vec![vec![], pi.clone()]).unwrap().verify().is_ok()
-    };
-    assert!(run(&honest.words, &st), "honest");
-    for name in ["pub_lane_changed", "lane_map_to_sponge"] {
-        let c = cs.iter().find(|c| c.name == name).unwrap();
-        let (_, s) = native_decode(&sh, &c.words);
-        assert!(!run(&c.words, &s), "{name} refused");
-    }
+    let (_, s) = native_decode(&sh, &honest.words);
+    let c = MidnightCircuit::new(&rel, Value::known(s.clone()), Value::known(honest.words.clone()), Some(k));
+    assert!(MockProver::<F>::run(&c, vec![vec![], s]).unwrap().verify().is_err(), "honest ENC refused (not an R log)");
     println!(
-        "E5ENC decode: {} cases equal stock; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; MockProver honest OK, pub_lane_changed and lane_map_to_sponge refused",
+        "E5ENC decode: {} cases equal stock (all refused at R entry 1); lane-map step equal on {n_lm} cases; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; mapped DIGEST replay refuses a changed C_P; MockProver refuses the honest vector",
         cs.len()
     );
 }

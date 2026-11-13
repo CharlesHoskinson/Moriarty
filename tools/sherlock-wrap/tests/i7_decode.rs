@@ -1,7 +1,8 @@
 //! I7: the E3 map (the D-9 decoder) over `Alg`. Native verdict equal to the stock verdict on
 //! every exported case (`lfr-e3-decode.json`, written by `lfr_e3`), the honest statement equal
 //! to the stock statement; then the gadget decoder alone: cost model and `MockProver` on the
-//! honest case, a `PUB` mismatch and a non-canonical lane.
+//! honest case, a `PUB` mismatch, a non-canonical lane and the 9539418 lane-map and `R`
+//! refusals. Cases named `open_replay_*` are the open divergence (stock replays every entry).
 use std::fs;
 
 use midnight_proofs::{circuit::Value, dev::MockProver};
@@ -21,6 +22,8 @@ struct Case {
     words: Vec<F>,
     ok: bool,
     statement: Option<Vec<F>>,
+    /// The stock lane-map step alone (`apply_lane_map`), when the case records it.
+    lane_map_ok: Option<bool>,
 }
 
 fn hexes(v: &J) -> Vec<F> {
@@ -46,6 +49,7 @@ fn cases() -> (Dims, Vec<Case>) {
             words: hexes(&c["words"]),
             ok: c["ok"].as_bool().unwrap(),
             statement: c["statement"].as_array().map(|_| hexes(&c["statement"])),
+            lane_map_ok: c["lane_map_ok"].as_bool(),
         })
         .collect();
     (d, cs)
@@ -69,16 +73,30 @@ fn i7_decode_native_equals_stock() {
     let (d, cs) = cases();
     let honest = cs.iter().find(|c| c.name == "honest").unwrap();
     let sh = DecodeShape { d, pre_hash: honest.words[0] };
+    let mut open = 0;
     for c in &cs {
         let (fails, s) = native(&sh, &c.words);
         let ok = fails.is_empty();
         println!("E5DECODE {}: stock {} native {} {:?}", c.name, c.ok, ok, fails.iter().take(3).collect::<Vec<_>>());
+        if c.name.starts_with("open_replay_") {
+            // Open (E3 J6 in the wrap): stock replays every entry, the wrap replays R and the
+            // mapped entries only. A changed output of another entry: stock refuses, wrap accepts.
+            assert!(!c.ok && ok, "open divergence of {}", c.name);
+            open += 1;
+            continue;
+        }
         assert_eq!(ok, c.ok, "verdict of {}", c.name);
         if let Some(st) = &c.statement {
             assert_eq!(&s, st, "statement of {}", c.name);
         }
+        if let Some(lm) = c.lane_map_ok {
+            let twice = fails.iter().any(|f| f.contains("lane mapped twice"));
+            assert_eq!(!lm, twice, "lane-map step of {}", c.name);
+            println!("E5DECODE {}: stock lane-map step {lm}, wrap lane mapped twice {twice}", c.name);
+        }
     }
-    println!("E5DECODE cases {} all equal", cs.len());
+    assert!(open >= 1);
+    println!("E5DECODE cases {} equal, {open} open (replay outside R and the lane map)", cs.len() - open);
 }
 
 #[test]
@@ -99,7 +117,7 @@ fn i7_decode_gadget_mock() {
     let mut bad = st.clone();
     bad[1] += F::from(1u64);
     assert!(!run(&honest.words, &bad), "changed statement");
-    for name in ["pub_lane_changed", "lane_not_canonical"] {
+    for name in ["pub_lane_changed", "lane_not_canonical", "lane_map_sponge_not_3", "lane_map_twice", "lane_map_not_u16", "r_anchor_output_changed", "chunk_j_0"] {
         let c = cs.iter().find(|c| c.name == name).unwrap();
         assert!(!c.ok);
         let (_, s) = native(&sh, &c.words);
