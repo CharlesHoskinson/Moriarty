@@ -1,0 +1,13 @@
+// FP-3 fact 2 evidence: the acceptRun entry of the LEDGER CONTRACT kit sketch
+// (FD/ARCHITECTURE.md, kit LEDGER CONTRACT), compiled to read its public-input lanes.
+// Not the contract of N-11: no anchor prologue, no acceptCollection (FP-3 fact 3 open).
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export ledger runs: Map<Field, Field>;   // claim_pub -> outcome_pub
+
+export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}

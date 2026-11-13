@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: SHP-001 Join is total at any depth with no claim count
-JOIN SHALL compute `set_root = H(SHK_SET_JOIN, l.set_root, r.set_root)` with no counter and no range check, at any depth (R-5, OD-2 OWNER to confirm). A claim MAY be reused in two branches. One key set SHALL prove a chain, a balanced tree and a DAG with equal final proof size.
+JOIN SHALL compute `set_root = H(SHK_SET_JOIN, l.set_root, r.set_root)` with no counter and no range check, at any depth (R-5, AD-2 OWNER to confirm). A claim MAY be reused in two branches. One key set SHALL prove a chain, a balanced tree and a DAG with equal final proof size.
 
 #### Scenario: Diamond reuse at depth 8 or more
 - **WHEN** one claim feeds two consumers at depth >= 8 and the branches are joined
@@ -35,7 +35,7 @@ MERGE-WORK SHALL take two enabled prior SEG proofs plus `k >= 1` real owner step
 
 #### Scenario: Two nodes offered as evidence
 - **WHEN** a run of two successive nodes is offered as evidence for MERGE-WORK
-- **THEN** the acceptance check refuses it (`graph_two_nodes_for_merge_work`), and if X7 does not fit 950,000 rows GP-4 stays incomplete and the owner decides
+- **THEN** the acceptance check refuses it (`graph_two_nodes_for_merge_work`), and if X7 does not fit the shape bounds of the internal set GP-4 stays incomplete and the owner decides
 
 ### Requirement: SHP-004 Leaf, foreign and disabled children have canonical shape encodings
 A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its authenticated lanes. A FOREIGN child SHALL forward `H(SHK_SHAPE, T_FOREIGN, fclaim_d)`. A disabled slot SHALL have the fixed non-zero constant `SHAPE_OFF = H(SHK_SHAPE, T_OFF, 0)`.
@@ -43,3 +43,17 @@ A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its 
 #### Scenario: Free leaf shape
 - **WHEN** a leaf child's shape word is not derived from its lanes, or a disabled slot's shape is not `SHAPE_OFF`
 - **THEN** the node is unsatisfiable (mutants `graph_leaf_shape_free`, `graph_disabled_slot_shape_not_off`)
+
+### Requirement: SHP-005 Each output type has a fixed `(out_a, out_b)` pair
+`(out_a, out_b)` SHALL be `(h_lo, h_hi)` for a SEG output, `(set_root, 0)` for a SET, `(chain_d, cover_root)` for a DL, `(set_root, sub_root)` for a SUB and `(0, 0)` for an FV, AW or VW output. A FOREIGN SET at FV completion, and an `ADM` or `VIEW` SET at the completion of ADMIT-WORK or VIEW-WORK, SHALL use the SET rule `(set_root, 0)` (`FD/ARCHITECTURE.md` kit GP-4 hook). `fv_state_d` SHALL NOT enter `shape_d`.
+
+#### Scenario: FV state in the shape
+- **WHEN** an FV output has `(out_a, out_b)` other than `(0, 0)`, for example `fv_state_d` in `out_a`
+- **THEN** the node is unsatisfiable (mutant `shape_fv_state_in_shape`)
+
+### Requirement: SHP-006 The inline kernel has one encoding of the machine relation
+The inline kernel SHALL be built from the same kit `configure` and `assign` functions as the leaf (CORE, DEC, ALU, RANGE, HASH, STACKS, MEM, the memory backend, VALUE DIGEST, INIT), instantiated in the node's constraint system. A separate node emitter SHALL NOT be used. If the kernel does not fit the node gate, the owner SHALL decide under N-6 and GP-4 SHALL NOT be narrowed.
+
+#### Scenario: Second encoding of the machine relation
+- **WHEN** an inline kernel does not instantiate the leaf kits' `configure` and `assign` functions, for example an emitter checked only against differential vectors
+- **THEN** the build check `graph_inline_kernel_separate_encoding` refuses it

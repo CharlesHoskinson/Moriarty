@@ -8,7 +8,7 @@ The MEM window SHALL serve each new active window row at the next dense address,
 - **THEN** the correct circuit refuses the witness (mutants `address_reuse_window_row`, `close_advances_len`, `append_value_mismatch`), and P8 (`appendCells_len`, `canon_len`, proved in C3) holds
 
 ### Requirement: MEM-002 Both lengths are below `2^(TOP+3)` and TOP binds after the step counter
-MEM SHALL decompose `len_pre` and `len_post` into `TOP + 3` boolean bits. The tree depth SHALL satisfy `len_0 + a e 2^64 <= 2^(TOP+3) - 1` with `a = 3` (M-2). The working value SHALL be TOP = 63, gated on OD-1 (OWNER) and on `e = 1` from OD-11. A memory bound below the step bound SHALL NOT be an acceptance path.
+MEM SHALL decompose `len_pre` and `len_post` into `TOP + 3` boolean bits. The tree depth SHALL satisfy `len_0 + a e 2^64 <= 2^(TOP+3) - 1` with `a = 3` (M-2). The working value SHALL be TOP = 63, gated on AD-1 (OWNER) and on `e = 1` from AD-11. A memory bound below the step bound SHALL NOT be an acceptance path.
 
 #### Scenario: Counter wrap
 - **WHEN** `len` wraps at `2^64` or wraps in the field
@@ -52,14 +52,14 @@ A leaf with `W` flush units SHALL accept at most `8 W + 7 - r_pre` new records, 
 
 #### Scenario: Nine to fifteen appends at W = 1
 - **WHEN** a `W = 1` leaf appends 9, 12 or `15 - r_pre` records at each `r_pre`
-- **THEN** MockProver accepts it with the same post state as smaller leaves (positive `mem_w1_leaf_9_to_15_appends`)
+- **THEN** the constraint checker accepts it with the same post state as smaller leaves (positive `mem_w1_leaf_9_to_15_appends`)
 
 #### Scenario: Leaf sum exceeds the window
 - **WHEN** steps that each fit sum to `16 - r_pre` appends in one `W = 1` leaf, or a `LeafShape` has `8 W` below the per-rule maximum
 - **THEN** the leaf is unsatisfiable (mutant `mem_leaf_sum_exceeds_window`) and configuration refuses the shape (`mem_shape_step_exceeds_window`), and O15 and O47 are open
 
 ### Requirement: MEM-007 One arena, hidden by the interface
-The MEM interface SHALL hide the arena count. The built configuration SHALL be one arena with kind-tagged records (M-1, decided by X2). The record layout SHALL be three-word records at consecutive addresses (OD-11), frozen before the CORE rule families start.
+The MEM interface SHALL hide the arena count. The built configuration SHALL be one arena with kind-tagged records (M-1, decided by X2). The record layout SHALL be three-word records at consecutive addresses (AD-11), frozen before the CORE rule families start.
 
 #### Scenario: Arena count behind the interface
 - **WHEN** the MEM harness runs with one arena and with four arenas

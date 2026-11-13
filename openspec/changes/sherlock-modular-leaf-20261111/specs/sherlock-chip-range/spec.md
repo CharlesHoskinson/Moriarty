@@ -9,7 +9,7 @@ The RANGE port SHALL take a source cell and a static width and SHALL return the 
 
 #### Scenario: Boundary values accepted
 - **WHEN** the values 0, 1, `2^64` and `2^128 - 1` are checked at 128 bits, the 64-bit boundaries at 64 bits, and small widths at their width
-- **THEN** MockProver accepts each (positives `range_128_boundaries`, `range_64_boundaries`, `range_small_widths`)
+- **THEN** the constraint checker accepts each (positives `range_128_boundaries`, `range_64_boundaries`, `range_small_widths`)
 
 ### Requirement: RNG-002 The decomposition is tied to the source cell
 The limb decomposition SHALL reconstruct exactly the source cell through a running sum. The top limb SHALL be bounded to the exact width. Every limb SHALL be in the table.

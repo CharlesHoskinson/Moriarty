@@ -1,0 +1,303 @@
+//! ENC and FP-3 vectors on the `L_Fr` machine AIRs (Sherlock loop items ENC and FP3, branch
+//! `enc-fp3`). The pinned values come from the Rust reference of the stark-backend branch
+//! `enc-fp3` (`crates/stark-sdk/tests/enc_vectors.rs`, `fp3_closure.rs`; Moriarty
+//! `research/sherlock-enc-fp3-20261112/VECTORS.txt` and `fp3-closure/VALUES.txt`).
+//!
+//! Each case is a tape program: the T-FS `L` transcript cases (u = 3) on [`TapeTranscript`],
+//! the public digests `PoseidonFr_4(tag, pack(d2))` as one `Perm` over `[tag, pack, cap(4, 2)]`,
+//! and `claim_pub` as the `u = 0` sponge (`transientHash`) over the three digests. Every output
+//! is checked on the executed tape and by an `AssertEq` against the pinned constant, and the
+//! whole tape proves and verifies on the machine AIRs.
+
+use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::{cap_fixed, Bls12381Fr, U_TRANSCRIPT};
+use p3_field::PrimeCharacteristicRing;
+use sherlock_lfr::{
+    fr::fr_from_big,
+    machine::Machine,
+    tape::{Addr, Tape, Val, ValKind},
+    testing::{prove_verify_range, small_params},
+    transcript::TapeTranscript,
+};
+
+type Fr = Bls12381Fr;
+
+fn fr_hex(s: &str) -> Fr {
+    let b = num_bigint::BigUint::parse_bytes(s.trim_start_matches("0x").as_bytes(), 16).unwrap();
+    fr_from_big(&b)
+}
+
+fn tag_fr(name: &str) -> Fr {
+    let mut b = [0u8; 16];
+    b[..name.len()].copy_from_slice(name.as_bytes());
+    Fr::from_u128(u128::from_le_bytes(b))
+}
+
+enum S {
+    Obs(u64),
+    Commit(u64),
+    Sample,
+}
+
+struct Case {
+    name: &'static str,
+    steps: Vec<S>,
+    want: Vec<u64>,
+}
+
+fn obs(r: std::ops::RangeInclusive<u64>) -> Vec<S> {
+    r.map(S::Obs).collect()
+}
+fn with(mut v: Vec<S>, tail: Vec<S>) -> Vec<S> {
+    v.extend(tail);
+    v
+}
+
+/// The T-FS `L` cases of `VECTORS.txt` (`g3.L.*`).
+fn l_cases() -> Vec<Case> {
+    use S::*;
+    let mut v = vec![
+        Case {
+            name: "samples11",
+            steps: (0..11).map(|_| Sample).collect(),
+            want: vec![
+                1363105379, 892007186, 735613566, 1339319426, 1207660350, 392318480, 119967817,
+                878318772, 1931888973, 1626463949, 844166059,
+            ],
+        },
+        Case {
+            name: "obs16_sample2",
+            steps: with(obs(1..=16), vec![Sample, Sample]),
+            want: vec![1428490671, 1363299102],
+        },
+        Case {
+            name: "obs3_commit_sample2",
+            steps: vec![Obs(1), Obs(2), Obs(3), Commit(99), Sample, Sample],
+            want: vec![275738974, 544771868],
+        },
+        Case {
+            name: "sample_obs_sample",
+            steps: vec![Sample, Obs(5), Sample],
+            want: vec![1363105379, 1479302139],
+        },
+        Case {
+            name: "prehash_sample",
+            steps: vec![Commit(0xabcdef), Sample],
+            want: vec![1136280182],
+        },
+        Case {
+            name: "obs9_commit_sample",
+            steps: with(obs(1..=9), vec![Commit(77), Sample]),
+            want: vec![102412516],
+        },
+    ];
+    let k_want = [
+        1036001612, 975083760, 1831231216, 1387334005, 511085693, 102922085, 1743404485, 468850959,
+    ];
+    for k in 1..=8u64 {
+        v.push(Case {
+            name: "obsK_sample",
+            steps: with(obs(1..=k), vec![Sample]),
+            want: vec![k_want[k as usize - 1]],
+        });
+    }
+    v
+}
+
+struct Prog {
+    tape: Tape,
+    inputs: Vec<Val>,
+    bb_checks: Vec<(String, Addr, u64)>,
+    fr_checks: Vec<(String, Addr, Fr)>,
+}
+
+impl Prog {
+    fn bb_in(&mut self, w: u64) -> Addr {
+        let a = self.tape.input(ValKind::Bb);
+        self.inputs.push(Val::Bb([w, 0, 0, 0]));
+        a
+    }
+    fn fr_in(&mut self, x: Fr) -> Addr {
+        let a = self.tape.fr_input();
+        self.inputs.push(Val::Fr(x));
+        a
+    }
+    fn fr_check(&mut self, name: &str, a: Addr, want: Fr) {
+        let c = self.tape.fr_const(want);
+        self.tape.assert_eq(a, c);
+        self.fr_checks.push((name.into(), a, want));
+    }
+    /// `PoseidonFr_4(tag, pack(d2))`: one permutation of `[tag, pack, cap(4, 2)]`, output `r_0`.
+    fn pub_digest(&mut self, tag: &str, d2: &[u64; 8]) -> Addr {
+        let ws: Vec<Addr> = d2.iter().map(|&w| self.bb_in(w)).collect();
+        let x = self.tape.pack(&ws);
+        let t = self.tape.fr_const(tag_fr(tag));
+        let c = self.tape.fr_const(cap_fixed(4, 2));
+        self.tape.perm([t, x, c])[0]
+    }
+    /// `PoseidonFr_4(tag, x)` with `x` already packed.
+    fn pub_digest_fr(&mut self, tag: &str, x: Addr) -> Addr {
+        let t = self.tape.fr_const(tag_fr(tag));
+        let c = self.tape.fr_const(cap_fixed(4, 2));
+        self.tape.perm([t, x, c])[0]
+    }
+    /// `transientHash` of three values: the `u = 0` fixed-length sponge, capacity 3, two blocks.
+    fn sponge3(&mut self, a: Addr, b: Addr, c: Addr) -> Addr {
+        let cap = self.tape.fr_const(cap_fixed(0, 3));
+        let s = self.tape.perm([a, b, cap]);
+        let s0 = self.tape.fr_add(s[0], c);
+        self.tape.perm([s0, s[1], s[2]])[0]
+    }
+}
+
+fn build() -> Prog {
+    let mut p = Prog {
+        tape: Tape::default(),
+        inputs: vec![],
+        bb_checks: vec![],
+        fr_checks: vec![],
+    };
+    // (1) G3 / T-FS: the L transcript (u = 3) cases, one fresh transcript each.
+    for case in l_cases() {
+        let mut tt = TapeTranscript::new(&mut p.tape, U_TRANSCRIPT);
+        let mut outs = vec![];
+        for s in &case.steps {
+            match s {
+                S::Obs(w) => {
+                    let a = p.bb_in(*w);
+                    tt.observe(&mut p.tape, a);
+                }
+                S::Commit(x) => {
+                    let a = p.fr_in(Fr::from_u64(*x));
+                    tt.observe_commit(&mut p.tape, a);
+                }
+                S::Sample => outs.push(tt.sample(&mut p.tape)),
+            }
+        }
+        assert_eq!(outs.len(), case.want.len(), "{}", case.name);
+        for (i, (a, w)) in outs.iter().zip(&case.want).enumerate() {
+            p.bb_checks
+                .push((format!("g3.L.{} [{i}]", case.name), *a, *w));
+        }
+    }
+    // (2) ENC-1: the public digests of the run statement (enc1.* vectors).
+    let c_p = p.pub_digest(
+        "SHK_PROGC",
+        &[
+            520957427, 984145394, 1989647505, 623846375, 1856043986, 928030188, 771931842,
+            1420568668,
+        ],
+    );
+    p.fr_check(
+        "enc1.C_P",
+        c_p,
+        fr_hex("0x65f6874b0be5aaa5a42b2e3b6b94ee9adf10dad60d7eff1211c65e3331ff2994"),
+    );
+    let a1 = p.pub_digest(
+        "SHK_LOCK",
+        &[
+            721127855, 143940948, 962073650, 1915216605, 359226632, 630925463, 808849877, 370162181,
+        ],
+    );
+    p.fr_check(
+        "enc1.A_1",
+        a1,
+        fr_hex("0x37adc0f165135af5f670e5ba16a4d473c4a6ec42847cb53833acaecdb08e82a2"),
+    );
+    let inp = p.pub_digest(
+        "SHK_INPUT",
+        &[
+            1844765863, 1946263212, 480254560, 1610161683, 900750315, 731375867, 384171174,
+            1479089448,
+        ],
+    );
+    p.fr_check(
+        "enc1.input_pub",
+        inp,
+        fr_hex("0x675781f2fdaf30f1e06631db92a4806ee474b86159f82f31d650f648fb6fc555"),
+    );
+    let out = p.pub_digest(
+        "SHK_OUTCOME",
+        &[
+            526154039, 1594846096, 1669988065, 971873550, 747720088, 1215261023, 1984080422,
+            588103289,
+        ],
+    );
+    p.fr_check(
+        "enc1.outcome_pub",
+        out,
+        fr_hex("0x5eeb4e2b1dd1044fcbb1391358218509b3b3623b96682a5ec4ca8e71183ee5fe"),
+    );
+    // (3) FP-3: SHK_SET (index 5) over a packed set root, and claim_pub = SPONGE(3) over the
+    // three digests of run 0 of the 3-run collection (fp3-closure/VALUES.txt).
+    let root = p.fr_in(fr_hex(
+        "0x00b31ef4a19ecb72a9b7a90c7984f2d7a4ab5d4ab0a105f26934a8238805768f",
+    ));
+    let set_pub = p.pub_digest_fr("SHK_SET", root);
+    p.fr_check(
+        "coll.set_pub",
+        set_pub,
+        fr_hex("0x51826f857106bb167db3744fa9ec45ce0b99901a8707716cc2f7be485e71d962"),
+    );
+    let r0 = [
+        "0x25a506d195d2043784a3b10ac8a62ed37a262b9e5f0db732e17582baa37729e1",
+        "0x20da0efc8515aa3e25dd57e2fc0cbe1ff52cbdc4490cd83011c4861593946efb",
+        "0x57a4342f55c3327165c38fd599aa52f2911992f8695cf83cf6e0bbd1fb01e5b7",
+    ]
+    .map(fr_hex);
+    let [a, b, c] = r0.map(|x| p.fr_in(x));
+    let claim = p.sponge3(a, b, c);
+    p.fr_check(
+        "coll.run[0].claim_pub",
+        claim,
+        fr_hex("0x09cca21dd1663ea8ae00ee29adf93f834b47d71c987296ee9779cb1b387844f9"),
+    );
+    // (4) XC-3b: u0.h2(3, 5), the two-input transientHash.
+    let (x3, x5) = (p.fr_in(Fr::from_u64(3)), p.fr_in(Fr::from_u64(5)));
+    let cap = p.tape.fr_const(cap_fixed(0, 2));
+    let h2 = p.tape.perm([x3, x5, cap])[0];
+    p.fr_check(
+        "u0.h2(3,5)",
+        h2,
+        fr_hex("0x04f583ee7888baa926645fc6c1f5ec5828bf8cae159b3534dbb11016b56999fa"),
+    );
+    p
+}
+
+#[test]
+fn enc_fp3_vectors_on_machine_airs() {
+    let p = build();
+    let mem = p.tape.execute_vals(&p.inputs);
+    for (n, a, w) in &p.bb_checks {
+        assert_eq!(mem[*a as usize].unwrap().bb()[0], *w, "{n}");
+    }
+    for (n, a, w) in &p.fr_checks {
+        assert_eq!(mem[*a as usize].unwrap().fr(), *w, "{n}");
+    }
+    let m = Machine::new(&p.tape);
+    let (o, _) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
+    println!(
+        "ENC/FP-3 AIR vectors: {} transcript samples, {} Fr digests equal the pinned values; machine shape {:?}; {o:?}",
+        p.bb_checks.len(),
+        p.fr_checks.len(),
+        m.shape()
+    );
+    assert!(o.accepted(), "vector tape refused: {o:?}");
+
+    // A changed pinned constant is refused by the proof (AssertEq), not only by the host check.
+    let mut q = build();
+    let (_, a, w) = q.fr_checks[0].clone();
+    let bad = q.tape.fr_const(w + Fr::ONE);
+    q.tape.assert_eq(a, bad);
+    let (mem, failed) = q.tape.execute_checked(&q.inputs);
+    assert_eq!(
+        failed.len(),
+        1,
+        "the changed constant fails one assertion on the tape"
+    );
+    let m = Machine::new(&q.tape);
+    let (o, _) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
+    assert!(
+        !o.accepted(),
+        "a false pinned digest must be refused: {o:?}"
+    );
+}

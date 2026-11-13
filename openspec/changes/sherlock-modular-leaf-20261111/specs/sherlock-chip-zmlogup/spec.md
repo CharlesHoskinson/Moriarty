@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: ZML-001 Profile B is benchmark-only
-The ZmLogUp backend SHALL be built only behind a feature, and not before milestone M4 (L-5, OD-7). It SHALL NOT be described as supporting stop and resume of a run. It SHALL be listed as changing the leaf statement, the node, the seal and the continuation modules, and as replacing the `digest_inj` premise. It SHALL be offered only with the Horner boundary.
+The ZmLogUp backend SHALL be built only behind a feature, and not before milestone M4 (L-5, AD-7). It SHALL NOT be described as supporting stop and resume of a run. It SHALL be listed as changing the leaf statement, the node, the seal and the continuation modules, and as replacing the `digest_inj` premise. It SHALL be offered only with the Horner boundary.
 
 #### Scenario: Checkpoint resets the memory sum
 - **WHEN** a checkpoint resets the memory sum of a run
@@ -27,14 +27,14 @@ An active entry SHALL have a non-zero denominator with `(alpha - E) inv = 1`. An
 
 #### Scenario: Free inverse
 - **WHEN** the inverse is free, an inactive term is non-zero, an active denominator is zero, or a read entry is not charged
-- **THEN** MockProver refuses the witness (mutants `inverse_unconstrained`, `inactive_term_nonzero`, `zero_denominator_active`, `read_entry_not_charged`)
+- **THEN** the constraint checker refuses the witness (mutants `inverse_unconstrained`, `inactive_term_nonzero`, `zero_denominator_active`, `read_entry_not_charged`)
 
 ### Requirement: ZML-004 Causality and single writes
 Every read SHALL keep `addr < len_cur`, and every address SHALL be written once. The seal SHALL check that the run sum is zero.
 
 #### Scenario: Read balanced by a later write
 - **WHEN** a read is balanced by a later write, an address is written twice, or the seal does not check the sum
-- **THEN** MockProver refuses the witness (mutants `read_before_write_balanced_later`, `address_written_twice`, `seal_sum_unchecked`), and the Quint model `writeOnceLogup.qnt` keeps the precommit phase apart from the challenge phase
+- **THEN** the constraint checker refuses the witness (mutants `read_before_write_balanced_later`, `address_written_twice`, `seal_sum_unchecked`), and the Quint model `writeOnceLogup.qnt` keeps the precommit phase apart from the challenge phase
 
 ### Requirement: ZML-005 Imported tail rows are debits
 Every imported window row and every old-record provider row SHALL be a read entry of the balance, also when no request uses it. Backend capabilities SHALL be fixed at configuration time.

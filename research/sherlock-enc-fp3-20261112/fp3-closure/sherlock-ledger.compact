@@ -1,0 +1,33 @@
+// FP-3 closure: the LEDGER CONTRACT kit entries with the owner rulings of 2026-11-12
+// (FP3-1 (C), FP3-3 (a), claim_pub = transientHash(C_P, input_pub, outcome_pub)).
+// One settled-claim map for acceptRun and openClaim (cross-entry replay refused);
+// verified collection roots in a separate set. Anchor prologue omitted (N-11 kit).
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export ledger runs: Map<Field, Field>;        // claim_pub -> outcome_pub
+export ledger verified_roots: Set<Field>;     // set_pub of accepted collections
+export sealed ledger reg_root: Field;         // reg_pub of the registered template
+
+constructor(reg: Field) {
+  reg_root = disclose(reg);
+}
+
+export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}
+
+export circuit acceptCollection(reg_pub: Field, set_pub: Field): [] {
+  assert(reg_root == disclose(reg_pub), "other template");
+  assert(!verified_roots.member(disclose(set_pub)), "collection already accepted");
+  verified_roots.insert(disclose(set_pub));
+}
+
+export circuit openClaim(set_pub: Field, c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  assert(verified_roots.member(disclose(set_pub)), "collection not accepted");
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}

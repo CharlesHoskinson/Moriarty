@@ -20,14 +20,14 @@ ALU SHALL range-check `x`, `y`, `z` and every internal witness below `2^128` ins
 
 #### Scenario: Boundary vectors
 - **WHEN** 0, 1, `2^64 - 1`, `2^64` and `2^128 - 1` are used for every op
-- **THEN** MockProver accepts each (positive `alu_boundary_vectors`), and an unranged output is refused (mutant `alu_output_range_missing`)
+- **THEN** the constraint checker accepts each (positive `alu_boundary_vectors`), and an unranged output is refused (mutant `alu_output_range_missing`)
 
 ### Requirement: ALU-003 Overflow is provable with flag 1
 An overflowing ADD or MUL SHALL be provable with `flag = 1`, so that the outcome `Rejected(10)` stays provable (L-7). The multiply SHALL keep the high half and SHALL have no field residue.
 
 #### Scenario: Honest overflow
 - **WHEN** an overflowing ADD or MUL is proved with `flag = 1`
-- **THEN** MockProver accepts it (the completeness check `alu_overflow_unprovable` passes)
+- **THEN** the constraint checker accepts it (the completeness check `alu_overflow_unprovable` passes)
 
 #### Scenario: Overflow hidden
 - **WHEN** an overflowing product is offered with `flag = 0`, the C1 term overflows, or a field residue replaces the product

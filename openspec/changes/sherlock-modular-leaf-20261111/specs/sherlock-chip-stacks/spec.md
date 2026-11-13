@@ -24,7 +24,7 @@ FRAMES and TASKS SHALL be hash-chain stacks with a cached top. One `StackStep` p
 
 #### Scenario: Count 0 to 1 to 0
 - **WHEN** a stack goes from `count` 0 to 1 to 0, and a stack at `count = 1` has `below = EMPTY`
-- **THEN** MockProver accepts both leaves, the first with no hash (the count 0-1-0 positive of the kit, and positive `stack_count_one_below_empty`)
+- **THEN** the constraint checker accepts both leaves, the first with no hash (the count 0-1-0 positive of the kit, and positive `stack_count_one_below_empty`)
 
 ### Requirement: STK-003 A restored record is the record spilled at that depth
 A pop SHALL restore exactly the record that was spilled at that depth, bound through a depth-indexed chain hash. A push SHALL spill the old top, and a rewrite SHALL NOT spill.
@@ -35,7 +35,7 @@ A pop SHALL restore exactly the record that was spilled at that depth, bound thr
 
 #### Scenario: Across a leaf boundary
 - **WHEN** nested push, rewrite and pop run on both stacks, also across a leaf boundary
-- **THEN** MockProver accepts each leaf, and P6 (`chainHash_inj`, proved in C3) is cited only as a lemma on whole lists, not as the cached-top protocol
+- **THEN** the constraint checker accepts each leaf, and P6 (`chainHash_inj`, proved in C3) is cited only as a lemma on whole lists, not as the cached-top protocol
 
 ### Requirement: STK-004 Frame and task chains are domain separated
 The FRAMES chain and the TASKS chain SHALL use distinct hash domains from the frozen registry. STACKS SHALL export `frame_count`, `task_count`, `frames_below`, `tasks_below` and the cached tops to CORE, BOUNDARY COMMITMENT and INIT.
