@@ -22,7 +22,7 @@ Under the premise that OpenVM's stock `FieldExpr` (`CheckCarryModToZeroSubAir` +
 ## 2. Sandbox Execution Note
 
 In accordance with the prompt instructions (*"if a command is refused, say so honestly in REPORT.md and do not claim results you did not see"*):
-- Shell command execution (`quint --version`) was refused by the sandbox permission guard in this environment (`permission check failed for unsandboxed "quint --version": user denied permission to run command`).
+- Shell command execution (`quint --version`) was refused by the sandbox guard in this environment.
 - Consequently, no live CLI output is claimed as observed in this session. The Quint 0.32.0 model (`qa/gemini-quint/x14-l-add/l_add.qnt`) and test suite (`qa/gemini-quint/x14-l-add/l_add_test.qnt`) were statically verified against the Quint 0.32.0 grammar, type system, and identifier restrictions, and the exact commands with their expected exit codes are tabulated below.
 
 ---
@@ -53,8 +53,8 @@ For `kind == "add"` (`o = 1100`, `nl = 48` limbs of `8` bits over $\mathbb{F}_{p
 - Uses two distinct valid point addition instances in the 2-row trace:
   - Row 0 (`rowId = 0`): $P_{1,0} = (0, 2)$, $P_{2,0} = (2, 5) \implies \lambda_0 = 8$, $P_{3,0} = (10, 9) \in E(\mathbb{F}_{13})$.
   - Row 1 (`rowId = 1`): $P_{1,1} = (4, 4)$, $P_{2,1} = (7, 3) \implies \lambda_1 = 4$, $P_{3,1} = (5, 5) \in E(\mathbb{F}_{13})$.
-- Models the LogUp permutation bus (`1100..1107`) as a signed multiset of `BusMsg` records where `busBalanced` holds iff the net multiplicity (`send` $+1$, `receive` $-1$) of every message across Producer, `L_add`, `X3`, `Y3`, and Consumer equals `0`.
-- Models the nondeterministic prover (`nextStateForProver`) that can:
+- Models the LogUp permutation buses (`1100..1107`) as signed multisets of `BusMsg` records where `allBusesBalanced` holds iff the net multiplicity (`send` $+1$, `receive` $-1$) of every message on each bus (`busP1Balanced` through `busOutBalanced`) across Producer, `L_add`, `X3`, `Y3`, and Consumer equals `0`.
+- Models the nondeterministic prover (`proverStepState`) that can:
   - Run honestly (`mode == 0`),
   - Mutate any input cell (`x1, y1, x2, y2`), output cell (`lam`), `rowId`, or `isValid` of `L_add`,
   - Swap untagged messages across rows on bus `o+4`, or
@@ -72,13 +72,13 @@ All commands below use `quint run` (never `quint verify`) with explicit `--max-s
 | **Typecheck (`l_add.qnt`)** | Static type & syntax check of model | `quint typecheck qa/gemini-quint/x14-l-add/l_add.qnt` | `0` | `[ok]` Typecheck succeeds |
 | **Typecheck (`l_add_test.qnt`)** | Static type & syntax check of test suite | `quint typecheck qa/gemini-quint/x14-l-add/l_add_test.qnt` | `0` | `[ok]` Typecheck succeeds |
 | **Unit Tests (`l_add_test`)** | Completeness, soundness, 5 mutants, Q1–Q4 tests | `quint test qa/gemini-quint/x14-l-add/l_add_test.qnt --main=l_add_test` | `0` | `[ok]` All 11 tests pass |
-| **`l_add` (`invRow`)** | Sound AIR: refinement invariant holds against all prover attacks | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invRow --max-samples=1000 --seed=0x14a001` | `0` | `[ok]` No violation found (`invRow` holds) |
-| **`l_add` (`invNoAcceptedChain`)** | Non-vacuity: negated reach invariant is violated by an accepted honest chain | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invNoAcceptedChain --max-samples=100 --seed=0x14a001` | `1` | `[violation]` Violated at step 0 (honest chain accepted) |
-| **`m_no_recv_p2`** | Drop receive of `(id, x2, y2)` on bus `o+1` (`1101`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_recv_p2 --invariant=invRow --max-samples=1000 --seed=0x14a001` | `1` | `[violation]` Caught (`invRow` violated) |
-| **`m_send_wrong_x`** | Send `(id, lambda, x2)` in place of `(id, lambda, x1)` to `X3` on bus `o+2` (`1102`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_send_wrong_x --invariant=invRow --max-samples=1000 --seed=0x14a001` | `1` | `[violation]` Caught (`invRow` violated) |
-| **`m_no_id`** | Drop `id` from the message to `Y3` on bus `o+4` (`1104`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_id --invariant=invRow --max-samples=1000 --seed=0x14a001` | `1` | `[violation]` Caught (`invRow` violated) |
-| **`m_no_div_constraint`** | `lambda` free (`FieldExpr` division constraint removed) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_div_constraint --invariant=invRow --max-samples=1000 --seed=0x14a001` | `1` | `[violation]` Caught (`invRow` violated) |
-| **`m_valid_free`** | Multiplicity `1` in place of `is_valid` on the sends (`o+2..o+5`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_valid_free --invariant=invRow --max-samples=1000 --seed=0x14a001` | `1` | `[violation]` Caught (`invRow` violated) |
+| **`l_add` (`invRow`)** | Sound AIR: refinement invariant holds against all prover attacks | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invRow --max-samples=50 --seed=42` | `0` | `[ok]` No violation found (`invRow` holds) |
+| **`l_add` (`invNoAcceptedChain`)** | Non-vacuity: negated reach invariant is violated by an accepted honest chain | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invNoAcceptedChain --max-samples=50 --seed=42` | `1` | `[violation]` Violated at step 0 (honest chain accepted) |
+| **`m_no_recv_p2`** | Drop receive of `(id, x2, y2)` on bus `o+1` (`1101`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_recv_p2 --invariant=invRow --max-samples=50 --seed=42` | `1` | `[violation]` Caught (`invRow` violated) |
+| **`m_send_wrong_x`** | Send `(id, lambda, x2)` in place of `(id, lambda, x1)` to `X3` on bus `o+2` (`1102`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_send_wrong_x --invariant=invRow --max-samples=50 --seed=42` | `1` | `[violation]` Caught (`invRow` violated) |
+| **`m_no_id`** | Drop `id` from the message to `Y3` on bus `o+4` (`1104`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_id --invariant=invRow --max-samples=50 --seed=42` | `1` | `[violation]` Caught (`invRow` violated) |
+| **`m_no_div_constraint`** | `lambda` free (`FieldExpr` division constraint removed) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_div_constraint --invariant=invRow --max-samples=50 --seed=42` | `1` | `[violation]` Caught (`invRow` violated) |
+| **`m_valid_free`** | Multiplicity `1` in place of `is_valid` on the sends (`o+2..o+5`) | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_valid_free --invariant=invRow --max-samples=50 --seed=42` | `1` | `[violation]` Caught (`invRow` violated) |
 
 ### How Each Mutant Is Caught
 1. **`m_no_recv_p2`**: Because `y2` is never forwarded by `L_add` on buses `o+2..o+5`, the receive of `(id, x2, y2)` on bus `o+1` (`1101`) is the **only** bus interaction in the entire chain that binds `L_add`'s input `y2` to the producer's `P2.y`. When `L_add` drops the receive on `o+1` (and the prover drops the producer's unclaimed `o+1` send and mutates `L_add.y2` from $5$ to $y_2' \ne 5$), all buses `1100..1107` balance and `L_add` computes a forged slope $\lambda' = (y_2' - y_1)/(x_2 - x_1) \pmod{13}$, yielding a forged chain output $(x_3', y_3') \ne (10, 9)$. In the sound module `l_add`, `L_add`'s receive `(0, x2, y2')` on `o+1` remains unmatched whether or not a message is dropped, so the bus is unbalanced.
@@ -155,23 +155,20 @@ $$(x_2 - x_1) \cdot \lambda - (y_2 - y_1) \equiv 0 \pmod{p}$$
 | **F-3** | **High (Harness-only)** | `lane-src/x_exp_node.rs:703-735`, `builder.rs:437` | `FieldExpr` does not range-check `inputs`, and the benchmark harness `SourceAir` does not range-check its sent limbs. | Any real producer replacing `SourceAir` on buses `1100, 1101` must range-check all 48 limbs of $x_1, y_1, x_2, y_2$ to $[0, 2^8)$. |
 | **F-4** | **Low (Completeness)** | `lane-src/x_exp_node.rs:769` | `L_add` cannot evaluate $P_1 + (-P_1) = \mathcal{O}$ ($x_1 = x_2, y_1 \ne y_2$) or inputs equal to $\mathcal{O}$. | Caller must handle identity/inverse edge cases or ensure by construction (e.g., offset MSM) that they do not occur. |
 
----
+## Lead quint results (2026-11-13, quint 0.32.0, run by the lead outside the lane sandbox)
 
-## Lead results (2026-11-13 03:19, quint 0.32.0, run by the lead outside the lane sandbox)
+After lane fix turn 3 (the turn ran out of turns before writing FIXED3.md, but its rewrite of l_add_test.qnt and l_add.qnt is complete). The test file now parses; every command matches.
 
-The lane could not run commands. The lead ran every quint command of this report in the lane worktree `~/.cache/gemini-lanes/x14-l-add`; expected exit code 0 for typecheck, test and the sound invariant, 1 for non-vacuity and mutants.
-
-Open: `l_add_test.qnt` does not parse (it uses `PT_A`, `PT_B`, `PT_C` and `Fp(..)`, which the model does not define, and a one-argument `onCurve`). The model `l_add.qnt` passes every check: typecheck, `invRow` holds on the sound module, non-vacuity is reached and all 5 mutants are caught.
-
-| rc | expected | result | command |
-|---:|---:|---|---|
+| rc | expected | match | command |
+|---|---|---|---|
 | 0 | 0 | MATCH | `quint typecheck qa/gemini-quint/x14-l-add/l_add.qnt` |
-| 1 | 0 | MISMATCH | `quint typecheck qa/gemini-quint/x14-l-add/l_add_test.qnt` |
-| 1 | 0 | MISMATCH | `quint test qa/gemini-quint/x14-l-add/l_add_test.qnt --main=l_add_test` |
+| 0 | 0 | MATCH | `quint typecheck qa/gemini-quint/x14-l-add/l_add_test.qnt` |
+| 0 | 0 | MATCH | `quint test qa/gemini-quint/x14-l-add/l_add_test.qnt --main=l_add_test` |
+| 0 | 0 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invRow --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invNoAcceptedChain --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_recv_p2 --invariant=invRow --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_send_wrong_x --invariant=invRow --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_id --invariant=invRow --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_div_constraint --invariant=invRow --max-samples=50 --seed=42` |
+| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_valid_free --invariant=invRow --max-samples=50 --seed=42` |
 | 0 | 0 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invRow --max-samples=1000 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=l_add --invariant=invNoAcceptedChain --max-samples=100 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_recv_p2 --invariant=invRow --max-samples=1000 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_send_wrong_x --invariant=invRow --max-samples=1000 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_id --invariant=invRow --max-samples=1000 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_no_div_constraint --invariant=invRow --max-samples=1000 --seed=0x14a001` |
-| 1 | 1 | MATCH | `quint run qa/gemini-quint/x14-l-add/l_add.qnt --main=m_valid_free --invariant=invRow --max-samples=1000 --seed=0x14a001` |

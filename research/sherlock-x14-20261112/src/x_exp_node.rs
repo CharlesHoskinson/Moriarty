@@ -646,6 +646,7 @@ enum Ref {
     Id,
     In(usize),
     Var(usize),
+    Zero,
 }
 #[derive(Clone, Debug)]
 struct Msg {
@@ -674,10 +675,14 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Chai
         use openvm_circuit_primitives::SubAir;
         let main = builder.main();
         let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        let next: Vec<AB::Var> = main.row_slice(1).expect("next").to_vec();
         drop(main);
         SubAir::eval(&self.expr, builder, &local[..self.ew]);
         let cols = self.expr.load_vars(&local[..self.ew]);
         let id = local[self.ew].clone();
+        // id = row index: unique ids, no interactions
+        builder.when_first_row().assert_zero(id.clone());
+        builder.when_transition().assert_eq(next[self.ew].clone(), id.clone().into() + AB::Expr::ONE);
         for m in &self.msgs {
             let mut f: Vec<AB::Expr> = vec![];
             for r in &m.refs {
@@ -685,6 +690,7 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Chai
                     Ref::Id => f.push(id.clone().into()),
                     Ref::In(i) => f.extend(cols.inputs[*i].iter().map(|v| v.clone().into())),
                     Ref::Var(j) => f.extend(cols.vars[*j].iter().map(|v| v.clone().into())),
+                    Ref::Zero => f.push(AB::Expr::ZERO),
                 }
             }
             let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(m.bus);
@@ -734,6 +740,172 @@ impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for Sour
     }
 }
 
+/// Producer of the input points. Columns: id, v (is_valid), f_0..f_{npts-1} (identity flags, one
+/// per point), g = prod (1 - f_i) (only for 2 points), e (the operation runs in the chain), then
+/// `nv` values of 48 limbs (2 values per point). Constraints: id = row index; v, f_i boolean;
+/// valid rows are a prefix (next.v (1 - v) = 0); e = v g (2 points) or e = v (1 - f_0) (1 point);
+/// a flagged point has all limbs zero (f_i limb = 0). Every limb is range-checked to 8 bits on
+/// RANGE_BUS. The point messages to the chain go with multiplicity e. When the operation does not
+/// run (v = 1, e = 0: an identity input), PointsIn itself sends the result on the OUT bus with
+/// multiplicity v - e: add: sel = P1 + f_0 (P2 - P1) (so P2 if P1 = O, P1 if P2 = O) with flag
+/// f_0 f_1; dbl: the point itself (zero limbs) with flag f_0 (2 O = O).
+struct PointsIn {
+    nv: usize,
+    nl: usize,
+    rb: usize,
+    npts: usize,
+    msgs: Vec<(u16, Vec<Option<usize>>)>,
+    out_bus: u16,
+}
+impl PointsIn {
+    fn off(&self) -> usize {
+        3 + self.npts + usize::from(self.npts == 2)
+    }
+}
+impl<T> BaseAir<T> for PointsIn {
+    fn width(&self) -> usize {
+        self.off() + self.nv * self.nl
+    }
+}
+impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for PointsIn {}
+impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for PointsIn {}
+impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for PointsIn {
+    fn eval(&self, builder: &mut AB) {
+        use openvm_circuit_primitives::var_range::VariableRangeCheckerBus;
+        let main = builder.main();
+        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        let next: Vec<AB::Var> = main.row_slice(1).expect("next").to_vec();
+        drop(main);
+        let one = AB::Expr::ONE;
+        let (off, nl) = (self.off(), self.nl);
+        let ex = |c: &AB::Var| -> AB::Expr { c.clone().into() };
+        let (id, v, e) = (ex(&local[0]), ex(&local[1]), ex(&local[off - 1]));
+        let f: Vec<AB::Expr> = (0..self.npts).map(|i| ex(&local[2 + i])).collect();
+        builder.when_first_row().assert_zero(id.clone());
+        builder.when_transition().assert_eq(ex(&next[0]), id.clone() + one.clone());
+        builder.assert_bool(v.clone());
+        for fi in &f {
+            builder.assert_bool(fi.clone());
+        }
+        builder.when_transition().assert_zero(ex(&next[1]) * (one.clone() - v.clone()));
+        if self.npts == 2 {
+            let g = ex(&local[2 + self.npts]);
+            builder.assert_eq(g.clone(), (one.clone() - f[0].clone()) * (one.clone() - f[1].clone()));
+            builder.assert_eq(e.clone(), v.clone() * g);
+        } else {
+            builder.assert_eq(e.clone(), v.clone() * (one.clone() - f[0].clone()));
+        }
+        let val = |k: usize| -> Vec<AB::Expr> { local[off + k * nl..off + (k + 1) * nl].iter().map(ex).collect() };
+        for i in 0..self.npts {
+            for k in [2 * i, 2 * i + 1] {
+                for l in val(k) {
+                    builder.assert_zero(f[i].clone() * l);
+                }
+            }
+        }
+        let rbus = VariableRangeCheckerBus::new(RANGE_BUS, self.rb);
+        for c in &local[off..] {
+            rbus.range_check(c.clone(), 8).eval(builder, one.clone());
+        }
+        for (bus, refs) in &self.msgs {
+            let mut m: Vec<AB::Expr> = vec![];
+            for r in refs {
+                match r {
+                    None => m.push(id.clone()),
+                    Some(k) => m.extend(val(*k)),
+                }
+            }
+            openvm_stark_backend::interaction::PermutationCheckBus::new(*bus).send(builder, m, e.clone());
+        }
+        let mut m: Vec<AB::Expr> = vec![id.clone()];
+        if self.npts == 2 {
+            for k in 0..2 {
+                m.extend(val(k).into_iter().zip(val(2 + k)).map(|(a, b)| a.clone() + f[0].clone() * (b - a)));
+            }
+            m.push(f[0].clone() * f[1].clone());
+        } else {
+            m.extend(val(0));
+            m.extend(val(1));
+            m.push(f[0].clone());
+        }
+        openvm_stark_backend::interaction::PermutationCheckBus::new(self.out_bus).send(builder, m, v - e);
+    }
+}
+
+/// Test harness only: the consumer of the output point (the MSM accumulator in a real verifier).
+/// Columns: id, v, f (identity flag of the output), x (48 limbs), y (48 limbs). Receives
+/// (id, x, y, f) on the OUT bus with multiplicity v.
+struct SinkAir {
+    nl: usize,
+    bus: u16,
+}
+impl<T> BaseAir<T> for SinkAir {
+    fn width(&self) -> usize {
+        3 + 2 * self.nl
+    }
+}
+impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for SinkAir {}
+impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for SinkAir {}
+impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for SinkAir {
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        drop(main);
+        let mut m: Vec<AB::Expr> = vec![local[0].clone().into()];
+        m.extend(local[3..].iter().map(|c| c.clone().into()));
+        m.push(local[2].clone().into());
+        openvm_stark_backend::interaction::PermutationCheckBus::new(self.bus).receive(builder, m, local[1].clone());
+    }
+}
+
+/// Negative tests only: a FieldExpr row with the given (forged) vars instead of the computed
+/// ones. q and carries are computed from the forged values as `generate_subrow` does, and the
+/// range-checker counts match the row, so the only failing check is the row's own constraint
+/// (if the forged values do not satisfy it).
+fn forge_subrow(
+    e: &openvm_mod_circuit_builder::FieldExpr,
+    rc: &openvm_circuit_primitives::var_range::VariableRangeCheckerChip,
+    inputs: &[num_bigint::BigUint],
+    vars: &[num_bigint::BigUint],
+    row: &mut [F],
+) {
+    use num_bigint::{BigInt, Sign};
+    use openvm_circuit_primitives::bigint::{check_carry_to_zero::get_carry_max_abs_and_bits, utils::{big_int_to_num_limbs, vec_isize_to_f}, OverflowInt};
+    let lb = e.limb_bits;
+    let ib: Vec<BigInt> = inputs.iter().map(|x| BigInt::from_biguint(Sign::Plus, x.clone())).collect();
+    let vb: Vec<BigInt> = vars.iter().map(|x| BigInt::from_biguint(Sign::Plus, x.clone())).collect();
+    let io: Vec<OverflowInt<isize>> = inputs.iter().map(|x| OverflowInt::<isize>::from_biguint(x, lb, Some(e.num_limbs))).collect();
+    let vo: Vec<OverflowInt<isize>> = vars.iter().map(|x| OverflowInt::<isize>::from_biguint(x, lb, Some(e.num_limbs))).collect();
+    let po = OverflowInt::<isize>::from_biguint(&e.prime, lb, None);
+    let consts: Vec<OverflowInt<isize>> = e.constants.iter().map(|(_, l)| OverflowInt::from_unsigned_limbs(l.iter().map(|&i| i as isize).collect(), lb)).collect();
+    let (mut qs, mut cs) = (vec![], vec![]);
+    for i in 0..e.constraints.len() {
+        let eb = e.constraints[i].evaluate_bigint(&ib, &vb, &[]);
+        let q = &eb / &e.prime_bigint;
+        let ql = big_int_to_num_limbs(&q, lb, e.q_limbs[i]);
+        for &q in &ql {
+            rc.add_count((q + (1 << lb)) as u32, lb + 1);
+        }
+        let qo = OverflowInt::from_signed_limbs(ql.clone(), lb);
+        let ex = e.constraints[i].evaluate_overflow_isize(&io, &vo, &consts, &[]) - qo * po.clone();
+        let carries = ex.calculate_carries(lb);
+        let (cma, cb) = get_carry_max_abs_and_bits(ex.max_overflow_bits(), lb);
+        for &c in &carries {
+            rc.add_count((c + cma as isize) as u32, cb);
+        }
+        qs.push(vec_isize_to_f::<F>(ql));
+        cs.push(vec_isize_to_f::<F>(carries));
+    }
+    for v in &vo {
+        for &l in v.limbs() {
+            rc.add_count(l as u32, lb);
+        }
+    }
+    let il: Vec<F> = io.iter().flat_map(|x| vec_isize_to_f::<F>(x.limbs().to_vec())).collect();
+    let vl: Vec<F> = vo.iter().flat_map(|x| vec_isize_to_f::<F>(x.limbs().to_vec())).collect();
+    row.copy_from_slice(&[vec![F::ONE], il, vl, qs.concat(), cs.concat()].concat());
+}
+
 fn limbs_of(x: &num_bigint::BigUint, nl: usize) -> Vec<F> {
     let mut b = x.to_bytes_le();
     b.resize(nl, 0);
@@ -741,13 +913,22 @@ fn limbs_of(x: &num_bigint::BigUint, nl: usize) -> Vec<F> {
 }
 
 /// The G1 chain of one operation kind ("add" or "dbl") over BLS12-381 Fp, 8-bit limbs:
-/// add: L_add (lambda = (y2 - y1) / (x2 - x1)), X3 (x3 = lambda^2 - x1 - x2), Y3 (y3 = lambda (x1 - x3) - y1);
-/// dbl: L_dbl (lambda = 3 x^2 / (2 y)), X3 (x2 = x1), Y3. Returns the AIRs [L, X3, Y3, range, source]
-/// and their traces of 2^log_rows rows (one G1 operation per row of each AIR).
-fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>, Vec<&'static str>) {
+/// add: L_add (lambda = (y2 - y1) / (x2 - x1)), X3 (x3 = lambda^2 - x1 - x2), Y3 (y3 = lambda (x1 - x3) - y1),
+/// INV (w = 1 / (x2 - x1): forces x2 != x1);
+/// dbl: SQ (s = x^2), L_dbl (lambda = 3 s / (2 y)), X3 (x2 = x1), Y3, INV_y (w = 1 / y: forces y != 0).
+/// Condition rows: every ChainAir has id = row index; PointsIn range-checks every input limb and
+/// sends the input points. The sink AIR (test harness) receives the output point.
+/// `neg` builds a negative-test trace: "same_pt" (add, row 0: P2 = P1, forged lambda, forged w = 0),
+/// "y_zero" (dbl, row 0: P = (0, 0), forged lambda, forged w = 0), "dup_id" (row 1 has id 0 in every AIR).
+/// Returns the AIRs and their traces of 2^log_rows rows (one G1 operation per row of each AIR).
+fn g1_chain(kind: &str, log_rows: usize, neg: &str) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>, Vec<&'static str>) {
     use num_bigint::BigUint;
     use openvm_circuit_primitives::{var_range::{VariableRangeCheckerBus, VariableRangeCheckerChip}, TraceSubRowGenerator};
     use openvm_mod_circuit_builder::{ExprBuilder, ExprBuilderConfig, FieldExpr};
+    let add = kind == "add";
+    // X14_NO_INV_Y=1: the doubling chain without INV_y (valid only when every input point is
+    // checked to be on the curve elsewhere: BLS12-381 G1 has no point with y = 0)
+    let no_inv_y = !add && std::env::var("X14_NO_INV_Y").ok().as_deref() == Some("1");
     let nl = 48;
     let p = BigUint::parse_bytes(P381, 16).unwrap();
     let rb: usize = std::env::var("X14_RANGE_BITS").ok().and_then(|v| v.parse().ok()).unwrap_or(17);
@@ -760,7 +941,7 @@ fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix
         FieldExpr::new(bb, rc.bus(), false)
     };
     use std::{cell::RefCell, rc::Rc};
-    let l_expr = if kind == "add" {
+    let l_expr = if add {
         mk(&|b| {
             let mut x1 = ExprBuilder::new_input(b.clone());
             let mut y1 = ExprBuilder::new_input(b.clone());
@@ -777,6 +958,23 @@ fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix
             let mut y = ExprBuilder::new_input(b.clone());
             let mut l = s.int_mul(3) / y.int_mul(2);
             l.save();
+        })
+    };
+    let inv_expr = if add {
+        mk(&|b| {
+            let mut x1 = ExprBuilder::new_input(b.clone());
+            let mut x2 = ExprBuilder::new_input(b.clone());
+            let mut c1 = ExprBuilder::new_const(b.clone(), BigUint::from(1u32));
+            let mut d = &mut x2 - &mut x1;
+            let mut w = &mut c1 / &mut d;
+            w.save();
+        })
+    } else {
+        mk(&|b| {
+            let mut y = ExprBuilder::new_input(b.clone());
+            let mut c1 = ExprBuilder::new_const(b.clone(), BigUint::from(1u32));
+            let mut w = &mut c1 / &mut y;
+            w.save();
         })
     };
     let sq_expr = mk(&|b| {
@@ -799,35 +997,44 @@ fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix
         let mut y3 = l * (&mut x1 - &mut x3) - y1.clone();
         y3.save();
     });
-    for e in [&l_expr, &x_expr, &y_expr, &sq_expr] {
+    for e in [&l_expr, &x_expr, &y_expr, &sq_expr, &inv_expr] {
         assert_eq!(e.num_vars(), 1, "one modular constraint per row kind");
     }
     let (id, i, v) = (Ref::Id, Ref::In, Ref::Var);
     let m = |bus: u16, send: bool, refs: Vec<Ref>| Msg { bus, send, refs };
-    let o = if kind == "add" { 1100u16 } else { 1110 };
-    // buses: o+0 P1, o+1 P2 (add only), o+2 (lambda, x1) to X3, o+3 x2 to X3, o+4 (lambda, x1) to Y3,
-    // o+5 y1 to Y3, o+6 x3 to Y3, o+7 (x3, y3) out
-    let (l_msgs, src_msgs): (Vec<Msg>, Vec<(u16, bool, Vec<Option<usize>>)>) = if kind == "add" {
+    let o = if add { 1100u16 } else { 1110 };
+    // buses: o+0 P1 (add) or y (dbl), o+1 P2 (add only), o+2 (lambda, x1) to X3, o+3 x2 to X3,
+    // o+4 (lambda, x1) to Y3, o+5 y1 to Y3, o+6 x3 to Y3, o+7 (x3, y3) out, o+8 x to SQ (dbl),
+    // o+9 (s, x) to L_dbl, o+10 the denominator to INV / INV_y
+    let (mut l_msgs, inv_msgs, pin_nv, pin_msgs): (Vec<Msg>, Vec<Msg>, usize, Vec<(u16, Vec<Option<usize>>)>) = if add {
         (
             vec![m(o, false, vec![id, i(0), i(1)]), m(o + 1, false, vec![id, i(2), i(3)]),
                  m(o + 2, true, vec![id, v(0), i(0)]), m(o + 3, true, vec![id, i(2)]),
-                 m(o + 4, true, vec![id, v(0), i(0)]), m(o + 5, true, vec![id, i(1)])],
-            vec![(o, true, vec![None, Some(0), Some(1)]), (o + 1, true, vec![None, Some(2), Some(3)]),
-                 (o + 7, false, vec![None, Some(4), Some(5)])],
+                 m(o + 4, true, vec![id, v(0), i(0)]), m(o + 5, true, vec![id, i(1)]),
+                 m(o + 10, true, vec![id, i(0), i(2)])],
+            vec![m(o + 10, false, vec![id, i(0), i(1)])],
+            4,
+            vec![(o, vec![None, Some(0), Some(1)]), (o + 1, vec![None, Some(2), Some(3)])],
         )
     } else {
         // L_dbl inputs (s, x, y): receive (id, s, x) from SQ on o+9 and (id, y) on o
         (
             vec![m(o + 9, false, vec![id, i(0), i(1)]), m(o, false, vec![id, i(2)]),
                  m(o + 2, true, vec![id, v(0), i(1)]), m(o + 3, true, vec![id, i(1)]),
-                 m(o + 4, true, vec![id, v(0), i(1)]), m(o + 5, true, vec![id, i(2)])],
-            vec![(o + 8, true, vec![None, Some(0)]), (o, true, vec![None, Some(1)]), (o + 7, false, vec![None, Some(4), Some(5)])],
+                 m(o + 4, true, vec![id, v(0), i(1)]), m(o + 5, true, vec![id, i(2)]),
+                 m(o + 10, true, vec![id, i(2)])],
+            vec![m(o + 10, false, vec![id, i(0)])],
+            2,
+            vec![(o + 8, vec![None, Some(0)]), (o, vec![None, Some(1)])],
         )
     };
+    if no_inv_y {
+        l_msgs.pop();
+    }
     let sq_msgs = vec![m(o + 8, false, vec![id, i(0)]), m(o + 9, true, vec![id, v(0), i(0)])];
     let x_msgs = vec![m(o + 2, false, vec![id, i(0), i(1)]), m(o + 3, false, vec![id, i(2)]), m(o + 6, true, vec![id, v(0)])];
     let y_msgs = vec![m(o + 4, false, vec![id, i(0), i(1)]), m(o + 5, false, vec![id, i(3)]), m(o + 6, false, vec![id, i(2)]),
-                      m(o + 7, true, vec![id, i(2), v(0)])];
+                      m(o + 7, true, vec![id, i(2), v(0), Ref::Zero])];
     // host values
     let gx = BigUint::parse_bytes(b"17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb", 16).unwrap();
     let gy = BigUint::parse_bytes(b"08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1", 16).unwrap();
@@ -846,67 +1053,174 @@ fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix
         pts.push((x3, y3));
     }
     let n = 1usize << log_rows;
-    let widths = [BaseAir::<F>::width(&l_expr), BaseAir::<F>::width(&x_expr), BaseAir::<F>::width(&y_expr), BaseAir::<F>::width(&sq_expr)];
+    let widths = [BaseAir::<F>::width(&l_expr), BaseAir::<F>::width(&x_expr), BaseAir::<F>::width(&y_expr),
+                  BaseAir::<F>::width(&sq_expr), BaseAir::<F>::width(&inv_expr)];
     let mut tq = F::zero_vec(n * (widths[3] + 1));
     let mut tl = F::zero_vec(n * (widths[0] + 1));
     let mut tx = F::zero_vec(n * (widths[1] + 1));
     let mut ty = F::zero_vec(n * (widths[2] + 1));
-    let src_nv = 6;
-    let mut ts = F::zero_vec(n * (1 + src_nv * nl));
+    let mut tw = F::zero_vec(n * (widths[4] + 1));
+    let npts = if add { 2 } else { 1 };
+    let poff = 3 + npts + usize::from(npts == 2);
+    let pw = poff + pin_nv * nl;
+    let mut tp = F::zero_vec(n * pw);
+    let sw = 3 + 2 * nl;
+    let mut ts = F::zero_vec(n * sw);
+    let zero = BigUint::from(0u32);
+    // padding and identity plan (see g1neg): v = PointsIn row valid; f1, f2 identity flags
+    let n_valid = if neg == "partial" || neg == "pad_forge" { 11 } else { n };
+    let inf_case = neg == "inf" || neg == "inf_lie" || neg == "inf_out";
     for r in 0..n {
-        let (x1, y1, x2, y2) = if kind == "add" {
+        let v = if neg == "pad_hole" { r != 3 } else { r < n_valid };
+        let (f1, f2) = if !inf_case {
+            (false, false)
+        } else if add {
+            match r {
+                0 => (true, false),
+                1 if neg == "inf" => (false, true),
+                2 if neg == "inf" => (true, true),
+                _ => (false, false),
+            }
+        } else {
+            (r == 0, false)
+        };
+        let e = v && !f1 && !f2;
+        let chain_on = e || (neg == "pad_forge" && r == 11);
+        // padding chain rows: a dummy satisfying witness (the carry constraints are not gated by
+        // is_valid), generated with a throwaway range checker, then is_valid = 0 (as core_chip does)
+        let tmp_rc = VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(RANGE_BUS, rb));
+        let rcr: &VariableRangeCheckerChip = if chain_on { rc.as_ref() } else { &tmp_rc };
+        let forged = r == 0 && ((add && neg == "same_pt") || (!add && neg == "y_zero"));
+        let (x1, y1, x2, y2) = if add {
             let (a, b) = (&pts[r % 2], &pts[2 + r % 2]);
-            (a.0.clone(), a.1.clone(), b.0.clone(), b.1.clone())
+            if forged { (a.0.clone(), a.1.clone(), a.0.clone(), a.1.clone()) } else { (a.0.clone(), a.1.clone(), b.0.clone(), b.1.clone()) }
+        } else if forged {
+            (zero.clone(), zero.clone(), zero.clone(), zero.clone())
         } else {
             let a = &pts[r % 4];
             (a.0.clone(), a.1.clone(), a.0.clone(), a.1.clone())
         };
-        let lam = if kind == "add" { sub(&y2, &y1) * inv(&sub(&x2, &x1)) % &p } else { dbl(&x1, &y1).0 };
+        let lam = if forged { BigUint::from(5u32) } else if add { sub(&y2, &y1) * inv(&sub(&x2, &x1)) % &p } else { dbl(&x1, &y1).0 };
         let x3 = sub(&sub(&(&lam * &lam % &p), &x1), &x2);
         let y3 = sub(&(&lam * sub(&x1, &x3) % &p), &y1);
-        let idf = F::from_u32(r as u32);
-        let li = if kind == "add" {
+        let idf = if neg == "dup_id" && r == 1 { F::ZERO } else { F::from_u32(r as u32) };
+        let li = if add {
             vec![x1.clone(), y1.clone(), x2.clone(), y2.clone()]
         } else {
             vec![&x1 * &x1 % &p, x1.clone(), y1.clone()]
         };
-        if kind != "add" {
+        let wi = if add { vec![x1.clone(), x2.clone()] } else { vec![y1.clone()] };
+        if !add {
             let row = &mut tq[r * (widths[3] + 1)..(r + 1) * (widths[3] + 1)];
-            sq_expr.generate_subrow((rc.as_ref(), vec![x1.clone()], vec![]), &mut row[..widths[3]]);
+            sq_expr.generate_subrow((rcr, vec![x1.clone()], vec![]), &mut row[..widths[3]]);
+            if !chain_on {
+                row[0] = F::ZERO;
+            }
             row[widths[3]] = idf;
         }
         let row = &mut tl[r * (widths[0] + 1)..(r + 1) * (widths[0] + 1)];
-        l_expr.generate_subrow((rc.as_ref(), li, vec![]), &mut row[..widths[0]]);
+        if chain_on && forged {
+            forge_subrow(&l_expr, rc.as_ref(), &li, &[lam.clone()], &mut row[..widths[0]]);
+        } else {
+            l_expr.generate_subrow((rcr, li, vec![]), &mut row[..widths[0]]);
+        }
+        if !chain_on {
+            row[0] = F::ZERO;
+        }
         row[widths[0]] = idf;
+        let row = &mut tw[r * (widths[4] + 1)..(r + 1) * (widths[4] + 1)];
+        if no_inv_y {
+        } else if chain_on && forged {
+            forge_subrow(&inv_expr, rc.as_ref(), &wi, &[zero.clone()], &mut row[..widths[4]]);
+        } else {
+            inv_expr.generate_subrow((rcr, wi, vec![]), &mut row[..widths[4]]);
+            if !chain_on {
+                row[0] = F::ZERO;
+            }
+        }
+        row[widths[4]] = idf;
         let row = &mut tx[r * (widths[1] + 1)..(r + 1) * (widths[1] + 1)];
-        x_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
+        x_expr.generate_subrow((rcr, vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
+        if !chain_on {
+            row[0] = F::ZERO;
+        }
         row[widths[1]] = idf;
         let row = &mut ty[r * (widths[2] + 1)..(r + 1) * (widths[2] + 1)];
-        y_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
-        row[widths[2]] = idf;
-        let row = &mut ts[r * (1 + src_nv * nl)..(r + 1) * (1 + src_nv * nl)];
-        row[0] = idf;
-        for (k, val) in [&x1, &y1, &x2, &y2, &x3, &y3].iter().enumerate() {
-            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&limbs_of(val, nl));
+        y_expr.generate_subrow((rcr, vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
+        if !chain_on {
+            row[0] = F::ZERO;
         }
+        row[widths[2]] = idf;
+        // PointsIn row: identity points have zero limbs (inf_lie keeps the real P1 limbs); padding rows are zero
+        let keep = |flag: bool| v && (!flag || neg == "inf_lie");
+        let (px1, py1) = if keep(f1) { (x1.clone(), y1.clone()) } else { (zero.clone(), zero.clone()) };
+        let (px2, py2) = if keep(f2) { (x2.clone(), y2.clone()) } else { (zero.clone(), zero.clone()) };
+        let row = &mut tp[r * pw..(r + 1) * pw];
+        row[0] = idf;
+        row[1] = F::from_bool(v);
+        row[2] = F::from_bool(f1);
+        if add {
+            row[3] = F::from_bool(f2);
+            let g = !f1 && !f2;
+            row[4] = F::from_bool(g);
+            row[5] = F::from_bool(v && g);
+        } else {
+            row[3] = F::from_bool(v && !f1);
+        }
+        let vals: Vec<&BigUint> = if add { vec![&px1, &py1, &px2, &py2] } else { vec![&px1, &py1] };
+        for (k, val) in vals.iter().enumerate() {
+            let ls = limbs_of(val, nl);
+            for l in &ls {
+                rc.add_count(l.as_canonical_u32(), 8);
+            }
+            row[poff + k * nl..poff + (k + 1) * nl].copy_from_slice(&ls);
+        }
+        // sink row
+        let row = &mut ts[r * sw..(r + 1) * sw];
+        row[0] = idf;
+        let (sv, sf, ox, oy) = if chain_on {
+            (true, false, x3.clone(), y3.clone())
+        } else if v {
+            if add {
+                let (sx, sy) = if f1 { (px2.clone(), py2.clone()) } else { (px1.clone(), py1.clone()) };
+                if neg == "inf_out" && r == 0 { (true, f1 && f2, x3.clone(), y3.clone()) } else { (true, f1 && f2, sx, sy) }
+            } else {
+                (true, f1, px1.clone(), py1.clone())
+            }
+        } else {
+            (false, false, zero.clone(), zero.clone())
+        };
+        row[1] = F::from_bool(sv);
+        row[2] = F::from_bool(sf);
+        row[3..3 + nl].copy_from_slice(&limbs_of(&ox, nl));
+        row[3 + nl..3 + 2 * nl].copy_from_slice(&limbs_of(&oy, nl));
     }
     let rt = rc.generate_trace::<F>();
     let mut airs: Vec<AirRef<SC>> = vec![
         Arc::new(ChainAir { ew: widths[0], expr: l_expr, msgs: l_msgs }),
         Arc::new(ChainAir { ew: widths[1], expr: x_expr, msgs: x_msgs }),
         Arc::new(ChainAir { ew: widths[2], expr: y_expr, msgs: y_msgs }),
+        Arc::new(ChainAir { ew: widths[4], expr: inv_expr, msgs: inv_msgs }),
+        Arc::new(PointsIn { nv: pin_nv, nl, rb, npts: if add { 2 } else { 1 }, msgs: pin_msgs, out_bus: o + 7 }),
         Arc::new(rc.air),
-        Arc::new(SourceAir { nv: src_nv, nl, msgs: src_msgs }),
+        Arc::new(SinkAir { nl, bus: o + 7 }),
     ];
     let mut traces = vec![
         RowMajorMatrix::new(tl, widths[0] + 1),
         RowMajorMatrix::new(tx, widths[1] + 1),
         RowMajorMatrix::new(ty, widths[2] + 1),
+        RowMajorMatrix::new(tw, widths[4] + 1),
+        RowMajorMatrix::new(tp, pw),
         rt,
-        RowMajorMatrix::new(ts, 1 + src_nv * nl),
+        RowMajorMatrix::new(ts, sw),
     ];
-    let mut names = vec![if kind == "add" { "L_add" } else { "L_dbl" }, "X3", "Y3", "range", "source (harness)"];
-    if kind != "add" {
+    let mut names = vec![if add { "L_add" } else { "L_dbl" }, "X3", "Y3", if add { "INV" } else { "INV_y" }, "PointsIn", "range", "sink (harness)"];
+    if no_inv_y {
+        airs.remove(3);
+        traces.remove(3);
+        names.remove(3);
+    }
+    if !add {
         airs.push(Arc::new(ChainAir { ew: widths[3], expr: sq_expr, msgs: sq_msgs }));
         traces.push(RowMajorMatrix::new(tq, widths[3] + 1));
         names.push("SQ");
@@ -925,7 +1239,7 @@ fn unit_child(log_rows: usize) -> (MultiStarkVerifyingKey<SC>, Vec<Proof<SC>>) {
 
 fn g1c(log_rows: usize, kinds: &[String], heights: &[usize], prove_h: usize) {
     for k in kinds {
-        let (airs, traces, names) = g1_chain(k, 4);
+        let (airs, traces, names) = g1_chain(k, 4, "");
         let params = app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT);
         let engine = Eng::new(params.clone());
         let (pk, vk) = engine.keygen(&airs);
@@ -941,12 +1255,61 @@ fn g1c(log_rows: usize, kinds: &[String], heights: &[usize], prove_h: usize) {
     let p = internal_ud();
     for k in kinds {
         for &h in heights {
-            let (airs, traces, _) = g1_chain(k, h);
+            let (airs, traces, _) = g1_chain(k, h, "");
             let (_, _, out) = node_extra(p.clone(), &nvk, &child, (airs, traces), h == prove_h);
             let ok = out["shape"]["layout_ok"].as_bool() == Some(true);
             emit(&json!({"case": "unit_node_with_g1_chain", "op": k, "log_rows": h, "layout_ok": ok, "node": out}));
         }
     }
+}
+
+/// Negative tests of the condition rows at 2^4 rows, app set. Each case is "kind:neg" (neg empty
+/// = honest control). Reports the AIRs whose constraints fail (debug checker, per AIR), whether
+/// the LogUp multisets balance, and the prove/verify result.
+fn g1neg(cases: &[String]) {
+    use openvm_stark_backend::air_builders::{debug::{check_constraints, check_logup}, symbolic::SymbolicConstraints};
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    for c in cases {
+        let (kind, neg) = c.split_once(':').unwrap_or((c.as_str(), ""));
+        let (airs, traces, names) = g1_chain(kind, 4, neg);
+        let params = app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT);
+        let engine = Eng::new(params.clone());
+        let (pk, vk) = engine.keygen(&airs);
+        let pres: Vec<Option<RowMajorMatrix<F>>> = pk.per_air.iter()
+            .map(|p| p.preprocessed_data.as_ref().map(|d| d.mat_view(0).to_row_major_matrix())).collect();
+        let mut fails = vec![];
+        for (j, air) in airs.iter().enumerate() {
+            let pv = pres[j].as_ref().map(|t| t.as_view());
+            let r = catch_unwind(AssertUnwindSafe(|| check_constraints::<_, SC>(air.as_ref(), &air.name(), &pv, &[traces[j].as_view()], &[])));
+            if r.is_err() {
+                fails.push(names[j]);
+            }
+        }
+        let anames: Vec<String> = pk.per_air.iter().map(|p| p.air_name.clone()).collect();
+        let ints: Vec<_> = pk.per_air.iter().map(|p| SymbolicConstraints::from(&p.vk.symbolic_constraints).interactions).collect();
+        let pviews: Vec<_> = pres.iter().map(|t| t.as_ref().map(|t| t.as_view())).collect();
+        let mains: Vec<Vec<_>> = traces.iter().map(|t| vec![t.as_view()]).collect();
+        let pvs: Vec<Vec<F>> = vec![vec![]; airs.len()];
+        let logup_ok = catch_unwind(AssertUnwindSafe(|| check_logup(&anames, &ints, &pviews, &mains, &pvs))).is_ok();
+        let ctxs: Vec<AirProvingContext<CpuBackend<SC>>> = traces.iter()
+            .map(|t| AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t))))
+            .collect();
+        let d_pk = engine.device().transport_pk_to_device(&pk);
+        let pr = catch_unwind(AssertUnwindSafe(|| {
+            match engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())) {
+                Ok(proof) => match engine.verify(&vk, &proof) {
+                    Ok(_) => "verified".to_string(),
+                    Err(e) => format!("verify_err {e:?}"),
+                },
+                Err(e) => format!("prove_err {e:?}"),
+            }
+        }));
+        let pr = pr.unwrap_or_else(|e| format!("prover_panic {:?}", e.downcast_ref::<String>().cloned().or(e.downcast_ref::<&str>().map(|s| s.to_string()))));
+        emit(&json!({"case": "g1_neg", "kind": kind, "neg": neg, "names": names, "constraint_fail_airs": fails, "logup_ok": logup_ok, "prove_verify": pr}));
+    }
+    std::panic::set_hook(hook);
 }
 
 /// (b) of the ruling: the parent node's cost of verifying a unit node whose op AIR has 193
@@ -1007,6 +1370,7 @@ fn main() {
             let hs: Vec<usize> = a[4].split(',').map(|s| s.parse().unwrap()).collect();
             g1c(a[2].parse().unwrap(), &kinds, &hs, a[5].parse().unwrap())
         }
+        "g1neg" => g1neg(&a[2].split(',').map(String::from).collect::<Vec<_>>()),
         "parent" => parent(a[2].parse().unwrap(), &a[3], a[4].parse().unwrap()),
         m => panic!("mode {m}"),
     }
