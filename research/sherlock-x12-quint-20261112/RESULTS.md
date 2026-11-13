@@ -6,7 +6,7 @@ Model: `qa/gemini-quint/x12/claimConsumption.qnt` (the kit names it `models/sher
 
 ## 1. Status
 
-**Partly run; not a completed gate.** The model typechecks, and every deterministic test passes (the kit positives, the refusals, and one attack test per mutant module). The sampled `soundAll` run of the sound instance finds no violation. The sampled run set stopped after 6 of the 16 mutants (run `full2`, cut under host load 30); the other 10 mutants have only their deterministic attack tests. Two sampled mutant runs (`cc_subUnrelated`, `cc_linkAnyStatus`) and one reach run (`reachChainSeal`) found no trace in 20,000 samples, so they rely on the deterministic tests. The follow-up runner `rerun-rest.sh` (10 mutants and a deeper `reachChainSeal` at 5,000 samples) was not run. The protocol of items 1 to 7 stands, with the four revisions of section 7. No node-mode circuit is built, so nothing here qualifies a circuit.
+**Run set complete (2026-11-13); every mutant caught, 3 of them by deterministic tests only.** The model typechecks, and every deterministic test passes (the kit positives, the refusals, and one attack test per mutant module). The sampled `soundAll` run of the sound instance finds no violation. All 16 mutants now have a sampled run: 6 in `full2` (20,000 samples), the other 10 and a second `cc_noValueTie` in `full2b` (5,000 samples, `rerun-rest.sh`), and the two that `full2b` did not catch again at 20,000 in `full2c` (`rerun-deep.sh`). Sampling catches 13 of the 16. `cc_subUnrelated`, `cc_linkAnyStatus` and `cc_accumSorted` found no trace in 20,000 samples, and the reach run `reachChainSeal` found none at 10 steps (20,000 samples) or 20 steps (5,000 samples); these four rely on their deterministic tests. The protocol of items 1 to 7 stands, with the four revisions of section 7. No node-mode circuit is built, so nothing here qualifies a circuit.
 
 ## 2. What the model is
 
@@ -31,7 +31,9 @@ Soundness in words: no consumer is accepted with an input link unless a genuine 
 
 Completeness is reachability, so it is checked by deterministic `run` tests (the kit's positives) and by negated `reach*` invariants that must be violated in the sound instance (`reachBConsumesA`, `reachJoin`, `reachDescend`, `reachChainSeal`).
 
-## 4. Lead runs (MEASURED, quint 0.32.0, `runs/full2/summary.txt`, `runs/witness/`)
+## 4. Lead runs (MEASURED, quint 0.32.0, `runs/full2/summary.txt`, `runs/full2b/summary.txt`, `runs/full2c/summary.txt`, `runs/witness/`)
+
+Every sampled run uses `--max-steps 10 --seed 0x20261112` unless the row says otherwise. `full2` ran through `heavy-run`; `full2b` and `full2c` (2026-11-13) ran through `heavy-slot` (`q-slot.sh`).
 
 | Command | Result |
 |---|---|
@@ -40,14 +42,16 @@ Completeness is reachability, so it is checked by deterministic `run` tests (the
 | `quint test` of the 16 mutant test modules (`t_*`) and `t_subUnrelated_sound` | every module passes: under each mutant its attack breaks a named invariant; `t_subUnrelated_sound` (7 passing) shows the same attacks refused by the sound instance |
 | `quint run --main cc_sound --invariant soundAll` (20,000 samples, 10 steps) | `[ok]`, no violation |
 | reach witnesses `reachBConsumesA`, `reachJoin`, `reachDescend` | `[violation]` as expected (witness found) |
-| reach witness `reachChainSeal` | `[ok]`: no witness in 20,000 samples; the deterministic `pos_gp2_witness_chain_seal` test reaches it |
-| sampled mutants `cc_noTerminal`, `cc_ignoreTag`, `cc_headOfJoin`, `cc_noValueTie` | `[violation]` (caught); `cc_noValueTie` from `runs/full2/31.log`, its summary line was not written before the cut |
-| sampled mutants `cc_subUnrelated`, `cc_linkAnyStatus` | `[ok]`: not caught by sampling; caught by their deterministic tests |
-| sampled mutants `cc_valueMismatch` to `cc_sealDepsEmpty` (10) | not run |
+| reach witness `reachChainSeal` | `[ok]`: no witness in 20,000 samples at 10 steps (`full2`) or in 5,000 samples at 20 steps (`full2b`); the deterministic `pos_gp2_witness_chain_seal` test reaches it |
+| sampled mutants, 20,000 samples (`full2`): `cc_noTerminal`, `cc_ignoreTag`, `cc_headOfJoin`, `cc_noValueTie` | `[violation]` (caught); `cc_noValueTie` from `runs/full2/31.log`, its summary line was not written before the cut |
+| sampled mutants, 20,000 samples (`full2`): `cc_subUnrelated`, `cc_linkAnyStatus` | `[ok]`: not caught by sampling; caught by their deterministic tests |
+| sampled mutants, 5,000 samples (`full2b`): `cc_noValueTie` (again), `cc_nstepsForged`, `cc_plainSealNonEmpty`, `cc_noChainCheck`, `cc_premiseInChain`, `cc_accumSet`, `cc_coverSkipsLater`, `cc_linkNoCover`, `cc_sealDepsEmpty` | `[violation]` (caught) |
+| sampled mutants, 5,000 samples (`full2b`): `cc_valueMismatch`, `cc_accumSorted` | `[ok]`: not caught at 5,000 samples |
+| the same two at 20,000 samples (`full2c`) | `cc_valueMismatch` `[violation]` (caught); `cc_accumSorted` `[ok]`: not caught by sampling, caught by its deterministic test |
 
 ## 5. Verdict
 
-The sound instance holds every invariant in the deterministic tests and in the sampled run. Every mutant is caught by a deterministic attack test. Sampling alone catches 4 of the 6 mutants it ran. The X12 gate stays open until the 10 remaining sampled mutant runs and a deeper `reachChainSeal` run are made (`qa/gemini-quint/x12/rerun-rest.sh`).
+The sound instance holds every invariant in the deterministic tests and in the sampled run. Every mutant is caught by a deterministic attack test. Sampling alone catches 13 of the 16 mutants; `cc_subUnrelated`, `cc_linkAnyStatus` and `cc_accumSorted` are caught only by their deterministic tests, and the `reachChainSeal` witness is reached only by its deterministic test. The planned run set is complete, so X12 passes on the deterministic tests with this sampling record; it is not a clean sampled pass.
 
 ## 6. Rows per mode (ESTIMATE)
 
