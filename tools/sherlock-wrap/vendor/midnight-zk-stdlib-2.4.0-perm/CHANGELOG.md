@@ -1,0 +1,107 @@
+# Changelog
+
+We use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+* MAJOR: Incremented on incompatible API changes
+* MINOR: Incremented on backward-compatible API changes that may affect the VKs
+* PATCH: Incremented on minor changes and bug fixes that do not alter the VKs
+
+## [Unreleased]
+### Added
+### Changed
+### Removed
+
+## [2.4.0]
+### Changed
+* Bump `midnight-circuits` to 7.3.0 [#614](https://github.com/midnightntwrk/midnight-zk/pull/614)
+* `assign_as_public_input` always performs the in-circuit checks of `assign` (affects the VKs of relations with byte, Jubjub point or BLS12-381 point public inputs) [#598](https://github.com/midnightntwrk/midnight-zk/pull/598)
+* `DivisionInstructions::div_rem` and `rem` panic when `divisor * (dividend_bound / divisor + 1)` exceeds the field modulus, in particular when no bound is given; `DivisionInstructions` is deprecated [#606](https://github.com/midnightntwrk/midnight-zk/pull/606)
+* Examples use `EccInstructions::x` and `y` instead of the deprecated `x_coordinate` and `y_coordinate`, asserting that secp256k1 points are not the identity (affects the VKs of the Bitcoin signature and credential examples) [#612](https://github.com/midnightntwrk/midnight-zk/issues/612)
+* In-circuit `as_public_input` of Jubjub scalars encodes the canonical value, as `Instantiable::as_public_input` does (affects the VKs of relations with Jubjub scalar public inputs) [#611](https://github.com/midnightntwrk/midnight-zk/pull/611)
+
+## [2.3.5]
+### Changed
+* Bump `midnight-circuits` to 7.2.4 [#485](https://github.com/midnightntwrk/midnight-zk/pull/485)
+
+## [2.3.4]
+### Changed
+* Bump `midnight-circuits` to 7.2.3 and `midnight-proofs` to 0.8.2 for the verifier per-proof length check [#482](https://github.com/midnightntwrk/midnight-zk/pull/482)
+
+## [2.3.3]
+### Changed
+* Display the underlying error message in `Relation::circuit` synthesis errors [#452](https://github.com/midnightntwrk/midnight-zk/pull/452)
+
+## [2.3.2]
+### Changed
+* Bump `midnight-circuits` to 7.2.2 [451](https://github.com/midnightntwrk/midnight-zk/pull/451)
+
+## [2.3.1]
+### Fixed
+* Bug fix in midnight-curves [#434](https://github.com/midnightntwrk/midnight-zk/pull/434)
+
+## [2.3.0]
+### Added
+* `Instantiable::from_public_input`: inverse of `as_public_input` for decoding values from their public input representation [#408](https://github.com/midnightntwrk/midnight-zk/pull/408)
+
+## [2.2.0]
+### Changed
+* Update verification keys following Weierstrass chip public input update [#398](https://github.com/midnightntwrk/midnight-zk/pull/398)
+
+## [2.1.0]
+### Added
+* `AssignedScalarOfNativeCurve` now implements `InnerValue`, `InnerConstants`, `Instantiable`, and `Sampleable` [#383](https://github.com/midnightntwrk/midnight-zk/pull/383)
+
+### Changed
+* Bump `ZKSTD_VERSION` to 2; add `ZkStdLibArchV1` for backward-compatible deserialization of v1 verifying keys
+
+## [2.0.0]
+### Changed
+* Do not expose scalar chips separately from `ZkStdLib`; use `secp256k1()`, `p256()`, `bls12_381()` instead [#335](https://github.com/midnightntwrk/midnight-zk/pull/335)
+* Adapt `FromScratch` impls to new `configure_from_scratch` signature with shared column pools [#306](https://github.com/midnightntwrk/midnight-zk/pull/306)
+* Use `Blake2b256` transcript hash in the `bitcoin_signature` example [#322](https://github.com/midnightntwrk/midnight-zk/pull/322)
+* Removed outdated identity examples and restructured identity example crate [#330](https://github.com/midnightntwrk/midnight-zk/pull/330)
+* Exposing varlen hashes, and minor additional function exposure [#331](https://github.com/midnightntwrk/midnight-zk/pull/331)
+* Negligible regression (1 row) in examples involving substring checks [#332](https://github.com/midnightntwrk/midnight-zk/pull/332)
+
+### Added
+* Expose P-256 (secp256r1) chip via `ZkStdLib::p256_curve` and `ZkStdLib::p256_scalar` [#317](https://github.com/midnightntwrk/midnight-zk/pull/317)
+* Added an example verifying an ethereum signature [#177](https://github.com/midnightntwrk/midnight-zk/pull/177)
+* `setup_vk_with_k` for generating a verifying key with an explicit circuit size parameter [#227](https://github.com/midnightntwrk/midnight-zk/pull/227)
+* Expose `verifier_gadget` and `bls12_381_scalar` (native gadget) from `ZkStdLib` [#227](https://github.com/midnightntwrk/midnight-zk/pull/227)
+* Add `square`, `mod_square` operations in `BigUintGadget` [#259](https://github.com/midnightntwrk/midnight-zk/pull/259)
+* Add `PartialEq` impl for `AssignedBigUint` [#259](https://github.com/midnightntwrk/midnight-zk/pull/259)
+* Update READMEs and add badges [#261](https://github.com/midnightntwrk/midnight-zk/pull/261)
+* Adds identity related examples to evaluate the impact of substring checks [#229](https://github.com/midnightntwrk/midnight-zk/pull/229)
+* Example for in-circuit verification of Ed25519 signatures [#310](https://github.com/midnightntwrk/midnight-zk/pull/310)
+
+### Changed
+* Add associated type `Error` to `Relation` trait for typed domain errors [#252](https://github.com/midnightntwrk/midnight-zk/pull/252)
+* Adapt imports to foreign ECC module reorganization [#298](https://github.com/midnightntwrk/midnight-zk/pull/298)
+* bug patch in the credential property verification example, which was omitting some index computation in circuit [#240](https://github.com/midnightntwrk/midnight-zk/pull/240)
+* Pass `max_bit_len` to foreign-field chip configuration [#251](https://github.com/midnightntwrk/midnight-zk/pull/251)
+* Update IVC example to use improved verifier gadget [#212](https://github.com/midnightntwrk/midnight-zk/pull/212)
+* Change nr of bits to represent JubJub scalar field modulus from 255 -> 252 [#179](https://github.com/midnightntwrk/midnight-zk/pull/179)
+* Adapt external hash tests to hash instructions interface [#162](https://github.com/midnightntwrk/midnight-zk/pull/162)
+* Updated Rust toolchain to 1.90.0 [#210](https://github.com/midnightntwrk/midnight-zk/pull/210)
+* `CircuitField` refactor  [#201](https://github.com/midnightntwrk/midnight-zk/pull/201)
+* Replace `secp256k1` with `k256`  [#192](https://github.com/midnightntwrk/midnight-zk/pull/192)
+* Parallelise batch_verifier [#236](https://github.com/midnightntwrk/midnight-zk/pull/236)
+* Minor type renames [#241](https://github.com/midnightntwrk/midnight-zk/pull/241)
+* Adapting examples to the lazy automaton loading [#232](https://github.com/midnightntwrk/midnight-zk/pull/232)
+* Adapting examples to the lazy automaton loading [#232](https://github.com/midnightntwrk/midnight-zk/pull/232) and [#234](https://github.com/midnightntwrk/midnight-zk/pull/234/changes)
+* Add `from/to_canonical_compressed_bytes` to foreign Edwards chip [#354](https://github.com/midnightntwrk/midnight-zk/pull/354)
+
+### Removed
+* Move Blake2b and SHA3-256/Keccak256 implementations to zk-stdlib [#178](https://github.com/midnightntwrk/midnight-zk/pull/178)
+
+## [1.1.0]
+### Changed
+* Update `prove` to accept `impl RngCore + CryptoRng` by value [#307](https://github.com/midnightntwrk/midnight-zk/pull/307)
+
+## [1.0.0] 
+### Added
+- Initial release of zk_stdlib extracted from circuits crate
+
+### Changed
+
+### Removed

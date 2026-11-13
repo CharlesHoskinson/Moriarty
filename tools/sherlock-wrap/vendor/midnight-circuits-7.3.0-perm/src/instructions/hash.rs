@@ -1,0 +1,320 @@
+// This file is part of MIDNIGHT-ZK.
+// Copyright (C) Midnight Foundation
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Hashing instructions interface.
+//!
+//! It provides functions for (in-circuit) hashing from a specified input type
+//! to another output one.
+
+use std::fmt::Debug;
+
+use midnight_proofs::{circuit::Layouter, plonk::Error};
+
+use crate::{
+    types::{AssignedVector, InnerValue, Vectorizable},
+    CircuitField,
+};
+
+/// The set of off-circuit instructions for hashing operations.
+pub trait HashCPU<Input, Output>: Clone + Debug {
+    /// Hash the given input into the designated output type.
+    fn hash(inputs: &[Input]) -> Output;
+}
+
+/// The set of circuit instructions for hashing operations.
+pub trait HashInstructions<F, Input, Output>: HashCPU<Input::Element, Output::Element>
+where
+    F: CircuitField,
+    Input: InnerValue,
+    Output: InnerValue,
+{
+    /// Hash the given input into the designated output type.
+    fn hash(&self, layouter: &mut impl Layouter<F>, inputs: &[Input]) -> Result<Output, Error>;
+}
+
+/// The set of circuit instructions for variable length hashing operations.
+pub trait VarHashInstructions<F, const MAX_LEN: usize, Input, Output, const A: usize>:
+    HashCPU<<Input as InnerValue>::Element, Output::Element>
+where
+    F: CircuitField,
+    Input: Vectorizable,
+    Output: InnerValue,
+{
+    /// Hash the given input into the designated output type.
+    fn varhash(
+        &self,
+        layouter: &mut impl Layouter<F>,
+        inputs: &AssignedVector<F, Input, MAX_LEN, A>,
+    ) -> Result<Output, Error>;
+}
+
+#[cfg(any(test, feature = "testing"))]
+pub(crate) mod tests {
+    use std::{fmt::Debug, marker::PhantomData};
+
+    use midnight_proofs::{
+        circuit::{SimpleFloorPlanner, Value},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem},
+    };
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha12Rng;
+
+    use super::*;
+    #[cfg(test)]
+    use crate::{
+        field::{decomposition::chip::P2RDecompositionChip, NativeChip, NativeGadget},
+        vec::vector_gadget::VectorGadget,
+    };
+    use crate::{
+        instructions::{AssertionInstructions, AssignmentInstructions},
+        testing_utils::{FromScratch, Sampleable},
+        utils::circuit_modeling::{circuit_to_json, cost_measure_end, cost_measure_start},
+    };
+
+    #[derive(Clone, Debug, Default)]
+    struct TestCircuit<F, Input, Output, HashChip, AssignChip>
+    where
+        Input: InnerValue,
+        Output: InnerValue,
+    {
+        input: Vec<Value<Input::Element>>,
+        expected_output: Output::Element,
+        _marker: PhantomData<(F, Output, HashChip, AssignChip)>,
+    }
+
+    impl<F, Input, Output, HashChip, AssignChip> Circuit<F>
+        for TestCircuit<F, Input, Output, HashChip, AssignChip>
+    where
+        F: CircuitField,
+        Input: InnerValue,
+        Output: InnerValue,
+        HashChip: HashInstructions<F, Input, Output> + FromScratch<F>,
+        AssignChip:
+            AssignmentInstructions<F, Input> + AssertionInstructions<F, Output> + FromScratch<F>,
+    {
+        type Config = (
+            <HashChip as FromScratch<F>>::Config,
+            <AssignChip as FromScratch<F>>::Config,
+        );
+        type FloorPlanner = SimpleFloorPlanner;
+        type Params = ();
+
+        fn without_witnesses(&self) -> Self {
+            unreachable!()
+        }
+
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            let committed_instance_column = meta.instance_column();
+            let instance_column = meta.instance_column();
+            let instance_columns = [committed_instance_column, instance_column];
+            let mut advice_columns = vec![];
+            let mut fixed_columns = vec![];
+            (
+                HashChip::configure_from_scratch(
+                    meta,
+                    &mut advice_columns,
+                    &mut fixed_columns,
+                    &instance_columns,
+                ),
+                AssignChip::configure_from_scratch(
+                    meta,
+                    &mut advice_columns,
+                    &mut fixed_columns,
+                    &instance_columns,
+                ),
+            )
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<F>,
+        ) -> Result<(), Error> {
+            let chip = HashChip::new_from_scratch(&config.0);
+            let assign_chip = AssignChip::new_from_scratch(&config.1);
+
+            let inputs = assign_chip.assign_many(&mut layouter, &self.input)?;
+
+            cost_measure_start(&mut layouter);
+            let output = chip.hash(&mut layouter, &inputs)?;
+            cost_measure_end(&mut layouter);
+            assign_chip.assert_equal_to_fixed(
+                &mut layouter,
+                &output,
+                self.expected_output.clone(),
+            )?;
+
+            chip.load_from_scratch(&mut layouter)?;
+            assign_chip.load_from_scratch(&mut layouter)
+        }
+    }
+
+    /// Generic tests for hash functions. The arguments allow in particular to
+    /// tune the input/sample size for the test, so that corner cases specific
+    /// to the tested hash can be tested. In addition to the custom input sizes,
+    /// are always included: a random input of size 10 (for the cost model), 0
+    /// and 1, and 10 inputs from random sizes in 1..10.
+    ///
+    /// Note: the pseudo-randomness seed used in the tests in chosen
+    /// non-deterministically.
+    pub fn test_hash<F, Input, Output, HashChip, AssignChip>(
+        cost_model: bool,
+        chip_name: &str,
+        size: usize,
+    ) where
+        F: CircuitField + ff::FromUniformBytes<64> + Ord,
+        Input: InnerValue + Sampleable,
+        Output: InnerValue,
+        HashChip: HashInstructions<F, Input, Output> + FromScratch<F>,
+        AssignChip:
+            AssignmentInstructions<F, Input> + AssertionInstructions<F, Output> + FromScratch<F>,
+    {
+        let mut rng = ChaCha12Rng::seed_from_u64(0xf007ba11);
+
+        let input = (0..size).map(|_| Input::sample_inner(&mut rng)).collect::<Vec<_>>();
+        let expected_output = <HashChip as HashCPU<Input::Element, Output::Element>>::hash(&input);
+
+        println!(
+            "[{}] Preimage circuit test on input {:?}",
+            chip_name,
+            input.clone()
+        );
+        let circuit = TestCircuit::<F, Input, Output, HashChip, AssignChip> {
+            input: input.into_iter().map(Value::known).collect(),
+            expected_output,
+            _marker: PhantomData,
+        };
+
+        MockProver::run(&circuit, vec![vec![], vec![]]).unwrap().assert_satisfied();
+        println!("\n... succeeded!\n");
+
+        if cost_model {
+            circuit_to_json(chip_name, "hash", circuit);
+        }
+    }
+
+    #[cfg(test)]
+    type NG<F> = NativeGadget<F, P2RDecompositionChip<F>, NativeChip<F>>;
+
+    #[cfg(test)]
+    #[derive(Clone, Debug, Default)]
+    struct TestVarHashCircuit<F, Input, Output, VarHashChip, const M: usize, const A: usize>
+    where
+        Input: Vectorizable,
+        Output: InnerValue,
+    {
+        input: Value<Vec<Input::Element>>,
+        expected_output: Output::Element,
+        _marker: PhantomData<(F, Output, VarHashChip)>,
+    }
+
+    #[cfg(test)]
+    impl<F, Input, Output, VarHashChip, const M: usize, const A: usize> Circuit<F>
+        for TestVarHashCircuit<F, Input, Output, VarHashChip, M, A>
+    where
+        F: CircuitField,
+        Input: Vectorizable,
+        Output: InnerValue,
+        VarHashChip: VarHashInstructions<F, M, Input, Output, A> + FromScratch<F>,
+        VectorGadget<F>: AssignmentInstructions<F, AssignedVector<F, Input, M, A>>,
+        NG<F>: AssignmentInstructions<F, Input> + AssertionInstructions<F, Output>,
+    {
+        type Config = (
+            <VarHashChip as FromScratch<F>>::Config,
+            <VectorGadget<F> as FromScratch<F>>::Config,
+        );
+        type FloorPlanner = SimpleFloorPlanner;
+        type Params = ();
+
+        fn without_witnesses(&self) -> Self {
+            unreachable!()
+        }
+
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            let committed_instance_column = meta.instance_column();
+            let instance_column = meta.instance_column();
+            let instance_columns = [committed_instance_column, instance_column];
+            let mut advice_columns = vec![];
+            let mut fixed_columns = vec![];
+            (
+                VarHashChip::configure_from_scratch(
+                    meta,
+                    &mut advice_columns,
+                    &mut fixed_columns,
+                    &instance_columns,
+                ),
+                VectorGadget::configure_from_scratch(
+                    meta,
+                    &mut advice_columns,
+                    &mut fixed_columns,
+                    &instance_columns,
+                ),
+            )
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<F>,
+        ) -> Result<(), Error> {
+            let chip = VarHashChip::new_from_scratch(&config.0);
+            let ng = <NG<F>>::new_from_scratch(&config.1);
+
+            let vg = VectorGadget::new(&ng);
+
+            let assigned_input: AssignedVector<_, _, M, A> =
+                vg.assign(&mut layouter, self.input.clone())?;
+
+            cost_measure_start(&mut layouter);
+            let output = chip.varhash(&mut layouter, &assigned_input)?;
+            cost_measure_end(&mut layouter);
+            ng.assert_equal_to_fixed(&mut layouter, &output, self.expected_output.clone())?;
+
+            chip.load_from_scratch(&mut layouter)?;
+            ng.load_from_scratch(&mut layouter)
+        }
+    }
+
+    #[cfg(test)]
+    pub fn test_varhash<F, Input, Output, VarHashChip, const M: usize, const A: usize>(
+        cost_model: bool,
+        chip_name: &str,
+        size: usize,
+    ) where
+        F: CircuitField + ff::FromUniformBytes<64> + Ord,
+        Input: Vectorizable + Sampleable,
+        Output: InnerValue,
+        VarHashChip: VarHashInstructions<F, M, Input, Output, A> + FromScratch<F>,
+        VectorGadget<F>: AssignmentInstructions<F, AssignedVector<F, Input, M, A>>,
+        NG<F>: AssignmentInstructions<F, Input> + AssertionInstructions<F, Output>,
+    {
+        let mut rng = ChaCha12Rng::seed_from_u64(0xf007ba11);
+
+        let input = (0..size).map(|_| Input::sample_inner(&mut rng)).collect::<Vec<_>>();
+        let expected_output =
+            <VarHashChip as HashCPU<Input::Element, Output::Element>>::hash(&input);
+
+        let circuit = TestVarHashCircuit::<F, Input, Output, VarHashChip, M, A> {
+            input: Value::known(input),
+            expected_output,
+            _marker: PhantomData,
+        };
+
+        MockProver::run(&circuit, vec![vec![], vec![]]).unwrap().assert_satisfied();
+
+        if cost_model {
+            circuit_to_json(chip_name, "hash", circuit);
+        }
+    }
+}

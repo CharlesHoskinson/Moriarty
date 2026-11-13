@@ -1,0 +1,79 @@
+[package]
+name = "midnight-zk-stdlib"
+version = "2.4.0"
+edition = "2021"
+license-file.workspace = true
+description = "Standard library of circuits and utilities for Midnight zero-knowledge proofs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+group = { workspace = true }
+ff = { workspace = true }
+blake2b_simd = { workspace = true }
+midnight-circuits = { version = "7.3.0", features = ["testing"] }
+midnight-curves = { version = "0.3.1" }
+midnight-proofs = { version = "0.8.2", default-features = false, features = [
+    "circuit-params",
+    "committed-instances",
+] }
+
+keccak_sha3 = { package = "sha3-circuit", version = "0.2.0" }
+blake2b = { package = "blake2b_halo2", version = "0.2.0" }
+
+serde = { workspace = true, optional = true }
+sha2 = { workspace = true }
+rand = { workspace = true }
+rayon = { workspace = true }
+
+num-bigint = { version = "0.4" }
+num-traits = "0.2"
+base64 = "0.13.1"
+bincode = "2.0"
+hex-literal = "1.1"
+
+[dev-dependencies]
+criterion = "0.7"
+rand_chacha = { workspace = true }
+goldenfile = "=1.8.0"
+num-bigint = { workspace = true, features = ["rand"] }
+serde_json = { workspace = true }
+itertools = "0.14"
+dhat = "0.3"
+bellman = "0.14.0"
+serial_test = "3.2.0"
+sha3 = "0.11.0"
+blake2 = "0.10.6"
+
+[target.'cfg(ci_build)'.dependencies]
+midnight-curves = { version = "0.3.0", features = ["portable"] }
+
+[features]
+default = []
+# Feature that exposes some testing functionality, such as load from scratch or instantiable
+testing = ["num-bigint/rand"]
+heap_profiling = []
+# Enable truncated challenges. This makes recursive proofs more efficient
+truncated-challenges = [
+    "midnight-proofs/truncated-challenges",
+    "midnight-circuits/truncated-challenges",
+]
+
+[lib]
+bench = false
+
+[[bench]]
+name = "verify"
+harness = false
+
+[[example]]
+name = "cred_full"
+path = "examples/identity/jwt/full_credential.rs"
+
+[[example]]
+name = "cred_enrollment"
+path = "examples/identity/jwt/enrollment.rs"
+
+[[example]]
+name = "cred_property"
+path = "examples/identity/jwt/property_check.rs"
