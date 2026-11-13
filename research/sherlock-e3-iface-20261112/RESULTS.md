@@ -42,6 +42,8 @@ Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO
 
 ## 3. J1: public values of `L` through `L_Fr` (MEASURED)
 
+Numbers of this section are from the 2f09caf tree (`l_tx` 14); from J7 on J1 runs at `l_tx` 62 (passes in the J8 small stage).
+
 Test `j1_public_values_through_lfr` (log `~/.cache/e3-iface/logs/j1-final.log`, tree of 2f09caf). Small `L_iface`: the 4 interface AIRs at `Dims { b: 32, v: 32, p: 32, l_tx: 14 }` (610 public words), `L` config, `small_params_n(4, 8)`, case full-V (14 entries, 32 values).
 
 | Check | Result |
@@ -161,7 +163,7 @@ Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`
 |---|---|
 | small | lib (5 unit tests), J1 (`l_tx` 62), I10 small, J7 on the words, J8 small: pass |
 | fixture | 44 AIRs of `L` (39 bench, 4 interface, onion), vk 241,251 bytes (2f09caf: 238,345); the 39 bench heights equal E2 in all 10 cases (no pinning needed); onion 1,006 permutations on full-V as external inputs of the bench `Poseidon2Air`; `L` proof 489,806 bytes in every case (2f09caf: 487,514); prove 149 to 167 s |
-| J4 | 33,690 transcript events per case; one tape of 502,877 ops (2f09caf: 497,410; +5,467 = 2,943 for the replay of `R` and 2,524 for the onion set); 7 positives with 0 failed assertions and the decoder equal to the native statement; missing-`R` 36, anchor tag swapped 2, forged `DIGEST` 1 failed assertions, each refused by the decoder (`R entry 1`, `R entry 4`, `entry 0: native replay`) |
+| J4 | 33,690 transcript events per case; one tape of 502,877 ops (2f09caf: 497,410; +5,467, DERIVED split: about 2,943 for the new `R` check and replay, which replaces the 14 ops of D-7, and about 2,524 for the onion set); 7 positives with 0 failed assertions and the decoder equal to the native statement; missing-`R` 36, anchor tag swapped 2, forged `DIGEST` 1 failed assertions, each refused by the decoder (`R entry 1`, `R entry 4`, `entry 0: native replay`) |
 | `L_Fr` shape | `BbAlu` and `ProgramTable` 2^19 (guard passed), `FrAdd` 8,192 rows (was 2,048), every other height as in section 6; main cells 34,267,904 (32.68 columns of 2^20) |
 | J5 | keygen 189.0 s; overflow, all-entries, chunk 2 of 3: accepted, 2 commitments (widths 33 and 10), 2,571,250 bytes, prove 658 to 680 s, verify 1.9 to 2.0 s; forged `DIGEST`: prover refuses (`LogupZerocheck(NonZeroRootSum)`) |
 | D3 | 101.1435 bits at the measured key, every term as in section 7 |
@@ -171,4 +173,8 @@ Headroom left in the 2^19 table: about 21,000 rows (DERIVED).
 ## 11. Open items and next step
 
 - The production tie of the root statement to the verified node (the bench node is not FP-2), more than one log segment (`TAG_NODE`), check (i) on the operands of `R` (an `L` obligation), the opening-proof `R` with `DIGEST(SHK_SET)`, the `popeq` lane check in the wrap, in-circuit limb range and `Canon`, and the `PATH` node order.
+- The `a_out` anchor of a chunk: its `DIGEST` output is bound to no lane (the 4 lane-map pairs are `a_in`, `claim_pub` twice, `outcome_pub`), while the spec writes `ins anchor := a_out` in the effect region: the same 4 against 5 pair question as `openClaim` (ENC section 10).
+- The anchor words `j`, `k`: no range check and no `1 <= j <= k` (the `Stmt` AIR only carries words).
+- Negative coverage: at the `L_Fr` set on f725b15 only the forged `DIGEST` was proved and refused; missing-`R` and anchor tag swapped are refused by the tape and the decoder (missing-`R` also by the prover on 2f09caf); the onion forgeries are refused at small scale with a stand-in key table; no wrong-permutation negative.
+- No Gemini Quint lane has run on `OnionAir` or the replay of `R` (owner rule for Sherlock circuit changes).
 - Confirmations: D-10 (`R` order), D-11 (replay of `R` only), D-12 (onion form).
