@@ -4,7 +4,7 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 
 ## 1. Status
 
-**E3 gate: PASS (J1 to J5, tree 2f09caf).** At the `L_Fr` set (`lfr_params`) the all-entries case (253 entries, every value slot used, no `NOP` before the padding) and the forced-overflow case (551 operations to tier E) prove and the stock verifier accepts with 2 commitments; the missing-`R` case is refused by the prover. D3 at the measured key: 101.1435 bits (equal to E2). An entry table with no `NOP` row at all is impossible at `B = V = 256` (DERIVED, section 5), so all-entries is the strongest case that exists. "Statement words equal the native ones" is the plain-Rust decoder check of D-9 on the exposed `L_Fr` words, not a constraint of the wrap.
+**E3 gate: PASS (J1 to J5, tree 2f09caf); the owner accepted the all-entries case in place of all-non-`NOP` (ruling 2026-11-12 22:10).** At the `L_Fr` set (`lfr_params`) the all-entries case (253 entries, every value slot used, no `NOP` before the padding) and the forced-overflow case (551 operations to tier E) prove and the stock verifier accepts with 2 commitments; the missing-`R` case is refused by the prover. D3 at the measured key: 101.1435 bits (equal to E2). An entry table with no `NOP` row at all is impossible at `B = V = 256` (DERIVED, section 5), so all-entries is the strongest case that exists. "Statement words equal the native ones" is the plain-Rust decoder check of D-9 on the exposed `L_Fr` words, not a constraint of the wrap.
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -13,13 +13,16 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 | J3 | `L_iface` fixture at the OD-19 `L` set | PASS | section 5 |
 | J4 | `R` check (D-7), the full tape of every case, op counts | PASS | section 6 |
 | J5 | gate at `lfr_params`, D3 | PASS | section 7 |
-| J6 | optional replay | not started | |
+| J6 | optional replay of every entry | not built: does not fit the key (DERIVED) | section 8 |
+| J7 | ENC-1/ENC-2, `R` with `claim_pub` and chunk anchors, replay of `R` | code and word-level tests pass; full rerun with J8 | section 9 |
+| J8 | the log onion in `L`, tied to `log_d`, `log_n` | code and small tests pass; full rerun running (unit `e3-j8`) | section 10 |
 
 ## 2. Code
 
 | Repository (not pushed) | Branch | Commits |
 |---|---|---|
-| openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2; 71bf0f1 J3 and J4; 2f09caf `PublicAir` row binding, all-entries case |
+| openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2; 71bf0f1 J3 and J4; 2f09caf `PublicAir` row binding, all-entries case; 6d70a45 J7 |
+| openvm worktree `~/.cache/m7-wrap/src/openvm-e3-onion` | `e3-iface-onion` (from 6d70a45) | ab0e88a J8; f725b15 J4 shape guard, bus check, small tape delta |
 | Moriarty `~/Projects/Moriarty-wt/e3-iface` | `e3-iface` (from `e2-lfr` fbba858f1) | 8bcb491b9 plan and J1; this file |
 
 Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO_TARGET_DIR=~/.cache/e3-iface/target`, logs `~/.cache/e3-iface/logs/`).
@@ -131,9 +134,28 @@ Full-V and full-P use the same tape and key; their plain-Rust runs (0 failed ass
 
 **Added `L_Fr` rows** (section 6): 54,604 ops (+12.3 %) all fit in the existing heights; only `Public` grows (2 to 128 rows, width 3 to 58). The 2-commitment shape with one shared `ProgramTable` is kept.
 
-## 8. Open items and next step
+## 8. J6: replay of every entry in `L_Fr` (DERIVED; not built)
 
-- J6 (optional): native-Fr replay of the log values (`PERM`, `H2`, `SPONGE`, `PATH`, `DIGEST`) and `Canon` in `L_Fr`; today the decoder of D-9 does these checks in plain Rust outside the wrap.
-- D-8 placeholders: the `DIGEST` tag `Fr(k + 1)` and the `PATH` order (ENC-1, ENC-2) wait for the encoding decision.
-- Production `L`: the onion / node-statement tie of FP-3 (M7b) is not in the bench `L_iface`; chunk-mode `R` (mode word 74 = 1) is not built.
+The tape is fixed per key, while the values of entry `i` start at the data-dependent offset `off_i`. A replay of every entry therefore needs either routing of each permutation slot to its value rows (about 256 by 256 selector pairs on a fixed tape, ESTIMATE) or a new lookup AIR. The entry of a value alone costs 257 ops (`Pack` per limb and `FrAdd` doubling, MEASURED in J7), so 256 values cost about 65,800 ops against about 27,000 rows of `ProgramTable` headroom (DERIVED). Limb ranges would add about 4,600 ops (2,304 limbs, 2 ops each). So J6 does not fit the 2^19 key and is not built (owner rule: build only if it fits). The replay of `R`, at static positions, fits and is J7. The reader (D-9) replays every entry whose values are all in `pv` (`PERM`, `H2`, `SPONGE`, `DIGEST`; `PATH` needs the wrap-private siblings).
 
+## 9. J7: ENC-1/ENC-2, `R` after FP-3, chunk anchors, replay of `R` (MEASURED on the words)
+
+Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j5_gate.rs`). Decisions D-8', D-10, D-11 of the plan.
+
+- ENC-1 values: `tagFr(SHK_PROGC)` = `0x43474f52505f4b4853` and `tagFr(SHK_OUTCOME)` equal the ENC table; `PoseidonFr_4(tagFr(SHK_INPUT), pack(input_d))` equals the pinned `enc1.input_pub` (unit test `enc1_tags_and_input_pub_vector`).
+- Cases (one key): full-V, full-P, overflow, all-entries (now 249 entries: `R` of 5 entries and 12 values, then 244 `PUB`), chunk 1 of 3, chunk 2 of 3, chunk 3 of 3; negatives missing-`R`, anchor tag swapped (`wrap_anchor_tag_swapped`: chunk 2 with `a_in` under `SHK_PROGC`, its value recomputed), forged `DIGEST` (the `C_P` output changed, `claim_pub` recomputed to match).
+- The `R` check and replay on each case's 12,164 words as tape inputs (`j7_r_check_on_words`): 2,943 ops in every case (Alu 28, AssertEq 56, CSwap 3, Const 6, FrAdd 2,729, FrConst 7, Input 8 advice, Pack 99, Perm 7); failed assertions 0 on the 7 positives, 36 on missing-`R`, 2 on anchor tag swapped (the tag and the replay), 1 on forged `DIGEST` (the replay). The decoder accepts the positives with the native statement and refuses the 3 negatives (`cases_decode_or_refuse`).
+- 2,943 ops is about 11 % of the headroom (DERIVED); `FrAdd` grows from 1,568 to about 4,300 rows (2,048 to 8,192, DERIVED).
+
+## 10. J8: the log onion in `L` (MEASURED small; full rerun running)
+
+Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12.
+
+- Native: `P2(TAG_EMPTY)` equals `enc2.D_EMPTY` and the onion of the 6-entry ENC-2 log equals `enc2.onion6` (unit test `enc2_onion_vectors`).
+- Small `L_iface` (`Dims { 32, 64, 32, 62 }`, `small_params_n(4, 8)`, a stand-in key table on the permute bus, onion height 256): accepted full-V, all-entries, chunk 2 of 3, missing-`R` (the onion binds whatever log is in `pv`); refused by the prover (`LogupZerocheck(NonZeroRootSum)`): `log_d` changed, one value changed with `log_d` kept, `log_n` changed.
+- `L_Fr` cost, ESTIMATE: on the small `L_iface` the onion set (onion AIR 70 columns, 143 constraints, 11 interactions; `LogValue` 9 and `LogEntry` 1 more interactions; the key table) adds 151,357 tape ops (70,268 to 221,625) at the small `L` set; the full `L` set has other query and stacking counts, so the full figure comes from J4 of unit `e3-j8`, which fails if `BbAlu` or `ProgramTable` leaves 2^19.
+
+## 11. Open items and next step
+
+- The production tie of the root statement to the verified node (the bench node is not FP-2), more than one log segment (`TAG_NODE`), check (i) on the operands of `R` (an `L` obligation), the opening-proof `R` with `DIGEST(SHK_SET)`, the `popeq` lane check in the wrap, in-circuit limb range and `Canon`, and the `PATH` node order.
+- Confirmations: D-10 (`R` order), D-11 (replay of `R` only), D-12 (onion form).
