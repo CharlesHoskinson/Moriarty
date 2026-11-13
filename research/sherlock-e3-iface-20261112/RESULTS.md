@@ -14,15 +14,15 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 | J4 | `R` check (D-7), the full tape of every case, op counts | PASS | section 6 |
 | J5 | gate at `lfr_params`, D3 | PASS | section 7 |
 | J6 | optional replay of every entry | not built: does not fit the key (DERIVED) | section 8 |
-| J7 | ENC-1/ENC-2, `R` with `claim_pub` and chunk anchors, replay of `R` | code and word-level tests pass; full rerun with J8 | section 9 |
-| J8 | the log onion in `L`, tied to `log_d`, `log_n` | code and small tests pass; full rerun running (unit `e3-j8`) | section 10 |
+| J7 | ENC-1/ENC-2, `R` with `claim_pub` and chunk anchors, replay of `R` | PASS (with J8, full rerun) | sections 9, 10 |
+| J8 | the log onion in `L`, tied to `log_d`, `log_n` (bench form: one segment, no node tie) | PASS: fixture, J4, J5 at the E2 shape; D3 101.1435 | section 10 |
 
 ## 2. Code
 
 | Repository (not pushed) | Branch | Commits |
 |---|---|---|
 | openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2; 71bf0f1 J3 and J4; 2f09caf `PublicAir` row binding, all-entries case; 6d70a45 J7 |
-| openvm worktree `~/.cache/m7-wrap/src/openvm-e3-onion` | `e3-iface-onion` (from 6d70a45) | ab0e88a J8; f725b15 J4 shape guard, bus check, small tape delta |
+| openvm worktree `~/.cache/m7-wrap/src/openvm-e3-onion` | `e3-iface-onion` (from 6d70a45); `e3-iface` fast-forwarded to it | ab0e88a J8; f725b15 J4 shape guard, bus check, small tape delta |
 | Moriarty `~/Projects/Moriarty-wt/e3-iface` | `e3-iface` (from `e2-lfr` fbba858f1) | 8bcb491b9 plan and J1; this file |
 
 Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO_TARGET_DIR=~/.cache/e3-iface/target`, logs `~/.cache/e3-iface/logs/`).
@@ -147,13 +147,26 @@ Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j
 - The `R` check and replay on each case's 12,164 words as tape inputs (`j7_r_check_on_words`): 2,943 ops in every case (Alu 28, AssertEq 56, CSwap 3, Const 6, FrAdd 2,729, FrConst 7, Input 8 advice, Pack 99, Perm 7); failed assertions 0 on the 7 positives, 36 on missing-`R`, 2 on anchor tag swapped (the tag and the replay), 1 on forged `DIGEST` (the replay). The decoder accepts the positives with the native statement and refuses the 3 negatives (`cases_decode_or_refuse`).
 - 2,943 ops is about 11 % of the headroom (DERIVED); `FrAdd` grows from 1,568 to about 4,300 rows (2,048 to 8,192, DERIVED).
 
-## 10. J8: the log onion in `L` (MEASURED small; full rerun running)
+## 10. J8: the log onion in `L` (MEASURED)
 
 Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12.
 
 - Native: `P2(TAG_EMPTY)` equals `enc2.D_EMPTY` and the onion of the 6-entry ENC-2 log equals `enc2.onion6` (unit test `enc2_onion_vectors`).
 - Small `L_iface` (`Dims { 32, 64, 32, 62 }`, `small_params_n(4, 8)`, a stand-in key table on the permute bus, onion height 256): accepted full-V, all-entries, chunk 2 of 3, missing-`R` (the onion binds whatever log is in `pv`); refused by the prover (`LogupZerocheck(NonZeroRootSum)`): `log_d` changed, one value changed with `log_d` kept, `log_n` changed.
-- `L_Fr` cost, ESTIMATE: on the small `L_iface` the onion set (onion AIR 70 columns, 143 constraints, 11 interactions; `LogValue` 9 and `LogEntry` 1 more interactions; the key table) adds 151,357 tape ops (70,268 to 221,625) at the small `L` set; the full `L` set has other query and stacking counts, so the full figure comes from J4 of unit `e3-j8`, which fails if `BbAlu` or `ProgramTable` leaves 2^19.
+- Small-set figure (ESTIMATE that did not carry over): on the small `L_iface` the onion set (onion AIR 70 columns, 143 constraints, 11 interactions; `LogValue` 9 and `LogEntry` 1 more interactions; the key table) adds 151,357 tape ops at `small_params_n(4, 8)`.
+
+**Full rerun with J7 and J8** (unit `e3-j8`, tree f725b15, logs `~/.cache/e3-iface/logs/j8-{small,fixture,j4,j5}-final.log`, fixture `~/.cache/e3-iface/fixture-j8/`; shared slots, times are not clean timings):
+
+| Stage | Result |
+|---|---|
+| small | lib (5 unit tests), J1 (`l_tx` 62), I10 small, J7 on the words, J8 small: pass |
+| fixture | 44 AIRs of `L` (39 bench, 4 interface, onion), vk 241,251 bytes (2f09caf: 238,345); the 39 bench heights equal E2 in all 10 cases (no pinning needed); onion 1,006 permutations on full-V as external inputs of the bench `Poseidon2Air`; `L` proof 489,806 bytes in every case (2f09caf: 487,514); prove 149 to 167 s |
+| J4 | 33,690 transcript events per case; one tape of 502,877 ops (2f09caf: 497,410; +5,467 = 2,943 for the replay of `R` and 2,524 for the onion set); 7 positives with 0 failed assertions and the decoder equal to the native statement; missing-`R` 36, anchor tag swapped 2, forged `DIGEST` 1 failed assertions, each refused by the decoder (`R entry 1`, `R entry 4`, `entry 0: native replay`) |
+| `L_Fr` shape | `BbAlu` and `ProgramTable` 2^19 (guard passed), `FrAdd` 8,192 rows (was 2,048), every other height as in section 6; main cells 34,267,904 (32.68 columns of 2^20) |
+| J5 | keygen 189.0 s; overflow, all-entries, chunk 2 of 3: accepted, 2 commitments (widths 33 and 10), 2,571,250 bytes, prove 658 to 680 s, verify 1.9 to 2.0 s; forged `DIGEST`: prover refuses (`LogupZerocheck(NonZeroRootSum)`) |
+| D3 | 101.1435 bits at the measured key, every term as in section 7 |
+
+Headroom left in the 2^19 table: about 21,000 rows (DERIVED).
 
 ## 11. Open items and next step
 
