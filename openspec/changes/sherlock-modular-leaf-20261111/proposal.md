@@ -10,6 +10,15 @@ Superseded 2026-11-11 by `openspec/changes/sherlock-processor-final-20261111/` (
 - The constraint tests of the kits run the stark-backend debug constraint checker on STARK AIRs and MockProver on halo2 prototypes (DG-008).
 - The machine-level decisions are named AD-1 to AD-23, as in `FD/ARCHITECTURE.md` section 4.1. OD-1 to OD-18 now name the co-processor decisions of `FD/DECISIONS.md`.
 
+Refreshed 2026-11-13 to the STARK design (row T6a of `research/sherlock-tested-design-20261113/LOOP.md`; text before the refresh at commit `bcae0f185`). The owner chose small-field STARKs (OpenVM over BabyBear) for leaves and nodes with one BLS12-381 wrap. Changed only where that switch forces it:
+
+- The kits are OpenVM AIRs. The STARK kit gate SG-1 to SG-6 of `design.md` section 9 replaces MockProver as the kit gate: keygen with every AIR required (row T3), positive and negative real proofs on the stock stark-backend verifier, fixed leaf shard heights, the layer budgets, D3 at the measured shapes, and cost in seconds per proved step.
+- The layer budgets: the app set for leaf shards; the internal set as raised by the owner on 2026-11-12 (64 AIRs, 3,000 columns, 200 interactions per AIR) for nodes and the inline kernel; 3,300 columns and the 17-bit checker for FV work units only (rulings O1 and O2 of 2026-11-13).
+- Each kit spec with an AIR gets one STARK gate requirement. The halo2 normative text of BUS, RANGE, NODE-002, NODE-006, NODE-007 and SHP-006 is restated in the FP-1 form. Other halo2 words in scenarios are read through the term map of `design.md` section 12.
+- `tasks.md` gets group V, a vertical slice, before group 0. Its last task is the T6 done-when.
+- The fields that wait on the T5 leaf schemas are listed in `design.md` section 13.
+- Every requirement id, mutant name, Quint invariant and Lean obligation is kept. The refresh proposes new check names that `FD/ARCHITECTURE.md` does not yet list: `<kit>_air_omitted` (one per kit), `slice_air_omitted`, `bus_two_layouts_one_index`, `fv_unit_over_3300_columns` and `non_fv_17bit_checker`.
+
 ## Why
 
 The leaf of `openspec/changes/sherlock-vm-consensus-20261107/design.md` section 2.7 is one circuit description. One agent cannot build or check it in one session, and the memory backend and the boundary commitment cannot change without a change to every other part. This change specifies the leaf and the recursion as 23 module kits with frozen interfaces (`FD/ARCHITECTURE.md` sections 1 and 2). One agent builds and checks one kit against its interface. The memory backend and the boundary commitment each sit behind one seam.
@@ -19,7 +28,7 @@ The change can move the terminal evidence-gated decision of `sherlock-vm-consens
 ## What Changes
 
 - One capability spec per module kit (24 kits, list below), each with requirement IDs per kit.
-- The bus schema `(chip, key, a, b, c)` (halo2 prototype form over `Fq`; its frozen form is the BabyBear encoding of `FD/ARCHITECTURE.md` section 1.11, FP-1, spec `sherlock-freeze-prerequisites` of `sherlock-processor-final-20261111`) with two request lanes and one provider table, the chip registry, the tagged fixed table for RANGE and DEC, and the named copy-constrained ports (`FD/ARCHITECTURE.md` sections 1.2 and 1.3).
+- The bus in its BabyBear form of `FD/ARCHITECTURE.md` section 1.11, FP-1 (spec `sherlock-freeze-prerequisites` of `sherlock-processor-final-20261111`): one LogUp bus per chip id with typed 16-bit-limb lanes, the RANGE and DEC buses over fixed tables, and the named ports as shared columns or permutation buses (`FD/ARCHITECTURE.md` sections 1.2, 1.3 and 1.11). The halo2 tuple `(chip, key, a, b, c)` over `Fq` is the prototype form only.
 - Profile A as the built path: dense tail-buffered Merkle memory with 8-record PAGE and ROM cache lines, and a Poseidon header-and-body boundary digest (decisions L-1, M-1, E-1).
 - Hash-chain FRAMES and TASKS stacks with the compound stack step (R-3, revision B2 finding 2).
 - `sherlock-value/1` unchanged (L-3).
@@ -103,7 +112,7 @@ The amendments of the governing change that this change needs are tasks of group
 
 ## Impact
 
-- Code: `crates/mori-chip` (leaf kits), `crates/mori-recursion` (node, decider, continuation, checkpoint store, GP hooks, general verifier), `crates/mori-core/src/sherlock/` (REFERENCE BRIDGE), `tools/sherlock-sdk/` (LEDGER CONTRACT).
+- Code: the leaf kit AIRs and the node-side AIRs on OpenVM and stark-backend (the halo2 prototypes in `crates/mori-chip` and `crates/mori-recursion` stay as differential references), `crates/mori-core/src/sherlock/` (REFERENCE BRIDGE), `tools/sherlock-sdk/` (LEDGER CONTRACT).
 - Models: `models/sherlock/quint/` (new and extended models per kit, verdict files under `qa/gemini-quint/`).
 - Proofs: `clean/fork/Clean/Sherlock/` (new Lean files per kit, axiom-report companions).
 - Keys: the per-program leaf keys change with the leaf AIRs under `key_root`. The universal internal-recursive, `L` and wrap keys do not.

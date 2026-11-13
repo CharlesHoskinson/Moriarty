@@ -12,22 +12,22 @@ The memory backend SHALL implement the `MemBackend` trait (`crates/mori-chip/src
 
 #### Scenario: Forged or non-canonical tail
 - **WHEN** a leaf imports a forged tail across a leaf boundary, a non-canonical tail, or changes `tail_d` with no append
-- **THEN** the correct circuit refuses the witness (mutants `forged_tail_across_leaf_boundary`, `non_canonical_tail`, `tail_open_skipped_when_no_append`), and P12 (`Mem.wf_unique`, proved in C3) holds
+- **THEN** the correct AIR refuses the witness (mutants `forged_tail_across_leaf_boundary`, `non_canonical_tail`, `tail_open_skipped_when_no_append`), and P12 (`Mem.wf_unique`, proved in C3) holds
 
 #### Scenario: Domain tag dropped
 - **WHEN** a domain tag is dropped or a node domain is swapped across heights
-- **THEN** the C1 lane model mutant `domain_tag_dropped` violates `invRefine`, and the correct circuit refuses the witness (mutant `domain_tag_swapped_node_height`)
+- **THEN** the C1 lane model mutant `domain_tag_dropped` violates `invRefine`, and the correct AIR refuses the witness (mutant `domain_tag_swapped_node_height`)
 
 ### Requirement: MBK-003 A flush happens iff a segment boundary is crossed, into an empty slot, at every TOP
 `persist` SHALL flush a segment exactly when `floor(len / 8)` grows, into an empty tree slot, with old and new walks that share siblings. It SHALL hold at every `TOP >= 1`. The working depth SHALL be TOP = 63, gated on AD-1 (OWNER).
 
 #### Scenario: Skipped, spurious or occupied flush
 - **WHEN** a flush is skipped, spurious, onto an occupied slot, or forges an empty segment, also at TOP = 1
-- **THEN** the correct circuit refuses the witness (mutants `flush_skipped`, `flush_spurious`, `address_reuse_occupied_slot`, `empty_seg_forgery`, `c1_gap_top1_empty_seg_forgery`), and the C1 lane model mutant `top1_walk_empty_shadowed` violates `invRefine`
+- **THEN** the correct AIR refuses the witness (mutants `flush_skipped`, `flush_spurious`, `address_reuse_occupied_slot`, `empty_seg_forgery`, `c1_gap_top1_empty_seg_forgery`), and the C1 lane model mutant `top1_walk_empty_shadowed` violates `invRefine`
 
 #### Scenario: Walk tampered
 - **WHEN** a walk sibling differs between the old and the new walk, or a walk bit is not boolean
-- **THEN** the correct circuit refuses the witness (mutants `walk_sibling_differs_old_new`, `walk_bit_nonboolean`), and a wrong sibling count is refused at synthesis (`persist_wrong_sibling_count`, recorded apart)
+- **THEN** the correct AIR refuses the witness (mutants `walk_sibling_differs_old_new`, `walk_bit_nonboolean`), and a wrong sibling count is refused at tracegen or keygen (`persist_wrong_sibling_count`, recorded apart)
 
 #### Scenario: Lean evidence for the flush rule
 - **WHEN** the backend is offered for completion
@@ -38,7 +38,11 @@ A scalar cold read SHALL open the record and its kind against `pre.root` of the 
 
 #### Scenario: Forged old record
 - **WHEN** the value or the kind of an old record is forged, or the read is opened against the running root
-- **THEN** the correct circuit refuses the witness (mutants `cold_value_forged`, `wrong_kind_cold`, `cold_read_uses_running_root`), and O16 (`MemContract.lean`, read soundness) is open
+- **THEN** the correct AIR refuses the witness (mutants `cold_value_forged`, `wrong_kind_cold`, `cold_read_uses_running_root`), and O16 (`MemContract.lean`, read soundness) is open
+
+#### Scenario: Field waits on T5
+- **WHEN** the record lanes and the kind that a cold read opens is needed for a freeze or a kit tick
+- **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-5 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
 
 ### Requirement: MBK-005 The landed dense backend is conformed to the frozen ports
 The landed dense backend (C1, `crates/mori-chip/src/dense.rs`) SHALL be conformed to the ports frozen in group F. The C1 Quint model SHALL move to `models/sherlock/quint/denseMemory.qnt` with its verdict kept.
@@ -46,3 +50,18 @@ The landed dense backend (C1, `crates/mori-chip/src/dense.rs`) SHALL be conforme
 #### Scenario: Landed tests after conformance
 - **WHEN** the backend is conformed to the frozen ports
 - **THEN** every landed C1 positive (for example `c1_partition_independence`, `c1_top1_positive`) and every landed backend mutant (for example `flush_skipped`, `cold_value_forged`) still gives its result, and the moved model `denseMemory.qnt` re-runs with `invRefine` and all 23 mutant modules caught
+
+### Requirement: MBK-006 The MEMORY BACKEND AIRs meet the STARK kit gate
+The dense backend AIRs SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the app set (at most 5,000 constraints and 1,000 interactions per AIR, 100 AIRs, 30,000 columns), with every AIR required and a fixed height in its menu shape. Where the inline kernel of SHP-006 carries them, each AIR SHALL also fit the per-AIR bounds of the internal set (1,000 constraints, 200 interactions).
+
+#### Scenario: AIR omitted from the proof
+- **WHEN** a proof omits one of the dense backend AIRs
+- **THEN** N1, N3 and `L` refuse it (mutant `mbk_air_omitted`), and the kit does not pass SG-1 before row T3 passes
+
+#### Scenario: Positive and negative proofs on the stock verifier
+- **WHEN** the positive `c1_top1_positive` and the mutant `flush_skipped` are proved with the stark-backend prover
+- **THEN** the stock verifier accepts the first, refuses the second and accepts the second under its weakened control AIR; a prover panic or tracegen error earns no rejection credit
+
+#### Scenario: Shape, budget and D3
+- **WHEN** the dense backend AIRs are keyed in a menu shape
+- **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)

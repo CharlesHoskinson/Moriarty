@@ -31,3 +31,10 @@ The resume SHALL refuse, before any proving, a checkpoint whose manifest differs
 #### Scenario: Manifest mismatch
 - **WHEN** the checkpoint manifest differs from the key manifest, or a bundle proof is missing
 - **THEN** the resume refuses before proving (host refusals `cont_mismatched_key_manifest`, `cont_bundle_missing_proof`)
+
+### Requirement: CONT-005 Continuation evidence is real proofs of NODE MERGE and SEAL
+Continuation mode 1 adds no AIR. Its positives and mutants SHALL be real proofs of NODE MERGE and SEAL nodes under the NODE key set of NODE-014, checked by the stock verifier (SG-2, SG-3). Its host refusals SHALL stay host tests.
+
+#### Scenario: Stop and resume on real proofs
+- **WHEN** `pos_mode1_stop_resume_allocating_run` and the mutant `cont_skip_predecessor` are proved with the stark-backend prover
+- **THEN** the stock verifier accepts the first and refuses the second, and every leaf shard of both runs has the fixed height of its menu shape
