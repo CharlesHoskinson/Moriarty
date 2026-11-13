@@ -112,7 +112,7 @@ Runner verdict: `{"A": true, "R1": true, "R2": true, "R3": true, "rehearsal": fa
 Notes for other lanes:
 - In the stark-backend clone, the `FrDomains::l_fr` comment "LEAD pending OD-18" is stale (E1/E2 lane).
 - Clippy `-D warnings` reports 7 errors in the E5 files `merkle.rs`, `merkle_test.rs`, `verifier.rs` and `whir.rs` (E5 lane).
-- The wrap relation is built from E5's cached `~/.cache/e5-wrap/fixtures/lfr-e3.json`. Openvm `e6-int` does not contain e147918 (the `lfr_e3` exporter), so e6-int alone cannot regenerate that fixture.
+- Rebuilt from source (coordinator, 2026-11-13). Openvm `e6-int` 780db4a merges the e5-wrap `lfr_e3` exporter e147918. `lfr_e3 1` regenerates `~/.cache/e6-int/fixtures-src/lfr-e3.json` (keygen 196.2 s, prove 731.0 s). Its `L_Fr` vk and `decode` section equal the cached E5 fixture. The k = 21 wrap of that fixture (1,605,413 rows, mock pass, keygen 119.8 s, prove 167.5 s) gives a wrap key byte-identical to the deployed key, sha256 `2fc7563673dcc317aaf20ab5600dc1bb8916d21d71dec4b079d70d2d1d1a93dd`. All MEASURED: `~/.cache/e6-int/logs/e3export.log`, `wrapkey4.log`, `runs.log`, script `~/.cache/e6-int/prep4.sh`.
 - The per-call prover regenerates the wrap key on each call (about 83 s). Caching the proving key would save that time.
 
 ## 10. Run log
@@ -127,6 +127,7 @@ Notes for other lanes:
 - 2026-11-13 01:00. Coordinator: use the E5 lfr-e3 wrap. The waiting call was stopped before any proving. E6 work committed (f62da0bb3), e5-wrap d044d01b3 merged (aa6998370), D3 on lfr-e3 pass.
 - 2026-11-13 01:49. Wrap key on lfr-e3 (1,605,413 rows), byte-equal to the E5 key; ledger `Ok(())`.
 - 2026-11-13 02:31. Deploy, then A included and R1 to R3 refused. Gate PASS.
+- 2026-11-13 04:06. lfr-e3 and the wrap key rebuilt from source (openvm 780db4a); key byte-identical.
 
 ## 11. Files
 
@@ -134,7 +135,7 @@ Notes for other lanes:
   - `tools/sherlock-wrap/src/bin/wrap.rs`: key fixture argument and `E6_EXPECT_VK`.
   - `tools/sherlock-wrap/tests/od18_vectors.rs`.
   - `tools/sherlock-sdk/`: `e6-local-run.mjs`, `e6-padding.mjs`, `e6-padding.test.mjs`, `e6-dump-prover.mjs`, `e6-wrap-prover.sh` (`E6_REL_FIXTURE`).
-- openvm `~/.cache/m7-wrap/src/openvm-e6` (branch `e6-int` = e3-iface 2f09caf + e5-wrap e0d43ff, commit a0f07fa): `crates/sherlock-wrap-export/examples/lfr_call.rs`, `examples/d3_wrapin.rs`, Cargo.toml dev-dependencies.
+- openvm `~/.cache/m7-wrap/src/openvm-e6` (branch `e6-int` = e3-iface 2f09caf + e5-wrap e0d43ff, commits a0f07fa and merge 780db4a of e5-wrap e147918): `examples/lfr_e3.rs`, `crates/sherlock-wrap-export/examples/lfr_call.rs`, `examples/d3_wrapin.rs`, Cargo.toml dev-dependencies.
 - bridge-lean: `clean/fork/Clean/Sherlock/Bridge.lean`, `BridgeAxioms.lean` (docstrings).
 - Scripts and logs: `~/.cache/e6-int/` (`prep.sh`, `prep2.sh`, `prep3.sh`, `callphase.sh`, `run-call.sh`, `logs/`, `run-e3/`).
 - Gemini Quint lane (callvec): `~/.cache/gemini-lanes/e6-callvec`, `research/sherlock-e6-int-20261112/gemini-quint/`.
