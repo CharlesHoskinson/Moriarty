@@ -48,7 +48,7 @@ The `L_Fr` key and the `L` pre-hash are constants of the wrap relation, so the o
 
 The wrap statement is the call vector that the D-9 decoder (`tools/sherlock-wrap/src/decode.rs`, E5 7a4dfb308) computes from the `L_Fr` public words in the circuit. That covers range and `Canon` of each lane, the padding rules, the lane map and `PUB(i)`. E5 RESULTS section 6i has the full list. A call run of E6 (empty lane map, log = the reservation R only: 3 `DIGEST` entries) decodes to its 1,026 lanes. The native decoder accepts the E6 key fixture under the `lfr-e3` relation (cost run 1,605,413 rows, MEASURED, `wrapcheck3.log`). For both calls the prover checked that the wrap statement equals the ledger call vector, lane for lane.
 
-History: before the E5 decoder arrived, E6 built its own map `callvec` (commit f62da0bb3). It handled call-vector lanes only and refused a non-empty lane map: 1,544,986 rows, key 1,325 bytes (sha256 `5be9344c...6a6f`), ledger `Ok(())`, Gemini Quint lane SOUND on all 5 questions (MEASURED, `gemini-quint/`). The merge aa6998370 removed it in favour of the E5 decoder, which is a superset. The E5 lane owns the Quint lane of the decoder change; E6 makes no circuit change of its own on top of E5.
+History: before the E5 decoder arrived, E6 built its own map `callvec` (commit f62da0bb3). It handled call-vector lanes only and refused a non-empty lane map: 1,544,986 rows, key 1,325 bytes (sha256 `5be9344c...6a6f`), ledger `Ok(())`, Gemini Quint lane SOUND on all 5 questions (MEASURED, `gemini-quint/`). The merge aa6998370 removed it in favour of the E5 decoder, which is a superset. E6 makes no circuit change of its own on top of E5. **Open item:** no Gemini Quint lane for the D-9 decoder circuit is on record. The E5 RESULTS at d044d01b3 name none, and `~/.cache/gemini-lanes/` has no decoder lane. The E5 lane or the coordinator owns it. After the merge, `od18_vectors` (3 of 3) and E5 `i7_decode` (2 of 2) pass on aa6998370 (MEASURED, `~/.cache/e6-int/logs/wraptest3.log`).
 
 ## 4. Item 2: OD-18 tags of `L_Fr` (PASS)
 
@@ -106,12 +106,13 @@ Runner verdict: `{"A": true, "R1": true, "R2": true, "R3": true, "rehearsal": fa
 ## 9. Owner confirmations (LEAD)
 
 1. Intent TTL 14,400 s for the call (section 7).
-2. The E3 map scope as E5 states it: every decoder check is in the circuit, with no J6 deferred-log replay. The E6 call runs use an empty lane map.
+2. The E3 map scope as E5 states it: every decoder check is in the circuit, with no J6 deferred-log replay. The E6 call runs use an empty lane map and a log of R only (no `PUB` entries). The decoder's `PUB(i)` and lane-map checks were therefore not exercised on-chain; only the E5 I7 cases cover them (native and `MockProver`).
 3. The superseded E6 `callvec` map was removed in favour of the E5 decoder (coordinator order, 2026-11-13 01:00).
 
 Notes for other lanes:
 - In the stark-backend clone, the `FrDomains::l_fr` comment "LEAD pending OD-18" is stale (E1/E2 lane).
 - Clippy `-D warnings` reports 7 errors in the E5 files `merkle.rs`, `merkle_test.rs`, `verifier.rs` and `whir.rs` (E5 lane).
+- The wrap relation is built from E5's cached `~/.cache/e5-wrap/fixtures/lfr-e3.json`. Openvm `e6-int` does not contain e147918 (the `lfr_e3` exporter), so e6-int alone cannot regenerate that fixture.
 - The per-call prover regenerates the wrap key on each call (about 83 s). Caching the proving key would save that time.
 
 ## 10. Run log
@@ -133,7 +134,7 @@ Notes for other lanes:
   - `tools/sherlock-wrap/src/bin/wrap.rs`: key fixture argument and `E6_EXPECT_VK`.
   - `tools/sherlock-wrap/tests/od18_vectors.rs`.
   - `tools/sherlock-sdk/`: `e6-local-run.mjs`, `e6-padding.mjs`, `e6-padding.test.mjs`, `e6-dump-prover.mjs`, `e6-wrap-prover.sh` (`E6_REL_FIXTURE`).
-- openvm `~/.cache/m7-wrap/src/openvm-e6` (branch `e6-int` = e3-iface 2f09caf + e5-wrap e0d43ff): `crates/sherlock-wrap-export/examples/lfr_call.rs`, `examples/d3_wrapin.rs`, Cargo.toml dev-dependencies.
+- openvm `~/.cache/m7-wrap/src/openvm-e6` (branch `e6-int` = e3-iface 2f09caf + e5-wrap e0d43ff, commit a0f07fa): `crates/sherlock-wrap-export/examples/lfr_call.rs`, `examples/d3_wrapin.rs`, Cargo.toml dev-dependencies.
 - bridge-lean: `clean/fork/Clean/Sherlock/Bridge.lean`, `BridgeAxioms.lean` (docstrings).
 - Scripts and logs: `~/.cache/e6-int/` (`prep.sh`, `prep2.sh`, `prep3.sh`, `callphase.sh`, `run-call.sh`, `logs/`, `run-e3/`).
 - Gemini Quint lane (callvec): `~/.cache/gemini-lanes/e6-callvec`, `research/sherlock-e6-int-20261112/gemini-quint/`.
