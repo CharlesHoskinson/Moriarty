@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: HDM-001 Fr-side capacity words and use codes
-Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3, rate 2. The initial capacity SHALL be `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. The use codes SHALL be 0 for program operations, 1 for a Merkle leaf of `L`, 2 for a Merkle node of `L`, 3 for the Fr transcript of `L` and 4 for public digests (OD-18).
+Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3, rate 2. The initial capacity SHALL be `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. The use codes SHALL be 0 program operations; 1, 2, 3 the Merkle leaf, Merkle node and transcript of `L`; 4 public digests; 5, 6, 7 the Merkle leaf, Merkle node and transcript of `L_Fr` (OD-18).
 
 #### Scenario: Two uses with one capacity
 - **WHEN** a Merkle leaf hash of `L` and a public digest of the same length are computed
 - **THEN** their initial capacities differ by the use code, and the T-FS vector 9 checks each against Midnight's CPU sponge
+
+#### Scenario: Hash of `L_Fr` against a hash of `L`
+- **WHEN** a Merkle hash or the transcript of `L_Fr` and a hash of `L` of the same length are computed
+- **THEN** their initial states differ, because u = 5, 6, 7 are disjoint from 0 to 4 (static check `vkLFr_ok`, built at `6661325d4` of branch `bridge-lean`)
 
 ### Requirement: HDM-002 Public digest tags
 A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18). The Fr value of each tag SHALL be published with a differential vector before the hash domains freeze (ENC-1); until then the tag rows are FREEZE-PENDING.
@@ -22,18 +26,18 @@ The Merkle leaf and node hashes of `L` (`u` = 1 and 2) SHALL use Midnight's fixe
 - **THEN** two different inputs pack to one element (`pack_length_check_needed`, `pack_range_check_needed`, proved at `bdb92973a`)
 
 ### Requirement: HDM-004 The transcript of `L`
-The transcript of `L` SHALL be the stark-backend multi-field overwrite duplex over Fr with Midnight's permutation, stock in every transition, with one change: the initial capacity cell `s_2 = 2^64 + 3 * 2^66` (OD-18). The wrap SHALL implement the duplex on its 19-row permutation layout.
+The transcript of `L` SHALL be the stark-backend multi-field overwrite duplex over Fr with Midnight's permutation, stock in every transition, with one change: the initial capacity cell `s_2 = 2^64 + 3 * 2^66` (OD-18). The verifier of `L` inside `L_Fr` SHALL implement the duplex natively in the trace of `L_Fr`. The transcript of `L_Fr` SHALL be the same duplex with the initial capacity `2^64 + 7 * 2^66`, and the wrap SHALL implement it with the stdlib Poseidon chip.
 
 #### Scenario: Stock capacity
 - **WHEN** a prover or verifier starts the transcript of `L` with the stock capacity
 - **THEN** its T-FS outputs differ from the reference vectors, and the gate check G3 fails
 
 ### Requirement: HDM-005 The key schedule fixes the flushes
-The key schedule `sched` SHALL fix the count of words between any two flushes. The wrap's verifier of `L` SHALL follow `sched`. It SHALL NOT follow the proof (LW-002).
+The key schedule `sched` SHALL fix the count of words between any two flushes. The verifier of `L` inside `L_Fr` SHALL follow `sched`. It SHALL NOT follow the proof (LW-002).
 
 #### Scenario: Proof-driven flush
 - **WHEN** a verifier of `L` flushes where the proof places a commitment and not where `sched` does
-- **THEN** the wrap refuses the witness (mutant `wrap_l_transcript_from_proof`)
+- **THEN** the trace of `L_Fr` is refused (mutant `wrap_l_transcript_from_proof`)
 
 ### Requirement: HDM-006 One OOD sample in the stock WHIR order
 Each non-final round of `L` SHALL take one OOD sample in the stock order of WHIR Construction 5.1: observe the round commitment, sample one OOD point, observe its answer, then the query PoW, the query indices and `gamma` as stock, with the answer batched with the query answers under one `gamma` (`q_i + 1` claims) (OD-19).
@@ -54,10 +58,10 @@ Each squeeze SHALL give 5 base-`p` digits with bias at most `2^-100`. The recomp
 
 #### Scenario: Aliased squeeze
 - **WHEN** the digits of `r` are offered as a squeeze of `0`
-- **THEN** the wrap refuses the witness (mutant `wrap_squeeze_noncanon`), and `squeeze_alias` and `squeeze_digits_sound` (proved at `bdb92973a`) give the reason
+- **THEN** `L_Fr` or the wrap refuses the witness (mutant `wrap_squeeze_noncanon`), and `squeeze_alias` and `squeeze_digits_sound` (proved at `bdb92973a`) give the reason
 
 ### Requirement: HDM-009 Transcript vectors T-FS
-The nine transcript vectors T-FS of `FD/EXPERIMENTS.md` section 2 SHALL give the same digits and the same final state on the CPU prover, the GPU prover, the stark-backend verifier and the wrap's verifier of `L`. Until they pass, the transcript SHALL be reported PENDING.
+The nine transcript vectors T-FS of `FD/EXPERIMENTS.md` section 2 SHALL give the same digits and the same final state on the CPU prover, the GPU prover, the stark-backend verifier and the `L_Fr` tape, and the same holds for the `L_Fr` transcript on its prover, its verifier and the wrap's verifier of `L_Fr`. Until they pass, the transcript SHALL be reported PENDING.
 
 #### Scenario: One implementation differs
 - **WHEN** one of the four implementations gives other digits on one vector
