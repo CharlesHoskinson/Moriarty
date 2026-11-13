@@ -303,7 +303,7 @@ One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: wit
 
    `L_Fr` already checks `R` in its tape (`gen_r_check`, E3 J7). The wrap repeats the check so that its verdict equals stock `decode`.
 
-**Open (recommended option, FOR OWNER CONFIRMATION).** Stock `decode` replays every entry (`PERM`, `H2`, `SPONGE`, `DIGEST`). The wrap replays only `R` and the mapped entries, so a wrong output in any other entry is accepted by the wrap and refused by stock. This is E3 J6 in the wrap. Such an output does not reach the statement: only mapped entries and `PUB` values reach it, and both are checked. ESTIMATE for a full replay through a 256-slot permutation tape with the sponge state carried between slots: about 15,000 to 25,000 rows. That fits the headroom below.
+**Open at this step (closed in section 6m by the full replay).** Stock `decode` replays every entry (`PERM`, `H2`, `SPONGE`, `DIGEST`). The wrap replays only `R` and the mapped entries, so a wrong output in any other entry is accepted by the wrap and refused by stock. This is E3 J6 in the wrap. Such an output does not reach the statement: only mapped entries and `PUB` values reach it, and both are checked. ESTIMATE for a full replay through a 256-slot permutation tape with the sponge state carried between slots: about 15,000 to 25,000 rows. That fits the headroom below.
 
 | Check | Result |
 |---|---|
@@ -319,6 +319,31 @@ One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: wit
 | Exclusive slot (`r2-i6-excl.log`) | keygen 83.7 s; blinded prove 138.5 s; proof 2,912 bytes; key 1,325 bytes; library verify OK |
 | Stock ledger 9.1.0.1 | `Ok(())` in 0.077 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
 | Gemini Quint lane round 2 (`qa/gemini-quint/e5-decode-r2/`) | The `argon-run` lane gives SOUND and COMPLETE on 7 questions (op test, output index, mapped twice, u16, mapped replay, step 4, output), with no defect apart from the open replay. The lane sandbox refused quint, so the lead ran it with no model fixes: typecheck OK; 14 of 14 tests pass; `SOUND_AND_COMPLETE` has no violation in 10,000 traces (seeds 1 and 2); all 8 mutants are violated (`no_sponge3_param`, `idx_plus1`, `no_twice`, `no_u16`, `no_mapped_replay`, `t_in_wrong`, `no_claim_pub`, `no_chunk_range`) |
+
+## 6m. Full native replay of every entry (MEASURED unless marked)
+
+The lead decided (AFK pick) that the wrap statement must equal the stock D-9 one, so the open item of section 6l is closed. Step 7 of `src/decode.rs` replays every `PERM`, `H2`, `SPONGE` and `DIGEST` entry, as stock `decode` does; stock does not replay `PATH`. The partial replays of section 6l (R and mapped entries) are removed, because step 7 covers them.
+
+**Design.**
+- A tape of `P` = 256 permutation slots. The active slots `t < np` form a monotone bit vector with sum `np`, and an inactive slot holds the zero tuple.
+- Each entry gives a packed tuple: the `PERM`, `H2`, `SPONGE`, `DIGEST` bits, the parity, `param` (8 bits), `o`, `poff` and `perms` (9 bits each).
+- Each slot witnesses a tuple with the same fields, range checked. A lookup with fixed multiplicities ties the slots to the entries: `sum act_t / (alpha - pk_t) = sum perms_i / (alpha - row_i)`. With `0 <= t - poff < perms`, this places block m of entry i at slot `poff_i + m`.
+- The values are read through the V lookup: `vs[o + 2m]`, `vs[o + 2m + 1]` (when the block has a second input), `vs[o + 2m + 2]`, the output `vs[o + 3]` or `vs[o + param]`, then `vs[o + 4]` and `vs[o + 5]`. All reads are gated.
+- The sponge state is carried from slot to slot. The first block takes capacity `param` (u = 0). `H2` takes `cap(0, 2)`, and `DIGEST` takes `cap(4, 2)` with the tag from a gated one-hot.
+- Every slot tuple and every read value is observed before `alpha` and `beta` are sampled.
+
+| Check | Result |
+|---|---|
+| I7 native vs stock (`r3-i9.log`) | 30 of 30 cases equal, including `open_replay_perm`, `open_replay_sponge`, `open_replay_digest` (now refused, as by stock); honest and `tail_honest` statements equal |
+| Decoder alone, cost model k = 18 | 223,453 rows (was 165,168; the replay costs 58,285 rows, against the ESTIMATE of 15k to 25k in section 6l: the estimate left out the observed read values) |
+| `MockProver`, decoder alone | honest OK; changed statement and 10 refusal cases refused, the 3 `open_replay` cases included |
+| I9 | Part A pass. Part B: 12 of 12 equal stock (refused at `R entry 1`); the honest ENC-2 log replays (no replay failure); a changed `C_P` is refused by the replay |
+| I8 native verifier core (`r3-i8.log`) | 675 of 675 stock samples equal |
+| Full wrap rows, k = 21 | 1,668,323 (gate 1,782,573; 93.6 percent; headroom 114,250); table rows 1,261,315; 8 advice, 27 fixed columns |
+| `MockProver`, full wrap | honest OK (46.2 s); changed public input and changed proof value refused |
+| Exclusive slot (`r3-i6-excl.log`) | keygen 86.1 s; blinded prove 137.5 s; proof 2,912 bytes; key 1,325 bytes; library verify OK |
+| Stock ledger 9.1.0.1 | `Ok(())` in 0.079 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
+| Gemini Quint lane round 3 (`argon-run` lane `e5-decode-r3`, report to `qa/gemini-quint/e5-decode-r3/`) | lane running, verdict pending (2026-11-13 07:55: the lane is still writing `decode.qnt`; no REPORT yet) |
 
 ## 7. Soundness points (as built)
 
@@ -360,3 +385,4 @@ One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: wit
 - 2026-11-13 05:25. Openvm `e5-wrap` rebased onto E3 9539418; `lfr-e3` re-exported from the J8 fixture (log `r2-export.log`); I7 and I9 pass on the ported decoder (log `r2-i9.log`).
 - 2026-11-13 05:35. Full wrap on the new `lfr-e3`: 1,610,038 rows at k = 21; exclusive keygen 83.7 s, prove 138.5 s; ledger 9.1.0.1 accepts (logs `r2-i8.log`, `r2-i6-excl.log`).
 - 2026-11-13 05:55. Gemini Quint lane round 2 on the ported decoder: SOUND and COMPLETE; lead runs pass, 8 of 8 mutants caught (`qa/gemini-quint/e5-decode-r2/`).
+- 2026-11-13 06:32. Full native replay (section 6m): I7 30 of 30 equal; 1,668,323 rows at k = 21; exclusive keygen 86.1 s, prove 137.5 s; ledger 9.1.0.1 accepts (logs `r3-i9.log`, `r3-i8.log`, `r3-i6-excl.log`).
