@@ -95,3 +95,96 @@ Gemini Quint lane: none due for X14. The operation AIRs are stock OpenVM mod-bui
 - `out/x14-run.jsonl`, `out/x14-run.err`: operation AIR shapes, child node, unit node base, unit nodes with each operation at five heights.
 - `out/x14-ops.jsonl`, `out/x14-ops.err`, `out/x14-ops.sh`, `out/x14-ops2.jsonl`, `out/x14-ops2.err`, `out/x14-ops2.sh`: the limb and range sweeps.
 - `src/x_exp_node.rs`: bench source.
+
+## Follow-up under the owner rulings of 2026-11-12 20:35
+
+Rulings (`research/sherlock-processor-final-20261111/DECISIONS-ASK.md`, "Owner rulings 2026-11-12 20:35"): X14 option 2. The internal set's per-AIR interaction bound is 200, G1 operations become `fp_mul`-class rows, and stock `fr_mul` and `fp_mul` are used unchanged. N-6 option 2: the node budget is 64 AIRs and 3,000 columns, before FP-8. D3 recomputes the internal-set terms. The bounds below are the ruling's; this section records what they give.
+
+### (a) D3 at the new bounds (MEASURED, `out/d3-bounds.log`, `src/x_exp_bounds.rs`)
+
+The D3 calculator call of `ud_sizing.rs` (`SoundnessCalculator::calculate_extended`), with the frozen internal set (OD-19): log blowup 3, `l_skip` 2, `n_stack` 17, `w_stack` 512, queries 97/82/81, folding PoW 0, `mu` PoW 9, query PoW 21, LogUp PoW 18, height 2^19, 1,000 constraints per AIR.
+
+| Term | 50 AIRs, 2,000 columns, 100 interactions | 64 AIRs, 3,000 columns, 200 interactions |
+|---|---:|---:|
+| logup (grindable) | 102.7205 | 102.7205 |
+| gkr_sumcheck | 122.0426 | 122.0426 |
+| gkr_batching | 123.6276 | 123.6276 |
+| zerocheck | 119.7207 | 119.7207 |
+| constraint_batching | 113.6546 | 113.6546 |
+| stacked | 111.6618 | **111.0768** |
+| mu (grindable) | 101.6304 | 101.6304 |
+| fold_rbr (grindable) | 102.6276 | 102.6276 |
+| query (grindable) | 101.1643 | 101.1643 |
+| shift_rbr | 101.1643 | 101.1643 |
+| gamma | 117.0129 | 117.0129 |
+| ood | 109.6276 | 109.6276 |
+| weakest | 101.1643 | 101.1643 |
+| gate (grindable >= 101, every >= 100) | PASS | PASS |
+
+Every term stays at 100 bits or more, and every grindable term at 101 or more. No PoW or parameter changes: the smallest LogUp PoW and `mu` PoW that hold 101 bits are the frozen 18 and 9. Only the stacked term moves, through the column count. `n_logup` stays 29 under both bounds, because the field bound (`max_interaction_count`) is smaller than the parameter bound (`log2 64 + log2 200 + 19 - 2 = 31`), so the per-AIR interaction bound does not reach the LogUp term at this set. This is a calculator figure (G2 part), not the qualified proof (G1 to G4 open, ARCHITECTURE section 1.9).
+
+### (b) The parent node over a unit node with 193-interaction AIRs (MEASURED, `out/x14b-parent.jsonl`)
+
+The unit node is arity 1 over one internal-set node: stock `fp_mul` at 2^16 rows (193 interactions) and its range checker. It was proved and verified (41 AIRs, 1,831 columns, tallest AIR 2^18). The parent is an internal-set node over it, compared with the same parent over the plain child node:
+
+| Parent | Child | AIRs | Columns | Max interactions per AIR | Tallest AIR | Stacked width | Main cells | Lifted interactions | Proved and verified |
+|---|---|---:|---:|---:|---|---:|---:|---:|---|
+| arity 1 | plain node | 39 | 1,537 | 77 | 2^16 | 34 | 17,296,624 | 1,506,468 | yes |
+| arity 1 | unit node (`fp_mul`, 193) | 39 | 1,537 | 77 | 2^16 | 34 | 17,426,928 (+130,304, +0.75 %) | 1,554,852 | yes |
+| arity 2 | plain nodes | 39 | 1,549 | 77 | 2^17 | 47 | 24,336,216 | 2,946,964 | yes |
+| arity 2 | unit nodes | 39 | 1,549 | 77 | 2^17 | 48 | 24,596,824 (+260,608, +1.07 %) | 3,043,732 | yes |
+
+So a child with 193-interaction AIRs costs the parent about 1 % more main cells and one more stacked column at arity 2. The AIR count, column count and tallest height do not change. The parent's own AIRs stay at 77 interactions or fewer, which is within the new and the old bound.
+
+### (c) G1 as `fp_mul`-class row chains (MEASURED, `out/x14c-g1.jsonl`)
+
+New AIRs (`src/x_exp_node.rs`, `ChainAir`). Each is one stock `FieldExpr` row with exactly one modular constraint (asserted), plus an `id` column and bus messages that carry its inputs and outputs. A message carries at most 2 field values (97 fields), under the LogUp message length bound of 128. `SourceAir` is a test harness that produces the input points and consumes the output; it is not part of the design.
+
+| Chain | Row kind | Constraint | Width | Constraints | Interactions | Degree |
+|---|---|---|---:|---:|---:|---:|
+| add (3 rows per addition) | `L_add` | `lambda (x2 - x1) = y2 - y1` | 387 | 98 | 199 | 2 |
+| | `X3` | `x3 = lambda^2 - x1 - x2` | 339 | 98 | 196 | 2 |
+| | `Y3` | `y3 = lambda (x1 - x3) - y1` | 387 | 98 | 197 | 2 |
+| double (4 rows per doubling) | `SQ` | `s = x^2` | 243 | 98 | 195 | 2 |
+| | `L_dbl` | `lambda 2y = 3 s` | 339 | 98 | 199 | 2 |
+| | `X3`, `Y3` | as above, `x2 = x1` | 339, 387 | 98 | 196, 197 | 2 |
+
+`lambda = 3 x^2 / (2 y)` in one row needs two modular constraints (the mod-builder saves `x^2`), so the doubling has a separate `SQ` row. Every row kind stays at 199 interactions or fewer, which is within the 200 bound by 1. Each chain proves and verifies alone at 2^4 rows.
+
+The unit node is arity 1 over one internal-set node, with the chain at 2^h rows (one G1 operation per row of each AIR):
+
+| Unit | AIRs (without the harness) | Columns (without the 289-column harness) | Max interactions | Stacked width at 2^12 / 2^14 / 2^16 / 2^17 | Proved and verified at 2^16 |
+|---|---:|---:|---:|---|---|
+| add chain | 44 (43) | 2,943 (2,654) | 199 | 47 / 80 / 211 / 386 | yes |
+| double chain | 45 (44) | 3,138 (2,849) | 199 | 48 / 86 / 235 / 435 | yes |
+
+Without the harness, both units are inside 64 AIRs and 3,000 columns (DERIVED by subtracting the harness's 289 columns and 1 AIR). With the harness, the double-chain unit has 3,138 columns, over the bound; it proved anyway, because the bound is a soundness assumption, not a check (see above). The tallest AIR is the range checker at 2^18 (17 bits).
+
+Findings:
+
+- **One kind per unit.** A unit with both chains (`L_add`, `L_dbl`, `SQ`, shared `X3` and `Y3`, range) has 1,537 + 387 + 339 + 243 + 339 + 387 + 4 = 3,236 columns, over 3,000 (DERIVED). So the MSM schedule needs units of one kind: addition units, then one doubling unit (for example a bucket MSM: bucket and window sums are additions, and the 255 doublings that combine the windows come last). FV-SCHED must use this schedule (DERIVED).
+- **Range checker of the units.** With the 16-bit RANGE table of LD-S10x-3, these row kinds need up to 3 modular constraints each (MEASURED: the one-constraint assertion fails with 3, `out/x14c-rb16.err`). The work units therefore keep their own 17-bit range checker (2^18 rows, under the 2^19 height bound). LD-S10x-3 fixes the RANGE table of the leaf kits. Recommendation, **for owner confirmation**: the FV work units use a 17-bit range checker of their own.
+- **Gemini Quint lanes** (`qa/gemini-quint/x14-l-add`, `x14-l-dbl`, `x14-sq`, `x14-x3`, `x14-y3`): every lane finds the row kinds SOUND and COMPLETE only under conditions that the chain as built does not yet enforce. (1) The denominator must be non-zero: for `L_add` with x1 = x2 and y1 = y2, `lambda` is free (a soundness failure); with x1 = x2 and y1 != y2 there is no witness (a completeness failure for P + (-P)); `L_dbl` needs y != 0. (2) Every `id` must be unique: `id` is not constrained, so two rows with the same `id` can swap inputs on a split message. (3) The producer must range-check input limbs: `FieldExpr` range-checks only its outputs, quotient and carries. (4) No point at infinity is representable. The lead's quint runs are in `out/x14-lanes-quint.txt`. Some lane models did not typecheck on the first pass and are being fixed by a continuation turn; see the lane reports.
+- **What the conditions cost (DERIVED, recommendation for owner confirmation).** Add one inverse-witness row per addition and per doubling (`w (x2 - x1) = 1`, or `w y = 1`; one `fp_mul`-class row, about 195 interactions): an addition becomes 4 rows and a doubling 5. Constrain `id` as the row index (first row 0, next = local + 1: one transition constraint, no interaction). The producer of the points (MSM bucket logic) range-checks limbs, or receives them from rows that did. For the point at infinity, use a flag column with the identity handled by selection, or a schedule that never adds a point to itself or its negation. The extra row kind adds about 300 columns to a unit: 2,654 + about 300 = about 2,950 for the addition unit, which is just under 3,000 (ESTIMATE, not measured).
+
+### X14 gate under the new bounds
+
+| Check | Result | Label |
+|---|---|---|
+| stock `fr_mul` (129) and `fp_mul` (193) within 200 interactions | yes | MEASURED |
+| G1 addition and doubling as `fp_mul`-class rows within 200 | yes, at most 199 | MEASURED |
+| unit node within 64 AIRs and 3,000 columns | `fr_mul` 41 / 1,735; `fp_mul` 41 / 1,831; add chain 43 / 2,654; double chain 44 / 2,849 | MEASURED (chains: DERIVED without the harness) |
+| one operation AIR at 2^16 beside one child verification | proved and verified for all four | MEASURED |
+| the parent over such a unit | about +1 % main cells | MEASURED |
+| D3 at the new bounds | weakest 101.1643, PASS | MEASURED (calculator) |
+
+**GP-3 general verifier, FV-SCHED unit budget:** one unit holds 2^16 operations of one kind (2^17 laid out, not proved). For one `ivc_node` proof (ESTIMATE): the MSM is a bucket MSM with about 23,000 additions in 1 addition unit plus 1 doubling unit, and the final check (AD-22 (a)) is about 20,000 `fp_mul` rows in 1 unit. That is 3 arithmetic units before transcript and expression evaluation, which stay PENDING. Status: the arithmetic part of the unit budget is MEASURED. The gate stays **FREEZE-PENDING** on (1) the non-zero, `id` and infinity rows above (unmeasured), (2) the transcript and expression-evaluation AIRs, and (3) the lanes' fixed models.
+
+### ARCHITECTURE rows that must change (not edited here; `efb0eb78a` text)
+
+- Section 1.9 parameter sets table, row "Internal (and the leaf layer on path C)", column "Shape bounds": "same per-AIR bounds" becomes 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns (only for the internal set; the leaf layer row on path C needs its own reading). Add the D3 figure 101.1643 at the new bounds.
+- Line 2265 (NODE INTEGRATION, "The node's shape bounds are those of the internal set ... 1,000 constraints and 100 interactions per AIR, 50 AIRs, 2,000 columns"): the new bounds.
+- GP-3 general verifier "Row budget" (line 2698, "Unknown. No figure is given") and kit FV-SCHED (line 2689): the unit budget, the one-kind-per-unit schedule, and the operation inventory above.
+- X14 row of the experiments table (line 4008) and AD-22 (line 3457): the cost of the final check per SRS.
+- N-6 (line 3489) and N-10 (line 3508): the rulings.
+- AD-3 (line 3438), the kit PAGE/ROM block cache text at line 1481 ("`K_rom` ... not frozen"), V-4 (line 3562), the decision index row at line 3341 and X15 (line 4009): `K_rom = 15` FROZEN by the owner (2026-11-12 20:35).

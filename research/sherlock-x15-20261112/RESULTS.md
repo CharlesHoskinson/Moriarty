@@ -64,3 +64,7 @@ All earlier assertions of the X1 test (appends, stack operations, heap reads, no
 - 18 rules did not fire (the same list as X1); their bounds are STATIC only.
 - The production `BoundsC` caps for `D_row` (AD-12) and the wide-row layout (V-2).
 - No circuit was changed, so no Gemini Quint lane is due for X15.
+
+## Owner ruling 2026-11-12 20:35
+
+`K_rom = 15` is **FROZEN** by the owner (X15 / AD-3, `research/sherlock-processor-final-20261111/DECISIONS-ASK.md`, "Owner rulings 2026-11-12 20:35": "freeze K_rom = 15 (static bound of 15 ROM rows per step)"). ARCHITECTURE rows to update (not edited here): AD-3 (line 3438), the kit PAGE/ROM block cache (line 1481, "`K_rom` ... not frozen"; line 1573 uses `K_rom = 2` as an example, which X15 rules out), V-4 (line 3562), the decision index row "ROM depth over physical rows and `K_rom`" (line 3341, `K_rom` part), and the X15 row of the experiments table (line 4009). `D_tbl` and `D_row` (AD-12) stay open.

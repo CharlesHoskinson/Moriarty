@@ -30,3 +30,19 @@ The old halo2 figures (a 255-level path about 5,610 hash rows; the lift 550,000 
 1. The owner's (or lead's) choice of X14 option 1, 2 or 3 (operation AIR encoding under the internal-set bounds).
 2. One Compact adapter class named with its circuit, so a real adapter proof can be costed with `x14_inventory.rs` (its `CircuitModel` gives the counts of the X14 inventory table).
 3. Then the probe: the unit sequence of X14 over that proof, plus the two membership paths and the claim hash, in nodes at the internal set.
+
+## Update under the owner rulings of 2026-11-12 20:35 (from the new X14 numbers)
+
+X14 option 2 is ruled: 200 interactions per AIR, 64 AIRs, 3,000 columns, stock `fr_mul` and `fp_mul`, and G1 as `fp_mul`-class rows. The X14 blocker of this file is removed for the arithmetic. New cost of the foreign lift on the STARK node (DERIVED from `../sherlock-x14-20261112/RESULTS.md`, follow-up section):
+
+| Part | Units at the internal set | Label |
+|---|---|---|
+| adapter-class proof: MSM (about 23,000 additions in a bucket MSM, 255 doublings) | 1 addition unit (`L_add`, `X3`, `Y3` at 2^15 to 2^16) + 1 doubling unit | DERIVED (unit shapes MEASURED) |
+| adapter-class proof: final check, AD-22 (a) | 1 `fp_mul` unit (about 20,000 rows) | ESTIMATE (unit shape MEASURED) |
+| inner foreign proof | the same 3 units again, under its own registry entry | DERIVED |
+| transcript and expression evaluation, both proofs | PENDING (no AIR) | |
+| 2 membership paths in `reg_root` and the foreign claim | one Poseidon2 AIR of 2^9 rows (about 300 columns, 0 interactions) and 1 to 2 permutations, inside any unit's spare columns | DERIVED |
+
+So the lift costs about 6 arithmetic units plus the transcript and expression-evaluation units. Each unit is a node proof at the internal set. The parent's cost of verifying a unit is about 1 % over a plain node (X14 (b), MEASURED). The exceptional-case rows (non-zero denominators, `id` as row index, infinity) add about one row kind per chain (X14, DERIVED).
+
+**N-10:** the native path (adapter class) and the general path use the same units. The native path is a schedule milestone, not a cheaper circuit. **Still needed:** a named Compact adapter class with its circuit (to cost its proof with `x14_inventory.rs`), the transcript AIR for the midnight transcript hash, and the exceptional-case rows. The GP-3 hook and I-13 stay FREEZE-PENDING on these.

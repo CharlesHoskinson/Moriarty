@@ -57,3 +57,9 @@ Not measured. Under OD-24 option E, `L` and the wrap are the BLS12-381 side (`L`
 
 - `out/x7-nn.jsonl`: the leaf, the lift node, the nodes over lifts at arity 1 and 2, with per-AIR shapes and height histograms.
 - `out/x7-nn.err`: run log.
+
+## Owner ruling 2026-11-12 20:35
+
+N-6: **option 2**. Raise the node internal-set budget now, to 64 AIRs and 3,000 columns, before FP-8 freezes the key set. N-6 (a) stays the inline merge-work form (`research/sherlock-processor-final-20261111/DECISIONS-ASK.md`). The same ruling sets 200 interactions per AIR (X14 option 2). D3 at these bounds: weakest term 101.1643 bits, every term at least 100 (MEASURED, `../sherlock-x14-20261112/out/d3-bounds.log`).
+
+Residual for the inline owner step under the new budget (DERIVED from the arity-2 node over two node children, 39 AIRs and 1,549 columns): 64 - 39 = **25 AIRs**, 3,000 - 1,549 = **1,451 columns**, at most 2^19 rows, 1,000 constraints and 200 interactions per AIR. The real owner step is still not measurable (no BabyBear kits). N-6 stays FREEZE-PENDING on the first kit build, with this budget. ARCHITECTURE rows to update (not edited here): N-6 (line 3489), the node shape bounds at line 2265, and the internal row of the parameter sets table (section 1.9).

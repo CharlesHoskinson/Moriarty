@@ -472,7 +472,7 @@ fn op_air(kind: &str) -> (openvm_mod_circuit_builder::FieldExpr, Arc<openvm_circ
     let modulus = BigUint::parse_bytes(m, 16).unwrap();
     let lb: usize = std::env::var("X14_LIMB_BITS").ok().and_then(|v| v.parse().ok()).unwrap_or(8);
     let rb: usize = std::env::var("X14_RANGE_BITS").ok().and_then(|v| v.parse().ok()).unwrap_or(17);
-    let rc = Arc::new(VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(1, rb)));
+    let rc = Arc::new(VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(RANGE_BUS, rb)));
     let b = ExprBuilder::new(ExprBuilderConfig { modulus, limb_bits: lb, num_limbs: (nl * 8usize).div_ceil(lb) }, rc.range_max_bits());
     let b = std::rc::Rc::new(std::cell::RefCell::new(b));
     let n_in = match kind {
@@ -567,7 +567,7 @@ fn node_extra(
     proofs: &[Proof<SC>],
     extra: (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>),
     prove: bool,
-) -> Value {
+) -> (MultiStarkVerifyingKey<SC>, Option<Proof<SC>>, Value) {
     let engine = Eng::new(params.clone());
     let circuit = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<SC>, SC, ()>>::new(Arc::new(child_vk.clone()), Default::default());
     let child_pcs = circuit.commit_child_vk(&engine, child_vk);
@@ -582,6 +582,7 @@ fn node_extra(
     let sh = shape(&pk, &ctxs, params.l_skip, params.n_stack);
     let layout_ok = sh["layout_ok"].as_bool() == Some(true);
     let mut out = json!({"shape": sh});
+    let mut proof_out = None;
     if prove && layout_ok {
         let d_pk = engine.device().transport_pk_to_device(&pk);
         let t = Instant::now();
@@ -590,12 +591,16 @@ fn node_extra(
         out["prove"] = match res {
             Ok(proof) => {
                 let ok = engine.verify(&vk, &proof);
-                json!({"prove_s": prove_s, "verify_ok": ok.is_ok(), "verify_err": ok.err().map(|e| format!("{e:?}"))})
+                let j = json!({"prove_s": prove_s, "verify_ok": ok.is_ok(), "verify_err": ok.as_ref().err().map(|e| format!("{e:?}"))});
+                if ok.is_ok() {
+                    proof_out = Some(proof);
+                }
+                j
             }
             Err(e) => json!({"prove_s": prove_s, "prove_err": format!("{e:?}")}),
         };
     }
-    out
+    (vk, proof_out, out)
 }
 
 fn x14(log_rows: usize, kinds: &[String], heights: &[usize], prove_h: usize) {
@@ -619,15 +624,349 @@ fn x14(log_rows: usize, kinds: &[String], heights: &[usize], prove_h: usize) {
     let (nvk, npr, nout) = node::<1>(p.clone(), &lvk, &lproofs, None, true);
     emit(&json!({"case": "child_node", "node": nout}));
     let child = vec![npr.expect("child node proof")];
-    let base = node_extra(p.clone(), &nvk, &child, (vec![], vec![]), false);
+    let base = node_extra(p.clone(), &nvk, &child, (vec![], vec![]), false).2;
     emit(&json!({"case": "unit_node_base", "node": base}));
     for k in kinds {
         for &h in heights {
             let ex = op_trace(k, h);
-            let out = node_extra(p.clone(), &nvk, &child, ex, h == prove_h);
+            let out = node_extra(p.clone(), &nvk, &child, ex, h == prove_h).2;
             let ok = out["shape"]["layout_ok"].as_bool() == Some(true);
             emit(&json!({"case": "unit_node_with_ops", "op": k, "log_rows": h, "layout_ok": ok, "node": out}));
         }
+    }
+}
+
+
+// ------------------------------------------------------------------ X14 (ruling 2026-11-12): G1 as fp_mul-class rows
+/// Bus indices of the X14 work AIRs, far above the verifier sub-circuit's buses (0, 1, ...).
+const RANGE_BUS: u16 = 1000;
+
+#[derive(Clone, Copy, Debug)]
+enum Ref {
+    Id,
+    In(usize),
+    Var(usize),
+}
+#[derive(Clone, Debug)]
+struct Msg {
+    bus: u16,
+    send: bool,
+    refs: Vec<Ref>,
+}
+
+/// One FieldExpr row kind (one modular constraint, fp_mul class) plus an `id` column and bus
+/// messages that carry its inputs and outputs (at most 2 field values of 48 limbs per message:
+/// the LogUp message length bound is 2^7 = 128 fields).
+struct ChainAir {
+    expr: openvm_mod_circuit_builder::FieldExpr,
+    ew: usize,
+    msgs: Vec<Msg>,
+}
+impl<T> BaseAir<T> for ChainAir {
+    fn width(&self) -> usize {
+        self.ew + 1
+    }
+}
+impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for ChainAir {}
+impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for ChainAir {}
+impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for ChainAir {
+    fn eval(&self, builder: &mut AB) {
+        use openvm_circuit_primitives::SubAir;
+        let main = builder.main();
+        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        drop(main);
+        SubAir::eval(&self.expr, builder, &local[..self.ew]);
+        let cols = self.expr.load_vars(&local[..self.ew]);
+        let id = local[self.ew].clone();
+        for m in &self.msgs {
+            let mut f: Vec<AB::Expr> = vec![];
+            for r in &m.refs {
+                match r {
+                    Ref::Id => f.push(id.clone().into()),
+                    Ref::In(i) => f.extend(cols.inputs[*i].iter().map(|v| v.clone().into())),
+                    Ref::Var(j) => f.extend(cols.vars[*j].iter().map(|v| v.clone().into())),
+                }
+            }
+            let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(m.bus);
+            if m.send {
+                bus.send(builder, f, cols.is_valid.clone());
+            } else {
+                bus.receive(builder, f, cols.is_valid.clone());
+            }
+        }
+    }
+}
+
+/// Test harness only: stands for the producer of the input points and the consumer of the
+/// output point (the MSM accumulator in a real verifier). Columns: id, then `nv` values of 48 limbs.
+struct SourceAir {
+    nv: usize,
+    nl: usize,
+    msgs: Vec<(u16, bool, Vec<Option<usize>>)>,
+}
+impl<T> BaseAir<T> for SourceAir {
+    fn width(&self) -> usize {
+        1 + self.nv * self.nl
+    }
+}
+impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for SourceAir {}
+impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for SourceAir {}
+impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for SourceAir {
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
+        drop(main);
+        for (bus, send, refs) in &self.msgs {
+            let mut f: Vec<AB::Expr> = vec![];
+            for r in refs {
+                match r {
+                    None => f.push(local[0].clone().into()),
+                    Some(k) => f.extend(local[1 + k * self.nl..1 + (k + 1) * self.nl].iter().map(|v| v.clone().into())),
+                }
+            }
+            let b = openvm_stark_backend::interaction::PermutationCheckBus::new(*bus);
+            if *send {
+                b.send(builder, f, AB::Expr::ONE);
+            } else {
+                b.receive(builder, f, AB::Expr::ONE);
+            }
+        }
+    }
+}
+
+fn limbs_of(x: &num_bigint::BigUint, nl: usize) -> Vec<F> {
+    let mut b = x.to_bytes_le();
+    b.resize(nl, 0);
+    b.iter().map(|&v| F::from_u32(v as u32)).collect()
+}
+
+/// The G1 chain of one operation kind ("add" or "dbl") over BLS12-381 Fp, 8-bit limbs:
+/// add: L_add (lambda = (y2 - y1) / (x2 - x1)), X3 (x3 = lambda^2 - x1 - x2), Y3 (y3 = lambda (x1 - x3) - y1);
+/// dbl: L_dbl (lambda = 3 x^2 / (2 y)), X3 (x2 = x1), Y3. Returns the AIRs [L, X3, Y3, range, source]
+/// and their traces of 2^log_rows rows (one G1 operation per row of each AIR).
+fn g1_chain(kind: &str, log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>, Vec<&'static str>) {
+    use num_bigint::BigUint;
+    use openvm_circuit_primitives::{var_range::{VariableRangeCheckerBus, VariableRangeCheckerChip}, TraceSubRowGenerator};
+    use openvm_mod_circuit_builder::{ExprBuilder, ExprBuilderConfig, FieldExpr};
+    let nl = 48;
+    let p = BigUint::parse_bytes(P381, 16).unwrap();
+    let rb: usize = std::env::var("X14_RANGE_BITS").ok().and_then(|v| v.parse().ok()).unwrap_or(17);
+    let rc = Arc::new(VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(RANGE_BUS, rb)));
+    let mk = |f: &dyn Fn(Rc<RefCell<ExprBuilder>>)| {
+        let b = ExprBuilder::new(ExprBuilderConfig { modulus: p.clone(), limb_bits: 8, num_limbs: nl }, rc.range_max_bits());
+        let b = Rc::new(RefCell::new(b));
+        f(b.clone());
+        let bb = RefCell::borrow(&b).clone();
+        FieldExpr::new(bb, rc.bus(), false)
+    };
+    use std::{cell::RefCell, rc::Rc};
+    let l_expr = if kind == "add" {
+        mk(&|b| {
+            let mut x1 = ExprBuilder::new_input(b.clone());
+            let mut y1 = ExprBuilder::new_input(b.clone());
+            let mut x2 = ExprBuilder::new_input(b.clone());
+            let mut y2 = ExprBuilder::new_input(b.clone());
+            let mut l = (&mut y2 - &mut y1) / (&mut x2 - &mut x1);
+            l.save();
+        })
+    } else {
+        // lambda = 3 s / (2 y) with s = x^2 from the SQ row (one constraint per row kind)
+        mk(&|b| {
+            let mut s = ExprBuilder::new_input(b.clone());
+            let _x = ExprBuilder::new_input(b.clone());
+            let mut y = ExprBuilder::new_input(b.clone());
+            let mut l = s.int_mul(3) / y.int_mul(2);
+            l.save();
+        })
+    };
+    let sq_expr = mk(&|b| {
+        let mut x = ExprBuilder::new_input(b.clone());
+        let mut s = x.square();
+        s.save();
+    });
+    let x_expr = mk(&|b| {
+        let mut l = ExprBuilder::new_input(b.clone());
+        let x1 = ExprBuilder::new_input(b.clone());
+        let x2 = ExprBuilder::new_input(b.clone());
+        let mut x3 = l.square() - x1.clone() - x2.clone();
+        x3.save();
+    });
+    let y_expr = mk(&|b| {
+        let mut l = ExprBuilder::new_input(b.clone());
+        let mut x1 = ExprBuilder::new_input(b.clone());
+        let mut x3 = ExprBuilder::new_input(b.clone());
+        let y1 = ExprBuilder::new_input(b.clone());
+        let mut y3 = l * (&mut x1 - &mut x3) - y1.clone();
+        y3.save();
+    });
+    for e in [&l_expr, &x_expr, &y_expr, &sq_expr] {
+        assert_eq!(e.num_vars(), 1, "one modular constraint per row kind");
+    }
+    let (id, i, v) = (Ref::Id, Ref::In, Ref::Var);
+    let m = |bus: u16, send: bool, refs: Vec<Ref>| Msg { bus, send, refs };
+    let o = if kind == "add" { 1100u16 } else { 1110 };
+    // buses: o+0 P1, o+1 P2 (add only), o+2 (lambda, x1) to X3, o+3 x2 to X3, o+4 (lambda, x1) to Y3,
+    // o+5 y1 to Y3, o+6 x3 to Y3, o+7 (x3, y3) out
+    let (l_msgs, src_msgs): (Vec<Msg>, Vec<(u16, bool, Vec<Option<usize>>)>) = if kind == "add" {
+        (
+            vec![m(o, false, vec![id, i(0), i(1)]), m(o + 1, false, vec![id, i(2), i(3)]),
+                 m(o + 2, true, vec![id, v(0), i(0)]), m(o + 3, true, vec![id, i(2)]),
+                 m(o + 4, true, vec![id, v(0), i(0)]), m(o + 5, true, vec![id, i(1)])],
+            vec![(o, true, vec![None, Some(0), Some(1)]), (o + 1, true, vec![None, Some(2), Some(3)]),
+                 (o + 7, false, vec![None, Some(4), Some(5)])],
+        )
+    } else {
+        // L_dbl inputs (s, x, y): receive (id, s, x) from SQ on o+9 and (id, y) on o
+        (
+            vec![m(o + 9, false, vec![id, i(0), i(1)]), m(o, false, vec![id, i(2)]),
+                 m(o + 2, true, vec![id, v(0), i(1)]), m(o + 3, true, vec![id, i(1)]),
+                 m(o + 4, true, vec![id, v(0), i(1)]), m(o + 5, true, vec![id, i(2)])],
+            vec![(o + 8, true, vec![None, Some(0)]), (o, true, vec![None, Some(1)]), (o + 7, false, vec![None, Some(4), Some(5)])],
+        )
+    };
+    let sq_msgs = vec![m(o + 8, false, vec![id, i(0)]), m(o + 9, true, vec![id, v(0), i(0)])];
+    let x_msgs = vec![m(o + 2, false, vec![id, i(0), i(1)]), m(o + 3, false, vec![id, i(2)]), m(o + 6, true, vec![id, v(0)])];
+    let y_msgs = vec![m(o + 4, false, vec![id, i(0), i(1)]), m(o + 5, false, vec![id, i(3)]), m(o + 6, false, vec![id, i(2)]),
+                      m(o + 7, true, vec![id, i(2), v(0)])];
+    // host values
+    let gx = BigUint::parse_bytes(b"17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb", 16).unwrap();
+    let gy = BigUint::parse_bytes(b"08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1", 16).unwrap();
+    let inv = |a: &BigUint| a.modpow(&(&p - 2u32), &p);
+    let sub = |a: &BigUint, b: &BigUint| (a + &p - b % &p) % &p;
+    let dbl = |x: &BigUint, y: &BigUint| {
+        let lam = (BigUint::from(3u32) * x * x % &p) * inv(&(BigUint::from(2u32) * y % &p)) % &p;
+        let x3 = sub(&sub(&(&lam * &lam % &p), x), x);
+        let y3 = sub(&(&lam * sub(x, &x3) % &p), y);
+        (lam, x3, y3)
+    };
+    let mut pts = vec![(gx.clone(), gy.clone())];
+    for _ in 0..4 {
+        let (x, y) = pts.last().unwrap().clone();
+        let (_, x3, y3) = dbl(&x, &y);
+        pts.push((x3, y3));
+    }
+    let n = 1usize << log_rows;
+    let widths = [BaseAir::<F>::width(&l_expr), BaseAir::<F>::width(&x_expr), BaseAir::<F>::width(&y_expr), BaseAir::<F>::width(&sq_expr)];
+    let mut tq = F::zero_vec(n * (widths[3] + 1));
+    let mut tl = F::zero_vec(n * (widths[0] + 1));
+    let mut tx = F::zero_vec(n * (widths[1] + 1));
+    let mut ty = F::zero_vec(n * (widths[2] + 1));
+    let src_nv = 6;
+    let mut ts = F::zero_vec(n * (1 + src_nv * nl));
+    for r in 0..n {
+        let (x1, y1, x2, y2) = if kind == "add" {
+            let (a, b) = (&pts[r % 2], &pts[2 + r % 2]);
+            (a.0.clone(), a.1.clone(), b.0.clone(), b.1.clone())
+        } else {
+            let a = &pts[r % 4];
+            (a.0.clone(), a.1.clone(), a.0.clone(), a.1.clone())
+        };
+        let lam = if kind == "add" { sub(&y2, &y1) * inv(&sub(&x2, &x1)) % &p } else { dbl(&x1, &y1).0 };
+        let x3 = sub(&sub(&(&lam * &lam % &p), &x1), &x2);
+        let y3 = sub(&(&lam * sub(&x1, &x3) % &p), &y1);
+        let idf = F::from_u32(r as u32);
+        let li = if kind == "add" {
+            vec![x1.clone(), y1.clone(), x2.clone(), y2.clone()]
+        } else {
+            vec![&x1 * &x1 % &p, x1.clone(), y1.clone()]
+        };
+        if kind != "add" {
+            let row = &mut tq[r * (widths[3] + 1)..(r + 1) * (widths[3] + 1)];
+            sq_expr.generate_subrow((rc.as_ref(), vec![x1.clone()], vec![]), &mut row[..widths[3]]);
+            row[widths[3]] = idf;
+        }
+        let row = &mut tl[r * (widths[0] + 1)..(r + 1) * (widths[0] + 1)];
+        l_expr.generate_subrow((rc.as_ref(), li, vec![]), &mut row[..widths[0]]);
+        row[widths[0]] = idf;
+        let row = &mut tx[r * (widths[1] + 1)..(r + 1) * (widths[1] + 1)];
+        x_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
+        row[widths[1]] = idf;
+        let row = &mut ty[r * (widths[2] + 1)..(r + 1) * (widths[2] + 1)];
+        y_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
+        row[widths[2]] = idf;
+        let row = &mut ts[r * (1 + src_nv * nl)..(r + 1) * (1 + src_nv * nl)];
+        row[0] = idf;
+        for (k, val) in [&x1, &y1, &x2, &y2, &x3, &y3].iter().enumerate() {
+            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&limbs_of(val, nl));
+        }
+    }
+    let rt = rc.generate_trace::<F>();
+    let mut airs: Vec<AirRef<SC>> = vec![
+        Arc::new(ChainAir { ew: widths[0], expr: l_expr, msgs: l_msgs }),
+        Arc::new(ChainAir { ew: widths[1], expr: x_expr, msgs: x_msgs }),
+        Arc::new(ChainAir { ew: widths[2], expr: y_expr, msgs: y_msgs }),
+        Arc::new(rc.air),
+        Arc::new(SourceAir { nv: src_nv, nl, msgs: src_msgs }),
+    ];
+    let mut traces = vec![
+        RowMajorMatrix::new(tl, widths[0] + 1),
+        RowMajorMatrix::new(tx, widths[1] + 1),
+        RowMajorMatrix::new(ty, widths[2] + 1),
+        rt,
+        RowMajorMatrix::new(ts, 1 + src_nv * nl),
+    ];
+    let mut names = vec![if kind == "add" { "L_add" } else { "L_dbl" }, "X3", "Y3", "range", "source (harness)"];
+    if kind != "add" {
+        airs.push(Arc::new(ChainAir { ew: widths[3], expr: sq_expr, msgs: sq_msgs }));
+        traces.push(RowMajorMatrix::new(tq, widths[3] + 1));
+        names.push("SQ");
+    }
+    (airs, traces, names)
+}
+
+/// Child node for the unit node: an internal-set node proof over one W1 leaf.
+fn unit_child(log_rows: usize) -> (MultiStarkVerifyingKey<SC>, Vec<Proof<SC>>) {
+    let (lvk, lproofs, leaf) = leaf_proofs(1, log_rows);
+    emit(&leaf);
+    let (nvk, npr, nout) = node::<1>(internal_ud(), &lvk, &lproofs, None, true);
+    emit(&json!({"case": "child_node", "node": nout}));
+    (nvk, vec![npr.expect("child node proof")])
+}
+
+fn g1c(log_rows: usize, kinds: &[String], heights: &[usize], prove_h: usize) {
+    for k in kinds {
+        let (airs, traces, names) = g1_chain(k, 4);
+        let params = app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT);
+        let engine = Eng::new(params.clone());
+        let (pk, vk) = engine.keygen(&airs);
+        let ctxs: Vec<AirProvingContext<CpuBackend<SC>>> = traces.iter()
+            .map(|t| AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t))))
+            .collect();
+        let sh = shape(&pk, &ctxs, params.l_skip, params.n_stack);
+        let d_pk = engine.device().transport_pk_to_device(&pk);
+        let ok = engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).map(|pr| engine.verify(&vk, &pr).map_err(|e| format!("{e:?}")));
+        emit(&json!({"kind": "g1_chain", "op": k, "names": names, "airs": sh["airs"].clone(), "prove_verify_2p4": format!("{ok:?}")}));
+    }
+    let (nvk, child) = unit_child(log_rows);
+    let p = internal_ud();
+    for k in kinds {
+        for &h in heights {
+            let (airs, traces, _) = g1_chain(k, h);
+            let (_, _, out) = node_extra(p.clone(), &nvk, &child, (airs, traces), h == prove_h);
+            let ok = out["shape"]["layout_ok"].as_bool() == Some(true);
+            emit(&json!({"case": "unit_node_with_g1_chain", "op": k, "log_rows": h, "layout_ok": ok, "node": out}));
+        }
+    }
+}
+
+/// (b) of the ruling: the parent node's cost of verifying a unit node whose op AIR has 193
+/// interactions (fp_mul at 2^h), at arity 1 and 2, against the parent over a plain node.
+fn parent(log_rows: usize, op: &str, h: usize) {
+    let (nvk, child) = unit_child(log_rows);
+    let p = internal_ud();
+    let (uvk, upr, uout) = node_extra(p.clone(), &nvk, &child, op_trace(op, h), true);
+    emit(&json!({"case": "unit_node", "op": op, "log_rows": h, "node": uout}));
+    let upr = upr.expect("unit node proof");
+    for a in [1usize, 2] {
+        let proofs: Vec<Proof<SC>> = (0..a).map(|_| upr.clone()).collect();
+        let (_, pr, out) = node_n!(a, p.clone(), &uvk, &proofs, None, true);
+        emit(&json!({"case": "parent_over_unit", "arity": a, "op": op, "unit_log_rows": h, "proved_verified": pr.is_some(), "node": out}));
+    }
+    // baseline: parent over the plain child node (no op AIR)
+    for a in [1usize, 2] {
+        let proofs: Vec<Proof<SC>> = (0..a).map(|_| child[0].clone()).collect();
+        let (_, pr, out) = node_n!(a, p.clone(), &nvk, &proofs, None, true);
+        emit(&json!({"case": "parent_over_plain_node", "arity": a, "proved_verified": pr.is_some(), "node": out}));
     }
 }
 
@@ -663,6 +1002,12 @@ fn main() {
                              "air": sh["airs"][0].clone(), "range_air": sh["airs"][1].clone(), "prove_verify_2p4": format!("{ok:?}")}));
             }
         }
+        "g1c" => {
+            let kinds: Vec<String> = a[3].split(',').map(String::from).collect();
+            let hs: Vec<usize> = a[4].split(',').map(|s| s.parse().unwrap()).collect();
+            g1c(a[2].parse().unwrap(), &kinds, &hs, a[5].parse().unwrap())
+        }
+        "parent" => parent(a[2].parse().unwrap(), &a[3], a[4].parse().unwrap()),
         m => panic!("mode {m}"),
     }
     eprintln!("done {:.1}s", t0.elapsed().as_secs_f64());
