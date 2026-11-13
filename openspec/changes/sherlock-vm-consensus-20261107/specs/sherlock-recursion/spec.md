@@ -1,11 +1,10 @@
-# Capability: sherlock-recursion (leaf, node, decider, contract)
-
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Amended 2026-11-10 by the design review (`research/sherlock-recursion-design-review-20261110/review.md` §5; SRC-001, SRC-010, SRC-011, SRC-013, SRC-014, SRC-017 edited; SRC-019..021 added) and by the owner definition `../../general-purpose.md`; amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SRC-006 and SRC-007 replaced, SRC-021 amended, SRC-022 and SRC-023 added); not council text. Design: `../../design.md` §3.
-
 ## ADDED Requirements
 
 ### Requirement: SRC-001 Leaf statement schema
-Leaf, node and decider SHALL consume one versioned statement `sherlock-leaf-stmt/1 = [binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`; any other lane count or order SHALL be refused before proving. (Amended 2026-11-10.) `rules_d` SHALL be `Poseidon(dom("SHK_RULES"), rid_0, ..., rid_{S-1})` over exactly S slot rule lanes in slot order with `rid_j = sum_r sel_j[r] * lane(r)`, so a disabled slot carries the reserved id 0, which SHALL NOT be the lane of any rule in `R`; no special case for S=1 or one enabled slot. The enabled slots SHALL form a prefix; a publishing step SHALL be the last enabled slot; the outcome tag and result inside `pre_d` and `post_d` SHALL be derived from the constrained carriers; `prog_d` SHALL be the identity of SVM-005.
+Leaf, node and decider SHALL consume one versioned statement `sherlock-leaf-stmt/1 = [binding, prog_d, pre_d, post_d, rules_d, h_pre, steps]`; any other lane count or order SHALL be refused before proving. (Amended 2026-11-10.)
+
+#### Detail
+`rules_d` SHALL be `Poseidon(dom("SHK_RULES"), rid_0, ..., rid_{S-1})` over exactly S slot rule lanes in slot order with `rid_j = sum_r sel_j[r] * lane(r)`, so a disabled slot carries the reserved id 0, which SHALL NOT be the lane of any rule in `R`; no special case for S=1 or one enabled slot. The enabled slots SHALL form a prefix; a publishing step SHALL be the last enabled slot; the outcome tag and result inside `pre_d` and `post_d` SHALL be derived from the constrained carriers; `prog_d` SHALL be the identity of SVM-005.
 
 #### Scenario: Disabled slot encoded as a rule
 - **WHEN** a raw witness encodes a disabled slot of `rules_d` with the lane of an admitted rule, or leaves a gap in the enable prefix, or enables a slot after a publishing step.
@@ -55,7 +54,10 @@ If `prev_h == 0`, the node SHALL require `prev_d == init_d` and SHALL introduce 
 - **THEN** the run decider's final pairing refuses it under either realization; a malformed carry encoding is refused at its decoder boundary and counts only as decoder evidence. This review did not establish a practical attack; the clause is hardening.
 
 ### Requirement: SRC-006 Decider pins and discharges
-(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:148`. The old text exposed `[prog_d, init_d, fin_d, n_steps, result_be]`.) The run decider SHALL verify the last node proof under the node key as constants, pin `self_vk_repr`, fold and pair the carried accumulator in circuit, open the final state digest as a terminal state (`Halted`, `Rejected` or `Exhausted`) whose outcome tag and payload are derived from the proved state, compute `outcome_d` from that tag and payload, and expose exactly `[prog_d, input_d, outcome_d, n_steps]`. The decider SHALL NOT expose `fin_d`, `init_d`, `pre_d`, `post_d`, `mem_root`, `lanes_d`, `len`, a reference, or any value that depends on a memory address. If the final state is `Running`, then the decider SHALL refuse.
+The run decider SHALL verify the last node proof under the node key as constants, pin `self_vk_repr`, fold and pair the carried accumulator in circuit, open the final state digest as a terminal state (`Halted`, `Rejected` or `Exhausted`) whose outcome tag and payload are derived from the proved state, compute `outcome_d` from that tag and payload, and expose exactly `[prog_d, input_d, outcome_d, n_steps]`.
+
+#### Detail
+(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:148`. The old text exposed `[prog_d, init_d, fin_d, n_steps, result_be]`.) The decider SHALL NOT expose `fin_d`, `init_d`, `pre_d`, `post_d`, `mem_root`, `lanes_d`, `len`, a reference, or any value that depends on a memory address. If the final state is `Running`, then the decider SHALL refuse.
 
 #### Scenario: Running final state
 (drafted by lead from review.md §Q1 verdict 1)
@@ -72,9 +74,10 @@ If `prev_h == 0`, the node SHALL require `prev_d == init_d` and SHALL introduce 
 - **THEN** the result is not reported final-valid (UISEC-010).
 
 ### Requirement: SRC-007 Ledger binding and replay
-(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:150,154`. The old text sealed `init_d`, refused a replayed `stmt` and wrote a u128 result as `Bytes<16>`.) When `acceptRun` accepts a run, it SHALL bind `prog_d`, `input_d`, `outcome_d` and `n_steps` to the verified call transcript, SHALL read the sealed `program_d` into the transcript so that a proof of another program is refused, SHALL refuse a `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` already in `runs`, and SHALL store `outcome_d` and `n_steps`. `input_d` SHALL be call data bound by the proof, not a sealed field. A change of leaf partition, proof randomness, physical layout or aggregation shape SHALL NOT create a new `claim_d`. The contract SHALL NOT take or store a state digest.
+When `acceptRun` accepts a run, it SHALL bind `prog_d`, `input_d`, `outcome_d` and `n_steps` to the verified call transcript, SHALL read the sealed `program_d` into the transcript so that a proof of another program is refused, SHALL refuse a `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)` already in `runs`, and SHALL store `outcome_d` and `n_steps`.
 
-Note (`review.md:154`): the sealed `program_d` stays, so this contract serves one program and every input of that program. One contract for every program (GP-1) needs `prog_d` as call data. That is the GP-1 contract change and is not part of this decision.
+#### Detail
+(Replaced 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:150,154`. The old text sealed `init_d`, refused a replayed `stmt` and wrote a u128 result as `Bytes<16>`.) `input_d` SHALL be call data bound by the proof, not a sealed field. A change of leaf partition, proof randomness, physical layout or aggregation shape SHALL NOT create a new `claim_d`. The contract SHALL NOT take or store a state digest. Note (`review.md:154`): the sealed `program_d` stays, so this contract serves one program and every input of that program. One contract for every program (GP-1) needs `prog_d` as call data. That is the GP-1 contract change and is not part of this decision.
 
 #### Scenario: Replay on the target
 (drafted by lead from review.md §Q1 verdict 1)
@@ -108,7 +111,10 @@ When a ledger, circuits, zk-stdlib or zkir pin changes, the toolchain SHALL rege
 - **THEN** the independent verifier refuses and the E6 record shows the refusal (row A31).
 
 ### Requirement: SRC-011 Throughput target (Mandatory since 2026-11-08 (3))
-A committed program of at most 320 owner steps SHALL prove its leaves, fold them through the node chain or the tree, prove the run decider, pass the independent verifier (SRC-010) and the local `validate_call` (SRC-020) in under 2 h wall, under 48 GB peak RSS per process and under 100 GB aggregate peak RSS across the concurrently running heavy processes of the run (owner decision 2026-11-08: "48 GB per process, 100 GB aggregate"), on the 20-core 120 GB host. The receipt SHALL record `RAYON_NUM_THREADS`, the concurrency P and both peaks. The C0 phase profile SHALL be committed before any S, concurrency, GPU or tree adoption, and `qa/sherlock/decisions/speed-levers.json` SHALL cite the C0 metric behind each adopted lever. A shortfall is a failing row. (Amended 2026-11-10.) A projection SHALL use total wall = setup + max(node service, leaf service) under measured mixed contention + decider + independent verification + call validation; a lever not built and measured SHALL get no credit in G-C.
+A committed program of at most 320 owner steps SHALL prove its leaves, fold them through the node chain or the tree, prove the run decider, pass the independent verifier (SRC-010) and the local `validate_call` (SRC-020) in under 2 h wall, under 48 GB peak RSS per process and under 100 GB aggregate peak RSS across the concurrently running heavy processes of the run (owner decision 2026-11-08: "48 GB per process, 100 GB aggregate"), on the 20-core 120 GB host.
+
+#### Detail
+The receipt SHALL record `RAYON_NUM_THREADS`, the concurrency P and both peaks. The C0 phase profile SHALL be committed before any S, concurrency, GPU or tree adoption, and `qa/sherlock/decisions/speed-levers.json` SHALL cite the C0 metric behind each adopted lever. A shortfall is a failing row. (Amended 2026-11-10.) A projection SHALL use total wall = setup + max(node service, leaf service) under measured mixed contention + decider + independent verification + call validation; a lever not built and measured SHALL get no credit in G-C.
 
 #### Scenario: Shortfall is a failure
 - **WHEN** fact(3) at the chosen S takes more than 2 h, or any process exceeds 48 GB, or the aggregate exceeds 100 GB.
@@ -126,7 +132,10 @@ If a run exceeds its `heavy` memory or wall cap, it SHALL stop and preserve its 
 - **THEN** `runs.jsonl` records exit 4 with a trace and the next attempt carries `--hypothesis`.
 
 ### Requirement: SRC-013 Leaf shape decision
-(Amended 2026-11-10; was "U if `k <= 17 + log2 S`, otherwise F".) When milestone M4 probes and keys the universal gated leaf over the frozen inventory (tasks 4.1a, 4.2b, 4.1, 4.4), the toolchain SHALL use option U and SHALL record rows, k, RSS and prove time of the leaf at the chosen S, and the `cost_model` rows of the node and decider keyed over a leaf of its arch. Option F (finite family, in-circuit key membership) is defined and not planned: it fixes S=1, which fails SRC-011 at the measured node step; it MAY be used as a diagnostic.
+(Amended 2026-11-10; was "U if `k <= 17 + log2 S`, otherwise F".) When milestone M4 probes and keys the universal gated leaf over the frozen inventory (tasks 4.1a, 4.2b, 4.1, 4.4), the toolchain SHALL use option U and SHALL record rows, k, RSS and prove time of the leaf at the chosen S, and the `cost_model` rows of the node and decider keyed over a leaf of its arch.
+
+#### Detail
+Option F (finite family, in-circuit key membership) is defined and not planned: it fixes S=1, which fails SRC-011 at the measured node step; it MAY be used as a diagnostic.
 
 #### Scenario: Diagnostic probe first
 - **WHEN** task 4.1a runs `IrSource::model()` over every existing per-rule C6 circuit and the dispatch block alone.
@@ -137,7 +146,10 @@ If a run exceeds its `heavy` memory or wall cap, it SHALL stop and preserve its 
 - **THEN** the record shows the decider k next to the leaf k, and S is chosen from the full envelope (leaf, node and decider), not from `k_U + log2 S` alone (experiment E2, task 4.12).
 
 ### Requirement: SRC-014 S-slot leaf with a keyed S (amended 2026-11-08 (3); 2026-11-10)
-S SHALL be a keyed constant of the leaf relation, chosen once at gate G-A' and fixed before the leaf is keyed; S=1 is the one-enabled-slot case of the same relation. S SHALL be the largest power of two, at most `S_MAX` = 16, for which the measured leaf, node and decider fit their k and memory caps; `k_U + log2 S <= K_LEAF_MAX` is a first sizing estimate (`K_LEAF_MAX` = 20 (E4 2026-11-10: a k=20 stand-in leaf of 742,327 rows proves in 66 s at 11.1 GB peak RSS, under the 16 GB cap; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`)); S >= 8 is the planning target; S=4 SHALL be chosen only with a measured leaf time; S <= 2 is a redesign trigger; if no S >= 4 fits, the leaf design SHALL be revisited before any key. `S_MAX` SHALL be a serialized field of the node relation. When a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S] and refuse `steps == 0` and `steps > S`. The slot contract is specified by the Quint slot model (F24); Lean proves boundary composition only until a Lean refinement from S-slot execution to the boundary `Leaf` exists.
+S SHALL be a keyed constant of the leaf relation, chosen once at gate G-A' and fixed before the leaf is keyed; S=1 is the one-enabled-slot case of the same relation. S SHALL be the largest power of two, at most `S_MAX` = 16, for which the measured leaf, node and decider fit their k and memory caps;
+
+#### Detail
+`k_U + log2 S <= K_LEAF_MAX` is a first sizing estimate (`K_LEAF_MAX` = 20 (E4 2026-11-10: a k=20 stand-in leaf of 742,327 rows proves in 66 s at 11.1 GB peak RSS, under the 16 GB cap; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`)); S >= 8 is the planning target; S=4 SHALL be chosen only with a measured leaf time; S <= 2 is a redesign trigger; if no S >= 4 fits, the leaf design SHALL be revisited before any key. `S_MAX` SHALL be a serialized field of the node relation. When a leaf proves fewer than S enabled steps, remaining slots SHALL be disabled with identity lanes and zero `steps` contribution; the node SHALL accept `steps` in [1, S] and refuse `steps == 0` and `steps > S`. The slot contract is specified by the Quint slot model (F24); Lean proves boundary composition only until a Lean refinement from S-slot execution to the boundary `Leaf` exists.
 
 #### Scenario: Terminal publication at slot 3 of 8
 - **WHEN** `KAdminPublishValue` fires at slot 3.
@@ -180,6 +192,7 @@ Every `heavy` process SHALL run under a cgroup v2 `MemoryMax` equal to its cap (
 ### Requirement: SRC-017 General-purpose recursion: fixed keys and formal gates
 (Amended 2026-11-10, owner: "It needs to be general purpose recursion. Make sure we understand what that means. And universal".) The target SHALL be GP-1 to GP-4 as defined in `../../general-purpose.md` (GP-001..GP-004); the design of this change is the first milestone toward GP-1, and its open gaps are listed in `../../design.md` §3.6. The text below states what the first milestone SHALL meet.
 
+#### Detail
 One key set (leaf over `R` at the keyed S, one self-recursive node, one decider, one acceptRun template) SHALL serve every committed program, step count, fold schedule and tree shape; per-program, per-depth or per-level keys are refused. The aggregation protocol SHALL have a Quint model (`models/sherlock/quint/aggregation.qnt`, constants `TREE` and S) whose invariants pass with every seeded mutant caught, and Lean theorems (`clean/fork/Clean/Sherlock/Aggregation.lean`, library `SherlockSpec`) that build with zero `sorry` and declared premises only: segment soundness for every program, associativity, padding neutrality, exactly-once coverage, height arithmetic, decider pinning, independence from shape, depth and S. F20, F21 and the council review SHALL pass before 2.3, 4.2 and 5.7 are implemented.
 
 #### Scenario: Program-dependent constant
@@ -195,6 +208,9 @@ One key set (leaf over `R` at the keyed S, one self-recursive node, one decider,
 - **THEN** `scripts/qa/check-lean-aggregation.sh` fails F21.
 
 ### Requirement: SRC-018 GPU backend bit-identity and fallback
+If the GPU path is enabled, its MSM and NTT results SHALL equal those of the CPU path on every input, the backend SHALL be an open-source Rust crate of this repository with a small CUDA kernel core, and it SHALL fall back to the CPU path with identical bytes. The detail below is the full rule.
+
+#### Detail
 If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and its hooks registered by `heavy --gpu`), its MSM (BLS12-381 G1) result SHALL equal the CPU path's (`msm_specific` over BLST `multi_exp`) in the group, checked on `to_affine()` and the compressed encoding that reaches the transcript, and its NTT (scalar field) result SHALL be bit-exact per element against `best_fft`, on every input (zero, one and r-1 scalars, the identity point as base and as result, duplicate bases, projective bases with Z != 1, the signed-digit exceptions, host- and device-resident inputs), so proof bytes, keys and format are unchanged and stock Midnight verifies the proofs. The backend SHALL be an open-source Rust crate owned in this repository with a small CUDA C++ kernel core compiled by nvcc from `build.rs` for sm_121 using 32-bit limbs, derived only from permissively licensed sources with headers preserved (sppark Apache-2.0, Yrrid ZPrize-2023 MIT/Apache, ICICLE v2.8.0 MIT, ec-gpu MIT/Apache; nothing from ICICLE v3+/open-icicle, gnark-cuda, Nocy, Snarkify ZPrize-1B or the WebGPU entries); neither sppark nor ICICLE SHALL be a crate dependency. The `midnight-proofs 0.8.3` hooks patch SHALL live in the separate workspace `tools/gpu-prover/` (registry crate stays the default in the main workspace, T0 isolation extended to the vendored copy). The backend SHALL fall back to the CPU path at compile time, init time (no device, driver or toolchain) and call time (small n or kernel error) with identical bytes and the fallback recorded, SHALL run under the same cgroup caps (device allocations are process RSS on this host), and SHALL accept any `n <= SRS size` and `log_n <= 32` without knowledge of the program or circuit. Design source: `research/sherlock-speed-replan-20261108/gpu.md`.
 
 #### Scenario: One differing point or element
@@ -232,7 +248,10 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **THEN** the validation does not count (row A32 fails) until the template is recaptured.
 
 ### Requirement: SRC-021 Canonical initialization
-(Amended 2026-11-12, AD-18 (a) and AD-17 (b): the one-arena field list of kit INIT; history in git.) A run whose initial state is not `Init(prog_d, input_d)` SHALL NOT be accepted as canonical; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first leaf SHALL prove in circuit that its pre state equals `Init(prog_d, input_d)` field by field over the one-arena field list. The gate SHALL be `h_pre = 0`, not a witness flag.
+If a run's initial state is not `Init(prog_d, input_d)`, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count as that check.
+
+#### Detail
+(Added 2026-11-10; amended 2026-11-13 by the owner rulings AD-17 (b) and AD-18 (a) of 2026-11-12, text signed by the owner 2026-11-13 (T5 sign-off): one memory arena, by-digest input admission with an empty genesis memory; the text is the one-arena field list of `research/sherlock-final-design-20261111/ARCHITECTURE.md` kit INIT.) When `h_pre = 0`, the first segment leaf SHALL prove in circuit that its state header, its persistent registers, both stacks and its memory state equal `Init(prog_d, input_d)` field by field (the one-arena field list of design §3.2(5)): control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; fuel (u128, two 64-bit limbs) in both fuel registers and the stack limit from `input_d`; outcome `Running`; every other counter zero; environment pointer `None`; both stacks empty, with count 0, the chain heads `EMPTY_F` and `EMPTY_T` and zero cached tops; helper, result and scratch registers zero; the one memory arena empty: `len = 0`, the empty tree root of depth `TOP + 3` and the empty tail digest; `prog_root` from `prog_d`; the header words `input_d` (opened), `deps_d = EMPTY_DEPS` and `view_root`, which is `VIEW_NONE` when the input is absent. `input_d` SHALL be `P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with each limb and the stack limit below 2^64 and `salt` 8 words fixed for the run. `val_d` SHALL be `vd(x)` of SRC-022 for an input `x`, and `VAL_NONE` when the input is absent. The input SHALL enter by digest: no input record is in the genesis memory, and a step SHALL read an input node only through the read port under `view_root`; the seal SHALL require the `VIEW(val_d, view_root)` claim for every `val_d` other than `VAL_NONE`. The Init check SHALL NOT scan the input. When the first execution segment begins, the proof SHALL authenticate the input value, the dependency claims and every resource-policy parameter that can affect the outcome. The gate SHALL be `h_pre = 0`, not a witness flag. The seal SHALL require `h_lo = 0` and a terminal outcome. Off-chain recomputation of `init_d` (option G2) MAY be recorded as a diagnostic and SHALL NOT be acceptance authority.
 
 #### Scenario: One-arena field list
 - **WHEN** the first leaf of a run checks `Init(prog_d, input_d)`
@@ -246,13 +265,17 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **WHEN** the first leaf opens `input_d`
 - **THEN** `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words fixed for the run, `val_d = vd(x)` (SRC-022), and each fuel limb and the stack limit range-checked below 2^64; the proof authenticates the input value, the dependency claims and every resource-policy parameter that can affect the outcome
 
+#### Scenario: Input by digest
+- **WHEN** a first leaf with an input carries an input record in its genesis memory, or a `view_root` other than `VIEW_NONE` with `val_d = VAL_NONE`, or a run with an input is sealed without the `VIEW(val_d, view_root)` claim.
+- **THEN** the first leaf or the seal refuses it.
+
 #### Scenario: Forged initial carriers
 - **WHEN** a run starts from a state that opens to the sealed `init_d` but is not `Init(prog_d, input_d)`.
 - **THEN** the first leaf refuses it (row A13), and the record names the circuit that performed the check.
 
 #### Scenario: Single-field deviation
-- **WHEN** the first-leaf witness differs from `Init(prog_d, input_d)` in exactly one field of the one-arena list, or opens another `input_d`, or carries a fuel limb or stack limit at or above 2^64.
-- **THEN** the first leaf refuses it; the Quint model `models/sherlock/quint/init.qnt`, extended to the one-arena field list, shows this for every field, and row A37 matches `Init` against `Machine::new` on fact(3), list123 and one run with input.
+- **WHEN** the first-leaf witness differs from `Init(prog_d, input_d)` in exactly one field of the one-arena list (design §3.2(5)), or opens another `input_d`, or carries a fuel limb or stack limit at or above 2^64.
+- **THEN** the first leaf refuses it; the Quint model `models/sherlock/quint/init.qnt`, extended to the one-arena field list, shows this for every field, and row A37 matches `Init` against `Machine::new` on fact(3), list123 and one run with input, for the run with input fields 2, 23 to 29 and 34 to 36 by decoding.
 
 #### Scenario: Seal without genesis
 - **WHEN** a segment chain with `h_lo != 0`, or with a `Running` outcome, is presented for sealing.
@@ -262,8 +285,11 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **WHEN** `init_d` is recomputed off chain (option G2)
 - **THEN** the result MAY be recorded as a diagnostic and is not acceptance authority
 
-### Requirement: SRC-022 Outcome and value encoding `sherlock-value/1`
-(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:152`. The encoding table is at `review.md:104-121` and in `../../design.md` §3.2(5).) The published outcome of a run SHALL be `outcome_d = H(O, 1, 0, vd(v))` for `Halted(v)`, `H(O, 1, 1, code)` for `Rejected(code)` and `H(O, 1, 2, kind)` for `Exhausted(kind)`, where `vd` is the value digest `sherlock-value/1` of this review. The digest of a reference SHALL be the digest of the value it refers to. A table index, an address, a type-table index or a constructor-table index SHALL NOT be an input of `vd`. The proof SHALL authenticate every value record, constructor ordinal, field position and child digest used to compute `vd`. [OPEN: the normal form of `decl_schema_d` inside `ty_d`, to be fixed before any key is frozen (`review.md:61,117`; `../../dissent.md` D-2).]
+### Requirement: SRC-022 Outcome and value encoding `sherlock-value/2`
+The published outcome of a run SHALL be `outcome_d = P2(SHK_OUTCOME_V2, 2, kind, payload)` with `kind` 0 and payload `vd(v)` for `Halted(v)`, `kind` 1 and the code for `Rejected(code)`, and `kind` 2 and the exhaust kind for `Exhausted(kind)`, where `vd` is the value digest `sherlock-value/2`.
+
+#### Detail
+(Added 2026-11-10 by the C6 review, `review.md:152`; amended 2026-11-13 by the owner sign-off O6-1 to the BabyBear forms `sherlock-value/2` of `research/sherlock-final-design-20261111/ARCHITECTURE.md` section 1.11, FP-4, and the `ty_d` normal form of FP-9.5 there; the `sherlock-value/1` table of design §3.2(5) is the BLS12-381 prototype.) The digest of a reference SHALL be the digest of the value it refers to. A table index, an address, a type-table index or a constructor-table index SHALL NOT be an input of `vd`, and `ty_d` SHALL be the program-independent normal form of FP-9.5. The proof SHALL authenticate every value record, constructor ordinal, field position and child digest used to compute `vd`.
 
 #### Scenario: Host and circuit vectors
 (drafted by lead from review.md §The canonical encoding and its cost)

@@ -6,7 +6,7 @@ Every number carries MEASURED, DERIVED or ESTIMATE. Choices marked **LEAD, owner
 
 ## 1. Status
 
-**E6 gate: PASS.** On the local devnet, the valid `acceptRun` call A with a fresh option E wrap proof is included (block 2,879, status SUCCESS). R1 and R2 are refused with `Malformed(InvalidProof)`. R3 has a valid proof, and the node refuses it at the guaranteed transcript read of `program_d`. All results are MEASURED, `~/.cache/e6-int/logs/call-final.log`. The wrap is the E5 wrap on the E3 map (D-9 decoder, E5 d044d01b3), as the coordinator ordered at 01:00.
+**E6 gate: BENCH-PASS** (status word of `research/sherlock-tested-design-20261113/LOOP.md`: a pass on a stand-in contract closes no freeze row). The devnet call ran on the stand-in contract `tools/sherlock-sdk/sherlock-run.compact`, which discloses `program_d` and `steps` on the ledger (against ZK-002 and FP-6), with a bench call vector: its lanes are free inputs of the bench `L_iface`, not the output of a Sherlock program run, and its lane map is empty. The design `acceptRun` on chain is row T10. On the local devnet, the valid `acceptRun` call A with a fresh option E wrap proof is included (block 2,879, status SUCCESS). R1 and R2 are refused with `Malformed(InvalidProof)`. R3 has a valid proof, and the node refuses it at the guaranteed transcript read of `program_d`. All results are MEASURED, `~/.cache/e6-int/logs/call-final.log`. The wrap is the E5 wrap on the E3 map (D-9 decoder, E5 d044d01b3), as the coordinator ordered at 01:00.
 
 | # | Item | Status | Section |
 |---|---|---|---|
@@ -14,7 +14,7 @@ Every number carries MEASURED, DERIVED or ESTIMATE. Choices marked **LEAD, owner
 | 2 | OD-18 hash tags for `L_Fr`: u = 5, 6, 7, transcript on u = 7 | PASS | 4 |
 | 3 | Fr STARK premise A2' beside A2 (bridge-lean 46622c969); Lean wording | PASS (bridge-lean ecbce035f) | 5 |
 | 4 | D3 at the measured shapes | PASS (101.1435 bits at all three keys) | 6 |
-| 5 | Devnet deploy and call on the XC-9 path; R1 to R3 | PASS | 7, 8 |
+| 5 | Devnet deploy and call on the XC-9 path; R1 to R3 | BENCH-PASS (stand-in contract `sherlock-run.compact`, bench call vector) | 7, 8 |
 
 Inputs: E5 PASS, Moriarty `e5-wrap` 7c75add31 then d044d01b3: the wrap on the E3 map with the D-9 decoder in the circuit, 1,605,413 rows at k = 21, MEASURED. E3 J5 PASS, Moriarty `e3-iface` 4b5156e1f and openvm 2f09caf. E4: the gate failed once; the owner ruled that E6 proceeds without it. All are merged into `e6-int` (cb1d20f8a, then aa6998370).
 
@@ -86,7 +86,7 @@ Other terms at the 561-column key (MEASURED): logup 215.95, stacked reduction 24
   - a check that the statement equals the ledger vector;
   - framing as `midnight:proof[v5]:`.
 - Prover times: 1,209 s (A) and 1,201 s (R3), wall for the call phase 2,466 s.
-- Intent TTL: 14,400 s (**LEAD, owner to confirm**; a chain takes 20 to 45 min on this host; ledger `global_ttl` 1,209,600 s).
+- Intent TTL: 14,400 s (owner ruling O6, 2026-11-13; a chain takes 20 to 45 min on this host; ledger `global_ttl` 1,209,600 s).
 
 | Call | Transaction sha256 | Verdict | Node evidence |
 |---|---|---|---|
@@ -107,7 +107,7 @@ Runner verdict: `{"A": true, "R1": true, "R2": true, "R3": true, "rehearsal": fa
 
 1. Intent TTL 14,400 s for the call (section 7).
 2. The E3 map scope as E5 states it: every decoder check is in the circuit, with no J6 deferred-log replay. The E6 call runs use an empty lane map and a log of R only (no `PUB` entries). The decoder's `PUB(i)` and lane-map checks were therefore not exercised on-chain; only the E5 I7 cases cover them (native and `MockProver`).
-3. The superseded E6 `callvec` map was removed in favour of the E5 decoder (coordinator order, 2026-11-13 01:00).
+3. The superseded E6 `callvec` map was removed in favour of the E5 decoder (coordinator order, 2026-11-13 01:00; owner ruling O6, 2026-11-13).
 
 Notes for other lanes:
 - In the stark-backend clone, the `FrDomains::l_fr` comment "LEAD pending OD-18" is stale (E1/E2 lane).

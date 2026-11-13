@@ -1,7 +1,3 @@
-# Capability: sherlock-delivery (DoctorWatson factory workflow)
-
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
-
 ## ADDED Requirements
 
 ### Requirement: SWF-001 Single engine
@@ -53,7 +49,10 @@ Rows MAY carry `network:`; tiers SHALL be T0-T4; a T4 row SHALL depend on a T3 r
 - **WHEN** a T4 row has no T3 dependency. **THEN** `validate` refuses.
 
 ### Requirement: SWF-009 Mainnet blocked until authorized
-The 2026-11-08 amendment (`MORIARTY-COMPLETION-PROGRAM.md:270-283`) supersedes the `:269` mainnet ban. While any of its conditions is unmet (local Docker at 9.1.0.1 passed, Preview qualification receipts committed, Preview rollback rehearsal receipt committed, pre-deploy checklist passed), no mainnet operation SHALL run. Each mainnet operation SHALL be a T4 operation with owner+checklist authorization, SHALL have explicit owner authorization at the time it runs, and SHALL stay within the owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no specific spend.
+The 2026-11-08 amendment (`MORIARTY-COMPLETION-PROGRAM.md:270-283`) supersedes the `:269` mainnet ban. While any of its conditions is unmet (local Docker at 9.1.0.1 passed, Preview qualification receipts committed, Preview rollback rehearsal receipt committed, pre-deploy checklist passed), no mainnet operation SHALL run.
+
+#### Detail
+Each mainnet operation SHALL be a T4 operation with owner+checklist authorization, SHALL have explicit owner authorization at the time it runs, and SHALL stay within the owner-set per-operation spend ceiling with no automatic retry. The amendment authorizes no specific spend.
 
 #### Scenario: Checklist without rehearsal
 - **WHEN** `t4.sh` runs without the rehearsal receipt. **THEN** it refuses.
@@ -82,7 +81,10 @@ Superseded rows SHALL carry `retired:`; `next` and `check --tier`/`--set` sweeps
 - **THEN** FIRST FAILING is `A8p`, `RETIRED: A8 (...)` is listed, the sweeps ignore A8, `check A8` runs and its history is retained.
 
 ### Requirement: SWF-012 Optional rows do not gate
-Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects. Since 2026-11-08 no B row is optional (SWF-013); the optional rows are the conditionally guarded features: the GPU rows (F23, A24-A27, A21) and the tree row (A22) until gate G-A or their kill criteria keep them, and the S-slot row A20 until G-A fixes S (amended 2026-11-08 (3); the S>1 experiment is retired, S is chosen once at G-A, SRC-014).
+Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `check --tier`/`--set` sweeps unless `--include-optional`; explicit `check <ID>` SHALL run them; `validate` SHALL refuse a mandatory row depending on an optional row; the mandatory milestone row set and its dependencies SHALL be what the tier runner selects.
+
+#### Detail
+Since 2026-11-08 no B row is optional (SWF-013); the optional rows are the conditionally guarded features: the GPU rows (F23, A24-A27, A21) and the tree row (A22) until gate G-A or their kill criteria keep them, and the S-slot row A20 until G-A fixes S (amended 2026-11-08 (3); the S>1 experiment is retired, S is chosen once at G-A, SRC-014).
 
 #### Scenario: Unimplemented optional row
 - **WHEN** a GPU or tree row is optional and `unimplemented.sh`, and every mandatory Preview row passes.
@@ -92,7 +94,10 @@ Rows marked `optional: true` SHALL be skipped by `next` FIRST FAILING and by `ch
 - **WHEN** A8p is `unimplemented.sh`. **THEN** `next` names A8p and `t3.sh` fails.
 
 ### Requirement: SWF-013 Synthetic rollup: local, then Preview, then Mainnet
-The B rows SHALL be Sherlock's synthetic-rollup qualification on FSYN-generated data (synthetic rollup change SSRD-029), run locally first, then on Preview, then on Mainnet (owner decisions 2026-11-08 and 2026-11-08 (2)): B1, B2, B3, B6 and B7 locally; B4p, B5p, B8p and B9p on Preview (OP-PV-SYNTH-ROLLUP); then B4m, B5m, B8m and B9m (OP-MN-SYNTH-ROLLUP), each mainnet row depending on its Preview counterpart. No B row SHALL target stagenet; B4, B5, B8 and B9 stay retired. No row in the Sherlock U023/C4 dependency closure SHALL depend on a B row (owner decision 2026-11-08 (2): "keep them out of C4"). The synthetic-rollup Preview and Mainnet gates SHALL depend on their B rows. A mainnet B operation SHALL meet SWF-009.
+The B rows SHALL be Sherlock's synthetic-rollup qualification on FSYN-generated data (synthetic rollup change SSRD-029), run locally first, then on Preview, then on Mainnet (owner decisions 2026-11-08 and 2026-11-08 (2)): B1, B2, B3, B6 and B7 locally; B4p, B5p, B8p and B9p on Preview (OP-PV-SYNTH-ROLLUP); then B4m, B5m, B8m and B9m (OP-MN-SYNTH-ROLLUP), each mainnet row depending on its Preview counterpart. No B row SHALL target stagenet; B4, B5, B8 and B9 stay retired.
+
+#### Detail
+No row in the Sherlock U023/C4 dependency closure SHALL depend on a B row (owner decision 2026-11-08 (2): "keep them out of C4"). The synthetic-rollup Preview and Mainnet gates SHALL depend on their B rows. A mainnet B operation SHALL meet SWF-009.
 
 #### Scenario: C4 does not wait on the synthetic rollup
 - **WHEN** B4p is `unimplemented.sh` and every row of the C4 closure passes.

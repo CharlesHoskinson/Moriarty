@@ -173,7 +173,7 @@ Measured at the ledger 9.1.0.1 pins (amended 2026-11-10, review §5 design edit 
 
    Mechanism: option G1 as selected by council D1 (`research/sherlock-gp-decisions-council-20261110/decisions.md` "D1 Genesis mechanism"), corrected for its `changes_requested` finding (rev-2a3a: run input, three of the four tables, helper and result registers). The owner keeps the final call on owner question 1 of `dissent.md` "Owner questions from the 2026-11-10 design review". When `h_pre == 0`, the first segment leaf opens `prog_d` and `input_d` and proves in circuit that its register file and its table roots equal `Init(prog_d, input_d)` field by field (table below). The gate is `h_pre == 0` itself, not a witness flag. The seal (the decider, or the key that seals) requires `h_lo == 0` and a terminal outcome (`Halted`, `Rejected` or `Exhausted`), so a segment chain whose first leaf did not pass the gate cannot seal. Option G2 (off-chain recomputation of `init_d` by the independent verifier, SRC-010) is a diagnostic only and is not acceptance authority. The row cost is 27,736 rows on the C6 digest leaf (E3 2026-11-10: 2,637,481 to 2,665,217 rows, k=22 both; standalone check 55,877 rows, k=16; prove time not measured; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`). Kill criterion as in council D1: the check needs a scan whose rows grow with the program image or the input, or adds more than 5% (ESTIMATE) to the leaf rows.
 
-   **Openings.** `prog_d` (§2.4) opens to `prog_root` (root of the normalised PROG table), the layout and profile identity, and the entry metadata. The entry metadata is one of two forms. `Expr(e0)` is the entry expression id (`e0 = 0` under the C6 normalisation, `owner_prepare.rs:2773`). `Main(in_fn, in_ty)` is a function row with exactly one parameter, of type `in_ty`. `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with `fuel = fuel_lo + 2^64 * fuel_hi`. Each limb and `stack_limit` is range-checked below 2^64, so the u128 fuel has exactly one encoding. `val_d` is the canonical value digest. GP-1 asks for a digest of a canonical value encoding for `Halted(v)` and does not define one. The C6 review fixed that encoding as `sherlock-value/1` (SRC-022; `review.md:102-142`), with `val_d = vd(x)` (SRC-021 as amended), so that a GP-2 consumer can pass the value behind `outcome_d'` of run A as `val_d` of run B. The table below replaces the two `val_d` bullets of the 2026-11-10 D1 text (roots of a dense re-serialization), which had no `Constructor` case, covered lists of UInt only, exposed `n_d`, `n_f` and `ref_x`, and needed a copy of the result into dense tables at halt (`review.md:122`):
+   **Openings.** `prog_d` (§2.4) opens to `prog_root` (root of the normalised PROG table), the layout and profile identity, and the entry metadata. The entry metadata is one of two forms. `Expr(e0)` is the entry expression id (`e0 = 0` under the C6 normalisation, `owner_prepare.rs:2773`). `Main(in_fn, in_ty)` is a function row with exactly one parameter, of type `in_ty`. `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words from the user's CSPRNG, fixed for the run at INIT (the FP-4 rule of `research/sherlock-final-design-20261111/ARCHITECTURE.md`), and `fuel = fuel_lo + 2^64 * fuel_hi`. Each limb and `stack_limit` is range-checked below 2^64, so the u128 fuel has exactly one encoding. `val_d` is the canonical value digest. GP-1 asks for a digest of a canonical value encoding for `Halted(v)` and does not define one. The C6 review fixed that encoding as `sherlock-value/1` (SRC-022; `review.md:102-142`), with `val_d = vd(x)` (SRC-021 as amended), so that a GP-2 consumer can pass the value behind `outcome_d'` of run A as `val_d` of run B. The table below replaces the two `val_d` bullets of the 2026-11-10 D1 text (roots of a dense re-serialization), which had no `Constructor` case, covered lists of UInt only, exposed `n_d`, `n_f` and `ref_x`, and needed a copy of the result into dense tables at halt (`review.md:122`):
    **`sherlock-value/1`** (`review.md:104-121`). `H` is the Poseidon of zk-stdlib 2.4.0 over the BLS12-381 scalar field, with the input length in its initial state (`src/hash/poseidon/poseidon_cpu.rs:131-133` of `midnight-circuits` 7.3.0 in the cargo registry). `V = dom("SHK_VALUE_V1")`, `O = dom("SHK_OUTCOME_V1")`. Every value preimage starts with the header `[V, 1, tag, arity]`.
 
    | Value | tag / arity | Digest `vd` = `H(header, ...)` with |
@@ -187,13 +187,13 @@ Measured at the ledger 9.1.0.1 pins (amended 2026-11-10, review §5 design edit 
    | `Constructor` of type `T`, ordinal `c`, fields `f_0..f_{m-1}` | 6 / m | `ty_d(T), c, acc_m`, with `acc_0 = 0` and `acc_{k+1} = H(V, 1, 7, 2, acc_k, vd(f_k))` |
    | a reference, `Const(i)` or `Data(i)` | none | the `vd` of the value it refers to |
 
-   - The encoding is exact for the six builtin forms and for references. For `Constructor` it is exact except for `ty_d(T)`. `ty_d` is Carbon's program-independent type digest, and its `decl_schema_d` has no defined normal form yet [OPEN: dissent D-2]. A raw `TypeIdC` cannot be used: it is canonical only inside one program (`helper_machine/shared/adt.rs:6-13`).
+   - The encoding is exact for the six builtin forms and for references. For `Constructor` it is exact except for `ty_d(T)`. `ty_d` is Carbon's program-independent type digest; its normal form is FP-9.5 of `research/sherlock-final-design-20261111/ARCHITECTURE.md` (owner sign-off 2026-11-13; dissent D-2 decided). A raw `TypeIdC` cannot be used: it is canonical only inside one program (`helper_machine/shared/adt.rs:6-13`).
    - Shared structure: the digest equals that of the unfolded tree. It is computed once per stored value.
    - Not a value: a dangling reference, a padding record, a scalar out of range, a wrong arity.
    - Outcome: `outcome_d = H(O, 1, 0, vd(v))` for `Halted(v)`; `H(O, 1, 1, code)` for `Rejected(code)` with `code` a range-checked u8; `H(O, 1, 2, kind)` for `Exhausted(kind)` with `kind` in 0..7 = Fuel, DataNodes, DataFields, EnvironmentCells, HelperTasks, HelperWork, SerializationBytes, LogicalCap (`helper_machine/shared.rs:367-378`). `Running` has no `outcome_d`.
-   - Input: `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)`, with `val_d = vd(x)`.
+   - Input: `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)`, with 8 salt words fixed for the run at INIT (FP-4 of `research/sherlock-final-design-20261111/ARCHITECTURE.md`) and `val_d = vd(x)`.
    - In circuit (`review.md:124`): the step that creates a value computes its `vd` from its tag and the `vd` of its fields and binds it to the write-once record (SVM-012). Constants carry `vd` under the PROG canonicality premise. Halt copies the `vd` of the result. Where the digest is carried (with every reference, or in the data record) is not measured. The Init check stays free of an input scan.
-   - [OPEN since the C6 review (`review.md:94,124,164`): the relation of `val_d = vd(x)` to the initial DATA and FIELDS prefix (a loading prefix before `Eval(ENTRY)`, or a lazy unfold), and with it the Init values of fields 23, 24, 26, 27, 34 and 35 below, `ref_x` in "Where the input enters", and the `val_d` of an absent input (the D1 text used `VAL_NONE = Poseidon(SHK_VAL, 0)`). The symbols `enc(x)`, `n_d`, `n_f` and `ref_x` in the table and paragraphs below keep their D1 definition, which is the two removed `val_d` bullets of this section at commit `c53ab3c91`. This design does not redefine them.]
+   - Closed by AD-17 (b) and the SRC-021 text signed 2026-11-13: the input is held by digest and read through the input view, so there is no initial DATA and FIELDS prefix; the Init values of fields 23 to 29 and 34 to 36 do not depend on `x`; `ARG` decodes to a reference to record 0 of the input view; the `val_d` of an absent input is `VAL_NONE = P2(SHK_VALUE_V2)`. SRC-022 uses the `sherlock-value/2` forms of FP-4; the `sherlock-value/1` table above is their BLS12-381 prototype.
 
    Cost of the encoding (`review.md:126-142`), all ESTIMATE, on the measured 70 rows per Poseidon permutation and 2 absorbed words per permutation (§2.7.11: 87 permutations, 6,090 rows; `experiments-4.md:157`):
 
@@ -213,66 +213,51 @@ Measured at the ledger 9.1.0.1 pins (amended 2026-11-10, review §5 design edit 
 
    Without the 4-word header the numbers are 140 rows for scalars and pairs. The header is kept for versioning. No member measured the cached digest or the halt traversal (dissent D-4, task 4.16).
 
-   - Admissibility: `Expr(e0)` takes no input (`val_d = VAL_NONE`; [OPEN since the C6 review: `VAL_NONE` under `sherlock-value/1`]). `Main(in_fn, in_ty)` requires a present input with `ty(x) == in_ty`. A statement outside these two cases has no `Init`, and every first leaf refuses it.
+   - Admissibility: `Expr(e0)` takes no input (`val_d = VAL_NONE = P2(SHK_VALUE_V2)`, FP-4). `Main(in_fn, in_ty)` requires a present input with `ty(x) == in_ty`. A statement outside these two cases has no `Init`, and every first leaf refuses it.
 
-   **Where the input enters.** The reference machine takes no input (`Machine::new(program, fuel, stack_limit)`, `reference.rs:14-27`; empty environment at `:19`). A run with input is the reference run of `apply(prog, x) = Program { functions: prog.functions, entry: Call(name(in_fn), [Literal(x)]) }`. This is the construction that the host already uses for typed inputs (`core_action_consumer.rs:93-113`). Its start state is therefore the unmodified `Machine::new(apply(prog, x), fuel, stack_limit)`. In the chip, `prog_root` does not change with `x`. Control is `Eval(ENTRY)`. `ENTRY` and `ARG` are two reserved expression ids outside the PROG table. The core decodes them from `prog_d` and `val_d`, without a PAGE read, as `Call(in_fn, [ARG])` and `Literal(Data(ref_x))`. The cells of `x` are the initial DATA and FIELDS prefix. The environment and the frame stack stay empty, as in `Machine::new`. [OPEN: `ENTRY`/`ARG` rule coverage] Today a C6 `Literal` row holds a constant id only (`ExpressionRowC::Literal { constant }`, `shared.rs:1157-1159`) and a `Call` row holds an argument slice in the PROG child table (`c6_phys_program.rs:472-478`). `ENTRY` and `ARG` therefore add a literal form whose value is a DATA reference and a one-entry argument slice outside the PROG table. The `KMachineEvalLiteralValid` and Call rules must admit them, and their ids (at or above the code-row count) must be excepted from the expression-index range checks. This is a change to the rule inventory and the layout version; it is not yet made.
+   **Where the input enters.** The reference machine takes no input (`Machine::new(program, fuel, stack_limit)`, `reference.rs:14-27`; empty environment at `:19`). A run with input is the reference run of `apply(prog, x) = Program { functions: prog.functions, entry: Call(name(in_fn), [Literal(x)]) }`. This is the construction that the host already uses for typed inputs (`core_action_consumer.rs:93-113`). Its start state is therefore the unmodified `Machine::new(apply(prog, x), fuel, stack_limit)`. In the chip, `prog_root` does not change with `x`. Control is `Eval(ENTRY)`. `ENTRY` and `ARG` are two reserved expression ids outside the PROG table. The core decodes them from `prog_d` and `val_d`, without a PAGE read, as `Call(in_fn, [ARG])` and `Literal(Data(ref_x))`. The input is held by digest: `ARG` decodes to a reference to record 0 of the input view, and a step reads an input node through `read_input` under `view_root` (`research/sherlock-final-design-20261111/ARCHITECTURE.md` kit CORE). The environment and the frame stack stay empty, as in `Machine::new`. [OPEN: `ENTRY`/`ARG` rule coverage, with the reference variant `Input(i)` of FP-9.1 (O1-1)] Today a C6 `Literal` row holds a constant id only (`ExpressionRowC::Literal { constant }`, `shared.rs:1157-1159`) and a `Call` row holds an argument slice in the PROG child table (`c6_phys_program.rs:472-478`). `ENTRY` and `ARG` therefore add a literal form whose value is a DATA reference and a one-entry argument slice outside the PROG table. The `KMachineEvalLiteralValid` and Call rules must admit them, and their ids (at or above the code-row count) must be excepted from the expression-index range checks. This is a change to the rule inventory and the layout version; it is not yet made.
 
-   For a run with input, the C6 genesis of `apply(prog, x)` holds `x` as a PROG constant, with `expr: 0`, empty tables and zero counters (`owner_prepare.rs:2773,2787-2798`). The chip `Init` differs from it in fields 2 (`ENTRY`), 23, 24, 26 and 27 (`n_d`, `n_f`), and 34 and 35 (DATA and FIELDS roots). For these seven fields the host differential compares by decoding to the reference `Value` and `Control`, not lane by lane. For a run without input, all 39 fields equal the C6 genesis.
+   For a run with input, the C6 genesis of `apply(prog, x)` holds `x` as a PROG constant, with `expr: 0`, empty tables and zero counters (`owner_prepare.rs:2773,2787-2798`). The chip `Init` differs from it in field 2 (`ENTRY`) and in the memory and input words; for the run with input the host differential compares fields 2, 23 to 29 and 34 to 36 by decoding to the reference `Value` and `Control`, not lane by lane.
 
-   **`Init(prog_d, input_d)`.** Reference column: `Snapshot` (`reference_types.rs:162-171`) as `Machine::new` builds it (`reference.rs:14-27`). C6 column: `genesis()` (`helper_machine/shared/owner_prepare.rs:2760-2800`), lanes of `c6_phys.rs:56-74` and `c6_phys_helper.rs:63-70`. Chip column: `research/sherlock-processor-analogy-20261110/study.md` §1.3 and §2.4 (not adopted; council D2). A `None` record, a zero cache and the `Running` outcome are all-zero lanes (`encode_control` `c6_phys.rs:892-896`, `put_env` `:322-327`, `put_outcome` `:1294-1296`, `encode_helper_record` `c6_phys_helper.rs:293-296`, `encode_result_record` `:823-826`). `n_d` and `n_f` are 0 when the input is absent. Each row is one field of `models/sherlock/quint/init.qnt` (39 fields).
+   **`Init(prog_d, input_d)`** (the one-arena field list of kit INIT, `research/sherlock-final-design-20261111/ARCHITECTURE.md`; owner rulings AD-17 (b) and AD-18 (a) of 2026-11-12, text signed 2026-11-13). The table keeps the Quint field numbers 1 to 33 and 38 to 39 and replaces 34 to 37. Header words are marked (H). Under AD-17 (b) the genesis memory is empty, so `n_d = n_f = 0`. The 39-field reference mapping of each field to `Machine::new` and to the C6 `genesis()` is in git history (this file at `4cd8c0695`).
 
-   | # | Field (Quint) | `Machine::new` | C6 `genesis()` | Chip register | Init value |
-   |---|---|---|---|---|---|
-   | 1 | `ctl_tag` | `control: Some(Eval(..))` `:17` | `ControlC::Eval` `:2773`, lane 2 | `ctl` | `Eval` (tag 0) |
-   | 2 | `ctl_expr` | `program.entry` `:17` | `expr: 0` `:2773`, lane 3 | `ctl` | `e0` for `Expr(e0)`; `ENTRY` for `Main` |
-   | 3 | `ctl_rest` | (none) | control lanes 4-18 | `ctl` | 0 |
-   | 4 | `ctl_origin` | (none) | `control_origin: 0` `:2777`, lane 19 | `ctl` | 0 |
-   | 5 | `outcome` | `Outcome::Pending` `:24` | `OutcomeC::Running` `:2780`, lanes 23-25 | `st` | `Running` (all zero) |
-   | 6 | `initial_fuel` | `initial_fuel: fuel` `:23` | `:2781`, lane 26 | `st` | `fuel` (u128) |
-   | 7 | `remaining_fuel` | `remaining_fuel: fuel` `:22` | `remaining_work` `:2782`, lane 27 | `st` | `fuel` (u128) |
-   | 8 | `consumed_work` | (`initial - remaining` = 0) | `:2783`, lane 28 | `st` | 0 |
-   | 9 | `helper_work` | (none) | `:2784`, lane 29 | `st` | 0 |
-   | 10 | `helper_visits` | (none) | `:2785`, lane 30 | `st` | 0 |
-   | 11 | `reference_cursor` | (none) | `:2786`, lane 31 | `st` | 0 |
-   | 12 | `stack_limit` | `stack_limit` `:21` | `:2779`, lane 22 | `st` | `stack_limit` from `input_d` |
-   | 13 | `frame_count` | `frames: vec![]` `:20` | lane 47 | `st` | 0 |
-   | 14 | `task_count` | (none) | `tasks: Vec::new()` `:2797` | `st` | 0 |
-   | 15 | `env_ptr` | `environment: Environment::new()` `:19` | `env_root: None` `:2778`, lanes 20-21 | `env` | `None` (`[0,0]`) |
-   | 16 | `fp` | `frames: vec![]` `:20` | `frames: Vec::new()` `:2796` | `fp` | `NIL` |
-   | 17 | `tp` | (none) | `tasks: Vec::new()` `:2797` | `tp` | `NIL` |
-   | 18 | `top` | (none) | (no frame) | `top` | 0 (13 lanes) |
-   | 19 | `task` | (none) | (no task) | `task` | 0 (7 lanes) |
-   | 20 | `helper` | (none) | `helper: None` `:2790` | `h` | `None` (23 lanes, 0) |
-   | 21 | `result` | (none) | `result: None` `:2791` | `r` | `None` (4 lanes, 0) |
-   | 22 | `vregs` | (none) | (none) | `v0..v2` | 0 |
-   | 23 | `alloc_data` | (none) | `alloc.data_nodes` `:2787`, lane 32 | `st` | `n_d` |
-   | 24 | `alloc_fields` | (none) | `alloc.data_fields`, lane 33 | `st` | `n_f` |
-   | 25 | `alloc_env` | (none) | `alloc.environment_cells`, lane 34 | `st` | 0 |
-   | 26 | `len_data` | (none) | `active.data` `:2788`, lane 35 | `len` | `n_d` |
-   | 27 | `len_fields` | (none) | `active.data_fields`, lane 36 | `len` | `n_f` |
-   | 28 | `len_env` | (none) | `active.env`, lane 37 | `len` | 0 |
-   | 29 | `len_slots` | (none) | `active.value_slots`, lane 38 | `len` | 0 |
-   | 30 | `seg_active` | (none) | `SegBase::genesis_uncut` `:2789`, lanes 39-42 | `st` | 0 (4 lanes) |
-   | 31 | `seg_alloc` | (none) | same, lanes 43-45 | `st` | 0 (3 lanes) |
-   | 32 | `seg_consumed` | (none) | same, lane 46 | `st` | 0 |
-   | 33 | `prog_root` | `program` `:18` | `admission` `:2768-2770` | PROG root | `prog_root` from `prog_d` |
-   | 34 | `root_data` | (none) | `data: Vec::new()` `:2793` | DATA root | `root(DATA, enc(x))`; `EMPTY(DATA)` if absent |
-   | 35 | `root_fields` | (none) | `data_fields: Vec::new()` `:2794` | FIELDS root | `root(FIELDS, enc(x))`; `EMPTY(FIELDS)` if absent |
-   | 36 | `root_env` | `Environment::new()` `:19` | `env: Vec::new()` `:2795` | ENV root | `EMPTY(ENV)` |
-   | 37 | `root_slots` | (none) | `value_slots: Vec::new()` `:2798` | SLOTS root | `EMPTY(SLOTS)` |
-   | 38 | `fin` | (none) | `fin: None` `:2792` | (pure profile) | absent (0) |
-   | 39 | `deps` | (none) | (none) | statement `deps_d` | `EMPTY_DEPS` (no consumed claim, GP-2) |
+   | # | Field | Chip word | Init value |
+   |---|---|---|---|
+   | 1 | `ctl_tag` | control | `Eval` (tag 0) |
+   | 2 | `ctl_expr` | control | `e0` for `Expr(e0)`; `ENTRY` for `Main` |
+   | 3 | `ctl_rest` | control | 0 |
+   | 4 | `ctl_origin` | control | 0 |
+   | 5 | `outcome` | `outcome_tag`, `outcome_payload` (H) | `Running`, 0 |
+   | 6 | `initial_fuel` | register | `fuel_lo + 2^64 fuel_hi` |
+   | 7 | `remaining_fuel` | register | the same |
+   | 8 to 11 | consumed work, helper work, helper visits, reference cursor | registers | 0 |
+   | 12 | `stack_limit` | register | from the `input_d` opening |
+   | 13, 14 | `frame_count`, `task_count` | stack cells | 0 |
+   | 15 | `env_ptr` | register | `None` |
+   | 16, 17 | `fp`, `tp` | `frames_below`, `tasks_below` | `EMPTY_F`, `EMPTY_T` |
+   | 18 to 21 | top frame, top task, helper, result | cached records | 0 |
+   | 22 | `vregs` | scratch `v0..v2` | 0 (never read, CORE invariant 8) |
+   | 23 to 25 | allocation counters | registers | 0 |
+   | 26 to 29 | per-kind active lengths, where the machine keeps them as registers | registers | 0 |
+   | 30 to 32 | segment counters | registers | 0 |
+   | 33 | `prog_root`, `prog_d` | body words | the opened `prog_root`; the lane `prog_d` |
+   | 34 | `mem_len` (replaces `root_data`) | MEM frontier `len` | 0 |
+   | 35 | `mem_root` (replaces `root_fields`) | token word `root` | `empty_at(TOP + 3)` (`chip/dense.rs:86-119`) |
+   | 36 | `mem_tail` (replaces `root_env`) | token word `tail_d` | `tail_d([])` (`chip/dense.rs:144-152`) |
+   | 37 | (removed; was `root_slots`) | | |
+   | 38 | `fin` | (pure profile) | absent, 0 |
+   | 39 | `deps` | `deps_d` (H) | `EMPTY_DEPS` |
+   | 40 | `input_d` (new) | `input_d` (H) | the opened `input_d` |
+   | 41 | `view_root` (new) | `view_root` (H) | `VIEW_NONE` when `val_d = VAL_NONE`; otherwise the witness word, tied to `val_d` at the seal by `VIEW` |
+   | 42 | constructor fold cells (new) | body words | 0 |
 
    Notes on the table:
-   - `NIL` is the empty-stack link. No allocated address and no hash-chain head takes this value. Address 0 is the first append when `len = 0`, so as an address `NIL != 0`. For hash-chain stacks, `NIL` is the `EMPTY_STACK` constant.
-   - `EMPTY(t)` is the root of the empty table `t`, and it is different for each table. The one-arena amendment below replaces the four `(root, length)` pairs.
+   - `NIL` is replaced by the hash-chain constants `EMPTY_F`, `EMPTY_T` (kit STACKS). The one memory arena holds every record kind with a kind tag (L-9, M-1); its state is `(len, root, tail_d)` and replaces the four `(root, length)` pairs; the sentence 'its root SHALL open to these four `(root, length)` pairs' is withdrawn. The input enters by digest (AD-17 (b)): fields 23 to 29 and 34 to 36 do not depend on `x`.
    - `v0..v2` are scratch registers outside `pre_d`. Init requires them to be zero at slot 0, so no value enters the first step without a check.
    - `run_id` (`owner_prepare.rs:2810-2814`) maps to `(prog_d, input_d)`.
    - Init drops these checks of C6 `genesis_image` (`owner_prepare.rs:2801-2872`). R2: negative inputs cannot be written in unsigned limbs, so the genesis-invalid form `Error { code: 1 }` cannot occur. R3 (`fuel <= max_reference_work`), R4 (`stack_limit <= Bounds.frames`) and R5 (`fuel <= value_slots`): these are key capacities, which GP-1 removes. Resource limits stay in-run outcomes (`Exhausted`, `Rejected(4)`).
-   - Model evidence: `models/sherlock/quint/init.qnt` (`quint test --main init`). Over 128 statements (with and without input, fuel at 0 and at the two-limb maximum with the limb scaled to 2^16, non-canonical fuel limbs and stack limit, input shape mismatches), the check accepts exactly the model's `Init`. The model shows that the check is complete over the 39 fields; it does not show that the `Init` values equal `Machine::new`, which is row A37. It refuses every single-field deviation, a swapped input or program opening, and a witness genesis flag used in place of `h_pre == 0`. All 47 mutants (39 field mutants, 8 check and seal mutants) are caught.
+   - Model evidence: `models/sherlock/quint/init.qnt` (`quint test --main init`). Over 128 statements (with and without input, fuel at 0 and at the two-limb maximum with the limb scaled to 2^16, non-canonical fuel limbs and stack limit, input shape mismatches), the check accepts exactly the model's `Init`. The model shows that the check is complete over the 39 fields; it does not show that the `Init` values equal `Machine::new`, which is row A37. It refuses every single-field deviation, a swapped input or program opening, and a witness genesis flag used in place of `h_pre == 0`. All 47 mutants (39 field mutants, 8 check and seal mutants) are caught. The model covers the 39-field list; its extension to fields 1 to 42 with `InitFieldsCoverSchema` is a closure test of FP-9.7.
    - Host differential: task 4.15, row A37.
-
-   **One-arena amendment (owner decisions AD-18 (a) and AD-17 (b), 2026-11-12).** SRC-021 uses the one-arena Init field list of kit INIT (`research/sherlock-final-design-20261111/ARCHITECTURE.md`, kit INIT). Rows 26 to 29 and 34 to 37 become one arena with genesis memory `(len, root, tail_d) = (0, empty_at(TOP + 3), tail_d([]))`. Rows 16 and 17 take the empty-stack constants `EMPTY_F` and `EMPTY_T` of the hash-chain stacks. The input is admitted by digest: it is not loaded into memory, so rows 23, 24, 26 and 27 are 0, and steps read input nodes through the certified input view under the header word `view_root` (from the witness, `VIEW_NONE` for an absent input). `input_d`, `deps_d` and `view_root` are header words of the state commitment, and `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words fixed for the run. The table above is the reference mapping of the 39 fields; where it differs, this amendment holds.
 
 ### 3.3 Decider and contract
 

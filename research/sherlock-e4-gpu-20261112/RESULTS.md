@@ -184,7 +184,7 @@ Log blowup 2: SHA-256 `538d716a8bb8de68ecb48765f3fbdfa034ab80cf0acace740c06827ef
 No option below reaches the 19.0 s warm call; kernel tuning is exhausted at the 754 MHz clock. Each option is a decision for the owner; nothing here is applied. Wrap rows: E5 final circuit 1,436,529 rows against the k = 21 gate of 1,782,573 (MEASURED, `~/Projects/Moriarty-wt/e5-wrap/research/sherlock-e5-wrap-20261112/RESULTS.md` section 6g); per-query costs from its section 8 model (about 9,600 rows per round-0 query plus 688 of `mu` batching, about 1,010 per round 1 and 2 query; ESTIMATE, from its section 8 table).
 
 **Option A (recommended): relax the target; `L_Fr` is an added stage of about 105 s per call.**
-- Lead pick while the owner is AFK (2026-11-13): option A, marked for owner confirmation. The GPU clock stays as it is (owner call).
+- Owner ruling O3 (2026-11-13): option A now (the added `L_Fr` stage, 105.0 s MEASURED); option B is measured in T14; the GPU clock cap stays with the owner.
 - Prove time 105.0 s, MEASURED (section 7.3); mid warm call about 124 s, DERIVED (19.0 + 105.0).
 - D3: no change. Keys: none. Wrap: none. Ledger: none.
 - Further engineering inside the design, no key change: the CPU stages left (WHIR about 15 to 19 s, GKR input and zerocheck about 12 to 16 s, stacked reduction about 5 s) to the GPU would give about 65 to 75 s (ESTIMATE). If the GPU ran at its 3,003 MHz maximum instead of 754 MHz, the Poseidon stage (about 59 s) could fall up to 4x (ESTIMATE, not tested; the cause of the cap is unknown).

@@ -31,7 +31,7 @@ The genesis selector SHALL be `g = is_zero(h_pre)` from the leaf public value `h
 - **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-15 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
 
 ### Requirement: INIT-003 `prog_d` and `input_d` are opened and bound
-INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each of the three limbs below `2^64`. PROG canonicality SHALL be the named premise `ProgCanonical(prog_root)` of the leaf. The seal SHALL discharge it with the `ADM` claim (NODE-010).
+INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)`, with 8 salt words fixed for the run at INIT, and with each of the three limbs below `2^64`. PROG canonicality SHALL be the named premise `ProgCanonical(prog_root)` of the leaf. The seal SHALL discharge it with the `ADM` claim (NODE-010).
 
 #### Scenario: Root or input not opened
 - **WHEN** `prog_root` is not the root inside `prog_d`, a fuel limb is `2^64`, `input_d` is not opened, the stack limit is unbound, or the opening of another `input_d` is used

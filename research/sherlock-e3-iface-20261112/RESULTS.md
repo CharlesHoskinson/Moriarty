@@ -6,6 +6,8 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 
 **E3 gate: PASS (J1 to J5, tree 2f09caf); the owner accepted the all-entries case in place of all-non-`NOP` (ruling 2026-11-12 22:10).** At the `L_Fr` set (`lfr_params`) the all-entries case (253 entries, every value slot used, no `NOP` before the padding) and the forced-overflow case (551 operations to tier E) prove and the stock verifier accepts with 2 commitments; the missing-`R` case is refused by the prover. D3 at the measured key: 101.1435 bits (equal to E2). An entry table with no `NOP` row at all is impossible at `B = V = 256` (DERIVED, section 5), so all-entries is the strongest case that exists. "Statement words equal the native ones" is the plain-Rust decoder check of D-9 on the exposed `L_Fr` words, not a constraint of the wrap.
 
+**Cases proved at `lfr_params` (MEASURED, read from the J5 logs `~/.cache/e3-iface/logs/j5-final.log`, `j8-j5-final.log` and `j9-j5.log`).** No run proved ten cases at the `L_Fr` set. Each J5 run proves at most four, under one key: on 2f09caf, all-entries and overflow accepted, missing-`R` refused by the prover; on f725b15 (J8) and on 95ed47b (J9), overflow, all-entries and chunk 2 of 3 accepted and the forged `DIGEST` refused by the prover (`LogupZerocheck(NonZeroRootSum)`). The ten cases of the fixture (full-V, full-P, overflow, all-entries, chunks 1, 2 and 3 of 3, missing-`R`, anchor tag swapped, forged `DIGEST`) run at J4, on the tape and the decoder, not as `L_Fr` proofs: full-V, full-P, chunk 1 of 3, chunk 3 of 3 and anchor tag swapped were never proved at `lfr_params`, and missing-`R` was proved and refused only on the 2f09caf key.
+
 | # | Increment | Status | Evidence |
 |---|---|---|---|
 | J1 | `Entry::Public`, D-6 carrier in `L` and `L_Fr`, small `L_iface` | PASS | section 3 |
@@ -134,7 +136,7 @@ Test `j5_gate_at_lfr_params` (unit `e3-j5b`, tree 2f09caf, log `~/.cache/e3-ifac
 
 Full-V and full-P use the same tape and key; their plain-Rust runs (0 failed assertions, decode equal) are in J4.
 
-**D3 at the measured key** (`w_stack` 48, log stacked height 20, max 171 constraints and 46 interactions per AIR): logup 215.95, GKR sumcheck 253.27, GKR batching 254.86, zerocheck 250.95, constraint batching 247.40, stacked reduction 244.73, WHIR 101.1435 (mu 226.30, fold 232.86, query 101.1435, shift 101.1435, gamma 248.23, OOD 239.86); **total 101.1435 bits**, equal to E2 I10 (the query term, set by the parameters, is the weakest; the added `Public` rows do not change it). Proven 100 bits holds.
+**D3 at the measured key** (`w_stack` 48, log stacked height 20, max 171 constraints and 46 interactions per AIR): logup 215.95, GKR sumcheck 253.27, GKR batching 254.86, zerocheck 250.95, constraint batching 247.40, stacked reduction 244.73, WHIR 101.1435 (mu 226.30, fold 232.86, query 101.1435, shift 101.1435, gamma 248.23, OOD 239.86); **total 101.1435 bits**, equal to E2 I10 (the query term, set by the parameters, is the weakest; the added `Public` rows do not change it). D3 weakest term 101.1435 bits; proven 100-bit security is not qualified until G3 and G4 pass (ARCHITECTURE 1.9).
 
 **Added `L_Fr` rows** (section 6): 54,604 ops (+12.3 %) all fit in the existing heights; only `Public` grows (2 to 128 rows, width 3 to 58). The 2-commitment shape with one shared `ProgramTable` is kept.
 
@@ -144,7 +146,7 @@ The tape is fixed per key, while the values of entry `i` start at the data-depen
 
 ## 9. J7: ENC-1/ENC-2, `R` after FP-3, chunk anchors, replay of `R` (MEASURED on the words)
 
-Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j5_gate.rs`). Decisions D-8', D-10 (**FOR OWNER CONFIRMATION**), D-11 (**FOR OWNER CONFIRMATION**) of the plan.
+Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j5_gate.rs`). Decisions D-8', D-10 (confirmed by owner ruling O4, 2026-11-13) and D-11 (resolved 2026-11-13 under O4 by the T4 wrap budget: the wrap replays every log entry, `PATH` included; `L_Fr` keeps the replay of `R` only, `research/sherlock-tested-design-20261113/T4-WRAP-BUDGET.md`) of the plan.
 
 - ENC-1 values: `tagFr(SHK_PROGC)` = `0x43474f52505f4b4853` and `tagFr(SHK_OUTCOME)` equal the ENC table; `PoseidonFr_4(tagFr(SHK_INPUT), pack(input_d))` equals the pinned `enc1.input_pub` (unit test `enc1_tags_and_input_pub_vector`).
 - Cases (one key): full-V, full-P, overflow, all-entries (now 249 entries: `R` of 5 entries and 12 values, then 244 `PUB`), chunk 1 of 3, chunk 2 of 3, chunk 3 of 3; negatives missing-`R`, anchor tag swapped (`wrap_anchor_tag_swapped`: chunk 2 with `a_in` under `SHK_PROGC`, its value recomputed), forged `DIGEST` (the `C_P` output changed, `claim_pub` recomputed to match).
@@ -153,7 +155,7 @@ Code: openvm `e3-iface` 6d70a45 (`iface.rs`, `lverify.rs::gen_r_check`, `tests/j
 
 ## 10. J8: the log onion in `L` (MEASURED)
 
-Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12 (**FOR OWNER CONFIRMATION**).
+Code: openvm `e3-iface-onion` ab0e88a and f725b15 (`iface.rs` native `P2`, `enc`, `onion`; `iface_l.rs` `OnionAir`, `airs_onion`, `traces_onion`; `carrier.rs::row_ind`; `tests/j8_onion.rs`; the fixture with the bench Poseidon2 external inputs). Decision D-12 (confirmed by owner ruling O4, 2026-11-13).
 
 - Native: `P2(TAG_EMPTY)` equals `enc2.D_EMPTY` and the onion of the 6-entry ENC-2 log equals `enc2.onion6` (unit test `enc2_onion_vectors`).
 - Small `L_iface` (`Dims { 32, 64, 32, 62 }`, `small_params_n(4, 8)`, a stand-in key table on the permute bus, onion height 256): accepted full-V, all-entries, chunk 2 of 3, missing-`R` (the onion binds whatever log is in `pv`); refused by the prover (`LogupZerocheck(NonZeroRootSum)`): `log_d` changed, one value changed with `log_d` kept, `log_n` changed.
@@ -179,12 +181,12 @@ Headroom left in the 2^19 table: about 21,000 rows (DERIVED).
 - Closed in J9 (section 12): the range of the anchor words `j`, `k` and `1 <= j <= k` for a chunk. Open, for the owner: whether an ordinary call must also have `j = k = 0` (J9 checks only the 16-bit range there).
 - Negative coverage: at the `L_Fr` set on f725b15 only the forged `DIGEST` was proved and refused; missing-`R` and anchor tag swapped are refused by the tape and the decoder (missing-`R` also by the prover on 2f09caf); the onion forgeries are refused at small scale with a stand-in key table; no wrong-permutation negative.
 - Gemini Quint lanes: rounds 1 and 2 on `OnionAir` and on the `R` replay done (section 12), no open defect; the lane-map lane of section 13 done (2 reader defects fixed, 2 items for the owner).
-- **FOR OWNER CONFIRMATION** (taken as built by the coordinator, 2026-11-13): D-10 (`R` order and anchor rule, section 9), D-11 (replay of `R` only in `L_Fr`, section 9), D-12 (onion form in the bench `L`, section 10).
+- Owner ruling O4 (2026-11-13): D-10 (`R` order and anchor rule, section 9) and D-12 (onion form in the bench `L`, section 10) confirmed; D-11 resolved by the T4 wrap budget: the wrap replays every log entry, `PATH` included (1,676,222 rows with every check, MEASURED cost model), and `L_Fr` keeps the replay of `R` only (section 9).
 - Negative coverage of J9: the 5 `j`, `k` negatives are refused by the tape (failed assertions) and by the reader only; none was proved and refused at the `L_Fr` set (the proved negative of J5 is still the forged `DIGEST`).
 
 **Owner items (one list):**
-1. Confirm D-10, D-11, D-12 (taken as built) and the AFK changes of section 13 (ENC-1 vector test, the `SPONGE(3)` lane map, `apply_lane_map`).
-2. The `a_out` lane-map pair (4 against 5 pairs).
+1. D-10 and D-12 confirmed and D-11 resolved (owner ruling O4, 2026-11-13). Of the AFK changes of section 13, the ENC-1 tag rule is the owner-confirmed pick P-1; the `SPONGE(3)` lane map and `apply_lane_map` stay for owner confirmation.
+2. The `a_out` lane-map pair: owner ruling O7 (2026-11-13), the lane map has 5 pairs (the table edit lands in T9).
 3. Whether an ordinary call must have `j = k = 0` (J9 checks only the 16-bit range there).
 4. Whether lanes 0 and 1 (binding, `comm`) may be lane-map targets (lane `e3-lanemap` finding 2b).
 5. Whether the lane map is a wrap key constant or tied to the `R` positions (entry 3 for `claim_pub`, entry 4 for `a_in`; finding 4).
@@ -224,7 +226,7 @@ Defect found: Q6 of `e3-rreplay`, the missing `j`, `k` rule; fixed in 95ed47b (a
 
 Notes for the owner from round 2: an ordinary call keeps any 16-bit `j`, `k` words (not forced to 0); the node circuit that implements `log_merge` must take an `n = 0` statement only with `d = D_EMPTY` (a node obligation, not built in E3).
 
-## 13. E5 port: ENC-1 tag rule and the `SPONGE(3)` lane map (AFK changes, FOR OWNER CONFIRMATION)
+## 13. E5 port: ENC-1 tag rule and the `SPONGE(3)` lane map (AFK changes; the tag rule is the owner-confirmed pick P-1, the lane-map changes are FOR OWNER CONFIRMATION)
 
 Asked by the coordinator after the E5 wrap-side ENC vectors (E5 RESULTS sections 6j and 6k).
 
@@ -233,4 +235,4 @@ Asked by the coordinator after the E5 wrap-side ENC vectors (E5 RESULTS sections
 
 3. **Lane `e3-lanemap`** (reader lane map at 099d6d8; report `qa/gemini-quint/e3-lanemap/REPORT.md`; the lead ran the commands: 12 tests pass after 2 wrong expected values in the lane's tests were corrected, `SOUND` and `COMPLETE` 5,000 samples no violation, 5 mutants caught). Verdicts: Q1 acceptance and output index SOUND; Q5 `PUB` interplay SOUND; Q6 COMPLETE; Q2 UNSOUND in two edge cases, Q3 no u16 check, Q4 the lane map is not pinned by the reader. Fixed in openvm 9539418 (`apply_lane_map`): a lane is set at most once by a flag (finding 2a: the old `s[lane] != 0` test let a second pair overwrite a lane whose first mapped output was 0), and lane-map words must be u16 (finding 3); tests pass, J4 on fixture-j8 unchanged (7 positives equal native, 3 negatives refused). Left for the owner: whether the reader refuses lanes 0 and 1 (binding, `comm`) as lane-map targets (finding 2b), and whether the lane map is a wrap key constant or tied to the `R` positions (entry 3 for `claim_pub`, entry 4 for `a_in`; finding 4), with the `a_out` 4 against 5 pair question.
 
-Commits for the E5 port (openvm `e3-iface`, not pushed): 6d70a45 (ENC-1 `tag_fr`, `TAG_NAMES`, DIGEST tag indices, the replay of `R`), 52a538c (the ENC-1 vector test), 099d6d8 (the `SPONGE(3)` lane map), 9539418 (`apply_lane_map`: per-lane flag, u16 words). All are AFK changes FOR OWNER CONFIRMATION; none changes the `L_Fr` tape (MEASURED: the J4 tape at 9539418, `j10-j4.log`, has the same 502,910 ops and op histogram as at 95ed47b, `j9-j4.log`), so the J5 result of section 12 stands. Small suite at 9539418 (`j10-small.log`): lib 9, `i10_gate` small, `j1_public`, `j5_gate` (J7 and J9 words-level), `j8_onion` (2): pass.
+Commits for the E5 port (openvm `e3-iface`, not pushed): 6d70a45 (ENC-1 `tag_fr`, `TAG_NAMES`, DIGEST tag indices, the replay of `R`), 52a538c (the ENC-1 vector test), 099d6d8 (the `SPONGE(3)` lane map), 9539418 (`apply_lane_map`: per-lane flag, u16 words). All are AFK changes: 6d70a45 and 52a538c carry the owner-confirmed rule P-1, and 099d6d8 and 9539418 stay FOR OWNER CONFIRMATION; none changes the `L_Fr` tape (MEASURED: the J4 tape at 9539418, `j10-j4.log`, has the same 502,910 ops and op histogram as at 95ed47b, `j9-j4.log`), so the J5 result of section 12 stands. Small suite at 9539418 (`j10-small.log`): lib 9, `i10_gate` small, `j1_public`, `j5_gate` (J7 and J9 words-level), `j8_onion` (2): pass.

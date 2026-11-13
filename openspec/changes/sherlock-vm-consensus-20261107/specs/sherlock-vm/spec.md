@@ -1,7 +1,3 @@
-# Capability: sherlock-vm (machine, layout, dispatch, host interface)
-
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SVM-010..SVM-012 added); not council text. Design: `../../design.md` §2.
-
 ## ADDED Requirements
 
 ### Requirement: SVM-001 Fixed reference machine
@@ -80,7 +76,10 @@ While this change's qualification runs, `sherlock-helper-microstep/1` SHALL be t
 - **THEN** the leaf refuses (SI-02/SI-20) and the record points to the later `/2` change.
 
 ### Requirement: SVM-010 Opaque addresses
-(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:158`.) No machine rule SHALL compute a UInt, a Bool, a branch condition, an error code, an exhaust kind or a published value from a memory address, from `len`, `fp`, `tp` or a segment index. When a leaf closes, fuel and every logical resource counter SHALL remain unchanged. If physical proving capacity is unavailable, then the prover SHALL NOT encode that condition as a `Rejected` or `Exhausted` outcome.
+(Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:158`.) No machine rule SHALL compute a UInt, a Bool, a branch condition, an error code, an exhaust kind or a published value from a memory address, from `len`, `fp`, `tp` or a segment index. When a leaf closes, fuel and every logical resource counter SHALL remain unchanged.
+
+#### Detail
+If physical proving capacity is unavailable, then the prover SHALL NOT encode that condition as a `Rejected` or `Exhausted` outcome.
 
 #### Scenario: Address space exhausted
 (drafted by lead from review.md §Q1 agreement 3)

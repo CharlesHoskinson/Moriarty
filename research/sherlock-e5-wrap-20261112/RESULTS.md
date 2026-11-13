@@ -6,7 +6,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 
 **E5 gate: PASS (I6b, section 6f; final circuit section 6g).** The one BLS12-381 wrap in `ZkStdLibArch` verifies the real E2 I10 `L_Fr` proof (widths 33 + 10, 15 traces) natively in Fr. With levers L1 and L2 it is 1,436,529 rows at k = 21, 80.6 percent of the k = 21 gate (1,782,573). The key is 1,325 bytes in the `MidnightVK` framing. The stock ledger 9.1.0.1 `VerifierKey::verify` accepts the blinded proof with 1,026 public inputs and refuses a changed public input and a flipped proof byte. Keygen takes 84.6 s and the blinded prove 183.8 s in an exclusive heavy slot. All figures are MEASURED. The `L_Fr` shape is a parameter, pinned from its key and its fixture proof (section 7).
 
-**E3 map: PASS (I7, I8, section 6i).** On the E3 all-entries `L_Fr` proof (openvm e3-iface 2f09caf, 1,522 public words), PublicMap is replaced by the E3 map: the D-9 decoder in the circuit, and the statement is the decoded call vector (1,026 lanes). The wrap is 1,605,413 rows at k = 21, 90.1 percent of the gate, with 177,160 rows of headroom. Keygen takes 82.6 s and the blinded prove 131.6 s under `heavy-slot --exclusive`. The stock ledger 9.1.0.1 returns `Ok(())` in 0.062 s. All figures are MEASURED. **For owner confirmation:** the scope (every decoder check in the circuit; no J6 replay) and the pinned pre-hash (section 6i).
+**E3 map: PASS (I7, I8, section 6i).** On the E3 all-entries `L_Fr` proof (openvm e3-iface 2f09caf, 1,522 public words), PublicMap is replaced by the E3 map: the D-9 decoder in the circuit, and the statement is the decoded call vector (1,026 lanes). The wrap is 1,605,413 rows at k = 21, 90.1 percent of the gate, with 177,160 rows of headroom. Keygen takes 82.6 s and the blinded prove 131.6 s under `heavy-slot --exclusive`. The stock ledger 9.1.0.1 returns `Ok(())` in 0.062 s. All figures are MEASURED. Owner ruling O5 (2026-11-13): every D-9 decode check in the circuit and the `L` vk pre-hash pinned as a key constant (section 6i). The replay of every entry was added in section 6m and extends to `PATH` by D-11 (owner ruling O4, 2026-11-13; `research/sherlock-tested-design-20261113/T4-WRAP-BUDGET.md`).
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
@@ -229,7 +229,7 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 | Exclusive slot (`heavy-slot --exclusive`) | keygen 82.6 s; blinded prove 131.6 s (OsRng); proof 2,912 bytes; key 1,325 bytes (`MidnightVK`); library verify OK |
 | Stock ledger 9.1.0.1 (`ledger-check`) | `Ok(())` in 0.062 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
 
-**Recommended options (for owner confirmation).**
+**Options (scope and pre-hash ruled by the owner, O5, 2026-11-13).**
 - The scope: `decode()` is ported exactly, with no check dropped. The native-Fr replay of the log values (E3 J6) is not in the wrap; it stays open.
 - The `L` vk pre-hash (`L_Fr` public value 0) is pinned as a key constant, so the wrap key commits to one `L` key.
 - The statement head words (0 to 113, other than the lane map) are range checked only (`< P`). Nothing reads them yet; that is open.
@@ -322,7 +322,7 @@ One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: wit
 
 ## 6m. Full native replay of every entry (MEASURED unless marked)
 
-The lead decided (AFK pick) that the wrap statement must equal the stock D-9 one, so the open item of section 6l is closed. Step 7 of `src/decode.rs` replays every `PERM`, `H2`, `SPONGE` and `DIGEST` entry, as stock `decode` does; stock does not replay `PATH`. The partial replays of section 6l (R and mapped entries) are removed, because step 7 covers them.
+The wrap statement must equal the stock D-9 one (a lead pick; owner ruling O4 of 2026-11-13 resolves D-11 as the full replay, `PATH` included, in T10 per `research/sherlock-tested-design-20261113/T4-WRAP-BUDGET.md`), so the open item of section 6l is closed. Step 7 of `src/decode.rs` replays every `PERM`, `H2`, `SPONGE` and `DIGEST` entry, as stock `decode` does; stock does not replay `PATH`. The partial replays of section 6l (R and mapped entries) are removed, because step 7 covers them.
 
 **Design.**
 - A tape of `P` = 256 permutation slots. The active slots `t < np` form a monotone bit vector with sum `np`, and an inactive slot holds the zero tuple.

@@ -47,3 +47,44 @@ Not superseded: UIREQ-001..035 (`openspec/changes/sherlock-universal-interpreter
 ## Exit of this change
 
 This change is complete when the Preview qualification record for P1 (`fact(3)`), P2 (`list123`) and P3 (fresh program) exists under the new keys (U023 scenario 2, C4 flips) and every mandatory security and assurance gate for the claimed profile (`sherlock-helper-microstep/1`, the frozen inventory, Preview) passes: SVM-001..009, SRC-001..017 (SRC-011, SRC-014, SRC-015, SRC-016 and SRC-017 mandatory since 2026-11-08 (3); SRC-014 is vacuous only if gate G-A' chooses S=1), SAS-001..007, SAS-010..014, SWF-001..008, SWF-010..012, SWF-014 (added 2026-11-08 (2)), SMN-001..007. Conditional clauses apply whenever their trigger occurs and are then mandatory: SAS-008 whenever an optimization is enabled (otherwise recorded "not applicable: no optimization enabled"), SAS-009 whenever a formal property is claimed (triggered by SRC-017's F21 theorems), SRC-018 whenever the `gpu` feature is enabled for a qualified candidate (otherwise "not applicable: CPU path"). Only work outside the claim may stay open: SWF-009 and M7 (mainnet), SWF-013 (the synthetic-rollup B rows on FSYN data: mandatory for the synthetic-rollup gates, outside the C4 closure by owner decision 2026-11-08 (2)), the `/2` profile, financial and generic-ADT extensions. An explicitly open or unexecuted applicable gate does not make the change complete (astra-2, astra-3). The Mainnet operation (`SWF-009`) is specified here and executed only on owner authorization after `openspec/MORIARTY-COMPLETION-PROGRAM.md:269` is amended. The amendment was made on 2026-11-08 (`:270-283`): each mainnet operation still needs its preconditions and an explicit owner authorization when it runs.
+
+## Capability status notes
+
+The status lines of the capability spec files of this change, moved here so that archive keeps them (they were the text above the first section of each `specs/*/spec.md`).
+
+### sherlock-assurance
+
+Capability: sherlock-assurance (evidence, negative tests, coverage)
+
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
+
+### sherlock-delivery
+
+Capability: sherlock-delivery (DoctorWatson factory workflow)
+
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"). Adopts fable-3's workflow text and the E1-E13 additions; refines AGENTS.md and `models/doctorwatson/factory/CONTRACT.md`. Design: `../../workflow.md`.
+
+### sherlock-general-purpose
+
+Capability: sherlock-general-purpose (general-purpose and universal recursion)
+
+Status: added 2026-11-10 from the owner definition `../../general-purpose.md` (owner: "It needs to be general purpose recursion. Make sure we understand what that means. And universal"; the owner selected all four of universal VM, cross-run composition, foreign proofs and any shape). Not council text. The architecture for GP-002..GP-004 is the output of the GP architecture study (`../../tasks.md` 4.14). Amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md:166-172`): one sentence added to each of GP-001..GP-004; no GP text is narrowed. Design: `../../design.md` §3.6.
+
+### sherlock-midnight-target
+
+Capability: sherlock-midnight-target (ledger 9.1.0.x pins, networks, fees, keys)
+
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1; amended 2026-11-08 (2) by the owner decisions in `dissent.md` "Resolved 2026-11-08" and "Resolved 2026-11-08 (2)"; amended 2026-11-10 by the design review C7: SMN-003 and SMN-006 name the ledger source constants and the `LedgerParameters` fields separately). Sources: https://github.com/midnightntwrk/midnight-ledger/releases/tag/ledger-9.1.0.0 and `.../ledger-9.1.0.1`, https://docs.midnight.network/relnotes/ledger-9, https://docs.midnight.network/relnotes/support-matrix, `wiki/midnight-ledger-9-hardfork.md`. Design: `../../design.md` §5.
+
+### sherlock-recursion
+
+Capability: sherlock-recursion (leaf, node, decider, contract)
+
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-023, UISEC-006/009/010/011, ZR04/05/08/10, SRPOC-008; adopts SND-001..005 and fable-2's SRC text. Amended 2026-11-10 by the design review (`research/sherlock-recursion-design-review-20261110/review.md` §5; SRC-001, SRC-010, SRC-011, SRC-013, SRC-014, SRC-017 edited; SRC-019..021 added) and by the owner definition `../../general-purpose.md`; amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SRC-006 and SRC-007 replaced, SRC-021 amended, SRC-022 and SRC-023 added); not council text. Design: `../../design.md` §3.
+
+### sherlock-vm
+
+Capability: sherlock-vm (machine, layout, dispatch, host interface)
+
+Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Refines UIREQ-001..035 and UISEC-001..012 without renumbering them. Amended 2026-11-10 by the C6 outcome-only review (`research/sherlock-c6-outcome-ledger9-review-20261110/review.md`: SVM-010..SVM-012 added); not council text. Design: `../../design.md` §2.
+

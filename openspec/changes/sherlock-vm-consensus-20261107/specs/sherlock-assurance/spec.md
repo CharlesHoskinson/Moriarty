@@ -1,7 +1,3 @@
-# Capability: sherlock-assurance (evidence, negative tests, coverage)
-
-Status: CONSENSUS v2.1 (council vote 6/6 ACCEPT at 2026-11-07 21:29Z; text unchanged from DRAFT v2.1). Adopts ASR-001..012 (astra-1), SND-007 (astra-2) and astra-3's scope clauses; refines UISEC-012, UIREQ-021/023/024. Design: `../../assurance.md`.
-
 ## ADDED Requirements
 
 ### Requirement: SAS-001 Typed evidence record

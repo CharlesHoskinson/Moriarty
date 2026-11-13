@@ -1,6 +1,6 @@
 # Sherlock design decisions
 
-Each entry records one decision with its source. Only owner words are canon. An owner decision names its date. A decision the lead took while the owner was away and that the owner has not ruled on is marked "lead decision, owner to confirm"; a machine-level item without a ruling is marked OWNER. The owner ruled on OD-1 to OD-18, OD-24, FZ-1 to FZ-6, LD-S10x-2 to LD-S10x-5 and AD-1, AD-2, AD-6, AD-9, AD-11, AD-14, AD-16, AD-17, AD-18, AD-20, AD-22 and AD-23 on 2026-11-12. The owner can reverse any of them; a reversal changes the rows named in its "Touches" column.
+Each entry records one decision with its source. Only owner words are canon. An owner decision names its date. A decision the lead took while the owner was away and that the owner has not ruled on is marked "lead decision, owner to confirm"; a machine-level item without a ruling is marked OWNER. The owner ruled on OD-1 to OD-18, OD-24, FZ-1 to FZ-6, LD-S10x-2 to LD-S10x-5 and AD-1, AD-2, AD-6, AD-9, AD-11, AD-14, AD-16, AD-17, AD-18, AD-20, AD-22 and AD-23 on 2026-11-12, and on O1 to O12 (with the D-11 resolution under O4) and the T5 leaf schemas on 2026-11-13 (last section). The owner can reverse any of them; a reversal changes the rows named in its "Touches" column.
 
 Two numbered series exist. OD-1 to OD-20 and OD-24 are the co-processor decisions of `research/sherlock-processor-final-20261111/PROPOSAL.md` section 12 and `DECISIONS-ASK.md`. AD-1 to AD-23 are the machine-level decisions of `ARCHITECTURE.md` section 4.1.
 
@@ -130,7 +130,7 @@ Source: `ARCHITECTURE.md` section 1.11. Each item is a LEAD choice where the sou
 - F-5. **Key routing by the `prog_d` opening.** A LEAF child's key leaf `P2(DOM_KEYTRIPLE, set_id, c_app, c_leaf, c_ifl)` is in the `key_root` opened from `prog_d`, depth 16; NODE children carry equal `key_root` (SEG) and `keys_d`; sealed and administrative outputs forward slot 0.
 - F-6. **`L` opens the sealed SET head.** The SET forms are BabyBear Poseidon2 and `L` computes it natively; the wrap pays 2,000 to 4,000 rows for each value. Replaces C-2's open layer.
 - F-7. **The public program identity is `C_P`.** It is the form of N-11 that keeps ZK-002; N-11 stays OWNER.
-- F-8. **The entry label is the discriminator, and `L` has the public-value index table of FP-3** (12,164 words at `B = V = 256`, `L_TX` = 1,024, with a 4-pair lane map for lanes the wrap fills). The anchor values `a_in` and `a_out` are carried by reference as the entry rows `e_in` and `e_out` of their `DIGEST` entries; the anchor statement `(mode, j, k, a_in, a_out)` does not change.
+- F-8. **The entry label is the discriminator, and `L` has the public-value index table of FP-3** (12,164 words at `B = V = 256`, `L_TX` = 1,024, with a 4-pair lane map for lanes the wrap fills; owner ruling O7 of 2026-11-13 sets 5 pairs, and the table changes with ENC-2 in T9). The anchor values `a_in` and `a_out` are carried by reference as the entry rows `e_in` and `e_out` of their `DIGEST` entries; the anchor statement `(mode, j, k, a_in, a_out)` does not change.
 - F-9. **BabyBear tag codes 1 to 32 and the constants as tag-only hashes** (`EMPTY_DEPS`, `NO_INPUT_LINK`, `NO_PREMISE`, `VIEW_NONE`, `VAL_NONE`), under OD-18. Later digests take the next free codes.
 - F-10. **One salt for the run, fixed at INIT in `input_d`.** `outcome_pub` hides `outcome_d` under `DOM_OUTHIDE` with `input_d`; `claim_pub = transientHash([C_P, input_pub, outcome_pub])` is the replay key, so every partition of one run has one `claim_pub` (LW-010).
 - F-11. **`view_root` is a header word.** `state_d = P2(SHK_SD2, outcome_tag, outcome_payload, input_d, deps_d, view_root, body_d)`, 42 words; `VIEW_NONE` under forms (a) and (c). Replaces "body word" of P-6. AD-17 is form (b) (owner decision 2026-11-12).
@@ -157,3 +157,27 @@ Source: `ARCHITECTURE.md` section 1.12. Owner confirmed FZ-1 to FZ-6 as written 
 - FZ-5. **The static plan and the per-run schedule are separate.** `plan_d = P2(DOM_PLAN, 1, itab_d, menu_d, policy_d, layout_rule_d, place_d)` binds the instruction tables, the shape menu, the scheduling policy, the log layout rule and the placement rule. The cut points, tree, padded count and resumes are a per-run schedule outside `plan_d`.
 - FZ-6. **DISCHARGE is exempt from the log concatenation rule.** Its invariant: every entry of the slot-0 log is proved `Valid`, the output log is empty, and every other output word equals slot 0. Lean `node_discharge_sound`; positive test on a non-empty log.
 - FZ-2. **The leaf public-value layout keeps the lane `rules_d`.** Both options of AD-23 keep lane 32 (a consumer in the LEAF base case of `shape_d`, or a reserved zero lane), so the 54-word layout does not wait for AD-23; only the value of the lane does. The layout itself waits on X10 (row I-12).
+
+## Owner rulings of 2026-11-13 (tested-design loop)
+
+Source: `research/sherlock-processor-final-20261111/DECISIONS-ASK.md` (main working copy, untracked; quoted here) and `research/sherlock-tested-design-20261113/LOOP.md`. Owner ruling 2026-11-13 07:35: "go with your recommendations on O1 to O12". Each ruling replaces the AFK pick that the lane RESULTS files marked for confirmation; those marks are edited in place.
+
+| # | Question | Ruling | Touches |
+|---|---|---|---|
+| O1 | X14 range checker of the FV work units | a 17-bit range checker in the FV work units only; the 16-bit RANGE table of LD-S10x-3 stays for everything else | `ARCHITECTURE.md` 1.11 FP-1 RANGE row, GP-3 general verifier; X14 RESULTS |
+| O2 | X14 column bound | 3,300 columns for the FV work units only (the add unit is 3,138, MEASURED) | GP-3 general verifier; X14, X8 and FP8 RESULTS |
+| O3 | E4 call time | option A now: the added `L_Fr` stage, 105.0 s (MEASURED); option B is measured in T14; the GPU clock cap stays with the owner | E4 RESULTS; T14 |
+| O4 | E3 picks D-10, D-11, D-12 | D-10 (`R` order and anchor rule) and D-12 (the log onion as an OnionAir in `L`) confirmed; D-11 decided by the T4 wrap budget (below) | E3 and E5 RESULTS; `ARCHITECTURE.md` I-30, kit L AND WRAP |
+| O5 | E5 picks | every D-9 decode check in the circuit; the `L` vk pre-hash as a key constant | E5 RESULTS; wrap key |
+| O6 | E6 picks | 4 h TTL; the E6 callvec map is dropped for the E5 decoder | E6 RESULTS |
+| O7 | openClaim lane map | 5 pairs; the FP-3 index table is fixed to match (with ENC-2 in T9) | `ARCHITECTURE.md` I-28, LEDGER CONTRACT; F-8 |
+| O8 | X8 Compact adapter class | the lead names it in T8 | GP-3 hook |
+| O9 | LW-009 | `acceptCollection` carries no `shape_d`; LW-009 drops it (T9) | `ARCHITECTURE.md` I-24 |
+| O10 | FP8 picks 1 to 7 | the `KeyBind` pvs chain is withdrawn, because it narrows GP-3 and GP-4; G1 in the Sherlock crate, arity 2 padded to depth 3, the `key_root` encoding and a new contract key at the next deploy stay | FP8 RESULTS; T7 |
+| O11 | Push of the E-path branches and the T0 patch series | push to input-output-hk/Moriarty after T0 is verified | durability |
+| O12 | T5 leaf schemas | the lead drafts first, the owner signs (signed, below) | `ARCHITECTURE.md` 1.11 FP-9 |
+
+**E3 D-11, resolved 2026-11-13 08:16 under O4.** The T4 wrap budget fits the full replay with `PATH`: 1,676,222 rows with every missing check, 94.03 percent of the k = 21 gate, headroom 106,351 (MEASURED cost model of probe gadgets, no `MockProver` on the new checks; `research/sherlock-tested-design-20261113/T4-WRAP-BUDGET.md`). So the wrap replays every log entry, `PATH` included, and the replay of `R` only is withdrawn from the wrap. `L_Fr` keeps its `R` check: a full J6 replay in `L_Fr` does not fit its key (about 65.8k ops against about 27k rows of headroom, DERIVED). T10 builds the checks.
+
+**T5 sign-off, 2026-11-13 08:49 (O12).** "Sign all recommendations" on the drafts of `research/sherlock-tested-design-20261113/T5-SCHEMAS.md`: AD-11 one physical cell per record (C1-1), `W_rec` = 28, MEM message 34 words, `vd` in the DATA record, the `Input(i)` reference variant (O1-1) and the recommended counter widths (O-1, O-2); AD-12 `D_tbl` = 5, `W_rom` = 33, `D_row` = 64 (O2-1, no `2^32` row limit in the language) and the recommended permutations per tree node (O2-2); AD-9 the 120 guards in reference priority order, `rule_lane` = class (O3-1) and the recommended MatchArm guard place (O3-3), with residue states a Quint task (O3-4); `D_view` = 67 with a hash-consed view and a lazy view under a host canonical rule (O4-1); the Carbon-style `ty_d` normal form with the recommended answers to O5-1 to O5-4; the SRC-021 amendment text with SRC-022 moved to `sherlock-value/2` in the same change (O6-1 to O6-3). O3-2 (the DEC plan lanes) stays open until T6. The layouts are `ARCHITECTURE.md` section 1.11, FP-9; the amended SRC-021 and SRC-022 are in `openspec/changes/sherlock-vm-consensus-20261107`. Each row of section 1.12 that they settle stays FREEZE-PENDING until its closure test (FP-9.7) passes.
+
