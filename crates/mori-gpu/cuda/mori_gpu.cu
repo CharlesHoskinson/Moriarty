@@ -23,6 +23,7 @@ typedef fr_t scalar_t;
 #include <ntt/ntt.cuh>
 
 #include "quotient.cuh"
+#include "poseidon.cuh"
 
 #ifndef __CUDA_ARCH__
 
@@ -243,6 +244,137 @@ extern "C" int mori_quotient_run(const QuotientJob* job)
     } catch (const cuda_error& e) {
         return fail("quotient", e.code());
     }
+    return 0;
+}
+
+// ------------------------------------------- Midnight Poseidon over Fr (E4, poseidon.cuh)
+// rc: 68 x 3 round constants, then the 3 x 3 MDS row-major, Montgomery (host fr layout).
+// mode 0: plain rounds; mode 1: sparse partial rounds (needs the full POS_NCONST table).
+extern "C" int mori_pos_set_constants(const fr_t* c, size_t n, int mode)
+{
+    if (n != POS_NCONST || (mode != 0 && mode != 1)) return fail("pos_set_constants", (int)n);
+    (void)select_gpu(0);
+    cudaError_t e = cudaMemcpyToSymbol(POS_C, c, n * sizeof(fr_t));
+    if (e == cudaSuccess) e = cudaMemcpyToSymbol(POS_MODE, &mode, sizeof(int));
+    return e == cudaSuccess ? 0 : fail("pos_set_constants", e);
+}
+
+static int pos_grid(size_t n)
+{
+    size_t b = (n + 127) / 128;
+    return (int)(b < 65535 * 4 ? b : 65535 * 4);
+}
+
+// Leaf hashes of n rows of width w (row-major, host), in chunks; out on the host.
+extern "C" int mori_pos_hash_rows(fr_t* out, const fr_t* vals, size_t n, uint32_t w,
+                                  const fr_t* cap)
+{
+    auto& gpu = select_gpu(0);
+    const F8 c = *(const F8*)cap;
+    size_t chunk = ((size_t)1 << 30) / (w * sizeof(fr_t));
+    if (chunk > n) chunk = n;
+    if (chunk == 0) chunk = 1;
+    fr_t *dv = nullptr, *dout = nullptr;
+    cudaError_t e = cudaMalloc(&dv, chunk * w * sizeof(fr_t));
+    if (e == cudaSuccess) e = cudaMalloc(&dout, chunk * sizeof(fr_t));
+    for (size_t off = 0; e == cudaSuccess && off < n; off += chunk) {
+        size_t m = n - off < chunk ? n - off : chunk;
+        e = cudaMemcpyAsync(dv, vals + off * w, m * w * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
+        if (e != cudaSuccess) break;
+        mori_pos_rows<<<pos_grid(m), 128, 0, gpu>>>(dout, dv, m, w, c);
+        e = cudaGetLastError();
+        if (e != cudaSuccess) break;
+        e = cudaMemcpyAsync(out + off, dout, m * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu);
+        if (e == cudaSuccess) e = cudaStreamSynchronize(gpu);
+    }
+    if (dv) cudaFree(dv);
+    if (dout) cudaFree(dout);
+    return e == cudaSuccess ? 0 : fail("pos_hash_rows", e);
+}
+
+// All digest layers of build_digest_layers_scalar: log2(rpq) strided rounds (query stride
+// n / rpq), then halving to the root. out holds the layers after the strided rounds,
+// concatenated (n / rpq, n / (2 rpq), ..., 1 entries; 2 n / rpq - 1 in total).
+extern "C" int mori_pos_digest_layers(fr_t* out, const fr_t* leaves, size_t n, size_t rpq,
+                                      const fr_t* cap)
+{
+    auto& gpu = select_gpu(0);
+    const F8 c = *(const F8*)cap;
+    size_t qs = n / rpq;
+    fr_t *a = nullptr, *b = nullptr;
+    cudaError_t e = cudaMalloc(&a, n * sizeof(fr_t));
+    if (e == cudaSuccess) e = cudaMalloc(&b, (n / 2 + 1) * sizeof(fr_t));
+    if (e == cudaSuccess) e = cudaMemcpyAsync(a, leaves, n * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
+    size_t len = n;
+    for (size_t s = rpq; e == cudaSuccess && s > 1; s >>= 1) {
+        mori_pos_layer<<<pos_grid(len / 2), 128, 0, gpu>>>(b, a, len / 2, qs, c);
+        e = cudaGetLastError();
+        fr_t* t = a; a = b; b = t;
+        len /= 2;
+    }
+    size_t at = 0;
+    while (e == cudaSuccess) {
+        e = cudaMemcpyAsync(out + at, a, len * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu);
+        at += len;
+        if (len == 1 || e != cudaSuccess) break;
+        mori_pos_layer<<<pos_grid(len / 2), 128, 0, gpu>>>(b, a, len / 2, 1, c);
+        e = cudaGetLastError();
+        fr_t* t = a; a = b; b = t;
+        len /= 2;
+    }
+    if (e == cudaSuccess) e = cudaStreamSynchronize(gpu);
+    if (a) cudaFree(a);
+    if (b) cudaFree(b);
+    return e == cudaSuccess ? 0 : fail("pos_digest_layers", e);
+}
+
+// Fused RS encode and leaf hash (E4): coeffs are w columns of h coefficients (host,
+// column-major); each column is zero-padded to n = 2^lg_n and transformed in place with the
+// forward NTT at the standard 2^lg_n root (natural order, the same values as
+// p3 Radix2DitParallel), then the rows are hashed on the device. Outputs on the host: the
+// row-major codeword rm (n x w) and the n leaf hashes.
+extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs, size_t h,
+                                    uint32_t w, uint32_t lg_n, const fr_t* cap)
+{
+    auto& gpu = select_gpu(0);
+    const F8 c = *(const F8*)cap;
+    size_t n = (size_t)1 << lg_n;
+    if (h > n || w == 0) return fail("pos_encode_hash", (int)h);
+    fr_t *cols = nullptr, *dout = nullptr, *stage = nullptr;
+    size_t m = ((size_t)1 << 28) / (w * sizeof(fr_t));
+    if (m > n) m = n;
+    try {
+        CUDA_OK(cudaMalloc(&cols, n * w * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&dout, n * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&stage, m * w * sizeof(fr_t)));
+        for (uint32_t j = 0; j < w; j++) {
+            fr_t* col = cols + (size_t)j * n;
+            CUDA_OK(cudaMemcpyAsync(col, coeffs + (size_t)j * h, h * sizeof(fr_t),
+                                    cudaMemcpyHostToDevice, gpu));
+            if (n > h) CUDA_OK(cudaMemsetAsync(col + h, 0, (n - h) * sizeof(fr_t), gpu));
+            MoriNTT::run(col, lg_n, false, gpu);
+            CUDA_OK(cudaGetLastError());
+        }
+        mori_pos_rows_cm<<<pos_grid(n), 128, 0, gpu>>>(dout, cols, n, w, c);
+        CUDA_OK(cudaGetLastError());
+        CUDA_OK(cudaMemcpyAsync(digests, dout, n * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu));
+        for (size_t r0 = 0; r0 < n; r0 += m) {
+            size_t mm = n - r0 < m ? n - r0 : m;
+            mori_cm_to_rm<<<pos_grid(mm * w), 128, 0, gpu>>>(stage, cols, n, w, r0, mm);
+            CUDA_OK(cudaGetLastError());
+            CUDA_OK(cudaMemcpyAsync(rm + r0 * w, stage, mm * w * sizeof(fr_t),
+                                    cudaMemcpyDeviceToHost, gpu));
+        }
+        CUDA_OK(cudaStreamSynchronize(gpu));
+    } catch (const cuda_error& e) {
+        if (cols) cudaFree(cols);
+        if (dout) cudaFree(dout);
+        if (stage) cudaFree(stage);
+        return fail("pos_encode_hash", e.code());
+    }
+    cudaFree(cols);
+    cudaFree(dout);
+    cudaFree(stage);
     return 0;
 }
 

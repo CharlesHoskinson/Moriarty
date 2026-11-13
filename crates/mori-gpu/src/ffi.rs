@@ -52,6 +52,30 @@ unsafe extern "C" {
         tn: usize,
     ) -> i32;
     pub(crate) fn mori_quotient_run(job: *const c_void) -> i32;
+    pub(crate) fn mori_pos_set_constants(c: *const c_void, n: usize, mode: i32) -> i32;
+    pub(crate) fn mori_pos_hash_rows(
+        out: *mut c_void,
+        vals: *const c_void,
+        n: usize,
+        w: u32,
+        cap: *const c_void,
+    ) -> i32;
+    pub(crate) fn mori_pos_encode_hash(
+        rm: *mut c_void,
+        digests: *mut c_void,
+        coeffs: *const c_void,
+        h: usize,
+        w: u32,
+        lg_n: u32,
+        cap: *const c_void,
+    ) -> i32;
+    pub(crate) fn mori_pos_digest_layers(
+        out: *mut c_void,
+        leaves: *const c_void,
+        n: usize,
+        rpq: usize,
+        cap: *const c_void,
+    ) -> i32;
 }
 
 /// Serialises every GPU call (sppark's streams are per device, not per thread).
