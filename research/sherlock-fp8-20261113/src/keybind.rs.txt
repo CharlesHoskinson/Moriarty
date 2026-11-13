@@ -1,0 +1,476 @@
+//! FP-8 key binding: the `KeyBind` AIR of every aggregation layer (leaf layer, N1, N2, N3) and of
+//! `L`, a fork of OpenVM `continuations::circuit::inner::verifier::VerifierPvsAir` (and of the
+//! root check of `RootVerifierPvsAir`) for the Sherlock chain
+//! `app -> leaf -> N1 -> N2 -> N3 (recursive) -> L`.
+//!
+//! Why: every layer is a `VerifierSubCircuit` whose cached trace holds the constraint DAG of its
+//! child key. The verifying key of a layer does not fix that DAG (the cached commitment is proof
+//! data), so without this AIR a layer accepts a proof of any child key of the same shape.
+//!
+//! How (as upstream, with the recursion flag `continuations_enabled` on): the proof-shape module
+//! of the verifier sub-circuit sends, per child proof, (1) the child public values a second time,
+//! (2) the commitment of each child cached trace, (3) the pre-hash of the child key. This AIR
+//! receives them and keeps five key commitments in its public values (`VkCommit` = cached-trace
+//! commitment + pre-hash): `app`, `leaf`, `n1`, `n2`, `n3`.
+//!
+//! - A layer learns the pre-hash of its child key (the proof-shape pre-hash) and writes it into
+//!   the slot of the child; the cached commitment of that slot is the commitment of the child DAG
+//!   in this layer, which only the parent can check (it is in this layer's proof). So the
+//!   cached half of the slot of a layer's child is checked one layer up, against the cached
+//!   commitment the parent receives from the proof (`cc`).
+//! - Differences to upstream: five slots instead of four (the Sherlock chain has N1 and N2
+//!   between the leaf layer and the fixed point N3, measured `fixpoint` mode), the role of a
+//!   layer is a constant of the AIR (no `internal_flag` selectors on fixed roles), no deferral,
+//!   no VM public values (the bench app has none; an app with public values or cached traces
+//!   makes the leaf layer's buses unbalanced, so it fails closed), no range check of the depth
+//!   (each N3 level adds exactly 1, the depth cannot wrap).
+//! - `L` (role [`Role::Root`]) pins the universal keys N2 and N3 (both halves) as constants,
+//!   checks that its child is N3, and exposes the per-program slots `app`, `leaf`, `n1` (48
+//!   words) as its key public values. `L_Fr` pins the cached commitment of `L`
+//!   (`lverify::Gen::pinned_cached`), so `L` itself verifies only N3 proofs.
+
+use std::borrow::Borrow;
+
+use openvm_recursion_circuit::bus::{
+    CachedCommitBus, CachedCommitBusMessage, PreHashBus, PreHashMessage, PublicValuesBus,
+    PublicValuesBusMessage,
+};
+use openvm_stark_backend::{
+    interaction::InteractionBuilder,
+    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
+    p3_field::{Field, PrimeCharacteristicRing, PrimeField32},
+    p3_matrix::{dense::RowMajorMatrix, Matrix},
+    BaseAirWithPublicValues, PartitionedBaseAir,
+};
+use p3_baby_bear::BabyBear;
+
+type F = BabyBear;
+
+/// Digest width (BabyBear Poseidon2).
+pub const D: usize = 8;
+/// AIR index of `KeyBind` in every layer (the child public values are read at this index).
+pub const KB_AIR_ID: usize = 0;
+/// AIR index of the constraint-evaluation AIR (the one AIR with a cached trace) of a node
+/// layer: `KeyBind` first, then the verifier sub-circuit.
+pub const CE_AIR_ID: usize = 1;
+
+/// Key slots.
+pub const APP: usize = 0;
+pub const LEAF: usize = 1;
+pub const N1: usize = 2;
+pub const N2: usize = 3;
+pub const N3: usize = 4;
+pub const SLOTS: usize = 5;
+
+/// Public values of a node layer: `flag`, five `VkCommit` (cached 8, pre 8), `depth`.
+pub const PV_FLAG: usize = 0;
+pub const fn pv_cached(k: usize) -> usize {
+    1 + 2 * D * k
+}
+pub const fn pv_pre(k: usize) -> usize {
+    1 + 2 * D * k + D
+}
+pub const PV_DEPTH: usize = 1 + 2 * D * SLOTS;
+pub const NUM_PVS: usize = PV_DEPTH + 1;
+/// Public values of `L` from `KeyBind`: `app`, `leaf`, `n1` (cached 8, pre 8 each).
+pub const ROOT_PVS: usize = 3 * 2 * D;
+
+/// A key commitment: commitment of the key's constraint DAG in the layer that verifies it, and
+/// the key's pre-hash.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct VkCommit {
+    pub cached: [u32; D],
+    pub pre: [u32; D],
+}
+
+/// The role of a layer (a constant of its `KeyBind` AIR).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Role {
+    /// Leaf layer: child is an app proof (no public values).
+    Leaf,
+    /// N1: child is a leaf-layer proof.
+    N1,
+    /// N2: child is an N1 proof.
+    N2,
+    /// N3, the internal-recursive key: child is an N2 proof or an N3 proof.
+    N3,
+    /// `L`: child is an N3 proof; N2 and N3 pinned.
+    Root { n2: VkCommit, n3: VkCommit },
+}
+
+impl Role {
+    /// Layer flag written in `PV_FLAG` (not used by `Root`).
+    pub fn flag(&self) -> u32 {
+        match self {
+            Role::Leaf => 0,
+            Role::N1 => 1,
+            Role::N2 => 2,
+            Role::N3 => 3,
+            Role::Root { .. } => 4,
+        }
+    }
+}
+
+/// Columns: `proof_idx`, `is_valid`, child public values (`NUM_PVS`), selectors `s2` (child N2),
+/// `s31` (child N3 at depth 1), `s3x` (child N3 at depth 2 or more), `dinv` (inverse of
+/// `depth - 1` when `s3x`).
+pub const C_IDX: usize = 0;
+pub const C_VALID: usize = 1;
+pub const C_P: usize = 2;
+pub const C_S2: usize = C_P + NUM_PVS;
+pub const C_S31: usize = C_S2 + 1;
+pub const C_S3X: usize = C_S2 + 2;
+pub const C_DINV: usize = C_S2 + 3;
+pub const WIDTH: usize = C_DINV + 1;
+
+pub struct KeyBindAir {
+    pub role: Role,
+    pub public_values_bus: PublicValuesBus,
+    pub cached_commit_bus: CachedCommitBus,
+    pub pre_hash_bus: PreHashBus,
+}
+
+impl KeyBindAir {
+    pub fn new(
+        role: Role,
+        inv: &openvm_recursion_circuit::system::BusInventory,
+    ) -> Self {
+        Self {
+            role,
+            public_values_bus: inv.public_values_bus,
+            cached_commit_bus: inv.cached_commit_bus,
+            pre_hash_bus: inv.pre_hash_bus,
+        }
+    }
+}
+
+impl<T> BaseAir<T> for KeyBindAir {
+    fn width(&self) -> usize {
+        WIDTH
+    }
+}
+impl<T> BaseAirWithPublicValues<T> for KeyBindAir {
+    fn num_public_values(&self) -> usize {
+        match self.role {
+            Role::Root { .. } => ROOT_PVS,
+            _ => NUM_PVS,
+        }
+    }
+}
+impl<T> PartitionedBaseAir<T> for KeyBindAir {}
+
+fn c<AB: AirBuilder>(v: u32) -> AB::Expr {
+    AB::Expr::from_u32(v)
+}
+
+impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for KeyBindAir {
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local = main.row_slice(0).expect("window");
+        let next = main.row_slice(1).expect("window");
+        let local: &[AB::Var] = (*local).borrow();
+        let next: &[AB::Var] = (*next).borrow();
+        let pv: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
+
+        let valid: AB::Expr = local[C_VALID].into();
+        let p = |i: usize| -> AB::Expr { local[C_P + i].into() };
+        let s2: AB::Expr = local[C_S2].into();
+        let s31: AB::Expr = local[C_S31].into();
+        let s3x: AB::Expr = local[C_S3X].into();
+        let zero = AB::Expr::ZERO;
+
+        // Rows: is_valid boolean, first row valid, valid rows first, proof_idx 0, 1, 2, ...
+        builder.assert_bool(valid.clone());
+        builder.when_first_row().assert_one(valid.clone());
+        builder.when_transition().assert_bool(valid.clone() - next[C_VALID].into());
+        builder.when_first_row().assert_zero(local[C_IDX]);
+        builder
+            .when_transition()
+            .when(next[C_VALID])
+            .assert_eq(local[C_IDX].into() + AB::Expr::ONE, next[C_IDX].into());
+
+        // Helpers: equalities gated by an expression.
+        let eq = |b: &mut AB, g: AB::Expr, x: AB::Expr, y: AB::Expr| {
+            b.assert_zero(g * (x - y));
+        };
+        let slot_eq_pv = |b: &mut AB, g: AB::Expr, k: usize, pvk: usize| {
+            for i in 0..2 * D {
+                b.assert_zero(g.clone() * (p(pv_cached(k) + i) - pv[pv_cached(pvk) + i].clone()));
+            }
+        };
+        let slot_zero = |b: &mut AB, g: AB::Expr, k: usize| {
+            for i in 0..2 * D {
+                b.assert_zero(g.clone() * p(pv_cached(k) + i));
+            }
+        };
+        let own_zero = |b: &mut AB, k: usize| {
+            for i in 0..2 * D {
+                b.assert_zero(pv[pv_cached(k) + i].clone());
+            }
+        };
+
+        // Reference every own public value in the constraint DAG: the parent's verifier receives
+        // a child public value from the PublicValuesBus only when the child DAG uses it, while
+        // the continuations send covers all of them. Vacuous (`is_valid` is a bit); MEASURED
+        // need: without it a slot half set here and checked one layer up (e.g. the leaf layer's
+        // `app.cached`) is sent twice and received once.
+        let all_pv = pv.iter().fold(zero.clone(), |a, x| a + x.clone());
+        builder.assert_zero(valid.clone() * (AB::Expr::ONE - valid.clone()) * all_pv);
+
+        let role = &self.role;
+        let has_child_pvs = !matches!(role, Role::Leaf);
+
+        // Receive the child public values (AIR KB_AIR_ID of the child) and the child cached
+        // commitment (the constraint DAG the child verified).
+        if has_child_pvs {
+            for i in 0..NUM_PVS {
+                self.public_values_bus.receive(
+                    builder,
+                    local[C_IDX],
+                    PublicValuesBusMessage {
+                        air_idx: c::<AB>(KB_AIR_ID as u32),
+                        pv_idx: c::<AB>(i as u32),
+                        value: p(i),
+                    },
+                    valid.clone(),
+                );
+            }
+            let cc_slot: Vec<(AB::Expr, usize)> = match role {
+                Role::Leaf => unreachable!(),
+                Role::N1 => vec![(AB::Expr::ONE, APP)],
+                Role::N2 => vec![(AB::Expr::ONE, LEAF)],
+                Role::N3 => vec![(s2.clone(), N1), (s31.clone(), N2), (s3x.clone(), N3)],
+                Role::Root { .. } => vec![(s31.clone(), N2), (s3x.clone(), N3)],
+            };
+            let cc: [AB::Expr; D] = std::array::from_fn(|i| {
+                cc_slot.iter().fold(zero.clone(), |acc, (g, k)| acc + g.clone() * p(pv_cached(*k) + i))
+            });
+            self.cached_commit_bus.receive(
+                builder,
+                local[C_IDX],
+                CachedCommitBusMessage {
+                    air_idx: c::<AB>(CE_AIR_ID as u32),
+                    cached_idx: zero.clone(),
+                    global_cached_idx: zero.clone(),
+                    cached_commit: cc,
+                },
+                valid.clone(),
+            );
+        }
+
+        // Receive the pre-hash of the child key (proof-shape summary row).
+        let h: [AB::Expr; D] = match role {
+            Role::Leaf => std::array::from_fn(|i| pv[pv_pre(APP) + i].clone()),
+            Role::N1 => std::array::from_fn(|i| pv[pv_pre(LEAF) + i].clone()),
+            Role::N2 => std::array::from_fn(|i| pv[pv_pre(N1) + i].clone()),
+            Role::N3 => std::array::from_fn(|i| {
+                s2.clone() * pv[pv_pre(N2) + i].clone()
+                    + (s31.clone() + s3x.clone()) * pv[pv_pre(N3) + i].clone()
+            }),
+            Role::Root { n3, .. } => std::array::from_fn(|i| c::<AB>(n3.pre[i])),
+        };
+        self.pre_hash_bus.receive(
+            builder,
+            local[C_IDX],
+            PreHashMessage { vk_pre_hash: h },
+            valid.clone(),
+        );
+
+        match role {
+            Role::Leaf => {
+                builder.assert_zero(pv[PV_FLAG].clone());
+                builder.assert_zero(pv[PV_DEPTH].clone());
+                for k in [LEAF, N1, N2, N3] {
+                    own_zero(builder, k);
+                }
+            }
+            Role::N1 | Role::N2 => {
+                // Child flag, unset child slots, child depth 0, copies, own flag, own unset slots.
+                let (child_flag, child_set, own_set) =
+                    if *role == Role::N1 { (0, vec![APP], vec![APP, LEAF]) } else { (1, vec![APP, LEAF], vec![APP, LEAF, N1]) };
+                eq(builder, valid.clone(), p(PV_FLAG), c::<AB>(child_flag));
+                eq(builder, valid.clone(), p(PV_DEPTH), zero.clone());
+                for k in 0..SLOTS {
+                    if !child_set.contains(&k) {
+                        slot_zero(builder, valid.clone(), k);
+                    }
+                }
+                for &k in &child_set {
+                    slot_eq_pv(builder, valid.clone(), k, k);
+                }
+                builder.assert_eq(pv[PV_FLAG].clone(), c::<AB>(role.flag()));
+                builder.assert_zero(pv[PV_DEPTH].clone());
+                for k in 0..SLOTS {
+                    if !own_set.contains(&k) {
+                        own_zero(builder, k);
+                    }
+                }
+            }
+            Role::N3 | Role::Root { .. } => {
+                let is_root = matches!(role, Role::Root { .. });
+                // Selectors: boolean, exactly one on a valid row (s2 never at the root).
+                for s in [&s2, &s31, &s3x] {
+                    builder.assert_bool(s.clone());
+                }
+                builder.assert_eq(s2.clone() + s31.clone() + s3x.clone(), valid.clone());
+                if is_root {
+                    builder.assert_zero(s2.clone());
+                }
+                // s2: child is N2 (flag 2, depth 0, n2 and n3 unset).
+                eq(builder, s2.clone(), p(PV_FLAG), c::<AB>(2));
+                eq(builder, s2.clone(), p(PV_DEPTH), zero.clone());
+                slot_zero(builder, s2.clone(), N2);
+                slot_zero(builder, s2.clone(), N3);
+                // s31: child is N3 at depth 1 (n3 unset).
+                eq(builder, s31.clone(), p(PV_FLAG), c::<AB>(3));
+                eq(builder, s31.clone(), p(PV_DEPTH), AB::Expr::ONE);
+                slot_zero(builder, s31.clone(), N3);
+                // s3x: child is N3 at depth != 1 (an N3 depth is at least 1, so at least 2).
+                eq(builder, s3x.clone(), p(PV_FLAG), c::<AB>(3));
+                builder.assert_zero(
+                    s3x.clone() * ((p(PV_DEPTH) - AB::Expr::ONE) * local[C_DINV].into() - AB::Expr::ONE),
+                );
+                match role {
+                    Role::N3 => {
+                        // Copies of the slots below this layer.
+                        for k in [APP, LEAF, N1] {
+                            slot_eq_pv(builder, valid.clone(), k, k);
+                        }
+                        slot_eq_pv(builder, s31.clone() + s3x.clone(), N2, N2);
+                        slot_eq_pv(builder, s3x.clone(), N3, N3);
+                        // Own: flag 3; depth 1 over N2, child depth + 1 over N3; n3 unset at
+                        // depth 1.
+                        builder.assert_eq(pv[PV_FLAG].clone(), c::<AB>(3));
+                        eq(builder, s2.clone(), pv[PV_DEPTH].clone(), AB::Expr::ONE);
+                        eq(
+                            builder,
+                            s31.clone() + s3x.clone(),
+                            pv[PV_DEPTH].clone(),
+                            p(PV_DEPTH) + AB::Expr::ONE,
+                        );
+                        for i in 0..2 * D {
+                            builder.assert_zero(s2.clone() * pv[pv_cached(N3) + i].clone());
+                        }
+                    }
+                    Role::Root { n2, n3 } => {
+                        // The universal keys: N2 always, N3 once set (depth 2 or more).
+                        for i in 0..D {
+                            eq(builder, valid.clone(), p(pv_cached(N2) + i), c::<AB>(n2.cached[i]));
+                            eq(builder, valid.clone(), p(pv_pre(N2) + i), c::<AB>(n2.pre[i]));
+                            eq(builder, s3x.clone(), p(pv_cached(N3) + i), c::<AB>(n3.cached[i]));
+                            eq(builder, s3x.clone(), p(pv_pre(N3) + i), c::<AB>(n3.pre[i]));
+                        }
+                        // Expose app, leaf, n1.
+                        for (j, k) in [APP, LEAF, N1].into_iter().enumerate() {
+                            for i in 0..2 * D {
+                                eq(
+                                    builder,
+                                    valid.clone(),
+                                    p(pv_cached(k) + i),
+                                    pv[2 * D * j + i].clone(),
+                                );
+                            }
+                        }
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+}
+
+/// Trace and public values of `KeyBind` for one layer. `child_pvs`: the `KeyBind` public values
+/// of each child proof (empty slices for app children); `child`: the commitment of the child key
+/// in this layer (`commit_child_vk(..).commitment`, child pre-hash). Rows: one per child proof,
+/// padded to a power of two (at least 2).
+pub fn trace(role: &Role, child_pvs: &[Vec<F>], child: VkCommit) -> (RowMajorMatrix<F>, Vec<F>) {
+    let n = child_pvs.len();
+    assert!(n > 0);
+    let h = n.next_power_of_two().max(2);
+    let mut t = vec![F::ZERO; h * WIDTH];
+    for (r, cp) in child_pvs.iter().enumerate() {
+        let row = &mut t[r * WIDTH..(r + 1) * WIDTH];
+        row[C_IDX] = F::from_usize(r);
+        row[C_VALID] = F::ONE;
+        if *role != Role::Leaf {
+            assert_eq!(cp.len(), NUM_PVS, "child KeyBind public values");
+            row[C_P..C_P + NUM_PVS].copy_from_slice(cp);
+            let flag = cp[PV_FLAG].as_canonical_u32();
+            let depth = cp[PV_DEPTH];
+            match (flag, depth.as_canonical_u32()) {
+                (2, _) => row[C_S2] = F::ONE,
+                (3, 1) => row[C_S31] = F::ONE,
+                (3, _) => {
+                    row[C_S3X] = F::ONE;
+                    row[C_DINV] = (depth - F::ONE).inverse();
+                }
+                _ => {}
+            }
+        }
+    }
+    // Padding rows: proof_idx continues (unconstrained), is_valid 0.
+    for r in n..h {
+        t[r * WIDTH + C_IDX] = F::from_usize(r);
+    }
+    let put = |v: &mut Vec<F>, k: usize, x: &VkCommit| {
+        for i in 0..D {
+            v[pv_cached(k) + i] = F::from_u32(x.cached[i]);
+            v[pv_pre(k) + i] = F::from_u32(x.pre[i]);
+        }
+    };
+    let p0 = child_pvs[0].clone();
+    let pvs = match role {
+        Role::Leaf => {
+            let mut v = vec![F::ZERO; NUM_PVS];
+            put(&mut v, APP, &child);
+            v
+        }
+        Role::N1 | Role::N2 | Role::N3 => {
+            let mut v = p0.clone();
+            v[PV_FLAG] = F::from_u32(role.flag());
+            let cflag = p0[PV_FLAG].as_canonical_u32();
+            let cdepth = p0[PV_DEPTH];
+            match (role, cflag, cdepth.as_canonical_u32()) {
+                (Role::N1, 0, _) => put(&mut v, LEAF, &child),
+                (Role::N2, 1, _) => put(&mut v, N1, &child),
+                (Role::N3, 2, _) => {
+                    put(&mut v, N2, &child);
+                    v[PV_DEPTH] = F::ONE;
+                }
+                (Role::N3, 3, 1) => {
+                    put(&mut v, N3, &child);
+                    v[PV_DEPTH] = cdepth + F::ONE;
+                }
+                (Role::N3, 3, _) => v[PV_DEPTH] = cdepth + F::ONE,
+                _ => panic!("KeyBind: child flag {cflag} under role {role:?}"),
+            }
+            v
+        }
+        Role::Root { .. } => {
+            let mut v = vec![F::ZERO; ROOT_PVS];
+            for (j, k) in [APP, LEAF, N1].into_iter().enumerate() {
+                v[2 * D * j..2 * D * (j + 1)].copy_from_slice(&p0[pv_cached(k)..pv_cached(k) + 2 * D]);
+            }
+            v
+        }
+    };
+    (RowMajorMatrix::new(t, WIDTH), pvs)
+}
+
+/// A `VkCommit` from a commitment and a pre-hash (BabyBear digests).
+pub fn vk_commit(cached: &[F; D], pre: &[F; D]) -> VkCommit {
+    VkCommit {
+        cached: cached.map(|x| x.as_canonical_u32()),
+        pre: pre.map(|x| x.as_canonical_u32()),
+    }
+}
+
+/// Read slot `k` from node public values.
+pub fn slot(pvs: &[F], k: usize) -> VkCommit {
+    let mut v = VkCommit::default();
+    for i in 0..D {
+        v.cached[i] = pvs[pv_cached(k) + i].as_canonical_u32();
+        v.pre[i] = pvs[pv_pre(k) + i].as_canonical_u32();
+    }
+    v
+}

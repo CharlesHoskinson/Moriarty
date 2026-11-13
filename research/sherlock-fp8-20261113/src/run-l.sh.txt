@@ -1,0 +1,13 @@
+#!/bin/bash
+# FP-8 chain without the wrap (the wrap waits for e5-wrap): keys + proofs W1 -> leaf -> N1 -> N2 -> N3 -> L_iface -> L_Fr, D3 per key.
+# Usage: run-l.sh OUTDIR TAG
+set -uo pipefail
+export PATH=$HOME/.cargo/bin:$PATH RUSTUP_AUTO_INSTALL=0
+L=$HOME/.cache/fp8/logs; O=$1; G=$2; HS=$HOME/.local/bin/heavy-slot
+T=$HOME/.cache/fp8/target/release/examples
+mkdir -p $O
+step() { echo "# $(date -Is) $G $1 start" >> $L/runs.log; }
+fin() { echo "# $(date -Is) $G $1 end rc=$2" >> $L/runs.log; [ $2 -eq 0 ] || exit $2; }
+step chain; $HS --mem 64G --name fp8-chain-$G -- $T/fp8_keyset chain $O > $L/chain-$G.log 2> $L/chain-$G.err; fin chain $?
+step d3; $HS --mem 8G --name fp8-d3-$G -- $T/fp8_d3 $O > $L/d3-$G.log 2>&1; fin d3 $?
+echo "# $(date -Is) $G all done" >> $L/runs.log

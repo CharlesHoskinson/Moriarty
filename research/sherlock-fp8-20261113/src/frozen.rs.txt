@@ -240,6 +240,39 @@ impl std::fmt::Display for G1Error {
     }
 }
 
+/// The frozen set whose parameters equal `p` in every field, if any.
+pub fn set_of(p: &SystemParams) -> Option<&'static FrozenSet> {
+    ALL.iter().copied().find(|s| &s.params() == p)
+}
+
+/// Keygen of a key of the Sherlock set: the engine parameters must equal one frozen set, and the
+/// key must pass [`keygen_checked`] for it. Panics on parameters outside every set or on any G1
+/// refusal; no key of the set is made without the check.
+pub fn keygen_frozen<E: StarkEngine>(
+    engine: &E,
+    airs: &[AirRef<E::SC>],
+) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
+    let set = set_of(engine.params()).expect("G1: engine parameters equal no frozen set");
+    match keygen_checked(set, engine, airs) {
+        Ok((pk, vk, _)) => (pk, vk),
+        Err(e) => panic!("{e}"),
+    }
+}
+
+/// Keygen for test fixtures: at frozen-set parameters it is [`keygen_frozen`] (strict); at any
+/// other parameters (the small test sets of `testing`) it is plain keygen, and such a key is never
+/// a key of the Sherlock set.
+pub fn keygen_any<E: StarkEngine>(
+    engine: &E,
+    airs: &[AirRef<E::SC>],
+) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
+    if set_of(engine.params()).is_some() {
+        keygen_frozen(engine, airs)
+    } else {
+        engine.keygen(airs)
+    }
+}
+
 /// Check every field of `p` against the frozen set.
 pub fn check_params(set: &FrozenSet, p: &SystemParams) -> Result<(), G1Error> {
     let q: Vec<usize> = p.whir.rounds.iter().map(|r| r.num_queries).collect();

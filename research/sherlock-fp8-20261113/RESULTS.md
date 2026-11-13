@@ -6,12 +6,14 @@ Labels: MEASURED (read from a run log), DERIVED (computed from MEASURED numbers 
 
 ## 1. Status
 
-**FP-8 gate: BLOCKED.** The six work items of this lane pass (table below). The FP-8 row of `FD/ARCHITECTURE.md` (FZ-4) also needs items that this lane does not close; section 9 names them. The first blocker is the GP-3 FV work-unit keys: their shapes are still being measured by X-EXP, and the measured units are over the 3,000-column node bound.
+**FP-8 gate: BLOCKED.** The six work items of this lane pass (table below). The FP-8 row of `FD/ARCHITECTURE.md` (FZ-4) also needs items that this lane does not close; section 9 names them.
+
+**Update 2026-11-13, coordinator round 2 (section 15).** Round 1 had a soundness gap: no layer bound its child key. Round 2 closes it for the key chain. A new `KeyBind` AIR sits in every layer. `L` pins the universal keys `N2` and `N3`. `L_Fr` pins the cached commitment of `L`. The per-program commitments (app, leaf layer, `N1`) are now in the `L_Fr` statement. 13 of 13 cases on real proofs behave as expected: 11 refusals and 2 honest acceptances, plus the tape cases (section 15.4). Every keygen site now goes through `frozen`. E3 phase 2 is merged, and `L` and `L_Fr` are regenerated over the bound chain. Still open: the wrap is not regenerated (it waits for e5-wrap); `prog_d` is not bound in a circuit (the bench chain has no layer that carries `prog_d`; section 15.6); both FV unit keys need the 3,300-column pick once `KeyBind` is in the node (section 15.7).
 
 | # | Item | Result | Section |
 |---|---|---|---|
 | 1 | One universal key set under the new node bounds (leaf, node, `L`, `L_Fr`, wrap); per-program preprocessing bound to `prog_d` | PASS for the keys: every key generated through G1 keygen, node key menu with its fixed point. Binding: the `prog_d` encoding is computed; its enforcement in a circuit is not built (section 6) | 3, 4, 6 |
-| 2 | G1 parameters in keygen | PASS: `sherlock_lfr::frozen` with `keygen_checked`, used by the FP-8 generator; 4 of 4 tests pass. The older bench examples and tests are not routed through it (section 2) | 2 |
+| 2 | G1 parameters in keygen | PASS: `sherlock_lfr::frozen` with `keygen_checked`; 4 of 4 tests pass. Round 2: every keygen site of `sherlock-lfr` and `sherlock-wrap-export` goes through `frozen::keygen_frozen` (examples) or `frozen::keygen_any` (tests: strict at frozen parameters, plain only at the small test sets) (openvm be96611) | 2, 15 |
 | 3 | Size and digest of every key; wrap key at most 50,000 bytes | PASS: wrap `MidnightVK` 1,325 bytes | 3 |
 | 4 | D3 on every key at the measured shapes; every term at least 100 bits | PASS: weakest 101.0110 bits (leaf layer); every grindable term at least 101 | 5 |
 | 5 | The wrap key verifies under the unchanged stock ledger 9.1.0.1 | PASS: `Ok(())`, a changed input and a flipped byte refused 3 of 3; ledger-check unchanged against `e6-int` | 7 |
@@ -93,7 +95,7 @@ The vk pre-hash covers the parameters, every per-AIR key (preprocessed commitmen
 
 Here `P2` is the ENC P-3 overwrite form and the codes are those of `PR` 3.6. `image_d` and `plan_d` are stand-ins (ENC-5 word lists open).
 
-Enforcement (READ, `sherlock-lfr/src/lverify.rs` 296-299): the `L_Fr` tape takes `L`'s cached commitments, which are the child node's vk commitment, as prover input (`g.fr_in`), not as a constant. No circuit checks `key_root` inclusion, and nothing in `L`, `L_Fr` or the wrap pins `N3`. The keys agree: `c1/L_iface` equals the E6 `L` although the node key under it changed, and `N1` is equal for two programs. So a parent key does not pin its child key, and the universal keys do not enforce the app and leaf-layer G1 sets either. The `PR` 4.3 checks (the first universal node checks each child key against `key_root`; on the full tree `L` hardcodes the pair of the universal internal-recursive key) are not built. This section shows the encoding computed in Rust, not an enforced binding.
+Enforcement (READ, `sherlock-lfr/src/lverify.rs` 296-299): the `L_Fr` tape takes `L`'s cached commitments, which are the child node's vk commitment, as prover input (`g.fr_in`), not as a constant. No circuit checks `key_root` inclusion, and nothing in `L`, `L_Fr` or the wrap pins `N3`. The keys agree: `c1/L_iface` equals the E6 `L` although the node key under it changed, and `N1` is equal for two programs. So a parent key does not pin its child key, and the universal keys do not enforce the app and leaf-layer G1 sets either. The `PR` 4.3 checks (the first universal node checks each child key against `key_root`; on the full tree `L` hardcodes the pair of the universal internal-recursive key) are not built. This section shows the encoding computed in Rust, not an enforced binding. **Round 2:** the key chain is now enforced (section 15). `prog_d` itself is still not checked in a circuit (section 15.6).
 
 Results: `key_root` A `1439f56f...8c97`, `prog_d` A `00d09a07...86ba`. A second program (app with 2 AIRs) gives `key_root` B `2685ab6e...8af9` and `prog_d` B `4ad3a42c...d93d`. A changed per-program key changes `prog_d`, and recomputation is deterministic. The bench app has no preprocessed trace (0 preprocessed AIRs), so the binding is shown through the pre-hash only. A per-program instruction table (preprocessed) enters the same pre-hash. E6 R3 already measured the on-chain side, where a wrong `prog_d` is refused at the transcript read. The universal keys `N1` to `N3`, `L`, `L_Fr` and the wrap are the same for both programs (section 4), so only the per-program keys and `prog_d` change from program to program, as `PR` 4.3 says.
 
@@ -121,12 +123,14 @@ The coordinator's "every node key changes" holds, but through G1 and the topolog
 | FZ-4 / 1.9 item | State | Evidence |
 |---|---|---|
 | GP-3 FV work-unit keys (X14) | open. Final shapes from X-EXP (agent message 2026-11-13, MEASURED there, arity-1 unit over one internal-set node, sink excluded): add unit 45 AIRs, 3,138 columns, at most 200 interactions; double unit 45 AIRs, 2,946 columns, at most 199. Against the G1 internal bounds (DERIVED): the double unit is inside 64 / 3,000 / 200; the add unit is over 3,000 columns, so `keygen_checked` refuses it unless the owner takes the X-EXP AFK pick of 3,300 columns for FV units (D3 at 3,300: weakest 101.1643, stacked 110.9393, X-EXP). The double unit needs an on-curve check by the point producer (no `INV_y`). No unit key was generated, and `fp8_keyset` has no unit mode (the unit AIRs live in the stark-bench tree, `~/.cache/stark-bench/src/openvm-org_openvm/crates/stark-bench-ovm/examples/x_exp_node.rs`). By the shape finding of section 4, a node over a unit node is a new key, not `N3`, so the set gains keys. Whether the chain returns to `N3`, and so to this `L`, is unmeasured. X-EXP measures the units with the condition rows at 3,138 and 3,189 columns, over 3,000. Either they fit under 3,000 or an AFK pick of 3,300 for FV units. The keys get generated when X-EXP sends the final shapes (coordinator note). The 17-bit unit range checker needs owner sign-off (departs from LD-S10x-3) | X-EXP RESULTS (d), uncommitted on `x-exp`; `x-exp` head at handback 77b735941, unchanged since the merge |
-| The `L` interface on this branch | `fp8` carries the `e6-int` interface. E3 phase 2 (OnionAir, the j, k rule of 95ed47b, the D-9 SPONGE(3) lane map 099d6d8) is on other branches. Each changes `L` or `L_Fr` and so the wrap key. The key set is regenerated by `fp8_keyset chain` after those merge | wiki log 2026-11-13 03:57 and 04:07 |
+| The `L` interface on this branch | merged in round 2: E3 phase 2 final (Moriarty eccfc7d86, openvm 9539418); `L` and `L_Fr` regenerated (section 15.3) | merges d3342041b, f77a052 |
 | G3 transcript vectors | partial: Rust reference and AIR-side (ENC), wrap side (E5 I9); the GPU prover and stark-backend verifier legs of T-FS are not on record as a set | ENC RESULTS 6, E5 6j |
 | G4 Lean | `lfrUD_gate` exists (bridge-lean `UDBits.lean:306`); `decide` on the concrete keys of this G1 freeze is not run | bridge-lean ecbce035f |
 | I-17 (path C `h_pre`) | not run | none found |
-| `key_root` and child-key enforcement (`PR` 4.3) | not built: `L` takes the child node commitment as prover input, so no key pins `N3`, the leaf-layer key or the app key (section 6) | `lverify.rs` 296-299 (READ); `keys.json` (MEASURED) |
-| Per-call prover on the FP-8 keys | `lfr_call` still builds the E6 topology with raw keygen (section 2) | READ |
+| Child-key enforcement (`PR` 4.3) | **built in round 2**: `KeyBind` in every layer, `L` pins `N2` and `N3`, `L_Fr` pins the `L` cached commitment, and the per-program commitments are in the `L_Fr` statement (section 15). The Gemini Quint lane returned SOUND and COMPLETE (15.5) | section 15 |
+| `prog_d` and `key_root` in a circuit | not built: the bench chain (W1 app, statement-free nodes) has no layer that carries `prog_d`; it needs the real leaf statement and the node `key_root` routing of DECISIONS F-5 (section 15.6) | READ |
+| Wrap over the bound `L_Fr` | not regenerated: it waits for the e5-wrap decoder port (coordinator order); the `L_Fr` statement grows by 6 words (1,522 to 1,528) | `out/kb/chain.json` |
+| Per-call prover on the FP-8 keys | `lfr_call` goes through `keygen_frozen` and the E3 phase-2 API, but still builds the E6 topology without `KeyBind` | READ |
 | D10 on path C | not measured (D10 measured the full-tree `L`: `w_stack` 18, matched here: 17 + 1) | d10-heights 3b979bd5c |
 | FZ-3 production qualification | not qualified: no frontend run, no J6 replay (E6 section 2) | E6 RESULTS |
 
@@ -136,18 +140,22 @@ The coordinator's "every node key changes" holds, but through G1 and the topolog
 2. The node arity of the universal set is 2, with the depth-3 fixed point `N3` as the internal-recursive key. Padding repeats a child proof.
 3. The `key_root` leaf and node encodings of section 6.
 4. The FP-8 wrap key replaces the E6 devnet key at the next deploy.
+5. The `KeyBind` design (section 15): five commitment slots, with `L` pinning `N2` and `N3` and exposing the app, leaf-layer and `N1` commitments. `N1` is treated as per program, because it is the internal-for-leaf key of PR 4.3 and DECISIONS F-5, although it is measured equal for two programs.
+6. The 48 key words enter the `L_Fr` statement as 6 extra Fr words after the FP-3 iface words (1,522 to 1,528 words). The recommended final form folds them into `key_root` and `prog_d` (section 15.6).
+7. FV units: role N3, and the 3,300-column bound for FV units (both units need it once `KeyBind` is in the node; section 15.7).
 
 ## 11. Gemini Quint lane
 
-None is due. No AIR or wrap circuit source changed: the new keys come from the unchanged recursion, `L_iface`, `L_Fr` and wrap code under other parameters and another topology. `frozen.rs` is a keygen admission check, not a circuit. The FV work-unit AIRs are new circuits, and they have their X-EXP lanes.
+Round 1: none was due, because no AIR changed. Round 2 adds an AIR (`KeyBind`) and changes the `L_Fr` tape (the pinned cached commitment). The lane is `fp8-keybind`. Its verdict is SOUND and COMPLETE, and the agent rerun of its model finds no BIND violation and catches 7 of 8 mutants (section 15.5).
 
 ## 12. Merge note
 
-The merge of `x-exp` into `fp8` (5d9a2d705) had 4 conflicts in `FD/ARCHITECTURE.md`. The resolution kept the `e6-int` text "Facts 1 to 3: closed" (FP-3 done in enc-fp3) and the `x-exp` (final-design-2) text of rows I-27, I-28, L AND WRAP, GP-2, GP-3 and LEDGER CONTRACT. It removed from those rows the FREEZE-PENDING clauses on FP-3 facts 1 to 3, because the facts are closed. The DOC lane owns that file and should check this resolution.
+The merge of `x-exp` into `fp8` (5d9a2d705) had 4 conflicts in `FD/ARCHITECTURE.md`. The first resolution dropped the FREEZE-PENDING clauses on FP-3 facts 1 to 3 from rows I-28, L AND WRAP, GP-2 hook and LEDGER CONTRACT. On coordinator order, 010431011 restored those `x-exp` clauses and kept the `e6-int` text "Facts 1 to 3: closed" of enc-fp3. Then `e3-iface` (E3 phase 2 final, eccfc7d86; openvm 9539418) merged without conflicts on both sides (Moriarty d3342041b, openvm f77a052). After the merge, `gen_r_check` takes the `L` public values, and `reservation` takes the anchor tags (D-10). `fp8_keyset`, `lfr_call` and `lfr_e3` follow that API (openvm be96611). The DOC lane owns `FD/ARCHITECTURE.md` and should check the resolution.
 
 ## 13. Files
 
 - Moriarty `fp8`: this folder; `out/` holds `keys.json`, `fixpoint.json`, `chain.json`, `d3.json` and the logs; `src/` holds copies of the openvm sources and `run-chain.sh`.
+- Round 2: `out/kb/` (`chain.json`, `d3.json`, `fixpoint.json`, `neg*.log`, `units.json`); `src/keybind.rs.txt`, `src/fp8_keyset.rs.txt`, `src/frozen.rs.txt`, `src/run-kb.sh.txt`, `src/run-l.sh.txt`. openvm commits be96611 (item 3), a09cc5d and 9fe4193 (key binding). FV units: worktree `~/.cache/m7-wrap/src/openvm-fp8-units`, branch `fp8-units` (33e32d1, 1ba98ab).
 - openvm `~/.cache/m7-wrap/src/openvm-fp8`, branch `fp8` (local, not pushed): `crates/sherlock-lfr/src/frozen.rs`, `tests/g1_frozen.rs`, `fixture.rs` and `testing.rs` (delegate to `frozen`), `crates/sherlock-wrap-export/examples/fp8_keyset.rs` (modes `keys`, `chain`, `fixpoint`), `examples/fp8_d3.rs`; `Cargo.toml` patch path to `../stark-backend-fp8`.
 - Outputs: `~/.cache/fp8/out/chain/` (vk bitcode files, `lfr-fp8.json`), `~/.cache/fp8/out/wrap/` (`wrap.vk`, `wrap.proof`, `wrap.public.json`), logs `~/.cache/fp8/logs/`.
 
@@ -157,3 +165,103 @@ The merge of `x-exp` into `fp8` (5d9a2d705) had 4 conflicts in `FD/ARCHITECTURE.
 - Section 1.12 key set: "Internal-recursive key: `N3<2>`, the depth-3 fixed point of the node over node at the internal set (`N4 = N3`), 39 AIRs, 1,549 columns, 81,541 bytes, pre-hash `[1083965961, ...]`; `N1` and `N2` below it; equal for programs of the same leaf-layer shape (FP-8, MEASURED)". "`L` key: `L_iface` over `N3`, pre-hash `3702...7945`, 43 AIRs, 1,805 columns". "`L_Fr` key: pre-hash `2526...0818`, 15 AIRs, 561 columns". "Wrap key: 1,325-byte `MidnightVK` sha256 `4990db4d...a28d`, 1,605,413 rows at k = 21, ledger 9.1.0.1 `Ok`". Status of each: FREEZE-PENDING the items of section 9.
 - G1 row of the qualification gate: "the sets and bounds are fixed in `sherlock_lfr::frozen`, and keygen refuses another parameter set or a key outside the bounds (openvm `fp8` 9d4105f, 4 tests)".
 
+## 15. Round 2: key binding (coordinator item 2), E3 merge, FV unit keys
+
+### 15.1 The gap and the design
+
+Every layer (leaf layer, `N1`, `N2`, `N3`, `L`) is a `VerifierSubCircuit`. Its cached trace holds the constraint DAG of its child key. The layer's vk does not fix that DAG, because the cached commitment is proof data (READ: `N1` to `N3` and `L` came out equal for two programs). Round 1 ran with `continuations_enabled` off and no public values, and `L_Fr` read the cached commitment of `L` as prover input (`lverify.rs`, `fr_in`). So no key fixed the key below it.
+
+Fix (**FOR OWNER CONFIRMATION**): `sherlock-lfr/src/keybind.rs` is a fork of OpenVM `VerifierPvsAir` and of the root check of `RootVerifierPvsAir`. With continuations on, the proof shape of each layer sends three things for every child proof: the child public values, the child cached commitment, and the child key pre-hash. `KeyBind` receives them. Its public values hold five slots `VkCommit = (cached, pre)`: `app`, `leaf`, `n1`, `n2`, `n3`, plus `flag` and `depth` (82 words).
+- **Who writes a slot.** A layer writes the pre-hash half of its child's slot. The cached half is checked one layer up, against the cached commitment that the parent receives.
+- **Unset slots.** Slots above a layer must be zero.
+- **`N3` at the fixed point.** It verifies `N2` or `N3`, chosen by the selectors `s2`, `s31` and `s3x` with an inverse witness on `depth - 1`.
+- **`L` (role Root).** Its child flag must be 3. It pins `N2` (both halves) and `N3` (once `depth` is at least 2) as constants, pins the received pre-hash to the `N3` pre-hash, and exposes `app`, `leaf` and `n1` (48 words).
+- **`L_Fr`.** It pins the cached commitment of `L` (the `N3` DAG in `L`) with `fr_const` (`Gen::pinned_cached`). The 48 key words follow the FP-3 iface words in the `L_Fr` statement as 6 Fr words.
+
+Differences from upstream:
+- five slots, because the measured topology has `N1` and `N2` below the fixed point;
+- fixed roles;
+- no deferral, VM public values or depth range check.
+
+An app with public values or cached traces leaves the leaf layer's buses unbalanced, so it fails closed. One finding (MEASURED, `FP8_DEBUG` bus check): the parent verifier receives a child public value only when the child DAG uses it. So `KeyBind` references every own public value in one vacuous constraint, `is_valid (1 - is_valid) sum(pv) = 0`. Without it, the honest `N1` failed with `LogupZerocheck(NonZeroRootSum)`.
+
+### 15.2 Fixed point with `KeyBind` (MEASURED, `out/kb/fixpoint.json`)
+
+Bound layers: depth 1 is `N1`, depth 2 is `N2`, and depth 3 and up is `N3`. The keys at depths 3 to 6 are equal (3 to 4, 4 to 5 and 5 to 6 equal), so the fixed point stays at depth 3. Five slots suffice.
+
+### 15.3 Bound chain, E3 phase 2 merged (MEASURED, `out/kb/chain.json`, `out/kb/d3.json`; wall 1,315 s)
+
+Every key is accepted by `keygen_checked`. The chain is app -> leaf -> `N1` -> `N2` -> `N3` (depth 1) -> `N3` (depth 2) -> `N3` (depth 3) -> `L` -> `L_Fr`. `L` verifies the depth-3 proof, which exercises `s3x`.
+
+| Key | AIRs | Columns | Max interactions | vk bytes | Pre-hash | D3 weakest (measured / vk / bounds) |
+|---|---|---|---|---|---|---|
+| app (W1) | 1 | 299 | 0 | 12,743 | `[1944710894, ...]` (unchanged) | 101.0891 / 101.0891 / 101.0891 |
+| leaf layer | 40 | 1,619 | 78 | 79,525 | `[1890699715, ...]` | 101.0110 (all three) |
+| `N1` | 40 | 1,637 | 84 | 85,515 | `[338404911, ...]` | 101.1643 (all three) |
+| `N2` | 40 | 1,637 | 84 | 85,457 | `[1222385458, ...]` | vk and bounds 101.1643 |
+| `N3` (fixed point) | 40 | 1,637 | 84 | 86,496 | `[715374878, ...]` | 101.1643 (all three) |
+| `L` | 44 | 1,893 | 84 | 243,725 | `4425...8464` | 101.1427 / mu 101.0730 / mu 101.0730 |
+| `L_Fr` | 15 | 561 | 46 | 45,600 | `1390...2680` | query 101.1435 (all three) |
+
+- **D3.** Every gate passes, and every term is at least 101 bits (MEASURED).
+- **Heights.** All within bounds (MEASURED): app 20 / 24, leaf 17 / 21, `N1` 19 / 19, `N3` 17 / 19, `L` 16 / 20, `L_Fr` 19 / 20.
+- **`L_Fr` public words.** 1,528, of which 6 are key words (DERIVED: 1,522 + 6).
+- **Wrap and ledger.** Not run, by coordinator order: the wrap waits for e5-wrap. The k = 21 row count of the wrap over 1,528 words is unmeasured. Round 1 used 1,605,413 rows of the 1,782,573-row gate.
+- **Times** (MEASURED): `L_Fr` prove 666 s, `L` prove 154 s, node proves 15 to 24 s each.
+
+Against round 1, every node key gains 1 AIR and 88 columns (DERIVED: 1,549 + 88 = 1,637). `L` gains 1 AIR. With the E3 phase-2 interface, `L` goes from 1,805 to 1,893 columns.
+
+### 15.4 Negative and positive cases on real proofs (MEASURED, `out/kb/neg2.log`, `out/kb/neg.json`: `all_pass` true)
+
+Program B is W1 with one partial-round constant changed: same shape, another DAG. Its leaf-layer key is equal to program A's (MEASURED).
+
+| Case | Expect | Result |
+|---|---|---|
+| `N1` over one leaf proof of app A and one of app B | refuse | refused (verifier, `SumClaimMismatch`) |
+| `N1` with its own `app` slot changed | refuse | refused (verifier) |
+| program B's honest `N1` exposes another `app` commitment than A's | differ | differ |
+| `N1` with the `n2` slot pre-set | refuse | refused (verifier) |
+| `N3` at depth 1 with the `n3` slot pre-set | refuse | refused (verifier) |
+| `N3` over children at depths 1 and 2 | refuse | refused (verifier) |
+| `N3` at depth 2 with the `n2` slot changed | refuse | refused (verifier) |
+| `L` over `N3` at depth 1 | accept | accepted |
+| `L` over `N3` at depth 2 | accept | accepted |
+| `L_Fr` tape, honest pin | accept | accepted |
+| `L_Fr` tape, wrong pin of the `L` cached commitment | refuse | refused (393 tape assertions fail) |
+| `L` over an `N2` proof (child flag 2, `N2` DAG) | refuse | refused by the prover's own LogUp check (`prove: LogupZerocheck(NonZeroRootSum)`: the buses do not balance, so no proof exists). Run 1 (`neg-run1.log`) panicked in the harness here; the rerun records it as a refusal |
+| `L` keyed with a wrong `N2` pin, honest child | refuse | refused (verifier) |
+
+Not covered:
+- a wrong `prog_d` (15.6);
+- a node key of another shape at the `N3` position (it cannot be fed to the verifier sub-circuit; the shape is fixed by the parent key).
+
+### 15.5 Gemini Quint lane (`qa/gemini-quint/fp8-keybind/`)
+
+The lane `fp8-keybind` ran Gemini 4 Argon via `argon-run`. It returned the verdict **SOUND and COMPLETE** on questions 1 to 8 (BIND holds at the root for depth-1 and deeper `N3` children, mixed rows are refused, and the inputs fail closed). It wrote a Quint model with 8 mutants, but could not run quint in its sandbox and says so. The FP8 agent ran the model (MEASURED, `RERUN.md`):
+- both files typecheck;
+- `quint test`: 14 of 15 pass;
+- `quint run` of BIND, COMPLETE and SOUND_ALL over 10,000 samples of 20 steps: no violation;
+- 7 of 8 mutants caught: `no_cc_receive`, `root_no_n2_pin`, `root_no_prehash_pin`, `n3_no_copy_n2`, `n3_no_copy_n3`, `selector_free` and `lfr_no_pin`.
+
+`mut_no_unset_check` is not caught (and is the 1 failing test). Reason (DERIVED): N1 and N2 copy only the slots below them, and each layer zeroes its own upper slots, so a pre-set upper slot in a child never reaches the exposed words. The parent's unset check is defense in depth, not needed for BIND. The lane notes that the real-proof negatives do not cover the parent-side unset check alone.
+
+### 15.6 `prog_d`: not bound in a circuit (BLOCKED on the bench chain)
+
+In the design, `prog_d` is a public word of each leaf shard (54 words), and nodes carry `key_root` (74 words). A LEAF child's key triple `P2(DOM_KEYTRIPLE, set_id, c_app, c_leaf, c_ifl)` is opened in the `key_root` from `prog_d` (DECISIONS F-5). `DIGEST(SHK_PROGC)` logs `P2(6, r_p, prog_d)` (READ, `iface.rs`). The bench chain has a W1 app without a statement and nodes without public values apart from `KeyBind`. No layer carries `prog_d`, so no circuit can compare it with the key words.
+
+What round 2 provides is the input of the check: the three per-program commitments, both halves, in the `L_Fr` statement. **Recommended (FOR OWNER CONFIRMATION):** the leaf statement carries `prog_d`. The first node opens the key triple from `key_root` against the `KeyBind` slots `app`, `leaf` and `n1`, and `L` forwards `prog_d`, so the 6 extra words leave the statement. Note that F-5 hashes `c_app`, `c_leaf` and `c_ifl`. The Rust `key_triple` of section 6 hashes pre-hashes only, while a key's DAG is identified by its cached commitment. So the leaf must take both halves: an encoding change, FOR OWNER CONFIRMATION.
+
+### 15.7 FV unit keys (coordinator item 5; MEASURED by a helper agent, `out/kb/units.json`)
+
+A unit node is `KeyBind` (role `N3`, FOR OWNER CONFIRMATION) + `VerifierSubCircuit<1>` over `N3` + the X-EXP unit AIRs:
+
+| Unit | AIRs | Columns | Max interactions | vk bytes | G1 at `INTERNAL` (3,000) | G1 at the 3,300 copy |
+|---|---|---|---|---|---|---|
+| add | 46 | 3,226 | 200 | 282,156 | refused (columns) | accepted |
+| double | 46 | 3,034 | 199 | 279,887 | refused (columns) | accepted |
+
+- **Columns.** Each unit is the X-EXP shape plus the 88 columns and 1 AIR of `KeyBind` (DERIVED: 3,138 + 88, 2,946 + 88). Once `KeyBind` is in the node, the double unit no longer fits 3,000 either, so both need the 3,300 pick.
+- **Built before the fix.** The keys were made on a09cc5d, before the vacuous-constraint fix of 15.1. The column count is unchanged, but the pre-hashes and bytes will move by a little when the keys are regenerated.
+- **No unit proof.** Proving was blocked by the `N1` bus bug that 9fe4193 fixed, so no unit proof and no unit heights exist yet.
+- **Headroom.** With the 97-column harness sink, the add proving key would be 3,323 columns, over 3,300 (DERIVED).
+- **Lock deviation.** The unit generator lives in the stark-bench crate, because adding `openvm-mod-circuit-builder` to `sherlock-wrap-export` changes `Cargo.lock`. The lock was not updated.

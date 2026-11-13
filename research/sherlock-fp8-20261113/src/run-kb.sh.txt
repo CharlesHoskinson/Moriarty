@@ -1,0 +1,11 @@
+#!/bin/bash
+# FP-8 key binding: fixpoint of the bound keys, negatives, then chain + D3 (no wrap).
+set -uo pipefail
+export PATH=$HOME/.cargo/bin:$PATH RUSTUP_AUTO_INSTALL=0
+L=$HOME/.cache/fp8/logs; HS=$HOME/.local/bin/heavy-slot; T=$HOME/.cache/fp8/target/release/examples
+O=$HOME/.cache/fp8/out/kb; mkdir -p $O/keys $O/neg $O/chain
+st() { echo "# $(date -Is) kb $1 start" >> $L/runs.log; }
+en() { echo "# $(date -Is) kb $1 end rc=$2" >> $L/runs.log; }
+st fixpoint; $HS --mem 16G --name fp8-kb-fix -- $T/fp8_keyset fixpoint $O/keys > $L/kb-fix.log 2>&1; en fixpoint $?
+st neg; $HS --mem 64G --name fp8-kb-neg -- $T/fp8_keyset neg $O/neg > $L/kb-neg.log 2>&1; en neg $?
+$HOME/.cache/fp8/run-l.sh $O/chain kb
