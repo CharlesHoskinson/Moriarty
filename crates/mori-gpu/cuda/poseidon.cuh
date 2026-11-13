@@ -22,6 +22,8 @@
 __constant__ uint32_t POS_C[POS_NCONST * 8];
 // 0: plain rounds (the definition); 1: sparse partial rounds (default).
 __constant__ int POS_MODE;
+// 1: the S-box squares with sqr() (MORI_POS_SQR=1); 0: plain products. Same values.
+__constant__ int POS_SQR;
 
 #ifdef __CUDA_ARCH__
 __device__ __forceinline__ fr_t pos_c(int i)
@@ -33,6 +35,11 @@ __device__ __forceinline__ fr_t pos_c(int i)
 
 __device__ __forceinline__ fr_t pow5(const fr_t& x)
 {
+    if (POS_SQR) {
+        fr_t x2 = sqr(x);
+        fr_t x4 = sqr(x2);
+        return x4 * x;
+    }
     fr_t x2 = x * x;
     fr_t x4 = x2 * x2;
     return x4 * x;

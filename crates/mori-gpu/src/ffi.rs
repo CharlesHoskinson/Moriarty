@@ -69,6 +69,19 @@ unsafe extern "C" {
         lg_n: u32,
         cap: *const c_void,
     ) -> i32;
+    pub(crate) fn mori_frac_tree(tree: *mut c_void, lg: u32) -> i32;
+    pub(crate) fn mori_frac_layer_begin(
+        seg: *const c_void,
+        eq: *const c_void,
+        es: usize,
+    ) -> *mut c_void;
+    pub(crate) fn mori_frac_layer_round(
+        ctx: *mut c_void,
+        lambda: *const c_void,
+        out3: *mut c_void,
+    ) -> i32;
+    pub(crate) fn mori_frac_layer_fold(ctx: *mut c_void, r: *const c_void) -> i32;
+    pub(crate) fn mori_frac_layer_end(ctx: *mut c_void, claims4: *mut c_void) -> i32;
     pub(crate) fn mori_pos_digest_layers(
         out: *mut c_void,
         leaves: *const c_void,

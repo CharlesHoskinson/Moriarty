@@ -11,7 +11,9 @@ Plan: `PLAN.md` beside this file. Branch `e4-gpu` in three worktrees: Moriarty `
 - Step 3 increment 2 (fused GPU encode and hash, chunked grind): byte-identical; the timing run was memory-throttled (section 4).
 - Step 3 increment 2b (streaming fused encode): byte-identical, prove **139.9 s** MEASURED on the GPU path, exclusive slot (section 5). This is the gate number.
 - Step 4 (gate verdict): section 6. `L_Fr` on the GPU fails the call-time budget by a wide margin.
-- Open: the quiet CPU baseline on the current tree (chunked grind) was not obtained. The exclusive A/B `e4-abfinal` got its slot at 20:10, but heavy.slice was over MemoryHigh and throttled it (section 6, pickup). It was stopped at 20:31.
+- CPU baseline on the current tree: 896.5 s MEASURED in an exclusive slot (rerun `e4-abfinal2` after the tmpfs leftover was removed), but at host load 28 to 36 from work outside heavy-slot; a quiet host was not available (section 7.1).
+- Step 3 tuning (owner 21:00, tune first): the Poseidon kernel knobs give no gain; the GPU fractional sumcheck saves about 7 s. **Tuned `L_Fr` prove 105.0 s** MEASURED (median of 3, 99.6 to 105.8 s), byte-identical (section 7).
+- Owner options to close the remaining gap: section 8 (recommended: option A).
 
 ## 1. Profile harness
 
@@ -114,3 +116,73 @@ The encode stage is the Midnight Poseidon permutation count: 2^23 rows x 17 perm
 **Incidents for the coordinator:** (a) the CPU prover was not deterministic (rayon `find_any` in the grind), fixed on stark-backend `e4-gpu` 4199bc1 with ordered chunks and `find_first`. (b) heavy.slice has MemoryHigh 64 GiB, and another lane's 31 GB tmpfs leftover `/tmp/bounded-depth-final-2848992` counts as shmem in it. This throttled the section 4 run (fractional sumcheck 570 s). It is not deleted, because it belongs to another lane.
 
 **Pickup for `e4-abfinal`** (systemd user unit, `~/.cache/e4-gpu/ab.sh final`). The exclusive slot came free at 20:10. The CPU reference (`MORI_GPU=off`) then ran at about 0.7 cores for 21 minutes: heavy.slice was at 69.4 GB against its 68.7 GB MemoryHigh, with 32.7 GB of shmem from `/tmp/bounded-depth-final-2848992`. The prove thread sat in `__mem_cgroup_handle_over_high`, the same throttle as section 4. The agent stopped the unit at 20:31 with no timing. To rerun: first remove that tmpfs leftover (owner or its lane), then run `systemd-run --user --collect --unit e4-abfinal ~/.cache/e4-gpu/ab.sh final`. The binary is `~/.cache/e4-gpu/bin/e4_profile-final` (the tree of section 5). Logs go to `~/.cache/e4-gpu/logs/ab-final.log` and `logs/mem-final.log`, and proofs to `~/.cache/e4-gpu/proofs/{cpu,gpu}-final.bin`. Both SHA-256 values must equal `c17dadf7a2a65eaa1785f219f10caf9900f3bd2e69f2ee0a89bb7315a3554987`. Its CPU time is the quiet baseline of the current tree.
+
+## 7. Tuning: Poseidon kernel, GPU fractional sumcheck, final A/B (MEASURED)
+
+### 7.1 Final A/B of the section 5 binary
+
+Unit `e4-abfinal2`, exclusive slot 21:56 to 22:15, binary `~/.cache/e4-gpu/bin/e4_profile-final`, log `~/.cache/e4-gpu/logs/ab-final.log`. Host load average 28 to 36 for the whole slot: other lanes' cargo and Lean builds run outside heavy-slot, so an exclusive slot does not give a quiet host.
+
+| Path | Prove | Main commit | Fractional sumcheck | WHIR | Peak RSS | Proof SHA-256 |
+|---|---:|---:|---:|---:|---:|---|
+| CPU (`MORI_GPU=off`) | 896.5 s | 802 s (row hash 728) | 12.0 s | 62.3 s | 27,273 MiB | `c17dadf7...3554987` |
+| GPU | 123.0 s | 68.3 s (encode and hash 60.0) | 11.0 s | 23.9 s | 23,830 MiB | `c17dadf7...3554987` |
+
+The fractional sumcheck took 11 to 12 s here against 28.9 s in section 5, so the section 5 run was most likely also slowed by the heavy.slice memory throttle of section 6 (the tmpfs leftover was present then).
+
+### 7.2 Poseidon kernel knobs
+
+The kernels take `MORI_POS_BLOCK` (threads per block, default 128) and `MORI_POS_SQR=1` (the x^5 S-box with `sqr()`; same values). The equality test `e4_gpu_hash` passes at sqr and block sizes 64 and 256. Throughput, test `e4_gpu_poseidon_rate` (2^20 permutations including copies), exclusive slot 22:54 to 23:17, 3 interleaved rounds of 3 reps per knob, load 7.6 to 23.6 (log `~/.cache/e4-gpu/logs/rate1.log`):
+
+| Knob | Mean of 9 reps (M permutations/s) |
+|---|---:|
+| block 128 (default) | 2.34 |
+| sqr S-box | 2.30 |
+| block 64 | 2.28 |
+| block 256 | 2.22 |
+| block 512 | 2.40 |
+
+Every rep lies between 1.80 and 2.95, so the spread inside a knob (about 0.35) is larger than any difference between knobs: no knob is a measurable gain. The defaults stay. The GPU stays at 754 MHz SM clock (maximum 3,003 MHz, event reason 0x400) at 96 percent utilization in every run; the kernel is bound by that clock, not by its launch shape. The cause of the clock cap was not investigated (no system change without the owner).
+
+### 7.3 GPU fractional sumcheck
+
+mori-gpu `frac` (`crates/mori-gpu/cuda/frac.cuh`, `src/frac.rs`): the segment tree layer by layer, and per GKR layer the round polynomial at 1, 2, 3 (block sums, then one reduction block) and the fold, with the transcript kept on the host through a callback. Hook: stark-backend `StarkProtocolConfig::frac_gkr_accel` (default `None`; trait `FracGkrAccel`), implemented by stark-sdk `gpu::FracGpu` for layers of at least 2^12 points; `E4_GPU_FRAC=0` takes the CPU path. Test `e4_gpu_frac`: proof, point and transcript state equal to the CPU at 2^12, 2^13 and 2^17 leaves.
+
+Full prove, exclusive slot 23:36 to 23:53, interleaved, load 9.4 to 23.9 (log `~/.cache/e4-gpu/logs/abt-t2.log`), every proof SHA-256 `c17dadf7...3554987`:
+
+| Run | GPU fractional sumcheck (tuned) | CPU fractional sumcheck |
+|---|---:|---:|
+| 1 | 105.78 s (stage 2.33 s) | 109.49 s (stage 10.4 s) |
+| 2 | 99.64 s (stage 2.93 s) | 118.76 s (stage 10.2 s) |
+| 3 | 105.02 s (stage 3.16 s) | 110.62 s (stage 9.84 s) |
+| Median | **105.0 s** | 110.6 s |
+
+**Tuned `L_Fr` prove on the GPU path: 105.0 s** (median of 3; 99.6 to 105.8 s), MEASURED. Peak RSS 23,265 to 23,533 MiB; system memory in use rose 21.7 to 25.9 GiB per run (host and GPU share memory). Stages of run 3: encode and leaf hash 55.6 s (GPU), digest layers about 3.4 s (GPU), LogUp GKR and zerocheck 19.0 s (fractional sumcheck 3.2 s on the GPU, the rest on the CPU), stacked reduction 5.0 s, WHIR 19.4 s (CPU apart from its Merkle trees).
+
+Against the budget (PROPOSAL 6.3, ESTIMATE): 105.0 s is 5.5x the 19.0 s mid warm call and 11.8x the 8.90 s mid prove-stage figure; the mid warm call with `L_Fr` becomes about 124 s (DERIVED). **The gate stays FAIL.**
+
+## 8. Owner options to close the remaining gap
+
+No option below reaches the 19.0 s warm call; kernel tuning is exhausted at the 754 MHz clock. Each option is a decision for the owner; nothing here is applied. Wrap rows: E5 final circuit 1,436,529 rows against the k = 21 gate of 1,782,573 (MEASURED, `~/Projects/Moriarty-wt/e5-wrap/research/sherlock-e5-wrap-20261112/RESULTS.md` section 6g); per-query costs from its section 8 model (about 9,600 rows per round-0 query plus 688 of `mu` batching, about 1,010 per round 1 and 2 query, DERIVED there).
+
+**Option A (recommended): relax the target; `L_Fr` is an added stage of about 105 s per call.**
+- Prove time 105.0 s, MEASURED (section 7.3); mid warm call about 124 s, DERIVED (19.0 + 105.0).
+- D3: no change. Keys: none. Wrap: none. Ledger: none.
+- Further engineering inside the design, no key change: the CPU stages left (WHIR about 15 to 19 s, GKR input and zerocheck about 12 to 16 s, stacked reduction about 5 s) to the GPU would give about 65 to 75 s (ESTIMATE). If the GPU ran at its 3,003 MHz maximum instead of 754 MHz, the Poseidon stage (about 59 s) could fall up to 4x (ESTIMATE, not tested; the cause of the cap is unknown).
+- Why recommended: it keeps every hard rule, every key and the wrap headroom, and options B and D do not reach the budget either.
+
+**Option B: smaller `L_Fr` trace, log blowup 3 to 2** (queries 120/85/82).
+- Prove 96.2 s MEASURED in the same slot as a 138.6 s run at log blowup 3 (section 7, run `abt-t1`, load 26 to 36), so about 31 percent less. At the section 7.3 conditions about 72 to 80 s (ESTIMATE: the encode stage scales with the codeword length, 70.5 to 41.5 s in that slot). Proof 3,016,786 bytes against 2,516,530 (MEASURED). Peak RSS 16,782 MiB. Stock verifier accepts; there is no CPU reference proof at this set.
+- D3: the query terms of 120/85/82 are at least 101 bits (M7 RESULTS 2b.2, the D3 calculator at the Fr field, MEASURED); the field-size terms stay above 200 bits; no PoW change.
+- Keys: the `L_Fr` key regenerates (log blowup and query vector are key constants) and the wrap key regenerates (its circuit has more queries). Ledger: none.
+- Wrap: about +223,000 rows (22 more round-0 queries at about 10,300 rows, one path level less, 2 more round 1 and 2 queries; ESTIMATE), so about 1.66 M of 1,782,573 (93 percent) and about 120,000 rows of headroom left for E3's public-value carrier.
+- Log blowup 1 (196/89/82) proves in 86.2 s (MEASURED, proof 4,763,762 bytes) but adds about 1.0 M wrap rows (ESTIMATE) and does not fit k = 21, so it is excluded by the never-k = 22 rule.
+
+**Option C: a cheaper Merkle hash for `L_Fr`** (for example Poseidon2 over Fr, width 3).
+- Prover: Poseidon is about 59 s of the 105.0 s. A permutation about 1.5x cheaper (ESTIMATE, from the multiplication counts of the sparse Midnight rounds against Poseidon2's internal rounds) saves about 20 s, to about 85 s (ESTIMATE).
+- D3: no term moves. The calculator has no hash term; Merkle binding rests on the hash's collision resistance, a premise outside D3 (the Fiat-Shamir term of SWIRL Cor 4.2.6 uses its kappa). The new hash would need its own security premise.
+- Keys: the `L_Fr` key and its hash tag (OD-18) change, and the wrap key changes. The wrap must check the new hash in circuit. `ZkStdLibArch` (midnight-zk-stdlib 2.4.0) has one algebraic hash, Midnight Poseidon; its other hashes are bit-oriented (SHA-2, SHA-3, Keccak, Blake2b) and cost far more rows (NOT MEASURED). A Poseidon2 chip takes the wrap out of the stdlib architecture, and the unchanged ledger 9.1.0.1 verifier then cannot verify it (M7 verdict). So this breaks the hard rule "ledger 9.1.0.1 verifier unchanged".
+- Not recommended.
+
+**Option D: options A and B together.** About 72 to 80 s now (ESTIMATE), about 50 to 60 s with the engineering of option A (ESTIMATE), at the key and wrap-headroom cost of option B. Still about 3x the mid warm call.
+

@@ -25,6 +25,7 @@ typedef fr_t scalar_t;
 
 #include "quotient.cuh"
 #include "poseidon.cuh"
+#include "frac.cuh"
 
 #ifndef __CUDA_ARCH__
 
@@ -257,12 +258,27 @@ extern "C" int mori_pos_set_constants(const fr_t* c, size_t n, int mode)
     (void)select_gpu(0);
     cudaError_t e = cudaMemcpyToSymbol(POS_C, c, n * sizeof(fr_t));
     if (e == cudaSuccess) e = cudaMemcpyToSymbol(POS_MODE, &mode, sizeof(int));
+    const char* q = getenv("MORI_POS_SQR");
+    int sq = (q && q[0] == '1') ? 1 : 0;
+    if (e == cudaSuccess) e = cudaMemcpyToSymbol(POS_SQR, &sq, sizeof(int));
     return e == cudaSuccess ? 0 : fail("pos_set_constants", e);
+}
+
+// Threads per block of the Poseidon kernels: MORI_POS_BLOCK (32 to 1024), default 128.
+static int pos_block()
+{
+    static int b = 0;
+    if (!b) {
+        const char* e = getenv("MORI_POS_BLOCK");
+        int v = e ? atoi(e) : 128;
+        b = (v >= 32 && v <= 1024 && v % 32 == 0) ? v : 128;
+    }
+    return b;
 }
 
 static int pos_grid(size_t n)
 {
-    size_t b = (n + 127) / 128;
+    size_t b = (n + pos_block() - 1) / pos_block();
     return (int)(b < 65535 * 4 ? b : 65535 * 4);
 }
 
@@ -282,7 +298,7 @@ extern "C" int mori_pos_hash_rows(fr_t* out, const fr_t* vals, size_t n, uint32_
         size_t m = n - off < chunk ? n - off : chunk;
         e = cudaMemcpyAsync(dv, vals + off * w, m * w * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
         if (e != cudaSuccess) break;
-        mori_pos_rows<<<pos_grid(m), 128, 0, gpu>>>(dout, dv, m, w, c);
+        mori_pos_rows<<<pos_grid(m), pos_block(), 0, gpu>>>(dout, dv, m, w, c);
         e = cudaGetLastError();
         if (e != cudaSuccess) break;
         e = cudaMemcpyAsync(out + off, dout, m * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu);
@@ -308,7 +324,7 @@ extern "C" int mori_pos_digest_layers(fr_t* out, const fr_t* leaves, size_t n, s
     if (e == cudaSuccess) e = cudaMemcpyAsync(a, leaves, n * sizeof(fr_t), cudaMemcpyHostToDevice, gpu);
     size_t len = n;
     for (size_t s = rpq; e == cudaSuccess && s > 1; s >>= 1) {
-        mori_pos_layer<<<pos_grid(len / 2), 128, 0, gpu>>>(b, a, len / 2, qs, c);
+        mori_pos_layer<<<pos_grid(len / 2), pos_block(), 0, gpu>>>(b, a, len / 2, qs, c);
         e = cudaGetLastError();
         fr_t* t = a; a = b; b = t;
         len /= 2;
@@ -318,7 +334,7 @@ extern "C" int mori_pos_digest_layers(fr_t* out, const fr_t* leaves, size_t n, s
         e = cudaMemcpyAsync(out + at, a, len * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu);
         at += len;
         if (len == 1 || e != cudaSuccess) break;
-        mori_pos_layer<<<pos_grid(len / 2), 128, 0, gpu>>>(b, a, len / 2, 1, c);
+        mori_pos_layer<<<pos_grid(len / 2), pos_block(), 0, gpu>>>(b, a, len / 2, 1, c);
         e = cudaGetLastError();
         fr_t* t = a; a = b; b = t;
         len /= 2;
@@ -354,7 +370,7 @@ extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs,
             CUDA_OK(cudaMalloc(&st, 3 * n * sizeof(fr_t)));
             CUDA_OK(cudaMalloc(&ca, n * sizeof(fr_t)));
             CUDA_OK(cudaMalloc(&cb, n * sizeof(fr_t)));
-            mori_pos_init<<<pos_grid(n), 128, 0, gpu>>>(st, n, c);
+            mori_pos_init<<<pos_grid(n), pos_block(), 0, gpu>>>(st, n, c);
             CUDA_OK(cudaGetLastError());
             for (uint32_t j = 0; j < w; j += 2) {
                 fr_t* bufs[2] = {ca, cb};
@@ -366,11 +382,11 @@ extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs,
                     MoriNTT::run(col, lg_n, false, gpu);
                     CUDA_OK(cudaGetLastError());
                 }
-                mori_pos_absorb<<<pos_grid(n), 128, 0, gpu>>>(st, ca, j + 1 < w ? cb : nullptr,
+                mori_pos_absorb<<<pos_grid(n), pos_block(), 0, gpu>>>(st, ca, j + 1 < w ? cb : nullptr,
                                                               n, rm, w, j);
                 CUDA_OK(cudaGetLastError());
             }
-            mori_pos_take0<<<pos_grid(n), 128, 0, gpu>>>(ca, st, n);
+            mori_pos_take0<<<pos_grid(n), pos_block(), 0, gpu>>>(ca, st, n);
             CUDA_OK(cudaGetLastError());
             CUDA_OK(cudaMemcpyAsync(digests, ca, n * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu));
             CUDA_OK(cudaStreamSynchronize(gpu));
@@ -398,12 +414,12 @@ extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs,
             MoriNTT::run(col, lg_n, false, gpu);
             CUDA_OK(cudaGetLastError());
         }
-        mori_pos_rows_cm<<<pos_grid(n), 128, 0, gpu>>>(dout, cols, n, w, c);
+        mori_pos_rows_cm<<<pos_grid(n), pos_block(), 0, gpu>>>(dout, cols, n, w, c);
         CUDA_OK(cudaGetLastError());
         CUDA_OK(cudaMemcpyAsync(digests, dout, n * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu));
         for (size_t r0 = 0; r0 < n; r0 += m) {
             size_t mm = n - r0 < m ? n - r0 : m;
-            mori_cm_to_rm<<<pos_grid(mm * w), 128, 0, gpu>>>(stage, cols, n, w, r0, mm);
+            mori_cm_to_rm<<<pos_grid(mm * w), pos_block(), 0, gpu>>>(stage, cols, n, w, r0, mm);
             CUDA_OK(cudaGetLastError());
             CUDA_OK(cudaMemcpyAsync(rm + r0 * w, stage, mm * w * sizeof(fr_t),
                                     cudaMemcpyDeviceToHost, gpu));
@@ -419,6 +435,132 @@ extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs,
     cudaFree(dout);
     cudaFree(stage);
     return 0;
+}
+
+// ------------------------------------------- Fractional sumcheck over Fr (E4, frac.cuh)
+static int frac_grid(size_t n)
+{
+    size_t b = (n + FRAC_BLOCK - 1) / FRAC_BLOCK;
+    return (int)(b < 2048 ? (b ? b : 1) : 2048);
+}
+
+// Internal nodes of the segment tree: tree (host, 2^(N+1) fractions, interleaved p, q) holds
+// the leaves at [2^N, 2^(N+1)); nodes [1, 2^N) are written back.
+extern "C" int mori_frac_tree(fr_t* tree, uint32_t lg)
+{
+    auto& gpu = select_gpu(0);
+    const size_t n = (size_t)1 << lg;
+    fr_t* T = nullptr;
+    try {
+        CUDA_OK(cudaMalloc(&T, 4 * n * sizeof(fr_t)));
+        CUDA_OK(cudaMemcpyAsync(T + 2 * n, tree + 2 * n, 2 * n * sizeof(fr_t),
+                                cudaMemcpyHostToDevice, gpu));
+        for (size_t lo = n / 2; lo >= 1; lo /= 2) {
+            mori_frac_tree_layer<<<frac_grid(lo), FRAC_BLOCK, 0, gpu>>>(T, lo);
+            CUDA_OK(cudaGetLastError());
+        }
+        CUDA_OK(cudaMemcpyAsync(tree + 2, T + 2, (2 * n - 2) * sizeof(fr_t),
+                                cudaMemcpyDeviceToHost, gpu));
+        CUDA_OK(cudaStreamSynchronize(gpu));
+    } catch (const cuda_error& e) {
+        if (T) cudaFree(T);
+        return fail("frac_tree", e.code());
+    }
+    cudaFree(T);
+    return 0;
+}
+
+// One GKR layer sumcheck. seg: the 2 es fractions of the layer (interleaved), eq: es values.
+struct FracLayer {
+    fr_t *seg, *w[2], *part, *out;
+    FracCols c;
+    size_t m;      // current number of points
+    int cur;       // buffer holding the current columns (-1: seg and eq)
+};
+
+extern "C" void* mori_frac_layer_begin(const fr_t* seg, const fr_t* eq, size_t es)
+{
+    auto& gpu = select_gpu(0);
+    FracLayer* L = new FracLayer();
+    try {
+        CUDA_OK(cudaMalloc(&L->seg, 5 * es * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&L->w[0], 5 * (es / 2 + 1) * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&L->w[1], 5 * (es / 4 + 1) * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&L->part, 3 * 2048 * sizeof(fr_t)));
+        CUDA_OK(cudaMalloc(&L->out, 3 * sizeof(fr_t)));
+        fr_t* eqd = L->seg + 4 * es;
+        CUDA_OK(cudaMemcpyAsync(L->seg, seg, 4 * es * sizeof(fr_t), cudaMemcpyHostToDevice, gpu));
+        CUDA_OK(cudaMemcpyAsync(eqd, eq, es * sizeof(fr_t), cudaMemcpyHostToDevice, gpu));
+        // Column x of p_j0 is seg[2x].p: fr index 4x; q_j0 4x + 1; p_j1 4x + 2; q_j1 4x + 3.
+        L->c.c[0] = eqd; L->c.s[0] = 1;
+        for (int j = 0; j < 4; j++) { L->c.c[1 + j] = L->seg + j; L->c.s[1 + j] = 4; }
+        L->m = es;
+        L->cur = -1;
+        CUDA_OK(cudaStreamSynchronize(gpu));
+    } catch (const cuda_error& e) {
+        cudaFree(L->seg); cudaFree(L->w[0]); cudaFree(L->w[1]); cudaFree(L->part);
+        cudaFree(L->out);
+        delete L;
+        fail("frac_layer_begin", e.code());
+        return nullptr;
+    }
+    return L;
+}
+
+extern "C" int mori_frac_layer_round(void* ctx, const fr_t* lambda, fr_t* out3)
+{
+    auto& gpu = select_gpu(0);
+    FracLayer* L = (FracLayer*)ctx;
+    const size_t half = L->m / 2;
+    const int nb = frac_grid(half);
+    try {
+        mori_frac_eval<<<nb, FRAC_BLOCK, 0, gpu>>>(L->part, L->c, half, *(const F8*)lambda);
+        CUDA_OK(cudaGetLastError());
+        mori_frac_sum<<<1, FRAC_BLOCK, 0, gpu>>>(L->out, L->part, nb);
+        CUDA_OK(cudaGetLastError());
+        CUDA_OK(cudaMemcpyAsync(out3, L->out, 3 * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu));
+        CUDA_OK(cudaStreamSynchronize(gpu));
+    } catch (const cuda_error& e) {
+        return fail("frac_layer_round", e.code());
+    }
+    return 0;
+}
+
+extern "C" int mori_frac_layer_fold(void* ctx, const fr_t* r)
+{
+    auto& gpu = select_gpu(0);
+    FracLayer* L = (FracLayer*)ctx;
+    const size_t half = L->m / 2;
+    // Ping-pong: w[0] holds sizes es/2, es/8, ...; w[1] holds es/4, es/16, ...
+    const int nxt = L->cur == 0 ? 1 : 0;
+    fr_t* dst = L->w[nxt];
+    try {
+        mori_frac_fold<<<frac_grid(half), FRAC_BLOCK, 0, gpu>>>(dst, L->c, half, *(const F8*)r);
+        CUDA_OK(cudaGetLastError());
+    } catch (const cuda_error& e) {
+        return fail("frac_layer_fold", e.code());
+    }
+    for (int j = 0; j < 5; j++) { L->c.c[j] = dst + j * half; L->c.s[j] = 1; }
+    L->m = half;
+    L->cur = nxt;
+    return 0;
+}
+
+// claims4 = (p_j0, q_j0, p_j1, q_j1) at the folded point (m = 1); frees the layer.
+extern "C" int mori_frac_layer_end(void* ctx, fr_t* claims4)
+{
+    auto& gpu = select_gpu(0);
+    FracLayer* L = (FracLayer*)ctx;
+    cudaError_t e = cudaSuccess;
+    if (claims4) {
+        for (int j = 0; j < 4 && e == cudaSuccess; j++)
+            e = cudaMemcpyAsync(claims4 + j, L->c.c[1 + j], sizeof(fr_t), cudaMemcpyDeviceToHost,
+                                gpu);
+        if (e == cudaSuccess) e = cudaStreamSynchronize(gpu);
+    }
+    cudaFree(L->seg); cudaFree(L->w[0]); cudaFree(L->w[1]); cudaFree(L->part); cudaFree(L->out);
+    delete L;
+    return e == cudaSuccess ? 0 : fail("frac_layer_end", e);
 }
 
 #endif
