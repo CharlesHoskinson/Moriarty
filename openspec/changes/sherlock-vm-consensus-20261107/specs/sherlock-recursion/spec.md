@@ -232,19 +232,35 @@ If the GPU path is enabled (the `cuda` feature of `crates/mori-gpu` built and it
 - **THEN** the validation does not count (row A32 fails) until the template is recaptured.
 
 ### Requirement: SRC-021 Canonical initialization
-(Added 2026-11-10; mechanism and `Init` amended 2026-11-10 by the council D1 correction, `../../design.md` §3.2(5); the owner keeps the final call on owner question 1 of `../../dissent.md` "Owner questions from the 2026-11-10 design review".) If a run's initial state is not `Init(prog_d, input_d)`, the run SHALL NOT be accepted as a canonical run; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first segment leaf SHALL prove in circuit that its register file and table roots equal `Init(prog_d, input_d)` field by field (the 39 fields of design §3.2(5)): control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; fuel (u128, two 64-bit limbs) in both fuel registers and the stack limit from `input_d`; outcome `Running`; every other counter zero; environment pointer `None`; frame and task links `NIL`; top-frame, top-task, helper, result and scratch registers zero; the DATA and FIELDS roots and lengths equal to the canonical encoding of the run input behind `val_d` (empty when absent); the ENV and SLOTS roots empty; `prog_root` from `prog_d`; `deps_d` empty. The well-formedness of the input encoding behind `val_d` is a premise of this check, not proved by it [OPEN: input admission claim]; `StepInv` at genesis (SAS-010) rests on it, as it rests on PROG canonicality behind `prog_root`. `input_d` SHALL be `Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each limb and the stack limit below 2^64. (Amended 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:164`.) `val_d` SHALL be `vd(x)` of `sherlock-value/1` (SRC-022) for an input `x`. When the first execution segment begins, the proof SHALL authenticate the input value, the dependency claims and every resource-policy parameter that can affect the outcome. The mechanism that relates `val_d` to the initial memory is open (lazy unfold or load steps); it SHALL NOT scan the input in the Init check (kill criterion of `../../design.md` §3.2(5)). [OPEN since the C6 review (`review.md:94,124,164`): the DATA and FIELDS roots and lengths above, `ref_x`, and the `val_d` of an absent input under `sherlock-value/1`.] The gate SHALL be `h_pre = 0`, not a witness flag. The seal SHALL require `h_lo = 0` and a terminal outcome. Off-chain recomputation of `init_d` (option G2) MAY be recorded as a diagnostic and SHALL NOT be acceptance authority. Cost 27,736 rows on the C6 digest leaf (E3 2026-11-10: 2,637,481 to 2,665,217 rows, k=22 both; standalone check 55,877 rows, k=16; prove time not measured; `research/sherlock-recursion-design-review-20261110/experiments/e2-e4.md`).
+(Amended 2026-11-12, AD-18 (a) and AD-17 (b): the one-arena field list of kit INIT; history in git.) A run whose initial state is not `Init(prog_d, input_d)` SHALL NOT be accepted as canonical; equality with a supplied `init_d` alone SHALL NOT count. When `h_pre = 0`, the first leaf SHALL prove in circuit that its pre state equals `Init(prog_d, input_d)` field by field over the one-arena field list. The gate SHALL be `h_pre = 0`, not a witness flag.
+
+#### Scenario: One-arena field list
+- **WHEN** the first leaf of a run checks `Init(prog_d, input_d)`
+- **THEN** it requires: control `Eval` at `e0`, or at the reserved `ENTRY` that applies `in_fn` to the input; outcome `Running`; `fuel_lo + 2^64 fuel_hi` in both fuel registers, consumed work 0, and the stack limit from `input_d`; every other counter 0; environment pointer `None`; `frames_below` and `tasks_below` equal to the empty-stack constants `EMPTY_F` and `EMPTY_T`; top-frame, top-task, helper, result and scratch registers 0; `prog_root` opened from `prog_d`; one arena with genesis memory `(len, root, tail_d) = (0, empty_at(TOP + 3), tail_d([]))` in place of the four `(root, length)` table pairs; the header words `input_d` (opened), `deps_d = EMPTY_DEPS` and `view_root` (from the witness, `VIEW_NONE` for an absent input)
+
+#### Scenario: Input admission by digest
+- **WHEN** a run has an input
+- **THEN** the input is not loaded into the genesis memory: it is held by `val_d` and read through the certified input view under `view_root` (AD-17 (b)), the Init check does not scan the input, and every input node that a step uses is authenticated against `val_d` before use
+
+#### Scenario: Input digest form
+- **WHEN** the first leaf opens `input_d`
+- **THEN** `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words fixed for the run, `val_d = vd(x)` (SRC-022), and each fuel limb and the stack limit range-checked below 2^64; the proof authenticates the input value, the dependency claims and every resource-policy parameter that can affect the outcome
 
 #### Scenario: Forged initial carriers
 - **WHEN** a run starts from a state that opens to the sealed `init_d` but is not `Init(prog_d, input_d)`.
 - **THEN** the first leaf refuses it (row A13), and the record names the circuit that performed the check.
 
 #### Scenario: Single-field deviation
-- **WHEN** the first-leaf witness differs from `Init(prog_d, input_d)` in exactly one of the 39 fields, or opens another `input_d`, or carries a fuel limb or stack limit at or above 2^64.
-- **THEN** the first leaf refuses it; the Quint model `models/sherlock/quint/init.qnt` shows this for every field, and row A37 matches `Init` against `Machine::new` and, for fields without a reference counterpart, the C6 `genesis()` on fact(3), list123 and one run with input (for the run with input, fields 2, 23, 24, 26, 27, 34 and 35 by decoding to the reference value).
+- **WHEN** the first-leaf witness differs from `Init(prog_d, input_d)` in exactly one field of the one-arena list, or opens another `input_d`, or carries a fuel limb or stack limit at or above 2^64.
+- **THEN** the first leaf refuses it; the Quint model `models/sherlock/quint/init.qnt`, extended to the one-arena field list, shows this for every field, and row A37 matches `Init` against `Machine::new` on fact(3), list123 and one run with input.
 
 #### Scenario: Seal without genesis
 - **WHEN** a segment chain with `h_lo != 0`, or with a `Running` outcome, is presented for sealing.
 - **THEN** the seal refuses it.
+
+#### Scenario: Off-chain recomputation
+- **WHEN** `init_d` is recomputed off chain (option G2)
+- **THEN** the result MAY be recorded as a diagnostic and is not acceptance authority
 
 ### Requirement: SRC-022 Outcome and value encoding `sherlock-value/1`
 (Added 2026-11-10 by the C6 outcome-only review, `research/sherlock-c6-outcome-ledger9-review-20261110/review.md:152`. The encoding table is at `review.md:104-121` and in `../../design.md` §3.2(5).) The published outcome of a run SHALL be `outcome_d = H(O, 1, 0, vd(v))` for `Halted(v)`, `H(O, 1, 1, code)` for `Rejected(code)` and `H(O, 1, 2, kind)` for `Exhausted(kind)`, where `vd` is the value digest `sherlock-value/1` of this review. The digest of a reference SHALL be the digest of the value it refers to. A table index, an address, a type-table index or a constructor-table index SHALL NOT be an input of `vd`. The proof SHALL authenticate every value record, constructor ordinal, field position and child digest used to compute `vd`. [OPEN: the normal form of `decl_schema_d` inside `ty_d`, to be fixed before any key is frozen (`review.md:61,117`; `../../dissent.md` D-2).]

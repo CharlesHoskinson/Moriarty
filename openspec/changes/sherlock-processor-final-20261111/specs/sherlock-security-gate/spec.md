@@ -33,7 +33,7 @@ Every term of every layer SHALL be at least 100 bits. Every grindable term (fold
 - **THEN** the LogUp term is 84.7207, 100.7206 and 101.7206 bits, so 17 is the smallest LogUp PoW that meets the margin rule, and the weakest term stays the query term at 101.0110 bits, MEASURED (`~/.cache/ud-sizing/leaf-logup.log`, test `crates/stark-backend/tests/leaf_logup.rs`)
 
 ### Requirement: SQG-005 The stacked width of `L`
-The `L` key SHALL have the shape bound `w_stack` at most 48 with `mu` PoW 6 (LEAD under OD-19, owner to confirm). D10 measured `w_stack` 18 on `L_cached` and 26 without the cache (branch `d10-heights`, commit `3b979bd5c`); a tighter bound MAY follow. A tighter bound SHALL rerun D3 before the `L` key freezes. The internal set SHALL keep its own bound 512.
+The `L` key SHALL have the shape bound `w_stack` at most 48 with `mu` PoW 6 (OD-19; frozen by owner decision 2026-11-12). D10 measured `w_stack` 18 on `L_cached` and 26 without the cache (branch `d10-heights`, commit `3b979bd5c`). The internal set SHALL keep its own bound 512.
 
 #### Scenario: Width at the bound
 - **WHEN** D3 runs `L` at `w_stack` 48 with `mu` PoW 6

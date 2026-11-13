@@ -22,7 +22,7 @@ Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (c
 | OD-8 | Hybrid native and Sherlock contracts | (a) small entries native at compile time, anchor prologue in every native entry, gated on the T2-N control | owner decision, 2026-11-12: (a) | compiler, anchor |
 | OD-9 | Elastic trust domain | (a) the user's own devices and GPUs only; no untrusted helpers | owner decision, 2026-11-12: (a) | prover daemon |
 | OD-10 | Fallback if the Fr Poseidon GPU kernel slips | (a) wait for the kernel | owner decision, 2026-11-12: (a) | build order |
-| OD-11 | Second Fr proving engine | (a) no | owner decision, 2026-11-12: (a) | build order |
+| OD-11 | Second Fr proving engine | (a) no | owner decision, 2026-11-12: (a), confirmed: no second engine as a call-time fallback; `L_Fr` (OD-24 option E) is part of the one proving path | build order |
 | OD-12 | User batches | (a) A-GP-root, opt-in, one batch digest per `acceptRun` | owner decision, 2026-11-12: (a) | GP entry |
 | OD-13 | Resident prover daemon | (a) required, local socket, one-use slots | owner decision, 2026-11-12: (a) | prover daemon |
 | OD-14 | Keep Compact `Field` emulated | (a) yes | owner decision, 2026-11-12: (a) | leaf AIR |
@@ -36,7 +36,7 @@ Source: `PROPOSAL.md` section 12 (options and reasons) and `DECISIONS-ASK.md` (c
 
 Owner actions outside the decisions (`DECISIONS-ASK.md`): fetch the ePrint papers, with WHIR (ePrint 2024/1586) added, because gate check G5 needs full readings of WHIR and of the mutual correlated agreement paper. The Preview pin records the node build `2.1.101-bbd616b1` that the Preview node reports (`qa/sherlock/target-pins.json`, main working copy).
 
-Machine-level owner rulings of 2026-11-12 (`ARCHITECTURE.md` section 4.1): AD-1 (b) TOP = 63; AD-2 (c) no count in the public statement; AD-6 S = 16 for the first build; AD-9 (a) priority network; AD-11 three-word records at consecutive addresses; AD-14 program-independent `ty_d`; AD-16 DEC enforces profile `/1`; AD-17 (b) by-digest admission with an empty genesis memory, and AD-18 (a) follows (amend SRC-021); AD-20 (a) input consumption built now, the mid-run consume rule (b) stays specified and is built later, GP-2 not narrowed; AD-22 (a) final check in circuit; AD-23 (a) `rules_d` in the LEAF base case of `shape_d`. AD-21, the `n_steps` rule, witness values in `input_d`, the public-input cap per call, and column against row cores stay open owner items of `research/sherlock-processor-final-20261111/PLAN.md` step 5.
+Machine-level owner rulings of 2026-11-12 (`ARCHITECTURE.md` section 4.1): AD-1 (b) TOP = 63; AD-2 (c) no count in the public statement; AD-6 S = 16 for the first build; AD-9 (a) priority network; AD-11 three-word records at consecutive addresses; AD-14 program-independent `ty_d`; AD-16 DEC enforces profile `/1`; AD-17 (b) by-digest admission with an empty genesis memory, and AD-18 (a) follows (SRC-021 amended to the one-arena field list); AD-20 (a) input consumption built now, the mid-run consume rule (b) stays specified and is built later, GP-2 not narrowed; AD-22 (a) final check in circuit; AD-23 (a) `rules_d` in the LEAF base case of `shape_d`. AD-21, the `n_steps` rule, witness values in `input_d`, the public-input cap per call, and column against row cores stay open owner items of `research/sherlock-processor-final-20261111/PLAN.md` step 5.
 
 ## From the run-length study and its audit
 

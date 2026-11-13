@@ -49,7 +49,7 @@ Non-goals: the machine-level leaf kits (`sherlock-modular-leaf-20261111`), Profi
 
 Semantic guarantees are the requirements of `specs/`. Feasibility is the derived gates (DG-001 to DG-007) and the measured cost in seconds per proved step. Every number in the specs is MEASURED with its record, DERIVED, ESTIMATE with its inputs, PENDING or LEAD, as in `FD/ARCHITECTURE.md`.
 
-The `L` key bound is `w_stack` at most 48 with `mu` PoW 6 (LEAD under OD-19, owner to confirm). The D3 unique decoding sweep (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`. D10 (branch `d10-heights`, commit `3b979bd5c`) measured `w_stack` 18 on `L_cached` and 26 without the cache, inside the bound. The leaf-aggregation set takes LogUp PoW 17: its LogUp term is 84.7207 bits at PoW 0 and 101.7206 bits at PoW 17, MEASURED (`~/.cache/ud-sizing/leaf-logup.log`).
+The `L` key bound is `w_stack` at most 48 with `mu` PoW 6 (OD-19; frozen by owner decision 2026-11-12). The D3 unique decoding sweep (branch `d3-soundness`, commit `81abb8f7a`) measured that only the `mu` term moves with `w_stack`. D10 (branch `d10-heights`, commit `3b979bd5c`) measured `w_stack` 18 on `L_cached` and 26 without the cache, inside the bound. The leaf-aggregation set takes LogUp PoW 17: its LogUp term is 84.7207 bits at PoW 0 and 101.7206 bits at PoW 17, MEASURED (`~/.cache/ud-sizing/leaf-logup.log`).
 
 ## 7. Lean status
 

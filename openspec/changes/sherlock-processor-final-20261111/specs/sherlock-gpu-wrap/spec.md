@@ -44,7 +44,7 @@ The MSM SHALL stay split between CPU and GPU while the GPU MSM takes more than 0
 - **THEN** the split stays
 
 ### Requirement: GPW-006 Fallbacks of the GPU path
-If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel (OD-10). No second Fr proving engine SHALL be built as a call-time hedge (OD-11); `L_Fr` of OD-24 option E is the ledger-readability path, and its prover shares the Fr field header K0 (step E4). A measured GPU wrap above 8 s at the chosen k after K1 to K5 SHALL be a fallback trigger of LW-014.
+If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel (OD-10). No second Fr proving engine SHALL be built as a call-time fallback (OD-11, owner decision 2026-11-12); `L_Fr` of OD-24 option E is part of the one proving path, and its prover shares the Fr field header K0 (step E4). A measured GPU wrap above 8 s at the chosen k after K1 to K5 SHALL be a fallback trigger of LW-014.
 
 #### Scenario: Wrap above 8 s
 - **WHEN** the GPU wrap takes more than 8 s at the chosen k after K1 to K5
