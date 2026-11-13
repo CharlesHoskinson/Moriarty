@@ -177,3 +177,59 @@ __global__ void mori_cm_to_rm(fr_t* stage, const fr_t* cols, size_t n, uint32_t 
     }
 #endif
 }
+
+// Streaming form of the fused encode (low device memory): the sponge states of all n rows
+// stay on the device; each call absorbs one column pair (a, b; b null for an odd last
+// column), permutes, and writes the two codeword columns straight into the host row-major
+// matrix rm (n x w, at column j) through the GPU's access to pageable host memory.
+__global__ void mori_pos_init(fr_t* st, size_t n, F8 cap_)
+{
+#ifdef __CUDA_ARCH__
+    const fr_t cap = f8(cap_);
+    for (size_t i = blockIdx.x * (size_t)blockDim.x + threadIdx.x; i < n;
+         i += (size_t)gridDim.x * blockDim.x) {
+        fr_t z; z.zero();
+        stf(&st[3 * i], z); stf(&st[3 * i + 1], z); stf(&st[3 * i + 2], cap);
+    }
+#endif
+}
+
+#ifdef __CUDA_ARCH__
+// Store to host memory with 32-bit words: a Rust Vec<Fq> is only 8-byte aligned, and the
+// vector store of stf needs 16 (cudaErrorMisalignedAddress otherwise, MEASURED).
+__device__ __forceinline__ void st_host(fr_t* p, const fr_t& v)
+{
+    uint32_t* q = (uint32_t*)p;
+    for (int k = 0; k < 8; k++) q[k] = v[k];
+}
+#endif
+
+__global__ void mori_pos_absorb(fr_t* st, const fr_t* a, const fr_t* b, size_t n, fr_t* rm,
+                                uint32_t w, uint32_t j)
+{
+#ifdef __CUDA_ARCH__
+    for (size_t i = blockIdx.x * (size_t)blockDim.x + threadIdx.x; i < n;
+         i += (size_t)gridDim.x * blockDim.x) {
+        fr_t s0 = ldf(&st[3 * i]), s1 = ldf(&st[3 * i + 1]), s2 = ldf(&st[3 * i + 2]);
+        fr_t x = ldf(&a[i]);
+        s0 += x;
+        st_host(&rm[i * w + j], x);
+        if (b) {
+            fr_t y = ldf(&b[i]);
+            s1 += y;
+            st_host(&rm[i * w + j + 1], y);
+        }
+        pos_permute(s0, s1, s2);
+        stf(&st[3 * i], s0); stf(&st[3 * i + 1], s1); stf(&st[3 * i + 2], s2);
+    }
+#endif
+}
+
+__global__ void mori_pos_take0(fr_t* out, const fr_t* st, size_t n)
+{
+#ifdef __CUDA_ARCH__
+    for (size_t i = blockIdx.x * (size_t)blockDim.x + threadIdx.x; i < n;
+         i += (size_t)gridDim.x * blockDim.x)
+        stf(&out[i], ldf(&st[3 * i]));
+#endif
+}

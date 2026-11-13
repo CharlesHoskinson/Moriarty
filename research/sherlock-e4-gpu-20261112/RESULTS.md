@@ -71,3 +71,21 @@ Code: `mori_pos_encode_hash` (`cuda/mori_gpu.cu`) and `poseidon::encode_hash_row
 Unit test `e4_gpu_encode_equals_cpu` (shared slot): codeword and row hashes equal the CPU DFT and `hash_slice` at (width, height, blowup) = (33, 2^11, 8), (10, 2^12, 8), (3, 2^10, 4), (1, 2^12, 2); the increment 1 tests pass again.
 
 Full prove in an exclusive slot (2026-11-12 18:53 to 19:06; load 5 at the start; log `~/.cache/e4-gpu/logs/ab-gpu2.log`): proof SHA-256 `c17dadf7...3554987`, **byte-identical to the CPU reference of section 3**, accepted. Stage times: main commit 87.7 s (encode and hash 81.4 s, digest layers 3.7 s), grinding 4.8 s in total (was 97 s), WHIR 15.0 s, stacked reduction 4.5 s. The prove took 697.7 s because the LogUp fractional sumcheck took 570 s (10 to 25 s in the other runs): the process was throttled by the `heavy.slice` memory limit (`MemoryHigh` 64 GiB; the busy thread sat in `__mem_cgroup_handle_over_high`, system time twice user time). The slice held 30.5 GiB of tmpfs (`/tmp/bounded-depth-final-2848992`, 31 GB, another lane's leftover) plus this job's 32 GiB (peak RSS 29,397 MiB plus 8.9 GiB of device buffers for the 33 columns). So this run is a correctness result, not a timing.
+
+## 5. GPU increment 2b: streaming fused encode, low device memory (MEASURED)
+
+The resident path of section 4 holds all 33 codeword columns on the device (8.9 GiB). The streaming path keeps only the sponge states of the 2^23 rows (805 MiB) and two column buffers on the device: per column pair it copies and transforms two columns, absorbs them, permutes, and writes the two codeword columns straight into the host row-major matrix (this GPU reads and writes pageable host memory, `cudaDevAttrPageableMemoryAccess` = 1; 32-bit stores, since a Rust `Vec<Fq>` is only 8-byte aligned and a vector store gave `cudaErrorMisalignedAddress`). It is the default where the attribute is set; `MORI_POS_STREAM=0` selects the resident path. The encode test passes on both paths.
+
+Full prove, exclusive slot, 2026-11-12 19:40 to 19:43, load average 15 at the start (decaying from the previous jobs) and 10.5 at the end, no other heavy job; GPU SM clock 754 MHz (throttle reason 0x400) for the whole run; log `~/.cache/e4-gpu/logs/ab-gpu3.log`, binary `~/.cache/e4-gpu/bin/e4_profile-gpu3`:
+
+| Stage | GPU path (s) |
+|---|---:|
+| `engine.prove` | **139.9** |
+| main trace commit (PLE coefficients 0.9, encode and row hash on the GPU 70.6, digest layers on the GPU 3.7) | 76.9 |
+| LogUp GKR (fractional sumcheck 28.9) and zerocheck (5.2), CPU | 42.8 |
+| stacked opening reduction, CPU | 4.5 |
+| WHIR (round DFT and GPU trees 7.0, grinding 4.7, rest 3.9) | 15.6 |
+
+Proof SHA-256 `c17dadf7...3554987`, byte-identical to the CPU reference, accepted, 2,516,530 bytes. Peak RSS 23,738 MiB (CPU path 27,271 MiB); system memory in use rose by 22.4 GiB over the run (61.7 to 84.1 GiB, sampled every 2 s), which includes the device buffers.
+
+The encode stage is the Midnight Poseidon permutation count: 2^23 rows x 17 permutations = 1.43 x 10^8 permutations in about 70 s, about 2.0 M permutations per second at 754 MHz (DERIVED), the rate of the section 3 unit test.

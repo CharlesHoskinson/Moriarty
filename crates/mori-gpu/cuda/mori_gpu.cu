@@ -6,6 +6,7 @@
 #include <cuda.h>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <mutex>
 #include <map>
 
@@ -340,6 +341,48 @@ extern "C" int mori_pos_encode_hash(fr_t* rm, fr_t* digests, const fr_t* coeffs,
     const F8 c = *(const F8*)cap;
     size_t n = (size_t)1 << lg_n;
     if (h > n || w == 0) return fail("pos_encode_hash", (int)h);
+    // Low-memory streaming path when the GPU reads and writes pageable host memory
+    // (coherent platforms such as this one); MORI_POS_STREAM=0 forces the resident path.
+    int pageable = 0;
+    cudaDeviceGetAttribute(&pageable, cudaDevAttrPageableMemoryAccess, 0);
+    const char* sv = getenv("MORI_POS_STREAM");
+    if (pageable && !(sv && sv[0] == '0')) {
+        static bool said = false;
+        if (!said) { fprintf(stderr, "mori-gpu: fused encode: streaming path (pageable host access)\n"); said = true; }
+        fr_t *st = nullptr, *ca = nullptr, *cb = nullptr;
+        try {
+            CUDA_OK(cudaMalloc(&st, 3 * n * sizeof(fr_t)));
+            CUDA_OK(cudaMalloc(&ca, n * sizeof(fr_t)));
+            CUDA_OK(cudaMalloc(&cb, n * sizeof(fr_t)));
+            mori_pos_init<<<pos_grid(n), 128, 0, gpu>>>(st, n, c);
+            CUDA_OK(cudaGetLastError());
+            for (uint32_t j = 0; j < w; j += 2) {
+                fr_t* bufs[2] = {ca, cb};
+                for (uint32_t k = 0; k < 2 && j + k < w; k++) {
+                    fr_t* col = bufs[k];
+                    CUDA_OK(cudaMemcpyAsync(col, coeffs + (size_t)(j + k) * h, h * sizeof(fr_t),
+                                            cudaMemcpyHostToDevice, gpu));
+                    if (n > h) CUDA_OK(cudaMemsetAsync(col + h, 0, (n - h) * sizeof(fr_t), gpu));
+                    MoriNTT::run(col, lg_n, false, gpu);
+                    CUDA_OK(cudaGetLastError());
+                }
+                mori_pos_absorb<<<pos_grid(n), 128, 0, gpu>>>(st, ca, j + 1 < w ? cb : nullptr,
+                                                              n, rm, w, j);
+                CUDA_OK(cudaGetLastError());
+            }
+            mori_pos_take0<<<pos_grid(n), 128, 0, gpu>>>(ca, st, n);
+            CUDA_OK(cudaGetLastError());
+            CUDA_OK(cudaMemcpyAsync(digests, ca, n * sizeof(fr_t), cudaMemcpyDeviceToHost, gpu));
+            CUDA_OK(cudaStreamSynchronize(gpu));
+        } catch (const cuda_error& e) {
+            if (st) cudaFree(st);
+            if (ca) cudaFree(ca);
+            if (cb) cudaFree(cb);
+            return fail("pos_encode_hash_stream", e.code());
+        }
+        cudaFree(st); cudaFree(ca); cudaFree(cb);
+        return 0;
+    }
     fr_t *cols = nullptr, *dout = nullptr, *stage = nullptr;
     size_t m = ((size_t)1 << 28) / (w * sizeof(fr_t));
     if (m > n) m = n;
