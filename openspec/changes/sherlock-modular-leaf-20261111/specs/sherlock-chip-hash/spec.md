@@ -19,7 +19,7 @@ Every leaf-internal hash SHALL carry a capacity domain word from one frozen doma
 - **THEN** the correct AIR refuses the witness (mutant `hash_domain_swapped`), the Quint model `hashProtocol.qnt` checks domain separation, and O7 (`HashPremises.lean`, the hash premises as one structure, open premise statement) states the injectivity hypothesis
 
 ### Requirement: HSH-003 Inputs and outputs are copy-connected and no provider row has a free output
-A whole-sponge slot SHALL take ordered, copied input cells and SHALL return one digest cell copied from the final state, with a fixed length and a fixed capacity word per call site. The two-input provider SHALL serve `(3, BUS_KEY, x, y, H([x, y]))` with identity `(x, y)`.
+A whole-sponge slot SHALL take ordered input cells through its port and SHALL return one digest from the final state, with a fixed length and a fixed capacity word per call site. The two-input provider SHALL serve the FP-1 HASH message `(tag, x, y, h)` with `h = P2(tag, x, y)` and identity `(tag, x, y)`. The prototype tuple `(3, BUS_KEY, x, y, H([x, y]))` is the halo2 form only.
 
 #### Scenario: Copy removed
 - **WHEN** a caller's cell differs from the sponge input that it is said to feed, or a digest cell differs from the final state
@@ -51,7 +51,7 @@ The HASH AIRs SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 
 - **THEN** N1, N3 and `L` refuse it (mutant `hash_air_omitted`), and the kit does not pass SG-1 before row T3 passes
 
 #### Scenario: Positive and negative proofs on the stock verifier
-- **WHEN** the differential vectors of HSH-005 and the mutant `hash_round_skipped` are proved with the stark-backend prover
+- **WHEN** the FP-4 vectors `digest_table_vectors` (FPR-011) and the mutant `hash_round_skipped` are proved with the stark-backend prover
 - **THEN** the stock verifier accepts the first, refuses the second and accepts the second under its weakened control AIR; a prover panic or tracegen error earns no rejection credit
 
 #### Scenario: Shape, budget and D3

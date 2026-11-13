@@ -40,6 +40,10 @@ A scalar cold read SHALL open the record and its kind against `pre.root` of the 
 - **WHEN** the value or the kind of an old record is forged, or the read is opened against the running root
 - **THEN** the correct AIR refuses the witness (mutants `cold_value_forged`, `wrong_kind_cold`, `cold_read_uses_running_root`), and O16 (`MemContract.lean`, read soundness) is open
 
+#### Scenario: Field waits on T5
+- **WHEN** the record lanes and the kind that a cold read opens is needed for a freeze or a kit tick
+- **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-5 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
+
 ### Requirement: MBK-005 The landed dense backend is conformed to the frozen ports
 The landed dense backend (C1, `crates/mori-chip/src/dense.rs`) SHALL be conformed to the ports frozen in group F. The C1 Quint model SHALL move to `models/sherlock/quint/denseMemory.qnt` with its verdict kept.
 

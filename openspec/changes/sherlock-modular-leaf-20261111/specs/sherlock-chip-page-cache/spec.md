@@ -56,8 +56,8 @@ ROM SHALL have its own bus. Its message SHALL carry `tbl` and `row` as separate 
 - **WHEN** a freeze or a kit tick needs `D_tbl`, `D_row`, `W_rom` and the `ty_d` normal form
 - **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-6 and I-14 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
 
-### Requirement: PAGE-005 Line capacity covers every rule and waits for X4
-`K_page + n_cold`, `K_rom` and the lane count SHALL be at least the per-step maxima of every branch of every rule. A shape below them SHALL be refused before key generation. `K_rom` SHALL be 15, the static bound of X15 (owner ruling 2026-11-12 20:35). The line cost and the ROM depth SHALL NOT be frozen before X4 (AD-3, AD-12).
+### Requirement: PAGE-005 Line capacity covers every rule and waits for X4 and X15
+`K_page + n_cold`, `K_rom` and the lane count SHALL be at least the per-step maxima of every branch of every rule. A shape below them SHALL be refused before key generation. `K_rom` SHALL NOT be frozen before X15, and the line cost and ROM depth SHALL NOT be frozen before X4 (AD-3, AD-12).
 
 #### Scenario: Shape below a rule maximum
 - **WHEN** a `LeafShape` is below a rule maximum

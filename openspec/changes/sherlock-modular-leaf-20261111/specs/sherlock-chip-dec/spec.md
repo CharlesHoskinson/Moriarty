@@ -48,6 +48,10 @@ A disabled slot SHALL return `rule_lane = 0`. No rule of the inventory SHALL hav
 - **WHEN** the table has a duplicate key or a rule with key 0
 - **THEN** configuration fails (configuration failures `dec_duplicate_key_at_load`, `dec_rule_with_key_zero_at_load`)
 
+#### Scenario: Field waits on T5
+- **WHEN** the `rule_lane` of the control word is needed for a freeze or a kit tick
+- **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-7 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
+
 ### Requirement: DEC-005 The DEC AIRs meet the STARK kit gate
 The DEC table AIR SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the app set (at most 5,000 constraints and 1,000 interactions per AIR, 100 AIRs, 30,000 columns), with every AIR required and a fixed height in its menu shape. Where the inline kernel of SHP-006 carries them, each AIR SHALL also fit the per-AIR bounds of the internal set (1,000 constraints, 200 interactions).
 

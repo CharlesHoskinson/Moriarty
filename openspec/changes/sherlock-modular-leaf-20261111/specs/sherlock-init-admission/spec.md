@@ -26,6 +26,10 @@ The genesis selector SHALL be `g = is_zero(h_pre)` from the leaf public value `h
 - **WHEN** the selector is taken from a witness column, or only a supplied `init_d` is compared
 - **THEN** the controls `ctl_init_gate_from_witness_flag` and `ctl_init_supplied_digest_only` accept a wrong genesis state, which the correct AIR refuses
 
+#### Scenario: Field waits on T5
+- **WHEN** the Init field list that the genesis selector gates is needed for a freeze or a kit tick
+- **THEN** it waits on `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` (DRAFT for owner sign-off, O12) until row I-15 of `FD/ARCHITECTURE.md` section 1.12 reads FROZEN (`design.md` section 13), and no draft value is read as settled
+
 ### Requirement: INIT-003 `prog_d` and `input_d` are opened and bound
 INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = Poseidon(SHK_IN, val_d, fuel_lo, fuel_hi, stack_limit)` with each of the three limbs below `2^64`. PROG canonicality SHALL be the named premise `ProgCanonical(prog_root)` of the leaf. The seal SHALL discharge it with the `ADM` claim (NODE-010).
 

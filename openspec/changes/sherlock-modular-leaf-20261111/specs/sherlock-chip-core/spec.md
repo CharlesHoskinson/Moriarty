@@ -96,7 +96,7 @@ CORE SHALL issue only the requests of its inventory: ALU, MEM read, MEM append, 
 - **THEN** the correct AIR refuses the witness (mutants `core_unused_lane_nonzero`, `core_value_digest_host_supplied`)
 
 ### Requirement: CORE-010 Leaf shape capacities fit every rule maximum
-`LeafShape { s, w_flush, k_page, k_rom, n_cold }` SHALL fit the largest single step of every rule over every branch at one step per leaf and every tail occupancy. A shape below a rule maximum SHALL be refused before key generation. `k_page` and `n_cold` SHALL NOT be frozen before X5 (AD-3, L-2), and `k_rom` SHALL be 15 (X15, owner ruling 2026-11-12 20:35).
+`LeafShape { s, w_flush, k_page, k_rom, n_cold }` SHALL fit the largest single step of every rule over every branch at one step per leaf and every tail occupancy. A shape below a rule maximum SHALL be refused before key generation. `k_page`, `k_rom` and `n_cold` SHALL NOT be frozen before X15 and X5 (AD-3, L-2).
 
 #### Scenario: Shape below a rule maximum
 - **WHEN** a `LeafShape` is below a rule maximum of the per-rule table
@@ -104,7 +104,7 @@ CORE SHALL issue only the requests of its inventory: ALU, MEM read, MEM append, 
 
 #### Scenario: Values known from X1
 - **WHEN** the shape is configured for the first build
-- **THEN** `s = 16`, `w_flush = 1` and `k_page + n_cold >= 4` hold by the X1 table `FD/maxima/rule_maxima.md` (M-2, M-3), a shape with `8 W` below the append maximum is refused (`mem_shape_step_exceeds_window`), and `k_rom` is `K_rom = 15` (owner ruling 2026-11-12 20:35, X15)
+- **THEN** `s = 16`, `w_flush = 1` and `k_page + n_cold >= 4` hold by the X1 table `FD/maxima/rule_maxima.md` (M-2, M-3), a shape with `8 W` below the append maximum is refused (`mem_shape_step_exceeds_window`), and `k_rom` waits for X15
 
 ### Requirement: CORE-011 Each rule of a rule family is its reference transition
 Each rule family sub-kit SHALL be generated from the `RuleContract`s of its rules (read set, write set, ordered plan, charge behaviour, effect bounds). Each rule SHALL be its reference transition on every branch, checked against the REFERENCE BRIDGE kit. A family that builds constructors SHALL wait for X6 (AD-5).

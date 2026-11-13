@@ -17,7 +17,7 @@ Refreshed 2026-11-13 to the STARK design (row T6a of `research/sherlock-tested-d
 - Each kit spec with an AIR gets one STARK gate requirement. The halo2 normative text of BUS, RANGE, NODE-002, NODE-006, NODE-007 and SHP-006 is restated in the FP-1 form. Other halo2 words in scenarios are read through the term map of `design.md` section 12.
 - `tasks.md` gets group V, a vertical slice, before group 0. Its last task is the T6 done-when.
 - The fields that wait on the T5 leaf schemas are listed in `design.md` section 13.
-- Every requirement id, mutant name, Quint invariant and Lean obligation is kept.
+- Every requirement id, mutant name, Quint invariant and Lean obligation is kept. The refresh proposes new check names that `FD/ARCHITECTURE.md` does not yet list: `<kit>_air_omitted` (one per kit), `slice_air_omitted`, `bus_two_layouts_one_index`, `fv_unit_over_3300_columns` and `non_fv_17bit_checker`.
 
 ## Why
 

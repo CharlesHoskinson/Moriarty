@@ -37,7 +37,7 @@ Non-goals: Profile B as a built path, continuation mode 2, semantic profile `/2`
 
 Rules of the graph:
 
-- CORE is the only bus requester. VALUE DIGEST and INIT take records only as `AuthRec` and `AuthRom` tokens of the read port of CORE.
+- CORE is the only requester of buses 1 to 4 and 6. Every kit may query the RANGE bus 5. VALUE DIGEST and INIT take records only as `AuthRec` and `AuthRom` tokens of the read port of CORE.
 - A module never reads the columns of another module. The only channels are a bus message on one LogUp bus and a named port (FP-1 of `FD/ARCHITECTURE.md` section 1.11: shared columns of one row inside one AIR, or a `PermutationCheckBus` between two AIRs).
 - Bus tuples have levels: tagged-table rows 0, ALU, HASH and ROM 1, MEM 2 with the address as sub-level, CORE requests above. Ports follow the build-order DAG. A port guarantee travels as a port certificate through the port's multiset equality (Lean O42, open).
 - The bus is a membership lookup (`LookupSound`) under the LogUp bounds of FP-1 (in place of BUS-007). No argument uses `BusBalanced` for the landed bus.
@@ -50,14 +50,14 @@ The bus and the ports freeze in the BabyBear form of `FD/ARCHITECTURE.md` sectio
 | id | Bus | Message (FP-1) | Provider | Requesters |
 |---:|---|---|---|---|
 | 1 | ALU | `op: tag(4)`, `flag: bit`, `x, y, z: u128` | ALU | CORE |
-| 2 | MEM | `kind: tag(3)` in `1..=4`, `addr`, `rec` (`W_rec` lanes, waits T5) | MEM window (`addr >= q_pre`), heap lines (`addr < q_pre`) | CORE |
+| 2 | MEM | `kind: tag(3)` in `1..=4`, `addr`, `rec` (`W_rec` lanes, waits T5) | MEM window (`addr >= 8 q_pre`), heap lines (`addr < 8 q_pre`), MEM-004 | CORE |
 | 3 | HASH | `tag: u16`, `x, y, h: digest`, `h = P2(tag, x, y)` | HASH | CORE |
 | 4 | ROM | `tbl: tag(D_tbl)`, `row: u32`, `rec` (`W_rom` lanes, waits T5) | PAGE/ROM ROM lines | CORE |
 | 5 | RANGE | `x`, `w: tag(5)`, `0 <= w <= 16` | stock `VariableRangeCheckerAir` at 16 bits, 2^17 rows (LD-S10x-3) | every kit |
 | 6 | DEC | `dec_key`, `dec_val` in `u16` parts (AD-9, waits T5) | DEC table with the idle row | CORE |
 | 7 to 15 | reserved | none | no AIR | a request is unsatisfiable |
 
-The halo2 prototype tuple `(chip, key, a, b, c)` over `Fq` with packed keys (`8 addr + kind`, `tbl 2^D_row + row`, `op + 8 flag`) is history and is the form of the landed `crates/mori-chip` tests only. Provider rules 1 to 6 of `FD/ARCHITECTURE.md` section 1.2 bind every provider kit. Provider rule 7 is a halo2 rule: over stark-backend an AIR reads its local row and its next row only, stays inside the shape bounds of its layer, and draws no challenge of its own. The append transport is unchanged: the append-chain port (A1 to A3) and one MEM bus request per append (A4).
+The MEM provider split uses the MEM-004 form with `q_pre` a block index; FP-1 writes `addr >= q_pre`, a discrepancy left for row T2. The halo2 prototype tuple `(chip, key, a, b, c)` over `Fq` with packed keys (`8 addr + kind`, `tbl 2^D_row + row`, `op + 8 flag`) is history and is the form of the landed `crates/mori-chip` tests only. Provider rules 1 to 6 of `FD/ARCHITECTURE.md` section 1.2 bind every provider kit. Provider rule 7 is a halo2 rule: over stark-backend an AIR reads its local row and its next row only, stays inside the shape bounds of its layer, and draws no challenge of its own. The append transport is unchanged: the append-chain port (A1 to A3) and one MEM bus request per append (A4).
 
 Named ports (section 1.3, in the FP-1 form): `Window`, append chain with `len_at`, `AuthRec`, `AuthRom`, memory token `[root, tail_d]`, `ColdRead`, state cells, stack cells, state header cells, whole-sponge slot, RANGE port, DEC port, leaf public values. The leaf public values are the 54 words of FP-1: `binding`, `prog_d`, `pre_d`, `post_d`, `rules_d` (SRC-001, computed by CORE), `h_pre`, `steps`, `log_d`, `log_n`.
 
@@ -74,7 +74,7 @@ Seam 1 is the trait `MemBackend` (`persist`, `cold_read`, one block-line method)
 
 ## 5. Leaf shape
 
-`LeafShape { s, w_flush, k_page, k_rom, n_cold }` is owned by CORE. Working values for the first build: `s = 16` (SRC-014, AD-6), `w_flush = 1` (M-3), one arena (M-1), `TOP = 63` (AD-1, OWNER, valid only with one physical cell per record, AD-11). `k_page + n_cold >= 4` (X1). `K_rom = 15` (owner ruling 2026-11-12 20:35, X15, `DA` line 80). Nothing else in the shape is frozen until X5.
+`LeafShape { s, w_flush, k_page, k_rom, n_cold }` is owned by CORE. Working values for the first build: `s = 16` (SRC-014, AD-6), `w_flush = 1` (M-3), one arena (M-1), `TOP = 63` (AD-1, OWNER, valid only with one physical cell per record, AD-11). `k_page + n_cold >= 4` (X1). `k_rom` waits for X15. Nothing in the shape is frozen until X15 and X5.
 
 A leaf shard is a fixed shape from the plan's shape menu (`FD/ARCHITECTURE.md` section 1.6, the shard plan). The shape fixes the chip set, the AIR list in order and the trace height of every AIR. No height is chosen from the witness: a leaf with fewer steps pads to the height of its shape, with disabled slots (CORE-001). Every leaf shard of one run has the height of its menu shape. The heights are PENDING measurement (task V.9 and X5). The only fixed height in the sources is the 2^17-row RANGE table. The cost of a shape is seconds per proved step on the GPU (DG-006).
 
@@ -114,7 +114,7 @@ Group V comes first because no kit gate of section 9 can pass before a real Sher
 
 Profile B kits are in no group. Agents can start a later group early against mocks once group F is done.
 
-Freeze prerequisites of group F: X1 (done except ROM rows), X2 (done), B2 audit answered (done), the Init relation (specified, input part waits for AD-17 and X11), the boundary opening interface (specified, X10 measures it), the record layouts and physical cells per record (AD-11, waits T5), ROM depth (AD-12, waits T5; `K_rom = 15` ruled). The dependency discharge protocol (X12) and reference coverage (X13) gate later groups, not the leaf freeze. SRC-023 at the window capacity (O14, O47) does not block the freeze. It blocks reporting SRC-023 as proved for the circuit rule.
+Freeze prerequisites of group F: X1 (done except ROM rows), X2 (done), B2 audit answered (done), the Init relation (specified, input part waits for AD-17 and X11), the boundary opening interface (specified, X10 measures it), the record layouts and physical cells per record (AD-11, waits T5), ROM depth and `K_rom` (AD-12, X15, waits T5). The dependency discharge protocol (X12) and reference coverage (X13) gate later groups, not the leaf freeze. SRC-023 at the window capacity (O14, O47) does not block the freeze. It blocks reporting SRC-023 as proved for the circuit rule.
 
 ## 9. Gates
 
@@ -161,10 +161,11 @@ Some scenario text of `specs/` keeps halo2 words. In every STARK kit (section 9)
 | "control circuit", "control port", "control test" | the weakened control AIR of SG-3 |
 | "configuration fails", "refused at synthesis", "refused before key generation" | a keygen or shape-check refusal, recorded apart |
 | "copy-constrained", "copy-linked", "copied", "copy equality" | an FP-1 port: shared columns of one row, or one `PermutationCheckBus` message `(seq, cells)` |
-| "fixed column", "fixed selector", "fixed table" | a preprocessed trace column bound in the key under `key_root` |
+| "fixed column", "fixed selector", "fixed table" | a preprocessed trace column bound in the key under `key_root`; the RANGE table is the exception, with 4 main columns, no preprocessed trace and its row set fixed by constraints (FP-1) |
 | "advice cell" | a main trace column (witness) |
 | "request lane", "the zero tuple", "chip id 0" | one interaction of the requester AIR; a disabled request has count 0 |
 | "packed key" | separate typed lanes (FP-1) |
+| "the only bus requester", "issues no bus request" | of buses 1 to 4 and 6; every kit may query the RANGE bus 5 |
 | "public lane" | a leaf public value (FP-1, 54 words) |
 | `configure`, `assign`, `Region`, `Layouter` | `KitAir` and `KitTrace` of FP-1 |
 
@@ -176,10 +177,10 @@ The leaf schemas are drafted in `research/sherlock-tested-design-20261113/T5-SCH
 
 | Field | 1.12 row | Requirements that use it |
 |---|---|---|
-| AD-11 record layouts: `W_rec`, the lane types per kind, the physical cells per record, the `AuthRec` cells | I-5, I-9 | BUS-001, MEM-003, MEM-007, CORE-004, VDG-004, PAGE-001 |
+| AD-11 record layouts: `W_rec`, the lane types per kind, the physical cells per record, the `AuthRec` cells | I-5, I-9 | BUS-001, MEM-003, MEM-007, MBK-004, CORE-004, VDG-004, PAGE-001 |
 | State schema body words | I-15 | BND-001 |
 | AD-12 ROM tables and rows: `D_tbl`, `D_row`, `W_rom`, the `AuthRom` cells | I-6, I-9 | PAGE-004, CORE-004, VDG-003 |
-| AD-9 guard list and control word: `dec_key`, `dec_val` | I-7 | DEC-001, DEC-003, BUS-004 |
+| AD-9 guard list and control word: `dec_key`, `dec_val` | I-7 | DEC-001, DEC-003, DEC-004, BUS-004 |
 | `D_view`, the view form, the `AuthIn` cells | I-10 | CORE-013, INIT-006, NODE-012, NODE-013, VDG-005 |
 | `ty_d` normal form (AD-14) | I-14 | NODE-011, INIT-006, PAGE-004 |
-| SRC-021 Init field list | I-15 | INIT-001 |
+| SRC-021 Init field list (and the SRC-022 form it names) | I-15 | INIT-001, INIT-002 |

@@ -19,7 +19,7 @@ Each digest SHALL be one sponge in HASH slots with copy-constrained inputs. Cons
 - **THEN** the differential fails (mutant `vd_bus_rehash_chain`), and O26 (`ValueDigest.lean`, constant-start equivalence) is open
 
 ### Requirement: VDG-003 Records and ROM rows only through the read port
-VALUE DIGEST SHALL issue no bus request. Every child record and ROM row SHALL be an `AuthRec` or `AuthRom` token of the read port of CORE.
+VALUE DIGEST SHALL issue no request on buses 1 to 4 and 6; it MAY query the RANGE bus. Every child record and ROM row SHALL be an `AuthRec` or `AuthRom` token of the read port of CORE.
 
 #### Scenario: Future child, wrong reference or row overflow
 - **WHEN** a child record is at or above the running length, at another address than the held reference, or a ROM row index overflows `D_row`
