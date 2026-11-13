@@ -4,23 +4,23 @@ Plan: `PLAN.md` beside this file (decisions D-5 to D-9, increments J1 to J6).
 
 ## 1. Status
 
-**E3 gate: NOT REACHED.** J1 and J2 pass. The `L_iface` fixture (J3) is proving; J4 and J5 run next.
+**E3 gate: PASS (J1 to J5, tree 2f09caf).** At the `L_Fr` set (`lfr_params`) the all-entries case (253 entries, every value slot used, no `NOP` before the padding) and the forced-overflow case (551 operations to tier E) prove and the stock verifier accepts with 2 commitments; the missing-`R` case is refused by the prover. D3 at the measured key: 101.1435 bits (equal to E2). An entry table with no `NOP` row at all is impossible at `B = V = 256` (DERIVED, section 5), so all-entries is the strongest case that exists. "Statement words equal the native ones" is the plain-Rust decoder check of D-9 on the exposed `L_Fr` words, not a constraint of the wrap.
 
 | # | Increment | Status | Evidence |
 |---|---|---|---|
 | J1 | `Entry::Public`, D-6 carrier in `L` and `L_Fr`, small `L_iface` | PASS | section 3 |
 | J2 | native reference `iface.rs` | PASS (unit tests; used by J1) | section 4 |
-| J3 | `L_iface` fixture at the OD-19 `L` set | example written | section 5 |
-| J4 | `R` check (D-7), op counts | written | section 6 |
-| J5 | gate at `lfr_params`, D3 | written | section 7 |
+| J3 | `L_iface` fixture at the OD-19 `L` set | PASS | section 5 |
+| J4 | `R` check (D-7), the full tape of every case, op counts | PASS | section 6 |
+| J5 | gate at `lfr_params`, D3 | PASS | section 7 |
 | J6 | optional replay | not started | |
 
 ## 2. Code
 
 | Repository (not pushed) | Branch | Commits |
 |---|---|---|
-| openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2 |
-| Moriarty `~/Projects/Moriarty-wt/e3-iface` | `e3-iface` (from `e2-lfr` fbba858f1) | none yet |
+| openvm worktree `~/.cache/m7-wrap/src/openvm-e3` | `e3-iface` (from `e2-lfr` c4bd312) | 96acfa3 J1 and J2; 71bf0f1 J3 and J4; 2f09caf `PublicAir` row binding, all-entries case |
+| Moriarty `~/Projects/Moriarty-wt/e3-iface` | `e3-iface` (from `e2-lfr` fbba858f1) | 8bcb491b9 plan and J1; this file |
 
 Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO_TARGET_DIR=~/.cache/e3-iface/target`, logs `~/.cache/e3-iface/logs/`).
 
@@ -32,23 +32,26 @@ Runner `~/.cache/e3-iface/run.sh <stage> <mem> <dir> cmd...` (heavy-slot, `CARGO
 | `src/iface.rs` | J2: index table (`Dims`, 12,164 words at `Dims::FULL`), log operations, native values with Midnight Poseidon (u = 0 and u = 4), OD-17 planner, `Run::words`, `Run::statement`, the decoder `decode` (D-9), the cases of J3 |
 | `src/iface_l.rs` | D-5: the `L`-side interface AIRs `Stmt`, `LogEntry`, `LogValue`, `Call` and their traces |
 | `src/lverify.rs` | `Entry::Public` (part 2 reads the per-AIR public addresses of part 1); `gen_verifier_full`; `gen_r_check` (D-7) |
-| `src/machine.rs`, `src/tape.rs` | `PublicAir` as a carrier, 16 words per row (`PUBLIC_W`); `Tape::expose`; `Op::PublicPad` (the zero read by the empty cells of the last row) |
+| `src/machine.rs`, `src/tape.rs` | `PublicAir` as a carrier, 16 words per row (`PUBLIC_W`), program row `[addr_0..addr_15, active, idx]` with `active (idx - row) = 0`; `Tape::expose`; `Op::PublicPad` (the zero read by the empty cells of the last row) |
 | `src/record.rs` | `stock_log_at` (the stock record at any `L` parameter set) |
 | `examples/iface_fixture.rs` | J3 fixture |
 | `tests/j1_public.rs`, `tests/j5_gate.rs` | the gates of J1, J4 and J5 |
 
 ## 3. J1: public values of `L` through `L_Fr` (MEASURED)
 
-Test `j1_public_values_through_lfr` (log `~/.cache/e3-iface/logs/j1-final.log`). Small `L_iface`: the 4 interface AIRs at `Dims { b: 32, v: 32, p: 32, l_tx: 14 }` (610 public words), `L` config, `small_params_n(4, 8)`, case full-V (14 entries, 32 values).
+Test `j1_public_values_through_lfr` (log `~/.cache/e3-iface/logs/j1-final.log`, tree of 2f09caf). Small `L_iface`: the 4 interface AIRs at `Dims { b: 32, v: 32, p: 32, l_tx: 14 }` (610 public words), `L` config, `small_params_n(4, 8)`, case full-V (14 entries, 32 values).
 
 | Check | Result |
 |---|---|
 | Stock verifier on the small `L_iface` | accepts; 4 AIRs at log heights 2, 5, 5, 2; 3,337 transcript events |
 | Tape (whole `L` verifier with `Entry::Public`) | 59,566 ops; every one of the 3,337 events equals the stock record; no assertion fails |
 | `L_Fr` public words | 78 = 1 + ceil(610 / 8); word 0 is the `L` vk pre-hash; `decode` gives the native statement (all 16 lanes) |
-| `L_Fr` proof at `small_params_n(3, 14)` | accepted; 2 commitments (stacked widths 80 and 20); 4,415,746 bytes; prove 62.3 s |
+| `L_Fr` proof at `small_params_n(3, 14)` | accepted; 2 commitments (stacked widths 80 and 20); 4,415,810 bytes; prove 55.1 s (shared slot, not a clean timing) |
 | Changed `L` public value (the last call-vector word + 1) | stock `L` verifier refuses; tape: 142 assertions fail, the tape (so the key) is unchanged; `L_Fr` prover refuses (`LogupZerocheck(NonZeroRootSum)`) |
 | Carrier controls (same witness, changed `L_Fr` public values): first word, middle word, last word, two words swapped | each refused by the stock verifier (`BatchConstraintError(SumClaimMismatch)`) |
+| Row binding control: `PublicAir` rows 0 and 1 swapped together with their program cells and values, and public blocks 0 and 1 swapped (program bus and memory bus still balance) | refused by the stock verifier (`SumClaimMismatch`) |
+
+**Soundness fix found in review (2f09caf).** The program bus fixes only the multiset of program rows. In 96acfa3 a `PublicAir` program row could sit at any trace row, so a prover could permute 16-word blocks of the public words (DERIVED; the first swap control kept the honest trace and so tested only the carrier). Each program row now carries its row index `idx` (18 cells, exactly `PROG_W`), and `active (idx - (sum_i i a_i + h1 sum_j j b_j)) = 0` ties it to the carrier row. The row binding control above is refused on 2f09caf. `cargo clippy -p sherlock-lfr --all-targets -D warnings` is clean on 2f09caf.
 
 Also pass on the same tree: `i10_public_air_small` (the E2 test, now with `Tape::expose`) and the `iface` unit tests (layout 12,164 words, `W_pv` 2,816; limb round trip; `Canon` refuses `r` and a limb at `2^30`).
 
@@ -59,3 +62,78 @@ Also pass on the same tree: `i10_public_air_small` (the E2 test, now with `Tape:
 - Native values: `PERM` the Midnight permutation; `H2`, `SPONGE(n)` the Midnight fixed-length sponge at u = 0 (capacity `l`); `PATH(d)` `H2` per level with the index bit choosing the order (placeholder, D-8); `DIGEST` the sponge at u = 4 of `(tag, pack(d2))` with tag `Fr(k + 1)` (placeholder, D-8).
 - Planner (OD-17): `R` first (refused if it does not fit), then each discretionary operation if its bound and all four limits still hold, else tier E.
 - Decoder (D-9): unpack the `L_Fr` words, range and `Canon` of every lane and value, bounds, `NOP` padding, capacity, zero value rows after `off_n`, the lane map (each mapped entry a `DIGEST`, its lane zero in `pv`), every `PUB(i)` against lane `i`; output the statement (the call vector with the lane-map lanes filled).
+
+## 5. J3: the `L_iface` fixture (MEASURED)
+
+Example `iface_fixture` (unit `e3-j3b`, tree 2f09caf, wall 1,558 s, log `~/.cache/e3-iface/logs/j3-final.log`, directory `~/.cache/e3-iface/fixture/`, file `iface_fixture.json`). The bench chain of E2 I0 (two W1 proofs, the node at the OD-19 internal set, 90.2 s), then `L_iface` at the OD-19 `L` set (`l_ud(48)`, BabyBear base with the Midnight Poseidon Fr hash): the 39 AIRs of `L_cached` and the 4 interface AIRs at `Dims::FULL`. One key; the stock verifier accepts each proof, also after a re-read from disk.
+
+| Quantity | Value |
+|---|---|
+| AIRs | 43 (39 bench, 4 interface) |
+| Public words of `L` | 12,164 (Stmt 114, LogEntry 512, LogValue 2,304, Call 9,234) |
+| Log heights of the interface AIRs | Stmt 2^2, LogEntry 2^8, LogValue 2^8, Call 2^8; the 39 bench log heights equal `l_log_heights` of the E2 `l_fixture.json` (compared) |
+| `L` vk | 238,345 bytes (bitcode; bench `L` 80,439) |
+| Proof | 487,514 bytes in every case (bench `L` 430,073) |
+| Prove (16 threads, shared slot, not a clean timing) | full-V 188.2 s, full-P 156.0 s, overflow 165.8 s, missing-`R` 247.0 s, all-entries 258.7 s |
+
+| Case | Log | Planner |
+|---|---|---|
+| full-V | 189 entries (`R`, 8 `PERM`, 8 `H2`, `SPONGE(5)`, `PATH(8)`, `DIGEST(SHK_LOCK)`, 167 `PUB`), 256 values, 31 slots | `V` filled exactly; 67 entry rows `NOP` |
+| full-P | 11 entries (`R`, 7 `PATH(32)`, `PATH(29)`), 30 values, 256 slots | `P` filled exactly |
+| overflow | 46 entries, 256 values, 76 slots | `R` and 594 discretionary operations (64 `PERM`, `SPONGE(256)` over its bound, 16 `PATH(32)`, `PATH(33)` over its bound, 512 `PUB`); 551 go to tier E |
+| missing-`R` | full-V with the `SHK_INPUT` entry removed: 188 entries, 254 values | built without the planner (negative) |
+| all-entries | 253 entries (`R` and 250 `PUB`), 256 values, 3 slots | `V` filled exactly; every entry before the 3 padding rows non-`NOP` |
+
+Every case gives the same `L` shape (asserted in J4), so one `L_Fr` key serves all of them.
+
+All-non-`NOP` (DERIVED): with `B = V = 256`, every non-`NOP` entry logs at least one value and the 3 `DIGEST` entries of `R` log 2 each, so at most 253 entries are used and an entry table with no `NOP` row is impossible. The all-entries case reaches this bound: 253 non-`NOP` entries, all 256 values, `R` real.
+
+## 6. J4: the full tape on every case (MEASURED)
+
+Test `j4_tapes_on_l_iface` (log `~/.cache/e3-iface/logs/j4-final.log`, tree 2f09caf). Per case: the stock verifier accepts the `L_iface` proof (33,120 transcript events); the shape and the tape are the same in every case; the tape is the whole `L` verifier, the `R` check of D-7 and the exposure of 1,522 words.
+
+| Case | Failed tape assertions | Decoder (D-9) |
+|---|---|---|
+| full-V | 0 | statement equals the native one (1,026 lanes) |
+| full-P | 0 | equal |
+| overflow | 0 | equal (551 operations in tier E do not change the statement) |
+| missing-`R` | 3 (the `R` check: the tag of entry 1, and the op and tag of entry 2) | refused (lane-map pair 2 names entry 2, now a `PERM`) |
+| all-entries | 0 | equal |
+
+**Added `L_Fr` rows** (MEASURED op counts; bench values from E2 I10):
+
+| Op kind | Bench `L` (E2 I10) | `L_iface` | Added |
+|---|---:|---:|---:|
+| ALU | 347,887 | 383,493 | 35,606 |
+| Input | 34,773 | 47,481 | 12,708 |
+| Pack | 11,187 | 14,502 | 3,315 |
+| Perm | 20,563 | 21,460 | 897 |
+| Decompose | 6,936 | 7,480 | 544 |
+| Public | 1 | 1,522 | 1,521 |
+| AssertEq | 658 | 665 | 7 |
+| all ops | 442,806 | 497,410 | 54,604 |
+
+**Heights of `L_Fr`** (rows / main width): BbAlu 524,288/47, ProgramTable 524,288/1 (preprocessed 20), Input 65,536/30, Range16 65,536/2, PoseidonFr 32,768/185, Pack 16,384/27, FrInput 8,192/5, Reshape 8,192/16, Halve 8,192/9, CSwap 8,192/13, FrAdd 2,048/8, AssertEq 1,024/7, Split 512/64, Bits 512/69, **Public 128/58** (E2: 2/3; 57 in 71bf0f1, plus the `idx` cell). Every height except `Public` equals E2 I10; the table holds 497,410 ops plus the nop rows and stays at 2^19 (about 27,000 rows of headroom, DERIVED). The 2-commitment shape is unchanged (one `ProgramTable`).
+
+## 7. J5: the gate at the `L_Fr` set, D3 (MEASURED)
+
+Test `j5_gate_at_lfr_params` (unit `e3-j5b`, tree 2f09caf, log `~/.cache/e3-iface/logs/j5-final.log`, 20 threads, shared slot: the times are not clean timings). One `L_Fr` key from the tape of J4 (497,410 ops, 15 AIRs, 561 columns, main cells 34,218,752 = 32.63 columns of 2^20, preprocessed 10 columns, one preprocessed AIR `ProgramTable`). Keygen 394.2 s.
+
+| Case | Result |
+|---|---|
+| all-entries | accepted; 2 commitments (stacked widths 33 and 10); 2,568,818 bytes; prove 860.8 s; verify 1.92 s |
+| overflow | accepted; 2 commitments (33, 10); 2,568,818 bytes; prove 2,589.0 s (with other heavy jobs); verify 3.53 s |
+| missing-`R` | prover refuses (`LogupZerocheck(NonZeroRootSum)`; the 3 failed `R` assertions of J4) |
+
+Full-V and full-P use the same tape and key; their plain-Rust runs (0 failed assertions, decode equal) are in J4.
+
+**D3 at the measured key** (`w_stack` 48, log stacked height 20, max 171 constraints and 46 interactions per AIR): logup 215.95, GKR sumcheck 253.27, GKR batching 254.86, zerocheck 250.95, constraint batching 247.40, stacked reduction 244.73, WHIR 101.1435 (mu 226.30, fold 232.86, query 101.1435, shift 101.1435, gamma 248.23, OOD 239.86); **total 101.1435 bits**, equal to E2 I10 (the query term, set by the parameters, is the weakest; the added `Public` rows do not change it). Proven 100 bits holds.
+
+**Added `L_Fr` rows** (section 6): 54,604 ops (+12.3 %) all fit in the existing heights; only `Public` grows (2 to 128 rows, width 3 to 58). The 2-commitment shape with one shared `ProgramTable` is kept.
+
+## 8. Open items and next step
+
+- J6 (optional): native-Fr replay of the log values (`PERM`, `H2`, `SPONGE`, `PATH`, `DIGEST`) and `Canon` in `L_Fr`; today the decoder of D-9 does these checks in plain Rust outside the wrap.
+- D-8 placeholders: the `DIGEST` tag `Fr(k + 1)` and the `PATH` order (ENC-1, ENC-2) wait for the encoding decision.
+- Production `L`: the onion / node-statement tie of FP-3 (M7b) is not in the bench `L_iface`; chunk-mode `R` (mode word 74 = 1) is not built.
+
