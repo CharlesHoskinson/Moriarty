@@ -13,13 +13,15 @@ pub struct Transcript<V> {
     pub state: [V; WIDTH],
     pub absorb_idx: usize,
     pub sample_idx: usize,
+    /// Every sample, in order (test oracle against the stock record).
+    pub samples: Vec<V>,
 }
 
 impl<V: Clone> Transcript<V> {
     pub fn new<A: Alg<V = V>>(a: &mut A, u: u128) -> Result<Self, Error> {
         let z = a.cst(<crate::native::F as ff::Field>::ZERO)?;
         let c = a.cst(cap_var(u))?;
-        Ok(Self { state: [z.clone(), z, c], absorb_idx: 0, sample_idx: 0 })
+        Ok(Self { state: [z.clone(), z, c], absorb_idx: 0, sample_idx: 0, samples: vec![] })
     }
 
     fn perm<A: Alg<V = V>>(&mut self, a: &mut A) -> Result<(), Error> {
@@ -47,7 +49,9 @@ impl<V: Clone> Transcript<V> {
             self.perm(a)?;
         }
         self.sample_idx -= 1;
-        Ok(self.state[self.sample_idx].clone())
+        let x = self.state[self.sample_idx].clone();
+        self.samples.push(x.clone());
+        Ok(x)
     }
 
     /// `sample_bits`: the low `bits` bits (little-endian) of the canonical representative of

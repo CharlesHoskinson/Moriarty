@@ -128,3 +128,14 @@ pub fn f_from_hex(s: &str) -> Option<F> {
     repr.as_mut().copy_from_slice(&b);
     Option::from(F::from_repr(repr))
 }
+
+/// The 2-adic generator of order `2^bits` (p3-bls12-381-fr: `ROOT_OF_UNITY` squared
+/// `32 - bits` times).
+pub fn two_adic_generator(bits: usize) -> F {
+    assert!(bits <= 32);
+    let mut w = <F as PrimeField>::ROOT_OF_UNITY;
+    for _ in bits..32 {
+        w = w.square();
+    }
+    w
+}

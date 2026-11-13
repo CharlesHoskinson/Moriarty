@@ -11,3 +11,5 @@ pub mod merkle;
 pub mod transcript;
 pub mod merkle_test;
 pub mod poly;
+pub mod verifier;
+pub mod verifier_test;
