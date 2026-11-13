@@ -165,6 +165,7 @@ Each lever is applied alone on top of the one before; each is checked by the I3 
 |---|---:|---:|---:|
 | none (I6b) | 1,592,979 | 89.4 | |
 | L1 fused multiply-add: `Alg::mul_add` is the native chip's one-row `add_and_mul` (`x*y + z`), used in the WHIR `mu` batching, the final-polynomial Horner, the `gamma` and final-check sums, `binary_k_fold`, the DAG `lambda` sum, the interaction sums and the stacked sums. Needs a visibility-only accessor `ZkStdLib::native_gadget()` (patch `patches/perm-access.diff`; `configure` unchanged). Log `lever-fma.log` | 1,453,425 | 81.5 | -139,554 |
+| L2 `omega^index` chains: the `omega^(2^j)` constants assigned once per round (not per query and chain); `zi = zi_root^(2^k)` by k squarings; `zi^-1` witnessed and pinned by `zi_root * zi_inv = 1` (was three select chains of key constants per query). Log `lever-omega.log` | 1,436,529 | 80.6 | -16,896 |
 
 ## 6h. Row budget at the measured `L_Fr` shape (DERIVED)
 
@@ -210,3 +211,4 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 18:45. I6a passes on `mix-small` (log `i6-small.log`): ledger 9.1.0.1 accepts the whole-verifier wrap.
 - 2026-11-12 19:39. I6b passes (log `i6-real.log`): 1,592,979 rows at k = 21; ledger 9.1.0.1 accepts the wrap of the real `L_Fr` proof. E5 gate PASS.
 - 2026-11-12 19:40. Lever L1 (fused multiply-add): 1,453,425 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-fma.log`).
+- 2026-11-12 20:37. Lever L2 (`omega^index`): 1,436,529 rows on `lfr-real`, all I3 to I5 tests pass (log `lever-omega.log`).

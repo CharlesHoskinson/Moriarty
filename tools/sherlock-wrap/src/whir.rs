@@ -108,17 +108,18 @@ impl WhirData {
     }
 }
 
-/// `prod_j (b_j ? c^(2^j) : 1)` for constant `c`: `c^index` from the index bits.
-fn pow_from_bits<A: Alg>(a: &mut A, bits: &[A::B], c: F, one: &A::V) -> Result<A::V, Error> {
-    let mut acc = one.clone();
-    let mut cp = c;
-    for b in bits {
-        let k = a.cst(cp)?;
-        let f = a.select(b, &k, one)?;
-        acc = a.mul(&acc, &f)?;
-        cp = cp.square();
+/// `omega^index` from the index bit cells: `prod_j (b_j ? omega^(2^j) : 1)`, with the
+/// constants `cs[j] = omega^(2^j)` assigned once per round.
+fn pow_from_bits<A: Alg>(a: &mut A, bits: &[A::B], cs: &[A::V], one: &A::V) -> Result<A::V, Error> {
+    let mut acc: Option<A::V> = None;
+    for (b, c) in bits.iter().zip(cs) {
+        let f = a.select(b, c, one)?;
+        acc = Some(match acc {
+            None => f,
+            Some(p) => a.mul(&p, &f)?,
+        });
     }
-    Ok(acc)
+    Ok(acc.unwrap_or_else(|| one.clone()))
 }
 
 /// `binary_k_fold` with `x = zi_root` and `x^-1 = zi_inv` given.
@@ -220,14 +221,26 @@ pub fn part4<A: Alg>(
         t.check_witness(a, ws.query_pow_bits, &qw)?;
         let nbits = log_rs - k;
         let omega = two_adic_generator(log_rs);
-        let omega_inv = omega.invert().unwrap();
+        // L2: the `omega^(2^j)` constants once per round; `zi` by k squarings; `zi^-1` witnessed
+        // and pinned by `zi_root * zi_inv = 1`.
+        let mut cs = vec![];
+        let mut cp = omega;
+        for _ in 0..nbits {
+            cs.push(a.cst(cp)?);
+            cp = cp.square();
+        }
         let mut ys = vec![];
         let mut zr = vec![];
         for qi in 0..ws.num_queries[r] {
             let (_, bits) = t.sample_bits(a, nbits)?;
-            let zi_root = pow_from_bits(a, &bits, omega, &one)?;
-            let zi_inv = pow_from_bits(a, &bits, omega_inv, &one)?;
-            let zi = pow_from_bits(a, &bits, omega.pow_vartime([1u64 << k]), &one)?;
+            let zi_root = pow_from_bits(a, &bits, &cs, &one)?;
+            let zi_inv = a.wit(a.val(&zi_root).map(|x| x.invert().unwrap_or(F::ZERO)))?;
+            let prod = a.mul(&zi_root, &zi_inv)?;
+            a.assert_eq_c(&prod, F::ONE, "omega^index inverse")?;
+            let mut zi = zi_root.clone();
+            for _ in 0..k {
+                zi = a.mul(&zi, &zi)?;
+            }
             let yi = if r == 0 {
                 let mut vals = vec![a.cst(F::ZERO)?; 1 << k];
                 let mut mi = 0usize;
