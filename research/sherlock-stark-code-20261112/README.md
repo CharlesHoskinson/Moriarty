@@ -25,14 +25,17 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-enc-fp3/` | enc-fp3 | `05f3b73e7` | `f31a84381` | 10 | 10 | sherlock-lfr: ENC and FP-3 vectors on the L_Fr machine AIRs |
 | `openvm-fp8/` | fp8 | `05f3b73e7` | `5d8e15883` | 21 | 33, 3 merges | fp8_keyset: univ mode (bound N1 to N3 and the L pins for two programs) |
 | `openvm-fp8-units/` | fp8-units | `05f3b73e7` | `1ba98abf6` | 21 | 33, 3 merges | FP-8 units: N3 reference key in the bitcode check |
+| `openvm-tested/` | tested (T1 integration, T3) | `05f3b73e7` | `b3fbaa5` | 27 | 48, 6 merges | T3: every recursion layer keyed with every AIR required |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |
 | `stark-backend-enc-fp3/` | enc-fp3 | `a6b4761ad` | `65d1a03d4` | 10 | 10 | stark-sdk: FP-3 closure tests on the Rust reference |
 | `stark-backend-fp8/` | fp8 | `a6b4761ad` | `5f698b56e` | 7 | 7 | same tip as `stark-backend-e2-lfr/` |
 
-Branches without merges are plain `git format-patch --binary main..BRANCH`. A branch with merges (e6-int, fp8, fp8-units) is exported along its first-parent history: each non-merge commit is one `format-patch` file, and each merge is one patch of its diff against its first parent, with the merge named in the message. So `git am` gives a linear history whose final tree equals the tip tree.
+Branches without merges are plain `git format-patch --binary main..BRANCH`. A branch with merges (e6-int, fp8, fp8-units, tested) is exported along its first-parent history: each non-merge commit is one `format-patch` file, and each merge is one patch of its diff against its first parent, with the merge named in the message. So `git am` gives a linear history whose final tree equals the tip tree.
 
 Apply: `git checkout $(cat BASE) && git am *.patch` in a clone of the upstream. The openvm clones are shallow, so fetch the base first (`git fetch --depth 1 origin $(cat BASE)`).
 
 Round trip checked for all 14 series (2026-11-13, scratch clones under `~/.cache/t0-verify`, deleted after the check): the base plus `git am` of the series gives a tree equal to the tip tree (`git diff --stat` against the tip is empty and the tree ids match). The fp8 tree is `95e9c51`, and the stark-backend e2-lfr and fp8 tree is `eb17157`.
+
+T3 (2026-11-13): `openvm-tested/` added the same way (first-parent export, merges flattened); round trip checked in a scratch clone: tree `39610c3` equals the `tested` tip tree. stark-backend `tested` has no T3 commit.

@@ -1,0 +1,246 @@
+From 780db4ae1df4832574a65e15b9ca16e694d73a8d Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 02:44:10 -0700
+Subject: [PATCH] Merge e5-wrap e147918 (lfr_e3 exporter) into e6-int
+
+
+(Merge commit 780db4ae1df4832574a65e15b9ca16e694d73a8d flattened to its diff against the first parent a0f07fa; second parent e147918.)
+---
+ crates/sherlock-wrap-export/examples/lfr_e3.rs | 227 +++++++++++++++++++++++++
+ 1 file changed, 227 insertions(+)
+
+diff --git a/crates/sherlock-wrap-export/examples/lfr_e3.rs b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+new file mode 100644
+index 0000000..7ca64f6
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+@@ -0,0 +1,227 @@
++//! Writes the E5 fixture `lfr-e3` (`wrapin` v1): the E3 `L_Fr` proof of the whole `L` verifier
++//! on the `L_iface` all-entries proof (E3 J5 case `all_entries`, seed 14), at the `L_Fr` set,
++//! with the 1,522 exposed words (the `L` vk pre-hash, then the 12,164 `L` public words packed 8
++//! per Fr). Adds `decode`: the stock D-9 decoder (`iface::decode`) on the honest words and on
++//! tampered word vectors, each with its stock verdict, for the wrap's in-circuit decoder.
++//! usage: lfr_e3 [prove: 1 | 0 (decode cases only, no proof)]
++use std::{fs, path::PathBuf, time::Instant};
++
++use num_bigint::BigUint;
++use openvm_stark_backend::{
++    codec::Decode,
++    keygen::types::MultiStarkVerifyingKey,
++    p3_field::{Field, PrimeCharacteristicRing},
++    proof::Proof,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    StarkEngine,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use serde_json::{json, Value};
++use sherlock_lfr::{
++    fixture::LSC,
++    iface::{self, Case, Dims, ECMUL, LANE_MAP, LIMBS, NOP, PUB, STMT},
++    lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
++    machine::Machine,
++    record::stock_log,
++    testing::{lfr_params, range_trace, Engine},
++};
++use sherlock_wrap_export::{export, hex_be};
++
++const BB_P: u64 = 0x7800_0001;
++
++fn unpack_words(pw: &[Fr], n: usize) -> Vec<u64> {
++    iface::unpack(pw, n).expect("honest words unpack")
++}
++
++/// Repack `L` words (no range check: tampered words may be out of range) 8 per Fr, 31 bits each.
++fn repack(pre: Fr, w: &[u64]) -> Vec<Fr> {
++    let mut out = vec![pre];
++    for c in w.chunks(8) {
++        let mut b = BigUint::from(0u32);
++        for (k, &x) in c.iter().enumerate() {
++            b += BigUint::from(x) << (31 * k);
++        }
++        out.push(fr_of(&b));
++    }
++    out
++}
++
++fn fr_of(b: &BigUint) -> Fr {
++    let mut acc = Fr::ZERO;
++    for d in b.to_u64_digits().iter().rev() {
++        acc = acc * Fr::from_u64(1 << 32) * Fr::from_u64(1 << 32) + Fr::from_u64(*d);
++    }
++    acc
++}
++
++fn hexes(v: &[Fr]) -> Vec<String> {
++    v.iter().map(hex_be).collect()
++}
++
++fn case(name: &str, d: &Dims, words: Vec<Fr>) -> Value {
++    let r = iface::decode(d, &words);
++    println!(
++        "E5DECODE {name}: {}",
++        match &r {
++            Ok(_) => "ok".to_string(),
++            Err(e) => format!("refused: {e}"),
++        }
++    );
++    json!({
++        "name": name,
++        "words": hexes(&words),
++        "ok": r.is_ok(),
++        "error": r.as_ref().err().cloned(),
++        "statement": r.ok().map(|s| hexes(&s)),
++    })
++}
++
++fn decode_cases(d: &Dims, pw: &[Fr]) -> Value {
++    let n = d.words();
++    let w = unpack_words(pw, n);
++    let pre = pw[0];
++    let mut cases = vec![case("honest", d, pw.to_vec())];
++    // The first PUB entry and its lane.
++    let (pub_i, lane) = (0..d.b)
++        .find(|&i| w[STMT + 2 * i] == PUB)
++        .map(|i| (i, w[STMT + 2 * i + 1] as usize))
++        .expect("a PUB entry");
++    let lane_at = d.call_at() + LIMBS * lane;
++    let mut t = w.clone();
++    t[lane_at] ^= 1;
++    cases.push(case("pub_lane_changed", d, repack(pre, &t)));
++    // An effect lane no PUB reads: the statement changes, the decode is still ok.
++    let read: Vec<usize> = (0..d.b)
++        .filter(|&i| w[STMT + 2 * i] == PUB)
++        .map(|i| w[STMT + 2 * i + 1] as usize)
++        .collect();
++    if let Some(free) = (5..d.lanes()).find(|l| !read.contains(l)) {
++        let mut t = w.clone();
++        t[d.call_at() + LIMBS * free] ^= 1;
++        cases.push(case("free_lane_changed", d, repack(pre, &t)));
++    }
++    let mut t = w.clone();
++    t[d.values_at() + 3] = 1 << 30;
++    cases.push(case("value_limb_out_of_range", d, repack(pre, &t)));
++    // A lane equal to the Fr modulus in 9 limbs of 30 bits (non-canonical).
++    let r = Fr::order();
++    let mut t = w.clone();
++    for k in 0..LIMBS {
++        let limb = (&r >> (30 * k)) & BigUint::from((1u64 << 30) - 1);
++        t[lane_at + k] = limb.to_u64_digits().first().copied().unwrap_or(0);
++    }
++    cases.push(case("lane_not_canonical", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[d.call_at() + 2] = BB_P;
++    cases.push(case("word_not_babybear", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[STMT + 2 * pub_i] = ECMUL;
++    cases.push(case("op_not_admitted", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[STMT + 2 * pub_i + 1] = d.lanes() as u64;
++    cases.push(case("param_out_of_bound", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[STMT + 2 * 5] = NOP;
++    t[STMT + 2 * 5 + 1] = 0;
++    cases.push(case("used_entry_after_nop", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 1] = pub_i as u64;
++    cases.push(case("lane_map_not_digest", d, repack(pre, &t)));
++    let mut hi = pw.to_vec();
++    hi[3] += fr_of(&(BigUint::from(1u32) << 250));
++    cases.push(case("packed_high_bits", d, hi));
++    json!({
++        "dims": {"b": d.b, "v": d.v, "p": d.p, "l_tx": d.l_tx},
++        "cases": cases,
++    })
++}
++
++fn main() {
++    let prove = std::env::args().nth(1).map(|s| s != "0").unwrap_or(true);
++    let out = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    let fx = PathBuf::from(std::env::var("E3_FIXTURE_DIR").unwrap_or_else(|_| {
++        format!("{}/.cache/e3-iface/fixture", std::env::var("HOME").unwrap())
++    }));
++    fs::create_dir_all(&out).unwrap();
++    let vk_l: MultiStarkVerifyingKey<LSC> =
++        bitcode::deserialize(&fs::read(fx.join("l_vk.bitcode")).unwrap()).unwrap();
++    let proof_l =
++        Proof::<LSC>::decode_from_bytes(&fs::read(fx.join("l_proof_all_entries.bin")).unwrap())
++            .unwrap();
++    let (_, ok) = stock_log(&vk_l, &proof_l);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&proof_l);
++    let mut g = Gen::new();
++    let (words, l_pub) = gen_verifier_full(&mut g, &vk_l, &shape, &proof_l).expect("pinned shape");
++    gen_r_check(&mut g, &l_pub);
++    g.tape.expose(&words);
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed");
++    let m = Machine::new(&g.tape);
++    let dims = Dims::FULL;
++    let pw = m.public_values(&mem).concat();
++    assert_eq!(pw.len(), 1 + dims.words().div_ceil(8));
++    let (run, _) = iface::case_run(&dims, Case::AllEntries, 14);
++    let dec = decode_cases(&dims, &pw);
++    assert_eq!(
++        iface::decode(&dims, &pw).unwrap(),
++        run.statement(),
++        "honest decode equals the native statement"
++    );
++    if !prove {
++        fs::write(out.join("lfr-e3-decode.json"), serde_json::to_vec(&dec).unwrap()).unwrap();
++        println!("E5EXPORT lfr-e3 decode cases only");
++        return;
++    }
++    let engine = Engine::new(lfr_params());
++    let airs = m.airs();
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    let keygen_s = t.elapsed().as_secs_f64();
++    let mut traces = m.traces(&mem);
++    traces.push(range_trace(&pk, &airs, &traces));
++    let mut pis = m.public_values(&mem);
++    pis.resize(traces.len(), vec![]);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctx = ProvingContext::new(
++        traces
++            .iter()
++            .enumerate()
++            .map(|(i, t)| {
++                let cm = ColMajorMatrix::from_row_major(t);
++                (
++                    i,
++                    AirProvingContext::simple(
++                        engine.device().transport_matrix_to_device(&cm),
++                        pis[i].clone(),
++                    ),
++                )
++            })
++            .collect(),
++    );
++    drop(traces);
++    drop(pk);
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ctx).expect("L_Fr prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    let mut doc = export("lfr-e3", engine.config(), &vk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap());
++    doc["decode"] = dec;
++    let path = out.join("lfr-e3.json");
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!(
++        "E5EXPORT lfr-e3: keygen {keygen_s:.1} s, prove {prove_s:.1} s, commitments {}, widths {:?}, public words {}, log events {}, file {}",
++        proof.stacking_proof.stacking_openings.len(),
++        proof
++            .stacking_proof
++            .stacking_openings
++            .iter()
++            .map(|v| v.len())
++            .collect::<Vec<_>>(),
++        pw.len(),
++        doc["log"].as_array().unwrap().len(),
++        path.display()
++    );
++}
+-- 
+flattened merge

@@ -1,0 +1,406 @@
+From be966114a112c2f52566ddd1cb73013446359cb9 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 05:27:10 -0700
+Subject: [PATCH] FP-8 item 3: every keygen site through frozen (keygen_frozen
+ in examples, keygen_any in tests, strict at frozen parameters); app fixtures
+ at the frozen app set; lfr_call and lfr_e3 follow the E3 phase-2 API
+ (gen_r_check takes the L values, reservation takes the anchor tags)
+
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs | 12 +++----
+ crates/sherlock-lfr/examples/l_fixture.rs     | 12 +++----
+ crates/sherlock-lfr/src/frozen.rs             | 33 +++++++++++++++++++
+ crates/sherlock-lfr/src/testing.rs            |  6 ++--
+ crates/sherlock-lfr/tests/i10_gate.rs         |  4 +--
+ crates/sherlock-lfr/tests/j1_public.rs        |  4 +--
+ crates/sherlock-lfr/tests/j5_gate.rs          |  2 +-
+ crates/sherlock-lfr/tests/j8_onion.rs         |  2 +-
+ .../sherlock-wrap-export/examples/lfr_call.rs | 26 ++++++++-------
+ .../sherlock-wrap-export/examples/lfr_e3.rs   |  6 ++--
+ .../sherlock-wrap-export/examples/lfr_real.rs |  2 +-
+ 11 files changed, 70 insertions(+), 39 deletions(-)
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+index 182228a..856335c 100644
+--- a/crates/sherlock-lfr/examples/iface_fixture.rs
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -23,13 +23,11 @@ use openvm_stark_backend::{
+     AirRef, StarkEngine,
+ };
+ use openvm_stark_sdk::config::{
+-    app_params_with_100_bits_security,
+     baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+     baby_bear_poseidon2::{
+         default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
+         DuplexSpongeRecorder,
+     },
+-    MAX_APP_LOG_STACKED_HEIGHT,
+ };
+ use p3_baby_bear::BabyBear;
+ use rand::{rngs::StdRng, Rng, SeedableRng};
+@@ -48,10 +46,8 @@ fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<
+     let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+     let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+     let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
+-    let engine = Eng::new(app_params_with_100_bits_security(
+-        MAX_APP_LOG_STACKED_HEIGHT,
+-    ));
+-    let (pk, vk) = engine.keygen(&airs);
++    let engine = Eng::new(sherlock_lfr::frozen::APP.params());
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let mut proofs = vec![];
+     for _ in 0..n {
+@@ -82,7 +78,7 @@ fn node_proof(
+     );
+     let child_pcs = circuit.commit_child_vk(&engine, child_vk);
+     let airs = circuit.airs::<NodeSC>();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         child_vk,
+@@ -188,7 +184,7 @@ fn main() {
+     let pin = all_h.iter().any(|h| *h != max_h);
+     eprintln!("bench heights differ across cases: {pin}; max {max_h:?}");
+     let t = Instant::now();
+-    let (pk, l_vk) = engine.keygen(&airs);
++    let (pk, l_vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let keygen_s = t.elapsed().as_secs_f64();
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     std::fs::write(
+diff --git a/crates/sherlock-lfr/examples/l_fixture.rs b/crates/sherlock-lfr/examples/l_fixture.rs
+index 7191ea9..de0b909 100644
+--- a/crates/sherlock-lfr/examples/l_fixture.rs
++++ b/crates/sherlock-lfr/examples/l_fixture.rs
+@@ -19,13 +19,11 @@ use openvm_stark_backend::{
+     AirRef, StarkEngine,
+ };
+ use openvm_stark_sdk::config::{
+-    app_params_with_100_bits_security,
+     baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+     baby_bear_poseidon2::{
+         default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
+         DuplexSpongeRecorder,
+     },
+-    MAX_APP_LOG_STACKED_HEIGHT,
+ };
+ use p3_baby_bear::BabyBear;
+ use rand::{rngs::StdRng, Rng, SeedableRng};
+@@ -40,10 +38,8 @@ fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<
+     let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+     let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+     let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
+-    let engine = Eng::new(app_params_with_100_bits_security(
+-        MAX_APP_LOG_STACKED_HEIGHT,
+-    ));
+-    let (pk, vk) = engine.keygen(&airs);
++    let engine = Eng::new(sherlock_lfr::frozen::APP.params());
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let mut proofs = vec![];
+     for _ in 0..n {
+@@ -74,7 +70,7 @@ fn node_proof(
+     );
+     let child_pcs = circuit.commit_child_vk(&engine, child_vk);
+     let airs = circuit.airs::<NodeSC>();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         child_vk,
+@@ -111,7 +107,7 @@ fn main() {
+         cfg,
+     );
+     let airs = AggregationSubCircuit::airs::<LSC>(&l);
+-    let (pk, l_vk) = engine.keygen(&airs);
++    let (pk, l_vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
+     let ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         &node_vk,
+diff --git a/crates/sherlock-lfr/src/frozen.rs b/crates/sherlock-lfr/src/frozen.rs
+index b17e4e4..bc452cc 100644
+--- a/crates/sherlock-lfr/src/frozen.rs
++++ b/crates/sherlock-lfr/src/frozen.rs
+@@ -240,6 +240,39 @@ impl std::fmt::Display for G1Error {
+     }
+ }
+ 
++/// The frozen set whose parameters equal `p` in every field, if any.
++pub fn set_of(p: &SystemParams) -> Option<&'static FrozenSet> {
++    ALL.iter().copied().find(|s| &s.params() == p)
++}
++
++/// Keygen of a key of the Sherlock set: the engine parameters must equal one frozen set, and the
++/// key must pass [`keygen_checked`] for it. Panics on parameters outside every set or on any G1
++/// refusal; no key of the set is made without the check.
++pub fn keygen_frozen<E: StarkEngine>(
++    engine: &E,
++    airs: &[AirRef<E::SC>],
++) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
++    let set = set_of(engine.params()).expect("G1: engine parameters equal no frozen set");
++    match keygen_checked(set, engine, airs) {
++        Ok((pk, vk, _)) => (pk, vk),
++        Err(e) => panic!("{e}"),
++    }
++}
++
++/// Keygen for test fixtures: at frozen-set parameters it is [`keygen_frozen`] (strict); at any
++/// other parameters (the small test sets of `testing`) it is plain keygen, and such a key is never
++/// a key of the Sherlock set.
++pub fn keygen_any<E: StarkEngine>(
++    engine: &E,
++    airs: &[AirRef<E::SC>],
++) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
++    if set_of(engine.params()).is_some() {
++        keygen_frozen(engine, airs)
++    } else {
++        engine.keygen(airs)
++    }
++}
++
+ /// Check every field of `p` against the frozen set.
+ pub fn check_params(set: &FrozenSet, p: &SystemParams) -> Result<(), G1Error> {
+     let q: Vec<usize> = p.whir.rounds.iter().map(|r| r.num_queries).collect();
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+index 6837390..b444e6f 100644
+--- a/crates/sherlock-lfr/src/testing.rs
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -96,7 +96,7 @@ pub fn prove_verify(
+     traces: Vec<RowMajorMatrix<F>>,
+ ) -> Outcome {
+     let engine = Engine::new(params);
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = crate::frozen::keygen_any(&engine, &airs);
+     prove_verify_keyed(&engine, &pk, &vk, traces)
+ }
+ 
+@@ -155,7 +155,7 @@ pub fn bus_balances(
+     bus: u16,
+ ) -> bool {
+     let engine = Engine::new(params);
+-    let (pk, _) = engine.keygen(airs);
++    let (pk, _) = crate::frozen::keygen_any(&engine, airs);
+     let mut li = LogicalInteractions::<F>::default();
+     for (i, (air, t)) in airs.iter().zip(traces).enumerate() {
+         let sc = SymbolicConstraints::from(&pk.per_air[i].vk.symbolic_constraints);
+@@ -176,7 +176,7 @@ pub fn prove_verify_range(
+     mut traces: Vec<RowMajorMatrix<F>>,
+ ) -> (Outcome, MultiStarkVerifyingKey<SC>) {
+     let engine = Engine::new(params);
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = crate::frozen::keygen_any(&engine, &airs);
+     assert_eq!(traces.len() + 1, airs.len());
+     traces.push(range_trace(&pk, &airs, &traces));
+     (prove_verify_keyed(&engine, &pk, &vk, traces), vk)
+diff --git a/crates/sherlock-lfr/tests/i10_gate.rs b/crates/sherlock-lfr/tests/i10_gate.rs
+index e3a0f43..1ea620c 100644
+--- a/crates/sherlock-lfr/tests/i10_gate.rs
++++ b/crates/sherlock-lfr/tests/i10_gate.rs
+@@ -47,7 +47,7 @@ fn public_controls(
+ ) -> (Outcome, Outcome) {
+     let engine = Engine::new(params);
+     let airs = m.airs();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     let pis = m.public_values(mem);
+     let honest = prove_verify_range_keyed(&engine, &pk, &vk, &airs, m.traces(mem), pis.clone());
+     let mut bad = pis;
+@@ -156,7 +156,7 @@ fn i10_gate_at_lfr_params() {
+     let engine = Engine::new(params);
+     let airs = m.airs();
+     let t = Instant::now();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     println!("I10 keygen {:.1}s", t.elapsed().as_secs_f64());
+     assert_eq!(
+         preprocessed_airs(&vk),
+diff --git a/crates/sherlock-lfr/tests/j1_public.rs b/crates/sherlock-lfr/tests/j1_public.rs
+index 27738e2..7e78317 100644
+--- a/crates/sherlock-lfr/tests/j1_public.rs
++++ b/crates/sherlock-lfr/tests/j1_public.rs
+@@ -49,7 +49,7 @@ fn l_params() -> openvm_stark_backend::SystemParams {
+ fn l_iface(words: &[u64]) -> (MultiStarkVerifyingKey<LSC>, Proof<LSC>) {
+     let engine = BabyBearBls12381PoseidonCpuEngine::new(l_params());
+     let airs = iface_l::airs(&SMALL);
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let ctx = ProvingContext::new(
+         iface_l::traces::<BabyBear>(&SMALL, words)
+@@ -164,7 +164,7 @@ fn j1_public_values_through_lfr() {
+     let n_stack = (max_rows.trailing_zeros() as usize).saturating_sub(2).max(14);
+     let engine = Engine::new(small_params_n(3, n_stack));
+     let airs = m.airs();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     assert_eq!(preprocessed_airs(&vk), 1);
+     let run_o = |traces, pis| prove_verify_range_keyed(&engine, &pk, &vk, &airs, traces, pis);
+     let o = run_o(m.traces(&mem), pis.clone());
+diff --git a/crates/sherlock-lfr/tests/j5_gate.rs b/crates/sherlock-lfr/tests/j5_gate.rs
+index 4d499c4..c8cf01c 100644
+--- a/crates/sherlock-lfr/tests/j5_gate.rs
++++ b/crates/sherlock-lfr/tests/j5_gate.rs
+@@ -194,7 +194,7 @@ fn j5_gate_at_lfr_params() {
+     let engine = Engine::new(lfr_params());
+     let airs = m.airs();
+     let t = Instant::now();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     println!("J5 keygen {:.1}s", t.elapsed().as_secs_f64());
+     assert_eq!(preprocessed_airs(&vk), 1);
+     let s = SoundnessCalculator::calculate_from_vk(&vk);
+diff --git a/crates/sherlock-lfr/tests/j8_onion.rs b/crates/sherlock-lfr/tests/j8_onion.rs
+index e8f583c..b0ed9c9 100644
+--- a/crates/sherlock-lfr/tests/j8_onion.rs
++++ b/crates/sherlock-lfr/tests/j8_onion.rs
+@@ -105,7 +105,7 @@ fn prove_onion(words: &[u64], onion: bool) -> Result<VkProof, String> {
+     if onion {
+         airs.push(Arc::new(KeyTable));
+     }
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_any(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let (traces, ins) = if onion {
+         iface_l::traces_onion::<BabyBear>(&SMALL, words, perm)
+diff --git a/crates/sherlock-wrap-export/examples/lfr_call.rs b/crates/sherlock-wrap-export/examples/lfr_call.rs
+index e5687b9..3a5d1e8 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_call.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_call.rs
+@@ -23,6 +23,7 @@ use openvm_recursion_circuit::system::{
+     AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
+ };
+ use openvm_stark_backend::{
++    p3_field::PrimeField32,
+     keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+     p3_field::PrimeCharacteristicRing,
+     proof::Proof,
+@@ -30,14 +31,12 @@ use openvm_stark_backend::{
+     AirRef, StarkEngine,
+ };
+ use openvm_stark_sdk::config::{
+-    app_params_with_100_bits_security,
+     baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+     baby_bear_poseidon2::{
+         default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
+         DuplexSpongeRecorder,
+     },
+     bls12381_fr_poseidon::Bls12381Fr as Fr,
+-    MAX_APP_LOG_STACKED_HEIGHT,
+ };
+ use p3_baby_bear::BabyBear;
+ use rand::{rngs::StdRng, Rng, SeedableRng};
+@@ -62,8 +61,8 @@ fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<
+     let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+     let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+     let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
+-    let engine = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
+-    let (pk, vk) = engine.keygen(&airs);
++    let engine = Eng::new(sherlock_lfr::frozen::APP.params());
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let mut proofs = vec![];
+     for _ in 0..n {
+@@ -94,7 +93,7 @@ fn node_proof(
+     );
+     let child_pcs = circuit.commit_child_vk(&engine, child_vk);
+     let airs = circuit.airs::<NodeSC>();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         child_vk,
+@@ -114,11 +113,15 @@ fn node_proof(
+ fn call_run(d: &Dims, lanes: Vec<Fr>) -> Run {
+     assert_eq!(lanes.len(), d.lanes(), "call vector length");
+     let mut rng = StdRng::seed_from_u64(11);
+-    let r = iface::reservation(&mut rng);
+-    let plan = iface::plan(d, &r, &[]);
+-    assert!(plan.spilled.is_empty());
++    // E3 phase 2: the reservation takes the anchor tags of the head (D-10), so the head comes first.
+     let mut head: Vec<u64> = (0..iface::STMT).map(|_| rng.random::<u64>() % 0x7800_0001).collect();
+     head[iface::MODE_WORD] = 0;
++    head[iface::E_IN_WORD] = iface::ANCHOR_IN as u64;
++    head[iface::E_OUT_WORD] = iface::ANCHOR_IN as u64;
++    let tags = iface::anchor_tags(&head).unwrap();
++    let r = iface::reservation(&mut rng, tags, false);
++    let plan = iface::plan(d, &r, &[]);
++    assert!(plan.spilled.is_empty());
+     for w in head.iter_mut().skip(iface::LANE_MAP).take(2 * iface::LANE_PAIRS) {
+         *w = 0;
+     }
+@@ -188,7 +191,7 @@ fn main() {
+     let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
+     let n_bench = airs.len();
+     airs.extend(iface_l::airs(&dims));
+-    let (pk, l_vk) = engine.keygen(&airs);
++    let (pk, l_vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+     let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
+     let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+@@ -218,7 +221,8 @@ fn main() {
+     let shape = LShape::of(&l_proof);
+     let mut g = Gen::new();
+     let (lw, l_pub) = gen_verifier_full(&mut g, &l_vk, &shape, &l_proof).expect("pinned shape");
+-    gen_r_check(&mut g, &l_pub);
++    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
++    gen_r_check(&mut g, &l_pub, &l_vals);
+     g.tape.expose(&lw);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty(), "tape assertions failed {failed:?}");
+@@ -231,7 +235,7 @@ fn main() {
+     let pk_path = out.join("lfr_pk.bitcode");
+     let t = Instant::now();
+     let (fpk, keygen_s): (MultiStarkProvingKey<SC>, f64) = if mode == "key" {
+-        let (fpk, _) = lfr.keygen(&fairs);
++        let (fpk, _) = sherlock_lfr::frozen::keygen_frozen(&lfr, &fairs);
+         let s = t.elapsed().as_secs_f64();
+         fs::write(&pk_path, bitcode::serialize(&fpk).unwrap()).unwrap();
+         (fpk, s)
+diff --git a/crates/sherlock-wrap-export/examples/lfr_e3.rs b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+index 7ca64f6..a880c51 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_e3.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+@@ -8,6 +8,7 @@ use std::{fs, path::PathBuf, time::Instant};
+ 
+ use num_bigint::BigUint;
+ use openvm_stark_backend::{
++    p3_field::PrimeField32,
+     codec::Decode,
+     keygen::types::MultiStarkVerifyingKey,
+     p3_field::{Field, PrimeCharacteristicRing},
+@@ -155,7 +156,8 @@ fn main() {
+     let shape = LShape::of(&proof_l);
+     let mut g = Gen::new();
+     let (words, l_pub) = gen_verifier_full(&mut g, &vk_l, &shape, &proof_l).expect("pinned shape");
+-    gen_r_check(&mut g, &l_pub);
++    let l_vals: Vec<u64> = proof_l.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
++    gen_r_check(&mut g, &l_pub, &l_vals);
+     g.tape.expose(&words);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty(), "tape assertions failed");
+@@ -178,7 +180,7 @@ fn main() {
+     let engine = Engine::new(lfr_params());
+     let airs = m.airs();
+     let t = Instant::now();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let keygen_s = t.elapsed().as_secs_f64();
+     let mut traces = m.traces(&mem);
+     traces.push(range_trace(&pk, &airs, &traces));
+diff --git a/crates/sherlock-wrap-export/examples/lfr_real.rs b/crates/sherlock-wrap-export/examples/lfr_real.rs
+index 29344f3..ebc4148 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_real.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_real.rs
+@@ -37,7 +37,7 @@ fn main() {
+     let engine = Engine::new(lfr_params());
+     let airs = m.airs();
+     let t = Instant::now();
+-    let (pk, vk) = engine.keygen(&airs);
++    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+     let keygen_s = t.elapsed().as_secs_f64();
+     let mut traces = m.traces(&mem);
+     traces.push(range_trace(&pk, &airs, &traces));
+-- 
+2.56.0
+

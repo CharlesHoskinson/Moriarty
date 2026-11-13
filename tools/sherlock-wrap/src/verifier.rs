@@ -121,6 +121,11 @@ impl Shape {
         for (i, a) in inner["per_air"].as_array().unwrap().iter().enumerate() {
             vk_deg = vk_deg.max(us(&a["max_constraint_degree"]));
             let t = &tv[i];
+            // T3: as the stock proof-shape check (RequiredAirNoVData), a required AIR is present.
+            assert!(
+                !(a["is_required"].as_bool().unwrap() && t.is_null()),
+                "wrap shape: required AIR {i} has no trace"
+            );
             airs.push(AirShape {
                 is_required: a["is_required"].as_bool().unwrap(),
                 preprocessed_commit: (!a["preprocessed_data"].is_null())
