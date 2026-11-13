@@ -1,0 +1,276 @@
+From c1ddfc02efe6bc41afb9a1f785881c27d96ad552 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 15:06:56 -0700
+Subject: [PATCH 20/24] E5: sherlock-wrap-export, the wrapin v1 exporter (vk,
+ proof, layouts, stock transcript record) and the mix-small and mix-lfr
+ fixtures at the L_Fr domains
+
+---
+ Cargo.lock                                    | 10 ++
+ Cargo.toml                                    |  1 +
+ crates/sherlock-wrap-export/Cargo.toml        | 20 ++++
+ .../sherlock-wrap-export/examples/fixtures.rs | 85 ++++++++++++++++
+ crates/sherlock-wrap-export/src/lib.rs        | 99 +++++++++++++++++++
+ 5 files changed, 215 insertions(+)
+ create mode 100644 crates/sherlock-wrap-export/Cargo.toml
+ create mode 100644 crates/sherlock-wrap-export/examples/fixtures.rs
+ create mode 100644 crates/sherlock-wrap-export/src/lib.rs
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 193e060..ecb1e9d 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -7655,6 +7655,16 @@ dependencies = [
+  "serde_json",
+ ]
+ 
++[[package]]
++name = "sherlock-wrap-export"
++version = "2.1.0"
++dependencies = [
++ "hex",
++ "openvm-stark-backend",
++ "openvm-stark-sdk",
++ "serde_json",
++]
++
+ [[package]]
+ name = "shlex"
+ version = "1.3.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index 17abd4f..1f1325a 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -77,6 +77,7 @@ members = [
+   "scripts",
+   "crates/stark-bench-ovm",
+   "crates/sherlock-lfr",
++  "crates/sherlock-wrap-export",
+ ]
+ # Keep this in sync with `members`, except for `openvm-certified-verifier`. That crate requires the
+ # pinned Lean toolchain and is built and tested by `.github/workflows/certified-verifier.yml`.
+diff --git a/crates/sherlock-wrap-export/Cargo.toml b/crates/sherlock-wrap-export/Cargo.toml
+new file mode 100644
+index 0000000..f3f6b92
+--- /dev/null
++++ b/crates/sherlock-wrap-export/Cargo.toml
+@@ -0,0 +1,20 @@
++[package]
++name = "sherlock-wrap-export"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++description = "Sherlock E5: export an L_Fr-config proof, its vk, layouts and the stock transcript record for the wrap circuit"
++
++[dependencies]
++openvm-stark-backend = { workspace = true, features = ["test-utils"] }
++openvm-stark-sdk = { workspace = true, features = ["cpu-backend", "bls12381-fr-poseidon"] }
++serde_json = { workspace = true }
++hex = { workspace = true, features = ["std"] }
++
++[features]
++default = ["parallel"]
++parallel = [
++  "openvm-stark-backend/parallel",
++  "openvm-stark-sdk/parallel",
++]
+diff --git a/crates/sherlock-wrap-export/examples/fixtures.rs b/crates/sherlock-wrap-export/examples/fixtures.rs
+new file mode 100644
+index 0000000..699623d
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/fixtures.rs
+@@ -0,0 +1,85 @@
++//! Writes the E5 synthetic `L_Fr`-config fixtures (`wrapin` v1) to `$E5_FIXTURES`
++//! (default `~/.cache/e5-wrap/fixtures`): `MixtureFixture::standard` (Fibonacci with public
++//! values, LogUp interactions, cached main, preprocessed trace, self interactions) proved
++//! with `Bls12381FrPoseidonLfrCpuEngine` (u = 5, 6, 7) at the small test set (`mix-small`)
++//! and at the `L_Fr` set of E1 (`mix-lfr`: UD, log blowup 3, `l_skip` 2, `n_stack` 18,
++//! `k_whir` 4, queries 98/83/82, query PoW 20, other PoW 0).
++//! usage: cargo run --release -p sherlock-wrap-export --example fixtures [small|lfr|all]
++use std::{fs, path::PathBuf, time::Instant};
++
++use openvm_stark_backend::{
++    interaction::LogUpSecurityParameters,
++    test_utils::{MixtureFixture, TestFixture},
++    StarkEngine, SystemParams, WhirConfig, WhirParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::{
++    bls12381_fr_poseidon::Bls12381FrPoseidonLfrCpuEngine, params_with_100_bits_security,
++};
++use sherlock_wrap_export::export;
++
++fn small_params() -> SystemParams {
++    let (l_skip, n_stack, k_whir, log_blowup) = (2, 8, 4, 1);
++    let whir_params = WhirParams {
++        k: k_whir,
++        log_final_poly_len: (l_skip + n_stack) % k_whir,
++        query_phase_pow_bits: 6,
++        folding_pow_bits: 5,
++        mu_pow_bits: 4,
++        proximity: WhirProximityStrategy::UniqueDecoding,
++    };
++    SystemParams {
++        l_skip,
++        n_stack,
++        w_stack: 64,
++        log_blowup,
++        whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
++        logup: LogUpSecurityParameters {
++            max_interaction_count: 1 << 30,
++            log_max_message_length: 7,
++            pow_bits: 7,
++        },
++        max_constraint_degree: 3,
++    }
++}
++
++fn lfr_params() -> SystemParams {
++    let mut p = params_with_100_bits_security(
++        3, 2, 18, 48, 0, 0, WhirProximityStrategy::UniqueDecoding, 4, 20, 4,
++    );
++    for (r, &n) in p.whir.rounds.iter_mut().zip(&[98usize, 83, 82]) {
++        r.num_queries = n;
++    }
++    p.logup.pow_bits = 0;
++    p
++}
++
++fn one(name: &str, params: SystemParams, dir: &PathBuf) {
++    let engine = Bls12381FrPoseidonLfrCpuEngine::new(params);
++    let fx = MixtureFixture::standard(6, engine.config().clone());
++    let t = Instant::now();
++    let (vk, proof) = fx.keygen_and_prove(&engine);
++    let prove_s = t.elapsed().as_secs_f64();
++    let doc = export(name, engine.config(), &vk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap());
++    let path = dir.join(format!("{name}.json"));
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!(
++        "E5EXPORT {name}: keygen+prove {prove_s:.1} s, log events {}, file {}",
++        doc["log"].as_array().unwrap().len(),
++        path.display()
++    );
++}
++
++fn main() {
++    let which = std::env::args().nth(1).unwrap_or_else(|| "all".into());
++    let dir = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    fs::create_dir_all(&dir).unwrap();
++    if which == "small" || which == "all" {
++        one("mix-small", small_params(), &dir);
++    }
++    if which == "lfr" || which == "all" {
++        one("mix-lfr", lfr_params(), &dir);
++    }
++}
+diff --git a/crates/sherlock-wrap-export/src/lib.rs b/crates/sherlock-wrap-export/src/lib.rs
+new file mode 100644
+index 0000000..38f77a5
+--- /dev/null
++++ b/crates/sherlock-wrap-export/src/lib.rs
+@@ -0,0 +1,99 @@
++//! Sherlock E5 exporter: an `L_Fr`-config proof (BLS12-381 Fr base, `EF = F`, Midnight
++//! Poseidon at the `L_Fr` codes u = 5, 6, 7) with its vk, the stacked layouts of
++//! `verify_proof_shape`, and the stock transcript record, as one JSON file (`wrapin` v1) for
++//! the wrap circuit in the Moriarty worktree (`tools/sherlock-wrap`). Fr values are serde
++//! bytes (32, little-endian canonical) inside the vk and proof; the log uses 64-digit
++//! big-endian hex.
++
++use std::sync::{Arc, Mutex};
++
++use openvm_stark_backend::{
++    keygen::types::MultiStarkVerifyingKey,
++    proof::Proof,
++    verifier::{proof_shape::verify_proof_shape, verify},
++    FiatShamirTranscript, StarkProtocolConfig,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    Bls12381FrPoseidonConfig, Transcript, F,
++};
++use serde_json::{json, Value};
++
++pub type SC = Bls12381FrPoseidonConfig;
++
++/// Big-endian 64-digit hex of a canonical Fr value.
++pub fn hex_be(x: &F) -> String {
++    let v = serde_json::to_value(x).unwrap();
++    let mut b: Vec<u8> = serde_json::from_value(v).unwrap();
++    b.reverse();
++    hex::encode(b)
++}
++
++#[derive(Clone, Debug)]
++pub enum Ev {
++    Obs(F),
++    Commit(F),
++    Sample(F),
++}
++
++#[derive(Clone)]
++pub struct Rec {
++    pub inner: Transcript,
++    pub log: Arc<Mutex<Vec<Ev>>>,
++}
++
++impl FiatShamirTranscript<SC> for Rec {
++    fn observe(&mut self, v: F) {
++        self.log.lock().unwrap().push(Ev::Obs(v));
++        FiatShamirTranscript::<SC>::observe(&mut self.inner, v);
++    }
++    fn sample(&mut self) -> F {
++        let v = FiatShamirTranscript::<SC>::sample(&mut self.inner);
++        self.log.lock().unwrap().push(Ev::Sample(v));
++        v
++    }
++    fn observe_commit(&mut self, d: [F; 1]) {
++        self.log.lock().unwrap().push(Ev::Commit(d[0]));
++        FiatShamirTranscript::<SC>::observe_commit(&mut self.inner, d);
++    }
++}
++
++/// The stock verifier on `proof` with a recording transcript: (log, verdict).
++pub fn stock_log(config: &SC, vk: &MultiStarkVerifyingKey<SC>, proof: &Proof<SC>) -> (Vec<Ev>, bool) {
++    let mut rec = Rec { inner: config.transcript(), log: Default::default() };
++    let ok = verify(config, vk, proof, &mut rec).is_ok();
++    let log = rec.log.lock().unwrap().clone();
++    (log, ok)
++}
++
++/// The `wrapin` v1 document.
++pub fn export(name: &str, config: &SC, vk: &MultiStarkVerifyingKey<SC>, proof: &Proof<SC>) -> Value {
++    let (log, ok) = stock_log(config, vk, proof);
++    let layouts = verify_proof_shape::<SC>(&vk.inner, proof).expect("proof shape");
++    let p = config.params();
++    let d = config.domains();
++    let log: Vec<Value> = log
++        .iter()
++        .map(|e| match e {
++            Ev::Obs(x) => json!(["o", hex_be(x)]),
++            Ev::Commit(x) => json!(["c", hex_be(x)]),
++            Ev::Sample(x) => json!(["s", hex_be(x)]),
++        })
++        .collect();
++    json!({
++        "version": 1,
++        "name": name,
++        "derived": {
++            "k_whir": p.k_whir(),
++            "log_stacked_height": p.log_stacked_height(),
++            "log_final_poly_len": p.log_final_poly_len(),
++            "num_whir_rounds": p.num_whir_rounds(),
++            "num_whir_sumcheck_rounds": p.num_whir_sumcheck_rounds(),
++        },
++        "domains": {"u_leaf": d.u_leaf as u64, "u_node": d.u_node as u64, "u_transcript": d.u_transcript as u64},
++        "vk": serde_json::to_value(vk).unwrap(),
++        "proof": serde_json::to_value(proof).unwrap(),
++        "layouts": serde_json::to_value(&layouts).unwrap(),
++        "log": log,
++        "stock_verdict": ok,
++    })
++}
+-- 
+2.56.0
+

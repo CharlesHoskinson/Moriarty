@@ -1,0 +1,727 @@
+From 65d1a03d461447896da85ea53782ddf0bbcb06e8 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:21:07 -0700
+Subject: [PATCH 10/10] stark-sdk: FP-3 closure tests on the Rust reference
+ (Sherlock enc-fp3)
+
+Reference relations of L and the wrap for the owner rulings of 2026-11-12:
+the Compact outcome carrier (FP3-1 (C)) with check (i) for general runs,
+claim_pub as a logged SPONGE(3) over the three DIGEST outputs, and opening
+by proof (FP3-3 (a)). 7 tests: pos_fp3_effect_multishard, fp3_effect_forged,
+general-run check (i) and its refusals, opening by proof and its refusals,
+and the values for the contract tests (FP3_PRINT=1).
+---
+ crates/stark-sdk/tests/fp3_closure.rs | 701 ++++++++++++++++++++++++++
+ 1 file changed, 701 insertions(+)
+ create mode 100644 crates/stark-sdk/tests/fp3_closure.rs
+
+diff --git a/crates/stark-sdk/tests/fp3_closure.rs b/crates/stark-sdk/tests/fp3_closure.rs
+new file mode 100644
+index 0000000..a767370
+--- /dev/null
++++ b/crates/stark-sdk/tests/fp3_closure.rs
+@@ -0,0 +1,701 @@
++//! Sherlock FP-3 closure tests on the Rust reference (owner rulings 2026-11-12: FP3-1 (C) outcome
++//! carrier with check (i) for general runs; FP3-3 (a) opening by proof; `claim_pub` bound to a
++//! logged `SPONGE(3)` over the three `DIGEST` outputs).
++//!
++//! The functions `l_check_*` are the reference relations that `L` (and, for the lane map, the
++//! wrap) enforce; they run on the real hashes (`P2` of `enc_vectors.rs`, Midnight Poseidon over
++//! Fr). The tests are the closure tests of `FD/ARCHITECTURE.md` 1.11 FP-3 at the reference
++//! level: `pos_fp3_effect_multishard`, `fp3_effect_forged`, the general-run check (i), and the
++//! `L` side of the opening proof. The contract side (`fp3_cross_entry_replay`,
++//! `fp3_collection_private`) runs on the compiled Compact contract
++//! (`research/sherlock-enc-fp3-20261112/fp3-closure/`, Moriarty) with the values printed here
++//! (`FP3_PRINT=1`).
++//!
++//! Run: `cargo test -p openvm-stark-sdk --release --features bls12381-fr-poseidon --test fp3_closure`.
++#![cfg(feature = "bls12381-fr-poseidon")]
++
++use num_bigint::BigUint;
++use openvm_stark_backend::p3_symmetric::Permutation;
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::{fixed_len_hash, pack_words, Bls12381Fr, MidnightPoseidonFr},
++    baby_bear_poseidon2::poseidon2_perm,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::{PrimeCharacteristicRing, PrimeField};
++
++type Fr = Bls12381Fr;
++type B = BabyBear;
++type D = [B; 8];
++
++// Tag codes (FD/ARCHITECTURE.md 1.11 FP-4).
++const DOM_PROGC: u32 = 6;
++const SHK_VALUE_V2: u32 = 13;
++const SHK_OUTCOME_V2: u32 = 14;
++const SHK_IN: u32 = 15;
++const SHK_RUN: u32 = 16;
++const SHK_SET_LEAF: u32 = 18;
++const SHK_SET_JOIN: u32 = 20;
++const SHK_SD2: u32 = 29;
++const DOM_OUTHIDE: u32 = 31;
++
++/// Public digest tags, `DIGEST` `param` = index (P-2); 4 to 6 are the collection tags of this
++/// change (`SHK_REG`, `SHK_SET`, `SHK_SHAPE`).
++const PUB_TAGS: [&str; 7] = [
++    "SHK_PROGC",
++    "SHK_LOCK",
++    "SHK_INPUT",
++    "SHK_OUTCOME",
++    "SHK_REG",
++    "SHK_SET",
++    "SHK_SHAPE",
++];
++const T_PROGC: u32 = 0;
++const T_INPUT: u32 = 2;
++const T_OUTCOME: u32 = 3;
++const T_REG: u32 = 4;
++const T_SET: u32 = 5;
++
++fn tag_fr(name: &str) -> Fr {
++    let mut b = [0u8; 16];
++    b[..name.len()].copy_from_slice(name.as_bytes());
++    Fr::from_u128(u128::from_le_bytes(b))
++}
++
++fn p2(tag: u32, xs: &[B]) -> D {
++    let mut words = vec![B::from_u32(tag)];
++    words.extend_from_slice(xs);
++    let mut st = [B::ZERO; 16];
++    st[8] = B::from_u32(words.len() as u32);
++    for blk in words.chunks(8) {
++        for i in 0..8 {
++            st[i] = if i < blk.len() { blk[i] } else { B::ZERO };
++        }
++        poseidon2_perm().permute_mut(&mut st);
++    }
++    st[..8].try_into().unwrap()
++}
++
++fn cat(parts: &[&[B]]) -> Vec<B> {
++    parts.concat()
++}
++fn bw(xs: &[u32]) -> Vec<B> {
++    xs.iter().map(|&x| B::from_u32(x)).collect()
++}
++fn u64w(x: u64) -> Vec<B> {
++    bw(&[0, 1, 2, 3].map(|i| ((x >> (16 * i)) & 0xffff) as u32))
++}
++fn limbs(x: Fr) -> Vec<B> {
++    let mut v = x.as_canonical_biguint();
++    let m = BigUint::from((1u32 << 30) - 1);
++    let mut o = Vec::new();
++    for _ in 0..9 {
++        o.push(B::from_u32(u32::try_from(&v & &m).unwrap()));
++        v >>= 30;
++    }
++    o
++}
++fn hex(x: Fr) -> String {
++    format!("0x{:064x}", x.as_canonical_biguint())
++}
++
++struct H {
++    perm: MidnightPoseidonFr,
++}
++impl H {
++    fn pfr4(&self, t: u32, d: &D) -> Fr {
++        fixed_len_hash(
++            &self.perm,
++            4,
++            &[tag_fr(PUB_TAGS[t as usize]), pack_words(d)],
++        )
++    }
++    /// `transientHash` = the `u = 0` Midnight fixed-length sponge (parity checked on the
++    /// compiled contract runtime, `fp3-closure/fp3.test.mjs`).
++    fn h0(&self, xs: &[Fr]) -> Fr {
++        fixed_len_hash(&self.perm, 0, xs)
++    }
++    fn perm(&self, s: [Fr; 3]) -> [Fr; 3] {
++        let mut s = s;
++        self.perm.permute_mut(&mut s);
++        s
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// Values: the vd form Fr, outcomes, claims, SET forms
++// ---------------------------------------------------------------------------------------------
++
++/// The new `sherlock-value/2` form `Fr x`: `(form 8, arity 0, x: fr)`; `form` widens from
++/// `tag(3)` to `tag(4)`, which changes no word of the forms 0 to 7.
++fn vd_fr(x: Fr) -> D {
++    p2(SHK_VALUE_V2, &cat(&[&bw(&[2, 8, 0, 0]), &limbs(x)]))
++}
++fn vd_nil() -> D {
++    p2(SHK_VALUE_V2, &bw(&[2, 2, 0, 0]))
++}
++fn vd_cons(h: &D, t: &D) -> D {
++    p2(SHK_VALUE_V2, &cat(&[&bw(&[2, 3, 2, 0]), h, t]))
++}
++/// `vd` of the list `[x_0, .., x_(n-1)]` of Fr values.
++fn vd_fr_list(xs: &[Fr]) -> D {
++    xs.iter()
++        .rev()
++        .fold(vd_nil(), |t, x| vd_cons(&vd_fr(*x), &t))
++}
++fn outcome_halted(v: &D) -> D {
++    p2(SHK_OUTCOME_V2, &cat(&[&bw(&[2, 0]), v]))
++}
++fn outcome_running() -> D {
++    // The header of a non-terminal state: outcome tag 3 (Running), payload zero (FP-5).
++    [B::ZERO; 8]
++}
++fn input_d(salt: u32, val: &D) -> D {
++    let s: Vec<u32> = (0..8).map(|i| salt + i).collect();
++    p2(
++        SHK_IN,
++        &cat(&[&bw(&s), val, &u64w(0), &u64w(1), &u64w(1 << 16)]),
++    )
++}
++fn claim_d(prog: &D, inp: &D, out: &D) -> D {
++    p2(SHK_RUN, &cat(&[&bw(&[1]), prog, inp, out]))
++}
++fn leaf(c: &D, n_steps: u64) -> D {
++    p2(SHK_SET_LEAF, &cat(&[c, &u64w(n_steps)]))
++}
++fn join(l: &D, r: &D) -> D {
++    p2(SHK_SET_JOIN, &cat(&[l, r]))
++}
++fn state_d(tag: u32, payload: &D, inp: &D) -> D {
++    let z = [B::ZERO; 8];
++    p2(SHK_SD2, &cat(&[&bw(&[tag]), payload, inp, &z, &z, &z]))
++}
++
++// ---------------------------------------------------------------------------------------------
++// Fact 1 (C): the Compact effect carrier
++// ---------------------------------------------------------------------------------------------
++
++const L_TX: usize = 1024;
++/// Anchor prefix words of the call vector (`2 .. 2 + A`); a constant of the template.
++const A: usize = 5;
++
++/// What `L` holds for a run root: the opened SET head and the witnessed claim preimage.
++struct RunOpening {
++    set_root: D,
++    head_claim: D,
++    n_steps: u64,
++    prog: D,
++    inp: D,
++    out: D,
++}
++
++/// `L` opens the SET head `LEAF(claim_d, n_steps)` against `set_root` and recomputes `claim_d`
++/// from its witnessed preimage (FP-3, LW-008).
++fn l_open_run(o: &RunOpening) -> Result<(), &'static str> {
++    if leaf(&o.head_claim, o.n_steps) != o.set_root {
++        return Err("SET head");
++    }
++    if claim_d(&o.prog, &o.inp, &o.out) != o.head_claim {
++        return Err("claim preimage");
++    }
++    Ok(())
++}
++
++/// Fact 1 (C): a Compact call halts with `Halted(v)`, `v` the Fr list `[comm, E_0 .. E_(L_e-1)]`.
++/// `L` opens `outcome_d` to `vd(v)` from the witnessed list and requires lane 1 = `comm`, lanes
++/// `2 + A + i` = `E_i`, and every lane from `2 + A + L_e` to `1 + L_TX` zero.
++fn l_check_compact_effects(o: &RunOpening, list: &[Fr], cv: &[Fr]) -> Result<(), &'static str> {
++    l_open_run(o)?;
++    if cv.len() != 2 + L_TX || list.is_empty() || list.len() - 1 > L_TX - A {
++        return Err("shape");
++    }
++    if outcome_halted(&vd_fr_list(list)) != o.out {
++        return Err("outcome opening");
++    }
++    if cv[1] != list[0] {
++        return Err("comm lane");
++    }
++    let le = list.len() - 1;
++    for i in 0..le {
++        if cv[2 + A + i] != list[1 + i] {
++            return Err("effect lane");
++        }
++    }
++    if cv[2 + A + le..].iter().any(|x| *x != Fr::ZERO) {
++        return Err("lane after the effect region");
++    }
++    Ok(())
++}
++
++/// A two-shard Compact run: shard 1 ends Running with an intermediate effect list, shard 2
++/// halts with the final list. The SEAL opens the terminal header (`post_d` of shard 2) and
++/// gives `LEAF(claim_d, n_steps)` with `claim_d` over the terminal outcome.
++struct Run2 {
++    open: RunOpening,
++    final_list: Vec<Fr>,
++    mid_list: Vec<Fr>,
++}
++
++fn run2() -> Run2 {
++    let prog = p2(5, &bw(&[1, 2, 3]));
++    let inp = input_d(1, &p2(SHK_VALUE_V2, &[]));
++    let comm = Fr::from_u64(0xc0ffee);
++    let final_list = vec![comm, Fr::from_u64(11), Fr::from_u64(12), -Fr::ONE];
++    let mid_list = vec![comm, Fr::from_u64(11), Fr::ZERO, Fr::ZERO];
++    // Shard 1 post state: Running; shard 2 post state: Halted(final list).
++    let post1 = state_d(3, &outcome_running(), &inp);
++    let v = vd_fr_list(&final_list);
++    let post2 = state_d(0, &v, &inp);
++    assert_ne!(post1, post2);
++    let out = outcome_halted(&v);
++    let c = claim_d(&prog, &inp, &out);
++    let n = 2 * 4096;
++    Run2 {
++        open: RunOpening {
++            set_root: leaf(&c, n),
++            head_claim: c,
++            n_steps: n,
++            prog,
++            inp,
++            out,
++        },
++        final_list,
++        mid_list,
++    }
++}
++
++fn call_vector(binding: Fr, list: &[Fr]) -> Vec<Fr> {
++    let mut cv = vec![Fr::ZERO; 2 + L_TX];
++    cv[0] = binding;
++    cv[1] = list[0];
++    for i in 0..A {
++        cv[2 + i] = Fr::from_u64(0x30 + i as u64); // anchor prefix words (not checked here)
++    }
++    for (i, e) in list[1..].iter().enumerate() {
++        cv[2 + A + i] = *e;
++    }
++    cv
++}
++
++#[test]
++fn pos_fp3_effect_multishard() {
++    let r = run2();
++    let cv = call_vector(Fr::from_u64(77), &r.final_list);
++    assert_eq!(l_check_compact_effects(&r.open, &r.final_list, &cv), Ok(()));
++}
++
++#[test]
++fn fp3_effect_forged() {
++    let r = run2();
++    let good = call_vector(Fr::from_u64(77), &r.final_list);
++    // (1) A changed effect word in the call vector.
++    let mut cv = good.clone();
++    cv[2 + A + 1] += Fr::ONE;
++    assert_eq!(
++        l_check_compact_effects(&r.open, &r.final_list, &cv),
++        Err("effect lane")
++    );
++    // (2) A changed comm.
++    let mut cv = good.clone();
++    cv[1] += Fr::ONE;
++    assert_eq!(
++        l_check_compact_effects(&r.open, &r.final_list, &cv),
++        Err("comm lane")
++    );
++    // (3) The effect words of the first shard's state, with a list witness that matches them.
++    let cv = call_vector(Fr::from_u64(77), &r.mid_list);
++    assert_eq!(
++        l_check_compact_effects(&r.open, &r.mid_list, &cv),
++        Err("outcome opening")
++    );
++    // (4) The honest list witness with the first shard's words in the call vector.
++    assert_eq!(
++        l_check_compact_effects(&r.open, &r.final_list, &cv),
++        Err("effect lane")
++    );
++    // (5) A non-zero word after the effect region.
++    let mut cv = good.clone();
++    cv[2 + A + r.final_list.len()] = Fr::ONE;
++    assert_eq!(
++        l_check_compact_effects(&r.open, &r.final_list, &cv),
++        Err("lane after the effect region")
++    );
++    // (6) A shorter list witness (drop the last effect word) against the honest lanes.
++    let short = &r.final_list[..r.final_list.len() - 1];
++    assert_eq!(
++        l_check_compact_effects(&r.open, short, &good),
++        Err("outcome opening")
++    );
++    // (7) Another claim's head under the same set root.
++    let mut o2 = run2().open;
++    o2.head_claim[0] += B::ONE;
++    assert_eq!(
++        l_check_compact_effects(&o2, &r.final_list, &good),
++        Err("SET head")
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// Check (i) for general runs, the lane map and the SPONGE(3) binding of claim_pub
++// ---------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug, PartialEq)]
++enum Ent {
++    /// `DIGEST(t)`: operand `pack(d2)`, output.
++    Digest(u32, Fr, Fr),
++    /// `SPONGE(3)`: inputs and output.
++    Sponge3([Fr; 3], Fr),
++}
++
++fn valid(h: &H, e: &Ent) -> bool {
++    match e {
++        Ent::Digest(t, x, o) => {
++            *o == fixed_len_hash(&h.perm, 4, &[tag_fr(PUB_TAGS[*t as usize]), *x])
++        }
++        Ent::Sponge3(i, o) => *o == h.h0(i),
++    }
++}
++fn out(e: &Ent) -> Fr {
++    match e {
++        Ent::Digest(_, _, o) | Ent::Sponge3(_, o) => *o,
++    }
++}
++
++/// The run statement entries of `R` for `acceptRun` (owner ruling: `claim_pub` by a logged
++/// `SPONGE(3)` over the three `DIGEST` outputs), in the order the planner places them.
++fn run_entries(h: &H, r_p: &D, o: &RunOpening) -> Vec<Ent> {
++    let d2c = p2(DOM_PROGC, &cat(&[r_p, &o.prog]));
++    let hide = p2(DOM_OUTHIDE, &cat(&[&o.inp, &o.out]));
++    let c_p = h.pfr4(T_PROGC, &d2c);
++    let inp = h.pfr4(T_INPUT, &o.inp);
++    let outp = h.pfr4(T_OUTCOME, &hide);
++    vec![
++        Ent::Digest(T_PROGC, pack_words(&d2c), c_p),
++        Ent::Digest(T_INPUT, pack_words(&o.inp), inp),
++        Ent::Digest(T_OUTCOME, pack_words(&hide), outp),
++        Ent::Sponge3([c_p, inp, outp], h.h0(&[c_p, inp, outp])),
++    ]
++}
++
++/// Check (i), in `L`: the operands of the `R` entries are the forms of the opened claim, the
++/// `SPONGE(3)` inputs are the three `DIGEST` outputs in order; every entry is valid (the wrap's
++/// replay). Then the wrap's lane map: lane `l` equals the output of entry `e`.
++fn l_check_general(
++    h: &H,
++    o: &RunOpening,
++    r_p: &D,
++    log: &[Ent],
++    lane_map: &[(usize, usize)],
++    cv: &[Fr],
++) -> Result<(), &'static str> {
++    l_open_run(o)?;
++    if log.len() < 4 {
++        return Err("R missing");
++    }
++    let d2c = p2(DOM_PROGC, &cat(&[r_p, &o.prog]));
++    let hide = p2(DOM_OUTHIDE, &cat(&[&o.inp, &o.out]));
++    let want = [(T_PROGC, d2c), (T_INPUT, o.inp), (T_OUTCOME, hide)];
++    for (i, (t, d)) in want.iter().enumerate() {
++        match &log[i] {
++            Ent::Digest(tt, x, _) if tt == t && *x == pack_words(d) => {}
++            _ => return Err("R operand"),
++        }
++    }
++    match &log[3] {
++        Ent::Sponge3(i, _) if *i == [out(&log[0]), out(&log[1]), out(&log[2])] => {}
++        _ => return Err("SPONGE(3) inputs"),
++    }
++    if !log.iter().all(|e| valid(h, e)) {
++        return Err("replay");
++    }
++    for &(l, e) in lane_map {
++        if e >= log.len() || cv[l] != out(&log[e]) {
++            return Err("lane map");
++        }
++    }
++    Ok(())
++}
++
++/// The `acceptRun` lanes of the compiled ledger contract (fact 2; `fp3-closure/lanes.json`),
++/// before the anchor prefix: `claim_pub` at 11 and 25, `outcome_pub` at 30.
++const RUN_LANES: [(usize, usize); 3] = [(11, 3), (25, 3), (30, 2)];
++
++fn general_case(h: &H) -> (RunOpening, D, Vec<Ent>, Vec<Fr>) {
++    let prog = p2(5, &bw(&[9, 9, 9]));
++    let inp = input_d(100, &p2(SHK_VALUE_V2, &[]));
++    let outd = outcome_halted(&vd_fr_list(&[Fr::from_u64(42)]));
++    let c = claim_d(&prog, &inp, &outd);
++    let o = RunOpening {
++        set_root: leaf(&c, 1000),
++        head_claim: c,
++        n_steps: 1000,
++        prog,
++        inp,
++        out: outd,
++    };
++    let r_p = [B::from_u32(7); 8];
++    let log = run_entries(h, &r_p, &o);
++    let mut cv = vec![Fr::ZERO; 2 + L_TX];
++    for &(l, e) in &RUN_LANES {
++        cv[l] = out(&log[e]);
++    }
++    (o, r_p, log, cv)
++}
++
++#[test]
++fn pos_fp3_general_run_check_i() {
++    let h = H {
++        perm: MidnightPoseidonFr::new(),
++    };
++    let (o, r_p, log, cv) = general_case(&h);
++    assert_eq!(l_check_general(&h, &o, &r_p, &log, &RUN_LANES, &cv), Ok(()));
++}
++
++#[test]
++fn fp3_general_run_check_i_refusals() {
++    let h = H {
++        perm: MidnightPoseidonFr::new(),
++    };
++    let (o, r_p, log, cv) = general_case(&h);
++    // An input digest of another input_d (a valid DIGEST entry, wrong operand).
++    let other = input_d(200, &p2(SHK_VALUE_V2, &[]));
++    let mut l2 = log.clone();
++    l2[1] = Ent::Digest(T_INPUT, pack_words(&other), h.pfr4(T_INPUT, &other));
++    assert_eq!(
++        l_check_general(&h, &o, &r_p, &l2, &RUN_LANES, &cv),
++        Err("R operand")
++    );
++    // outcome_pub over the unsalted outcome_d (FP-4 control outcome_pub_unsalted).
++    let mut l2 = log.clone();
++    l2[2] = Ent::Digest(T_OUTCOME, pack_words(&o.out), h.pfr4(T_OUTCOME, &o.out));
++    assert_eq!(
++        l_check_general(&h, &o, &r_p, &l2, &RUN_LANES, &cv),
++        Err("R operand")
++    );
++    // SPONGE(3) inputs in another order.
++    let mut l2 = log.clone();
++    let (a, b, c) = (out(&log[0]), out(&log[1]), out(&log[2]));
++    l2[3] = Ent::Sponge3([b, a, c], h.h0(&[b, a, c]));
++    assert_eq!(
++        l_check_general(&h, &o, &r_p, &l2, &RUN_LANES, &cv),
++        Err("SPONGE(3) inputs")
++    );
++    // A false SPONGE(3) output (claim_pub of another statement).
++    let mut l2 = log.clone();
++    l2[3] = Ent::Sponge3([a, b, c], h.h0(&[a, b, b]));
++    assert_eq!(
++        l_check_general(&h, &o, &r_p, &l2, &RUN_LANES, &cv),
++        Err("replay")
++    );
++    // A call vector whose claim_pub lane holds another value.
++    let mut cv2 = cv.clone();
++    cv2[25] += Fr::ONE;
++    assert_eq!(
++        l_check_general(&h, &o, &r_p, &log, &RUN_LANES, &cv2),
++        Err("lane map")
++    );
++    // The C_P operand under another r_P.
++    let r2 = [B::from_u32(8); 8];
++    assert_eq!(
++        l_check_general(&h, &o, &r2, &log, &RUN_LANES, &cv),
++        Err("R operand")
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// Fact 3 (a): opening by proof
++// ---------------------------------------------------------------------------------------------
++
++/// The `L` relation of an opening proof: the root statement is `SUB(set_root, x)` (DESCEND
++/// nodes, GP-2 hook item 3); `L` opens `x` as `LEAF(claim_d, n_steps)` (or `DEP`), recomputes
++/// `claim_d`, and its `R` is the run statement entries plus `DIGEST(SHK_SET)` over
++/// `pack(set_root)` (index 4 of the log). `JOIN` has no head claim and is refused.
++fn l_check_open(
++    h: &H,
++    sub: (D, D),
++    o: &RunOpening,
++    r_p: &D,
++    log: &[Ent],
++) -> Result<(), &'static str> {
++    let (set_root, x) = sub;
++    if leaf(&o.head_claim, o.n_steps) != x {
++        return Err("head opening");
++    }
++    if claim_d(&o.prog, &o.inp, &o.out) != o.head_claim {
++        return Err("claim preimage");
++    }
++    let ro = RunOpening {
++        set_root: x,
++        head_claim: o.head_claim,
++        n_steps: o.n_steps,
++        prog: o.prog,
++        inp: o.inp,
++        out: o.out,
++    };
++    l_check_general(h, &ro, r_p, &log[..4], &[], &[])?;
++    match log.get(4) {
++        Some(Ent::Digest(T_SET, s, _)) if *s == pack_words(&set_root) => {}
++        _ => return Err("set_root digest"),
++    }
++    if !valid(h, &log[4]) {
++        return Err("replay");
++    }
++    Ok(())
++}
++
++struct Coll {
++    runs: Vec<(RunOpening, D, Vec<Ent>)>,
++    set_root: D,
++    reg_root: D,
++}
++
++fn collection(h: &H) -> Coll {
++    let mut runs = Vec::new();
++    for k in 0..3u32 {
++        let prog = p2(5, &bw(&[k, 1]));
++        let inp = input_d(1000 * (k + 1), &p2(SHK_VALUE_V2, &[]));
++        let outd = outcome_halted(&vd_fr_list(&[Fr::from_u64(k as u64)]));
++        let c = claim_d(&prog, &inp, &outd);
++        let n = 5000 + k as u64;
++        let o = RunOpening {
++            set_root: leaf(&c, n),
++            head_claim: c,
++            n_steps: n,
++            prog,
++            inp,
++            out: outd,
++        };
++        let r_p = [B::from_u32(50 + k); 8];
++        let log = run_entries(h, &r_p, &o);
++        runs.push((o, r_p, log));
++    }
++    let set_root = join(
++        &join(&runs[0].0.set_root, &runs[1].0.set_root),
++        &runs[2].0.set_root,
++    );
++    Coll {
++        runs,
++        set_root,
++        reg_root: p2(5, &bw(&[0xee])),
++    }
++}
++
++#[test]
++fn pos_fp3_open_by_proof() {
++    let h = H {
++        perm: MidnightPoseidonFr::new(),
++    };
++    let c = collection(&h);
++    for (o, r_p, log) in &c.runs {
++        let mut l = log.clone();
++        l.push(Ent::Digest(
++            T_SET,
++            pack_words(&c.set_root),
++            h.pfr4(T_SET, &c.set_root),
++        ));
++        assert_eq!(
++            l_check_open(&h, (c.set_root, o.set_root), o, r_p, &l),
++            Ok(())
++        );
++    }
++}
++
++#[test]
++fn fp3_open_by_proof_refusals() {
++    let h = H {
++        perm: MidnightPoseidonFr::new(),
++    };
++    let c = collection(&h);
++    let (o, r_p, log) = &c.runs[1];
++    let mut l = log.clone();
++    l.push(Ent::Digest(
++        T_SET,
++        pack_words(&c.set_root),
++        h.pfr4(T_SET, &c.set_root),
++    ));
++    // A JOIN offered as a head claim.
++    let j = join(&c.runs[0].0.set_root, &c.runs[1].0.set_root);
++    assert_eq!(
++        l_check_open(&h, (c.set_root, j), o, r_p, &l),
++        Err("head opening")
++    );
++    // The head of run 0 with the claim of run 1.
++    assert_eq!(
++        l_check_open(&h, (c.set_root, c.runs[0].0.set_root), o, r_p, &l),
++        Err("head opening")
++    );
++    // The set_root digest over another root.
++    let mut l2 = l.clone();
++    l2[4] = Ent::Digest(T_SET, pack_words(&c.reg_root), h.pfr4(T_SET, &c.reg_root));
++    assert_eq!(
++        l_check_open(&h, (c.set_root, o.set_root), o, r_p, &l2),
++        Err("set_root digest")
++    );
++    // A different n_steps in the head (the claim stays private; the head must match).
++    let o2 = RunOpening {
++        set_root: o.set_root,
++        head_claim: o.head_claim,
++        n_steps: o.n_steps + 1,
++        prog: o.prog,
++        inp: o.inp,
++        out: o.out,
++    };
++    assert_eq!(
++        l_check_open(&h, (c.set_root, o.set_root), &o2, r_p, &l),
++        Err("head opening")
++    );
++}
++
++/// The values the contract tests use, and the `transientHash` parity inputs.
++#[test]
++fn fp3_values() {
++    let h = H {
++        perm: MidnightPoseidonFr::new(),
++    };
++    let c = collection(&h);
++    let mut lines = Vec::new();
++    for n in [1usize, 2, 3, 5, 16] {
++        let xs: Vec<Fr> = (1..=n as u64).map(Fr::from_u64).collect();
++        lines.push(format!("parity.u0[{n}] = {}", hex(h.h0(&xs))));
++    }
++    // XC-3b also names the empty input: the u = 0 sponge with no input permutes nothing.
++    lines.push(format!("parity.u0[0] = {}", hex(h.h0(&[]))));
++    let mut s = [Fr::ZERO, Fr::ZERO, Fr::from_u64(3)];
++    s[0] += Fr::from_u64(1);
++    s[1] += Fr::from_u64(2);
++    let s = h.perm(s);
++    let s = h.perm([s[0] + Fr::from_u64(3), s[1], s[2]]);
++    assert_eq!(s[0], h.h0(&[Fr::ONE, Fr::from_u64(2), Fr::from_u64(3)]));
++    lines.push(format!(
++        "coll.reg_pub = {}",
++        hex(h.pfr4(T_REG, &c.reg_root))
++    ));
++    lines.push(format!(
++        "coll.set_pub = {}",
++        hex(h.pfr4(T_SET, &c.set_root))
++    ));
++    lines.push(format!(
++        "coll.set_root_pack = {}",
++        hex(pack_words(&c.set_root))
++    ));
++    for (k, (o, _, log)) in c.runs.iter().enumerate() {
++        lines.push(format!("coll.run[{k}].c_p = {}", hex(out(&log[0]))));
++        lines.push(format!("coll.run[{k}].input_pub = {}", hex(out(&log[1]))));
++        lines.push(format!("coll.run[{k}].outcome_pub = {}", hex(out(&log[2]))));
++        lines.push(format!("coll.run[{k}].claim_pub = {}", hex(out(&log[3]))));
++        lines.push(format!(
++            "coll.run[{k}].claim_d_pack = {}",
++            hex(pack_words(&o.head_claim))
++        ));
++        lines.push(format!(
++            "coll.run[{k}].head_pack = {}",
++            hex(pack_words(&o.set_root))
++        ));
++        lines.push(format!("coll.run[{k}].n_steps = {}", o.n_steps));
++    }
++    if std::env::var("FP3_PRINT").is_ok() {
++        for l in &lines {
++            println!("FP3 {l}");
++        }
++    }
++    assert_eq!(lines.len(), 6 + 3 + 21);
++}
+-- 
+2.56.0
+

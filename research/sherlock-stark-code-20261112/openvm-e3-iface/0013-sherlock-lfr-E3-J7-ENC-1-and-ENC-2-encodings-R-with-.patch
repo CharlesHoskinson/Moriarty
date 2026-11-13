@@ -1,0 +1,770 @@
+From 6d70a4539c0af18658ea5fb429688132309ae5a7 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 22:33:47 -0700
+Subject: [PATCH 13/19] sherlock-lfr: E3 J7, ENC-1 and ENC-2 encodings, R with
+ claim_pub and chunk anchors, native replay of R in L_Fr
+
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs |   7 +-
+ crates/sherlock-lfr/src/iface.rs              | 307 +++++++++++++++---
+ crates/sherlock-lfr/src/lverify.rs            | 150 ++++++++-
+ crates/sherlock-lfr/tests/j1_public.rs        |   2 +-
+ crates/sherlock-lfr/tests/j5_gate.rs          |  64 +++-
+ 5 files changed, 469 insertions(+), 61 deletions(-)
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+index 87f25b6..6592ff2 100644
+--- a/crates/sherlock-lfr/examples/iface_fixture.rs
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -100,12 +100,17 @@ fn node_proof(
+     (vk, proof)
+ }
+ 
+-pub const CASES: [(Case, &str, u64); 5] = [
++pub const CASES: [(Case, &str, u64); 10] = [
+     (Case::FullV, "full_v", 11),
+     (Case::FullP, "full_p", 12),
+     (Case::Overflow, "overflow", 13),
+     (Case::MissingR, "missing_r", 11),
+     (Case::AllEntries, "all_entries", 14),
++    (Case::Chunk { j: 1, k: 3 }, "chunk_1", 15),
++    (Case::Chunk { j: 2, k: 3 }, "chunk_mid", 16),
++    (Case::Chunk { j: 3, k: 3 }, "chunk_k", 17),
++    (Case::AnchorTagSwapped, "anchor_tag_swapped", 16),
++    (Case::DigestForged, "digest_forged", 11),
+ ];
+ 
+ fn main() {
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index f4d7cbf..f82f70f 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -10,8 +10,17 @@
+ //!   every capacity limit and its per-operation bound still hold; otherwise it goes to tier E.
+ //! - The decoder of the `L_Fr` public words (plan D-9): the wrap's reading of the statement.
+ //!
+-//! Placeholders (plan D-8, ENC-1 and ENC-2 open): the Fr tag of `DIGEST` tag index `k` is
+-//! `Fr(k + 1)`; `PATH` hashes a node as `H2(l, r)` with the index bit choosing the order.
++//! Encodings (E3 J7, ENC-1 and ENC-2 of `research/sherlock-enc-fp3-20261112/RESULTS.md`, owner
++//! rulings P-1, P-2): the Fr tag of `DIGEST` tag index `k` is the ASCII name of tag `k` read as a
++//! little-endian `u128`; `DIGEST` logs `(pack(d2), PoseidonFr_4(tagFr(k), pack(d2)))`. Still a
++//! placeholder (no text fixes it): `PATH` hashes a node as `H2(l, r)` with the index bit choosing
++//! the order.
++//!
++//! The reservation `R` (ARCHITECTURE 1.8 after FP-3): the run entries `DIGEST(SHK_PROGC)`,
++//! `DIGEST(SHK_INPUT)`, `DIGEST(SHK_OUTCOME)`, the `SPONGE(3)` of `claim_pub` over their three
++//! outputs, then the anchor reservation `R_A`: one `DIGEST(SHK_PROGC)` (ordinary call, `e_in =
++//! e_out = 4`) or two `DIGEST` entries (chunk `j` of `k`: `e_in = 4`, `e_out = 5`, tags by the
++//! anchor rule). The order is a LEAD pick of E3 (plan D-10).
+ 
+ use num_bigint::BigUint;
+ use openvm_stark_backend::p3_field::{Field, PrimeCharacteristicRing, PrimeField};
+@@ -46,7 +55,28 @@ pub const SHK_PROGC: u64 = 0;
+ pub const SHK_LOCK: u64 = 1;
+ pub const SHK_INPUT: u64 = 2;
+ pub const SHK_OUTCOME: u64 = 3;
+-pub const N_TAGS: u64 = 4;
++pub const SHK_REG: u64 = 4;
++pub const SHK_SET: u64 = 5;
++pub const N_TAGS: u64 = 6;
++/// ASCII names of the tags, in index order (ENC-1, P-1 and P-2).
++pub const TAG_NAMES: [&str; 6] = [
++    "SHK_PROGC",
++    "SHK_LOCK",
++    "SHK_INPUT",
++    "SHK_OUTCOME",
++    "SHK_REG",
++    "SHK_SET",
++];
++/// Anchor statement words after `mode` (FP-1 types; the `u32` limbs low first, a LEAD pick).
++pub const J_WORDS: usize = MODE_WORD + 1;
++pub const K_WORDS: usize = MODE_WORD + 3;
++pub const E_IN_WORD: usize = MODE_WORD + 5;
++pub const E_OUT_WORD: usize = MODE_WORD + 6;
++/// `R` of plan D-10: entries 0 to 3 the run entries, entry 4 the `a_in` anchor, entry 5 the
++/// `a_out` anchor of a chunk; the values of entry `i` start at `R_OFF[i]`.
++pub const R_RUN: [u64; 3] = [SHK_PROGC, SHK_INPUT, SHK_OUTCOME];
++pub const R_OFF: [usize; 6] = [0, 2, 4, 6, 10, 12];
++pub const ANCHOR_IN: usize = 4;
+ /// Most `PATH` depth (the Compact maximum).
+ pub const PATH_MAX: u64 = 32;
+ 
+@@ -133,8 +163,20 @@ pub fn bounds(d: &Dims, op: u64) -> Option<(u64, u64)> {
+     }
+ }
+ 
++/// ENC-1: the ASCII name of tag `k`, zero padded to 16 bytes, read as a little-endian `u128`.
+ pub fn tag_fr(k: u64) -> Fr {
+-    Fr::from_u64(k + 1)
++    let name = TAG_NAMES[k as usize].as_bytes();
++    assert!(name.len() <= 16);
++    let mut b = [0u8; 16];
++    b[..name.len()].copy_from_slice(name);
++    let v = u128::from_le_bytes(b);
++    Fr::from_u64((v >> 64) as u64) * Fr::from_u64(1 << 32) * Fr::from_u64(1 << 32)
++        + Fr::from_u64(v as u64)
++}
++
++/// `cap(4, 2) = 2 + 4 * 2^66`, the initial capacity of `PoseidonFr_4`.
++pub fn cap_digest() -> Fr {
++    Fr::from_u64(2) + Fr::from_u64(4) * two66()
+ }
+ 
+ fn two66() -> Fr {
+@@ -359,8 +401,8 @@ impl Run {
+         w
+     }
+ 
+-    /// The native statement: the call vector with the lane-map lanes set to the outputs of their
+-    /// `DIGEST` entries.
++    /// The native statement: the call vector with the lane-map lanes set to the outputs (the last
++    /// value) of their `DIGEST` or `SPONGE` entries.
+     pub fn statement(&self) -> Vec<Fr> {
+         let mut s = self.lanes.clone();
+         for &(lane, ent) in &self.lane_map {
+@@ -368,8 +410,8 @@ impl Run {
+                 continue;
+             }
+             let e = &self.log[ent as usize];
+-            assert_eq!(e.op, DIGEST);
+-            s[lane as usize] = e.values[1];
++            assert!(e.op == DIGEST || e.op == SPONGE);
++            s[lane as usize] = *e.values.last().unwrap();
+         }
+         s
+     }
+@@ -404,9 +446,41 @@ pub fn unpack(lfr_words: &[Fr], n_words: usize) -> Result<Vec<u64>, String> {
+     Ok(out)
+ }
+ 
++/// The anchor tags of plan D-10 from the anchor statement words: `(tag_in, tag_out)`, `None`
++/// unless `mode` is 0 or 1. ORD, or chunk 1 (`a_in`) and chunk `k` (`a_out`): `SHK_PROGC`;
++/// otherwise `SHK_LOCK`.
++pub fn anchor_tags(head: &[u64]) -> Option<(u64, u64)> {
++    let mode = head[MODE_WORD];
++    let u32w = |at: usize| head[at] + (head[at + 1] << 16);
++    let (j, k) = (u32w(J_WORDS), u32w(K_WORDS));
++    match mode {
++        0 => Some((SHK_PROGC, SHK_PROGC)),
++        1 => Some((
++            if j == 1 { SHK_PROGC } else { SHK_LOCK },
++            if j == k { SHK_PROGC } else { SHK_LOCK },
++        )),
++        _ => None,
++    }
++}
++
++/// The expected `(op, param)` of the entries of `R` (plan D-10) for the anchor statement.
++pub fn r_entries(head: &[u64]) -> Option<Vec<(u64, u64)>> {
++    let (ti, to) = anchor_tags(head)?;
++    let mut r: Vec<(u64, u64)> = R_RUN.iter().map(|&t| (DIGEST, t)).collect();
++    r.push((SPONGE, 3));
++    r.push((DIGEST, ti));
++    if head[MODE_WORD] == 1 {
++        r.push((DIGEST, to));
++    }
++    Some(r)
++}
++
+ /// The decoder of plan D-9: the statement words that the wrap reads from the `L_Fr` public
+-/// words. Checks range and `Canon` of every lane and logged value, the padding rules, the lane
+-/// map (each mapped entry a `DIGEST`) and every `PUB(i)` against lane `i`.
++/// words. Checks range and `Canon` of every lane and logged value, the padding rules, `R` and the
++/// anchor rule (plan D-10), the native replay of every entry whose values are all in `pv`
++/// (`PERM`, `H2`, `SPONGE`, `DIGEST`; `PATH` needs the wrap-private siblings), the lane map (each
++/// mapped entry a `DIGEST` or a `SPONGE`, its output the lane) and every `PUB(i)` against lane
++/// `i`.
+ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+     let w = unpack(lfr_words, d.words())?;
+     let mut lanes = vec![];
+@@ -442,17 +516,44 @@ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+     if vs[off..].iter().any(|x| *x != Fr::ZERO) {
+         return Err("value row after off_n not zero".into());
+     }
++    let r = r_entries(&w[..STMT]).ok_or("mode")?;
++    for (i, want) in r.iter().enumerate() {
++        if (offs[i].0, offs[i].1) != *want {
++            return Err(format!("R entry {i}"));
++        }
++    }
++    let mode = w[MODE_WORD] as usize;
++    if w[E_IN_WORD] != ANCHOR_IN as u64 || w[E_OUT_WORD] != (ANCHOR_IN + mode) as u64 {
++        return Err("anchor entry words".into());
++    }
++    let sp = R_OFF[3];
++    if vs[sp..sp + 3] != [vs[R_OFF[0] + 1], vs[R_OFF[1] + 1], vs[R_OFF[2] + 1]] {
++        return Err("claim_pub inputs are not the run DIGEST outputs".into());
++    }
++    for (i, &(op, param, o)) in offs.iter().enumerate() {
++        let v = &vs[o..o + vals(op, param)];
++        let ok = match op {
++            PERM => perm([v[0], v[1], v[2]]) == [v[3], v[4], v[5]],
++            H2 => h2(v[0], v[1]) == v[2],
++            SPONGE => sponge_u(0, &v[..param as usize]) == v[param as usize],
++            DIGEST => digest(param, v[0]) == v[1],
++            _ => true,
++        };
++        if !ok {
++            return Err(format!("entry {i}: native replay"));
++        }
++    }
+     let mut s = lanes;
+     for k in 0..LANE_PAIRS {
+         let (lane, ent) = (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1]);
+         if (lane, ent) == (0, 0) {
+             continue;
+         }
+-        let (op, _, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
+-        if op != DIGEST || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
++        let (op, param, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
++        if !(op == DIGEST || op == SPONGE) || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
+             return Err(format!("lane map pair {k}"));
+         }
+-        s[lane as usize] = vs[o + 1];
++        s[lane as usize] = vs[o + vals(op, param) - 1];
+     }
+     for &(op, param, o) in &offs {
+         if op == PUB && s[param as usize] != vs[o] {
+@@ -469,7 +570,7 @@ fn rfr(rng: &mut StdRng) -> Fr {
+     hi * two66() * two66() + lo + t * two66()
+ }
+ 
+-/// Test cases of plan J3 (all at one key).
++/// Test cases of plan J3 and J7 (all at one key).
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub enum Case {
+     /// The discretionary operations fill `V` exactly.
+@@ -480,37 +581,93 @@ pub enum Case {
+     Overflow,
+     /// `FullV` with the `SHK_INPUT` entry of `R` removed (negative).
+     MissingR,
+-    /// The most non-`NOP` entries `B = V` allows: `R` and `V - 6` `PUB` entries (253 of 256 at
+-    /// `Dims::FULL`; every value slot used).
++    /// The most non-`NOP` entries `B = V` allows: `R` (5 entries, 12 values) and `V - 12` `PUB`
++    /// entries (249 of 256 at `Dims::FULL`; every value slot used).
+     AllEntries,
++    /// Chunk `j` of `k` (`mode` 1): `R_A` of two `DIGEST` entries under the anchor rule.
++    Chunk { j: u32, k: u32 },
++    /// Chunk 2 of 3 with the `a_in` entry under `SHK_PROGC` instead of `SHK_LOCK`, its value
++    /// recomputed (negative: `wrap_anchor_tag_swapped`).
++    AnchorTagSwapped,
++    /// `FullV` with the output of `DIGEST(SHK_PROGC)` changed, the `claim_pub` input and output
++    /// recomputed to match (negative: only the native `DIGEST` replay refuses it).
++    DigestForged,
+ }
+ 
+-/// The reservation `R` of an ordinary call: `DIGEST` of `SHK_PROGC`, `SHK_INPUT`,
+-/// `SHK_OUTCOME`.
+-pub fn reservation(rng: &mut StdRng) -> Vec<OpIn> {
+-    [SHK_PROGC, SHK_INPUT, SHK_OUTCOME]
++/// The reservation `R` of plan D-10 for anchor tags `(tag_in, tag_out)`: the run entries, the
++/// `SPONGE(3)` of `claim_pub`, then `R_A` (`chunk` adds the `a_out` entry).
++pub fn reservation(rng: &mut StdRng, tags: (u64, u64), chunk: bool) -> Vec<OpIn> {
++    let ds: Vec<Fr> = (0..3).map(|_| rfr(rng)).collect();
++    let mut r: Vec<OpIn> = R_RUN
+         .iter()
+-        .map(|&tag| OpIn::Digest { tag, d2: rfr(rng) })
+-        .collect()
++        .zip(&ds)
++        .map(|(&tag, &d2)| OpIn::Digest { tag, d2 })
++        .collect();
++    let outs: Vec<Fr> = R_RUN.iter().zip(&ds).map(|(&t, &d2)| digest(t, d2)).collect();
++    r.push(OpIn::Sponge(outs));
++    // An ordinary call's anchor is C_P (A_0 = C_P), the same operand as the SHK_PROGC entry.
++    let d_in = if tags.0 == SHK_PROGC { ds[0] } else { rfr(rng) };
++    r.push(OpIn::Digest { tag: tags.0, d2: d_in });
++    if chunk {
++        let d_out = if tags.1 == SHK_PROGC { ds[0] } else { rfr(rng) };
++        r.push(OpIn::Digest { tag: tags.1, d2: d_out });
++    }
++    r
+ }
+ 
++/// Lane of `popeq a_in` and the `acceptRun` lanes of `claim_pub` (twice) and `outcome_pub`
++/// (FP-3 fact 2, MEASURED from the zkir, shifted by an anchor prefix of 8 lanes: a LEAD pick,
++/// test data only).
++pub const LANE_A_IN: u64 = 9;
++pub const LANE_CLAIM: [u64; 2] = [19, 33];
++pub const LANE_OUTCOME: u64 = 38;
++
+ /// The run of a case (seeded), with its plan.
+ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+     let mut rng = StdRng::seed_from_u64(seed);
+-    let r = reservation(&mut rng);
++    let (mode, j, k) = match case {
++        Case::Chunk { j, k } => (1u64, j, k),
++        Case::AnchorTagSwapped => (1, 2, 3),
++        _ => (0, 0, 0),
++    };
++    let mut head: Vec<u64> = (0..STMT).map(|_| rng.random::<u64>() % P).collect();
++    head[MODE_WORD] = mode;
++    head[J_WORDS] = (j & 0xffff) as u64;
++    head[J_WORDS + 1] = (j >> 16) as u64;
++    head[K_WORDS] = (k & 0xffff) as u64;
++    head[K_WORDS + 1] = (k >> 16) as u64;
++    head[E_IN_WORD] = ANCHOR_IN as u64;
++    head[E_OUT_WORD] = ANCHOR_IN as u64 + mode;
++    let tags = anchor_tags(&head).unwrap();
++    let r = reservation(&mut rng, tags, mode == 1);
++    let r_vals: usize = r.iter().map(|o| o.entry().values.len()).sum();
++    let r_perms: usize = r
++        .iter()
++        .map(|o| {
++            let (op, param) = o.op_param();
++            perms(op, param)
++        })
++        .sum();
+     let mut lanes = vec![Fr::ZERO; d.lanes()];
+     lanes[0] = rfr(&mut rng);
+     lanes[1] = rfr(&mut rng);
+-    // Lanes 2, 3, 4 are the lane-map lanes (anchor prefix C_P, input_pub, outcome_pub).
+-    let first_effect = 5usize;
++    let mapped = [LANE_A_IN, LANE_CLAIM[0], LANE_CLAIM[1], LANE_OUTCOME];
++    let first_effect = 2usize;
+     let n_eff = (d.lanes() - first_effect).min(600);
+-    for l in lanes.iter_mut().skip(first_effect).take(n_eff) {
+-        *l = rfr(&mut rng);
++    for (i, l) in lanes.iter_mut().enumerate().skip(first_effect).take(n_eff) {
++        if !mapped.contains(&(i as u64)) {
++            *l = rfr(&mut rng);
++        }
+     }
+     let pubs = |rng: &mut StdRng, k: usize, lanes: &[Fr]| -> Vec<OpIn> {
+         (0..k)
+             .map(|_| {
+-                let lane = first_effect as u64 + rng.random_range(0..n_eff as u64);
++                let lane = loop {
++                    let l = first_effect as u64 + rng.random_range(0..n_eff as u64);
++                    if !mapped.contains(&l) {
++                        break l;
++                    }
++                };
+                 OpIn::Pub {
+                     lane,
+                     v: lanes[lane as usize],
+@@ -524,11 +681,11 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+         sibs: (0..depth).map(|_| rfr(rng)).collect(),
+     };
+     let s: Vec<OpIn> = match case {
+-        Case::FullV | Case::MissingR => {
+-            // R holds 6 values; mixed operations, then PUB to fill V exactly.
++        Case::FullV | Case::MissingR | Case::DigestForged | Case::Chunk { .. } | Case::AnchorTagSwapped => {
++            // Mixed operations, then PUB to fill V exactly.
+             let mut s = vec![];
+-            let k = (d.v / 32).max(1);
+-            for _ in 0..k {
++            let kk = (d.v / 32).max(1);
++            for _ in 0..kk {
+                 s.push(OpIn::Perm([rfr(&mut rng), rfr(&mut rng), rfr(&mut rng)]));
+                 s.push(OpIn::H2(rfr(&mut rng), rfr(&mut rng)));
+             }
+@@ -538,17 +695,16 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+                 tag: SHK_LOCK,
+                 d2: rfr(&mut rng),
+             });
+-            let used: usize = 6 + s.iter().map(|o| o.entry().values.len()).sum::<usize>();
++            let used: usize = r_vals + s.iter().map(|o| o.entry().values.len()).sum::<usize>();
+             assert!(used <= d.v);
+             s.extend(pubs(&mut rng, d.v - used, &lanes));
+             s
+         }
+-        Case::AllEntries => pubs(&mut rng, d.v - 6, &lanes),
++        Case::AllEntries => pubs(&mut rng, d.v - r_vals, &lanes),
+         Case::FullP => {
+-            // R holds 3 slots; PATH(32) until fewer than 32 slots are left, then one PATH of
+-            // the rest.
++            // PATH(32) until fewer than 32 slots are left, then one PATH of the rest.
+             let mut s = vec![];
+-            let mut left = d.p - 3;
++            let mut left = d.p - r_perms;
+             while left > 0 {
+                 let depth = left.min(PATH_MAX as usize);
+                 s.push(path(&mut rng, depth));
+@@ -572,12 +728,27 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+     };
+     let pl = plan(d, &r, &s);
+     let mut log = pl.log.clone();
+-    if case == Case::MissingR {
+-        log.remove(1);
++    match case {
++        Case::MissingR => {
++            log.remove(1);
++        }
++        Case::AnchorTagSwapped => {
++            let x = log[ANCHOR_IN].values[0];
++            log[ANCHOR_IN] = OpIn::Digest { tag: SHK_PROGC, d2: x }.entry();
++        }
++        Case::DigestForged => {
++            log[0].values[1] += Fr::ONE;
++            let outs = vec![log[0].values[1], log[1].values[1], log[2].values[1]];
++            log[3] = OpIn::Sponge(outs).entry();
++        }
++        _ => {}
+     }
+-    let mut head: Vec<u64> = (0..STMT).map(|_| rng.random::<u64>() % P).collect();
+-    head[MODE_WORD] = 0;
+-    let lane_map = [(2, 0), (3, 1), (4, 2), (0, 0)];
++    let lane_map = [
++        (LANE_A_IN, ANCHOR_IN as u64),
++        (LANE_CLAIM[0], 3),
++        (LANE_CLAIM[1], 3),
++        (LANE_OUTCOME, 2),
++    ];
+     (
+         Run {
+             dims: *d,
+@@ -594,6 +765,58 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn enc1_tags_and_input_pub_vector() {
++        // ENC-1 (research/sherlock-enc-fp3-20261112/RESULTS.md section 1 and VECTORS.txt).
++        let hex = |x: Fr| format!("{:064x}", x.as_canonical_biguint());
++        assert_eq!(hex(tag_fr(SHK_PROGC)), format!("{:0>64}", "43474f52505f4b4853"));
++        assert_eq!(hex(tag_fr(SHK_OUTCOME)), format!("{:0>64}", "454d4f4354554f5f4b4853"));
++        let input_d: [u64; 8] = [
++            1844765863, 1946263212, 480254560, 1610161683, 900750315, 731375867, 384171174,
++            1479089448,
++        ];
++        let mut x = BigUint::from(0u32);
++        for (i, &w) in input_d.iter().enumerate() {
++            x += BigUint::from(w) << (31 * i);
++        }
++        assert_eq!(
++            hex(digest(SHK_INPUT, fr_from_big(&x))),
++            "675781f2fdaf30f1e06631db92a4806ee474b86159f82f31d650f648fb6fc555"
++        );
++    }
++
++    #[test]
++    fn cases_decode_or_refuse() {
++        let d = Dims { b: 48, v: 48, p: 32, l_tx: 62 };
++        for (case, ok) in [
++            (Case::FullV, true),
++            (Case::FullP, true),
++            (Case::AllEntries, true),
++            (Case::Chunk { j: 1, k: 3 }, true),
++            (Case::Chunk { j: 2, k: 3 }, true),
++            (Case::Chunk { j: 3, k: 3 }, true),
++            (Case::MissingR, false),
++            (Case::AnchorTagSwapped, false),
++            (Case::DigestForged, false),
++        ] {
++            let (run, _) = case_run(&d, case, 5);
++            let w = run.words();
++            let mut lfr = vec![Fr::ZERO];
++            for c in w.chunks(8) {
++                let mut x = BigUint::from(0u32);
++                for (i, &v) in c.iter().enumerate() {
++                    x += BigUint::from(v) << (31 * i);
++                }
++                lfr.push(fr_from_big(&x));
++            }
++            let dec = decode(&d, &lfr);
++            assert_eq!(dec.is_ok(), ok, "{case:?}: {dec:?}");
++            if ok {
++                assert_eq!(dec.unwrap(), run.statement(), "{case:?}");
++            }
++        }
++    }
++
+     #[test]
+     fn layout_full_is_12164() {
+         assert_eq!(Dims::FULL.words(), 12_164);
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index bf8abff..83c91be 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -1595,18 +1595,144 @@ pub fn gen_verifier_full(
+     Ok((words, p1.public))
+ }
+ 
+-/// E3 plan D-7: the reservation `R` of an ordinary call, checked on the public words of `L`
+-/// (`l_pub`, the index table of `crate::iface`): the `mode` word is 0 and the first 3 entries
+-/// are `DIGEST` of `SHK_PROGC`, `SHK_INPUT`, `SHK_OUTCOME`. Key constants and `AssertEq` ops.
+-pub fn gen_r_check(g: &mut Gen, l_pub: &[Addr]) {
+-    use crate::iface::{DIGEST, MODE_WORD, SHK_INPUT, SHK_OUTCOME, SHK_PROGC, STMT};
+-    let mut want = vec![(MODE_WORD, 0u64)];
+-    for (i, tag) in [SHK_PROGC, SHK_INPUT, SHK_OUTCOME].into_iter().enumerate() {
+-        want.push((STMT + 2 * i, DIGEST));
+-        want.push((STMT + 2 * i + 1, tag));
++/// E3 plan D-7 and D-10: the reservation `R` and the anchor rule, checked on the public words of
++/// `L` (`l_pub`, the index table of `crate::iface`; `l_vals` their values, for the advice of the
++/// two zero tests), with the native replay of `R` (J7, the part of J6 that fits the key):
++///
++/// - `mode` is a bit; entries 0 to 3 are `DIGEST(SHK_PROGC)`, `DIGEST(SHK_INPUT)`,
++///   `DIGEST(SHK_OUTCOME)`, `SPONGE(3)`; entry 4 is `DIGEST(tag_in)`; with `mode` 1 entry 5 is
++///   `DIGEST(tag_out)`; `e_in = 4`, `e_out = 4 + mode`; `tag_in = mode (1 - [j = 1])`, `tag_out =
++///   mode (1 - [j = k])` (`SHK_PROGC` 0, `SHK_LOCK` 1).
++/// - The `SPONGE(3)` inputs are the 3 run `DIGEST` outputs (limb by limb).
++/// - Replay in native Fr: each `DIGEST` output is `Perm(tagFr, x, cap(4, 2))[0]` of its logged
++///   operand (entry 5 only when `mode` is 1), the `SPONGE(3)` output is the `u = 0` sponge of its
++///   inputs. Logged values enter as `sum_i limb_i 2^(30 i)` (`Pack` of each limb, `FrAdd`
++///   doubling); limb range and `Canon` stay with the reader (plan D-9).
++pub fn gen_r_check(g: &mut Gen, l_pub: &[Addr], l_vals: &[u64]) {
++    use crate::iface::{
++        cap_digest, tag_fr, Dims, ANCHOR_IN, DIGEST, E_IN_WORD, E_OUT_WORD, J_WORDS, K_WORDS,
++        LIMBS, LIMB_BITS, MODE_WORD, R_OFF, R_RUN, SHK_LOCK, SHK_PROGC, SPONGE, STMT,
++    };
++    let d = Dims::FULL;
++    assert_eq!(l_pub.len(), d.words());
++    let ent = |i: usize| (l_pub[STMT + 2 * i], l_pub[STMT + 2 * i + 1]);
++    let limb = |j: usize, t: usize| l_pub[d.values_at() + LIMBS * j + t];
++    let one = g.kbb(1);
++    let zero = g.kbb(0);
++    // mode is a bit
++    let mode = l_pub[MODE_WORD];
++    let m1 = g.sub(mode, one);
++    let mm = g.mul(mode, m1);
++    g.assert_eq(mm, zero);
++    // [a = 0] with advice (w, z): a w = 1 - z, a z = 0.
++    let is_zero = |g: &mut Gen, a: Addr, av: u64| -> Addr {
++        let x = BabyBear::from_u64(av);
++        let (w, z) = if av == 0 {
++            (BabyBear::ZERO, BabyBear::ONE)
++        } else {
++            (x.inverse(), BabyBear::ZERO)
++        };
++        let (w, z) = (g.bb_in(w), g.bb_in(z));
++        let aw = g.mul(a, w);
++        let one_z = g.sub(one, z);
++        g.assert_eq(aw, one_z);
++        let az = g.mul(a, z);
++        g.assert_eq(az, zero);
++        z
++    };
++    let p = crate::bb::P;
++    let wv = |i: usize| l_vals[i];
++    let (j_lo, j_hi, k_lo, k_hi) = (
++        l_pub[J_WORDS],
++        l_pub[J_WORDS + 1],
++        l_pub[K_WORDS],
++        l_pub[K_WORDS + 1],
++    );
++    let a = g.sub(j_lo, one);
++    let z1a = is_zero(g, a, (wv(J_WORDS) + p - 1) % p);
++    let z1b = is_zero(g, j_hi, wv(J_WORDS + 1));
++    let z_j1 = g.mul(z1a, z1b);
++    let a = g.sub(j_lo, k_lo);
++    let zka = is_zero(g, a, (wv(J_WORDS) + p - wv(K_WORDS)) % p);
++    let a = g.sub(j_hi, k_hi);
++    let zkb = is_zero(g, a, (wv(J_WORDS + 1) + p - wv(K_WORDS + 1)) % p);
++    let z_jk = g.mul(zka, zkb);
++    let nz = g.sub(one, z_j1);
++    let tag_in = g.mul(mode, nz);
++    let nz = g.sub(one, z_jk);
++    let tag_out = g.mul(mode, nz);
++    // entries of R
++    for (i, &t) in R_RUN.iter().enumerate() {
++        let (op, param) = ent(i);
++        let (kd, kt) = (g.kbb(DIGEST), g.kbb(t));
++        g.assert_eq(op, kd);
++        g.assert_eq(param, kt);
+     }
+-    for (w, v) in want {
+-        let k = g.kbb(v);
+-        g.assert_eq(l_pub[w], k);
++    let (op, param) = ent(3);
++    let (ks, k3) = (g.kbb(SPONGE), g.kbb(3));
++    g.assert_eq(op, ks);
++    g.assert_eq(param, k3);
++    let (op, param) = ent(ANCHOR_IN);
++    let kd = g.kbb(DIGEST);
++    g.assert_eq(op, kd);
++    g.assert_eq(param, tag_in);
++    let (op, param) = ent(ANCHOR_IN + 1);
++    let x = g.sub(op, kd);
++    let x = g.mul(mode, x);
++    g.assert_eq(x, zero);
++    let x = g.sub(param, tag_out);
++    let x = g.mul(mode, x);
++    g.assert_eq(x, zero);
++    let k4 = g.kbb(ANCHOR_IN as u64);
++    g.assert_eq(l_pub[E_IN_WORD], k4);
++    let e_out = g.add(k4, mode);
++    g.assert_eq(l_pub[E_OUT_WORD], e_out);
++    // SPONGE(3) inputs = the run DIGEST outputs, limb by limb
++    for (i, &o) in R_OFF[..3].iter().enumerate() {
++        for t in 0..LIMBS {
++            g.assert_eq(limb(R_OFF[3] + i, t), limb(o + 1, t));
++        }
+     }
++    // native replay
++    let fr_val = |g: &mut Gen, j: usize| -> Addr {
++        let mut acc = g.tape.pack(&[limb(j, LIMBS - 1)]);
++        for t in (0..LIMBS - 1).rev() {
++            for _ in 0..LIMB_BITS {
++                acc = g.tape.fr_add(acc, acc);
++            }
++            let l = g.tape.pack(&[limb(j, t)]);
++            acc = g.tape.fr_add(acc, l);
++        }
++        acc
++    };
++    let cap = g.tape.fr_const(cap_digest());
++    let (t_progc, t_lock) = (g.tape.fr_const(tag_fr(SHK_PROGC)), g.tape.fr_const(tag_fr(SHK_LOCK)));
++    let mut outs = vec![];
++    for (i, &t) in R_RUN.iter().enumerate() {
++        let x = fr_val(g, R_OFF[i]);
++        let y = fr_val(g, R_OFF[i] + 1);
++        let tk = g.tape.fr_const(tag_fr(t));
++        let o = g.tape.perm([tk, x, cap]);
++        g.assert_eq(o[0], y);
++        outs.push(y);
++    }
++    // SPONGE(3), u = 0: state (0, 0, 3); absorb (a, b), permute, absorb c, permute.
++    let k3 = g.tape.fr_const(Fr::from_u64(3));
++    let s = g.tape.perm([outs[0], outs[1], k3]);
++    let s0 = g.tape.fr_add(s[0], outs[2]);
++    let s = g.tape.perm([s0, s[1], s[2]]);
++    let claim = fr_val(g, R_OFF[3] + 3);
++    g.assert_eq(s[0], claim);
++    // anchors: tagFr by the tag bit
++    let x = fr_val(g, R_OFF[4]);
++    let y = fr_val(g, R_OFF[4] + 1);
++    let (tk, _) = g.tape.cswap(tag_in, t_progc, t_lock);
++    let o = g.tape.perm([tk, x, cap]);
++    g.assert_eq(o[0], y);
++    let x = fr_val(g, R_OFF[5]);
++    let y = fr_val(g, R_OFF[5] + 1);
++    let (tk, _) = g.tape.cswap(tag_out, t_progc, t_lock);
++    let o = g.tape.perm([tk, x, cap]);
++    let (l, _) = g.tape.cswap(mode, y, o[0]);
++    g.assert_eq(l, y);
+ }
+diff --git a/crates/sherlock-lfr/tests/j1_public.rs b/crates/sherlock-lfr/tests/j1_public.rs
+index 3087d1d..27738e2 100644
+--- a/crates/sherlock-lfr/tests/j1_public.rs
++++ b/crates/sherlock-lfr/tests/j1_public.rs
+@@ -38,7 +38,7 @@ const SMALL: Dims = Dims {
+     b: 32,
+     v: 32,
+     p: 32,
+-    l_tx: 14,
++    l_tx: 62,
+ };
+ 
+ fn l_params() -> openvm_stark_backend::SystemParams {
+diff --git a/crates/sherlock-lfr/tests/j5_gate.rs b/crates/sherlock-lfr/tests/j5_gate.rs
+index ccb8868..d4db7de 100644
+--- a/crates/sherlock-lfr/tests/j5_gate.rs
++++ b/crates/sherlock-lfr/tests/j5_gate.rs
+@@ -18,6 +18,7 @@ use openvm_stark_backend::{
+     soundness::SoundnessCalculator, StarkEngine,
+ };
+ use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use p3_field::PrimeField32;
+ use sherlock_lfr::{
+     fixture::LSC,
+     iface::{self, Case, Dims},
+@@ -28,12 +29,17 @@ use sherlock_lfr::{
+     testing::{lfr_params, preprocessed_airs, prove_verify_range_keyed, Engine},
+ };
+ 
+-const CASES: [(Case, &str, u64); 5] = [
++const CASES: [(Case, &str, u64); 10] = [
+     (Case::FullV, "full_v", 11),
+     (Case::FullP, "full_p", 12),
+     (Case::Overflow, "overflow", 13),
+     (Case::MissingR, "missing_r", 11),
+     (Case::AllEntries, "all_entries", 14),
++    (Case::Chunk { j: 1, k: 3 }, "chunk_1", 15),
++    (Case::Chunk { j: 2, k: 3 }, "chunk_mid", 16),
++    (Case::Chunk { j: 3, k: 3 }, "chunk_k", 17),
++    (Case::AnchorTagSwapped, "anchor_tag_swapped", 16),
++    (Case::DigestForged, "digest_forged", 11),
+ ];
+ 
+ fn dir() -> PathBuf {
+@@ -58,7 +64,13 @@ fn load() -> (MultiStarkVerifyingKey<LSC>, Vec<Proof<LSC>>) {
+ fn build(vk: &MultiStarkVerifyingKey<LSC>, shape: &LShape, proof: &Proof<LSC>) -> Gen {
+     let mut g = Gen::new();
+     let (words, l_pub) = gen_verifier_full(&mut g, vk, shape, proof).expect("pinned shape");
+-    gen_r_check(&mut g, &l_pub);
++    let l_vals: Vec<u64> = proof
++        .public_values
++        .iter()
++        .flatten()
++        .map(|x| x.as_canonical_u32() as u64)
++        .collect();
++    gen_r_check(&mut g, &l_pub, &l_vals);
+     g.tape.expose(&words);
+     g
+ }
+@@ -113,8 +125,9 @@ fn all_cases() -> (Vec<Built>, LShape) {
+                 Err(e) => format!("refused: {e}"),
+             }
+         );
+-        if *case == Case::MissingR {
+-            assert!(!failed.is_empty(), "missing R: tape refuses");
++        if negative(*case) {
++            assert!(!failed.is_empty(), "{name}: tape refuses");
++            assert!(dec.is_err(), "{name}: decoder refuses");
+         } else {
+             assert!(failed.is_empty(), "{name}: tape assertions failed {failed:?}");
+             assert_eq!(dec.unwrap(), run.statement(), "{name}: statement");
+@@ -127,6 +140,10 @@ fn all_cases() -> (Vec<Built>, LShape) {
+     (out, shape)
+ }
+ 
++fn negative(c: Case) -> bool {
++    matches!(c, Case::MissingR | Case::AnchorTagSwapped | Case::DigestForged)
++}
++
+ fn op_counts(g: &Gen) -> String {
+     let mut c = std::collections::BTreeMap::<String, usize>::new();
+     for o in &g.tape.ops {
+@@ -219,7 +236,7 @@ fn j5_gate_at_lfr_params() {
+     );
+     assert!(s.total_bits >= 100.0);
+     for (i, (_, name, _)) in CASES.iter().enumerate() {
+-        if *name == "full_p" || *name == "full_v" {
++        if !["all_entries", "overflow", "chunk_mid", "digest_forged"].contains(name) {
+             continue; // same tape and key; their plain-Rust runs are in J4
+         }
+         let bi = &b[i];
+@@ -246,3 +263,40 @@ fn j5_gate_at_lfr_params() {
+         }
+     }
+ }
++
++/// J7 on the words alone (no `L` proof): the `R` check and replay of plan D-10 on each case's
++/// public words, entered as inputs; the op count it adds (MEASURED) and its verdict per case.
++#[test]
++fn j7_r_check_on_words() {
++    use p3_baby_bear::BabyBear;
++    use p3_field::PrimeCharacteristicRing;
++    let dims = Dims::FULL;
++    let mut n_ops = None;
++    for (case, name, seed) in CASES {
++        let (run, _) = iface::case_run(&dims, case, seed);
++        let words = run.words();
++        let mut g = Gen::new();
++        let l_pub: Vec<_> = words.iter().map(|&w| g.bb_in(BabyBear::from_u64(w))).collect();
++        let before = g.tape.ops.len();
++        gen_r_check(&mut g, &l_pub, &words);
++        let added = g.tape.ops.len() - before;
++        let (_, failed) = g.tape.execute_checked(&g.inputs);
++        println!(
++            "J7 {name}: R check and replay {added} ops ({}); failed assertions {}",
++            op_counts_from(&g.tape.ops[before..]),
++            failed.len()
++        );
++        assert_eq!(*n_ops.get_or_insert(added), added, "same tape in every case");
++        assert_eq!(failed.is_empty(), !negative(case), "{name}");
++    }
++}
++
++fn op_counts_from(ops: &[sherlock_lfr::tape::Op]) -> String {
++    let mut c = std::collections::BTreeMap::<String, usize>::new();
++    for o in ops {
++        let k = format!("{o:?}");
++        let k = k.split([' ', '{', '(']).next().unwrap().to_string();
++        *c.entry(k).or_default() += 1;
++    }
++    format!("{c:?}")
++}
+-- 
+2.56.0
+

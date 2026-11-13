@@ -1,0 +1,363 @@
+From cee7fd2b8e384e8e0ebc130160c57a5e97255e85 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:07:11 -0700
+Subject: [PATCH 10/12] sherlock-lfr: E4 profile harness and GPU equality tests
+
+e4_profile: one L_Fr prove at the L_Fr set with stage spans, proof bytes and
+peak RSS, cached proving key. e4_gpu_hash: GPU Poseidon rows, digest layers and
+fused encode equal the CPU. Feature gpu enables openvm-stark-sdk/gpu. The
+stark-backend patch points at the stark-backend-e4 worktree.
+---
+ Cargo.lock                               |  13 +++
+ Cargo.toml                               |  12 +-
+ crates/sherlock-lfr/Cargo.toml           |   7 ++
+ crates/sherlock-lfr/tests/e4_gpu_hash.rs | 141 +++++++++++++++++++++++
+ crates/sherlock-lfr/tests/e4_profile.rs  | 109 ++++++++++++++++++
+ 5 files changed, 276 insertions(+), 6 deletions(-)
+ create mode 100644 crates/sherlock-lfr/tests/e4_gpu_hash.rs
+ create mode 100644 crates/sherlock-lfr/tests/e4_profile.rs
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 193e060..8b3f4f5 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -4204,6 +4204,16 @@ dependencies = [
+  "windows-sys 0.59.0",
+ ]
+ 
++[[package]]
++name = "mori-gpu"
++version = "0.1.0"
++dependencies = [
++ "blst",
++ "ff 0.13.1",
++ "group 0.13.0",
++ "midnight-curves",
++]
++
+ [[package]]
+ name = "ndarray"
+ version = "0.16.1"
+@@ -5741,6 +5751,7 @@ dependencies = [
+  "metrics-tracing-context",
+  "metrics-util",
+  "midnight-circuits",
++ "mori-gpu",
+  "num-bigint 0.4.6",
+  "nvtx",
+  "openvm-cpu-backend",
+@@ -7650,7 +7661,9 @@ dependencies = [
+  "openvm-stark-backend",
+  "openvm-stark-sdk",
+  "p3-baby-bear",
++ "p3-dft",
+  "p3-field",
++ "p3-matrix",
+  "rand 0.9.2",
+  "serde_json",
+ ]
+diff --git a/Cargo.toml b/Cargo.toml
+index 17abd4f..fc91b7f 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -320,9 +320,9 @@ ignored = ["cargo-openvm"]
+ 
+ # stark-bench: use the local stark-backend copy (same commit as tag v2.1.0)
+ [patch."https://github.com/openvm-org/stark-backend.git"]
+-openvm-stark-backend = { path = "../openvm-org_stark-backend/crates/stark-backend" }
+-openvm-stark-sdk = { path = "../openvm-org_stark-backend/crates/stark-sdk" }
+-openvm-cpu-backend = { path = "../openvm-org_stark-backend/crates/cpu-backend" }
+-openvm-cuda-backend = { path = "../openvm-org_stark-backend/crates/cuda-backend" }
+-openvm-cuda-builder = { path = "../openvm-org_stark-backend/crates/cuda-builder" }
+-openvm-cuda-common = { path = "../openvm-org_stark-backend/crates/cuda-common" }
++openvm-stark-backend = { path = "../stark-backend-e4/crates/stark-backend" }
++openvm-stark-sdk = { path = "../stark-backend-e4/crates/stark-sdk" }
++openvm-cpu-backend = { path = "../stark-backend-e4/crates/cpu-backend" }
++openvm-cuda-backend = { path = "../stark-backend-e4/crates/cuda-backend" }
++openvm-cuda-builder = { path = "../stark-backend-e4/crates/cuda-builder" }
++openvm-cuda-common = { path = "../stark-backend-e4/crates/cuda-common" }
+diff --git a/crates/sherlock-lfr/Cargo.toml b/crates/sherlock-lfr/Cargo.toml
+index 49d01d8..e639e54 100644
+--- a/crates/sherlock-lfr/Cargo.toml
++++ b/crates/sherlock-lfr/Cargo.toml
+@@ -22,8 +22,15 @@ midnight-circuits = { version = "=7.3.0", default-features = false }
+ openvm-recursion-circuit = { workspace = true }
+ openvm-poseidon2-air = { workspace = true }
+ 
++[dev-dependencies]
++# E4: the CPU DFT reference for the fused GPU encode test (already in the lock)
++p3-dft = { version = "=0.4.3", default-features = false }
++p3-matrix = { workspace = true }
++
+ [features]
+ default = ["parallel"]
++# Sherlock E4: GPU Merkle hashing (mori-gpu); MORI_GPU=off at run time takes the CPU path
++gpu = ["openvm-stark-sdk/gpu"]
+ parallel = [
+   "openvm-stark-backend/parallel",
+   "openvm-stark-sdk/parallel",
+diff --git a/crates/sherlock-lfr/tests/e4_gpu_hash.rs b/crates/sherlock-lfr/tests/e4_gpu_hash.rs
+new file mode 100644
+index 0000000..a54b9f0
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/e4_gpu_hash.rs
+@@ -0,0 +1,141 @@
++//! E4 increment 1: the GPU Midnight Poseidon leaf hashes and digest layers equal the CPU
++//! `FrMerkleHasher` (`hash_slice`, `compress`, and the stark-backend scalar layer order).
++#![cfg(feature = "gpu")]
++
++use std::time::Instant;
++
++use openvm_stark_backend::hasher::MerkleHasher;
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    Bls12381Fr as Fr, FrDomains, FrMerkleHasher, MidnightPoseidonFr,
++};
++use p3_field::PrimeCharacteristicRing;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++
++fn hasher() -> FrMerkleHasher {
++    FrMerkleHasher::new(MidnightPoseidonFr::new(), FrDomains::l_fr())
++}
++
++fn rand_fr(rng: &mut StdRng) -> Fr {
++    // a full-width value: x = a * 2^128 + b reduced mod r
++    let a = Fr::from_u128(rng.random::<u128>());
++    let b = Fr::from_u128(rng.random::<u128>());
++    a * Fr::from_u128(1u128 << 127) * Fr::TWO + b
++}
++
++/// `build_digest_layers_scalar` of cpu-backend (sequential copy).
++fn layers_cpu(h: &FrMerkleHasher, leaves: Vec<[Fr; 1]>, rpq: usize) -> Vec<Vec<[Fr; 1]>> {
++    let qs = leaves.len() / rpq;
++    let mut cur = leaves;
++    let mut s = rpq;
++    while s > 1 {
++        cur = (0..cur.len() / 2)
++            .map(|i| {
++                let (x, y) = (i / qs, i % qs);
++                h.compress(cur[2 * x * qs + y], cur[(2 * x + 1) * qs + y])
++            })
++            .collect();
++        s /= 2;
++    }
++    let mut layers = vec![cur];
++    while layers.last().unwrap().len() > 1 {
++        let p = layers.last().unwrap();
++        let l = p.chunks_exact(2).map(|c| h.compress(c[0], c[1])).collect();
++        layers.push(l);
++    }
++    layers
++}
++
++#[test]
++fn e4_gpu_poseidon_equals_cpu() {
++    assert!(mori_gpu_available(), "GPU path not available (MORI_GPU=off or no device)");
++    for mode in ["0", "1"] {
++        std::env::set_var("MORI_POS_MODE", mode);
++        println!("E4 kernel mode {mode} (0 plain rounds, 1 sparse partial rounds)");
++        check_equal();
++    }
++}
++
++fn check_equal() {
++    let h = hasher();
++    let mut rng = StdRng::seed_from_u64(0xe4);
++    for &(width, rows) in &[(33usize, 1usize << 13), (10, 1 << 13), (1, 1 << 14), (2, 1 << 12), (3, 1 << 12), (48, 1 << 12)] {
++        let mut vals: Vec<Fr> = (0..width * rows).map(|_| rand_fr(&mut rng)).collect();
++        // edge values: zeros and p - 1
++        vals[0] = Fr::ZERO;
++        let n = vals.len();
++        vals[1 % n] = -Fr::ONE;
++        let gpu = h.hash_rows(&vals, width).expect("GPU hash_rows taken");
++        let cpu: Vec<[Fr; 1]> = vals.chunks(width).map(|r| h.hash_slice(r)).collect();
++        assert_eq!(gpu, cpu, "hash_rows width {width}");
++        println!("E4 hash_rows width {width} rows {rows}: equal");
++    }
++    for &(n, rpq) in &[(1usize << 13, 16usize), (1 << 13, 1), (1 << 14, 4)] {
++        let leaves: Vec<[Fr; 1]> = (0..n).map(|_| [rand_fr(&mut rng)]).collect();
++        let gpu = h.digest_layers(&leaves, rpq).expect("GPU digest_layers taken");
++        let cpu = layers_cpu(&h, leaves, rpq);
++        assert_eq!(gpu, cpu, "digest_layers n {n} rpq {rpq}");
++        println!("E4 digest_layers n {n} rpq {rpq}: equal ({} layers)", gpu.len());
++    }
++}
++
++/// The fused GPU encode (zero-padded NTT per column, then row hashes) equals
++/// `Radix2DitParallel::dft_batch` on the padded row-major coefficients and `hash_slice`.
++#[test]
++fn e4_gpu_encode_equals_cpu() {
++    use p3_dft::{Radix2DitParallel, TwoAdicSubgroupDft};
++    use p3_matrix::{dense::RowMajorMatrix, Matrix};
++    let h = hasher();
++    let mut rng = StdRng::seed_from_u64(0xe42);
++    for &(width, height, log_blowup) in &[(33usize, 1usize << 11, 3usize), (10, 1 << 12, 3), (3, 1 << 10, 2), (1, 1 << 12, 1)] {
++        let n = height << log_blowup;
++        let coeffs: Vec<Fr> = (0..width * height).map(|_| rand_fr(&mut rng)).collect();
++        let (rm, dg) = h
++            .encode_hash_rows(&coeffs, height, width, n.trailing_zeros() as usize)
++            .expect("GPU encode taken");
++        let mut padded = vec![Fr::ZERO; n * width];
++        for j in 0..width {
++            for i in 0..height {
++                padded[i * width + j] = coeffs[j * height + i];
++            }
++        }
++        let cpu = Radix2DitParallel::default()
++            .dft_batch(RowMajorMatrix::new(padded, width))
++            .to_row_major_matrix();
++        assert_eq!(rm, cpu.values, "codeword width {width} height {height}");
++        let cpu_h: Vec<[Fr; 1]> = cpu.values.chunks(width).map(|r| h.hash_slice(r)).collect();
++        assert_eq!(dg, cpu_h, "row hashes width {width}");
++        println!("E4 encode_hash_rows width {width} height {height} blowup 2^{log_blowup}: equal");
++    }
++}
++
++#[test]
++#[ignore = "throughput only"]
++fn e4_gpu_poseidon_rate() {
++    let h = hasher();
++    let mut rng = StdRng::seed_from_u64(1);
++    let rows = 1usize << 20;
++    let vals: Vec<Fr> = (0..2 * rows).map(|_| rand_fr(&mut rng)).collect();
++    for mode in ["0", "1"] {
++    std::env::set_var("MORI_POS_MODE", mode);
++    let _ = h.hash_rows(&vals[..2 * 4096], 2);
++    for rep in 0..3 {
++        let t = Instant::now();
++        let out = h.hash_rows(&vals, 2).unwrap();
++        let s = t.elapsed().as_secs_f64();
++        println!(
++            "E4 GPU rate mode {mode} rep {rep}: {rows} permutations (width 2 rows) in {s:.3}s = {:.2} M perm/s",
++            rows as f64 / s / 1e6
++        );
++        assert_eq!(out.len(), rows);
++    }
++    }
++    let t = Instant::now();
++    let n = 1usize << 16;
++    let _c: Vec<[Fr; 1]> = vals[..2 * n].chunks(2).map(|r| h.hash_slice(r)).collect();
++    let s = t.elapsed().as_secs_f64();
++    println!("E4 CPU rate (1 thread): {:.0} perm/s", n as f64 / s);
++}
++
++fn mori_gpu_available() -> bool {
++    std::env::var("MORI_GPU").as_deref() != Ok("off")
++}
+diff --git a/crates/sherlock-lfr/tests/e4_profile.rs b/crates/sherlock-lfr/tests/e4_profile.rs
+new file mode 100644
+index 0000000..326484d
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/e4_profile.rs
+@@ -0,0 +1,109 @@
++//! E4: one honest `L_Fr` prove at the `L_Fr` parameter set on the real `L` proof, with the
++//! backend's tracing spans (stage profile), the proof bytes written to `$E4_PROOF_OUT` (for
++//! the byte-identity check of each GPU increment against the CPU proof), and the peak RSS.
++//! The proving key is cached in `$E4_PK_CACHE` (bitcode) so a run skips the 250 s keygen.
++
++use std::{fs, path::PathBuf, time::Instant};
++
++use openvm_stark_backend::{
++    codec::Encode,
++    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    StarkEngine,
++};
++use sherlock_lfr::{
++    fixture,
++    lverify::{gen_verifier, Gen, LShape},
++    machine::Machine,
++    testing::{lfr_params, range_trace, Engine, SC},
++};
++
++fn vm_hwm_kib() -> u64 {
++    let s = fs::read_to_string("/proc/self/status").unwrap_or_default();
++    s.lines()
++        .find(|l| l.starts_with("VmHWM:"))
++        .and_then(|l| l.split_whitespace().nth(1))
++        .and_then(|v| v.parse().ok())
++        .unwrap_or(0)
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk; one L_Fr prove at the L_Fr parameter set"]
++fn e4_profile_lfr_prove() {
++    openvm_stark_sdk::utils::setup_tracing();
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let shape = LShape::of(&fx.l_proof);
++    let mut g = Gen::new();
++    let words = gen_verifier(&mut g, &fx.l_vk, &shape, &fx.l_proof).expect("pinned shape");
++    for w in words {
++        g.tape.public(w);
++    }
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty());
++    let m = Machine::new(&g.tape);
++    let engine = Engine::new(lfr_params());
++    let airs = m.airs();
++
++    let cache = std::env::var("E4_PK_CACHE").ok().map(PathBuf::from);
++    let t = Instant::now();
++    let (pk, vk): (MultiStarkProvingKey<SC>, MultiStarkVerifyingKey<SC>) =
++        match cache.as_ref().filter(|p| p.exists()) {
++            Some(p) => {
++                let pk: MultiStarkProvingKey<SC> =
++                    bitcode::deserialize(&fs::read(p).unwrap()).expect("pk cache");
++                let vk = pk.get_vk();
++                println!("E4 pk loaded from {} in {:.1}s", p.display(), t.elapsed().as_secs_f64());
++                (pk, vk)
++            }
++            None => {
++                let (pk, vk) = engine.keygen(&airs);
++                println!("E4 keygen {:.1}s", t.elapsed().as_secs_f64());
++                if let Some(p) = cache.as_ref() {
++                    fs::write(p, bitcode::serialize(&pk).unwrap()).unwrap();
++                }
++                (pk, vk)
++            }
++        };
++    println!("E4 rss after keygen {} MiB", vm_hwm_kib() / 1024);
++
++    let mut traces = m.traces(&mem);
++    traces.push(range_trace(&pk, &airs, &traces));
++    let pis = m.public_values(&mem);
++    let mut pis_all = pis;
++    pis_all.resize(traces.len(), vec![]);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctx = ProvingContext::new(
++        traces
++            .iter()
++            .enumerate()
++            .map(|(i, t)| {
++                let cm = ColMajorMatrix::from_row_major(t);
++                (
++                    i,
++                    AirProvingContext::simple(
++                        engine.device().transport_matrix_to_device(&cm),
++                        pis_all[i].clone(),
++                    ),
++                )
++            })
++            .collect(),
++    );
++    drop(traces);
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ctx).expect("prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    let t = Instant::now();
++    engine.verify(&vk, &proof).expect("stock verifier accepts");
++    let verify_s = t.elapsed().as_secs_f64();
++    let bytes = proof.encode_to_vec().unwrap();
++    println!(
++        "E4 prove {prove_s:.2}s verify {verify_s:.2}s proof {} bytes commits {} peak rss {} MiB",
++        bytes.len(),
++        proof.stacking_proof.stacking_openings.len(),
++        vm_hwm_kib() / 1024
++    );
++    if let Ok(out) = std::env::var("E4_PROOF_OUT") {
++        fs::write(&out, &bytes).unwrap();
++        println!("E4 proof written to {out}");
++    }
++}
+-- 
+2.56.0
+

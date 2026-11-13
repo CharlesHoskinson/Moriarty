@@ -1,0 +1,160 @@
+From f725b15942e8e3ee8b1e92e29da30da7f0d668e8 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 22:55:49 -0700
+Subject: [PATCH 15/15] sherlock-lfr: E3 J8 guards (J4 fails above the 2^19
+ BbAlu and ProgramTable of E2; bench buses below the interface buses) and the
+ small tape delta of the onion set
+
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs |  4 +
+ crates/sherlock-lfr/tests/j5_gate.rs          |  5 ++
+ crates/sherlock-lfr/tests/j8_onion.rs         | 87 ++++++++++++++++---
+ 3 files changed, 86 insertions(+), 10 deletions(-)
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+index bd682cf..182228a 100644
+--- a/crates/sherlock-lfr/examples/iface_fixture.rs
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -142,6 +142,10 @@ fn main() {
+     let n_bench = airs.len();
+     // J8: the interface AIRs with the onion, on the bench Poseidon2 permute bus.
+     let perm_bus = l.bus_inventory().poseidon2_permute_bus;
++    assert!(
++        (l.next_bus_idx() as usize) < iface_l::LOG_BUS as usize,
++        "bench bus indices reach the interface buses"
++    );
+     airs.extend(iface_l::airs_onion(&dims, perm_bus));
+     // The bench L traces with the onion's permutations as external inputs; `req` pins the bench
+     // heights (one L shape for every case).
+diff --git a/crates/sherlock-lfr/tests/j5_gate.rs b/crates/sherlock-lfr/tests/j5_gate.rs
+index d4db7de..2507c63 100644
+--- a/crates/sherlock-lfr/tests/j5_gate.rs
++++ b/crates/sherlock-lfr/tests/j5_gate.rs
+@@ -167,6 +167,11 @@ fn j4_tapes_on_l_iface() {
+     );
+     let stacked = 1usize << 20;
+     assert!(m.shape().iter().all(|s| s.1 <= stacked));
++    // The headroom rule: the added work must fit the E2 key shape (no doubled table).
++    for name in ["BbAlu", "ProgramTable"] {
++        let h = m.shape().iter().find(|s| s.0 == name).unwrap().1;
++        assert_eq!(h, 1 << 19, "{name} height {h}: over the 2^19 of E2");
++    }
+ }
+ 
+ #[test]
+diff --git a/crates/sherlock-lfr/tests/j8_onion.rs b/crates/sherlock-lfr/tests/j8_onion.rs
+index bf642c1..e8f583c 100644
+--- a/crates/sherlock-lfr/tests/j8_onion.rs
++++ b/crates/sherlock-lfr/tests/j8_onion.rs
+@@ -85,13 +85,33 @@ fn key_trace(ins: &[[u64; 16]], height: usize) -> RowMajorMatrix<BabyBear> {
+ }
+ 
+ fn prove(words: &[u64]) -> Result<(), String> {
++    prove_onion(words, true).map(|_| ())
++}
++
++type VkProof = (
++    openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>,
++    openvm_stark_backend::proof::Proof<LSC>,
++);
++
++/// Prove the small `L_iface` with (`onion`) or without the onion AIR set.
++fn prove_onion(words: &[u64], onion: bool) -> Result<VkProof, String> {
+     let engine = BabyBearBls12381PoseidonCpuEngine::new(small_params_n(4, 8));
+     let perm = Poseidon2PermuteBus::new(PERM_BUS);
+-    let mut airs: Vec<AirRef<LSC>> = iface_l::airs_onion(&SMALL, perm);
+-    airs.push(Arc::new(KeyTable));
++    let mut airs: Vec<AirRef<LSC>> = if onion {
++        iface_l::airs_onion(&SMALL, perm)
++    } else {
++        iface_l::airs(&SMALL)
++    };
++    if onion {
++        airs.push(Arc::new(KeyTable));
++    }
+     let (pk, vk) = engine.keygen(&airs);
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let (traces, ins) = iface_l::traces_onion::<BabyBear>(&SMALL, words, perm);
++    let (traces, ins) = if onion {
++        iface_l::traces_onion::<BabyBear>(&SMALL, words, perm)
++    } else {
++        (iface_l::traces::<BabyBear>(&SMALL, words), vec![])
++    };
+     let mut ctxs: Vec<_> = traces
+         .into_iter()
+         .map(|(t, pv)| {
+@@ -99,17 +119,64 @@ fn prove(words: &[u64]) -> Result<(), String> {
+             AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv)
+         })
+         .collect();
+-    let kt = key_trace(&ins, 512);
+-    ctxs.push(AirProvingContext::simple_no_pis(
+-        engine
+-            .device()
+-            .transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
+-    ));
++    if onion {
++        let kt = key_trace(&ins, 512);
++        ctxs.push(AirProvingContext::simple_no_pis(
++            engine
++                .device()
++                .transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
++        ));
++    }
+     let proof = engine
+         .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+         .map_err(|e| format!("prover: {e:?}"))?;
+     engine.verify(&vk, &proof).map_err(|e| format!("verifier: {e:?}"))?;
+-    Ok(())
++    Ok((vk, proof))
++}
++
++/// ESTIMATE of the `L_Fr` cost of the onion: the `gen_verifier` tape of the small `L_iface` with
++/// the onion set (onion AIR, key table, onion buses) against the one without.
++#[test]
++fn j8_tape_delta_small() {
++    use sherlock_lfr::lverify::{gen_verifier, Gen, LShape};
++    let (run, _) = iface::case_run(&SMALL, Case::FullV, 7);
++    let w = run.words();
++    let mut n = vec![];
++    for onion in [false, true] {
++        let (vk, proof) = prove_onion(&w, onion).expect("prove");
++        let mut g = Gen::new();
++        let shape = LShape::of(&proof);
++        let words = gen_verifier(&mut g, &vk, &shape, &proof).expect("pinned shape");
++        g.tape.expose(&words);
++        let (_, failed) = g.tape.execute_checked(&g.inputs);
++        assert!(failed.is_empty());
++        let mut c = std::collections::BTreeMap::<String, usize>::new();
++        for o in &g.tape.ops {
++            let k = format!("{o:?}");
++            *c.entry(k.split([' ', '{', '(']).next().unwrap().to_string()).or_default() += 1;
++        }
++        let air: Vec<String> = vk
++            .inner
++            .per_air
++            .iter()
++            .map(|a| {
++                format!(
++                    "w{} c{} i{}",
++                    a.params.width.total_width(),
++                    a.symbolic_constraints.constraints.constraint_idx.len(),
++                    a.symbolic_constraints.interactions.len()
++                )
++            })
++            .collect();
++        println!(
++            "J8 small tape, onion {onion}: {} ops {c:?}; AIRs {air:?}; log heights {:?}; {} transcript events",
++            g.tape.ops.len(),
++            shape.log_heights,
++            g.tt.log.len()
++        );
++        n.push(g.tape.ops.len());
++    }
++    println!("J8 small tape delta of the onion set: {} ops", n[1] - n[0]);
+ }
+ 
+ #[test]
+-- 
+2.56.0
+

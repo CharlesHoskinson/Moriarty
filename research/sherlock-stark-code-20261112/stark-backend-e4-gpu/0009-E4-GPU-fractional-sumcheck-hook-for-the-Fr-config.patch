@@ -1,0 +1,295 @@
+From 0b779c74a494609aec7d6f6aa2a5d34108f20259 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 23:18:39 -0700
+Subject: [PATCH 9/9] E4: GPU fractional sumcheck hook for the Fr config
+
+StarkProtocolConfig::frac_gkr_accel (default None) gives fractional_sumcheck an
+optional FracGkrAccel: the segment tree and each GKR layer sumcheck (round polynomial
+at 1, 2, 3 and the fold, with the transcript kept in Rust through a callback). The Fr
+config implements it under the stark-sdk feature gpu with mori-gpu frac for layers of
+at least 2^12 points; E4_GPU_FRAC=0 takes the CPU path. Field arithmetic is exact, so
+the L_Fr proof is byte-identical to the CPU proof.
+---
+ crates/stark-backend/src/config.rs            |   8 +
+ .../fractional_sumcheck_gkr.rs                | 147 ++++++++++++------
+ .../src/config/bls12381_fr_poseidon.rs        |  50 ++++++
+ 3 files changed, 155 insertions(+), 50 deletions(-)
+
+diff --git a/crates/stark-backend/src/config.rs b/crates/stark-backend/src/config.rs
+index bdb71a8..4fe97eb 100644
+--- a/crates/stark-backend/src/config.rs
++++ b/crates/stark-backend/src/config.rs
+@@ -42,6 +42,14 @@ pub trait StarkProtocolConfig: 'static + Clone + Send + Sync {
+     fn params(&self) -> &SystemParams;
+ 
+     fn hasher(&self) -> &Self::Hasher;
++
++    /// Optional accelerator of the fractional sumcheck (LogUp GKR), for example a GPU. The
++    /// default is `None`: the CPU code runs. An accelerator must give the same field values,
++    /// so the proof does not change.
++    fn frac_gkr_accel(
++    ) -> Option<&'static dyn crate::prover::fractional_sumcheck_gkr::FracGkrAccel<Self::EF>> {
++        None
++    }
+ }
+ 
+ /// Type alias for backwards compatibility. New implementations should use `SC::F`.
+diff --git a/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs b/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
+index 7c37275..4b20f1c 100644
+--- a/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
++++ b/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
+@@ -45,6 +45,27 @@ impl<EF: Field> Add<Frac<EF>> for Frac<EF> {
+     }
+ }
+ 
++/// Accelerator of [`fractional_sumcheck`] ([`StarkProtocolConfig::frac_gkr_accel`]). Each
++/// method may decline (`false` / `None`) before it changes anything; the CPU code then runs.
++pub trait FracGkrAccel<EF>: Sync {
++    /// Fills the internal nodes `tree[1..2^total_rounds]` of the segment tree from the leaves
++    /// `tree[2^total_rounds..]` (node `k` is node `2k` plus node `2k + 1`).
++    fn build_tree(&self, tree: &mut [Frac<EF>], total_rounds: usize) -> bool;
++
++    /// The `n = log2(eq.len())` batched sumcheck rounds of one GKR layer, as the CPU loop of
++    /// [`fractional_sumcheck`]: `segment` is the layer (`2 eq.len()` fractions), `eq` the
++    /// evaluations of `eq(xi, .)`. `round` gets the round polynomial at `1, 2, 3` and returns
++    /// the challenge. Returns `(p_0, q_0, p_1, q_1)` at the folded point. It may return `None`
++    /// only before the first call of `round`.
++    fn layer_sumcheck(
++        &self,
++        segment: &[Frac<EF>],
++        eq: &[EF],
++        lambda: EF,
++        round: &mut dyn FnMut([EF; 3]) -> EF,
++    ) -> Option<[EF; 4]>;
++}
++
+ /// Runs the fractional sumcheck protocol using GKR layered circuit.
+ ///
+ /// # Arguments
+@@ -81,8 +102,11 @@ pub fn fractional_sumcheck<SC: StarkProtocolConfig, TS: FiatShamirTranscript<SC>
+     let mut tree_evals: Vec<Frac<SC::EF>> = vec![Frac::default(); 2 << total_rounds];
+     tree_evals[(1 << total_rounds)..].copy_from_slice(evals);
+ 
+-    for node_idx in (1..(1 << total_rounds)).rev() {
+-        tree_evals[node_idx] = tree_evals[2 * node_idx] + tree_evals[2 * node_idx + 1];
++    let accel = SC::frac_gkr_accel();
++    if !accel.is_some_and(|a| a.build_tree(&mut tree_evals, total_rounds)) {
++        for node_idx in (1..(1 << total_rounds)).rev() {
++            tree_evals[node_idx] = tree_evals[2 * node_idx] + tree_evals[2 * node_idx + 1];
++        }
+     }
+     let frac_sum = tree_evals[1];
+     if assert_zero {
+@@ -129,63 +153,86 @@ pub fn fractional_sumcheck<SC: StarkProtocolConfig, TS: FiatShamirTranscript<SC>
+         let lambda = transcript.sample_ext();
+         debug!(gkr_round = round, %lambda);
+ 
+-        // Columns are p_j0, q_j0, p_j1, q_j1
+-        // PERF: use a view instead of re-allocating memory
+-        let mut pq_j_evals = SC::EF::zero_vec(4 * eval_size);
+         let segment = &tree_evals[2 * eval_size..4 * eval_size];
+-        for x in 0..eval_size {
+-            pq_j_evals[x] = segment[2 * x].p;
+-            pq_j_evals[eval_size + x] = segment[2 * x].q;
+-            pq_j_evals[2 * eval_size + x] = segment[2 * x + 1].p;
+-            pq_j_evals[3 * eval_size + x] = segment[2 * x + 1].q;
+-        }
+-        let mut pq_j_evals = ColMajorMatrix::new(pq_j_evals, 4);
+-        let mut eq_xis = ColMajorMatrix::new(evals_eq_hypercube(&xi_prev), 1);
+-
+-        // Batch sumcheck where the round polynomials are evaluated at {1, 2, 3}
+-        let (round_polys_eval, rho) = {
+-            let n = round;
+-            let mut round_polys_eval = Vec::with_capacity(n);
+-            let mut r_vec = Vec::with_capacity(n);
+-
+-            // Sumcheck rounds: apply fraction addition in projective coordinates to MLEs
+-            for sumcheck_round in 0..n {
+-                // Evaluate the univariate polynomial at {1, 2, 3}
+-                // :projective fraction addition is degree 2, and then another +1 for eq
+-                let [s_evals] = sumcheck_round_poly_evals(
+-                    n - sumcheck_round,
+-                    3,
+-                    &[eq_xis.as_view(), pq_j_evals.as_view()],
+-                    |_x, _y, row| {
+-                        let eq_xi = row[0][0];
+-                        let &[p_j0, q_j0, p_j1, q_j1] = row[1].as_slice() else {
+-                            unreachable!("pq_j_evals always has 4 columns")
+-                        };
+-                        let p_prev = p_j0 * q_j1 + p_j1 * q_j0;
+-                        let q_prev = q_j0 * q_j1;
+-                        // batch using lambda
+-                        [eq_xi * (p_prev + lambda * q_prev)]
+-                    },
+-                );
+-                let s_evals: [SC::EF; 3] = s_evals.try_into().unwrap();
++        let eq_vec = evals_eq_hypercube(&xi_prev);
++        let n = round;
++        let mut round_polys_eval: Vec<[SC::EF; 3]> = Vec::with_capacity(n);
++        let mut rho = Vec::with_capacity(n);
++        let accel_claims = accel.and_then(|a| {
++            a.layer_sumcheck(segment, &eq_vec, lambda, &mut |s_evals: [SC::EF; 3]| {
+                 for &eval in &s_evals {
+                     transcript.observe_ext(eval);
+                 }
+                 round_polys_eval.push(s_evals);
+-
+                 let r_round = transcript.sample_ext();
+-                pq_j_evals = fold_mle_evals(pq_j_evals, r_round);
+-                eq_xis = fold_mle_evals(eq_xis, r_round);
+-                r_vec.push(r_round);
+-                debug!(gkr_round = round, %sumcheck_round, %r_round);
++                rho.push(r_round);
++                debug!(gkr_round = round, sumcheck_round = rho.len() - 1, %r_round);
++                r_round
++            })
++        });
++        let [p_xi_0, q_xi_0, p_xi_1, q_xi_1] = match accel_claims {
++            Some(c) => c,
++            None => {
++                // Columns are p_j0, q_j0, p_j1, q_j1
++                // PERF: use a view instead of re-allocating memory
++                let mut pq_j_evals = SC::EF::zero_vec(4 * eval_size);
++
++                for x in 0..eval_size {
++                    pq_j_evals[x] = segment[2 * x].p;
++                    pq_j_evals[eval_size + x] = segment[2 * x].q;
++                    pq_j_evals[2 * eval_size + x] = segment[2 * x + 1].p;
++                    pq_j_evals[3 * eval_size + x] = segment[2 * x + 1].q;
++                }
++                let mut pq_j_evals = ColMajorMatrix::new(pq_j_evals, 4);
++                let mut eq_xis = ColMajorMatrix::new(eq_vec, 1);
++
++                // Batch sumcheck where the round polynomials are evaluated at {1, 2, 3}
++                {
++                    // Sumcheck rounds: apply fraction addition in projective coordinates to MLEs
++                    for sumcheck_round in 0..n {
++                        // Evaluate the univariate polynomial at {1, 2, 3}
++                        // :projective fraction addition is degree 2, and then another +1 for eq
++                        let [s_evals] = sumcheck_round_poly_evals(
++                            n - sumcheck_round,
++                            3,
++                            &[eq_xis.as_view(), pq_j_evals.as_view()],
++                            |_x, _y, row| {
++                                let eq_xi = row[0][0];
++                                let &[p_j0, q_j0, p_j1, q_j1] = row[1].as_slice() else {
++                                    unreachable!("pq_j_evals always has 4 columns")
++                                };
++                                let p_prev = p_j0 * q_j1 + p_j1 * q_j0;
++                                let q_prev = q_j0 * q_j1;
++                                // batch using lambda
++                                [eq_xi * (p_prev + lambda * q_prev)]
++                            },
++                        );
++                        let s_evals: [SC::EF; 3] = s_evals.try_into().unwrap();
++                        for &eval in &s_evals {
++                            transcript.observe_ext(eval);
++                        }
++                        round_polys_eval.push(s_evals);
++
++                        let r_round = transcript.sample_ext();
++                        pq_j_evals = fold_mle_evals(pq_j_evals, r_round);
++                        eq_xis = fold_mle_evals(eq_xis, r_round);
++                        rho.push(r_round);
++                        debug!(gkr_round = round, %sumcheck_round, %r_round);
++                    }
++                }
++                [
++                    pq_j_evals.column(0)[0],
++                    pq_j_evals.column(1)[0],
++                    pq_j_evals.column(2)[0],
++                    pq_j_evals.column(3)[0],
++                ]
+             }
+-            (round_polys_eval, r_vec)
+         };
+         claims_per_layer.push(GkrLayerClaims::<SC> {
+-            p_xi_0: pq_j_evals.column(0)[0],
+-            q_xi_0: pq_j_evals.column(1)[0],
+-            p_xi_1: pq_j_evals.column(2)[0],
+-            q_xi_1: pq_j_evals.column(3)[0],
++            p_xi_0,
++            q_xi_0,
++            p_xi_1,
++            q_xi_1,
+         });
+         transcript.observe_ext(claims_per_layer[round].p_xi_0);
+         transcript.observe_ext(claims_per_layer[round].q_xi_0);
+diff --git a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+index fa5ed5f..6e5ac29 100644
+--- a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
++++ b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+@@ -220,6 +220,7 @@ pub mod gpu {
+ 
+     use midnight_circuits::hash::poseidon::constants::PoseidonField;
+     use mori_gpu::poseidon::Constants;
++    use openvm_stark_backend::prover::fractional_sumcheck_gkr::{FracGkrAccel, Frac};
+ 
+     use super::{Digest, MidnightFq, F};
+ 
+@@ -295,6 +296,48 @@ pub mod gpu {
+         out
+     }
+ 
++    /// The fractional sumcheck on the GPU (mori-gpu `frac`); layers below `MIN_ROWS` points
++    /// stay on the CPU. `E4_GPU_FRAC=0` turns it off.
++    pub struct FracGpu;
++
++    impl FracGkrAccel<F> for FracGpu {
++        fn build_tree(&self, tree: &mut [Frac<F>], total_rounds: usize) -> bool {
++            if (1usize << total_rounds) < MIN_ROWS {
++                return false;
++            }
++            // SAFETY: Frac is repr(C) (p, q) and F is repr(transparent) over MidnightFq.
++            let flat: &mut [MidnightFq] = unsafe {
++                std::slice::from_raw_parts_mut(tree.as_mut_ptr().cast(), 2 * tree.len())
++            };
++            let ok = mori_gpu::frac::build_tree(flat, total_rounds);
++            static ONCE: std::sync::Once = std::sync::Once::new();
++            if ok {
++                ONCE.call_once(|| {
++                    eprintln!("mori-gpu: fractional sumcheck on the GPU, 2^{total_rounds} leaves")
++                });
++            }
++            ok
++        }
++
++        fn layer_sumcheck(
++            &self,
++            segment: &[Frac<F>],
++            eq: &[F],
++            lambda: F,
++            round: &mut dyn FnMut([F; 3]) -> F,
++        ) -> Option<[F; 4]> {
++            if eq.len() < MIN_ROWS {
++                return None;
++            }
++            // SAFETY: as in build_tree.
++            let seg: &[MidnightFq] =
++                unsafe { std::slice::from_raw_parts(segment.as_ptr().cast(), 2 * segment.len()) };
++            let mut cb = |s: [MidnightFq; 3]| round(s.map(F::from_ff)).to_ff();
++            mori_gpu::frac::layer_sumcheck(seg, as_ff(eq), lambda.to_ff(), &mut cb)
++                .map(|c| c.map(F::from_ff))
++        }
++    }
++
+     pub fn as_ff(v: &[F]) -> &[MidnightFq] {
+         // SAFETY: Bls12381Fr is repr(transparent) over MidnightFq.
+         unsafe { std::slice::from_raw_parts(v.as_ptr().cast(), v.len()) }
+@@ -346,6 +389,13 @@ impl StarkProtocolConfig for Bls12381FrPoseidonConfig {
+     fn hasher(&self) -> &Self::Hasher {
+         &self.hasher
+     }
++
++    #[cfg(feature = "gpu")]
++    fn frac_gkr_accel(
++    ) -> Option<&'static dyn openvm_stark_backend::prover::fractional_sumcheck_gkr::FracGkrAccel<EF>>
++    {
++        mori_gpu::frac::enabled().then_some(&gpu::FracGpu as _)
++    }
+ }
+ 
+ /// 32 big-endian bytes of the canonical value.
+-- 
+2.56.0
+

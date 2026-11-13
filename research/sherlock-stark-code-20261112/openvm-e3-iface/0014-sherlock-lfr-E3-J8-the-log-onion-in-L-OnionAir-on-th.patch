@@ -1,0 +1,860 @@
+From ab0e88adfc0439fc7954be4cd648d39aa7d9d618 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 22:48:24 -0700
+Subject: [PATCH 14/19] sherlock-lfr: E3 J8, the log onion in L (OnionAir on
+ the bench Poseidon2 permute bus, tie to log_d and log_n), native P2 and onion
+ with the ENC-2 vectors
+
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs |  60 ++-
+ crates/sherlock-lfr/src/carrier.rs            |   6 +
+ crates/sherlock-lfr/src/iface.rs              |  97 +++++
+ crates/sherlock-lfr/src/iface_l.rs            | 404 +++++++++++++++++-
+ crates/sherlock-lfr/tests/j8_onion.rs         | 148 +++++++
+ 5 files changed, 699 insertions(+), 16 deletions(-)
+ create mode 100644 crates/sherlock-lfr/tests/j8_onion.rs
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+index 6592ff2..bd682cf 100644
+--- a/crates/sherlock-lfr/examples/iface_fixture.rs
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -11,7 +11,8 @@ use std::{sync::Arc, time::Instant};
+ use openvm_cpu_backend::CpuBackend;
+ use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
+ use openvm_recursion_circuit::system::{
+-    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierExternalData,
++    VerifierSubCircuit, VerifierTraceGen,
+ };
+ use openvm_stark_backend::{
+     codec::{Decode, Encode},
+@@ -139,7 +140,49 @@ fn main() {
+     );
+     let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
+     let n_bench = airs.len();
+-    airs.extend(iface_l::airs(&dims));
++    // J8: the interface AIRs with the onion, on the bench Poseidon2 permute bus.
++    let perm_bus = l.bus_inventory().poseidon2_permute_bus;
++    airs.extend(iface_l::airs_onion(&dims, perm_bus));
++    // The bench L traces with the onion's permutations as external inputs; `req` pins the bench
++    // heights (one L shape for every case).
++    let bench_ctxs = |words: &[u64], req: Option<&[usize]>| {
++        let (iface_tr, ins) = iface_l::traces_onion::<F>(&dims, words, perm_bus);
++        let ins_f: Vec<[F; 16]> = ins.iter().map(|a| a.map(F::from_u64)).collect();
++        let (e1, e2, e3): (Vec<[F; 16]>, Vec<usize>, Vec<usize>) = (vec![], vec![], vec![]);
++        let mut ext = VerifierExternalData {
++            poseidon2_compress_inputs: &e1,
++            poseidon2_permute_inputs: &ins_f,
++            range_check_inputs: &e2,
++            power_check_inputs: &e3,
++            required_heights: req,
++            final_transcript_state: None,
++        };
++        let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
++        let ctxs = l
++            .generate_proving_ctxs::<DuplexSpongeRecorder>(
++                &node_vk,
++                cached,
++                std::slice::from_ref(&node_pf),
++                &mut ext,
++                &(),
++                default_duplex_sponge_recorder(),
++            )
++            .expect("bench L traces");
++        (ctxs, iface_tr, ins.len())
++    };
++    let mut max_h = vec![0usize; n_bench];
++    let mut all_h = vec![];
++    for (case, _, seed) in CASES {
++        let (run, _) = iface::case_run(&dims, case, seed);
++        let (ctxs, _, _) = bench_ctxs(&run.words(), None);
++        let h: Vec<usize> = ctxs.iter().map(|c| c.height()).collect();
++        for (m, x) in max_h.iter_mut().zip(&h) {
++            *m = (*m).max(*x);
++        }
++        all_h.push(h);
++    }
++    let pin = all_h.iter().any(|h| *h != max_h);
++    eprintln!("bench heights differ across cases: {pin}; max {max_h:?}");
+     let t = Instant::now();
+     let (pk, l_vk) = engine.keygen(&airs);
+     let keygen_s = t.elapsed().as_secs_f64();
+@@ -153,16 +196,11 @@ fn main() {
+     for (case, name, seed) in CASES {
+         let (run, plan) = iface::case_run(&dims, case, seed);
+         let words = run.words();
+-        let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
+-        let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-            &node_vk,
+-            cached,
+-            std::slice::from_ref(&node_pf),
+-            &(),
+-            default_duplex_sponge_recorder(),
+-        );
++        let (mut ctxs, iface_tr, n_onion_perms) =
++            bench_ctxs(&words, if pin { Some(&max_h[..]) } else { None });
+         assert_eq!(ctxs.len(), n_bench);
+-        for (tr, pv) in iface_l::traces::<F>(&dims, &words) {
++        eprintln!("{name}: onion permutations {n_onion_perms}");
++        for (tr, pv) in iface_tr {
+             let cm = ColMajorMatrix::from_row_major(&tr);
+             ctxs.push(AirProvingContext::simple(
+                 engine.device().transport_matrix_to_device(&cm),
+diff --git a/crates/sherlock-lfr/src/carrier.rs b/crates/sherlock-lfr/src/carrier.rs
+index 33e8ba4..9bbaba2 100644
+--- a/crates/sherlock-lfr/src/carrier.rs
++++ b/crates/sherlock-lfr/src/carrier.rs
+@@ -58,6 +58,12 @@ impl Carrier {
+         self.h1 + self.h2
+     }
+ 
++    /// The indicator of row `r` (degree 2): `a_(r mod h1) b_(r / h1)` from the selector cells.
++    pub fn row_ind<E: Clone + core::ops::Mul<Output = E>>(&self, sel: &[E], r: usize) -> E {
++        assert!(r < self.height());
++        sel[r % self.h1].clone() * sel[self.h1 + r / self.h1].clone()
++    }
++
+     /// The carrier constraints. `local` and `next` hold the carrier's columns (selectors, then
+     /// values) of the current and next row; `pv_off` is the index of the carrier's first word in
+     /// the AIR's public values.
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index f82f70f..ccf4a16 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -225,6 +225,64 @@ pub fn digest(tag: u64, d2: Fr) -> Fr {
+     sponge_u(4, &[tag_fr(tag), d2])
+ }
+ 
++// ---- the log onion (ARCHITECTURE 1.8, FP-2; ENC-2; P2 absorption P-3) ----------------------
++
++/// BabyBear tag codes of the onion (F-9).
++pub const TAG_EMPTY: u64 = 1;
++pub const TAG_STEP: u64 = 2;
++pub const TAG_NODE: u64 = 3;
++pub const TAG_ENT: u64 = 4;
++/// Words of `log_d` and `log_n` in the root statement (FP-2).
++pub const LOG_D_WORD: usize = 57;
++pub const LOG_N_WORD: usize = 65;
++
++/// `P2(tag, xs)`: Poseidon2 over BabyBear, width 16, overwrite absorption of `[tag, xs..]` in
++/// blocks of 8 (last block zero padded), `state[8] = 1 + |xs|` first; output `state[0..8]`.
++/// Also returns the permutation inputs, in order.
++pub fn p2_with_inputs(tag: u64, xs: &[u64]) -> ([u64; 8], Vec<[u64; 16]>) {
++    use openvm_stark_backend::{p3_field::PrimeField64, p3_symmetric::Permutation};
++    use openvm_stark_sdk::config::baby_bear_poseidon2::poseidon2_perm;
++    use p3_baby_bear::BabyBear;
++    let mut words = vec![tag];
++    words.extend_from_slice(xs);
++    let mut st = [BabyBear::ZERO; 16];
++    st[8] = BabyBear::from_u64(words.len() as u64);
++    let mut ins = vec![];
++    for blk in words.chunks(8) {
++        for i in 0..8 {
++            st[i] = BabyBear::from_u64(*blk.get(i).unwrap_or(&0));
++        }
++        ins.push(st.map(|x| x.as_canonical_u64()));
++        poseidon2_perm().permute_mut(&mut st);
++    }
++    (std::array::from_fn(|i| st[i].as_canonical_u64()), ins)
++}
++
++pub fn p2(tag: u64, xs: &[u64]) -> [u64; 8] {
++    p2_with_inputs(tag, xs).0
++}
++
++/// ENC-2: `enc(e) = [op, param] ++ limbs(v_0) ++ ...`.
++pub fn enc(e: &Entry) -> Vec<u64> {
++    let mut w = vec![e.op, e.param];
++    for v in &e.values {
++        w.extend(limbs(*v));
++    }
++    w
++}
++
++/// The onion of one log segment: `d_0 = P2(TAG_EMPTY)`, `d_(i+1) = P2(tagStep, d_i,
++/// P2(tagEnt, enc(e_i)))`.
++pub fn onion(log: &[Entry]) -> [u64; 8] {
++    let mut d = p2(TAG_EMPTY, &[]);
++    for e in log {
++        let h = p2(TAG_ENT, &enc(e));
++        let x: Vec<u64> = d.iter().chain(h.iter()).copied().collect();
++        d = p2(TAG_STEP, &x);
++    }
++    d
++}
++
+ /// One operation of a run, with its native inputs.
+ #[derive(Clone, Debug)]
+ pub enum OpIn {
+@@ -743,6 +801,9 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+         }
+         _ => {}
+     }
++    let ld = onion(&log);
++    head[LOG_D_WORD..LOG_D_WORD + 8].copy_from_slice(&ld);
++    head[LOG_N_WORD] = log.len() as u64;
+     let lane_map = [
+         (LANE_A_IN, ANCHOR_IN as u64),
+         (LANE_CLAIM[0], 3),
+@@ -785,6 +846,42 @@ mod tests {
+         );
+     }
+ 
++    #[test]
++    fn enc2_onion_vectors() {
++        // research/sherlock-enc-fp3-20261112/VECTORS.txt: enc2.D_EMPTY, enc2.onion6.
++        assert_eq!(
++            p2(TAG_EMPTY, &[]),
++            [1601720553, 1813189633, 533296967, 1863848096, 1186913909, 1231646054, 526551043, 780997282]
++        );
++        let pack = |ws: &[u64]| {
++            let mut x = BigUint::from(0u32);
++            for (i, &w) in ws.iter().enumerate() {
++                x += BigUint::from(w) << (31 * i);
++            }
++            fr_from_big(&x)
++        };
++        let r_p: Vec<u64> = (101..=108).collect();
++        let prog_d: Vec<u64> = (201..=208).collect();
++        let d2_progc = p2(6, &[r_p, prog_d].concat());
++        let input_d: [u64; 8] = [
++            1844765863, 1946263212, 480254560, 1610161683, 900750315, 731375867, 384171174,
++            1479089448,
++        ];
++        let (a, b, c) = (Fr::from_u64(3), Fr::from_u64(5), Fr::from_u64(7));
++        let log = vec![
++            OpIn::Digest { tag: SHK_PROGC, d2: pack(&d2_progc) }.entry(),
++            OpIn::H2(a, b).entry(),
++            OpIn::Sponge(vec![a, b, c]).entry(),
++            OpIn::Perm([a, b, c]).entry(),
++            OpIn::Pub { lane: 1, v: Fr::from_u64(0x1234) }.entry(),
++            OpIn::Digest { tag: SHK_INPUT, d2: pack(&input_d) }.entry(),
++        ];
++        assert_eq!(
++            onion(&log),
++            [365509232, 1748783776, 666338835, 1517722680, 393187787, 100716010, 257089906, 1188286804]
++        );
++    }
++
+     #[test]
+     fn cases_decode_or_refuse() {
+         let d = Dims { b: 48, v: 48, p: 32, l_tx: 62 };
+diff --git a/crates/sherlock-lfr/src/iface_l.rs b/crates/sherlock-lfr/src/iface_l.rs
+index 2c1c3d0..45a738d 100644
+--- a/crates/sherlock-lfr/src/iface_l.rs
++++ b/crates/sherlock-lfr/src/iface_l.rs
+@@ -15,8 +15,16 @@
+ //!   are used).
+ //! - `Call`: the call vector, carrier only.
+ //!
+-//! Not here (production `L`, FP-3 and M7b): the onion `d`, the tie of the words to a node
+-//! statement, the limb range and `Canon` (the reader of the words checks them; plan D-9).
++//! - `Onion` (E3 J8, with [`airs_onion`]): recomputes the log onion of ARCHITECTURE 1.8 over
++//!   the entry and value tables, `d_0 = P2(TAG_EMPTY)`, `d_(i+1) = P2(tagStep, d_i, P2(tagEnt,
++//!   enc(e_i)))`, one row per Poseidon2 permutation, each looked up on the permute bus of the
++//!   bench `L` (its `Poseidon2Air`); the absorbed words come from `LogEntry` ([`ENT_BUS`]) and
++//!   `LogValue` ([`VAL_BUS`]) by permutation arguments, and the final `(d, n)` must equal the
++//!   `log_d`, `log_n` words of the root statement in `Stmt` ([`TIE_BUS`]).
++//!
++//! Not here (production `L`, M7b): the tie of the root statement to the verified node's public
++//! values (the bench node is not an FP-2 node), a log tree of more than one segment (`TAG_NODE`
++//! merges), the limb range and `Canon` (the reader of the words checks them; plan D-9).
+ 
+ use openvm_stark_backend::{
+     interaction::{BusIndex, InteractionBuilder},
+@@ -33,6 +41,11 @@ use crate::{
+ 
+ /// The `L`-side bus of the log AIRs (`off_n` from `LogEntry` to `LogValue`).
+ pub const LOG_BUS: BusIndex = 900;
++/// J8 buses: value limbs `(9 r + t, limb)`, entries `(op, param, off, vals)`, the onion tie
++/// `(d, n)`.
++pub const VAL_BUS: BusIndex = 901;
++pub const ENT_BUS: BusIndex = 902;
++pub const TIE_BUS: BusIndex = 903;
+ /// Carrier words per row of `Stmt` and `Call`.
+ pub const W_CARRY: usize = 48;
+ const SLACK_BITS: usize = 11;
+@@ -53,6 +66,8 @@ pub const KINDS: [Kind; 4] = [Kind::Stmt, Kind::LogEntry, Kind::LogValue, Kind::
+ pub struct IfaceAir {
+     pub kind: Kind,
+     pub dims: Dims,
++    /// J8: the onion buses are on (`Stmt` receives the tie, the log AIRs send their words).
++    pub onion: bool,
+ }
+ 
+ // LogEntry columns after the carrier.
+@@ -175,7 +190,11 @@ pub fn traces<F: Field>(dims: &Dims, words: &[u64]) -> Vec<(RowMajorMatrix<F>, V
+     KINDS
+         .iter()
+         .map(|&kind| {
+-            let a = IfaceAir { kind, dims: *dims };
++            let a = IfaceAir {
++                kind,
++                dims: *dims,
++                onion: false,
++            };
+             let (s, e) = a.section();
+             let ws = &words[s..e];
+             (a.trace(ws, off_n), ws.iter().map(|&x| F::from_u64(x)).collect())
+@@ -278,18 +297,41 @@ impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
+                 builder
+                     .when_transition()
+                     .assert_zero(xn[E_POFF].clone() - poff.clone() - perms.clone());
+-                let off_end = off + vals;
++                let off_end = off + vals.clone();
+                 builder.when_last_row().assert_zero(
+                     k(d.v as u64) - off_end.clone() - pow2_sum(&x[E_VB..E_VB + CAP_BITS]),
+                 );
+                 builder.when_last_row().assert_zero(
+                     k(d.p as u64) - poff - perms - pow2_sum(&x[E_QB..E_QB + CAP_BITS]),
+                 );
++                if self.onion {
++                    let used = one.clone() - b[iface::NOP as usize].clone();
++                    builder.push_interaction(
++                        ENT_BUS,
++                        vec![v[0].clone(), v[1].clone(), x[E_OFF].clone(), vals.clone()],
++                        used,
++                        1,
++                    );
++                }
+                 let last = builder.is_last_row();
+                 builder.push_interaction(LOG_BUS, vec![off_end], last, 1);
+             }
++            Kind::Stmt if self.onion => {
++                // log_d, log_n sit in one carrier row (words 57 to 65 of 48 per row).
++                let (r, c0) = (iface::LOG_D_WORD / W_CARRY, iface::LOG_D_WORD % W_CARRY);
++                assert_eq!(iface::LOG_N_WORD / W_CARRY, r);
++                let ind = c.row_ind(&local[..c.sel_width()], r);
++                let msg: Vec<AB::Expr> = (0..9).map(|i| v[c0 + i].clone()).collect();
++                builder.push_interaction(TIE_BUS, msg, -ind, 1);
++            }
+             Kind::LogValue => {
+                 let (u, cnt) = (x[V_USED].clone(), x[V_CNT].clone());
++                if self.onion {
++                    for (t, limb) in v.iter().enumerate() {
++                        let g = (cnt.clone() - one.clone()) * k(LIMBS as u64) + k(t as u64);
++                        builder.push_interaction(VAL_BUS, vec![g, limb.clone()], u.clone(), 1);
++                    }
++                }
+                 builder.assert_bool(u.clone());
+                 builder
+                     .when_transition()
+@@ -314,8 +356,360 @@ pub fn airs(dims: &Dims) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC
+     KINDS
+         .iter()
+         .map(|&kind| {
+-            std::sync::Arc::new(IfaceAir { kind, dims: *dims })
++            std::sync::Arc::new(IfaceAir {
++                kind,
++                dims: *dims,
++                onion: false,
++            })
+                 as openvm_stark_backend::AirRef<crate::fixture::LSC>
+         })
+         .collect()
+ }
++
++// ---- J8: the onion AIR -------------------------------------------------------------------
++
++use openvm_recursion_circuit::bus::{Poseidon2PermuteBus, Poseidon2PermuteMessage};
++
++const O_W: usize = 0; // 8 block words (state_in[0..8])
++const O_CAP: usize = 8; // state_in[8..16]
++const O_OUT: usize = 16; // 16 output words
++const O_D: usize = 32; // 8: the onion digest before this entry
++const O_H: usize = 40; // 8: P2(tagEnt, enc(e)) of this entry (B rows)
++const O_U: usize = 48; // 8: word used (A rows)
++const O_E: usize = 56;
++const O_A: usize = 57;
++const O_FA: usize = 58;
++const O_B0: usize = 59;
++const O_B1: usize = 60;
++const O_B2: usize = 61;
++const O_LAST: usize = 62;
++const O_FIN: usize = 63;
++const O_POS: usize = 64;
++const O_CNT: usize = 65;
++const O_OP: usize = 66;
++const O_PARAM: usize = 67;
++const O_OFF: usize = 68;
++const O_K: usize = 69;
++const O_WIDTH: usize = 70;
++
++/// The onion AIR (module header): rows `E` (`D_EMPTY`), then per used entry the `A` blocks of
++/// `P2(tagEnt, enc(e))` and the 3 `B` blocks of `P2(tagStep, d, h)`, then inactive rows.
++#[derive(Clone, Copy, Debug)]
++pub struct OnionAir {
++    pub dims: Dims,
++    pub perm: Poseidon2PermuteBus,
++}
++
++impl OnionAir {
++    /// Fixed height: at most `1 + sum_i (ceil((3 + 9 k_i) / 8) + 3)` rows, bounded by
++    /// `1 + ceil((3 B + 9 V) / 8) + 4 B`.
++    pub fn height(&self) -> usize {
++        let d = &self.dims;
++        (1 + (3 * d.b + 9 * d.v).div_ceil(8) + 4 * d.b).next_power_of_two()
++    }
++
++    /// The trace for the `L` words of a run and the permutation inputs it looks up.
++    pub fn trace<F: Field>(&self, words: &[u64]) -> (RowMajorMatrix<F>, Vec<[u64; 16]>) {
++        let d = &self.dims;
++        let mut rows: Vec<[u64; O_WIDTH]> = vec![];
++        let mut ins = vec![];
++        let perm_row = |st_in: [u64; 16], rows: &mut Vec<[u64; O_WIDTH]>, ins: &mut Vec<[u64; 16]>| {
++            use openvm_stark_backend::{p3_field::PrimeField64, p3_symmetric::Permutation};
++            use openvm_stark_sdk::config::baby_bear_poseidon2::poseidon2_perm;
++            use p3_baby_bear::BabyBear;
++            let mut st = st_in.map(BabyBear::from_u64);
++            poseidon2_perm().permute_mut(&mut st);
++            let out = st.map(|x| x.as_canonical_u64());
++            let mut r = [0u64; O_WIDTH];
++            r[O_W..O_W + 16].copy_from_slice(&st_in);
++            r[O_OUT..O_OUT + 16].copy_from_slice(&out);
++            rows.push(r);
++            ins.push(st_in);
++            out
++        };
++        // E row
++        let mut st = [0u64; 16];
++        st[0] = iface::TAG_EMPTY;
++        st[8] = 1;
++        let out = perm_row(st, &mut rows, &mut ins);
++        rows[0][O_E] = 1;
++        let mut dg: [u64; 8] = out[..8].try_into().unwrap();
++        let (mut off, mut cnt) = (0u64, 0u64);
++        for i in 0..d.b {
++            let (op, param) = (words[iface::STMT + 2 * i], words[iface::STMT + 2 * i + 1]);
++            if op == iface::NOP {
++                break;
++            }
++            let kv = iface::vals(op, param) as u64;
++            let mut enc = vec![iface::TAG_ENT, op, param];
++            let at = d.values_at() + LIMBS * off as usize;
++            enc.extend_from_slice(&words[at..at + LIMBS * kv as usize]);
++            let total = enc.len() as u64;
++            let mut cap = [0u64; 8];
++            cap[0] = total;
++            let mut h = [0u64; 8];
++            let nb = enc.len().div_ceil(8);
++            for (bi, blk) in enc.chunks(8).enumerate() {
++                let mut st = [0u64; 16];
++                st[..blk.len()].copy_from_slice(blk);
++                st[8..].copy_from_slice(&cap);
++                let out = perm_row(st, &mut rows, &mut ins);
++                let r = rows.last_mut().unwrap();
++                r[O_A] = 1;
++                r[O_FA] = (bi == 0) as u64;
++                r[O_LAST] = (bi + 1 == nb) as u64;
++                for j in 0..blk.len() {
++                    r[O_U + j] = 1;
++                }
++                r[O_POS] = 8 * bi as u64;
++                cap.copy_from_slice(&out[8..]);
++                h.copy_from_slice(&out[..8]);
++            }
++            let mut x: Vec<u64> = vec![iface::TAG_STEP];
++            x.extend_from_slice(&dg);
++            x.extend_from_slice(&h);
++            let mut cap = [0u64; 8];
++            cap[0] = 17;
++            for (bi, blk) in x.chunks(8).enumerate() {
++                let mut st = [0u64; 16];
++                st[..blk.len()].copy_from_slice(blk);
++                st[8..].copy_from_slice(&cap);
++                let out = perm_row(st, &mut rows, &mut ins);
++                let r = rows.last_mut().unwrap();
++                r[O_B0 + bi] = 1;
++                cap.copy_from_slice(&out[8..]);
++                if bi == 2 {
++                    dg.copy_from_slice(&out[..8]);
++                }
++            }
++            // entry fields, d and h on every row of this entry
++            let first = rows.len() - nb - 3;
++            for (ri, r) in rows[first..].iter_mut().enumerate() {
++                r[O_OP] = op;
++                r[O_PARAM] = param;
++                r[O_OFF] = off;
++                r[O_K] = kv;
++                r[O_CNT] = cnt;
++                if ri >= nb {
++                    r[O_H..O_H + 8].copy_from_slice(&h);
++                }
++            }
++            off += kv;
++            cnt += 1;
++        }
++        // d before each entry: the output of the previous E or B2 row
++        let mut cur = [0u64; 8];
++        let mut prev_out = [0u64; 8];
++        for r in rows.iter_mut() {
++            if r[O_E] == 1 {
++                prev_out.copy_from_slice(&r[O_OUT..O_OUT + 8]);
++                continue;
++            }
++            if r[O_FA] == 1 {
++                cur = prev_out;
++            }
++            r[O_D..O_D + 8].copy_from_slice(&cur);
++            if r[O_B2] == 1 {
++                prev_out.copy_from_slice(&r[O_OUT..O_OUT + 8]);
++            }
++        }
++        let n_act = rows.len();
++        assert!(n_act <= self.height(), "onion rows {n_act} over {}", self.height());
++        rows[n_act - 1][O_FIN] = 1;
++        let cnt_end = cnt;
++        while rows.len() < self.height() {
++            let mut r = [0u64; O_WIDTH];
++            r[O_CNT] = cnt_end;
++            rows.push(r);
++        }
++        let vals: Vec<F> = rows.iter().flat_map(|r| r.iter().map(|&x| F::from_u64(x))).collect();
++        (RowMajorMatrix::new(vals, O_WIDTH), ins)
++    }
++}
++
++impl<F: Field> BaseAir<F> for OnionAir {
++    fn width(&self) -> usize {
++        O_WIDTH
++    }
++}
++impl<F: Field> BaseAirWithPublicValues<F> for OnionAir {}
++impl<F: Field> PartitionedBaseAir<F> for OnionAir {}
++
++impl<AB: InteractionBuilder> Air<AB> for OnionAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let (l, n) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let x: Vec<AB::Expr> = (0..O_WIDTH).map(|i| l[i].into()).collect();
++        let y: Vec<AB::Expr> = (0..O_WIDTH).map(|i| n[i].into()).collect();
++        drop((l, n));
++        let one = AB::Expr::ONE;
++        let k = |u: u64| AB::Expr::from_u64(u);
++        for c in [O_E, O_A, O_FA, O_B0, O_B1, O_B2, O_LAST, O_FIN] {
++            builder.assert_bool(x[c].clone());
++        }
++        for j in 0..8 {
++            builder.assert_bool(x[O_U + j].clone());
++        }
++        let act = |r: &[AB::Expr]| {
++            r[O_E].clone() + r[O_A].clone() + r[O_B0].clone() + r[O_B1].clone() + r[O_B2].clone()
++        };
++        let (ax, ay) = (act(&x), act(&y));
++        builder.assert_bool(ax.clone());
++        builder.assert_zero(x[O_FA].clone() * (one.clone() - x[O_A].clone()));
++        // row order
++        builder.when_first_row().assert_one(x[O_E].clone());
++        builder.when_first_row().assert_zero(x[O_CNT].clone());
++        builder.when_transition().assert_zero(y[O_E].clone());
++        let mut tr = builder.when_transition();
++        tr.assert_zero(
++            (x[O_E].clone() + x[O_B2].clone()) * ay.clone() * (one.clone() - y[O_FA].clone()),
++        );
++        tr.assert_zero(x[O_A].clone() * x[O_LAST].clone() * (one.clone() - y[O_B0].clone()));
++        tr.assert_zero(
++            x[O_A].clone() * (one.clone() - x[O_LAST].clone()) * (one.clone() - y[O_A].clone()),
++        );
++        tr.assert_zero(x[O_A].clone() * (one.clone() - x[O_LAST].clone()) * y[O_FA].clone());
++        tr.assert_zero(x[O_B0].clone() * (one.clone() - y[O_B1].clone()));
++        tr.assert_zero(x[O_B1].clone() * (one.clone() - y[O_B2].clone()));
++        tr.assert_zero((one.clone() - ax.clone()) * ay.clone());
++        tr.assert_zero(x[O_FIN].clone() - ax.clone() * (one.clone() - ay.clone()));
++        tr.assert_zero(y[O_CNT].clone() - x[O_CNT].clone() - x[O_B2].clone());
++        builder.when_last_row().assert_zero(x[O_FIN].clone() - ax.clone());
++        builder.assert_zero(
++            x[O_FIN].clone() * (x[O_A].clone() + x[O_B0].clone() + x[O_B1].clone()),
++        );
++        // capacities and fixed words
++        let total = k(3) + x[O_K].clone() * k(LIMBS as u64);
++        builder.assert_zero(x[O_E].clone() * (x[O_W].clone() - one.clone()));
++        builder.assert_zero(x[O_E].clone() * (x[O_CAP].clone() - one.clone()));
++        builder.assert_zero(x[O_FA].clone() * (x[O_CAP].clone() - total.clone()));
++        builder.assert_zero(x[O_B0].clone() * (x[O_CAP].clone() - k(17)));
++        let first = x[O_E].clone() + x[O_FA].clone() + x[O_B0].clone();
++        for m in 1..8 {
++            builder.assert_zero(first.clone() * x[O_CAP + m].clone());
++        }
++        for j in 1..8 {
++            builder.assert_zero(x[O_E].clone() * x[O_W + j].clone());
++        }
++        let cont_y = y[O_A].clone() - y[O_FA].clone() + y[O_B1].clone() + y[O_B2].clone();
++        for m in 0..8 {
++            builder
++                .when_transition()
++                .assert_zero(cont_y.clone() * (y[O_CAP + m].clone() - x[O_OUT + 8 + m].clone()));
++        }
++        // the permutation, looked up in the bench Poseidon2 AIR
++        self.perm.lookup_key(
++            builder,
++            Poseidon2PermuteMessage {
++                input: std::array::from_fn(|i| x[O_W + i].clone()),
++                output: std::array::from_fn(|i| x[O_OUT + i].clone()),
++            },
++            ax.clone(),
++        );
++        // A blocks: words of [tagEnt, op, param, limbs...], zero padded
++        let (fa, a) = (x[O_FA].clone(), x[O_A].clone());
++        builder.assert_zero(fa.clone() * (x[O_W].clone() - k(iface::TAG_ENT)));
++        builder.assert_zero(fa.clone() * (x[O_W + 1].clone() - x[O_OP].clone()));
++        builder.assert_zero(fa.clone() * (x[O_W + 2].clone() - x[O_PARAM].clone()));
++        builder.assert_zero(fa.clone() * x[O_POS].clone());
++        builder.when_transition().assert_zero(
++            (y[O_A].clone() - y[O_FA].clone())
++                * (y[O_POS].clone() - x[O_POS].clone() - k(8)),
++        );
++        builder.assert_zero(a.clone() * (one.clone() - x[O_U].clone()));
++        let mut c = AB::Expr::ZERO;
++        for j in 0..8 {
++            let u = x[O_U + j].clone();
++            c += u.clone();
++            if j + 1 < 8 {
++                builder.assert_zero(x[O_U + j + 1].clone() * (one.clone() - u.clone()));
++            }
++            builder.assert_zero(a.clone() * (one.clone() - u.clone()) * x[O_W + j].clone());
++            let m = a.clone() * u - if j < 3 { fa.clone() } else { AB::Expr::ZERO };
++            let g = x[O_OFF].clone() * k(LIMBS as u64) + x[O_POS].clone() + k(j as u64) - k(3);
++            builder.push_interaction(VAL_BUS, vec![g, x[O_W + j].clone()], -m, 1);
++        }
++        let last = x[O_LAST].clone();
++        builder.assert_zero(a.clone() * (one.clone() - last.clone()) * (k(8) - c.clone()));
++        builder.assert_zero(a.clone() * last * (x[O_POS].clone() + c - total));
++        // B blocks: [tagStep, d_0..d_6], [d_7, h_0..h_6], [h_7, 0..]
++        let (b0, b1, b2) = (x[O_B0].clone(), x[O_B1].clone(), x[O_B2].clone());
++        builder.assert_zero(b0.clone() * (x[O_W].clone() - k(iface::TAG_STEP)));
++        for j in 1..8 {
++            builder.assert_zero(b0.clone() * (x[O_W + j].clone() - x[O_D + j - 1].clone()));
++            builder.assert_zero(b1.clone() * (x[O_W + j].clone() - x[O_H + j - 1].clone()));
++            builder.assert_zero(b2.clone() * x[O_W + j].clone());
++        }
++        builder.assert_zero(b1 * (x[O_W].clone() - x[O_D + 7].clone()));
++        builder.assert_zero(b2.clone() * (x[O_W].clone() - x[O_H + 7].clone()));
++        // carried fields
++        let same = ay.clone() * (one.clone() - y[O_FA].clone());
++        for f in [O_OP, O_PARAM, O_OFF, O_K] {
++            builder
++                .when_transition()
++                .assert_zero(same.clone() * (y[f].clone() - x[f].clone()));
++        }
++        for m in 0..8 {
++            let mut tr = builder.when_transition();
++            tr.assert_zero(same.clone() * (y[O_D + m].clone() - x[O_D + m].clone()));
++            tr.assert_zero(y[O_FA].clone() * (y[O_D + m].clone() - x[O_OUT + m].clone()));
++            tr.assert_zero(y[O_B0].clone() * (y[O_H + m].clone() - x[O_OUT + m].clone()));
++            tr.assert_zero(
++                (y[O_B1].clone() + y[O_B2].clone()) * (y[O_H + m].clone() - x[O_H + m].clone()),
++            );
++        }
++        // offsets: the first entry at 0, each next one after the values of the last
++        builder
++            .when_transition()
++            .assert_zero(x[O_E].clone() * y[O_OFF].clone());
++        builder.when_transition().assert_zero(
++            b2.clone() * y[O_FA].clone() * (y[O_OFF].clone() - x[O_OFF].clone() - x[O_K].clone()),
++        );
++        builder.push_interaction(
++            ENT_BUS,
++            vec![x[O_OP].clone(), x[O_PARAM].clone(), x[O_OFF].clone(), x[O_K].clone()],
++            -fa,
++            1,
++        );
++        // the tie: (d_n, n) on the last active row
++        let mut tie: Vec<AB::Expr> = (0..8).map(|m| x[O_OUT + m].clone()).collect();
++        tie.push(x[O_CNT].clone() + b2);
++        builder.push_interaction(TIE_BUS, tie, x[O_FIN].clone(), 1);
++    }
++}
++
++/// The interface AIRs with the onion (J8): the 4 of [`airs`] with their onion buses, then
++/// [`OnionAir`] on the bench `L`'s Poseidon2 permute bus.
++pub fn airs_onion(
++    dims: &Dims,
++    perm: Poseidon2PermuteBus,
++) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
++    let mut v: Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> = KINDS
++        .iter()
++        .map(|&kind| {
++            std::sync::Arc::new(IfaceAir {
++                kind,
++                dims: *dims,
++                onion: true,
++            }) as openvm_stark_backend::AirRef<crate::fixture::LSC>
++        })
++        .collect();
++    v.push(std::sync::Arc::new(OnionAir { dims: *dims, perm }));
++    v
++}
++
++/// A trace with its public values.
++pub type Traced<F> = (RowMajorMatrix<F>, Vec<F>);
++
++/// The traces of [`airs_onion`] (the onion has no public values) and the Poseidon2 inputs that
++/// the onion looks up (external inputs of the bench `L` trace generation).
++pub fn traces_onion<F: Field>(
++    dims: &Dims,
++    words: &[u64],
++    perm: Poseidon2PermuteBus,
++) -> (Vec<Traced<F>>, Vec<[u64; 16]>) {
++    let mut t = traces::<F>(dims, words);
++    let (tr, ins) = OnionAir { dims: *dims, perm }.trace::<F>(words);
++    t.push((tr, vec![]));
++    (t, ins)
++}
+diff --git a/crates/sherlock-lfr/tests/j8_onion.rs b/crates/sherlock-lfr/tests/j8_onion.rs
+new file mode 100644
+index 0000000..bf642c1
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/j8_onion.rs
+@@ -0,0 +1,148 @@
++//! E3 J8: the log onion in `L` (`iface_l::OnionAir`) on a small `L_iface`: the 4 interface AIRs
++//! with their onion buses, the onion AIR, and a stand-in key table for the Poseidon2 permute bus
++//! (in the bench `L` the keys come from its `Poseidon2Air`, which constrains the permutation).
++//!
++//! Accepted: the honest cases. Refused by the prover: `log_d` of the root statement changed; one
++//! logged value changed with `log_d` kept; `log_n` changed.
++
++use std::sync::Arc;
++
++use openvm_recursion_circuit::bus::{Poseidon2PermuteBus, Poseidon2PermuteMessage};
++use openvm_stark_backend::{
++    interaction::InteractionBuilder,
++    p3_air::{Air, BaseAir},
++    p3_field::Field,
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    AirRef, BaseAirWithPublicValues, PartitionedBaseAir, StarkEngine,
++};
++use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine;
++use p3_baby_bear::BabyBear;
++use sherlock_lfr::{
++    fixture::LSC,
++    iface::{self, Case, Dims},
++    iface_l,
++    testing::small_params_n,
++};
++
++const SMALL: Dims = Dims {
++    b: 32,
++    v: 64,
++    p: 32,
++    l_tx: 62,
++};
++const PERM_BUS: u16 = 950;
++
++/// Stand-in key table: `(input, output, mult)` rows, keys on the permute bus.
++#[derive(Clone, Copy)]
++struct KeyTable;
++impl<F: Field> BaseAir<F> for KeyTable {
++    fn width(&self) -> usize {
++        33
++    }
++}
++impl<F: Field> BaseAirWithPublicValues<F> for KeyTable {}
++impl<F: Field> PartitionedBaseAir<F> for KeyTable {}
++impl<AB: InteractionBuilder> Air<AB> for KeyTable {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let l = main.row_slice(0).expect("row");
++        let x: Vec<AB::Expr> = (0..33).map(|i| l[i].into()).collect();
++        drop(l);
++        Poseidon2PermuteBus::new(PERM_BUS).add_key_with_lookups(
++            builder,
++            Poseidon2PermuteMessage {
++                input: std::array::from_fn(|i| x[i].clone()),
++                output: std::array::from_fn(|i| x[16 + i].clone()),
++            },
++            x[32].clone(),
++        );
++    }
++}
++
++fn key_trace(ins: &[[u64; 16]], height: usize) -> RowMajorMatrix<BabyBear> {
++    use openvm_stark_backend::{p3_field::PrimeCharacteristicRing, p3_symmetric::Permutation};
++    use openvm_stark_sdk::config::baby_bear_poseidon2::poseidon2_perm;
++    let mut keys: Vec<([u64; 16], u64)> = vec![];
++    for i in ins {
++        match keys.iter_mut().find(|(k, _)| k == i) {
++            Some(e) => e.1 += 1,
++            None => keys.push((*i, 1)),
++        }
++    }
++    assert!(keys.len() <= height);
++    let mut v = vec![];
++    for r in 0..height {
++        let (inp, m) = keys.get(r).copied().unwrap_or(([0; 16], 0));
++        let mut st = inp.map(BabyBear::from_u64);
++        let i0 = st;
++        poseidon2_perm().permute_mut(&mut st);
++        v.extend(i0);
++        v.extend(st);
++        v.push(BabyBear::from_u64(m));
++    }
++    RowMajorMatrix::new(v, 33)
++}
++
++fn prove(words: &[u64]) -> Result<(), String> {
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(small_params_n(4, 8));
++    let perm = Poseidon2PermuteBus::new(PERM_BUS);
++    let mut airs: Vec<AirRef<LSC>> = iface_l::airs_onion(&SMALL, perm);
++    airs.push(Arc::new(KeyTable));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let (traces, ins) = iface_l::traces_onion::<BabyBear>(&SMALL, words, perm);
++    let mut ctxs: Vec<_> = traces
++        .into_iter()
++        .map(|(t, pv)| {
++            let cm = ColMajorMatrix::from_row_major(&t);
++            AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv)
++        })
++        .collect();
++    let kt = key_trace(&ins, 512);
++    ctxs.push(AirProvingContext::simple_no_pis(
++        engine
++            .device()
++            .transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
++    ));
++    let proof = engine
++        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++        .map_err(|e| format!("prover: {e:?}"))?;
++    engine.verify(&vk, &proof).map_err(|e| format!("verifier: {e:?}"))?;
++    Ok(())
++}
++
++#[test]
++fn j8_onion_small() {
++    for (case, seed) in [
++        (Case::FullV, 7u64),
++        (Case::AllEntries, 8),
++        (Case::Chunk { j: 2, k: 3 }, 9),
++        (Case::MissingR, 7),
++    ] {
++        let (run, _) = iface::case_run(&SMALL, case, seed);
++        let w = run.words();
++        let r = prove(&w);
++        println!("J8 {case:?}: {} entries, onion rows {}: {r:?}", run.log.len(),
++            iface_l::OnionAir { dims: SMALL, perm: Poseidon2PermuteBus::new(PERM_BUS) }.height());
++        assert!(r.is_ok(), "{case:?}");
++    }
++    let (run, _) = iface::case_run(&SMALL, Case::FullV, 7);
++    let w = run.words();
++    let mut bad = w.clone();
++    bad[iface::LOG_D_WORD] = (bad[iface::LOG_D_WORD] + 1) % sherlock_lfr::bb::P;
++    let r = prove(&bad);
++    println!("J8 log_d changed: {r:?}");
++    assert!(r.is_err());
++    let mut bad = w.clone();
++    let at = SMALL.values_at() + 9 * 20;
++    bad[at] ^= 1;
++    let r = prove(&bad);
++    println!("J8 value 20 changed, log_d kept: {r:?}");
++    assert!(r.is_err());
++    let mut bad = w.clone();
++    bad[iface::LOG_N_WORD] += 1;
++    let r = prove(&bad);
++    println!("J8 log_n changed: {r:?}");
++    assert!(r.is_err());
++}
+-- 
+2.56.0
+

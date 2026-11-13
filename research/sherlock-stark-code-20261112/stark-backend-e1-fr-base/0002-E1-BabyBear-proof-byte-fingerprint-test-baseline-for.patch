@@ -1,0 +1,107 @@
+From 7f50d969f9bbcf73262dd3cfb5ec3dc162e74162 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 07:37:54 -0700
+Subject: [PATCH 2/5] E1: BabyBear proof-byte fingerprint test (baseline for
+ the base-field relaxation)
+
+---
+ crates/cpu-backend/tests/e1_bb_bytes.rs | 87 +++++++++++++++++++++++++
+ 1 file changed, 87 insertions(+)
+ create mode 100644 crates/cpu-backend/tests/e1_bb_bytes.rs
+
+diff --git a/crates/cpu-backend/tests/e1_bb_bytes.rs b/crates/cpu-backend/tests/e1_bb_bytes.rs
+new file mode 100644
+index 0000000..d1bf42f
+--- /dev/null
++++ b/crates/cpu-backend/tests/e1_bb_bytes.rs
+@@ -0,0 +1,87 @@
++//! Sherlock E1: BabyBear proofs must stay byte-identical across the base-field relaxation.
++//!
++//! The test proves fixed fixtures with both BabyBear engines at parameters that exercise every
++//! grinding site (LogUp, folding, `mu`, query PoW) and `sample_bits` (WHIR queries), verifies
++//! each proof, and prints a 64-bit FNV-1a fingerprint of the encoded proof. When `E1_PROOF_OUT`
++//! is set, it also writes the encoded proofs to that directory, so that two builds can be
++//! compared with `cmp`.
++
++use std::path::PathBuf;
++
++use openvm_stark_backend::{
++    codec::Encode,
++    interaction::LogUpSecurityParameters,
++    test_utils::{FibFixture, InteractionsFixture11, TestFixture},
++    verifier::verify,
++    StarkEngine, SystemParams, WhirConfig, WhirParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::baby_bear_poseidon2::{
++    default_duplex_sponge, BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine,
++    BabyBearPoseidon2RefEngine, DuplexSponge,
++};
++
++type SC = BabyBearPoseidon2Config;
++
++fn params() -> SystemParams {
++    let l_skip = 2;
++    let n_stack = 8;
++    let k_whir = 4;
++    let log_blowup = 1;
++    let whir_params = WhirParams {
++        k: k_whir,
++        log_final_poly_len: (l_skip + n_stack) % k_whir,
++        query_phase_pow_bits: 6,
++        folding_pow_bits: 5,
++        mu_pow_bits: 4,
++        proximity: WhirProximityStrategy::UniqueDecoding,
++    };
++    SystemParams {
++        l_skip,
++        n_stack,
++        w_stack: 64,
++        log_blowup,
++        whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
++        logup: LogUpSecurityParameters {
++            max_interaction_count: 1 << 30,
++            log_max_message_length: 7,
++            pow_bits: 7,
++        },
++        max_constraint_degree: 3,
++    }
++}
++
++fn fnv1a(bytes: &[u8]) -> u64 {
++    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
++    for b in bytes {
++        h ^= *b as u64;
++        h = h.wrapping_mul(0x0000_0100_0000_01b3);
++    }
++    h
++}
++
++fn emit(name: &str, bytes: &[u8]) {
++    println!("E1_BB_PROOF {name} len={} fnv1a={:016x}", bytes.len(), fnv1a(bytes));
++    if let Ok(dir) = std::env::var("E1_PROOF_OUT") {
++        let mut p = PathBuf::from(dir);
++        std::fs::create_dir_all(&p).unwrap();
++        p.push(format!("{name}.bin"));
++        std::fs::write(p, bytes).unwrap();
++    }
++}
++
++fn run<E: StarkEngine<SC = SC>, Fx: TestFixture<SC>>(name: &str, fx: &Fx) {
++    let engine = E::new(params());
++    let (vk, proof) = fx.keygen_and_prove(&engine);
++    let mut ts: DuplexSponge = default_duplex_sponge();
++    verify(engine.config(), &vk, &proof, &mut ts).expect("proof verifies");
++    emit(name, &proof.encode_to_vec().unwrap());
++}
++
++#[test]
++fn e1_babybear_proof_bytes() {
++    let fib = FibFixture::new(0, 1, 1 << 9);
++    run::<BabyBearPoseidon2RefEngine<DuplexSponge>, _>("ref_fib", &fib);
++    run::<BabyBearPoseidon2CpuEngine, _>("cpu_fib", &fib);
++    run::<BabyBearPoseidon2RefEngine<DuplexSponge>, _>("ref_int11", &InteractionsFixture11);
++    run::<BabyBearPoseidon2CpuEngine, _>("cpu_int11", &InteractionsFixture11);
++}
+-- 
+2.56.0
+

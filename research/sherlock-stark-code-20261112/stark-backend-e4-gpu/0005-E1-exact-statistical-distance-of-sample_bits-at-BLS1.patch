@@ -1,0 +1,30 @@
+From 30407617d815e49b8329c71dbcb19f82aef42b9b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 08:04:47 -0700
+Subject: [PATCH 5/9] E1: exact statistical distance of sample_bits at
+ BLS12-381 Fr in the documentation
+
+---
+ crates/stark-backend/src/transcript/traits.rs | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/crates/stark-backend/src/transcript/traits.rs b/crates/stark-backend/src/transcript/traits.rs
+index 0e1e253..be8d729 100644
+--- a/crates/stark-backend/src/transcript/traits.rs
++++ b/crates/stark-backend/src/transcript/traits.rs
+@@ -44,9 +44,9 @@ where
+     /// For BabyBear, `p - 1 = 2^27 * 15`, so `p ≡ 1 (mod 2^bits)` and thus `r = 1` for every
+     /// `bits <= 27`—exactly one heavy residue (the all-zero one).
+     ///
+-    /// For BLS12-381 Fr, `2^32` divides `r - 1`, so again exactly one residue is heavy for every
+-    /// `bits < 32`, and `c ≈ 2^(254.86 - bits)`: the statistical distance from uniform is below
+-    /// `2^bits / p < 2^-222`.
++    /// For BLS12-381 Fr, `2^32` divides `r - 1`, so `r = c * 2^bits + 1` for every `bits < 32`:
++    /// again exactly one heavy residue (zero). The statistical distance from uniform on
++    /// `[0, 2^bits)` is then exactly `(1 - 2^-bits) / r < 2^-254`.
+     ///
+     /// The value is the low `bits` bits of the canonical representative, for any prime field
+     /// (see [`canonical_low_u64`]). For a field below `2^64` this equals the earlier
+-- 
+2.56.0
+

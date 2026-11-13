@@ -1,0 +1,286 @@
+From b281bfe518746696392a258aa6250cb4cac071c4 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 07:48:25 -0700
+Subject: [PATCH 3/5] E1: relax the base field from PrimeField64 to PrimeField
+
+sample_bits takes the low bits of the canonical representative, grinding
+iterates 0..min(p, 2^64), the proof decoder refuses values that do not fit
+usize, and base_field_order is computed from the BigUint order. BabyBear
+proofs are byte-identical (e1_bb_bytes) and the 239 suite tests pass.
+---
+ crates/stark-backend/src/config.rs            |  7 +--
+ crates/stark-backend/src/soundness/mod.rs     | 10 +++-
+ crates/stark-backend/src/test_utils/mod.rs    | 17 ++++---
+ crates/stark-backend/src/transcript/traits.rs | 47 +++++++++++++++++--
+ .../src/verifier/transcript_extractor.rs      | 15 +++---
+ 5 files changed, 72 insertions(+), 24 deletions(-)
+
+diff --git a/crates/stark-backend/src/config.rs b/crates/stark-backend/src/config.rs
+index c776e1c..bdb71a8 100644
+--- a/crates/stark-backend/src/config.rs
++++ b/crates/stark-backend/src/config.rs
+@@ -1,7 +1,7 @@
+ use core::fmt::Debug;
+ 
+ use getset::Getters;
+-use p3_field::{BasedVectorSpace, ExtensionField, PrimeField64, TwoAdicField};
++use p3_field::{BasedVectorSpace, ExtensionField, PrimeField, TwoAdicField};
+ use serde::{Deserialize, Serialize};
+ 
+ use crate::{hasher::MerkleHasher, interaction::LogUpSecurityParameters};
+@@ -18,8 +18,9 @@ use crate::{hasher::MerkleHasher, interaction::LogUpSecurityParameters};
+ /// for logging or debugging purposes. The trait controlling concrete implementations of the
+ /// transcript is specified by [`FiatShamirTranscript`](crate::FiatShamirTranscript).
+ pub trait StarkProtocolConfig: 'static + Clone + Send + Sync {
+-    /// The prime base field.
+-    type F: TwoAdicField + PrimeField64;
++    /// The prime base field. Any prime field with enough two-adicity: 31-bit fields such as
++    /// BabyBear, and large fields such as BLS12-381 Fr (with `EF = F`).
++    type F: TwoAdicField + PrimeField;
+     /// The extension field, used for random challenges.
+     type EF: TwoAdicField + ExtensionField<Self::F>;
+     /// The digest type used for commitments.
+diff --git a/crates/stark-backend/src/soundness/mod.rs b/crates/stark-backend/src/soundness/mod.rs
+index 098ed29..be8bcbf 100644
+--- a/crates/stark-backend/src/soundness/mod.rs
++++ b/crates/stark-backend/src/soundness/mod.rs
+@@ -1,6 +1,6 @@
+ //! Soundness analysis for the SWIRL proof system.
+ 
+-use p3_field::PrimeField64;
++use p3_field::Field;
+ 
+ use crate::StarkProtocolConfig;
+ 
+@@ -15,7 +15,13 @@ pub use calculator::*;
+ /// it without restating the formula.
+ #[doc(hidden)]
+ pub fn base_field_order<SC: StarkProtocolConfig>() -> f64 {
+-    SC::F::ORDER_U64 as f64
++    // Exact for a field below 2^53 (BabyBear). For a larger field (BLS12-381 Fr) it is `p`
++    // rounded to an f64, so `log2` is exact to about 2^-52 relative.
++    SC::F::order()
++        .to_u64_digits()
++        .iter()
++        .rev()
++        .fold(0.0f64, |acc, &d| acc * 18_446_744_073_709_551_616.0 + d as f64)
+ }
+ 
+ /// Number of bits in the challenge (extension) field: `D_EF * log2(|F|)`.
+diff --git a/crates/stark-backend/src/test_utils/mod.rs b/crates/stark-backend/src/test_utils/mod.rs
+index e6d2fbd..0f5d311 100644
+--- a/crates/stark-backend/src/test_utils/mod.rs
++++ b/crates/stark-backend/src/test_utils/mod.rs
+@@ -1,7 +1,7 @@
+ use std::sync::Arc;
+ 
+ use itertools::Itertools;
+-use p3_field::{PrimeCharacteristicRing, PrimeField64};
++use p3_field::{Field, PrimeCharacteristicRing};
+ use p3_matrix::dense::RowMajorMatrix;
+ 
+ use self::dummy_airs::{
+@@ -60,19 +60,22 @@ pub fn prove_up_to_batch_constraints<E: StarkEngine>(
+         .unwrap()
+ }
+ 
+-fn get_fib_number<F: PrimeField64>(mut a: u64, mut b: u64, n: usize) -> u64 {
++/// The `n`-th term of the Fibonacci sequence from `(a, b)`, computed in `F` (any field).
++fn get_fib_number<F: Field>(a: u64, b: u64, n: usize) -> F {
++    let (mut a, mut b) = (F::from_u64(a), F::from_u64(b));
+     for _ in 0..n - 1 {
+-        let c = (a + b) % F::ORDER_U64;
++        let c = a + b;
+         a = b;
+         b = c;
+     }
+     b
+ }
+ 
+-fn get_conditional_fib_number<F: PrimeField64>(mut a: u64, mut b: u64, sels: &[bool]) -> u64 {
++fn get_conditional_fib_number<F: Field>(a: u64, b: u64, sels: &[bool]) -> F {
++    let (mut a, mut b) = (F::from_u64(a), F::from_u64(b));
+     for &s in sels[0..sels.len() - 1].iter() {
+         if s {
+-            let c = (a + b) % F::ORDER_U64;
++            let c = a + b;
+             a = b;
+             b = c;
+         }
+@@ -193,7 +196,7 @@ impl<SC: StarkProtocolConfig> TestFixture<SC> for FibFixture {
+     fn generate_proving_ctx(&self) -> ProvingContext<CpuColMajorBackend<SC>> {
+         use crate::test_utils::dummy_airs::fib_air::trace::generate_trace_rows;
+         let f_n = get_fib_number::<SC::F>(self.a, self.b, self.n);
+-        let pis = [self.a, self.b, f_n].map(SC::F::from_u64);
++        let pis = [SC::F::from_u64(self.a), SC::F::from_u64(self.b), f_n];
+ 
+         ProvingContext::new(
+             (0..self.num_airs)
+@@ -347,7 +350,7 @@ impl<SC: StarkProtocolConfig> TestFixture<SC> for PreprocessedFibFixture {
+         use crate::test_utils::dummy_airs::fib_selector_air::trace::generate_trace_rows;
+         let trace = generate_trace_rows::<SC::F>(self.a, self.b, &self.sels);
+         let f_n = get_conditional_fib_number::<SC::F>(self.a, self.b, &self.sels);
+-        let pis = [self.a, self.b, f_n].map(SC::F::from_u64);
++        let pis = [SC::F::from_u64(self.a), SC::F::from_u64(self.b), f_n];
+ 
+         let single_ctx =
+             AirProvingContext::simple(ColMajorMatrix::from_row_major(&trace), pis.to_vec());
+diff --git a/crates/stark-backend/src/transcript/traits.rs b/crates/stark-backend/src/transcript/traits.rs
+index ecd6dec..4fcdfcd 100644
+--- a/crates/stark-backend/src/transcript/traits.rs
++++ b/crates/stark-backend/src/transcript/traits.rs
+@@ -1,6 +1,6 @@
+ use std::ops::Deref;
+ 
+-use p3_field::{BasedVectorSpace, PrimeCharacteristicRing, PrimeField, PrimeField64};
++use p3_field::{BasedVectorSpace, PrimeCharacteristicRing, PrimeField};
+ use p3_maybe_rayon::prelude::*;
+ use tracing::instrument;
+ 
+@@ -43,11 +43,19 @@ where
+     ///
+     /// For BabyBear, `p - 1 = 2^27 * 15`, so `p ≡ 1 (mod 2^bits)` and thus `r = 1` for every
+     /// `bits <= 27`—exactly one heavy residue (the all-zero one).
++    ///
++    /// For BLS12-381 Fr, `2^32` divides `r - 1`, so again exactly one residue is heavy for every
++    /// `bits < 32`, and `c ≈ 2^(254.86 - bits)`: the statistical distance from uniform is below
++    /// `2^bits / p < 2^-222`.
++    ///
++    /// The value is the low `bits` bits of the canonical representative, for any prime field
++    /// (see [`canonical_low_u64`]). For a field below `2^64` this equals the earlier
++    /// `as_canonical_u64() & mask` bit for bit.
+     fn sample_bits(&mut self, bits: usize) -> u64 {
+         assert!(bits < (u32::BITS as usize));
+-        assert!((1 << bits) < SC::F::ORDER_U64);
++        assert!(pow2_below_order::<SC::F>(bits));
+         let rand_f: SC::F = self.sample();
+-        let rand_u64 = rand_f.as_canonical_u64();
++        let rand_u64 = canonical_low_u64(&rand_f);
+         rand_u64 & ((1 << bits) - 1)
+     }
+ 
+@@ -71,15 +79,19 @@ where
+     /// Finds a proof-of-work witness `w` such that [`Self::check_witness`]`(bits, w)` holds, by
+     /// brute force over the base field.
+     #[instrument(name = "grind_pow", skip_all)]
++    ///
++    /// The candidates are the field elements `0, 1, 2, ...` below `min(p, 2^64)` (the whole field
++    /// for a field below `2^64`, as before). For a large field the `2^64` candidates are far
++    /// more than the `≈ 2^bits` needed, since `bits < 32`.
+     fn grind(&mut self, bits: usize) -> SC::F {
+         assert!(bits < (u32::BITS as usize));
+-        assert!((1 << bits) < SC::F::ORDER_U64);
++        assert!(pow2_below_order::<SC::F>(bits));
+         // Trivial case: 0 bits mean no PoW is required and any witness is valid.
+         if bits == 0 {
+             return SC::F::ZERO;
+         }
+ 
+-        let witness = (0..SC::F::ORDER_U64)
++        let witness = (0..grind_candidate_count::<SC::F>())
+             .into_par_iter()
+             .map(PrimeCharacteristicRing::from_u64)
+             .find_any(|witness| self.clone().check_witness(bits, *witness))
+@@ -89,6 +101,31 @@ where
+     }
+ }
+ 
++/// The low 64 bits of the canonical representative of `x` in `[0, p)`. For a field with
++/// `p < 2^64` this is `as_canonical_u64()`.
++#[inline]
++pub fn canonical_low_u64<F: PrimeField>(x: &F) -> u64 {
++    x.as_canonical_biguint().iter_u64_digits().next().unwrap_or(0)
++}
++
++/// `2^bits < p`, exactly. `F::bits()` is the bit length `b` of `p`, so `2^(b-1) <= p < 2^b`;
++/// `p` is an odd prime, so `p != 2^(b-1)`, and `2^bits < p` holds if and only if `bits < b`.
++#[inline]
++pub fn pow2_below_order<F: PrimeField>(bits: usize) -> bool {
++    bits < F::bits()
++}
++
++/// Number of proof-of-work candidates: `p` when `p < 2^64`, otherwise `2^64 - 1`.
++#[inline]
++pub fn grind_candidate_count<F: PrimeField>() -> u64 {
++    let order = F::order();
++    if order.bits() <= 64 {
++        order.iter_u64_digits().next().unwrap_or(0)
++    } else {
++        u64::MAX
++    }
++}
++
+ pub trait TranscriptHistory {
+     type F;
+     type State;
+diff --git a/crates/stark-backend/src/verifier/transcript_extractor.rs b/crates/stark-backend/src/verifier/transcript_extractor.rs
+index 846ff0a..5a5e95b 100644
+--- a/crates/stark-backend/src/verifier/transcript_extractor.rs
++++ b/crates/stark-backend/src/verifier/transcript_extractor.rs
+@@ -1,7 +1,7 @@
+ use core::cmp::Reverse;
+ 
+ use itertools::Itertools;
+-use p3_field::{BasedVectorSpace, PrimeCharacteristicRing, PrimeField64};
++use p3_field::{BasedVectorSpace, PrimeCharacteristicRing, PrimeField};
+ use thiserror::Error;
+ 
+ use crate::{
+@@ -157,7 +157,7 @@ pub fn extract_proof<SC, State, F, const RATE: usize>(
+ ) -> ExtractionResult<Proof<SC>>
+ where
+     SC: StarkProtocolConfig<F = F, Digest = [F; RATE]>,
+-    F: PrimeField64,
++    F: PrimeField,
+ {
+     let mut cursor = TranscriptCursor::new(log);
+     cursor.expect_observe_digest::<RATE>(mvk.pre_hash)?;
+@@ -205,7 +205,7 @@ impl<'a, F, State> TranscriptCursor<'a, F, State> {
+ 
+ impl<F, State> TranscriptCursor<'_, F, State>
+ where
+-    F: PrimeField64,
++    F: PrimeField,
+ {
+     fn observe(&mut self) -> ExtractionResult<F> {
+         self.next(false)
+@@ -264,7 +264,8 @@ where
+ 
+     fn observe_usize(&mut self) -> ExtractionResult<usize> {
+         let value = self.next(false)?;
+-        usize::try_from(value.as_canonical_u64()).map_err(|_| {
++        // Reject every value that does not fit in `usize`; never truncate a large-field value.
++        usize::try_from(value.as_canonical_biguint()).map_err(|_| {
+             TranscriptExtractionError::UsizeOverflow {
+                 position: self.position - 1,
+                 value: value.to_string(),
+@@ -417,7 +418,7 @@ fn extract_trace_preamble<SC, State, F, const RATE: usize>(
+ ) -> ExtractionResult<TracePreamble<SC>>
+ where
+     SC: StarkProtocolConfig<F = F, Digest = [F; RATE]>,
+-    F: PrimeField64,
++    F: PrimeField,
+ {
+     let mut trace_vdata = vec![None; mvk.per_air.len()];
+     let mut public_values = vec![Vec::new(); mvk.per_air.len()];
+@@ -682,7 +683,7 @@ fn extract_whir<SC, State, F, const RATE: usize>(
+ ) -> ExtractionResult<WhirProof<SC>>
+ where
+     SC: StarkProtocolConfig<F = F, Digest = [F; RATE]>,
+-    F: PrimeField64,
++    F: PrimeField,
+ {
+     let mu_pow_witness = cursor.extract_witness(params.whir.mu_pow_bits)?;
+     let _mu = cursor.sample_ext::<SC>()?;
+@@ -804,7 +805,7 @@ fn validate_initial_round_opened_rows<F>(
+     params: &crate::SystemParams,
+ ) -> ExtractionResult<OpenedRows<F>>
+ where
+-    F: PrimeField64,
++    F: PrimeField,
+ {
+     let expected_commit_count = widths.len();
+     if initial_round_opened_rows.len() != expected_commit_count {
+-- 
+2.56.0
+

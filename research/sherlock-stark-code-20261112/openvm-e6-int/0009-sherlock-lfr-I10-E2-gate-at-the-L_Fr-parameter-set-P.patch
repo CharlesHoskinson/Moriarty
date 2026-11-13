@@ -1,0 +1,748 @@
+From c4bd312bed0bc261429499f0b7231c1dbcfa95d1 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 14:55:53 -0700
+Subject: [PATCH] sherlock-lfr: I10 E2 gate at the L_Fr parameter set
+ (PublicAir, D-2)
+
+PublicAir exposes the D-2 public words (L vk pre-hash). The whole L verifier
+tape of the real L proof proves at the L_Fr set with 2 commitments and the
+stock verifier accepts; a changed public word and a changed L proof byte are
+refused. D3 at the measured key: 101.1435 bits.
+---
+ crates/sherlock-lfr/src/lverify.rs    |  20 +-
+ crates/sherlock-lfr/src/machine.rs    | 107 ++++++++++-
+ crates/sherlock-lfr/src/program.rs    |   1 +
+ crates/sherlock-lfr/src/tape.rs       |  13 ++
+ crates/sherlock-lfr/src/testing.rs    |  86 ++++++++-
+ crates/sherlock-lfr/tests/i10_gate.rs | 253 ++++++++++++++++++++++++++
+ 6 files changed, 469 insertions(+), 11 deletions(-)
+ create mode 100644 crates/sherlock-lfr/tests/i10_gate.rs
+
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index 3d768ebf631681d2ab0e547dc34ff36d4f3e2239..20672d70f0c5847536126aea8c801cdc4738ec52 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -222,6 +222,10 @@ pub struct Part1 {
+     /// The commitments as WHIR reads them: common main, then per present trace (trace order)
+     /// its preprocessed (none in `L`) and cached commitments.
+     pub commits: Vec<Addr>,
++    /// The `L` vk pre-hash (an Fr constant of the key).
++    pub pre_hash: Addr,
++    /// The public values of `L` (BabyBear words, in vk order).
++    pub public: Vec<Addr>,
+ }
+ 
+ /// Errors of the generator: the proof does not have the pinned shape.
+@@ -268,6 +272,7 @@ pub fn gen_part1(
+     let cm = g.fr_in(proof.common_main_commit[0]);
+     g.observe_commit(cm);
+     let mut cached_per_air: Vec<Vec<Addr>> = vec![vec![]; mvk.per_air.len()];
++    let mut public = vec![];
+     for (i, avk) in mvk.per_air.iter().enumerate() {
+         let lh = shape.log_heights[i];
+         if !avk.is_required {
+@@ -297,6 +302,7 @@ pub fn gen_part1(
+         for pv in &proof.public_values[i] {
+             let a = g.bb_in(*pv);
+             g.observe(a);
++            public.push(a);
+         }
+     }
+ 
+@@ -365,6 +371,8 @@ pub fn gen_part1(
+         commits: std::iter::once(cm)
+             .chain(order.iter().flat_map(|&i| cached_per_air[i].clone()))
+             .collect(),
++        pre_hash,
++        public,
+     })
+ }
+ 
+@@ -1555,14 +1563,22 @@ fn tree_compress(g: &mut Gen, mut hashes: Vec<Addr>) -> Addr {
+ }
+ 
+ /// The whole `L` verifier on the tape (parts 1 to 4).
++/// The whole `L` verifier on the tape (parts 1 to 4). Returns the addresses of the public words
++/// of `L_Fr` (D-2): the `L` vk pre-hash, then the public values of `L` packed 8 BabyBear words
++/// per Fr word (in vk order). The caller exposes them with [`crate::tape::Tape::public`].
+ pub fn gen_verifier(
+     g: &mut Gen,
+     vk: &MultiStarkVerifyingKey<LSC>,
+     shape: &LShape,
+     proof: &Proof<LSC>,
+-) -> Result<(), ShapeError> {
++) -> Result<Vec<Addr>, ShapeError> {
+     let p1 = gen_part1(g, vk, shape, proof)?;
+     let p2 = gen_part2(g, vk, shape, proof, &p1)?;
+     let p3 = gen_part3(g, vk, shape, proof, &p1, &p2)?;
+-    gen_part4(g, vk, proof, &p3)
++    gen_part4(g, vk, proof, &p3)?;
++    let mut words = vec![p1.pre_hash];
++    for c in p1.public.chunks(8) {
++        words.push(g.tape.pack(c));
++    }
++    Ok(words)
+ }
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+index 8b4a1501dc43fe03710b57ce8731d67963b0904a..fb95f5e75909a92916224029f986dd568a419a47 100644
+--- a/crates/sherlock-lfr/src/machine.rs
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -4,7 +4,7 @@
+ //! AIRs (only those with at least one op are present; `Range16` is always last):
+ //! `InputAir` (BabyBear and `EF4` inputs and constants), `FrInputAir`, `BbAluProgAir`,
+ //! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `AssertEqAir`, `BitsAir`,
+-//! `ProgramTableAir`, `Range16Air`. All
++//! `FrAddAir`, `HalveAir`, `CSwapAir`, `PublicAir`, `ProgramTableAir`, `Range16Air`. All
+ //! talk over the write-once memory bus [`MEM_BUS`] and the 16-bit range bus. Each execution AIR
+ //! keeps its program in main columns after its other columns and receives it on the program bus
+ //! from the one `ProgramTableAir` (`crate::program`), the only preprocessed trace.
+@@ -14,7 +14,7 @@ use std::sync::Arc;
+ use num_bigint::BigUint;
+ use openvm_stark_backend::{
+     interaction::InteractionBuilder,
+-    p3_air::{Air, BaseAir},
++    p3_air::{Air, AirBuilderWithPublicValues, BaseAir},
+     p3_field::{Field, PrimeCharacteristicRing},
+     p3_matrix::{dense::RowMajorMatrix, Matrix},
+     AirRef, BaseAirWithPublicValues, PartitionedBaseAir,
+@@ -27,7 +27,8 @@ use crate::{
+     poseidon::{eval_rounds, poseidon_row, IN, OUT, POSEIDON_WIDTH},
+     program::{
+         receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_ASSERT_EQ, TAG_BITS, TAG_CSWAP,
+-        TAG_FR_ADD, TAG_FR_INPUT, TAG_HALVE, TAG_INPUT, TAG_PACK, TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
++        TAG_FR_ADD, TAG_FR_INPUT, TAG_HALVE, TAG_INPUT, TAG_PACK, TAG_PERM, TAG_PUBLIC,
++        TAG_RESHAPE, TAG_SPLIT,
+     },
+     range::{Range16Air, RangeCounts, RANGE_BUS},
+     tape::{padded, Addr, BbAluProgAir, InputAir, Op, Tape, Val, MEM_BUS},
+@@ -932,6 +933,71 @@ impl<AB: InteractionBuilder<F = Fr>> Air<AB> for CSwapAir {
+     }
+ }
+ 
++// ------------------------------------------------------------------------------------------
++// PublicAir (D-2): the public values of the machine. One active row: program
++// [addr_0, .., addr_{P-1}, active]; main [v_0, .., v_{P-1}]. Reads (addr_i, v_i) and constrains
++// `active (v_i - pv_i) = 0`, so public value `i` equals the Fr value at `addr_i` of the tape.
++// The padding row (the nop row of the table: every cell 0) reads nothing.
++// ------------------------------------------------------------------------------------------
++
++/// Most public words of one `PublicAir` row (the program cells of one row, `PROG_W`, less the
++/// `active` cell).
++pub const PUBLIC_MAX: usize = crate::program::PROG_W - 1;
++
++#[derive(Clone, Debug)]
++pub struct PublicAir {
++    pub addrs: Arc<Vec<Addr>>,
++}
++
++impl PublicAir {
++    fn n(&self) -> usize {
++        self.addrs.len()
++    }
++    pub fn prog_rows(&self) -> Vec<Vec<Fr>> {
++        let mut r: Vec<Fr> = self.addrs.iter().map(|&a| fu(a as u64)).collect();
++        r.push(Fr::ONE);
++        vec![r]
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let row: Vec<Fr> = self.addrs.iter().map(|&a| get(mem, a).fr()).collect();
++        let main = rows_to_matrix(vec![row], 1, self.n(), vec![Fr::ZERO; self.n()]);
++        crate::program::with_prog(main, &self.prog_rows(), self.n() + 1)
++    }
++    /// The public values of the honest witness.
++    pub fn values(&self, mem: &[Option<Val>]) -> Vec<Fr> {
++        self.addrs.iter().map(|&a| get(mem, a).fr()).collect()
++    }
++}
++
++impl BaseAir<Fr> for PublicAir {
++    fn width(&self) -> usize {
++        2 * self.n() + 1
++    }
++}
++impl BaseAirWithPublicValues<Fr> for PublicAir {
++    fn num_public_values(&self) -> usize {
++        self.n()
++    }
++}
++impl PartitionedBaseAir<Fr> for PublicAir {}
++
++impl<AB: InteractionBuilder<F = Fr> + AirBuilderWithPublicValues> Air<AB> for PublicAir {
++    fn eval(&self, builder: &mut AB) {
++        let n = self.n();
++        let (v, p) = split_row(builder, TAG_PUBLIC, n, n + 1);
++        let pv: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
++        for i in 0..n {
++            builder.assert_zero(p[n].clone() * (v[i].clone() - pv[i].clone()));
++            builder.push_interaction(
++                MEM_BUS,
++                mem_msg(p[i].clone(), &[v[i].clone()]),
++                -p[n].clone(),
++                1,
++            );
++        }
++    }
++}
++
+ // ------------------------------------------------------------------------------------------
+ // Machine
+ // ------------------------------------------------------------------------------------------
+@@ -951,6 +1017,7 @@ pub struct Machine {
+     pub fr_add: Option<FrAddAir>,
+     pub halve: Option<HalveAir>,
+     pub cswap: Option<CSwapAir>,
++    pub public: Option<PublicAir>,
+ }
+ 
+ fn some<T>(v: Vec<T>) -> Option<Arc<Vec<T>>> {
+@@ -967,6 +1034,7 @@ impl Machine {
+         let mut alu = vec![];
+         let (mut asserts, mut bits) = (vec![], vec![]);
+         let (mut fr_add, mut halve, mut cswap) = (vec![], vec![], vec![]);
++        let mut public = vec![];
+         for op in &tape.ops {
+             match op {
+                 Op::Input { kind, out } => inp.push(crate::tape::InputProg {
+@@ -1056,6 +1124,7 @@ impl Machine {
+                     mult_l: m(l),
+                     mult_r: m(r),
+                 }),
++                Op::Public { a } => public.push(*a),
+             }
+         }
+         Self {
+@@ -1071,6 +1140,13 @@ impl Machine {
+             fr_add: some(fr_add).map(|prog| FrAddAir { prog }),
+             halve: some(halve).map(|prog| HalveAir { prog }),
+             cswap: some(cswap).map(|prog| CSwapAir { prog }),
++            public: some(public).map(|addrs| {
++                assert!(
++                    addrs.len() <= PUBLIC_MAX,
++                    "public words of one PublicAir row"
++                );
++                PublicAir { addrs }
++            }),
+         }
+     }
+ 
+@@ -1114,6 +1190,9 @@ impl Machine {
+         if let Some(a) = &self.cswap {
+             push(TAG_CSWAP, a.prog_rows());
+         }
++        if let Some(a) = &self.public {
++            push(TAG_PUBLIC, a.prog_rows());
++        }
+         v
+     }
+ 
+@@ -1161,6 +1240,9 @@ impl Machine {
+         if let Some(a) = &self.cswap {
+             v.push(Arc::new(a.clone()));
+         }
++        if let Some(a) = &self.public {
++            v.push(Arc::new(a.clone()));
++        }
+         v.push(Arc::new(self.table()));
+         v.push(Arc::new(Range16Air));
+         v
+@@ -1182,6 +1264,7 @@ impl Machine {
+             (self.fr_add.is_some(), "FrAdd"),
+             (self.halve.is_some(), "Halve"),
+             (self.cswap.is_some(), "CSwap"),
++            (self.public.is_some(), "Public"),
+         ] {
+             if present {
+                 v.push(n);
+@@ -1192,6 +1275,18 @@ impl Machine {
+         v
+     }
+ 
++    /// The public values per AIR in [`Machine::airs`] order (only `PublicAir` has any), from the
++    /// executed memory.
++    pub fn public_values(&self, mem: &[Option<Val>]) -> Vec<Vec<Fr>> {
++        let n = self.names().len();
++        let mut v = vec![vec![]; n];
++        if let Some(a) = &self.public {
++            let i = self.names().iter().position(|&x| x == "Public").unwrap();
++            v[i] = a.values(mem);
++        }
++        v
++    }
++
+     /// Honest main traces of every AIR except `Range16` (filled by
+     /// [`crate::testing::prove_verify_range`]).
+     pub fn traces(&self, mem: &[Option<Val>]) -> Vec<RowMajorMatrix<Fr>> {
+@@ -1241,6 +1336,9 @@ impl Machine {
+         if let Some(a) = &self.cswap {
+             v.push(a.trace(mem));
+         }
++        if let Some(a) = &self.public {
++            v.push(a.trace(mem));
++        }
+         v.push(self.table().trace());
+         v
+     }
+@@ -1297,6 +1395,9 @@ impl Machine {
+         if let Some(a) = &self.cswap {
+             push("CSwap", a.prog.len(), 5 + 8, 0);
+         }
++        if let Some(a) = &self.public {
++            push("Public", 1, 2 * a.addrs.len() + 1, 0);
++        }
+         let t = self.table();
+         v.push((
+             "ProgramTable",
+diff --git a/crates/sherlock-lfr/src/program.rs b/crates/sherlock-lfr/src/program.rs
+index 5cec75917b4331a0cf9ed265a9dc7ca17c951e18..774f989b7981b67def2515703c5c27d2bc5780dd 100644
+--- a/crates/sherlock-lfr/src/program.rs
++++ b/crates/sherlock-lfr/src/program.rs
+@@ -46,6 +46,7 @@ pub const TAG_BITS: u64 = 9;
+ pub const TAG_FR_ADD: u64 = 10;
+ pub const TAG_HALVE: u64 = 11;
+ pub const TAG_CSWAP: u64 = 12;
++pub const TAG_PUBLIC: u64 = 13;
+ 
+ /// `[tag, cols.., 0 ..]` of length `1 + PROG_W`.
+ pub fn prog_msg<E: Clone + PrimeCharacteristicRing>(tag: u64, cols: &[E]) -> Vec<E> {
+diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
+index c7efcf4ea4bc78f11759ea558c832cb0e07d4daf..630dd370ad4bb49762c0b297a4baee4c4e1a92f4 100644
+--- a/crates/sherlock-lfr/src/tape.rs
++++ b/crates/sherlock-lfr/src/tape.rs
+@@ -161,6 +161,10 @@ pub enum Op {
+         l: Addr,
+         r: Addr,
+     },
++    /// The Fr value at `a` is the next public value of the machine (D-2; no output).
++    Public {
++        a: Addr,
++    },
+ }
+ 
+ /// A straight-line program over BabyBear and `EF4` values.
+@@ -282,6 +286,11 @@ impl Tape {
+         self.ops.push(Op::CSwap { bit, a, b, l, r });
+         (l, r)
+     }
++    /// Expose the Fr value at `a` as the next public value (`machine::PublicAir`).
++    pub fn public(&mut self, a: Addr) {
++        self.check(a);
++        self.ops.push(Op::Public { a });
++    }
+     pub fn low_bits(&mut self, x: Addr, n: u32) -> Addr {
+         assert!(n <= 31);
+         self.check(x);
+@@ -320,6 +329,7 @@ impl Tape {
+                     rd(a);
+                     rd(b);
+                 }
++                Op::Public { a } => rd(a),
+                 Op::Input { .. } | Op::Const { .. } | Op::FrInput { .. } | Op::FrConst { .. } => {}
+             }
+         }
+@@ -379,6 +389,9 @@ impl Tape {
+                     mem[*l as usize] = Some(vl);
+                     mem[*r as usize] = Some(vr);
+                 }
++                Op::Public { a } => {
++                    let _ = get(&mem, a).fr();
++                }
+                 Op::LowBits { x, n, out } => {
+                     let v = get(&mem, x).bb()[0];
+                     mem[*out as usize] = Some(Val::Bb([v & ((1u64 << n) - 1), 0, 0, 0]));
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+index b6d077612c1812d6078de901943e12edad739b2e..a6b4699239f6ef1eec0eedb4224fb8fea93d4e39 100644
+--- a/crates/sherlock-lfr/src/testing.rs
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -61,7 +61,15 @@ pub fn small_params_n(max_constraint_degree: usize, n_stack: usize) -> SystemPar
+ pub enum Outcome {
+     /// Proved and the stock verifier accepted: proof bytes, and the number of commitments of the
+     /// proof (`stacking_openings.len()`: common main, then each preprocessed or cached one).
+-    Accepted { bytes: usize, commits: usize },
++    /// `prove_s` is the time of `engine.prove` only (after the trace transport), `verify_s` of
++    /// the stock verifier; `widths` the stacked width per commitment.
++    Accepted {
++        bytes: usize,
++        commits: usize,
++        prove_s: f64,
++        verify_s: f64,
++        widths: Vec<usize>,
++    },
+     /// The stock verifier refused the proof.
+     VerifierRefused(String),
+     /// The prover stopped (panic) on the witness.
+@@ -174,6 +182,44 @@ pub fn prove_verify_range(
+     (prove_verify_keyed(&engine, &pk, &vk, traces), vk)
+ }
+ 
++/// The `L_Fr` parameter set (E1 `lfr_params(3, 48, [98, 83, 82], 20)`, M7 `m7_fr_d3.rs`): UD,
++/// log blowup 3, `l_skip` 2, `n_stack` 18 (stacked height 2^20), `w_stack` 48, `k_whir` 4,
++/// queries 98/83/82, query PoW 20, folding, `mu` and LogUp PoW 0, max constraint degree 4.
++pub fn lfr_params() -> SystemParams {
++    let mut p = openvm_stark_sdk::config::params_with_100_bits_security(
++        3,
++        2,
++        18,
++        48,
++        0,
++        0,
++        WhirProximityStrategy::UniqueDecoding,
++        4,
++        20,
++        4,
++    );
++    for (r, n) in p.whir.rounds.iter_mut().zip([98, 83, 82]) {
++        r.num_queries = n;
++    }
++    p.logup.pow_bits = 0;
++    p
++}
++
++/// Prove and verify under an existing key, after filling the `Range16` table (last AIR);
++/// `pis` gives the public values per AIR (empty for an AIR without any).
++pub fn prove_verify_range_keyed(
++    engine: &Engine,
++    pk: &MultiStarkProvingKey<SC>,
++    vk: &MultiStarkVerifyingKey<SC>,
++    airs: &[AirRef<SC>],
++    mut traces: Vec<RowMajorMatrix<F>>,
++    pis: Vec<Vec<F>>,
++) -> Outcome {
++    assert_eq!(traces.len() + 1, airs.len());
++    traces.push(range_trace(pk, airs, &traces));
++    prove_verify_keyed_pis(engine, pk, vk, traces, pis)
++}
++
+ /// Prove and verify under an existing key.
+ pub fn prove_verify_keyed(
+     engine: &Engine,
+@@ -181,6 +227,19 @@ pub fn prove_verify_keyed(
+     vk: &MultiStarkVerifyingKey<SC>,
+     traces: Vec<RowMajorMatrix<F>>,
+ ) -> Outcome {
++    let n = traces.len();
++    prove_verify_keyed_pis(engine, pk, vk, traces, vec![vec![]; n])
++}
++
++/// Prove and verify under an existing key, with public values per AIR.
++pub fn prove_verify_keyed_pis(
++    engine: &Engine,
++    pk: &MultiStarkProvingKey<SC>,
++    vk: &MultiStarkVerifyingKey<SC>,
++    traces: Vec<RowMajorMatrix<F>>,
++    pis: Vec<Vec<F>>,
++) -> Outcome {
++    assert_eq!(traces.len(), pis.len());
+     let d_pk = engine.device().transport_pk_to_device(pk);
+     let res = catch_unwind(AssertUnwindSafe(|| {
+         let ctx = ProvingContext::new(
+@@ -191,14 +250,17 @@ pub fn prove_verify_keyed(
+                     let cm = ColMajorMatrix::from_row_major(t);
+                     (
+                         i,
+-                        AirProvingContext::simple_no_pis(
++                        AirProvingContext::simple(
+                             engine.device().transport_matrix_to_device(&cm),
++                            pis[i].clone(),
+                         ),
+                     )
+                 })
+                 .collect(),
+         );
+-        engine.prove(&d_pk, ctx)
++        let t = std::time::Instant::now();
++        let p = engine.prove(&d_pk, ctx);
++        (p, t.elapsed().as_secs_f64())
+     }));
+     let proof = match res {
+         Err(e) => {
+@@ -209,13 +271,25 @@ pub fn prove_verify_keyed(
+                 .unwrap_or_default();
+             return Outcome::ProverRefused(msg);
+         }
+-        Ok(Err(e)) => return Outcome::ProverRefused(format!("{e:?}")),
+-        Ok(Ok(p)) => p,
++        Ok((Err(e), _)) => return Outcome::ProverRefused(format!("{e:?}")),
++        Ok((Ok(p), s)) => (p, s),
+     };
+-    match engine.verify(vk, &proof) {
++    let (proof, prove_s) = proof;
++    let t = std::time::Instant::now();
++    let verdict = engine.verify(vk, &proof);
++    let verify_s = t.elapsed().as_secs_f64();
++    match verdict {
+         Ok(()) => Outcome::Accepted {
+             bytes: proof.encode_to_vec().map(|b| b.len()).unwrap_or(0),
+             commits: proof.stacking_proof.stacking_openings.len(),
++            prove_s,
++            verify_s,
++            widths: proof
++                .stacking_proof
++                .stacking_openings
++                .iter()
++                .map(|v| v.len())
++                .collect(),
+         },
+         Err(e) => Outcome::VerifierRefused(format!("{e:?}")),
+     }
+diff --git a/crates/sherlock-lfr/tests/i10_gate.rs b/crates/sherlock-lfr/tests/i10_gate.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bc5d4fba267df20652e211829ed50c485139cc98
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i10_gate.rs
+@@ -0,0 +1,253 @@
++//! I10, the E2 gate: the whole `L` verifier tape of the real `L` proof, with the `L_Fr` public
++//! values of D-2 (the `L` vk pre-hash; the bench `L` has no public values), proved at the
++//! `L_Fr` parameter set (`testing::lfr_params`) and accepted by the stock verifier, with 2
++//! commitments. Refused: a changed public word and a changed byte of the encoded `L` proof.
++//! Heights MEASURED; the D3 soundness terms at the measured `L_Fr` key
++//! (`SoundnessCalculator::calculate_from_vk`). Ignored by default: needs the fixture and about
++//! an hour of CPU.
++//!
++//! `i10_public_air_small` checks `PublicAir` on a small tape at the small test set.
++
++use std::time::Instant;
++
++use openvm_stark_backend::{
++    codec::{Decode, Encode},
++    soundness::SoundnessCalculator,
++    StarkEngine,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use p3_field::PrimeCharacteristicRing;
++use sherlock_lfr::{
++    fixture::{self, LSC},
++    lverify::{gen_verifier, Gen, LShape},
++    machine::Machine,
++    record::stock_log,
++    tape::{Op, Tape, Val},
++    testing::{
++        lfr_params, preprocessed_airs, prove_verify_range_keyed, small_params, Engine, Outcome,
++    },
++};
++
++type LProof = openvm_stark_backend::proof::Proof<LSC>;
++type LVk = openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>;
++
++/// The tape of the whole `L` verifier with the D-2 public words exposed.
++fn build(vk: &LVk, shape: &LShape, proof: &LProof) -> Result<Gen, String> {
++    let mut g = Gen::new();
++    let words = gen_verifier(&mut g, vk, shape, proof).map_err(|e| format!("{e:?}"))?;
++    for w in words {
++        g.tape.public(w);
++    }
++    Ok(g)
++}
++
++/// Keygen at `params`, then prove and verify the honest witness and the changed public word.
++fn public_controls(
++    params: openvm_stark_backend::SystemParams,
++    m: &Machine,
++    mem: &[Option<Val>],
++) -> (Outcome, Outcome) {
++    let engine = Engine::new(params);
++    let airs = m.airs();
++    let (pk, vk) = engine.keygen(&airs);
++    let pis = m.public_values(mem);
++    let honest = prove_verify_range_keyed(&engine, &pk, &vk, &airs, m.traces(mem), pis.clone());
++    let mut bad = pis;
++    let i = m.names().iter().position(|&n| n == "Public").unwrap();
++    bad[i][0] += Fr::ONE;
++    let changed = prove_verify_range_keyed(&engine, &pk, &vk, &airs, m.traces(mem), bad);
++    (honest, changed)
++}
++
++#[test]
++fn i10_public_air_small() {
++    let mut t = Tape::default();
++    let a = t.fr_const(Fr::from_u64(7));
++    let b = t.fr_input();
++    let c = t.fr_add(a, b);
++    t.public(c);
++    t.public(a);
++    let (mem, failed) = t.execute_checked(&[Val::Fr(Fr::from_u64(5))]);
++    assert!(failed.is_empty());
++    let m = Machine::new(&t);
++    assert_eq!(
++        m.public_values(&mem).concat(),
++        vec![Fr::from_u64(12), Fr::from_u64(7)]
++    );
++    let (honest, changed) = public_controls(small_params(3), &m, &mem);
++    println!("I10 small PublicAir: honest {honest:?}; changed public word {changed:?}");
++    assert!(honest.accepted());
++    assert_eq!(honest.commits(), Some(2));
++    assert!(!changed.accepted());
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk; about an hour at the L_Fr parameter set"]
++fn i10_gate_at_lfr_params() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let (_, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let g = build(&fx.l_vk, &shape, &fx.l_proof).expect("pinned shape");
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++    let m = Machine::new(&g.tape);
++    let n_public = g
++        .tape
++        .ops
++        .iter()
++        .filter(|o| matches!(o, Op::Public { .. }))
++        .count();
++    assert_eq!(n_public, 1, "D-2 on the bench L: the vk pre-hash only");
++    assert_eq!(m.public_values(&mem).concat(), vec![fx.l_vk.pre_hash[0]]);
++
++    // Heights (MEASURED): every AIR within the stacked height 2^20 of the L_Fr set.
++    let shape_m = m.shape();
++    let cells: usize = shape_m.iter().map(|&(_, h, w, _)| h * w).sum();
++    let pre_cells: usize = shape_m.iter().map(|&(_, h, _, pw)| h * pw).sum();
++    let params = lfr_params();
++    let stacked = 1usize << (params.l_skip + params.n_stack);
++    println!(
++        "I10 tape: {} ops, {} AIRs, shape (name, rows, main width, preprocessed width) {:?}; main cells {} ({:.2} stacked columns of 2^{}), preprocessed cells {} ({:.2} columns)",
++        g.tape.ops.len(),
++        shape_m.len(),
++        shape_m,
++        cells,
++        cells as f64 / stacked as f64,
++        params.l_skip + params.n_stack,
++        pre_cells,
++        pre_cells as f64 / stacked as f64
++    );
++    assert!(shape_m.iter().all(|&(_, h, _, _)| h <= stacked));
++
++    // Changed L proof byte (checked before keygen, proved last): the first byte from the middle
++    // of the encoding whose low-bit flip still decodes to a proof of the pinned shape (so the
++    // key is the same tape).
++    let bytes = fx.l_proof.encode_to_vec().unwrap();
++    let mut chosen = None;
++    for off in (bytes.len() / 2)..(bytes.len() / 2 + 256) {
++        let mut b = bytes.clone();
++        b[off] ^= 1;
++        let Ok(p) = LProof::decode_from_bytes(&b) else {
++            continue;
++        };
++        if LShape::of(&p) != shape {
++            continue;
++        }
++        let Ok(gt) = build(&fx.l_vk, &shape, &p) else {
++            continue;
++        };
++        if format!("{:?}", gt.tape.ops) != format!("{:?}", g.tape.ops) {
++            continue;
++        }
++        chosen = Some((off, p, gt));
++        break;
++    }
++    let (off, p, gt) = chosen.expect("a byte flip of the pinned shape");
++    let (_, stock_ok) = stock_log(&fx.l_vk, &p);
++    let (mem_t, failed_t) = gt.tape.execute_checked(&gt.inputs);
++    println!(
++        "I10 changed L proof byte (offset {off} of {}, low bit): stock verifier accepts {stock_ok}; tape assertions failed at {} ops (first {:?})",
++        bytes.len(),
++        failed_t.len(),
++        failed_t.first()
++    );
++    assert!(!stock_ok);
++    assert!(!failed_t.is_empty());
++
++    // Keygen at the L_Fr set, and D3 at the measured key.
++    let engine = Engine::new(params);
++    let airs = m.airs();
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    println!("I10 keygen {:.1}s", t.elapsed().as_secs_f64());
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
++    let max_constraints = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.constraints.constraint_idx.len())
++        .max()
++        .unwrap();
++    let max_interactions = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.interactions.len())
++        .max()
++        .unwrap();
++    let columns: usize = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.params.width.total_width())
++        .sum();
++    let s = SoundnessCalculator::calculate_from_vk(&vk);
++    let wd = &s.whir_details;
++    println!(
++        "I10 D3 at the measured L_Fr key ({} AIRs, max {} constraints per AIR, max {} interactions per AIR, {} columns, w_stack {}, log stacked height {}): logup {:.4}, gkr sumcheck {:.4}, gkr batching {:.4}, zerocheck {:.4}, constraint batching {:.4}, stacked reduction {:.4}, whir {:.4} (mu {:.4}, fold {:.4}, query {:.4}, shift {:.4}, gamma {:.4}, ood {:.4}); total {:.4}",
++        vk.inner.per_air.len(),
++        max_constraints,
++        max_interactions,
++        columns,
++        vk.inner.params.w_stack,
++        vk.inner.params.log_stacked_height(),
++        s.logup_bits,
++        s.gkr_sumcheck_bits,
++        s.gkr_batching_bits,
++        s.zerocheck_sumcheck_bits,
++        s.constraint_batching_bits,
++        s.stacked_reduction_bits,
++        s.whir_bits,
++        wd.mu_batching_bits,
++        wd.fold_rbr_bits,
++        wd.query_bits,
++        wd.shift_rbr_bits,
++        wd.gamma_batching_bits,
++        wd.ood_rbr_bits,
++        s.total_bits
++    );
++    assert!(s.total_bits >= 100.0, "D3 total below 100 bits");
++
++    // The honest proof.
++    let pis = m.public_values(&mem);
++    let t = Instant::now();
++    let o = prove_verify_range_keyed(&engine, &pk, &vk, &airs, m.traces(&mem), pis.clone());
++    println!(
++        "I10 honest prove and verify at the L_Fr set {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(o.accepted(), "honest L_Fr proof refused: {o:?}");
++    assert_eq!(o.commits(), Some(2));
++
++    // Changed public word (the L vk pre-hash), same key and witness.
++    let mut bad = pis;
++    let pi = m.names().iter().position(|&n| n == "Public").unwrap();
++    bad[pi][0] += Fr::ONE;
++    let t = Instant::now();
++    let o = prove_verify_range_keyed(&engine, &pk, &vk, &airs, m.traces(&mem), bad);
++    println!(
++        "I10 negative changed public word {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(!o.accepted(), "changed public word accepted");
++
++    let t = Instant::now();
++    let o = prove_verify_range_keyed(
++        &engine,
++        &pk,
++        &vk,
++        &airs,
++        m.traces(&mem_t),
++        m.public_values(&mem_t),
++    );
++    println!(
++        "I10 negative changed L proof byte (offset {off}): prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(!o.accepted(), "changed L proof byte accepted");
++}
+-- 
+2.56.0
+

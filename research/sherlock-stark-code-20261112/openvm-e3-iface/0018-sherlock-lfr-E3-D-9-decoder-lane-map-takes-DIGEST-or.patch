@@ -1,0 +1,64 @@
+From 099d6d8dfa790f46e0cf48f8bf9fd24a19c2258e Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 04:06:19 -0700
+Subject: [PATCH 18/19] sherlock-lfr: E3 D-9 decoder lane map takes DIGEST or
+ SPONGE(3) only (claim_pub of acceptRun); SPONGE(n), n != 3, refused, with a
+ test
+
+---
+ crates/sherlock-lfr/src/iface.rs | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index 0b5b9ed..90b2821 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -564,7 +564,8 @@ pub fn r_entries(head: &[u64]) -> Option<Vec<(u64, u64)>> {
+ /// words. Checks range and `Canon` of every lane and logged value, the padding rules, `R` and the
+ /// anchor rule (plan D-10), the native replay of every entry whose values are all in `pv`
+ /// (`PERM`, `H2`, `SPONGE`, `DIGEST`; `PATH` needs the wrap-private siblings), the lane map (each
+-/// mapped entry a `DIGEST` or a `SPONGE`, its output the lane) and every `PUB(i)` against lane
++/// mapped entry a `DIGEST` or a `SPONGE(3)` (the `claim_pub` of `acceptRun`), its output the
++/// lane) and every `PUB(i)` against lane
+ /// `i`.
+ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+     let w = unpack(lfr_words, d.words())?;
+@@ -635,7 +636,7 @@ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+             continue;
+         }
+         let (op, param, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
+-        if !(op == DIGEST || op == SPONGE) || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
++        if !(op == DIGEST || (op == SPONGE && param == 3)) || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
+             return Err(format!("lane map pair {k}"));
+         }
+         s[lane as usize] = vs[o + vals(op, param) - 1];
+@@ -1094,8 +1095,8 @@ mod tests {
+ 
+     /// D-9 lane map with `SPONGE(3)` entries (the owner-ruled `acceptRun` binds `claim_pub` to
+     /// the logged `SPONGE(3)` of `R`): the two `claim_pub` lanes come from entry 3 and equal its
+-    /// output; a pair that points at a `PUB`, `PERM` or `H2` entry, a lane mapped twice, and a
+-    /// `SPONGE(3)` output changed in `pv` are refused.
++    /// output; a pair that points at a `PUB`, `PERM`, `H2` or `SPONGE(n)` (`n != 3`) entry, a lane
++    /// mapped twice, and a `SPONGE(3)` output changed in `pv` are refused.
+     #[test]
+     fn lane_map_sponge_entries() {
+         let d = Dims { b: 48, v: 48, p: 32, l_tx: 62 };
+@@ -1124,6 +1125,15 @@ mod tests {
+             }
+         }
+         assert!(refused >= 2, "FullV has PUB and PERM or H2 entries");
++        // a SPONGE(n) with n != 3 is not a lane-map target
++        let i = run
++            .log
++            .iter()
++            .position(|e| e.op == SPONGE && e.param != 3)
++            .expect("FullV has a discretionary SPONGE(n), n != 3");
++        let mut x = w.clone();
++        pair(&mut x, 1, LANE_CLAIM[0], i as u64);
++        assert_eq!(decode(&d, &to_lfr(&x)), Err("lane map pair 1".into()));
+         let mut x = w.clone();
+         pair(&mut x, 2, LANE_CLAIM[0], 3);
+         assert_eq!(decode(&d, &to_lfr(&x)), Err("lane map pair 2".into()));
+-- 
+2.56.0
+

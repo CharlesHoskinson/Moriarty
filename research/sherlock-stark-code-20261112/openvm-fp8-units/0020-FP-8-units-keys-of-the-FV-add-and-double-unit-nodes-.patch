@@ -1,0 +1,815 @@
+From 33e32d1c1d3b1e03d52b56e2662233c238df010b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 05:39:41 -0700
+Subject: [PATCH] FP-8 units: keys of the FV add and double unit nodes (KeyBind
+ N3 + VerifierSubCircuit<1> over N3 + X14 G1 work AIRs) under G1 at INTERNAL
+ and a 3,300-column copy; step 1 in stark-bench-ovm (mod-builder dependency),
+ step 2 in sherlock-wrap-export (G1 recheck, vk bitcode bytes and sha256)
+
+---
+ .../examples/fp8_units.rs                     |  71 ++
+ .../stark-bench-ovm/examples/fp8_units_gen.rs | 714 ++++++++++++++++++
+ 2 files changed, 785 insertions(+)
+ create mode 100644 crates/sherlock-wrap-export/examples/fp8_units.rs
+ create mode 100644 crates/stark-bench-ovm/examples/fp8_units_gen.rs
+
+diff --git a/crates/sherlock-wrap-export/examples/fp8_units.rs b/crates/sherlock-wrap-export/examples/fp8_units.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f251a7614ba5cdb21051248ec1fde8e8a1e037b0
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/fp8_units.rs
+@@ -0,0 +1,71 @@
++//! Sherlock FP-8 (loop item FP8): the two FV (fixed-base / G1) unit node keys, step 2 of 2.
++//!
++//! Step 1 (`stark-bench-ovm/examples/fp8_units_gen.rs`) keys the units (KeyBind `Role::N3` +
++//! `VerifierSubCircuit<1>` over N3 + the G1 work AIRs) and writes each vk as JSON with its G1
++//! verdicts. It lives there because only that crate has the mod-builder dependency (adding it here
++//! changes `Cargo.lock`). This step loads each vk, checks the JSON round trip and the pre-hash,
++//! re-runs the G1 key check with the `sherlock_lfr::frozen` crate (INTERNAL, and the 3,300-column
++//! copy, FOR OWNER CONFIRMATION), and records the vk bitcode bytes and sha256.
++//!
++//! usage: fp8_units DIR   (reads DIR/gen.json and DIR/*_vk.json, writes DIR/units.json)
++use std::{fs, path::PathBuf};
++
++use openvm_stark_backend::keygen::types::MultiStarkVerifyingKey;
++use serde_json::{json, Value};
++use sherlock_lfr::{fixture::NodeSC, frozen};
++
++fn sha256_hex(b: &[u8]) -> String {
++    use std::process::{Command, Stdio};
++    let mut c = Command::new("sha256sum").stdin(Stdio::piped()).stdout(Stdio::piped()).spawn().expect("sha256sum");
++    std::io::Write::write_all(c.stdin.as_mut().unwrap(), b).unwrap();
++    let o = c.wait_with_output().unwrap();
++    String::from_utf8(o.stdout).unwrap().split_whitespace().next().unwrap().to_string()
++}
++
++fn verdict(r: Result<frozen::KeyShape, frozen::G1Error>) -> String {
++    match r {
++        Ok(_) => "accepted".into(),
++        Err(e) => format!("REFUSED: {e:?}"),
++    }
++}
++
++fn main() {
++    let dir = PathBuf::from(std::env::args().nth(1).expect("DIR"));
++    let mut gen: Value = serde_json::from_slice(&fs::read(dir.join("gen.json")).unwrap()).unwrap();
++    let mut wide = frozen::INTERNAL.bounds;
++    wide.max_columns = 3300;
++    let mut out = vec![];
++    let mut seen = std::collections::BTreeSet::new();
++    for k in gen["keys"].as_array().unwrap().clone() {
++        let file = k["file"].as_str().unwrap().to_string();
++        if !seen.insert(file.clone()) {
++            continue;
++        }
++        let raw = fs::read(dir.join(&file)).unwrap();
++        let vk: MultiStarkVerifyingKey<NodeSC> = serde_json::from_slice(&raw).unwrap();
++        let back: Value = serde_json::to_value(&vk).unwrap();
++        let orig: Value = serde_json::from_slice(&raw).unwrap();
++        assert_eq!(back, orig, "{file}: vk JSON round trip");
++        let pre = format!("{:?}", vk.pre_hash);
++        assert_eq!(pre, k["pre_hash"].as_str().unwrap(), "{file}: pre-hash");
++        let bytes = bitcode::serialize(&vk).expect("vk bitcode");
++        let s = frozen::shape(&vk);
++        out.push(json!({
++            "key": k["key"], "file": file,
++            "airs": s.airs, "columns": s.columns, "max_interactions_per_air": s.max_interactions,
++            "max_constraints_per_air": s.max_constraints, "max_constraint_degree": s.max_degree,
++            "total_constraints": s.total_constraints, "total_interactions": s.total_interactions,
++            "public_values": s.public_values,
++            "pre_hash": pre, "vk_bitcode_bytes": bytes.len(), "vk_bitcode_sha256": sha256_hex(&bytes),
++            "g1_internal": verdict(frozen::check_vk(&frozen::INTERNAL, &vk)),
++            "g1_internal_cols3300": verdict(frozen::check_vk_bounds(&frozen::INTERNAL, &wide, &vk)),
++            "work_airs": k.get("work_airs").cloned().unwrap_or(Value::Null),
++        }));
++        println!("FP8UNIT {} airs={} cols={} maxint={} deg={} bytes={} g1={} g1_3300={}",
++            k["key"], s.airs, s.columns, s.max_interactions, s.max_degree, bytes.len(),
++            out.last().unwrap()["g1_internal"], out.last().unwrap()["g1_internal_cols3300"]);
++    }
++    gen["units"] = json!(out);
++    gen["labels"] = json!("every key quantity, verdict, time and height MEASURED; role N3 and the 3,300-column bound FOR OWNER CONFIRMATION");
++    fs::write(dir.join("units.json"), serde_json::to_string_pretty(&gen).unwrap()).unwrap();
++}
+diff --git a/crates/stark-bench-ovm/examples/fp8_units_gen.rs b/crates/stark-bench-ovm/examples/fp8_units_gen.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..16b17b2704de6335c5d136c67266f3663601d133
+--- /dev/null
++++ b/crates/stark-bench-ovm/examples/fp8_units_gen.rs
+@@ -0,0 +1,714 @@
++//! Sherlock FP-8 (loop item FP8): the two FV (fixed-base / G1) unit node keys, step 1 of 2.
++//!
++//! A unit node = `KeyBind` (AIR 0, `Role::N3`, the internal-recursive position: FOR OWNER
++//! CONFIRMATION) + `VerifierSubCircuit<1>` (continuations on) over the N3 fixed-point key + the
++//! G1 work AIRs of one chain kind at the X-EXP final shapes (X14 section (d)):
++//!   add:    L_add, X3, Y3, INV, PointsIn (4 values), range
++//!   double: L_dbl, X3, Y3, PointsIn (2 values, on-curve checked by the producer), range, SQ
++//!           (no INV_y)
++//! The work AIRs are a port of `g1_chain` of `stark-bench-ovm/examples/x_exp_node.rs` (X-EXP
++//! checkout) without the negative-test paths. The sink AIR (test harness: the consumer of the
++//! output point) is not part of a unit key; the proving run adds it in a separate harness key.
++//!
++//! This example lives in `stark-bench-ovm` because only this crate has the mod-builder and
++//! circuit-primitives dependencies; adding them to `sherlock-wrap-export` changes `Cargo.lock`.
++//! `frozen.rs` and `keybind.rs` of `sherlock-lfr` are included unmodified by path. Step 2
++//! (`sherlock-wrap-export/examples/fp8_units.rs`) loads the vk JSON files written here, re-runs
++//! the G1 check with the `sherlock_lfr` crate, and computes the vk bitcode bytes and sha256.
++//!
++//! usage: fp8_units_gen OUT PROVE_LOG_ROWS PROVE_KINDS(add,dbl|none) APP_LOG_ROWS
++use std::{fs, path::PathBuf, sync::Arc, time::Instant};
++
++#[path = "../../sherlock-lfr/src/frozen.rs"]
++#[allow(dead_code)]
++mod frozen;
++#[path = "../../sherlock-lfr/src/keybind.rs"]
++#[allow(dead_code)]
++mod keybind;
++
++use frozen::{FrozenSet, KeyShape};
++use keybind::{KeyBindAir, Role};
++use num_bigint::BigUint;
++use openvm_cpu_backend::CpuBackend;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    p3_air::{Air, BaseAir},
++    p3_field::{PrimeCharacteristicRing, PrimeField32},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    proof::Proof,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    AirRef, BaseAirWithPublicValues, PartitionedBaseAir, StarkEngine,
++};
++use openvm_stark_sdk::config::baby_bear_poseidon2::{
++    default_duplex_sponge_recorder, BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine, DuplexSponge,
++    DuplexSpongeRecorder,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use serde_json::{json, Value};
++
++type F = BabyBear;
++type SC = BabyBearPoseidon2Config;
++type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
++
++// ------------------------------------------------------------------ G1 keygen with a record
++fn shape_json(s: &KeyShape) -> Value {
++    json!({"airs": s.airs, "columns": s.columns, "max_constraints": s.max_constraints,
++           "max_interactions": s.max_interactions, "max_degree": s.max_degree,
++           "total_constraints": s.total_constraints, "total_interactions": s.total_interactions,
++           "preprocessed_airs": s.preprocessed_airs, "public_values": s.public_values})
++}
++
++/// Keygen through `frozen::keygen_checked`; on a refusal, record it and key with the plain
++/// engine (same parameters) so the shape is still measured. Returns the verdict string.
++fn kg(set: &FrozenSet, engine: &Eng, airs: &[AirRef<SC>]) -> (MultiStarkProvingKey<SC>, MultiStarkVerifyingKey<SC>, String, f64) {
++    let t = Instant::now();
++    match frozen::keygen_checked(set, engine, airs) {
++        Ok((pk, vk, _)) => (pk, vk, "accepted".into(), t.elapsed().as_secs_f64()),
++        Err(e) => {
++            let (pk, vk) = engine.keygen(airs);
++            (pk, vk, format!("REFUSED: {e:?}"), t.elapsed().as_secs_f64())
++        }
++    }
++}
++
++/// Strict keygen for the chain ladder (app, leaf, N1, N2, N3): any refusal aborts.
++fn kg_strict(set: &FrozenSet, engine: &Eng, airs: &[AirRef<SC>], label: &str) -> (MultiStarkProvingKey<SC>, MultiStarkVerifyingKey<SC>) {
++    match frozen::keygen_checked(set, engine, airs) {
++        Ok((pk, vk, _)) => (pk, vk),
++        Err(e) => panic!("G1 refused {label}: {e:?}"),
++    }
++}
++
++fn key_record(label: &str, set: &FrozenSet, verdict: &str, vk: &MultiStarkVerifyingKey<SC>, keygen_s: f64) -> Value {
++    json!({"key": label, "set": set.name, "bounds_max_columns": set.bounds.max_columns, "g1": verdict,
++           "pre_hash": format!("{:?}", vk.pre_hash), "keygen_s": keygen_s,
++           "shape": shape_json(&frozen::shape(vk))})
++}
++
++// ------------------------------------------------------------------ chain ladder (as fp8_keyset)
++fn bound_cfg() -> VerifierConfig {
++    VerifierConfig { continuations_enabled: true, ..Default::default() }
++}
++
++struct Layer<const N: usize> {
++    circuit: VerifierSubCircuit<N>,
++    role: Role,
++    engine: Eng,
++    pk: MultiStarkProvingKey<SC>,
++    vk: MultiStarkVerifyingKey<SC>,
++}
++
++fn circuit<const N: usize>(child: &MultiStarkVerifyingKey<SC>) -> VerifierSubCircuit<N>
++where
++    VerifierSubCircuit<N>: VerifierTraceGen<CpuBackend<SC>, SC, ()>,
++{
++    <VerifierSubCircuit<N> as VerifierTraceGen<CpuBackend<SC>, SC, ()>>::new(Arc::new(child.clone()), bound_cfg())
++}
++
++fn layer_airs<const N: usize>(c: &VerifierSubCircuit<N>, role: &Role, work: Vec<AirRef<SC>>) -> Vec<AirRef<SC>>
++where
++    VerifierSubCircuit<N>: AggregationSubCircuit,
++{
++    let kb = Arc::new(KeyBindAir::new(role.clone(), c.bus_inventory())) as AirRef<SC>;
++    std::iter::once(kb).chain(c.airs::<SC>()).chain(work).collect()
++}
++
++fn agg_key<const N: usize>(set: &FrozenSet, child: &MultiStarkVerifyingKey<SC>, role: Role, label: &str) -> Layer<N>
++where
++    VerifierSubCircuit<N>: VerifierTraceGen<CpuBackend<SC>, SC, ()> + AggregationSubCircuit,
++{
++    let engine = Eng::new(set.params());
++    let c = circuit::<N>(child);
++    let airs = layer_airs(&c, &role, vec![]);
++    let (pk, vk) = kg_strict(set, &engine, &airs, label);
++    check_layout(&vk);
++    Layer { circuit: c, role, engine, pk, vk }
++}
++
++/// As fp8_keyset: one cached-trace AIR at CE_AIR_ID, KeyBind public values at KB_AIR_ID only.
++fn check_layout(vk: &MultiStarkVerifyingKey<SC>) {
++    let cached: Vec<usize> = vk.inner.per_air.iter().enumerate()
++        .filter(|(_, a)| !a.params.width.cached_mains.is_empty()).map(|(i, _)| i).collect();
++    assert_eq!(cached, vec![keybind::CE_AIR_ID], "KeyBind: cached-trace AIR");
++    assert_eq!(vk.inner.per_air[keybind::KB_AIR_ID].params.num_public_values, keybind::NUM_PVS);
++    let others: usize = vk.inner.per_air.iter().skip(1).map(|a| a.params.num_public_values).sum();
++    assert_eq!(others, 0, "KeyBind: only AIR 0 has public values");
++}
++
++/// Prove a bound layer (KeyBind + verifier sub-circuit + `work` traces in AIR order).
++fn bound_prove<const N: usize>(
++    c: &VerifierSubCircuit<N>,
++    role: &Role,
++    engine: &Eng,
++    pk: &MultiStarkProvingKey<SC>,
++    vk: &MultiStarkVerifyingKey<SC>,
++    child_vk: &MultiStarkVerifyingKey<SC>,
++    proofs: &[Proof<SC>],
++    work: Vec<RowMajorMatrix<F>>,
++) -> (Proof<SC>, Result<(), String>, f64)
++where
++    VerifierSubCircuit<N>: VerifierTraceGen<CpuBackend<SC>, SC, ()>,
++{
++    let pcs = c.commit_child_vk(engine, child_vk);
++    let child = keybind::vk_commit(&pcs.commitment, &child_vk.pre_hash);
++    let child_pvs: Vec<Vec<F>> = proofs.iter()
++        .map(|p| if *role == Role::Leaf { vec![] } else { p.public_values[keybind::KB_AIR_ID].clone() }).collect();
++    let (tr, pvs) = keybind::trace(role, &child_pvs, child);
++    let d_pk = engine.device().transport_pk_to_device(pk);
++    let mut ctxs = vec![AirProvingContext::simple(
++        engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&tr)), pvs)];
++    ctxs.extend(c.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk, CachedTraceCtx::PcsData(pcs), proofs, &(), default_duplex_sponge_recorder()));
++    for t in work {
++        ctxs.push(AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&t))));
++    }
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).expect("bound prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    let r = engine.verify(vk, &proof).map_err(|e| format!("{e:?}"));
++    (proof, r, prove_s)
++}
++
++fn heights(p: &Proof<SC>) -> Vec<Option<usize>> {
++    p.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect()
++}
++
++fn height_check(set: &FrozenSet, p: &[Option<usize>]) -> Value {
++    match frozen::check_heights(set, p) {
++        Ok(m) => json!({"max_log_height": m, "bound": set.bounds.max_log_height, "g1": "accepted"}),
++        Err(e) => json!({"bound": set.bounds.max_log_height, "g1": format!("REFUSED: {e:?}")}),
++    }
++}
++
++// ------------------------------------------------------------------ G1 work AIRs (port of X14 g1_chain)
++const P381: &[u8] = b"1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab";
++/// Bus indices of the work AIRs, far above the verifier sub-circuit's buses (0, 1, ...).
++const RANGE_BUS: u16 = 1000;
++const RANGE_BITS: usize = 17;
++
++#[derive(Clone, Copy, Debug)]
++enum Ref {
++    Id,
++    In(usize),
++    Var(usize),
++}
++#[derive(Clone, Debug)]
++struct Msg {
++    bus: u16,
++    send: bool,
++    refs: Vec<Ref>,
++}
++
++/// One FieldExpr row kind (one modular constraint) plus an `id` column (id = row index) and bus
++/// messages that carry its inputs and outputs.
++struct ChainAir {
++    expr: openvm_mod_circuit_builder::FieldExpr,
++    ew: usize,
++    msgs: Vec<Msg>,
++    name: &'static str,
++}
++impl<T> BaseAir<T> for ChainAir {
++    fn width(&self) -> usize {
++        self.ew + 1
++    }
++}
++impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for ChainAir {}
++impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for ChainAir {}
++impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for ChainAir {
++    fn eval(&self, builder: &mut AB) {
++        use openvm_circuit_primitives::SubAir;
++        use openvm_stark_backend::p3_air::AirBuilder;
++        let main = builder.main();
++        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
++        let next: Vec<AB::Var> = main.row_slice(1).expect("next").to_vec();
++        drop(main);
++        SubAir::eval(&self.expr, builder, &local[..self.ew]);
++        let cols = self.expr.load_vars(&local[..self.ew]);
++        let id = local[self.ew];
++        builder.when_first_row().assert_zero(id);
++        builder.when_transition().assert_eq(next[self.ew], id.into() + AB::Expr::ONE);
++        for m in &self.msgs {
++            let mut f: Vec<AB::Expr> = vec![];
++            for r in &m.refs {
++                match r {
++                    Ref::Id => f.push(id.into()),
++                    Ref::In(i) => f.extend(cols.inputs[*i].iter().map(|v| (*v).into())),
++                    Ref::Var(j) => f.extend(cols.vars[*j].iter().map(|v| (*v).into())),
++                }
++            }
++            let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(m.bus);
++            if m.send {
++                bus.send(builder, f, cols.is_valid);
++            } else {
++                bus.receive(builder, f, cols.is_valid);
++            }
++        }
++    }
++}
++
++/// Test harness only (not part of a unit key): the consumer of the output point.
++struct SourceAir {
++    nv: usize,
++    nl: usize,
++    msgs: Vec<(u16, bool, Vec<Option<usize>>)>,
++}
++impl<T> BaseAir<T> for SourceAir {
++    fn width(&self) -> usize {
++        1 + self.nv * self.nl
++    }
++}
++impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for SourceAir {}
++impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for SourceAir {}
++impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for SourceAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
++        drop(main);
++        for (bus, send, refs) in &self.msgs {
++            let mut f: Vec<AB::Expr> = vec![];
++            for r in refs {
++                match r {
++                    None => f.push(local[0].into()),
++                    Some(k) => f.extend(local[1 + k * self.nl..1 + (k + 1) * self.nl].iter().map(|v| (*v).into())),
++                }
++            }
++            let b = openvm_stark_backend::interaction::PermutationCheckBus::new(*bus);
++            if *send {
++                b.send(builder, f, AB::Expr::ONE);
++            } else {
++                b.receive(builder, f, AB::Expr::ONE);
++            }
++        }
++    }
++}
++
++/// Producer of the input points: id, then `nv` values of 48 limbs; range-checks every limb to
++/// 8 bits on RANGE_BUS and sends the point messages.
++struct PointsIn {
++    nv: usize,
++    nl: usize,
++    rb: usize,
++    msgs: Vec<(u16, Vec<Option<usize>>)>,
++}
++impl<T> BaseAir<T> for PointsIn {
++    fn width(&self) -> usize {
++        1 + self.nv * self.nl
++    }
++}
++impl<T: openvm_stark_backend::p3_field::Field> BaseAirWithPublicValues<T> for PointsIn {}
++impl<T: openvm_stark_backend::p3_field::Field> PartitionedBaseAir<T> for PointsIn {}
++impl<AB: openvm_stark_backend::interaction::InteractionBuilder> Air<AB> for PointsIn {
++    fn eval(&self, builder: &mut AB) {
++        use openvm_circuit_primitives::var_range::VariableRangeCheckerBus;
++        use openvm_stark_backend::p3_air::AirBuilder;
++        let main = builder.main();
++        let local: Vec<AB::Var> = main.row_slice(0).expect("row").to_vec();
++        let next: Vec<AB::Var> = main.row_slice(1).expect("next").to_vec();
++        drop(main);
++        builder.when_first_row().assert_zero(local[0]);
++        builder.when_transition().assert_eq(next[0], local[0].into() + AB::Expr::ONE);
++        let rbus = VariableRangeCheckerBus::new(RANGE_BUS, self.rb);
++        for v in &local[1..] {
++            rbus.range_check(*v, 8).eval(builder, AB::Expr::ONE);
++        }
++        for (bus, refs) in &self.msgs {
++            let mut f: Vec<AB::Expr> = vec![];
++            for r in refs {
++                match r {
++                    None => f.push(local[0].into()),
++                    Some(k) => f.extend(local[1 + k * self.nl..1 + (k + 1) * self.nl].iter().map(|v| (*v).into())),
++                }
++            }
++            openvm_stark_backend::interaction::PermutationCheckBus::new(*bus).send(builder, f, AB::Expr::ONE);
++        }
++    }
++}
++
++fn limbs_of(x: &BigUint, nl: usize) -> Vec<F> {
++    let mut b = x.to_bytes_le();
++    b.resize(nl, 0);
++    b.iter().map(|&v| F::from_u32(v as u32)).collect()
++}
++
++/// The G1 chain of one kind ("add" or "dbl") at its X-EXP final shape (dbl without INV_y), with
++/// honest traces of 2^log_rows rows. `with_sink`: append the harness sink (proving runs only).
++/// Returns (AIRs, traces, names).
++fn g1_chain(kind: &str, log_rows: usize, with_sink: bool) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>, Vec<&'static str>) {
++    use openvm_circuit_primitives::{var_range::{VariableRangeCheckerBus, VariableRangeCheckerChip}, TraceSubRowGenerator};
++    use openvm_mod_circuit_builder::{ExprBuilder, ExprBuilderConfig, FieldExpr};
++    use std::{cell::RefCell, rc::Rc};
++    let add = match kind {
++        "add" => true,
++        "dbl" => false,
++        k => panic!("kind {k}"),
++    };
++    // X-EXP final shape: the doubling unit without INV_y (on-curve check at the point producer)
++    let no_inv_y = !add;
++    let nl = 48;
++    let p = BigUint::parse_bytes(P381, 16).unwrap();
++    let rb = RANGE_BITS;
++    let rc = Arc::new(VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(RANGE_BUS, rb)));
++    let mk = |f: &dyn Fn(Rc<RefCell<ExprBuilder>>)| {
++        let b = ExprBuilder::new(ExprBuilderConfig { modulus: p.clone(), limb_bits: 8, num_limbs: nl }, rc.range_max_bits());
++        let b = Rc::new(RefCell::new(b));
++        f(b.clone());
++        let bb = RefCell::borrow(&b).clone();
++        FieldExpr::new(bb, rc.bus(), false)
++    };
++    let l_expr = if add {
++        mk(&|b| {
++            let mut x1 = ExprBuilder::new_input(b.clone());
++            let mut y1 = ExprBuilder::new_input(b.clone());
++            let mut x2 = ExprBuilder::new_input(b.clone());
++            let mut y2 = ExprBuilder::new_input(b.clone());
++            let mut l = (&mut y2 - &mut y1) / (&mut x2 - &mut x1);
++            l.save();
++        })
++    } else {
++        mk(&|b| {
++            let mut s = ExprBuilder::new_input(b.clone());
++            let _x = ExprBuilder::new_input(b.clone());
++            let mut y = ExprBuilder::new_input(b.clone());
++            let mut l = s.int_mul(3) / y.int_mul(2);
++            l.save();
++        })
++    };
++    let inv_expr = if add {
++        mk(&|b| {
++            let mut x1 = ExprBuilder::new_input(b.clone());
++            let mut x2 = ExprBuilder::new_input(b.clone());
++            let mut c1 = ExprBuilder::new_const(b.clone(), BigUint::from(1u32));
++            let mut d = &mut x2 - &mut x1;
++            let mut w = &mut c1 / &mut d;
++            w.save();
++        })
++    } else {
++        mk(&|b| {
++            let mut y = ExprBuilder::new_input(b.clone());
++            let mut c1 = ExprBuilder::new_const(b.clone(), BigUint::from(1u32));
++            let mut w = &mut c1 / &mut y;
++            w.save();
++        })
++    };
++    let sq_expr = mk(&|b| {
++        let mut x = ExprBuilder::new_input(b.clone());
++        let mut s = x.square();
++        s.save();
++    });
++    let x_expr = mk(&|b| {
++        let mut l = ExprBuilder::new_input(b.clone());
++        let x1 = ExprBuilder::new_input(b.clone());
++        let x2 = ExprBuilder::new_input(b.clone());
++        let mut x3 = l.square() - x1.clone() - x2.clone();
++        x3.save();
++    });
++    let y_expr = mk(&|b| {
++        let mut l = ExprBuilder::new_input(b.clone());
++        let mut x1 = ExprBuilder::new_input(b.clone());
++        let mut x3 = ExprBuilder::new_input(b.clone());
++        let y1 = ExprBuilder::new_input(b.clone());
++        let mut y3 = l * (&mut x1 - &mut x3) - y1.clone();
++        y3.save();
++    });
++    for e in [&l_expr, &x_expr, &y_expr, &sq_expr, &inv_expr] {
++        assert_eq!(e.num_vars(), 1, "one modular constraint per row kind");
++    }
++    let (id, i, v) = (Ref::Id, Ref::In, Ref::Var);
++    let m = |bus: u16, send: bool, refs: Vec<Ref>| Msg { bus, send, refs };
++    let o = if add { 1100u16 } else { 1110 };
++    // buses: o+0 P1 (add) or y (dbl), o+1 P2 (add only), o+2 (lambda, x1) to X3, o+3 x2 to X3,
++    // o+4 (lambda, x1) to Y3, o+5 y1 to Y3, o+6 x3 to Y3, o+7 (x3, y3) out, o+8 x to SQ (dbl),
++    // o+9 (s, x) to L_dbl, o+10 the denominator to INV / INV_y
++    type PinMsgs = Vec<(u16, Vec<Option<usize>>)>;
++    let (mut l_msgs, inv_msgs, pin_nv, pin_msgs): (Vec<Msg>, Vec<Msg>, usize, PinMsgs) = if add {
++        (
++            vec![m(o, false, vec![id, i(0), i(1)]), m(o + 1, false, vec![id, i(2), i(3)]),
++                 m(o + 2, true, vec![id, v(0), i(0)]), m(o + 3, true, vec![id, i(2)]),
++                 m(o + 4, true, vec![id, v(0), i(0)]), m(o + 5, true, vec![id, i(1)]),
++                 m(o + 10, true, vec![id, i(0), i(2)])],
++            vec![m(o + 10, false, vec![id, i(0), i(1)])],
++            4,
++            vec![(o, vec![None, Some(0), Some(1)]), (o + 1, vec![None, Some(2), Some(3)])],
++        )
++    } else {
++        (
++            vec![m(o + 9, false, vec![id, i(0), i(1)]), m(o, false, vec![id, i(2)]),
++                 m(o + 2, true, vec![id, v(0), i(1)]), m(o + 3, true, vec![id, i(1)]),
++                 m(o + 4, true, vec![id, v(0), i(1)]), m(o + 5, true, vec![id, i(2)]),
++                 m(o + 10, true, vec![id, i(2)])],
++            vec![m(o + 10, false, vec![id, i(0)])],
++            2,
++            vec![(o + 8, vec![None, Some(0)]), (o, vec![None, Some(1)])],
++        )
++    };
++    if no_inv_y {
++        l_msgs.pop();
++    }
++    let sink_msgs = vec![(o + 7, false, vec![None, Some(0), Some(1)])];
++    let sq_msgs = vec![m(o + 8, false, vec![id, i(0)]), m(o + 9, true, vec![id, v(0), i(0)])];
++    let x_msgs = vec![m(o + 2, false, vec![id, i(0), i(1)]), m(o + 3, false, vec![id, i(2)]), m(o + 6, true, vec![id, v(0)])];
++    let y_msgs = vec![m(o + 4, false, vec![id, i(0), i(1)]), m(o + 5, false, vec![id, i(3)]), m(o + 6, false, vec![id, i(2)]),
++                      m(o + 7, true, vec![id, i(2), v(0)])];
++    // host values: the G1 generator and four doublings
++    let gx = BigUint::parse_bytes(b"17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb", 16).unwrap();
++    let gy = BigUint::parse_bytes(b"08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1", 16).unwrap();
++    let inv = |a: &BigUint| a.modpow(&(&p - 2u32), &p);
++    let sub = |a: &BigUint, b: &BigUint| (a + &p - b % &p) % &p;
++    let dbl = |x: &BigUint, y: &BigUint| {
++        let lam = (BigUint::from(3u32) * x * x % &p) * inv(&(BigUint::from(2u32) * y % &p)) % &p;
++        let x3 = sub(&sub(&(&lam * &lam % &p), x), x);
++        let y3 = sub(&(&lam * sub(x, &x3) % &p), y);
++        (lam, x3, y3)
++    };
++    let mut pts = vec![(gx, gy)];
++    for _ in 0..4 {
++        let (x, y) = pts.last().unwrap().clone();
++        let (_, x3, y3) = dbl(&x, &y);
++        pts.push((x3, y3));
++    }
++    let n = 1usize << log_rows;
++    let widths = [BaseAir::<F>::width(&l_expr), BaseAir::<F>::width(&x_expr), BaseAir::<F>::width(&y_expr),
++                  BaseAir::<F>::width(&sq_expr), BaseAir::<F>::width(&inv_expr)];
++    let mut tq = F::zero_vec(n * (widths[3] + 1));
++    let mut tl = F::zero_vec(n * (widths[0] + 1));
++    let mut tx = F::zero_vec(n * (widths[1] + 1));
++    let mut ty = F::zero_vec(n * (widths[2] + 1));
++    let mut tw = F::zero_vec(n * (widths[4] + 1));
++    let pw = 1 + pin_nv * nl;
++    let mut tp = F::zero_vec(n * pw);
++    let sw = 1 + 2 * nl;
++    let mut ts = F::zero_vec(n * sw);
++    for r in 0..n {
++        let (x1, y1, x2, y2) = if add {
++            let (a, b) = (&pts[r % 2], &pts[2 + r % 2]);
++            (a.0.clone(), a.1.clone(), b.0.clone(), b.1.clone())
++        } else {
++            let a = &pts[r % 4];
++            (a.0.clone(), a.1.clone(), a.0.clone(), a.1.clone())
++        };
++        let lam = if add { sub(&y2, &y1) * inv(&sub(&x2, &x1)) % &p } else { dbl(&x1, &y1).0 };
++        let x3 = sub(&sub(&(&lam * &lam % &p), &x1), &x2);
++        let y3 = sub(&(&lam * sub(&x1, &x3) % &p), &y1);
++        let idf = F::from_u32(r as u32);
++        let li = if add { vec![x1.clone(), y1.clone(), x2.clone(), y2.clone()] } else { vec![&x1 * &x1 % &p, x1.clone(), y1.clone()] };
++        let wi = if add { vec![x1.clone(), x2.clone()] } else { vec![y1.clone()] };
++        if !add {
++            let row = &mut tq[r * (widths[3] + 1)..(r + 1) * (widths[3] + 1)];
++            sq_expr.generate_subrow((rc.as_ref(), vec![x1.clone()], vec![]), &mut row[..widths[3]]);
++            row[widths[3]] = idf;
++        }
++        let row = &mut tl[r * (widths[0] + 1)..(r + 1) * (widths[0] + 1)];
++        l_expr.generate_subrow((rc.as_ref(), li, vec![]), &mut row[..widths[0]]);
++        row[widths[0]] = idf;
++        if !no_inv_y {
++            let row = &mut tw[r * (widths[4] + 1)..(r + 1) * (widths[4] + 1)];
++            inv_expr.generate_subrow((rc.as_ref(), wi, vec![]), &mut row[..widths[4]]);
++            row[widths[4]] = idf;
++        }
++        let row = &mut tx[r * (widths[1] + 1)..(r + 1) * (widths[1] + 1)];
++        x_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x2.clone()], vec![]), &mut row[..widths[1]]);
++        row[widths[1]] = idf;
++        let row = &mut ty[r * (widths[2] + 1)..(r + 1) * (widths[2] + 1)];
++        y_expr.generate_subrow((rc.as_ref(), vec![lam.clone(), x1.clone(), x3.clone(), y1.clone()], vec![]), &mut row[..widths[2]]);
++        row[widths[2]] = idf;
++        let row = &mut tp[r * pw..(r + 1) * pw];
++        row[0] = idf;
++        let vals: Vec<&BigUint> = if add { vec![&x1, &y1, &x2, &y2] } else { vec![&x1, &y1] };
++        for (k, val) in vals.iter().enumerate() {
++            let ls = limbs_of(val, nl);
++            for l in &ls {
++                rc.add_count(l.as_canonical_u32(), 8);
++            }
++            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&ls);
++        }
++        let row = &mut ts[r * sw..(r + 1) * sw];
++        row[0] = idf;
++        for (k, val) in [&x3, &y3].iter().enumerate() {
++            row[1 + k * nl..1 + (k + 1) * nl].copy_from_slice(&limbs_of(val, nl));
++        }
++    }
++    let rt = rc.generate_trace::<F>();
++    let mut airs: Vec<AirRef<SC>> = vec![
++        Arc::new(ChainAir { ew: widths[0], expr: l_expr, msgs: l_msgs, name: if add { "L_add" } else { "L_dbl" } }),
++        Arc::new(ChainAir { ew: widths[1], expr: x_expr, msgs: x_msgs, name: "X3" }),
++        Arc::new(ChainAir { ew: widths[2], expr: y_expr, msgs: y_msgs, name: "Y3" }),
++    ];
++    let mut traces = vec![
++        RowMajorMatrix::new(tl, widths[0] + 1),
++        RowMajorMatrix::new(tx, widths[1] + 1),
++        RowMajorMatrix::new(ty, widths[2] + 1),
++    ];
++    let mut names = vec![if add { "L_add" } else { "L_dbl" }, "X3", "Y3"];
++    if !no_inv_y {
++        airs.push(Arc::new(ChainAir { ew: widths[4], expr: inv_expr, msgs: inv_msgs, name: "INV" }));
++        traces.push(RowMajorMatrix::new(tw, widths[4] + 1));
++        names.push("INV");
++    }
++    airs.push(Arc::new(PointsIn { nv: pin_nv, nl, rb, msgs: pin_msgs }));
++    traces.push(RowMajorMatrix::new(tp, pw));
++    names.push("PointsIn");
++    airs.push(Arc::new(rc.air));
++    traces.push(rt);
++    names.push("range");
++    if !add {
++        airs.push(Arc::new(ChainAir { ew: widths[3], expr: sq_expr, msgs: sq_msgs, name: "SQ" }));
++        traces.push(RowMajorMatrix::new(tq, widths[3] + 1));
++        names.push("SQ");
++    }
++    if with_sink {
++        airs.push(Arc::new(SourceAir { nv: 2, nl, msgs: sink_msgs }));
++        traces.push(RowMajorMatrix::new(ts, sw));
++        names.push("sink (harness)");
++    }
++    let _ = ChainAir::name_of;
++    (airs, traces, names)
++}
++
++impl ChainAir {
++    fn name_of(&self) -> &'static str {
++        self.name
++    }
++}
++
++// ------------------------------------------------------------------ main
++fn w1_prove(engine: &Eng, pk: &MultiStarkProvingKey<SC>, vk: &MultiStarkVerifyingKey<SC>, chip: &Poseidon2SubChip<F, 1>, log_rows: usize) -> Proof<SC> {
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    let d_pk = engine.device().transport_pk_to_device(pk);
++    let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
++        .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30)))).collect();
++    let trace = chip.generate_trace(inputs);
++    let ctx = ProvingContext::new(vec![(0, AirProvingContext::simple_no_pis(
++        engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&trace))))]);
++    let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
++    engine.verify(vk, &proof).expect("w1 verify");
++    proof
++}
++
++fn main() {
++    let a: Vec<String> = std::env::args().collect();
++    let out = PathBuf::from(&a[1]);
++    let prove_h: usize = a[2].parse().unwrap();
++    let prove_kinds: Vec<String> = if a[3] == "none" { vec![] } else { a[3].split(',').map(String::from).collect() };
++    let app_rows: usize = a[4].parse().unwrap();
++    fs::create_dir_all(&out).unwrap();
++    let t0 = Instant::now();
++    let mut keys: Vec<Value> = vec![];
++    let mut wide = frozen::INTERNAL.clone();
++    wide.bounds.max_columns = 3300; // AFK pick of X14 (d), FOR OWNER CONFIRMATION
++    wide.name = "internal_cols3300";
++
++    // chain ladder, keys only (as fp8_keyset fixpoint): app -> leaf -> N1 -> N2 -> N3 -> N3 fixed point
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let fapp = Eng::new(frozen::APP.params());
++    let w1: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    let (app_pk, app_vk) = kg_strict(&frozen::APP, &fapp, &w1, "app");
++    let lc = agg_key::<1>(&frozen::LEAF_AGG, &app_vk, Role::Leaf, "leaf<1>");
++    let c1 = agg_key::<2>(&frozen::INTERNAL, &lc.vk, Role::N1, "N1<2>");
++    let c2 = agg_key::<2>(&frozen::INTERNAL, &c1.vk, Role::N2, "N2<2>");
++    let c3 = agg_key::<2>(&frozen::INTERNAL, &c2.vk, Role::N3, "N3<2> over N2");
++    let n3_vk = c3.vk.clone();
++    {
++        let c4 = agg_key::<2>(&frozen::INTERNAL, &n3_vk, Role::N3, "N3<2> over N3");
++        assert_eq!(c4.vk.pre_hash, n3_vk.pre_hash, "N3 fixed point");
++    }
++    eprintln!("ladder keyed {:.1}s", t0.elapsed().as_secs_f64());
++    let n3_rec = json!({"pre_hash": format!("{:?}", n3_vk.pre_hash), "shape": shape_json(&frozen::shape(&n3_vk))});
++
++    // base unit (no work AIRs): KeyBind(N3) + VerifierSubCircuit<1> over N3
++    let unit_engine = Eng::new(frozen::INTERNAL.params());
++    let ucirc = circuit::<1>(&n3_vk);
++    let role = Role::N3; // FOR OWNER CONFIRMATION
++    {
++        let airs = layer_airs(&ucirc, &role, vec![]);
++        let (_, vk, verdict, s) = kg(&frozen::INTERNAL, &unit_engine, &airs);
++        check_layout(&vk);
++        let mut r = key_record("base unit: KeyBind(N3) + VerifierSubCircuit<1> over N3", &frozen::INTERNAL, &verdict, &vk, s);
++        r["file"] = json!("unit_base_vk.json");
++        fs::write(out.join("unit_base_vk.json"), serde_json::to_vec(&vk).unwrap()).unwrap();
++        keys.push(r);
++    }
++
++    // the two unit keys (no sink): strict INTERNAL, then the 3,300-column copy
++    let mut unit_pre = std::collections::BTreeMap::new();
++    for kind in ["add", "dbl"] {
++        let (work, _, names) = g1_chain(kind, 4, false);
++        let airs = layer_airs(&ucirc, &role, work);
++        let (_, vk, verdict, s) = kg(&frozen::INTERNAL, &unit_engine, &airs);
++        check_layout(&vk);
++        let nw = names.len();
++        let per_work: Vec<Value> = vk.inner.per_air[vk.inner.per_air.len() - nw..].iter().zip(&names).map(|(p, n)| json!({
++            "name": n, "columns": p.params.width.total_width(), "interactions": p.symbolic_constraints.interactions.len(),
++            "constraints": p.symbolic_constraints.constraints.constraint_idx.len(), "degree": p.max_constraint_degree})).collect();
++        let file = format!("unit_{kind}_vk.json");
++        fs::write(out.join(&file), serde_json::to_vec(&vk).unwrap()).unwrap();
++        let mut r = key_record(&format!("unit {kind}"), &frozen::INTERNAL, &verdict, &vk, s);
++        r["file"] = json!(file);
++        r["work_airs"] = json!(per_work);
++        keys.push(r);
++        eprintln!("unit {kind} INTERNAL: {verdict}");
++        if verdict != "accepted" {
++            let (_, vk2, verdict2, s2) = kg(&wide, &unit_engine, &airs);
++            assert_eq!(vk2.pre_hash, vk.pre_hash, "same key under both bound sets");
++            let mut r = key_record(&format!("unit {kind}"), &wide, &verdict2, &vk2, s2);
++            r["file"] = json!(format!("unit_{kind}_vk.json"));
++            keys.push(r);
++            eprintln!("unit {kind} cols3300: {verdict2}");
++        }
++        unit_pre.insert(kind, vk.pre_hash);
++    }
++    let mut doc = json!({"keys": keys, "n3": n3_rec, "role": "N3 (FOR OWNER CONFIRMATION)",
++                         "unit_pre_hash_equals_n3": unit_pre.values().any(|p| *p == n3_vk.pre_hash)});
++    fs::write(out.join("gen.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
++    eprintln!("keys done {:.1}s", t0.elapsed().as_secs_f64());
++
++    // proving: one real N3 proof (app -> leaf -> N1 -> N2 -> N3), then the unit harness key(s)
++    let mut proves = vec![];
++    if !prove_kinds.is_empty() {
++        let t = Instant::now();
++        let app_p = w1_prove(&fapp, &app_pk, &app_vk, &chip, app_rows);
++        drop(app_pk);
++        let pr = |l: &dyn Fn() -> (Proof<SC>, Result<(), String>, f64)| {
++            let (p, r, _) = l();
++            r.expect("bound verify");
++            p
++        };
++        let leaf_p = pr(&|| bound_prove(&lc.circuit, &lc.role, &lc.engine, &lc.pk, &lc.vk, &app_vk, std::slice::from_ref(&app_p), vec![]));
++        let n1_p = pr(&|| bound_prove(&c1.circuit, &c1.role, &c1.engine, &c1.pk, &c1.vk, &lc.vk, &[leaf_p.clone(), leaf_p.clone()], vec![]));
++        let n2_p = pr(&|| bound_prove(&c2.circuit, &c2.role, &c2.engine, &c2.pk, &c2.vk, &c1.vk, &[n1_p.clone(), n1_p.clone()], vec![]));
++        let n3_p = pr(&|| bound_prove(&c3.circuit, &c3.role, &c3.engine, &c3.pk, &c3.vk, &c2.vk, &[n2_p.clone(), n2_p.clone()], vec![]));
++        let child_s = t.elapsed().as_secs_f64();
++        eprintln!("N3 child proof {child_s:.1}s");
++        for kind in &prove_kinds {
++            let (work, traces, names) = g1_chain(kind, prove_h, true);
++            let airs = layer_airs(&ucirc, &role, work);
++            let (hpk, hvk, verdict, s) = kg(&wide, &unit_engine, &airs);
++            let unit_strict = unit_pre[kind.as_str()];
++            let (proof, r, prove_s) = bound_prove(&ucirc, &role, &unit_engine, &hpk, &hvk, &n3_vk, std::slice::from_ref(&n3_p), traces);
++            let hs = heights(&proof);
++            let rec = json!({
++                "key": format!("unit {kind} + sink (harness, proving run only)"), "names_work": names,
++                "set": wide.name, "g1": verdict, "keygen_s": s, "pre_hash": format!("{:?}", hvk.pre_hash),
++                "differs_from_unit_key": hvk.pre_hash != unit_strict,
++                "shape": shape_json(&frozen::shape(&hvk)), "log_rows": prove_h, "app_log_rows": app_rows,
++                "child_chain_prove_s": child_s,
++                "prove_s": prove_s, "verify": match &r { Ok(_) => "verified".to_string(), Err(e) => format!("REJECTED: {e}") },
++                "log_heights": hs, "height_check_internal": height_check(&frozen::INTERNAL, &hs),
++                "stacked_widths": proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
++                "kb_depth": proof.public_values[keybind::KB_AIR_ID][keybind::PV_DEPTH].as_canonical_u32(),
++                "kb_flag": proof.public_values[keybind::KB_AIR_ID][keybind::PV_FLAG].as_canonical_u32(),
++            });
++            eprintln!("prove {kind}: {}", rec["verify"]);
++            proves.push(rec);
++            doc["proves"] = json!(proves);
++            fs::write(out.join("gen.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
++        }
++    }
++    doc["wall_s"] = json!(t0.elapsed().as_secs_f64());
++    fs::write(out.join("gen.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
++    eprintln!("done {:.1}s", t0.elapsed().as_secs_f64());
++}
+-- 
+2.56.0
+

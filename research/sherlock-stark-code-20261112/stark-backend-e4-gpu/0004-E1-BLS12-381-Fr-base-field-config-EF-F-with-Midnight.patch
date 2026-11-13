@@ -1,0 +1,943 @@
+From 975721c949e4935b449e921bc119f3a65bcb591d Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 07:54:49 -0700
+Subject: [PATCH 4/9] E1: BLS12-381 Fr base-field config (EF = F) with Midnight
+ Poseidon, and its tests
+
+Feature bls12381-fr-poseidon. Merkle leaf (u = 1) and node (u = 2) are
+Midnight's fixed-length sponge over native Fr words; the transcript (u = 3)
+is the stock overwrite duplex over Fr from (0, 0, 2^64 + 3 * 2^66). The use
+codes are config fields (FrDomains). Reference and CPU engines.
+
+Test e1_fr: field facts for sampling and grinding, hash-domain rules, codec
+canonical checks, a Fibonacci AIR and an interaction AIR proved and verified
+on both engines, negative controls (256 byte flips, 3 public-value changes,
+another transcript domain), the AIR at the L_Fr parameter set (ignored by
+default), and the D3 terms from the config against M7 section 2b.2.
+---
+ crates/cpu-backend/tests/e1_bb_bytes.rs       |   6 +-
+ crates/stark-backend/src/soundness/mod.rs     |   4 +-
+ crates/stark-backend/src/transcript/traits.rs |   5 +-
+ crates/stark-sdk/Cargo.toml                   |   7 +
+ .../src/config/bls12381_fr_poseidon.rs        | 357 ++++++++++++++
+ crates/stark-sdk/src/config/mod.rs            |   4 +
+ crates/stark-sdk/tests/e1_fr.rs               | 451 ++++++++++++++++++
+ 7 files changed, 831 insertions(+), 3 deletions(-)
+ create mode 100644 crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+ create mode 100644 crates/stark-sdk/tests/e1_fr.rs
+
+diff --git a/crates/cpu-backend/tests/e1_bb_bytes.rs b/crates/cpu-backend/tests/e1_bb_bytes.rs
+index d1bf42f..5cf10a1 100644
+--- a/crates/cpu-backend/tests/e1_bb_bytes.rs
++++ b/crates/cpu-backend/tests/e1_bb_bytes.rs
+@@ -60,7 +60,11 @@ fn fnv1a(bytes: &[u8]) -> u64 {
+ }
+ 
+ fn emit(name: &str, bytes: &[u8]) {
+-    println!("E1_BB_PROOF {name} len={} fnv1a={:016x}", bytes.len(), fnv1a(bytes));
++    println!(
++        "E1_BB_PROOF {name} len={} fnv1a={:016x}",
++        bytes.len(),
++        fnv1a(bytes)
++    );
+     if let Ok(dir) = std::env::var("E1_PROOF_OUT") {
+         let mut p = PathBuf::from(dir);
+         std::fs::create_dir_all(&p).unwrap();
+diff --git a/crates/stark-backend/src/soundness/mod.rs b/crates/stark-backend/src/soundness/mod.rs
+index be8bcbf..49c7b65 100644
+--- a/crates/stark-backend/src/soundness/mod.rs
++++ b/crates/stark-backend/src/soundness/mod.rs
+@@ -21,7 +21,9 @@ pub fn base_field_order<SC: StarkProtocolConfig>() -> f64 {
+         .to_u64_digits()
+         .iter()
+         .rev()
+-        .fold(0.0f64, |acc, &d| acc * 18_446_744_073_709_551_616.0 + d as f64)
++        .fold(0.0f64, |acc, &d| {
++            acc * 18_446_744_073_709_551_616.0 + d as f64
++        })
+ }
+ 
+ /// Number of bits in the challenge (extension) field: `D_EF * log2(|F|)`.
+diff --git a/crates/stark-backend/src/transcript/traits.rs b/crates/stark-backend/src/transcript/traits.rs
+index 4fcdfcd..0e1e253 100644
+--- a/crates/stark-backend/src/transcript/traits.rs
++++ b/crates/stark-backend/src/transcript/traits.rs
+@@ -105,7 +105,10 @@ where
+ /// `p < 2^64` this is `as_canonical_u64()`.
+ #[inline]
+ pub fn canonical_low_u64<F: PrimeField>(x: &F) -> u64 {
+-    x.as_canonical_biguint().iter_u64_digits().next().unwrap_or(0)
++    x.as_canonical_biguint()
++        .iter_u64_digits()
++        .next()
++        .unwrap_or(0)
+ }
+ 
+ /// `2^bits < p`, exactly. `F::bits()` is the bit length `b` of `p`, so `2^(b-1) <= p < 2^b`;
+diff --git a/crates/stark-sdk/Cargo.toml b/crates/stark-sdk/Cargo.toml
+index 7876031..7890da6 100644
+--- a/crates/stark-sdk/Cargo.toml
++++ b/crates/stark-sdk/Cargo.toml
+@@ -49,6 +49,7 @@ num-bigint = { workspace = true, optional = true }
+ nvtx = { workspace = true, optional = true }
+ 
+ [dev-dependencies]
++openvm-stark-backend = { workspace = true, features = ["test-utils"] }
+ p3-keccak-air.workspace = true
+ p3-poseidon2.workspace = true
+ zkhash.workspace = true
+@@ -70,6 +71,8 @@ baby-bear-bls12381-poseidon = [
+   "dep:num-bigint",
+   "openvm-stark-backend/multi-field-transcript",
+ ]
++# Sherlock E1: BLS12-381 Fr base field (EF = F) with Midnight Poseidon hashes and transcript
++bls12381-fr-poseidon = ["baby-bear-bls12381-poseidon"]
+ cpu-backend = ["dep:openvm-cpu-backend"]
+ parallel = ["openvm-stark-backend/parallel", "openvm-cpu-backend?/parallel"]
+ mimalloc = ["openvm-stark-backend/mimalloc"]
+@@ -83,3 +86,7 @@ prometheus = [
+   "dep:rustls",
+ ]
+ nvtx = ["dep:nvtx"]
++
++[[test]]
++name = "e1_fr"
++required-features = ["bls12381-fr-poseidon"]
+diff --git a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+new file mode 100644
+index 0000000..c88372c
+--- /dev/null
++++ b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+@@ -0,0 +1,357 @@
++//! BLS12-381 Fr base-field STARK configuration with Midnight Poseidon (Sherlock E1, `L_Fr`).
++//!
++//! The base field is BLS12-381 Fr ([`Bls12381Fr`]) and the challenge field is the base field
++//! itself (`EF = F`, degree 1). Digests are one Fr element. Every hash is the Midnight Poseidon
++//! permutation over Fr (width 3, rate 2) of [`MidnightPoseidonFr`], with the PROPOSAL section 3.6
++//! domain rules applied to native Fr words:
++//!
++//! - **Merkle leaf (`u_leaf`, default u = 1)**: Midnight's fixed-length sponge over the leaf's
++//!   `l = w` Fr values (no packing): state `(0, 0, l + u * 2^66)`; each block of 2 values is
++//!   added into `(r_0, r_1)` (a last block of 1 adds only `r_0`), one permutation per block;
++//!   output `r_0`.
++//! - **Merkle node (`u_node`, default u = 2)**: the same sponge with `l = 2`: state
++//!   `(left, right, 2 + u * 2^66)`, one permutation, output `r_0`.
++//! - **Transcript (`u_transcript`, default u = 3)**: the stock overwrite duplex
++//!   ([`DuplexSponge`]) over Fr, width 3, rate 2, one Fr word per cell (no packing, no digit
++//!   split), with the initial state `(0, 0, 2^64 + u * 2^66)`. A commitment observe absorbs the
++//!   one digest element. Every transition is stock.
++//!
++//! The use codes are fields of [`FrDomains`], so a later OD-18 ruling (a separate tag for the
++//! `L_Fr` hashes) changes constants, not code. [`FrDomains::default`] is u = 1, 2, 3.
++
++use std::io::{self, Read, Write};
++
++use num_bigint::BigUint;
++use openvm_stark_backend::{
++    codec::{DecodableConfig, EncodableConfig},
++    hasher::MerkleHasher,
++    p3_symmetric::Permutation,
++    prover::{Coordinator, CpuColMajorBackend, ReferenceDevice},
++    transcript::duplex_sponge::DuplexSponge,
++    FiatShamirTranscript, StarkEngine, StarkProtocolConfig, SystemParams,
++};
++use p3_field::{Field, PrimeCharacteristicRing};
++
++pub use super::baby_bear_bls12381_poseidon::{
++    cap_fixed, cap_var, Bls12381Fr, MidnightFq, MidnightPoseidonFr, FR_RATE, U_LEAF, U_NODE,
++    U_TRANSCRIPT, WIDTH,
++};
++
++pub type F = Bls12381Fr;
++pub type EF = Bls12381Fr;
++pub const D_EF: usize = 1;
++pub const DIGEST_WIDTH: usize = 1;
++pub type Digest = [F; DIGEST_WIDTH];
++type SC = Bls12381FrPoseidonConfig;
++
++/// Use codes of the three hash domains (PROPOSAL 3.6). Default u = 1 (leaf), 2 (node),
++/// 3 (transcript).
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct FrDomains {
++    pub u_leaf: u128,
++    pub u_node: u128,
++    pub u_transcript: u128,
++}
++
++impl Default for FrDomains {
++    fn default() -> Self {
++        Self {
++            u_leaf: U_LEAF,
++            u_node: U_NODE,
++            u_transcript: U_TRANSCRIPT,
++        }
++    }
++}
++
++/// Merkle hasher over native Fr leaves: leaf hash `u_leaf`, node hash `u_node`.
++#[derive(Clone, Debug)]
++pub struct FrMerkleHasher {
++    perm: MidnightPoseidonFr,
++    domains: FrDomains,
++}
++
++impl FrMerkleHasher {
++    pub fn new(perm: MidnightPoseidonFr, domains: FrDomains) -> Self {
++        Self { perm, domains }
++    }
++
++    pub fn perm(&self) -> &MidnightPoseidonFr {
++        &self.perm
++    }
++
++    pub fn domains(&self) -> FrDomains {
++        self.domains
++    }
++}
++
++impl MerkleHasher for FrMerkleHasher {
++    type F = F;
++    type Digest = Digest;
++
++    #[inline]
++    fn hash_slice(&self, vals: &[F]) -> Digest {
++        let mut state = [
++            F::ZERO,
++            F::ZERO,
++            cap_fixed(self.domains.u_leaf, vals.len() as u128),
++        ];
++        for block in vals.chunks(FR_RATE) {
++            for (s, x) in state.iter_mut().zip(block) {
++                *s += *x;
++            }
++            self.perm.permute_mut(&mut state);
++        }
++        [state[0]]
++    }
++
++    #[inline]
++    fn compress(&self, left: Digest, right: Digest) -> Digest {
++        let mut state = [left[0], right[0], cap_fixed(self.domains.u_node, 2)];
++        self.perm.permute_mut(&mut state);
++        [state[0]]
++    }
++}
++
++#[derive(Clone, Debug)]
++pub struct Bls12381FrPoseidonConfig {
++    params: SystemParams,
++    hasher: FrMerkleHasher,
++}
++
++impl Bls12381FrPoseidonConfig {
++    pub fn new(params: SystemParams, perm: MidnightPoseidonFr, domains: FrDomains) -> Self {
++        Self {
++            params,
++            hasher: FrMerkleHasher::new(perm, domains),
++        }
++    }
++
++    pub fn default_from_params(params: SystemParams) -> Self {
++        Self::new(params, MidnightPoseidonFr::new(), FrDomains::default())
++    }
++
++    pub fn domains(&self) -> FrDomains {
++        self.hasher.domains
++    }
++
++    /// The initial transcript of this configuration.
++    pub fn transcript(&self) -> Transcript {
++        Transcript::new(self.hasher.perm.clone(), self.hasher.domains.u_transcript)
++    }
++}
++
++impl StarkProtocolConfig for Bls12381FrPoseidonConfig {
++    type F = F;
++    type EF = EF;
++    type Digest = Digest;
++    type Hasher = FrMerkleHasher;
++
++    fn params(&self) -> &SystemParams {
++        &self.params
++    }
++
++    fn hasher(&self) -> &Self::Hasher {
++        &self.hasher
++    }
++}
++
++/// 32 big-endian bytes of the canonical value.
++pub fn encode_fr<W: Write>(val: &F, writer: &mut W) -> io::Result<()> {
++    let mut buf = val.to_canonical_bytes();
++    buf.reverse();
++    writer.write_all(&buf)
++}
++
++/// Reads 32 big-endian bytes and refuses a value at or above the modulus.
++pub fn decode_fr<R: Read>(reader: &mut R) -> io::Result<F> {
++    let mut buf = [0u8; 32];
++    reader.read_exact(&mut buf)?;
++    if BigUint::from_bytes_be(&buf) >= F::order() {
++        return Err(io::Error::other(
++            "non-canonical BLS12-381 Fr element >= modulus",
++        ));
++    }
++    buf.reverse();
++    F::from_canonical_bytes(buf).ok_or_else(|| io::Error::other("invalid BLS12-381 Fr element"))
++}
++
++impl EncodableConfig for Bls12381FrPoseidonConfig {
++    fn encode_base_field<W: Write>(val: &F, writer: &mut W) -> io::Result<()> {
++        encode_fr(val, writer)
++    }
++
++    fn encode_extension_field<W: Write>(val: &EF, writer: &mut W) -> io::Result<()> {
++        encode_fr(val, writer)
++    }
++
++    fn encode_digest<W: Write>(digest: &Digest, writer: &mut W) -> io::Result<()> {
++        for val in digest {
++            encode_fr(val, writer)?;
++        }
++        Ok(())
++    }
++}
++
++impl DecodableConfig for Bls12381FrPoseidonConfig {
++    fn decode_base_field<R: Read>(reader: &mut R) -> io::Result<F> {
++        decode_fr(reader)
++    }
++
++    fn decode_extension_field<R: Read>(reader: &mut R) -> io::Result<EF> {
++        decode_fr(reader)
++    }
++
++    fn decode_digest<R: Read>(reader: &mut R) -> io::Result<Digest> {
++        let mut result = Digest::default();
++        for val in &mut result {
++            *val = decode_fr(reader)?;
++        }
++        Ok(result)
++    }
++}
++
++/// The stock overwrite duplex over Fr with Midnight's permutation.
++pub type FrSponge = DuplexSponge<F, MidnightPoseidonFr, WIDTH, FR_RATE>;
++
++/// Native Fr transcript: the stock overwrite duplex from `(0, 0, 2^64 + u * 2^66)`.
++#[derive(Clone, Debug)]
++pub struct Transcript(pub FrSponge);
++
++impl Transcript {
++    /// The initial sponge state `(0, 0, 2^64 + u * 2^66)`.
++    pub fn initial_state(u_transcript: u128) -> [F; WIDTH] {
++        [F::ZERO, F::ZERO, cap_var(u_transcript)]
++    }
++
++    pub fn new(perm: MidnightPoseidonFr, u_transcript: u128) -> Self {
++        Self(FrSponge::new_with_state(
++            perm,
++            Self::initial_state(u_transcript),
++        ))
++    }
++
++    pub fn sponge(&self) -> &FrSponge {
++        &self.0
++    }
++}
++
++impl From<MidnightPoseidonFr> for Transcript {
++    /// The transcript at the default use code (u = 3).
++    fn from(perm: MidnightPoseidonFr) -> Self {
++        Self::new(perm, U_TRANSCRIPT)
++    }
++}
++
++impl FiatShamirTranscript<SC> for Transcript {
++    #[inline]
++    fn observe(&mut self, value: F) {
++        self.0.absorb(value);
++    }
++
++    #[inline]
++    fn sample(&mut self) -> F {
++        self.0.squeeze()
++    }
++
++    #[inline]
++    fn observe_commit(&mut self, digest: Digest) {
++        for x in digest {
++            self.0.absorb(x);
++        }
++    }
++}
++
++/// The transcript at the default use code (u = 3).
++pub fn default_transcript() -> Transcript {
++    Transcript::from(MidnightPoseidonFr::new())
++}
++
++/// Reference (column-major) engine at the default domains.
++pub struct Bls12381FrPoseidonRefEngine {
++    device: ReferenceDevice<SC>,
++}
++
++impl StarkEngine for Bls12381FrPoseidonRefEngine {
++    type SC = SC;
++    type PB = CpuColMajorBackend<SC>;
++    type PD = ReferenceDevice<SC>;
++    type TS = Transcript;
++
++    fn new(params: SystemParams) -> Self {
++        Self {
++            device: ReferenceDevice::new(SC::default_from_params(params)),
++        }
++    }
++
++    fn config(&self) -> &SC {
++        self.device.config()
++    }
++
++    fn device(&self) -> &Self::PD {
++        &self.device
++    }
++
++    fn initial_transcript(&self) -> Self::TS {
++        self.config().transcript()
++    }
++
++    fn prover_from_transcript(
++        &self,
++        transcript: Transcript,
++    ) -> Coordinator<Self::SC, Self::PB, Self::PD, Self::TS> {
++        Coordinator::new(CpuColMajorBackend::new(), self.device.clone(), transcript)
++    }
++}
++
++#[cfg(feature = "cpu-backend")]
++mod cpu_engine {
++    use openvm_cpu_backend::{CpuBackend, CpuDevice};
++
++    use super::*;
++
++    /// Row-major CPU engine at the default domains.
++    pub struct Bls12381FrPoseidonCpuEngine {
++        device: CpuDevice<SC>,
++    }
++
++    impl StarkEngine for Bls12381FrPoseidonCpuEngine {
++        type SC = SC;
++        type PB = CpuBackend<SC>;
++        type PD = CpuDevice<SC>;
++        type TS = Transcript;
++
++        fn new(params: SystemParams) -> Self {
++            Self {
++                device: CpuDevice::new(SC::default_from_params(params)),
++            }
++        }
++
++        fn config(&self) -> &SC {
++            self.device.config()
++        }
++
++        fn device(&self) -> &Self::PD {
++            &self.device
++        }
++
++        fn initial_transcript(&self) -> Self::TS {
++            self.config().transcript()
++        }
++
++        fn prover_from_transcript(
++            &self,
++            transcript: Transcript,
++        ) -> Coordinator<Self::SC, Self::PB, Self::PD, Self::TS> {
++            Coordinator::new(CpuBackend::new(), self.device.clone(), transcript)
++        }
++    }
++}
++
++#[cfg(feature = "cpu-backend")]
++pub use cpu_engine::Bls12381FrPoseidonCpuEngine;
++
++#[allow(dead_code)]
++fn _assert_traits() {
++    fn is_field<T: Field>() {}
++    is_field::<EF>();
++}
+diff --git a/crates/stark-sdk/src/config/mod.rs b/crates/stark-sdk/src/config/mod.rs
+index 35ad1e0..9a3b127 100644
+--- a/crates/stark-sdk/src/config/mod.rs
++++ b/crates/stark-sdk/src/config/mod.rs
+@@ -16,6 +16,10 @@ pub mod baby_bear_bn254_poseidon2;
+ /// the hasher and transcript are Midnight Poseidon over BLS12-381 Fr (PROPOSAL 3.6 domains).
+ #[cfg(feature = "baby-bear-bls12381-poseidon")]
+ pub mod baby_bear_bls12381_poseidon;
++/// Sherlock E1: STARK config where the base field is BLS12-381 Fr, the extension field is Fr
++/// itself (degree 1), and the hasher and transcript are Midnight Poseidon over Fr.
++#[cfg(feature = "bls12381-fr-poseidon")]
++pub mod bls12381_fr_poseidon;
+ /// STARK config where the base field is BabyBear, extension field is BabyBear^4, and the hasher is
+ /// `Poseidon2<BabyBear>`.
+ pub mod baby_bear_poseidon2;
+diff --git a/crates/stark-sdk/tests/e1_fr.rs b/crates/stark-sdk/tests/e1_fr.rs
+new file mode 100644
+index 0000000..1c91b81
+--- /dev/null
++++ b/crates/stark-sdk/tests/e1_fr.rs
+@@ -0,0 +1,451 @@
++//! Sherlock E1: the stark-backend at a BLS12-381 Fr base field (`EF = F`).
++//!
++//! - Field facts that the sampling and grinding argument uses.
++//! - The hash-domain rules of PROPOSAL 3.6 on native Fr words (u = 1, 2, 3).
++//! - A small AIR proved and verified end to end at the Fr base on both CPU engines, with
++//!   negative controls: single-byte proof changes and a changed public value are refused.
++//! - The D3 soundness terms at the `L_Fr` parameters, with the field order and the challenge
++//!   field size taken from the configuration, against RESULTS.md (M7) section 2b.2.
++//!
++//! Run: `cargo test -p openvm-stark-sdk --release --features bls12381-fr-poseidon --test e1_fr`.
++#![cfg(feature = "bls12381-fr-poseidon")]
++
++use openvm_stark_backend::{
++    codec::{Decode, Encode},
++    hasher::MerkleHasher,
++    interaction::LogUpSecurityParameters,
++    p3_symmetric::Permutation,
++    proof::Proof,
++    soundness::{base_field_order, challenge_field_bits, SoundnessCalculator},
++    test_utils::{FibFixture, InteractionsFixture11, TestFixture},
++    transcript::{canonical_low_u64, grind_candidate_count, pow2_below_order},
++    verifier::verify,
++    FiatShamirTranscript, StarkEngine, StarkProtocolConfig, SystemParams, WhirConfig, WhirParams,
++    WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::fixed_len_hash,
++    bls12381_fr_poseidon::{
++        cap_fixed, cap_var, default_transcript, Bls12381FrPoseidonConfig,
++        Bls12381FrPoseidonCpuEngine, Bls12381FrPoseidonRefEngine, FrDomains, FrMerkleHasher,
++        MidnightPoseidonFr, Transcript, EF, F,
++    },
++    params_with_100_bits_security,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::{Field, PrimeCharacteristicRing, TwoAdicField};
++
++type SC = Bls12381FrPoseidonConfig;
++
++// ---------------------------------------------------------------------------------------------
++// Field facts
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn e1_field_facts() {
++    let r = F::order();
++    assert_eq!(F::bits(), 255);
++    // r = 1 mod 2^32: so for every bits < 32 exactly one residue mod 2^bits is heavy.
++    assert_eq!(&r % (1u64 << 32), 1u64.into());
++    assert_eq!(<F as TwoAdicField>::TWO_ADICITY, 32);
++    // EF = F, degree 1.
++    assert_eq!(<SC as StarkProtocolConfig>::D_EF, 1);
++    let _: EF = F::ONE;
++    // The order checks are exact.
++    assert!(pow2_below_order::<F>(254));
++    assert!(!pow2_below_order::<F>(255));
++    assert!(pow2_below_order::<BabyBear>(30));
++    assert!(!pow2_below_order::<BabyBear>(31));
++    // Grinding candidates.
++    assert_eq!(grind_candidate_count::<F>(), u64::MAX);
++    assert_eq!(grind_candidate_count::<BabyBear>(), 0x7800_0001);
++    // canonical_low_u64 against the canonical big integer.
++    let x = -F::ONE; // r - 1
++    assert_eq!(canonical_low_u64(&x), 0xffff_ffff_0000_0000);
++    let y = F::from_u64(0x1234_5678_9abc_def0);
++    assert_eq!(canonical_low_u64(&y), 0x1234_5678_9abc_def0);
++    let z = F::from_u128((1u128 << 64) + 5);
++    assert_eq!(canonical_low_u64(&z), 5);
++    let b = BabyBear::from_u32(0x7800_0000);
++    assert_eq!(canonical_low_u64(&b), 0x7800_0000);
++    // Order and challenge-field size come from the configuration.
++    let log2_r = base_field_order::<SC>().log2();
++    assert!((log2_r - 254.857_089_413_047_2).abs() < 1e-9, "{log2_r}");
++    assert_eq!(challenge_field_bits::<SC>(), log2_r);
++}
++
++/// The heavy residue of `sample_bits` is 0 only, with weight `(c + 1) / r` against `c / r`,
++/// `c = floor(r / 2^bits)`: so the bias is below `2^(bits - 254)`. Here: the empirical counts
++/// of 2^16 four-bit samples from the Fr transcript are within 5 sigma of uniform.
++#[test]
++fn e1_sample_bits_counts() {
++    for bits in [1usize, 4, 20, 31] {
++        let c = F::order() >> bits;
++        assert_eq!(
++            &F::order() - (&c << bits),
++            1u64.into(),
++            "r mod 2^{bits} = 1"
++        );
++    }
++    let mut ts = default_transcript();
++    let n = 1usize << 16;
++    let mut counts = [0usize; 16];
++    for i in 0..n {
++        if i % 3 == 0 {
++            FiatShamirTranscript::<SC>::observe(&mut ts, F::from_usize(i));
++        }
++        let v = FiatShamirTranscript::<SC>::sample_bits(&mut ts, 4);
++        assert!(v < 16);
++        counts[v as usize] += 1;
++    }
++    let mean = n as f64 / 16.0;
++    let sd = (n as f64 * (1.0 / 16.0) * (15.0 / 16.0)).sqrt();
++    for (v, c) in counts.iter().enumerate() {
++        assert!(((*c as f64) - mean).abs() < 5.0 * sd, "value {v}: {c}");
++    }
++}
++
++/// Grinding at 12 bits finds a witness that the verifier check accepts, and the check refuses
++/// the next witness when it does not also meet the target.
++#[test]
++fn e1_grind() {
++    let ts = default_transcript();
++    let mut p = ts.clone();
++    let w = FiatShamirTranscript::<SC>::grind(&mut p, 12);
++    let mut v = ts.clone();
++    assert!(FiatShamirTranscript::<SC>::check_witness(&mut v, 12, w));
++    let mut tries = 0;
++    let mut bad = w + F::ONE;
++    loop {
++        let mut v = ts.clone();
++        if !FiatShamirTranscript::<SC>::check_witness(&mut v, 12, bad) {
++            break;
++        }
++        bad += F::ONE;
++        tries += 1;
++        assert!(tries < 100);
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// Hash domains (PROPOSAL 3.6) on native Fr words
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn e1_hash_domains() {
++    let perm = MidnightPoseidonFr::new();
++    let d = FrDomains::default();
++    assert_eq!((d.u_leaf, d.u_node, d.u_transcript), (1, 2, 3));
++    let h = FrMerkleHasher::new(perm.clone(), d);
++    // Leaf: Midnight's fixed-length sponge with u = 1 and l = w, for w = 1 .. 9.
++    for w in 1..=9usize {
++        let vals: Vec<F> = (0..w).map(|i| F::from_u64(1000 + i as u64)).collect();
++        assert_eq!(
++            h.hash_slice(&vals)[0],
++            fixed_len_hash(&perm, 1, &vals),
++            "w {w}"
++        );
++        // Hand-rolled: state (0, 0, w + 2^66), add blocks of 2, permute per block.
++        let mut s = [F::ZERO, F::ZERO, F::from_u128(w as u128 + (1u128 << 66))];
++        for blk in vals.chunks(2) {
++            s[0] += blk[0];
++            if blk.len() == 2 {
++                s[1] += blk[1];
++            }
++            perm.permute_mut(&mut s);
++        }
++        assert_eq!(h.hash_slice(&vals)[0], s[0]);
++    }
++    // A leaf of length 2 and a node over the same two values differ (distinct capacities).
++    let (a, b) = (F::from_u64(7), F::from_u64(9));
++    assert_eq!(h.compress([a], [b])[0], fixed_len_hash(&perm, 2, &[a, b]));
++    assert_ne!(h.compress([a], [b]), h.hash_slice(&[a, b]));
++    assert_eq!(cap_fixed(2, 2), F::from_u128(2 + (2u128 << 66)));
++    // Transcript: state (0, 0, 2^64 + 3 * 2^66); the first squeeze permutes it and returns s_1.
++    assert_eq!(cap_var(3), F::from_u128((1u128 << 64) + (3u128 << 66)));
++    let mut ts = default_transcript();
++    assert_eq!(*ts.sponge().state(), Transcript::initial_state(3));
++    let mut s = Transcript::initial_state(3);
++    perm.permute_mut(&mut s);
++    assert_eq!(FiatShamirTranscript::<SC>::sample(&mut ts), s[1]);
++    assert_eq!(FiatShamirTranscript::<SC>::sample(&mut ts), s[0]);
++    // Observe overwrites s_0, s_1 and permutes at the second word.
++    let mut ts = default_transcript();
++    FiatShamirTranscript::<SC>::observe(&mut ts, a);
++    FiatShamirTranscript::<SC>::observe_commit(&mut ts, [b]);
++    let mut s = Transcript::initial_state(3);
++    s[0] = a;
++    s[1] = b;
++    perm.permute_mut(&mut s);
++    assert_eq!(*ts.sponge().state(), s);
++    assert_eq!(FiatShamirTranscript::<SC>::sample(&mut ts), s[1]);
++}
++
++#[test]
++fn e1_codec_canonical() {
++    use openvm_stark_sdk::config::bls12381_fr_poseidon::{decode_fr, encode_fr};
++    let x = -F::ONE;
++    let mut buf = Vec::new();
++    encode_fr(&x, &mut buf).unwrap();
++    assert_eq!(buf.len(), 32);
++    assert_eq!(decode_fr(&mut &buf[..]).unwrap(), x);
++    // r itself (x + 1 as an integer) is refused.
++    let mut r_be = F::order().to_bytes_be();
++    while r_be.len() < 32 {
++        r_be.insert(0, 0);
++    }
++    assert!(decode_fr(&mut &r_be[..]).is_err());
++    assert!(decode_fr(&mut &[0xffu8; 32][..]).is_err());
++}
++
++// ---------------------------------------------------------------------------------------------
++// End to end
++// ---------------------------------------------------------------------------------------------
++
++/// Small parameters with every grinding site on (LogUp, folding, mu, query PoW).
++fn small_params() -> SystemParams {
++    let l_skip = 2;
++    let n_stack = 8;
++    let k_whir = 4;
++    let log_blowup = 1;
++    let whir_params = WhirParams {
++        k: k_whir,
++        log_final_poly_len: (l_skip + n_stack) % k_whir,
++        query_phase_pow_bits: 6,
++        folding_pow_bits: 5,
++        mu_pow_bits: 4,
++        proximity: WhirProximityStrategy::UniqueDecoding,
++    };
++    SystemParams {
++        l_skip,
++        n_stack,
++        w_stack: 64,
++        log_blowup,
++        whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
++        logup: LogUpSecurityParameters {
++            max_interaction_count: 1 << 30,
++            log_max_message_length: 7,
++            pow_bits: 7,
++        },
++        max_constraint_degree: 3,
++    }
++}
++
++fn prove_verify<E: StarkEngine<SC = SC>, Fx: TestFixture<SC>>(
++    params: SystemParams,
++    fx: &Fx,
++) -> (
++    openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<SC>,
++    Proof<SC>,
++) {
++    let engine = E::new(params);
++    let (vk, proof) = fx.keygen_and_prove(&engine);
++    let mut ts = engine.config().transcript();
++    verify(engine.config(), &vk, &proof, &mut ts).expect("Fr proof verifies");
++    // Codec round trip is exact.
++    let bytes = proof.encode_to_vec().unwrap();
++    let back = Proof::<SC>::decode_from_bytes(&bytes).unwrap();
++    assert_eq!(back.encode_to_vec().unwrap(), bytes);
++    (vk, proof)
++}
++
++#[test]
++fn e1_fr_fib_ref_and_cpu() {
++    let fib = FibFixture::new(0, 1, 1 << 9);
++    let (_, p_ref) = prove_verify::<Bls12381FrPoseidonRefEngine, _>(small_params(), &fib);
++    let (_, p_cpu) = prove_verify::<Bls12381FrPoseidonCpuEngine, _>(small_params(), &fib);
++    // The public value f_n is the Fibonacci number computed in Fr.
++    assert_eq!(p_ref.public_values[0].len(), 3);
++    let len = p_ref.encode_to_vec().unwrap().len();
++    println!("E1_FR fib proof bytes {len}");
++    // Both engines give the same proof (deterministic prover; grinding may pick different
++    // witnesses under several threads, so compare only when single-threaded).
++    if std::env::var("RAYON_NUM_THREADS").as_deref() == Ok("1") {
++        assert_eq!(
++            p_ref.encode_to_vec().unwrap(),
++            p_cpu.encode_to_vec().unwrap()
++        );
++    }
++}
++
++#[test]
++fn e1_fr_interactions_ref_and_cpu() {
++    prove_verify::<Bls12381FrPoseidonRefEngine, _>(small_params(), &InteractionsFixture11);
++    prove_verify::<Bls12381FrPoseidonCpuEngine, _>(small_params(), &InteractionsFixture11);
++}
++
++/// Negative controls: a changed public value, and single-byte changes spread over the encoded
++/// proof, are each refused (by the decoder or by the verifier).
++#[test]
++fn e1_fr_negative_controls() {
++    let fib = FibFixture::new(0, 1, 1 << 9);
++    let engine = Bls12381FrPoseidonCpuEngine::new(small_params());
++    let (vk, proof) = fib.keygen_and_prove(&engine);
++    let config = engine.config();
++    let mut ts = config.transcript();
++    verify(config, &vk, &proof, &mut ts).unwrap();
++
++    // Changed public values (each of the three, by +1).
++    for i in 0..3 {
++        let mut bad = Proof::<SC>::decode_from_bytes(&proof.encode_to_vec().unwrap()).unwrap();
++        bad.public_values[0][i] += F::ONE;
++        let mut ts = config.transcript();
++        assert!(
++            verify(config, &vk, &bad, &mut ts).is_err(),
++            "public value {i} change accepted"
++        );
++    }
++
++    // Single-byte changes at evenly spaced positions.
++    let bytes = proof.encode_to_vec().unwrap();
++    let n = 256usize.min(bytes.len());
++    let (mut dec_refused, mut ver_refused) = (0usize, 0usize);
++    for k in 0..n {
++        let pos = k * bytes.len() / n;
++        let mut b = bytes.clone();
++        b[pos] ^= 0x01;
++        match Proof::<SC>::decode_from_bytes(&b) {
++            Err(_) => dec_refused += 1,
++            Ok(bad) => {
++                let mut ts = config.transcript();
++                assert!(
++                    verify(config, &vk, &bad, &mut ts).is_err(),
++                    "byte {pos} change accepted"
++                );
++                ver_refused += 1;
++            }
++        }
++    }
++    println!(
++        "E1_FR negative: {n} byte flips of {} bytes: decode refused {dec_refused}, verify \
++         refused {ver_refused}; 3 of 3 public-value changes refused",
++        bytes.len()
++    );
++    assert_eq!(dec_refused + ver_refused, n);
++
++    // A transcript at another use code refuses the proof (the domain is bound).
++    let other = Transcript::new(MidnightPoseidonFr::new(), 5);
++    let mut ts = other;
++    assert!(verify(config, &vk, &proof, &mut ts).is_err());
++}
++
++/// The small AIR at the `L_Fr` parameter set: UD, log blowup 3, queries 98/83/82, query PoW
++/// 20, folding and mu PoW 0, LogUp PoW 0, `l_skip` 2, `n_stack` 18, `w_stack` 48. Ignored by
++/// default (about a minute of CPU); run with `--ignored`.
++#[test]
++#[ignore]
++fn e1_fr_fib_at_lfr_params() {
++    let (p, _) = lfr_params(3, 48, &[98, 83, 82], 20);
++    let fib = FibFixture::new(0, 1, 1 << 12);
++    let t0 = std::time::Instant::now();
++    let engine = Bls12381FrPoseidonCpuEngine::new(p);
++    let (vk, proof) = fib.keygen_and_prove(&engine);
++    let prove_s = t0.elapsed().as_secs_f64();
++    let t1 = std::time::Instant::now();
++    let mut ts = engine.config().transcript();
++    verify(engine.config(), &vk, &proof, &mut ts).expect("verifies");
++    let verify_s = t1.elapsed().as_secs_f64();
++    let mut bad = Proof::<SC>::decode_from_bytes(&proof.encode_to_vec().unwrap()).unwrap();
++    bad.public_values[0][2] += F::ONE;
++    let mut ts = engine.config().transcript();
++    assert!(verify(engine.config(), &vk, &bad, &mut ts).is_err());
++    println!(
++        "E1_FR lfr-params fib 2^12: keygen+prove {prove_s:.2} s, verify {verify_s:.3} s, proof \
++         {} bytes, changed public value refused",
++        proof.encode_to_vec().unwrap().len()
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// D3 soundness terms at the configured Fr parameters
++// ---------------------------------------------------------------------------------------------
++
++/// The `L_Fr` parameter set of M7 `m7_fr_d3.rs` (`mk`): UD, `l_skip` 2, `n_stack` 18, `k_whir`
++/// 4, max constraint degree 4, every PoW 0 except the query PoW.
++fn lfr_params(b: usize, w: usize, q: &[usize], qpow: usize) -> (SystemParams, ()) {
++    let mut p = params_with_100_bits_security(
++        b,
++        2,
++        18,
++        w,
++        0,
++        0,
++        WhirProximityStrategy::UniqueDecoding,
++        4,
++        qpow,
++        4,
++    );
++    for (r, &n) in p.whir.rounds.iter_mut().zip(q) {
++        r.num_queries = n;
++    }
++    p.logup.pow_bits = 0;
++    (p, ())
++}
++
++fn n_logup_bound(l_skip: usize, num_airs: usize, ipa: usize, h: usize, mic: usize) -> usize {
++    let field_bound = (mic as f64).log2().ceil() as usize - l_skip;
++    let param_bound =
++        (num_airs as f64).log2().ceil() as usize + (ipa as f64).log2().ceil() as usize + h - l_skip;
++    field_bound.min(param_bound)
++}
++
++/// D3 terms (shape bounds of PROPOSAL 11.2: 1,000 constraints, 50 AIRs, 2,000 columns, 100
++/// interactions per AIR), with `base_field_order` and `challenge_field_bits` of the Fr config.
++#[test]
++fn e1_fr_d3_terms() {
++    // Expected values: M7 RESULTS.md section 2b.2 / fr-d3.out (4 decimals).
++    // (logup, gkr_sumcheck, gkr_batching, zerocheck, constraint_batching, stacked, mu,
++    //  fold_rbr, query, shift_rbr, gamma, ood)
++    let common = [
++        215.9502, 253.2721, 254.8571, 250.9502, 244.8841, 242.8913, 0.0, 232.8571, 101.1435,
++        101.1435, 248.2277, 239.8571,
++    ];
++    let mu_w18 = 227.7696;
++    let mu_w48 = 226.3025;
++    let order = base_field_order::<SC>();
++    let cbits = challenge_field_bits::<SC>();
++    for h in [20usize, 22] {
++        for w in [18usize, 48] {
++            let (p, _) = lfr_params(3, w, &[98, 83, 82], 20);
++            let n_logup =
++                n_logup_bound(p.l_skip, 50, 100, h, p.logup.max_interaction_count as usize);
++            let s = SoundnessCalculator::calculate(
++                &p,
++                order,
++                cbits,
++                1000,
++                50,
++                p.max_constraint_degree,
++                h,
++                2000,
++                p.w_stack,
++                n_logup,
++            );
++            let wd = &s.whir_details;
++            let got = [
++                s.logup_bits,
++                s.gkr_sumcheck_bits,
++                s.gkr_batching_bits,
++                s.zerocheck_sumcheck_bits,
++                s.constraint_batching_bits,
++                s.stacked_reduction_bits,
++                wd.mu_batching_bits,
++                wd.fold_rbr_bits,
++                wd.query_bits,
++                wd.shift_rbr_bits,
++                wd.gamma_batching_bits,
++                wd.ood_rbr_bits,
++            ];
++            let mut want = common;
++            want[6] = if w == 18 { mu_w18 } else { mu_w48 };
++            println!(
++                "E1_FR_D3 h 2^{h} w_stack {w}: {got:.4?} total {:.4}",
++                s.total_bits
++            );
++            for (i, (g, e)) in got.iter().zip(want.iter()).enumerate() {
++                assert!((g - e).abs() < 5e-5, "term {i}: got {g:.6}, M7 {e:.4}");
++            }
++            assert!((s.total_bits - 101.1435).abs() < 5e-5);
++        }
++    }
++}
+-- 
+2.56.0
+

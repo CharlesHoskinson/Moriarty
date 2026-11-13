@@ -1,0 +1,138 @@
+From 68657522eb2d7eb1ec9a5cd746d2841510213f29 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 23:18:39 -0700
+Subject: [PATCH 12/12] E4: GPU fractional sumcheck equality test; log blowup
+ override in the profile
+
+tests/e4_gpu_frac.rs: proof, point and transcript state of fractional_sumcheck equal
+on the GPU and the CPU at 2^12, 2^13 and 2^17 leaves. e4_profile takes E4_LOG_BLOWUP
+= 2 or 1 (queries 120/85/82 or 196/89/82, the D3 sets of M7 RESULTS 2b.2) for the
+owner options of E4.
+---
+ crates/sherlock-lfr/tests/e4_gpu_frac.rs | 59 ++++++++++++++++++++++++
+ crates/sherlock-lfr/tests/e4_profile.rs  | 36 ++++++++++++++-
+ 2 files changed, 94 insertions(+), 1 deletion(-)
+ create mode 100644 crates/sherlock-lfr/tests/e4_gpu_frac.rs
+
+diff --git a/crates/sherlock-lfr/tests/e4_gpu_frac.rs b/crates/sherlock-lfr/tests/e4_gpu_frac.rs
+new file mode 100644
+index 0000000..797dc92
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/e4_gpu_frac.rs
+@@ -0,0 +1,59 @@
++//! E4: the GPU fractional sumcheck (mori-gpu `frac`, stark-sdk `FracGpu`) gives the same
++//! proof, point and transcript state as the CPU `fractional_sumcheck` (`E4_GPU_FRAC=0`).
++#![cfg(feature = "gpu")]
++
++use std::time::Instant;
++
++use openvm_stark_backend::{
++    prover::fractional_sumcheck_gkr::{fractional_sumcheck, Frac},
++    FiatShamirTranscript,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    Bls12381Fr as Fr, Bls12381FrPoseidonConfig as SC, MidnightPoseidonFr, Transcript,
++};
++use p3_field::PrimeCharacteristicRing;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++
++fn rand_fr(rng: &mut StdRng) -> Fr {
++    let a = Fr::from_u128(rng.random::<u128>());
++    let b = Fr::from_u128(rng.random::<u128>());
++    a * Fr::from_u128(1u128 << 127) * Fr::TWO + b
++}
++
++type Out = (Vec<String>, Vec<Fr>, Fr);
++
++fn run(evals: &[Frac<Fr>]) -> Out {
++    let mut ts = Transcript::from(MidnightPoseidonFr::new());
++    let (proof, xi) = fractional_sumcheck::<SC, _>(&mut ts, evals, false).expect("sumcheck");
++    let mut v = vec![format!("{:?}", proof.fractional_sum)];
++    v.extend(proof.claims_per_layer.iter().map(|c| format!("{c:?}")));
++    v.extend(proof.sumcheck_polys.iter().map(|p| format!("{p:?}")));
++    let next = FiatShamirTranscript::<SC>::sample_ext(&mut ts);
++    (v, xi, next)
++}
++
++#[test]
++fn e4_gpu_frac_sumcheck_equals_cpu() {
++    let mut rng = StdRng::seed_from_u64(0xe4f);
++    // 2^12 is the smallest size on the GPU; 2^13 and 2^17 run several GPU layers.
++    for lg in [12usize, 13, 17] {
++        let evals: Vec<Frac<Fr>> = (0..1usize << lg)
++            .map(|_| Frac::new(rand_fr(&mut rng), rand_fr(&mut rng)))
++            .collect();
++        std::env::set_var("E4_GPU_FRAC", "0");
++        let t = Instant::now();
++        let cpu = run(&evals);
++        let tc = t.elapsed().as_secs_f64();
++        std::env::remove_var("E4_GPU_FRAC");
++        let t = Instant::now();
++        let gpu = run(&evals);
++        let tg = t.elapsed().as_secs_f64();
++        assert_eq!(cpu.0.len(), gpu.0.len());
++        for (i, (a, b)) in cpu.0.iter().zip(&gpu.0).enumerate() {
++            assert_eq!(a, b, "2^{lg}: proof item {i} differs");
++        }
++        assert_eq!(cpu.1, gpu.1, "2^{lg}: point differs");
++        assert_eq!(cpu.2, gpu.2, "2^{lg}: transcript state differs");
++        println!("E4 frac 2^{lg}: equal, cpu {tc:.3}s gpu {tg:.3}s");
++    }
++}
+diff --git a/crates/sherlock-lfr/tests/e4_profile.rs b/crates/sherlock-lfr/tests/e4_profile.rs
+index 326484d..84b0d21 100644
+--- a/crates/sherlock-lfr/tests/e4_profile.rs
++++ b/crates/sherlock-lfr/tests/e4_profile.rs
+@@ -27,6 +27,40 @@ fn vm_hwm_kib() -> u64 {
+         .unwrap_or(0)
+ }
+ 
++/// `lfr_params()`, or with `E4_LOG_BLOWUP` = 2 or 1 the same set at that log blowup with the
++/// smallest query vector whose query terms are at least 101 bits by D3 (M7 RESULTS 2b.2:
++/// 120/85/82 at 2, 196/89/82 at 1). For the owner options of E4 (prover time only).
++fn params() -> openvm_stark_backend::SystemParams {
++    let lb: usize = std::env::var("E4_LOG_BLOWUP").ok().and_then(|v| v.parse().ok()).unwrap_or(3);
++    if lb == 3 {
++        return lfr_params();
++    }
++    let q: [usize; 3] = match lb {
++        2 => [120, 85, 82],
++        1 => [196, 89, 82],
++        _ => panic!("E4_LOG_BLOWUP must be 1, 2 or 3"),
++    };
++    let mut p = openvm_stark_sdk::config::params_with_100_bits_security(
++        lb,
++        2,
++        18,
++        48,
++        0,
++        0,
++        openvm_stark_backend::WhirProximityStrategy::UniqueDecoding,
++        4,
++        20,
++        4,
++    );
++    assert_eq!(p.whir.rounds.len(), 3);
++    for (r, n) in p.whir.rounds.iter_mut().zip(q) {
++        r.num_queries = n;
++    }
++    p.logup.pow_bits = 0;
++    println!("E4 log blowup {lb}, queries {q:?}");
++    p
++}
++
+ #[test]
+ #[ignore = "needs the L fixture on disk; one L_Fr prove at the L_Fr parameter set"]
+ fn e4_profile_lfr_prove() {
+@@ -41,7 +75,7 @@ fn e4_profile_lfr_prove() {
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty());
+     let m = Machine::new(&g.tape);
+-    let engine = Engine::new(lfr_params());
++    let engine = Engine::new(params());
+     let airs = m.airs();
+ 
+     let cache = std::env::var("E4_PK_CACHE").ok().map(PathBuf::from);
+-- 
+2.56.0
+

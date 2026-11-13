@@ -1,0 +1,1742 @@
+From 96acfa3e51468b5dbfac172cfc19a3e20e0e886e Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 18:03:13 -0700
+Subject: [PATCH 10/15] sherlock-lfr: E3 J1 and J2, public values of L through
+ L_Fr
+
+Entry::Public in part 2 of the L verifier tape (per-AIR public value
+addresses from part 1). D-6 carrier: two one-hot selector groups bind n
+public words to trace cells with the stock backend; used by the L-side
+interface AIRs (iface_l: Stmt, LogEntry, LogValue, Call, the 12,164-word
+index table) and by the multi-row PublicAir of L_Fr (16 words per row,
+Tape::expose). Native reference iface.rs: layout, log entries with
+Midnight Poseidon values, OD-17 planner, decoder of the L_Fr words.
+Test j1_public: small L_iface proof through L_Fr, changed L public value
+and four carrier controls refused.
+---
+ crates/sherlock-lfr/src/carrier.rs     | 155 ++++++
+ crates/sherlock-lfr/src/iface.rs       | 624 +++++++++++++++++++++++++
+ crates/sherlock-lfr/src/iface_l.rs     | 321 +++++++++++++
+ crates/sherlock-lfr/src/lib.rs         |   3 +
+ crates/sherlock-lfr/src/lverify.rs     |  42 +-
+ crates/sherlock-lfr/src/machine.rs     |  86 +++-
+ crates/sherlock-lfr/src/record.rs      |  11 +-
+ crates/sherlock-lfr/src/tape.rs        |  32 +-
+ crates/sherlock-lfr/tests/i10_gate.rs  |   7 +-
+ crates/sherlock-lfr/tests/j1_public.rs | 193 ++++++++
+ 10 files changed, 1435 insertions(+), 39 deletions(-)
+ create mode 100644 crates/sherlock-lfr/src/carrier.rs
+ create mode 100644 crates/sherlock-lfr/src/iface.rs
+ create mode 100644 crates/sherlock-lfr/src/iface_l.rs
+ create mode 100644 crates/sherlock-lfr/tests/j1_public.rs
+
+diff --git a/crates/sherlock-lfr/src/carrier.rs b/crates/sherlock-lfr/src/carrier.rs
+new file mode 100644
+index 0000000..33e8ba4
+--- /dev/null
++++ b/crates/sherlock-lfr/src/carrier.rs
+@@ -0,0 +1,155 @@
++//! E3 D-6: the public-value carrier, a stock-backend way to bind `n` public words to trace cells.
++//!
++//! The stock verifier has no row-indexed public value: a public value enters a constraint as the
++//! same constant on every row. The carrier makes the row index explicit with two one-hot
++//! selector groups and binds `w` public words per row:
++//!
++//! - `a[h1]`: on the first row `a_0 = 1`, the others 0; on each transition `a` rotates by one
++//!   (`a_i' = a_(i-1)`, `a_0' = a_(h1-1)`).
++//! - `b[h2]`: on the first row `b_0 = 1`, the others 0; on each transition `b` moves one place
++//!   when `a_(h1-1) = 1` (`b_j' = b_j + a_(h1-1) (b_(j-1) - b_j)`, `b_0' = b_0 (1 - a_(h1-1))`),
++//!   so after row `H - 1` (`H = h1 h2`) every `b_j` is 0.
++//! - last row: `a_(h1-1) b_(h2-1) = 1`, so the height is exactly `H`.
++//!
++//! By induction on the row, row `r = j h1 + i` has `a = e_i` and `b = e_j` (unique). Per value
++//! column `c`: `v_c = sum_(i,j) a_i b_j pv[off + (j h1 + i) w + c]` (indices at or above `n`
++//! dropped, so those cells are 0). At row `r` the sum is the one term `pv[off + r w + c]`, so
++//! cell `(r, c)` equals public word `r w + c` and every public word is bound to exactly one cell
++//! (DERIVED). Degree 2 in the trace (a public value is a constant); no preprocessed trace.
++
++use openvm_stark_backend::{
++    p3_air::{AirBuilder, AirBuilderWithPublicValues},
++    p3_field::{Field, PrimeCharacteristicRing},
++};
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct Carrier {
++    /// Public words carried.
++    pub n: usize,
++    /// Words per row.
++    pub w: usize,
++    pub h1: usize,
++    pub h2: usize,
++}
++
++impl Carrier {
++    /// The carrier of `n` words, `w` per row; the height is the next power of two (at least 2)
++    /// of the row count, split into `h1 >= h2`.
++    pub fn new(n: usize, w: usize) -> Self {
++        assert!(n > 0 && w > 0);
++        let h = n.div_ceil(w).next_power_of_two().max(2);
++        let lg = h.trailing_zeros() as usize;
++        let h1 = 1usize << lg.div_ceil(2);
++        Self {
++            n,
++            w,
++            h1,
++            h2: h / h1,
++        }
++    }
++    pub fn height(&self) -> usize {
++        self.h1 * self.h2
++    }
++    /// Selector columns, then `w` value columns.
++    pub fn width(&self) -> usize {
++        self.h1 + self.h2 + self.w
++    }
++    pub fn sel_width(&self) -> usize {
++        self.h1 + self.h2
++    }
++
++    /// The carrier constraints. `local` and `next` hold the carrier's columns (selectors, then
++    /// values) of the current and next row; `pv_off` is the index of the carrier's first word in
++    /// the AIR's public values.
++    pub fn eval<AB: AirBuilderWithPublicValues>(
++        &self,
++        builder: &mut AB,
++        local: &[AB::Expr],
++        next: &[AB::Expr],
++        pv_off: usize,
++    ) {
++        let (h1, h2, w) = (self.h1, self.h2, self.w);
++        let a = &local[..h1];
++        let b = &local[h1..h1 + h2];
++        let v = &local[h1 + h2..h1 + h2 + w];
++        let an = &next[..h1];
++        let bn = &next[h1..h1 + h2];
++        let one = AB::Expr::ONE;
++        for i in 0..h1 {
++            let t = if i == 0 {
++                a[0].clone() - one.clone()
++            } else {
++                a[i].clone()
++            };
++            builder.when_first_row().assert_zero(t);
++        }
++        for j in 0..h2 {
++            let t = if j == 0 {
++                b[0].clone() - one.clone()
++            } else {
++                b[j].clone()
++            };
++            builder.when_first_row().assert_zero(t);
++        }
++        let last = a[h1 - 1].clone();
++        for i in 0..h1 {
++            let prev = a[(i + h1 - 1) % h1].clone();
++            builder.when_transition().assert_zero(an[i].clone() - prev);
++        }
++        builder
++            .when_transition()
++            .assert_zero(bn[0].clone() - b[0].clone() * (one.clone() - last.clone()));
++        for j in 1..h2 {
++            let step = last.clone() * (b[j - 1].clone() - b[j].clone());
++            builder
++                .when_transition()
++                .assert_zero(bn[j].clone() - b[j].clone() - step);
++        }
++        builder
++            .when_last_row()
++            .assert_zero(a[h1 - 1].clone() * b[h2 - 1].clone() - one);
++        let pv: Vec<AB::Expr> = builder
++            .public_values()
++            .iter()
++            .map(|&x| x.into())
++            .collect();
++        for c in 0..w {
++            let mut sum = AB::Expr::ZERO;
++            for j in 0..h2 {
++                let mut inner = AB::Expr::ZERO;
++                let mut any = false;
++                for i in 0..h1 {
++                    let k = (j * h1 + i) * w + c;
++                    if k < self.n {
++                        inner += a[i].clone() * pv[pv_off + k].clone();
++                        any = true;
++                    }
++                }
++                if any {
++                    sum += b[j].clone() * inner;
++                }
++            }
++            builder.assert_zero(v[c].clone() - sum);
++        }
++    }
++
++    /// The carrier cells of every row (selectors, then values) for the words `words`
++    /// (`words.len() == n`).
++    pub fn rows<F: Field>(&self, words: &[F]) -> Vec<Vec<F>> {
++        assert_eq!(words.len(), self.n);
++        (0..self.height())
++            .map(|r| {
++                let mut row = vec![F::ZERO; self.width()];
++                row[r % self.h1] = F::ONE;
++                row[self.h1 + r / self.h1] = F::ONE;
++                for c in 0..self.w {
++                    let k = r * self.w + c;
++                    if k < self.n {
++                        row[self.h1 + self.h2 + c] = words[k];
++                    }
++                }
++                row
++            })
++            .collect()
++    }
++}
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+new file mode 100644
+index 0000000..63c3693
+--- /dev/null
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -0,0 +1,624 @@
++//! E3: the native reference of the full `L` interface (ARCHITECTURE 1.8 and 1.11 FP-3).
++//!
++//! - The index table of the public words of `L`: `root_stmt` (74), the anchor statement (7),
++//!   `run_tag` (8), `layout_d` (8), `X` (9), the lane map (8), `pv` (`2B + 9V`), the call vector
++//!   (`9 (2 + L_TX)`): 12,164 words at `B = V = 256`, `L_TX = 1,024`.
++//! - The deferred field log: entries `(op, param)` with their logged Fr values (9 limbs of 30
++//!   bits each), computed natively with the Midnight Poseidon permutation (use code u = 0 for
++//!   `PERM`, `H2`, `SPONGE`, `PATH`; u = 4 for `DIGEST`).
++//! - The planner (OD-17): the reservation `R` first, then each discretionary operation only if
++//!   every capacity limit and its per-operation bound still hold; otherwise it goes to tier E.
++//! - The decoder of the `L_Fr` public words (plan D-9): the wrap's reading of the statement.
++//!
++//! Placeholders (plan D-8, ENC-1 and ENC-2 open): the Fr tag of `DIGEST` tag index `k` is
++//! `Fr(k + 1)`; `PATH` hashes a node as `H2(l, r)` with the index bit choosing the order.
++
++use num_bigint::BigUint;
++use openvm_stark_backend::p3_field::{Field, PrimeCharacteristicRing, PrimeField};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++
++use crate::{bb::P, fr::fr_from_big, poseidon::permute_trace};
++
++/// Words of the statement head (`root_stmt` to the lane map).
++pub const STMT: usize = 114;
++/// Word of the anchor `mode` (0 ordinary, 1 chunk).
++pub const MODE_WORD: usize = 74;
++/// First word of the lane map (4 pairs `(lane, entry)`).
++pub const LANE_MAP: usize = 106;
++pub const LANE_PAIRS: usize = 4;
++/// Limbs per logged Fr value and per call-vector lane.
++pub const LIMBS: usize = 9;
++pub const LIMB_BITS: u32 = 30;
++
++pub const NOP: u64 = 0;
++pub const PERM: u64 = 1;
++pub const H2: u64 = 2;
++pub const SPONGE: u64 = 3;
++pub const PATH: u64 = 4;
++pub const ECMUL: u64 = 5;
++pub const ECMULG: u64 = 6;
++pub const PUB: u64 = 7;
++pub const DIGEST: u64 = 8;
++
++/// `DIGEST` tag indices (frozen list of PROPOSAL 3.6).
++pub const SHK_PROGC: u64 = 0;
++pub const SHK_LOCK: u64 = 1;
++pub const SHK_INPUT: u64 = 2;
++pub const SHK_OUTCOME: u64 = 3;
++pub const N_TAGS: u64 = 4;
++/// Most `PATH` depth (the Compact maximum).
++pub const PATH_MAX: u64 = 32;
++
++/// The capacity and call-vector size of one wrap key.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct Dims {
++    pub b: usize,
++    pub v: usize,
++    pub p: usize,
++    pub l_tx: usize,
++}
++
++impl Dims {
++    /// OD-17 and OD-15: `B = V = P = 256`, `L_TX = 1,024`.
++    pub const FULL: Dims = Dims {
++        b: 256,
++        v: 256,
++        p: 256,
++        l_tx: 1024,
++    };
++    pub fn entries_at(&self) -> usize {
++        STMT
++    }
++    pub fn values_at(&self) -> usize {
++        STMT + 2 * self.b
++    }
++    pub fn call_at(&self) -> usize {
++        self.values_at() + LIMBS * self.v
++    }
++    pub fn lanes(&self) -> usize {
++        2 + self.l_tx
++    }
++    /// All public words of `L`.
++    pub fn words(&self) -> usize {
++        self.call_at() + LIMBS * self.lanes()
++    }
++    /// Section boundaries in word order: statement head, entry table, value table, call vector.
++    pub fn sections(&self) -> [(usize, usize); 4] {
++        [
++            (0, STMT),
++            (STMT, self.values_at()),
++            (self.values_at(), self.call_at()),
++            (self.call_at(), self.words()),
++        ]
++    }
++}
++
++/// Logged values of an entry.
++pub fn vals(op: u64, param: u64) -> usize {
++    match op {
++        NOP => 0,
++        PERM => 6,
++        H2 => 3,
++        SPONGE => param as usize + 1,
++        PATH => 3,
++        ECMUL => 5,
++        ECMULG => 3,
++        PUB => 1,
++        DIGEST => 2,
++        _ => panic!("op code {op}"),
++    }
++}
++
++/// Permutation slots of an entry.
++pub fn perms(op: u64, param: u64) -> usize {
++    match op {
++        PERM | H2 | DIGEST => 1,
++        SPONGE => (param as usize).div_ceil(2),
++        PATH => param as usize,
++        _ => 0,
++    }
++}
++
++/// The per-operation bound (`low <= param <= high`) at capacity `d`; `None` for an op that is
++/// never admitted (`ECMUL`, `ECMULG` while `E = 0`).
++pub fn bounds(d: &Dims, op: u64) -> Option<(u64, u64)> {
++    match op {
++        NOP | PERM | H2 => Some((0, 0)),
++        SPONGE => Some((1, d.v as u64 - 1)),
++        PATH => Some((1, PATH_MAX)),
++        PUB => Some((0, d.lanes() as u64 - 1)),
++        DIGEST => Some((0, N_TAGS - 1)),
++        _ => None,
++    }
++}
++
++pub fn tag_fr(k: u64) -> Fr {
++    Fr::from_u64(k + 1)
++}
++
++fn two66() -> Fr {
++    Fr::from_u64(1 << 33) * Fr::from_u64(1 << 33)
++}
++
++pub fn perm(x: [Fr; 3]) -> [Fr; 3] {
++    permute_trace(x).0
++}
++
++/// Midnight fixed-length sponge at use code `u`: capacity `l + u 2^66`, additive absorption in
++/// blocks of 2, output the first rate cell.
++pub fn sponge_u(u: u64, xs: &[Fr]) -> Fr {
++    let mut s = [
++        Fr::ZERO,
++        Fr::ZERO,
++        Fr::from_u64(xs.len() as u64) + Fr::from_u64(u) * two66(),
++    ];
++    for blk in xs.chunks(2) {
++        s[0] += blk[0];
++        if blk.len() > 1 {
++            s[1] += blk[1];
++        }
++        s = perm(s);
++    }
++    s[0]
++}
++
++pub fn h2(a: Fr, b: Fr) -> Fr {
++    sponge_u(0, &[a, b])
++}
++
++pub fn path_root(leaf: Fr, index: u64, sibs: &[Fr]) -> Fr {
++    let mut cur = leaf;
++    for (t, &s) in sibs.iter().enumerate() {
++        cur = if (index >> t) & 1 == 1 {
++            h2(s, cur)
++        } else {
++            h2(cur, s)
++        };
++    }
++    cur
++}
++
++pub fn digest(tag: u64, d2: Fr) -> Fr {
++    sponge_u(4, &[tag_fr(tag), d2])
++}
++
++/// One operation of a run, with its native inputs.
++#[derive(Clone, Debug)]
++pub enum OpIn {
++    Perm([Fr; 3]),
++    H2(Fr, Fr),
++    Sponge(Vec<Fr>),
++    Path { leaf: Fr, index: u64, sibs: Vec<Fr> },
++    Pub { lane: u64, v: Fr },
++    Digest { tag: u64, d2: Fr },
++}
++
++/// A log entry: op, param and its logged values (inputs then outputs, as ARCHITECTURE 1.8).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Entry {
++    pub op: u64,
++    pub param: u64,
++    pub values: Vec<Fr>,
++}
++
++impl OpIn {
++    pub fn op_param(&self) -> (u64, u64) {
++        match self {
++            OpIn::Perm(_) => (PERM, 0),
++            OpIn::H2(..) => (H2, 0),
++            OpIn::Sponge(x) => (SPONGE, x.len() as u64),
++            OpIn::Path { sibs, .. } => (PATH, sibs.len() as u64),
++            OpIn::Pub { lane, .. } => (PUB, *lane),
++            OpIn::Digest { tag, .. } => (DIGEST, *tag),
++        }
++    }
++    /// The native evaluation as a log entry.
++    pub fn entry(&self) -> Entry {
++        let (op, param) = self.op_param();
++        let values = match self {
++            OpIn::Perm(x) => {
++                let y = perm(*x);
++                x.iter().chain(y.iter()).copied().collect()
++            }
++            OpIn::H2(a, b) => vec![*a, *b, h2(*a, *b)],
++            OpIn::Sponge(x) => {
++                let mut v = x.clone();
++                v.push(sponge_u(0, x));
++                v
++            }
++            OpIn::Path { leaf, index, sibs } => {
++                vec![*leaf, Fr::from_u64(*index), path_root(*leaf, *index, sibs)]
++            }
++            OpIn::Pub { v, .. } => vec![*v],
++            OpIn::Digest { tag, d2 } => vec![*d2, digest(*tag, *d2)],
++        };
++        assert_eq!(values.len(), vals(op, param));
++        Entry { op, param, values }
++    }
++}
++
++/// The admitted log and the operations sent to tier E.
++#[derive(Clone, Debug)]
++pub struct Plan {
++    pub log: Vec<Entry>,
++    pub spilled: Vec<OpIn>,
++}
++
++/// OD-17 planner: `R` first (refused if it does not fit: keygen refuses such a capacity), then
++/// each discretionary operation if every limit and its per-operation bound still hold.
++pub fn plan(d: &Dims, r: &[OpIn], s: &[OpIn]) -> Plan {
++    let (mut nv, mut np) = (0usize, 0usize);
++    let mut log = vec![];
++    for o in r {
++        let e = o.entry();
++        nv += e.values.len();
++        np += perms(e.op, e.param);
++        log.push(e);
++    }
++    assert!(
++        log.len() <= d.b && nv <= d.v && np <= d.p,
++        "capacity does not hold R"
++    );
++    let mut spilled = vec![];
++    for o in s {
++        let (op, param) = o.op_param();
++        let ok_bound = bounds(d, op).is_some_and(|(lo, hi)| lo <= param && param <= hi);
++        let (dv, dp) = (vals(op, param), perms(op, param));
++        if ok_bound && log.len() < d.b && nv + dv <= d.v && np + dp <= d.p {
++            log.push(o.entry());
++            nv += dv;
++            np += dp;
++        } else {
++            spilled.push(o.clone());
++        }
++    }
++    Plan { log, spilled }
++}
++
++/// 9 limbs of 30 bits of an Fr value (little-endian).
++pub fn limbs(x: Fr) -> [u64; LIMBS] {
++    let big = x.as_canonical_biguint();
++    let mask = BigUint::from((1u64 << LIMB_BITS) - 1);
++    std::array::from_fn(|k| {
++        let l: BigUint = (&big >> (LIMB_BITS as usize * k)) & &mask;
++        l.to_u64_digits().first().copied().unwrap_or(0)
++    })
++}
++
++/// `dec`: the integer of 9 limbs; `None` unless every limb is below `2^30` and the integer is
++/// below `r` (`Canon`).
++pub fn dec(l: &[u64]) -> Option<Fr> {
++    assert_eq!(l.len(), LIMBS);
++    let mut big = BigUint::from(0u32);
++    for (k, &x) in l.iter().enumerate() {
++        if x >= 1 << LIMB_BITS {
++            return None;
++        }
++        big += BigUint::from(x) << (LIMB_BITS as usize * k);
++    }
++    if big >= Fr::order() {
++        return None;
++    }
++    Some(fr_from_big(&big))
++}
++
++/// A run's interface: the statement head and the call vector (lane map lanes still empty).
++#[derive(Clone, Debug)]
++pub struct Run {
++    pub dims: Dims,
++    /// Statement head words (114, BabyBear).
++    pub head: Vec<u64>,
++    /// The call vector without the lane-map lanes (they are zero here).
++    pub lanes: Vec<Fr>,
++    /// `(lane, entry)` pairs; unused `(0, 0)`.
++    pub lane_map: [(u64, u64); LANE_PAIRS],
++    pub log: Vec<Entry>,
++}
++
++impl Run {
++    /// The 12,164 (at `Dims::FULL`) public words of `L`, in index-table order.
++    pub fn words(&self) -> Vec<u64> {
++        let d = &self.dims;
++        assert!(self.log.len() <= d.b);
++        let mut w = self.head.clone();
++        assert_eq!(w.len(), STMT);
++        for (i, &(lane, ent)) in self.lane_map.iter().enumerate() {
++            w[LANE_MAP + 2 * i] = lane;
++            w[LANE_MAP + 2 * i + 1] = ent;
++        }
++        for i in 0..d.b {
++            match self.log.get(i) {
++                Some(e) => w.extend([e.op, e.param]),
++                None => w.extend([NOP, 0]),
++            }
++        }
++        let vals: Vec<Fr> = self.log.iter().flat_map(|e| e.values.clone()).collect();
++        assert!(vals.len() <= d.v);
++        for j in 0..d.v {
++            match vals.get(j) {
++                Some(&x) => w.extend(limbs(x)),
++                None => w.extend([0; LIMBS]),
++            }
++        }
++        assert_eq!(self.lanes.len(), d.lanes());
++        let mapped: Vec<u64> = self
++            .lane_map
++            .iter()
++            .filter(|p| **p != (0, 0))
++            .map(|p| p.0)
++            .collect();
++        for (i, &x) in self.lanes.iter().enumerate() {
++            if mapped.contains(&(i as u64)) {
++                assert_eq!(x, Fr::ZERO, "a lane in the lane map holds zero limbs");
++            }
++            w.extend(limbs(x));
++        }
++        assert_eq!(w.len(), d.words());
++        assert!(w.iter().all(|&x| x < P));
++        w
++    }
++
++    /// The native statement: the call vector with the lane-map lanes set to the outputs of their
++    /// `DIGEST` entries.
++    pub fn statement(&self) -> Vec<Fr> {
++        let mut s = self.lanes.clone();
++        for &(lane, ent) in &self.lane_map {
++            if (lane, ent) == (0, 0) {
++                continue;
++            }
++            let e = &self.log[ent as usize];
++            assert_eq!(e.op, DIGEST);
++            s[lane as usize] = e.values[1];
++        }
++        s
++    }
++}
++
++/// Unpack `L_Fr` public words (pre-hash first, then `L` words packed 8 per Fr) into the `L`
++/// words.
++pub fn unpack(lfr_words: &[Fr], n_words: usize) -> Result<Vec<u64>, String> {
++    let mut out = vec![];
++    for (i, x) in lfr_words[1..].iter().enumerate() {
++        let k = (n_words - 8 * i).min(8);
++        let mut b = x.as_canonical_biguint();
++        for _ in 0..k {
++            let w = (&b % BigUint::from(1u64 << 31))
++                .to_u64_digits()
++                .first()
++                .copied()
++                .unwrap_or(0);
++            if w >= P {
++                return Err(format!("packed word {i}: non-canonical BabyBear"));
++            }
++            out.push(w);
++            b >>= 31;
++        }
++        if b != BigUint::from(0u32) {
++            return Err(format!("packed word {i}: high bits set"));
++        }
++    }
++    if out.len() != n_words {
++        return Err("word count".into());
++    }
++    Ok(out)
++}
++
++/// The decoder of plan D-9: the statement words that the wrap reads from the `L_Fr` public
++/// words. Checks range and `Canon` of every lane and logged value, the padding rules, the lane
++/// map (each mapped entry a `DIGEST`) and every `PUB(i)` against lane `i`.
++pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
++    let w = unpack(lfr_words, d.words())?;
++    let mut lanes = vec![];
++    for i in 0..d.lanes() {
++        let at = d.call_at() + LIMBS * i;
++        lanes.push(dec(&w[at..at + LIMBS]).ok_or(format!("lane {i}: range or Canon"))?);
++    }
++    let mut vs = vec![];
++    for j in 0..d.v {
++        let at = d.values_at() + LIMBS * j;
++        vs.push(dec(&w[at..at + LIMBS]).ok_or(format!("value {j}: range or Canon"))?);
++    }
++    let (mut off, mut np, mut ended) = (0usize, 0usize, false);
++    let mut offs = vec![];
++    for i in 0..d.b {
++        let (op, param) = (w[STMT + 2 * i], w[STMT + 2 * i + 1]);
++        let (lo, hi) = bounds(d, op).ok_or(format!("entry {i}: op {op} not admitted"))?;
++        if param < lo || param > hi {
++            return Err(format!("entry {i}: param out of bound"));
++        }
++        if op == NOP {
++            ended = true;
++        } else if ended {
++            return Err(format!("entry {i}: used entry after NOP"));
++        }
++        offs.push((op, param, off));
++        off += vals(op, param);
++        np += perms(op, param);
++    }
++    if off > d.v || np > d.p {
++        return Err("capacity".into());
++    }
++    if vs[off..].iter().any(|x| *x != Fr::ZERO) {
++        return Err("value row after off_n not zero".into());
++    }
++    let mut s = lanes;
++    for k in 0..LANE_PAIRS {
++        let (lane, ent) = (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1]);
++        if (lane, ent) == (0, 0) {
++            continue;
++        }
++        let (op, _, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
++        if op != DIGEST || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
++            return Err(format!("lane map pair {k}"));
++        }
++        s[lane as usize] = vs[o + 1];
++    }
++    for &(op, param, o) in &offs {
++        if op == PUB && s[param as usize] != vs[o] {
++            return Err(format!("PUB({param}) differs from its lane"));
++        }
++    }
++    Ok(s)
++}
++
++fn rfr(rng: &mut StdRng) -> Fr {
++    let lo = Fr::from_u64(rng.random::<u64>());
++    let hi = Fr::from_u64(rng.random::<u64>());
++    let t = Fr::from_u64(rng.random::<u64>());
++    hi * two66() * two66() + lo + t * two66()
++}
++
++/// Test cases of plan J3 (all at one key).
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Case {
++    /// The discretionary operations fill `V` exactly.
++    FullV,
++    /// The discretionary operations fill `P` exactly.
++    FullP,
++    /// The discretionary demand exceeds every limit (forced overflow).
++    Overflow,
++    /// `FullV` with the `SHK_INPUT` entry of `R` removed (negative).
++    MissingR,
++}
++
++/// The reservation `R` of an ordinary call: `DIGEST` of `SHK_PROGC`, `SHK_INPUT`,
++/// `SHK_OUTCOME`.
++pub fn reservation(rng: &mut StdRng) -> Vec<OpIn> {
++    [SHK_PROGC, SHK_INPUT, SHK_OUTCOME]
++        .iter()
++        .map(|&tag| OpIn::Digest { tag, d2: rfr(rng) })
++        .collect()
++}
++
++/// The run of a case (seeded), with its plan.
++pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
++    let mut rng = StdRng::seed_from_u64(seed);
++    let r = reservation(&mut rng);
++    let mut lanes = vec![Fr::ZERO; d.lanes()];
++    lanes[0] = rfr(&mut rng);
++    lanes[1] = rfr(&mut rng);
++    // Lanes 2, 3, 4 are the lane-map lanes (anchor prefix C_P, input_pub, outcome_pub).
++    let first_effect = 5usize;
++    let n_eff = (d.lanes() - first_effect).min(600);
++    for l in lanes.iter_mut().skip(first_effect).take(n_eff) {
++        *l = rfr(&mut rng);
++    }
++    let pubs = |rng: &mut StdRng, k: usize, lanes: &[Fr]| -> Vec<OpIn> {
++        (0..k)
++            .map(|_| {
++                let lane = first_effect as u64 + rng.random_range(0..n_eff as u64);
++                OpIn::Pub {
++                    lane,
++                    v: lanes[lane as usize],
++                }
++            })
++            .collect()
++    };
++    let path = |rng: &mut StdRng, depth: usize| OpIn::Path {
++        leaf: rfr(rng),
++        index: rng.random::<u64>() & ((1u64 << depth) - 1),
++        sibs: (0..depth).map(|_| rfr(rng)).collect(),
++    };
++    let s: Vec<OpIn> = match case {
++        Case::FullV | Case::MissingR => {
++            // R holds 6 values; mixed operations, then PUB to fill V exactly.
++            let mut s = vec![];
++            let k = (d.v / 32).max(1);
++            for _ in 0..k {
++                s.push(OpIn::Perm([rfr(&mut rng), rfr(&mut rng), rfr(&mut rng)]));
++                s.push(OpIn::H2(rfr(&mut rng), rfr(&mut rng)));
++            }
++            s.push(OpIn::Sponge((0..5).map(|_| rfr(&mut rng)).collect()));
++            s.push(path(&mut rng, 8.min(d.p / 8)));
++            s.push(OpIn::Digest {
++                tag: SHK_LOCK,
++                d2: rfr(&mut rng),
++            });
++            let used: usize = 6 + s.iter().map(|o| o.entry().values.len()).sum::<usize>();
++            assert!(used <= d.v);
++            s.extend(pubs(&mut rng, d.v - used, &lanes));
++            s
++        }
++        Case::FullP => {
++            // R holds 3 slots; PATH(32) until fewer than 32 slots are left, then one PATH of
++            // the rest.
++            let mut s = vec![];
++            let mut left = d.p - 3;
++            while left > 0 {
++                let depth = left.min(PATH_MAX as usize);
++                s.push(path(&mut rng, depth));
++                left -= depth;
++            }
++            s
++        }
++        Case::Overflow => {
++            let mut s = vec![];
++            for _ in 0..d.v / 4 {
++                s.push(OpIn::Perm([rfr(&mut rng), rfr(&mut rng), rfr(&mut rng)]));
++            }
++            s.push(OpIn::Sponge((0..d.v).map(|_| rfr(&mut rng)).collect()));
++            for _ in 0..d.p / 16 {
++                s.push(path(&mut rng, PATH_MAX as usize));
++            }
++            s.push(path(&mut rng, PATH_MAX as usize + 1));
++            s.extend(pubs(&mut rng, d.b + d.v, &lanes));
++            s
++        }
++    };
++    let pl = plan(d, &r, &s);
++    let mut log = pl.log.clone();
++    if case == Case::MissingR {
++        log.remove(1);
++    }
++    let mut head: Vec<u64> = (0..STMT).map(|_| rng.random::<u64>() % P).collect();
++    head[MODE_WORD] = 0;
++    let lane_map = [(2, 0), (3, 1), (4, 2), (0, 0)];
++    (
++        Run {
++            dims: *d,
++            head,
++            lanes,
++            lane_map,
++            log,
++        },
++        pl,
++    )
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn layout_full_is_12164() {
++        assert_eq!(Dims::FULL.words(), 12_164);
++        assert_eq!(Dims::FULL.call_at(), 2_930);
++        assert_eq!(2 * Dims::FULL.b + 9 * Dims::FULL.v, 2_816);
++    }
++
++    #[test]
++    fn limbs_round_trip_and_canon() {
++        let mut rng = StdRng::seed_from_u64(1);
++        for _ in 0..50 {
++            let x = rfr(&mut rng);
++            assert_eq!(dec(&limbs(x)), Some(x));
++        }
++        // r itself in limbs is refused (Canon), and a limb at 2^30 is refused (range).
++        let r: BigUint = Fr::order();
++        let mask = BigUint::from((1u64 << 30) - 1);
++        let l: Vec<u64> = (0..9usize)
++            .map(|k| {
++                ((&r >> (30 * k)) & &mask)
++                    .to_u64_digits()
++                    .first()
++                    .copied()
++                    .unwrap_or(0)
++            })
++            .collect();
++        assert_eq!(dec(&l), None);
++        let mut l2 = vec![0u64; 9];
++        l2[0] = 1 << 30;
++        assert_eq!(dec(&l2), None);
++    }
++}
+diff --git a/crates/sherlock-lfr/src/iface_l.rs b/crates/sherlock-lfr/src/iface_l.rs
+new file mode 100644
+index 0000000..2c1c3d0
+--- /dev/null
++++ b/crates/sherlock-lfr/src/iface_l.rs
+@@ -0,0 +1,321 @@
++//! E3 plan D-5: the interface AIRs of `L_iface` (BabyBear, at the `L` config). Appended after
++//! the 39 AIRs of the bench `L`, in this order, their public values are the index table of
++//! ARCHITECTURE 1.11 FP-3 word for word (`crate::iface::Dims::sections`):
++//!
++//! - `Stmt`: words 0 to 113 (the statement head), carrier only.
++//! - `LogEntry`: the entry table (`B` rows of `(op, param)`), with the structural rules of
++//!   ARCHITECTURE 1.8: op one-hot with `ECMUL` and `ECMULG` excluded (`E = 0`); the
++//!   per-operation bound `low <= param <= high` by two 11-bit slacks (so `NOP`, `PERM`, `H2` have
++//!   `param` 0); no used entry after a `NOP`; the running sums `off` (values) and `poff`
++//!   (permutation slots, `SPONGE(n)` takes `ceil(n/2)` by an 8-bit `half` with
++//!   `(n - 2 half)(n - 2 half + 1) = 0`); on the last row `V - off_n` and `P - poff_n` in 9 bits;
++//!   `off_n` sent on [`LOG_BUS`].
++//! - `LogValue`: the value table (`V` rows of 9 limbs): a non-increasing `used` flag, unused rows
++//!   zero, and the count of used rows received on [`LOG_BUS`] (so exactly the first `off_n` rows
++//!   are used).
++//! - `Call`: the call vector, carrier only.
++//!
++//! Not here (production `L`, FP-3 and M7b): the onion `d`, the tie of the words to a node
++//! statement, the limb range and `Canon` (the reader of the words checks them; plan D-9).
++
++use openvm_stark_backend::{
++    interaction::{BusIndex, InteractionBuilder},
++    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
++    p3_field::{Field, PrimeCharacteristicRing},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++
++use crate::{
++    carrier::Carrier,
++    iface::{self, Dims, LIMBS},
++};
++
++/// The `L`-side bus of the log AIRs (`off_n` from `LogEntry` to `LogValue`).
++pub const LOG_BUS: BusIndex = 900;
++/// Carrier words per row of `Stmt` and `Call`.
++pub const W_CARRY: usize = 48;
++const SLACK_BITS: usize = 11;
++const HALF_BITS: usize = 8;
++const CAP_BITS: usize = 9;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Kind {
++    Stmt,
++    LogEntry,
++    LogValue,
++    Call,
++}
++
++pub const KINDS: [Kind; 4] = [Kind::Stmt, Kind::LogEntry, Kind::LogValue, Kind::Call];
++
++#[derive(Clone, Copy, Debug)]
++pub struct IfaceAir {
++    pub kind: Kind,
++    pub dims: Dims,
++}
++
++// LogEntry columns after the carrier.
++const E_BITS: usize = 0; // 9 one-hot op bits
++const E_OFF: usize = 9;
++const E_POFF: usize = 10;
++const E_HALF: usize = 11; // HALF_BITS
++const E_LO: usize = E_HALF + HALF_BITS; // SLACK_BITS
++const E_HI: usize = E_LO + SLACK_BITS; // SLACK_BITS
++const E_VB: usize = E_HI + SLACK_BITS; // CAP_BITS
++const E_QB: usize = E_VB + CAP_BITS; // CAP_BITS
++const E_W: usize = E_QB + CAP_BITS;
++// LogValue columns after the carrier.
++const V_USED: usize = 0;
++const V_CNT: usize = 1;
++const V_W: usize = 2;
++
++impl IfaceAir {
++    pub fn section(&self) -> (usize, usize) {
++        let s = self.dims.sections();
++        match self.kind {
++            Kind::Stmt => s[0],
++            Kind::LogEntry => s[1],
++            Kind::LogValue => s[2],
++            Kind::Call => s[3],
++        }
++    }
++    pub fn n(&self) -> usize {
++        let (a, b) = self.section();
++        b - a
++    }
++    pub fn carrier(&self) -> Carrier {
++        match self.kind {
++            Kind::Stmt | Kind::Call => Carrier::new(self.n(), W_CARRY),
++            Kind::LogEntry => {
++                let c = Carrier::new(self.n(), 2);
++                assert_eq!(c.height(), self.dims.b, "B a power of two");
++                c
++            }
++            Kind::LogValue => {
++                let c = Carrier::new(self.n(), LIMBS);
++                assert_eq!(c.height(), self.dims.v, "V a power of two");
++                c
++            }
++        }
++    }
++    fn extra(&self) -> usize {
++        match self.kind {
++            Kind::LogEntry => E_W,
++            Kind::LogValue => V_W,
++            _ => 0,
++        }
++    }
++
++    /// The trace for the section's words (`words` = this AIR's public values).
++    /// `off_n` is the used value count of the run (read by `LogValue` only).
++    pub fn trace<F: Field>(&self, words: &[u64], off_n: u64) -> RowMajorMatrix<F> {
++        let c = self.carrier();
++        let fw: Vec<F> = words.iter().map(|&x| F::from_u64(x)).collect();
++        let mut rows = c.rows(&fw);
++        let d = &self.dims;
++        match self.kind {
++            Kind::LogEntry => {
++                let (mut off, mut poff) = (0usize, 0usize);
++                for (i, row) in rows.iter_mut().enumerate() {
++                    let (op, param) = (words[2 * i], words[2 * i + 1]);
++                    let mut x = vec![F::ZERO; E_W];
++                    x[E_BITS + op as usize] = F::ONE;
++                    x[E_OFF] = F::from_usize(off);
++                    x[E_POFF] = F::from_usize(poff);
++                    let half = if op == iface::SPONGE {
++                        (param as usize).div_ceil(2)
++                    } else {
++                        0
++                    };
++                    bits_into(&mut x[E_HALF..E_HALF + HALF_BITS], half as u64);
++                    let (lo, hi) = iface::bounds(d, op).expect("admitted op");
++                    bits_into(&mut x[E_LO..E_LO + SLACK_BITS], param - lo);
++                    bits_into(&mut x[E_HI..E_HI + SLACK_BITS], hi - param);
++                    off += iface::vals(op, param);
++                    poff += iface::perms(op, param);
++                    if i == d.b - 1 {
++                        bits_into(&mut x[E_VB..E_VB + CAP_BITS], (d.v - off) as u64);
++                        bits_into(&mut x[E_QB..E_QB + CAP_BITS], (d.p - poff) as u64);
++                    }
++                    row.extend(x);
++                }
++            }
++            Kind::LogValue => {
++                let mut cnt = 0u64;
++                for (j, row) in rows.iter_mut().enumerate() {
++                    let used = (j as u64) < off_n;
++                    cnt += used as u64;
++                    row.extend([F::from_bool(used), F::from_u64(cnt)]);
++                }
++            }
++            _ => {}
++        }
++        let w = c.width() + self.extra();
++        RowMajorMatrix::new(rows.concat(), w)
++    }
++
++}
++
++fn bits_into<F: Field>(dst: &mut [F], x: u64) {
++    assert!(x < 1 << dst.len(), "value {x} over {} bits", dst.len());
++    for (k, d) in dst.iter_mut().enumerate() {
++        *d = F::from_bool((x >> k) & 1 == 1);
++    }
++}
++
++/// The traces and public values of the four interface AIRs for the `L` words of a run.
++pub fn traces<F: Field>(dims: &Dims, words: &[u64]) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
++    assert_eq!(words.len(), dims.words());
++    let mut off_n = 0u64;
++    for i in 0..dims.b {
++        let (op, param) = (words[iface::STMT + 2 * i], words[iface::STMT + 2 * i + 1]);
++        off_n += iface::vals(op, param) as u64;
++    }
++    KINDS
++        .iter()
++        .map(|&kind| {
++            let a = IfaceAir { kind, dims: *dims };
++            let (s, e) = a.section();
++            let ws = &words[s..e];
++            (a.trace(ws, off_n), ws.iter().map(|&x| F::from_u64(x)).collect())
++        })
++        .collect()
++}
++
++impl<F: Field> BaseAir<F> for IfaceAir {
++    fn width(&self) -> usize {
++        self.carrier().width() + self.extra()
++    }
++}
++impl<F: Field> BaseAirWithPublicValues<F> for IfaceAir {
++    fn num_public_values(&self) -> usize {
++        self.n()
++    }
++}
++impl<F: Field> PartitionedBaseAir<F> for IfaceAir {}
++
++fn pow2_sum<E: PrimeCharacteristicRing + Clone>(bits: &[E]) -> E {
++    bits.iter()
++        .enumerate()
++        .fold(E::ZERO, |acc, (k, b)| acc + b.clone() * E::from_u64(1 << k))
++}
++
++impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
++    fn eval(&self, builder: &mut AB) {
++        let c = self.carrier();
++        let w = c.width() + self.extra();
++        let main = builder.main();
++        let (l, n) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let local: Vec<AB::Expr> = (0..w).map(|i| l[i].into()).collect();
++        let next: Vec<AB::Expr> = (0..w).map(|i| n[i].into()).collect();
++        drop((l, n));
++        c.eval(builder, &local[..c.width()], &next[..c.width()], 0);
++        let v = &local[c.sel_width()..c.width()];
++        let x = &local[c.width()..];
++        let xn = &next[c.width()..];
++        let one = AB::Expr::ONE;
++        let k = |u: u64| AB::Expr::from_u64(u);
++        let d = &self.dims;
++        match self.kind {
++            Kind::LogEntry => {
++                let (op, param) = (v[0].clone(), v[1].clone());
++                let b = &x[E_BITS..E_BITS + 9];
++                for bit in x[E_BITS..E_W]
++                    .iter()
++                    .enumerate()
++                    .filter(|(i, _)| *i != E_OFF && *i != E_POFF)
++                    .map(|(_, e)| e)
++                {
++                    builder.assert_bool(bit.clone());
++                }
++                let sum = b.iter().fold(AB::Expr::ZERO, |a, e| a + e.clone());
++                builder.assert_zero(sum - one.clone());
++                let code = b
++                    .iter()
++                    .enumerate()
++                    .fold(AB::Expr::ZERO, |a, (i, e)| a + e.clone() * k(i as u64));
++                builder.assert_zero(op - code);
++                builder.assert_zero(b[iface::ECMUL as usize].clone());
++                builder.assert_zero(b[iface::ECMULG as usize].clone());
++                let bn0 = xn[E_BITS + iface::NOP as usize].clone();
++                builder
++                    .when_transition()
++                    .assert_zero(b[0].clone() * (one.clone() - bn0));
++                let half = pow2_sum(&x[E_HALF..E_HALF + HALF_BITS]);
++                let t = param.clone() - half.clone() * k(2);
++                builder.assert_zero(
++                    b[iface::SPONGE as usize].clone() * t.clone() * (t + one.clone()),
++                );
++                let low = b[iface::SPONGE as usize].clone() + b[iface::PATH as usize].clone();
++                let high = b[iface::SPONGE as usize].clone() * k(d.v as u64 - 1)
++                    + b[iface::PATH as usize].clone() * k(iface::PATH_MAX)
++                    + b[iface::PUB as usize].clone() * k(d.lanes() as u64 - 1)
++                    + b[iface::DIGEST as usize].clone() * k(iface::N_TAGS - 1);
++                builder.assert_zero(
++                    param.clone() - low - pow2_sum(&x[E_LO..E_LO + SLACK_BITS]),
++                );
++                builder.assert_zero(
++                    high - param.clone() - pow2_sum(&x[E_HI..E_HI + SLACK_BITS]),
++                );
++                let vals = b[iface::PERM as usize].clone() * k(6)
++                    + b[iface::H2 as usize].clone() * k(3)
++                    + b[iface::SPONGE as usize].clone() * (param.clone() + one.clone())
++                    + b[iface::PATH as usize].clone() * k(3)
++                    + b[iface::PUB as usize].clone()
++                    + b[iface::DIGEST as usize].clone() * k(2);
++                let perms = b[iface::PERM as usize].clone()
++                    + b[iface::H2 as usize].clone()
++                    + b[iface::SPONGE as usize].clone() * half
++                    + b[iface::PATH as usize].clone() * param
++                    + b[iface::DIGEST as usize].clone();
++                let (off, poff) = (x[E_OFF].clone(), x[E_POFF].clone());
++                builder.when_first_row().assert_zero(off.clone());
++                builder.when_first_row().assert_zero(poff.clone());
++                builder
++                    .when_transition()
++                    .assert_zero(xn[E_OFF].clone() - off.clone() - vals.clone());
++                builder
++                    .when_transition()
++                    .assert_zero(xn[E_POFF].clone() - poff.clone() - perms.clone());
++                let off_end = off + vals;
++                builder.when_last_row().assert_zero(
++                    k(d.v as u64) - off_end.clone() - pow2_sum(&x[E_VB..E_VB + CAP_BITS]),
++                );
++                builder.when_last_row().assert_zero(
++                    k(d.p as u64) - poff - perms - pow2_sum(&x[E_QB..E_QB + CAP_BITS]),
++                );
++                let last = builder.is_last_row();
++                builder.push_interaction(LOG_BUS, vec![off_end], last, 1);
++            }
++            Kind::LogValue => {
++                let (u, cnt) = (x[V_USED].clone(), x[V_CNT].clone());
++                builder.assert_bool(u.clone());
++                builder
++                    .when_transition()
++                    .assert_zero((one.clone() - u.clone()) * xn[V_USED].clone());
++                for limb in v {
++                    builder.assert_zero((one.clone() - u.clone()) * limb.clone());
++                }
++                builder.when_first_row().assert_zero(cnt.clone() - u);
++                builder
++                    .when_transition()
++                    .assert_zero(xn[V_CNT].clone() - cnt.clone() - xn[V_USED].clone());
++                let last = builder.is_last_row();
++                builder.push_interaction(LOG_BUS, vec![cnt], -last, 1);
++            }
++            _ => {}
++        }
++    }
++}
++
++/// The interface AIRs as `L` AIRs, in [`KINDS`] order.
++pub fn airs(dims: &Dims) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
++    KINDS
++        .iter()
++        .map(|&kind| {
++            std::sync::Arc::new(IfaceAir { kind, dims: *dims })
++                as openvm_stark_backend::AirRef<crate::fixture::LSC>
++        })
++        .collect()
++}
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+index c2dd7a8..849be7f 100644
+--- a/crates/sherlock-lfr/src/lib.rs
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -7,8 +7,11 @@
+ 
+ pub mod alu;
+ pub mod bb;
++pub mod carrier;
+ pub mod fixture;
+ pub mod fr;
++pub mod iface;
++pub mod iface_l;
+ pub mod lverify;
+ pub mod machine;
+ pub mod poseidon;
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index 20672d7..bf8abff 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -226,6 +226,8 @@ pub struct Part1 {
+     pub pre_hash: Addr,
+     /// The public values of `L` (BabyBear words, in vk order).
+     pub public: Vec<Addr>,
++    /// The same addresses per AIR (vk order), read by the DAG of part 2 (`Entry::Public`).
++    pub public_per_air: Vec<Vec<Addr>>,
+ }
+ 
+ /// Errors of the generator: the proof does not have the pinned shape.
+@@ -273,6 +275,7 @@ pub fn gen_part1(
+     g.observe_commit(cm);
+     let mut cached_per_air: Vec<Vec<Addr>> = vec![vec![]; mvk.per_air.len()];
+     let mut public = vec![];
++    let mut public_per_air = vec![vec![]; mvk.per_air.len()];
+     for (i, avk) in mvk.per_air.iter().enumerate() {
+         let lh = shape.log_heights[i];
+         if !avk.is_required {
+@@ -303,6 +306,7 @@ pub fn gen_part1(
+             let a = g.bb_in(*pv);
+             g.observe(a);
+             public.push(a);
++            public_per_air[i].push(a);
+         }
+     }
+ 
+@@ -373,6 +377,7 @@ pub fn gen_part1(
+             .collect(),
+         pre_hash,
+         public,
++        public_per_air,
+     })
+ }
+ 
+@@ -837,10 +842,8 @@ pub fn gen_part2(
+                         Entry::Main { part_index, offset } => {
+                             pick(&part_main[part_index][var.index], offset)
+                         }
+-                        Entry::Public => {
+-                            // Public values are tape inputs of part 1 (L has none).
+-                            unimplemented!("public values of L")
+-                        }
++                        // Public values are the BabyBear tape inputs of part 1 (E3).
++                        Entry::Public => p1.public_per_air[air][var.index],
+                         Entry::Challenge => unimplemented!("challenge variable"),
+                     }
+                 }
+@@ -1562,16 +1565,25 @@ fn tree_compress(g: &mut Gen, mut hashes: Vec<Addr>) -> Addr {
+     hashes[0]
+ }
+ 
+-/// The whole `L` verifier on the tape (parts 1 to 4).
+ /// The whole `L` verifier on the tape (parts 1 to 4). Returns the addresses of the public words
+ /// of `L_Fr` (D-2): the `L` vk pre-hash, then the public values of `L` packed 8 BabyBear words
+-/// per Fr word (in vk order). The caller exposes them with [`crate::tape::Tape::public`].
++/// per Fr word (in vk order). The caller exposes them with [`crate::tape::Tape::expose`].
+ pub fn gen_verifier(
+     g: &mut Gen,
+     vk: &MultiStarkVerifyingKey<LSC>,
+     shape: &LShape,
+     proof: &Proof<LSC>,
+ ) -> Result<Vec<Addr>, ShapeError> {
++    gen_verifier_full(g, vk, shape, proof).map(|(w, _)| w)
++}
++
++/// [`gen_verifier`], also returning the tape addresses of the public values of `L` (vk order).
++pub fn gen_verifier_full(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &Proof<LSC>,
++) -> Result<(Vec<Addr>, Vec<Addr>), ShapeError> {
+     let p1 = gen_part1(g, vk, shape, proof)?;
+     let p2 = gen_part2(g, vk, shape, proof, &p1)?;
+     let p3 = gen_part3(g, vk, shape, proof, &p1, &p2)?;
+@@ -1580,5 +1592,21 @@ pub fn gen_verifier(
+     for c in p1.public.chunks(8) {
+         words.push(g.tape.pack(c));
+     }
+-    Ok(words)
++    Ok((words, p1.public))
++}
++
++/// E3 plan D-7: the reservation `R` of an ordinary call, checked on the public words of `L`
++/// (`l_pub`, the index table of `crate::iface`): the `mode` word is 0 and the first 3 entries
++/// are `DIGEST` of `SHK_PROGC`, `SHK_INPUT`, `SHK_OUTCOME`. Key constants and `AssertEq` ops.
++pub fn gen_r_check(g: &mut Gen, l_pub: &[Addr]) {
++    use crate::iface::{DIGEST, MODE_WORD, SHK_INPUT, SHK_OUTCOME, SHK_PROGC, STMT};
++    let mut want = vec![(MODE_WORD, 0u64)];
++    for (i, tag) in [SHK_PROGC, SHK_INPUT, SHK_OUTCOME].into_iter().enumerate() {
++        want.push((STMT + 2 * i, DIGEST));
++        want.push((STMT + 2 * i + 1, tag));
++    }
++    for (w, v) in want {
++        let k = g.kbb(v);
++        g.assert_eq(l_pub[w], k);
++    }
+ }
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+index fb95f5e..2bf571b 100644
+--- a/crates/sherlock-lfr/src/machine.rs
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -934,34 +934,51 @@ impl<AB: InteractionBuilder<F = Fr>> Air<AB> for CSwapAir {
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// PublicAir (D-2): the public values of the machine. One active row: program
+-// [addr_0, .., addr_{P-1}, active]; main [v_0, .., v_{P-1}]. Reads (addr_i, v_i) and constrains
+-// `active (v_i - pv_i) = 0`, so public value `i` equals the Fr value at `addr_i` of the tape.
+-// The padding row (the nop row of the table: every cell 0) reads nothing.
++// PublicAir (D-2 at the full interface, E3 D-6): the public values of the machine, carried
++// `PUBLIC_W` per row by the selector carrier of `crate::carrier`. Program per row
++// `[addr_0, .., addr_(W-1), active]`; main `[a.., b.., v_0, .., v_(W-1)]`. Each cell reads
++// `(addr_c, v_c)` with count `-active`, and the carrier binds cell `(r, c)` to public value
++// `r W + c` (cells past the last word are 0 and read the zero of `Op::PublicPad`). Padding rows
++// (the nop rows of the table) read nothing, and their cells are 0 by the carrier.
+ // ------------------------------------------------------------------------------------------
+ 
+-/// Most public words of one `PublicAir` row (the program cells of one row, `PROG_W`, less the
+-/// `active` cell).
+-pub const PUBLIC_MAX: usize = crate::program::PROG_W - 1;
++/// Public words per `PublicAir` row (`PROG_W - 2` address cells, so the program row with its
++/// `active` cell fits the table).
++pub const PUBLIC_W: usize = 16;
+ 
+ #[derive(Clone, Debug)]
+ pub struct PublicAir {
+     pub addrs: Arc<Vec<Addr>>,
++    /// The zero read by the empty cells of the last row.
++    pub pad: Option<Addr>,
+ }
+ 
+ impl PublicAir {
+     fn n(&self) -> usize {
+         self.addrs.len()
+     }
++    pub fn carrier(&self) -> crate::carrier::Carrier {
++        crate::carrier::Carrier::new(self.n(), PUBLIC_W)
++    }
+     pub fn prog_rows(&self) -> Vec<Vec<Fr>> {
+-        let mut r: Vec<Fr> = self.addrs.iter().map(|&a| fu(a as u64)).collect();
+-        r.push(Fr::ONE);
+-        vec![r]
++        self.addrs
++            .chunks(PUBLIC_W)
++            .map(|c| {
++                let mut r: Vec<Fr> = c.iter().map(|&a| fu(a as u64)).collect();
++                let pad = self.pad.unwrap_or(0) as u64;
++                r.resize(PUBLIC_W, fu(pad));
++                r.push(Fr::ONE);
++                r
++            })
++            .collect()
+     }
+     pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
+-        let row: Vec<Fr> = self.addrs.iter().map(|&a| get(mem, a).fr()).collect();
+-        let main = rows_to_matrix(vec![row], 1, self.n(), vec![Fr::ZERO; self.n()]);
+-        crate::program::with_prog(main, &self.prog_rows(), self.n() + 1)
++        let c = self.carrier();
++        let rows = c.rows(&self.values(mem));
++        let h = c.height();
++        assert_eq!(h, padded(self.n().div_ceil(PUBLIC_W)), "carrier height");
++        let main = RowMajorMatrix::new(rows.concat(), c.width());
++        crate::program::with_prog(main, &self.prog_rows(), PUBLIC_W + 1)
+     }
+     /// The public values of the honest witness.
+     pub fn values(&self, mem: &[Option<Val>]) -> Vec<Fr> {
+@@ -971,7 +988,7 @@ impl PublicAir {
+ 
+ impl BaseAir<Fr> for PublicAir {
+     fn width(&self) -> usize {
+-        2 * self.n() + 1
++        self.carrier().width() + PUBLIC_W + 1
+     }
+ }
+ impl BaseAirWithPublicValues<Fr> for PublicAir {
+@@ -983,15 +1000,22 @@ impl PartitionedBaseAir<Fr> for PublicAir {}
+ 
+ impl<AB: InteractionBuilder<F = Fr> + AirBuilderWithPublicValues> Air<AB> for PublicAir {
+     fn eval(&self, builder: &mut AB) {
+-        let n = self.n();
+-        let (v, p) = split_row(builder, TAG_PUBLIC, n, n + 1);
+-        let pv: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
+-        for i in 0..n {
+-            builder.assert_zero(p[n].clone() * (v[i].clone() - pv[i].clone()));
++        let c = self.carrier();
++        let cw = c.width();
++        let main = builder.main();
++        let (l, nx) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let local: Vec<AB::Expr> = (0..cw + PUBLIC_W + 1).map(|i| l[i].into()).collect();
++        let next: Vec<AB::Expr> = (0..cw).map(|i| nx[i].into()).collect();
++        drop((l, nx));
++        let p = local[cw..].to_vec();
++        receive_prog(builder, TAG_PUBLIC, &p);
++        c.eval(builder, &local[..cw], &next, 0);
++        let v = &local[c.sel_width()..cw];
++        for i in 0..PUBLIC_W {
+             builder.push_interaction(
+                 MEM_BUS,
+                 mem_msg(p[i].clone(), &[v[i].clone()]),
+-                -p[n].clone(),
++                -p[PUBLIC_W].clone(),
+                 1,
+             );
+         }
+@@ -1035,6 +1059,7 @@ impl Machine {
+         let (mut asserts, mut bits) = (vec![], vec![]);
+         let (mut fr_add, mut halve, mut cswap) = (vec![], vec![], vec![]);
+         let mut public = vec![];
++        let mut pad = None;
+         for op in &tape.ops {
+             match op {
+                 Op::Input { kind, out } => inp.push(crate::tape::InputProg {
+@@ -1125,6 +1150,14 @@ impl Machine {
+                     mult_r: m(r),
+                 }),
+                 Op::Public { a } => public.push(*a),
++                Op::PublicPad { a, k } => {
++                    assert_eq!(
++                        public.len().div_ceil(PUBLIC_W) * PUBLIC_W - public.len(),
++                        *k as usize,
++                        "PublicPad after the last public word"
++                    );
++                    pad = Some(*a);
++                }
+             }
+         }
+         Self {
+@@ -1142,10 +1175,10 @@ impl Machine {
+             cswap: some(cswap).map(|prog| CSwapAir { prog }),
+             public: some(public).map(|addrs| {
+                 assert!(
+-                    addrs.len() <= PUBLIC_MAX,
+-                    "public words of one PublicAir row"
++                    pad.is_some() || addrs.len() % PUBLIC_W == 0,
++                    "expose the public words with Tape::expose"
+                 );
+-                PublicAir { addrs }
++                PublicAir { addrs, pad }
+             }),
+         }
+     }
+@@ -1396,7 +1429,12 @@ impl Machine {
+             push("CSwap", a.prog.len(), 5 + 8, 0);
+         }
+         if let Some(a) = &self.public {
+-            push("Public", 1, 2 * a.addrs.len() + 1, 0);
++            push(
++                "Public",
++                a.addrs.len().div_ceil(PUBLIC_W),
++                a.carrier().width() + PUBLIC_W + 1,
++                0,
++            );
+         }
+         let t = self.table();
+         v.push((
+diff --git a/crates/sherlock-lfr/src/record.rs b/crates/sherlock-lfr/src/record.rs
+index aa7d7f4..08dfdf6 100644
+--- a/crates/sherlock-lfr/src/record.rs
++++ b/crates/sherlock-lfr/src/record.rs
+@@ -45,7 +45,16 @@ impl FiatShamirTranscript<LSC> for Rec {
+ 
+ /// The stock verifier's transcript events on an `L` proof, and its verdict.
+ pub fn stock_log(vk: &MultiStarkVerifyingKey<LSC>, proof: &Proof<LSC>) -> (Vec<Ev>, bool) {
+-    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_ud(48));
++    stock_log_at(l_ud(48), vk, proof)
++}
++
++/// [`stock_log`] with the engine at `params` (E3 small `L` fixtures).
++pub fn stock_log_at(
++    params: openvm_stark_backend::SystemParams,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    proof: &Proof<LSC>,
++) -> (Vec<Ev>, bool) {
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(params);
+     let mut rec = Rec {
+         inner: default_transcript(),
+         log: Default::default(),
+diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
+index 630dd37..c474390 100644
+--- a/crates/sherlock-lfr/src/tape.rs
++++ b/crates/sherlock-lfr/src/tape.rs
+@@ -165,6 +165,11 @@ pub enum Op {
+     Public {
+         a: Addr,
+     },
++    /// `k` reads of the zero at `a` by the empty cells of the last `PublicAir` row (E3).
++    PublicPad {
++        a: Addr,
++        k: u32,
++    },
+ }
+ 
+ /// A straight-line program over BabyBear and `EF4` values.
+@@ -286,11 +291,29 @@ impl Tape {
+         self.ops.push(Op::CSwap { bit, a, b, l, r });
+         (l, r)
+     }
+-    /// Expose the Fr value at `a` as the next public value (`machine::PublicAir`).
++    /// Expose the Fr value at `a` as the next public value (`machine::PublicAir`). Use
++    /// [`Tape::expose`] for the whole list, which also pads the last `PublicAir` row.
+     pub fn public(&mut self, a: Addr) {
+         self.check(a);
+         self.ops.push(Op::Public { a });
+     }
++    /// Expose `words` as the public values of the machine, in order (E3 D-6 carrier,
++    /// `machine::PUBLIC_W` per row); the empty cells of the last row read one zero constant.
++    pub fn expose(&mut self, words: &[Addr]) {
++        assert!(
++            !self.ops.iter().any(|o| matches!(o, Op::Public { .. })),
++            "expose once"
++        );
++        for &w in words {
++            self.public(w);
++        }
++        let w = crate::machine::PUBLIC_W;
++        let k = words.len().div_ceil(w) * w - words.len();
++        if k > 0 {
++            let z = self.fr_const(Fr::ZERO);
++            self.ops.push(Op::PublicPad { a: z, k: k as u32 });
++        }
++    }
+     pub fn low_bits(&mut self, x: Addr, n: u32) -> Addr {
+         assert!(n <= 31);
+         self.check(x);
+@@ -330,6 +353,11 @@ impl Tape {
+                     rd(b);
+                 }
+                 Op::Public { a } => rd(a),
++                Op::PublicPad { a, k } => {
++                    for _ in 0..*k {
++                        rd(a)
++                    }
++                }
+                 Op::Input { .. } | Op::Const { .. } | Op::FrInput { .. } | Op::FrConst { .. } => {}
+             }
+         }
+@@ -389,7 +417,7 @@ impl Tape {
+                     mem[*l as usize] = Some(vl);
+                     mem[*r as usize] = Some(vr);
+                 }
+-                Op::Public { a } => {
++                Op::Public { a } | Op::PublicPad { a, .. } => {
+                     let _ = get(&mem, a).fr();
+                 }
+                 Op::LowBits { x, n, out } => {
+diff --git a/crates/sherlock-lfr/tests/i10_gate.rs b/crates/sherlock-lfr/tests/i10_gate.rs
+index bc5d4fb..e3a0f43 100644
+--- a/crates/sherlock-lfr/tests/i10_gate.rs
++++ b/crates/sherlock-lfr/tests/i10_gate.rs
+@@ -35,9 +35,7 @@ type LVk = openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>;
+ fn build(vk: &LVk, shape: &LShape, proof: &LProof) -> Result<Gen, String> {
+     let mut g = Gen::new();
+     let words = gen_verifier(&mut g, vk, shape, proof).map_err(|e| format!("{e:?}"))?;
+-    for w in words {
+-        g.tape.public(w);
+-    }
++    g.tape.expose(&words);
+     Ok(g)
+ }
+ 
+@@ -65,8 +63,7 @@ fn i10_public_air_small() {
+     let a = t.fr_const(Fr::from_u64(7));
+     let b = t.fr_input();
+     let c = t.fr_add(a, b);
+-    t.public(c);
+-    t.public(a);
++    t.expose(&[c, a]);
+     let (mem, failed) = t.execute_checked(&[Val::Fr(Fr::from_u64(5))]);
+     assert!(failed.is_empty());
+     let m = Machine::new(&t);
+diff --git a/crates/sherlock-lfr/tests/j1_public.rs b/crates/sherlock-lfr/tests/j1_public.rs
+new file mode 100644
+index 0000000..12da942
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/j1_public.rs
+@@ -0,0 +1,193 @@
++//! E3 J1: public values of `L` through `L_Fr` on a small `L_iface` (the 4 interface AIRs of
++//! `iface_l` at small `Dims`, `L` config at a small parameter set).
++//!
++//! - `L` side: the stock verifier accepts the small `L_iface` proof; refused: a changed public
++//!   value of `L` (the log tables are also checked by the `L` AIRs).
++//! - `L_Fr` side: the tape of the `L` verifier reads the public values of `L` in the DAG
++//!   (`Entry::Public`); every transcript event equals the stock record; no tape assertion fails;
++//!   the exposed words decode to the native statement (plan D-9); the tape proves at the small
++//!   Fr set with 2 commitments. Refused: the changed `L` public value (tape and prover), and on the
++//!   `L_Fr` carrier a changed first, middle and last public word and two swapped words.
++
++use openvm_stark_backend::{
++    keygen::types::MultiStarkVerifyingKey,
++    proof::Proof,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    StarkEngine,
++};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
++    bls12381_fr_poseidon::Bls12381Fr as Fr,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use sherlock_lfr::{
++    fixture::LSC,
++    iface::{self, Case, Dims},
++    iface_l,
++    lverify::{gen_verifier, Gen, LShape},
++    machine::Machine,
++    record::{stock_log_at, Ev},
++    tape::Val,
++    testing::{preprocessed_airs, prove_verify_range_keyed, small_params_n, Engine},
++    transcript::TEv,
++};
++
++const SMALL: Dims = Dims {
++    b: 32,
++    v: 32,
++    p: 32,
++    l_tx: 14,
++};
++
++fn l_params() -> openvm_stark_backend::SystemParams {
++    small_params_n(4, 8)
++}
++
++/// Keygen and prove the small `L_iface` for `words`; the proof and its vk.
++fn l_iface(words: &[u64]) -> (MultiStarkVerifyingKey<LSC>, Proof<LSC>) {
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_params());
++    let airs = iface_l::airs(&SMALL);
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctx = ProvingContext::new(
++        iface_l::traces::<BabyBear>(&SMALL, words)
++            .into_iter()
++            .enumerate()
++            .map(|(i, (t, pv))| {
++                let cm = ColMajorMatrix::from_row_major(&t);
++                (
++                    i,
++                    AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv),
++                )
++            })
++            .collect(),
++    );
++    let proof = engine.prove(&d_pk, ctx).expect("L_iface prove");
++    (vk, proof)
++}
++
++fn build(vk: &MultiStarkVerifyingKey<LSC>, shape: &LShape, proof: &Proof<LSC>) -> Gen {
++    let mut g = Gen::new();
++    let words = gen_verifier(&mut g, vk, shape, proof).expect("pinned shape");
++    g.tape.expose(&words);
++    g
++}
++
++fn events_equal(g: &Gen, mem: &[Option<Val>], log: &[Ev]) {
++    assert_eq!(g.tt.log.len(), log.len(), "event count");
++    for (i, (t, s)) in g.tt.log.iter().zip(log).enumerate() {
++        match (t, s) {
++            (TEv::Obs(a), Ev::Obs(v)) => assert_eq!(
++                mem[*a as usize].unwrap().bb(),
++                [v.as_canonical_u32() as u64, 0, 0, 0],
++                "observe {i}"
++            ),
++            (TEv::Commit(a), Ev::Commit(v)) => {
++                assert_eq!(mem[*a as usize].unwrap().fr(), *v, "commit {i}")
++            }
++            (TEv::Sample(a), Ev::Sample(v)) => assert_eq!(
++                mem[*a as usize].unwrap().bb(),
++                [v.as_canonical_u32() as u64, 0, 0, 0],
++                "sample {i}"
++            ),
++            _ => panic!("event {i}: kind differs"),
++        }
++    }
++}
++
++#[test]
++fn j1_public_values_through_lfr() {
++    let (run, plan) = iface::case_run(&SMALL, Case::FullV, 7);
++    let words = run.words();
++    assert_eq!(words.len(), SMALL.words());
++    println!(
++        "J1 small L_iface: {} public words, {} log entries, {} values, {} spilled",
++        words.len(),
++        run.log.len(),
++        run.log.iter().map(|e| e.values.len()).sum::<usize>(),
++        plan.spilled.len()
++    );
++    let (lvk, lproof) = l_iface(&words);
++    let (log, ok) = stock_log_at(l_params(), &lvk, &lproof);
++    assert!(ok, "stock verifier accepts the small L_iface");
++    println!(
++        "J1 L_iface: {} AIRs, log heights {:?}, {} transcript events",
++        lvk.inner.per_air.len(),
++        LShape::of(&lproof).log_heights,
++        log.len()
++    );
++
++    // L_Fr tape.
++    let shape = LShape::of(&lproof);
++    let g = build(&lvk, &shape, &lproof);
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++    events_equal(&g, &mem, &log);
++    let m = Machine::new(&g.tape);
++    let pis = m.public_values(&mem);
++    let pub_words = pis.concat();
++    assert_eq!(pub_words.len(), 1 + SMALL.words().div_ceil(8));
++    assert_eq!(pub_words[0], lvk.pre_hash[0]);
++    let st = iface::decode(&SMALL, &pub_words).expect("decode");
++    assert_eq!(st, run.statement(), "statement words equal the native ones");
++    println!(
++        "J1 tape: {} ops, {} public words; shape {:?}",
++        g.tape.ops.len(),
++        pub_words.len(),
++        m.shape()
++    );
++
++    // Changed L public value: the stock verifier and the tape refuse.
++    let mut bad = lproof.clone();
++    let k = SMALL.words() - 1;
++    let (air, idx) = (3usize, k - SMALL.call_at());
++    bad.public_values[air][idx] += BabyBear::ONE;
++    let (_, ok_bad) = stock_log_at(l_params(), &lvk, &bad);
++    assert!(!ok_bad, "stock verifier refuses a changed L public value");
++    let gb = build(&lvk, &shape, &bad);
++    let (mem_b, failed_b) = gb.tape.execute_checked(&gb.inputs);
++    println!(
++        "J1 changed L public value: stock refuses; tape assertions failed {}",
++        failed_b.len()
++    );
++    assert!(!failed_b.is_empty());
++    assert_eq!(
++        format!("{:?}", gb.tape.ops),
++        format!("{:?}", g.tape.ops),
++        "same key"
++    );
++
++    // L_Fr proofs at the small Fr set, one key.
++    let max_rows = m.shape().iter().map(|s| s.1).max().unwrap();
++    let n_stack = (max_rows.trailing_zeros() as usize).saturating_sub(2).max(14);
++    let engine = Engine::new(small_params_n(3, n_stack));
++    let airs = m.airs();
++    let (pk, vk) = engine.keygen(&airs);
++    assert_eq!(preprocessed_airs(&vk), 1);
++    let run_o = |traces, pis| prove_verify_range_keyed(&engine, &pk, &vk, &airs, traces, pis);
++    let o = run_o(m.traces(&mem), pis.clone());
++    println!("J1 L_Fr honest (n_stack {n_stack}): {o:?}");
++    assert!(o.accepted());
++    assert_eq!(o.commits(), Some(2));
++
++    let o = run_o(m.traces(&mem_b), m.public_values(&mem_b));
++    println!("J1 L_Fr changed L public value: {o:?}");
++    assert!(!o.accepted());
++
++    let pi = m.names().iter().position(|&n| n == "Public").unwrap();
++    let n = pis[pi].len();
++    for (what, f) in [
++        ("first word", Box::new(|v: &mut Vec<Fr>| v[0] += Fr::ONE) as Box<dyn Fn(&mut Vec<Fr>)>),
++        ("middle word", Box::new(move |v: &mut Vec<Fr>| v[n / 2] += Fr::ONE)),
++        ("last word", Box::new(move |v: &mut Vec<Fr>| v[n - 1] += Fr::ONE)),
++        ("two words swapped", Box::new(move |v: &mut Vec<Fr>| v.swap(3, n - 2))),
++    ] {
++        let mut p = pis.clone();
++        f(&mut p[pi]);
++        assert_ne!(p, pis);
++        let o = run_o(m.traces(&mem), p);
++        println!("J1 L_Fr carrier control, {what}: {o:?}");
++        assert!(!o.accepted(), "{what} accepted");
++    }
++}
+-- 
+2.56.0
+
