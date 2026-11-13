@@ -13,9 +13,9 @@ Loop items ENC and FP3 (`research/sherlock-e-path-20261112/LOOP.md`). Plan: `PLA
 | ENC-5 `plan_d` word lists, `DOM_PLAN` | code 41 or 33, a pick (LEAD P-5, 41 recommended); the five word lists need `sherlock plan` data structures that do not exist | section 4 |
 | `P2` absorption mode | not fixed by any text; LEAD pick P-3 (overwrite, as the stock BabyBear leaf hash) | section 5 |
 | G3 transcript vectors `L` (u = 3) and `L_Fr` (u = 7) | MEASURED against a hand model of each duplex | section 6 |
-| FP-3 fact 1 | STOPPED: needs a design choice; options and a recommendation | section 7.1 |
-| FP-3 fact 2 | evidence only (the `acceptRun` lanes of the kit sketch); not closed (N-11 and fact 3) | section 7.2 |
-| FP-3 fact 3 | STOPPED: needs a design choice; options and a recommendation | section 7.3 |
+| FP-3 fact 1 | CLOSED (phase 2): owner ruling (C), spec in `FD/ARCHITECTURE.md`, closure tests pass | sections 7.1, 10 |
+| FP-3 fact 2 | CLOSED (phase 2): lanes of the three compiled entries; N-11 prologue shifts them by a constant | sections 7.2, 10 |
+| FP-3 fact 3 | CLOSED (phase 2): owner ruling (a), compiled contract tests pass | sections 7.3, 10 |
 
 No 1.12 row reaches FROZEN: section 1.12 closes ENC-1 to ENC-3 only with vectors on the Rust reference, the AIR and the wrap, and this item gives the Rust reference only; every encoding here also carries a LEAD pick. So `FD/ARCHITECTURE.md` 1.12 is not edited: no gate closes. The rows I-19, I-22, I-29, I-31, I-33, I-34 and I-36 (ENC) and I-21, I-23, I-24, I-25 (FP-3) stay FREEZE-PENDING; this file is their evidence for the next step.
 
@@ -227,3 +227,38 @@ Recommendation: (a). It meets the three conditions with the existing `acceptRun`
 - Moriarty, branch `enc-fp3`: this folder (`PLAN.md`, `RESULTS.md`, `VECTORS.txt`, `enc_vectors.rs.txt`, `fp3-fact2/`). Not pushed.
 
 Next: the owner confirms P-1 to P-4 and chooses FP3-1 and FP3-3; then the AIR and wrap sides of the vectors (the `L` log AIR, the wrap replay of `DIGEST`) close ENC-1 to ENC-3, ENC-4 waits on the CORE state schema, ENC-5 on `sherlock plan`, and fact 2 on N-11 with the chosen fact 3 form.
+
+## 10. Phase 2: owner rulings applied, FP-3 closed (2026-11-12)
+
+Owner rulings (via the coordinator, `DECISIONS-ASK.md`): P-1 to P-6 as recommended; FP3-1 (C) with check (i); FP3-3 (a); `claim_pub` bound to a logged `SPONGE(3)` over the three `DIGEST` outputs after the XC-3b parity check.
+
+**Specification.** Written into `FD/ARCHITECTURE.md` on this branch: FP-3 facts 1 to 3 (closed), the FP-4 `vd` form `Fr` (form 8, arity 0, 9 limbs; `form` widened to `tag(4)`, no existing digest changes), the public tags `SHK_REG` (index 4) and `SHK_SET` (index 5), the `R` bound (a run: 4 statement entries, 10 values, 5 permutations; an opening proof: 5, 12, 6; the largest `R` with `R_A` of a chunk: 7, 16, 8, DERIVED; it was 4, 8, 4), the zerocash margins with the added `SPONGE(3)` (115 values and 41 permutations, 2.23 and 6.24 times, DERIVED, assuming the 111 counted the three `DIGEST` entries), and kit LEDGER CONTRACT (`openClaim(set_pub, C_P, input_pub, outcome_pub)` by proof, keyed on `claim_pub` in the one `runs` map; `descend` removed; the contract computes only `transientHash`).
+
+**XC-3b parity, MEASURED.** `transientHash` of compact-runtime 0.21.0 equals the `u = 0` Midnight sponge of the Rust reference (`fixed_len_hash(perm, 0, ..)`) on `[1..n]` for n in {0, 1, 2, 3, 5, 16} and on the three run triples of the collection (`fp3-closure/fp3.test.mjs`, test 1). For n = 0 both give 0 (no permutation).
+
+**Closure tests, MEASURED.**
+
+| Test | Where | Result |
+|---|---|---|
+| `pos_fp3_effect_multishard`, `fp3_effect_forged` (7 refusals) | Rust reference, `SBW` `crates/stark-sdk/tests/fp3_closure.rs` (copy: `fp3-closure/fp3_closure.rs.txt`), commit 65d1a03 | pass |
+| `pos_fp3_general_run_check_i`, `fp3_general_run_check_i_refusals` (6 refusals) | same | pass |
+| `pos_fp3_open_by_proof`, `fp3_open_by_proof_refusals` (4 refusals) | same | pass |
+| `fp3_cross_entry_replay` (both orders, same entry twice; the two-map control accepts) | compiled contract `fp3-closure/sherlock-ledger.compact`, control `control-two-maps.compact`, `fp3.test.mjs` | pass |
+| `fp3_collection_private` (no `n_steps`, `pack(claim_d)`, `pack(head)` or `pack(set_root)` in the public transcripts or inputs of `acceptCollection` and three `openClaim` calls) | same | pass |
+| lane map (`lanes.py` over the zkir, `lanes.json`) | same | pass |
+
+Run: `cargo test -p openvm-stark-sdk --release --features bls12381-fr-poseidon --test fp3_closure` in `SBW`; `compactc --skip-zk <contract> <out>/<name>` for both contracts, a `node_modules` link to the SDK in `<out>`, then `FP3_BUILD=<out> SHERLOCK_SDK_ROOT=~/Projects/Moriarty/tools/sherlock-sdk node --test fp3-closure/fp3.test.mjs`. `VALUES.txt` holds the Rust values the contract test reads.
+
+Level of the tests: the Rust tests run the `L` and wrap relations as reference functions on the real hashes (`P2`, Midnight Poseidon); the contract tests run the compiled contract in the runtime without proofs. The same checks inside the `L` AIR (the outcome opening, check (i)) and the wrap (lane map, `DIGEST` replay) are obligations of kit L AND WRAP.
+
+**Lanes (fact 2), MEASURED from the zkir.** `acceptRun` 33 lanes: `claim_pub` 11 and 25, `outcome_pub` 30. `acceptCollection` 39: the `reg_root` read 10, `set_pub` 20 and 34. `openClaim` 48: `set_pub` 11, `claim_pub` 26 and 40, `outcome_pub` 45. Lane map of `L` for `acceptRun`: (11, SPONGE), (25, SPONGE), (30, DIGEST(SHK_OUTCOME)); with the anchor `DIGEST(SHK_PROGC)` pair, 4 pairs, the table width of FP-3. For `openClaim`, 3 lanes plus `set_pub` and the anchor: 5 pairs, one more than the 4 of the index table: the table needs 5 pairs (10 words) or the `claim_pub` repeat lane is dropped. Open point for the L AND WRAP kit, not a gate of this item.
+
+**Collection statement.** The compiled `acceptCollection` takes `[reg_pub, set_pub]`; `shape_d` of LW-009 has no lane (the contract writes nothing keyed by it). I-24 stays FREEZE-PENDING on N-11 and on the LW-009 text.
+
+**AIR-side vectors, MEASURED.** New test `crates/sherlock-lfr/tests/enc_air_vectors.rs` in the openvm clone (worktree `~/.cache/m7-wrap/src/openvm-enc-fp3`, branch `enc-fp3` from `e2-lfr` c4bd312; copy: `fp3-closure/enc_air_vectors.rs.txt`). One tape on the `L_Fr` machine AIRs holds: the 14 T-FS `L` transcript cases of section 6 on `TapeTranscript` (u = 3; 27 samples), the ENC-1 public digests `C_P`, `A_1`, `input_pub`, `outcome_pub` as `Perm([tag, pack(d2), cap(4, 2)])`, `set_pub` under `SHK_SET`, `claim_pub` of collection run 0 as the `u = 0` `SPONGE(3)`, and `u0.h2(3, 5)`. Every output equals the pinned value on the executed tape and through an in-AIR `AssertEq` with the pinned constant; the tape proves and verifies (Accepted, 362,366 bytes, 2 commitments, prove 6.7 s, verify 0.55 s, MEASURED); one changed pinned constant fails the tape assertion and the proof is refused. Not covered on the AIR side: the `L` log AIR itself (the `DIGEST` and `SPONGE` entry rows and `enc(e)`), which is not built; the `L_Fr` transcript (u = 7) vectors; the `P2` (BabyBear) forms, which belong to the internal BabyBear AIRs.
+
+**Wrap-side vectors waiting on E5** (`~/Projects/Moriarty-wt/e5-wrap`, `openvm-e5`): the `DIGEST` replay of the enc1 and collection digests in the wrap (Fr native `PoseidonFr_4` against the pinned values), the `SPONGE(3)` replay of `claim_pub`, the lane-map check on the `acceptRun` and `openClaim` call vectors, the `Canon` and 9 by 30-bit limb check of `X` and of the logged values (`enc2.limbs(r-1)`), the `pv` binding (`enc2.pv.p2_fingerprint`), and the L transcript samples inside the wrap's verifier of `L` (G3, u = 3).
+
+**1.12 rows changed.** FP-3 gates close (spec and closure tests, FZ-4): I-21 FROZEN, I-25 FROZEN; I-23 and I-24 lose the FP-3 gate and keep N-11 (and LW-009 for I-24); I-28, L AND WRAP, GP-2 hook and LEDGER CONTRACT lose their FP-3 gates; the 1.11 summary rows FP-3 and FP-6 read closed. The ENC rows (I-19, I-22, I-29, I-31, I-33, I-34, I-36) stay FREEZE-PENDING: 1.12 closes ENC-1 to ENC-3 only with vectors on the Rust reference, the AIR and the wrap, and the wrap side waits on E5.
+
+**Phase 2 commits** (none pushed): `SBW` branch `enc-fp3` 65d1a03 (`fp3_closure.rs`); openvm clone `~/.cache/m7-wrap/src/openvm-org_openvm`, branch `enc-fp3` (worktree `~/.cache/m7-wrap/src/openvm-enc-fp3`) f31a843 (`enc_air_vectors.rs`); Moriarty branch `enc-fp3`: `fp3-closure/`, this section, and the `FD/ARCHITECTURE.md` edits.
