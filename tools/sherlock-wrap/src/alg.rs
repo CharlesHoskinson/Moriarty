@@ -3,11 +3,11 @@
 //! the witness generator), `Gadget` emits the same operations as `ZkStdLib` cells. The
 //! `MockProver` checks that the two agree on a fixture.
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use midnight_circuits::{
     instructions::{
         ArithInstructions, AssertionInstructions, AssignmentInstructions, ControlFlowInstructions,
-        ConversionInstructions, DecompositionInstructions,
+        ConversionInstructions, DecompositionInstructions, RangeCheckInstructions,
     },
     types::{AssignedBit, AssignedNative},
 };
@@ -52,6 +52,17 @@ pub trait Alg {
     fn bit_v(&mut self, b: &Self::B) -> Result<Self::V, Error>;
     /// Host view of a value (known only with a witness).
     fn val(&self, a: &Self::V) -> Value<F>;
+    /// `n` little-endian chunks of `bits` bits with `x = sum c_i 2^(bits i)`; refuses `x` at or
+    /// above `2^(bits n)` (E6 call-vector unpack, `bits n < 255`).
+    fn chunks(&mut self, x: &Self::V, bits: usize, n: usize) -> Result<Vec<Self::V>, Error>;
+    /// Asserts `x < 2^n`.
+    fn range(&mut self, x: &Self::V, n: usize, what: &str) -> Result<(), Error>;
+    /// A private witness bit.
+    fn wbit(&mut self, b: Value<bool>) -> Result<Self::B, Error>;
+}
+
+fn big(x: &F) -> num_bigint::BigUint {
+    num_bigint::BigUint::from_bytes_le(x.to_repr().as_ref())
 }
 
 /// Native back end: values and a list of failed checks.
@@ -136,6 +147,27 @@ impl Alg for Native {
     fn val(&self, a: &Value<F>) -> Value<F> {
         *a
     }
+    fn chunks(&mut self, x: &Value<F>, bits: usize, n: usize) -> Result<Vec<Value<F>>, Error> {
+        assert!(bits * n < 255);
+        let b = x.map(|x| big(&x));
+        self.check(b.as_ref().map(|b| b.bits() as usize <= bits * n), "chunks: value too large");
+        let mask = (num_bigint::BigUint::from(1u8) << bits) - 1u8;
+        Ok((0..n)
+            .map(|i| {
+                b.as_ref().map(|b| {
+                    let c = (b >> (bits * i)) & &mask;
+                    F::from_u128(c.to_u64_digits().first().copied().unwrap_or(0) as u128)
+                })
+            })
+            .collect())
+    }
+    fn range(&mut self, x: &Value<F>, n: usize, what: &str) -> Result<(), Error> {
+        self.check(x.map(|x| big(&x).bits() as usize <= n), what);
+        Ok(())
+    }
+    fn wbit(&mut self, b: Value<bool>) -> Result<Value<bool>, Error> {
+        Ok(b)
+    }
 }
 
 /// `ZkStdLib` back end.
@@ -209,5 +241,15 @@ impl<L: Layouter<F>> Alg for Gadget<'_, L> {
     }
     fn val(&self, a: &Self::V) -> Value<F> {
         a.value().copied()
+    }
+    fn chunks(&mut self, x: &Self::V, bits: usize, n: usize) -> Result<Vec<Self::V>, Error> {
+        assert!(bits * n < 255);
+        self.std.assigned_to_le_chunks(&mut *self.l, x, bits, Some(n))
+    }
+    fn range(&mut self, x: &Self::V, n: usize, _: &str) -> Result<(), Error> {
+        self.std.assert_lower_than_fixed(&mut *self.l, x, &(num_bigint::BigUint::from(1u8) << n))
+    }
+    fn wbit(&mut self, b: Value<bool>) -> Result<Self::B, Error> {
+        AssignmentInstructions::<F, AssignedBit<F>>::assign(self.std, &mut *self.l, b)
     }
 }

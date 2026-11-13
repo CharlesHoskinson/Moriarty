@@ -2,6 +2,7 @@
 //! `L_Fr` proof natively in Fr. Plan: `research/sherlock-e5-wrap-20261112/PLAN.md`.
 
 pub mod alg;
+pub mod callvec;
 pub mod native;
 pub mod smoke;
 pub mod util;

@@ -1,7 +1,10 @@
 //! I6: the full wrap of one exported `L_Fr` proof. Cost model, MockProver (honest, a changed
 //! public input, a changed proof value), keygen on the ceremony SRS, one blinded proof
 //! (OsRng), library verify, and the files for `ledger-check`.
-//! usage: wrap <fixture name or path> <out dir> <k> [mock: 0|1]
+//! usage: wrap <fixture name or path> <out dir> <k> [mode: 0|1|cost] [key fixture]
+//! E6: with a key fixture the relation (shape and the pinned `L` pre-hash) is built from the
+//! key fixture and the witness from the first fixture; with `E6_EXPECT_VK=<path>` the run
+//! asserts the key equals that file byte for byte (the key installed on the devnet).
 use std::{fs, path::PathBuf, time::Instant};
 
 use ff::Field;
@@ -29,7 +32,13 @@ fn main() {
     assert!(k <= 21, "never k = 22");
     fs::create_dir_all(&out).unwrap();
     let w = WrapIn::load(&src);
-    let rel = WrapRelation::from_wrapin(&w, 1);
+    let rel = match a.get(5) {
+        Some(kf) => {
+            let kp = if kf.contains('/') { PathBuf::from(kf) } else { fixture(kf) };
+            WrapRelation::from_wrapin(&WrapIn::load(&kp), 1)
+        }
+        None => WrapRelation::from_wrapin(&w, 1),
+    };
     let p = ProofData::from_wrapin(&w);
     let pi = rel.instance(&p);
 
@@ -72,6 +81,9 @@ fn main() {
     let lib_ok = verify::<WrapRelation, B2>(&params.verifier_params(), &vk, &pi, None, &proof).is_ok();
     let mut key = vec![];
     vk.write(&mut key, SerdeFormat::Processed).unwrap();
+    if let Ok(path) = std::env::var("E6_EXPECT_VK") {
+        assert_eq!(key, fs::read(&path).unwrap(), "the wrap key differs from {path}");
+    }
     fs::write(out.join("wrap.vk"), &key).unwrap();
     fs::write(out.join("wrap.proof"), &proof).unwrap();
     fs::write(out.join("wrap.public.json"), serde_json::to_vec(&pi.iter().map(f_to_hex).collect::<Vec<_>>()).unwrap()).unwrap();
