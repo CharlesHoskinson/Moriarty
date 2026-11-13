@@ -733,8 +733,7 @@ pub fn part2<A: Alg>(
         }
         let mut expr = a.cst(F::ZERO)?;
         for (k, &idx) in ash.constraint_idx.iter().enumerate() {
-            let x = a.mul(&nodes[idx], &lambda_pows[k])?;
-            expr = a.add(&expr, &x)?;
+            expr = a.mul_add(&nodes[idx], &lambda_pows[k], &expr)?;
         }
         cons_evals.push(a.mul(&eq_ns[n_lift], &expr)?);
         let mut num = a.cst(F::ZERO)?;
@@ -742,15 +741,12 @@ pub fn part2<A: Alg>(
         for (j, it) in ash.interactions.iter().enumerate() {
             let mut d = a.cst(F::ZERO)?;
             for (m, &idx) in it.message.iter().enumerate() {
-                let x = a.mul(&nodes[idx], &beta_pows[m])?;
-                d = a.add(&d, &x)?;
+                d = a.mul_add(&nodes[idx], &beta_pows[m], &d)?;
             }
             let x = a.mul_c(&beta_pows[it.message.len()], F::from(it.bus + 1))?;
             d = a.add(&d, &x)?;
-            let x = a.mul(&eq_3b[ti][j], &nodes[it.count])?;
-            num = a.add(&num, &x)?;
-            let x = a.mul(&eq_3b[ti][j], &d)?;
-            den = a.add(&den, &x)?;
+            num = a.mul_add(&eq_3b[ti][j], &nodes[it.count], &num)?;
+            den = a.mul_add(&eq_3b[ti][j], &d, &den)?;
         }
         let x = a.mul(&num, &eq_sharp_ns[n_lift])?;
         inter_evals.push(a.mul_c(&x, norm)?);
@@ -759,8 +755,7 @@ pub fn part2<A: Alg>(
     let mut acc = a.cst(F::ZERO)?;
     let mut mp = a.cst(F::ONE)?;
     for e in inter_evals.iter().chain(&cons_evals) {
-        let x = a.mul(e, &mp)?;
-        acc = a.add(&acc, &x)?;
+        acc = a.mul_add(e, &mp, &acc)?;
         mp = a.mul(&mp, &p1.mu)?;
     }
     a.assert_eq(&acc, &p1.cur_sum, "batch constraint final claim")?;

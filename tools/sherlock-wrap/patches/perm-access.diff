@@ -22,8 +22,8 @@ diff -ru /midnight-circuits-7.3.0/src/hash/poseidon/poseidon_chip.rs midnight-ci
          inputs: &AssignedRegister<F>,
 diff -ru /midnight-zk-stdlib-2.4.0/src/lib.rs midnight-zk-stdlib-2.4.0-perm/src/lib.rs
 --- /midnight-zk-stdlib-2.4.0/src/lib.rs	2006-07-23 19:21:28.000000000 -0600
-+++ midnight-zk-stdlib-2.4.0-perm/src/lib.rs	2026-11-12 13:12:22.080077205 -0700
-@@ -758,6 +758,14 @@
++++ midnight-zk-stdlib-2.4.0-perm/src/lib.rs	2026-11-12 19:31:56.709363367 -0700
+@@ -758,6 +758,20 @@
          &self.biguint_gadget
      }
  
@@ -33,6 +33,12 @@ diff -ru /midnight-zk-stdlib-2.4.0/src/lib.rs midnight-zk-stdlib-2.4.0-perm/src/
 +        self.poseidon_gadget
 +            .as_ref()
 +            .unwrap_or_else(|| panic!("ZkStdLibArch must enable poseidon"))
++    }
++
++    /// Native gadget (Sherlock E5 vendored patch, visibility only: gives the one-row
++    /// `add_and_mul` of the native chip; `configure` is unchanged).
++    pub fn native_gadget(&self) -> &NG {
++        &self.native_gadget
 +    }
 +
      /// Gadget for performing map and non-map checks

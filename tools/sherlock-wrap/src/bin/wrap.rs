@@ -24,7 +24,8 @@ fn main() {
     let src = if a[1].contains('/') { PathBuf::from(&a[1]) } else { fixture(&a[1]) };
     let out = PathBuf::from(&a[2]);
     let k: u32 = a[3].parse().unwrap();
-    let mock = a.get(4).map(|s| s == "1").unwrap_or(true);
+    let mode = a.get(4).cloned().unwrap_or_else(|| "1".into());
+    let mock = mode == "1";
     assert!(k <= 21, "never k = 22");
     fs::create_dir_all(&out).unwrap();
     let w = WrapIn::load(&src);
@@ -37,6 +38,9 @@ fn main() {
         "k21_gate": K21_GATE, "within_gate": model.rows <= K21_GATE, "table_rows": model.table_rows,
         "advice_columns": model.advice_columns, "fixed_columns": model.fixed_columns, "lookups": model.lookups}));
     assert!(model.rows <= K21_GATE, "rows {} above the k = 21 gate {K21_GATE}", model.rows);
+    if mode == "cost" {
+        return;
+    }
 
     if mock {
         let run = |pi: &Vec<F>, p: &ProofData| {

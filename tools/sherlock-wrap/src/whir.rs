@@ -141,8 +141,7 @@ fn k_fold<A: Alg>(a: &mut A, mut v: Vec<A::V>, alphas: &[A::V], x: &A::V, x_inv:
             let d = a.sub(&v[i], &v[i + m])?;
             let ti = a.mul_c(&xip[j], itw * half)?;
             let p = a.mul(&at, &d)?;
-            let p = a.mul(&p, &ti)?;
-            v[i] = a.add(&v[i], &p)?;
+            v[i] = a.mul_add(&p, &ti, &v[i])?;
         }
     }
     Ok(v[0].clone())
@@ -172,8 +171,7 @@ pub fn part4<A: Alg>(
     let mu_pows = powers(a, &mu, total)?;
     let mut claim = a.cst(F::ZERO)?;
     for (x, m) in q.iter().flatten().zip(&mu_pows) {
-        let y = a.mul(x, m)?;
-        claim = a.add(&claim, &y)?;
+        claim = a.mul_add(x, m, &claim)?;
     }
     let mut log_rs = ws.m + ws.log_blowup;
     let mut sc = 0usize;
@@ -250,8 +248,7 @@ pub fn part4<A: Alg>(
                     merkle_verify(a, ws.u_node, &commits[ci], &bits, &dg, &sib)?;
                     for c in 0..wd {
                         for j in 0..1usize << k {
-                            let x = a.mul(&mu_pows[mi], &rows[j][c])?;
-                            vals[j] = a.add(&vals[j], &x)?;
+                            vals[j] = a.mul_add(&mu_pows[mi], &rows[j][c], &vals[j])?;
                         }
                         mi += 1;
                     }
@@ -277,12 +274,10 @@ pub fn part4<A: Alg>(
         let gamma = t.sample(a)?;
         let gp = powers(a, &gamma, ws.num_queries[r] + 2)?;
         if let Some(y0) = y0 {
-            let x = a.mul(&y0, &gamma)?;
-            claim = a.add(&claim, &x)?;
+            claim = a.mul_add(&y0, &gamma, &claim)?;
         }
         for (yi, g) in ys.iter().zip(&gp[2..]) {
-            let x = a.mul(yi, g)?;
-            claim = a.add(&claim, &x)?;
+            claim = a.mul_add(yi, g, &claim)?;
         }
         gammas.push(gp);
         zs.push(zr);
@@ -308,8 +303,7 @@ pub fn part4<A: Alg>(
         len >>= 1;
         for i in 0..len {
             let d = a.sub(&ev[i + len], &ev[i])?;
-            let x = a.mul(xj, &d)?;
-            ev[i] = a.add(&ev[i], &x)?;
+            ev[i] = a.mul_add(xj, &d, &ev[i])?;
         }
     }
     assert_eq!(len, 1, "final poly length");
@@ -323,16 +317,14 @@ pub fn part4<A: Alg>(
             let e = eval_eq_mle(a, slc, &zp[..n - 1])?;
             let h = horner(a, &final_poly, &zp[n - 1])?;
             let x = a.mul(&gammas[i][1], &e)?;
-            let x = a.mul(&x, &h)?;
-            acc = a.add(&acc, &x)?;
+            acc = a.mul_add(&x, &h, &acc)?;
         }
         for (zi, g) in zs[i].iter().zip(&gammas[i][2..]) {
             let zp = exp_powers_of_2(a, zi, n)?;
             let e = eval_eq_mle(a, slc, &zp[..n - 1])?;
             let h = horner(a, &final_poly, &zp[n - 1])?;
             let x = a.mul(g, &e)?;
-            let x = a.mul(&x, &h)?;
-            acc = a.add(&acc, &x)?;
+            acc = a.mul_add(&x, &h, &acc)?;
         }
         j += k;
     }

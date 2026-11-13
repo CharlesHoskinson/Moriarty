@@ -141,10 +141,8 @@ pub fn part3<A: Alg>(
     let lp = powers(a, &l2, n_claims)?;
     let mut s0 = a.cst(F::ZERO)?;
     for ((c, r), p) in tc.iter().zip(&lp) {
-        let x = a.mul(r, &lambda)?;
-        let x = a.add(c, &x)?;
-        let x = a.mul(&x, p)?;
-        s0 = a.add(&s0, &x)?;
+        let x = a.mul_add(r, &lambda, c)?;
+        s0 = a.mul_add(&x, p, &s0)?;
     }
     let coeffs: Vec<A::V> =
         (0..ss.n_uni).map(|i| wit(a, &|p: &StackData| p.univariate_round_coeffs[i])).collect::<Result<_, _>>()?;
@@ -234,14 +232,12 @@ pub fn part3<A: Alg>(
             let (ep, rk, ind) = prism(a, n, rot)?;
             let mut batched = ep;
             if let Some(rk) = rk {
-                let x = a.mul(&lambda, &rk)?;
-                batched = a.add(&batched, &x)?;
+                batched = a.mul_add(&lambda, &rk, &batched)?;
             }
             let x = a.mul(&batched, &lp[li])?;
             let x = a.mul(&x, &eqb)?;
             let x = a.mul(&x, &ind)?;
-            let x = a.mul(&x, &q[ci][sl.col_idx])?;
-            final_sum = a.add(&final_sum, &x)?;
+            final_sum = a.mul_add(&x, &q[ci][sl.col_idx], &final_sum)?;
             li += 1;
         }
     }
