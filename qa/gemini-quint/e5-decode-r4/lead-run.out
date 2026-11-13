@@ -1,0 +1,14 @@
+exit=0 other :: quint typecheck decode.qnt
+exit=0 other :: quint typecheck decode_test.qnt
+exit=0 other :: quint typecheck lead_control_test.qnt
+exit=0 14 passing :: quint test --backend typescript --main decode_test --match _test$ --seed 1 decode_test.qnt
+exit=0 2 passing :: quint test --backend typescript --main control_test --match _test$ --seed 1 lead_control_test.qnt
+exit=0 [ok] :: quint run --backend typescript --invariant SOUND_AND_COMPLETE --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=0 [ok] :: quint run --backend typescript --invariant SOUND_AND_COMPLETE --max-samples 20 --max-steps 10 --seed 2 decode.qnt
+exit=0 [ok] :: quint run --backend typescript --invariant SOUND_mut_free_mult --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_no_m_range --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_no_inactive_zero --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_no_has1 --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_no_chain --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_first_cap_wrong --max-samples 20 --max-steps 10 --seed 1 decode.qnt
+exit=1 [violation] :: quint run --backend typescript --invariant SOUND_mut_ungated_y1 --max-samples 20 --max-steps 10 --seed 1 decode.qnt
