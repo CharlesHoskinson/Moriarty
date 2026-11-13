@@ -1,0 +1,32 @@
+From 34a27e709a7986fe6df8b27583fd1f8fe1cc0414 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:43:55 -0700
+Subject: [PATCH 11/12] sherlock-lfr: E4 encode test covers the resident and
+ the streaming GPU paths
+
+---
+ crates/sherlock-lfr/tests/e4_gpu_hash.rs | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/crates/sherlock-lfr/tests/e4_gpu_hash.rs b/crates/sherlock-lfr/tests/e4_gpu_hash.rs
+index a54b9f0..f51ede1 100644
+--- a/crates/sherlock-lfr/tests/e4_gpu_hash.rs
++++ b/crates/sherlock-lfr/tests/e4_gpu_hash.rs
+@@ -82,6 +82,14 @@ fn check_equal() {
+ /// `Radix2DitParallel::dft_batch` on the padded row-major coefficients and `hash_slice`.
+ #[test]
+ fn e4_gpu_encode_equals_cpu() {
++    for stream in ["0", "1"] {
++        std::env::set_var("MORI_POS_STREAM", stream);
++        println!("E4 encode path: {}", if stream == "0" { "resident columns" } else { "streaming (pageable host access)" });
++        check_encode();
++    }
++}
++
++fn check_encode() {
+     use p3_dft::{Radix2DitParallel, TwoAdicSubgroupDft};
+     use p3_matrix::{dense::RowMajorMatrix, Matrix};
+     let h = hasher();
+-- 
+2.56.0
+

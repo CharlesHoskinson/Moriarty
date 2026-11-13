@@ -1,0 +1,104 @@
+From 92d77ef138808129d70b0c242a460d9798cd2dab Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 18:15:11 -0700
+Subject: [PATCH 09/10] Sherlock G3: T-FS cases (key pre-hash, 9 words then a
+ commitment, 11 samples), final-state checks, u = 1 and 2 vectors; 55 vectors
+ pinned
+
+---
+ crates/stark-sdk/tests/enc_vectors.rs | 58 +++++++++++++++++++++++++++
+ 1 file changed, 58 insertions(+)
+
+diff --git a/crates/stark-sdk/tests/enc_vectors.rs b/crates/stark-sdk/tests/enc_vectors.rs
+index 775517e..47d0a2a 100644
+--- a/crates/stark-sdk/tests/enc_vectors.rs
++++ b/crates/stark-sdk/tests/enc_vectors.rs
+@@ -579,6 +579,9 @@ fn run_l(perm: &MidnightPoseidonFr, steps: &[LStep]) -> Vec<u32> {
+             }
+         }
+     }
++    // Same final state (the T-FS rule): sponge state and absorb index.
++    assert_eq!(*t.inner().sponge_state(), m.s, "L final state");
++    assert_eq!(t.inner().absorb_idx(), m.ai, "L final absorb index");
+     out
+ }
+ 
+@@ -604,6 +607,7 @@ fn run_lfr(perm: &MidnightPoseidonFr, steps: &[FStep]) -> Vec<String> {
+             }
+         }
+     }
++    assert_eq!(*t.sponge().state(), m.s, "L_Fr final state");
+     out
+ }
+ 
+@@ -656,6 +660,46 @@ fn transcripts(perm: &MidnightPoseidonFr, o: &mut Out) {
+         "g3.L.sample_obs_sample",
+         format!("{:?}", run_l(perm, &[Sample, Obs(5), Sample])),
+     );
++    // T-FS: the key pre-hash (a commitment observe) then one sample; 9 words then a
++    // commitment then a sample; 11 samples in a row (digit refill at the 6th, a permutation at
++    // sample_idx 0 at the 11th).
++    o.put(
++        "g3.L.prehash_sample",
++        format!("{:?}", run_l(perm, &[Commit(0xabcdef), Sample])),
++    );
++    let mut st: Vec<LStep> = (1..=9).map(Obs).collect();
++    st.extend([Commit(77), Sample]);
++    o.put("g3.L.obs9_commit_sample", format!("{:?}", run_l(perm, &st)));
++    let st: Vec<LStep> = (0..11).map(|_| Sample).collect();
++    o.put("g3.L.samples11", format!("{:?}", run_l(perm, &st)));
++    // T-FS u = 1 (leaf of 20 BabyBear words) and u = 2 (node) against a hand sponge.
++    let mh = lcfg::MidnightMerkleHasher::new(perm.clone());
++    let leaf: Vec<B> = (1..=20).map(B::from_u32).collect();
++    let l = leaf.len().div_ceil(8);
++    let mut s = [Fr::ZERO, Fr::ZERO, Fr::from_u128(l as u128 + (1u128 << 66))];
++    let packed: Vec<Fr> = leaf.chunks(8).map(pack_alt).collect();
++    for blk in packed.chunks(2) {
++        for (c, x) in s.iter_mut().zip(blk) {
++            *c += *x;
++        }
++        perm.permute_mut(&mut s);
++    }
++    let lh = openvm_stark_backend::hasher::MerkleHasher::hash_slice(&mh, &leaf)[0];
++    assert_eq!(lh, s[0], "u = 1 leaf");
++    o.put("g3.L.u1_leaf20", hex(lh));
++    let nh = openvm_stark_backend::hasher::MerkleHasher::compress(
++        &mh,
++        [Fr::from_u64(7)],
++        [Fr::from_u64(9)],
++    )[0];
++    let mut s = [
++        Fr::from_u64(7),
++        Fr::from_u64(9),
++        Fr::from_u128(2 + (2u128 << 66)),
++    ];
++    perm.permute_mut(&mut s);
++    assert_eq!(nh, s[0], "u = 2 node");
++    o.put("g3.L.u2_node(7,9)", hex(nh));
+ 
+     // L_Fr: fresh, three samples; one observe then a sample; a full block then three samples.
+     o.put(
+@@ -835,6 +879,20 @@ const PIN: &[(&str, &str)] = &[
+     ("g3.L.obs16_sample2", r#"[1428490671, 1363299102]"#),
+     ("g3.L.obs3_commit_sample2", r#"[275738974, 544771868]"#),
+     ("g3.L.sample_obs_sample", r#"[1363105379, 1479302139]"#),
++    ("g3.L.prehash_sample", r#"[1136280182]"#),
++    ("g3.L.obs9_commit_sample", r#"[102412516]"#),
++    (
++        "g3.L.samples11",
++        r#"[1363105379, 892007186, 735613566, 1339319426, 1207660350, 392318480, 119967817, 878318772, 1931888973, 1626463949, 844166059]"#,
++    ),
++    (
++        "g3.L.u1_leaf20",
++        r#"0x062a4499d81463f421748920dd5c0af3047c94e1e0371f476903cdcfc8469427"#,
++    ),
++    (
++        "g3.L.u2_node(7,9)",
++        r#"0x43a5edbf03e9e21278a71b42cd00852382f7d8d5bfaf8c74e4ac395d458dc266"#,
++    ),
+     (
+         "g3.Lfr.fresh3",
+         r#"["0x39860bcfe756854514595b63ce95d5c2c2fd4edfcb369b711ec14a1f76acda89", "0x6b65309e059b3d01d40576c9f1f962ea91bccb4e0583c469b1589c26555ec999", "0x21790135f388b123857958f8b61cd542ef96277f118fd0d9fe5c183c65b5b100"]"#,
+-- 
+2.56.0
+

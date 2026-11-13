@@ -1,0 +1,106 @@
+From 953941809e65ddd6689e32dcd5ecec7905c9013b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 04:25:58 -0700
+Subject: [PATCH 19/24] sherlock-lfr: E3 D-9 lane map as apply_lane_map: a lane
+ set at most once by a flag (a mapped output can be 0), u16 lane-map words
+ (lane e3-lanemap findings 2a and 3)
+
+---
+ crates/sherlock-lfr/src/iface.rs | 67 ++++++++++++++++++++++++++------
+ 1 file changed, 55 insertions(+), 12 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index 90b2821..461d50d 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -560,6 +560,40 @@ pub fn r_entries(head: &[u64]) -> Option<Vec<(u64, u64)>> {
+     Some(r)
+ }
+ 
++/// The lane map of plan D-9: each pair `(lane, entry)` other than `(0, 0)` sets lane `lane` of
++/// the statement to the output (last logged value) of entry `entry`, which must be a `DIGEST` or
++/// a `SPONGE(3)`; the lane must hold zero limbs in the call vector and is set at most once (a
++/// flag, not a value test: a mapped output can be 0; lane `e3-lanemap` finding 2a); lane and entry
++/// are u16 words.
++pub fn apply_lane_map(
++    lanes: Vec<Fr>,
++    pairs: &[(u64, u64)],
++    offs: &[(u64, u64, usize)],
++    vs: &[Fr],
++) -> Result<Vec<Fr>, String> {
++    let mut s = lanes;
++    let mut mapped = vec![false; s.len()];
++    for (k, &(lane, ent)) in pairs.iter().enumerate() {
++        if (lane, ent) == (0, 0) {
++            continue;
++        }
++        if lane >= 1 << 16 || ent >= 1 << 16 {
++            return Err(format!("lane map pair {k}: not u16"));
++        }
++        let (op, param, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
++        if !(op == DIGEST || (op == SPONGE && param == 3))
++            || lane as usize >= s.len()
++            || mapped[lane as usize]
++            || s[lane as usize] != Fr::ZERO
++        {
++            return Err(format!("lane map pair {k}"));
++        }
++        mapped[lane as usize] = true;
++        s[lane as usize] = vs[o + vals(op, param) - 1];
++    }
++    Ok(s)
++}
++
+ /// The decoder of plan D-9: the statement words that the wrap reads from the `L_Fr` public
+ /// words. Checks range and `Canon` of every lane and logged value, the padding rules, `R` and the
+ /// anchor rule (plan D-10), the native replay of every entry whose values are all in `pv`
+@@ -629,18 +663,10 @@ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+             return Err(format!("entry {i}: native replay"));
+         }
+     }
+-    let mut s = lanes;
+-    for k in 0..LANE_PAIRS {
+-        let (lane, ent) = (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1]);
+-        if (lane, ent) == (0, 0) {
+-            continue;
+-        }
+-        let (op, param, o) = *offs.get(ent as usize).ok_or("lane map entry")?;
+-        if !(op == DIGEST || (op == SPONGE && param == 3)) || lane as usize >= d.lanes() || s[lane as usize] != Fr::ZERO {
+-            return Err(format!("lane map pair {k}"));
+-        }
+-        s[lane as usize] = vs[o + vals(op, param) - 1];
+-    }
++    let pairs: Vec<(u64, u64)> = (0..LANE_PAIRS)
++        .map(|k| (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1]))
++        .collect();
++    let s = apply_lane_map(lanes, &pairs, &offs, &vs)?;
+     for &(op, param, o) in &offs {
+         if op == PUB && s[param as usize] != vs[o] {
+             return Err(format!("PUB({param}) differs from its lane"));
+@@ -1137,6 +1163,23 @@ mod tests {
+         let mut x = w.clone();
+         pair(&mut x, 2, LANE_CLAIM[0], 3);
+         assert_eq!(decode(&d, &to_lfr(&x)), Err("lane map pair 2".into()));
++        // finding 2a of lane e3-lanemap: a lane mapped twice is refused even when the first
++        // mapped output is 0 (the reader keeps a flag per lane, not the value test)
++        let offs = [(DIGEST, SHK_PROGC, 0usize), (SPONGE, 3, 2)];
++        let vs = [Fr::from_u64(5), Fr::ZERO, Fr::ONE, Fr::ONE, Fr::ONE, Fr::from_u64(7)];
++        let lanes = vec![Fr::ZERO; 4];
++        assert_eq!(
++            apply_lane_map(lanes.clone(), &[(2, 0), (3, 1)], &offs, &vs),
++            Ok(vec![Fr::ZERO, Fr::ZERO, Fr::ZERO, Fr::from_u64(7)])
++        );
++        assert_eq!(
++            apply_lane_map(lanes.clone(), &[(2, 0), (2, 1)], &offs, &vs),
++            Err("lane map pair 1".into())
++        );
++        // non-u16 lane-map words
++        let mut x = w.clone();
++        pair(&mut x, 1, (1 << 16) + LANE_CLAIM[0], 3);
++        assert_eq!(decode(&d, &to_lfr(&x)), Err("lane map pair 1: not u16".into()));
+         // the SPONGE(3) output limb 0 changed: the native replay refuses it
+         let mut x = w.clone();
+         let o = d.values_at() + LIMBS * 9;
+-- 
+2.56.0
+

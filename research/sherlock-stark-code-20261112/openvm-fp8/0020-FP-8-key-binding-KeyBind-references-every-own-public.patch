@@ -1,0 +1,170 @@
+From 9fe4193b5e650c0b5eb1ba5486396001e3d93ac2 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 06:08:23 -0700
+Subject: [PATCH] FP-8 key binding: KeyBind references every own public value
+ (the parent verifier receives only DAG-used child values; measured bus
+ imbalance at N1 without it); fp8_keyset dbg mode, FP8_DEBUG bus check, prove
+ errors returned as refusals
+
+---
+ crates/sherlock-lfr/src/keybind.rs            |  8 +++
+ .../examples/fp8_keyset.rs                    | 63 ++++++++++++++-----
+ 2 files changed, 56 insertions(+), 15 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/keybind.rs b/crates/sherlock-lfr/src/keybind.rs
+index 659e1d842704f13f86c7d00aa1c0c6f06866b6aa..2bb63bec3b19183ad69d389b971e5efa2ae2800d 100644
+--- a/crates/sherlock-lfr/src/keybind.rs
++++ b/crates/sherlock-lfr/src/keybind.rs
+@@ -209,6 +209,14 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+             }
+         };
+ 
++        // Reference every own public value in the constraint DAG: the parent's verifier receives
++        // a child public value from the PublicValuesBus only when the child DAG uses it, while
++        // the continuations send covers all of them. Vacuous (`is_valid` is a bit); MEASURED
++        // need: without it a slot half set here and checked one layer up (e.g. the leaf layer's
++        // `app.cached`) is sent twice and received once.
++        let all_pv = pv.iter().fold(zero.clone(), |a, x| a + x.clone());
++        builder.assert_zero(valid.clone() * (AB::Expr::ONE - valid.clone()) * all_pv);
++
+         let role = &self.role;
+         let has_child_pvs = !matches!(role, Role::Leaf);
+ 
+diff --git a/crates/sherlock-wrap-export/examples/fp8_keyset.rs b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+index 7e1ab6456d046cc256f7d1331f5b1ecf3536aa20..2e2217d520e2df95583f6f435db3c6e2cecee6d1 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_keyset.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+@@ -225,6 +225,7 @@ struct Layer<const N: usize> {
+     engine: Eng,
+     pk: MultiStarkProvingKey<NodeSC>,
+     vk: MultiStarkVerifyingKey<NodeSC>,
++    airs: Vec<AirRef<NodeSC>>,
+ }
+ 
+ fn bound_cfg() -> VerifierConfig {
+@@ -247,7 +248,7 @@ fn agg_key<const N: usize>(
+     let airs: Vec<AirRef<NodeSC>> = std::iter::once(kb).chain(circuit.airs::<NodeSC>()).collect();
+     let (pk, vk) = kg(set, &engine, &airs, label, log);
+     check_layout(&vk);
+-    Layer { circuit, role, engine, pk, vk }
++    Layer { circuit, role, engine, pk, vk, airs }
+ }
+ 
+ /// A node key has exactly one AIR with a cached trace, at `CE_AIR_ID`, and the KeyBind public
+@@ -279,8 +280,8 @@ fn bound_prove<const N: usize>(
+     proofs: &[Proof<NodeSC>],
+ ) -> Proof<NodeSC> {
+     let (p, r) = bound_prove_try(c, child_vk, proofs, None);
+-    r.expect("bound verify");
+-    p
++    r.expect("bound prove and verify");
++    p.unwrap()
+ }
+ 
+ /// Prove a bound layer (optionally with its own KeyBind public values changed by `tamper`) and
+@@ -290,7 +291,7 @@ fn bound_prove_try<const N: usize>(
+     child_vk: &MultiStarkVerifyingKey<NodeSC>,
+     proofs: &[Proof<NodeSC>],
+     tamper: Option<&dyn Fn(&mut Vec<F>)>,
+-) -> (Proof<NodeSC>, Result<(), String>) {
++) -> (Option<Proof<NodeSC>>, Result<(), String>) {
+     let pcs = c.circuit.commit_child_vk(&c.engine, child_vk);
+     let child = keybind::vk_commit(&pcs.commitment, &child_vk.pre_hash);
+     let child_pvs: Vec<Vec<F>> = proofs
+@@ -313,12 +314,16 @@ fn bound_prove_try<const N: usize>(
+         &(),
+         default_duplex_sponge_recorder(),
+     ));
+-    let proof = c
+-        .engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("bound prove");
++    let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
++    if std::env::var("FP8_DEBUG").is_ok() {
++        c.engine.debug(&c.airs, &ctx);
++    }
++    let proof = match c.engine.prove(&d_pk, ctx) {
++        Ok(p) => p,
++        Err(e) => return (None, Err(format!("prove: {e:?}"))),
++    };
+     let r = c.engine.verify(&c.vk, &proof).map_err(|e| format!("{e:?}"));
+-    (proof, r)
++    (Some(proof), r)
+ }
+ 
+ /// Bound `L`: verifier sub-circuit over N3 (continuations on), the iface AIRs, KeyBind (Root,
+@@ -892,6 +897,20 @@ fn l_prove(
+     child_pf: &Proof<NodeSC>,
+     words: &[u64],
+ ) -> Proof<LSC> {
++    l_prove_try(l, engine, pk, n_bench, role, child_vk, child_pf, words).expect("L prove")
++}
++
++#[allow(clippy::too_many_arguments)]
++fn l_prove_try(
++    l: &VerifierSubCircuit<1>,
++    engine: &RootEng,
++    pk: &MultiStarkProvingKey<LSC>,
++    n_bench: usize,
++    role: &Role,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    child_pf: &Proof<NodeSC>,
++    words: &[u64],
++) -> Result<Proof<LSC>, String> {
+     let dims = Dims::FULL;
+     let d_pk = engine.device().transport_pk_to_device(pk);
+     let pcs = l.commit_child_vk(engine, child_vk);
+@@ -912,7 +931,7 @@ fn l_prove(
+         engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
+         kpv,
+     ));
+-    engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).expect("L prove")
++    engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).map_err(|e| format!("prove: {e:?}"))
+ }
+ 
+ /// The L_Fr tape over an `L` proof with the cached commitment pinned to `pin`: Ok when every
+@@ -1011,15 +1030,14 @@ fn neg(out: &PathBuf) {
+     // (7) L_Fr tape with a wrong pin of the L cached commitment: refused.
+     rec("lfr_tape_wrong_pin", false, lfr_tape(&l_vk, &p2, l_pin + Fr::ONE));
+     // (8) L over an N2 proof (child DAG N2, child flag 2): refused by L and by the tape.
+-    let p3 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+-        l_prove(&l, &engine, &pk, n_bench, &role, &n2_vk, &n2, &words)
+-    }));
+-    match p3 {
++    // The prover's own LogUp sum check refuses an unbalanced bus (no proof exists); that counts
++    // as a refusal by the constraint system, as for the node cases.
++    match l_prove_try(&l, &engine, &pk, n_bench, &role, &n2_vk, &n2, &words) {
+         Ok(p3) => {
+             rec("l_over_n2_child", false, engine.verify(&l_vk, &p3).map_err(|e| format!("{e:?}")));
+             rec("lfr_tape_over_l_with_n2_dag", false, lfr_tape(&l_vk, &p3, l_pin));
+         }
+-        Err(_) => rec("l_over_n2_child (trace generation panicked: not a verifier refusal)", true, Err("panic".into())),
++        Err(e) => rec("l_over_n2_child", false, Err(e)),
+     }
+     drop((pk, l));
+     // (9) L keyed with a wrong N2 pin, honest child: refused.
+@@ -1043,6 +1061,21 @@ fn main() {
+         "chain" => chain(&out),
+         "fixpoint" => fixpoint(&out),
+         "neg" => neg(&out),
++        "dbg" => {
++            let mut log = vec![];
++            let (chip, w1) = w1_airs(1);
++            let fapp = Eng::new(frozen::APP.params());
++            let (pk, app) = kg(&frozen::APP, &fapp, &w1, "app", &mut log);
++            let rows: usize = std::env::var("FP8_ROWS").ok().and_then(|v| v.parse().ok()).unwrap_or(14);
++            let pa = w1_prove(&fapp, &pk, &app, &chip, 1, rows);
++            let lc = agg_key::<1>(&frozen::LEAF_AGG, &app, Role::Leaf, "leaf", &mut log);
++            let (la, r) = bound_prove_try(&lc, &app, &pa, None);
++            println!("FP8DBG leaf {r:?}");
++            let la = la.unwrap();
++            let c1 = agg_key::<2>(&frozen::INTERNAL, &lc.vk, Role::N1, "N1", &mut log);
++            let (_, r) = bound_prove_try(&c1, &lc.vk, &[la.clone(), la], None);
++            println!("FP8DBG n1 {r:?}");
++        }
+         _ => panic!("mode keys or chain"),
+     }
+ }
+-- 
+2.56.0
+

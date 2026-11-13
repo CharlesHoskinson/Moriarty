@@ -1,0 +1,127 @@
+From 52a538c807d1cf1e69d2139f134fb17216f2a868 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 04:05:13 -0700
+Subject: [PATCH 17/24] sherlock-lfr: E3 tests for the E5 port: every ENC-1
+ vector (ASCII tag rule P-1, DIGEST of 1..8 under the 4 tags in PR 3.6 order,
+ C_P, A_1) and the D-9 lane map with SPONGE(3) entries
+
+---
+ crates/sherlock-lfr/src/iface.rs | 102 +++++++++++++++++++++++++++++++
+ 1 file changed, 102 insertions(+)
+
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index ed0f141..0b5b9ed 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -1032,6 +1032,108 @@ mod tests {
+         }
+     }
+ 
++    /// Every ENC-1 vector of `research/sherlock-enc-fp3-20261112/VECTORS.txt` that `iface`
++    /// computes: the 4 tag values (ASCII name as a little-endian u128, rule P-1), the `DIGEST` of
++    /// `pack(1..8)` under each tag (parameter = tag index, PR 3.6 order), `C_P` and `A_1`.
++    #[test]
++    fn enc1_all_vectors() {
++        let hex = |x: Fr| format!("0x{:064x}", x.as_canonical_biguint());
++        let pack = |ws: &[u64]| {
++            let mut x = BigUint::from(0u32);
++            for (i, &w) in ws.iter().enumerate() {
++                x += BigUint::from(w) << (31 * i);
++            }
++            fr_from_big(&x)
++        };
++        let tags = [
++            (SHK_PROGC, "43474f52505f4b4853", "4e5ebfb63419246bf08041fbd42eeb9f224456652546bc7ee6d132d3b7e1db97"),
++            (SHK_LOCK, "4b434f4c5f4b4853", "3cc27fe1afbd021f2cb5bd0bd801bc31497c0a09ccd0dfbd2f467a945db3d923"),
++            (SHK_INPUT, "5455504e495f4b4853", "6aff6cb8d8b241d7b9185ce576f20e1f029253bf0616f7aa68355d165e03565b"),
++            (SHK_OUTCOME, "454d4f4354554f5f4b4853", "71d60d6aea20059dcd39489435709a56c6e1c2cccc5cd54ba28259ef8b265028"),
++        ];
++        let d2 = pack(&[1, 2, 3, 4, 5, 6, 7, 8]);
++        for (i, (t, name, dg)) in tags.iter().enumerate() {
++            assert_eq!(*t, i as u64, "PR 3.6 order");
++            assert_eq!(hex(tag_fr(*t)), format!("0x{name:0>64}"), "enc1.tag[{i}]");
++            assert_eq!(hex(digest(*t, d2)), format!("0x{dg}"), "enc1.digest_1to8[{i}]");
++        }
++        let r_p: Vec<u64> = (101..=108).collect();
++        let prog_d: Vec<u64> = (201..=208).collect();
++        let run_tag: Vec<u64> = (301..=308).collect();
++        let d2_progc = p2(6, &[r_p.clone(), prog_d.clone()].concat());
++        assert_eq!(
++            d2_progc,
++            [520957427, 984145394, 1989647505, 623846375, 1856043986, 928030188, 771931842, 1420568668]
++        );
++        assert_eq!(
++            hex(digest(SHK_PROGC, pack(&d2_progc))),
++            "0x65f6874b0be5aaa5a42b2e3b6b94ee9adf10dad60d7eff1211c65e3331ff2994"
++        );
++        let d2_lock = p2(7, &[r_p, prog_d, run_tag, vec![1, 0]].concat());
++        assert_eq!(
++            d2_lock,
++            [721127855, 143940948, 962073650, 1915216605, 359226632, 630925463, 808849877, 370162181]
++        );
++        assert_eq!(
++            hex(digest(SHK_LOCK, pack(&d2_lock))),
++            "0x37adc0f165135af5f670e5ba16a4d473c4a6ec42847cb53833acaecdb08e82a2"
++        );
++    }
++
++    fn to_lfr(w: &[u64]) -> Vec<Fr> {
++        let mut lfr = vec![Fr::ZERO];
++        for c in w.chunks(8) {
++            let mut x = BigUint::from(0u32);
++            for (i, &v) in c.iter().enumerate() {
++                x += BigUint::from(v) << (31 * i);
++            }
++            lfr.push(fr_from_big(&x));
++        }
++        lfr
++    }
++
++    /// D-9 lane map with `SPONGE(3)` entries (the owner-ruled `acceptRun` binds `claim_pub` to
++    /// the logged `SPONGE(3)` of `R`): the two `claim_pub` lanes come from entry 3 and equal its
++    /// output; a pair that points at a `PUB`, `PERM` or `H2` entry, a lane mapped twice, and a
++    /// `SPONGE(3)` output changed in `pv` are refused.
++    #[test]
++    fn lane_map_sponge_entries() {
++        let d = Dims { b: 48, v: 48, p: 32, l_tx: 62 };
++        let (run, _) = case_run(&d, Case::FullV, 7);
++        let w = run.words();
++        assert_eq!((run.log[3].op, run.log[3].param), (SPONGE, 3));
++        let claim = *run.log[3].values.last().unwrap();
++        let st = decode(&d, &to_lfr(&w)).unwrap();
++        assert_eq!(st, run.statement());
++        for l in LANE_CLAIM {
++            assert_eq!(st[l as usize], claim, "claim_pub lane {l} from SPONGE(3)");
++        }
++        let pair = |w: &mut Vec<u64>, k: usize, lane: u64, ent: u64| {
++            w[LANE_MAP + 2 * k] = lane;
++            w[LANE_MAP + 2 * k + 1] = ent;
++        };
++        let find = |op: u64| run.log.iter().position(|e| e.op == op);
++        let mut refused = 0;
++        for op in [PUB, PERM, H2] {
++            if let Some(i) = find(op) {
++                let mut x = w.clone();
++                pair(&mut x, 1, LANE_CLAIM[0], i as u64);
++                let r = decode(&d, &to_lfr(&x));
++                assert!(r.is_err(), "lane map to op {op} accepted");
++                refused += 1;
++            }
++        }
++        assert!(refused >= 2, "FullV has PUB and PERM or H2 entries");
++        let mut x = w.clone();
++        pair(&mut x, 2, LANE_CLAIM[0], 3);
++        assert_eq!(decode(&d, &to_lfr(&x)), Err("lane map pair 2".into()));
++        // the SPONGE(3) output limb 0 changed: the native replay refuses it
++        let mut x = w.clone();
++        let o = d.values_at() + LIMBS * 9;
++        x[o] ^= 1;
++        assert!(decode(&d, &to_lfr(&x)).is_err());
++    }
++
+     #[test]
+     fn layout_full_is_12164() {
+         assert_eq!(Dims::FULL.words(), 12_164);
+-- 
+2.56.0
+

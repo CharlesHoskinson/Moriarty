@@ -1,0 +1,59 @@
+From 5f698b56e10f7f606dc4f9ffe183701c6f261fd4 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 09:05:38 -0700
+Subject: [PATCH 7/9] E2: per-bus trace-height bound is the base field order
+ capped at u32::MAX (was the low 32 bits, 1 at BLS12-381 Fr), with its test
+
+---
+ crates/stark-backend/src/keygen/mod.rs |  5 ++++-
+ crates/stark-sdk/tests/e2_domains.rs   | 21 +++++++++++++++++++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/crates/stark-backend/src/keygen/mod.rs b/crates/stark-backend/src/keygen/mod.rs
+index 3074dd0..1252cb2 100644
+--- a/crates/stark-backend/src/keygen/mod.rs
++++ b/crates/stark-backend/src/keygen/mod.rs
+@@ -130,7 +130,10 @@ impl<SC: StarkProtocolConfig> MultiStarkKeygenBuilder<SC> {
+         }
+ 
+         let num_airs = pk_per_air.len();
+-        let base_order = SC::F::order().to_u32_digits()[0];
++        // The per-bus bound is the base field order, capped at u32::MAX for a field above 2^32
++        // (a stronger bound). `to_u32_digits()[0]` would take the low 32 bits of the order, which
++        // is 1 for BLS12-381 Fr (r = 1 mod 2^32) and refused every interaction count.
++        let base_order: u32 = u32::try_from(SC::F::order()).unwrap_or(u32::MAX);
+         let mut count_weight_per_air_per_bus_index = HashMap::new();
+ 
+         let mut num_interactions_per_air: Vec<u32> = Vec::with_capacity(num_airs);
+diff --git a/crates/stark-sdk/tests/e2_domains.rs b/crates/stark-sdk/tests/e2_domains.rs
+index e9d5ae9..ce5b315 100644
+--- a/crates/stark-sdk/tests/e2_domains.rs
++++ b/crates/stark-sdk/tests/e2_domains.rs
+@@ -165,3 +165,24 @@ fn e2_lfr_domains_interactions() {
+     let (vk, pf) = fx.keygen_and_prove(&r);
+     assert!(verifies(FrDomains::l_fr(), &vk, &pf));
+ }
++
++#[test]
++fn e2_fr_per_bus_threshold() {
++    // The per-bus trace-height bound is the base field order capped at u32::MAX. Before the E2
++    // fix it was the low 32 bits of the order, 1 at BLS12-381 Fr, which refused every AIR with
++    // a non-zero count weight (`TraceHeightsTooLarge`).
++    use openvm_stark_sdk::config::baby_bear_poseidon2::BabyBearPoseidon2RefEngine;
++    let fx = InteractionsFixture11;
++    let e = Bls12381FrPoseidonLfrCpuEngine::new(small_params());
++    let (_, vk) = TestFixture::<SC>::keygen(&fx, &e);
++    let th: Vec<u32> = vk.inner.trace_height_constraints.iter().map(|c| c.threshold).collect();
++    assert!(!th.is_empty());
++    assert!(th.iter().all(|&t| t > 1), "Fr thresholds {th:?}");
++    let max_count = small_params().logup.max_interaction_count;
++    assert!(th.iter().all(|&t| t == u32::MAX || t == max_count), "Fr thresholds {th:?}");
++    let eb = BabyBearPoseidon2RefEngine::<openvm_stark_sdk::config::baby_bear_poseidon2::DuplexSponge>::new(small_params());
++    let (_, vkb) = fx.keygen(&eb);
++    let thb: Vec<u32> = vkb.inner.trace_height_constraints.iter().map(|c| c.threshold).collect();
++    assert!(thb.iter().all(|&t| t == 2_013_265_921 || t == max_count), "BabyBear thresholds {thb:?}");
++    println!("E2 per-bus thresholds: Fr {th:?}, BabyBear {thb:?}");
++}
+-- 
+2.56.0
+

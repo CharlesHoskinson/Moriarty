@@ -1,0 +1,2335 @@
+From 3cc18495e5ac936b1d7598b697e21d31ea1a588b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 08:24:42 -0700
+Subject: [PATCH 01/15] M7 bench crate stark-bench-ovm (P1/P2 bench, D10
+ l_heights, M7 l_fr and m7_bls_fr) and its workspace patch to the local
+ stark-backend
+
+---
+ Cargo.lock                                    | 174 ++++-
+ Cargo.toml                                    |  10 +
+ crates/stark-bench-ovm/Cargo.toml             |  65 ++
+ crates/stark-bench-ovm/examples/l_fr.rs       | 411 +++++++++++
+ crates/stark-bench-ovm/examples/l_heights.rs  | 359 ++++++++++
+ .../stark-bench-ovm/examples/l_structure.rs   | 175 +++++
+ crates/stark-bench-ovm/src/main.rs            | 636 ++++++++++++++++++
+ crates/stark-bench-ovm/tests/m7_bls_fr.rs     | 290 ++++++++
+ 8 files changed, 2111 insertions(+), 9 deletions(-)
+ create mode 100644 crates/stark-bench-ovm/Cargo.toml
+ create mode 100644 crates/stark-bench-ovm/examples/l_fr.rs
+ create mode 100644 crates/stark-bench-ovm/examples/l_heights.rs
+ create mode 100644 crates/stark-bench-ovm/examples/l_structure.rs
+ create mode 100644 crates/stark-bench-ovm/src/main.rs
+ create mode 100644 crates/stark-bench-ovm/tests/m7_bls_fr.rs
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 3137704..0f154bf 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2206,6 +2206,34 @@ dependencies = [
+  "cuda-config",
+ ]
+ 
++[[package]]
++name = "curve25519-dalek"
++version = "4.1.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
++dependencies = [
++ "cfg-if 1.0.1",
++ "cpufeatures 0.2.17",
++ "curve25519-dalek-derive",
++ "fiat-crypto",
++ "group 0.13.0",
++ "rand_core 0.6.4",
++ "rustc_version 0.4.1",
++ "subtle",
++ "zeroize",
++]
++
++[[package]]
++name = "curve25519-dalek-derive"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.118",
++]
++
+ [[package]]
+ name = "darling"
+ version = "0.20.11"
+@@ -2715,6 +2743,12 @@ dependencies = [
+  "subtle",
+ ]
+ 
++[[package]]
++name = "fiat-crypto"
++version = "0.2.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
++
+ [[package]]
+ name = "fixed-hash"
+ version = "0.8.0"
+@@ -2841,8 +2875,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
+ dependencies = [
+  "cfg-if 1.0.1",
++ "js-sys",
+  "libc",
+  "wasi 0.11.1+wasi-snapshot-preview1",
++ "wasm-bindgen",
+ ]
+ 
+ [[package]]
+@@ -3123,7 +3159,7 @@ dependencies = [
+  "rand_core 0.6.4",
+  "rayon",
+  "serde",
+- "serde_arrays",
++ "serde_arrays 0.1.0",
+  "sha2 0.10.9",
+  "static_assertions",
+  "subtle",
+@@ -4066,6 +4102,79 @@ dependencies = [
+  "sketches-ddsketch",
+ ]
+ 
++[[package]]
++name = "midnight-circuits"
++version = "7.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "79ba23314560e105bb1da33551199ae9abaa25188589d8308caddbcd8d1f3448"
++dependencies = [
++ "base64 0.13.1",
++ "ff 0.13.1",
++ "group 0.13.0",
++ "lazy_static",
++ "midnight-curves",
++ "midnight-proofs",
++ "num-bigint 0.4.6",
++ "num-integer",
++ "num-traits",
++ "rand 0.8.5",
++ "ripemd 0.2.0",
++ "rustc-hash 2.1.1",
++ "sha2 0.10.9",
++ "subtle",
++]
++
++[[package]]
++name = "midnight-curves"
++version = "0.3.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "efaa236cfabccb367c0a89e58a6e8f0b4ba70fb81efd07acfe1d3a0ec3bed081"
++dependencies = [
++ "bitvec",
++ "blst",
++ "byte-slice-cast",
++ "curve25519-dalek",
++ "digest 0.10.7",
++ "ff 0.13.1",
++ "getrandom 0.2.16",
++ "group 0.13.0",
++ "hex",
++ "k256 0.13.4 (registry+https://github.com/rust-lang/crates.io-index)",
++ "lazy_static",
++ "num-bigint 0.4.6",
++ "p256 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "pairing 0.23.0",
++ "paste",
++ "primeorder",
++ "rand_core 0.6.4",
++ "rayon",
++ "serde",
++ "serde_arrays 0.2.0",
++ "sha2 0.10.9",
++ "subtle",
++]
++
++[[package]]
++name = "midnight-proofs"
++version = "0.8.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "19b2e4b1acb581ad741b0cb7c0e9dbdf51142f4e9518886f25fcff40a6702dcc"
++dependencies = [
++ "blake2b_simd",
++ "ff 0.13.1",
++ "getrandom 0.2.16",
++ "group 0.13.0",
++ "itertools 0.14.0",
++ "midnight-curves",
++ "num-bigint 0.4.6",
++ "rand_chacha 0.3.1",
++ "rand_core 0.6.4",
++ "rayon",
++ "serde",
++ "serde_derive",
++ "tracing",
++]
++
+ [[package]]
+ name = "mimalloc"
+ version = "0.1.47"
+@@ -4706,7 +4815,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-codec-derive"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "proc-macro-crate 1.3.1",
+  "proc-macro2",
+@@ -4754,7 +4862,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-cpu-backend"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "cfg-if 1.0.1",
+  "derive-new 0.7.0",
+@@ -4779,7 +4886,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-cuda-backend"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "derive-new 0.7.0",
+  "getset",
+@@ -4806,7 +4912,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-cuda-builder"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "cc",
+  "glob",
+@@ -4815,7 +4920,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-cuda-common"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "bytesize",
+  "ctor",
+@@ -5593,7 +5697,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-stark-backend"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "cfg-if 1.0.1",
+  "derivative",
+@@ -5628,7 +5731,6 @@ dependencies = [
+ [[package]]
+ name = "openvm-stark-sdk"
+ version = "2.1.0"
+-source = "git+https://github.com/openvm-org/stark-backend.git?tag=v2.1.0#a6b4761ad9a098f3a166740d22ad60b96400cd65"
+ dependencies = [
+  "dashmap",
+  "derive-new 0.7.0",
+@@ -5638,11 +5740,13 @@ dependencies = [
+  "metrics",
+  "metrics-tracing-context",
+  "metrics-util",
++ "midnight-circuits",
+  "num-bigint 0.4.6",
+  "nvtx",
+  "openvm-cpu-backend",
+  "openvm-stark-backend",
+  "p3-baby-bear",
++ "p3-bls12-381-fr",
+  "p3-bn254",
+  "p3-field",
+  "p3-poseidon2",
+@@ -5862,6 +5966,18 @@ dependencies = [
+  "rand 0.9.2",
+ ]
+ 
++[[package]]
++name = "p3-bls12-381-fr"
++version = "0.4.3"
++dependencies = [
++ "ff 0.13.1",
++ "midnight-curves",
++ "num-bigint 0.4.6",
++ "p3-field",
++ "rand 0.9.2",
++ "serde",
++]
++
+ [[package]]
+ name = "p3-bn254"
+ version = "0.4.3"
+@@ -6863,7 +6979,7 @@ dependencies = [
+  "once_cell",
+  "p256 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "revm-primitives",
+- "ripemd",
++ "ripemd 0.1.3",
+  "rug",
+  "secp256k1",
+  "sha2 0.10.9",
+@@ -6935,6 +7051,15 @@ dependencies = [
+  "digest 0.10.7",
+ ]
+ 
++[[package]]
++name = "ripemd"
++version = "0.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4dd4211456b4172d7e44261920c25acf07367c4f04bb5f5d54fc21b090d9b159"
++dependencies = [
++ "digest 0.11.3",
++]
++
+ [[package]]
+ name = "rlp"
+ version = "0.5.2"
+@@ -7330,6 +7455,15 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "serde_arrays"
++version = "0.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "94a16b99c5ea4fe3daccd14853ad260ec00ea043b2708d1fd1da3106dcd8d9df"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "serde_core"
+ version = "1.0.228"
+@@ -7629,6 +7763,28 @@ version = "1.2.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+ 
++[[package]]
++name = "stark-bench-ovm"
++version = "2.1.0"
++dependencies = [
++ "ff 0.13.1",
++ "libc",
++ "midnight-circuits",
++ "num-bigint 0.4.6",
++ "openvm-circuit-primitives",
++ "openvm-cpu-backend",
++ "openvm-cuda-backend",
++ "openvm-cuda-common",
++ "openvm-mod-circuit-builder",
++ "openvm-poseidon2-air",
++ "openvm-recursion-circuit",
++ "openvm-stark-backend",
++ "openvm-stark-sdk",
++ "p3-baby-bear",
++ "rand 0.9.2",
++ "serde_json",
++]
++
+ [[package]]
+ name = "static_assertions"
+ version = "1.1.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index e265796..a90d8c7 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -75,6 +75,7 @@ members = [
+   "guest-libs/verify-stark/guest",
+   "crates/static-verifier",
+   "scripts",
++  "crates/stark-bench-ovm",
+ ]
+ # Keep this in sync with `members`, except for `openvm-certified-verifier`. That crate requires the
+ # pinned Lean toolchain and is built and tested by `.github/workflows/certified-verifier.yml`.
+@@ -315,3 +316,12 @@ blstrs = { version = "0.7.1", default-features = true }
+ 
+ [workspace.metadata.cargo-shear]
+ ignored = ["cargo-openvm"]
++
++# stark-bench: use the local stark-backend copy (same commit as tag v2.1.0)
++[patch."https://github.com/openvm-org/stark-backend.git"]
++openvm-stark-backend = { path = "../openvm-org_stark-backend/crates/stark-backend" }
++openvm-stark-sdk = { path = "../openvm-org_stark-backend/crates/stark-sdk" }
++openvm-cpu-backend = { path = "../openvm-org_stark-backend/crates/cpu-backend" }
++openvm-cuda-backend = { path = "../openvm-org_stark-backend/crates/cuda-backend" }
++openvm-cuda-builder = { path = "../openvm-org_stark-backend/crates/cuda-builder" }
++openvm-cuda-common = { path = "../openvm-org_stark-backend/crates/cuda-common" }
+diff --git a/crates/stark-bench-ovm/Cargo.toml b/crates/stark-bench-ovm/Cargo.toml
+new file mode 100644
+index 0000000..d022a45
+--- /dev/null
++++ b/crates/stark-bench-ovm/Cargo.toml
+@@ -0,0 +1,65 @@
++[package]
++name = "stark-bench-ovm"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++description = "Sherlock STARK framework bench (P1/P2) on OpenVM stark-backend v2.1.0"
++
++[dependencies]
++openvm-stark-backend = { workspace = true }
++openvm-stark-sdk = { workspace = true, features = ["cpu-backend"] }
++openvm-cpu-backend = { workspace = true }
++openvm-poseidon2-air = { workspace = true }
++openvm-circuit-primitives = { workspace = true }
++openvm-recursion-circuit = { workspace = true }
++openvm-mod-circuit-builder = { workspace = true }
++num-bigint = { workspace = true }
++openvm-cuda-backend = { workspace = true, optional = true }
++openvm-cuda-common = { workspace = true, optional = true }
++p3-baby-bear = { workspace = true }
++rand = { workspace = true, features = ["std", "std_rng"] }
++serde_json = { workspace = true }
++libc = "0.2"
++
++[features]
++default = ["parallel"]
++parallel = [
++  "openvm-stark-backend/parallel",
++  "openvm-stark-sdk/parallel",
++  "openvm-cpu-backend/parallel",
++  "openvm-poseidon2-air/parallel",
++  "openvm-circuit-primitives/parallel",
++  "openvm-recursion-circuit/parallel",
++  "openvm-mod-circuit-builder/parallel",
++]
++cuda = [
++  "dep:openvm-cuda-backend",
++  "dep:openvm-cuda-common",
++  "openvm-recursion-circuit/cuda",
++  "openvm-poseidon2-air/cuda",
++  "openvm-circuit-primitives/cuda",
++  "openvm-mod-circuit-builder/cuda",
++]
++# D10: BN254 root config for the L heights example (not used by the bench binary)
++bn254 = ["openvm-stark-sdk/baby-bear-bn254-poseidon2"]
++# M7: BLS12-381 Fr Midnight-Poseidon root config
++bls = ["openvm-stark-sdk/baby-bear-bls12381-poseidon"]
++
++[[example]]
++name = "l_heights"
++required-features = ["bn254"]
++
++# M7: BLS12-381 Fr Midnight-Poseidon config for L (example l_fr, test m7_bls_fr)
++[dev-dependencies]
++midnight-circuits = { version = "=7.3.0", default-features = false }
++ff = "0.13"
++num-bigint = { workspace = true }
++
++[[example]]
++name = "l_fr"
++required-features = ["bls"]
++
++[[test]]
++name = "m7_bls_fr"
++required-features = ["bls"]
+diff --git a/crates/stark-bench-ovm/examples/l_fr.rs b/crates/stark-bench-ovm/examples/l_fr.rs
+new file mode 100644
+index 0000000..94976d1
+--- /dev/null
++++ b/crates/stark-bench-ovm/examples/l_fr.rs
+@@ -0,0 +1,411 @@
++//! M7: one real proof of the Sherlock last layer L with Midnight Poseidon over BLS12-381 Fr as
++//! its Merkle and transcript hash (PROPOSAL 3.6, u = 1, 2, 3), at the OD-19 L set.
++//!
++//! Copy of the D10 program `l_heights.rs` with the BabyBear chain unchanged: two W1 proofs (CPU,
++//! app params, 2^20 rows) -> node VerifierSubCircuit::<2> at the OD-19 internal set (UD, blowup
++//! 3, queries 97/82/81, fold PoW 0, mu PoW 9, query PoW 21, LogUp PoW 18, l_skip 2, n_stack 17,
++//! w_stack 512), proved and verified -> L = VerifierSubCircuit::<1> over the node vk, `L_cached`
++//! (has_cached = true, CachedTraceCtx::PcsData), proved with BabyBearBls12381PoseidonCpuEngine
++//! at the OD-19 L set (UD, blowup 3, queries 98/83/82, fold PoW 0, mu PoW 6, query PoW 20,
++//! LogUp PoW 18, l_skip 2, n_stack 18, w_stack 48 bound) and verified with the stock verifier
++//! (`StarkEngine::verify` -> stark-backend `verifier::verify`). Prover randomness is stock.
++//!
++//! Usage: l_fr. Prints one JSON object on stdout.
++
++use std::{cmp::Reverse, collections::BTreeMap, sync::Arc, time::Instant};
++
++use openvm_cpu_backend::CpuBackend;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    air_builders::symbolic::{symbolic_variable::Entry, SymbolicExpressionNode},
++    calculate_n_logup,
++    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    p3_field::PrimeCharacteristicRing,
++    p3_matrix::Matrix,
++    proof::Proof,
++    prover::{
++        stacked_pcs::StackedLayout, AirProvingContext, ColMajorMatrix, DeviceDataTransporter,
++        ProvingContext,
++    },
++    AirRef, StarkEngine, StarkProtocolConfig, SystemParams, WhirProximityStrategy,
++};
++use openvm_stark_backend::codec::{Decode, Encode};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_bls12381_poseidon::{
++        BabyBearBls12381PoseidonConfig, BabyBearBls12381PoseidonCpuEngine, Bls12381Fr,
++    },
++    baby_bear_poseidon2::{
++        default_duplex_sponge_recorder, BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine,
++        DuplexSponge, DuplexSpongeRecorder,
++    },
++    params_with_100_bits_security, MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use serde_json::{json, Value};
++
++type F = BabyBear;
++type SC = BabyBearPoseidon2Config;
++type RootSC = BabyBearBls12381PoseidonConfig;
++type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
++type RootEng = BabyBearBls12381PoseidonCpuEngine;
++
++#[allow(clippy::too_many_arguments)]
++fn ud_params(
++    b: usize,
++    l_skip: usize,
++    n_stack: usize,
++    w_stack: usize,
++    mu: usize,
++    qpow: usize,
++    queries: &[usize],
++    logup: usize,
++) -> SystemParams {
++    let mut p = params_with_100_bits_security(
++        b, l_skip, n_stack, w_stack, 0, mu, WhirProximityStrategy::UniqueDecoding, 4, qpow, 4,
++    );
++    assert_eq!(p.whir.rounds.len(), queries.len(), "WHIR round count");
++    for (r, &q) in p.whir.rounds.iter_mut().zip(queries) {
++        r.num_queries = q;
++    }
++    p.logup.pow_bits = logup;
++    p
++}
++
++/// OD-19 internal set (UD-SIZING.md 5.1).
++fn internal_ud() -> SystemParams {
++    ud_params(3, 2, 17, 512, 9, 21, &[97, 82, 81], 18)
++}
++/// OD-19 L set (UD-SIZING.md 5.1) at the w_stack bound 48.
++fn l_ud(w_stack: usize) -> SystemParams {
++    ud_params(3, 2, 18, w_stack, 6, 20, &[98, 83, 82], 18)
++}
++
++fn params_json(p: &SystemParams) -> Value {
++    json!({
++        "l_skip": p.l_skip, "n_stack": p.n_stack, "w_stack": p.w_stack, "log_blowup": p.log_blowup,
++        "k_whir": p.k_whir(), "proximity": format!("{:?}", p.whir.proximity),
++        "queries": p.whir.rounds.iter().map(|r| r.num_queries).collect::<Vec<_>>(),
++        "folding_pow_bits": p.whir.folding_pow_bits, "mu_pow_bits": p.whir.mu_pow_bits,
++        "query_phase_pow_bits": p.whir.query_phase_pow_bits, "logup_pow_bits": p.logup.pow_bits,
++    })
++}
++
++fn log2_exact(h: usize) -> usize {
++    assert!(h.is_power_of_two(), "height {h} not a power of two");
++    h.trailing_zeros() as usize
++}
++
++/// Shape of one L tracegen: per-AIR heights, stacked widths, interactions, n_logup.
++fn shape<C: StarkProtocolConfig<F = F>>(
++    pk: &MultiStarkProvingKey<C>,
++    ctxs: &[AirProvingContext<CpuBackend<C>>],
++    l_skip: usize,
++    n_stack: usize,
++) -> Value {
++    assert_eq!(ctxs.len(), pk.per_air.len(), "one ctx per AIR");
++    let mut airs = vec![];
++    // (air_idx, common width, cached widths, log_height, num_interactions)
++    let mut per: Vec<(usize, usize, Vec<usize>, usize, usize)> = vec![];
++    let mut cells = 0usize;
++    for (i, (apk, ctx)) in pk.per_air.iter().zip(ctxs).enumerate() {
++        let h = Matrix::height(&ctx.common_main);
++        let w = Matrix::width(&ctx.common_main);
++        assert_eq!(w, apk.vk.params.width.common_main, "width of AIR {i}");
++        let cached: Vec<(usize, usize)> =
++            ctx.cached_mains.iter().map(|c| (Matrix::height(&c.trace), Matrix::width(&c.trace))).collect();
++        for (ch, _) in &cached {
++            assert_eq!(*ch, h, "cached height of AIR {i}");
++        }
++        let ni = apk.vk.symbolic_constraints.interactions.len();
++        let cw: Vec<usize> = cached.iter().map(|c| c.1).collect();
++        cells += h * (w + cw.iter().sum::<usize>());
++        airs.push(json!({"idx": i, "name": apk.air_name, "height": h, "log_height": log2_exact(h),
++                         "width_common": w, "width_cached": cw, "num_interactions": ni,
++                         "need_rot": apk.vk.params.need_rot}));
++        per.push((i, w, cw, log2_exact(h), ni));
++    }
++    let mut sorted = per.clone();
++    sorted.sort_by_key(|t| Reverse(t.3)); // stable, as sorted_by_key in proof_shape.rs:375
++    let lsh = n_stack + l_skip;
++    let common = StackedLayout::new(l_skip, lsh, sorted.iter().map(|t| (t.1, t.3)).collect())
++        .expect("common layout")
++        .width();
++    let other: Vec<usize> = sorted
++        .iter()
++        .flat_map(|t| t.2.iter().map(move |&cw| (cw, t.3)))
++        .map(|(cw, lh)| StackedLayout::new(l_skip, lsh, vec![(cw, lh)]).expect("layout").width())
++        .collect();
++    let total_int: u64 = per.iter().map(|t| (t.4 as u64) << t.3.max(l_skip)).sum();
++    let n_logup = calculate_n_logup(l_skip, total_int);
++    let mut hist: BTreeMap<usize, usize> = BTreeMap::new();
++    for t in &per {
++        *hist.entry(t.3).or_default() += 1;
++    }
++    json!({
++        "airs": airs, "main_cells": cells,
++        "stacked_width_common": common, "stacked_width_other": other,
++        "w_stack_needed": common + other.iter().sum::<usize>(),
++        "total_interactions_lifted": total_int, "n_logup": n_logup,
++        "gkr_rounds_T": if total_int == 0 { 0 } else { l_skip + n_logup },
++        "distinct_log_heights": hist.keys().collect::<Vec<_>>(), "log_height_histogram": hist,
++        "max_log_height": per.iter().map(|t| t.3).max(),
++    })
++}
++
++#[allow(dead_code)]
++fn dump<C: StarkProtocolConfig<F = F>>(pk: &MultiStarkProvingKey<C>) -> Value {
++    let mut airs = vec![];
++    for apk in pk.per_air.iter() {
++        let vk = &apk.vk;
++        let w = &vk.params.width;
++        let dag = &vk.symbolic_constraints.constraints;
++        let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
++        for n in &dag.nodes {
++            let k = match n {
++                SymbolicExpressionNode::Variable(v) => match v.entry {
++                    Entry::Preprocessed { .. } => "var_pre",
++                    Entry::Main { .. } => "var_main",
++                    Entry::Public => "var_public",
++                    Entry::Challenge => "var_challenge",
++                },
++                SymbolicExpressionNode::IsFirstRow => "is_first_row",
++                SymbolicExpressionNode::IsLastRow => "is_last_row",
++                SymbolicExpressionNode::IsTransition => "is_transition",
++                SymbolicExpressionNode::Constant(_) => "constant",
++                SymbolicExpressionNode::Add { .. } => "add",
++                SymbolicExpressionNode::Sub { .. } => "sub",
++                SymbolicExpressionNode::Neg { .. } => "neg",
++                SymbolicExpressionNode::Mul { .. } => "mul",
++            };
++            *kinds.entry(k).or_default() += 1;
++        }
++        let ints = &vk.symbolic_constraints.interactions;
++        airs.push(json!({
++            "name": apk.air_name, "width_preprocessed": w.preprocessed.unwrap_or(0),
++            "width_cached_mains": w.cached_mains, "width_common_main": w.common_main,
++            "need_rot": vk.params.need_rot, "num_public_values": vk.params.num_public_values,
++            "max_constraint_degree": vk.max_constraint_degree,
++            "num_constraints": dag.constraint_idx.len(), "dag_nodes": dag.nodes.len(),
++            "dag_node_kinds": kinds, "num_interactions": ints.len(),
++            "interaction_msg_len_sum": ints.iter().map(|it| it.message.len()).sum::<usize>(),
++        }));
++    }
++    json!({"num_airs": pk.per_air.len(), "params": params_json(&pk.params),
++           "max_constraint_degree": pk.max_constraint_degree, "airs": airs})
++}
++
++fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<SC>, Vec<Proof<SC>>) {
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let airs: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    let engine = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let mut proofs = vec![];
++    for _ in 0..n {
++        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
++            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++            .collect();
++        let trace = chip.generate_trace(inputs);
++        let cm = ColMajorMatrix::from_row_major(&trace);
++        let ctx = ProvingContext::new(vec![(
++            0,
++            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
++        )]);
++        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
++        engine.verify(&vk, &proof).expect("w1 verify");
++        proofs.push(proof);
++    }
++    (vk, proofs)
++}
++
++fn node_proof<const N: usize>(
++    params: SystemParams,
++    child_vk: &MultiStarkVerifyingKey<SC>,
++    proofs: &[Proof<SC>],
++) -> (MultiStarkVerifyingKey<SC>, Proof<SC>, Value)
++where
++    VerifierSubCircuit<N>: VerifierTraceGen<CpuBackend<SC>, SC, ()> + AggregationSubCircuit,
++{
++    let engine = Eng::new(params.clone());
++    let circuit = <VerifierSubCircuit<N> as VerifierTraceGen<CpuBackend<SC>, SC, ()>>::new(
++        Arc::new(child_vk.clone()),
++        Default::default(),
++    );
++    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
++    let airs = circuit.airs::<SC>();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(child_pcs),
++        proofs,
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let sh = shape(&pk, &ctxs, params.l_skip, params.n_stack);
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++        .expect("node prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    engine.verify(&vk, &proof).expect("node verify");
++    let q: usize = params.whir.rounds.iter().map(|r| r.num_queries).sum();
++    (vk, proof, json!({"arity": N, "params": params_json(&params), "total_queries": q,
++                       "prove_s": prove_s, "verified": true, "shape": sh}))
++}
++
++/// (VmHWM, VmRSS) of this process in kB, from /proc/self/status.
++fn mem_kb() -> (u64, u64) {
++    let s = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
++    let get = |k: &str| {
++        s.lines()
++            .find(|l| l.starts_with(k))
++            .and_then(|l| l.split_whitespace().nth(1))
++            .and_then(|v| v.parse().ok())
++            .unwrap_or(0)
++    };
++    (get("VmHWM:"), get("VmRSS:"))
++}
++
++/// Reset VmHWM to the current RSS (writing 5 to /proc/self/clear_refs).
++fn reset_hwm() -> bool {
++    std::fs::write("/proc/self/clear_refs", "5").is_ok()
++}
++
++/// D10 `L_cached` heights at the OD-19 sets (run internal_ud 2 20 1, proof_log_heights).
++const D10_L_LOG_HEIGHTS: [usize; 39] = [
++    15, 6, 4, 7, 5, 14, 2, 2, 2, 7, 12, 12, 3, 12, 15, 14, 6, 0, 8, 0, 5, 8, 0, 11, 3, 5, 9, 2, 11,
++    2, 4, 9, 14, 12, 12, 8, 16, 5, 14,
++];
++
++/// L_cached: keygen, tracegen, prove, verify, negative controls, with the BLS12-381 Fr engine.
++fn l_fr_run(
++    engine: &RootEng,
++    node_vk: &Arc<MultiStarkVerifyingKey<SC>>,
++    node_proof: &Proof<SC>,
++) -> Value {
++    type C = RootSC;
++    let (hwm_before_reset_kb, rss_before_kb) = mem_kb();
++    let reset_ok = reset_hwm();
++    let cfg = VerifierConfig { has_cached: true, ..Default::default() };
++    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<C>, C, ()>>::new(
++        node_vk.clone(),
++        cfg,
++    );
++    let airs = AggregationSubCircuit::airs::<C>(&l);
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    let keygen_s = t.elapsed().as_secs_f64();
++    let cached = CachedTraceCtx::PcsData(l.commit_child_vk(engine, node_vk));
++    let t = Instant::now();
++    let ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        node_vk,
++        cached,
++        std::slice::from_ref(node_proof),
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let tracegen_s = t.elapsed().as_secs_f64();
++    let p = engine.params().clone();
++    let sh = shape(&pk, &ctxs, p.l_skip, p.n_stack);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let (hwm_pre_prove_kb, rss_pre_prove_kb) = mem_kb();
++    let t = Instant::now();
++    let proof = engine
++        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++        .expect("L prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    let (hwm_after_prove_kb, rss_after_prove_kb) = mem_kb();
++    eprintln!("L prove done {prove_s:.1}s");
++
++    let t = Instant::now();
++    let ok = engine.verify(&vk, &proof);
++    let verify_s = t.elapsed().as_secs_f64();
++    eprintln!("L verify {:?} {verify_s:.3}s", ok.as_ref().map(|_| ()));
++    let lh: Vec<Option<usize>> =
++        proof.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect();
++    let tracegen_lh: Vec<usize> =
++        sh["airs"].as_array().unwrap().iter().map(|a| a["log_height"].as_u64().unwrap() as usize).collect();
++    let proof_matches_tracegen =
++        lh.iter().zip(&tracegen_lh).all(|(a, b)| *a == Some(*b)) && lh.len() == tracegen_lh.len();
++    let matches_d10 = tracegen_lh == D10_L_LOG_HEIGHTS;
++
++    // Proof bytes (stark-backend codec) and a decode round trip.
++    let bytes = proof.encode_to_vec().expect("encode");
++    let decoded = Proof::<C>::decode_from_bytes(&bytes).expect("decode");
++    let t = Instant::now();
++    let ok_dec = engine.verify(&vk, &decoded);
++    let verify_decoded_s = t.elapsed().as_secs_f64();
++
++    // Negative control 1: one flipped bit in one byte of the encoded proof, at several positions.
++    let mut flips = vec![];
++    for pos in [40usize, bytes.len() / 3, bytes.len() / 2, bytes.len() - 64] {
++        let mut b = bytes.clone();
++        b[pos] ^= 0x01;
++        let (decode_ok, verify_res) = match Proof::<C>::decode_from_bytes(&b) {
++            Ok(pf) => (true, Some(engine.verify(&vk, &pf))),
++            Err(_) => (false, None),
++        };
++        let rejected = !decode_ok || verify_res.as_ref().is_some_and(|r| r.is_err());
++        flips.push(json!({
++            "byte_pos": pos, "decode_ok": decode_ok,
++            "verify_err": verify_res.and_then(|r| r.err()).map(|e| format!("{e:?}")),
++            "rejected": rejected,
++        }));
++    }
++    // Negative control 2: one public value changed in memory.
++    let mut pv_ctrl = json!(null);
++    if let Some(ai) = proof.public_values.iter().position(|v| !v.is_empty()) {
++        let mut bad = proof.clone();
++        bad.public_values[ai][0] += F::ONE;
++        let r = engine.verify(&vk, &bad);
++        pv_ctrl = json!({"air_idx": ai, "air_name": pk.per_air[ai].air_name,
++                         "rejected": r.is_err(), "verify_err": r.err().map(|e| format!("{e:?}"))});
++    }
++
++    let q: usize = p.whir.rounds.iter().map(|r| r.num_queries).sum();
++    json!({
++        "variant": "L_cached", "has_cached": true,
++        "engine": "BabyBearBls12381PoseidonCpuEngine (Midnight Poseidon, BLS12-381 Fr, PROPOSAL 3.6 u=1,2,3)",
++        "params": params_json(&p), "total_queries": q,
++        "keygen_s": keygen_s, "tracegen_s": tracegen_s, "shape": sh,
++        "prove_s": prove_s, "verify_s": verify_s,
++        "verify_ok": ok.is_ok(), "verify_err": ok.err().map(|e| format!("{e:?}")),
++        "verify_decoded_ok": ok_dec.is_ok(), "verify_decoded_s": verify_decoded_s,
++        "proof_bytes": bytes.len(),
++        "proof_log_heights": lh, "proof_heights_match_tracegen": proof_matches_tracegen,
++        "heights_match_d10": matches_d10,
++        "mem": {
++            "hwm_whole_process_before_reset_kb": hwm_before_reset_kb,
++            "rss_before_reset_kb": rss_before_kb, "hwm_reset_ok": reset_ok,
++            "hwm_keygen_tracegen_kb": hwm_pre_prove_kb, "rss_pre_prove_kb": rss_pre_prove_kb,
++            "hwm_l_keygen_tracegen_prove_kb": hwm_after_prove_kb,
++            "rss_after_prove_kb": rss_after_prove_kb,
++        },
++        "neg_byte_flips": flips, "neg_public_value": pv_ctrl,
++        "commit_digest_bytes": 32, "digest_example": format!("{:?}", proof.common_main_commit[0]),
++    })
++}
++
++fn main() {
++    let t0 = Instant::now();
++    let (w1_vk, proofs) = w1_proofs(2, 20);
++    eprintln!("w1 proofs done {:.1}s", t0.elapsed().as_secs_f64());
++    let (node_vk, node_pf, node_json) = node_proof::<2>(internal_ud(), &w1_vk, &proofs);
++    drop(proofs);
++    eprintln!("node proof done {:.1}s", t0.elapsed().as_secs_f64());
++    let node_vk = Arc::new(node_vk);
++    let mut out = json!({"child_set": "internal_ud", "arity": 2, "w1_log_rows": 20,
++                         "node": node_json,
++                         "rayon_threads": std::env::var("RAYON_NUM_THREADS").ok()});
++    let root = RootEng::new(l_ud(48));
++    out["L_cached_bls12381_ud"] = l_fr_run(&root, &node_vk, &node_pf);
++    out["wall_s"] = json!(t0.elapsed().as_secs_f64());
++    let _ = std::marker::PhantomData::<Bls12381Fr>;
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/stark-bench-ovm/examples/l_heights.rs b/crates/stark-bench-ovm/examples/l_heights.rs
+new file mode 100644
+index 0000000..0bec96a
+--- /dev/null
++++ b/crates/stark-bench-ovm/examples/l_heights.rs
+@@ -0,0 +1,359 @@
++//! D10: trace heights of the Sherlock last layer L by tracegen over one real node proof.
++//!
++//! Usage: l_heights <child_set> <arity> <w1_log_rows> <prove_l>
++//!   child_set : "internal_ud" (OD-19 internal set: UD, blowup 3, queries 97/82/81, fold PoW 0,
++//!               mu PoW 9, query PoW 21, LogUp PoW 18, l_skip 2, n_stack 17, w_stack 512)
++//!               or "leaf" (stock leaf params, the bench node).
++//!   arity     : 1 or 2 (VerifierSubCircuit::<arity> over W1 proofs at app params).
++//!   prove_l   : 0 or 1. 1 proves and verifies L_nocached and L_cached with the BN254 root engine
++//!               at the OD-19 L set (UD, blowup 3, queries 98/83/82, fold PoW 0, mu PoW 6,
++//!               query PoW 20, LogUp PoW 18, l_skip 2, n_stack 18) with w_stack 48.
++//!
++//! Chain: W1 proofs (CPU, app params) -> node proof (CPU, child_set params, verified) ->
++//! L = VerifierSubCircuit::<1> over the node vk: tracegen with the BabyBear engine and with the
++//! BN254 root engine, both VerifierConfig variants (has_cached true and false). Per-AIR heights
++//! and widths, the stacked width per commit by StackedLayout::new (as proof_shape.rs:540-573),
++//! the total interactions and n_logup (proof_shape.rs:378-384), and the BN254 keygen dump.
++//! Prints one JSON object on stdout.
++
++use std::{cmp::Reverse, collections::BTreeMap, sync::Arc, time::Instant};
++
++use openvm_cpu_backend::CpuBackend;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    air_builders::symbolic::{symbolic_variable::Entry, SymbolicExpressionNode},
++    calculate_n_logup,
++    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    p3_field::PrimeCharacteristicRing,
++    p3_matrix::Matrix,
++    proof::Proof,
++    prover::{
++        stacked_pcs::StackedLayout, AirProvingContext, ColMajorMatrix, DeviceDataTransporter,
++        ProvingContext,
++    },
++    AirRef, StarkEngine, StarkProtocolConfig, SystemParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_bn254_poseidon2::{BabyBearBn254Poseidon2Config, BabyBearBn254Poseidon2CpuEngine},
++    baby_bear_poseidon2::{
++        default_duplex_sponge_recorder, BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine,
++        DuplexSponge, DuplexSpongeRecorder,
++    },
++    leaf_params_with_100_bits_security, params_with_100_bits_security, MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use serde_json::{json, Value};
++
++type F = BabyBear;
++type SC = BabyBearPoseidon2Config;
++type RootSC = BabyBearBn254Poseidon2Config;
++type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
++type RootEng = BabyBearBn254Poseidon2CpuEngine;
++
++#[allow(clippy::too_many_arguments)]
++fn ud_params(
++    b: usize,
++    l_skip: usize,
++    n_stack: usize,
++    w_stack: usize,
++    mu: usize,
++    qpow: usize,
++    queries: &[usize],
++    logup: usize,
++) -> SystemParams {
++    let mut p = params_with_100_bits_security(
++        b, l_skip, n_stack, w_stack, 0, mu, WhirProximityStrategy::UniqueDecoding, 4, qpow, 4,
++    );
++    assert_eq!(p.whir.rounds.len(), queries.len(), "WHIR round count");
++    for (r, &q) in p.whir.rounds.iter_mut().zip(queries) {
++        r.num_queries = q;
++    }
++    p.logup.pow_bits = logup;
++    p
++}
++
++/// OD-19 internal set (UD-SIZING.md 5.1).
++fn internal_ud() -> SystemParams {
++    ud_params(3, 2, 17, 512, 9, 21, &[97, 82, 81], 18)
++}
++/// OD-19 L set (UD-SIZING.md 5.1) at the w_stack bound 48.
++fn l_ud(w_stack: usize) -> SystemParams {
++    ud_params(3, 2, 18, w_stack, 6, 20, &[98, 83, 82], 18)
++}
++
++fn params_json(p: &SystemParams) -> Value {
++    json!({
++        "l_skip": p.l_skip, "n_stack": p.n_stack, "w_stack": p.w_stack, "log_blowup": p.log_blowup,
++        "k_whir": p.k_whir(), "proximity": format!("{:?}", p.whir.proximity),
++        "queries": p.whir.rounds.iter().map(|r| r.num_queries).collect::<Vec<_>>(),
++        "folding_pow_bits": p.whir.folding_pow_bits, "mu_pow_bits": p.whir.mu_pow_bits,
++        "query_phase_pow_bits": p.whir.query_phase_pow_bits, "logup_pow_bits": p.logup.pow_bits,
++    })
++}
++
++fn log2_exact(h: usize) -> usize {
++    assert!(h.is_power_of_two(), "height {h} not a power of two");
++    h.trailing_zeros() as usize
++}
++
++/// Shape of one L tracegen: per-AIR heights, stacked widths, interactions, n_logup.
++fn shape<C: StarkProtocolConfig<F = F>>(
++    pk: &MultiStarkProvingKey<C>,
++    ctxs: &[AirProvingContext<CpuBackend<C>>],
++    l_skip: usize,
++    n_stack: usize,
++) -> Value {
++    assert_eq!(ctxs.len(), pk.per_air.len(), "one ctx per AIR");
++    let mut airs = vec![];
++    // (air_idx, common width, cached widths, log_height, num_interactions)
++    let mut per: Vec<(usize, usize, Vec<usize>, usize, usize)> = vec![];
++    let mut cells = 0usize;
++    for (i, (apk, ctx)) in pk.per_air.iter().zip(ctxs).enumerate() {
++        let h = Matrix::height(&ctx.common_main);
++        let w = Matrix::width(&ctx.common_main);
++        assert_eq!(w, apk.vk.params.width.common_main, "width of AIR {i}");
++        let cached: Vec<(usize, usize)> =
++            ctx.cached_mains.iter().map(|c| (Matrix::height(&c.trace), Matrix::width(&c.trace))).collect();
++        for (ch, _) in &cached {
++            assert_eq!(*ch, h, "cached height of AIR {i}");
++        }
++        let ni = apk.vk.symbolic_constraints.interactions.len();
++        let cw: Vec<usize> = cached.iter().map(|c| c.1).collect();
++        cells += h * (w + cw.iter().sum::<usize>());
++        airs.push(json!({"idx": i, "name": apk.air_name, "height": h, "log_height": log2_exact(h),
++                         "width_common": w, "width_cached": cw, "num_interactions": ni,
++                         "need_rot": apk.vk.params.need_rot}));
++        per.push((i, w, cw, log2_exact(h), ni));
++    }
++    let mut sorted = per.clone();
++    sorted.sort_by_key(|t| Reverse(t.3)); // stable, as sorted_by_key in proof_shape.rs:375
++    let lsh = n_stack + l_skip;
++    let common = StackedLayout::new(l_skip, lsh, sorted.iter().map(|t| (t.1, t.3)).collect())
++        .expect("common layout")
++        .width();
++    let other: Vec<usize> = sorted
++        .iter()
++        .flat_map(|t| t.2.iter().map(move |&cw| (cw, t.3)))
++        .map(|(cw, lh)| StackedLayout::new(l_skip, lsh, vec![(cw, lh)]).expect("layout").width())
++        .collect();
++    let total_int: u64 = per.iter().map(|t| (t.4 as u64) << t.3.max(l_skip)).sum();
++    let n_logup = calculate_n_logup(l_skip, total_int);
++    let mut hist: BTreeMap<usize, usize> = BTreeMap::new();
++    for t in &per {
++        *hist.entry(t.3).or_default() += 1;
++    }
++    json!({
++        "airs": airs, "main_cells": cells,
++        "stacked_width_common": common, "stacked_width_other": other,
++        "w_stack_needed": common + other.iter().sum::<usize>(),
++        "total_interactions_lifted": total_int, "n_logup": n_logup,
++        "gkr_rounds_T": if total_int == 0 { 0 } else { l_skip + n_logup },
++        "distinct_log_heights": hist.keys().collect::<Vec<_>>(), "log_height_histogram": hist,
++        "max_log_height": per.iter().map(|t| t.3).max(),
++    })
++}
++
++fn dump<C: StarkProtocolConfig<F = F>>(pk: &MultiStarkProvingKey<C>) -> Value {
++    let mut airs = vec![];
++    for apk in pk.per_air.iter() {
++        let vk = &apk.vk;
++        let w = &vk.params.width;
++        let dag = &vk.symbolic_constraints.constraints;
++        let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
++        for n in &dag.nodes {
++            let k = match n {
++                SymbolicExpressionNode::Variable(v) => match v.entry {
++                    Entry::Preprocessed { .. } => "var_pre",
++                    Entry::Main { .. } => "var_main",
++                    Entry::Public => "var_public",
++                    Entry::Challenge => "var_challenge",
++                },
++                SymbolicExpressionNode::IsFirstRow => "is_first_row",
++                SymbolicExpressionNode::IsLastRow => "is_last_row",
++                SymbolicExpressionNode::IsTransition => "is_transition",
++                SymbolicExpressionNode::Constant(_) => "constant",
++                SymbolicExpressionNode::Add { .. } => "add",
++                SymbolicExpressionNode::Sub { .. } => "sub",
++                SymbolicExpressionNode::Neg { .. } => "neg",
++                SymbolicExpressionNode::Mul { .. } => "mul",
++            };
++            *kinds.entry(k).or_default() += 1;
++        }
++        let ints = &vk.symbolic_constraints.interactions;
++        airs.push(json!({
++            "name": apk.air_name, "width_preprocessed": w.preprocessed.unwrap_or(0),
++            "width_cached_mains": w.cached_mains, "width_common_main": w.common_main,
++            "need_rot": vk.params.need_rot, "num_public_values": vk.params.num_public_values,
++            "max_constraint_degree": vk.max_constraint_degree,
++            "num_constraints": dag.constraint_idx.len(), "dag_nodes": dag.nodes.len(),
++            "dag_node_kinds": kinds, "num_interactions": ints.len(),
++            "interaction_msg_len_sum": ints.iter().map(|it| it.message.len()).sum::<usize>(),
++        }));
++    }
++    json!({"num_airs": pk.per_air.len(), "params": params_json(&pk.params),
++           "max_constraint_degree": pk.max_constraint_degree, "airs": airs})
++}
++
++fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<SC>, Vec<Proof<SC>>) {
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let airs: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    let engine = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let mut proofs = vec![];
++    for _ in 0..n {
++        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
++            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++            .collect();
++        let trace = chip.generate_trace(inputs);
++        let cm = ColMajorMatrix::from_row_major(&trace);
++        let ctx = ProvingContext::new(vec![(
++            0,
++            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
++        )]);
++        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
++        engine.verify(&vk, &proof).expect("w1 verify");
++        proofs.push(proof);
++    }
++    (vk, proofs)
++}
++
++fn node_proof<const N: usize>(
++    params: SystemParams,
++    child_vk: &MultiStarkVerifyingKey<SC>,
++    proofs: &[Proof<SC>],
++) -> (MultiStarkVerifyingKey<SC>, Proof<SC>, Value)
++where
++    VerifierSubCircuit<N>: VerifierTraceGen<CpuBackend<SC>, SC, ()> + AggregationSubCircuit,
++{
++    let engine = Eng::new(params.clone());
++    let circuit = <VerifierSubCircuit<N> as VerifierTraceGen<CpuBackend<SC>, SC, ()>>::new(
++        Arc::new(child_vk.clone()),
++        Default::default(),
++    );
++    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
++    let airs = circuit.airs::<SC>();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(child_pcs),
++        proofs,
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let sh = shape(&pk, &ctxs, params.l_skip, params.n_stack);
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++        .expect("node prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    engine.verify(&vk, &proof).expect("node verify");
++    let q: usize = params.whir.rounds.iter().map(|r| r.num_queries).sum();
++    (vk, proof, json!({"arity": N, "params": params_json(&params), "total_queries": q,
++                       "prove_s": prove_s, "verified": true, "shape": sh}))
++}
++
++/// L tracegen (and optionally prove + verify) for one engine and one VerifierConfig.
++fn l_run<E, C>(
++    engine: &E,
++    node_vk: &Arc<MultiStarkVerifyingKey<SC>>,
++    node_proof: &Proof<SC>,
++    has_cached: bool,
++    prove: bool,
++) -> (Value, MultiStarkProvingKey<C>)
++where
++    C: StarkProtocolConfig<F = F>,
++    E: StarkEngine<SC = C, PB = CpuBackend<C>>,
++    (): From<openvm_stark_backend::EngineDeviceCtx<E>>,
++    VerifierSubCircuit<1>: VerifierTraceGen<CpuBackend<C>, C, ()>,
++{
++    let cfg = VerifierConfig { has_cached, ..Default::default() };
++    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<C>, C, ()>>::new(
++        node_vk.clone(),
++        cfg,
++    );
++    let airs = AggregationSubCircuit::airs::<C>(&l);
++    let (pk, vk) = engine.keygen(&airs);
++    let cached = if has_cached {
++        CachedTraceCtx::PcsData(l.commit_child_vk(engine, node_vk))
++    } else {
++        CachedTraceCtx::Records(
++            <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<C>, C, ()>>::cached_trace_record(
++                &l, node_vk,
++            ),
++        )
++    };
++    let t = Instant::now();
++    let ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        node_vk,
++        cached,
++        std::slice::from_ref(node_proof),
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let tracegen_s = t.elapsed().as_secs_f64();
++    let p = engine.params().clone();
++    let mut out = json!({"has_cached": has_cached, "tracegen_s": tracegen_s,
++                         "shape": shape(&pk, &ctxs, p.l_skip, p.n_stack)});
++    if prove {
++        let d_pk = engine.device().transport_pk_to_device(&pk);
++        let t = Instant::now();
++        let proof = engine
++            .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++            .expect("L prove");
++        let prove_s = t.elapsed().as_secs_f64();
++        let ok = engine.verify(&vk, &proof);
++        let lh: Vec<Option<usize>> =
++            proof.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect();
++        out["prove"] = json!({"prove_s": prove_s, "verify_ok": ok.is_ok(),
++                              "verify_err": ok.err().map(|e| format!("{e:?}")),
++                              "proof_log_heights": lh, "params": params_json(&p)});
++    }
++    (out, pk)
++}
++
++fn main() {
++    let a: Vec<String> = std::env::args().collect();
++    let set = a[1].as_str();
++    let arity: usize = a[2].parse().unwrap();
++    let log_rows: usize = a[3].parse().unwrap();
++    let prove_l = a[4] == "1";
++    let t0 = Instant::now();
++    let child_params = match set {
++        "internal_ud" => internal_ud(),
++        "leaf" => leaf_params_with_100_bits_security(),
++        _ => panic!("child_set"),
++    };
++    let (w1_vk, proofs) = w1_proofs(arity, log_rows);
++    eprintln!("w1 proofs done {:.1}s", t0.elapsed().as_secs_f64());
++    let (node_vk, node_pf, node_json) = match arity {
++        1 => node_proof::<1>(child_params, &w1_vk, &proofs),
++        2 => node_proof::<2>(child_params, &w1_vk, &proofs),
++        _ => panic!("arity"),
++    };
++    eprintln!("node proof done {:.1}s", t0.elapsed().as_secs_f64());
++    let node_vk = Arc::new(node_vk);
++    let mut out = json!({"child_set": set, "arity": arity, "w1_log_rows": log_rows, "node": node_json});
++
++    // BabyBear engine at the stock root params (as L-STRUCTURE) and BN254 root engine at the
++    // OD-19 L set. Heights of L do not depend on L's own params; both are dumped to show it.
++    let bb = Eng::new(openvm_stark_sdk::config::root_params_with_100_bits_security());
++    let root = RootEng::new(l_ud(48));
++    for has_cached in [true, false] {
++        let tag = if has_cached { "L_cached" } else { "L_nocached" };
++        let (bb_out, _) = l_run(&bb, &node_vk, &node_pf, has_cached, false);
++        out[format!("{tag}_babybear_rootparams")] = bb_out;
++        let (bn_out, bn_pk) = l_run(&root, &node_vk, &node_pf, has_cached, prove_l);
++        out[format!("{tag}_bn254_ud")] = bn_out;
++        out[format!("{tag}_bn254_ud_keygen")] = dump(&bn_pk);
++        eprintln!("{tag} done {:.1}s", t0.elapsed().as_secs_f64());
++    }
++    out["wall_s"] = json!(t0.elapsed().as_secs_f64());
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/stark-bench-ovm/examples/l_structure.rs b/crates/stark-bench-ovm/examples/l_structure.rs
+new file mode 100644
+index 0000000..4b0b185
+--- /dev/null
++++ b/crates/stark-bench-ovm/examples/l_structure.rs
+@@ -0,0 +1,175 @@
++//! Keygen-only dump of the structure of the Sherlock last layer L (no tracegen, no proving).
++//!
++//! Chain: W1 (Poseidon2 AIR) keygen at app params -> node = VerifierSubCircuit::<2> over W1 vk
++//! at leaf params (the bench node) -> L = VerifierSubCircuit::<1> over the node vk at root params.
++//! L is keyed at root params (BabyBear engine; see note in main) and, for the C check, with both
++//! VerifierConfig defaults (has_cached = true) and the RootProver setting (has_cached = false).
++//!
++//! Prints one JSON object on stdout: per-AIR structure for the node and for each L variant.
++
++use std::{collections::BTreeMap, sync::Arc};
++
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{AggregationSubCircuit, VerifierConfig, VerifierSubCircuit};
++use openvm_stark_backend::{
++    air_builders::symbolic::{symbolic_variable::Entry, SymbolicExpressionNode},
++    keygen::types::MultiStarkProvingKey,
++    AirRef, StarkEngine, StarkProtocolConfig, SystemParams,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_poseidon2::{BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine, DuplexSponge},
++    leaf_params_with_100_bits_security, root_params_with_100_bits_security,
++    MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use serde_json::{json, Value};
++
++type F = BabyBear;
++type SC = BabyBearPoseidon2Config;
++
++fn params_json(p: &SystemParams) -> Value {
++    json!({
++        "l_skip": p.l_skip,
++        "n_stack": p.n_stack,
++        "w_stack": p.w_stack,
++        "log_blowup": p.log_blowup,
++        "k_whir": p.k_whir(),
++        "num_whir_rounds": p.num_whir_rounds(),
++        "whir_queries_per_round": p.whir.rounds.iter().map(|r| r.num_queries).collect::<Vec<_>>(),
++        "log_final_poly_len": p.log_final_poly_len(),
++        "final_poly_len": 1usize << p.log_final_poly_len(),
++        "mu_pow_bits": p.whir.mu_pow_bits,
++        "folding_pow_bits": p.whir.folding_pow_bits,
++        "query_phase_pow_bits": p.whir.query_phase_pow_bits,
++        "logup_pow_bits": p.logup.pow_bits,
++        "max_constraint_degree": p.max_constraint_degree,
++        "debug": format!("{:?}", p),
++    })
++}
++
++fn dump<C: StarkProtocolConfig<F = F>>(pk: &MultiStarkProvingKey<C>) -> Value {
++    let mut airs = vec![];
++    for (i, apk) in pk.per_air.iter().enumerate() {
++        let vk = &apk.vk;
++        let w = &vk.params.width;
++        let dag = &vk.symbolic_constraints.constraints;
++        let nodes = &dag.nodes;
++        let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
++        let mut var_kinds: BTreeMap<&str, usize> = BTreeMap::new();
++        let is_const = |j: usize| matches!(nodes[j], SymbolicExpressionNode::Constant(_));
++        let mut mul_const = 0usize;
++        let mut max_node_deg = 0usize;
++        for n in nodes {
++            let k = match n {
++                SymbolicExpressionNode::Variable(v) => {
++                    let vk = match v.entry {
++                        Entry::Preprocessed { .. } => "preprocessed",
++                        Entry::Main { .. } => "main",
++                        Entry::Public => "public",
++                        Entry::Challenge => "challenge",
++                    };
++                    *var_kinds.entry(vk).or_default() += 1;
++                    "variable"
++                }
++                SymbolicExpressionNode::IsFirstRow => "is_first_row",
++                SymbolicExpressionNode::IsLastRow => "is_last_row",
++                SymbolicExpressionNode::IsTransition => "is_transition",
++                SymbolicExpressionNode::Constant(_) => "constant",
++                SymbolicExpressionNode::Add { degree_multiple, .. } => {
++                    max_node_deg = max_node_deg.max(*degree_multiple);
++                    "add"
++                }
++                SymbolicExpressionNode::Sub { degree_multiple, .. } => {
++                    max_node_deg = max_node_deg.max(*degree_multiple);
++                    "sub"
++                }
++                SymbolicExpressionNode::Neg { degree_multiple, .. } => {
++                    max_node_deg = max_node_deg.max(*degree_multiple);
++                    "neg"
++                }
++                SymbolicExpressionNode::Mul { left_idx, right_idx, degree_multiple } => {
++                    max_node_deg = max_node_deg.max(*degree_multiple);
++                    if is_const(*left_idx) || is_const(*right_idx) {
++                        mul_const += 1;
++                    }
++                    "mul"
++                }
++            };
++            *kinds.entry(k).or_default() += 1;
++        }
++        let ints = &vk.symbolic_constraints.interactions;
++        let mut buses: Vec<u16> = ints.iter().map(|it| it.bus_index as u16).collect();
++        buses.sort();
++        buses.dedup();
++        let msg_lens: Vec<usize> = ints.iter().map(|it| it.message.len()).collect();
++        airs.push(json!({
++            "idx": i,
++            "name": apk.air_name,
++            "width_preprocessed": w.preprocessed.unwrap_or(0),
++            "width_cached_mains": w.cached_mains,
++            "width_common_main": w.common_main,
++            "width_main_total": w.main_width(),
++            "width_after_challenge": 0,
++            "has_preprocessed_data": vk.preprocessed_data.is_some(),
++            "num_public_values": vk.params.num_public_values,
++            "need_rot": vk.params.need_rot,
++            "is_required": vk.is_required,
++            "max_constraint_degree": vk.max_constraint_degree,
++            "max_dag_node_degree": max_node_deg,
++            "num_constraints": dag.constraint_idx.len(),
++            "dag_nodes": nodes.len(),
++            "dag_node_kinds": kinds,
++            "dag_variable_kinds": var_kinds,
++            "dag_mul_by_constant": mul_const,
++            "num_interactions": ints.len(),
++            "interaction_msg_lens": msg_lens,
++            "interaction_msg_len_sum": msg_lens.iter().sum::<usize>(),
++            "bus_ids": buses,
++        }));
++    }
++    json!({
++        "num_airs": pk.per_air.len(),
++        "params": params_json(&pk.params),
++        "max_constraint_degree": pk.max_constraint_degree,
++        "num_trace_height_constraints": pk.trace_height_constraints.len(),
++        "airs": airs,
++    })
++}
++
++fn main() {
++    // W1 child: Poseidon2 width-16 AIR, app params (the bench leaf).
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let w1_airs: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    let app = BabyBearPoseidon2CpuEngine::<DuplexSponge>::new(app_params_with_100_bits_security(
++        MAX_APP_LOG_STACKED_HEIGHT,
++    ));
++    let (_, w1_vk) = app.keygen(&w1_airs);
++
++    // Bench node: VerifierSubCircuit::<2> over W1 at leaf params, default config.
++    let node = VerifierSubCircuit::<2>::new(Arc::new(w1_vk));
++    let node_airs = node.airs::<SC>();
++    let leaf = BabyBearPoseidon2CpuEngine::<DuplexSponge>::new(leaf_params_with_100_bits_security());
++    let (node_pk, node_vk) = leaf.keygen(&node_airs);
++    let node_json = dump(&node_pk);
++    eprintln!("node: {} AIRs", node_pk.per_air.len());
++
++    let node_vk = Arc::new(node_vk);
++    let mut out = json!({ "node": node_json });
++    for (tag, has_cached) in [("L_cached", true), ("L_nocached", false)] {
++        let cfg = VerifierConfig { has_cached, ..Default::default() };
++        let l = VerifierSubCircuit::<1>::new_with_options(node_vk.clone(), cfg);
++        // Root params. The BN254 root config needs the stark-sdk feature baby-bear-bn254-poseidon2,
++        // which the bench crate does not enable; the AIRs of L do not depend on L's own hash
++        // (airs::<SC>() only fixes the config type), so the BabyBear engine keys the same structure.
++        let root = BabyBearPoseidon2CpuEngine::<DuplexSponge>::new(root_params_with_100_bits_security());
++        let l_airs = l.airs::<SC>();
++        let (l_pk, _) = root.keygen(&l_airs);
++        eprintln!("{tag}: {} AIRs", l_pk.per_air.len());
++        out[tag] = dump(&l_pk);
++        out[tag]["verifier_config"] =
++            json!({"has_cached": has_cached, "continuations_enabled": false,
++                   "final_state_bus_enabled": false, "engine": "BabyBearPoseidon2CpuEngine (root params; BN254 config not built)"});
++    }
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/stark-bench-ovm/src/main.rs b/crates/stark-bench-ovm/src/main.rs
+new file mode 100644
+index 0000000..b86727c
+--- /dev/null
++++ b/crates/stark-bench-ovm/src/main.rs
+@@ -0,0 +1,636 @@
++//! Sherlock STARK framework bench, P1 (leaf) and P2 (node), on OpenVM stark-backend v2.1.0.
++//!
++//! Usage: stark-bench-ovm <w1|w2|node> <cpu|gpu> <log_rows> <reps> [arity]
++//!   w1   : Poseidon2 width-16 permutation AIR (OpenVM `Poseidon2SubAir`, BabyBear, SBOX_REGISTERS=1),
++//!          one permutation per row, 2^log_rows rows.
++//!   w2   : authored-for-bench CPU-style ALU AIR (32-bit add in 4 byte limbs, 16 columns) that
++//!          sends 12 byte range checks per row over a LogUp bus to OpenVM's `RangeCheckerAir`
++//!          (256-row preprocessed table with a multiplicity column).
++//!   node : `arity` W1 proofs at 2^log_rows rows (app params) verified by OpenVM's recursion
++//!          `VerifierSubCircuit::<arity>` and proved at leaf params (the leaf-aggregation layer).
++//! Prints one JSON object on stdout. Timings: keygen, tracegen, transport, prove (each rep), verify.
++
++use std::{
++    sync::{
++        atomic::{AtomicBool, AtomicUsize, Ordering},
++        Arc,
++    },
++    time::Instant,
++};
++
++use openvm_circuit_primitives::range::{RangeCheckBus, RangeCheckerChip};
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    codec::Encode,
++    interaction::InteractionBuilder,
++    keygen::types::MultiStarkVerifyingKey,
++    p3_air::{Air, BaseAir},
++    p3_field::{Field, PrimeCharacteristicRing},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    proof::Proof,
++    prover::{
++        AirProvingContext, ColMajorMatrix, DeviceDataTransporter, MatrixDimensions, ProverDevice,
++        ProvingContext,
++    },
++    AirRef, BaseAirWithPublicValues, EngineDeviceCtx, PartitionedBaseAir, StarkEngine,
++    SystemParams,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_poseidon2::{
++        default_duplex_sponge_recorder, BabyBearPoseidon2Config, BabyBearPoseidon2CpuEngine,
++        DuplexSponge, DuplexSpongeRecorder,
++    },
++    leaf_params_with_100_bits_security, MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
++use serde_json::{json, Value};
++
++type F = BabyBear;
++type SC = BabyBearPoseidon2Config;
++
++// ---------------------------------------------------------------------------
++// resource helpers
++// ---------------------------------------------------------------------------
++
++fn rusage() -> (f64, u64) {
++    let mut ru: libc::rusage = unsafe { std::mem::zeroed() };
++    unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut ru) };
++    let cpu = ru.ru_utime.tv_sec as f64
++        + ru.ru_utime.tv_usec as f64 * 1e-6
++        + ru.ru_stime.tv_sec as f64
++        + ru.ru_stime.tv_usec as f64 * 1e-6;
++    (cpu, ru.ru_maxrss as u64)
++}
++
++fn median(v: &[f64]) -> f64 {
++    let mut s = v.to_vec();
++    s.sort_by(|a, b| a.partial_cmp(b).unwrap());
++    let n = s.len();
++    if n == 0 {
++        return f64::NAN;
++    }
++    if n % 2 == 1 {
++        s[n / 2]
++    } else {
++        0.5 * (s[n / 2 - 1] + s[n / 2])
++    }
++}
++
++/// Samples device memory in use (cudaMemGetInfo total - free) while proving. On this unified
++/// memory device that is a system-wide figure, so the bench reports the rise over the
++/// pre-prove baseline.
++struct GpuSampler {
++    stop: Arc<AtomicBool>,
++    peak: Arc<AtomicUsize>,
++    handle: Option<std::thread::JoinHandle<()>>,
++    base: usize,
++}
++
++impl GpuSampler {
++    fn start() -> Self {
++        let base = gpu_used();
++        if std::env::var("SB_NO_SAMPLER").is_ok() {
++            return Self { stop: Arc::new(AtomicBool::new(true)), peak: Arc::new(AtomicUsize::new(base)), handle: Some(std::thread::spawn(|| {})), base };
++        }
++        let stop = Arc::new(AtomicBool::new(false));
++        let peak = Arc::new(AtomicUsize::new(base));
++        let (s, p) = (stop.clone(), peak.clone());
++        let handle = std::thread::spawn(move || {
++            while !s.load(Ordering::Relaxed) {
++                p.fetch_max(gpu_used(), Ordering::Relaxed);
++                std::thread::sleep(std::time::Duration::from_millis(20));
++            }
++        });
++        Self {
++            stop,
++            peak,
++            handle: Some(handle),
++            base,
++        }
++    }
++    fn finish(mut self) -> (usize, usize) {
++        self.stop.store(true, Ordering::Relaxed);
++        self.handle.take().unwrap().join().unwrap();
++        let peak = self.peak.load(Ordering::Relaxed).max(gpu_used());
++        (self.base, peak)
++    }
++}
++
++#[cfg(feature = "cuda")]
++fn gpu_used() -> usize {
++    openvm_cuda_common::memory_manager::device_memory_used()
++}
++#[cfg(not(feature = "cuda"))]
++fn gpu_used() -> usize {
++    0
++}
++
++// ---------------------------------------------------------------------------
++// W2: CPU-style ALU AIR with byte range checks over a LogUp bus
++// ---------------------------------------------------------------------------
++
++const ALU_W: usize = 16; // a[4] b[4] c[4] carry[4]
++
++#[derive(Clone, Copy, Debug)]
++struct AluAir {
++    bus: RangeCheckBus,
++}
++
++impl<T> BaseAir<T> for AluAir {
++    fn width(&self) -> usize {
++        ALU_W
++    }
++}
++impl<T: Field> BaseAirWithPublicValues<T> for AluAir {}
++impl<T: Field> PartitionedBaseAir<T> for AluAir {}
++
++impl<AB: InteractionBuilder> Air<AB> for AluAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let row = main.row_slice(0).expect("window");
++        let local: Vec<AB::Var> = row.to_vec();
++        drop(row);
++        let base = AB::Expr::from_u32(256);
++        for i in 0..4 {
++            let a: AB::Expr = local[i].into();
++            let b: AB::Expr = local[4 + i].into();
++            let c: AB::Expr = local[8 + i].into();
++            let cy: AB::Expr = local[12 + i].into();
++            let cin: AB::Expr = if i == 0 {
++                AB::Expr::ZERO
++            } else {
++                local[12 + i - 1].into()
++            };
++            builder.assert_bool(cy.clone());
++            builder.assert_eq(a + b + cin, c + cy * base.clone());
++        }
++        for &limb in local.iter().take(12) {
++            self.bus.send(limb).eval(builder, AB::Expr::ONE);
++        }
++    }
++}
++
++fn w2_traces(log_rows: usize, rng: &mut StdRng) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>) {
++    let bus = RangeCheckBus::new(0, 256);
++    let range = RangeCheckerChip::new(bus);
++    let n = 1usize << log_rows;
++    let mut vals = F::zero_vec(n * ALU_W);
++    for r in 0..n {
++        let a = rng.next_u32();
++        let b = rng.next_u32();
++        let row = &mut vals[r * ALU_W..(r + 1) * ALU_W];
++        let mut carry = 0u32;
++        for i in 0..4 {
++            let ai = (a >> (8 * i)) & 0xff;
++            let bi = (b >> (8 * i)) & 0xff;
++            let s = ai + bi + carry;
++            let ci = s & 0xff;
++            carry = s >> 8;
++            row[i] = F::from_u32(ai);
++            row[4 + i] = F::from_u32(bi);
++            row[8 + i] = F::from_u32(ci);
++            row[12 + i] = F::from_u32(carry);
++            range.add_count(ai);
++            range.add_count(bi);
++            range.add_count(ci);
++        }
++    }
++    let alu_trace = RowMajorMatrix::new(vals, ALU_W);
++    let range_trace = range.generate_trace::<F>();
++    let airs: Vec<AirRef<SC>> = vec![Arc::new(AluAir { bus }), Arc::new(range.air)];
++    (airs, vec![alu_trace, range_trace])
++}
++
++// ---------------------------------------------------------------------------
++// W1: Poseidon2 permutation AIR
++// ---------------------------------------------------------------------------
++
++fn w1_traces(log_rows: usize, rng: &mut StdRng) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>) {
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let n = 1usize << log_rows;
++    let inputs: Vec<[F; 16]> = (0..n)
++        .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++        .collect();
++    let trace = chip.generate_trace(inputs);
++    let airs: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    (airs, vec![trace])
++}
++
++
++// ---------------------------------------------------------------------------
++// W3a: BLS12-381 Fr multiply, OpenVM mod-builder FieldExpr (32 x 8-bit limbs) + var range checker
++// ---------------------------------------------------------------------------
++
++fn w3_traces(log_rows: usize) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>) {
++    use num_bigint::BigUint;
++    use openvm_circuit_primitives::{
++        var_range::{VariableRangeCheckerBus, VariableRangeCheckerChip},
++        TraceSubRowGenerator,
++    };
++    use openvm_mod_circuit_builder::{ExprBuilder, ExprBuilderConfig, FieldExpr};
++    use openvm_stark_backend::p3_maybe_rayon::prelude::*;
++    let r = BigUint::parse_bytes(
++        b"73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
++        16,
++    )
++    .unwrap();
++    let range_checker = Arc::new(VariableRangeCheckerChip::new(VariableRangeCheckerBus::new(
++        1, 17,
++    )));
++    let config = ExprBuilderConfig {
++        modulus: r.clone(),
++        limb_bits: 8,
++        num_limbs: 32,
++    };
++    let builder = ExprBuilder::new(config, range_checker.range_max_bits());
++    let builder = std::rc::Rc::new(std::cell::RefCell::new(builder));
++    let mut x1 = ExprBuilder::new_input(builder.clone());
++    let mut x2 = ExprBuilder::new_input(builder.clone());
++    let mut x3 = &mut x1 * &mut x2;
++    x3.save();
++    let b = builder.borrow().clone();
++    let expr = FieldExpr::new(b, range_checker.bus(), false);
++    let width = BaseAir::<F>::width(&expr);
++    let n = 1usize << log_rows;
++    let mut rng = StdRng::seed_from_u64(7);
++    let inputs: Vec<(BigUint, BigUint)> = (0..n)
++        .map(|_| {
++            let a: Vec<u32> = (0..8).map(|_| rng.next_u32()).collect();
++            let b: Vec<u32> = (0..8).map(|_| rng.next_u32()).collect();
++            (BigUint::new(a) % &r, BigUint::new(b) % &r)
++        })
++        .collect();
++    let mut vals = F::zero_vec(n * width);
++    vals.par_chunks_mut(width)
++        .zip(inputs.into_par_iter())
++        .for_each(|(row, (a, b))| {
++            expr.generate_subrow((range_checker.as_ref(), vec![a, b], vec![]), row);
++        });
++    let trace = RowMajorMatrix::new(vals, width);
++    let range_trace = range_checker.generate_trace::<F>();
++    let airs: Vec<AirRef<SC>> = vec![Arc::new(expr), Arc::new(range_checker.air)];
++    (airs, vec![trace, range_trace])
++}
++
++/// Generic leaf: the W1 Poseidon2 AIR plus the other bench chips (ALU, byte range table,
++/// Fr-multiply FieldExpr, variable range checker) in one verifying key, with only the Poseidon2
++/// trace present. Stands in for a general-purpose leaf configuration that every program shares,
++/// against the program-specialized W1 leaf whose key holds only the chip the program uses.
++fn w1gen_traces(log_rows: usize, rng: &mut StdRng) -> (Vec<AirRef<SC>>, Vec<RowMajorMatrix<F>>) {
++    let (mut airs, traces) = w1_traces(log_rows, rng);
++    // Absent AIRs only (no trace). Tables with preprocessed columns are left out: with absent
++    // preprocessed AIRs in the child key, the node proof failed to verify (see RESULTS.md).
++    let (a2, _) = w2_traces(0, rng);
++    let (a3, _) = w3_traces(0);
++    airs.push(a2[0].clone());
++    airs.push(a3[0].clone());
++    (airs, traces)
++}
++
++fn app_params() -> SystemParams {
++    app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT)
++}
++
++fn params_json(p: &SystemParams) -> Value {
++    json!({
++        "log_blowup": p.log_blowup,
++        "l_skip": p.l_skip,
++        "n_stack": p.n_stack,
++        "w_stack": p.w_stack,
++        "max_constraint_degree": p.max_constraint_degree,
++        "debug": format!("{:?}", p),
++    })
++}
++
++// ---------------------------------------------------------------------------
++// leaf proving (generic over CPU / GPU engine)
++// ---------------------------------------------------------------------------
++
++struct LeafOut {
++    json: Value,
++    vk: MultiStarkVerifyingKey<SC>,
++    proofs: Vec<Proof<SC>>,
++}
++
++/// Per-engine knobs. GPU: `SB_ZC_SAVE=0|1` overrides `zerocheck_save_memory` (default in
++/// stark-backend: true when log_blowup == 1, i.e. for app params).
++trait Tune {
++    fn tune(&mut self) -> Value;
++}
++impl Tune for BabyBearPoseidon2CpuEngine<DuplexSponge> {
++    fn tune(&mut self) -> Value {
++        json!(null)
++    }
++}
++#[cfg(feature = "cuda")]
++impl Tune for openvm_cuda_backend::BabyBearPoseidon2GpuEngine {
++    fn tune(&mut self) -> Value {
++        let cfg = self.device_mut().prover_config_mut();
++        if let Ok(v) = std::env::var("SB_ZC_SAVE") {
++            cfg.zerocheck_save_memory = v == "1";
++        }
++        json!({"zerocheck_save_memory": cfg.zerocheck_save_memory,
++               "cache_stacked_matrix": cfg.cache_stacked_matrix,
++               "cache_rs_code_matrix": cfg.cache_rs_code_matrix})
++    }
++}
++
++fn prove_leaf<E: StarkEngine<SC = SC> + Tune>(
++    params: SystemParams,
++    airs: Vec<AirRef<SC>>,
++    traces: Vec<RowMajorMatrix<F>>,
++    reps: usize,
++    keep_proofs: usize,
++) -> LeafOut {
++    let mut engine = E::new(params.clone());
++    let tune = engine.tune();
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let keygen_s = t.elapsed().as_secs_f64();
++
++    let cells: usize = traces.iter().map(|m| Matrix::height(m) * Matrix::width(m)).sum();
++    let shapes: Vec<(usize, usize)> = traces.iter().map(|m| (Matrix::height(m), Matrix::width(m))).collect();
++    let cm: Vec<ColMajorMatrix<F>> = traces
++        .iter()
++        .map(ColMajorMatrix::from_row_major)
++        .collect();
++    drop(traces);
++
++    let mut prove_s = vec![];
++    let mut transport_s = vec![];
++    let mut avg_cores = vec![];
++    let mut gpu_rise = vec![];
++    let mut proofs = vec![];
++    let mut proof_bytes = 0usize;
++    let mut verify_s = 0.0;
++    for rep in 0..reps {
++        let t = Instant::now();
++        let ctx = ProvingContext::new(
++            cm.iter()
++                .enumerate()
++                .map(|(i, m)| {
++                    (
++                        i,
++                        AirProvingContext::simple_no_pis(
++                            engine.device().transport_matrix_to_device(m),
++                        ),
++                    )
++                })
++                .collect(),
++        );
++        transport_s.push(t.elapsed().as_secs_f64());
++        let sampler = GpuSampler::start();
++        let (c0, _) = rusage();
++        let t = Instant::now();
++        let proof = engine.prove(&d_pk, ctx).expect("prove");
++        let dt = t.elapsed().as_secs_f64();
++        let (c1, _) = rusage();
++        let (base, peak) = sampler.finish();
++        gpu_rise.push(peak.saturating_sub(base));
++        prove_s.push(dt);
++        avg_cores.push((c1 - c0) / dt);
++        eprintln!("rep {rep}: prove {dt:.3}s");
++        if rep == 0 {
++            let t = Instant::now();
++            engine.verify(&vk, &proof).expect("verify");
++            verify_s = t.elapsed().as_secs_f64();
++            proof_bytes = proof.encode_to_vec().expect("encode").len();
++        }
++        if proofs.len() < keep_proofs {
++            proofs.push(proof);
++        }
++    }
++    // reps > 1: rep 0 is the warmup, the median is over the rest.
++    let timed: Vec<f64> = if prove_s.len() > 1 {
++        prove_s[1..].to_vec()
++    } else {
++        prove_s.clone()
++    };
++    let med = median(&timed);
++    let (_, maxrss) = rusage();
++    LeafOut {
++        json: json!({
++            "keygen_s": keygen_s,
++            "transport_s": transport_s,
++            "prove_s": prove_s,
++            "prove_median_s": med,
++            "avg_cores": avg_cores,
++            "verify_s": verify_s,
++            "proof_bytes": proof_bytes,
++            "trace_shapes": shapes,
++            "main_cells": cells,
++            "cells_per_s": cells as f64 / med,
++            "gpu_mem_rise_bytes": gpu_rise,
++            "peak_rss_kb": maxrss,
++            "params": params_json(&params),
++            "num_airs_in_vk": airs.len(),
++            "gpu_prover_config": tune,
++            "num_airs_traced": cm.len(),
++        }),
++        vk,
++        proofs,
++    }
++}
++
++// ---------------------------------------------------------------------------
++// node: VerifierSubCircuit::<N> over N child W1 proofs
++// ---------------------------------------------------------------------------
++
++fn prove_node<E: Tune, const N: usize>(
++    child_vk: &MultiStarkVerifyingKey<SC>,
++    proofs: &[Proof<SC>],
++    reps: usize,
++) -> Value
++where
++    E: StarkEngine<SC = SC>,
++    VerifierSubCircuit<N>: VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>> + AggregationSubCircuit,
++    <E::PB as openvm_stark_backend::prover::ProverBackend>::Matrix: Clone,
++{
++    assert_eq!(proofs.len(), N);
++    let params = leaf_params_with_100_bits_security();
++    let mut engine = E::new(params.clone());
++    let tune = engine.tune();
++    let t = Instant::now();
++    let circuit = <VerifierSubCircuit<N> as VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>>>::new(
++        Arc::new(child_vk.clone()),
++        Default::default(),
++    );
++    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
++    let airs = circuit.airs::<SC>();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let keygen_s = t.elapsed().as_secs_f64();
++
++    let mut tracegen_s = vec![];
++    let mut prove_s = vec![];
++    let mut avg_cores = vec![];
++    let mut gpu_rise = vec![];
++    let mut verify_s = 0.0;
++    let mut proof_bytes = 0usize;
++    let mut cells = 0usize;
++    let mut heights: Vec<(usize, usize, usize)> = vec![];
++    for rep in 0..reps {
++        let t = Instant::now();
++        let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++            child_vk,
++            CachedTraceCtx::PcsData(child_pcs.clone()),
++            proofs,
++            engine.device().device_ctx(),
++            default_duplex_sponge_recorder(),
++        );
++        let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
++        tracegen_s.push(t.elapsed().as_secs_f64());
++        if rep == 0 {
++            for (i, m) in ctx.common_main_traces() {
++                cells += m.height() * m.width();
++                heights.push((i, m.height(), m.width()));
++            }
++        }
++        let sampler = GpuSampler::start();
++        let (c0, _) = rusage();
++        let t = Instant::now();
++        let proof = engine.prove(&d_pk, ctx).expect("node prove");
++        let dt = t.elapsed().as_secs_f64();
++        let (c1, _) = rusage();
++        let (base, peak) = sampler.finish();
++        gpu_rise.push(peak.saturating_sub(base));
++        prove_s.push(dt);
++        avg_cores.push((c1 - c0) / dt);
++        eprintln!("node rep {rep}: tracegen {:.3}s prove {dt:.3}s", tracegen_s[rep]);
++        if rep == 0 {
++            let t = Instant::now();
++            engine.verify(&vk, &proof).expect("node verify");
++            verify_s = t.elapsed().as_secs_f64();
++            proof_bytes = proof.encode_to_vec().expect("encode").len();
++        }
++    }
++    let timed_p: Vec<f64> = if reps > 1 { prove_s[1..].to_vec() } else { prove_s.clone() };
++    let timed_t: Vec<f64> = if reps > 1 { tracegen_s[1..].to_vec() } else { tracegen_s.clone() };
++    let (_, maxrss) = rusage();
++    json!({
++        "arity": N,
++        "gpu_prover_config": tune,
++        "num_airs": airs.len(),
++        "keygen_s": keygen_s,
++        "tracegen_s": tracegen_s,
++        "tracegen_median_s": median(&timed_t),
++        "prove_s": prove_s,
++        "prove_median_s": median(&timed_p),
++        "node_median_s": median(&timed_p) + median(&timed_t),
++        "avg_cores": avg_cores,
++        "verify_s": verify_s,
++        "proof_bytes": proof_bytes,
++        "recursion_main_cells": cells,
++        "recursion_traces": heights,
++        "gpu_mem_rise_bytes": gpu_rise,
++        "peak_rss_kb": maxrss,
++        "params": params_json(&params),
++    })
++}
++
++// ---------------------------------------------------------------------------
++
++fn run<E: Tune, const N: usize>(workload: &str, log_rows: usize, reps: usize) -> Value
++where
++    E: StarkEngine<SC = SC>,
++    VerifierSubCircuit<N>: VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>> + AggregationSubCircuit,
++    <E::PB as openvm_stark_backend::prover::ProverBackend>::Matrix: Clone,
++{
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    match workload {
++        "w1" | "w2" | "w3mul" | "w1gen" => {
++            let t = Instant::now();
++            let (airs, traces) = match workload {
++                "w1" => w1_traces(log_rows, &mut rng),
++                "w2" => w2_traces(log_rows, &mut rng),
++                "w1gen" => w1gen_traces(log_rows, &mut rng),
++                _ => w3_traces(log_rows),
++            };
++            let tracegen_s = t.elapsed().as_secs_f64();
++            let mut out = prove_leaf::<E>(app_params(), airs, traces, reps, 0).json;
++            out["tracegen_cpu_s"] = json!(tracegen_s);
++            out
++        }
++        "node" | "nodegen" => {
++            // N child W1 proofs with distinct inputs, proved on the same backend.
++            let mut proofs = vec![];
++            let mut vk = None;
++            let mut leaf_json = json!(null);
++            for i in 0..N {
++                let (airs, traces) = if workload == "node" {
++                    w1_traces(log_rows, &mut rng)
++                } else {
++                    w1gen_traces(log_rows, &mut rng)
++                };
++                let n_airs = airs.len();
++                let mut out = prove_leaf::<E>(app_params(), airs, traces, 1, 1);
++                out.json["child_num_airs"] = json!(n_airs);
++                if i == 0 {
++                    leaf_json = out.json;
++                }
++                vk = Some(out.vk);
++                proofs.extend(out.proofs);
++            }
++            let vk = vk.unwrap();
++            let mut node = prove_node::<E, N>(&vk, &proofs, reps);
++            node["child_leaf"] = leaf_json;
++            node
++        }
++        _ => panic!("unknown workload {workload}"),
++    }
++}
++
++fn dispatch<E: Tune>(workload: &str, log_rows: usize, reps: usize, arity: usize) -> Value
++where
++    E: StarkEngine<SC = SC>,
++    VerifierSubCircuit<2>: VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>> + AggregationSubCircuit,
++    VerifierSubCircuit<4>: VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>> + AggregationSubCircuit,
++    VerifierSubCircuit<8>: VerifierTraceGen<E::PB, SC, EngineDeviceCtx<E>> + AggregationSubCircuit,
++    <E::PB as openvm_stark_backend::prover::ProverBackend>::Matrix: Clone,
++{
++    match arity {
++        2 => run::<E, 2>(workload, log_rows, reps),
++        4 => run::<E, 4>(workload, log_rows, reps),
++        8 => run::<E, 8>(workload, log_rows, reps),
++        _ => panic!("arity must be 2, 4 or 8"),
++    }
++}
++
++fn main() {
++    let args: Vec<String> = std::env::args().collect();
++    if args.len() < 5 {
++        eprintln!("usage: stark-bench-ovm <w1|w2|node> <cpu|gpu> <log_rows> <reps> [arity]");
++        std::process::exit(2);
++    }
++    let workload = args[1].as_str();
++    let backend = args[2].as_str();
++    let log_rows: usize = args[3].parse().unwrap();
++    let reps: usize = args[4].parse().unwrap();
++    let arity: usize = args.get(5).map(|s| s.parse().unwrap()).unwrap_or(2);
++    if std::env::var("SB_TRACE").is_ok() {
++        openvm_stark_sdk::utils::setup_tracing();
++    }
++    let t0 = Instant::now();
++    let mut out = match backend {
++        "cpu" => dispatch::<BabyBearPoseidon2CpuEngine<DuplexSponge>>(workload, log_rows, reps, arity),
++        #[cfg(feature = "cuda")]
++        "gpu" => dispatch::<openvm_cuda_backend::BabyBearPoseidon2GpuEngine>(
++            workload, log_rows, reps, arity,
++        ),
++        _ => panic!("backend {backend} not built"),
++    };
++    out["framework"] = json!("openvm-stark-backend v2.1.0 (a6b4761)");
++    out["workload"] = json!(workload);
++    out["backend"] = json!(backend);
++    out["log_rows"] = json!(log_rows);
++    out["reps"] = json!(reps);
++    out["rayon_threads_env"] = json!(std::env::var("RAYON_NUM_THREADS").ok());
++    out["wall_total_s"] = json!(t0.elapsed().as_secs_f64());
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/stark-bench-ovm/tests/m7_bls_fr.rs b/crates/stark-bench-ovm/tests/m7_bls_fr.rs
+new file mode 100644
+index 0000000..9fda1be
+--- /dev/null
++++ b/crates/stark-bench-ovm/tests/m7_bls_fr.rs
+@@ -0,0 +1,290 @@
++//! M7 tests: the BLS12-381 Fr p3 field, the Midnight Poseidon permutation, the PROPOSAL 3.6
++//! leaf / node / transcript rules, and one small AIR proved and verified with the engine.
++//!
++//! Run: cargo test --release -p stark-bench-ovm --features bls --test m7_bls_fr -- --nocapture
++
++use ff::{Field as FfField, PrimeField as FfPrimeField};
++use midnight_circuits::{
++    hash::poseidon::{constants::PoseidonField, PoseidonChip},
++    instructions::hash::HashCPU,
++};
++use num_bigint::BigUint;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_stark_backend::{
++    codec::{Decode, Encode},
++    hasher::MerkleHasher,
++    p3_field::{Field, PrimeCharacteristicRing, PrimeField, PrimeField32, TwoAdicField},
++    p3_symmetric::Permutation,
++    prover::{ColMajorMatrix, DeviceDataTransporter, AirProvingContext, ProvingContext},
++    proof::Proof,
++    transcript::multi_field::MultiFieldTranscript,
++    AirRef, FiatShamirTranscript, StarkEngine,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_bls12381_poseidon::{
++        cap_fixed, cap_var, fixed_len_hash, pack_words, BabyBearBls12381PoseidonConfig as SC,
++        BabyBearBls12381PoseidonCpuEngine as Eng, Bls12381Fr as Fr, MidnightFq as Fq,
++        MidnightMerkleHasher, MidnightPoseidonFr, Transcript, InnerTranscript,
++    },
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++
++type F = BabyBear;
++
++fn rnd_fq(rng: &mut StdRng) -> Fq {
++    let mut b = [0u8; 64];
++    rng.fill(&mut b[..]);
++    <Fq as ff::FromUniformBytes<64>>::from_uniform_bytes(&b)
++}
++
++fn fq_big(x: &Fq) -> BigUint {
++    BigUint::from_bytes_le(x.to_repr().as_ref())
++}
++
++const R_HEX: &str = "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001";
++
++#[test]
++fn field_matches_ff() {
++    let r = BigUint::parse_bytes(R_HEX.as_bytes(), 16).unwrap();
++    assert_eq!(Fr::order(), r);
++    assert_eq!(Fr::bits(), 255);
++    assert_eq!(Fr::ZERO.0, Fq::ZERO);
++    assert_eq!(Fr::ONE.0, Fq::ONE);
++    assert_eq!(Fr::TWO.0, Fq::ONE.double());
++    assert_eq!(Fr::NEG_ONE.0, -Fq::ONE);
++    assert_eq!(Fr::GENERATOR.0, Fq::MULTIPLICATIVE_GENERATOR);
++    assert_eq!(Fr::TWO_ADICITY as u32, Fq::S);
++    let w = Fr::two_adic_generator(32);
++    assert_eq!(w.0, Fq::ROOT_OF_UNITY);
++    assert_eq!(w.exp_power_of_2(32), Fr::ONE);
++    assert_ne!(w.exp_power_of_2(31), Fr::ONE);
++    assert_eq!(Fr::two_adic_generator(1), Fr::NEG_ONE);
++    let mut rng = StdRng::seed_from_u64(7);
++    for _ in 0..2000 {
++        let (a, b) = (rnd_fq(&mut rng), rnd_fq(&mut rng));
++        let (x, y) = (Fr(a), Fr(b));
++        assert_eq!((x + y).0, a + b);
++        assert_eq!((x - y).0, a - b);
++        assert_eq!((x * y).0, a * b);
++        assert_eq!((-x).0, -a);
++        assert_eq!(x.square().0, a.square());
++        assert_eq!(x.double().0, a.double());
++        assert_eq!((x.halve() + x.halve()).0, a);
++        if !bool::from(a.is_zero()) {
++            assert_eq!(x.inverse().0, a.invert().unwrap());
++            assert_eq!((y / x).0, b * a.invert().unwrap());
++        }
++        assert_eq!(x.as_canonical_biguint(), fq_big(&a));
++        assert_eq!(Fr::from_biguint(fq_big(&a)).unwrap(), x);
++        assert_eq!(Fr::from_biguint(fq_big(&a) + &r).unwrap(), x);
++        assert_eq!(x.cmp(&y), fq_big(&a).cmp(&fq_big(&b)));
++        // serde round trip and canonical rejection
++        let js = serde_json::to_string(&x).unwrap();
++        assert_eq!(serde_json::from_str::<Fr>(&js).unwrap(), x);
++        let u: u128 = rng.random();
++        assert_eq!(Fr::from_u128(u).as_canonical_biguint(), BigUint::from(u));
++        let i: i64 = rng.random();
++        let fi = Fr::from_i64(i);
++        if i < 0 {
++            assert_eq!(fi.as_canonical_biguint(), &r - BigUint::from(i.unsigned_abs()));
++        } else {
++            assert_eq!(fi.as_canonical_biguint(), BigUint::from(i as u64));
++        }
++        let v: Fr = rng.random();
++        assert!(v.as_canonical_biguint() < r);
++    }
++    let mut rb = [0u8; 32];
++    let rbytes = r.to_bytes_le();
++    rb[..rbytes.len()].copy_from_slice(&rbytes);
++    assert!(Fr::from_canonical_bytes(rb).is_none());
++    let js = serde_json::to_string(&rb.to_vec()).unwrap();
++    assert!(serde_json::from_str::<Fr>(&js).is_err());
++    assert_eq!(
++        Fr::from_u64_limbs([u64::MAX; 4]).as_canonical_biguint(),
++        ((BigUint::from(1u8) << 256u32) - 1u8) % &r
++    );
++}
++
++#[test]
++fn packing_constants() {
++    let t = InnerTranscript::new(MidnightPoseidonFr::new());
++    assert_eq!(t.packing_constants(), (8, 5));
++}
++
++/// Independent no-skip Poseidon from midnight-circuits' published constants:
++/// for each round r: add RC[r], S-box (all cells in full rounds, the last cell in partial
++/// rounds), multiply by MDS. Rounds 0..4 and 64..68 are full.
++fn reference_perm(state: &mut [Fq; 3]) {
++    let rc = <Fq as PoseidonField>::ROUND_CONSTANTS;
++    let mds = <Fq as PoseidonField>::MDS;
++    assert_eq!(rc.len(), 68);
++    for (r, k) in rc.iter().enumerate() {
++        for i in 0..3 {
++            state[i] += k[i];
++        }
++        let full = r < 4 || r >= 64;
++        for i in 0..3 {
++            if full || i == 2 {
++                state[i] = state[i].square().square() * state[i];
++            }
++        }
++        let s = *state;
++        for i in 0..3 {
++            state[i] = mds[i][0] * s[0] + mds[i][1] * s[1] + mds[i][2] * s[2];
++        }
++    }
++}
++
++#[test]
++fn permutation_matches_midnight() {
++    let p = MidnightPoseidonFr::new();
++    let fixed: Vec<[Fq; 3]> = vec![
++        [Fq::ZERO, Fq::ZERO, Fq::ZERO],
++        [Fq::from(1u64), Fq::from(2u64), Fq::from(3u64)],
++        [-Fq::ONE, -Fq::ONE, -Fq::ONE],
++        [Fq::ZERO, Fq::ZERO, cap_var(3).0],
++    ];
++    let mut rng = StdRng::seed_from_u64(11);
++    let mut all = fixed.clone();
++    for _ in 0..200 {
++        all.push([rnd_fq(&mut rng), rnd_fq(&mut rng), rnd_fq(&mut rng)]);
++    }
++    for (k, s0) in all.iter().enumerate() {
++        let mut a = *s0;
++        p.permute_ff(&mut a);
++        let mut b = *s0;
++        reference_perm(&mut b);
++        assert_eq!(a, b, "vector {k}");
++        let c = p.permute(s0.map(Fr));
++        assert_eq!(c.map(|x| x.0), a);
++        if k < fixed.len() {
++            println!("PERM_VECTOR {k}: in {:?} out {:?}", s0, a);
++        }
++    }
++}
++
++#[test]
++fn sponges_match_midnight_and_spec() {
++    let p = MidnightPoseidonFr::new();
++    let mut rng = StdRng::seed_from_u64(13);
++    // u = 0 is Midnight's native fixed-length hash.
++    for l in 0..9usize {
++        let xs: Vec<Fq> = (0..l).map(|_| rnd_fq(&mut rng)).collect();
++        let native = <PoseidonChip<Fq> as HashCPU<Fq, Fq>>::hash(&xs);
++        let ours = fixed_len_hash(&p, 0, &xs.iter().copied().map(Fr).collect::<Vec<_>>());
++        assert_eq!(ours.0, native, "u=0 l={l}");
++        let tagged = fixed_len_hash(&p, 1, &xs.iter().copied().map(Fr).collect::<Vec<_>>());
++        if l > 0 {
++            assert_ne!(tagged, ours);
++        }
++    }
++    assert_eq!(cap_fixed(1, 5).as_canonical_biguint(), BigUint::from(5u8) + (BigUint::from(1u8) << 66u32));
++    assert_eq!(
++        cap_var(3).as_canonical_biguint(),
++        (BigUint::from(1u8) << 64u32) + BigUint::from(3u8) * (BigUint::from(1u8) << 66u32)
++    );
++    // Leaf (u = 1): pack 8 words per Fr, then the fixed-length sponge.
++    let h = MidnightMerkleHasher::new(p.clone());
++    for w in [1usize, 2, 7, 8, 9, 15, 16, 17, 24, 33, 100] {
++        let words: Vec<F> = (0..w).map(|_| F::from_u32(rng.random::<u32>() % F::ORDER_U32)).collect();
++        let packed: Vec<Fr> = words.chunks(8).map(pack_words).collect();
++        assert_eq!(packed.len(), w.div_ceil(8));
++        let expect = fixed_len_hash(&p, 1, &packed);
++        assert_eq!(h.hash_slice(&words)[0], expect, "leaf w={w}");
++        // pack check: sum b_i 2^(31 i)
++        let mut acc = BigUint::from(0u8);
++        for (i, x) in words[..w.min(8)].iter().enumerate() {
++            acc += BigUint::from(x.as_canonical_u32()) << (31 * i);
++        }
++        assert_eq!(packed[0].as_canonical_biguint(), acc);
++    }
++    // Node (u = 2).
++    for _ in 0..20 {
++        let (a, b) = (Fr(rnd_fq(&mut rng)), Fr(rnd_fq(&mut rng)));
++        assert_eq!(h.compress([a], [b])[0], fixed_len_hash(&p, 2, &[a, b]));
++        let mut s = [a.0, b.0, Fq::from(2u64) + Fq::from_u128(2u128 << 66)];
++        p.permute_ff(&mut s);
++        assert_eq!(h.compress([a], [b])[0].0, s[0]);
++    }
++}
++
++#[test]
++fn transcript_rules() {
++    let p = MidnightPoseidonFr::new();
++    // First squeeze of an empty tagged transcript: perm(0, 0, 2^64 + 3 * 2^66), output s_1,
++    // digit b_0 = s_1 mod p.
++    let mut t = Transcript::new(p.clone());
++    let s0 = FiatShamirTranscript::<SC>::sample(&mut t);
++    let st = p.permute([Fr::ZERO, Fr::ZERO, cap_var(3)]);
++    let pbig = BigUint::from(F::ORDER_U32);
++    let s1 = st[1].as_canonical_biguint();
++    assert_eq!(BigUint::from(s0.as_canonical_u32()), &s1 % &pbig);
++    let s0b = FiatShamirTranscript::<SC>::sample(&mut t);
++    assert_eq!(BigUint::from(s0b.as_canonical_u32()), (&s1 / &pbig) % &pbig);
++    // With a zero initial state the transcript equals the stock one; with the tag it differs.
++    let ops = |t: &mut dyn FnMut(u8, u32) -> Option<u32>| {
++        let mut out = vec![];
++        let mut rng = StdRng::seed_from_u64(17);
++        for _ in 0..300 {
++            let op = rng.random::<u8>() % 3;
++            let v = rng.random::<u32>() % F::ORDER_U32;
++            if let Some(x) = t(op, v) {
++                out.push(x);
++            }
++        }
++        out
++    };
++    let run = |mut tr: InnerTranscript| {
++        let mut f = move |op: u8, v: u32| -> Option<u32> {
++            match op {
++                0 => {
++                    FiatShamirTranscript::<SC>::observe(&mut tr, F::from_u32(v));
++                    None
++                }
++                1 => Some(FiatShamirTranscript::<SC>::sample(&mut tr).as_canonical_u32()),
++                _ => {
++                    FiatShamirTranscript::<SC>::observe_commit(&mut tr, [Fr::from_u32(v)]);
++                    None
++                }
++            }
++        };
++        ops(&mut f)
++    };
++    let zero_state = run(InnerTranscript::new_with_sponge_state(p.clone(), [Fr::ZERO; 3]));
++    let stock = run(MultiFieldTranscript::new(p.clone()));
++    assert_eq!(zero_state, stock);
++    let tagged = run(Transcript::new(p.clone()).0);
++    assert_ne!(tagged, stock);
++    assert_eq!(tagged.len(), stock.len());
++}
++
++#[test]
++fn small_air_proves_and_verifies() {
++    let mut rng = StdRng::seed_from_u64(0x5e7);
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let airs: Vec<AirRef<SC>> = vec![chip.air.clone()];
++    let engine = Eng::new(app_params_with_100_bits_security(12));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let inputs: Vec<[F; 16]> = (0..1usize << 8)
++        .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++        .collect();
++    let trace = chip.generate_trace(inputs);
++    let cm = ColMajorMatrix::from_row_major(&trace);
++    let ctx = ProvingContext::new(vec![(
++        0,
++        AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
++    )]);
++    let proof = engine.prove(&d_pk, ctx).expect("prove");
++    engine.verify(&vk, &proof).expect("verify");
++    let bytes = proof.encode_to_vec().unwrap();
++    let back = Proof::<SC>::decode_from_bytes(&bytes).unwrap();
++    engine.verify(&vk, &back).expect("verify decoded");
++    // tampered commitment is rejected
++    let mut bad = back.clone();
++    bad.common_main_commit = [bad.common_main_commit[0] + Fr::ONE];
++    assert!(engine.verify(&vk, &bad).is_err());
++    println!("SMALL_AIR proof bytes {}", bytes.len());
++}
+-- 
+2.56.0
+

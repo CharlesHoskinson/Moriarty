@@ -1,0 +1,498 @@
+From 71bf0f1e2b5c45f41a0811f64924c23edb1b0898 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 18:42:01 -0700
+Subject: [PATCH 11/19] sherlock-lfr: E3 J3 and J4, the L_iface fixture and the
+ full tape
+
+Example iface_fixture: the bench L plus the 4 interface AIRs (43 AIRs,
+12,164 public words) at the OD-19 L set, one key, proofs for the full-V,
+full-P, overflow and missing-R cases. Test j5_gate: j4 runs the tape of
+every case (same shape, same tape, R check, 1,522 exposed words); the
+statements decode equal to the native ones and missing-R is refused;
+j5 proves at the L_Fr set with D3 at the measured key.
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs | 217 +++++++++++++++
+ crates/sherlock-lfr/tests/j5_gate.rs          | 247 ++++++++++++++++++
+ 2 files changed, 464 insertions(+)
+ create mode 100644 crates/sherlock-lfr/examples/iface_fixture.rs
+ create mode 100644 crates/sherlock-lfr/tests/j5_gate.rs
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+new file mode 100644
+index 0000000..c640dc9
+--- /dev/null
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -0,0 +1,217 @@
++//! E3 J3: the `L_iface` fixture. The bench chain of `l_fixture` (two W1 proofs, the node at the
++//! OD-19 internal set), then `L_iface` = the 39 AIRs of `L_cached` plus the 4 interface AIRs of
++//! `iface_l` at `Dims::FULL` (12,164 public words), one key at the OD-19 `L` set, and one proof
++//! per case of `iface::Case` (full-V, full-P, overflow, missing-`R`). Each proof is verified by
++//! the stock verifier, re-read from disk and verified again. Prints one JSON object.
++//!
++//! Usage: `iface_fixture` (directory `$E3_FIXTURE_DIR`, else `~/.cache/e3-iface/fixture`).
++
++use std::{sync::Arc, time::Instant};
++
++use openvm_cpu_backend::CpuBackend;
++use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
++use openvm_recursion_circuit::system::{
++    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
++};
++use openvm_stark_backend::{
++    codec::{Decode, Encode},
++    keygen::types::MultiStarkVerifyingKey,
++    p3_field::PrimeCharacteristicRing,
++    proof::Proof,
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    AirRef, StarkEngine,
++};
++use openvm_stark_sdk::config::{
++    app_params_with_100_bits_security,
++    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
++    baby_bear_poseidon2::{
++        default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
++        DuplexSpongeRecorder,
++    },
++    MAX_APP_LOG_STACKED_HEIGHT,
++};
++use p3_baby_bear::BabyBear;
++use rand::{rngs::StdRng, Rng, SeedableRng};
++use serde_json::json;
++use sherlock_lfr::{
++    fixture::{self, internal_ud, l_ud, NodeSC, LSC},
++    iface::{self, Case, Dims},
++    iface_l,
++};
++
++type F = BabyBear;
++type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
++type RootEng = BabyBearBls12381PoseidonCpuEngine;
++
++fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<Proof<NodeSC>>) {
++    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
++    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
++    let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
++    let engine = Eng::new(app_params_with_100_bits_security(
++        MAX_APP_LOG_STACKED_HEIGHT,
++    ));
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let mut proofs = vec![];
++    for _ in 0..n {
++        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
++            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
++            .collect();
++        let trace = chip.generate_trace(inputs);
++        let cm = ColMajorMatrix::from_row_major(&trace);
++        let ctx = ProvingContext::new(vec![(
++            0,
++            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
++        )]);
++        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
++        engine.verify(&vk, &proof).expect("w1 verify");
++        proofs.push(proof);
++    }
++    (vk, proofs)
++}
++
++fn node_proof(
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    proofs: &[Proof<NodeSC>],
++) -> (MultiStarkVerifyingKey<NodeSC>, Proof<NodeSC>) {
++    let engine = Eng::new(internal_ud());
++    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
++        Arc::new(child_vk.clone()),
++        Default::default(),
++    );
++    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
++    let airs = circuit.airs::<NodeSC>();
++    let (pk, vk) = engine.keygen(&airs);
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(child_pcs),
++        proofs,
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    let proof = engine
++        .prove(
++            &d_pk,
++            ProvingContext::new(ctxs.into_iter().enumerate().collect()),
++        )
++        .expect("node prove");
++    engine.verify(&vk, &proof).expect("node verify");
++    (vk, proof)
++}
++
++pub const CASES: [(Case, &str, u64); 4] = [
++    (Case::FullV, "full_v", 11),
++    (Case::FullP, "full_p", 12),
++    (Case::Overflow, "overflow", 13),
++    (Case::MissingR, "missing_r", 11),
++];
++
++fn main() {
++    let t0 = Instant::now();
++    let d = std::env::var("E3_FIXTURE_DIR")
++        .map(std::path::PathBuf::from)
++        .unwrap_or_else(|_| {
++            std::path::Path::new(&std::env::var("HOME").unwrap()).join(".cache/e3-iface/fixture")
++        });
++    std::fs::create_dir_all(&d).unwrap();
++    let (w1_vk, proofs) = w1_proofs(2, 20);
++    let (node_vk, node_pf) = node_proof(&w1_vk, &proofs);
++    drop(proofs);
++    eprintln!("node proof done {:.1}s", t0.elapsed().as_secs_f64());
++    let node_vk = Arc::new(node_vk);
++
++    let dims = Dims::FULL;
++    let engine = RootEng::new(l_ud(48));
++    let cfg = VerifierConfig {
++        has_cached: true,
++        ..Default::default()
++    };
++    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(
++        node_vk.clone(),
++        cfg,
++    );
++    let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
++    let n_bench = airs.len();
++    airs.extend(iface_l::airs(&dims));
++    let t = Instant::now();
++    let (pk, l_vk) = engine.keygen(&airs);
++    let keygen_s = t.elapsed().as_secs_f64();
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    std::fs::write(
++        d.join(fixture::L_VK),
++        bitcode::serialize(&l_vk).expect("vk serialize"),
++    )
++    .unwrap();
++    let mut cases = vec![];
++    for (case, name, seed) in CASES {
++        let (run, plan) = iface::case_run(&dims, case, seed);
++        let words = run.words();
++        let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
++        let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++            &node_vk,
++            cached,
++            std::slice::from_ref(&node_pf),
++            &(),
++            default_duplex_sponge_recorder(),
++        );
++        assert_eq!(ctxs.len(), n_bench);
++        for (tr, pv) in iface_l::traces::<F>(&dims, &words) {
++            let cm = ColMajorMatrix::from_row_major(&tr);
++            ctxs.push(AirProvingContext::simple(
++                engine.device().transport_matrix_to_device(&cm),
++                pv,
++            ));
++        }
++        let t = Instant::now();
++        let l_proof = engine
++            .prove(
++                &d_pk,
++                ProvingContext::new(ctxs.into_iter().enumerate().collect()),
++            )
++            .expect("L_iface prove");
++        let prove_s = t.elapsed().as_secs_f64();
++        engine.verify(&l_vk, &l_proof).expect("L_iface verify");
++        let bytes = l_proof.encode_to_vec().unwrap();
++        let path = d.join(format!("l_proof_{name}.bin"));
++        std::fs::write(&path, &bytes).unwrap();
++        let back = Proof::<LSC>::decode_from_bytes(&std::fs::read(&path).unwrap()).unwrap();
++        engine.verify(&l_vk, &back).expect("from disk");
++        let lh: Vec<Option<usize>> = back
++            .trace_vdata
++            .iter()
++            .map(|v| v.as_ref().map(|v| v.log_height))
++            .collect();
++        eprintln!("{name}: prove {prove_s:.1}s, {} bytes", bytes.len());
++        cases.push(json!({
++            "case": name,
++            "seed": seed,
++            "entries": run.log.len(),
++            "values": run.log.iter().map(|e| e.values.len()).sum::<usize>(),
++            "perms": run.log.iter().map(|e| iface::perms(e.op, e.param)).sum::<usize>(),
++            "spilled": plan.spilled.len(),
++            "proof_bytes": bytes.len(),
++            "prove_s": prove_s,
++            "log_heights": lh,
++        }));
++    }
++    std::fs::write(
++        d.join(fixture::NODE_VK),
++        bitcode::serialize(&*node_vk).expect("vk serialize"),
++    )
++    .unwrap();
++    let out = json!({
++        "dir": d.display().to_string(),
++        "l_num_airs": l_vk.inner.per_air.len(),
++        "bench_airs": n_bench,
++        "public_words": l_vk.inner.per_air.iter().map(|a| a.params.num_public_values).sum::<usize>(),
++        "l_vk_bytes": std::fs::metadata(d.join(fixture::L_VK)).map(|m| m.len()).unwrap_or(0),
++        "l_pre_hash": format!("{:?}", l_vk.pre_hash),
++        "keygen_s": keygen_s,
++        "cases": cases,
++        "wall_s": t0.elapsed().as_secs_f64(),
++    });
++    std::fs::write(d.join("iface_fixture.json"), serde_json::to_string_pretty(&out).unwrap())
++        .unwrap();
++    println!("{}", serde_json::to_string(&out).unwrap());
++}
+diff --git a/crates/sherlock-lfr/tests/j5_gate.rs b/crates/sherlock-lfr/tests/j5_gate.rs
+new file mode 100644
+index 0000000..73fecb7
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/j5_gate.rs
+@@ -0,0 +1,247 @@
++//! E3 J4 and J5 on the `L_iface` fixture (`examples/iface_fixture.rs`, directory
++//! `$E3_FIXTURE_DIR` or `~/.cache/e3-iface/fixture`): the bench `L` plus the 4 interface AIRs,
++//! 12,164 public words, one `L` key and one proof per case.
++//!
++//! - `j4_tapes_on_l_iface`: per case the stock verifier accepts the `L` proof; the shape is the
++//!   same in every case, so is the tape (one `L_Fr` key); the tape (whole `L` verifier, `R`
++//!   check of plan D-7, the 1,522 exposed words) runs with no failed assertion, except the
++//!   missing-`R` case; the exposed words decode (plan D-9) to the native statement. Op counts and
++//!   the machine shape are printed (MEASURED).
++//! - `j5_gate_at_lfr_params`: keygen at `testing::lfr_params`, D3 at the measured key; the
++//!   full-V and overflow cases prove and the stock verifier accepts with 2 commitments; the
++//!   missing-`R` case is refused by the prover.
++
++use std::{path::PathBuf, time::Instant};
++
++use openvm_stark_backend::{
++    codec::Decode, keygen::types::MultiStarkVerifyingKey, proof::Proof,
++    soundness::SoundnessCalculator, StarkEngine,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use sherlock_lfr::{
++    fixture::LSC,
++    iface::{self, Case, Dims},
++    lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
++    machine::Machine,
++    record::stock_log,
++    tape::Val,
++    testing::{lfr_params, preprocessed_airs, prove_verify_range_keyed, Engine},
++};
++
++const CASES: [(Case, &str, u64); 4] = [
++    (Case::FullV, "full_v", 11),
++    (Case::FullP, "full_p", 12),
++    (Case::Overflow, "overflow", 13),
++    (Case::MissingR, "missing_r", 11),
++];
++
++fn dir() -> PathBuf {
++    std::env::var("E3_FIXTURE_DIR")
++        .map(PathBuf::from)
++        .unwrap_or_else(|_| PathBuf::from(std::env::var("HOME").unwrap()).join(".cache/e3-iface/fixture"))
++}
++
++fn load() -> (MultiStarkVerifyingKey<LSC>, Vec<Proof<LSC>>) {
++    let d = dir();
++    let vk = bitcode::deserialize(&std::fs::read(d.join("l_vk.bitcode")).unwrap()).unwrap();
++    let proofs = CASES
++        .iter()
++        .map(|(_, name, _)| {
++            let b = std::fs::read(d.join(format!("l_proof_{name}.bin"))).unwrap();
++            Proof::<LSC>::decode_from_bytes(&b).unwrap()
++        })
++        .collect();
++    (vk, proofs)
++}
++
++fn build(vk: &MultiStarkVerifyingKey<LSC>, shape: &LShape, proof: &Proof<LSC>) -> Gen {
++    let mut g = Gen::new();
++    let (words, l_pub) = gen_verifier_full(&mut g, vk, shape, proof).expect("pinned shape");
++    gen_r_check(&mut g, &l_pub);
++    g.tape.expose(&words);
++    g
++}
++
++struct Built {
++    g: Gen,
++    mem: Vec<Option<Val>>,
++    failed: Vec<usize>,
++}
++
++fn all_cases() -> (Vec<Built>, LShape) {
++    let (vk, proofs) = load();
++    let dims = Dims::FULL;
++    assert_eq!(
++        vk.inner
++            .per_air
++            .iter()
++            .map(|a| a.params.num_public_values)
++            .sum::<usize>(),
++        dims.words()
++    );
++    let shape = LShape::of(&proofs[0]);
++    let mut out: Vec<Built> = vec![];
++    for ((case, name, seed), proof) in CASES.iter().zip(&proofs) {
++        let (log, ok) = stock_log(&vk, proof);
++        assert!(ok, "{name}: stock verifier accepts L");
++        assert_eq!(LShape::of(proof), shape, "{name}: same shape");
++        let g = build(&vk, &shape, proof);
++        let (mem, failed) = g.tape.execute_checked(&g.inputs);
++        if let Some(b) = out.first() {
++            assert_eq!(
++                format!("{:?}", g.tape.ops),
++                format!("{:?}", b.g.tape.ops),
++                "{name}: same tape"
++            );
++        }
++        let (run, plan) = iface::case_run(&dims, *case, *seed);
++        let m = Machine::new(&g.tape);
++        let pw = m.public_values(&mem).concat();
++        assert_eq!(pw.len(), 1 + dims.words().div_ceil(8));
++        let dec = iface::decode(&dims, &pw);
++        println!(
++            "J4 {name}: {} transcript events; log {} entries, {} values, {} slots; {} spilled to tier E; failed assertions {}; decode {}",
++            log.len(),
++            run.log.len(),
++            run.log.iter().map(|e| e.values.len()).sum::<usize>(),
++            run.log.iter().map(|e| iface::perms(e.op, e.param)).sum::<usize>(),
++            plan.spilled.len(),
++            failed.len(),
++            match &dec {
++                Ok(s) => format!("ok, statement equals native {}", *s == run.statement()),
++                Err(e) => format!("refused: {e}"),
++            }
++        );
++        if *case == Case::MissingR {
++            assert!(!failed.is_empty(), "missing R: tape refuses");
++        } else {
++            assert!(failed.is_empty(), "{name}: tape assertions failed {failed:?}");
++            assert_eq!(dec.unwrap(), run.statement(), "{name}: statement");
++            if *case == Case::Overflow {
++                assert!(!plan.spilled.is_empty());
++            }
++        }
++        out.push(Built { g, mem, failed });
++    }
++    (out, shape)
++}
++
++fn op_counts(g: &Gen) -> String {
++    let mut c = std::collections::BTreeMap::<String, usize>::new();
++    for o in &g.tape.ops {
++        let k = format!("{o:?}");
++        let k = k.split([' ', '{', '(']).next().unwrap().to_string();
++        *c.entry(k).or_default() += 1;
++    }
++    format!("{c:?}")
++}
++
++#[test]
++#[ignore = "needs the L_iface fixture"]
++fn j4_tapes_on_l_iface() {
++    let (b, _) = all_cases();
++    let m = Machine::new(&b[0].g.tape);
++    println!(
++        "J4 tape: {} ops ({}); shape {:?}",
++        b[0].g.tape.ops.len(),
++        op_counts(&b[0].g),
++        m.shape()
++    );
++    let stacked = 1usize << 20;
++    assert!(m.shape().iter().all(|s| s.1 <= stacked));
++}
++
++#[test]
++#[ignore = "needs the L_iface fixture; about an hour at the L_Fr set"]
++fn j5_gate_at_lfr_params() {
++    let (b, _) = all_cases();
++    let m = Machine::new(&b[0].g.tape);
++    let shape_m = m.shape();
++    let cells: usize = shape_m.iter().map(|&(_, h, w, _)| h * w).sum();
++    let pre: usize = shape_m.iter().map(|&(_, h, _, pw)| h * pw).sum();
++    println!(
++        "J5 tape: {} ops ({}); {} AIRs; shape {:?}; main cells {cells} ({:.2} columns of 2^20), preprocessed cells {pre} ({:.2} columns)",
++        b[0].g.tape.ops.len(),
++        op_counts(&b[0].g),
++        shape_m.len(),
++        shape_m,
++        cells as f64 / (1u64 << 20) as f64,
++        pre as f64 / (1u64 << 20) as f64,
++    );
++    let engine = Engine::new(lfr_params());
++    let airs = m.airs();
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    println!("J5 keygen {:.1}s", t.elapsed().as_secs_f64());
++    assert_eq!(preprocessed_airs(&vk), 1);
++    let s = SoundnessCalculator::calculate_from_vk(&vk);
++    let wd = &s.whir_details;
++    let maxc = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.constraints.constraint_idx.len())
++        .max()
++        .unwrap();
++    let maxi = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.interactions.len())
++        .max()
++        .unwrap();
++    let cols: usize = vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.params.width.total_width())
++        .sum();
++    println!(
++        "J5 D3 at the measured L_Fr key ({} AIRs, max {maxc} constraints per AIR, max {maxi} interactions per AIR, {cols} columns, w_stack {}, log stacked height {}): logup {:.4}, gkr sumcheck {:.4}, gkr batching {:.4}, zerocheck {:.4}, constraint batching {:.4}, stacked reduction {:.4}, whir {:.4} (mu {:.4}, fold {:.4}, query {:.4}, shift {:.4}, gamma {:.4}, ood {:.4}); total {:.4}",
++        vk.inner.per_air.len(),
++        vk.inner.params.w_stack,
++        vk.inner.params.log_stacked_height(),
++        s.logup_bits,
++        s.gkr_sumcheck_bits,
++        s.gkr_batching_bits,
++        s.zerocheck_sumcheck_bits,
++        s.constraint_batching_bits,
++        s.stacked_reduction_bits,
++        s.whir_bits,
++        wd.mu_batching_bits,
++        wd.fold_rbr_bits,
++        wd.query_bits,
++        wd.shift_rbr_bits,
++        wd.gamma_batching_bits,
++        wd.ood_rbr_bits,
++        s.total_bits
++    );
++    assert!(s.total_bits >= 100.0);
++    for (i, (_, name, _)) in CASES.iter().enumerate() {
++        if *name == "full_p" {
++            continue; // same tape and key; its plain-Rust run is in J4
++        }
++        let bi = &b[i];
++        let t = Instant::now();
++        let o = prove_verify_range_keyed(
++            &engine,
++            &pk,
++            &vk,
++            &airs,
++            m.traces(&bi.mem),
++            m.public_values(&bi.mem),
++        );
++        println!(
++            "J5 {name} at the L_Fr set {:.1}s (failed tape assertions {}): {o:?}",
++            t.elapsed().as_secs_f64(),
++            bi.failed.len()
++        );
++        if bi.failed.is_empty() {
++            assert!(o.accepted(), "{name} refused");
++            assert_eq!(o.commits(), Some(2));
++            let _: Vec<Fr> = m.public_values(&bi.mem).concat();
++        } else {
++            assert!(!o.accepted(), "{name} accepted");
++        }
++    }
++}
+-- 
+2.56.0
+

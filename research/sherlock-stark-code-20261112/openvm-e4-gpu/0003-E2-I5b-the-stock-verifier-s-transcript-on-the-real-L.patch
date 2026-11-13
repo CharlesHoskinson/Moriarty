@@ -1,0 +1,137 @@
+From 96a1897f971b10b69333c7d579879b9778a9dd7f Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 09:28:12 -0700
+Subject: [PATCH 03/12] E2 I5b: the stock verifier's transcript on the real L
+ proof replayed on the tape, equal samples, proved on the machine AIRs
+
+---
+ crates/sherlock-lfr/tests/i5_l_transcript.rs | 117 +++++++++++++++++++
+ 1 file changed, 117 insertions(+)
+ create mode 100644 crates/sherlock-lfr/tests/i5_l_transcript.rs
+
+diff --git a/crates/sherlock-lfr/tests/i5_l_transcript.rs b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+new file mode 100644
+index 0000000..3548c4b
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+@@ -0,0 +1,117 @@
++//! I5b: the full transcript of the stock verifier on the real `L` proof, replayed on the tape.
++//!
++//! A recording wrapper around the stock `L` transcript logs every observe, commitment observe
++//! and sample while `verifier::verify` accepts the fixture. The log drives [`TapeTranscript`]
++//! (observed values as tape inputs); every sample on the tape equals the stock sample. The op
++//! counts of the `L` transcript are printed (MEASURED), and the tape proves on the machine AIRs
++//! with the stock verifier. Ignored by default: needs the fixture.
++
++use openvm_stark_backend::{verifier::verify, FiatShamirTranscript, StarkEngine};
++use openvm_stark_sdk::config::{
++    baby_bear_bls12381_poseidon::{
++        default_transcript, BabyBearBls12381PoseidonConfig, BabyBearBls12381PoseidonCpuEngine,
++        Bls12381Fr, Transcript,
++    },
++    bls12381_fr_poseidon::U_TRANSCRIPT,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::PrimeField32;
++use sherlock_lfr::{
++    fixture::{self, l_ud},
++    machine::Machine,
++    tape::{Op, Tape, Val, ValKind},
++    testing::{prove_verify_range, small_params},
++    transcript::TapeTranscript,
++};
++
++type Lsc = BabyBearBls12381PoseidonConfig;
++
++#[derive(Clone, Debug)]
++enum Ev {
++    Obs(BabyBear),
++    Commit(Bls12381Fr),
++    Sample(BabyBear),
++}
++
++#[derive(Clone)]
++struct Rec {
++    inner: Transcript,
++    log: std::sync::Arc<std::sync::Mutex<Vec<Ev>>>,
++}
++
++impl FiatShamirTranscript<Lsc> for Rec {
++    fn observe(&mut self, v: BabyBear) {
++        self.log.lock().unwrap().push(Ev::Obs(v));
++        FiatShamirTranscript::<Lsc>::observe(&mut self.inner, v);
++    }
++    fn sample(&mut self) -> BabyBear {
++        let v = FiatShamirTranscript::<Lsc>::sample(&mut self.inner);
++        self.log.lock().unwrap().push(Ev::Sample(v));
++        v
++    }
++    fn observe_commit(&mut self, d: [Bls12381Fr; 1]) {
++        self.log.lock().unwrap().push(Ev::Commit(d[0]));
++        FiatShamirTranscript::<Lsc>::observe_commit(&mut self.inner, d);
++    }
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i5_l_transcript_on_tape() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_ud(48));
++    let mut rec = Rec {
++        inner: default_transcript(),
++        log: Default::default(),
++    };
++    verify(engine.config(), &fx.l_vk, &fx.l_proof, &mut rec).expect("L verifies");
++    let log = rec.log.lock().unwrap().clone();
++
++    let mut tape = Tape::default();
++    let mut tt = TapeTranscript::new(&mut tape, U_TRANSCRIPT);
++    let mut inputs = vec![];
++    let mut checks = vec![];
++    let (mut n_obs, mut n_commit, mut n_sample) = (0usize, 0usize, 0usize);
++    for e in &log {
++        match e {
++            Ev::Obs(v) => {
++                let a = tape.input(ValKind::Bb);
++                inputs.push(Val::Bb([v.as_canonical_u32() as u64, 0, 0, 0]));
++                tt.observe(&mut tape, a);
++                n_obs += 1;
++            }
++            Ev::Commit(d) => {
++                let a = tape.fr_input();
++                inputs.push(Val::Fr(*d));
++                tt.observe_commit(&mut tape, a);
++                n_commit += 1;
++            }
++            Ev::Sample(v) => {
++                checks.push((tt.sample(&mut tape), v.as_canonical_u32() as u64));
++                n_sample += 1;
++            }
++        }
++    }
++    let mem = tape.execute_vals(&inputs);
++    for (i, (a, want)) in checks.iter().enumerate() {
++        assert_eq!(mem[*a as usize].unwrap().bb()[0], *want, "sample {i}");
++    }
++    let count = |f: fn(&Op) -> bool| tape.ops.iter().filter(|o| f(o)).count();
++    let perms = count(|o| matches!(o, Op::Perm { .. }));
++    let packs = count(|o| matches!(o, Op::Pack { .. }));
++    let splits = count(|o| matches!(o, Op::Split { .. }));
++    println!(
++        "I5b L transcript: {} events: {n_obs} observes, {n_commit} commitment observes, {n_sample} samples; all samples equal on the tape; tape ops: {perms} Perm, {packs} Pack, {splits} Split; machine shape {:?}",
++        log.len(),
++        Machine::new(&tape).shape()
++    );
++    // Prove the transcript tape of the real L verification on the machine AIRs.
++    let m = Machine::new(&tape);
++    let t = std::time::Instant::now();
++    let (o, _) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
++    println!(
++        "I5b prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(o.accepted(), "L transcript tape refused: {o:?}");
++}
+-- 
+2.56.0
+

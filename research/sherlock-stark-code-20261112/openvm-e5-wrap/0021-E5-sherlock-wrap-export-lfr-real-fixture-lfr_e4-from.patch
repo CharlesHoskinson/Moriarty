@@ -1,0 +1,189 @@
+From 8ce7774f80d8d511adb13b18da8dc15e9962e13e Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:14:33 -0700
+Subject: [PATCH 21/24] E5: sherlock-wrap-export lfr-real fixture (lfr_e4: from
+ the E4 key cache and CPU-baseline proof of the E2 I10 tape, stock verifier
+ accepts, widths 33 and 10; lfr_real: the same with a new keygen and prove)
+
+---
+ Cargo.lock                                    |  2 +
+ crates/sherlock-wrap-export/Cargo.toml        |  5 ++
+ .../sherlock-wrap-export/examples/lfr_e4.rs   | 48 ++++++++++++
+ .../sherlock-wrap-export/examples/lfr_real.rs | 77 +++++++++++++++++++
+ 4 files changed, 132 insertions(+)
+ create mode 100644 crates/sherlock-wrap-export/examples/lfr_e4.rs
+ create mode 100644 crates/sherlock-wrap-export/examples/lfr_real.rs
+
+diff --git a/Cargo.lock b/Cargo.lock
+index ecb1e9d..f69776f 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -7659,10 +7659,12 @@ dependencies = [
+ name = "sherlock-wrap-export"
+ version = "2.1.0"
+ dependencies = [
++ "bitcode",
+  "hex",
+  "openvm-stark-backend",
+  "openvm-stark-sdk",
+  "serde_json",
++ "sherlock-lfr",
+ ]
+ 
+ [[package]]
+diff --git a/crates/sherlock-wrap-export/Cargo.toml b/crates/sherlock-wrap-export/Cargo.toml
+index f3f6b92..e1ae934 100644
+--- a/crates/sherlock-wrap-export/Cargo.toml
++++ b/crates/sherlock-wrap-export/Cargo.toml
+@@ -12,6 +12,11 @@ openvm-stark-sdk = { workspace = true, features = ["cpu-backend", "bls12381-fr-p
+ serde_json = { workspace = true }
+ hex = { workspace = true, features = ["std"] }
+ 
++[dev-dependencies]
++# the lfr-real fixture: the E2 I10 L_Fr proof
++sherlock-lfr = { path = "../sherlock-lfr" }
++bitcode = { workspace = true }
++
+ [features]
+ default = ["parallel"]
+ parallel = [
+diff --git a/crates/sherlock-wrap-export/examples/lfr_e4.rs b/crates/sherlock-wrap-export/examples/lfr_e4.rs
+new file mode 100644
+index 0000000..71bc70d
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/lfr_e4.rs
+@@ -0,0 +1,48 @@
++//! Writes the E5 fixture `lfr-real` (`wrapin` v1) from an existing `L_Fr` proof of the E2 I10
++//! tape (no new prove): the proving key cache and a proof written by the E4 profile harness at
++//! the unchanged tree (openvm c4bd312), read only. The stock verifier must accept the pair.
++//! usage: lfr_e4 <pk.bitcode> <proof.bin>
++use std::{fs, path::PathBuf, time::Instant};
++
++use openvm_stark_backend::{
++    codec::Decode, keygen::types::MultiStarkProvingKey, proof::Proof, StarkEngine,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381FrPoseidonConfig as SC;
++use sherlock_lfr::testing::{lfr_params, Engine};
++use sherlock_wrap_export::export;
++
++fn main() {
++    let a: Vec<String> = std::env::args().collect();
++    let dir = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    let t = Instant::now();
++    let pk: MultiStarkProvingKey<SC> =
++        bitcode::deserialize(&fs::read(&a[1]).unwrap()).expect("pk cache");
++    let vk = pk.get_vk();
++    drop(pk);
++    let proof = Proof::<SC>::decode_from_bytes(&fs::read(&a[2]).unwrap()).expect("proof");
++    let engine = Engine::new(lfr_params());
++    let doc = export("lfr-real", engine.config(), &vk, &proof);
++    assert!(
++        doc["stock_verdict"].as_bool().unwrap(),
++        "stock verifier refuses the pair"
++    );
++    let path = dir.join("lfr-real.json");
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!(
++        "E5EXPORT lfr-real (from {} and {}): {:.1} s, commitments {}, widths {:?}, log events {}, file {}",
++        a[1],
++        a[2],
++        t.elapsed().as_secs_f64(),
++        proof.stacking_proof.stacking_openings.len(),
++        proof
++            .stacking_proof
++            .stacking_openings
++            .iter()
++            .map(|v| v.len())
++            .collect::<Vec<_>>(),
++        doc["log"].as_array().unwrap().len(),
++        path.display()
++    );
++}
+diff --git a/crates/sherlock-wrap-export/examples/lfr_real.rs b/crates/sherlock-wrap-export/examples/lfr_real.rs
+new file mode 100644
+index 0000000..29344f3
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/lfr_real.rs
+@@ -0,0 +1,77 @@
++//! Writes the E5 fixture `lfr-real` (`wrapin` v1): the E2 I10 `L_Fr` proof of the whole `L`
++//! verifier on the real bench `L` proof, at the `L_Fr` parameter set (`testing::lfr_params`),
++//! with the D-2 public word (the `L` vk pre-hash). This is the shape the wrap is keyed on.
++//! usage: cargo run --release -p sherlock-wrap-export --example lfr_real
++use std::{fs, path::PathBuf, time::Instant};
++
++use openvm_stark_backend::{
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    StarkEngine,
++};
++use sherlock_lfr::{
++    fixture,
++    lverify::{gen_verifier, Gen, LShape},
++    machine::Machine,
++    record::stock_log,
++    testing::{lfr_params, range_trace, Engine},
++};
++use sherlock_wrap_export::export;
++
++fn main() {
++    let dir = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    fs::create_dir_all(&dir).unwrap();
++    let fx = fixture::load(&fixture::dir()).expect("E2 fixture");
++    let (_, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let mut g = Gen::new();
++    let words = gen_verifier(&mut g, &fx.l_vk, &shape, &fx.l_proof).expect("pinned shape");
++    for w in words {
++        g.tape.public(w);
++    }
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed");
++    let m = Machine::new(&g.tape);
++    let engine = Engine::new(lfr_params());
++    let airs = m.airs();
++    let t = Instant::now();
++    let (pk, vk) = engine.keygen(&airs);
++    let keygen_s = t.elapsed().as_secs_f64();
++    let mut traces = m.traces(&mem);
++    traces.push(range_trace(&pk, &airs, &traces));
++    let pis = m.public_values(&mem);
++    assert_eq!(pis.len(), traces.len());
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let ctx = ProvingContext::new(
++        traces
++            .iter()
++            .enumerate()
++            .map(|(i, t)| {
++                let cm = ColMajorMatrix::from_row_major(t);
++                (
++                    i,
++                    AirProvingContext::simple(
++                        engine.device().transport_matrix_to_device(&cm),
++                        pis[i].clone(),
++                    ),
++                )
++            })
++            .collect(),
++    );
++    let t = Instant::now();
++    let proof = engine.prove(&d_pk, ctx).expect("L_Fr prove");
++    let prove_s = t.elapsed().as_secs_f64();
++    let doc = export("lfr-real", engine.config(), &vk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap());
++    let path = dir.join("lfr-real.json");
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!(
++        "E5EXPORT lfr-real: keygen {keygen_s:.1} s, prove {prove_s:.1} s, commitments {}, widths {:?}, log events {}, file {}",
++        proof.stacking_proof.stacking_openings.len(),
++        proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
++        doc["log"].as_array().unwrap().len(),
++        path.display()
++    );
++}
+-- 
+2.56.0
+

@@ -1,0 +1,73 @@
+From 1ba98abf619d141aaf6b2a12999f8d023ce8c560 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 05:44:09 -0700
+Subject: [PATCH] FP-8 units: N3 reference key in the bitcode check, ladder
+ stage log, notes merged into units.json
+
+---
+ crates/sherlock-wrap-export/examples/fp8_units.rs | 10 ++++++++--
+ crates/stark-bench-ovm/examples/fp8_units_gen.rs  | 11 +++++++++++
+ 2 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/fp8_units.rs b/crates/sherlock-wrap-export/examples/fp8_units.rs
+index f251a7614ba5cdb21051248ec1fde8e8a1e037b0..7ab846833be211473bfea4cb7c3b9b7a0634c1c7 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_units.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_units.rs
+@@ -7,7 +7,7 @@
+ //! re-runs the G1 key check with the `sherlock_lfr::frozen` crate (INTERNAL, and the 3,300-column
+ //! copy, FOR OWNER CONFIRMATION), and records the vk bitcode bytes and sha256.
+ //!
+-//! usage: fp8_units DIR   (reads DIR/gen.json and DIR/*_vk.json, writes DIR/units.json)
++//! usage: fp8_units DIR   (reads DIR/gen.json, DIR/*_vk.json and optional DIR/notes.json, writes DIR/units.json)
+ use std::{fs, path::PathBuf};
+ 
+ use openvm_stark_backend::keygen::types::MultiStarkVerifyingKey;
+@@ -66,6 +66,12 @@ fn main() {
+             out.last().unwrap()["g1_internal"], out.last().unwrap()["g1_internal_cols3300"]);
+     }
+     gen["units"] = json!(out);
+-    gen["labels"] = json!("every key quantity, verdict, time and height MEASURED; role N3 and the 3,300-column bound FOR OWNER CONFIRMATION");
++    gen["labels"] = json!("key quantities, verdicts and times MEASURED; role N3 and the 3,300-column bound FOR OWNER CONFIRMATION; see notes for what was not measured");
++    if let Ok(n) = fs::read(dir.join("notes.json")) {
++        let n: Value = serde_json::from_slice(&n).unwrap();
++        for (k, v) in n.as_object().unwrap() {
++            gen[k.as_str()] = v.clone();
++        }
++    }
+     fs::write(dir.join("units.json"), serde_json::to_string_pretty(&gen).unwrap()).unwrap();
+ }
+diff --git a/crates/stark-bench-ovm/examples/fp8_units_gen.rs b/crates/stark-bench-ovm/examples/fp8_units_gen.rs
+index 16b17b2704de6335c5d136c67266f3663601d133..5611a7f1006f6bc502a0b63b3217d4045b9a114e 100644
+--- a/crates/stark-bench-ovm/examples/fp8_units_gen.rs
++++ b/crates/stark-bench-ovm/examples/fp8_units_gen.rs
+@@ -618,6 +618,13 @@ fn main() {
+     }
+     eprintln!("ladder keyed {:.1}s", t0.elapsed().as_secs_f64());
+     let n3_rec = json!({"pre_hash": format!("{:?}", n3_vk.pre_hash), "shape": shape_json(&frozen::shape(&n3_vk))});
++    // reference key for the step-2 bitcode check (fp8_keyset fixpoint serialises it directly)
++    fs::write(out.join("n3_vk.json"), serde_json::to_vec(&n3_vk).unwrap()).unwrap();
++    keys.push({
++        let mut r = key_record("N3 reference (child key; fp8_keyset fixpoint depth 3)", &frozen::INTERNAL, "accepted", &n3_vk, 0.0);
++        r["file"] = json!("n3_vk.json");
++        r
++    });
+ 
+     // base unit (no work AIRs): KeyBind(N3) + VerifierSubCircuit<1> over N3
+     let unit_engine = Eng::new(frozen::INTERNAL.params());
+@@ -677,9 +684,13 @@ fn main() {
+             r.expect("bound verify");
+             p
+         };
++        eprintln!("ladder prove leaf_p");
+         let leaf_p = pr(&|| bound_prove(&lc.circuit, &lc.role, &lc.engine, &lc.pk, &lc.vk, &app_vk, std::slice::from_ref(&app_p), vec![]));
++        eprintln!("ladder prove n1_p");
+         let n1_p = pr(&|| bound_prove(&c1.circuit, &c1.role, &c1.engine, &c1.pk, &c1.vk, &lc.vk, &[leaf_p.clone(), leaf_p.clone()], vec![]));
++        eprintln!("ladder prove n2_p");
+         let n2_p = pr(&|| bound_prove(&c2.circuit, &c2.role, &c2.engine, &c2.pk, &c2.vk, &c1.vk, &[n1_p.clone(), n1_p.clone()], vec![]));
++        eprintln!("ladder prove n3_p");
+         let n3_p = pr(&|| bound_prove(&c3.circuit, &c3.role, &c3.engine, &c3.pk, &c3.vk, &c2.vk, &[n2_p.clone(), n2_p.clone()], vec![]));
+         let child_s = t.elapsed().as_secs_f64();
+         eprintln!("N3 child proof {child_s:.1}s");
+-- 
+2.56.0
+

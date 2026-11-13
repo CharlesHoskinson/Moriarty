@@ -1,0 +1,647 @@
+From e43c763cc0326a2a682214e9402b4a6e66331c96 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 11:52:11 -0700
+Subject: [PATCH 06/24] E2 I7: tape generator part 2 (batched zerocheck: mu,
+ univariate and multilinear rounds, eq_3b, eq_ns, eq_sharp_ns, column
+ openings, the DAG of all 39 L AIRs, interaction evaluations, final claim); on
+ the real L proof 16,975 transcript events equal the stock record and the tape
+ proves; test w_stack 128
+
+---
+ crates/sherlock-lfr/src/lverify.rs    | 454 ++++++++++++++++++++++++++
+ crates/sherlock-lfr/src/testing.rs    |   4 +-
+ crates/sherlock-lfr/tests/i7_part2.rs | 138 ++++++++
+ 3 files changed, 594 insertions(+), 2 deletions(-)
+ create mode 100644 crates/sherlock-lfr/tests/i7_part2.rs
+
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index b6fc826..04c0bb5 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -434,3 +434,457 @@ pub fn is_bb(x: [u64; 4], v: BabyBear) -> bool {
+     x == [v.as_canonical_u32() as u64, 0, 0, 0]
+ }
+ 
++
++// ==========================================================================================
++// I7: part 2, zerocheck and constraint batching (batch_constraints.rs steps 4 to 9).
++// ==========================================================================================
++
++/// The tape values of part 2 that the later stages read.
++#[derive(Clone, Debug)]
++pub struct Part2 {
++    /// `r_0, r_1, .., r_{n_max}`.
++    pub rs: Vec<Addr>,
++    /// Per present trace (trace order), per part (common main first, then preprocessed and
++    /// cached, as in the proof), the openings `(claim, claim_rot)`; `claim_rot` is the constant
++    /// 0 when the AIR does not need rotation.
++    pub openings: Vec<Vec<Vec<(Addr, Addr)>>>,
++    pub n_max: usize,
++}
++
++impl Gen {
++    pub fn neg(&mut self, a: Addr) -> Addr {
++        let z = self.kbb(0);
++        self.sub(z, a)
++    }
++    /// `x^(2^k)` for `k = 0..n` (`exp_powers_of_2`).
++    pub fn pow2s(&mut self, x: Addr, n: usize) -> Vec<Addr> {
++        let mut v = vec![x];
++        while v.len() < n {
++            let l = *v.last().unwrap();
++            v.push(self.mul(l, l));
++        }
++        v.truncate(n);
++        v
++    }
++    /// `x^e` by squaring (e > 0).
++    pub fn pow(&mut self, x: Addr, e: u64) -> Addr {
++        assert!(e > 0);
++        let mut acc: Option<Addr> = None;
++        let mut base = x;
++        let mut e = e;
++        while e > 0 {
++            if e & 1 == 1 {
++                acc = Some(match acc {
++                    None => base,
++                    Some(a) => self.mul(a, base),
++                });
++            }
++            e >>= 1;
++            if e > 0 {
++                base = self.mul(base, base);
++            }
++        }
++        acc.unwrap()
++    }
++    /// `eval_eq_uni(l_skip, x, y)`.
++    pub fn eq_uni(&mut self, l_skip: usize, x: Addr, y: Addr) -> Addr {
++        let one = self.kbb(1);
++        let xs = self.pow2s(x, l_skip);
++        let ys = self.pow2s(y, l_skip);
++        let mut res = one;
++        for (xp, yp) in xs.into_iter().zip(ys) {
++            let s = self.add(xp, yp);
++            let a = self.mul(s, res);
++            let xm = self.sub(xp, one);
++            let ym = self.sub(yp, one);
++            let b = self.mul(xm, ym);
++            res = self.add(a, b);
++        }
++        let h = BabyBear::ONE.halve().exp_u64(l_skip as u64);
++        let k = self.kbb(h.as_canonical_u32() as u64);
++        self.mul(res, k)
++    }
++    /// `progression_exp_2(m, l)` = `1 + m + .. + m^(2^l - 1)`.
++    fn progression_exp_2(&mut self, m: Addr, l: usize) -> Addr {
++        let one = self.kbb(1);
++        let (mut pow, mut sum) = (m, one);
++        for _ in 0..l {
++            let t = self.add(one, pow);
++            sum = self.mul(sum, t);
++            pow = self.mul(pow, pow);
++        }
++        sum
++    }
++    /// `horner_eval` of coefficient addresses at `x`.
++    pub fn horner(&mut self, coeffs: &[Addr], x: Addr) -> Addr {
++        let mut acc = self.kbb(0);
++        for &c in coeffs.iter().rev() {
++            let m = self.mul(acc, x);
++            acc = self.add(m, c);
++        }
++        acc
++    }
++}
++
++fn bb_u64(x: BabyBear) -> u64 {
++    x.as_canonical_u32() as u64
++}
++
++/// Part 2 of the `L` verifier on the tape (`batch_constraints.rs` steps 4 to 9).
++pub fn gen_part2(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &Proof<LSC>,
++    p1: &Part1,
++) -> Result<Part2, ShapeError> {
++    use openvm_stark_backend::air_builders::symbolic::{
++        symbolic_variable::Entry, SymbolicExpressionNode as N,
++    };
++    use p3_field::TwoAdicField;
++
++    let mvk = &vk.inner;
++    let l_skip = mvk.params.l_skip;
++    let order = shape.trace_order();
++    let n_per_trace: Vec<isize> = order
++        .iter()
++        .map(|&i| shape.log_heights[i].unwrap() as isize - l_skip as isize)
++        .collect();
++    let bp = &proof.batch_constraint_proof;
++    let (xi, lambda) = (&p1.xi, p1.lambda);
++
++    // 4. mu and the batched sum claim.
++    let mu = g.sample_ext();
++    let mut sum_claim = g.kbb(0);
++    let mut cur_mu_pow = g.kbb(1);
++    for (&sp, &sq) in p1.num_terms.iter().zip(&p1.den_terms) {
++        let a = g.mul(sp, cur_mu_pow);
++        sum_claim = g.add(sum_claim, a);
++        cur_mu_pow = g.mul(cur_mu_pow, mu);
++        let b = g.mul(sq, cur_mu_pow);
++        sum_claim = g.add(sum_claim, b);
++        cur_mu_pow = g.mul(cur_mu_pow, mu);
++    }
++
++    // 5. Univariate round.
++    let d = mvk.params.max_constraint_degree;
++    if bp.univariate_round_coeffs.len() != (d + 1) * ((1 << l_skip) - 1) + 1 {
++        return Err(ShapeError::Lengths("univariate round"));
++    }
++    let coeffs: Vec<Addr> = bp
++        .univariate_round_coeffs
++        .iter()
++        .map(|&c| g.ef_in(c))
++        .collect();
++    for &c in &coeffs {
++        g.observe_ext(c);
++    }
++    let s_deg = d + 1;
++    let r0 = g.sample_ext();
++    let mut acc = g.kbb(0);
++    for &c in coeffs.iter().step_by(1 << l_skip) {
++        acc = g.add(acc, c);
++    }
++    let n_skip = g.kbb(1 << l_skip);
++    let sum_univ = g.mul(acc, n_skip);
++    g.assert_eq(sum_claim, sum_univ);
++    let mut cur_sum = g.horner(&coeffs, r0);
++    let mut rs = vec![r0];
++
++    // 6. Multilinear rounds.
++    let n_max = n_per_trace.iter().copied().max().unwrap().max(0) as usize;
++    if bp.sumcheck_round_polys.len() != n_max {
++        return Err(ShapeError::Lengths("sumcheck rounds"));
++    }
++    let mut fact = vec![BabyBear::ONE; s_deg + 1];
++    for i in 1..=s_deg {
++        fact[i] = fact[i - 1] * BabyBear::from_usize(i);
++    }
++    for round in 0..n_max {
++        let ev = &bp.sumcheck_round_polys[round];
++        if ev.len() != s_deg {
++            return Err(ShapeError::Lengths("sumcheck round evals"));
++        }
++        let e: Vec<Addr> = ev.iter().map(|&x| g.ef_in(x)).collect();
++        for &a in &e {
++            g.observe_ext(a);
++        }
++        let s0 = g.sub(cur_sum, e[0]);
++        let evals: Vec<Addr> = std::iter::once(s0).chain(e).collect();
++        let r = g.sample_ext();
++        let one = g.kbb(1);
++        let mut pref = vec![one; s_deg + 1];
++        let mut suf = vec![one; s_deg + 1];
++        for i in 0..s_deg {
++            let ki = g.kbb(i as u64);
++            let t = g.sub(r, ki);
++            pref[i + 1] = g.mul(pref[i], t);
++            let kj = g.kbb((s_deg - i) as u64);
++            let u = g.sub(kj, r);
++            suf[i + 1] = g.mul(suf[i], u);
++        }
++        let mut sum = g.kbb(0);
++        for i in 0..=s_deg {
++            let w = bb_u64((fact[i] * fact[s_deg - i]).inverse());
++            let kw = g.kbb(w);
++            let a = g.mul(evals[i], pref[i]);
++            let a = g.mul(a, suf[s_deg - i]);
++            let a = g.mul(a, kw);
++            sum = g.add(sum, a);
++        }
++        cur_sum = sum;
++        rs.push(r);
++    }
++
++    // 7. eq_3b per trace.
++    let n_logup = p1.n_logup;
++    let one = g.kbb(1);
++    let one_minus_xi: Vec<Addr> = xi.iter().map(|&x| g.sub(one, x)).collect();
++    let mut stacked_idx = 0usize;
++    let mut eq_3b_per_trace = vec![];
++    for (t, &n) in n_per_trace.iter().enumerate() {
++        let ni = mvk.per_air[order[t]].symbolic_constraints.interactions.len();
++        let n_lift = n.max(0) as usize;
++        let mut v = vec![];
++        for _ in 0..ni {
++            let mut b_int = stacked_idx >> (l_skip + n_lift);
++            let mut e = one;
++            for j in l_skip + n_lift..l_skip + n_logup {
++                let f = if b_int & 1 == 1 { xi[j] } else { one_minus_xi[j] };
++                e = g.mul(e, f);
++                b_int >>= 1;
++            }
++            stacked_idx += 1 << (l_skip + n_lift);
++            v.push(e);
++        }
++        eq_3b_per_trace.push(v);
++    }
++
++    // 8. eq_ns and eq_sharp_ns.
++    let mut eq_ns = vec![one; n_max + 1];
++    let mut eq_sharp_ns = vec![one; n_max + 1];
++    eq_ns[0] = g.eq_uni(l_skip, xi[0], r0);
++    {
++        // eval_eq_sharp_uni(omega_skip_pows, xi[..l_skip], r0)
++        let mut evals = vec![one];
++        for &x in &xi[..l_skip] {
++            let omx = g.sub(one, x);
++            let mut next = vec![0; evals.len() * 2];
++            for (k, &lo) in evals.iter().enumerate() {
++                next[k] = g.mul(lo, omx);
++                next[k + evals.len()] = g.mul(lo, x);
++            }
++            evals = next;
++        }
++        let omega = BabyBear::two_adic_generator(l_skip);
++        let mut res = g.kbb(0);
++        for (k, &e) in evals.iter().enumerate() {
++            let w = g.kbb(bb_u64(omega.exp_u64(k as u64)));
++            let q = g.eq_uni(l_skip, r0, w);
++            let a = g.mul(q, e);
++            res = g.add(res, a);
++        }
++        eq_sharp_ns[0] = res;
++    }
++    for i in 1..=n_max {
++        let f = g.eq1(xi[l_skip + i - 1], rs[i]);
++        eq_ns[i] = g.mul(eq_ns[i - 1], f);
++        eq_sharp_ns[i] = g.mul(eq_sharp_ns[i - 1], f);
++    }
++    let mut r_rev_prod = rs[n_max];
++    for i in (0..n_max).rev() {
++        eq_ns[i] = g.mul(eq_ns[i], r_rev_prod);
++        eq_sharp_ns[i] = g.mul(eq_sharp_ns[i], r_rev_prod);
++        r_rev_prod = g.mul(r_rev_prod, rs[i]);
++    }
++
++    // 9. Openings, constraint and interaction evaluations.
++    if bp.column_openings.len() != order.len() {
++        return Err(ShapeError::Lengths("column openings"));
++    }
++    let zero = g.kbb(0);
++    let mut openings: Vec<Vec<Vec<(Addr, Addr)>>> = vec![];
++    for (t, air_open) in bp.column_openings.iter().enumerate() {
++        let avk = &mvk.per_air[order[t]];
++        let need_rot = avk.params.need_rot;
++        let w = &avk.params.width;
++        let mut widths = vec![w.common_main];
++        if avk.preprocessed_data.is_some() {
++            widths.push(w.preprocessed.unwrap_or(0));
++        }
++        widths.extend(w.cached_mains.iter().copied());
++        if air_open.len() != widths.len() {
++            return Err(ShapeError::Lengths("opening parts"));
++        }
++        let mut parts = vec![];
++        for (claims, &wd) in air_open.iter().zip(&widths) {
++            if claims.len() != wd * if need_rot { 2 } else { 1 } {
++                return Err(ShapeError::Lengths("openings per part"));
++            }
++            let v: Vec<(Addr, Addr)> = if need_rot {
++                claims
++                    .chunks_exact(2)
++                    .map(|c| (g.ef_in(c[0]), g.ef_in(c[1])))
++                    .collect()
++            } else {
++                claims.iter().map(|&c| (g.ef_in(c), zero)).collect()
++            };
++            parts.push(v);
++        }
++        openings.push(parts);
++    }
++    // Common main openings first, then preprocessed and cached, per trace.
++    for parts in &openings {
++        for &(c, cr) in &parts[0] {
++            g.observe_ext(c);
++            g.observe_ext(cr);
++        }
++    }
++    let mut interactions_evals = vec![];
++    let mut constraints_evals = vec![];
++    for (t, parts) in openings.iter().enumerate() {
++        for part in &parts[1..] {
++            for &(c, cr) in part {
++                g.observe_ext(c);
++                g.observe_ext(cr);
++            }
++        }
++        let air = order[t];
++        let avk = &mvk.per_air[air];
++        let n = n_per_trace[t];
++        let n_lift = n.max(0) as usize;
++        let has_pre = avk.preprocessed_data.is_some();
++        let preprocessed = has_pre.then(|| parts[1].clone());
++        let cached_idx = 1 + has_pre as usize;
++        let mut part_main: Vec<Vec<(Addr, Addr)>> = parts[cached_idx..].to_vec();
++        part_main.push(parts[0].clone());
++
++        // Selectors (evaluator.rs) at the lifted point.
++        let (l, rs_n, norm) = if n < 0 {
++            let r = g.pow(rs[0], 1u64 << (-n) as u32);
++            (
++                l_skip.wrapping_add_signed(n),
++                vec![r],
++                Some(bb_u64(BabyBear::from_usize(1 << n.unsigned_abs()).inverse())),
++            )
++        } else {
++            (l_skip, rs[..=(n as usize)].to_vec(), None)
++        };
++        let omega = BabyBear::two_adic_generator(l);
++        let inv = g.kbb(bb_u64(BabyBear::from_usize(1 << l).inverse()));
++        let mut prod1 = one;
++        let mut prod2 = one;
++        for &x in &rs_n[1..] {
++            let omx = g.sub(one, x);
++            prod1 = g.mul(prod1, omx);
++            prod2 = g.mul(prod2, x);
++        }
++        let pe = g.progression_exp_2(rs_n[0], l);
++        let a = g.mul(inv, pe);
++        let is_first = g.mul(a, prod1);
++        let kom = g.kbb(bb_u64(omega));
++        let r_om = g.mul(rs_n[0], kom);
++        let pe2 = g.progression_exp_2(r_om, l);
++        let a = g.mul(inv, pe2);
++        let is_last = g.mul(a, prod2);
++        let is_trans = g.sub(one, is_last);
++
++        // The DAG (eval_nodes).
++        let dag = &avk.symbolic_constraints.constraints;
++        let mut nodes: Vec<Addr> = Vec::with_capacity(dag.nodes.len());
++        for node in &dag.nodes {
++            let v = match node {
++                N::Variable(var) => {
++                    let pick = |p: &(Addr, Addr), off: usize| if off == 0 { p.0 } else { p.1 };
++                    match var.entry {
++                        Entry::Preprocessed { offset } => {
++                            pick(&preprocessed.as_ref().expect("preprocessed")[var.index], offset)
++                        }
++                        Entry::Main { part_index, offset } => {
++                            pick(&part_main[part_index][var.index], offset)
++                        }
++                        Entry::Public => {
++                            // Public values are tape inputs of part 1 (L has none).
++                            unimplemented!("public values of L")
++                        }
++                        Entry::Challenge => unimplemented!("challenge variable"),
++                    }
++                }
++                N::IsFirstRow => is_first,
++                N::IsLastRow => is_last,
++                N::IsTransition => is_trans,
++                N::Constant(c) => g.kbb(bb_u64(*c)),
++                N::Add {
++                    left_idx,
++                    right_idx,
++                    ..
++                } => g.add(nodes[*left_idx], nodes[*right_idx]),
++                N::Sub {
++                    left_idx,
++                    right_idx,
++                    ..
++                } => g.sub(nodes[*left_idx], nodes[*right_idx]),
++                N::Neg { idx, .. } => g.neg(nodes[*idx]),
++                N::Mul {
++                    left_idx,
++                    right_idx,
++                    ..
++                } => g.mul(nodes[*left_idx], nodes[*right_idx]),
++            };
++            nodes.push(v);
++        }
++        let mut expr = g.kbb(0);
++        let mut lp = one;
++        for &idx in &dag.constraint_idx {
++            let a = g.mul(nodes[idx], lp);
++            expr = g.add(expr, a);
++            lp = g.mul(lp, lambda);
++        }
++        let ce = g.mul(eq_ns[n_lift], expr);
++        constraints_evals.push(ce);
++
++        let mut num = g.kbb(0);
++        let mut den = g.kbb(0);
++        let ints = &avk.symbolic_constraints.interactions;
++        assert_eq!(ints.len(), eq_3b_per_trace[t].len());
++        for (it, &e3) in ints.iter().zip(&eq_3b_per_trace[t]) {
++            let nv = nodes[it.count];
++            let mut acc = g.kbb(0);
++            let mut bp_pow = one;
++            let bus = g.kbb(it.bus_index as u64 + 1);
++            for x in it.message.iter().map(|&i| nodes[i]).chain(std::iter::once(bus)) {
++                let a = g.mul(x, bp_pow);
++                acc = g.add(acc, a);
++                bp_pow = g.mul(bp_pow, p1.beta);
++            }
++            let a = g.mul(e3, nv);
++            num = g.add(num, a);
++            let b = g.mul(e3, acc);
++            den = g.add(den, b);
++        }
++        let num = match norm {
++            Some(k) => {
++                let kk = g.kbb(k);
++                g.mul(num, kk)
++            }
++            None => num,
++        };
++        let a = g.mul(num, eq_sharp_ns[n_lift]);
++        interactions_evals.push(a);
++        let b = g.mul(den, eq_sharp_ns[n_lift]);
++        interactions_evals.push(b);
++    }
++    let mut evaluated = g.kbb(0);
++    let mut mp = one;
++    for &x in interactions_evals.iter().chain(&constraints_evals) {
++        let a = g.mul(x, mp);
++        evaluated = g.add(evaluated, a);
++        mp = g.mul(mp, mu);
++    }
++    g.assert_eq(cur_sum, evaluated);
++    Ok(Part2 {
++        rs,
++        openings,
++        n_max,
++    })
++}
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+index b900cbb..212a70a 100644
+--- a/crates/sherlock-lfr/src/testing.rs
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -24,7 +24,7 @@ pub type SC = Bls12381FrPoseidonConfig;
+ pub type Engine = Bls12381FrPoseidonLfrCpuEngine;
+ 
+ /// Small Fr test set: UD, log blowup 1, `l_skip` 2, `n_stack` 14 (stacked height 2^16, so the
+-/// 2^16-row range table fits), `k_whir` 4, every grinding site on at a few bits.
++/// 2^16-row range table fits), `w_stack` 128, `k_whir` 4, every grinding site on at a few bits.
+ pub fn small_params(max_constraint_degree: usize) -> SystemParams {
+     let (l_skip, n_stack, k_whir, log_blowup) = (2, 14, 4, 1);
+     let whir_params = WhirParams {
+@@ -38,7 +38,7 @@ pub fn small_params(max_constraint_degree: usize) -> SystemParams {
+     SystemParams {
+         l_skip,
+         n_stack,
+-        w_stack: 64,
++        w_stack: 128,
+         log_blowup,
+         whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
+         logup: LogUpSecurityParameters {
+diff --git a/crates/sherlock-lfr/tests/i7_part2.rs b/crates/sherlock-lfr/tests/i7_part2.rs
+new file mode 100644
+index 0000000..b935cbb
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i7_part2.rs
+@@ -0,0 +1,138 @@
++//! I7 gate: the tape generator, parts 1 and 2 (part 2: `mu`, the univariate and multilinear
++//! sumcheck rounds of the batched zerocheck, `eq_3b`, `eq_ns`, `eq_sharp_ns`, the column
++//! openings, the DAG of every `L` AIR, the interaction evaluations and the final claim check) on
++//! the real `L` proof. Every value the tape observes or samples equals the stock verifier's
++//! transcript record, in order, up to the end of `verify_zerocheck_and_logup`. No tape
++//! assertion fails. Op counts and the machine shape are printed (MEASURED); the tape proves on
++//! the machine with 2 commitments. Refused: a changed column opening and a changed univariate
++//! round coefficient (by the stock verifier, the plain-Rust tape run, and the prover). Ignored by
++//! default: needs the fixture.
++
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use sherlock_lfr::{
++    bb::Ef4,
++    fixture::{self, LSC},
++    lverify::{gen_part1, gen_part2, Gen, LShape},
++    machine::Machine,
++    record::{stock_log, Ev},
++    tape::Op,
++    testing::{preprocessed_airs, prove_verify_range, small_params, Outcome},
++    transcript::TEv,
++};
++
++type LProof = openvm_stark_backend::proof::Proof<LSC>;
++
++fn build(
++    vk: &openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &LProof,
++) -> Gen {
++    let mut g = Gen::new();
++    let p1 = gen_part1(&mut g, vk, shape, proof).expect("pinned shape");
++    gen_part2(&mut g, vk, shape, proof, &p1).expect("pinned shape");
++    g
++}
++
++fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
++    let m = Machine::new(&g.tape);
++    let (o, vk) = prove_verify_range(small_params(3), m.airs(), m.traces(mem));
++    assert_eq!(preprocessed_airs(&vk), 1, "only the program table is preprocessed");
++    o
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i7_part2_on_real_l() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let (log, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let g = build(&fx.l_vk, &shape, &fx.l_proof);
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++
++    // Every event equals the stock record, in order.
++    let bb = |a: u32| mem[a as usize].unwrap().bb();
++    let (mut n_obs, mut n_commit, mut n_sample) = (0, 0, 0);
++    assert!(g.tt.log.len() < log.len());
++    for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
++        match (t, s) {
++            (TEv::Obs(a), Ev::Obs(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "observe {i}");
++                n_obs += 1;
++            }
++            (TEv::Commit(a), Ev::Commit(v)) => {
++                assert_eq!(mem[*a as usize].unwrap().fr(), *v, "commit {i}");
++                n_commit += 1;
++            }
++            (TEv::Sample(a), Ev::Sample(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "sample {i}");
++                n_sample += 1;
++            }
++            _ => panic!("event {i}: kind differs: tape {t:?}, stock {s:?}"),
++        }
++    }
++    let dag_nodes: usize = fx
++        .l_vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.constraints.nodes.len())
++        .sum();
++    println!("I7 L DAG nodes (all 39 AIRs): {dag_nodes}");
++
++    let count = |f: fn(&Op) -> bool| g.tape.ops.iter().filter(|o| f(o)).count();
++    let m = Machine::new(&g.tape);
++    println!(
++        "I7 parts 1 and 2: {} events equal the stock record ({n_obs} observes, {n_commit} commitment observes, {n_sample} samples) of {} in one L verification; ops: {} total, {} Input, {} FrInput, {} Const/FrConst, {} Alu, {} Perm, {} Pack, {} Split, {} Compose, {} Decompose, {} AssertEq, {} LowBits; table rows {}; machine shape {:?}",
++        g.tt.log.len(),
++        log.len(),
++        g.tape.ops.len(),
++        count(|o| matches!(o, Op::Input { .. })),
++        count(|o| matches!(o, Op::FrInput { .. })),
++        count(|o| matches!(o, Op::Const { .. } | Op::FrConst { .. })),
++        count(|o| matches!(o, Op::Alu { .. })),
++        count(|o| matches!(o, Op::Perm { .. })),
++        count(|o| matches!(o, Op::Pack { .. })),
++        count(|o| matches!(o, Op::Split { .. })),
++        count(|o| matches!(o, Op::Compose { .. })),
++        count(|o| matches!(o, Op::Decompose { .. })),
++        count(|o| matches!(o, Op::AssertEq { .. })),
++        count(|o| matches!(o, Op::LowBits { .. })),
++        m.table().rows.len(),
++        m.shape()
++    );
++    let t = std::time::Instant::now();
++    let o = prove(&g, &mem);
++    println!("I7 prove and verify {:.1}s: {o:?}", t.elapsed().as_secs_f64());
++    assert!(o.accepted(), "honest part 1 refused: {o:?}");
++    assert_eq!(o.commits(), Some(2));
++
++    // Negative controls: the same key (shape and vk), changed proof values.
++    let mut p1 = fx.l_proof.clone();
++    p1.batch_constraint_proof.column_openings[3][0][7] += Ef4::ONE;
++    let mut p2 = fx.l_proof.clone();
++    p2.batch_constraint_proof.univariate_round_coeffs[2] += Ef4::ONE;
++    for (name, p) in [
++        ("changed column opening", p1),
++        ("changed univariate round coefficient", p2),
++    ] {
++        let (_, stock_ok) = stock_log(&fx.l_vk, &p);
++        let gt = build(&fx.l_vk, &shape, &p);
++        assert_eq!(
++            format!("{:?}", gt.tape.ops),
++            format!("{:?}", g.tape.ops),
++            "same tape (the key)"
++        );
++        let (mem_t, failed_t) = gt.tape.execute_checked(&gt.inputs);
++        let o = prove(&gt, &mem_t);
++        println!(
++            "I7 negative {name}: stock verifier accepts {stock_ok}; tape assertions failed at {} ops (first {:?}); prover: {o:?}",
++            failed_t.len(),
++            failed_t.first()
++        );
++        assert!(!stock_ok);
++        assert!(!failed_t.is_empty());
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+-- 
+2.56.0
+

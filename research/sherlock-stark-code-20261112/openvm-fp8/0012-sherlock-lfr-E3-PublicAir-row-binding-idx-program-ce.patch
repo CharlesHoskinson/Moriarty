@@ -1,0 +1,226 @@
+From 2f09cafdffa562dac4f293f159a8aeae1576df03 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:15:40 -0700
+Subject: [PATCH] sherlock-lfr: E3 PublicAir row binding (idx program cell),
+ all-entries case
+
+The program bus fixes only the multiset of program rows, so a PublicAir
+program row could sit at another trace row and permute 16-word blocks of
+the public words. Each program row now carries its row index idx, and
+active (idx - row) = 0 ties it to the carrier row. J1 control: rows 0 and
+1 swapped with their programs and public blocks is refused. New case
+all_entries: R and V - 6 PUB entries (253 non-NOP of 256).
+---
+ crates/sherlock-lfr/examples/iface_fixture.rs |  3 +-
+ crates/sherlock-lfr/src/iface.rs              |  4 +++
+ crates/sherlock-lfr/src/machine.rs            | 30 +++++++++++++------
+ crates/sherlock-lfr/tests/j1_public.rs        | 20 +++++++++++++
+ crates/sherlock-lfr/tests/j5_gate.rs          |  9 +++---
+ 5 files changed, 52 insertions(+), 14 deletions(-)
+
+diff --git a/crates/sherlock-lfr/examples/iface_fixture.rs b/crates/sherlock-lfr/examples/iface_fixture.rs
+index c640dc993e128d79b8797db4c632f923f351519d..87f25b6c787ee98bf2d8d75635b53650793e3e53 100644
+--- a/crates/sherlock-lfr/examples/iface_fixture.rs
++++ b/crates/sherlock-lfr/examples/iface_fixture.rs
+@@ -100,11 +100,12 @@ fn node_proof(
+     (vk, proof)
+ }
+ 
+-pub const CASES: [(Case, &str, u64); 4] = [
++pub const CASES: [(Case, &str, u64); 5] = [
+     (Case::FullV, "full_v", 11),
+     (Case::FullP, "full_p", 12),
+     (Case::Overflow, "overflow", 13),
+     (Case::MissingR, "missing_r", 11),
++    (Case::AllEntries, "all_entries", 14),
+ ];
+ 
+ fn main() {
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index 63c36937dbe1eb27c55879bb04ea0bb33b808e70..f4d7cbf85b4b93c026824303289a28e04a014880 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -480,6 +480,9 @@ pub enum Case {
+     Overflow,
+     /// `FullV` with the `SHK_INPUT` entry of `R` removed (negative).
+     MissingR,
++    /// The most non-`NOP` entries `B = V` allows: `R` and `V - 6` `PUB` entries (253 of 256 at
++    /// `Dims::FULL`; every value slot used).
++    AllEntries,
+ }
+ 
+ /// The reservation `R` of an ordinary call: `DIGEST` of `SHK_PROGC`, `SHK_INPUT`,
+@@ -540,6 +543,7 @@ pub fn case_run(d: &Dims, case: Case, seed: u64) -> (Run, Plan) {
+             s.extend(pubs(&mut rng, d.v - used, &lanes));
+             s
+         }
++        Case::AllEntries => pubs(&mut rng, d.v - 6, &lanes),
+         Case::FullP => {
+             // R holds 3 slots; PATH(32) until fewer than 32 slots are left, then one PATH of
+             // the rest.
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+index 2bf571b8883f980f7daa93cb326c94c18be44850..4521b2803dbe3f71d13dd0aa4bb654d4dbbd4cbc 100644
+--- a/crates/sherlock-lfr/src/machine.rs
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -936,14 +936,18 @@ impl<AB: InteractionBuilder<F = Fr>> Air<AB> for CSwapAir {
+ // ------------------------------------------------------------------------------------------
+ // PublicAir (D-2 at the full interface, E3 D-6): the public values of the machine, carried
+ // `PUBLIC_W` per row by the selector carrier of `crate::carrier`. Program per row
+-// `[addr_0, .., addr_(W-1), active]`; main `[a.., b.., v_0, .., v_(W-1)]`. Each cell reads
++// `[addr_0, .., addr_(W-1), active, idx]`; main `[a.., b.., v_0, .., v_(W-1)]`. Each cell reads
+ // `(addr_c, v_c)` with count `-active`, and the carrier binds cell `(r, c)` to public value
+-// `r W + c` (cells past the last word are 0 and read the zero of `Op::PublicPad`). Padding rows
+-// (the nop rows of the table) read nothing, and their cells are 0 by the carrier.
++// `r W + c` (cells past the last word are 0 and read the zero of `Op::PublicPad`). The program
++// bus fixes only the multiset of program rows, so `idx` (the row index of the program row, a
++// key constant) is tied to the trace row by `active (idx - (sum_i i a_i + h1 sum_j j b_j)) = 0`:
++// an active program row sits only at its own trace row, so its addresses meet the public words
++// of that row. Padding rows (the nop rows of the table) read nothing, and their cells are 0 by
++// the carrier.
+ // ------------------------------------------------------------------------------------------
+ 
+ /// Public words per `PublicAir` row (`PROG_W - 2` address cells, so the program row with its
+-/// `active` cell fits the table).
++/// `active` and `idx` cells fits the table).
+ pub const PUBLIC_W: usize = 16;
+ 
+ #[derive(Clone, Debug)]
+@@ -963,11 +967,13 @@ impl PublicAir {
+     pub fn prog_rows(&self) -> Vec<Vec<Fr>> {
+         self.addrs
+             .chunks(PUBLIC_W)
+-            .map(|c| {
++            .enumerate()
++            .map(|(i, c)| {
+                 let mut r: Vec<Fr> = c.iter().map(|&a| fu(a as u64)).collect();
+                 let pad = self.pad.unwrap_or(0) as u64;
+                 r.resize(PUBLIC_W, fu(pad));
+                 r.push(Fr::ONE);
++                r.push(fu(i as u64));
+                 r
+             })
+             .collect()
+@@ -978,7 +984,7 @@ impl PublicAir {
+         let h = c.height();
+         assert_eq!(h, padded(self.n().div_ceil(PUBLIC_W)), "carrier height");
+         let main = RowMajorMatrix::new(rows.concat(), c.width());
+-        crate::program::with_prog(main, &self.prog_rows(), PUBLIC_W + 1)
++        crate::program::with_prog(main, &self.prog_rows(), PUBLIC_W + 2)
+     }
+     /// The public values of the honest witness.
+     pub fn values(&self, mem: &[Option<Val>]) -> Vec<Fr> {
+@@ -988,7 +994,7 @@ impl PublicAir {
+ 
+ impl BaseAir<Fr> for PublicAir {
+     fn width(&self) -> usize {
+-        self.carrier().width() + PUBLIC_W + 1
++        self.carrier().width() + PUBLIC_W + 2
+     }
+ }
+ impl BaseAirWithPublicValues<Fr> for PublicAir {
+@@ -1004,12 +1010,18 @@ impl<AB: InteractionBuilder<F = Fr> + AirBuilderWithPublicValues> Air<AB> for Pu
+         let cw = c.width();
+         let main = builder.main();
+         let (l, nx) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
+-        let local: Vec<AB::Expr> = (0..cw + PUBLIC_W + 1).map(|i| l[i].into()).collect();
++        let local: Vec<AB::Expr> = (0..cw + PUBLIC_W + 2).map(|i| l[i].into()).collect();
+         let next: Vec<AB::Expr> = (0..cw).map(|i| nx[i].into()).collect();
+         drop((l, nx));
+         let p = local[cw..].to_vec();
+         receive_prog(builder, TAG_PUBLIC, &p);
+         c.eval(builder, &local[..cw], &next, 0);
++        let row = (0..c.h1).fold(AB::Expr::ZERO, |s, i| {
++            s + local[i].clone() * AB::Expr::from_u64(i as u64)
++        }) + (0..c.h2).fold(AB::Expr::ZERO, |s, j| {
++            s + local[c.h1 + j].clone() * AB::Expr::from_u64((c.h1 * j) as u64)
++        });
++        builder.assert_zero(p[PUBLIC_W].clone() * (p[PUBLIC_W + 1].clone() - row));
+         let v = &local[c.sel_width()..cw];
+         for i in 0..PUBLIC_W {
+             builder.push_interaction(
+@@ -1432,7 +1444,7 @@ impl Machine {
+             push(
+                 "Public",
+                 a.addrs.len().div_ceil(PUBLIC_W),
+-                a.carrier().width() + PUBLIC_W + 1,
++                a.carrier().width() + PUBLIC_W + 2,
+                 0,
+             );
+         }
+diff --git a/crates/sherlock-lfr/tests/j1_public.rs b/crates/sherlock-lfr/tests/j1_public.rs
+index 12da942590015cb964de80d19db60983cfea63d8..3087d1d5f057203912d2504bbcc5fdb2671e72f7 100644
+--- a/crates/sherlock-lfr/tests/j1_public.rs
++++ b/crates/sherlock-lfr/tests/j1_public.rs
+@@ -19,6 +19,7 @@ use openvm_stark_sdk::config::{
+     baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+     bls12381_fr_poseidon::Bls12381Fr as Fr,
+ };
++use openvm_stark_backend::p3_matrix::Matrix;
+ use p3_baby_bear::BabyBear;
+ use p3_field::{PrimeCharacteristicRing, PrimeField32};
+ use sherlock_lfr::{
+@@ -190,4 +191,23 @@ fn j1_public_values_through_lfr() {
+         println!("J1 L_Fr carrier control, {what}: {o:?}");
+         assert!(!o.accepted(), "{what} accepted");
+     }
++
++    // Row binding: PublicAir rows 0 and 1 swapped with their program cells and values, and the
++    // matching public blocks swapped. The program bus and the memory bus both still balance, so
++    // only the idx constraint refuses this.
++    let mut traces = m.traces(&mem);
++    let pa = m.public.as_ref().unwrap();
++    let c = pa.carrier();
++    let t = &mut traces[pi];
++    let w = t.width();
++    for col in c.sel_width()..w {
++        t.values.swap(col, w + col);
++    }
++    let mut p = pis.clone();
++    for k in 0..16 {
++        p[pi].swap(k, 16 + k);
++    }
++    let o = run_o(traces, p);
++    println!("J1 L_Fr row binding control, rows 0 and 1 swapped with their programs: {o:?}");
++    assert!(!o.accepted(), "row swap accepted");
+ }
+diff --git a/crates/sherlock-lfr/tests/j5_gate.rs b/crates/sherlock-lfr/tests/j5_gate.rs
+index 73fecb7bdd2b5f6b1f05fa0c0b46f8a8baac25a0..ccb8868e6239d8a0cb39ba2f77ef806940a7be41 100644
+--- a/crates/sherlock-lfr/tests/j5_gate.rs
++++ b/crates/sherlock-lfr/tests/j5_gate.rs
+@@ -8,7 +8,7 @@
+ //!   missing-`R` case; the exposed words decode (plan D-9) to the native statement. Op counts and
+ //!   the machine shape are printed (MEASURED).
+ //! - `j5_gate_at_lfr_params`: keygen at `testing::lfr_params`, D3 at the measured key; the
+-//!   full-V and overflow cases prove and the stock verifier accepts with 2 commitments; the
++//!   all-entries and overflow cases prove and the stock verifier accepts with 2 commitments; the
+ //!   missing-`R` case is refused by the prover.
+ 
+ use std::{path::PathBuf, time::Instant};
+@@ -28,11 +28,12 @@ use sherlock_lfr::{
+     testing::{lfr_params, preprocessed_airs, prove_verify_range_keyed, Engine},
+ };
+ 
+-const CASES: [(Case, &str, u64); 4] = [
++const CASES: [(Case, &str, u64); 5] = [
+     (Case::FullV, "full_v", 11),
+     (Case::FullP, "full_p", 12),
+     (Case::Overflow, "overflow", 13),
+     (Case::MissingR, "missing_r", 11),
++    (Case::AllEntries, "all_entries", 14),
+ ];
+ 
+ fn dir() -> PathBuf {
+@@ -218,8 +219,8 @@ fn j5_gate_at_lfr_params() {
+     );
+     assert!(s.total_bits >= 100.0);
+     for (i, (_, name, _)) in CASES.iter().enumerate() {
+-        if *name == "full_p" {
+-            continue; // same tape and key; its plain-Rust run is in J4
++        if *name == "full_p" || *name == "full_v" {
++            continue; // same tape and key; their plain-Rust runs are in J4
+         }
+         let bi = &b[i];
+         let t = Instant::now();
+-- 
+2.56.0
+

@@ -1,0 +1,343 @@
+From e8223ed59d1837ee9ce2405ace6f5725876f92d4 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 08:34:24 -0700
+Subject: [PATCH 6/9] E2 I1: L_Fr hash tags u = 5, 6, 7 as FrDomains config
+ fields, engines per domain set, and their tests
+
+---
+ crates/stark-sdk/Cargo.toml                   |   4 +
+ .../src/config/bls12381_fr_poseidon.rs        |  83 +++++++--
+ crates/stark-sdk/tests/e2_domains.rs          | 167 ++++++++++++++++++
+ 3 files changed, 243 insertions(+), 11 deletions(-)
+ create mode 100644 crates/stark-sdk/tests/e2_domains.rs
+
+diff --git a/crates/stark-sdk/Cargo.toml b/crates/stark-sdk/Cargo.toml
+index 7890da6..927f534 100644
+--- a/crates/stark-sdk/Cargo.toml
++++ b/crates/stark-sdk/Cargo.toml
+@@ -90,3 +90,7 @@ nvtx = ["dep:nvtx"]
+ [[test]]
+ name = "e1_fr"
+ required-features = ["bls12381-fr-poseidon"]
++
++[[test]]
++name = "e2_domains"
++required-features = ["bls12381-fr-poseidon"]
+diff --git a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+index c88372c..52c23d1 100644
+--- a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
++++ b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+@@ -16,8 +16,12 @@
+ //!   split), with the initial state `(0, 0, 2^64 + u * 2^66)`. A commitment observe absorbs the
+ //!   one digest element. Every transition is stock.
+ //!
+-//! The use codes are fields of [`FrDomains`], so a later OD-18 ruling (a separate tag for the
+-//! `L_Fr` hashes) changes constants, not code. [`FrDomains::default`] is u = 1, 2, 3.
++//! The use codes are fields of [`FrDomains`]. [`FrDomains::default`] is u = 1, 2, 3 (the codes of
++//! `L`'s own hashes). [`FrDomains::l_fr`] is u = 5, 6, 7: the codes of the `L_Fr` proof's own
++//! Merkle trees and transcript (Sherlock E2, plan D-3, LEAD pending OD-18), distinct from every
++//! code of PROPOSAL 3.6 (u = 0 to 4). The engines take the domain set as a type parameter
++//! ([`DomainSet`]); [`Bls12381FrPoseidonCpuEngine`] is the default set and
++//! [`Bls12381FrPoseidonLfrCpuEngine`] the `L_Fr` set.
+ 
+ use std::io::{self, Read, Write};
+ 
+@@ -63,6 +67,47 @@ impl Default for FrDomains {
+     }
+ }
+ 
++/// `L_Fr` Merkle leaf use code (E2 plan D-3; LEAD, OD-18).
++pub const U_LFR_LEAF: u128 = 5;
++/// `L_Fr` Merkle node use code (E2 plan D-3; LEAD, OD-18).
++pub const U_LFR_NODE: u128 = 6;
++/// `L_Fr` transcript use code (E2 plan D-3; LEAD, OD-18).
++pub const U_LFR_TRANSCRIPT: u128 = 7;
++
++impl FrDomains {
++    /// The domain set of the `L_Fr` proof's own hashes: u = 5 (leaf), 6 (node), 7 (transcript).
++    pub const fn l_fr() -> Self {
++        Self {
++            u_leaf: U_LFR_LEAF,
++            u_node: U_LFR_NODE,
++            u_transcript: U_LFR_TRANSCRIPT,
++        }
++    }
++}
++
++/// A domain set fixed at the type level, so an engine's `new(params)` picks its use codes.
++pub trait DomainSet: Send + Sync + 'static {
++    const DOMAINS: FrDomains;
++}
++
++/// u = 1, 2, 3 ([`FrDomains::default`]).
++#[derive(Clone, Copy, Debug, Default)]
++pub struct DefaultDomains;
++impl DomainSet for DefaultDomains {
++    const DOMAINS: FrDomains = FrDomains {
++        u_leaf: U_LEAF,
++        u_node: U_NODE,
++        u_transcript: U_TRANSCRIPT,
++    };
++}
++
++/// u = 5, 6, 7 ([`FrDomains::l_fr`]).
++#[derive(Clone, Copy, Debug, Default)]
++pub struct LfrDomains;
++impl DomainSet for LfrDomains {
++    const DOMAINS: FrDomains = FrDomains::l_fr();
++}
++
+ /// Merkle hasher over native Fr leaves: leaf hash `u_leaf`, node hash `u_node`.
+ #[derive(Clone, Debug)]
+ pub struct FrMerkleHasher {
+@@ -266,12 +311,18 @@ pub fn default_transcript() -> Transcript {
+     Transcript::from(MidnightPoseidonFr::new())
+ }
+ 
+-/// Reference (column-major) engine at the default domains.
+-pub struct Bls12381FrPoseidonRefEngine {
++/// Reference (column-major) engine at the domain set `D`.
++pub struct Bls12381FrPoseidonRefEngineAt<D: DomainSet> {
+     device: ReferenceDevice<SC>,
++    _d: core::marker::PhantomData<D>,
+ }
+ 
+-impl StarkEngine for Bls12381FrPoseidonRefEngine {
++/// Reference engine at the default domains (u = 1, 2, 3).
++pub type Bls12381FrPoseidonRefEngine = Bls12381FrPoseidonRefEngineAt<DefaultDomains>;
++/// Reference engine at the `L_Fr` domains (u = 5, 6, 7).
++pub type Bls12381FrPoseidonLfrRefEngine = Bls12381FrPoseidonRefEngineAt<LfrDomains>;
++
++impl<D: DomainSet> StarkEngine for Bls12381FrPoseidonRefEngineAt<D> {
+     type SC = SC;
+     type PB = CpuColMajorBackend<SC>;
+     type PD = ReferenceDevice<SC>;
+@@ -279,7 +330,8 @@ impl StarkEngine for Bls12381FrPoseidonRefEngine {
+ 
+     fn new(params: SystemParams) -> Self {
+         Self {
+-            device: ReferenceDevice::new(SC::default_from_params(params)),
++            device: ReferenceDevice::new(SC::new(params, MidnightPoseidonFr::new(), D::DOMAINS)),
++            _d: core::marker::PhantomData,
+         }
+     }
+ 
+@@ -309,12 +361,18 @@ mod cpu_engine {
+ 
+     use super::*;
+ 
+-    /// Row-major CPU engine at the default domains.
+-    pub struct Bls12381FrPoseidonCpuEngine {
++    /// Row-major CPU engine at the domain set `D`.
++    pub struct Bls12381FrPoseidonCpuEngineAt<D: DomainSet> {
+         device: CpuDevice<SC>,
++        _d: core::marker::PhantomData<D>,
+     }
+ 
+-    impl StarkEngine for Bls12381FrPoseidonCpuEngine {
++    /// CPU engine at the default domains (u = 1, 2, 3).
++    pub type Bls12381FrPoseidonCpuEngine = Bls12381FrPoseidonCpuEngineAt<DefaultDomains>;
++    /// CPU engine at the `L_Fr` domains (u = 5, 6, 7).
++    pub type Bls12381FrPoseidonLfrCpuEngine = Bls12381FrPoseidonCpuEngineAt<LfrDomains>;
++
++    impl<D: DomainSet> StarkEngine for Bls12381FrPoseidonCpuEngineAt<D> {
+         type SC = SC;
+         type PB = CpuBackend<SC>;
+         type PD = CpuDevice<SC>;
+@@ -322,7 +380,8 @@ mod cpu_engine {
+ 
+         fn new(params: SystemParams) -> Self {
+             Self {
+-                device: CpuDevice::new(SC::default_from_params(params)),
++                device: CpuDevice::new(SC::new(params, MidnightPoseidonFr::new(), D::DOMAINS)),
++                _d: core::marker::PhantomData,
+             }
+         }
+ 
+@@ -348,7 +407,9 @@ mod cpu_engine {
+ }
+ 
+ #[cfg(feature = "cpu-backend")]
+-pub use cpu_engine::Bls12381FrPoseidonCpuEngine;
++pub use cpu_engine::{
++    Bls12381FrPoseidonCpuEngine, Bls12381FrPoseidonCpuEngineAt, Bls12381FrPoseidonLfrCpuEngine,
++};
+ 
+ #[allow(dead_code)]
+ fn _assert_traits() {
+diff --git a/crates/stark-sdk/tests/e2_domains.rs b/crates/stark-sdk/tests/e2_domains.rs
+new file mode 100644
+index 0000000..e9d5ae9
+--- /dev/null
++++ b/crates/stark-sdk/tests/e2_domains.rs
+@@ -0,0 +1,167 @@
++//! Sherlock E2 increment I1: the `L_Fr` hash tags (plan D-3, LEAD pending OD-18).
++//!
++//! The `L_Fr` proof's own Merkle leaf, node and transcript use the codes u = 5, 6, 7, distinct
++//! from `L`'s u = 1, 2, 3 and from u = 0 and u = 4 (PROPOSAL 3.6). A proof made at one domain set
++//! is refused by a verifier at the other, in both directions, and each of the three codes is
++//! bound on its own.
++//!
++//! Run: `cargo test -p openvm-stark-sdk --release --features bls12381-fr-poseidon --test e2_domains`.
++#![cfg(feature = "bls12381-fr-poseidon")]
++
++use openvm_stark_backend::{
++    interaction::LogUpSecurityParameters,
++    keygen::types::MultiStarkVerifyingKey,
++    proof::Proof,
++    test_utils::{FibFixture, InteractionsFixture11, TestFixture},
++    verifier::verify,
++    StarkEngine, SystemParams, WhirConfig, WhirParams, WhirProximityStrategy,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{
++    cap_fixed, cap_var, Bls12381FrPoseidonConfig, Bls12381FrPoseidonCpuEngine,
++    Bls12381FrPoseidonLfrCpuEngine, Bls12381FrPoseidonLfrRefEngine, DefaultDomains, DomainSet,
++    FrDomains, LfrDomains, MidnightPoseidonFr, U_LFR_LEAF, U_LFR_NODE, U_LFR_TRANSCRIPT,
++};
++
++type SC = Bls12381FrPoseidonConfig;
++
++fn small_params() -> SystemParams {
++    let (l_skip, n_stack, k_whir, log_blowup) = (2, 8, 4, 1);
++    let whir_params = WhirParams {
++        k: k_whir,
++        log_final_poly_len: (l_skip + n_stack) % k_whir,
++        query_phase_pow_bits: 6,
++        folding_pow_bits: 5,
++        mu_pow_bits: 4,
++        proximity: WhirProximityStrategy::UniqueDecoding,
++    };
++    SystemParams {
++        l_skip,
++        n_stack,
++        w_stack: 64,
++        log_blowup,
++        whir: WhirConfig::new(log_blowup, l_skip + n_stack, whir_params, 40),
++        logup: LogUpSecurityParameters {
++            max_interaction_count: 1 << 30,
++            log_max_message_length: 7,
++            pow_bits: 7,
++        },
++        max_constraint_degree: 3,
++    }
++}
++
++fn verifies(d: FrDomains, vk: &MultiStarkVerifyingKey<SC>, proof: &Proof<SC>) -> bool {
++    let config = SC::new(small_params(), MidnightPoseidonFr::new(), d);
++    let mut ts = config.transcript();
++    verify(&config, vk, proof, &mut ts).is_ok()
++}
++
++#[test]
++fn e2_lfr_domain_codes() {
++    let l = FrDomains::l_fr();
++    let d = FrDomains::default();
++    assert_eq!((l.u_leaf, l.u_node, l.u_transcript), (5, 6, 7));
++    assert_eq!((U_LFR_LEAF, U_LFR_NODE, U_LFR_TRANSCRIPT), (5, 6, 7));
++    assert_eq!(LfrDomains::DOMAINS, l);
++    assert_eq!(DefaultDomains::DOMAINS, d);
++    // Every L_Fr code differs from every PROPOSAL 3.6 code (u = 0 to 4) and from each other.
++    let lfr = [l.u_leaf, l.u_node, l.u_transcript];
++    for (i, u) in lfr.iter().enumerate() {
++        assert!(!(0..=4).contains(u), "L_Fr code {u} is a PROPOSAL 3.6 code");
++        for v in &lfr[i + 1..] {
++            assert_ne!(u, v);
++        }
++    }
++    // Initial capacities: every fixed length below 2^64 and the transcript give distinct cells.
++    for len in [1u128, 2, 18, 36, 1 << 20] {
++        for u in 0..=4u128 {
++            assert_ne!(cap_fixed(l.u_leaf, len), cap_fixed(u, len));
++            assert_ne!(cap_fixed(l.u_node, len), cap_fixed(u, len));
++            assert_ne!(cap_fixed(l.u_leaf, len), cap_var(u));
++        }
++    }
++    for u in 0..=4u128 {
++        assert_ne!(cap_var(l.u_transcript), cap_var(u));
++    }
++    // The engines at the L_Fr set carry the L_Fr domains.
++    let e = Bls12381FrPoseidonLfrCpuEngine::new(small_params());
++    assert_eq!(e.config().domains(), l);
++    let r = Bls12381FrPoseidonLfrRefEngine::new(small_params());
++    assert_eq!(r.config().domains(), l);
++    let b = Bls12381FrPoseidonCpuEngine::new(small_params());
++    assert_eq!(b.config().domains(), d);
++}
++
++#[test]
++fn e2_lfr_domains_bound_both_directions() {
++    let l = FrDomains::l_fr();
++    let d = FrDomains::default();
++    let fib = FibFixture::new(0, 1, 1 << 9);
++
++    let e_l = Bls12381FrPoseidonLfrCpuEngine::new(small_params());
++    let (vk_l, pf_l) = fib.keygen_and_prove(&e_l);
++    let e_d = Bls12381FrPoseidonCpuEngine::new(small_params());
++    let (vk_d, pf_d) = fib.keygen_and_prove(&e_d);
++
++    // Each proof verifies at its own domain set.
++    assert!(
++        verifies(l, &vk_l, &pf_l),
++        "L_Fr-domain proof refused at L_Fr domains"
++    );
++    assert!(
++        verifies(d, &vk_d, &pf_d),
++        "default-domain proof refused at default domains"
++    );
++    // Each is refused at the other set.
++    assert!(
++        !verifies(d, &vk_l, &pf_l),
++        "L_Fr-domain proof accepted at default domains"
++    );
++    assert!(
++        !verifies(l, &vk_d, &pf_d),
++        "default-domain proof accepted at L_Fr domains"
++    );
++
++    // Each code is bound on its own: change one code of the L_Fr set, keep the other two.
++    for (name, one) in [
++        (
++            "leaf",
++            FrDomains {
++                u_leaf: d.u_leaf,
++                ..l
++            },
++        ),
++        (
++            "node",
++            FrDomains {
++                u_node: d.u_node,
++                ..l
++            },
++        ),
++        (
++            "transcript",
++            FrDomains {
++                u_transcript: d.u_transcript,
++                ..l
++            },
++        ),
++    ] {
++        assert!(
++            !verifies(one, &vk_l, &pf_l),
++            "L_Fr proof accepted with the {name} code at u = 1..3"
++        );
++    }
++    println!("E2_I1: L_Fr-domain and default-domain Fib proofs each refused at the other set; leaf, node and transcript codes each bound");
++}
++
++#[test]
++fn e2_lfr_domains_interactions() {
++    // A LogUp fixture at the L_Fr domains, both engines.
++    let fx = InteractionsFixture11;
++    let e = Bls12381FrPoseidonLfrCpuEngine::new(small_params());
++    let (vk, pf) = fx.keygen_and_prove(&e);
++    assert!(verifies(FrDomains::l_fr(), &vk, &pf));
++    assert!(!verifies(FrDomains::default(), &vk, &pf));
++    let r = Bls12381FrPoseidonLfrRefEngine::new(small_params());
++    let (vk, pf) = fx.keygen_and_prove(&r);
++    assert!(verifies(FrDomains::l_fr(), &vk, &pf));
++}
+-- 
+2.56.0
+

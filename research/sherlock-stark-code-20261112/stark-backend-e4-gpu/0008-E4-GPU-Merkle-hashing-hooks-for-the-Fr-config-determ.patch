@@ -1,0 +1,415 @@
+From 4199bc19c5eac6fcb88dc454f06c0afdda6ba0f3 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 19:07:11 -0700
+Subject: [PATCH 8/9] E4: GPU Merkle hashing hooks for the Fr config,
+ deterministic grind
+
+MerkleHasher gets has_batch, hash_rows, encode_hash_rows and digest_layers
+(default None); cpu-backend RS encode, digest layers, the WHIR tree and the
+reference MerkleTree::new call them first. FrMerkleHasher implements them under
+the stark-sdk feature gpu with mori-gpu (Midnight Poseidon over Fr and the
+sppark NTT); MORI_GPU=off takes the CPU path. The PoW grind searches ordered
+chunks with find_first, so a proof is reproducible at any thread count (two
+20-thread proofs differed with find_any). The L_Fr GPU proof is byte-identical
+to the CPU proof.
+---
+ crates/cpu-backend/src/merkle.rs              |  34 ++++
+ crates/cpu-backend/src/whir.rs                |  11 ++
+ crates/stark-backend/src/hasher.rs            |  42 +++++
+ .../stark-backend/src/prover/stacked_pcs.rs   |  25 +++
+ crates/stark-backend/src/transcript/traits.rs |  26 ++-
+ crates/stark-sdk/Cargo.toml                   |   4 +
+ .../src/config/bls12381_fr_poseidon.rs        | 148 ++++++++++++++++++
+ 7 files changed, 285 insertions(+), 5 deletions(-)
+
+diff --git a/crates/cpu-backend/src/merkle.rs b/crates/cpu-backend/src/merkle.rs
+index db55c08..98153e1 100644
+--- a/crates/cpu-backend/src/merkle.rs
++++ b/crates/cpu-backend/src/merkle.rs
+@@ -255,6 +255,8 @@ where
+             .into_iter()
+             .map(|layer| unsafe { reinterpret_vec(layer) })
+             .collect()
++    } else if let Some(layers) = hasher.digest_layers(&row_hashes, rows_per_query) {
++        layers
+     } else {
+         build_digest_layers_scalar(row_hashes, rows_per_query, hasher)
+     }
+@@ -307,6 +309,31 @@ where
+     let width = eval_matrix.width();
+     let twiddles = DftTwiddles::new(l_skip);
+ 
++    // Accelerated path (Sherlock E4): PLE coefficients on the CPU, then the zero-padded
++    // DFT and the row hashes in one batch call of the hasher (GPU), no CPU transpose.
++    if hasher.has_batch() && codeword_height.is_power_of_two() {
++        let coeffs: Vec<F> = tracing::info_span!("eval_to_coeff_phase").in_scope(|| {
++            let cols: Vec<Vec<F>> = eval_matrix
++                .values
++                .par_chunks_exact(height)
++                .map(|column_evals| eval_to_coeff_cpu(column_evals, &twiddles))
++                .collect();
++            cols.concat()
++        });
++        let enc = tracing::info_span!("encode_hash_rows_batch").in_scope(|| {
++            hasher.encode_hash_rows(&coeffs, height, width, log2_strict_usize(codeword_height))
++        });
++        drop(coeffs);
++        if let Some((rm, row_hashes)) = enc {
++            let digest_layers = tracing::info_span!("digest_layers")
++                .in_scope(|| build_digest_layers::<F, H>(row_hashes, rows_per_query, hasher));
++            let rm_result = P3RowMajorMatrix::new(rm, width);
++            // SAFETY: the hasher computed the row hashes over exactly this codeword matrix
++            // (`encode_hash_rows` contract) and digest_layers over them.
++            return unsafe { CpuMerkleTree::from_raw_parts(rm_result, digest_layers, rows_per_query) };
++        }
++    }
++
+     // Phase 1: Convert PLE evaluations to coefficients (parallel per column).
+     let coeff_vecs: Vec<Vec<F>> = tracing::info_span!("eval_to_coeff_phase").in_scope(|| {
+         eval_matrix
+@@ -356,6 +383,13 @@ where
+             };
+             let bb_digests = hash_rows_packed_babybear(bb_vals, width, codeword_height, num_leaves);
+             unsafe { reinterpret_vec(bb_digests) }
++        } else if let Some(mut h) = (num_leaves == codeword_height)
++            .then(|| hasher.hash_rows(rm_vals, width))
++            .flatten()
++        {
++            debug_assert_eq!(h.len(), codeword_height);
++            h.truncate(num_leaves);
++            h
+         } else {
+             let zero_row = vec![F::ZERO; width];
+             hash_rows_with_padding(
+diff --git a/crates/cpu-backend/src/whir.rs b/crates/cpu-backend/src/whir.rs
+index 711791d..d17ac14 100644
+--- a/crates/cpu-backend/src/whir.rs
++++ b/crates/cpu-backend/src/whir.rs
+@@ -399,6 +399,17 @@ where
+             let bb_digests = hash_rows_packed_babybear(bb_vals, ef_width, height, num_leaves);
+             // SAFETY: TypeId checks guarantee SC::Digest = [BabyBear; 8].
+             unsafe { reinterpret_vec(bb_digests) }
++        } else if let Some(h) = (TypeId::of::<SC::EF>() == TypeId::of::<SC::F>()
++            && num_leaves == height)
++            .then(|| {
++                // SAFETY: the TypeId check guarantees SC::EF = SC::F (D_EF = 1).
++                let f_vals: &[SC::F] =
++                    unsafe { std::slice::from_raw_parts(g_rs.as_ptr().cast::<SC::F>(), height) };
++                hasher.hash_rows(f_vals, 1)
++            })
++            .flatten()
++        {
++            h
+         } else {
+             let zero_row = vec![SC::F::ZERO; ef_width];
+             hash_rows_with_padding(
+diff --git a/crates/stark-backend/src/hasher.rs b/crates/stark-backend/src/hasher.rs
+index d03985a..40f0c31 100644
+--- a/crates/stark-backend/src/hasher.rs
++++ b/crates/stark-backend/src/hasher.rs
+@@ -26,6 +26,48 @@ pub trait MerkleHasher: 'static + Clone + Send + Sync {
+     /// Compress two digests into one (used for internal Merkle tree nodes).
+     fn compress(&self, left: Self::Digest, right: Self::Digest) -> Self::Digest;
+ 
++    /// Whether [`Self::hash_rows`] and [`Self::digest_layers`] may return `Some` (so a caller
++    /// may lay out the leaf values for them). Default `false`.
++    fn has_batch(&self) -> bool {
++        false
++    }
++
++    /// Batch leaf hashes of the rows of a row-major matrix (`vals.len() / width` rows):
++    /// row `r` maps to `hash_slice(&vals[r * width..(r + 1) * width])`. `None` (the default)
++    /// means the caller hashes on the CPU; an accelerated hasher (GPU) returns `Some` with
++    /// values equal to the CPU ones.
++    fn hash_rows(&self, _vals: &[Self::F], _width: usize) -> Option<Vec<Self::Digest>> {
++        None
++    }
++
++    /// Fused Reed-Solomon encode and leaf hash: `coeffs` holds `width` columns of `height`
++    /// coefficients (column-major). Each column is zero-padded to `2^log_n` and evaluated on
++    /// the order-`2^log_n` subgroup (natural order, as `Radix2DitParallel::dft_batch`).
++    /// Returns the row-major codeword (`2^log_n` rows of `width`) and the row hashes.
++    /// `None` (the default) means the caller encodes and hashes on the CPU.
++    #[allow(clippy::type_complexity)]
++    fn encode_hash_rows(
++        &self,
++        _coeffs: &[Self::F],
++        _height: usize,
++        _width: usize,
++        _log_n: usize,
++    ) -> Option<(Vec<Self::F>, Vec<Self::Digest>)> {
++        None
++    }
++
++    /// Batch digest layers of a power-of-two leaf layer: `log2(rows_per_query)` rounds of
++    /// `compress` at query stride `n / rows_per_query`, then halving to the root, returning
++    /// the layers from the first one after the strided rounds down to the root. `None` (the
++    /// default) means the caller compresses on the CPU.
++    fn digest_layers(
++        &self,
++        _leaves: &[Self::Digest],
++        _rows_per_query: usize,
++    ) -> Option<Vec<Vec<Self::Digest>>> {
++        None
++    }
++
+     /// Compress a vector of digests (must be power-of-two length) into a single digest
+     /// by repeated binary compression.
+     fn tree_compress(&self, mut hashes: Vec<Self::Digest>) -> Self::Digest {
+diff --git a/crates/stark-backend/src/prover/stacked_pcs.rs b/crates/stark-backend/src/prover/stacked_pcs.rs
+index 97271aa..1f028e7 100644
+--- a/crates/stark-backend/src/prover/stacked_pcs.rs
++++ b/crates/stark-backend/src/prover/stacked_pcs.rs
+@@ -432,6 +432,31 @@ where
+                 num_leaves,
+             });
+         }
++        // Accelerated hasher (Sherlock E4): one batch call over the row-major leaf values.
++        let width = matrix.width() * EF::DIMENSION;
++        let batch = (num_leaves == height && hasher.has_batch())
++            .then(|| {
++                let rows: Vec<Vec<H::F>> = (0..height)
++                    .into_par_iter()
++                    .map(|r| {
++                        Self::row_iter(&matrix, r)
++                            .flat_map(|ef| ef.as_basis_coefficients_slice().to_vec())
++                            .collect()
++                    })
++                    .collect();
++                let vals: Vec<H::F> = rows.concat();
++                hasher.hash_rows(&vals, width)
++            })
++            .flatten();
++        if let Some(row_hashes) = batch {
++            if let Some(digest_layers) = hasher.digest_layers(&row_hashes, rows_per_query) {
++                return Ok(Self {
++                    backing_matrix: matrix,
++                    digest_layers,
++                    rows_per_query,
++                });
++            }
++        }
+         let row_hashes: Vec<_> = (0..num_leaves)
+             .into_par_iter()
+             .map(|r| {
+diff --git a/crates/stark-backend/src/transcript/traits.rs b/crates/stark-backend/src/transcript/traits.rs
+index be8d729..57715c4 100644
+--- a/crates/stark-backend/src/transcript/traits.rs
++++ b/crates/stark-backend/src/transcript/traits.rs
+@@ -91,11 +91,27 @@ where
+             return SC::F::ZERO;
+         }
+ 
+-        let witness = (0..grind_candidate_count::<SC::F>())
+-            .into_par_iter()
+-            .map(PrimeCharacteristicRing::from_u64)
+-            .find_any(|witness| self.clone().check_witness(bits, *witness))
+-            .expect("failed to find PoW witness");
++        // Sherlock E4: the smallest witness (`find_first`), so a proof is a function of its
++        // inputs at any thread count and a GPU path can be checked byte for byte (`find_any`
++        // returned whichever thread finished first: two 20-thread proofs differed, MEASURED).
++        // Searched in ordered chunks: the first chunk with a witness gives the smallest one,
++        // with no thread scanning far past it (a single `find_first` over the whole range was
++        // 2 to 5 times slower, MEASURED in E4).
++        const CHUNK: u64 = 1 << 16;
++        let end = grind_candidate_count::<SC::F>();
++        let mut start = 0u64;
++        let witness = loop {
++            assert!(start < end, "failed to find PoW witness");
++            let stop = start.saturating_add(CHUNK).min(end);
++            if let Some(w) = (start..stop)
++                .into_par_iter()
++                .map(PrimeCharacteristicRing::from_u64)
++                .find_first(|witness| self.clone().check_witness(bits, *witness))
++            {
++                break w;
++            }
++            start = stop;
++        };
+         assert!(self.check_witness(bits, witness));
+         witness
+     }
+diff --git a/crates/stark-sdk/Cargo.toml b/crates/stark-sdk/Cargo.toml
+index 927f534..c9a9586 100644
+--- a/crates/stark-sdk/Cargo.toml
++++ b/crates/stark-sdk/Cargo.toml
+@@ -21,6 +21,8 @@ zkhash = { workspace = true, optional = true }
+ # Sherlock M7: BLS12-381 Fr field and Midnight Poseidon
+ p3-bls12-381-fr = { path = "../../../p3-bls12-381-fr", optional = true }
+ midnight-circuits = { version = "=7.3.0", default-features = false, optional = true }
++# Sherlock E4: Midnight Poseidon over Fr on the GPU (crates/mori-gpu of the Moriarty e4-gpu worktree)
++mori-gpu = { path = "/home/hoskinson/Projects/Moriarty-wt/e4-gpu/crates/mori-gpu", optional = true }
+ 
+ hex-literal.workspace = true
+ itertools.workspace = true
+@@ -73,6 +75,8 @@ baby-bear-bls12381-poseidon = [
+ ]
+ # Sherlock E1: BLS12-381 Fr base field (EF = F) with Midnight Poseidon hashes and transcript
+ bls12381-fr-poseidon = ["baby-bear-bls12381-poseidon"]
++# Sherlock E4: GPU Merkle hashing of the Fr config (MORI_GPU=off at run time takes the CPU path)
++gpu = ["bls12381-fr-poseidon", "dep:mori-gpu", "mori-gpu/cuda"]
+ cpu-backend = ["dep:openvm-cpu-backend"]
+ parallel = ["openvm-stark-backend/parallel", "openvm-cpu-backend?/parallel"]
+ mimalloc = ["openvm-stark-backend/mimalloc"]
+diff --git a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+index 52c23d1..fa5ed5f 100644
+--- a/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
++++ b/crates/stark-sdk/src/config/bls12381_fr_poseidon.rs
+@@ -155,6 +155,154 @@ impl MerkleHasher for FrMerkleHasher {
+         self.perm.permute_mut(&mut state);
+         [state[0]]
+     }
++
++    #[cfg(feature = "gpu")]
++    fn has_batch(&self) -> bool {
++        mori_gpu::info().is_some()
++    }
++
++    #[cfg(feature = "gpu")]
++    fn hash_rows(&self, vals: &[F], width: usize) -> Option<Vec<Digest>> {
++        if vals.len() / width.max(1) < gpu::MIN_ROWS {
++            return None;
++        }
++        let cap = cap_fixed(self.domains.u_leaf, width as u128).to_ff();
++        let out = mori_gpu::poseidon::hash_rows(gpu::constants(), gpu::as_ff(vals), width, cap)?;
++        Some(gpu::digests(out))
++    }
++
++    #[cfg(feature = "gpu")]
++    fn encode_hash_rows(
++        &self,
++        coeffs: &[F],
++        height: usize,
++        width: usize,
++        log_n: usize,
++    ) -> Option<(Vec<F>, Vec<Digest>)> {
++        if (1usize << log_n) < gpu::MIN_ROWS || std::env::var("E4_GPU_ENCODE").as_deref() == Ok("0") {
++            return None;
++        }
++        let cap = cap_fixed(self.domains.u_leaf, width as u128).to_ff();
++        let (rm, dg) = mori_gpu::poseidon::encode_hash_rows(
++            gpu::constants(),
++            gpu::as_ff(coeffs),
++            height,
++            width,
++            log_n as u32,
++            cap,
++        )?;
++        // SAFETY: Bls12381Fr is repr(transparent) over MidnightFq.
++        let rm: Vec<F> = unsafe {
++            let mut rm = std::mem::ManuallyDrop::new(rm);
++            Vec::from_raw_parts(rm.as_mut_ptr().cast(), rm.len(), rm.capacity())
++        };
++        Some((rm, gpu::digests(dg)))
++    }
++
++    #[cfg(feature = "gpu")]
++    fn digest_layers(&self, leaves: &[Digest], rows_per_query: usize) -> Option<Vec<Vec<Digest>>> {
++        if leaves.len() < gpu::MIN_ROWS {
++            return None;
++        }
++        let cap = cap_fixed(self.domains.u_node, 2).to_ff();
++        // SAFETY: Digest = [Bls12381Fr; 1], and Bls12381Fr is repr(transparent) over MidnightFq.
++        let flat: &[F] = unsafe { std::slice::from_raw_parts(leaves.as_ptr().cast(), leaves.len()) };
++        let layers =
++            mori_gpu::poseidon::digest_layers(gpu::constants(), gpu::as_ff(flat), rows_per_query, cap)?;
++        Some(layers.into_iter().map(gpu::digests).collect())
++    }
++}
++
++/// Sherlock E4: the GPU hooks of [`FrMerkleHasher`] (Midnight Poseidon over Fr in `mori-gpu`).
++#[cfg(feature = "gpu")]
++pub mod gpu {
++    use std::sync::OnceLock;
++
++    use midnight_circuits::hash::poseidon::constants::PoseidonField;
++    use mori_gpu::poseidon::Constants;
++
++    use super::{Digest, MidnightFq, F};
++
++    /// Below this many rows the CPU hashes (launch and copy cost dominate).
++    pub const MIN_ROWS: usize = 1 << 12;
++
++    /// The constant table of the kernel: the round constants and the MDS matrix of
++    /// midnight-circuits, then the sparse partial-round table derived from them here.
++    pub fn constants() -> &'static Constants {
++        static C: OnceLock<Constants> = OnceLock::new();
++        C.get_or_init(|| {
++            let mut v: Vec<MidnightFq> =
++                MidnightFq::ROUND_CONSTANTS.iter().flatten().copied().collect();
++            v.extend(MidnightFq::MDS.iter().flatten().copied());
++            v.extend(sparse_partial().into_iter().map(F::to_ff));
++            assert_eq!(v.len(), mori_gpu::poseidon::NCONST);
++            Constants(v)
++        })
++    }
++
++    /// Sparse partial rounds (Poseidon paper, appendix B) in coordinates `t = (s2, s0, s1)`
++    /// (the S-box cell first). Partial round `k` (round `r = 4 + k` of the unskipped
++    /// permutation: S-box on `s2`, then `s = M s + RC[r + 1]`) becomes
++    /// `u = M''_k S(u) + k_k e_0` with `M''_k = [[a, v0, v1], [w0, 1, 0], [w1, 0, 1]]`.
++    /// `A_k = M M'_{k - 1}` (`M'_0 = I`) is split as `M'_k M''_k`, `M'_k = diag(1, Â_k)`,
++    /// and `M'_k` moves into the next round. The constants of `t1, t2` are carried
++    /// (`S` leaves them alone): the true state is the computed one plus `e`, `e_0 = 0`.
++    /// After the last round the state is `M'_60 u + e`. Returns 60 x (a, v0, v1, w0, w1, k),
++    /// then `Â_60` row-major and `(e_1, e_2)`.
++    fn sparse_partial() -> Vec<F> {
++        use p3_field::{Field, PrimeCharacteristicRing};
++        const P: [usize; 3] = [2, 0, 1];
++        let rc: Vec<[F; 3]> = MidnightFq::ROUND_CONSTANTS
++            .iter()
++            .map(|r| [0, 1, 2].map(|i| F::from_ff(r[P[i]])))
++            .collect();
++        let m: [[F; 3]; 3] =
++            [0, 1, 2].map(|i| [0, 1, 2].map(|j| F::from_ff(MidnightFq::MDS[P[i]][P[j]])));
++        let mul = |x: &[[F; 3]; 3], y: &[[F; 3]; 3]| -> [[F; 3]; 3] {
++            [0, 1, 2].map(|i| {
++                [0, 1, 2].map(|j| (0..3).fold(F::ZERO, |acc, l| acc + x[i][l] * y[l][j]))
++            })
++        };
++        let mut out = Vec::new();
++        let mut e = [F::ZERO; 3];
++        let mut a = m;
++        let mut last = [[F::ZERO; 2]; 2];
++        for k in 0..60 {
++            let r = 4 + k;
++            let c: [F; 3] = [0, 1, 2]
++                .map(|i| (0..3).fold(rc[r + 1][i], |acc, j| acc + m[i][j] * e[j]));
++            e = [F::ZERO, c[1], c[2]];
++            let ah = [[a[1][1], a[1][2]], [a[2][1], a[2][2]]];
++            let det_inv = (ah[0][0] * ah[1][1] - ah[0][1] * ah[1][0]).inverse();
++            let inv = [
++                [ah[1][1] * det_inv, -ah[0][1] * det_inv],
++                [-ah[1][0] * det_inv, ah[0][0] * det_inv],
++            ];
++            let w = [
++                inv[0][0] * a[1][0] + inv[0][1] * a[2][0],
++                inv[1][0] * a[1][0] + inv[1][1] * a[2][0],
++            ];
++            out.extend([a[0][0], a[0][1], a[0][2], w[0], w[1], c[0]]);
++            let mprime = [
++                [F::ONE, F::ZERO, F::ZERO],
++                [F::ZERO, ah[0][0], ah[0][1]],
++                [F::ZERO, ah[1][0], ah[1][1]],
++            ];
++            a = mul(&m, &mprime);
++            last = ah;
++        }
++        out.extend([last[0][0], last[0][1], last[1][0], last[1][1], e[1], e[2]]);
++        out
++    }
++
++    pub fn as_ff(v: &[F]) -> &[MidnightFq] {
++        // SAFETY: Bls12381Fr is repr(transparent) over MidnightFq.
++        unsafe { std::slice::from_raw_parts(v.as_ptr().cast(), v.len()) }
++    }
++
++    pub fn digests(v: Vec<MidnightFq>) -> Vec<Digest> {
++        v.into_iter().map(|x| [F::from_ff(x)]).collect()
++    }
+ }
+ 
+ #[derive(Clone, Debug)]
+-- 
+2.56.0
+

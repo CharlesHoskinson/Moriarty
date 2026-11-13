@@ -1,0 +1,1168 @@
+From 02bb7ff5cd3772eb6bb6b6a56ec9440bd9a35356 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 11:31:53 -0700
+Subject: [PATCH 04/24] E2 I5c: one shared ProgramTable AIR holds every program
+ (owner ruling 2026-11-12), so an L_Fr proof has 2 commitments; execution AIRs
+ receive their program rows on a program bus; tests assert the count and
+ refuse a changed program cell and a forged padding-row write
+
+---
+ crates/sherlock-lfr/src/lib.rs               |   1 +
+ crates/sherlock-lfr/src/machine.rs           | 196 ++++++++++++-------
+ crates/sherlock-lfr/src/program.rs           | 150 ++++++++++++++
+ crates/sherlock-lfr/src/tape.rs              | 114 +++++++----
+ crates/sherlock-lfr/src/testing.rs           |  54 ++++-
+ crates/sherlock-lfr/tests/i4_tape.rs         | 150 +++++++++++---
+ crates/sherlock-lfr/tests/i5_l_transcript.rs |  17 +-
+ crates/sherlock-lfr/tests/i5_transcript.rs   |   1 +
+ 8 files changed, 529 insertions(+), 154 deletions(-)
+ create mode 100644 crates/sherlock-lfr/src/program.rs
+
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+index 58dbbdc..8313c8a 100644
+--- a/crates/sherlock-lfr/src/lib.rs
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -11,6 +11,7 @@ pub mod fixture;
+ pub mod fr;
+ pub mod machine;
+ pub mod poseidon;
++pub mod program;
+ pub mod range;
+ pub mod tape;
+ pub mod testing;
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+index 6a8aaaa..20c1c87 100644
+--- a/crates/sherlock-lfr/src/machine.rs
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -3,15 +3,17 @@
+ //!
+ //! AIRs (only those with at least one op are present; `Range16` is always last):
+ //! `InputAir` (BabyBear and `EF4` inputs and constants), `FrInputAir`, `BbAluProgAir`,
+-//! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `Range16Air`. All talk over the
+-//! write-once memory bus [`MEM_BUS`] and the 16-bit range bus.
++//! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `ProgramTableAir`, `Range16Air`. All
++//! talk over the write-once memory bus [`MEM_BUS`] and the 16-bit range bus. Each execution AIR
++//! keeps its program in main columns after its other columns and receives it on the program bus
++//! from the one `ProgramTableAir` (`crate::program`), the only preprocessed trace.
+ 
+ use std::sync::Arc;
+ 
+ use num_bigint::BigUint;
+ use openvm_stark_backend::{
+     interaction::InteractionBuilder,
+-    p3_air::{Air, BaseAir, PairBuilder},
++    p3_air::{Air, BaseAir},
+     p3_field::{Field, PrimeCharacteristicRing},
+     p3_matrix::{dense::RowMajorMatrix, Matrix},
+     AirRef, BaseAirWithPublicValues, PartitionedBaseAir,
+@@ -22,6 +24,10 @@ use crate::{
+     alu::{canonical_cells, eval_canonical},
+     fr::{fr_from_big, limbs16, split, split_consts, H_LIMBS, V_LIMBS},
+     poseidon::{eval_rounds, poseidon_row, IN, OUT, POSEIDON_WIDTH},
++    program::{
++        receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_FR_INPUT, TAG_INPUT, TAG_PACK,
++        TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
++    },
+     range::{Range16Air, RangeCounts, RANGE_BUS},
+     tape::{padded, Addr, BbAluProgAir, InputAir, Op, Tape, Val, MEM_BUS},
+     testing::SC,
+@@ -48,20 +54,48 @@ macro_rules! air_boiler {
+     ($t:ty, $w:expr, $pw:expr) => {
+         impl BaseAir<Fr> for $t {
+             fn width(&self) -> usize {
+-                $w
+-            }
+-            fn preprocessed_trace(&self) -> Option<RowMajorMatrix<Fr>> {
+-                Some(self.pre())
++                $w + $pw
+             }
+         }
+         impl BaseAirWithPublicValues<Fr> for $t {}
+         impl PartitionedBaseAir<Fr> for $t {}
+         impl $t {
+-            pub const PRE_WIDTH: usize = $pw;
++            /// Main columns before the program columns.
++            pub const MAIN_WIDTH: usize = $w;
++            /// Program columns (after the main columns; received on the program bus).
++            pub const PROG_WIDTH: usize = $pw;
++            /// Program rows (unpadded), as sent by the program table.
++            pub fn prog_rows(&self) -> Vec<Vec<Fr>> {
++                let m = self.pre();
++                m.values[..self.prog.len() * $pw]
++                    .chunks($pw)
++                    .map(|c| c.to_vec())
++                    .collect()
++            }
++            fn finish(&self, main: RowMajorMatrix<Fr>) -> RowMajorMatrix<Fr> {
++                crate::program::with_prog(main, &self.prog_rows(), $pw)
++            }
+         }
+     };
+ }
+ 
++/// The main row split into its main cells (`w`) and program cells (`pw`); the program cells are
++/// received on the program bus under `tag`.
++fn split_row<AB: InteractionBuilder>(
++    builder: &mut AB,
++    tag: u64,
++    w: usize,
++    pw: usize,
++) -> (Vec<AB::Expr>, Vec<AB::Expr>) {
++    let main = builder.main();
++    let r = main.row_slice(0).expect("row");
++    let all: Vec<AB::Expr> = (0..w + pw).map(|i| r[i].into()).collect();
++    drop(r);
++    let p = all[w..].to_vec();
++    receive_prog(builder, tag, &p);
++    (all[..w].to_vec(), p)
++}
++
+ fn rows_to_matrix(rows: Vec<Vec<Fr>>, n: usize, w: usize, pad: Vec<Fr>) -> RowMajorMatrix<Fr> {
+     let h = padded(n);
+     let mut v = Vec::with_capacity(h * w);
+@@ -74,7 +108,7 @@ fn rows_to_matrix(rows: Vec<Vec<Fr>>, n: usize, w: usize, pad: Vec<Fr>) -> RowMa
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// FrInputAir: pre [addr, mult, is_const, k]; main [v].
++// FrInputAir: program (main, after the other columns) [addr, mult, is_const, k]; main [v].
+ // ------------------------------------------------------------------------------------------
+ 
+ #[derive(Clone, Debug)]
+@@ -112,27 +146,21 @@ impl FrInputAir {
+             .iter()
+             .map(|p| vec![get(mem, p.addr).fr()])
+             .collect();
+-        rows_to_matrix(rows, self.prog.len(), 1, vec![Fr::ZERO])
++        self.finish(rows_to_matrix(rows, self.prog.len(), 1, vec![Fr::ZERO]))
+     }
+ }
+ 
+-impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for FrInputAir {
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for FrInputAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre");
+-        let p: Vec<AB::Expr> = (0..4).map(|i| pr[i].into()).collect();
+-        drop(pr);
+-        let main = builder.main();
+-        let r = main.row_slice(0).expect("row");
+-        let v: AB::Expr = r[0].into();
+-        drop(r);
++        let (x, p) = split_row(builder, TAG_FR_INPUT, 1, 4);
++        let v = x[0].clone();
+         builder.assert_zero(p[2].clone() * (v.clone() - p[3].clone()));
+         builder.push_interaction(MEM_BUS, mem_msg(p[0].clone(), &[v]), p[1].clone(), 1);
+     }
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// PoseidonProgAir: pre [in_addr[3], out_addr[3], out_mult[3], active]; main = PoseidonFr row.
++// PoseidonProgAir: program (main, after the other columns) [in_addr[3], out_addr[3], out_mult[3], active]; main = PoseidonFr row.
+ // ------------------------------------------------------------------------------------------
+ 
+ #[derive(Clone, Debug)]
+@@ -168,25 +196,18 @@ impl PoseidonProgAir {
+             .iter()
+             .map(|p| poseidon_row(p.ins.map(|a| get(mem, a).fr()), 0))
+             .collect();
+-        rows_to_matrix(
++        self.finish(rows_to_matrix(
+             rows,
+             self.prog.len(),
+             POSEIDON_WIDTH,
+             poseidon_row([Fr::ZERO; 3], 0),
+-        )
++        ))
+     }
+ }
+ 
+-impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PoseidonProgAir {
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for PoseidonProgAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre");
+-        let p: Vec<AB::Expr> = (0..10).map(|i| pr[i].into()).collect();
+-        drop(pr);
+-        let main = builder.main();
+-        let r = main.row_slice(0).expect("row");
+-        let x: Vec<AB::Expr> = (0..POSEIDON_WIDTH).map(|i| r[i].into()).collect();
+-        drop(r);
++        let (x, p) = split_row(builder, TAG_PERM, POSEIDON_WIDTH, 10);
+         eval_rounds(builder, &x);
+         for i in 0..3 {
+             builder.push_interaction(
+@@ -206,7 +227,7 @@ impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PoseidonProgAir {
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// PackAir: pre [addr_b[8], use[8], addr_out, mult_out]; main [b[8], out].
++// PackAir: program (main, after the other columns) [addr_b[8], use[8], addr_out, mult_out]; main [b[8], out].
+ // ------------------------------------------------------------------------------------------
+ 
+ #[derive(Clone, Debug)]
+@@ -253,20 +274,13 @@ impl PackAir {
+                 r
+             })
+             .collect();
+-        rows_to_matrix(rows, self.prog.len(), 9, vec![Fr::ZERO; 9])
++        self.finish(rows_to_matrix(rows, self.prog.len(), 9, vec![Fr::ZERO; 9]))
+     }
+ }
+ 
+-impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PackAir {
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for PackAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre");
+-        let p: Vec<AB::Expr> = (0..18).map(|i| pr[i].into()).collect();
+-        drop(pr);
+-        let main = builder.main();
+-        let r = main.row_slice(0).expect("row");
+-        let x: Vec<AB::Expr> = (0..9).map(|i| r[i].into()).collect();
+-        drop(r);
++        let (x, p) = split_row(builder, TAG_PACK, 9, 18);
+         let mut acc = AB::Expr::ZERO;
+         for i in (0..8).rev() {
+             builder.assert_zero((AB::Expr::ONE - p[8 + i].clone()) * x[i].clone());
+@@ -289,7 +303,7 @@ impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for PackAir {
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// SplitAir: pre [addr_x, addr_d[5], mult_d[5], active];
++// SplitAir: program (main, after the other columns) [addr_x, addr_d[5], mult_d[5], active];
+ // main [x, d[5], canon(d)[5][4], hl[7], gl[7], inv_e, is_eq, vl[10]].
+ // ------------------------------------------------------------------------------------------
+ 
+@@ -393,30 +407,23 @@ impl SplitAir {
+     }
+     pub fn trace_from(&self, w: &[SplitWitness]) -> RowMajorMatrix<Fr> {
+         let rows = w.iter().map(|w| w.cells()).collect();
+-        rows_to_matrix(
++        self.finish(rows_to_matrix(
+             rows,
+             self.prog.len(),
+             SPLIT_WIDTH,
+             SplitWitness::honest(Fr::ZERO).cells(),
+-        )
++        ))
+     }
+     pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
+         self.trace_from(&self.witnesses(mem))
+     }
+ }
+ 
+-impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for SplitAir {
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for SplitAir {
+     fn eval(&self, builder: &mut AB) {
+         let c = split_consts();
+         let k = |v: &BigUint| -> AB::Expr { AB::Expr::from(fr_from_big(v)) };
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre");
+-        let p: Vec<AB::Expr> = (0..12).map(|i| pr[i].into()).collect();
+-        drop(pr);
+-        let main = builder.main();
+-        let r = main.row_slice(0).expect("row");
+-        let x: Vec<AB::Expr> = (0..SPLIT_WIDTH).map(|i| r[i].into()).collect();
+-        drop(r);
++        let (x, p) = split_row(builder, TAG_SPLIT, SPLIT_WIDTH, 12);
+         let limbs = |base: usize, n: usize| -> AB::Expr {
+             (0..n).rev().fold(AB::Expr::ZERO, |acc, j| {
+                 acc * AB::Expr::from_u64(1 << 16) + x[base + j].clone()
+@@ -467,7 +474,7 @@ impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for SplitAir {
+ }
+ 
+ // ------------------------------------------------------------------------------------------
+-// ReshapeAir: pre [addr_ef, addr_bb[4], is_compose, is_decompose, mult_ef, mult_bb[4]]; main v[4].
++// ReshapeAir: program (main, after the other columns) [addr_ef, addr_bb[4], is_compose, is_decompose, mult_ef, mult_bb[4]]; main v[4].
+ // ------------------------------------------------------------------------------------------
+ 
+ #[derive(Clone, Debug)]
+@@ -508,20 +515,13 @@ impl ReshapeAir {
+             .iter()
+             .map(|p| get(mem, p.ef).cells().to_vec())
+             .collect();
+-        rows_to_matrix(rows, self.prog.len(), 4, vec![Fr::ZERO; 4])
++        self.finish(rows_to_matrix(rows, self.prog.len(), 4, vec![Fr::ZERO; 4]))
+     }
+ }
+ 
+-impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for ReshapeAir {
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for ReshapeAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre");
+-        let p: Vec<AB::Expr> = (0..12).map(|i| pr[i].into()).collect();
+-        drop(pr);
+-        let main = builder.main();
+-        let r = main.row_slice(0).expect("row");
+-        let v: Vec<AB::Expr> = (0..4).map(|i| r[i].into()).collect();
+-        drop(r);
++        let (v, p) = split_row(builder, TAG_RESHAPE, 4, 12);
+         let (comp, decomp) = (p[5].clone(), p[6].clone());
+         builder.push_interaction(
+             MEM_BUS,
+@@ -641,7 +641,40 @@ impl Machine {
+         }
+     }
+ 
+-    /// AIRs in order, `Range16` last.
++    /// The programs of the present AIRs, in [`Machine::airs`] order.
++    pub fn programs(&self) -> Vec<KindProgram> {
++        let mut v = vec![];
++        let mut push = |tag, rows| v.push(KindProgram { tag, rows });
++        if let Some(a) = &self.input {
++            push(TAG_INPUT, a.prog_rows());
++        }
++        if let Some(a) = &self.fr_input {
++            push(TAG_FR_INPUT, a.prog_rows());
++        }
++        if let Some(a) = &self.alu {
++            push(TAG_ALU, a.prog_rows());
++        }
++        if let Some(a) = &self.poseidon {
++            push(TAG_PERM, a.prog_rows());
++        }
++        if let Some(a) = &self.pack {
++            push(TAG_PACK, a.prog_rows());
++        }
++        if let Some(a) = &self.split {
++            push(TAG_SPLIT, a.prog_rows());
++        }
++        if let Some(a) = &self.reshape {
++            push(TAG_RESHAPE, a.prog_rows());
++        }
++        v
++    }
++
++    /// The one program table of all present AIRs (the only preprocessed trace).
++    pub fn table(&self) -> ProgramTableAir {
++        ProgramTableAir::new(&self.programs())
++    }
++
++    /// AIRs in order: the execution AIRs, `ProgramTable`, `Range16` last.
+     pub fn airs(&self) -> Vec<AirRef<SC>> {
+         let mut v: Vec<AirRef<SC>> = vec![];
+         if let Some(a) = &self.input {
+@@ -665,6 +698,7 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             v.push(Arc::new(a.clone()));
+         }
++        v.push(Arc::new(self.table()));
+         v.push(Arc::new(Range16Air));
+         v
+     }
+@@ -685,6 +719,7 @@ impl Machine {
+                 v.push(n);
+             }
+         }
++        v.push("ProgramTable");
+         v.push("Range16");
+         v
+     }
+@@ -723,10 +758,12 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             v.push(a.trace(mem));
+         }
++        v.push(self.table().trace());
+         v
+     }
+ 
+-    /// Rows and cells per AIR: (name, rows padded, main width, preprocessed width).
++    /// Rows and cells per AIR: (name, rows padded, main width with the program columns,
++    /// preprocessed width).
+     pub fn shape(&self) -> Vec<(&'static str, usize, usize, usize)> {
+         let mut v = vec![];
+         let mut push =
+@@ -735,33 +772,40 @@ impl Machine {
+             push(
+                 "Input",
+                 a.prog.len(),
+-                crate::tape::IN_WIDTH,
+-                crate::tape::IN_PRE_WIDTH,
++                crate::tape::IN_WIDTH + crate::tape::IN_PRE_WIDTH,
++                0,
+             );
+         }
+         if let Some(a) = &self.fr_input {
+-            push("FrInput", a.prog.len(), 1, 4);
++            push("FrInput", a.prog.len(), 1 + 4, 0);
+         }
+         if let Some(a) = &self.alu {
+             push(
+                 "BbAlu",
+                 a.prog.len(),
+-                crate::alu::ALU_WIDTH,
+-                crate::tape::ALU_PRE_WIDTH,
++                crate::alu::ALU_WIDTH + crate::tape::ALU_PROG_COLS,
++                0,
+             );
+         }
+         if let Some(a) = &self.poseidon {
+-            push("PoseidonFr", a.prog.len(), POSEIDON_WIDTH, 10);
++            push("PoseidonFr", a.prog.len(), POSEIDON_WIDTH + 10, 0);
+         }
+         if let Some(a) = &self.pack {
+-            push("Pack", a.prog.len(), 9, 18);
++            push("Pack", a.prog.len(), 9 + 18, 0);
+         }
+         if let Some(a) = &self.split {
+-            push("Split", a.prog.len(), SPLIT_WIDTH, 12);
++            push("Split", a.prog.len(), SPLIT_WIDTH + 12, 0);
+         }
+         if let Some(a) = &self.reshape {
+-            push("Reshape", a.prog.len(), 4, 12);
++            push("Reshape", a.prog.len(), 4 + 12, 0);
+         }
++        let t = self.table();
++        v.push((
++            "ProgramTable",
++            t.height(),
++            1,
++            crate::program::TABLE_PRE_WIDTH,
++        ));
+         v.push(("Range16", crate::range::RANGE_SIZE, 2, 0));
+         v
+     }
+diff --git a/crates/sherlock-lfr/src/program.rs b/crates/sherlock-lfr/src/program.rs
+new file mode 100644
+index 0000000..fe14aac
+--- /dev/null
++++ b/crates/sherlock-lfr/src/program.rs
+@@ -0,0 +1,150 @@
++//! The shared program table (owner ruling 2026-11-12): every program of every execution AIR is
++//! one preprocessed trace, so an `L_Fr` proof has 2 commitments (common main and this table).
++//!
++//! **Program bus.** Each execution AIR keeps its program columns (op kind, operand and result
++//! addresses, multiplicities, constants) in its main trace, after its other columns. Every row,
++//! padding included, receives `[tag, prog[0..k], 0 ..]` (length `1 + PROG_W`) on [`PROG_BUS`]
++//! with count 1. The table sends each program row with count 1 and, per AIR kind, one all-zero
++//! nop row `[tag, 0 ..]` with count `padded(n) - n` (the padding rows of that AIR).
++//!
++//! **Why this binds the program.** The table is preprocessed, so the key fixes the multiset of
++//! `(tag, program row)` with its counts. The bus balances only if the rows of each execution AIR
++//! carry exactly that multiset: every program row once, and the nop row on every other row. So
++//! the execution AIR height is pinned to `padded(n)` (as the old per-AIR preprocessed trace did),
++//! a padding row has all program cells zero (so no memory traffic), and the hard-coded tag stops
++//! one kind of AIR from taking another kind's row. Order inside an AIR is free: the write-once
++//! memory bus does not depend on it.
++
++use std::sync::Arc;
++
++use openvm_stark_backend::{
++    interaction::{BusIndex, InteractionBuilder},
++    p3_air::{Air, BaseAir, PairBuilder},
++    p3_field::PrimeCharacteristicRing,
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++
++use crate::tape::padded;
++
++pub const PROG_BUS: BusIndex = 3;
++/// Program cells per message (the widest program, `Pack`).
++pub const PROG_W: usize = 18;
++/// Preprocessed columns of the table: `tag, f[PROG_W], count`.
++pub const TABLE_PRE_WIDTH: usize = PROG_W + 2;
++
++pub const TAG_INPUT: u64 = 1;
++pub const TAG_FR_INPUT: u64 = 2;
++pub const TAG_ALU: u64 = 3;
++pub const TAG_PERM: u64 = 4;
++pub const TAG_PACK: u64 = 5;
++pub const TAG_SPLIT: u64 = 6;
++pub const TAG_RESHAPE: u64 = 7;
++
++/// `[tag, cols.., 0 ..]` of length `1 + PROG_W`.
++pub fn prog_msg<E: Clone + PrimeCharacteristicRing>(tag: u64, cols: &[E]) -> Vec<E> {
++    assert!(cols.len() <= PROG_W);
++    let mut m = vec![E::from_u64(tag)];
++    m.extend(cols.iter().cloned());
++    m.resize(1 + PROG_W, E::ZERO);
++    m
++}
++
++/// The receive of an execution row: its program cells, count 1 on every row.
++pub fn receive_prog<AB: InteractionBuilder>(builder: &mut AB, tag: u64, cols: &[AB::Expr]) {
++    builder.push_interaction(PROG_BUS, prog_msg(tag, cols), -AB::Expr::ONE, 1);
++}
++
++/// One kind's program: its tag, its rows (unpadded) and its row width.
++#[derive(Clone, Debug)]
++pub struct KindProgram {
++    pub tag: u64,
++    pub rows: Vec<Vec<Fr>>,
++}
++
++#[derive(Clone, Debug)]
++pub struct ProgramTableAir {
++    /// `(tag, cells (PROG_W), count)` per table row.
++    pub rows: Arc<Vec<(u64, Vec<Fr>, u64)>>,
++}
++
++impl ProgramTableAir {
++    pub fn new(kinds: &[KindProgram]) -> Self {
++        let mut rows = vec![];
++        for k in kinds {
++            let n = k.rows.len();
++            for r in &k.rows {
++                let mut c = r.clone();
++                assert!(c.len() <= PROG_W);
++                c.resize(PROG_W, Fr::ZERO);
++                rows.push((k.tag, c, 1));
++            }
++            if padded(n) > n {
++                rows.push((k.tag, vec![Fr::ZERO; PROG_W], (padded(n) - n) as u64));
++            }
++        }
++        Self {
++            rows: Arc::new(rows),
++        }
++    }
++
++    pub fn height(&self) -> usize {
++        padded(self.rows.len())
++    }
++
++    /// The main trace: one column of zeros.
++    pub fn trace(&self) -> RowMajorMatrix<Fr> {
++        RowMajorMatrix::new(vec![Fr::ZERO; self.height()], 1)
++    }
++}
++
++impl BaseAir<Fr> for ProgramTableAir {
++    fn width(&self) -> usize {
++        1
++    }
++    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<Fr>> {
++        let h = self.height();
++        let mut v = vec![Fr::ZERO; h * TABLE_PRE_WIDTH];
++        for (i, (tag, cells, count)) in self.rows.iter().enumerate() {
++            let r = &mut v[i * TABLE_PRE_WIDTH..(i + 1) * TABLE_PRE_WIDTH];
++            r[0] = Fr::from_u64(*tag);
++            r[1..1 + PROG_W].copy_from_slice(cells);
++            r[1 + PROG_W] = Fr::from_u64(*count);
++        }
++        Some(RowMajorMatrix::new(v, TABLE_PRE_WIDTH))
++    }
++}
++impl BaseAirWithPublicValues<Fr> for ProgramTableAir {}
++impl PartitionedBaseAir<Fr> for ProgramTableAir {}
++
++impl<AB: InteractionBuilder<F = Fr> + PairBuilder> Air<AB> for ProgramTableAir {
++    fn eval(&self, builder: &mut AB) {
++        let pre = builder.preprocessed();
++        let pr = pre.row_slice(0).expect("pre");
++        let p: Vec<AB::Expr> = (0..TABLE_PRE_WIDTH).map(|i| pr[i].into()).collect();
++        drop(pr);
++        let main = builder.main();
++        let r = main.row_slice(0).expect("row");
++        let z: AB::Expr = r[0].into();
++        drop(r);
++        builder.assert_zero(z);
++        builder.push_interaction(PROG_BUS, p[..1 + PROG_W].to_vec(), p[1 + PROG_W].clone(), 1);
++    }
++}
++
++/// Append the program columns `prog` (one row per program row, zeros on padding rows) to the
++/// main trace `main` (already padded).
++pub fn with_prog(main: RowMajorMatrix<Fr>, prog: &[Vec<Fr>], pw: usize) -> RowMajorMatrix<Fr> {
++    let (h, w) = (main.height(), main.width());
++    assert!(prog.len() <= h);
++    let mut v = Vec::with_capacity(h * (w + pw));
++    let zero = vec![Fr::ZERO; pw];
++    for i in 0..h {
++        v.extend_from_slice(&main.values[i * w..(i + 1) * w]);
++        let p = prog.get(i).unwrap_or(&zero);
++        assert_eq!(p.len(), pw);
++        v.extend_from_slice(p);
++    }
++    RowMajorMatrix::new(v, w + pw)
++}
+diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
+index e2a29ca..8682295 100644
+--- a/crates/sherlock-lfr/src/tape.rs
++++ b/crates/sherlock-lfr/src/tape.rs
+@@ -2,24 +2,27 @@
+ //!
+ //! Every tape value has one address and is written once. A writer sends `[addr, v0, v1, v2, v3]`
+ //! on [`MEM_BUS`] with the multiplicity `mult` = the number of reads of `addr` in the tape; each
+-//! read sends the same message with count `-1`. Addresses, op kinds and multiplicities are
+-//! preprocessed columns, so the key fixes the program; only the values are witness.
++//! read sends the same message with count `-1`. Addresses, op kinds and multiplicities come from
++//! the program table (the one preprocessed trace), so the key fixes the program; only the values
++//! are witness.
+ //!
+ //! AIRs:
+-//! - [`InputAir`]: tape inputs (values of the `L` proof) and constants. Preprocessed `[addr,
++//! Program cells (addresses, kinds, multiplicities, constants) are main columns received from
++//! the one program table (`crate::program`), not per-AIR preprocessed traces.
++//!
++//! - [`InputAir`]: tape inputs (values of the `L` proof) and constants. Program `[addr,
+ //!   mult, z1, z2, z3, is_const, k0..k3]`; main `v[4]` and a canonical gadget per coefficient
+ //!   (`lo, hi, inv, is_max`). Each coefficient is canonical BabyBear; `z_k = 1` forces
+ //!   coefficient `k` to 0 (a BabyBear value); `is_const = 1` forces `v = k`.
+-//! - [`BbAluProgAir`]: the `BbAlu` row with its op, operand addresses and result multiplicity
+-//!   preprocessed: `[add, sub, mul, addr_a, addr_b, addr_c, mult_c]`. The main selectors equal
+-//!   the preprocessed ones; it reads `a` and `b` (count `-active`) and writes `c` (count
+-//!   `mult_c`).
++//! - [`BbAluProgAir`]: the `BbAlu` row plus `[addr_a, addr_b, addr_c, mult_c]`; the program
++//!   message is `[add, sub, mul, addr_a, addr_b, addr_c, mult_c]` (the selectors are the ALU
++//!   columns). It reads `a` and `b` (count `-active`) and writes `c` (count `mult_c`).
+ 
+ use std::sync::Arc;
+ 
+ use openvm_stark_backend::{
+     interaction::{BusIndex, InteractionBuilder},
+-    p3_air::{Air, BaseAir, PairBuilder},
++    p3_air::{Air, BaseAir},
+     p3_field::Field,
+     p3_matrix::{dense::RowMajorMatrix, Matrix},
+     BaseAirWithPublicValues, PartitionedBaseAir,
+@@ -34,6 +37,7 @@ use crate::{
+         SEL_ADD,
+     },
+     bb::P,
++    program::{receive_prog, TAG_ALU, TAG_INPUT},
+     range::RangeCounts,
+ };
+ 
+@@ -376,13 +380,17 @@ pub const IN_WIDTH: usize = 20;
+ 
+ impl<F: Field> BaseAir<F> for InputAir {
+     fn width(&self) -> usize {
+-        IN_WIDTH
++        IN_WIDTH + IN_PRE_WIDTH
+     }
+-    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+-        let h = padded(self.prog.len());
+-        let mut v = vec![F::ZERO; h * IN_PRE_WIDTH];
+-        for (i, p) in self.prog.iter().enumerate() {
+-            let r = &mut v[i * IN_PRE_WIDTH..(i + 1) * IN_PRE_WIDTH];
++}
++
++impl InputAir {
++    /// Program rows (unpadded), sent by the program table under `TAG_INPUT`.
++    pub fn prog_rows<F: Field>(&self) -> Vec<Vec<F>> {
++        let mut out = vec![];
++        for p in self.prog.iter() {
++            let mut v = vec![F::ZERO; IN_PRE_WIDTH];
++            let r = &mut v[..];
+             r[0] = F::from_u32(p.addr);
+             r[1] = F::from_u64(p.mult);
+             if p.bb {
+@@ -396,24 +404,24 @@ impl<F: Field> BaseAir<F> for InputAir {
+                     r[6 + j] = F::from_u64(k[j]);
+                 }
+             }
++            out.push(v);
+         }
+-        Some(RowMajorMatrix::new(v, IN_PRE_WIDTH))
++        out
+     }
+ }
+ impl<F: Field> BaseAirWithPublicValues<F> for InputAir {}
+ impl<F: Field> PartitionedBaseAir<F> for InputAir {}
+ 
+-impl<AB: InteractionBuilder + PairBuilder> Air<AB> for InputAir {
++impl<AB: InteractionBuilder> Air<AB> for InputAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre row");
+-        let p = |i: usize| -> AB::Expr { pr[i].into() };
+-        let pv: Vec<AB::Expr> = (0..IN_PRE_WIDTH).map(p).collect();
+-        drop(pr);
+         let main = builder.main();
+         let r = main.row_slice(0).expect("row");
+         let x: Vec<AB::Expr> = (0..IN_WIDTH).map(|i| r[i].into()).collect();
++        let pv: Vec<AB::Expr> = (IN_WIDTH..IN_WIDTH + IN_PRE_WIDTH)
++            .map(|i| r[i].into())
++            .collect();
+         drop(r);
++        receive_prog(builder, TAG_INPUT, &pv);
+         for k in 0..4 {
+             let v = x[k].clone();
+             eval_canonical(
+@@ -446,10 +454,15 @@ impl InputAir {
+     ) -> RowMajorMatrix<F> {
+         assert_eq!(vals.len(), self.prog.len());
+         let h = padded(self.prog.len());
+-        let mut v = vec![F::ZERO; h * IN_WIDTH];
++        let w = IN_WIDTH + IN_PRE_WIDTH;
++        let prog = self.prog_rows::<F>();
++        let mut v = vec![F::ZERO; h * w];
+         for i in 0..h {
+             let val = vals.get(i).copied().unwrap_or([0; 4]);
+-            let row = &mut v[i * IN_WIDTH..(i + 1) * IN_WIDTH];
++            let row = &mut v[i * w..(i + 1) * w];
++            if let Some(p) = prog.get(i) {
++                row[IN_WIDTH..].copy_from_slice(p);
++            }
+             for k in 0..4 {
+                 row[k] = F::from_u64(val[k]);
+                 let cc = canonical_cells::<F>(val[k]);
+@@ -467,7 +480,7 @@ impl InputAir {
+                 }
+             }
+         }
+-        RowMajorMatrix::new(v, IN_WIDTH)
++        RowMajorMatrix::new(v, w)
+     }
+ }
+ 
+@@ -489,17 +502,23 @@ pub struct BbAluProgAir {
+     pub prog: Arc<Vec<AluProg>>,
+ }
+ 
++/// Program cells of an ALU row: `[add, sub, mul, addr_a, addr_b, addr_c, mult_c]`.
+ pub const ALU_PRE_WIDTH: usize = 7;
++/// Program columns appended to the `BbAlu` row (the selectors are already ALU columns).
++pub const ALU_PROG_COLS: usize = 4;
+ 
+ impl<F: Field> BaseAir<F> for BbAluProgAir {
+     fn width(&self) -> usize {
+-        crate::alu::ALU_WIDTH
++        crate::alu::ALU_WIDTH + ALU_PROG_COLS
+     }
+-    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+-        let h = padded(self.prog.len());
+-        let mut v = vec![F::ZERO; h * ALU_PRE_WIDTH];
+-        for (i, p) in self.prog.iter().enumerate() {
+-            let r = &mut v[i * ALU_PRE_WIDTH..(i + 1) * ALU_PRE_WIDTH];
++}
++
++impl BbAluProgAir {
++    /// Program rows (unpadded), sent by the program table under `TAG_ALU`.
++    pub fn prog_rows<F: Field>(&self) -> Vec<Vec<F>> {
++        let mut out = vec![];
++        for p in self.prog.iter() {
++            let mut r = vec![F::ZERO; ALU_PRE_WIDTH];
+             let s = match p.kind {
+                 AluKind::Add => 0,
+                 AluKind::Sub => 1,
+@@ -510,29 +529,30 @@ impl<F: Field> BaseAir<F> for BbAluProgAir {
+             r[4] = F::from_u32(p.b);
+             r[5] = F::from_u32(p.out);
+             r[6] = F::from_u64(p.mult);
++            out.push(r);
+         }
+-        Some(RowMajorMatrix::new(v, ALU_PRE_WIDTH))
++        out
+     }
+ }
+ impl<F: Field> BaseAirWithPublicValues<F> for BbAluProgAir {}
+ impl<F: Field> PartitionedBaseAir<F> for BbAluProgAir {}
+ 
+-impl<AB: InteractionBuilder + PairBuilder> Air<AB> for BbAluProgAir {
++impl<AB: InteractionBuilder> Air<AB> for BbAluProgAir {
+     fn eval(&self, builder: &mut AB) {
+-        let pre = builder.preprocessed();
+-        let pr = pre.row_slice(0).expect("pre row");
+-        let pv: Vec<AB::Expr> = (0..ALU_PRE_WIDTH).map(|i| pr[i].into()).collect();
+-        drop(pr);
++        let w = crate::alu::ALU_WIDTH;
+         let main = builder.main();
+         let r = main.row_slice(0).expect("row");
+-        let x: Vec<AB::Expr> = (0..crate::alu::ALU_WIDTH).map(|i| r[i].into()).collect();
++        let x: Vec<AB::Expr> = (0..w + ALU_PROG_COLS).map(|i| r[i].into()).collect();
+         drop(r);
+         // The ALU identities (selectors from main) ...
+         <BbAluAir as Air<AB>>::eval(&BbAluAir, builder);
+-        // ... with the selectors fixed by the program.
+-        for s in 0..3 {
+-            builder.assert_eq(x[SEL_ADD + s].clone(), pv[s].clone());
+-        }
++        // ... with the selectors and addresses fixed by the program table.
++        let pv: Vec<AB::Expr> = x[SEL_ADD..SEL_ADD + 3]
++            .iter()
++            .chain(&x[w..w + ALU_PROG_COLS])
++            .cloned()
++            .collect();
++        receive_prog(builder, TAG_ALU, &pv);
+         let active = pv[0].clone() + pv[1].clone() + pv[2].clone();
+         let msg = |addr: AB::Expr, base: usize| -> Vec<AB::Expr> {
+             std::iter::once(addr)
+@@ -563,6 +583,16 @@ impl BbAluProgAir {
+     pub fn trace<F: Field>(&self, rows: &[AluRow], counts: &mut RangeCounts) -> RowMajorMatrix<F> {
+         let m = alu_trace::<F>(rows, counts);
+         assert_eq!(m.height(), padded(self.prog.len()));
+-        m
++        let (h, w) = (m.height(), m.width());
++        let prog = self.prog_rows::<F>();
++        let mut v = Vec::with_capacity(h * (w + ALU_PROG_COLS));
++        for i in 0..h {
++            v.extend_from_slice(&m.values[i * w..(i + 1) * w]);
++            match prog.get(i) {
++                Some(p) => v.extend_from_slice(&p[3..]),
++                None => v.extend(std::iter::repeat_n(F::ZERO, ALU_PROG_COLS)),
++            }
++        }
++        RowMajorMatrix::new(v, w + ALU_PROG_COLS)
+     }
+ }
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+index 0f321e8..b900cbb 100644
+--- a/crates/sherlock-lfr/src/testing.rs
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -9,7 +9,7 @@ use openvm_stark_backend::{
+     interaction::debug::{generate_logical_interactions, LogicalInteractions},
+     interaction::LogUpSecurityParameters,
+     keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+-    p3_field::PrimeField,
++    p3_field::{Field, PrimeField},
+     p3_matrix::dense::RowMajorMatrix,
+     prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
+     AirRef, StarkEngine, SystemParams, WhirConfig, WhirParams, WhirProximityStrategy,
+@@ -53,8 +53,9 @@ pub fn small_params(max_constraint_degree: usize) -> SystemParams {
+ /// Outcome of one prove-and-verify run.
+ #[derive(Debug)]
+ pub enum Outcome {
+-    /// Proved and the stock verifier accepted; proof bytes.
+-    Accepted(usize),
++    /// Proved and the stock verifier accepted: proof bytes, and the number of commitments of the
++    /// proof (`stacking_openings.len()`: common main, then each preprocessed or cached one).
++    Accepted { bytes: usize, commits: usize },
+     /// The stock verifier refused the proof.
+     VerifierRefused(String),
+     /// The prover stopped (panic) on the witness.
+@@ -63,7 +64,14 @@ pub enum Outcome {
+ 
+ impl Outcome {
+     pub fn accepted(&self) -> bool {
+-        matches!(self, Outcome::Accepted(_))
++        matches!(self, Outcome::Accepted { .. })
++    }
++    /// The commitment count of an accepted proof.
++    pub fn commits(&self) -> Option<usize> {
++        match self {
++            Outcome::Accepted { commits, .. } => Some(*commits),
++            _ => None,
++        }
+     }
+ }
+ 
+@@ -78,6 +86,15 @@ pub fn prove_verify(
+     prove_verify_keyed(&engine, &pk, &vk, traces)
+ }
+ 
++/// The number of AIRs of `vk` with a preprocessed trace (each adds one commitment).
++pub fn preprocessed_airs(vk: &MultiStarkVerifyingKey<SC>) -> usize {
++    vk.inner
++        .per_air
++        .iter()
++        .filter(|a| a.preprocessed_data.is_some())
++        .count()
++}
++
+ /// The `Range16` multiplicities that balance the range bus for the main traces of
+ /// `airs[..n-1]` (the last AIR is `Range16`). A looked-up value at or above `2^16` is left
+ /// out, so its bus does not balance.
+@@ -114,6 +131,30 @@ pub fn range_trace(
+     counts.trace()
+ }
+ 
++/// Whether bus `bus` balances (every message's counts sum to 0) for `traces` of `airs` (one
++/// trace per AIR, in order). A diagnostic for negative controls: it shows which bus a tamper
++/// breaks.
++pub fn bus_balances(
++    params: SystemParams,
++    airs: &[AirRef<SC>],
++    traces: &[RowMajorMatrix<F>],
++    bus: u16,
++) -> bool {
++    let engine = Engine::new(params);
++    let (pk, _) = engine.keygen(airs);
++    let mut li = LogicalInteractions::<F>::default();
++    for (i, (air, t)) in airs.iter().zip(traces).enumerate() {
++        let sc = SymbolicConstraints::from(&pk.per_air[i].vk.symbolic_constraints);
++        let pre = air.preprocessed_trace();
++        let pre_view = pre.as_ref().map(|m| m.as_view());
++        generate_logical_interactions(i, &sc.interactions, &pre_view, &[t.as_view()], &[], &mut li);
++    }
++    li.at_bus.get(&bus).is_none_or(|m| {
++        m.values()
++            .all(|conns| conns.iter().map(|(_, c)| *c).sum::<F>().is_zero())
++    })
++}
++
+ /// Keygen, fill the `Range16` table (last AIR), prove and verify.
+ pub fn prove_verify_range(
+     params: SystemParams,
+@@ -166,7 +207,10 @@ pub fn prove_verify_keyed(
+         Ok(Ok(p)) => p,
+     };
+     match engine.verify(vk, &proof) {
+-        Ok(()) => Outcome::Accepted(proof.encode_to_vec().map(|b| b.len()).unwrap_or(0)),
++        Ok(()) => Outcome::Accepted {
++            bytes: proof.encode_to_vec().map(|b| b.len()).unwrap_or(0),
++            commits: proof.stacking_proof.stacking_openings.len(),
++        },
+         Err(e) => Outcome::VerifierRefused(format!("{e:?}")),
+     }
+ }
+diff --git a/crates/sherlock-lfr/tests/i4_tape.rs b/crates/sherlock-lfr/tests/i4_tape.rs
+index 2d1b1ca..b6f1bda 100644
+--- a/crates/sherlock-lfr/tests/i4_tape.rs
++++ b/crates/sherlock-lfr/tests/i4_tape.rs
+@@ -1,20 +1,25 @@
+ //! I4 gate: a fixed tape (Horner evaluation of an `EF4` polynomial, with a BabyBear constant)
+-//! runs on `InputAir` + `BbAluProgAir` + `Range16` over the write-once memory bus and proves with
+-//! the stock verifier; a changed read value, a read of an unwritten address and a non-canonical
+-//! input are refused.
++//! runs on `InputAir` + `BbAluProgAir` + `ProgramTable` + `Range16` over the write-once memory
++//! bus and proves with the stock verifier; a changed read value, a read of an unwritten address
++//! and a non-canonical input are refused. Program table (I5c): a changed program cell in an
++//! execution row and a forged write from padding rows are refused.
+ 
+ #![allow(clippy::needless_range_loop)]
+ 
+ use std::sync::Arc;
+ 
+-use openvm_stark_backend::AirRef;
++use openvm_stark_backend::p3_matrix::dense::RowMajorMatrix;
++use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++use p3_field::PrimeCharacteristicRing;
+ use rand::{rngs::StdRng, Rng, SeedableRng};
+ use sherlock_lfr::{
+-    alu::{AluOp, AluRow},
++    alu::{AluOp, AluRow, ALU_WIDTH},
+     bb::{from_ef4, to_ef4, Ef4, P},
+-    range::{Range16Air, RangeCounts},
+-    tape::{AluProg, BbAluProgAir, InputAir, Tape, ValKind},
+-    testing::{prove_verify, small_params, Outcome, SC},
++    machine::Machine,
++    program::PROG_BUS,
++    range::RangeCounts,
++    tape::{AluProg, BbAluProgAir, InputAir, InputProg, Op, Tape, ValKind, IN_WIDTH, MEM_BUS},
++    testing::{bus_balances, preprocessed_airs, prove_verify_range, small_params, Outcome},
+ };
+ 
+ const DEG: usize = 40;
+@@ -49,16 +54,22 @@ fn input_rows(t: &Tape, mem: &[[u64; 4]], inp: &InputAir) -> Vec<[u64; 4]> {
+     inp.prog.iter().map(|p| mem[p.addr as usize]).collect()
+ }
+ 
+-fn run(inp: &InputAir, alu: &BbAluProgAir, in_vals: &[[u64; 4]], rows: &[AluRow]) -> Outcome {
+-    let mut counts = RangeCounts::default();
+-    let ti = inp.trace(in_vals, &mut counts);
+-    let ta = alu.trace(rows, &mut counts);
+-    let airs: Vec<AirRef<SC>> = vec![
+-        Arc::new(inp.clone()),
+-        Arc::new(alu.clone()),
+-        Arc::new(Range16Air),
+-    ];
+-    prove_verify(small_params(3), airs, vec![ti, ta, counts.trace()])
++/// Prove the machine `m` (its key) on the given Input and ALU traces.
++fn run_traces(m: &Machine, ti: RowMajorMatrix<Fr>, ta: RowMajorMatrix<Fr>) -> Outcome {
++    let (o, vk) = prove_verify_range(small_params(3), m.airs(), vec![ti, ta, m.table().trace()]);
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "one preprocessed AIR (the program table)"
++    );
++    o
++}
++
++fn run(m: &Machine, in_vals: &[[u64; 4]], rows: &[AluRow]) -> Outcome {
++    let mut c = RangeCounts::default();
++    let ti = m.input.as_ref().unwrap().trace(in_vals, &mut c);
++    let ta = m.alu.as_ref().unwrap().trace(rows, &mut c);
++    run_traces(m, ti, ta)
+ }
+ 
+ #[test]
+@@ -75,17 +86,20 @@ fn i4_tape_executes_and_proves() {
+     let seven = Ef4::from(p3_baby_bear::BabyBear::new(7));
+     assert_eq!(mem[out as usize], from_ef4(acc * seven + x - seven));
+ 
+-    let (inp, alu) = t.programs();
++    let m = Machine::new(&t);
++    let (inp, alu) = (m.input.clone().unwrap(), m.alu.clone().unwrap());
+     let in_vals = input_rows(&t, &mem, &inp);
+     let rows = alu.rows(&mem);
+-    let o = run(&inp, &alu, &in_vals, &rows);
++    let o = run(&m, &in_vals, &rows);
+     println!(
+-        "I4 honest: {} ops ({} inputs and constants, {} ALU rows): {o:?}",
++        "I4 honest: {} ops ({} inputs and constants, {} ALU rows), shape {:?}: {o:?}",
+         t.ops.len(),
+         inp.prog.len(),
+-        rows.len()
++        rows.len(),
++        m.shape()
+     );
+     assert!(o.accepted(), "honest tape refused: {o:?}");
++    assert_eq!(o.commits(), Some(2), "commitments of the proof");
+ 
+     // 1. Changed read value: ALU row 5 uses a' = a + 1 (its own identities recomputed, so only
+     // the memory bus can refuse).
+@@ -98,7 +112,7 @@ fn i4_tape_executes_and_proves() {
+         a,
+         b: mem[p.b as usize],
+     });
+-    let o1 = run(&inp, &alu, &in_vals, &r);
++    let o1 = run(&m, &in_vals, &r);
+ 
+     // 2. A program that reads an address no op writes.
+     let mut prog = (*alu.prog).clone();
+@@ -106,10 +120,11 @@ fn i4_tape_executes_and_proves() {
+         a: 100_000,
+         ..prog[3].clone()
+     };
+-    let bad_alu = BbAluProgAir {
++    let mut m2 = m.clone();
++    m2.alu = Some(BbAluProgAir {
+         prog: Arc::new(prog),
+-    };
+-    let o2 = run(&inp, &bad_alu, &in_vals, &rows);
++    });
++    let o2 = run(&m2, &in_vals, &rows);
+ 
+     // 3. A non-canonical input coefficient v + p (< 2^31), used consistently by its readers.
+     let j = (0..DEG + 1)
+@@ -135,11 +150,92 @@ fn i4_tape_executes_and_proves() {
+     for (x, y) in r3.iter().zip(&rows) {
+         assert_eq!(x.c, y.c);
+     }
+-    let o3 = run(&inp, &alu, &iv, &r3);
++    let o3 = run(&m, &iv, &r3);
++
++    // 4. A changed program cell in an execution row, key unchanged: the result address of the
++    // last ALU row (read count 0, so the memory bus is unchanged; only the program bus refuses).
++    let last = alu
++        .prog
++        .iter()
++        .rposition(|p| p.mult == 0)
++        .expect("an unread result");
++    let mut c = RangeCounts::default();
++    let ti = inp.trace(&in_vals, &mut c);
++    let mut ta = alu.trace::<Fr>(&rows, &mut c);
++    let w = ta.width;
++    ta.values[last * w + ALU_WIDTH + 2] += Fr::from_u64(1000);
++    let t4 = vec![ti.clone(), ta.clone(), m.table().trace()];
++    let airs = m.airs();
++    assert!(bus_balances(small_params(3), &airs[..3], &t4, MEM_BUS));
++    assert!(!bus_balances(small_params(3), &airs[..3], &t4, PROG_BUS));
++    let o4 = run_traces(&m, ti, ta);
++
++    // 5. A forged write from two padding rows of InputAir, key unchanged: the constant 7 at
++    // address X (read k times) is read as 8. Padding row A writes (X, 8) with count k, padding
++    // row B takes (X, 7) with count -k, so the memory bus balances; the ALU rows are those of the
++    // tape with the constant 8. Only the program bus (padding rows must carry the nop row) can
++    // refuse.
++    let (x_addr, k) = inp
++        .prog
++        .iter()
++        .find(|p| p.konst == Some([7, 0, 0, 0]))
++        .map(|p| (p.addr, p.mult))
++        .expect("the constant 7");
++    let mut t8 = t.clone();
++    for op in &mut t8.ops {
++        if let Op::Const { val, out, .. } = op {
++            if *out == x_addr {
++                *val = [8, 0, 0, 0];
++            }
++        }
++    }
++    let mem8 = t8.execute(&ins);
++    assert_ne!(mem8[out as usize], mem[out as usize]);
++    let rows8 = alu.rows(&mem8);
++    let mut fprog = (*inp.prog).clone();
++    let extra = InputProg {
++        addr: x_addr,
++        mult: k,
++        bb: true,
++        konst: None,
++    };
++    fprog.push(extra.clone());
++    fprog.push(extra);
++    let forged = InputAir {
++        prog: Arc::new(fprog),
++    };
++    let mut fv = in_vals.clone();
++    fv.push([8, 0, 0, 0]);
++    fv.push([7, 0, 0, 0]);
++    let mut c = RangeCounts::default();
++    let mut ti = forged.trace::<Fr>(&fv, &mut c);
++    assert_eq!(
++        ti.values.len() / ti.width,
++        64,
++        "same height as the key's InputAir"
++    );
++    let w = ti.width;
++    let row_b = fv.len() - 1;
++    ti.values[row_b * w + IN_WIDTH + 1] = -Fr::from_u64(k);
++    let ta = alu.trace::<Fr>(&rows8, &mut c);
++    let t5 = vec![ti.clone(), ta.clone(), m.table().trace()];
++    let airs = m.airs();
++    assert!(
++        bus_balances(small_params(3), &airs[..3], &t5, MEM_BUS),
++        "the forge balances the memory bus"
++    );
++    assert!(
++        !bus_balances(small_params(3), &airs[..3], &t5, PROG_BUS),
++        "the forge breaks the program bus"
++    );
++    let o5 = run_traces(&m, ti, ta);
++
+     for (name, o) in [
+         ("changed read value", o1),
+         ("unwritten address", o2),
+         ("non-canonical input", o3),
++        ("changed program cell in an execution row", o4),
++        ("forged write from padding rows", o5),
+     ] {
+         println!("I4 negative {name}: {o:?}");
+         assert!(!o.accepted(), "{name} accepted");
+diff --git a/crates/sherlock-lfr/tests/i5_l_transcript.rs b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+index 3548c4b..a8fa45d 100644
+--- a/crates/sherlock-lfr/tests/i5_l_transcript.rs
++++ b/crates/sherlock-lfr/tests/i5_l_transcript.rs
+@@ -20,7 +20,7 @@ use sherlock_lfr::{
+     fixture::{self, l_ud},
+     machine::Machine,
+     tape::{Op, Tape, Val, ValKind},
+-    testing::{prove_verify_range, small_params},
++    testing::{preprocessed_airs, prove_verify_range, small_params},
+     transcript::TapeTranscript,
+ };
+ 
+@@ -108,10 +108,19 @@ fn i5_l_transcript_on_tape() {
+     // Prove the transcript tape of the real L verification on the machine AIRs.
+     let m = Machine::new(&tape);
+     let t = std::time::Instant::now();
+-    let (o, _) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
++    let (o, vk) = prove_verify_range(small_params(3), m.airs(), m.traces(&mem));
+     println!(
+-        "I5b prove and verify {:.1}s: {o:?}",
+-        t.elapsed().as_secs_f64()
++        "I5b prove and verify {:.1}s: {o:?}; AIRs {:?}; AIRs with a preprocessed trace {}",
++        t.elapsed().as_secs_f64(),
++        m.names(),
++        preprocessed_airs(&vk)
+     );
+     assert!(o.accepted(), "L transcript tape refused: {o:?}");
++    // Owner ruling 2026-11-12: one shared program table, so 2 commitments.
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
++    assert_eq!(o.commits(), Some(2), "commitments of the L_Fr proof");
+ }
+diff --git a/crates/sherlock-lfr/tests/i5_transcript.rs b/crates/sherlock-lfr/tests/i5_transcript.rs
+index 1f81a5f..d0b74f2 100644
+--- a/crates/sherlock-lfr/tests/i5_transcript.rs
++++ b/crates/sherlock-lfr/tests/i5_transcript.rs
+@@ -145,6 +145,7 @@ fn i5_transcript_equals_stock_and_proves() {
+     let (o, _) = prove_verify_range(small_params(3), m.airs(), traces.clone());
+     println!("I5 honest: {o:?}");
+     assert!(o.accepted(), "honest transcript tape refused: {o:?}");
++    assert_eq!(o.commits(), Some(2), "commitments of the proof");
+ 
+     let names = m.names();
+     let si = names.iter().position(|n| *n == "Split").unwrap();
+-- 
+2.56.0
+

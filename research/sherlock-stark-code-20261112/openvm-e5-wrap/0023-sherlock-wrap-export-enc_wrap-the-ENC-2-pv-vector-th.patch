@@ -1,0 +1,231 @@
+From 1f421149150205cebb6abdc34f63160421ee9796 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 02:58:04 -0700
+Subject: [PATCH 23/24] sherlock-wrap-export: enc_wrap, the ENC-2 pv vector
+ through the stock D-9 decoder
+
+Builds L words whose pv is the pinned ENC-2 log (enc-fp3 VECTORS.txt),
+checks D_EMPTY, pv[0..12] and the pv P2 fingerprint against the pinned
+values, and records the stock decode verdict on the honest vector (two
+lane-map pairs, a PUB entry) and 11 changed vectors.
+---
+ .../sherlock-wrap-export/examples/enc_wrap.rs | 207 ++++++++++++++++++
+ 1 file changed, 207 insertions(+)
+ create mode 100644 crates/sherlock-wrap-export/examples/enc_wrap.rs
+
+diff --git a/crates/sherlock-wrap-export/examples/enc_wrap.rs b/crates/sherlock-wrap-export/examples/enc_wrap.rs
+new file mode 100644
+index 0000000..1144836
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/enc_wrap.rs
+@@ -0,0 +1,207 @@
++//! Writes the E5 fixture `enc-wrap-decode` for the ENC wrap-side vectors. It builds an `L` word
++//! vector whose `pv` (entry table and value table) is the ENC-2 log of the pinned vectors
++//! (`enc2.enc[0..6]`: `DIGEST(0)`, `H2`, `SPONGE(3)`, `PERM`, `PUB(1)`, `DIGEST(2)`). Two
++//! things are checked against the pinned values first: that `pv` gives `enc2.pv[0..12]`, and
++//! that its `P2(TAG_ENT, pv)` gives `enc2.pv.p2_fingerprint`. `D_EMPTY` is also recomputed,
++//! which confirms the BabyBear permutation matches ENC's. The lane map has two pairs:
++//! lane 2 takes `C_P` from entry 0, and lane 3 takes `input_pub` from entry 5. Lane 1
++//! carries the `PUB(1)` value 0x1234. The L words are packed 8 per Fr into the `L_Fr`
++//! public words. The stock D-9 decoder (`iface::decode`) verdict is recorded on the honest
++//! vector and on changed vectors, in the `lfr-e3-decode` format.
++//! usage: enc_wrap [VECTORS.txt]
++use std::{collections::HashMap, fs, path::PathBuf};
++
++use num_bigint::BigUint;
++use openvm_stark_backend::p3_field::{PrimeCharacteristicRing, PrimeField32};
++use openvm_stark_sdk::{
++    config::{baby_bear_poseidon2::poseidon2_compress_with_capacity, bls12381_fr_poseidon::Bls12381Fr as Fr},
++    p3_baby_bear::BabyBear as B,
++};
++use serde_json::{json, Value};
++use sherlock_lfr::iface::{self, Dims, LANE_MAP, LIMBS, STMT};
++use sherlock_wrap_export::hex_be;
++
++const TAG_EMPTY: u32 = 1;
++const TAG_ENT: u32 = 4;
++
++/// ENC `p2_alt`: the chain of `poseidon2_compress_with_capacity` from `cap = [1 + l, 0, ..]`.
++fn p2(tag: u32, xs: &[u64]) -> Vec<u64> {
++    let mut words = vec![B::from_u32(tag)];
++    words.extend(xs.iter().map(|&x| B::from_u32(x as u32)));
++    let mut cap = [B::ZERO; 8];
++    cap[0] = B::from_u32(words.len() as u32);
++    let mut out = [B::ZERO; 8];
++    for blk in words.chunks(8) {
++        let mut left = [B::ZERO; 8];
++        left[..blk.len()].copy_from_slice(blk);
++        let (o, c) = poseidon2_compress_with_capacity(left, cap);
++        out = o;
++        cap = c;
++    }
++    out.iter().map(|x| x.as_canonical_u32() as u64).collect()
++}
++
++fn fr_of(b: &BigUint) -> Fr {
++    let mut acc = Fr::ZERO;
++    for d in b.to_u64_digits().iter().rev() {
++        acc = acc * Fr::from_u64(1 << 32) * Fr::from_u64(1 << 32) + Fr::from_u64(*d);
++    }
++    acc
++}
++
++fn pack(pre: Fr, w: &[u64]) -> Vec<Fr> {
++    let mut out = vec![pre];
++    for c in w.chunks(8) {
++        let mut b = BigUint::from(0u32);
++        for (k, &x) in c.iter().enumerate() {
++            b += BigUint::from(x) << (31 * k);
++        }
++        out.push(fr_of(&b));
++    }
++    out
++}
++
++fn nums(s: &str) -> Vec<u64> {
++    s.trim().trim_start_matches('[').trim_end_matches(']').split(',').map(|x| x.trim().parse().unwrap()).collect()
++}
++
++fn hexes(v: &[Fr]) -> Vec<String> {
++    v.iter().map(hex_be).collect()
++}
++
++fn case(name: &str, d: &Dims, words: Vec<Fr>) -> Value {
++    let r = iface::decode(d, &words);
++    println!(
++        "E5ENC {name}: {}",
++        match &r {
++            Ok(_) => "ok".to_string(),
++            Err(e) => format!("refused: {e}"),
++        }
++    );
++    json!({
++        "name": name,
++        "words": hexes(&words),
++        "ok": r.is_ok(),
++        "error": r.as_ref().err().cloned(),
++        "statement": r.ok().map(|s| hexes(&s)),
++    })
++}
++
++fn main() {
++    let src = std::env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
++        PathBuf::from(format!(
++            "{}/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112/VECTORS.txt",
++            std::env::var("HOME").unwrap()
++        ))
++    });
++    let out = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    let text = fs::read_to_string(&src).unwrap();
++    let pin: HashMap<String, String> = text
++        .lines()
++        .filter_map(|l| l.split_once(" = ").map(|(k, v)| (k.trim().to_string(), v.trim().to_string())))
++        .collect();
++    assert_eq!(pin.len(), 55, "55 pinned vectors");
++    let d = Dims::FULL;
++
++    // The BabyBear permutation is ENC's: D_EMPTY = P2(TAG_EMPTY).
++    assert_eq!(p2(TAG_EMPTY, &[]), nums(&pin["enc2.D_EMPTY"]), "D_EMPTY");
++
++    // pv from the pinned enc(e) words.
++    let encs: Vec<Vec<u64>> = (0..6).map(|i| nums(&pin[&format!("enc2.enc[{i}]")])).collect();
++    let mut pv = vec![];
++    for i in 0..d.b {
++        match encs.get(i) {
++            Some(e) => pv.extend(&e[..2]),
++            None => pv.extend([0, 0]),
++        }
++    }
++    let mut vals: Vec<u64> = encs.iter().flat_map(|e| e[2..].to_vec()).collect();
++    assert_eq!(vals.len(), 9 * 18, "18 logged values");
++    vals.resize(LIMBS * d.v, 0);
++    pv.extend(&vals);
++    assert_eq!(pv.len(), 2816);
++    assert_eq!(pv[..12].to_vec(), nums(&pin["enc2.pv[0..12]"]), "pv[0..12]");
++    assert_eq!(p2(TAG_ENT, &pv), nums(&pin["enc2.pv.p2_fingerprint"]), "pv fingerprint");
++
++    // The L words: head zero but for the lane map; pv; the call vector.
++    let mut head = vec![0u64; STMT];
++    let lm = [(2u64, 0u64), (3, 5), (0, 0), (0, 0)];
++    for (k, &(lane, ent)) in lm.iter().enumerate() {
++        head[LANE_MAP + 2 * k] = lane;
++        head[LANE_MAP + 2 * k + 1] = ent;
++    }
++    let mut lanes = vec![Fr::ZERO; d.lanes()];
++    lanes[0] = Fr::from_u64(0x5eed);
++    lanes[1] = Fr::from_u64(0x1234);
++    let mut w = head.clone();
++    w.extend(&pv);
++    for x in &lanes {
++        w.extend(iface::limbs(*x));
++    }
++    assert_eq!(w.len(), d.words());
++    let pre = Fr::from_u64(0xe5c0de);
++    let honest = pack(pre, &w);
++    let s = iface::decode(&d, &honest).expect("honest ENC vector decodes");
++    let c_p = iface::dec(&encs[0][11..20]).unwrap();
++    let input_pub = iface::dec(&encs[5][11..20]).unwrap();
++    assert_eq!(s[2], c_p);
++    assert_eq!(s[3], input_pub);
++    assert_eq!(hex_be(&c_p).trim_start_matches("0x"), pin["enc1.C_P"].trim_start_matches("0x"), "lane 2 is C_P");
++    assert_eq!(hex_be(&input_pub).trim_start_matches("0x"), pin["enc1.input_pub"].trim_start_matches("0x"), "lane 3 is input_pub");
++    assert_eq!(s[1], Fr::from_u64(0x1234));
++
++    let lane_at = |l: usize| d.call_at() + LIMBS * l;
++    let mut cases = vec![case("honest", &d, honest.clone())];
++    let mut t = w.clone();
++    t[lane_at(1)] ^= 1;
++    cases.push(case("pub_lane_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + LIMBS * 15] ^= 1; // the logged value of PUB(1) (value row 15 of 18)
++    cases.push(case("pub_value_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + LIMBS] ^= 1; // the output C_P of DIGEST(0) (value row 1): lane 2 follows it
++    cases.push(case("digest_output_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 1] = 2; // pair 0 names SPONGE(3)
++    cases.push(case("lane_map_to_sponge", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 1] = 4; // pair 0 names PUB(1)
++    cases.push(case("lane_map_to_pub", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP] = 1; // pair 0 writes lane 1, which holds 0x1234
++    cases.push(case("lane_map_taken_lane", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 2] = 2; // pair 1 writes lane 2 again
++    cases.push(case("lane_map_same_lane_twice", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 3] = 6; // pair 1 names entry 6, a NOP
++    cases.push(case("lane_map_to_nop", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    let r1 = iface::limbs(-Fr::ONE);
++    assert_eq!(r1.to_vec(), nums(&pin["enc2.limbs(r-1)"]), "limbs(r-1)");
++    t[lane_at(0)..lane_at(0) + LIMBS].copy_from_slice(&r1);
++    cases.push(case("lane_r_minus_1", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    let mut r = r1;
++    r[0] += 1; // r - 1 + 1 = r: not canonical
++    t[lane_at(0)..lane_at(0) + LIMBS].copy_from_slice(&r);
++    cases.push(case("lane_r", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + 2] = 1 << 30;
++    cases.push(case("value_limb_2_30", &d, pack(pre, &t)));
++
++    let doc = json!({
++        "source": src.display().to_string(),
++        "dims": {"b": d.b, "v": d.v, "p": d.p, "l_tx": d.l_tx},
++        "lane_map": lm.iter().map(|p| [p.0, p.1]).collect::<Vec<_>>(),
++        "pv": pv,
++        "checks": {"d_empty": true, "pv_head12": true, "pv_fingerprint": true, "lane2_c_p": true, "lane3_input_pub": true, "limbs_r_minus_1": true},
++        "cases": cases,
++    });
++    fs::create_dir_all(&out).unwrap();
++    let path = out.join("enc-wrap-decode.json");
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!("E5ENC wrote {} ({} cases; D_EMPTY, pv[0..12], pv fingerprint, lane 2 = C_P, lane 3 = input_pub equal the pinned values)", path.display(), doc["cases"].as_array().unwrap().len());
++}
+-- 
+2.56.0
+
