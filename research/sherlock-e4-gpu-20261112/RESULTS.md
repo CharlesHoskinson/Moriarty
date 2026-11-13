@@ -9,6 +9,9 @@ Plan: `PLAN.md` beside this file. Branch `e4-gpu` in three worktrees: Moriarty `
 - Step 2 (CPU baseline and profile): done; the CPU prover was not deterministic (grind), fixed on `e4-gpu`.
 - Step 3 increment 1 (GPU Midnight Poseidon for the Merkle trees): done, byte-identical, prove 824.4 s CPU against 228.6 s GPU (section 3).
 - Step 3 increment 2 (fused GPU encode and hash, chunked grind): byte-identical; the timing run was memory-throttled (section 4).
+- Step 3 increment 2b (streaming fused encode): byte-identical, prove **139.9 s** MEASURED on the GPU path, exclusive slot (section 5). This is the gate number.
+- Step 4 (gate verdict): section 6. `L_Fr` on the GPU fails the call-time budget by a wide margin.
+- Open: the quiet CPU baseline on the current tree (chunked grind) was not obtained. The exclusive A/B `e4-abfinal` got its slot at 20:10, but heavy.slice was over MemoryHigh and throttled it (section 6, pickup). It was stopped at 20:31.
 
 ## 1. Profile harness
 
@@ -89,3 +92,25 @@ Full prove, exclusive slot, 2026-11-12 19:40 to 19:43, load average 15 at the st
 Proof SHA-256 `c17dadf7...3554987`, byte-identical to the CPU reference, accepted, 2,516,530 bytes. Peak RSS 23,738 MiB (CPU path 27,271 MiB); system memory in use rose by 22.4 GiB over the run (61.7 to 84.1 GiB, sampled every 2 s), which includes the device buffers.
 
 The encode stage is the Midnight Poseidon permutation count: 2^23 rows x 17 permutations = 1.43 x 10^8 permutations in about 70 s, about 2.0 M permutations per second at 754 MHz (DERIVED), the rate of the section 3 unit test.
+
+## 6. Gate verdict and open items
+
+**Measured `L_Fr` prove on the GPU path:** 139.9 s, peak host RSS 23,738 MiB, system memory in use +22.4 GiB over the run (host and device share memory on this machine), all MEASURED (section 5, exclusive slot, load 15 falling to 10.5, GPU at 754 MHz). The device memory that the streaming encode holds is the sponge states (805 MiB) plus two column buffers (DERIVED from the sizes; no separate device-memory counter was read).
+
+**Budget** (PROPOSAL 6.3, ESTIMATE): prove stages 6.31 / 8.90 / 16.20 s and warm call 11.1 / 19.0 / 45.0 s (lo / mid / hi), with no `L_Fr` stage. `L_Fr` adds to the call:
+
+| Quantity | Value |
+|---|---|
+| Mid warm call plus `L_Fr` | 19.0 + 139.9 = 158.9 s (DERIVED) |
+| `L_Fr` as a multiple of the mid warm call | 7.4x (DERIVED) |
+| `L_Fr` as a multiple of the mid prove-stage figure 8.90 s | 15.7x (DERIVED) |
+
+**Verdict: FAIL.** The GPU path is 5x faster than the CPU path (139.9 s against 700 to 824 s), but `L_Fr` is still about 7 times the whole mid warm call. With these kernels, `L_Fr` is not a per-call stage.
+
+**CPU baselines, as measured:** 700.2 s (run 1, old heavy lock, load 7.3 to 20.7, rayon `find_any` grind) and 824.4 s (exclusive slot, load 28 falling to 19.5, unchunked `find_first` grind 68.7 s). Neither is a quiet baseline of the current tree. With the grind at the chunked cost (about 11.5 s, run 1), the 824.4 s run gives about 767 s (DERIVED). The CPU-to-GPU ratio is about 5x on every pairing (DERIVED).
+
+**Where the 139.9 s goes and the next levers** (section 5 profile): (1) the Midnight Poseidon kernel, about 74 s of encode, row hash and digest at about 2.0 M permutations/s with the GPU throttled to 754 MHz. Next tries are block size (an env knob, staged in `~/.cache/e4-gpu/mori_gpu.cu.tune`, not built) and squaring in the x^5 S-box (`poseidon.cuh.tune`). (2) The LogUp GKR fractional sumcheck, 28.9 s on the CPU, which can move to the GPU. (3) WHIR, 15.6 s. Even if all three fall to zero, the Poseidon floor at today's kernel rate (about 74 s) stays several times the call budget (DERIVED). Getting within budget needs a much cheaper Merkle hash for `L_Fr` or a much smaller `L_Fr` trace, not only kernel tuning.
+
+**Incidents for the coordinator:** (a) the CPU prover was not deterministic (rayon `find_any` in the grind), fixed on stark-backend `e4-gpu` 4199bc1 with ordered chunks and `find_first`. (b) heavy.slice has MemoryHigh 64 GiB, and another lane's 31 GB tmpfs leftover `/tmp/bounded-depth-final-2848992` counts as shmem in it. This throttled the section 4 run (fractional sumcheck 570 s). It is not deleted, because it belongs to another lane.
+
+**Pickup for `e4-abfinal`** (systemd user unit, `~/.cache/e4-gpu/ab.sh final`). The exclusive slot came free at 20:10. The CPU reference (`MORI_GPU=off`) then ran at about 0.7 cores for 21 minutes: heavy.slice was at 69.4 GB against its 68.7 GB MemoryHigh, with 32.7 GB of shmem from `/tmp/bounded-depth-final-2848992`. The prove thread sat in `__mem_cgroup_handle_over_high`, the same throttle as section 4. The agent stopped the unit at 20:31 with no timing. To rerun: first remove that tmpfs leftover (owner or its lane), then run `systemd-run --user --collect --unit e4-abfinal ~/.cache/e4-gpu/ab.sh final`. The binary is `~/.cache/e4-gpu/bin/e4_profile-final` (the tree of section 5). Logs go to `~/.cache/e4-gpu/logs/ab-final.log` and `logs/mem-final.log`, and proofs to `~/.cache/e4-gpu/proofs/{cpu,gpu}-final.bin`. Both SHA-256 values must equal `c17dadf7a2a65eaa1785f219f10caf9900f3bd2e69f2ee0a89bb7315a3554987`. Its CPU time is the quiet baseline of the current tree.
