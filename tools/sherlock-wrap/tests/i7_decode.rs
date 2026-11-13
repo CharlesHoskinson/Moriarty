@@ -2,21 +2,16 @@
 //! every exported case (`lfr-e3-decode.json`, written by `lfr_e3`), the honest statement equal
 //! to the stock statement; then the gadget decoder alone: cost model and `MockProver` on the
 //! honest case, a `PUB` mismatch and a non-canonical lane.
-use std::{fs, io};
+use std::fs;
 
-use midnight_circuits::instructions::{AssignmentInstructions, PublicInputInstructions};
-use midnight_proofs::{
-    circuit::{Layouter, Value},
-    dev::MockProver,
-    plonk::Error,
-};
-use midnight_zk_stdlib::{MidnightCircuit, Relation, ZkStdLib, ZkStdLibArch, cost_model};
+use midnight_proofs::{circuit::Value, dev::MockProver};
+use midnight_zk_stdlib::{MidnightCircuit, cost_model};
 use serde_json::Value as J;
 use sherlock_wrap::{
-    alg::{Gadget, Native},
+    alg::Native,
     decode::{DecodeShape, Dims, decode},
+    decode_test::DecodeRelation,
     native::{F, U_LFR_TRANSCRIPT, f_from_hex},
-    smoke::wrap_arch,
     transcript::Transcript,
     wrapin::fixture,
 };
@@ -67,46 +62,6 @@ fn native(sh: &DecodeShape, pw: &[F]) -> (Vec<String>, Vec<F>) {
         x.map(|x| out.push(x));
     }
     (a.failures, out)
-}
-
-#[derive(Clone, Debug)]
-struct DecodeRelation {
-    sh: DecodeShape,
-}
-
-impl Relation for DecodeRelation {
-    type Instance = Vec<F>;
-    type Witness = Vec<F>;
-    type Error = Error;
-    fn format_instance(i: &Vec<F>) -> Result<Vec<F>, Error> {
-        Ok(i.clone())
-    }
-    fn circuit(&self, std: &ZkStdLib, l: &mut impl Layouter<F>, _: Value<Vec<F>>, w: Value<Vec<F>>) -> Result<(), Error> {
-        let n = self.sh.d.n_public();
-        let mut pw = vec![];
-        for i in 0..n {
-            pw.push(std.assign(l, w.as_ref().map(|w| w[i]))?);
-        }
-        let s = {
-            let mut a = Gadget::new(std, &mut *l);
-            let mut t = Transcript::new(&mut a, U_LFR_TRANSCRIPT)?;
-            t.observe_all(&mut a, &pw)?;
-            decode(&mut a, &mut t, &self.sh, &pw)?
-        };
-        for c in &s {
-            std.constrain_as_public_input(l, c)?;
-        }
-        Ok(())
-    }
-    fn used_chips(&self) -> ZkStdLibArch {
-        wrap_arch(1)
-    }
-    fn write_relation<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
-        w.write_all(b"decode")
-    }
-    fn read_relation<R: io::Read>(_: &mut R) -> io::Result<Self> {
-        Err(io::Error::other("decode"))
-    }
 }
 
 #[test]

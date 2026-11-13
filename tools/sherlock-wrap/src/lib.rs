@@ -3,6 +3,7 @@
 
 pub mod alg;
 pub mod decode;
+pub mod decode_test;
 pub mod native;
 pub mod smoke;
 pub mod util;

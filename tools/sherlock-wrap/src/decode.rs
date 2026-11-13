@@ -152,8 +152,16 @@ fn one_hot<A: Alg>(
     Ok(bs)
 }
 
+/// The 9 limbs of 30 bits of `r - 1`.
+pub fn r_minus_1_limbs() -> Vec<u64> {
+    let r1 = to_big(&-F::ONE);
+    (0..LIMBS)
+        .map(|k| ((&r1 >> (LIMB_BITS * k)) % pow2(LIMB_BITS)).to_u64_digits().first().copied().unwrap_or(0))
+        .collect()
+}
+
 /// `dec`: 9 limbs of 30 bits (already range checked) to Fr, with `Canon` (`< r`).
-fn dec<A: Alg>(a: &mut A, limbs: &[A::V], r1: &[u64]) -> Result<A::V, Error> {
+pub fn dec<A: Alg>(a: &mut A, limbs: &[A::V], r1: &[u64]) -> Result<A::V, Error> {
     let t: Vec<(F, A::V)> = limbs.iter().enumerate().map(|(k, l)| (f2(LIMB_BITS * k), l.clone())).collect();
     let v = a.lin(&t, F::ZERO)?;
     // Borrow chain of (r - 1) - L: d_k = R_k - l_k - c_{k-1} + 2^30 c_k in [0, 2^30), c_8 = 0.
@@ -227,10 +235,7 @@ pub fn decode<A: Alg>(
     }
 
     // 2. Lanes and logged values.
-    let r1 = to_big(&-F::ONE);
-    let r1: Vec<u64> = (0..LIMBS)
-        .map(|k| ((&r1 >> (LIMB_BITS * k)) % pow2(LIMB_BITS)).to_u64_digits().first().copied().unwrap_or(0))
-        .collect();
+    let r1 = r_minus_1_limbs();
     let mut lanes = vec![];
     for i in 0..d.lanes() {
         let at = d.call_at() + LIMBS * i;
