@@ -26,7 +26,7 @@ FV-FINAL SHALL check every foreign proof, under the core SRS or under another SR
 - **THEN** the unit is unsatisfiable (mutant `fv_other_srs_folded_into_core_acc`), and the positives `pos_fv_plonk_proof_same_srs` and `pos_fv_plonk_proof_other_srs` pass against a host verifier
 
 ### Requirement: FVR-004 The subkits wait for X14 and the general path is never dropped
-FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before X14 gives the operation inventory and the unit budget. One unit plus the verification of one `FV` child SHALL fit the node shape bounds of the internal set. If no unit size fits, GP-3 SHALL stay incomplete and the scope SHALL NOT be reduced to adapter classes.
+FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before X14 gives the operation inventory and the unit budget. One unit plus the verification of one `FV` child SHALL fit the node shape bounds of the internal set, with at most 3,300 columns and the 17-bit range checker for FV work units only (rulings O1 and O2). If no unit size fits, GP-3 SHALL stay incomplete and the scope SHALL NOT be reduced to adapter classes.
 
 #### Scenario: No unit size fits
 - **WHEN** X14 finds no unit size that fits the node gate
@@ -38,3 +38,14 @@ FV-PARSE, FV-TRANSCRIPT, FV-ARITH, FV-FINAL and FV-SCHED SHALL NOT start before 
 #### Scenario: Substituted operand or swapped challenge
 - **WHEN** an MSM term uses a commitment other than the one absorbed, or a challenge is read from another schema index
 - **THEN** the unit is unsatisfiable (mutants `fv_operand_substituted`, `fv_challenge_index_swapped`), and the Quint invariant `LaterPhaseReadsAbsorbedValue` of `foreignRegistry.qnt` holds
+
+### Requirement: FVR-006 FV work units meet the STARK kit gate with their own column bound
+The FV work-unit AIRs SHALL meet SG-1 to SG-6 of `design.md` section 9 inside the internal set, except that a unit MAY use at most 3,300 columns and the 17-bit range checker (owner rulings O1 and O2 of 2026-11-13). No other kit SHALL use these two exceptions.
+
+#### Scenario: Unit over its column bound
+- **WHEN** an FV unit is keyed with more than 3,300 columns, or a non-FV kit is keyed with the 17-bit checker
+- **THEN** keygen refuses the key (refusals `fv_unit_over_3300_columns`, `non_fv_17bit_checker`)
+
+#### Scenario: Positive and negative units on the stock verifier
+- **WHEN** `pos_fv_unit_boundaries_every_phase` and the mutant `fv_state_forked` are proved with the stark-backend prover
+- **THEN** the stock verifier accepts the first, refuses the second and accepts the second under its weakened control AIR, a proof that omits a unit AIR is refused (mutant `fv_air_omitted`), and D3 at the measured unit shape prints every term at 100 bits or more

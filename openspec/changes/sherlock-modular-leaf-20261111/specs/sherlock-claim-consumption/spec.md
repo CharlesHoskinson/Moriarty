@@ -38,7 +38,7 @@ DESCEND SHALL derive `SUB(R, x)` from a verified SET `R` by one-hash openings of
 
 #### Scenario: Repeated and empty dependencies
 - **WHEN** one claim is consumed twice, one producer feeds two consumers, or a run has no dependency
-- **THEN** the constraint checker accepts each (positives `pos_gp2_repeated_consumption`, `pos_gp2_one_producer_two_consumers`, `pos_gp2_empty_deps_plain_seal`)
+- **THEN** the stock verifier accepts a real proof of each (positives `pos_gp2_repeated_consumption`, `pos_gp2_one_producer_two_consumers`, `pos_gp2_empty_deps_plain_seal`)
 
 ### Requirement: CLM-005 The input link binds the consumer's input to the producer's Halted value
 If `DL.in_link = c_A` is set, SEAL-WITH-DEPS SHALL re-hash the consumer's `input_d` and `c_A` and SHALL require `outcome_d' == H(O, 1, 0, val_d)`. A Rejected or Exhausted claim SHALL be consumable as a chain element only, never as an input link or a value.
@@ -49,7 +49,7 @@ If `DL.in_link = c_A` is set, SEAL-WITH-DEPS SHALL re-hash the consumer's `input
 
 #### Scenario: Rejected claim as metadata
 - **WHEN** a Rejected claim is consumed as a chain element, or a structured value passes across programs
-- **THEN** the constraint checker accepts it (positives `pos_gp2_rejected_as_metadata`, `pos_gp2_struct_value_across_programs`, `pos_gp2_three_runs_collection`)
+- **THEN** the stock verifier accepts a real proof of it (positives `pos_gp2_rejected_as_metadata`, `pos_gp2_struct_value_across_programs`, `pos_gp2_three_runs_collection`)
 
 ### Requirement: CLM-006 The scope of GP-2 is gated on AD-20
 The built path SHALL be input consumption at the seal (AD-20 option a), with the circuit side of a mid-run consume rule specified so that it needs no new node relation. If the owner reads GP-2 as requiring a mid-run consume rule or a genesis-bound dependency, that work SHALL be required by this change and option (a) SHALL be only a milestone.
@@ -64,3 +64,18 @@ The built path SHALL be input consumption at the seal (AD-20 option a), with the
 #### Scenario: Premise in the chain
 - **WHEN** an `ADM` or `VIEW` head is appended to `chain_d` or used as an input link
 - **THEN** the node is unsatisfiable (mutant `claim_premise_in_chain`), and a run with no dependency still seals to a `LEAF` (positive `pos_gp2_empty_deps_plain_seal`)
+
+### Requirement: CLM-008 The GP-2 hook AIRs meet the STARK kit gate
+The claim AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns), with every AIR required and a fixed height in its menu shape.
+
+#### Scenario: AIR omitted from the proof
+- **WHEN** a proof omits one of the claim AIRs of the node
+- **THEN** N1, N3 and `L` refuse it (mutant `claim_air_omitted`), and the kit does not pass SG-1 before row T3 passes
+
+#### Scenario: Positive and negative proofs on the stock verifier
+- **WHEN** the positive `pos_gp2_b_consumes_a_halted` and the mutant `claim_drop_dependency` are proved with the stark-backend prover
+- **THEN** the stock verifier accepts the first, refuses the second and accepts the second under its weakened control AIR; a prover panic or tracegen error earns no rejection credit
+
+#### Scenario: Shape, budget and D3
+- **WHEN** the claim AIRs of the node are keyed in a menu shape
+- **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)

@@ -52,8 +52,23 @@ A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its 
 - **THEN** the node is unsatisfiable (mutant `shape_fv_state_in_shape`)
 
 ### Requirement: SHP-006 The inline kernel has one encoding of the machine relation
-The inline kernel SHALL be built from the same kit `configure` and `assign` functions as the leaf (CORE, DEC, ALU, RANGE, HASH, STACKS, MEM, the memory backend, VALUE DIGEST, INIT), instantiated in the node's constraint system. A separate node emitter SHALL NOT be used. If the kernel does not fit the node gate, the owner SHALL decide under N-6 and GP-4 SHALL NOT be narrowed.
+The inline kernel SHALL be built from the same kit `KitAir` and `KitTrace` implementations as the leaf (CORE, DEC, ALU, RANGE, HASH, STACKS, MEM, the memory backend, VALUE DIGEST, INIT), instantiated in the node's AIR set inside the internal set bounds (SG-4). A separate node emitter SHALL NOT be used. If the kernel does not fit the node shape bounds, the owner SHALL decide under N-6 and GP-4 SHALL NOT be narrowed.
 
 #### Scenario: Second encoding of the machine relation
-- **WHEN** an inline kernel does not instantiate the leaf kits' `configure` and `assign` functions, for example an emitter checked only against differential vectors
+- **WHEN** an inline kernel does not instantiate the leaf kits' `KitAir` and `KitTrace` implementations, for example an emitter checked only against differential vectors
 - **THEN** the build check `graph_inline_kernel_separate_encoding` refuses it
+
+### Requirement: SHP-007 The GP-4 hook AIRs meet the STARK kit gate
+The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns), with every AIR required and a fixed height in its menu shape.
+
+#### Scenario: AIR omitted from the proof
+- **WHEN** a proof omits one of the shape and MERGE-WORK AIRs of the node
+- **THEN** N1, N3 and `L` refuse it (mutant `graph_air_omitted`), and the kit does not pass SG-1 before row T3 passes
+
+#### Scenario: Positive and negative proofs on the stock verifier
+- **WHEN** the positive `pos_gp4_two_prior_plus_step` and the mutant `graph_work_not_bound_to_child_state` are proved with the stark-backend prover
+- **THEN** the stock verifier accepts the first, refuses the second and accepts the second under its weakened control AIR; a prover panic or tracegen error earns no rejection credit
+
+#### Scenario: Shape, budget and D3
+- **WHEN** the shape and MERGE-WORK AIRs of the node are keyed in a menu shape
+- **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
