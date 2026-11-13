@@ -8,7 +8,7 @@ Labels: MEASURED (read from a run log), DERIVED (computed from MEASURED numbers 
 
 **FP-8 gate: BLOCKED.** The six work items of this lane pass (table below). The FP-8 row of `FD/ARCHITECTURE.md` (FZ-4) also needs items that this lane does not close; section 9 names them.
 
-**Update 2026-11-13, coordinator round 2 (section 15).** Round 1 had a soundness gap: no layer bound its child key. Round 2 closes it for the key chain. A new `KeyBind` AIR sits in every layer. `L` pins the universal keys `N2` and `N3`. `L_Fr` pins the cached commitment of `L`. The per-program commitments (app, leaf layer, `N1`) are now in the `L_Fr` statement. 13 of 13 cases on real proofs behave as expected: 11 refusals and 2 honest acceptances, plus the tape cases (section 15.4). Every keygen site now goes through `frozen`. E3 phase 2 is merged, and `L` and `L_Fr` are regenerated over the bound chain. Still open: the wrap is not regenerated (it waits for e5-wrap); `prog_d` is not bound in a circuit (the bench chain has no layer that carries `prog_d`; section 15.6); both FV unit keys need the 3,300-column pick once `KeyBind` is in the node (section 15.7).
+**Update 2026-11-13, coordinator round 2 (section 15).** Round 1 had a soundness gap: no layer bound its child key. Round 2 closes it for the key chain. A new `KeyBind` AIR sits in every layer. `L` pins the universal keys `N2` and `N3`. `L_Fr` pins the cached commitment of `L`. The per-program commitments (app, leaf layer, `N1`) are now in the `L_Fr` statement. 13 of 13 cases on real proofs behave as expected: 9 refusals, 3 acceptances and 1 comparison (section 15.4). **Two of the three negatives the coordinator asked for are not met in a circuit.** A substituted app key is visible only in the `L_Fr` statement, because program B's honest chain passes `L` and `L_Fr` with other key words. A wrong `prog_d` cannot be built on the bench chain (15.6). Item 2 is PARTIAL. `KeyBind` is an interim design that narrows DECISIONS F-5 (15.8). Every keygen site now goes through `frozen`. E3 phase 2 is merged, and `L` and `L_Fr` are regenerated over the bound chain. Still open: the wrap is not regenerated (it waits for e5-wrap); `prog_d` is not bound in a circuit (the bench chain has no layer that carries `prog_d`; section 15.6); both FV unit keys need the 3,300-column pick once `KeyBind` is in the node (section 15.7).
 
 | # | Item | Result | Section |
 |---|---|---|---|
@@ -217,9 +217,9 @@ Program B is W1 with one partial-round constant changed: same shape, another DAG
 
 | Case | Expect | Result |
 |---|---|---|
-| `N1` over one leaf proof of app A and one of app B | refuse | refused (verifier, `SumClaimMismatch`) |
+| `N1` over one leaf proof of app A and one of app B | refuse | refused (verifier, `SumClaimMismatch`). This is the one-key-triple-per-tree limit of 15.8, not only a check |
 | `N1` with its own `app` slot changed | refuse | refused (verifier) |
-| program B's honest `N1` exposes another `app` commitment than A's | differ | differ |
+| program B's honest `N1` exposes another `app` commitment than A's | differ | differ. This is a comparison, not a refusal: B's chain is accepted by every layer, and only a reader of the 6 key words in the `L_Fr` statement (the wrap or the contract) can refuse it. That reader is not built |
 | `N1` with the `n2` slot pre-set | refuse | refused (verifier) |
 | `N3` at depth 1 with the `n3` slot pre-set | refuse | refused (verifier) |
 | `N3` over children at depths 1 and 2 | refuse | refused (verifier) |
@@ -251,6 +251,12 @@ In the design, `prog_d` is a public word of each leaf shard (54 words), and node
 
 What round 2 provides is the input of the check: the three per-program commitments, both halves, in the `L_Fr` statement. **Recommended (FOR OWNER CONFIRMATION):** the leaf statement carries `prog_d`. The first node opens the key triple from `key_root` against the `KeyBind` slots `app`, `leaf` and `n1`, and `L` forwards `prog_d`, so the 6 extra words leave the statement. Note that F-5 hashes `c_app`, `c_leaf` and `c_ifl`. The Rust `key_triple` of section 6 hashes pre-hashes only, while a key's DAG is identified by its cached commitment. So the leaf must take both halves: an encoding change, FOR OWNER CONFIRMATION.
 
+### 15.6b Universality and required AIRs of the bound keys (MEASURED, `out/kb/univ.json`)
+
+Program A (W1, 1 AIR) and program B (W1 twice, 2 AIRs) give equal bound `N1`, `N2` and `N3` and equal `L` pins (`n2`, `n3`). The leaf-layer keys differ, as expected (per program).
+
+Every AIR of every bound key is optional (`is_required` false): `frozen::keygen_checked` uses plain keygen. Upstream keys its inner layers with `keygen_all_required`. The lane did not see this. An omitted `KeyBind` or an omitted proof-shape AIR leaves the continuations sends without receivers, so the LogUp sum fails (DERIVED, not tested). **Open, FOR OWNER CONFIRMATION:** at the next regeneration, key the bound layers with every AIR required, as upstream does. That changes every node key, `L` and `L_Fr`.
+
 ### 15.7 FV unit keys (coordinator item 5; MEASURED by a helper agent, `out/kb/units.json`)
 
 A unit node is `KeyBind` (role `N3`, FOR OWNER CONFIRMATION) + `VerifierSubCircuit<1>` over `N3` + the X-EXP unit AIRs:
@@ -264,4 +270,19 @@ A unit node is `KeyBind` (role `N3`, FOR OWNER CONFIRMATION) + `VerifierSubCircu
 - **Built before the fix.** The keys were made on a09cc5d, before the vacuous-constraint fix of 15.1. The column count is unchanged, but the pre-hashes and bytes will move by a little when the keys are regenerated.
 - **No unit proof.** Proving was blocked by the `N1` bus bug that 9fe4193 fixed, so no unit proof and no unit heights exist yet.
 - **Headroom.** With the 97-column harness sink, the add proving key would be 3,323 columns, over 3,300 (DERIVED).
+- **New X-EXP shapes** (message 2026-11-13, X-EXP RESULTS (e), MEASURED there): add 45 AIRs, 3,143 columns; double 45 AIRs, 2,949 columns. With `KeyBind` (DERIVED, + 88): add 3,231 and double 3,037. Both are still over 3,000, and both fit 3,300. The unit keys above predate these shapes.
+- **Not under `N3` or `L` as built.** `KeyBind` ties the received pre-hash to the `N3` slot or pin. A unit pre-hash differs from `N3` (MEASURED), so a parent `N3` or `L` refuses a unit child. Placing units needs a slot or a key set for them, a design change FOR OWNER CONFIRMATION.
 - **Lock deviation.** The unit generator lives in the stark-bench crate, because adding `openvm-mod-circuit-builder` to `sherlock-wrap-export` changes `Cargo.lock`. The lock was not updated.
+
+### 15.8 Scope: `KeyBind` is interim (FOR OWNER CONFIRMATION)
+
+`KeyBind` allows one key triple (app, leaf, `N1`) per proof tree. DECISIONS F-5 and section 6 give `key_root` one leaf per chip set, so a program whose leaves use several chip sets is refused today: the `n1_mixed_app_keys` case shows the limit. FV units cannot sit under `N3` or `L` (15.7). So `KeyBind` is a narrower binding than GP-1 to GP-4 need. Keep it only as the interim soundness fix. The final form is the F-5 key routing by a `key_root` opening in node statements, with `prog_d` carried by the leaf statement (15.6).
+
+### 15.9 Superseded round-1 content
+
+Sections 3, 4, 5, 7, 8 and 14, and rows 3 to 5 of the status table, describe the round-1 keys **without key binding**, and the round-1 wrap and ledger run over them. They are superseded by section 15 and must not be copied into `FD/ARCHITECTURE.md`. The bound keys are in 15.3. The wrap and ledger of the bound set are not yet run (they wait for e5-wrap).
+
+### 15.10 Not done in round 2
+
+- Coordinator item 6 (G3, G4 `decide`, I-17, D10 path C, FZ-3): untouched.
+- Item 3: every site compiles, and `g1_frozen` passes 4 of 4. The full `sherlock-lfr` test suite was started on the new tree (unit `fp8-tests`, log `~/.cache/fp8/logs/tests-r2.log`) and had not finished at handback. No routed example was run apart from `fp8_keyset`.
