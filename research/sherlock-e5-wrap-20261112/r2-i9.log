@@ -1,0 +1,77 @@
+heavy-slot: e5-r2-i9 waiting for a slot
++ cd /home/hoskinson/Projects/Moriarty-wt/e5-wrap/tools/sherlock-wrap
++ grep -v Compiling
++ cargo test --release --offline --test i9_enc --test i7_decode -- --nocapture --test-threads 1
+    Finished `release` profile [optimized + debuginfo] target(s) in 59.60s
+     Running tests/i7_decode.rs (/home/hoskinson/.cache/e5-wrap/target/release/deps/i7_decode-131f2a657b643b92)
+
+running 2 tests
+test i7_decode_gadget_mock ... E5DECODE gadget rows 165168 (k 18)
+E5DECODE mock pub_lane_changed refused
+E5DECODE mock lane_not_canonical refused
+E5DECODE mock lane_map_sponge_not_3 refused
+E5DECODE mock lane_map_twice refused
+E5DECODE mock lane_map_not_u16 refused
+E5DECODE mock r_anchor_output_changed refused
+E5DECODE mock chunk_j_0 refused
+E5DECODE mock honest ok, changed statement refused
+ok
+test i7_decode_native_equals_stock ... E5DECODE honest: stock true native true []
+E5DECODE pub_lane_changed: stock false native false ["PUB differs from its lane"]
+E5DECODE free_lane_changed: stock true native true []
+E5DECODE value_limb_out_of_range: stock false native false ["limb range", "entry 0: native replay"]
+E5DECODE lane_not_canonical: stock false native false ["range or Canon", "PUB differs from its lane"]
+E5DECODE word_not_babybear: stock false native false ["limb range"]
+E5DECODE op_not_admitted: stock false native false ["op not admitted", "op not admitted", "param out of bound"]
+E5DECODE param_out_of_bound: stock false native false ["param out of bound", "PUB differs from its lane"]
+E5DECODE used_entry_after_nop: stock false native false ["used entry after NOP", "value row after off_n not zero", "PUB differs from its lane"]
+E5DECODE lane_map_not_digest: stock false native false ["lane map pair"]
+E5DECODE mode_2: stock false native false ["mode", "mode", "R entry 4"]
+E5DECODE jk_not_u16: stock false native false ["mode"]
+E5DECODE chunk_j_0: stock false native false ["mode", "R entry 4", "R entry 5"]
+E5DECODE anchor_word_e_in: stock false native false ["anchor entry words"]
+E5DECODE r_entry_0_tag: stock false native false ["R entry 0"]
+E5DECODE claim_pub_input_changed: stock false native false ["claim_pub inputs are not the run DIGEST outputs", "entry 3: native replay", "lane map entry: native replay"]
+E5DECODE r_anchor_output_changed: stock false native false ["entry 4: native replay", "lane map entry: native replay"]
+E5DECODE r_sponge3_output_changed: stock false native false ["entry 3: native replay", "lane map entry: native replay", "lane map entry: native replay"]
+E5DECODE tail_honest: stock true native true []
+E5DECODE open_replay_perm: stock false native true []
+E5DECODE open_replay_sponge: stock false native true []
+E5DECODE open_replay_digest: stock false native true []
+E5DECODE lane_map_sponge_not_3: stock false native false ["lane map pair", "lane map entry: native replay"]
+E5DECODE lane_map_perm: stock false native false ["lane map pair"]
+E5DECODE lane_map_digest_reg: stock true native true []
+E5DECODE lane_map_digest_reg_output_changed: stock false native false ["lane map entry: native replay"]
+E5DECODE lane_map_not_u16: stock false native false ["lane map pair: not u16", "lane map pair", "lane map pair"]
+E5DECODE lane_map_twice: stock false native false ["lane map pair", "lane map pair: lane mapped twice"]
+E5DECODE lane_map_twice_zero_output: stock false native false ["entry 4: native replay", "lane map entry: native replay", "lane map pair: lane mapped twice"]
+E5DECODE lane_map_twice_zero_output: stock lane-map step false, wrap lane mapped twice true
+E5DECODE packed_high_bits: stock false native false ["packed word"]
+E5DECODE cases 27 equal, 3 open (replay outside R and the lane map)
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 94.33s
+
+     Running tests/i9_enc.rs (/home/hoskinson/.cache/e5-wrap/target/release/deps/i9_enc-b9b74e73e3f9cce5)
+
+running 2 tests
+test i9_enc_fr_vectors ... E5ENC native: 40 checks equal their pinned values (21 vector names); replay asserts hold
+E5ENC gadget: MockProver OK on 40 checks (k 15); 4 changed pinned values refused; Canon refuses limbs(r), the range refuses a 2^30 limb
+ok
+test i9_enc_pv_lane_map ... E5ENC decode honest: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode pub_lane_changed: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode pub_value_changed: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode digest_output_changed: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_map_to_sponge: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_map_to_pub: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_map_taken_lane: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_map_same_lane_twice: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_map_to_nop: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_r_minus_1: stock false wrap false ["R entry 1", "R entry 1"]
+E5ENC decode lane_r: stock false wrap false ["range or Canon", "R entry 1"]
+E5ENC decode value_limb_2_30: stock false wrap false ["limb range", "R entry 1"]
+E5ENC decode: 12 cases equal stock (all refused at R entry 1); lane-map step equal on 10 cases; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; mapped DIGEST replay refuses a changed C_P; MockProver refuses the honest vector
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.41s
+

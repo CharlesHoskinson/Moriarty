@@ -21,6 +21,8 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | PASS | section 6f |
 | I7 | The E3 map: D-9 decoder over `Alg`; native verdicts equal stock on 11 cases; gadget `MockProver` | PASS | section 6i |
 | I8 | The full wrap of the E3 all-entries `L_Fr` proof (`lfr-e3`) on the E3 map, exclusive timing, stock ledger | PASS | section 6i |
+| Q1 | Gemini Quint lane on the D-9 decoder circuit (`decode.rs`) | PASS: SOUND and COMPLETE, 8 of 8 mutants caught, no defect | section 6k |
+| I9 | ENC wrap-side vectors: Fr vectors on the wrap gadgets; `pv` binding and a non-empty lane map through the decoder | PASS (33 of 55 pinned vectors apply to the wrap) | section 6j |
 
 ## 2. Code
 
@@ -232,6 +234,117 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - The `L` vk pre-hash (`L_Fr` public value 0) is pinned as a key constant, so the wrap key commits to one `L` key.
 - The statement head words (0 to 113, other than the lane map) are range checked only (`< P`). Nothing reads them yet; that is open.
 
+## 6j. I9: the ENC wrap-side vectors (MEASURED)
+
+Source: `~/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112/VECTORS.txt` (55 pinned values) and `fp3-closure/VALUES.txt` (FP-3 collection). Run: `export-enc.sh` (openvm `e5-wrap`, example `enc_wrap`, log `export-enc.log`), then `i9.sh` (tests `i9_enc` and `i7_decode`, log `i9.log`). The circuit is unchanged; only `dec` and `r_minus_1_limbs` are made public, and the test relation moves to `src/decode_test.rs`.
+
+**Part A, Fr vectors on the wrap gadgets** (`i9_enc_fr_vectors`). These are the wrap's own `Alg` code: `merkle::hash_slice` and `compress` (u = 0, 1, 2, 4), `permute`, the `pack` of BabyBear words (each `< P`), `decode::dec` (9 x 30-bit limbs with `Canon`), and the `L_Fr` transcript (u = 7). There are 40 checks. All of them equal their pinned values natively, and `MockProver` accepts them at k = 15. The test changes 4 pinned values (the first, the fifth, the middle one and the last), and each change is refused.
+
+| Group | Checks |
+|---|---|
+| ENC-1 tags (rule P-1, key constants) | `enc1.tag[0..3]` |
+| `DIGEST` = `PoseidonFr_4(tagFr, pack(d2))` | `enc1.C_P`, `enc1.A_1`, `enc1.input_pub`, `enc1.outcome_pub` (from the pinned `d2_progc`, `d2_lock_j1`, `input_d`, `outhide_d2`), `enc1.digest_1to8` x 4 |
+| Replay of the ENC-2 log from its pinned limbs (`enc2.enc[0..5]`) | `DIGEST(0)`: value 0 = `pack(d2_progc)`, output = replay = `C_P`; `H2`: output = replay = `u0.h2(3,5)`; `SPONGE(3)`: output = replay of the logged inputs = `SPONGE(3)(3, 5, 7)`; `PERM`: outputs = permutation of the inputs; `PUB(1)`: 0x1234; `DIGEST(2)`: value 0 = `pack(input_d)`, output = replay = `input_pub` |
+| `Canon`, limbs | `enc2.limbs(r-1)` decodes to `r - 1`; the limbs of `r` are refused (Canon), and a limb `2^30` is refused (range) |
+| Fr Merkle hashes | `g3.L.u1_leaf20` (u = 1, 3 packed words), `g3.L.u2_node(7,9)` (u = 2) |
+| `L_Fr` transcript (u = 7) on the wrap `Transcript` | `g3.Lfr.s2`, `g3.Lfr.fresh3`, `g3.Lfr.obs1_sample`, `g3.Lfr.obs2_sample3` |
+| FP-3 collection | `coll.run[0..2].claim_pub` (u = 0 `SPONGE(3)` over `C_P`, `input_pub`, `outcome_pub`), `coll.set_pub` (`SHK_SET`), `parity.u0[0,1,2,3,5,16]` |
+
+**Part B, `pv` binding and the lane map** (`enc_wrap`, `i9_enc_pv_lane_map`).
+- `enc_wrap` builds the `L` words. Their `pv` is the pinned ENC-2 log (6 entries, 18 values), and the head is zero except the lane map. The lane map has two pairs: lane 2 takes `C_P` from `DIGEST(0)`, lane 3 takes `input_pub` from `DIGEST(2)`. Lane 1 holds the `PUB(1)` value 0x1234.
+- Checked against the pinned values: `D_EMPTY` (this confirms the BabyBear permutation is ENC's), `enc2.pv[0..12]` and `enc2.pv.p2_fingerprint` of the same 2,816 `pv` words, plus `limbs(r-1)`.
+- The wrap test unpacks the `L_Fr` words and finds the pinned `pv`. On all 12 cases the wrap decoder gives the stock verdict and the stock statement. The honest statement has lane 2 = `C_P`, lane 3 = `input_pub` and lane 1 = 0x1234.
+- `MockProver` (k = 18) accepts the honest case and refuses `pub_lane_changed` and `lane_map_to_sponge`.
+
+| Case | Stock D-9 | Wrap |
+|---|---|---|
+| honest; `lane_r_minus_1` | OK | OK, the same statement |
+| `digest_output_changed` (the logged `C_P` changed) | OK (no `DIGEST` replay in D-9) | OK, lane 2 differs from honest |
+| `pub_lane_changed`, `pub_value_changed` | refused (`PUB(1)`) | refused (lookup) |
+| `lane_map_to_sponge`, `lane_map_to_pub`, `lane_map_to_nop`, `lane_map_taken_lane`, `lane_map_same_lane_twice` | refused (lane map) | refused |
+| `lane_r`, `value_limb_2_30` | refused (range or Canon) | refused |
+
+**Not on the wrap side (22 of 55).** These are the BabyBear `P2` forms, which the wrap never computes: `enc1.VAL_NONE`, `enc1.outcome_d`, `enc1.claim_d`, `enc2.onion6`, `enc2.node(2,4)`, `enc3.layout_d`. Also the 16 `L` transcript vectors (u = 3: `g3.L.s2`, `fresh6`, `obs1..8_sample`, `obs16_sample2`, `obs3_commit_sample2`, `sample_obs_sample`, `prehash_sample`, `obs9_commit_sample`, `samples11`). The `L` verifier runs inside `L_Fr`; the wrap verifies `L_Fr` with the u = 7 transcript, so the u = 3 samples are an AIR-side obligation (ENC section 10 covers them on `TapeTranscript`).
+
+**Findings (for owner and lead confirmation; recommended options marked).**
+1. **The lane map admits only `DIGEST`, but ENC's `acceptRun` lane map has `SPONGE` pairs.** ENC (section 10) maps lanes 11 and 25 to a `SPONGE(3)` entry (`claim_pub`). D-9 (`iface::decode`) admits only `DIGEST` entries in the lane map and reads `vs[off + 1]`, and `lane_map_to_sponge` is refused on both sides. Recommended: E3 extends D-9 so a lane-map pair may name a `SPONGE(n)` entry and read its output `vs[off + n]`; the wrap then ports the change (a one-hot over two ops and an offset by `vals - 1`). The wrap keeps the stock D-9 rule until E3 changes it.
+2. **E3 `iface` uses placeholder tags.** `iface::tag_fr(k) = k + 1` (plan D-8), not the ENC-1 ASCII rule P-1, so E3's logged `DIGEST` outputs differ from the ENC values. The wrap tests use P-1. Recommended: E3 adopts P-1 before the J6 replay.
+3. **No `DIGEST` replay in the wrap (E3 J6 open).** The replay gadgets match the pinned vectors (part A), but the wrap does not yet replay every logged entry, so a changed logged output decodes into a changed statement (`digest_output_changed`). Recommended: J6 adds the per-entry replay in the wrap.
+4. **`Canon` on `X`.** The architecture (`FD/ARCHITECTURE.md`, wrap checks) asks for range and `Canon` on the limbs of `X`. `X` (head words 97 to 105) is not fixed in E3, and its honest head words are random BabyBear values, so the wrap checks only `< P` there. The `dec` gadget that would check `X` passes the `Canon` vectors (part A). Recommended: add `Canon` on `X` when E3 fixes `X`.
+
+## 6k. Gemini Quint lane on the decoder circuit (MEASURED by the lead)
+
+The lane was `argon-run` (gemini-4-argon-high) in `~/.cache/gemini-lanes/e5-decode` with the quint-modeling and quint-lang skills (prompt `qa/gemini-quint/e5-decode/PROMPT.md`). Its report, model and the lead's runs are in `qa/gemini-quint/e5-decode/` of this worktree. The lane's verdict: SOUND on all 7 questions (unpack, Canon, entries, zero padding, lane map, PUB lookup, output), with no defect found. The model is reduced in size: F_359, 3 limbs of 3 bits, 2 words of 4 bits per packed element, B = V = 4, 3 lanes, 2 lane-map pairs. The lookup is modelled as the per-key weight equality that Schwartz-Zippel gives after the transcript observes everything.
+
+The lane's sandbox refused every command, so the lead ran quint:
+- 4 model fixes first: the typecheck, `mod_inv(1) = 360`, a `mut_skip_any_pair` counterexample that does not separate, and a fuzz step for `quint run`.
+- `quint typecheck` OK on both files; `quint test` 13 of 13 pass.
+- `quint run --invariant SOUND_AND_COMPLETE`: no violation in 10,000 traces (seeds 1 and 2, 5,000 samples, 10 steps).
+- Each of the 8 mutants is violated: `no_canon_last_borrow`, `lo_only`, `nop_chain_off`, `g_not_monotone`, `skip_any_pair`, `no_taken_check`, `s_before_lanemap`, `v_s_keys_overlap`.
+
+One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: without it a prover takes `nz = 2` and writes one value into two lanes. The gated one-hot alone handles only `nz = 0`. The circuit has the check, so nothing changes. No defect means no circuit change, so sections 6i and 6j stand.
+
+## 6l. The decoder on E3 9539418 (MEASURED unless marked)
+
+**Port.** openvm `e5-wrap` is rebased onto E3 `e3-iface` 9539418: c1ddfc0, 8ce7774, 6ef8f47, 1f42114, then 2f1d8a4 (the export changes). `lfr_e3` now reads the E3 J8 fixture (`~/.cache/e3-iface/fixture-j8`; the `L` that E3 used at 9539418) and passes the `L` public values to `gen_r_check`. Script: `export-r2.sh`, log `r2-export.log`. Keygen took 334.4 s and prove 972.3 s (shared slot). The proof has 2 commitments, widths 33 + 10, and 1,522 public words. The decode cases grew from 11 to 30. The old fixtures are kept in `~/.cache/e5-wrap/fixtures/at-2f09caf/`.
+
+**Decoder changes (`src/decode.rs`), from `iface.rs` 9539418:**
+1. Lane map: the entry must be a `DIGEST` or a `SPONGE(3)`. The circuit checks `sel_dig + sel_sp == nz` and `sel_sp (p - 3) == 0`. The output is `vs[o + 1 + 2 sel_sp]`: `o + 1` for a `DIGEST`, `o + 3` for a `SPONGE(3)`.
+2. A lane is set at most once (lane `e3-lanemap` finding 2a). For each earlier active pair, `nz_i nz_j ((lane_i - lane_j) inv - 1) == 0`. The `s[lane] == 0` check stays.
+3. The 8 lane-map words are range checked `< 2^16` (finding 3). The gated one-hots already bound them; the checks keep the stock refusal.
+4. Each mapped entry is replayed natively. A `DIGEST` uses the tag from a gated one-hot of `param` over the 6 tags; a `SPONGE(3)` uses the u = 0 sponge. Its inputs are read through the same lookup, and the reads at `o + 1` and `o + 2` are gated by the `SPONGE` bit.
+5. `N_TAGS` is 6, and `tag_fr` follows the ASCII rule P-1.
+6. New step 4, at static positions:
+   - `mode` is a bit, and the `j`, `k` words are u16.
+   - For a chunk, `1 <= j <= k`.
+   - The `R` entries have fixed `(op, param)`, with `t_in = mode [j != 1]` and `t_out = [j != k]`.
+   - The anchor entry words and the `claim_pub` inputs are checked.
+   - Entries 0 to 4 (5 for a chunk) are replayed natively.
+
+   `L_Fr` already checks `R` in its tape (`gen_r_check`, E3 J7). The wrap repeats the check so that its verdict equals stock `decode`.
+
+**Open at this step (closed in section 6m by the full replay).** Stock `decode` replays every entry (`PERM`, `H2`, `SPONGE`, `DIGEST`). The wrap replays only `R` and the mapped entries, so a wrong output in any other entry is accepted by the wrap and refused by stock. This is E3 J6 in the wrap. Such an output does not reach the statement: only mapped entries and `PUB` values reach it, and both are checked. ESTIMATE for a full replay through a 256-slot permutation tape with the sponge state carried between slots: about 15,000 to 25,000 rows. That fits the headroom below.
+
+| Check | Result |
+|---|---|
+| I7 native vs stock (`r2-i9.log`) | 27 of 30 cases equal, honest statement equal. Accepted: `honest`, `free_lane_changed`, `tail_honest`, `lane_map_digest_reg`. Refused by both: `mode_2`, `jk_not_u16`, `chunk_j_0`, `anchor_word_e_in`, `r_entry_0_tag`, `claim_pub_input_changed`, `r_anchor_output_changed`, `r_sponge3_output_changed`, `lane_map_sponge_not_3`, `lane_map_perm`, `lane_map_digest_reg_output_changed`, `lane_map_not_u16`, `lane_map_twice`, `lane_map_twice_zero_output`, and the 11 earlier refusals. Open, as planned (stock refuses, wrap accepts): `open_replay_perm`, `open_replay_sponge`, `open_replay_digest` |
+| Mapped twice with a first output of 0 | stock `apply_lane_map` alone refuses; the wrap records `lane map pair: lane mapped twice` (whole stock decode refuses earlier, at the replay) |
+| Decoder alone, cost model k = 18 | 165,168 rows (was 162,381; +2,787) |
+| `MockProver`, decoder alone | honest OK; changed statement, `pub_lane_changed`, `lane_not_canonical`, `lane_map_sponge_not_3`, `lane_map_twice`, `lane_map_not_u16`, `r_anchor_output_changed`, `chunk_j_0` refused |
+| I9 Part A | pass (unchanged) |
+| I9 Part B (`enc-wrap-decode`) | The ENC-2 log is not an `R` log (entry 1 is `H2`), so stock and the wrap refuse all 12 cases at `R entry 1`. The lane-map step alone gives the same verdict as the wrap's lane-map checks on 10 cases (2 fail `dec` first), and the same statement: lane 2 = `C_P`, lane 3 = `input_pub`, lane 1 = 0x1234. A changed `C_P` is refused by the replay of the mapped `DIGEST`. `MockProver` refuses the honest vector (recommended option, FOR OWNER CONFIRMATION: the ENC vectors stay pinned at Part A and at the lane-map step) |
+| I8 native verifier core (`r2-i8.log`) | 675 of 675 stock samples equal; 51,547 permutations; queries [98, 83, 82]; 3 refusals |
+| Full wrap rows, k = 21 | 1,610,038 (gate 1,782,573; 90.3 percent; headroom 172,535); table rows 1,260,547; 8 advice, 27 fixed columns |
+| `MockProver`, full wrap | honest OK (44.6 s); changed public input and changed proof value refused |
+| Exclusive slot (`r2-i6-excl.log`) | keygen 83.7 s; blinded prove 138.5 s; proof 2,912 bytes; key 1,325 bytes; library verify OK |
+| Stock ledger 9.1.0.1 | `Ok(())` in 0.077 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
+| Gemini Quint lane round 2 (`qa/gemini-quint/e5-decode-r2/`) | The `argon-run` lane gives SOUND and COMPLETE on 7 questions (op test, output index, mapped twice, u16, mapped replay, step 4, output), with no defect apart from the open replay. The lane sandbox refused quint, so the lead ran it with no model fixes: typecheck OK; 14 of 14 tests pass; `SOUND_AND_COMPLETE` has no violation in 10,000 traces (seeds 1 and 2); all 8 mutants are violated (`no_sponge3_param`, `idx_plus1`, `no_twice`, `no_u16`, `no_mapped_replay`, `t_in_wrong`, `no_claim_pub`, `no_chunk_range`) |
+
+## 6m. Full native replay of every entry (MEASURED unless marked)
+
+The lead decided (AFK pick) that the wrap statement must equal the stock D-9 one, so the open item of section 6l is closed. Step 7 of `src/decode.rs` replays every `PERM`, `H2`, `SPONGE` and `DIGEST` entry, as stock `decode` does; stock does not replay `PATH`. The partial replays of section 6l (R and mapped entries) are removed, because step 7 covers them.
+
+**Design.**
+- A tape of `P` = 256 permutation slots. The active slots `t < np` form a monotone bit vector with sum `np`, and an inactive slot holds the zero tuple.
+- Each entry gives a packed tuple: the `PERM`, `H2`, `SPONGE`, `DIGEST` bits, the parity, `param` (8 bits), `o`, `poff` and `perms` (9 bits each).
+- Each slot witnesses a tuple with the same fields, range checked. A lookup with fixed multiplicities ties the slots to the entries: `sum act_t / (alpha - pk_t) = sum perms_i / (alpha - row_i)`. With `0 <= t - poff < perms`, this places block m of entry i at slot `poff_i + m`.
+- The values are read through the V lookup: `vs[o + 2m]`, `vs[o + 2m + 1]` (when the block has a second input), `vs[o + 2m + 2]`, the output `vs[o + 3]` or `vs[o + param]`, then `vs[o + 4]` and `vs[o + 5]`. All reads are gated.
+- The sponge state is carried from slot to slot. The first block takes capacity `param` (u = 0). `H2` takes `cap(0, 2)`, and `DIGEST` takes `cap(4, 2)` with the tag from a gated one-hot.
+- Every slot tuple and every read value is observed before `alpha` and `beta` are sampled.
+
+| Check | Result |
+|---|---|
+| I7 native vs stock (`r3-i9.log`) | 30 of 30 cases equal, including `open_replay_perm`, `open_replay_sponge`, `open_replay_digest` (now refused, as by stock); honest and `tail_honest` statements equal |
+| Decoder alone, cost model k = 18 | 223,453 rows (was 165,168; the replay costs 58,285 rows, against the ESTIMATE of 15k to 25k in section 6l: the estimate left out the observed read values) |
+| `MockProver`, decoder alone | honest OK; changed statement and 10 refusal cases refused, the 3 `open_replay` cases included |
+| I9 | Part A pass. Part B: 12 of 12 equal stock (refused at `R entry 1`); the honest ENC-2 log replays (no replay failure); a changed `C_P` is refused by the replay |
+| I8 native verifier core (`r3-i8.log`) | 675 of 675 stock samples equal |
+| Full wrap rows, k = 21 | 1,668,323 (gate 1,782,573; 93.6 percent; headroom 114,250); table rows 1,261,315; 8 advice, 27 fixed columns |
+| `MockProver`, full wrap | honest OK (46.2 s); changed public input and changed proof value refused |
+| Exclusive slot (`r3-i6-excl.log`) | keygen 86.1 s; blinded prove 137.5 s; proof 2,912 bytes; key 1,325 bytes; library verify OK |
+| Stock ledger 9.1.0.1 | `Ok(())` in 0.079 s, 1,026 public inputs; 3 changed public inputs and 3 flipped proof bytes refused |
+| Gemini Quint lane round 3 (`qa/gemini-quint/e5-decode-r3/`) | Lane verdict: SOUND and COMPLETE on all 7 questions, caveat only the deliberate `pw[0] == sh.pre_hash` pin. Lead rerun (`RERUN.md`, MEASURED): typecheck OK; the rust backend hits its recursion limit, so the typescript backend is used; 12 of 14 tests pass, and `corpus_sound_and_complete_test` and `catch_mut_no_m_range_test` fail; `SOUND_AND_COMPLETE` is violated at seeds 1 and 2, and all 7 mutant invariants are violated. Cause: a model artifact. The toy field 359 is below the 2^9 slot range bound, so the model's range check accepts `rem = -1`. Over Fr the circuit refuses it. The verdict is **not confirmed by the lead runs** until the model is repaired and rerun |
+
 ## 7. Soundness points (as built)
 
 - Direction bits of a Merkle path are the low-bit cells of the sample cell (`merkle_verify` takes them from `low_bits`), not separate witnesses.
@@ -266,3 +379,11 @@ So the measured `L_Fr` shape fits k = 21 by this estimate, with less margin than
 - 2026-11-12 23:54. I7 passes (log `i7.log`): decoder verdicts equal stock on 11 cases; gadget decoder 162,381 rows.
 - 2026-11-13 00:10. I8 cost model: 1,605,413 rows on `lfr-e3` with the E3 map (log `i8.log`); commit 7a4dfb308.
 - 2026-11-13 00:49. I8 under `heavy-slot --exclusive`: keygen 82.6 s, prove 131.6 s, ledger 9.1.0.1 accepts (log `i8-excl.log`).
+- 2026-11-13 03:20. I9 passes (logs `export-enc.log`, `i9.log`): 40 Fr checks and 12 decoder cases on the ENC `pv` vector equal the pinned and stock values.
+
+- 2026-11-13 03:50. Gemini Quint lane on `decode.rs`: lane verdict SOUND; the lead ran quint: 13 of 13 tests, SOUND_AND_COMPLETE holds on 10,000 traces, 8 of 8 mutants caught (`qa/gemini-quint/e5-decode/`).
+- 2026-11-13 05:25. Openvm `e5-wrap` rebased onto E3 9539418; `lfr-e3` re-exported from the J8 fixture (log `r2-export.log`); I7 and I9 pass on the ported decoder (log `r2-i9.log`).
+- 2026-11-13 05:35. Full wrap on the new `lfr-e3`: 1,610,038 rows at k = 21; exclusive keygen 83.7 s, prove 138.5 s; ledger 9.1.0.1 accepts (logs `r2-i8.log`, `r2-i6-excl.log`).
+- 2026-11-13 05:55. Gemini Quint lane round 2 on the ported decoder: SOUND and COMPLETE; lead runs pass, 8 of 8 mutants caught (`qa/gemini-quint/e5-decode-r2/`).
+- 2026-11-13 06:32. Full native replay (section 6m): I7 30 of 30 equal; 1,668,323 rows at k = 21; exclusive keygen 86.1 s, prove 137.5 s; ledger 9.1.0.1 accepts (logs `r3-i9.log`, `r3-i8.log`, `r3-i6-excl.log`).
+- 2026-11-13 08:09. Gemini Quint lane round 3: lane verdict SOUND and COMPLETE; the lead rerun fails 2 of 14 tests and `SOUND_AND_COMPLETE` through a toy-field artifact of the model (`qa/gemini-quint/e5-decode-r3/RERUN.md`); verdict not confirmed until the model is repaired.

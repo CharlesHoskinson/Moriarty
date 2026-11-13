@@ -1,22 +1,19 @@
 //! I7: the E3 map (the D-9 decoder) over `Alg`. Native verdict equal to the stock verdict on
 //! every exported case (`lfr-e3-decode.json`, written by `lfr_e3`), the honest statement equal
 //! to the stock statement; then the gadget decoder alone: cost model and `MockProver` on the
-//! honest case, a `PUB` mismatch and a non-canonical lane.
-use std::{fs, io};
+//! honest case, a `PUB` mismatch, a non-canonical lane and the 9539418 lane-map and `R`
+//! refusals, and the replay of entries outside `R` and the lane map (`open_replay_*`, a
+//! changed `PERM`, `SPONGE(5)` and `DIGEST(SHK_REG)` output).
+use std::fs;
 
-use midnight_circuits::instructions::{AssignmentInstructions, PublicInputInstructions};
-use midnight_proofs::{
-    circuit::{Layouter, Value},
-    dev::MockProver,
-    plonk::Error,
-};
-use midnight_zk_stdlib::{MidnightCircuit, Relation, ZkStdLib, ZkStdLibArch, cost_model};
+use midnight_proofs::{circuit::Value, dev::MockProver};
+use midnight_zk_stdlib::{MidnightCircuit, cost_model};
 use serde_json::Value as J;
 use sherlock_wrap::{
-    alg::{Gadget, Native},
+    alg::Native,
     decode::{DecodeShape, Dims, decode},
+    decode_test::DecodeRelation,
     native::{F, U_LFR_TRANSCRIPT, f_from_hex},
-    smoke::wrap_arch,
     transcript::Transcript,
     wrapin::fixture,
 };
@@ -26,6 +23,8 @@ struct Case {
     words: Vec<F>,
     ok: bool,
     statement: Option<Vec<F>>,
+    /// The stock lane-map step alone (`apply_lane_map`), when the case records it.
+    lane_map_ok: Option<bool>,
 }
 
 fn hexes(v: &J) -> Vec<F> {
@@ -51,6 +50,7 @@ fn cases() -> (Dims, Vec<Case>) {
             words: hexes(&c["words"]),
             ok: c["ok"].as_bool().unwrap(),
             statement: c["statement"].as_array().map(|_| hexes(&c["statement"])),
+            lane_map_ok: c["lane_map_ok"].as_bool(),
         })
         .collect();
     (d, cs)
@@ -69,46 +69,6 @@ fn native(sh: &DecodeShape, pw: &[F]) -> (Vec<String>, Vec<F>) {
     (a.failures, out)
 }
 
-#[derive(Clone, Debug)]
-struct DecodeRelation {
-    sh: DecodeShape,
-}
-
-impl Relation for DecodeRelation {
-    type Instance = Vec<F>;
-    type Witness = Vec<F>;
-    type Error = Error;
-    fn format_instance(i: &Vec<F>) -> Result<Vec<F>, Error> {
-        Ok(i.clone())
-    }
-    fn circuit(&self, std: &ZkStdLib, l: &mut impl Layouter<F>, _: Value<Vec<F>>, w: Value<Vec<F>>) -> Result<(), Error> {
-        let n = self.sh.d.n_public();
-        let mut pw = vec![];
-        for i in 0..n {
-            pw.push(std.assign(l, w.as_ref().map(|w| w[i]))?);
-        }
-        let s = {
-            let mut a = Gadget::new(std, &mut *l);
-            let mut t = Transcript::new(&mut a, U_LFR_TRANSCRIPT)?;
-            t.observe_all(&mut a, &pw)?;
-            decode(&mut a, &mut t, &self.sh, &pw)?
-        };
-        for c in &s {
-            std.constrain_as_public_input(l, c)?;
-        }
-        Ok(())
-    }
-    fn used_chips(&self) -> ZkStdLibArch {
-        wrap_arch(1)
-    }
-    fn write_relation<W: io::Write>(&self, w: &mut W) -> io::Result<()> {
-        w.write_all(b"decode")
-    }
-    fn read_relation<R: io::Read>(_: &mut R) -> io::Result<Self> {
-        Err(io::Error::other("decode"))
-    }
-}
-
 #[test]
 fn i7_decode_native_equals_stock() {
     let (d, cs) = cases();
@@ -121,6 +81,11 @@ fn i7_decode_native_equals_stock() {
         assert_eq!(ok, c.ok, "verdict of {}", c.name);
         if let Some(st) = &c.statement {
             assert_eq!(&s, st, "statement of {}", c.name);
+        }
+        if let Some(lm) = c.lane_map_ok {
+            let twice = fails.iter().any(|f| f.contains("lane mapped twice"));
+            assert_eq!(!lm, twice, "lane-map step of {}", c.name);
+            println!("E5DECODE {}: stock lane-map step {lm}, wrap lane mapped twice {twice}", c.name);
         }
     }
     println!("E5DECODE cases {} all equal", cs.len());
@@ -144,7 +109,7 @@ fn i7_decode_gadget_mock() {
     let mut bad = st.clone();
     bad[1] += F::from(1u64);
     assert!(!run(&honest.words, &bad), "changed statement");
-    for name in ["pub_lane_changed", "lane_not_canonical"] {
+    for name in ["pub_lane_changed", "lane_not_canonical", "lane_map_sponge_not_3", "lane_map_twice", "lane_map_not_u16", "r_anchor_output_changed", "chunk_j_0", "open_replay_perm", "open_replay_sponge", "open_replay_digest"] {
         let c = cs.iter().find(|c| c.name == name).unwrap();
         assert!(!c.ok);
         let (_, s) = native(&sh, &c.words);
