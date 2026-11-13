@@ -21,6 +21,7 @@ Plan: `PLAN.md` beside this file. Owner ruling 2026-11-12: OD-24 is option E.
 | I6b | The same on the real `L_Fr` proof (`lfr-real`, widths 33 + 10), rows within the k = 21 gate | PASS | section 6f |
 | I7 | The E3 map: D-9 decoder over `Alg`; native verdicts equal stock on 11 cases; gadget `MockProver` | PASS | section 6i |
 | I8 | The full wrap of the E3 all-entries `L_Fr` proof (`lfr-e3`) on the E3 map, exclusive timing, stock ledger | PASS | section 6i |
+| Q1 | Gemini Quint lane on the D-9 decoder circuit (`decode.rs`) | PASS: SOUND and COMPLETE, 8 of 8 mutants caught, no defect | section 6k |
 | I9 | ENC wrap-side vectors: Fr vectors on the wrap gadgets; `pv` binding and a non-empty lane map through the decoder | PASS (33 of 55 pinned vectors apply to the wrap) | section 6j |
 
 ## 2. Code
@@ -271,6 +272,18 @@ Source: `~/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112/VECTO
 3. **No `DIGEST` replay in the wrap (E3 J6 open).** The replay gadgets match the pinned vectors (part A), but the wrap does not yet replay every logged entry, so a changed logged output decodes into a changed statement (`digest_output_changed`). Recommended: J6 adds the per-entry replay in the wrap.
 4. **`Canon` on `X`.** The architecture (`FD/ARCHITECTURE.md`, wrap checks) asks for range and `Canon` on the limbs of `X`. `X` (head words 97 to 105) is not fixed in E3, and its honest head words are random BabyBear values, so the wrap checks only `< P` there. The `dec` gadget that would check `X` passes the `Canon` vectors (part A). Recommended: add `Canon` on `X` when E3 fixes `X`.
 
+## 6k. Gemini Quint lane on the decoder circuit (MEASURED by the lead)
+
+The lane was `argon-run` (gemini-4-argon-high) in `~/.cache/gemini-lanes/e5-decode` with the quint-modeling and quint-lang skills (prompt `qa/gemini-quint/e5-decode/PROMPT.md`). Its report, model and the lead's runs are in `qa/gemini-quint/e5-decode/` of this worktree. The lane's verdict: SOUND on all 7 questions (unpack, Canon, entries, zero padding, lane map, PUB lookup, output), with no defect found. The model is reduced in size: F_359, 3 limbs of 3 bits, 2 words of 4 bits per packed element, B = V = 4, 3 lanes, 2 lane-map pairs. The lookup is modelled as the per-key weight equality that Schwartz-Zippel gives after the transcript observes everything.
+
+The lane's sandbox refused every command, so the lead ran quint:
+- 4 model fixes first: the typecheck, `mod_inv(1) = 360`, a `mut_skip_any_pair` counterexample that does not separate, and a fuzz step for `quint run`.
+- `quint typecheck` OK on both files; `quint test` 13 of 13 pass.
+- `quint run --invariant SOUND_AND_COMPLETE`: no violation in 10,000 traces (seeds 1 and 2, 5,000 samples, 10 steps).
+- Each of the 8 mutants is violated: `no_canon_last_borrow`, `lo_only`, `nop_chain_off`, `g_not_monotone`, `skip_any_pair`, `no_taken_check`, `s_before_lanemap`, `v_s_keys_overlap`.
+
+One fact came out of fix 3. `z u = 0` in the lane-map skip is not redundant: without it a prover takes `nz = 2` and writes one value into two lanes. The gated one-hot alone handles only `nz = 0`. The circuit has the check, so nothing changes. No defect means no circuit change, so sections 6i and 6j stand.
+
 ## 7. Soundness points (as built)
 
 - Direction bits of a Merkle path are the low-bit cells of the sample cell (`merkle_verify` takes them from `low_bits`), not separate witnesses.
@@ -306,3 +319,5 @@ Source: `~/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112/VECTO
 - 2026-11-13 00:10. I8 cost model: 1,605,413 rows on `lfr-e3` with the E3 map (log `i8.log`); commit 7a4dfb308.
 - 2026-11-13 00:49. I8 under `heavy-slot --exclusive`: keygen 82.6 s, prove 131.6 s, ledger 9.1.0.1 accepts (log `i8-excl.log`).
 - 2026-11-13 03:20. I9 passes (logs `export-enc.log`, `i9.log`): 40 Fr checks and 12 decoder cases on the ENC `pv` vector equal the pinned and stock values.
+
+- 2026-11-13 03:50. Gemini Quint lane on `decode.rs`: lane verdict SOUND; the lead ran quint: 13 of 13 tests, SOUND_AND_COMPLETE holds on 10,000 traces, 8 of 8 mutants caught (`qa/gemini-quint/e5-decode/`).

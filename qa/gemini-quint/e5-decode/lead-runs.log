@@ -1,0 +1,62 @@
+# 2026-11-13T03:19:20-07:00 quint 0.32.0
+$ quint typecheck decode.qnt
+OK
+$ quint typecheck decode_test.qnt
+OK
+$ quint test --main decode_test --match '_test$' decode_test.qnt
+    ok honest_mixed_test passed 1 test(s)
+    ok honest_sponge_test passed 1 test(s)
+    ok honest_padded_test passed 1 test(s)
+    ok corpus_sound_and_complete_test passed 1 test(s)
+    ok unpack_refusals_test passed 1 test(s)
+    ok catch_mut_no_canon_last_borrow_test passed 1 test(s)
+    ok catch_mut_lo_only_test passed 1 test(s)
+    ok catch_mut_nop_chain_off_test passed 1 test(s)
+    ok catch_mut_g_not_monotone_test passed 1 test(s)
+    ok catch_mut_skip_any_pair_test passed 1 test(s)
+    ok catch_mut_no_taken_check_test passed 1 test(s)
+    ok catch_mut_s_before_lanemap_test passed 1 test(s)
+    ok catch_mut_v_s_keys_overlap_test passed 1 test(s)
+  13 passing (16160ms)
+$ quint run decode.qnt --main decode --invariant SOUND_AND_COMPLETE --max-samples 5000 --max-steps 10 --seed 1
+[State 0]
+[State 1]
+[State 2]
+[State 3]
+[State 4]
+[State 5]
+[State 6]
+[State 7]
+[State 8]
+[State 9]
+[State 10]
+[ok] No violation found (244657ms at 20 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_AND_COMPLETE --max-samples 5000 --max-steps 10 --seed 2
+[State 0]
+[State 1]
+[State 2]
+[State 3]
+[State 4]
+[State 5]
+[State 6]
+[State 7]
+[State 8]
+[State 9]
+[State 10]
+[ok] No violation found (119481ms at 42 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_no_canon_last_borrow --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (777ms at 3 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_lo_only --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (522ms at 4 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_nop_chain_off --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (2192ms at 1 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_g_not_monotone --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (468ms at 11 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_skip_any_pair --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (776ms at 1 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_no_taken_check --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (2208ms at 1 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_s_before_lanemap --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (597ms at 5 traces/second).
+$ quint run decode.qnt --main decode --invariant SOUND_mut_v_s_keys_overlap --max-samples 5000 --max-steps 10 --seed 1
+[violation] Found an issue (486ms at 2 traces/second).

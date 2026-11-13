@@ -1,0 +1,1170 @@
+// -*- mode: Bluespec; -*-
+//
+// E5 wrap in-circuit D-9 decoder (`lane-src/decode.rs`) vs stock reference
+// (`lane-src/iface.rs`), modeled at reduced parameters over F_359.
+
+module decode {
+
+  // =========================================================================
+  // 1. Reduced-Scale Parameters
+  // =========================================================================
+
+  // Prime scalar field modulus r = 359 (360 - 1).
+  // R = r - 1 = 358 = 6 + 4*8 + 5*64 in base 8 (3 limbs of 3 bits).
+  pure val FR_MOD: int = 359
+  pure val R1_LIMBS: List[int] = [6, 4, 5]
+
+  // Word packing: 2 words per packed Fr element, 4 bits per word (base 16).
+  // Max packed value for 2 words is 15 + 15*16 = 255 < FR_MOD = 359 (no wrap).
+  pure val WORD_BASE: int = 16
+  pure val PACK_K: int = 2
+  pure val BB_P: int = 13
+
+  // Limbs: 3 limbs of 3 bits (base 8 < BB_P = 13 < WORD_BASE = 16).
+  // Max 3-limb integer is 8^3 - 1 = 511 >= FR_MOD = 359 (Canon check is active).
+  pure val LIMBS: int = 3
+  pure val LIMB_BASE: int = 8
+
+  // Layout dimensions: B = 4 entries, V = 4 values, P = 4 perms, 3 lanes,
+  // 2 lane-map pairs, 6 statement prefix words (2 header words + 4 lane-map words).
+  pure val STMT: int = 6
+  pure val LANE_MAP: int = 2
+  pure val LANE_PAIRS: int = 2
+  pure val B_CAP: int = 4
+  pure val V_CAP: int = 4
+  pure val P_CAP: int = 4
+  pure val LANES: int = 3
+
+  pure val VALUES_AT: int = 14   // STMT + 2 * B_CAP = 6 + 8
+  pure val CALL_AT: int = 26     // VALUES_AT + LIMBS * V_CAP = 14 + 12
+  pure val N_WORDS: int = 35     // CALL_AT + LIMBS * LANES = 26 + 9
+  pure val N_PUBLIC: int = 19    // 1 + ceil(35 / 2) = 1 + 18
+
+  pure val PRE_HASH: int = 42
+  pure val N_TAGS: int = 4
+  pure val PATH_MAX: int = 4
+  pure val PERM_VALS: int = 4
+
+  // Range check bounds in the circuit (scaled analogs of 2^11, 2^16, 2^17)
+  pure val BOUND_LIM: int = 8
+  pure val SPONGE_Q_LIM: int = 8
+  pure val CAP_LIM: int = 8
+
+  // Operation codes (matching iface.rs / decode.rs)
+  pure val OP_NOP: int = 0
+  pure val OP_PERM: int = 1
+  pure val OP_H2: int = 2
+  pure val OP_SPONGE: int = 3
+  pure val OP_PATH: int = 4
+  pure val OP_ECMUL: int = 5
+  pure val OP_ECMULG: int = 6
+  pure val OP_PUB: int = 7
+  pure val OP_DIGEST: int = 8
+
+  pure val ADMITTED: List[int] = [
+    OP_NOP, OP_PERM, OP_H2, OP_SPONGE, OP_PATH, OP_PUB, OP_DIGEST
+  ]
+
+  pure val I_NOP: int = 0
+  pure val I_PERM: int = 1
+  pure val I_H2: int = 2
+  pure val I_SPONGE: int = 3
+  pure val I_PATH: int = 4
+  pure val I_PUB: int = 5
+  pure val I_DIGEST: int = 6
+
+  // =========================================================================
+  // 2. Types
+  // =========================================================================
+
+  type DecodeRes = {
+    ok: bool,
+    stmt: List[int],
+    err: str
+  }
+
+  type Witness = {
+    w_words: List[int],
+    lane_borrows: List[List[int]],
+    vs_borrows: List[List[int]],
+    op_bits: List[List[int]],
+    sponge_q: List[int],
+    sponge_e: List[int],
+    g_bits: List[int],
+    lm_inv: List[int],
+    lm_h: List[List[int]],
+    lm_e: List[List[int]],
+    lm_val: List[int],
+    pub_v: List[int],
+    mv: List[int],
+    ms: List[int]
+  }
+
+  type Flags = {
+    check_canon_last_borrow: bool,
+    check_hi_bound: bool,
+    check_nop_chain: bool,
+    check_g_monotone: bool,
+    check_skip_zero: bool,
+    check_lane_taken: bool,
+    use_s_after_lanemap: bool,
+    offset_s_keys: bool
+  }
+
+  type Query = {
+    q_gate: int,
+    q_key: int,
+    q_v: int
+  }
+
+  type TableRow = {
+    t_key: int,
+    t_v: int,
+    t_mult: int
+  }
+
+  pure val DEFAULT_FLAGS: Flags = {
+    check_canon_last_borrow: true,
+    check_hi_bound: true,
+    check_nop_chain: true,
+    check_g_monotone: true,
+    check_skip_zero: true,
+    check_lane_taken: true,
+    use_s_after_lanemap: true,
+    offset_s_keys: true
+  }
+
+  // =========================================================================
+  // 3. Field and Arithmetic Helpers
+  // =========================================================================
+
+  pure def f_mod(x: int): int = {
+    val r = x % FR_MOD
+    if (r < 0) r + FR_MOD else r
+  }
+
+  pure def f_add(a: int, b: int): int = f_mod(a + b)
+  pure def f_sub(a: int, b: int): int = f_mod(a - b)
+  pure def f_mul(a: int, b: int): int = f_mod(a * b)
+
+  pure def is_fr(x: int): bool = (x >= 0 and x < FR_MOD)
+  pure def is_bit(b: int): bool = (b == 0 or b == 1)
+  pure def in_bound(x: int, lim: int): bool = (x >= 0 and x < FR_MOD and x < lim)
+
+  pure def sum_list(xs: List[int]): int =
+     xs.foldl(0, (acc, x) => acc + x)
+
+  pure def f_sum_list(xs: List[int]): int =
+    xs.foldl(0, (acc, x) => f_add(acc, x))
+
+  pure def f_dot(xs: List[int], ys: List[int]): int =
+    0.to(xs.length() - 1).foldl(0, (acc, i) =>
+      f_add(acc, f_mul(xs.nth(i), ys.nth(i)))
+    )
+
+  // Modular inverse in F_359 for lane-map u values (360 == 1 mod 359)
+  pure def mod_inv(u: int): int = {
+    val x = f_mod(u)
+    if (x == 0) 0
+    else if (360 % x == 0) 360 / x
+    else if (x == 7) 154
+    else if (x == 11) 98
+    else if (x == 13) 221
+    else if (x == 14) 77
+    else if (x == 17) 190
+    else if (x == 19) 170
+    else if (x == 21) 171
+    else if (x == 22) 49
+    else if (x == 23) 250
+    else 1
+  }
+
+  // Encode an integer into 3 base-8 limbs (little-endian)
+  pure def to_limbs(x: int): List[int] = [
+    x % LIMB_BASE,
+    (x / LIMB_BASE) % LIMB_BASE,
+    (x / (LIMB_BASE * LIMB_BASE)) % LIMB_BASE
+  ]
+
+  // Reconstruct integer from 3 base-8 limbs
+  pure def limbs_int(ls: List[int]): int =
+    ls.nth(0) + ls.nth(1) * LIMB_BASE + ls.nth(2) * LIMB_BASE * LIMB_BASE
+
+  // Pack 35 words into 19 public inputs (pw[0] = pre_hash, then 2 words per Fr)
+  pure def pack_words(pre_hash: int, w: List[int]): List[int] = {
+    val packed = 0.to(17).foldl([], (acc, i) => {
+      val w0 = w.nth(2 * i)
+      val w1 = if (2 * i + 1 < N_WORDS) w.nth(2 * i + 1) else 0
+      acc.append(w0 + w1 * WORD_BASE)
+    })
+    [pre_hash].concat(packed)
+  }
+
+  // =========================================================================
+  // 4. Native Reference (`lane-src/iface.rs`)
+  // =========================================================================
+
+  pure def op_admitted(op: int): bool =
+    (op == OP_NOP or op == OP_PERM or op == OP_H2 or op == OP_SPONGE or
+     op == OP_PATH or op == OP_PUB or op == OP_DIGEST)
+
+  pure def op_lo(op: int): int =
+    if (op == OP_SPONGE or op == OP_PATH) 1 else 0
+
+  pure def op_hi(op: int): int =
+    if (op == OP_NOP or op == OP_PERM or op == OP_H2) 0
+    else if (op == OP_SPONGE) V_CAP - 1
+    else if (op == OP_PATH) PATH_MAX
+    else if (op == OP_PUB) LANES - 1
+    else if (op == OP_DIGEST) N_TAGS - 1
+    else -1
+
+  pure def op_vals(op: int, param: int): int =
+    if (op == OP_NOP) 0
+    else if (op == OP_PERM) PERM_VALS
+    else if (op == OP_H2) 3
+    else if (op == OP_SPONGE) param + 1
+    else if (op == OP_PATH) 3
+    else if (op == OP_PUB) 1
+    else if (op == OP_DIGEST) 2
+    else 0
+
+  pure def op_perms(op: int, param: int): int =
+    if (op == OP_PERM or op == OP_H2 or op == OP_DIGEST) 1
+    else if (op == OP_SPONGE) (param + 1) / 2
+    else if (op == OP_PATH) param
+    else 0
+
+  // Reference unpack (`iface::unpack` + pre_hash check on pw[0])
+  pure def ref_unpack(pw: List[int]): { ok: bool, words: List[int], err: str } = {
+    if (pw.length() != N_PUBLIC) {
+      { ok: false, words: [], err: "word count" }
+    } else if (pw.nth(0) != PRE_HASH) {
+      { ok: false, words: [], err: "pre-hash" }
+    } else {
+      0.to(17).foldl({ ok: true, words: [], err: "" }, (st, i) => {
+        if (not(st.ok)) st
+        else {
+          val x = pw.nth(i + 1)
+          if (not(is_fr(x))) {
+            { ok: false, words: [], err: "pw not canonical Fr" }
+          } else {
+            val k = if (N_WORDS - 2 * i < 2) N_WORDS - 2 * i else 2
+            val w0 = x % WORD_BASE
+            val b1 = x / WORD_BASE
+            if (k == 1) {
+              if (w0 >= BB_P) {
+                { ok: false, words: [], err: "word not BabyBear" }
+              } else if (b1 != 0) {
+                { ok: false, words: [], err: "high bits set" }
+              } else {
+                { ok: true, words: st.words.append(w0), err: "" }
+              }
+            } else {
+              val w1 = b1 % WORD_BASE
+              val b2 = b1 / WORD_BASE
+              if (w0 >= BB_P or w1 >= BB_P) {
+                { ok: false, words: [], err: "word not BabyBear" }
+              } else if (b2 != 0) {
+                { ok: false, words: [], err: "high bits set" }
+              } else {
+                { ok: true, words: st.words.append(w0).append(w1), err: "" }
+              }
+            }
+          }
+        }
+      })
+    }
+  }
+
+  // Reference dec (`iface::dec`): every limb < LIMB_BASE and integer < FR_MOD
+  pure def ref_dec(ls: List[int]): { ok: bool, v_out: int } = {
+    val limbs_ok = (ls.length() == LIMBS and
+      ls.nth(0) >= 0 and ls.nth(0) < LIMB_BASE and
+      ls.nth(1) >= 0 and ls.nth(1) < LIMB_BASE and
+      ls.nth(2) >= 0 and ls.nth(2) < LIMB_BASE)
+    val n = limbs_int(ls)
+    if (limbs_ok and n < FR_MOD) {
+      { ok: true, v_out: n }
+    } else {
+      { ok: false, v_out: 0 }
+    }
+  }
+
+  // Reference decode (`iface::decode` with pinned pre_hash on pw[0])
+  pure def ref_decode(pw: List[int]): DecodeRes = {
+    val u = ref_unpack(pw)
+    if (not(u.ok)) {
+      { ok: false, stmt: [], err: u.err }
+    } else {
+      val w = u.words
+      // 1. Decode lanes
+      val lanes_res = 0.to(LANES - 1).foldl({ ok: true, xs: [] }, (st, i) => {
+        if (not(st.ok)) st
+        else {
+          val at = CALL_AT + LIMBS * i
+          val d = ref_dec(w.slice(at, at + LIMBS))
+          if (not(d.ok)) { ok: false, xs: [] }
+          else { ok: true, xs: st.xs.append(d.v_out) }
+        }
+      })
+      if (not(lanes_res.ok)) {
+        { ok: false, stmt: [], err: "lane range or Canon" }
+      } else {
+        // 2. Decode logged values vs
+        val vs_res = 0.to(V_CAP - 1).foldl({ ok: true, xs: [] }, (st, j) => {
+          if (not(st.ok)) st
+          else {
+            val at = VALUES_AT + LIMBS * j
+            val d = ref_dec(w.slice(at, at + LIMBS))
+            if (not(d.ok)) { ok: false, xs: [] }
+            else { ok: true, xs: st.xs.append(d.v_out) }
+          }
+        })
+        if (not(vs_res.ok)) {
+          { ok: false, stmt: [], err: "value range or Canon" }
+        } else {
+          val vs = vs_res.xs
+          // 3. Entries loop
+          val ent_res = 0.to(B_CAP - 1).foldl(
+            { ok: true, off: 0, np: 0, ended: false, offs: [], err: "" },
+            (st, i) => {
+              if (not(st.ok)) st
+              else {
+                val op = w.nth(STMT + 2 * i)
+                val param = w.nth(STMT + 2 * i + 1)
+                if (not(op_admitted(op))) {
+                  { ...st, ok: false, err: "op not admitted" }
+                } else if (param < op_lo(op) or param > op_hi(op)) {
+                  { ...st, ok: false, err: "param out of bound" }
+                } else if (op != OP_NOP and st.ended) {
+                  { ...st, ok: false, err: "used entry after NOP" }
+                } else {
+                  val now_ended = (st.ended or op == OP_NOP)
+                  {
+                    ok: true,
+                    off: st.off + op_vals(op, param),
+                    np: st.np + op_perms(op, param),
+                    ended: now_ended,
+                    offs: st.offs.append(st.off),
+                    err: ""
+                  }
+                }
+              }
+            }
+          )
+          if (not(ent_res.ok)) {
+            { ok: false, stmt: [], err: ent_res.err }
+          } else if (ent_res.off > V_CAP or ent_res.np > P_CAP) {
+            { ok: false, stmt: [], err: "capacity" }
+          } else {
+            // 4. Zero padding of vs after off_n
+            val pad_ok = 0.to(V_CAP - 1).forall(j =>
+              (j < ent_res.off) or (vs.nth(j) == 0)
+            )
+            if (not(pad_ok)) {
+              { ok: false, stmt: [], err: "value row after off_n not zero" }
+            } else {
+              // 5. Lane map in stock order
+              val lm_res = 0.to(LANE_PAIRS - 1).foldl(
+                { ok: true, s_vec: lanes_res.xs, err: "" },
+                (st, k) => {
+                  if (not(st.ok)) st
+                  else {
+                    val lane = w.nth(LANE_MAP + 2 * k)
+                    val ent = w.nth(LANE_MAP + 2 * k + 1)
+                    if (lane == 0 and ent == 0) st
+                    else if (ent < 0 or ent >= B_CAP or lane < 0 or lane >= LANES) {
+                      { ...st, ok: false, err: "lane map bounds" }
+                    } else {
+                      val op_e = w.nth(STMT + 2 * ent)
+                      val o_e = ent_res.offs.nth(ent)
+                      if (op_e != OP_DIGEST or st.s_vec.nth(lane) != 0) {
+                        { ...st, ok: false, err: "lane map pair" }
+                      } else {
+                        val updated = 0.to(LANES - 1).foldl([], (acc, l) =>
+                          acc.append(if (l == lane) vs.nth(o_e + 1) else st.s_vec.nth(l))
+                        )
+                        { ok: true, s_vec: updated, err: "" }
+                      }
+                    }
+                  }
+                }
+              )
+              if (not(lm_res.ok)) {
+                { ok: false, stmt: [], err: lm_res.err }
+              } else {
+                // 6. PUB entries check against s after lane map
+                val pub_ok = 0.to(B_CAP - 1).forall(i => {
+                  val op = w.nth(STMT + 2 * i)
+                  val param = w.nth(STMT + 2 * i + 1)
+                  val o = ent_res.offs.nth(i)
+                  (op != OP_PUB) or (lm_res.s_vec.nth(param) == vs.nth(o))
+                })
+                if (not(pub_ok)) {
+                  { ok: false, stmt: [], err: "PUB differs from its lane" }
+                } else {
+                  { ok: true, stmt: lm_res.s_vec, err: "" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // 5. In-Circuit Constraint System (`lane-src/decode.rs`)
+  // =========================================================================
+
+  // Gated one-hot constraint (`decode::one_hot`):
+  // bs are bits, sum(bs) == gate (mod r), sum_i (i * bs[i]) == idx (mod r).
+  pure def check_one_hot(n: int, bs: List[int], idx: int, gate: int): bool = {
+    bs.length() == n and
+    0.to(n - 1).forall(i => is_bit(bs.nth(i))) and
+    f_sum_list(bs) == f_mod(gate) and
+    0.to(n - 1).foldl(0, (acc, i) => f_add(acc, f_mul(i, bs.nth(i)))) == f_mod(idx)
+  }
+
+  // Borrow chain constraint (`decode::dec`):
+  // d_k = R_k - l_k - c_{k-1} + LIMB_BASE * c_k (mod r), d_k in [0, LIMB_BASE),
+  // with c_{LIMBS-1} == 0 when check_canon_last_borrow is true.
+  pure def check_dec_canon(
+    ls: List[int],
+    borrows: List[int],
+    check_last_borrow: bool
+  ): bool = {
+    ls.length() == LIMBS and
+    borrows.length() == LIMBS and
+    0.to(LIMBS - 1).forall(k => is_bit(borrows.nth(k))) and
+    (not(check_last_borrow) or borrows.nth(LIMBS - 1) == 0) and
+    0.to(LIMBS - 1).forall(k => {
+      val prev_c = if (k == 0) 0 else borrows.nth(k - 1)
+      val cur_c = borrows.nth(k)
+      val d_k = f_mod(R1_LIMBS.nth(k) - ls.nth(k) - prev_c + LIMB_BASE * cur_c)
+      in_bound(d_k, LIMB_BASE)
+    })
+  }
+
+  // Reconstruct Fr value from limbs inside the circuit (`decode::dec` linear combination)
+  pure def circuit_dec_v(ls: List[int]): int =
+    f_mod(limbs_int(ls))
+
+  // Compute circuit output vector `s` from witness
+  pure def circuit_output(pw: List[int], wit: Witness): List[int] = {
+    val w = wit.w_words
+    val init_lanes = 0.to(LANES - 1).foldl([], (acc, l) => {
+      val at = CALL_AT + LIMBS * l
+      acc.append(circuit_dec_v(w.slice(at, at + LIMBS)))
+    })
+    0.to(LANE_PAIRS - 1).foldl(init_lanes, (s_cur, k) => {
+      val hk = wit.lm_h.nth(k)
+      val vk = wit.lm_val.nth(k)
+      0.to(LANES - 1).foldl([], (acc, l) =>
+        acc.append(f_add(s_cur.nth(l), f_mul(hk.nth(l), vk)))
+      )
+    })
+  }
+
+  // Symbolic log-derivative lookup check:
+  // By Schwartz-Zippel over challenges (alpha, beta) sampled after all table values,
+  // query values, and multiplicities are observed into the Fiat-Shamir transcript,
+  // the rational function identity holds iff for every pair (key, v) in Q union T,
+  // sum_{(g, k, v) in Q} g == sum_{(k, v, m) in T} m (mod FR_MOD).
+  pure def check_lookup(queries: List[Query], table: List[TableRow]): bool = {
+    val q_ok = 0.to(queries.length() - 1).forall(qi => {
+      val q = queries.nth(qi)
+      val lhs_w = 0.to(queries.length() - 1).foldl(0, (acc, j) => {
+        val qj = queries.nth(j)
+        if (qj.q_key == q.q_key and qj.q_v == q.q_v) f_add(acc, qj.q_gate) else acc
+      })
+      val rhs_w = 0.to(table.length() - 1).foldl(0, (acc, j) => {
+        val tj = table.nth(j)
+        if (tj.t_key == q.q_key and tj.t_v == q.q_v) f_add(acc, tj.t_mult) else acc
+      })
+      lhs_w == rhs_w
+    })
+    val t_ok = 0.to(table.length() - 1).forall(ti => {
+      val t = table.nth(ti)
+      val lhs_w = 0.to(queries.length() - 1).foldl(0, (acc, j) => {
+        val qj = queries.nth(j)
+        if (qj.q_key == t.t_key and qj.q_v == t.t_v) f_add(acc, qj.q_gate) else acc
+      })
+      val rhs_w = 0.to(table.length() - 1).foldl(0, (acc, j) => {
+        val tj = table.nth(j)
+        if (tj.t_key == t.t_key and tj.t_v == t.t_v) f_add(acc, tj.t_mult) else acc
+      })
+      lhs_w == rhs_w
+    })
+    q_ok and t_ok
+  }
+
+  // Full circuit constraint predicate parameterized by mutant flags
+  pure def constraints_with_flags(fl: Flags, pw: List[int], wit: Witness): bool = {
+    // Well-formedness of field elements and vector lengths
+    val shapes_ok = (
+      pw.length() == N_PUBLIC and
+      0.to(N_PUBLIC - 1).forall(i => is_fr(pw.nth(i))) and
+      wit.w_words.length() == N_WORDS and
+      0.to(N_WORDS - 1).forall(i => is_fr(wit.w_words.nth(i))) and
+      wit.lane_borrows.length() == LANES and
+      wit.vs_borrows.length() == V_CAP and
+      wit.op_bits.length() == B_CAP and
+      wit.sponge_q.length() == B_CAP and
+      wit.sponge_e.length() == B_CAP and
+      wit.g_bits.length() == V_CAP and
+      wit.lm_inv.length() == LANE_PAIRS and
+      wit.lm_h.length() == LANE_PAIRS and
+      wit.lm_e.length() == LANE_PAIRS and
+      wit.lm_val.length() == LANE_PAIRS and
+      wit.pub_v.length() == B_CAP and
+      wit.mv.length() == V_CAP and
+      wit.ms.length() == LANES and
+      0.to(LANE_PAIRS - 1).forall(k => is_fr(wit.lm_inv.nth(k)) and is_fr(wit.lm_val.nth(k))) and
+      0.to(B_CAP - 1).forall(i => is_fr(wit.sponge_q.nth(i)) and is_fr(wit.pub_v.nth(i))) and
+      0.to(V_CAP - 1).forall(j => is_fr(wit.mv.nth(j))) and
+      0.to(LANES - 1).forall(l => is_fr(wit.ms.nth(l)))
+    )
+    if (not(shapes_ok)) false
+    else {
+      val w = wit.w_words
+      // Pinned pre-hash check: pw[0] == PRE_HASH
+      val pre_hash_ok = (pw.nth(0) == PRE_HASH)
+
+      // 1. Unpack constraints
+      val unpack_range_ok = 0.to(N_WORDS - 1).forall(idx =>
+        if (idx >= VALUES_AT) in_bound(w.nth(idx), LIMB_BASE)
+        else in_bound(w.nth(idx), BB_P)
+      )
+      val unpack_lin_ok = 0.to(17).forall(i => {
+        val k = if (N_WORDS - 2 * i < 2) N_WORDS - 2 * i else 2
+        val s = if (k == 1) w.nth(2 * i)
+                else f_add(w.nth(2 * i), f_mul(WORD_BASE, w.nth(2 * i + 1)))
+        s == pw.nth(i + 1)
+      })
+
+      // 2. Lanes and logged values Canon borrow chains
+      val lanes_canon_ok = 0.to(LANES - 1).forall(l => {
+        val at = CALL_AT + LIMBS * l
+        check_dec_canon(w.slice(at, at + LIMBS), wit.lane_borrows.nth(l), fl.check_canon_last_borrow)
+      })
+      val vs_canon_ok = 0.to(V_CAP - 1).forall(j => {
+        val at = VALUES_AT + LIMBS * j
+        check_dec_canon(w.slice(at, at + LIMBS), wit.vs_borrows.nth(j), fl.check_canon_last_borrow)
+      })
+
+      val init_lanes = 0.to(LANES - 1).foldl([], (acc, l) => {
+        val at = CALL_AT + LIMBS * l
+        acc.append(circuit_dec_v(w.slice(at, at + LIMBS)))
+      })
+      val vs = 0.to(V_CAP - 1).foldl([], (acc, j) => {
+        val at = VALUES_AT + LIMBS * j
+        acc.append(circuit_dec_v(w.slice(at, at + LIMBS)))
+      })
+
+      // 3. Entries constraints
+      val entries_step = 0.to(B_CAP - 1).foldl(
+        { ok: true, off: 0, np: 0, offs: [] },
+        (st, i) => {
+          val op = w.nth(STMT + 2 * i)
+          val param = w.nth(STMT + 2 * i + 1)
+          val c = wit.op_bits.nth(i)
+          val c_len_ok = (c.length() == 7 and 0.to(6).forall(k => is_bit(c.nth(k))))
+          if (not(st.ok) or not(c_len_ok)) {
+            { ...st, ok: false }
+          } else {
+            val one_ok = (f_sum_list(c) == 1)
+            val opc = f_dot(ADMITTED, c)
+            val op_ok = (opc == op)
+            val lo_coeffs = [0, 0, 0, 1, 1, 0, 0]
+            val hi_coeffs = [0, 0, 0, V_CAP - 1, PATH_MAX, LANES - 1, N_TAGS - 1]
+            val lo = f_dot(lo_coeffs, c)
+            val hi = f_dot(hi_coeffs, c)
+            val x = f_sub(param, lo)
+            val y = f_sub(hi, param)
+            val lo_ok = in_bound(x, BOUND_LIM)
+            val hi_ok = (not(fl.check_hi_bound) or in_bound(y, BOUND_LIM))
+            val nop_ok = (
+              not(fl.check_nop_chain) or
+              i == 0 or
+              f_mul(wit.op_bits.nth(i - 1).nth(I_NOP), c.nth(I_NOP)) == wit.op_bits.nth(i - 1).nth(I_NOP)
+            )
+            // vals: PERM_VALS*c[1] + 3*c[2] + 3*c[PATH] + 1*c[PUB] + 2*c[DIGEST] + c[SPONGE]*(param + 1)
+            val sp = f_add(f_mul(c.nth(I_SPONGE), param), c.nth(I_SPONGE))
+            val dv = f_mod(
+              PERM_VALS * c.nth(I_PERM) +
+              3 * c.nth(I_H2) +
+              3 * c.nth(I_PATH) +
+              1 * c.nth(I_PUB) +
+              2 * c.nth(I_DIGEST) +
+              sp
+            )
+            // perms: c[1] + c[2] + c[DIGEST] + c[SPONGE]*q + c[PATH]*param
+            val q = wit.sponge_q.nth(i)
+            val e = wit.sponge_e.nth(i)
+            val sp_slots_ok = (
+              is_bit(e) and
+              f_mod(2 * q - param - e) == 0 and
+              in_bound(q, SPONGE_Q_LIM)
+            )
+            val spq = f_mul(c.nth(I_SPONGE), q)
+            val pp = f_mul(c.nth(I_PATH), param)
+            val dp = f_mod(c.nth(I_PERM) + c.nth(I_H2) + c.nth(I_DIGEST) + spq + pp)
+            {
+              ok: (st.ok and one_ok and op_ok and lo_ok and hi_ok and nop_ok and sp_slots_ok),
+              off: f_add(st.off, dv),
+              np: f_add(st.np, dp),
+              offs: st.offs.append(st.off)
+            }
+          }
+        }
+      )
+
+      val cap_v = f_sub(V_CAP, entries_step.off)
+      val cap_p = f_sub(P_CAP, entries_step.np)
+      val cap_ok = (in_bound(cap_v, CAP_LIM) and in_bound(cap_p, CAP_LIM))
+
+      // 4a. Zero padding after off_n: monotone g_bits with sum(g) == cap_v and g[j] * vs[j] == 0
+      val g = wit.g_bits
+      val g_bits_ok = 0.to(V_CAP - 1).forall(j => is_bit(g.nth(j)))
+      val g_mono_ok = (
+        not(fl.check_g_monotone) or
+        1.to(V_CAP - 1).forall(j => f_mul(g.nth(j - 1), g.nth(j)) == g.nth(j - 1))
+      )
+      val g_zero_ok = 0.to(V_CAP - 1).forall(j => f_mul(g.nth(j), vs.nth(j)) == 0)
+      val g_sum_ok = (f_sum_list(g) == cap_v)
+
+      // 4b. Lane map in stock order
+      val digs = 0.to(B_CAP - 1).foldl([], (acc, i) =>
+        acc.append(wit.op_bits.nth(i).nth(I_DIGEST))
+      )
+      val lm_step = 0.to(LANE_PAIRS - 1).foldl(
+        { ok: true, s_vec: init_lanes, qv: [] },
+        (st, k) => {
+          val lane = w.nth(LANE_MAP + 2 * k)
+          val ent = w.nth(LANE_MAP + 2 * k + 1)
+          val u = f_add(lane, f_mul(LANES, ent))
+          val inv = wit.lm_inv.nth(k)
+          val nz = f_mul(u, inv)
+          val z = f_sub(1, nz)
+          val zu_ok = (not(fl.check_skip_zero) or f_mul(z, u) == 0)
+          val hk = wit.lm_h.nth(k)
+          val ek = wit.lm_e.nth(k)
+          val h_ok = check_one_hot(LANES, hk, lane, nz)
+          val e_ok = check_one_hot(B_CAP, ek, ent, nz)
+          val dig_ok = (
+            if (e_ok and entries_step.ok) f_dot(ek, digs) == nz else false
+          )
+          val taken_ok = (not(fl.check_lane_taken) or (h_ok and f_dot(hk, st.s_vec) == 0))
+          val o = if (e_ok and entries_step.offs.length() == B_CAP) f_dot(ek, entries_step.offs) else 0
+          val idx = f_add(o, 1)
+          val vk = wit.lm_val.nth(k)
+          val next_s = if (h_ok) {
+            0.to(LANES - 1).foldl([], (acc, l) =>
+              acc.append(f_add(st.s_vec.nth(l), f_mul(hk.nth(l), vk)))
+            )
+          } else st.s_vec
+          {
+            ok: (st.ok and zu_ok and h_ok and e_ok and dig_ok and taken_ok),
+            s_vec: next_s,
+            qv: st.qv.append({ q_gate: nz, q_key: idx, q_v: vk })
+          }
+        }
+      )
+
+      // 5. PUB entries and log-derivative lookup
+      val s_key_base = if (fl.offset_s_keys) V_CAP else 0
+      val pub_queries = 0.to(B_CAP - 1).foldl(
+        { qv: lm_step.qv, qs: [] },
+        (st, i) => {
+          val gate = if (entries_step.ok) wit.op_bits.nth(i).nth(I_PUB) else 0
+          val off_i = if (entries_step.offs.length() == B_CAP) entries_step.offs.nth(i) else 0
+          val param_i = w.nth(STMT + 2 * i + 1)
+          val vi = wit.pub_v.nth(i)
+          {
+            qv: st.qv.append({ q_gate: gate, q_key: off_i, q_v: vi }),
+            qs: st.qs.append({ q_gate: gate, q_key: f_add(s_key_base, param_i), q_v: vi })
+          }
+        }
+      )
+
+      val s_for_table = if (fl.use_s_after_lanemap) lm_step.s_vec else init_lanes
+      val table_v = 0.to(V_CAP - 1).foldl([], (acc, j) =>
+        acc.append({ t_key: j, t_v: vs.nth(j), t_mult: wit.mv.nth(j) })
+      )
+      val table_s = 0.to(LANES - 1).foldl([], (acc, l) =>
+        acc.append({ t_key: f_add(s_key_base, l), t_v: s_for_table.nth(l), t_mult: wit.ms.nth(l) })
+      )
+      val all_queries = pub_queries.qv.concat(pub_queries.qs)
+      val all_table = table_v.concat(table_s)
+      val lookup_ok = check_lookup(all_queries, all_table)
+
+      pre_hash_ok and unpack_range_ok and unpack_lin_ok and
+      lanes_canon_ok and vs_canon_ok and entries_step.ok and
+      cap_ok and g_bits_ok and g_mono_ok and g_zero_ok and g_sum_ok and
+      lm_step.ok and lookup_ok
+    }
+  }
+
+  // Real constraint system predicate
+  pure def constraints_ok(pw: List[int], wit: Witness): bool =
+    constraints_with_flags(DEFAULT_FLAGS, pw, wit)
+
+  // =========================================================================
+  // 6. Mutant Constraint Predicates (8 Mutants)
+  // =========================================================================
+
+  // Mutant 1: omits c_{LIMBS-1} == 0 in Canon borrow chain (allows borrow out of top limb)
+  pure def mut_no_canon_last_borrow(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_canon_last_borrow: false }, pw, wit)
+
+  // Mutant 2: checks only param - lo < BOUND_LIM, omitting hi - param < BOUND_LIM
+  pure def mut_lo_only(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_hi_bound: false }, pw, wit)
+
+  // Mutant 3: omits monotone NOP chain check prev_nop * c[0] == prev_nop
+  pure def mut_nop_chain_off(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_nop_chain: false }, pw, wit)
+
+  // Mutant 4: omits monotonicity g[j-1] * g[j] == g[j-1] on zero-padding bit vector g
+  pure def mut_g_not_monotone(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_g_monotone: false }, pw, wit)
+
+  // Mutant 5: omits z * u == 0 in lane-map is_zero gadget (lets prover skip non-(0,0) pair)
+  pure def mut_skip_any_pair(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_skip_zero: false }, pw, wit)
+
+  // Mutant 6: omits taken == 0 check before writing s[lane] in lane map
+  pure def mut_no_taken_check(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, check_lane_taken: false }, pw, wit)
+
+  // Mutant 7: builds lookup table S from initial lanes before lane-map writes
+  pure def mut_s_before_lanemap(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, use_s_after_lanemap: false }, pw, wit)
+
+  // Mutant 8: omits +V key offset on table S and S-queries (keys of V and S overlap)
+  pure def mut_v_s_keys_overlap(pw: List[int], wit: Witness): bool =
+    constraints_with_flags({ ...DEFAULT_FLAGS, offset_s_keys: false }, pw, wit)
+
+  // =========================================================================
+  // 7. Honest Witness Generator (`Native` closures in `lane-src/decode.rs`)
+  // =========================================================================
+
+  pure def honest_borrows(ls: List[int]): List[int] = {
+    val d0 = R1_LIMBS.nth(0) - ls.nth(0)
+    val b0 = if (d0 < 0) 1 else 0
+    val d1 = R1_LIMBS.nth(1) - ls.nth(1) - b0
+    val b1 = if (d1 < 0) 1 else 0
+    [b0, b1, 0]
+  }
+
+  pure def honest_witness(pw: List[int]): Witness = {
+    // 1. Unpack words from pw[1..18]
+    val w = 0.to(17).foldl([], (acc, i) => {
+      val x = pw.nth(i + 1)
+      val w0 = x % WORD_BASE
+      val w1 = (x / WORD_BASE) % WORD_BASE
+      if (2 * i + 1 < N_WORDS) acc.append(w0).append(w1)
+      else acc.append(w0)
+    })
+
+    // 2. Canon borrows and values for lanes and vs
+    val l_borrows = 0.to(LANES - 1).foldl([], (acc, l) => {
+      val at = CALL_AT + LIMBS * l
+      acc.append(honest_borrows(w.slice(at, at + LIMBS)))
+    })
+    val v_borrows = 0.to(V_CAP - 1).foldl([], (acc, j) => {
+      val at = VALUES_AT + LIMBS * j
+      acc.append(honest_borrows(w.slice(at, at + LIMBS)))
+    })
+    val vs = 0.to(V_CAP - 1).foldl([], (acc, j) => {
+      val at = VALUES_AT + LIMBS * j
+      acc.append(circuit_dec_v(w.slice(at, at + LIMBS)))
+    })
+
+    // 3. Entries witnesses and offsets
+    val ent_st = 0.to(B_CAP - 1).foldl(
+      { op_bits: [], sq: [], se: [], off: 0, offs: [] },
+      (st, i) => {
+        val op = w.nth(STMT + 2 * i)
+        val param = w.nth(STMT + 2 * i + 1)
+        val c = 0.to(6).foldl([], (acc, k) =>
+          acc.append(if (op == ADMITTED.nth(k)) 1 else 0)
+        )
+        val q = (param + 1) / 2
+        val e = param % 2
+        val dv = op_vals(op, param)
+        {
+          op_bits: st.op_bits.append(c),
+          sq: st.sq.append(q),
+          se: st.se.append(e),
+          off: st.off + dv,
+          offs: st.offs.append(st.off)
+        }
+      }
+    )
+
+    // 4a. Zero-padding bit vector g
+    val g = 0.to(V_CAP - 1).foldl([], (acc, j) =>
+      acc.append(if (j >= ent_st.off) 1 else 0)
+    )
+
+    // 4b. Lane-map witnesses
+    val lm_st = 0.to(LANE_PAIRS - 1).foldl(
+      { invs: [], hs: [], es: [], vals: [], qv: [] },
+      (st, k) => {
+        val lane = w.nth(LANE_MAP + 2 * k)
+        val ent = w.nth(LANE_MAP + 2 * k + 1)
+        val u = f_add(lane, f_mul(LANES, ent))
+        val inv = mod_inv(u)
+        val nz = f_mul(u, inv)
+        val hk = 0.to(LANES - 1).foldl([], (acc, l) =>
+          acc.append(if (nz == 1 and lane == l) 1 else 0)
+        )
+        val ek = 0.to(B_CAP - 1).foldl([], (acc, i) =>
+          acc.append(if (nz == 1 and ent == i) 1 else 0)
+        )
+        val o = f_dot(ek, ent_st.offs)
+        val idx = f_add(o, 1)
+        val vk = if (nz == 1 and idx >= 0 and idx < V_CAP) vs.nth(idx) else 0
+        {
+          invs: st.invs.append(inv),
+          hs: st.hs.append(hk),
+          es: st.es.append(ek),
+          vals: st.vals.append(vk),
+          qv: st.qv.append({ q_gate: nz, q_key: idx, q_v: vk })
+        }
+      }
+    )
+
+    // 5. PUB query values and multiplicities
+    val pub_st = 0.to(B_CAP - 1).foldl(
+      { pvs: [], qv: lm_st.qv, qs: [] },
+      (st, i) => {
+        val gate = ent_st.op_bits.nth(i).nth(I_PUB)
+        val off_i = ent_st.offs.nth(i)
+        val param_i = w.nth(STMT + 2 * i + 1)
+        val vi = if (gate == 1 and off_i >= 0 and off_i < V_CAP) vs.nth(off_i) else 0
+        {
+          pvs: st.pvs.append(vi),
+          qv: st.qv.append({ q_gate: gate, q_key: off_i, q_v: vi }),
+          qs: st.qs.append({ q_gate: gate, q_key: param_i, q_v: vi })
+        }
+      }
+    )
+
+    val mv = 0.to(V_CAP - 1).foldl([], (acc, j) => {
+      val cnt = 0.to(pub_st.qv.length() - 1).foldl(0, (c_acc, qi) => {
+        val q = pub_st.qv.nth(qi)
+        if (q.q_gate == 1 and q.q_key == j) c_acc + 1 else c_acc
+      })
+      acc.append(cnt)
+    })
+
+    val ms = 0.to(LANES - 1).foldl([], (acc, l) => {
+      val cnt = 0.to(pub_st.qs.length() - 1).foldl(0, (c_acc, qi) => {
+        val q = pub_st.qs.nth(qi)
+        if (q.q_gate == 1 and q.q_key == l) c_acc + 1 else c_acc
+      })
+      acc.append(cnt)
+    })
+
+    {
+      w_words: w,
+      lane_borrows: l_borrows,
+      vs_borrows: v_borrows,
+      op_bits: ent_st.op_bits,
+      sponge_q: ent_st.sq,
+      sponge_e: ent_st.se,
+      g_bits: g,
+      lm_inv: lm_st.invs,
+      lm_h: lm_st.hs,
+      lm_e: lm_st.es,
+      lm_val: lm_st.vals,
+      pub_v: pub_st.pvs,
+      mv: mv,
+      ms: ms
+    }
+  }
+
+  // =========================================================================
+  // 8. Word Vector Builders and Concrete Test Corpus
+  // =========================================================================
+
+  pure def build_words(
+    hdr: List[int],
+    lm: List[int],
+    ents: List[int],
+    vs_vals: List[int],
+    lane_vals: List[int]
+  ): List[int] = {
+    val vs_words = 0.to(V_CAP - 1).foldl([], (acc, j) =>
+      acc.concat(to_limbs(vs_vals.nth(j)))
+    )
+    val lane_words = 0.to(LANES - 1).foldl([], (acc, l) =>
+      acc.concat(to_limbs(lane_vals.nth(l)))
+    )
+    hdr.concat(lm).concat(ents).concat(vs_words).concat(lane_words)
+  }
+
+  // Case 0: Honest run with DIGEST(0) mapped to lane 2, PUB(0) on lane 0, PUB(2) on lane 2
+  // Entry 0: DIGEST(0) -> vals = 2 (off = 0..2), vs[0]=10, vs[1]=99 (written to s[2])
+  // Entry 1: PUB(0)    -> vals = 1 (off = 2), vs[2]=25 == lanes[0]
+  // Entry 2: PUB(2)    -> vals = 1 (off = 3), vs[3]=99 == s[2] (after lane map!)
+  // Entry 3: NOP(0)    -> vals = 0 (off = 4)
+  pure val WORDS_HONEST_MIXED: List[int] = build_words(
+    [1, 2],
+    [2, 0, 0, 0],
+    [OP_DIGEST, 0, OP_PUB, 0, OP_PUB, 2, OP_NOP, 0],
+    [10, 99, 25, 99],
+    [25, 50, 0]
+  )
+  pure val PW_HONEST_MIXED: List[int] = pack_words(PRE_HASH, WORDS_HONEST_MIXED)
+
+  // Case 1: Honest run with SPONGE(2) + PUB(1) + NOP + NOP (off_n = 4, perms = 1)
+  pure val WORDS_HONEST_SPONGE: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_SPONGE, 2, OP_PUB, 1, OP_NOP, 0, OP_NOP, 0],
+    [11, 22, 33, 77],
+    [5, 77, 12]
+  )
+  pure val PW_HONEST_SPONGE: List[int] = pack_words(PRE_HASH, WORDS_HONEST_SPONGE)
+
+  // Case 2: Honest run with 1 DIGEST entry (off_n = 2, vs[2]=0, vs[3]=0 padded)
+  pure val WORDS_HONEST_PADDED: List[int] = build_words(
+    [3, 4],
+    [1, 0, 0, 0],
+    [OP_DIGEST, 2, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [15, 120, 0, 0],
+    [40, 0, 80]
+  )
+  pure val PW_HONEST_PADDED: List[int] = pack_words(PRE_HASH, WORDS_HONEST_PADDED)
+
+  // Case 3: Counterexample for mut_no_canon_last_borrow
+  // Lane 0 has limbs [7, 4, 5] -> integer 7 + 32 + 320 = 359 == FR_MOD (non-canonical!)
+  pure val WORDS_BAD_CANON: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_NOP, 0, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [0, 0, 0, 0],
+    [359, 0, 0]
+  )
+  pure val PW_BAD_CANON: List[int] = pack_words(PRE_HASH, WORDS_BAD_CANON)
+  pure val WIT_BAD_CANON: Witness = {
+    val hw = honest_witness(PW_BAD_CANON)
+    // Borrow bits [1, 1, 1] make d_0=7, d_1=7, d_2=7 in [0, 8) if last borrow c_2=1 is allowed
+    { ...hw, lane_borrows: [[1, 1, 1], hw.lane_borrows.nth(1), hw.lane_borrows.nth(2)] }
+  }
+
+  // Case 4: Counterexample for mut_lo_only
+  // Entry 0 is NOP with param = 1 (lo = 0, hi = 0; param - lo = 1 < 8, but hi - param = -1)
+  pure val WORDS_BAD_HI_BOUND: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_NOP, 1, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0]
+  )
+  pure val PW_BAD_HI_BOUND: List[int] = pack_words(PRE_HASH, WORDS_BAD_HI_BOUND)
+  pure val WIT_BAD_HI_BOUND: Witness = honest_witness(PW_BAD_HI_BOUND)
+
+  // Case 5: Counterexample for mut_nop_chain_off
+  // Entry 0 is NOP, Entry 1 is DIGEST(0) (used entry after NOP)
+  pure val WORDS_BAD_NOP_CHAIN: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_NOP, 0, OP_DIGEST, 0, OP_NOP, 0, OP_NOP, 0],
+    [10, 20, 0, 0],
+    [0, 0, 0]
+  )
+  pure val PW_BAD_NOP_CHAIN: List[int] = pack_words(PRE_HASH, WORDS_BAD_NOP_CHAIN)
+  pure val WIT_BAD_NOP_CHAIN: Witness = honest_witness(PW_BAD_NOP_CHAIN)
+
+  // Case 6: Counterexample for mut_g_not_monotone
+  // Entry 0 is DIGEST(0) (off_n = 2, cap_v = 2), vs = [0, 0, 9, 0] (vs[2] != 0 after off_n!)
+  // Prover chooses non-monotone g_bits = [1, 1, 0, 0] with sum 2 and g[j] * vs[j] == 0.
+  pure val WORDS_BAD_ZERO_PAD: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_DIGEST, 0, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [0, 0, 9, 0],
+    [0, 0, 0]
+  )
+  pure val PW_BAD_ZERO_PAD: List[int] = pack_words(PRE_HASH, WORDS_BAD_ZERO_PAD)
+  pure val WIT_BAD_ZERO_PAD: Witness = {
+    val hw = honest_witness(PW_BAD_ZERO_PAD)
+    { ...hw, g_bits: [1, 1, 0, 0] }
+  }
+
+  // Case 7: Counterexample for mut_skip_any_pair
+  // Lane-map pair 0 is (2, 1) where entry 1 is NOP (invalid lane-map target!).
+  // Without z * u == 0, prover sets lm_inv[0] = 0 -> nz = 0, skipping the invalid pair.
+  pure val WORDS_BAD_SKIP_PAIR: List[int] = build_words(
+    [0, 0],
+    [2, 1, 0, 0],
+    [OP_DIGEST, 0, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [10, 20, 0, 0],
+    [0, 0, 0]
+  )
+  pure val PW_BAD_SKIP_PAIR: List[int] = pack_words(PRE_HASH, WORDS_BAD_SKIP_PAIR)
+  pure val WIT_BAD_SKIP_PAIR: Witness = {
+    val hw = honest_witness(PW_BAD_SKIP_PAIR)
+    {
+      ...hw,
+      lm_inv: [0, 0],
+      lm_h: [[0, 0, 0], [0, 0, 0]],
+      lm_e: [[0, 0, 0, 0], [0, 0, 0, 0]],
+      lm_val: [0, 0],
+      mv: [0, 0, 0, 0]
+    }
+  }
+
+  // Case 8: Counterexample for mut_no_taken_check
+  // Lane 2 initially has lanes[2] = 15 != 0, and lane-map pair 0 maps (2, 0) to DIGEST(0).
+  pure val WORDS_BAD_TAKEN: List[int] = build_words(
+    [0, 0],
+    [2, 0, 0, 0],
+    [OP_DIGEST, 0, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [10, 20, 0, 0],
+    [0, 0, 15]
+  )
+  pure val PW_BAD_TAKEN: List[int] = pack_words(PRE_HASH, WORDS_BAD_TAKEN)
+  pure val WIT_BAD_TAKEN: Witness = honest_witness(PW_BAD_TAKEN)
+
+  // Case 9: Counterexample for mut_s_before_lanemap
+  // Lane-map pair 0 maps (2, 0) (DIGEST(0) with vs[1] = 99 -> s[2] = 99),
+  // Entry 1 is PUB(2) with vs[2] = 0 (matches initial lanes[2] = 0, differs from s[2] = 99!).
+  pure val WORDS_BAD_S_BEFORE_LM: List[int] = build_words(
+    [0, 0],
+    [2, 0, 0, 0],
+    [OP_DIGEST, 0, OP_PUB, 2, OP_NOP, 0, OP_NOP, 0],
+    [10, 99, 0, 0],
+    [0, 0, 0]
+  )
+  pure val PW_BAD_S_BEFORE_LM: List[int] = pack_words(PRE_HASH, WORDS_BAD_S_BEFORE_LM)
+  pure val WIT_BAD_S_BEFORE_LM: Witness = honest_witness(PW_BAD_S_BEFORE_LM)
+
+  // Case 10: Counterexample for mut_v_s_keys_overlap
+  // Entry 0 is PUB(0) at off = 0, with vs[0] = 77 but lanes[0] = 33 (mismatch!).
+  // When S keys are not offset by +V, both V-query and S-query have (key=0, v=77).
+  // Prover sets mv[0] = 2 on V's row (0, 77) and ms[0] = 0 on S's row (0, 33).
+  pure val WORDS_BAD_KEY_OVERLAP: List[int] = build_words(
+    [0, 0],
+    [0, 0, 0, 0],
+    [OP_PUB, 0, OP_NOP, 0, OP_NOP, 0, OP_NOP, 0],
+    [77, 0, 0, 0],
+    [33, 0, 0]
+  )
+  pure val PW_BAD_KEY_OVERLAP: List[int] = pack_words(PRE_HASH, WORDS_BAD_KEY_OVERLAP)
+  pure val WIT_BAD_KEY_OVERLAP: Witness = {
+    val hw = honest_witness(PW_BAD_KEY_OVERLAP)
+    { ...hw, mv: [2, 0, 0, 0], ms: [0, 0, 0] }
+  }
+
+  // Case 11: High bits set on partial last packed Fr element pw[18] (word 34 + high word != 0)
+  pure val PW_BAD_HIGH_BITS: List[int] = {
+    val last = PW_HONEST_MIXED.nth(18) + WORD_BASE
+    PW_HONEST_MIXED.slice(0, 18).append(last)
+  }
+  pure val WIT_BAD_HIGH_BITS: Witness = honest_witness(PW_BAD_HIGH_BITS)
+
+  // Catalog of (pw, wit) pairs for state exploration
+  pure val CORPUS: List[{ pw: List[int], wit: Witness }] = [
+    { pw: PW_HONEST_MIXED, wit: honest_witness(PW_HONEST_MIXED) },
+    { pw: PW_HONEST_SPONGE, wit: honest_witness(PW_HONEST_SPONGE) },
+    { pw: PW_HONEST_PADDED, wit: honest_witness(PW_HONEST_PADDED) },
+    { pw: PW_BAD_CANON, wit: WIT_BAD_CANON },
+    { pw: PW_BAD_HI_BOUND, wit: WIT_BAD_HI_BOUND },
+    { pw: PW_BAD_NOP_CHAIN, wit: WIT_BAD_NOP_CHAIN },
+    { pw: PW_BAD_ZERO_PAD, wit: WIT_BAD_ZERO_PAD },
+    { pw: PW_BAD_SKIP_PAIR, wit: WIT_BAD_SKIP_PAIR },
+    { pw: PW_BAD_TAKEN, wit: WIT_BAD_TAKEN },
+    { pw: PW_BAD_S_BEFORE_LM, wit: WIT_BAD_S_BEFORE_LM },
+    { pw: PW_BAD_KEY_OVERLAP, wit: WIT_BAD_KEY_OVERLAP },
+    { pw: PW_BAD_HIGH_BITS, wit: WIT_BAD_HIGH_BITS }
+  ]
+
+  // =========================================================================
+  // 9. State Machine & Invariants (SOUND and COMPLETE)
+  // =========================================================================
+
+  var cur_pw: List[int]
+  var cur_wit: Witness
+
+  action init = {
+    nondet idx = oneOf(0.to(CORPUS.length() - 1))
+    val c = CORPUS.nth(idx)
+    all {
+      cur_pw' = c.pw,
+      cur_wit' = c.wit,
+    }
+  }
+
+  action step = {
+    nondet idx = oneOf(0.to(CORPUS.length() - 1))
+    val c = CORPUS.nth(idx)
+    all {
+      cur_pw' = c.pw,
+      cur_wit' = c.wit,
+    }
+  }
+
+  // Pure soundness predicate on a (pw, wit) pair:
+  // Every witness satisfying constraints_ok produces an output equal to ref_decode(pw),
+  // and ref_decode(pw) returns Ok.
+  pure def is_sound_on(pw: List[int], wit: Witness): bool = {
+    val ref_r = ref_decode(pw)
+    constraints_ok(pw, wit) implies (ref_r.ok and circuit_output(pw, wit) == ref_r.stmt)
+  }
+
+  // Pure completeness predicate on a pw vector:
+  // Whenever ref_decode(pw) returns Ok, the honest witness satisfies constraints_ok
+  // and produces the exact same statement.
+  pure def is_complete_on(pw: List[int]): bool = {
+    val ref_r = ref_decode(pw)
+    val hw = honest_witness(pw)
+    ref_r.ok implies (constraints_ok(pw, hw) and circuit_output(pw, hw) == ref_r.stmt)
+  }
+
+  // State invariants for `quint run`
+  val SOUND: bool = is_sound_on(cur_pw, cur_wit)
+  val COMPLETE: bool = is_complete_on(cur_pw)
+  val SOUND_AND_COMPLETE: bool = (SOUND and COMPLETE)
+
+  // Mutant soundness invariants (each fails on its corresponding mutant in `quint run`)
+  val SOUND_mut_no_canon_last_borrow: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_no_canon_last_borrow(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_lo_only: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_lo_only(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_nop_chain_off: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_nop_chain_off(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_g_not_monotone: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_g_not_monotone(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_skip_any_pair: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_skip_any_pair(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_no_taken_check: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_no_taken_check(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_s_before_lanemap: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_s_before_lanemap(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+  val SOUND_mut_v_s_keys_overlap: bool = {
+    val ref_r = ref_decode(cur_pw)
+    mut_v_s_keys_overlap(cur_pw, cur_wit) implies (ref_r.ok and circuit_output(cur_pw, cur_wit) == ref_r.stmt)
+  }
+
+}
