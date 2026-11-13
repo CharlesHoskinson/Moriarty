@@ -13,20 +13,22 @@
 //! 4. `R` and the anchor rule (plan D-10): `mode` 0 or 1, the `j`, `k` words u16, a chunk
 //!    `1 <= j <= k`; entries 0 to 4 (5 for a chunk) are `DIGEST(PROGC)`, `DIGEST(INPUT)`,
 //!    `DIGEST(OUTCOME)`, `SPONGE(3)`, `DIGEST(t_in)` [, `DIGEST(t_out)`]; the anchor entry words;
-//!    the `claim_pub` inputs are the three run outputs; the native replay of these entries;
+//!    the `claim_pub` inputs are the three run outputs;
 //! 5. lane map in stock order (`apply_lane_map`): a pair `(0, 0)` is skipped; otherwise lane
 //!    and entry are u16 words, the entry exists and is a `DIGEST` or a `SPONGE(3)`,
 //!    `lane < lanes`, the lane is not already mapped and `s[lane] == 0`, then
-//!    `s[lane] = vs[off + vals - 1]`; the mapped entry is replayed natively;
-//! 6. each `PUB(param)` entry: `s[param] == vs[off]`.
+//!    `s[lane] = vs[off + vals - 1]`;
+//! 6. each `PUB(param)` entry: `s[param] == vs[off]`;
+//! 7. the native replay of every `PERM`, `H2`, `SPONGE` and `DIGEST` entry (stock does not
+//!    replay `PATH`): a tape of `P` permutation slots tied to the entries by a lookup of packed
+//!    tuples with the fixed multiplicities `perms_i`, the sponge state carried from slot to slot.
 //!
-//! Steps 5 (the value reads) and 6 use one log-derivative lookup into the tables
-//! `(j, vs_j)` and `(V + l, s_l)` (`s` after the lane map). The multiplicities and the
-//! witnessed values are observed into the transcript before the two challenges.
+//! Steps 5, 6 and 7 read values through one log-derivative lookup into the tables
+//! `(j, vs_j)` and `(V + l, s_l)` (`s` after the lane map). The multiplicities, the
+//! witnessed values and the slot tuples are observed into the transcript before the two
+//! challenges.
 //!
-//! One stock check is not here: stock replays every entry (`PERM`, `H2`, `SPONGE`, `DIGEST`);
-//! the wrap replays `R` and the mapped entries only (open, E3 J6 in the wrap; FOR OWNER
-//! CONFIRMATION). The pre-hash word is pinned to a key constant (recommended option, for owner
+//! The pre-hash word is pinned to a key constant (recommended option, for owner
 //! confirmation). The other statement head words are only range checked.
 
 use ff::Field;
@@ -35,8 +37,7 @@ use num_bigint::BigUint;
 
 use crate::{
     alg::Alg,
-    merkle::hash_slice,
-    native::{F, low_u64, to_big},
+    native::{F, cap_fixed, low_u64, to_big},
     transcript::Transcript,
 };
 
@@ -175,10 +176,19 @@ fn is_zero<A: Alg>(a: &mut A, x: &A::V, what: &str) -> Result<A::V, Error> {
     Ok(z)
 }
 
-/// `PoseidonFr_4(tag, x)`: the `DIGEST` replay (`sponge_u(4, [tag, x])`).
-fn digest<A: Alg>(a: &mut A, tag: &A::V, x: &A::V) -> Result<A::V, Error> {
-    hash_slice(a, 4, &[tag.clone(), x.clone()])
+/// A witnessed read of `vs[idx]` (0 when the gate is off); the caller adds the query.
+fn read<A: Alg>(a: &mut A, vsv: &Value<Vec<F>>, idx: &A::V, gate: &A::V) -> Result<A::V, Error> {
+    a.wit(a.val(idx).zip(a.val(gate)).zip(vsv.clone()).map(|((i, g), vs)| {
+        if g == F::ONE { vs.get(low_u64(&i) as usize).copied().unwrap_or(F::ZERO) } else { F::ZERO }
+    }))
 }
+
+/// Bit offsets of the packed replay tuple: bits 0 to 4 are the `PERM`, `H2`, `SPONGE`, `DIGEST`
+/// selectors and the parity of `param`; then `param` (8 bits), `o`, `poff`, `perms` (9 bits each).
+const T_PARAM: usize = 5;
+const T_O: usize = 13;
+const T_POFF: usize = 22;
+const T_PERMS: usize = 31;
 
 /// One-hot bits for `idx` over `0..n`, gated: `sum b = gate`, `sum i b_i = idx`.
 fn one_hot<A: Alg>(
@@ -303,6 +313,7 @@ pub fn decode<A: Alg>(
     let mut offs = vec![];
     let mut ops: Vec<Vec<A::V>> = vec![];
     let mut params = vec![];
+    let (mut poffs, mut permss, mut pars) = (vec![], vec![], vec![]);
     let mut prev_nop: Option<A::V> = None;
     for i in 0..d.b {
         let (op, param) = (w[STMT + 2 * i].clone(), w[STMT + 2 * i + 1].clone());
@@ -348,7 +359,7 @@ pub fn decode<A: Alg>(
         let q = a.wit(pv.map(|p| F::from(p.div_ceil(2))))?;
         let e = a.wit_bit(pv.map(|p| p % 2 == 1))?;
         let ev = a.bit_v(&e)?;
-        let chk = a.lin(&[(F::from(2u64), q.clone()), (-F::ONE, param.clone()), (-F::ONE, ev)], F::ZERO)?;
+        let chk = a.lin(&[(F::from(2u64), q.clone()), (-F::ONE, param.clone()), (-F::ONE, ev.clone())], F::ZERO)?;
         a.assert_eq_c(&chk, F::ZERO, "sponge slots")?;
         a.range(&q, &pow2(16), "sponge slots")?;
         let spq = a.mul(&c[I_SPONGE], &q)?;
@@ -358,14 +369,17 @@ pub fn decode<A: Alg>(
             F::ZERO,
         )?;
         offs.push(off.clone());
+        poffs.push(np.clone());
         off = a.add(&off, &vals)?;
         np = a.add(&np, &perms)?;
+        permss.push(perms);
+        pars.push(ev);
         ops.push(c);
         params.push(param);
     }
     let cap_v = a.lin(&[(-F::ONE, off.clone())], F::from(d.v as u64))?;
     a.range(&cap_v, &pow2(17), "capacity")?;
-    let cap_p = a.lin(&[(-F::ONE, np)], F::from(d.p as u64))?;
+    let cap_p = a.lin(&[(-F::ONE, np.clone())], F::from(d.p as u64))?;
     a.range(&cap_p, &pow2(17), "capacity")?;
     // Values after off_n are zero: g_j = [j >= off_n] (monotone, count V - off_n).
     let offv = a.val(&off).map(|x| low_u64(&x) as usize);
@@ -429,25 +443,6 @@ pub fn decode<A: Alg>(
     for i in 0..3 {
         a.assert_eq(&vs[sp + i], &vs[R_OFF[i] + 1], "claim_pub inputs are not the run DIGEST outputs")?;
     }
-    // Native replay of R (stock replays every entry; the entries outside R and outside the lane
-    // map are not replayed here: open, E3 J6 in the wrap).
-    let tags: Vec<A::V> = (0..N_TAGS).map(|t| a.cst(tag_fr(t))).collect::<Result<_, _>>()?;
-    for (i, &t) in R_RUN.iter().enumerate() {
-        let y = digest(a, &tags[t as usize], &vs[R_OFF[i]])?;
-        a.assert_eq(&y, &vs[R_OFF[i] + 1], &format!("entry {i}: native replay"))?;
-    }
-    let y = hash_slice(a, 0, &vs[sp..sp + 3])?;
-    a.assert_eq(&y, &vs[sp + 3], "entry 3: native replay")?;
-    let anchor_tag = |a: &mut A, t: &A::V| a.lin(&[(tag_fr(SHK_LOCK) - tag_fr(SHK_PROGC), t.clone())], tag_fr(SHK_PROGC));
-    let tg = anchor_tag(a, &t_in)?;
-    let y = digest(a, &tg, &vs[R_OFF[4]])?;
-    a.assert_eq(&y, &vs[R_OFF[4] + 1], "entry 4: native replay")?;
-    let tg = anchor_tag(a, &t_out)?;
-    let y = digest(a, &tg, &vs[R_OFF[5]])?;
-    let dy = a.sub(&y, &vs[R_OFF[5] + 1])?;
-    let dy = a.mul(&mode, &dy)?;
-    a.assert_eq_c(&dy, F::ZERO, "entry 5: native replay")?;
-
     // 5. Lane map, in stock order (`apply_lane_map`, E3 9539418). Queries into V:
     // (gate, index, value).
     let vsv = hv(a, &vs);
@@ -456,11 +451,6 @@ pub fn decode<A: Alg>(
     let nl = d.lanes() as u64;
     let digs: Vec<A::V> = ops.iter().map(|c| c[I_DIGEST].clone()).collect();
     let sps: Vec<A::V> = ops.iter().map(|c| c[I_SPONGE].clone()).collect();
-    let read = |a: &mut A, idx: &A::V, gate: &A::V| -> Result<A::V, Error> {
-        a.wit(a.val(idx).zip(a.val(gate)).zip(vsv.clone()).map(|((i, g), vs)| {
-            if g == F::ONE { vs.get(low_u64(&i) as usize).copied().unwrap_or(F::ZERO) } else { F::ZERO }
-        }))
-    };
     let mut done: Vec<(A::V, A::V)> = vec![];
     for k in 0..LANE_PAIRS {
         let (lane, ent) = (w[LANE_MAP + 2 * k].clone(), w[LANE_MAP + 2 * k + 1].clone());
@@ -501,32 +491,11 @@ pub fn decode<A: Alg>(
         // The output: vs[o + vals - 1], o + 1 for a DIGEST, o + 3 for a SPONGE(3).
         let o = dot(a, &e, &offs)?;
         let idx = a.lin(&[(F::ONE, o.clone()), (F::from(2u64), sel_sp.clone())], F::ONE)?;
-        let val = read(a, &idx, &nz)?;
-        // Native replay of the mapped entry (its inputs read through the same lookup).
-        let x0 = read(a, &o, &nz)?;
-        let i1 = a.add_c(&o, F::ONE)?;
-        let i2 = a.add_c(&o, F::from(2u64))?;
-        let x1 = read(a, &i1, &sel_sp)?;
-        let x2 = read(a, &i2, &sel_sp)?;
-        let pd = a.mul(&sel_dig, &p)?;
-        let tb = one_hot(a, N_TAGS as usize, &pd, &sel_dig, "lane map entry")?;
-        let tt: Vec<(F, A::V)> = tb.iter().enumerate().map(|(t, b)| (tag_fr(t as u64), b.clone())).collect();
-        let tag = a.lin(&tt, F::ZERO)?;
-        let yd = digest(a, &tag, &x0)?;
-        let ys = hash_slice(a, 0, &[x0.clone(), x1.clone(), x2.clone()])?;
-        let dd = a.sub(&yd, &val)?;
-        let dd = a.mul(&sel_dig, &dd)?;
-        a.assert_eq_c(&dd, F::ZERO, "lane map entry: native replay")?;
-        let ds = a.sub(&ys, &val)?;
-        let ds = a.mul(&sel_sp, &ds)?;
-        a.assert_eq_c(&ds, F::ZERO, "lane map entry: native replay")?;
+        let val = read(a, &vsv, &idx, &nz)?;
         for (sl, hl) in s.iter_mut().zip(&h) {
             *sl = a.mul_add(hl, &val, sl)?;
         }
         qv.push((nz.clone(), idx, val));
-        qv.push((nz.clone(), o, x0));
-        qv.push((sel_sp.clone(), i1, x1));
-        qv.push((sel_sp, i2, x2));
     }
 
     // 6. PUB entries: query (off_i, v_i) into V and (param_i, v_i) into S.
@@ -539,6 +508,150 @@ pub fn decode<A: Alg>(
         qv.push((gate.clone(), offs[i].clone(), v.clone()));
         qs.push((gate, params[i].clone(), v));
     }
+
+    // 7. Native replay of every entry (stock: PERM, H2, SPONGE, DIGEST; PATH needs the
+    // wrap-private siblings and is not replayed). A tape of P permutation slots: slot t is block
+    // m = t - poff_i of the entry i with poff_i <= t < poff_i + perms_i. Each active slot
+    // (t < np) carries the packed tuple (op bits, parity, param, o, poff, perms) of its entry;
+    // a lookup with the fixed multiplicities perms_i ties the slots to the entries, and
+    // 0 <= m < perms_i places them. The values are read through the V lookup.
+    let tup = |a: &mut A, b: [&A::V; 5], param: &A::V, o: &A::V, poff: &A::V, prm: &A::V| -> Result<A::V, Error> {
+        let mut t: Vec<(F, A::V)> = b.iter().enumerate().map(|(k, x)| (f2(k), (*x).clone())).collect();
+        t.push((f2(T_PARAM), param.clone()));
+        t.push((f2(T_O), o.clone()));
+        t.push((f2(T_POFF), poff.clone()));
+        t.push((f2(T_PERMS), prm.clone()));
+        a.lin(&t, F::ZERO)
+    };
+    let mut rows = vec![];
+    for i in 0..d.b {
+        let c = &ops[i];
+        rows.push(tup(a, [&c[1], &c[2], &c[I_SPONGE], &c[I_DIGEST], &pars[i]], &params[i], &offs[i], &poffs[i], &permss[i])?);
+    }
+    // Host view of the slot of each t (honest witness).
+    let host_rows: Value<Vec<u64>> = Value::from_iter(rows.iter().map(|r| a.val(r).map(|x| low_u64(&x))));
+    let host_pp: Value<Vec<(u64, u64)>> = Value::from_iter(
+        poffs.iter().zip(&permss).map(|(p, q)| a.val(p).zip(a.val(q)).map(|(p, q)| (low_u64(&p), low_u64(&q)))),
+    );
+    let slot_tuples: Value<Vec<u64>> = host_rows.zip(host_pp).map(|(r, pp)| {
+        (0..d.p as u64)
+            .map(|t| pp.iter().position(|&(p, q)| p <= t && t < p + q).map(|i| r[i]).unwrap_or(0))
+            .collect()
+    });
+    let npv = a.val(&np).map(|x| low_u64(&x) as usize);
+    let (cap02, cap42) = (a.cst(cap_fixed(0, 2))?, a.cst(cap_fixed(4, 2))?);
+    let mut prev = [zero.clone(), zero.clone(), zero.clone()];
+    let mut slots: Vec<(A::V, A::V)> = vec![];
+    let mut act_prev: Option<A::V> = None;
+    let mut act_sum = vec![];
+    for ti in 0..d.p {
+        let tf = F::from(ti as u64);
+        let ab = a.wit_bit(npv.map(|n| ti < n))?;
+        let act = a.bit_v(&ab)?;
+        if let Some(p) = &act_prev {
+            // Monotone: act_t = 1 implies act_(t-1) = 1.
+            let m = a.mul(p, &act)?;
+            a.assert_eq(&m, &act, "replay slots")?;
+        }
+        act_prev = Some(act.clone());
+        act_sum.push(act.clone());
+        let tv = slot_tuples.as_ref().map(|v| v[ti]);
+        let field = |x: u64, sh: usize, w: usize| (x >> sh) & ((1u64 << w) - 1);
+        let mut bits = vec![];
+        for k in 0..5 {
+            let b = a.wit_bit(tv.map(|x| field(x, k, 1) == 1))?;
+            bits.push(a.bit_v(&b)?);
+        }
+        let param = a.wit(tv.map(|x| F::from(field(x, T_PARAM, 8))))?;
+        a.range(&param, &pow2(8), "replay slots")?;
+        let o = a.wit(tv.map(|x| F::from(field(x, T_O, 9))))?;
+        let poff = a.wit(tv.map(|x| F::from(field(x, T_POFF, 9))))?;
+        let prm = a.wit(tv.map(|x| F::from(field(x, T_PERMS, 9))))?;
+        for x in [&o, &poff, &prm] {
+            a.range(x, &pow2(9), "replay slots")?;
+        }
+        let pk = tup(a, [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4]], &param, &o, &poff, &prm)?;
+        // An inactive slot holds the zero tuple.
+        let na = a.lin(&[(-F::ONE, act.clone())], F::ONE)?;
+        let z = a.mul(&na, &pk)?;
+        a.assert_eq_c(&z, F::ZERO, "replay slots")?;
+        let [c_perm, c_h2, c_sp, c_dig, par] = [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4]];
+        // m = t - poff with 0 <= m < perms (active slots).
+        let tm = a.lin(&[(-F::ONE, poff.clone())], tf)?;
+        let d1 = a.mul(&act, &tm)?;
+        a.range(&d1, &pow2(9), "replay slots")?;
+        let rem = a.lin(&[(F::ONE, prm.clone()), (-F::ONE, tm.clone())], -F::ONE)?;
+        let d2 = a.mul(&act, &rem)?;
+        a.range(&d2, &pow2(9), "replay slots")?;
+        let first = is_zero(a, &tm, "replay slots")?;
+        let last = is_zero(a, &rem, "replay slots")?;
+        let nf = a.lin(&[(-F::ONE, first.clone())], F::ONE)?;
+        // has1: the block has a second input (not the last block of an odd SPONGE).
+        let lp = a.mul(&last, par)?;
+        let has1 = a.lin(&[(-F::ONE, lp)], F::ONE)?;
+        let sp1 = a.mul(c_sp, &has1)?;
+        let spl = a.mul(c_sp, &last)?;
+        // Reads: y_k = vs[o + 2m + k] (k < 3), y3 = vs[o + 3] (PERM) or vs[o + param] (SPONGE
+        // output), y4, y5 = vs[o + 4], vs[o + 5] (PERM).
+        let g0 = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_sp.clone()), (F::ONE, c_dig.clone())], F::ZERO)?;
+        let g1 = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_dig.clone()), (F::ONE, sp1.clone())], F::ZERO)?;
+        let g2 = a.add(c_perm, c_h2)?;
+        let g3 = a.add(c_perm, &spl)?;
+        let i0 = a.lin(&[(F::ONE, o.clone()), (F::from(2u64), tm.clone())], F::ZERO)?;
+        let i1 = a.add_c(&i0, F::ONE)?;
+        let i2 = a.add_c(&i0, F::from(2u64))?;
+        let op3 = a.add_c(&o, F::from(3u64))?;
+        let pm3 = a.mul(c_perm, &op3)?;
+        let opp = a.add(&o, &param)?;
+        let i3 = a.mul_add(c_sp, &opp, &pm3)?;
+        let i4 = a.add_c(&o, F::from(4u64))?;
+        let i5 = a.add_c(&o, F::from(5u64))?;
+        let mut y = vec![];
+        for (g, i) in [(&g0, &i0), (&g1, &i1), (&g2, &i2), (&g3, &i3), (c_perm, &i4), (c_perm, &i5)] {
+            let v = read(a, &vsv, i, g)?;
+            qv.push((g.clone(), i.clone(), v.clone()));
+            y.push(v);
+        }
+        // DIGEST tag.
+        let pd = a.mul(c_dig, &param)?;
+        let tb = one_hot(a, N_TAGS as usize, &pd, c_dig, "replay slots")?;
+        let tt: Vec<(F, A::V)> = tb.iter().enumerate().map(|(k, b)| (tag_fr(k as u64), b.clone())).collect();
+        let tag = a.lin(&tt, F::ZERO)?;
+        // Permutation input.
+        let pse = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_sp.clone())], F::ZERO)?;
+        let spn = a.mul(c_sp, &nf)?;
+        let x = a.mul(&pse, &y[0])?;
+        let x = a.mul_add(c_dig, &tag, &x)?;
+        let in0 = a.mul_add(&spn, &prev[0], &x)?;
+        let ph = a.add(c_perm, c_h2)?;
+        let x = a.mul(&ph, &y[1])?;
+        let x = a.mul_add(c_dig, &y[0], &x)?;
+        let x = a.mul_add(&sp1, &y[1], &x)?;
+        let in1 = a.mul_add(&spn, &prev[1], &x)?;
+        let x = a.mul(c_perm, &y[2])?;
+        let x = a.mul_add(c_h2, &cap02, &x)?;
+        let x = a.mul_add(c_dig, &cap42, &x)?;
+        let sf = a.mul(c_sp, &first)?;
+        let x = a.mul_add(&sf, &param, &x)?;
+        let in2 = a.mul_add(&spn, &prev[2], &x)?;
+        let out = a.permute(&[in0, in1, in2])?;
+        // Outputs.
+        let chk = |a: &mut A, g: &A::V, u: &A::V, v: &A::V| -> Result<(), Error> {
+            let dd = a.sub(u, v)?;
+            let dd = a.mul(g, &dd)?;
+            a.assert_eq_c(&dd, F::ZERO, "native replay")
+        };
+        for k in 0..3 {
+            chk(a, c_perm, &out[k], &y[3 + k])?;
+        }
+        chk(a, c_h2, &out[0], &y[2])?;
+        chk(a, c_dig, &out[0], &y[1])?;
+        chk(a, &spl, &out[0], &y[3])?;
+        prev = out;
+        slots.push((act, pk));
+    }
+    let asum = sum(a, &act_sum)?;
+    a.assert_eq(&asum, &np, "replay slots")?;
 
     // Multiplicities (host count of gated query indices).
     let count = |a: &A, q: &[(A::V, A::V, A::V)], n: usize| -> Value<Vec<F>> {
@@ -570,6 +683,9 @@ pub fn decode<A: Alg>(
     }
     for (_, _, v) in qv.iter().chain(&qs[..]) {
         t.observe(a, v)?;
+    }
+    for (_, pk) in &slots {
+        t.observe(a, pk)?;
     }
     let alpha = t.sample(a)?;
     let beta = t.sample(a)?;
@@ -605,5 +721,24 @@ pub fn decode<A: Alg>(
         rhs = a.mul_add(&ms[l], &inv, &rhs)?;
     }
     a.assert_eq(&lhs, &rhs, "PUB differs from its lane")?;
+    // Slots against entries: sum_t act_t / (alpha - pk_t) = sum_i perms_i / (alpha - row_i).
+    let inv1 = |a: &mut A, x: &A::V| -> Result<A::V, Error> {
+        let den = a.sub(&alpha, x)?;
+        let inv = a.wit(a.val(&den).map(|x| x.invert().unwrap_or(F::ZERO)))?;
+        let one = a.mul(&den, &inv)?;
+        a.assert_eq_c(&one, F::ONE, "lookup denominator")?;
+        Ok(inv)
+    };
+    let mut l2 = a.cst(F::ZERO)?;
+    for (act, pk) in &slots {
+        let inv = inv1(a, pk)?;
+        l2 = a.mul_add(act, &inv, &l2)?;
+    }
+    let mut r2 = a.cst(F::ZERO)?;
+    for (r, m) in rows.iter().zip(&permss) {
+        let inv = inv1(a, r)?;
+        r2 = a.mul_add(m, &inv, &r2)?;
+    }
+    a.assert_eq(&l2, &r2, "native replay")?;
     Ok(s)
 }

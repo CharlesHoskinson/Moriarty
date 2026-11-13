@@ -15,8 +15,8 @@
 //! also checks `R` (plan D-10), and the ENC-2 log is not an `R` log (entry 1 is `H2`): stock
 //! refuses every case at `R entry 1`, and so must the wrap. The lane map is then checked
 //! against the stock lane-map step alone (`apply_lane_map`): its verdict and statement equal
-//! the wrap's lane-map refusals and statement; a changed mapped `DIGEST` output is refused by
-//! the wrap's replay of the mapped entry. `MockProver` refuses the honest vector.
+//! the wrap's lane-map refusals and statement. Every ENC-2 entry is replayed: the honest log
+//! replays, and a changed `DIGEST` output is refused. `MockProver` refuses the honest vector.
 use std::{collections::HashMap, fs, io};
 
 use ff::{Field, PrimeField};
@@ -416,17 +416,20 @@ fn i9_enc_pv_lane_map() {
     assert_eq!(st[2], hx(&pin.p["enc1.C_P"]));
     assert_eq!(st[3], hx(&pin.p["enc1.input_pub"]));
     assert_eq!(st[1], F::from(0x1234u64));
-    // The mapped DIGEST(0) is replayed: a changed logged C_P is refused (stock: at its replay).
+    // Every entry of the ENC-2 log is replayed: the honest log replays (its only refusal is R);
+    // a changed logged C_P is refused by the replay of DIGEST(0).
+    let (fails, _) = native_decode(&sh, &honest.words);
+    assert!(!fails.iter().any(|f| f.contains("native replay")), "the honest ENC-2 log replays");
     let dc = cs.iter().find(|c| c.name == "digest_output_changed").unwrap();
     let (fails, _) = native_decode(&sh, &dc.words);
-    assert!(fails.iter().any(|f| f == "lane map entry: native replay"), "mapped DIGEST replay");
+    assert!(fails.iter().any(|f| f == "native replay"), "DIGEST replay");
     let k = 18;
     let rel = DecodeRelation { sh: sh.clone() };
     let (_, s) = native_decode(&sh, &honest.words);
     let c = MidnightCircuit::new(&rel, Value::known(s.clone()), Value::known(honest.words.clone()), Some(k));
     assert!(MockProver::<F>::run(&c, vec![vec![], s]).unwrap().verify().is_err(), "honest ENC refused (not an R log)");
     println!(
-        "E5ENC decode: {} cases equal stock (all refused at R entry 1); lane-map step equal on {n_lm} cases; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; mapped DIGEST replay refuses a changed C_P; MockProver refuses the honest vector",
+        "E5ENC decode: {} cases equal stock (all refused at R entry 1); lane-map step equal on {n_lm} cases; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; the honest ENC-2 log replays, a changed C_P is refused by the replay; MockProver refuses the honest vector",
         cs.len()
     );
 }

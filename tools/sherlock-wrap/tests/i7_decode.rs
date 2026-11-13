@@ -2,7 +2,8 @@
 //! every exported case (`lfr-e3-decode.json`, written by `lfr_e3`), the honest statement equal
 //! to the stock statement; then the gadget decoder alone: cost model and `MockProver` on the
 //! honest case, a `PUB` mismatch, a non-canonical lane and the 9539418 lane-map and `R`
-//! refusals. Cases named `open_replay_*` are the open divergence (stock replays every entry).
+//! refusals, and the replay of entries outside `R` and the lane map (`open_replay_*`, a
+//! changed `PERM`, `SPONGE(5)` and `DIGEST(SHK_REG)` output).
 use std::fs;
 
 use midnight_proofs::{circuit::Value, dev::MockProver};
@@ -73,18 +74,10 @@ fn i7_decode_native_equals_stock() {
     let (d, cs) = cases();
     let honest = cs.iter().find(|c| c.name == "honest").unwrap();
     let sh = DecodeShape { d, pre_hash: honest.words[0] };
-    let mut open = 0;
     for c in &cs {
         let (fails, s) = native(&sh, &c.words);
         let ok = fails.is_empty();
         println!("E5DECODE {}: stock {} native {} {:?}", c.name, c.ok, ok, fails.iter().take(3).collect::<Vec<_>>());
-        if c.name.starts_with("open_replay_") {
-            // Open (E3 J6 in the wrap): stock replays every entry, the wrap replays R and the
-            // mapped entries only. A changed output of another entry: stock refuses, wrap accepts.
-            assert!(!c.ok && ok, "open divergence of {}", c.name);
-            open += 1;
-            continue;
-        }
         assert_eq!(ok, c.ok, "verdict of {}", c.name);
         if let Some(st) = &c.statement {
             assert_eq!(&s, st, "statement of {}", c.name);
@@ -95,8 +88,7 @@ fn i7_decode_native_equals_stock() {
             println!("E5DECODE {}: stock lane-map step {lm}, wrap lane mapped twice {twice}", c.name);
         }
     }
-    assert!(open >= 1);
-    println!("E5DECODE cases {} equal, {open} open (replay outside R and the lane map)", cs.len() - open);
+    println!("E5DECODE cases {} all equal", cs.len());
 }
 
 #[test]
@@ -117,7 +109,7 @@ fn i7_decode_gadget_mock() {
     let mut bad = st.clone();
     bad[1] += F::from(1u64);
     assert!(!run(&honest.words, &bad), "changed statement");
-    for name in ["pub_lane_changed", "lane_not_canonical", "lane_map_sponge_not_3", "lane_map_twice", "lane_map_not_u16", "r_anchor_output_changed", "chunk_j_0"] {
+    for name in ["pub_lane_changed", "lane_not_canonical", "lane_map_sponge_not_3", "lane_map_twice", "lane_map_not_u16", "r_anchor_output_changed", "chunk_j_0", "open_replay_perm", "open_replay_sponge", "open_replay_digest"] {
         let c = cs.iter().find(|c| c.name == name).unwrap();
         assert!(!c.ok);
         let (_, s) = native(&sh, &c.words);
