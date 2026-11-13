@@ -282,7 +282,7 @@ New `PointsIn` shape: add 198 columns, 200 constraints, 195 interactions, degree
 
 - Padding (`x14-pad`): SOUND and COMPLETE with conditions. The consumer of the OUT bus must constrain its receive multiplicity to be boolean and bind `id` (the harness `SinkAir` does neither), and padding chain rows must hold a dummy satisfying carry witness with `is_valid = 0`, as `g1_chain` does. The lane models 5 mutants; it finds `m_range_mult_v` an allowed variant for operational soundness.
 - Identity flag path (`x14-identity`): SOUND and COMPLETE with conditions. The producer must bind both the flags and the limbs to the transcript encoding of O, and an active `add` row needs `x1 != x2`.
-- Lead quint runs: not run. The lane sandbox refused `quint`, so neither lane ran its own commands; the expected exit codes in each REPORT are not yet confirmed.
+- Lead quint runs (MEASURED, 2026-11-13, quint 0.32.0 through `heavy-slot`, fixed seeds; `qa/gemini-quint/x14-pad/RERUN.md`, `qa/gemini-quint/x14-identity/RERUN.md`): the lane sandbox refused `quint`, so the lead ran every command of both REPORT tables. Every command gives the expected exit code. `x14-pad`: 2 typechecks, 11 + 10 tests passing, `invRow` and `invRefinement` `[ok]`, non-vacuity witness found, 5 of 5 mutants caught, the 2 mutant control runs `[ok]`. `x14-identity`: 2 typechecks, 11 tests passing, `invRow` `[ok]`, non-vacuity witness found, 5 of 5 mutants caught. Both lane verdicts are confirmed, with their conditions still open.
 
 ### X14 gate under the new bounds
 
