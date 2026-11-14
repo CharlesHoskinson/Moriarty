@@ -4,7 +4,7 @@
 # Every key-dependent number (L_Fr key, wrap rows, wrap key, ledger verdicts, devnet call) is a stage
 # here, so a later L key (T7c path C) reruns with: rm -f ~/.cache/t10/state/*.ok; chain.sh all
 set -uo pipefail
-export PATH=$HOME/.cargo/bin:$PATH RUSTUP_AUTO_INSTALL=0 RUSTFLAGS="-C target-cpu=native"
+export PATH=$HOME/.cargo/bin:/opt/cuda/bin:$PATH RUSTUP_AUTO_INSTALL=0 RUSTFLAGS="-C target-cpu=native"
 T=${T10_HOME:-$HOME/.cache/t10}; S=$T/state; LOG=$T/logs; HS=$HOME/.local/bin/heavy-slot
 OVM=${T10_OVM:-$HOME/.cache/m7-wrap/src/openvm-t10}; MOR=${T10_MOR:-$HOME/Projects/Moriarty-wt/t10-bound}
 W=$MOR/tools/sherlock-wrap; SDK=$MOR/tools/sherlock-sdk
@@ -102,7 +102,7 @@ preview() {
     E6_WRAP_BIN=$TW/release/wrap E6_CALLS=$T/calls-preview E6_REL_FIXTURE=$T/key/lfr-call.json \
     E6_VALIDATE_CALL=$HOME/.cache/xc9/target/release/examples/validate_call RAYON_NUM_THREADS=20 T10A_PROVER=$SDK/e6-wrap-prover.sh \
     T10_NET=preview T10A_TTL_S=3600
-  mkdir -p $T/preview $T/calls-preview
+  mkdir -p $T/preview $T/calls-preview $MOR/research/sherlock-t10-bound-20261114/preview
   if [ ! -e $S/preview-deploy.ok ]; then
     echo "# $(date -Is) preview-deploy start $(heads)" >> $LOG/runs.log
     ( cd $SDK && node t10a-ledger-run.mjs deploy --vk $E6_WRAP_VK --args $T/key/ledger-args.json --out $T/preview ) > $LOG/preview-deploy.log 2>&1 \
@@ -112,6 +112,29 @@ preview() {
   stage preview-call 80G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
     node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
     --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/preview || exit 1
+  # public receipts only: an allow-list of fields; the private words of the scan (forbidden values) are dropped
+  python3 - $T/preview/t10a-state.json $MOR/research/sherlock-t10-bound-20261114/preview/receipts.json <<'PY' || exit 1
+import json, sys
+s = json.load(open(sys.argv[1]))
+pick = lambda d, ks: {k: d[k] for k in ks if k in d}
+sub = lambda x: pick(x, ["label", "verdict", "txHash", "txSHA256", "blockHash", "blockHeight", "txBytes", "error"])
+acc = s["calls"]["accept"]
+out = {
+  "network": "Midnight Preview", "chain": s["chain"],
+  "wallet": "OP-PV-WALLET (address pinned in t10a-ledger-run.mjs)",
+  "key": pick(s["key"], ["taggedBytes", "taggedSHA256", "midnightVkBytes", "midnightVkSHA256"]),
+  "deploy": pick(s["deploy"], ["address", "txHash", "blockHash", "blockHeight", "txId", "status", "paidFees", "txBytes", "stateSHA256"]),
+  "constructorArgs": s["deploy"]["constructorArgs"],
+  "acceptRun": {**pick(acc, ["txId", "indexedTxHash", "blockHeight", "status", "paidFees", "txBytes", "claimPub", "claimInRuns",
+                             "runsLookup", "runsSize", "anchorUnchanged", "keysUnchanged", "includedProgramEqualsProven", "postStateSHA256"]),
+                "privacyScanPass": acc["scan"]["pass"], "scannerFires": acc["scan"]["scannerFires"],
+                "smallScanPass": acc["smallScan"]["pass"]},
+  "refusals": {k: sub(s["submissions"][k]) for k in ("r1", "r2", "r4", "r3") if k in s["submissions"]},
+  "verdict": s["verdict"],
+}
+json.dump(out, open(sys.argv[2], "w"), indent=2)
+print("T10PREVIEW receipts", sys.argv[2], "verdict pass", s["verdict"].get("pass"))
+PY
 }
 pathc() {
   # T7c path C cases on this tree (one leaf of `entry x;` through the leaf layer, L and L_Fr on the universal keys)
@@ -123,7 +146,7 @@ pathc() {
 sg6() {
   # SG-6 on this tree (lead ruling on T7 pick 15): GPU seconds per proved step, stock CPU verifier on each proof
   mkdir -p $T/out/sg6
-  stage sg6 24G $OVM $T/target-cuda --exclusive env LIBRARY_PATH=/opt/cuda/lib64 T6_OUT=$T/out/sg6 \
+  stage sg6 24G $OVM $T/target-cuda --exclusive env PATH=/opt/cuda/bin:$PATH LIBRARY_PATH=/opt/cuda/lib64 T6_OUT=$T/out/sg6 \
     cargo run --release --offline -p sherlock-leaf --features cuda --example sg6 || exit 1
   need $T/out/sg6/sg6.json
   python3 - $T/out/sg6/sg6.json <<'PY' || exit 1
