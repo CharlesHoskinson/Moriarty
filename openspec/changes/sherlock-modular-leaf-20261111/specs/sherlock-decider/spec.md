@@ -22,11 +22,11 @@ DCD-003 SHALL be met by LW-010 of `sherlock-processor-final-20261111`. The repla
 - **THEN** the second call is refused, and the Quint invariant `PartitionReplayRefusedByClaimD` holds
 
 ### Requirement: DCD-004 The collection statement carries no claim count
-DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_root, set_root, shape_d]` with no claim count (AD-2, OWNER to confirm). Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).
+DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_root, set_root]` with no `shape_d` (owner ruling O9, 2026-11-13) and no claim count (AD-2, OWNER to confirm). Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).
 
 #### Scenario: Three runs joined
 - **WHEN** three sealed runs are joined and wrapped
-- **THEN** the statement is exactly `[reg_root, set_root, shape_d]` (positive `pos_decider_collection_three_runs` in kit L AND WRAP), and each claim opens through the LEDGER CONTRACT (LDG-004)
+- **THEN** the statement is exactly `[reg_root, set_root]` (positive `pos_decider_collection_three_runs` in kit L AND WRAP), and each claim opens through the LEDGER CONTRACT (LDG-004)
 
 ### Requirement: DCD-005 The derived gates replace the decider row gate
 DCD-005 SHALL be met by DG-001 and DG-002 of `sherlock-processor-final-20261111`. The decider gate of 1,000,000 rows SHALL NOT apply. The wrap SHALL fit 85 percent of `2^k - 7` usable rows at the smallest k of 19, 20 and 21, with one fixed 2^16-row range table.

@@ -171,7 +171,7 @@ Each lever is applied alone on top of the one before; each is checked by the I3 
 |---|---:|---:|---:|
 | none (I6b) | 1,592,979 | 89.4 | |
 | L1 fused multiply-add: `Alg::mul_add` is the native chip's one-row `add_and_mul` (`x*y + z`), used in the WHIR `mu` batching, the final-polynomial Horner, the `gamma` and final-check sums, `binary_k_fold`, the DAG `lambda` sum, the interaction sums and the stacked sums. Needs a visibility-only accessor `ZkStdLib::native_gadget()` (patch `patches/perm-access.diff`; `configure` unchanged). Log `lever-fma.log` | 1,453,425 | 81.5 | -139,554 |
-| L2 `omega^index` chains: the `omega^(2^j)` constants assigned once per round (not per query and chain); `zi = zi_root^(2^k)` by k squarings; `zi^-1` witnessed and pinned by `zi_root * zi_inv = 1` (was three select chains of key constants per query). Log `lever-omega.log` | 1,436,529 | 80.6 | -16,896 |
+| L2 `omega^index` chains: the `omega^(2^j)` constants assigned once per round (not per query and chain); `zi = zi_root^(2^k)` by k squarings; `zi_root^-1` witnessed and pinned by `zi_root * zi_inv = 1` (was three select chains of key constants per query). Log `lever-omega.log` | 1,436,529 | 80.6 | -16,896 |
 
 Final circuit (L1 + L2), run `i6.sh lfr-real 21` under `heavy-slot --exclusive` (log `i6-excl.log`; heavy-slot gave the job the host alone among slot jobs, host load 30 to 37 from work outside the slots, so the times are the cleanest available, not an idle host):
 
