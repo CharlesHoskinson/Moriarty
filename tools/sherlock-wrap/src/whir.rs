@@ -221,7 +221,7 @@ pub fn part4<A: Alg>(
         t.check_witness(a, ws.query_pow_bits, &qw)?;
         let nbits = log_rs - k;
         let omega = two_adic_generator(log_rs);
-        // L2: the `omega^(2^j)` constants once per round; `zi` by k squarings; `zi^-1` witnessed
+        // L2: the `omega^(2^j)` constants once per round; `zi` by k squarings; `zi_root^-1` witnessed
         // and pinned by `zi_root * zi_inv = 1`.
         let mut cs = vec![];
         let mut cp = omega;

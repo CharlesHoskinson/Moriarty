@@ -212,6 +212,9 @@ pub struct ProofData {
     pub stack: crate::stacked::StackData,
     /// The WHIR proof (I5).
     pub whir: crate::whir::WhirData,
+    /// The wrap-private `PATH` siblings of the decoded log, one list per `PATH` entry in log
+    /// order (T9; `wrapin` field `path_sibs`, hex Fr; empty when the log has no `PATH`).
+    pub path_sibs: Vec<Vec<F>>,
 }
 
 impl ProofData {
@@ -256,6 +259,16 @@ impl ProofData {
                 .collect(),
             stack: crate::stacked::StackData::from_wrapin(w),
             whir: crate::whir::WhirData::from_wrapin(w),
+            path_sibs: w
+                .doc
+                .get("path_sibs")
+                .and_then(|v| v.as_array())
+                .map(|ls| {
+                    ls.iter()
+                        .map(|l| l.as_array().unwrap().iter().map(|h| crate::native::f_from_hex(h.as_str().unwrap()).unwrap()).collect())
+                        .collect()
+                })
+                .unwrap_or_default(),
         }
     }
 }

@@ -20,7 +20,7 @@ use midnight_zk_stdlib::{Relation, ZkStdLib, ZkStdLibArch};
 
 use crate::{
     alg::{Alg, Gadget, Native},
-    decode::{DecodeShape, Dims, decode},
+    decode::{DecodeShape, decode_with},
     native::F,
     smoke::{NPI, wrap_arch},
     stacked::{StackShape, part3},
@@ -47,12 +47,11 @@ impl WrapRelation {
         let whir = WhirShape::from_wrapin(w, &stack.widths);
         let n: usize = shape.airs.iter().map(|a| if a.log_height.is_some() { a.num_public_values } else { 0 }).sum();
         let map = w.doc.get("decode").filter(|d| !d.is_null()).map(|dd| {
-            let g = |k: &str| dd["dims"][k].as_u64().unwrap() as usize;
-            let d = Dims { b: g("b"), v: g("v"), p: g("p"), l_tx: g("l_tx") };
-            assert_eq!(d.lanes(), NPI, "E3 map: the call vector is the statement");
-            assert_eq!(n, d.n_public(), "E3 map: L_Fr public values");
             let p = ProofData::from_wrapin(w);
-            DecodeShape { d, pre_hash: p.public_values.iter().flatten().copied().next().unwrap() }
+            let sh = DecodeShape::from_doc(dd, p.public_values.iter().flatten().copied().next().unwrap());
+            assert_eq!(sh.d.lanes(), NPI, "E3 map: the call vector is the statement");
+            assert_eq!(n, sh.d.n_public(), "E3 map: L_Fr public values");
+            sh
         });
         if map.is_none() {
             assert!(n <= NPI, "PublicMap: {n} public values exceed {NPI} words");
@@ -68,7 +67,7 @@ impl WrapRelation {
             let mut t = Transcript::new(&mut a, self.shape.u_transcript).unwrap();
             let pv: Vec<Value<F>> = v.iter().map(|x| Value::known(*x)).collect();
             t.observe_all(&mut a, &pv).unwrap();
-            let s = decode(&mut a, &mut t, sh, &pv).unwrap();
+            let s = decode_with(&mut a, &mut t, sh, &pv, &Value::known(p.path_sibs.clone())).unwrap();
             assert!(a.failures.is_empty(), "decoder refused: {:?}", a.failures);
             let mut out = vec![];
             for x in s {
@@ -109,7 +108,8 @@ impl Relation for WrapRelation {
             part4(&mut a, &mut t, &self.whir, &pv.map(|p| &p.whir), &q, &commits, &u, self.shape.l_skip)?;
             let pw: Vec<_> = p1.public_values.iter().flatten().cloned().collect();
             if let Some(sh) = &self.map {
-                cells = decode(&mut a, &mut t, sh, &pw)?;
+                let sibs = witness.as_ref().map(|p| p.path_sibs.clone());
+                cells = decode_with(&mut a, &mut t, sh, &pw, &sibs)?;
             } else {
                 cells.extend(pw);
                 let zero = a.cst(F::from(0u64))?;

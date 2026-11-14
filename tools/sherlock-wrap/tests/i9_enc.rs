@@ -41,7 +41,9 @@ use sherlock_wrap::{
 const BB_P: u64 = 0x7800_0001;
 
 fn enc_dir() -> String {
-    format!("{}/Projects/Moriarty-wt/tested/research/sherlock-enc-fp3-20261112", std::env::var("HOME").unwrap())
+    std::env::var("ENC_DIR").unwrap_or_else(|_| {
+        format!("{}/Projects/Moriarty-wt/tested/research/sherlock-enc-fp3-20261112", std::env::var("HOME").unwrap())
+    })
 }
 
 fn pins(path: &str) -> HashMap<String, String> {
@@ -383,7 +385,8 @@ fn i9_enc_pv_lane_map() {
         .collect();
     let honest = cs.iter().find(|c| c.name == "honest").unwrap();
     let d = Dims::FULL;
-    let sh = DecodeShape { d, pre_hash: honest.words[0] };
+    let dd = serde_json::json!({"dims": {"b": d.b, "v": d.v, "p": d.p, "l_tx": d.l_tx}, "keys": doc["keys"].clone()});
+    let sh = DecodeShape::from_doc(&dd, honest.words[0]);
     // pv binding: the packed words hold the pinned pv.
     let pv: Vec<u64> = doc["pv"].as_array().unwrap().iter().map(|x| x.as_u64().unwrap()).collect();
     let mut words = vec![];
@@ -395,7 +398,7 @@ fn i9_enc_pv_lane_map() {
             words.push(w.to_u64_digits().first().copied().unwrap_or(0));
         }
     }
-    assert_eq!(words[114..d.call_at()].to_vec(), pv, "pv words");
+    assert_eq!(words[sherlock_wrap::decode::STMT..d.call_at()].to_vec(), pv, "pv words");
     let lane_map_fail = |f: &Vec<String>| f.iter().any(|x| x.contains("lane map") && !x.contains("native replay"));
     let mut n_lm = 0;
     for c in &cs {
@@ -426,7 +429,7 @@ fn i9_enc_pv_lane_map() {
     let k = 18;
     let rel = DecodeRelation { sh: sh.clone() };
     let (_, s) = native_decode(&sh, &honest.words);
-    let c = MidnightCircuit::new(&rel, Value::known(s.clone()), Value::known(honest.words.clone()), Some(k));
+    let c = MidnightCircuit::new(&rel, Value::known(s.clone()), Value::known((honest.words.clone(), vec![])), Some(k));
     assert!(MockProver::<F>::run(&c, vec![vec![], s]).unwrap().verify().is_err(), "honest ENC refused (not an R log)");
     println!(
         "E5ENC decode: {} cases equal stock (all refused at R entry 1); lane-map step equal on {n_lm} cases; pv words equal the pinned pv; lane 2 = C_P, lane 3 = input_pub, lane 1 = 0x1234; the honest ENC-2 log replays, a changed C_P is refused by the replay; MockProver refuses the honest vector",
