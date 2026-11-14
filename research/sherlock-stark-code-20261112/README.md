@@ -30,6 +30,7 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-t6/` | t6-leaf (T6 modular leaf slice) | `b3fbaa5` (the `tested` tip) | see `TIP` | see folder | linear | T6: `sherlock-leaf` slice crate, `KeyBind` app public values, `slice_chain`, `fp8_d3` |
 | `openvm-t7/` | t7-bind (T7 `prog_d` and key route) | `8672651` (the `tested` merge of `t6-leaf` and `t9-contract`) | `662235f` | 3 | linear | T7: FP-2 statement AIR, `L` root statement and `RootSealAir`, `t7_chain` |
 | `openvm-t8/` | t8-gp (T8 GP hooks) | `662235f` (the `t7-bind` tip) | `a645de3` | 4 | linear | T8: GP-2/GP-4 node mode block `gp.rs`, MERGE-WORK node (`Kind::Work`, split CORE, `MERGE_WORK` set), `t8_gp` (x7, gp2) |
+| `openvm-t8b/` | t8b-gp (T8b GP hooks) | `a645de3` (the `t8-gp` tip, on `tested`) | `2325f63` | 4 | linear | T8b: chip set 2 value set (`value_set`), NW parent ladder (`keys_d` 7 rows), kernel CORE step words as columns, honest GP-2 SEAL-WITH-DEPS with twins, `x14_units` |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |
@@ -50,3 +51,5 @@ T6 (2026-11-13): `openvm-t6/` and `stark-backend-t6/` are plain `git format-patc
 T7 (2026-11-13): `openvm-t7/` is a plain `git format-patch --binary 8672651..t7-bind` series. It applies on the openvm `tested` commit `8672651` (the merge of `t6-leaf` 3160f59 into `tested`). The `Cargo.toml` patches still point at `../stark-backend-t6/crates/...`; stark-backend has no T7 change. Report: `research/sherlock-t7-bind-20261113/RESULTS.md`.
 
 T8 (2026-11-14): `openvm-t8/` is a plain `git format-patch --binary 662235f..t8-gp` series. It applies on the openvm `t7-bind` tip `662235f` (series `openvm-t7/`). The `Cargo.toml` patches still point at `../stark-backend-t6/crates/...`; stark-backend has no T8 change. Report: `research/sherlock-t8-gp-20261113/RESULTS.md`.
+
+T8b (2026-11-14): `openvm-t8b/` is a plain `git format-patch --binary a645de3..t8b-gp` series. It applies on the openvm `t8-gp` tip `a645de3` (series `openvm-t8/`). Patch 0001 points the `Cargo.toml` patches at `../stark-backend-t8b/crates/...`, a copy of stark-backend `deeeb0a` with no change. Report: `research/sherlock-t8b-gp-20261114/RESULTS.md`.

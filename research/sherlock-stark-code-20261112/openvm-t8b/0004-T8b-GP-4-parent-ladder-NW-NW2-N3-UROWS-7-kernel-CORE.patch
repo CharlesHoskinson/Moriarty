@@ -1,0 +1,298 @@
+From 2325f63bb26bc629ab4209d1f6da07a06661f5ad Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 06:36:56 -0700
+Subject: [PATCH 4/4] T8b: GP-4 parent ladder NW, NW2, N3 (UROWS 7); kernel
+ CORE step words as columns so a parent verifies MERGE-WORK
+
+---
+ crates/sherlock-leaf/src/core.rs              | 22 ++++++--
+ crates/sherlock-leaf/src/leaf.rs              | 15 ++++++
+ crates/sherlock-lfr/src/stmt.rs               | 12 +++--
+ .../sherlock-wrap-export/examples/t7_chain.rs | 21 ++++----
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 54 +++++++++++++------
+ 5 files changed, 91 insertions(+), 33 deletions(-)
+
+diff --git a/crates/sherlock-leaf/src/core.rs b/crates/sherlock-leaf/src/core.rs
+index 9c7a8ef..a7925db 100644
+--- a/crates/sherlock-leaf/src/core.rs
++++ b/crates/sherlock-leaf/src/core.rs
+@@ -116,6 +116,12 @@ pub const C_VCIDX: usize = C_VR3 + 30;
+ /// digest; chip sets 0 and 1 keep the constant `VAL_NONE`).
+ pub const C_VVAL: usize = C_VCIDX + 4;
+ pub const WIDTH_V: usize = C_VVAL + D;
++/// T8b (GP-4): in the split CORE of a MERGE-WORK kernel the 54 step words are main columns after
++/// `WIDTH` (every row, the same words), not public values: a parent node verifies only the
++/// statement AIR's public values. Each row sends the words over `step_pv`, and the node statement
++/// receives them `HEIGHT` times, so every row holds the received words.
++pub const C_PVK: usize = WIDTH;
++pub const WIDTH_SPLIT: usize = C_PVK + pv::N;
+ 
+ /// The value-set witness of a shard (T8b): the two ROM rows and the constant index.
+ #[derive(Clone, Debug)]
+@@ -239,6 +245,8 @@ impl<T> BaseAir<T> for CoreAir {
+     fn width(&self) -> usize {
+         if self.vset {
+             WIDTH_V
++        } else if self.split {
++            WIDTH_SPLIT
+         } else {
+             WIDTH
+         }
+@@ -246,7 +254,11 @@ impl<T> BaseAir<T> for CoreAir {
+ }
+ impl<T> BaseAirWithPublicValues<T> for CoreAir {
+     fn num_public_values(&self) -> usize {
+-        pv::N
++        if self.split {
++            0
++        } else {
++            pv::N
++        }
+     }
+ }
+ impl<T> PartitionedBaseAir<T> for CoreAir {}
+@@ -261,8 +273,12 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+         let (lr, nr) = (main.row_slice(0).unwrap(), main.row_slice(1).unwrap());
+         let l: &[AB::Var] = (*lr).borrow();
+         let n: &[AB::Var] = (*nr).borrow();
+-        let pvs: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
+         let c = |i: usize| -> AB::Expr { l[i].into() };
++        let pvs: Vec<AB::Expr> = if self.split {
++            (0..pv::N).map(|i| c(C_PVK + i)).collect()
++        } else {
++            builder.public_values().iter().map(|&x| x.into()).collect()
++        };
+         let nx = |i: usize| -> AB::Expr { n[i].into() };
+         let st = |w: usize| c(C_ST + w);
+         let nst = |w: usize| nx(C_ST + w);
+@@ -357,7 +373,7 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+             send_frame::<AB>(builder, &(0..FRAME_W).map(|i| c(frame_col(i))).collect::<Vec<_>>());
+             let mut m: Vec<AB::Expr> = pvs.clone();
+             m.truncate(pv::N);
+-            bus::perm(bus::PORT_STEP_PV).send(builder, m, b0.clone());
++            bus::perm(bus::PORT_STEP_PV).send(builder, m, one.clone());
+         } else {
+             frame_rule::<AB>(builder, o, &st, &nst, &sel, slot.clone(), self.vset);
+         }
+diff --git a/crates/sherlock-leaf/src/leaf.rs b/crates/sherlock-leaf/src/leaf.rs
+index 589ee7f..c70d8cc 100644
+--- a/crates/sherlock-leaf/src/leaf.rs
++++ b/crates/sherlock-leaf/src/leaf.rs
+@@ -158,6 +158,21 @@ pub fn traces_kernel(p: &Program, sh: &ShardIn, b: &Build) -> Vec<Tr> {
+     v
+ }
+ 
++/// T8b (GP-4): the proving form of a kernel CORE trace ([`traces_kernel`] index 0): the step words
++/// `t.pvs` copied into the columns `C_PVK..` of every row, no public values.
++pub fn kernel_core_split(t: &Tr) -> Tr {
++    use crate::core::{C_PVK, WIDTH, WIDTH_SPLIT};
++    assert_eq!(t.pvs.len(), crate::core::pv::N);
++    let h = t.m.values.len() / WIDTH;
++    assert_eq!(h as u32, sherlock_lfr::stmt::STEP_PV_ROWS, "kernel CORE rows = the node's step_pv multiplicity");
++    let mut v = vec![F::ZERO; h * WIDTH_SPLIT];
++    for r in 0..h {
++        v[r * WIDTH_SPLIT..r * WIDTH_SPLIT + WIDTH].copy_from_slice(&t.m.values[r * WIDTH..(r + 1) * WIDTH]);
++        v[r * WIDTH_SPLIT + C_PVK..(r + 1) * WIDTH_SPLIT].copy_from_slice(&t.pvs);
++    }
++    Tr::new(openvm_stark_backend::p3_matrix::dense::RowMajorMatrix::new(v, WIDTH_SPLIT))
++}
++
+ /// The traces of one shard under chip set `set`.
+ pub fn traces_set(p: &Program, sh: &ShardIn, b: &Build, set: u32) -> Vec<Tr> {
+     if set == 2 {
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index 5668cec..acac953 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -84,9 +84,9 @@ pub const KB_AIR_ID: usize = 0;
+ pub const CE_AIR_ID: usize = 1;
+ /// Most levels of the `key_root` path (FP-2 `D_key`).
+ pub const D_KEY: usize = 16;
+-/// Rows of each half of the universal key table (`c_node`, `c_foreign`). T8b: 6 (4 in T7 and
+-/// T8); node rows 4 and 5 are the parent over a MERGE-WORK child and N3 over that parent.
+-pub const UROWS: usize = 6;
++/// Rows of each half of the universal key table (`c_node`, `c_foreign`). T8b: 7 (4 in T7 and
++/// T8); node rows 4, 5 and 6 are NW over a MERGE-WORK child, NW2 over NW and N3 over NW2.
++pub const UROWS: usize = 7;
+ /// Header words of `state_d` after the tag (FP-5).
+ pub const HDR: usize = 41;
+ /// T7 buses: sponge ports and the `L` operand words (above the `L` interface buses 900 to 903).
+@@ -96,6 +96,8 @@ pub const PORT_OUT: BusIndex = 961;
+ /// Leaf-layer statement: the 54 leaf public values (FP-1, I-12) and the app pre-hash.
+ /// T8 (X7): the `step_pv` port of the slice kernel (`sherlock_leaf::bus::port(5)` at the kernel offset 128: 64 + 128 + 16 + 5).
+ pub const STEP_PV_BUS: u16 = 213;
++/// Rows of the kernel CORE trace (`sherlock_leaf::core::HEIGHT`), each sending the step words (T8b).
++pub const STEP_PV_ROWS: u32 = 8;
+ 
+ pub mod lpv {
+     pub const BINDING: usize = 0;
+@@ -1041,7 +1043,9 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+             builder.when_first_row().assert_one(wf.clone());
+             builder.when_transition().assert_zero(n[c.wf].clone());
+             let msg: Vec<AB::Expr> = (0..lpv::LEAF).map(|i| l[c.wk + i].clone()).collect();
+-            PermutationCheckBus::new(STEP_PV_BUS).receive(builder, msg, wf);
++            // T8b: every row of the kernel CORE sends the step words (no CORE public values), so
++            // the statement receives them `STEP_PV_ROWS` times
++            PermutationCheckBus::new(STEP_PV_BUS).receive(builder, msg, wf * k::<AB>(STEP_PV_ROWS));
+             let two16 = k::<AB>(1 << 16);
+             for i in 0..4 {
+                 let cin = if i == 0 { l[c.wk + lpv::STEPS].clone() } else { l[c.wcry + i - 1].clone() };
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 16a1d5a..6fc91e3 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -319,6 +319,8 @@ struct Keys {
+     work: Layer<2>,
+     /// T8b (GP-4): the parent over a MERGE-WORK child (one universal node key).
+     nw: Layer<2>,
++    /// T8b (GP-4): the node over NW (rung 2 of the ladder; a node over NW2 is N3).
++    nw2: Layer<2>,
+     triples: Vec<KeyTriple>,
+     tree: KeyTree,
+     key_root: Dg,
+@@ -358,15 +360,16 @@ fn keys() -> Keys {
+     let v33 = n4.vkc(&n3.vk);
+     drop(n4);
+     let (work, _) = work::work_key(&n3.vk, &mut log);
+-    // T8b (GP-4): the parent over a MERGE-WORK child, and N3 over that parent (a node over the
+-    // parent is N3: the ladder of `t8_gp ladder`)
++    // T8b (GP-4): the parent NW over a MERGE-WORK child, NW2 over NW, and N3 over NW2 (the
++    // ladder of `t8_gp ladder`, MEASURED: rung 3 over MERGE-WORK is N3; rungs 1 and 2 are not)
+     let nw = layer::<2>(&frozen::INTERNAL, &work.vk, Kind::Node, "NW<2> over MERGE-WORK", &mut log);
+-    let nwp = layer::<2>(&frozen::INTERNAL, &nw.vk, Kind::Node, "N3<2> over NW", &mut log);
++    let nw2 = layer::<2>(&frozen::INTERNAL, &nw.vk, Kind::Node, "NW2<2> over NW", &mut log);
++    let nwp = layer::<2>(&frozen::INTERNAL, &nw2.vk, Kind::Node, "N3<2> over NW2", &mut log);
+     let nw_fixed = nwp.vk.pre_hash == n3.vk.pre_hash;
+-    log.push(json!({"key": "N3 over NW", "pre_equals_n3": nw_fixed}));
+-    println!("T7KEY \"N3 over NW\" pre_equals_n3={nw_fixed}");
+-    assert!(nw_fixed, "a node over NW is N3");
+-    let v3w = nwp.vkc(&nw.vk);
++    log.push(json!({"key": "N3 over NW2", "pre_equals_n3": nw_fixed}));
++    println!("T7KEY \"N3 over NW2\" pre_equals_n3={nw_fixed}");
++    assert!(nw_fixed, "a node over NW2 is N3");
++    let v3w = nwp.vkc(&nw2.vk);
+     drop(nwp);
+     let triples: Vec<KeyTriple> = (0..3)
+         .map(|s| KeyTriple {
+@@ -382,11 +385,11 @@ fn keys() -> Keys {
+     let key_root = tree.root();
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+-        node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33, nw.vkc(&work.vk), v3w],
++        node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33, nw.vkc(&work.vk), nw2.vkc(&nw.vk), v3w],
+         // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
+         foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
+-    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, triples, tree, key_root, table, log }
++    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, nw2, triples, tree, key_root, table, log }
+ }
+ 
+ impl Keys {
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index a6ef7df..6e9ecde 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -319,6 +319,8 @@ struct Keys {
+     work: Layer<2>,
+     /// T8b (GP-4): the parent over a MERGE-WORK child (one universal node key).
+     nw: Layer<2>,
++    /// T8b (GP-4): the node over NW (rung 2 of the ladder; a node over NW2 is N3).
++    nw2: Layer<2>,
+     triples: Vec<KeyTriple>,
+     tree: KeyTree,
+     key_root: Dg,
+@@ -358,15 +360,16 @@ fn keys() -> Keys {
+     let v33 = n4.vkc(&n3.vk);
+     drop(n4);
+     let (work, _) = work::work_key(&n3.vk, &mut log);
+-    // T8b (GP-4): the parent over a MERGE-WORK child, and N3 over that parent (a node over the
+-    // parent is N3: the ladder of `t8_gp ladder`)
++    // T8b (GP-4): the parent NW over a MERGE-WORK child, NW2 over NW, and N3 over NW2 (the
++    // ladder of `t8_gp ladder`, MEASURED: rung 3 over MERGE-WORK is N3; rungs 1 and 2 are not)
+     let nw = layer::<2>(&frozen::INTERNAL, &work.vk, Kind::Node, "NW<2> over MERGE-WORK", &mut log);
+-    let nwp = layer::<2>(&frozen::INTERNAL, &nw.vk, Kind::Node, "N3<2> over NW", &mut log);
++    let nw2 = layer::<2>(&frozen::INTERNAL, &nw.vk, Kind::Node, "NW2<2> over NW", &mut log);
++    let nwp = layer::<2>(&frozen::INTERNAL, &nw2.vk, Kind::Node, "N3<2> over NW2", &mut log);
+     let nw_fixed = nwp.vk.pre_hash == n3.vk.pre_hash;
+-    log.push(json!({"key": "N3 over NW", "pre_equals_n3": nw_fixed}));
+-    println!("T7KEY \"N3 over NW\" pre_equals_n3={nw_fixed}");
+-    assert!(nw_fixed, "a node over NW is N3");
+-    let v3w = nwp.vkc(&nw.vk);
++    log.push(json!({"key": "N3 over NW2", "pre_equals_n3": nw_fixed}));
++    println!("T7KEY \"N3 over NW2\" pre_equals_n3={nw_fixed}");
++    assert!(nw_fixed, "a node over NW2 is N3");
++    let v3w = nwp.vkc(&nw2.vk);
+     drop(nwp);
+     let triples: Vec<KeyTriple> = (0..3)
+         .map(|s| KeyTriple {
+@@ -382,11 +385,11 @@ fn keys() -> Keys {
+     let key_root = tree.root();
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+-        node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33, nw.vkc(&work.vk), v3w],
++        node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33, nw.vkc(&work.vk), nw2.vkc(&nw.vk), v3w],
+         // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
+         foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
+-    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, triples, tree, key_root, table, log }
++    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, nw2, triples, tree, key_root, table, log }
+ }
+ 
+ impl Keys {
+@@ -1422,7 +1425,9 @@ fn work_try(
+         Err(e) => return (None, Err(format!("trace generation: {e}"))),
+     };
+     let dev = w.engine.device();
+-    for t in kernel {
++    for (i, t) in kernel.iter().enumerate() {
++        // T8b (GP-4): the CORE step words are columns, not public values
++        let t = if i == 0 { sl::kernel_core_split(t) } else { t.clone() };
+         ctxs.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&t.m)), t.pvs.clone()));
+     }
+     let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
+@@ -1550,20 +1555,35 @@ fn x7(out: &PathBuf) {
+         let (pp, r) = k.nw.prove_try(&wl.vk, std::slice::from_ref(pw), &nwit, None, false);
+         cases.rec("pos_x7_parent_over_merge_work", true, r, "NW (the universal parent over MERGE-WORK) verifies the honest MERGE-WORK proof");
+         if let Some(pp) = &pp {
+-            let (top, r) = k.n3.prove_try(&k.nw.vk, std::slice::from_ref(pp), &Wit::Node { tbl: k.table.clone(), sel: 5 }, None, false);
+-            cases.rec("pos_x7_n3_over_parent", true, r, "N3 over NW: the MERGE-WORK SEG reaches the N3 fixed point (the L input)");
+-            parent_out = json!({"nw": statement(pp), "nw_log_heights": heights(pp), "n3_over_nw": top.as_ref().map(statement)});
+-            let (_, r) = k.n3.prove_try(&k.nw.vk, std::slice::from_ref(pp), &Wit::Node { tbl: k.table.clone(), sel: 3 }, None, true);
+-            cases.rec("x7_n3_over_parent_wrong_row", false, r, "N3 over NW with the N3-over-N3 row as the received child key");
++            let (p2, r) = k.nw2.prove_try(&k.nw.vk, std::slice::from_ref(pp), &Wit::Node { tbl: k.table.clone(), sel: 5 }, None, false);
++            cases.rec("pos_x7_nw2_over_parent", true, r, "NW2 over NW (row 5)");
++            if let Some(p2) = &p2 {
++                let (top, r) = k.n3.prove_try(&k.nw2.vk, std::slice::from_ref(p2), &Wit::Node { tbl: k.table.clone(), sel: 6 }, None, false);
++                cases.rec("pos_x7_n3_over_parent", true, r, "N3 over NW2 (row 6): the MERGE-WORK SEG reaches the N3 fixed point (the L input)");
++                parent_out = json!({"nw": statement(pp), "nw_log_heights": heights(pp), "nw2": statement(p2), "n3_over_nw2": top.as_ref().map(statement)});
++                // the own key row is checked one layer up (T7 key route): a wrong row is refused there
++                let (pb, _) = k.n3.prove_try(&k.nw2.vk, std::slice::from_ref(p2), &Wit::Node { tbl: k.table.clone(), sel: 3 }, None, true);
++                let r = match &pb {
++                    Some(pb) => k.n3.prove_try(&k.n3.vk, std::slice::from_ref(pb), &Wit::Node { tbl: k.table.clone(), sel: 3 }, None, true).1,
++                    None => Ok(()),
++                };
++                cases.rec("x7_n3_over_parent_wrong_row", false, r, "N3 over NW2 with the N3-over-N3 row as its own key commitment, refused by N3 above");
++            }
++            let (pb, _) = k.nw2.prove_try(&k.nw.vk, std::slice::from_ref(pp), &Wit::Node { tbl: k.table.clone(), sel: 3 }, None, true);
++            let r = match &pb {
++                Some(pb) => k.n3.prove_try(&k.nw2.vk, std::slice::from_ref(pb), &Wit::Node { tbl: k.table.clone(), sel: 6 }, None, true).1,
++                None => Ok(()),
++            };
++            cases.rec("x7_nw2_over_parent_wrong_row", false, r, "NW2 over NW with the N3-over-N3 row as its own key commitment, refused by N3 above");
+         }
+         let (_, r) = k.nw.prove_try(&wl.vk, std::slice::from_ref(pw), &nwit, Some(&|v: &mut Vec<F>| v[stmt::npv::POST_D] += F::ONE), true);
+         cases.rec("x7_parent_output_post_forged", false, r, "NW output post_d changed against the MERGE-WORK child");
+         let (pbad, _) = k.nw.prove_try(&wl.vk, std::slice::from_ref(pw), &Wit::Node { tbl: k.table.clone(), sel: 1 }, None, true);
+         let r = match &pbad {
+-            Some(pb) => k.n3.prove_try(&k.nw.vk, std::slice::from_ref(pb), &Wit::Node { tbl: k.table.clone(), sel: 5 }, None, true).1,
++            Some(pb) => k.nw2.prove_try(&k.nw.vk, std::slice::from_ref(pb), &Wit::Node { tbl: k.table.clone(), sel: 5 }, None, true).1,
+             None => Ok(()), // no NW proof: the case fails (a prover error earns no credit)
+         };
+-        cases.rec("x7_parent_wrong_own_row", false, r, "NW with the N3-over-N2 row as its own key commitment, refused by N3 above");
++        cases.rec("x7_parent_wrong_own_row", false, r, "NW with the N3-over-N2 row as its own key commitment, refused by NW2 above");
+     }
+     if let Some(pfv) = &pfv {
+         let (_, r) = k.nw.prove_try(&wl.vk, std::slice::from_ref(pfv), &nwit, None, true);
+-- 
+2.56.0
+

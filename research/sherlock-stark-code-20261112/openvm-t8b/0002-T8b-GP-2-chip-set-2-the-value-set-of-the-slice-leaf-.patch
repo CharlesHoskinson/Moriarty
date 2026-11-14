@@ -1,0 +1,869 @@
+From 5f15e079f29078ab4f2cd6d415a30bcca7ea4cbe Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 05:24:41 -0700
+Subject: [PATCH 2/4] T8b GP-2: chip set 2 (the value set) of the slice leaf:
+ CORE with XAdtEvalConstructNullary and KAdminPublishValue (three ROM reads,
+ the constant vd as the Halted payload), a witnessed input val_d in INIT,
+ DecVAir, rom::trace_h; example value_set (producer and consumer real proofs,
+ four forged witnesses refused)
+
+---
+ crates/sherlock-leaf/examples/value_set.rs |  77 ++++++++
+ crates/sherlock-leaf/src/core.rs           | 183 +++++++++++++++++--
+ crates/sherlock-leaf/src/dec.rs            |  65 ++++++-
+ crates/sherlock-leaf/src/leaf.rs           | 203 ++++++++++++++++++++-
+ crates/sherlock-leaf/src/rom.rs            |  11 +-
+ 5 files changed, 506 insertions(+), 33 deletions(-)
+ create mode 100644 crates/sherlock-leaf/examples/value_set.rs
+
+diff --git a/crates/sherlock-leaf/examples/value_set.rs b/crates/sherlock-leaf/examples/value_set.rs
+new file mode 100644
+index 0000000..1ecdc00
+--- /dev/null
++++ b/crates/sherlock-leaf/examples/value_set.rs
+@@ -0,0 +1,77 @@
++//! T8b (GP-2): chip set 2, the value set, at the app set. The Halted slice run `unitctor`
++//! (`type U { A(); } entry construct U::A();`) as the producer, and the consumer (type `V`) whose
++//! input value digest is the producer's Halted `vd`. Real proofs with the stock verifier; forged
++//! witnesses are refused (debug checker and the stock verifier on a mutant-prover proof).
++//!
++//! Usage: `value_set OUT_DIR` (with `T6_SLICE_JSON` at the T8b `slice_v1.json`).
++
++use openvm_stark_backend::p3_field::PrimeCharacteristicRing;
++use serde_json::{json, Value};
++use sherlock_leaf::{
++    core::{self, C_VR3, C_VVAL, OP, OT},
++    enc::{val_none, F},
++    harness::{self as sh, Tr},
++    leaf::{self as sl, ProgV},
++};
++
++fn main() {
++    let out = std::path::PathBuf::from(std::env::args().nth(1).expect("OUT_DIR"));
++    std::fs::create_dir_all(&out).unwrap();
++    let eng = sh::engine();
++    let k = sh::key(&eng, sl::airs_set(2, 0)).expect("chip set 2 key (G1 against the app set)");
++    let k0 = sh::key(&eng, sl::airs_set(0, 0)).expect("chip set 0 key");
++    println!("T8BV key chip set 2: {}", k.shape);
++    let kr = [F::ZERO; 8];
++    let pp = sl::program_v(kr, ProgV::P, val_none());
++    let vd = sl::halted_vd(&pp);
++    let pc = sl::program_v(kr, ProgV::C, vd);
++    assert_ne!(pp.adm.prog_d(), pc.adm.prog_d(), "two programs");
++    let mut cases: Vec<Value> = vec![];
++    let mut all = true;
++    for (name, p) in [("producer", &pp), ("consumer", &pc)] {
++        let shs = sl::shards(p);
++        assert_eq!(shs.len(), 1);
++        let tr = sl::traces_set(p, &shs[0], &sl::Build::default(), 2);
++        let r = sh::positive(&eng, &k, &format!("pos_value_{name}"), &tr);
++        all &= r["pass"].as_bool().unwrap();
++        println!("T8BV {} pass={} prove_s={}", r["case"], r["pass"], r["prove_seconds"]);
++        cases.push(r);
++    }
++    // forged witnesses on the producer's shard (each a one-cell change of the honest trace)
++    let shs = sl::shards(&pp);
++    let honest = sl::traces_set(&pp, &shs[0], &sl::Build::default(), 2);
++    let w = core::WIDTH_V;
++    let forge = |f: &dyn Fn(&mut Vec<Tr>)| {
++        let mut t = honest.clone();
++        f(&mut t);
++        t
++    };
++    let mutants: Vec<(&str, Vec<Tr>)> = vec![
++        // the published payload is not the constant's vd (row 2 = post state of the publication)
++        ("value_payload_forged", forge(&|t| t[0].m.values[2 * w + core::C_ST + OP] += F::ONE)),
++        // Halted relabelled as Rejected on the post state
++        ("value_outcome_tag_forged", forge(&|t| t[0].m.values[2 * w + core::C_ST + OT] = F::from_u32(2))),
++        // the constant row vd column changed (ROM lookup and the payload rule)
++        ("value_const_row_vd_forged", forge(&|t| {
++            for r in 0..core::HEIGHT {
++                t[0].m.values[r * w + C_VR3 + 22] += F::ONE;
++            }
++        })),
++        // the consumer's genesis input value changed in the INIT column only (input_d mismatch)
++        ("value_input_vd_forged", forge(&|t| t[0].m.values[C_VVAL] += F::ONE)),
++    ];
++    for (name, tr) in mutants {
++        let d = sh::debug(&eng, &k, &tr);
++        let (p, v, _) = sh::prove(&eng, &k, &tr, true);
++        let refused = d.is_err() && (p.is_err() || v.is_err());
++        all &= refused;
++        println!("T8BV {name} refused={refused} debug={:?}", d.as_ref().err().map(|e| e.chars().take(160).collect::<String>()));
++        cases.push(json!({"case": name, "kind": "mutant", "pass": refused, "debug": format!("{d:?}").chars().take(300).collect::<String>(),
++            "stock_verifier": format!("{v:?}").chars().take(200).collect::<String>()}));
++    }
++    let rec = json!({"all_pass": all, "key_set2": k.shape, "key_set0_pre_hash": format!("{:?}", k0.vk.pre_hash),
++        "vd": vd.iter().map(|x| x.to_string()).collect::<Vec<_>>(), "cases": cases});
++    std::fs::write(out.join("value_set.json"), serde_json::to_string_pretty(&rec).unwrap()).unwrap();
++    println!("T8BV all_pass={all}");
++    assert!(all);
++}
+diff --git a/crates/sherlock-leaf/src/core.rs b/crates/sherlock-leaf/src/core.rs
+index 53d00ed..9c7a8ef 100644
+--- a/crates/sherlock-leaf/src/core.rs
++++ b/crates/sherlock-leaf/src/core.rs
+@@ -18,7 +18,7 @@ use openvm_stark_backend::{
+ 
+ use crate::{
+     bus::{self, seq},
+-    dec::{self, RULES, R_ABSENT, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH},
++    dec::{self, R_ABSENT, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH},
+     enc::*,
+     sponge::Call,
+ };
+@@ -104,6 +104,26 @@ pub const C_SALT: usize = C_IMG + D;
+ pub const C_FUEL: usize = C_SALT + D;
+ pub const C_SL: usize = C_FUEL + 8;
+ pub const WIDTH: usize = C_SL + 4;
++// T8b (GP-2, chip set 2, the value set): columns after `WIDTH`, only in [`CoreAir::value`].
++/// The `constructors` row the nullary construct reads (FP-9.2 table 11, 20 words).
++pub const C_VR2: usize = WIDTH;
++/// The `constants` row the nullary construct and the value publication read (table 19, 30 words:
++/// kind, marker_free, p1 (8), p2, p3, p4 (4 each), vd (8)).
++pub const C_VR3: usize = C_VR2 + 20;
++/// The constant row index (`ridx`, 4 words).
++pub const C_VCIDX: usize = C_VR3 + 30;
++/// The input value digest `val_d` of the `input_d` preimage (INIT, AD-17: the input enters by
++/// digest; chip sets 0 and 1 keep the constant `VAL_NONE`).
++pub const C_VVAL: usize = C_VCIDX + 4;
++pub const WIDTH_V: usize = C_VVAL + D;
++
++/// The value-set witness of a shard (T8b): the two ROM rows and the constant index.
++#[derive(Clone, Debug)]
++pub struct VExtra {
++    pub ctor: [F; 20],
++    pub cst: [F; 30],
++    pub cidx: [F; 4],
++}
+ 
+ /// Body word that the weakened BOUNDARY control leaves out (`remaining_work` limb 0).
+ pub fn w_omit(l: &Layout) -> usize {
+@@ -191,13 +211,20 @@ pub struct CoreAir {
+     /// [`FrameAir`] (each state row goes there over `core_frame`), and the public values go to
+     /// the node statement over `step_pv`. The constraints are the same functions.
+     pub split: bool,
++    /// T8b: chip set 2 (the value set): the rules `XAdtEvalConstructNullary` and
++    /// `KAdminPublishValue` in place of the five slice rules, and a witnessed input `val_d`.
++    pub vset: bool,
+ }
+ 
+ impl CoreAir {
+     pub fn new(weak: u64) -> Self {
+         let l = Layout::new();
+         let o = Off::new(&l);
+-        Self { weak, l, o, split: false }
++        Self { weak, l, o, split: false, vset: false }
++    }
++    /// T8b: the CORE of chip set 2 (the value set).
++    pub fn value(weak: u64) -> Self {
++        Self { vset: true, ..Self::new(weak) }
+     }
+     /// The CORE half of the split (T8, X7).
+     pub fn split(weak: u64) -> Self {
+@@ -210,7 +237,11 @@ impl CoreAir {
+ 
+ impl<T> BaseAir<T> for CoreAir {
+     fn width(&self) -> usize {
+-        WIDTH
++        if self.vset {
++            WIDTH_V
++        } else {
++            WIDTH
++        }
+     }
+ }
+ impl<T> BaseAirWithPublicValues<T> for CoreAir {
+@@ -275,8 +306,12 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+         let mut key = zero.clone();
+         for r in 0..5 {
+             builder.assert_bool(sel(r));
+-            ssum += sel(r);
+-            key += sel(r) * ce::<AB>(RULES[r].1);
++            if r < dec::n_rules(self.vset) {
++                ssum += sel(r);
++                key += sel(r) * ce::<AB>(dec::rule(self.vset, r).0);
++            } else {
++                builder.assert_zero(sel(r));
++            }
+         }
+         if self.on(weak::DEC_DISPATCH) {
+             builder.assert_eq(ssum, en.clone());
+@@ -324,8 +359,90 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+             m.truncate(pv::N);
+             bus::perm(bus::PORT_STEP_PV).send(builder, m, b0.clone());
+         } else {
+-            frame_rule::<AB>(builder, o, &st, &nst, &sel, slot.clone());
++            frame_rule::<AB>(builder, o, &st, &nst, &sel, slot.clone(), self.vset);
+         }
++        if self.vset {
++            // ---- T8b: the value-set rules (chip set 2), gated by their selector
++            use dec::{R_CNULL, R_PUBV};
++            let rom = |k: usize| c(C_ROM + k);
++            let r2 = |k: usize| c(C_VR2 + k);
++            let r3 = |k: usize| c(C_VR3 + k);
++            let cx = |k: usize| c(C_VCIDX + k);
++            let hl0 = o.hlp_lane[0];
++            let ctl2 = lay.at("ctl.2");
++            let fc = lay.at("frm.count");
++            let g = |b: &mut AB, r: usize, x: AB::Expr| b.when_transition().assert_zero(sel(r) * x);
++            // XAdtEvalConstructNullary (T5 3.4 row 119; `owner_adt_runtime.rs`
++            // `impl_nullary_construct`): Running, no helper, no result, control Eval{e}; ROM
++            // expressions[e] is Construct{type, ctor, fields.len = 0, constant = Some(cid)};
++            // constructors[ctor] is owned by `type` with arity 0; constants[cid] is the marker-free
++            // Constructor{type, ctor, fields.len = 0}. Effect: control Return{Const(cid)}.
++            g(builder, R_CNULL, st(OT));
++            g(builder, R_CNULL, st(hl0));
++            g(builder, R_CNULL, st(res[0]));
++            g(builder, R_CNULL, st(o.ctl));
++            g(builder, R_CNULL, rom(0) - ce::<AB>(8));
++            g(builder, R_CNULL, rom(17) - one.clone());
++            g(builder, R_CNULL, r3(0) - ce::<AB>(6));
++            g(builder, R_CNULL, r3(1) - one.clone());
++            for i in 0..4 {
++                g(builder, R_CNULL, rom(13 + i));
++                if i > 0 {
++                    g(builder, R_CNULL, rom(17 + i));
++                }
++                g(builder, R_CNULL, r2(i) - rom(1 + i));
++                g(builder, R_CNULL, r2(16 + i));
++                g(builder, R_CNULL, r3(2 + i) - rom(1 + i));
++                g(builder, R_CNULL, r3(6 + i));
++                g(builder, R_CNULL, r3(10 + i) - rom(5 + i));
++                g(builder, R_CNULL, r3(18 + i));
++                g(builder, R_CNULL, cx(i) - rom(21 + i));
++            }
++            for &w in &ctl {
++                let v = if w == o.ctl {
++                    one.clone()
++                } else if (ctl2..ctl2 + 4).contains(&w) {
++                    cx(w - ctl2)
++                } else {
++                    zero.clone()
++                };
++                g(builder, R_CNULL, nst(w) - v);
++            }
++            // KAdminPublishValue (T5 3.4 row 2): Running, no helper, no result, control
++            // Return{Const(cid)}, no frame. Effect: Halted with the payload `vd` of
++            // constants[cid] (VALUE DIGEST: the constant `vd` of the ROM row, under the PROG
++            // premise).
++            g(builder, R_PUBV, st(OT));
++            g(builder, R_PUBV, st(hl0));
++            g(builder, R_PUBV, st(res[0]));
++            g(builder, R_PUBV, st(o.ctl) - one.clone());
++            g(builder, R_PUBV, st(ctl2 + 4));
++            for i in 0..4 {
++                g(builder, R_PUBV, st(o.ctl1 + i));
++                g(builder, R_PUBV, st(fc + i));
++                g(builder, R_PUBV, cx(i) - st(ctl2 + i));
++            }
++            g(builder, R_PUBV, nst(OT) - one.clone());
++            for i in 0..D {
++                g(builder, R_PUBV, nst(OP + i) - r3(22 + i));
++            }
++            // ROM reads: expressions[ctl.1], constructors[ctor], constants[cid].
++            let mut rm = vec![zero.clone()];
++            rm.extend((0..4).map(|i| st(o.ctl1 + i)));
++            rm.extend((0..ROMW).map(rom));
++            rm.extend((ROMW..W_ROM).map(|_| zero.clone()));
++            bus::lookup(bus::ROM).lookup_key(builder, rm, sel(R_CNULL));
++            let mut rm = vec![ce::<AB>(11)];
++            rm.extend((0..4).map(|i| rom(5 + i)));
++            rm.extend((0..20).map(r2));
++            rm.extend((20..W_ROM).map(|_| zero.clone()));
++            bus::lookup(bus::ROM).lookup_key(builder, rm, sel(R_CNULL));
++            let mut rm = vec![ce::<AB>(19)];
++            rm.extend((0..4).map(cx));
++            rm.extend((0..30).map(r3));
++            rm.extend((30..W_ROM).map(|_| zero.clone()));
++            bus::lookup(bus::ROM).lookup_key(builder, rm, sel(R_CNULL) + sel(R_PUBV));
++        } else {
+ 
+         // ---- the subset rules (guards and effects), gated by their selector
+         let rom = |k: usize| c(C_ROM + k);
+@@ -406,6 +523,7 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+         rm.extend((0..ROMW).map(rom));
+         rm.extend((ROMW..W_ROM).map(|_| zero.clone()));
+         bus::lookup(bus::ROM).lookup_key(builder, rm, sel(R_ENTRY) + sel(R_ABSENT));
++        }
+ 
+         // ---- charges: remaining work -fuel, consumed +fuel, helper work +hw, cursor +rc
+         let p16 = ce::<AB>(1 << 16);
+@@ -524,7 +642,11 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+         let vn = val_none();
+         let mut iw = vec![ce::<AB>(SHK_IN)];
+         iw.extend((0..D).map(|k| c(C_SALT + k)));
+-        iw.extend((0..D).map(|k| AB::Expr::from(vn[k])));
++        if self.vset {
++            iw.extend((0..D).map(|k| c(C_VVAL + k)));
++        } else {
++            iw.extend((0..D).map(|k| AB::Expr::from(vn[k])));
++        }
+         iw.extend((0..12).map(|k| if k < 8 { c(C_FUEL + k) } else { c(C_SL + k - 8) }));
+         send_blocks::<AB>(builder, ce::<AB>(seq::INPUT), iw, gi.clone());
+         let mut m = vec![ce::<AB>(seq::INPUT)];
+@@ -601,6 +723,7 @@ pub fn frame_rule<AB: AirBuilder>(
+     nst: &dyn Fn(usize) -> AB::Expr,
+     sel: &dyn Fn(usize) -> AB::Expr,
+     slot: AB::Expr,
++    vset: bool,
+ ) {
+     let ctr = o.counters();
+     let hlp: Vec<usize> = o.hlp.clone().collect();
+@@ -609,6 +732,16 @@ pub fn frame_rule<AB: AirBuilder>(
+     let h11 = o.hlp_lane[11];
+     let writes = |w: usize| -> Vec<usize> {
+         let mut v = vec![];
++        if vset {
++            // T8b: the construct writes the control, the publication the outcome.
++            if ctl.contains(&w) {
++                v.push(dec::R_CNULL);
++            }
++            if w == OT || (OP..OP + D).contains(&w) {
++                v.push(dec::R_PUBV);
++            }
++            return v;
++        }
+         if hlp.contains(&w) {
+             v.extend([R_ENTRY, R_FAILURE]);
+             if w == h11 {
+@@ -684,7 +817,7 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder> Air<AB> for FrameAir {
+         let st = |w: usize| c(HEIGHT + w);
+         let nst = |w: usize| nx(HEIGHT + w);
+         let sel = |r: usize| c(HEIGHT + SW + r);
+-        frame_rule::<AB>(builder, &self.o, &st, &nst, &sel, slot);
++        frame_rule::<AB>(builder, &self.o, &st, &nst, &sel, slot, false);
+         let row: Vec<AB::Expr> = (0..FRAME_W).map(c).collect();
+         for (k, ch) in row.chunks(bus::FRAME_CHUNK).enumerate() {
+             let mut m = vec![AB::Expr::from_usize(k)];
+@@ -735,6 +868,8 @@ pub struct ShardIn {
+     pub adm: Admission,
+     pub rom: [F; ROMW],
+     pub nrom: u32,
++    /// T8b: the value-set witness (`Some` for a chip set 2 shard).
++    pub vx: Option<VExtra>,
+ }
+ 
+ /// Mutation knobs of the witness generator (SG-3).
+@@ -774,7 +909,9 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+     let lay = Layout::new();
+     let o = Off::new(&lay);
+     assert_eq!(sh.states.len(), S + 1);
+-    let mut v = vec![F::ZERO; HEIGHT * WIDTH];
++    let vset = sh.vx.is_some();
++    let wd = if vset { WIDTH_V } else { WIDTH };
++    let mut v = vec![F::ZERO; HEIGHT * wd];
+     let mut range: Vec<(u32, usize)> = vec![];
+     let mut dec_counts = [0u32; dec::HEIGHT];
+     let mut calls = vec![];
+@@ -794,7 +931,7 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+     let hsum: u64 = (0..4).map(|i| (sh.h_pre >> (16 * i)) & 0xffff).sum();
+     let hinv = if hsum == 0 { F::ZERO } else { F::from_u64(hsum).inverse() };
+     for r in 0..HEIGHT {
+-        let row = &mut v[r * WIDTH..(r + 1) * WIDTH];
++        let row = &mut v[r * wd..(r + 1) * wd];
+         row[C_B + r] = F::ONE;
+         row[C_G] = F::from_bool(genesis);
+         row[C_HINV] = hinv;
+@@ -824,15 +961,15 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+                 }
+             }
+             let (cls, fl) = match sh.sel[r] {
+-                Some(rule) => (RULES[rule].1, RULES[rule].2),
++                Some(rule) => dec::rule(vset, rule),
+                 None => (0, [0; 3]),
+             };
+             let cls = match op.key {
+                 Some((j, k)) if j == r => k,
+                 _ => cls,
+             };
+-            let trow = (0..dec::HEIGHT).find(|&j| dec::row(j).0 == cls).unwrap_or(0);
+-            let fl = if op.key.map(|x| x.0) == Some(r) { dec::row(trow).1 } else { fl };
++            let trow = (0..dec::HEIGHT).find(|&j| dec::row_of(vset, j).0 == cls).unwrap_or(0);
++            let fl = if op.key.map(|x| x.0) == Some(r) { dec::row_of(vset, trow).1 } else { fl };
+             row[C_KEY] = F::from_u32(cls);
+             for k in 0..dec::NF {
+                 row[C_FL + k] = F::from_u32(fl[k]);
+@@ -843,6 +980,11 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+                 cnt += 1;
+             }
+             row[C_ROM..C_ROM + ROMW].copy_from_slice(&sh.rom);
++            if let Some(x) = &sh.vx {
++                row[C_VR2..C_VR2 + 20].copy_from_slice(&x.ctor);
++                row[C_VR3..C_VR3 + 30].copy_from_slice(&x.cst);
++                row[C_VCIDX..C_VCIDX + 4].copy_from_slice(&x.cidx);
++            }
+             // charge carries
+             let (a, b) = (&sh.states[r].body, &sh.states[r + 1].body);
+             let val = |x: &[F], at: usize| -> u128 { (0..8).map(|i| (u(x[at + i]) as u128) << (16 * i)).sum() };
+@@ -871,11 +1013,11 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+     // steps column: running sum of enable from row 0
+     let mut run = 0u32;
+     for r in 0..HEIGHT {
+-        run += u(v[r * WIDTH + C_EN]);
+-        v[r * WIDTH + C_CNT] = F::from_u32(run);
++        run += u(v[r * wd + C_EN]);
++        v[r * wd + C_CNT] = F::from_u32(run);
+     }
+     for r in 0..HEIGHT {
+-        v[r * WIDTH + C_RIDS..r * WIDTH + C_RIDS + S].copy_from_slice(&rids);
++        v[r * wd + C_RIDS..r * wd + C_RIDS + S].copy_from_slice(&rids);
+     }
+     // rules_d
+     let rules_d = p2(SHK_RULES, &rids);
+@@ -901,7 +1043,7 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+         let hw = header_words(&s.hdr, &bd);
+         let sd = p2(SHK_SD2, &hw);
+         calls.push(Call { seq: sh_, tag: SHK_SD2, words: hw });
+-        let row = &mut v[r * WIDTH..(r + 1) * WIDTH];
++        let row = &mut v[r * wd..(r + 1) * wd];
+         row[C_BODY_D..C_BODY_D + D].copy_from_slice(&bd0);
+         row[C_HBD..C_HBD + D].copy_from_slice(&bd);
+         row[C_STATE_D..C_STATE_D + D].copy_from_slice(&sd);
+@@ -914,7 +1056,7 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+     // INIT
+     if genesis {
+         let a = &sh.adm;
+-        let row = &mut v[0..WIDTH];
++        let row = &mut v[0..wd];
+         row[C_GI] = F::ONE;
+         row[C_LV] = F::from_u32(a.layout_version);
+         row[C_PID] = F::from_u32(a.profile_id);
+@@ -929,6 +1071,9 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+         let fw = a.input_words();
+         row[C_FUEL..C_FUEL + 8].copy_from_slice(&fw[16..24]);
+         row[C_SL..C_SL + 4].copy_from_slice(&fw[24..28]);
++        if vset {
++            row[C_VVAL..C_VVAL + D].copy_from_slice(&a.val_d);
++        }
+         calls.push(Call { seq: seq::IMAGE, tag: SHK_IMAGE, words: a.image_words() });
+         calls.push(Call { seq: seq::PROG, tag: DOM_PROG, words: a.prog_words() });
+         calls.push(Call { seq: seq::INPUT, tag: SHK_IN, words: a.input_words() });
+@@ -957,7 +1102,7 @@ pub fn trace(sh: &ShardIn, op: &Opts) -> CoreOut {
+     pvs[pv::H_PRE..pv::H_PRE + 4].copy_from_slice(&limbs_u128(sh.h_pre as u128, 4));
+     pvs[pv::STEPS] = F::from_u32(steps);
+     pvs[pv::LOG_D..pv::LOG_D + D].copy_from_slice(&d_empty());
+-    CoreOut { m: RowMajorMatrix::new(v, WIDTH), pvs, calls, range, dec: dec_counts }
++    CoreOut { m: RowMajorMatrix::new(v, wd), pvs, calls, range, dec: dec_counts }
+ }
+ 
+ #[allow(dead_code)]
+diff --git a/crates/sherlock-leaf/src/dec.rs b/crates/sherlock-leaf/src/dec.rs
+index 5142a61..2ce4c77 100644
+--- a/crates/sherlock-leaf/src/dec.rs
++++ b/crates/sherlock-leaf/src/dec.rs
+@@ -33,6 +33,32 @@ pub const R_FAILURE: usize = 2;
+ pub const R_ABSENT: usize = 3;
+ pub const R_PUBLISH: usize = 4;
+ pub const NF: usize = 3;
++/// T8b (GP-2, the Halted slice run `unitctor`): the rules of chip set 2 (the value set) in CORE
++/// selector order, with the T5 3.4 ordinals and the charges read from the reference run
++/// (`XAdtEvalConstructNullary`: remaining work -1, consumed +1, cursor +1; `KAdminPublishValue`:
++/// no charge).
++pub const RULES_V: [(&str, u32, [u32; 3]); 2] =
++    [("XAdtEvalConstructNullary", 119, [1, 0, 1]), ("KAdminPublishValue", 2, [0, 0, 0])];
++pub const R_CNULL: usize = 0;
++pub const R_PUBV: usize = 1;
++
++/// The rule table of a chip set: (class, flags) of selector `r`.
++pub fn rule(vset: bool, r: usize) -> (u32, [u32; 3]) {
++    if vset {
++        (RULES_V[r].1, RULES_V[r].2)
++    } else {
++        (RULES[r].1, RULES[r].2)
++    }
++}
++/// The number of rules of a chip set.
++pub fn n_rules(vset: bool) -> usize {
++    if vset {
++        RULES_V.len()
++    } else {
++        RULES.len()
++    }
++}
++
+ /// Message words: key, lane, microplan, write set, flags.
+ pub const MSG: usize = 4 + NF;
+ /// Table height: idle + 5 rules + 2 padding rows (off the bus).
+@@ -40,10 +66,15 @@ pub const HEIGHT: usize = 8;
+ 
+ /// Row `j` of the table: (class, flags); row 0 is idle.
+ pub fn row(j: usize) -> (u32, [u32; 3]) {
+-    match j {
+-        0 => (0, [0; 3]),
+-        1..=5 => (RULES[j - 1].1, RULES[j - 1].2),
+-        _ => (0, [0; 3]),
++    row_of(false, j)
++}
++
++/// Row `j` of the table of a chip set (T8b: the value set has rows 0 to 2 and padding).
++pub fn row_of(vset: bool, j: usize) -> (u32, [u32; 3]) {
++    if j == 0 || j > n_rules(vset) {
++        (0, [0; 3])
++    } else {
++        rule(vset, j - 1)
+     }
+ }
+ 
+@@ -59,6 +90,9 @@ pub const WIDTH: usize = HEIGHT + 1;
+ 
+ pub struct DecAir;
+ 
++/// T8b: the DEC table of chip set 2 (the value set), the same AIR over [`row_of`] `(true, j)`.
++pub struct DecVAir;
++
+ impl<T> BaseAir<T> for DecAir {
+     fn width(&self) -> usize {
+         WIDTH
+@@ -66,9 +100,27 @@ impl<T> BaseAir<T> for DecAir {
+ }
+ impl<T> BaseAirWithPublicValues<T> for DecAir {}
+ impl<T> PartitionedBaseAir<T> for DecAir {}
++impl<T> BaseAir<T> for DecVAir {
++    fn width(&self) -> usize {
++        WIDTH
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for DecVAir {}
++impl<T> PartitionedBaseAir<T> for DecVAir {}
+ 
+ impl<AB: AirBuilder<F = F> + InteractionBuilder> Air<AB> for DecAir {
+     fn eval(&self, builder: &mut AB) {
++        eval_table(builder, false)
++    }
++}
++impl<AB: AirBuilder<F = F> + InteractionBuilder> Air<AB> for DecVAir {
++    fn eval(&self, builder: &mut AB) {
++        eval_table(builder, true)
++    }
++}
++
++fn eval_table<AB: AirBuilder<F = F> + InteractionBuilder>(builder: &mut AB, vset: bool) {
++    {
+         let main = builder.main();
+         let (lr, nr) = (main.row_slice(0).unwrap(), main.row_slice(1).unwrap());
+         let l: &[AB::Var] = (*lr).borrow();
+@@ -85,11 +137,12 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder> Air<AB> for DecAir {
+             builder.when_transition().assert_eq(n[C_E + j + 1].into(), e(j));
+         }
+         // Padding rows are off the bus.
+-        builder.assert_zero((e(6) + e(7)) * l[C_MULT].into());
++        let pad = if vset { e(3) + e(4) + e(5) + e(6) + e(7) } else { e(6) + e(7) };
++        builder.assert_zero(pad * l[C_MULT].into());
+         let m: Vec<AB::Expr> = (0..MSG)
+             .map(|k| {
+                 (0..HEIGHT).fold(AB::Expr::ZERO, |a, j| {
+-                    let (c, f) = row(j);
++                    let (c, f) = row_of(vset, j);
+                     a + e(j) * AB::Expr::from_u32(msg(c, f)[k])
+                 })
+             })
+diff --git a/crates/sherlock-leaf/src/leaf.rs b/crates/sherlock-leaf/src/leaf.rs
+index 0bfb338..589ee7f 100644
+--- a/crates/sherlock-leaf/src/leaf.rs
++++ b/crates/sherlock-leaf/src/leaf.rs
+@@ -14,8 +14,8 @@ use serde_json::Value;
+ 
+ use crate::{
+     bus,
+-    core::{self, CoreAir, Opts, ShardIn, ROMW, S},
+-    dec::{self, DecAir, R_ABSENT, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH},
++    core::{self, CoreAir, Opts, ShardIn, VExtra, ROMW, S},
++    dec::{self, DecAir, DecVAir, R_ABSENT, R_CNULL, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH, R_PUBV},
+     enc::*,
+     harness::{Tr, SC},
+     mem::{self, MemAir, Window},
+@@ -98,6 +98,9 @@ pub fn slice_plan_d() -> Digest {
+ /// T7 chip set 1 (PICK): the slice AIRs plus [`crate::ext::ExtAir`], a stand-in for a chip-set
+ /// extension (FIELD-EMU in the Compact menu). A shard of chip set 1 proves the same steps.
+ pub fn airs_set(set: u32, weak: u64) -> Vec<AirRef<SC>> {
++    if set == 2 {
++        return airs_value(weak);
++    }
+     let mut v = airs(weak);
+     if set == 1 {
+         v.push(Arc::new(crate::ext::ExtAir));
+@@ -157,6 +160,9 @@ pub fn traces_kernel(p: &Program, sh: &ShardIn, b: &Build) -> Vec<Tr> {
+ 
+ /// The traces of one shard under chip set `set`.
+ pub fn traces_set(p: &Program, sh: &ShardIn, b: &Build, set: u32) -> Vec<Tr> {
++    if set == 2 {
++        return traces_value(p, sh, b);
++    }
+     let mut v = traces(p, sh, b);
+     if set == 1 {
+         v.push(Tr::new(crate::ext::trace()));
+@@ -189,6 +195,10 @@ pub fn rom_rows(run: &Value) -> Vec<RomRow> {
+         (9, vec![U64, Bit, U64, U64, U64, U64, U64]),
+         (11, vec![U64, U64, U64, U64, U64]),
+         (12, vec![U64, U64]),
++        // T8b (`unitctor`): decl counts, constants (FP-9.2 rows of T5 2.2)
++        (13, vec![U64]),
++        (14, vec![U64]),
++        (19, vec![Tag(3), Bit, U128, U64, U64, U64]),
+     ]);
+     let mut out = vec![];
+     for (k, rows) in run["rom_rows"].as_object().unwrap() {
+@@ -196,7 +206,12 @@ pub fn rom_rows(run: &Value) -> Vec<RomRow> {
+         for (i, row) in rows.as_array().unwrap().iter().enumerate() {
+             let lanes: Vec<u128> = row.as_array().unwrap().iter().map(num).collect();
+             let mut w: Vec<F> = vec![];
+-            if tbl == 21 {
++            if tbl == 15 {
++                // PICK (FP-9.5 decl_d not built): decl_d = P2(DOM_DECL, len: u32, name bytes).
++                let mut x = limbs_u128(lanes.len() as u128, 2);
++                x.extend(lanes.iter().map(|&b| F::from_u64(b as u64)));
++                w.extend(p2(48, &x));
++            } else if tbl == 21 {
+                 // name_d = P2(DOM_NAME, len: u32, bytes) (T5 C2-3), one byte per word.
+                 let mut x = limbs_u128(lanes.len() as u128, 2);
+                 x.extend(lanes.iter().map(|&b| F::from_u64(b as u64)));
+@@ -211,6 +226,11 @@ pub fn rom_rows(run: &Value) -> Vec<RomRow> {
+                     // PICK (AD-14 normal form waits on T5 5.5): builtin ty_d = P2(DOM_TY, row).
+                     w.extend(p2(45, &[F::from_usize(i)]));
+                 }
++                if tbl == 19 {
++                    // T8b: the constant's `vd` (VALUE DIGEST, ENC vd row), a constructor only.
++                    assert_eq!(lanes[0], 6, "slice constants: Constructor rows only");
++                    w.extend(const_vd(run, &lanes));
++                }
+             }
+             assert!(w.len() <= W_ROM);
+             let mut rec = [F::ZERO; W_ROM];
+@@ -221,6 +241,22 @@ pub fn rom_rows(run: &Value) -> Vec<RomRow> {
+     out
+ }
+ 
++/// T8b: `vd` of a constructor constant row `[6, marker_free, type, ctor, fields start, len]`
++/// (ENC `vd` row, ARCHITECTURE 1.11): `P2(SHK_VALUE_V2, 2, form 6, m: u32, ty_d, c: u32, acc_m)`,
++/// with `ty_d` of the type row (the slice PICK `P2(DOM_TY, row)`), `c` the constructor's
++/// `source_order` and, for `m = 0`, `acc_0` the zero digest.
++pub fn const_vd(run: &Value, lanes: &[u128]) -> Digest {
++    let (ty, ctor, m) = (lanes[2] as usize, lanes[3] as usize, lanes[5]);
++    assert_eq!(m, 0, "slice: nullary constructor constants only");
++    let crow: Vec<u128> = run["rom_rows"]["11"][ctor].as_array().unwrap().iter().map(num).collect();
++    let mut x = vec![F::from_u32(2), F::from_u32(6)];
++    x.extend(limbs_u128(m, 2));
++    x.extend(p2(45, &[F::from_usize(ty)]));
++    x.extend(limbs_u128(crow[2], 2));
++    x.extend([F::ZERO; D]);
++    p2(SHK_VALUE_V2, &x)
++}
++
+ /// PICKs of the slice admission: versions 1, a test-only seeded salt `[1..8]`, `plan_d` of an
+ /// empty plan, `key_root` given by the caller (a stand-in before V.10).
+ pub fn admission(run: &Value, prog_root: Digest, key_root: Digest) -> Admission {
+@@ -308,6 +344,9 @@ pub struct Program {
+     pub adm: Admission,
+     pub states: Vec<State>,
+     pub rules: Vec<usize>,
++    /// T8b: the chip set of every shard (0 for the `entry x;` programs, 2 for the value set).
++    pub set: u32,
++    pub vx: Option<VExtra>,
+ }
+ 
+ pub fn program(key_root: Digest) -> Program {
+@@ -349,7 +388,7 @@ pub fn program_of(key_root: Digest, which: Prog) -> Program {
+     let mut states: Vec<State> = steps.iter().map(|s| state_of(&s["lanes_before"], &adm)).collect();
+     states.push(state_of(&steps.last().unwrap()["lanes_after"], &adm));
+     let rules = steps.iter().map(|s| rule_of(s["rule"].as_str().unwrap())).collect();
+-    Program { rom, adm, states, rules }
++    Program { rom, adm, states, rules, set: 0, vx: None }
+ }
+ 
+ /// The shards of the run at S slots each (the last one padded with disabled slots).
+@@ -381,7 +420,8 @@ pub fn shards_cut(p: &Program, sizes: &[usize]) -> Vec<ShardIn> {
+             sel.push(None);
+             states.push(states.last().unwrap().clone());
+         }
+-        out.push(ShardIn { states, sel, h_pre: i as u64, adm: p.adm.clone(), rom: rr, nrom: 1 });
++        let nrom = if p.vx.is_some() { 3 } else { 1 };
++        out.push(ShardIn { states, sel, h_pre: i as u64, adm: p.adm.clone(), rom: rr, nrom, vx: p.vx.clone() });
+         i += n;
+     }
+     out
+@@ -470,3 +510,156 @@ use openvm_stark_backend::p3_field::PrimeField32;
+ pub fn bus_port_step_pv() -> u16 {
+     crate::bus::with_off(crate::bus::KERNEL_OFF, || crate::bus::port(crate::bus::PORT_STEP_PV))
+ }
++
++// ---------------------------------------------------------------- T8b: chip set 2 (the value set)
++/// Heights of a chip set 2 shard: CORE, DEC, RANGE, SPONGE, HASH2, ROM (three opened rows), MEM.
++pub const H_HASH2_V: usize = 256;
++pub const H_ROM_V: usize = 4;
++pub const H_SPONGE_V: usize = 1024;
++pub const HEIGHTS_V: [usize; 7] = [core::HEIGHT, dec::HEIGHT, H_RANGE, H_SPONGE_V, H_HASH2_V, H_ROM_V, mem::HEIGHT];
++
++/// T8b (GP-2): the AIRs of chip set 2, the value set: CORE with the rules
++/// `XAdtEvalConstructNullary` and `KAdminPublishValue` and a witnessed input `val_d`
++/// ([`CoreAir::value`]), its DEC table, and the slice kits.
++pub fn airs_value(weak: u64) -> Vec<AirRef<SC>> {
++    vec![
++        Arc::new(CoreAir::value(weak)),
++        Arc::new(DecVAir),
++        Arc::new(VariableRangeCheckerAir::new(bus::range())),
++        Arc::new(SpongeAir::new(weak)),
++        Arc::new(Hash2Air { weak }),
++        Arc::new(RomAir { weak }),
++        Arc::new(MemAir { weak }),
++    ]
++}
++
++/// The programs of chip set 2. `P` is `type U { A(); } entry construct U::A();` (`unitctor`,
++/// Halted with the value of `constants[0]`). `C` is the same run with the type name `V` (names
++/// row 1 and the declaration template), so a different `prog_root` and `prog_d`: the consumer
++/// whose input value is the producer's Halted value.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum ProgV {
++    P,
++    C,
++}
++
++impl ProgV {
++    pub fn source(self) -> &'static str {
++        match self {
++            ProgV::P => "language \"moriarty-sherlock-nominal/1\"; program P { type U { A(); } entry construct U::A(); }",
++            ProgV::C => "language \"moriarty-sherlock-nominal/1\"; program P { type V { A(); } entry construct V::A(); }",
++        }
++    }
++}
++
++fn run_named<'a>(j: &'a Value, name: &str) -> &'a Value {
++    j["runs"].as_array().unwrap().iter().find(|r| r["name"] == name).unwrap_or_else(|| panic!("run `{name}`"))
++}
++
++/// A chip set 2 program with input value digest `val_d` (`VAL_NONE` for no input).
++pub fn program_v(key_root: Digest, which: ProgV, val_d: Digest) -> Program {
++    let mut j = slice_json();
++    if which == ProgV::C {
++        let run = j["runs"].as_array_mut().unwrap().iter_mut().find(|r| r["name"] == "unitctor").unwrap();
++        assert_eq!(run["rom_rows"]["21"][1], serde_json::json!(["85"]), "names[1] of `unitctor` is U");
++        run["rom_rows"]["21"][1] = serde_json::json!(["86"]);
++        run["rom_rows"]["15"][0] = serde_json::json!(["86"]);
++    }
++    let run = run_named(&j, "unitctor");
++    let rom = rom_rows(run);
++    let (root, _) = rom_tree(&rom);
++    let mut adm = admission(run, root, key_root);
++    adm.val_d = val_d;
++    let steps = run["steps"].as_array().unwrap();
++    let mut states: Vec<State> = steps.iter().map(|s| state_of(&s["lanes_before"], &adm)).collect();
++    states.push(state_of(&steps.last().unwrap()["lanes_after"], &adm));
++    // the expression row, the constructor row and the constant row of the construct
++    let e: Vec<u128> = run["rom_rows"]["0"][adm.entry_a as usize].as_array().unwrap().iter().map(num).collect();
++    assert_eq!((e[0], e[4], e[5]), (8, 0, 1), "a nullary Construct with a constant");
++    let (ctor, cid) = (e[2] as u64, e[6] as u64);
++    let find = |tbl: u32, row: u64| rom.iter().find(|r| r.tbl == tbl && r.row == row).unwrap().rec;
++    let vx = VExtra {
++        ctor: find(11, ctor)[..20].try_into().unwrap(),
++        cst: find(19, cid)[..30].try_into().unwrap(),
++        cidx: limbs_u128(cid as u128, 4).try_into().unwrap(),
++    };
++    // Halted: the payload is the constant's vd (the reference lane holds the reference Const(cid))
++    let vd: Digest = vx.cst[22..30].try_into().unwrap();
++    for s in states.iter_mut() {
++        if s.hdr.outcome_tag == F::ONE {
++            s.hdr.outcome_payload = vd;
++        }
++    }
++    let rules = steps
++        .iter()
++        .map(|s| match s["rule"].as_str().unwrap() {
++            "XAdtEvalConstructNullary" => R_CNULL,
++            "KAdminPublishValue" => R_PUBV,
++            r => panic!("rule {r} not in chip set 2"),
++        })
++        .collect();
++    Program { rom, adm, states, rules, set: 2, vx: Some(vx) }
++}
++
++/// The Halted value digest of a chip set 2 program (the payload of its last state).
++pub fn halted_vd(p: &Program) -> Digest {
++    let h = &p.states.last().unwrap().hdr;
++    assert_eq!(h.outcome_tag, F::ONE, "Halted");
++    h.outcome_payload
++}
++
++/// The seven traces of one chip set 2 shard at the [`HEIGHTS_V`] heights.
++pub fn traces_value(p: &Program, sh: &ShardIn, b: &Build) -> Vec<Tr> {
++    let lay = Layout::new();
++    let co = core::trace(sh, &b.core);
++    let n_c = sh.sel.iter().filter(|s| **s == Some(R_CNULL)).count() as u32;
++    let n_p = sh.sel.iter().filter(|s| **s == Some(R_PUBV)).count() as u32;
++    let e: Vec<u128> = (0..1).map(|_| 0).collect();
++    let _ = e;
++    let vx = sh.vx.as_ref().expect("chip set 2 shard");
++    let expr0 = p.rom.iter().find(|r| r.tbl == 0 && r.row == sh.adm.entry_a).unwrap().clone();
++    let ctor_row = p.rom.iter().find(|r| r.tbl == 11 && r.rec[..20] == vx.ctor[..]).unwrap().clone();
++    let cid: u64 = (0..4).map(|i| (vx.cidx[i].as_canonical_u32() as u64) << (16 * i)).sum();
++    let cst_row = p.rom.iter().find(|r| r.tbl == 19 && r.row == cid).unwrap().clone();
++    let opens = [Open { row: expr0, mult: n_c }, Open { row: ctor_row, mult: n_c }, Open { row: cst_row, mult: n_c + n_p }];
++    let (rom_m, mut h2, mut calls_rom, root) = rom::trace_h(&p.rom, &opens, H_ROM_V);
++    assert_eq!(root, sh.states[0].body[lay.at("prog_root")..lay.at("prog_root") + D]);
++    let s0 = &sh.states[0].body;
++    let w = b.window.clone().unwrap_or_else(|| Window {
++        len_pre: (0..5).map(|k| (s0[lay.at("mem.len") + k].as_canonical_u32() as u128) << (16 * k)).sum(),
++        root: s0[lay.at("mem.root")..lay.at("mem.root") + D].try_into().unwrap(),
++        tail_pre: s0[lay.at("mem.tail")..lay.at("mem.tail") + D].try_into().unwrap(),
++        appends: vec![],
++    });
++    let chip = VariableRangeCheckerChip::new(bus::range());
++    let (mem_m, h2m, calls_mem) = mem::trace(&w, &mut |v, bits| chip.add_count(v, bits));
++    h2.extend(h2m);
++    let mut merged: Vec<H2> = vec![];
++    for h in h2 {
++        if let Some(m) = merged.iter_mut().find(|m| m.tag == h.tag && m.x == h.x && m.y == h.y) {
++            m.mult += h.mult;
++        } else {
++            merged.push(h);
++        }
++    }
++    let (h2_m, calls_h2) = hash2_trace(&merged, H_HASH2_V);
++    let mut calls: Vec<Call> = co.calls.clone();
++    calls.append(&mut calls_rom);
++    calls.extend(calls_mem);
++    calls.extend(calls_h2);
++    let sp = sponge_trace(&calls, H_SPONGE_V, b.sponge_patch.as_ref());
++    for &(v, bits) in &co.range {
++        chip.add_count(v, bits);
++    }
++    let rg = chip.generate_trace();
++    let dm = dec::trace(co.dec);
++    vec![
++        Tr { m: co.m, pvs: co.pvs },
++        Tr::new(dm),
++        Tr::new(rg),
++        Tr::new(sp),
++        Tr::new(h2_m),
++        Tr::new(rom_m),
++        Tr::new(mem_m),
++    ]
++}
+diff --git a/crates/sherlock-leaf/src/rom.rs b/crates/sherlock-leaf/src/rom.rs
+index 87652d2..18e0de8 100644
+--- a/crates/sherlock-leaf/src/rom.rs
++++ b/crates/sherlock-leaf/src/rom.rs
+@@ -121,12 +121,17 @@ pub struct Open {
+ /// ROM trace of the opened rows of `all` (the program's ROM): the trace, the HASH2 rows and the
+ /// sponge calls it needs, and the root.
+ pub fn trace(all: &[RomRow], open: &[Open]) -> (RowMajorMatrix<F>, Vec<H2>, Vec<Call>, Digest) {
++    trace_h(all, open, HEIGHT)
++}
++
++/// The ROM trace at height `h` (T8b: chip set 2 opens three rows at height 4).
++pub fn trace_h(all: &[RomRow], open: &[Open], h: usize) -> (RowMajorMatrix<F>, Vec<H2>, Vec<Call>, Digest) {
+     let (root, paths) = rom_tree(all);
+-    assert!(open.len() <= HEIGHT);
+-    let mut v = vec![F::ZERO; HEIGHT * WIDTH];
++    assert!(open.len() <= h);
++    let mut v = vec![F::ZERO; h * WIDTH];
+     let mut h2 = vec![];
+     let mut calls = vec![];
+-    for r in 0..HEIGHT {
++    for r in 0..h {
+         let row = &mut v[r * WIDTH..(r + 1) * WIDTH];
+         row[C_RC] = F::from_usize(r);
+         let Some(o) = open.get(r) else { continue };
+-- 
+2.56.0
+
