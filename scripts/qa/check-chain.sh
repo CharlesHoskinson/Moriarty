@@ -35,8 +35,10 @@ print(f"V.9 PASS: {len(names)} cases; every AIR required in {sorted(req)}; app s
 PY
   # SG-6: seconds per proved step on the GPU (and the CPU), stock CPU verifier on each proof.
   rm -f "$out/sg6.json"
+  echo "host load before sg6 (DG-006): $(cat /proc/loadavg); $(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>/dev/null || echo no nvidia-smi)"
   ( cd "$ovm" && LIBRARY_PATH="${CUDA_LIB_DIR:-/opt/cuda/lib64}" T6_OUT="$out" "$HOME/.local/bin/heavy-slot" --exclusive --mem 24G --name t6-check-sg6 -- \
       cargo run --release --offline -p sherlock-leaf --features cuda --example sg6 ) 2>&1 | grep -E "SG6|panicked|error" | tail -10
+  echo "host load after sg6 (DG-006): $(cat /proc/loadavg)"
   python3 - "$out/sg6.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -48,7 +50,9 @@ print(f"V.9 SG-6 PASS: GPU {gpu[0]['s_per_proved_step']:.4f} s per proved step (
 PY
 elif [ "$mode" = chain ]; then
   rm -f "$out/chain.json" "$out/d3.json"
+  echo "host load before the chain (DG-006): $(cat /proc/loadavg)"
   run slice_chain chain "$out" 2>&1 | grep -E "SLICECHAIN|SLICEKEY|panicked" | tail -40
+  echo "host load after the chain (DG-006): $(cat /proc/loadavg)"
   run fp8_d3 "$out" 2>&1 | grep FP8D3
   python3 - "$out" <<'PY'
 import json, sys, os
