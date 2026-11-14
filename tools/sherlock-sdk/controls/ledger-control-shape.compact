@@ -1,0 +1,45 @@
+// CONTROL for sherlock-ledger.test.mjs (LW-009, ledger_collection_writes_no_claim): SherlockLedger with
+// the same anchor prologue, but acceptCollection also takes shape_d and writes a per-collection entry
+// keyed by it. The LW-009 checks of the test must flag this contract. Not a design candidate.
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export sealed ledger anchor: Field;
+export ledger runs: Map<Field, Field>;
+export ledger verified_roots: Set<Field>;
+export sealed ledger reg_root: Field;
+export ledger shapes: Map<Field, Field>;      // shape_d -> set_pub (control)
+
+constructor(a0: Field, reg: Field) {
+  const a = disclose(a0);
+  assert(a != (0 as Field), "zero anchor");
+  anchor = a;
+  reg_root = disclose(reg);
+}
+
+circuit prologue(): [] {
+  assert(anchor != (0 as Field), "anchor unset");
+}
+
+export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  prologue();
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}
+
+export circuit acceptCollection(reg_pub: Field, set_pub: Field, shape_d: Field): [] {
+  prologue();
+  assert(reg_root == disclose(reg_pub), "other registry root");
+  assert(!verified_roots.member(disclose(set_pub)), "collection already accepted");
+  verified_roots.insert(disclose(set_pub));
+  shapes.insert(disclose(shape_d), disclose(set_pub));
+}
+
+export circuit openClaim(set_pub: Field, c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  prologue();
+  assert(verified_roots.member(disclose(set_pub)), "collection not accepted");
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}

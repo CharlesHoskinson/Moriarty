@@ -11,7 +11,7 @@ use midnight_zk_stdlib::{Relation, ZkStdLib, ZkStdLibArch};
 
 use crate::{
     alg::Gadget,
-    decode::{DecodeShape, decode},
+    decode::{DecodeShape, decode_with},
     native::{F, U_LFR_TRANSCRIPT},
     smoke::wrap_arch,
     transcript::Transcript,
@@ -24,22 +24,24 @@ pub struct DecodeRelation {
 
 impl Relation for DecodeRelation {
     type Instance = Vec<F>;
-    type Witness = Vec<F>;
+    /// The `L_Fr` public words and the wrap-private `PATH` siblings.
+    type Witness = (Vec<F>, Vec<Vec<F>>);
     type Error = Error;
     fn format_instance(i: &Vec<F>) -> Result<Vec<F>, Error> {
         Ok(i.clone())
     }
-    fn circuit(&self, std: &ZkStdLib, l: &mut impl Layouter<F>, _: Value<Vec<F>>, w: Value<Vec<F>>) -> Result<(), Error> {
+    fn circuit(&self, std: &ZkStdLib, l: &mut impl Layouter<F>, _: Value<Vec<F>>, w: Value<(Vec<F>, Vec<Vec<F>>)>) -> Result<(), Error> {
         let n = self.sh.d.n_public();
         let mut pw = vec![];
         for i in 0..n {
-            pw.push(std.assign(l, w.as_ref().map(|w| w[i]))?);
+            pw.push(std.assign(l, w.as_ref().map(|w| w.0[i]))?);
         }
+        let sibs = w.as_ref().map(|w| w.1.clone());
         let s = {
             let mut a = Gadget::new(std, &mut *l);
             let mut t = Transcript::new(&mut a, U_LFR_TRANSCRIPT)?;
             t.observe_all(&mut a, &pw)?;
-            decode(&mut a, &mut t, &self.sh, &pw)?
+            decode_with(&mut a, &mut t, &self.sh, &pw, &sibs)?
         };
         for c in &s {
             std.constrain_as_public_input(l, c)?;

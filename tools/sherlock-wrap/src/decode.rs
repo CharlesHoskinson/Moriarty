@@ -7,21 +7,32 @@
 //!    its words (8 * 31 = 248 bits, no wrap, so no high bits);
 //! 2. `dec`: each lane and each logged value is 9 limbs of 30 bits and `< r` (`Canon`, a
 //!    borrow chain against `r - 1`);
+//! 2b. (T9) `X` (head words 97 to 105) is 9 limbs of 30 bits with `Canon` and equals the key
+//!    constant `x` (the cached-trace commitment of `L` that `L_Fr` pins, the DAG key check);
+//!    `layout_d` (head words 89 to 96) equals the key constant (ENC-3, V+);
 //! 3. entries: the op is admitted (one-hot over the 7 admitted codes), `lo <= param <= hi`
 //!    (`DIGEST` tags 0 to 5), no used entry after a `NOP`, offsets and permutation slots,
 //!    capacity `off <= V`, `np <= P`; every value after `off_n` is zero;
 //! 4. `R` and the anchor rule (plan D-10): `mode` 0 or 1, the `j`, `k` words u16, a chunk
 //!    `1 <= j <= k`; entries 0 to 4 (5 for a chunk) are `DIGEST(PROGC)`, `DIGEST(INPUT)`,
-//!    `DIGEST(OUTCOME)`, `SPONGE(3)`, `DIGEST(t_in)` [, `DIGEST(t_out)`]; the anchor entry words;
+//!    `DIGEST(OUTCOME)`, `SPONGE(3)`, `DIGEST(t_in)` [, `DIGEST(t_out)`]; (T9) or, in the
+//!    opening-proof form `open = [param_4 = SHK_SET]`, `DIGEST(SHK_SET)` at entry 4 and the
+//!    anchors at 5 [and 6]; the anchor entry words `e_in = 4 + open`, `e_out = e_in + mode`;
 //!    the `claim_pub` inputs are the three run outputs;
 //! 5. lane map in stock order (`apply_lane_map`): a pair `(0, 0)` is skipped; otherwise lane
 //!    and entry are u16 words, the entry exists and is a `DIGEST` or a `SPONGE(3)`,
-//!    `lane < lanes`, the lane is not already mapped and `s[lane] == 0`, then
-//!    `s[lane] = vs[off + vals - 1]`;
+//!    `lane < lanes`, (T9) `lane` is not 0 or 1, the lane is not already mapped and
+//!    `s[lane] == 0`, then `s[lane] = vs[off + vals - 1]`;
+//! 5b. (T9) the N-11 anchor prologue: the template lanes 2 to 9 equal key constants, lane 10
+//!    (the `popeq` of the anchor cell) equals `a_in`; for a chunk the anchor-write template lanes
+//!    (11 to 19, 21) equal key constants and lane 20 equals `a_out`;
 //! 6. each `PUB(param)` entry: `s[param] == vs[off]`;
-//! 7. the native replay of every `PERM`, `H2`, `SPONGE` and `DIGEST` entry (stock does not
-//!    replay `PATH`): a tape of `P` permutation slots tied to the entries by a lookup of packed
-//!    tuples with the fixed multiplicities `perms_i`, the sponge state carried from slot to slot.
+//! 7. the native replay of every `PERM`, `H2`, `SPONGE`, `DIGEST` and (T9, D-11) `PATH` entry: a
+//!    tape of `P` permutation slots tied to the entries by a lookup of packed tuples with the
+//!    fixed multiplicities `perms_i`, the sponge state carried from slot to slot; a `PATH(d)` slot
+//!    `m` hashes `H2(l, r)` of the current node and the wrap-private sibling `m`, the index bit
+//!    `m` choosing the order (node hash: the E3 `iface.rs` placeholder, LEAD), the first slot reads
+//!    the leaf, the last checks the bits against the logged index and the output against the root.
 //!
 //! Steps 5, 6 and 7 read values through one log-derivative lookup into the tables
 //! `(j, vs_j)` and `(V + l, s_l)` (`s` after the lane map). The multiplicities, the
@@ -41,9 +52,24 @@ use crate::{
     transcript::Transcript,
 };
 
-pub const STMT: usize = 114;
+pub const STMT: usize = 116;
 pub const LANE_MAP: usize = 106;
-pub const LANE_PAIRS: usize = 4;
+/// Owner ruling O7 (2026-11-13): 5 pairs.
+pub const LANE_PAIRS: usize = 5;
+pub const LAYOUT_WORD: usize = 89;
+pub const X_WORD: usize = 97;
+/// The N-11 prologue lanes (compiled `tools/sherlock-sdk/sherlock-ledger.compact`, compactc
+/// 0.36.0, MEASURED; `sherlock-lfr` `iface.rs` holds the same constants).
+pub const LANE_POPEQ: usize = 10;
+pub const LANE_A_OUT: usize = 20;
+/// Template lanes `(lane, value)` of every entry; a value `-k` is `r - k`.
+pub const TPL_ORD: [(usize, i64); 8] = [(2, 0x30), (3, 0x50), (4, 1), (5, 1), (6, 0), (7, 0x0c), (8, 1), (9, -2)];
+/// Template lanes of a chunk's anchor write.
+pub const TPL_CHUNK: [(usize, i64); 10] =
+    [(11, 0x10), (12, 1), (13, 1), (14, 1), (15, 0), (16, 0x11), (17, 1), (18, 1), (19, -2), (21, 0x91)];
+pub fn tpl_f(v: i64) -> F {
+    if v < 0 { -F::from((-v) as u64) } else { F::from(v as u64) }
+}
 pub const LIMBS: usize = 9;
 pub const LIMB_BITS: usize = 30;
 pub const BB_P: u64 = 0x7800_0001;
@@ -61,6 +87,7 @@ pub const N_TAGS: u64 = 6;
 pub const TAG_NAMES: [&str; 6] = ["SHK_PROGC", "SHK_LOCK", "SHK_INPUT", "SHK_OUTCOME", "SHK_REG", "SHK_SET"];
 pub const SHK_PROGC: u64 = 0;
 pub const SHK_LOCK: u64 = 1;
+pub const SHK_SET: u64 = 5;
 /// Anchor statement words (E3 6d70a45, 95ed47b): `mode`, the `u32` `j` and `k` as two 16-bit
 /// words low first, the anchor entry indices.
 pub const MODE_WORD: usize = 74;
@@ -72,7 +99,7 @@ pub const E_OUT_WORD: usize = MODE_WORD + 6;
 /// `a_in` anchor `DIGEST` at entry 4 and, for a chunk, the `a_out` anchor at entry 5. The values
 /// of entry `i` start at `R_OFF[i]`.
 pub const R_RUN: [u64; 3] = [0, 2, 3];
-pub const R_OFF: [usize; 6] = [0, 2, 4, 6, 10, 12];
+pub const R_OFF: [usize; 7] = [0, 2, 4, 6, 10, 12, 14];
 pub const ANCHOR_IN: u64 = 4;
 
 /// The tag value: the ASCII name as a little-endian `u128` (ENC-1 rule P-1).
@@ -137,6 +164,23 @@ pub struct DecodeShape {
     pub d: Dims,
     /// The `L` vk pre-hash (`L_Fr` public value 0), pinned.
     pub pre_hash: F,
+    /// `X`: the cached-trace commitment of `L` (T9; the DAG key check of ARCHITECTURE 1.11).
+    pub x: F,
+    /// `layout_d` (ENC-3), 8 BabyBear words.
+    pub layout_d: [u64; 8],
+}
+
+impl DecodeShape {
+    /// From a fixture's `decode` section (`dims`, `keys.x` hex, `keys.layout_d`) and the pinned
+    /// pre-hash.
+    pub fn from_doc(dd: &serde_json::Value, pre_hash: F) -> Self {
+        let g = |k: &str| dd["dims"][k].as_u64().unwrap() as usize;
+        let d = Dims { b: g("b"), v: g("v"), p: g("p"), l_tx: g("l_tx") };
+        let k = &dd["keys"];
+        let x = crate::native::f_from_hex(k["x"].as_str().expect("decode.keys.x")).expect("decode.keys.x hex");
+        let ld: Vec<u64> = k["layout_d"].as_array().expect("decode.keys.layout_d").iter().map(|v| v.as_u64().unwrap()).collect();
+        DecodeShape { d, pre_hash, x, layout_d: ld.try_into().expect("8 layout_d words") }
+    }
 }
 
 fn pow2(n: usize) -> BigUint {
@@ -183,12 +227,13 @@ fn read<A: Alg>(a: &mut A, vsv: &Value<Vec<F>>, idx: &A::V, gate: &A::V) -> Resu
     }))
 }
 
-/// Bit offsets of the packed replay tuple: bits 0 to 4 are the `PERM`, `H2`, `SPONGE`, `DIGEST`
-/// selectors and the parity of `param`; then `param` (8 bits), `o`, `poff`, `perms` (9 bits each).
-const T_PARAM: usize = 5;
-const T_O: usize = 13;
-const T_POFF: usize = 22;
-const T_PERMS: usize = 31;
+/// Bit offsets of the packed replay tuple: bits 0 to 5 are the `PERM`, `H2`, `SPONGE`, `DIGEST`
+/// selectors, the parity of `param` and the `PATH` selector; then `param` (8 bits), `o`, `poff`,
+/// `perms` (9 bits each).
+const T_PARAM: usize = 6;
+const T_O: usize = 14;
+const T_POFF: usize = 23;
+const T_PERMS: usize = 32;
 
 /// One-hot bits for `idx` over `0..n`, gated: `sum b = gate`, `sum i b_i = idx`.
 fn one_hot<A: Alg>(
@@ -257,13 +302,25 @@ pub fn dec<A: Alg>(a: &mut A, limbs: &[A::V], r1: &[u64]) -> Result<A::V, Error>
     Ok(v)
 }
 
-/// The decoder. `pw` are the `L_Fr` public-value cells; `t` is the transcript that has
-/// already observed them (the wrap: after `part4`). Returns the call vector `s`.
+/// The decoder with no `PATH` siblings (a log with a `PATH` entry is refused).
 pub fn decode<A: Alg>(
     a: &mut A,
     t: &mut Transcript<A::V>,
     sh: &DecodeShape,
     pw: &[A::V],
+) -> Result<Vec<A::V>, Error> {
+    decode_with(a, t, sh, pw, &Value::known(vec![]))
+}
+
+/// The decoder. `pw` are the `L_Fr` public-value cells; `t` is the transcript that has
+/// already observed them (the wrap: after `part4`); `sibs` are the wrap-private siblings, one
+/// list per `PATH` entry in log order. Returns the call vector `s`.
+pub fn decode_with<A: Alg>(
+    a: &mut A,
+    t: &mut Transcript<A::V>,
+    sh: &DecodeShape,
+    pw: &[A::V],
+    sibs: &Value<Vec<Vec<F>>>,
 ) -> Result<Vec<A::V>, Error> {
     let d = sh.d;
     let n = d.words();
@@ -282,7 +339,7 @@ pub fn decode<A: Alg>(
                 let b = (to_big(&x) >> (31 * j)) % pow2(31);
                 F::from(b.to_u64_digits().first().copied().unwrap_or(0))
             }))?;
-            if 8 * i + j >= d.values_at() {
+            if 8 * i + j >= d.values_at() || (X_WORD..X_WORD + LIMBS).contains(&(8 * i + j)) {
                 a.range(&c, &pow2(LIMB_BITS), "limb range")?;
             } else {
                 a.range(&c, &lt_p, "word not BabyBear")?;
@@ -305,6 +362,12 @@ pub fn decode<A: Alg>(
     for j in 0..d.v {
         let at = d.values_at() + LIMBS * j;
         vs.push(dec(a, &w[at..at + LIMBS], &r1)?);
+    }
+    // 2b. X with Canon, equal to the pinned cached commitment of L; layout_d pinned (T9).
+    let xv = dec(a, &w[X_WORD..X_WORD + LIMBS], &r1)?;
+    a.assert_eq_c(&xv, sh.x, "X is not the pinned cached commitment")?;
+    for i in 0..8 {
+        a.assert_eq_c(&w[LAYOUT_WORD + i], F::from(sh.layout_d[i]), "layout_d is not the key constant")?;
     }
 
     // 3. Entries.
@@ -399,7 +462,7 @@ pub fn decode<A: Alg>(
     a.assert_eq(&gs, &cap_v, "value row after off_n not zero")?;
 
     // 4. R and the anchor rule (plan D-10; E3 6d70a45, 95ed47b), at static positions.
-    assert!(d.b >= 6 && d.v >= R_OFF[5] + 2);
+    assert!(d.b >= 7 && d.v >= R_OFF[6] + 2);
     let mode = w[MODE_WORD].clone();
     let mm = a.mul(&mode, &mode)?;
     let m2 = a.sub(&mm, &mode)?;
@@ -428,17 +491,42 @@ pub fn decode<A: Alg>(
     }
     a.assert_eq_c(&ops[3][I_SPONGE], F::ONE, "R entry 3")?;
     a.assert_eq_c(&params[3], F::from(3u64), "R entry 3")?;
+    // Entry 4: DIGEST in both forms; the opening-proof form (T9) is `open = [param_4 = SHK_SET]`
+    // (t_in is 0 or 1, never 5), with the anchors at entries 5 and 6.
     a.assert_eq_c(&ops[4][I_DIGEST], F::ONE, "R entry 4")?;
-    a.assert_eq(&params[4], &t_in, "R entry 4")?;
+    let p4 = a.add_c(&params[4], -F::from(SHK_SET))?;
+    let open = is_zero(a, &p4, "R entry 4")?;
+    let nopen = a.lin(&[(-F::ONE, open.clone())], F::ONE)?;
+    let x4 = a.sub(&params[4], &t_in)?;
+    let x4 = a.mul(&nopen, &x4)?;
+    a.assert_eq_c(&x4, F::ZERO, "R entry 4")?;
+    let om = a.mul(&open, &mode)?;
+    let need5 = a.lin(&[(F::ONE, open.clone()), (F::ONE, mode.clone()), (-F::ONE, om.clone())], F::ZERO)?;
     let c5 = a.add_c(&ops[5][I_DIGEST], -F::ONE)?;
-    let c5 = a.mul(&mode, &c5)?;
+    let c5 = a.mul(&need5, &c5)?;
     a.assert_eq_c(&c5, F::ZERO, "R entry 5")?;
-    let p5 = a.sub(&params[5], &t_out)?;
-    let p5 = a.mul(&mode, &p5)?;
+    let dt = a.sub(&t_in, &t_out)?;
+    let want5 = a.mul_add(&open, &dt, &t_out)?;
+    let p5 = a.sub(&params[5], &want5)?;
+    let p5 = a.mul(&need5, &p5)?;
     a.assert_eq_c(&p5, F::ZERO, "R entry 5")?;
-    a.assert_eq_c(&w[E_IN_WORD], F::from(ANCHOR_IN), "anchor entry words")?;
-    let eo = a.sub(&w[E_OUT_WORD], &mode)?;
+    let c6 = a.add_c(&ops[6][I_DIGEST], -F::ONE)?;
+    let c6 = a.mul(&om, &c6)?;
+    a.assert_eq_c(&c6, F::ZERO, "R entry 6")?;
+    let p6 = a.sub(&params[6], &t_out)?;
+    let p6 = a.mul(&om, &p6)?;
+    a.assert_eq_c(&p6, F::ZERO, "R entry 6")?;
+    let ei = a.sub(&w[E_IN_WORD], &open)?;
+    a.assert_eq_c(&ei, F::from(ANCHOR_IN), "anchor entry words")?;
+    let eo = a.lin(&[(F::ONE, w[E_OUT_WORD].clone()), (-F::ONE, mode.clone()), (-F::ONE, open.clone())], F::ZERO)?;
     a.assert_eq_c(&eo, F::from(ANCHOR_IN), "anchor entry words")?;
+    // a_in: the output of entry 4 + open; a_out: of entry 5 + open for a chunk, else a_in.
+    let d45 = a.sub(&vs[R_OFF[5] + 1], &vs[R_OFF[4] + 1])?;
+    let a_in = a.mul_add(&open, &d45, &vs[R_OFF[4] + 1])?;
+    let d56 = a.sub(&vs[R_OFF[6] + 1], &vs[R_OFF[5] + 1])?;
+    let a_next = a.mul_add(&open, &d56, &vs[R_OFF[5] + 1])?;
+    let dn = a.sub(&a_next, &a_in)?;
+    let a_out = a.mul_add(&mode, &dn, &a_in)?;
     let sp = R_OFF[3];
     for i in 0..3 {
         a.assert_eq(&vs[sp + i], &vs[R_OFF[i] + 1], "claim_pub inputs are not the run DIGEST outputs")?;
@@ -466,6 +554,9 @@ pub fn decode<A: Alg>(
         a.assert_eq_c(&zu, F::ZERO, "lane map skip")?;
         let h = one_hot(a, d.lanes(), &lane, &nz, "lane map pair")?;
         let e = one_hot(a, d.b, &ent, &nz, "lane map entry")?;
+        // Lanes 0 (binding_input) and 1 (comm) are not effect lanes (T9).
+        a.assert_eq_c(&h[0], F::ZERO, "lane map pair: lane 0 or 1")?;
+        a.assert_eq_c(&h[1], F::ZERO, "lane map pair: lane 0 or 1")?;
         // The entry is a DIGEST or a SPONGE(3) (E3 099d6d8).
         let sel_dig = dot(a, &e, &digs)?;
         let sel_sp = dot(a, &e, &sps)?;
@@ -498,6 +589,21 @@ pub fn decode<A: Alg>(
         qv.push((nz.clone(), idx, val));
     }
 
+    // 5b. The N-11 anchor prologue (T9): template lanes, popeq lane = a_in; a chunk's anchor
+    // write template and value lane = a_out.
+    for (l, v) in TPL_ORD {
+        a.assert_eq_c(&s[l], tpl_f(v), "anchor template lane")?;
+    }
+    a.assert_eq(&s[LANE_POPEQ], &a_in, "popeq lane is not a_in")?;
+    for (l, v) in TPL_CHUNK {
+        let e = a.add_c(&s[l], -tpl_f(v))?;
+        let e = a.mul(&mode, &e)?;
+        a.assert_eq_c(&e, F::ZERO, "anchor write template lane")?;
+    }
+    let e = a.sub(&s[LANE_A_OUT], &a_out)?;
+    let e = a.mul(&mode, &e)?;
+    a.assert_eq_c(&e, F::ZERO, "anchor write is not a_out")?;
+
     // 6. PUB entries: query (off_i, v_i) into V and (param_i, v_i) into S.
     let mut qs: Vec<(A::V, A::V, A::V)> = vec![];
     for i in 0..d.b {
@@ -515,7 +621,7 @@ pub fn decode<A: Alg>(
     // (t < np) carries the packed tuple (op bits, parity, param, o, poff, perms) of its entry;
     // a lookup with the fixed multiplicities perms_i ties the slots to the entries, and
     // 0 <= m < perms_i places them. The values are read through the V lookup.
-    let tup = |a: &mut A, b: [&A::V; 5], param: &A::V, o: &A::V, poff: &A::V, prm: &A::V| -> Result<A::V, Error> {
+    let tup = |a: &mut A, b: [&A::V; 6], param: &A::V, o: &A::V, poff: &A::V, prm: &A::V| -> Result<A::V, Error> {
         let mut t: Vec<(F, A::V)> = b.iter().enumerate().map(|(k, x)| (f2(k), (*x).clone())).collect();
         t.push((f2(T_PARAM), param.clone()));
         t.push((f2(T_O), o.clone()));
@@ -526,8 +632,34 @@ pub fn decode<A: Alg>(
     let mut rows = vec![];
     for i in 0..d.b {
         let c = &ops[i];
-        rows.push(tup(a, [&c[1], &c[2], &c[I_SPONGE], &c[I_DIGEST], &pars[i]], &params[i], &offs[i], &poffs[i], &permss[i])?);
+        rows.push(tup(a, [&c[1], &c[2], &c[I_SPONGE], &c[I_DIGEST], &pars[i], &c[I_PATH]], &params[i], &offs[i], &poffs[i], &permss[i])?);
     }
+    // Host view of the PATH witness of each slot: (sibling, index bit) from the wrap-private
+    // siblings and the logged index vs[o + 1] (honest witness; zero elsewhere).
+    let host_ent: Value<Vec<(bool, usize, u64, u64)>> = Value::from_iter((0..d.b).map(|i| {
+        a.val(&ops[i][I_PATH]).zip(a.val(&offs[i])).zip(a.val(&poffs[i])).zip(a.val(&permss[i])).map(
+            |(((pb, o), p), q)| (pb == F::ONE, low_u64(&o) as usize, low_u64(&p), low_u64(&q)),
+        )
+    }));
+    let path_wit: Value<Vec<(F, bool)>> = host_ent.zip(vsv.clone()).zip(sibs.clone()).map(|((ents, vs), sb)| {
+        let mut out = vec![(F::ZERO, false); d.p];
+        let mut k = 0usize;
+        for &(is_path, o, p, q) in &ents {
+            if !is_path {
+                continue;
+            }
+            let idx = vs.get(o + 1).map(low_u64).unwrap_or(0);
+            for m in 0..q {
+                let t = (p + m) as usize;
+                if t < d.p {
+                    let sib = sb.get(k).and_then(|v| v.get(m as usize)).copied().unwrap_or(F::ZERO);
+                    out[t] = (sib, m < 64 && (idx >> m) & 1 == 1);
+                }
+            }
+            k += 1;
+        }
+        out
+    });
     // Host view of the slot of each t (honest witness).
     let host_rows: Value<Vec<u64>> = Value::from_iter(rows.iter().map(|r| a.val(r).map(|x| low_u64(&x))));
     let host_pp: Value<Vec<(u64, u64)>> = Value::from_iter(
@@ -541,6 +673,7 @@ pub fn decode<A: Alg>(
     let npv = a.val(&np).map(|x| low_u64(&x) as usize);
     let (cap02, cap42) = (a.cst(cap_fixed(0, 2))?, a.cst(cap_fixed(4, 2))?);
     let mut prev = [zero.clone(), zero.clone(), zero.clone()];
+    let (mut pw_prev, mut acc_prev) = (zero.clone(), zero.clone());
     let mut slots: Vec<(A::V, A::V)> = vec![];
     let mut act_prev: Option<A::V> = None;
     let mut act_sum = vec![];
@@ -558,7 +691,7 @@ pub fn decode<A: Alg>(
         let tv = slot_tuples.as_ref().map(|v| v[ti]);
         let field = |x: u64, sh: usize, w: usize| (x >> sh) & ((1u64 << w) - 1);
         let mut bits = vec![];
-        for k in 0..5 {
+        for k in 0..6 {
             let b = a.wit_bit(tv.map(|x| field(x, k, 1) == 1))?;
             bits.push(a.bit_v(&b)?);
         }
@@ -570,12 +703,12 @@ pub fn decode<A: Alg>(
         for x in [&o, &poff, &prm] {
             a.range(x, &pow2(9), "replay slots")?;
         }
-        let pk = tup(a, [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4]], &param, &o, &poff, &prm)?;
+        let pk = tup(a, [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4], &bits[5]], &param, &o, &poff, &prm)?;
         // An inactive slot holds the zero tuple.
         let na = a.lin(&[(-F::ONE, act.clone())], F::ONE)?;
         let z = a.mul(&na, &pk)?;
         a.assert_eq_c(&z, F::ZERO, "replay slots")?;
-        let [c_perm, c_h2, c_sp, c_dig, par] = [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4]];
+        let [c_perm, c_h2, c_sp, c_dig, par, c_path] = [&bits[0], &bits[1], &bits[2], &bits[3], &bits[4], &bits[5]];
         // m = t - poff with 0 <= m < perms (active slots).
         let tm = a.lin(&[(-F::ONE, poff.clone())], tf)?;
         let d1 = a.mul(&act, &tm)?;
@@ -591,12 +724,21 @@ pub fn decode<A: Alg>(
         let has1 = a.lin(&[(-F::ONE, lp)], F::ONE)?;
         let sp1 = a.mul(c_sp, &has1)?;
         let spl = a.mul(c_sp, &last)?;
+        // PATH (T9): the first slot reads the leaf vs[o], the last the index vs[o + 1] and the
+        // root vs[o + 2].
+        let pf = a.mul(c_path, &first)?;
+        let pl = a.mul(c_path, &last)?;
         // Reads: y_k = vs[o + 2m + k] (k < 3), y3 = vs[o + 3] (PERM) or vs[o + param] (SPONGE
-        // output), y4, y5 = vs[o + 4], vs[o + 5] (PERM).
-        let g0 = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_sp.clone()), (F::ONE, c_dig.clone())], F::ZERO)?;
+        // output) or vs[o + 2] (PATH root), y4 = vs[o + 4] (PERM) or vs[o + 1] (PATH index),
+        // y5 = vs[o + 5] (PERM).
+        let g0 = a.lin(
+            &[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_sp.clone()), (F::ONE, c_dig.clone()), (F::ONE, pf.clone())],
+            F::ZERO,
+        )?;
         let g1 = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, c_h2.clone()), (F::ONE, c_dig.clone()), (F::ONE, sp1.clone())], F::ZERO)?;
         let g2 = a.add(c_perm, c_h2)?;
-        let g3 = a.add(c_perm, &spl)?;
+        let g3 = a.lin(&[(F::ONE, c_perm.clone()), (F::ONE, spl.clone()), (F::ONE, pl.clone())], F::ZERO)?;
+        let g4 = a.add(c_perm, &pl)?;
         let i0 = a.lin(&[(F::ONE, o.clone()), (F::from(2u64), tm.clone())], F::ZERO)?;
         let i1 = a.add_c(&i0, F::ONE)?;
         let i2 = a.add_c(&i0, F::from(2u64))?;
@@ -604,10 +746,13 @@ pub fn decode<A: Alg>(
         let pm3 = a.mul(c_perm, &op3)?;
         let opp = a.add(&o, &param)?;
         let i3 = a.mul_add(c_sp, &opp, &pm3)?;
-        let i4 = a.add_c(&o, F::from(4u64))?;
+        let o2 = a.add_c(&o, F::from(2u64))?;
+        let i3 = a.mul_add(&pl, &o2, &i3)?;
+        // vs[o + 4] for PERM, vs[o + 1] for the last PATH slot.
+        let i4 = a.lin(&[(F::ONE, o.clone()), (-F::from(3u64), pl.clone())], F::from(4u64))?;
         let i5 = a.add_c(&o, F::from(5u64))?;
         let mut y = vec![];
-        for (g, i) in [(&g0, &i0), (&g1, &i1), (&g2, &i2), (&g3, &i3), (c_perm, &i4), (c_perm, &i5)] {
+        for (g, i) in [(&g0, &i0), (&g1, &i1), (&g2, &i2), (&g3, &i3), (&g4, &i4), (c_perm, &i5)] {
             let v = read(a, &vsv, i, g)?;
             qv.push((g.clone(), i.clone(), v.clone()));
             y.push(v);
@@ -634,6 +779,33 @@ pub fn decode<A: Alg>(
         let sf = a.mul(c_sp, &first)?;
         let x = a.mul_add(&sf, &param, &x)?;
         let in2 = a.mul_add(&spn, &prev[2], &x)?;
+        // PATH slot m: cur = leaf (first) or the previous slot's output; (l, r) = (cur, sib) or
+        // (sib, cur) by the index bit b_m; input (l, r, cap(0, 2)); the bits sum to the index.
+        let pwv = path_wit.as_ref().map(|v| v[ti]);
+        let sib = a.wit(pwv.map(|x| x.0))?;
+        let bb = a.wit_bit(pwv.map(|x| x.1))?;
+        let b = a.bit_v(&bb)?;
+        let dcur = a.sub(&y[0], &prev[0])?;
+        let cur = a.mul_add(&first, &dcur, &prev[0])?;
+        let ds = a.sub(&sib, &cur)?;
+        let xx = a.mul(&b, &ds)?;
+        let pl_l = a.add(&cur, &xx)?;
+        let pl_r = a.sub(&sib, &xx)?;
+        let in0 = a.mul_add(c_path, &pl_l, &in0)?;
+        let in1 = a.mul_add(c_path, &pl_r, &in1)?;
+        let in2 = a.mul_add(c_path, &cap02, &in2)?;
+        // index accumulator: pw_m = 2^m (1 on the first slot), acc_m = acc_(m-1) + b_m pw_m.
+        let two = a.lin(&[(F::from(2u64), pw_prev.clone())], F::ZERO)?;
+        let om1 = a.lin(&[(-F::from(2u64), pw_prev.clone())], F::ONE)?;
+        let pw_m = a.mul_add(&first, &om1, &two)?;
+        let ac = a.mul(&nf, &acc_prev)?;
+        let acc = a.mul_add(&b, &pw_m, &ac)?;
+        pw_prev = pw_m;
+        acc_prev = acc.clone();
+        // A bit outside a PATH slot is zero (no free witness on other slots).
+        let npb = a.lin(&[(-F::ONE, c_path.clone())], F::ONE)?;
+        let zb = a.mul(&npb, &b)?;
+        a.assert_eq_c(&zb, F::ZERO, "native replay")?;
         let out = a.permute(&[in0, in1, in2])?;
         // Outputs.
         let chk = |a: &mut A, g: &A::V, u: &A::V, v: &A::V| -> Result<(), Error> {
@@ -647,6 +819,8 @@ pub fn decode<A: Alg>(
         chk(a, c_h2, &out[0], &y[2])?;
         chk(a, c_dig, &out[0], &y[1])?;
         chk(a, &spl, &out[0], &y[3])?;
+        chk(a, &pl, &out[0], &y[3])?;
+        chk(a, &pl, &acc, &y[4])?;
         prev = out;
         slots.push((act, pk));
     }

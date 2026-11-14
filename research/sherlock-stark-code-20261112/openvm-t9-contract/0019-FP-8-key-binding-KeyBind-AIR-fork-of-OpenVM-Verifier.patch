@@ -1,0 +1,1193 @@
+From a09cc5d8b6eaf452bce2048177c1f9e2159ee1b6 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 05:27:10 -0700
+Subject: [PATCH] FP-8 key binding: KeyBind AIR (fork of OpenVM VerifierPvsAir,
+ five slots app/leaf/N1/N2/N3, continuations buses on) in the leaf layer, N1,
+ N2, N3 and L; L pins N2 and N3 and exposes app, leaf, N1; L_Fr pins the L
+ cached commitment (Gen::pinned_cached); fp8_keyset chain, fixpoint and neg
+ modes on bound layers
+
+---
+ crates/sherlock-lfr/src/keybind.rs            | 468 +++++++++++++++++
+ crates/sherlock-lfr/src/lib.rs                |   1 +
+ crates/sherlock-lfr/src/lverify.rs            |  17 +-
+ .../examples/fp8_keyset.rs                    | 483 +++++++++++++++---
+ 4 files changed, 892 insertions(+), 77 deletions(-)
+ create mode 100644 crates/sherlock-lfr/src/keybind.rs
+
+diff --git a/crates/sherlock-lfr/src/keybind.rs b/crates/sherlock-lfr/src/keybind.rs
+new file mode 100644
+index 0000000..659e1d8
+--- /dev/null
++++ b/crates/sherlock-lfr/src/keybind.rs
+@@ -0,0 +1,468 @@
++//! FP-8 key binding: the `KeyBind` AIR of every aggregation layer (leaf layer, N1, N2, N3) and of
++//! `L`, a fork of OpenVM `continuations::circuit::inner::verifier::VerifierPvsAir` (and of the
++//! root check of `RootVerifierPvsAir`) for the Sherlock chain
++//! `app -> leaf -> N1 -> N2 -> N3 (recursive) -> L`.
++//!
++//! Why: every layer is a `VerifierSubCircuit` whose cached trace holds the constraint DAG of its
++//! child key. The verifying key of a layer does not fix that DAG (the cached commitment is proof
++//! data), so without this AIR a layer accepts a proof of any child key of the same shape.
++//!
++//! How (as upstream, with the recursion flag `continuations_enabled` on): the proof-shape module
++//! of the verifier sub-circuit sends, per child proof, (1) the child public values a second time,
++//! (2) the commitment of each child cached trace, (3) the pre-hash of the child key. This AIR
++//! receives them and keeps five key commitments in its public values (`VkCommit` = cached-trace
++//! commitment + pre-hash): `app`, `leaf`, `n1`, `n2`, `n3`.
++//!
++//! - A layer learns the pre-hash of its child key (the proof-shape pre-hash) and writes it into
++//!   the slot of the child; the cached commitment of that slot is the commitment of the child DAG
++//!   in this layer, which only the parent can check (it is in this layer's proof). So the
++//!   cached half of the slot of a layer's child is checked one layer up, against the cached
++//!   commitment the parent receives from the proof (`cc`).
++//! - Differences to upstream: five slots instead of four (the Sherlock chain has N1 and N2
++//!   between the leaf layer and the fixed point N3, measured `fixpoint` mode), the role of a
++//!   layer is a constant of the AIR (no `internal_flag` selectors on fixed roles), no deferral,
++//!   no VM public values (the bench app has none; an app with public values or cached traces
++//!   makes the leaf layer's buses unbalanced, so it fails closed), no range check of the depth
++//!   (each N3 level adds exactly 1, the depth cannot wrap).
++//! - `L` (role [`Role::Root`]) pins the universal keys N2 and N3 (both halves) as constants,
++//!   checks that its child is N3, and exposes the per-program slots `app`, `leaf`, `n1` (48
++//!   words) as its key public values. `L_Fr` pins the cached commitment of `L`
++//!   (`lverify::Gen::pinned_cached`), so `L` itself verifies only N3 proofs.
++
++use std::borrow::Borrow;
++
++use openvm_recursion_circuit::bus::{
++    CachedCommitBus, CachedCommitBusMessage, PreHashBus, PreHashMessage, PublicValuesBus,
++    PublicValuesBusMessage,
++};
++use openvm_stark_backend::{
++    interaction::InteractionBuilder,
++    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
++    p3_field::{Field, PrimeCharacteristicRing, PrimeField32},
++    p3_matrix::{dense::RowMajorMatrix, Matrix},
++    BaseAirWithPublicValues, PartitionedBaseAir,
++};
++use p3_baby_bear::BabyBear;
++
++type F = BabyBear;
++
++/// Digest width (BabyBear Poseidon2).
++pub const D: usize = 8;
++/// AIR index of `KeyBind` in every layer (the child public values are read at this index).
++pub const KB_AIR_ID: usize = 0;
++/// AIR index of the constraint-evaluation AIR (the one AIR with a cached trace) of a node
++/// layer: `KeyBind` first, then the verifier sub-circuit.
++pub const CE_AIR_ID: usize = 1;
++
++/// Key slots.
++pub const APP: usize = 0;
++pub const LEAF: usize = 1;
++pub const N1: usize = 2;
++pub const N2: usize = 3;
++pub const N3: usize = 4;
++pub const SLOTS: usize = 5;
++
++/// Public values of a node layer: `flag`, five `VkCommit` (cached 8, pre 8), `depth`.
++pub const PV_FLAG: usize = 0;
++pub const fn pv_cached(k: usize) -> usize {
++    1 + 2 * D * k
++}
++pub const fn pv_pre(k: usize) -> usize {
++    1 + 2 * D * k + D
++}
++pub const PV_DEPTH: usize = 1 + 2 * D * SLOTS;
++pub const NUM_PVS: usize = PV_DEPTH + 1;
++/// Public values of `L` from `KeyBind`: `app`, `leaf`, `n1` (cached 8, pre 8 each).
++pub const ROOT_PVS: usize = 3 * 2 * D;
++
++/// A key commitment: commitment of the key's constraint DAG in the layer that verifies it, and
++/// the key's pre-hash.
++#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
++pub struct VkCommit {
++    pub cached: [u32; D],
++    pub pre: [u32; D],
++}
++
++/// The role of a layer (a constant of its `KeyBind` AIR).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum Role {
++    /// Leaf layer: child is an app proof (no public values).
++    Leaf,
++    /// N1: child is a leaf-layer proof.
++    N1,
++    /// N2: child is an N1 proof.
++    N2,
++    /// N3, the internal-recursive key: child is an N2 proof or an N3 proof.
++    N3,
++    /// `L`: child is an N3 proof; N2 and N3 pinned.
++    Root { n2: VkCommit, n3: VkCommit },
++}
++
++impl Role {
++    /// Layer flag written in `PV_FLAG` (not used by `Root`).
++    pub fn flag(&self) -> u32 {
++        match self {
++            Role::Leaf => 0,
++            Role::N1 => 1,
++            Role::N2 => 2,
++            Role::N3 => 3,
++            Role::Root { .. } => 4,
++        }
++    }
++}
++
++/// Columns: `proof_idx`, `is_valid`, child public values (`NUM_PVS`), selectors `s2` (child N2),
++/// `s31` (child N3 at depth 1), `s3x` (child N3 at depth 2 or more), `dinv` (inverse of
++/// `depth - 1` when `s3x`).
++pub const C_IDX: usize = 0;
++pub const C_VALID: usize = 1;
++pub const C_P: usize = 2;
++pub const C_S2: usize = C_P + NUM_PVS;
++pub const C_S31: usize = C_S2 + 1;
++pub const C_S3X: usize = C_S2 + 2;
++pub const C_DINV: usize = C_S2 + 3;
++pub const WIDTH: usize = C_DINV + 1;
++
++pub struct KeyBindAir {
++    pub role: Role,
++    pub public_values_bus: PublicValuesBus,
++    pub cached_commit_bus: CachedCommitBus,
++    pub pre_hash_bus: PreHashBus,
++}
++
++impl KeyBindAir {
++    pub fn new(
++        role: Role,
++        inv: &openvm_recursion_circuit::system::BusInventory,
++    ) -> Self {
++        Self {
++            role,
++            public_values_bus: inv.public_values_bus,
++            cached_commit_bus: inv.cached_commit_bus,
++            pre_hash_bus: inv.pre_hash_bus,
++        }
++    }
++}
++
++impl<T> BaseAir<T> for KeyBindAir {
++    fn width(&self) -> usize {
++        WIDTH
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for KeyBindAir {
++    fn num_public_values(&self) -> usize {
++        match self.role {
++            Role::Root { .. } => ROOT_PVS,
++            _ => NUM_PVS,
++        }
++    }
++}
++impl<T> PartitionedBaseAir<T> for KeyBindAir {}
++
++fn c<AB: AirBuilder>(v: u32) -> AB::Expr {
++    AB::Expr::from_u32(v)
++}
++
++impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for KeyBindAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let local = main.row_slice(0).expect("window");
++        let next = main.row_slice(1).expect("window");
++        let local: &[AB::Var] = (*local).borrow();
++        let next: &[AB::Var] = (*next).borrow();
++        let pv: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
++
++        let valid: AB::Expr = local[C_VALID].into();
++        let p = |i: usize| -> AB::Expr { local[C_P + i].into() };
++        let s2: AB::Expr = local[C_S2].into();
++        let s31: AB::Expr = local[C_S31].into();
++        let s3x: AB::Expr = local[C_S3X].into();
++        let zero = AB::Expr::ZERO;
++
++        // Rows: is_valid boolean, first row valid, valid rows first, proof_idx 0, 1, 2, ...
++        builder.assert_bool(valid.clone());
++        builder.when_first_row().assert_one(valid.clone());
++        builder.when_transition().assert_bool(valid.clone() - next[C_VALID].into());
++        builder.when_first_row().assert_zero(local[C_IDX]);
++        builder
++            .when_transition()
++            .when(next[C_VALID])
++            .assert_eq(local[C_IDX].into() + AB::Expr::ONE, next[C_IDX].into());
++
++        // Helpers: equalities gated by an expression.
++        let eq = |b: &mut AB, g: AB::Expr, x: AB::Expr, y: AB::Expr| {
++            b.assert_zero(g * (x - y));
++        };
++        let slot_eq_pv = |b: &mut AB, g: AB::Expr, k: usize, pvk: usize| {
++            for i in 0..2 * D {
++                b.assert_zero(g.clone() * (p(pv_cached(k) + i) - pv[pv_cached(pvk) + i].clone()));
++            }
++        };
++        let slot_zero = |b: &mut AB, g: AB::Expr, k: usize| {
++            for i in 0..2 * D {
++                b.assert_zero(g.clone() * p(pv_cached(k) + i));
++            }
++        };
++        let own_zero = |b: &mut AB, k: usize| {
++            for i in 0..2 * D {
++                b.assert_zero(pv[pv_cached(k) + i].clone());
++            }
++        };
++
++        let role = &self.role;
++        let has_child_pvs = !matches!(role, Role::Leaf);
++
++        // Receive the child public values (AIR KB_AIR_ID of the child) and the child cached
++        // commitment (the constraint DAG the child verified).
++        if has_child_pvs {
++            for i in 0..NUM_PVS {
++                self.public_values_bus.receive(
++                    builder,
++                    local[C_IDX],
++                    PublicValuesBusMessage {
++                        air_idx: c::<AB>(KB_AIR_ID as u32),
++                        pv_idx: c::<AB>(i as u32),
++                        value: p(i),
++                    },
++                    valid.clone(),
++                );
++            }
++            let cc_slot: Vec<(AB::Expr, usize)> = match role {
++                Role::Leaf => unreachable!(),
++                Role::N1 => vec![(AB::Expr::ONE, APP)],
++                Role::N2 => vec![(AB::Expr::ONE, LEAF)],
++                Role::N3 => vec![(s2.clone(), N1), (s31.clone(), N2), (s3x.clone(), N3)],
++                Role::Root { .. } => vec![(s31.clone(), N2), (s3x.clone(), N3)],
++            };
++            let cc: [AB::Expr; D] = std::array::from_fn(|i| {
++                cc_slot.iter().fold(zero.clone(), |acc, (g, k)| acc + g.clone() * p(pv_cached(*k) + i))
++            });
++            self.cached_commit_bus.receive(
++                builder,
++                local[C_IDX],
++                CachedCommitBusMessage {
++                    air_idx: c::<AB>(CE_AIR_ID as u32),
++                    cached_idx: zero.clone(),
++                    global_cached_idx: zero.clone(),
++                    cached_commit: cc,
++                },
++                valid.clone(),
++            );
++        }
++
++        // Receive the pre-hash of the child key (proof-shape summary row).
++        let h: [AB::Expr; D] = match role {
++            Role::Leaf => std::array::from_fn(|i| pv[pv_pre(APP) + i].clone()),
++            Role::N1 => std::array::from_fn(|i| pv[pv_pre(LEAF) + i].clone()),
++            Role::N2 => std::array::from_fn(|i| pv[pv_pre(N1) + i].clone()),
++            Role::N3 => std::array::from_fn(|i| {
++                s2.clone() * pv[pv_pre(N2) + i].clone()
++                    + (s31.clone() + s3x.clone()) * pv[pv_pre(N3) + i].clone()
++            }),
++            Role::Root { n3, .. } => std::array::from_fn(|i| c::<AB>(n3.pre[i])),
++        };
++        self.pre_hash_bus.receive(
++            builder,
++            local[C_IDX],
++            PreHashMessage { vk_pre_hash: h },
++            valid.clone(),
++        );
++
++        match role {
++            Role::Leaf => {
++                builder.assert_zero(pv[PV_FLAG].clone());
++                builder.assert_zero(pv[PV_DEPTH].clone());
++                for k in [LEAF, N1, N2, N3] {
++                    own_zero(builder, k);
++                }
++            }
++            Role::N1 | Role::N2 => {
++                // Child flag, unset child slots, child depth 0, copies, own flag, own unset slots.
++                let (child_flag, child_set, own_set) =
++                    if *role == Role::N1 { (0, vec![APP], vec![APP, LEAF]) } else { (1, vec![APP, LEAF], vec![APP, LEAF, N1]) };
++                eq(builder, valid.clone(), p(PV_FLAG), c::<AB>(child_flag));
++                eq(builder, valid.clone(), p(PV_DEPTH), zero.clone());
++                for k in 0..SLOTS {
++                    if !child_set.contains(&k) {
++                        slot_zero(builder, valid.clone(), k);
++                    }
++                }
++                for &k in &child_set {
++                    slot_eq_pv(builder, valid.clone(), k, k);
++                }
++                builder.assert_eq(pv[PV_FLAG].clone(), c::<AB>(role.flag()));
++                builder.assert_zero(pv[PV_DEPTH].clone());
++                for k in 0..SLOTS {
++                    if !own_set.contains(&k) {
++                        own_zero(builder, k);
++                    }
++                }
++            }
++            Role::N3 | Role::Root { .. } => {
++                let is_root = matches!(role, Role::Root { .. });
++                // Selectors: boolean, exactly one on a valid row (s2 never at the root).
++                for s in [&s2, &s31, &s3x] {
++                    builder.assert_bool(s.clone());
++                }
++                builder.assert_eq(s2.clone() + s31.clone() + s3x.clone(), valid.clone());
++                if is_root {
++                    builder.assert_zero(s2.clone());
++                }
++                // s2: child is N2 (flag 2, depth 0, n2 and n3 unset).
++                eq(builder, s2.clone(), p(PV_FLAG), c::<AB>(2));
++                eq(builder, s2.clone(), p(PV_DEPTH), zero.clone());
++                slot_zero(builder, s2.clone(), N2);
++                slot_zero(builder, s2.clone(), N3);
++                // s31: child is N3 at depth 1 (n3 unset).
++                eq(builder, s31.clone(), p(PV_FLAG), c::<AB>(3));
++                eq(builder, s31.clone(), p(PV_DEPTH), AB::Expr::ONE);
++                slot_zero(builder, s31.clone(), N3);
++                // s3x: child is N3 at depth != 1 (an N3 depth is at least 1, so at least 2).
++                eq(builder, s3x.clone(), p(PV_FLAG), c::<AB>(3));
++                builder.assert_zero(
++                    s3x.clone() * ((p(PV_DEPTH) - AB::Expr::ONE) * local[C_DINV].into() - AB::Expr::ONE),
++                );
++                match role {
++                    Role::N3 => {
++                        // Copies of the slots below this layer.
++                        for k in [APP, LEAF, N1] {
++                            slot_eq_pv(builder, valid.clone(), k, k);
++                        }
++                        slot_eq_pv(builder, s31.clone() + s3x.clone(), N2, N2);
++                        slot_eq_pv(builder, s3x.clone(), N3, N3);
++                        // Own: flag 3; depth 1 over N2, child depth + 1 over N3; n3 unset at
++                        // depth 1.
++                        builder.assert_eq(pv[PV_FLAG].clone(), c::<AB>(3));
++                        eq(builder, s2.clone(), pv[PV_DEPTH].clone(), AB::Expr::ONE);
++                        eq(
++                            builder,
++                            s31.clone() + s3x.clone(),
++                            pv[PV_DEPTH].clone(),
++                            p(PV_DEPTH) + AB::Expr::ONE,
++                        );
++                        for i in 0..2 * D {
++                            builder.assert_zero(s2.clone() * pv[pv_cached(N3) + i].clone());
++                        }
++                    }
++                    Role::Root { n2, n3 } => {
++                        // The universal keys: N2 always, N3 once set (depth 2 or more).
++                        for i in 0..D {
++                            eq(builder, valid.clone(), p(pv_cached(N2) + i), c::<AB>(n2.cached[i]));
++                            eq(builder, valid.clone(), p(pv_pre(N2) + i), c::<AB>(n2.pre[i]));
++                            eq(builder, s3x.clone(), p(pv_cached(N3) + i), c::<AB>(n3.cached[i]));
++                            eq(builder, s3x.clone(), p(pv_pre(N3) + i), c::<AB>(n3.pre[i]));
++                        }
++                        // Expose app, leaf, n1.
++                        for (j, k) in [APP, LEAF, N1].into_iter().enumerate() {
++                            for i in 0..2 * D {
++                                eq(
++                                    builder,
++                                    valid.clone(),
++                                    p(pv_cached(k) + i),
++                                    pv[2 * D * j + i].clone(),
++                                );
++                            }
++                        }
++                    }
++                    _ => unreachable!(),
++                }
++            }
++        }
++    }
++}
++
++/// Trace and public values of `KeyBind` for one layer. `child_pvs`: the `KeyBind` public values
++/// of each child proof (empty slices for app children); `child`: the commitment of the child key
++/// in this layer (`commit_child_vk(..).commitment`, child pre-hash). Rows: one per child proof,
++/// padded to a power of two (at least 2).
++pub fn trace(role: &Role, child_pvs: &[Vec<F>], child: VkCommit) -> (RowMajorMatrix<F>, Vec<F>) {
++    let n = child_pvs.len();
++    assert!(n > 0);
++    let h = n.next_power_of_two().max(2);
++    let mut t = vec![F::ZERO; h * WIDTH];
++    for (r, cp) in child_pvs.iter().enumerate() {
++        let row = &mut t[r * WIDTH..(r + 1) * WIDTH];
++        row[C_IDX] = F::from_usize(r);
++        row[C_VALID] = F::ONE;
++        if *role != Role::Leaf {
++            assert_eq!(cp.len(), NUM_PVS, "child KeyBind public values");
++            row[C_P..C_P + NUM_PVS].copy_from_slice(cp);
++            let flag = cp[PV_FLAG].as_canonical_u32();
++            let depth = cp[PV_DEPTH];
++            match (flag, depth.as_canonical_u32()) {
++                (2, _) => row[C_S2] = F::ONE,
++                (3, 1) => row[C_S31] = F::ONE,
++                (3, _) => {
++                    row[C_S3X] = F::ONE;
++                    row[C_DINV] = (depth - F::ONE).inverse();
++                }
++                _ => {}
++            }
++        }
++    }
++    // Padding rows: proof_idx continues (unconstrained), is_valid 0.
++    for r in n..h {
++        t[r * WIDTH + C_IDX] = F::from_usize(r);
++    }
++    let put = |v: &mut Vec<F>, k: usize, x: &VkCommit| {
++        for i in 0..D {
++            v[pv_cached(k) + i] = F::from_u32(x.cached[i]);
++            v[pv_pre(k) + i] = F::from_u32(x.pre[i]);
++        }
++    };
++    let p0 = child_pvs[0].clone();
++    let pvs = match role {
++        Role::Leaf => {
++            let mut v = vec![F::ZERO; NUM_PVS];
++            put(&mut v, APP, &child);
++            v
++        }
++        Role::N1 | Role::N2 | Role::N3 => {
++            let mut v = p0.clone();
++            v[PV_FLAG] = F::from_u32(role.flag());
++            let cflag = p0[PV_FLAG].as_canonical_u32();
++            let cdepth = p0[PV_DEPTH];
++            match (role, cflag, cdepth.as_canonical_u32()) {
++                (Role::N1, 0, _) => put(&mut v, LEAF, &child),
++                (Role::N2, 1, _) => put(&mut v, N1, &child),
++                (Role::N3, 2, _) => {
++                    put(&mut v, N2, &child);
++                    v[PV_DEPTH] = F::ONE;
++                }
++                (Role::N3, 3, 1) => {
++                    put(&mut v, N3, &child);
++                    v[PV_DEPTH] = cdepth + F::ONE;
++                }
++                (Role::N3, 3, _) => v[PV_DEPTH] = cdepth + F::ONE,
++                _ => panic!("KeyBind: child flag {cflag} under role {role:?}"),
++            }
++            v
++        }
++        Role::Root { .. } => {
++            let mut v = vec![F::ZERO; ROOT_PVS];
++            for (j, k) in [APP, LEAF, N1].into_iter().enumerate() {
++                v[2 * D * j..2 * D * (j + 1)].copy_from_slice(&p0[pv_cached(k)..pv_cached(k) + 2 * D]);
++            }
++            v
++        }
++    };
++    (RowMajorMatrix::new(t, WIDTH), pvs)
++}
++
++/// A `VkCommit` from a commitment and a pre-hash (BabyBear digests).
++pub fn vk_commit(cached: &[F; D], pre: &[F; D]) -> VkCommit {
++    VkCommit {
++        cached: cached.map(|x| x.as_canonical_u32()),
++        pre: pre.map(|x| x.as_canonical_u32()),
++    }
++}
++
++/// Read slot `k` from node public values.
++pub fn slot(pvs: &[F], k: usize) -> VkCommit {
++    let mut v = VkCommit::default();
++    for i in 0..D {
++        v.cached[i] = pvs[pv_cached(k) + i].as_canonical_u32();
++        v.pre[i] = pvs[pv_pre(k) + i].as_canonical_u32();
++    }
++    v
++}
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+index 80b66e7..02ccce9 100644
+--- a/crates/sherlock-lfr/src/lib.rs
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -10,6 +10,7 @@ pub mod bb;
+ pub mod carrier;
+ pub mod fixture;
+ pub mod frozen;
++pub mod keybind;
+ pub mod fr;
+ pub mod iface;
+ pub mod iface_l;
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index 041eeac..84be359 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -62,6 +62,11 @@ pub struct Gen {
+     pub inputs: Vec<Val>,
+     consts: HashMap<[u64; 4], Addr>,
+     fr_consts: Vec<(Fr, Addr)>,
++    /// FP-8 key binding: the cached-trace commitments of `L` (vk order of the AIRs with cached
++    /// mains), fixed in the tape as constants. `L` keeps the constraint DAG of its child (the
++    /// internal-recursive key N3) in its cached trace, so this pin fixes which child key `L`
++    /// verifies. `None` reads them as prover inputs (the pre-FP-8 tape, tests only).
++    pub pinned_cached: Option<Vec<Fr>>,
+ }
+ 
+ impl Default for Gen {
+@@ -80,6 +85,7 @@ impl Gen {
+             inputs: vec![],
+             consts: HashMap::new(),
+             fr_consts: vec![],
++            pinned_cached: None,
+         }
+     }
+ 
+@@ -294,7 +300,16 @@ pub fn gen_part1(
+                 return Err(ShapeError::Lengths("cached commitments"));
+             }
+             for c in &tv.cached_commitments {
+-                let a = g.fr_in(c[0]);
++                // Pinned: a constant, whatever the proof carries (a proof made over another
++                // child DAG then fails the transcript checks of the tape).
++                let a = match g.pinned_cached.as_mut() {
++                    Some(pins) => {
++                        assert!(!pins.is_empty(), "FP-8: more cached commitments than pins");
++                        let v = pins.remove(0);
++                        g.tape.fr_const(v)
++                    }
++                    None => g.fr_in(c[0]),
++                };
+                 g.observe_commit(a);
+                 cached_per_air[i].push(a);
+             }
+diff --git a/crates/sherlock-wrap-export/examples/fp8_keyset.rs b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+index 8f27a69..7e1ab64 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_keyset.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+@@ -15,7 +15,18 @@
+ //!   fp8_keyset chain OUT    the proofs W1 -> leaf -> node -> L_iface (all-entries case, seed 14)
+ //!                           -> L_Fr keygen and proof; writes OUT/lfr-fp8.json (wrapin v1 with
+ //!                           the D-9 decode cases), OUT/*.bitcode vks, OUT/chain.json
+-use std::{fs, path::PathBuf, sync::Arc, time::Instant};
++use std::{
++    fs,
++    path::PathBuf,
++    sync::{
++        atomic::{AtomicBool, Ordering},
++        Arc,
++    },
++    time::Instant,
++};
++
++/// Set in `keys` mode only: a G1 refusal is recorded instead of aborting.
++static MEASURE_REFUSED: AtomicBool = AtomicBool::new(false);
+ 
+ use num_bigint::BigUint;
+ use openvm_cpu_backend::CpuBackend;
+@@ -49,6 +60,7 @@ use sherlock_lfr::{
+     frozen::{self, FrozenSet, KeyShape},
+     iface::{self, Case, Dims, ECMUL, LANE_MAP, LIMBS, NOP, PUB, STMT},
+     iface_l,
++    keybind::{self, KeyBindAir, Role, VkCommit},
+     lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
+     machine::Machine,
+     record::stock_log,
+@@ -118,6 +130,9 @@ where
+             (pk, vk)
+         }
+         Err(e) => {
++            // Only `keys` mode records a refused key (the stock-set measurement); `chain` and
++            // `fixpoint` abort on any G1 refusal.
++            assert!(MEASURE_REFUSED.load(Ordering::Relaxed), "FP8 G1 refused {label}: {e:?}");
+             let (pk, vk) = engine.keygen(airs);
+             let mut v = vk_json(&vk);
+             v["key"] = json!(label);
+@@ -166,7 +181,7 @@ fn w1_prove(
+ }
+ 
+ /// A verifier circuit of arity N over `child`, keyed under `set`.
+-fn agg_key<const N: usize>(
++fn agg_key_unbound<const N: usize>(
+     set: &FrozenSet,
+     child: &MultiStarkVerifyingKey<NodeSC>,
+     label: &str,
+@@ -182,31 +197,7 @@ fn agg_key<const N: usize>(
+     (circuit, engine, pk, vk)
+ }
+ 
+-fn agg_prove<const N: usize>(
+-    circuit: &VerifierSubCircuit<N>,
+-    engine: &Eng,
+-    pk: &MultiStarkProvingKey<NodeSC>,
+-    vk: &MultiStarkVerifyingKey<NodeSC>,
+-    child_vk: &MultiStarkVerifyingKey<NodeSC>,
+-    proofs: &[Proof<NodeSC>],
+-) -> Proof<NodeSC> {
+-    let child_pcs = circuit.commit_child_vk(engine, child_vk);
+-    let d_pk = engine.device().transport_pk_to_device(pk);
+-    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-        child_vk,
+-        CachedTraceCtx::PcsData(child_pcs),
+-        proofs,
+-        &(),
+-        default_duplex_sponge_recorder(),
+-    );
+-    let proof = engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("agg prove");
+-    engine.verify(vk, &proof).expect("agg verify");
+-    proof
+-}
+-
+-fn l_key(
++fn l_key_unbound(
+     node_vk: &MultiStarkVerifyingKey<NodeSC>,
+     label: &str,
+     log: &mut Vec<Value>,
+@@ -224,6 +215,136 @@ fn l_key(
+     (l, engine, pk, vk, n_bench)
+ }
+ 
++// ------------------------------------------------------------------ FP-8 key binding (KeyBind)
++
++/// A bound aggregation layer: `KeyBind` (AIR 0, `role`) + the verifier sub-circuit with the
++/// continuations buses on (child public values, cached commitment and pre-hash sent to KeyBind).
++struct Layer<const N: usize> {
++    circuit: VerifierSubCircuit<N>,
++    role: Role,
++    engine: Eng,
++    pk: MultiStarkProvingKey<NodeSC>,
++    vk: MultiStarkVerifyingKey<NodeSC>,
++}
++
++fn bound_cfg() -> VerifierConfig {
++    VerifierConfig { continuations_enabled: true, ..Default::default() }
++}
++
++fn agg_key<const N: usize>(
++    set: &FrozenSet,
++    child: &MultiStarkVerifyingKey<NodeSC>,
++    role: Role,
++    label: &str,
++    log: &mut Vec<Value>,
++) -> Layer<N> {
++    let engine = Eng::new(set.params());
++    let circuit = <VerifierSubCircuit<N> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
++        Arc::new(child.clone()),
++        bound_cfg(),
++    );
++    let kb = Arc::new(KeyBindAir::new(role.clone(), circuit.bus_inventory())) as AirRef<NodeSC>;
++    let airs: Vec<AirRef<NodeSC>> = std::iter::once(kb).chain(circuit.airs::<NodeSC>()).collect();
++    let (pk, vk) = kg(set, &engine, &airs, label, log);
++    check_layout(&vk);
++    Layer { circuit, role, engine, pk, vk }
++}
++
++/// A node key has exactly one AIR with a cached trace, at `CE_AIR_ID`, and the KeyBind public
++/// values at `KB_AIR_ID` (what the parent KeyBind reads).
++fn check_layout(vk: &MultiStarkVerifyingKey<NodeSC>) {
++    let cached: Vec<usize> = vk
++        .inner
++        .per_air
++        .iter()
++        .enumerate()
++        .filter(|(_, a)| !a.params.width.cached_mains.is_empty())
++        .map(|(i, _)| i)
++        .collect();
++    assert_eq!(cached, vec![keybind::CE_AIR_ID], "KeyBind: cached-trace AIR");
++    assert_eq!(vk.inner.per_air[keybind::KB_AIR_ID].params.num_public_values, keybind::NUM_PVS);
++    let others: usize = vk.inner.per_air.iter().skip(1).map(|a| a.params.num_public_values).sum();
++    assert_eq!(others, 0, "KeyBind: only AIR 0 has public values");
++}
++
++/// The commitment of `child` in the layer `c` (its cached DAG commitment, its pre-hash).
++fn commit_in<const N: usize>(c: &Layer<N>, child: &MultiStarkVerifyingKey<NodeSC>) -> VkCommit {
++    let pcs = c.circuit.commit_child_vk(&c.engine, child);
++    keybind::vk_commit(&pcs.commitment, &child.pre_hash)
++}
++
++fn bound_prove<const N: usize>(
++    c: &Layer<N>,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    proofs: &[Proof<NodeSC>],
++) -> Proof<NodeSC> {
++    let (p, r) = bound_prove_try(c, child_vk, proofs, None);
++    r.expect("bound verify");
++    p
++}
++
++/// Prove a bound layer (optionally with its own KeyBind public values changed by `tamper`) and
++/// return the proof with the stock verifier verdict.
++fn bound_prove_try<const N: usize>(
++    c: &Layer<N>,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    proofs: &[Proof<NodeSC>],
++    tamper: Option<&dyn Fn(&mut Vec<F>)>,
++) -> (Proof<NodeSC>, Result<(), String>) {
++    let pcs = c.circuit.commit_child_vk(&c.engine, child_vk);
++    let child = keybind::vk_commit(&pcs.commitment, &child_vk.pre_hash);
++    let child_pvs: Vec<Vec<F>> = proofs
++        .iter()
++        .map(|p| if c.role == Role::Leaf { vec![] } else { p.public_values[keybind::KB_AIR_ID].clone() })
++        .collect();
++    let (tr, mut pvs) = keybind::trace(&c.role, &child_pvs, child);
++    if let Some(t) = tamper {
++        t(&mut pvs);
++    }
++    let d_pk = c.engine.device().transport_pk_to_device(&c.pk);
++    let mut ctxs = vec![AirProvingContext::simple(
++        c.engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&tr)),
++        pvs,
++    )];
++    ctxs.extend(c.circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(pcs),
++        proofs,
++        &(),
++        default_duplex_sponge_recorder(),
++    ));
++    let proof = c
++        .engine
++        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
++        .expect("bound prove");
++    let r = c.engine.verify(&c.vk, &proof).map_err(|e| format!("{e:?}"));
++    (proof, r)
++}
++
++/// Bound `L`: verifier sub-circuit over N3 (continuations on), the iface AIRs, KeyBind (Root,
++/// N2 and N3 pinned) last, so the L public values are the iface words then the 48 key words.
++fn l_key(
++    node_vk: &MultiStarkVerifyingKey<NodeSC>,
++    n2: VkCommit,
++    n3: VkCommit,
++    label: &str,
++    log: &mut Vec<Value>,
++) -> (VerifierSubCircuit<1>, RootEng, MultiStarkProvingKey<LSC>, MultiStarkVerifyingKey<LSC>, usize, Role) {
++    let engine = RootEng::new(frozen::L.params());
++    let cfg = VerifierConfig { has_cached: true, continuations_enabled: true, ..Default::default() };
++    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(
++        Arc::new(node_vk.clone()),
++        cfg,
++    );
++    let role = Role::Root { n2, n3 };
++    let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
++    let n_bench = airs.len();
++    airs.extend(iface_l::airs(&Dims::FULL));
++    airs.push(Arc::new(KeyBindAir::new(role.clone(), l.bus_inventory())) as AirRef<LSC>);
++    let (pk, vk) = kg(&frozen::L, &engine, &airs, label, log);
++    (l, engine, pk, vk, n_bench, role)
++}
++
+ fn heights<SC: StarkProtocolConfig>(p: &Proof<SC>) -> Vec<Option<usize>> {
+     p.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect()
+ }
+@@ -304,6 +425,7 @@ fn stand_in(seed: u32) -> [F; 8] {
+ 
+ // ------------------------------------------------------------------ keys mode
+ fn keys(out: &PathBuf) {
++    MEASURE_REFUSED.store(true, Ordering::Relaxed);
+     let mut log: Vec<Value> = vec![];
+     let fx = PathBuf::from(format!("{}/.cache/e3-iface/fixture", std::env::var("HOME").unwrap()));
+     let e6_node: MultiStarkVerifyingKey<NodeSC> =
+@@ -315,8 +437,8 @@ fn keys(out: &PathBuf) {
+     let (_, w1) = w1_airs(1);
+     let stock = Eng::new(app_params_with_100_bits_security(MAX_APP_LOG_STACKED_HEIGHT));
+     let (_, b_app) = kg(&frozen::APP, &stock, &w1, "e6/app (stock app set)", &mut log);
+-    let (_, _, _, b_node) = agg_key::<2>(&frozen::INTERNAL, &b_app, "e6/node<2>", &mut log);
+-    let (_, _, _, b_l, _) = l_key(&b_node, "e6/L_iface", &mut log);
++    let (_, _, _, b_node) = agg_key_unbound::<2>(&frozen::INTERNAL, &b_app, "e6/node<2>", &mut log);
++    let (_, _, _, b_l, _) = l_key_unbound(&b_node, "e6/L_iface", &mut log);
+     let baseline = json!({
+         "node_equal_e6": b_node.pre_hash == e6_node.pre_hash,
+         "l_equal_e6": b_l.pre_hash == e6_l.pre_hash,
+@@ -328,13 +450,13 @@ fn keys(out: &PathBuf) {
+     // (1) cause 1: the frozen app set, same topology.
+     let fapp = Eng::new(frozen::APP.params());
+     let (_, a_app) = kg(&frozen::APP, &fapp, &w1, "c1/app (frozen app set)", &mut log);
+-    let (_, _, _, a_node) = agg_key::<2>(&frozen::INTERNAL, &a_app, "c1/node<2> over app", &mut log);
+-    let (_, _, _, _a_l, _) = l_key(&a_node, "c1/L_iface", &mut log);
++    let (_, _, _, a_node) = agg_key_unbound::<2>(&frozen::INTERNAL, &a_app, "c1/node<2> over app", &mut log);
++    let (_, _, _, _a_l, _) = l_key_unbound(&a_node, "c1/L_iface", &mut log);
+ 
+     // (2) cause 2: the leaf layer (FP-8 topology).
+-    let (_, _, _, leaf) = agg_key::<1>(&frozen::LEAF_AGG, &a_app, "fp8/leaf<1>", &mut log);
+-    let (_, _, _, node) = agg_key::<2>(&frozen::INTERNAL, &leaf, "fp8/node<2> over leaf", &mut log);
+-    let (_, _, _, l, _) = l_key(&node, "fp8/L_iface", &mut log);
++    let (_, _, _, leaf) = agg_key_unbound::<1>(&frozen::LEAF_AGG, &a_app, "fp8/leaf<1>", &mut log);
++    let (_, _, _, node) = agg_key_unbound::<2>(&frozen::INTERNAL, &leaf, "fp8/node<2> over leaf", &mut log);
++    let (_, _, _, l, _) = l_key_unbound(&node, "fp8/L_iface", &mut log);
+ 
+     // (3) the new bounds: the same keys checked against the old internal bounds.
+     let old = |vk: &MultiStarkVerifyingKey<NodeSC>| match frozen::check_vk_bounds(
+@@ -352,7 +474,7 @@ fn keys(out: &PathBuf) {
+     macro_rules! menu {
+         ($child:expr, $tag:expr, $($n:literal),*) => {{
+             let mut v = vec![];
+-            $( let (_, _, _, k) = agg_key::<$n>(&frozen::INTERNAL, $child, &format!("{}<{}>", $tag, $n), &mut log);
++            $( let (_, _, _, k) = agg_key_unbound::<$n>(&frozen::INTERNAL, $child, &format!("{}<{}>", $tag, $n), &mut log);
+                v.push(k.pre_hash); )*
+             v
+         }};
+@@ -360,19 +482,19 @@ fn keys(out: &PathBuf) {
+     let over_leaf = menu!(&leaf, "menu/node over leaf", 1, 2, 3, 4);
+     let over_node = menu!(&node, "menu/node over node<2>", 1, 2, 3, 4);
+     // node over node over node: does the internal-recursive key reach a fixed point?
+-    let (_, _, _, nn2) = agg_key::<2>(&frozen::INTERNAL, &node, "fix/nn<2>", &mut log);
+-    let (_, _, _, nnn2) = agg_key::<2>(&frozen::INTERNAL, &nn2, "fix/nnn<2>", &mut log);
++    let (_, _, _, nn2) = agg_key_unbound::<2>(&frozen::INTERNAL, &node, "fix/nn<2>", &mut log);
++    let (_, _, _, nnn2) = agg_key_unbound::<2>(&frozen::INTERNAL, &nn2, "fix/nnn<2>", &mut log);
+ 
+     // (5) universality: the same node arity over a second program's leaf layer (app = 2 W1 AIRs).
+     let (_, w1b) = w1_airs(2);
+     let (_, app_b) = kg(&frozen::APP, &fapp, &w1b, "prog B/app (2 AIRs)", &mut log);
+-    let (_, _, _, leaf_b) = agg_key::<1>(&frozen::LEAF_AGG, &app_b, "prog B/leaf<1>", &mut log);
+-    let (_, _, _, node_b) = agg_key::<2>(&frozen::INTERNAL, &leaf_b, "prog B/node<2> over leaf", &mut log);
+-    let (_, _, _, nn_b) = agg_key::<2>(&frozen::INTERNAL, &node_b, "prog B/nn<2>", &mut log);
+-    let (_, _, _, nnn_b) = agg_key::<2>(&frozen::INTERNAL, &nn_b, "prog B/nnn<2>", &mut log);
+-    let (_, _, _, l_b, _) = l_key(&node_b, "prog B/L_iface over node<2>", &mut log);
+-    let (_, _, _, l_nn, _) = l_key(&nn2, "L_iface over nn<2>", &mut log);
+-    let (_, _, _, l_nnb, _) = l_key(&nn_b, "prog B/L_iface over nn<2>", &mut log);
++    let (_, _, _, leaf_b) = agg_key_unbound::<1>(&frozen::LEAF_AGG, &app_b, "prog B/leaf<1>", &mut log);
++    let (_, _, _, node_b) = agg_key_unbound::<2>(&frozen::INTERNAL, &leaf_b, "prog B/node<2> over leaf", &mut log);
++    let (_, _, _, nn_b) = agg_key_unbound::<2>(&frozen::INTERNAL, &node_b, "prog B/nn<2>", &mut log);
++    let (_, _, _, nnn_b) = agg_key_unbound::<2>(&frozen::INTERNAL, &nn_b, "prog B/nnn<2>", &mut log);
++    let (_, _, _, l_b, _) = l_key_unbound(&node_b, "prog B/L_iface over node<2>", &mut log);
++    let (_, _, _, l_nn, _) = l_key_unbound(&nn2, "L_iface over nn<2>", &mut log);
++    let (_, _, _, l_nnb, _) = l_key_unbound(&nn_b, "prog B/L_iface over nn<2>", &mut log);
+     let universal = json!({
+         "node_over_leaf A == B": node.pre_hash == node_b.pre_hash,
+         "nn A == B": nn2.pre_hash == nn_b.pre_hash,
+@@ -529,50 +651,74 @@ fn chain(out: &PathBuf) {
+     stacked.insert("app".into(), json!(sw(&w1p[0])));
+     drop(app_pk);
+ 
+-    let (lc, le, lpk, leaf_vk) = agg_key::<1>(&frozen::LEAF_AGG, &app_vk, "leaf<1>", &mut log);
++    let lc = agg_key::<1>(&frozen::LEAF_AGG, &app_vk, Role::Leaf, "leaf<1>", &mut log);
++    let leaf_vk = lc.vk.clone();
+     let t = Instant::now();
+-    let leaf_p: Vec<_> =
+-        w1p.iter().map(|p| agg_prove(&lc, &le, &lpk, &leaf_vk, &app_vk, std::slice::from_ref(p))).collect();
++    let leaf_p: Vec<_> = w1p.iter().map(|p| bound_prove(&lc, &app_vk, std::slice::from_ref(p))).collect();
+     tick("leaf_prove_2", t);
+     let h_leaf = height_check(&frozen::LEAF_AGG, &heights(&leaf_p[0]));
+     stacked.insert("leaf".into(), json!(sw(&leaf_p[0])));
+     let leaf_heights = heights(&leaf_p[0]);
+     let app_heights = heights(&w1p[0]);
+-    drop((lpk, w1p));
++    drop((lc, w1p));
+ 
+-    let (nc, ne, npk, node_vk) = agg_key::<2>(&frozen::INTERNAL, &leaf_vk, "node<2>", &mut log);
++    let c1 = agg_key::<2>(&frozen::INTERNAL, &leaf_vk, Role::N1, "N1<2> over leaf", &mut log);
++    let n1_vk = c1.vk.clone();
+     let t = Instant::now();
+-    let node_pf = agg_prove(&nc, &ne, &npk, &node_vk, &leaf_vk, &leaf_p);
++    let n1_pf = bound_prove(&c1, &leaf_vk, &leaf_p);
+     tick("node_prove", t);
+-    let h_node = height_check(&frozen::INTERNAL, &heights(&node_pf));
+-    stacked.insert("node1".into(), json!(sw(&node_pf)));
+-    drop((npk, leaf_p));
+-    let n1_vk = node_vk.clone();
+-    let n1_heights = heights(&node_pf);
+-    // Node over node to the fixed point (depth 3 equals depth 4, `fixpoint` mode): N2, N3.
+-    let (c2, e2, pk2, n2_vk) = agg_key::<2>(&frozen::INTERNAL, &n1_vk, "node2<2> over node1", &mut log);
++    let h_n1 = height_check(&frozen::INTERNAL, &heights(&n1_pf));
++    stacked.insert("node1".into(), json!(sw(&n1_pf)));
++    let n1_heights = heights(&n1_pf);
++    drop((c1, leaf_p));
++    let c2 = agg_key::<2>(&frozen::INTERNAL, &n1_vk, Role::N2, "N2<2> over N1", &mut log);
++    let n2_vk = c2.vk.clone();
+     let t = Instant::now();
+-    let n2_pf = agg_prove(&c2, &e2, &pk2, &n2_vk, &n1_vk, &[node_pf.clone(), node_pf]);
++    let n2_pf = bound_prove(&c2, &n1_vk, &[n1_pf.clone(), n1_pf.clone()]);
+     tick("node2_prove", t);
+-    drop(pk2);
+-    let (c3, e3, pk3, n3_vk) = agg_key::<2>(&frozen::INTERNAL, &n2_vk, "node3<2> over node2", &mut log);
++    drop(c2);
++    let c3 = agg_key::<2>(&frozen::INTERNAL, &n2_vk, Role::N3, "N3<2> over N2", &mut log);
++    let n3_vk = c3.vk.clone();
+     let t = Instant::now();
+-    let n3_pf = agg_prove(&c3, &e3, &pk3, &n3_vk, &n2_vk, &[n2_pf.clone(), n2_pf]);
++    let n3_pf = bound_prove(&c3, &n2_vk, &[n2_pf.clone(), n2_pf]);
+     tick("node3_prove", t);
+-    drop(pk3);
+-    let (_, _, _, n4_vk) = agg_key::<2>(&frozen::INTERNAL, &n3_vk, "node4<2> over node3 (fixed point check)", &mut log);
+-    assert_eq!(n4_vk.pre_hash, n3_vk.pre_hash, "internal-recursive key at its fixed point");
+-    let h_node = json!({"node1": h_node, "node3": height_check(&frozen::INTERNAL, &heights(&n3_pf))});
+-    stacked.insert("node".into(), json!(sw(&n3_pf)));
++    // The internal-recursive key at its fixed point: N3 over N3 has the N3 key.
++    let c4 = agg_key::<2>(&frozen::INTERNAL, &n3_vk, Role::N3, "N3<2> over N3 (fixed point)", &mut log);
++    assert_eq!(c4.vk.pre_hash, n3_vk.pre_hash, "internal-recursive key at its fixed point");
++    // Depth 2 (N3 over N3 at depth 1) and depth 3 (KeyBind s31 and s3x paths).
++    let t = Instant::now();
++    let d2_pf = bound_prove(&c4, &n3_vk, &[n3_pf.clone(), n3_pf.clone()]);
++    let d3_pf = bound_prove(&c4, &n3_vk, &[d2_pf.clone(), d2_pf.clone()]);
++    tick("node_d2_d3_prove", t);
++    let pin_n2 = commit_in(&c3, &n2_vk);
++    let pin_n3 = commit_in(&c4, &n3_vk);
++    drop((c3, c4));
++    let kb_of = |p: &Proof<NodeSC>| p.public_values[keybind::KB_AIR_ID].clone();
++    let slots = |p: &Proof<NodeSC>| -> Value {
++        let v = kb_of(p);
++        json!({
++            "flag": v[keybind::PV_FLAG].as_canonical_u32(),
++            "depth": v[keybind::PV_DEPTH].as_canonical_u32(),
++            "slots": (0..keybind::SLOTS).map(|k| format!("{:?}", keybind::slot(&v, k))).collect::<Vec<_>>(),
++        })
++    };
++    let kb_json = json!({"n1": slots(&n1_pf), "n3_d1": slots(&n3_pf), "n3_d2": slots(&d2_pf), "n3_d3": slots(&d3_pf),
++        "pin_n2": format!("{pin_n2:?}"), "pin_n3": format!("{pin_n3:?}")});
++    assert_eq!(keybind::slot(&kb_of(&d3_pf), keybind::N3), pin_n3, "N3 slot at depth 3 = pinned N3");
++    assert_eq!(keybind::slot(&kb_of(&d3_pf), keybind::N2), pin_n2, "N2 slot = pinned N2");
++    let h_node = json!({"node1": h_n1, "node3": height_check(&frozen::INTERNAL, &heights(&d3_pf))});
++    stacked.insert("node".into(), json!(sw(&d3_pf)));
+     let node_vk = n3_vk.clone();
+-    let node_pf = n3_pf;
++    let node_pf = d3_pf;
+ 
+     let dims = Dims::FULL;
+-    let (l, engine, pk, l_vk, n_bench) = l_key(&node_vk, "L_iface", &mut log);
++    let (l, engine, pk, l_vk, n_bench, l_role) = l_key(&node_vk, pin_n2, pin_n3, "L_iface", &mut log);
+     let (run, _) = iface::case_run(&dims, Case::AllEntries, 14);
+     let words = run.words();
+     let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let cached = CachedTraceCtx::PcsData(l.commit_child_vk(&engine, &node_vk));
++    let l_pcs = l.commit_child_vk(&engine, &node_vk);
++    let l_cached: Fr = l_pcs.commitment[0];
++    let cached = CachedTraceCtx::PcsData(l_pcs);
+     let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         &node_vk,
+         cached,
+@@ -585,6 +731,12 @@ fn chain(out: &PathBuf) {
+         let cm = ColMajorMatrix::from_row_major(&tr);
+         ctxs.push(AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv));
+     }
++    let (kt, kpv) = keybind::trace(&l_role, &[kb_of(&node_pf)], VkCommit::default());
++    let key_words: Vec<u32> = kpv.iter().map(|x| x.as_canonical_u32()).collect();
++    ctxs.push(AirProvingContext::simple(
++        engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
++        kpv,
++    ));
+     let t = Instant::now();
+     let l_proof = engine
+         .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+@@ -600,14 +752,33 @@ fn chain(out: &PathBuf) {
+     assert!(ok, "stock verifier accepts L");
+     let shape = LShape::of(&l_proof);
+     let mut g = Gen::new();
++    g.pinned_cached = Some(vec![l_cached]);
+     let (lw, l_pub) = gen_verifier_full(&mut g, &l_vk, &shape, &l_proof).expect("pinned shape");
+-    gen_r_check(&mut g, &l_pub);
++    assert_eq!(g.pinned_cached.as_ref().map(|v| v.len()), Some(0), "every L cached commitment pinned");
++    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
++    let nw = dims.words();
++    assert_eq!(l_pub.len(), nw + keybind::ROOT_PVS, "L public values: iface words + key words");
++    gen_r_check(&mut g, &l_pub[..nw], &l_vals[..nw]);
++    // L_Fr words: pre-hash, the iface words packed 8 per Fr (the FP-3 layout, unchanged), then
++    // the 48 key words (app, leaf, n1 commitments) packed 8 per Fr: 6 more words (FP-8 key
++    // binding, FOR OWNER CONFIRMATION; the recommended final form folds them into key_root and
++    // prog_d inside the tape).
++    let mut lw = vec![lw[0]];
++    for c in l_pub[..nw].chunks(8) {
++        lw.push(g.tape.pack(c));
++    }
++    for c in l_pub[nw..].chunks(8) {
++        lw.push(g.tape.pack(c));
++    }
+     g.tape.expose(&lw);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty(), "tape assertions failed");
+     let m = Machine::new(&g.tape);
+     let pw = m.public_values(&mem).concat();
+-    assert_eq!(pw.len(), 1 + dims.words().div_ceil(8));
++    let n_iface = 1 + dims.words().div_ceil(8);
++    assert_eq!(pw.len(), n_iface + keybind::ROOT_PVS / 8);
++    let key_fr = pw[n_iface..].to_vec();
++    let pw = pw[..n_iface].to_vec();
+     assert_eq!(iface::decode(&dims, &pw).unwrap(), run.statement(), "honest decode");
+     let dec = decode_cases(&dims, &pw);
+ 
+@@ -660,7 +831,10 @@ fn chain(out: &PathBuf) {
+         "stacked_widths": stacked,
+         "l_stacked_widths": l_stacked,
+         "lfr_stacked_widths": proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
+-        "lfr_public_words": pw.len(),
++        "lfr_public_words": pw.len() + key_fr.len(),
++        "lfr_key_words_fr": hexes(&key_fr),
++        "l_key_words": key_words,
++        "keybind": kb_json,
+         "lfr_pk_bitcode_bytes": fpk_bytes,
+         "times_s": times,
+         "wall_s": t0.elapsed().as_secs_f64(),
+@@ -680,11 +854,13 @@ fn fixpoint(out: &PathBuf) {
+     let (_, w1) = w1_airs(1);
+     let fapp = Eng::new(frozen::APP.params());
+     let (_, app) = kg(&frozen::APP, &fapp, &w1, "app", &mut log);
+-    let (_, _, _, leaf) = agg_key::<1>(&frozen::LEAF_AGG, &app, "leaf<1>", &mut log);
+-    let (_, _, _, mut cur) = agg_key::<2>(&frozen::INTERNAL, &leaf, "depth 1", &mut log);
++    // Bound layers (KeyBind): depth 1 is N1, depth 2 is N2, depth 3 and up is N3.
++    let leaf = agg_key::<1>(&frozen::LEAF_AGG, &app, Role::Leaf, "leaf<1>", &mut log).vk;
++    let mut cur = agg_key::<2>(&frozen::INTERNAL, &leaf, Role::N1, "depth 1", &mut log).vk;
+     let mut rows = vec![];
+-    for depth in 2..=7 {
+-        let (_, _, _, next) = agg_key::<2>(&frozen::INTERNAL, &cur, &format!("depth {depth}"), &mut log);
++    for depth in 2..=6 {
++        let role = if depth == 2 { Role::N2 } else { Role::N3 };
++        let next = agg_key::<2>(&frozen::INTERNAL, &cur, role, &format!("depth {depth}"), &mut log).vk;
+         let a = serde_json::to_value(&cur.inner).unwrap();
+         let b = serde_json::to_value(&next.inner).unwrap();
+         let mut diff = vec![];
+@@ -704,6 +880,160 @@ fn fixpoint(out: &PathBuf) {
+     fs::write(out.join("fixpoint.json"), serde_json::to_string_pretty(&json!({"rows": rows, "keys": log})).unwrap()).unwrap();
+ }
+ 
++/// Prove `L` over one child proof (`child_vk` gives the cached DAG), iface `words`, KeyBind last.
++#[allow(clippy::too_many_arguments)]
++fn l_prove(
++    l: &VerifierSubCircuit<1>,
++    engine: &RootEng,
++    pk: &MultiStarkProvingKey<LSC>,
++    n_bench: usize,
++    role: &Role,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    child_pf: &Proof<NodeSC>,
++    words: &[u64],
++) -> Proof<LSC> {
++    let dims = Dims::FULL;
++    let d_pk = engine.device().transport_pk_to_device(pk);
++    let pcs = l.commit_child_vk(engine, child_vk);
++    let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
++        child_vk,
++        CachedTraceCtx::PcsData(pcs),
++        std::slice::from_ref(child_pf),
++        &(),
++        default_duplex_sponge_recorder(),
++    );
++    assert_eq!(ctxs.len(), n_bench);
++    for (tr, pv) in iface_l::traces::<F>(&dims, words) {
++        let cm = ColMajorMatrix::from_row_major(&tr);
++        ctxs.push(AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv));
++    }
++    let (kt, kpv) = keybind::trace(role, &[child_pf.public_values[keybind::KB_AIR_ID].clone()], VkCommit::default());
++    ctxs.push(AirProvingContext::simple(
++        engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
++        kpv,
++    ));
++    engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).expect("L prove")
++}
++
++/// The L_Fr tape over an `L` proof with the cached commitment pinned to `pin`: Ok when every
++/// tape assertion holds.
++fn lfr_tape(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) -> Result<(), String> {
++    let shape = LShape::of(l_proof);
++    let mut g = Gen::new();
++    g.pinned_cached = Some(vec![pin]);
++    let (lw, l_pub) = gen_verifier_full(&mut g, l_vk, &shape, l_proof).map_err(|e| format!("{e:?}"))?;
++    let nw = Dims::FULL.words();
++    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
++    gen_r_check(&mut g, &l_pub[..nw], &l_vals[..nw]);
++    g.tape.expose(&lw);
++    let (_, failed) = g.tape.execute_checked(&g.inputs);
++    if failed.is_empty() { Ok(()) } else { Err(format!("{} tape assertions failed", failed.len())) }
++}
++
++/// FP-8 key-binding negatives on real proofs: each must be refused by the stock verifier of the
++/// layer or by the L_Fr tape (not by trace generation), and the honest cases accepted.
++fn neg(out: &PathBuf) {
++    let mut log: Vec<Value> = vec![];
++    let mut res: Vec<Value> = vec![];
++    let mut rec = |name: &str, expect_ok: bool, r: Result<(), String>| {
++        let pass = r.is_ok() == expect_ok;
++        println!("FP8NEG {name}: expect {} got {:?} -> {}", if expect_ok { "accept" } else { "refuse" }, r, if pass { "PASS" } else { "FAIL" });
++        res.push(json!({"case": name, "expect": if expect_ok { "accept" } else { "refuse" }, "got": format!("{r:?}"), "pass": pass}));
++    };
++    // Program A: W1; program B: W1 with one partial-round constant changed (same shape, other DAG).
++    let (chip_a, w1a) = w1_airs(1);
++    let mut cb = Poseidon2Config::<F>::default().constants;
++    cb.partial_round_constants[0] += F::ONE;
++    let chip_b = Poseidon2SubChip::<F, 1>::new(cb);
++    let w1b: Vec<AirRef<NodeSC>> = vec![chip_b.air.clone()];
++    let fapp = Eng::new(frozen::APP.params());
++    let (pka, app_a) = kg(&frozen::APP, &fapp, &w1a, "app A", &mut log);
++    let (pkb, app_b) = kg(&frozen::APP, &fapp, &w1b, "app B", &mut log);
++    let pa = w1_prove(&fapp, &pka, &app_a, &chip_a, 1, 14);
++    let pb = w1_prove(&fapp, &pkb, &app_b, &chip_b, 1, 14);
++    let lc = agg_key::<1>(&frozen::LEAF_AGG, &app_a, Role::Leaf, "leaf<1>", &mut log);
++    let lc_b = agg_key::<1>(&frozen::LEAF_AGG, &app_b, Role::Leaf, "leaf<1> (B)", &mut log);
++    assert_eq!(lc.vk.pre_hash, lc_b.vk.pre_hash, "leaf key depends only on the app shape");
++    let la = bound_prove(&lc, &app_a, &pa);
++    let lb = bound_prove(&lc, &app_b, &pb);
++    let c1 = agg_key::<2>(&frozen::INTERNAL, &lc.vk, Role::N1, "N1", &mut log);
++    // (1) Two app keys under one N1: refused.
++    let (_, r) = bound_prove_try(&c1, &lc.vk, &[la.clone(), lb.clone()], None);
++    rec("n1_mixed_app_keys", false, r);
++    // (2) N1 with its own app slot changed: refused.
++    let bump: &dyn Fn(&mut Vec<F>) = &|v: &mut Vec<F>| v[keybind::pv_pre(keybind::APP)] += F::ONE;
++    let (_, r) = bound_prove_try(&c1, &lc.vk, &[la.clone(), la.clone()], Some(bump));
++    rec("n1_tampered_app_slot", false, r);
++    // (3) N1 with a leaf slot pre-set (a slot above the layer): refused one layer up.
++    let n1a = bound_prove(&c1, &lc.vk, &[la.clone(), la.clone()]);
++    let n1b = bound_prove(&c1, &lc.vk, &[lb.clone(), lb.clone()]);
++    let a_slot = keybind::slot(&n1a.public_values[0], keybind::APP);
++    let b_slot = keybind::slot(&n1b.public_values[0], keybind::APP);
++    rec("program_b_exposes_other_app_commit", false, if a_slot == b_slot { Ok(()) } else { Err("app slots differ".into()) });
++    // (4) N1 with a slot above itself pre-set (n2): refused by N1 itself.
++    let preset: &dyn Fn(&mut Vec<F>) = &|v: &mut Vec<F>| v[keybind::pv_pre(keybind::N2)] = F::ONE;
++    let (_, r) = bound_prove_try(&c1, &lc.vk, &[la.clone(), la.clone()], Some(preset));
++    rec("n1_preset_n2_slot", false, r);
++    let c2 = agg_key::<2>(&frozen::INTERNAL, &c1.vk, Role::N2, "N2", &mut log);
++    let n2 = bound_prove(&c2, &c1.vk, &[n1a.clone(), n1a.clone()]);
++    let c3 = agg_key::<2>(&frozen::INTERNAL, &c2.vk, Role::N3, "N3", &mut log);
++    let n3 = bound_prove(&c3, &c2.vk, &[n2.clone(), n2.clone()]);
++    let c4 = agg_key::<2>(&frozen::INTERNAL, &c3.vk, Role::N3, "N3 over N3", &mut log);
++    assert_eq!(c4.vk.pre_hash, c3.vk.pre_hash);
++    // (5) N3 depth 1 with its n3 slot pre-set: refused by N3 itself.
++    let preset3: &dyn Fn(&mut Vec<F>) = &|v: &mut Vec<F>| v[keybind::pv_cached(keybind::N3)] = F::ONE;
++    let (_, r) = bound_prove_try(&c3, &c2.vk, &[n2.clone(), n2.clone()], Some(preset3));
++    rec("n3_d1_preset_n3_slot", false, r);
++    let d2 = bound_prove(&c4, &c3.vk, &[n3.clone(), n3.clone()]);
++    // (6) N3 over [depth 1, depth 2] (mixed depths): refused.
++    let (_, r) = bound_prove_try(&c4, &c3.vk, &[n3.clone(), d2.clone()], None);
++    rec("n3_mixed_depths", false, r);
++    // (7) N3 at depth 2 with its n2 slot changed: refused.
++    let bump2: &dyn Fn(&mut Vec<F>) = &|v: &mut Vec<F>| v[keybind::pv_cached(keybind::N2)] += F::ONE;
++    let (_, r) = bound_prove_try(&c4, &c3.vk, &[n3.clone(), n3.clone()], Some(bump2));
++    rec("n3_d2_tampered_n2_slot", false, r);
++    let pin_n2 = commit_in(&c3, &c2.vk);
++    let pin_n3 = commit_in(&c4, &c3.vk);
++    let n3_vk = c3.vk.clone();
++    let n2_vk = c2.vk.clone();
++    drop((c1, c2, c3, c4, lc, lc_b));
++
++    let (run, _) = iface::case_run(&Dims::FULL, Case::AllEntries, 14);
++    let words = run.words();
++    let (l, engine, pk, l_vk, n_bench, role) = l_key(&n3_vk, pin_n2, pin_n3, "L", &mut log);
++    let l_pin: Fr = l.commit_child_vk(&engine, &n3_vk).commitment[0];
++    // (6) L over N3 depth 1 and depth 2: accepted; tape with the pin accepted.
++    let p1 = l_prove(&l, &engine, &pk, n_bench, &role, &n3_vk, &n3, &words);
++    rec("l_over_n3_depth1", true, engine.verify(&l_vk, &p1).map_err(|e| format!("{e:?}")));
++    let p2 = l_prove(&l, &engine, &pk, n_bench, &role, &n3_vk, &d2, &words);
++    rec("l_over_n3_depth2", true, engine.verify(&l_vk, &p2).map_err(|e| format!("{e:?}")));
++    rec("lfr_tape_honest", true, lfr_tape(&l_vk, &p2, l_pin));
++    // (7) L_Fr tape with a wrong pin of the L cached commitment: refused.
++    rec("lfr_tape_wrong_pin", false, lfr_tape(&l_vk, &p2, l_pin + Fr::ONE));
++    // (8) L over an N2 proof (child DAG N2, child flag 2): refused by L and by the tape.
++    let p3 = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++        l_prove(&l, &engine, &pk, n_bench, &role, &n2_vk, &n2, &words)
++    }));
++    match p3 {
++        Ok(p3) => {
++            rec("l_over_n2_child", false, engine.verify(&l_vk, &p3).map_err(|e| format!("{e:?}")));
++            rec("lfr_tape_over_l_with_n2_dag", false, lfr_tape(&l_vk, &p3, l_pin));
++        }
++        Err(_) => rec("l_over_n2_child (trace generation panicked: not a verifier refusal)", true, Err("panic".into())),
++    }
++    drop((pk, l));
++    // (9) L keyed with a wrong N2 pin, honest child: refused.
++    let mut bad = pin_n2;
++    bad.cached[0] ^= 1;
++    let (l, engine, pk, l_vk, n_bench, role) = l_key(&n3_vk, bad, pin_n3, "L (wrong N2 pin)", &mut log);
++    let p4 = l_prove(&l, &engine, &pk, n_bench, &role, &n3_vk, &d2, &words);
++    rec("l_wrong_n2_pin", false, engine.verify(&l_vk, &p4).map_err(|e| format!("{e:?}")));
++    let all = res.iter().all(|r| r["pass"].as_bool().unwrap());
++    fs::write(out.join("neg.json"), serde_json::to_string_pretty(&json!({"all_pass": all, "cases": res, "keys": log})).unwrap()).unwrap();
++    println!("FP8NEG all_pass={all}");
++    assert!(all, "a key-binding case did not behave as expected");
++}
++
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+     let out = PathBuf::from(&a[2]);
+@@ -712,6 +1042,7 @@ fn main() {
+         "keys" => keys(&out),
+         "chain" => chain(&out),
+         "fixpoint" => fixpoint(&out),
++        "neg" => neg(&out),
+         _ => panic!("mode keys or chain"),
+     }
+ }
+-- 
+2.56.0
+

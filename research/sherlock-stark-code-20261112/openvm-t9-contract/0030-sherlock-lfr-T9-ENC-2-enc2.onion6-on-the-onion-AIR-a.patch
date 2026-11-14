@@ -1,0 +1,80 @@
+From 01eb63fa4554f53d063d860adf6659eb3af057d4 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 19:05:32 -0700
+Subject: [PATCH] sherlock-lfr: T9 ENC-2 enc2.onion6 on the onion AIR
+ (accepted; one-word changes refused)
+
+---
+ crates/sherlock-lfr/tests/j8_onion.rs | 59 +++++++++++++++++++++++++++
+ 1 file changed, 59 insertions(+)
+
+diff --git a/crates/sherlock-lfr/tests/j8_onion.rs b/crates/sherlock-lfr/tests/j8_onion.rs
+index b0ed9c9..e7ad5af 100644
+--- a/crates/sherlock-lfr/tests/j8_onion.rs
++++ b/crates/sherlock-lfr/tests/j8_onion.rs
+@@ -213,3 +213,62 @@ fn j8_onion_small() {
+     println!("J8 log_n changed: {r:?}");
+     assert!(r.is_err());
+ }
++
++/// T9, ENC-2 on the AIR side: the onion AIR over the pinned ENC-2 log (`enc2.enc[0..6]`:
++/// `DIGEST(SHK_PROGC)`, `H2`, `SPONGE(3)`, `PERM`, `PUB(1)`, `DIGEST(SHK_INPUT)`, with the
++/// preimages of `VECTORS.txt`) accepts `log_d` = the pinned `enc2.onion6` word for word, and
++/// refuses each one-word change of it. The words of every entry reach the AIR as `enc(e)`.
++#[test]
++fn t9_enc2_onion6_on_the_onion_air() {
++    use num_bigint::BigUint;
++    use openvm_stark_backend::p3_field::PrimeCharacteristicRing;
++    use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
++    use sherlock_lfr::{fr::fr_from_big, iface::OpIn};
++    const ONION6: [u64; 8] =
++        [365509232, 1748783776, 666338835, 1517722680, 393187787, 100716010, 257089906, 1188286804];
++    let pack = |ws: &[u64]| {
++        let mut x = BigUint::from(0u32);
++        for (i, &w) in ws.iter().enumerate() {
++            x += BigUint::from(w) << (31 * i);
++        }
++        fr_from_big(&x)
++    };
++    let r_p: Vec<u64> = (101..=108).collect();
++    let prog_d: Vec<u64> = (201..=208).collect();
++    let d2_progc = iface::p2(6, &[r_p, prog_d].concat());
++    let input_d: [u64; 8] =
++        [1844765863, 1946263212, 480254560, 1610161683, 900750315, 731375867, 384171174, 1479089448];
++    let (a, b, c) = (Fr::from_u64(3), Fr::from_u64(5), Fr::from_u64(7));
++    let log = vec![
++        OpIn::Digest { tag: iface::SHK_PROGC, d2: pack(&d2_progc) }.entry(),
++        OpIn::H2(a, b).entry(),
++        OpIn::Sponge(vec![a, b, c]).entry(),
++        OpIn::Perm([a, b, c]).entry(),
++        OpIn::Pub { lane: 1, v: Fr::from_u64(0x1234) }.entry(),
++        OpIn::Digest { tag: iface::SHK_INPUT, d2: pack(&input_d) }.entry(),
++    ];
++    let mut head = vec![0u64; iface::STMT];
++    head[iface::LOG_D_WORD..iface::LOG_D_WORD + 8].copy_from_slice(&ONION6);
++    head[iface::LOG_N_WORD] = log.len() as u64;
++    let mut lanes = vec![Fr::ZERO; SMALL.lanes()];
++    lanes[1] = Fr::from_u64(0x1234);
++    let run = iface::Run {
++        dims: SMALL,
++        head,
++        lanes,
++        lane_map: [(0, 0); iface::LANE_PAIRS],
++        log,
++        path_sibs: vec![],
++    };
++    let w = run.words();
++    let r = prove(&w);
++    println!("T9 ENC-2 onion6 on the onion AIR: {r:?}");
++    assert!(r.is_ok());
++    for k in [0usize, 7] {
++        let mut bad = w.clone();
++        bad[iface::LOG_D_WORD + k] = (bad[iface::LOG_D_WORD + k] + 1) % sherlock_lfr::bb::P;
++        let r = prove(&bad);
++        println!("T9 ENC-2 onion6 word {k} changed: {r:?}");
++        assert!(r.is_err());
++    }
++}
+-- 
+2.56.0
+

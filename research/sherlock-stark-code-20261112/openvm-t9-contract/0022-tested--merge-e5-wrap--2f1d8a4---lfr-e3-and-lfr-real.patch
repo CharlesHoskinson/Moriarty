@@ -1,0 +1,467 @@
+From 53628634172543e69dce47cbda54e448e883354b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 08:22:11 -0700
+Subject: [PATCH] tested: merge e5-wrap (2f1d8a4): lfr_e3 and lfr_real take the e5-wrap port to E3 9539418 with the fp8 keygen_frozen call
+
+(merge exported as its diff against the first parent)
+---
+
+diff --git a/crates/sherlock-wrap-export/examples/enc_wrap.rs b/crates/sherlock-wrap-export/examples/enc_wrap.rs
+new file mode 100644
+index 0000000..40456e5
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/enc_wrap.rs
+@@ -0,0 +1,238 @@
++//! Writes the E5 fixture `enc-wrap-decode` for the ENC wrap-side vectors. It builds an `L` word
++//! vector whose `pv` (entry table and value table) is the ENC-2 log of the pinned vectors
++//! (`enc2.enc[0..6]`: `DIGEST(0)`, `H2`, `SPONGE(3)`, `PERM`, `PUB(1)`, `DIGEST(2)`). Two
++//! things are checked against the pinned values first: that `pv` gives `enc2.pv[0..12]`, and
++//! that its `P2(TAG_ENT, pv)` gives `enc2.pv.p2_fingerprint`. `D_EMPTY` is also recomputed,
++//! which confirms the BabyBear permutation matches ENC's. The lane map has two pairs:
++//! lane 2 takes `C_P` from entry 0, and lane 3 takes `input_pub` from entry 5. Lane 1
++//! carries the `PUB(1)` value 0x1234. The L words are packed 8 per Fr into the `L_Fr`
++//! public words. The stock D-9 decoder (`iface::decode`) verdict is recorded on the honest
++//! vector and on changed vectors, in the `lfr-e3-decode` format. At E3 9539418 the decoder also
++//! checks `R` (plan D-10): the ENC-2 log is not an `R` log (entry 1 is `H2`), so every case is
++//! refused at `R entry 1`. Each case therefore also records the verdict and the statement of
++//! the stock lane-map step alone (`iface::apply_lane_map`, `lane_map_ok`, `lane_map_statement`).
++//! usage: enc_wrap [VECTORS.txt]
++use std::{collections::HashMap, fs, path::PathBuf};
++
++use num_bigint::BigUint;
++use openvm_stark_backend::p3_field::{PrimeCharacteristicRing, PrimeField32};
++use openvm_stark_sdk::{
++    config::{baby_bear_poseidon2::poseidon2_compress_with_capacity, bls12381_fr_poseidon::Bls12381Fr as Fr},
++    p3_baby_bear::BabyBear as B,
++};
++use serde_json::{json, Value};
++use sherlock_lfr::iface::{self, Dims, LANE_MAP, LIMBS, STMT};
++use sherlock_wrap_export::hex_be;
++
++const TAG_EMPTY: u32 = 1;
++const TAG_ENT: u32 = 4;
++
++/// ENC `p2_alt`: the chain of `poseidon2_compress_with_capacity` from `cap = [1 + l, 0, ..]`.
++fn p2(tag: u32, xs: &[u64]) -> Vec<u64> {
++    let mut words = vec![B::from_u32(tag)];
++    words.extend(xs.iter().map(|&x| B::from_u32(x as u32)));
++    let mut cap = [B::ZERO; 8];
++    cap[0] = B::from_u32(words.len() as u32);
++    let mut out = [B::ZERO; 8];
++    for blk in words.chunks(8) {
++        let mut left = [B::ZERO; 8];
++        left[..blk.len()].copy_from_slice(blk);
++        let (o, c) = poseidon2_compress_with_capacity(left, cap);
++        out = o;
++        cap = c;
++    }
++    out.iter().map(|x| x.as_canonical_u32() as u64).collect()
++}
++
++fn fr_of(b: &BigUint) -> Fr {
++    let mut acc = Fr::ZERO;
++    for d in b.to_u64_digits().iter().rev() {
++        acc = acc * Fr::from_u64(1 << 32) * Fr::from_u64(1 << 32) + Fr::from_u64(*d);
++    }
++    acc
++}
++
++fn pack(pre: Fr, w: &[u64]) -> Vec<Fr> {
++    let mut out = vec![pre];
++    for c in w.chunks(8) {
++        let mut b = BigUint::from(0u32);
++        for (k, &x) in c.iter().enumerate() {
++            b += BigUint::from(x) << (31 * k);
++        }
++        out.push(fr_of(&b));
++    }
++    out
++}
++
++fn nums(s: &str) -> Vec<u64> {
++    s.trim().trim_start_matches('[').trim_end_matches(']').split(',').map(|x| x.trim().parse().unwrap()).collect()
++}
++
++fn hexes(v: &[Fr]) -> Vec<String> {
++    v.iter().map(hex_be).collect()
++}
++
++/// The stock lane-map step alone (lanes, pairs, entry offsets and values from the words).
++fn lane_map_step(d: &Dims, words: &[Fr]) -> Option<Result<Vec<Fr>, String>> {
++    let w = iface::unpack(words, d.words()).ok()?;
++    let mut lanes = vec![];
++    for i in 0..d.lanes() {
++        lanes.push(iface::dec(&w[d.call_at() + LIMBS * i..][..LIMBS])?);
++    }
++    let mut vs = vec![];
++    for j in 0..d.v {
++        vs.push(iface::dec(&w[d.values_at() + LIMBS * j..][..LIMBS])?);
++    }
++    let mut off = 0;
++    let offs: Vec<(u64, u64, usize)> = (0..d.b)
++        .map(|i| {
++            let (op, param) = (w[STMT + 2 * i], w[STMT + 2 * i + 1]);
++            let o = off;
++            off += iface::vals(op, param);
++            (op, param, o)
++        })
++        .collect();
++    let pairs: Vec<(u64, u64)> = (0..4).map(|k| (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1])).collect();
++    Some(iface::apply_lane_map(lanes, &pairs, &offs, &vs))
++}
++
++fn case(name: &str, d: &Dims, words: Vec<Fr>) -> Value {
++    let r = iface::decode(d, &words);
++    let lm = lane_map_step(d, &words);
++    println!(
++        "E5ENC {name}: {}",
++        match &r {
++            Ok(_) => "ok".to_string(),
++            Err(e) => format!("refused: {e}"),
++        }
++    );
++    json!({
++        "name": name,
++        "words": hexes(&words),
++        "ok": r.is_ok(),
++        "error": r.as_ref().err().cloned(),
++        "statement": r.ok().map(|s| hexes(&s)),
++        "lane_map_ok": lm.as_ref().map(|x| x.is_ok()),
++        "lane_map_statement": lm.and_then(|x| x.ok()).map(|s| hexes(&s)),
++    })
++}
++
++fn main() {
++    let src = std::env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
++        PathBuf::from(format!(
++            "{}/Projects/Moriarty-wt/enc-fp3/research/sherlock-enc-fp3-20261112/VECTORS.txt",
++            std::env::var("HOME").unwrap()
++        ))
++    });
++    let out = PathBuf::from(std::env::var("E5_FIXTURES").unwrap_or_else(|_| {
++        format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
++    }));
++    let text = fs::read_to_string(&src).unwrap();
++    let pin: HashMap<String, String> = text
++        .lines()
++        .filter_map(|l| l.split_once(" = ").map(|(k, v)| (k.trim().to_string(), v.trim().to_string())))
++        .collect();
++    assert_eq!(pin.len(), 55, "55 pinned vectors");
++    let d = Dims::FULL;
++
++    // The BabyBear permutation is ENC's: D_EMPTY = P2(TAG_EMPTY).
++    assert_eq!(p2(TAG_EMPTY, &[]), nums(&pin["enc2.D_EMPTY"]), "D_EMPTY");
++
++    // pv from the pinned enc(e) words.
++    let encs: Vec<Vec<u64>> = (0..6).map(|i| nums(&pin[&format!("enc2.enc[{i}]")])).collect();
++    let mut pv = vec![];
++    for i in 0..d.b {
++        match encs.get(i) {
++            Some(e) => pv.extend(&e[..2]),
++            None => pv.extend([0, 0]),
++        }
++    }
++    let mut vals: Vec<u64> = encs.iter().flat_map(|e| e[2..].to_vec()).collect();
++    assert_eq!(vals.len(), 9 * 18, "18 logged values");
++    vals.resize(LIMBS * d.v, 0);
++    pv.extend(&vals);
++    assert_eq!(pv.len(), 2816);
++    assert_eq!(pv[..12].to_vec(), nums(&pin["enc2.pv[0..12]"]), "pv[0..12]");
++    assert_eq!(p2(TAG_ENT, &pv), nums(&pin["enc2.pv.p2_fingerprint"]), "pv fingerprint");
++
++    // The L words: head zero but for the lane map; pv; the call vector.
++    let mut head = vec![0u64; STMT];
++    let lm = [(2u64, 0u64), (3, 5), (0, 0), (0, 0)];
++    for (k, &(lane, ent)) in lm.iter().enumerate() {
++        head[LANE_MAP + 2 * k] = lane;
++        head[LANE_MAP + 2 * k + 1] = ent;
++    }
++    let mut lanes = vec![Fr::ZERO; d.lanes()];
++    lanes[0] = Fr::from_u64(0x5eed);
++    lanes[1] = Fr::from_u64(0x1234);
++    let mut w = head.clone();
++    w.extend(&pv);
++    for x in &lanes {
++        w.extend(iface::limbs(*x));
++    }
++    assert_eq!(w.len(), d.words());
++    let pre = Fr::from_u64(0xe5c0de);
++    let honest = pack(pre, &w);
++    assert_eq!(iface::decode(&d, &honest), Err("R entry 1".to_string()), "the ENC-2 log is not an R log");
++    let s = lane_map_step(&d, &honest).unwrap().expect("the honest lane map applies");
++    let c_p = iface::dec(&encs[0][11..20]).unwrap();
++    let input_pub = iface::dec(&encs[5][11..20]).unwrap();
++    assert_eq!(s[2], c_p);
++    assert_eq!(s[3], input_pub);
++    assert_eq!(hex_be(&c_p).trim_start_matches("0x"), pin["enc1.C_P"].trim_start_matches("0x"), "lane 2 is C_P");
++    assert_eq!(hex_be(&input_pub).trim_start_matches("0x"), pin["enc1.input_pub"].trim_start_matches("0x"), "lane 3 is input_pub");
++    assert_eq!(s[1], Fr::from_u64(0x1234));
++
++    let lane_at = |l: usize| d.call_at() + LIMBS * l;
++    let mut cases = vec![case("honest", &d, honest.clone())];
++    let mut t = w.clone();
++    t[lane_at(1)] ^= 1;
++    cases.push(case("pub_lane_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + LIMBS * 15] ^= 1; // the logged value of PUB(1) (value row 15 of 18)
++    cases.push(case("pub_value_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + LIMBS] ^= 1; // the output C_P of DIGEST(0) (value row 1): lane 2 follows it
++    cases.push(case("digest_output_changed", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 1] = 2; // pair 0 names SPONGE(3)
++    cases.push(case("lane_map_to_sponge", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 1] = 4; // pair 0 names PUB(1)
++    cases.push(case("lane_map_to_pub", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP] = 1; // pair 0 writes lane 1, which holds 0x1234
++    cases.push(case("lane_map_taken_lane", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 2] = 2; // pair 1 writes lane 2 again
++    cases.push(case("lane_map_same_lane_twice", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 3] = 6; // pair 1 names entry 6, a NOP
++    cases.push(case("lane_map_to_nop", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    let r1 = iface::limbs(-Fr::ONE);
++    assert_eq!(r1.to_vec(), nums(&pin["enc2.limbs(r-1)"]), "limbs(r-1)");
++    t[lane_at(0)..lane_at(0) + LIMBS].copy_from_slice(&r1);
++    cases.push(case("lane_r_minus_1", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    let mut r = r1;
++    r[0] += 1; // r - 1 + 1 = r: not canonical
++    t[lane_at(0)..lane_at(0) + LIMBS].copy_from_slice(&r);
++    cases.push(case("lane_r", &d, pack(pre, &t)));
++    let mut t = w.clone();
++    t[d.values_at() + 2] = 1 << 30;
++    cases.push(case("value_limb_2_30", &d, pack(pre, &t)));
++
++    let doc = json!({
++        "source": src.display().to_string(),
++        "dims": {"b": d.b, "v": d.v, "p": d.p, "l_tx": d.l_tx},
++        "lane_map": lm.iter().map(|p| [p.0, p.1]).collect::<Vec<_>>(),
++        "pv": pv,
++        "checks": {"d_empty": true, "pv_head12": true, "pv_fingerprint": true, "lane2_c_p": true, "lane3_input_pub": true, "limbs_r_minus_1": true},
++        "cases": cases,
++    });
++    fs::create_dir_all(&out).unwrap();
++    let path = out.join("enc-wrap-decode.json");
++    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    println!("E5ENC wrote {} ({} cases; D_EMPTY, pv[0..12], pv fingerprint, lane 2 = C_P, lane 3 = input_pub equal the pinned values)", path.display(), doc["cases"].as_array().unwrap().len());
++}
+diff --git a/crates/sherlock-wrap-export/examples/lfr_e3.rs b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+index a880c51..7c4d46e 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_e3.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+@@ -1,17 +1,18 @@
+ //! Writes the E5 fixture `lfr-e3` (`wrapin` v1): the E3 `L_Fr` proof of the whole `L` verifier
+-//! on the `L_iface` all-entries proof (E3 J5 case `all_entries`, seed 14), at the `L_Fr` set,
++//! on the `L_iface` all-entries proof (E3 J5 case `all_entries`, seed 14; the J8 fixture of E3 9539418), at the `L_Fr` set,
+ //! with the 1,522 exposed words (the `L` vk pre-hash, then the 12,164 `L` public words packed 8
+ //! per Fr). Adds `decode`: the stock D-9 decoder (`iface::decode`) on the honest words and on
+-//! tampered word vectors, each with its stock verdict, for the wrap's in-circuit decoder.
++//! tampered word vectors, each with its stock verdict, for the wrap's in-circuit decoder. A case
++//! may also carry `lane_map_ok`, the verdict of the stock `iface::apply_lane_map` step alone (for
++//! a lane-map rule that the whole decoder reaches only after a replay refusal).
+ //! usage: lfr_e3 [prove: 1 | 0 (decode cases only, no proof)]
+ use std::{fs, path::PathBuf, time::Instant};
+ 
+ use num_bigint::BigUint;
+ use openvm_stark_backend::{
+-    p3_field::PrimeField32,
+     codec::Decode,
+     keygen::types::MultiStarkVerifyingKey,
+-    p3_field::{Field, PrimeCharacteristicRing},
++    p3_field::{Field, PrimeCharacteristicRing, PrimeField32},
+     proof::Proof,
+     prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
+     StarkEngine,
+@@ -20,7 +21,10 @@ use openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr as Fr;
+ use serde_json::{json, Value};
+ use sherlock_lfr::{
+     fixture::LSC,
+-    iface::{self, Case, Dims, ECMUL, LANE_MAP, LIMBS, NOP, PUB, STMT},
++    iface::{
++        self, Case, Dims, DIGEST, ECMUL, E_IN_WORD, J_WORDS, LANE_A_IN, LANE_MAP, LANE_PAIRS, LIMBS,
++        MODE_WORD, NOP, PERM, PUB, SPONGE, STMT,
++    },
+     lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
+     machine::Machine,
+     record::stock_log,
+@@ -77,6 +81,41 @@ fn case(name: &str, d: &Dims, words: Vec<Fr>) -> Value {
+     })
+ }
+ 
++/// The verdict of the stock lane-map step alone on the words `w` (lanes, pairs, entry offsets).
++fn lane_map_ok(d: &Dims, w: &[u64]) -> bool {
++    let lanes: Vec<Fr> = (0..d.lanes())
++        .map(|i| iface::dec(&w[d.call_at() + LIMBS * i..][..LIMBS]).unwrap())
++        .collect();
++    let vs: Vec<Fr> = (0..d.v)
++        .map(|j| iface::dec(&w[d.values_at() + LIMBS * j..][..LIMBS]).unwrap())
++        .collect();
++    let mut off = 0;
++    let offs: Vec<(u64, u64, usize)> = (0..d.b)
++        .map(|i| {
++            let (op, param) = (w[STMT + 2 * i], w[STMT + 2 * i + 1]);
++            let o = off;
++            off += iface::vals(op, param);
++            (op, param, o)
++        })
++        .collect();
++    let pairs: Vec<(u64, u64)> = (0..LANE_PAIRS)
++        .map(|k| (w[LANE_MAP + 2 * k], w[LANE_MAP + 2 * k + 1]))
++        .collect();
++    iface::apply_lane_map(lanes, &pairs, &offs, &vs).is_ok()
++}
++
++/// Value offsets of the entries.
++fn offsets(d: &Dims, w: &[u64]) -> Vec<usize> {
++    let mut off = 0;
++    (0..d.b)
++        .map(|i| {
++            let o = off;
++            off += iface::vals(w[STMT + 2 * i], w[STMT + 2 * i + 1]);
++            o
++        })
++        .collect()
++}
++
+ fn decode_cases(d: &Dims, pw: &[Fr]) -> Value {
+     let n = d.words();
+     let w = unpack_words(pw, n);
+@@ -128,6 +167,110 @@ fn decode_cases(d: &Dims, pw: &[Fr]) -> Value {
+     let mut t = w.clone();
+     t[LANE_MAP + 1] = pub_i as u64;
+     cases.push(case("lane_map_not_digest", d, repack(pre, &t)));
++    // 9539418: R, the anchor rule, the claim_pub inputs and the native replay.
++    let offs = offsets(d, &w);
++    let val_at = |j: usize| d.values_at() + LIMBS * j;
++    let mut t = w.clone();
++    t[MODE_WORD] = 2;
++    cases.push(case("mode_2", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[J_WORDS] = 1 << 16;
++    cases.push(case("jk_not_u16", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[MODE_WORD] = 1; // a chunk with j = 0
++    cases.push(case("chunk_j_0", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[E_IN_WORD] = 5;
++    cases.push(case("anchor_word_e_in", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[STMT + 1] = 1; // entry 0 DIGEST(LOCK), not DIGEST(PROGC)
++    cases.push(case("r_entry_0_tag", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[val_at(6)] ^= 1; // first SPONGE(3) input is not the PROGC output
++    cases.push(case("claim_pub_input_changed", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[val_at(11)] ^= 1; // output of entry 4 (the a_in anchor DIGEST), mapped to LANE_A_IN
++    cases.push(case("r_anchor_output_changed", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[val_at(9)] ^= 1; // output of entry 3, SPONGE(3), mapped to the claim_pub lanes
++    cases.push(case("r_sponge3_output_changed", d, repack(pre, &t)));
++    // The all-entries log is R then PUB entries. A tail of other ops: the last 14 PUB entries
++    // (14 values) become PERM, SPONGE(5), DIGEST(SHK_REG) (6 + 6 + 2 values), honest replays,
++    // then NOPs. Their lanes are no longer read by a PUB; the decode stays ok.
++    let n_ent = (0..d.b).filter(|&i| w[STMT + 2 * i] != NOP).count();
++    let first = n_ent - 14;
++    assert!((first..n_ent).all(|i| w[STMT + 2 * i] == PUB));
++    let mut tb = w.clone();
++    let x = |k: u64| Fr::from_u64(0x7a11 + k);
++    let pin = [x(1), x(2), x(3)];
++    let pout = iface::perm(pin);
++    let sin: Vec<Fr> = (4..9).map(x).collect();
++    let sout = iface::sponge_u(0, &sin);
++    let dx = x(9);
++    let dout = iface::digest(4, dx);
++    let mut vals: Vec<Fr> = pin.to_vec();
++    vals.extend(pout);
++    vals.extend(&sin);
++    vals.push(sout);
++    vals.extend([dx, dout]);
++    assert_eq!(vals.len(), 14);
++    let o0 = offs[first];
++    for (k, v) in vals.iter().enumerate() {
++        tb[val_at(o0 + k)..][..LIMBS].copy_from_slice(&iface::limbs(*v));
++    }
++    let tail = [(PERM, 0u64), (SPONGE, 5), (DIGEST, 4)];
++    for i in first..n_ent {
++        let (op, param) = tail.get(i - first).copied().unwrap_or((NOP, 0));
++        tb[STMT + 2 * i] = op;
++        tb[STMT + 2 * i + 1] = param;
++    }
++    let (e_perm, e_sp5, e_dig) = (first, first + 1, first + 2);
++    let tail_case = |name: &str, t: &[u64]| {
++        let mut c = case(name, d, repack(pre, t));
++        c["tail"] = json!([e_perm, e_sp5, e_dig]);
++        c
++    };
++    cases.push(tail_case("tail_honest", &tb));
++    // Native replay outside R and outside the lane map: stock refuses; the wrap does not replay
++    // these entries (open item, E3 J6 in the wrap).
++    for (name, at) in [("open_replay_perm", o0 + 5), ("open_replay_sponge", o0 + 11), ("open_replay_digest", o0 + 13)] {
++        let mut t = tb.clone();
++        t[val_at(at)] ^= 1;
++        cases.push(tail_case(name, &t));
++    }
++    // Lane map at 9539418: DIGEST or SPONGE(3) only.
++    let mut t = tb.clone();
++    t[LANE_MAP + 1] = e_sp5 as u64;
++    cases.push(tail_case("lane_map_sponge_not_3", &t));
++    let mut t = tb.clone();
++    t[LANE_MAP + 1] = e_perm as u64;
++    cases.push(tail_case("lane_map_perm", &t));
++    // A mapped DIGEST outside R (tag SHK_REG): accepted; its output is the lane; replayed.
++    let mut t = tb.clone();
++    t[LANE_MAP + 1] = e_dig as u64;
++    cases.push(tail_case("lane_map_digest_reg", &t));
++    t[val_at(o0 + 13)] ^= 1;
++    cases.push(tail_case("lane_map_digest_reg_output_changed", &t));
++    let mut t = w.clone();
++    t[LANE_MAP] = (1 << 16) + LANE_A_IN;
++    cases.push(case("lane_map_not_u16", d, repack(pre, &t)));
++    let mut t = w.clone();
++    t[LANE_MAP + 2] = LANE_A_IN; // pair 1 writes lane LANE_A_IN again (nonzero output)
++    cases.push(case("lane_map_twice", d, repack(pre, &t)));
++    // A lane mapped twice whose first output is 0 (lane e3-lanemap finding 2a). The whole
++    // decoder refuses at the replay of entry 4; the lane-map step alone refuses the second pair.
++    let mut t = w.clone();
++    for k in 0..LIMBS {
++        t[val_at(11) + k] = 0;
++    }
++    t[LANE_MAP + 2] = LANE_A_IN;
++    let mut c = case("lane_map_twice_zero_output", d, repack(pre, &t));
++    c["lane_map_ok"] = json!(lane_map_ok(d, &t));
++    assert_eq!(c["lane_map_ok"], json!(false));
++    let mut t0 = t.clone();
++    t0[LANE_MAP + 2] = w[LANE_MAP + 2];
++    assert!(lane_map_ok(d, &t0), "the same words with one pair per lane pass the lane-map step");
++    cases.push(c);
+     let mut hi = pw.to_vec();
+     hi[3] += fr_of(&(BigUint::from(1u32) << 250));
+     cases.push(case("packed_high_bits", d, hi));
+@@ -143,7 +286,7 @@ fn main() {
+         format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
+     }));
+     let fx = PathBuf::from(std::env::var("E3_FIXTURE_DIR").unwrap_or_else(|_| {
+-        format!("{}/.cache/e3-iface/fixture", std::env::var("HOME").unwrap())
++        format!("{}/.cache/e3-iface/fixture-j8", std::env::var("HOME").unwrap())
+     }));
+     fs::create_dir_all(&out).unwrap();
+     let vk_l: MultiStarkVerifyingKey<LSC> =
+@@ -156,7 +299,12 @@ fn main() {
+     let shape = LShape::of(&proof_l);
+     let mut g = Gen::new();
+     let (words, l_pub) = gen_verifier_full(&mut g, &vk_l, &shape, &proof_l).expect("pinned shape");
+-    let l_vals: Vec<u64> = proof_l.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
++    let l_vals: Vec<u64> = proof_l
++        .public_values
++        .iter()
++        .flatten()
++        .map(|x| x.as_canonical_u32() as u64)
++        .collect();
+     gen_r_check(&mut g, &l_pub, &l_vals);
+     g.tape.expose(&words);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);

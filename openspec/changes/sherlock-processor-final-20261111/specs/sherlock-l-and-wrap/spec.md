@@ -77,15 +77,19 @@ The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The ope
 - **THEN** the proof is refused (mutants `decider_seg_root_as_run`, `decider_set_head_forged`), and the seal predicates stay in NODE INTEGRATION (NODE-003)
 
 ### Requirement: LW-009 The collection statement carries no claim count
-A collection SHALL publish `[reg_root, set_root, shape_d]` through its effect words, with a schema separate from the run statement. No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The call-vector lanes and the contract-side form of a collection are open (FPR-009).
+A collection SHALL publish `[reg_root, set_root]` through its effect words, with a schema separate from the run statement. `shape_d` SHALL NOT be public (owner ruling O9, 2026-11-13). No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The contract entry SHALL be `acceptCollection(reg_pub, set_pub)`.
 
 #### Scenario: Three runs joined
 - **WHEN** three sealed runs of different programs are joined and wrapped
-- **THEN** the statement is exactly `[reg_root, set_root, shape_d]` (positive `pos_decider_collection_three_runs` as a real proof), and each claim opens through the LEDGER CONTRACT (LDG-004)
+- **THEN** the statement is exactly `[reg_root, set_root]` (positive `pos_decider_collection_three_runs` as a real proof), and each claim opens through the LEDGER CONTRACT (LDG-004)
 
 #### Scenario: Stale registry root
 - **WHEN** the call carries a registry root other than the contract's
 - **THEN** the call is refused (Quint invariant `StaleOrForeignRegRootRefused`)
+
+#### Scenario: No shape digest in the collection call
+- **WHEN** the compiled `acceptCollection` entry is inspected
+- **THEN** its inputs are exactly `[reg_pub, set_pub]`, it changes only `verified_roots` by adding `set_pub`, and a control entry that takes `shape_d` fails the same check (test `(e) LW-009` and its control in `tools/sherlock-sdk/sherlock-ledger.test.mjs`)
 
 ### Requirement: LW-010 Replay is refused by `claim_d` only
 The replay identity SHALL be `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023). The contract SHALL key it by its public image `claim_pub = transientHash([C_P, input_pub, outcome_pub])` (FPR-010). Every partition of one run SHALL have the salt of its `input_d`, so every partition SHALL have one `claim_pub`.
@@ -134,7 +138,7 @@ The kit SHALL be reported complete only when BR-L2, BR-L4 and DEC-L1 are proved 
 - **THEN** the rest of BR-L2 (the leaf-aggregation entry at LogUp PoW 17, the parameter gate of `L_Fr`, `encode` on the two-table `pv`, `wrap_refines` with the DAG key check and the anchor checks), BR-L4 (`ReduceRel` in place of `ArithGadget`) and DEC-L1 (O34) are open
 
 ### Requirement: LW-016 Production qualification of the wrap
-The wrap SHALL be qualified on OD-24 option E (step E5), as the stdlib wrap of `L_Fr` over the complete `L` interface (12,164 public words, log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (FZ-3).
+The wrap SHALL be qualified on OD-24 option E (step E5), as the stdlib wrap of `L_Fr` over the complete `L` interface (12,166 public words at 5 lane-map pairs (O7), log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (FZ-3).
 
 #### Scenario: Benchmark offered as qualification
 - **WHEN** wrap rows measured on `L_cached` with an all-`NOP` log are offered for DG-002, LW-013 or the key freeze
@@ -155,7 +159,7 @@ The wrap key SHALL be one that ledger 9.1.0.1 reads unchanged: a `ZkStdLib`-arch
 - **THEN** the stock verifier accepts it: 15 AIRs, every AIR at most 2^19 rows, 2 commitments, proof 2,516,530 bytes, and D3 at the measured key gives 101.1435 bits (query), MEASURED (gate E2, `research/sherlock-e2-lfr-20261112/RESULTS.md` section 8g in the `e2-lfr` worktree)
 
 #### Scenario: Full interface
-- **WHEN** `L_Fr` carries the complete `L` interface (12,164 public words, the log AIRs, `R` as real non-`NOP` entries, an all-non-`NOP` case and a forced-overflow case)
+- **WHEN** `L_Fr` carries the complete `L` interface (12,166 public words at 5 lane-map pairs, the log AIRs, `R` as real non-`NOP` entries, an all-non-`NOP` case and a forced-overflow case)
 - **THEN** the proof verifies and D3 reruns at that key (step E3, PENDING)
 
 ### Requirement: LW-019 The parameter set of `L_Fr`

@@ -1,0 +1,729 @@
+From db8bbd51d8968e5df7090bb6ba8055dc79a96f88 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 12:10:12 -0700
+Subject: [PATCH] E2 I8: tape generator part 3 (stacked reduction: lambda,
+ univariate and n_stack rounds, eq, rotation kernel and indicator per stacked
+ column, final sum); on the real L proof 17,299 transcript events equal the
+ stock record and the tape proves at n_stack 15; small_params_n; rustfmt of
+ the I6 and I7 tests
+
+---
+ crates/sherlock-lfr/src/lverify.rs    | 345 +++++++++++++++++++++++++-
+ crates/sherlock-lfr/src/testing.rs    |   8 +-
+ crates/sherlock-lfr/tests/i6_part1.rs |  22 +-
+ crates/sherlock-lfr/tests/i7_part2.rs |  17 +-
+ crates/sherlock-lfr/tests/i8_part3.rs | 150 +++++++++++
+ 5 files changed, 523 insertions(+), 19 deletions(-)
+ create mode 100644 crates/sherlock-lfr/tests/i8_part3.rs
+
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index 04c0bb5..58a0cbe 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -9,7 +9,9 @@
+ 
+ use std::{cmp::Reverse, collections::HashMap};
+ 
+-use openvm_stark_backend::{calculate_n_logup, keygen::types::MultiStarkVerifyingKey, proof::Proof};
++use openvm_stark_backend::{
++    calculate_n_logup, keygen::types::MultiStarkVerifyingKey, proof::Proof,
++};
+ use openvm_stark_sdk::config::bls12381_fr_poseidon::{Bls12381Fr as Fr, U_TRANSCRIPT};
+ use p3_baby_bear::BabyBear;
+ use p3_field::{Field, PrimeCharacteristicRing, PrimeField32};
+@@ -215,6 +217,9 @@ pub struct Part1 {
+     pub den_terms: Vec<Addr>,
+     pub n_logup: usize,
+     pub n_global: usize,
++    /// The commitments as WHIR reads them: common main, then per present trace (trace order)
++    /// its preprocessed (none in `L`) and cached commitments.
++    pub commits: Vec<Addr>,
+ }
+ 
+ /// Errors of the generator: the proof does not have the pinned shape.
+@@ -245,9 +250,14 @@ pub fn gen_part1(
+     for c in &mvk.trace_height_constraints {
+         let sum: u64 = order
+             .iter()
+-            .map(|&i| (1u64 << shape.log_heights[i].unwrap().max(l_skip)) * c.coefficients[i] as u64)
++            .map(|&i| {
++                (1u64 << shape.log_heights[i].unwrap().max(l_skip)) * c.coefficients[i] as u64
++            })
+             .sum();
+-        assert!(sum < c.threshold as u64, "pinned shape breaks a height constraint");
++        assert!(
++            sum < c.threshold as u64,
++            "pinned shape breaks a height constraint"
++        );
+     }
+ 
+     // Preamble (verifier/mod.rs).
+@@ -255,6 +265,7 @@ pub fn gen_part1(
+     g.observe_commit(pre_hash);
+     let cm = g.fr_in(proof.common_main_commit[0]);
+     g.observe_commit(cm);
++    let mut cached_per_air: Vec<Vec<Addr>> = vec![vec![]; mvk.per_air.len()];
+     for (i, avk) in mvk.per_air.iter().enumerate() {
+         let lh = shape.log_heights[i];
+         if !avk.is_required {
+@@ -275,6 +286,7 @@ pub fn gen_part1(
+             for c in &tv.cached_commitments {
+                 let a = g.fr_in(c[0]);
+                 g.observe_commit(a);
++                cached_per_air[i].push(a);
+             }
+         }
+         if proof.public_values[i].len() != avk.params.num_public_values {
+@@ -348,6 +360,9 @@ pub fn gen_part1(
+         den_terms,
+         n_logup,
+         n_global,
++        commits: std::iter::once(cm)
++            .chain(order.iter().flat_map(|&i| cached_per_air[i].clone()))
++            .collect(),
+     })
+ }
+ 
+@@ -434,7 +449,6 @@ pub fn is_bb(x: [u64; 4], v: BabyBear) -> bool {
+     x == [v.as_canonical_u32() as u64, 0, 0, 0]
+ }
+ 
+-
+ // ==========================================================================================
+ // I7: part 2, zerocheck and constraint batching (batch_constraints.rs steps 4 to 9).
+ // ==========================================================================================
+@@ -643,14 +657,21 @@ pub fn gen_part2(
+     let mut stacked_idx = 0usize;
+     let mut eq_3b_per_trace = vec![];
+     for (t, &n) in n_per_trace.iter().enumerate() {
+-        let ni = mvk.per_air[order[t]].symbolic_constraints.interactions.len();
++        let ni = mvk.per_air[order[t]]
++            .symbolic_constraints
++            .interactions
++            .len();
+         let n_lift = n.max(0) as usize;
+         let mut v = vec![];
+         for _ in 0..ni {
+             let mut b_int = stacked_idx >> (l_skip + n_lift);
+             let mut e = one;
+             for j in l_skip + n_lift..l_skip + n_logup {
+-                let f = if b_int & 1 == 1 { xi[j] } else { one_minus_xi[j] };
++                let f = if b_int & 1 == 1 {
++                    xi[j]
++                } else {
++                    one_minus_xi[j]
++                };
+                 e = g.mul(e, f);
+                 b_int >>= 1;
+             }
+@@ -765,7 +786,9 @@ pub fn gen_part2(
+             (
+                 l_skip.wrapping_add_signed(n),
+                 vec![r],
+-                Some(bb_u64(BabyBear::from_usize(1 << n.unsigned_abs()).inverse())),
++                Some(bb_u64(
++                    BabyBear::from_usize(1 << n.unsigned_abs()).inverse(),
++                )),
+             )
+         } else {
+             (l_skip, rs[..=(n as usize)].to_vec(), None)
+@@ -797,9 +820,10 @@ pub fn gen_part2(
+                 N::Variable(var) => {
+                     let pick = |p: &(Addr, Addr), off: usize| if off == 0 { p.0 } else { p.1 };
+                     match var.entry {
+-                        Entry::Preprocessed { offset } => {
+-                            pick(&preprocessed.as_ref().expect("preprocessed")[var.index], offset)
+-                        }
++                        Entry::Preprocessed { offset } => pick(
++                            &preprocessed.as_ref().expect("preprocessed")[var.index],
++                            offset,
++                        ),
+                         Entry::Main { part_index, offset } => {
+                             pick(&part_main[part_index][var.index], offset)
+                         }
+@@ -852,7 +876,12 @@ pub fn gen_part2(
+             let mut acc = g.kbb(0);
+             let mut bp_pow = one;
+             let bus = g.kbb(it.bus_index as u64 + 1);
+-            for x in it.message.iter().map(|&i| nodes[i]).chain(std::iter::once(bus)) {
++            for x in it
++                .message
++                .iter()
++                .map(|&i| nodes[i])
++                .chain(std::iter::once(bus))
++            {
+                 let a = g.mul(x, bp_pow);
+                 acc = g.add(acc, a);
+                 bp_pow = g.mul(bp_pow, p1.beta);
+@@ -888,3 +917,297 @@ pub fn gen_part2(
+         n_max,
+     })
+ }
++
++// ==========================================================================================
++// I8: part 3, the stacked reduction (stacked_reduction.rs).
++// ==========================================================================================
++
++/// The tape values of part 3 that WHIR reads.
++#[derive(Clone, Debug)]
++pub struct Part3 {
++    /// `u_0, .., u_{n_stack}`.
++    pub u: Vec<Addr>,
++    /// Per commitment, per stacked column: the opening `q_j(u)` (a proof value).
++    pub stacking_openings: Vec<Vec<Addr>>,
++    /// The commitments, in the verifier's order (common main, then per trace preprocessed and
++    /// cached).
++    pub commits: Vec<Addr>,
++}
++
++impl Gen {
++    /// `eval_eq_uni_at_one(l, x)`.
++    pub fn eq_uni_at_one(&mut self, l: usize, x: Addr) -> Addr {
++        let one = self.kbb(1);
++        let mut res = one;
++        for xp in self.pow2s(x, l) {
++            let t = self.add(xp, one);
++            res = self.mul(res, t);
++        }
++        let h = BabyBear::ONE.halve().exp_u64(l as u64);
++        let k = self.kbb(bb_u64(h));
++        self.mul(res, k)
++    }
++    /// `eval_eq_mle(x, y)` for addresses.
++    pub fn eq_mle(&mut self, x: &[Addr], y: &[Addr]) -> Addr {
++        let mut acc = self.kbb(1);
++        for (&a, &b) in x.iter().zip(y) {
++            let f = self.eq1(a, b);
++            acc = self.mul(acc, f);
++        }
++        acc
++    }
++    /// `eval_eq_prism(l, x, y)`.
++    pub fn eq_prism(&mut self, l: usize, x: &[Addr], y: &[Addr]) -> Addr {
++        let a = self.eq_uni(l, x[0], y[0]);
++        let b = self.eq_mle(&x[1..], &y[1..]);
++        self.mul(a, b)
++    }
++    /// `eval_eq_rot_cube(x, y)` -> `(eq, rot)`.
++    pub fn eq_rot_cube(&mut self, x: &[Addr], y: &[Addr]) -> (Addr, Addr) {
++        let one = self.kbb(1);
++        let (mut rot, mut eq) = (one, one);
++        for i in (0..x.len()).rev() {
++            let omy = self.sub(one, y[i]);
++            let omx = self.sub(one, x[i]);
++            let a = self.mul(x[i], omy);
++            let a = self.mul(a, eq);
++            let b = self.mul(omx, y[i]);
++            let b = self.mul(b, rot);
++            rot = self.add(a, b);
++            let f = self.eq1(x[i], y[i]);
++            eq = self.mul(eq, f);
++        }
++        (eq, rot)
++    }
++    /// `eval_rot_kernel_prism(l, x, y)`.
++    pub fn rot_kernel_prism(&mut self, l: usize, x: &[Addr], y: &[Addr]) -> Addr {
++        use p3_field::TwoAdicField;
++        let omega = self.kbb(bb_u64(BabyBear::two_adic_generator(l)));
++        let (eq_cube, rot_cube) = self.eq_rot_cube(&x[1..], &y[1..]);
++        let y0w = self.mul(y[0], omega);
++        let a = self.eq_uni(l, x[0], y0w);
++        let a = self.mul(a, eq_cube);
++        let b = self.eq_uni_at_one(l, x[0]);
++        let c = self.eq_uni_at_one(l, y0w);
++        let d = self.sub(rot_cube, eq_cube);
++        let b = self.mul(b, c);
++        let b = self.mul(b, d);
++        self.add(a, b)
++    }
++    /// `interpolate_quadratic_at_012`.
++    pub fn quad012(&mut self, e: [Addr; 3], x: Addr) -> Addr {
++        let inv2 = self.kbb(bb_u64(BabyBear::TWO.inverse()));
++        let s1 = self.sub(e[1], e[0]);
++        let s2 = self.sub(e[2], e[1]);
++        let t = self.sub(s2, s1);
++        let p = self.mul(t, inv2);
++        let q = self.sub(s1, p);
++        let a = self.mul(p, x);
++        let a = self.add(a, q);
++        let a = self.mul(a, x);
++        self.add(a, e[0])
++    }
++}
++
++/// Part 3 of the `L` verifier on the tape: the stacked reduction. `commits` are the tape
++/// addresses of the commitments observed in part 1 (common main first).
++pub fn gen_part3(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &Proof<LSC>,
++    p1: &Part1,
++    p2: &Part2,
++) -> Result<Part3, ShapeError> {
++    let commits = p1.commits.clone();
++    use openvm_stark_backend::verifier::proof_shape::verify_proof_shape;
++
++    let mvk = &vk.inner;
++    let l_skip = mvk.params.l_skip;
++    let n_stack = mvk.params.n_stack;
++    let order = shape.trace_order();
++    // The layouts depend only on the shape and the vk (the proof shape check also checks the
++    // proof's lengths).
++    let layouts = verify_proof_shape::<LSC>(mvk, proof).map_err(|_| ShapeError::Heights)?;
++    let mut need_rot_per_commit: Vec<Vec<bool>> = vec![order
++        .iter()
++        .map(|&i| mvk.per_air[i].params.need_rot)
++        .collect()];
++    for &i in &order {
++        let nr = mvk.per_air[i].params.need_rot;
++        if mvk.per_air[i].preprocessed_data.is_some() {
++            need_rot_per_commit.push(vec![nr]);
++        }
++        for _ in 0..mvk.per_air[i].params.width.cached_mains.len() {
++            need_rot_per_commit.push(vec![nr]);
++        }
++    }
++    assert_eq!(layouts.len(), need_rot_per_commit.len());
++    assert_eq!(layouts.len(), commits.len());
++
++    let mut lambda_idx = 0usize;
++    let lambda_indices_per_layout: Vec<Vec<(usize, bool)>> = layouts
++        .iter()
++        .enumerate()
++        .map(|(ci, layout)| {
++            layout
++                .sorted_cols
++                .iter()
++                .map(|&(mat_idx, _, _)| {
++                    lambda_idx += 1;
++                    (lambda_idx - 1, need_rot_per_commit[ci][mat_idx])
++                })
++                .collect()
++        })
++        .collect();
++    let t_len = lambda_idx;
++
++    // t_claims: common main of every trace, then the other parts per trace. The rotation
++    // claim of an AIR without rotation is the constant 0, as in part 2.
++    let mut t_claims: Vec<(Addr, Addr)> = vec![];
++    for parts in &p2.openings {
++        t_claims.extend(parts[0].iter().copied());
++    }
++    for parts in &p2.openings {
++        for part in &parts[1..] {
++            t_claims.extend(part.iter().copied());
++        }
++    }
++    assert_eq!(t_claims.len(), t_len);
++
++    let lambda = g.sample_ext();
++    let l2 = g.mul(lambda, lambda);
++    let one = g.kbb(1);
++    let mut lambda_sqr_powers = vec![one];
++    while lambda_sqr_powers.len() < t_len {
++        let l = *lambda_sqr_powers.last().unwrap();
++        lambda_sqr_powers.push(g.mul(l, l2));
++    }
++
++    // Univariate round.
++    let sp = &proof.stacking_proof;
++    if sp.univariate_round_coeffs.len() != 2 * ((1 << l_skip) - 1) + 1 {
++        return Err(ShapeError::Lengths("stacking univariate round"));
++    }
++    if sp.sumcheck_round_polys.len() != n_stack {
++        return Err(ShapeError::Lengths("stacking sumcheck rounds"));
++    }
++    let mut s0 = g.kbb(0);
++    for (&(t0, t1), &lp) in t_claims.iter().zip(&lambda_sqr_powers) {
++        let a = g.mul(t1, lambda);
++        let a = g.add(t0, a);
++        let a = g.mul(a, lp);
++        s0 = g.add(s0, a);
++    }
++    let coeffs: Vec<Addr> = sp
++        .univariate_round_coeffs
++        .iter()
++        .map(|&c| g.ef_in(c))
++        .collect();
++    let mut acc = g.kbb(0);
++    for &c in coeffs.iter().step_by(1 << l_skip) {
++        acc = g.add(acc, c);
++    }
++    let k = g.kbb(1 << l_skip);
++    let s0_sum = g.mul(acc, k);
++    g.assert_eq(s0, s0_sum);
++    for &c in &coeffs {
++        g.observe_ext(c);
++    }
++    let mut u = vec![g.sample_ext()];
++    let mut claim = g.horner(&coeffs, u[0]);
++
++    // Rounds 1 to n_stack.
++    for j in 1..=n_stack {
++        let [e1, e2] = sp.sumcheck_round_polys[j - 1].map(|x| g.ef_in(x));
++        g.observe_ext(e1);
++        g.observe_ext(e2);
++        let uj = g.sample_ext();
++        u.push(uj);
++        let e0 = g.sub(claim, e1);
++        claim = g.quad012([e0, e1, e2], uj);
++    }
++
++    // Final check.
++    if sp.stacking_openings.len() != layouts.len() {
++        return Err(ShapeError::Lengths("stacking openings"));
++    }
++    let r = &p2.rs;
++    let zero = g.kbb(0);
++    let mut q_coeffs: Vec<Vec<Addr>> = sp
++        .stacking_openings
++        .iter()
++        .map(|v| vec![zero; v.len()])
++        .collect();
++    // Shared values per (n, need_rot): eq_prism, rot kernel and ind depend only on n.
++    let mut cache: HashMap<(isize, bool), Addr> = HashMap::new();
++    for (ci, layout) in layouts.iter().enumerate() {
++        for (col, &(_, _, s)) in layout.sorted_cols.iter().enumerate() {
++            let (li, need_rot) = lambda_indices_per_layout[ci][col];
++            let n = s.log_height() as isize - l_skip as isize;
++            let n_lift = n.max(0) as usize;
++            // eq_mle(u[n_lift + 1..], b) with constant bits b.
++            let mut eq_mle = one;
++            for (k, j) in (l_skip + n_lift..l_skip + n_stack).enumerate() {
++                let x = u[n_lift + 1 + k];
++                let f = if (s.row_idx >> j) & 1 == 1 {
++                    x
++                } else {
++                    g.sub(one, x)
++                };
++                eq_mle = g.mul(eq_mle, f);
++            }
++            let h = match cache.get(&(n, need_rot)) {
++                Some(&h) => h,
++                None => {
++                    let ind = if n < 0 {
++                        let z = g.pow(u[0], 1u64 << l_skip.wrapping_add_signed(n));
++                        g.eq_uni_at_one(n.unsigned_abs(), z)
++                    } else {
++                        one
++                    };
++                    let (l, rs_n) = if n < 0 {
++                        (
++                            l_skip.wrapping_add_signed(n),
++                            vec![g.pow(r[0], 1u64 << (-n) as u32)],
++                        )
++                    } else {
++                        (l_skip, r[..=n_lift].to_vec())
++                    };
++                    let mut b = g.eq_prism(l, &u[..=n_lift], &rs_n);
++                    if need_rot {
++                        let rk = g.rot_kernel_prism(l, &u[..=n_lift], &rs_n);
++                        let rl = g.mul(rk, lambda);
++                        b = g.add(b, rl);
++                    }
++                    let h = g.mul(b, ind);
++                    cache.insert((n, need_rot), h);
++                    h
++                }
++            };
++            // coeffs[s.col_idx] += eq_mle * lambda_sqr^li * h
++            let a = g.mul(lambda_sqr_powers[li], h);
++            let a = g.mul(eq_mle, a);
++            q_coeffs[ci][s.col_idx] = g.add(q_coeffs[ci][s.col_idx], a);
++        }
++    }
++    let mut final_sum = g.kbb(0);
++    let mut openings = vec![];
++    for (qc, qv) in q_coeffs.iter().zip(&sp.stacking_openings) {
++        let mut row = vec![];
++        for (&c, &q) in qc.iter().zip(qv) {
++            let qa = g.ef_in(q);
++            g.observe_ext(qa);
++            let a = g.mul(c, qa);
++            final_sum = g.add(final_sum, a);
++            row.push(qa);
++        }
++        openings.push(row);
++    }
++    g.assert_eq(claim, final_sum);
++    Ok(Part3 {
++        u,
++        stacking_openings: openings,
++        commits,
++    })
++}
+diff --git a/crates/sherlock-lfr/src/testing.rs b/crates/sherlock-lfr/src/testing.rs
+index 212a70a..b6d0776 100644
+--- a/crates/sherlock-lfr/src/testing.rs
++++ b/crates/sherlock-lfr/src/testing.rs
+@@ -26,7 +26,13 @@ pub type Engine = Bls12381FrPoseidonLfrCpuEngine;
+ /// Small Fr test set: UD, log blowup 1, `l_skip` 2, `n_stack` 14 (stacked height 2^16, so the
+ /// 2^16-row range table fits), `w_stack` 128, `k_whir` 4, every grinding site on at a few bits.
+ pub fn small_params(max_constraint_degree: usize) -> SystemParams {
+-    let (l_skip, n_stack, k_whir, log_blowup) = (2, 14, 4, 1);
++    small_params_n(max_constraint_degree, 14)
++}
++
++/// [`small_params`] at another `n_stack` (stacked height `2^(2 + n_stack)`), for tapes whose
++/// largest AIR exceeds `2^16` rows.
++pub fn small_params_n(max_constraint_degree: usize, n_stack: usize) -> SystemParams {
++    let (l_skip, k_whir, log_blowup) = (2, 4, 1);
+     let whir_params = WhirParams {
+         k: k_whir,
+         log_final_poly_len: (l_skip + n_stack) % k_whir,
+diff --git a/crates/sherlock-lfr/tests/i6_part1.rs b/crates/sherlock-lfr/tests/i6_part1.rs
+index 3e9a802..5c1ae3b 100644
+--- a/crates/sherlock-lfr/tests/i6_part1.rs
++++ b/crates/sherlock-lfr/tests/i6_part1.rs
+@@ -33,7 +33,11 @@ fn build(
+ fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
+     let m = Machine::new(&g.tape);
+     let (o, vk) = prove_verify_range(small_params(3), m.airs(), m.traces(mem));
+-    assert_eq!(preprocessed_airs(&vk), 1, "only the program table is preprocessed");
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
+     o
+ }
+ 
+@@ -65,7 +69,11 @@ fn i6_part1_on_real_l() {
+     for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
+         match (t, s) {
+             (TEv::Obs(a), Ev::Obs(v)) => {
+-                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "observe {i}");
++                assert_eq!(
++                    bb(*a),
++                    [v.as_canonical_u32() as u64, 0, 0, 0],
++                    "observe {i}"
++                );
+                 n_obs += 1;
+             }
+             (TEv::Commit(a), Ev::Commit(v)) => {
+@@ -105,7 +113,10 @@ fn i6_part1_on_real_l() {
+     );
+     let t = std::time::Instant::now();
+     let o = prove(&g, &mem);
+-    println!("I6 prove and verify {:.1}s: {o:?}", t.elapsed().as_secs_f64());
++    println!(
++        "I6 prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
+     assert!(o.accepted(), "honest part 1 refused: {o:?}");
+     assert_eq!(o.commits(), Some(2));
+ 
+@@ -114,7 +125,10 @@ fn i6_part1_on_real_l() {
+     p1.gkr_proof.claims_per_layer[5].p_xi_0 += Ef4::ONE;
+     let mut p2 = fx.l_proof.clone();
+     p2.gkr_proof.logup_pow_witness += p3_baby_bear::BabyBear::ONE;
+-    for (name, p) in [("changed GKR layer claim", p1), ("changed LogUp PoW witness", p2)] {
++    for (name, p) in [
++        ("changed GKR layer claim", p1),
++        ("changed LogUp PoW witness", p2),
++    ] {
+         let (_, stock_ok) = stock_log(&fx.l_vk, &p);
+         let gt = build(&fx.l_vk, &shape, &p);
+         assert_eq!(
+diff --git a/crates/sherlock-lfr/tests/i7_part2.rs b/crates/sherlock-lfr/tests/i7_part2.rs
+index b935cbb..a7f39b7 100644
+--- a/crates/sherlock-lfr/tests/i7_part2.rs
++++ b/crates/sherlock-lfr/tests/i7_part2.rs
+@@ -36,7 +36,11 @@ fn build(
+ fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
+     let m = Machine::new(&g.tape);
+     let (o, vk) = prove_verify_range(small_params(3), m.airs(), m.traces(mem));
+-    assert_eq!(preprocessed_airs(&vk), 1, "only the program table is preprocessed");
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
+     o
+ }
+ 
+@@ -58,7 +62,11 @@ fn i7_part2_on_real_l() {
+     for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
+         match (t, s) {
+             (TEv::Obs(a), Ev::Obs(v)) => {
+-                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "observe {i}");
++                assert_eq!(
++                    bb(*a),
++                    [v.as_canonical_u32() as u64, 0, 0, 0],
++                    "observe {i}"
++                );
+                 n_obs += 1;
+             }
+             (TEv::Commit(a), Ev::Commit(v)) => {
+@@ -104,7 +112,10 @@ fn i7_part2_on_real_l() {
+     );
+     let t = std::time::Instant::now();
+     let o = prove(&g, &mem);
+-    println!("I7 prove and verify {:.1}s: {o:?}", t.elapsed().as_secs_f64());
++    println!(
++        "I7 prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
+     assert!(o.accepted(), "honest part 1 refused: {o:?}");
+     assert_eq!(o.commits(), Some(2));
+ 
+diff --git a/crates/sherlock-lfr/tests/i8_part3.rs b/crates/sherlock-lfr/tests/i8_part3.rs
+new file mode 100644
+index 0000000..be8f4b7
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i8_part3.rs
+@@ -0,0 +1,150 @@
++//! I8 gate: the tape generator, parts 1 to 3 (part 3: the stacked reduction: lambda, the
++//! univariate and `n_stack` quadratic sumcheck rounds, the eq, rotation-kernel and indicator
++//! terms of every stacked column, the stacking openings and the final sum check) on the real `L`
++//! proof. Every value the tape observes or samples equals the stock verifier's transcript record,
++//! in order, up to the end of `verify_stacked_reduction`. No tape assertion fails. Op counts and
++//! the machine shape are printed (MEASURED); the tape proves on the machine with 2 commitments
++//! at `small_params_n(3, 15)` (stacked height 2^17). Refused: a changed stacking opening and a
++//! changed stacking sumcheck evaluation (by the stock verifier, the plain-Rust tape run, and the
++//! prover). Ignored by default: needs the fixture.
++
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use sherlock_lfr::{
++    bb::Ef4,
++    fixture::{self, LSC},
++    lverify::{gen_part1, gen_part2, gen_part3, Gen, LShape},
++    machine::Machine,
++    record::{stock_log, Ev},
++    tape::Op,
++    testing::{preprocessed_airs, prove_verify_range, small_params_n, Outcome},
++    transcript::TEv,
++};
++
++type LProof = openvm_stark_backend::proof::Proof<LSC>;
++
++fn build(
++    vk: &openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &LProof,
++) -> Gen {
++    let mut g = Gen::new();
++    let p1 = gen_part1(&mut g, vk, shape, proof).expect("pinned shape");
++    let p2 = gen_part2(&mut g, vk, shape, proof, &p1).expect("pinned shape");
++    gen_part3(&mut g, vk, shape, proof, &p1, &p2).expect("pinned shape");
++    g
++}
++
++fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
++    let m = Machine::new(&g.tape);
++    let (o, vk) = prove_verify_range(small_params_n(3, 15), m.airs(), m.traces(mem));
++    assert_eq!(
++        preprocessed_airs(&vk),
++        1,
++        "only the program table is preprocessed"
++    );
++    o
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i8_part3_on_real_l() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let (log, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let g = build(&fx.l_vk, &shape, &fx.l_proof);
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++
++    // Every event equals the stock record, in order.
++    let bb = |a: u32| mem[a as usize].unwrap().bb();
++    let (mut n_obs, mut n_commit, mut n_sample) = (0, 0, 0);
++    assert!(g.tt.log.len() < log.len());
++    for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
++        match (t, s) {
++            (TEv::Obs(a), Ev::Obs(v)) => {
++                assert_eq!(
++                    bb(*a),
++                    [v.as_canonical_u32() as u64, 0, 0, 0],
++                    "observe {i}"
++                );
++                n_obs += 1;
++            }
++            (TEv::Commit(a), Ev::Commit(v)) => {
++                assert_eq!(mem[*a as usize].unwrap().fr(), *v, "commit {i}");
++                n_commit += 1;
++            }
++            (TEv::Sample(a), Ev::Sample(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "sample {i}");
++                n_sample += 1;
++            }
++            _ => panic!("event {i}: kind differs: tape {t:?}, stock {s:?}"),
++        }
++    }
++    let dag_nodes: usize = fx
++        .l_vk
++        .inner
++        .per_air
++        .iter()
++        .map(|a| a.symbolic_constraints.constraints.nodes.len())
++        .sum();
++    println!("I8 L DAG nodes (all 39 AIRs): {dag_nodes}");
++
++    let count = |f: fn(&Op) -> bool| g.tape.ops.iter().filter(|o| f(o)).count();
++    let m = Machine::new(&g.tape);
++    println!(
++        "I8 parts 1 to 3: {} events equal the stock record ({n_obs} observes, {n_commit} commitment observes, {n_sample} samples) of {} in one L verification; ops: {} total, {} Input, {} FrInput, {} Const/FrConst, {} Alu, {} Perm, {} Pack, {} Split, {} Compose, {} Decompose, {} AssertEq, {} LowBits; table rows {}; machine shape {:?}",
++        g.tt.log.len(),
++        log.len(),
++        g.tape.ops.len(),
++        count(|o| matches!(o, Op::Input { .. })),
++        count(|o| matches!(o, Op::FrInput { .. })),
++        count(|o| matches!(o, Op::Const { .. } | Op::FrConst { .. })),
++        count(|o| matches!(o, Op::Alu { .. })),
++        count(|o| matches!(o, Op::Perm { .. })),
++        count(|o| matches!(o, Op::Pack { .. })),
++        count(|o| matches!(o, Op::Split { .. })),
++        count(|o| matches!(o, Op::Compose { .. })),
++        count(|o| matches!(o, Op::Decompose { .. })),
++        count(|o| matches!(o, Op::AssertEq { .. })),
++        count(|o| matches!(o, Op::LowBits { .. })),
++        m.table().rows.len(),
++        m.shape()
++    );
++    let t = std::time::Instant::now();
++    let o = prove(&g, &mem);
++    println!(
++        "I8 prove and verify {:.1}s: {o:?}",
++        t.elapsed().as_secs_f64()
++    );
++    assert!(o.accepted(), "honest part 1 refused: {o:?}");
++    assert_eq!(o.commits(), Some(2));
++
++    // Negative controls: the same key (shape and vk), changed proof values.
++    let mut p1 = fx.l_proof.clone();
++    p1.stacking_proof.stacking_openings[0][5] += Ef4::ONE;
++    let mut p2 = fx.l_proof.clone();
++    p2.stacking_proof.sumcheck_round_polys[4][1] += Ef4::ONE;
++    for (name, p) in [
++        ("changed stacking opening", p1),
++        ("changed stacking sumcheck evaluation", p2),
++    ] {
++        let (_, stock_ok) = stock_log(&fx.l_vk, &p);
++        let gt = build(&fx.l_vk, &shape, &p);
++        assert_eq!(
++            format!("{:?}", gt.tape.ops),
++            format!("{:?}", g.tape.ops),
++            "same tape (the key)"
++        );
++        let (mem_t, failed_t) = gt.tape.execute_checked(&gt.inputs);
++        let o = prove(&gt, &mem_t);
++        println!(
++            "I8 negative {name}: stock verifier accepts {stock_ok}; tape assertions failed at {} ops (first {:?}); prover: {o:?}",
++            failed_t.len(),
++            failed_t.first()
++        );
++        assert!(!stock_ok);
++        assert!(!failed_t.is_empty());
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+-- 
+2.56.0
+

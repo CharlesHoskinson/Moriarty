@@ -1,0 +1,47 @@
+From d86f56c23a8e2af6dc14fcbd87e540532f5858c2 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 12:25:04 -0700
+Subject: [PATCH] T3: e4_profile_lfr_prove and the lfr_real export expose the
+ L_Fr public words with Tape::expose (E3 made it mandatory; machine.rs:1189
+ panicked)
+
+---
+ crates/sherlock-lfr/tests/e4_profile.rs          | 5 ++---
+ crates/sherlock-wrap-export/examples/lfr_real.rs | 5 ++---
+ 2 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/crates/sherlock-lfr/tests/e4_profile.rs b/crates/sherlock-lfr/tests/e4_profile.rs
+index 84b0d21..9a6d0e6 100644
+--- a/crates/sherlock-lfr/tests/e4_profile.rs
++++ b/crates/sherlock-lfr/tests/e4_profile.rs
+@@ -69,9 +69,8 @@ fn e4_profile_lfr_prove() {
+     let shape = LShape::of(&fx.l_proof);
+     let mut g = Gen::new();
+     let words = gen_verifier(&mut g, &fx.l_vk, &shape, &fx.l_proof).expect("pinned shape");
+-    for w in words {
+-        g.tape.public(w);
+-    }
++    // E3: the public words go through Tape::expose (padded to whole PublicAir rows).
++    g.tape.expose(&words);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty());
+     let m = Machine::new(&g.tape);
+diff --git a/crates/sherlock-wrap-export/examples/lfr_real.rs b/crates/sherlock-wrap-export/examples/lfr_real.rs
+index ebc4148..5959321 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_real.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_real.rs
+@@ -28,9 +28,8 @@ fn main() {
+     let shape = LShape::of(&fx.l_proof);
+     let mut g = Gen::new();
+     let words = gen_verifier(&mut g, &fx.l_vk, &shape, &fx.l_proof).expect("pinned shape");
+-    for w in words {
+-        g.tape.public(w);
+-    }
++    // E3: the public words go through Tape::expose (padded to whole PublicAir rows).
++    g.tape.expose(&words);
+     let (mem, failed) = g.tape.execute_checked(&g.inputs);
+     assert!(failed.is_empty(), "tape assertions failed");
+     let m = Machine::new(&g.tape);
+-- 
+2.56.0
+

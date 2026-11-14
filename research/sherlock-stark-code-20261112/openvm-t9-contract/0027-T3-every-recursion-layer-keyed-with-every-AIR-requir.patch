@@ -1,0 +1,492 @@
+From b3fbaa574e04578f8859b93d5b29e10fefa89492 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 15:26:11 -0700
+Subject: [PATCH] T3: every recursion layer keyed with every AIR required
+
+frozen::keygen_checked keys the leaf aggregation, internal (N1, N2, N3), L and
+L_Fr sets with every AIR required (keygen_required, as upstream
+continuations::prover::keygen_all_required); only the app set keeps optional
+AIRs. G1 refuses an optional AIR in a required set (G1Error::Optional).
+keygen_any at test parameters and the e4 profile key with required AIRs.
+
+The L_Fr tape generator refuses a shape that leaves out a required AIR
+(ShapeError::RequiredAbsent) or has another AIR count than the L key.
+
+fp8_keyset: check_layout asserts no optional AIR; new omit mode, the
+omitted-AIR negatives on real proofs (KeyBind, ProofShapeAir,
+PublicValuesAir left out of N1, N3 and L: prover path, stock verifier, the
+parent or the L_Fr tape) with an optional-key control and the parent
+proof-shape constraint count.
+---
+ crates/sherlock-lfr/src/frozen.rs             |  55 +++-
+ crates/sherlock-lfr/src/lverify.rs            |   9 +
+ crates/sherlock-lfr/tests/e4_profile.rs       |   2 +-
+ .../examples/fp8_keyset.rs                    | 242 +++++++++++++++++-
+ 4 files changed, 297 insertions(+), 11 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/frozen.rs b/crates/sherlock-lfr/src/frozen.rs
+index bc452cc..04ef9d8 100644
+--- a/crates/sherlock-lfr/src/frozen.rs
++++ b/crates/sherlock-lfr/src/frozen.rs
+@@ -9,13 +9,22 @@
+ //!   `n_stack`, `w_stack`, WHIR `k`, the explicit per-round query vector, folding, `mu`, query
+ //!   and LogUp PoW, proximity strategy, maximum constraint degree, LogUp interaction bound);
+ //! - a key whose shape is outside the bounds of the set (AIR count, total columns, constraints
+-//!   and interactions per AIR, constraint degree).
++//!   and interactions per AIR, constraint degree);
++//! - (T3) a recursion-layer key (leaf aggregation, internal, `L`, `L_Fr`) with an optional AIR.
++//!   Those layers are keyed with every AIR required ([`keygen_required`], as upstream
++//!   `continuations::prover::keygen_all_required`), so a proof that leaves out any AIR (`KeyBind`,
++//!   a proof-shape AIR, any other) is refused by the stock verifier (`RequiredAirNoVData`), by the
++//!   parent's proof-shape AIR (`is_required => is_present`) and by the `L_Fr` tape generator.
++//!   Only the app set keeps optional AIRs (an app key may leave chips unused).
+ //!
+ //! The trace-height bound is a property of a proof, not of a key; [`check_heights`] checks it.
+ //! The bounds are admission checks: no bound value is written into a key.
+ 
+ use openvm_stark_backend::{
+-    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++    keygen::{
++        types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
++        MultiStarkKeygenBuilder,
++    },
+     AirRef, StarkEngine, StarkProtocolConfig, SystemParams, WhirProximityStrategy,
+ };
+ use openvm_stark_sdk::config::params_with_100_bits_security;
+@@ -198,6 +207,11 @@ pub const LFR: FrozenSet = FrozenSet {
+ pub const ALL: [&FrozenSet; 5] = [&APP, &LEAF_AGG, &INTERNAL, &L, &LFR];
+ 
+ impl FrozenSet {
++    /// T3: every AIR of a key of this set is required (all sets but the app set).
++    pub fn all_required(&self) -> bool {
++        self.layer != Layer::App
++    }
++
+     /// The `SystemParams` of the set, with the explicit query vector in place of the derived one.
+     pub fn params(&self) -> SystemParams {
+         let mut p = params_with_100_bits_security(
+@@ -232,6 +246,8 @@ pub enum G1Error {
+     Interactions { set: &'static str, air: usize, got: usize, bound: usize },
+     Degree { set: &'static str, air: usize, got: usize, bound: usize },
+     Height { set: &'static str, air: usize, got: usize, bound: usize },
++    /// T3: an optional AIR in a key of a set whose AIRs are all required.
++    Optional { set: &'static str, air: usize },
+ }
+ 
+ impl std::fmt::Display for G1Error {
+@@ -260,7 +276,7 @@ pub fn keygen_frozen<E: StarkEngine>(
+ }
+ 
+ /// Keygen for test fixtures: at frozen-set parameters it is [`keygen_frozen`] (strict); at any
+-/// other parameters (the small test sets of `testing`) it is plain keygen, and such a key is never
++/// other parameters (the small test sets of `testing`) it is [`keygen_required`] (T3), and such a key is never
+ /// a key of the Sherlock set.
+ pub fn keygen_any<E: StarkEngine>(
+     engine: &E,
+@@ -268,6 +284,34 @@ pub fn keygen_any<E: StarkEngine>(
+ ) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
+     if set_of(engine.params()).is_some() {
+         keygen_frozen(engine, airs)
++    } else {
++        keygen_required(engine, airs)
++    }
++}
++
++/// Keygen with every AIR required (no proof may leave an AIR out); the same as upstream
++/// `continuations::prover::keygen_all_required`, without the continuations dependency.
++pub fn keygen_required<E: StarkEngine>(
++    engine: &E,
++    airs: &[AirRef<E::SC>],
++) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
++    let mut b = MultiStarkKeygenBuilder::new(engine.config().clone());
++    for air in airs {
++        b.add_required_air(air.clone());
++    }
++    let pk = b.generate_pk().unwrap();
++    let vk = pk.get_vk();
++    (pk, vk)
++}
++
++/// Keygen of `set` without the G1 checks: required AIRs where the set requires them.
++pub fn keygen_set<E: StarkEngine>(
++    set: &FrozenSet,
++    engine: &E,
++    airs: &[AirRef<E::SC>],
++) -> (MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>) {
++    if set.all_required() {
++        keygen_required(engine, airs)
+     } else {
+         engine.keygen(airs)
+     }
+@@ -385,6 +429,9 @@ pub fn check_vk_bounds<SC: StarkProtocolConfig>(
+         if d > b.max_constraint_degree {
+             return Err(G1Error::Degree { set: set.name, air, got: d, bound: b.max_constraint_degree });
+         }
++        if set.all_required() && !a.is_required {
++            return Err(G1Error::Optional { set: set.name, air });
++        }
+     }
+     Ok(s)
+ }
+@@ -403,7 +450,7 @@ pub fn keygen_checked<E: StarkEngine>(
+     airs: &[AirRef<E::SC>],
+ ) -> Result<(MultiStarkProvingKey<E::SC>, MultiStarkVerifyingKey<E::SC>, KeyShape), G1Error> {
+     check_params(set, engine.params())?;
+-    let (pk, vk) = engine.keygen(airs);
++    let (pk, vk) = keygen_set(set, engine, airs);
+     let s = check_vk(set, &vk)?;
+     Ok((pk, vk, s))
+ }
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index 84be359..fb69e68 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -241,6 +241,8 @@ pub struct Part1 {
+ pub enum ShapeError {
+     Heights,
+     Lengths(&'static str),
++    /// T3: the shape leaves out an AIR that the `L` key marks required (no tape is made for it).
++    RequiredAbsent(usize),
+ }
+ 
+ /// Part 1 of the `L` verifier on the tape: preamble, LogUp PoW, alpha, beta, GKR, the rest of
+@@ -255,6 +257,13 @@ pub fn gen_part1(
+     if LShape::of(proof) != *shape {
+         return Err(ShapeError::Heights);
+     }
++    if shape.log_heights.len() != vk.inner.per_air.len() {
++        return Err(ShapeError::Lengths("AIRs"));
++    }
++    // T3: as the stock proof-shape check (`RequiredAirNoVData`), a required AIR must be present.
++    if let Some(i) = vk.inner.per_air.iter().zip(&shape.log_heights).position(|(a, h)| a.is_required && h.is_none()) {
++        return Err(ShapeError::RequiredAbsent(i));
++    }
+     let mvk = &vk.inner;
+     let params = &mvk.params;
+     let l_skip = params.l_skip;
+diff --git a/crates/sherlock-lfr/tests/e4_profile.rs b/crates/sherlock-lfr/tests/e4_profile.rs
+index 9a6d0e6..088ab26 100644
+--- a/crates/sherlock-lfr/tests/e4_profile.rs
++++ b/crates/sherlock-lfr/tests/e4_profile.rs
+@@ -89,7 +89,7 @@ fn e4_profile_lfr_prove() {
+                 (pk, vk)
+             }
+             None => {
+-                let (pk, vk) = engine.keygen(&airs);
++                let (pk, vk) = sherlock_lfr::frozen::keygen_required(&engine, &airs);
+                 println!("E4 keygen {:.1}s", t.elapsed().as_secs_f64());
+                 if let Some(p) = cache.as_ref() {
+                     fs::write(p, bitcode::serialize(&pk).unwrap()).unwrap();
+diff --git a/crates/sherlock-wrap-export/examples/fp8_keyset.rs b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+index 8c1d459..8df4b14 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_keyset.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+@@ -133,7 +133,7 @@ where
+             // Only `keys` mode records a refused key (the stock-set measurement); `chain` and
+             // `fixpoint` abort on any G1 refusal.
+             assert!(MEASURE_REFUSED.load(Ordering::Relaxed), "FP8 G1 refused {label}: {e:?}");
+-            let (pk, vk) = engine.keygen(airs);
++            let (pk, vk) = frozen::keygen_set(set, engine, airs);
+             let mut v = vk_json(&vk);
+             v["key"] = json!(label);
+             v["set"] = json!(set.name);
+@@ -269,7 +269,7 @@ fn check_layout(vk: &MultiStarkVerifyingKey<NodeSC>) {
+     // As upstream keygen_all_required: every AIR of a bound layer is required (no AIR can be
+     // left out of a proof).
+     let opt: Vec<usize> = vk.inner.per_air.iter().enumerate().filter(|(_, a)| !a.is_required).map(|(i, _)| i).collect();
+-    if !opt.is_empty() { eprintln!("FP8 optional AIRs: {opt:?}"); }
++    assert!(opt.is_empty(), "T3: optional AIRs {opt:?} in a bound layer");
+ }
+ 
+ /// The commitment of `child` in the layer `c` (its cached DAG commitment, its pre-hash).
+@@ -296,6 +296,17 @@ fn bound_prove_try<const N: usize>(
+     proofs: &[Proof<NodeSC>],
+     tamper: Option<&dyn Fn(&mut Vec<F>)>,
+ ) -> (Option<Proof<NodeSC>>, Result<(), String>) {
++    let ctxs = bound_ctxs(c, child_vk, proofs, tamper);
++    bound_prove_ctxs(c, ctxs.into_iter().enumerate().collect())
++}
++
++/// The proving contexts of a bound layer, in AIR order (KeyBind first).
++fn bound_ctxs<const N: usize>(
++    c: &Layer<N>,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    proofs: &[Proof<NodeSC>],
++    tamper: Option<&dyn Fn(&mut Vec<F>)>,
++) -> Vec<AirProvingContext<CpuBackend<NodeSC>>> {
+     let pcs = c.circuit.commit_child_vk(&c.engine, child_vk);
+     let child = keybind::vk_commit(&pcs.commitment, &child_vk.pre_hash);
+     let child_pvs: Vec<Vec<F>> = proofs
+@@ -306,7 +317,6 @@ fn bound_prove_try<const N: usize>(
+     if let Some(t) = tamper {
+         t(&mut pvs);
+     }
+-    let d_pk = c.engine.device().transport_pk_to_device(&c.pk);
+     let mut ctxs = vec![AirProvingContext::simple(
+         c.engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&tr)),
+         pvs,
+@@ -318,7 +328,16 @@ fn bound_prove_try<const N: usize>(
+         &(),
+         default_duplex_sponge_recorder(),
+     ));
+-    let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
++    ctxs
++}
++
++/// Prove a bound layer from `(air id, context)` pairs and verify with the stock verifier.
++fn bound_prove_ctxs<const N: usize>(
++    c: &Layer<N>,
++    ctxs: Vec<(usize, AirProvingContext<CpuBackend<NodeSC>>)>,
++) -> (Option<Proof<NodeSC>>, Result<(), String>) {
++    let d_pk = c.engine.device().transport_pk_to_device(&c.pk);
++    let ctx = ProvingContext::new(ctxs);
+     if std::env::var("FP8_DEBUG").is_ok() {
+         c.engine.debug(&c.airs, &ctx);
+     }
+@@ -915,8 +934,22 @@ fn l_prove_try(
+     child_pf: &Proof<NodeSC>,
+     words: &[u64],
+ ) -> Result<Proof<LSC>, String> {
+-    let dims = Dims::FULL;
++    let ctxs = l_ctxs(l, engine, n_bench, role, child_vk, child_pf, words);
+     let d_pk = engine.device().transport_pk_to_device(pk);
++    engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).map_err(|e| format!("prove: {e:?}"))
++}
++
++/// The proving contexts of `L` in AIR order (bench AIRs, iface AIRs, KeyBind last).
++fn l_ctxs(
++    l: &VerifierSubCircuit<1>,
++    engine: &RootEng,
++    n_bench: usize,
++    role: &Role,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    child_pf: &Proof<NodeSC>,
++    words: &[u64],
++) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
++    let dims = Dims::FULL;
+     let pcs = l.commit_child_vk(engine, child_vk);
+     let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+         child_vk,
+@@ -935,7 +968,7 @@ fn l_prove_try(
+         engine.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&kt)),
+         kpv,
+     ));
+-    engine.prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect())).map_err(|e| format!("prove: {e:?}"))
++    ctxs
+ }
+ 
+ /// The L_Fr tape over an `L` proof with the cached commitment pinned to `pin`: Ok when every
+@@ -1056,6 +1089,202 @@ fn neg(out: &PathBuf) {
+     assert!(all, "a key-binding case did not behave as expected");
+ }
+ 
++/// The AIR index whose name contains `name` (exactly one).
++fn air_idx<SC: StarkProtocolConfig>(airs: &[AirRef<SC>], name: &str) -> usize {
++    let v: Vec<usize> = airs.iter().enumerate().filter(|(_, a)| a.name().contains(name)).map(|(i, _)| i).collect();
++    assert_eq!(v.len(), 1, "AIR {name}: {:?}", airs.iter().map(|a| a.name()).collect::<Vec<_>>());
++    v[0]
++}
++
++/// `p` with AIR `i` left out (no trace data, no public values): the proof an omitting prover
++/// would send, on the real proof of the layer.
++fn strip<SC: StarkProtocolConfig>(p: &Proof<SC>, i: usize) -> Proof<SC> {
++    let mut q = p.clone();
++    q.trace_vdata[i] = None;
++    q.public_values[i] = vec![];
++    q
++}
++
++/// Run `f`; a panic is returned as `Err("panic: ...")`.
++fn guard<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
++    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
++        Ok(r) => r,
++        Err(e) => Err(format!(
++            "panic: {}",
++            e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
++        )),
++    }
++}
++
++/// The failing AIRs that the debug constraint checker names for `ctx` (empty when all hold).
++fn debug_fail<const N: usize>(c: &Layer<N>, ctxs: Vec<(usize, AirProvingContext<CpuBackend<NodeSC>>)>) -> String {
++    let ctx = ProvingContext::new(ctxs);
++    match guard(|| {
++        c.engine.debug(&c.airs, &ctx);
++        Ok(())
++    }) {
++        Ok(()) => "debug: all constraints and buses hold".into(),
++        Err(e) => format!("debug {}", e.chars().take(400).collect::<String>()),
++    }
++}
++
++/// T3: omitted-AIR negatives on real proofs. Every recursion layer (leaf layer, N1, N2, N3, `L`)
++/// is keyed with every AIR required (`frozen::keygen_checked`, T3). For N1, N3 and `L` and for
++/// each of `KeyBind`, `ProofShapeAir` and `PublicValuesAir` (the proof-shape module) the case is
++/// refused (1) on the prover path (the layer proved without that AIR's trace), (2) by the stock
++/// verifier of the layer on the real proof with that AIR left out, (3) one layer up: the parent
++/// node (N2 over N1, N3 over N3) proving over the stripped child, and for `L` the `L_Fr` tape
++/// generator (with the stripped shape and with the honest shape). A control keys N1 with plain
++/// (optional-AIR) keygen and records the same cases without a verdict.
++fn omit(out: &PathBuf) {
++    let mut log: Vec<Value> = vec![];
++    let mut res: Vec<Value> = vec![];
++    let mut rec = |name: &str, expect_ok: bool, r: Result<(), String>, check: &str| {
++        let pass = r.is_ok() == expect_ok;
++        let got: String = format!("{r:?}").chars().take(400).collect();
++        println!("T3OMIT {name}: expect {} got {got} [{check}] -> {}", if expect_ok { "accept" } else { "refuse" }, if pass { "PASS" } else { "FAIL" });
++        res.push(json!({"case": name, "expect": if expect_ok { "accept" } else { "refuse" }, "got": got, "check": check, "pass": pass}));
++    };
++    let vr = |r: Result<(), openvm_stark_backend::verifier::VerifierError<_>>| r.map_err(|e| format!("{e:?}"));
++    let (chip, w1) = w1_airs(1);
++    let fapp = Eng::new(frozen::APP.params());
++    let (pka, app) = kg(&frozen::APP, &fapp, &w1, "app", &mut log);
++    let pa = w1_prove(&fapp, &pka, &app, &chip, 1, 14);
++    let lc = agg_key::<1>(&frozen::LEAF_AGG, &app, Role::Leaf, "leaf<1>", &mut log);
++    let la = bound_prove(&lc, &app, &pa);
++    let c1 = agg_key::<2>(&frozen::INTERNAL, &lc.vk, Role::N1, "N1", &mut log);
++    let n1 = bound_prove(&c1, &lc.vk, &[la.clone(), la.clone()]);
++    let c2 = agg_key::<2>(&frozen::INTERNAL, &c1.vk, Role::N2, "N2", &mut log);
++    let n2 = bound_prove(&c2, &c1.vk, &[n1.clone(), n1.clone()]);
++    let c3 = agg_key::<2>(&frozen::INTERNAL, &c2.vk, Role::N3, "N3", &mut log);
++    let n3 = bound_prove(&c3, &c2.vk, &[n2.clone(), n2.clone()]);
++    let c4 = agg_key::<2>(&frozen::INTERNAL, &c3.vk, Role::N3, "N3 over N3", &mut log);
++    assert_eq!(c4.vk.pre_hash, c3.vk.pre_hash, "N3 fixed point");
++    let mut req = serde_json::Map::new();
++    for (k, v) in [("leaf", &lc.vk), ("n1", &c1.vk), ("n2", &c2.vk), ("n3", &c3.vk)] {
++        req.insert(k.into(), json!(v.inner.per_air.iter().all(|a| a.is_required)));
++    }
++    rec("n2_over_n1_honest", true, bound_prove_try(&c2, &c1.vk, &[n1.clone(), n1.clone()], None).1, "honest");
++    rec("n3_over_n3_honest", true, bound_prove_try(&c4, &c3.vk, &[n3.clone(), n3.clone()], None).1, "honest");
++    let omitted = ["KeyBindAir", "ProofShapeAir", "PublicValuesAir"];
++
++    // N1 and N3: prover path, stock verifier, parent.
++    for (tag, c, child_vk, kids, parent, parent_child_vk, own) in [
++        ("n1", &c1, &lc.vk, vec![la.clone(), la.clone()], &c2, &c1.vk, &n1),
++        ("n3", &c3, &c2.vk, vec![n2.clone(), n2.clone()], &c4, &c3.vk, &n3),
++    ] {
++        for name in omitted {
++            let i = air_idx(&c.airs, name);
++            let mk = || -> Vec<_> { bound_ctxs(c, child_vk, &kids, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
++            let dbg = debug_fail(c, mk());
++            let ctxs = mk();
++            let (p, r) = guard(|| Ok(bound_prove_ctxs(c, ctxs))).unwrap_or((None, Err("panic in prove".into())));
++            rec(&format!("{tag}_prove_without_{name}"), false, r, &format!("prover path, air {i}; {dbg}"));
++            let _ = p;
++            let s = strip(own, i);
++            rec(&format!("{tag}_stock_verify_without_{name}"), false, vr(c.engine.verify(&c.vk, &s)), &format!("stock verifier, air {i}"));
++            let pmk = || guard(|| Ok(bound_ctxs(parent, parent_child_vk, &[s.clone(), own.clone()], None).into_iter().enumerate().collect::<Vec<_>>()));
++            match pmk() {
++                Ok(pc) => {
++                    let dbg = debug_fail(parent, pc);
++                    let pc = pmk().unwrap();
++                    let r = guard(|| Ok(bound_prove_ctxs(parent, pc).1)).and_then(|r| r);
++                    rec(&format!("{tag}_parent_over_child_without_{name}"), false, r, &format!("parent in circuit; {dbg}"));
++                }
++                Err(e) => rec(&format!("{tag}_parent_over_child_without_{name}"), false, Err(e), "parent trace generation"),
++            }
++        }
++    }
++
++    // L: prover path, stock verifier, L_Fr tape (stripped shape, honest shape).
++    let pin_n2 = commit_in(&c3, &c2.vk);
++    let pin_n3 = commit_in(&c4, &c3.vk);
++    let n3_vk = c3.vk.clone();
++    let (run, _) = iface::case_run(&Dims::FULL, Case::AllEntries, 14);
++    let words = run.words();
++    let (l, engine, pk, l_vk, n_bench, role) = l_key(&n3_vk, pin_n2, pin_n3, "L", &mut log);
++    req.insert("L".into(), json!(l_vk.inner.per_air.iter().all(|a| a.is_required)));
++    let mut l_airs = AggregationSubCircuit::airs::<LSC>(&l);
++    l_airs.extend(iface_l::airs(&Dims::FULL));
++    l_airs.push(Arc::new(KeyBindAir::new(role.clone(), l.bus_inventory())) as AirRef<LSC>);
++    assert_eq!(l_airs.len(), l_vk.inner.per_air.len());
++    let l_pin: Fr = l.commit_child_vk(&engine, &n3_vk).commitment[0];
++    let lp = l_prove(&l, &engine, &pk, n_bench, &role, &n3_vk, &n3, &words);
++    rec("l_honest", true, vr(engine.verify(&l_vk, &lp)), "honest");
++    rec("lfr_tape_honest", true, lfr_tape(&l_vk, &lp, l_pin), "honest");
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    for name in omitted {
++        let i = air_idx(&l_airs, name);
++        let ctxs: Vec<_> = l_ctxs(&l, &engine, n_bench, &role, &n3_vk, &n3, &words).into_iter().enumerate().filter(|(j, _)| *j != i).collect();
++        let ctx = ProvingContext::new(ctxs);
++        let dbg = match guard(|| {
++            engine.debug(&l_airs, &ctx);
++            Ok(())
++        }) {
++            Ok(()) => "debug: all constraints and buses hold".to_string(),
++            Err(e) => format!("debug {}", e.chars().take(400).collect::<String>()),
++        };
++        let r = guard(|| engine.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}")))
++            .and_then(|p| vr(engine.verify(&l_vk, &p)));
++        rec(&format!("l_prove_without_{name}"), false, r, &format!("prover path, air {i}; {dbg}"));
++        let s = strip(&lp, i);
++        rec(&format!("l_stock_verify_without_{name}"), false, vr(engine.verify(&l_vk, &s)), &format!("stock verifier, air {i}"));
++        rec(&format!("lfr_tape_stripped_shape_without_{name}"), false, guard(|| lfr_tape(&l_vk, &s, l_pin)), "L_Fr tape generator, shape of the stripped proof");
++        let honest = LShape::of(&lp);
++        let mut g = Gen::new();
++        g.pinned_cached = Some(vec![l_pin]);
++        let r = guard(|| gen_verifier_full(&mut g, &l_vk, &honest, &s).map(|_| ()).map_err(|e| format!("{e:?}")));
++        rec(&format!("lfr_tape_honest_shape_without_{name}"), false, r, "L_Fr tape generator, the pinned honest shape");
++    }
++    drop((d_pk, pk, l));
++
++    // Control: N1 keyed with plain keygen (every AIR optional, the pre-T3 keys). No verdict.
++    let mut ctl: Vec<Value> = vec![];
++    {
++        let engine = Eng::new(frozen::INTERNAL.params());
++        let (pk, vk) = engine.keygen(&c1.airs);
++        let o = Layer::<2> { circuit: <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(Arc::new(lc.vk.clone()), bound_cfg()), role: Role::N1, engine, pk, vk, airs: c1.airs.clone() };
++        // The parent's proof-shape AIR over a required child key carries `is_present = 1` per
++        // child AIR (recursion proof_shape/air.rs, `when_current.assert_one(local.is_present)`)
++        // and drops the presence-bit transcript receive: compare N2 over the T3 N1 key with N2
++        // over the optional N1 key.
++        let n2o = agg_key::<2>(&frozen::INTERNAL, &o.vk, Role::N2, "N2 over optional N1", &mut log);
++        let ps = air_idx(&c2.airs, "ProofShapeAir");
++        let cnt = |v: &MultiStarkVerifyingKey<NodeSC>| {
++            let a = &v.inner.per_air[ps];
++            (a.symbolic_constraints.constraints.constraint_idx.len(), a.symbolic_constraints.interactions.len())
++        };
++        let (rq, op) = (cnt(&c2.vk), cnt(&n2o.vk));
++        println!("T3CTL n2_proof_shape_air constraints/interactions over required N1 {rq:?}, over optional N1 {op:?}; child AIRs {}", c1.vk.inner.per_air.len());
++        ctl.push(json!({"case": "n2_proof_shape_air_over_required_vs_optional_n1",
++            "required_child": {"constraints": rq.0, "interactions": rq.1},
++            "optional_child": {"constraints": op.0, "interactions": op.1},
++            "child_airs": c1.vk.inner.per_air.len()}));
++        drop(n2o);
++        let (ho, r) = bound_prove_try(&o, &lc.vk, &[la.clone(), la.clone()], None);
++        ctl.push(json!({"case": "optional_n1_honest", "got": format!("{r:?}")}));
++        let ho = ho.unwrap();
++        for name in omitted {
++            let i = air_idx(&o.airs, name);
++            let ctxs: Vec<_> = bound_ctxs(&o, &lc.vk, &[la.clone(), la.clone()], None).into_iter().enumerate().filter(|(j, _)| *j != i).collect();
++            let r = guard(|| Ok(bound_prove_ctxs(&o, ctxs).1)).and_then(|r| r);
++            let got: String = format!("{r:?}").chars().take(300).collect();
++            println!("T3CTL optional_n1_prove_without_{name}: {got}");
++            ctl.push(json!({"case": format!("optional_n1_prove_without_{name}"), "got": got}));
++            let r = vr(o.engine.verify(&o.vk, &strip(&ho, i)));
++            let got: String = format!("{r:?}").chars().take(300).collect();
++            println!("T3CTL optional_n1_stock_verify_without_{name}: {got}");
++            ctl.push(json!({"case": format!("optional_n1_stock_verify_without_{name}"), "got": got}));
++        }
++    }
++    let all = res.iter().all(|r| r["pass"].as_bool().unwrap());
++    let doc = json!({"all_pass": all, "all_required": req, "cases": res, "control_optional_keys": ctl, "keys": log});
++    fs::write(out.join("omit.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
++    println!("T3OMIT all_required {}", serde_json::to_string(&req).unwrap());
++    println!("T3OMIT all_pass={all}");
++    assert!(all, "an omitted-AIR case did not behave as expected");
++}
++
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+     let out = PathBuf::from(&a[2]);
+@@ -1065,6 +1294,7 @@ fn main() {
+         "chain" => chain(&out),
+         "fixpoint" => fixpoint(&out),
+         "neg" => neg(&out),
++        "omit" => omit(&out),
+         "univ" => {
+             // Universality of the bound keys: programs A (W1, 1 AIR) and B (W1 x 2, 2 AIRs).
+             let mut log = vec![];
+-- 
+2.56.0
+

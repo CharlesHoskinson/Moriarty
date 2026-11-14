@@ -902,7 +902,7 @@ GRAND body words = 417   (outcome moved to header: 410)
 | 0 | (all) kind `tag(2)` [3 kinds, H:992-1010] | `tag(2)` | 1 |
 | 1 | ValidateTask.r.tag `bit` [H:992-995; caps H:1056-1057]<br>EqualTask.left.tag `bit` [H:1003-1007; caps H:1065-1067]<br>PairTask.binder(name ROM) `u32` [H:1010-1013; caps H:1070-1072] | `u32` | 2 |
 | 2 | ValidateTask.r.idx(Const u32 or Data addr) `addr` [H:992-995; caps H:1056-1057]<br>EqualTask.left.idx(Const u32 or Data addr) `addr` [H:1003-1007; caps H:1065-1067]<br>PairTask.sort(type ROM) `u32` [H:1010-1013; caps H:1070-1072] | `addr` | 5 |
-| 3 | ValidateTask.visit(2 TaskVisitC, H:148) `tag(1)` [H:992-995; caps H:1056-1057]<br>EqualTask.right.tag `bit` [H:1003-1007; caps H:1065-1067]<br>PairTask.arg.tag `bit` [H:1010-1013; caps H:1070-1072] | `tag(1)` | 1 |
+| 3 | ValidateTask.visit(2 TaskVisitC, H:148) `tag(1)` [H:992-995; caps H:1056-1057]<br>EqualTask.right.tag(rtag: 0 Const, 1 Data, 2 Input) `tag(2)` [H:1003-1007; caps H:1065-1067]<br>PairTask.arg.tag(rtag) `tag(2)` [H:1010-1013; caps H:1070-1072] | `tag(2)` | 1 |
 | 4 | ValidateTask.cursor(< max_arity) `u32` [H:992-995; caps H:1056-1057]<br>EqualTask.right.idx(Const u32 or Data addr) `addr` [H:1003-1007; caps H:1065-1067]<br>PairTask.arg.idx(Const u32 or Data addr) `addr` [H:1010-1013; caps H:1070-1072] | `addr` | 5 |
 | 5 | EqualTask.visit `tag(1)` [H:1003-1007; caps H:1065-1067] | `tag(1)` | 1 |
 | 6 | EqualTask.cursor(< max_arity) `u32` [H:1003-1007; caps H:1065-1067] | `u32` | 2 |
