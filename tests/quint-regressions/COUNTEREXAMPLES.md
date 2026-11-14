@@ -8,6 +8,8 @@ input, the result, the constraint involved and a verdict:
 - **GUARD HOLDS**: the attack is refused, and the refusing constraint is the one the finding names.
 - **OPEN DESIGN**: the finding concerns a design or prose point. There is no code to attack.
 - **NOT ATTEMPTED**: no counterexample was built in this run (the reason is in the row).
+- **FIXED**: a CONFIRMED defect that T10q fixed. The row names the commit, the named test that failed
+  before the fix (`logs/t10q-fails-before.txt`) and passes after it, and the refusing constraint.
 
 Results are MEASURED on openvm `1733bb5` (branch `quint-reg` on T10mm `d26453c`) with the local
 checker of the replay driver (README), unless the row says otherwise. Inputs are in `inputs/`, or the
@@ -16,12 +18,12 @@ witness).
 
 ## Defects found
 
-| class | ids |
-|---|---|
-| forgery accepted | MW-F01-WORK-A, MW-F01-WORK-B (and the B rerun trace); AFK-F7 |
-| honest witness refused | AFK-F6, AFK-F9(b) |
-| host/prose mismatch | GP2-F4.2 |
-| conditional (standalone shard only) | GP2-C2.1 |
+| class | ids | state |
+|---|---|---|
+| forgery accepted | MW-F01-WORK-A, MW-F01-WORK-B (and the B rerun trace); AFK-F7 | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
+| honest witness refused | AFK-F6, AFK-F9(b) | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
+| host/prose mismatch | GP2-F4.2 | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
+| conditional (standalone shard only) | GP2-C2.1 | open (outside T10q) |
 
 No attack that a lane called sound was accepted among those attempted (see NOT ATTEMPTED rows). Every guard row is refused by the constraint the
 finding names.
@@ -30,10 +32,10 @@ finding names.
 
 | finding | attempt | input | result | constraint | verdict |
 |---|---|---|---|---|---|
-| F-01 Work, test A (false carry) | MERGE-WORK at h_pre 4, step 1, `whi [2013200390, 1, 0, 0]`, `wcry [1, 0, 0, 0]`; then NW, NW2, N3 over it | `merge-work-ladder-F01-work-false-carry.itf.json` | accepted (Work and 3 rungs) | none: `whi` has no range lookup (stmt.rs:1083-1090); at `L`, `H_HI` passes as columns (code reading) | CONFIRMED |
-| F-01 Work, test B (2^64 wrap bypass) | MERGE-WORK at h_pre 2^64 - 1, `whi [65536, 65535, 65535, 65535]`, `wcry 0` | `merge-work-ladder-F01-work-wrap-bypass.itf.json`, `...-wrap-bypass-run.itf.json` | accepted (Work and 3 rungs) | none (as above) | CONFIRMED |
+| F-01 Work, test A (false carry) | MERGE-WORK at h_pre 4, step 1, `whi [2013200390, 1, 0, 0]`, `wcry [1, 0, 0, 0]`; then NW, NW2, N3 over it | `merge-work-ladder-F01-work-false-carry.itf.json` | before T10q: accepted (Work and 3 rungs). After: refused | bus 197 (kernel RANGE, 16 bits) unbalanced on `[2013200390, 16]`: Work looks up its four `whi` limbs in the inline kernel's RANGE table | FIXED (openvm `beba730` (branch `t10q`); `mw_f01_work_whi_false_carry_refused`) |
+| F-01 Work, test B (2^64 wrap bypass) | MERGE-WORK at h_pre 2^64 - 1, `whi [65536, 65535, 65535, 65535]`, `wcry 0` | `merge-work-ladder-F01-work-wrap-bypass.itf.json`, `...-wrap-bypass-run.itf.json` | before T10q: accepted (Work and 3 rungs). After: refused | bus 197 unbalanced on `[65536, 16]` (as above) | FIXED (openvm `beba730` (branch `t10q`); `mw_f01_work_whi_wrap_bypass_refused`, `..._run_refused`) |
 | F-01 First | N1 over one leaf step at h_pre 65535: `hhi [65536, 0, 0, 0]`, `cry 0` | `inputs/MW-F01-FIRST.json` | refused | bus 963 (HHI_RANGE_BUS, T10) unbalanced on `[65536]` | NOT REPRODUCED (fixed in T10) |
-| F-02 segment drop, swap, splice | the `w-left`, `no-pre-link`, `no-h-link`, `no-prog-link`, `h-wrap` and `merge-no-contig` attacks | the six traces | refused | #748 `[wk+16, child_words+17']` (W.pre_d = post_d(1)); #772 `[wk+40, child_words+29']`; #749 `[child_words+1, wk+8]`; #826 `[wcry+3]`; #734 `[child_words+17, gp.mode, valid', child_words+9']` | GUARD HOLDS |
+| F-02 segment drop, swap, splice | the `w-left`, `no-pre-link`, `no-h-link`, `no-prog-link`, `h-wrap` and `merge-no-contig` attacks | the six traces | refused | on T10q: `[child_words+17, wk+16, valid+0', child_words+17']` (W.pre_d = post_d of the right-most enabled child); `[child_words+29, wk+40, valid+0', child_words+29']`; `[child_words+1, wk+8]`; `[wcry+3]`; `[child_words+17, valid+0', child_words+9']` (contiguity; Work has no GP block since T10q) | GUARD HOLDS |
 | F-03 W's log omitted from `log_merge` | not attacked. The lane reads that CORE fixes `(LOG_D, LOG_N) = (D_EMPTY, 0)`; not checked here | none | none | CoreAir log columns | NOT ATTEMPTED (lane says sound) |
 | F-04 step words over STEP_PV_BUS | `stepv-once`, `stepv-wf-free`, `core-send-row0-only` | the three traces | refused | bus 197 (truncated CORE; a proof is refused first at the key's fixed CORE height of 8); #818 `[wf]`; bus 213 (STEP_PV_BUS) | GUARD HOLDS |
 | F-05 key rows and half split | `row-unbound`, `half-split-off` | the two traces | refused at rung 0 | #61 `[valid, child_words+66, pv[66]]` (keys_d); #29 `[sel+7]` | GUARD HOLDS |
@@ -49,13 +51,13 @@ finding names.
 | F-2 revocation of historical roots | none: the ledger contract is prose | none | none | none | OPEN DESIGN |
 | F-3 mixed-root JOIN | Node JOIN of two SET children under `reg_root` R(10) and R(0) | `inputs/AFK-F3.json` | refused (the same JOIN with equal roots is accepted: AFK-HONEST) | #153 `[child_words+41, valid', child_words+41']` (gp.rs:313-315) | GUARD HOLDS |
 | F-4 shape without intervals | the code as built binds `(h_lo, h_hi)` of a SEG output in `shape_d` (gp.rs:714-716), so the rejected option is not in the code; the residual collision is F-7 | none | none | none | GUARD HOLDS (by code reading; see F-7) |
-| F-5 MERGE-WORK column bound | the widths of the Work statement and kernel AIRs, and of CORE in chip sets 0 and 2 | `logs/merge-work-columns.txt` | Work statement and inline kernel 3,735 columns (MEASURED, without the verifier sub-circuit); value-set CORE 738 vs 676 = +62 (MEASURED); MERGE-WORK key 5,284 (MEASURED in T8b); STACKS 71 words (ESTIMATE, ARCHITECTURE 1280-1282) | 5,284 + 62 + 71 = 5,417 > 5,400 (DERIVED). The value-set CORE has 1,298 constraints > 1,000 (MEASURED in T8b), so a second CORE split is needed too | OPEN DESIGN (bound does not fit STACKS + VALUE DIGEST; owner item T15) |
-| F-6 N1 forces `reg_root` 0 (NT-2a) | N1 over leaf `[0, 5)` with public `reg_root` R(10) | `inputs/AFK-F6.json` | refused | #549 to #556 `[pv[41..49]]` (First: pv = e0 and e0 reg_root = 0) | CONFIRMED (honest witness refused) |
-| F-7 N1 `shape_d` 0, N2 cut collision (NT-1) | N2 over N1[0,1)+N1[1,5) and N2 over N1[0,3)+N1[3,5) (model cuts 2 and 5 of 8); the second proof presented with the first one's `shape_d` | `inputs/AFK-F7.json` | accepted; both N1 `shape_d` are 0 and both N2 `shape_d` are equal | none: First copies `shape_d` 0 from the leaf envelope (stmt.rs:1063, First is not skipped) | CONFIRMED (forgery accepted) |
+| F-5 MERGE-WORK column bound | the widths of the Work statement and kernel AIRs, and of CORE in chip sets 0 and 2; T10q drops the GP block and `fv_state` from `Kind::Work` (MERGE-WORK has no other mode) | `logs/merge-work-columns.txt` | before T10q: Work StmtAir 760, Work statement and inline kernel 3,735 (MEASURED); MERGE-WORK key 5,284 (MEASURED in T8b); 5,284 + 62 (value-set CORE 738 vs 676, MEASURED) + 71 (STACKS words, ESTIMATE, ARCHITECTURE 1280-1282) = 5,417 > 5,400 (DERIVED). After: Work StmtAir 464, statement and kernel 3,439 (MEASURED, -296); MERGE-WORK key MEASURED in the T10q gate (`research/sherlock-t10q-20261114/RESULTS.md`) | the bound 5,400 stays. The value-set CORE has 1,298 constraints > 1,000 (MEASURED in T8b), so a second CORE split is still needed | FIXED (fit; openvm `beba730` (branch `t10q`)) |
+| F-6 N1 forces `reg_root` 0 (NT-2a) | N1 over leaf `[0, 5)` with public `reg_root` R(10) | `inputs/AFK-F6.json` | before T10q: refused by #549 to #556 `[pv[41..49]]` (First: pv = e0 and e0 reg_root = 0). After: accepted | First takes `reg_root` as a free public value, as `keys_d`; JOIN still binds equal roots (AFK-F3) | FIXED (openvm `beba730` (branch `t10q`); `afk_f6_first_carries_nonzero_reg_root`) |
+| F-7 N1 `shape_d` 0, N2 cut collision (NT-1) | N2 over N1[0,1)+N1[1,5) and N2 over N1[0,3)+N1[3,5) (model cuts 2 and 5 of 8); the second proof presented with the first one's `shape_d` | `inputs/AFK-F7.json` | before T10q: accepted; both N1 `shape_d` are 0 and both N2 `shape_d` are equal. After: the two cuts give different N1 and N2 `shape_d`, and the second proof with the first one's `shape_d` is refused | bus 961 (shape sponge) unbalanced: N1 computes `shape_d` from its cut (a leaf `SHK_SHAPE` per row, one MERGE node shape over them) | FIXED (openvm `beba730` (branch `t10q`); `afk_f7_n2_shape_binds_the_cut`) |
 | F-8 revocation after `acceptCollection` | none: ledger finality is a spec point | none | none | none | OPEN DESIGN (owner item T15) |
 | F-9(a) `KSEL_NODE` fixed in the shape call | code reading: `gp::shape_w` writes `KSEL_NODE` for both slots (gp.rs:731-732); foreign slots do not exist yet | none | none | none | OPEN DESIGN (GP-3 foreign wiring not built) |
 | F-9(a) `Kind::Fv` outputs `STMT_FV` | code reading: stmt.rs:1143 and 1857 set `TAG = STMT_FV` (T7 stand-in) | none | none | none | OPEN DESIGN |
-| F-9(b) MERGE-WORK needs two children | MERGE-WORK with one SEG child [0, 4) and the inline step at 4 (the honest merge-work witness with slot 1 off) | `inputs/AFK-F9.json` | refused | #747 `[valid']` (`fr.assert_one(en1)`), and the unconditional W link to slot 1 (#748 ff.) | CONFIRMED (honest witness refused) |
+| F-9(b) MERGE-WORK needs two children | MERGE-WORK with one SEG child [0, 4) and the inline step at 4 (the honest merge-work witness with slot 1 off) | `inputs/AFK-F9.json` | before T10q: refused by #747 `[valid']` (`fr.assert_one(en1)`) and the W link to slot 1 (#748 ff.). After: accepted; the same witness with the step not linked to the child is refused by `[child_words+17, wk+16, valid+0', child_words+17']` (`afk_f9_work_one_child_unlinked_refused`) | W links to the right-most enabled child | FIXED (openvm `beba730` (branch `t10q`); `afk_f9_work_one_child`) |
 
 ## gp2-value-set
 
@@ -68,7 +70,7 @@ finding names.
 | F3.1 frame rule | mutant `frame_skip_word` (`reg.19` changed across the PUBV step) | `inputs/GP2-M-frame_skip_word.json` | refused | #122 row 1 `[b, st.reg.19, st.reg.19']` | GUARD HOLDS |
 | F4.1 INIT `val_d` only in chip set 2 | mutant `init_val_any_set`: not replayed. Chip set 0 CORE has no `C_VVAL` column, so there is no cell to forge (core.rs:661-665) | none | none | layout | GUARD HOLDS (structural, not replayed) |
 | F4.2 ROM table typing | mutant `rom_no_tbl_bind` (PUBV reads the table-0 row as constants[0]) | `inputs/GP2-M-rom_no_tbl_bind.json` | refused | bus 68 (ROM) on `[19, ...]` | GUARD HOLDS |
-| F4.2 `const_vd` ignores the nominal type | `leaf::halted_vd` of `ProgV::P` (type U) and `ProgV::C` (type V) | `inputs/GP2-F4.2.json` | `prog_d` differ, the two Halted digests are equal | leaf.rs:264-275 hashes `p2(45, [ty])` only | CONFIRMED (host/prose mismatch: nominal type collision) |
+| F4.2 `const_vd` ignores the nominal type | `leaf::halted_vd` of `ProgV::P` (type U) and `ProgV::C` (type V) | `inputs/GP2-F4.2.json` | before T10q: `prog_d` differ, the two Halted digests are equal. After: the digests differ | `const_vd` and the table 9 and 15 ROM rows use the T5 5.2 type normal form (`name_d`, `decl_d`, `ty_d_row`); host and ROM only, no circuit key changes for it | FIXED (openvm `beba730` (branch `t10q`); `gp2_f42_const_vd_binds_the_type_name`) |
 | C2.1 R_PUBV trusts the constant row | `unitctor` with `constants[0]` marker_free 0; the PUBV shard of the cut [1, 1] (h_pre 1) alone | `inputs/GP2-C2.1.json` | accepted; the genesis CNULL shard of the same program is refused (#537 `[r3+1]`, mutant row `cnull_no_marker_free`) | core.rs:439-449 has no `r3(0) = 6`, `r3(1) = 1`, `tsk.count = 0` | CONFIRMED (conditional: the pre state is unreachable from genesis under chip sets 0 to 2) |
 
 ## pathc-xcheck
@@ -100,9 +102,15 @@ finding names.
 ## Observation outside the lanes
 
 A constants row whose `fields start` lane (lane 4) is 1 is accepted by a genesis CNULL step
-(diagnostic `gp2_cst_fields_start`, MEASURED, local checker). CNULL checks the type, ctor and
-length lanes of the constant, but not its fields start. For a nullary constant (length 0) no field
-is read and `const_vd` does not hash the lane, so the Halted value is unchanged. The edited ROM
-changes `prog_root` and so `prog_d`. This is not a forgery of a value. It is a ROM typing gap to
-record. The lane's `m_cnull_no_cst_fields` changes the constant's ctor lane, and the replay of that
-mutant is refused (`[sel+0, rom+5, r3+10]`).
+(diagnostic `gp2_cst_fields_start`, MEASURED, local checker), and the Halted value is unchanged.
+T10q verdict: GUARD HOLDS, reference-consistent, kept as the positive test
+`gp2_cnull_fields_start_free_as_in_the_reference`. The compiler writes `start =
+constant_fields.len()` for every constant, also for length 0 (`mori-core/src/sherlock/program_image.rs:305`).
+The reference nullary rule reads `len` only (`owner_adt_runtime.rs:208-213`), and admission bounds
+`start` by the table length only (`owner_ext_admit.rs:472-473`). A `start = 0` constraint would
+refuse honest programs. The lane's `m_cnull_no_cst_fields` changes the constant's ctor lane, and
+that mutant is refused (`[sel+0, rom+5, r3+10]`).
+
+Since T10q, `program_v` refuses the ROM edits of `cnull_no_ctor_type`, `cnull_no_ctor_arity` and
+`cnull_no_cst_fields` (the host builds the type normal form and `const_vd` from the edited rows and
+asserts on them). The handler then attacks with the CORE cell edit, and the named constraint still refuses.

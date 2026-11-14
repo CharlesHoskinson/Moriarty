@@ -14,7 +14,7 @@ code and asserts the verdict that the code must give.
 | `manifest.json` | one row per trace: id, handler, expected verdict, status, refusing constraint (`refused_by`), named test |
 | `inputs/` | the counterexample inputs that the handlers built (forged cells, public values, edited ROM rows). The tests write them again with `QR_DUMP_INPUTS=1` |
 | `models/` | the lane models (`*.qnt`), `traces.tsv` and `run.sh`. `run.sh` reruns every command: each `quint run` must exit 1, each `quint test` must pass, and the new ITF states must equal the committed trace |
-| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`: 94 of 94 exit 1, MEASURED), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `merge-work-columns.txt` (AFK F-5 input) |
+| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`: 94 of 94 exit 1, MEASURED), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `t10q-fails-before.txt` and `t10q-after.txt` (the 7 T10q tests before and after the fixes), `merge-work-columns.txt` (AFK F-5 input) |
 | `COUNTEREXAMPLES.md` | one row per lane finding: the attempt, its input, the result, the constraint, the verdict |
 
 ## The driver
@@ -52,20 +52,24 @@ cd ~/.cache/m7-wrap/src/openvm-quint-reg
 CARGO_TARGET_DIR=~/.cache/quint-reg/target T6_SLICE_JSON=~/.cache/quint-reg/slice_v1.json \
 QUINT_REGRESSIONS_DIR=~/Projects/Moriarty/tests/quint-regressions \
   heavy-run --mem 8G -- cargo test --release --locked --offline -p sherlock-leaf --test quint_regressions
-# open defects (each fails on the code as built):
-  ... --test quint_regressions -- --ignored mw_f01 afk_ gp2_
+# the open defect GP2-C2.1 (fails on the code as built):
+  ... --test quint_regressions -- --ignored gp2_c21
 # the Quint side:
 tests/quint-regressions/models/run.sh
 ```
 
-`replay_all` passes on openvm `1733bb5` (branch `quint-reg`, on T10mm `d26453c`): 52 rows pass,
-8 open-defect rows and 1 not-replayed row are skipped (`logs/replay_all.txt`, MEASURED). Each of
-the 8 named defect tests fails before any fix (`logs/fails-before.txt`, MEASURED).
+`replay_all` passes on openvm `beba730` (branch `t10q`, on T10mm `d26453c` and quint-reg `1733bb5`):
+59 rows pass, the open-defect row GP2-C2.1 and 1 not-replayed row are skipped (`logs/replay_all.txt`,
+MEASURED). T10q fixed 7 of the 8 defect rows. Each of their named tests failed on `1733bb5`
+(`logs/t10q-fails-before.txt`) and passes on `beba730` without `#[ignore]` (`logs/t10q-after.txt`,
+MEASURED). T10q added `afk_f9_work_one_child_unlinked_refused` and
+`gp2_cnull_fields_start_free_as_in_the_reference`.
 
 ## Rows
 
 Kind: guard (the code must refuse), defect (open; the named `#[ignore]` test asserts the fixed
-behaviour), positive (the code must accept). Status: pass, ignored-open-defect, not-replayed.
+behaviour), positive (the code must accept). Status: pass, pass (fixed in T10q), ignored-open-defect,
+not-replayed.
 
 | id | lane | finding | trace | Rust test | kind | status | code location |
 |---|---|---|---|---|---|---|---|
@@ -82,17 +86,17 @@ behaviour), positive (the code must accept). Status: pass, ignored-open-defect, 
 | MW-ROW-UNBOUND | merge-work-ladder | F-05 | `merge-work-ladder-row-unbound.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
 | MW-HALF-SPLIT-OFF | merge-work-ladder | F-05 | `merge-work-ladder-half-split-off.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
 | MW-KEY-CHECK-NONE | merge-work-ladder | F-06 | `merge-work-ladder-key-check-none.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
-| MW-F01-WORK-A | merge-work-ladder | F-01 Test A | `merge-work-ladder-F01-work-false-carry.itf.json` | `mw_f01_work_whi_false_carry_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
-| MW-F01-WORK-B | merge-work-ladder | F-01 Test B | `merge-work-ladder-F01-work-wrap-bypass.itf.json` | `mw_f01_work_whi_wrap_bypass_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
-| MW-F01-WORK-B-RUN | merge-work-ladder | F-01 Test B (quint run m_whi_no_range invRefine) | `merge-work-ladder-F01-work-wrap-bypass-run.itf.json` | `mw_f01_work_whi_wrap_bypass_run_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
+| MW-F01-WORK-A | merge-work-ladder | F-01 Test A | `merge-work-ladder-F01-work-false-carry.itf.json` | `mw_f01_work_whi_false_carry_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
+| MW-F01-WORK-B | merge-work-ladder | F-01 Test B | `merge-work-ladder-F01-work-wrap-bypass.itf.json` | `mw_f01_work_whi_wrap_bypass_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
+| MW-F01-WORK-B-RUN | merge-work-ladder | F-01 Test B (quint run m_whi_no_range invRefine) | `merge-work-ladder-F01-work-wrap-bypass-run.itf.json` | `mw_f01_work_whi_wrap_bypass_run_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
 | MW-F01-FIRST | merge-work-ladder | F-01 (First half, fixed in T10 by HHI_RANGE_BUS) | `merge-work-ladder-F01-first-false-carry.itf.json` | `replay_all` | guard | pass | stmt.rs:968 HHI_RANGE_BUS, HhiRangeAir |
 | AFK-HONEST | afk-picks | honest unary N1 lifts, binary N2, JOIN of equal reg_root | `afk-picks-honest.itf.json` | `replay_all` | positive | pass | stmt.rs Kind::First, Kind::Node, gp.rs JOIN |
 | AFK-F3 | afk-picks | F-3 / C2.2 JOIN reg_root equality (gp.rs:313-315) | `afk-picks-F3-join-mixed-roots.itf.json` | `replay_all` | guard | pass | gp.rs:313-315 JOIN reg_root equality |
-| AFK-F6 | afk-picks | F-6 N1 forces reg_root 0 (NT-2a) | `afk-picks-F6-n1-zero-reg-root.itf.json` | `afk_f6_first_carries_nonzero_reg_root` | defect | ignored-open-defect | stmt.rs:882-900 (First env, reg_root 0), 1060-1075 (pv == e0) |
-| AFK-F7 | afk-picks | F-7 N1 shape_d 0, N2 cut collision (NT-1) | `afk-picks-F7-n1-zero-shape.itf.json` | `afk_f7_n2_shape_binds_the_cut` | defect | ignored-open-defect | stmt.rs:882-900, 1063 (First keeps shape_d 0); gp.rs:711-744 |
-| AFK-F9 | afk-picks | F-9(b) MERGE-WORK needs two children | `afk-picks-F9-work-one-child.itf.json` | `afk_f9_work_one_child` | defect | ignored-open-defect | stmt.rs:1045 fr.assert_one(en1) |
+| AFK-F6 | afk-picks | F-6 N1 forces reg_root 0 (NT-2a) | `afk-picks-F6-n1-zero-reg-root.itf.json` | `afk_f6_first_carries_nonzero_reg_root` | positive | pass (fixed in T10q) | stmt.rs Kind::First env (reg_root free, as keys_d) |
+| AFK-F7 | afk-picks | F-7 N1 shape_d 0, N2 cut collision (NT-1) | `afk-picks-F7-n1-zero-shape.itf.json` | `afk_f7_n2_shape_binds_the_cut` | guard | pass (fixed in T10q) | stmt.rs Kind::First shape (SHLEAF, SHNODE sponge calls) |
+| AFK-F9 | afk-picks | F-9(b) MERGE-WORK needs two children | `afk-picks-F9-work-one-child.itf.json` | `afk_f9_work_one_child` | positive | pass (fixed in T10q) | stmt.rs Kind::Work (W links to the right-most enabled child) |
 | GP2-HONEST | gp2-value-set | honest unitctor shard (chip set 2) | `gp2-value-set-honest.itf.json` | `replay_all` | positive | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
-| GP2-F4.2 | gp2-value-set | F4.2 const_vd ignores the nominal type (U vs V) | `gp2-value-set-F4.2-const-vd-type-name.itf.json` | `gp2_f42_const_vd_binds_the_type_name` | defect | ignored-open-defect | leaf.rs:264-275 const_vd (p2(45, [ty])) |
+| GP2-F4.2 | gp2-value-set | F4.2 const_vd ignores the nominal type (U vs V) | `gp2-value-set-F4.2-const-vd-type-name.itf.json` | `gp2_f42_const_vd_binds_the_type_name` | guard | pass (fixed in T10q) | leaf.rs const_vd, name_d, decl_d, ty_d_row (T5 5.2 normal form) |
 | GP2-C2.1 | gp2-value-set | C2.1 R_PUBV lacks r3(0)==6, r3(1)==1, tsk.count==0 | `gp2-value-set-C2.1-pubv-marker-free.itf.json` | `gp2_c21_pubv_checks_the_constant_row` | defect | ignored-open-defect | core.rs:439-449 R_PUBV guards |
 | GP2-M-CNULL-CTL-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_ctl_free | `gp2-value-set-m-cnull-ctl-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
 | GP2-M-CNULL-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cid_bind | `gp2-value-set-m-cnull-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
@@ -137,11 +141,13 @@ behaviour), positive (the code must accept). Status: pass, ignored-open-defect, 
   sound, as the models take them. For MW-STEPV-ONCE, the local refusal is the kernel range bus
   (bus 197) of the truncated CORE trace. In a proof, the key's fixed CORE height (8) refuses the
   trace first.
-- MW F-01 Work: the forged `h_hi` passes the Work statement and the NW, NW2 and N3 rungs (MEASURED
-  here, local checker). At `L`, `root_map` (stmt.rs:1165) takes the child `H_HI` as columns with no
-  range lookup. In the wrap, `decode.rs:333-351` checks root words 0 to 73 only for being below the
-  BabyBear modulus, and no later step reads words 29 to 32. These two points come from reading the
-  code; `L` and the wrap were not replayed.
+- MW F-01 Work (fixed in T10q): the range check is at the producers. A SEG `h_hi` enters only at
+  First (HHI_RANGE_BUS, T10) and at Work (the kernel RANGE bus, T10q). Node, the GP modes and `L`
+  copy it, so the range holds by induction. Downstream checks were not added: on the code as built
+  NW, NW2 and N3 accept a child with a wide limb (MEASURED, fails-before), `L` takes the child
+  `H_HI` as columns (`root_map`, code reading), and the decoder twin `iface::decode_with` accepts a
+  root word 29 of 65536 (`h_hi_wide_limb_downstream`, MEASURED). A forged Work is refused before it
+  can be a child.
 - The `L` and `L_Fr` findings of pathc-xcheck: 4 of the 11 lane mutants are covered by T7c
   real-prover cases (mutant prover, stock verifier, `research/sherlock-t7c-pathc-20261114/RESULTS.md`),
   cited and not run again here. 7 were not attempted (COUNTEREXAMPLES.md).
@@ -151,4 +157,4 @@ behaviour), positive (the code must accept). Status: pass, ignored-open-defect, 
   prover) is refused. Every other verdict comes from the local checker.
 - The replay needs `~/.cache/quint-reg/slice_v1.json`, a copy of the slice JSON of the T7c/T8b runs
   (`T6_SLICE_JSON`). The default folder becomes valid when the branch merges. Until then, set
-  `QUINT_REGRESSIONS_DIR=~/Projects/Moriarty-wt/quint-reg/tests/quint-regressions`.
+  `QUINT_REGRESSIONS_DIR=~/Projects/Moriarty-wt/t10q/tests/quint-regressions`.
