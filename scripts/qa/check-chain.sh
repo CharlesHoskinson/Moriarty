@@ -59,11 +59,13 @@ for prog in "AB":
     gates = all(r[k]["gate"] == "PASS" for r in d3 for k in ("measured", "vk", "bounds") if k in r and r[k] is not None)
     measured = sum(1 for r in d3 if r.get("measured")) >= 7
     cases = cs["all_pass"] and c["cases_all_pass"]
-    if not (fixed and g1 and gates and measured and cases):
-        sys.exit(f"V.10 FAIL {prog}: fixed {fixed} g1 {g1} d3 {gates} measured {measured} cases {cases}")
+    # the internal-recursive key is at its fixed point: N3 over N3 has the N3 pre-hash
+    fp = any(k.get("n3_over_n3_pre_equals_n3_pre") is True for k in c["keys"])
+    if not (fixed and g1 and gates and measured and cases and fp):
+        sys.exit(f"V.10 FAIL {prog}: fixed {fixed} g1 {g1} d3 {gates} measured {measured} cases {cases} n3 fixed point {fp}")
     seen[prog] = (c["prog_d"], c["key_root"], c["keys_d"])
     print(f"V.10 {prog} PASS: {c['shards']} shards, {c['proved_steps']} steps, fixed heights; G1 accepted; "
-          f"D3 PASS on {len(d3)} keys; {len(cs['cases'])} cases; L_Fr words {c['lfr_public_words']}")
+          f"D3 PASS on {len(d3)} keys; {len(cs['cases'])} cases; N3 fixed point; L_Fr words {c['lfr_public_words']}")
 if seen["A"][0] == seen["B"][0] or seen["A"][1:] != seen["B"][1:]:
     sys.exit(f"V.10 FAIL: programs must differ in prog_d and share key_root and keys_d: {seen}")
 print("V.10 PASS: two programs, one key_root and one keys_d")
