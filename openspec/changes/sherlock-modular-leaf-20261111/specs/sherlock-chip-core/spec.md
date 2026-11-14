@@ -153,3 +153,18 @@ The CORE slot AIRs SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` sec
 #### Scenario: Shape, budget and D3
 - **WHEN** the CORE slot AIRs are keyed in a menu shape
 - **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
+
+### Requirement: CORE-015 The slice value set proves a Halted run
+The slice leaf SHALL have a CORE rule subset chip set 2 (the value set) under its own per-program leaf key in `key_root`, with the rules `XAdtEvalConstructNullary` and `KAdminPublishValue`. The Halted payload SHALL equal the `vd` word of the constant's ROM row, and the INIT opening of `input_d` SHALL take a witnessed input value digest `val_d`. Chip sets 0 and 1 SHALL keep `VAL_NONE` and their keys.
+
+#### Scenario: Rules, reads and digests
+- **WHEN** chip set 2 proves a step
+- **THEN** the rules are T5 3.4 rows 119 and 2, the ROM reads are `expressions[e]`, `constructors[ctor]` and `constants[cid]`, the payload is the constant VALUE DIGEST under the PROG premise, and the input enters by digest (AD-17) and is bound at the seal by the input link of CLM-005
+
+#### Scenario: Halted producer and consumer at the app set
+- **WHEN** `type U { A(); } entry construct U::A();` (producer) and the consumer whose input `val_d` is the producer's Halted `vd` are proved under chip set 2
+- **THEN** the stock verifier accepts both, and a forged payload, a relabelled outcome tag, a forged constant row `vd` and a forged INIT input value are refused by the debug checker and by the stock verifier (example `value_set`)
+
+#### Scenario: Chip set 0 is unchanged
+- **WHEN** the chip set 0 and 1 app keys are built after the change
+- **THEN** their pre-hashes equal the T8 values (`T7KEY` lines)

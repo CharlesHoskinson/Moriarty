@@ -79,3 +79,14 @@ The claim AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design
 #### Scenario: Shape, budget and D3
 - **WHEN** the claim AIRs of the node are keyed in a menu shape
 - **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
+
+### Requirement: CLM-009 The input link is exercised on a real Halted run
+The GP-2 node modes SHALL be run on real proofs with an honest SEAL-WITH-DEPS: a consumer of chip set 2 whose input value is the Halted value of a producer of chip set 2, through SEAL, the DL-STEP input-link element and SEAL-WITH-DEPS, with a DEP output whose cover opens to the producer's claim. Each SEAL-WITH-DEPS refusal SHALL have a twin that differs from the honest case in one input.
+
+#### Scenario: B consumes A's Halted value
+- **WHEN** `pos_gp2_b_consumes_a_halted` is proved in the universal node over N3 roots
+- **THEN** the node accepts it, its output is `DEP(claim_C, n, LEAF(P), claim_P)`, and DESCEND to the cover with a chain element of `claim_P` is accepted
+
+#### Scenario: Twins of the refusals
+- **WHEN** the honest case is changed in one input (another `val_d`, the link check skipped, the producer outcome relabelled Rejected, the Rejected producer A linked, a chain DL, a premise-only DL, another producer `prog_d`, the output root, the producer as its own consumer)
+- **THEN** each proof is refused by the stock verifier

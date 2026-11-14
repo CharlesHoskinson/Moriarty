@@ -1,0 +1,1398 @@
+{
+  "all_pass": true,
+  "cases": [
+    {
+      "case": "pos_x7_merge_work",
+      "check": "two enabled N3 SEG proofs (steps [0,2) and [2,n-1)) and one owner step [n-1,n) inline at the right end",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "x7_step_wrong_position",
+      "check": "inline segment [0,2) in place of [n-1,n): W.pre_d != post_d(slot 1)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1983941578, 1762096643, 94151008, 1115277673], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [931740986, 721516994, 528844546, 1785020407], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "x7_step_other_program",
+      "check": "inline step of program B between two segments of A",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [584845731, 1548721438, 897218327, 1773081831], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1831040238, 1805690547, 1736736864, 400278217], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "pass": true
+    },
+    {
+      "case": "x7_step_pv_forged_in_statement",
+      "check": "statement copy of the step's post_d changed (step_pv bus)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [262038505, 1483659055, 105465130, 1794570368], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "x7_step_post_forged_in_kernel",
+      "check": "kernel CORE public post_d changed with the statement; rule not isolated (CORE BOUNDARY and the output post_d)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1831457142, 1380418732, 1155060207, 1096937704], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1457582271, 740278408, 682668128, 654900778], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "pass": true
+    },
+    {
+      "case": "x7_step_height_forged",
+      "check": "step h_pre changed in kernel and statement (W.h_pre != h_hi(1)); rule not isolated (also CORE INIT gate input)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [493745233, 602702271, 1238285849, 1916789922], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "x7_frame_row_forged",
+      "check": "FRAME row 2 state word changed (core_frame bus)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [592436514, 1352646544, 638539277, 28871239], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "x7_frame_rule_in_frame",
+      "check": "a kept state word changed on rows 2 and 3 after disabled slots, in CORE and FRAME alike (only FRAME frame_rule can fail)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [760399477, 527063525, 1003309621, 83678617], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [488307828, 1268638044, 662178714, 260011970], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p",
+      "pass": true
+    },
+    {
+      "case": "x7_one_prior_proof",
+      "check": "slot 1 off (two enabled prior proofs required)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [611297624, 1982603577, 1131416576, 1651361939], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1420677227, 1789064466, 310080508, 1880582943], _phantom: PhantomData<p3_monty_31::monty_31::MontyFiel",
+      "pass": true
+    },
+    {
+      "case": "x7_children_swapped",
+      "check": "suffix in slot 0, prefix in slot 1",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1150685385, 577547258, 271432692, 992264019], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1223980563, 411131818, 765478823, 457186694], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<",
+      "pass": true
+    },
+    {
+      "case": "x7_output_post_forged",
+      "check": "output post_d changed",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [403922584, 1757445844, 1291822101, 321938223], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1234633843, 366550691, 763341502, 679625200], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "x7_output_shape_forged",
+      "check": "output shape_d (work_kind, work_steps) changed",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1213801904, 1498265784, 1677419698, 1292626467], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "probe_x7_key_row_checked_one_layer_up",
+      "check": "the FV row as the output key commitment: accepted at this layer; the parent's child-key check refuses it (T7 key route)",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "pos_x7_parent_over_merge_work",
+      "check": "NW (the universal parent over MERGE-WORK) verifies the honest MERGE-WORK proof",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "pos_x7_nw2_over_parent",
+      "check": "NW2 over NW (row 5)",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "pos_x7_n3_over_parent",
+      "check": "N3 over NW2 (row 6): the MERGE-WORK SEG reaches the N3 fixed point (the L input)",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "x7_n3_over_parent_wrong_row",
+      "check": "N3 over NW2 with the N3-over-N3 row as its own key commitment, refused by N3 above",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1671197954, 1285757898, 225836714, 744307900], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1584928990, 892183248, 1656918553, 1423981028], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "pass": true
+    },
+    {
+      "case": "x7_nw2_over_parent_wrong_row",
+      "check": "NW2 over NW with the N3-over-N3 row as its own key commitment, refused by N3 above",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [506832959, 1458812184, 1724676924, 228205440], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1100379553, 313154149, 599468135, 656108398], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "x7_parent_output_post_forged",
+      "check": "NW output post_d changed against the MERGE-WORK child",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [565072978, 745923343, 465460091, 589092726], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [141503099, 1462547173, 1619024916, 1063666577], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "x7_parent_wrong_own_row",
+      "check": "NW with the N3-over-N2 row as its own key commitment, refused by NW2 above",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [949894882, 750060666, 862181246, 562871961], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1964120957, 941237943, 1625320212, 1619157204], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "x7_key_row_forged_refused_by_parent",
+      "check": "the MERGE-WORK proof with the FV row as its key commitment, under the parent NW",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [539909643, 1485814804, 1337684564, 292344164], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [320435814, 1869457794, 623683449, 188445247], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    }
+  ],
+  "cut": [
+    2,
+    2,
+    1
+  ],
+  "keys": [
+    {
+      "g1": "accepted",
+      "key": "app chip set 0",
+      "logup_pow": 18,
+      "pre_hash": "[820819264, 327421531, 1671674420, 1699183093, 749464721, 545269499, 700611204, 1842961545]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 7,
+        "columns": 2361,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2013,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70564
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 0",
+      "logup_pow": 17,
+      "pre_hash": "[1548077043, 1876158159, 175413506, 576083482, 1607699243, 1617244263, 1687527573, 1845908956]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2283,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81473
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 0",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "app chip set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1363321697, 555668064, 1869827368, 678263150, 1941619784, 1631259805, 1286913989, 766938083]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 8,
+        "columns": 2363,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2015,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70610
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 1",
+      "logup_pow": 17,
+      "pre_hash": "[1377195214, 1200674299, 1968862833, 1718366832, 1767005551, 1932491409, 1107958638, 224455984]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2284,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81513
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "app chip set 2",
+      "logup_pow": 18,
+      "pre_hash": "[376580329, 132028299, 307769454, 1044356823, 371138928, 238009101, 1372092162, 1495746910]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 7,
+        "columns": 2423,
+        "max_constraints": 1298,
+        "max_degree": 3,
+        "max_interactions": 147,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 1835,
+        "total_interactions": 254
+      },
+      "vk_bitcode_bytes": 68892
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 2",
+      "logup_pow": 17,
+      "pre_hash": "[1114479213, 1867747242, 1327968800, 394362310, 327220792, 738939689, 601373383, 1740583471]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2283,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81473
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 2",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "N2<2> over N1",
+      "logup_pow": 18,
+      "pre_hash": "[1099904333, 226111882, 1516948263, 950633390, 530974185, 1654779240, 1037202788, 473813097]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3105,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 107860
+    },
+    {
+      "g1": "accepted",
+      "key": "FV unit (N2 shape) over N1",
+      "logup_pow": 18,
+      "pre_hash": "[718687069, 870004623, 1978348721, 982996647, 1137336857, 623814688, 693379698, 1700885726]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 765,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3052,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 106332
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N2",
+      "logup_pow": 18,
+      "pre_hash": "[332206673, 1051104646, 1428034513, 273691067, 489258238, 723206018, 427623849, 751262482]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3105,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 107860
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N3 (fixed point)",
+      "logup_pow": 18,
+      "pre_hash": "[332206673, 1051104646, 1428034513, 273691067, 489258238, 723206018, 427623849, 751262482]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3105,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 107860
+    },
+    {
+      "key": "N3 fixed point",
+      "n3_over_n3_pre_equals_n3_pre": true
+    },
+    {
+      "g1": "accepted",
+      "key": "MERGE-WORK<2> over N3",
+      "logup_pow": 18,
+      "pre_hash": "[1815597710, 569543714, 1337009340, 459984708, 987568961, 1843080836, 1554970829, 104412955]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "merge_work",
+      "shape": {
+        "airs": 49,
+        "columns": 5284,
+        "max_constraints": 999,
+        "max_degree": 4,
+        "max_interactions": 183,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 5169,
+        "total_interactions": 948
+      },
+      "vk_bitcode_bytes": 185315
+    },
+    {
+      "g1": "accepted",
+      "key": "NW<2> over MERGE-WORK",
+      "logup_pow": 18,
+      "pre_hash": "[1468169124, 1124175016, 1043559930, 1260682478, 1528366572, 190969518, 1067086419, 1874294671]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2285,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3114,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 108483
+    },
+    {
+      "g1": "accepted",
+      "key": "NW2<2> over NW",
+      "logup_pow": 18,
+      "pre_hash": "[1643054151, 832035218, 1740374538, 366989321, 1369716398, 632365311, 1129901998, 829371836]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3105,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 107860
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over NW2",
+      "logup_pow": 18,
+      "pre_hash": "[332206673, 1051104646, 1428034513, 273691067, 489258238, 723206018, 427623849, 751262482]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2284,
+        "max_constraints": 818,
+        "max_degree": 4,
+        "max_interactions": 182,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3105,
+        "total_interactions": 684
+      },
+      "vk_bitcode_bytes": 107860
+    },
+    {
+      "key": "N3 over NW2",
+      "pre_equals_n3": true
+    }
+  ],
+  "keys_d": "[490453286, 108369775, 1883932258, 14761055, 1711777630, 620645556, 1488967785, 1939496412]",
+  "keys_d_words": [
+    490453286,
+    108369775,
+    1883932258,
+    14761055,
+    1711777630,
+    620645556,
+    1488967785,
+    1939496412
+  ],
+  "output": {
+    "h_hi": [
+      5,
+      0,
+      0,
+      0
+    ],
+    "h_lo": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "log_heights": [
+      1,
+      15,
+      7,
+      5,
+      8,
+      6,
+      15,
+      3,
+      3,
+      3,
+      8,
+      14,
+      13,
+      4,
+      13,
+      16,
+      15,
+      7,
+      8,
+      8,
+      1,
+      6,
+      9,
+      1,
+      13,
+      4,
+      6,
+      10,
+      3,
+      13,
+      3,
+      5,
+      10,
+      15,
+      13,
+      13,
+      9,
+      17,
+      5,
+      15,
+      6,
+      3,
+      3,
+      3,
+      17,
+      9,
+      7,
+      1,
+      3
+    ],
+    "post_d_equals_step_post": true,
+    "pre_d_equals_prefix_pre": true,
+    "statement": {
+      "h_pre": [
+        443774767,
+        0,
+        0,
+        0
+      ],
+      "post_d": [
+        1220061753,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "pre_d": [
+        1373544102,
+        1033855108,
+        1011752542,
+        1332869166,
+        1170154026,
+        73576082,
+        1377873444,
+        1637644428
+      ],
+      "prog_d": [
+        694918002,
+        242787532,
+        7775899,
+        1786386003,
+        917676462,
+        1825711984,
+        428555813,
+        1019281002
+      ],
+      "steps": [
+        0
+      ]
+    },
+    "vkc_out_equals_work_row": true
+  },
+  "parent": {
+    "n3_over_nw2": {
+      "h_pre": [
+        443774767,
+        0,
+        0,
+        0
+      ],
+      "post_d": [
+        1220061753,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "pre_d": [
+        1373544102,
+        1033855108,
+        1011752542,
+        1332869166,
+        1170154026,
+        73576082,
+        1377873444,
+        1637644428
+      ],
+      "prog_d": [
+        694918002,
+        242787532,
+        7775899,
+        1786386003,
+        917676462,
+        1825711984,
+        428555813,
+        1019281002
+      ],
+      "steps": [
+        0
+      ]
+    },
+    "nw": {
+      "h_pre": [
+        443774767,
+        0,
+        0,
+        0
+      ],
+      "post_d": [
+        1220061753,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "pre_d": [
+        1373544102,
+        1033855108,
+        1011752542,
+        1332869166,
+        1170154026,
+        73576082,
+        1377873444,
+        1637644428
+      ],
+      "prog_d": [
+        694918002,
+        242787532,
+        7775899,
+        1786386003,
+        917676462,
+        1825711984,
+        428555813,
+        1019281002
+      ],
+      "steps": [
+        0
+      ]
+    },
+    "nw2": {
+      "h_pre": [
+        443774767,
+        0,
+        0,
+        0
+      ],
+      "post_d": [
+        1220061753,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0
+      ],
+      "pre_d": [
+        1373544102,
+        1033855108,
+        1011752542,
+        1332869166,
+        1170154026,
+        73576082,
+        1377873444,
+        1637644428
+      ],
+      "prog_d": [
+        694918002,
+        242787532,
+        7775899,
+        1786386003,
+        917676462,
+        1825711984,
+        428555813,
+        1019281002
+      ],
+      "steps": [
+        0
+      ]
+    },
+    "nw_log_heights": [
+      1,
+      16,
+      6,
+      4,
+      7,
+      5,
+      15,
+      2,
+      2,
+      2,
+      8,
+      14,
+      13,
+      3,
+      13,
+      16,
+      14,
+      6,
+      7,
+      8,
+      0,
+      5,
+      8,
+      0,
+      13,
+      3,
+      5,
+      9,
+      2,
+      14,
+      2,
+      4,
+      9,
+      14,
+      12,
+      12,
+      8,
+      16,
+      5,
+      14,
+      6
+    ]
+  },
+  "probe": {
+    "kernel_airs": 8,
+    "kernel_buses": [
+      194,
+      195,
+      196,
+      197,
+      198,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213
+    ],
+    "node_airs": 41,
+    "node_buses": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      213,
+      960,
+      961
+    ],
+    "shared_buses": [
+      213
+    ],
+    "violations": {
+      "per_air": [
+        {
+          "air": 0,
+          "constraints": 852,
+          "degree": 4,
+          "interactions": 183,
+          "name": "StmtAir",
+          "width": 760
+        },
+        {
+          "air": 1,
+          "constraints": 16,
+          "degree": 4,
+          "interactions": 26,
+          "name": "SymbolicExpressionAir<BabyBearParameters>",
+          "width": 36
+        },
+        {
+          "air": 2,
+          "constraints": 41,
+          "degree": 4,
+          "interactions": 17,
+          "name": "FractionsFolderAir",
+          "width": 29
+        },
+        {
+          "air": 3,
+          "constraints": 46,
+          "degree": 4,
+          "interactions": 14,
+          "name": "UnivariateSumcheckAir",
+          "width": 24
+        },
+        {
+          "air": 4,
+          "constraints": 60,
+          "degree": 4,
+          "interactions": 14,
+          "name": "MultilinearSumcheckAir",
+          "width": 33
+        },
+        {
+          "air": 5,
+          "constraints": 65,
+          "degree": 4,
+          "interactions": 10,
+          "name": "EqNsAir",
+          "width": 41
+        },
+        {
+          "air": 6,
+          "constraints": 65,
+          "degree": 4,
+          "interactions": 3,
+          "name": "Eq3bAir",
+          "width": 25
+        },
+        {
+          "air": 7,
+          "constraints": 48,
+          "degree": 4,
+          "interactions": 5,
+          "name": "EqSharpUniAir",
+          "width": 17
+        },
+        {
+          "air": 8,
+          "constraints": 25,
+          "degree": 4,
+          "interactions": 3,
+          "name": "EqSharpUniReceiverAir",
+          "width": 17
+        },
+        {
+          "air": 9,
+          "constraints": 31,
+          "degree": 4,
+          "interactions": 3,
+          "name": "EqUniAir",
+          "width": 16
+        },
+        {
+          "air": 10,
+          "constraints": 68,
+          "degree": 4,
+          "interactions": 7,
+          "name": "ExpressionClaimAir",
+          "width": 32
+        },
+        {
+          "air": 11,
+          "constraints": 94,
+          "degree": 4,
+          "interactions": 13,
+          "name": "InteractionsFoldingAir",
+          "width": 37
+        },
+        {
+          "air": 12,
+          "constraints": 42,
+          "degree": 4,
+          "interactions": 10,
+          "name": "ConstraintsFoldingAir",
+          "width": 25
+        },
+        {
+          "air": 13,
+          "constraints": 83,
+          "degree": 4,
+          "interactions": 8,
+          "name": "EqNegAir",
+          "width": 40
+        },
+        {
+          "air": 14,
+          "constraints": 84,
+          "degree": 4,
+          "interactions": 17,
+          "name": "TranscriptAir",
+          "width": 44
+        },
+        {
+          "air": 15,
+          "constraints": 282,
+          "degree": 3,
+          "interactions": 2,
+          "name": "Poseidon2Air<BabyBearParameters>, 1>",
+          "width": 301
+        },
+        {
+          "air": 16,
+          "constraints": 22,
+          "degree": 3,
+          "interactions": 6,
+          "name": "MerkleVerifyAir",
+          "width": 38
+        },
+        {
+          "air": 17,
+          "constraints": 126,
+          "degree": 4,
+          "interactions": 78,
+          "name": "ProofShapeAir<4, 8>",
+          "width": 45
+        },
+        {
+          "air": 18,
+          "constraints": 18,
+          "degree": 4,
+          "interactions": 4,
+          "name": "PublicValuesAir",
+          "width": 8
+        },
+        {
+          "air": 19,
+          "constraints": 3,
+          "degree": 2,
+          "interactions": 1,
+          "name": "RangeCheckerAir<8>",
+          "width": 2
+        },
+        {
+          "air": 20,
+          "constraints": 19,
+          "degree": 4,
+          "interactions": 19,
+          "name": "GkrInputAir",
+          "width": 26
+        },
+        {
+          "air": 21,
+          "constraints": 38,
+          "degree": 4,
+          "interactions": 30,
+          "name": "GkrLayerAir",
+          "width": 46
+        },
+        {
+          "air": 22,
+          "constraints": 59,
+          "degree": 4,
+          "interactions": 21,
+          "name": "GkrLayerSumcheckAir",
+          "width": 45
+        },
+        {
+          "air": 23,
+          "constraints": 17,
+          "degree": 4,
+          "interactions": 7,
+          "name": "GkrXiSamplerAir",
+          "width": 10
+        },
+        {
+          "air": 24,
+          "constraints": 98,
+          "degree": 4,
+          "interactions": 22,
+          "name": "OpeningClaimsAir",
+          "width": 63
+        },
+        {
+          "air": 25,
+          "constraints": 54,
+          "degree": 4,
+          "interactions": 13,
+          "name": "UnivariateRoundAir",
+          "width": 27
+        },
+        {
+          "air": 26,
+          "constraints": 69,
+          "degree": 4,
+          "interactions": 21,
+          "name": "SumcheckRoundsAir",
+          "width": 57
+        },
+        {
+          "air": 27,
+          "constraints": 57,
+          "degree": 4,
+          "interactions": 17,
+          "name": "StackingClaimsAir",
+          "width": 35
+        },
+        {
+          "air": 28,
+          "constraints": 89,
+          "degree": 4,
+          "interactions": 8,
+          "name": "EqBaseAir",
+          "width": 51
+        },
+        {
+          "air": 29,
+          "constraints": 24,
+          "degree": 4,
+          "interactions": 5,
+          "name": "EqBitsAir",
+          "width": 16
+        },
+        {
+          "air": 30,
+          "constraints": 28,
+          "degree": 4,
+          "interactions": 31,
+          "name": "WhirRoundAir",
+          "width": 46
+        },
+        {
+          "air": 31,
+          "constraints": 47,
+          "degree": 4,
+          "interactions": 16,
+          "name": "SumcheckAir",
+          "width": 38
+        },
+        {
+          "air": 32,
+          "constraints": 51,
+          "degree": 4,
+          "interactions": 5,
+          "name": "WhirQueryAir",
+          "width": 32
+        },
+        {
+          "air": 33,
+          "constraints": 145,
+          "degree": 4,
+          "interactions": 13,
+          "name": "InitialOpenedValuesAir",
+          "width": 89
+        },
+        {
+          "air": 34,
+          "constraints": 42,
+          "degree": 4,
+          "interactions": 4,
+          "name": "NonInitialOpenedValuesAir",
+          "width": 28
+        },
+        {
+          "air": 35,
+          "constraints": 15,
+          "degree": 3,
+          "interactions": 4,
+          "name": "WhirFoldingAir",
+          "width": 31
+        },
+        {
+          "air": 36,
+          "constraints": 19,
+          "degree": 4,
+          "interactions": 13,
+          "name": "FinalPolyMleEvalAir",
+          "width": 34
+        },
+        {
+          "air": 37,
+          "constraints": 120,
+          "degree": 4,
+          "interactions": 5,
+          "name": "FinalPolyQueryEvalAir",
+          "width": 45
+        },
+        {
+          "air": 38,
+          "constraints": 5,
+          "degree": 2,
+          "interactions": 2,
+          "name": "PowerCheckerAir<2, 32>",
+          "width": 4
+        },
+        {
+          "air": 39,
+          "constraints": 44,
+          "degree": 3,
+          "interactions": 2,
+          "name": "ExpBitsLenAir",
+          "width": 16
+        },
+        {
+          "air": 40,
+          "constraints": 28,
+          "degree": 3,
+          "interactions": 3,
+          "name": "PermSpongeAir",
+          "width": 38
+        },
+        {
+          "air": 41,
+          "constraints": 999,
+          "degree": 3,
+          "interactions": 151,
+          "name": "Rebus<CoreAir>",
+          "width": 730
+        },
+        {
+          "air": 42,
+          "constraints": 494,
+          "degree": 3,
+          "interactions": 5,
+          "name": "Rebus<FrameAir>",
+          "width": 522
+        },
+        {
+          "air": 43,
+          "constraints": 18,
+          "degree": 2,
+          "interactions": 1,
+          "name": "Rebus<DecAir>",
+          "width": 9
+        },
+        {
+          "air": 44,
+          "constraints": 10,
+          "degree": 3,
+          "interactions": 1,
+          "name": "Rebus<VariableRangeCheckerAir>",
+          "width": 4
+        },
+        {
+          "air": 45,
+          "constraints": 326,
+          "degree": 3,
+          "interactions": 2,
+          "name": "Rebus<SpongeAir>",
+          "width": 321
+        },
+        {
+          "air": 46,
+          "constraints": 5,
+          "degree": 2,
+          "interactions": 5,
+          "name": "Rebus<Hash2Air>",
+          "width": 29
+        },
+        {
+          "air": 47,
+          "constraints": 78,
+          "degree": 2,
+          "interactions": 77,
+          "name": "Rebus<RomAir>",
+          "width": 1222
+        },
+        {
+          "air": 48,
+          "constraints": 100,
+          "degree": 3,
+          "interactions": 21,
+          "name": "Rebus<MemAir>",
+          "width": 100
+        }
+      ],
+      "set": "merge_work",
+      "shape": {
+        "airs": 49,
+        "columns": 5284,
+        "max_constraints": 999,
+        "max_degree": 4,
+        "max_interactions": 183,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 5169,
+        "total_interactions": 948
+      },
+      "violations": []
+    }
+  },
+  "wall_s": 155.63837835,
+  "work_vkc": "[466399758, 9508663, 793991092, 1693401029, 1783496105, 674874180, 1081197430, 896540999, 1815597710, 569543714, 1337009340, 459984708, 987568961, 1843080836, 1554970829, 104412955]"
+}
