@@ -28,6 +28,7 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-tested/` | tested (T1 integration, T3) | `05f3b73e7` | `b3fbaa5` | 27 | 48, 6 merges | T3: every recursion layer keyed with every AIR required |
 | `openvm-t9-contract/` | t9-contract | `05f3b73e7` | `01eb63f` | 30 | 51, 6 merges | sherlock-lfr: T9 ENC-2 enc2.onion6 on the onion AIR |
 | `openvm-t6/` | t6-leaf (T6 modular leaf slice) | `b3fbaa5` (the `tested` tip) | see `TIP` | see folder | linear | T6: `sherlock-leaf` slice crate, `KeyBind` app public values, `slice_chain`, `fp8_d3` |
+| `openvm-t7/` | t7-bind (T7 `prog_d` and key route) | `8672651` (the `tested` merge of `t6-leaf` and `t9-contract`) | `662235f` | 3 | linear | T7: FP-2 statement AIR, `L` root statement and `RootSealAir`, `t7_chain` |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |
@@ -44,3 +45,5 @@ T3 (2026-11-13): `openvm-tested/` added the same way (first-parent export, merge
 T9 round trip (2026-11-13): `openvm-t9-contract/` on its base gives tree `60db66a`, equal to the tip tree. The branch carries T3 (`b3fbaa5`) and the T9 commits `c7c0c2e` (ENC-4/5), `609c4f1` (decoder, `lfr_call`) and `01eb63f` (onion6 on the onion AIR).
 
 T6 (2026-11-13): `openvm-t6/` and `stark-backend-t6/` are plain `git format-patch --binary BASE..t6-leaf` series. `openvm-t6` applies on the `tested` tip `b3fbaa5` (apply `openvm-tested/` first). `stark-backend-t6` applies on its `BASE` (the stark-backend `tested` tip) and adds `SB_MUTANT_PROVER` (test only). The openvm-t6 `Cargo.toml` patches point at `../stark-backend-t6/crates/...`.
+
+T7 (2026-11-13): `openvm-t7/` is a plain `git format-patch --binary 8672651..t7-bind` series. It applies on the openvm `tested` commit `8672651` (the merge of `t6-leaf` 3160f59 into `tested`). The `Cargo.toml` patches still point at `../stark-backend-t6/crates/...`; stark-backend has no T7 change. Report: `research/sherlock-t7-bind-20261113/RESULTS.md`.
