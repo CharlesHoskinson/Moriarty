@@ -1,6 +1,6 @@
 #!/bin/bash
 # T10 bound path (research/sherlock-t10-bound-20261114), resumable (~/.cache/t10/state/<stage>.ok).
-# usage: chain.sh ovm|wrap|devnet|gates|pathc|sg6|all
+# usage: chain.sh ovm|wrap|devnet|gates|pathc|preview|sg6|all
 # Every key-dependent number (L_Fr key, wrap rows, wrap key, ledger verdicts, devnet call) is a stage
 # here, so a later L key (T7c path C) reruns with: rm -f ~/.cache/t10/state/*.ok; chain.sh all
 set -uo pipefail
@@ -94,6 +94,25 @@ gates() {
     [ $rc -eq 0 ] && [ -s $LOG/check-$m.log ] && touch $S/check-$m.ok || exit 1
   done
 }
+preview() {
+  # Midnight Preview (owner ruling 2026-11-14): deploy, then one acceptRun with the refusals R1, R3, R4 and the
+  # replay; public receipts only (the wallet phrase is read in-process by t10a-ledger-run.mjs, never logged).
+  need $T/out/key-k21/wrap.vk $T/key/ledger-args.json $T/key/forbid.json $T/keyB/args.json $T/out/wrap-B/wrap.tagged-proof
+  export E6_KEY_DIR=$T/key E6_WRAP_VK=$T/out/key-k21/wrap.vk E6_LFR_CALL=$EX/lfr_call SHERLOCK_PROG=A \
+    E6_WRAP_BIN=$TW/release/wrap E6_CALLS=$T/calls-preview E6_REL_FIXTURE=$T/key/lfr-call.json \
+    E6_VALIDATE_CALL=$HOME/.cache/xc9/target/release/examples/validate_call RAYON_NUM_THREADS=20 T10A_PROVER=$SDK/e6-wrap-prover.sh \
+    T10_NET=preview T10A_TTL_S=3600
+  mkdir -p $T/preview $T/calls-preview
+  if [ ! -e $S/preview-deploy.ok ]; then
+    echo "# $(date -Is) preview-deploy start $(heads)" >> $LOG/runs.log
+    ( cd $SDK && node t10a-ledger-run.mjs deploy --vk $E6_WRAP_VK --args $T/key/ledger-args.json --out $T/preview ) > $LOG/preview-deploy.log 2>&1 \
+      && touch $S/preview-deploy.ok || { echo "# preview-deploy FAIL" >> $LOG/runs.log; exit 1; }
+    echo "# $(date -Is) preview-deploy end" >> $LOG/runs.log
+  fi
+  stage preview-call 80G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
+    node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
+    --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/preview || exit 1
+}
 pathc() {
   # T7c path C cases on this tree (one leaf of `entry x;` through the leaf layer, L and L_Fr on the universal keys)
   mkdir -p $T/out/pathc
@@ -133,5 +152,5 @@ devnet() {
     node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
     --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/devnet || exit 1
 }
-case "$1" in ovm) ovm;; wrap) wrap;; gates) gates;; sg6) sg6;; devnet) devnet;; pathc) pathc;; all) ovm; wrap; devnet; gates; pathc; sg6;; esac
+case "$1" in ovm) ovm;; wrap) wrap;; gates) gates;; sg6) sg6;; devnet) devnet;; pathc) pathc;; preview) preview;; all) ovm; wrap; devnet; gates; pathc; sg6;; esac
 echo "# $(date -Is) chain $1 done" >> $LOG/runs.log
