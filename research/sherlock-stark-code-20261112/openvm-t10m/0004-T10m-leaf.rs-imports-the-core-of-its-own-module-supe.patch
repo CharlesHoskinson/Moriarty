@@ -1,0 +1,35 @@
+From cd062400369190fb1d82529eb8390446d2128a1e Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 10:24:39 -0700
+Subject: [PATCH 4/5] T10m: leaf.rs imports the core of its own module
+ (super::core), as T7c had it
+
+The merge resolution 9f3b521 took the T8b import block, which named
+crate::core; the S = 8 copy (crate::s8::leaf) then used the S = 4 core and
+`entry x;` was two shards on path C (key-A refused: "path C: one leaf").
+With super::core the S = 8 bucket is one shard again (t7_chain s8app: 1 shard,
+proved and verified). The kernel uses of crate::core (split CORE, FrameAir)
+stay as T8 wrote them.
+---
+ crates/sherlock-leaf/src/leaf.rs | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/crates/sherlock-leaf/src/leaf.rs b/crates/sherlock-leaf/src/leaf.rs
+index c70d8cc..75eb600 100644
+--- a/crates/sherlock-leaf/src/leaf.rs
++++ b/crates/sherlock-leaf/src/leaf.rs
+@@ -12,9 +12,10 @@ use openvm_stark_backend::{
+ };
+ use serde_json::Value;
+ 
++// T7c: `super::core`, so the S = 8 copy of this file (`crate::s8::leaf`) uses the S = 8 core
++use super::core::{self, CoreAir, Opts, ShardIn, VExtra, ROMW, S};
+ use crate::{
+     bus,
+-    core::{self, CoreAir, Opts, ShardIn, VExtra, ROMW, S},
+     dec::{self, DecAir, DecVAir, R_ABSENT, R_CNULL, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH, R_PUBV},
+     enc::*,
+     harness::{Tr, SC},
+-- 
+2.56.0
+

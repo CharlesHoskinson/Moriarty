@@ -1,0 +1,840 @@
+From 4b10d789259e634551e00b826284283eb7b0116b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 10:15:09 -0700
+Subject: [PATCH 2/5] T10m: t8_gp uses the current L key and the universal
+ key_root
+
+t8_gp chain, cases and omit run the production L of t7_chain (T7c path C,
+T10 log tie and onion AIR) in place of its T7-era L copy, which refused unless
+T8_GP_OLD_L was set; the copy is removed. t8_gp keys() puts the path C DAG key
+leaf after the three chip-set leaves, so gp2, x7 and ladder run under the same
+key_root as t7_chain, L, L_Fr and the wrap. t7_chain: path_c() builds the path
+C keys (shared with t8_gp); chain, cases_mode, omit, PathC and KEYDAG_IDX are pub.
+---
+ .../sherlock-wrap-export/examples/t7_chain.rs |  72 +-
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 643 +-----------------
+ 2 files changed, 57 insertions(+), 658 deletions(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 82b5381..ff7ba04 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -351,18 +351,45 @@ struct Keys {
+ /// fixed cached-trace height of `L`, over every child it admits), `x_n3` (`X` of the full tree)
+ /// and `x` (`X` of the path C leaf layer per chip set). Only chip set 0 has a DAG key leaf in
+ /// `key_root` (leaf index `KEYDAG_IDX`); chip set 1 is the key outside `key_root`.
+-struct PathC {
+-    app: Vec<sh::Keyed>,
+-    leaf: Vec<Layer<1>>,
+-    meta_h: usize,
+-    meta_rows: Value,
++pub struct PathC {
++    pub app: Vec<sh::Keyed>,
++    pub leaf: Vec<Layer<1>>,
++    pub meta_h: usize,
++    pub meta_rows: Value,
+     x_n3: Fr,
+-    x: Vec<Fr>,
+-    dag: Dg,
++    pub x: Vec<Fr>,
++    pub dag: Dg,
+ }
+-const KEYDAG_IDX: usize = 3;
++pub const KEYDAG_IDX: usize = 3;
+ const PC_ENTRY: u32 = 0;
+ 
++/// T7c: the path C keys (S = 8 app keys and their leaf layers at the internal set, chip sets 0
++/// and 1), the `L` child-meta height, `X` of N3 and of each path C leaf layer, and the DAG key
++/// leaf of chip set 0. T10m: also used by `t8_gp`, so its `key_root` is the universal one.
++pub fn path_c(eng: &sh::Eng, n3_vk: &MultiStarkVerifyingKey<NodeSC>, log: &mut Vec<Value>) -> PathC {
++    let mut pc_app = vec![];
++    let mut pc_leaf = vec![];
++    for set in 0..2u32 {
++        let a = sh::key(eng, s8l::airs_set(set, 0)).expect("path C app key");
++        let mut v = vk_json(&a.vk);
++        v["key"] = json!(format!("app S=8 chip set {set} (path C)"));
++        v["set"] = json!(frozen::APP.name);
++        v["g1"] = json!("accepted");
++        log.push(v);
++        let l = layer::<1>(&frozen::INTERNAL, &a.vk, Kind::Leaf, &format!("leaf<1> path C (internal set) chip set {set}"), log);
++        pc_app.push(a);
++        pc_leaf.push(l);
++    }
++    let rows_n3 = openvm_recursion_circuit::batch_constraint::meta_cached_rows(n3_vk);
++    let rows_c: Vec<usize> = pc_leaf.iter().map(|l| openvm_recursion_circuit::batch_constraint::meta_cached_rows(&l.vk)).collect();
++    let meta_h = rows_c.iter().copied().fold(rows_n3, usize::max).next_power_of_two();
++    println!("T7CMETA cached rows n3 {rows_n3} path C {rows_c:?} height {meta_h}");
++    let x_n3 = l_x(n3_vk, meta_h);
++    let x: Vec<Fr> = pc_leaf.iter().map(|l| l_x(&l.vk, meta_h)).collect();
++    let dag = stmt::dag_leaf(PC_ENTRY, &x_limbs(x[0]), &pc_leaf[0].vk.pre_hash, &pc_app[0].vk.pre_hash, &pc_leaf[0].vkc(&pc_app[0].vk).cc);
++    PathC { app: pc_app, leaf: pc_leaf, meta_h, meta_rows: json!({"n3": rows_n3, "path_c": rows_c}), x_n3, x, dag }
++}
++
+ fn keys() -> Keys {
+     let mut log = vec![];
+     let eng = sh::engine();
+@@ -417,27 +444,8 @@ fn keys() -> Keys {
+         })
+         .collect();
+     // T7c: the path C keys and the DAG key leaf of chip set 0
+-    let mut pc_app = vec![];
+-    let mut pc_leaf = vec![];
+-    for set in 0..2u32 {
+-        let a = sh::key(&eng, s8l::airs_set(set, 0)).expect("path C app key");
+-        let mut v = vk_json(&a.vk);
+-        v["key"] = json!(format!("app S=8 chip set {set} (path C)"));
+-        v["set"] = json!(frozen::APP.name);
+-        v["g1"] = json!("accepted");
+-        log.push(v);
+-        let l = layer::<1>(&frozen::INTERNAL, &a.vk, Kind::Leaf, &format!("leaf<1> path C (internal set) chip set {set}"), &mut log);
+-        pc_app.push(a);
+-        pc_leaf.push(l);
+-    }
+-    let rows_n3 = openvm_recursion_circuit::batch_constraint::meta_cached_rows(&n3.vk);
+-    let rows_c: Vec<usize> = pc_leaf.iter().map(|l| openvm_recursion_circuit::batch_constraint::meta_cached_rows(&l.vk)).collect();
+-    let meta_h = rows_c.iter().copied().fold(rows_n3, usize::max).next_power_of_two();
+-    println!("T7CMETA cached rows n3 {rows_n3} path C {rows_c:?} height {meta_h}");
+-    let x_n3 = l_x(&n3.vk, meta_h);
+-    let x: Vec<Fr> = pc_leaf.iter().map(|l| l_x(&l.vk, meta_h)).collect();
+-    let dag = stmt::dag_leaf(PC_ENTRY, &x_limbs(x[0]), &pc_leaf[0].vk.pre_hash, &pc_app[0].vk.pre_hash, &pc_leaf[0].vkc(&pc_app[0].vk).cc);
+-    let pc = PathC { app: pc_app, leaf: pc_leaf, meta_h, meta_rows: json!({"n3": rows_n3, "path_c": rows_c}), x_n3, x, dag };
++    let pc = path_c(&eng, &n3.vk, &mut log);
++    let dag = pc.dag;
+     let mut leaves: Vec<Dg> = triples.iter().map(|t| t.leaf()).collect();
+     assert_eq!(leaves.len(), KEYDAG_IDX);
+     leaves.push(dag);
+@@ -839,7 +847,7 @@ fn statement(p: &Proof<NodeSC>) -> Value {
+ }
+ 
+ // ------------------------------------------------------------------ modes
+-fn chain(out: &PathBuf, which: sl::Prog) {
++pub fn chain(out: &PathBuf, which: sl::Prog) {
+     let t0 = Instant::now();
+     let mut times = serde_json::Map::new();
+     let mut tick = |name: &str, t: Instant| {
+@@ -1056,7 +1064,7 @@ fn other(p: sl::Prog) -> sl::Prog {
+ }
+ 
+ /// N1 refusals, mixed chip sets, the FV unit under N3.
+-fn cases_mode(out: &PathBuf) {
++pub fn cases_mode(out: &PathBuf) {
+     let mut cases = Cases(vec![]);
+     let k = keys();
+     let pa = sl::program_of(k.key_root, sl::Prog::A);
+@@ -1198,7 +1206,7 @@ fn strip<SC: StarkProtocolConfig>(p: &Proof<SC>, i: usize) -> Proof<SC> {
+ /// path, stock app verifier, leaf layer) and the T3 omit cases of N1, N3 and `L` (the statement
+ /// AIR, the proof-shape AIR and the public-values AIR left out: prover path, stock verifier,
+ /// the parent over the stripped proof; for `L` the `L_Fr` tape generator).
+-fn omit(out: &PathBuf) {
++pub fn omit(out: &PathBuf) {
+     let mut cases = Cases(vec![]);
+     let mut k = keys();
+     let p = sl::program_of(k.key_root, sl::Prog::A);
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index dc93506..a905c9e 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -32,33 +32,26 @@ use openvm_stark_backend::{
+     AirRef, StarkEngine, StarkProtocolConfig,
+ };
+ use openvm_stark_sdk::config::{
+-    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+     baby_bear_poseidon2::{default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge, DuplexSpongeRecorder},
+-    bls12381_fr_poseidon::Bls12381Fr as Fr,
+ };
+ use p3_baby_bear::BabyBear;
+ use serde_json::{json, Value};
+ use sherlock_leaf::{core as slice_core, enc as slice_enc, harness as sh, leaf as sl};
+ use sherlock_lfr::{
+-    fixture::{NodeSC, LSC},
+-    fr,
++    fixture::NodeSC,
+     frozen::{self, FrozenSet, KeyShape},
+-    iface::{self, Case, Dims},
+-    iface_l,
+-    lverify::{gen_ops_check, gen_r_check, gen_verifier_full, Gen, LShape},
+-    machine::Machine,
+-    record::stock_log,
+-    stmt::{self, Child, FirstWit, Kind, KeyTree, KeyTriple, PermSpongeAir, RootSealAir, StmtAir, UKeys, Vkc, Wit, D},
+-    testing::{range_trace, Engine},
++    stmt::{self, Child, FirstWit, Kind, KeyTree, KeyTriple, PermSpongeAir, StmtAir, UKeys, Vkc, Wit, D},
+ };
+-use sherlock_wrap_export::export;
+ 
+ #[path = "common/work.rs"]
+ mod work;
++// T10m: the production `L` and the path C DAG key leaf of the universal `key_root`
++#[path = "t7_chain.rs"]
++#[allow(dead_code)]
++mod t7_chain;
+ 
+ type F = BabyBear;
+ type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+-type RootEng = BabyBearBls12381PoseidonCpuEngine;
+ type Dg = [F; D];
+ 
+ // ------------------------------------------------------------------ records
+@@ -107,25 +100,10 @@ fn heights<SC: StarkProtocolConfig>(p: &Proof<SC>) -> Vec<Option<usize>> {
+     p.trace_vdata.iter().map(|v| v.as_ref().map(|v| v.log_height)).collect()
+ }
+ 
+-fn height_check(set: &FrozenSet, p: &[Option<usize>]) -> Value {
+-    match frozen::check_heights(set, p) {
+-        Ok(m) => json!({"max_log_height": m, "bound": set.bounds.max_log_height, "g1": "accepted"}),
+-        Err(e) => json!({"g1": format!("REFUSED: {e:?}")}),
+-    }
+-}
+-
+-fn sw<SC: StarkProtocolConfig>(p: &Proof<SC>) -> Vec<usize> {
+-    p.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect()
+-}
+-
+ fn dhex(d: &Dg) -> String {
+     d.iter().map(|x| format!("{:08x}", x.as_canonical_u32())).collect::<Vec<_>>().join("")
+ }
+ 
+-fn u64s(d: &[F]) -> Vec<u64> {
+-    d.iter().map(|x| x.as_canonical_u32() as u64).collect()
+-}
+-
+ fn guard<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+         Ok(r) => r,
+@@ -381,7 +359,13 @@ fn keys() -> Keys {
+             cc_leaf: n1[s].vkc(&leaf[s].vk).cc,
+         })
+         .collect();
+-    let tree = KeyTree { leaves: triples.iter().map(|t| t.leaf()).collect() };
++    // T10m: the path C DAG key leaf after the chip-set leaves, so `key_root` is the universal
++    // one of `t7_chain` (and of `L`, `L_Fr` and the wrap)
++    let dag = t7_chain::path_c(&eng, &n3.vk, &mut log).dag;
++    let mut leaves: Vec<Dg> = triples.iter().map(|t| t.leaf()).collect();
++    assert_eq!(leaves.len(), t7_chain::KEYDAG_IDX);
++    leaves.push(dag);
++    let tree = KeyTree { leaves };
+     let key_root = tree.root();
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+@@ -430,175 +414,6 @@ impl Keys {
+     }
+ }
+ 
+-// ------------------------------------------------------------------ L
+-struct LKey {
+-    l: VerifierSubCircuit<1>,
+-    engine: RootEng,
+-    pk: MultiStarkProvingKey<LSC>,
+-    vk: MultiStarkVerifyingKey<LSC>,
+-    airs: Vec<AirRef<LSC>>,
+-    kind: Kind,
+-    n_bench: usize,
+-}
+-
+-fn l_key(n3_vk: &MultiStarkVerifyingKey<NodeSC>, keys_d: &Dg, log: &mut Vec<Value>) -> LKey {
+-    // T10 merge: the production `L` (T7c path C, child-meta, T10 log tie and onion AIR) lives in
+-    // `t7_chain`; this T7-era copy no longer builds that key. Run `t7_chain chain|cases|omit`.
+-    if std::env::var("T8_GP_OLD_L").is_err() {
+-        panic!("t8_gp: the L layer moved to t7_chain (T7c, T10); use t7_chain for chain, cases and omit");
+-    }
+-    let engine = RootEng::new(frozen::L.params());
+-    let c = VerifierConfig { has_cached: true, continuations_enabled: true, ..Default::default() };
+-    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(Arc::new(n3_vk.clone()), c);
+-    let kind = Kind::Root { n3_pre: stmt::digest_u32(&n3_vk.pre_hash), keys_d: stmt::digest_u32(keys_d), x_n3: [0; 9] };
+-    let inv = l.bus_inventory();
+-    let perm = inv.poseidon2_permute_bus;
+-    let mut airs: Vec<AirRef<LSC>> = vec![Arc::new(StmtAir::new(kind.clone(), inv))];
+-    let bench = AggregationSubCircuit::airs::<LSC>(&l);
+-    let n_bench = bench.len();
+-    airs.extend(bench);
+-    airs.extend(iface_l::airs_with(&Dims::FULL, iface::ROOT_WORDS));
+-    airs.push(Arc::new(RootSealAir));
+-    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
+-    let (pk, vk) = kg(&frozen::L, &engine, &airs, "L over N3", log);
+-    LKey { l, engine, pk, vk, airs, kind, n_bench }
+-}
+-
+-/// The `L` witness of a run: the opened header of the final state and the blinding `r_P`.
+-struct LWit {
+-    hdr: Vec<F>,
+-    r_p: Dg,
+-}
+-
+-impl LKey {
+-    fn ctxs(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64]) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
+-        let kid = child_of(&self.kind, n3_vk, n3);
+-        let (tr, pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p, head: vec![], pc: None });
+-        let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p, None);
+-        let (st, ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
+-        let dev = self.engine.device();
+-        let m = |t: &openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>| dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(t));
+-        let mut v = vec![AirProvingContext::simple(m(&tr), pvs)];
+-        let (e1, e2, e3): (Vec<[F; 16]>, Vec<usize>, Vec<usize>) = (vec![], vec![], vec![]);
+-        let mut ext = VerifierExternalData {
+-            poseidon2_compress_inputs: &e1,
+-            poseidon2_permute_inputs: &ins,
+-            range_check_inputs: &e2,
+-            power_check_inputs: &e3,
+-            required_heights: None,
+-            final_transcript_state: None,
+-        };
+-        let pcs = self.l.commit_child_vk(&self.engine, n3_vk);
+-        let b = self
+-            .l
+-            .generate_proving_ctxs::<DuplexSpongeRecorder>(n3_vk, CachedTraceCtx::PcsData(pcs), std::slice::from_ref(n3), &mut ext, &(), default_duplex_sponge_recorder())
+-            .expect("L verifier traces");
+-        assert_eq!(b.len(), self.n_bench);
+-        v.extend(b);
+-        for (t, pv) in iface_l::traces_with::<F>(&Dims::FULL, words, iface::ROOT_WORDS) {
+-            v.push(AirProvingContext::simple(m(&t), pv));
+-        }
+-        v.push(AirProvingContext::simple(m(&ot), opv));
+-        v.push(AirProvingContext::simple(m(&st), vec![]));
+-        v
+-    }
+-
+-    fn prove_try(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64], mutant: bool) -> (Option<Proof<LSC>>, Result<(), String>) {
+-        let ctxs = match guard(|| Ok(self.ctxs(n3_vk, n3, w, words))) {
+-            Ok(c) => c,
+-            Err(e) => return (None, Err(format!("trace generation: {e}"))),
+-        };
+-        let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
+-        if std::env::var("T7_DEBUG").is_ok() {
+-            let _ = guard(|| {
+-                self.engine.debug(&self.airs, &ctx);
+-                Ok(())
+-            })
+-            .map_err(|e| eprintln!("T7_DEBUG L: {}", e.chars().take(600).collect::<String>()));
+-        }
+-        let d_pk = self.engine.device().transport_pk_to_device(&self.pk);
+-        if mutant {
+-            std::env::set_var("SB_MUTANT_PROVER", "1");
+-        }
+-        let p = guard(|| self.engine.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}")));
+-        std::env::remove_var("SB_MUTANT_PROVER");
+-        match p {
+-            Ok(p) => {
+-                let r = self.engine.verify(&self.vk, &p).map_err(|e| format!("{e:?}"));
+-                (Some(p), r)
+-            }
+-            Err(e) => (None, Err(e)),
+-        }
+-    }
+-}
+-
+-/// The `L` words of a run bound to the root statement of `n3`: `root_stmt` = the N3 envelope,
+-/// the `R` run operands = the packed operand digests, the ordinary-call anchor of the ledger
+-/// (`anchor_d2(r_L, prog_d_ledger)`, `r_L = r_P`). `forge_outcome` changes the logged
+-/// `DIGEST(SHK_OUTCOME)` operand.
+-fn run_words(n3: &Proof<NodeSC>, w: &LWit, prog_d_ledger: &Dg, forge_outcome: bool) -> iface::Run {
+-    let env = &n3.public_values[0][..stmt::npv::ENV];
+-    let prog_d = stmt::dig(env, stmt::npv::PROG_D);
+-    let ops = stmt::operands(&prog_d, &w.r_p, &w.hdr);
+-    let mut ds: [Fr; 3] = std::array::from_fn(|k| fr::pack(&u64s(&ops[k])));
+-    if forge_outcome {
+-        let mut h = w.hdr.clone();
+-        h[1] += F::ONE;
+-        ds[2] = fr::pack(&u64s(&stmt::operands(&prog_d, &w.r_p, &h)[2]));
+-    }
+-    let r_l: [u64; 8] = u64s(&w.r_p).try_into().unwrap();
+-    let pl: [u64; 8] = u64s(prog_d_ledger).try_into().unwrap();
+-    let anchor = iface::anchor_d2(&r_l, &pl);
+-    iface::case_run_bound(&Dims::FULL, Case::AllEntries, 14, Some((&u64s(env), ds)), Some(anchor)).0
+-}
+-
+-/// The `L_Fr` tape over an `L` proof: `gen_r_check`, then the T7 operand check; Ok when every
+-/// assertion holds. Returns the generator and the exposed words on success.
+-type LfrGen = (Gen, Vec<sherlock_lfr::tape::Addr>, Vec<Option<sherlock_lfr::tape::Val>>);
+-
+-fn lfr_gen(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) -> Result<LfrGen, String> {
+-    let (g, out, mem, failed) = lfr_gen_any(l_vk, l_proof, pin)?;
+-    if failed > 0 {
+-        return Err(format!("{failed} tape assertions failed"));
+-    }
+-    Ok((g, out, mem))
+-}
+-
+-/// [`lfr_gen`] that also returns a tape whose assertions fail (for the mutant `L_Fr` prover).
+-fn lfr_gen_any(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) -> Result<(Gen, Vec<sherlock_lfr::tape::Addr>, Vec<Option<sherlock_lfr::tape::Val>>, usize), String> {
+-    let shape = LShape::of(l_proof);
+-    let mut g = Gen::new();
+-    g.pinned_cached = Some(vec![pin]);
+-    let (lw, l_pub) = gen_verifier_full(&mut g, l_vk, &shape, l_proof).map_err(|e| format!("{e:?}"))?;
+-    if g.pinned_cached.as_ref().map(|v| v.len()) != Some(0) {
+-        return Err("an L cached commitment is not pinned".into());
+-    }
+-    let nw = Dims::FULL.words();
+-    if l_pub.len() != nw + stmt::OPS_WORDS {
+-        return Err(format!("L public values {} (want {})", l_pub.len(), nw + stmt::OPS_WORDS));
+-    }
+-    // L order: the FP-3 table (root_stmt from the root statement AIR, the rest from the interface
+-    // AIRs), then the R operands of the seal.
+-    let (r0, r1) = (nw, nw + stmt::OPS_WORDS);
+-    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
+-    let (words, vals) = (reorder(&l_pub, r0, r1), reorder(&l_vals, r0, r1));
+-    let ops = l_pub[r0..r1].to_vec();
+-    let (words, vals) = (words[..nw].to_vec(), vals[..nw].to_vec());
+-    let (mode, open) = gen_r_check(&mut g, &words, &vals);
+-    gen_ops_check(&mut g, &words, &ops, mode, open);
+-    let mut out = vec![lw[0]];
+-    for c in words.chunks(8) {
+-        out.push(g.tape.pack(c));
+-    }
+-    g.tape.expose(&out);
+-    let (mem, failed) = g.tape.execute_checked(&g.inputs);
+-    Ok((g, out, mem, failed.len()))
+-}
+-
+-fn reorder<T: Copy>(v: &[T], r0: usize, r1: usize) -> Vec<T> {
+-    v[..r0].iter().chain(&v[r1..]).copied().collect()
+-}
+-
+ fn hdr_of(p: &sl::Program) -> Vec<F> {
+     let st = p.states.last().unwrap();
+     slice_enc::header_words(&st.hdr, &st.body_d())
+@@ -612,439 +427,15 @@ fn statement(p: &Proof<NodeSC>) -> Value {
+         "h_pre": w(pv::H_PRE, 4), "steps": w(pv::STEPS, 1)})
+ }
+ 
+-// ------------------------------------------------------------------ modes
+-fn chain(out: &PathBuf, which: sl::Prog) {
+-    let t0 = Instant::now();
+-    let mut times = serde_json::Map::new();
+-    let mut tick = |name: &str, t: Instant| {
+-        times.insert(name.into(), json!(t.elapsed().as_secs_f64()));
+-    };
+-    let mut cases = Cases(vec![]);
+-    let t = Instant::now();
+-    let mut k = keys();
+-    tick("keygen", t);
+-    let p = sl::program_of(k.key_root, which);
+-    let nsh = sl::shards(&p).len();
+-    let sets = vec![0usize; nsh];
+-    let t = Instant::now();
+-    let (app_p, app_s) = k.app_proofs(&p, &sets);
+-    tick("app_prove", t);
+-    let steps: u32 = app_p.iter().map(|p| p.public_values[0][slice_core::pv::STEPS].as_canonical_u32()).sum();
+-    let want: Vec<Option<usize>> = sl::HEIGHTS.iter().map(|h| Some(h.trailing_zeros() as usize)).collect();
+-    let fixed: Vec<Value> = app_p.iter().map(|p| json!({"fixed": heights(p) == want, "log_heights": heights(p)})).collect();
+-    let t = Instant::now();
+-    let leaf_p: Vec<_> = app_p.iter().map(|q| k.leaf[0].prove(&k.app[0].vk, std::slice::from_ref(q), &Wit::Leaf)).collect();
+-    tick("leaf_prove", t);
+-    let t = Instant::now();
+-    let n1_p = k.n1[0].prove(&k.leaf[0].vk, &leaf_p, &k.first_wit(&p, &sets));
+-    tick("n1_prove", t);
+-    let t = Instant::now();
+-    let v2 = k.table.node[0];
+-    let n2_p = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1_p), &k.node_wit(&v2));
+-    tick("n2_prove", t);
+-    let t = Instant::now();
+-    let v3 = k.table.node[1];
+-    let n3_p = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2_p), &k.node_wit(&v3));
+-    tick("n3_prove", t);
+-    let _root: Vec<u64> = u64s(&n3_p.public_values[0][..stmt::npv::ENV]);
+-    assert_eq!(stmt::dig(&n3_p.public_values[0], stmt::npv::PROG_D), p.adm.prog_d(), "N3 statement carries prog_d");
+-
+-    let t = Instant::now();
+-    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
+-    tick("l_keygen", t);
+-    let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
+-    let prog_d = p.adm.prog_d();
+-    let run = run_words(&n3_p, &w, &prog_d, false);
+-    let words = run.words();
+-    let t = Instant::now();
+-    let (lp, r) = lk.prove_try(&k.n3.vk, &n3_p, &w, &words, false);
+-    tick("l_prove", t);
+-    r.expect("L verify");
+-    let lp = lp.unwrap();
+-    let (_, ok) = stock_log(&lk.vk, &lp);
+-    assert!(ok, "stock verifier accepts L");
+-    cases.rec(&format!("chain_{which:?}_L_honest"), true, Ok(()), "honest chain: leaf, N1, N2 (unary), N3 (unary), L verified");
+-    let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
+-
+-    // L refusals: the outcome word of the opened header changed (X10 refuses at L).
+-    let mut wf = LWit { hdr: w.hdr.clone(), r_p: w.r_p };
+-    wf.hdr[1] += F::ONE;
+-    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &wf, &words, true);
+-    cases.rec("outcome_word_changed_refused_at_L", false, r, "header outcome payload word + 1 against post_d (mutant prover, stock L verifier)");
+-    let mut wt = LWit { hdr: w.hdr.clone(), r_p: w.r_p };
+-    wt.hdr[0] = F::from_u32(0);
+-    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &wt, &words, true);
+-    cases.rec("non_terminal_outcome_refused_at_L", false, r, "outcome_tag 0 (Running) at the seal (mutant prover, stock L verifier)");
+-
+-    // L_Fr: honest, then the R operands against the L operand words.
+-    let mut bad_lfr: Option<(Gen, Vec<Option<sherlock_lfr::tape::Val>>)> = None;
+-    let (g, lw, mem) = lfr_gen(&lk.vk, &lp, l_pin).expect("L_Fr tape honest");
+-    cases.rec("lfr_tape_honest", true, Ok(()), "gen_r_check and the operand check hold");
+-    for (name, run, check) in [
+-        ("wrong_prog_d_anchor_refused_at_L_Fr", run_words(&n3_p, &w, &sl::program_of(k.key_root, other(which)).adm.prog_d(), false), "ledger anchor of the other program (A_0 = C_P)"),
+-        ("forged_outcome_operand_refused_at_L_Fr", run_words(&n3_p, &w, &prog_d, true), "DIGEST(SHK_OUTCOME) operand of another outcome"),
+-    ] {
+-        let wds = run.words();
+-        let r = match lk.prove_try(&k.n3.vk, &n3_p, &w, &wds, false) {
+-            (Some(q), Ok(())) => match guard(|| lfr_gen_any(&lk.vk, &q, l_pin)) {
+-                Ok((g2, _, mem2, nf)) if nf > 0 => {
+-                    if name.starts_with("wrong_prog_d") {
+-                        bad_lfr = Some((g2, mem2));
+-                    }
+-                    Err(format!("{nf} tape assertions failed"))
+-                }
+-                Ok(_) => Ok(()),
+-                Err(e) => Err(e),
+-            },
+-            (_, r) => r.and(Err("L refused first".into())),
+-        };
+-        cases.rec(name, false, r, check);
+-    }
+-
+-    let m = Machine::new(&g.tape);
+-    let pw = m.public_values(&mem).concat();
+-    assert_eq!(pw.len(), lw.len());
+-    assert_eq!(iface::decode(&Dims::FULL, &pw).unwrap(), run.statement(), "honest decode");
+-    let lfr = Engine::new(frozen::LFR.params());
+-    let fairs = m.airs();
+-    let t = Instant::now();
+-    let (fpk, fvk) = kg(&frozen::LFR, &lfr, &fairs, "L_Fr", &mut k.log);
+-    tick("lfr_keygen", t);
+-    let mut traces = m.traces(&mem);
+-    traces.push(range_trace(&fpk, &fairs, &traces));
+-    let mut pis = m.public_values(&mem);
+-    pis.resize(traces.len(), vec![]);
+-    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
+-    let ctx = ProvingContext::new(
+-        traces
+-            .iter()
+-            .enumerate()
+-            .map(|(i, t)| (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t)), pis[i].clone())))
+-            .collect(),
+-    );
+-    drop(traces);
+-    let t = Instant::now();
+-    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
+-    tick("lfr_prove", t);
+-    // SG-3 on L_Fr: the wrong_prog_d tape (its operand assertion fails) proved by the mutant
+-    // prover on the same L_Fr key, then the stock verifier.
+-    if let Some((g2, mem2)) = bad_lfr.take() {
+-        let m2 = Machine::new(&g2.tape);
+-        let r = guard(|| {
+-            let mut tr = m2.traces(&mem2);
+-            tr.push(range_trace(&fpk, &fairs, &tr));
+-            let mut pi = m2.public_values(&mem2);
+-            pi.resize(tr.len(), vec![]);
+-            let ctx = ProvingContext::new(
+-                tr.iter()
+-                    .enumerate()
+-                    .map(|(i, t)| (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t)), pi[i].clone())))
+-                    .collect(),
+-            );
+-            std::env::set_var("SB_MUTANT_PROVER", "1");
+-            let p = lfr.prove(&d_fpk, ctx).map_err(|e| format!("prove: {e:?}"));
+-            std::env::remove_var("SB_MUTANT_PROVER");
+-            lfr.verify(&fvk, &p?).map_err(|e| format!("{e:?}"))
+-        });
+-        cases.rec("wrong_prog_d_anchor_refused_by_stock_L_Fr_verifier", false, r, "mutant L_Fr proof of the failing tape, stock L_Fr verifier (SG-3)");
+-    }
+-    drop(fpk);
+-    let doc = export("lfr-t7", lfr.config(), &fvk, &proof);
+-    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses L_Fr");
+-    fs::write(out.join("lfr-fp8.json"), serde_json::to_vec(&doc).unwrap()).unwrap();
+-    for (f, b) in [
+-        ("app_vk.bitcode", bitcode::serialize(&k.app[0].vk).unwrap()),
+-        ("leaf_vk.bitcode", bitcode::serialize(&k.leaf[0].vk).unwrap()),
+-        ("node1_vk.bitcode", bitcode::serialize(&k.n1[0].vk).unwrap()),
+-        ("node2_vk.bitcode", bitcode::serialize(&k.n2.vk).unwrap()),
+-        ("node_vk.bitcode", bitcode::serialize(&k.n3.vk).unwrap()),
+-        ("fv_vk.bitcode", bitcode::serialize(&k.fv.vk).unwrap()),
+-        ("l_vk.bitcode", bitcode::serialize(&lk.vk).unwrap()),
+-        ("lfr_vk.bitcode", bitcode::serialize(&fvk).unwrap()),
+-    ] {
+-        fs::write(out.join(f), b).unwrap();
+-    }
+-    let all = cases.0.iter().all(|c| c["pass"].as_bool().unwrap());
+-    let summary = json!({
+-        "program": format!("{which:?}: {}", which.source()),
+-        "prog_d": dhex(&prog_d),
+-        "key_root": dhex(&k.key_root),
+-        "keys_d": dhex(&k.table.keys_d()),
+-        "keys": k.log,
+-        "shards": app_p.len(),
+-        "proved_steps": steps,
+-        "fixed_heights": fixed,
+-        "statements": app_p.iter().map(statement).collect::<Vec<_>>(),
+-        "heights": {"app": height_check(&frozen::APP, &heights(&app_p[0])), "leaf": height_check(&frozen::LEAF_AGG, &heights(&leaf_p[0])),
+-                    "node1": height_check(&frozen::INTERNAL, &heights(&n1_p)), "node2": height_check(&frozen::INTERNAL, &heights(&n2_p)),
+-                    "node": height_check(&frozen::INTERNAL, &heights(&n3_p)), "L": height_check(&frozen::L, &heights(&lp)),
+-                    "L_Fr": height_check(&frozen::LFR, &heights(&proof))},
+-        "app_log_heights": heights(&app_p[0]),
+-        "leaf_log_heights": heights(&leaf_p[0]),
+-        "node1_log_heights": heights(&n1_p),
+-        "node2_log_heights": heights(&n2_p),
+-        "node_log_heights": heights(&n3_p),
+-        "l_log_heights": heights(&lp),
+-        "stacked_widths": {"app": sw(&app_p[0]), "leaf": sw(&leaf_p[0]), "node1": sw(&n1_p), "node2": sw(&n2_p), "node": sw(&n3_p)},
+-        "l_stacked_widths": sw(&lp),
+-        "lfr_stacked_widths": sw(&proof),
+-        "l_public_values": lp.public_values.iter().map(|v| v.len()).sum::<usize>(),
+-        "lfr_public_words": pw.len(),
+-        "app_prove_per_shard_s": app_s,
+-        "times_s": times,
+-        "wall_s": t0.elapsed().as_secs_f64(),
+-        "cases_all_pass": all,
+-    });
+-    fs::write(out.join("chain.json"), serde_json::to_string_pretty(&summary).unwrap()).unwrap();
+-    fs::write(out.join("cases.json"), serde_json::to_string_pretty(&json!({"all_pass": all, "cases": cases.0})).unwrap()).unwrap();
+-    println!("T7CHAIN heights {}", serde_json::to_string(&summary["heights"]).unwrap());
+-    println!("T7CHAIN times {}", serde_json::to_string(&summary["times_s"]).unwrap());
+-    println!("T7CHAIN L public values {} L_Fr public words {}", summary["l_public_values"], pw.len());
+-    for k in summary["keys"].as_array().unwrap() {
+-        println!("T7KEY {} g1={} pre={} bytes={}", k["key"], k["g1"], k["pre_hash"], k["vk_bitcode_bytes"]);
+-    }
+-    assert!(all, "a T7 case did not behave as expected");
+-    println!("T7CHAIN PASS: program {which:?}: app, leaf, N1, N2, N3, L, L_Fr proved and verified on one universal key set");
+-}
+-
+-fn other(p: sl::Prog) -> sl::Prog {
+-    if p == sl::Prog::A { sl::Prog::B } else { sl::Prog::A }
+-}
+-
+-/// N1 refusals, mixed chip sets, the FV unit under N3.
+-fn cases_mode(out: &PathBuf) {
+-    let mut cases = Cases(vec![]);
+-    let k = keys();
+-    let pa = sl::program_of(k.key_root, sl::Prog::A);
+-    let pb = sl::program_of(k.key_root, sl::Prog::B);
+-    assert_ne!(pa.adm.prog_d(), pb.adm.prog_d(), "A and B differ in prog_d");
+-
+-    // Mixed chip sets: shard 0 under set 0, shard 1 under set 1; N1 unary each; N2 merges.
+-    let (ap, _) = k.app_proofs(&pa, &[0, 1]);
+-    let l0 = k.leaf[0].prove(&k.app[0].vk, &ap[..1], &Wit::Leaf);
+-    let l1 = k.leaf[1].prove(&k.app[1].vk, &ap[1..], &Wit::Leaf);
+-    let n1a = k.n1[0].prove(&k.leaf[0].vk, std::slice::from_ref(&l0), &k.first_wit(&pa, &[0]));
+-    let n1b = k.n1[1].prove(&k.leaf[1].vk, std::slice::from_ref(&l1), &k.first_wit(&pa, &[1]));
+-    let (n2m, r) = k.n2.prove_try(&k.n1[0].vk, &[n1a.clone(), n1b.clone()], &k.node_wit(&k.table.node[0]), None, false);
+-    cases.rec("mixed_chip_sets_one_key_root_N2_accepts", true, r, "shard 0 set 0, shard 1 set 1 (ExtAir), N1 unary each, N2 binary merge");
+-    if let Some(n2m) = n2m {
+-        let (_, r) = k.n3.prove_try(&k.n2.vk, std::slice::from_ref(&n2m), &k.node_wit(&k.table.node[1]), None, false);
+-        cases.rec("mixed_chip_sets_N3_accepts", true, r, "N3 unary over the mixed N2");
+-    }
+-
+-    // wrong_prog_d at N1: leaf of A (shard 0) merged with leaf of B (shard 1).
+-    let (bp, _) = k.app_proofs(&pb, &[0, 0]);
+-    let (apa, _) = k.app_proofs(&pa, &[0, 0]);
+-    let la0 = k.leaf[0].prove(&k.app[0].vk, &apa[..1], &Wit::Leaf);
+-    let lb1 = k.leaf[0].prove(&k.app[0].vk, &bp[1..], &Wit::Leaf);
+-    let mut wit = k.first_wit(&pa, &[0, 0]);
+-    if let Wit::First(ws, _) = &mut wit {
+-        ws[1].image_d = pb.adm.image_d();
+-    }
+-    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, &[la0.clone(), lb1], &wit, None, true);
+-    cases.rec("wrong_prog_d_merge_refused_at_N1", false, r, "leaf of program A then leaf of program B (mutant prover, stock N1 verifier)");
+-    // key outside key_root: the N1 key claimed in the key leaf is not the one in key_root.
+-    let mut wit = k.first_wit(&pa, &[0]);
+-    if let Wit::First(ws, _) = &mut wit {
+-        ws[0].pre_ifl[0] += F::ONE;
+-    }
+-    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &wit, None, true);
+-    cases.rec("key_triple_outside_key_root_refused_at_N1", false, r, "pre_ifl changed in the key leaf (mutant prover, stock N1 verifier)");
+-    // the leaf of chip set 0 claimed under the set-1 triple
+-    let mut wit = k.first_wit(&pa, &[1]);
+-    if let Wit::First(ws, _) = &mut wit {
+-        ws[0].cc_leaf = k.triples[1].cc_leaf;
+-    }
+-    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &wit, None, true);
+-    cases.rec("chip_set_swap_refused_at_N1", false, r, "set-0 leaf proof opened under the set-1 key triple");
+-    // a wrong prog_d opening (image of B for a leaf of A)
+-    let mut wit = k.first_wit(&pa, &[0]);
+-    if let Wit::First(ws, _) = &mut wit {
+-        ws[0].image_d = pb.adm.image_d();
+-    }
+-    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &wit, None, true);
+-    cases.rec("wrong_prog_d_opening_refused_at_N1", false, r, "prog_d opened with the image of B");
+-
+-    // FV unit under N3.
+-    let n1 = k.n1[0].prove(&k.leaf[0].vk, std::slice::from_ref(&la0), &k.first_wit(&pa, &[0]));
+-    let fvr = k.table.foreign[0];
+-    let fv_state: Dg = stmt::p2(33, &[F::ONE]);
+-    let fw = Wit::Fv { tbl: k.table.clone(), sel: k.table.index(&fvr, true).unwrap(), fv_state };
+-    let (fvp, r) = k.fv.prove_try(&k.n1[0].vk, std::slice::from_ref(&n1), &fw, None, false);
+-    cases.rec("fv_unit_proves", true, r, "FV unit (N2 AIR shape, Fv statement) over N1");
+-    if let Some(fvp) = fvp {
+-        let n3w = k.node_wit(&k.table.node[2]);
+-        let (_, r) = k.n3.prove_try(&k.fv.vk, std::slice::from_ref(&fvp), &n3w, None, false);
+-        cases.rec("fv_unit_under_N3_accepted", true, r, "N3 (keyed over N2) verifies the FV unit proof; FV row in keys_d");
+-        // FV row missing from keys_d: a table `t2` whose foreign row is not the FV unit's key.
+-        // The whole subtree (N1, FV unit) is made on `t2`, so only N3's check of the FV key
+-        // against `vkc` can refuse it (N3 on `t2`); N3 on the true table refuses on keys_d too.
+-        let t2 = UKeys { node: k.table.node.clone(), foreign: vec![Vkc { cc: [F::ONE; D], pre: [F::TWO; D] }] };
+-        let mut w1 = k.first_wit(&pa, &[0]);
+-        if let Wit::First(_, kd) = &mut w1 {
+-            *kd = t2.keys_d();
+-        }
+-        let n1t = k.n1[0].prove(&k.leaf[0].vk, std::slice::from_ref(&la0), &w1);
+-        let fw2 = Wit::Fv { tbl: t2.clone(), sel: stmt::UROWS, fv_state };
+-        let (fvp2, r2) = k.fv.prove_try(&k.n1[0].vk, std::slice::from_ref(&n1t), &fw2, None, false);
+-        cases.rec("fv_unit_on_table_without_its_row_proves", true, r2.clone(), "the FV unit alone cannot see that its row is wrong");
+-        if let (Some(q), Ok(())) = (fvp2, r2) {
+-            let tw = Wit::Node { tbl: t2.clone(), sel: 2 };
+-            let a = k.n3.prove_try(&k.fv.vk, std::slice::from_ref(&q), &tw, None, true).1;
+-            cases.rec("fv_row_missing_refused_at_N3", false, a, "N3 on the same table: the received FV key is not the FV unit's vkc (mutant N3)");
+-            let b = k.n3.prove_try(&k.fv.vk, std::slice::from_ref(&q), &n3w, None, true).1;
+-            cases.rec("fv_row_missing_refused_at_N3_true_table", false, b, "N3 on the true keys_d (mutant N3)");
+-        }
+-        // a node child whose keys_d differs from the parent's
+-        let (_, r) = k.fv.prove_try(&k.n1[0].vk, std::slice::from_ref(&n1), &fw2, None, true);
+-        cases.rec("keys_d_mismatch_refused_at_FV_unit", false, r, "FV unit on t2 over an N1 proof on the true keys_d (mutant)");
+-    }
+-    let all = cases.0.iter().all(|c| c["pass"].as_bool().unwrap());
+-    fs::write(out.join("cases.json"), serde_json::to_string_pretty(&json!({"all_pass": all, "cases": cases.0, "keys": k.log,
+-        "key_root": dhex(&k.key_root), "keys_d": dhex(&k.table.keys_d())})).unwrap()).unwrap();
+-    println!("T7CASES all_pass={all}");
+-    assert!(all, "a T7 case did not behave as expected");
+-}
+-
+-fn air_idx<SC: StarkProtocolConfig>(airs: &[AirRef<SC>], name: &str) -> usize {
+-    let v: Vec<usize> = airs.iter().enumerate().filter(|(_, a)| a.name().contains(name)).map(|(i, _)| i).collect();
+-    assert_eq!(v.len(), 1, "AIR {name}: {:?}", airs.iter().map(|a| a.name()).collect::<Vec<_>>());
+-    v[0]
+-}
+-
+-/// `p` with AIR `i` left out (no trace data, no public values).
+-fn strip<SC: StarkProtocolConfig>(p: &Proof<SC>, i: usize) -> Proof<SC> {
+-    let mut q = p.clone();
+-    q.trace_vdata[i] = None;
+-    q.public_values[i] = vec![];
+-    q
+-}
+-
+-/// V.9 on the T7 layers: `slice_air_omitted` (each slice AIR left out of the app proof: prover
+-/// path, stock app verifier, leaf layer) and the T3 omit cases of N1, N3 and `L` (the statement
+-/// AIR, the proof-shape AIR and the public-values AIR left out: prover path, stock verifier,
+-/// the parent over the stripped proof; for `L` the `L_Fr` tape generator).
+-fn omit(out: &PathBuf) {
+-    let mut cases = Cases(vec![]);
+-    let mut k = keys();
+-    let p = sl::program_of(k.key_root, sl::Prog::A);
+-    let sets = [0usize, 0];
+-    let (pa, secs) = k.app_proofs(&p, &sets);
+-    let steps: u32 = pa.iter().map(|q| q.public_values[0][slice_core::pv::STEPS].as_canonical_u32()).sum();
+-    let want: Vec<Option<usize>> = sl::HEIGHTS.iter().map(|h| Some(h.trailing_zeros() as usize)).collect();
+-    let sg6 = json!({"backend": "CPU (openvm-cpu-backend)", "app_prove_per_shard_s": secs, "proved_steps": steps,
+-        "s_per_proved_step": secs.iter().sum::<f64>() / steps as f64,
+-        "fixed_heights": pa.iter().map(|q| json!({"fixed": heights(q) == want, "log_heights": heights(q)})).collect::<Vec<_>>()});
+-    cases.rec("app_honest", true, Ok(()), "honest: both shards proved, stock verifier accepts");
+-    let vr = |r: Result<(), openvm_stark_backend::verifier::VerifierError<_>>| r.map_err(|e| format!("{e:?}"));
+-    let app = &k.app[0];
+-    let lc = &k.leaf[0];
+-    cases.rec("leaf_honest", true, lc.prove_try(&app.vk, &pa[..1], &Wit::Leaf, None, false).1, "honest");
+-    let shard0 = &sl::shards(&p)[0];
+-    let trs = sl::traces_set(&p, shard0, &sl::Build::default(), 0);
+-    let d_pk = k.eng.device().transport_pk_to_device(&app.pk);
+-    for (i, a) in app.airs.iter().enumerate() {
+-        let name = a.name();
+-        let ctx = ProvingContext::new(
+-            trs.iter()
+-                .enumerate()
+-                .filter(|(j, _)| *j != i)
+-                .map(|(j, t)| (j, AirProvingContext::simple(k.eng.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(&t.m)), t.pvs.clone())))
+-                .collect(),
+-        );
+-        let r = guard(|| k.eng.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}"))).and_then(|q| vr(k.eng.verify(&app.vk, &q)));
+-        cases.rec(&format!("slice_air_omitted_prove_without_{name}"), false, r, &format!("app prover path, air {i}"));
+-        let st = strip(&pa[0], i);
+-        cases.rec(&format!("slice_air_omitted_stock_verify_without_{name}"), false, vr(k.eng.verify(&app.vk, &st)), &format!("stock app verifier, air {i}"));
+-        let r = lc.prove_try(&app.vk, std::slice::from_ref(&st), &Wit::Leaf, None, true).1;
+-        cases.rec(&format!("slice_air_omitted_leaf_over_app_without_{name}"), false, r, "leaf layer over the stripped app proof");
+-    }
+-    drop(d_pk);
+-    let la: Vec<_> = pa.iter().map(|q| lc.prove(&app.vk, std::slice::from_ref(q), &Wit::Leaf)).collect();
+-    let fw = k.first_wit(&p, &sets);
+-    let n1 = k.n1[0].prove(&lc.vk, &la, &fw);
+-    let w2 = k.node_wit(&k.table.node[0]);
+-    let n2 = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1), &w2);
+-    let w3 = k.node_wit(&k.table.node[1]);
+-    let n3 = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2), &w3);
+-    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
+-    let mut req = serde_json::Map::new();
+-    req.insert("app".into(), json!(app.vk.inner.per_air.iter().all(|a| a.is_required)));
+-    for (name, v) in [("leaf", &lc.vk), ("n1", &k.n1[0].vk), ("n2", &k.n2.vk), ("n3", &k.n3.vk), ("fv", &k.fv.vk)] {
+-        req.insert(name.into(), json!(v.inner.per_air.iter().all(|a| a.is_required)));
+-    }
+-    req.insert("L".into(), json!(lk.vk.inner.per_air.iter().all(|a| a.is_required)));
+-    let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
+-    let words = run_words(&n3, &w, &p.adm.prog_d(), false).words();
+-    let omitted = ["StmtAir", "ProofShapeAir", "PublicValuesAir"];
+-    // N1 (parent N2) and N3 (parent L)
+-    for name in omitted {
+-        let i = air_idx(&k.n1[0].airs, name);
+-        let mk = || -> Vec<_> { k.n1[0].ctxs(&lc.vk, &la, &fw, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+-        let r = guard(|| {
+-            let ctx = ProvingContext::new(mk());
+-            let d = k.n1[0].engine.device().transport_pk_to_device(&k.n1[0].pk);
+-            let q = k.n1[0].engine.prove(&d, ctx).map_err(|e| format!("prove: {e:?}"))?;
+-            vr(k.n1[0].engine.verify(&k.n1[0].vk, &q))
+-        });
+-        cases.rec(&format!("n1_prove_without_{name}"), false, r, &format!("prover path, air {i}"));
+-        let st = strip(&n1, i);
+-        cases.rec(&format!("n1_stock_verify_without_{name}"), false, vr(k.n1[0].engine.verify(&k.n1[0].vk, &st)), &format!("stock verifier, air {i}"));
+-        let r = k.n2.prove_try(&k.n1[0].vk, std::slice::from_ref(&st), &w2, None, true).1;
+-        cases.rec(&format!("n1_parent_over_child_without_{name}"), false, r, "N2 over the stripped N1 proof (mutant prover)");
+-        let i = air_idx(&k.n3.airs, name);
+-        let mk = || -> Vec<_> { k.n3.ctxs(&k.n2.vk, std::slice::from_ref(&n2), &w3, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+-        let r = guard(|| {
+-            let ctx = ProvingContext::new(mk());
+-            let d = k.n3.engine.device().transport_pk_to_device(&k.n3.pk);
+-            let q = k.n3.engine.prove(&d, ctx).map_err(|e| format!("prove: {e:?}"))?;
+-            vr(k.n3.engine.verify(&k.n3.vk, &q))
+-        });
+-        cases.rec(&format!("n3_prove_without_{name}"), false, r, &format!("prover path, air {i}"));
+-        let st = strip(&n3, i);
+-        cases.rec(&format!("n3_stock_verify_without_{name}"), false, vr(k.n3.engine.verify(&k.n3.vk, &st)), &format!("stock verifier, air {i}"));
+-        let r = lk.prove_try(&k.n3.vk, &st, &w, &words, true).1;
+-        cases.rec(&format!("n3_parent_over_child_without_{name}"), false, r, "L over the stripped N3 proof (mutant prover)");
+-    }
+-    let (lp, r) = lk.prove_try(&k.n3.vk, &n3, &w, &words, false);
+-    cases.rec("l_honest", true, r, "honest");
+-    let lp = lp.unwrap();
+-    let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
+-    cases.rec("lfr_tape_honest", true, lfr_gen(&lk.vk, &lp, l_pin).map(|_| ()), "honest");
+-    let d_pk = lk.engine.device().transport_pk_to_device(&lk.pk);
+-    for name in ["StmtAir", "ProofShapeAir", "PublicValuesAir", "RootSealAir"] {
+-        let i = air_idx(&lk.airs, name);
+-        let r = guard(|| {
+-            let ctx = ProvingContext::new(lk.ctxs(&k.n3.vk, &n3, &w, &words).into_iter().enumerate().filter(|(j, _)| *j != i).collect());
+-            let q = lk.engine.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}"))?;
+-            vr(lk.engine.verify(&lk.vk, &q))
+-        });
+-        cases.rec(&format!("l_prove_without_{name}"), false, r, &format!("prover path, air {i}"));
+-        let st = strip(&lp, i);
+-        cases.rec(&format!("l_stock_verify_without_{name}"), false, vr(lk.engine.verify(&lk.vk, &st)), &format!("stock verifier, air {i}"));
+-        cases.rec(&format!("lfr_tape_stripped_shape_without_{name}"), false, guard(|| lfr_gen(&lk.vk, &st, l_pin).map(|_| ())), "L_Fr tape generator, shape of the stripped proof");
+-        let honest = LShape::of(&lp);
+-        let mut g = Gen::new();
+-        g.pinned_cached = Some(vec![l_pin]);
+-        let r = guard(|| gen_verifier_full(&mut g, &lk.vk, &honest, &st).map(|_| ()).map_err(|e| format!("{e:?}")));
+-        cases.rec(&format!("lfr_tape_honest_shape_without_{name}"), false, r, "L_Fr tape generator, the pinned honest shape");
+-    }
+-    let all = cases.0.iter().all(|c| c["pass"].as_bool().unwrap());
+-    let doc = json!({"all_pass": all, "all_required": req, "app_shape": app.shape, "sg6": sg6, "cases": cases.0, "keys": k.log});
+-    fs::write(out.join("omit.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+-    println!("SLICEOMIT all_required {}", serde_json::to_string(&req).unwrap());
+-    println!("SLICEOMIT all_pass={all}");
+-    assert!(all, "an omitted-AIR case did not behave as expected");
+-}
+-
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+     let out = PathBuf::from(&a[2]);
+     fs::create_dir_all(&out).unwrap();
+     match a[1].as_str() {
+-        "chain" => chain(&out, if a.get(3).map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A }),
+-        "cases" => cases_mode(&out),
+-        "omit" => omit(&out),
++        // T10m: the L layer is the production one of `t7_chain` (T7c path C, T10 log tie)
++        "chain" => t7_chain::chain(&out, if a.get(3).map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A }),
++        "cases" => t7_chain::cases_mode(&out),
++        "omit" => t7_chain::omit(&out),
+         "x7probe" => x7_probe(&out),
+         "gp2" => gp2(&out),
+         "x7" => x7(&out),
+-- 
+2.56.0
+

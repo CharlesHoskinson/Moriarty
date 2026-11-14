@@ -1,0 +1,51 @@
+From acf1856c1daeb433152112f290c250d5f4f9981d Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 10:15:09 -0700
+Subject: [PATCH 3/5] T10m: lfr_e3 reads an L_iface fixture at Dims::FULL
+ (12,166 words)
+
+The J8 bench L proof (~/.cache/e3-iface/fixture-j8) has 12,164 public words,
+from before T9's FP-3 (5 lane pairs, 12,166 words), so gen_r_check panicked at
+lverify.rs:1648. lfr_e3 now reads ~/.cache/e3-iface/fixture-t10m (written by
+sherlock-lfr iface_fixture on this tree) and checks the word count first, with
+the regeneration command in the message.
+---
+ crates/sherlock-wrap-export/examples/lfr_e3.rs | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/lfr_e3.rs b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+index 48e1a09..2ea96bb 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_e3.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_e3.rs
+@@ -365,7 +365,7 @@ fn main() {
+         format!("{}/.cache/e5-wrap/fixtures", std::env::var("HOME").unwrap())
+     }));
+     let fx = PathBuf::from(std::env::var("E3_FIXTURE_DIR").unwrap_or_else(|_| {
+-        format!("{}/.cache/e3-iface/fixture-j8", std::env::var("HOME").unwrap())
++        format!("{}/.cache/e3-iface/fixture-t10m", std::env::var("HOME").unwrap())
+     }));
+     fs::create_dir_all(&out).unwrap();
+     let vk_l: MultiStarkVerifyingKey<LSC> =
+@@ -375,6 +375,19 @@ fn main() {
+             .unwrap();
+     let (_, ok) = stock_log(&vk_l, &proof_l);
+     assert!(ok, "stock verifier accepts L");
++    // T10m: the J8 bench fixture (`fixture-j8`) predates T9's FP-3 (5 lane pairs, 12,166 words)
++    // and has 12,164 public words, so `gen_r_check` refused it. The fixture is the `L_iface` of
++    // `sherlock-lfr` `iface_fixture` at `Dims::FULL` (`E3_FIXTURE_DIR=<dir> iface_fixture`).
++    let n_pub: usize = proof_l.public_values.iter().map(|v| v.len()).sum();
++    assert_eq!(
++        n_pub,
++        Dims::FULL.words(),
++        "the L proof in {} has {n_pub} public words, Dims::FULL has {}: regenerate it with \
++         `E3_FIXTURE_DIR={} cargo run --release -p sherlock-lfr --example iface_fixture`",
++        fx.display(),
++        Dims::FULL.words(),
++        fx.display()
++    );
+     let shape = LShape::of(&proof_l);
+     let mut g = Gen::new();
+     let (words, l_pub) = gen_verifier_full(&mut g, &vk_l, &shape, &proof_l).expect("pinned shape");
+-- 
+2.56.0
+

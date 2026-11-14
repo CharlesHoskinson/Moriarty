@@ -1,0 +1,54 @@
+From 805d86a69ddb1b77683acc51d947778e08ede71e Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 14:59:42 -0700
+Subject: [PATCH 5/5] T10m: t8_gp layers carry T10's h_hi range table, so its
+ N1 is the universal N1
+
+t8_gp's own layer() built N1 without HhiRangeAir (T10), while the First
+statement AIR looks up the h_hi limbs on bus 963: the First prove failed with
+LogupZerocheck(NonZeroRootSum) and the key differed from t7_chain's. The layer
+now pushes HhiRangeAir after PermSpongeAir and its trace, as t7_chain does.
+keys() prints key_root, keys_d and the N1 pre-hash (T8GPKEYS) to compare with
+t7_chain's records.
+---
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index a905c9e..18abb28 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -156,6 +156,10 @@ fn layer<const N: usize>(
+     if kind != Kind::Leaf {
+         airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
+     }
++    if kind == Kind::First {
++        // T10 (as in t7_chain): the 16-bit table of the h_hi limbs
++        airs.push(Arc::new(stmt::HhiRangeAir));
++    }
+     let (pk, vk) = kg(set, &engine, &airs, label, log);
+     check_layout(&vk, &kind);
+     Layer { circuit, kind, engine, pk, vk, airs, perm }
+@@ -228,6 +232,10 @@ impl<const N: usize> Layer<N> {
+                 .expect("verifier traces"),
+         );
+         v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&st)), vec![]));
++        if self.kind == Kind::First {
++            let rt = stmt::hhi_range_trace(&tr);
++            v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&rt)), vec![]));
++        }
+         let _ = self.perm;
+         v
+     }
+@@ -373,6 +381,8 @@ fn keys() -> Keys {
+         // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
+         foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
++    // T10m: the key set of t7_chain (compare with `T10CALL` key_root and keys_d in its key-A log)
++    println!("T8GPKEYS key_root {} keys_d {} n1_pre {}", dhex(&key_root), dhex(&table.keys_d()), dhex(&n1[0].vk.pre_hash));
+     Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, nw2, triples, tree, key_root, table, log }
+ }
+ 
+-- 
+2.56.0
+

@@ -1,0 +1,3456 @@
+From aa4573fd90d51eadef65a8c705f576343938b094 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 10:15:02 -0700
+Subject: [PATCH 1/5] Merge t10-bound (T10, 33371a6) into t10mm (tested at T8b,
+ 89bee35)
+
+Conflicts resolved keeping both rows: Cargo.toml keeps the T8b stark-backend
+copy (../stark-backend-t8b, the same deeeb0a as ../stark-backend-t7c); leaf.rs
+keeps the T8b imports (VExtra, DecVAir, R_CNULL, R_PUBV); t7_chain Keys holds
+nw, nw2 (T8b) and pc (T7c/T10).
+
+KEYDAG_IDX is 3: T8b puts three chip-set leaves (0, 1, 2) in key_root, so the
+path C DAG key leaf is leaf 3 (the key tree pads to 4 leaves, depth 2 as before).
+
+First-parent diff of merge 9f3b521.
+---
+ .../expr_eval/symbolic_expression/air.rs      |   21 +
+ .../expr_eval/symbolic_expression/trace.rs    |   40 +
+ crates/recursion/src/batch_constraint/mod.rs  |   44 +-
+ crates/recursion/src/proof_shape/mod.rs       |   20 +-
+ .../src/proof_shape/proof_shape/air.rs        |  129 ++-
+ .../src/proof_shape/proof_shape/mod.rs        |    4 +-
+ .../src/proof_shape/proof_shape/trace.rs      |   88 +-
+ crates/recursion/src/system/mod.rs            |   19 +-
+ crates/sherlock-leaf/src/core.rs              |   24 +-
+ crates/sherlock-leaf/src/lib.rs               |   16 +
+ crates/sherlock-leaf/src/s8/mod.rs            |    8 +
+ crates/sherlock-lfr/src/iface.rs              |   27 +-
+ crates/sherlock-lfr/src/iface_l.rs            |   46 +-
+ crates/sherlock-lfr/src/lverify.rs            |    6 +
+ crates/sherlock-lfr/src/stmt.rs               |  473 +++++++-
+ .../sherlock-wrap-export/examples/fp8_d3.rs   |    7 +-
+ .../sherlock-wrap-export/examples/lfr_call.rs |  405 +------
+ .../sherlock-wrap-export/examples/t7_chain.rs | 1028 +++++++++++++++--
+ crates/sherlock-wrap-export/examples/t8_gp.rs |   11 +-
+ 19 files changed, 1859 insertions(+), 557 deletions(-)
+ create mode 100644 crates/sherlock-leaf/src/s8/mod.rs
+
+diff --git a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
+index 5f29a97..189a14b 100644
+--- a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
++++ b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
+@@ -117,6 +117,10 @@ pub struct SymbolicExpressionAir<F: Field> {
+ 
+     pub cnt_proofs: usize,
+     pub dag_commit_subair: Option<Arc<DagCommitSubAir<F>>>,
++    /// T7c child-meta mode (`L` only): the meta rows of the cached trace (the invalid flag point
++    /// with `is_constraint = 1`) are sent on this bus as `(air_idx, group, attrs[3], fanout,
++    /// constraint_idx)` to the proof-shape AIR. One proof slot only.
++    pub meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
+ }
+ // No columns provided: width is dynamic, depending on `cnt_proofs` and on whether
+ // `dag_commit_subair` is present, and mixes several column structs.
+@@ -224,6 +228,23 @@ where
+         assert_eq!(enc.width(), NUM_FLAGS);
+         let flags = cached_cols.flags;
+         let is_valid_row = enc.is_valid::<AB>(&flags);
++        if let Some(mb) = self.meta_bus {
++            assert_eq!(self.cnt_proofs, 1, "T7c meta mode: one proof slot");
++            let msg: Vec<AB::Expr> = vec![
++                cached_cols.air_idx.into(),
++                cached_cols.node_or_interaction_idx.into(),
++                cached_cols.attrs[0].into(),
++                cached_cols.attrs[1].into(),
++                cached_cols.attrs[2].into(),
++                cached_cols.fanout.into(),
++                cached_cols.constraint_idx.into(),
++            ];
++            openvm_stark_backend::interaction::PermutationCheckBus::new(mb).send(
++                builder,
++                msg,
++                (AB::Expr::ONE - is_valid_row.clone()) * cached_cols.is_constraint,
++            );
++        }
+ 
+         let is_arg0_node_idx = enc.contains_flag::<AB>(
+             &flags,
+diff --git a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
+index e66f866..e3436b1 100644
+--- a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
++++ b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
+@@ -688,6 +688,46 @@ pub(crate) fn generate_symbolic_expr_cached_trace(
+     RowMajorMatrix::new(cached_trace, cached_width)
+ }
+ 
++/// T7c child-meta mode: [`generate_symbolic_expr_cached_trace`] with the meta rows of the child
++/// key after the DAG rows, at the fixed `height`. A meta row has the invalid flag point (no DAG
++/// node) and `is_constraint = 1`; it carries `(air_idx, group, attrs[3], fanout,
++/// constraint_idx)` = `(i, g, the 5 values of group g of AIR i)`; the end row is
++/// `(num_airs, TERM, 0, ..)`.
++pub(crate) fn generate_symbolic_expr_cached_trace_meta(
++    cached_trace_record: &CachedTraceRecord,
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    height: usize,
++) -> RowMajorMatrix<F> {
++    use crate::proof_shape::proof_shape::air::meta;
++    let base = generate_symbolic_expr_cached_trace(cached_trace_record);
++    let cached_width = CachedSymbolicExpressionColumns::<F>::width();
++    let n = child_vk.inner.per_air.len();
++    let dag_rows = cached_trace_record.records.len();
++    let rows = dag_rows + 3 * n + 1;
++    assert!(height.is_power_of_two() && rows <= height, "T7c meta: {rows} cached rows over the fixed height {height}");
++    let mut v = F::zero_vec(cached_width * height);
++    v[..dag_rows * cached_width].copy_from_slice(&base.values[..dag_rows * cached_width]);
++    let mut r = dag_rows;
++    let mut put = |r: usize, air: usize, g: usize, vals: [F; meta::VALS]| {
++        let cols: &mut CachedSymbolicExpressionColumns<F> = v[r * cached_width..(r + 1) * cached_width].borrow_mut();
++        cols.air_idx = F::from_usize(air);
++        cols.node_or_interaction_idx = F::from_usize(g);
++        cols.attrs = [vals[0], vals[1], vals[2]];
++        cols.fanout = vals[3];
++        cols.constraint_idx = vals[4];
++        cols.is_constraint = F::ONE;
++    };
++    for i in 0..n {
++        let m = crate::proof_shape::proof_shape::trace::meta_row(child_vk, i, crate::proof_shape::proof_shape::trace::meta_gcsi(child_vk, i));
++        for (g, cols) in meta::GROUPS.iter().enumerate() {
++            put(r, i, g, cols.map(|c| c.map_or(F::ZERO, |c| m[c])));
++            r += 1;
++        }
++    }
++    put(r, n, meta::TERM, [F::ZERO; meta::VALS]);
++    RowMajorMatrix::new(v, cached_width)
++}
++
+ #[cfg(feature = "cuda")]
+ pub(in crate::batch_constraint) mod cuda {
+ 
+diff --git a/crates/recursion/src/batch_constraint/mod.rs b/crates/recursion/src/batch_constraint/mod.rs
+index 0adfe6f..ec02b84 100644
+--- a/crates/recursion/src/batch_constraint/mod.rs
++++ b/crates/recursion/src/batch_constraint/mod.rs
+@@ -80,6 +80,37 @@ mod cuda_utils;
+ /// AIR index within the BatchConstraintModule
+ pub(crate) const LOCAL_SYMBOLIC_EXPRESSION_AIR_IDX: usize = 0;
+ 
++/// T7c child-meta mode: the cached DAG trace of `child_vk` with the meta rows of every child
++/// AIR appended (then the end row), at the fixed `height`, committed. Its commitment is the `X`
++/// of `L`: it fixes the child constraint DAG and every per-AIR value that the proof-shape AIR
++/// reads, so the `L` key does not depend on the child key.
++pub fn commit_child_vk_meta<E>(
++    engine: &E,
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    height: usize,
++) -> CommittedTraceData<E::PB>
++where
++    E: StarkEngine,
++    E::SC: StarkProtocolConfig<F = F>,
++{
++    let cached_trace_record = expr_eval::build_cached_trace_record(child_vk, true);
++    let cached_trace = expr_eval::generate_symbolic_expr_cached_trace_meta(&cached_trace_record, child_vk, height);
++    let cached_trace = ColMajorMatrix::from_row_major(&cached_trace);
++    let cached_trace = engine.device().transport_matrix_to_device(&cached_trace);
++    let (commitment, data) = engine.device().commit(&[&cached_trace]).unwrap();
++    CommittedTraceData {
++        commitment,
++        data: Arc::new(data),
++        trace: cached_trace,
++    }
++}
++
++/// T7c: rows of the cached DAG trace of `child_vk` (DAG rows plus meta rows), the least fixed
++/// height a child-meta `L` needs.
++pub fn meta_cached_rows(child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>) -> usize {
++    expr_eval::build_cached_trace_record(child_vk, true).records.len() + 3 * child_vk.inner.per_air.len() + 1
++}
++
+ pub fn commit_child_vk<E>(
+     engine: &E,
+     child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
+@@ -145,6 +176,9 @@ pub struct BatchConstraintModule {
+ 
+     max_num_proofs: usize,
+     pub(crate) has_cached: bool,
++    /// T7c child-meta mode (`L` only): the meta bus and the fixed height of the cached DAG trace
++    /// (DAG rows, then the meta rows of the child key).
++    pub(crate) meta: Option<(openvm_stark_backend::interaction::BusIndex, usize)>,
+ }
+ 
+ impl BatchConstraintModule {
+@@ -198,6 +232,7 @@ impl BatchConstraintModule {
+             max_constraint_degree,
+             max_num_proofs,
+             has_cached,
++            meta: None,
+         }
+     }
+ 
+@@ -352,6 +387,7 @@ impl AirModule for BatchConstraintModule {
+             sel_uni_bus: self.sel_uni_bus,
+             cnt_proofs: self.max_num_proofs,
+             dag_commit_subair: (!self.has_cached).then_some(Arc::new(DagCommitSubAir::new())),
++            meta_bus: self.meta.map(|m| m.0),
+         };
+         let fraction_folder_air = FractionsFolderAir {
+             transcript_bus: self.transcript_bus,
+@@ -754,9 +790,15 @@ impl<SC: StarkProtocolConfig<F = F>> TraceGenModule<GlobalCtxCpu, CpuBackend<SC>
+             .par_iter()
+             .map(|chip| {
+                 let _guard = span.enter();
++                // T7c: in the child-meta mode the main trace of the DAG AIR has the fixed height
++                // of its cached trace.
++                let meta_h = match chip {
++                    BatchConstraintModuleChip::SymbolicExpression { .. } => self.meta.map(|m| m.1),
++                    _ => None,
++                };
+                 chip.generate_proving_ctx(
+                     &ctx,
+-                    required_heights.map(|heights| heights[chip.index()]),
++                    required_heights.map(|heights| heights[chip.index()]).or(meta_h),
+                 )
+             })
+             .collect::<Vec<_>>()
+diff --git a/crates/recursion/src/proof_shape/mod.rs b/crates/recursion/src/proof_shape/mod.rs
+index 5496e68..ac00951 100644
+--- a/crates/recursion/src/proof_shape/mod.rs
++++ b/crates/recursion/src/proof_shape/mod.rs
+@@ -79,6 +79,9 @@ pub struct ProofShapeModule {
+     // Module sends extra public values message for use outside of verifier
+     // sub-circuit if true
+     continuations_enabled: bool,
++
++    /// T7c child-meta mode (set by `VerifierSubCircuit` for `L`): the bus of the meta rows.
++    pub(crate) meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
+ }
+ 
+ impl ProofShapeModule {
+@@ -144,6 +147,7 @@ impl ProofShapeModule {
+             max_cached,
+             commit_mult: mvk.params.whir.rounds.first().unwrap().num_queries,
+             continuations_enabled,
++            meta_bus: None,
+         }
+     }
+ 
+@@ -229,6 +233,18 @@ impl ProofShapeModule {
+     }
+ }
+ 
++impl ProofShapeModule {
++    /// T7c: switch to the child-meta mode on bus `bus`. The child must have its fewest cached
++    /// mains at AIR 0, at most one cached main per AIR and no preprocessed AIR, so the key of
++    /// the AIR is the same for every such child at the same parameters.
++    pub(crate) fn set_meta(&mut self, bus: openvm_stark_backend::interaction::BusIndex) {
++        assert_eq!(self.min_cached_idx, 0, "T7c meta mode: AIR 0 must have no cached main");
++        assert_eq!(self.max_cached, 1, "T7c meta mode: at most one cached main per AIR");
++        assert!(self.per_air.iter().all(|a| a.preprocessed_data.is_none()), "T7c meta mode: no preprocessed AIR");
++        self.meta_bus = Some(bus);
++    }
++}
++
+ impl AirModule for ProofShapeModule {
+     fn num_airs(&self) -> usize {
+         3
+@@ -263,6 +279,7 @@ impl AirModule for ProofShapeModule {
+             cached_commit_bus: self.bus_inventory.cached_commit_bus,
+             pre_hash_bus: self.bus_inventory.pre_hash_bus,
+             continuations_enabled: self.continuations_enabled,
++            meta_bus: self.meta_bus,
+         };
+         let pvs_air = PublicValuesAir {
+             public_values_bus: self.bus_inventory.public_values_bus,
+@@ -303,13 +320,14 @@ impl<SC: StarkProtocolConfig<F = F>> TraceGenModule<GlobalCtxCpu, CpuBackend<SC>
+         let external_range_checks = ctx.1;
+ 
+         let range_checker = Arc::new(RangeCheckerCpuTraceGenerator::<8>::default());
+-        let proof_shape = proof_shape::ProofShapeChip::<4, 8>::new(
++        let mut proof_shape = proof_shape::ProofShapeChip::<4, 8>::new(
+             self.idx_encoder.clone(),
+             self.min_cached_idx,
+             self.max_cached,
+             range_checker.clone(),
+             pow_checker.clone(),
+         );
++        proof_shape.meta = self.meta_bus.is_some();
+         let ctx = (child_vk, proofs, preflights);
+         let chips = [
+             ProofShapeModuleChip::ProofShape(proof_shape),
+diff --git a/crates/recursion/src/proof_shape/proof_shape/air.rs b/crates/recursion/src/proof_shape/proof_shape/air.rs
+index f1435dc..e2e1e28 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/air.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/air.rs
+@@ -170,17 +170,59 @@ pub struct ProofShapeAir<const NUM_LIMBS: usize, const LIMB_BITS: usize> {
+     pub cached_commit_bus: CachedCommitBus,
+     pub pre_hash_bus: PreHashBus,
+     pub continuations_enabled: bool,
++
++    /// T7c child-meta mode (`L` only): the per-AIR metadata of the child key is read from the
++    /// meta rows of the cached DAG trace on this bus, not baked in as key constants, so the key
++    /// of this AIR does not depend on the child key. `per_air` and `idx_encoder` are then unused
++    /// by the constraints; `min_cached_idx` is 0 and `max_cached` is 1.
++    pub meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
++}
++
++/// T7c child-meta columns (in place of the AIR index encoder flags).
++pub mod meta {
++    pub const AIR: usize = 0;
++    pub const AIR0: usize = 1;
++    pub const ROT: usize = 2;
++    pub const MW: usize = 3;
++    pub const NPV: usize = 4;
++    pub const HPV: usize = 5;
++    pub const REQ: usize = 6;
++    pub const CP: usize = 7;
++    pub const CW: usize = 8;
++    pub const GC: usize = 9;
++    pub const NI: usize = 10; // 4 limbs
++    pub const N: usize = 14;
++    pub const W: usize = 15;
++    /// Values per meta row of the cached DAG trace, and the groups: `g` of air `i` carries the
++    /// columns `GROUPS[g]`; group `TERM` (air index = the AIR count) ends the table.
++    pub const VALS: usize = 5;
++    pub const GROUPS: [[Option<usize>; VALS]; 3] = [
++        [Some(AIR0), Some(ROT), Some(MW), Some(NPV), Some(HPV)],
++        [Some(REQ), Some(CP), Some(CW), Some(GC), Some(NI)],
++        [Some(NI + 1), Some(NI + 2), Some(NI + 3), None, None],
++    ];
++    pub const TERM: usize = 3;
+ }
+ 
+ impl<F, const NUM_LIMBS: usize, const LIMB_BITS: usize> BaseAir<F>
+     for ProofShapeAir<NUM_LIMBS, LIMB_BITS>
+ {
+     fn width(&self) -> usize {
+-        ProofShapeCols::<F, NUM_LIMBS>::width()
+-            + self.idx_encoder.width()
+-            + self.max_cached * DIGEST_SIZE
++        ProofShapeCols::<F, NUM_LIMBS>::width() + self.var_width() + self.max_cached * DIGEST_SIZE
+     }
+ }
++impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> ProofShapeAir<NUM_LIMBS, LIMB_BITS> {
++    /// Width of the variable block before the cached commits: the encoder flags, or the T7c
++    /// child-meta columns.
++    pub fn var_width(&self) -> usize {
++        if self.meta_bus.is_some() {
++            meta::W
++        } else {
++            self.idx_encoder.width()
++        }
++    }
++}
++
+ impl<F, const NUM_LIMBS: usize, const LIMB_BITS: usize> BaseAirWithPublicValues<F>
+     for ProofShapeAir<NUM_LIMBS, LIMB_BITS>
+ {
+@@ -212,21 +254,23 @@ where
+ 
+         let localv = borrow_var_cols::<AB::Var>(
+             &local[const_width..],
+-            self.idx_encoder.width(),
++            self.var_width(),
+             self.max_cached,
+         );
+         let nextv = borrow_var_cols::<AB::Var>(
+             &next[const_width..],
+-            self.idx_encoder.width(),
++            self.var_width(),
+             self.max_cached,
+         );
+         let local: &ProofShapeCols<AB::Var, NUM_LIMBS> = (*local)[..const_width].borrow();
+         let next: &ProofShapeCols<AB::Var, NUM_LIMBS> = (*next)[..const_width].borrow();
+ 
+-        self.idx_encoder.eval(builder, localv.idx_flags);
+-        builder
+-            .when(local.is_valid)
+-            .assert_one(self.idx_encoder.is_valid::<AB>(localv.idx_flags));
++        if self.meta_bus.is_none() {
++            self.idx_encoder.eval(builder, localv.idx_flags);
++            builder
++                .when(local.is_valid)
++                .assert_one(self.idx_encoder.is_valid::<AB>(localv.idx_flags));
++        }
+ 
+         NestedForLoopSubAir::<1> {}.eval(
+             builder,
+@@ -296,7 +340,49 @@ where
+         let mut current_air_found = AB::Expr::ZERO;
+         let mut global_cached_start_idx = AB::Expr::ZERO;
+ 
+-        for (i, air_data) in self.per_air.iter().enumerate() {
++        if let Some(mb) = self.meta_bus {
++            // T7c: the selected values are meta columns, each fixed by a lookup of the meta rows
++            // of the cached DAG trace (the commitment `X` of the child key); zero off valid rows.
++            let m = |i: usize| -> AB::Expr { localv.idx_flags[i].into() };
++            let mn = |i: usize| -> AB::Expr { nextv.idx_flags[i].into() };
++            for i in 0..meta::W {
++                if i != meta::N {
++                    builder.assert_zero(not::<AB::Expr>(local.is_valid.into()) * m(i));
++                }
++            }
++            builder.when(local.is_valid).assert_eq(mn(meta::N), m(meta::N));
++            for b in [meta::AIR0, meta::ROT, meta::HPV, meta::REQ, meta::CP] {
++                builder.assert_bool(m(b));
++            }
++            air_idx = m(meta::AIR);
++            need_rot = m(meta::ROT);
++            main_common_width = m(meta::MW);
++            has_pvs = m(meta::HPV);
++            num_pvs = m(meta::NPV);
++            next_air_idx = mn(meta::AIR);
++            for i in 0..NUM_LIMBS {
++                num_interactions_per_row[i] = m(meta::NI + i);
++                num_interactions += m(meta::NI + i) * AB::F::from_usize(1 << (i * LIMB_BITS));
++            }
++            is_required = m(meta::REQ);
++            builder
++                .when(local.is_valid)
++                .assert_zero(m(meta::REQ) * not::<AB::Expr>(local.is_present.into()));
++            is_min_cached = m(meta::AIR0);
++            cached_present[0] = m(meta::CP);
++            cached_widths[0] = m(meta::CW);
++            global_cached_start_idx = m(meta::GC);
++            let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(mb);
++            for (g, cols) in meta::GROUPS.iter().enumerate() {
++                let mut msg = vec![m(meta::AIR), AB::Expr::from_usize(g)];
++                msg.extend(cols.iter().map(|c| c.map_or(AB::Expr::ZERO, &m)));
++                bus.receive(builder, msg, local.is_valid);
++            }
++            let mut msg = vec![m(meta::N), AB::Expr::from_usize(meta::TERM)];
++            msg.extend((0..meta::VALS).map(|_| AB::Expr::ZERO));
++            bus.receive(builder, msg, local.is_last);
++        }
++        for (i, air_data) in self.per_air.iter().enumerate().filter(|_| self.meta_bus.is_none()) {
+             // We keep a running tally of how many transcript reads there should be up to any
+             // given point, and use that to constrain initial_tidx
+             let is_current_air = self.idx_encoder.get_flag_expr::<AB>(i, localv.idx_flags);
+@@ -437,7 +523,16 @@ where
+         ///////////////////////////////////////////////////////////////////////////////////////////
+         // TRANSCRIPT OBSERVATIONS
+         ///////////////////////////////////////////////////////////////////////////////////////////
+-        let is_first_idx = self.idx_encoder.get_flag_expr::<AB>(0, localv.idx_flags);
++        let is_first_idx = if self.meta_bus.is_some() {
++            localv.idx_flags[meta::AIR0].into()
++        } else {
++            self.idx_encoder.get_flag_expr::<AB>(0, localv.idx_flags)
++        };
++        let num_airs: AB::Expr = if self.meta_bus.is_some() {
++            localv.idx_flags[meta::N].into()
++        } else {
++            AB::Expr::from_usize(self.per_air.len())
++        };
+         builder
+             .when(is_first_idx.clone())
+             .assert_eq(local.starting_tidx, AB::Expr::from_usize(2 * DIGEST_SIZE));
+@@ -447,7 +542,7 @@ where
+             local.proof_idx,
+             StartingTidxMessage {
+                 air_idx: air_idx.clone() * local.is_valid
+-                    + AB::Expr::from_usize(self.per_air.len()) * local.is_last,
++                    + num_airs.clone() * local.is_last,
+                 tidx: local.starting_tidx.into(),
+             },
+             or(
+@@ -881,9 +976,13 @@ where
+         builder.assert_bool(local.is_last);
+         builder.when(local.is_last).assert_zero(local.is_valid);
+         builder.when(next.is_last).assert_one(local.is_valid);
+-        builder
+-            .when(local.sorted_idx - AB::F::from_usize(self.per_air.len() - 1))
+-            .assert_zero(next.is_last);
++        // the stock expression without meta (keys of every other layer byte-identical to T7)
++        let not_last_idx: AB::Expr = if self.meta_bus.is_some() {
++            local.sorted_idx + AB::F::ONE - num_airs.clone()
++        } else {
++            local.sorted_idx - AB::F::from_usize(self.per_air.len() - 1)
++        };
++        builder.when(not_last_idx).assert_zero(next.is_last);
+ 
+         builder.when(local.is_last).assert_one(or(
+             next.is_first,
+diff --git a/crates/recursion/src/proof_shape/proof_shape/mod.rs b/crates/recursion/src/proof_shape/proof_shape/mod.rs
+index 7182101..a906d6c 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/mod.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/mod.rs
+@@ -1,5 +1,5 @@
+-mod air;
+-mod trace;
++pub(crate) mod air;
++pub(crate) mod trace;
+ 
+ pub use air::*;
+ pub(crate) use trace::*;
+diff --git a/crates/recursion/src/proof_shape/proof_shape/trace.rs b/crates/recursion/src/proof_shape/proof_shape/trace.rs
+index dc81398..e599006 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/trace.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/trace.rs
+@@ -43,6 +43,46 @@ pub(in crate::proof_shape) struct ProofShapeChip<const NUM_LIMBS: usize, const L
+     max_cached: usize,
+     range_checker: Arc<RangeCheckerCpuTraceGenerator<LIMB_BITS>>,
+     pow_checker: Arc<PowerCheckerCpuTraceGenerator<2, POW_CHECKER_HEIGHT>>,
++    /// T7c child-meta mode: meta columns in place of the encoder flags.
++    #[new(default)]
++    pub(in crate::proof_shape) meta: bool,
++}
++
++/// T7c: the meta columns of AIR `idx` of `child_vk` (`num_airs` in every valid row).
++pub(crate) fn meta_row(
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    idx: usize,
++    gcsi: usize,
++) -> [F; super::air::meta::W] {
++    use super::air::meta::*;
++    let avk = &child_vk.inner.per_air[idx];
++    assert!(avk.preprocessed_data.is_none(), "T7c meta mode: a child AIR with a preprocessed trace");
++    assert!(avk.params.width.cached_mains.len() <= 1, "T7c meta mode: more than one cached main");
++    let mut r = [F::ZERO; W];
++    r[AIR] = F::from_usize(idx);
++    r[AIR0] = F::from_bool(idx == 0);
++    r[ROT] = F::from_bool(avk.params.need_rot);
++    r[MW] = F::from_usize(avk.params.width.common_main);
++    r[NPV] = F::from_usize(avk.params.num_public_values);
++    r[HPV] = F::from_bool(avk.params.num_public_values != 0);
++    r[REQ] = F::from_bool(avk.is_required);
++    r[CP] = F::from_bool(!avk.params.width.cached_mains.is_empty());
++    r[CW] = F::from_usize(avk.params.width.cached_mains.first().copied().unwrap_or(0));
++    r[GC] = F::from_usize(gcsi);
++    let ni = decompose_usize::<4, 8>(avk.num_interactions());
++    for i in 0..4 {
++        r[NI + i] = F::from_usize(ni[i]);
++    }
++    r[N] = F::from_usize(child_vk.inner.per_air.len());
++    r
++}
++
++/// T7c: the global cached index at which AIR `idx` starts (number of cached mains before it).
++pub(crate) fn meta_gcsi(
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    idx: usize,
++) -> usize {
++    child_vk.inner.per_air[..idx].iter().map(|a| a.params.width.cached_mains.len()).sum()
+ }
+ 
+ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+@@ -77,7 +117,8 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+         let pow_checker = &self.pow_checker;
+         let num_airs = child_vk.inner.per_air.len();
+         let cols_width = ProofShapeCols::<usize, NUM_LIMBS>::width();
+-        let total_width = self.idx_encoder.width() + cols_width + self.max_cached * DIGEST_SIZE;
++        let var_width = if self.meta { super::air::meta::W } else { self.idx_encoder.width() };
++        let total_width = var_width + cols_width + self.max_cached * DIGEST_SIZE;
+         let l_skip = child_vk.inner.params.l_skip;
+ 
+         debug_assert_eq!(proofs.len(), preflights.len());
+@@ -152,17 +193,21 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+ 
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+ 
+-                for (i, flag) in idx_encoder
+-                    .get_flag_pt(*idx)
+-                    .iter()
+-                    .map(|x| F::from_u32(*x))
+-                    .enumerate()
+-                {
+-                    vcols.idx_flags[i] = flag;
++                if self.meta {
++                    vcols.idx_flags.copy_from_slice(&meta_row(child_vk, *idx, meta_gcsi(child_vk, *idx)));
++                } else {
++                    for (i, flag) in idx_encoder
++                        .get_flag_pt(*idx)
++                        .iter()
++                        .map(|x| F::from_u32(*x))
++                        .enumerate()
++                    {
++                        vcols.idx_flags[i] = flag;
++                    }
+                 }
+ 
+                 for (i, commit) in vdata.cached_commitments.iter().enumerate() {
+@@ -240,17 +285,21 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+ 
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+ 
+-                for (i, flag) in idx_encoder
+-                    .get_flag_pt(idx)
+-                    .iter()
+-                    .map(|x| F::from_u32(*x))
+-                    .enumerate()
+-                {
+-                    vcols.idx_flags[i] = flag;
++                if self.meta {
++                    vcols.idx_flags.copy_from_slice(&meta_row(child_vk, idx, meta_gcsi(child_vk, idx)));
++                } else {
++                    for (i, flag) in idx_encoder
++                        .get_flag_pt(idx)
++                        .iter()
++                        .map(|x| F::from_u32(*x))
++                        .enumerate()
++                    {
++                        vcols.idx_flags[i] = flag;
++                    }
+                 }
+ 
+                 if idx == min_cached_idx {
+@@ -353,10 +402,13 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+                 // We store the pre-hash of the child vk in the summary row
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+                 vcols.cached_commits[max_cached - 1] = child_vk.pre_hash;
++                if self.meta {
++                    vcols.idx_flags[super::air::meta::N] = F::from_usize(num_airs);
++                }
+             }
+         }
+ 
+diff --git a/crates/recursion/src/system/mod.rs b/crates/recursion/src/system/mod.rs
+index f1294c9..09fdafc 100644
+--- a/crates/recursion/src/system/mod.rs
++++ b/crates/recursion/src/system/mod.rs
+@@ -65,6 +65,10 @@ pub struct VerifierConfig {
+     pub continuations_enabled: bool,
+     pub final_state_bus_enabled: bool,
+     pub has_cached: bool,
++    /// T7c child-meta mode (`L` of Sherlock path C): `Some(h)` reads every per-AIR value of the
++    /// child key from meta rows of the cached DAG trace of fixed height `h`, so the key of this
++    /// circuit is one key for every child at the same parameters (one proof, cached DAG).
++    pub child_meta: Option<usize>,
+ }
+ 
+ impl Default for VerifierConfig {
+@@ -73,6 +77,7 @@ impl Default for VerifierConfig {
+             continuations_enabled: false,
+             final_state_bus_enabled: false,
+             has_cached: true,
++            child_meta: None,
+         }
+     }
+ }
+@@ -610,14 +615,14 @@ impl<const MAX_NUM_PROOFS: usize> VerifierSubCircuit<MAX_NUM_PROOFS> {
+             config.final_state_bus_enabled,
+         );
+         let child_mvk_frame = child_mvk.as_ref().into();
+-        let proof_shape = ProofShapeModule::new(
++        let mut proof_shape = ProofShapeModule::new(
+             &child_mvk_frame,
+             &mut bus_idx_manager,
+             bus_inventory.clone(),
+             config.continuations_enabled,
+         );
+         let gkr = GkrModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
+-        let batch_constraint = BatchConstraintModule::new(
++        let mut batch_constraint = BatchConstraintModule::new(
+             &child_mvk,
+             &mut bus_idx_manager,
+             bus_inventory.clone(),
+@@ -626,6 +631,13 @@ impl<const MAX_NUM_PROOFS: usize> VerifierSubCircuit<MAX_NUM_PROOFS> {
+         );
+         let stacking = StackingModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
+         let whir = WhirModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
++        if let Some(h) = config.child_meta {
++            // T7c: the meta bus is the last bus index, so the other buses keep their indices.
++            assert!(config.has_cached && MAX_NUM_PROOFS == 1, "T7c child-meta mode: cached DAG, one proof");
++            let mb = bus_idx_manager.new_bus_idx();
++            proof_shape.set_meta(mb);
++            batch_constraint.meta = Some((mb, h));
++        }
+ 
+         VerifierSubCircuit {
+             bus_inventory,
+@@ -1072,6 +1084,9 @@ impl<SC: StarkProtocolConfig<F = F>, const MAX_NUM_PROOFS: usize>
+     where
+         (): From<EngineDeviceCtx<E>>,
+     {
++        if let Some((_, h)) = self.batch_constraint.meta {
++            return crate::batch_constraint::commit_child_vk_meta(engine, child_vk, h);
++        }
+         crate::batch_constraint::commit_child_vk(engine, child_vk, self.batch_constraint.has_cached)
+     }
+ 
+diff --git a/crates/sherlock-leaf/src/core.rs b/crates/sherlock-leaf/src/core.rs
+index a7925db..b4d650e 100644
+--- a/crates/sherlock-leaf/src/core.rs
++++ b/crates/sherlock-leaf/src/core.rs
+@@ -23,9 +23,10 @@ use crate::{
+     sponge::Call,
+ };
+ 
+-/// Slots per shard (PICK for the slice: 4; AD-6 working value S = 16).
+-pub const S: usize = 4;
+-pub const HEIGHT: usize = 8;
++/// Slots per shard (PICK for the slice: 4; AD-6 working value S = 16). T7c: 8 in the path C
++/// bucket [`crate::s8`].
++pub const S: usize = crate::slots(module_path!());
++pub const HEIGHT: usize = 2 * S;
+ /// State words per row: body + header (`outcome_tag`, `outcome_payload`, `input_d`, `deps_d`,
+ /// `view_root`).
+ pub const HW: usize = 1 + 4 * D;
+@@ -345,12 +346,19 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+             builder.when_transition().assert_eq(nx(C_RIDS + j), c(C_RIDS + j));
+             builder.assert_zero(c(C_B + j) * (c(C_RIDS + j) - c(C_KEY)));
+         }
+-        let mut rw = vec![ce::<AB>(seq::RULES), zero.clone(), ce::<AB>(1 + S as u32), ce::<AB>(SHK_RULES)];
+-        rw.extend((0..S).map(|j| c(C_RIDS + j)));
+-        while rw.len() < 11 {
+-            rw.push(zero.clone());
++        // `(seq, blk, len, 8 words)` per block of `[SHK_RULES, rids]` (one block at S = 4; T7c:
++        // two at S = 8)
++        let mut ws = vec![ce::<AB>(SHK_RULES)];
++        ws.extend((0..S).map(|j| c(C_RIDS + j)));
++        while ws.len() % 8 != 0 {
++            ws.push(zero.clone());
++        }
++        for (k, b) in ws.chunks(8).enumerate() {
++            let blk = if k == 0 { zero.clone() } else { ce::<AB>(k as u32) };
++            let mut rw = vec![ce::<AB>(seq::RULES), blk, ce::<AB>(1 + S as u32)];
++            rw.extend(b.iter().cloned());
++            bus::perm(bus::PORT_SPONGE_IN).send(builder, rw, b0.clone());
+         }
+-        bus::perm(bus::PORT_SPONGE_IN).send(builder, rw, b0.clone());
+         let mut ro = vec![ce::<AB>(seq::RULES)];
+         ro.extend((0..D).map(|i| c(C_RULES_D + i)));
+         bus::perm(bus::PORT_SPONGE_OUT).receive(builder, ro, b0.clone());
+diff --git a/crates/sherlock-leaf/src/lib.rs b/crates/sherlock-leaf/src/lib.rs
+index 9dd6422..4bbbdf0 100644
+--- a/crates/sherlock-leaf/src/lib.rs
++++ b/crates/sherlock-leaf/src/lib.rs
+@@ -14,3 +14,19 @@ pub mod rom;
+ pub mod leaf;
+ pub mod kits;
+ pub mod ext;
++
++/// T7c (path C, the one-leaf Compact call): the S = 8 shard bucket ([`s8`]).
++pub mod s8;
++
++/// Slots per shard of the CORE module at `module_path` (8 under [`s8`], else 4).
++pub const fn slots(module_path: &str) -> usize {
++    let b = module_path.as_bytes();
++    let mut i = 0;
++    while i + 4 <= b.len() {
++        if b[i] == b':' && b[i + 1] == b':' && b[i + 2] == b's' && b[i + 3] == b'8' {
++            return 8;
++        }
++        i += 1;
++    }
++    4
++}
+diff --git a/crates/sherlock-leaf/src/s8/mod.rs b/crates/sherlock-leaf/src/s8/mod.rs
+new file mode 100644
+index 0000000..f6e39ce
+--- /dev/null
++++ b/crates/sherlock-leaf/src/s8/mod.rs
+@@ -0,0 +1,8 @@
++//! T7c (path C, the one-leaf Compact call): the S = 8 shard bucket. The same `core.rs` and
++//! `leaf.rs` compiled a second time, with [`crate::slots`] = 8 (CORE height 16); the other AIRs
++//! are shared. `entry x;` (5 steps) is one shard here, two at S = 4.
++
++#[path = "../core.rs"]
++pub mod core;
++#[path = "../leaf.rs"]
++pub mod leaf;
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index 122d3ef..6bf8940 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -716,8 +716,8 @@ pub fn decode(d: &Dims, lfr_words: &[Fr]) -> Result<Vec<Fr>, String> {
+ /// the wrap reads from the `L_Fr` public words. Checks, in order:
+ ///
+ /// 1. unpack; range and `Canon` of every lane and logged value;
+-/// 2. `X` is 9 limbs of 30 bits with `Canon` and equals the key constant `keys.x`; `layout_d`
+-///    equals `keys.layout_d`;
++/// 2. `X` is 9 limbs of 30 bits with `Canon` (T10: `L_Fr` binds its value); `layout_d` equals
++///    `keys.layout_d`;
+ /// 3. entries: op admitted, `param` bounds, no used entry after a `NOP`, capacity, zero padding;
+ /// 4. `R` and the anchor rule (plan D-10) in the run form or the opening-proof form (entry 4
+ ///    `DIGEST(SHK_SET)`); the anchor entry words; the `claim_pub` inputs;
+@@ -744,10 +744,9 @@ pub fn decode_with(
+         let at = d.values_at() + LIMBS * j;
+         vs.push(dec(&w[at..at + LIMBS]).ok_or(format!("value {j}: range or Canon"))?);
+     }
+-    let x = dec(&w[X_WORD..X_WORD + LIMBS]).ok_or("X: range or Canon")?;
+-    if x != keys.x {
+-        return Err("X is not the pinned cached commitment".into());
+-    }
++    // T10 (lead, T7c pick): `L_Fr` checks `X` against the `L` cached commitment it reads, so the
++    // decoder keeps only the range and `Canon` of `X` (on path C `X` differs per program).
++    let _x = dec(&w[X_WORD..X_WORD + LIMBS]).ok_or("X: range or Canon")?;
+     if w[LAYOUT_WORD..LAYOUT_WORD + 8] != keys.layout_d {
+         return Err("layout_d is not the key constant".into());
+     }
+@@ -1120,13 +1119,11 @@ pub fn case_run_bound(
+         }
+         _ => {}
+     }
+-    // A bound run keeps the root statement's log words (T7: the `L` log tie is open, RESULTS
+-    // section 0).
+-    if bind.is_none() {
+-        let ld = onion(&log);
+-        head[LOG_D_WORD..LOG_D_WORD + 8].copy_from_slice(&ld);
+-        head[LOG_N_WORD] = log.len() as u64;
+-    }
++    // The log words are the onion of the tables, bound runs too (T10: `L` ties them by its
++    // onion AIR).
++    let ld = onion(&log);
++    head[LOG_D_WORD..LOG_D_WORD + 8].copy_from_slice(&ld);
++    head[LOG_N_WORD] = log.len() as u64;
+     (
+         Run {
+             dims: *d,
+@@ -1485,10 +1482,10 @@ mod tests {
+             let (run, _) = case_run(&d, case, 9);
+             let w = run.words();
+             assert_eq!(check(&run, &w), Ok(run.statement()), "{case:?}");
+-            // wrap_x_not_cached_commitment
++            // T10: an `X` other than `keys.x` decodes (`L_Fr` binds `X`, not the decoder)
+             let mut x = w.clone();
+             x[X_WORD] ^= 1;
+-            assert_eq!(check(&run, &x), Err("X is not the pinned cached commitment".into()));
++            assert!(check(&run, &x).is_ok(), "X is bound by L_Fr, not by the decoder");
+             let mut x = w.clone();
+             x[X_WORD + 8] = 1 << 30;
+             assert_eq!(check(&run, &x), Err("X: range or Canon".into()));
+diff --git a/crates/sherlock-lfr/src/iface_l.rs b/crates/sherlock-lfr/src/iface_l.rs
+index 6a363e8..7a99aed 100644
+--- a/crates/sherlock-lfr/src/iface_l.rs
++++ b/crates/sherlock-lfr/src/iface_l.rs
+@@ -71,6 +71,9 @@ pub struct IfaceAir {
+     /// T7: the leading `root_stmt` words that the root statement AIR of `L` exposes instead
+     /// (`Stmt` then carries words `skip..STMT`; 0 elsewhere).
+     pub skip: usize,
++    /// T7c: the production `L` ([`airs_with`], [`traces_with`]) keeps the carrier-only sections
++    /// bare ([`IfaceAir::bare`]); the bench `L_iface` ([`airs`], [`traces`]) keeps the carrier.
++    pub slim: bool,
+ }
+ 
+ // LogEntry columns after the carrier.
+@@ -117,6 +120,13 @@ impl IfaceAir {
+             }
+         }
+     }
++    /// T7c slimming: a carrier-only section (`Call`, and `Stmt` without the onion tie) has no
++    /// constraint that reads its cells, so its words stay public values of the AIR without the
++    /// carrier cells (one zero column). The words are bound by the transcript and exposed by
++    /// `L_Fr` as before; the carrier added no relation between them and any other value.
++    pub fn bare(&self) -> bool {
++        self.slim && (self.kind == Kind::Call || (self.kind == Kind::Stmt && !self.onion))
++    }
+     fn extra(&self) -> usize {
+         match self.kind {
+             Kind::LogEntry => E_W,
+@@ -128,6 +138,9 @@ impl IfaceAir {
+     /// The trace for the section's words (`words` = this AIR's public values).
+     /// `off_n` is the used value count of the run (read by `LogValue` only).
+     pub fn trace<F: Field>(&self, words: &[u64], off_n: u64) -> RowMajorMatrix<F> {
++        if self.bare() {
++            return RowMajorMatrix::new(vec![F::ZERO; 2], 1);
++        }
+         let c = self.carrier();
+         let fw: Vec<F> = words.iter().map(|&x| F::from_u64(x)).collect();
+         let mut rows = c.rows(&fw);
+@@ -184,11 +197,15 @@ fn bits_into<F: Field>(dst: &mut [F], x: u64) {
+ 
+ /// The traces and public values of the four interface AIRs for the `L` words of a run.
+ pub fn traces<F: Field>(dims: &Dims, words: &[u64]) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
+-    traces_with(dims, words, 0)
++    traces_impl(dims, words, 0, false)
+ }
+ 
+ /// [`traces`] with the first `skip` statement words left to the root statement AIR (T7).
+ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
++    traces_impl(dims, words, skip, true)
++}
++
++fn traces_impl<F: Field>(dims: &Dims, words: &[u64], skip: usize, slim: bool) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
+     assert_eq!(words.len(), dims.words());
+     let mut off_n = 0u64;
+     for i in 0..dims.b {
+@@ -203,6 +220,7 @@ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(Ro
+                 dims: *dims,
+                 onion: false,
+                 skip,
++                slim,
+             };
+             let (s, e) = a.section();
+             let ws = &words[s..e];
+@@ -213,6 +231,9 @@ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(Ro
+ 
+ impl<F: Field> BaseAir<F> for IfaceAir {
+     fn width(&self) -> usize {
++        if self.bare() {
++            return 1;
++        }
+         self.carrier().width() + self.extra()
+     }
+ }
+@@ -231,6 +252,12 @@ fn pow2_sum<E: PrimeCharacteristicRing + Clone>(bits: &[E]) -> E {
+ 
+ impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
+     fn eval(&self, builder: &mut AB) {
++        if self.bare() {
++            let main = builder.main();
++            let z: AB::Expr = main.row_slice(0).expect("row")[0].into();
++            builder.assert_zero(z);
++            return;
++        }
+         let c = self.carrier();
+         let w = c.width() + self.extra();
+         let main = builder.main();
+@@ -362,19 +389,29 @@ impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
+ 
+ /// The interface AIRs as `L` AIRs, in [`KINDS`] order.
+ pub fn airs(dims: &Dims) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
+-    airs_with(dims, 0)
++    airs_impl(dims, 0, false)
+ }
+ 
+-/// [`airs`] with the first `skip` statement words left to the root statement AIR (T7).
++/// [`airs`] with the first `skip` statement words left to the root statement AIR (T7). T10:
++/// `LogEntry` and `LogValue` send on the onion buses, so the caller adds [`OnionAir`] and the
++/// root statement AIR receives [`TIE_BUS`].
+ pub fn airs_with(dims: &Dims, skip: usize) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
++    airs_impl(dims, skip, true)
++}
++
++fn airs_impl(dims: &Dims, skip: usize, slim: bool) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
+     KINDS
+         .iter()
+         .map(|&kind| {
+             std::sync::Arc::new(IfaceAir {
+                 kind,
+                 dims: *dims,
+-                onion: false,
++                // T10 log tie: the production `L` sends the log words to its [`OnionAir`] (added
++                // by the caller on the permute bus); the root statement AIR receives the tie,
++                // so `Stmt` stays bare.
++                onion: slim && matches!(kind, Kind::LogEntry | Kind::LogValue),
+                 skip,
++                slim,
+             })
+                 as openvm_stark_backend::AirRef<crate::fixture::LSC>
+         })
+@@ -707,6 +744,7 @@ pub fn airs_onion(
+                 dims: *dims,
+                 onion: true,
+                 skip: 0,
++                slim: false,
+             }) as openvm_stark_backend::AirRef<crate::fixture::LSC>
+         })
+         .collect();
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+index e6dfbc3..f4d62ab 100644
+--- a/crates/sherlock-lfr/src/lverify.rs
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -67,6 +67,10 @@ pub struct Gen {
+     /// internal-recursive key N3) in its cached trace, so this pin fixes which child key `L`
+     /// verifies. `None` reads them as prover inputs (the pre-FP-8 tape, tests only).
+     pub pinned_cached: Option<Vec<Fr>>,
++    /// T7c: the tape addresses of the `L` cached-trace commitments (vk order), pinned or not.
++    /// The universal `L_Fr` reads them as inputs and checks `X` against them (one `L` key over
++    /// the full tree and path C).
++    pub cached_in: Vec<Addr>,
+ }
+ 
+ impl Default for Gen {
+@@ -86,6 +90,7 @@ impl Gen {
+             consts: HashMap::new(),
+             fr_consts: vec![],
+             pinned_cached: None,
++            cached_in: vec![],
+         }
+     }
+ 
+@@ -320,6 +325,7 @@ pub fn gen_part1(
+                     None => g.fr_in(c[0]),
+                 };
+                 g.observe_commit(a);
++                g.cached_in.push(a);
+                 cached_per_air[i].push(a);
+             }
+         }
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index acac953..c411614 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -69,6 +69,7 @@ pub const TAG_NODE: u32 = 3;
+ pub const DOM_PROG: u32 = 5;
+ pub const DOM_PROGC: u32 = 6;
+ pub const DOM_KEYTRIPLE: u32 = 8;
++pub const DOM_KEYDAG: u32 = 9;
+ pub const DOM_KEYNODE: u32 = 10;
+ pub const SHK_OUTCOME_V2: u32 = 14;
+ pub const SHK_DEPS: u32 = 28;
+@@ -92,6 +93,21 @@ pub const HDR: usize = 41;
+ /// T7 buses: sponge ports and the `L` operand words (above the `L` interface buses 900 to 903).
+ pub const PORT_IN: BusIndex = 960;
+ pub const PORT_OUT: BusIndex = 961;
++/// T7c: the `key_root` the path C key path reaches ([`KeyPathAir`] to [`RootSealAir`]).
++pub const KR_BUS: BusIndex = 970;
++/// T7c: the `path` word of the DAG key leaf `P2(DOM_KEYDAG, entry, path, enc(X), ...)`
++/// (I-17): 0 the full tree, 1 path C.
++pub const PATH_FULL: u32 = 0;
++pub const PATH_C: u32 = 1;
++/// T7c: public values of the root statement AIR of `L`: `root_stmt` (74 words) and the FP-3
++/// head words up to the end of `X` (`mode` 74 to `X` 97..106), so `X` is an `L` statement word
++/// the root statement AIR reads.
++pub const ROOT_PVS: usize = crate::iface::X_WORD + crate::iface::LIMBS;
++/// Rows of [`KeyPathAir`] (at least `D_KEY + 1`).
++pub const KP_H: usize = 32;
++
++/// T10: the bus of the 16-bit range table of the N1 layer ([`HhiRangeAir`]).
++pub const HHI_RANGE_BUS: BusIndex = 963;
+ 
+ /// Leaf-layer statement: the 54 leaf public values (FP-1, I-12) and the app pre-hash.
+ /// T8 (X7): the `step_pv` port of the slice kernel (`sherlock_leaf::bus::port(5)` at the kernel offset 128: 64 + 128 + 16 + 5).
+@@ -557,6 +573,8 @@ pub mod seq {
+     pub const OUTCOME: u32 = 25;
+     pub const OPC: u32 = 26;
+     pub const OPO: u32 = 27;
++    /// T7c: the path C DAG key leaf, then the key path nodes (`KD_LEAF + 1 + level`).
++    pub const KD_LEAF: u32 = 28;
+     pub fn of(id: u32, idx: usize) -> u32 {
+         1 + id + 32 * idx as u32
+     }
+@@ -573,8 +591,9 @@ pub enum Kind {
+     /// two enabled children and one inline segment of the slice kernel linked at their right end
+     /// (its public values come over [`STEP_PV_BUS`]); its own parameter set `frozen::MERGE_WORK`.
+     Work,
+-    /// `L`: the N3 pre-hash and `keys_d` as key constants.
+-    Root { n3_pre: [u32; 8], keys_d: [u32; 8] },
++    /// `L`: the N3 pre-hash and `keys_d` as key constants; T7c: `x_n3`, the 9 limbs of `enc(X)`
++    /// of the N3 child DAG (the `L` cached commitment of the full tree).
++    Root { n3_pre: [u32; 8], keys_d: [u32; 8], x_n3: [u32; 9] },
+ }
+ 
+ /// Column offsets (0 where a kind has no such column).
+@@ -626,6 +645,12 @@ pub struct Cols {
+     pub hdr: usize,
+     pub outd: usize,
+     pub rp: usize,
++    // T7c, Root: the path C bit, the child words at the key-constant positions 0 and 25..29 of
++    // a leaf-layer child, the child pre-hash, the entry of the DAG key leaf
++    pub pc: usize,
++    pub xl: usize,
++    pub hp: usize,
++    pub ent: usize,
+     pub width: usize,
+ }
+ 
+@@ -648,7 +673,12 @@ impl Cols {
+             c.valid = 0;
+             c.cw = 1;
+             c.ncw = npv::N;
+-            c.width = 1 + root_map().iter().flatten().count();
++            let n = 1 + root_map().iter().flatten().count();
++            c.pc = n;
++            c.xl = n + 1;
++            c.hp = n + 6;
++            c.ent = n + 14;
++            c.width = n + 15;
+             return c;
+         }
+         let mut w = 0usize;
+@@ -742,7 +772,7 @@ impl StmtAir {
+     pub fn num_pvs(kind: &Kind) -> usize {
+         match kind {
+             Kind::Leaf => lpv::N,
+-            Kind::Root { .. } => npv::ENV,
++            Kind::Root { .. } => ROOT_PVS,
+             _ => npv::N,
+         }
+     }
+@@ -766,8 +796,8 @@ fn k<AB: AirBuilder>(v: u32) -> AB::Expr {
+ 
+ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for StmtAir {
+     fn eval(&self, builder: &mut AB) {
+-        if let Kind::Root { n3_pre, keys_d } = &self.kind {
+-            return self.eval_root(builder, n3_pre, keys_d);
++        if let Kind::Root { n3_pre, keys_d, x_n3 } = &self.kind {
++            return self.eval_root(builder, n3_pre, keys_d, x_n3);
+         }
+         let c = &self.cols;
+         let main = builder.main();
+@@ -932,6 +962,11 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                 builder.assert_eq(l[c.hhi + i].clone() + two16.clone() * l[c.cry + i].clone(), cw(&l, lpv::H_PRE + i) + cin);
+             }
+             builder.assert_zero(l[c.cry + 3].clone());
++            // T10 (lead ruling on T7 pick 9): each h_hi limb below 2^16, one lookup per limb on
++            // the 16-bit table [`HhiRangeAir`] of the N1 layer.
++            for i in 0..4 {
++                builder.push_interaction(HHI_RANGE_BUS, [l[c.hhi + i].clone()], valid.clone(), 1);
++            }
+         }
+ 
+         // ---- Node, Fv: the universal key table under keys_d, and the own vkc
+@@ -1158,18 +1193,68 @@ fn root_const(i: usize, n3_pre: &[u32; 8], keys_d: &[u32; 8]) -> u32 {
+     }
+ }
+ 
+-/// Bus of the root statement's message to [`RootSealAir`]: `(prog_d, post_d)`.
++/// Bus of the root statement's message to [`RootSealAir`]: `(prog_d, post_d, pc, key_root)` of
++/// the output `root_stmt` (T7c: the path C bit and `key_root` appended).
+ pub const SEAL_BUS: BusIndex = 962;
+ 
++/// T7c: the leaf-layer child words that sit at key-constant positions of the N3 layout
++/// (`root_map`): word 0 (`binding`) and words 25 to 28 (`post_d`). Column `xl + j` holds word
++/// `XL_POS[j]` on path C.
++pub const XL_POS: [usize; 5] = [0, 25, 26, 27, 28];
++
++/// The words of the path C DAG key leaf `P2(DOM_KEYDAG, entry, PATH_C, enc(X) 9, h_pre 8,
++/// pre_app 8, cc_app 8)` (I-17: the child pre-hash `h_pre` joins the leaf, since the stock
++/// recursion takes the child pre-hash as data and `X` does not hold it; `pre_app` and `cc_app`
++/// are the app key the leaf layer verified).
++pub fn dag_leaf_words(entry: u32, x: &[F], h_pre: &Digest, pre_app: &Digest, cc_app: &Digest) -> Vec<F> {
++    assert_eq!(x.len(), 9);
++    let mut w = vec![F::from_u32(entry), F::from_u32(PATH_C)];
++    w.extend_from_slice(x);
++    w.extend(cat(&[h_pre, pre_app, cc_app]));
++    w
++}
++
++pub fn dag_leaf(entry: u32, x: &[F], h_pre: &Digest, pre_app: &Digest, cc_app: &Digest) -> Digest {
++    p2(DOM_KEYDAG, &dag_leaf_words(entry, x, h_pre, pre_app, cc_app))
++}
++
++/// Requester side of one call without the digest receive (the digest goes to another AIR).
++fn call_send<AB: InteractionBuilder>(builder: &mut AB, seq: AB::Expr, tag: u32, words: Vec<AB::Expr>, mult: AB::Expr) {
++    let len = words.len() + 1;
++    let mut w = vec![AB::Expr::from_u32(tag)];
++    w.extend(words);
++    while w.len() % 8 != 0 {
++        w.push(AB::Expr::ZERO);
++    }
++    for (k, b) in w.chunks(8).enumerate() {
++        let mut m = vec![seq.clone(), AB::Expr::from_usize(k), AB::Expr::from_usize(len)];
++        m.extend(b.iter().cloned());
++        PermutationCheckBus::new(PORT_IN).send(builder, m, mult.clone());
++    }
++}
++
+ impl StmtAir {
+-    /// `L`: one N3 child (`proof_idx` 0). Receives its 90 words (the key constants as constants),
+-    /// its cached commitment (its `vkc` cc words) and its pre-hash (the N3 constant); exposes
+-    /// `root_stmt`; sends `(prog_d, post_d)` to the seal.
++    /// `L`: one child (`proof_idx` 0), an N3 proof (full tree, `pc` = 0) or a leaf-layer proof
++    /// (path C, `pc` = 1, T7c).
++    ///
++    /// - Full tree: receives the 90 N3 words (the key constants as constants), the cached
++    ///   commitment (its `vkc` cc words) and the pre-hash (the N3 constant); `X` is the key
++    ///   constant `x_n3`.
++    /// - Path C: receives the 62 leaf-layer words (the words at the key-constant positions from
++    ///   the `xl` columns; no receive past word 61), the cached commitment (`cc_app`) and the
++    ///   pre-hash (`hp`); the leaf `h_pre` is 0 (one leaf from step 0); sends the DAG key leaf
++    ///   blocks (its digest goes to [`KeyPathAir`], which proves it in `key_root`); the output
++    ///   is the SEG of the leaf (FP-2 `seg_of_leaf`) with `key_root` from the seal's `prog_d`
++    ///   opening.
++    ///
++    /// Exposes `root_stmt` and the head words to `X`; sends `(prog_d, post_d, pc, key_root)` to
++    /// the seal.
+     fn eval_root<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues>(
+         &self,
+         builder: &mut AB,
+         n3_pre: &[u32; 8],
+         keys_d: &[u32; 8],
++        x_n3: &[u32; 9],
+     ) {
+         let c = &self.cols;
+         let main = builder.main();
+@@ -1178,23 +1263,41 @@ impl StmtAir {
+         let nvalid: AB::Expr = nr[c.valid].clone().into();
+         drop((lr, nr));
+         let pv: Vec<AB::Expr> = builder.public_values().iter().map(|&x| x.into()).collect();
++        let one = AB::Expr::ONE;
+         let valid = l[c.valid].clone();
++        let pc = l[c.pc].clone();
++        let npc = one.clone() - pc.clone();
+         builder.assert_bool(valid.clone());
++        builder.assert_bool(pc.clone());
+         builder.when_first_row().assert_one(valid.clone());
+         builder.when_first_row().assert_zero(nvalid);
+         let map = root_map();
++        // full-tree child words (constants at the key-constant positions)
+         let w: Vec<AB::Expr> = (0..npv::N)
+             .map(|i| match map[i] {
+                 Some(o) => l[c.cw + o].clone(),
+                 None => AB::Expr::from_u32(root_const(i, n3_pre, keys_d)),
+             })
+             .collect();
++        // path C child word `j` (< 62)
++        let lw = |j: usize| -> AB::Expr {
++            match XL_POS.iter().position(|&p| p == j) {
++                Some(t) => l[c.xl + t].clone(),
++                None => w[j].clone(),
++            }
++        };
+         for i in 0..npv::N {
++            let (value, mult) = if i < lpv::N {
++                let v = if map[i].is_none() { npc.clone() * w[i].clone() + pc.clone() * lw(i) } else { w[i].clone() };
++                (v, valid.clone())
++            } else {
++                (w[i].clone(), valid.clone() * npc.clone())
++            };
+             self.public_values_bus.receive(
+                 builder,
+                 AB::Expr::ZERO,
+-                PublicValuesBusMessage { air_idx: k::<AB>(KB_AIR_ID as u32), pv_idx: k::<AB>(i as u32), value: w[i].clone() },
+-                valid.clone(),
++                PublicValuesBusMessage { air_idx: k::<AB>(KB_AIR_ID as u32), pv_idx: k::<AB>(i as u32), value },
++                mult,
+             );
+         }
+         self.cached_commit_bus.receive(
+@@ -1211,22 +1314,171 @@ impl StmtAir {
+         self.pre_hash_bus.receive(
+             builder,
+             AB::Expr::ZERO,
+-            PreHashMessage { vk_pre_hash: std::array::from_fn(|i| AB::Expr::from_u32(n3_pre[i])) },
++            PreHashMessage {
++                vk_pre_hash: std::array::from_fn(|i| npc.clone() * AB::Expr::from_u32(n3_pre[i]) + pc.clone() * l[c.hp + i].clone()),
++            },
+             valid.clone(),
+         );
+-        for i in 0..npv::ENV {
+-            builder.when_first_row().assert_eq(pv[i].clone(), w[i].clone());
++        // root_stmt: the N3 envelope (full tree) or the SEG of the leaf (path C); key_root on
++        // path C is free here and fixed by the seal (prog_d opening, key path).
++        let seg = |i: usize| -> Option<AB::Expr> {
++            let z = AB::Expr::ZERO;
++            Some(if i == npv::TAG {
++                k::<AB>(STMT_SEG)
++            } else if (npv::PROG_D..npv::PROG_D + D).contains(&i) {
++                lw(lpv::PROG_D + i - npv::PROG_D)
++            } else if (npv::PRE_D..npv::PRE_D + D).contains(&i) {
++                lw(lpv::PRE_D + i - npv::PRE_D)
++            } else if (npv::POST_D..npv::POST_D + D).contains(&i) {
++                lw(lpv::POST_D + i - npv::POST_D)
++            } else if i == npv::H_HI {
++                lw(lpv::STEPS)
++            } else if (npv::KEY_ROOT..npv::KEY_ROOT + D).contains(&i) {
++                return None;
++            } else if (npv::LOG_D..npv::LOG_D + D).contains(&i) {
++                lw(lpv::LOG_D + i - npv::LOG_D)
++            } else if i == npv::LOG_N {
++                lw(lpv::LOG_N)
++            } else if (npv::KEYS_D..npv::KEYS_D + D).contains(&i) {
++                AB::Expr::from_u32(keys_d[i - npv::KEYS_D])
++            } else {
++                z
++            })
++        };
++        let is_log = |i: usize| (npv::LOG_D..npv::LOG_N + 1).contains(&i);
++        for i in (0..npv::ENV).filter(|&i| !is_log(i)) {
++            let mut fr = builder.when_first_row();
++            fr.assert_zero(npc.clone() * (pv[i].clone() - w[i].clone()));
++            if let Some(v) = seg(i) {
++                fr.assert_zero(pc.clone() * (pv[i].clone() - v));
++            }
+         }
+-        let mut m: Vec<AB::Expr> = (0..D).map(|i| w[npv::PROG_D + i].clone()).collect();
+-        m.extend((0..D).map(|i| w[npv::POST_D + i].clone()));
++        // T10 log tie (T7 pick 8): the child logs nothing yet (the leaves have no log section),
++        // so its log words are `(D_EMPTY, 0)` on both paths; the exposed `log_d`, `log_n` are the
++        // onion of the `L` entry and value tables, sent by `iface_l::OnionAir` on its last
++        // active row. The child log words stay columns (path C reads leaf words 57 to 61 there).
++        let de = d_empty();
++        for i in npv::LOG_D..npv::LOG_N + 1 {
++            let (cw, lwi) = (w[i].clone(), lw(lpv::LOG_D + i - npv::LOG_D));
++            let e = if i == npv::LOG_N { 0 } else { de[i - npv::LOG_D].as_canonical_u32() };
++            let mut fr = builder.when_first_row();
++            fr.assert_zero(npc.clone() * (cw - AB::Expr::from_u32(e)));
++            fr.assert_zero(pc.clone() * (lwi - AB::Expr::from_u32(e)));
++        }
++        let tie: Vec<AB::Expr> = (npv::LOG_D..npv::LOG_N + 1).map(|i| pv[i].clone()).collect();
++        builder.push_interaction(crate::iface_l::TIE_BUS, tie, -valid.clone(), 1);
++        // path C: one leaf from step 0 (h_lo = h_pre = 0; h_hi = steps < 2^16, steps <= S by CORE)
++        for t in 0..4 {
++            builder.when_first_row().assert_zero(pc.clone() * lw(lpv::H_PRE + t));
++        }
++        // X: the N3 DAG constant on the full tree; on path C it is in the DAG key leaf
++        let xw = crate::iface::X_WORD;
++        for t in 0..9 {
++            builder.when_first_row().assert_zero(npc.clone() * (pv[xw + t].clone() - AB::Expr::from_u32(x_n3[t])));
++        }
++        let mut wds = vec![l[c.ent].clone(), k::<AB>(PATH_C)];
++        wds.extend((0..9).map(|t| pv[xw + t].clone()));
++        wds.extend((0..D).map(|i| l[c.hp + i].clone()));
++        wds.extend((0..D).map(|i| lw(lpv::PRE_APP + i)));
++        wds.extend((0..D).map(|i| w[npv::VKC_CC + i].clone()));
++        call_send(builder, AB::Expr::from_u32(seq::of(seq::KD_LEAF, 0)), DOM_KEYDAG, wds, valid.clone() * pc.clone());
++        let mut m: Vec<AB::Expr> = (0..D).map(|i| pv[npv::PROG_D + i].clone()).collect();
++        m.extend((0..D).map(|i| pv[npv::POST_D + i].clone()));
++        m.push(pc);
++        m.extend((0..D).map(|i| pv[npv::KEY_ROOT + i].clone()));
+         PermutationCheckBus::new(SEAL_BUS).send(builder, m, valid);
+     }
+ }
+ 
+-/// The seal of `L` (X10 and FP-3 fact 1 check (i)): receives `(prog_d, post_d)`, opens `post_d`
+-/// as `P2(SHK_SD2, header 41 words)`, checks the seal predicates (a terminal `outcome_tag`,
+-/// `deps_d = EMPTY_DEPS`; SEG and `h_lo = 0` are key constants of the root statement), and
+-/// exposes the three `R` operand digests (24 public values after the FP-3 table).
++/// T7c: the `key_root` inclusion path of the path C DAG key leaf. Row `r` (level `r`) receives
++/// the node `cur` (row 0: the leaf digest of the root statement's call; row `r`: the digest of
++/// row `r - 1`'s call) when `rcv`, and, when `en`, sends `P2(DOM_KEYNODE, l, r)` of `cur` and
++/// the sibling `sib` (`b` 1: `cur` is the right child). The row that receives and does not send
++/// is the root: it sends `cur` on [`KR_BUS`], and the seal receives it as `key_root` on path C.
++/// `rcv` of the next row is `en` (one chain, an enable prefix), row 0 sends when it receives
++/// (depth at least 1), the last row does not send. All zero on the full tree.
++pub struct KeyPathAir;
++const KP_EN: usize = 0;
++const KP_RCV: usize = 1;
++const KP_B: usize = 2;
++const KP_LVL: usize = 3;
++const KP_CUR: usize = 4;
++const KP_SIB: usize = 12;
++const KP_W: usize = 20;
++
++impl<T> BaseAir<T> for KeyPathAir {
++    fn width(&self) -> usize {
++        KP_W
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for KeyPathAir {}
++impl<T> PartitionedBaseAir<T> for KeyPathAir {}
++
++impl<AB: AirBuilder + InteractionBuilder> Air<AB> for KeyPathAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let (lr, nr) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let l: Vec<AB::Expr> = (0..KP_W).map(|i| lr[i].clone().into()).collect();
++        let n: Vec<AB::Expr> = (0..KP_W).map(|i| nr[i].clone().into()).collect();
++        drop((lr, nr));
++        let one = AB::Expr::ONE;
++        let (en, rcv, b) = (l[KP_EN].clone(), l[KP_RCV].clone(), l[KP_B].clone());
++        builder.assert_bool(en.clone());
++        builder.assert_bool(rcv.clone());
++        builder.assert_bool(b.clone());
++        builder.assert_zero(en.clone() * (one.clone() - rcv.clone()));
++        builder.when_first_row().assert_zero(l[KP_LVL].clone());
++        builder.when_first_row().assert_eq(en.clone(), rcv.clone());
++        builder.when_transition().assert_eq(n[KP_LVL].clone(), l[KP_LVL].clone() + one.clone());
++        builder.when_transition().assert_eq(n[KP_RCV].clone(), en.clone());
++        builder.when_last_row().assert_zero(en.clone());
++        let cur: Vec<AB::Expr> = (0..D).map(|i| l[KP_CUR + i].clone()).collect();
++        let sib: Vec<AB::Expr> = (0..D).map(|i| l[KP_SIB + i].clone()).collect();
++        let s0 = AB::Expr::from_u32(seq::of(seq::KD_LEAF, 0));
++        let mut o = vec![s0.clone() + l[KP_LVL].clone()];
++        o.extend(cur.iter().cloned());
++        PermutationCheckBus::new(PORT_OUT).receive(builder, o, rcv.clone());
++        let mut ws: Vec<AB::Expr> = (0..D).map(|i| cur[i].clone() + b.clone() * (sib[i].clone() - cur[i].clone())).collect();
++        ws.extend((0..D).map(|i| sib[i].clone() + b.clone() * (cur[i].clone() - sib[i].clone())));
++        call_send(builder, s0 + l[KP_LVL].clone() + one, DOM_KEYNODE, ws, en.clone());
++        PermutationCheckBus::new(KR_BUS).send(builder, cur, rcv - en);
++    }
++}
++
++/// The [`KeyPathAir`] trace of a leaf digest and its path (`None`: the full tree, all zero but
++/// the level counter), and the node calls.
++pub fn key_path_trace(leaf: Option<(&Digest, &[(bool, Digest)])>) -> (RowMajorMatrix<F>, Vec<Call>) {
++    let mut v = vec![F::ZERO; KP_H * KP_W];
++    let mut calls = vec![];
++    for r in 0..KP_H {
++        v[r * KP_W + KP_LVL] = F::from_usize(r);
++    }
++    if let Some((leaf, path)) = leaf {
++        assert!(!path.is_empty() && path.len() < KP_H);
++        let mut cur = *leaf;
++        for r in 0..=path.len() {
++            let row = &mut v[r * KP_W..(r + 1) * KP_W];
++            row[KP_RCV] = F::ONE;
++            row[KP_CUR..KP_CUR + D].copy_from_slice(&cur);
++            if let Some(&(b, sib)) = path.get(r) {
++                row[KP_EN] = F::ONE;
++                row[KP_B] = F::from_bool(b);
++                row[KP_SIB..KP_SIB + D].copy_from_slice(&sib);
++                let (ll, rr) = if b { (sib, cur) } else { (cur, sib) };
++                calls.push(Call { seq: seq::of(seq::KD_LEAF, 0) + r as u32 + 1, tag: DOM_KEYNODE, words: cat(&[&ll, &rr]) });
++                cur = key_node(&ll, &rr);
++            }
++        }
++    }
++    (RowMajorMatrix::new(v, KP_W), calls)
++}
++
++/// The seal of `L` (X10 and FP-3 fact 1 check (i)): receives `(prog_d, post_d, pc, key_root)`,
++/// opens `post_d` as `P2(SHK_SD2, header 41 words)`, checks the seal predicates (a terminal
++/// `outcome_tag`, `deps_d = EMPTY_DEPS`; SEG and `h_lo = 0` are fixed by the root statement),
++/// and exposes the three `R` operand digests (24 public values after the FP-3 table). T7c, path
++/// C: opens `prog_d = P2(DOM_PROG, image_d, plan_d, key_root, machine_version)` (the first node
++/// does this on the full tree) and receives the `key_root` that [`KeyPathAir`] reaches.
+ pub struct RootSealAir;
+ pub const OPS_WORDS: usize = 3 * D;
+ const RS_VALID: usize = 0;
+@@ -1235,7 +1487,12 @@ const RS_POST: usize = 9;
+ const RS_HDR: usize = 17;
+ const RS_OUTD: usize = 17 + HDR;
+ const RS_RP: usize = RS_OUTD + D;
+-const RS_W: usize = RS_RP + D;
++const RS_PC: usize = RS_RP + D;
++const RS_KR: usize = RS_PC + 1;
++const RS_IMG: usize = RS_KR + D;
++const RS_PLAN: usize = RS_IMG + D;
++const RS_MV: usize = RS_PLAN + D;
++const RS_W: usize = RS_MV + 1;
+ 
+ impl<T> BaseAir<T> for RootSealAir {
+     fn width(&self) -> usize {
+@@ -1265,6 +1522,8 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+         let r = |a: usize, n: usize| -> Vec<AB::Expr> { (0..n).map(|i| l[a + i].clone()).collect() };
+         let mut m = r(RS_PROG, D);
+         m.extend(r(RS_POST, D));
++        m.push(l[RS_PC].clone());
++        m.extend(r(RS_KR, D));
+         PermutationCheckBus::new(SEAL_BUS).receive(builder, m, v.clone());
+         let t = l[RS_HDR].clone();
+         builder.when_first_row().assert_zero((t.clone() - one.clone()) * (t.clone() - k::<AB>(2)) * (t.clone() - k::<AB>(3)));
+@@ -1284,39 +1543,98 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+         let mut wds = r(RS_HDR + 9, D);
+         wds.extend(r(RS_OUTD, D));
+         let opo: Vec<AB::Expr> = (0..D).map(|i| pv[2 * D + i].clone()).collect();
+-        call(builder, AB::Expr::from_u32(seq::of(seq::OPO, 0)), DOM_OUTHIDE, wds, &opo, v);
++        call(builder, AB::Expr::from_u32(seq::of(seq::OPO, 0)), DOM_OUTHIDE, wds, &opo, v.clone());
++        // path C: the prog_d opening and the key_root of the key path
++        let pcv = v * l[RS_PC].clone();
++        let mut wds = r(RS_IMG, D);
++        wds.extend(r(RS_PLAN, D));
++        wds.extend(r(RS_KR, D));
++        wds.push(l[RS_MV].clone());
++        call(builder, AB::Expr::from_u32(seq::of(seq::PROG, 0)), DOM_PROG, wds, &r(RS_PROG, D), pcv.clone());
++        PermutationCheckBus::new(KR_BUS).receive(builder, r(RS_KR, D), pcv);
+     }
+ }
+ 
+-/// The root statement trace of `L` (2 rows), its public values (`root_stmt`) and every sponge
+-/// call of `L` (the seal's).
+-fn root_trace(kind: &Kind, kid: &Child, hdr: &[F], r_p: &Digest) -> (RowMajorMatrix<F>, Vec<F>, Vec<Call>) {
++/// T7c: the path C witness of `L`: the `prog_d` preimage, the entry and the `key_root` path of
++/// the DAG key leaf.
++#[derive(Clone, Debug)]
++pub struct PcWit {
++    pub image_d: Digest,
++    pub plan_d: Digest,
++    pub key_root: Digest,
++    pub mv: F,
++    pub entry: u32,
++    pub path: Vec<(bool, Digest)>,
++}
++
++/// The root statement trace of `L` (2 rows), its public values (`root_stmt` and the head words
++/// `head` = words 74 to 106, `X` last) and every sponge call of `L` (the seal's, and on path C
++/// the DAG key leaf and the `prog_d` opening; the key path calls come from [`key_path_trace`]).
++fn root_trace(kind: &Kind, kid: &Child, hdr: &[F], r_p: &Digest, head: &[F], pcw: Option<&PcWit>) -> (RowMajorMatrix<F>, Vec<F>, Vec<Call>) {
+     let c = Cols::new(kind);
+-    assert_eq!(kid.pvs.len(), npv::N, "child public values");
++    let Kind::Root { keys_d, .. } = kind else { unreachable!() };
++    assert_eq!(head.len(), ROOT_PVS - npv::ENV, "head words");
+     let mut t = vec![F::ZERO; 2 * c.width];
+     t[c.valid] = F::ONE;
+-    for (i, m) in root_map().iter().enumerate() {
+-        if let Some(o) = m {
+-            t[c.cw + o] = kid.pvs[i];
++    let map = root_map();
++    let mut calls = vec![];
++    let mut pvs = match pcw {
++        None => {
++            assert_eq!(kid.pvs.len(), npv::N, "child public values");
++            for (i, m) in map.iter().enumerate() {
++                if let Some(o) = m {
++                    t[c.cw + o] = kid.pvs[i];
++                }
++            }
++            kid.pvs[..npv::ENV].to_vec()
+         }
++        Some(w) => {
++            assert_eq!(kid.pvs.len(), lpv::N, "leaf-layer child public values");
++            t[c.pc] = F::ONE;
++            for (i, m) in map.iter().enumerate() {
++                if let Some(o) = m {
++                    t[c.cw + o] = if i < lpv::N { kid.pvs[i] } else { F::ZERO };
++                }
++            }
++            for (j, &p) in XL_POS.iter().enumerate() {
++                t[c.xl + j] = kid.pvs[p];
++            }
++            for i in 0..D {
++                t[c.cw + map[npv::VKC_CC + i].unwrap()] = kid.cc[i];
++            }
++            t[c.hp..c.hp + D].copy_from_slice(&kid.pre);
++            t[c.ent] = F::from_u32(w.entry);
++            let kd: Digest = keys_d.map(F::from_u32);
++            let pre_app = dig(&kid.pvs, lpv::PRE_APP);
++            let x = &head[crate::iface::X_WORD - npv::ENV..];
++            calls.push(Call { seq: seq::of(seq::KD_LEAF, 0), tag: DOM_KEYDAG, words: dag_leaf_words(w.entry, x, &kid.pre, &pre_app, &kid.cc) });
++            calls.push(Call { seq: seq::of(seq::PROG, 0), tag: DOM_PROG, words: cat(&[&w.image_d, &w.plan_d, &w.key_root, &[w.mv]]) });
++            seg_of_leaf(&kid.pvs, &w.key_root, &kd)
++        }
++    };
++    // T10 log tie: the child log is (D_EMPTY, 0) on both paths (the root statement AIR checks it)
++    let de = d_empty();
++    for i in npv::LOG_D..npv::LOG_N + 1 {
++        let e = if i == npv::LOG_N { F::ZERO } else { de[i - npv::LOG_D] };
++        assert_eq!(pvs[i], e, "child log is (D_EMPTY, 0)");
+     }
+-    let pvs = kid.pvs[..npv::ENV].to_vec();
++    pvs.extend_from_slice(head);
+     let prog_d = dig(&pvs, npv::PROG_D);
+     let ops = operands(&prog_d, r_p, hdr);
+     let od = outcome_d(hdr[0], &hdr[1..9]);
+     let mut wo = vec![F::from_u32(2), hdr[0] - F::ONE];
+     wo.extend_from_slice(&hdr[1..9]);
+-    let calls = vec![
++    calls.extend([
+         Call { seq: seq::of(seq::HEADER, 0), tag: SHK_SD2, words: hdr.to_vec() },
+         Call { seq: seq::of(seq::OUTCOME, 0), tag: SHK_OUTCOME_V2, words: wo },
+         Call { seq: seq::of(seq::OPC, 0), tag: DOM_PROGC, words: cat(&[r_p, &prog_d]) },
+         Call { seq: seq::of(seq::OPO, 0), tag: DOM_OUTHIDE, words: cat(&[&ops[1], &od]) },
+-    ];
++    ]);
+     (RowMajorMatrix::new(t, c.width), pvs, calls)
+ }
+ 
+ /// The seal trace of `L` (2 rows) and its public values (the three `R` operand digests).
+-pub fn root_seal_trace(root_stmt: &[F], hdr: &[F], r_p: &Digest) -> (RowMajorMatrix<F>, Vec<F>) {
++pub fn root_seal_trace(root_stmt: &[F], hdr: &[F], r_p: &Digest, pcw: Option<&PcWit>) -> (RowMajorMatrix<F>, Vec<F>) {
+     assert_eq!(hdr.len(), HDR);
+     let prog_d = dig(root_stmt, npv::PROG_D);
+     let ops = operands(&prog_d, r_p, hdr);
+@@ -1327,6 +1645,13 @@ pub fn root_seal_trace(root_stmt: &[F], hdr: &[F], r_p: &Digest) -> (RowMajorMat
+     t[RS_HDR..RS_HDR + HDR].copy_from_slice(hdr);
+     t[RS_OUTD..RS_OUTD + D].copy_from_slice(&outcome_d(hdr[0], &hdr[1..9]));
+     t[RS_RP..RS_RP + D].copy_from_slice(r_p);
++    t[RS_KR..RS_KR + D].copy_from_slice(&root_stmt[npv::KEY_ROOT..npv::KEY_ROOT + D]);
++    if let Some(w) = pcw {
++        t[RS_PC] = F::ONE;
++        t[RS_IMG..RS_IMG + D].copy_from_slice(&w.image_d);
++        t[RS_PLAN..RS_PLAN + D].copy_from_slice(&w.plan_d);
++        t[RS_MV] = w.mv;
++    }
+     (RowMajorMatrix::new(t, RS_W), ops.iter().flat_map(|d| d.iter().copied()).collect())
+ }
+ 
+@@ -1363,16 +1688,17 @@ pub enum Wit {
+     Fv { tbl: UKeys, sel: usize, fv_state: Digest },
+     /// T8 (X7): a MERGE-WORK node; `step` = the 54 public values of the inline kernel's CORE.
+     Work { tbl: UKeys, sel: usize, step: Vec<F> },
+-    Root { hdr: Vec<F>, r_p: Digest },
++    /// T7c: `head` the FP-3 words 74 to 106 (`X` last); `pc` the path C witness.
++    Root { hdr: Vec<F>, r_p: Digest, head: Vec<F>, pc: Option<PcWit> },
+ }
+ 
+ /// The trace (2 rows), the public values (the Rust reference of the statement) and the sponge
+ /// calls of one statement AIR. `tamper` changes the public values after they are computed
+ /// (refusal cases).
+ pub fn trace(kind: &Kind, kids: &[Child], wit: &Wit) -> (RowMajorMatrix<F>, Vec<F>, Vec<Call>) {
+-    if let (Kind::Root { .. }, Wit::Root { hdr, r_p }) = (kind, wit) {
++    if let (Kind::Root { .. }, Wit::Root { hdr, r_p, head, pc }) = (kind, wit) {
+         assert_eq!(kids.len(), 1);
+-        return root_trace(kind, &kids[0], hdr, r_p);
++        return root_trace(kind, &kids[0], hdr, r_p, head, pc.as_ref());
+     }
+     let c = Cols::new(kind);
+     assert!(!kids.is_empty() && kids.len() <= 2);
+@@ -1611,7 +1937,9 @@ pub fn sponge_height(kind: &Kind) -> usize {
+         Kind::Leaf => 0,
+         Kind::First => 128,
+         Kind::Node | Kind::Fv | Kind::Work => 64,
+-        Kind::Root { .. } => 16,
++        // T7c: the seal (14 rows), the DAG key leaf (5), the prog_d opening (4), 31 key path
++        // nodes (3 each)
++        Kind::Root { .. } => 128,
+     }
+ }
+ 
+@@ -1627,6 +1955,57 @@ pub fn digest_u32(d: &Digest) -> [u32; 8] {
+ #[allow(dead_code)]
+ fn _is_field<T: Field>() {}
+ 
++// ---------------------------------------------------------------- N1: the h_hi range table
++/// T10 (lead ruling on T7 pick 9): the 16-bit table of the N1 layer, `[value, mult]`, one row
++/// per value `0 .. 2^16` (the last-row constraint pins the height). It receives `[x]` on
++/// [`HHI_RANGE_BUS`] with multiplicity `mult`; the First statement AIR looks up each of the four
++/// `h_hi` limbs of every enabled row, so `h_hi = h_pre + steps` holds over the integers.
++#[derive(Clone, Copy, Debug, Default)]
++pub struct HhiRangeAir;
++pub const HHI_RANGE_ROWS: usize = 1 << 16;
++
++impl<T> BaseAir<T> for HhiRangeAir {
++    fn width(&self) -> usize {
++        2
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for HhiRangeAir {}
++impl<T> PartitionedBaseAir<T> for HhiRangeAir {}
++
++impl<AB: AirBuilder + InteractionBuilder> Air<AB> for HhiRangeAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let (lr, nr) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let (v, m, nv): (AB::Expr, AB::Expr, AB::Expr) = (lr[0].clone().into(), lr[1].clone().into(), nr[0].clone().into());
++        drop((lr, nr));
++        builder.when_first_row().assert_zero(v.clone());
++        builder.when_transition().assert_eq(nv, v.clone() + AB::Expr::ONE);
++        builder.when_last_row().assert_eq(v.clone(), AB::Expr::from_u32((HHI_RANGE_ROWS - 1) as u32));
++        builder.push_interaction(HHI_RANGE_BUS, [v], -m, 1);
++    }
++}
++
++/// The [`HhiRangeAir`] trace for a First statement trace `tr`: one count per `h_hi` limb of each
++/// enabled row. A limb of 2^16 or more (no valid witness has one; a refusal case) is not
++/// counted, so the lookup is unbalanced.
++pub fn hhi_range_trace(tr: &RowMajorMatrix<F>) -> RowMajorMatrix<F> {
++    let c = Cols::new(&Kind::First);
++    assert_eq!(tr.width(), c.width, "a First statement trace");
++    let mut cnt = vec![0u32; HHI_RANGE_ROWS];
++    for r in 0..tr.height() {
++        let row = &tr.values[r * c.width..(r + 1) * c.width];
++        if row[c.valid] == F::ONE {
++            for i in 0..4 {
++                if let Some(x) = cnt.get_mut(row[c.hhi + i].as_canonical_u32() as usize) {
++                    *x += 1;
++                }
++            }
++        }
++    }
++    let v: Vec<F> = cnt.iter().enumerate().flat_map(|(i, &m)| [F::from_usize(i), F::from_u32(m)]).collect();
++    RowMajorMatrix::new(v, 2)
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -1642,6 +2021,24 @@ mod tests {
+         }
+     }
+ 
++    /// T7c: the key path trace of a DAG key leaf ends at `key_root` on the root row (`rcv` and
++    /// not `en`), with one node call per level.
++    #[test]
++    fn key_path_trace_reaches_the_root() {
++        let x: Vec<F> = (0..9).map(|i| F::from_usize(i + 7)).collect();
++        let d = |v: u32| [F::from_u32(v); D];
++        let dag = dag_leaf(0, &x, &d(1), &d(2), &d(3));
++        let leaves = vec![p2(DOM_KEYTRIPLE, &[F::ONE]), p2(DOM_KEYTRIPLE, &[F::TWO]), dag];
++        let t = KeyTree { leaves };
++        let path = t.path(2);
++        let (m, calls) = key_path_trace(Some((&dag, &path)));
++        assert_eq!(calls.len(), path.len());
++        let top: Vec<usize> = (0..KP_H).filter(|&r| m.values[r * KP_W + KP_RCV] == F::ONE && m.values[r * KP_W + KP_EN] == F::ZERO).collect();
++        assert_eq!(top, vec![path.len()]);
++        let r = top[0];
++        assert_eq!(&m.values[r * KP_W + KP_CUR..r * KP_W + KP_CUR + D], &t.root());
++    }
++
+     #[test]
+     fn log_merge_neutral_and_node() {
+         let e = (d_empty(), 0);
+diff --git a/crates/sherlock-wrap-export/examples/fp8_d3.rs b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+index 5ca96f5..260da4e 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_d3.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+@@ -120,7 +120,12 @@ fn main() {
+     let sw = &chain["stacked_widths"];
+     let mut res = vec![
+         d3("app", &frozen::APP, &app, Some(&chain["app_log_heights"]), sw.get("app")),
+-        d3("leaf<1>", &frozen::LEAF_AGG, &leaf, Some(&chain["leaf_log_heights"]), sw.get("leaf")),
++        // T7c: the path C leaf layer is at the internal set (`leaf_set` "internal" in pathc.json)
++        if chain.get("leaf_set").and_then(|v| v.as_str()) == Some("internal") {
++            d3("leaf<1> path C (internal set)", &frozen::INTERNAL, &leaf, Some(&chain["leaf_log_heights"]), sw.get("leaf"))
++        } else {
++            d3("leaf<1>", &frozen::LEAF_AGG, &leaf, Some(&chain["leaf_log_heights"]), sw.get("leaf"))
++        },
+         d3("node1<2> (over leaf)", &frozen::INTERNAL, &bitcode::deserialize::<MultiStarkVerifyingKey<NodeSC>>(&rd("node1_vk.bitcode")).unwrap(), Some(&chain["node1_log_heights"]), sw.get("node1")),
+         d3("node2<2>", &frozen::INTERNAL, &bitcode::deserialize::<MultiStarkVerifyingKey<NodeSC>>(&rd("node2_vk.bitcode")).unwrap(), chain.get("node2_log_heights"), sw.get("node2")),
+         d3("node3<2> (internal-recursive, fixed point)", &frozen::INTERNAL, &node, Some(&chain["node_log_heights"]), sw.get("node")),
+diff --git a/crates/sherlock-wrap-export/examples/lfr_call.rs b/crates/sherlock-wrap-export/examples/lfr_call.rs
+index 36866fd..d7a1aef 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_call.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_call.rs
+@@ -1,383 +1,40 @@
+-//! Sherlock E6: one `L` -> `L_Fr` chain whose `L` call-vector lanes are a given call vector.
++//! Sherlock T10: the published `L` -> `L_Fr` call path, bound to a real program.
+ //!
+-//! `L_iface` is the E3 stand-in (`examples/iface_fixture.rs` of `sherlock-lfr`): the bench `L`
+-//! (39 AIRs over a bench node) plus the 4 interface AIRs at `Dims::FULL` (12,166 public words).
+-//! T10a: the run is an ORD `acceptRun` call of `tools/sherlock-sdk/sherlock-ledger.compact`
+-//! (`call_run`): head of seed 11 (mode word 0) with `X` = this `L`'s cached-trace commitment
+-//! and the ENC-3 `layout_d`, the reservation `R` with the ledger anchor, 4 `PUB` entries, the
+-//! 5-pair lane map, and call-vector lanes equal to the given 1,026 words. The `L_Fr` tape of E3 J5 (`gen_verifier_full`,
+-//! `gen_r_check`, `expose`) verifies that `L` proof at `lfr_params`; the `L_Fr` proof is written
+-//! as a `wrapin` v1 file for `tools/sherlock-wrap` (Moriarty).
++//! T10a (E6) proved this path over the E3 bench `L` (`L_iface`: a W1 node, the bench `L` and the
++//! interface AIRs) with a stand-in ledger anchor operand `ANCHOR_D2`. T10 replaces both: the run
++//! is the T7 chain of a slice program (app, leaf, N1, N2, N3, the T7 `L` with its root statement
++//! and seal, then `L_Fr`), the ledger anchor operand is `sherlock_lfr::iface::anchor_d2(r_L,
++//! prog_d_ledger)` of that program, and the `L_Fr` tape runs `lverify::gen_ops_check` after
++//! `gen_r_check`, so `A_0 = C_P` holds on the published path and the anchor
++//! `C_L = DIGEST(SHK_PROGC, anchor_d2)` fixes `prog_d`. The work is `t7_chain t10` (this file
++//! includes `t7_chain.rs`); the command line of T10a stays, so `e6-wrap-prover.sh` and
++//! `t10a-ledger-run.mjs` call it unchanged.
+ //!
+-//! usage:
+-//!   lfr_call key  OUTDIR                 synthetic lanes (seed 6), keygen; writes OUTDIR/lfr_pk.bitcode,
+-//!                                        OUTDIR/lfr-call.json (the fixture the wrap is keyed on)
+-//!   lfr_call args OUTDIR [VECTOR.json]  writes OUTDIR/args.json (the acceptRun arguments, the anchor,
+-//!                                        the private R operands to scan for); natively decodes the run
+-//!                                        and, with VECTOR.json, the run of that call vector (no proof)
++//! usage (the program is `SHERLOCK_PROG`, `A` = `entry x;` (default) or `B` = `entry y;`):
++//!   lfr_call key  OUTDIR                  the chain with synthetic lanes, the `L_Fr` keygen;
++//!                                         OUTDIR/lfr_pk.bitcode, OUTDIR/lfr-call.json (wrap fixture)
++//!   lfr_call args OUTDIR [VECTOR.json]   OUTDIR/args.json (the `acceptRun` arguments, the anchor,
++//!                                         the private words to scan for); with VECTOR.json the
++//!                                         native decode of that call vector
+ //!   lfr_call call OUTDIR VECTOR.json OUT.json
+-//!                                        VECTOR.json = {"words": [1,026 decimal Fr]}; reads the
+-//!                                        cached pk, asserts the same L_Fr vk, writes OUT.json
+-use std::{fs, path::PathBuf, sync::Arc, time::Instant};
+-
+-use num_bigint::BigUint;
+-use openvm_cpu_backend::CpuBackend;
+-use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
+-use openvm_recursion_circuit::system::{
+-    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
+-};
+-use openvm_stark_backend::{
+-    p3_field::{PrimeField, PrimeField32},
+-    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+-    p3_field::PrimeCharacteristicRing,
+-    proof::Proof,
+-    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
+-    AirRef, StarkEngine,
+-};
+-use openvm_stark_sdk::config::{
+-    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+-    baby_bear_poseidon2::{
+-        default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
+-        DuplexSpongeRecorder,
+-    },
+-    bls12381_fr_poseidon::Bls12381Fr as Fr,
+-};
+-use p3_baby_bear::BabyBear;
+-use rand::{rngs::StdRng, Rng, SeedableRng};
+-use serde_json::json;
+-use sherlock_lfr::{
+-    fixture::{internal_ud, l_ud, NodeSC, LSC},
+-    fr::fr_from_big,
+-    iface::{self, Dims, Keys, OpIn, Run},
+-    iface_l,
+-    lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
+-    machine::Machine,
+-    record::stock_log,
+-    testing::{lfr_params, range_trace, Engine},
+-};
+-use sherlock_wrap_export::{export, SC};
+-
+-type F = BabyBear;
+-type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+-type RootEng = BabyBearBls12381PoseidonCpuEngine;
+-
+-fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<Proof<NodeSC>>) {
+-    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+-    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+-    let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
+-    let engine = Eng::new(sherlock_lfr::frozen::APP.params());
+-    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let mut proofs = vec![];
+-    for _ in 0..n {
+-        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
+-            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
+-            .collect();
+-        let trace = chip.generate_trace(inputs);
+-        let cm = ColMajorMatrix::from_row_major(&trace);
+-        let ctx = ProvingContext::new(vec![(
+-            0,
+-            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
+-        )]);
+-        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
+-        engine.verify(&vk, &proof).expect("w1 verify");
+-        proofs.push(proof);
+-    }
+-    (vk, proofs)
+-}
+-
+-fn node_proof(
+-    child_vk: &MultiStarkVerifyingKey<NodeSC>,
+-    proofs: &[Proof<NodeSC>],
+-) -> (MultiStarkVerifyingKey<NodeSC>, Proof<NodeSC>) {
+-    let engine = Eng::new(internal_ud());
+-    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
+-        Arc::new(child_vk.clone()),
+-        Default::default(),
+-    );
+-    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
+-    let airs = circuit.airs::<NodeSC>();
+-    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-        child_vk,
+-        CachedTraceCtx::PcsData(child_pcs),
+-        proofs,
+-        &(),
+-        default_duplex_sponge_recorder(),
+-    );
+-    let proof = engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("node prove");
+-    engine.verify(&vk, &proof).expect("node verify");
+-    (vk, proof)
+-}
+-
+-/// The ledger's own anchor operand (T9 LEAD pick): the ledger anchor is
+-/// `C_L = DIGEST(SHK_PROGC, ANCHOR_D2)`, fixed at deploy. A placeholder of the ledger's program
+-/// digest; binding it to a real `prog_d` key is T7/T10 work (a clean seam: only this constant).
+-/// T7: the value for a real program is `sherlock_lfr::iface::anchor_d2(r_L, prog_d_ledger)`
+-/// (tested in `t7_chain chain`: the honest anchor is accepted, the other program's anchor is
+-/// refused by the `A_0 = C_P` tape check `lverify::gen_ops_check`). T10 replaces this constant.
+-const ANCHOR_D2: u64 = 0x5e7_1ed9_e700;
+-/// Lanes of the `acceptRun` call vector that the run publishes with `PUB` entries (template words
+-/// of the ledger transcript, T10a: a non-empty `PUB` set on unmapped lanes).
+-const PUB_LANES: [u64; 4] = [21, 22, 40, 41];
+-
+-/// The T10a run: an ORD `acceptRun` call of `sherlock-ledger.compact`. Head of seed 11 with mode
+-/// 0, `X` = the cached-trace commitment of this `L`, the ENC-3 `layout_d`; `R` with the ledger
+-/// anchor; the 5-pair lane map (prologue read, `claim_pub` twice, `outcome_pub`, unused); `PUB`
+-/// entries on `PUB_LANES`. `lanes = None` gives the synthetic key lanes (the same mapped words).
+-fn call_run(d: &Dims, keys: &Keys, lanes: Option<Vec<Fr>>) -> Run {
+-    let mut rng = StdRng::seed_from_u64(11);
+-    let mut head: Vec<u64> = (0..iface::STMT).map(|_| rng.random::<u64>() % 0x7800_0001).collect();
+-    head[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(keys.x));
+-    head[iface::LAYOUT_WORD..iface::LAYOUT_WORD + 8].copy_from_slice(&keys.layout_d);
+-    head[iface::MODE_WORD] = 0;
+-    // ORD: j = k = 0 (anchor_tags requires 16-bit limbs).
+-    head[iface::J_WORDS..iface::J_WORDS + 4].fill(0);
+-    head[iface::E_IN_WORD] = iface::ANCHOR_IN as u64;
+-    head[iface::E_OUT_WORD] = iface::ANCHOR_IN as u64;
+-    let tags = iface::anchor_tags(&head).unwrap();
+-    let r = iface::reservation_with(&mut rng, tags, false, false, Some(Fr::from_u64(ANCHOR_D2)));
+-    let outs: Vec<Fr> = r.iter().map(|o| *o.entry().values.last().unwrap()).collect();
+-    let e_in = iface::ANCHOR_IN as u64;
+-    let lane_map: [(u64, u64); iface::LANE_PAIRS] = [
+-        (iface::LANE_A_IN, e_in),
+-        (iface::LANE_CLAIM[0], 3),
+-        (iface::LANE_CLAIM[1], 3),
+-        (iface::LANE_OUTCOME, 2),
+-        (0, 0),
+-    ];
+-    let mut lanes = match lanes {
+-        Some(v) => v,
+-        None => {
+-            let mut v = synthetic_lanes(d);
+-            for (l, c) in iface::tpl_ord() {
+-                v[l] = c;
+-            }
+-            for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
+-                v[l as usize] = outs[e as usize];
+-            }
+-            v
+-        }
+-    };
+-    assert_eq!(lanes.len(), d.lanes(), "call vector length");
+-    // The mapped lanes of the vector are the R outputs (else the call args or the deployed anchor
+-    // are not this run's); in the L words they hold zero limbs, the decoder writes them back.
+-    for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
+-        assert_eq!(lanes[l as usize], outs[e as usize], "call vector lane {l} is not the output of R entry {e}");
+-        lanes[l as usize] = Fr::ZERO;
+-    }
+-    let s: Vec<OpIn> = PUB_LANES.iter().map(|&l| OpIn::Pub { lane: l, v: lanes[l as usize] }).collect();
+-    let plan = iface::plan(d, &r, &s);
+-    assert!(plan.spilled.is_empty());
+-    Run { dims: *d, head, lanes, lane_map, log: plan.log, path_sibs: plan.sibs }
+-}
+-
+-/// The `acceptRun` arguments of the run (`args` mode): `c_p`, `input_pub`, `outcome_pub` (the
+-/// `R_RUN` outputs), `claim_pub` (the `SPONGE(3)` output) and the ledger `anchor` (decimal).
+-fn run_args(run: &Run) -> serde_json::Value {
+-    let dec = |x: &Fr| iface::dec(&iface::limbs(*x)).map(|_| x.as_canonical_biguint().to_string()).unwrap();
+-    let v = |i: usize| dec(run.log[i].values.last().unwrap());
+-    json!({
+-        "c_p": v(0), "input_pub": v(1), "outcome_pub": v(2), "claim_pub": v(3),
+-        "anchor": v(iface::ANCHOR_IN), "anchor_d2": ANCHOR_D2.to_string(),
+-        // The private operands of R (the d2 words of the run DIGEST entries): never call data.
+-        "forbid": (0..3).map(|i| json!({"label": format!("R{i}.d2"), "value": dec(&run.log[i].values[0])}))
+-            .chain([json!({"label": "anchor_d2", "value": ANCHOR_D2.to_string()})]).collect::<Vec<_>>(),
+-    })
+-}
+-
+-fn synthetic_lanes(d: &Dims) -> Vec<Fr> {
+-    let mut rng = StdRng::seed_from_u64(6);
+-    (0..d.lanes())
+-        .map(|i| {
+-            if i < 70 {
+-                let b: Vec<u8> = (0..31).map(|_| rng.random::<u8>()).collect();
+-                fr_from_big(&BigUint::from_bytes_le(&b))
+-            } else {
+-                Fr::ZERO
+-            }
+-        })
+-        .collect()
+-}
+-
+-/// The `L_Fr` public words of `L` words under a bench pre-hash (the decoder does not verify the
+-/// proof): 8 BabyBear words per Fr, base 2^31.
+-fn pack_words(w: &[u64]) -> Vec<Fr> {
+-    let mut out = vec![Fr::from_u64(0x5e7_ca11)];
+-    for c in w.chunks(8) {
+-        let mut b = BigUint::from(0u32);
+-        for (k, &x) in c.iter().enumerate() {
+-            b += BigUint::from(x) << (31 * k);
+-        }
+-        out.push(fr_from_big(&b));
+-    }
+-    out
+-}
+-
+-fn read_vector(path: &str) -> Vec<Fr> {
+-    let v: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+-    v["words"]
+-        .as_array()
+-        .expect("words")
+-        .iter()
+-        .map(|w| {
+-            let b: BigUint = w.as_str().expect("decimal string").parse().expect("decimal");
+-            let x = fr_from_big(&b);
+-            assert_eq!(iface::dec(&iface::limbs(x)), Some(x));
+-            assert!(b < BigUint::parse_bytes(b"73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16).unwrap(), "canonical");
+-            x
+-        })
+-        .collect()
+-}
++//!                                         the chain whose `L` call-vector lanes are VECTOR.json
++//!                                         (1,026 decimal Fr words) under the cached `L_Fr` key
++#[path = "t7_chain.rs"]
++#[allow(dead_code)]
++mod t7_chain;
+ 
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+-    let mode = a[1].as_str();
+-    let out = PathBuf::from(&a[2]);
+-    fs::create_dir_all(&out).unwrap();
+-    let t0 = Instant::now();
+-    let dims = Dims::FULL;
+-    if mode == "args" {
+-        // The R outputs do not depend on X (the head words before X are drawn either way).
+-        let keys = Keys::bench();
+-        let run = call_run(&dims, &keys, None);
+-        let pw = pack_words(&run.words());
+-        let st = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs));
+-        assert_eq!(st.as_ref(), Ok(&run.statement()), "native decode of the call run");
+-        if let Some(v) = a.get(3) {
+-            // A real call vector (dry-run or dump): the same run and native decode, no proof.
+-            let run = call_run(&dims, &keys, Some(read_vector(v)));
+-            let pw = pack_words(&run.words());
+-            let st = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs)).expect("decode of the vector run");
+-            assert_eq!(st, read_vector(v), "decoded statement equals the call vector");
+-            println!("lfr_call args: the vector {v} decodes to itself");
++    let prog = std::env::var("SHERLOCK_PROG").unwrap_or_else(|_| "A".into());
++    let mut v = vec![a[0].clone(), "t10".into()];
++    match a[1].as_str() {
++        "key" => v.extend([a[1].clone(), a[2].clone(), prog]),
++        "args" => {
++            v.extend([a[1].clone(), a[2].clone(), prog]);
++            v.extend(a.get(3).cloned());
+         }
+-        let args = run_args(&run);
+-        fs::write(out.join("args.json"), serde_json::to_vec_pretty(&args).unwrap()).unwrap();
+-        println!("{args}");
+-        return;
++        "call" => v.extend([a[1].clone(), a[2].clone(), a[3].clone(), a[4].clone(), prog]),
++        m => panic!("mode {m}: key, args or call"),
+     }
+-    // L_iface: W1 -> node -> L (bench L + 4 interface AIRs), as the E3 fixture.
+-    let (w1_vk, proofs) = w1_proofs(2, 20);
+-    let (node_vk, node_pf) = node_proof(&w1_vk, &proofs);
+-    drop(proofs);
+-    let node_s = t0.elapsed().as_secs_f64();
+-    let node_vk = Arc::new(node_vk);
+-    let engine = RootEng::new(l_ud(48));
+-    let cfg = VerifierConfig { has_cached: true, ..Default::default() };
+-    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(node_vk.clone(), cfg);
+-    // X: the cached-trace commitment of this L (the key constant the decoder pins, T9).
+-    let pcs = l.commit_child_vk(&engine, &node_vk);
+-    let keys = Keys { x: pcs.commitment[0], layout_d: iface::layout_d() };
+-    let run = match mode {
+-        "key" => call_run(&dims, &keys, None),
+-        "call" => call_run(&dims, &keys, Some(read_vector(&a[3]))),
+-        _ => panic!("mode key, args or call"),
+-    };
+-    let words = run.words();
+-    let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
+-    let n_bench = airs.len();
+-    airs.extend(iface_l::airs(&dims));
+-    let (pk, l_vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let cached = CachedTraceCtx::PcsData(pcs);
+-    let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-        &node_vk,
+-        cached,
+-        std::slice::from_ref(&node_pf),
+-        &(),
+-        default_duplex_sponge_recorder(),
+-    );
+-    assert_eq!(ctxs.len(), n_bench);
+-    for (tr, pv) in iface_l::traces::<F>(&dims, &words) {
+-        let cm = ColMajorMatrix::from_row_major(&tr);
+-        ctxs.push(AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv));
+-    }
+-    let t = Instant::now();
+-    let l_proof = engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("L_iface prove");
+-    let l_prove_s = t.elapsed().as_secs_f64();
+-    engine.verify(&l_vk, &l_proof).expect("L_iface verify");
+-    drop(d_pk);
+-    drop(pk);
+-
+-    // L_Fr: the E3 J5 tape over the L proof.
+-    let (_, ok) = stock_log(&l_vk, &l_proof);
+-    assert!(ok);
+-    let shape = LShape::of(&l_proof);
+-    let mut g = Gen::new();
+-    let (lw, l_pub) = gen_verifier_full(&mut g, &l_vk, &shape, &l_proof).expect("pinned shape");
+-    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
+-    gen_r_check(&mut g, &l_pub, &l_vals);
+-    g.tape.expose(&lw);
+-    let (mem, failed) = g.tape.execute_checked(&g.inputs);
+-    assert!(failed.is_empty(), "tape assertions failed {failed:?}");
+-    let m = Machine::new(&g.tape);
+-    let pw = m.public_values(&mem).concat();
+-    let dec = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs)).expect("decode");
+-    assert_eq!(dec, run.statement(), "decoded statement equals the call vector");
+-    let lfr = Engine::new(lfr_params());
+-    let fairs = m.airs();
+-    let pk_path = out.join("lfr_pk.bitcode");
+-    let t = Instant::now();
+-    let (fpk, keygen_s): (MultiStarkProvingKey<SC>, f64) = if mode == "key" {
+-        let (fpk, _) = sherlock_lfr::frozen::keygen_frozen(&lfr, &fairs);
+-        let s = t.elapsed().as_secs_f64();
+-        fs::write(&pk_path, bitcode::serialize(&fpk).unwrap()).unwrap();
+-        (fpk, s)
+-    } else {
+-        (bitcode::deserialize(&fs::read(&pk_path).unwrap()).expect("pk cache"), t.elapsed().as_secs_f64())
+-    };
+-    let fvk = fpk.get_vk();
+-    let mut traces = m.traces(&mem);
+-    traces.push(range_trace(&fpk, &fairs, &traces));
+-    let pis = m.public_values(&mem);
+-    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
+-    let ctx = ProvingContext::new(
+-        traces
+-            .iter()
+-            .enumerate()
+-            .map(|(i, t)| {
+-                let cm = ColMajorMatrix::from_row_major(t);
+-                (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&cm), pis[i].clone()))
+-            })
+-            .collect(),
+-    );
+-    let t = Instant::now();
+-    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
+-    let lfr_prove_s = t.elapsed().as_secs_f64();
+-    let mut doc = export("lfr-call", lfr.config(), &fvk, &proof);
+-    // The wrap relation fixture: the decode shape and its key constants (T9; no cases).
+-    doc["decode"] = json!({
+-        "dims": {"b": dims.b, "v": dims.v, "p": dims.p, "l_tx": dims.l_tx},
+-        "keys": {"x": sherlock_wrap_export::hex_be(&keys.x), "layout_d": keys.layout_d.to_vec()},
+-        "cases": [],
+-    });
+-    doc["path_sibs"] = json!(run.path_sibs.iter().map(|v| v.iter().map(sherlock_wrap_export::hex_be).collect::<Vec<_>>()).collect::<Vec<_>>());
+-    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses the L_Fr proof");
+-    let path = if mode == "key" { out.join("lfr-call.json") } else { PathBuf::from(&a[4]) };
+-    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
+-    let pv_hex: Vec<String> = pw.iter().map(sherlock_wrap_export::hex_be).collect();
+-    fs::write(path.with_extension("pv.json"), serde_json::to_vec(&pv_hex).unwrap()).unwrap();
+-    println!(
+-        "{}",
+-        json!({
+-            "mode": mode,
+-            "file": path.display().to_string(),
+-            "l_pre_hash": format!("{:?}", l_vk.pre_hash),
+-            "lfr_pre_hash": format!("{:?}", fvk.pre_hash),
+-            "lfr_public_words": pw.len(),
+-            "lfr_airs": fvk.inner.per_air.len(),
+-            "widths": proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
+-            "node_s": node_s,
+-            "l_prove_s": l_prove_s,
+-            "lfr_keygen_or_load_s": keygen_s,
+-            "lfr_prove_s": lfr_prove_s,
+-            "wall_s": t0.elapsed().as_secs_f64(),
+-        })
+-    );
++    t7_chain::t10(&v);
+ }
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 6fc91e3..82b5381 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -14,6 +14,9 @@
+ //!   t7_chain omit OUT         V.9: slice_air_omitted and the omit cases of N1, N3 and L; OUT/omit.json
+ //!   t7_chain cases OUT        N1 refusals (wrong_prog_d merge, key outside key_root), mixed chip
+ //!                             sets under one key_root, the FV unit under N3; OUT/cases.json
++//!   t7_chain pathc OUT        T7c: path C, the one-leaf run of `entry x;` (S = 8) through the
++//!                             leaf layer, L and L_Fr on the universal L key; OUT/pathc.json
++//!   t7_chain shape OUT        T7c: per-AIR widths of L, N3 and the leaf layers; OUT/shape.json
+ use std::{fs, path::PathBuf, sync::Arc, time::Instant};
+ 
+ use openvm_cpu_backend::CpuBackend;
+@@ -38,7 +41,7 @@ use openvm_stark_sdk::config::{
+ };
+ use p3_baby_bear::BabyBear;
+ use serde_json::{json, Value};
+-use sherlock_leaf::{core as slice_core, enc as slice_enc, harness as sh, leaf as sl};
++use sherlock_leaf::{core as slice_core, enc as slice_enc, harness as sh, leaf as sl, s8::leaf as s8l};
+ use sherlock_lfr::{
+     fixture::{NodeSC, LSC},
+     fr,
+@@ -48,7 +51,7 @@ use sherlock_lfr::{
+     lverify::{gen_ops_check, gen_r_check, gen_verifier_full, Gen, LShape},
+     machine::Machine,
+     record::stock_log,
+-    stmt::{self, Child, FirstWit, Kind, KeyTree, KeyTriple, PermSpongeAir, RootSealAir, StmtAir, UKeys, Vkc, Wit, D},
++    stmt::{self, Child, FirstWit, KeyPathAir, Kind, KeyTree, KeyTriple, PcWit, PermSpongeAir, RootSealAir, StmtAir, UKeys, Vkc, Wit, D},
+     testing::{range_trace, Engine},
+ };
+ use sherlock_wrap_export::export;
+@@ -81,6 +84,8 @@ where
+         "query_pow": vk.inner.params.whir.query_phase_pow_bits,
+         "logup_pow": vk.inner.params.logup.pow_bits,
+         "shape": shape_json(&frozen::shape(vk)),
++        // T10: per-AIR total widths (the G1 column bound is their sum)
++        "air_widths": vk.inner.per_air.iter().map(|a| a.params.width.total_width()).collect::<Vec<_>>(),
+     })
+ }
+ 
+@@ -147,6 +152,9 @@ impl Cases {
+     }
+ }
+ 
++/// A change to a statement trace and its public values (refusal cases, mutant prover).
++type Tamper = dyn Fn(&mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, &mut Vec<F>);
++
+ // ------------------------------------------------------------------ layers
+ struct Layer<const N: usize> {
+     circuit: VerifierSubCircuit<N>,
+@@ -178,6 +186,10 @@ fn layer<const N: usize>(
+     if kind != Kind::Leaf {
+         airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
+     }
++    if kind == Kind::First {
++        // T10: the 16-bit table of the h_hi limbs (lead ruling on T7 pick 9)
++        airs.push(Arc::new(stmt::HhiRangeAir));
++    }
+     let (pk, vk) = kg(set, &engine, &airs, label, log);
+     check_layout(&vk, &kind);
+     Layer { circuit, kind, engine, pk, vk, airs, perm }
+@@ -207,12 +219,12 @@ impl<const N: usize> Layer<N> {
+         child_vk: &MultiStarkVerifyingKey<NodeSC>,
+         proofs: &[Proof<NodeSC>],
+         wit: &Wit,
+-        tamper: Option<&dyn Fn(&mut Vec<F>)>,
++        tamper: Option<&Tamper>,
+     ) -> Vec<AirProvingContext<CpuBackend<NodeSC>>> {
+         let kids: Vec<Child> = proofs.iter().map(|p| child_of(&self.kind, child_vk, p)).collect();
+-        let (tr, mut pvs, calls) = stmt::trace(&self.kind, &kids, wit);
++        let (mut tr, mut pvs, calls) = stmt::trace(&self.kind, &kids, wit);
+         if let Some(t) = tamper {
+-            t(&mut pvs);
++            t(&mut tr, &mut pvs);
+         }
+         let dev = self.engine.device();
+         let mut v = vec![AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&tr)), pvs)];
+@@ -250,6 +262,10 @@ impl<const N: usize> Layer<N> {
+                 .expect("verifier traces"),
+         );
+         v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&st)), vec![]));
++        if self.kind == Kind::First {
++            let rt = stmt::hhi_range_trace(&tr);
++            v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&rt)), vec![]));
++        }
+         let _ = self.perm;
+         v
+     }
+@@ -260,7 +276,7 @@ impl<const N: usize> Layer<N> {
+         child_vk: &MultiStarkVerifyingKey<NodeSC>,
+         proofs: &[Proof<NodeSC>],
+         wit: &Wit,
+-        tamper: Option<&dyn Fn(&mut Vec<F>)>,
++        tamper: Option<&Tamper>,
+         mutant: bool,
+     ) -> (Option<Proof<NodeSC>>, Result<(), String>) {
+         let ctxs = match guard(|| Ok(self.ctxs(child_vk, proofs, wit, tamper))) {
+@@ -325,9 +341,28 @@ struct Keys {
+     tree: KeyTree,
+     key_root: Dg,
+     table: UKeys,
++    pc: PathC,
+     log: Vec<Value>,
+ }
+ 
++/// T7c: path C, the one-leaf Compact call. The S = 8 shard bucket (`sherlock_leaf::s8`: `entry
++/// x;` is one shard), its app keys (chip sets 0 and 1), the leaf layer of each at the internal
++/// set (the child of `L` on path C), and the `L` constants: the child-meta height `meta_h` (the
++/// fixed cached-trace height of `L`, over every child it admits), `x_n3` (`X` of the full tree)
++/// and `x` (`X` of the path C leaf layer per chip set). Only chip set 0 has a DAG key leaf in
++/// `key_root` (leaf index `KEYDAG_IDX`); chip set 1 is the key outside `key_root`.
++struct PathC {
++    app: Vec<sh::Keyed>,
++    leaf: Vec<Layer<1>>,
++    meta_h: usize,
++    meta_rows: Value,
++    x_n3: Fr,
++    x: Vec<Fr>,
++    dag: Dg,
++}
++const KEYDAG_IDX: usize = 3;
++const PC_ENTRY: u32 = 0;
++
+ fn keys() -> Keys {
+     let mut log = vec![];
+     let eng = sh::engine();
+@@ -381,7 +416,32 @@ fn keys() -> Keys {
+             cc_leaf: n1[s].vkc(&leaf[s].vk).cc,
+         })
+         .collect();
+-    let tree = KeyTree { leaves: triples.iter().map(|t| t.leaf()).collect() };
++    // T7c: the path C keys and the DAG key leaf of chip set 0
++    let mut pc_app = vec![];
++    let mut pc_leaf = vec![];
++    for set in 0..2u32 {
++        let a = sh::key(&eng, s8l::airs_set(set, 0)).expect("path C app key");
++        let mut v = vk_json(&a.vk);
++        v["key"] = json!(format!("app S=8 chip set {set} (path C)"));
++        v["set"] = json!(frozen::APP.name);
++        v["g1"] = json!("accepted");
++        log.push(v);
++        let l = layer::<1>(&frozen::INTERNAL, &a.vk, Kind::Leaf, &format!("leaf<1> path C (internal set) chip set {set}"), &mut log);
++        pc_app.push(a);
++        pc_leaf.push(l);
++    }
++    let rows_n3 = openvm_recursion_circuit::batch_constraint::meta_cached_rows(&n3.vk);
++    let rows_c: Vec<usize> = pc_leaf.iter().map(|l| openvm_recursion_circuit::batch_constraint::meta_cached_rows(&l.vk)).collect();
++    let meta_h = rows_c.iter().copied().fold(rows_n3, usize::max).next_power_of_two();
++    println!("T7CMETA cached rows n3 {rows_n3} path C {rows_c:?} height {meta_h}");
++    let x_n3 = l_x(&n3.vk, meta_h);
++    let x: Vec<Fr> = pc_leaf.iter().map(|l| l_x(&l.vk, meta_h)).collect();
++    let dag = stmt::dag_leaf(PC_ENTRY, &x_limbs(x[0]), &pc_leaf[0].vk.pre_hash, &pc_app[0].vk.pre_hash, &pc_leaf[0].vkc(&pc_app[0].vk).cc);
++    let pc = PathC { app: pc_app, leaf: pc_leaf, meta_h, meta_rows: json!({"n3": rows_n3, "path_c": rows_c}), x_n3, x, dag };
++    let mut leaves: Vec<Dg> = triples.iter().map(|t| t.leaf()).collect();
++    assert_eq!(leaves.len(), KEYDAG_IDX);
++    leaves.push(dag);
++    let tree = KeyTree { leaves };
+     let key_root = tree.root();
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+@@ -389,10 +449,46 @@ fn keys() -> Keys {
+         // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
+         foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
+-    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, nw2, triples, tree, key_root, table, log }
++    Keys { eng, app, leaf, n1, n2, n3, fv, work, nw, nw2, triples, tree, key_root, table, pc, log }
++}
++
++/// T7c: one path C run of `entry x;` (S = 8): its single app shard, the leaf-layer proof at
++/// the internal set, the path C witness and the words of `L`.
++struct PcRun {
++    prog_d: Dg,
++    app: Proof<NodeSC>,
++    app_s: f64,
++    leaf: Proof<NodeSC>,
++    pcw: PcWit,
++    w: LWit,
++    run: iface::Run,
++    words: Vec<u64>,
+ }
+ 
+ impl Keys {
++    /// T7c: the path C run under chip set `set` with `key_root` (in `prog_d`), the DAG key leaf
++    /// path `path` and `X` = `x`.
++    fn pathc_run(&self, set: usize, key_root: Dg, path: Vec<(bool, Dg)>, x: Fr) -> PcRun {
++        let p = s8l::program_of(key_root, s8l::Prog::A);
++        let shards = s8l::shards(&p);
++        assert_eq!(shards.len(), 1, "path C: one leaf");
++        let tr = s8l::traces_set(&p, &shards[0], &s8l::Build::default(), set as u32);
++        let (pf, v, app_s) = sh::prove(&self.eng, &self.pc.app[set], &tr, false);
++        if pf.is_err() || v.is_err() {
++            let d = sh::debug(&self.eng, &self.pc.app[set], &tr);
++            panic!("path C app shard set {set}: prove {:?} verify {v:?} debug {d:?}", pf.as_ref().err());
++        }
++        let app = pf.unwrap();
++        let leaf = self.pc.leaf[set].prove(&self.pc.app[set].vk, std::slice::from_ref(&app), &Wit::Leaf);
++        let pcw = PcWit { image_d: p.adm.image_d(), plan_d: p.adm.plan_d, key_root, mv: F::from_u32(p.adm.machine_version), entry: PC_ENTRY, path };
++        let st = p.states.last().unwrap();
++        let w = LWit { hdr: slice_enc::header_words(&st.hdr, &st.body_d()), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
++        let env = stmt::seg_of_leaf(&leaf.public_values[0], &key_root, &self.table.keys_d());
++        let run = run_words_env(&env, x, &w, &p.adm.prog_d(), false);
++        let words = run.words();
++        PcRun { prog_d: p.adm.prog_d(), app, app_s, leaf, pcw, w, run, words }
++    }
++
+     fn first_wit(&self, p: &sl::Program, sets: &[usize]) -> Wit {
+         Wit::First(
+             sets.iter()
+@@ -431,32 +527,86 @@ impl Keys {
+ }
+ 
+ // ------------------------------------------------------------------ L
++/// T7c: the one universal `L` key. The verifier sub-circuit runs in child-meta mode (the per-AIR
++/// constants of the child key are rows of the cached trace, `VerifierConfig::child_meta`), so
++/// the `L` key is the same over N3 (full tree) and over the path C leaf layer; `X` (the `L`
++/// cached commitment) tells the children apart. Every `L` proof has the fixed heights `req` of
++/// the verifier sub-circuit AIRs (the maximum over both children), so `L_Fr` is one key too.
+ struct LKey {
+-    l: VerifierSubCircuit<1>,
++    cfg: VerifierConfig,
+     engine: RootEng,
+     pk: MultiStarkProvingKey<LSC>,
+     vk: MultiStarkVerifyingKey<LSC>,
+     airs: Vec<AirRef<LSC>>,
+     kind: Kind,
+     n_bench: usize,
++    n3_vk: MultiStarkVerifyingKey<NodeSC>,
++    req: Option<Vec<usize>>,
+ }
+ 
+-fn l_key(n3_vk: &MultiStarkVerifyingKey<NodeSC>, keys_d: &Dg, log: &mut Vec<Value>) -> LKey {
++/// The child of an `L` proof: an N3 proof (full tree) or a leaf-layer proof (path C) with its
++/// key (the internal-set leaf layer of one chip set) and the path C witness.
++enum LChild<'a> {
++    N3(&'a Proof<NodeSC>),
++    C(&'a MultiStarkVerifyingKey<NodeSC>, &'a Proof<NodeSC>, &'a PcWit),
++}
++
++fn l_cfg(meta_h: usize) -> VerifierConfig {
++    VerifierConfig { has_cached: true, continuations_enabled: true, child_meta: Some(meta_h), ..Default::default() }
++}
++
++fn l_sub(child: &MultiStarkVerifyingKey<NodeSC>, meta_h: usize) -> VerifierSubCircuit<1> {
++    <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(Arc::new(child.clone()), l_cfg(meta_h))
++}
++
++/// `X` of a child key: the `L` cached-trace commitment (the child DAG and its meta rows).
++fn l_x(child: &MultiStarkVerifyingKey<NodeSC>, meta_h: usize) -> Fr {
+     let engine = RootEng::new(frozen::L.params());
+-    let c = VerifierConfig { has_cached: true, continuations_enabled: true, ..Default::default() };
+-    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(Arc::new(n3_vk.clone()), c);
+-    let kind = Kind::Root { n3_pre: stmt::digest_u32(&n3_vk.pre_hash), keys_d: stmt::digest_u32(keys_d) };
++    l_sub(child, meta_h).commit_child_vk(&engine, child).commitment[0]
++}
++
++fn x_limbs(x: Fr) -> Vec<F> {
++    iface::limbs(x).iter().map(|&v| F::from_u64(v)).collect()
++}
++
++fn l_airs(child: &MultiStarkVerifyingKey<NodeSC>, kind: &Kind, meta_h: usize) -> (Vec<AirRef<LSC>>, usize) {
++    let l = l_sub(child, meta_h);
+     let inv = l.bus_inventory();
+     let perm = inv.poseidon2_permute_bus;
+     let mut airs: Vec<AirRef<LSC>> = vec![Arc::new(StmtAir::new(kind.clone(), inv))];
+     let bench = AggregationSubCircuit::airs::<LSC>(&l);
+     let n_bench = bench.len();
+     airs.extend(bench);
+-    airs.extend(iface_l::airs_with(&Dims::FULL, iface::ROOT_WORDS));
++    airs.extend(iface_l::airs_with(&Dims::FULL, stmt::ROOT_PVS));
+     airs.push(Arc::new(RootSealAir));
+-    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
++    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(kind) }));
++    airs.push(Arc::new(KeyPathAir));
++    // T10 log tie (T7 pick 8): the J8 onion AIR, last so the earlier AIR indices stay.
++    airs.push(Arc::new(iface_l::OnionAir { dims: Dims::FULL, perm }));
++    (airs, n_bench)
++}
++
++/// The `L` key over N3, and (T7c MEASURED check) the `L` key built over the path C leaf layer
++/// of every chip set, which must be the same key.
++fn l_key(k: &Keys, log: &mut Vec<Value>) -> LKey {
++    let kind = Kind::Root {
++        n3_pre: stmt::digest_u32(&k.n3.vk.pre_hash),
++        keys_d: stmt::digest_u32(&k.table.keys_d()),
++        x_n3: std::array::from_fn(|t| x_limbs(k.pc.x_n3)[t].as_canonical_u32()),
++    };
++    let engine = RootEng::new(frozen::L.params());
++    let (airs, n_bench) = l_airs(&k.n3.vk, &kind, k.pc.meta_h);
+     let (pk, vk) = kg(&frozen::L, &engine, &airs, "L over N3", log);
+-    LKey { l, engine, pk, vk, airs, kind, n_bench }
++    for (s, lc) in k.pc.leaf.iter().enumerate() {
++        let (a2, _) = l_airs(&lc.vk, &kind, k.pc.meta_h);
++        let mut lg = vec![];
++        let (_, vk2) = kg(&frozen::L, &engine, &a2, "L over the path C leaf layer", &mut lg);
++        let same = bitcode::serialize(&vk).unwrap() == bitcode::serialize(&vk2).unwrap();
++        println!("T7CKEY L over the path C leaf layer set {s}: same key as L over N3 = {same}");
++        log.push(json!({"key": format!("L over path C leaf layer set {s}"), "same_as_L_over_N3": same, "pre_hash": format!("{:?}", vk2.pre_hash)}));
++        assert!(same, "T7c: one universal L key over N3 and the path C leaf layer");
++    }
++    LKey { cfg: l_cfg(k.pc.meta_h), engine, pk, vk, airs, kind, n_bench, n3_vk: k.n3.vk.clone(), req: None }
+ }
+ 
+ /// The `L` witness of a run: the opened header of the final state and the blinding `r_P`.
+@@ -466,11 +616,30 @@ struct LWit {
+ }
+ 
+ impl LKey {
+-    fn ctxs(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64]) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
+-        let kid = child_of(&self.kind, n3_vk, n3);
+-        let (tr, pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p });
+-        let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p);
+-        let (st, ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
++    fn ctxs(&self, child: &LChild, w: &LWit, words: &[u64]) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
++        let (vk, proof, pcw) = match child {
++            LChild::N3(p) => (&self.n3_vk, *p, None),
++            LChild::C(vk, p, pcw) => (*vk, *p, Some((*pcw).clone())),
++        };
++        let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(Arc::new(vk.clone()), self.cfg.clone());
++        let kid = child_of(&self.kind, vk, proof);
++        let head: Vec<F> = words[stmt::npv::ENV..stmt::ROOT_PVS].iter().map(|&x| F::from_u64(x)).collect();
++        let wit = Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p, head: head.clone(), pc: pcw.clone() };
++        let (tr, mut pvs, mut calls) = stmt::trace(&self.kind, std::slice::from_ref(&kid), &wit);
++        // T10 log tie: the exposed log words are the run's (the onion of its tables).
++        for i in stmt::npv::LOG_D..stmt::npv::LOG_N + 1 {
++            pvs[i] = F::from_u64(words[i]);
++        }
++        let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p, pcw.as_ref());
++        let leaf = pcw.as_ref().map(|q| {
++            let x = &head[iface::X_WORD - stmt::npv::ENV..];
++            (stmt::dag_leaf(q.entry, x, &kid.pre, &stmt::dig(&kid.pvs, stmt::lpv::PRE_APP), &kid.cc), q.path.clone())
++        });
++        let (kt, kcalls) = stmt::key_path_trace(leaf.as_ref().map(|(l, p)| (l, p.as_slice())));
++        calls.extend(kcalls);
++        let (st, mut ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
++        let (ont, oins) = iface_l::OnionAir { dims: Dims::FULL, perm: l.bus_inventory().poseidon2_permute_bus }.trace::<F>(words);
++        ins.extend(oins.iter().map(|r| r.map(F::from_u64)));
+         let dev = self.engine.device();
+         let m = |t: &openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>| dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(t));
+         let mut v = vec![AirProvingContext::simple(m(&tr), pvs)];
+@@ -480,26 +649,47 @@ impl LKey {
+             poseidon2_permute_inputs: &ins,
+             range_check_inputs: &e2,
+             power_check_inputs: &e3,
+-            required_heights: None,
++            required_heights: self.req.as_deref(),
+             final_transcript_state: None,
+         };
+-        let pcs = self.l.commit_child_vk(&self.engine, n3_vk);
+-        let b = self
+-            .l
+-            .generate_proving_ctxs::<DuplexSpongeRecorder>(n3_vk, CachedTraceCtx::PcsData(pcs), std::slice::from_ref(n3), &mut ext, &(), default_duplex_sponge_recorder())
++        let pcs = l.commit_child_vk(&self.engine, vk);
++        let b = l
++            .generate_proving_ctxs::<DuplexSpongeRecorder>(vk, CachedTraceCtx::PcsData(pcs), std::slice::from_ref(proof), &mut ext, &(), default_duplex_sponge_recorder())
+             .expect("L verifier traces");
+         assert_eq!(b.len(), self.n_bench);
+         v.extend(b);
+-        for (t, pv) in iface_l::traces_with::<F>(&Dims::FULL, words, iface::ROOT_WORDS) {
++        for (t, pv) in iface_l::traces_with::<F>(&Dims::FULL, words, stmt::ROOT_PVS) {
+             v.push(AirProvingContext::simple(m(&t), pv));
+         }
+         v.push(AirProvingContext::simple(m(&ot), opv));
+         v.push(AirProvingContext::simple(m(&st), vec![]));
++        v.push(AirProvingContext::simple(m(&kt), vec![]));
++        v.push(AirProvingContext::simple(m(&ont), vec![]));
+         v
+     }
+ 
+-    fn prove_try(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64], mutant: bool) -> (Option<Proof<LSC>>, Result<(), String>) {
+-        let ctxs = match guard(|| Ok(self.ctxs(n3_vk, n3, w, words))) {
++    /// T7c: fix the heights of the verifier sub-circuit AIRs at the maximum over `kids` (the
++    /// full-tree child and the path C child).
++    fn fix_heights(&mut self, kids: &[(LChild, &LWit, &[u64])]) -> Value {
++        assert!(self.req.is_none());
++        let mut req = vec![0usize; self.n_bench];
++        let mut per = vec![];
++        for (c, w, words) in kids {
++            let hs: Vec<usize> = self.ctxs(c, w, words)[1..1 + self.n_bench].iter().map(|x| x.height()).collect();
++            for (r, h) in req.iter_mut().zip(&hs) {
++                *r = (*r).max(*h);
++            }
++            per.push(hs);
++        }
++        println!("T7CHEIGHTS fixed L sub-circuit heights {req:?} (per child {per:?})");
++        let v = json!({"fixed": req, "per_child": per});
++        self.req = Some(req);
++        v
++    }
++
++    fn prove_try(&self, child: &LChild, w: &LWit, words: &[u64], mutant: bool) -> (Option<Proof<LSC>>, Result<(), String>) {
++        assert!(self.req.is_some(), "T7c: L heights fixed before proving");
++        let ctxs = match guard(|| Ok(self.ctxs(child, w, words))) {
+             Ok(c) => c,
+             Err(e) => return (None, Err(format!("trace generation: {e}"))),
+         };
+@@ -527,12 +717,26 @@ impl LKey {
+     }
+ }
+ 
+-/// The `L` words of a run bound to the root statement of `n3`: `root_stmt` = the N3 envelope,
+-/// the `R` run operands = the packed operand digests, the ordinary-call anchor of the ledger
+-/// (`anchor_d2(r_L, prog_d_ledger)`, `r_L = r_P`). `forge_outcome` changes the logged
+-/// `DIGEST(SHK_OUTCOME)` operand.
+-fn run_words(n3: &Proof<NodeSC>, w: &LWit, prog_d_ledger: &Dg, forge_outcome: bool) -> iface::Run {
+-    let env = &n3.public_values[0][..stmt::npv::ENV];
++/// T7c: the universal `L` key with its fixed heights, from the full-tree child `n3` and the path
++/// C runs of chip set 0 (DAG key leaf in `key_root`) and chip set 1 (outside `key_root`, an
++/// admitted leaf-layer shape all the same).
++fn l_fixed(k: &Keys, log: &mut Vec<Value>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64]) -> (LKey, [PcRun; 2], Value) {
++    let mut lk = l_key(k, log);
++    let pr: [PcRun; 2] = std::array::from_fn(|s| k.pathc_run(s, k.key_root, k.tree.path(KEYDAG_IDX), k.pc.x[s]));
++    let hv = lk.fix_heights(&[
++        (LChild::N3(n3), w, words),
++        (LChild::C(&k.pc.leaf[0].vk, &pr[0].leaf, &pr[0].pcw), &pr[0].w, &pr[0].words),
++        (LChild::C(&k.pc.leaf[1].vk, &pr[1].leaf, &pr[1].pcw), &pr[1].w, &pr[1].words),
++    ]);
++    (lk, pr, hv)
++}
++
++/// The `L` words of a run bound to a root statement `env` (74 words): `root_stmt` = `env`, the
++/// `R` run operands = the packed operand digests, the ordinary-call anchor of the ledger
++/// (`anchor_d2(r_L, prog_d_ledger)`, `r_L = r_P`), `X` = `x` (T7c: the `L` cached commitment of
++/// the child DAG). `forge_outcome` changes the logged `DIGEST(SHK_OUTCOME)` operand.
++fn run_words_env(env: &[F], x: Fr, w: &LWit, prog_d_ledger: &Dg, forge_outcome: bool) -> iface::Run {
++    let env = &env[..stmt::npv::ENV];
+     let prog_d = stmt::dig(env, stmt::npv::PROG_D);
+     let ops = stmt::operands(&prog_d, &w.r_p, &w.hdr);
+     let mut ds: [Fr; 3] = std::array::from_fn(|k| fr::pack(&u64s(&ops[k])));
+@@ -544,15 +748,28 @@ fn run_words(n3: &Proof<NodeSC>, w: &LWit, prog_d_ledger: &Dg, forge_outcome: bo
+     let r_l: [u64; 8] = u64s(&w.r_p).try_into().unwrap();
+     let pl: [u64; 8] = u64s(prog_d_ledger).try_into().unwrap();
+     let anchor = iface::anchor_d2(&r_l, &pl);
+-    iface::case_run_bound(&Dims::FULL, Case::AllEntries, 14, Some((&u64s(env), ds)), Some(anchor)).0
++    let mut run = iface::case_run_bound(&Dims::FULL, Case::AllEntries, 14, Some((&u64s(env), ds)), Some(anchor)).0;
++    run.head[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(x));
++    run
+ }
+ 
+-/// The `L_Fr` tape over an `L` proof: `gen_r_check`, then the T7 operand check; Ok when every
+-/// assertion holds. Returns the generator and the exposed words on success.
++fn run_words(n3: &Proof<NodeSC>, x_n3: Fr, w: &LWit, prog_d_ledger: &Dg, forge_outcome: bool) -> iface::Run {
++    run_words_env(&n3.public_values[0], x_n3, w, prog_d_ledger, forge_outcome)
++}
++
++/// The decoder keys with `X` (T7c: `X` is the `L` cached commitment of the child DAG, no
++/// longer one constant).
++fn dec_keys(x: Fr) -> iface::Keys {
++    iface::Keys { x, ..iface::Keys::bench() }
++}
++
++/// The `L_Fr` tape over an `L` proof: `gen_r_check`, then the T7 operand check, then (T7c) the
++/// `X` check; Ok when every assertion holds. Returns the generator and the exposed words on
++/// success.
+ type LfrGen = (Gen, Vec<sherlock_lfr::tape::Addr>, Vec<Option<sherlock_lfr::tape::Val>>);
+ 
+-fn lfr_gen(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) -> Result<LfrGen, String> {
+-    let (g, out, mem, failed) = lfr_gen_any(l_vk, l_proof, pin)?;
++fn lfr_gen(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>) -> Result<LfrGen, String> {
++    let (g, out, mem, failed) = lfr_gen_any(l_vk, l_proof)?;
+     if failed > 0 {
+         return Err(format!("{failed} tape assertions failed"));
+     }
+@@ -560,20 +777,23 @@ fn lfr_gen(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) ->
+ }
+ 
+ /// [`lfr_gen`] that also returns a tape whose assertions fail (for the mutant `L_Fr` prover).
+-fn lfr_gen_any(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr) -> Result<(Gen, Vec<sherlock_lfr::tape::Addr>, Vec<Option<sherlock_lfr::tape::Val>>, usize), String> {
++/// T7c: the `L` cached commitment is a tape input (one `L_Fr` key over every child of `L`), and
++/// the tape asserts `X = sum_t limb_t 2^(30 t)` (the 9 limbs of the `L` statement word `X`)
++/// against it. Limb range and `Canon` of `X` are not needed for this binding: `X` is a key
++/// constant of `L` on the full tree and a word of a `key_root` leaf on path C.
++fn lfr_gen_any(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>) -> Result<(Gen, Vec<sherlock_lfr::tape::Addr>, Vec<Option<sherlock_lfr::tape::Val>>, usize), String> {
+     let shape = LShape::of(l_proof);
+     let mut g = Gen::new();
+-    g.pinned_cached = Some(vec![pin]);
+     let (lw, l_pub) = gen_verifier_full(&mut g, l_vk, &shape, l_proof).map_err(|e| format!("{e:?}"))?;
+-    if g.pinned_cached.as_ref().map(|v| v.len()) != Some(0) {
+-        return Err("an L cached commitment is not pinned".into());
++    if g.cached_in.len() != 1 {
++        return Err(format!("L cached commitments {} (want 1)", g.cached_in.len()));
+     }
+     let nw = Dims::FULL.words();
+     if l_pub.len() != nw + stmt::OPS_WORDS {
+         return Err(format!("L public values {} (want {})", l_pub.len(), nw + stmt::OPS_WORDS));
+     }
+-    // L order: the FP-3 table (root_stmt from the root statement AIR, the rest from the interface
+-    // AIRs), then the R operands of the seal.
++    // L order: the FP-3 table (root_stmt and the head to X from the root statement AIR, the rest
++    // from the interface AIRs), then the R operands of the seal.
+     let (r0, r1) = (nw, nw + stmt::OPS_WORDS);
+     let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
+     let (words, vals) = (reorder(&l_pub, r0, r1), reorder(&l_vals, r0, r1));
+@@ -581,6 +801,17 @@ fn lfr_gen_any(l_vk: &MultiStarkVerifyingKey<LSC>, l_proof: &Proof<LSC>, pin: Fr
+     let (words, vals) = (words[..nw].to_vec(), vals[..nw].to_vec());
+     let (mode, open) = gen_r_check(&mut g, &words, &vals);
+     gen_ops_check(&mut g, &words, &ops, mode, open);
++    let xw = iface::X_WORD;
++    let mut acc = g.tape.pack(&[words[xw + iface::LIMBS - 1]]);
++    for t in (0..iface::LIMBS - 1).rev() {
++        for _ in 0..iface::LIMB_BITS {
++            acc = g.tape.fr_add(acc, acc);
++        }
++        let l = g.tape.pack(&[words[xw + t]]);
++        acc = g.tape.fr_add(acc, l);
++    }
++    let cached = g.cached_in[0];
++    g.assert_eq(acc, cached);
+     let mut out = vec![lw[0]];
+     for c in words.chunks(8) {
+         out.push(g.tape.pack(c));
+@@ -644,44 +875,60 @@ fn chain(out: &PathBuf, which: sl::Prog) {
+     let _root: Vec<u64> = u64s(&n3_p.public_values[0][..stmt::npv::ENV]);
+     assert_eq!(stmt::dig(&n3_p.public_values[0], stmt::npv::PROG_D), p.adm.prog_d(), "N3 statement carries prog_d");
+ 
+-    let t = Instant::now();
+-    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
+-    tick("l_keygen", t);
+     let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
+     let prog_d = p.adm.prog_d();
+-    let run = run_words(&n3_p, &w, &prog_d, false);
++    let run = run_words(&n3_p, k.pc.x_n3, &w, &prog_d, false);
+     let words = run.words();
+     let t = Instant::now();
+-    let (lp, r) = lk.prove_try(&k.n3.vk, &n3_p, &w, &words, false);
++    let mut lg = vec![];
++    let (lk, _pr, l_fixed_heights) = l_fixed(&k, &mut lg, &n3_p, &w, &words);
++    k.log.extend(lg);
++    tick("l_keygen_and_fixed_heights", t);
++    let t = Instant::now();
++    let (lp, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &words, false);
+     tick("l_prove", t);
+     r.expect("L verify");
+     let lp = lp.unwrap();
+     let (_, ok) = stock_log(&lk.vk, &lp);
+     assert!(ok, "stock verifier accepts L");
+     cases.rec(&format!("chain_{which:?}_L_honest"), true, Ok(()), "honest chain: leaf, N1, N2 (unary), N3 (unary), L verified");
+-    let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
+ 
+     // L refusals: the outcome word of the opened header changed (X10 refuses at L).
+     let mut wf = LWit { hdr: w.hdr.clone(), r_p: w.r_p };
+     wf.hdr[1] += F::ONE;
+-    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &wf, &words, true);
++    let (_, r) = lk.prove_try(&LChild::N3(&n3_p), &wf, &words, true);
+     cases.rec("outcome_word_changed_refused_at_L", false, r, "header outcome payload word + 1 against post_d (mutant prover, stock L verifier)");
+     let mut wt = LWit { hdr: w.hdr.clone(), r_p: w.r_p };
+     wt.hdr[0] = F::from_u32(0);
+-    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &wt, &words, true);
++    let (_, r) = lk.prove_try(&LChild::N3(&n3_p), &wt, &words, true);
+     cases.rec("non_terminal_outcome_refused_at_L", false, r, "outcome_tag 0 (Running) at the seal (mutant prover, stock L verifier)");
++    // T10 log tie: the exposed log words against the onion of the tables.
++    let mut wl = words.clone();
++    wl[iface::LOG_D_WORD] = (wl[iface::LOG_D_WORD] + 1) % 0x7800_0001;
++    let (_, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &wl, true);
++    cases.rec("exposed_log_d_changed_refused_at_L", false, r, "log_d word + 1 against the onion of the entry and value tables (mutant prover, stock L verifier)");
++    let mut wv = words.clone();
++    let v0 = Dims::FULL.values_at();
++    wv[v0] = (wv[v0] + 1) % 0x7800_0001;
++    let (_, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &wv, true);
++    cases.rec("log_value_changed_refused_at_L", false, r, "first value limb + 1 under the same exposed log_d (mutant prover, stock L verifier)");
++    // T7c: on the full tree X is the key constant x_n3
++    let mut wx = words.clone();
++    wx[iface::X_WORD] ^= 1;
++    let (_, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &wx, true);
++    cases.rec("full_tree_wrong_x_refused_at_L", false, r, "X limb 0 xor 1 on the full tree (mutant prover, stock L verifier)");
+ 
+     // L_Fr: honest, then the R operands against the L operand words.
+     let mut bad_lfr: Option<(Gen, Vec<Option<sherlock_lfr::tape::Val>>)> = None;
+-    let (g, lw, mem) = lfr_gen(&lk.vk, &lp, l_pin).expect("L_Fr tape honest");
++    let (g, lw, mem) = lfr_gen(&lk.vk, &lp).expect("L_Fr tape honest");
+     cases.rec("lfr_tape_honest", true, Ok(()), "gen_r_check and the operand check hold");
+     for (name, run, check) in [
+-        ("wrong_prog_d_anchor_refused_at_L_Fr", run_words(&n3_p, &w, &sl::program_of(k.key_root, other(which)).adm.prog_d(), false), "ledger anchor of the other program (A_0 = C_P)"),
+-        ("forged_outcome_operand_refused_at_L_Fr", run_words(&n3_p, &w, &prog_d, true), "DIGEST(SHK_OUTCOME) operand of another outcome"),
++        ("wrong_prog_d_anchor_refused_at_L_Fr", run_words(&n3_p, k.pc.x_n3, &w, &sl::program_of(k.key_root, other(which)).adm.prog_d(), false), "ledger anchor of the other program (A_0 = C_P)"),
++        ("forged_outcome_operand_refused_at_L_Fr", run_words(&n3_p, k.pc.x_n3, &w, &prog_d, true), "DIGEST(SHK_OUTCOME) operand of another outcome"),
+     ] {
+         let wds = run.words();
+-        let r = match lk.prove_try(&k.n3.vk, &n3_p, &w, &wds, false) {
+-            (Some(q), Ok(())) => match guard(|| lfr_gen_any(&lk.vk, &q, l_pin)) {
++        let r = match lk.prove_try(&LChild::N3(&n3_p), &w, &wds, false) {
++            (Some(q), Ok(())) => match guard(|| lfr_gen_any(&lk.vk, &q)) {
+                 Ok((g2, _, mem2, nf)) if nf > 0 => {
+                     if name.starts_with("wrong_prog_d") {
+                         bad_lfr = Some((g2, mem2));
+@@ -699,7 +946,7 @@ fn chain(out: &PathBuf, which: sl::Prog) {
+     let m = Machine::new(&g.tape);
+     let pw = m.public_values(&mem).concat();
+     assert_eq!(pw.len(), lw.len());
+-    assert_eq!(iface::decode(&Dims::FULL, &pw).unwrap(), run.statement(), "honest decode");
++    assert_eq!(iface::decode_with(&Dims::FULL, &dec_keys(k.pc.x_n3), &pw, None).unwrap(), run.statement(), "honest decode");
+     let lfr = Engine::new(frozen::LFR.params());
+     let fairs = m.airs();
+     let t = Instant::now();
+@@ -780,6 +1027,8 @@ fn chain(out: &PathBuf, which: sl::Prog) {
+         "node2_log_heights": heights(&n2_p),
+         "node_log_heights": heights(&n3_p),
+         "l_log_heights": heights(&lp),
++        "l_fixed_heights": l_fixed_heights,
++        "l_meta": {"cached_rows": k.pc.meta_rows, "height": k.pc.meta_h},
+         "stacked_widths": {"app": sw(&app_p[0]), "leaf": sw(&leaf_p[0]), "node1": sw(&n1_p), "node2": sw(&n2_p), "node": sw(&n3_p)},
+         "l_stacked_widths": sw(&lp),
+         "lfr_stacked_widths": sw(&proof),
+@@ -860,6 +1109,36 @@ fn cases_mode(out: &PathBuf) {
+     let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &wit, None, true);
+     cases.rec("wrong_prog_d_opening_refused_at_N1", false, r, "prog_d opened with the image of B");
+ 
++    // T10 (T7 pick 13 made a real case): the leaf statement's post_d changed. `pvs` only (the
++    // statement AIR's own equality refuses), and trace plus pvs (only the public-values bus
++    // receive from the app proof refuses).
++    let pd = stmt::lpv::POST_D;
++    let only_pv = move |_: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| pv[pd] += F::ONE;
++    let (_, r) = k.leaf[0].prove_try(&k.app[0].vk, &apa[..1], &Wit::Leaf, Some(&only_pv), true);
++    cases.rec("leaf_post_d_changed_refused_at_leaf", false, r, "leaf statement post_d word + 1 in the public values (mutant prover, stock leaf verifier)");
++    let lc = stmt::Cols::new(&Kind::Leaf);
++    let both = move |t: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| {
++        t.values[lc.cw + pd] += F::ONE;
++        pv[pd] += F::ONE;
++    };
++    let (_, r) = k.leaf[0].prove_try(&k.app[0].vk, &apa[..1], &Wit::Leaf, Some(&both), true);
++    cases.rec("leaf_post_d_changed_in_trace_refused_at_leaf", false, r, "post_d + 1 in the leaf statement trace and public values: the receive from the app proof (mutant prover, stock leaf verifier)");
++
++    // T10 (lead ruling on T7 pick 9): an h_hi limb at or over 2^16 with the limb equation kept
++    // (limb 0 minus 2^16 with carry 1, limb 1 plus 1): only the 16-bit lookups refuse it.
++    let fc = stmt::Cols::new(&Kind::First);
++    let forge = move |t: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| {
++        let two16 = F::from_u32(1 << 16);
++        t.values[fc.hhi] -= two16;
++        t.values[fc.cry] = F::ONE;
++        t.values[fc.hhi + 1] += F::ONE;
++        for i in 0..4 {
++            pv[stmt::npv::H_HI + i] = t.values[fc.hhi + i];
++        }
++    };
++    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &k.first_wit(&pa, &[0]), Some(&forge), true);
++    cases.rec("h_hi_limb_over_16_bits_refused_at_N1", false, r, "h_hi limb 0 = s - 2^16 with carry 1 (mutant prover, stock N1 verifier)");
++
+     // FV unit under N3.
+     let n1 = k.n1[0].prove(&k.leaf[0].vk, std::slice::from_ref(&la0), &k.first_wit(&pa, &[0]));
+     let fvr = k.table.foreign[0];
+@@ -962,18 +1241,20 @@ fn omit(out: &PathBuf) {
+     let n2 = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1), &w2);
+     let w3 = k.node_wit(&k.table.node[1]);
+     let n3 = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2), &w3);
+-    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
++    let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
++    let words = run_words(&n3, k.pc.x_n3, &w, &p.adm.prog_d(), false).words();
++    let mut lg = vec![];
++    let (lk, _pr, _) = l_fixed(&k, &mut lg, &n3, &w, &words);
++    k.log.extend(lg);
+     let mut req = serde_json::Map::new();
+     req.insert("app".into(), json!(app.vk.inner.per_air.iter().all(|a| a.is_required)));
+     for (name, v) in [("leaf", &lc.vk), ("n1", &k.n1[0].vk), ("n2", &k.n2.vk), ("n3", &k.n3.vk), ("fv", &k.fv.vk)] {
+         req.insert(name.into(), json!(v.inner.per_air.iter().all(|a| a.is_required)));
+     }
+     req.insert("L".into(), json!(lk.vk.inner.per_air.iter().all(|a| a.is_required)));
+-    let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
+-    let words = run_words(&n3, &w, &p.adm.prog_d(), false).words();
+     let omitted = ["StmtAir", "ProofShapeAir", "PublicValuesAir"];
+-    // N1 (parent N2) and N3 (parent L)
+-    for name in omitted {
++    // N1 (parent N2) and N3 (parent L); T10: the N1 h_hi range table too
++    for name in omitted.iter().copied().chain(["HhiRangeAir"]) {
+         let i = air_idx(&k.n1[0].airs, name);
+         let mk = || -> Vec<_> { k.n1[0].ctxs(&lc.vk, &la, &fw, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+         let r = guard(|| {
+@@ -987,6 +1268,9 @@ fn omit(out: &PathBuf) {
+         cases.rec(&format!("n1_stock_verify_without_{name}"), false, vr(k.n1[0].engine.verify(&k.n1[0].vk, &st)), &format!("stock verifier, air {i}"));
+         let r = k.n2.prove_try(&k.n1[0].vk, std::slice::from_ref(&st), &w2, None, true).1;
+         cases.rec(&format!("n1_parent_over_child_without_{name}"), false, r, "N2 over the stripped N1 proof (mutant prover)");
++        if name == "HhiRangeAir" {
++            continue;
++        }
+         let i = air_idx(&k.n3.airs, name);
+         let mk = || -> Vec<_> { k.n3.ctxs(&k.n2.vk, std::slice::from_ref(&n2), &w3, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+         let r = guard(|| {
+@@ -998,31 +1282,29 @@ fn omit(out: &PathBuf) {
+         cases.rec(&format!("n3_prove_without_{name}"), false, r, &format!("prover path, air {i}"));
+         let st = strip(&n3, i);
+         cases.rec(&format!("n3_stock_verify_without_{name}"), false, vr(k.n3.engine.verify(&k.n3.vk, &st)), &format!("stock verifier, air {i}"));
+-        let r = lk.prove_try(&k.n3.vk, &st, &w, &words, true).1;
++        let r = lk.prove_try(&LChild::N3(&st), &w, &words, true).1;
+         cases.rec(&format!("n3_parent_over_child_without_{name}"), false, r, "L over the stripped N3 proof (mutant prover)");
+     }
+-    let (lp, r) = lk.prove_try(&k.n3.vk, &n3, &w, &words, false);
++    let (lp, r) = lk.prove_try(&LChild::N3(&n3), &w, &words, false);
+     cases.rec("l_honest", true, r, "honest");
+     let lp = lp.unwrap();
+-    let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
+-    cases.rec("lfr_tape_honest", true, lfr_gen(&lk.vk, &lp, l_pin).map(|_| ()), "honest");
++    cases.rec("lfr_tape_honest", true, lfr_gen(&lk.vk, &lp).map(|_| ()), "honest");
+     let d_pk = lk.engine.device().transport_pk_to_device(&lk.pk);
+-    for name in ["StmtAir", "ProofShapeAir", "PublicValuesAir", "RootSealAir"] {
++    for name in ["StmtAir", "ProofShapeAir", "PublicValuesAir", "RootSealAir", "KeyPathAir", "OnionAir"] {
+         let i = air_idx(&lk.airs, name);
+         let r = guard(|| {
+-            let ctx = ProvingContext::new(lk.ctxs(&k.n3.vk, &n3, &w, &words).into_iter().enumerate().filter(|(j, _)| *j != i).collect());
++            let ctx = ProvingContext::new(lk.ctxs(&LChild::N3(&n3), &w, &words).into_iter().enumerate().filter(|(j, _)| *j != i).collect());
+             let q = lk.engine.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}"))?;
+             vr(lk.engine.verify(&lk.vk, &q))
+         });
+         cases.rec(&format!("l_prove_without_{name}"), false, r, &format!("prover path, air {i}"));
+         let st = strip(&lp, i);
+         cases.rec(&format!("l_stock_verify_without_{name}"), false, vr(lk.engine.verify(&lk.vk, &st)), &format!("stock verifier, air {i}"));
+-        cases.rec(&format!("lfr_tape_stripped_shape_without_{name}"), false, guard(|| lfr_gen(&lk.vk, &st, l_pin).map(|_| ())), "L_Fr tape generator, shape of the stripped proof");
++        cases.rec(&format!("lfr_tape_stripped_shape_without_{name}"), false, guard(|| lfr_gen(&lk.vk, &st).map(|_| ())), "L_Fr tape generator, shape of the stripped proof");
+         let honest = LShape::of(&lp);
+         let mut g = Gen::new();
+-        g.pinned_cached = Some(vec![l_pin]);
+         let r = guard(|| gen_verifier_full(&mut g, &lk.vk, &honest, &st).map(|_| ()).map_err(|e| format!("{e:?}")));
+-        cases.rec(&format!("lfr_tape_honest_shape_without_{name}"), false, r, "L_Fr tape generator, the pinned honest shape");
++        cases.rec(&format!("lfr_tape_honest_shape_without_{name}"), false, r, "L_Fr tape generator, the honest (fixed) shape");
+     }
+     let all = cases.0.iter().all(|c| c["pass"].as_bool().unwrap());
+     let doc = json!({"all_pass": all, "all_required": req, "app_shape": app.shape, "sg6": sg6, "cases": cases.0, "keys": k.log});
+@@ -1032,14 +1314,610 @@ fn omit(out: &PathBuf) {
+     assert!(all, "an omitted-AIR case did not behave as expected");
+ }
+ 
++// ------------------------------------------------------------------ T10: the bound call
++/// Lanes of the `acceptRun` call vector that the run publishes with `PUB` entries (T10a: template
++/// words of the ledger transcript on unmapped lanes).
++const PUB_LANES: [u64; 4] = [21, 22, 40, 41];
++
++/// The blinding `r_P` of the T7 chains (`r_L = r_P`, T7 pick 11) and the run witness of `p`.
++fn lwit(p: &sl::Program) -> LWit {
++    LWit { hdr: hdr_of(p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) }
++}
++
++/// The ledger anchor operand of program `p` (T10, the `ANCHOR_D2` seam of `lfr_call`):
++/// `anchor_d2(r_L, prog_d)`, so `C_L = DIGEST(SHK_PROGC, anchor_d2)` fixes `prog_d` through the
++/// `A_0 = C_P` check of `gen_ops_check`.
++fn ledger_anchor_d2(p: &sl::Program, w: &LWit) -> Fr {
++    let r_l: [u64; 8] = u64s(&w.r_p).try_into().unwrap();
++    let pl: [u64; 8] = u64s(&p.adm.prog_d()).try_into().unwrap();
++    iface::anchor_d2(&r_l, &pl)
++}
++
++/// The packed `R` operands of a run: `pack(P2(DOM_PROGC, r_P, prog_d))`, `pack(input_d)`,
++/// `pack(P2(DOM_OUTHIDE, input_d, outcome_d))` (what `RootSealAir` exposes).
++fn run_ops(prog_d: &Dg, w: &LWit) -> [Fr; 3] {
++    let ops = stmt::operands(prog_d, &w.r_p, &w.hdr);
++    std::array::from_fn(|k| fr::pack(&u64s(&ops[k])))
++}
++
++/// The T10 run: an ORD `acceptRun` call of `sherlock-ledger.compact` (the T10a `call_run` of
++/// `lfr_call`) bound to the root statement `env` (74 words of N3): head words from seed 11, `X`
++/// = the `L` cached commitment, the ENC-3 `layout_d`, mode 0; `R` with the real operands `ops` and
++/// the ledger anchor `anchor`; the 5-pair lane map; `PUB` entries on `PUB_LANES`. `lanes = None`
++/// gives the synthetic key lanes (seed 6) with the same mapped words.
++fn t10_run(env: &[u64], ops: [Fr; 3], anchor: Fr, keys: &iface::Keys, lanes: Option<Vec<Fr>>) -> iface::Run {
++    use rand::{rngs::StdRng, Rng, SeedableRng};
++    let d = Dims::FULL;
++    let mut rng = StdRng::seed_from_u64(11);
++    let mut head: Vec<u64> = (0..iface::STMT).map(|_| rng.random::<u64>() % 0x7800_0001).collect();
++    head[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(keys.x));
++    head[iface::LAYOUT_WORD..iface::LAYOUT_WORD + 8].copy_from_slice(&keys.layout_d);
++    head[iface::MODE_WORD] = 0;
++    head[iface::J_WORDS..iface::J_WORDS + 4].fill(0);
++    head[iface::E_IN_WORD] = iface::ANCHOR_IN as u64;
++    head[iface::E_OUT_WORD] = iface::ANCHOR_IN as u64;
++    let tags = iface::anchor_tags(&head).unwrap();
++    let r = iface::reservation_full(&mut rng, tags, false, false, Some(anchor), Some(ops));
++    assert_eq!(env.len(), iface::ROOT_WORDS);
++    head[..iface::ROOT_WORDS].copy_from_slice(env);
++    let outs: Vec<Fr> = r.iter().map(|o| *o.entry().values.last().unwrap()).collect();
++    let e_in = iface::ANCHOR_IN as u64;
++    let lane_map: [(u64, u64); iface::LANE_PAIRS] =
++        [(iface::LANE_A_IN, e_in), (iface::LANE_CLAIM[0], 3), (iface::LANE_CLAIM[1], 3), (iface::LANE_OUTCOME, 2), (0, 0)];
++    let mut lanes = match lanes {
++        Some(v) => v,
++        None => {
++            let mut rng = StdRng::seed_from_u64(6);
++            let mut v: Vec<Fr> = (0..d.lanes())
++                .map(|i| {
++                    if i < 70 {
++                        let b: Vec<u8> = (0..31).map(|_| rng.random::<u8>()).collect();
++                        fr::fr_from_big(&num_bigint::BigUint::from_bytes_le(&b))
++                    } else {
++                        Fr::ZERO
++                    }
++                })
++                .collect();
++            for (l, c) in iface::tpl_ord() {
++                v[l] = c;
++            }
++            for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
++                v[l as usize] = outs[e as usize];
++            }
++            v
++        }
++    };
++    assert_eq!(lanes.len(), d.lanes(), "call vector length");
++    for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
++        assert_eq!(lanes[l as usize], outs[e as usize], "call vector lane {l} is not the output of R entry {e}");
++        lanes[l as usize] = Fr::ZERO;
++    }
++    let s: Vec<iface::OpIn> = PUB_LANES.iter().map(|&l| iface::OpIn::Pub { lane: l, v: lanes[l as usize] }).collect();
++    let plan = iface::plan(&d, &r, &s);
++    assert!(plan.spilled.is_empty());
++    let mut head = head;
++    head[iface::LOG_D_WORD..iface::LOG_D_WORD + 8].copy_from_slice(&iface::onion(&plan.log));
++    head[iface::LOG_N_WORD] = plan.log.len() as u64;
++    iface::Run { dims: d, head, lanes, lane_map, log: plan.log, path_sibs: plan.sibs }
++}
++
++fn read_vector(path: &str) -> Vec<Fr> {
++    let v: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
++    let r = num_bigint::BigUint::parse_bytes(b"73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16).unwrap();
++    v["words"]
++        .as_array()
++        .expect("words")
++        .iter()
++        .map(|w| {
++            let b: num_bigint::BigUint = w.as_str().expect("decimal string").parse().expect("decimal");
++            assert!(b < r, "canonical");
++            fr::fr_from_big(&b)
++        })
++        .collect()
++}
++
++fn fr_dec(x: &Fr) -> String {
++    use openvm_stark_backend::p3_field::PrimeField;
++    x.as_canonical_biguint().to_string()
++}
++
++/// The `acceptRun` arguments of a run (`c_p`, `input_pub`, `outcome_pub`, `claim_pub`, the
++/// ledger `anchor`) and the private words the privacy scan forbids on the call vector and the
++/// ledger state: `prog_d` (its 8 words and `pack`), `r_P`, the three `R` operands
++/// (`anchor_d2` = the `SHK_PROGC` operand), `n_steps` and the `h_hi` limbs. Small words (below
++/// 2^16) are listed with `"small": true`: a hit there is judged by its lane (template lanes hold
++/// small constants).
++fn t10_args(run: &iface::Run, p: &sl::Program, w: &LWit, n3_env: &[F], anchor: Fr) -> Value {
++    let v = |i: usize| fr_dec(run.log[i].values.last().unwrap());
++    let prog_d = p.adm.prog_d();
++    let mut forbid = vec![json!({"label": "pack(prog_d)", "value": fr_dec(&fr::pack(&u64s(&prog_d)))})];
++    for (i, x) in prog_d.iter().enumerate() {
++        forbid.push(json!({"label": format!("prog_d[{i}]"), "value": x.as_canonical_u32().to_string()}));
++    }
++    forbid.push(json!({"label": "pack(r_P)", "value": fr_dec(&fr::pack(&u64s(&w.r_p)))}));
++    for i in 0..3 {
++        forbid.push(json!({"label": format!("R{i}.d2"), "value": fr_dec(&run.log[i].values[0])}));
++    }
++    let steps = n3_env[stmt::npv::H_HI] - n3_env[stmt::npv::H_LO];
++    forbid.push(json!({"label": "n_steps", "value": steps.as_canonical_u32().to_string(), "small": true}));
++    for i in 0..4 {
++        forbid.push(json!({"label": format!("h_hi[{i}]"), "value": n3_env[stmt::npv::H_HI + i].as_canonical_u32().to_string(), "small": true}));
++    }
++    for (i, x) in w.r_p.iter().enumerate() {
++        forbid.push(json!({"label": format!("r_P[{i}]"), "value": x.as_canonical_u32().to_string(), "small": true}));
++    }
++    json!({
++        "c_p": v(0), "input_pub": v(1), "outcome_pub": v(2), "claim_pub": v(3),
++        "anchor": v(iface::ANCHOR_IN), "anchor_d2": fr_dec(&anchor),
++        "prog_d": dhex(&prog_d),
++        "forbid": forbid,
++    })
++}
++
++/// T10: the bound call on the T7 chain. `key OUT P`: the chain of program `P` with the synthetic
++/// lanes, the `L_Fr` keygen (OUT/lfr_pk.bitcode) and the wrap fixture OUT/lfr-call.json;
++/// `args OUT P [VECTOR]`: the `acceptRun` arguments (OUT/args.json) natively, and with VECTOR the
++/// native decode of that call vector; `call KEYDIR VECTOR OUT.json P`: the chain of `P` whose `L`
++/// call-vector lanes are VECTOR (1,026 words), `L_Fr` under the cached key, OUT.json.
++pub fn t10(a: &[String]) {
++    let t0 = Instant::now();
++    let mode = a[2].as_str();
++    let dir = PathBuf::from(&a[3]);
++    fs::create_dir_all(&dir).unwrap();
++    let which = |s: Option<&String>| if s.map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A };
++    let (prog, vec_path, out_path) = match mode {
++        "key" => (which(a.get(4)), None, dir.join("lfr-call.json")),
++        "args" => (which(a.get(4)), a.get(5).cloned(), dir.join("args.json")),
++        "call" => (which(a.get(6)), Some(a[4].clone()), PathBuf::from(&a[5])),
++        m => panic!("t10 mode {m}: key, args or call"),
++    };
++    let mut k = keys();
++    let p = sl::program_of(k.key_root, prog);
++    let w = lwit(&p);
++    // The ledger's program (`SHERLOCK_LEDGER_PROG`, default the run's own): a run of B against the
++    // anchor of A must be refused by the `L_Fr` tape (`gen_ops_check`, A_0 = C_P).
++    let ledger_prog = std::env::var("SHERLOCK_LEDGER_PROG").ok().map(|s| which(Some(&s))).unwrap_or(prog);
++    let anchor = ledger_anchor_d2(&sl::program_of(k.key_root, ledger_prog), &w);
++    let prog_d = p.adm.prog_d();
++    let ops = run_ops(&prog_d, &w);
++    // T7c: X is the `L` cached commitment of the child DAG (over N3 on the full tree); `L_Fr`
++    // checks it against the commitment it reads.
++    let keys = iface::Keys { x: k.pc.x_n3, layout_d: iface::layout_d() };
++    let lanes = vec_path.as_deref().map(read_vector);
++    if mode == "args" {
++        // The R outputs and the decode do not need the proofs: the N3 envelope of the run is the
++        // SEG statement the tree carries (computed by proving app to N3 here once, to be exact).
++        let (n3_p, _) = prove_to_n3(&k, &p);
++        let env = &n3_p.public_values[0][..stmt::npv::ENV];
++        let run = t10_run(&u64s(env), ops, anchor, &keys, lanes.clone());
++        let pw = native_lfr_words(&run);
++        let st = iface::decode_with(&Dims::FULL, &keys, &pw, Some(&run.path_sibs)).expect("native decode of the run");
++        assert_eq!(st, run.statement(), "native decode equals the run statement");
++        if let Some(v) = &lanes {
++            assert_eq!(&st, v, "decoded statement equals the call vector");
++            println!("T10ARGS the vector decodes to itself");
++        }
++        let args = t10_args(&run, &p, &w, env, anchor);
++        fs::write(&out_path, serde_json::to_vec_pretty(&args).unwrap()).unwrap();
++        println!("T10ARGS {args}");
++        return;
++    }
++    let tp = Instant::now();
++    let (n3_p, steps) = prove_to_n3(&k, &p);
++    let tree_s = tp.elapsed().as_secs_f64();
++    let env = &n3_p.public_values[0][..stmt::npv::ENV];
++    assert_eq!(stmt::dig(env, stmt::npv::PROG_D), prog_d, "N3 statement carries prog_d");
++    let run = t10_run(&u64s(env), ops, anchor, &keys, lanes);
++    let words = run.words();
++    // the universal `L` key with its fixed heights (the full-tree child and the path C runs)
++    let mut lg = vec![];
++    let (lk, _pr, _hv) = l_fixed(&k, &mut lg, &n3_p, &w, &words);
++    k.log.extend(lg);
++    let t = Instant::now();
++    let (lp, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &words, false);
++    let l_s = t.elapsed().as_secs_f64();
++    r.expect("L verify");
++    let lp = lp.unwrap();
++    let (_, ok) = stock_log(&lk.vk, &lp);
++    assert!(ok, "stock verifier accepts L");
++    // L_Fr: gen_verifier_full, gen_r_check, then gen_ops_check (the operand tie and A_0 = C_P).
++    let (g, lw, mem) = match lfr_gen(&lk.vk, &lp) {
++        Ok(x) => x,
++        Err(e) => {
++            println!("T10REFUSED {}", json!({"program": format!("{prog:?}"), "ledger_program": format!("{ledger_prog:?}"),
++                "refused_at": "L_Fr tape (gen_r_check, gen_ops_check)", "why": e, "wall_s": t0.elapsed().as_secs_f64()}));
++            std::process::exit(3);
++        }
++    };
++    let m = Machine::new(&g.tape);
++    let pw = m.public_values(&mem).concat();
++    assert_eq!(pw.len(), lw.len());
++    let dec = iface::decode_with(&Dims::FULL, &keys, &pw, Some(&run.path_sibs)).expect("decode");
++    assert_eq!(dec, run.statement(), "decoded statement equals the call vector");
++    let lfr = Engine::new(frozen::LFR.params());
++    let fairs = m.airs();
++    let pk_path = dir.join("lfr_pk.bitcode");
++    let t = Instant::now();
++    let fpk: MultiStarkProvingKey<sherlock_wrap_export::SC> = if mode == "key" {
++        let (fpk, _) = kg(&frozen::LFR, &lfr, &fairs, "L_Fr", &mut k.log);
++        fs::write(&pk_path, bitcode::serialize(&fpk).unwrap()).unwrap();
++        fpk
++    } else {
++        bitcode::deserialize(&fs::read(&pk_path).unwrap()).expect("L_Fr pk cache")
++    };
++    let keygen_s = t.elapsed().as_secs_f64();
++    let fvk = fpk.get_vk();
++    let mut traces = m.traces(&mem);
++    traces.push(range_trace(&fpk, &fairs, &traces));
++    let mut pis = m.public_values(&mem);
++    pis.resize(traces.len(), vec![]);
++    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
++    let ctx = ProvingContext::new(
++        traces
++            .iter()
++            .enumerate()
++            .map(|(i, t)| (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t)), pis[i].clone())))
++            .collect(),
++    );
++    drop(traces);
++    let t = Instant::now();
++    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
++    let lfr_s = t.elapsed().as_secs_f64();
++    let mut doc = export("lfr-call", lfr.config(), &fvk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses the L_Fr proof");
++    doc["decode"] = json!({
++        "dims": {"b": Dims::FULL.b, "v": Dims::FULL.v, "p": Dims::FULL.p, "l_tx": Dims::FULL.l_tx},
++        "keys": {"x": sherlock_wrap_export::hex_be(&keys.x), "layout_d": keys.layout_d.to_vec()},
++        "cases": [],
++    });
++    doc["path_sibs"] = json!(run.path_sibs.iter().map(|v| v.iter().map(sherlock_wrap_export::hex_be).collect::<Vec<_>>()).collect::<Vec<_>>());
++    fs::write(&out_path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    let pv_hex: Vec<String> = pw.iter().map(sherlock_wrap_export::hex_be).collect();
++    fs::write(out_path.with_extension("pv.json"), serde_json::to_vec(&pv_hex).unwrap()).unwrap();
++    if mode == "key" {
++        fs::write(dir.join("keys.json"), serde_json::to_string_pretty(&json!({"keys": k.log})).unwrap()).unwrap();
++        let args = t10_args(&run, &p, &w, env, anchor);
++        fs::write(dir.join("args-key.json"), serde_json::to_vec_pretty(&args).unwrap()).unwrap();
++    }
++    println!(
++        "T10CALL {}",
++        json!({
++            "mode": mode, "program": format!("{prog:?}"), "file": out_path.display().to_string(),
++            "prog_d": dhex(&prog_d), "key_root": dhex(&k.key_root), "keys_d": dhex(&k.table.keys_d()),
++            "l_pre_hash": format!("{:?}", lk.vk.pre_hash), "lfr_pre_hash": format!("{:?}", fvk.pre_hash),
++            "x": sherlock_wrap_export::hex_be(&keys.x), "anchor_d2": fr_dec(&anchor),
++            "lfr_public_words": pw.len(), "lfr_airs": fvk.inner.per_air.len(), "proved_steps": steps,
++            "lfr_widths": sw(&proof), "l_heights": height_check(&frozen::L, &heights(&lp)),
++            "lfr_heights": height_check(&frozen::LFR, &heights(&proof)),
++            "tree_s": tree_s, "l_prove_s": l_s, "lfr_keygen_or_load_s": keygen_s, "lfr_prove_s": lfr_s,
++            "wall_s": t0.elapsed().as_secs_f64(),
++        })
++    );
++}
++
++/// App, leaf, N1 (binary over the shards), N2, N3 of program `p` (chip set 0); the N3 proof and
++/// the proved steps.
++fn prove_to_n3(k: &Keys, p: &sl::Program) -> (Proof<NodeSC>, u32) {
++    let sets = vec![0usize; sl::shards(p).len()];
++    let (app_p, _) = k.app_proofs(p, &sets);
++    let steps: u32 = app_p.iter().map(|q| q.public_values[0][slice_core::pv::STEPS].as_canonical_u32()).sum();
++    let leaf_p: Vec<_> = app_p.iter().map(|q| k.leaf[0].prove(&k.app[0].vk, std::slice::from_ref(q), &Wit::Leaf)).collect();
++    let n1 = k.n1[0].prove(&k.leaf[0].vk, &leaf_p, &k.first_wit(p, &sets));
++    let n2 = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1), &k.node_wit(&k.table.node[0]));
++    let n3 = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2), &k.node_wit(&k.table.node[1]));
++    (n3, steps)
++}
++
++/// The `L_Fr` public words of a run without a proof (the decoder does not verify the proof):
++/// a stand-in pre-hash, then the `L` words packed 8 per Fr, base 2^31.
++fn native_lfr_words(run: &iface::Run) -> Vec<Fr> {
++    let mut out = vec![Fr::from_u64(0x5e7_ca11)];
++    for c in run.words().chunks(8) {
++        out.push(fr::pack(c));
++    }
++    out
++}
++
++/// Per-AIR widths of a key (T7c: the `L` column budget).
++fn per_air<SC: StarkProtocolConfig>(vk: &MultiStarkVerifyingKey<SC>, airs: &[AirRef<SC>]) -> Value {
++    let rows: Vec<Value> = vk
++        .inner
++        .per_air
++        .iter()
++        .zip(airs)
++        .enumerate()
++        .map(|(i, (a, r))| {
++            json!({"i": i, "name": r.name(), "total": a.params.width.total_width(),
++                   "pre": a.params.width.preprocessed, "common": a.params.width.common_main,
++                   "cached": a.params.width.cached_mains, "interactions": a.symbolic_constraints.interactions.len(),
++                   "constraints": a.symbolic_constraints.constraints.constraint_idx.len(),
++                   "pvs": a.params.num_public_values})
++        })
++        .collect();
++    for r in &rows {
++        println!("T7CSHAPE {r}");
++    }
++    json!({"total": rows.iter().map(|r| r["total"].as_u64().unwrap()).sum::<u64>(), "airs": rows})
++}
++
++/// T7c: per-AIR widths of the universal `L` (and the check that it is one key over N3 and the
++/// path C leaf layer), of N3, of the leaf layers.
++fn shape_mode(out: &PathBuf) {
++    let mut k = keys();
++    let mut lg = vec![];
++    let lk = l_key(&k, &mut lg);
++    k.log.extend(lg);
++    println!("T7CSHAPE == L (universal)");
++    let l = per_air(&lk.vk, &lk.airs);
++    println!("T7CSHAPE == N3");
++    let n3 = per_air(&k.n3.vk, &k.n3.airs);
++    println!("T7CSHAPE == leaf set 0");
++    let lf = per_air(&k.leaf[0].vk, &k.leaf[0].airs);
++    println!("T7CSHAPE == path C leaf layer set 0");
++    let lc = per_air(&k.pc.leaf[0].vk, &k.pc.leaf[0].airs);
++    println!("T7CSHAPE == path C app set 0");
++    let ac = per_air(&k.pc.app[0].vk, &k.pc.app[0].airs);
++    let doc = json!({"L": l, "N3": n3, "leaf0": lf, "pathc_leaf0": lc, "pathc_app0": ac,
++        "meta": {"cached_rows": k.pc.meta_rows, "height": k.pc.meta_h}, "keys": k.log});
++    fs::write(out.join("shape.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
++}
++
++/// T7c: path C. The one-leaf run of `entry x;` (S = 8): app, leaf layer at the internal set,
++/// `L` (the universal key, fixed heights), `L_Fr`; the refusals (a child key outside
++/// `key_root`, a wrong `X`, an `X` that is not the `L` commitment, the slim interface words);
++/// the full-tree `L` on the same key and the same heights. Writes OUT/pathc.json, OUT/cases.json
++/// and the key bitcodes for `fp8_d3`.
++fn pathc(out: &PathBuf) {
++    let t0 = Instant::now();
++    let mut times = serde_json::Map::new();
++    let mut tick = |name: &str, t: Instant| {
++        times.insert(name.into(), json!(t.elapsed().as_secs_f64()));
++    };
++    let mut cases = Cases(vec![]);
++    let t = Instant::now();
++    let mut k = keys();
++    tick("keygen", t);
++    // the full-tree child of L (program A, S = 4), for the fixed heights and the same-key run
++    let p = sl::program_of(k.key_root, sl::Prog::A);
++    let sets = vec![0usize; sl::shards(&p).len()];
++    let (app_p, _) = k.app_proofs(&p, &sets);
++    let leaf_p: Vec<_> = app_p.iter().map(|q| k.leaf[0].prove(&k.app[0].vk, std::slice::from_ref(q), &Wit::Leaf)).collect();
++    let n1_p = k.n1[0].prove(&k.leaf[0].vk, &leaf_p, &k.first_wit(&p, &sets));
++    let n2_p = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1_p), &k.node_wit(&k.table.node[0]));
++    let n3_p = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2_p), &k.node_wit(&k.table.node[1]));
++    let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
++    let words = run_words(&n3_p, k.pc.x_n3, &w, &p.adm.prog_d(), false).words();
++    let t = Instant::now();
++    let mut lg = vec![];
++    let (lk, pr, l_fixed_heights) = l_fixed(&k, &mut lg, &n3_p, &w, &words);
++    k.log.extend(lg);
++    tick("l_keygen_and_fixed_heights", t);
++    let [pr, pr1] = pr;
++    let steps = pr.leaf.public_values[0][stmt::lpv::STEPS].as_canonical_u32();
++    let want: Vec<Option<usize>> = s8l::HEIGHTS.iter().map(|h| Some(h.trailing_zeros() as usize)).collect();
++    let app_fixed = heights(&pr.app) == want;
++    println!("T7CPATHC one leaf: {steps} steps, app heights fixed {app_fixed}, leaf-layer statement h_pre {:?}", &pr.leaf.public_values[0][stmt::lpv::H_PRE..stmt::lpv::H_PRE + 4]);
++    let child = LChild::C(&k.pc.leaf[0].vk, &pr.leaf, &pr.pcw);
++
++    // honest path C
++    let t = Instant::now();
++    let (lp, r) = lk.prove_try(&child, &pr.w, &pr.words, false);
++    tick("l_prove_pathc", t);
++    cases.rec("pathc_L_honest", true, r.clone(), "one leaf (S = 8), leaf layer at the internal set, L on the universal key: DAG key leaf in key_root, prog_d opened, SEG root sealed");
++    r.expect("path C L verify");
++    let lp = lp.unwrap();
++    let (_, ok) = stock_log(&lk.vk, &lp);
++    assert!(ok, "stock verifier accepts the path C L proof");
++    let root = &lp.public_values[0][..stmt::npv::ENV];
++    assert_eq!(stmt::dig(root, stmt::npv::PROG_D), pr.prog_d, "root_stmt prog_d");
++    assert_eq!(stmt::dig(root, stmt::npv::KEY_ROOT), k.key_root, "root_stmt key_root");
++    // the full tree on the same key and heights
++    let t = Instant::now();
++    let (lpf, r) = lk.prove_try(&LChild::N3(&n3_p), &w, &words, false);
++    tick("l_prove_full", t);
++    cases.rec("full_tree_L_honest_on_the_same_key", true, r, "N3 child of program A on the same L key and fixed heights");
++    let lpf = lpf.unwrap();
++    let same_shape = heights(&lp) == heights(&lpf) && sw(&lp) == sw(&lpf);
++    cases.rec("pathc_and_full_tree_L_same_shape", true, if same_shape { Ok(()) } else { Err(format!("{:?} vs {:?}", heights(&lp), heights(&lpf))) }, "per-AIR log heights and stacked widths equal (one L_Fr key)");
++
++    // refusals at L
++    let r = lk.prove_try(&LChild::C(&k.pc.leaf[1].vk, &pr1.leaf, &pr1.pcw), &pr1.w, &pr1.words, true).1;
++    cases.rec("pathc_child_key_outside_key_root_refused_at_L", false, r, "leaf layer of chip set 1 (S = 8, EXT): its DAG key leaf is not in key_root (mutant prover, stock L verifier)");
++    let mut wx = pr.words.clone();
++    wx[iface::X_WORD] ^= 1;
++    let r = lk.prove_try(&child, &pr.w, &wx, true).1;
++    cases.rec("pathc_wrong_x_refused_at_L", false, r, "X limb 0 xor 1: the DAG key leaf leaves key_root (mutant prover, stock L verifier)");
++    let mut wx = pr.words.clone();
++    wx[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(k.pc.x_n3));
++    let r = lk.prove_try(&child, &pr.w, &wx, true).1;
++    cases.rec("pathc_x_of_the_full_tree_refused_at_L", false, r, "X = x_n3 on path C (mutant prover, stock L verifier)");
++    let mut bad = pr.pcw.clone();
++    bad.image_d[0] += F::ONE;
++    let r = lk.prove_try(&LChild::C(&k.pc.leaf[0].vk, &pr.leaf, &bad), &pr.w, &pr.words, true).1;
++    cases.rec("pathc_wrong_prog_d_opening_refused_at_L", false, r, "image_d word 0 + 1 in the prog_d opening (mutant prover, stock L verifier)");
++
++    // X not the L commitment: a key_root whose DAG leaf for chip set 0 carries X of chip set 1
++    let x_fake = k.pc.x[1];
++    let fake = stmt::dag_leaf(PC_ENTRY, &x_limbs(x_fake), &k.pc.leaf[0].vk.pre_hash, &k.pc.app[0].vk.pre_hash, &k.pc.leaf[0].vkc(&k.pc.app[0].vk).cc);
++    let mut leaves = k.tree.leaves.clone();
++    leaves[KEYDAG_IDX] = fake;
++    let tf = KeyTree { leaves };
++    let prf = k.pathc_run(0, tf.root(), tf.path(KEYDAG_IDX), x_fake);
++    let (lq, r) = lk.prove_try(&LChild::C(&k.pc.leaf[0].vk, &prf.leaf, &prf.pcw), &prf.w, &prf.words, false);
++    cases.rec("pathc_x_not_the_l_commitment_accepted_at_L", true, r, "a key_root with X of another DAG in the leaf: L cannot see its own commitment");
++    let mut bad_lfr = None;
++    if let Some(q) = lq {
++        let r = match guard(|| lfr_gen_any(&lk.vk, &q)) {
++            Ok((g2, _, mem2, nf)) if nf > 0 => {
++                bad_lfr = Some((g2, mem2));
++                Err(format!("{nf} tape assertions failed"))
++            }
++            Ok(_) => Ok(()),
++            Err(e) => Err(e),
++        };
++        cases.rec("pathc_x_not_the_l_commitment_refused_at_L_Fr", false, r, "L_Fr: X != the L cached commitment it reads");
++    }
++
++    // slim interface AIRs: Call and Stmt carry public values only; a changed word after proving
++    let d = Dims::FULL;
++    // the interface AIRs follow the verifier sub-circuit: Stmt, LogEntry, LogValue, Call
++    let i_stmt = 1 + lk.n_bench;
++    let i_call = i_stmt + 3;
++    assert_eq!(lk.vk.inner.per_air[i_call].params.width.total_width(), 1, "bare Call AIR");
++    assert_eq!(lk.vk.inner.per_air[i_stmt].params.width.total_width(), 1, "bare Stmt AIR");
++    for (air, i) in [("call", i_call), ("stmt", i_stmt)] {
++        let n = lp.public_values[i].len();
++        for (pos, j) in [("first", 0usize), ("middle", n / 2), ("last", n - 1)] {
++            let mut q = lp.clone();
++            q.public_values[i][j] += F::ONE;
++            let r = lk.engine.verify(&lk.vk, &q).map_err(|e| format!("{e:?}"));
++            cases.rec(&format!("slim_{air}_word_{pos}_changed_refused_by_stock_L"), false, r, &format!("bare {air} AIR (AIR {i}) public value {j} + 1 after proving"));
++            let r = guard(|| lfr_gen(&lk.vk, &q).map(|_| ()));
++            cases.rec(&format!("slim_{air}_word_{pos}_changed_refused_by_L_Fr_tape"), false, r, "L_Fr tape over the changed proof");
++        }
++    }
++    let _ = d;
++
++    // L_Fr on path C
++    let (g, lw, mem) = lfr_gen(&lk.vk, &lp).expect("L_Fr tape honest on path C");
++    cases.rec("pathc_lfr_tape_honest", true, Ok(()), "gen_r_check, the operand check and the X check hold");
++    cases.rec("full_tree_lfr_tape_honest_on_the_same_tape", true, lfr_gen(&lk.vk, &lpf).map(|_| ()), "the same L_Fr tape over the full-tree L proof");
++    let m = Machine::new(&g.tape);
++    let pw = m.public_values(&mem).concat();
++    assert_eq!(pw.len(), lw.len());
++    assert_eq!(iface::decode_with(&d, &dec_keys(k.pc.x[0]), &pw, None).unwrap(), pr.run.statement(), "honest decode");
++    let lfr = Engine::new(frozen::LFR.params());
++    let fairs = m.airs();
++    let t = Instant::now();
++    let (fpk, fvk) = kg(&frozen::LFR, &lfr, &fairs, "L_Fr", &mut k.log);
++    tick("lfr_keygen", t);
++    let lfr_prove = |g: &Gen, mem: &Vec<Option<sherlock_lfr::tape::Val>>, mutant: bool| {
++        let m2 = Machine::new(&g.tape);
++        let mut tr = m2.traces(mem);
++        tr.push(range_trace(&fpk, &fairs, &tr));
++        let mut pi = m2.public_values(mem);
++        pi.resize(tr.len(), vec![]);
++        let ctx = ProvingContext::new(
++            tr.iter()
++                .enumerate()
++                .map(|(i, t)| (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t)), pi[i].clone())))
++                .collect(),
++        );
++        drop(tr);
++        let d_fpk = lfr.device().transport_pk_to_device(&fpk);
++        if mutant {
++            std::env::set_var("SB_MUTANT_PROVER", "1");
++        }
++        let p = lfr.prove(&d_fpk, ctx).map_err(|e| format!("prove: {e:?}"));
++        std::env::remove_var("SB_MUTANT_PROVER");
++        p
++    };
++    let t = Instant::now();
++    let proof = lfr_prove(&g, &mem, false).expect("L_Fr prove");
++    tick("lfr_prove", t);
++    let r = lfr.verify(&fvk, &proof).map_err(|e| format!("{e:?}"));
++    cases.rec("pathc_L_Fr_honest", true, r, "L_Fr proof over the path C L proof, stock L_Fr verifier");
++    if let Some((g2, mem2)) = bad_lfr.take() {
++        let r = guard(|| lfr.verify(&fvk, &lfr_prove(&g2, &mem2, true)?).map_err(|e| format!("{e:?}")));
++        cases.rec("pathc_x_not_the_l_commitment_refused_by_stock_L_Fr_verifier", false, r, "mutant L_Fr proof of the failing tape, stock L_Fr verifier (SG-3)");
++    }
++    let doc = export("lfr-t7c-pathc", lfr.config(), &fvk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses L_Fr");
++    fs::write(out.join("lfr-fp8.json"), serde_json::to_vec(&doc).unwrap()).unwrap();
++    for (f, b) in [
++        ("app_vk.bitcode", bitcode::serialize(&k.pc.app[0].vk).unwrap()),
++        ("leaf_vk.bitcode", bitcode::serialize(&k.pc.leaf[0].vk).unwrap()),
++        ("node1_vk.bitcode", bitcode::serialize(&k.n1[0].vk).unwrap()),
++        ("node2_vk.bitcode", bitcode::serialize(&k.n2.vk).unwrap()),
++        ("node_vk.bitcode", bitcode::serialize(&k.n3.vk).unwrap()),
++        ("fv_vk.bitcode", bitcode::serialize(&k.fv.vk).unwrap()),
++        ("l_vk.bitcode", bitcode::serialize(&lk.vk).unwrap()),
++        ("lfr_vk.bitcode", bitcode::serialize(&fvk).unwrap()),
++    ] {
++        fs::write(out.join(f), b).unwrap();
++    }
++    let all = cases.0.iter().all(|c| c["pass"].as_bool().unwrap());
++    let summary = json!({
++        "program": format!("A (S = 8 bucket): {}", sl::Prog::A.source()),
++        "prog_d": dhex(&pr.prog_d),
++        "key_root": dhex(&k.key_root),
++        "keys_d": dhex(&k.table.keys_d()),
++        "x_pathc": format!("{:?}", k.pc.x[0]),
++        "x_n3": format!("{:?}", k.pc.x_n3),
++        "dag_leaf": dhex(&k.pc.dag),
++        "keys": k.log,
++        "shards": 1,
++        "proved_steps": steps,
++        "app_fixed_heights": app_fixed,
++        "heights": {"app": height_check(&frozen::APP, &heights(&pr.app)), "leaf_layer": height_check(&frozen::INTERNAL, &heights(&pr.leaf)),
++                    "L": height_check(&frozen::L, &heights(&lp)), "L_full_tree": height_check(&frozen::L, &heights(&lpf)),
++                    "L_Fr": height_check(&frozen::LFR, &heights(&proof))},
++        "app_log_heights": heights(&pr.app),
++        "leaf_log_heights": heights(&pr.leaf),
++        "l_log_heights": heights(&lp),
++        "l_full_tree_log_heights": heights(&lpf),
++        "l_fixed_heights": l_fixed_heights,
++        "l_meta": {"cached_rows": k.pc.meta_rows, "height": k.pc.meta_h},
++        "stacked_widths": {"app": sw(&pr.app), "leaf_layer": sw(&pr.leaf)},
++        "l_stacked_widths": sw(&lp),
++        "l_full_tree_stacked_widths": sw(&lpf),
++        "lfr_log_heights": heights(&proof),
++        "lfr_stacked_widths": sw(&proof),
++        "l_public_values": lp.public_values.iter().map(|v| v.len()).sum::<usize>(),
++        "lfr_public_words": pw.len(),
++        "app_prove_s": pr.app_s,
++        "times_s": times,
++        "wall_s": t0.elapsed().as_secs_f64(),
++        "cases_all_pass": all,
++    });
++    fs::write(out.join("pathc.json"), serde_json::to_string_pretty(&summary).unwrap()).unwrap();
++    // the fp8_d3 input: the path C app and leaf layer, the full-tree nodes of the same run, L
++    // and L_Fr on path C
++    let d3in = json!({
++        "leaf_set": "internal",
++        "app_log_heights": heights(&pr.app), "leaf_log_heights": heights(&pr.leaf),
++        "node1_log_heights": heights(&n1_p), "node2_log_heights": heights(&n2_p), "node_log_heights": heights(&n3_p),
++        "stacked_widths": {"app": sw(&pr.app), "leaf": sw(&pr.leaf), "node1": sw(&n1_p), "node2": sw(&n2_p), "node": sw(&n3_p)},
++        "l_log_heights": heights(&lp), "l_stacked_widths": sw(&lp),
++        "heights": {"L_Fr": summary["heights"]["L_Fr"].clone()}, "lfr_stacked_widths": sw(&proof),
++    });
++    fs::write(out.join("chain.json"), serde_json::to_string_pretty(&d3in).unwrap()).unwrap();
++    fs::write(out.join("cases.json"), serde_json::to_string_pretty(&json!({"all_pass": all, "cases": cases.0})).unwrap()).unwrap();
++    println!("T7CPATHC heights {}", serde_json::to_string(&summary["heights"]).unwrap());
++    println!("T7CPATHC l_stacked_widths {:?} lfr_stacked_widths {:?}", sw(&lp), sw(&proof));
++    println!("T7CPATHC times {}", serde_json::to_string(&summary["times_s"]).unwrap());
++    println!("T7CPATHC L public values {} L_Fr public words {}", summary["l_public_values"], pw.len());
++    for k in summary["keys"].as_array().unwrap() {
++        println!("T7KEY {} g1={} pre={} bytes={}", k["key"], k["g1"], k["pre_hash"], k["vk_bitcode_bytes"]);
++    }
++    assert!(all, "a T7c case did not behave as expected");
++    println!("T7CPATHC PASS: one leaf, leaf layer, L, L_Fr on the universal L key");
++}
++
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
++    if a[1] == "t10" {
++        return t10(&a);
++    }
+     let out = PathBuf::from(&a[2]);
+     fs::create_dir_all(&out).unwrap();
+     match a[1].as_str() {
+         "chain" => chain(&out, if a.get(3).map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A }),
+         "cases" => cases_mode(&out),
+         "omit" => omit(&out),
+-        m => panic!("mode {m}: chain, cases or omit"),
++        "shape" => shape_mode(&out),
++        "pathc" => pathc(&out),
++        "s8app" => {
++            // T7c diagnostic: the S = 8 app shard of `entry x;` alone
++            let eng = sh::engine();
++            let k = sh::key(&eng, s8l::airs_set(0, 0)).expect("S=8 app key");
++            let p = s8l::program_of([F::ONE; D], s8l::Prog::A);
++            let shards = s8l::shards(&p);
++            let tr = s8l::traces_set(&p, &shards[0], &s8l::Build::default(), 0);
++            println!("T7CS8 shards {} debug {:?}", shards.len(), sh::debug(&eng, &k, &tr));
++            let (pf, v, t) = sh::prove(&eng, &k, &tr, false);
++            println!("T7CS8 prove {:?} verify {v:?} {t:.1}s", pf.as_ref().err());
++        }
++        m => panic!("mode {m}: chain, cases, omit, shape or pathc"),
+     }
+ }
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index a58b2d2..dc93506 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -442,10 +442,15 @@ struct LKey {
+ }
+ 
+ fn l_key(n3_vk: &MultiStarkVerifyingKey<NodeSC>, keys_d: &Dg, log: &mut Vec<Value>) -> LKey {
++    // T10 merge: the production `L` (T7c path C, child-meta, T10 log tie and onion AIR) lives in
++    // `t7_chain`; this T7-era copy no longer builds that key. Run `t7_chain chain|cases|omit`.
++    if std::env::var("T8_GP_OLD_L").is_err() {
++        panic!("t8_gp: the L layer moved to t7_chain (T7c, T10); use t7_chain for chain, cases and omit");
++    }
+     let engine = RootEng::new(frozen::L.params());
+     let c = VerifierConfig { has_cached: true, continuations_enabled: true, ..Default::default() };
+     let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(Arc::new(n3_vk.clone()), c);
+-    let kind = Kind::Root { n3_pre: stmt::digest_u32(&n3_vk.pre_hash), keys_d: stmt::digest_u32(keys_d) };
++    let kind = Kind::Root { n3_pre: stmt::digest_u32(&n3_vk.pre_hash), keys_d: stmt::digest_u32(keys_d), x_n3: [0; 9] };
+     let inv = l.bus_inventory();
+     let perm = inv.poseidon2_permute_bus;
+     let mut airs: Vec<AirRef<LSC>> = vec![Arc::new(StmtAir::new(kind.clone(), inv))];
+@@ -468,8 +473,8 @@ struct LWit {
+ impl LKey {
+     fn ctxs(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64]) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
+         let kid = child_of(&self.kind, n3_vk, n3);
+-        let (tr, pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p });
+-        let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p);
++        let (tr, pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p, head: vec![], pc: None });
++        let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p, None);
+         let (st, ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
+         let dev = self.engine.device();
+         let m = |t: &openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>| dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(t));
+-- 
+2.56.0
+
