@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Slice gates V.2..V.8 (sherlock-modular-leaf-20261111): run one mode of the sherlock-leaf
-# `slice` example in the T6 openvm tree and require every case PASS. Usage: check-slice.sh vN
+# `slice` example in the T7 openvm tree (t7-bind) and require every case PASS. Usage: check-slice.sh vN
 set -euo pipefail
 mode="$1"
-ovm="${SHERLOCK_SDK_ROOT:-$HOME/.cache/m7-wrap/src/openvm-t6}"
+ovm="${SHERLOCK_SDK_ROOT:-$HOME/.cache/m7-wrap/src/openvm-t7}"
 export RUSTUP_AUTO_INSTALL=0
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cache/t6/target-ovm}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cache/t7/target-ovm}"
 export SHERLOCK_SDK_ROOT="$ovm"
-export T6_OUT="${T6_OUT:-$HOME/.cache/t6/check-out}"
+export T6_OUT="${T6_OUT:-$HOME/.cache/t7/check-out}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-8}"
 mkdir -p "$T6_OUT"
 if [ -n "$(git -C "$ovm" status --porcelain -- crates Cargo.toml Cargo.lock)" ]; then
@@ -15,7 +15,7 @@ if [ -n "$(git -C "$ovm" status --porcelain -- crates Cargo.toml Cargo.lock)" ];
 fi
 echo "openvm tree $ovm at $(git -C "$ovm" rev-parse HEAD)"
 rm -f "$T6_OUT/$mode.json"
-( cd "$ovm" && "$HOME/.local/bin/heavy-slot" --mem 24G --name "t6-check-$mode" -- \
+( cd "$ovm" && "$HOME/.local/bin/heavy-slot" --mem 24G --name "t7-check-$mode" -- \
     cargo run --release --offline -p sherlock-leaf --example slice -- "$mode" ) 2>&1 | grep -v "Air idx" | tail -40
 python3 - "$T6_OUT/$mode.json" "$mode" <<'PY'
 import json, sys
