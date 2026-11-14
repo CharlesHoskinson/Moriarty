@@ -24,6 +24,7 @@ witness).
 | honest witness refused | AFK-F6, AFK-F9(b) | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
 | host/prose mismatch | GP2-F4.2 | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
 | conditional (standalone shard only) | GP2-C2.1 | open (outside T10q) |
+| forgery accepted (`L_Fr` tape, chunk mode) | T10B-F03 | FIXED in T10q-cx (openvm `bcf2cfd` (branch `t10q-cx`)) |
 
 No attack that a lane called sound was accepted among those attempted (see NOT ATTEMPTED rows). Every guard row is refused by the constraint the
 finding names.
@@ -98,6 +99,54 @@ finding names.
 | `m_dag_leaf_no_hpre`, `m_hpre_free`, `m_pc_free`, `m_seal_no_keyroot` | not attempted: needs an `L` statement build (`Kind::Root` with `PcWit`, KeyPathAir, RootSealAir) | NOT ATTEMPTED |
 | `m_lfr_no_l_vk_pin`, `m_lfr_x_check_low_limbs_only` | not attempted: needs the `L_Fr` tape | NOT ATTEMPTED |
 | `m_wrap_ignores_slim_call` | not attempted: needs the wrap circuit | NOT ATTEMPTED |
+
+## t10-bound (T10q-cx)
+
+Lane `qa-20261114-t10-bound` finding F-03 (verdict D-2). Handler `lfr` (`tests/qr/lfr.rs`): the
+real `L_Fr` tape (`gen_r_check`, then `gen_ops_check`) on chunk-mode `L` words built by
+`iface::case_run_bound` with the run operands of program B (`r_P`, `prog_d` B) and the ledger
+anchor operand `anchor_d2(r_P, prog_d A)` on every `SHK_PROGC` anchor entry, checked by
+`Tape::execute_checked`; then the wrap's decoder twin `iface::decode_with`. Before: openvm `dd3593e`
+(`logs/t10q-cx-fails-before.txt`); after: `bcf2cfd` (`logs/t10q-cx-after.txt`). MEASURED.
+
+| finding | attempt | input | result | constraint | verdict |
+|---|---|---|---|---|---|
+| F-03 chunk 1 anchor (`A_0 = C_P`) | chunk 1 of 1 and 1 of 2 of program B, `a_in` operand = ledger anchor of A | `t10-bound-F03-chunk-j1-anchor.itf.json` (lane witness `modeBit 1`, `chunkJ 1`, `chunkK 1`); `inputs/T10B-F03-chunk-j1-k*-forged.json` | before: tape accepted (0 failed assertions) and the decoder accepts with the `a_in` lane = `C_L` of ledger A and the `TPL_CHUNK` lanes. After: refused | `gen_ops_check` assert #3: the `a_in` operand equals the `SHK_PROGC` operand when `tag_in` is `SHK_PROGC` (ORD or chunk 1) | FIXED (openvm `bcf2cfd`; `t10b_f03_chunk_anchor_is_c_p`) |
+| F-03 chunk `k` anchor (`A_k = C_P`) | chunk 2 of 2, `a_out` operand = ledger anchor of A | `inputs/T10B-F03-chunk-j2-k2-forged.json` | before: no check on `a_out` in the code. After: refused | `gen_ops_check` assert #4: a chunk's `a_out` operand equals the `SHK_PROGC` operand when `tag_out` is `SHK_PROGC` | FIXED (`t10b_f03_chunk_anchor_ends`) |
+| F-03 controls | honest chunks 1/2, 2/2, 1/1, 2/3 | `inputs/T10B-F03-chunk-*-honest.json` | accepted before and after | none | positive |
+
+Reach (DERIVED from the source): the head words (`mode`, `j`, `k`, `e_in`, `e_out`) are
+prover-chosen public values of the `Stmt` interface AIR, and the anchor entries are bound only by
+the onion digest, so the `L` prover can produce chunk-mode words. Only `t7_chain::lfr_gen_any`
+(the `L_Fr` tape of `t7_chain t10`, `cases`, `pathc` and the T16 runner) calls `gen_ops_check`;
+the tapes of `j5_gate`, `lfr_e3`, `slice_chain` and `fp8_keyset` run `gen_r_check` alone and never
+had the anchor tie. On `SherlockLedger` the forgery is not reachable: a mode-1 call vector must
+carry the `TPL_CHUNK` anchor-write lanes 11 to 20 and `LANE_A_OUT = a_out` (`decode.rs:598-605`),
+and no entry of `tools/sherlock-sdk/sherlock-ledger.compact` writes the anchor cell (the header:
+"the ledger has no chunked entry"). It is live for any contract with a chunked entry (the
+ARCHITECTURE chunk path, FINAL-DESIGN anchor lock `A_0 = A_k = C_P`).
+
+End to end (`t7_chain t10 chunkcx`, unit `t10q-cx-e2e`, `logs/t10q-cx-chunkcx.{txt,json}`, MEASURED):
+the real `L` prover over the N3 proof of program A, with chunk-mode words (mode 1, chunk 1 of 1)
+whose `SHK_PROGC` anchor entries carry the ledger anchor operand of program B. The stock `L`
+verifier accepts this `L` proof. The `L_Fr` tape with the anchor rule as built has 0 failed
+assertions, and the decoder twin accepts with the `a_in` lane equal to `C_L` of ledger B: a proof
+of A presents itself to a B ledger. With the fix the tape has 2 failed assertions (`A_0`, `A_k`).
+The honest ORD run passes both tapes. Run on openvm `475b80d` (branch `t10q-cx-e2e` = `beba730`
+plus the fix), because the `L` key of the t10q tip `8bff541` does not pass the FP8 G1 bounds at
+this time (`Interactions { set: "L", air: 0, got: 107, bound: 100 }`; `dd3593e`: 2,003 columns
+against 2,000); the `L_Fr` check does not depend on that change.
+
+Keys: the `L_Fr` tape gains the `A_k` check on every call, so the `L_Fr` key and the wrap key
+that pins it change (DERIVED). `L`, N1 to N3 and the leaf keys do not change. MEASURED on the T10 ORD tape: 499,360 ops
+as built, 499,623 fixed (+263), and the 14 `L_Fr` machine AIR heights are equal (largest 2^19,
+bound 2^20), so the `L_Fr` key shape and the wrap circuit size do not change; only the `L_Fr`
+program table and its commitment change, which the next `L_Fr` keygen and wrap keygen take up.
+
+Open observation (no counterexample built, not a lane finding): the lock anchors of middle
+chunks (`SHK_LOCK`, FINAL-DESIGN `A_j = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d,
+run_tag, j)))`) have a free operand in the tape; nothing ties it to `prog_d`. A chunked contract
+needs that tie before it ships, or chunks of two programs could share a lock value.
 
 ## Observation outside the lanes
 
