@@ -58,12 +58,13 @@ QUINT_REGRESSIONS_DIR=~/Projects/Moriarty/tests/quint-regressions \
 tests/quint-regressions/models/run.sh
 ```
 
-`replay_all` passes on openvm `beba730` (branch `t10q`, on T10mm `d26453c` and quint-reg `1733bb5`):
-59 rows pass, the open-defect row GP2-C2.1 and 1 not-replayed row are skipped (`logs/replay_all.txt`,
+`replay_all` passes on openvm `fb5961f` (branch `t10q`, with t10q-cx merged, on T10mm `d26453c` and quint-reg `1733bb5`):
+60 rows pass, the open-defect row GP2-C2.1 and 1 not-replayed row are skipped (`logs/replay_all.txt`,
 MEASURED). T10q fixed 7 of the 8 defect rows. Each of their named tests failed on `1733bb5`
-(`logs/t10q-fails-before.txt`) and passes on `beba730` without `#[ignore]` (`logs/t10q-after.txt`,
-MEASURED). T10q added `afk_f9_work_one_child_unlinked_refused` and
-`gp2_cnull_fields_start_free_as_in_the_reference`.
+(`logs/t10q-fails-before.txt`) and passes on `beba730` and `51b12a0` without `#[ignore]` (`logs/t10q-after.txt`,
+MEASURED). T10q added `afk_f9_work_one_child_unlinked_refused`,
+`gp2_cnull_fields_start_free_as_in_the_reference`, and `merge_binds_the_children`
+(openvm `51b12a0`).
 
 ## Rows
 
@@ -141,13 +142,17 @@ not-replayed.
   sound, as the models take them. For MW-STEPV-ONCE, the local refusal is the kernel range bus
   (bus 197) of the truncated CORE trace. In a proof, the key's fixed CORE height (8) refuses the
   trace first.
-- MW F-01 Work (fixed in T10q): the range check is at the producers. A SEG `h_hi` enters only at
-  First (HHI_RANGE_BUS, T10) and at Work (the kernel RANGE bus, T10q). Node, the GP modes and `L`
-  copy it, so the range holds by induction. Downstream checks were not added: on the code as built
-  NW, NW2 and N3 accept a child with a wide limb (MEASURED, fails-before), `L` takes the child
-  `H_HI` as columns (`root_map`, code reading), and the decoder twin `iface::decode_with` accepts a
-  root word 29 of 65536 (`h_hi_wide_limb_downstream`, MEASURED). A forged Work is refused before it
-  can be a child.
+- MW F-01 Work (fixed in T10q): `h_hi` is ranged where it enters. A SEG `h_hi` enters only at
+  First (HHI_RANGE_BUS, T10) and at Work (the kernel RANGE bus, T10q `beba730`). Node, the GP
+  modes and `L` copy it. A non-root `h_hi` is consumed by a MERGE stitch `h_hi(0) = h_lo(1)`
+  against a leaf `h_pre`, which CORE ranges at 16 bits (core.rs:613), so the range holds by
+  induction. No check was added at NW, NW2, N3, `L` or the wrap. An `L` check was built and
+  measured and does not fit the frozen `L` set: 8 byte columns give 2,003 columns (bound 2,000),
+  one column per limb gives 107 interactions on the `L` statement AIR (bound 100) (MEASURED,
+  `t7_chain shape`, openvm `dd3593e` and `8bff541`, removed in `51b12a0`). It needs an owner
+  ruling on the `L` bounds. On the code before T10q, NW, NW2 and N3 accepted a child with a wide
+  limb (MEASURED, `t10q-fails-before.txt`), and the decoder twin `iface::decode_with` accepts a
+  root word 29 of 65536 (`h_hi_wide_limb_downstream`, MEASURED).
 - The `L` and `L_Fr` findings of pathc-xcheck: 4 of the 11 lane mutants are covered by T7c
   real-prover cases (mutant prover, stock verifier, `research/sherlock-t7c-pathc-20261114/RESULTS.md`),
   cited and not run again here. 7 were not attempted (COUNTEREXAMPLES.md).
