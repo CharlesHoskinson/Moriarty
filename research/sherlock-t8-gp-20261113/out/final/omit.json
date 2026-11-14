@@ -1,0 +1,843 @@
+{
+  "all_pass": true,
+  "all_required": {
+    "L": true,
+    "app": true,
+    "fv": true,
+    "leaf": true,
+    "n1": true,
+    "n2": true,
+    "n3": true
+  },
+  "app_shape": {
+    "airs": 7,
+    "columns": 2361,
+    "max_constraints": 1476,
+    "max_degree": 3,
+    "max_interactions": 145,
+    "per_air": [
+      {
+        "air": "CoreAir",
+        "columns": 676,
+        "constraints": 1476,
+        "degree": 3,
+        "interactions": 145,
+        "public_values": 54,
+        "required": true
+      },
+      {
+        "air": "DecAir",
+        "columns": 9,
+        "constraints": 18,
+        "degree": 2,
+        "interactions": 1,
+        "public_values": 0,
+        "required": true
+      },
+      {
+        "air": "VariableRangeCheckerAir",
+        "columns": 4,
+        "constraints": 10,
+        "degree": 3,
+        "interactions": 1,
+        "public_values": 0,
+        "required": true
+      },
+      {
+        "air": "SpongeAir",
+        "columns": 321,
+        "constraints": 326,
+        "degree": 3,
+        "interactions": 2,
+        "public_values": 0,
+        "required": true
+      },
+      {
+        "air": "Hash2Air",
+        "columns": 29,
+        "constraints": 5,
+        "degree": 2,
+        "interactions": 5,
+        "public_values": 0,
+        "required": true
+      },
+      {
+        "air": "RomAir",
+        "columns": 1222,
+        "constraints": 78,
+        "degree": 2,
+        "interactions": 77,
+        "public_values": 0,
+        "required": true
+      },
+      {
+        "air": "MemAir",
+        "columns": 100,
+        "constraints": 100,
+        "degree": 3,
+        "interactions": 21,
+        "public_values": 0,
+        "required": true
+      }
+    ],
+    "public_values": 54
+  },
+  "cases": [
+    {
+      "case": "app_honest",
+      "check": "honest: both shards proved, stock verifier accepts",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "leaf_honest",
+      "check": "honest",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_CoreAir",
+      "check": "app prover path, air 0",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_CoreAir",
+      "check": "stock app verifier, air 0",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 0 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_CoreAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: assertion `left == right` failed: child public values\\n  left: 0\\n right: 54\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_DecAir",
+      "check": "app prover path, air 1",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_DecAir",
+      "check": "stock app verifier, air 1",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 1 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_DecAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 200 but the index is 200\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_VariableRangeCheckerAir",
+      "check": "app prover path, air 2",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_VariableRangeCheckerAir",
+      "check": "stock app verifier, air 2",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 2 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_VariableRangeCheckerAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 58 but the index is 1034\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_SpongeAir",
+      "check": "app prover path, air 3",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_SpongeAir",
+      "check": "stock app verifier, air 3",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 3 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_SpongeAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 58 but the index is 1034\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_Hash2Air",
+      "check": "app prover path, air 4",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_Hash2Air",
+      "check": "stock app verifier, air 4",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 4 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_Hash2Air",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 58 but the index is 1034\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_RomAir",
+      "check": "app prover path, air 5",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_RomAir",
+      "check": "stock app verifier, air 5",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 5 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_RomAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 6 but the index is 6\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_prove_without_MemAir",
+      "check": "app prover path, air 6",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_stock_verify_without_MemAir",
+      "check": "stock app verifier, air 6",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 6 }))\")",
+      "pass": true
+    },
+    {
+      "case": "slice_air_omitted_leaf_over_app_without_MemAir",
+      "check": "leaf layer over the stripped app proof",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 200 but the index is 200\")",
+      "pass": true
+    },
+    {
+      "case": "n1_prove_without_StmtAir",
+      "check": "prover path, air 0",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n1_stock_verify_without_StmtAir",
+      "check": "stock verifier, air 0",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 0 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n1_parent_over_child_without_StmtAir",
+      "check": "N2 over the stripped N1 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: assertion `left == right` failed: child public values\\n  left: 0\\n right: 90\")",
+      "pass": true
+    },
+    {
+      "case": "n3_prove_without_StmtAir",
+      "check": "prover path, air 0",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n3_stock_verify_without_StmtAir",
+      "check": "stock verifier, air 0",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 0 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n3_parent_over_child_without_StmtAir",
+      "check": "L over the stripped N3 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: assertion `left == right` failed: child public values\\n  left: 0\\n right: 90\")",
+      "pass": true
+    },
+    {
+      "case": "n1_prove_without_ProofShapeAir",
+      "check": "prover path, air 17",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n1_stock_verify_without_ProofShapeAir",
+      "check": "stock verifier, air 17",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 17 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n1_parent_over_child_without_ProofShapeAir",
+      "check": "N2 over the stripped N1 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 92 but the index is 260\")",
+      "pass": true
+    },
+    {
+      "case": "n3_prove_without_ProofShapeAir",
+      "check": "prover path, air 17",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n3_stock_verify_without_ProofShapeAir",
+      "check": "stock verifier, air 17",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 17 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n3_parent_over_child_without_ProofShapeAir",
+      "check": "L over the stripped N3 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 92 but the index is 184\")",
+      "pass": true
+    },
+    {
+      "case": "n1_prove_without_PublicValuesAir",
+      "check": "prover path, air 18",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n1_stock_verify_without_PublicValuesAir",
+      "check": "stock verifier, air 18",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 18 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n1_parent_over_child_without_PublicValuesAir",
+      "check": "N2 over the stripped N1 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 92 but the index is 260\")",
+      "pass": true
+    },
+    {
+      "case": "n3_prove_without_PublicValuesAir",
+      "check": "prover path, air 18",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "n3_stock_verify_without_PublicValuesAir",
+      "check": "stock verifier, air 18",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 18 }))\")",
+      "pass": true
+    },
+    {
+      "case": "n3_parent_over_child_without_PublicValuesAir",
+      "check": "L over the stripped N3 proof (mutant prover)",
+      "expect": "refuse",
+      "got": "Err(\"trace generation: panic: index out of bounds: the len is 92 but the index is 184\")",
+      "pass": true
+    },
+    {
+      "case": "l_honest",
+      "check": "honest",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest",
+      "check": "honest",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "l_prove_without_StmtAir",
+      "check": "prover path, air 0",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "l_stock_verify_without_StmtAir",
+      "check": "stock verifier, air 0",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 0 }))\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_stripped_shape_without_StmtAir",
+      "check": "L_Fr tape generator, shape of the stripped proof",
+      "expect": "refuse",
+      "got": "Err(\"RequiredAbsent(0)\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest_shape_without_StmtAir",
+      "check": "L_Fr tape generator, the pinned honest shape",
+      "expect": "refuse",
+      "got": "Err(\"Heights\")",
+      "pass": true
+    },
+    {
+      "case": "l_prove_without_ProofShapeAir",
+      "check": "prover path, air 17",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "l_stock_verify_without_ProofShapeAir",
+      "check": "stock verifier, air 17",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 17 }))\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_stripped_shape_without_ProofShapeAir",
+      "check": "L_Fr tape generator, shape of the stripped proof",
+      "expect": "refuse",
+      "got": "Err(\"RequiredAbsent(17)\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest_shape_without_ProofShapeAir",
+      "check": "L_Fr tape generator, the pinned honest shape",
+      "expect": "refuse",
+      "got": "Err(\"Heights\")",
+      "pass": true
+    },
+    {
+      "case": "l_prove_without_PublicValuesAir",
+      "check": "prover path, air 18",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "l_stock_verify_without_PublicValuesAir",
+      "check": "stock verifier, air 18",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 18 }))\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_stripped_shape_without_PublicValuesAir",
+      "check": "L_Fr tape generator, shape of the stripped proof",
+      "expect": "refuse",
+      "got": "Err(\"RequiredAbsent(18)\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest_shape_without_PublicValuesAir",
+      "check": "L_Fr tape generator, the pinned honest shape",
+      "expect": "refuse",
+      "got": "Err(\"Heights\")",
+      "pass": true
+    },
+    {
+      "case": "l_prove_without_RootSealAir",
+      "check": "prover path, air 44",
+      "expect": "refuse",
+      "got": "Err(\"prove: LogupZerocheck(NonZeroRootSum)\")",
+      "pass": true
+    },
+    {
+      "case": "l_stock_verify_without_RootSealAir",
+      "check": "stock verifier, air 44",
+      "expect": "refuse",
+      "got": "Err(\"ProofShapeError(InvalidVData(RequiredAirNoVData { air_idx: 44 }))\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_stripped_shape_without_RootSealAir",
+      "check": "L_Fr tape generator, shape of the stripped proof",
+      "expect": "refuse",
+      "got": "Err(\"RequiredAbsent(44)\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest_shape_without_RootSealAir",
+      "check": "L_Fr tape generator, the pinned honest shape",
+      "expect": "refuse",
+      "got": "Err(\"Heights\")",
+      "pass": true
+    }
+  ],
+  "keys": [
+    {
+      "g1": "accepted",
+      "key": "app chip set 0",
+      "logup_pow": 18,
+      "pre_hash": "[820819264, 327421531, 1671674420, 1699183093, 749464721, 545269499, 700611204, 1842961545]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 7,
+        "columns": 2361,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2013,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70564
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 0",
+      "logup_pow": 17,
+      "pre_hash": "[1548077043, 1876158159, 175413506, 576083482, 1607699243, 1617244263, 1687527573, 1845908956]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2283,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81473
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 0",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "app chip set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1363321697, 555668064, 1869827368, 678263150, 1941619784, 1631259805, 1286913989, 766938083]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 8,
+        "columns": 2363,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2015,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70610
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 1",
+      "logup_pow": 17,
+      "pre_hash": "[1377195214, 1200674299, 1968862833, 1718366832, 1767005551, 1932491409, 1107958638, 224455984]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2284,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81513
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "N2<2> over N1",
+      "logup_pow": 18,
+      "pre_hash": "[841718798, 614645009, 406685465, 1314896490, 439614671, 197427794, 1984515649, 1663819575]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "g1": "accepted",
+      "key": "FV unit (N2 shape) over N1",
+      "logup_pow": 18,
+      "pre_hash": "[63617814, 886077997, 19136875, 204387017, 1934329459, 209941658, 1151912489, 513721530]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 756,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3043,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 104440
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N2",
+      "logup_pow": 18,
+      "pre_hash": "[608147433, 155354226, 420416450, 294759415, 525842546, 555912701, 879235575, 466861587]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N3 (fixed point)",
+      "logup_pow": 18,
+      "pre_hash": "[608147433, 155354226, 420416450, 294759415, 525842546, 555912701, 879235575, 466861587]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "key": "N3 fixed point",
+      "n3_over_n3_pre_equals_n3_pre": true
+    },
+    {
+      "g1": "accepted",
+      "key": "MERGE-WORK<2> over N3",
+      "logup_pow": 18,
+      "pre_hash": "[313910856, 1804717800, 768812028, 1760199374, 968914789, 6441291, 1902341147, 1948855840]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "merge_work",
+      "shape": {
+        "airs": 49,
+        "columns": 5128,
+        "max_constraints": 999,
+        "max_degree": 4,
+        "max_interactions": 171,
+        "preprocessed_airs": 0,
+        "public_values": 144,
+        "total_constraints": 5160,
+        "total_interactions": 936
+      },
+      "vk_bitcode_bytes": 183279
+    },
+    {
+      "g1": "accepted",
+      "key": "L over N3",
+      "logup_pow": 18,
+      "pre_hash": "[15971677572060585635062693588003989408964688008536569005663841510736342892768]",
+      "queries": [
+        98,
+        83,
+        82
+      ],
+      "query_pow": 20,
+      "set": "L",
+      "shape": {
+        "airs": 46,
+        "columns": 1986,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 93,
+        "preprocessed_airs": 0,
+        "public_values": 12190,
+        "total_constraints": 2769,
+        "total_interactions": 603
+      },
+      "vk_bitcode_bytes": 243126
+    }
+  ],
+  "sg6": {
+    "app_prove_per_shard_s": [
+      4.965648614,
+      4.497095719
+    ],
+    "backend": "CPU (openvm-cpu-backend)",
+    "fixed_heights": [
+      {
+        "fixed": true,
+        "log_heights": [
+          3,
+          3,
+          17,
+          9,
+          7,
+          1,
+          3
+        ]
+      },
+      {
+        "fixed": true,
+        "log_heights": [
+          3,
+          3,
+          17,
+          9,
+          7,
+          1,
+          3
+        ]
+      }
+    ],
+    "proved_steps": 5,
+    "s_per_proved_step": 1.8925488665999999
+  }
+}

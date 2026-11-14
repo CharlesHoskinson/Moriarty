@@ -1,0 +1,374 @@
+{
+  "all_pass": true,
+  "cases": [
+    {
+      "case": "mixed_chip_sets_one_key_root_N2_accepts",
+      "check": "shard 0 set 0, shard 1 set 1 (ExtAir), N1 unary each, N2 binary merge",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "mixed_chip_sets_N3_accepts",
+      "check": "N3 unary over the mixed N2",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "wrong_prog_d_merge_refused_at_N1",
+      "check": "leaf of program A then leaf of program B (mutant prover, stock N1 verifier)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1925753153, 629176491, 978574399, 1658808043], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [455275272, 1246610694, 1374206023, 1522348244], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "pass": true
+    },
+    {
+      "case": "key_triple_outside_key_root_refused_at_N1",
+      "check": "pre_ifl changed in the key leaf (mutant prover, stock N1 verifier)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1968519218, 1282282896, 527706926, 1262985135], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [756209416, 447237668, 686167407, 524050983], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "chip_set_swap_refused_at_N1",
+      "check": "set-0 leaf proof opened under the set-1 key triple",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1610237774, 547620372, 300845197, 1778051666], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [292584138, 904490008, 1831861263, 893659098], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "wrong_prog_d_opening_refused_at_N1",
+      "check": "prog_d opened with the image of B",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1629783065, 331925445, 119346011, 352475033], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "fv_unit_proves",
+      "check": "FV unit (N2 AIR shape, Fv statement) over N1",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "fv_unit_under_N3_accepted",
+      "check": "N3 (keyed over N2) verifies the FV unit proof; FV row in keys_d",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "fv_unit_on_table_without_its_row_proves",
+      "check": "the FV unit alone cannot see that its row is wrong",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "fv_row_missing_refused_at_N3",
+      "check": "N3 on the same table: the received FV key is not the FV unit's vkc (mutant N3)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1081749623, 806420515, 433250861, 302321585], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1296299670, 1969839305, 925138400, 625453053], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "pass": true
+    },
+    {
+      "case": "fv_row_missing_refused_at_N3_true_table",
+      "check": "N3 on the true keys_d (mutant N3)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1900080801, 727920691, 364760469, 1343900642], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [543725427, 1927628359, 1312224519, 309602348], _phantom: PhantomData<p3_monty_31::monty_31::MontyField3",
+      "pass": true
+    },
+    {
+      "case": "keys_d_mismatch_refused_at_FV_unit",
+      "check": "FV unit on t2 over an N1 proof on the true keys_d (mutant)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1103772925, 1308185436, 1604110846, 1524212790], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1916181625, 95818736, 267299048, 1707928776], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "pass": true
+    }
+  ],
+  "key_root": "5b7961434bc7b3d13c05eebd6dd99d6a417c5f0d586b523134de46d36490f5f0",
+  "keys": [
+    {
+      "g1": "accepted",
+      "key": "app chip set 0",
+      "logup_pow": 18,
+      "pre_hash": "[820819264, 327421531, 1671674420, 1699183093, 749464721, 545269499, 700611204, 1842961545]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 7,
+        "columns": 2361,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2013,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70564
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 0",
+      "logup_pow": 17,
+      "pre_hash": "[1548077043, 1876158159, 175413506, 576083482, 1607699243, 1617244263, 1687527573, 1845908956]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2283,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81473
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 0",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "app chip set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1363321697, 555668064, 1869827368, 678263150, 1941619784, 1631259805, 1286913989, 766938083]",
+      "queries": [
+        193,
+        88,
+        81,
+        81
+      ],
+      "query_pow": 21,
+      "set": "app",
+      "shape": {
+        "airs": 8,
+        "columns": 2363,
+        "max_constraints": 1476,
+        "max_degree": 3,
+        "max_interactions": 145,
+        "preprocessed_airs": 0,
+        "public_values": 54,
+        "total_constraints": 2015,
+        "total_interactions": 252
+      },
+      "vk_bitcode_bytes": 70610
+    },
+    {
+      "g1": "accepted",
+      "key": "leaf<1> chip set 1",
+      "logup_pow": 17,
+      "pre_hash": "[1377195214, 1200674299, 1968862833, 1718366832, 1767005551, 1932491409, 1107958638, 224455984]",
+      "queries": [
+        118,
+        84,
+        81
+      ],
+      "query_pow": 21,
+      "set": "leaf_agg",
+      "shape": {
+        "airs": 40,
+        "columns": 1597,
+        "max_constraints": 282,
+        "max_degree": 4,
+        "max_interactions": 78,
+        "preprocessed_airs": 0,
+        "public_values": 62,
+        "total_constraints": 2284,
+        "total_interactions": 544
+      },
+      "vk_bitcode_bytes": 81513
+    },
+    {
+      "g1": "accepted",
+      "key": "N1<2> over leaf set 1",
+      "logup_pow": 18,
+      "pre_hash": "[1936027841, 196022695, 706793951, 318639986, 604278312, 1918161196, 1385373485, 942405743]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2435,
+        "max_constraints": 620,
+        "max_degree": 4,
+        "max_interactions": 144,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 2906,
+        "total_interactions": 649
+      },
+      "vk_bitcode_bytes": 104524
+    },
+    {
+      "g1": "accepted",
+      "key": "N2<2> over N1",
+      "logup_pow": 18,
+      "pre_hash": "[841718798, 614645009, 406685465, 1314896490, 439614671, 197427794, 1984515649, 1663819575]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "g1": "accepted",
+      "key": "FV unit (N2 shape) over N1",
+      "logup_pow": 18,
+      "pre_hash": "[63617814, 886077997, 19136875, 204387017, 1934329459, 209941658, 1151912489, 513721530]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 756,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3043,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 104440
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N2",
+      "logup_pow": 18,
+      "pre_hash": "[608147433, 155354226, 420416450, 294759415, 525842546, 555912701, 879235575, 466861587]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "g1": "accepted",
+      "key": "N3<2> over N3 (fixed point)",
+      "logup_pow": 18,
+      "pre_hash": "[608147433, 155354226, 420416450, 294759415, 525842546, 555912701, 879235575, 466861587]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "internal",
+      "shape": {
+        "airs": 41,
+        "columns": 2182,
+        "max_constraints": 809,
+        "max_degree": 4,
+        "max_interactions": 170,
+        "preprocessed_airs": 0,
+        "public_values": 90,
+        "total_constraints": 3096,
+        "total_interactions": 672
+      },
+      "vk_bitcode_bytes": 105968
+    },
+    {
+      "key": "N3 fixed point",
+      "n3_over_n3_pre_equals_n3_pre": true
+    },
+    {
+      "g1": "accepted",
+      "key": "MERGE-WORK<2> over N3",
+      "logup_pow": 18,
+      "pre_hash": "[313910856, 1804717800, 768812028, 1760199374, 968914789, 6441291, 1902341147, 1948855840]",
+      "queries": [
+        97,
+        82,
+        81
+      ],
+      "query_pow": 21,
+      "set": "merge_work",
+      "shape": {
+        "airs": 49,
+        "columns": 5128,
+        "max_constraints": 999,
+        "max_degree": 4,
+        "max_interactions": 171,
+        "preprocessed_airs": 0,
+        "public_values": 144,
+        "total_constraints": 5160,
+        "total_interactions": 936
+      },
+      "vk_bitcode_bytes": 183279
+    }
+  ],
+  "keys_d": "0028aa654f3cb034479111330e100c09651208eb2ddfaff721e6374432552691"
+}

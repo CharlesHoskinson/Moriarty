@@ -1,0 +1,942 @@
+From 7298247719b5e33b66ccb80604b286e636dce34a Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 00:58:34 -0700
+Subject: [PATCH 3/4] T8 X7: MERGE-WORK node (owner ruling N-6 own bounds):
+ CORE split into CORE and FRAME from one frame_rule, inline slice kernel with
+ buses moved by Rebus, Kind::Work statement with the inline step between two
+ SEG children, MERGE_WORK set (5,400 columns, AFK pick), t8_gp x7 mode, fp8_d3
+ MERGE-WORK key
+
+---
+ crates/sherlock-leaf/src/bus.rs               |  32 +++-
+ crates/sherlock-leaf/src/core.rs              | 173 ++++++++++++++---
+ crates/sherlock-leaf/src/harness.rs           |   1 +
+ crates/sherlock-leaf/src/leaf.rs              |  79 +++++++-
+ crates/sherlock-lfr/src/frozen.rs             |  18 ++
+ crates/sherlock-lfr/src/gp.rs                 |  19 +-
+ crates/sherlock-lfr/src/stmt.rs               | 116 ++++++++++--
+ .../sherlock-wrap-export/examples/fp8_d3.rs   |   8 +-
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 178 ++++++++++++++++++
+ 9 files changed, 569 insertions(+), 55 deletions(-)
+
+diff --git a/crates/sherlock-leaf/src/bus.rs b/crates/sherlock-leaf/src/bus.rs
+index 0faca68..1895669 100644
+--- a/crates/sherlock-leaf/src/bus.rs
++++ b/crates/sherlock-leaf/src/bus.rs
+@@ -31,18 +31,42 @@ pub const PORTS: &[(BusIndex, &str, &str, &str, usize)] = &[
+     (1, "sponge_out", "SPONGE", "requester", 9),
+     (2, "rom_root", "ROM", "CORE", 9),
+     (3, "mem_token", "MEM", "CORE", 23),
++    // T8 (X7, owner ruling N-6 "own bounds"): the split CORE of the inline kernel. CORE sends
++    // each state row to FRAME in chunks; CORE sends its public values to the node statement.
++    (4, "core_frame", "CORE (split)", "FRAME", 1 + FRAME_CHUNK),
++    (5, "step_pv", "CORE (split)", "node statement (MERGE-WORK)", 54),
+ ];
+ 
++/// Words per `core_frame` message after the chunk index (T8).
++pub const FRAME_CHUNK: usize = 120;
++pub const PORT_FRAME: BusIndex = 4;
++pub const PORT_STEP_PV: BusIndex = 5;
++
+ pub const PORT_SPONGE_IN: BusIndex = 0;
+ pub const PORT_SPONGE_OUT: BusIndex = 1;
+ pub const PORT_ROM_ROOT: BusIndex = 2;
+ pub const PORT_MEM_TOKEN: BusIndex = 3;
+ 
+-pub const fn chip(id: BusIndex) -> BusIndex {
+-    BUS_BASE + id
++thread_local! {
++    /// T8 (X7): bus index offset while a kit AIR of the inline kernel is built or evaluated
++    /// inside a MERGE-WORK node ([`crate::leaf::Rebus`]); 0 everywhere else.
++    static OFF: std::cell::Cell<BusIndex> = const { std::cell::Cell::new(0) };
+ }
+-pub const fn port(j: BusIndex) -> BusIndex {
+-    BUS_BASE + 16 + j
++/// The offset of the inline kernel's buses in a MERGE-WORK node: above every recursion bus of
++/// the node (the node uses indices up to 79, MEASURED in T8).
++pub const KERNEL_OFF: BusIndex = 128;
++/// Run `f` with the bus offset `off` (restored after).
++pub fn with_off<T>(off: BusIndex, f: impl FnOnce() -> T) -> T {
++    let prev = OFF.with(|o| o.replace(off));
++    let r = f();
++    OFF.with(|o| o.set(prev));
++    r
++}
++pub fn chip(id: BusIndex) -> BusIndex {
++    BUS_BASE + OFF.with(|o| o.get()) + id
++}
++pub fn port(j: BusIndex) -> BusIndex {
++    BUS_BASE + OFF.with(|o| o.get()) + 16 + j
+ }
+ 
+ pub fn lookup(id: BusIndex) -> LookupBus {
+diff --git a/crates/sherlock-leaf/src/core.rs b/crates/sherlock-leaf/src/core.rs
+index eecd9aa..53d00ed 100644
+--- a/crates/sherlock-leaf/src/core.rs
++++ b/crates/sherlock-leaf/src/core.rs
+@@ -187,13 +187,21 @@ pub struct CoreAir {
+     pub weak: u64,
+     pub l: Layout,
+     pub o: Off,
++    /// T8 (X7): `true` in the inline kernel of a MERGE-WORK node. The frame rule moves to
++    /// [`FrameAir`] (each state row goes there over `core_frame`), and the public values go to
++    /// the node statement over `step_pv`. The constraints are the same functions.
++    pub split: bool,
+ }
+ 
+ impl CoreAir {
+     pub fn new(weak: u64) -> Self {
+         let l = Layout::new();
+         let o = Off::new(&l);
+-        Self { weak, l, o }
++        Self { weak, l, o, split: false }
++    }
++    /// The CORE half of the split (T8, X7).
++    pub fn split(weak: u64) -> Self {
++        Self { split: true, ..Self::new(weak) }
+     }
+     fn on(&self, w: u64) -> bool {
+         self.weak & w == 0
+@@ -301,38 +309,22 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+             }
+         }
+ 
+-        // ---- write sets and the frame rule: every state word not written by the selected rule
+-        // keeps its value across a slot; counters are written by the charge gadgets.
++        // ---- the frame rule (every state word not written by the selected rule keeps its value
++        // across a slot; counters are written by the charge gadgets): [`frame_rule`].
+         let ctr = o.counters();
+         let hlp: Vec<usize> = o.hlp.clone().collect();
+         let res: Vec<usize> = o.res.clone().collect();
+         let ctl: Vec<usize> = o.ctl_span.clone().collect();
+         let h11 = o.hlp_lane[11];
+-        let writes = |w: usize| -> Vec<usize> {
+-            let mut v = vec![];
+-            if hlp.contains(&w) {
+-                v.extend([R_ENTRY, R_FAILURE]);
+-                if w == h11 {
+-                    v.push(R_EMPTY);
+-                }
+-            }
+-            if res.contains(&w) {
+-                v.extend([R_FAILURE, R_ABSENT]);
+-            }
+-            if ctl.contains(&w) {
+-                v.push(R_ABSENT);
+-            }
+-            if w == OT || (OP..OP + D).contains(&w) {
+-                v.push(R_PUBLISH);
+-            }
+-            v
+-        };
+-        for w in 0..SW {
+-            if ctr.contains(&w) {
+-                continue;
+-            }
+-            let keep = writes(w).iter().fold(slot.clone(), |a, &r| a - sel(r));
+-            builder.when_transition().assert_zero((nst(w) - st(w)) * keep);
++        let _ = (&ctr, &res);
++        if self.split {
++            // T8 (X7): the row goes to FRAME, which holds the frame rule.
++            send_frame::<AB>(builder, &(0..FRAME_W).map(|i| c(frame_col(i))).collect::<Vec<_>>());
++            let mut m: Vec<AB::Expr> = pvs.clone();
++            m.truncate(pv::N);
++            bus::perm(bus::PORT_STEP_PV).send(builder, m, b0.clone());
++        } else {
++            frame_rule::<AB>(builder, o, &st, &nst, &sel, slot.clone());
+         }
+ 
+         // ---- the subset rules (guards and effects), gated by their selector
+@@ -589,6 +581,131 @@ fn init_exprs<AB: AirBuilder<F = F>>(lay: &Layout, l: &[AB::Var]) -> Vec<AB::Exp
+     v
+ }
+ 
++/// FRAME columns of a CORE row: the one-hot row index, the state words, the five selectors.
++pub const FRAME_W: usize = HEIGHT + SW + 5;
++pub fn frame_col(i: usize) -> usize {
++    if i < HEIGHT {
++        C_B + i
++    } else if i < HEIGHT + SW {
++        C_ST + i - HEIGHT
++    } else {
++        C_SEL + i - HEIGHT - SW
++    }
++}
++
++/// The frame rule of CORE (one function for the whole CORE and for [`FrameAir`]).
++pub fn frame_rule<AB: AirBuilder>(
++    builder: &mut AB,
++    o: &Off,
++    st: &dyn Fn(usize) -> AB::Expr,
++    nst: &dyn Fn(usize) -> AB::Expr,
++    sel: &dyn Fn(usize) -> AB::Expr,
++    slot: AB::Expr,
++) {
++    let ctr = o.counters();
++    let hlp: Vec<usize> = o.hlp.clone().collect();
++    let res: Vec<usize> = o.res.clone().collect();
++    let ctl: Vec<usize> = o.ctl_span.clone().collect();
++    let h11 = o.hlp_lane[11];
++    let writes = |w: usize| -> Vec<usize> {
++        let mut v = vec![];
++        if hlp.contains(&w) {
++            v.extend([R_ENTRY, R_FAILURE]);
++            if w == h11 {
++                v.push(R_EMPTY);
++            }
++        }
++        if res.contains(&w) {
++            v.extend([R_FAILURE, R_ABSENT]);
++        }
++        if ctl.contains(&w) {
++            v.push(R_ABSENT);
++        }
++        if w == OT || (OP..OP + D).contains(&w) {
++            v.push(R_PUBLISH);
++        }
++        v
++    };
++    for w in 0..SW {
++        if ctr.contains(&w) {
++            continue;
++        }
++        let keep = writes(w).iter().fold(slot.clone(), |a, &r| a - sel(r));
++        builder.when_transition().assert_zero((nst(w) - st(w)) * keep);
++    }
++}
++
++/// Send one CORE row to FRAME in chunks of [`bus::FRAME_CHUNK`] words (count 1 on every row).
++pub fn send_frame<AB: AirBuilder<F = F> + InteractionBuilder>(builder: &mut AB, row: &[AB::Expr]) {
++    for (k, ch) in row.chunks(bus::FRAME_CHUNK).enumerate() {
++        let mut m = vec![AB::Expr::from_usize(k)];
++        m.extend(ch.iter().cloned());
++        bus::perm(bus::PORT_FRAME).send(builder, m, AB::Expr::ONE);
++    }
++}
++
++/// FRAME (T8, X7): the frame rule of CORE in its own AIR, so each half of the split CORE stays
++/// at or under 1,000 constraints. Columns are [`frame_col`] of the CORE row; the one-hot row
++/// index has the CORE rules, so the multiset match of `core_frame` pairs row `j` with row `j`.
++pub struct FrameAir {
++    pub o: Off,
++}
++impl FrameAir {
++    pub fn new() -> Self {
++        Self { o: Off::new(&Layout::new()) }
++    }
++}
++impl<T> BaseAir<T> for FrameAir {
++    fn width(&self) -> usize {
++        FRAME_W
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for FrameAir {}
++impl<T> PartitionedBaseAir<T> for FrameAir {}
++impl<AB: AirBuilder<F = F> + InteractionBuilder> Air<AB> for FrameAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let (lr, nr) = (main.row_slice(0).unwrap(), main.row_slice(1).unwrap());
++        let l: &[AB::Var] = (*lr).borrow();
++        let n: &[AB::Var] = (*nr).borrow();
++        let c = |i: usize| -> AB::Expr { l[i].into() };
++        let nx = |i: usize| -> AB::Expr { n[i].into() };
++        let mut sum = AB::Expr::ZERO;
++        for j in 0..HEIGHT {
++            builder.assert_bool(c(j));
++            sum += c(j);
++        }
++        builder.assert_one(sum);
++        builder.when_first_row().assert_one(c(0));
++        for j in 0..HEIGHT - 1 {
++            builder.when_transition().assert_eq(nx(j + 1), c(j));
++        }
++        let slot = (0..S).fold(AB::Expr::ZERO, |a, j| a + c(j));
++        let st = |w: usize| c(HEIGHT + w);
++        let nst = |w: usize| nx(HEIGHT + w);
++        let sel = |r: usize| c(HEIGHT + SW + r);
++        frame_rule::<AB>(builder, &self.o, &st, &nst, &sel, slot);
++        let row: Vec<AB::Expr> = (0..FRAME_W).map(c).collect();
++        for (k, ch) in row.chunks(bus::FRAME_CHUNK).enumerate() {
++            let mut m = vec![AB::Expr::from_usize(k)];
++            m.extend(ch.iter().cloned());
++            bus::perm(bus::PORT_FRAME).receive(builder, m, AB::Expr::ONE);
++        }
++    }
++}
++
++/// FRAME trace from the CORE trace.
++pub fn frame_trace(core: &RowMajorMatrix<F>) -> RowMajorMatrix<F> {
++    let h = core.height();
++    let mut v = vec![F::ZERO; h * FRAME_W];
++    for r in 0..h {
++        for i in 0..FRAME_W {
++            v[r * FRAME_W + i] = core.values[r * WIDTH + frame_col(i)];
++        }
++    }
++    RowMajorMatrix::new(v, FRAME_W)
++}
++
+ /// Send the rate blocks of a sponge call (`words` start with the tag) with `count`.
+ pub fn send_blocks<AB: AirBuilder<F = F> + InteractionBuilder>(
+     builder: &mut AB,
+diff --git a/crates/sherlock-leaf/src/harness.rs b/crates/sherlock-leaf/src/harness.rs
+index e6f07ec..275562d 100644
+--- a/crates/sherlock-leaf/src/harness.rs
++++ b/crates/sherlock-leaf/src/harness.rs
+@@ -31,6 +31,7 @@ pub fn engine() -> Eng {
+ }
+ 
+ /// One AIR's trace and public values.
++#[derive(Clone)]
+ pub struct Tr {
+     pub m: RowMajorMatrix<F>,
+     pub pvs: Vec<F>,
+diff --git a/crates/sherlock-leaf/src/leaf.rs b/crates/sherlock-leaf/src/leaf.rs
+index 3a4c718..0bfb338 100644
+--- a/crates/sherlock-leaf/src/leaf.rs
++++ b/crates/sherlock-leaf/src/leaf.rs
+@@ -5,7 +5,11 @@
+ use std::{collections::BTreeMap, sync::Arc};
+ 
+ use openvm_circuit_primitives::var_range::{VariableRangeCheckerAir, VariableRangeCheckerChip};
+-use openvm_stark_backend::{p3_field::PrimeCharacteristicRing, AirRef};
++use openvm_stark_backend::{
++    p3_air::{Air, AirBuilder, BaseAir},
++    p3_field::PrimeCharacteristicRing,
++    AirRef, BaseAirWithPublicValues, PartitionedBaseAir,
++};
+ use serde_json::Value;
+ 
+ use crate::{
+@@ -101,6 +105,56 @@ pub fn airs_set(set: u32, weak: u64) -> Vec<AirRef<SC>> {
+     v
+ }
+ 
++/// T8 (X7, owner ruling N-6 "own bounds"): the inline kernel of a MERGE-WORK node. Chip set 0
++/// with CORE split in two ([`CoreAir::split`] and [`crate::core::FrameAir`]); the same kit
++/// functions as the leaf, and the same traces (FRAME copies the CORE rows).
++pub fn airs_kernel(weak: u64) -> Vec<AirRef<SC>> {
++    let off = crate::bus::KERNEL_OFF;
++    crate::bus::with_off(off, || {
++        vec![
++            Arc::new(Rebus { inner: CoreAir::split(weak), off }) as AirRef<SC>,
++            Arc::new(Rebus { inner: crate::core::FrameAir::new(), off }),
++            Arc::new(Rebus { inner: DecAir, off }),
++            Arc::new(Rebus { inner: VariableRangeCheckerAir::new(bus::range()), off }),
++            Arc::new(Rebus { inner: SpongeAir::new(weak), off }),
++            Arc::new(Rebus { inner: Hash2Air { weak }, off }),
++            Arc::new(Rebus { inner: RomAir { weak }, off }),
++            Arc::new(Rebus { inner: MemAir { weak }, off }),
++        ]
++    })
++}
++
++/// A kit AIR with its buses moved by `off` (T8, X7): the same AIR and the same constraints, the
++/// bus indices of the kit helpers read the offset while it is evaluated.
++pub struct Rebus<A> {
++    pub inner: A,
++    pub off: u16,
++}
++impl<T, A: BaseAir<T>> BaseAir<T> for Rebus<A> {
++    fn width(&self) -> usize {
++        self.inner.width()
++    }
++}
++impl<T, A: BaseAirWithPublicValues<T>> BaseAirWithPublicValues<T> for Rebus<A> {
++    fn num_public_values(&self) -> usize {
++        self.inner.num_public_values()
++    }
++}
++impl<T, A: PartitionedBaseAir<T>> PartitionedBaseAir<T> for Rebus<A> {}
++impl<AB: AirBuilder, A: Air<AB>> Air<AB> for Rebus<A> {
++    fn eval(&self, builder: &mut AB) {
++        crate::bus::with_off(self.off, || self.inner.eval(builder))
++    }
++}
++
++/// The traces of [`airs_kernel`] for one shard.
++pub fn traces_kernel(p: &Program, sh: &ShardIn, b: &Build) -> Vec<Tr> {
++    let mut v = traces(p, sh, b);
++    let fr = crate::core::frame_trace(&v[A_CORE].m);
++    v.insert(1, Tr::new(fr));
++    v
++}
++
+ /// The traces of one shard under chip set `set`.
+ pub fn traces_set(p: &Program, sh: &ShardIn, b: &Build, set: u32) -> Vec<Tr> {
+     let mut v = traces(p, sh, b);
+@@ -300,13 +354,27 @@ pub fn program_of(key_root: Digest, which: Prog) -> Program {
+ 
+ /// The shards of the run at S slots each (the last one padded with disabled slots).
+ pub fn shards(p: &Program) -> Vec<ShardIn> {
++    let mut sizes = vec![];
++    let mut i = 0;
++    while i < p.rules.len() {
++        let n = (p.rules.len() - i).min(S);
++        sizes.push(n);
++        i += n;
++    }
++    shards_cut(p, &sizes)
++}
++
++/// The shards of `p` cut at the given step counts (each at most `S`; T8, X7: a run cut into a
++/// prefix, the inline step of a MERGE-WORK node and a suffix).
++pub fn shards_cut(p: &Program, sizes: &[usize]) -> Vec<ShardIn> {
++    assert_eq!(sizes.iter().sum::<usize>(), p.rules.len(), "cut covers the run");
+     let expr0 = p.rom.iter().find(|r| r.tbl == 0 && r.row == p.adm.entry_a).unwrap();
+     let mut rr = [F::ZERO; ROMW];
+     rr.copy_from_slice(&expr0.rec[..ROMW]);
+     let mut out = vec![];
+     let mut i = 0;
+-    while i < p.rules.len() {
+-        let n = (p.rules.len() - i).min(S);
++    for &n in sizes {
++        assert!(n >= 1 && n <= S);
+         let mut states: Vec<State> = p.states[i..=i + n].to_vec();
+         let mut sel: Vec<Option<usize>> = p.rules[i..i + n].iter().map(|&r| Some(r)).collect();
+         while sel.len() < S {
+@@ -397,3 +465,8 @@ pub fn sponge_rows(calls: &[Call]) -> usize {
+ }
+ 
+ use openvm_stark_backend::p3_field::PrimeField32;
++
++/// The `step_pv` port index (T8, X7).
++pub fn bus_port_step_pv() -> u16 {
++    crate::bus::with_off(crate::bus::KERNEL_OFF, || crate::bus::port(crate::bus::PORT_STEP_PV))
++}
+diff --git a/crates/sherlock-lfr/src/frozen.rs b/crates/sherlock-lfr/src/frozen.rs
+index 04ef9d8..bc651d6 100644
+--- a/crates/sherlock-lfr/src/frozen.rs
++++ b/crates/sherlock-lfr/src/frozen.rs
+@@ -41,6 +41,8 @@ pub enum Layer {
+     LeafAgg,
+     /// Internal (internal-recursive nodes; the leaf layer on path C), universal.
+     Internal,
++    /// MERGE-WORK nodes (T8, X7, owner ruling N-6 "own bounds", 2026-11-14), universal.
++    MergeWork,
+     /// `L`, universal.
+     L,
+     /// `L_Fr`, universal (BLS12-381 Fr base field, `EF = F`).
+@@ -147,6 +149,22 @@ pub const INTERNAL: FrozenSet = FrozenSet {
+     },
+ };
+ 
++/// MERGE-WORK set (T8, X7; owner ruling N-6 "own bounds", 2026-11-14): the internal parameters
++/// (a MERGE-WORK node verifies internal-set children with the same verifier), its own shape
++/// bounds: columns sized from the T8 measurement with a margin, the per-AIR constraint bound
++/// kept at 1,000 (the inline CORE is split in two). Not in [`ALL`]: its parameters equal
++/// [`INTERNAL`]'s, so keygen names the set ([`keygen_set`]).
++pub const MERGE_WORK: FrozenSet = FrozenSet {
++    layer: Layer::MergeWork,
++    name: "merge_work",
++    bounds: Bounds { max_columns: MERGE_WORK_COLUMNS, ..INTERNAL.bounds },
++    ..INTERNAL
++};
++/// AFK pick (T8, for owner confirmation at T15): the owner sized "about 4,400" from the T8 probe
++/// of the T7 node layout (4,246). The MERGE-WORK key as built (GP block in the node, CORE split,
++/// FRAME) is 5,128 columns (MEASURED), so the bound is 5,400 (about 5 percent margin).
++pub const MERGE_WORK_COLUMNS: usize = 5400;
++
+ /// The internal bounds before the 2026-11-12 20:35 rulings (for comparison runs only).
+ pub const INTERNAL_OLD_BOUNDS: Bounds = Bounds {
+     max_log_height: 19,
+diff --git a/crates/sherlock-lfr/src/gp.rs b/crates/sherlock-lfr/src/gp.rs
+index f201b70..eeb1e0c 100644
+--- a/crates/sherlock-lfr/src/gp.rs
++++ b/crates/sherlock-lfr/src/gp.rs
+@@ -57,6 +57,8 @@ pub const T_OFF: u32 = 4;
+ /// Key kind numbers of `key_sel` (0 off).
+ pub const KSEL_LEAF: u32 = 1;
+ pub const KSEL_NODE: u32 = 2;
++/// `work_kind` of a MERGE-WORK node whose inline kernel is the slice chip set 0 (T8, X7, LEAD).
++pub const WK_SLICE0: u32 = 1;
+ 
+ pub fn empty_deps() -> Digest {
+     p2(SHK_DEPS, &[])
+@@ -246,6 +248,7 @@ pub fn eval<AB: AirBuilder + InteractionBuilder>(
+     e1: &[AB::Expr],
+     en1: AB::Expr,
+     pv: &[AB::Expr],
++    work: Option<(AB::Expr, AB::Expr)>,
+ ) -> AB::Expr {
+     let one = AB::Expr::ONE;
+     let zero = AB::Expr::ZERO;
+@@ -451,8 +454,10 @@ pub fn eval<AB: AirBuilder + InteractionBuilder>(
+     let mut sw = vec![k::<AB>(T_NODE), code, one.clone() + k::<AB>(2) * l[g.en1].clone(), k::<AB>(KSEL_NODE), k::<AB>(KSEL_NODE) * l[g.en1].clone()];
+     sw.extend((0..D).map(|i| e0[npv::SHAPE_D + i].clone()));
+     sw.extend(col(g.sh1, D));
+-    sw.push(zero.clone());
+-    sw.push(zero.clone());
++    // work_kind, work_steps: (0, 0) except in a MERGE-WORK node (T8, X7)
++    let (wk, ws) = work.unwrap_or((zero.clone(), zero.clone()));
++    sw.push(wk);
++    sw.push(ws);
+     sw.extend(oa);
+     sw.extend(ob);
+     let shape_out: Vec<AB::Expr> = (0..D).map(|i| pv[npv::SHAPE_D + i].clone()).collect();
+@@ -699,6 +704,11 @@ pub fn fill(row: &mut [F], g: &GpCols, e0: &[F], e1: Option<&[F]>, w: &GpWit, ca
+ /// `shape_d` of the output envelope `env` (74 words) for mode bit `mode`; fills `out_a`, `out_b`
+ /// and pushes the call.
+ pub fn shape(row: &mut [F], g: &GpCols, mode: usize, e0: &[F], e1: Option<&[F]>, env: &[F], calls: &mut Vec<Call>) -> Digest {
++    shape_w(row, g, mode, e0, e1, env, calls, None)
++}
++
++/// [`shape`] with `(work_kind, work_steps)` of a MERGE-WORK node (T8, X7).
++pub fn shape_w(row: &mut [F], g: &GpCols, mode: usize, e0: &[F], e1: Option<&[F]>, env: &[F], calls: &mut Vec<Call>, work: Option<(F, F)>) -> Digest {
+     let mut oa = [F::ZERO; D];
+     let mut ob = [F::ZERO; D];
+     if mode == m::MERGE {
+@@ -723,8 +733,9 @@ pub fn shape(row: &mut [F], g: &GpCols, mode: usize, e0: &[F], e1: Option<&[F]>,
+     ];
+     w.extend_from_slice(&dg(e0, npv::SHAPE_D));
+     w.extend_from_slice(&sh1);
+-    w.push(F::ZERO);
+-    w.push(F::ZERO);
++    let (wk, ws) = work.unwrap_or((F::ZERO, F::ZERO));
++    w.push(wk);
++    w.push(ws);
+     w.extend_from_slice(&oa);
+     w.extend_from_slice(&ob);
+     let d = p2(SHK_SHAPE, &w);
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index 63a2652..645fe95 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -93,6 +93,9 @@ pub const PORT_IN: BusIndex = 960;
+ pub const PORT_OUT: BusIndex = 961;
+ 
+ /// Leaf-layer statement: the 54 leaf public values (FP-1, I-12) and the app pre-hash.
++/// T8 (X7): the `step_pv` port of the slice kernel (`sherlock_leaf::bus::port(5)` at the kernel offset 128: 64 + 128 + 16 + 5).
++pub const STEP_PV_BUS: u16 = 213;
++
+ pub mod lpv {
+     pub const BINDING: usize = 0;
+     pub const PROG_D: usize = 8;
+@@ -563,6 +566,10 @@ pub enum Kind {
+     First,
+     Node,
+     Fv,
++    /// T8 (X7, owner ruling N-6 "own bounds"): the MERGE-WORK node. The Node layout, MERGE only,
++    /// two enabled children and one inline step of the slice kernel between them (its public
++    /// values come over [`STEP_PV_BUS`]); its own parameter set `frozen::MERGE_WORK`.
++    Work,
+     /// `L`: the N3 pre-hash and `keys_d` as key constants.
+     Root { n3_pre: [u32; 8], keys_d: [u32; 8] },
+ }
+@@ -607,6 +614,11 @@ pub struct Cols {
+     pub fvs: usize,
+     /// T8: the GP-2 / GP-4 mode block (Node and Fv).
+     pub gpc: crate::gp::GpCols,
++    /// T8 (Work): the 54 public values of the inline step, its `h_hi` and carries, the row 0 flag.
++    pub wk: usize,
++    pub whi: usize,
++    pub wcry: usize,
++    pub wf: usize,
+     // Root
+     pub hdr: usize,
+     pub outd: usize,
+@@ -669,7 +681,7 @@ impl Cols {
+                 c.hhi = take(4);
+                 c.cry = take(4);
+             }
+-            Kind::Node | Kind::Fv => {
++            Kind::Node | Kind::Fv | Kind::Work => {
+                 c.tbl = take(2 * UROWS * 2 * D);
+                 c.sel = take(2 * UROWS);
+                 c.cn = take(D);
+@@ -681,10 +693,16 @@ impl Cols {
+                 let g = crate::gp::GpCols::new(base);
+                 take(g.width);
+                 c.gpc = g;
++                if *kind == Kind::Work {
++                    c.wk = take(lpv::LEAF);
++                    c.whi = take(4);
++                    c.wcry = take(4);
++                    c.wf = take(1);
++                }
+             }
+             Kind::Root { .. } => unreachable!(),
+         }
+-        if matches!(kind, Kind::First | Kind::Node | Kind::Fv) {
++        if matches!(kind, Kind::First | Kind::Node | Kind::Fv | Kind::Work) {
+             c.za = take(1);
+             c.ia = take(1);
+             c.zb = take(1);
+@@ -914,7 +932,7 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+         }
+ 
+         // ---- Node, Fv: the universal key table under keys_d, and the own vkc
+-        if matches!(self.kind, Kind::Node | Kind::Fv) {
++        if matches!(self.kind, Kind::Node | Kind::Fv | Kind::Work) {
+             let half = 2 * UROWS * D;
+             call(builder, AB::Expr::from_u32(seq::of(seq::CNODE, 0)), DOM_UKEYS, rng(&l, c.tbl, half), &rng(&l, c.cn, D), first.clone());
+             call(builder, AB::Expr::from_u32(seq::of(seq::CFOR, 0)), DOM_UKEYS, rng(&l, c.tbl + half, half), &rng(&l, c.cf, D), first.clone());
+@@ -925,6 +943,7 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+             for i in 0..2 * UROWS {
+                 builder.assert_bool(l[c.sel + i].clone());
+                 s += l[c.sel + i].clone();
++                // T8 LEAD: a MERGE-WORK key takes a row of the second half, beside the FV rows
+                 let allowed = if self.kind == Kind::Node { i < UROWS } else { i >= UROWS };
+                 if !allowed {
+                     builder.assert_zero(l[c.sel + i].clone());
+@@ -951,11 +970,13 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+         let e0 = env(&l);
+         let e1 = env(&n);
+         let en1 = n[c.valid].clone();
+-        let merges = matches!(self.kind, Kind::First | Kind::Node);
++        let merges = matches!(self.kind, Kind::First | Kind::Node | Kind::Work);
++        let work = self.kind == Kind::Work;
+         // T8: the GP-2 / GP-4 modes (Node; in an FV unit every mode bit is 0); MERGE is gated by
+         // its mode bit, so the T7 merge rules below hold only in MERGE.
+-        let m0 = if matches!(self.kind, Kind::Node | Kind::Fv) {
+-            crate::gp::eval(builder, &c.gpc, self.kind == Kind::Node, &l, &n, &e0, &e1, en1.clone(), &pv)
++        let m0 = if matches!(self.kind, Kind::Node | Kind::Fv | Kind::Work) {
++            let wsh = if work { Some((k::<AB>(crate::gp::WK_SLICE0), l[c.wk + lpv::STEPS].clone())) } else { None };
++            crate::gp::eval(builder, &c.gpc, self.kind != Kind::Fv, &l, &n, &e0, &e1, en1.clone(), &pv, wsh)
+         } else {
+             one.clone()
+         };
+@@ -971,11 +992,29 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                     fr.assert_zero(g.clone() * (e0[a + i].clone() - e1[a + i].clone()));
+                 }
+             }
+-            for i in 0..D {
+-                fr.assert_zero(g.clone() * (e0[npv::POST_D + i].clone() - e1[npv::PRE_D + i].clone()));
+-            }
+-            for i in 0..4 {
+-                fr.assert_zero(g.clone() * (e0[npv::H_HI + i].clone() - e1[npv::H_LO + i].clone()));
++            if !work {
++                for i in 0..D {
++                    fr.assert_zero(g.clone() * (e0[npv::POST_D + i].clone() - e1[npv::PRE_D + i].clone()));
++                }
++                for i in 0..4 {
++                    fr.assert_zero(g.clone() * (e0[npv::H_HI + i].clone() - e1[npv::H_LO + i].clone()));
++                }
++            } else {
++                // MERGE-WORK (T8, X7): MERGE mode, both slots on, and the inline step S between
++                // them: post_d(0) = pre_d(S), post_d(S) = pre_d(1), h_hi(0) = h_pre(S),
++                // h_pre(S) + steps(S) = h_lo(1), prog_d(S) = prog_d(0).
++                fr.assert_one(l[c.gpc.m + crate::gp::m::MERGE].clone());
++                fr.assert_one(en1.clone());
++                let s = |i: usize| l[c.wk + i].clone();
++                for i in 0..D {
++                    fr.assert_eq(e0[npv::POST_D + i].clone(), s(lpv::PRE_D + i));
++                    fr.assert_eq(s(lpv::POST_D + i), e1[npv::PRE_D + i].clone());
++                    fr.assert_eq(s(lpv::PROG_D + i), e0[npv::PROG_D + i].clone());
++                }
++                for i in 0..4 {
++                    fr.assert_eq(e0[npv::H_HI + i].clone(), s(lpv::H_PRE + i));
++                    fr.assert_eq(l[c.whi + i].clone(), e1[npv::H_LO + i].clone());
++                }
+             }
+             // outputs: slot 0 words, post_d and h_hi from slot 1 when it is on (a Node takes its
+             // shape_d from the GP-4 shape call)
+@@ -983,7 +1022,7 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                 if (npv::LOG_D..npv::LOG_N + 1).contains(&i) || (npv::KEYS_D..npv::ENV).contains(&i) {
+                     continue;
+                 }
+-                if self.kind == Kind::Node && (npv::SHAPE_D..npv::SHAPE_D + D).contains(&i) {
++                if matches!(self.kind, Kind::Node | Kind::Work) && (npv::SHAPE_D..npv::SHAPE_D + D).contains(&i) {
+                     continue;
+                 }
+                 let from1 = (npv::POST_D..npv::POST_D + D).contains(&i) || (npv::H_HI..npv::H_HI + 4).contains(&i);
+@@ -991,7 +1030,23 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                 fr.assert_zero(m0.clone() * (pv[i].clone() - v));
+             }
+         }
+-        if matches!(self.kind, Kind::First | Kind::Node | Kind::Fv) {
++        if work {
++            // the inline step's public values (row 0 flag `wf`), h_hi(S) = h_pre(S) + steps(S)
++            let wf = l[c.wf].clone();
++            builder.assert_bool(wf.clone());
++            builder.when_first_row().assert_one(wf.clone());
++            builder.when_transition().assert_zero(n[c.wf].clone());
++            let msg: Vec<AB::Expr> = (0..lpv::LEAF).map(|i| l[c.wk + i].clone()).collect();
++            PermutationCheckBus::new(STEP_PV_BUS).receive(builder, msg, wf);
++            let two16 = k::<AB>(1 << 16);
++            for i in 0..4 {
++                let cin = if i == 0 { l[c.wk + lpv::STEPS].clone() } else { l[c.wcry + i - 1].clone() };
++                builder.assert_bool(l[c.wcry + i].clone());
++                builder.assert_eq(l[c.whi + i].clone() + two16.clone() * l[c.wcry + i].clone(), l[c.wk + lpv::H_PRE + i].clone() + cin);
++            }
++            builder.assert_zero(l[c.wcry + 3].clone());
++        }
++        if matches!(self.kind, Kind::First | Kind::Node | Kind::Fv | Kind::Work) {
+             let mut fr = builder.when_first_row();
+             // log merge with the neutral (D_EMPTY, 0); an FV unit has the same columns and calls
+             // (one AIR shape with a node) and one child, so `both` is 0 there.
+@@ -1298,6 +1353,8 @@ pub enum Wit {
+     /// T8: a Node in one of the GP-2 / GP-4 modes.
+     NodeGp { tbl: UKeys, sel: usize, gp: crate::gp::GpWit },
+     Fv { tbl: UKeys, sel: usize, fv_state: Digest },
++    /// T8 (X7): a MERGE-WORK node; `step` = the 54 public values of the inline kernel's CORE.
++    Work { tbl: UKeys, sel: usize, step: Vec<F> },
+     Root { hdr: Vec<F>, r_p: Digest },
+ }
+ 
+@@ -1469,11 +1526,40 @@ pub fn trace(kind: &Kind, kids: &[Child], wit: &Wit) -> (RowMajorMatrix<F>, Vec<
+             pvs[npv::KEYS_D..npv::KEYS_D + D].copy_from_slice(&kd);
+             pvs[npv::VKC_CC..npv::N].copy_from_slice(&v.words());
+         }
++        (Kind::Work, Wit::Work { tbl, sel, step }) => {
++            let gw = crate::gp::GpWit::merge();
++            let (v, kd) = table(&mut t, tbl, *sel, &mut calls);
++            let e1 = envs.get(1).map(|v| v.as_slice());
++            let _ = crate::gp::fill(&mut t[..c.width], &c.gpc, &envs[0], e1, &gw, &mut calls);
++            let out = merge_forced(&envs[0], e1);
++            pvs[..npv::ENV].copy_from_slice(&out);
++            pvs[npv::KEYS_D..npv::KEYS_D + D].copy_from_slice(&kd);
++            let (hh, cry) = h_hi(&step[lpv::H_PRE..lpv::H_PRE + 4], step[lpv::STEPS]);
++            {
++                let row = &mut t[..c.width];
++                row[c.wk..c.wk + lpv::LEAF].copy_from_slice(&step[..lpv::LEAF]);
++                row[c.whi..c.whi + 4].copy_from_slice(&hh);
++                row[c.wcry..c.wcry + 4].copy_from_slice(&cry);
++                row[c.wf] = F::ONE;
++            }
++            let sh = crate::gp::shape_w(
++                &mut t[..c.width],
++                &c.gpc,
++                gw.mode,
++                &envs[0],
++                e1,
++                &pvs[..npv::ENV],
++                &mut calls,
++                Some((F::from_u32(crate::gp::WK_SLICE0), step[lpv::STEPS])),
++            );
++            pvs[npv::SHAPE_D..npv::SHAPE_D + D].copy_from_slice(&sh);
++            pvs[npv::VKC_CC..npv::N].copy_from_slice(&v.words());
++        }
+         (Kind::Leaf, _) => {}
+         (k, _) => panic!("statement witness does not fit kind {k:?}"),
+     }
+     // log merge columns (row 0)
+-    if matches!(kind, Kind::First | Kind::Node | Kind::Fv) {
++    if matches!(kind, Kind::First | Kind::Node | Kind::Fv | Kind::Work) {
+         let e0 = &envs[0];
+         let de = d_empty();
+         let (db, nb) = match envs.get(1) {
+@@ -1514,7 +1600,7 @@ pub fn sponge_height(kind: &Kind) -> usize {
+     match kind {
+         Kind::Leaf => 0,
+         Kind::First => 128,
+-        Kind::Node | Kind::Fv => 64,
++        Kind::Node | Kind::Fv | Kind::Work => 64,
+         Kind::Root { .. } => 16,
+     }
+ }
+diff --git a/crates/sherlock-wrap-export/examples/fp8_d3.rs b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+index 299a935..5ca96f5 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_d3.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+@@ -129,7 +129,13 @@ fn main() {
+     ];
+     for f in a.iter().skip(2) {
+         let vk: MultiStarkVerifyingKey<NodeSC> = bitcode::deserialize(&fs::read(f).unwrap()).unwrap();
+-        res.push(d3(f, &frozen::INTERNAL, &vk, None, None));
++        if f.ends_with("work_vk.bitcode") {
++            // T8 (X7): the MERGE-WORK key under its own set, at the heights of its proof in x7.json
++            let x7: Value = serde_json::from_slice(&fs::read(PathBuf::from(f).with_file_name("x7.json")).unwrap()).unwrap();
++            res.push(d3(f, &frozen::MERGE_WORK, &vk, Some(&x7["output"]["log_heights"]), None));
++        } else {
++            res.push(d3(f, &frozen::INTERNAL, &vk, None, None));
++        }
+     }
+     fs::write(d.join("d3.json"), serde_json::to_string_pretty(&res).unwrap()).unwrap();
+     let all = res.iter().all(|r| {
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index d0a68a6..d72850c 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -1020,6 +1020,7 @@ fn main() {
+         "omit" => omit(&out),
+         "x7probe" => x7_probe(&out),
+         "gp2" => gp2(&out),
++        "x7" => x7(&out),
+         m => panic!("mode {m}: chain, cases, omit, x7probe or gp2"),
+     }
+ }
+@@ -1281,3 +1282,180 @@ fn gp2(out: &PathBuf) {
+     println!("T8GP2 all_pass={all} cases={}", cases.0.len());
+     assert!(all, "a T8 GP-2 case did not behave as expected");
+ }
++
++// ------------------------------------------------------------------ T8: X7 MERGE-WORK (N-6)
++/// The MERGE-WORK key over N3 children: the Work statement AIR, the verifier sub-circuit, the
++/// sponge, and the inline kernel (`sl::airs_kernel`, CORE split in two). Own set
++/// `frozen::MERGE_WORK` (owner ruling N-6 "own bounds", 2026-11-14).
++fn work_layer(child: &MultiStarkVerifyingKey<NodeSC>, log: &mut Vec<Value>) -> (Layer<2>, Value) {
++    let set = &frozen::MERGE_WORK;
++    let engine = Eng::new(set.params());
++    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(Arc::new(child.clone()), cfg());
++    let inv = circuit.bus_inventory();
++    let perm = inv.poseidon2_permute_bus;
++    let mut airs: Vec<AirRef<NodeSC>> = vec![Arc::new(StmtAir::new(Kind::Work, inv))];
++    airs.extend(circuit.airs::<NodeSC>());
++    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&Kind::Work) }));
++    let node_airs = airs.len();
++    airs.extend(sl::airs_kernel(0));
++    let names: Vec<String> = airs.iter().map(|a| a.name()).collect();
++    // probe first (shape against the own bounds), then the checked keygen
++    let (_pk, vk0) = frozen::keygen_set(set, &engine, &airs);
++    let viol = violations(set, &vk0, &names);
++    let buses = |r: std::ops::Range<usize>| -> std::collections::BTreeSet<u16> {
++        r.flat_map(|i| vk0.inner.per_air[i].symbolic_constraints.interactions.iter().map(|x| x.bus_index).collect::<Vec<_>>()).collect()
++    };
++    let (bn, bk) = (buses(0..node_airs), buses(node_airs..airs.len()));
++    let shared: Vec<u16> = bn.intersection(&bk).copied().collect();
++    let probe = json!({"violations": viol, "node_airs": node_airs, "kernel_airs": airs.len() - node_airs,
++        "node_buses": bn.iter().collect::<Vec<_>>(), "kernel_buses": bk.iter().collect::<Vec<_>>(), "shared_buses": shared});
++    println!("T8X7PROBE {}", probe);
++    assert_eq!(shared, vec![stmt::STEP_PV_BUS], "only step_pv joins the node and the kernel");
++    assert_eq!(sl::bus_port_step_pv(), stmt::STEP_PV_BUS);
++    let (pk, vk) = kg(set, &engine, &airs, "MERGE-WORK<2> over N3", log);
++    (Layer { circuit, kind: Kind::Work, engine, pk, vk, airs, perm }, probe)
++}
++
++impl Keys {
++    /// The N3 SEG proof of the shards `shs` of `p` (each shard: leaf, N1 unary; then N2, N3).
++    fn seg_of(&self, p: &sl::Program, shs: &[slice_core::ShardIn]) -> Proof<NodeSC> {
++        let leaf_p: Vec<_> = shs
++            .iter()
++            .map(|s| {
++                let tr = sl::traces_set(p, s, &sl::Build::default(), 0);
++                let (pf, v, _) = sh::prove(&self.eng, &self.app[0], &tr, false);
++                v.expect("app shard");
++                self.leaf[0].prove(&self.app[0].vk, std::slice::from_ref(&pf.unwrap()), &Wit::Leaf)
++            })
++            .collect();
++        let sets = vec![0usize; shs.len()];
++        let n1 = self.n1[0].prove(&self.leaf[0].vk, &leaf_p, &self.first_wit(p, &sets));
++        let n2 = self.n2.prove(&self.n1[0].vk, std::slice::from_ref(&n1), &self.node_wit(&self.table.node[0]));
++        self.n3.prove(&self.n2.vk, std::slice::from_ref(&n2), &self.node_wit(&self.table.node[1]))
++    }
++}
++
++/// Prove a MERGE-WORK node: the node contexts, then the kernel traces (`ktamper` edits them).
++fn work_try(
++    w: &Layer<2>,
++    child_vk: &MultiStarkVerifyingKey<NodeSC>,
++    kids: &[Proof<NodeSC>],
++    wit: &Wit,
++    kernel: &[sh::Tr],
++    tamper: Option<&dyn Fn(&mut Vec<F>)>,
++    mutant: bool,
++) -> (Option<Proof<NodeSC>>, Result<(), String>) {
++    let mut ctxs = match guard(|| Ok(w.ctxs(child_vk, kids, wit, tamper))) {
++        Ok(c) => c,
++        Err(e) => return (None, Err(format!("trace generation: {e}"))),
++    };
++    let dev = w.engine.device();
++    for t in kernel {
++        ctxs.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&t.m)), t.pvs.clone()));
++    }
++    let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
++    if std::env::var("T7_DEBUG").is_ok() {
++        let _ = guard(|| {
++            w.engine.debug(&w.airs, &ctx);
++            Ok(())
++        })
++        .map_err(|e| eprintln!("T7_DEBUG: {}", e.chars().take(600).collect::<String>()));
++    }
++    let d_pk = w.engine.device().transport_pk_to_device(&w.pk);
++    if mutant {
++        std::env::set_var("SB_MUTANT_PROVER", "1");
++    }
++    let p = guard(|| w.engine.prove(&d_pk, ctx).map_err(|e| format!("prove: {e:?}")));
++    std::env::remove_var("SB_MUTANT_PROVER");
++    match p {
++        Ok(p) => {
++            let r = w.engine.verify(&w.vk, &p).map_err(|e| format!("{e:?}"));
++            (Some(p), r)
++        }
++        Err(e) => (None, Err(e)),
++    }
++}
++
++fn x7(out: &PathBuf) {
++    let t0 = Instant::now();
++    let mut cases = Cases(vec![]);
++    let mut k = keys();
++    let (wl, probe) = work_layer(&k.n3.vk, &mut k.log);
++    // the MERGE-WORK key's row in keys_d: the second half, beside the FV row (LEAD)
++    let wv = wl.vkc(&k.n3.vk);
++    k.table.foreign.push(wv.clone());
++    let wsel = k.table.index(&wv, true).expect("work row");
++    fs::write(out.join("work_vk.bitcode"), bitcode::serialize(&wl.vk).unwrap()).unwrap();
++    let pa = sl::program_of(k.key_root, sl::Prog::A);
++    let pb = sl::program_of(k.key_root, sl::Prog::B);
++    let n = pa.rules.len();
++    println!("T8X7 program A steps {n}, B steps {}", pb.rules.len());
++    // prefix 2 steps, the inline step(s) 1, suffix the rest
++    let cut = vec![2, 1, n - 3];
++    let sa = sl::shards_cut(&pa, &cut);
++    let c0 = k.seg_of(&pa, &sa[0..1]);
++    let c1 = k.seg_of(&pa, &sa[2..3]);
++    let kern = |p: &sl::Program, s: &slice_core::ShardIn| sl::traces_kernel(p, s, &sl::Build::default());
++    let ks = kern(&pa, &sa[1]);
++    let step = ks[0].pvs.clone();
++    let wit = |st: &Vec<F>| Wit::Work { tbl: k.table.clone(), sel: wsel, step: st.clone() };
++    let kids = vec![c0.clone(), c1.clone()];
++    let (pw, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, None, false);
++    cases.rec("pos_x7_merge_work", true, r, "two enabled N3 SEG proofs (steps [0,2) and [3,n)) and one owner step [2,3) inline");
++    let mut stmt_out = Value::Null;
++    if let Some(p) = &pw {
++        let pv = &p.public_values[0];
++        let h = |a: usize| (0..4).map(|i| pv[a + i].as_canonical_u32()).collect::<Vec<_>>();
++        stmt_out = json!({"h_lo": h(stmt::npv::H_LO), "h_hi": h(stmt::npv::H_HI), "post_d_equals_suffix_post": pvd(p, stmt::npv::POST_D) == pvd(&c1, stmt::npv::POST_D),
++            "pre_d_equals_prefix_pre": pvd(p, stmt::npv::PRE_D) == pvd(&c0, stmt::npv::PRE_D),
++            "vkc_out_equals_work_row": p.public_values[0][stmt::npv::VKC_CC..stmt::npv::N].to_vec() == wv.words().to_vec(),
++            "vkc_out_equals_own_key": wl.vkc(&k.n3.vk).words().to_vec() == wv.words().to_vec(), "statement": statement(p), "log_heights": heights(p)});
++        println!("T8X7 output {}", stmt_out);
++    }
++    // ---- refusals
++    let ks0 = kern(&pa, &sa[0]);
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&ks0[0].pvs), &ks0, None, true);
++    cases.rec("x7_step_wrong_position", false, r, "inline step [0,2) in place of [2,3): pre_d(S) != post_d(slot 0)");
++    let sb = sl::shards_cut(&pb, &[2, 1, pb.rules.len() - 3]);
++    let ksb = kern(&pb, &sb[1]);
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&ksb[0].pvs), &ksb, None, true);
++    cases.rec("x7_step_other_program", false, r, "inline step of program B between two segments of A");
++    let mut fs_ = step.clone();
++    fs_[stmt::lpv::POST_D] += F::ONE;
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&fs_), &ks, None, true);
++    cases.rec("x7_step_pv_forged_in_statement", false, r, "statement copy of the step's post_d changed (step_pv bus)");
++    let mut kf = ks.clone();
++    kf[0].pvs[stmt::lpv::POST_D] += F::ONE;
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&kf[0].pvs), &kf, None, true);
++    cases.rec("x7_step_post_forged_in_kernel", false, r, "kernel CORE public post_d changed with the statement (BOUNDARY of CORE)");
++    let mut kh = ks.clone();
++    kh[0].pvs[stmt::lpv::H_PRE] += F::ONE;
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&kh[0].pvs), &kh, None, true);
++    cases.rec("x7_step_height_forged", false, r, "step h_pre changed in kernel and statement (h_hi(0) != h_pre(S))");
++    let mut kfr = ks.clone();
++    {
++        let m = &mut kfr[1].m;
++        let w = m.width;
++        m.values[2 * w + slice_core::HEIGHT + 3] += F::ONE;
++    }
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &kfr, None, true);
++    cases.rec("x7_frame_row_forged", false, r, "FRAME row 2 state word changed (core_frame bus)");
++    let kids1 = vec![c0.clone()];
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids1, &wit(&step), &ks, None, true);
++    cases.rec("x7_one_prior_proof", false, r, "slot 1 off (two enabled prior proofs required)");
++    let kids_sw = vec![c1.clone(), c0.clone()];
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids_sw, &wit(&step), &ks, None, true);
++    cases.rec("x7_children_swapped", false, r, "suffix in slot 0, prefix in slot 1");
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::POST_D] += F::ONE), true);
++    cases.rec("x7_output_post_forged", false, r, "output post_d changed");
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::SHAPE_D] += F::ONE), true);
++    cases.rec("x7_output_shape_forged", false, r, "output shape_d (work_kind, work_steps) changed");
++    let wnode = Wit::Work { tbl: k.table.clone(), sel: k.table.index(&k.table.foreign[0], true).unwrap(), step: step.clone() };
++    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wnode, &ks, None, true);
++    cases.rec("probe_x7_key_row_checked_one_layer_up", true, r, "the FV row as the output key commitment: accepted at this layer; the parent's child-key check refuses it (T7 key route)");
++    let all = cases.0.iter().all(|c| c["pass"] == true);
++    println!("T8X7 all_pass={all} cases={}", cases.0.len());
++    let rec = json!({"all_pass": all, "cases": cases.0, "probe": probe, "output": stmt_out, "work_vkc": format!("{:?}", wv.words()),
++        "keys_d": format!("{:?}", k.table.keys_d()), "cut": cut, "keys": k.log, "wall_s": t0.elapsed().as_secs_f64()});
++    fs::write(out.join("x7.json"), serde_json::to_string_pretty(&rec).unwrap()).unwrap();
++}
+-- 
+2.56.0
+
