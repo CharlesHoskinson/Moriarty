@@ -1,0 +1,54 @@
+From 89bee35f8638fc9ddcca5d5900fb14914ca29147 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 09:24:47 -0700
+Subject: [PATCH 5/5] T8b: x7 case for one forged kernel step-word column row;
+ NW and NW2 verifying keys written for D3
+
+---
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index 6e9ecde..a58b2d2 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -1427,7 +1427,8 @@ fn work_try(
+     let dev = w.engine.device();
+     for (i, t) in kernel.iter().enumerate() {
+         // T8b (GP-4): the CORE step words are columns, not public values
+-        let t = if i == 0 { sl::kernel_core_split(t) } else { t.clone() };
++        // (a trace already in the split form is used as given: the forged-column case)
++        let t = if i == 0 && t.pvs.len() == slice_core::pv::N { sl::kernel_core_split(t) } else { t.clone() };
+         ctxs.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&t.m)), t.pvs.clone()));
+     }
+     let ctx = ProvingContext::new(ctxs.into_iter().enumerate().collect());
+@@ -1510,6 +1511,17 @@ fn x7(out: &PathBuf) {
+     kh[0].pvs[stmt::lpv::H_PRE] += F::ONE;
+     let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&kh[0].pvs), &kh, None, true);
+     cases.rec("x7_step_height_forged", false, r, "step h_pre changed in kernel and statement (W.h_pre != h_hi(1)); rule not isolated (also CORE INIT gate input)");
++    // T8b (Q7): one step-word column changed on one CORE row that is not row 0 (the statement
++    // receives the honest words 8 times; the forged row sends another message)
++    let mut kpv = ks.clone();
++    kpv[0] = sl::kernel_core_split(&ks[0]);
++    {
++        let m = &mut kpv[0].m;
++        let w = m.width;
++        m.values[3 * w + slice_core::C_PVK + stmt::lpv::POST_D] += F::ONE;
++    }
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &kpv, None, true);
++    cases.rec("x7_step_column_forged_one_row", false, r, "kernel CORE step-word column (post_d) changed on row 3 only; step_pv sent 8 times against the honest words");
+     let mut kfr = ks.clone();
+     {
+         let m = &mut kfr[1].m;
+@@ -1548,6 +1560,8 @@ fn x7(out: &PathBuf) {
+     let (pfv, r) = work_try(wl, &k.n3.vk, &kids, &wnode, &ks, None, true);
+     cases.rec("probe_x7_key_row_checked_one_layer_up", true, r, "the FV row as the output key commitment: accepted at this layer; the parent's child-key check refuses it (T7 key route)");
+     // ---- T8b (GP-4): the parent NW over the MERGE-WORK child, then N3 over NW
++    fs::write(out.join("nw_vk.bitcode"), bitcode::serialize(&k.nw.vk).unwrap()).unwrap();
++    fs::write(out.join("nw2_vk.bitcode"), bitcode::serialize(&k.nw2.vk).unwrap()).unwrap();
+     let nws = k.table.index(&k.table.node[4], false).expect("NW row");
+     let nwit = Wit::Node { tbl: k.table.clone(), sel: nws };
+     let mut parent_out = Value::Null;
+-- 
+2.56.0
+

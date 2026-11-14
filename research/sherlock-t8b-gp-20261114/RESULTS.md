@@ -6,7 +6,31 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 
 ## 0. For the lead
 
-DRAFT, work in progress. Sections below are filled as each item lands.
+**Commits.** openvm `t8b-gp`: `fe2a341`, `5f15e07`, `4b2771b`, `2325f63`, `89bee35` (series `research/sherlock-stark-code-20261112/openvm-t8b/`). stark-backend: none. Moriarty `t8b-gp`: `da9cc4212`, `6e76d79d6`, `08df7b956` and the final commit of this report.
+
+**Done-when checks (MEASURED, real proofs, stock verifier):**
+
+| Check | Result | Section |
+|---|---|---|
+| GP-2: a run consumes a prior run's Halted value; forged dependency refused | PASS: chip set 2 proves the Halted run and its consumer; SEAL-WITH-DEPS of the consumer over the input-link DL gives `DEP(claim_C, n, LEAF(P), claim_P)`; 9 twins refused; gp2 48 of 48 | 1, 2 |
+| GP-3: a Compact proof of a named class verified in-circuit; forged proof refused | NOT DONE: no in-circuit Compact verifier exists and no Compact proof of the class is on the host; X14 units rerun and reproduce | 5 |
+| GP-4: a parent verifies a MERGE-WORK child; forged continuations, points, final checks refused | PASS for the parent: NW, NW2, N3 over MERGE-WORK accepted, forged parent output, wrong key rows and a forged step-word column refused; x7 22 of 22 | 3 |
+| GP-4: the inline step includes STACKS and VALUE DIGEST work | NOT DONE: no STACKS AIR exists; chip set 2 CORE is 1,298 constraints, over the kernel's 1,000 | 4 |
+| V.9, V.10, D3 | see section 7 | 7 |
+| I-13 and the four GP hook rows FROZEN | NOT FROZEN: all five stay FREEZE-PENDING with T8b evidence and the reason (ARCHITECTURE rows I-13, GP-2 hook, GP-3 hook, GP-4 hook, GP-3 general verifier) | 4, 5, 6 |
+
+**Blocked or not done, with the reason.**
+- `L` over a SET root (GP-2 to the ledger): not started; the brief says not to edit `L` before the lead reports that T10 has landed, and no such message came (section 6).
+- GP-3 in-circuit verifier (X8): not built; it is a stream of FV work units (transcript, MSM, final check) that are not designed, and no Compact proof of the class is on the host (section 5).
+- STACKS and VALUE DIGEST in the inline kernel: not built (section 4).
+
+**AFK picks for owner confirmation at T15** (basis: the lead's brief of 2026-11-14 says the owner is AFK and to take the recommended option; LOOP.md in the main checkout has no T8b row):
+1. Chip set 2 (the value set) is a per-program leaf key under `key_root` (set id 2), so N1 is one key over chip sets 0, 1 and 2 (CORE-015).
+2. The `vd` of a constant comes from its constants ROM row, with `ty_d = P2(DOM_TY, row)` and the `decl_d` form of `leaf.rs` `const_vd`; the INIT input `val_d` is a witness for chip set 2 only.
+3. `keys_d` has 7 rows: NW over MERGE-WORK, NW2 over NW and N3 over NW2 (SHP-009). This changes `keys_d`, so `L` and `L_Fr` rekey and T10's final keys go stale when T8b merges into `tested`.
+4. The kernel CORE step words are main columns sent from every row, received 8 times by the Work statement (in place of 54 CORE public values that no parent can verify).
+
+**Carbon Quint lanes:** seven circuit changes, Q1 to Q7 with file:line in section 8.
 
 ## 1. GP-2: the Halted leaf run (chip set 2, the value set)
 
@@ -25,14 +49,14 @@ DRAFT, work in progress. Sections below are filled as each item lands.
 
 - **The honest chain.** The Halted producer P (chip set 2) is sealed (`pos_gp2_seal_halted_producer`, outcome tag 1, payload `vd`). A DL-STEP input-link element takes `in_link = claim P` under the cover `LEAF(P)` (`pos_gp2_dl_link_halted_producer`). The consumer C, whose input value is P's Halted value, is sealed with SEAL-WITH-DEPS over that DL (`pos_gp2_b_consumes_a_halted`); its output is `DEP(claim C, n, LEAF(P), claim P)` (asserted in the example). DESCEND from `DEP(C)` to its cover and a DL-STEP chain element that opens claim P under `DEP(C)` are accepted (`pos_gp2_descend_dep_cover`, `pos_gp2_claim_from_dep_cover`). This is the first SEAL-WITH-DEPS of a real consumer of a real Halted value.
 - **Twins.** T8 refused SEAL-WITH-DEPS forgeries without an accepted honest case. Each refusal now has a twin that differs from the honest case in one input, and each twin is refused by the stock verifier: another `val_d` (`twin_claim_input_link_value_mismatch`), the value opening skipped, the producer relabelled Rejected, the Rejected producer A linked, a chain DL in place of the link DL (undischarged deps), a premise-only DL, another producer `prog_d`, a forged output root, and the producer as its own consumer.
-- **What is still open on GP-2.** `L` does not yet accept a SET root (section 6), so a SET or DEP output cannot reach the ledger. The hook row stays FREEZE-PENDING on that item only.
+- **What is still open on GP-2.** `L` does not yet accept a SET root (section 6), so a SET or DEP output cannot reach the ledger. X12 (the GP-2 discharge model in the circuit) and the Carbon lanes Q1 to Q7 are also still open. The hook row stays FREEZE-PENDING on these items.
 
 ## 3. GP-4: a parent over a MERGE-WORK child
 
-**Done, MEASURED** (`out/x7.json`, `t8_gp x7`, openvm `2325f63`; 21 of 21 cases pass, every proof checked by the stock verifier).
+**Done, MEASURED** (`out/x7.json`, `t8_gp x7`, openvm `89bee35`; 22 of 22 cases pass, every proof checked by the stock verifier).
 
 - **The ladder.** A node key over the MERGE-WORK key is not N3: node keys built one over the other from MERGE-WORK differ from N3 at rungs 1 and 2 and equal N3 at rung 3 (`out/ladder.json`, `t8_gp ladder`). So the parent route is NW over MERGE-WORK, NW2 over NW, and N3 over NW2, and `keys_d` has three new node rows: `UROWS` 4 to 7 (`crates/sherlock-lfr/src/stmt.rs:89`). NW and NW2 are the same universal node circuit keyed over another child; no new circuit. AFK pick for owner confirmation at T15 (SHP-009).
-- **The fix the parent needed.** The first NW proof failed (`LogupZerocheck(NonZeroRootSum)`, `logs/x7-r2.log`): the split kernel CORE of T8 had 54 public values (MERGE-WORK key public values 144), and a parent's verifier sends every child public value while the statement AIR receives only its own 90. The split CORE now holds the 54 step words as main columns on every row, sends them on `step_pv` from each row, and the Work statement receives them 8 times (the CORE height), so every row holds the received words (`core.rs` `C_PVK`, `leaf.rs` `kernel_core_split`, `stmt.rs` `STEP_PV_ROWS`). The constraints are unchanged; CORE stays at 999 constraints.
+- **The fix the parent needed.** The first NW proof failed (`LogupZerocheck(NonZeroRootSum)`, `logs/x7-r2.log`): the split kernel CORE of T8 had 54 public values (MERGE-WORK key public values 144), and a parent's verifier sends every child public value while the statement AIR receives only its own 90. The split CORE now holds the 54 step words as main columns on every row, sends them on `step_pv` from each row, and the Work statement receives them 8 times (the CORE height), so every row holds the received words (`core.rs` `C_PVK`, `leaf.rs` `kernel_core_split`, `stmt.rs` `STEP_PV_ROWS`). The constraints are unchanged; CORE stays at 999 constraints. A step word changed on CORE row 3 only is refused (`x7_step_column_forged_one_row`; a CORE constraint on that row fails too, so the refusal is not isolated to `step_pv`).
 - **Keys** (MEASURED, G1 accepted): MERGE-WORK 49 AIRs, 5,284 of 5,400 columns, 999 constraints, 183 interactions, 90 public values; NW 2,285 columns, NW2 and N3 2,284 columns (41 AIRs, 818 constraints, 182 interactions), inside the internal set. App, leaf and N1 keys of chip sets 0 and 1 have the same pre-hashes as T8 (`x7r1`); N2, FV, N3 and MERGE-WORK change because `keys_d` grew.
 - **Positive.** `pos_x7_parent_over_merge_work` (NW over the honest MERGE-WORK proof), `pos_x7_nw2_over_parent`, `pos_x7_n3_over_parent`: the MERGE-WORK SEG reaches N3, the input of `L`.
 - **Refusals.** A forged NW output `post_d`; NW, NW2 and N3 each with a wrong own key row, refused by the layer above; the MERGE-WORK proof with the FV row as its key commitment, under NW (`x7_key_row_forged_refused_by_parent`). The T8 probe `probe_x7_key_row_checked_one_layer_up` (accepted at its own layer) is now refused one layer up. The 12 T8 MERGE-WORK cases still pass on the new key.
@@ -67,7 +91,7 @@ DRAFT, work in progress. Sections below are filled as each item lands.
 
 ## 8. Carbon Quint lanes (circuit changes, for the lead)
 
-Each change below changes a constraint system and needs a Gemini Carbon Quint lane run by the lead. Paths are in openvm `t8b-gp` (`~/.cache/m7-wrap/src/openvm-t8b`, commit `2325f63`).
+Each change below changes a constraint system and needs a Gemini Carbon Quint lane run by the lead. Paths are in openvm `t8b-gp` (`~/.cache/m7-wrap/src/openvm-t8b`, commit `89bee35`; the circuit code is the same as at `2325f63`).
 
 | Lane | Change | File:line |
 |---|---|---|

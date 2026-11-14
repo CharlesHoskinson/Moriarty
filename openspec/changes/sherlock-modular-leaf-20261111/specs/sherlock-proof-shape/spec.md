@@ -78,7 +78,7 @@ The MERGE-WORK key SHALL meet the STARK kit gate inside its own set `merge_work`
 
 #### Scenario: MERGE-WORK key at its bounds
 - **WHEN** keygen builds the MERGE-WORK key over N3 with the inline slice kernel
-- **THEN** G1 accepts it under `merge_work` (49 AIRs, 5,128 columns, 999 constraints, 171 interactions, MEASURED in T8), and D3 at the bounds has every term at least 100 and every grindable term at least 101
+- **THEN** G1 accepts it under `merge_work` (49 AIRs, 5,284 columns, 999 constraints, 183 interactions, 90 public values, MEASURED in T8b with the 7-row `keys_d` and the step words as CORE columns; 5,128 columns and 171 interactions in T8), and D3 at the bounds has every term at least 100 and every grindable term at least 101
 
 ### Requirement: SHP-009 A parent node verifies a MERGE-WORK child
 The `keys_d` table SHALL have seven rows (`UROWS` 7): the four rows of T8 and the rows NW over the MERGE-WORK key, NW2 over NW and N3 over NW2. NW and NW2 SHALL be the universal node circuit keyed over their children, and a node over NW2 SHALL have the N3 key. A child proof SHALL be accepted only at its own `keys_d` row (T8b AFK pick; it changes `keys_d` and so rekeys `L` and `L_Fr`).
@@ -89,4 +89,8 @@ The `keys_d` table SHALL have seven rows (`UROWS` 7): the four rows of T8 and th
 
 #### Scenario: Parent over MERGE-WORK
 - **WHEN** a MERGE-WORK proof is verified by NW, NW by NW2 and NW2 by N3
-- **THEN** each is accepted, and a forged parent output, a wrong own row, a wrong received row at NW2 and at N3 and the FV-row proof at the MERGE-WORK row are refused
+- **THEN** each is accepted, and a forged NW output, a wrong own key row at NW, NW2 and N3 (each refused by the layer above) and the MERGE-WORK proof with the FV row as its key commitment under NW are refused
+
+#### Scenario: The kernel step words are columns
+- **WHEN** the MERGE-WORK key is built
+- **THEN** only its statement AIR has public values (90), the kernel CORE holds the 54 step words as columns sent on `step_pv` from each of its 8 rows, the Work statement receives them 8 times, and a step word changed on one CORE row is refused (`x7_step_column_forged_one_row`)
