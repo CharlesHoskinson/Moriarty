@@ -181,3 +181,10 @@ Local e6 devnet only. Node 2.1.101, indexer 4.4.101, proof server 9.0.1, runner 
   - `lfr_call key`: `L_Fr` prove 203 s.
   - Wrap: keygen 32 s, prove 51 s, proof 2,912 bytes.
 - Patch series: `research/sherlock-stark-code-20261112/openvm-t9-contract/` (30 patches, first-parent export, tip `01eb63f`). Round trip checked: base plus `git am` gives tree `60db66a`, equal to the tip tree.
+
+## Lead rulings on section 0 (2026-11-13)
+
+- **Item 1, the ledger anchor: accepted for T10a.** One universal ledger cannot hold each run's `C_P`, and `claim_pub` still binds the run's `C_P`. Every ledger call is ORD with `a_in = a_out = C_L = DIGEST(SHK_PROGC, anchor_d2)`. The program identity in the anchor (`anchor_d2 = pack(P2(DOM_PROGC, r_L, prog_d_ledger))`) is T7 and T10 work at the `ANCHOR_D2` seam (`crates/sherlock-wrap-export/examples/lfr_call.rs:119`). I-23 and I-24 stay FREEZE-PENDING N-11 until then.
+- **Item 6, ENC-4 task lane 3: `tag(2)`.** The signed T5 schema defines `rtag` with three values (0 Const, 1 Data, 2 Input) at `tag(2)` (T5-SCHEMAS section 1, row a, and O1-1). Appendix A row 3 typed `EqualTask.right.tag` and `PairTask.arg.tag` as `bit` and the lane as `tag(1)`, which predates the `Input` variant. Appendix A row 3 is corrected to `tag(2)`; the word count is unchanged (1 word). The four ENC-4 pins stand.
+- **Item 8, ENC-5 part tags 58 to 62: accepted** as the next free codes after FP-9.5. `SHK_SHAPE` takes the next free code after 62 when it is defined.
+- Items 2 to 5 and 7 are LEAD picks inside the signed schemas and stand as written.
