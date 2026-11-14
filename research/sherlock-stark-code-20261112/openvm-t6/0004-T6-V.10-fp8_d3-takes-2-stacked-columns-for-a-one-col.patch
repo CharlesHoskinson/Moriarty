@@ -1,0 +1,37 @@
+From c541730b51fc27b1045b18263ac58cb4bfaa63db Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 19:05:29 -0700
+Subject: [PATCH 4/4] T6 V.10: fp8_d3 takes 2 stacked columns for a one-column
+ proof (no mu batching; 2 is the conservative value)
+
+---
+ crates/sherlock-wrap-export/examples/fp8_d3.rs | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/fp8_d3.rs b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+index 1915a9c..299a935 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_d3.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_d3.rs
+@@ -80,13 +80,17 @@ fn d3<SC: StarkProtocolConfig>(
+         "vk": terms(&SoundnessCalculator::calculate_from_vk(vk))});
+     if let (Some(h), Some(sw)) = (log_heights, stacked) {
+         let h = h.as_array().unwrap().iter().filter_map(|x| x.as_u64()).max().unwrap() as usize;
+-        let w: usize = sw.as_array().unwrap().iter().map(|x| x.as_u64().unwrap() as usize).sum();
++        let w0: usize = sw.as_array().unwrap().iter().map(|x| x.as_u64().unwrap() as usize).sum();
++        // T6: a proof stacked into one column has no mu batching; the calculator asserts at
++        // least 2 columns. The mu error grows with the column count, so 2 is the conservative
++        // value (the slice app proof is one stacked column).
++        let w = w0.max(2);
+         let s = SoundnessCalculator::calculate(
+             p, bo, cb, sh.max_constraints, sh.airs, p.max_constraint_degree, h, sh.columns, w,
+             n_logup(p.l_skip, mic, sh.airs, sh.max_interactions, h),
+         );
+         out["measured"] = terms(&s);
+-        out["measured_shape"] = json!({"max_log_height": h, "stacked_columns": w});
++        out["measured_shape"] = json!({"max_log_height": h, "stacked_columns": w0, "stacked_columns_used": w});
+     }
+     let b = &set.bounds;
+     let s = SoundnessCalculator::calculate(
+-- 
+2.56.0
+

@@ -26,6 +26,7 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-fp8/` | fp8 | `05f3b73e7` | `5d8e15883` | 21 | 33, 3 merges | fp8_keyset: univ mode (bound N1 to N3 and the L pins for two programs) |
 | `openvm-fp8-units/` | fp8-units | `05f3b73e7` | `1ba98abf6` | 21 | 33, 3 merges | FP-8 units: N3 reference key in the bitcode check |
 | `openvm-tested/` | tested (T1 integration, T3) | `05f3b73e7` | `b3fbaa5` | 27 | 48, 6 merges | T3: every recursion layer keyed with every AIR required |
+| `openvm-t6/` | t6-leaf (T6 modular leaf slice) | `b3fbaa5` (the `tested` tip) | see `TIP` | see folder | linear | T6: `sherlock-leaf` slice crate, `KeyBind` app public values, `slice_chain`, `fp8_d3` |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |
@@ -39,3 +40,5 @@ Apply: `git checkout $(cat BASE) && git am *.patch` in a clone of the upstream. 
 Round trip checked for all 14 series (2026-11-13, scratch clones under `~/.cache/t0-verify`, deleted after the check): the base plus `git am` of the series gives a tree equal to the tip tree (`git diff --stat` against the tip is empty and the tree ids match). The fp8 tree is `95e9c51`, and the stark-backend e2-lfr and fp8 tree is `eb17157`.
 
 T3 (2026-11-13): `openvm-tested/` added the same way (first-parent export, merges flattened); round trip checked in a scratch clone: tree `39610c3` equals the `tested` tip tree. stark-backend `tested` has no T3 commit.
+
+T6 (2026-11-13): `openvm-t6/` and `stark-backend-t6/` are plain `git format-patch --binary BASE..t6-leaf` series. `openvm-t6` applies on the `tested` tip `b3fbaa5` (apply `openvm-tested/` first). `stark-backend-t6` applies on its `BASE` (the stark-backend `tested` tip) and adds `SB_MUTANT_PROVER` (test only). The openvm-t6 `Cargo.toml` patches point at `../stark-backend-t6/crates/...`.
