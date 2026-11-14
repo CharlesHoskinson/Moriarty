@@ -7,7 +7,7 @@ Labels: MEASURED (read from a run log), DERIVED (computed from MEASURED numbers 
 ## 1. Status
 
 **T3: DONE (INTEGRATED-PASS on `tested`).** The done-when of LOOP row T3 holds:
-- Real proofs of N1, N3 and `L` with `KeyBind` left out, and with each of two proof-shape AIRs (`ProofShapeAir`, `PublicValuesAir`) left out, are refused: 28 of 28 refusals, 6 of 6 honest acceptances, in two runs (MEASURED, section 3).
+- Real proofs of N1, N3 and `L` with `KeyBind` left out, and with each of two proof-shape AIRs (`ProofShapeAir`, `PublicValuesAir`) left out, are refused: 30 of 30 refusals and 4 of 4 honest acceptances, in two runs (MEASURED, section 3).
 - The three T1 failures pass: `e4_profile_lfr_prove` (845 s), the `lfr_real` export (`exp-lfr-real`, keygen 200.1 s, prove 645.7 s) and the wrap test `i5_lfr_real_native` (MEASURED, section 5).
 - Every suite that passed in T1 passes again on the T3 tree (section 5).
 
@@ -21,7 +21,7 @@ Every key of the leaf aggregation, internal (N1, N2, N3), `L` and `L_Fr` sets is
 |---|---|---|
 | `d86f56c` | openvm `tested` | `e4_profile_lfr_prove` and the `lfr_real` export call `Tape::expose` (the E3 rule; T1 panicked at `machine.rs:1189`) |
 | `b3fbaa5` | openvm `tested` | required AIRs in `frozen`, the `L_Fr` tape generator refusal, the `fp8_keyset omit` negatives |
-| this commit | Moriarty `tested` | the wrap shape refusal, this report, the `openvm-tested` patch series |
+| `a4ae673c6`, and the record fix after it | Moriarty `tested` | the wrap shape refusal, this report, the `openvm-tested` patch series |
 
 stark-backend: no change. The stock verifier already refuses a proof without a required AIR (`verifier/proof_shape.rs:332`, `RequiredAirNoVData`). The recursion proof-shape AIR already constrains `is_present = 1` for a required child AIR (`crates/recursion/src/proof_shape/proof_shape/air.rs:331-332`). T3 turns both checks on by keying the layers with required AIRs.
 
@@ -42,7 +42,7 @@ Each item below changes a key or a circuit relation.
 
 Reading of "refused at N1, N3 and `L`": a real proof of the layer N1, N3 or `L` with one AIR left out is refused (a) when the layer is proved without that AIR's trace, (b) by the stock verifier of the layer, and (c) one layer up: N2 over the N1 proof, N3 over the N3 proof, and the `L_Fr` tape generator over the `L` proof. The chain is app W1 (2^14 rows) -> leaf layer -> N1 -> N2 -> N3 -> N3 over N3 -> `L` (`L_iface` with `KeyBind`, `Dims::FULL`, case `AllEntries`, seed 14), all under the frozen sets. Omitted AIRs: `KeyBindAir`, and the proof-shape module AIRs `ProofShapeAir` and `PublicValuesAir`.
 
-Result (MEASURED): **34 of 34 cases behave as expected** in both runs. Run 1 ran on the uncommitted tree (`~/.cache/t3/logs/omit-run1.summary`, `~/.cache/t3/out/omit/omit-run1.json`, wall 15.7 min), and run 2 ran on openvm `b3fbaa5` with the proof-shape constraint count below (`~/.cache/t3/logs/omit-run2.summary`, `~/.cache/t3/out/omit/omit.json`, wall 16.9 min). There are 6 honest acceptances and 28 refusals. The keys of leaf, N1, N2, N3 and `L` have every AIR required (`all_required` all true).
+Result (MEASURED): **34 of 34 cases behave as expected** in both runs. Run 1 ran on the uncommitted tree (`~/.cache/t3/logs/omit-run1.summary`, `~/.cache/t3/out/omit/omit-run1.json`, wall 15.7 min), and run 2 ran on openvm `b3fbaa5` with the proof-shape constraint count below (`~/.cache/t3/logs/omit-run2.summary`, `~/.cache/t3/out/omit/omit.json`, wall 16.9 min). There are 4 honest acceptances and 30 refusals. The keys of leaf, N1, N2, N3 and `L` have every AIR required (`all_required` all true).
 
 | Layer | Omitted AIR (index) | (a) prover path | (b) stock verifier | (c) one layer up |
 |---|---|---|---|---|
@@ -70,7 +70,7 @@ Control (no verdict, MEASURED): with N1 keyed by plain keygen (every AIR optiona
 
 | Item | Before (optional AIRs) | After (T3) | Label |
 |---|---|---|---|
-| bound leaf layer vk bitcode | 79,525 B | 79,525 B (pre-hash changed) | MEASURED (FP8 `neg.json`, T3 `omit-run1.json`) |
+| bound leaf layer vk bitcode (before: FP8 `neg` run on the fp8 tree, `~/.cache/fp8/out/kb/neg/neg.json`) | 79,525 B | 79,525 B (pre-hash changed) | MEASURED (FP8 `neg.json`, T3 `omit-run1.json`) |
 | bound N1 vk | 85,515 B | 85,918 B (+403) | MEASURED |
 | bound N2 vk | 85,457 B | 85,860 B (+403) | MEASURED |
 | bound N3 vk | 86,496 B | 86,899 B (+403) | MEASURED |
@@ -84,11 +84,11 @@ Control (no verdict, MEASURED): with N1 keyed by plain keygen (every AIR optiona
 | wrap `MidnightVK` bytes, lfr-e3 (`wrap lfr-e3 ... 21 0`) | 1,325 B | 1,325 B (other bytes: sha256 `82eb9f8b...` before, `599da624...` after) | MEASURED (`~/.cache/t3/logs/wrap-key-{before,after}.log`) |
 | wrap keygen, prove, library verify, lfr-e3 | 90.7 s, 136.7 s, Ok | 88.6 s, 138.5 s, Ok | MEASURED (shared host, not `--exclusive`) |
 
-The STARK vks grow by about 400 bytes per layer whose child is required (one `assert_one` per child AIR in the proof-shape AIR, DERIVED from the table). These vks are not the ledger key; the ledger key is the wrap `MidnightVK`, bound at 50,000 bytes. The wrap loses 140 rows because the `L_Fr` transcript no longer absorbs 15 presence bits. k stays 21; headroom to the gate of 1,782,573 rows is 114,390 rows for lfr-e3 (DERIVED).
+The STARK vks grow by about 400 bytes per layer whose child is required (one `assert_one` per child AIR in the proof-shape AIR, DERIVED from the table). These vks are not the ledger key; the ledger key is the wrap `MidnightVK`, bound at 50,000 bytes. The wrap loses 140 rows (MEASURED); the likely cause is that the `L_Fr` transcript no longer absorbs 15 presence bits (DERIVED, not isolated). k stays 21; headroom to the gate of 1,782,573 rows is 114,390 rows for lfr-e3 (DERIVED).
 
 ## 5. Tests on the T3 tree
 
-Same commands as T1 (`~/.cache/t1/run.sh`), run by `~/.cache/t3/run.sh` on openvm `b3fbaa5` (`d86f56c` plus the then uncommitted T3 diff, which `b3fbaa5` commits unchanged, for the stages before i10), stark-backend `0004791` and Moriarty `52b71e250` with the `verifier.rs` change. The fixtures were made again (`l_fixture`, `iface_fixture`, every export), because T3 changes every recursion-layer key. Logs: `~/.cache/t3/logs/<stage>.log`, times in `~/.cache/t3/logs/runs.log`.
+Same commands as T1 (`~/.cache/t1/run.sh`), run by `~/.cache/t3/run.sh` on openvm `b3fbaa5`. The stages up to j5 ran on `d86f56c` plus the then uncommitted T3 diff (`runs.log` shows `ovm d86f56c ovm-dirty 4`). `b3fbaa5` commits that diff; the `sherlock-lfr` and export sources were not edited after the builds of those stages, and only `fp8_keyset.rs` gained the control counted in run 2 (`git diff b3fbaa5` is empty at handback). The stages from m7-bls on ran on `b3fbaa5` itself. Every stage used stark-backend `0004791` and Moriarty `52b71e250` with the `verifier.rs` change (committed in `a4ae673c6`). The fixtures were made again (`l_fixture`, `iface_fixture`, every export), because T3 changes every recursion-layer key. Logs: `~/.cache/t3/logs/<stage>.log`, times in `~/.cache/t3/logs/runs.log`.
 
 | Stage | T1 | T3 (MEASURED) |
 |---|---|---|
@@ -122,4 +122,6 @@ stark-backend suites (sb-nextest, sb-fr, sb-bb-bytes) were not rerun: T3 changes
 ## 7. Open
 
 - The parent-circuit refusal of an omitting child is shown by the constraint in the parent key, not by an adversarial trace that passes every other constraint (section 3).
+- No test covers `G1Error::Optional` (`frozen.rs:432-433`), `ShapeError::Lengths("AIRs")` (`lverify.rs:260-262`) or the wrap `from_wrapin` assert (`verifier.rs:124-128`); every key in the runs is all-required, so these checks never fired. The Quint lane should take them.
+- No case shows optional keys accepting what required keys refuse: on the three AIRs tested, the optional-key control refuses too (section 3).
 - The `fixtures` mixtures (`mix-small`, `mix-lfr`) keep optional AIRs on purpose: they test the wrap's presence-bit path, which a required-only key set no longer uses.
