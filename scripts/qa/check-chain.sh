@@ -33,6 +33,19 @@ if bad or not all(req.values()) or not all(any(n.startswith(p) for n in names) f
 s = d["app_shape"]
 print(f"V.9 PASS: {len(names)} cases; every AIR required in {sorted(req)}; app shape {s['airs']} AIRs, {s['columns']} columns, max interactions {s['max_interactions']}")
 PY
+  # SG-6: seconds per proved step on the GPU (and the CPU), stock CPU verifier on each proof.
+  rm -f "$out/sg6.json"
+  ( cd "$ovm" && LIBRARY_PATH="${CUDA_LIB_DIR:-/opt/cuda/lib64}" T6_OUT="$out" "$HOME/.local/bin/heavy-slot" --exclusive --mem 24G --name t6-check-sg6 -- \
+      cargo run --release --offline -p sherlock-leaf --features cuda --example sg6 ) 2>&1 | grep -E "SG6|panicked|error" | tail -10
+  python3 - "$out/sg6.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+gpu = [r for r in d["rows"] if r["backend"].startswith("GPU")]
+ok = d["gpu"] and gpu and all(s["stock_cpu_verifier"] for r in d["rows"] for s in r["shards"])
+if not ok:
+    sys.exit("V.9 FAIL: SG-6 has no verified GPU row")
+print(f"V.9 SG-6 PASS: GPU {gpu[0]['s_per_proved_step']:.4f} s per proved step ({gpu[0]['proved_steps']} steps, {gpu[0]['slots']} slots)")
+PY
 elif [ "$mode" = chain ]; then
   rm -f "$out/chain.json" "$out/d3.json"
   run slice_chain chain "$out" 2>&1 | grep -E "SLICECHAIN|SLICEKEY|panicked" | tail -40
