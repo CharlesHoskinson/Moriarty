@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # V.9 and V.10 (sherlock-modular-leaf-20261111) on the T7 openvm tree (t7-bind): the slice leaf
 # shards through leaf, N1, N2, N3, L and L_Fr on one universal key set. Usage: check-chain.sh omit|chain|cases
-#   omit:  `t7_chain omit` (V.9 slice_air_omitted and the omit cases of N1, N3 and L)
-#   chain: `t7_chain chain A`, `t7_chain chain B`, then `fp8_d3` on each (V.10: D3 >= 100 on every term)
+#   omit:  `t7_chain omit` (V.9 slice_air_omitted and the omit cases of N1, N3 and L; T10: the N1 h_hi table, the L onion AIR)
+#   chain: `t7_chain chain A`, `t7_chain chain B`, then `fp8_d3` on each (V.10: D3 >= 100 on every term; T10: the L log tie cases)
 #   cases: `t7_chain cases` (T7 binding cases: wrong prog_d, mixed chip sets, the FV unit under N3; T10: a changed
 #          leaf post_d and an h_hi limb of 2^16 or more)
 set -euo pipefail
@@ -31,7 +31,8 @@ d = json.load(open(sys.argv[1]))
 bad = [c["case"] for c in d["cases"] if not c["pass"]]
 req = d["all_required"]
 names = [c["case"] for c in d["cases"]]
-need = ["slice_air_omitted_stock_verify_without_", "n1_parent_over_child_without_", "n3_parent_over_child_without_", "l_stock_verify_without_", "lfr_tape_honest_shape_without_"]
+need = ["slice_air_omitted_stock_verify_without_", "n1_parent_over_child_without_", "n3_parent_over_child_without_", "l_stock_verify_without_", "lfr_tape_honest_shape_without_",
+        "n1_stock_verify_without_HhiRangeAir", "l_stock_verify_without_OnionAir"]  # T10: the h_hi table and the onion AIR
 if bad or not all(req.values()) or not all(any(n.startswith(p) for n in names) for p in need):
     sys.exit(f"V.9 FAIL: failing {bad}, all_required {req}")
 s = d["app_shape"]
@@ -59,7 +60,9 @@ for prog in "AB":
     g1 = all(c["heights"][k].get("g1") == "accepted" for k in layers)
     gates = all(r[k]["gate"] == "PASS" for r in d3 for k in ("measured", "vk", "bounds") if k in r and r[k] is not None)
     measured = sum(1 for r in d3 if r.get("measured")) >= 7
-    cases = cs["all_pass"] and c["cases_all_pass"]
+    # T10: the L log tie cases must be present
+    tie = {"exposed_log_d_changed_refused_at_L", "log_value_changed_refused_at_L"} <= {x["case"] for x in cs["cases"]}
+    cases = cs["all_pass"] and c["cases_all_pass"] and tie
     # the internal-recursive key is at its fixed point: N3 over N3 has the N3 pre-hash
     fp = any(k.get("n3_over_n3_pre_equals_n3_pre") is True for k in c["keys"])
     if not (fixed and g1 and gates and measured and cases and fp):
