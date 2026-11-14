@@ -6,7 +6,7 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 
 ## 0. For the lead
 
-**Commits.** openvm `t8b-gp`: `fe2a341`, `5f15e07`, `4b2771b`, `2325f63`, `89bee35` (series `research/sherlock-stark-code-20261112/openvm-t8b/`). stark-backend: none. Moriarty `t8b-gp`: `da9cc4212`, `6e76d79d6`, `08df7b956` and the final commit of this report.
+**Commits.** openvm `t8b-gp`: `fe2a341`, `5f15e07`, `4b2771b`, `2325f63`, `89bee35` (series `research/sherlock-stark-code-20261112/openvm-t8b/`). stark-backend: none. Moriarty `t8b-gp`: `da9cc4212`, `6e76d79d6`, `08df7b956`, `c13d880e3` and the final commit of this report.
 
 **Done-when checks (MEASURED, real proofs, stock verifier):**
 
@@ -16,7 +16,7 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 | GP-3: a Compact proof of a named class verified in-circuit; forged proof refused | NOT DONE: no in-circuit Compact verifier exists and no Compact proof of the class is on the host; X14 units rerun and reproduce | 5 |
 | GP-4: a parent verifies a MERGE-WORK child; forged continuations, points, final checks refused | PASS for the parent: NW, NW2, N3 over MERGE-WORK accepted, forged parent output, wrong key rows and a forged step-word column refused; x7 22 of 22 | 3 |
 | GP-4: the inline step includes STACKS and VALUE DIGEST work | NOT DONE: no STACKS AIR exists; chip set 2 CORE is 1,298 constraints, over the kernel's 1,000 | 4 |
-| V.9, V.10, D3 | see section 7 | 7 |
+| V.9, V.10, D3 | PASS: cases 12, V.9 59 cases, V.10 A and B, D3 every term at least 100 and every grindable term at least 101 on every key including MERGE-WORK, NW and NW2 (weakest 101.0110, leaf shift) | 7 |
 | I-13 and the four GP hook rows FROZEN | NOT FROZEN: all five stay FREEZE-PENDING with T8b evidence and the reason (ARCHITECTURE rows I-13, GP-2 hook, GP-3 hook, GP-4 hook, GP-3 general verifier) | 4, 5, 6 |
 
 **Blocked or not done, with the reason.**
@@ -66,7 +66,7 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 
 **Not done. The GP-4 hook row stays FREEZE-PENDING on this item.** What is missing, with sizes:
 
-- **STACKS is not built anywhere.** No STACKS AIR exists in `crates/sherlock-leaf/src` (openvm `t8b-gp`). The state body carries the stack words (`frm.count`, `frm.below`, `tsk.count`, `tsk.below` and the cached tops, `enc.rs:187-193`), and INIT sets them to the empty constants (`core.rs:188-189`, `:683-684`). No slice rule pushes, pops or rewrites a stack: the five rules of chip set 0 and the two of chip set 2 write no stack word (frame rule, `core.rs` `frame_rule`). The kit needs the hash-chain AIR of ARCHITECTURE kit STACKS (one whole-sponge HASH slot per step per stack, frame record 52 words and task record 19 words at `ridx = u64`, T5-SCHEMAS section 3), its Quint model `hashStacks.qnt` (not written) and the stack rules of CORE.
+- **STACKS is not built anywhere.** No STACKS AIR exists in `crates/sherlock-leaf/src` (openvm `t8b-gp`). The state body carries the stack words (`frm.count`, `frm.below`, `tsk.count`, `tsk.below` and the cached tops, `enc.rs:187-193`), and INIT sets them to the empty constants (`core.rs:194-195`, `:699-700`, openvm `89bee35`). No slice rule pushes, pops or rewrites a stack: the five rules of chip set 0 and the two of chip set 2 write no stack word (frame rule, `core.rs` `frame_rule`). The kit needs the hash-chain AIR of ARCHITECTURE kit STACKS (one whole-sponge HASH slot per step per stack, frame record 52 words and task record 19 words at `ridx = u64`, T5-SCHEMAS section 3), its Quint model `hashStacks.qnt` (not written) and the stack rules of CORE.
 - **No slice run reaches a hashing stack step within S = 4.** In the reference runs of `out/slice_v1.json` (MEASURED), `literal`, `boolconst` and `nil` push one task at count 0 and pop it at count 1 (`task_push_pop_rewrite` `[1,0,0]` then `[0,1,0]`): both are the no-hash paths of the kit. `underflow` and `overflow` push one frame and tasks, and the deepest stack of every candidate is 1 (frames) and 1 (tasks) (MEASURED, net push minus pop over `frame_push_pop_rewrite` and `task_push_pop_rewrite`). A spill or a restore needs a stack two deep, which none of the seven candidate programs reaches.
 - **VALUE DIGEST in the kernel.** The value rules exist only in the leaf (chip set 2, section 1). Chip set 2's CORE has 1,298 constraints (MEASURED, `out/value_set.json`), over the 1,000-constraint per-AIR bound of the kernel set `merge_work`; the kernel would need a second split of CORE (as T8 split FRAME off). A MERGE-WORK node needs two enabled SEG children and at least one inline step, so 3 steps at least; the Halted value run `unitctor` has 2 steps (MEASURED), and the kernel's `work_kind` would need a second value (`WK_SLICE0` is chip set 0, `gp.rs`).
 - **Kernel budget (MEASURED):** split CORE 999 of 1,000 constraints; MERGE-WORK 5,284 of 5,400 columns after T8b (5,128 in T8; T8b adds the key table rows of `UROWS` 7 and the 54 step columns, section 3), so 116 columns are left for a second CORE split and a value rule set.
@@ -88,6 +88,15 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 **Not started, by the lead's order.** The brief says not to edit `L` until the lead says T10 has landed, and no such message came during this run. `L` is at 1,995 of 2,000 columns and StmtAir at 99 of 100 interactions on the T10 merge tree (MEASURED by T10, cited). The recommended route (a node mode below `L` that accepts the SET root, so `L` does not change) is not built. GP-2 hook row: FREEZE-PENDING on it.
 
 ## 7. Final run, V.9 and V.10
+
+**PASS, MEASURED** (records in `out/gates/`; openvm tree clean at each run).
+
+- **Cases** (`scripts/qa/check-chain.sh cases`, openvm `2325f63`): T7 cases PASS, 12 cases (`out/gates/cases.json`, `check-cases.log`).
+- **V.9** (`omit`, openvm `2325f63`): PASS, 59 cases, every AIR required in app, leaf, N1, N2, N3, FV and `L`; app shape 7 AIRs, 2,361 columns, max interactions 145 (`out/gates/omit.json`).
+- **V.10** (`chain`, openvm `89bee35`, the stock gate script at 64G): A and B each PASS: 2 shards, 5 steps, fixed heights, G1 accepted, D3 PASS on 8 keys, 7 cases, N3 fixed point, `L_Fr` 1,522 words; two programs under one `key_root` and one `keys_d` (`out/gates/chain-A.json`, `chain-B.json`, `d3-A.json`, `d3-B.json`). `L` 243,126-byte key, `L` public values 12,190.
+- **D3** (stock `SoundnessCalculator`, `fp8_d3`): every term at least 100 and every grindable term at least 101 on every key. Weakest per key: app shift 101.0891, leaf shift 101.0110, N1, N2, N3 shift 101.1643, `L` mu 101.0730 (vk and bounds), `L_Fr` query 101.1435, FV shift 101.1643. The MERGE-WORK key under `merge_work` (5,284 columns) and NW and NW2 under the internal set: weakest shift 101.1643 at vk and bounds; for MERGE-WORK query 101.1643, mu 101.6304, LogUp 102.7205, fold 102.6276 (`out/gates/d3-work-nw.json`; no measured-shape row for these three, the stacked widths of their proofs are not recorded).
+- **The gate runs.** `cases` and `omit` ran through a copy of `scripts/qa/check-chain.sh` that differs only in `--mem` (8G, `~/.cache/t8b/check-chain-mem.sh`); their code (`t7_chain`) is the same at `2325f63` and `89bee35` (the later commit changes `t8_gp` only). A first `chain` run at 34G was stopped after 98 minutes: `heavy.slice` was over its `MemoryHigh` of 64G (heavy-slot admits 90G) and both it and T10's `t10-pathc` sat in reclaim. The rerun used the stock script at 64G. The lead may want to align `heavy.slice` `MemoryHigh` with the heavy-slot budget.
+- **Not a timing.** No `--exclusive` run; prove seconds in the records are on a shared host and are not labelled MEASURED timings.
 
 ## 8. Carbon Quint lanes (circuit changes, for the lead)
 
