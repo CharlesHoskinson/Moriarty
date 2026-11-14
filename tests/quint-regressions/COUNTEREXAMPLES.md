@@ -147,13 +147,65 @@ bound 2^20), so the `L_Fr` key shape does not change (MEASURED); the `L_Fr` prog
 commitment change, so the `L_Fr` key changes and the wrap key that pins it changes with the same
 circuit size (DERIVED).
 
-NOT COVERED: the opening-proof form of a chunk (`open` 1 and `mode` 1, `a_out` at entry 6) has no
-builder in `iface` and no test; the fix selects its operand by `cswap(open, a5, a6)`.
+Opening-proof form of a chunk (T10q-cx follow-up, `iface::Case::OpenChunk`, openvm `4d8177b`):
+`DIGEST(SHK_SET)` at entry 4, `a_in` at entry 5, `a_out` at entry 6, `e_in = 5`, `e_out = 6`.
+Test `t10b_f03_open_chunk_anchor_ends` (`logs/t10q-cx-lock-after.txt`, MEASURED): honest open
+chunks 1/2, 2/2, 1/1 and 2/3 pass the tape and the decoder twin; a forged `a_in` of chunk 1 is
+refused by assert #3 and a forged `a_out` of chunk `k` by assert #4. This covers the tape rule at
+entries 5 and 6. The lane layout of an open chunk is ESTIMATE: the `openClaim` lanes moved by the
+11 lanes of the anchor write (as `LANE_CLAIM` for a chunk) and `a_out` at `LANE_A_OUT` in the call
+vector, not lane-mapped (the five pairs are used by `openClaim`); no compiled ledger entry has this
+form.
 
-Open observation (no counterexample built, not a lane finding): the lock anchors of middle
-chunks (`SHK_LOCK`, FINAL-DESIGN `A_j = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d,
-run_tag, j)))`) have a free operand in the tape; nothing ties it to `prog_d`. A chunked contract
-needs that tie before it ships, or chunks of two programs could share a lock value.
+### T10B-LOCK: the lock anchors of a chunked run (T10q-cx follow-up)
+
+Source: the F-03 work above (code review of `gen_ops_check`, not a Quint lane finding; the
+t10-bound model has no lock operand, so there is no ITF trace). Handler `lfr::lock_call`: chunk
+`j` of `k` of program B with the honest lock operands of its own run, or, on one position, the
+lock operand of a run of program A (another `C_P` operand and `run_tag`). Before: openvm `4d8177b`
+(`logs/t10q-cx-lock-fails-before.txt`); after: `0a4a2c8` (`logs/t10q-cx-lock-after.txt`). MEASURED.
+
+| attempt | input | result | constraint | verdict |
+|---|---|---|---|---|
+| chunk 1 of 3 of B writes `a_out` = `A_1` of A's run | `inputs/T10B-LOCK-chunk-j1-k3-a_out-of-A.json` | before: tape accepted (0 failed assertions), decoder accepts. After: refused | `gen_ops_check` assert #6, lock rule `A_j` (`a_out`) | FIXED (`t10b_chunk_lock_is_bound`) |
+| chunk 2 of 3 of B reads `a_in` = `A_1` of A's run | `inputs/T10B-LOCK-chunk-j2-k3-a_in-of-A.json` | after: refused | assert #5, lock rule `A_(j-1)` (`a_in`) | FIXED |
+| chunk 2 of 3 of B writes `a_out` = `A_2` of A's run | `inputs/T10B-LOCK-chunk-j2-k3-a_out-of-A.json` | after: refused | assert #6 | FIXED |
+| chunk 3 of 3 of B reads `a_in` = `A_2` of A's run | `inputs/T10B-LOCK-chunk-j3-k3-a_in-of-A.json` | after: refused | assert #5 | FIXED |
+| chunk 65,536 of 65,537 reads a foreign `A_65535` (borrow of `j - 1` across the 16-bit limb) | `inputs/T10B-LOCK-chunk-j65536-k65537-a_in-of-A.json` | after: refused | assert #5 | FIXED |
+| controls: honest chunks 1/3, 2/3, 3/3, 1/2, 2/2, 65,536/65,537, 65,537/65,537 | `inputs/T10B-LOCK-chunk-*-honest.json` | accepted before and after | none | positive |
+
+Verdict CONFIRMED. As built, every `SHK_LOCK` anchor operand was free in the `L_Fr` tape (no code
+outside the ENC-1 test vector computes `DOM_LOCK`). No other check ties a middle chunk to `prog_d`
+or to its run: the decoder twin checks only the `TPL_CHUNK` template lanes and `a_in`, `a_out`
+lanes against the logged anchors; the claim chain `(addr_c, ep_hash, comm_(j+1))` of FINAL-DESIGN
+and ANC-010 has no code yet; `pre_d`, `post_d` of a chunk are `L` words that no later chunk reads.
+So a middle chunk of program B could read lock `A_1` of contract A's run and write `A_2`: B's code
+applied to A's state between A's chunk 1 and chunk `k`. Scope as F-03: native tape plus decoder
+twin; on `SherlockLedger` not reachable (no chunked entry, DERIVED).
+
+Fix (openvm `0a4a2c8`): `gen_ops_check` ties `a_in` under `SHK_LOCK` to `x_(j-1)` and `a_out` under
+`SHK_LOCK` to `x_j`, with `x_j = sponge(U_LOCK = 8; c, pack(run_tag), j)` over Fr
+(`iface::lock_x`): `c` is the operand of the `DIGEST(SHK_PROGC)` entry, already tied to the `L`
+root statement (`P2(DOM_PROGC, r_P, prog_d)`), `run_tag` the 8 head words 81 to 88, `j = j_lo +
+2^16 j_hi` (each limb range-checked to 16 bits in `gen_r_check`). 3 `Perm` operations, no BabyBear
+`P2` in the tape, no change to `L` or `OPS_WORDS`. Lock values stay `A_j = DIGEST(SHK_LOCK, x_j)`.
+The use code 8 is outside the OD-18 codes 0 to 7, so no other sponge shares the capacity.
+
+PICK for T15 confirmation (design text): ANC-002
+(`openspec/changes/sherlock-processor-final-20261111/specs/sherlock-anchor-chunks/spec.md`),
+FINAL-DESIGN 1.6 line 172 and the ENC-1 test vector (`iface.rs`, `d2_lock`) write the lock
+operand as `pack(P2(DOM_LOCK, r_P, prog_d, run_tag, j))`. The `L_Fr` tape has no BabyBear `P2`,
+so that form needs two more `P2` calls in the `L` root statement (an `L` key change, while the
+`L` key of the t10q tip is at the FP8 G1 bounds). The Fr form binds the same values (`r_P` and
+`prog_d` through `c`). These texts are not changed here. Zero knowledge: `A_j` is public on the
+ledger as before; it hides `prog_d` and the run as long as `run_tag` stays a value of `L` only
+(never a wrap public input), unchanged from FINAL-DESIGN.
+
+Keys: the `L_Fr` key and the wrap key change (DERIVED); `L`, node and leaf keys do not.
+MEASURED on the T10 ORD tape (`t7_chain t10 chunkcx` on openvm `a74fbc9` = `475b80d` plus
+`4d8177b` and `0a4a2c8`, `logs/t10q-cx-lock-chunkcx.txt`): 499,657 ops with the lock rule (+34
+over 499,623), and the 14 `L_Fr` machine AIR heights are unchanged (largest 2^19, bound 2^20).
+The honest ORD run passes; the chunk 1 of 1 forgery still fails 2 assertions.
 
 ## Observation outside the lanes
 
