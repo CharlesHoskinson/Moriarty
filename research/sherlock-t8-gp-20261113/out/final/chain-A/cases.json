@@ -1,0 +1,54 @@
+{
+  "all_pass": true,
+  "cases": [
+    {
+      "case": "chain_A_L_honest",
+      "check": "honest chain: leaf, N1, N2 (unary), N3 (unary), L verified",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "outcome_word_changed_refused_at_L",
+      "check": "header outcome payload word + 1 against post_d (mutant prover, stock L verifier)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1784877023, 272621810, 1911223842, 1315666337], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "non_terminal_outcome_refused_at_L",
+      "check": "outcome_tag 0 (Running) at the seal (mutant prover, stock L verifier)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [619315861, 741882200, 290759032, 1555786395], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "lfr_tape_honest",
+      "check": "gen_r_check and the operand check hold",
+      "expect": "accept",
+      "got": "Ok(())",
+      "pass": true
+    },
+    {
+      "case": "wrong_prog_d_anchor_refused_at_L_Fr",
+      "check": "ledger anchor of the other program (A_0 = C_P)",
+      "expect": "refuse",
+      "got": "Err(\"1 tape assertions failed\")",
+      "pass": true
+    },
+    {
+      "case": "forged_outcome_operand_refused_at_L_Fr",
+      "check": "DIGEST(SHK_OUTCOME) operand of another outcome",
+      "expect": "refuse",
+      "got": "Err(\"1 tape assertions failed\")",
+      "pass": true
+    },
+    {
+      "case": "wrong_prog_d_anchor_refused_by_stock_L_Fr_verifier",
+      "check": "mutant L_Fr proof of the failing tape, stock L_Fr verifier (SG-3)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: 17931516899210452045326698086850353505091143511404831351794279609413511984978 }))\")",
+      "pass": true
+    }
+  ]
+}

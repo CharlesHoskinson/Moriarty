@@ -6,18 +6,47 @@ Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbe
 
 ## 0. For the lead
 
-Status: X12 node modes and N-4 done on real proofs and in Quint; X7, X8 and X14 measured or named; no GP hook row can read FROZEN yet (reasons per row below).
+Status: N-4, X12 and X7 are built and run on real proofs or in Quint. X8 has a named class. X14 is cited from its own run. No GP hook row reads FROZEN; each row names its open gates (item 11). The Moriarty branch is rebased onto `t7-bind` `316b17682`. openvm `t8-gp` ends at `7298247` on `662235f`.
 
-1. **N-4 reading: option (a). ACCEPTED by the lead (2026-11-13).** No circuit relation carries a checkpoint tag; the tag is on the persisted record digest only. Reason: `continuation.qnt` (section 1) shows the circuit side holds with an untagged record (`cont_recordTagRun --invariant circuitSide` `[ok]`), and all 7 sampled mutants are caught.
-2. **`SHK_CKPT` code (LEAD pick).** Record tag, host digest, next free BabyBear code: 67, after `SHK_FV` 65 and `SHK_REG_ENTRY` 66.
-3. **X7 and N-6: OWNER.** The MERGE-WORK node with the inline kernel is 48 AIRs, 4,246 columns, 1,476 constraints in `CoreAir` (MEASURED, section 2), over the 3,000-column and 1,000-constraint bounds. T8 does not trim the kernel or pick a layout (lead ruling). GP-4 inline merge work stays FREEZE-PENDING N-6.
-4. **X12 readings (LEAD, built and MEASURED in section 3):** SEAL has no admission premise (slot 1 off; ADMIT-WORK is group 5); DL-STEP slot 0 is SET or SUB, slot 1 is DL or off; the link element joins its producer SET into the cover; the head opening is LEAF or DEP only (FOREIGN waits for GP-3); cover presence is tested by the inverse of the word sum (honest failure probability about 2^-31, DERIVED: one BabyBear element); an ABSENT cover is the zero digest; MERGE no longer requires equal `shape_d` (T7 `merge_check` and the merge rule in `stmt.rs` edited); the N1 output keeps `shape_d = 0` (the LEAF base case of `shape_d` with `rules_d`, AD-23 (a), is not built: `graph_leaf_shape_free` stays open); FV rows keep the T7 stand-in output with the GP mode bits forced to 0.
-5. **GP-2 blocker: no Halted leaf run.** The T6 slice leaf only proves the unbound run (Rejected). The honest SEAL-WITH-DEPS of a run that consumes a prior run's value cannot be proved until the leaf kit has the literal and publish-value rules. All forged dependency, link and value cases are refused (MEASURED). GP-2 hook stays FREEZE-PENDING on that positive case.
-6. **L needs a SET root (T7 or T10).** L takes a SEG root (1,986 of 2,000 columns, 93 of 100 interactions in T7). Accepting a SET or DEP root of the T8 block (FP-3, LW-008) is a change to L, not made here. No edit to `crates/recursion/src/proof_shape/` or the path C seams.
-7. **O8 pick (LEAD, for owner confirmation): `compact-zkir3-kzg-bls12381-blake2b/1`** (section 4). GP-3 hook stays FREEZE-PENDING: no in-circuit verifier of the class, the transcript and expression-evaluation AIRs are not built (X14), and N-8.
-8. **X14 under O1 and O2:** unit sizes MEASURED in X14 (section 5); GP-3 general verifier stays FREEZE-PENDING on the transcript, expression and FV-FINAL AIRs.
-9. **ARCHITECTURE rows (proposed text, not edited by T8):** CONTINUATION and HOST CHECKPOINT STORE: N-4 closed by `continuation.qnt` with option (a) (lead rerun of the Quint set pending; the host refusals of HOST CHECKPOINT STORE outside the model stay open). GP-2 hook: "FREEZE-PENDING the Halted leaf run (honest SEAL-WITH-DEPS); X12 node modes built and MEASURED in T8 (34 cases)". GP-3 hook: "FREEZE-PENDING the X8 verifier of `compact-zkir3-kzg-bls12381-blake2b/1`, N-8". GP-4 hook: "FREEZE-PENDING N-6 (owner); per-mode `shape_d` MEASURED in T8". I-13: FREEZE-PENDING the same gates.
-10. **Circuit changes for the Carbon Quint lanes (openvm `c26e247`):** `crates/sherlock-lfr/src/gp.rs:239` `eval` (mode bits, SEAL, SEAL-WITH-DEPS, DESCEND, DL-STEP, JOIN, `shape_d` constraints and sponge calls); `gp.rs:530` `fill` and `gp.rs:700` `shape` (trace); `crates/sherlock-lfr/src/stmt.rs:609` and `:683` (`gpc` columns after `fvs` for Node and Fv); `stmt.rs:957-991` (GP eval call, T7 merge rules gated by the MERGE bit, SHAPE_D output skipped for Node); `stmt.rs:356` (`merge_check` drops the equal-`shape_d` rule); `stmt.rs:1298` (`Wit::NodeGp`); `stmt.rs:1434-1465` (node trace with `gp::fill` and `gp::shape`, FV rows with bit 0); `stmt.rs:1517` (`sponge_height` for Node and Fv 32 to 64). Suggested lane: the X12 claim-consumption model `qa/gemini-quint/x12/claimConsumption.qnt` against `gp.rs` eval.
+1. **N-4 reading: option (a). ACCEPTED by the lead (2026-11-13).** No circuit relation carries a checkpoint tag. The tag is on the persisted record digest only. Reason: in `continuation.qnt` (section 1) the circuit side holds with an untagged record (`cont_recordTagRun --invariant circuitSide` `[ok]`), and the sampler catches all 7 mutants.
+2. **`SHK_CKPT` code (LEAD pick).** This is the record tag, a host digest. It takes the next free BabyBear code: 67, after `SHK_FV` 65 and `SHK_REG_ENTRY` 66.
+3. **N-6: owner ruling of 2026-11-14 ("own bounds").** MERGE-WORK nodes get their own universal parameter set `frozen::MERGE_WORK`. It has the internal parameters, its own column bound, and the per-AIR bounds of the internal set (1,000 constraints, 200 interactions, 64 AIRs, log height 19). The shared internal set keeps 3,000 columns. Built and run in T8 (section 2). The ruling is recorded in ARCHITECTURE N-6 and the GP-4 hook row.
+   - **AFK pick, for owner confirmation at T15: the column bound is 5,400, not "about 4,400".** The ruling sized 4,400 from the probe of the T7 node layout (4,246). The key as built is 5,128 columns (MEASURED). The extra columns come from the GP block in the node statement, the MERGE-WORK step columns and FRAME (522 columns). 5,400 leaves about 5 percent margin. D3 at the 5,400 bound: weakest term 101.1643, so every term is at least 100 and every grindable term at least 101 (MEASURED). No hard rule moves.
+   - **CORE split (LEAD build).** CORE keeps 999 constraints, and FRAME holds the frame rule (494 constraints, MEASURED). Both use one function, `frame_rule`. The leaf's whole CORE calls the same function, so one encoding of the machine relation stays, with no separate emitter. CORE sends each row to FRAME over the new port `core_frame` (5 chunks of at most 121 words, under the message bound of 128). The one-hot row index travels in the message, so row `j` pairs only with row `j`. The leaf key does not change (CORE with `split = false`).
+   - **Kernel buses (LEAD).** The node's recursion buses use indices up to 79 and collide with the kit buses at 64 and above (MEASURED by the bus probe). In a MERGE-WORK node, every kit AIR is wrapped in `Rebus`, which moves its buses by 128 while it is built and evaluated. The kit AIR and its constraints stay the same. The kernel buses are then 194 to 198 and 208 to 213. Only `step_pv` (213) joins the node and the kernel (asserted in `work_layer`).
+   - **Key row (LEAD).** The MERGE-WORK key takes a row in the second half of the `keys_d` table, beside the FV row. All 4 node rows are in use (`UROWS` = 4).
+   - **Inline step binding (LEAD).** The step's CORE public values go to the node statement over `step_pv`. The statement checks `prog_d(S) = prog_d(slot 0)`, `post_d(0) = pre_d(S)`, `post_d(S) = pre_d(1)`, `h_hi(0) = h_pre(S)` and `h_pre(S) + steps(S) = h_lo(1)` (16-bit limbs with carries). The kernel key is fixed by the MERGE-WORK key, so no plan or menu opening of a chip set is made for the step. The step's log is empty (CORE PICK of the slice). `shape_d` carries `work_kind = 1` (`WK_SLICE0`) and `work_steps`.
+   - **Open (next work, not T8):** a parent key that verifies a MERGE-WORK child. The verifier sub-circuit is keyed per child AIR shape, and no node row is free. The STACKS and VALUE DIGEST kits are not in the slice leaf, so the inline step has MEM work but no stack or value-digest work.
+4. **X12 readings (LEAD, built and MEASURED in section 3):**
+   - SEAL has no admission premise (slot 1 off; ADMIT-WORK is group 5).
+   - DL-STEP slot 0 is SET or SUB; slot 1 is DL or off.
+   - The link element joins its producer SET into the cover.
+   - The head opening is LEAF or DEP only. FOREIGN waits for GP-3.
+   - Cover presence is tested by the inverse of the word sum. The honest failure probability is about 2^-31 (DERIVED: one BabyBear element). An ABSENT cover is the zero digest.
+   - MERGE no longer requires equal `shape_d` (T7 `merge_check` and the merge rule edited).
+   - The N1 output keeps `shape_d = 0`. The LEAF base case with `rules_d` (AD-23 (a)) is not built, so `graph_leaf_shape_free` stays open.
+   - FV rows keep the T7 stand-in output with every GP mode bit 0.
+5. **GP-2 blocker: no Halted leaf run.** The T6 slice leaf proves only the unbound run, which ends Rejected. An honest SEAL-WITH-DEPS (a run that consumes a prior run's value) cannot be proved until the leaf kit has the literal and publish-value rules. Every forged dependency, link and value case is refused (MEASURED). The SEAL-WITH-DEPS refusals have no accepting twin, so they do not isolate their named rule (section 3).
+6. **L needs a SET root (T7 or T10).** L takes a SEG root (1,986 of 2,000 columns and 93 of 100 interactions in T7). To accept a SET or DEP root of the T8 block (FP-3, LW-008), L must change. T8 makes no such change and no edit to `crates/recursion/src/proof_shape/` or the path C seams.
+7. **O8 pick (LEAD, for owner confirmation): `compact-zkir3-kzg-bls12381-blake2b/1`** (section 4). The GP-3 hook stays FREEZE-PENDING. No in-circuit verifier of the class exists, the transcript and expression-evaluation AIRs are not built (X14), and N-8 is open.
+8. **X14 under O1 and O2:** the unit sizes are MEASURED in the X14 run and cited here, not rerun on the T8 tree (section 5). The GP-3 general verifier stays FREEZE-PENDING on the transcript, expression and FV-FINAL AIRs.
+9. **AFK picks on OWNER items (lead order of 2026-11-14), for owner confirmation at T15:**
+   - **N-7, recommended option: bind intervals.** The T8 `shape_d` binds `(h_lo, h_hi)` of a SEG output as `out_a`, `out_b` (`gp.rs` `shape_w`). Disclosure stays the open dissent item D-6.
+   - **N-8, recommended option: root history with revocation.** T8 builds no part of the `reg_root` lifecycle. Every node mode keeps `reg_root` equal across the enabled slots. FOREIGN is not opened, so the `FOREIGN(reg_root, fclaim_d)` form is not needed yet.
+10. **Regression found and fixed (one gate failure, not repeated).** The first T7 cases rerun on the T8 layout failed `fv_unit_proves` and `fv_unit_under_N3_accepted` (MEASURED, `out/chain-recheck-c26e247.log`). The non-MERGE output rules were gated by one minus the MERGE bit, so they also held in an FV unit. Fix `569b23c` gates them by the mode bit sum. All 12 cases pass at the fix and at the tip (section 6).
+11. **ARCHITECTURE rows.** T8 edited the N-6 entry and the GP-4 hook row. Proposed text for the others, not edited by T8:
+    - CONTINUATION and HOST CHECKPOINT STORE: N-4 is closed by `continuation.qnt` with option (a). The lead's rerun of the Quint set is pending, and the host refusals of HOST CHECKPOINT STORE (outside the model) stay open.
+    - GP-2 hook: "FREEZE-PENDING the Halted leaf run (honest SEAL-WITH-DEPS) and L over a SET root; the X12 node modes are built and MEASURED in T8 (34 cases)".
+    - GP-3 hook: "FREEZE-PENDING the X8 verifier of `compact-zkir3-kzg-bls12381-blake2b/1`, N-8 (AFK pick: history with revocation)".
+    - I-13: FREEZE-PENDING the same gates.
+12. **Circuit changes for the Carbon Quint lanes (openvm `7298247`):**
+    - `crates/sherlock-lfr/src/gp.rs`: `:241` `eval` (mode bits; SEAL, SEAL-WITH-DEPS, DESCEND, DL-STEP and JOIN rules; `shape_d` with `work_kind`, `work_steps`); `:427` (`nm` gated by the mode bit sum); `:536` `fill`; `:706`, `:711` `shape`, `shape_w`.
+    - `crates/sherlock-lfr/src/stmt.rs`: `:97` `STEP_PV_BUS`; `:350` `merge_check` (no equal-`shape_d` rule); `:616`, `:695` to `:700` (`gpc` and the Work columns); `:947` (allowed key rows); `:977` to `:1031` (GP eval call, the T7 merge rules gated by MERGE, the MERGE-WORK stitch); `:1033` (the `step_pv` receive and `h_hi(S)`); `:1357` `Wit::Work`; `:1483`, `:1529` (Node and Work traces); `:1603` (`sponge_height`).
+    - `crates/sherlock-lfr/src/frozen.rs:157` `MERGE_WORK`.
+    - `crates/sherlock-leaf/src/core.rs`: `:203` `CoreAir::split`; `:320` (frame send and `step_pv` send); `:597` `frame_rule`; `:650` `FrameAir`; `:698` `frame_trace`.
+    - `crates/sherlock-leaf/src/leaf.rs`: `:111` `airs_kernel`; `:129` `Rebus`; `:151` `traces_kernel`; `:369` `shards_cut`.
+    - `crates/sherlock-leaf/src/bus.rs`: `:36` (ports `core_frame`, `step_pv`); `:57` to `:70` (bus offset).
+    - Suggested lanes: the X12 claim-consumption model `qa/gemini-quint/x12/claimConsumption.qnt` against `gp.rs` eval; a MERGE-WORK stitch model (two SEGs and one step, with interval and stitch mutants) against `stmt.rs:1003`; and the frame split (FRAME and CORE as one relation).
 
 ## 1. N-4: `continuation.qnt`
 
@@ -42,30 +71,75 @@ Lead-style runs (MEASURED, `quint/runs/r2/summary.txt`):
 
 Named mutants of the kit and where each is refused: `cont_refresh_fuel` and `cont_change_input` by the MERGE stitch; `cont_skip_predecessor` by the MERGE interval; `cont_reset_height` by the genesis gate of the leaf; `cont_publish_as_run` by the SEAL terminal check; `cont_ckpt_as_gp2_claim` by the consumer's SET-membership check; Exhausted as a checkpoint by the scheduler rule. `cont_tampered_read_cell_unvalidated` and the host refusals of the HOST CHECKPOINT STORE kit are outside this model (no memory cells).
 
-## 2. X7 and N-6: inline merge work (GP-4)
+## 2. X7 and N-6: the MERGE-WORK node (GP-4)
 
-Probe: `t8_gp x7probe` (openvm `crates/sherlock-wrap-export/examples/t8_gp.rs`, mode `x7probe`), record `~/.cache/t8/out/x7/x7probe.json`, log `~/.cache/t8/logs/x7probe.log`. The probe builds the MERGE-WORK node layout of N-6 (the universal node AIR set with the 7 slice leaf AIRs inlined as the work kernel) and checks it against the internal set bounds. It does not prove.
+The owner's ruling of 2026-11-14 is in section 0, item 3. Code: openvm `7298247`. Run: mode `x7` of `crates/sherlock-wrap-export/examples/t8_gp.rs`. Record: `out/final/x7.json`. Log: `out/final/x7.log`. Both come from the final run at the tip (section 6), on a shared slot, so the wall times are not timings.
 
-| Layout | AIRs | Columns | Max constraints (AIR) | Max interactions | Bounds (64 / 3,000 / 1,000 / 200) | Label |
-|---|---|---|---|---|---|---|
-| universal node alone (N2 position) | 41 | 1,885 | 282 | 120 | inside | MEASURED |
-| node + inline kernel, over N1 | 48 | 4,246 | 1,476 (`CoreAir`) | 145 | **columns and constraints outside** | MEASURED |
-| node + inline kernel, over N2 | 48 | 4,246 | 1,476 (`CoreAir`) | 145 | **outside** | MEASURED |
-| kernel alone (7 AIRs) | 7 | 2,361 | 1,476 | 145 | constraints outside | MEASURED |
+**What the node does.** One MERGE-WORK proof covers program A's run (5 steps), cut into three parts:
+- slot 0: an N3 SEG proof of steps [0, 2) (leaf, N1, N2, N3);
+- slot 1: an N3 SEG proof of steps [3, 5);
+- inline: the owner step [2, 3), proved inside the node by the slice kernel (CORE, FRAME, DEC, RANGE, SPONGE, HASH2, ROM, MEM, built by the leaf kits' `airs` and `traces` functions; `sl::airs_kernel`, `sl::traces_kernel`).
 
-Kernel per AIR (columns / constraints / interactions, MEASURED): `CoreAir` 676 / 1,476 / 145, `DecAir` 9 / 18 / 1, `VariableRangeCheckerAir` 4 / 10 / 1, `SpongeAir` 321 / 326 / 2, `Hash2Air` 29 / 5 / 5, `RomAir` 1,222 / 78 / 77, `MemAir` 100 / 100 / 21.
+The node's statement AIR (`Kind::Work`) stitches the parts in order: slot 0, then the step, then slot 1. Its output is the SEG of the whole run: `h_lo` 0, `h_hi` 5, `pre_d` of slot 0 and `post_d` of slot 1 (MEASURED, `output` of `x7.json`). The own key commitment in the output equals the MERGE-WORK row of `keys_d` (MEASURED: `vkc_out_equals_own_key`).
 
-Reading: the inline kernel does not fit one node key under the bounds of the internal set. The overrun is 1,246 columns (DERIVED, 4,246 minus 3,000) and 476 constraints in `CoreAir` (DERIVED). The choice between trimming the kernel, splitting `CoreAir`, or a different N-6 layout is an owner decision (N-6 in section 0). T8 does not pick. GP-4 inline merge work stays FREEZE-PENDING on N-6.
+**The MERGE-WORK key** (`frozen::MERGE_WORK`, MEASURED by keygen with the G1 check):
+
+| | Value | Bound | Label |
+|---|---|---|---|
+| AIRs | 49 (41 node, 8 kernel) | 64 | MEASURED |
+| columns | 5,128 | 5,400 (AFK pick; ruling "about 4,400") | MEASURED |
+| max constraints per AIR | 999 (CORE) | 1,000 | MEASURED |
+| max interactions per AIR | 171 (statement AIR) | 200 | MEASURED |
+| max log height of the proof | 17 | 19 (k at most 21) | MEASURED |
+| verifying key, bitcode | 183,452 bytes | none (not a wrap key) | MEASURED |
+
+Per AIR (columns / constraints / interactions, MEASURED):
+- statement AIR (Work): 658 / 843 / 171
+- CORE (split): 676 / 999 / 151
+- FRAME: 522 / 494 / 5
+- DEC: 9 / 18 / 1
+- RANGE: 4 / 10 / 1
+- SPONGE: 321 / 326 / 2
+- HASH2: 29 / 5 / 5
+- ROM: 1,222 / 78 / 77
+- MEM: 100 / 100 / 21
+
+**D3** (`fp8_d3` under `merge_work`; `out/final/d3work/d3.json`, MEASURED):
+- At the key: weakest `shift` 101.1643, stacked 110.3034.
+- At the bounds (5,400 columns, 64 AIRs, 1,000 constraints, 200 interactions): weakest `shift` 101.1643, stacked 110.2288, `mu` 101.6304, `logup` 102.7205.
+
+Every term is at least 100 and every grindable term at least 101.
+
+**Cases** (12 of 12 pass, MEASURED). Every refusal is a failed verification of the real MERGE-WORK proof.
+
+| Case | Expect | What changes |
+|---|---|---|
+| `pos_x7_merge_work` | accept | the honest node |
+| `x7_step_wrong_position` | refuse | inline step [0, 2) in place of [2, 3) |
+| `x7_step_other_program` | refuse | the inline step is program B's |
+| `x7_step_pv_forged_in_statement` | refuse | the statement's copy of the step's `post_d` (`step_pv` bus) |
+| `x7_step_post_forged_in_kernel` | refuse | CORE's public `post_d` and the statement's copy (CORE BOUNDARY) |
+| `x7_step_height_forged` | refuse | the step's `h_pre` in CORE and the statement |
+| `x7_frame_row_forged` | refuse | one state word of FRAME row 2 (`core_frame` bus) |
+| `x7_one_prior_proof` | refuse | slot 1 off |
+| `x7_children_swapped` | refuse | suffix in slot 0, prefix in slot 1 |
+| `x7_output_post_forged` | refuse | output `post_d` |
+| `x7_output_shape_forged` | refuse | output `shape_d` (`work_kind`, `work_steps`) |
+| `probe_x7_key_row_checked_one_layer_up` | accept | the FV row as the output key commitment. Accepted at this layer by design: the T7 key route checks a child's key commitment one layer up, and no parent over a MERGE-WORK child exists yet (section 0, item 3) |
+
+**What stays open.** No parent verifies a MERGE-WORK proof yet, so a forged own-key row is not refused on a real proof. The inline step has MEM work. It has no stack or value-digest work, because those kits are not in the slice leaf (ARCHITECTURE N-6 names them). The Gemini Carbon lane is the lead's. GP-4 hook: FREEZE-PENDING on these.
+
+The earlier probe of the T7 node layout plus the unsplit kernel (48 AIRs, 4,246 columns, `CoreAir` 1,476 constraints; `out/x7probe-t7layout.json`) is superseded. It is the number the owner's ruling was sized from.
 
 ## 3. X12: GP-2 node modes on real proofs (consuming a prior Sherlock run)
 
-Code (openvm `t8-gp`, commit `c26e247`; the runs below used `1d39339`, same git tree `ad8341b`): `crates/sherlock-lfr/src/gp.rs` (new, 737 lines: the GP-2 and GP-4 mode block of the node), hooks in `crates/sherlock-lfr/src/stmt.rs`, run mode `gp2` of `crates/sherlock-wrap-export/examples/t8_gp.rs`. Record `~/.cache/t8/out/gp2/gp2.json`, log `~/.cache/t8/logs/gp2-1.log` (shared slot, 191 s wall, not a timing measurement; the log header says `dirty 2` because the run started before the code was committed, same content).
+Code: openvm `t8-gp`. The node block is `crates/sherlock-lfr/src/gp.rs` (the GP-2 and GP-4 modes), with hooks in `crates/sherlock-lfr/src/stmt.rs`. The run is mode `gp2` of `crates/sherlock-wrap-export/examples/t8_gp.rs`. Record: `out/final/gp2.json`. Log: `out/final/gp2.log`. Both are from the final run at the tip `7298247` (section 6), on a shared slot, so the 237 s wall time is not a timing. The first run, at `c26e247`, also passed 34 of 34. It predates the FV fix of section 0, item 10.
 
 The run proves the slice leaf on programs A (`entry x;`) and B (`entry y;`), carries each through leaf, N1, N2 and N3 to a SEG root, then proves every GP-2 mode as an N3 node over N3 children on the one universal key set (N3 over N3 is the fixed point: `n3_over_n3_pre_equals_n3_pre=true`, MEASURED).
 
 Node modes in the block (`gp.rs:1-35` documents the preimages): MERGE [0] (T7 rules, gated by the MERGE bit), SEAL [2] `SEG -> SET` (`h_lo = 0`, `post_d = P2(SHK_SD2, header)`, terminal outcome, `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_d)`, `set_root = P2(SHK_SET_LEAF, claim_d, h_hi)`), SEAL-WITH-DEPS [3], DESCEND [5] `SET -> SUB`, DL-STEP [4] (premise, input-link and chain elements), JOIN [6] `SET + SET -> SET`. Every output carries `shape_d = P2(SHK_SHAPE, T_NODE, mode, slot bits, key selectors, child shapes, ...)`.
 
-Key shapes after the change (MEASURED, `keys` of `gp2.json`, all accepted by the G1 check): N2 and N3 41 AIRs, 2,182 columns, 809 constraints, 170 interactions, degree 4 (bounds 64 / 3,000 / 1,000 / 200); N1 41 / 2,435 / 620 / 144; FV unit (N2 shape) 41 / 2,182 / 756 / 170.
+Key shapes at the tip (MEASURED, `keys` of `gp2.json`, all accepted by the G1 check): N2 and N3 41 AIRs, 2,182 columns, 809 constraints, 170 interactions, degree 4 (bounds 64 / 3,000 / 1,000 / 200); N1 41 / 2,435 / 620 / 144; FV unit (N2 shape) 41 / 2,182 / 756 / 170.
 
 Cases (MEASURED, 34 of 34 pass, `T8GP2 all_pass=true cases=34`):
 
@@ -108,3 +182,26 @@ The arithmetic units of X14 are MEASURED in `research/sherlock-x14-20261112/RESU
 | G1 double chain without `INV_y` | 45 | 2,949 | 199 | 3,000 | MEASURED (X14) |
 
 D3 at 3,300 columns (internal set, 1,000 constraints, 64 AIRs, 200 interactions): stacked 110.9393, weakest 101.1643, so every term is at least 100 and every grindable term at least 101 (MEASURED by the calculator, `research/sherlock-x14-20261112/out/d3-bounds-cols.log`). T8 did not build or run these units on the openvm `t8-gp` tree: the numbers above are cited from X14, not remeasured. Forged points are refused on real X14 bench proofs (the `g1neg` cases, X14 `RESULTS.md` lines 197 to 206 and 264 to 268: forged lambda with P2 = P1 refused by `INV`, forged (0, 0) doubling by `INV_y`, padding holes and flags on real points by `PointsIn`), not on T8 proofs. The T8 node keeps the T7 FV stand-in output and forces the GP mode bits to 0 in FV rows (section 3). The transcript and expression-evaluation AIRs are not built, so forged transcripts and final checks cannot yet be refused on real proofs. The GP-3 general verifier row stays FREEZE-PENDING on those AIRs.
+
+## 6. Final run at the tip and the T7 gates
+
+The unit `t8-final` runs `~/.cache/t8/final.sh` at openvm `7298247` (clean tree), on shared slots. Log: `out/final/final.log`. Records: `out/final/`.
+
+| Check | Result | Label |
+|---|---|---|
+| `sherlock-lfr` lib tests, `t9_enc45`, `sherlock-leaf` tests | 17, 3 and 3 passed | MEASURED |
+| `t8_gp x7` (section 2) | 12 of 12 cases pass | MEASURED |
+| `t8_gp gp2` (section 3) | 34 of 34 cases pass | MEASURED |
+| V.10 `check-chain.sh chain` (chains A and B, `t7_chain`, `fp8_d3`) | PASS for A and B: 2 shards, 5 steps, fixed heights, G1 accepted, D3 PASS on 8 keys each, N3 fixed point, 7 cases each. `L_Fr` public words 1,522, unchanged, so the T10a wrap fit holds (DERIVED). The wrap and its key are not rerun | MEASURED |
+| `check-chain.sh cases` (T7 binding cases) | 12 of 12 pass, FV unit cases included | MEASURED |
+| V.9 `check-chain.sh omit` | PASS, 59 cases, every AIR required in app, leaf, N1, N2, N3, FV, L. The panics in the log are the expected omit refusals | MEASURED |
+| D3 on every key (`d3.json` of chains A and B; `d3work/d3.json` with the MERGE-WORK key) | every gate PASS. Weakest terms: app 101.0891, leaf 101.0110, N1 to N3 and FV 101.1643, `L` 101.0730 (`mu`, bounds), `L_Fr` 101.1435, MERGE-WORK 101.1643. Every term is at least 100 and every grindable term at least 101 | MEASURED |
+
+These are `check-chain.sh` runs, not doctorwatson receipts. The T8 tree has no `qa/sherlock` receipt for V.9 or V.10. The lead runs `doctorwatson check --closure V.10` on `t8-gp` if a receipt is needed.
+
+Commits:
+- openvm `t8-gp`: `c26e247` (GP block), `569b23c` (FV fix), `7298247` (X7 MERGE-WORK).
+- Patch series: `research/sherlock-stark-code-20261112/openvm-t8/` (`git format-patch --binary 662235f..t8-gp`).
+- stark-backend: no change.
+
+Reproduce: `~/.cache/t8/final.sh`.
