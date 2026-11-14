@@ -109,7 +109,7 @@ preview() {
       && touch $S/preview-deploy.ok || { echo "# preview-deploy FAIL" >> $LOG/runs.log; exit 1; }
     echo "# $(date -Is) preview-deploy end" >> $LOG/runs.log
   fi
-  stage preview-call 80G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
+  stage preview-call 64G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
     node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
     --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/preview || exit 1
   # public receipts only: an allow-list of fields; the private words of the scan (forbidden values) are dropped
@@ -171,7 +171,7 @@ devnet() {
       && touch $S/devnet-deploy.ok || { echo "# devnet-deploy FAIL" >> $LOG/runs.log; exit 1; }
   fi
   need $T/keyB/args.json $T/out/wrap-B/wrap.tagged-proof
-  stage devnet-call 80G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
+  stage devnet-call 64G $SDK $TOVM env T10A_R4_ARGS=$T/keyB/args.json T10A_R4_PROOF=$T/out/wrap-B/wrap.tagged-proof \
     node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
     --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/devnet || exit 1
 }
