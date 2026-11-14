@@ -13,15 +13,17 @@ No Sherlock program meets the V.1 condition "reads no ROM row beyond what INIT o
 | Task | Status | Receipt |
 |---|---|---|
 | V.1 | done | `qa/sherlock/traces/20261114T005955Z-V.1.log` PASS |
-| V.2 | done | `qa/sherlock/traces/20261114T020120Z-V.2.log` PASS |
-| V.3 | done | `qa/sherlock/traces/20261114T020315Z-V.3.log` PASS |
-| V.4 | done | `qa/sherlock/traces/20261114T020353Z-V.4.log` PASS |
-| V.5 | done | `qa/sherlock/traces/20261114T020432Z-V.5.log` PASS |
-| V.6 | done | `qa/sherlock/traces/20261114T020544Z-V.6.log` PASS |
-| V.7 | done | `qa/sherlock/traces/20261114T020634Z-V.7.log` PASS |
-| V.8 | done | `qa/sherlock/traces/20261114T020703Z-V.8.log` PASS |
-| V.9 | gate passes (section 4) | pending |
-| V.10 | gate passes (section 5) | pending |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.3 | done | `qa/sherlock/traces/20261114T024718Z-V.3.log` PASS (copy `runs/receipt-V.3.log`) |
+| V.4 | done | `qa/sherlock/traces/20261114T024747Z-V.4.log` PASS (copy `runs/receipt-V.4.log`) |
+| V.5 | done | `qa/sherlock/traces/20261114T024810Z-V.5.log` PASS (copy `runs/receipt-V.5.log`) |
+| V.6 | done | `qa/sherlock/traces/20261114T024852Z-V.6.log` PASS (copy `runs/receipt-V.6.log`) |
+| V.7 | done | `qa/sherlock/traces/20261114T024938Z-V.7.log` PASS (copy `runs/receipt-V.7.log`) |
+| V.8 | done | `qa/sherlock/traces/20261114T025005Z-V.8.log` PASS (copy `runs/receipt-V.8.log`) |
+| V.9 | done | `qa/sherlock/traces/20261114T025034Z-V.9.log` PASS (copy `runs/receipt-V.9.log`) |
+| V.10 | done: T6 done-when met | `qa/sherlock/traces/20261114T025621Z-V.10.log` PASS (copy `runs/receipt-V.10.log`) |
+
+Every receipt V.2 to V.10 ran at openvm `3160f59` and Moriarty `04215fa55`; each trace names the openvm commit and lists its cases. Run records in this folder, `runs/` (MEASURED, from those receipt runs): `v2.json` to `v8.json` (one per kit gate), `omit.json` and `sg6.json` (V.9), `chain.json` (V.10, every layer: keys, heights, stacked widths, times, statements), `d3.json` (D3 of all 7 keys), and the receipt traces `receipt-V.2.log` to `receipt-V.10.log`. Three runs of the V.10 chain (18:55, 19:20 and 19:50) gave the same keys, fixed heights and D3, with wall times 375 s, 374 s and 362 s.
 
 ## 2. V.1 the slice program
 
@@ -62,28 +64,28 @@ Slice leaf shard shape (MEASURED, `v5.json` `shape`): 7 AIRs (CORE, DEC, RANGE, 
 
 | Task | Case | Kind | Stock verifier on the mutant proof (MEASURED) | Weak control |
 |---|---|---|---|---|
-| V.2 | `bus_enc_vectors` | host | registry and lane vectors round trip | |
-| V.2 | `bus_reserved_id_registry` | keygen | `check_registry` refuses id 7 | |
-| V.2 | `bus_unassigned_chip` | mutant | GKR zero check fails | accepts |
-| V.2 | `bus_limb_over_range` | mutant | GKR zero check fails | accepts |
-| V.2 | `bus_port_received_twice` | mutant | GKR zero check fails | accepts |
-| V.3 | `range_64_boundaries`, `range_128_boundaries` | positive | accepts | |
-| V.3 | `range_limb_out_of_table` | mutant | GKR zero check fails | accepts |
-| V.3 | `range_source_copy_removed` | mutant | inconsistent claims | accepts |
-| V.4 | `digest_table_vectors` | host and AIR | FP-4 vectors equal the Rust reference | |
-| V.4 | `hash_domain_swapped`, `hash_round_skipped` | mutant | sum claim mismatch | accepts |
-| V.5 | `core_rules_shard0_entry_empty_failure_absent`, `core_rules_shard1_publish_error`, `core_height_edge` | positive | accepts | |
-| V.5 | `core_rules_d_reference_vectors` | host and AIR | equal | |
-| V.5 | `core_enable_nonprefix`, `core_rules_d_forged`, `dec_two_rules_selected` | mutant | sum claim mismatch | accepts |
-| V.6 | `mem_window_three_appends`, `mem_window_no_append` | positive | accepts | |
-| V.6 | `address_reuse_window_row`, `close_advances_len`, `counter_wrap_2_64` | mutant | sum claim mismatch | accepts |
-| V.6 | `forged_tail_across_leaf_boundary` | mutant | GKR zero check fails | accepts |
-| V.7 | `ok_boundary_poseidon_two_leaf_stitch` | positive | both shards accept, `post_d` of shard 0 = `pre_d` of shard 1 | |
-| V.7 | `boundary_word_omitted` | mutant | GKR zero check fails | accepts |
-| V.7 | `header_body_d_unlinked` | mutant | sum claim mismatch | accepts |
-| V.8 | `init_expr_entry_no_input` | positive | accepts; the reference genesis state equals `init_state` of the admission | |
-| V.8 | `init_non_genesis_leaf_any_state` | positive | accepts | |
-| V.8 | `init_wrong_control`, `init_memory_not_genesis` | mutant | sum claim mismatch | accepts |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.2 | done | `qa/sherlock/traces/20261114T024644Z-V.2.log` PASS (copy `runs/receipt-V.2.log`) |
+| V.3 | done | `qa/sherlock/traces/20261114T024718Z-V.3.log` PASS (copy `runs/receipt-V.3.log`) |
+| V.3 | done | `qa/sherlock/traces/20261114T024718Z-V.3.log` PASS (copy `runs/receipt-V.3.log`) |
+| V.3 | done | `qa/sherlock/traces/20261114T024718Z-V.3.log` PASS (copy `runs/receipt-V.3.log`) |
+| V.4 | done | `qa/sherlock/traces/20261114T024747Z-V.4.log` PASS (copy `runs/receipt-V.4.log`) |
+| V.4 | done | `qa/sherlock/traces/20261114T024747Z-V.4.log` PASS (copy `runs/receipt-V.4.log`) |
+| V.5 | done | `qa/sherlock/traces/20261114T024810Z-V.5.log` PASS (copy `runs/receipt-V.5.log`) |
+| V.5 | done | `qa/sherlock/traces/20261114T024810Z-V.5.log` PASS (copy `runs/receipt-V.5.log`) |
+| V.5 | done | `qa/sherlock/traces/20261114T024810Z-V.5.log` PASS (copy `runs/receipt-V.5.log`) |
+| V.6 | done | `qa/sherlock/traces/20261114T024852Z-V.6.log` PASS (copy `runs/receipt-V.6.log`) |
+| V.6 | done | `qa/sherlock/traces/20261114T024852Z-V.6.log` PASS (copy `runs/receipt-V.6.log`) |
+| V.6 | done | `qa/sherlock/traces/20261114T024852Z-V.6.log` PASS (copy `runs/receipt-V.6.log`) |
+| V.7 | done | `qa/sherlock/traces/20261114T024938Z-V.7.log` PASS (copy `runs/receipt-V.7.log`) |
+| V.7 | done | `qa/sherlock/traces/20261114T024938Z-V.7.log` PASS (copy `runs/receipt-V.7.log`) |
+| V.7 | done | `qa/sherlock/traces/20261114T024938Z-V.7.log` PASS (copy `runs/receipt-V.7.log`) |
+| V.8 | done | `qa/sherlock/traces/20261114T025005Z-V.8.log` PASS (copy `runs/receipt-V.8.log`) |
+| V.8 | done | `qa/sherlock/traces/20261114T025005Z-V.8.log` PASS (copy `runs/receipt-V.8.log`) |
+| V.8 | done | `qa/sherlock/traces/20261114T025005Z-V.8.log` PASS (copy `runs/receipt-V.8.log`) |
 
 V.5 "one positive per branch of each subset rule": each of the five subset rules has one branch in the V.1 run, and the two shard proofs cover all five.
 
@@ -93,9 +95,9 @@ Receipts: an incident voided the first V.2 to V.8 receipts. The 18:34 reboot lef
 
 ## 4. V.9 the slice leaf shard in place of W1
 
-Example `crates/sherlock-wrap-export/examples/slice_chain.rs` (openvm `6ec1364`), mode `omit`; gate `scripts/qa/check-v9.sh`. The app is the slice leaf shard, keyed with `sherlock_leaf::harness::key` (every AIR required, SG-1; inside the frozen app set, SG-4). The leaf layer is `VerifierSubCircuit<1>` with `KeyBind` (Leaf), and `KeyBind` receives the 54 slice public values (circuit change, section 7). N1 runs over the two leaf proofs, then N2, N3 and `L` as in T3.
+Example `crates/sherlock-wrap-export/examples/slice_chain.rs`, mode `omit`; gate `scripts/qa/check-v9.sh`. The app is the slice leaf shard, keyed with `sherlock_leaf::harness::key` (every AIR required, SG-1; inside the frozen app set, SG-4). The leaf layer is `VerifierSubCircuit<1>` with `KeyBind` (Leaf), and `KeyBind` receives the 54 slice public values (circuit change, section 7). N1 runs over the two leaf proofs, then N2, N3 and `L` as in T3.
 
-Per-AIR shape (MEASURED, `~/.cache/t6/v9/omit.json` `app_shape`):
+Per-AIR shape (MEASURED, `runs/omit.json` `app_shape`):
 
 | AIR | Columns | Constraints | Degree | Interactions | Height |
 |---|---:|---:|---:|---:|---:|
@@ -107,24 +109,24 @@ Per-AIR shape (MEASURED, `~/.cache/t6/v9/omit.json` `app_shape`):
 | ROM | 1,222 | 78 | 2 | 77 | 2 |
 | MEM | 100 | 100 | 3 | 21 | 8 |
 
-Keys of the layers (MEASURED, `~/.cache/t6/v10/chain.json` `keys`): app 7 AIRs, 2,361 columns, vk 70,560 bytes; leaf layer 40 AIRs, 1,675 columns, 81,234 bytes; N1, N2, N3 40 AIRs, 1,637 columns, at most 84 interactions; N3 over N3 has the N3 key (fixed point); `L_iface` 44 AIRs, 1,893 columns; `L_Fr` 15 AIRs, 561 columns, vk 45,600 bytes. Every AIR is required in app, leaf, N1, N2, N3 and `L` (MEASURED, `omit.json` `all_required`).
+Keys of the layers (MEASURED, `runs/chain.json` `keys`): app 7 AIRs, 2,361 columns, vk 70,560 bytes; leaf layer 40 AIRs, 1,675 columns, 81,234 bytes; N1, N2, N3 40 AIRs, 1,637 columns, at most 84 interactions; N3 over N3 has the N3 key (fixed point); `L_iface` 44 AIRs, 1,893 columns; `L_Fr` 15 AIRs, 561 columns, vk 45,600 bytes. Every AIR is required in app, leaf, N1, N2, N3 and `L` (MEASURED, `omit.json` `all_required`).
 
-`slice_air_omitted` and the T3 omit cases on the slice keys: 57 cases, all PASS (MEASURED, `~/.cache/t6/v9/omit.json`):
-- Each of the 7 slice AIRs left out of the app proof is refused three ways. The prover stops with a nonzero LogUp root, the stock app verifier refuses the stripped real proof (`RequiredAirNoVData`), and the leaf layer cannot generate its trace over the stripped proof (index out of bounds in the recursion trace generator), so no leaf proof and nothing above it exists. No N1, N3 or `L` proof can carry the omission. The circuit-level refusals at those layers are the T3 cases that follow.
+`slice_air_omitted` and the T3 omit cases on the slice keys: 57 cases, all PASS (MEASURED, `runs/omit.json`):
+- Each of the 7 slice AIRs left out of the app proof: the stock app verifier refuses the stripped real proof (`RequiredAirNoVData`). That is the one verifier refusal of a slice-AIR omission. Two further stops get no SG-3 credit under the harness rule, and the record lists them only as facts: the prover stops with a nonzero LogUp root, and the leaf layer cannot generate its trace over the stripped proof (index out of bounds in the recursion trace generator). So no leaf proof of an omitting app proof exists, and nothing above the leaf can carry the omission. The refusals at N1, N3 and `L` that V.9 names are the T3 recursion-AIR omissions (`KeyBindAir`, `ProofShapeAir`, `PublicValuesAir`) rerun on the slice keys. This reading of "`slice_air_omitted` refused at N1, N3 and `L`" is the lead's to accept.
 - N1 and N3, each without `KeyBindAir`, `ProofShapeAir` or `PublicValuesAir`, are refused on the prover path and by the stock verifier, and the parent over the stripped child fails trace generation. `L` without each of the three is refused on the prover path and by the stock verifier, and the `L_Fr` tape generator refuses the stripped shape (`RequiredAbsent`) and the pinned honest shape (`Heights`).
 - Honest controls accept: app, leaf, N2 over N1, N3 over N3, `L`, `L_Fr` tape.
 
-SG-6 seconds per proved step: 1.79 s on CPU (MEASURED, `--exclusive`, V.10 run: app proofs 4.66 s and 4.32 s for the two shards, 5 proved steps over 8 slots, 1.12 s per slot). GPU gap: the E4 GPU path in this tree is the fractional-sumcheck hook of the Fr config, not a full BabyBear prover. No GPU number exists for the slice. A GPU figure needs a full GPU engine for the app set (the `cuda` backend of stark-backend), which is outside group V.
+SG-6 seconds per proved step (MEASURED, `--exclusive`, example `sg6` of `sherlock-leaf`, V.9 receipt run at openvm `3160f59`, `runs/sg6.json`): GPU 0.148 s per proved step (`BabyBearPoseidon2GpuEngine` of `openvm-cuda-backend`, feature `cuda`; shard medians 0.363 s and 0.379 s over 3 timed runs after a warm-up; 0.093 s per slot). CPU: 1.82 s per proved step (shard medians 4.85 s and 4.26 s). The run proves the 5 steps of the V.1 run in 2 shards of 4 slots. Both engines key the same vk, and the stock CPU verifier accepts the first proof of each shard from each engine. An earlier exclusive run gave GPU 0.140 s and CPU 1.79 s. Linking the CUDA build needs `LIBRARY_PATH=/opt/cuda/lib64`, because the cuda-builder default is `/usr/local/cuda/lib64`. Host load (DG-006): the run held the heavy-slot exclusive lock; the 1-minute load average was 10.2 just before the first run, from other jobs.
 
 ## 5. V.10 one run through every layer
 
-Run (MEASURED, `--exclusive`, `~/.cache/t6/v10/chain.json`, log `~/.cache/t6/logs/v10-chain.log`, openvm `6ec1364`): the V.1 program `entry x;` as 2 shards (4 and 1 proved steps), with `post_d` of shard 0 equal to `pre_d` of shard 1. Two app proofs, two leaf proofs, N1 over both, N2, N3, `L_iface` over N3, `L_Fr`: each layer is proved and accepted by its stock verifier, and every layer's heights pass G1 (`frozen::check_heights`). Wall time 375 s. Per layer: leaf 5.7 s for 2, N1 6.7 s, N2 4.8 s, N3 3.6 s, `L` 65.2 s, `L_Fr` keygen 57.9 s, `L_Fr` prove 193.7 s.
+Run (MEASURED, `--exclusive`, V.10 receipt run at openvm `3160f59`, `runs/chain.json`, trace `runs/receipt-V.10.log`): the V.1 program `entry x;` as 2 shards (4 and 1 proved steps), with `post_d` of shard 0 equal to `pre_d` of shard 1. Two app proofs, two leaf proofs, N1 over both, N2, N3, `L_iface` over N3, `L_Fr`: each layer is proved and accepted by its stock verifier, and every layer's heights pass G1 (`frozen::check_heights`). Wall time 362 s. Per layer: leaf 5.6 s for 2, N1 6.3 s, N2 4.6 s, N3 3.7 s, `L` 61.9 s, `L_Fr` keygen 55.4 s, `L_Fr` prove 188.6 s. The app proofs on the CPU take 9.0 s for the 2 shards.
 
 Fixed heights: both shards have log heights `[3, 3, 17, 9, 7, 1, 3]`, equal to `leaf::HEIGHTS` (MEASURED).
 
 `key_root` = `key_root([key_triple(0, app.pre, leaf.pre, n1.pre)])` over this run's keys. It enters `prog_d` in the CORE public values (FP-8 form).
 
-D3 (MEASURED, `fp8_d3 ~/.cache/t6/v10`, `~/.cache/t6/v10/d3.json`): every term is at least 100 bits and every grindable term at least 101 bits, at the measured shape, the vk bounds and the frozen-set bounds, for all 7 keys. Weakest term at the measured shape:
+D3 (MEASURED, `fp8_d3` in the V.10 receipt run, `runs/d3.json`): every term is at least 100 bits and every grindable term at least 101 bits, at the measured shape, the vk bounds and the frozen-set bounds, for all 7 keys. Weakest term at the measured shape:
 
 | Key | Max log height | Stacked columns | Weakest | mu | query | logup | fold |
 |---|---:|---:|---|---:|---:|---:|---:|
@@ -136,7 +138,7 @@ D3 (MEASURED, `fp8_d3 ~/.cache/t6/v10`, `~/.cache/t6/v10/d3.json`): every term i
 | `L_iface` | 16 | 18 | shift 101.14 | 102.54 | 101.14 | 102.72 | 101.63 |
 | `L_Fr` | 19 | 43 | query 101.14 | 226.46 | 101.14 | 215.95 | 232.86 |
 
-The app proof is one stacked column, and the stock `SoundnessCalculator` asserts at least 2 for the mu term. `fp8_d3` uses 2 for a one-column proof (openvm `c541730`). That value is conservative: a single column has no mu batching, and the mu error grows with the column count. N2 now has a measured row (it had only vk and bounds in FP-8).
+The app proof is one stacked column, and the stock `SoundnessCalculator` asserts at least 2 for the mu term. `fp8_d3` uses 2 for a one-column proof (openvm `c541730`). That value is conservative: a single column has no mu batching, and the mu error grows with the column count. The `vk` and `bounds` rows of the app do not use the measured width and pass on their own. N2 now has a measured row (it had only vk and bounds in FP-8).
 
 What V.10 does not show: `L_iface` proves over N3 with the FP-3 interface statement (`Dims::FULL`, all-entries case, seed 14), not with the slice statement. The leaf layer receives the slice public values but does not expose them, and N1 to N3 carry no slice statement (FP-2 node statement, group 5). One proof chain therefore binds the keys of the run, not the slice outcome, up to `L_Fr`. N2 and N3 run over two copies of their child because the run has a single N1 (the T3 bench topology).
 
@@ -148,15 +150,20 @@ What V.10 does not show: `L_iface` proves over N3 with the FP-3 interface statem
 | Multi-segment `TAG_NODE` merge in `L` | An `L`-side AIR that folds the per-segment statements (`pre_d`, `post_d`, `h_pre`, steps) into one `TAG_NODE` digest and checks the `post_d` to `pre_d` stitch across segments. It also needs the node statement below (FP-2), because `L` today sees the FP-3 interface words only. |
 | FP-2 node statement | The leaf `KeyBind` receives the 54 slice public values but does not expose them. Carrying the leaf statement through N1 to N3 and into `L` is group 5 (NODE INTEGRATION). Until then, the chain binds the keys of the run, not its outcome. |
 | N2 and N3 arity with one N1 | The run has one N1, so N2 and N3 run over two copies of their child (the T3 bench topology). A run-shaped tree needs a padding or odd-arity rule for nodes (group 5). |
-| SG-6 on GPU | A full GPU engine for the app set. Only the CPU figure exists (section 4). |
 | DEC beyond the subset | Six DEC rows (idle and classes 1, 10, 12, 67, 89) in a subset table. The full priority network waits on T5 row I-7. |
 | MEM near the top address | The honest MEM window checks `addr + i` without a wrap at 2^64 (`counter_wrap_2_64`). A window that starts within 8 of 2^64 has no honest witness. Real runs never get there. |
 
-Slice PICKs (each marked `PICK` in the source, open for the owner or the kit tasks): `SHK_RULES` code 58 (`enc.rs:34`), body schema id 1 and the 476-word body (`enc.rs:37`), empty frame and task heads `P2(37)`, `P2(38)` (ENC-4 open, `enc.rs:308`), genesis memory root and tail `D_EMPTY` (`enc.rs:316`), `plan_d = P2(DOM_PLAN)` for a program with no plan nodes (ENC-5 open, `enc.rs:323`), the ROM tree as a 69-level binary sparse tree over `(tbl, row)` with empty-subtree digests (`enc.rs:385`, `enc.rs:408`), `BUS_BASE` 64 and the sponge sequence bases (`bus.rs:11`, `bus.rs:61`), the DEC row form (O3-2 open, `dec.rs:5`), S = 4 slots (`core.rs:26`), the public values binding 0, `log_d = D_EMPTY` and `log_n = 0` (`core.rs:471`), the MEM append chain `tail' = P2(TAG_NODE, tail, rd)` (`mem.rs:9`), and the builtin `ty_d = P2(DOM_TY, row)` (`leaf.rs:95`). The admission uses versions 1 and a test-only seeded salt `[1..8]` (`leaf.rs:108`, test only, never a production salt).
+Divergences from T9 (read-only sweep of `~/.cache/m7-wrap/src/openvm-t9/crates/sherlock-lfr/src/enc45.rs` and the T9 lead rulings; not fixed here):
+- `plan_d`: T9 ENC-5 is `P2(DOM_PLAN, 1, itab_d, menu_d, policy_d, layout_d, place_d)` (42 words with the tag, part tags 58 to 62). The slice uses the tag-only `P2(DOM_PLAN)` for a program with no plan nodes (`enc.rs:324`). The slice `prog_d` therefore differs from the T9 reference for the same program until the slice computes `plan_d` by ENC-5.
+- `SHK_RULES`: it was 58 and clashed with `DOM_PLAN_ITAB`; T6 moved it to 64 (decision above).
+- Agree: `EMPTY_F = P2(37)` and `EMPTY_T = P2(38)` (T9 `empty_below`), `DOM_PLAN` 41, `DOM_ROMLEAF` 39, `DOM_ROMNODE` 40, `DOM_STATE_BODY` 30, `DOM_MEMREC` 33.
+- ENC-4 task lane 3 `tag(2)` (lead ruling): the slice run pushes no task, so the slice has no such lane in a message yet.
+
+Slice PICKs (each marked `PICK` in the source, open for the owner or the kit tasks): `SHK_RULES` code 64 (`enc.rs:34`; 58 to 62 are the ENC-5 parts by the T9 lead ruling and 63 is left for `SHK_SHAPE`, so T6 moved it from 58 to 64 in openvm `f143943` and reran every receipt), body schema id 1 and the 476-word body (`enc.rs:38`), empty frame and task heads `P2(37)`, `P2(38)` (ENC-4 open, `enc.rs:309`), genesis memory root and tail `D_EMPTY` (`enc.rs:317`), `plan_d = P2(DOM_PLAN)` for a program with no plan nodes (ENC-5 open, `enc.rs:324`), the ROM tree as a 69-level binary sparse tree over `(tbl, row)` with empty-subtree digests (`enc.rs:386`, `enc.rs:409`), `BUS_BASE` 64 and the sponge sequence bases (`bus.rs:11`, `bus.rs:61`), the DEC row form (O3-2 open, `dec.rs:5`), S = 4 slots (`core.rs:26`), the public values binding 0, `log_d = D_EMPTY` and `log_n = 0` (`core.rs:471`), the MEM append chain `tail' = P2(TAG_NODE, tail, rd)` (`mem.rs:9`), and the builtin `ty_d = P2(DOM_TY, row)` (`leaf.rs:95`). The admission uses versions 1 and a test-only seeded salt `[1..8]` (`leaf.rs:108`, test only, never a production salt).
 
 ## 7. Circuit changes for the Carbon Quint lanes
 
-All in openvm `~/.cache/m7-wrap/src/openvm-t6`, branch `t6-leaf` (commits `810b370`, `c3bea58`, `6ec1364`, `c541730`). Paths are relative to `crates/`.
+All in openvm `~/.cache/m7-wrap/src/openvm-t6`, branch `t6-leaf` (commits `810b370`, `c3bea58`, `6ec1364`, `c541730`, `f143943`, `3160f59`). Paths are relative to `crates/`.
 
 | Change | File:line |
 |---|---|

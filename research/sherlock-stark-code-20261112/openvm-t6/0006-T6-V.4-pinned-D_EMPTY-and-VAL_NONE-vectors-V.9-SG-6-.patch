@@ -1,0 +1,191 @@
+From 3160f598a09a8d7b0a94c7e5faf9e2e09901fd7b Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 19:44:51 -0700
+Subject: [PATCH 6/6] T6 V.4 pinned D_EMPTY and VAL_NONE vectors; V.9 SG-6
+ example sg6 on the GPU engine (cuda feature)
+
+---
+ Cargo.lock                             |  1 +
+ crates/sherlock-leaf/Cargo.toml        |  3 +
+ crates/sherlock-leaf/examples/sg6.rs   | 97 ++++++++++++++++++++++++++
+ crates/sherlock-leaf/examples/slice.rs | 20 +++++-
+ 4 files changed, 119 insertions(+), 2 deletions(-)
+ create mode 100644 crates/sherlock-leaf/examples/sg6.rs
+
+diff --git a/Cargo.lock b/Cargo.lock
+index c1b1e25..5a0c093 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -7653,6 +7653,7 @@ version = "2.1.0"
+ dependencies = [
+  "openvm-circuit-primitives",
+  "openvm-cpu-backend",
++ "openvm-cuda-backend",
+  "openvm-poseidon2-air",
+  "openvm-stark-backend",
+  "openvm-stark-sdk",
+diff --git a/crates/sherlock-leaf/Cargo.toml b/crates/sherlock-leaf/Cargo.toml
+index a8da391..1f15823 100644
+--- a/crates/sherlock-leaf/Cargo.toml
++++ b/crates/sherlock-leaf/Cargo.toml
+@@ -15,9 +15,12 @@ openvm-poseidon2-air = { workspace = true }
+ p3-baby-bear = { workspace = true }
+ serde_json = { workspace = true }
+ sherlock-lfr = { path = "../sherlock-lfr" }
++# SG-6 on the GPU (example sg6, `--features cuda`)
++openvm-cuda-backend = { workspace = true, optional = true }
+ 
+ [features]
+ default = ["parallel"]
++cuda = ["dep:openvm-cuda-backend"]
+ parallel = [
+   "openvm-stark-backend/parallel",
+   "openvm-stark-sdk/parallel",
+diff --git a/crates/sherlock-leaf/examples/sg6.rs b/crates/sherlock-leaf/examples/sg6.rs
+new file mode 100644
+index 0000000..6e16f0c
+--- /dev/null
++++ b/crates/sherlock-leaf/examples/sg6.rs
+@@ -0,0 +1,97 @@
++//! T6 SG-6: seconds per proved step of the slice leaf shard on the GPU (`--features cuda`,
++//! `BabyBearPoseidon2GpuEngine`) and on the CPU, same frozen app set, same AIRs, same traces.
++//! Each engine keys the shard with every AIR required, proves both shards of the V.1 run
++//! `T6_REPS` times (default 4; rep 0 is the warm-up, the median is over the rest), and the stock
++//! CPU verifier accepts the first proof of each shard. Writes `$T6_OUT/sg6.json`.
++//!
++//! usage: cargo run --release -p sherlock-leaf [--features cuda] --example sg6
++
++use std::time::Instant;
++
++use openvm_stark_backend::{
++    keygen::types::MultiStarkVerifyingKey,
++    p3_field::{PrimeCharacteristicRing, PrimeField32},
++    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
++    StarkEngine,
++};
++use serde_json::{json, Value};
++use sherlock_leaf::{
++    core::pv,
++    enc::{p2, F},
++    harness::{self, SC},
++    leaf::{self, airs, Build},
++};
++use sherlock_lfr::frozen;
++
++fn median(v: &[f64]) -> f64 {
++    let mut s = v.to_vec();
++    s.sort_by(|a, b| a.partial_cmp(b).unwrap());
++    s[s.len() / 2]
++}
++
++fn run<E: StarkEngine<SC = SC>>(label: &str, cpu_vk: &MultiStarkVerifyingKey<SC>) -> Value {
++    let reps: usize = std::env::var("T6_REPS").ok().and_then(|v| v.parse().ok()).unwrap_or(4);
++    let engine = E::new(frozen::APP.params());
++    let a = airs(0);
++    let t = Instant::now();
++    let (pk, vk) = frozen::keygen_required(&engine, &a);
++    let keygen_s = t.elapsed().as_secs_f64();
++    assert_eq!(vk.pre_hash, cpu_vk.pre_hash, "{label}: the engine keys the same app vk");
++    let d_pk = engine.device().transport_pk_to_device(&pk);
++    let p = leaf::program(p2(10, &[F::from_u32(0x7_1e_af)]));
++    let shards = leaf::shards(&p);
++    let cpu = harness::engine();
++    let mut out = vec![];
++    let mut total_med = 0.0;
++    let mut steps = 0u32;
++    for (si, sh) in shards.iter().enumerate() {
++        let trs = leaf::traces(&p, sh, &Build::default());
++        let cm: Vec<(ColMajorMatrix<F>, Vec<F>)> = trs.iter().map(|t| (ColMajorMatrix::from_row_major(&t.m), t.pvs.clone())).collect();
++        let mut prove_s = vec![];
++        let mut transport_s = vec![];
++        let mut verified = false;
++        for rep in 0..reps {
++            let t = Instant::now();
++            let ctx = ProvingContext::new(
++                cm.iter()
++                    .enumerate()
++                    .map(|(i, (m, pvs))| (i, AirProvingContext::simple(engine.device().transport_matrix_to_device(m), pvs.clone())))
++                    .collect(),
++            );
++            transport_s.push(t.elapsed().as_secs_f64());
++            let t = Instant::now();
++            let proof = engine.prove(&d_pk, ctx).expect("prove");
++            prove_s.push(t.elapsed().as_secs_f64());
++            if rep == 0 {
++                cpu.verify(cpu_vk, &proof).unwrap_or_else(|e| panic!("{label} shard {si}: stock CPU verifier: {e:?}"));
++                verified = true;
++                steps += proof.public_values[0][pv::STEPS].as_canonical_u32();
++            }
++        }
++        let timed = if prove_s.len() > 1 { &prove_s[1..] } else { &prove_s[..] };
++        let med = median(timed);
++        total_med += med;
++        out.push(json!({"shard": si, "prove_s": prove_s, "transport_s": transport_s, "median_s": med, "stock_cpu_verifier": verified}));
++    }
++    json!({"backend": label, "keygen_s": keygen_s, "shards": out, "proved_steps": steps,
++        "slots": shards.len() * sherlock_leaf::core::S,
++        "s_per_proved_step": total_med / steps as f64,
++        "s_per_slot": total_med / (shards.len() * sherlock_leaf::core::S) as f64})
++}
++
++fn main() {
++    let cpu = harness::engine();
++    let k = harness::key(&cpu, airs(0)).expect("slice app key");
++    let mut rows = vec![run::<harness::Eng>("CPU (openvm-cpu-backend)", &k.vk)];
++    #[cfg(feature = "cuda")]
++    rows.push(run::<openvm_cuda_backend::BabyBearPoseidon2GpuEngine>("GPU (openvm-cuda-backend)", &k.vk));
++    let gpu = rows.iter().any(|r| r["backend"].as_str().unwrap().starts_with("GPU"));
++    for r in &rows {
++        println!("SG6 {} s_per_proved_step {:.4} s_per_slot {:.4}", r["backend"], r["s_per_proved_step"].as_f64().unwrap(), r["s_per_slot"].as_f64().unwrap());
++    }
++    let v = json!({"task": "V.9 SG-6", "shape": k.shape, "rows": rows, "gpu": gpu});
++    let dir = std::env::var("T6_OUT").unwrap_or_else(|_| format!("{}/.cache/t6/out", std::env::var("HOME").unwrap()));
++    std::fs::create_dir_all(&dir).unwrap();
++    std::fs::write(format!("{dir}/sg6.json"), serde_json::to_string_pretty(&v).unwrap()).unwrap();
++    println!("SG6 gpu={gpu}");
++}
+diff --git a/crates/sherlock-leaf/examples/slice.rs b/crates/sherlock-leaf/examples/slice.rs
+index 8650835..35783c7 100644
+--- a/crates/sherlock-leaf/examples/slice.rs
++++ b/crates/sherlock-leaf/examples/slice.rs
+@@ -6,7 +6,10 @@
+ use std::sync::Arc;
+ 
+ use openvm_circuit_primitives::var_range::{VariableRangeCheckerAir, VariableRangeCheckerChip};
+-use openvm_stark_backend::{p3_field::PrimeCharacteristicRing, AirRef};
++use openvm_stark_backend::{
++    p3_field::{PrimeCharacteristicRing, PrimeField32},
++    AirRef,
++};
+ use serde_json::{json, Value};
+ use sherlock_leaf::{
+     bus,
+@@ -209,11 +212,24 @@ fn v4() -> Value {
+         ok &= x == y;
+         vecs.push(json!({"row": name, "tag": tag, "words": w.len() + 1, "preimage": w.iter().map(|v| v.to_string()).collect::<Vec<_>>(), "digest": x.iter().map(|v| v.to_string()).collect::<Vec<_>>(), "independent_equal": x == y}));
+     }
++    // pinned cross-check: the FP-3/ENC-2 vectors of `research/sherlock-enc-fp3-20261112/VECTORS.txt`
++    // (`enc2.D_EMPTY`, `enc1.VAL_NONE`), computed by the T9/ENC reference, not by this crate.
++    let pinned: [(&str, u32, [u32; 8]); 2] = [
++        ("D_EMPTY", TAG_EMPTY, [1601720553, 1813189633, 533296967, 1863848096, 1186913909, 1231646054, 526551043, 780997282]),
++        ("VAL_NONE", SHK_VALUE_V2, [177090646, 988898068, 1058487993, 1357020063, 70888938, 1990745353, 257326398, 976638622]),
++    ];
++    let mut pins = vec![];
++    for (name, tag, want) in pinned {
++        let got: Vec<u32> = p2(tag, &[]).iter().map(|x| x.as_canonical_u32()).collect();
++        let eq = got == want;
++        ok &= eq;
++        pins.push(json!({"row": name, "source": "research/sherlock-enc-fp3-20261112/VECTORS.txt", "pinned": want, "got": got, "equal": eq}));
++    }
+     // against the AIR: the shard proofs carry pre_d, post_d, rules_d, prog_d as public values.
+     let t0 = leaf::traces(&s.p, &s.sh[0], &Build::default());
+     let air_eq = t0[0].pvs[pv::PRE_D..pv::PRE_D + 8] == st0.state_d()[..] && t0[0].pvs[pv::PROG_D..pv::PROG_D + 8] == a.prog_d()[..];
+     let pos = harness::positive(&s.eng, &s.k, "digest_table_vectors_air_shard0", &t0);
+-    cases.push(json!({"case": "digest_table_vectors", "kind": "host+air", "pass": ok && air_eq && pos["pass"] == true, "vectors": vecs, "air_public_values_equal": air_eq, "air_proof": pos, "gpu": "not run (SG-6 GPU path at V.9)"}));
++    cases.push(json!({"case": "digest_table_vectors", "kind": "host+air", "pass": ok && air_eq && pos["pass"] == true, "vectors": vecs, "pinned_vectors": pins, "air_public_values_equal": air_eq, "air_proof": pos, "gpu": "SG-6 GPU run at V.9 (example sg6)"}));
+     // hash_domain_swapped: the ROM node rows of HASH2 start their sponge with tag DOM_ROMLEAF.
+     let b = Build { h2_t2: Some((DOM_ROMNODE, DOM_ROMLEAF)), ..Default::default() };
+     // the ROM path then has nodes P2(DOM_ROMLEAF, l, r): the provider claims them under tag 40.
+-- 
+2.56.0
+
