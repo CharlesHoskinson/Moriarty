@@ -1,6 +1,6 @@
 #!/bin/bash
 # T10 bound path (research/sherlock-t10-bound-20261114), resumable (~/.cache/t10/state/<stage>.ok).
-# usage: chain.sh ovm|wrap|devnet|gates|sg6|probe|all
+# usage: chain.sh ovm|wrap|devnet|gates|pathc|sg6|all
 # Every key-dependent number (L_Fr key, wrap rows, wrap key, ledger verdicts, devnet call) is a stage
 # here, so a later L key (T7c path C) reruns with: rm -f ~/.cache/t10/state/*.ok; chain.sh all
 set -uo pipefail
@@ -94,6 +94,13 @@ gates() {
     [ $rc -eq 0 ] && [ -s $LOG/check-$m.log ] && touch $S/check-$m.ok || exit 1
   done
 }
+pathc() {
+  # T7c path C cases on this tree (one leaf of `entry x;` through the leaf layer, L and L_Fr on the universal keys)
+  mkdir -p $T/out/pathc
+  stage pathc 56G $OVM $TOVM env RAYON_NUM_THREADS=20 $EX/t7_chain pathc $T/out/pathc || exit 1
+  grep -q '^T7CPATHC PASS' $LOG/pathc.log || { echo "# $(date -Is) pathc FAIL" >> $LOG/runs.log; exit 1; }
+  stage pathc-d3 16G $OVM $TOVM cargo run --release --offline -p sherlock-wrap-export --example fp8_d3 -- $T/out/pathc $T/out/pathc/fv_vk.bitcode || exit 1
+}
 sg6() {
   # SG-6 on this tree (lead ruling on T7 pick 15): GPU seconds per proved step, stock CPU verifier on each proof
   mkdir -p $T/out/sg6
@@ -109,10 +116,6 @@ if not ok:
     sys.exit("SG-6 FAIL: no verified GPU row")
 print(f"SG-6 PASS: GPU {gpu[0]['s_per_proved_step']:.4f} s per proved step ({gpu[0]['proved_steps']} steps, {gpu[0]['slots']} slots)")
 PY
-}
-probe() {
-  # the column cost of the L log tie: the J8 onion AIR added to L, G1 against the frozen L bound
-  stage probe-onion 26G $OVM $TOVM env T10_PROBE_ONION=1 SHERLOCK_PROG=A $EX/lfr_call key $T/out/probe || exit 1
 }
 devnet() {
   need $T/out/key-k21/wrap.vk $T/key/ledger-args.json $T/key/forbid.json
@@ -130,5 +133,5 @@ devnet() {
     node t10a-ledger-run.mjs call --vk $E6_WRAP_VK --args $T/key/ledger-args.json \
     --forbid $T/key/forbid.json --forbid-small $T/key/forbid-small.json --out $T/devnet || exit 1
 }
-case "$1" in ovm) ovm;; wrap) wrap;; gates) gates;; sg6) sg6;; devnet) devnet;; probe) probe;; all) ovm; wrap; devnet; gates; sg6;; esac
+case "$1" in ovm) ovm;; wrap) wrap;; gates) gates;; sg6) sg6;; devnet) devnet;; pathc) pathc;; all) ovm; wrap; devnet; gates; pathc; sg6;; esac
 echo "# $(date -Is) chain $1 done" >> $LOG/runs.log
