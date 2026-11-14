@@ -1,0 +1,29 @@
+From deeeb0a837207288023095d5160cde688a650675 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 17:50:49 -0700
+Subject: [PATCH] T6: SB_MUTANT_PROVER (test only) lets the prover finish a
+ proof of a nonzero LogUp root sum so the stock verifier refuses it (SG-3)
+
+---
+ .../src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs    | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs b/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
+index 4b20f1c..f4d98bd 100644
+--- a/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
++++ b/crates/stark-backend/src/prover/logup_zerocheck/fractional_sumcheck_gkr.rs
+@@ -110,7 +110,10 @@ pub fn fractional_sumcheck<SC: StarkProtocolConfig, TS: FiatShamirTranscript<SC>
+     }
+     let frac_sum = tree_evals[1];
+     if assert_zero {
+-        if frac_sum.p != SC::EF::ZERO {
++        // Sherlock T6 (SG-3, test only): `SB_MUTANT_PROVER=1` lets the prover finish a proof of a
++        // witness whose LogUp root sum is not zero, so that the stock verifier (which takes the
++        // root numerator as zero and never reads it from the proof) is the one that refuses it.
++        if frac_sum.p != SC::EF::ZERO && std::env::var_os("SB_MUTANT_PROVER").is_none() {
+             return Err(LogupZerocheckError::NonZeroRootSum);
+         }
+     } else {
+-- 
+2.56.0
+
