@@ -1,0 +1,137 @@
+From 1f0c2432c345e7713535cd87b44b05748b73e26d Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 01:43:35 -0700
+Subject: [PATCH] sherlock-lfr: slim L interface AIRs (T7c)
+
+The Stmt and Call interface AIRs of L are carrier only: no interaction
+and no constraint reads their cells. In the production L (airs_with,
+traces_with) they become one zero column each and keep their public
+values. The bench and lfr_call paths (airs, traces) keep the full
+carriers. Frees 129 L columns (DERIVED from the T7c per-AIR shape:
+Stmt 51 + Call 80 - 2).
+---
+ crates/sherlock-lfr/src/iface_l.rs | 37 ++++++++++++++++++++++++++++--
+ 1 file changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/iface_l.rs b/crates/sherlock-lfr/src/iface_l.rs
+index 6a363e8..f1e67f3 100644
+--- a/crates/sherlock-lfr/src/iface_l.rs
++++ b/crates/sherlock-lfr/src/iface_l.rs
+@@ -71,6 +71,9 @@ pub struct IfaceAir {
+     /// T7: the leading `root_stmt` words that the root statement AIR of `L` exposes instead
+     /// (`Stmt` then carries words `skip..STMT`; 0 elsewhere).
+     pub skip: usize,
++    /// T7c: the production `L` ([`airs_with`], [`traces_with`]) keeps the carrier-only sections
++    /// bare ([`IfaceAir::bare`]); the bench `L_iface` ([`airs`], [`traces`]) keeps the carrier.
++    pub slim: bool,
+ }
+ 
+ // LogEntry columns after the carrier.
+@@ -117,6 +120,13 @@ impl IfaceAir {
+             }
+         }
+     }
++    /// T7c slimming: a carrier-only section (`Call`, and `Stmt` without the onion tie) has no
++    /// constraint that reads its cells, so its words stay public values of the AIR without the
++    /// carrier cells (one zero column). The words are bound by the transcript and exposed by
++    /// `L_Fr` as before; the carrier added no relation between them and any other value.
++    pub fn bare(&self) -> bool {
++        self.slim && (self.kind == Kind::Call || (self.kind == Kind::Stmt && !self.onion))
++    }
+     fn extra(&self) -> usize {
+         match self.kind {
+             Kind::LogEntry => E_W,
+@@ -128,6 +138,9 @@ impl IfaceAir {
+     /// The trace for the section's words (`words` = this AIR's public values).
+     /// `off_n` is the used value count of the run (read by `LogValue` only).
+     pub fn trace<F: Field>(&self, words: &[u64], off_n: u64) -> RowMajorMatrix<F> {
++        if self.bare() {
++            return RowMajorMatrix::new(vec![F::ZERO; 2], 1);
++        }
+         let c = self.carrier();
+         let fw: Vec<F> = words.iter().map(|&x| F::from_u64(x)).collect();
+         let mut rows = c.rows(&fw);
+@@ -184,11 +197,15 @@ fn bits_into<F: Field>(dst: &mut [F], x: u64) {
+ 
+ /// The traces and public values of the four interface AIRs for the `L` words of a run.
+ pub fn traces<F: Field>(dims: &Dims, words: &[u64]) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
+-    traces_with(dims, words, 0)
++    traces_impl(dims, words, 0, false)
+ }
+ 
+ /// [`traces`] with the first `skip` statement words left to the root statement AIR (T7).
+ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
++    traces_impl(dims, words, skip, true)
++}
++
++fn traces_impl<F: Field>(dims: &Dims, words: &[u64], skip: usize, slim: bool) -> Vec<(RowMajorMatrix<F>, Vec<F>)> {
+     assert_eq!(words.len(), dims.words());
+     let mut off_n = 0u64;
+     for i in 0..dims.b {
+@@ -203,6 +220,7 @@ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(Ro
+                 dims: *dims,
+                 onion: false,
+                 skip,
++                slim,
+             };
+             let (s, e) = a.section();
+             let ws = &words[s..e];
+@@ -213,6 +231,9 @@ pub fn traces_with<F: Field>(dims: &Dims, words: &[u64], skip: usize) -> Vec<(Ro
+ 
+ impl<F: Field> BaseAir<F> for IfaceAir {
+     fn width(&self) -> usize {
++        if self.bare() {
++            return 1;
++        }
+         self.carrier().width() + self.extra()
+     }
+ }
+@@ -231,6 +252,12 @@ fn pow2_sum<E: PrimeCharacteristicRing + Clone>(bits: &[E]) -> E {
+ 
+ impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
+     fn eval(&self, builder: &mut AB) {
++        if self.bare() {
++            let main = builder.main();
++            let z: AB::Expr = main.row_slice(0).expect("row")[0].into();
++            builder.assert_zero(z);
++            return;
++        }
+         let c = self.carrier();
+         let w = c.width() + self.extra();
+         let main = builder.main();
+@@ -362,11 +389,15 @@ impl<AB: InteractionBuilder + AirBuilderWithPublicValues> Air<AB> for IfaceAir {
+ 
+ /// The interface AIRs as `L` AIRs, in [`KINDS`] order.
+ pub fn airs(dims: &Dims) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
+-    airs_with(dims, 0)
++    airs_impl(dims, 0, false)
+ }
+ 
+ /// [`airs`] with the first `skip` statement words left to the root statement AIR (T7).
+ pub fn airs_with(dims: &Dims, skip: usize) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
++    airs_impl(dims, skip, true)
++}
++
++fn airs_impl(dims: &Dims, skip: usize, slim: bool) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
+     KINDS
+         .iter()
+         .map(|&kind| {
+@@ -375,6 +406,7 @@ pub fn airs_with(dims: &Dims, skip: usize) -> Vec<openvm_stark_backend::AirRef<c
+                 dims: *dims,
+                 onion: false,
+                 skip,
++                slim,
+             })
+                 as openvm_stark_backend::AirRef<crate::fixture::LSC>
+         })
+@@ -707,6 +739,7 @@ pub fn airs_onion(
+                 dims: *dims,
+                 onion: true,
+                 skip: 0,
++                slim: false,
+             }) as openvm_stark_backend::AirRef<crate::fixture::LSC>
+         })
+         .collect();
+-- 
+2.56.0
+

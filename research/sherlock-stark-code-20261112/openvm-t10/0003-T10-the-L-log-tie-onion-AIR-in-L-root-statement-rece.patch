@@ -1,0 +1,187 @@
+From 0c4f05ee0b4fad4912e6282cc51d4ab80ef19ee2 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 02:05:58 -0700
+Subject: [PATCH] T10: the L log tie (onion AIR in L, root statement receives
+ the tie, child log key constants)
+
+---
+ crates/sherlock-lfr/src/iface.rs              | 12 ++++----
+ crates/sherlock-lfr/src/iface_l.rs            |  9 ++++--
+ crates/sherlock-lfr/src/stmt.rs               | 16 +++++++++-
+ .../sherlock-wrap-export/examples/t7_chain.rs | 30 +++++++++++++++----
+ 4 files changed, 52 insertions(+), 15 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/iface.rs b/crates/sherlock-lfr/src/iface.rs
+index 122d3ef..1273562 100644
+--- a/crates/sherlock-lfr/src/iface.rs
++++ b/crates/sherlock-lfr/src/iface.rs
+@@ -1120,13 +1120,11 @@ pub fn case_run_bound(
+         }
+         _ => {}
+     }
+-    // A bound run keeps the root statement's log words (T7: the `L` log tie is open, RESULTS
+-    // section 0).
+-    if bind.is_none() {
+-        let ld = onion(&log);
+-        head[LOG_D_WORD..LOG_D_WORD + 8].copy_from_slice(&ld);
+-        head[LOG_N_WORD] = log.len() as u64;
+-    }
++    // The log words are the onion of the tables, bound runs too (T10: `L` ties them by its
++    // onion AIR).
++    let ld = onion(&log);
++    head[LOG_D_WORD..LOG_D_WORD + 8].copy_from_slice(&ld);
++    head[LOG_N_WORD] = log.len() as u64;
+     (
+         Run {
+             dims: *d,
+diff --git a/crates/sherlock-lfr/src/iface_l.rs b/crates/sherlock-lfr/src/iface_l.rs
+index f1e67f3..7a99aed 100644
+--- a/crates/sherlock-lfr/src/iface_l.rs
++++ b/crates/sherlock-lfr/src/iface_l.rs
+@@ -392,7 +392,9 @@ pub fn airs(dims: &Dims) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC
+     airs_impl(dims, 0, false)
+ }
+ 
+-/// [`airs`] with the first `skip` statement words left to the root statement AIR (T7).
++/// [`airs`] with the first `skip` statement words left to the root statement AIR (T7). T10:
++/// `LogEntry` and `LogValue` send on the onion buses, so the caller adds [`OnionAir`] and the
++/// root statement AIR receives [`TIE_BUS`].
+ pub fn airs_with(dims: &Dims, skip: usize) -> Vec<openvm_stark_backend::AirRef<crate::fixture::LSC>> {
+     airs_impl(dims, skip, true)
+ }
+@@ -404,7 +406,10 @@ fn airs_impl(dims: &Dims, skip: usize, slim: bool) -> Vec<openvm_stark_backend::
+             std::sync::Arc::new(IfaceAir {
+                 kind,
+                 dims: *dims,
+-                onion: false,
++                // T10 log tie: the production `L` sends the log words to its [`OnionAir`] (added
++                // by the caller on the permute bus); the root statement AIR receives the tie,
++                // so `Stmt` stays bare.
++                onion: slim && matches!(kind, Kind::LogEntry | Kind::LogValue),
+                 skip,
+                 slim,
+             })
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index 922220b..f016a09 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -1060,6 +1060,7 @@ pub fn root_map() -> Vec<Option<usize>> {
+             || (npv::H_LO..npv::H_LO + 4).contains(&i)
+             || (npv::KEYS_D..npv::KEYS_D + D).contains(&i)
+             || (npv::VKC_PRE..npv::VKC_PRE + D).contains(&i)
++            || (npv::LOG_D..npv::LOG_N + 1).contains(&i)
+     };
+     let mut k = 0;
+     (0..npv::N)
+@@ -1081,6 +1082,12 @@ fn root_const(i: usize, n3_pre: &[u32; 8], keys_d: &[u32; 8]) -> u32 {
+         0
+     } else if (npv::KEYS_D..npv::KEYS_D + D).contains(&i) {
+         keys_d[i - npv::KEYS_D]
++    } else if (npv::LOG_D..npv::LOG_D + D).contains(&i) {
++        // T10 log tie: the N3 child logs nothing (the leaves have no log section yet), so its
++        // log words are the key constants `(D_EMPTY, 0)`.
++        d_empty()[i - npv::LOG_D].as_canonical_u32()
++    } else if i == npv::LOG_N {
++        0
+     } else {
+         n3_pre[i - npv::VKC_PRE]
+     }
+@@ -1142,9 +1149,13 @@ impl StmtAir {
+             PreHashMessage { vk_pre_hash: std::array::from_fn(|i| AB::Expr::from_u32(n3_pre[i])) },
+             valid.clone(),
+         );
+-        for i in 0..npv::ENV {
++        for i in (0..npv::ENV).filter(|i| !(npv::LOG_D..npv::LOG_N + 1).contains(i)) {
+             builder.when_first_row().assert_eq(pv[i].clone(), w[i].clone());
+         }
++        // T10 log tie (T7 pick 8): the exposed `log_d`, `log_n` are the onion of the `L` entry
++        // and value tables, sent by `iface_l::OnionAir` on its last active row.
++        let tie: Vec<AB::Expr> = (npv::LOG_D..npv::LOG_N + 1).map(|i| pv[i].clone()).collect();
++        builder.push_interaction(crate::iface_l::TIE_BUS, tie, -valid.clone(), 1);
+         let mut m: Vec<AB::Expr> = (0..D).map(|i| w[npv::PROG_D + i].clone()).collect();
+         m.extend((0..D).map(|i| w[npv::POST_D + i].clone()));
+         PermutationCheckBus::new(SEAL_BUS).send(builder, m, valid);
+@@ -1228,6 +1239,9 @@ fn root_trace(kind: &Kind, kid: &Child, hdr: &[F], r_p: &Digest) -> (RowMajorMat
+             t[c.cw + o] = kid.pvs[i];
+         }
+     }
++    for i in npv::LOG_D..npv::LOG_N + 1 {
++        assert_eq!(kid.pvs[i].as_canonical_u32(), root_const(i, &[0; 8], &[0; 8]), "N3 child log is (D_EMPTY, 0)");
++    }
+     let pvs = kid.pvs[..npv::ENV].to_vec();
+     let prog_d = dig(&pvs, npv::PROG_D);
+     let ops = operands(&prog_d, r_p, hdr);
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 18529f1..6d22217 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -446,10 +446,10 @@ fn l_key(n3_vk: &MultiStarkVerifyingKey<NodeSC>, keys_d: &Dg, log: &mut Vec<Valu
+     airs.extend(iface_l::airs_with(&Dims::FULL, iface::ROOT_WORDS));
+     airs.push(Arc::new(RootSealAir));
+     airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
++    // T10 log tie (T7 pick 8): the J8 onion AIR, last so the earlier AIR indices stay.
++    airs.push(Arc::new(iface_l::OnionAir { dims: Dims::FULL, perm }));
+     if std::env::var("T10_PROBE_ONION").is_ok() {
+-        // T10 probe (not a key of the design): the J8 onion AIR added to `L`, to measure the
+-        // column cost of the log tie against the frozen L bound (G1 reports the total).
+-        airs.push(Arc::new(iface_l::OnionAir { dims: Dims::FULL, perm }));
++        // T10 probe: the G1 report of the `L` set with the onion AIR (column count vs bound).
+         let r = frozen::keygen_checked(&frozen::L, &engine, &airs).map(|_| ());
+         println!("T10PROBE L with OnionAir: G1 {:?}", r.map_err(|e| format!("{e:?}")));
+         std::process::exit(0);
+@@ -467,9 +467,15 @@ struct LWit {
+ impl LKey {
+     fn ctxs(&self, n3_vk: &MultiStarkVerifyingKey<NodeSC>, n3: &Proof<NodeSC>, w: &LWit, words: &[u64]) -> Vec<AirProvingContext<CpuBackend<LSC>>> {
+         let kid = child_of(&self.kind, n3_vk, n3);
+-        let (tr, pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p });
++        let (tr, mut pvs, calls) = stmt::trace(&self.kind, &[kid], &Wit::Root { hdr: w.hdr.clone(), r_p: w.r_p });
++        // T10 log tie: the exposed log words are the run's (the onion of its tables).
++        for i in stmt::npv::LOG_D..stmt::npv::LOG_N + 1 {
++            pvs[i] = F::from_u64(words[i]);
++        }
+         let (ot, opv) = stmt::root_seal_trace(&pvs, &w.hdr, &w.r_p);
+-        let (st, ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
++        let (st, mut ins) = stmt::sponge_trace(&calls, stmt::sponge_height(&self.kind));
++        let (ont, oins) = iface_l::OnionAir { dims: Dims::FULL, perm: self.l.bus_inventory().poseidon2_permute_bus }.trace::<F>(words);
++        ins.extend(oins.iter().map(|r| r.map(F::from_u64)));
+         let dev = self.engine.device();
+         let m = |t: &openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>| dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(t));
+         let mut v = vec![AirProvingContext::simple(m(&tr), pvs)];
+@@ -494,6 +500,7 @@ impl LKey {
+         }
+         v.push(AirProvingContext::simple(m(&ot), opv));
+         v.push(AirProvingContext::simple(m(&st), vec![]));
++        v.push(AirProvingContext::simple(m(&ont), vec![]));
+         v
+     }
+ 
+@@ -669,6 +676,16 @@ fn chain(out: &PathBuf, which: sl::Prog) {
+     wt.hdr[0] = F::from_u32(0);
+     let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &wt, &words, true);
+     cases.rec("non_terminal_outcome_refused_at_L", false, r, "outcome_tag 0 (Running) at the seal (mutant prover, stock L verifier)");
++    // T10 log tie: the exposed log words against the onion of the tables.
++    let mut wl = words.clone();
++    wl[iface::LOG_D_WORD] = (wl[iface::LOG_D_WORD] + 1) % 0x7800_0001;
++    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &w, &wl, true);
++    cases.rec("exposed_log_d_changed_refused_at_L", false, r, "log_d word + 1 against the onion of the entry and value tables (mutant prover, stock L verifier)");
++    let mut wv = words.clone();
++    let v0 = Dims::FULL.values_at();
++    wv[v0] = (wv[v0] + 1) % 0x7800_0001;
++    let (_, r) = lk.prove_try(&k.n3.vk, &n3_p, &w, &wv, true);
++    cases.rec("log_value_changed_refused_at_L", false, r, "first value limb + 1 under the same exposed log_d (mutant prover, stock L verifier)");
+ 
+     // L_Fr: honest, then the R operands against the L operand words.
+     let mut bad_lfr: Option<(Gen, Vec<Option<sherlock_lfr::tape::Val>>)> = None;
+@@ -1142,6 +1159,9 @@ fn t10_run(env: &[u64], ops: [Fr; 3], anchor: Fr, keys: &iface::Keys, lanes: Opt
+     let s: Vec<iface::OpIn> = PUB_LANES.iter().map(|&l| iface::OpIn::Pub { lane: l, v: lanes[l as usize] }).collect();
+     let plan = iface::plan(&d, &r, &s);
+     assert!(plan.spilled.is_empty());
++    let mut head = head;
++    head[iface::LOG_D_WORD..iface::LOG_D_WORD + 8].copy_from_slice(&iface::onion(&plan.log));
++    head[iface::LOG_N_WORD] = plan.log.len() as u64;
+     iface::Run { dims: d, head, lanes, lane_map, log: plan.log, path_sibs: plan.sibs }
+ }
+ 
+-- 
+2.56.0
+

@@ -31,6 +31,7 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-t7/` | t7-bind (T7 `prog_d` and key route) | `8672651` (the `tested` merge of `t6-leaf` and `t9-contract`) | `662235f` | 3 | linear | T7: FP-2 statement AIR, `L` root statement and `RootSealAir`, `t7_chain` |
 | `openvm-t7c/` | t7c-pathc (T7c path C) | `662235f` (the `openvm-t7` tip) | `3607e95` | 6 | linear | T7c: slim `L`, child-meta recursion mode, S = 8 leaf bucket, path C on the universal `L` key |
 | `openvm-t8/` | t8-gp (T8 GP hooks) | `662235f` (the `t7-bind` tip) | `a645de3` | 4 | linear | T8: GP-2/GP-4 node mode block `gp.rs`, MERGE-WORK node (`Kind::Work`, split CORE, `MERGE_WORK` set), `t8_gp` (x7, gp2) |
+| `openvm-t10/` | t10-bound (T10 bound wrap) | `662235f` (the `openvm-t7` tip) | `33371a6` | 6 | first-parent, 2 merges | T10: `h_hi` range table in N1, the `L` log tie (onion AIR, `TIE_BUS` at the root statement), the bound `lfr_call` path; merges `t7c-pathc` and `tested` (T8) |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |
@@ -52,3 +53,5 @@ T7 (2026-11-13): `openvm-t7/` is a plain `git format-patch --binary 8672651..t7-
 
 T7c (2026-11-14): `openvm-t7c/` is a plain `git format-patch --binary 662235f..t7c-pathc` series. It applies on the `openvm-t7` tip `662235f`. Patch 0001 points the stark-backend `[patch]` at `../stark-backend-t7c/` (stark-backend `deeeb0a`, no T7c change). Patch 0002 (`2080b5f`, slim `L`) stands alone for T10. Report: `research/sherlock-t7c-pathc-20261114/RESULTS.md`.
 T8 (2026-11-14): `openvm-t8/` is a plain `git format-patch --binary 662235f..t8-gp` series. It applies on the openvm `t7-bind` tip `662235f` (series `openvm-t7/`). The `Cargo.toml` patches still point at `../stark-backend-t6/crates/...`; stark-backend has no T8 change. Report: `research/sherlock-t8-gp-20261113/RESULTS.md`.
+
+T10 (2026-11-14): `openvm-t10/` is exported along the first-parent history of `t10-bound` from `662235f`: four commits, then the merges of `t7c-pathc` (`d72ad32`) and `tested` (`33371a6`, T8) as first-parent diffs. Round trip checked in a scratch worktree: `662235f` plus `git am` of the series gives tree `4dc7135`, equal to the tip tree. The `Cargo.toml` patches point at `../stark-backend-t7c/crates/...` (stark-backend `deeeb0a`, no T10 change). Report: `research/sherlock-t10-bound-20261114/RESULTS.md`.

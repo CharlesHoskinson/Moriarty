@@ -1,0 +1,957 @@
+From 89e57cce87f7f923dc2e2b4f4d9e58f085ce57d1 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 01:42:20 -0700
+Subject: [PATCH] T10: h_hi 16-bit range table in N1, the bound lfr_call path,
+ T10 cases
+
+- stmt.rs: HhiRangeAir (2 columns, 2^16 rows, bus 963) in the N1 layer; the First statement AIR looks up
+  each h_hi limb of every enabled row (lead ruling on T7 pick 9).
+- t7_chain: `t10 key|args|call` runs the T7 chain of program A or B into the acceptRun ORD call of
+  sherlock-ledger.compact, with the ledger anchor operand anchor_d2(r_L, prog_d) and gen_ops_check on the
+  L_Fr tape (A_0 = C_P); SHERLOCK_LEDGER_PROG puts another program's anchor in the call (refused at the
+  tape, exit 3); T10_PROBE_ONION measures L with the onion AIR against G1.
+- cases: changed leaf post_d (public values only, and trace plus public values), h_hi limb of 2^16.
+- lfr_call: the T10a command line over the t7_chain T10 path (SHERLOCK_PROG A or B).
+---
+ crates/sherlock-lfr/src/stmt.rs               |  59 +++
+ .../sherlock-wrap-export/examples/lfr_call.rs | 405 ++----------------
+ .../sherlock-wrap-export/examples/t7_chain.rs | 359 +++++++++++++++-
+ 3 files changed, 445 insertions(+), 378 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index 2bfa3ae..922220b 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -92,6 +92,9 @@ pub const HDR: usize = 41;
+ pub const PORT_IN: BusIndex = 960;
+ pub const PORT_OUT: BusIndex = 961;
+ 
++/// T10: the bus of the 16-bit range table of the N1 layer ([`HhiRangeAir`]).
++pub const HHI_RANGE_BUS: BusIndex = 963;
++
+ /// Leaf-layer statement: the 54 leaf public values (FP-1, I-12) and the app pre-hash.
+ pub mod lpv {
+     pub const BINDING: usize = 0;
+@@ -906,6 +909,11 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                 builder.assert_eq(l[c.hhi + i].clone() + two16.clone() * l[c.cry + i].clone(), cw(&l, lpv::H_PRE + i) + cin);
+             }
+             builder.assert_zero(l[c.cry + 3].clone());
++            // T10 (lead ruling on T7 pick 9): each h_hi limb below 2^16, one lookup per limb on
++            // the 16-bit table [`HhiRangeAir`] of the N1 layer.
++            for i in 0..4 {
++                builder.push_interaction(HHI_RANGE_BUS, [l[c.hhi + i].clone()], valid.clone(), 1);
++            }
+         }
+ 
+         // ---- Node, Fv: the universal key table under keys_d, and the own vkc
+@@ -1487,6 +1495,57 @@ pub fn digest_u32(d: &Digest) -> [u32; 8] {
+ #[allow(dead_code)]
+ fn _is_field<T: Field>() {}
+ 
++// ---------------------------------------------------------------- N1: the h_hi range table
++/// T10 (lead ruling on T7 pick 9): the 16-bit table of the N1 layer, `[value, mult]`, one row
++/// per value `0 .. 2^16` (the last-row constraint pins the height). It receives `[x]` on
++/// [`HHI_RANGE_BUS`] with multiplicity `mult`; the First statement AIR looks up each of the four
++/// `h_hi` limbs of every enabled row, so `h_hi = h_pre + steps` holds over the integers.
++#[derive(Clone, Copy, Debug, Default)]
++pub struct HhiRangeAir;
++pub const HHI_RANGE_ROWS: usize = 1 << 16;
++
++impl<T> BaseAir<T> for HhiRangeAir {
++    fn width(&self) -> usize {
++        2
++    }
++}
++impl<T> BaseAirWithPublicValues<T> for HhiRangeAir {}
++impl<T> PartitionedBaseAir<T> for HhiRangeAir {}
++
++impl<AB: AirBuilder + InteractionBuilder> Air<AB> for HhiRangeAir {
++    fn eval(&self, builder: &mut AB) {
++        let main = builder.main();
++        let (lr, nr) = (main.row_slice(0).expect("row"), main.row_slice(1).expect("next"));
++        let (v, m, nv): (AB::Expr, AB::Expr, AB::Expr) = (lr[0].clone().into(), lr[1].clone().into(), nr[0].clone().into());
++        drop((lr, nr));
++        builder.when_first_row().assert_zero(v.clone());
++        builder.when_transition().assert_eq(nv, v.clone() + AB::Expr::ONE);
++        builder.when_last_row().assert_eq(v.clone(), AB::Expr::from_u32((HHI_RANGE_ROWS - 1) as u32));
++        builder.push_interaction(HHI_RANGE_BUS, [v], -m, 1);
++    }
++}
++
++/// The [`HhiRangeAir`] trace for a First statement trace `tr`: one count per `h_hi` limb of each
++/// enabled row. A limb of 2^16 or more (no valid witness has one; a refusal case) is not
++/// counted, so the lookup is unbalanced.
++pub fn hhi_range_trace(tr: &RowMajorMatrix<F>) -> RowMajorMatrix<F> {
++    let c = Cols::new(&Kind::First);
++    assert_eq!(tr.width(), c.width, "a First statement trace");
++    let mut cnt = vec![0u32; HHI_RANGE_ROWS];
++    for r in 0..tr.height() {
++        let row = &tr.values[r * c.width..(r + 1) * c.width];
++        if row[c.valid] == F::ONE {
++            for i in 0..4 {
++                if let Some(x) = cnt.get_mut(row[c.hhi + i].as_canonical_u32() as usize) {
++                    *x += 1;
++                }
++            }
++        }
++    }
++    let v: Vec<F> = cnt.iter().enumerate().flat_map(|(i, &m)| [F::from_usize(i), F::from_u32(m)]).collect();
++    RowMajorMatrix::new(v, 2)
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+diff --git a/crates/sherlock-wrap-export/examples/lfr_call.rs b/crates/sherlock-wrap-export/examples/lfr_call.rs
+index 36866fd..d7a1aef 100644
+--- a/crates/sherlock-wrap-export/examples/lfr_call.rs
++++ b/crates/sherlock-wrap-export/examples/lfr_call.rs
+@@ -1,383 +1,40 @@
+-//! Sherlock E6: one `L` -> `L_Fr` chain whose `L` call-vector lanes are a given call vector.
++//! Sherlock T10: the published `L` -> `L_Fr` call path, bound to a real program.
+ //!
+-//! `L_iface` is the E3 stand-in (`examples/iface_fixture.rs` of `sherlock-lfr`): the bench `L`
+-//! (39 AIRs over a bench node) plus the 4 interface AIRs at `Dims::FULL` (12,166 public words).
+-//! T10a: the run is an ORD `acceptRun` call of `tools/sherlock-sdk/sherlock-ledger.compact`
+-//! (`call_run`): head of seed 11 (mode word 0) with `X` = this `L`'s cached-trace commitment
+-//! and the ENC-3 `layout_d`, the reservation `R` with the ledger anchor, 4 `PUB` entries, the
+-//! 5-pair lane map, and call-vector lanes equal to the given 1,026 words. The `L_Fr` tape of E3 J5 (`gen_verifier_full`,
+-//! `gen_r_check`, `expose`) verifies that `L` proof at `lfr_params`; the `L_Fr` proof is written
+-//! as a `wrapin` v1 file for `tools/sherlock-wrap` (Moriarty).
++//! T10a (E6) proved this path over the E3 bench `L` (`L_iface`: a W1 node, the bench `L` and the
++//! interface AIRs) with a stand-in ledger anchor operand `ANCHOR_D2`. T10 replaces both: the run
++//! is the T7 chain of a slice program (app, leaf, N1, N2, N3, the T7 `L` with its root statement
++//! and seal, then `L_Fr`), the ledger anchor operand is `sherlock_lfr::iface::anchor_d2(r_L,
++//! prog_d_ledger)` of that program, and the `L_Fr` tape runs `lverify::gen_ops_check` after
++//! `gen_r_check`, so `A_0 = C_P` holds on the published path and the anchor
++//! `C_L = DIGEST(SHK_PROGC, anchor_d2)` fixes `prog_d`. The work is `t7_chain t10` (this file
++//! includes `t7_chain.rs`); the command line of T10a stays, so `e6-wrap-prover.sh` and
++//! `t10a-ledger-run.mjs` call it unchanged.
+ //!
+-//! usage:
+-//!   lfr_call key  OUTDIR                 synthetic lanes (seed 6), keygen; writes OUTDIR/lfr_pk.bitcode,
+-//!                                        OUTDIR/lfr-call.json (the fixture the wrap is keyed on)
+-//!   lfr_call args OUTDIR [VECTOR.json]  writes OUTDIR/args.json (the acceptRun arguments, the anchor,
+-//!                                        the private R operands to scan for); natively decodes the run
+-//!                                        and, with VECTOR.json, the run of that call vector (no proof)
++//! usage (the program is `SHERLOCK_PROG`, `A` = `entry x;` (default) or `B` = `entry y;`):
++//!   lfr_call key  OUTDIR                  the chain with synthetic lanes, the `L_Fr` keygen;
++//!                                         OUTDIR/lfr_pk.bitcode, OUTDIR/lfr-call.json (wrap fixture)
++//!   lfr_call args OUTDIR [VECTOR.json]   OUTDIR/args.json (the `acceptRun` arguments, the anchor,
++//!                                         the private words to scan for); with VECTOR.json the
++//!                                         native decode of that call vector
+ //!   lfr_call call OUTDIR VECTOR.json OUT.json
+-//!                                        VECTOR.json = {"words": [1,026 decimal Fr]}; reads the
+-//!                                        cached pk, asserts the same L_Fr vk, writes OUT.json
+-use std::{fs, path::PathBuf, sync::Arc, time::Instant};
+-
+-use num_bigint::BigUint;
+-use openvm_cpu_backend::CpuBackend;
+-use openvm_poseidon2_air::{Poseidon2Config, Poseidon2SubChip};
+-use openvm_recursion_circuit::system::{
+-    AggregationSubCircuit, CachedTraceCtx, VerifierConfig, VerifierSubCircuit, VerifierTraceGen,
+-};
+-use openvm_stark_backend::{
+-    p3_field::{PrimeField, PrimeField32},
+-    keygen::types::{MultiStarkProvingKey, MultiStarkVerifyingKey},
+-    p3_field::PrimeCharacteristicRing,
+-    proof::Proof,
+-    prover::{AirProvingContext, ColMajorMatrix, DeviceDataTransporter, ProvingContext},
+-    AirRef, StarkEngine,
+-};
+-use openvm_stark_sdk::config::{
+-    baby_bear_bls12381_poseidon::BabyBearBls12381PoseidonCpuEngine,
+-    baby_bear_poseidon2::{
+-        default_duplex_sponge_recorder, BabyBearPoseidon2CpuEngine, DuplexSponge,
+-        DuplexSpongeRecorder,
+-    },
+-    bls12381_fr_poseidon::Bls12381Fr as Fr,
+-};
+-use p3_baby_bear::BabyBear;
+-use rand::{rngs::StdRng, Rng, SeedableRng};
+-use serde_json::json;
+-use sherlock_lfr::{
+-    fixture::{internal_ud, l_ud, NodeSC, LSC},
+-    fr::fr_from_big,
+-    iface::{self, Dims, Keys, OpIn, Run},
+-    iface_l,
+-    lverify::{gen_r_check, gen_verifier_full, Gen, LShape},
+-    machine::Machine,
+-    record::stock_log,
+-    testing::{lfr_params, range_trace, Engine},
+-};
+-use sherlock_wrap_export::{export, SC};
+-
+-type F = BabyBear;
+-type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+-type RootEng = BabyBearBls12381PoseidonCpuEngine;
+-
+-fn w1_proofs(n: usize, log_rows: usize) -> (MultiStarkVerifyingKey<NodeSC>, Vec<Proof<NodeSC>>) {
+-    let mut rng = StdRng::seed_from_u64(0x5e7_10c);
+-    let chip = Poseidon2SubChip::<F, 1>::new(Poseidon2Config::<F>::default().constants);
+-    let airs: Vec<AirRef<NodeSC>> = vec![chip.air.clone()];
+-    let engine = Eng::new(sherlock_lfr::frozen::APP.params());
+-    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let mut proofs = vec![];
+-    for _ in 0..n {
+-        let inputs: Vec<[F; 16]> = (0..1usize << log_rows)
+-            .map(|_| std::array::from_fn(|_| F::from_u32(rng.random::<u32>() % (1 << 30))))
+-            .collect();
+-        let trace = chip.generate_trace(inputs);
+-        let cm = ColMajorMatrix::from_row_major(&trace);
+-        let ctx = ProvingContext::new(vec![(
+-            0,
+-            AirProvingContext::simple_no_pis(engine.device().transport_matrix_to_device(&cm)),
+-        )]);
+-        let proof = engine.prove(&d_pk, ctx).expect("w1 prove");
+-        engine.verify(&vk, &proof).expect("w1 verify");
+-        proofs.push(proof);
+-    }
+-    (vk, proofs)
+-}
+-
+-fn node_proof(
+-    child_vk: &MultiStarkVerifyingKey<NodeSC>,
+-    proofs: &[Proof<NodeSC>],
+-) -> (MultiStarkVerifyingKey<NodeSC>, Proof<NodeSC>) {
+-    let engine = Eng::new(internal_ud());
+-    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(
+-        Arc::new(child_vk.clone()),
+-        Default::default(),
+-    );
+-    let child_pcs = circuit.commit_child_vk(&engine, child_vk);
+-    let airs = circuit.airs::<NodeSC>();
+-    let (pk, vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let ctxs = circuit.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-        child_vk,
+-        CachedTraceCtx::PcsData(child_pcs),
+-        proofs,
+-        &(),
+-        default_duplex_sponge_recorder(),
+-    );
+-    let proof = engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("node prove");
+-    engine.verify(&vk, &proof).expect("node verify");
+-    (vk, proof)
+-}
+-
+-/// The ledger's own anchor operand (T9 LEAD pick): the ledger anchor is
+-/// `C_L = DIGEST(SHK_PROGC, ANCHOR_D2)`, fixed at deploy. A placeholder of the ledger's program
+-/// digest; binding it to a real `prog_d` key is T7/T10 work (a clean seam: only this constant).
+-/// T7: the value for a real program is `sherlock_lfr::iface::anchor_d2(r_L, prog_d_ledger)`
+-/// (tested in `t7_chain chain`: the honest anchor is accepted, the other program's anchor is
+-/// refused by the `A_0 = C_P` tape check `lverify::gen_ops_check`). T10 replaces this constant.
+-const ANCHOR_D2: u64 = 0x5e7_1ed9_e700;
+-/// Lanes of the `acceptRun` call vector that the run publishes with `PUB` entries (template words
+-/// of the ledger transcript, T10a: a non-empty `PUB` set on unmapped lanes).
+-const PUB_LANES: [u64; 4] = [21, 22, 40, 41];
+-
+-/// The T10a run: an ORD `acceptRun` call of `sherlock-ledger.compact`. Head of seed 11 with mode
+-/// 0, `X` = the cached-trace commitment of this `L`, the ENC-3 `layout_d`; `R` with the ledger
+-/// anchor; the 5-pair lane map (prologue read, `claim_pub` twice, `outcome_pub`, unused); `PUB`
+-/// entries on `PUB_LANES`. `lanes = None` gives the synthetic key lanes (the same mapped words).
+-fn call_run(d: &Dims, keys: &Keys, lanes: Option<Vec<Fr>>) -> Run {
+-    let mut rng = StdRng::seed_from_u64(11);
+-    let mut head: Vec<u64> = (0..iface::STMT).map(|_| rng.random::<u64>() % 0x7800_0001).collect();
+-    head[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(keys.x));
+-    head[iface::LAYOUT_WORD..iface::LAYOUT_WORD + 8].copy_from_slice(&keys.layout_d);
+-    head[iface::MODE_WORD] = 0;
+-    // ORD: j = k = 0 (anchor_tags requires 16-bit limbs).
+-    head[iface::J_WORDS..iface::J_WORDS + 4].fill(0);
+-    head[iface::E_IN_WORD] = iface::ANCHOR_IN as u64;
+-    head[iface::E_OUT_WORD] = iface::ANCHOR_IN as u64;
+-    let tags = iface::anchor_tags(&head).unwrap();
+-    let r = iface::reservation_with(&mut rng, tags, false, false, Some(Fr::from_u64(ANCHOR_D2)));
+-    let outs: Vec<Fr> = r.iter().map(|o| *o.entry().values.last().unwrap()).collect();
+-    let e_in = iface::ANCHOR_IN as u64;
+-    let lane_map: [(u64, u64); iface::LANE_PAIRS] = [
+-        (iface::LANE_A_IN, e_in),
+-        (iface::LANE_CLAIM[0], 3),
+-        (iface::LANE_CLAIM[1], 3),
+-        (iface::LANE_OUTCOME, 2),
+-        (0, 0),
+-    ];
+-    let mut lanes = match lanes {
+-        Some(v) => v,
+-        None => {
+-            let mut v = synthetic_lanes(d);
+-            for (l, c) in iface::tpl_ord() {
+-                v[l] = c;
+-            }
+-            for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
+-                v[l as usize] = outs[e as usize];
+-            }
+-            v
+-        }
+-    };
+-    assert_eq!(lanes.len(), d.lanes(), "call vector length");
+-    // The mapped lanes of the vector are the R outputs (else the call args or the deployed anchor
+-    // are not this run's); in the L words they hold zero limbs, the decoder writes them back.
+-    for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
+-        assert_eq!(lanes[l as usize], outs[e as usize], "call vector lane {l} is not the output of R entry {e}");
+-        lanes[l as usize] = Fr::ZERO;
+-    }
+-    let s: Vec<OpIn> = PUB_LANES.iter().map(|&l| OpIn::Pub { lane: l, v: lanes[l as usize] }).collect();
+-    let plan = iface::plan(d, &r, &s);
+-    assert!(plan.spilled.is_empty());
+-    Run { dims: *d, head, lanes, lane_map, log: plan.log, path_sibs: plan.sibs }
+-}
+-
+-/// The `acceptRun` arguments of the run (`args` mode): `c_p`, `input_pub`, `outcome_pub` (the
+-/// `R_RUN` outputs), `claim_pub` (the `SPONGE(3)` output) and the ledger `anchor` (decimal).
+-fn run_args(run: &Run) -> serde_json::Value {
+-    let dec = |x: &Fr| iface::dec(&iface::limbs(*x)).map(|_| x.as_canonical_biguint().to_string()).unwrap();
+-    let v = |i: usize| dec(run.log[i].values.last().unwrap());
+-    json!({
+-        "c_p": v(0), "input_pub": v(1), "outcome_pub": v(2), "claim_pub": v(3),
+-        "anchor": v(iface::ANCHOR_IN), "anchor_d2": ANCHOR_D2.to_string(),
+-        // The private operands of R (the d2 words of the run DIGEST entries): never call data.
+-        "forbid": (0..3).map(|i| json!({"label": format!("R{i}.d2"), "value": dec(&run.log[i].values[0])}))
+-            .chain([json!({"label": "anchor_d2", "value": ANCHOR_D2.to_string()})]).collect::<Vec<_>>(),
+-    })
+-}
+-
+-fn synthetic_lanes(d: &Dims) -> Vec<Fr> {
+-    let mut rng = StdRng::seed_from_u64(6);
+-    (0..d.lanes())
+-        .map(|i| {
+-            if i < 70 {
+-                let b: Vec<u8> = (0..31).map(|_| rng.random::<u8>()).collect();
+-                fr_from_big(&BigUint::from_bytes_le(&b))
+-            } else {
+-                Fr::ZERO
+-            }
+-        })
+-        .collect()
+-}
+-
+-/// The `L_Fr` public words of `L` words under a bench pre-hash (the decoder does not verify the
+-/// proof): 8 BabyBear words per Fr, base 2^31.
+-fn pack_words(w: &[u64]) -> Vec<Fr> {
+-    let mut out = vec![Fr::from_u64(0x5e7_ca11)];
+-    for c in w.chunks(8) {
+-        let mut b = BigUint::from(0u32);
+-        for (k, &x) in c.iter().enumerate() {
+-            b += BigUint::from(x) << (31 * k);
+-        }
+-        out.push(fr_from_big(&b));
+-    }
+-    out
+-}
+-
+-fn read_vector(path: &str) -> Vec<Fr> {
+-    let v: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+-    v["words"]
+-        .as_array()
+-        .expect("words")
+-        .iter()
+-        .map(|w| {
+-            let b: BigUint = w.as_str().expect("decimal string").parse().expect("decimal");
+-            let x = fr_from_big(&b);
+-            assert_eq!(iface::dec(&iface::limbs(x)), Some(x));
+-            assert!(b < BigUint::parse_bytes(b"73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16).unwrap(), "canonical");
+-            x
+-        })
+-        .collect()
+-}
++//!                                         the chain whose `L` call-vector lanes are VECTOR.json
++//!                                         (1,026 decimal Fr words) under the cached `L_Fr` key
++#[path = "t7_chain.rs"]
++#[allow(dead_code)]
++mod t7_chain;
+ 
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+-    let mode = a[1].as_str();
+-    let out = PathBuf::from(&a[2]);
+-    fs::create_dir_all(&out).unwrap();
+-    let t0 = Instant::now();
+-    let dims = Dims::FULL;
+-    if mode == "args" {
+-        // The R outputs do not depend on X (the head words before X are drawn either way).
+-        let keys = Keys::bench();
+-        let run = call_run(&dims, &keys, None);
+-        let pw = pack_words(&run.words());
+-        let st = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs));
+-        assert_eq!(st.as_ref(), Ok(&run.statement()), "native decode of the call run");
+-        if let Some(v) = a.get(3) {
+-            // A real call vector (dry-run or dump): the same run and native decode, no proof.
+-            let run = call_run(&dims, &keys, Some(read_vector(v)));
+-            let pw = pack_words(&run.words());
+-            let st = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs)).expect("decode of the vector run");
+-            assert_eq!(st, read_vector(v), "decoded statement equals the call vector");
+-            println!("lfr_call args: the vector {v} decodes to itself");
++    let prog = std::env::var("SHERLOCK_PROG").unwrap_or_else(|_| "A".into());
++    let mut v = vec![a[0].clone(), "t10".into()];
++    match a[1].as_str() {
++        "key" => v.extend([a[1].clone(), a[2].clone(), prog]),
++        "args" => {
++            v.extend([a[1].clone(), a[2].clone(), prog]);
++            v.extend(a.get(3).cloned());
+         }
+-        let args = run_args(&run);
+-        fs::write(out.join("args.json"), serde_json::to_vec_pretty(&args).unwrap()).unwrap();
+-        println!("{args}");
+-        return;
++        "call" => v.extend([a[1].clone(), a[2].clone(), a[3].clone(), a[4].clone(), prog]),
++        m => panic!("mode {m}: key, args or call"),
+     }
+-    // L_iface: W1 -> node -> L (bench L + 4 interface AIRs), as the E3 fixture.
+-    let (w1_vk, proofs) = w1_proofs(2, 20);
+-    let (node_vk, node_pf) = node_proof(&w1_vk, &proofs);
+-    drop(proofs);
+-    let node_s = t0.elapsed().as_secs_f64();
+-    let node_vk = Arc::new(node_vk);
+-    let engine = RootEng::new(l_ud(48));
+-    let cfg = VerifierConfig { has_cached: true, ..Default::default() };
+-    let l = <VerifierSubCircuit<1> as VerifierTraceGen<CpuBackend<LSC>, LSC, ()>>::new(node_vk.clone(), cfg);
+-    // X: the cached-trace commitment of this L (the key constant the decoder pins, T9).
+-    let pcs = l.commit_child_vk(&engine, &node_vk);
+-    let keys = Keys { x: pcs.commitment[0], layout_d: iface::layout_d() };
+-    let run = match mode {
+-        "key" => call_run(&dims, &keys, None),
+-        "call" => call_run(&dims, &keys, Some(read_vector(&a[3]))),
+-        _ => panic!("mode key, args or call"),
+-    };
+-    let words = run.words();
+-    let mut airs = AggregationSubCircuit::airs::<LSC>(&l);
+-    let n_bench = airs.len();
+-    airs.extend(iface_l::airs(&dims));
+-    let (pk, l_vk) = sherlock_lfr::frozen::keygen_frozen(&engine, &airs);
+-    let d_pk = engine.device().transport_pk_to_device(&pk);
+-    let cached = CachedTraceCtx::PcsData(pcs);
+-    let mut ctxs = l.generate_proving_ctxs_base::<DuplexSpongeRecorder>(
+-        &node_vk,
+-        cached,
+-        std::slice::from_ref(&node_pf),
+-        &(),
+-        default_duplex_sponge_recorder(),
+-    );
+-    assert_eq!(ctxs.len(), n_bench);
+-    for (tr, pv) in iface_l::traces::<F>(&dims, &words) {
+-        let cm = ColMajorMatrix::from_row_major(&tr);
+-        ctxs.push(AirProvingContext::simple(engine.device().transport_matrix_to_device(&cm), pv));
+-    }
+-    let t = Instant::now();
+-    let l_proof = engine
+-        .prove(&d_pk, ProvingContext::new(ctxs.into_iter().enumerate().collect()))
+-        .expect("L_iface prove");
+-    let l_prove_s = t.elapsed().as_secs_f64();
+-    engine.verify(&l_vk, &l_proof).expect("L_iface verify");
+-    drop(d_pk);
+-    drop(pk);
+-
+-    // L_Fr: the E3 J5 tape over the L proof.
+-    let (_, ok) = stock_log(&l_vk, &l_proof);
+-    assert!(ok);
+-    let shape = LShape::of(&l_proof);
+-    let mut g = Gen::new();
+-    let (lw, l_pub) = gen_verifier_full(&mut g, &l_vk, &shape, &l_proof).expect("pinned shape");
+-    let l_vals: Vec<u64> = l_proof.public_values.iter().flatten().map(|x| x.as_canonical_u32() as u64).collect();
+-    gen_r_check(&mut g, &l_pub, &l_vals);
+-    g.tape.expose(&lw);
+-    let (mem, failed) = g.tape.execute_checked(&g.inputs);
+-    assert!(failed.is_empty(), "tape assertions failed {failed:?}");
+-    let m = Machine::new(&g.tape);
+-    let pw = m.public_values(&mem).concat();
+-    let dec = iface::decode_with(&dims, &keys, &pw, Some(&run.path_sibs)).expect("decode");
+-    assert_eq!(dec, run.statement(), "decoded statement equals the call vector");
+-    let lfr = Engine::new(lfr_params());
+-    let fairs = m.airs();
+-    let pk_path = out.join("lfr_pk.bitcode");
+-    let t = Instant::now();
+-    let (fpk, keygen_s): (MultiStarkProvingKey<SC>, f64) = if mode == "key" {
+-        let (fpk, _) = sherlock_lfr::frozen::keygen_frozen(&lfr, &fairs);
+-        let s = t.elapsed().as_secs_f64();
+-        fs::write(&pk_path, bitcode::serialize(&fpk).unwrap()).unwrap();
+-        (fpk, s)
+-    } else {
+-        (bitcode::deserialize(&fs::read(&pk_path).unwrap()).expect("pk cache"), t.elapsed().as_secs_f64())
+-    };
+-    let fvk = fpk.get_vk();
+-    let mut traces = m.traces(&mem);
+-    traces.push(range_trace(&fpk, &fairs, &traces));
+-    let pis = m.public_values(&mem);
+-    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
+-    let ctx = ProvingContext::new(
+-        traces
+-            .iter()
+-            .enumerate()
+-            .map(|(i, t)| {
+-                let cm = ColMajorMatrix::from_row_major(t);
+-                (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&cm), pis[i].clone()))
+-            })
+-            .collect(),
+-    );
+-    let t = Instant::now();
+-    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
+-    let lfr_prove_s = t.elapsed().as_secs_f64();
+-    let mut doc = export("lfr-call", lfr.config(), &fvk, &proof);
+-    // The wrap relation fixture: the decode shape and its key constants (T9; no cases).
+-    doc["decode"] = json!({
+-        "dims": {"b": dims.b, "v": dims.v, "p": dims.p, "l_tx": dims.l_tx},
+-        "keys": {"x": sherlock_wrap_export::hex_be(&keys.x), "layout_d": keys.layout_d.to_vec()},
+-        "cases": [],
+-    });
+-    doc["path_sibs"] = json!(run.path_sibs.iter().map(|v| v.iter().map(sherlock_wrap_export::hex_be).collect::<Vec<_>>()).collect::<Vec<_>>());
+-    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses the L_Fr proof");
+-    let path = if mode == "key" { out.join("lfr-call.json") } else { PathBuf::from(&a[4]) };
+-    fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
+-    let pv_hex: Vec<String> = pw.iter().map(sherlock_wrap_export::hex_be).collect();
+-    fs::write(path.with_extension("pv.json"), serde_json::to_vec(&pv_hex).unwrap()).unwrap();
+-    println!(
+-        "{}",
+-        json!({
+-            "mode": mode,
+-            "file": path.display().to_string(),
+-            "l_pre_hash": format!("{:?}", l_vk.pre_hash),
+-            "lfr_pre_hash": format!("{:?}", fvk.pre_hash),
+-            "lfr_public_words": pw.len(),
+-            "lfr_airs": fvk.inner.per_air.len(),
+-            "widths": proof.stacking_proof.stacking_openings.iter().map(|v| v.len()).collect::<Vec<_>>(),
+-            "node_s": node_s,
+-            "l_prove_s": l_prove_s,
+-            "lfr_keygen_or_load_s": keygen_s,
+-            "lfr_prove_s": lfr_prove_s,
+-            "wall_s": t0.elapsed().as_secs_f64(),
+-        })
+-    );
++    t7_chain::t10(&v);
+ }
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 33bac95..18529f1 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -78,6 +78,8 @@ where
+         "query_pow": vk.inner.params.whir.query_phase_pow_bits,
+         "logup_pow": vk.inner.params.logup.pow_bits,
+         "shape": shape_json(&frozen::shape(vk)),
++        // T10: per-AIR total widths (the G1 column bound is their sum)
++        "air_widths": vk.inner.per_air.iter().map(|a| a.params.width.total_width()).collect::<Vec<_>>(),
+     })
+ }
+ 
+@@ -144,6 +146,9 @@ impl Cases {
+     }
+ }
+ 
++/// A change to a statement trace and its public values (refusal cases, mutant prover).
++type Tamper = dyn Fn(&mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, &mut Vec<F>);
++
+ // ------------------------------------------------------------------ layers
+ struct Layer<const N: usize> {
+     circuit: VerifierSubCircuit<N>,
+@@ -175,6 +180,10 @@ fn layer<const N: usize>(
+     if kind != Kind::Leaf {
+         airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
+     }
++    if kind == Kind::First {
++        // T10: the 16-bit table of the h_hi limbs (lead ruling on T7 pick 9)
++        airs.push(Arc::new(stmt::HhiRangeAir));
++    }
+     let (pk, vk) = kg(set, &engine, &airs, label, log);
+     check_layout(&vk, &kind);
+     Layer { circuit, kind, engine, pk, vk, airs, perm }
+@@ -204,12 +213,12 @@ impl<const N: usize> Layer<N> {
+         child_vk: &MultiStarkVerifyingKey<NodeSC>,
+         proofs: &[Proof<NodeSC>],
+         wit: &Wit,
+-        tamper: Option<&dyn Fn(&mut Vec<F>)>,
++        tamper: Option<&Tamper>,
+     ) -> Vec<AirProvingContext<CpuBackend<NodeSC>>> {
+         let kids: Vec<Child> = proofs.iter().map(|p| child_of(&self.kind, child_vk, p)).collect();
+-        let (tr, mut pvs, calls) = stmt::trace(&self.kind, &kids, wit);
++        let (mut tr, mut pvs, calls) = stmt::trace(&self.kind, &kids, wit);
+         if let Some(t) = tamper {
+-            t(&mut pvs);
++            t(&mut tr, &mut pvs);
+         }
+         let dev = self.engine.device();
+         let mut v = vec![AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&tr)), pvs)];
+@@ -247,6 +256,10 @@ impl<const N: usize> Layer<N> {
+                 .expect("verifier traces"),
+         );
+         v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&st)), vec![]));
++        if self.kind == Kind::First {
++            let rt = stmt::hhi_range_trace(&tr);
++            v.push(AirProvingContext::simple(dev.transport_matrix_to_device(&ColMajorMatrix::from_row_major(&rt)), vec![]));
++        }
+         let _ = self.perm;
+         v
+     }
+@@ -257,7 +270,7 @@ impl<const N: usize> Layer<N> {
+         child_vk: &MultiStarkVerifyingKey<NodeSC>,
+         proofs: &[Proof<NodeSC>],
+         wit: &Wit,
+-        tamper: Option<&dyn Fn(&mut Vec<F>)>,
++        tamper: Option<&Tamper>,
+         mutant: bool,
+     ) -> (Option<Proof<NodeSC>>, Result<(), String>) {
+         let ctxs = match guard(|| Ok(self.ctxs(child_vk, proofs, wit, tamper))) {
+@@ -433,6 +446,14 @@ fn l_key(n3_vk: &MultiStarkVerifyingKey<NodeSC>, keys_d: &Dg, log: &mut Vec<Valu
+     airs.extend(iface_l::airs_with(&Dims::FULL, iface::ROOT_WORDS));
+     airs.push(Arc::new(RootSealAir));
+     airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&kind) }));
++    if std::env::var("T10_PROBE_ONION").is_ok() {
++        // T10 probe (not a key of the design): the J8 onion AIR added to `L`, to measure the
++        // column cost of the log tie against the frozen L bound (G1 reports the total).
++        airs.push(Arc::new(iface_l::OnionAir { dims: Dims::FULL, perm }));
++        let r = frozen::keygen_checked(&frozen::L, &engine, &airs).map(|_| ());
++        println!("T10PROBE L with OnionAir: G1 {:?}", r.map_err(|e| format!("{e:?}")));
++        std::process::exit(0);
++    }
+     let (pk, vk) = kg(&frozen::L, &engine, &airs, "L over N3", log);
+     LKey { l, engine, pk, vk, airs, kind, n_bench }
+ }
+@@ -838,6 +859,36 @@ fn cases_mode(out: &PathBuf) {
+     let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &wit, None, true);
+     cases.rec("wrong_prog_d_opening_refused_at_N1", false, r, "prog_d opened with the image of B");
+ 
++    // T10 (T7 pick 13 made a real case): the leaf statement's post_d changed. `pvs` only (the
++    // statement AIR's own equality refuses), and trace plus pvs (only the public-values bus
++    // receive from the app proof refuses).
++    let pd = stmt::lpv::POST_D;
++    let only_pv = move |_: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| pv[pd] += F::ONE;
++    let (_, r) = k.leaf[0].prove_try(&k.app[0].vk, &apa[..1], &Wit::Leaf, Some(&only_pv), true);
++    cases.rec("leaf_post_d_changed_refused_at_leaf", false, r, "leaf statement post_d word + 1 in the public values (mutant prover, stock leaf verifier)");
++    let lc = stmt::Cols::new(&Kind::Leaf);
++    let both = move |t: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| {
++        t.values[lc.cw + pd] += F::ONE;
++        pv[pd] += F::ONE;
++    };
++    let (_, r) = k.leaf[0].prove_try(&k.app[0].vk, &apa[..1], &Wit::Leaf, Some(&both), true);
++    cases.rec("leaf_post_d_changed_in_trace_refused_at_leaf", false, r, "post_d + 1 in the leaf statement trace and public values: the receive from the app proof (mutant prover, stock leaf verifier)");
++
++    // T10 (lead ruling on T7 pick 9): an h_hi limb at or over 2^16 with the limb equation kept
++    // (limb 0 minus 2^16 with carry 1, limb 1 plus 1): only the 16-bit lookups refuse it.
++    let fc = stmt::Cols::new(&Kind::First);
++    let forge = move |t: &mut openvm_stark_backend::p3_matrix::dense::RowMajorMatrix<F>, pv: &mut Vec<F>| {
++        let two16 = F::from_u32(1 << 16);
++        t.values[fc.hhi] -= two16;
++        t.values[fc.cry] = F::ONE;
++        t.values[fc.hhi + 1] += F::ONE;
++        for i in 0..4 {
++            pv[stmt::npv::H_HI + i] = t.values[fc.hhi + i];
++        }
++    };
++    let (_, r) = k.n1[0].prove_try(&k.leaf[0].vk, std::slice::from_ref(&la0), &k.first_wit(&pa, &[0]), Some(&forge), true);
++    cases.rec("h_hi_limb_over_16_bits_refused_at_N1", false, r, "h_hi limb 0 = s - 2^16 with carry 1 (mutant prover, stock N1 verifier)");
++
+     // FV unit under N3.
+     let n1 = k.n1[0].prove(&k.leaf[0].vk, std::slice::from_ref(&la0), &k.first_wit(&pa, &[0]));
+     let fvr = k.table.foreign[0];
+@@ -1010,8 +1061,308 @@ fn omit(out: &PathBuf) {
+     assert!(all, "an omitted-AIR case did not behave as expected");
+ }
+ 
++// ------------------------------------------------------------------ T10: the bound call
++/// Lanes of the `acceptRun` call vector that the run publishes with `PUB` entries (T10a: template
++/// words of the ledger transcript on unmapped lanes).
++const PUB_LANES: [u64; 4] = [21, 22, 40, 41];
++
++/// The blinding `r_P` of the T7 chains (`r_L = r_P`, T7 pick 11) and the run witness of `p`.
++fn lwit(p: &sl::Program) -> LWit {
++    LWit { hdr: hdr_of(p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) }
++}
++
++/// The ledger anchor operand of program `p` (T10, the `ANCHOR_D2` seam of `lfr_call`):
++/// `anchor_d2(r_L, prog_d)`, so `C_L = DIGEST(SHK_PROGC, anchor_d2)` fixes `prog_d` through the
++/// `A_0 = C_P` check of `gen_ops_check`.
++fn ledger_anchor_d2(p: &sl::Program, w: &LWit) -> Fr {
++    let r_l: [u64; 8] = u64s(&w.r_p).try_into().unwrap();
++    let pl: [u64; 8] = u64s(&p.adm.prog_d()).try_into().unwrap();
++    iface::anchor_d2(&r_l, &pl)
++}
++
++/// The packed `R` operands of a run: `pack(P2(DOM_PROGC, r_P, prog_d))`, `pack(input_d)`,
++/// `pack(P2(DOM_OUTHIDE, input_d, outcome_d))` (what `RootSealAir` exposes).
++fn run_ops(prog_d: &Dg, w: &LWit) -> [Fr; 3] {
++    let ops = stmt::operands(prog_d, &w.r_p, &w.hdr);
++    std::array::from_fn(|k| fr::pack(&u64s(&ops[k])))
++}
++
++/// The T10 run: an ORD `acceptRun` call of `sherlock-ledger.compact` (the T10a `call_run` of
++/// `lfr_call`) bound to the root statement `env` (74 words of N3): head words from seed 11, `X`
++/// = the `L` cached commitment, the ENC-3 `layout_d`, mode 0; `R` with the real operands `ops` and
++/// the ledger anchor `anchor`; the 5-pair lane map; `PUB` entries on `PUB_LANES`. `lanes = None`
++/// gives the synthetic key lanes (seed 6) with the same mapped words.
++fn t10_run(env: &[u64], ops: [Fr; 3], anchor: Fr, keys: &iface::Keys, lanes: Option<Vec<Fr>>) -> iface::Run {
++    use rand::{rngs::StdRng, Rng, SeedableRng};
++    let d = Dims::FULL;
++    let mut rng = StdRng::seed_from_u64(11);
++    let mut head: Vec<u64> = (0..iface::STMT).map(|_| rng.random::<u64>() % 0x7800_0001).collect();
++    head[iface::X_WORD..iface::X_WORD + iface::LIMBS].copy_from_slice(&iface::limbs(keys.x));
++    head[iface::LAYOUT_WORD..iface::LAYOUT_WORD + 8].copy_from_slice(&keys.layout_d);
++    head[iface::MODE_WORD] = 0;
++    head[iface::J_WORDS..iface::J_WORDS + 4].fill(0);
++    head[iface::E_IN_WORD] = iface::ANCHOR_IN as u64;
++    head[iface::E_OUT_WORD] = iface::ANCHOR_IN as u64;
++    let tags = iface::anchor_tags(&head).unwrap();
++    let r = iface::reservation_full(&mut rng, tags, false, false, Some(anchor), Some(ops));
++    assert_eq!(env.len(), iface::ROOT_WORDS);
++    head[..iface::ROOT_WORDS].copy_from_slice(env);
++    let outs: Vec<Fr> = r.iter().map(|o| *o.entry().values.last().unwrap()).collect();
++    let e_in = iface::ANCHOR_IN as u64;
++    let lane_map: [(u64, u64); iface::LANE_PAIRS] =
++        [(iface::LANE_A_IN, e_in), (iface::LANE_CLAIM[0], 3), (iface::LANE_CLAIM[1], 3), (iface::LANE_OUTCOME, 2), (0, 0)];
++    let mut lanes = match lanes {
++        Some(v) => v,
++        None => {
++            let mut rng = StdRng::seed_from_u64(6);
++            let mut v: Vec<Fr> = (0..d.lanes())
++                .map(|i| {
++                    if i < 70 {
++                        let b: Vec<u8> = (0..31).map(|_| rng.random::<u8>()).collect();
++                        fr::fr_from_big(&num_bigint::BigUint::from_bytes_le(&b))
++                    } else {
++                        Fr::ZERO
++                    }
++                })
++                .collect();
++            for (l, c) in iface::tpl_ord() {
++                v[l] = c;
++            }
++            for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
++                v[l as usize] = outs[e as usize];
++            }
++            v
++        }
++    };
++    assert_eq!(lanes.len(), d.lanes(), "call vector length");
++    for &(l, e) in lane_map.iter().filter(|p| **p != (0, 0)) {
++        assert_eq!(lanes[l as usize], outs[e as usize], "call vector lane {l} is not the output of R entry {e}");
++        lanes[l as usize] = Fr::ZERO;
++    }
++    let s: Vec<iface::OpIn> = PUB_LANES.iter().map(|&l| iface::OpIn::Pub { lane: l, v: lanes[l as usize] }).collect();
++    let plan = iface::plan(&d, &r, &s);
++    assert!(plan.spilled.is_empty());
++    iface::Run { dims: d, head, lanes, lane_map, log: plan.log, path_sibs: plan.sibs }
++}
++
++fn read_vector(path: &str) -> Vec<Fr> {
++    let v: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
++    let r = num_bigint::BigUint::parse_bytes(b"73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001", 16).unwrap();
++    v["words"]
++        .as_array()
++        .expect("words")
++        .iter()
++        .map(|w| {
++            let b: num_bigint::BigUint = w.as_str().expect("decimal string").parse().expect("decimal");
++            assert!(b < r, "canonical");
++            fr::fr_from_big(&b)
++        })
++        .collect()
++}
++
++fn fr_dec(x: &Fr) -> String {
++    use openvm_stark_backend::p3_field::PrimeField;
++    x.as_canonical_biguint().to_string()
++}
++
++/// The `acceptRun` arguments of a run (`c_p`, `input_pub`, `outcome_pub`, `claim_pub`, the
++/// ledger `anchor`) and the private words the privacy scan forbids on the call vector and the
++/// ledger state: `prog_d` (its 8 words and `pack`), `r_P`, the three `R` operands
++/// (`anchor_d2` = the `SHK_PROGC` operand), `n_steps` and the `h_hi` limbs. Small words (below
++/// 2^16) are listed with `"small": true`: a hit there is judged by its lane (template lanes hold
++/// small constants).
++fn t10_args(run: &iface::Run, p: &sl::Program, w: &LWit, n3_env: &[F], anchor: Fr) -> Value {
++    let v = |i: usize| fr_dec(run.log[i].values.last().unwrap());
++    let prog_d = p.adm.prog_d();
++    let mut forbid = vec![json!({"label": "pack(prog_d)", "value": fr_dec(&fr::pack(&u64s(&prog_d)))})];
++    for (i, x) in prog_d.iter().enumerate() {
++        forbid.push(json!({"label": format!("prog_d[{i}]"), "value": x.as_canonical_u32().to_string()}));
++    }
++    forbid.push(json!({"label": "pack(r_P)", "value": fr_dec(&fr::pack(&u64s(&w.r_p)))}));
++    for i in 0..3 {
++        forbid.push(json!({"label": format!("R{i}.d2"), "value": fr_dec(&run.log[i].values[0])}));
++    }
++    let steps = n3_env[stmt::npv::H_HI] - n3_env[stmt::npv::H_LO];
++    forbid.push(json!({"label": "n_steps", "value": steps.as_canonical_u32().to_string(), "small": true}));
++    for i in 0..4 {
++        forbid.push(json!({"label": format!("h_hi[{i}]"), "value": n3_env[stmt::npv::H_HI + i].as_canonical_u32().to_string(), "small": true}));
++    }
++    for (i, x) in w.r_p.iter().enumerate() {
++        forbid.push(json!({"label": format!("r_P[{i}]"), "value": x.as_canonical_u32().to_string(), "small": true}));
++    }
++    json!({
++        "c_p": v(0), "input_pub": v(1), "outcome_pub": v(2), "claim_pub": v(3),
++        "anchor": v(iface::ANCHOR_IN), "anchor_d2": fr_dec(&anchor),
++        "prog_d": dhex(&prog_d),
++        "forbid": forbid,
++    })
++}
++
++/// T10: the bound call on the T7 chain. `key OUT P`: the chain of program `P` with the synthetic
++/// lanes, the `L_Fr` keygen (OUT/lfr_pk.bitcode) and the wrap fixture OUT/lfr-call.json;
++/// `args OUT P [VECTOR]`: the `acceptRun` arguments (OUT/args.json) natively, and with VECTOR the
++/// native decode of that call vector; `call KEYDIR VECTOR OUT.json P`: the chain of `P` whose `L`
++/// call-vector lanes are VECTOR (1,026 words), `L_Fr` under the cached key, OUT.json.
++pub fn t10(a: &[String]) {
++    let t0 = Instant::now();
++    let mode = a[2].as_str();
++    let dir = PathBuf::from(&a[3]);
++    fs::create_dir_all(&dir).unwrap();
++    let which = |s: Option<&String>| if s.map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A };
++    let (prog, vec_path, out_path) = match mode {
++        "key" => (which(a.get(4)), None, dir.join("lfr-call.json")),
++        "args" => (which(a.get(4)), a.get(5).cloned(), dir.join("args.json")),
++        "call" => (which(a.get(6)), Some(a[4].clone()), PathBuf::from(&a[5])),
++        m => panic!("t10 mode {m}: key, args or call"),
++    };
++    let mut k = keys();
++    let p = sl::program_of(k.key_root, prog);
++    let w = lwit(&p);
++    // The ledger's program (`SHERLOCK_LEDGER_PROG`, default the run's own): a run of B against the
++    // anchor of A must be refused by the `L_Fr` tape (`gen_ops_check`, A_0 = C_P).
++    let ledger_prog = std::env::var("SHERLOCK_LEDGER_PROG").ok().map(|s| which(Some(&s))).unwrap_or(prog);
++    let anchor = ledger_anchor_d2(&sl::program_of(k.key_root, ledger_prog), &w);
++    let prog_d = p.adm.prog_d();
++    let ops = run_ops(&prog_d, &w);
++    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
++    let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
++    let keys = iface::Keys { x: l_pin, layout_d: iface::layout_d() };
++    let lanes = vec_path.as_deref().map(read_vector);
++    if mode == "args" {
++        // The R outputs and the decode do not need the proofs: the N3 envelope of the run is the
++        // SEG statement the tree carries (computed by proving app to N3 here once, to be exact).
++        let (n3_p, _) = prove_to_n3(&k, &p);
++        let env = &n3_p.public_values[0][..stmt::npv::ENV];
++        let run = t10_run(&u64s(env), ops, anchor, &keys, lanes.clone());
++        let pw = native_lfr_words(&run);
++        let st = iface::decode_with(&Dims::FULL, &keys, &pw, Some(&run.path_sibs)).expect("native decode of the run");
++        assert_eq!(st, run.statement(), "native decode equals the run statement");
++        if let Some(v) = &lanes {
++            assert_eq!(&st, v, "decoded statement equals the call vector");
++            println!("T10ARGS the vector decodes to itself");
++        }
++        let args = t10_args(&run, &p, &w, env, anchor);
++        fs::write(&out_path, serde_json::to_vec_pretty(&args).unwrap()).unwrap();
++        println!("T10ARGS {args}");
++        return;
++    }
++    let tp = Instant::now();
++    let (n3_p, steps) = prove_to_n3(&k, &p);
++    let tree_s = tp.elapsed().as_secs_f64();
++    let env = &n3_p.public_values[0][..stmt::npv::ENV];
++    assert_eq!(stmt::dig(env, stmt::npv::PROG_D), prog_d, "N3 statement carries prog_d");
++    let run = t10_run(&u64s(env), ops, anchor, &keys, lanes);
++    let words = run.words();
++    let t = Instant::now();
++    let (lp, r) = lk.prove_try(&k.n3.vk, &n3_p, &w, &words, false);
++    let l_s = t.elapsed().as_secs_f64();
++    r.expect("L verify");
++    let lp = lp.unwrap();
++    let (_, ok) = stock_log(&lk.vk, &lp);
++    assert!(ok, "stock verifier accepts L");
++    // L_Fr: gen_verifier_full, gen_r_check, then gen_ops_check (the operand tie and A_0 = C_P).
++    let (g, lw, mem) = match lfr_gen(&lk.vk, &lp, l_pin) {
++        Ok(x) => x,
++        Err(e) => {
++            println!("T10REFUSED {}", json!({"program": format!("{prog:?}"), "ledger_program": format!("{ledger_prog:?}"),
++                "refused_at": "L_Fr tape (gen_r_check, gen_ops_check)", "why": e, "wall_s": t0.elapsed().as_secs_f64()}));
++            std::process::exit(3);
++        }
++    };
++    let m = Machine::new(&g.tape);
++    let pw = m.public_values(&mem).concat();
++    assert_eq!(pw.len(), lw.len());
++    let dec = iface::decode_with(&Dims::FULL, &keys, &pw, Some(&run.path_sibs)).expect("decode");
++    assert_eq!(dec, run.statement(), "decoded statement equals the call vector");
++    let lfr = Engine::new(frozen::LFR.params());
++    let fairs = m.airs();
++    let pk_path = dir.join("lfr_pk.bitcode");
++    let t = Instant::now();
++    let fpk: MultiStarkProvingKey<sherlock_wrap_export::SC> = if mode == "key" {
++        let (fpk, _) = kg(&frozen::LFR, &lfr, &fairs, "L_Fr", &mut k.log);
++        fs::write(&pk_path, bitcode::serialize(&fpk).unwrap()).unwrap();
++        fpk
++    } else {
++        bitcode::deserialize(&fs::read(&pk_path).unwrap()).expect("L_Fr pk cache")
++    };
++    let keygen_s = t.elapsed().as_secs_f64();
++    let fvk = fpk.get_vk();
++    let mut traces = m.traces(&mem);
++    traces.push(range_trace(&fpk, &fairs, &traces));
++    let mut pis = m.public_values(&mem);
++    pis.resize(traces.len(), vec![]);
++    let d_fpk = lfr.device().transport_pk_to_device(&fpk);
++    let ctx = ProvingContext::new(
++        traces
++            .iter()
++            .enumerate()
++            .map(|(i, t)| (i, AirProvingContext::simple(lfr.device().transport_matrix_to_device(&ColMajorMatrix::from_row_major(t)), pis[i].clone())))
++            .collect(),
++    );
++    drop(traces);
++    let t = Instant::now();
++    let proof = lfr.prove(&d_fpk, ctx).expect("L_Fr prove");
++    let lfr_s = t.elapsed().as_secs_f64();
++    let mut doc = export("lfr-call", lfr.config(), &fvk, &proof);
++    assert!(doc["stock_verdict"].as_bool().unwrap(), "stock verifier refuses the L_Fr proof");
++    doc["decode"] = json!({
++        "dims": {"b": Dims::FULL.b, "v": Dims::FULL.v, "p": Dims::FULL.p, "l_tx": Dims::FULL.l_tx},
++        "keys": {"x": sherlock_wrap_export::hex_be(&keys.x), "layout_d": keys.layout_d.to_vec()},
++        "cases": [],
++    });
++    doc["path_sibs"] = json!(run.path_sibs.iter().map(|v| v.iter().map(sherlock_wrap_export::hex_be).collect::<Vec<_>>()).collect::<Vec<_>>());
++    fs::write(&out_path, serde_json::to_vec(&doc).unwrap()).unwrap();
++    let pv_hex: Vec<String> = pw.iter().map(sherlock_wrap_export::hex_be).collect();
++    fs::write(out_path.with_extension("pv.json"), serde_json::to_vec(&pv_hex).unwrap()).unwrap();
++    if mode == "key" {
++        fs::write(dir.join("keys.json"), serde_json::to_string_pretty(&json!({"keys": k.log})).unwrap()).unwrap();
++        let args = t10_args(&run, &p, &w, env, anchor);
++        fs::write(dir.join("args-key.json"), serde_json::to_vec_pretty(&args).unwrap()).unwrap();
++    }
++    println!(
++        "T10CALL {}",
++        json!({
++            "mode": mode, "program": format!("{prog:?}"), "file": out_path.display().to_string(),
++            "prog_d": dhex(&prog_d), "key_root": dhex(&k.key_root), "keys_d": dhex(&k.table.keys_d()),
++            "l_pre_hash": format!("{:?}", lk.vk.pre_hash), "lfr_pre_hash": format!("{:?}", fvk.pre_hash),
++            "x": sherlock_wrap_export::hex_be(&keys.x), "anchor_d2": fr_dec(&anchor),
++            "lfr_public_words": pw.len(), "lfr_airs": fvk.inner.per_air.len(), "proved_steps": steps,
++            "lfr_widths": sw(&proof), "l_heights": height_check(&frozen::L, &heights(&lp)),
++            "lfr_heights": height_check(&frozen::LFR, &heights(&proof)),
++            "tree_s": tree_s, "l_prove_s": l_s, "lfr_keygen_or_load_s": keygen_s, "lfr_prove_s": lfr_s,
++            "wall_s": t0.elapsed().as_secs_f64(),
++        })
++    );
++}
++
++/// App, leaf, N1 (binary over the shards), N2, N3 of program `p` (chip set 0); the N3 proof and
++/// the proved steps.
++fn prove_to_n3(k: &Keys, p: &sl::Program) -> (Proof<NodeSC>, u32) {
++    let sets = vec![0usize; sl::shards(p).len()];
++    let (app_p, _) = k.app_proofs(p, &sets);
++    let steps: u32 = app_p.iter().map(|q| q.public_values[0][slice_core::pv::STEPS].as_canonical_u32()).sum();
++    let leaf_p: Vec<_> = app_p.iter().map(|q| k.leaf[0].prove(&k.app[0].vk, std::slice::from_ref(q), &Wit::Leaf)).collect();
++    let n1 = k.n1[0].prove(&k.leaf[0].vk, &leaf_p, &k.first_wit(p, &sets));
++    let n2 = k.n2.prove(&k.n1[0].vk, std::slice::from_ref(&n1), &k.node_wit(&k.table.node[0]));
++    let n3 = k.n3.prove(&k.n2.vk, std::slice::from_ref(&n2), &k.node_wit(&k.table.node[1]));
++    (n3, steps)
++}
++
++/// The `L_Fr` public words of a run without a proof (the decoder does not verify the proof):
++/// a stand-in pre-hash, then the `L` words packed 8 per Fr, base 2^31.
++fn native_lfr_words(run: &iface::Run) -> Vec<Fr> {
++    let mut out = vec![Fr::from_u64(0x5e7_ca11)];
++    for c in run.words().chunks(8) {
++        out.push(fr::pack(c));
++    }
++    out
++}
++
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
++    if a[1] == "t10" {
++        return t10(&a);
++    }
+     let out = PathBuf::from(&a[2]);
+     fs::create_dir_all(&out).unwrap();
+     match a[1].as_str() {
+-- 
+2.56.0
+
