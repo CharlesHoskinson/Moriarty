@@ -29,6 +29,7 @@ use crate::sherlock::helper_machine::shared::owner_ext_source_program::ExtDomain
 use crate::sherlock::helper_machine::shared::owner_host::host_owner_engine;
 
 mod scan;
+mod slice_v1;
 
 const SRC_SHARED: &str = include_str!("../../../shared.rs");
 const SRC_OWNER: &str = include_str!("../../owner_runtime.rs");

@@ -1,0 +1,48 @@
+From 6ec13643fb565179474e343f9adba100c31643da Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 18:55:01 -0700
+Subject: [PATCH 3/6] T6 V.9: slice_chain omit records SG-6 app prove seconds
+ and fixed heights
+
+---
+ crates/sherlock-wrap-export/examples/slice_chain.rs | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/slice_chain.rs b/crates/sherlock-wrap-export/examples/slice_chain.rs
+index d07ce35..1e7da26 100644
+--- a/crates/sherlock-wrap-export/examples/slice_chain.rs
++++ b/crates/sherlock-wrap-export/examples/slice_chain.rs
+@@ -757,14 +757,20 @@ fn omit(out: &PathBuf) {
+     let c1 = agg_key::<2>(&frozen::INTERNAL, &lc.vk, Role::N1, "N1", &mut log);
+     let kr = key_root(&[key_triple(0, &app.vk.pre_hash, &lc.vk.pre_hash, &c1.vk.pre_hash)]);
+     let trs = slice_traces(&kr);
++    let mut secs = vec![];
+     let pa: Vec<Proof<NodeSC>> = trs
+         .iter()
+         .map(|t| {
+-            let (p, v, _) = sh::prove(&eng, &app, t, false);
++            let (p, v, s) = sh::prove(&eng, &app, t, false);
+             v.expect("slice app verify");
++            secs.push(s);
+             p.unwrap()
+         })
+         .collect();
++    let steps: u32 = pa.iter().map(|p| p.public_values[0][slice_core::pv::STEPS].as_canonical_u32()).sum();
++    let sg6 = json!({"backend": "CPU (openvm-cpu-backend)", "app_prove_per_shard_s": secs, "proved_steps": steps,
++        "s_per_proved_step": secs.iter().sum::<f64>() / steps as f64,
++        "fixed_heights": pa.iter().map(|p| fixed_heights(&app, p)).map(|(ok, h)| json!({"fixed": ok, "log_heights": h})).collect::<Vec<_>>()});
+     rec("app_honest", true, Ok(()), "honest: both shards proved, stock verifier accepts");
+     rec("leaf_honest", true, bound_prove_try(&lc, &app.vk, &pa[..1], None).1, "honest");
+ 
+@@ -863,7 +869,7 @@ fn omit(out: &PathBuf) {
+         rec(&format!("lfr_tape_honest_shape_without_{name}"), false, r, "L_Fr tape generator, the pinned honest shape");
+     }
+     let all = res.iter().all(|r| r["pass"].as_bool().unwrap());
+-    let doc = json!({"all_pass": all, "all_required": req, "app_shape": app.shape, "cases": res, "keys": log});
++    let doc = json!({"all_pass": all, "all_required": req, "app_shape": app.shape, "sg6": sg6, "cases": res, "keys": log});
+     fs::write(out.join("omit.json"), serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+     println!("SLICEOMIT all_required {}", serde_json::to_string(&req).unwrap());
+     println!("SLICEOMIT all_pass={all}");
+-- 
+2.56.0
+
