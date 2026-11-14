@@ -3,6 +3,8 @@
 # each `quint run` must exit 1 (the invariant violation the trace witnesses), each `quint test`
 # must pass; the regenerated ITF states must equal the committed trace.
 # usage: models/run.sh [substring]   (Quint 0.32.0; light memory, one run at a time)
+#        models/run.sh --all-runs     every violating `quint run` of the four lanes (all-runs.tsv)
+#                                     must still exit 1 (no trace comparison)
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
 dir=$(dirname "$here")
@@ -10,6 +12,14 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cd "$here"
 fail=0
+if [[ ${1:-} == --all-runs ]]; then
+  while IFS=$'\t' read -r lane cmd; do
+    [[ $lane == \#* || -z $lane ]] && continue
+    eval "$cmd" > "$tmp/log" 2>&1; rc=$?
+    if [[ $rc == 1 ]]; then echo "OK   $lane: $cmd"; else echo "FAIL $lane (exit $rc): $cmd"; tail -3 "$tmp/log"; fail=1; fi
+  done < "$here/all-runs.tsv"
+  exit $fail
+fi
 while IFS=$'\t' read -r trace kind cmd; do
   [[ $trace == \#* || -z $trace ]] && continue
   [[ -n ${1:-} && $trace != *"$1"* ]] && continue

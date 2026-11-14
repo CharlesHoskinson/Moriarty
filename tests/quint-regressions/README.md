@@ -14,7 +14,7 @@ code and asserts the verdict that the code must give.
 | `manifest.json` | one row per trace: id, handler, expected verdict, status, refusing constraint (`refused_by`), named test |
 | `inputs/` | the counterexample inputs that the handlers built (forged cells, public values, edited ROM rows). The tests write them again with `QR_DUMP_INPUTS=1` |
 | `models/` | the lane models (`*.qnt`), `traces.tsv` and `run.sh`. `run.sh` reruns every command: each `quint run` must exit 1, each `quint test` must pass, and the new ITF states must equal the committed trace |
-| `logs/` | `replay_all.txt` (green run), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `merge-work-columns.txt` (AFK F-5 input) |
+| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `merge-work-columns.txt` (AFK F-5 input) |
 | `COUNTEREXAMPLES.md` | one row per lane finding: the attempt, its input, the result, the constraint, the verdict |
 
 ## The driver
@@ -58,7 +58,7 @@ QUINT_REGRESSIONS_DIR=~/Projects/Moriarty/tests/quint-regressions \
 tests/quint-regressions/models/run.sh
 ```
 
-`replay_all` passes on openvm `a549644` (branch `quint-reg`, on T10mm `d26453c`): 52 rows pass,
+`replay_all` passes on openvm `1733bb5` (branch `quint-reg`, on T10mm `d26453c`): 52 rows pass,
 8 open-defect rows and 1 not-replayed row are skipped (`logs/replay_all.txt`, MEASURED). Each of
 the 8 named defect tests fails before any fix (`logs/fails-before.txt`, MEASURED).
 
@@ -82,50 +82,50 @@ behaviour), positive (the code must accept). Status: pass, ignored-open-defect, 
 | MW-ROW-UNBOUND | merge-work-ladder | F-05 | `merge-work-ladder-row-unbound.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
 | MW-HALF-SPLIT-OFF | merge-work-ladder | F-05 | `merge-work-ladder-half-split-off.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
 | MW-KEY-CHECK-NONE | merge-work-ladder | F-06 | `merge-work-ladder-key-check-none.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
-| MW-F01-WORK-A | merge-work-ladder | F-01 Test A | `merge-work-ladder-F01-work-false-carry.itf.json` | `mw_f01_work_whi_false_carry_refused` | defect | ignored-open-defect | stmt.rs:1050-1055 whi/wcry (no range lookup) |
-| MW-F01-WORK-B | merge-work-ladder | F-01 Test B | `merge-work-ladder-F01-work-wrap-bypass.itf.json` | `mw_f01_work_whi_wrap_bypass_refused` | defect | ignored-open-defect | stmt.rs:1050-1055 whi/wcry (no range lookup) |
-| MW-F01-WORK-B-RUN | merge-work-ladder | F-01 Test B (quint run m_whi_no_range invRefine) | `merge-work-ladder-F01-work-wrap-bypass-run.itf.json` | `mw_f01_work_whi_wrap_bypass_run_refused` | defect | ignored-open-defect | stmt.rs:1050-1055 whi/wcry (no range lookup) |
+| MW-F01-WORK-A | merge-work-ladder | F-01 Test A | `merge-work-ladder-F01-work-false-carry.itf.json` | `mw_f01_work_whi_false_carry_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
+| MW-F01-WORK-B | merge-work-ladder | F-01 Test B | `merge-work-ladder-F01-work-wrap-bypass.itf.json` | `mw_f01_work_whi_wrap_bypass_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
+| MW-F01-WORK-B-RUN | merge-work-ladder | F-01 Test B (quint run m_whi_no_range invRefine) | `merge-work-ladder-F01-work-wrap-bypass-run.itf.json` | `mw_f01_work_whi_wrap_bypass_run_refused` | defect | ignored-open-defect | stmt.rs:1083-1090 whi/wcry (no range lookup) |
 | MW-F01-FIRST | merge-work-ladder | F-01 (First half, fixed in T10 by HHI_RANGE_BUS) | `merge-work-ladder-F01-first-false-carry.itf.json` | `replay_all` | guard | pass | stmt.rs:968 HHI_RANGE_BUS, HhiRangeAir |
 | AFK-HONEST | afk-picks | honest unary N1 lifts, binary N2, JOIN of equal reg_root | `afk-picks-honest.itf.json` | `replay_all` | positive | pass | stmt.rs Kind::First, Kind::Node, gp.rs JOIN |
 | AFK-F3 | afk-picks | F-3 / C2.2 JOIN reg_root equality (gp.rs:313-315) | `afk-picks-F3-join-mixed-roots.itf.json` | `replay_all` | guard | pass | gp.rs:313-315 JOIN reg_root equality |
-| AFK-F6 | afk-picks | F-6 N1 forces reg_root 0 (NT-2a) | `afk-picks-F6-n1-zero-reg-root.itf.json` | `afk_f6_first_carries_nonzero_reg_root` | defect | ignored-open-defect | stmt.rs:854-874, 1028-1075 (First env reg_root 0, pv == e0) |
-| AFK-F7 | afk-picks | F-7 N1 shape_d 0, N2 cut collision (NT-1) | `afk-picks-F7-n1-zero-shape.itf.json` | `afk_f7_n2_shape_binds_the_cut` | defect | ignored-open-defect | stmt.rs:854-874, 1063 (First keeps shape_d 0); gp.rs:711-744 |
-| AFK-F9 | afk-picks | F-9(b) MERGE-WORK needs two children | `afk-picks-F9-work-one-child.itf.json` | `afk_f9_work_one_child` | defect | ignored-open-defect | stmt.rs:1048 fr.assert_one(en1) |
-| GP2-HONEST | gp2-value-set | honest unitctor shard (chip set 2) | `gp2-value-set-honest.itf.json` | `replay_all` | positive | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
+| AFK-F6 | afk-picks | F-6 N1 forces reg_root 0 (NT-2a) | `afk-picks-F6-n1-zero-reg-root.itf.json` | `afk_f6_first_carries_nonzero_reg_root` | defect | ignored-open-defect | stmt.rs:882-900 (First env, reg_root 0), 1060-1075 (pv == e0) |
+| AFK-F7 | afk-picks | F-7 N1 shape_d 0, N2 cut collision (NT-1) | `afk-picks-F7-n1-zero-shape.itf.json` | `afk_f7_n2_shape_binds_the_cut` | defect | ignored-open-defect | stmt.rs:882-900, 1063 (First keeps shape_d 0); gp.rs:711-744 |
+| AFK-F9 | afk-picks | F-9(b) MERGE-WORK needs two children | `afk-picks-F9-work-one-child.itf.json` | `afk_f9_work_one_child` | defect | ignored-open-defect | stmt.rs:1045 fr.assert_one(en1) |
+| GP2-HONEST | gp2-value-set | honest unitctor shard (chip set 2) | `gp2-value-set-honest.itf.json` | `replay_all` | positive | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
 | GP2-F4.2 | gp2-value-set | F4.2 const_vd ignores the nominal type (U vs V) | `gp2-value-set-F4.2-const-vd-type-name.itf.json` | `gp2_f42_const_vd_binds_the_type_name` | defect | ignored-open-defect | leaf.rs:264-275 const_vd (p2(45, [ty])) |
-| GP2-C2.1 | gp2-value-set | C2.1 R_PUBV lacks r3(0)==6, r3(1)==1, tsk.count==0 | `gp2-value-set-C2.1-pubv-marker-free.itf.json` | `gp2_c21_pubv_checks_the_constant_row` | defect | ignored-open-defect | core.rs:431-444 R_PUBV guards |
-| GP2-M-CNULL-CTL-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_ctl_free | `gp2-value-set-m-cnull-ctl-free.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cid_bind | `gp2-value-set-m-cnull-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CST-FIELDS | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_fields | `gp2-value-set-m-cnull-no-cst-fields.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CST-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_kind | `gp2-value-set-m-cnull-no-cst-kind.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CTL-EVAL | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctl_eval | `gp2-value-set-m-cnull-no-ctl-eval.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CTOR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_arity | `gp2-value-set-m-cnull-no-ctor-arity.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-CTOR-TYPE | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_type | `gp2-value-set-m-cnull-no-ctor-type.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-EXPR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_arity | `gp2-value-set-m-cnull-no-expr-arity.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-EXPR-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_kind | `gp2-value-set-m-cnull-no-expr-kind.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-HAS-CONST | gp2-value-set | mutant gp2_value_set_m_cnull_no_has_const | `gp2-value-set-m-cnull-no-has-const.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-HLP | gp2-value-set | mutant gp2_value_set_m_cnull_no_hlp | `gp2-value-set-m-cnull-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-MARKER-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_no_marker_free | `gp2-value-set-m-cnull-no-marker-free.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-RES | gp2-value-set | mutant gp2_value_set_m_cnull_no_res | `gp2-value-set-m-cnull-no-res.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-ROM | gp2-value-set | mutant gp2_value_set_m_cnull_no_rom | `gp2-value-set-m-cnull-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-CNULL-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_cnull_no_running | `gp2-value-set-m-cnull-no-running.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-FRAME-SKIP-WORD | gp2-value-set | mutant gp2_value_set_m_frame_skip_word | `gp2-value-set-m-frame-skip-word.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-INIT-VAL-ANY-SET | gp2-value-set | mutant gp2_value_set_m_init_val_any_set | `gp2-value-set-m-init-val-any-set.itf.json` | `replay_all` | guard | not-replayed | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-KEY-WRONG-CLASS | gp2-value-set | mutant gp2_value_set_m_key_wrong_class | `gp2-value-set-m-key-wrong-class.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PAD-ON-BUS | gp2-value-set | mutant gp2_value_set_m_pad_on_bus | `gp2-value-set-m-pad-on-bus.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_bind | `gp2-value-set-m-pubv-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-CID-HI | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_hi | `gp2-value-set-m-pubv-no-cid-hi.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-CTL-RET | gp2-value-set | mutant gp2_value_set_m_pubv_no_ctl_ret | `gp2-value-set-m-pubv-no-ctl-ret.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-FRM-ZERO | gp2-value-set | mutant gp2_value_set_m_pubv_no_frm_zero | `gp2-value-set-m-pubv-no-frm-zero.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-HLP | gp2-value-set | mutant gp2_value_set_m_pubv_no_hlp | `gp2-value-set-m-pubv-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-RES | gp2-value-set | mutant gp2_value_set_m_pubv_no_res | `gp2-value-set-m-pubv-no-res.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-ROM | gp2-value-set | mutant gp2_value_set_m_pubv_no_rom | `gp2-value-set-m-pubv-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_pubv_no_running | `gp2-value-set-m-pubv-no-running.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-NO-VAL-CONST | gp2-value-set | mutant gp2_value_set_m_pubv_no_val_const | `gp2-value-set-m-pubv-no-val-const.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-PUBV-PAYLOAD-FREE | gp2-value-set | mutant gp2_value_set_m_pubv_payload_free | `gp2-value-set-m-pubv-payload-free.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-ROM-NO-TBL-BIND | gp2-value-set | mutant gp2_value_set_m_rom_no_tbl_bind | `gp2-value-set-m-rom-no-tbl-bind.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-SEL-NO-BOOL | gp2-value-set | mutant gp2_value_set_m_sel_no_bool | `gp2-value-set-m-sel-no-bool.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
-| GP2-M-SEL-SUM-FREE | gp2-value-set | mutant gp2_value_set_m_sel_sum_free | `gp2-value-set-m-sel-sum-free.itf.json` | `replay_all` | guard | pass | core.rs:390-460 (value-set rules), dec.rs:140, rom.rs |
+| GP2-C2.1 | gp2-value-set | C2.1 R_PUBV lacks r3(0)==6, r3(1)==1, tsk.count==0 | `gp2-value-set-C2.1-pubv-marker-free.itf.json` | `gp2_c21_pubv_checks_the_constant_row` | defect | ignored-open-defect | core.rs:439-449 R_PUBV guards |
+| GP2-M-CNULL-CTL-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_ctl_free | `gp2-value-set-m-cnull-ctl-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cid_bind | `gp2-value-set-m-cnull-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CST-FIELDS | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_fields | `gp2-value-set-m-cnull-no-cst-fields.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CST-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_kind | `gp2-value-set-m-cnull-no-cst-kind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTL-EVAL | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctl_eval | `gp2-value-set-m-cnull-no-ctl-eval.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTOR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_arity | `gp2-value-set-m-cnull-no-ctor-arity.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTOR-TYPE | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_type | `gp2-value-set-m-cnull-no-ctor-type.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-EXPR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_arity | `gp2-value-set-m-cnull-no-expr-arity.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-EXPR-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_kind | `gp2-value-set-m-cnull-no-expr-kind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-HAS-CONST | gp2-value-set | mutant gp2_value_set_m_cnull_no_has_const | `gp2-value-set-m-cnull-no-has-const.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-HLP | gp2-value-set | mutant gp2_value_set_m_cnull_no_hlp | `gp2-value-set-m-cnull-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-MARKER-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_no_marker_free | `gp2-value-set-m-cnull-no-marker-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-RES | gp2-value-set | mutant gp2_value_set_m_cnull_no_res | `gp2-value-set-m-cnull-no-res.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-ROM | gp2-value-set | mutant gp2_value_set_m_cnull_no_rom | `gp2-value-set-m-cnull-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_cnull_no_running | `gp2-value-set-m-cnull-no-running.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-FRAME-SKIP-WORD | gp2-value-set | mutant gp2_value_set_m_frame_skip_word | `gp2-value-set-m-frame-skip-word.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-INIT-VAL-ANY-SET | gp2-value-set | mutant gp2_value_set_m_init_val_any_set | `gp2-value-set-m-init-val-any-set.itf.json` | `replay_all` | guard | not-replayed | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-KEY-WRONG-CLASS | gp2-value-set | mutant gp2_value_set_m_key_wrong_class | `gp2-value-set-m-key-wrong-class.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PAD-ON-BUS | gp2-value-set | mutant gp2_value_set_m_pad_on_bus | `gp2-value-set-m-pad-on-bus.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_bind | `gp2-value-set-m-pubv-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CID-HI | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_hi | `gp2-value-set-m-pubv-no-cid-hi.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CTL-RET | gp2-value-set | mutant gp2_value_set_m_pubv_no_ctl_ret | `gp2-value-set-m-pubv-no-ctl-ret.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-FRM-ZERO | gp2-value-set | mutant gp2_value_set_m_pubv_no_frm_zero | `gp2-value-set-m-pubv-no-frm-zero.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-HLP | gp2-value-set | mutant gp2_value_set_m_pubv_no_hlp | `gp2-value-set-m-pubv-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-RES | gp2-value-set | mutant gp2_value_set_m_pubv_no_res | `gp2-value-set-m-pubv-no-res.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-ROM | gp2-value-set | mutant gp2_value_set_m_pubv_no_rom | `gp2-value-set-m-pubv-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_pubv_no_running | `gp2-value-set-m-pubv-no-running.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-VAL-CONST | gp2-value-set | mutant gp2_value_set_m_pubv_no_val_const | `gp2-value-set-m-pubv-no-val-const.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-PAYLOAD-FREE | gp2-value-set | mutant gp2_value_set_m_pubv_payload_free | `gp2-value-set-m-pubv-payload-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-ROM-NO-TBL-BIND | gp2-value-set | mutant gp2_value_set_m_rom_no_tbl_bind | `gp2-value-set-m-rom-no-tbl-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-SEL-NO-BOOL | gp2-value-set | mutant gp2_value_set_m_sel_no_bool | `gp2-value-set-m-sel-no-bool.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-SEL-SUM-FREE | gp2-value-set | mutant gp2_value_set_m_sel_sum_free | `gp2-value-set-m-sel-sum-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
 | PATHC-HONEST | pathc-xcheck | honest L_Fr words decode | `pathc-xcheck-honest.itf.json` | `replay_all` | positive | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
 | PATHC-F5 | pathc-xcheck | Finding 5: X other than keys.x decodes (fixed in T10, decode.rs:368 / iface.rs:749) | `pathc-xcheck-F5-wrap-x-unpinned.itf.json` | `replay_all` | positive | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
 | PATHC-F6A | pathc-xcheck | Finding 6(a): non-canonical X limbs (carry family) | `pathc-xcheck-F6a-x-limb-carry.itf.json` | `replay_all` | guard | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
@@ -138,8 +138,17 @@ behaviour), positive (the code must accept). Status: pass, ignored-open-defect, 
   (bus 197) of the truncated CORE trace. In a proof, the key's fixed CORE height (8) refuses the
   trace first.
 - MW F-01 Work: the forged `h_hi` passes the Work statement and the NW, NW2 and N3 rungs (MEASURED
-  here). At `L`, `root_map` takes the child `H_HI` as columns and has no range lookup, and
-  `decode.rs` does not read `h_hi`. This was found by reading the code; `L` was not replayed.
-- The `L` and `L_Fr` findings of pathc-xcheck are covered by the T7c real-prover cases (mutant
-  prover, stock verifier, `research/sherlock-t7c-pathc-20261114/RESULTS.md`). They were not run
-  again here, because T10m held the heavy slots.
+  here, local checker). At `L`, `root_map` (stmt.rs:1165) takes the child `H_HI` as columns with no
+  range lookup. In the wrap, `decode.rs:333-351` checks root words 0 to 73 only for being below the
+  BabyBear modulus, and no later step reads words 29 to 32. These two points come from reading the
+  code; `L` and the wrap were not replayed.
+- The `L` and `L_Fr` findings of pathc-xcheck: 4 of the 11 lane mutants are covered by T7c
+  real-prover cases (mutant prover, stock verifier, `research/sherlock-t7c-pathc-20261114/RESULTS.md`),
+  cited and not run again here. 7 were not attempted (COUNTEREXAMPLES.md).
+- Real proofs: `gp2_real_proofs` (ignored test) proves three chip set 2 shards at the app set with
+  `harness::prove` and checks them with the stock verifier (MEASURED, `logs/real-proofs.txt`): the
+  honest shard and the C2.1 continuation shard are accepted, and the `sel_no_bool` mutant (mutant
+  prover) is refused. Every other verdict comes from the local checker.
+- The replay needs `~/.cache/quint-reg/slice_v1.json`, a copy of the slice JSON of the T7c/T8b runs
+  (`T6_SLICE_JSON`). The default folder becomes valid when the branch merges. Until then, set
+  `QUINT_REGRESSIONS_DIR=~/Projects/Moriarty-wt/quint-reg/tests/quint-regressions`.
