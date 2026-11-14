@@ -1,0 +1,663 @@
+From 638776fd4deca496df1fc012ae09d08b5996c607 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 02:34:10 -0700
+Subject: [PATCH 3/6] recursion: child-meta mode of the verifier sub-circuit
+ (T7c)
+
+VerifierConfig::child_meta = Some(h): the per-AIR constants of the child
+key that ProofShapeAir took as constraints are rows of the cached
+constraint-DAG trace instead (fixed height h), sent on a meta bus by
+SymbolicExpressionAir and received by ProofShapeAir. The verifier
+key then depends only on the child parameter set, so one L key verifies
+N3 (full tree) and the path C leaf layer; the cached commitment X tells
+the children apart. Default None keeps every existing key unchanged.
+---
+ .../expr_eval/symbolic_expression/air.rs      |  21 +++
+ .../expr_eval/symbolic_expression/trace.rs    |  40 ++++++
+ crates/recursion/src/batch_constraint/mod.rs  |  44 ++++++-
+ crates/recursion/src/proof_shape/mod.rs       |  20 ++-
+ .../src/proof_shape/proof_shape/air.rs        | 121 ++++++++++++++++--
+ .../src/proof_shape/proof_shape/mod.rs        |   4 +-
+ .../src/proof_shape/proof_shape/trace.rs      |  88 ++++++++++---
+ crates/recursion/src/system/mod.rs            |  19 ++-
+ 8 files changed, 320 insertions(+), 37 deletions(-)
+
+diff --git a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
+index 5f29a97..189a14b 100644
+--- a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
++++ b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/air.rs
+@@ -117,6 +117,10 @@ pub struct SymbolicExpressionAir<F: Field> {
+ 
+     pub cnt_proofs: usize,
+     pub dag_commit_subair: Option<Arc<DagCommitSubAir<F>>>,
++    /// T7c child-meta mode (`L` only): the meta rows of the cached trace (the invalid flag point
++    /// with `is_constraint = 1`) are sent on this bus as `(air_idx, group, attrs[3], fanout,
++    /// constraint_idx)` to the proof-shape AIR. One proof slot only.
++    pub meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
+ }
+ // No columns provided: width is dynamic, depending on `cnt_proofs` and on whether
+ // `dag_commit_subair` is present, and mixes several column structs.
+@@ -224,6 +228,23 @@ where
+         assert_eq!(enc.width(), NUM_FLAGS);
+         let flags = cached_cols.flags;
+         let is_valid_row = enc.is_valid::<AB>(&flags);
++        if let Some(mb) = self.meta_bus {
++            assert_eq!(self.cnt_proofs, 1, "T7c meta mode: one proof slot");
++            let msg: Vec<AB::Expr> = vec![
++                cached_cols.air_idx.into(),
++                cached_cols.node_or_interaction_idx.into(),
++                cached_cols.attrs[0].into(),
++                cached_cols.attrs[1].into(),
++                cached_cols.attrs[2].into(),
++                cached_cols.fanout.into(),
++                cached_cols.constraint_idx.into(),
++            ];
++            openvm_stark_backend::interaction::PermutationCheckBus::new(mb).send(
++                builder,
++                msg,
++                (AB::Expr::ONE - is_valid_row.clone()) * cached_cols.is_constraint,
++            );
++        }
+ 
+         let is_arg0_node_idx = enc.contains_flag::<AB>(
+             &flags,
+diff --git a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
+index e66f866..e3436b1 100644
+--- a/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
++++ b/crates/recursion/src/batch_constraint/expr_eval/symbolic_expression/trace.rs
+@@ -688,6 +688,46 @@ pub(crate) fn generate_symbolic_expr_cached_trace(
+     RowMajorMatrix::new(cached_trace, cached_width)
+ }
+ 
++/// T7c child-meta mode: [`generate_symbolic_expr_cached_trace`] with the meta rows of the child
++/// key after the DAG rows, at the fixed `height`. A meta row has the invalid flag point (no DAG
++/// node) and `is_constraint = 1`; it carries `(air_idx, group, attrs[3], fanout,
++/// constraint_idx)` = `(i, g, the 5 values of group g of AIR i)`; the end row is
++/// `(num_airs, TERM, 0, ..)`.
++pub(crate) fn generate_symbolic_expr_cached_trace_meta(
++    cached_trace_record: &CachedTraceRecord,
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    height: usize,
++) -> RowMajorMatrix<F> {
++    use crate::proof_shape::proof_shape::air::meta;
++    let base = generate_symbolic_expr_cached_trace(cached_trace_record);
++    let cached_width = CachedSymbolicExpressionColumns::<F>::width();
++    let n = child_vk.inner.per_air.len();
++    let dag_rows = cached_trace_record.records.len();
++    let rows = dag_rows + 3 * n + 1;
++    assert!(height.is_power_of_two() && rows <= height, "T7c meta: {rows} cached rows over the fixed height {height}");
++    let mut v = F::zero_vec(cached_width * height);
++    v[..dag_rows * cached_width].copy_from_slice(&base.values[..dag_rows * cached_width]);
++    let mut r = dag_rows;
++    let mut put = |r: usize, air: usize, g: usize, vals: [F; meta::VALS]| {
++        let cols: &mut CachedSymbolicExpressionColumns<F> = v[r * cached_width..(r + 1) * cached_width].borrow_mut();
++        cols.air_idx = F::from_usize(air);
++        cols.node_or_interaction_idx = F::from_usize(g);
++        cols.attrs = [vals[0], vals[1], vals[2]];
++        cols.fanout = vals[3];
++        cols.constraint_idx = vals[4];
++        cols.is_constraint = F::ONE;
++    };
++    for i in 0..n {
++        let m = crate::proof_shape::proof_shape::trace::meta_row(child_vk, i, crate::proof_shape::proof_shape::trace::meta_gcsi(child_vk, i));
++        for (g, cols) in meta::GROUPS.iter().enumerate() {
++            put(r, i, g, cols.map(|c| c.map_or(F::ZERO, |c| m[c])));
++            r += 1;
++        }
++    }
++    put(r, n, meta::TERM, [F::ZERO; meta::VALS]);
++    RowMajorMatrix::new(v, cached_width)
++}
++
+ #[cfg(feature = "cuda")]
+ pub(in crate::batch_constraint) mod cuda {
+ 
+diff --git a/crates/recursion/src/batch_constraint/mod.rs b/crates/recursion/src/batch_constraint/mod.rs
+index 0adfe6f..ec02b84 100644
+--- a/crates/recursion/src/batch_constraint/mod.rs
++++ b/crates/recursion/src/batch_constraint/mod.rs
+@@ -80,6 +80,37 @@ mod cuda_utils;
+ /// AIR index within the BatchConstraintModule
+ pub(crate) const LOCAL_SYMBOLIC_EXPRESSION_AIR_IDX: usize = 0;
+ 
++/// T7c child-meta mode: the cached DAG trace of `child_vk` with the meta rows of every child
++/// AIR appended (then the end row), at the fixed `height`, committed. Its commitment is the `X`
++/// of `L`: it fixes the child constraint DAG and every per-AIR value that the proof-shape AIR
++/// reads, so the `L` key does not depend on the child key.
++pub fn commit_child_vk_meta<E>(
++    engine: &E,
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    height: usize,
++) -> CommittedTraceData<E::PB>
++where
++    E: StarkEngine,
++    E::SC: StarkProtocolConfig<F = F>,
++{
++    let cached_trace_record = expr_eval::build_cached_trace_record(child_vk, true);
++    let cached_trace = expr_eval::generate_symbolic_expr_cached_trace_meta(&cached_trace_record, child_vk, height);
++    let cached_trace = ColMajorMatrix::from_row_major(&cached_trace);
++    let cached_trace = engine.device().transport_matrix_to_device(&cached_trace);
++    let (commitment, data) = engine.device().commit(&[&cached_trace]).unwrap();
++    CommittedTraceData {
++        commitment,
++        data: Arc::new(data),
++        trace: cached_trace,
++    }
++}
++
++/// T7c: rows of the cached DAG trace of `child_vk` (DAG rows plus meta rows), the least fixed
++/// height a child-meta `L` needs.
++pub fn meta_cached_rows(child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>) -> usize {
++    expr_eval::build_cached_trace_record(child_vk, true).records.len() + 3 * child_vk.inner.per_air.len() + 1
++}
++
+ pub fn commit_child_vk<E>(
+     engine: &E,
+     child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
+@@ -145,6 +176,9 @@ pub struct BatchConstraintModule {
+ 
+     max_num_proofs: usize,
+     pub(crate) has_cached: bool,
++    /// T7c child-meta mode (`L` only): the meta bus and the fixed height of the cached DAG trace
++    /// (DAG rows, then the meta rows of the child key).
++    pub(crate) meta: Option<(openvm_stark_backend::interaction::BusIndex, usize)>,
+ }
+ 
+ impl BatchConstraintModule {
+@@ -198,6 +232,7 @@ impl BatchConstraintModule {
+             max_constraint_degree,
+             max_num_proofs,
+             has_cached,
++            meta: None,
+         }
+     }
+ 
+@@ -352,6 +387,7 @@ impl AirModule for BatchConstraintModule {
+             sel_uni_bus: self.sel_uni_bus,
+             cnt_proofs: self.max_num_proofs,
+             dag_commit_subair: (!self.has_cached).then_some(Arc::new(DagCommitSubAir::new())),
++            meta_bus: self.meta.map(|m| m.0),
+         };
+         let fraction_folder_air = FractionsFolderAir {
+             transcript_bus: self.transcript_bus,
+@@ -754,9 +790,15 @@ impl<SC: StarkProtocolConfig<F = F>> TraceGenModule<GlobalCtxCpu, CpuBackend<SC>
+             .par_iter()
+             .map(|chip| {
+                 let _guard = span.enter();
++                // T7c: in the child-meta mode the main trace of the DAG AIR has the fixed height
++                // of its cached trace.
++                let meta_h = match chip {
++                    BatchConstraintModuleChip::SymbolicExpression { .. } => self.meta.map(|m| m.1),
++                    _ => None,
++                };
+                 chip.generate_proving_ctx(
+                     &ctx,
+-                    required_heights.map(|heights| heights[chip.index()]),
++                    required_heights.map(|heights| heights[chip.index()]).or(meta_h),
+                 )
+             })
+             .collect::<Vec<_>>()
+diff --git a/crates/recursion/src/proof_shape/mod.rs b/crates/recursion/src/proof_shape/mod.rs
+index 5496e68..ac00951 100644
+--- a/crates/recursion/src/proof_shape/mod.rs
++++ b/crates/recursion/src/proof_shape/mod.rs
+@@ -79,6 +79,9 @@ pub struct ProofShapeModule {
+     // Module sends extra public values message for use outside of verifier
+     // sub-circuit if true
+     continuations_enabled: bool,
++
++    /// T7c child-meta mode (set by `VerifierSubCircuit` for `L`): the bus of the meta rows.
++    pub(crate) meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
+ }
+ 
+ impl ProofShapeModule {
+@@ -144,6 +147,7 @@ impl ProofShapeModule {
+             max_cached,
+             commit_mult: mvk.params.whir.rounds.first().unwrap().num_queries,
+             continuations_enabled,
++            meta_bus: None,
+         }
+     }
+ 
+@@ -229,6 +233,18 @@ impl ProofShapeModule {
+     }
+ }
+ 
++impl ProofShapeModule {
++    /// T7c: switch to the child-meta mode on bus `bus`. The child must have its fewest cached
++    /// mains at AIR 0, at most one cached main per AIR and no preprocessed AIR, so the key of
++    /// the AIR is the same for every such child at the same parameters.
++    pub(crate) fn set_meta(&mut self, bus: openvm_stark_backend::interaction::BusIndex) {
++        assert_eq!(self.min_cached_idx, 0, "T7c meta mode: AIR 0 must have no cached main");
++        assert_eq!(self.max_cached, 1, "T7c meta mode: at most one cached main per AIR");
++        assert!(self.per_air.iter().all(|a| a.preprocessed_data.is_none()), "T7c meta mode: no preprocessed AIR");
++        self.meta_bus = Some(bus);
++    }
++}
++
+ impl AirModule for ProofShapeModule {
+     fn num_airs(&self) -> usize {
+         3
+@@ -263,6 +279,7 @@ impl AirModule for ProofShapeModule {
+             cached_commit_bus: self.bus_inventory.cached_commit_bus,
+             pre_hash_bus: self.bus_inventory.pre_hash_bus,
+             continuations_enabled: self.continuations_enabled,
++            meta_bus: self.meta_bus,
+         };
+         let pvs_air = PublicValuesAir {
+             public_values_bus: self.bus_inventory.public_values_bus,
+@@ -303,13 +320,14 @@ impl<SC: StarkProtocolConfig<F = F>> TraceGenModule<GlobalCtxCpu, CpuBackend<SC>
+         let external_range_checks = ctx.1;
+ 
+         let range_checker = Arc::new(RangeCheckerCpuTraceGenerator::<8>::default());
+-        let proof_shape = proof_shape::ProofShapeChip::<4, 8>::new(
++        let mut proof_shape = proof_shape::ProofShapeChip::<4, 8>::new(
+             self.idx_encoder.clone(),
+             self.min_cached_idx,
+             self.max_cached,
+             range_checker.clone(),
+             pow_checker.clone(),
+         );
++        proof_shape.meta = self.meta_bus.is_some();
+         let ctx = (child_vk, proofs, preflights);
+         let chips = [
+             ProofShapeModuleChip::ProofShape(proof_shape),
+diff --git a/crates/recursion/src/proof_shape/proof_shape/air.rs b/crates/recursion/src/proof_shape/proof_shape/air.rs
+index f1435dc..8ae6311 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/air.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/air.rs
+@@ -170,17 +170,59 @@ pub struct ProofShapeAir<const NUM_LIMBS: usize, const LIMB_BITS: usize> {
+     pub cached_commit_bus: CachedCommitBus,
+     pub pre_hash_bus: PreHashBus,
+     pub continuations_enabled: bool,
++
++    /// T7c child-meta mode (`L` only): the per-AIR metadata of the child key is read from the
++    /// meta rows of the cached DAG trace on this bus, not baked in as key constants, so the key
++    /// of this AIR does not depend on the child key. `per_air` and `idx_encoder` are then unused
++    /// by the constraints; `min_cached_idx` is 0 and `max_cached` is 1.
++    pub meta_bus: Option<openvm_stark_backend::interaction::BusIndex>,
++}
++
++/// T7c child-meta columns (in place of the AIR index encoder flags).
++pub mod meta {
++    pub const AIR: usize = 0;
++    pub const AIR0: usize = 1;
++    pub const ROT: usize = 2;
++    pub const MW: usize = 3;
++    pub const NPV: usize = 4;
++    pub const HPV: usize = 5;
++    pub const REQ: usize = 6;
++    pub const CP: usize = 7;
++    pub const CW: usize = 8;
++    pub const GC: usize = 9;
++    pub const NI: usize = 10; // 4 limbs
++    pub const N: usize = 14;
++    pub const W: usize = 15;
++    /// Values per meta row of the cached DAG trace, and the groups: `g` of air `i` carries the
++    /// columns `GROUPS[g]`; group `TERM` (air index = the AIR count) ends the table.
++    pub const VALS: usize = 5;
++    pub const GROUPS: [[Option<usize>; VALS]; 3] = [
++        [Some(AIR0), Some(ROT), Some(MW), Some(NPV), Some(HPV)],
++        [Some(REQ), Some(CP), Some(CW), Some(GC), Some(NI)],
++        [Some(NI + 1), Some(NI + 2), Some(NI + 3), None, None],
++    ];
++    pub const TERM: usize = 3;
+ }
+ 
+ impl<F, const NUM_LIMBS: usize, const LIMB_BITS: usize> BaseAir<F>
+     for ProofShapeAir<NUM_LIMBS, LIMB_BITS>
+ {
+     fn width(&self) -> usize {
+-        ProofShapeCols::<F, NUM_LIMBS>::width()
+-            + self.idx_encoder.width()
+-            + self.max_cached * DIGEST_SIZE
++        ProofShapeCols::<F, NUM_LIMBS>::width() + self.var_width() + self.max_cached * DIGEST_SIZE
+     }
+ }
++impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> ProofShapeAir<NUM_LIMBS, LIMB_BITS> {
++    /// Width of the variable block before the cached commits: the encoder flags, or the T7c
++    /// child-meta columns.
++    pub fn var_width(&self) -> usize {
++        if self.meta_bus.is_some() {
++            meta::W
++        } else {
++            self.idx_encoder.width()
++        }
++    }
++}
++
+ impl<F, const NUM_LIMBS: usize, const LIMB_BITS: usize> BaseAirWithPublicValues<F>
+     for ProofShapeAir<NUM_LIMBS, LIMB_BITS>
+ {
+@@ -212,21 +254,23 @@ where
+ 
+         let localv = borrow_var_cols::<AB::Var>(
+             &local[const_width..],
+-            self.idx_encoder.width(),
++            self.var_width(),
+             self.max_cached,
+         );
+         let nextv = borrow_var_cols::<AB::Var>(
+             &next[const_width..],
+-            self.idx_encoder.width(),
++            self.var_width(),
+             self.max_cached,
+         );
+         let local: &ProofShapeCols<AB::Var, NUM_LIMBS> = (*local)[..const_width].borrow();
+         let next: &ProofShapeCols<AB::Var, NUM_LIMBS> = (*next)[..const_width].borrow();
+ 
+-        self.idx_encoder.eval(builder, localv.idx_flags);
+-        builder
+-            .when(local.is_valid)
+-            .assert_one(self.idx_encoder.is_valid::<AB>(localv.idx_flags));
++        if self.meta_bus.is_none() {
++            self.idx_encoder.eval(builder, localv.idx_flags);
++            builder
++                .when(local.is_valid)
++                .assert_one(self.idx_encoder.is_valid::<AB>(localv.idx_flags));
++        }
+ 
+         NestedForLoopSubAir::<1> {}.eval(
+             builder,
+@@ -296,7 +340,49 @@ where
+         let mut current_air_found = AB::Expr::ZERO;
+         let mut global_cached_start_idx = AB::Expr::ZERO;
+ 
+-        for (i, air_data) in self.per_air.iter().enumerate() {
++        if let Some(mb) = self.meta_bus {
++            // T7c: the selected values are meta columns, each fixed by a lookup of the meta rows
++            // of the cached DAG trace (the commitment `X` of the child key); zero off valid rows.
++            let m = |i: usize| -> AB::Expr { localv.idx_flags[i].into() };
++            let mn = |i: usize| -> AB::Expr { nextv.idx_flags[i].into() };
++            for i in 0..meta::W {
++                if i != meta::N {
++                    builder.assert_zero(not::<AB::Expr>(local.is_valid.into()) * m(i));
++                }
++            }
++            builder.when(local.is_valid).assert_eq(mn(meta::N), m(meta::N));
++            for b in [meta::AIR0, meta::ROT, meta::HPV, meta::REQ, meta::CP] {
++                builder.assert_bool(m(b));
++            }
++            air_idx = m(meta::AIR);
++            need_rot = m(meta::ROT);
++            main_common_width = m(meta::MW);
++            has_pvs = m(meta::HPV);
++            num_pvs = m(meta::NPV);
++            next_air_idx = mn(meta::AIR);
++            for i in 0..NUM_LIMBS {
++                num_interactions_per_row[i] = m(meta::NI + i);
++                num_interactions += m(meta::NI + i) * AB::F::from_usize(1 << (i * LIMB_BITS));
++            }
++            is_required = m(meta::REQ);
++            builder
++                .when(local.is_valid)
++                .assert_zero(m(meta::REQ) * not::<AB::Expr>(local.is_present.into()));
++            is_min_cached = m(meta::AIR0);
++            cached_present[0] = m(meta::CP);
++            cached_widths[0] = m(meta::CW);
++            global_cached_start_idx = m(meta::GC);
++            let bus = openvm_stark_backend::interaction::PermutationCheckBus::new(mb);
++            for (g, cols) in meta::GROUPS.iter().enumerate() {
++                let mut msg = vec![m(meta::AIR), AB::Expr::from_usize(g)];
++                msg.extend(cols.iter().map(|c| c.map_or(AB::Expr::ZERO, &m)));
++                bus.receive(builder, msg, local.is_valid);
++            }
++            let mut msg = vec![m(meta::N), AB::Expr::from_usize(meta::TERM)];
++            msg.extend((0..meta::VALS).map(|_| AB::Expr::ZERO));
++            bus.receive(builder, msg, local.is_last);
++        }
++        for (i, air_data) in self.per_air.iter().enumerate().filter(|_| self.meta_bus.is_none()) {
+             // We keep a running tally of how many transcript reads there should be up to any
+             // given point, and use that to constrain initial_tidx
+             let is_current_air = self.idx_encoder.get_flag_expr::<AB>(i, localv.idx_flags);
+@@ -437,7 +523,16 @@ where
+         ///////////////////////////////////////////////////////////////////////////////////////////
+         // TRANSCRIPT OBSERVATIONS
+         ///////////////////////////////////////////////////////////////////////////////////////////
+-        let is_first_idx = self.idx_encoder.get_flag_expr::<AB>(0, localv.idx_flags);
++        let is_first_idx = if self.meta_bus.is_some() {
++            localv.idx_flags[meta::AIR0].into()
++        } else {
++            self.idx_encoder.get_flag_expr::<AB>(0, localv.idx_flags)
++        };
++        let num_airs: AB::Expr = if self.meta_bus.is_some() {
++            localv.idx_flags[meta::N].into()
++        } else {
++            AB::Expr::from_usize(self.per_air.len())
++        };
+         builder
+             .when(is_first_idx.clone())
+             .assert_eq(local.starting_tidx, AB::Expr::from_usize(2 * DIGEST_SIZE));
+@@ -447,7 +542,7 @@ where
+             local.proof_idx,
+             StartingTidxMessage {
+                 air_idx: air_idx.clone() * local.is_valid
+-                    + AB::Expr::from_usize(self.per_air.len()) * local.is_last,
++                    + num_airs.clone() * local.is_last,
+                 tidx: local.starting_tidx.into(),
+             },
+             or(
+@@ -882,7 +977,7 @@ where
+         builder.when(local.is_last).assert_zero(local.is_valid);
+         builder.when(next.is_last).assert_one(local.is_valid);
+         builder
+-            .when(local.sorted_idx - AB::F::from_usize(self.per_air.len() - 1))
++            .when(local.sorted_idx + AB::F::ONE - num_airs.clone())
+             .assert_zero(next.is_last);
+ 
+         builder.when(local.is_last).assert_one(or(
+diff --git a/crates/recursion/src/proof_shape/proof_shape/mod.rs b/crates/recursion/src/proof_shape/proof_shape/mod.rs
+index 7182101..a906d6c 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/mod.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/mod.rs
+@@ -1,5 +1,5 @@
+-mod air;
+-mod trace;
++pub(crate) mod air;
++pub(crate) mod trace;
+ 
+ pub use air::*;
+ pub(crate) use trace::*;
+diff --git a/crates/recursion/src/proof_shape/proof_shape/trace.rs b/crates/recursion/src/proof_shape/proof_shape/trace.rs
+index dc81398..e599006 100644
+--- a/crates/recursion/src/proof_shape/proof_shape/trace.rs
++++ b/crates/recursion/src/proof_shape/proof_shape/trace.rs
+@@ -43,6 +43,46 @@ pub(in crate::proof_shape) struct ProofShapeChip<const NUM_LIMBS: usize, const L
+     max_cached: usize,
+     range_checker: Arc<RangeCheckerCpuTraceGenerator<LIMB_BITS>>,
+     pow_checker: Arc<PowerCheckerCpuTraceGenerator<2, POW_CHECKER_HEIGHT>>,
++    /// T7c child-meta mode: meta columns in place of the encoder flags.
++    #[new(default)]
++    pub(in crate::proof_shape) meta: bool,
++}
++
++/// T7c: the meta columns of AIR `idx` of `child_vk` (`num_airs` in every valid row).
++pub(crate) fn meta_row(
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    idx: usize,
++    gcsi: usize,
++) -> [F; super::air::meta::W] {
++    use super::air::meta::*;
++    let avk = &child_vk.inner.per_air[idx];
++    assert!(avk.preprocessed_data.is_none(), "T7c meta mode: a child AIR with a preprocessed trace");
++    assert!(avk.params.width.cached_mains.len() <= 1, "T7c meta mode: more than one cached main");
++    let mut r = [F::ZERO; W];
++    r[AIR] = F::from_usize(idx);
++    r[AIR0] = F::from_bool(idx == 0);
++    r[ROT] = F::from_bool(avk.params.need_rot);
++    r[MW] = F::from_usize(avk.params.width.common_main);
++    r[NPV] = F::from_usize(avk.params.num_public_values);
++    r[HPV] = F::from_bool(avk.params.num_public_values != 0);
++    r[REQ] = F::from_bool(avk.is_required);
++    r[CP] = F::from_bool(!avk.params.width.cached_mains.is_empty());
++    r[CW] = F::from_usize(avk.params.width.cached_mains.first().copied().unwrap_or(0));
++    r[GC] = F::from_usize(gcsi);
++    let ni = decompose_usize::<4, 8>(avk.num_interactions());
++    for i in 0..4 {
++        r[NI + i] = F::from_usize(ni[i]);
++    }
++    r[N] = F::from_usize(child_vk.inner.per_air.len());
++    r
++}
++
++/// T7c: the global cached index at which AIR `idx` starts (number of cached mains before it).
++pub(crate) fn meta_gcsi(
++    child_vk: &MultiStarkVerifyingKey<BabyBearPoseidon2Config>,
++    idx: usize,
++) -> usize {
++    child_vk.inner.per_air[..idx].iter().map(|a| a.params.width.cached_mains.len()).sum()
+ }
+ 
+ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+@@ -77,7 +117,8 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+         let pow_checker = &self.pow_checker;
+         let num_airs = child_vk.inner.per_air.len();
+         let cols_width = ProofShapeCols::<usize, NUM_LIMBS>::width();
+-        let total_width = self.idx_encoder.width() + cols_width + self.max_cached * DIGEST_SIZE;
++        let var_width = if self.meta { super::air::meta::W } else { self.idx_encoder.width() };
++        let total_width = var_width + cols_width + self.max_cached * DIGEST_SIZE;
+         let l_skip = child_vk.inner.params.l_skip;
+ 
+         debug_assert_eq!(proofs.len(), preflights.len());
+@@ -152,17 +193,21 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+ 
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+ 
+-                for (i, flag) in idx_encoder
+-                    .get_flag_pt(*idx)
+-                    .iter()
+-                    .map(|x| F::from_u32(*x))
+-                    .enumerate()
+-                {
+-                    vcols.idx_flags[i] = flag;
++                if self.meta {
++                    vcols.idx_flags.copy_from_slice(&meta_row(child_vk, *idx, meta_gcsi(child_vk, *idx)));
++                } else {
++                    for (i, flag) in idx_encoder
++                        .get_flag_pt(*idx)
++                        .iter()
++                        .map(|x| F::from_u32(*x))
++                        .enumerate()
++                    {
++                        vcols.idx_flags[i] = flag;
++                    }
+                 }
+ 
+                 for (i, commit) in vdata.cached_commitments.iter().enumerate() {
+@@ -240,17 +285,21 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+ 
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+ 
+-                for (i, flag) in idx_encoder
+-                    .get_flag_pt(idx)
+-                    .iter()
+-                    .map(|x| F::from_u32(*x))
+-                    .enumerate()
+-                {
+-                    vcols.idx_flags[i] = flag;
++                if self.meta {
++                    vcols.idx_flags.copy_from_slice(&meta_row(child_vk, idx, meta_gcsi(child_vk, idx)));
++                } else {
++                    for (i, flag) in idx_encoder
++                        .get_flag_pt(idx)
++                        .iter()
++                        .map(|x| F::from_u32(*x))
++                        .enumerate()
++                    {
++                        vcols.idx_flags[i] = flag;
++                    }
+                 }
+ 
+                 if idx == min_cached_idx {
+@@ -353,10 +402,13 @@ impl<const NUM_LIMBS: usize, const LIMB_BITS: usize> RowMajorChip<F>
+                 // We store the pre-hash of the child vk in the summary row
+                 let vcols: &mut ProofShapeVarColsMut<'_, F> = &mut borrow_var_cols_mut(
+                     &mut chunk[cols_width..],
+-                    idx_encoder.width(),
++                    var_width,
+                     max_cached,
+                 );
+                 vcols.cached_commits[max_cached - 1] = child_vk.pre_hash;
++                if self.meta {
++                    vcols.idx_flags[super::air::meta::N] = F::from_usize(num_airs);
++                }
+             }
+         }
+ 
+diff --git a/crates/recursion/src/system/mod.rs b/crates/recursion/src/system/mod.rs
+index f1294c9..09fdafc 100644
+--- a/crates/recursion/src/system/mod.rs
++++ b/crates/recursion/src/system/mod.rs
+@@ -65,6 +65,10 @@ pub struct VerifierConfig {
+     pub continuations_enabled: bool,
+     pub final_state_bus_enabled: bool,
+     pub has_cached: bool,
++    /// T7c child-meta mode (`L` of Sherlock path C): `Some(h)` reads every per-AIR value of the
++    /// child key from meta rows of the cached DAG trace of fixed height `h`, so the key of this
++    /// circuit is one key for every child at the same parameters (one proof, cached DAG).
++    pub child_meta: Option<usize>,
+ }
+ 
+ impl Default for VerifierConfig {
+@@ -73,6 +77,7 @@ impl Default for VerifierConfig {
+             continuations_enabled: false,
+             final_state_bus_enabled: false,
+             has_cached: true,
++            child_meta: None,
+         }
+     }
+ }
+@@ -610,14 +615,14 @@ impl<const MAX_NUM_PROOFS: usize> VerifierSubCircuit<MAX_NUM_PROOFS> {
+             config.final_state_bus_enabled,
+         );
+         let child_mvk_frame = child_mvk.as_ref().into();
+-        let proof_shape = ProofShapeModule::new(
++        let mut proof_shape = ProofShapeModule::new(
+             &child_mvk_frame,
+             &mut bus_idx_manager,
+             bus_inventory.clone(),
+             config.continuations_enabled,
+         );
+         let gkr = GkrModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
+-        let batch_constraint = BatchConstraintModule::new(
++        let mut batch_constraint = BatchConstraintModule::new(
+             &child_mvk,
+             &mut bus_idx_manager,
+             bus_inventory.clone(),
+@@ -626,6 +631,13 @@ impl<const MAX_NUM_PROOFS: usize> VerifierSubCircuit<MAX_NUM_PROOFS> {
+         );
+         let stacking = StackingModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
+         let whir = WhirModule::new(&child_mvk, &mut bus_idx_manager, bus_inventory.clone());
++        if let Some(h) = config.child_meta {
++            // T7c: the meta bus is the last bus index, so the other buses keep their indices.
++            assert!(config.has_cached && MAX_NUM_PROOFS == 1, "T7c child-meta mode: cached DAG, one proof");
++            let mb = bus_idx_manager.new_bus_idx();
++            proof_shape.set_meta(mb);
++            batch_constraint.meta = Some((mb, h));
++        }
+ 
+         VerifierSubCircuit {
+             bus_inventory,
+@@ -1072,6 +1084,9 @@ impl<SC: StarkProtocolConfig<F = F>, const MAX_NUM_PROOFS: usize>
+     where
+         (): From<EngineDeviceCtx<E>>,
+     {
++        if let Some((_, h)) = self.batch_constraint.meta {
++            return crate::batch_constraint::commit_child_vk_meta(engine, child_vk, h);
++        }
+         crate::batch_constraint::commit_child_vk(engine, child_vk, self.batch_constraint.has_cached)
+     }
+ 
+-- 
+2.56.0
+
