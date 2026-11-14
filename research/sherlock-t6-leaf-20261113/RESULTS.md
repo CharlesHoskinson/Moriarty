@@ -4,9 +4,18 @@ Row T6 of `research/sherlock-tested-design-20261113/LOOP.md`. Change `openspec/c
 
 Labels: MEASURED (read from a run record), DERIVED (computed from MEASURED numbers or source by a stated rule), ESTIMATE.
 
-## 0. For the lead: scope change found by V.1
+## 0. For the lead
 
-No Sherlock program meets the V.1 condition "reads no ROM row beyond what INIT opens". Every run starts at `Eval { expr: e0 }`, and every rule at an Eval control reads the expression row `expressions[e0]` (`owner_site`, T5 section 3.3 atom `E_TAG`). INIT opens `prog_d` to `image_d` to `prog_root` and the entry index `entry_a`, not the row (`ML/specs/sherlock-init-admission` INIT-007, FP-4). So one ROM row read, with its ROM line under `prog_root` (FP-9.2, row I-6), enters the slice. The V.1 program needs no stack step and no flush, so STACKS and MBK-003 stay out. `ML/tasks.md` V.1 and `ML/design.md` section 8 are amended to say so.
+**Scope change found by V.1.** No Sherlock program meets the V.1 condition "reads no ROM row beyond what INIT opens". Every run starts at `Eval { expr: e0 }`, and every rule at an Eval control reads the expression row `expressions[e0]` (`owner_site`, T5 section 3.3 atom `E_TAG`). INIT opens `prog_d` to `image_d` to `prog_root` and the entry index `entry_a`, not the row (`ML/specs/sherlock-init-admission` INIT-007, FP-4). So one ROM row read, with its ROM line under `prog_root` (FP-9.2, row I-6), enters the slice. The V.1 program needs no stack step and no flush, so STACKS and MBK-003 stay out. `ML/tasks.md` V.1 and `ML/design.md` section 8 are amended to say so.
+
+**Readings and decisions to accept or overrule:**
+1. **V.9 `slice_air_omitted` reading.** A slice AIR left out of the app proof is refused by the stock app verifier (`RequiredAirNoVData`). No leaf proof over such an app proof can be made, so no node or `L` ever sees one. The refusals "at N1, N3 and `L`" are the T3 recursion-AIR omissions rerun on the slice keys (section 4).
+2. **`fp8_d3` two-column rule.** The stock `SoundnessCalculator` panics when a proof has one stacked column (the slice app proof). `fp8_d3` evaluates that case at 2 columns. This is conservative, and the app's `vk` and `bounds` rows pass without it (section 5, openvm `c541730`).
+3. **`SHK_RULES` moved from 58 to 64.** 58 to 62 are the ENC-5 parts under the T9 lead ruling, and 63 is left for `SHK_SHAPE`. The tag is in CORE, so every receipt was rerun.
+4. **`plan_d` diverges from T9 ENC-5.** The slice uses the tag-only `P2(DOM_PLAN)`, and T9 uses the 42-word ENC-5 form. Not fixed (section 6).
+5. **What V.10 binds.** The chain binds the keys of the run, not the slice outcome. `L` carries the FP-3 interface statement, and the leaf statement does not travel up the tree yet (FP-2). N2 and N3 run over duplicated children (section 5).
+6. **Voided first receipts.** The 18:34 reboot emptied the V.2 to V.8 gate scripts, so the first V.2 to V.8 receipts ran nothing. They are void, and their seven 3 ms lines stay in `qa/sherlock/runs.jsonl` (section 3). Every receipt that counts ran after the scripts were restored.
+7. **Carbon Quint lanes not yet run.** Every circuit change is listed with file:line in section 7.
 
 ## 1. Status
 
@@ -20,10 +29,10 @@ No Sherlock program meets the V.1 condition "reads no ROM row beyond what INIT o
 | V.6 | done | `qa/sherlock/traces/20261114T024852Z-V.6.log` PASS (copy `runs/receipt-V.6.log`) |
 | V.7 | done | `qa/sherlock/traces/20261114T024938Z-V.7.log` PASS (copy `runs/receipt-V.7.log`) |
 | V.8 | done | `qa/sherlock/traces/20261114T025005Z-V.8.log` PASS (copy `runs/receipt-V.8.log`) |
-| V.9 | done | `qa/sherlock/traces/20261114T025034Z-V.9.log` PASS (copy `runs/receipt-V.9.log`) |
-| V.10 | done: T6 done-when met | `qa/sherlock/traces/20261114T025621Z-V.10.log` PASS (copy `runs/receipt-V.10.log`) |
+| V.9 | done | `qa/sherlock/traces/20261114T030955Z-V.9.log` PASS (copy `runs/receipt-V.9.log`) |
+| V.10 | done: T6 done-when met | `qa/sherlock/traces/20261114T031526Z-V.10.log` PASS (copy `runs/receipt-V.10.log`) |
 
-Every receipt V.2 to V.10 ran at openvm `3160f59` and Moriarty `04215fa55`; each trace names the openvm commit and lists its cases. Run records in this folder, `runs/` (MEASURED, from those receipt runs): `v2.json` to `v8.json` (one per kit gate), `omit.json` and `sg6.json` (V.9), `chain.json` (V.10, every layer: keys, heights, stacked widths, times, statements), `d3.json` (D3 of all 7 keys), and the receipt traces `receipt-V.2.log` to `receipt-V.10.log`. Three runs of the V.10 chain (18:55, 19:20 and 19:50) gave the same keys, fixed heights and D3, with wall times 375 s, 374 s and 362 s.
+Every receipt V.2 to V.10 ran at openvm `3160f59` (V.2 to V.8 at Moriarty `04215fa55`; V.9 and V.10 at `9784e4940`, whose gate script also records the host load); each trace names the openvm commit and lists its cases. Run records in this folder, `runs/` (MEASURED, from those receipt runs): `v2.json` to `v8.json` (one per kit gate), `omit.json` and `sg6.json` (V.9), `chain.json` (V.10, every layer: keys, heights, stacked widths, times, statements), `d3.json` (D3 of all 7 keys), and the receipt traces `receipt-V.2.log` to `receipt-V.10.log`. Five runs of the V.10 chain (18:55, 19:20, 19:36, 19:56, 20:15) gave the same shapes, fixed heights and D3. The first two runs, before openvm `f143943`, had `SHK_RULES` = 58, so their app key differs. Every recursion key (leaf, N1, N2, N3, `L_iface`, `L_Fr`) is the same in all five runs, because the layers commit to the child key and their own keys do not depend on it.
 
 ## 2. V.1 the slice program
 
@@ -116,11 +125,11 @@ Keys of the layers (MEASURED, `runs/chain.json` `keys`): app 7 AIRs, 2,361 colum
 - N1 and N3, each without `KeyBindAir`, `ProofShapeAir` or `PublicValuesAir`, are refused on the prover path and by the stock verifier, and the parent over the stripped child fails trace generation. `L` without each of the three is refused on the prover path and by the stock verifier, and the `L_Fr` tape generator refuses the stripped shape (`RequiredAbsent`) and the pinned honest shape (`Heights`).
 - Honest controls accept: app, leaf, N2 over N1, N3 over N3, `L`, `L_Fr` tape.
 
-SG-6 seconds per proved step (MEASURED, `--exclusive`, example `sg6` of `sherlock-leaf`, V.9 receipt run at openvm `3160f59`, `runs/sg6.json`): GPU 0.148 s per proved step (`BabyBearPoseidon2GpuEngine` of `openvm-cuda-backend`, feature `cuda`; shard medians 0.363 s and 0.379 s over 3 timed runs after a warm-up; 0.093 s per slot). CPU: 1.82 s per proved step (shard medians 4.85 s and 4.26 s). The run proves the 5 steps of the V.1 run in 2 shards of 4 slots. Both engines key the same vk, and the stock CPU verifier accepts the first proof of each shard from each engine. An earlier exclusive run gave GPU 0.140 s and CPU 1.79 s. Linking the CUDA build needs `LIBRARY_PATH=/opt/cuda/lib64`, because the cuda-builder default is `/usr/local/cuda/lib64`. Host load (DG-006): the run held the heavy-slot exclusive lock; the 1-minute load average was 10.2 just before the first run, from other jobs.
+SG-6 seconds per proved step (MEASURED, `--exclusive`, example `sg6` of `sherlock-leaf`, V.9 receipt run at openvm `3160f59`, `runs/sg6.json`, trace `runs/receipt-V.9.log`): GPU 0.139 s per proved step (`BabyBearPoseidon2GpuEngine` of `openvm-cuda-backend`, feature `cuda`; shard medians 0.356 s and 0.339 s over 3 timed runs after a warm-up; 0.087 s per slot). CPU: 1.86 s per proved step (shard medians 4.95 s and 4.33 s). The run proves the 5 steps of the V.1 run in 2 shards of 4 slots. Both engines key the same vk, and the stock CPU verifier accepts the first proof of each shard from each engine. The earlier exclusive runs gave GPU 0.140 s and 0.148 s. Linking the CUDA build needs `LIBRARY_PATH=/opt/cuda/lib64`, because the cuda-builder default is `/usr/local/cuda/lib64`. Host load (DG-006, in the receipt trace): `/proc/loadavg` was 21.51, 14.86, 14.15 before the run and 19.14, 15.17, 14.29 after it, and GPU utilization was 1 percent before it. The run held the heavy-slot exclusive lock, but other agents' jobs outside heavy-slot kept the CPU loaded. So the CPU figure is an upper bound under load, and the GPU figure carries less of that load.
 
 ## 5. V.10 one run through every layer
 
-Run (MEASURED, `--exclusive`, V.10 receipt run at openvm `3160f59`, `runs/chain.json`, trace `runs/receipt-V.10.log`): the V.1 program `entry x;` as 2 shards (4 and 1 proved steps), with `post_d` of shard 0 equal to `pre_d` of shard 1. Two app proofs, two leaf proofs, N1 over both, N2, N3, `L_iface` over N3, `L_Fr`: each layer is proved and accepted by its stock verifier, and every layer's heights pass G1 (`frozen::check_heights`). Wall time 362 s. Per layer: leaf 5.6 s for 2, N1 6.3 s, N2 4.6 s, N3 3.7 s, `L` 61.9 s, `L_Fr` keygen 55.4 s, `L_Fr` prove 188.6 s. The app proofs on the CPU take 9.0 s for the 2 shards.
+Run (MEASURED, `--exclusive`, V.10 receipt run at openvm `3160f59`, Moriarty `9784e4940`, `runs/chain.json`, trace `runs/receipt-V.10.log`): the V.1 program `entry x;` as 2 shards (4 and 1 proved steps), with `post_d` of shard 0 equal to `pre_d` of shard 1. Two app proofs, two leaf proofs, N1 over both, N2, N3, `L_iface` over N3, `L_Fr`: each layer is proved and accepted by its stock verifier, and every layer's heights pass G1 (`frozen::check_heights`). Wall time 395 s. Per layer: leaf 6.4 s for 2, N1 6.1 s, N2 4.2 s, N3 3.8 s, `L` 61.9 s, `L_Fr` keygen 59.8 s, `L_Fr` prove 216.4 s. The app proofs on the CPU take 8.8 s for the 2 shards. Host load (in the trace): `/proc/loadavg` 19.14 before the chain and 23.87 after it.
 
 Fixed heights: both shards have log heights `[3, 3, 17, 9, 7, 1, 3]`, equal to `leaf::HEIGHTS` (MEASURED).
 
