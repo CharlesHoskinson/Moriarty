@@ -1,0 +1,30 @@
+From 569b23c09b8c1bc39ab93882f5e800158e945065 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 00:18:55 -0700
+Subject: [PATCH 2/2] T8: gate the non-MERGE output rules by the mode bit sum,
+ so an FV unit (sum 0) keeps the T7 FV output (fixes fv_unit_proves and
+ fv_unit_under_N3_accepted)
+
+---
+ crates/sherlock-lfr/src/gp.rs | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/crates/sherlock-lfr/src/gp.rs b/crates/sherlock-lfr/src/gp.rs
+index 8baf736..f201b70 100644
+--- a/crates/sherlock-lfr/src/gp.rs
++++ b/crates/sherlock-lfr/src/gp.rs
+@@ -419,8 +419,9 @@ pub fn eval<AB: AirBuilder + InteractionBuilder>(
+             }
+         }
+     }
+-    // key_root and reg_root of slot 0 (MERGE has its own rule)
+-    let nm = one.clone() - mb(m::MERGE);
++    // key_root and reg_root of slot 0 (MERGE has its own rule). `nm` is 1 in every Node mode
++    // but MERGE and 0 in an FV unit (mode bit sum 0), which keeps the T7 FV output.
++    let nm = sum.clone() - mb(m::MERGE);
+     if node {
+         for i in 0..D {
+             fr.assert_zero(nm.clone() * (pv[npv::KEY_ROOT + i].clone() - e0[npv::KEY_ROOT + i].clone()));
+-- 
+2.56.0
+
