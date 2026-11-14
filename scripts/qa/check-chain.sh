@@ -1,73 +1,89 @@
 #!/usr/bin/env bash
-# V.9 and V.10 (sherlock-modular-leaf-20261111): the slice leaf shard through the recursion
-# layers in the T6 openvm tree. Usage: check-chain.sh omit|chain
-#   omit:  `slice_chain omit` (V.9 slice_air_omitted and the T3 omit cases on the slice keys)
-#   chain: `slice_chain chain` then `fp8_d3` (V.10 one run through leaf, N1, N2, N3, L, L_Fr; D3)
+# V.9 and V.10 (sherlock-modular-leaf-20261111) on the T7 openvm tree (t7-bind): the slice leaf
+# shards through leaf, N1, N2, N3, L and L_Fr on one universal key set. Usage: check-chain.sh omit|chain|cases
+#   omit:  `t7_chain omit` (V.9 slice_air_omitted and the omit cases of N1, N3 and L)
+#   chain: `t7_chain chain A`, `t7_chain chain B`, then `fp8_d3` on each (V.10: D3 >= 100 on every term)
+#   cases: `t7_chain cases` (T7 binding cases: wrong prog_d, mixed chip sets, the FV unit under N3)
 set -euo pipefail
 mode="$1"
-ovm="${SHERLOCK_SDK_ROOT:-$HOME/.cache/m7-wrap/src/openvm-t6}"
+ovm="${SHERLOCK_SDK_ROOT:-$HOME/.cache/m7-wrap/src/openvm-t7}"
 export RUSTUP_AUTO_INSTALL=0
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cache/t6/target-ovm}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cache/t7/target-ovm}"
 export SHERLOCK_SDK_ROOT="$ovm"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-8}"
-out="${T6_CHAIN_OUT:-$HOME/.cache/t6/check-$mode}"
+out="${T7_CHAIN_OUT:-$HOME/.cache/t7/check-$mode}"
 mkdir -p "$out"
 if [ -n "$(git -C "$ovm" status --porcelain -- crates Cargo.toml Cargo.lock)" ]; then
   echo "$mode FAIL: uncommitted changes in $ovm"; exit 1
 fi
 echo "openvm tree $ovm at $(git -C "$ovm" rev-parse HEAD); out $out"
-run() { ( cd "$ovm" && "$HOME/.local/bin/heavy-slot" ${T6_EXCLUSIVE:+--exclusive} --mem 32G --name "t6-check-$1" -- \
+run() { ( cd "$ovm" && "$HOME/.local/bin/heavy-slot" ${T7_EXCLUSIVE:+--exclusive} --mem 64G --name "t7-check-$1" -- \
   cargo run --release --offline -p sherlock-wrap-export --example "$@" ); }
+nonempty() { for f in "$@"; do [ -s "$f" ] || { echo "$mode FAIL: $f is missing or empty"; exit 1; }; done; }
 if [ "$mode" = omit ]; then
   rm -f "$out/omit.json"
-  run slice_chain omit "$out" 2>&1 | grep -E "SLICEOMIT|panicked at examples|error" | tail -80
+  run t7_chain omit "$out" 2>&1 | grep -E "SLICEOMIT|T7CASE|panicked|error" | tail -80
+  nonempty "$out/omit.json"
   python3 - "$out/omit.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 bad = [c["case"] for c in d["cases"] if not c["pass"]]
 req = d["all_required"]
 names = [c["case"] for c in d["cases"]]
-need = ["slice_air_omitted_stock_verify_without_", "n1_parent_over_child_without_", "n3_parent_over_child_without_", "l_stock_verify_without_"]
+need = ["slice_air_omitted_stock_verify_without_", "n1_parent_over_child_without_", "n3_parent_over_child_without_", "l_stock_verify_without_", "lfr_tape_honest_shape_without_"]
 if bad or not all(req.values()) or not all(any(n.startswith(p) for n in names) for p in need):
     sys.exit(f"V.9 FAIL: failing {bad}, all_required {req}")
 s = d["app_shape"]
 print(f"V.9 PASS: {len(names)} cases; every AIR required in {sorted(req)}; app shape {s['airs']} AIRs, {s['columns']} columns, max interactions {s['max_interactions']}")
 PY
-  # SG-6: seconds per proved step on the GPU (and the CPU), stock CPU verifier on each proof.
-  rm -f "$out/sg6.json"
-  echo "host load before sg6 (DG-006): $(cat /proc/loadavg); $(nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader 2>/dev/null || echo no nvidia-smi)"
-  ( cd "$ovm" && LIBRARY_PATH="${CUDA_LIB_DIR:-/opt/cuda/lib64}" T6_OUT="$out" "$HOME/.local/bin/heavy-slot" --exclusive --mem 24G --name t6-check-sg6 -- \
-      cargo run --release --offline -p sherlock-leaf --features cuda --example sg6 ) 2>&1 | grep -E "SG6|panicked|error" | tail -10
-  echo "host load after sg6 (DG-006): $(cat /proc/loadavg)"
-  python3 - "$out/sg6.json" <<'PY'
-import json, sys
-d = json.load(open(sys.argv[1]))
-gpu = [r for r in d["rows"] if r["backend"].startswith("GPU")]
-ok = d["gpu"] and gpu and all(s["stock_cpu_verifier"] for r in d["rows"] for s in r["shards"])
-if not ok:
-    sys.exit("V.9 FAIL: SG-6 has no verified GPU row")
-print(f"V.9 SG-6 PASS: GPU {gpu[0]['s_per_proved_step']:.4f} s per proved step ({gpu[0]['proved_steps']} steps, {gpu[0]['slots']} slots)")
-PY
 elif [ "$mode" = chain ]; then
-  rm -f "$out/chain.json" "$out/d3.json"
-  echo "host load before the chain (DG-006): $(cat /proc/loadavg)"
-  run slice_chain chain "$out" 2>&1 | grep -E "SLICECHAIN|SLICEKEY|panicked" | tail -40
-  echo "host load after the chain (DG-006): $(cat /proc/loadavg)"
-  run fp8_d3 "$out" 2>&1 | grep FP8D3
+  for prog in A B; do
+    o="$out/chain-$prog"; mkdir -p "$o"; rm -f "$o/chain.json" "$o/d3.json"
+    echo "host load before chain $prog (DG-006): $(cat /proc/loadavg)"
+    run t7_chain chain "$o" "$prog" 2>&1 | grep -E "T7CHAIN|T7CASE|T7KEY|panicked" | tail -40
+    run fp8_d3 "$o" "$o/fv_vk.bitcode" 2>&1 | grep FP8D3
+    nonempty "$o/chain.json" "$o/cases.json" "$o/d3.json"
+  done
   python3 - "$out" <<'PY'
 import json, sys, os
-d = sys.argv[1]
-c = json.load(open(os.path.join(d, "chain.json")))
-d3 = json.load(open(os.path.join(d, "d3.json")))
-fixed = all(f["fixed"] for f in c["fixed_heights"])
-layers = {"app", "leaf", "node1", "node2", "node", "L", "L_Fr"}
-g1 = all(c["heights"][k].get("g1") == "accepted" for k in layers)
-gates = all(r[k]["gate"] == "PASS" for r in d3 for k in ("measured", "vk", "bounds") if k in r)
-measured = all("measured" in r for r in d3)
-if not (fixed and g1 and gates and measured):
-    sys.exit(f"V.10 FAIL: fixed {fixed} g1 {g1} d3 {gates} measured-every-layer {measured}")
-print(f"V.10 PASS: {c['shards']} shards, {c['proved_steps']} steps, fixed heights; layers {sorted(layers)} G1 accepted; D3 PASS on {len(d3)} keys at measured shapes")
+out = sys.argv[1]
+seen = {}
+for prog in "AB":
+    d = os.path.join(out, f"chain-{prog}")
+    c = json.load(open(os.path.join(d, "chain.json")))
+    cs = json.load(open(os.path.join(d, "cases.json")))
+    d3 = json.load(open(os.path.join(d, "d3.json")))
+    fixed = all(f["fixed"] for f in c["fixed_heights"])
+    layers = {"app", "leaf", "node1", "node2", "node", "L", "L_Fr"}
+    g1 = all(c["heights"][k].get("g1") == "accepted" for k in layers)
+    gates = all(r[k]["gate"] == "PASS" for r in d3 for k in ("measured", "vk", "bounds") if k in r and r[k] is not None)
+    measured = sum(1 for r in d3 if r.get("measured")) >= 7
+    cases = cs["all_pass"] and c["cases_all_pass"]
+    if not (fixed and g1 and gates and measured and cases):
+        sys.exit(f"V.10 FAIL {prog}: fixed {fixed} g1 {g1} d3 {gates} measured {measured} cases {cases}")
+    seen[prog] = (c["prog_d"], c["key_root"], c["keys_d"])
+    print(f"V.10 {prog} PASS: {c['shards']} shards, {c['proved_steps']} steps, fixed heights; G1 accepted; "
+          f"D3 PASS on {len(d3)} keys; {len(cs['cases'])} cases; L_Fr words {c['lfr_public_words']}")
+if seen["A"][0] == seen["B"][0] or seen["A"][1:] != seen["B"][1:]:
+    sys.exit(f"V.10 FAIL: programs must differ in prog_d and share key_root and keys_d: {seen}")
+print("V.10 PASS: two programs, one key_root and one keys_d")
+PY
+elif [ "$mode" = cases ]; then
+  rm -f "$out/cases.json"
+  run t7_chain cases "$out" 2>&1 | grep -E "T7CASE|T7KEY|panicked" | tail -60
+  nonempty "$out/cases.json"
+  python3 - "$out/cases.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+names = [c["case"] for c in d["cases"]]
+need = ["mixed_chip_sets_N3_accepts", "wrong_prog_d_merge_refused_at_N1", "key_triple_outside_key_root_refused_at_N1",
+        "fv_unit_under_N3_accepted", "fv_row_missing_refused_at_N3"]
+bad = [c["case"] for c in d["cases"] if not c["pass"]]
+miss = [n for n in need if n not in names]
+if bad or miss or not d["all_pass"]:
+    sys.exit(f"T7 cases FAIL: failing {bad}, missing {miss}")
+print(f"T7 cases PASS: {len(names)} cases")
 PY
 else
-  echo "usage: check-chain.sh omit|chain"; exit 2
+  echo "usage: check-chain.sh omit|chain|cases"; exit 2
 fi

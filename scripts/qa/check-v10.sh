@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-# V.10 gate: slice_chain chain and D3 (see check-chain.sh).
+# V.10 gate: t7_chain chain A and B with D3, then the T7 binding cases (see check-chain.sh).
 set -euo pipefail
-exec "$(dirname "$0")/check-chain.sh" chain
+"$(dirname "$0")/check-chain.sh" chain
+exec "$(dirname "$0")/check-chain.sh" cases

@@ -34,10 +34,10 @@ SEAL SHALL require `h_lo == 0`, a terminal opened `outcome_tag` and `deps_d == E
 - **THEN** the node is unsatisfiable (mutants `node_seal_running`, `node_seal_nonzero_hlo`, `node_seal_state_digest_in_set`, `node_seal_header_word_forged`, `node_seal_nonempty_deps`)
 
 ### Requirement: NODE-004 Child keys are routed by one selector and disabled slots are neutral
-Each child slot SHALL have `en_j` boolean and a one-hot `key_sel_j` over {LEAF, NODE, FOREIGN} that sums to `en_j`. One selector SHALL bind the child key, its permitted `stmt_tag` and its statement lanes. The recursion verifier SHALL verify every enabled child proof, and each child key commitment SHALL have an inclusion path into `key_root`. A disabled slot SHALL use the canonical neutral statement.
+Each child slot SHALL have `en_j` boolean and a one-hot `key_sel_j` over {LEAF, NODE, FOREIGN} that sums to `en_j`. One selector SHALL bind the child key, its permitted `stmt_tag` and its statement lanes. The recursion verifier SHALL verify every enabled child proof, and each child key SHALL be committed: a LEAF key triple by a path into `key_root`, a NODE or FOREIGN key `vkc` by a row of the universal table under `keys_d` (T7). A disabled slot SHALL use the canonical neutral statement.
 
 #### Scenario: Wrong key destination
-- **WHEN** a child proved under one key is routed to another key, a child key has no inclusion path into `key_root`, or the selector and the key disagree
+- **WHEN** a child proved under one key is routed to another key, a LEAF child key has no inclusion path into `key_root`, a NODE or FOREIGN child key is not a row of the table under `keys_d`, or the selector and the key disagree
 - **THEN** the node is unsatisfiable (mutants `node_wrong_key_destination`, `node_selector_repr_mismatch`), and O33 (NODE-L3, `NamedAccumulator.lean`) is open
 
 #### Scenario: Garbage in a disabled slot
