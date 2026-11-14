@@ -40,7 +40,8 @@ ovm() {
     ( cd $OVM && $HS --mem 64G --name t10-b-on-a -- env SHERLOCK_PROG=B SHERLOCK_LEDGER_PROG=A RAYON_NUM_THREADS=20 \
         $EX/lfr_call key $T/out/b-on-a ) > $LOG/b-on-a.log 2>&1
     rc=$?; echo "# $(date -Is) b-on-a end rc=$rc (want 3)" >> $LOG/runs.log
-    [ $rc -eq 3 ] && grep -q '^T10REFUSED' $LOG/b-on-a.log && touch $S/b-on-a.ok || exit 1
+    # exactly one failed tape assertion (A_0 = C_P): the B run is otherwise an honest run
+    [ $rc -eq 3 ] && grep -q '^T10REFUSED.*"why":"1 tape assertions failed"' $LOG/b-on-a.log && touch $S/b-on-a.ok || exit 1
   fi
   # the ledger arguments (anchor = C_L of A) and the strict forbid list (words of 16 bits or more)
   python3 - $T <<'PY' || exit 1
@@ -111,7 +112,7 @@ PY
 }
 probe() {
   # the column cost of the L log tie: the J8 onion AIR added to L, G1 against the frozen L bound
-  stage probe-onion 48G $OVM $TOVM env T10_PROBE_ONION=1 SHERLOCK_PROG=A $EX/lfr_call key $T/out/probe || exit 1
+  stage probe-onion 26G $OVM $TOVM env T10_PROBE_ONION=1 SHERLOCK_PROG=A $EX/lfr_call key $T/out/probe || exit 1
 }
 devnet() {
   need $T/out/key-k21/wrap.vk $T/key/ledger-args.json $T/key/forbid.json

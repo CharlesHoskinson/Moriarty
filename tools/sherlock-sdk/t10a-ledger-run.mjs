@@ -173,14 +173,17 @@ const forbidSmall = opt['forbid-small'] ? JSON.parse(readFileSync(resolve(opt['f
 const lanesFile = join(here, '../../research/sherlock-t9-contract-20261113/contract/lanes.json');
 const templateWords = existsSync(lanesFile) ? new Map(JSON.parse(readFileSync(lanesFile, 'utf8')).entries.acceptRun.words
   .filter(w => String(w.what).startsWith('const')).map(w => [w.lane, BigInt(w.word)])) : new Map();
-// T10: the small words on the call vector, each hit judged by its lane (a compiled template constant or not).
-const smallScan = vec => {
+// T10: the small words on the call vector, each hit judged by its lane (a compiled template constant or not),
+// and on the indexed ledger state (no template there, so any hit fails).
+const smallScan = (vec, stateWords = []) => {
   const rows = forbidSmall.map(({label, value}) => {
     const lanes = vec.map((x, i) => x === value ? i : -1).filter(i => i >= 0);
     const offTemplate = lanes.filter(l => templateWords.get(l) !== value);
-    return {label, value: value.toString(), lanes, offTemplate};
+    const stateHits = stateWords.filter(x => x === value).length;
+    return {label, value: value.toString(), lanes, offTemplate, stateHits};
   });
-  return {templateLanes: templateWords.size, rows, pass: templateWords.size > 0 && rows.every(r => r.offTemplate.length === 0)};
+  return {templateLanes: templateWords.size, stateWords: stateWords.length, rows,
+    pass: templateWords.size > 0 && rows.every(r => r.offTemplate.length === 0 && r.stateHits === 0)};
 };
 const controls = () => [{label: 'control claim_pub', value: claimPub}, {label: 'control outcome_pub', value: A_ARGS.outcome_pub},
   {label: 'control anchor', value: A_ARGS.anchor}];
@@ -678,7 +681,7 @@ if (!st.calls.accept?.readback) {
     anchorUnchanged: v.anchor === A_ARGS.anchor, keysUnchanged, includedProgramEqualsProven: samePrograms,
     postStateBytes: post.length, postStateSHA256: sha(post), vectorLayout: vectorLayout(vec),
     scan: privacyScan({callVector: vec, includedTranscriptOps: nestedWords(goodCall.guaranteedTranscript.program), indexedState: contractStateWords(cs)}),
-    smallScan: smallScan(vec)};
+    smallScan: smallScan(vec, contractStateWords(cs))};
   assert.ok(v.runs.member(claimPub) && v.runs.lookup(claimPub) === A_ARGS.outcome_pub, 'runs[claim_pub] = outcome_pub');
   save(); log(`A: ${json(st.calls.accept)}`);
 }
