@@ -17,6 +17,10 @@
 //            VALUES.txt coll.run[0] (dump, call, dry-run need them; deploy needs only anchor and reg_pub)
 //   forbid   JSON list of decimal Fr words (or {label, value}) that must not appear in the included call vector or
 //            the indexed state (prog_d words, pack(prog_d), n_steps); default: none (the scan still runs its control)
+//   forbid-small  T10: JSON list of {label, value} words below 2^16 (n_steps, h_hi limbs, r_P words). A small word
+//            can equal a template constant of the contract, so each hit on the call vector is judged by its lane: it
+//            passes only on a lane whose word is a constant of the compiled acceptRun (contract/lanes.json of T9),
+//            i.e. a lane that no run can change
 //   out      run directory (default ~/.cache/t9/devnet); build: sherlock-ledger-build.sh output
 //            (default ~/.cache/t9/contract/build/sherlock-ledger, compiled with keys)
 //   sdk      npm root with the ledger 9.1.0.1 stack and testkit-js (default ~/.cache/xc9/sdk; not modified)
@@ -46,6 +50,8 @@
 //               are present (claim_pub, outcome_pub, anchor) to show the scanner fires.
 //            R1 outcome-differs: outcome_pub + 1 carrying A's proof: refused.
 //            R2 tampered-proof: the saved unbound A with one proof bit flipped: refused.
+//            R4 (T10, with T10A_R4_ARGS and T10A_R4_PROOF): the acceptRun arguments of program B with B's own
+//               wrap proof (tagged midnight:proof bytes) against this ledger, whose anchor is C_L of program A: refused.
 //            R3 replay: the same claim again after A landed (fresh binding; A's proof, or a fresh one with
 //               T10A_R3_FRESH=1): refused. The local circuit run against the post-A state is recorded too (it
 //               refuses with "claim already settled": the contract-level evidence when the node refuses at the proof).
@@ -68,10 +74,10 @@ const ENTRIES = ['acceptCollection', 'acceptRun', 'openClaim'];
 // ---- arguments
 const argv = process.argv.slice(2), phase = argv.shift();
 const PHASES = ['deploy', 'dump', 'call', 'dry-run'];
-const USAGE = `usage: t10a-ledger-run.mjs ${PHASES.join('|')} --vk KEY [--args FILE] [--forbid FILE] [--out DIR] [--build DIR] [--sdk DIR] [--target N]`;
+const USAGE = `usage: t10a-ledger-run.mjs ${PHASES.join('|')} --vk KEY [--args FILE] [--forbid FILE] [--forbid-small FILE] [--out DIR] [--build DIR] [--sdk DIR] [--target N]`;
 assert.ok(PHASES.includes(phase), USAGE);
 const opt = {};
-for (let i = 0; i < argv.length; i += 2) { assert.match(argv[i], /^--(vk|args|forbid|out|build|sdk|target)$/, `unknown option ${argv[i]}; ${USAGE}`); opt[argv[i].slice(2)] = argv[i + 1]; }
+for (let i = 0; i < argv.length; i += 2) { assert.match(argv[i], /^--(vk|args|forbid|forbid-small|out|build|sdk|target)$/, `unknown option ${argv[i]}; ${USAGE}`); opt[argv[i].slice(2)] = argv[i + 1]; }
 const H = homedir();
 assert.ok(opt.vk, '--vk KEY (the wrap verifier key)');
 const vkPath = resolve(opt.vk);
@@ -82,9 +88,18 @@ const TARGET = Number(opt.target ?? 1024);
 assert.ok(Number.isInteger(TARGET) && TARGET > 0);
 mkdirSync(output, {recursive: true});
 const OFFLINE = phase === 'dry-run';
-const NET = 'undeployed';
+// T10: T10_NET=preview runs the same phases on Midnight Preview (owner ruling 2026-11-14), guarded by the pinned
+// Preview genesis and the pinned wallet address (OP-PV-WALLET); otherwise the local devnet only.
+const PREVIEW = process.env.T10_NET === 'preview';
+const NET = PREVIEW ? 'preview' : 'undeployed';
+const PREVIEW_GENESIS = '0x3c096de209e06a1a8c52be7bda109ee8c891a42288c0a9db5495f9616dd13796';
+const PREVIEW_WALLET = 'mn_addr_preview1qdqmf7mv8n673fm0r868vyxzkfcnjepmsnyayhxc54vqvyg4l87s5dwena';
 const port = (k, d) => Number(process.env[k] ?? d);
-const EP = {indexer: `http://127.0.0.1:${port('E6_INDEXER_PORT', 8098)}/api/v4/graphql`,
+const EP = PREVIEW ? {indexer: 'https://indexer.preview.midnight.network/api/v4/graphql',
+  indexerWS: 'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
+  node: 'https://rpc.preview.midnight.network', nodeWS: 'wss://rpc.preview.midnight.network',
+  proofServer: `http://127.0.0.1:${port('E6_PROOF_PORT', 6340)}`}
+  : {indexer: `http://127.0.0.1:${port('E6_INDEXER_PORT', 8098)}/api/v4/graphql`,
   indexerWS: `ws://127.0.0.1:${port('E6_INDEXER_PORT', 8098)}/api/v4/graphql/ws`,
   node: `http://127.0.0.1:${port('E6_NODE_PORT', 9954)}`, nodeWS: `ws://127.0.0.1:${port('E6_NODE_PORT', 9954)}`,
   proofServer: `http://127.0.0.1:${port('E6_PROOF_PORT', 6340)}`};
@@ -96,8 +111,9 @@ const st = existsSync(statePath) ? JSON.parse(readFileSync(statePath)) : {};
 const save = () => writeFileSync(statePath, json(st));
 const log = (...a) => console.log(`[${new Date().toISOString()}]`, ...a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-let secretSeed = null; // genesis seed, in memory only
-const scrub = s => secretSeed ? String(s).split(secretSeed).join('<seed>') : String(s);
+let secretSeed = null; // genesis seed (devnet) or the Preview phrase, in memory only
+let secretHex = null; // the Preview master seed hex, in memory only
+const scrub = s => { let o = String(s); for (const x of [secretSeed, secretHex]) if (x) o = o.split(x).join('<seed>'); return o; };
 const fail = e => { console.error('t10a-ledger-run failed:', scrub(e?.stack ?? e?.message ?? e)); process.exit(1); };
 process.on('unhandledRejection', fail); process.on('uncaughtException', fail);
 
@@ -152,6 +168,23 @@ if (st.deploy?.constructorArgs) {
 }
 const forbid = opt.forbid ? JSON.parse(readFileSync(resolve(opt.forbid), 'utf8')).map((x, i) => typeof x === 'object'
   ? {label: x.label ?? `forbid[${i}]`, value: fr(x.value, `forbid[${i}]`)} : {label: `forbid[${i}]`, value: fr(x, `forbid[${i}]`)}) : [];
+const forbidSmall = opt['forbid-small'] ? JSON.parse(readFileSync(resolve(opt['forbid-small']), 'utf8'))
+  .map((x, i) => ({label: x.label ?? `small[${i}]`, value: BigInt(x.value)})).filter(x => x.value !== 0n) : [];
+const lanesFile = join(here, '../../research/sherlock-t9-contract-20261113/contract/lanes.json');
+const templateWords = existsSync(lanesFile) ? new Map(JSON.parse(readFileSync(lanesFile, 'utf8')).entries.acceptRun.words
+  .filter(w => String(w.what).startsWith('const')).map(w => [w.lane, BigInt(w.word)])) : new Map();
+// T10: the small words on the call vector, each hit judged by its lane (a compiled template constant or not),
+// and on the indexed ledger state (no template there, so any hit fails).
+const smallScan = (vec, stateWords = []) => {
+  const rows = forbidSmall.map(({label, value}) => {
+    const lanes = vec.map((x, i) => x === value ? i : -1).filter(i => i >= 0);
+    const offTemplate = lanes.filter(l => templateWords.get(l) !== value);
+    const stateHits = stateWords.filter(x => x === value).length;
+    return {label, value: value.toString(), lanes, offTemplate, stateHits};
+  });
+  return {templateLanes: templateWords.size, stateWords: stateWords.length, rows,
+    pass: templateWords.size > 0 && rows.every(r => r.offTemplate.length === 0 && r.stateHits === 0)};
+};
 const controls = () => [{label: 'control claim_pub', value: claimPub}, {label: 'control outcome_pub', value: A_ARGS.outcome_pub},
   {label: 'control anchor', value: A_ARGS.anchor}];
 const LOC = 'sherlock/acceptRun';
@@ -187,7 +220,8 @@ if (!OFFLINE) {
     body: JSON.stringify({id: 1, jsonrpc: '2.0', method, params})})).json()).result;
   const chain = {genesisHash: await rpc('chain_getBlockHash', [0]), nodeVersion: await rpc('system_version'),
     specVersion: (await rpc('state_getRuntimeVersion')).specVersion, chain: await rpc('system_chain')};
-  assert.equal(chain.chain, 'undeployed1', 'local dev chain only');
+  if (PREVIEW) assert.equal(chain.genesisHash, PREVIEW_GENESIS, 'refuse: the RPC genesis is not the pinned Preview genesis');
+  else assert.equal(chain.chain, 'undeployed1', 'local dev chain only');
   st.chain ??= chain; assert.equal(st.chain.genesisHash, chain.genesisHash, 'same local chain as the deploy');
   st.proofServerVersion = (await (await fetch(EP.proofServer + '/version')).text()).trim();
   assert.ok(st.proofServerVersion.startsWith('9.0.'), 'proof server 9.0.x');
@@ -445,7 +479,13 @@ const {SerializedTransaction} = await load('@midnightntwrk/wallet-sdk-abstractio
 const Rx = await load('rxjs');
 const {WebSocket} = await load('ws'); globalThis.WebSocket ??= WebSocket;
 testkit.logger.level = 'warn';
-{
+if (PREVIEW) {
+  // The OP-PV-WALLET wallet, found as preview-session.mjs finds it: the 0600 phrase file of the wallet directory.
+  const dir = process.env.MORIARTY_PREVIEW_WALLET_DIR || join(H, '.local/share/moriarty/wallets/preview');
+  secretSeed = readFileSync(join(dir, 'seed'), 'utf8').trim();
+  const bip39 = await load('@scure/bip39');
+  secretHex = Buffer.from(bip39.mnemonicToSeedSync(secretSeed)).toString('hex');
+} else {
   const seeds = new testkit.LocalTestEnvironment(testkit.logger).genesisMintWalletSeed;
   assert.ok(Array.isArray(seeds) && /^[0-9a-f]{64}$/.test(seeds[1] ?? '') && seeds[1].endsWith('1'), 'testkit dev-preset genesis seed (index 1)');
   secretSeed = seeds[1];
@@ -454,12 +494,14 @@ const openWallet = async () => {
   const env = {walletNetworkId: NET, networkId: NET, ...EP, faucet: undefined};
   const {wallet, seeds, keystore} = await testkit.FluentWalletBuilder.forEnvironment(env)
     .withDustOptions({ledgerParams: ledger.LedgerParameters.initialParameters(), additionalFeeOverhead: 1_000n, feeBlocksMargin: 5})
-    .withSeed(secretSeed).buildWithoutStarting();
+    .withSeed(PREVIEW ? secretHex : secretSeed).buildWithoutStarting();
+  if (PREVIEW) assert.equal(keystore.getBech32Address().toString(), PREVIEW_WALLET, 'refuse: not the OP-PV-WALLET wallet');
   await wallet.start(seeds);
   const s = await Rx.firstValueFrom(wallet.state().pipe(
     Rx.filter(s => [s.shielded, s.unshielded, s.dust].every(w => w.progress?.isStrictlyComplete?.()) && s.dust.availableCoins.length > 0),
-    Rx.timeout({first: 600_000})));
+    Rx.timeout({first: PREVIEW ? 30 * 60_000 : 600_000})));
   log(`wallet synced: dust coins ${s.dust.availableCoins.length}, dust balance ${s.dust.balance(new Date())}`);
+  (st.walletSyncs ??= []).push({at: new Date().toISOString(), dustCoins: s.dust.availableCoins.length, dustBalance: String(s.dust.balance(new Date()))}); save();
   const active = async () => (await Rx.firstValueFrom(wallet.state())).activeProtocolVersion;
   const unwrap = async handle => {
     const r = WalletTransaction.unwrapWithin(handle, ProtocolVersion.epochOf(await active(), DefaultForkSchedule.v9));
@@ -475,7 +517,7 @@ const openWallet = async () => {
     balanceUnbound: async tx => finalize(await wallet.balanceUnboundTransaction(WalletTransaction.adopt('Unbound', tx, await active()), {ttl: ttlOf()}))};
 };
 const node = await PolkadotNodeClient.init(makeConfig({nodeURL: new URL(EP.nodeWS)}));
-const nodeLogSince = since => new Promise(ok => {
+const nodeLogSince = since => PREVIEW ? Promise.resolve('(Preview: no node container log)') : new Promise(ok => {
   const p = spawn('docker', ['logs', '--since', since, NODE_CONTAINER], {stdio: ['ignore', 'pipe', 'pipe']});
   let o = ''; p.stdout.on('data', b => { o += b; }); p.stderr.on('data', b => { o += b; }); p.on('close', () => ok(o));
 });
@@ -638,7 +680,8 @@ if (!st.calls.accept?.readback) {
     runsLookup: v.runs.member(claimPub) ? v.runs.lookup(claimPub).toString() : null, runsSize: v.runs.size(),
     anchorUnchanged: v.anchor === A_ARGS.anchor, keysUnchanged, includedProgramEqualsProven: samePrograms,
     postStateBytes: post.length, postStateSHA256: sha(post), vectorLayout: vectorLayout(vec),
-    scan: privacyScan({callVector: vec, includedTranscriptOps: nestedWords(goodCall.guaranteedTranscript.program), indexedState: contractStateWords(cs)})};
+    scan: privacyScan({callVector: vec, includedTranscriptOps: nestedWords(goodCall.guaranteedTranscript.program), indexedState: contractStateWords(cs)}),
+    smallScan: smallScan(vec, contractStateWords(cs))};
   assert.ok(v.runs.member(claimPub) && v.runs.lookup(claimPub) === A_ARGS.outcome_pub, 'runs[claim_pub] = outcome_pub');
   save(); log(`A: ${json(st.calls.accept)}`);
 }
@@ -675,6 +718,16 @@ if (!st.calls.r2?.done) {
   st.calls.r2 = {flippedOffsetInUnbound: flippedOffset};
   await refusal('r2', 'R2 tampered-proof (one proof bit flipped)', tampered, preState);
 }
+// R4 (T10) program B against program A's anchor: B's acceptRun arguments, B's own wrap proof, this ledger (C_L of A).
+const r4Args = process.env.T10A_R4_ARGS, r4Proof = process.env.T10A_R4_PROOF;
+if (r4Args && r4Proof && !st.calls.r4?.done) {
+  const b = JSON.parse(readFileSync(resolve(r4Args), 'utf8'));
+  const bArgs = {...A_ARGS, c_p: fr(b.c_p, 'R4 c_p'), input_pub: fr(b.input_pub, 'R4 input_pub'), outcome_pub: fr(b.outcome_pub, 'R4 outcome_pub')};
+  const built = await callTx(addr, preState, bArgs, 'r4');
+  const bad = await proveCall(built, {fixed: new Uint8Array(readFileSync(resolve(r4Proof))), tag: 'r4'});
+  st.calls.r4 = {call: built.info, programBAnchor: b.anchor, ledgerAnchor: A_ARGS.anchor.toString(), proofFile: resolve(r4Proof)};
+  await refusal('r4', 'R4 program B (its args and its own wrap proof) against program A\'s anchor', bad.unbound, preState);
+}
 // R3 replay: the same claim after A landed. The circuit against the post-A state refuses locally (recorded); the
 // transaction is built against the deploy state (the transcript claims runs.member(claim_pub) = false), with a
 // fresh binding, so the node sees a call whose transcript no longer matches the chain.
@@ -702,8 +755,11 @@ st.verdict = {A: st.calls.accept?.readback === true && st.calls.accept?.claimInR
   R1: sub('r1').verdict === 'refused-by-node', R2: sub('r2').verdict === 'refused-by-node',
   R3: sub('r3').verdict === 'refused-by-node' && st.calls.r3?.localCircuitAgainstPostA?.refused === true
     && st.calls.r3?.jsShapeAgainstPostA?.applied !== 'success',
+  R4: (r4Args && r4Proof) ? sub('r4').verdict === 'refused-by-node' : 'not run',
+  smallScan: st.calls.accept?.smallScan ? st.calls.accept.smallScan.pass : 'not run',
   R3stage: st.calls.r3?.native?.skipped ? 'native not run' : st.calls.r3?.native?.accepted ? 'proof accepted, refused at apply (replay rule)' : `proof stage: ${st.calls.r3?.native?.failure}`};
-st.verdict.pass = st.verdict.A && st.verdict.scan && st.verdict.R1 && st.verdict.R2 && st.verdict.R3;
+st.verdict.pass = st.verdict.A && st.verdict.scan && st.verdict.R1 && st.verdict.R2 && st.verdict.R3
+  && st.verdict.R4 !== false && st.verdict.smallScan !== false;
 st.done = new Date().toISOString(); save();
 log(`verdict: ${json(st.verdict)}`);
 await ww.wallet.stop(); await node.close();

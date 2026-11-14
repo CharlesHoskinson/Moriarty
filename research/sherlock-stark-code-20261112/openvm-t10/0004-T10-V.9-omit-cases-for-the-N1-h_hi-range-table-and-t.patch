@@ -1,0 +1,47 @@
+From 466d704882055e73aab3344709792d64bfb0c9d4 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 02:13:07 -0700
+Subject: [PATCH] T10: V.9 omit cases for the N1 h_hi range table and the L
+ onion AIR
+
+---
+ crates/sherlock-wrap-export/examples/t7_chain.rs | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 6d22217..ee551b6 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -1018,8 +1018,8 @@ fn omit(out: &PathBuf) {
+     let w = LWit { hdr: hdr_of(&p), r_p: std::array::from_fn(|i| F::from_usize(1000 + i)) };
+     let words = run_words(&n3, &w, &p.adm.prog_d(), false).words();
+     let omitted = ["StmtAir", "ProofShapeAir", "PublicValuesAir"];
+-    // N1 (parent N2) and N3 (parent L)
+-    for name in omitted {
++    // N1 (parent N2) and N3 (parent L); T10: the N1 h_hi range table too
++    for name in omitted.iter().copied().chain(["HhiRangeAir"]) {
+         let i = air_idx(&k.n1[0].airs, name);
+         let mk = || -> Vec<_> { k.n1[0].ctxs(&lc.vk, &la, &fw, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+         let r = guard(|| {
+@@ -1033,6 +1033,9 @@ fn omit(out: &PathBuf) {
+         cases.rec(&format!("n1_stock_verify_without_{name}"), false, vr(k.n1[0].engine.verify(&k.n1[0].vk, &st)), &format!("stock verifier, air {i}"));
+         let r = k.n2.prove_try(&k.n1[0].vk, std::slice::from_ref(&st), &w2, None, true).1;
+         cases.rec(&format!("n1_parent_over_child_without_{name}"), false, r, "N2 over the stripped N1 proof (mutant prover)");
++        if name == "HhiRangeAir" {
++            continue;
++        }
+         let i = air_idx(&k.n3.airs, name);
+         let mk = || -> Vec<_> { k.n3.ctxs(&k.n2.vk, std::slice::from_ref(&n2), &w3, None).into_iter().enumerate().filter(|(j, _)| *j != i).collect() };
+         let r = guard(|| {
+@@ -1053,7 +1056,7 @@ fn omit(out: &PathBuf) {
+     let l_pin: Fr = lk.l.commit_child_vk(&lk.engine, &k.n3.vk).commitment[0];
+     cases.rec("lfr_tape_honest", true, lfr_gen(&lk.vk, &lp, l_pin).map(|_| ()), "honest");
+     let d_pk = lk.engine.device().transport_pk_to_device(&lk.pk);
+-    for name in ["StmtAir", "ProofShapeAir", "PublicValuesAir", "RootSealAir"] {
++    for name in ["StmtAir", "ProofShapeAir", "PublicValuesAir", "RootSealAir", "OnionAir"] {
+         let i = air_idx(&lk.airs, name);
+         let r = guard(|| {
+             let ctx = ProvingContext::new(lk.ctxs(&k.n3.vk, &n3, &w, &words).into_iter().enumerate().filter(|(j, _)| *j != i).collect());
+-- 
+2.56.0
+

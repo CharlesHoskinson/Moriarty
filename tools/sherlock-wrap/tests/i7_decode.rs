@@ -84,7 +84,10 @@ fn i7_decode_native_equals_stock() {
         let (fails, s) = native(&sh, c);
         let ok = fails.is_empty();
         println!("E5DECODE {}: stock {} native {} {:?}", c.name, c.ok, ok, fails.iter().take(3).collect::<Vec<_>>());
-        assert_eq!(ok, c.ok, "verdict of {}", c.name);
+        // T10: the stock decoder no longer pins X (`iface::decode_with`, openvm t10-bound); the
+        // T9 fixture predates that, so this one verdict is the T10 one.
+        let stock_ok = c.ok || c.name == "wrap_x_not_cached_commitment";
+        assert_eq!(ok, stock_ok, "verdict of {}", c.name);
         if let Some(st) = &c.statement {
             assert_eq!(&s, st, "statement of {}", c.name);
         }
@@ -135,7 +138,6 @@ fn i7_decode_gadget_mock() {
         "open_replay_sponge",
         "open_replay_digest",
         // T9 named mutants (ARCHITECTURE kit L AND WRAP; T4 list)
-        "wrap_x_not_cached_commitment",
         "wrap_x_not_canonical",
         "wrap_layout_d_other",
         "wrap_popeq_lane_not_a_in",
@@ -155,5 +157,12 @@ fn i7_decode_gadget_mock() {
         assert!(!run(c, &s), "{name} refused");
         println!("E5DECODE mock {name} refused");
     }
+    // T10: the wrap no longer pins X (lead pick at T7c: `L_Fr` checks X against the L cached
+    // commitment), so an X other than the fixture's key decodes; its range and Canon still hold.
+    let c = cs.iter().find(|c| c.name == "wrap_x_not_cached_commitment").expect("case wrap_x_not_cached_commitment");
+    let (fails, s) = native(&sh, c);
+    assert!(fails.is_empty(), "X other than the key decodes natively: {fails:?}");
+    assert!(run(c, &s), "wrap_x_not_cached_commitment accepted by the wrap decoder (X bound by L_Fr)");
+    println!("E5DECODE mock wrap_x_not_cached_commitment accepted (X bound by L_Fr)");
     println!("E5DECODE mock honest ok, changed statement refused");
 }

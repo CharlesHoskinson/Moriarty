@@ -363,9 +363,9 @@ pub fn decode_with<A: Alg>(
         let at = d.values_at() + LIMBS * j;
         vs.push(dec(a, &w[at..at + LIMBS], &r1)?);
     }
-    // 2b. X with Canon, equal to the pinned cached commitment of L; layout_d pinned (T9).
-    let xv = dec(a, &w[X_WORD..X_WORD + LIMBS], &r1)?;
-    a.assert_eq_c(&xv, sh.x, "X is not the pinned cached commitment")?;
+    // 2b. X with Canon (T10: `L_Fr` checks X against the L cached commitment it reads, lead
+    // pick at T7c; on path C X differs per program); layout_d pinned (T9).
+    let _xv = dec(a, &w[X_WORD..X_WORD + LIMBS], &r1)?;
     for i in 0..8 {
         a.assert_eq_c(&w[LAYOUT_WORD + i], F::from(sh.layout_d[i]), "layout_d is not the key constant")?;
     }

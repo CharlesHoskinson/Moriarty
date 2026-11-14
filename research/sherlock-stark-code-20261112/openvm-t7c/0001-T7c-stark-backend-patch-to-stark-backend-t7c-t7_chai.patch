@@ -1,0 +1,118 @@
+From 517a86bc0886b7fdfc2475b6fb2f40fa00529e10 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 01:00:29 -0700
+Subject: [PATCH 1/6] T7c: stark-backend patch to stark-backend-t7c; t7_chain
+ shape mode (per-AIR L widths, L over a leaf layer at the internal set:
+ per-AIR vk diff)
+
+---
+ Cargo.toml                                    | 12 ++--
+ .../sherlock-wrap-export/examples/t7_chain.rs | 66 ++++++++++++++++++-
+ 2 files changed, 71 insertions(+), 7 deletions(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 5e6e280..b1c2daa 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -322,9 +322,9 @@ ignored = ["cargo-openvm"]
+ 
+ # stark-bench: use the local stark-backend copy (same commit as tag v2.1.0)
+ [patch."https://github.com/openvm-org/stark-backend.git"]
+-openvm-stark-backend = { path = "../stark-backend-t6/crates/stark-backend" }
+-openvm-stark-sdk = { path = "../stark-backend-t6/crates/stark-sdk" }
+-openvm-cpu-backend = { path = "../stark-backend-t6/crates/cpu-backend" }
+-openvm-cuda-backend = { path = "../stark-backend-t6/crates/cuda-backend" }
+-openvm-cuda-builder = { path = "../stark-backend-t6/crates/cuda-builder" }
+-openvm-cuda-common = { path = "../stark-backend-t6/crates/cuda-common" }
++openvm-stark-backend = { path = "../stark-backend-t7c/crates/stark-backend" }
++openvm-stark-sdk = { path = "../stark-backend-t7c/crates/stark-sdk" }
++openvm-cpu-backend = { path = "../stark-backend-t7c/crates/cpu-backend" }
++openvm-cuda-backend = { path = "../stark-backend-t7c/crates/cuda-backend" }
++openvm-cuda-builder = { path = "../stark-backend-t7c/crates/cuda-builder" }
++openvm-cuda-common = { path = "../stark-backend-t7c/crates/cuda-common" }
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 33bac95..fdde03d 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -1010,6 +1010,69 @@ fn omit(out: &PathBuf) {
+     assert!(all, "an omitted-AIR case did not behave as expected");
+ }
+ 
++/// Per-AIR widths of a key (T7c: the `L` column budget).
++fn per_air<SC: StarkProtocolConfig>(vk: &MultiStarkVerifyingKey<SC>, airs: &[AirRef<SC>]) -> Value {
++    let rows: Vec<Value> = vk
++        .inner
++        .per_air
++        .iter()
++        .zip(airs)
++        .enumerate()
++        .map(|(i, (a, r))| {
++            json!({"i": i, "name": r.name(), "total": a.params.width.total_width(),
++                   "pre": a.params.width.preprocessed, "common": a.params.width.common_main,
++                   "cached": a.params.width.cached_mains, "interactions": a.symbolic_constraints.interactions.len(),
++                   "constraints": a.symbolic_constraints.constraints.constraint_idx.len(),
++                   "pvs": a.params.num_public_values})
++        })
++        .collect();
++    for r in &rows {
++        println!("T7CSHAPE {r}");
++    }
++    json!({"total": rows.iter().map(|r| r["total"].as_u64().unwrap()).sum::<u64>(), "airs": rows})
++}
++
++/// T7c: per-AIR widths of `L` over N3, of N3, of the leaf layer, and of an `L`-shaped verifier
++/// over the leaf layer (path C seam).
++fn shape_mode(out: &PathBuf) {
++    let mut k = keys();
++    let lk = l_key(&k.n3.vk, &k.table.keys_d(), &mut k.log);
++    println!("T7CSHAPE == L over N3");
++    let l = per_air(&lk.vk, &lk.airs);
++    println!("T7CSHAPE == N3");
++    let n3 = per_air(&k.n3.vk, &k.n3.airs);
++    println!("T7CSHAPE == leaf set 0");
++    let lf = per_air(&k.leaf[0].vk, &k.leaf[0].airs);
++    println!("T7CSHAPE == L over leaf set 0");
++    let kd = k.table.keys_d();
++    // path C seam: a leaf layer at the internal set, and `L` over it; per-AIR diff against `L`
++    // over N3 (which AIRs carry child constants).
++    let lc_leaf = layer::<1>(&frozen::INTERNAL, &k.app[0].vk, Kind::Leaf, "leaf<1> at internal set 0", &mut k.log);
++    let mut lg = vec![];
++    let lcs = guard(|| {
++        let lc = l_key(&lc_leaf.vk, &kd, &mut lg);
++        let a = per_air(&lc.vk, &lc.airs);
++        let mut diff = vec![];
++        for (i, (x, y)) in lk.vk.inner.per_air.iter().zip(&lc.vk.inner.per_air).enumerate() {
++            let bx = bitcode::serialize(x).unwrap();
++            let by = bitcode::serialize(y).unwrap();
++            if bx != by {
++                let sx = bitcode::serialize(&x.symbolic_constraints).unwrap();
++                let sy = bitcode::serialize(&y.symbolic_constraints).unwrap();
++                diff.push(json!({"i": i, "name": lk.airs[i].name(), "constraints_differ": sx != sy,
++                    "params_differ": bitcode::serialize(&x.params).unwrap() != bitcode::serialize(&y.params).unwrap()}));
++            }
++        }
++        for d in &diff {
++            println!("T7CDIFF {d}");
++        }
++        println!("T7CDIFF pre_eq={} n_per_air {} {}", lk.vk.pre_hash == lc.vk.pre_hash, lk.vk.inner.per_air.len(), lc.vk.inner.per_air.len());
++        Ok(json!({"shape": a, "diff": diff}))
++    })
++    .unwrap_or_else(|e| json!({"error": e}));
++    fs::write(out.join("shape.json"), serde_json::to_string_pretty(&json!({"L": l, "N3": n3, "leaf0": lf, "L_over_leafC": lcs, "keys": k.log})).unwrap()).unwrap();
++}
++
+ fn main() {
+     let a: Vec<String> = std::env::args().collect();
+     let out = PathBuf::from(&a[2]);
+@@ -1018,6 +1081,7 @@ fn main() {
+         "chain" => chain(&out, if a.get(3).map(|s| s.as_str()) == Some("B") { sl::Prog::B } else { sl::Prog::A }),
+         "cases" => cases_mode(&out),
+         "omit" => omit(&out),
+-        m => panic!("mode {m}: chain, cases or omit"),
++        "shape" => shape_mode(&out),
++        m => panic!("mode {m}: chain, cases, omit or shape"),
+     }
+ }
+-- 
+2.56.0
+
