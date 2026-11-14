@@ -14,7 +14,7 @@ code and asserts the verdict that the code must give.
 | `manifest.json` | one row per trace: id, handler, expected verdict, status, refusing constraint (`refused_by`), named test |
 | `inputs/` | the counterexample inputs that the handlers built (forged cells, public values, edited ROM rows). The tests write them again with `QR_DUMP_INPUTS=1` |
 | `models/` | the lane models (`*.qnt`), `traces.tsv` and `run.sh`. `run.sh` reruns every command: each `quint run` must exit 1, each `quint test` must pass, and the new ITF states must equal the committed trace |
-| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `merge-work-columns.txt` (AFK F-5 input) |
+| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`: 94 of 94 exit 1, MEASURED), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `merge-work-columns.txt` (AFK F-5 input) |
 | `COUNTEREXAMPLES.md` | one row per lane finding: the attempt, its input, the result, the constraint, the verdict |
 
 ## The driver
