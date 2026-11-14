@@ -1,0 +1,116 @@
+From e7cbc09202e4ed1cfc86484fec88d20f022bf105 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 02:34:10 -0700
+Subject: [PATCH 4/6] sherlock-leaf: S = 8 shard bucket for path C (T7c)
+
+sherlock_leaf::s8 compiles core.rs and leaf.rs a second time with
+S = 8 (CORE height 16); entry x; (5 steps) is one shard. The CORE
+rules_d sponge send goes in 8-word blocks (one block and the same
+expressions at S = 4, two blocks at S = 8).
+---
+ crates/sherlock-leaf/src/core.rs   | 24 ++++++++++++++++--------
+ crates/sherlock-leaf/src/leaf.rs   |  2 +-
+ crates/sherlock-leaf/src/lib.rs    | 16 ++++++++++++++++
+ crates/sherlock-leaf/src/s8/mod.rs |  8 ++++++++
+ 4 files changed, 41 insertions(+), 9 deletions(-)
+ create mode 100644 crates/sherlock-leaf/src/s8/mod.rs
+
+diff --git a/crates/sherlock-leaf/src/core.rs b/crates/sherlock-leaf/src/core.rs
+index eecd9aa..419a54d 100644
+--- a/crates/sherlock-leaf/src/core.rs
++++ b/crates/sherlock-leaf/src/core.rs
+@@ -23,9 +23,10 @@ use crate::{
+     sponge::Call,
+ };
+ 
+-/// Slots per shard (PICK for the slice: 4; AD-6 working value S = 16).
+-pub const S: usize = 4;
+-pub const HEIGHT: usize = 8;
++/// Slots per shard (PICK for the slice: 4; AD-6 working value S = 16). T7c: 8 in the path C
++/// bucket [`crate::s8`].
++pub const S: usize = crate::slots(module_path!());
++pub const HEIGHT: usize = 2 * S;
+ /// State words per row: body + header (`outcome_tag`, `outcome_payload`, `input_d`, `deps_d`,
+ /// `view_root`).
+ pub const HW: usize = 1 + 4 * D;
+@@ -286,12 +287,19 @@ impl<AB: AirBuilder<F = F> + InteractionBuilder + AirBuilderWithPublicValues> Ai
+             builder.when_transition().assert_eq(nx(C_RIDS + j), c(C_RIDS + j));
+             builder.assert_zero(c(C_B + j) * (c(C_RIDS + j) - c(C_KEY)));
+         }
+-        let mut rw = vec![ce::<AB>(seq::RULES), zero.clone(), ce::<AB>(1 + S as u32), ce::<AB>(SHK_RULES)];
+-        rw.extend((0..S).map(|j| c(C_RIDS + j)));
+-        while rw.len() < 11 {
+-            rw.push(zero.clone());
++        // `(seq, blk, len, 8 words)` per block of `[SHK_RULES, rids]` (one block at S = 4; T7c:
++        // two at S = 8)
++        let mut ws = vec![ce::<AB>(SHK_RULES)];
++        ws.extend((0..S).map(|j| c(C_RIDS + j)));
++        while ws.len() % 8 != 0 {
++            ws.push(zero.clone());
++        }
++        for (k, b) in ws.chunks(8).enumerate() {
++            let blk = if k == 0 { zero.clone() } else { ce::<AB>(k as u32) };
++            let mut rw = vec![ce::<AB>(seq::RULES), blk, ce::<AB>(1 + S as u32)];
++            rw.extend(b.iter().cloned());
++            bus::perm(bus::PORT_SPONGE_IN).send(builder, rw, b0.clone());
+         }
+-        bus::perm(bus::PORT_SPONGE_IN).send(builder, rw, b0.clone());
+         let mut ro = vec![ce::<AB>(seq::RULES)];
+         ro.extend((0..D).map(|i| c(C_RULES_D + i)));
+         bus::perm(bus::PORT_SPONGE_OUT).receive(builder, ro, b0.clone());
+diff --git a/crates/sherlock-leaf/src/leaf.rs b/crates/sherlock-leaf/src/leaf.rs
+index 3a4c718..a3ea2fc 100644
+--- a/crates/sherlock-leaf/src/leaf.rs
++++ b/crates/sherlock-leaf/src/leaf.rs
+@@ -8,9 +8,9 @@ use openvm_circuit_primitives::var_range::{VariableRangeCheckerAir, VariableRang
+ use openvm_stark_backend::{p3_field::PrimeCharacteristicRing, AirRef};
+ use serde_json::Value;
+ 
++use super::core::{self, CoreAir, Opts, ShardIn, ROMW, S};
+ use crate::{
+     bus,
+-    core::{self, CoreAir, Opts, ShardIn, ROMW, S},
+     dec::{self, DecAir, R_ABSENT, R_EMPTY, R_ENTRY, R_FAILURE, R_PUBLISH},
+     enc::*,
+     harness::{Tr, SC},
+diff --git a/crates/sherlock-leaf/src/lib.rs b/crates/sherlock-leaf/src/lib.rs
+index 9dd6422..4bbbdf0 100644
+--- a/crates/sherlock-leaf/src/lib.rs
++++ b/crates/sherlock-leaf/src/lib.rs
+@@ -14,3 +14,19 @@ pub mod rom;
+ pub mod leaf;
+ pub mod kits;
+ pub mod ext;
++
++/// T7c (path C, the one-leaf Compact call): the S = 8 shard bucket ([`s8`]).
++pub mod s8;
++
++/// Slots per shard of the CORE module at `module_path` (8 under [`s8`], else 4).
++pub const fn slots(module_path: &str) -> usize {
++    let b = module_path.as_bytes();
++    let mut i = 0;
++    while i + 4 <= b.len() {
++        if b[i] == b':' && b[i + 1] == b':' && b[i + 2] == b's' && b[i + 3] == b'8' {
++            return 8;
++        }
++        i += 1;
++    }
++    4
++}
+diff --git a/crates/sherlock-leaf/src/s8/mod.rs b/crates/sherlock-leaf/src/s8/mod.rs
+new file mode 100644
+index 0000000..f6e39ce
+--- /dev/null
++++ b/crates/sherlock-leaf/src/s8/mod.rs
+@@ -0,0 +1,8 @@
++//! T7c (path C, the one-leaf Compact call): the S = 8 shard bucket. The same `core.rs` and
++//! `leaf.rs` compiled a second time, with [`crate::slots`] = 8 (CORE height 16); the other AIRs
++//! are shared. `entry x;` (5 steps) is one shard here, two at S = 4.
++
++#[path = "../core.rs"]
++pub mod core;
++#[path = "../leaf.rs"]
++pub mod leaf;
+-- 
+2.56.0
+
