@@ -131,7 +131,10 @@ the real `L` prover over the N3 proof of program A, with chunk-mode words (mode 
 whose `SHK_PROGC` anchor entries carry the ledger anchor operand of program B. The stock `L`
 verifier accepts this `L` proof. The `L_Fr` tape with the anchor rule as built has 0 failed
 assertions, and the decoder twin accepts with the `a_in` lane equal to `C_L` of ledger B: a proof
-of A presents itself to a B ledger. With the fix the tape has 2 failed assertions (`A_0`, `A_k`).
+of A presents itself to a B ledger. With the fix the tape has 2 failed assertions (`A_0`, `A_k`). Scope: the `L_Fr` tape runs natively
+(`execute_checked`); no `L_Fr` STARK proof, wrap proof or ledger call was made. The "as built" rule in
+this run is a replica of the pre-fix `gen_ops_check` in `t7_chain.rs` (`gen_ops_check_as_built`);
+the pre-fix function itself was measured at word level (`logs/t10q-cx-fails-before.txt`).
 The honest ORD run passes both tapes. Run on openvm `475b80d` (branch `t10q-cx-e2e` = `beba730`
 plus the fix), because the `L` key of the t10q tip `8bff541` does not pass the FP8 G1 bounds at
 this time (`Interactions { set: "L", air: 0, got: 107, bound: 100 }`; `dd3593e`: 2,003 columns
@@ -140,8 +143,12 @@ against 2,000); the `L_Fr` check does not depend on that change.
 Keys: the `L_Fr` tape gains the `A_k` check on every call, so the `L_Fr` key and the wrap key
 that pins it change (DERIVED). `L`, N1 to N3 and the leaf keys do not change. MEASURED on the T10 ORD tape: 499,360 ops
 as built, 499,623 fixed (+263), and the 14 `L_Fr` machine AIR heights are equal (largest 2^19,
-bound 2^20), so the `L_Fr` key shape and the wrap circuit size do not change; only the `L_Fr`
-program table and its commitment change, which the next `L_Fr` keygen and wrap keygen take up.
+bound 2^20), so the `L_Fr` key shape does not change (MEASURED); the `L_Fr` program table and its
+commitment change, so the `L_Fr` key changes and the wrap key that pins it changes with the same
+circuit size (DERIVED).
+
+NOT COVERED: the opening-proof form of a chunk (`open` 1 and `mode` 1, `a_out` at entry 6) has no
+builder in `iface` and no test; the fix selects its operand by `cswap(open, a5, a6)`.
 
 Open observation (no counterexample built, not a lane finding): the lock anchors of middle
 chunks (`SHK_LOCK`, FINAL-DESIGN `A_j = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d,
