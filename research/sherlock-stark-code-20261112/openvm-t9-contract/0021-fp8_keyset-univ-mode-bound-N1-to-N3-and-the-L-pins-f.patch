@@ -1,0 +1,59 @@
+From 5d8e15883b8dc1029312b9e71644bd346d9766fc Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 07:07:54 -0700
+Subject: [PATCH] fp8_keyset: univ mode (bound N1 to N3 and the L pins for two
+ programs), optional-AIR report in check_layout
+
+---
+ .../examples/fp8_keyset.rs                    | 28 +++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/crates/sherlock-wrap-export/examples/fp8_keyset.rs b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+index 2e2217d..8c1d459 100644
+--- a/crates/sherlock-wrap-export/examples/fp8_keyset.rs
++++ b/crates/sherlock-wrap-export/examples/fp8_keyset.rs
+@@ -266,6 +266,10 @@ fn check_layout(vk: &MultiStarkVerifyingKey<NodeSC>) {
+     assert_eq!(vk.inner.per_air[keybind::KB_AIR_ID].params.num_public_values, keybind::NUM_PVS);
+     let others: usize = vk.inner.per_air.iter().skip(1).map(|a| a.params.num_public_values).sum();
+     assert_eq!(others, 0, "KeyBind: only AIR 0 has public values");
++    // As upstream keygen_all_required: every AIR of a bound layer is required (no AIR can be
++    // left out of a proof).
++    let opt: Vec<usize> = vk.inner.per_air.iter().enumerate().filter(|(_, a)| !a.is_required).map(|(i, _)| i).collect();
++    if !opt.is_empty() { eprintln!("FP8 optional AIRs: {opt:?}"); }
+ }
+ 
+ /// The commitment of `child` in the layer `c` (its cached DAG commitment, its pre-hash).
+@@ -1061,6 +1065,30 @@ fn main() {
+         "chain" => chain(&out),
+         "fixpoint" => fixpoint(&out),
+         "neg" => neg(&out),
++        "univ" => {
++            // Universality of the bound keys: programs A (W1, 1 AIR) and B (W1 x 2, 2 AIRs).
++            let mut log = vec![];
++            let fapp = Eng::new(frozen::APP.params());
++            let mut rows = vec![];
++            for (name, copies) in [("A", 1usize), ("B", 2)] {
++                let (_, w) = w1_airs(copies);
++                let (_, app) = kg(&frozen::APP, &fapp, &w, &format!("{name}/app"), &mut log);
++                let l = agg_key::<1>(&frozen::LEAF_AGG, &app, Role::Leaf, &format!("{name}/leaf"), &mut log);
++                let c1 = agg_key::<2>(&frozen::INTERNAL, &l.vk, Role::N1, &format!("{name}/N1"), &mut log);
++                let c2 = agg_key::<2>(&frozen::INTERNAL, &c1.vk, Role::N2, &format!("{name}/N2"), &mut log);
++                let c3 = agg_key::<2>(&frozen::INTERNAL, &c2.vk, Role::N3, &format!("{name}/N3"), &mut log);
++                let c4 = agg_key::<2>(&frozen::INTERNAL, &c3.vk, Role::N3, &format!("{name}/N3 over N3"), &mut log);
++                let all_req = [&l.vk, &c1.vk, &c2.vk, &c3.vk].iter().all(|v| v.inner.per_air.iter().all(|a| a.is_required));
++                rows.push(json!({"program": name, "leaf": format!("{:?}", l.vk.pre_hash), "n1": format!("{:?}", c1.vk.pre_hash),
++                    "n2": format!("{:?}", c2.vk.pre_hash), "n3": format!("{:?}", c3.vk.pre_hash),
++                    "pin_n2": format!("{:?}", commit_in(&c3, &c2.vk)), "pin_n3": format!("{:?}", commit_in(&c4, &c3.vk)), "all_required": all_req}));
++            }
++            let same = |k: &str| rows[0][k] == rows[1][k];
++            let v = json!({"rows": rows, "leaf_equal": same("leaf"), "n1_equal": same("n1"), "n2_equal": same("n2"), "n3_equal": same("n3"),
++                "pin_n2_equal": same("pin_n2"), "pin_n3_equal": same("pin_n3")});
++            println!("FP8UNIV {}", serde_json::to_string(&v).unwrap());
++            fs::write(out.join("univ.json"), serde_json::to_string_pretty(&v).unwrap()).unwrap();
++        }
+         "dbg" => {
+             let mut log = vec![];
+             let (chip, w1) = w1_airs(1);
+-- 
+2.56.0
+

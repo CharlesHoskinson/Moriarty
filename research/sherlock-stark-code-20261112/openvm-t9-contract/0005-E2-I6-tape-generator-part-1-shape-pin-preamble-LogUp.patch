@@ -1,0 +1,1144 @@
+From be383517a3f3b475e954bd52ac319e7a4a1de7ad Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Thu, 12 Nov 2026 11:40:18 -0700
+Subject: [PATCH] E2 I6: tape generator part 1 (shape pin, preamble, LogUp PoW
+ with a LowBits op, LogUp GKR, GKR claim checks) with AssertEq and Bits AIRs;
+ on the real L proof 4,271 transcript events equal the stock record and the
+ tape proves; changed GKR claim and PoW witness refused
+
+---
+ crates/sherlock-lfr/src/lib.rs        |   2 +
+ crates/sherlock-lfr/src/lverify.rs    | 436 ++++++++++++++++++++++++++
+ crates/sherlock-lfr/src/machine.rs    | 197 +++++++++++-
+ crates/sherlock-lfr/src/program.rs    |   2 +
+ crates/sherlock-lfr/src/record.rs     |  56 ++++
+ crates/sherlock-lfr/src/tape.rs       |  52 ++-
+ crates/sherlock-lfr/src/transcript.rs |  21 ++
+ crates/sherlock-lfr/tests/i6_part1.rs | 136 ++++++++
+ 8 files changed, 896 insertions(+), 6 deletions(-)
+ create mode 100644 crates/sherlock-lfr/src/lverify.rs
+ create mode 100644 crates/sherlock-lfr/src/record.rs
+ create mode 100644 crates/sherlock-lfr/tests/i6_part1.rs
+
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+index 8313c8a..c2dd7a8 100644
+--- a/crates/sherlock-lfr/src/lib.rs
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -9,10 +9,12 @@ pub mod alu;
+ pub mod bb;
+ pub mod fixture;
+ pub mod fr;
++pub mod lverify;
+ pub mod machine;
+ pub mod poseidon;
+ pub mod program;
+ pub mod range;
++pub mod record;
+ pub mod tape;
+ pub mod testing;
+ pub mod transcript;
+diff --git a/crates/sherlock-lfr/src/lverify.rs b/crates/sherlock-lfr/src/lverify.rs
+new file mode 100644
+index 0000000..b6fc826
+--- /dev/null
++++ b/crates/sherlock-lfr/src/lverify.rs
+@@ -0,0 +1,436 @@
++//! I6: the tape generator for the `L` verifier, part 1 (shape pin, preamble, LogUp PoW, LogUp
++//! GKR, the GKR claim checks). A mirror of `stark-backend/src/verifier/mod.rs` (preamble),
++//! `batch_constraints.rs` (steps 1 to 3) and `fractional_sumcheck_gkr.rs`, line by line.
++//!
++//! The ops depend only on the `L` vk and the pinned shape [`LShape`] (D-1); the proof gives the
++//! input values. Each proof value is an `Input` (BabyBear or `EF4`) or `FrInput` op, in the order
++//! the verifier reads it. Each check of the verifier is an `AssertEq` op; `check_witness` is an
++//! observe, a sample, a `LowBits` op and an `AssertEq` with 0.
++
++use std::{cmp::Reverse, collections::HashMap};
++
++use openvm_stark_backend::{calculate_n_logup, keygen::types::MultiStarkVerifyingKey, proof::Proof};
++use openvm_stark_sdk::config::bls12381_fr_poseidon::{Bls12381Fr as Fr, U_TRANSCRIPT};
++use p3_baby_bear::BabyBear;
++use p3_field::{Field, PrimeCharacteristicRing, PrimeField32};
++
++use crate::{
++    bb::{from_ef4, Ef4},
++    fixture::LSC,
++    tape::{Addr, Tape, Val, ValKind},
++    transcript::TapeTranscript,
++};
++
++/// The pinned shape of `L` (D-1): per AIR in vk order, its log height or `None` (absent).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct LShape {
++    pub log_heights: Vec<Option<usize>>,
++}
++
++impl LShape {
++    pub fn of(proof: &Proof<LSC>) -> Self {
++        Self {
++            log_heights: proof
++                .trace_vdata
++                .iter()
++                .map(|v| v.as_ref().map(|v| v.log_height))
++                .collect(),
++        }
++    }
++
++    /// Present AIRs sorted as the verifier's `trace_id_to_air_id`.
++    pub fn trace_order(&self) -> Vec<usize> {
++        let mut ids: Vec<usize> = (0..self.log_heights.len()).collect();
++        ids.sort_by_key(|&i| {
++            (
++                self.log_heights[i].is_none(),
++                self.log_heights[i].map(Reverse),
++                i,
++            )
++        });
++        ids.truncate(self.log_heights.iter().flatten().count());
++        ids
++    }
++}
++
++/// A tape under construction with its input values and its transcript.
++pub struct Gen {
++    pub tape: Tape,
++    pub tt: TapeTranscript,
++    pub inputs: Vec<Val>,
++    consts: HashMap<[u64; 4], Addr>,
++}
++
++impl Default for Gen {
++    fn default() -> Self {
++        Self::new()
++    }
++}
++
++impl Gen {
++    pub fn new() -> Self {
++        let mut tape = Tape::default();
++        let tt = TapeTranscript::new(&mut tape, U_TRANSCRIPT);
++        Self {
++            tape,
++            tt,
++            inputs: vec![],
++            consts: HashMap::new(),
++        }
++    }
++
++    // ---- values -------------------------------------------------------------------------
++    pub fn ef_in(&mut self, v: Ef4) -> Addr {
++        let a = self.tape.input(ValKind::Ef4);
++        self.inputs.push(Val::Bb(from_ef4(v)));
++        a
++    }
++    pub fn bb_in(&mut self, v: BabyBear) -> Addr {
++        let a = self.tape.input(ValKind::Bb);
++        self.inputs
++            .push(Val::Bb([v.as_canonical_u32() as u64, 0, 0, 0]));
++        a
++    }
++    pub fn fr_in(&mut self, v: Fr) -> Addr {
++        let a = self.tape.fr_input();
++        self.inputs.push(Val::Fr(v));
++        a
++    }
++    /// A constant of the key (one op per distinct value).
++    pub fn konst(&mut self, v: [u64; 4]) -> Addr {
++        if let Some(&a) = self.consts.get(&v) {
++            return a;
++        }
++        let kind = if v[1..] == [0; 3] {
++            ValKind::Bb
++        } else {
++            ValKind::Ef4
++        };
++        let a = self.tape.constant(kind, v);
++        self.consts.insert(v, a);
++        a
++    }
++    pub fn kbb(&mut self, v: u64) -> Addr {
++        self.konst([v % crate::bb::P, 0, 0, 0])
++    }
++    pub fn kef(&mut self, v: Ef4) -> Addr {
++        self.konst(from_ef4(v))
++    }
++    pub fn add(&mut self, a: Addr, b: Addr) -> Addr {
++        self.tape.add(a, b)
++    }
++    pub fn sub(&mut self, a: Addr, b: Addr) -> Addr {
++        self.tape.sub(a, b)
++    }
++    pub fn mul(&mut self, a: Addr, b: Addr) -> Addr {
++        self.tape.mul(a, b)
++    }
++    pub fn assert_eq(&mut self, a: Addr, b: Addr) {
++        self.tape.assert_eq(a, b)
++    }
++
++    // ---- transcript ---------------------------------------------------------------------
++    pub fn observe(&mut self, a: Addr) {
++        self.tt.observe(&mut self.tape, a)
++    }
++    pub fn observe_ext(&mut self, a: Addr) {
++        self.tt.observe_ext(&mut self.tape, a)
++    }
++    pub fn observe_commit(&mut self, a: Addr) {
++        self.tt.observe_commit(&mut self.tape, a)
++    }
++    pub fn sample(&mut self) -> Addr {
++        self.tt.sample(&mut self.tape)
++    }
++    pub fn sample_ext(&mut self) -> Addr {
++        self.tt.sample_ext(&mut self.tape)
++    }
++    pub fn sample_bits(&mut self, bits: u32) -> Addr {
++        let s = self.sample();
++        self.tape.low_bits(s, bits)
++    }
++    /// `FiatShamirTranscript::check_witness`: observe `w`, then `sample_bits(bits) == 0`.
++    pub fn check_witness(&mut self, bits: usize, w: Addr) {
++        if bits == 0 {
++            return;
++        }
++        self.observe(w);
++        let low = self.sample_bits(bits as u32);
++        let zero = self.kbb(0);
++        self.assert_eq(low, zero);
++    }
++
++    // ---- polynomial helpers (poly_common.rs) ------------------------------------------------
++    /// `interpolate_linear_at_01`.
++    pub fn lin01(&mut self, e0: Addr, e1: Addr, x: Addr) -> Addr {
++        let p = self.sub(e1, e0);
++        let px = self.mul(p, x);
++        self.add(px, e0)
++    }
++    /// `interpolate_cubic_at_0123`.
++    pub fn cubic0123(&mut self, e: [Addr; 4], x: Addr) -> Addr {
++        let inv6 = self.kbb(BabyBear::from_u64(6).inverse().as_canonical_u32() as u64);
++        let inv2 = self.kbb(BabyBear::TWO.inverse().as_canonical_u32() as u64);
++        let three = self.kbb(3);
++        let s1 = self.sub(e[1], e[0]);
++        let s2 = self.sub(e[2], e[0]);
++        let s3 = self.sub(e[3], e[0]);
++        let t = self.sub(s2, s1);
++        let t3 = self.mul(t, three);
++        let d3 = self.sub(s3, t3);
++        let p = self.mul(d3, inv6);
++        let u = self.sub(s2, d3);
++        let uh = self.mul(u, inv2);
++        let q = self.sub(uh, s1);
++        let sp = self.sub(s1, p);
++        let r = self.sub(sp, q);
++        let a = self.mul(p, x);
++        let a = self.add(a, q);
++        let a = self.mul(a, x);
++        let a = self.add(a, r);
++        let a = self.mul(a, x);
++        self.add(a, e[0])
++    }
++    /// `xi r + (1 - xi)(1 - r)`.
++    pub fn eq1(&mut self, xi: Addr, r: Addr) -> Addr {
++        let one = self.kbb(1);
++        let a = self.mul(xi, r);
++        let omx = self.sub(one, xi);
++        let omr = self.sub(one, r);
++        let b = self.mul(omx, omr);
++        self.add(a, b)
++    }
++}
++
++/// The tape values of part 1 that the later stages read.
++#[derive(Clone, Debug)]
++pub struct Part1 {
++    pub alpha: Addr,
++    pub beta: Addr,
++    /// `xi` of length `l_skip + n_global`.
++    pub xi: Vec<Addr>,
++    pub lambda: Addr,
++    /// Per present trace (trace order): the numerator and denominator terms.
++    pub num_terms: Vec<Addr>,
++    pub den_terms: Vec<Addr>,
++    pub n_logup: usize,
++    pub n_global: usize,
++}
++
++/// Errors of the generator: the proof does not have the pinned shape.
++#[derive(Debug, PartialEq, Eq)]
++pub enum ShapeError {
++    Heights,
++    Lengths(&'static str),
++}
++
++/// Part 1 of the `L` verifier on the tape: preamble, LogUp PoW, alpha, beta, GKR, the rest of
++/// `xi`, lambda, and the per-AIR LogUp terms with the GKR claim checks. Ops depend only on `vk`
++/// and `shape`; `proof` gives the input values.
++pub fn gen_part1(
++    g: &mut Gen,
++    vk: &MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &Proof<LSC>,
++) -> Result<Part1, ShapeError> {
++    if LShape::of(proof) != *shape {
++        return Err(ShapeError::Heights);
++    }
++    let mvk = &vk.inner;
++    let params = &mvk.params;
++    let l_skip = params.l_skip;
++    let order = shape.trace_order();
++
++    // Trace height constraints (the pinned shape; no ops).
++    for c in &mvk.trace_height_constraints {
++        let sum: u64 = order
++            .iter()
++            .map(|&i| (1u64 << shape.log_heights[i].unwrap().max(l_skip)) * c.coefficients[i] as u64)
++            .sum();
++        assert!(sum < c.threshold as u64, "pinned shape breaks a height constraint");
++    }
++
++    // Preamble (verifier/mod.rs).
++    let pre_hash = g.tape.fr_const(vk.pre_hash[0]);
++    g.observe_commit(pre_hash);
++    let cm = g.fr_in(proof.common_main_commit[0]);
++    g.observe_commit(cm);
++    for (i, avk) in mvk.per_air.iter().enumerate() {
++        let lh = shape.log_heights[i];
++        if !avk.is_required {
++            let b = g.kbb(lh.is_some() as u64);
++            g.observe(b);
++        }
++        if let Some(lh) = lh {
++            assert!(
++                avk.preprocessed_data.is_none(),
++                "L has no preprocessed trace (L-STRUCTURE.md)"
++            );
++            let h = g.kbb(lh as u64);
++            g.observe(h);
++            let tv = proof.trace_vdata[i].as_ref().unwrap();
++            if tv.cached_commitments.len() != avk.params.width.cached_mains.len() {
++                return Err(ShapeError::Lengths("cached commitments"));
++            }
++            for c in &tv.cached_commitments {
++                let a = g.fr_in(c[0]);
++                g.observe_commit(a);
++            }
++        }
++        if proof.public_values[i].len() != avk.params.num_public_values {
++            return Err(ShapeError::Lengths("public values"));
++        }
++        for pv in &proof.public_values[i] {
++            let a = g.bb_in(*pv);
++            g.observe(a);
++        }
++    }
++
++    // batch_constraints.rs step 1: LogUp PoW.
++    let w = g.bb_in(proof.gkr_proof.logup_pow_witness);
++    g.check_witness(params.logup.pow_bits, w);
++    // Step 2: alpha, beta, GKR.
++    let alpha = g.sample_ext();
++    let beta = g.sample_ext();
++    let n_per_trace: Vec<isize> = order
++        .iter()
++        .map(|&i| shape.log_heights[i].unwrap() as isize - l_skip as isize)
++        .collect();
++    let total_interactions: u64 = order
++        .iter()
++        .zip(&n_per_trace)
++        .map(|(&i, &n)| {
++            (mvk.per_air[i].symbolic_constraints.interactions.len() as u64)
++                << (l_skip + n.max(0) as usize)
++        })
++        .sum();
++    assert!(total_interactions > 0, "L has interactions");
++    let n_logup = calculate_n_logup(l_skip, total_interactions);
++    let (p_xi, q_xi, mut xi) = gen_gkr(g, proof, l_skip + n_logup)?;
++    let n_max = n_per_trace.iter().copied().max().unwrap().max(0) as usize;
++    let n_global = n_max.max(n_logup);
++    while xi.len() != l_skip + n_global {
++        xi.push(g.sample_ext());
++    }
++    let lambda = g.sample_ext();
++
++    // Step 3: per-AIR terms and the GKR claim checks.
++    let bp = &proof.batch_constraint_proof;
++    if bp.numerator_term_per_air.len() != order.len()
++        || bp.denominator_term_per_air.len() != order.len()
++    {
++        return Err(ShapeError::Lengths("LogUp terms"));
++    }
++    let (mut p_claim, mut q_claim) = (p_xi, q_xi);
++    let (mut num_terms, mut den_terms) = (vec![], vec![]);
++    for (&sp, &sq) in bp
++        .numerator_term_per_air
++        .iter()
++        .zip(&bp.denominator_term_per_air)
++    {
++        let (ap, aq) = (g.ef_in(sp), g.ef_in(sq));
++        p_claim = g.sub(p_claim, ap);
++        q_claim = g.sub(q_claim, aq);
++        g.observe_ext(ap);
++        g.observe_ext(aq);
++        num_terms.push(ap);
++        den_terms.push(aq);
++    }
++    let zero = g.kbb(0);
++    g.assert_eq(p_claim, zero);
++    g.assert_eq(q_claim, alpha);
++    Ok(Part1 {
++        alpha,
++        beta,
++        xi,
++        lambda,
++        num_terms,
++        den_terms,
++        n_logup,
++        n_global,
++    })
++}
++
++/// `verify_gkr` (fractional_sumcheck_gkr.rs). Returns `(p(xi), q(xi), xi)`.
++fn gen_gkr(
++    g: &mut Gen,
++    proof: &Proof<LSC>,
++    total_rounds: usize,
++) -> Result<(Addr, Addr, Vec<Addr>), ShapeError> {
++    let gp = &proof.gkr_proof;
++    if gp.claims_per_layer.len() != total_rounds {
++        return Err(ShapeError::Lengths("GKR layers"));
++    }
++    if gp.sumcheck_polys.len() != total_rounds - 1 {
++        return Err(ShapeError::Lengths("GKR sumcheck polys"));
++    }
++    let q0 = g.ef_in(gp.q0_claim);
++    g.observe_ext(q0);
++    let zero = g.kbb(0);
++    let layer = |g: &mut Gen, j: usize| -> [Addr; 4] {
++        let c = &gp.claims_per_layer[j];
++        let v = [c.p_xi_0, c.q_xi_0, c.p_xi_1, c.q_xi_1].map(|x| g.ef_in(x));
++        for a in v {
++            g.observe_ext(a);
++        }
++        v
++    };
++    let cross = |g: &mut Gen, [p0, q0, p1, q1]: [Addr; 4]| -> (Addr, Addr) {
++        let a = g.mul(p0, q1);
++        let b = g.mul(p1, q0);
++        let pc = g.add(a, b);
++        let qc = g.mul(q0, q1);
++        (pc, qc)
++    };
++    let reduce = |g: &mut Gen, [p0, q0, p1, q1]: [Addr; 4], mu: Addr| -> (Addr, Addr) {
++        (g.lin01(p0, p1, mu), g.lin01(q0, q1, mu))
++    };
++
++    let c0 = layer(g, 0);
++    let (pc, qc) = cross(g, c0);
++    g.assert_eq(pc, zero);
++    g.assert_eq(qc, q0);
++    let mu = g.sample_ext();
++    let (mut numer, mut denom) = reduce(g, c0, mu);
++    let mut gkr_r = vec![mu];
++
++    for round in 1..total_rounds {
++        let lambda = g.sample_ext();
++        let ld = g.mul(lambda, denom);
++        let mut claim = g.add(numer, ld);
++        let polys = &gp.sumcheck_polys[round - 1];
++        if polys.len() != round {
++            return Err(ShapeError::Lengths("GKR sub-rounds"));
++        }
++        let mut round_r = vec![];
++        let mut eq = g.kbb(1);
++        for (sr, evals) in polys.iter().enumerate() {
++            let e = evals.map(|x| g.ef_in(x));
++            for a in e {
++                g.observe_ext(a);
++            }
++            let ri = g.sample_ext();
++            round_r.push(ri);
++            let ev0 = g.sub(claim, e[0]);
++            claim = g.cubic0123([ev0, e[0], e[1], e[2]], ri);
++            let f = g.eq1(gkr_r[sr], ri);
++            eq = g.mul(eq, f);
++        }
++        let c = layer(g, round);
++        let (pc, qc) = cross(g, c);
++        let lq = g.mul(lambda, qc);
++        let s = g.add(pc, lq);
++        let expected = g.mul(s, eq);
++        g.assert_eq(expected, claim);
++        let mu = g.sample_ext();
++        (numer, denom) = reduce(g, c, mu);
++        gkr_r = std::iter::once(mu).chain(round_r).collect();
++    }
++    Ok((numer, denom, gkr_r))
++}
++
++/// `true` iff `x` is the `Ef4` value of a BabyBear `v` (test helper).
++pub fn is_bb(x: [u64; 4], v: BabyBear) -> bool {
++    x == [v.as_canonical_u32() as u64, 0, 0, 0]
++}
++
+diff --git a/crates/sherlock-lfr/src/machine.rs b/crates/sherlock-lfr/src/machine.rs
+index 20c1c87..cfb2ac7 100644
+--- a/crates/sherlock-lfr/src/machine.rs
++++ b/crates/sherlock-lfr/src/machine.rs
+@@ -3,7 +3,8 @@
+ //!
+ //! AIRs (only those with at least one op are present; `Range16` is always last):
+ //! `InputAir` (BabyBear and `EF4` inputs and constants), `FrInputAir`, `BbAluProgAir`,
+-//! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `ProgramTableAir`, `Range16Air`. All
++//! `PoseidonProgAir`, `PackAir`, `SplitAir`, `ReshapeAir`, `AssertEqAir`, `BitsAir`,
++//! `ProgramTableAir`, `Range16Air`. All
+ //! talk over the write-once memory bus [`MEM_BUS`] and the 16-bit range bus. Each execution AIR
+ //! keeps its program in main columns after its other columns and receives it on the program bus
+ //! from the one `ProgramTableAir` (`crate::program`), the only preprocessed trace.
+@@ -25,8 +26,8 @@ use crate::{
+     fr::{fr_from_big, limbs16, split, split_consts, H_LIMBS, V_LIMBS},
+     poseidon::{eval_rounds, poseidon_row, IN, OUT, POSEIDON_WIDTH},
+     program::{
+-        receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_FR_INPUT, TAG_INPUT, TAG_PACK,
+-        TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
++        receive_prog, KindProgram, ProgramTableAir, TAG_ALU, TAG_ASSERT_EQ, TAG_BITS, TAG_FR_INPUT,
++        TAG_INPUT, TAG_PACK, TAG_PERM, TAG_RESHAPE, TAG_SPLIT,
+     },
+     range::{Range16Air, RangeCounts, RANGE_BUS},
+     tape::{padded, Addr, BbAluProgAir, InputAir, Op, Tape, Val, MEM_BUS},
+@@ -540,6 +541,158 @@ impl<AB: InteractionBuilder<F = Fr>> Air<AB> for ReshapeAir {
+     }
+ }
+ 
++// ------------------------------------------------------------------------------------------
++// AssertEqAir: program [addr_a, addr_b, active]; main v[4]. Reads (a, v) and (b, v), so the two
++// memory values are equal.
++// ------------------------------------------------------------------------------------------
++
++#[derive(Clone, Debug)]
++pub struct AssertEqProg {
++    pub a: Addr,
++    pub b: Addr,
++}
++
++#[derive(Clone, Debug)]
++pub struct AssertEqAir {
++    pub prog: Arc<Vec<AssertEqProg>>,
++}
++air_boiler!(AssertEqAir, 4, 3);
++
++impl AssertEqAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| vec![fu(p.a as u64), fu(p.b as u64), Fr::ONE])
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 3, vec![Fr::ZERO; 3])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| get(mem, p.a).cells().to_vec())
++            .collect();
++        self.finish(rows_to_matrix(rows, self.prog.len(), 4, vec![Fr::ZERO; 4]))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for AssertEqAir {
++    fn eval(&self, builder: &mut AB) {
++        let (v, p) = split_row(builder, TAG_ASSERT_EQ, 4, 3);
++        builder.push_interaction(MEM_BUS, mem_msg(p[0].clone(), &v), -p[2].clone(), 1);
++        builder.push_interaction(MEM_BUS, mem_msg(p[1].clone(), &v), -p[2].clone(), 1);
++    }
++}
++
++// ------------------------------------------------------------------------------------------
++// BitsAir: program [addr_x, addr_low, mult_low, n, active]; main [x, b[31], s[31], low].
++// `low = x mod 2^n` of a canonical BabyBear word `x` (`sample_bits`): `x = sum b_i 2^i` with
++// boolean `b_i` (31 bits: unique, as `x < p < 2^31 < r`); the mask `s` is boolean and
++// non-increasing with `sum s_i = n`, so `s_i = [i < n]`; `low = sum s_i b_i 2^i`.
++// ------------------------------------------------------------------------------------------
++
++pub const BITS_N: usize = 31;
++pub const BT_X: usize = 0;
++pub const BT_B: usize = 1;
++pub const BT_S: usize = BT_B + BITS_N;
++pub const BT_LOW: usize = BT_S + BITS_N;
++pub const BITS_WIDTH: usize = BT_LOW + 1;
++
++#[derive(Clone, Debug)]
++pub struct BitsProg {
++    pub x: Addr,
++    pub out: Addr,
++    pub mult: u64,
++    pub n: u32,
++}
++
++#[derive(Clone, Debug)]
++pub struct BitsAir {
++    pub prog: Arc<Vec<BitsProg>>,
++}
++air_boiler!(BitsAir, BITS_WIDTH, 5);
++
++/// Cells of one `BitsAir` row for the word `x` and bit count `n`.
++pub fn bits_cells(x: u64, n: u32) -> Vec<Fr> {
++    let mut r = vec![Fr::ZERO; BITS_WIDTH];
++    r[BT_X] = fu(x);
++    for i in 0..BITS_N {
++        r[BT_B + i] = fu((x >> i) & 1);
++        r[BT_S + i] = fu(((i as u32) < n) as u64);
++    }
++    r[BT_LOW] = fu(x & ((1u64 << n) - 1));
++    r
++}
++
++impl BitsAir {
++    fn pre(&self) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| {
++                vec![
++                    fu(p.x as u64),
++                    fu(p.out as u64),
++                    fu(p.mult),
++                    fu(p.n as u64),
++                    Fr::ONE,
++                ]
++            })
++            .collect();
++        rows_to_matrix(rows, self.prog.len(), 5, vec![Fr::ZERO; 5])
++    }
++    pub fn trace(&self, mem: &[Option<Val>]) -> RowMajorMatrix<Fr> {
++        let rows = self
++            .prog
++            .iter()
++            .map(|p| bits_cells(get(mem, p.x).bb()[0], p.n))
++            .collect();
++        self.finish(rows_to_matrix(
++            rows,
++            self.prog.len(),
++            BITS_WIDTH,
++            bits_cells(0, 0),
++        ))
++    }
++}
++
++impl<AB: InteractionBuilder<F = Fr>> Air<AB> for BitsAir {
++    fn eval(&self, builder: &mut AB) {
++        let (x, p) = split_row(builder, TAG_BITS, BITS_WIDTH, 5);
++        let mut acc = AB::Expr::ZERO;
++        let mut low = AB::Expr::ZERO;
++        let mut sum_s = AB::Expr::ZERO;
++        for i in (0..BITS_N).rev() {
++            let (b, s) = (x[BT_B + i].clone(), x[BT_S + i].clone());
++            builder.assert_bool(b.clone());
++            builder.assert_bool(s.clone());
++            if i + 1 < BITS_N {
++                // s_{i+1} = 1 -> s_i = 1
++                builder.assert_zero(x[BT_S + i + 1].clone() * (AB::Expr::ONE - s.clone()));
++            }
++            acc = acc * AB::Expr::TWO + b.clone();
++            low = low * AB::Expr::TWO + s.clone() * b;
++            sum_s += s;
++        }
++        builder.assert_eq(x[BT_X].clone(), acc);
++        builder.assert_eq(x[BT_LOW].clone(), low);
++        builder.assert_eq(sum_s, p[3].clone());
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[0].clone(), &[x[BT_X].clone()]),
++            -p[4].clone(),
++            1,
++        );
++        builder.push_interaction(
++            MEM_BUS,
++            mem_msg(p[1].clone(), &[x[BT_LOW].clone()]),
++            p[2].clone(),
++            1,
++        );
++    }
++}
++
+ // ------------------------------------------------------------------------------------------
+ // Machine
+ // ------------------------------------------------------------------------------------------
+@@ -554,6 +707,8 @@ pub struct Machine {
+     pub pack: Option<PackAir>,
+     pub split: Option<SplitAir>,
+     pub reshape: Option<ReshapeAir>,
++    pub assert_eq: Option<AssertEqAir>,
++    pub bits: Option<BitsAir>,
+ }
+ 
+ fn some<T>(v: Vec<T>) -> Option<Arc<Vec<T>>> {
+@@ -568,6 +723,7 @@ impl Machine {
+             (vec![], vec![], vec![], vec![], vec![]);
+         let mut inp = vec![];
+         let mut alu = vec![];
++        let (mut asserts, mut bits) = (vec![], vec![]);
+         for op in &tape.ops {
+             match op {
+                 Op::Input { kind, out } => inp.push(crate::tape::InputProg {
+@@ -628,6 +784,13 @@ impl Machine {
+                     mult_ef: 0,
+                     mult_bb: outs.map(|a| m(&a)),
+                 }),
++                Op::AssertEq { a, b } => asserts.push(AssertEqProg { a: *a, b: *b }),
++                Op::LowBits { x, n, out } => bits.push(BitsProg {
++                    x: *x,
++                    out: *out,
++                    mult: m(out),
++                    n: *n,
++                }),
+             }
+         }
+         Self {
+@@ -638,6 +801,8 @@ impl Machine {
+             pack: some(pack).map(|prog| PackAir { prog }),
+             split: some(split).map(|prog| SplitAir { prog }),
+             reshape: some(reshape).map(|prog| ReshapeAir { prog }),
++            assert_eq: some(asserts).map(|prog| AssertEqAir { prog }),
++            bits: some(bits).map(|prog| BitsAir { prog }),
+         }
+     }
+ 
+@@ -666,6 +831,12 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             push(TAG_RESHAPE, a.prog_rows());
+         }
++        if let Some(a) = &self.assert_eq {
++            push(TAG_ASSERT_EQ, a.prog_rows());
++        }
++        if let Some(a) = &self.bits {
++            push(TAG_BITS, a.prog_rows());
++        }
+         v
+     }
+ 
+@@ -698,6 +869,12 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             v.push(Arc::new(a.clone()));
+         }
++        if let Some(a) = &self.assert_eq {
++            v.push(Arc::new(a.clone()));
++        }
++        if let Some(a) = &self.bits {
++            v.push(Arc::new(a.clone()));
++        }
+         v.push(Arc::new(self.table()));
+         v.push(Arc::new(Range16Air));
+         v
+@@ -714,6 +891,8 @@ impl Machine {
+             (self.pack.is_some(), "Pack"),
+             (self.split.is_some(), "Split"),
+             (self.reshape.is_some(), "Reshape"),
++            (self.assert_eq.is_some(), "AssertEq"),
++            (self.bits.is_some(), "Bits"),
+         ] {
+             if present {
+                 v.push(n);
+@@ -758,6 +937,12 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             v.push(a.trace(mem));
+         }
++        if let Some(a) = &self.assert_eq {
++            v.push(a.trace(mem));
++        }
++        if let Some(a) = &self.bits {
++            v.push(a.trace(mem));
++        }
+         v.push(self.table().trace());
+         v
+     }
+@@ -799,6 +984,12 @@ impl Machine {
+         if let Some(a) = &self.reshape {
+             push("Reshape", a.prog.len(), 4 + 12, 0);
+         }
++        if let Some(a) = &self.assert_eq {
++            push("AssertEq", a.prog.len(), 4 + 3, 0);
++        }
++        if let Some(a) = &self.bits {
++            push("Bits", a.prog.len(), BITS_WIDTH + 5, 0);
++        }
+         let t = self.table();
+         v.push((
+             "ProgramTable",
+diff --git a/crates/sherlock-lfr/src/program.rs b/crates/sherlock-lfr/src/program.rs
+index fe14aac..1798e35 100644
+--- a/crates/sherlock-lfr/src/program.rs
++++ b/crates/sherlock-lfr/src/program.rs
+@@ -41,6 +41,8 @@ pub const TAG_PERM: u64 = 4;
+ pub const TAG_PACK: u64 = 5;
+ pub const TAG_SPLIT: u64 = 6;
+ pub const TAG_RESHAPE: u64 = 7;
++pub const TAG_ASSERT_EQ: u64 = 8;
++pub const TAG_BITS: u64 = 9;
+ 
+ /// `[tag, cols.., 0 ..]` of length `1 + PROG_W`.
+ pub fn prog_msg<E: Clone + PrimeCharacteristicRing>(tag: u64, cols: &[E]) -> Vec<E> {
+diff --git a/crates/sherlock-lfr/src/record.rs b/crates/sherlock-lfr/src/record.rs
+new file mode 100644
+index 0000000..aa7d7f4
+--- /dev/null
++++ b/crates/sherlock-lfr/src/record.rs
+@@ -0,0 +1,56 @@
++//! A recording wrapper around the stock `L` transcript: it logs every observe, commitment
++//! observe and sample while the stock verifier runs. The log is the reference for the tape.
++
++use std::sync::{Arc, Mutex};
++
++use openvm_stark_backend::{
++    keygen::types::MultiStarkVerifyingKey, proof::Proof, verifier::verify, FiatShamirTranscript,
++    StarkEngine,
++};
++use openvm_stark_sdk::config::baby_bear_bls12381_poseidon::{
++    default_transcript, BabyBearBls12381PoseidonCpuEngine, Bls12381Fr, Transcript,
++};
++use p3_baby_bear::BabyBear;
++
++use crate::fixture::{l_ud, LSC};
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Ev {
++    Obs(BabyBear),
++    Commit(Bls12381Fr),
++    Sample(BabyBear),
++}
++
++#[derive(Clone)]
++pub struct Rec {
++    pub inner: Transcript,
++    pub log: Arc<Mutex<Vec<Ev>>>,
++}
++
++impl FiatShamirTranscript<LSC> for Rec {
++    fn observe(&mut self, v: BabyBear) {
++        self.log.lock().unwrap().push(Ev::Obs(v));
++        FiatShamirTranscript::<LSC>::observe(&mut self.inner, v);
++    }
++    fn sample(&mut self) -> BabyBear {
++        let v = FiatShamirTranscript::<LSC>::sample(&mut self.inner);
++        self.log.lock().unwrap().push(Ev::Sample(v));
++        v
++    }
++    fn observe_commit(&mut self, d: [Bls12381Fr; 1]) {
++        self.log.lock().unwrap().push(Ev::Commit(d[0]));
++        FiatShamirTranscript::<LSC>::observe_commit(&mut self.inner, d);
++    }
++}
++
++/// The stock verifier's transcript events on an `L` proof, and its verdict.
++pub fn stock_log(vk: &MultiStarkVerifyingKey<LSC>, proof: &Proof<LSC>) -> (Vec<Ev>, bool) {
++    let engine = BabyBearBls12381PoseidonCpuEngine::new(l_ud(48));
++    let mut rec = Rec {
++        inner: default_transcript(),
++        log: Default::default(),
++    };
++    let ok = verify(engine.config(), vk, proof, &mut rec).is_ok();
++    let log = rec.log.lock().unwrap().clone();
++    (log, ok)
++}
+diff --git a/crates/sherlock-lfr/src/tape.rs b/crates/sherlock-lfr/src/tape.rs
+index 8682295..2daa786 100644
+--- a/crates/sherlock-lfr/src/tape.rs
++++ b/crates/sherlock-lfr/src/tape.rs
+@@ -130,6 +130,17 @@ pub enum Op {
+         x: Addr,
+         outs: [Addr; 4],
+     },
++    /// The values at `a` and `b` are equal (a check of the verifier; no output).
++    AssertEq {
++        a: Addr,
++        b: Addr,
++    },
++    /// `x mod 2^n` of a BabyBear word (`sample_bits`), `n <= 31`.
++    LowBits {
++        x: Addr,
++        n: u32,
++        out: Addr,
++    },
+ }
+ 
+ /// A straight-line program over BabyBear and `EF4` values.
+@@ -224,6 +235,18 @@ impl Tape {
+         self.ops.push(Op::Decompose { x, outs });
+         outs
+     }
++    pub fn assert_eq(&mut self, a: Addr, b: Addr) {
++        self.check(a);
++        self.check(b);
++        self.ops.push(Op::AssertEq { a, b });
++    }
++    pub fn low_bits(&mut self, x: Addr, n: u32) -> Addr {
++        assert!(n <= 31);
++        self.check(x);
++        let out = self.fresh();
++        self.ops.push(Op::LowBits { x, n, out });
++        out
++    }
+ 
+     /// Read counts per address.
+     pub fn reads(&self) -> Vec<u64> {
+@@ -240,6 +263,11 @@ impl Tape {
+                 Op::Split { x, .. } => rd(x),
+                 Op::Compose { ins, .. } => ins.iter().for_each(&mut rd),
+                 Op::Decompose { x, .. } => rd(x),
++                Op::AssertEq { a, b } => {
++                    rd(a);
++                    rd(b);
++                }
++                Op::LowBits { x, .. } => rd(x),
+                 Op::Input { .. } | Op::Const { .. } | Op::FrInput { .. } | Op::FrConst { .. } => {}
+             }
+         }
+@@ -256,13 +284,31 @@ impl Tape {
+     }
+ 
+     /// Run the tape on the input values (in order of the `Input` and `FrInput` ops). Returns
+-    /// every value (`None` at address 0).
++    /// every value (`None` at address 0). Panics if an `AssertEq` fails.
+     pub fn execute_vals(&self, inputs: &[Val]) -> Vec<Option<Val>> {
++        let (mem, failed) = self.execute_checked(inputs);
++        assert!(failed.is_empty(), "tape assertions failed at ops {failed:?}");
++        mem
++    }
++
++    /// Run the tape; returns the memory and the op indices of the failed `AssertEq` ops (the
++    /// plain-Rust verdict of the tape: accept iff none failed).
++    pub fn execute_checked(&self, inputs: &[Val]) -> (Vec<Option<Val>>, Vec<usize>) {
++        let mut failed = vec![];
+         let mut mem: Vec<Option<Val>> = vec![None; self.num_addrs()];
+         let mut it = inputs.iter();
+         let get = |mem: &Vec<Option<Val>>, a: &Addr| mem[*a as usize].expect("unwritten address");
+-        for op in &self.ops {
++        for (idx, op) in self.ops.iter().enumerate() {
+             match op {
++                Op::AssertEq { a, b } => {
++                    if get(&mem, a) != get(&mem, b) {
++                        failed.push(idx);
++                    }
++                }
++                Op::LowBits { x, n, out } => {
++                    let v = get(&mem, x).bb()[0];
++                    mem[*out as usize] = Some(Val::Bb([v & ((1u64 << n) - 1), 0, 0, 0]));
++                }
+                 Op::Input { kind, out } => {
+                     let v = it.next().expect("too few inputs").bb();
+                     assert!(v.iter().all(|&x| x < P), "input not canonical");
+@@ -311,7 +357,7 @@ impl Tape {
+             }
+         }
+         assert!(it.next().is_none(), "too many inputs");
+-        mem
++        (mem, failed)
+     }
+ 
+     /// The preprocessed programs of the two AIRs.
+diff --git a/crates/sherlock-lfr/src/transcript.rs b/crates/sherlock-lfr/src/transcript.rs
+index 5920f82..5778c5b 100644
+--- a/crates/sherlock-lfr/src/transcript.rs
++++ b/crates/sherlock-lfr/src/transcript.rs
+@@ -17,8 +17,20 @@ const RATE: usize = 2;
+ const OBS_PER_ELEM: usize = 8;
+ const SAMPLES_PER_ELEM: usize = 5;
+ 
++/// One transcript event on the tape, in the order of the stock `FiatShamirTranscript` calls
++/// (`observe_ext` is 4 observes, `sample_ext` 4 samples, `check_witness` an observe and a
++/// sample).
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum TEv {
++    Obs(Addr),
++    Commit(Addr),
++    Sample(Addr),
++}
++
+ #[derive(Clone, Debug)]
+ pub struct TapeTranscript {
++    /// Every event, in order.
++    pub log: Vec<TEv>,
+     state: [Addr; 3],
+     absorb_idx: usize,
+     sample_idx: usize,
+@@ -32,6 +44,7 @@ impl TapeTranscript {
+         let zero = tape.fr_const(openvm_stark_sdk::config::bls12381_fr_poseidon::Bls12381Fr::ZERO);
+         let cap = tape.fr_const(cap_var(u_transcript));
+         Self {
++            log: vec![],
+             state: [zero, zero, cap],
+             absorb_idx: 0,
+             sample_idx: 0,
+@@ -72,6 +85,7 @@ impl TapeTranscript {
+ 
+     /// Observe one BabyBear word.
+     pub fn observe(&mut self, tape: &mut Tape, w: Addr) {
++        self.log.push(TEv::Obs(w));
+         self.sample_buf.clear();
+         self.observe_buf.push(w);
+         if self.observe_buf.len() == OBS_PER_ELEM {
+@@ -90,6 +104,7 @@ impl TapeTranscript {
+ 
+     /// Observe a commitment (one Fr word).
+     pub fn observe_commit(&mut self, tape: &mut Tape, d: Addr) {
++        self.log.push(TEv::Commit(d));
+         self.sample_buf.clear();
+         self.flush_observe_buf(tape);
+         self.absorb(tape, d);
+@@ -97,6 +112,12 @@ impl TapeTranscript {
+ 
+     /// Sample one BabyBear word.
+     pub fn sample(&mut self, tape: &mut Tape) -> Addr {
++        let a = self.sample_inner(tape);
++        self.log.push(TEv::Sample(a));
++        a
++    }
++
++    fn sample_inner(&mut self, tape: &mut Tape) -> Addr {
+         if let Some(v) = self.sample_buf.pop() {
+             return v;
+         }
+diff --git a/crates/sherlock-lfr/tests/i6_part1.rs b/crates/sherlock-lfr/tests/i6_part1.rs
+new file mode 100644
+index 0000000..3e9a802
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/i6_part1.rs
+@@ -0,0 +1,136 @@
++//! I6 gate: the tape generator, part 1 (shape pin, preamble, LogUp PoW, LogUp GKR, the GKR
++//! claim checks) on the real `L` proof. Every value the tape observes or samples equals the
++//! stock verifier's transcript record, in order, up to the sample of `mu` (step 4 of
++//! `batch_constraints.rs`, where I7 starts). No tape assertion fails. Op counts and the machine
++//! shape are printed (MEASURED); the tape proves on the machine with 2 commitments. Refused: a
++//! changed GKR layer claim and a changed LogUp PoW witness (by the stock verifier, by the
++//! plain-Rust tape run, and by the prover). Ignored by default: needs the fixture.
++
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use sherlock_lfr::{
++    bb::Ef4,
++    fixture::{self, LSC},
++    lverify::{gen_part1, Gen, LShape},
++    machine::Machine,
++    record::{stock_log, Ev},
++    tape::Op,
++    testing::{preprocessed_airs, prove_verify_range, small_params, Outcome},
++    transcript::TEv,
++};
++
++type LProof = openvm_stark_backend::proof::Proof<LSC>;
++
++fn build(
++    vk: &openvm_stark_backend::keygen::types::MultiStarkVerifyingKey<LSC>,
++    shape: &LShape,
++    proof: &LProof,
++) -> Gen {
++    let mut g = Gen::new();
++    gen_part1(&mut g, vk, shape, proof).expect("pinned shape");
++    g
++}
++
++fn prove(g: &Gen, mem: &[Option<sherlock_lfr::tape::Val>]) -> Outcome {
++    let m = Machine::new(&g.tape);
++    let (o, vk) = prove_verify_range(small_params(3), m.airs(), m.traces(mem));
++    assert_eq!(preprocessed_airs(&vk), 1, "only the program table is preprocessed");
++    o
++}
++
++#[test]
++#[ignore = "needs the L fixture on disk"]
++fn i6_part1_on_real_l() {
++    let fx = fixture::load(&fixture::dir()).expect("fixture");
++    let (log, ok) = stock_log(&fx.l_vk, &fx.l_proof);
++    assert!(ok, "stock verifier accepts L");
++    let shape = LShape::of(&fx.l_proof);
++    let g = build(&fx.l_vk, &shape, &fx.l_proof);
++    let part1 = gen_part1(&mut Gen::new(), &fx.l_vk, &shape, &fx.l_proof).unwrap();
++    println!(
++        "I6 L shape: {} AIRs, {} present, log heights {:?}; n_logup {}, GKR rounds {}, n_global {}",
++        shape.log_heights.len(),
++        shape.trace_order().len(),
++        shape.log_heights,
++        part1.n_logup,
++        part1.xi.len() - (part1.n_global - part1.n_logup),
++        part1.n_global
++    );
++    let (mem, failed) = g.tape.execute_checked(&g.inputs);
++    assert!(failed.is_empty(), "tape assertions failed: {failed:?}");
++
++    // Every event equals the stock record, in order.
++    let bb = |a: u32| mem[a as usize].unwrap().bb();
++    let (mut n_obs, mut n_commit, mut n_sample) = (0, 0, 0);
++    assert!(g.tt.log.len() < log.len());
++    for (i, (t, s)) in g.tt.log.iter().zip(&log).enumerate() {
++        match (t, s) {
++            (TEv::Obs(a), Ev::Obs(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "observe {i}");
++                n_obs += 1;
++            }
++            (TEv::Commit(a), Ev::Commit(v)) => {
++                assert_eq!(mem[*a as usize].unwrap().fr(), *v, "commit {i}");
++                n_commit += 1;
++            }
++            (TEv::Sample(a), Ev::Sample(v)) => {
++                assert_eq!(bb(*a), [v.as_canonical_u32() as u64, 0, 0, 0], "sample {i}");
++                n_sample += 1;
++            }
++            _ => panic!("event {i}: kind differs: tape {t:?}, stock {s:?}"),
++        }
++    }
++    // The next stock event is the first sample of mu (I7 starts there).
++    assert!(matches!(log[g.tt.log.len()], Ev::Sample(_)));
++
++    let count = |f: fn(&Op) -> bool| g.tape.ops.iter().filter(|o| f(o)).count();
++    let m = Machine::new(&g.tape);
++    println!(
++        "I6 part 1: {} events equal the stock record ({n_obs} observes, {n_commit} commitment observes, {n_sample} samples) of {} in one L verification; ops: {} total, {} Input, {} FrInput, {} Const/FrConst, {} Alu, {} Perm, {} Pack, {} Split, {} Compose, {} Decompose, {} AssertEq, {} LowBits; table rows {}; machine shape {:?}",
++        g.tt.log.len(),
++        log.len(),
++        g.tape.ops.len(),
++        count(|o| matches!(o, Op::Input { .. })),
++        count(|o| matches!(o, Op::FrInput { .. })),
++        count(|o| matches!(o, Op::Const { .. } | Op::FrConst { .. })),
++        count(|o| matches!(o, Op::Alu { .. })),
++        count(|o| matches!(o, Op::Perm { .. })),
++        count(|o| matches!(o, Op::Pack { .. })),
++        count(|o| matches!(o, Op::Split { .. })),
++        count(|o| matches!(o, Op::Compose { .. })),
++        count(|o| matches!(o, Op::Decompose { .. })),
++        count(|o| matches!(o, Op::AssertEq { .. })),
++        count(|o| matches!(o, Op::LowBits { .. })),
++        m.table().rows.len(),
++        m.shape()
++    );
++    let t = std::time::Instant::now();
++    let o = prove(&g, &mem);
++    println!("I6 prove and verify {:.1}s: {o:?}", t.elapsed().as_secs_f64());
++    assert!(o.accepted(), "honest part 1 refused: {o:?}");
++    assert_eq!(o.commits(), Some(2));
++
++    // Negative controls: the same key (shape and vk), changed proof values.
++    let mut p1 = fx.l_proof.clone();
++    p1.gkr_proof.claims_per_layer[5].p_xi_0 += Ef4::ONE;
++    let mut p2 = fx.l_proof.clone();
++    p2.gkr_proof.logup_pow_witness += p3_baby_bear::BabyBear::ONE;
++    for (name, p) in [("changed GKR layer claim", p1), ("changed LogUp PoW witness", p2)] {
++        let (_, stock_ok) = stock_log(&fx.l_vk, &p);
++        let gt = build(&fx.l_vk, &shape, &p);
++        assert_eq!(
++            format!("{:?}", gt.tape.ops),
++            format!("{:?}", g.tape.ops),
++            "same tape (the key)"
++        );
++        let (mem_t, failed_t) = gt.tape.execute_checked(&gt.inputs);
++        let o = prove(&gt, &mem_t);
++        println!(
++            "I6 negative {name}: stock verifier accepts {stock_ok}; tape assertions failed at {} ops (first {:?}); prover: {o:?}",
++            failed_t.len(),
++            failed_t.first()
++        );
++        assert!(!stock_ok);
++        assert!(!failed_t.is_empty());
++        assert!(!o.accepted(), "{name} accepted");
++    }
++}
+-- 
+2.56.0
+

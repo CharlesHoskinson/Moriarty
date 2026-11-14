@@ -1,0 +1,1834 @@
+From c7c0c2e6565398ac413b0714760e7d1cf1436219 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Fri, 13 Nov 2026 18:37:37 -0700
+Subject: [PATCH] sherlock-lfr: ENC-4 and ENC-5 Rust reference and the sherlock
+ plan tool
+
+- enc45.rs: typed BabyBear layouts of the frame record (13 lanes, 52
+  words) and task record (7 lanes, 19 words), StackStep, StackCells,
+  EMPTY_F/EMPTY_T and the H_chain spill digest (ENC-4); the five plan
+  part word lists and plan_d = P2(DOM_PLAN, 1, itab_d, menu_d,
+  policy_d, layout_rule_d, place_d) (ENC-5), part tags 58 to 62 (LEAD).
+- tests/t9_enc45.rs: 48 pinned vectors and the ENC-4 and ENC-5
+  refusals; every P2 computed on three paths.
+- examples/sherlock_plan.rs: the sherlock plan tool over plan.json.
+---
+ crates/sherlock-lfr/examples/plan.json        |   26 +
+ crates/sherlock-lfr/examples/sherlock_plan.rs |   22 +
+ crates/sherlock-lfr/src/enc45.rs              | 1284 +++++++++++++++++
+ crates/sherlock-lfr/src/lib.rs                |    1 +
+ crates/sherlock-lfr/tests/t9_enc45.rs         |  437 ++++++
+ 5 files changed, 1770 insertions(+)
+ create mode 100644 crates/sherlock-lfr/examples/plan.json
+ create mode 100644 crates/sherlock-lfr/examples/sherlock_plan.rs
+ create mode 100644 crates/sherlock-lfr/src/enc45.rs
+ create mode 100644 crates/sherlock-lfr/tests/t9_enc45.rs
+
+diff --git a/crates/sherlock-lfr/examples/plan.json b/crates/sherlock-lfr/examples/plan.json
+new file mode 100644
+index 0000000..4c19703
+--- /dev/null
++++ b/crates/sherlock-lfr/examples/plan.json
+@@ -0,0 +1,26 @@
++{
++  "_comment": "T9 ENC-5 bench sample. Every value is a placeholder for the bench, not a measured or planned value: the instruction table is a toy trace, the log heights are sample buckets (RANGE 17 is the one fixed height in the sources, the 2^17-row RANGE table). The modular-leaf spec names no discrete leaf shapes, so the menu has two shapes. The chip sets are the three Compact chip sets of ARCHITECTURE 1.6.",
++  "itab": [
++    {"entry": 0, "width": 4, "rows": [[1, 0, 2, 3], [2, 1, 4, 5], [13, 0, 0, 0]]},
++    {"entry": 7, "width": 4, "rows": [[8, 0, 1, 9]]}
++  ],
++  "menu": {
++    "chip_sets": [
++      ["CPU", "ALU", "RANGE", "POSEIDON2", "SHA2", "LOG"],
++      ["CPU", "ALU", "RANGE", "POSEIDON2", "SHA2", "LOG", "FIELD_EMU", "POSEIDON_FR_EMU"],
++      ["CPU", "ALU", "RANGE", "POSEIDON2", "SHA2", "LOG", "JUBJUB_EMU"]
++    ],
++    "shapes": [
++      {"chip_set": 0, "log_heights": [12, 11, 17, 10, 8, 8]},
++      {"chip_set": 1, "log_heights": [12, 11, 17, 10, 8, 8, 12, 10]}
++    ],
++    "node_arity": 4
++  },
++  "policy": {"mode": "compact", "cut_len": 4096, "pad": [1, 2, 4, 8, 16]},
++  "layout": {
++    "r": [["DIGEST", 0], ["DIGEST", 0], ["DIGEST", 2], ["DIGEST", 3], ["SPONGE", 3]],
++    "fill_limits": ["P", "E", "V"],
++    "fill_ops": ["PATH", "H2", "ECMUL"]
++  },
++  "place": {"discharge": "root", "discharge_shape": 1, "tier_e": [1], "gp3": []}
++}
+diff --git a/crates/sherlock-lfr/examples/sherlock_plan.rs b/crates/sherlock-lfr/examples/sherlock_plan.rs
+new file mode 100644
+index 0000000..954a7c8
+--- /dev/null
++++ b/crates/sherlock-lfr/examples/sherlock_plan.rs
+@@ -0,0 +1,22 @@
++//! `sherlock plan` (T9, ENC-5): reads a plan JSON and prints the five canonical word lists, their
++//! `P2` digests and `plan_d = P2(DOM_PLAN = 41, 1: u16, itab_d, menu_d, policy_d, layout_rule_d,
++//! place_d)` as one JSON object. The format and every LEAD pick are in `sherlock_lfr::enc45`.
++//!
++//! Usage: `sherlock_plan [plan.json]` (default: the bench sample `examples/plan.json`).
++
++use sherlock_lfr::enc45::{plan_from_json, plan_report};
++
++fn main() {
++    let text = match std::env::args().nth(1) {
++        Some(p) => std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("read {p}: {e}")),
++        None => include_str!("plan.json").to_string(),
++    };
++    let v: serde_json::Value = serde_json::from_str(&text).expect("plan JSON");
++    match plan_from_json(&v).and_then(|p| p.words()) {
++        Ok(out) => println!("{}", serde_json::to_string_pretty(&plan_report(&out)).unwrap()),
++        Err(e) => {
++            eprintln!("sherlock plan: refused: {e}");
++            std::process::exit(2);
++        }
++    }
++}
+diff --git a/crates/sherlock-lfr/src/enc45.rs b/crates/sherlock-lfr/src/enc45.rs
+new file mode 100644
+index 0000000..bdccdf8
+--- /dev/null
++++ b/crates/sherlock-lfr/src/enc45.rs
+@@ -0,0 +1,1284 @@
++//! Sherlock ENC-4 and ENC-5: the typed BabyBear layouts of the stack records, `StackStep` and
++//! `StackCells` (kit STACKS), and the canonical word lists of the static plan behind `plan_d`.
++//!
++//! Sources (Moriarty worktree `t9-contract`):
++//! - `research/sherlock-enc-fp3-20261112/RESULTS.md` section 4 (owner rulings P-5: `DOM_PLAN` = 41;
++//!   P-6: `op` codes 0 none, 1 push, 2 pop, `count: u64`; P-3: `P2` is the overwrite sponge).
++//! - `research/sherlock-tested-design-20261113/T5-SCHEMAS.md` section 1.3, 1.6 and Appendix A
++//!   (owner SIGNED 2026-11-13): frame record 13 lanes, task record 7 lanes, widest-lane rule,
++//!   `ridx = u64` (AD-12, FP-9.2), so frame 52 words and task 19 words.
++//! - `research/sherlock-final-design-20261111/ARCHITECTURE.md` 1.6 (the shard plan and `plan_d`),
++//!   1.11 FP-1 (word types), FP-4 (tag codes), FP-9.1 (`RefC` with `Input` = 2), kit STACKS.
++//! - `research/sherlock-processor-final-20261111/PROPOSAL.md` 4.2 (what `sherlock plan` makes).
++//!
++//! Word types (FP-1, I-1 and I-2 FROZEN): `bit` 1, `tag(w)` 1, `u16` 1, `u32` 2, `u64` 4,
++//! `addr` 5 (TOP = 63, top limb below 4), `u128` 8, `digest` 8. Multi-limb integers are 16-bit
++//! limbs, little-endian (limb 0 least significant). Every encoder here refuses a value outside
++//! its type range; nothing is reduced mod p.
++//!
++//! Choices that no text fixes are marked `LEAD` in the comments; each is listed in the T9 report.
++
++use openvm_stark_backend::p3_symmetric::Permutation;
++use openvm_stark_sdk::config::baby_bear_poseidon2::{
++    poseidon2_compress_with_capacity, poseidon2_perm,
++};
++use p3_baby_bear::BabyBear;
++use p3_field::{PrimeCharacteristicRing, PrimeField32};
++use serde_json::{json, Value};
++
++/// The BabyBear modulus.
++pub const P: u32 = 2_013_265_921;
++
++// ---------------------------------------------------------------------------------------------
++// Errors
++// ---------------------------------------------------------------------------------------------
++
++/// A refusal of an encoder: a value outside its type range, a broken padding or framing rule.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct EncError(pub String);
++
++impl std::fmt::Display for EncError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        f.write_str(&self.0)
++    }
++}
++impl std::error::Error for EncError {}
++
++pub type Res<T> = Result<T, EncError>;
++
++fn refuse<T>(msg: impl Into<String>) -> Res<T> {
++    Err(EncError(msg.into()))
++}
++
++// ---------------------------------------------------------------------------------------------
++// FP-1 word types
++// ---------------------------------------------------------------------------------------------
++
++/// TOP of AD-1 (owner ruling, I-2 FROZEN).
++pub const TOP: u32 = 63;
++/// `addr` limbs: `ceil((TOP + 3) / 16)` = 5.
++pub const ADDR_LIMBS: usize = (TOP as usize + 3).div_ceil(16);
++/// The bound of the top `addr` limb: `2^(TOP + 3 - 16 (n_a - 1))` = 4.
++pub const ADDR_TOP_BOUND: u32 = 1 << (TOP + 3 - 16 * (ADDR_LIMBS as u32 - 1));
++
++/// One FP-1 type. `Digest` is handled by [`digest_words`]; the integer types by [`Ty::enc`].
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Ty {
++    Bit,
++    /// `tag(w)`, `1 <= w <= 16`: one word below `2^w`.
++    Tag(u32),
++    U16,
++    U32,
++    U64,
++    Addr,
++    U128,
++    Digest,
++}
++
++impl Ty {
++    pub fn words(self) -> usize {
++        match self {
++            Ty::Bit | Ty::Tag(_) | Ty::U16 => 1,
++            Ty::U32 => 2,
++            Ty::U64 => 4,
++            Ty::Addr => ADDR_LIMBS,
++            Ty::U128 | Ty::Digest => 8,
++        }
++    }
++
++    pub fn name(self) -> String {
++        match self {
++            Ty::Bit => "bit".into(),
++            Ty::Tag(w) => format!("tag({w})"),
++            Ty::U16 => "u16".into(),
++            Ty::U32 => "u32".into(),
++            Ty::U64 => "u64".into(),
++            Ty::Addr => "addr".into(),
++            Ty::U128 => "u128".into(),
++            Ty::Digest => "digest".into(),
++        }
++    }
++
++    /// The exclusive bound of an integer type (`None` for `u128`, whose bound is `2^128`).
++    fn bound(self) -> Option<u128> {
++        match self {
++            Ty::Bit => Some(2),
++            Ty::Tag(w) => Some(1u128 << w),
++            Ty::U16 => Some(1 << 16),
++            Ty::U32 => Some(1 << 32),
++            Ty::U64 => Some(1 << 64),
++            Ty::Addr => Some(1 << (TOP + 3)),
++            Ty::U128 => None,
++            Ty::Digest => Some(0),
++        }
++    }
++
++    /// The words of the integer `v` of this type, or a refusal if `v` is out of range.
++    pub fn enc(self, what: &str, v: u128) -> Res<Vec<u32>> {
++        if let Ty::Tag(w) = self {
++            assert!((1..=16).contains(&w), "tag width {w}");
++        }
++        if self == Ty::Digest {
++            return refuse(format!("{what}: a digest is not an integer"));
++        }
++        if let Some(b) = self.bound() {
++            if v >= b {
++                return refuse(format!("{what}: {v} out of range of {}", self.name()));
++            }
++        }
++        Ok(match self {
++            Ty::Bit | Ty::Tag(_) | Ty::U16 => vec![v as u32],
++            _ => (0..self.words()).map(|i| ((v >> (16 * i)) & 0xffff) as u32).collect(),
++        })
++    }
++}
++
++/// A `digest` lane: 8 words, each canonical (below p). A non-canonical word is refused: the
++/// permutation would otherwise reduce it and two word lists would alias.
++pub fn digest_words(what: &str, d: &[u32; 8]) -> Res<Vec<u32>> {
++    if let Some(w) = d.iter().find(|w| **w >= P) {
++        return refuse(format!("{what}: digest word {w} not canonical"));
++    }
++    Ok(d.to_vec())
++}
++
++/// Checks that every word of a list is canonical (below p).
++pub fn canonical(what: &str, ws: &[u32]) -> Res<()> {
++    match ws.iter().find(|w| **w >= P) {
++        Some(w) => refuse(format!("{what}: word {w} not canonical")),
++        None => Ok(()),
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// P2 (FP-4 form, owner-confirmed absorption P-3) on two paths
++// ---------------------------------------------------------------------------------------------
++
++/// `P2(tag, xs)` by the overwrite sponge: `state[8] = 1 + l`, each block of 8 words of
++/// `[tag, xs..]` (last zero padded) overwrites `state[0..8]`, one Poseidon2-16 permutation per
++/// block, output `state[0..8]`.
++pub fn p2_overwrite(tag: u32, xs: &[u32]) -> [u32; 8] {
++    let mut words = vec![tag];
++    words.extend_from_slice(xs);
++    let mut st = [BabyBear::ZERO; 16];
++    st[8] = BabyBear::from_u32(words.len() as u32);
++    for blk in words.chunks(8) {
++        for i in 0..8 {
++            st[i] = BabyBear::from_u32(*blk.get(i).unwrap_or(&0));
++        }
++        poseidon2_perm().permute_mut(&mut st);
++    }
++    std::array::from_fn(|i| st[i].as_canonical_u32())
++}
++
++/// The same hash as a chain of the stock `poseidon2_compress_with_capacity(block, cap)`, with
++/// `cap_0 = [1 + l, 0, ..]` and the capacity half carried between calls.
++pub fn p2_compress(tag: u32, xs: &[u32]) -> [u32; 8] {
++    let mut words = vec![tag];
++    words.extend_from_slice(xs);
++    let mut cap = [BabyBear::ZERO; 8];
++    cap[0] = BabyBear::from_u32(words.len() as u32);
++    let mut out = [BabyBear::ZERO; 8];
++    for blk in words.chunks(8) {
++        let left: [BabyBear; 8] =
++            std::array::from_fn(|i| BabyBear::from_u32(*blk.get(i).unwrap_or(&0)));
++        let (o, c) = poseidon2_compress_with_capacity(left, cap);
++        out = o;
++        cap = c;
++    }
++    out.map(|x| x.as_canonical_u32())
++}
++
++/// `P2(tag, xs)`: refuses a non-canonical word, computes both paths and asserts equality.
++pub fn p2(tag: u32, xs: &[u32]) -> Res<[u32; 8]> {
++    canonical("P2 input", xs)?;
++    let a = p2_overwrite(tag, xs);
++    let b = p2_compress(tag, xs);
++    assert_eq!(a, b, "P2 two paths disagree, tag {tag}");
++    Ok(a)
++}
++
++/// Permutations of one `P2` over `l` words after the tag: `ceil((1 + l) / 8)`.
++pub fn p2_perms(l: usize) -> usize {
++    (1 + l).div_ceil(8)
++}
++
++// ---------------------------------------------------------------------------------------------
++// Tag codes (FP-4)
++// ---------------------------------------------------------------------------------------------
++
++/// `DOM_STATE_BODY` (FP-4), for reference: the HASH registry entry `StateBody` already has it.
++pub const DOM_STATE_BODY: u32 = 30;
++/// The HASH registry `MemRec, MemPad, MemEmpty, MemNode, FrameChain, TaskChain, StateBody,
++/// RomLeaf, RomNode` (kit HASH, `HashDomain`) takes 33 to 40 in registry order, `StateBody`
++/// skipped (it has 30): DERIVED, and consistent with `DOM_MEMREC` 33, `DOM_ROMLEAF` 39,
++/// `DOM_ROMNODE` 40 of FP-4.
++pub const DOM_MEMREC: u32 = 33;
++pub const DOM_MEMPAD: u32 = 34;
++pub const DOM_MEMEMPTY: u32 = 35;
++pub const DOM_MEMNODE: u32 = 36;
++pub const DOM_FRAMECHAIN: u32 = 37;
++pub const DOM_TASKCHAIN: u32 = 38;
++pub const DOM_ROMLEAF: u32 = 39;
++pub const DOM_ROMNODE: u32 = 40;
++/// `DOM_PLAN` = 41 (owner ruling P-5).
++pub const DOM_PLAN: u32 = 41;
++/// LEAD (ENC-5): the five part digests of `plan_d` take the next free codes after the T5 codes
++/// 42 to 57, in the order of `plan_d` (FP-4 rule "every later Sherlock digest takes the next
++/// free codes"); one tag per part so no two part lists share a domain with each other or with
++/// `plan_d`.
++pub const DOM_PLAN_ITAB: u32 = 58;
++pub const DOM_PLAN_MENU: u32 = 59;
++pub const DOM_PLAN_POLICY: u32 = 60;
++pub const DOM_PLAN_LAYOUT: u32 = 61;
++pub const DOM_PLAN_PLACE: u32 = 62;
++/// The version word of `plan_d` (ARCHITECTURE 1.6: `1: u16`).
++pub const PLAN_VERSION: u32 = 1;
++
++// =============================================================================================
++// ENC-4: the stack records
++// =============================================================================================
++
++/// `ridx`, the ROM row index type: `u64` (AD-12, `D_row` = 64, FP-9.2, signed).
++pub const RIDX: Ty = Ty::U64;
++
++/// Frame record lane types (T5 Appendix A frame table at `ridx = u64`: lanes 1, 5, 8, 9, 12
++/// widen from `u32` to `u64`). 52 words, DERIVED.
++pub const FRAME_TYPES: [Ty; 13] = [
++    Ty::Tag(4), // 0 kind, 10 kinds 0..9
++    RIDX,       // 1
++    Ty::Addr,   // 2
++    Ty::Addr,   // 3
++    Ty::Addr,   // 4
++    RIDX,       // 5
++    Ty::Addr,   // 6
++    Ty::Addr,   // 7
++    RIDX,       // 8
++    RIDX,       // 9
++    Ty::Bit,    // 10
++    Ty::Addr,   // 11
++    RIDX,       // 12
++];
++
++/// Task record lane types (T5 Appendix A task table at `ridx = u64`: lane 1 widens to `u64`).
++/// LEAD: lane 3 is `tag(2)`, not the table's `tag(1)`: it carries `EqualTask.right.tag` and
++/// `PairTask.arg.tag`, and the signed `RefC` tag is `rtag: tag(2)` with `Input` = 2 (FP-9.1,
++/// O1-1 (a)); the widest-lane rule then gives `tag(2)`. No word count changes. 19 words, DERIVED.
++pub const TASK_TYPES: [Ty; 7] = [
++    Ty::Tag(2), // 0 kind, 3 kinds 0..2
++    RIDX,       // 1
++    Ty::Addr,   // 2
++    Ty::Tag(2), // 3
++    Ty::Addr,   // 4
++    Ty::Tag(1), // 5
++    Ty::U32,    // 6
++];
++
++/// Lanes used by each frame kind (the reference `encode_frame`, `hm/c6_phys.rs:670-783`): every
++/// lane at or above this count is padding and must be zero (T5 1.4 padding rule; the reference
++/// decode `zero(S, l, used, FRAME_LANES)`).
++pub const FRAME_USED: [usize; 10] = [6, 6, 5, 3, 6, 6, 9, 5, 4, 13];
++/// Lanes used by each task kind (`encode_task_record`, `hm/c6_phys_helper.rs:988-1016`).
++pub const TASK_USED: [usize; 3] = [5, 7, 5];
++
++pub const FRAME_KIND_NAMES: [&str; 10] = [
++    "LetF",
++    "LeftF",
++    "RightF",
++    "UnaryF",
++    "IfF",
++    "MatchF",
++    "ArgsF",
++    "ReturnF",
++    "ScopeF",
++    "ConstructorFieldsF",
++];
++pub const TASK_KIND_NAMES: [&str; 3] = ["ValidateTask", "EqualTask", "PairTask"];
++
++pub fn type_words(tys: &[Ty]) -> usize {
++    tys.iter().map(|t| t.words()).sum()
++}
++
++/// The typed words of a reference lane image (`[u128; n]`, the reference lane form): kind in
++/// range of its enumeration, every lane in range of its lane type, every unused lane zero.
++fn encode_lanes(
++    rec: &str,
++    tys: &[Ty],
++    used: &[usize],
++    names: &[&str],
++    lanes: &[u128],
++) -> Res<Vec<u32>> {
++    if lanes.len() != tys.len() {
++        return refuse(format!("{rec}: {} lanes, expected {}", lanes.len(), tys.len()));
++    }
++    let kind = lanes[0];
++    if kind >= used.len() as u128 {
++        return refuse(format!("{rec}: kind {kind} out of 0..{}", used.len()));
++    }
++    let k = kind as usize;
++    if let Some(l) = (used[k]..lanes.len()).find(|&l| lanes[l] != 0) {
++        return refuse(format!("{rec} {}: padding lane {l} non-zero", names[k]));
++    }
++    let mut out = Vec::with_capacity(type_words(tys));
++    for (l, (ty, v)) in tys.iter().zip(lanes).enumerate() {
++        out.extend(ty.enc(&format!("{rec} lane {l}"), *v)?);
++    }
++    Ok(out)
++}
++
++/// The typed words of a reference frame lane image (13 lanes).
++pub fn encode_frame_lanes(lanes: &[u128]) -> Res<Vec<u32>> {
++    encode_lanes("frame", &FRAME_TYPES, &FRAME_USED, &FRAME_KIND_NAMES, lanes)
++}
++
++/// The typed words of a reference task lane image (7 lanes).
++pub fn encode_task_lanes(lanes: &[u128]) -> Res<Vec<u32>> {
++    encode_lanes("task", &TASK_TYPES, &TASK_USED, &TASK_KIND_NAMES, lanes)
++}
++
++/// `RefC = (rtag, idx)` (FP-9.1): `Const(i)` 0 with `i: ridx`, `Data(i)` 1 and `Input(i)` 2 with
++/// `i: addr`. Raw integers, so that an out-of-range value can be offered and refused.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct RefC {
++    pub rtag: u128,
++    pub idx: u128,
++}
++
++impl RefC {
++    pub fn konst(i: u128) -> Self {
++        RefC { rtag: 0, idx: i }
++    }
++    pub fn data(i: u128) -> Self {
++        RefC { rtag: 1, idx: i }
++    }
++    pub fn input(i: u128) -> Self {
++        RefC { rtag: 2, idx: i }
++    }
++    fn check(&self, what: &str) -> Res<()> {
++        let idx_ty = match self.rtag {
++            0 => RIDX,
++            1 | 2 => Ty::Addr,
++            t => return refuse(format!("{what}: rtag {t} out of 0..=2")),
++        };
++        idx_ty.enc(&format!("{what}.idx"), self.idx).map(|_| ())
++    }
++    fn put(&self, o: &mut [u128], at: usize) {
++        o[at] = self.rtag;
++        o[at + 1] = self.idx;
++    }
++}
++
++/// `EnvRootC = Option<addr>`: `(present: bit, at: addr)`.
++pub type Env = Option<u128>;
++
++fn put_env(what: &str, o: &mut [u128], at: usize, e: Env) -> Res<()> {
++    if let Some(a) = e {
++        Ty::Addr.enc(what, a)?;
++        o[at] = 1;
++        o[at + 1] = a;
++    }
++    Ok(())
++}
++
++/// A program slice (`start: ridx, len: ridx`, C2-6) or a heap slice of `value_slots`
++/// (`start: addr`, `len: u32`, T5 Appendix A "SliceC len is u32").
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct Slice {
++    pub start: u128,
++    pub len: u128,
++}
++
++fn put_slice(what: &str, o: &mut [u128], at: usize, s: Slice, heap: bool) -> Res<()> {
++    let (ts, tl) = if heap { (Ty::Addr, Ty::U32) } else { (RIDX, RIDX) };
++    ts.enc(&format!("{what}.start"), s.start)?;
++    tl.enc(&format!("{what}.len"), s.len)?;
++    o[at] = s.start;
++    o[at + 1] = s.len;
++    Ok(())
++}
++
++fn field(ty: Ty, what: &str, v: u128) -> Res<u128> {
++    ty.enc(what, v)?;
++    Ok(v)
++}
++
++/// `BinaryOp` has 7 values (0 Add .. 6 Branch, `hm/c6_phys.rs:364-373`), carried as `tag(3)`.
++fn binop(what: &str, v: u128) -> Res<u128> {
++    field(Ty::Tag(3), what, v)?;
++    if v >= 7 {
++        return refuse(format!("{what}: BinaryOp {v} out of 0..7"));
++    }
++    Ok(v)
++}
++
++/// The frame record (`FrameRowC`, `hm/shared.rs:867-927`), with the field types of T5 Appendix A
++/// at `ridx = u64`.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Frame {
++    LetF { binder: u128, body: u128, saved_env: Env, origin: u128 },
++    LeftF { op: u128, right: u128, saved_env: Env, origin: u128 },
++    RightF { op: u128, left: RefC, origin: u128 },
++    UnaryF { op: u128, origin: u128 },
++    IfF { then_expr: u128, else_expr: u128, saved_env: Env, origin: u128 },
++    MatchF { arms: Slice, saved_env: Env, origin: u128 },
++    ArgsF { function_name: u128, completed: Slice, rest: Slice, saved_env: Env, origin: u128 },
++    ReturnF { return_type: u128, saved_env: Env, origin: u128 },
++    ScopeF { saved_env: Env, origin: u128 },
++    ConstructorFieldsF {
++        type_id: u128,
++        ctor_id: u128,
++        index: u128,
++        field_type: u128,
++        checked: u128,
++        completed: Slice,
++        rest: Slice,
++        saved_env: Env,
++        origin: u128,
++    },
++}
++
++impl Frame {
++    /// The reference lane image (the lane map of `encode_frame`), each field checked against its
++    /// own type first.
++    pub fn lanes(&self) -> Res<[u128; 13]> {
++        use Frame as F;
++        let mut o = [0u128; 13];
++        let r = RIDX;
++        match *self {
++            F::LetF { binder, body, saved_env, origin } => {
++                o[1] = field(r, "LetF.binder", binder)?;
++                o[2] = field(r, "LetF.body", body)?;
++                put_env("LetF.saved_env", &mut o, 3, saved_env)?;
++                o[5] = field(r, "LetF.origin", origin)?;
++            }
++            F::LeftF { op, right, saved_env, origin } => {
++                o[0] = 1;
++                o[1] = binop("LeftF.op", op)?;
++                o[2] = field(r, "LeftF.right", right)?;
++                put_env("LeftF.saved_env", &mut o, 3, saved_env)?;
++                o[5] = field(r, "LeftF.origin", origin)?;
++            }
++            F::RightF { op, left, origin } => {
++                o[0] = 2;
++                o[1] = binop("RightF.op", op)?;
++                left.check("RightF.left")?;
++                left.put(&mut o, 2);
++                o[4] = field(r, "RightF.origin", origin)?;
++            }
++            F::UnaryF { op, origin } => {
++                o[0] = 3;
++                o[1] = field(Ty::Tag(1), "UnaryF.op", op)?;
++                o[2] = field(r, "UnaryF.origin", origin)?;
++            }
++            F::IfF { then_expr, else_expr, saved_env, origin } => {
++                o[0] = 4;
++                o[1] = field(r, "IfF.then_expr", then_expr)?;
++                o[2] = field(r, "IfF.else_expr", else_expr)?;
++                put_env("IfF.saved_env", &mut o, 3, saved_env)?;
++                o[5] = field(r, "IfF.origin", origin)?;
++            }
++            F::MatchF { arms, saved_env, origin } => {
++                o[0] = 5;
++                put_slice("MatchF.arms", &mut o, 1, arms, false)?;
++                put_env("MatchF.saved_env", &mut o, 3, saved_env)?;
++                o[5] = field(r, "MatchF.origin", origin)?;
++            }
++            F::ArgsF { function_name, completed, rest, saved_env, origin } => {
++                o[0] = 6;
++                o[1] = field(r, "ArgsF.function_name", function_name)?;
++                put_slice("ArgsF.completed", &mut o, 2, completed, true)?;
++                put_slice("ArgsF.rest", &mut o, 4, rest, false)?;
++                put_env("ArgsF.saved_env", &mut o, 6, saved_env)?;
++                o[8] = field(r, "ArgsF.origin", origin)?;
++            }
++            F::ReturnF { return_type, saved_env, origin } => {
++                o[0] = 7;
++                o[1] = field(r, "ReturnF.return_type", return_type)?;
++                put_env("ReturnF.saved_env", &mut o, 2, saved_env)?;
++                o[4] = field(r, "ReturnF.origin", origin)?;
++            }
++            F::ScopeF { saved_env, origin } => {
++                o[0] = 8;
++                put_env("ScopeF.saved_env", &mut o, 1, saved_env)?;
++                o[3] = field(r, "ScopeF.origin", origin)?;
++            }
++            F::ConstructorFieldsF {
++                type_id,
++                ctor_id,
++                index,
++                field_type,
++                checked,
++                completed,
++                rest,
++                saved_env,
++                origin,
++            } => {
++                o[0] = 9;
++                o[1] = field(r, "ConstructorFieldsF.type_id", type_id)?;
++                o[2] = field(r, "ConstructorFieldsF.ctor_id", ctor_id)?;
++                // a field index below `max_arity`: u32 (T5 Appendix A)
++                o[3] = field(Ty::U32, "ConstructorFieldsF.index", index)?;
++                o[4] = field(r, "ConstructorFieldsF.field_type", field_type)?;
++                o[5] = field(Ty::Bit, "ConstructorFieldsF.checked", checked)?;
++                put_slice("ConstructorFieldsF.completed", &mut o, 6, completed, true)?;
++                put_slice("ConstructorFieldsF.rest", &mut o, 8, rest, false)?;
++                put_env("ConstructorFieldsF.saved_env", &mut o, 10, saved_env)?;
++                o[12] = field(r, "ConstructorFieldsF.origin", origin)?;
++            }
++        }
++        Ok(o)
++    }
++}
++
++/// `TaskVisitC`: 0 `Unvisited`, 1 `Fields` (`hm/shared.rs:395-398`), `tag(1)`.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum Task {
++    ValidateTask { r: RefC, visit: u128, cursor: u128 },
++    EqualTask { left: RefC, right: RefC, visit: u128, cursor: u128 },
++    PairTask { binder: u128, sort: u128, arg: RefC },
++}
++
++impl Task {
++    /// The reference lane image (the lane map of `encode_task_record`).
++    pub fn lanes(&self) -> Res<[u128; 7]> {
++        let mut o = [0u128; 7];
++        match *self {
++            Task::ValidateTask { r, visit, cursor } => {
++                r.check("ValidateTask.r")?;
++                r.put(&mut o, 1);
++                o[3] = field(Ty::Tag(1), "ValidateTask.visit", visit)?;
++                // a cursor below `max_arity`: u32
++                o[4] = field(Ty::U32, "ValidateTask.cursor", cursor)?;
++            }
++            Task::EqualTask { left, right, visit, cursor } => {
++                o[0] = 1;
++                left.check("EqualTask.left")?;
++                left.put(&mut o, 1);
++                right.check("EqualTask.right")?;
++                right.put(&mut o, 3);
++                o[5] = field(Ty::Tag(1), "EqualTask.visit", visit)?;
++                o[6] = field(Ty::U32, "EqualTask.cursor", cursor)?;
++            }
++            Task::PairTask { binder, sort, arg } => {
++                o[0] = 2;
++                o[1] = field(RIDX, "PairTask.binder", binder)?;
++                o[2] = field(RIDX, "PairTask.sort", sort)?;
++                arg.check("PairTask.arg")?;
++                arg.put(&mut o, 3);
++            }
++        }
++        Ok(o)
++    }
++}
++
++/// A stack record kind: the frame or the task record.
++pub trait StackRec: Clone + std::fmt::Debug {
++    /// The chain domain of the stack (`FrameChain` or `TaskChain`).
++    const DOM: u32;
++    /// The record width in words.
++    const WORDS: usize;
++    const NAME: &'static str;
++    fn words(&self) -> Res<Vec<u32>>;
++}
++
++impl StackRec for Frame {
++    const DOM: u32 = DOM_FRAMECHAIN;
++    const WORDS: usize = 52;
++    const NAME: &'static str = "frame";
++    fn words(&self) -> Res<Vec<u32>> {
++        encode_frame_lanes(&self.lanes()?)
++    }
++}
++
++impl StackRec for Task {
++    const DOM: u32 = DOM_TASKCHAIN;
++    const WORDS: usize = 19;
++    const NAME: &'static str = "task";
++    fn words(&self) -> Res<Vec<u32>> {
++        encode_task_lanes(&self.lanes()?)
++    }
++}
++
++fn rec_or_zero<R: StackRec>(r: &Option<R>) -> Res<Vec<u32>> {
++    match r {
++        Some(r) => r.words(),
++        None => Ok(vec![0; R::WORDS]),
++    }
++}
++
++/// `StackStep` op codes (owner ruling P-6).
++pub const OP_NONE: u128 = 0;
++pub const OP_PUSH: u128 = 1;
++pub const OP_POP: u128 = 2;
++
++/// `StackStep(stack) = [rw: bit, rw_top: Rec, op: tag(2), new_top: Rec]` (RESULTS section 4),
++/// `2 + 2 |Rec|` words: frame 106, task 40 (DERIVED).
++#[derive(Clone, Debug)]
++pub struct StackStep<R: StackRec> {
++    pub rw: u128,
++    pub rw_top: Option<R>,
++    pub op: u128,
++    pub new_top: Option<R>,
++}
++
++impl<R: StackRec> StackStep<R> {
++    /// The words of the step. Range: `rw` a bit, `op` in `{0, 1, 2}` (tag(2) alone would admit
++    /// 3). LEAD (padding rule, as FP-9.1 for records): `rw_top` is present exactly when `rw = 1`
++    /// and `new_top` exactly when `op = push`; an absent record is `|Rec|` zero words.
++    pub fn words(&self) -> Res<Vec<u32>> {
++        let what = format!("StackStep({})", R::NAME);
++        let mut o = Ty::Bit.enc(&format!("{what}.rw"), self.rw)?;
++        if (self.rw == 1) != self.rw_top.is_some() {
++            return refuse(format!("{what}: rw_top present iff rw = 1"));
++        }
++        o.extend(rec_or_zero(&self.rw_top)?);
++        o.extend(Ty::Tag(2).enc(&format!("{what}.op"), self.op)?);
++        if self.op > OP_POP {
++            return refuse(format!("{what}: op {} out of 0..=2", self.op));
++        }
++        if (self.op == OP_PUSH) != self.new_top.is_some() {
++            return refuse(format!("{what}: new_top present iff op = push"));
++        }
++        o.extend(rec_or_zero(&self.new_top)?);
++        debug_assert_eq!(o.len(), 2 + 2 * R::WORDS);
++        Ok(o)
++    }
++}
++
++/// `EMPTY_F` / `EMPTY_T`: the `below` of a stack with at most one record. LEAD: the tag-only
++/// hash of the chain domain, `P2(DOM_FRAMECHAIN)` / `P2(DOM_TASKCHAIN)`, as every FP-4 constant
++/// (`D_EMPTY = P2(TAG_EMPTY)`, ...): non-zero, and its preimage length 1 differs from every
++/// `H_chain` preimage, so under premise A5 it is outside the range of `H_chain` (the kit STACKS
++/// premise "EMPTY outside its range").
++pub fn empty_below<R: StackRec>() -> [u32; 8] {
++    p2(R::DOM, &[]).expect("tag-only P2")
++}
++
++/// `H_chain(count, below, top) = P2(DOM, count: u64, below: digest, top: Rec)` (kit STACKS
++/// chain; the domain is the `P2` tag word, the FP-4 form of the capacity domain word of the kit
++/// text). Frame 65 words with the tag, 9 permutations; task 32 words, 4 permutations (DERIVED).
++pub fn h_chain<R: StackRec>(count: u128, below: &[u32; 8], top: &R) -> Res<[u32; 8]> {
++    let mut xs = Ty::U64.enc("H_chain.count", count)?;
++    xs.extend(digest_words("H_chain.below", below)?);
++    xs.extend(top.words()?);
++    p2(R::DOM, &xs)
++}
++
++/// `StackCells(stack) = [count: u64, below: digest, top: Rec]`, `12 + |Rec|` words: frame 64,
++/// task 31 (DERIVED; T5 1.6). These cells are body words of `body_d` (FP-9.1); they have no
++/// digest of their own.
++#[derive(Clone, Debug)]
++pub struct StackCells<R: StackRec> {
++    pub count: u128,
++    pub below: [u32; 8],
++    pub top: Option<R>,
++}
++
++impl<R: StackRec> StackCells<R> {
++    /// The words, with the kit STACKS cell invariants: `count = 0` gives a zero top and
++    /// `below = EMPTY`; `count >= 1` has a top; `count = 1` has `below = EMPTY`.
++    pub fn words(&self) -> Res<Vec<u32>> {
++        let what = format!("StackCells({})", R::NAME);
++        let mut o = Ty::U64.enc(&format!("{what}.count"), self.count)?;
++        o.extend(digest_words(&format!("{what}.below"), &self.below)?);
++        if (self.count == 0) == self.top.is_some() {
++            return refuse(format!("{what}: top present iff count >= 1"));
++        }
++        if self.count <= 1 && self.below != empty_below::<R>() {
++            return refuse(format!("{what}: below != EMPTY at count {}", self.count));
++        }
++        o.extend(rec_or_zero(&self.top)?);
++        debug_assert_eq!(o.len(), 12 + R::WORDS);
++        Ok(o)
++    }
++}
++
++/// The reference stack: the list of the reference machine, bottom first. [`RefStack::cells`]
++/// is the cached-top abstraction of kit STACKS: `below = chainD(rest)`,
++/// `chainD([]) = EMPTY`, `chainD(x :: l) = H_chain(|l| + 1, chainD(l), x)`.
++#[derive(Clone, Debug)]
++pub struct RefStack<R: StackRec> {
++    pub items: Vec<R>,
++}
++
++impl<R: StackRec> Default for RefStack<R> {
++    fn default() -> Self {
++        RefStack { items: vec![] }
++    }
++}
++
++/// What one step hashed: the spill or restore digest, if any (at most one per step).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum Hashed {
++    None,
++    Spill([u32; 8]),
++    Restore([u32; 8]),
++}
++
++impl<R: StackRec> RefStack<R> {
++    pub fn cells(&self) -> Res<StackCells<R>> {
++        let n = self.items.len();
++        let mut below = empty_below::<R>();
++        for (i, x) in self.items.iter().take(n.saturating_sub(1)).enumerate() {
++            below = h_chain(i as u128 + 1, &below, x)?;
++        }
++        Ok(StackCells { count: n as u128, below, top: self.items.last().cloned() })
++    }
++
++    /// Applies one compound step by the list function of the reference (`owner_runtime.rs:
++    /// 3566-3577`): the rewrite of the top (no-op on an empty list), then none, push or pop (pop
++    /// of an empty list is a no-op). Also computes the protocol's own hash for the step from the
++    /// pre cells (`below' = H_chain(count, below, top*)` for a push at `count >= 1`; the restore
++    /// opening of `below` for a pop at `count >= 2`), so that callers can compare the protocol
++    /// with the recomputed abstraction.
++    pub fn apply(&mut self, st: &StackStep<R>) -> Res<Hashed> {
++        st.words()?;
++        let pre = self.cells()?;
++        if st.rw == 1 {
++            if let (Some(t), Some(new)) = (self.items.last_mut(), st.rw_top.as_ref()) {
++                *t = new.clone();
++            }
++        }
++        let top_star = self.items.last().cloned();
++        let h = match st.op {
++            OP_PUSH => {
++                let h = match (&top_star, pre.count) {
++                    (Some(t), c) if c >= 1 => Hashed::Spill(h_chain(c, &pre.below, t)?),
++                    _ => Hashed::None,
++                };
++                self.items.push(st.new_top.clone().expect("checked"));
++                h
++            }
++            OP_POP => {
++                self.items.pop();
++                if pre.count >= 2 { Hashed::Restore(pre.below) } else { Hashed::None }
++            }
++            _ => Hashed::None,
++        };
++        Ok(h)
++    }
++}
++
++// =============================================================================================
++// ENC-5: the static plan and `plan_d`
++// =============================================================================================
++
++/// LEAD: chip codes of the shape menu, in the order ARCHITECTURE 1.6 names the Compact chips
++/// (base: CPU, ALU, range, Poseidon2, SHA2, log writer; then FIELD-EMU, POSEIDON-FR-EMU,
++/// JUBJUB-EMU). Code 0 is not a chip. The interpreted machine's AIRs (CORE, MEM, ...) have no
++/// code yet: no text lists the general-program chip sets.
++pub const CHIPS: [&str; 9] = [
++    "CPU",
++    "ALU",
++    "RANGE",
++    "POSEIDON2",
++    "SHA2",
++    "LOG",
++    "FIELD_EMU",
++    "POSEIDON_FR_EMU",
++    "JUBJUB_EMU",
++];
++
++/// Log operation codes (ARCHITECTURE 1.8 table; ENC-2): 0 NOP .. 8 DIGEST.
++pub const LOG_OPS: [&str; 9] =
++    ["NOP", "PERM", "H2", "SPONGE", "PATH", "ECMUL", "ECMULG", "PUB", "DIGEST"];
++/// Capacity limits `(B, V, P, E)` (ARCHITECTURE 1.8), codes 0..3 in that order (LEAD).
++pub const LIMITS: [&str; 4] = ["B", "V", "P", "E"];
++/// Discharge placement codes (LEAD): 0 no discharge shard; 1 one DISCHARGE node over the
++/// run's root statement; 2 the root and every consumed claim with fanout or across runs
++/// (PROPOSAL 4.2 item 5 names "claims with fanout, cross-run claims").
++pub const DISCHARGE: [&str; 3] = ["none", "root", "root_and_claims"];
++
++fn len_word(ty: Ty, what: &str, n: usize) -> Res<Vec<u32>> {
++    ty.enc(&format!("{what} length"), n as u128)
++}
++
++fn strictly_ascending<T: PartialOrd + std::fmt::Debug>(what: &str, xs: &[T]) -> Res<()> {
++    match xs.windows(2).find(|w| w[0] >= w[1]) {
++        Some(w) => refuse(format!("{what}: not strictly ascending at {:?}, {:?}", w[0], w[1])),
++        None => Ok(()),
++    }
++}
++
++/// Part 1: the straight-line instruction table of each entry as a preprocessed trace
++/// (ARCHITECTURE 1.6 item (1)). LEAD: no text gives the row format of `R_SL_*`, so the table is
++/// carried as the trace itself: per entry the entry's ROM row index (`entry_a: u64`, as in
++/// `image_d`), the height, the width and the row-major words. LEAD: `itab_d` is the `P2` of
++/// this word list, not the stark-backend preprocessed commitment (that commitment is a key
++/// commitment under `key_root`, and 1.6 says each part digest is a `P2`).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Itab {
++    pub entries: Vec<ItabEntry>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct ItabEntry {
++    pub entry: u64,
++    pub width: u32,
++    /// `height` rows of `width` canonical words.
++    pub rows: Vec<Vec<u32>>,
++}
++
++impl Itab {
++    /// `[n: u32, per entry (ascending by entry): entry: u64, height: u32, width: u32,
++    /// words: height * width]`.
++    pub fn words(&self) -> Res<Vec<u32>> {
++        let es: Vec<u64> = self.entries.iter().map(|e| e.entry).collect();
++        strictly_ascending("itab entries", &es)?;
++        let mut o = len_word(Ty::U32, "itab", self.entries.len())?;
++        for e in &self.entries {
++            if e.width == 0 {
++                return refuse(format!("itab entry {}: width 0", e.entry));
++            }
++            o.extend(Ty::U64.enc("itab entry", e.entry as u128)?);
++            o.extend(len_word(Ty::U32, "itab height", e.rows.len())?);
++            o.extend(Ty::U32.enc("itab width", e.width as u128)?);
++            for (i, r) in e.rows.iter().enumerate() {
++                if r.len() != e.width as usize {
++                    return refuse(format!("itab entry {} row {i}: width {}", e.entry, r.len()));
++                }
++                canonical(&format!("itab entry {} row {i}", e.entry), r)?;
++                o.extend_from_slice(r);
++            }
++        }
++        Ok(o)
++    }
++}
++
++/// Part 2: the shape menu (ARCHITECTURE 1.6 item (2); PROPOSAL 4.2 item 2: a shape is
++/// `(chip set, area bucket)`; modular-leaf design 5: the shape fixes the chip set, the AIR list
++/// in order and the height of every AIR).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Menu {
++    /// Each chip set: chip codes (1-based into [`CHIPS`]), strictly ascending = the AIR order.
++    pub chip_sets: Vec<Vec<u16>>,
++    pub shapes: Vec<Shape>,
++    /// The node arity, `2..=4` (LD-S10x-2: at most 4).
++    pub node_arity: u16,
++}
++
++/// One area bucket of one chip set: the log2 trace height of each AIR of the chip set, in the
++/// chip set's order. LEAD: heights as `log_h: tag(5)` (powers of two, as every shard height).
++#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
++pub struct Shape {
++    pub chip_set: u16,
++    pub log_heights: Vec<u8>,
++}
++
++impl Menu {
++    /// `[n_sets: u16, per set: n: u16, chips: u16 .., n_shapes: u16, per shape: chip_set: u16,
++    /// log_h: tag(5) per AIR, node_arity: u16]`. Shapes strictly ascending by
++    /// `(chip_set, log_heights)`, so the list is canonical and shape indices are stable.
++    pub fn words(&self) -> Res<Vec<u32>> {
++        if self.chip_sets.is_empty() || self.shapes.is_empty() {
++            return refuse("menu: no chip set or no shape");
++        }
++        let mut o = len_word(Ty::U16, "chip sets", self.chip_sets.len())?;
++        for (i, cs) in self.chip_sets.iter().enumerate() {
++            if cs.is_empty() {
++                return refuse(format!("chip set {i}: empty"));
++            }
++            strictly_ascending(&format!("chip set {i}"), cs)?;
++            if let Some(c) = cs.iter().find(|c| **c == 0 || **c as usize > CHIPS.len()) {
++                return refuse(format!("chip set {i}: unknown chip code {c}"));
++            }
++            o.extend(len_word(Ty::U16, "chip set", cs.len())?);
++            o.extend(cs.iter().map(|c| *c as u32));
++        }
++        strictly_ascending("shapes", &self.shapes)?;
++        o.extend(len_word(Ty::U16, "shapes", self.shapes.len())?);
++        for (j, s) in self.shapes.iter().enumerate() {
++            let cs = self
++                .chip_sets
++                .get(s.chip_set as usize)
++                .ok_or_else(|| EncError(format!("shape {j}: chip set {} absent", s.chip_set)))?;
++            if s.log_heights.len() != cs.len() {
++                return refuse(format!("shape {j}: {} heights for {} AIRs", s.log_heights.len(), cs.len()));
++            }
++            o.extend(Ty::U16.enc("shape chip_set", s.chip_set as u128)?);
++            for h in &s.log_heights {
++                o.extend(Ty::Tag(5).enc(&format!("shape {j} log_h"), *h as u128)?);
++            }
++        }
++        if !(2..=4).contains(&self.node_arity) {
++            return refuse(format!("node arity {} out of 2..=4", self.node_arity));
++        }
++        o.extend(Ty::U16.enc("node arity", self.node_arity as u128)?);
++        Ok(o)
++    }
++}
++
++/// Part 3: the scheduling policy (ARCHITECTURE 1.6 item (3)).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum Policy {
++    /// Stage 1 Compact: the cut points follow from `N_e` alone. LEAD: one parameter
++    /// `cut_len: u64`, the cut points are `{k cut_len : 0 < k cut_len < N_e}`.
++    Compact { cut_len: u64, pad: Vec<u32> },
++    /// General programs: the cut rule (LEAD: code 0 = "a leaf ends at the last step whose
++    /// metered rows fit its shape", the only rule the text names), the per-rule maximum table
++    /// (rule class `tag(7)` 1..=120 of FP-9.3, resource = chip code `u16`, maximum rows `u32`),
++    /// strictly ascending by `(rule, chip)`.
++    General { cut_rule: u8, rule_max: Vec<(u8, u16, u32)>, pad: Vec<u32> },
++}
++
++impl Policy {
++    /// Compact: `[0: tag(1), cut_len: u64, pad]`; General: `[1: tag(1), cut_rule: tag(2),
++    /// n: u32, (rule: tag(7), chip: u16, max: u32) .., pad]`; `pad = [n: u16, counts: u32 ..]`,
++    /// the admitted padded shard counts, strictly ascending, each at least 1.
++    pub fn words(&self) -> Res<Vec<u32>> {
++        let pad = |o: &mut Vec<u32>, p: &[u32]| -> Res<()> {
++            if p.is_empty() || p[0] == 0 {
++                return refuse("padding list empty or holds 0");
++            }
++            strictly_ascending("padding list", p)?;
++            o.extend(len_word(Ty::U16, "padding list", p.len())?);
++            for c in p {
++                o.extend(Ty::U32.enc("pad count", *c as u128)?);
++            }
++            Ok(())
++        };
++        let mut o = vec![];
++        match self {
++            Policy::Compact { cut_len, pad: p } => {
++                if *cut_len == 0 {
++                    return refuse("cut_len 0");
++                }
++                o.push(0);
++                o.extend(Ty::U64.enc("cut_len", *cut_len as u128)?);
++                pad(&mut o, p)?;
++            }
++            Policy::General { cut_rule, rule_max, pad: p } => {
++                o.push(1);
++                if *cut_rule != 0 {
++                    return refuse(format!("cut rule {cut_rule}: only 0 is defined"));
++                }
++                o.extend(Ty::Tag(2).enc("cut_rule", *cut_rule as u128)?);
++                let keys: Vec<(u8, u16)> = rule_max.iter().map(|r| (r.0, r.1)).collect();
++                strictly_ascending("rule maximum table", &keys)?;
++                o.extend(len_word(Ty::U32, "rule maximum table", rule_max.len())?);
++                for (rule, chip, max) in rule_max {
++                    if !(1..=120).contains(rule) {
++                        return refuse(format!("rule class {rule} out of 1..=120"));
++                    }
++                    if *chip == 0 || *chip as usize > CHIPS.len() {
++                        return refuse(format!("rule max: unknown chip code {chip}"));
++                    }
++                    o.extend(Ty::Tag(7).enc("rule", *rule as u128)?);
++                    o.extend(Ty::U16.enc("chip", *chip as u128)?);
++                    o.extend(Ty::U32.enc("max rows", *max as u128)?);
++                }
++                pad(&mut o, p)?;
++            }
++        }
++        Ok(o)
++    }
++}
++
++/// Part 4: the log layout rule (ARCHITECTURE 1.6 item (4), 1.8 "Reservation and the capacity
++/// rule"; PROPOSAL 4.2 item 4): `R` first, then each discretionary operation to the log or tier
++/// E, filling the limits in a fixed order over the operation kinds in a fixed priority.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Layout {
++    /// The reservation `R`, in log order: `(op, param)`.
++    pub r: Vec<(u8, u16)>,
++    /// The limit fill order (codes of [`LIMITS`]); the text: `P`, then `E`, then `V`.
++    pub fill_limits: Vec<u8>,
++    /// The operation priority (codes of [`LOG_OPS`]); the text: `PATH`, `H2`, `ECMUL`.
++    pub fill_ops: Vec<u8>,
++}
++
++impl Layout {
++    /// `[n_r: u16, (op: tag(4), param: u16) .., n_l: u16, limit: tag(2) .., n_o: u16,
++    /// op: tag(4) ..]`. `R` is not empty and holds no `NOP`; `DIGEST` params index the six public
++    /// tags; `SPONGE(n)` has `n >= 1`; `PATH(d)` has `1 <= d <= 32`. The fill lists hold distinct
++    /// codes; fill operations are deferrable kinds (`PERM` to `ECMULG`).
++    pub fn words(&self) -> Res<Vec<u32>> {
++        if self.r.is_empty() {
++            return refuse("layout: R empty");
++        }
++        let mut o = len_word(Ty::U16, "R", self.r.len())?;
++        for (op, param) in &self.r {
++            let ok = match *op {
++                1 | 2 | 5 | 6 => *param == 0,
++                3 => *param >= 1,
++                4 => (1..=32).contains(param),
++                7 => true,
++                8 => *param < 6,
++                _ => false,
++            };
++            if !ok {
++                return refuse(format!("layout: R entry ({op}, {param}) not admitted"));
++            }
++            o.extend(Ty::Tag(4).enc("R op", *op as u128)?);
++            o.extend(Ty::U16.enc("R param", *param as u128)?);
++        }
++        let distinct = |what: &str, xs: &[u8]| -> Res<()> {
++            let mut s = xs.to_vec();
++            s.sort();
++            s.dedup();
++            if s.len() != xs.len() {
++                return refuse(format!("layout: {what} repeats a code"));
++            }
++            Ok(())
++        };
++        distinct("fill_limits", &self.fill_limits)?;
++        o.extend(len_word(Ty::U16, "fill_limits", self.fill_limits.len())?);
++        for l in &self.fill_limits {
++            if *l as usize >= LIMITS.len() {
++                return refuse(format!("layout: limit code {l}"));
++            }
++            o.extend(Ty::Tag(2).enc("limit", *l as u128)?);
++        }
++        distinct("fill_ops", &self.fill_ops)?;
++        o.extend(len_word(Ty::U16, "fill_ops", self.fill_ops.len())?);
++        for op in &self.fill_ops {
++            if !(1..=6).contains(op) {
++                return refuse(format!("layout: fill op {op} not deferrable"));
++            }
++            o.extend(Ty::Tag(4).enc("fill op", *op as u128)?);
++        }
++        Ok(o)
++    }
++}
++
++/// Part 5: the placement rule of discharge shards and of tier E and GP-3 chips (ARCHITECTURE
++/// 1.6 item (4); PROPOSAL 4.2 item 5).
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Place {
++    /// A code of [`DISCHARGE`].
++    pub discharge: u8,
++    /// The menu index of the discharge shape (a fixed leaf shape of the plan); 0 when
++    /// `discharge` is 0.
++    pub discharge_shape: u16,
++    /// Menu indices of the shapes that carry tier E chips, strictly ascending.
++    pub tier_e: Vec<u16>,
++    /// Menu indices of the shapes that carry GP-3 chips, strictly ascending.
++    pub gp3: Vec<u16>,
++}
++
++impl Place {
++    /// `[discharge: tag(2), discharge_shape: u16, n_e: u16, shape: u16 .., n_g: u16,
++    /// shape: u16 ..]`. Shape indices are checked against the menu by [`Plan::words`].
++    pub fn words(&self) -> Res<Vec<u32>> {
++        if self.discharge as usize >= DISCHARGE.len() {
++            return refuse(format!("place: discharge code {}", self.discharge));
++        }
++        if self.discharge == 0 && self.discharge_shape != 0 {
++            return refuse("place: discharge shape without discharge");
++        }
++        let mut o = Ty::Tag(2).enc("discharge", self.discharge as u128)?;
++        o.extend(Ty::U16.enc("discharge shape", self.discharge_shape as u128)?);
++        for (what, l) in [("tier_e", &self.tier_e), ("gp3", &self.gp3)] {
++            strictly_ascending(what, l)?;
++            o.extend(len_word(Ty::U16, what, l.len())?);
++            o.extend(l.iter().map(|s| *s as u32));
++        }
++        Ok(o)
++    }
++
++    fn shapes(&self) -> Vec<u16> {
++        let mut v = self.tier_e.clone();
++        v.extend(&self.gp3);
++        if self.discharge != 0 {
++            v.push(self.discharge_shape);
++        }
++        v
++    }
++}
++
++/// The static plan (ARCHITECTURE 1.6): the five parts that `plan_d` binds.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct Plan {
++    pub itab: Itab,
++    pub menu: Menu,
++    pub policy: Policy,
++    pub layout: Layout,
++    pub place: Place,
++}
++
++/// The word lists, digests and `plan_d` of a plan.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct PlanOut {
++    /// `(name, tag, words, digest)` of the five parts, in `plan_d` order.
++    pub parts: Vec<(&'static str, u32, Vec<u32>, [u32; 8])>,
++    /// The `plan_d` preimage after the tag: `1: u16` and the five digests (41 words).
++    pub plan_words: Vec<u32>,
++    pub plan_d: [u32; 8],
++}
++
++impl Plan {
++    pub fn words(&self) -> Res<PlanOut> {
++        let n = self.menu.shapes.len();
++        if let Some(s) = self.place.shapes().iter().find(|s| **s as usize >= n) {
++            return refuse(format!("place: shape {s} not in the menu of {n} shapes"));
++        }
++        let lists = [
++            ("itab", DOM_PLAN_ITAB, self.itab.words()?),
++            ("menu", DOM_PLAN_MENU, self.menu.words()?),
++            ("policy", DOM_PLAN_POLICY, self.policy.words()?),
++            ("layout", DOM_PLAN_LAYOUT, self.layout.words()?),
++            ("place", DOM_PLAN_PLACE, self.place.words()?),
++        ];
++        let mut parts = vec![];
++        let mut plan_words = vec![PLAN_VERSION];
++        for (name, tag, ws) in lists {
++            let d = p2(tag, &ws)?;
++            plan_words.extend(d);
++            parts.push((name, tag, ws, d));
++        }
++        assert_eq!(plan_words.len() + 1, 42, "plan_d preimage is 42 words with the tag");
++        let plan_d = p2(DOM_PLAN, &plan_words)?;
++        Ok(PlanOut { parts, plan_words, plan_d })
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// plan JSON (the input of `sherlock plan`)
++// ---------------------------------------------------------------------------------------------
++
++fn jerr(msg: impl Into<String>) -> EncError {
++    EncError(format!("plan json: {}", msg.into()))
++}
++
++fn ju(v: &Value, what: &str) -> Res<u64> {
++    v.as_u64().ok_or_else(|| jerr(format!("{what}: not an unsigned integer")))
++}
++
++fn jnarrow<T: TryFrom<u64>>(v: &Value, what: &str) -> Res<T> {
++    T::try_from(ju(v, what)?).map_err(|_| jerr(format!("{what}: out of range")))
++}
++
++fn jarr<'a>(v: &'a Value, what: &str) -> Res<&'a Vec<Value>> {
++    v.as_array().ok_or_else(|| jerr(format!("{what}: not an array")))
++}
++
++fn jget<'a>(v: &'a Value, k: &str) -> Res<&'a Value> {
++    v.get(k).ok_or_else(|| jerr(format!("missing key {k}")))
++}
++
++fn jname(v: &Value, table: &[&str], what: &str) -> Res<u8> {
++    let s = v.as_str().ok_or_else(|| jerr(format!("{what}: not a name")))?;
++    table
++        .iter()
++        .position(|n| *n == s)
++        .map(|i| i as u8)
++        .ok_or_else(|| jerr(format!("{what}: unknown name {s}")))
++}
++
++fn jlist<T: TryFrom<u64>>(v: &Value, what: &str) -> Res<Vec<T>> {
++    jarr(v, what)?.iter().map(|x| jnarrow(x, what)).collect()
++}
++
++/// Reads a plan from its JSON form (`crates/sherlock-lfr/examples/plan.json` is the bench
++/// sample). Names map to codes: chips by [`CHIPS`] (1-based), log ops by [`LOG_OPS`], limits by
++/// [`LIMITS`], discharge by [`DISCHARGE`].
++pub fn plan_from_json(v: &Value) -> Res<Plan> {
++    let itab = Itab {
++        entries: jarr(jget(v, "itab")?, "itab")?
++            .iter()
++            .map(|e| {
++                let rows = jarr(jget(e, "rows")?, "rows")?
++                    .iter()
++                    .map(|r| jlist::<u32>(r, "row"))
++                    .collect::<Res<Vec<_>>>()?;
++                Ok(ItabEntry {
++                    entry: ju(jget(e, "entry")?, "entry")?,
++                    width: jnarrow(jget(e, "width")?, "width")?,
++                    rows,
++                })
++            })
++            .collect::<Res<Vec<_>>>()?,
++    };
++    let m = jget(v, "menu")?;
++    let menu = Menu {
++        chip_sets: jarr(jget(m, "chip_sets")?, "chip_sets")?
++            .iter()
++            .map(|cs| {
++                jarr(cs, "chip set")?
++                    .iter()
++                    .map(|c| jname(c, &CHIPS, "chip").map(|i| i as u16 + 1))
++                    .collect::<Res<Vec<_>>>()
++            })
++            .collect::<Res<Vec<_>>>()?,
++        shapes: jarr(jget(m, "shapes")?, "shapes")?
++            .iter()
++            .map(|s| {
++                Ok(Shape {
++                    chip_set: jnarrow(jget(s, "chip_set")?, "chip_set")?,
++                    log_heights: jlist(jget(s, "log_heights")?, "log_heights")?,
++                })
++            })
++            .collect::<Res<Vec<_>>>()?,
++        node_arity: jnarrow(jget(m, "node_arity")?, "node_arity")?,
++    };
++    let p = jget(v, "policy")?;
++    let pad: Vec<u32> = jlist(jget(p, "pad")?, "pad")?;
++    let policy = match jget(p, "mode")?.as_str() {
++        Some("compact") => Policy::Compact { cut_len: ju(jget(p, "cut_len")?, "cut_len")?, pad },
++        Some("general") => Policy::General {
++            cut_rule: jnarrow(jget(p, "cut_rule")?, "cut_rule")?,
++            rule_max: jarr(jget(p, "rule_max")?, "rule_max")?
++                .iter()
++                .map(|r| {
++                    Ok((
++                        jnarrow(jget(r, "rule")?, "rule")?,
++                        jname(jget(r, "chip")?, &CHIPS, "chip")? as u16 + 1,
++                        jnarrow(jget(r, "max")?, "max")?,
++                    ))
++                })
++                .collect::<Res<Vec<_>>>()?,
++            pad,
++        },
++        _ => return Err(jerr("policy.mode: compact or general")),
++    };
++    let l = jget(v, "layout")?;
++    let layout = Layout {
++        r: jarr(jget(l, "r")?, "r")?
++            .iter()
++            .map(|e| {
++                let a = jarr(e, "R entry")?;
++                if a.len() != 2 {
++                    return Err(jerr("R entry: [op, param]"));
++                }
++                Ok((jname(&a[0], &LOG_OPS, "R op")?, jnarrow(&a[1], "R param")?))
++            })
++            .collect::<Res<Vec<_>>>()?,
++        fill_limits: jarr(jget(l, "fill_limits")?, "fill_limits")?
++            .iter()
++            .map(|x| jname(x, &LIMITS, "limit"))
++            .collect::<Res<Vec<_>>>()?,
++        fill_ops: jarr(jget(l, "fill_ops")?, "fill_ops")?
++            .iter()
++            .map(|x| jname(x, &LOG_OPS, "fill op"))
++            .collect::<Res<Vec<_>>>()?,
++    };
++    let pl = jget(v, "place")?;
++    let place = Place {
++        discharge: jname(jget(pl, "discharge")?, &DISCHARGE, "discharge")?,
++        discharge_shape: jnarrow(jget(pl, "discharge_shape")?, "discharge_shape")?,
++        tier_e: jlist(jget(pl, "tier_e")?, "tier_e")?,
++        gp3: jlist(jget(pl, "gp3")?, "gp3")?,
++    };
++    Ok(Plan { itab, menu, policy, layout, place })
++}
++
++/// The JSON report of `sherlock plan`: per part its tag, word list, word count, permutations
++/// and digest, then the `plan_d` preimage and `plan_d`.
++pub fn plan_report(out: &PlanOut) -> Value {
++    let parts: Vec<Value> = out
++        .parts
++        .iter()
++        .map(|(name, tag, ws, d)| {
++            json!({
++                "part": name, "tag": tag, "n_words": ws.len(), "perms": p2_perms(ws.len()),
++                "words": ws, "digest": d,
++            })
++        })
++        .collect();
++    json!({
++        "parts": parts,
++        "plan_tag": DOM_PLAN,
++        "plan_words": out.plan_words,
++        "plan_d": out.plan_d,
++    })
++}
+diff --git a/crates/sherlock-lfr/src/lib.rs b/crates/sherlock-lfr/src/lib.rs
+index 02ccce9..edb60a3 100644
+--- a/crates/sherlock-lfr/src/lib.rs
++++ b/crates/sherlock-lfr/src/lib.rs
+@@ -8,6 +8,7 @@
+ pub mod alu;
+ pub mod bb;
+ pub mod carrier;
++pub mod enc45;
+ pub mod fixture;
+ pub mod frozen;
+ pub mod keybind;
+diff --git a/crates/sherlock-lfr/tests/t9_enc45.rs b/crates/sherlock-lfr/tests/t9_enc45.rs
+new file mode 100644
+index 0000000..e81a467
+--- /dev/null
++++ b/crates/sherlock-lfr/tests/t9_enc45.rs
+@@ -0,0 +1,437 @@
++//! T9 ENC-4 and ENC-5 vectors on the Rust reference (`sherlock_lfr::enc45`).
++//!
++//! ENC-4: the typed words of the frame record (13 lanes, 52 words) and the task record (7 lanes,
++//! 19 words) at `ridx = u64`, `StackStep` and `StackCells`, `EMPTY_F`, `EMPTY_T` and the
++//! `H_chain` spills of a push sequence. ENC-5: the five word lists of the bench plan
++//! (`examples/plan.json`), their digests and `plan_d`. Every `P2` runs on two paths (overwrite
++//! sponge and a chain of `poseidon2_compress_with_capacity`, asserted equal in `enc45::p2`), and
++//! is checked once more against `iface::p2`. `PIN` holds the outputs (MEASURED); every output is
++//! pinned. `ENC45_PRINT=1` prints `VEC name = value` for each.
++
++use sherlock_lfr::{enc45::*, iface};
++
++fn words(ws: &[u32]) -> String {
++    format!("{ws:?}")
++}
++
++struct Out(Vec<(String, String)>);
++impl Out {
++    fn put(&mut self, k: &str, v: String) {
++        self.0.push((k.to_string(), v));
++    }
++}
++
++fn p2_3(tag: u32, xs: &[u32]) -> [u32; 8] {
++    let d = p2(tag, xs).unwrap();
++    let xs64: Vec<u64> = xs.iter().map(|x| *x as u64).collect();
++    assert_eq!(iface::p2(tag as u64, &xs64).map(|x| x as u32), d, "iface::p2 third path");
++    d
++}
++
++const A65: u128 = (1 << 65) + 1;
++const RMAX: u128 = u64::MAX as u128;
++const AMAX: u128 = (1 << 66) - 1;
++
++/// One sample per frame kind; values exercise every limb (u64 max, addr max, 2^65 + 1).
++fn frames() -> Vec<Frame> {
++    use Frame as F;
++    vec![
++        F::LetF { binder: 3, body: 5, saved_env: Some(A65), origin: 9 },
++        F::LeftF { op: 6, right: RMAX, saved_env: None, origin: 0x0001_0002_0003_0004 },
++        F::RightF { op: 2, left: RefC::data(AMAX), origin: 11 },
++        F::UnaryF { op: 1, origin: 12 },
++        F::IfF { then_expr: 13, else_expr: 14, saved_env: Some(15), origin: 16 },
++        F::MatchF { arms: Slice { start: 17, len: 3 }, saved_env: Some(18), origin: 19 },
++        F::ArgsF {
++            function_name: 20,
++            completed: Slice { start: A65, len: 2 },
++            rest: Slice { start: 21, len: 4 },
++            saved_env: Some(22),
++            origin: 23,
++        },
++        F::ReturnF { return_type: 24, saved_env: Some(25), origin: 26 },
++        F::ScopeF { saved_env: None, origin: 27 },
++        F::ConstructorFieldsF {
++            type_id: 28,
++            ctor_id: 29,
++            index: u32::MAX as u128,
++            field_type: 30,
++            checked: 1,
++            completed: Slice { start: 31, len: 1 },
++            rest: Slice { start: 32, len: 2 },
++            saved_env: Some(AMAX),
++            origin: RMAX,
++        },
++    ]
++}
++
++fn tasks() -> Vec<Task> {
++    vec![
++        Task::ValidateTask { r: RefC::konst(RMAX), visit: 1, cursor: 3 },
++        Task::EqualTask { left: RefC::data(A65), right: RefC::input(7), visit: 0, cursor: 2 },
++        Task::PairTask { binder: 4, sort: 5, arg: RefC::data(6) },
++    ]
++}
++
++fn push<R: StackRec>(r: R) -> StackStep<R> {
++    StackStep { rw: 0, rw_top: None, op: OP_PUSH, new_top: Some(r) }
++}
++
++fn plan() -> Plan {
++    let v: serde_json::Value = serde_json::from_str(include_str!("../examples/plan.json")).unwrap();
++    plan_from_json(&v).unwrap()
++}
++
++fn compute() -> Out {
++    let mut o = Out(vec![]);
++    // FP-1 bus_enc_vectors (limb sanity)
++    o.put("fp1.u64(2^64-1)", words(&Ty::U64.enc("x", RMAX).unwrap()));
++    o.put("fp1.u64(0x0001000200030004)", words(&Ty::U64.enc("x", 0x0001_0002_0003_0004).unwrap()));
++    o.put("fp1.addr(2^65+1)", words(&Ty::Addr.enc("x", A65).unwrap()));
++    o.put("fp1.u128(2^127)", words(&Ty::U128.enc("x", 1 << 127).unwrap()));
++
++    // ENC-4 widths (DERIVED)
++    o.put("enc4.frame.n_words", type_words(&FRAME_TYPES).to_string());
++    o.put("enc4.task.n_words", type_words(&TASK_TYPES).to_string());
++
++    // records
++    for (k, f) in frames().iter().enumerate() {
++        let w = f.words().unwrap();
++        assert_eq!(w.len(), 52);
++        o.put(&format!("enc4.frame[{k}].{}", FRAME_KIND_NAMES[k]), words(&w));
++    }
++    for (k, t) in tasks().iter().enumerate() {
++        let w = t.words().unwrap();
++        assert_eq!(w.len(), 19);
++        o.put(&format!("enc4.task[{k}].{}", TASK_KIND_NAMES[k]), words(&w));
++    }
++
++    // EMPTY constants
++    let ef = empty_below::<Frame>();
++    let et = empty_below::<Task>();
++    assert_eq!(ef, p2_3(DOM_FRAMECHAIN, &[]));
++    assert_eq!(et, p2_3(DOM_TASKCHAIN, &[]));
++    o.put("enc4.EMPTY_F", words(&ef));
++    o.put("enc4.EMPTY_T", words(&et));
++
++    // frame stack: push f0, f1, f2; then pop
++    let fs = frames();
++    let mut st = RefStack::<Frame>::default();
++    let c0 = st.cells().unwrap();
++    assert_eq!(c0.words().unwrap().len(), 64);
++    o.put("enc4.frames.cells(0)", words(&c0.words().unwrap()));
++    let s0 = push(fs[0]);
++    o.put("enc4.frames.step.push(f0)", words(&s0.words().unwrap()));
++    assert_eq!(s0.words().unwrap().len(), 106);
++    assert_eq!(st.apply(&s0).unwrap(), Hashed::None, "push at count 0 does not hash");
++    for (k, f) in fs.iter().enumerate().take(3).skip(1) {
++        let pre = st.cells().unwrap();
++        let h = st.apply(&push(*f)).unwrap();
++        let post = st.cells().unwrap();
++        // the protocol's spill equals the recomputed abstraction chainD
++        assert_eq!(h, Hashed::Spill(post.below));
++        let direct = h_chain(pre.count, &pre.below, pre.top.as_ref().unwrap()).unwrap();
++        let mut xs = Ty::U64.enc("c", pre.count).unwrap();
++        xs.extend(pre.below);
++        xs.extend(pre.top.as_ref().unwrap().words().unwrap());
++        assert_eq!(xs.len() + 1, 65);
++        assert_eq!(p2_perms(xs.len()), 9);
++        assert_eq!(direct, p2_3(DOM_FRAMECHAIN, &xs));
++        o.put(&format!("enc4.frames.below(count={})", k + 1), words(&post.below));
++    }
++    let c3 = st.cells().unwrap();
++    o.put("enc4.frames.cells(3)", words(&c3.words().unwrap()));
++    let pre_below = c3.below;
++    let h = st.apply(&StackStep { rw: 0, rw_top: None, op: OP_POP, new_top: None }).unwrap();
++    assert_eq!(h, Hashed::Restore(pre_below));
++    let c2 = st.cells().unwrap();
++    o.put("enc4.frames.cells(2)", words(&c2.words().unwrap()));
++
++    // task stack: push t0, push t2, then rewrite-then-push (the spill hashes rw_top)
++    let ts = tasks();
++    let mut tk = RefStack::<Task>::default();
++    tk.apply(&push(ts[0])).unwrap();
++    tk.apply(&push(ts[2])).unwrap();
++    let pre = tk.cells().unwrap();
++    o.put("enc4.tasks.below(count=2)", words(&pre.below));
++    let rw_top = Task::PairTask { binder: 4, sort: 5, arg: RefC::data(8) };
++    let step = StackStep { rw: 1, rw_top: Some(rw_top), op: OP_PUSH, new_top: Some(ts[1]) };
++    let sw = step.words().unwrap();
++    assert_eq!(sw.len(), 40);
++    o.put("enc4.tasks.step.rw_push", words(&sw));
++    let h = tk.apply(&step).unwrap();
++    let post = tk.cells().unwrap();
++    let want = h_chain(2, &pre.below, &rw_top).unwrap();
++    assert_eq!(h, Hashed::Spill(want));
++    assert_eq!(post.below, want);
++    // mutant stack_compound_spills_unrewritten_top: the old top gives another digest
++    assert_ne!(want, h_chain(2, &pre.below, pre.top.as_ref().unwrap()).unwrap());
++    let mut xs = Ty::U64.enc("c", 2).unwrap();
++    xs.extend(pre.below);
++    xs.extend(rw_top.words().unwrap());
++    assert_eq!(xs.len() + 1, 32);
++    assert_eq!(p2_perms(xs.len()), 4);
++    assert_eq!(want, p2_3(DOM_TASKCHAIN, &xs));
++    o.put("enc4.tasks.below(count=3,rw_push)", words(&post.below));
++    let cw = post.words().unwrap();
++    assert_eq!(cw.len(), 31);
++    o.put("enc4.tasks.cells(3)", words(&cw));
++
++    // ENC-5
++    let out = plan().words().unwrap();
++    for (name, tag, ws, d) in &out.parts {
++        assert_eq!(*d, p2_3(*tag, ws));
++        o.put(&format!("enc5.{name}.tag"), tag.to_string());
++        o.put(&format!("enc5.{name}.words"), words(ws));
++        o.put(&format!("enc5.{name}_d"), words(d));
++    }
++    assert_eq!(out.plan_words.len(), 41);
++    assert_eq!(out.plan_d, p2_3(DOM_PLAN, &out.plan_words));
++    o.put("enc5.plan.words", words(&out.plan_words));
++    o.put("enc5.plan_d", words(&out.plan_d));
++    o
++}
++
++#[test]
++fn t9_enc45_vectors() {
++    let o = compute();
++    if std::env::var("ENC45_PRINT").is_ok() {
++        for (k, v) in &o.0 {
++            println!("VEC {k} = {v}");
++        }
++    }
++    for (k, v) in PIN {
++        let got = o.0.iter().find(|(a, _)| a == k).unwrap_or_else(|| panic!("missing {k}"));
++        assert_eq!(&got.1, v, "vector {k}");
++    }
++    assert_eq!(PIN.len(), o.0.len(), "every vector pinned");
++}
++
++#[test]
++fn t9_enc4_refusals() {
++    use Frame as F;
++    let bad = |r: Result<Vec<u32>, EncError>| assert!(r.is_err(), "accepted: {r:?}");
++    // lane level: each lane type refuses its first value out of range
++    let mut l = Frame::LetF { binder: 1, body: 2, saved_env: Some(3), origin: 4 }.lanes().unwrap();
++    assert!(encode_frame_lanes(&l).is_ok());
++    for (lane, v) in [(0usize, 10u128), (1, 1 << 64), (4, 1 << 66), (5, 1 << 64)] {
++        let mut m = l;
++        m[lane] = v;
++        bad(encode_frame_lanes(&m));
++    }
++    l[6] = 1; // padding lane of LetF (uses lanes 0..6)
++    bad(encode_frame_lanes(&l));
++    let mut cf = frames()[9].lanes().unwrap();
++    cf[10] = 2; // bit lane
++    bad(encode_frame_lanes(&cf));
++    cf[10] = 1;
++    cf[11] = 1 << 66; // addr top limb 4
++    bad(encode_frame_lanes(&cf));
++    let mut tl = tasks()[1].lanes().unwrap();
++    assert!(encode_task_lanes(&tl).is_ok());
++    for (lane, v) in [(0usize, 3u128), (3, 4), (5, 2), (6, 1 << 32)] {
++        let mut m = tl;
++        m[lane] = v;
++        bad(encode_task_lanes(&m));
++    }
++    tl[0] = 0; // ValidateTask uses lanes 0..5: lanes 5, 6 must be zero
++    bad(encode_task_lanes(&tl));
++    // field level
++    bad(F::LeftF { op: 7, right: 0, saved_env: None, origin: 0 }.words());
++    bad(F::UnaryF { op: 2, origin: 0 }.words());
++    bad(F::RightF { op: 0, left: RefC { rtag: 3, idx: 0 }, origin: 0 }.words());
++    bad(F::RightF { op: 0, left: RefC::konst(1 << 64), origin: 0 }.words());
++    bad(F::RightF { op: 0, left: RefC::data(1 << 66), origin: 0 }.words());
++    assert!(F::RightF { op: 0, left: RefC::data(AMAX), origin: 0 }.words().is_ok());
++    let cfi = |index| F::ConstructorFieldsF {
++        type_id: 0,
++        ctor_id: 0,
++        index,
++        field_type: 0,
++        checked: 0,
++        completed: Slice { start: 0, len: 0 },
++        rest: Slice { start: 0, len: 0 },
++        saved_env: None,
++        origin: 0,
++    };
++    bad(cfi(1 << 32).words());
++    bad(F::ArgsF {
++        function_name: 0,
++        completed: Slice { start: 0, len: 1 << 32 },
++        rest: Slice { start: 0, len: 0 },
++        saved_env: None,
++        origin: 0,
++    }
++    .words());
++    bad(Task::ValidateTask { r: RefC::konst(0), visit: 2, cursor: 0 }.words());
++    bad(Task::PairTask { binder: 1 << 64, sort: 0, arg: RefC::konst(0) }.words());
++    // StackStep
++    let f = frames()[0];
++    bad(StackStep::<Frame> { rw: 0, rw_top: None, op: 3, new_top: None }.words());
++    bad(StackStep::<Frame> { rw: 2, rw_top: None, op: 0, new_top: None }.words());
++    bad(StackStep { rw: 0, rw_top: Some(f), op: 0, new_top: None }.words());
++    bad(StackStep::<Frame> { rw: 0, rw_top: None, op: OP_PUSH, new_top: None }.words());
++    bad(StackStep { rw: 0, rw_top: None, op: OP_POP, new_top: Some(f) }.words());
++    // StackCells
++    let e = empty_below::<Frame>();
++    bad(StackCells { count: 1 << 64, below: [1; 8], top: Some(f) }.words());
++    bad(StackCells { count: 0, below: e, top: Some(f) }.words());
++    bad(StackCells::<Frame> { count: 1, below: e, top: None }.words());
++    bad(StackCells { count: 1, below: [0; 8], top: Some(f) }.words()); // stack_count_one_below_nonempty
++    bad(StackCells::<Frame> { count: 0, below: [0; 8], top: None }.words()); // below not EMPTY
++    bad(StackCells { count: 2, below: [P, 0, 0, 0, 0, 0, 0, 0], top: Some(f) }.words());
++    assert!(h_chain(1, &[P, 0, 0, 0, 0, 0, 0, 0], &f).is_err());
++    // a changed word changes the digest
++    let d = h_chain(1, &e, &f).unwrap();
++    assert_ne!(d, h_chain(2, &e, &f).unwrap(), "depth is bound (stack_count_unchecked)");
++    let f2 = F::LetF { binder: 3, body: 5, saved_env: Some(A65), origin: 10 };
++    assert_ne!(d, h_chain(1, &e, &f2).unwrap(), "record is bound");
++    let mut e2 = e;
++    e2[7] ^= 1;
++    assert_ne!(d, h_chain(1, &e2, &f).unwrap(), "predecessor is bound");
++    // frame and task domains differ (stack_frame_task_domain_swapped)
++    let mut xs = Ty::U64.enc("c", 1).unwrap();
++    xs.extend(e);
++    xs.extend(f.words().unwrap());
++    assert_ne!(p2(DOM_FRAMECHAIN, &xs).unwrap(), p2(DOM_TASKCHAIN, &xs).unwrap());
++    assert_ne!(empty_below::<Frame>(), empty_below::<Task>());
++}
++
++#[test]
++fn t9_enc5_refusals() {
++    let base = plan();
++    let d0 = base.words().unwrap().plan_d;
++    let bad = |p: Plan, why: &str| assert!(p.words().is_err(), "accepted: {why}");
++    let mut p = base.clone();
++    p.itab.entries[0].rows[1][2] = P;
++    bad(p, "itab word not canonical");
++    let mut p = base.clone();
++    p.itab.entries[0].rows[1].push(0);
++    bad(p, "itab row width");
++    let mut p = base.clone();
++    p.itab.entries.swap(0, 1);
++    bad(p, "itab entries unsorted");
++    let mut p = base.clone();
++    p.menu.node_arity = 5;
++    bad(p, "node arity 5");
++    let mut p = base.clone();
++    p.menu.shapes[0].log_heights[0] = 32;
++    bad(p, "log_h over tag(5)");
++    let mut p = base.clone();
++    p.menu.shapes[0].log_heights.pop();
++    bad(p, "heights length");
++    let mut p = base.clone();
++    p.menu.shapes.swap(0, 1);
++    bad(p, "shapes unsorted");
++    let mut p = base.clone();
++    p.menu.chip_sets[0].swap(0, 1);
++    bad(p, "chip set unsorted");
++    let mut p = base.clone();
++    p.menu.chip_sets[0].push(10);
++    bad(p, "unknown chip");
++    let mut p = base.clone();
++    p.policy = Policy::Compact { cut_len: 4096, pad: vec![1, 4, 2] };
++    bad(p, "pad unsorted");
++    let mut p = base.clone();
++    p.policy = Policy::Compact { cut_len: 4096, pad: vec![0, 1] };
++    bad(p, "pad 0");
++    let mut p = base.clone();
++    p.policy = Policy::General { cut_rule: 0, rule_max: vec![(121, 1, 5)], pad: vec![1] };
++    bad(p, "rule class 121");
++    let mut p = base.clone();
++    p.policy = Policy::General { cut_rule: 0, rule_max: vec![(2, 1, 5), (1, 1, 5)], pad: vec![1] };
++    bad(p, "rule max unsorted");
++    let mut p = base.clone();
++    p.layout.r[0] = (0, 0);
++    bad(p, "NOP in R");
++    let mut p = base.clone();
++    p.layout.r[1] = (8, 6);
++    bad(p, "DIGEST tag index 6");
++    let mut p = base.clone();
++    p.layout.fill_ops = vec![4, 4];
++    bad(p, "fill op repeated");
++    let mut p = base.clone();
++    p.layout.fill_ops.push(8);
++    bad(p, "DIGEST is not deferrable");
++    let mut p = base.clone();
++    p.place.tier_e = vec![2];
++    bad(p, "tier E shape not in menu");
++    let mut p = base.clone();
++    p.place.discharge_shape = 2;
++    bad(p, "discharge shape not in menu");
++    let mut p = base.clone();
++    p.place.discharge = 3;
++    bad(p, "discharge code 3");
++    // a General policy encodes and differs
++    let mut p = base.clone();
++    p.policy = Policy::General { cut_rule: 0, rule_max: vec![(1, 1, 5), (1, 3, 7)], pad: vec![1, 2] };
++    assert_ne!(p.words().unwrap().plan_d, d0);
++    // a changed word changes the part digest and plan_d
++    let mut p = base.clone();
++    p.itab.entries[1].rows[0][3] += 1;
++    let o = p.words().unwrap();
++    let b = base.words().unwrap();
++    assert_ne!(o.parts[0].3, b.parts[0].3);
++    assert_eq!(o.parts[1..], b.parts[1..]);
++    assert_ne!(o.plan_d, d0);
++    let mut p = base.clone();
++    p.place.gp3 = vec![0];
++    assert_ne!(p.words().unwrap().plan_d, d0);
++    // JSON refusals
++    let mut v: serde_json::Value =
++        serde_json::from_str(include_str!("../examples/plan.json")).unwrap();
++    v["menu"]["chip_sets"][0][0] = "GPU".into();
++    assert!(plan_from_json(&v).is_err());
++}
++
++// Pinned outputs of `compute` (MEASURED: this code at T9 branch `t9-enc45`).
++const PIN: &[(&str, &str)] = &[
++    ("fp1.u64(2^64-1)", "[65535, 65535, 65535, 65535]"),
++    ("fp1.u64(0x0001000200030004)", "[4, 3, 2, 1]"),
++    ("fp1.addr(2^65+1)", "[1, 0, 0, 0, 2]"),
++    ("fp1.u128(2^127)", "[0, 0, 0, 0, 0, 0, 0, 32768]"),
++    ("enc4.frame.n_words", "52"),
++    ("enc4.task.n_words", "19"),
++    ("enc4.frame[0].LetF", "[0, 3, 0, 0, 0, 5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[1].LeftF", "[1, 6, 0, 0, 0, 65535, 65535, 65535, 65535, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[2].RightF", "[2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 65535, 65535, 65535, 65535, 3, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[3].UnaryF", "[3, 1, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[4].IfF", "[4, 13, 0, 0, 0, 14, 0, 0, 0, 0, 1, 0, 0, 0, 0, 15, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[5].MatchF", "[5, 17, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 18, 0, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[6].ArgsF", "[6, 20, 0, 0, 0, 1, 0, 0, 0, 2, 2, 0, 0, 0, 0, 21, 0, 0, 0, 0, 4, 0, 0, 0, 1, 0, 0, 0, 0, 22, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[7].ReturnF", "[7, 24, 0, 0, 0, 1, 0, 0, 0, 0, 25, 0, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[8].ScopeF", "[8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frame[9].ConstructorFieldsF", "[9, 28, 0, 0, 0, 29, 0, 0, 0, 0, 65535, 65535, 0, 0, 0, 30, 0, 0, 0, 0, 1, 0, 0, 0, 31, 0, 0, 0, 0, 1, 0, 0, 0, 0, 32, 0, 0, 0, 2, 0, 0, 0, 1, 65535, 65535, 65535, 65535, 3, 65535, 65535, 65535, 65535]"),
++    ("enc4.task[0].ValidateTask", "[0, 0, 0, 0, 0, 65535, 65535, 65535, 65535, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.task[1].EqualTask", "[1, 1, 0, 0, 0, 1, 0, 0, 0, 2, 2, 7, 0, 0, 0, 0, 0, 2, 0]"),
++    ("enc4.task[2].PairTask", "[2, 4, 0, 0, 0, 5, 0, 0, 0, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.EMPTY_F", "[1176688983, 1278346376, 38474965, 1838392317, 1623709148, 1943656309, 814136277, 1881624362]"),
++    ("enc4.EMPTY_T", "[1130008804, 1946014265, 263450774, 1551641767, 1691888516, 911434484, 1838136693, 1939293079]"),
++    ("enc4.frames.cells(0)", "[0, 0, 0, 0, 1176688983, 1278346376, 38474965, 1838392317, 1623709148, 1943656309, 814136277, 1881624362, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frames.step.push(f0)", "[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0, 0, 0, 5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frames.below(count=2)", "[1216167155, 1177358885, 326589423, 1701325405, 182508547, 1400058194, 317299205, 1285827029]"),
++    ("enc4.frames.below(count=3)", "[1433075097, 777473005, 813312805, 100441451, 1091136651, 1237436108, 1757163453, 851583020]"),
++    ("enc4.frames.cells(3)", "[3, 0, 0, 0, 1433075097, 777473005, 813312805, 100441451, 1091136651, 1237436108, 1757163453, 851583020, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0, 65535, 65535, 65535, 65535, 3, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.frames.cells(2)", "[2, 0, 0, 0, 1216167155, 1177358885, 326589423, 1701325405, 182508547, 1400058194, 317299205, 1285827029, 1, 6, 0, 0, 0, 65535, 65535, 65535, 65535, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"),
++    ("enc4.tasks.below(count=2)", "[83614625, 138898120, 1035979695, 811716903, 1551479752, 192252210, 1981583257, 1413049022]"),
++    ("enc4.tasks.step.rw_push", "[1, 2, 4, 0, 0, 0, 5, 0, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 2, 2, 7, 0, 0, 0, 0, 0, 2, 0]"),
++    ("enc4.tasks.below(count=3,rw_push)", "[1144343651, 1919485989, 1146870427, 1005545977, 1707224956, 1681909739, 1213744491, 1301954593]"),
++    ("enc4.tasks.cells(3)", "[3, 0, 0, 0, 1144343651, 1919485989, 1146870427, 1005545977, 1707224956, 1681909739, 1213744491, 1301954593, 1, 1, 0, 0, 0, 1, 0, 0, 0, 2, 2, 7, 0, 0, 0, 0, 0, 2, 0]"),
++    ("enc5.itab.tag", "58"),
++    ("enc5.itab.words", "[2, 0, 0, 0, 0, 0, 3, 0, 4, 0, 1, 0, 2, 3, 2, 1, 4, 5, 13, 0, 0, 0, 7, 0, 0, 0, 1, 0, 4, 0, 8, 0, 1, 9]"),
++    ("enc5.itab_d", "[1345560599, 1860688572, 1734315194, 36194483, 1959922776, 408143316, 1277230687, 586787347]"),
++    ("enc5.menu.tag", "59"),
++    ("enc5.menu.words", "[3, 6, 1, 2, 3, 4, 5, 6, 8, 1, 2, 3, 4, 5, 6, 7, 8, 7, 1, 2, 3, 4, 5, 6, 9, 2, 0, 12, 11, 17, 10, 8, 8, 1, 12, 11, 17, 10, 8, 8, 12, 10, 4]"),
++    ("enc5.menu_d", "[1214028253, 1652631420, 741998128, 471870231, 732067125, 438496328, 1597872996, 11932986]"),
++    ("enc5.policy.tag", "60"),
++    ("enc5.policy.words", "[0, 4096, 0, 0, 0, 5, 1, 0, 2, 0, 4, 0, 8, 0, 16, 0]"),
++    ("enc5.policy_d", "[1570527255, 1457830631, 962530573, 879093775, 961183313, 974999398, 1117834892, 1444720045]"),
++    ("enc5.layout.tag", "61"),
++    ("enc5.layout.words", "[5, 8, 0, 8, 0, 8, 2, 8, 3, 3, 3, 3, 2, 3, 1, 3, 4, 2, 5]"),
++    ("enc5.layout_d", "[938461046, 887369039, 1531125611, 40802216, 1855486303, 951177647, 1873538538, 76863331]"),
++    ("enc5.place.tag", "62"),
++    ("enc5.place.words", "[1, 1, 1, 1, 0]"),
++    ("enc5.place_d", "[153728254, 147617359, 300056841, 870949621, 193410522, 347186405, 632602734, 1172291810]"),
++    ("enc5.plan.words", "[1, 1345560599, 1860688572, 1734315194, 36194483, 1959922776, 408143316, 1277230687, 586787347, 1214028253, 1652631420, 741998128, 471870231, 732067125, 438496328, 1597872996, 11932986, 1570527255, 1457830631, 962530573, 879093775, 961183313, 974999398, 1117834892, 1444720045, 938461046, 887369039, 1531125611, 40802216, 1855486303, 951177647, 1873538538, 76863331, 153728254, 147617359, 300056841, 870949621, 193410522, 347186405, 632602734, 1172291810]"),
++    ("enc5.plan_d", "[498967615, 475488819, 638142412, 202436018, 1922544416, 1274038141, 316913251, 1426406982]"),
++];
+-- 
+2.56.0
+
