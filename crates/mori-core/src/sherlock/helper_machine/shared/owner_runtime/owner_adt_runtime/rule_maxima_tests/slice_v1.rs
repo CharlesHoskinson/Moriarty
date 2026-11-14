@@ -8,6 +8,7 @@ use crate::sherlock::helper_machine::c6_phys::{C6PhysCaps, C6Root, encode_root_a
 use crate::sherlock::helper_machine::c6_phys_helper::{
     encode_helper_record, encode_result_record, encode_task_record,
 };
+use crate::sherlock::helper_machine::raw::ConstRow as RawConstRow;
 
 fn root_of(img: &MachineImage) -> C6Root {
     C6Root {
@@ -97,6 +98,22 @@ fn rom_rows(v: &ProgramView) -> serde_json::Value {
         .iter()
         .map(|e| match e {
             ExpressionRowC::Var { binder } => vec![n(1), n(*binder), n(0), n(0), n(0), n(0), n(0)],
+            // T8b: `Construct` in the `encode_program` order (kind 8, type, ctor, fields
+            // slice, constant option).
+            ExpressionRowC::Construct {
+                type_id,
+                ctor_id,
+                fields,
+                constant,
+            } => vec![
+                n(8),
+                n(type_id.0),
+                n(ctor_id.0),
+                n(fields.start),
+                n(fields.len),
+                n(usize::from(constant.is_some())),
+                n(constant.unwrap_or(0)),
+            ],
             _ => panic!("slice ROM export: expression row kind not written"),
         })
         .collect();
@@ -155,19 +172,70 @@ fn rom_rows(v: &ProgramView) -> serde_json::Value {
     empty("patterns", v.patterns.len());
     empty("pattern_children", v.pattern_children.len());
     empty("type_args", v.type_args.len());
-    empty("decl_param_counts", v.decl_param_counts.len());
-    empty("decl_ctor_counts", v.decl_ctor_counts.len());
-    empty("decl_templates", v.decl_templates.len());
     empty("plan_nodes", v.plan_nodes.len());
     empty("plan_cases", v.plan_cases.len());
     empty("field_paths", v.field_paths.len());
-    empty("constants", v.constants.len());
     empty("constant_fields", v.constant_fields.len());
-    json!({
+    let mut out = json!({
         "entry": v.entry,
         "0": exprs, "1": occs, "9": types, "11": ctors, "12": cfields,
         "21": v.names.iter().map(|s| s.bytes().map(|b| b.to_string()).collect::<Vec<_>>()).collect::<Vec<_>>(),
-    })
+    });
+    // T8b (the Halted slice run `unitctor`): the declaration tables and the constants. Written
+    // only when non-empty, so the rows of `entry x;` are unchanged.
+    // - decl_param_counts, decl_ctor_counts: one `ridx` per row;
+    // - decl_templates: the declaration name bytes (PICK for the slice: `decl_d` of FP-9.5 is
+    //   not built; the leaf hashes these bytes as `P2(DOM_DECL, len, bytes)`);
+    // - constants: `[kind, marker_free, p1, p2, p3, p4]` in the `encode_program` order
+    //   (`Constructor`: 6, marker_free, type, ctor, fields start, fields len).
+    if !v.decl_param_counts.is_empty() {
+        out["13"] = json!(
+            v.decl_param_counts
+                .iter()
+                .map(|x| vec![n(*x)])
+                .collect::<Vec<_>>()
+        );
+    }
+    if !v.decl_ctor_counts.is_empty() {
+        out["14"] = json!(
+            v.decl_ctor_counts
+                .iter()
+                .map(|x| vec![n(*x)])
+                .collect::<Vec<_>>()
+        );
+    }
+    if !v.decl_templates.is_empty() {
+        out["15"] = json!(
+            v.decl_templates
+                .iter()
+                .map(|t| t.name.bytes().map(|b| b.to_string()).collect::<Vec<_>>())
+                .collect::<Vec<_>>()
+        );
+    }
+    if !v.constants.is_empty() {
+        let rows: Vec<Vec<String>> = v
+            .constants
+            .iter()
+            .map(|c| match c {
+                RawConstRow::Constructor {
+                    marker_free,
+                    type_id,
+                    ctor_id,
+                    fields,
+                } => vec![
+                    n(6),
+                    n(usize::from(*marker_free)),
+                    n(type_id.0),
+                    n(ctor_id.0),
+                    n(fields.start.0),
+                    n(fields.len),
+                ],
+                _ => panic!("slice ROM export: constant row kind not written"),
+            })
+            .collect();
+        out["19"] = json!(rows);
+    }
+    out
 }
 
 /// One candidate run: the step records, or the refusal text.
@@ -200,7 +268,7 @@ fn probe(p: &Program) -> serde_json::Value {
                 .collect()
         })
         .unwrap_or_default();
-    let rom = if p.name == "unbound" {
+    let rom = if p.name == "unbound" || p.name == "unitctor" {
         admitted
             .body
             .view
