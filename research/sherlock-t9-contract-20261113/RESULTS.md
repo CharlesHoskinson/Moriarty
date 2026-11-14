@@ -20,7 +20,8 @@ The state, logs and fixtures are in `~/.cache/t9/`, and the chain runner is `~/.
 4. **`layout_d` is pinned to the ENC-3 vector** `[1120272538, 1014741024, 1563488800, 1022622642, 354000869, 288819430, 75200499, 498114873]`, from `DOM_LAYOUT` 11 and `"midnight:binding-input[v1]"` at offset 58.
 5. **The `PATH` node hash is the `H2` of the log (placeholder, LEAD).** The siblings are wrap-private: `path_sibs` in `wrapin` and `sibs` in each decode case.
 6. **ENC-4 has a conflict on task lane 3.** It is typed `tag(2)` (FP-9.1 `rtag`, where `Input` is 2), but Appendix A says `tag(1)`. Four pins depend on the choice: `enc4.task[1].EqualTask`, `enc4.tasks.step.rw_push`, `enc4.tasks.below(count=3,rw_push)` and `enc4.tasks.cells(3)`.
-7. **ENC-5 part tags 58 to 62** (`itab`, `menu`, `policy`, `layout`, `place`) are the next free codes after FP-9.5 (45 to 57). `SHK_SHAPE` is named in ARCHITECTURE 3.x but has no code yet, so it takes the next free code after 62 (LEAD).
+7. **The chunk anchor-write template (`TPL_CHUNK`, lanes 11 to 21 with `a_out` at 20)** was read from a probe contract, `contract/chunk-probe.compact`, compiled with compactc 0.36.0. The ledger has no chunked entry, so no deployed contract measures it (LEAD; ARCHITECTURE FP-3 fact 2 states it from the probe).
+8. **ENC-5 part tags 58 to 62** (`itab`, `menu`, `policy`, `layout`, `place`) are the next free codes after FP-9.5 (45 to 57). `SHK_SHAPE` is named in ARCHITECTURE 3.x but has no code yet, so it takes the next free code after 62 (LEAD).
 
 ## 1. Done-when status
 
@@ -34,7 +35,7 @@ The state, logs and fixtures are in `~/.cache/t9/`, and the chain runner is `~/.
 | T10a: devnet call included, non-empty lane map and `PUB` entries | included at block 12,951 (tx `0x5b3f37b9…`), lane map with 4 used pairs, 4 `PUB` entries; R1, R2 and R3 refused | MEASURED |
 | T10a: no plain `prog_d` or `n_steps` in the call vector or ledger state | no forbidden word on the 1,026-word vector, 13 transcript ops or the indexed state; the controls fire | MEASURED, with the bench limit of section 5 |
 
-The wrap rows are +12,546 over the T3 baseline of 1,668,183 (DERIVED). They are +4,507 over the T4 probe total of 1,676,222, which priced only the PATH replay and the head checks (DERIVED). The extra rows are the opening-proof form of `R`, the fifth lane-map pair and the chunk anchor-write lanes. Both the E5 fixture `lfr-e3` and the T10a key fixture `lfr-call` give the same rows, because the relation is one shape.
+The wrap rows are +12,546 over the T3 baseline of 1,668,183 (DERIVED). They are +4,507 over the T4 probe total of 1,676,222, which priced only the PATH replay and the head checks (DERIVED). The likely sources of the extra rows are the opening-proof form of `R`, the fifth lane-map pair and the chunk anchor-write lanes. The rows were not broken down by cause, so this split is ESTIMATE. Both the E5 fixture `lfr-e3` and the T10a key fixture `lfr-call` give the same rows, because the relation is one shape.
 
 ## 2. What changed
 
@@ -134,7 +135,7 @@ The vectors are in `research/sherlock-enc-fp3-20261112/VECTORS.txt` (55) and `VE
   - `wrap_path_root_changed`, `wrap_path_sibling_changed`, `wrap_path_index_changed`.
 
   It accepts `open_honest`, `chunk_honest` and `path_honest`, along with the E3 cases.
-- **Wrap (I7, `~/.cache/t9/logs/wrap-i7i9.log`):** on all 46 cases the stock verdict equals the native wrap verdict. In MockProver, the honest case, the 3 T9 positives and 23 mutants all agree.
+- **Wrap (I7, `~/.cache/t9/logs/wrap-suite.log`, one writer):** on all 46 cases the stock verdict equals the native wrap verdict. In MockProver, the honest case, the 3 T9 positives and 23 mutants all agree.
 - **`L_Fr` tape (J4, `~/.cache/t9/logs/j4-tapes.log`):** 11 `L_iface` proofs at 12,166 words. The 8 positives have 0 failed assertions, the new `open` included, and the 3 negatives are refused.
 - **Wrap suite:** 25 tests pass, I0 to I9 and OD-18 (`wrap-suite.log`).
 - **sherlock-lfr:** the lib and every test pass (29 tests).
@@ -149,7 +150,7 @@ Local e6 devnet only. Node 2.1.101, indexer 4.4.101, proof server 9.0.1, runner 
    - The wrap at k = 21 under the deployed key, asserted byte-equal.
    - The wrap statement equals the ledger vector lane for lane.
 
-   Before proving, `lfr_call` asserts two things: lanes 10, 20, 34 and 39 equal the `R` outputs, and the native decode equals the vector. The log holds `R` (5 entries) and 4 `PUB` entries on lanes 21, 22, 40 and 41. The lane map has 4 used pairs: `(10, 4)`, `(20, 3)`, `(34, 3)`, `(39, 2)`.
+   Before proving, `lfr_call` asserts two things: lanes 10, 20, 34 and 39 equal the `R` outputs, and the native decode equals the vector. The proven `L_Fr` public words confirm the shape (`calls/call-97mA43/lfr-call.pv.json`, unpacked): the lane map words 106 to 115 are `10 4 20 3 34 3 39 2 0 0`, and the entry table holds `R` (`DIGEST` x3, `SPONGE(3)`, the anchor `DIGEST`) and 4 `PUB` entries on lanes 21, 22, 40 and 41.
 3. **A, the valid `acceptRun`.** It was included at block 12,951 with status SUCCESS: tx `0x5b3f37b97e0546985d994a187a2f697050e8042fe043b88588e8457b5ecb02d0`, 6,783 bytes.
    - The readback has `runs[claim_pub] = outcome_pub`, `runs` size 1, the anchor and the keys unchanged.
    - The included program equals the proven one.
@@ -167,6 +168,7 @@ Local e6 devnet only. Node 2.1.101, indexer 4.4.101, proof server 9.0.1, runner 
 - **The bench head has no real `n_steps` or `prog_d`.** The scan therefore forbids the private `R` operands of this run (the three `d2` words and `anchor_d2`). The scanner control, a `sherlock-run.compact` call, shows that the scanner finds `pack(prog_d)` and `steps` when they are present (compiled test d).
 - **ENC-4/5 AIR sides** wait on T6 (section 3).
 - **`PATH` node hash.** It is the log's `H2`, a LEAD placeholder (section 0, item 5).
+- **The opening-proof form and the chunk** were checked by the J4 `L_Fr` tape (no failed assertions on the `L_iface` proofs), the decode cases and the decode MockProver. Neither has gone through a real `L_Fr` proof and the full wrap. Only `all_entries` (`lfr_e3`) and the ORD `acceptRun` (`lfr_call`) have.
 - **Lane 0 = `bind`, lane 1 = `comm`** is an `L`-side check (T4 item 20). The bench `L` does not build it, and the wrap keeps the lane map off both lanes.
 
 ## 6. Runs and artifacts

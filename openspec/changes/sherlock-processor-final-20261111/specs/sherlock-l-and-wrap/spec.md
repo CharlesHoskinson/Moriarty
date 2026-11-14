@@ -138,7 +138,7 @@ The kit SHALL be reported complete only when BR-L2, BR-L4 and DEC-L1 are proved 
 - **THEN** the rest of BR-L2 (the leaf-aggregation entry at LogUp PoW 17, the parameter gate of `L_Fr`, `encode` on the two-table `pv`, `wrap_refines` with the DAG key check and the anchor checks), BR-L4 (`ReduceRel` in place of `ArithGadget`) and DEC-L1 (O34) are open
 
 ### Requirement: LW-016 Production qualification of the wrap
-The wrap SHALL be qualified on OD-24 option E (step E5), as the stdlib wrap of `L_Fr` over the complete `L` interface (12,164 public words, log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (FZ-3).
+The wrap SHALL be qualified on OD-24 option E (step E5), as the stdlib wrap of `L_Fr` over the complete `L` interface (12,166 public words at 5 lane-map pairs (O7), log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (FZ-3).
 
 #### Scenario: Benchmark offered as qualification
 - **WHEN** wrap rows measured on `L_cached` with an all-`NOP` log are offered for DG-002, LW-013 or the key freeze
@@ -159,7 +159,7 @@ The wrap key SHALL be one that ledger 9.1.0.1 reads unchanged: a `ZkStdLib`-arch
 - **THEN** the stock verifier accepts it: 15 AIRs, every AIR at most 2^19 rows, 2 commitments, proof 2,516,530 bytes, and D3 at the measured key gives 101.1435 bits (query), MEASURED (gate E2, `research/sherlock-e2-lfr-20261112/RESULTS.md` section 8g in the `e2-lfr` worktree)
 
 #### Scenario: Full interface
-- **WHEN** `L_Fr` carries the complete `L` interface (12,164 public words, the log AIRs, `R` as real non-`NOP` entries, an all-non-`NOP` case and a forced-overflow case)
+- **WHEN** `L_Fr` carries the complete `L` interface (12,166 public words at 5 lane-map pairs, the log AIRs, `R` as real non-`NOP` entries, an all-non-`NOP` case and a forced-overflow case)
 - **THEN** the proof verifies and D3 reruns at that key (step E3, PENDING)
 
 ### Requirement: LW-019 The parameter set of `L_Fr`
