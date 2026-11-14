@@ -3,7 +3,8 @@
 # shards through leaf, N1, N2, N3, L and L_Fr on one universal key set. Usage: check-chain.sh omit|chain|cases
 #   omit:  `t7_chain omit` (V.9 slice_air_omitted and the omit cases of N1, N3 and L)
 #   chain: `t7_chain chain A`, `t7_chain chain B`, then `fp8_d3` on each (V.10: D3 >= 100 on every term)
-#   cases: `t7_chain cases` (T7 binding cases: wrong prog_d, mixed chip sets, the FV unit under N3)
+#   cases: `t7_chain cases` (T7 binding cases: wrong prog_d, mixed chip sets, the FV unit under N3; T10: a changed
+#          leaf post_d and an h_hi limb of 2^16 or more)
 set -euo pipefail
 mode="$1"
 ovm="${SHERLOCK_SDK_ROOT:-$HOME/.cache/m7-wrap/src/openvm-t7}"
@@ -79,7 +80,9 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 names = [c["case"] for c in d["cases"]]
 need = ["mixed_chip_sets_N3_accepts", "wrong_prog_d_merge_refused_at_N1", "key_triple_outside_key_root_refused_at_N1",
-        "fv_unit_under_N3_accepted", "fv_row_missing_refused_at_N3"]
+        "fv_unit_under_N3_accepted", "fv_row_missing_refused_at_N3",
+        "leaf_post_d_changed_refused_at_leaf", "leaf_post_d_changed_in_trace_refused_at_leaf",
+        "h_hi_limb_over_16_bits_refused_at_N1"]
 bad = [c["case"] for c in d["cases"] if not c["pass"]]
 miss = [n for n in need if n not in names]
 if bad or miss or not d["all_pass"]:
