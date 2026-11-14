@@ -1,0 +1,401 @@
+From a645de3e6721854244839ae63d3b9a9e3551cc18 Mon Sep 17 00:00:00 2001
+From: Charles Hoskinson <charles.hoskinson@gmail.com>
+Date: Sat, 14 Nov 2026 03:01:51 -0700
+Subject: [PATCH 4/4] T8 X7: inline segment linked at the right end of the
+ merged children (SHP-003); MERGE-WORK key built in keys() of t7_chain and
+ t8_gp, so its keys_d row is in the one universal key set; frame-rule case
+
+---
+ crates/sherlock-lfr/src/stmt.rs               |  45 ++++---
+ .../examples/common/work.rs                   |  21 ++++
+ .../sherlock-wrap-export/examples/t7_chain.rs |  10 +-
+ crates/sherlock-wrap-export/examples/t8_gp.rs | 118 ++++++++++--------
+ 4 files changed, 118 insertions(+), 76 deletions(-)
+ create mode 100644 crates/sherlock-wrap-export/examples/common/work.rs
+
+diff --git a/crates/sherlock-lfr/src/stmt.rs b/crates/sherlock-lfr/src/stmt.rs
+index 645fe95..fe3d027 100644
+--- a/crates/sherlock-lfr/src/stmt.rs
++++ b/crates/sherlock-lfr/src/stmt.rs
+@@ -34,7 +34,7 @@
+ //!   moves them behind the FP-3 table and compares them with the logged operands of `R`).
+ //!
+ //! Node relation (T7 subset of NODE-001, NODE-004, NODE-009): two enabled SEG children merge
+-//! (equal `prog_d`, `key_root`, `reg_root`, `shape_d`; `post_d` of slot 0 = `pre_d` of slot 1;
++//! (equal `prog_d`, `key_root`, `reg_root`; T8: no longer `shape_d`; `post_d` of slot 0 = `pre_d` of slot 1;
+ //! `h_hi` of slot 0 = `h_lo` of slot 1); one enabled child passes through (any tag); the log
+ //! merge of FP-2. A LEAF child counts as the SEG `(prog_d, pre_d, post_d, h_pre, h_pre + steps)`.
+ //! Hashing goes through [`PermSpongeAir`], whose rows look up the verifier sub-circuit's
+@@ -567,8 +567,8 @@ pub enum Kind {
+     Node,
+     Fv,
+     /// T8 (X7, owner ruling N-6 "own bounds"): the MERGE-WORK node. The Node layout, MERGE only,
+-    /// two enabled children and one inline step of the slice kernel between them (its public
+-    /// values come over [`STEP_PV_BUS`]); its own parameter set `frozen::MERGE_WORK`.
++    /// two enabled children and one inline segment of the slice kernel linked at their right end
++    /// (its public values come over [`STEP_PV_BUS`]); its own parameter set `frozen::MERGE_WORK`.
+     Work,
+     /// `L`: the N3 pre-hash and `keys_d` as key constants.
+     Root { n3_pre: [u32; 8], keys_d: [u32; 8] },
+@@ -992,28 +992,28 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                     fr.assert_zero(g.clone() * (e0[a + i].clone() - e1[a + i].clone()));
+                 }
+             }
+-            if !work {
+-                for i in 0..D {
+-                    fr.assert_zero(g.clone() * (e0[npv::POST_D + i].clone() - e1[npv::PRE_D + i].clone()));
+-                }
+-                for i in 0..4 {
+-                    fr.assert_zero(g.clone() * (e0[npv::H_HI + i].clone() - e1[npv::H_LO + i].clone()));
+-                }
+-            } else {
+-                // MERGE-WORK (T8, X7): MERGE mode, both slots on, and the inline step S between
+-                // them: post_d(0) = pre_d(S), post_d(S) = pre_d(1), h_hi(0) = h_pre(S),
+-                // h_pre(S) + steps(S) = h_lo(1), prog_d(S) = prog_d(0).
++            for i in 0..D {
++                fr.assert_zero(g.clone() * (e0[npv::POST_D + i].clone() - e1[npv::PRE_D + i].clone()));
++            }
++            for i in 0..4 {
++                fr.assert_zero(g.clone() * (e0[npv::H_HI + i].clone() - e1[npv::H_LO + i].clone()));
++            }
++            if work {
++                // MERGE-WORK (T8, X7; ARCHITECTURE NODE INTEGRATION row MERGE-WORK, SHP-003): MERGE
++                // mode, both slots on, then the inline segment W linked at the right end:
++                // W.pre_d = post_d(1), W.h_pre = h_hi(1), W.prog_d = prog_d; output post_d =
++                // W.post_d, h_hi = W.h_pre + steps (16-bit limbs, no wrap at 2^64).
+                 fr.assert_one(l[c.gpc.m + crate::gp::m::MERGE].clone());
+                 fr.assert_one(en1.clone());
+                 let s = |i: usize| l[c.wk + i].clone();
+                 for i in 0..D {
+-                    fr.assert_eq(e0[npv::POST_D + i].clone(), s(lpv::PRE_D + i));
+-                    fr.assert_eq(s(lpv::POST_D + i), e1[npv::PRE_D + i].clone());
++                    fr.assert_eq(s(lpv::PRE_D + i), e1[npv::POST_D + i].clone());
+                     fr.assert_eq(s(lpv::PROG_D + i), e0[npv::PROG_D + i].clone());
++                    fr.assert_eq(pv[npv::POST_D + i].clone(), s(lpv::POST_D + i));
+                 }
+                 for i in 0..4 {
+-                    fr.assert_eq(e0[npv::H_HI + i].clone(), s(lpv::H_PRE + i));
+-                    fr.assert_eq(l[c.whi + i].clone(), e1[npv::H_LO + i].clone());
++                    fr.assert_eq(s(lpv::H_PRE + i), e1[npv::H_HI + i].clone());
++                    fr.assert_eq(pv[npv::H_HI + i].clone(), l[c.whi + i].clone());
+                 }
+             }
+             // outputs: slot 0 words, post_d and h_hi from slot 1 when it is on (a Node takes its
+@@ -1026,6 +1026,9 @@ impl<AB: AirBuilder + InteractionBuilder + AirBuilderWithPublicValues> Air<AB> f
+                     continue;
+                 }
+                 let from1 = (npv::POST_D..npv::POST_D + D).contains(&i) || (npv::H_HI..npv::H_HI + 4).contains(&i);
++                if work && from1 {
++                    continue; // W's post_d and h_hi (above)
++                }
+                 let v = if from1 { e0[i].clone() + en1.clone() * (e1[i].clone() - e0[i].clone()) } else { e0[i].clone() };
+                 fr.assert_zero(m0.clone() * (pv[i].clone() - v));
+             }
+@@ -1531,10 +1534,12 @@ pub fn trace(kind: &Kind, kids: &[Child], wit: &Wit) -> (RowMajorMatrix<F>, Vec<
+             let (v, kd) = table(&mut t, tbl, *sel, &mut calls);
+             let e1 = envs.get(1).map(|v| v.as_slice());
+             let _ = crate::gp::fill(&mut t[..c.width], &c.gpc, &envs[0], e1, &gw, &mut calls);
+-            let out = merge_forced(&envs[0], e1);
++            let mut out = merge_forced(&envs[0], e1);
++            let (hh, cry) = h_hi(&step[lpv::H_PRE..lpv::H_PRE + 4], step[lpv::STEPS]);
++            out[npv::POST_D..npv::POST_D + D].copy_from_slice(&step[lpv::POST_D..lpv::POST_D + D]);
++            out[npv::H_HI..npv::H_HI + 4].copy_from_slice(&hh);
+             pvs[..npv::ENV].copy_from_slice(&out);
+             pvs[npv::KEYS_D..npv::KEYS_D + D].copy_from_slice(&kd);
+-            let (hh, cry) = h_hi(&step[lpv::H_PRE..lpv::H_PRE + 4], step[lpv::STEPS]);
+             {
+                 let row = &mut t[..c.width];
+                 row[c.wk..c.wk + lpv::LEAF].copy_from_slice(&step[..lpv::LEAF]);
+diff --git a/crates/sherlock-wrap-export/examples/common/work.rs b/crates/sherlock-wrap-export/examples/common/work.rs
+new file mode 100644
+index 0000000..343c312
+--- /dev/null
++++ b/crates/sherlock-wrap-export/examples/common/work.rs
+@@ -0,0 +1,21 @@
++//! T8 (X7, owner ruling N-6 "own bounds"): the MERGE-WORK key, shared by `t7_chain` and `t8_gp`
++//! so that every run keys the same universal key set (the MERGE-WORK row is in `keys_d`).
++use super::*;
++
++/// The MERGE-WORK key over N3 children: the Work statement AIR, the verifier sub-circuit, the
++/// sponge, and the inline kernel (`sl::airs_kernel`, CORE split in two). Own set
++/// `frozen::MERGE_WORK`. Returns the layer and the number of node AIRs (before the kernel).
++pub(crate) fn work_key(child: &MultiStarkVerifyingKey<NodeSC>, log: &mut Vec<Value>) -> (Layer<2>, usize) {
++    let set = &frozen::MERGE_WORK;
++    let engine = Eng::new(set.params());
++    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(Arc::new(child.clone()), cfg());
++    let inv = circuit.bus_inventory();
++    let perm = inv.poseidon2_permute_bus;
++    let mut airs: Vec<AirRef<NodeSC>> = vec![Arc::new(StmtAir::new(Kind::Work, inv))];
++    airs.extend(circuit.airs::<NodeSC>());
++    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&Kind::Work) }));
++    let node_airs = airs.len();
++    airs.extend(sl::airs_kernel(0));
++    let (pk, vk) = kg(set, &engine, &airs, "MERGE-WORK<2> over N3", log);
++    (Layer { circuit, kind: Kind::Work, engine, pk, vk, airs, perm }, node_airs)
++}
+diff --git a/crates/sherlock-wrap-export/examples/t7_chain.rs b/crates/sherlock-wrap-export/examples/t7_chain.rs
+index 33bac95..2c54899 100644
+--- a/crates/sherlock-wrap-export/examples/t7_chain.rs
++++ b/crates/sherlock-wrap-export/examples/t7_chain.rs
+@@ -53,6 +53,9 @@ use sherlock_lfr::{
+ };
+ use sherlock_wrap_export::export;
+ 
++#[path = "common/work.rs"]
++mod work;
++
+ type F = BabyBear;
+ type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+ type RootEng = BabyBearBls12381PoseidonCpuEngine;
+@@ -313,6 +316,7 @@ struct Keys {
+     n2: Layer<2>,
+     n3: Layer<2>,
+     fv: Layer<2>,
++    work: Layer<2>,
+     triples: Vec<KeyTriple>,
+     tree: KeyTree,
+     key_root: Dg,
+@@ -350,6 +354,7 @@ fn keys() -> Keys {
+     println!("T7KEY \"N3 fixed point\" n3_over_n3_pre_equals_n3_pre={fixed}");
+     let v33 = n4.vkc(&n3.vk);
+     drop(n4);
++    let (work, _) = work::work_key(&n3.vk, &mut log);
+     let triples: Vec<KeyTriple> = (0..2)
+         .map(|s| KeyTriple {
+             set_id: s as u32,
+@@ -365,9 +370,10 @@ fn keys() -> Keys {
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+         node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33],
+-        foreign: vec![fv.vkc(&n1[0].vk)],
++        // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
++        foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
+-    Keys { eng, app, leaf, n1, n2, n3, fv, triples, tree, key_root, table, log }
++    Keys { eng, app, leaf, n1, n2, n3, fv, work, triples, tree, key_root, table, log }
+ }
+ 
+ impl Keys {
+diff --git a/crates/sherlock-wrap-export/examples/t8_gp.rs b/crates/sherlock-wrap-export/examples/t8_gp.rs
+index d72850c..bdafce6 100644
+--- a/crates/sherlock-wrap-export/examples/t8_gp.rs
++++ b/crates/sherlock-wrap-export/examples/t8_gp.rs
+@@ -53,6 +53,9 @@ use sherlock_lfr::{
+ };
+ use sherlock_wrap_export::export;
+ 
++#[path = "common/work.rs"]
++mod work;
++
+ type F = BabyBear;
+ type Eng = BabyBearPoseidon2CpuEngine<DuplexSponge>;
+ type RootEng = BabyBearBls12381PoseidonCpuEngine;
+@@ -313,6 +316,7 @@ struct Keys {
+     n2: Layer<2>,
+     n3: Layer<2>,
+     fv: Layer<2>,
++    work: Layer<2>,
+     triples: Vec<KeyTriple>,
+     tree: KeyTree,
+     key_root: Dg,
+@@ -350,6 +354,7 @@ fn keys() -> Keys {
+     println!("T7KEY \"N3 fixed point\" n3_over_n3_pre_equals_n3_pre={fixed}");
+     let v33 = n4.vkc(&n3.vk);
+     drop(n4);
++    let (work, _) = work::work_key(&n3.vk, &mut log);
+     let triples: Vec<KeyTriple> = (0..2)
+         .map(|s| KeyTriple {
+             set_id: s as u32,
+@@ -365,9 +370,10 @@ fn keys() -> Keys {
+     let table = UKeys {
+         // rows: N2 over N1, N3 over N2, N3 over the FV unit, N3 over N3 (any deeper tree)
+         node: vec![n2.vkc(&n1[0].vk), n3.vkc(&n2.vk), n3.vkc(&fv.vk), v33],
+-        foreign: vec![fv.vkc(&n1[0].vk)],
++        // T8: the FV row, then the MERGE-WORK row (owner ruling N-6, one more universal key)
++        foreign: vec![fv.vkc(&n1[0].vk), work.vkc(&n3.vk)],
+     };
+-    Keys { eng, app, leaf, n1, n2, n3, fv, triples, tree, key_root, table, log }
++    Keys { eng, app, leaf, n1, n2, n3, fv, work, triples, tree, key_root, table, log }
+ }
+ 
+ impl Keys {
+@@ -1284,36 +1290,23 @@ fn gp2(out: &PathBuf) {
+ }
+ 
+ // ------------------------------------------------------------------ T8: X7 MERGE-WORK (N-6)
+-/// The MERGE-WORK key over N3 children: the Work statement AIR, the verifier sub-circuit, the
+-/// sponge, and the inline kernel (`sl::airs_kernel`, CORE split in two). Own set
+-/// `frozen::MERGE_WORK` (owner ruling N-6 "own bounds", 2026-11-14).
+-fn work_layer(child: &MultiStarkVerifyingKey<NodeSC>, log: &mut Vec<Value>) -> (Layer<2>, Value) {
+-    let set = &frozen::MERGE_WORK;
+-    let engine = Eng::new(set.params());
+-    let circuit = <VerifierSubCircuit<2> as VerifierTraceGen<CpuBackend<NodeSC>, NodeSC, ()>>::new(Arc::new(child.clone()), cfg());
+-    let inv = circuit.bus_inventory();
+-    let perm = inv.poseidon2_permute_bus;
+-    let mut airs: Vec<AirRef<NodeSC>> = vec![Arc::new(StmtAir::new(Kind::Work, inv))];
+-    airs.extend(circuit.airs::<NodeSC>());
+-    airs.push(Arc::new(PermSpongeAir { perm, height: stmt::sponge_height(&Kind::Work) }));
+-    let node_airs = airs.len();
+-    airs.extend(sl::airs_kernel(0));
+-    let names: Vec<String> = airs.iter().map(|a| a.name()).collect();
+-    // probe first (shape against the own bounds), then the checked keygen
+-    let (_pk, vk0) = frozen::keygen_set(set, &engine, &airs);
+-    let viol = violations(set, &vk0, &names);
++/// Shape and bus probe of the MERGE-WORK key (`work::work_key`).
++fn work_probe(k: &Keys) -> Value {
++    let vk0 = &k.work.vk;
++    let names: Vec<String> = k.work.airs.iter().map(|a| a.name()).collect();
++    let viol = violations(&frozen::MERGE_WORK, vk0, &names);
++    let node_airs = names.len() - sl::airs_kernel(0).len();
+     let buses = |r: std::ops::Range<usize>| -> std::collections::BTreeSet<u16> {
+         r.flat_map(|i| vk0.inner.per_air[i].symbolic_constraints.interactions.iter().map(|x| x.bus_index).collect::<Vec<_>>()).collect()
+     };
+-    let (bn, bk) = (buses(0..node_airs), buses(node_airs..airs.len()));
++    let (bn, bk) = (buses(0..node_airs), buses(node_airs..names.len()));
+     let shared: Vec<u16> = bn.intersection(&bk).copied().collect();
+-    let probe = json!({"violations": viol, "node_airs": node_airs, "kernel_airs": airs.len() - node_airs,
++    let probe = json!({"violations": viol, "node_airs": node_airs, "kernel_airs": names.len() - node_airs,
+         "node_buses": bn.iter().collect::<Vec<_>>(), "kernel_buses": bk.iter().collect::<Vec<_>>(), "shared_buses": shared});
+     println!("T8X7PROBE {}", probe);
+     assert_eq!(shared, vec![stmt::STEP_PV_BUS], "only step_pv joins the node and the kernel");
+     assert_eq!(sl::bus_port_step_pv(), stmt::STEP_PV_BUS);
+-    let (pk, vk) = kg(set, &engine, &airs, "MERGE-WORK<2> over N3", log);
+-    (Layer { circuit, kind: Kind::Work, engine, pk, vk, airs, perm }, probe)
++    probe
+ }
+ 
+ impl Keys {
+@@ -1379,83 +1372,100 @@ fn work_try(
+ fn x7(out: &PathBuf) {
+     let t0 = Instant::now();
+     let mut cases = Cases(vec![]);
+-    let mut k = keys();
+-    let (wl, probe) = work_layer(&k.n3.vk, &mut k.log);
+-    // the MERGE-WORK key's row in keys_d: the second half, beside the FV row (LEAD)
+-    let wv = wl.vkc(&k.n3.vk);
+-    k.table.foreign.push(wv.clone());
++    let k = keys();
++    let probe = work_probe(&k);
++    let wl = &k.work;
++    // the MERGE-WORK key's row in keys_d (built in keys()): the second half, beside the FV row
++    let wv = k.table.foreign[1].clone();
+     let wsel = k.table.index(&wv, true).expect("work row");
+     fs::write(out.join("work_vk.bitcode"), bitcode::serialize(&wl.vk).unwrap()).unwrap();
+     let pa = sl::program_of(k.key_root, sl::Prog::A);
+     let pb = sl::program_of(k.key_root, sl::Prog::B);
+     let n = pa.rules.len();
+     println!("T8X7 program A steps {n}, B steps {}", pb.rules.len());
+-    // prefix 2 steps, the inline step(s) 1, suffix the rest
+-    let cut = vec![2, 1, n - 3];
++    // slot 0 steps [0, 2), slot 1 steps [2, n - 1), the inline segment W the last step
++    // (SHP-003: W linked at the right end of the enabled children)
++    let cut = vec![2, n - 3, 1];
+     let sa = sl::shards_cut(&pa, &cut);
+     let c0 = k.seg_of(&pa, &sa[0..1]);
+-    let c1 = k.seg_of(&pa, &sa[2..3]);
++    let c1 = k.seg_of(&pa, &sa[1..2]);
+     let kern = |p: &sl::Program, s: &slice_core::ShardIn| sl::traces_kernel(p, s, &sl::Build::default());
+-    let ks = kern(&pa, &sa[1]);
++    let ks = kern(&pa, &sa[2]);
+     let step = ks[0].pvs.clone();
+     let wit = |st: &Vec<F>| Wit::Work { tbl: k.table.clone(), sel: wsel, step: st.clone() };
+     let kids = vec![c0.clone(), c1.clone()];
+-    let (pw, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, None, false);
+-    cases.rec("pos_x7_merge_work", true, r, "two enabled N3 SEG proofs (steps [0,2) and [3,n)) and one owner step [2,3) inline");
++    let (pw, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &ks, None, false);
++    cases.rec("pos_x7_merge_work", true, r, "two enabled N3 SEG proofs (steps [0,2) and [2,n-1)) and one owner step [n-1,n) inline at the right end");
+     let mut stmt_out = Value::Null;
+     if let Some(p) = &pw {
+         let pv = &p.public_values[0];
+         let h = |a: usize| (0..4).map(|i| pv[a + i].as_canonical_u32()).collect::<Vec<_>>();
+-        stmt_out = json!({"h_lo": h(stmt::npv::H_LO), "h_hi": h(stmt::npv::H_HI), "post_d_equals_suffix_post": pvd(p, stmt::npv::POST_D) == pvd(&c1, stmt::npv::POST_D),
++        stmt_out = json!({"h_lo": h(stmt::npv::H_LO), "h_hi": h(stmt::npv::H_HI), "post_d_equals_step_post": p.public_values[0][stmt::npv::POST_D..stmt::npv::POST_D + D].to_vec() == step[stmt::lpv::POST_D..stmt::lpv::POST_D + D].to_vec(),
+             "pre_d_equals_prefix_pre": pvd(p, stmt::npv::PRE_D) == pvd(&c0, stmt::npv::PRE_D),
+             "vkc_out_equals_work_row": p.public_values[0][stmt::npv::VKC_CC..stmt::npv::N].to_vec() == wv.words().to_vec(),
+-            "vkc_out_equals_own_key": wl.vkc(&k.n3.vk).words().to_vec() == wv.words().to_vec(), "statement": statement(p), "log_heights": heights(p)});
++ "statement": statement(p), "log_heights": heights(p)});
+         println!("T8X7 output {}", stmt_out);
+     }
+     // ---- refusals
+     let ks0 = kern(&pa, &sa[0]);
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&ks0[0].pvs), &ks0, None, true);
+-    cases.rec("x7_step_wrong_position", false, r, "inline step [0,2) in place of [2,3): pre_d(S) != post_d(slot 0)");
+-    let sb = sl::shards_cut(&pb, &[2, 1, pb.rules.len() - 3]);
+-    let ksb = kern(&pb, &sb[1]);
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&ksb[0].pvs), &ksb, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&ks0[0].pvs), &ks0, None, true);
++    cases.rec("x7_step_wrong_position", false, r, "inline segment [0,2) in place of [n-1,n): W.pre_d != post_d(slot 1)");
++    let sb = sl::shards_cut(&pb, &[2, pb.rules.len() - 3, 1]);
++    let ksb = kern(&pb, &sb[2]);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&ksb[0].pvs), &ksb, None, true);
+     cases.rec("x7_step_other_program", false, r, "inline step of program B between two segments of A");
+     let mut fs_ = step.clone();
+     fs_[stmt::lpv::POST_D] += F::ONE;
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&fs_), &ks, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&fs_), &ks, None, true);
+     cases.rec("x7_step_pv_forged_in_statement", false, r, "statement copy of the step's post_d changed (step_pv bus)");
+     let mut kf = ks.clone();
+     kf[0].pvs[stmt::lpv::POST_D] += F::ONE;
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&kf[0].pvs), &kf, None, true);
+-    cases.rec("x7_step_post_forged_in_kernel", false, r, "kernel CORE public post_d changed with the statement (BOUNDARY of CORE)");
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&kf[0].pvs), &kf, None, true);
++    cases.rec("x7_step_post_forged_in_kernel", false, r, "kernel CORE public post_d changed with the statement; rule not isolated (CORE BOUNDARY and the output post_d)");
+     let mut kh = ks.clone();
+     kh[0].pvs[stmt::lpv::H_PRE] += F::ONE;
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&kh[0].pvs), &kh, None, true);
+-    cases.rec("x7_step_height_forged", false, r, "step h_pre changed in kernel and statement (h_hi(0) != h_pre(S))");
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&kh[0].pvs), &kh, None, true);
++    cases.rec("x7_step_height_forged", false, r, "step h_pre changed in kernel and statement (W.h_pre != h_hi(1)); rule not isolated (also CORE INIT gate input)");
+     let mut kfr = ks.clone();
+     {
+         let m = &mut kfr[1].m;
+         let w = m.width;
+         m.values[2 * w + slice_core::HEIGHT + 3] += F::ONE;
+     }
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &kfr, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &kfr, None, true);
+     cases.rec("x7_frame_row_forged", false, r, "FRAME row 2 state word changed (core_frame bus)");
++    // the frame rule only in FRAME: change one frame-protected, non-counter state word on the
++    // disabled-slot row 3 -> row 4 in CORE and FRAME alike (bus balanced; only frame_rule fails)
++    let mut kfs = ks.clone();
++    {
++        let o = slice_core::Off::new(&slice_enc::Layout::new());
++        let ctr = o.counters();
++        let w = (0..slice_core::SW).find(|w| !ctr.contains(w) && *w != o.ctl && !o.hlp.contains(w) && !o.res.contains(w)).unwrap();
++        let (cm, fm) = (kfs[0].m.width, kfs[1].m.width);
++        for r in 2..4 {
++            kfs[0].m.values[r * cm + slice_core::C_ST + w] += F::ONE;
++            kfs[1].m.values[r * fm + slice_core::HEIGHT + w] += F::ONE;
++        }
++        println!("T8X7 frame-rule case: word {w} changed on rows 2 and 3 (slots 1 to 3 disabled; rows 2, 3 are not hashed)");
++    }
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &kfs, None, true);
++    cases.rec("x7_frame_rule_in_frame", false, r, "a kept state word changed on rows 2 and 3 after disabled slots, in CORE and FRAME alike (only FRAME frame_rule can fail)");
+     let kids1 = vec![c0.clone()];
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids1, &wit(&step), &ks, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids1, &wit(&step), &ks, None, true);
+     cases.rec("x7_one_prior_proof", false, r, "slot 1 off (two enabled prior proofs required)");
+     let kids_sw = vec![c1.clone(), c0.clone()];
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids_sw, &wit(&step), &ks, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids_sw, &wit(&step), &ks, None, true);
+     cases.rec("x7_children_swapped", false, r, "suffix in slot 0, prefix in slot 1");
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::POST_D] += F::ONE), true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::POST_D] += F::ONE), true);
+     cases.rec("x7_output_post_forged", false, r, "output post_d changed");
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::SHAPE_D] += F::ONE), true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wit(&step), &ks, Some(&|v: &mut Vec<F>| v[stmt::npv::SHAPE_D] += F::ONE), true);
+     cases.rec("x7_output_shape_forged", false, r, "output shape_d (work_kind, work_steps) changed");
+     let wnode = Wit::Work { tbl: k.table.clone(), sel: k.table.index(&k.table.foreign[0], true).unwrap(), step: step.clone() };
+-    let (_, r) = work_try(&wl, &k.n3.vk, &kids, &wnode, &ks, None, true);
++    let (_, r) = work_try(wl, &k.n3.vk, &kids, &wnode, &ks, None, true);
+     cases.rec("probe_x7_key_row_checked_one_layer_up", true, r, "the FV row as the output key commitment: accepted at this layer; the parent's child-key check refuses it (T7 key route)");
+     let all = cases.0.iter().all(|c| c["pass"] == true);
+     println!("T8X7 all_pass={all} cases={}", cases.0.len());
+     let rec = json!({"all_pass": all, "cases": cases.0, "probe": probe, "output": stmt_out, "work_vkc": format!("{:?}", wv.words()),
+-        "keys_d": format!("{:?}", k.table.keys_d()), "cut": cut, "keys": k.log, "wall_s": t0.elapsed().as_secs_f64()});
++        "keys_d": format!("{:?}", k.table.keys_d()), "keys_d_words": k.table.keys_d().iter().map(|x| x.as_canonical_u32()).collect::<Vec<_>>(), "cut": cut, "keys": k.log, "wall_s": t0.elapsed().as_secs_f64()});
+     fs::write(out.join("x7.json"), serde_json::to_string_pretty(&rec).unwrap()).unwrap();
+ }
+-- 
+2.56.0
+

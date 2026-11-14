@@ -29,7 +29,7 @@ Each folder below holds one lane branch of a clone under `~/.cache/m7-wrap/src/`
 | `openvm-t9-contract/` | t9-contract | `05f3b73e7` | `01eb63f` | 30 | 51, 6 merges | sherlock-lfr: T9 ENC-2 enc2.onion6 on the onion AIR |
 | `openvm-t6/` | t6-leaf (T6 modular leaf slice) | `b3fbaa5` (the `tested` tip) | see `TIP` | see folder | linear | T6: `sherlock-leaf` slice crate, `KeyBind` app public values, `slice_chain`, `fp8_d3` |
 | `openvm-t7/` | t7-bind (T7 `prog_d` and key route) | `8672651` (the `tested` merge of `t6-leaf` and `t9-contract`) | `662235f` | 3 | linear | T7: FP-2 statement AIR, `L` root statement and `RootSealAir`, `t7_chain` |
-| `openvm-t8/` | t8-gp (T8 GP hooks) | `662235f` (the `t7-bind` tip) | `7298247` | 3 | linear | T8: GP-2/GP-4 node mode block `gp.rs`, MERGE-WORK node (`Kind::Work`, split CORE, `MERGE_WORK` set), `t8_gp` (x7, gp2) |
+| `openvm-t8/` | t8-gp (T8 GP hooks) | `662235f` (the `t7-bind` tip) | `a645de3` | 4 | linear | T8: GP-2/GP-4 node mode block `gp.rs`, MERGE-WORK node (`Kind::Work`, split CORE, `MERGE_WORK` set), `t8_gp` (x7, gp2) |
 | `stark-backend-e1-fr-base/` | e1-fr-base | `a6b4761ad` | `30407617d` | 5 | 5 | E1: exact statistical distance of sample_bits at BLS12-381 Fr |
 | `stark-backend-e2-lfr/` | e2-lfr | `a6b4761ad` | `5f698b56e` | 7 | 7 | E2: per-bus trace-height bound is the base field order capped at u32::MAX |
 | `stark-backend-e4-gpu/` | e4-gpu | `a6b4761ad` | `0b779c74a` | 9 | 9 | E4: GPU fractional sumcheck hook for the Fr config |

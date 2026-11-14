@@ -141,3 +141,10 @@ The node AIRs SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 
 #### Scenario: Shape, budget and D3
 - **WHEN** the node AIRs are keyed in a menu shape
 - **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
+
+### Requirement: NODE-015 The shared internal set does not change for MERGE-WORK
+The MERGE-WORK key SHALL be one more universal key with a row in the `keys_d` table. Ordinary nodes SHALL stay inside the internal set with 3,000 columns. Only the MERGE-WORK key SHALL use the set `merge_work`.
+
+#### Scenario: Node key above 3,000 columns
+- **WHEN** a node key that is not the MERGE-WORK key has more than 3,000 columns
+- **THEN** keygen refuses it under the internal set

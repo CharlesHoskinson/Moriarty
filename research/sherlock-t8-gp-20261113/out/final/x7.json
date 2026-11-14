@@ -3,79 +3,86 @@
   "cases": [
     {
       "case": "pos_x7_merge_work",
-      "check": "two enabled N3 SEG proofs (steps [0,2) and [3,n)) and one owner step [2,3) inline",
+      "check": "two enabled N3 SEG proofs (steps [0,2) and [2,n-1)) and one owner step [n-1,n) inline at the right end",
       "expect": "accept",
       "got": "Ok(())",
       "pass": true
     },
     {
       "case": "x7_step_wrong_position",
-      "check": "inline step [0,2) in place of [2,3): pre_d(S) != post_d(slot 0)",
+      "check": "inline segment [0,2) in place of [n-1,n): W.pre_d != post_d(slot 1)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [3390160, 832208023, 1271068813, 661214524], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1192854470, 716084133, 569178031, 1232679163], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [77619936, 440169527, 269398829, 1885820203], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1715178883, 1465616481, 77403278, 552716539], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p",
       "pass": true
     },
     {
       "case": "x7_step_other_program",
       "check": "inline step of program B between two segments of A",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1486209146, 424481837, 1576836974, 749872080], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1436353970, 1071963712, 1533446555, 1869823762], _phantom: PhantomData<p3_monty_31::monty_31::MontyFiel",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [590298058, 1886771594, 1437505981, 459330792], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [112275250, 523577014, 404989268, 1628165068], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
       "pass": true
     },
     {
       "case": "x7_step_pv_forged_in_statement",
       "check": "statement copy of the step's post_d changed (step_pv bus)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [727836517, 1414145528, 118321374, 1350654112], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [480811904, 620497880, 91657493, 270517806], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
       "pass": true
     },
     {
       "case": "x7_step_post_forged_in_kernel",
-      "check": "kernel CORE public post_d changed with the statement (BOUNDARY of CORE)",
+      "check": "kernel CORE public post_d changed with the statement; rule not isolated (CORE BOUNDARY and the output post_d)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1513740535, 85997462, 785083915, 1409320636], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [755406101, 1685224901, 640745787, 457941857], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [340752364, 1091115774, 1830673633, 407707324], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [372485893, 1090010496, 1172340151, 367137654], _phantom: PhantomData<p3_monty_31::monty_31::MontyField3",
       "pass": true
     },
     {
       "case": "x7_step_height_forged",
-      "check": "step h_pre changed in kernel and statement (h_hi(0) != h_pre(S))",
+      "check": "step h_pre changed in kernel and statement (W.h_pre != h_hi(1)); rule not isolated (also CORE INIT gate input)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1442988802, 1202967564, 792448990, 64503149], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [774534989, 244874552, 1309432067, 1984221138], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
       "pass": true
     },
     {
       "case": "x7_frame_row_forged",
       "check": "FRAME row 2 state word changed (core_frame bus)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1081878662, 1495398056, 854053379, 1039192785], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1322908818, 191075979, 453969624, 646740287], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "pass": true
+    },
+    {
+      "case": "x7_frame_rule_in_frame",
+      "check": "a kept state word changed on rows 2 and 3 after disabled slots, in CORE and FRAME alike (only FRAME frame_rule can fail)",
+      "expect": "refuse",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1648386398, 744998919, 944729416, 484675664], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1756349258, 1880066035, 1368650971, 1441601018], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
       "pass": true
     },
     {
       "case": "x7_one_prior_proof",
       "check": "slot 1 off (two enabled prior proofs required)",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1648484303, 600538791, 1221838006, 1205691885], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1342592065, 1611496491, 567447239, 624129661], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1224022352, 1575790760, 874288090, 1397586848], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1515389854, 53282078, 1075298410, 564019521], _phantom: PhantomData<p3_monty_31::monty_31::MontyField3",
       "pass": true
     },
     {
       "case": "x7_children_swapped",
       "check": "suffix in slot 0, prefix in slot 1",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1513499664, 1090013173, 1148228095, 1979052963], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [238064544, 1810172967, 2003369443, 63885452], _phantom: PhantomData<p3_monty_31::monty_31::MontyField",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1474560332, 1446056405, 1649589530, 175279618], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [1809512468, 963636950, 1862423536, 1622471081], _phantom: PhantomData<p3_monty_31::monty_31::MontyFiel",
       "pass": true
     },
     {
       "case": "x7_output_post_forged",
       "check": "output post_d changed",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [1417113858, 1884952311, 504408638, 1478740070], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [524802588, 519288683, 369653692, 911352640], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31",
+      "got": "Err(\"BatchConstraintError(SumClaimMismatch { sum_claim: BinomialExtensionField { value: [512360538, 762721099, 104290194, 1571429312], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> }, sum_univ_domain_s_0: BinomialExtensionField { value: [920733481, 968133462, 215908381, 123813426], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p",
       "pass": true
     },
     {
       "case": "x7_output_shape_forged",
       "check": "output shape_d (work_kind, work_steps) changed",
       "expect": "refuse",
-      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [571316509, 1389203576, 449847892, 719615454], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
+      "got": "Err(\"BatchConstraintError(GkrVerificationFailed(ZeroCheckFailed { actual: BinomialExtensionField { value: [1377718690, 1957392881, 1911727242, 1444139372], _phantom: PhantomData<p3_monty_31::monty_31::MontyField31<p3_baby_bear::baby_bear::BabyBearParameters>> } }))\")",
       "pass": true
     },
     {
@@ -88,8 +95,8 @@
   ],
   "cut": [
     2,
-    1,
-    2
+    2,
+    1
   ],
   "keys": [
     {
@@ -352,7 +359,7 @@
       "g1": "accepted",
       "key": "MERGE-WORK<2> over N3",
       "logup_pow": 18,
-      "pre_hash": "[982949626, 183924733, 173470952, 152975746, 1150457413, 1690645392, 560895640, 1461697017]",
+      "pre_hash": "[313910856, 1804717800, 768812028, 1760199374, 968914789, 6441291, 1902341147, 1948855840]",
       "queries": [
         97,
         82,
@@ -371,10 +378,20 @@
         "total_constraints": 5160,
         "total_interactions": 936
       },
-      "vk_bitcode_bytes": 183452
+      "vk_bitcode_bytes": 183279
     }
   ],
-  "keys_d": "[192082601, 1790579271, 1588210277, 659455994, 1805325153, 1741120895, 1125790425, 1349834344]",
+  "keys_d": "[2665061, 1329377332, 1200689459, 235932681, 1695680747, 769634295, 568735556, 844441233]",
+  "keys_d_words": [
+    2665061,
+    1329377332,
+    1200689459,
+    235932681,
+    1695680747,
+    769634295,
+    568735556,
+    844441233
+  ],
   "output": {
     "h_hi": [
       5,
@@ -439,7 +456,7 @@
       1,
       3
     ],
-    "post_d_equals_suffix_post": true,
+    "post_d_equals_step_post": true,
     "pre_d_equals_prefix_pre": true,
     "statement": {
       "h_pre": [
@@ -482,7 +499,6 @@
         0
       ]
     },
-    "vkc_out_equals_own_key": true,
     "vkc_out_equals_work_row": true
   },
   "probe": {
@@ -998,6 +1014,6 @@
       "violations": []
     }
   },
-  "wall_s": 128.462958116,
-  "work_vkc": "[1890422147, 1539609519, 1489709464, 1915938781, 1048616640, 1543823292, 813720915, 947034939, 982949626, 183924733, 173470952, 152975746, 1150457413, 1690645392, 560895640, 1461697017]"
+  "wall_s": 103.398444997,
+  "work_vkc": "[1890422147, 1539609519, 1489709464, 1915938781, 1048616640, 1543823292, 813720915, 947034939, 313910856, 1804717800, 768812028, 1760199374, 968914789, 6441291, 1902341147, 1948855840]"
 }

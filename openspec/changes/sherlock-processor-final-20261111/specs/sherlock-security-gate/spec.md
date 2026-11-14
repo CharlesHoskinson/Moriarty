@@ -95,3 +95,10 @@ The gate SHALL count Lean as passed only when BR-L2 is proved, with `ProvenRegim
 #### Scenario: Obligation status
 - **WHEN** the status is reported
 - **THEN** the unique decoding `ProvenRegime` and BR-L1 with premises A1 to A7, A2', `vkL_ok` and `vkLFr_ok` build at `6661325d4`, and the leaf-aggregation entry at LogUp PoW 17 and the `L_Fr` parameter gate are open
+
+### Requirement: SQG-013 The MERGE-WORK parameter set
+The MERGE-WORK nodes SHALL have their own set `merge_work`. It SHALL have the internal parameters and query vector 97/82/81, and the internal bounds with 5,400 columns (owner ruling N-6 "own bounds", 2026-11-14; the column bound is a T8 AFK pick for owner confirmation at T15).
+
+#### Scenario: D3 of the MERGE-WORK set
+- **WHEN** D3 runs `merge_work` at its bounds
+- **THEN** every term is at least 100 and every grindable term at least 101 (T8: weakest `shift` 101.1643, MEASURED)

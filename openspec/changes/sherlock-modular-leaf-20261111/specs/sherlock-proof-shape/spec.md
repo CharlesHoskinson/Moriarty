@@ -59,7 +59,7 @@ The inline kernel SHALL be built from the same kit `KitAir` and `KitTrace` imple
 - **THEN** the build check `graph_inline_kernel_separate_encoding` refuses it
 
 ### Requirement: SHP-007 The GP-4 hook AIRs meet the STARK kit gate
-The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns), with every AIR required and a fixed height in its menu shape.
+The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns; the MERGE-WORK key inside its own set, SHP-008), with every AIR required and a fixed height in its menu shape.
 
 #### Scenario: AIR omitted from the proof
 - **WHEN** a proof omits one of the shape and MERGE-WORK AIRs of the node
@@ -72,3 +72,10 @@ The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to 
 #### Scenario: Shape, budget and D3
 - **WHEN** the shape and MERGE-WORK AIRs of the node are keyed in a menu shape
 - **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
+
+### Requirement: SHP-008 The MERGE-WORK key has its own set
+The MERGE-WORK key SHALL meet the STARK kit gate inside its own set `merge_work` (owner ruling N-6 "own bounds", 2026-11-14), not inside the internal set. The set SHALL have the internal parameters and per-AIR bounds and 5,400 columns (T8 AFK pick for owner confirmation at T15). The inline CORE SHALL be split into CORE and FRAME from one frame rule, so that no AIR has more than 1,000 constraints.
+
+#### Scenario: MERGE-WORK key at its bounds
+- **WHEN** keygen builds the MERGE-WORK key over N3 with the inline slice kernel
+- **THEN** G1 accepts it under `merge_work` (49 AIRs, 5,128 columns, 999 constraints, 171 interactions, MEASURED in T8), and D3 at the bounds has every term at least 100 and every grindable term at least 101
