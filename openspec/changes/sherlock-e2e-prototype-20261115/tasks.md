@@ -4,7 +4,7 @@ Each task names the EARS IDs it closes and its LOOP row. The critical path is LO
 
 ## 0. Gates before the single rekey (T25)
 
-Lead ruling 2026-11-15: T25 does not start before these two lanes land, because each changes a keyed constraint and the keys are made once (RKY-001).
+Lead ruling 2026-11-15: T25 does not start before the items of this section land. Each one changes a keyed constraint, and T25 makes the universal key set of the prototype in one pass from one list (RKY-001). One exception is recorded and ordered: the `L` collection form of row T8c is a second rekey after T25 and before T15 (D-049, section 0b). The era check is not an exception: it enters T25, or its fallback is selected first (D-078).
 
 - [ ] 0.1 Lane rsl-bind (openvm branch `rsl-bind` from `rekey-int` 971bc67): bind `comm`, W, `prog_d`, `input_d` and `outcome_d` of an R_SL call into the recursion statement (EARS: ERS-006, ERS-007, ERS-008, ERS-012, ERS-015, LFP-010 to LFP-012, NAG-008, SLC-012; LOOP: T25; after: none)
 - [ ] 0.2 Lane T22 era-check: add the era-check row to the rekey list, or record a failed premise A2 or A3 and select the ELD-007 fallback (EARS: EGV-005, EGV-009; LOOP: T22 tasks 2 and 3; after: none; D-078)
@@ -24,21 +24,21 @@ LOOP.md names T8c in row T8b and has no row for it. Lead ruling 2026-11-15 (D-04
 
 - [ ] 1.1 Commit the Mycroft factory work (compiler, `factory/`, SUITE-COVERAGE) on `mycroft-factory` (EARS: ECC-002, ECC-010, ECC-011; LOOP: T18 (d); after: none)
 - [ ] 1.2 Commit `SECP-INTERFACE.md` into the repository and write the Jubjub interface file (EARS: EKT-009, EKT-010; LOOP: T24; after: none)
-- [ ] 1.3 Mycroft lowering of `keccak256` to `R_SL_KECCAK256`; amend MYC-BLT-007 (EARS: ECC-007; LOOP: T24; after: A1)
-- [ ] 1.4 Mycroft lowering of secp256k1 values, committed with its tests (EARS: CF-013; MYC-FE-013 to MYC-FE-020; LOOP: T24; after: A1)
-- [ ] 1.5 Mycroft Jubjub input types (both `j02` calls) (EARS: ECC-014; LOOP: T24; after: A2)
-- [ ] 1.6 One call format: `mycroft-suite` writes `rsl-call/1`; schema checks in `compile::build` (EARS: ERS-013, ERS-014, ERS-001; LOOP: T23; after: A1)
-- [ ] 1.7 Deploy profile with anchor slot 15 and the MYC-SEAL-021 refusal code (EARS: ECC-009; ANC-015; LOOP: T12; after: A1)
-- [ ] 1.8 Tests T-CHIP-RULES and T-RULES-D (rule table closed, `rules_d` in the key set) (EARS: ECC-004, ECC-005, EKT-001; LOOP: T25; after: A3, A4)
-- [ ] 1.9 Forged-row test for the Jubjub kit; MEASURED kit runs for keccak256, secp256k1, Jubjub on odin (EARS: EKT-006, EKT-007, EKT-003, EKT-011; LOOP: T24; after: A3, A4, A5)
-- [ ] 1.10 `RslStatement` record and its schema test (EARS: ERS-010, ERS-008, ERS-009; LOOP: T23; after: A6)
-- [ ] 1.11 Slice A part of lane rsl-bind (task 0.1): the statement form, the T-RSL-PROGD, T-RSL-INPUT and T-RSL-STMT-BIND cases, and the check that the builder output equals the bound statement (EARS: ERS-006, ERS-007, ERS-012, ERS-015; LOOP: T25; after: A10)
-- [ ] 1.12 Suite runner: kit reasons from the machine version, the compared count, the call identity map (EARS: ECS-006, ECS-012, ECS-013, ECS-011, ECS-014; LOOP: T23; after: A3, A4, A5)
-- [ ] 1.13 Execute all 208 calls on odin and huginn and compare result files on muninn (EARS: ERS-005, ERS-011, EUI-006, ECC-010; LOOP: T23; after: A9, A12)
+- [ ] 1.3 Mycroft lowering of `keccak256` to `R_SL_KECCAK256`; amend MYC-BLT-007 (EARS: ECC-007; LOOP: T24; after: 1.1)
+- [ ] 1.4 Mycroft lowering of secp256k1 values, committed with its tests (EARS: CF-013; MYC-FE-013 to MYC-FE-020; LOOP: T24; after: 1.1)
+- [ ] 1.5 Mycroft Jubjub input types (both `j02` calls) (EARS: ECC-014; LOOP: T24; after: 1.2)
+- [ ] 1.6 One call format: `mycroft-suite` writes `rsl-call/1`; schema checks in `compile::build` (EARS: ERS-013, ERS-014, ERS-001; LOOP: T23; after: 1.1)
+- [ ] 1.7 Deploy profile with anchor slot 15 and the MYC-SEAL-021 refusal code (EARS: ECC-009; ANC-015; LOOP: T12; after: 1.1)
+- [ ] 1.8 Tests T-CHIP-RULES and T-RULES-D (rule table closed, `rules_d` in the key set) (EARS: ECC-004, ECC-005, EKT-001; LOOP: T25; after: 1.3, 1.4)
+- [ ] 1.9 Forged-row test for the Jubjub kit; MEASURED kit runs for keccak256, secp256k1, Jubjub on odin (EARS: EKT-006, EKT-007, EKT-003, EKT-011; LOOP: T24; after: 1.3, 1.4, 1.5)
+- [ ] 1.10 `RslStatement` record and its schema test (EARS: ERS-010, ERS-008, ERS-009; LOOP: T23; after: 1.6)
+- [ ] 1.11 Slice A part of lane rsl-bind (task 0.1): the statement form, the T-RSL-PROGD, T-RSL-INPUT and T-RSL-STMT-BIND cases, and the check that the builder output equals the bound statement (EARS: ERS-006, ERS-007, ERS-012, ERS-015; LOOP: T25; after: 1.10)
+- [ ] 1.12 Suite runner: kit reasons from the machine version, the compared count, the call identity map (EARS: ECS-006, ECS-012, ECS-013, ECS-011, ECS-014; LOOP: T23; after: 1.3, 1.4, 1.5)
+- [ ] 1.13 Execute all 208 calls on odin and huginn and compare result files on muninn (EARS: ERS-005, ERS-011, EUI-006, ECC-010; LOOP: T23; after: 1.9, 1.12)
 - [ ] 1.14 Demonstration of both rule families under the T25 keys (EARS: EUI-001, EUI-002, EUI-005; LOOP: T25, T17 (c); after: T25)
-- [ ] 1.15 T23 Part B live run and the final suite table (EARS: ECS-003 to ECS-005, ECS-009, ECS-010, EUF-006, EUF-010; LOOP: T23; after: T25, T12 gate, A11, A13)
-- [ ] 1.16 First joined run of the whole flow, then the clean-box run (EARS: EUF-001, EUF-002, EUF-005, EUF-007 to EUF-009, EUF-011, EUF-012, EUF-014, ERS-002; LOOP: T17 (c); after: A15)
-- [ ] 1.17 Present the suite table, the gate logs and the receipts for one `key_root` at the freeze (EARS: EUF-013; LOOP: T15; after: A16)
+- [ ] 1.15 T23 Part B live run and the final suite table (EARS: ECS-003 to ECS-005, ECS-009, ECS-010, EUF-006, EUF-010; LOOP: T23; after: T25, T12 gate, 1.11, 1.13)
+- [ ] 1.16 First joined run of the whole flow, then the clean-box run (EARS: EUF-001, EUF-002, EUF-005, EUF-007 to EUF-009, EUF-011, EUF-012, EUF-014, ERS-002; LOOP: T17 (c); after: 1.15)
+- [ ] 1.17 Present the suite table, the gate logs and the receipts for one `key_root` at the freeze (EARS: EUF-013; LOOP: T15; after: 1.16)
 - [ ] 1.18 After the freeze: the `sherlock compile` command, the tier 3 kit, the sealed form, Stage 2, a path for mixed-hash programs (EARS: ECC-012, ECC-013, EKT-004; MYC-BLT-007; LOOP: none (after T15); after: T15)
 - [ ] 1.19 The UIREQ retention map (each UIREQ ID retained, mapped or superseded) (EARS: EUI-009; LOOP: none (gap); after: none)
 

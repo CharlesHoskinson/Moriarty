@@ -106,7 +106,7 @@ These owner decisions of 2026-11-12 keep their records in `research/sherlock-fin
 | OD-4 | proven rule on inner layers and the margin rule | owner 2026-11-12 | SQG-001 to SQG-013; SSG | D-003, D-030 | in scope |
 | OD-5 | E-1 placement V with the V+ layout word | owner 2026-11-12 | CF-008, CF-009, CF-010; MYC-BIND-001 to MYC-BIND-009 | no record here | retained obligation of the sealed form; not built in the run-form prototype (D-022) |
 | OD-6 | log capacity in the wrap key (`V = P = 256`) | owner 2026-11-12 | FLG (processor-final); LW | no record here | in scope |
-| OD-7, OD-15 | `L_TX` = 1,024 and one call-vector layout of `2 + L_TX` words | owner 2026-11-12 | CF-007; MYC-SEAL-001; WRP-005 | no record here | in scope |
+| OD-7, OD-15 | `L_TX` = 1,024 and one call-vector layout of `2 + L_TX` words | owner 2026-11-12 | CF-007; MYC-SEAL-001; LW-003 | no record here | in scope |
 | OD-8, OD-16 | hybrid native and Sherlock contracts; anchor lock and native prologue | owner 2026-11-12 | ANC-009; MYC-SEAL-006 | no record here | retained obligation; no hybrid contract in the prototype |
 | OD-9 | elastic trust domain: the user's own devices only | owner 2026-11-12 | ZK-018; HLP-005; BXF-001 | D-010, D-082 | in scope |
 | OD-10, OD-11 | wait for the Fr Poseidon GPU kernel; no second Fr proving engine | owner 2026-11-12 | none: build-order decisions | D-031 | closed |

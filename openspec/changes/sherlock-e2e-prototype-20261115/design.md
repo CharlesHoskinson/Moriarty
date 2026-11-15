@@ -4,7 +4,7 @@
 
 Sherlock is a universal, elastic proving co-processor for Midnight. A developer writes a Compact contract. A user runs a call on machines the user owns, and Midnight accepts the result by checking one blinded proof with the unchanged ledger 9.1.0.1 verifier. The parts exist on lane branches and in several OpenSpec changes. This change is the one place that shows the whole path, its domain model, its decisions and its coverage.
 
-This file explains. It holds no obligation. Obligations are the EARS requirements in `specs/` and the requirements this change cites (proposal.md, "Reuse rule"). The domain model is `architecture/DDD.md`, the decisions are `architecture/decisions/` (`INDEX.md`), and the map from every component and LOOP row to requirements is `architecture/COVERAGE.md`.
+This file explains. Obligations are the EARS requirements in `specs/` and the requirements this change cites (proposal.md, "Reuse rule"). One table of this file is bound by a requirement: the stage dependency table below, which EUF-002 names. Nothing else here is an obligation. The domain model is `architecture/DDD.md`, the decisions are `architecture/decisions/` (`INDEX.md`), and the map from every component and LOOP row to requirements is `architecture/COVERAGE.md`.
 
 ## Goals and non-goals
 
@@ -34,12 +34,12 @@ The owner named the local drwatt work as the architecture method (`~/Projects/so
 | # | Stage | Input artifact | Output artifact | Context (slice) | Requirements | State on 2026-11-15 |
 |---|---|---|---|---|---|---|
 | 1 | compile (native) | Compact source | ZKIR 3.1 files, `contract-info.json` | Native Compact (external) | ECC-001; MYC-FE-001 to MYC-FE-005 | BUILT: 33 of 36 suite programs compile with stock `compactc` 0.36.0 |
-| 2 | compile (Mycroft) | ZKIR build | program image and ABI per circuit, or a refusal code | Compact Compilation (A) | ECC-002 to ECC-014 | BUILT for 106 circuits; 6 calls wait on kits; no `sherlock compile` command |
+| 2 | compile (Mycroft) | ZKIR build | program image and ABI per circuit, or a refusal code | Compact Compilation (A) | ECC-002 to ECC-005, ECC-007, ECC-009 to ECC-014 | BUILT for 106 circuits; 6 calls wait on kits; no `sherlock compile` command |
 | 3 | setup | the box | `sherlock-profile/1` | Scheduling (B) | STM; EUF-007 | MEASURED on huginn and odin |
 | 4 | plan and admit | image, universal keys | `prog_d`, `key_root`, app key | Key Management, Leaf Proving (B) | ERS-006, ERS-015; UKS; LFP-006, LFP-011 | BUILT for chip sets 0 to 2; OPEN for R_SL |
 | 5 | deploy | `C_P = H(SHK_PROGC, r_P, prog_d)`, wrap VK | SherlockLedger address, anchor in slot 15 | Network Operations, Settlement (C) | SLC; PVW; EGV-001 | BUILT on the T10m keys (T17 (a)); redeploy after T12 |
 | 6 | tape | preimage, ABI | `rsl-call/1` call record (private) | Compact Compilation host (A) | ERS-001, ERS-002, ERS-013; MYC-TAPE | BUILT, two formats |
-| 7 | execute | call record | `RslStatement` (private), trace; or a reject code | Sherlock Execution (A) | ERS-003 to ERS-011; EUI; EKT | MEASURED: 142 of 142 executed vectors equal to native on odin |
+| 7 | execute | call record | `RslStatement` (private), trace; or a reject code | Sherlock Execution (A) | ERS-003, ERS-005 to ERS-011; EUI; EKT | MEASURED: 142 of 142 executed vectors equal to native on odin |
 | 8 | prove | statement, trace, profile | app, leaf, N1 to N3, `L`, `L_Fr` proofs; `LfrProofReady` | Leaf Proving, Aggregation, Bridge (B) | LFP, NAG, LTR, CLB, ZKE, GPV, PDM, ELA | BUILT for the interpreted subset on the T10m keys; OPEN for R_SL (ERS-012, LFP-010) |
 | 9 | wrap | `LfrProofReady` | `WrapOutput` (one blinded proof, k = 21, 1,026 public inputs) | Wrap (C) | WRP | MEASURED: 1,685,845 rows, VK 1,325 bytes on the T10m keys |
 | 10 | ledger check | `WrapOutput` | `WrapVerdict` (on muninn) | Ledger Verification (C) | LVR; HLP-001 | BUILT |
@@ -325,8 +325,9 @@ The gap list of `architecture/COVERAGE.md` (section 5) is the full list. The ite
 1. The open joint: `prog_d`, INIT and the statement binding for R_SL (ERS-006, ERS-007, ERS-012, ERS-015; LFP-010 to LFP-012; NAG-008; SLC-012). They change keyed constraints, so they land before the single rekey (T25): lane rsl-bind, openvm branch `rsl-bind` from `rekey-int` 971bc67 (lead ruling 2026-11-15).
 1a. The era check (EGV-005, D-078) enters the single rekey, or a recorded failure of premise A2 or A3 selects the ELD-007 fallback. T22 tasks 2 and 3 are on the critical path before T25 (lead ruling 2026-11-15).
 2. The interpreted family has 7 built rules of 120 (EUI-010). GP-1 at the proving layer is shown on a subset only.
-3. T8c has no LOOP row: STACKS and VALUE DIGEST in MERGE-WORK (5,417 columns against 5,400), the X8 in-circuit verifier, `L` over SET (LPC-002, LPC-003, GPH-008, BAT-009).
+3. T8c has no LOOP row: the MERGE-WORK width with STACKS and VALUE DIGEST (4,988 columns MEASURED without them, 5,121 DERIVED with them, bound 5,400; not MEASURED), the X8 in-circuit verifier, `L` over SET (LPC-002, LPC-003, GPH-008, BAT-009). The `L` collection form is a recorded second rekey after T25 and before T15 (D-049).
 4. A program with SHA-256 and keccak256 has no R_SL proof (EKT-004, D-024). The owner has not seen this limit.
+4a. The blinding-slot pool of OD-13 and PRD-002 is not built (D-040). The owner question for T15: does a per-proof draw satisfy "one-use slots".
 5. The zero mismatch of the T23 dry run is vacuous (ECS-012); completion needs the evidence set of every call (ECS-014).
 6. Much of the evidence is uncommitted: the spec-audit change, the Mycroft factory work, T11, FP-3, slot 15, MAP.md. A status in this change that cites a worktree says so.
 7. Records marked LEAD PICK for T15 (INDEX.md) can change at the freeze; D-022 (run form) changes what "works on Preview" means.
