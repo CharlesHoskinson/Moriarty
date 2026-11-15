@@ -70,7 +70,7 @@ finding names.
 | F2.3 effects | mutants `pubv_payload_free`, `cnull_ctl_free` | `inputs/GP2-M-*.json` | refused | #660 `[sel+1, r3+22, st.OP']`; #578 `[sel+0, cidx+0, st.ctl.2']` | GUARD HOLDS |
 | F3.1 frame rule | mutant `frame_skip_word` (`reg.19` changed across the PUBV step) | `inputs/GP2-M-frame_skip_word.json` | refused | #122 row 1 `[b, st.reg.19, st.reg.19']` | GUARD HOLDS |
 | F4.1 INIT `val_d` only in chip set 2 | mutant `init_val_any_set`: not replayed. Chip set 0 CORE has no `C_VVAL` column, so there is no cell to forge (core.rs:661-665) | none | none | layout | GUARD HOLDS (structural, not replayed) |
-| F4.2 ROM table typing | mutant `rom_no_tbl_bind` (PUBV reads the table-0 row as constants[0]) | `inputs/GP2-M-rom_no_tbl_bind.json` | refused | bus 68 (ROM) on `[19, ...]` | GUARD HOLDS |
+| F4.2 ROM table typing | mutant `rom_no_tbl_bind` (PUBV reads the table-0 row as constants[0]; on openvm with GP2-C2.1 a table-12 row with words 6, 1, see below) | `inputs/GP2-M-rom_no_tbl_bind.json` | refused | bus 68 (ROM) on `[19, ...]` | GUARD HOLDS (see below) |
 | F4.2 `const_vd` ignores the nominal type | `leaf::halted_vd` of `ProgV::P` (type U) and `ProgV::C` (type V) | `inputs/GP2-F4.2.json` | before T10q: `prog_d` differ, the two Halted digests are equal. After: the digests differ | `const_vd` and the table 9 and 15 ROM rows use the T5 5.2 type normal form (`name_d`, `decl_d`, `ty_d_row`); host and ROM only, no circuit key changes for it | FIXED (openvm `beba730` (branch `t10q`); `gp2_f42_const_vd_binds_the_type_name`) |
 | C2.1 R_PUBV trusts the constant row | `unitctor` with `constants[0]` marker_free 0; the PUBV shard of the cut [1, 1] (h_pre 1) alone | `inputs/GP2-C2.1.json` | accepted; the genesis CNULL shard of the same program is refused (#537 `[r3+1]`, mutant row `cnull_no_marker_free`) | core.rs:439-449 has no `r3(0) = 6`, `r3(1) = 1`, `tsk.count = 0` | CONFIRMED (conditional: the pre state is unreachable from genesis under chip sets 0 to 2) |
 
@@ -206,6 +206,18 @@ MEASURED on the T10 ORD tape (`t7_chain t10 chunkcx` on openvm `a74fbc9` = `475b
 `4d8177b` and `0a4a2c8`, `logs/t10q-cx-lock-chunkcx.txt`): 499,657 ops with the lock rule (+34
 over 499,623), and the 14 `L_Fr` machine AIR heights are unchanged (largest 2^19, bound 2^20).
 The honest ORD run passes; the chunk 1 of 1 forgery still fails 2 assertions.
+
+### GP2-M-ROM-NO-TBL-BIND on openvm with GP2-C2.1 (2026-11-15)
+
+Huginn h137 (`70a56d4`) and h143 (`rekey-int` `3af5323`) refused the trace by CORE #647 and #648
+row 1 `[sel+1, r3+0]`, `[sel+1, r3+1]`, not by bus 68. These are the C2.1 guards
+`sel(R_PUBV) * (r3(0) - 6)` and `sel(R_PUBV) * (r3(1) - 1)` (`7f17a2d`). The old alias row (table 0,
+kind 8) fails them first. No commit after `5f15e07` changes the ROM binding (`rom.rs`, the ROM bus of
+`core.rs`). The bind was not lost, but the case no longer isolated it. Fix in the handler, not the
+circuit: openvm `gp2-rom` `7d9596b` aliases row 0 of table 12 set to `[0x10006, 0]` (words 6, 1), so
+the C2.1 guards pass and only bus 68 can refuse it. `refused_by` is unchanged. The Quint model with
+C2.1 gets the same attack on Moriarty `gp2-rom` (from `prekey-fixes`). Measurement of both cases and
+of the old case with #647/#648 removed: box request `~/.cache/lead/gp2-rom-box-request.md`.
 
 ## Observation outside the lanes
 
