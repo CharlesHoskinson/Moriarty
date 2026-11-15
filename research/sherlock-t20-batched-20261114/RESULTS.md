@@ -153,3 +153,7 @@ Writes for `K` key changes (registrations and revocations) in a registry epoch o
 | After, per second | at most `1 / T_reg` | at most 6,783 / `T_reg` | | DERIVED |
 
 Quint `registryEpoch.qnt` (`run-registryEpoch.out`): 4 design tests pass (three key changes in one write and the new key used; a collection under the replaced root refused; an unregistered key refused; an epoch with no change writes nothing); `Inv` (`RegWritesPerEpochAtMostOne`, `StaleOrForeignRegRootRefused`, `KeysUsedAreRegistered`) holds; mutants `per_key_write`, `no_reg_check`, `unbound_membership` each break it; witnesses (batched update, new key used) reached.
+
+## Appendix: superseded anchor contracts
+
+`tools/sherlock-sdk/SUPERSEDED.md` marks `sherlock-anchor.compact`, `rollup-anchor.compact` and `sherlock-ledger-t10.compact` superseded for new designs by the batched `sherlock-ledger.compact`. The first two write twice per batch (`acceptValidity`, `settleValidity`) and grow `validity_ok` and `settled` by one statement per batch. Their sources stay byte-equal: deploy, call and readback scripts and the sealed holdout cases pin their SHA-256, so a header comment in the source would break those pins.
