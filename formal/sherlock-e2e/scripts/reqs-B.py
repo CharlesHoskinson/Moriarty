@@ -5,7 +5,8 @@ ctx_of_own = {'leaf-proving':'leaf-proving','node-aggregation':'aggregation','gp
 # reused families -> context
 fam_ctx = {'RSL':'leaf-proving','CPR':None,'SPL':None,'NODE':'aggregation','SHP':'aggregation','CLM':'aggregation','CONT':'aggregation','FREG':'aggregation','FVR':'aggregation','GP':'aggregation','LW':'bridge','FLG':'bridge','HDM':'bridge','ANC':'bridge','RKY':'key-management','LPC':None,'PRD':'box-fleet','GPW':'box-fleet','ZK':'assurance','SQG':'assurance','DG':'assurance','FPR':'assurance'}
 special = {'CPR-002':'leaf-proving','CPR-003':'key-management','SPL-006':'leaf-proving','SPL-004':'key-management','SPL-005':'key-management','SPL-011':'scheduling',
- 'LPC-004':'assurance','LPC-016':'assurance','LPC-005':'box-fleet','LPC-006':'scheduling','LPC-007':'scheduling','LPC-020':'box-fleet','LPC-018':'box-fleet'}
+ 'LPC-001':'aggregation','LPC-002':'aggregation','LPC-003':'aggregation','LPC-004':'assurance','LPC-016':'assurance','LPC-005':'box-fleet','LPC-006':'scheduling','LPC-007':'box-fleet','LPC-018':'leaf-proving'}
+# placement follows Formal-Quint's table in bus/formal-findings.md (LPC-020 is slice C)
 # which reused IDs are in scope
 def in_scope(i):
     fam, n = i.rsplit('-',1); n=int(n)
@@ -13,7 +14,7 @@ def in_scope(i):
     if fam=='RKY': return n in (1,2,5)
     if fam=='GP': return n<=4
     if fam=='CPR' or fam=='SPL': return True
-    if fam=='LPC': return n<=7 or n in (16,18,20)
+    if fam=='LPC': return n<=7 or n in (16,18)
     if fam=='GPW': return n==7
     return fam in fam_ctx
 out = {}
@@ -41,7 +42,7 @@ for f in files:
             if 'completion' in chg: out[i].update(sentence=sent, src=f"{chg}/{cap}")
             continue
         out[i] = dict(id=i, fam=fam, ctx=ctx, kind=kind, sentence=sent, src=f"{chg}/{cap}", sha=hashlib.sha256(f.read_bytes()).hexdigest()[:16])
-json.dump(out, open('reqs.json','w'), indent=1)
+json.dump(out, open(sys.argv[1] if len(sys.argv) > 1 else 'reqs-B.json','w'), indent=1)
 from collections import Counter
 print(len(out), Counter(v['ctx'] for v in out.values()), Counter(v['kind'] for v in out.values()))
 print([k for k,v in out.items() if 'dups' in v])

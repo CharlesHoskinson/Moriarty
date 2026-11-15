@@ -99,6 +99,17 @@ for ctx, ns in CTX.items():
             s = reqs.get(i, {}).get("sentence", "").replace("|", "\\|").replace("\n", " ")
             t.append(f"| {i} | {s} | {', '.join('`'+n.strip()+'`' for n in rows[i]['lean'].split(',') if n.strip())} | {rows[i]['verdict']} |")
         readme.write_text("\n".join(t) + "\n")
+# IDs of this part that other lanes' folders also name (for the merge into COVERAGE-FORMAL.md)
+mine = set(CTX) | {"scripts", "codec-lean"}
+hits = {}
+for p in here.rglob("*"):
+    rel = p.relative_to(here).parts
+    if p.is_file() and rel[0] not in mine and ".lake" not in rel and p.suffix in (".md", ".tsv", ".lean", ".qnt", ".json") and p.name != "COVERAGE-FORMAL-B.md":
+        for i in set(re.findall(r"\b[A-Z]{2,4}-\d{3}\b", p.read_text(errors="ignore"))) & set(rows):
+            hits.setdefault(i, set()).add(rel[0])
+out += ["## IDs also named by other lanes' folders (merge check)", "",
+        f"{len(hits)} IDs of this part appear in other folders. The merge keeps one row per ID; where another lane also classifies the ID, the merger picks one row.", ""]
+out += [f"- {i}: {', '.join(sorted(v))}" for i, v in sorted(hits.items(), key=lambda kv: key(kv[0]))]
 (here / "COVERAGE-FORMAL-B.md").write_text("\n".join(out) + "\n")
 print("rows", len(rows), "of", len(reqs), counts)
 if defects:

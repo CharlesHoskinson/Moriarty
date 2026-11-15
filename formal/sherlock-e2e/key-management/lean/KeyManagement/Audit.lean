@@ -51,9 +51,13 @@ elab "#audit_ns " n:ident : command => do
 #guard_msgs in
 #print axioms KeyManagement.uks006_twelve_gates
 
-/-- info: 'KeyManagement.t25_refused_20261115' does not depend on any axioms -/
+/-- info: 'KeyManagement.t25_refused_spec_evidence' does not depend on any axioms -/
 #guard_msgs in
-#print axioms KeyManagement.t25_refused_20261115
+#print axioms KeyManagement.t25_refused_spec_evidence
+
+/-- info: 'KeyManagement.t25_refused_rekey_int' does not depend on any axioms -/
+#guard_msgs in
+#print axioms KeyManagement.t25_refused_rekey_int
 
 /-- info: 'KeyManagement.uks003_collision_measured' does not depend on any axioms -/
 #guard_msgs in

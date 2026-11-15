@@ -20,7 +20,7 @@ Lean oracle of the box-fleet context (slice B). Interface: `../ORACLE.md`. Build
 | BXF-012 | The Sherlock prover SHALL read GPU data with `nvidia-smi --query-gpu` and the CUDA memory call and with no `nvidia-smi conf-compute` call. | `no_conf_compute`, `pin_bxf012` | MODELED |
 | BXF-013 | If the same eligible orphan still holds `gpu.lock` 30 seconds after SIGTERM, then the box agent SHALL end it with SIGKILL. | `sigkill_guard`, `pin_bxf013` | MODELED |
 | BXF-014 | If a file transfer between huginn and odin does not pass through muninn, then the box bus SHALL refuse the transfer. | `transfer_guard`, `pin_bxf014` | MODELED |
-| GPV-001 | Where the build has the cargo feature `cuda`, the leaf prover SHALL prove app shards on the GPU through `openvm-cuda-backend`. | `device_selection`, `pin_gpv_devices`, `gpv001_gpu_faster_huginn` | FINDING |
+| GPV-001 | Where the build has the cargo feature `cuda`, the leaf prover SHALL prove app shards on the GPU through `openvm-cuda-backend`. | `device_selection`, `pin_gpv_devices`, `gpv001_gpu_faster_huginn` | MODELED |
 | GPV-002 | When the GPU prover and the CPU prover each prove one shard, the leaf prover SHALL give byte-equal public values on both. | `publics_device_free` | SPEC-CHECKED |
 | GPV-003 | Where the build has the cargo feature `gpu`, the `L_Fr` prover SHALL compute Poseidon hashes, the encoding and the fractional sumcheck with results equal to the CPU path. | `publics_device_free` | SPEC-CHECKED |
 | GPV-004 | Where the build has the cargo feature `cuda` and `T7_NODE_GPU` is not `0` or `off`, the node prover SHALL prove N1, N2 and N3 on the GPU. | `device_selection`, `pin_gpv_devices` | MODELED |

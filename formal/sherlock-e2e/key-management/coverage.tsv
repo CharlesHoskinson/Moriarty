@@ -1,16 +1,16 @@
 # ID	verdict	lean	note
 UKS-001	MODELED	addProgram_keeps_universal, uks001_four_universal_keys, pin_cpr003	one manifest for every program; a new program changes key_root only (op 6)
 UKS-002	CONSTANT-CHECKED	uks002_node_rows	CODE UROWS = 7 (openvm t10mm 5b7ada8 stmt.rs:90); 7 node + 2 foreign entries (rekey-chips dcf1b4c t7_chain.rs:457, :459)
-UKS-003	MODELED	keygen_guard, pin_uks003, uks003_collision_measured, t25_refused_20261115	refusal key-leaf-collision; on the recorded values (KEYDAG_IDX = 3 at t7_chain.rs:363, LIST.md:17 plans id 3) the guard fires, as the spec status (GAP) says
+UKS-003	MODELED	keygen_guard, pin_uks003, uks003_collision_measured, t25_refused_spec_evidence, t25_refused_rekey_int	refusal key-leaf-collision; fires on the spec's evidence (KEYDAG_IDX = 3 at dcf1b4c t7_chain.rs:363, LIST.md:17 plans id 3); holds on rekey-int ca65f27 (stmt.rs:275 RSL_KEY_IDX0 = 4)
 UKS-004	MODELED	keygen_writes_manifest, changed_list_needs_keygen, pin_uks004	manifest id and recorded LIST sha256; a list change makes the recorded sha256 differ (scenario "A second keygen")
 UKS-005	MODELED	startProof_guard, pin_uks005, witness_rekey_done	refusal manifest-mismatch (op 4)
 UKS-006	MODELED	complete_guard, distribute_guard, reachable_status, pin_uks006_one_gate_fails, pin_uks006_no_distribution, uks006_twelve_gates	twelve named gates as bits; DONE and distribution need all twelve
 UKS-007	MODELED	reachable_status, apply_valid, pin_uks007, keygen_writes_manifest	qualified only on DONE keys after op 7 (SSG-006 gate); a new keygen returns to prototype
 UKS-008	MODELED	setup_changes_no_key, pin_uks008	setup changes only setupRuns (keyView unchanged)
-UKS-009	MODELED	keygen_guard, pin_uks009, t25_refused_20261115	refusal tree-not-descendant; recorded: e3b407d is not an ancestor of rekey-chips dcf1b4c (git merge-base, 2026-11-15)
-UKS-010	MODELED	keygen_guard, pin_uks010, uks010_rows_missing, t25_refused_20261115	refusal list-row-missing; LIST.md of 10:31 has FP-3 and slot 15, 4 rows missing (spec status says 6: stale, see F-B-KM-1)
+UKS-009	MODELED	keygen_guard, pin_uks009, t25_refused_spec_evidence, t25_refused_rekey_int	refusal tree-not-descendant; fires on rekey-chips dcf1b4c (e3b407d not an ancestor); holds on rekey-int ca65f27 (every listed openvm commit is an ancestor, git merge-base 2026-11-15)
+UKS-010	MODELED	keygen_guard, pin_uks010, uks010_rows_missing, t25_refused_spec_evidence, t25_refused_rekey_int	refusal list-row-missing; LIST.md 10:31: 4 rows missing; LIST.md 11:22: all six rows (spec status '6 rows missing' is stale, F-B-KM-1)
 RKY-001	MODELED	keygen_once, pin_rky001	keys made once per list; refusal keys-current
-RKY-002	MODELED	keygen_guard, pin_rky002	refusal row-uncommitted
+RKY-002	MODELED	keygen_guard, pin_rky002, t25_refused_rekey_int	refusal row-uncommitted; fires on the recorded list (wrap-levers C3.1 'staged, NOT committed'; T11 blinders Moriarty 'commit pending')
 RKY-005	MODELED	complete_guard, pin_rky005, rky005_d3_t10m	refusal d3-below-bound; MEASURED T10m D3 weakest 101.0110 bits (research/sherlock-t10m-20261114/RESULTS.md:91) >= 100 and >= 101; T25 keys not measured yet
 CPR-003	MODELED	addProgram_keeps_universal, pin_cpr003	a new program needs no new universal key
 SPL-004	MODELED	addProgram_keeps_universal, setup_changes_no_key	per-program keys under key_root; universal keys plan-independent (setup and addProgram leave the manifest)
