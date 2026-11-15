@@ -436,6 +436,21 @@ def run_command(argv, cwd, trace_path, echo, cap=None, marker=None, on_start=Non
     return res
 
 
+def _find_slice_dir(slice_, marker, pgids):
+    """cgroup dir of a run's transient slice, from any child still in its scope, else from systemd.
+
+    The kernel can OOM-kill the first child at the slice limit before the poll reads its
+    /proc/<pid>/cgroup; resolving only through that child then never found the slice, its
+    'oom' event went unread, and the sibling ran its full course under the cap.
+    """
+    for i, pid in list(pgids.items()):
+        d = _cgroup_dir(pid, scope_unit(f"{marker}.{i}"))
+        if d:
+            return os.path.dirname(d)
+    d = _unit_cgroup(slice_)
+    return d if d and os.path.isdir(d) else None
+
+
 def run_concurrent(commands, cwd, trace_path, echo, cap, aggregate, marker, mem_guard, extra_env=None,
                    on_start=None, watch_parent=False):
     """E11: run the commands at once, each under the per-process cap, all under the aggregate cap.
@@ -504,8 +519,7 @@ def run_concurrent(commands, cwd, trace_path, echo, cap, aggregate, marker, mem_
             total = sum(group_rss(pg) for pg in list(pgids.values()))
             agg_peak = max(agg_peak, total)
             if slice_ and slice_dir is None and pgids:
-                d = _cgroup_dir(next(iter(pgids.values())), scope_unit(f"{marker}.{next(iter(pgids))}"))
-                slice_dir = os.path.dirname(d) if d else None
+                slice_dir = _find_slice_dir(slice_, marker, pgids)
             if slice_dir:
                 oom, pk = _cgroup_read(slice_dir)
                 slice_oom = max(slice_oom, oom or 0)
@@ -750,6 +764,19 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
     leased = False
     queued = False
     last_exit = [None]
+    # SIGTERM/SIGHUP/SIGINT unwind through the finally below from the first lock step on. run_command
+    # installed its handlers only just before the job started, so a signal after the lease was written
+    # killed the holder with the default action and left the lease file behind.
+    sig_handlers = {}
+
+    def _terminate(signum, _frame):
+        raise Terminated(signum)
+
+    for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+        try:
+            sig_handlers[sig] = signal.signal(sig, _terminate)
+        except ValueError:  # not the main thread
+            break
     try:
         bc = (budgets.limits_for(budget_key, repo) or {}) if budget_key else {}
         admitted = clamp_rss_cap(bc.get("maxRssBytes")) * (len(commands) if commands else 1)
@@ -778,14 +805,19 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
         if any(_is_cargo_test(a) for a in (commands or [argv])) and not os.environ.get("RUST_TEST_THREADS"):
             extra_env["RUST_TEST_THREADS"] = os.environ.get("DW_RUST_TEST_THREADS") or DEFAULT_RUST_TEST_THREADS
         rid = run_id(pid_label, repo)
+        # The run id is unique per repo and second, but the scope/slice names and the DW_JOB_ID sweep
+        # are host-wide: two runs of one id in one second (two worktrees, or test suites with their own
+        # DW_LOCK) shared dw-<rid>.scope, so one systemd-run was refused (exit 1) and its cleanup
+        # stopped the other's scope (exit 143). The holder pid makes the job marker host-unique.
+        marker = f"{rid}.{os.getpid()}"
         trace_abs = os.path.join(repo, trace_rel(rid))
         now = time.time()
         lease = {"schema": LEASE_SCHEMA, "v": 1, "pid": None, "sid": None, "starttime": None, "id": pid_label, "run": rid, "cmd": cmd_str,
                  "holderPid": os.getpid(), "holderStart": proc_start(os.getpid()), "jobPid": None,
-                 "jobSid": None, "jobMarker": "DW_JOB_ID=" + rid, "startedAt": now,
+                 "jobSid": None, "jobMarker": "DW_JOB_ID=" + marker, "startedAt": now,
                  "deadline": now + (wall_cap or DEFAULT_MAX_WALL), "locks": kinds}
+        leased = True  # before the write: a signal right after it still removes the file
         _write_lease(kinds, lease)
-        leased = True
         _hook("acquired", lease)
 
         def on_start(pid):
@@ -794,10 +826,10 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
 
         hb.started(cap, hypothesis)
         if commands:
-            res = run_concurrent(commands, repo, trace_abs, echo, run_cap, aggregate, rid, guard_mode, extra_env,
+            res = run_concurrent(commands, repo, trace_abs, echo, run_cap, aggregate, marker, guard_mode, extra_env,
                                  on_start=on_start, watch_parent=os.environ.get("DW_WATCH_PARENT") == "1")
         else:
-            res = run_command(argv, repo, trace_abs, echo, run_cap, marker=rid, on_start=on_start,
+            res = run_command(argv, repo, trace_abs, echo, run_cap, marker=marker, on_start=on_start,
                               watch_parent=os.environ.get("DW_WATCH_PARENT") == "1",
                               pipe_stdin=pipe_stdin, mem_guard=guard_mode, extra_env=extra_env)
         code = res["exit"]
@@ -843,6 +875,7 @@ def _run_heavy(pid_label, argv, cmd_str, budget_key, hypothesis, repo, echo, err
                     fcntl.flock(f, fcntl.LOCK_UN)
                 finally:
                     os.close(f)
+        _restore(sig_handlers)
 
 
 def concurrent_commands(argv, concurrent=None, commands_file=None):
