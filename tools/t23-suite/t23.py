@@ -343,15 +343,50 @@ class BoxProver:
 
 
 # ---------------------------------------------------------------- stage 3: settle
-T10A = T17_WT / "tools/sherlock-sdk/t10a-ledger-run.mjs"
+# t10a-ledger-run.mjs on t23-suite (from t17-preview 9e1e7f398) with the T12-SLOT15 host side (anchor-slot.mjs, from
+# t12-slot15 707c9a8ed): a 16-child deploy state with the anchor at slot 15 and the acceptRun prologue rewritten to
+# read slot 15 (MEASURED offline: the call vector differs from the slot-0 call only in lane 6, 0 -> 15), and a suite
+# mode: one SherlockLedger per program (`deploy` into PREVIEW_DIR/<program>), each call in its own dir against it
+# (`call --deploy-from`), refusals R1 to R4 off per call (T10A_REFUSALS=0). acceptRun words: accept_args.py (t23-args
+# a030afc26). LEAD PICK (T23-SETTLE, for T15): the ledger anchor of a program is the C_P of its runs (FP-3 A_0 = C_P);
+# the binding words come from t10a's tx build, so the wrap proof of a call is made by T10A_PROVER (the box prover of
+# the R_SL chain) for the 1,026-word vector that t10a hands it; the Preview submit time is submissions.A.seconds.
+SDK = WT / "tools/sherlock-sdk"
+T10A = SDK / "t10a-ledger-run.mjs"
 T17_IN = H / ".cache/t17/in"
 T17_BUILD = H / ".cache/t17/contract/build/sherlock-ledger"
+PREVIEW_DIR = CACHE / "preview"
+ANCHOR_SLOT = "15"
+
+
+def accept_words(result):
+    """The acceptRun words of a proved call, checked with accept_args: claim_pub recomputed from (c_p, input_pub,
+    outcome_pub), anchor = C_P, and the call-vector lanes 10, 20, 34, 39 when the result carries `call_vector`.
+    Returns (words, ledger-args object for t10a --args). Raises accept_args.Mismatch."""
+    import accept_args as aa
+    w = {k: int(result[k]) for k in ("c_p", "input_pub", "outcome_pub")}
+    w["claim_pub"] = aa.transient_hash([w["c_p"], w["input_pub"], w["outcome_pub"]])
+    w["anchor"] = w["c_p"]
+    aa.check_public(w, {k: result[k] for k in ("claim_pub", "anchor", "call_vector") if k in result})
+    return w, aa.ledger_args(w)
+
+
+def settle_plan(prog, call, args_file, wrap_vk, build=T17_BUILD, prover="<T23_PREVIEW_PROVER>"):
+    """The Preview commands of one call: deploy the program's ledger once, then the call against it."""
+    pdir = PREVIEW_DIR / prog
+    cdir = pdir / "calls" / call
+    common = ["--vk", str(wrap_vk), "--args", str(args_file), "--build", str(build), "--anchor-slot", ANCHOR_SLOT]
+    return {"program_dir": pdir, "call_dir": cdir,
+            "deploy": ["node", str(T10A), "deploy", *common, "--out", str(pdir)],
+            "call": ["node", str(T10A), "call", *common, "--out", str(cdir), "--deploy-from", str(pdir)],
+            "env": {"T10_NET": "preview", "T10A_REFUSALS": "0", "T10A_PROVER": prover}}
 
 
 def settle_rehearsal(out, logs):
-    """One offline acceptRun build (t10a-ledger-run.mjs dry-run): padded call, stub prover, JS ledger shape check,
-    privacy scan, post-state readback and replay refusal, against a locally constructed SherlockLedger. No network,
-    no wallet. The args are the T17 ledger-args (stand-ins: the T23 claim words exist only after an R_SL proof)."""
+    """One offline acceptRun build (t10a-ledger-run.mjs dry-run, anchor slot 15): padded call, stub prover, JS ledger
+    shape check, privacy scan, post-state readback and replay refusal, against a locally constructed SherlockLedger.
+    No network, no wallet. The args are the T17 ledger-args (stand-ins: the T23 claim words exist only after an R_SL
+    proof)."""
     need = [T10A, T17_IN / "wrap.vk", T17_IN / "ledger-args.json", T17_BUILD / "keys/acceptRun.verifier"]
     miss = [str(p) for p in need if not pathlib.Path(p).exists()]
     if miss:
@@ -360,26 +395,61 @@ def settle_rehearsal(out, logs):
     d.mkdir(parents=True, exist_ok=True)
     env = {k: v for k, v in os.environ.items() if not k.startswith(("T10_NET", "T10A_PROVER", "MORIARTY_PREVIEW"))}
     cmd = ["node", str(T10A), "dry-run", "--vk", str(T17_IN / "wrap.vk"), "--args", str(T17_IN / "ledger-args.json"),
-           "--out", str(d), "--build", str(T17_BUILD)]
+           "--out", str(d), "--build", str(T17_BUILD), "--anchor-slot", ANCHOR_SLOT]
     log("settle (dry):", shlex.join(cmd))
     t = time.time()
     with open(logs / "settle-dry.log", "w") as f:
         r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=1800)
     st = json.loads((d / "t10a-dry-run.json").read_text()) if (d / "t10a-dry-run.json").exists() else {}
     v = st.get("dry-run", {}).get("shapeVerdict", {})
-    ok = r.returncode == 0 and v.get("jsLedgerAcceptsShapeAndApplies") and v.get("postAReadback") and v.get("replayRefusedWithProofsOff")
+    vec = d / "dry-run-vector.json"
+    lane6 = None
+    if vec.exists():
+        vv = json.loads(vec.read_text())
+        lane6 = (vv["words"] if isinstance(vv, dict) else vv)[6]
+    ok = (r.returncode == 0 and v.get("jsLedgerAcceptsShapeAndApplies") and v.get("postAReadback")
+          and v.get("replayRefusedWithProofsOff") and st.get("anchorSlot") == 15 and str(lane6) == ANCHOR_SLOT)
     return {"status": "ok" if ok else "failed", "exit": r.returncode, "seconds": round(time.time() - t, 1),
-            "shapeVerdict": v, "network": "none (offline)", "previewTxPlanned": 0, "previewTxSent": 0,
-            "state": str(d / "t10a-dry-run.json"), "t10a_sha256": sha256_file(T10A)}
+            "shapeVerdict": v, "anchorSlot": st.get("anchorSlot"), "lane6": lane6, "network": "none (offline)",
+            "previewTxPlanned": 0, "previewTxSent": 0, "state": str(d / "t10a-dry-run.json"), "t10a_sha256": sha256_file(T10A)}
 
 
-def settle_call(mode, proved, job):
+def settle_call(mode, proved, job, wrap_vk=None, build=T17_BUILD):
+    res = proved["result"]
+    prog, call = job.get("id", "-"), job.get("label", "-")
     if mode == "dry":
-        return {"status": "dry", "previewTxPlanned": 1, "previewTxSent": 0,
-                "args": {k: proved["result"].get(k) for k in ("c_p", "input_pub", "outcome_pub")}}
+        try:
+            words, la = accept_words(res)
+        except Exception as e:  # accept_args.Mismatch or missing words
+            return {"status": "args-refused", "reason": str(e), "previewTxPlanned": 0, "previewTxSent": 0}
+        plan = settle_plan(prog, call, PREVIEW_DIR / prog / "calls" / call / "ledger-args.json", wrap_vk or "<wrap.vk>", build)
+        return {"status": "dry", "previewTxPlanned": 1, "previewTxSent": 0, "args": la, "claim_pub": str(words["claim_pub"]),
+                "plan": {k: shlex.join(v) if isinstance(v, list) else str(v) for k, v in plan.items() if k != "env"}}
     if os.environ.get("T23_ALLOW_PREVIEW") != "1":
         raise SystemExit("settle preview: set T23_ALLOW_PREVIEW=1 (Preview only; Mainnet is never a target)")
-    raise SystemExit("settle preview: wire to t10a-ledger-run.mjs call with T10_NET=preview once T11/T12 keys exist (T17 (c) runbook)")
+    prover = os.environ.get("T23_PREVIEW_PROVER")
+    if not prover or not wrap_vk:
+        raise SystemExit("settle preview: T23_PREVIEW_PROVER (the R_SL chain box prover, rsl-chain) and the wrap.vk of the final keys")
+    words, la = accept_words(res)
+    plan = settle_plan(prog, call, PREVIEW_DIR / prog / "calls" / call / "ledger-args.json", wrap_vk, build, prover)
+    pdir, cdir = plan["program_dir"], plan["call_dir"]
+    cdir.mkdir(parents=True, exist_ok=True)
+    (cdir / "ledger-args.json").write_text(json.dumps(la))
+    env = {**os.environ, **plan["env"]}
+    pst = pdir / "t10a-state.json"
+    if not (pst.exists() and json.loads(pst.read_text()).get("deploy", {}).get("blockHeight")):
+        log("settle (preview): deploy", shlex.join(plan["deploy"]))
+        subprocess.run(plan["deploy"], cwd=SDK, env=env, check=True, timeout=7200)
+    log("settle (preview): call", shlex.join(plan["call"]))
+    r = subprocess.run(plan["call"], cwd=SDK, env=env, timeout=4 * 3600)
+    st = json.loads((cdir / "t10a-state.json").read_text()) if (cdir / "t10a-state.json").exists() else {}
+    acc = (st.get("calls") or {}).get("accept") or {}
+    sub = (st.get("submissions") or {}).get("A") or {}
+    ok = r.returncode == 0 and acc.get("claimInRuns") is True and acc.get("runsLookup") == str(words["outcome_pub"])
+    return {"status": "settled" if ok else "settle-failed", "exit": r.returncode, "previewTxPlanned": 1,
+            "previewTxSent": 1 if sub.get("txHash") else 0, "txHash": sub.get("txHash"), "blockHeight": sub.get("blockHeight"),
+            "claim_pub": str(words["claim_pub"]), "state": str(cdir / "t10a-state.json"),
+            "bench": bench.ingest_preview("t23", cdir / "t10a-state.json", {"A": f"{prog}/{call}"})}
 
 
 # ---------------------------------------------------------------- the run
@@ -451,7 +521,9 @@ def classify(calls, suite_json, emitted, natprev, suite, prover, settle_mode):
             rows.append(row)
             continue
         row["bench"] = bench.from_result("t23", c["id"], c["label"], getattr(prover, "name", "-"), pr["result"])
-        row["settle"] = settle_call(settle_mode, pr, job)["status"]
+        sc = settle_call(settle_mode, pr, {**job, "id": c["id"], "label": c["label"]}, wrap_vk=getattr(prover, "wrap_vk", None))
+        row["settle"], row["settle_detail"] = sc["status"], {k: v for k, v in sc.items() if k != "bench"}
+        row["bench"] += sc.get("bench", [])
         verdict, detail = compare({"calls": pr["result"]["calls"]}, np_, refs)
         row["compare"] = verdict
         if verdict == "equal":
@@ -604,6 +676,22 @@ def selftest():
         check("settle preview refused without T23_ALLOW_PREVIEW", False)
     except SystemExit:
         check("settle preview refused without T23_ALLOW_PREVIEW", True)
+    fa = pathlib.Path(__file__).resolve().parent / "fixtures-accept"
+    la17 = json.loads((fa / "t17-ledger-args.json").read_text())
+    rc17 = json.loads((fa / "t17-receipt.json").read_text())
+    w17, a17 = accept_words(la17)
+    check("settle args: T17 accepted call claim_pub recomputed (block 115,187)", str(w17["claim_pub"]) == rc17["acceptRun"]["claimPub"]
+          and a17 == la17)
+    try:
+        accept_words({**la17, "claim_pub": str(w17["claim_pub"] + 1)})
+        check("settle args: a wrong reported claim_pub is refused", False)
+    except Exception as e:
+        check("settle args: a wrong reported claim_pub is refused", type(e).__name__ == "Mismatch")
+    pl = settle_plan("p", "c", "/x/ledger-args.json", "/x/wrap.vk")
+    check("settle plan: slot 15, one ledger per program, refusals off per call",
+          pl["deploy"][-2:] == ["--out", str(PREVIEW_DIR / "p")] and "--anchor-slot" in pl["call"]
+          and pl["call"][pl["call"].index("--anchor-slot") + 1] == "15" and pl["call"][-2:] == ["--deploy-from", str(PREVIEW_DIR / "p")]
+          and pl["env"]["T10A_REFUSALS"] == "0" and pl["env"]["T10_NET"] == "preview")
     ok &= integration(check)
     return 0 if ok else 1
 
