@@ -1,0 +1,8 @@
+# Leaf Proving: findings (Formal-Lean-B)
+
+| Finding | IDs | Kind | Evidence | Proposed verdict |
+|---|---|---|---|---|
+| F-B-LFP-1 | LFP-003, RSL-002 | gap between requirements | LFP-003 refuses only above 8 app AIRs; RSL-002 requires 6 or 9 AIRs with FP-1 (5 or 8 app AIRs). A 6- or 7-app-AIR shape passes LFP-003 and no requirement refuses it. Lean: `lfp003_admits_outside_bucket`. CODE `rsl/trace.rs:137` asserts only `<= MAX_APP_AIRS`; `names()` builds only 5 or 8, so the code never reaches 6 or 7 today. Proposed text: "If the app shape ... is outside the 6-or-9 AIR bucket with FP-1, then the leaf prover SHALL refuse the shape". | GUARD HOLDS (code builds only 5 or 8; counterexample needs a new chip-set AIR, not buildable today) |
+| F-B-LFP-2 | LFP-006 | stale citation | LFP-006 status cites openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:41` (slot 8). Line 41 is blank; the doc line is `:42` and `pv::PROG_D = 8` is `:46`. | CONFIRMED (citation fix only) |
+| F-B-LFP-3 | CPR-005, LFP-003 | contradiction between EARS (acknowledged) | LFP-003 scenario refuses a program that calls `persistentHash` and `keccak256` (CODE `rsl/trace.rs:114` assert); CPR-005 forbids a requirement that narrows GP-001 unless an owner decision with an unbounded path. LFP-003 status names the GAP and D-024 (LEAD PICK for T15). | OPEN DESIGN (owner question at T15) |
+| F-B-LFP-4 | LFP-003 | observation | The mixed-hash refusal is an `assert!` (panic) in `Program::new` (`rsl/trace.rs:114`), not a typed refusal; "refuse the shape before it makes a proof" holds, but the refusal has no named code. | OPEN DESIGN (minor) |

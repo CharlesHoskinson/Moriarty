@@ -1,0 +1,82 @@
+# ID	verdict	lean	note
+ZKE-001	MODELED	seeded_refused, pin_zk014	refusal seeded-without-feature (exit 4, no proof) when a production build reaches a constant r_P path (op 0)
+ZKE-002	MODELED	testseed_not_submitted, pin_zke002	refusal test-seed-binary at submit (op 4)
+ZKE-003	SPEC-CHECKED	reachable, pin_zke004	the privacy scan reads ledger and transaction bytes (slice C, OBS): no host state machine. Consistency: the oracle never moves r_P, salt, witness or STARK proofs outside the roster (ZKE-004) and publishes nothing; agrees with ZK-002, ZK-004, ZK-007
+ZKE-004	MODELED	transfer_in_roster, pin_zke004	refusal host-outside-roster (op 5); transfers between roster boxes admitted (Astra-B R-01 wording)
+ZKE-005	MODELED	run_needs_secret, pin_zke005	refusal secret-missing at prepareRun; no new r_P is drawn
+ZKE-006	SPEC-CHECKED		Debug formatting of the blinder types is a code property (test blind::tests::debug_never_prints_words): no state. Consistent with ZK-001 and ZKE-003 (no secret word leaves the box)
+ZKE-007	MODELED	reachable, apply_valid, pin_zke007	production blinders are pairwise distinct across CPU and GPU proofs (Valid: blinders Nodup); fixed blinders only in a test-seed build with a seed variable
+SSG-001	SPEC-CHECKED	sqg004_d3_t10m	D3 of the per-program R_SL app keys: no record exists (spec GAP); the bound is the same 100-bit bound that sqg004_d3_t10m checks on the T10m chain keys. No contradiction with SQG-004 (grindable 101 bits is stricter and applies to the same terms)
+SSG-002	SPEC-CHECKED		a dependency-tree property of the crates (cargo tree): no state. Consistent with CPR-001 and DG-001 (the wrap is the only circuit with a k)
+SSG-003	MODELED	record_guard, pin_ssg003, t12_not_passed_20261115	refusal confirmed-defect; on the record of 2026-11-15 (CX: 1 CONFIRMED, GP2-C2.1) the gate does not pass
+SSG-004	MODELED	record_lists_open, pin_ssg004, ssg004_eight_open	NOT ATTEMPTED rows are listed open in the record and do not block it; 8 rows on the CX record
+SSG-005	MODELED	reachable, pin_lpc016	landChange adds one change-list row (invariant changeRows = changes)
+SSG-006	MODELED	record_guard, record_lists_open, reachable, pin_ssg006, pin_ssg006_old_g5	record only with G1..G5 and FP-8, naming the key manifest; status qualified after the record (UKS-007); G5 on old sets refused (g5-old-params)
+SSG-007	MODELED	reachable, pin_ssg007	run record security field equals the key set status; new keys reset to not qualified
+ZK-012	MODELED	rp_once, reachable, pin_zk012	r_P drawn once per deployment (invariant rpDraws <= 1); refusal already-deployed
+ZK-013	MODELED	salt_fresh, pin_zk013	each run draws a fresh salt (salt = saltDraws, strictly increasing)
+ZK-014	MODELED	seeded_refused, pin_zk014	refusal seeded-without-feature on deployment, run and wrap prove
+ZK-015	MODELED	reachable, pin_zke007	two proofs of one statement get different blinders (byte inequality abstracted to blinder inequality); ledger acceptance is LVR (slice C)
+ZK-016	MODELED	slot_reuse_refused, pin_zk016	refusal slot-reused (op 6)
+ZK-017	MODELED	reachable, pin_zke007	the GPU backend (device 1) draws its blinder from the same fresh source as the CPU
+ZK-018	MODELED	transfer_in_roster, pin_zke004	a job or file to a host the user does not own is refused (roster mask); shared with C (HLP)
+ZK-019	SPEC-CHECKED		obligation on the SherlockSpec Lean library (pv2_inj, pv2_count_det); not located in this worktree. This oracle's own audit holds the same axiom allowlist (Audit.lean)
+SQG-014	SPEC-CHECKED	gateCheckNames	G3 compares transcript vectors of five implementations: a measurement, abstracted as gate check bit 2 (G3). No contradiction with SQG-008
+SQG-015	MODELED	record_guard, pin_sqg015, pin_ssg007	newKeys (op 9) clears the checks; the record needs G1, G2, G4, FP-8 (and G3, G5) on the new keys
+SQG-016	MODELED	record_guard, pin_sqg016, t12_not_passed_20261115	refusal step-unverified; RUNBOOK (t12-gate 90f9b4df9) has 2 UNVERIFIED steps (:77, :87)
+LPC-004	MODELED	pin_lpc016	fileVerdict needs an open change (no-open-change); verdicts <= changes invariant
+LPC-016	MODELED	done_needs_verdict, pin_lpc016, lpc016_not_done_20261115	refusal no-lead-verdict; QV (t13-lanes 958a26919) has 5 verdicts for the 15 lanes of SSG-005's status
+DG-001	CONSTANT-CHECKED	dg001_k	MEASURED wrap k = 21 (research/sherlock-t10m-20261114/RESULTS.md:11, :64; T10m keys); shared with C (WRP)
+DG-002	CONSTANT-CHECKED	dg002_smallest_k	MEASURED 1,685,845 rows fit 85% of 2^21-7 (1,782,573) and not at 19 or 20 (RESULTS.md:11, :64); FP-3 and slot 15 change the rows: re-measure at T25; shared with C (WRP)
+DG-003	CONSTANT-CHECKED	dg003_vk	MEASURED wrap VK 1,325 B <= 50,000 (RESULTS.md:11, :65); shared with C (WRP)
+DG-004	SPEC-CHECKED		keygen shape-bound refusal is a property of each layer's keygen (SQG-002); modelled in Leaf Proving and Aggregation bounds. No contradiction with SQG-002
+DG-005	CONSTANT-CHECKED	sqg005_wstack	CODE L max_log_height 20, w_stack 48, mu PoW 6 (frozen.rs:180-197, 5b7ada8); MEASURED D10 w_stack 18 (3b979bd5c)
+DG-006	SPEC-CHECKED		a reporting rule (seconds per proved step on the GPU, no row gate): no state. Consistent with DG-007 and SQG-002 (bounds are shape bounds, not row gates)
+DG-007	SPEC-CHECKED		excludes the halo2 row gates; no state. Consistent with DG-001 (k only on the wrap) and DG-006
+DG-008	SPEC-CHECKED		test-method rule (debug constraint checker, MockProver, mutants with weakened controls): no state
+DG-009	CONSTANT-CHECKED	dg009_height	structural: a u64 height in 4 16-bit limbs (FPR-001) holds 2^64-1 and not 2^64
+DG-010	SPEC-CHECKED		governance of failed gates (GP target open, to the owner): no state. Consistent with CPR-005; shared with C (WRP)
+DG-011	SPEC-CHECKED		states that derived gates are measurements or keygen checks: this file checks the recorded measurements (DG-001..005)
+FPR-001	CONSTANT-CHECKED	fpr001_widths	structural limb widths (u32 2, u64 4, u128 8 limbs of 16 bits; fr 9 x 30 >= 255 bits)
+FPR-002	SPEC-CHECKED		bus id layout of the leaf chip set: in-circuit encoding, no state. Consistent with FPR-003 (ports at BUS_BASE + 16 + j do not overlap ids 1..15)
+FPR-003	SPEC-CHECKED		port bus encoding: in-circuit, no state. Consistent with FPR-002
+FPR-004	SPEC-CHECKED		LookupBus rules and the field-size bound sum < p: in-circuit, no state
+FPR-005	CONSTANT-CHECKED	fpr005_74_words	74 = 1 + 32 + 8 + 8 + 8 + 8 + 1 + 8 with digests of 8 words (FPR-001)
+FPR-006	SPEC-CHECKED		node key routing: in-circuit (modelled in Aggregation, NODE); no state here
+FPR-007	SPEC-CHECKED		L opens the SET head with one BabyBear Poseidon2 hash: in-circuit (Bridge)
+FPR-008	SPEC-CHECKED		order of L public values: layout (Bridge, CLB-001); no state here
+FPR-009	SPEC-CHECKED		freeze proposal content rule: no state. Consistent with FPR-017 (no FROZEN row by a choice of the freeze)
+FPR-010	SPEC-CHECKED	pin_zk013	public digest forms: hash definitions, no state; the salt freshness it needs is ZK-013 (salt_fresh)
+FPR-011	SPEC-CHECKED		digest preimage table: hash definitions, no state
+FPR-012	SPEC-CHECKED		state_d form and view_root rule: in-circuit, no state
+FPR-013	SPEC-CHECKED		n_steps stays private: consistent with ZK-008 and ZK-002 (not in the published view); no state
+FPR-014	SPEC-CHECKED		bind_label: in-circuit SHA-256 window, no state
+FPR-015	SPEC-CHECKED		placement V tape layout: in-circuit, no state
+FPR-016	SPEC-CHECKED		obligation on the freeze Lean theorems (bus_enc_inj ...): another library; same axiom allowlist as this audit
+FPR-017	SPEC-CHECKED		freeze status rule (FROZEN or FREEZE-PENDING): no state. Consistent with SQG-011 and FPR-019
+FPR-018	SPEC-CHECKED		DISCHARGE invariant: in-circuit (Aggregation); Lean node_discharge_sound is another library
+FPR-019	SPEC-CHECKED	gateCheckNames	FP-8 closes only when no embedded interface is FREEZE-PENDING: FP-8 is gate check bit 5 here; consistent with SQG-011
+SQG-001	SPEC-CHECKED	record_guard	100-bit RBR soundness claim only after G1..G4 with G5: the claim is the record (record_guard); the per-layer proof is G4/G5 (another library)
+SQG-002	SPEC-CHECKED	sqg003_L_set	one parameter set per layer, keygen refusal outside bounds: the sets are checked as constants (sqg003_L_set, sqg004_pow); the refusal is a keygen property (Leaf Proving, Aggregation)
+SQG-003	CONSTANT-CHECKED	sqg003_L_set	CODE frozen.rs:180-197 (5b7ada8): L log blowup 3, 98/83/82, folding 0, mu 6, query 20, LogUp 18; EF degree and transcript are not constants of this file
+SQG-004	CONSTANT-CHECKED	sqg004_pow, sqg004_d3_t10m	CODE query PoW 21 app (:90), leaf_agg (:114), internal (:139); LogUp 17 leaf_agg (:115); MEASURED D3 T10m weakest 101.0110 (RESULTS.md:91, :96)
+SQG-005	CONSTANT-CHECKED	sqg005_wstack	CODE L w_stack 48, mu 6, internal 512 (frozen.rs:186, :188, :136); MEASURED D10 18 and 26 (3b979bd5c)
+SQG-006	SPEC-CHECKED	sqg004_pow	G1 content (sets fixed in keygen code): the PoW constants hold (sqg004_pow); the per-round vectors of OD-17/18 and the global interaction bound are keygen checks outside this oracle
+SQG-007	CONSTANT-CHECKED	sqg004_d3_t10m	G2 bound 100 / 101 bits: MEASURED on the T10m keys (RESULTS.md:91, :96); T25 keys not measured
+SQG-008	SPEC-CHECKED	gateCheckNames	G3 content: transcript vector equality, a measurement (gate bit 2)
+SQG-009	SPEC-CHECKED	gateCheckNames	G4 content: a Lean theorem in another library (gate bit 3)
+SQG-010	SPEC-CHECKED	gateCheckNames	G5 content: a written mapping (gate bit 4); a mapping that names old sets is refused (g5-old-params, SSG-006)
+SQG-011	MODELED	reachable, record_guard	no qualified status (key freeze) without G1..G4, G5 and FP-8 (Valid: qualified -> record -> all checks)
+SQG-012	SPEC-CHECKED		how G4 counts the Lean proof (BR-L2, premises named): no state; consistent with SQG-009
+SQG-013	CONSTANT-CHECKED	sqg013_merge_work	CODE merge_work = internal params 97/82/81 (frozen.rs:141, :157-161), 5,400 columns (:166); MEASURED 5,284 (RESULTS.md:96) <= 5,400; see F-B-AS-1
+ZK-001	MODELED	transfer_in_roster, pin_zke004	jobs and files only to owned hosts (case A); a non-owned host is refused (ZK-018); shared with C (HLP)
+ZK-002	SPEC-CHECKED		content of the published view: ledger side (slice C) and ZKE-003 scan; no state here
+ZK-003	MODELED	reachable, apply_valid, pin_zk003_testseed, pin_zke007, salt_fresh, rp_once	r_P once per deployment, salt once per run, a fresh blinder per proof; fixed blinders only in a test-seed build
+ZK-004	SPEC-CHECKED		wrap public inputs carry no transcript value: in-circuit (Bridge, WRP)
+ZK-005	SPEC-CHECKED		log and call-vector padding: in-circuit (Bridge)
+ZK-006	SPEC-CHECKED	salt_fresh	salt placement in input_d and no publication: in-circuit; its freshness per run is ZK-013 (salt_fresh)
+ZK-007	SPEC-CHECKED		anchor lane carries C_P or A_j: in-circuit (Bridge, CLB)
+ZK-008	SPEC-CHECKED		heights, AIR sets and leaf counts stay on the user's machine: consistent with ZK-001 and ZKE-004 (transfer_in_roster)
+ZK-009	SPEC-CHECKED	slot_reuse_refused, transfer_in_roster	forbidden helper constructions: the oracle refuses slot reuse (ZK-016) and non-owned hosts (ZK-018); the rest (MSM, aggregator) has no state here; shared with C (HLP)
+ZK-010	SPEC-CHECKED		obligation on ZK-L1, ZK-L2 Lean proofs in another library
+ZK-011	SPEC-CHECKED		public digest forms with r_P per deployment (rp_once covers the draw); hash definitions have no state

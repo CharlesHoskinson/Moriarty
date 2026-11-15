@@ -1,0 +1,27 @@
+# ID	verdict	lean	note
+LFP-001	SPEC-CHECKED	witness_merged	the STARK field and Poseidon2 configuration of each proof is a prover configuration with no state machine (CODE harness.rs:26 sets the engine); consistency: an honest run reaches N1 with no BLS12-381 step, as CPR-001 allows
+LFP-002	MODELED	reachable_leaves, pin_lfp002, rsl001_probe_counts	one app proof and one leaf-layer proof per shard (op 1); universal N1 pre-hash exactly for bucket shapes (MEASURED r10 probe, 5 calls)
+LFP-003	FINDING	admit_guard, pin_lfp003_over, pin_lfp003_mixed, lfp003_bound_code, lfp003_admits_outside_bucket	F-B-LFP-1: the bound "more than 8 app AIRs" admits 6 and 7 app AIRs, which RSL-002 excludes; the oracle refuses them as outside-bucket (RSL-002). Refusals air-count-over-bound, mixed-hash otherwise agree
+LFP-004	MODELED	admit_guard, pin_lfp004, lfp004_columns, lfp004_refuses_30001	refusal column-bound; CODE frozen.rs:98 (set "app", :83) 30,000; MEASURED max 16,346 (LIST.md:30)
+LFP-005	MODELED	prove_guard, pin_lfp005, lfp005_heights	refusal shape-mismatch; CODE HEIGHTS length 7 (leaf.rs:34) for chip sets 0 to 2; chip set 3 vector not named (spec GAP)
+LFP-006	MODELED	prove_sets_progD, reachable_leaves, pin_lfp006, lfp006_slot_in_fp1	PROG_D slot 8 inside the 54 FP-1 words (CODE core.rs:46, air.rs:223); spec cites core.rs:41 (F-B-LFP-2, citation drift)
+LFP-007	MODELED	merge_guard, reachable_leaves, pin_lfp007	refusal wrong-prog-d at N1 merge (op 4); a foreign leaf (op 2) of the same prog_d is accepted
+LFP-008	MODELED	extend_keeps_keys, shards_monotone, pin_lfp008	op 5 adds shards (ceil(steps / shardCap), SC-003) and keeps key_root and the manifest
+LFP-009	MODELED	publish_guard, pin_lfp009	one LeafProofsReady after every leaf; names every leaf; N1 refuses before it (not-published)
+LFP-010	MODELED	prove_guard, pin_lfp010	refusal statement-unbound when the FP-1 outcome commitment differs from the digest of comm and ordered W
+LFP-011	MODELED	prove_sets_progD, reachable_leaves, pin_lfp006	the R_SL leaf sets PROG_D to the program's prog_d
+LFP-012	MODELED	prove_guard, pin_lfp012	refusal input-mismatch when the consumed tape digest differs from input_d
+RSL-001	MODELED	reachable_leaves, rsl001_probe_counts, witness_merged	pre-hash predicate = bucket; agrees with MEASURED r10 probe (6 and 9 AIRs equal) and the a05 10-AIR probe (differs), LIST rows 6f773b2, 5d77cfc
+RSL-002	MODELED	admit_guard, pin_rsl002, rsl002_code_shapes	refusal outside-bucket; CODE names() (rsl/trace.rs:122 to :138) builds 5 or 8 app AIRs (6 or 9 with FP-1)
+RSL-003	SPEC-CHECKED	witness_merged	suite-run process requirement (142 calls, stock verifier); no state machine. Consistency: an admitted honest program proves every shard (witness). MEASURED on file is execution only (142/142, LIST.md:30), not app proofs
+RSL-004	CONSTANT-CHECKED	rsl002_code_shapes	CODE: the Keccak kit adds 3 AIRs to the 5 base AIRs = 8 app AIRs (9 with FP-1), inside the bucket (rsl/trace.rs:132 to :136)
+RSL-005	CONSTANT-CHECKED	rsl002_code_shapes	CODE: secp256k1 adds no AIR (names() at dcf1b4c lists none; LIST row c281a5f "AIR count unchanged"), so the count stays 5 or 8
+RSL-006	CONSTANT-CHECKED	rsl002_code_shapes	CODE: jubjub checks are micro-ops with no new AIR (names() lists no EC AIR; LIST rows d8e5671, 637ca2e)
+RSL-007	SPEC-CHECKED	rsl002_code_shapes	choice of AIRs and hasher for persistentHash: structural, no state. CODE names() adds RSL_SHA_REQ and RSL_SHA_HASHER beside SHA_IN (rsl/trace.rs:127 to :130); consistent with the bucket (8 app AIRs)
+RSL-008	MODELED	prove_guard, pin_rsl008	refusal noncanonical-word
+CPR-001	CONSTANT-CHECKED	cpr001_wrap_k	MEASURED wrap k = 21 (research/sherlock-t10m-20261114/RESULTS.md:11, :64); the leaf has no BLS12-381 circuit
+CPR-002	MODELED	extend_keeps_keys, shards_monotone, prove_guard	fixed-size shards of the admitted shape; work grows by shards; no key field depends on steps
+CPR-004	SPEC-CHECKED		the ledger 9.1.0.1 verifier is external (Ledger Verification, slice C); no proving-layer state. No leaf requirement changes the verifier, so no contradiction
+CPR-005	FINDING	pin_lfp003_mixed	F-B-LFP-3: LFP-003 refuses a program with both hash kits, which narrows GP-001; CPR-005 allows such a narrowing only as an owner decision with an unbounded path. The LFP-003 status names it (GAP against GP-001, D-024 LEAD PICK for T15), so it is OPEN DESIGN until the owner rules
+SPL-006	MODELED	extend_keeps_keys, prove_guard, shards_monotone	leaf side: fixed shape, work by shards; node arity is in the aggregation oracle
+LPC-018	SPEC-CHECKED		Carbon lane process (t3-airs forged inputs for T3 parent constraints); no state machine; no other slice B requirement constrains it, no contradiction

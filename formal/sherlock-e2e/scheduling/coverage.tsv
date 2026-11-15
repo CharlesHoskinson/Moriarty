@@ -1,0 +1,37 @@
+# ID	verdict	lean	note
+STM-001	CONSTANT-CHECKED	stm001_seven_gpu_fields, pin_stm004, setup_writes_profile	CODE profile.rs:82: one gpus entry has 7 fields (scenario huginn); setup records the GPU count (op 0). Reading nvidia-smi is I/O, not modelled
+STM-002	MODELED	pin_stm002, setup_writes_profile	setup: unified := hasGpu and not gpuReportsMem; vram_total null (0)
+STM-003	MODELED	budgetOf_le, pin_stm003	mem_budget = min(MemAvailable, cgroup headroom), no cgroup limit = MemAvailable (both scenarios pinned)
+STM-004	MODELED	pin_stm004, code_constants	setup calibrates every shape on CPU and GPU (calMask 15; 10 without a GPU); CODE t16.rs:677 T16_CAL_REPS default 3. One GPU per box: the multi-GPU case is OPEN in the spec
+STM-005	MODELED	setup_refused_writes_nothing, pin_stm005	refusal setup-stopped; no profile is written, a run then gets no-profile
+STM-006	MODELED	setup_writes_profile, stm006_eleven_fields	CODE profile.rs:79 to :89 writes exactly the 11 fields; setup records the prover key set
+STM-007	MODELED	startRun_guard, pin_stm007	refusal profile-refused: other format, missing field, or a present entry with leaf time 0
+STM-008	MODELED	startRun_calibrated, pin_stm008	calibrated := (profile key set = prover key set); the run proceeds and the record reads not calibrated
+STM-009	MODELED	pin_hgpu, schedule_cut_free, stm011_estimates_match_records	schedule (shape, device, concurrency, cut) from profile, run length and limits; h-gpu pick reproduced from the MEASURED huginn calibration (RESULTS-CDE.md:45 to :50, :77)
+STM-010	MODELED	limits_only_lower, pin_stm010, pin_hnogpu, pin_hcap	ops 2, 3, 4; a limit only lowers the profile value (scenario "A limit above the profile": 80,000 MB over 30,000 MB gives 30,000)
+STM-011	MODELED	concOf, cpu_conc_cap, cand_conc_le_leaves, concOf_mono, stm011_leaf_capacity, stm011_estimates_match_records, pin_hcap	device bytes in free VRAM and host bytes in the budget, CPU at most max(1, cores/4); DERIVED per-GPU capacities 15, 12, 27 (RESULTS-CDE.md:75) and the section 3.2 estimates reproduced
+STM-012	MODELED	startRun_guard, pickAt_none_mono, pin_stm012	refusal no-shape-fits; a lower budget never makes a refused run fit
+STM-013	MODELED	checkFree, checkFree_nil, prove_guard, pin_stm013, pin_hc5	refusals shape-no-key, empty-cut, leaf-out-of-range, cut-not-covering (all failing codes); forced cut 1,1,1,1,1 passes
+STM-014	MODELED	schedule_cut_free, checkFree, pin_hc5	checkFree takes no count list and no menu; every greedy cut of ceil(n/S) leaves passes for every n > 0. The code still holds sched::check (spec status GAP), outside the oracle
+STM-015	MODELED	policyOf, stm015_three_boxes, pin_stm015	full / evict-after-quotient / none from the largest GPU memory less 1/16; CODE PEAKS profile.rs:366; the three boxes and o-cap reproduce RESULTS-CDE.md:76, :102
+STM-016	SPEC-CHECKED	startRun_guard	a file path is not state: the oracle models only whether the box has a profile (profWritten; refusal no-profile); moveTo clears it, so each box runs from its own profile (consistent with ELA-005)
+STM-017	MODELED	Better, pickList_least, pick_order_independent, better_total, pin_stm017	the pick is the least element of the strict total order (est, leaves, shape, GPU before CPU); the pick does not depend on the candidate order
+STM-018	MODELED	pickAt_mono, ceilDiv_anti, cand_mono, pin_stm018	for every state and budgets h' <= h: a pick at h' has a pick at h that is not slower; the cx_f9 shape of witness pinned over 8 to 1 GiB
+STM-019	MODELED	earlyWrap_guard, wrapTail, pin_stm019, stm019_odin_h70	refusal early-wrap-refused one byte short; odin h70 (constant tail 209 MiB short, profile tail 5,017 MiB admitted)
+ELA-001	MODELED	one_claim_every_schedule, run_keeps_prepared, apply_keeps_prepared, fresh_run_other_claim, pin_hc5, pin_ela001_fresh	claim_pub is a function of the prepared run (prog, input, r_P, salt) only; no schedule, limit, box or profile op changes it; a fresh preparation gives another claim
+ELA-002	MODELED	apply_keeps_keys, prove_records_keys, pin_ela005	no operation changes the prover key set; every record names it
+ELA-003	MODELED	pickAt_mono, pickAt_none_mono, pin_hcap	lowering the budget gives the concurrency that fits it (h-cap: 1 at once, 2 waves, 4,188 ms, MEASURED RESULTS-CDE.md:100)
+ELA-004	MODELED	no_gpu_cpu_pick, pin_hnogpu, pin_onogpu	with no usable GPU every pick is on the CPU (h-nogpu 5,355 ms, o-nogpu 8,371 ms)
+ELA-005	MODELED	one_claim_every_schedule, pin_ela005	the prepared run moved to odin and proved from odin's profile gives the huginn claim under the same keys
+ELA-006	MODELED	join_refuses_bad_leaf, pin_ela006	refusal leaf-not-verified before N1
+ELA-007	MODELED	pin_ela007	the record names box, shape, device, shard count, key set, calibration and claim; wall times and peak memory are measured quantities outside the oracle state
+LPC-006	SPEC-CHECKED	schedule_cut_free	node acceptance belongs to Aggregation; the scheduling side holds for every run length: the greedy cut of any n > 0 passes check_free under one plan (no count list)
+SPL-001	SPEC-CHECKED		layer architecture and field choice (BabyBear, PLONK/KZG wrap): no scheduling state; consistent with ELA-002 (one key per layer for every schedule)
+SPL-002	SPEC-CHECKED	schedule_cut_free	sherlock plan outputs no cut, tree or shard count; consistent: the oracle derives the cut per run from n (cutAux), never from the plan
+SPL-003	SPEC-CHECKED		prog_d hash definition (Leaf Proving, slice A ERS-006); no scheduling state; the schedule is not an input of prog_d (consistent with SPL-011)
+SPL-007	SPEC-CHECKED		prover library choice and zerocheck_save_memory: configuration, no state; no contradiction with STM-004 (calibration runs the same prover)
+SPL-008	SPEC-CHECKED		machine version binding in prog_d: language/leaf context; no scheduling state
+SPL-009	SPEC-CHECKED		freeze list of encodings with the universal keys: Key Management; the schedule and the profile are not on it (consistent with SPL-011, UKS-008)
+SPL-010	SPEC-CHECKED		reporting rule of the plan binding proof (BR-L2, premise A4): process requirement, no state
+SPL-011	MODELED	one_claim_every_schedule, run_keeps_prepared, schedule_cut_free, apply_keeps_keys, setup_writes_profile	schedule from the metered run and the profile; no menu or count list; setup selects no key (proverKeyD unchanged); one claim_pub for every schedule
+SPL-012	SPEC-CHECKED	one_claim_every_schedule	plan_d word lists are FREEZE-PENDING ENC-5; consistent: no schedule field is an input of the claim

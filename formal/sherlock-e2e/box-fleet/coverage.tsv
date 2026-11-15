@@ -1,0 +1,39 @@
+# ID	verdict	lean	note
+BXF-001	MODELED	submit_in_roster, pin_bxf001	refusal host-not-in-roster (op 0); the roster is user-written (op 5 addBox), a fourth box is admitted once added
+BXF-002	MODELED	reachable_admission, pin_bxf002, bxf003_heavy_slot_code	a muninn job enters heavy-slot (op 0, h = 0): slotsUsed <= 3 in every reachable state; CODE SLOTS = 3 (heavy-slot:27)
+BXF-003	MODELED	shared_over_budget, reachable_admission, pin_bxf003, bxf003_heavy_slot_code	refusal over-budget for a shared job over 64 GB; CODE BUDGET = 64 (heavy-slot:28, refusal :115); --exclusive admits 80 GB. The LOOP rule's 90G is the spec's acknowledged GAP, not a contradiction
+BXF-004	MODELED	gpu_lock_exclusive, pin_bxf004	one holder of gpu.lock; a second acquire is refused (gpu-locked)
+BXF-005	MODELED	sigterm_guard, pin_bxf005	SIGTERM only for holder kind 3 (eligible orphan) idle more than 10 min; the bus line comes with the signal
+BXF-006	MODELED	protected_holder, apply_valid, pin_bxf006	prover and wrapd holders refused (holder-protected); invariant termSent -> holder = orphan
+BXF-007	MODELED	transfer_guard, pin_bxf007	refusal sha256-mismatch (op 12)
+BXF-008	MODELED	outbox_appends, pin_bxf008	each outbox line adds one all.log line; CODE box-relay:7 (LOG), :22 (forward)
+BXF-009	MODELED	long_run_is_unit, pin_bxf009	refusal needs-unit for a run planned over 30 min outside a systemd-run unit
+BXF-010	MODELED	link_drop_moves, pin_bxf010	owner away: the dropped box keeps no queued job and none is lost
+BXF-011	MODELED	speed_claim_same_box, pin_bxf011, pdm001_daemon_gain_same_box	refusal cross-box-claim; MEASURED huginn daemon gain 113.01 s -> 71.59 s is same-box (wiki log.md:3691)
+BXF-012	MODELED	no_conf_compute, pin_bxf012	refusal conf-compute-forbidden; query-gpu and the CUDA memory call pass
+BXF-013	MODELED	sigkill_guard, pin_bxf013	SIGKILL only for the same orphan, termSent and >= 30 s after SIGTERM; clears the lock and logs
+BXF-014	MODELED	transfer_guard, pin_bxf014	refusal not-via-muninn for any transfer between two non-muninn boxes
+GPV-001	FINDING	device_selection, pin_gpv_devices, gpv001_gpu_faster_huginn	behaviour modelled (app on GPU where cuda); F-BF-1: the status calls the huginn 0.225 s vs 3.595 s figure MEASURED, the cited source (RESULTS-CDE.md:52) labels it DERIVED
+GPV-002	SPEC-CHECKED	publics_device_free	byte equality of STARK public values cannot be computed by the oracle; consistency: no device choice (GPV-001/004/005/007) enters a public value in the model
+GPV-003	SPEC-CHECKED	publics_device_free	L_Fr GPU kernels equal to the CPU path: a numeric-kernel property with no state machine; same consistency statement
+GPV-004	MODELED	device_selection, pin_gpv_devices	nodes on GPU iff cuda and T7_NODE_GPU not 0/off
+GPV-005	MODELED	device_selection, pin_gpv_devices	L on GPU iff cuda and T14_L_GPU not off
+GPV-006	MODELED	device_error_stops, pin_gpv006	a device error stops the run, records shard and device; later shards refused (run-stopped)
+GPV-007	MODELED	device_selection, pin_gpv_devices	leaf layer follows the app device (appDev) where cuda
+PDM-001	MODELED	reachable_daemon, pin_pdm002, pdm001_daemon_gain_same_box	while up: keys loaded (invariant); MEASURED warm gain on huginn (log.md:3691; the spec cites :3690, the entry heading)
+PDM-002	MODELED	reachable_daemon, pin_pdm002, pdm002_socket_mode	socket mode 0600 while up; CODE serve.rs:210 from_mode(0o600) (t14b 5e54263da)
+PDM-003	MODELED	unknown_op_keeps_serving, pin_pdm003	another operation: errors + 1, daemon stays up
+PDM-004	FINDING	reachable_daemon, pdm004_cited_record_is_wrap_only	keys loaded while serving is modelled; F-BF-2: the cited odin record (all.log:42, 28.98 s / 27.77 s) is the wrap w1 baseline and says "STARK lfr_call half not run", so it is no evidence for the STARK worker
+PDM-005	MODELED	reachable_one_use_slots, manifest_guard, pin_prd002	a prove or call consumes one fresh daemon-made slot (OsRng per proof at serve.rs:117 today; pool TO BUILD per D-040)
+PDM-006	MODELED	manifest_guard, pin_pdm006	refusal manifest-mismatch
+PDM-007	MODELED	one_leaf_path_c, pin_pdm007	a one-leaf call sets lastPath = path C
+PDM-008	MODELED	reachable_stats_no_witness, pin_pdm008	stats replies hold 0 witness words in every reachable state
+PDM-009	MODELED	reachable_one_use_slots, pin_prd002	the no-reuse half: every served proof spent its own slot (served = slotsSpent, free + spent = made); the distribution half is a ZK property (Assurance context)
+PRD-001	MODELED	pin_prd001, unknown_op_keeps_serving	refusal peer-refused for a peer of another user or machine
+PRD-002	MODELED	reachable_one_use_slots, helper_and_export_refused, pin_prd002	one-use slots, helper-made slot refused (helper-slot), export refused (slot-off-machine)
+PRD-003	SPEC-CHECKED	helper_and_export_refused, transfer_guard, submit_in_roster	the oracle has no STARK-proof object; consistency: every transfer and job stays among roster boxes and no slot leaves the machine, matching BXF-001, BXF-014 and ZKE-004 (no contradiction)
+PRD-004	MODELED	one_leaf_path_c, pin_pdm007	one-leaf call takes path C (same transition as PDM-007)
+PRD-005	SPEC-CHECKED		design statement (no Lean obligation for the daemon; ZK rests on ZK-L1, premise A7): no state; consistent, this oracle states no ZK obligation and leaves it to the Assurance context
+GPW-007	SPEC-CHECKED	gpw007_label	reporting rule: MEASURED iff run record and host load; the label function is checked; F-BF-1 is a case of this rule's discipline being broken in a spec status
+LPC-005	SPEC-CHECKED	pdm001_daemon_gain_same_box	timing runner process after the rekey; consistent with BXF-011 (each box against its own baseline); the T10m same-box figures satisfy it
+LPC-007	SPEC-CHECKED		elastic demo at 1x, 2x, 4x, 8x under the same keys: a run procedure with no box-fleet state; consistent with LFP-008 and UKS-008 (no key change) and with BXF-009 (long runs as units)
