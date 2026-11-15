@@ -50,3 +50,12 @@ export circuit useSettledRun(c_p: Field, input_pub: Field, outcome_pub: Field): 
   sherlock.runAccepted(disclose(claim_pub), disclose(outcome_pub));
   useOnce(claim_pub);
 }
+
+// A foreign claim from an accepted collection (W-3): leaf transientHash([SHK_CLAIM_FGN, fclaim_pub]), where
+// fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d)) is the public image of the foreign claim (GP-3 hook).
+// The tag keeps a foreign leaf apart from a run leaf (a 3-input claim_pub), so neither passes as the other.
+export circuit useForeignClaim(fclaim_pub: Field): [] {
+  const leaf = transientHash<Vector<2, Field>>([6201855186667800606600548010067 as Field, fclaim_pub]); // SHK_CLAIM_FGN
+  sherlock.rootAccepted(disclose(rootOf(leaf)));
+  useOnce(leaf);
+}

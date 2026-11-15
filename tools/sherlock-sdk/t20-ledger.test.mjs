@@ -196,3 +196,29 @@ test('W-2 read entry key: a callee whose rootAccepted holds another key is not r
   w.ledger = withOps(w.ledger.data, wrapLike);
   await assert.rejects(consumerCall(w, 'useRunClaim', t.path(0), ...run(0)), /mismatch|Implementation/i);
 });
+
+// ---- W-3 tests (fix 3): foreign claims by membership, no foreign map
+const FCLAIM = th([0x53484b5f46434c41494dn, 7n]); // a stand-in fclaim_pub (any Fr value; the leaf form is what is tested)
+test('W-3 foreign claim: used once by membership; the ledger has no foreign state', async () => {
+  const w = await newWorld();
+  const t = claimsTree([claimPub(0), foreignLeaf(FCLAIM), claimPub(1)]);
+  await ledgerCall(w, 'acceptCollection', REG, t.root);
+  assert.equal('foreign' in ledgerView(w), false, 'no foreign map');
+  const res = await consumerCall(w, 'useForeignClaim', t.path(1), FCLAIM);
+  assert.equal(res.ledgerUnchanged, true);
+  await assert.rejects(consumerCall(w, 'useForeignClaim', t.path(1), FCLAIM), /claim already used/);
+  await consumerCall(w, 'useRunClaim', t.path(0), ...run(0));   // the run members stay usable
+  assert.equal(usedSize(w), 2n);
+});
+
+test('W-3 kind separation: a run leaf is not a foreign claim (the control without the tag accepts it)', async () => {
+  const w = await newWorld();
+  const t = claimsTree([claimPub(0), claimPub(1)]);
+  await ledgerCall(w, 'acceptCollection', REG, t.root);
+  await assert.rejects(consumerCall(w, 'useForeignClaim', t.path(0), claimPub(0)), /root not accepted/);
+  const ctl = await modOf('consumer-control-no-kind-tag');
+  const c = await newWorld(ctl);
+  await ledgerCall(c, 'acceptCollection', REG, t.root);
+  await consumerCall(c, 'useForeignClaim', t.path(0), claimPub(0));   // accepted: the defect the design refuses
+  assert.equal(usedSize(c), 1n);
+});

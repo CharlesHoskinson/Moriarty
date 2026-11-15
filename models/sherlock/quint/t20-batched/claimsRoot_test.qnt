@@ -56,3 +56,21 @@ module claimsRoot_mutUnbound {
   run mut_unbound_root =
     init.then(proveMember({ kind: "RUN", v: 1 })).then(closeEpoch(true)).then(useFromRoot(1, "RUN", 9, 0)).expect(not(UsedOnlyVerified))
 }
+
+// fix 3: foreign claims by membership; a run leaf never passes as a foreign claim and the reverse
+module claimsRoot_fgn {
+  import claimsRoot(MUT = "none").* from "./claimsRoot"
+  run pos_foreign_once =
+    init.then(proveMember({ kind: "RUN", v: 1 })).then(proveMember({ kind: "FGN", v: 7 })).then(closeEpoch(true))
+      .then(useFromRoot(1, "FGN", 7, 0)).expect(Inv and WitForeignUse and ledgerWrites == 1)
+  run neg_foreign_twice =
+    init.then(proveMember({ kind: "FGN", v: 7 })).then(closeEpoch(true)).then(useFromRoot(1, "FGN", 7, 0)).then(useFromRoot(1, "FGN", 7, 0)).fail()
+  run neg_run_as_foreign = init.then(proveMember({ kind: "RUN", v: 1 })).then(closeEpoch(true)).then(useFromRoot(1, "FGN", 1, 0)).fail()
+  run neg_foreign_as_run = init.then(proveMember({ kind: "FGN", v: 7 })).then(closeEpoch(true)).then(useFromRoot(1, "RUN", 7, 0)).fail()
+}
+
+module claimsRoot_mutKind {
+  import claimsRoot(MUT = "no_kind_separation").* from "./claimsRoot"
+  run mut_no_kind_separation =
+    init.then(proveMember({ kind: "FGN", v: 7 })).then(closeEpoch(true)).then(useFromRoot(1, "RUN", 7, 0)).expect(not(UsedOnlyVerified))
+}

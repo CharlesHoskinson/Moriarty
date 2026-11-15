@@ -47,3 +47,10 @@ When an operator settles proved jobs, the operator SHALL JOIN the run SETs of on
 #### Scenario: Many jobs in one epoch
 - **WHEN** an operator proves four jobs in one epoch and a user submits its own run
 - **THEN** the ledger receives two writes, one `acceptCollection` for the four jobs and one `acceptRun` for the user's run (Quint `epochSettle.qnt`, `pos_four_jobs_one_write`, invariants `OperatorWritesPerEpochAtMostOne` and `LedgerWritesBounded`), and a job never enters `runs` (`NoJobInRuns`)
+
+### Requirement: LDG-007 A foreign claim is used by membership, with no foreign map
+The LEDGER CONTRACT SHALL hold no `foreign` map and SHALL have no FOREIGN opening entry. A foreign claim SHALL stay a member of the collection's `set_root` as a `FOREIGN(fclaim_d)` node, and its leaf in the claims tree SHALL be `transientHash([SHK_CLAIM_FGN, fclaim_pub])` with `fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d))`. A consumer SHALL use it with the path check, the `rootAccepted` read and its own nullifier keyed by the leaf. A foreign leaf SHALL NOT pass as a run claim, and a run leaf SHALL NOT pass as a foreign claim.
+
+#### Scenario: Foreign claim in a collection
+- **WHEN** a collection holds run claims and one foreign claim and its root is accepted
+- **THEN** a consumer uses the foreign claim once with `useForeignClaim` (test `W-3 foreign claim`), and a run leaf offered as a foreign claim is refused, while a consumer with no kind tag accepts it (control `consumer-control-no-kind-tag`; Quint mutant `no_kind_separation`)

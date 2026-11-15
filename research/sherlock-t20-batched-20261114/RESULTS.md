@@ -89,3 +89,22 @@ Data availability and epoch wait: see W-2 in ARCHITECTURE. Each job's submitter 
 Tests (`t20-ledger-test.out`, compiled contracts, compact-runtime 0.21.0): 7 pass: entries (no `openClaim`), collection write and refusals (replay, other registry), consumer use once with the ledger unchanged, refusals (unaccepted root, forged outcome, another slot, flipped index bit), one use across two roots and `runs`, two controls that accept the defect (root-keyed nullifier, no root read), read-entry key binding.
 
 Quint `claimsRoot.qnt` (`run-claimsRoot.out`, 4,000 samples of 16 steps): 8 design tests pass; `Inv` (`LedgerWritesBounded`, `UsedOnlyVerified`, `UsedOncePerConsumer`, `UseAfterEpochClose`) holds; mutants `per_claim_open`, `root_keyed_nullifier`, `no_root_check`, `unbound_root` each break it; witnesses reached: one claim used by two consumers, one claim in two roots, a withheld list. The model already carries the leaf kind for fix 3.
+
+## Fix 3: the `foreign` map and the FOREIGN opening (LDG-005) by membership
+
+Rule W-3 in ARCHITECTURE; LDG-007 added. The `foreign: Map<fclaim_d, ()>` state and the FOREIGN opening were design text only (never in a compiled contract); both are removed. A foreign claim stays a `FOREIGN(fclaim_d)` member of `set_root`; its claims-tree leaf is `transientHash([SHK_CLAIM_FGN, fclaim_pub])` with `fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d))` (a seventh `DIGEST` tag; LEAD pick for T15, it fixes the public form the GP-3 hook left open). The example consumer gains `useForeignClaim(fclaim_pub)` (64 lanes, MEASURED from its ZKIR), with the same path check, root read and nullifier.
+
+Circuit delta (with the GP-3 foreign lift and T8b, neither built): `L` logs `DIGEST(SHK_FCLAIM)` and one `H2` per foreign member. The new tag changes the decoder's `DIGEST` tag bound, a wrap key constant; it rides the T8b rekey that the `L` collection form needs anyway. No key change for T20 on its own.
+
+| | Transactions | Bytes on chain | Proofs | State growth | Label |
+|---|---|---|---|---|---|
+| Before, per foreign claim opened | 1 FOREIGN opening | about 6,897 (an `openClaim`-sized call) | 1 wrap | one `foreign` entry | ESTIMATE (design text, no compiled entry) |
+| Before, per collection of `F` foreign claims | `1 + F` | about 6,797 + 6,897 `F` | `1 + F` | `F` entries | ESTIMATE |
+| Before, per second | `1/T + lambda_fgn` | | | | DERIVED |
+| After, per foreign claim used | 0 on SherlockLedger | 0; the consumer's own call adds one `rootAccepted` read | 0 | 0 | MEASURED (lanes, no state change) |
+| After, per collection | 1 (shared with the run claims of the epoch) | about 6,797 | 1 | 180 bytes | ESTIMATE |
+| After, per second | `1 / T` | about 6,797 / `T` | `1 / T` | 180 / `T` | DERIVED |
+
+Tests (`t20-ledger-test.out`): 9 pass, the two new ones: `W-3 foreign claim` (used once, no foreign state, run members still usable) and `W-3 kind separation` (a run leaf offered as a foreign claim is refused; the control `consumer-control-no-kind-tag` accepts it).
+
+Quint `claimsRoot.qnt` extension (`run-claimsRoot-fix3.out`): 4 foreign tests pass (use once, twice refused, run as foreign refused, foreign as run refused); `Inv` holds; mutant `no_kind_separation` breaks `UsedOnlyVerified`; witness "a foreign claim is used" reached.
