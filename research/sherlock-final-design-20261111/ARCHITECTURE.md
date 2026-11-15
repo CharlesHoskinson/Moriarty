@@ -15,7 +15,7 @@ Conventions:
 - `chip/dense.rs` line numbers are of commit `f36eb714d` unless a citation names commit `b85b00213`.
 - "B2 finding N" names finding N of the architecture audit `FD/ARCH-AUDIT-astra.md`; `FD/ARCH-AUDIT-RESPONSE.md` gives the check for each. "The B1 text" is the first merged form of this file that the audit read.
 - Mutant protocol (one wording for the whole file): a named negative mutant is a malicious witness that the correct circuit refuses at a constraint, lookup or permutation boundary. Its control is a deliberately weakened circuit (the constraint under test removed) that accepts the same witness. "Refused" never means that a weakened circuit is refused.
-- GP-1 to GP-4 (`O/general-purpose.md`) are not narrowed by anything in this file. Where a design constant could narrow them (tree depth, cache-line counts, ROM depth, claim counter, log capacity, `L_TX`) the item is a decision with an owner mark, and the design keeps a path with no bound (the spill rule of section 1.8, chunked calls of kit COMPACT FRONTEND).
+- GP-1 to GP-4 (`O/general-purpose.md`) are not narrowed by anything in this file. Where a design constant could narrow them (tree depth, cache-line counts, ROM depth, claim counter, log capacity, `L_TX`) the item is a decision with an owner mark, and the design keeps a path with no bound (the spill rule of section 1.8). Chunked calls of kit COMPACT FRONTEND are a capped fallback (`K_MAX`, Midnight write rule W-5, owner ruling 2026-11-14; the value 2 is a LEAD pick for T15): the cap bounds the effect words of one Compact call, which are the user's own ledger writes, and does not bound a Sherlock run, whose statement is a fixed 3 words.
 
 ## 1. Overview
 
