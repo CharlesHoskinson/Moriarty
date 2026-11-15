@@ -104,7 +104,8 @@ def snapshot(src, dst):
 
 
 def build(snap, target, logs, mem):
-    env = dict(os.environ, CARGO_TARGET_DIR=str(target))
+    # systemd user units do not carry the login PATH: put rustup's cargo first
+    env = dict(os.environ, CARGO_TARGET_DIR=str(target), PATH=f"{H / '.cargo/bin'}:{os.environ.get('PATH', '/usr/bin')}")
     cmd = [str(HEAVY), "--mem", mem, "--name", "t23-mycroft-build", "--",
            "cargo", "build", "--release", "--offline", "--bin", "mycroft-suite"]
     log("build:", " ".join(cmd), f"(cwd {snap}, CARGO_TARGET_DIR {target})")
@@ -115,7 +116,7 @@ def build(snap, target, logs, mem):
         raise SystemExit(f"compile stage: cargo build failed (exit {r.returncode}); see {logs / 'build.log'}")
     b = pathlib.Path(target) / "release/mycroft-suite"
     return {"binary": str(b), "binary_sha256": sha256_file(b), "seconds": round(time.time() - t, 1),
-            "rustc": subprocess.run(["rustc", "--version"], capture_output=True, text=True).stdout.strip()}
+            "rustc": subprocess.run([str(H / ".cargo/bin/rustc"), "--version"], capture_output=True, text=True).stdout.strip()}
 
 
 def compile_suite(binary, suite, out, logs, mem):
@@ -205,6 +206,9 @@ def compare(outcome, np_call, native_refs):
     Returns (verdict, detail): verdict in {"equal", "different", "no-native"}."""
     if not np_call or not np_call["vectors"]:
         return "no-native", "no native Preview transcript for this call"
+    if not native_pass(np_call):
+        # e.g. z02 mintShieldedToSelfTest on 2026-11-14: the recorded lanes came from the zswap output proof
+        return "no-native", "the native Preview transcript of this call did not pass against native (T18 (a))"
     # pair by the native ref each on-chain vector was compared with: a cross-contract transaction orders its
     # ContractCalls caller first on chain, the native ref and the outcome callee first
     by_idx = {}
@@ -496,7 +500,7 @@ def table(rows, meta):
           f"Of the blocked calls, {nonat} also have no passing native Preview transcript (T18 (a) verdict not PASS), "
           "so they stay blocked after T11/T12 until the native run includes them.", "",
           f"Precheck without a proof (compiled W and comm against the native Preview transcript): "
-          f"{pre.count('equal')} equal, {pre.count('different')} different, {pre.count('no-native')} without a native transcript, "
+          f"{pre.count('equal')} equal, {pre.count('different')} different, {pre.count('no-native')} without a passing native Preview transcript, "
           f"of {len(pre)} calls with an emitted mycroft-call file.", "",
           "| program | call | circuit | native | native Preview | compile | precheck | prove | result | reason |",
           "|---|---|---|---|---|---|---|---|---|---|"]
