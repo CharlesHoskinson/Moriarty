@@ -87,6 +87,7 @@ Lead decisions on the open owner items (owner 2026-11-14 12:13: "you decide"). D
 - **AFK picks: confirmed** (N-7, N-8, the X8 class `compact-zkir3-kzg-bls12381-blake2b/1`, `keys_d` with 7 rows, kernel step words as columns, N-11 one ledger per program, the interim child-log rule). **MERGE-WORK 5,400 is confirmed with a condition**: it fits as built (5,284) but not once STACKS and VALUE DIGEST land (at least 5,417, Carbon afk-picks F-5); T8c must keep both under 116 columns with a second CORE split or raise the bound with a measurement.
 - **Preview redeploy: after T12** on the frozen keys, not on the prototype T10 keys.
 - **Moriarty push (O11): after T12**, as one reviewed set of branches; nothing is pushed before then.
+- **All remaining recommendations accepted (owner 2026-11-15):** "go with the recommended answers for the 21 decisions" and "go with the remaining recommendations". Every LEAD PICK and LEAD PICK for T15 recorded up to 2026-11-15 11:45 is OWNER: the 21 e2e decision records (D-016 ... D-085), D-040 (the per-proof blinder draw satisfies OD-13 one-use slots; no slot pool), T11-1 to T11-4 and the odin wrap-leg pick, T12-SLOT15, FP-3 (L bound 2,200), T22 ELD-007 fallback, T16 picks, T23 args map picks. Hard rules are unchanged. T15 presents results, not open picks; LEAD PICKs made after this ruling still need confirmation.
 - **heavy-slot budget: aligned to the slice.** Default `HEAVY_BUDGET_G` 64 (heavy.slice is MemoryHigh 64G, MemoryMax 72G); a job over 64G uses `--exclusive`.
 
 ## Loop rules
