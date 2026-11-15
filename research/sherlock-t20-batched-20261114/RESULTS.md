@@ -108,3 +108,32 @@ Circuit delta (with the GP-3 foreign lift and T8b, neither built): `L` logs `DIG
 Tests (`t20-ledger-test.out`): 9 pass, the two new ones: `W-3 foreign claim` (used once, no foreign state, run members still usable) and `W-3 kind separation` (a run leaf offered as a foreign claim is refused; the control `consumer-control-no-kind-tag` accepts it).
 
 Quint `claimsRoot.qnt` extension (`run-claimsRoot-fix3.out`): 4 foreign tests pass (use once, twice refused, run as foreign refused, foreign as run refused); `Inv` holds; mutant `no_kind_separation` breaks `UsedOnlyVerified`; witness "a foreign claim is used" reached.
+
+## Fix 4: `L_TX` covers every measured entry; chunks are a capped fallback
+
+Rule W-5 in ARCHITECTURE (kit COMPACT FRONTEND call vector and row budget, kit LEDGER CONTRACT write rule); ANC-012 added to `sherlock-anchor-chunks`. `L_TX` stays 1,024, so no key changes (the wrap's 1,026 public inputs are a key constant that T10q is rekeying now).
+
+Sizes (MEASURED here over the 105 ZKIR circuits of `mycroft/tests/compact-suite/native` on branch `mycroft`, and its checked transcripts): largest checked call 474 transcript words, 476 lanes (`d04-coracle` `withdraw`, vector `11-red-withdraw`); largest static impact count 699 words (`a07-historic-merkletree` `test`, which has no passing call). The audit's "largest `L_e` 699 of 1,015" (Mycroft a3) is this static count; 476 lanes is the measured one. With the 9-lane anchor prefix one call carries 1,015 effect words: 474 uses 47 %, 699 uses 69 %. No measured or static entry needs a chunk.
+
+Cap `K_MAX` = 2 at the default 3,600 s intent TTL (LEAD pick, for T15 confirmation), the least of three limits, DERIVED:
+
+| Limit | Rule | Chunks | Label |
+|---|---|---|---|
+| Intent TTL | TTL at least 10 times proving (kit COMPACT FRONTEND); `k` chunks prove in about `k` x 175.5 s warm | `floor(3,600 / 1,755)` = 2 | DERIVED |
+| Block compute | 2 s per block (Preview, MEASURED) over 0.067 to 0.107 s per wrap verification (`ledger-check`, MEASURED off chain) | about 18 | ESTIMATE |
+| Transaction bytes | 1,048,576 (Preview, MEASURED) over about 39 KB per full chunk (6,783 bytes plus about 33 bytes for each of 990 effect words) | about 26 | ESTIMATE |
+
+A plan that sets a longer TTL may raise the cap to `min(floor(TTL / 1,755), 18)`. Above the cap `sherlock plan` refuses the entry with its name, `L_e` and `K_MAX`; below it, it prints `k` and the fee before proving. General Sherlock runs write the fixed 3-word run statement and never chunk, so the cap does not narrow GP-1 to GP-4. The chunk planner itself is not built (ANC-010 tests T3 are open); the rule is a planner requirement.
+
+Writes per logical call of `L_e` effect words (each call is the user's own transaction; per second is the user's call rate `lambda_call`):
+
+| | Calls (wrap proofs) per logical call | Anchor overwrites | Bytes | Label |
+|---|---|---|---|---|
+| Before, measured entry (`L_e` <= 699) | 1 | 0 | 6,783 for `acceptRun`-sized calls | MEASURED |
+| Before, oversized entry | `ceil(L_e / 990)`, no cap (5 to 30 at the code defaults, audit) | `k` | about 39 KB `k`, up to about 1.18 MB at `k` = 30 (over the transaction limit) | ESTIMATE |
+| After, measured entry | 1 | 0 | unchanged | MEASURED |
+| After, 1,016 to 1,980 words | 2 | 2 | about 79 KB | ESTIMATE |
+| After, above 1,980 words (at TTL 3,600 s) | 0: refused at plan time | 0 | 0 | DERIVED |
+| Per second, before and after | `k` x `lambda_call` with `k` <= 2 after | | | DERIVED |
+
+Quint `chunkCap.qnt` (`run-chunkCap.out`): 3 design tests pass (474, 699, 1,015 in one call with no anchor write; 1,016 and 1,980 in 2 chunks; 1,981 and 5,000 refused); `Inv` (`MeasuredEntriesOneCall`, `ChunksAtMostCap`, `NoSilentTruncation`, `TtlCoversProving`, `RefusedAtPlanTime`) holds; mutants `no_cap`, `small_ltx` (the 256-word assumption), `cap_truncate`, `cap_four` each break it; witnesses (a 2-chunk plan, a refused plan) reached.

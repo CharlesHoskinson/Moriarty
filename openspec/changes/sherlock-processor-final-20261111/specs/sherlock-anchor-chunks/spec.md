@@ -28,6 +28,13 @@ One logical call SHALL run as `k` contract calls in one intent of one transactio
 - **WHEN** another intent places a call of the contract between two chunks
 - **THEN** that call fails on the anchor lock
 
+### Requirement: ANC-012 One call covers every measured entry; chunks are a capped fallback
+`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`. `K_MAX` SHALL be `min(floor(TTL / (10 x 175.5 s)), 18)`, which is 2 at the default intent TTL of 3,600 s (Midnight write rule W-5, owner ruling 2026-11-14; LEAD pick for T15 confirmation).
+
+#### Scenario: Measured entry, fallback and refusal
+- **WHEN** entries of 474, 699, 1,016 and 1,981 effect words are planned at TTL 3,600 s
+- **THEN** the first two run as one call with no anchor write, the third runs as 2 chunks, the fourth is refused at plan time, and no plan drops an effect word (Quint `chunkCap.qnt`: `MeasuredEntriesOneCall`, `ChunksAtMostCap`, `NoSilentTruncation`, `TtlCoversProving`, `RefusedAtPlanTime`)
+
 ### Requirement: ANC-005 Mode 1F is the default
 Mode 1F SHALL put all chunks in the fallible part of one segment. A failure of a middle chunk SHALL leave the contract state unchanged. The transaction SHALL be included with its fee paid.
 
