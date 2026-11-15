@@ -329,3 +329,9 @@ MID-002 (`sherlock-processor-final-20261111` `sherlock-midnight-side`) names the
 - SLC-004 and MID-002 status: per-entry key readback BUILT in t23-suite bdcc5126c. The four-entry devnet deploy is in the box request.
 - BAT-005 and ANC-012 status: cap BUILT in openvm rekey-int 349b1e5 (`chunk_cap.rs`). The fee print is still TO BUILD.
 - ECC-007 status: MET in mycroft-factory b119a63e3. ECC-010 source: mycroft-factory b119a63e3 `compiler/SUITE-COVERAGE.md:5`, which `factory/REPORT.md:9` repeats.
+
+### Correction to the FAL-FIX answer to F-leaf-proving-Q1 (Lean pins), and FAL-FIX follow-ups
+- The Lean pins do not all hold unchanged. `lfp003_bound_code` (`leaf-proving/lean/LeafProving/Constants.lean:23`) still holds. `lfp003_admits_outside_bucket` (`:35`) records the F-B-LFP-1 defect: 6 and 7 app AIRs pass the old bound. With the new LFP-003 text the oracle refuses every count outside 5 or 8 (FP-1 not counted). So the oracle lane must change the admit guard to `inBucket` and replace the pin with a refusal pin for 6 and 7 app AIRs. It fails on the old guard and passes on the new one.
+- FAL-LEDGER-VERIFICATION-1 follow-up: t23-suite 93987152e. The deploy readback now accepts the SLC-001 ledger, which has `claim_roots` in place of `verified_roots`. MEASURED offline: the t10a dry-run with the T20 four-entry build passes.
+- FAL-COMPACT-COMPILATION-3 scope: the compiler (Rust) and the Lean oracle are fixed in b119a63e3. The KRS definition, the kink toy cases, the Quint model and the replay projector still map keccak256 to `tier3`, and the KRS lane holds live hunks in those files. Until they are synced, `krs kink compare` and the Lean-Quint replay differ on keccak cases.
+- FAL-NETOPS-4 behaviour: a `sending`, timed-out or no-verdict call has no block hash, so it stays `pending` (exit 5) until its intent TTL ends. After the TTL it fails the 5-minute reuse rule of FRC-003 and is proved again.
