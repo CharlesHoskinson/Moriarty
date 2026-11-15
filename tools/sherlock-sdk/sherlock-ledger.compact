@@ -38,6 +38,8 @@ circuit prologue(): [] {
   assert(anchor != (0 as Field), "anchor unset");
 }
 
+// acceptRun: one run that its own user submits and pays for (Midnight write rule W-1, T20). Jobs that
+// an operator proves and settles go through one acceptCollection per epoch, never one acceptRun per job.
 export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
   prologue();
   const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);

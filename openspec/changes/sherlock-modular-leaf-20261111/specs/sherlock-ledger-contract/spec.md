@@ -10,6 +10,8 @@ The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: 
 ### Requirement: LDG-002 `acceptRun` settles a run claim at most once
 `acceptRun(C_P, input_pub, outcome_pub)` SHALL verify the wrap proof whose effect words carry the three values (FPR-010). Plain `prog_d` and `n_steps` SHALL NOT be call data (ZK-002, FPR-013); `C_P` is LEAD F-7 under N-11, OWNER. It SHALL compute `claim_pub = transientHash([C_P, input_pub, outcome_pub])` and SHALL refuse a `claim_pub` that is already in `runs`.
 
+Under the Midnight write rule (owner ruling 2026-11-14, row T20) `acceptRun` SHALL be the entry for one run that its own user submits and pays for. A job that an operator proves and settles SHALL NOT be settled by `acceptRun`; it SHALL settle through the epoch collection of LDG-006.
+
 #### Scenario: Replay of a settled run
 - **WHEN** a second `acceptRun` call carries a `claim_d` that is already in `runs`, from any partition
 - **THEN** the call is refused, and the Quint invariant `ClaimSettledOnceAcrossEntries` holds
@@ -38,3 +40,10 @@ There SHALL be no `descend` entry (ARCHITECTURE section 1.11, FP-3 fact 3, owner
 #### Scenario: Seal premise or JOIN offered as a claim
 - **WHEN** an `ADM` or `VIEW` head, or a `JOIN` root, is offered to `openClaim`
 - **THEN** the call is refused (tests `ledger_open_premise_as_claim`, `ledger_open_join_as_claim`), and a foreign claim opens into `foreign` (positive `ledger_foreign_claim_open`)
+
+### Requirement: LDG-006 Operator-settled jobs settle by one collection per epoch
+When an operator settles proved jobs, the operator SHALL JOIN the run SETs of one epoch and SHALL submit one `acceptCollection` call for the epoch. An epoch with no job SHALL write nothing. The operator SHALL make at most one ledger write per epoch, and the number of ledger writes SHALL NOT grow with the number of jobs.
+
+#### Scenario: Many jobs in one epoch
+- **WHEN** an operator proves four jobs in one epoch and a user submits its own run
+- **THEN** the ledger receives two writes, one `acceptCollection` for the four jobs and one `acceptRun` for the user's run (Quint `epochSettle.qnt`, `pos_four_jobs_one_write`, invariants `OperatorWritesPerEpochAtMostOne` and `LedgerWritesBounded`), and a job never enters `runs` (`NoJobInRuns`)
