@@ -115,7 +115,7 @@ Verification: the UIREQ retention map (each UIREQ ID: retained by reference, map
 
 #### Scenario: Status of EUI-009
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: OPEN. No UIREQ requirement is retired by this change. UIREQ-003, 004, 005, 008, 014 and 016 (lexical scope, evaluation order, recursion, matching, resumable execution) have host tests (`crates/mori-core/tests/sherlock_original_ears_host_positive.rs:196`, `:257`, `:315`; `sherlock_technical_chunks_positive.rs:255`) and no proof evidence; they stay in force by reference. LEAD PICK for T15 (D-025). References: UIREQ-001 to UIREQ-035.
+- **THEN** it reads: OPEN. No UIREQ requirement is retired by this change. UIREQ-003, 004, 005, 008, 014 and 016 (lexical scope, evaluation order, recursion, matching, resumable execution) have host tests (`crates/mori-core/tests/sherlock_original_ears_host_positive.rs:196`, `:257`, `:315`; `sherlock_technical_chunks_positive.rs:255`) and no proof evidence; they stay in force by reference. OWNER 2026-11-15 (D-025). References: UIREQ-001 to UIREQ-035.
 
 ### Requirement: EUI-010 The interpreted family covers every enabled rule
 EUI-010: The interpreted-family leaf SHALL prove each of the 120 enabled step rules of decision M-4.

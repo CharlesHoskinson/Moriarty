@@ -94,7 +94,7 @@ The Sherlock machine has two rule families under one universal key set (EUI-001,
 
 ## Decisions
 
-`architecture/decisions/INDEX.md` lists every record with its authority. Hard rules: D-001 to D-015 and D-018 (OWNER). Records marked LEAD PICK for T15 are proposals that the owner confirms or changes at the interface freeze; the design stays open until then (D-015). Conflicts between older texts that this change resolves:
+`architecture/decisions/INDEX.md` lists every record with its authority. Hard rules: D-001 to D-015 and D-018 (OWNER). The owner accepted the 21 records that were LEAD PICK for T15 on 2026-11-15 ("go with the recommended answers for the 21 decisions"); they are OWNER records now. Params, keys and key handling stay open until the end-to-end prototype (D-015). Conflicts between older texts that this change resolves:
 
 | Conflict | Resolution | Record |
 |---|---|---|
@@ -327,10 +327,10 @@ The gap list of `architecture/COVERAGE.md` (section 5) is the full list. The ite
 2. The interpreted family has 7 built rules of 120 (EUI-010). GP-1 at the proving layer is shown on a subset only.
 3. T8c has no LOOP row: the MERGE-WORK width with STACKS and VALUE DIGEST (4,988 columns MEASURED without them, 5,121 DERIVED with them, bound 5,400; not MEASURED), the X8 in-circuit verifier, `L` over SET (LPC-002, LPC-003, GPH-008, BAT-009). The `L` collection form is a recorded second rekey after T25 and before T15 (D-049).
 4. A program with SHA-256 and keccak256 has no R_SL proof (EKT-004, D-024). The owner has not seen this limit.
-4a. The blinding-slot pool of OD-13 and PRD-002 is not built (D-040). The owner question for T15: does a per-proof draw satisfy "one-use slots".
+4a. OD-13 one-use slots: the owner ruled on 2026-11-15 that the per-proof draw of the daemon satisfies them; no slot pool is built (D-040).
 5. The zero mismatch of the T23 dry run is vacuous (ECS-012); completion needs the evidence set of every call (ECS-014).
 6. Much of the evidence is uncommitted: the spec-audit change, the Mycroft factory work, T11, FP-3, slot 15, MAP.md. A status in this change that cites a worktree says so.
-7. Records marked LEAD PICK for T15 (INDEX.md) can change at the freeze; D-022 (run form) changes what "works on Preview" means.
+7. The 21 former LEAD PICK for T15 records are OWNER since 2026-11-15; D-022 (run form) sets what "works on Preview" means.
 
 ## Migration and archive
 

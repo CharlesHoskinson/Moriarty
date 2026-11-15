@@ -68,7 +68,7 @@ Verification: test `eq_zk` through the daemon (Moriarty `t11-zk` 71c4c001b `tool
 
 #### Scenario: Status of PDM-005
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT. No recorded run of `eq_zk`. Owner lane: t11-zk. Evidence: Moriarty `t14b` 5e54263da `tools/sherlock-wrap-gpu/src/serve.rs:114` to `:117` (fresh `OsRng` per proof). No blinding-slot pool exists in the code. D-040 keeps OD-13 and PRD-002 as stated (lead ruling 2026-11-15: a LEAD PICK cannot override an owner decision): the blinding-slot pool is TO BUILD, owner lane T11; the per-proof draw is the present state of the code. Astra-B review R-26.
+- **THEN** it reads: BUILT. No recorded run of `eq_zk`. Owner lane: t11-zk. Evidence: Moriarty `t14b` 5e54263da `tools/sherlock-wrap-gpu/src/serve.rs:114` to `:117` (fresh `OsRng` per proof). No blinding-slot pool exists in the code. D-040 keeps OD-13 and PRD-002; owner ruling 2026-11-15: the per-proof draw satisfies one-use slots, so no slot pool is built. Astra-B review R-26.
 
 ### Requirement: PDM-006 The daemon serves only the loaded key set
 PDM-006: If a request names a key manifest sha256 that differs from the key set the daemon loaded, then the prover daemon SHALL refuse the request.

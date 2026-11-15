@@ -82,7 +82,7 @@ Verification: T17 (a) through `t17.sh` (exists). MISSING: the runner default and
 
 #### Scenario: Status of BAT-006
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: PARTIAL. References: ANC-012 (default intent TTL 3,600 s; below 1,755 s no chunk); SCL-007 bounds an explicit value. Decision D-074 (LEAD PICK for T15). Evidence: `t17-preview@9e1e7f398:research/sherlock-t17-preview-20261114/t17.sh:19` sets 3,600 s only through `t17.sh`; runner default `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:192` is 14,400 s (ruling O6, LOOP.md:75); Preview `global_ttl` 1,209,600 s (`RUNBOOK.md:73`). Check: T17 (a) through `t17.sh` (exists). MISSING: the runner default and a test of a direct start.
+- **THEN** it reads: PARTIAL. References: ANC-012 (default intent TTL 3,600 s; below 1,755 s no chunk); SCL-007 bounds an explicit value. Decision D-074 (OWNER 2026-11-15). Evidence: `t17-preview@9e1e7f398:research/sherlock-t17-preview-20261114/t17.sh:19` sets 3,600 s only through `t17.sh`; runner default `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:192` is 14,400 s (ruling O6, LOOP.md:75); Preview `global_ttl` 1,209,600 s (`RUNBOOK.md:73`). Check: T17 (a) through `t17.sh` (exists). MISSING: the runner default and a test of a direct start.
 
 ### Requirement: BAT-007 Membership data for each submitter
 BAT-007: When an epoch closes, the epoch operator SHALL give the submitter of each job the slot index and the 20 sibling words of the job's claim.
@@ -138,7 +138,7 @@ Verification: MISSING (no operator code, not in a Quint model); to build.
 
 #### Scenario: Status of BAT-010
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: ERT-009, UC-9 (governance); BAT-001 stays the upper bound. The two budgets are parameters; 175.5 s warm is the DERIVED collection proof time. Under decision D-077 (LEAD PICK for T15). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70,86`. Check: MISSING (no operator code, not in a Quint model).
+- **THEN** it reads: TO BUILD. References: ERT-009, UC-9 (governance); BAT-001 stays the upper bound. The two budgets are parameters; 175.5 s warm is the DERIVED collection proof time. Under decision D-077 (OWNER 2026-11-15). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70,86`. Check: MISSING (no operator code, not in a Quint model).
 
 ### Requirement: BAT-011 No run starts that cannot land in its era
 BAT-011: If the proving time plus the inclusion time of a new run ends after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.

@@ -45,7 +45,7 @@ Verification: tests `rsl_air_count_in_universal_leaf_bucket` (openvm `rekey-chip
 
 #### Scenario: Status of LFP-003
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT; no MEASURED run of the keccak tests on file (audit A3). GAP against GP-001: a program with both hash kits has no proving route. D-024 (slice A, LEAD PICK for T15) holds this as a temporary limit; a route (a second chip-set bucket or a split) is open. Owner lane: rekey-chips. Astra-B review R-08, R-09. Evidence: openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/rsl/trace.rs:49` sets `MAX_APP_AIRS = 8`; the assert is at `trace.rs:137`; a program with SHA-256 and Keccak-256 is refused at `trace.rs:114` (`~/.cache/rekey-t11/LIST.md:34`).
+- **THEN** it reads: BUILT; no MEASURED run of the keccak tests on file (audit A3). GAP against GP-001: a program with both hash kits has no proving route. D-024 (slice A, OWNER 2026-11-15) holds this as a temporary limit; a route (a second chip-set bucket or a split) is open. Owner lane: rekey-chips. Astra-B review R-08, R-09. Evidence: openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/rsl/trace.rs:49` sets `MAX_APP_AIRS = 8`; the assert is at `trace.rs:137`; a program with SHA-256 and Keccak-256 is refused at `trace.rs:114` (`~/.cache/rekey-t11/LIST.md:34`).
 
 ### Requirement: LFP-004 App key bounds
 LFP-004: If an app verifying key has more than 30,000 columns, then the leaf harness SHALL refuse the key.

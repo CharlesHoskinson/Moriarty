@@ -141,7 +141,7 @@ Verification: CLI test T-COMPILE-REFUSE (a request with one accepted circuit and
 
 #### Scenario: Status of ECC-013
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: codes BUILT (`pipeline.rs:125-137`), command OPEN. No partial output is a LEAD PICK for T15 of this change. References: MYC-FE-002, MYC-FE-011.
+- **THEN** it reads: codes BUILT (`pipeline.rs:125-137`), command OPEN. No partial output is an owner-accepted decision of this change (2026-11-15). References: MYC-FE-002, MYC-FE-011.
 
 ### Requirement: ECC-014 Jubjub inputs are typed tape words
 ECC-014: When a circuit has an input of a Jubjub point type or a Jubjub scalar type, the Mycroft compiler SHALL read the input as tape words in the native public-input encoding.

@@ -138,4 +138,4 @@ Verification: MISSING (no migration drill, no model); to build.
 
 #### Scenario: Status of EGV-010
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: T22 O11 (recommended option, not ruled): LEAD PICK for T15 under decision D-077. EGV-007 holds: no verifier-key change on a deployed contract. Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:21` (ledger a2b3012: `VerifierKeyInsert` is maintenance). Check: MISSING (no migration drill, no model).
+- **THEN** it reads: TO BUILD. References: T22 O11 (recommended option, accepted by the owner 2026-11-15): decision D-077. EGV-007 holds: no verifier-key change on a deployed contract. Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:21` (ledger a2b3012: `VerifierKeyInsert` is maintenance). Check: MISSING (no migration drill, no model).
