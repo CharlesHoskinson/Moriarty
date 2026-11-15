@@ -23,6 +23,18 @@ def sh(*a):
     return subprocess.run(a, capture_output=True, text=True).stdout.strip()
 
 
+def status(have_new):
+    log = H / ".cache/t23/logs/partA.log"
+    text = log.read_text(errors="replace") if log.exists() else ""
+    if "PARTA DONE" in text and have_new:
+        return "COMPLETE"
+    stops = [l for l in text.splitlines() if "; stop" in l]
+    if stops:
+        return "STOPPED: " + stops[-1].split(" ", 2)[-1]
+    return ("IN PROGRESS: the rerun unit t23-partA runs one program at a time, each gated on the public Preview indexer "
+            "(it returned 502, 503 or timeouts for long stretches) and on a heavy slot")
+
+
 def main():
     out = pathlib.Path(sys.argv[1])
     probe = json.loads((A / "probe.json").read_text())
@@ -45,7 +57,7 @@ def main():
          "proof server 9.0.1, node 2.1.101, indexer 4.4.101), the same harness (tools/preview/preview.mjs, compare.mjs, "
          "report.py of mycroft c1c78e66f, run from a copy under ~/.cache/t23/partA so the 2026-11-14 receipts are not "
          "touched) and the same funded wallet OP-PV-WALLET. Preview only. All numbers are MEASURED.", "",
-         f"Status: {'COMPLETE' if have_new else 'BLOCKED: the public Preview indexer is down (502, 503, timeouts); the rerun unit t23-partA stays armed and gates each program on the indexer'}.", "",
+         f"Status: {status(have_new)}.", "",
          "## Chain after the hard fork", "",
          f"Zero-transaction probe at {idn['at']} (tools/t23-suite/preview_probe.py): genesis `{idn['genesis']}` (the pinned "
          f"Preview genesis), node `{idn['system_version']}`, spec {idn['specVersion']}, ledger {idn['ledgerVersion']}, tip "
