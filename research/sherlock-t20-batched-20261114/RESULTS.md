@@ -56,3 +56,36 @@ Writes for `N` operator jobs per epoch of length `T` seconds, at job rate `lambd
 Example (DERIVED): one prover at its ceiling of 492 jobs per day writes 492 transactions and 3.34 MB per day before; with a 3,600 s epoch it writes at most 24 transactions and about 163 KB per day after.
 
 Quint: `epochSettle.qnt` (`run-epochSettle.out`): 3 design tests pass; `Inv` (`OperatorWritesPerEpochAtMostOne`, `LedgerWritesBounded`, `JobsSettledAtClose`, `NoJobInRuns`) holds on 3,000 samples of 14 steps; the mutants `per_job_accept_run`, `collection_drops_job` and `split_epoch` each break `Inv` and their attack tests pass; the batching witness (one collection of at least three jobs beside a user run) is reached.
+
+## Fix 2: `openClaim` replaced by membership against the collection root
+
+Rule W-2 in ARCHITECTURE kit LEDGER CONTRACT; LDG-001, LDG-003, LDG-004, LDG-005, LW-009 and DCD-004 amended. Contract `tools/sherlock-sdk/sherlock-ledger.compact` (batched form): `openClaim` removed, `verified_roots` replaced by `claim_roots` (one `claims_root` per epoch), read entries `rootAccepted` and `runAccepted` added. The T10 contract that T10 and T17 measured is kept byte-equal as `sherlock-ledger-t10.compact` (sha256 `4f002887...`, the source T17 builds), and `sherlock-ledger-build.sh` and the T10 tests use it, so the T17 Preview path is untouched.
+
+Picks (LEAD, for T15 confirmation):
+- Collection statement `[reg_pub, claims_root]` in place of `[reg_pub, set_pub]` (I-24, LW-009, DCD-004); `set_root` stays private. The compiled `acceptCollection` is byte-equal to the T10 form up to the argument name (48 lanes, `claims_root` at 29 and 43, MEASURED), and `acceptRun.zkir` and its compiled verifier key are byte-equal to the T10 build (MEASURED).
+- Claims tree: fixed depth `D_C` = 20, run leaf `claim_pub`, node `H2(l, r)` (the `PATH` form of the deferred log; it fixes the placeholder in `iface.rs`), empty slot 0.
+- Read entries deployed with their own compiled keys (native proofs), not the wrap key. The runtime refuses to bind a callee whose deployed key differs from the compiled one (test `W-2 read entry key`); on chain a wrap-keyed read entry would cost a 175.5 s wrap proof per consumer use.
+- The at-most-once rule for collection claims (I-21, FROZEN under FP3-3 (a)) moves to the consumer's nullifier keyed by `claim_pub` alone.
+
+Circuit delta (no code on this branch; it belongs to T8b "L over SET", which is not built): the `L` collection form logs the run entries of check (i) for each member head, `H2` entries for the tree (about `2N + 20` for `N` members) and two `PUB` entries for lanes 29 and 43. The wrap is unchanged: the E5 decoder already replays `H2`, `SPONGE`, `PATH` and binds a lane to a logged value with `PUB`. Keys: the T10q key set does not change for T20; the `L` key changes when T8b builds the collection form, as it would without T20. The `openClaim` opening form of `L` (`R_SET`, 5 lane pairs) becomes unused; it can stay until the T12 freeze. Log capacity, ESTIMATE: about 14 members per collection fit in `V = 256` values; the rest go to tier E with no bound (GP-1, GP-4).
+
+Consumer (`tools/sherlock-sdk/sherlock-claim-consumer.compact`, MEASURED from its ZKIR): `useRunClaim` 64 lanes, 23 `transientHash` (claim, 20 path nodes, nullifier); `rootAccepted` 17 lanes, preimage 195 bytes, no state change; `runAccepted` 30 lanes, 403 bytes, no state change.
+
+Writes for a collection of `N` claims, each used by one consumer:
+
+| | SherlockLedger transactions | Bytes on chain | Wrap proofs | SherlockLedger state growth | Label |
+|---|---|---|---|---|---|
+| Before, per claim used | 1 `openClaim` | about 6,897 | 1 (175.5 s) | 345 bytes | ESTIMATE (bytes), MEASURED (state, runtime) |
+| Before, per collection | `1 + N` | about 6,797 + 6,897 `N` | `1 + N` | 180 + 345 `N` | DERIVED |
+| Before, per second | `1/T + lambda_use` | about 6,897 `lambda_use` + 6,797 / `T` | same as transactions | 345 `lambda_use` | DERIVED |
+| After, per claim used | 0 | 0 on SherlockLedger; the consumer's own call adds one native `rootAccepted` read and 20 hashes in its own proof | 0 | 0 | MEASURED (lanes, no state change), ESTIMATE (native proof bytes) |
+| After, per collection | 1 | about 6,797 | 1 | 180 bytes | ESTIMATE |
+| After, per second | `1 / T` | about 6,797 / `T` | `1 / T` | 180 / `T` | DERIVED |
+
+The consumer's own nullifier insert (one set entry in the consumer's state) is part of the consumer's call, which its user makes and pays for anyway: one write per user call, the OK class of the audit.
+
+Data availability and epoch wait: see W-2 in ARCHITECTURE. Each job's submitter gets its slot and path with its receipt; the operator publishes the epoch's leaf list (32 bytes per claim) off chain; a withheld list delays use and never admits a non-member. Wait: at most the epoch (3,600 s) plus the collection proof (175.5 s warm for `L` to wrap, DERIVED, plus JOIN nodes) plus inclusion.
+
+Tests (`t20-ledger-test.out`, compiled contracts, compact-runtime 0.21.0): 7 pass: entries (no `openClaim`), collection write and refusals (replay, other registry), consumer use once with the ledger unchanged, refusals (unaccepted root, forged outcome, another slot, flipped index bit), one use across two roots and `runs`, two controls that accept the defect (root-keyed nullifier, no root read), read-entry key binding.
+
+Quint `claimsRoot.qnt` (`run-claimsRoot.out`, 4,000 samples of 16 steps): 8 design tests pass; `Inv` (`LedgerWritesBounded`, `UsedOnlyVerified`, `UsedOncePerConsumer`, `UseAfterEpochClose`) holds; mutants `per_claim_open`, `root_keyed_nullifier`, `no_root_check`, `unbound_root` each break it; witnesses reached: one claim used by two consumers, one claim in two roots, a withheld list. The model already carries the leaf kind for fix 3.

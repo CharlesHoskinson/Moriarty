@@ -1,4 +1,4 @@
-// T10a compiled-contract tests of SherlockLedger (sherlock-ledger.compact, kit LEDGER CONTRACT, FP-3 facts 1 to 3,
+// T10a compiled-contract tests of SherlockLedger (sherlock-ledger-t10.compact, the T10 form; kit LEDGER CONTRACT, FP-3 facts 1 to 3,
 // anchor prologue). compactc 0.36.0, compact-runtime 0.21.0, ledger 9.1.0.1 (for the call-vector words).
 // Build first: tools/sherlock-sdk/sherlock-ledger-build.sh [DIR]
 // Run: LEDGER_BUILD=DIR [SHERLOCK_SDK_ROOT=~/.cache/xc9/sdk] [LANES_OUT=FILE] [T10A_FORBID=FILE] node --test sherlock-ledger.test.mjs
@@ -211,7 +211,7 @@ async function lw009(mod, name, extra = []) {
   await call(s, 'acceptCollection', REG, SET, ...extra);
   const after = s.cs.data.state.asArray().map(c => contractStateWords({data: {state: c}}).map(String).sort().join());
   const changed = after.map((w, i) => w === before[i] ? null : i).filter(i => i !== null);
-  const vrIdx = 2; // field order: anchor, runs, verified_roots, reg_root (sherlock-ledger.compact)
+  const vrIdx = 2; // field order: anchor, runs, verified_roots, reg_root (sherlock-ledger-t10.compact)
   if (cells.length !== 4) failures.push(`${cells.length} state fields`);
   if (JSON.stringify(changed) !== JSON.stringify([vrIdx])) failures.push(`fields changed by acceptCollection: ${changed}`);
   const added = new Set(after[vrIdx].split(',')); for (const w of before[vrIdx].split(',')) added.delete(w);

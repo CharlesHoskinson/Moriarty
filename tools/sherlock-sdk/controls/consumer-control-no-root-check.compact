@@ -1,0 +1,52 @@
+// T20 CONTROL (no rootAccepted read; must accept a forged path). Derived from the example consumer of SherlockLedger claims (Midnight write rule W-2, W-3). A Compact contract proves,
+// inside its own call, that a claim is a member of a claims_root that SherlockLedger accepted, and keeps
+// its own nullifier, so SherlockLedger is never written per claim. The claim list and the paths stay off
+// chain with the operator or a data-availability store; the consumer gets its path from there.
+// Tree (see sherlock-ledger.compact): depth D_C = 20, run leaf = claim_pub, foreign leaf =
+// transientHash([SHK_CLAIM_FGN, fclaim_pub]), node = transientHash([l, r]), index bit 1 = running value on
+// the right.
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+contract SherlockLedger {
+  circuit rootAccepted(claims_root: Field): [];
+  circuit runAccepted(claim_pub: Field, outcome_pub: Field): [];
+}
+
+export sealed ledger sherlock: SherlockLedger;
+export ledger used: Set<Field>;               // this consumer's nullifiers, keyed by the claim alone
+
+witness claimSiblings(): Vector<20, Field>;
+witness claimIndexBits(): Vector<20, Boolean>;
+
+constructor(l: SherlockLedger) { sherlock = disclose(l); }
+
+circuit node(cur: Field, sib: Field, right: Boolean): Field {
+  return transientHash<Vector<2, Field>>([right ? sib : cur, right ? cur : sib]);
+}
+
+circuit rootOf(leaf: Field): Field {
+  return fold(node, leaf, claimSiblings(), claimIndexBits());
+}
+
+// One use per claim: the nullifier is keyed by the claim's public key alone, never by the root, the path
+// or the source, so a claim in two epochs' roots, or in runs and in a root, is used once.
+circuit useOnce(key: Field): [] {
+  const nul = transientHash<Vector<2, Field>>([6047741323183327679409004693587 as Field, key]); // SHK_CLAIM_NUL
+  assert(!used.member(disclose(nul)), "claim already used");
+  used.insert(disclose(nul));
+}
+
+// A run claim from an accepted collection (operator-settled, W-1).
+export circuit useRunClaim(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  const claim_pub = transientHash<Vector<3, Field>>([c_p, input_pub, outcome_pub]);
+  const root = rootOf(claim_pub);   // CONTROL: the root is never checked against SherlockLedger
+  useOnce(claim_pub);
+}
+
+// A run its own user settled by acceptRun: read from runs, same nullifier.
+export circuit useSettledRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  const claim_pub = transientHash<Vector<3, Field>>([c_p, input_pub, outcome_pub]);
+  sherlock.runAccepted(disclose(claim_pub), disclose(outcome_pub));
+  useOnce(claim_pub);
+}

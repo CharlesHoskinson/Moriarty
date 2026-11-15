@@ -1,0 +1,61 @@
+// SherlockLedger: the LEDGER CONTRACT kit (ARCHITECTURE 1.11 FP-3, kit LEDGER CONTRACT), the
+// design acceptRun of T10a. One contract, one runs map for acceptRun and openClaim, so a claim
+// settles at most once whichever entry inserts it (FP-3 fact 3, owner ruling FP3-3 (a)).
+//
+// Each entry's verifier key is the one universal wrap key, never the compiled key of the circuit
+// below. The circuits here fix only the public transcript (the call vector of 2 + L_TX lanes):
+// lane 0 binding_input, lane 1 comm, then the anchor prologue, then the effect words.
+//
+// Anchor prologue (N-11, OD-16, PR 7.3; T9 LEAD pick for this contract): field 0 is the anchor
+// cell. Every entry starts with one uncached read of it, so lanes 2 to 9 are the same template
+// words in every entry (0x30, 0x50, 1, 1, 0, 0x0c, 1, -2) and the read value sits at lane 10,
+// which the wrap pins to a_in, the output of the anchor DIGEST(SHK_PROGC) entry of the
+// reservation R. The constructor writes the anchor once: A_0 = A_k = C_L, the ledger's own
+// identity DIGEST(SHK_PROGC, anchor_d2), not the C_P of any run (a universal ledger holds no one
+// run's C_P). No entry writes it, because the ledger has no chunked entry, so every call is
+// mode ORD with a_in = a_out = anchor.
+//
+// Plain prog_d and n_steps are never call data or ledger state (ZK-002, FP-6): acceptRun takes
+// the run statement [C_P, input_pub, outcome_pub]; only claim_pub = transientHash of the three
+// and outcome_pub reach the transcript.
+pragma language_version >= 0.22;
+import CompactStandardLibrary;
+
+export sealed ledger anchor: Field;           // field 0: the anchor cell (A_0 = A_k)
+export ledger runs: Map<Field, Field>;        // claim_pub -> outcome_pub
+export ledger verified_roots: Set<Field>;     // set_pub of accepted collections
+export sealed ledger reg_root: Field;         // reg_pub of the registry root (history rule N-8 open)
+
+constructor(a0: Field, reg: Field) {
+  const a = disclose(a0);
+  assert(a != (0 as Field), "zero anchor");
+  anchor = a;
+  reg_root = disclose(reg);
+}
+
+// The prologue: one read of the anchor cell. The wrap requires its lane to equal a_in.
+circuit prologue(): [] {
+  assert(anchor != (0 as Field), "anchor unset");
+}
+
+export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  prologue();
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}
+
+export circuit acceptCollection(reg_pub: Field, set_pub: Field): [] {
+  prologue();
+  assert(reg_root == disclose(reg_pub), "other registry root");
+  assert(!verified_roots.member(disclose(set_pub)), "collection already accepted");
+  verified_roots.insert(disclose(set_pub));
+}
+
+export circuit openClaim(set_pub: Field, c_p: Field, input_pub: Field, outcome_pub: Field): [] {
+  prologue();
+  assert(verified_roots.member(disclose(set_pub)), "collection not accepted");
+  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
+  assert(!runs.member(k), "claim already settled");
+  runs.insert(k, disclose(outcome_pub));
+}

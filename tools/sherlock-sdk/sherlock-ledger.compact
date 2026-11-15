@@ -1,29 +1,40 @@
-// SherlockLedger: the LEDGER CONTRACT kit (ARCHITECTURE 1.11 FP-3, kit LEDGER CONTRACT), the
-// design acceptRun of T10a. One contract, one runs map for acceptRun and openClaim, so a claim
-// settles at most once whichever entry inserts it (FP-3 fact 3, owner ruling FP3-3 (a)).
+// SherlockLedger: the LEDGER CONTRACT kit (ARCHITECTURE 1.11 FP-3, kit LEDGER CONTRACT), batched form of
+// row T20 (Midnight write rule, owner ruling 2026-11-14: no write per event; one root per epoch, item data
+// off chain and checked against the root).
 //
-// Each entry's verifier key is the one universal wrap key, never the compiled key of the circuit
-// below. The circuits here fix only the public transcript (the call vector of 2 + L_TX lanes):
-// lane 0 binding_input, lane 1 comm, then the anchor prologue, then the effect words.
+// Writes: acceptRun writes one runs entry for one run its own user submits and pays for (W-1).
+// acceptCollection writes one claims_root per epoch (W-1, W-2). Nothing is written per claim: openClaim and
+// the foreign map are removed (W-2, W-3). A consumer contract proves membership of its claim in an accepted
+// claims_root inside its own call and keeps its own nullifier; it reads this ledger only through the
+// read entries rootAccepted and runAccepted, which write nothing.
 //
-// Anchor prologue (N-11, OD-16, PR 7.3; T9 LEAD pick for this contract): field 0 is the anchor
-// cell. Every entry starts with one uncached read of it, so lanes 2 to 9 are the same template
-// words in every entry (0x30, 0x50, 1, 1, 0, 0x0c, 1, -2) and the read value sits at lane 10,
-// which the wrap pins to a_in, the output of the anchor DIGEST(SHK_PROGC) entry of the
-// reservation R. The constructor writes the anchor once: A_0 = A_k = C_L, the ledger's own
-// identity DIGEST(SHK_PROGC, anchor_d2), not the C_P of any run (a universal ledger holds no one
-// run's C_P). No entry writes it, because the ledger has no chunked entry, so every call is
-// mode ORD with a_in = a_out = anchor.
+// Wrap-key entries (acceptRun, acceptCollection): the verifier key is the one universal wrap key. Their
+// circuits fix only the public transcript (the call vector of 2 + L_TX lanes): lane 0 binding_input, lane 1
+// comm, then the anchor prologue, then the effect words.
+// Read entries (rootAccepted, runAccepted): deployed with their own compiled Compact keys (T20 LEAD pick, for
+// T15 confirmation), so a consumer's call costs a native proof, not a wrap proof. They write nothing, so
+// the anchor lock (needed only by a chunked entry, and this ledger has none) is not affected.
 //
-// Plain prog_d and n_steps are never call data or ledger state (ZK-002, FP-6): acceptRun takes
-// the run statement [C_P, input_pub, outcome_pub]; only claim_pub = transientHash of the three
-// and outcome_pub reach the transcript.
+// Anchor prologue (N-11, OD-16, PR 7.3; T9 LEAD pick for this contract): field 0 is the anchor cell. Every
+// wrap-key entry starts with one uncached read of it, so lanes 2 to 9 are the same template words in every
+// entry (0x30, 0x50, 1, 1, 0, 0x0c, 1, -2) and the read value sits at lane 10, which the wrap pins to a_in.
+// The constructor writes the anchor once. No entry writes it, because the ledger has no chunked entry.
+//
+// Plain prog_d and n_steps are never call data or ledger state (ZK-002, FP-6). set_root never reaches the
+// ledger: the collection statement is [reg_pub, claims_root] (T20 LEAD pick, for T15 confirmation).
+//
+// claims_root (W-2): the root of a binary Merkle tree of fixed depth D_C = 20 over Fr, built by L from the
+// members of the collection's set_root. A run claim's leaf is its claim_pub (a 3-input transientHash); a
+// foreign claim's leaf is transientHash([SHK_CLAIM_FGN, fclaim_pub]) (W-3); an empty slot is 0. A node is
+// transientHash([l, r]), the H2 of the deferred log (the PATH entry of L: index bit 1 puts the running
+// value on the right). Tags are ASCII little-endian (ENC-1 rule P-1). ADM and VIEW heads are seal premises
+// and are never leaves.
 pragma language_version >= 0.22;
 import CompactStandardLibrary;
 
 export sealed ledger anchor: Field;           // field 0: the anchor cell (A_0 = A_k)
 export ledger runs: Map<Field, Field>;        // claim_pub -> outcome_pub
-export ledger verified_roots: Set<Field>;     // set_pub of accepted collections
+export ledger claim_roots: Set<Field>;        // claims_root of accepted collections, one per epoch (W-2)
 export sealed ledger reg_root: Field;         // reg_pub of the registry root (history rule N-8 open)
 
 constructor(a0: Field, reg: Field) {
@@ -47,17 +58,19 @@ export circuit acceptRun(c_p: Field, input_pub: Field, outcome_pub: Field): [] {
   runs.insert(k, disclose(outcome_pub));
 }
 
-export circuit acceptCollection(reg_pub: Field, set_pub: Field): [] {
+export circuit acceptCollection(reg_pub: Field, claims_root: Field): [] {
   prologue();
   assert(reg_root == disclose(reg_pub), "other registry root");
-  assert(!verified_roots.member(disclose(set_pub)), "collection already accepted");
-  verified_roots.insert(disclose(set_pub));
+  assert(!claim_roots.member(disclose(claims_root)), "collection already accepted");
+  claim_roots.insert(disclose(claims_root));
 }
 
-export circuit openClaim(set_pub: Field, c_p: Field, input_pub: Field, outcome_pub: Field): [] {
-  prologue();
-  assert(verified_roots.member(disclose(set_pub)), "collection not accepted");
-  const k = transientHash<Vector<3, Field>>([disclose(c_p), disclose(input_pub), disclose(outcome_pub)]);
-  assert(!runs.member(k), "claim already settled");
-  runs.insert(k, disclose(outcome_pub));
+// Read entries for consumer contracts (cross-contract calls). Native keys; no write.
+export circuit rootAccepted(claims_root: Field): [] {
+  assert(claim_roots.member(disclose(claims_root)), "root not accepted");
+}
+
+export circuit runAccepted(claim_pub: Field, outcome_pub: Field): [] {
+  assert(runs.member(disclose(claim_pub)), "run not accepted");
+  assert(runs.lookup(disclose(claim_pub)) == disclose(outcome_pub), "other outcome");
 }
