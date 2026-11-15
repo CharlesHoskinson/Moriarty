@@ -1,0 +1,165 @@
+# Quint regression traces
+
+Regression tests built from the outputs of four Quint QA lanes of 2026-11-14
+(`~/.cache/gemini-lanes/qa-20261114-{merge-work-ladder,afk-picks,gp2-value-set,pathc-xcheck}/`).
+Each `*.itf.json` file is a trace that Quint 0.32.0 wrote with `--out-itf`. The command for each
+trace is in `models/traces.tsv`. The replay driver maps the witness of each trace onto the real
+code and asserts the verdict that the code must give.
+
+## Layout
+
+| path | content |
+|---|---|
+| `*.itf.json` | the Quint traces (a violating `quint run`, or a named `quint test`) |
+| `manifest.json` | one row per trace: id, handler, expected verdict, status, refusing constraint (`refused_by`), named test |
+| `inputs/` | the counterexample inputs that the handlers built (forged cells, public values, edited ROM rows). The tests write them again with `QR_DUMP_INPUTS=1` |
+| `models/` | the lane models (`*.qnt`), `traces.tsv` and `run.sh`. `run.sh` reruns every command: each `quint run` must exit 1, each `quint test` must pass, and the new ITF states must equal the committed trace |
+| `logs/` | `replay_all.txt` (green run), `real-proofs.txt`, `all-runs.txt` (`run.sh --all-runs`: 94 of 94 exit 1, MEASURED), `models-run.txt` (`models/run.sh`: 61 of 61 OK, MEASURED), `fails-before.txt` (the 8 open-defect tests on the code as built), `t10q-fails-before.txt` and `t10q-after.txt` (the 7 T10q tests before and after the fixes), `merge-work-columns.txt` (AFK F-5 input) |
+| `COUNTEREXAMPLES.md` | one row per lane finding: the attempt, its input, the result, the constraint, the verdict |
+
+## The driver
+
+The driver is in the openvm fork, `~/.cache/m7-wrap/src/openvm-quint-reg`, branch `quint-reg`, in
+`crates/sherlock-leaf/tests/quint_regressions.rs` and `tests/qr/`. It reads this folder from
+`QUINT_REGRESSIONS_DIR` (default `~/Projects/Moriarty/tests/quint-regressions`).
+
+- `ck.rs` is the local checker. It runs the stock `check_constraints` on every AIR, then the LogUp
+  multiset check on every bus except the child-proof buses of the verifier sub-circuit (public
+  values, cached commitment, pre-hash). The Poseidon2 permute bus is checked as an oracle. A
+  refusal names every failing constraint with its key index, its first failing row and the columns
+  that it reads (`wk+16`, `child_words+41'`, `st.OT`, `pv[41]`), or names the unbalanced bus.
+- `mw.rs` maps a merge-work-ladder witness (`wit`) onto the MERGE-WORK statement, its inline
+  kernel and the NW, NW2 and N3 node rungs.
+- `afk.rs`: the afk model has no cell values (its digests are token lists). Each afk trace is the
+  model witness of one finding. The handler builds the code-level counterexample that the report's
+  negative test names (NT-1, NT-2, F-9(b)) and scales the model's cuts of `[0, 8)` to the 5-step
+  slice program.
+- `gp2.rs` replays the chip set 2 leaf (`airs_value`) over `unitctor`. When a builder accepts the
+  forged input, the attack is rebuilt at the inputs of the witness builders: `program_v` ROM rows,
+  `ShardIn` states and selectors, `core::Opts`. When the builder asserts on the forged input, the
+  attack is a cell edit of the generated trace, and the row note says so. A guard row passes only
+  when the constraint that the lane's mutant drops is among the failing ones.
+- `pathc.rs` runs the reference decoder `iface::decode_with` (the native twin of
+  `tools/sherlock-wrap/src/decode.rs`).
+
+A row with `expect: refuse` must name `refused_by`. A harness error (the witness could not be
+built) fails the row. It never counts as a refusal. A trace with no manifest row fails the run.
+
+## Run
+
+```
+cd ~/.cache/m7-wrap/src/openvm-quint-reg
+CARGO_TARGET_DIR=~/.cache/quint-reg/target T6_SLICE_JSON=~/.cache/quint-reg/slice_v1.json \
+QUINT_REGRESSIONS_DIR=~/Projects/Moriarty/tests/quint-regressions \
+  heavy-run --mem 8G -- cargo test --release --locked --offline -p sherlock-leaf --test quint_regressions
+# the open defect GP2-C2.1 (fails on the code as built):
+  ... --test quint_regressions -- --ignored gp2_c21
+# the Quint side:
+tests/quint-regressions/models/run.sh
+```
+
+`replay_all` passes on openvm `fb5961f` (branch `t10q`, with t10q-cx merged, on T10mm `d26453c` and quint-reg `1733bb5`):
+60 rows pass, the open-defect row GP2-C2.1 and 1 not-replayed row are skipped (`logs/replay_all.txt`,
+MEASURED). T10q fixed 7 of the 8 defect rows. Each of their named tests failed on `1733bb5`
+(`logs/t10q-fails-before.txt`) and passes on `beba730` and `51b12a0` without `#[ignore]` (`logs/t10q-after.txt`,
+MEASURED). T10q added `afk_f9_work_one_child_unlinked_refused`,
+`gp2_cnull_fields_start_free_as_in_the_reference`, and `merge_binds_the_children`
+(openvm `51b12a0`).
+
+## Rows
+
+Kind: guard (the code must refuse), defect (open; the named `#[ignore]` test asserts the fixed
+behaviour), positive (the code must accept). Status: pass, pass (fixed in T10q), ignored-open-defect,
+not-replayed.
+
+| id | lane | finding | trace | Rust test | kind | status | code location |
+|---|---|---|---|---|---|---|---|
+| MW-HONEST | merge-work-ladder | honest MERGE-WORK -> NW -> NW2 -> N3 ladder (soundHonestTest) | `merge-work-ladder-honest.itf.json` | `replay_all` | positive | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-W-LEFT | merge-work-ladder | F-02 | `merge-work-ladder-w-left.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-NO-PRE-LINK | merge-work-ladder | F-02 | `merge-work-ladder-no-pre-link.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-NO-H-LINK | merge-work-ladder | F-02 | `merge-work-ladder-no-h-link.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-NO-PROG-LINK | merge-work-ladder | F-02 | `merge-work-ladder-no-prog-link.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-H-WRAP | merge-work-ladder | F-02 | `merge-work-ladder-h-wrap.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-MERGE-NO-CONTIG | merge-work-ladder | F-02 | `merge-work-ladder-merge-no-contig.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-STEPV-ONCE | merge-work-ladder | F-04 | `merge-work-ladder-stepv-once.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-STEPV-WF-FREE | merge-work-ladder | F-04 | `merge-work-ladder-stepv-wf-free.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-CORE-SEND-ROW0-ONLY | merge-work-ladder | F-04 | `merge-work-ladder-core-send-row0-only.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-ROW-UNBOUND | merge-work-ladder | F-05 | `merge-work-ladder-row-unbound.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-HALF-SPLIT-OFF | merge-work-ladder | F-05 | `merge-work-ladder-half-split-off.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-KEY-CHECK-NONE | merge-work-ladder | F-06 | `merge-work-ladder-key-check-none.itf.json` | `replay_all` | guard | pass | stmt.rs (Kind::Work, StmtAir::eval merge and MERGE-WORK blocks) |
+| MW-F01-WORK-A | merge-work-ladder | F-01 Test A | `merge-work-ladder-F01-work-false-carry.itf.json` | `mw_f01_work_whi_false_carry_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
+| MW-F01-WORK-B | merge-work-ladder | F-01 Test B | `merge-work-ladder-F01-work-wrap-bypass.itf.json` | `mw_f01_work_whi_wrap_bypass_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
+| MW-F01-WORK-B-RUN | merge-work-ladder | F-01 Test B (quint run m_whi_no_range invRefine) | `merge-work-ladder-F01-work-wrap-bypass-run.itf.json` | `mw_f01_work_whi_wrap_bypass_run_refused` | guard | pass (fixed in T10q) | stmt.rs Kind::Work whi lookup on WORK_RANGE_BUS (197) |
+| MW-F01-FIRST | merge-work-ladder | F-01 (First half, fixed in T10 by HHI_RANGE_BUS) | `merge-work-ladder-F01-first-false-carry.itf.json` | `replay_all` | guard | pass | stmt.rs:968 HHI_RANGE_BUS, HhiRangeAir |
+| AFK-HONEST | afk-picks | honest unary N1 lifts, binary N2, JOIN of equal reg_root | `afk-picks-honest.itf.json` | `replay_all` | positive | pass | stmt.rs Kind::First, Kind::Node, gp.rs JOIN |
+| AFK-F3 | afk-picks | F-3 / C2.2 JOIN reg_root equality (gp.rs:313-315) | `afk-picks-F3-join-mixed-roots.itf.json` | `replay_all` | guard | pass | gp.rs:313-315 JOIN reg_root equality |
+| AFK-F6 | afk-picks | F-6 N1 forces reg_root 0 (NT-2a) | `afk-picks-F6-n1-zero-reg-root.itf.json` | `afk_f6_first_carries_nonzero_reg_root` | positive | pass (fixed in T10q) | stmt.rs Kind::First env (reg_root free, as keys_d) |
+| AFK-F7 | afk-picks | F-7 N1 shape_d 0, N2 cut collision (NT-1) | `afk-picks-F7-n1-zero-shape.itf.json` | `afk_f7_n2_shape_binds_the_cut` | guard | pass (fixed in T10q) | stmt.rs Kind::First shape (SHLEAF, SHNODE sponge calls) |
+| AFK-F9 | afk-picks | F-9(b) MERGE-WORK needs two children | `afk-picks-F9-work-one-child.itf.json` | `afk_f9_work_one_child` | positive | pass (fixed in T10q) | stmt.rs Kind::Work (W links to the right-most enabled child) |
+| GP2-HONEST | gp2-value-set | honest unitctor shard (chip set 2) | `gp2-value-set-honest.itf.json` | `replay_all` | positive | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-F4.2 | gp2-value-set | F4.2 const_vd ignores the nominal type (U vs V) | `gp2-value-set-F4.2-const-vd-type-name.itf.json` | `gp2_f42_const_vd_binds_the_type_name` | guard | pass (fixed in T10q) | leaf.rs const_vd, name_d, decl_d, ty_d_row (T5 5.2 normal form) |
+| GP2-C2.1 | gp2-value-set | C2.1 R_PUBV lacks r3(0)==6, r3(1)==1, tsk.count==0 | `gp2-value-set-C2.1-pubv-marker-free.itf.json` | `gp2_c21_pubv_checks_the_constant_row` | defect | ignored-open-defect | core.rs:439-449 R_PUBV guards |
+| GP2-M-CNULL-CTL-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_ctl_free | `gp2-value-set-m-cnull-ctl-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cid_bind | `gp2-value-set-m-cnull-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CST-FIELDS | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_fields | `gp2-value-set-m-cnull-no-cst-fields.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CST-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_cst_kind | `gp2-value-set-m-cnull-no-cst-kind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTL-EVAL | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctl_eval | `gp2-value-set-m-cnull-no-ctl-eval.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTOR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_arity | `gp2-value-set-m-cnull-no-ctor-arity.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-CTOR-TYPE | gp2-value-set | mutant gp2_value_set_m_cnull_no_ctor_type | `gp2-value-set-m-cnull-no-ctor-type.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-EXPR-ARITY | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_arity | `gp2-value-set-m-cnull-no-expr-arity.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-EXPR-KIND | gp2-value-set | mutant gp2_value_set_m_cnull_no_expr_kind | `gp2-value-set-m-cnull-no-expr-kind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-HAS-CONST | gp2-value-set | mutant gp2_value_set_m_cnull_no_has_const | `gp2-value-set-m-cnull-no-has-const.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-HLP | gp2-value-set | mutant gp2_value_set_m_cnull_no_hlp | `gp2-value-set-m-cnull-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-MARKER-FREE | gp2-value-set | mutant gp2_value_set_m_cnull_no_marker_free | `gp2-value-set-m-cnull-no-marker-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-RES | gp2-value-set | mutant gp2_value_set_m_cnull_no_res | `gp2-value-set-m-cnull-no-res.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-ROM | gp2-value-set | mutant gp2_value_set_m_cnull_no_rom | `gp2-value-set-m-cnull-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-CNULL-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_cnull_no_running | `gp2-value-set-m-cnull-no-running.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-FRAME-SKIP-WORD | gp2-value-set | mutant gp2_value_set_m_frame_skip_word | `gp2-value-set-m-frame-skip-word.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-INIT-VAL-ANY-SET | gp2-value-set | mutant gp2_value_set_m_init_val_any_set | `gp2-value-set-m-init-val-any-set.itf.json` | `replay_all` | guard | not-replayed | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-KEY-WRONG-CLASS | gp2-value-set | mutant gp2_value_set_m_key_wrong_class | `gp2-value-set-m-key-wrong-class.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PAD-ON-BUS | gp2-value-set | mutant gp2_value_set_m_pad_on_bus | `gp2-value-set-m-pad-on-bus.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CID-BIND | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_bind | `gp2-value-set-m-pubv-no-cid-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CID-HI | gp2-value-set | mutant gp2_value_set_m_pubv_no_cid_hi | `gp2-value-set-m-pubv-no-cid-hi.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-CTL-RET | gp2-value-set | mutant gp2_value_set_m_pubv_no_ctl_ret | `gp2-value-set-m-pubv-no-ctl-ret.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-FRM-ZERO | gp2-value-set | mutant gp2_value_set_m_pubv_no_frm_zero | `gp2-value-set-m-pubv-no-frm-zero.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-HLP | gp2-value-set | mutant gp2_value_set_m_pubv_no_hlp | `gp2-value-set-m-pubv-no-hlp.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-RES | gp2-value-set | mutant gp2_value_set_m_pubv_no_res | `gp2-value-set-m-pubv-no-res.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-ROM | gp2-value-set | mutant gp2_value_set_m_pubv_no_rom | `gp2-value-set-m-pubv-no-rom.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-RUNNING | gp2-value-set | mutant gp2_value_set_m_pubv_no_running | `gp2-value-set-m-pubv-no-running.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-NO-VAL-CONST | gp2-value-set | mutant gp2_value_set_m_pubv_no_val_const | `gp2-value-set-m-pubv-no-val-const.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-PUBV-PAYLOAD-FREE | gp2-value-set | mutant gp2_value_set_m_pubv_payload_free | `gp2-value-set-m-pubv-payload-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-ROM-NO-TBL-BIND | gp2-value-set | mutant gp2_value_set_m_rom_no_tbl_bind | `gp2-value-set-m-rom-no-tbl-bind.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-SEL-NO-BOOL | gp2-value-set | mutant gp2_value_set_m_sel_no_bool | `gp2-value-set-m-sel-no-bool.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| GP2-M-SEL-SUM-FREE | gp2-value-set | mutant gp2_value_set_m_sel_sum_free | `gp2-value-set-m-sel-sum-free.itf.json` | `replay_all` | guard | pass | core.rs:405-480 (value-set rules), dec.rs:140, rom.rs |
+| PATHC-HONEST | pathc-xcheck | honest L_Fr words decode | `pathc-xcheck-honest.itf.json` | `replay_all` | positive | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
+| PATHC-F5 | pathc-xcheck | Finding 5: X other than keys.x decodes (fixed in T10, decode.rs:368 / iface.rs:749) | `pathc-xcheck-F5-wrap-x-unpinned.itf.json` | `replay_all` | positive | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
+| PATHC-F6A | pathc-xcheck | Finding 6(a): non-canonical X limbs (carry family) | `pathc-xcheck-F6a-x-limb-carry.itf.json` | `replay_all` | guard | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
+| PATHC-F6B | pathc-xcheck | Finding 6(b): non-canonical X limbs (X + r family) | `pathc-xcheck-F6b-x-plus-r.itf.json` | `replay_all` | guard | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
+
+## Limits
+
+- The checker checks each AIR set locally. It proves nothing. The child-proof buses are taken as
+  sound, as the models take them. For MW-STEPV-ONCE, the local refusal is the kernel range bus
+  (bus 197) of the truncated CORE trace. In a proof, the key's fixed CORE height (8) refuses the
+  trace first.
+- MW F-01 Work (fixed in T10q): `h_hi` is ranged where it enters. A SEG `h_hi` enters only at
+  First (HHI_RANGE_BUS, T10) and at Work (the kernel RANGE bus, T10q `beba730`). Node, the GP
+  modes and `L` copy it. A non-root `h_hi` is consumed by a MERGE stitch `h_hi(0) = h_lo(1)`
+  against a leaf `h_pre`, which CORE ranges at 16 bits (core.rs:613), so the range holds by
+  induction. No check was added at NW, NW2, N3, `L` or the wrap. An `L` check was built and
+  measured and does not fit the frozen `L` set: 8 byte columns give 2,003 columns (bound 2,000),
+  one column per limb gives 107 interactions on the `L` statement AIR (bound 100) (MEASURED,
+  `t7_chain shape`, openvm `dd3593e` and `8bff541`, removed in `51b12a0`). It needs an owner
+  ruling on the `L` bounds. On the code before T10q, NW, NW2 and N3 accepted a child with a wide
+  limb (MEASURED, `t10q-fails-before.txt`), and the decoder twin `iface::decode_with` accepts a
+  root word 29 of 65536 (`h_hi_wide_limb_downstream`, MEASURED).
+- The `L` and `L_Fr` findings of pathc-xcheck: 4 of the 11 lane mutants are covered by T7c
+  real-prover cases (mutant prover, stock verifier, `research/sherlock-t7c-pathc-20261114/RESULTS.md`),
+  cited and not run again here. 7 were not attempted (COUNTEREXAMPLES.md).
+- Real proofs: `gp2_real_proofs` (ignored test) proves three chip set 2 shards at the app set with
+  `harness::prove` and checks them with the stock verifier (MEASURED, `logs/real-proofs.txt`): the
+  honest shard and the C2.1 continuation shard are accepted, and the `sel_no_bool` mutant (mutant
+  prover) is refused. Every other verdict comes from the local checker.
+- The replay needs `~/.cache/quint-reg/slice_v1.json`, a copy of the slice JSON of the T7c/T8b runs
+  (`T6_SLICE_JSON`). The default folder becomes valid when the branch merges. Until then, set
+  `QUINT_REGRESSIONS_DIR=~/Projects/Moriarty-wt/t10q/tests/quint-regressions`.
