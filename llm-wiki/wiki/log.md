@@ -4050,8 +4050,78 @@
 - rsl_jubjub does not compile (pow_vartime takes &[u64; 4]); rsl_suite exec: 57 different, 85 unsupported, 0 equal. Returned to the rekey-chips lane; this blocks T23 proving.
 - Runner fixes (lead): base tree as a sibling dir so relative path deps resolve; mycroft-emit built on rustc 1.99 (sysinfo 0.39.6 needs 1.95; openvm pins 1.91.1).
 
-## [2026-11-15 08:05] build | rekey-chips odin runs r3 and r4 (ce309c6)
+## [2026-11-15 07:42] build | rekey-chips odin runs r3 and r4 (ce309c6)
 - MEASURED on odin: sherlock-leaf rsl 5/5 (579.6 s), rsl_exec 2/2; rsl_jubjub_matches_native fails (R_SL jubjub scalar mul differs from midnight-curves); suite exec: 57 executed, 85 unsupported (PersistentHash, sha256 kit).
 - openvm-sha2-air builds offline on odin; the sherlock-leaf, sherlock-lfr and sherlock-wrap-export check passes.
 - t7_chain rsl probe: G1 refuses the R_SL app key (app set, air 5: 14,912 constraints, bound 5,000). The G1 bound stays; the lane must split or narrow that AIR.
 - r5 on 9364edb (R_SL_SHA256 AIRs) runs on odin.
+
+## [2026-11-15 07:50] lane-done | T11 zero knowledge: PARTIAL handback, lane continues
+- ZK-L2 done: clean/fork/Clean/Sherlock/ZkPadding.lean, 0 sorry, full lake build passes (Moriarty t11-zk 71c4c001b; t14b merges 31e25cc0c and openvm cce8c1d).
+- Written, not yet run: fresh r_P per deployment and salt per run from the OS CSPRNG (openvm sherlock-leaf blind.rs), seeded paths behind feature test-seed (zkguard.rs), EQ-ZK and slot-reuse tests (t11_zk.rs). Rebuild in unit t11zk-build2.
+- LEAD PICKs for T15: T11-1 r_P per deployment, salt per run, wrap blinders per proof; T11-2 merge t14b; T11-3 no PCS masking while STARK layers stay on user-owned devices (helper-machine case to be stated); T11-4 every seeded path behind test-seed.
+
+## [2026-11-15 07:58] note | T11 helper-machine case OPEN for the owner
+- T11 RESULTS section 2: case A (huginn or odin proving for their own owner) is the user's own machine under OD-9 / ZK-001; case B (a host the user does not own) is a helper and needs witness-hiding delegation (MPC or secret-shared STARK proving). Case B is OPEN, an owner design item; ZK-001 and ZK-009 refuse it today.
+- t11zk-build2 waits for a muninn heavy slot (held by item16-verify2, t16-m-nogpu, fp3-after); the lead resumes the lane when it ends.
+
+## [2026-11-15 08:14] build | rekey-chips odin run r5 (9364edb, R_SL_SHA256 AIRs)
+- MEASURED on odin: check passes; rsl_exec 2/2; rsl_sha 3/3 (1,335.5 s); rsl 5/5 (611.7 s); rsl_suite exec runs all 142 Compact suite calls (0 unsupported).
+- rsl_jubjub still fails on 9364edb; the lane's fix (subgroup points, d8e5671) runs in r6 with the split RSL_PUBLIC AIRs and the rsl probe.
+
+## [2026-11-15 08:39] build | rekey-chips odin run r6 (d8e5671)
+- MEASURED on odin: check passes; rsl_jubjub 2/2 (subgroup fix); rsl_sha 3/3 (1,350.0 s).
+- rsl probe: the split RSL_PUBLIC AIRs pass G1 (bound 5,000 unchanged); the leaf layer over the R_SL app proof fails with LogupZerocheck(NonZeroRootSum). Returned to the lane.
+- r7 (rsl_suite prove, every call at the app level) runs on odin.
+
+## [2026-11-15 08:40] lane-done | T23 prep: Part B dry run done, Part A runs unattended on Preview
+- Part B (t23-suite daa1ca745): 208 calls, 0 mismatch, 62 refused-as-native (DERIVED), 145 blocked (139 R_SL chip set, 3 jubjub, 2 secp256k1, 1 keccak), 1 pure; compiled W and comm vs native Preview transcript 92 equal, 0 different; offline acceptRun rehearsal passes.
+- Part A (units t23-partA, t23-partA-finalize): no hard fork since 2026-11-14 (spec 2001100); 3 of 33 programs, 4 calls word-equal; about 13 h left; 134 transactions planned with the existing Preview wallet.
+- Open: the Mycroft statement to acceptRun argument map (c_p, input_pub, outcome_pub); LEAD PICKs instance reuse rule and box profile path.
+
+## [2026-11-15 08:40] lane-start | T23 args: Mycroft statement to acceptRun arguments
+- New Opus lane on branch t23-args: MAP.md (statement and wrap public inputs to c_p, input_pub, outcome_pub, claim_pub, with sources) and a tested builder that must reproduce the T17 accepted arguments; dry only, no Preview transactions.
+
+## [2026-11-15 08:45] decision | heavy-slot admits shared jobs first-in-first-out
+- Cause: a waiting shared job left no record, so smaller jobs that arrived later took the free budget; the T11 32G builds waited from 07:49 while fp3, t18d and t16 jobs were admitted.
+- Change (lead, ~/.local/bin/heavy-slot, backup ~/.cache/heavy-slot.bak-20261115): every waiter writes a pending record with its arrival time; a shared job is admitted only when no older shared job is pending. Exclusive behaviour unchanged.
+- The running T11 waiter (pid 1234937, from 08:27) got its pending record by hand. odin r8 (2b59f9b): check and rsl_fp1_public_values_on_air0_only pass; the probe runs.
+
+## [2026-11-15 08:46] qa | R_SL probe: leaf proves, universal N1 key holds only at a fixed app AIR count
+- odin r8 (rekey-chips 2b59f9b), MEASURED: leaf over the R_SL app proof proves for a05, t02, s01; G1 accepts app (log height 17 of 24) and leaf (17 of 21); app prove 20.8-21.2 s, leaf 11.0-16.6 s on odin CPU.
+- n1_pre_hash_equals_universal_n1: true for t02 and s01 (7 app AIRs), FALSE for a05 (10 app AIRs, 4 PUBLIC AIRs): leaf width 1,598 vs 1,597. A call with more public words would get another leaf key, against the one-universal-key-set rule. Lane told to fix the app AIR set so the leaf shape is constant, with a test across a05, t02, s01 and d04.
+
+## [2026-11-15 08:47] lane-done | T12 part 1: anchor-slot pin NOT REPRODUCED; RUNBOOK written
+- t12-gate 9260e8b75, 90f9b4df9: forged anchor slots 1, 3, 15 in the read (lane 6) and the chunk write (lane 15) refused by the native decoder and MockProver (k=18), only decode.rs step 5b failing; the real T14b proof has lane 6 = 0. Regression test t12_anchor_slot (3 tests) passes. Wrap VK unchanged, 1,325 bytes.
+- RUNBOOK covers G3, G4, G1/G2, wrap VK plus ledger-check, FP-8, I-27/28/30/34/37; G3 legs (CPU prover, GPU prover, stark-backend verifier) not built yet; two steps UNVERIFIED.
+
+## [2026-11-15 08:47] decision | T12-SLOT15: the anchor moves to slot 15 in the single rekey (LEAD PICK for T15)
+- Open route: a Mycroft contract with a user-writable field 0 could hold a forged C_P' in the anchor cell (MYC-SEAL-021); today only an untested compiler refusal guards it. SherlockLedger is safe (field 0 sealed).
+- Pick: move the pinned cell 0 -> 15 in decode.rs, iface.rs and SherlockLedger inside the single rekey, plus a tested compiler refusal. Reason: the rekey changes L_Fr and the wrap VK anyway, and the guard then sits in the circuit. The T12 lane implements it on t12-slot15.
+
+## [2026-11-15 09:02] note | huginn freed; w3b starts; rekey-chips r10 on 6f773b2
+- Owner killed huginn pid 592115; the queued w3b wrapd bench (hc-wrap-w3b) started at once on the RTX 5080.
+- rekey-chips 5d77cfc fixed the leaf key bucket (R_SL at most 9 AIRs) but left small programs at 5; 6f773b2 keeps SHA_IN always present (6 or 9 AIRs). odin r10 runs check, tests, the 5-call probe, then the suite prove if every leaf key equals the universal N1 pre_hash.
+
+## [2026-11-15 09:04] decision | owner confirms the listed LEAD PICKs; w3b KEEP; odin runs w8
+- Owner 2026-11-15 ~09:10: "Ye sif you recommend it" for the LEAD PICKs listed in the morning status: T11-1..T11-4, T12-SLOT15, T23 instance-reuse rule and box profile path, the single rekey list, the x_j change, T22 governance picks. These are CONFIRMED.
+- huginn w3b (config all = GPU phases + sppark MSM on GPU): warm 12.89 s vs w1 25.13 s, cold 14.02 vs 25.55 (MEASURED, RTX 5080); muninn ledger-check 9.1.0.1 24/24 Ok, VK byte-equal to w1. KEEP.
+- odin gets w8 = w7 + config all (owner: "Have Odin do productive things"). huginn gpu.lock incident (7 h 40 min, orphan sampler pid 592115 holding fd 9) accepted with a lock-wait watchdog.
+
+## [2026-11-15 09:05] decision | owner: helper machines start with case A; case B later via the Veritee model
+- Owner 2026-11-15: "we will start with case A and a future design will allow for outsources components using the Veritee model from the MPC Research thread".
+- Case A (huginn, odin or any box the user owns proves for that user) is the supported mode now. Case B (outsourced proving on hosts the user does not own) is a future design on the Veritee seald Sessions model (MPC research, TEE Sessions design); ZK-001 and ZK-009 keep refusing case B until then. T11-3 stands as worded.
+
+## [2026-11-15 09:06] decision | owner: build the secp256k1 and keccak kits; box agents may kill orphan gpu.lock holders
+- Owner 2026-11-15 "yes to both": the rekey-chips lane builds the secp256k1 (2 calls) and keccak256 (1 call) R_SL kits after r10, inside the fixed 6-or-9 AIR bucket, so T23 runs all 208 calls.
+- Narrow kill rule sent to huginn (m44) and odin (m24): only a process holding gpu.lock whose parent is gone, that is the sampler of an ended job, with the lock held over 10 min and no progress; log to the bus first, SIGTERM then SIGKILL. Never a live prover or wrapd.
+
+## [2026-11-15 09:11] decision | Finish plan: T24 kits, T25 single rekey, box assignments; spec audit lane; owner AFK
+- Owner 2026-11-15: "Audit this checklist to confirm all work items. Make sure the openspec is accurate and we have EARS for each item. Adjust the loop and the workflow with Odin and Huginn ... Going AFK again".
+- LOOP.md gains T24 (keccak + secp256k1 R_SL kits; SECP-INTERFACE.md written for the Mycroft lowering), T25 (the single rekey) and a Finish plan section with the critical path and per-box queues; FINISH-PLAN.md (sha256 8093c945) on both box buses, BOXES.md points to it (m26 odin, m46 huginn).
+- Spec-audit lane started (worktree spec-audit): confirms every checklist item, fixes OpenSpec drift, adds change sherlock-completion-20261115 and EARS IDs where missing.
+
+## [2026-11-15 09:42] decision | Sherlock end-to-end prototype OpenSpec, DDD and MADR
+- Owner order: end-to-end OpenSpecs for the prototype, 3 Fable 5.2 + 3 GPT-6 Astra agents, drwatt architecture method, MADR and DDD.
+- Worktree Moriarty-wt/sherlock-e2e-spec (branch sherlock-e2e-spec from t10m 3dc9001a9); brief research/sherlock-e2e-spec-20261115/BRIEF.md.
+- Slices: A language+integration (Fable-A integrates DDD, MADR, COVERAGE), B proving, C wrap/settlement/operations; each Fable pairs with one Astra lane (independent draft, then adversarial review).
