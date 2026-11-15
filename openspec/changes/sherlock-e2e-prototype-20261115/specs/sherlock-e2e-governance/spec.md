@@ -26,7 +26,7 @@ Verification: MISSING (T22 tasks.md task 4: a sealed deploy tool with the readba
 
 #### Scenario: Status of EGV-002
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: ERT-002, ELD-002 (governance): committee, threshold, counter and every installed entry key, native read keys included (SLC-003, SLC-004). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/REPORT.md:8-9` (compact-js `executable.js:492`; threshold 0 is not sealed). Check: MISSING (T22 tasks.md task 4: a sealed deploy tool with the readback gate; controls: the SDK default and threshold 0).
+- **THEN** it reads: TO BUILD. References: ERT-002, ELD-002 (governance; ERT-002 now also requires threshold exactly 1, FAL-GOVERNANCE-1, LEAD PICK LP-2 for T15): committee, threshold, counter and every installed entry key, native read keys included (SLC-003, SLC-004). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/REPORT.md:8-9` (compact-js `executable.js:492`; threshold 0 is not sealed). Check: MISSING (T22 tasks.md task 4: a sealed deploy tool with the readback gate; controls: the SDK default and threshold 0).
 
 ### Requirement: EGV-003 Unsealed deployments are path evidence only
 EGV-003: If a deployed SherlockLedger is not sealed, then the prototype report SHALL label the receipts of that ledger as transaction-path evidence.

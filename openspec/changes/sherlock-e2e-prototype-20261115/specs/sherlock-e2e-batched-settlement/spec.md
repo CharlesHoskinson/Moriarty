@@ -68,7 +68,7 @@ Verification: Quint model of fix 4 on `t20-batched`; MISSING a test of `sherlock
 
 #### Scenario: Status of BAT-005
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: PARTIAL. References: ANC-012 on `t20-batched`. Supersedes its formula `min(floor(TTL / 1,755 s), 18)` above 2: the owner accepted the cap as `K_MAX = 2` (llm-wiki `wiki/log.md:3502-3503`; hard rule in BRIEF.md). Evidence: `t20-batched@5dc1be2ee:openspec/changes/sherlock-processor-final-20261111/specs/sherlock-anchor-chunks/spec.md:31-32`; `research/sherlock-t20-batched-20261114/RESULTS.md:112-118` (no measured entry needs a chunk: largest 474 of 1,015 words). Check: Quint model of fix 4 on `t20-batched`; MISSING a test of `sherlock_plan` at TTL 14,400 s (openvm `rekey-chips@dcf1b4c:crates/sherlock-lfr/examples/sherlock_plan.rs`).
+- **THEN** it reads: PARTIAL. References: ANC-012 on `t20-batched`. The ANC-012 formula now reads `min(floor(TTL / 1,755 s), 2)` in `sherlock-processor-final-20261111` (FAL-SETTLEMENT-2; the earlier cap 18 is withdrawn): the owner accepted the cap as `K_MAX = 2` (llm-wiki `wiki/log.md:3502-3503`; hard rule in BRIEF.md). Evidence: `t20-batched@5dc1be2ee:openspec/changes/sherlock-processor-final-20261111/specs/sherlock-anchor-chunks/spec.md:31-32`; `research/sherlock-t20-batched-20261114/RESULTS.md:112-118` (no measured entry needs a chunk: largest 474 of 1,015 words). Check: Quint model of fix 4 on `t20-batched`; MISSING a test of `sherlock_plan` at TTL 14,400 s (openvm `rekey-chips@dcf1b4c:crates/sherlock-lfr/examples/sherlock_plan.rs`).
 
 ### Requirement: BAT-006 Settlement intent TTL
 BAT-006: When the settle runner builds an intent on Preview with no TTL given by the user, the settle runner SHALL set the intent TTL to 3,600 s.
@@ -127,7 +127,7 @@ Verification: MISSING. GAP owner: slice B (GPH), row T8c; to build.
 - **THEN** it reads: TO BUILD. Evidence: `t20-batched@5dc1be2ee:research/sherlock-t20-batched-20261114/RESULTS.md:70` ("no code on this branch; it belongs to T8b L over SET, which is not built"); LPC-001 to LPC-003 (row T8c). Check: MISSING. GAP owner: slice B (GPH), row T8c.
 
 ### Requirement: BAT-010 An epoch closes before its era ends
-BAT-010: While an era end `end_eff` is announced, when the time reaches `end_eff` minus the collection proof time and the inclusion time, the epoch operator SHALL close the open epoch.
+BAT-010: While an era end `end_eff` is announced, when the time reaches `end_eff` minus the collection proof time, the inclusion time and one block interval, the epoch operator SHALL close the open epoch.
 
 Verification: MISSING (no operator code, not in a Quint model); to build.
 
@@ -138,10 +138,10 @@ Verification: MISSING (no operator code, not in a Quint model); to build.
 
 #### Scenario: Status of BAT-010
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: ERT-009, UC-9 (governance); BAT-001 stays the upper bound. The two budgets are parameters; 175.5 s warm is the DERIVED collection proof time. Under decision D-077 (OWNER 2026-11-15). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70,86`. Check: MISSING (no operator code, not in a Quint model).
+- **THEN** it reads: TO BUILD. References: ERT-009, UC-9 (governance); BAT-001 stays the upper bound. `active(e)` is the half-open interval `[start, end_eff)` (ERT-004), so a root must land strictly before `end_eff`; the one-block margin gives that (FAL-SETTLEMENT-3, LEAD PICK for T15). The two budgets are parameters; 175.5 s warm is the DERIVED collection proof time. Under decision D-077 (OWNER 2026-11-15). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70,86`. Check: MISSING (no operator code, not in a Quint model).
 
 ### Requirement: BAT-011 No run starts that cannot land in its era
-BAT-011: If the proving time plus the inclusion time of a new run ends after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.
+BAT-011: If the proving time plus the inclusion time of a new run ends at or after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.
 
 Verification: MISSING (no code; `eraTable.qnt` has the lazy end, not the prover rule); to build.
 
@@ -152,7 +152,7 @@ Verification: MISSING (no code; `eraTable.qnt` has the lazy end, not the prover 
 
 #### Scenario: Status of BAT-011
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: ERT-004, GOV-006 (governance); the TTL of an admitted intent ends before `end_eff`. Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70`. Check: MISSING (no code; `eraTable.qnt` has the lazy end, not the prover rule).
+- **THEN** it reads: TO BUILD. References: ERT-004, GOV-006 (governance); the TTL of an admitted intent ends before `end_eff`. A landing at exactly `end_eff` is refused, because ERT-004 accepts nothing at `end_eff` (FAL-SETTLEMENT-3, LEAD PICK for T15). Evidence: `t22-governance@fe7207819:research/sherlock-t22-governance-20261114/OPEN-QUESTIONS.md:70`. Check: MISSING (no code; `eraTable.qnt` has the lazy end, not the prover rule).
 
 ### Requirement: BAT-012 Collection settlement is shown or listed as open
 BAT-012: If the T15 freeze record holds no `acceptCollection` receipt on the T25 key set, then the T15 freeze record SHALL list batched collection settlement as open.

@@ -71,7 +71,7 @@ Verification: T17 (a) verdict record `A, scan, smallScan, R1, R2, R3, R4: true` 
 - **THEN** it reads: BUILT. References: LPC-008 (parts (b) and (c) of row T17). Evidence: `t17-preview@9e1e7f398:research/sherlock-t17-preview-20261114/t17.sh:4,151-153`, `RUNBOOK.md:24-40`. Check: T17 (a) verdict record `A, scan, smallScan, R1, R2, R3, R4: true` (`RESULTS.md:9`).
 
 ### Requirement: PVW-006 Tamper controls on Preview
-PVW-006: When the honest call is included, the Preview runner SHALL submit the 4 controls R1 (changed public input), R2 (flipped proof bit), R4 (other program) and R3 (replay).
+PVW-006: When the readback of the included honest call arrives, the Preview runner SHALL submit the 4 controls R1 (changed public input), R2 (flipped proof bit), R4 (other program) and R3 (replay).
 
 Verification: T17 (a); rerun in LPC-008 on the T25 keys; exists.
 
@@ -169,7 +169,7 @@ Verification: MISSING a test (no control was ever included); to build.
 - **THEN** it reads: TO BUILD. References: SCL-002; PVW-006. Evidence: `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:59,556-560,572`. Check: MISSING a test (no control was ever included).
 
 ### Requirement: PVW-013 The final deploy needs the gate record of its key
-PVW-013: If the gate record of the wrap key to deploy lacks a pass for RKY-003, RKY-004, RKY-005, the T12 gate or the zero-knowledge checks ZK-012 to ZK-017, then the deploy runner SHALL refuse the final prototype deploy.
+PVW-013: If the gate record of the wrap key to deploy lacks a pass for RKY-003, RKY-004, RKY-005, the T12 gate, the zero-knowledge checks ZK-012 to ZK-017 or the 5 wrap checks of WRP-012, then the deploy runner SHALL refuse the final prototype deploy.
 
 Verification: MISSING (no gate record format, no check in the deploy runner); to build.
 
@@ -180,4 +180,4 @@ Verification: MISSING (no gate record format, no check in the deploy runner); to
 
 #### Scenario: Status of PVW-013
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: TO BUILD. References: RKY-003 to RKY-005, SQG-014 to SQG-016, ZK-012 to ZK-017 (completion); WRP-012; PVW-009. Slice B produces the keys and the evidence; slice C checks the record for the exact key (sha256 of `wrap.vk`). Evidence: LOOP.md:47 (T25 done-when: every gate reruns PASS on the new keys); `~/.cache/lead/CHECKLIST-20261115.md:12-14`. Check: MISSING (no gate record format, no check in the deploy runner).
+- **THEN** it reads: TO BUILD. References: RKY-003 to RKY-005, SQG-014 to SQG-016, ZK-012 to ZK-017 (completion); WRP-012; PVW-009. One gate record gates the deploy: it holds the WRP-012 qualification passes too (FAL-WRAP-1, LEAD PICK for T15). Slice B produces the keys and the evidence; slice C checks the record for the exact key (sha256 of `wrap.vk`). Evidence: LOOP.md:47 (T25 done-when: every gate reruns PASS on the new keys); `~/.cache/lead/CHECKLIST-20261115.md:12-14`. Check: MISSING (no gate record format, no check in the deploy runner).

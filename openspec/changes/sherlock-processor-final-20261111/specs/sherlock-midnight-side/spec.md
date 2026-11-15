@@ -7,12 +7,12 @@ The ledger SHALL check each Sherlock `ContractCall` with `midnight_transient_cry
 - **WHEN** a wrap proof of option E is submitted on a local devnet
 - **THEN** ledger 9.1.0.1 verifies it unchanged (step E6, frontend M2b and M3)
 
-### Requirement: MID-002 Every exported entry holds the universal wrap key
-Every exported entry of a Sherlock contract SHALL hold the same universal wrap key.
+### Requirement: MID-002 Every write entry holds the universal wrap key
+Every exported write entry of a Sherlock contract (`acceptRun`, `acceptCollection`) SHALL hold the same universal wrap key; the read entries `readRoot` and `readRun` keep their compiled native keys (SLC-004, ELD-005; FAL-LEDGER-VERIFICATION-1).
 
 #### Scenario: Entry with its own key
 - **WHEN** a contract has Sherlock entries and native-routed entries
-- **THEN** every Sherlock entry holds the universal wrap key, and only the native-routed entries of MID-005 hold their own keys
+- **THEN** every Sherlock write entry holds the universal wrap key, and only the native-routed entries of MID-005 and the read entries of SLC-004 hold their own keys
 
 ### Requirement: MID-003 Ledger limits
 The wrap verifier key SHALL be at most 50,000 bytes. A call SHALL have at most 65,536 public inputs. The wrap SHALL have `2 + L_TX` = 1,026 (OD-7, OD-15). A transaction SHALL be at most 1,048,576 bytes. `VERIFIER_MAX_DEGREE` 14 SHALL be read as a bound on the public inputs, not on the circuit k.

@@ -29,7 +29,7 @@ Verification: MISSING a fault-injection test; fix 4 of T17 (a); to build.
 - **THEN** it reads: TO BUILD. Evidence: `t17-preview@9e1e7f398:research/sherlock-t17-preview-20261114/RESULTS.md:38`, `RUNBOOK.md:42,65`. Check: MISSING a fault-injection test; fix 4 of T17 (a).
 
 ### Requirement: FRC-003 A proven call is reused while its TTL lasts
-FRC-003: While a proven, unsubmitted and unrefused call has more than 5 minutes of TTL left, the ledger runner SHALL reuse the saved call on a rerun.
+FRC-003: While a proven, unrefused call that is not included has more than 5 minutes of TTL left, the ledger runner SHALL reuse the saved call on a rerun.
 
 Verification: T17 (a) rerun; MISSING a test at 4 minutes of TTL; exists in part.
 
@@ -40,7 +40,7 @@ Verification: T17 (a) rerun; MISSING a test at 4 minutes of TTL; exists in part.
 
 #### Scenario: Status of FRC-003
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: PARTIAL. Evidence: `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:58,675-676,694`. Check: T17 (a) rerun; MISSING a test at 4 minutes of TTL.
+- **THEN** it reads: PARTIAL. A call that was submitted and resolved as not included (FRC-013) is reused too: it carries the same claim, and LDG-002 makes a wrong resubmit cost a fee and no state (FAL-NETOPS-2, LEAD PICK for T15). Evidence: `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:58,675-676,694`. Check: T17 (a) rerun; MISSING a test at 4 minutes of TTL.
 
 ### Requirement: FRC-004 Transport errors are retried
 FRC-004: If wallet balancing fails with a transport error, then the ledger runner SHALL make at most 4 attempts in total, 30 s apart, with a wallet resync before each new attempt.
@@ -209,3 +209,17 @@ Verification: the T1 record (exists); MISSING for the merges still open: `t20-ba
 #### Scenario: Status of FRC-015
 - **WHEN** the status is reported on 2026-11-15
 - **THEN** it reads: PARTIAL. References: LPC-010 (T20 merge), LPC-014 (T15 freeze presentation and owner sign-off), LPC-015 (pushes), completion. The freeze itself stays LPC-014. Evidence: row T1 (LOOP.md:18), `tested@52b71e250`. Check: the T1 record (exists); MISSING for the merges still open: `t20-batched`, `t10q-ntfix`, `t11-zk`, `t22-governance`.
+
+### Requirement: FRC-016 Other balancing errors stop the call
+FRC-016: If wallet balancing fails with an error other than a transport error, then the ledger runner SHALL record the attempt and stop the call without a retry.
+
+Verification: MISSING a fault-injection test with a non-transport balancing error; to build.
+
+#### Scenario: Insufficient funds
+- **GIVEN** a wallet that cannot balance the fee
+- **WHEN** balancing fails with that error
+- **THEN** the runner records one attempt and stops the call
+
+#### Scenario: Status of FRC-016
+- **WHEN** the status is reported on 2026-11-15
+- **THEN** it reads: BUILT, not tested. Added for FAL-NETOPS-3 (LEAD PICK for T15). References: FRC-004, OBS-008. Evidence: `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:764-775` retries only transport-like errors and stops at once on any other error. Check: MISSING a fault-injection test.

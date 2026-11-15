@@ -80,10 +80,10 @@ theorem pin_dup_root : (r (epoch3 ++ [o 5 0, o 4 3600, o 6 51])).lastRefusal = r
 theorem pin_registry : (r (epoch3.take 5 ++ [o 6 61])).lastRefusal = rRegistry := by decide +kernel
 #guard (r (epoch3.take 5 ++ [o 6 61])).lastRefusal == rRegistry
 
--- BAT-010: era end 2,000: the epoch closes at 2,000 - 200 - 100 = 1,700
-theorem pin_era_close : stepRefusals (r [o 7 2000, o 5 0]) (o 4 1701) = [.opNotEnabled] ∧
-    stepRefusals (r [o 7 2000, o 5 0, o 4 1700]) (o 6 51) = [] := by decide +kernel
-#guard stepRefusals (r [o 7 2000, o 5 0, o 4 1700]) (o 6 51) == []
+-- BAT-010: era end 2,000: the epoch closes at 2,000 - 200 - 100 - 1 (one block) = 1,699
+theorem pin_era_close : stepRefusals (r [o 7 2000, o 5 0]) (o 4 1700) = [.opNotEnabled] ∧
+    stepRefusals (r [o 7 2000, o 5 0, o 4 1699]) (o 6 51) = [] := by decide +kernel
+#guard stepRefusals (r [o 7 2000, o 5 0, o 4 1699]) (o 6 51) == []
 -- BAT-011: end_eff in 500 s and a proving time of 757 s: refused; with end 1,000 it starts
 theorem pin_era_run : (r [o 7 500, o 8 757]).lastRefusal = rEra ∧ (r [o 7 500, o 8 757]).runsStarted = 0 ∧
     (r [o 7 1000, o 8 757]).runsStarted = 1 := by decide +kernel

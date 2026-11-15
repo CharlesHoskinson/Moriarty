@@ -21,8 +21,8 @@
 | BAT-007 | C | settlement | MODELED | `Inv.membership` (pathsGiven = jobsClosed), pin `pin_epoch` | pending (Formal-Quint) | see ORACLE.md |
 | BAT-008 | C | settlement | MODELED | `Inv.membership` (leafBytes = 32 x jobsClosed), pin `pin_epoch` | pending (Formal-Quint) | see ORACLE.md |
 | BAT-009 | C | settlement | MODELED | `Inv.formFirst`, pin `pin_no_form` | pending (Formal-Quint) | see ORACLE.md |
-| BAT-010 | C | settlement | FINDING | `deadline`, `BAT_010_close_before_era`, pin `pin_era_close`, `Consistency.finding_bat010_boundary` | n/a (finding) | FAL-SETTLEMENT-3: closing at end_eff - proof - inclusion lands at end_eff, where ERT-004 accepts nothing |
-| BAT-011 | C | settlement | FINDING | `BAT_011_era_refusal`, pin `pin_era_run`, `Consistency.finding_bat011_boundary` | n/a (finding) | FAL-SETTLEMENT-3: a run ending exactly at end_eff is admitted (refused only after) but ERT-004 is not active at end_eff |
+| BAT-010 | C | settlement | MODELED | `deadline`, `blockGap`, `BAT_010_close_before_era`, pin `pin_era_close`, `Consistency.replay_bat010_boundary` | pending (Formal-Quint) | FAL-SETTLEMENT-3 FIXED in the text: close at end_eff - proof - inclusion - one block (LEAD PICK); replay `replay_bat010_boundary` lands at 1,999 < 2,000; spec: e2e/sherlock-e2e-batched-settlement |
+| BAT-011 | C | settlement | MODELED | `BAT_011_era_refusal`, pin `pin_era_run`, `Consistency.replay_bat011_boundary` | pending (Formal-Quint) | FAL-SETTLEMENT-3 FIXED in the text: a run that ends at or after end_eff is refused (LEAD PICK); replay `replay_bat011_boundary`; spec: e2e/sherlock-e2e-batched-settlement |
 | BAT-012 | C | settlement | MODELED | `Inv.freezeOpen`, pin `pin_freeze_open` | pending (Formal-Quint) | see ORACLE.md |
 | STL-001 | completion | settlement | SPEC-CHECKED | `Consistency.STL_001_ok` | n/a | a derivation of the 4 public words; same form as SLC-006 |
 | STL-002 | completion | settlement | SPEC-CHECKED | `Consistency.STL_002_ok` | n/a | the prove chain app, leaf, N1, N2, N3, L, L_Fr, wrap at k = 21; proving is slice B |
@@ -30,7 +30,7 @@
 | STL-004 | completion | settlement | MODELED | `STL_004_runs_set`, pin `pin_settle` | pending (Formal-Quint) | see ORACLE.md |
 | STL-005 | completion | settlement | MODELED | `Inv.mismatchSettled`, pin `pin_stl005` | pending (Formal-Quint) | see ORACLE.md |
 | STL-006 | completion | settlement | SPEC-CHECKED | `Consistency.STL_006_ok` | n/a | 33 of 36 programs (LOOP.md:45); a run plan, no transition |
-| ANC-012 | reused | settlement | FINDING | `chunks`, `kMax`, `planRefuses`, `kmax_default_ttl`, `measured_largest_calls`, `anc012_call_words`, `Consistency.finding_anc012_formula` | n/a (finding) | FAL-SETTLEMENT-2: the formula gives K_MAX 8 at 14,400 s, BAT-005 caps 2; constants 1,015 = 1,024 - 9, 474 and 699 <= 1,015 (t20-batched@5dc1be2ee:...RESULTS.md:116), floor(3,600/1,755) = 2 (RESULTS.md:122) |
+| ANC-012 | reused | settlement | MODELED | `chunks`, `kMax`, `planRefuses`, `kmax_default_ttl`, `measured_largest_calls`, `anc012_call_words`, `Consistency.anc012_cap2` | pending (Formal-Quint) | FAL-SETTLEMENT-2 FIXED in the text: K_MAX = min(floor(TTL / 1,755 s), 2) (owner rule K_MAX = 2, BAT-005); now in-tree processor-final anchor-chunks; plan tool cap TO BUILD (~/.cache/lead/fal-fix-FAL-SETTLEMENT-2.md) |
 | CLM-001 | reused | settlement | SPEC-CHECKED | `Consistency.CLM_001_ok` | n/a | node circuit rule (slice B Aggregation owns the AIRs); kinds and domain words distinct |
 | CLM-002 | reused | settlement | SPEC-CHECKED | `Consistency.CLM_002_ok` | n/a | node circuit rule; no SEG or JOIN consumed |
 | CLM-003 | reused | settlement | SPEC-CHECKED | `Consistency.CLM_003_ok` | n/a | node circuit rule; openings of JOIN or DEP only (in circuit, LDG-004 t20) |
@@ -42,7 +42,7 @@
 | CLM-009 | reused | settlement | SPEC-CHECKED | `Consistency.CLM_009_ok` | n/a | a test obligation (refusal twins) |
 | CRR-007 | reused | settlement | SPEC-CHECKED | `Consistency.CRR_007_ok` | n/a | consumer writes only its nullifier; consistent with LDG-004 |
 | ELD-005 | reused | settlement | SPEC-CHECKED | `Consistency.ELD_005_ok`; native read keys in `Inv.deployShape` | n/a | read entries keep native keys and never write |
-| ERT-004 | reused | settlement | SPEC-CHECKED | `Consistency.ERT_004_ok`, `ERT_004_consistent`, `active`, `endEff`, `finding_bat011_boundary`, `finding_bat010_boundary` | n/a | era activity is the governance context's model; here the half-open interval shows FAL-SETTLEMENT-3 against BAT-010/BAT-011 |
+| ERT-004 | reused | settlement | SPEC-CHECKED | `Consistency.ERT_004_ok`, `ERT_004_consistent`, `active`, `endEff`, `replay_bat011_boundary`, `replay_bat010_boundary` | n/a | era activity is the governance context's model; here the half-open interval shows FAL-SETTLEMENT-3 against BAT-010/BAT-011 |
 | ERT-009 | reused | settlement | SPEC-CHECKED | `Consistency.ERT_009_ok` | n/a | GRID rule of the governance era table; no transition in this context |
 | GOV-006 | reused | settlement | SPEC-CHECKED | `Consistency.GOV_006_ok`, `GOV_006_consistent`; `eraEnd` cell (announceEra) feeds BAT-010/011 | n/a | the soundness_end verb is the governance context's; here only its end_eff is consumed |
 | FREG-001 | reused | settlement | SPEC-CHECKED | `Consistency.FREG_001_ok` | n/a | registry entry form (9 fields, pi_count < 2^32) |
@@ -50,14 +50,14 @@
 | FREG-003 | reused | settlement | SPEC-CHECKED | `Consistency.FREG_003_ok` | n/a | parsing refuses trailing data |
 | FREG-004 | reused | settlement | SPEC-CHECKED | `Consistency.FREG_004_ok` | n/a | no accumulator |
 | FREG-005 | reused | settlement | SPEC-CHECKED | `Consistency.FREG_005_ok`, `SG_ok` | n/a | SG gate constants |
-| LDG-001 | reused | settlement | FINDING | `Consistency.LDG_001_ok` (t20 text); `Inv.deployShape` | n/a (finding) | FAL-SETTLEMENT-1: this branch holds the pre-T20 text (foreign map, verified_roots) that contradicts SLC-001; the oracle models the t20-batched text (LEAD PICK) |
+| LDG-001 | reused | settlement | SPEC-CHECKED | `Consistency.LDG_001_ok` (t20 text); `Inv.deployShape` | n/a | FAL-SETTLEMENT-1 FIXED: the in-tree text is now the t20-batched text (claim_roots, no foreign map), consistent with SLC-001; the oracle models it |
 | LDG-002 | reused | settlement | MODELED | `LDG_002_at_most_once`, `BAT_002_operator_no_acceptRun`, `Consistency.LDG_002_args_ok`, pins `pin_replay`, `pin_both_node` | pending (Formal-Quint) | see ORACLE.md |
-| LDG-003 | reused | settlement | FINDING | `closeStep`, `collBad`, `Inv.rootsDistinct`, pin `pin_dup_root` | n/a (finding) | FAL-SETTLEMENT-1: in-tree text takes (reg_root, set_root, shape_d); the t20 text (modeled) takes (reg_pub, claims_root) |
-| LDG-004 | reused | settlement | FINDING | `Consistency.LDG_004_ok` | n/a (finding) | FAL-SETTLEMENT-1: in-tree text has a descend entry; SLC-001 and the t20 text have none |
-| LDG-005 | reused | settlement | FINDING | `Consistency.LDG_005_ok`, `epoch_cap_depth20` | n/a (finding) | FAL-SETTLEMENT-1: in-tree text is an openClaim entry; SLC-001 and the t20 text (claims tree depth 20, modeled) have none |
+| LDG-003 | reused | settlement | MODELED | `closeStep`, `collBad`, `Inv.rootsDistinct`, pin `pin_dup_root` | pending (Formal-Quint) | FAL-SETTLEMENT-1 FIXED: the in-tree text is now the t20-batched text (acceptCollection(reg_pub, claims_root)), consistent with SLC-001; the oracle models it |
+| LDG-004 | reused | settlement | SPEC-CHECKED | `Consistency.LDG_004_ok` | n/a | FAL-SETTLEMENT-1 FIXED: the in-tree text is now the t20-batched text (no descend or openClaim entry; membership), consistent with SLC-001; the oracle models it |
+| LDG-005 | reused | settlement | SPEC-CHECKED | `Consistency.LDG_005_ok`, `epoch_cap_depth20` | n/a | FAL-SETTLEMENT-1 FIXED: the in-tree text is now the t20-batched text (claims tree depth 20), consistent with SLC-001; the oracle models it |
 | LDG-006 | reused | settlement | MODELED | `Inv.onePerEpoch`, `LDG_006_one_write_per_epoch`, pins `pin_epoch`, `pin_empty_epoch` | pending (Formal-Quint) | see ORACLE.md |
 | LDG-007 | reused | settlement | SPEC-CHECKED | `Consistency.LDG_007_ok` | n/a | no foreign map; run and foreign leaf tags differ |
 | LDG-008 | reused | settlement | MODELED | `collBad` (registry bit 64), pin `pin_registry`, `Consistency.LDG_008_once` | pending (Formal-Quint) | registry epochs are not a transition here: `regWrites` shows one write per changed epoch |
-| LW-009 | reused | settlement | FINDING | `Consistency.LW_009_ok` | n/a (finding) | FAL-SETTLEMENT-1: in-tree LW-009 publishes [reg_root, set_root]; the t20 text (modeled) publishes [reg_pub, claims_root] |
+| LW-009 | reused | settlement | SPEC-CHECKED | `Consistency.LW_009_ok` | n/a | FAL-SETTLEMENT-1 FIXED: the in-tree text is now the t20-batched text (publishes [reg_pub, claims_root]), consistent with SLC-001; the oracle models it |
 | ZK-006 | reused | settlement | SPEC-CHECKED | `Consistency.ZK_006_ok` | n/a | salt form; the CSPRNG draw is slice B (ZKE) |
 | ZK-011 | reused | settlement | SPEC-CHECKED | `Consistency.ZK_011_ok` | n/a | public digest forms, distinct tags |

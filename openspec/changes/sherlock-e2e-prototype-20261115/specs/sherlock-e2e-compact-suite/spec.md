@@ -181,3 +181,17 @@ Verification: check T-EVIDENCE-COMPLETE over the whole manifest: an empty, omitt
 #### Scenario: Status of ECS-014
 - **WHEN** the status is reported on 2026-11-15
 - **THEN** it reads: OPEN. `classify` can give pass after a dry settlement (`t23.py:371`, `:444-448`), live settlement stops by design (`t23.py:378`), and `compare` returns equal on an empty vector list (`t23.py:222-240`). Found by Astra-A review R-17. References: STL-002, STL-004, STL-005, ECS-010, ECS-012, ECS-013.
+
+### Requirement: ECS-015 A dry settle is not a pass
+ECS-015: If the T23 runner settled a call without a Preview transaction, then the T23 runner SHALL class the call as blocked with the reason `preview off`.
+
+Verification: a `t23.py selftest` case with `T23_ALLOW_DISPATCH=1` and no `T23_ALLOW_PREVIEW`; to build.
+
+#### Scenario: Dispatch on, Preview off
+- **GIVEN** a call that proves and compares equal to the native transcript
+- **WHEN** settle runs dry because Preview is off
+- **THEN** the class is blocked with the reason `preview off`, not pass
+
+#### Scenario: Status of ECS-015
+- **WHEN** the status is reported on 2026-11-15
+- **THEN** it reads: TO BUILD. Added for FAL-CONFORMANCE-1 (LEAD PICK for T15). References: ECS-004, ECS-005, ECS-008, ECS-010, ECS-014. Evidence: `classify` can give pass after a dry settlement (`t23.py:371`, `:444-448`; ECS-014 status). Check: MISSING the selftest case.

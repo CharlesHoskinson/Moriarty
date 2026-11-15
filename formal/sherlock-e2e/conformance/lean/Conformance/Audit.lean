@@ -227,3 +227,7 @@ Classical.choice, Quot.sound), and `#audit_ns Conformance` pinned at `[]`. -/
 /-- info: 'Conformance.pin_refuse_kit' does not depend on any axioms -/
 #guard_msgs in
 #print axioms Conformance.pin_refuse_kit
+
+/-- info: 'Conformance.pin_preview_off' does not depend on any axioms -/
+#guard_msgs in
+#print axioms Conformance.pin_preview_off

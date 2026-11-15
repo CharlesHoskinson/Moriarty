@@ -38,6 +38,9 @@ def chunkWords : Int := 990
 def ttlPerChunk : Int := 1755
 /-- BAT-005: the chunk cap at every TTL. -/
 def kMaxCap : Int := 2
+/-- BAT-010 (FAL-SETTLEMENT-3, LEAD PICK): the one-block margin before `end_eff`, abstracted as one
+time unit (any strict margin makes the landing fall inside `[start, end_eff)`). -/
+def blockGap : Int := 1
 /-- SLC-002, ANC-014: the anchor slot. -/
 def anchorSlotConst : Int := 15
 /-- SLC-003: key kind of the universal wrap key; SLC-004: of a compiled native key. -/
@@ -129,15 +132,15 @@ def addRoot (s : St) (r : Int) : St :=
 def b2i (b : Bool) : Int := if b then 1 else 0
 
 /-- BAT-001, BAT-010: the close time of the open epoch: 3,600 s after its first job, or
-earlier at `end_eff` minus the collection proof time and the inclusion time. -/
+earlier at `end_eff` minus the collection proof time, the inclusion time and one block. -/
 def deadline (s : St) : Int :=
   if s.eraEnd = 0 then s.epochStart + epochLen
-  else min (s.epochStart + epochLen) (s.eraEnd - s.collBudget - s.inclTime)
+  else min (s.epochStart + epochLen) (s.eraEnd - s.collBudget - s.inclTime - blockGap)
 
 /-- ANC-012 capped by BAT-005: chunks of an entry of `le` effect words. -/
 def chunks (le : Int) : Int := if le ≤ callWords then 1 else (le + chunkWords - 1) / chunkWords
-/-- ANC-012 formula `min(floor(TTL / 1,755 s), 18)`, capped at 2 by BAT-005 (LEAD PICK). -/
-def kMax (ttl : Int) : Int := min (min (ttl / ttlPerChunk) 18) kMaxCap
+/-- ANC-012 formula `min(floor(TTL / 1,755 s), 2)` (owner rule K_MAX = 2, BAT-005; FAL-SETTLEMENT-2). -/
+def kMax (ttl : Int) : Int := min (ttl / ttlPerChunk) kMaxCap
 /-- BAT-005, ANC-012: refused when the entry needs chunks above the cap. -/
 def planRefuses (le ttl : Int) : Bool := decide (callWords < le) && decide (kMax ttl < chunks le)
 
@@ -274,7 +277,7 @@ def apply (s : St) (op : Op) : St :=
   | .announceEra e => { s with eraEnd := e }
   | .startRun p =>
     -- BAT-011, ERT-004, GOV-006: no run starts that cannot land before end_eff
-    if s.eraEnd ≠ 0 ∧ s.eraEnd < s.now + p + s.inclTime then
+    if s.eraEnd ≠ 0 ∧ s.eraEnd ≤ s.now + p + s.inclTime then
       { s with runsRefusedEra := s.runsRefusedEra + 1, lastRefusal := rEra }
     else { s with runsStarted := s.runsStarted + 1, lastRefusal := 0 }
   | .intent t =>
@@ -502,7 +505,7 @@ theorem inv_startRun (p : Int) : Inv (apply s (.startRun p)) := by
   by_cases he : 0 ≤ p
   · have hen : enabled s (.startRun p) = true := by simp [enabled, he]
     unfold apply; rw [hen]; (try dsimp only)
-    by_cases hc : s.eraEnd ≠ 0 ∧ s.eraEnd < s.now + p + s.inclTime
+    by_cases hc : s.eraEnd ≠ 0 ∧ s.eraEnd ≤ s.now + p + s.inclTime
     · rw [ite_eq_left_of_eq_true _ _ (eq_true hc)]; inv_tac
     · rw [ite_eq_right_of_eq_false _ _ (eq_false hc)]; inv_tac
   · simp [apply, enabled, he]; exact h
@@ -656,7 +659,7 @@ theorem STL_004_runs_set (s : St) (c o : Int) (f4 : Bool)
     · simp [c1, c2]
 
 /-- BAT-011: no run starts that cannot land before `end_eff`. -/
-theorem BAT_011_era_refusal (s : St) (p : Int) (hp : 0 ≤ p) (he : s.eraEnd ≠ 0) (hl : s.eraEnd < s.now + p + s.inclTime) :
+theorem BAT_011_era_refusal (s : St) (p : Int) (hp : 0 ≤ p) (he : s.eraEnd ≠ 0) (hl : s.eraEnd ≤ s.now + p + s.inclTime) :
     (apply s (.startRun p)).runsStarted = s.runsStarted ∧ (apply s (.startRun p)).lastRefusal = rEra := by
   simp [apply, enabled, hp, he, hl]
 
@@ -668,7 +671,7 @@ theorem BAT_006_default_ttl (s : St) : (apply s (.intent 0)).intentTtl = 3600 :=
 collection proof time and the inclusion time with an epoch open. -/
 theorem BAT_010_close_before_era (s : St) (dt : Int) (ho : s.epochOpen = true) (he : s.eraEnd ≠ 0)
     (hen : enabled s (.tick dt) = true) :
-    (apply s (.tick dt)).now ≤ s.eraEnd - s.collBudget - s.inclTime := by
+    (apply s (.tick dt)).now ≤ s.eraEnd - s.collBudget - s.inclTime - blockGap := by
   simp [enabled, ho] at hen
   simp [apply, enabled, ho, hen]
   have := hen.2; unfold deadline at this; simp [he] at this; omega

@@ -69,8 +69,8 @@ for p in sorted((WT / "openspec/changes").glob("*/specs/*/spec.md")):
     for k, v in reqs(p.read_text(), f"{ch}/{p.parts[-2]}").items():
         if k not in defs or defs[k][2] <= rank:
             defs[k] = (v[0], v[1], rank)
-# t22-governance supplies GOV/ERT/ELD/CRR only; t20-batched supplies the post-T20 LDG text and ANC-012
-for ref in ("t22-governance", "t20-batched"):
+# t22-governance supplies GOV/ERT/ELD/CRR only
+for ref in ("t22-governance",):  # t20 LDG and ANC-012 text is in-tree since FAL-SETTLEMENT-1/2
     for path in git_ls(ref):
         if path.endswith("spec.md") and ((ref == "t22-governance" and "sherlock-governance/" in path) or (ref == "t20-batched" and ("modular-leaf-20261111/specs/sherlock-ledger-contract" in path or "specs/sherlock-anchor-chunks/" in path))):
             ch = path.split("/")[2]

@@ -1,7 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: CF-001 The frontend taps `Lflattened`
-The frontend SHALL read `Lflattened` after `optimize-circuit2`, the exact input of `reduce-to-zkir`. The manifest and the TypeScript runtime SHALL come from `analyzed-ir` unchanged. One analysis pass `add-sherlock-anchor` SHALL follow `determine-ledger-paths`. The frontend SHALL replace `reduce-to-zkir`, the `zkir-v3 compile-many` key step and the per-circuit key fingerprint.
+Where the build is not the e2e prototype (D-016; in the prototype ECC-001 applies and the Mycroft compiler reads only ZKIR 3.1, FAL-COMPACT-COMPILATION-1), the frontend SHALL read `Lflattened` after `optimize-circuit2`, the exact input of `reduce-to-zkir`. The manifest and the TypeScript runtime SHALL come from `analyzed-ir` unchanged. One analysis pass `add-sherlock-anchor` SHALL follow `determine-ledger-paths`.
+
+#### Scenario: Further rules of CF-001
+- **WHEN** CF-001 is applied
+- **THEN** The frontend SHALL replace `reduce-to-zkir`, the `zkir-v3 compile-many` key step and the per-circuit key fingerprint.
 
 #### Scenario: Tap point drift
 - **WHEN** the compiler version changes the input of `reduce-to-zkir`

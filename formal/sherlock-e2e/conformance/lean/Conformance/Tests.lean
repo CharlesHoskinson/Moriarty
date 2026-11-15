@@ -67,6 +67,12 @@ theorem pin_incomplete_report : (run 29 (honest 1 ++ [o 8 0])).complete = false 
     (run 29 (honest 1 ++ [o 8 0])).completeBlocked = 1 := by decide +kernel
 #guard !(run 29 (honest 1 ++ [o 8 0])).complete
 
+-- ECS-015 (FAL-CONFORMANCE-1, LEAD PICK): dispatch on, Preview off, equal transcript: the
+-- call is blocked with the reason Preview off, not pass; with Preview on it is pass.
+theorem pin_preview_off : (run 29 (honest 1)).cls = clsBlocked ∧ (run 29 (honest 1)).reason = rPreviewOff ∧
+    (run 31 (honest 1)).cls = clsPass := by decide +kernel
+#guard (run 29 (honest 1)).reason == rPreviewOff
+
 -- ECS-012: the dry run: 0 of 0; one mismatch after a proof: 1 of 1
 theorem pin_denominator_dry : (run 0 []).mismatchCompared = 0 ∧ (run 0 []).compared = 0 := by decide +kernel
 def mism : List Int := [o 1 1, o 2 1, o 3 1, o 4 0, o 5 3, o 6 1, o 7 1]

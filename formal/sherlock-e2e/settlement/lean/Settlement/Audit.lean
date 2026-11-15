@@ -28,21 +28,21 @@ Classical.choice, Quot.sound), and `#audit_ns Settlement` pinned at `[]`. -/
 #guard_msgs in
 #print axioms Settlement.Consistency.LDG_008_once
 
-/-- info: 'Settlement.Consistency.finding_bat011_boundary' depends on axioms: [propext] -/
+/-- info: 'Settlement.Consistency.replay_bat011_boundary' depends on axioms: [propext] -/
 #guard_msgs in
-#print axioms Settlement.Consistency.finding_bat011_boundary
+#print axioms Settlement.Consistency.replay_bat011_boundary
 
-/-- info: 'Settlement.Consistency.finding_bat010_boundary' depends on axioms: [propext] -/
+/-- info: 'Settlement.Consistency.replay_bat010_boundary' depends on axioms: [propext] -/
 #guard_msgs in
-#print axioms Settlement.Consistency.finding_bat010_boundary
+#print axioms Settlement.Consistency.replay_bat010_boundary
 
-/-- info: 'Settlement.Consistency.finding_mid002_read_entries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'Settlement.Consistency.MID_002_read_entries_native' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
-#print axioms Settlement.Consistency.finding_mid002_read_entries
+#print axioms Settlement.Consistency.MID_002_read_entries_native
 
-/-- info: 'Settlement.Consistency.finding_anc012_formula' does not depend on any axioms -/
+/-- info: 'Settlement.Consistency.anc012_cap2' does not depend on any axioms -/
 #guard_msgs in
-#print axioms Settlement.Consistency.finding_anc012_formula
+#print axioms Settlement.Consistency.anc012_cap2
 
 /-- info: 'Settlement.Consistency.ERT_004_consistent' does not depend on any axioms -/
 #guard_msgs in

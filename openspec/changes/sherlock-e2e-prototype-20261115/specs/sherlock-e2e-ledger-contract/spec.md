@@ -54,7 +54,7 @@ Verification: test `W-2 read entry key` in `t20-ledger-test.out` for the runtime
 
 #### Scenario: Status of SLC-004
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: PARTIAL. References: ELD-005 (governance). Supersedes MID-002 for read entries (owner-confirmed T20 pick "native-keyed reads", LOOP.md:106; decision D-073). Evidence: `t20-batched@5dc1be2ee:research/sherlock-t20-batched-20261114/RESULTS.md:67`; the runtime test builds the state in memory (`tools/sherlock-sdk/t20-ledger.test.mjs`); the Preview runner of T17 installs the wrap key on every entry (`t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:646-649`). Check: test `W-2 read entry key` in `t20-ledger-test.out` for the runtime rule. MISSING: a four-entry deploy path with per-entry key readback and one real consumer call.
+- **THEN** it reads: PARTIAL. References: ELD-005 (governance). MID-002 now names the write entries only (FAL-LEDGER-VERIFICATION-1; owner-confirmed T20 pick "native-keyed reads", LOOP.md:106; decision D-073). Evidence: `t20-batched@5dc1be2ee:research/sherlock-t20-batched-20261114/RESULTS.md:67`; the runtime test builds the state in memory (`tools/sherlock-sdk/t20-ledger.test.mjs`); the Preview runner of T17 installs the wrap key on every entry (`t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:646-649`). Check: test `W-2 read entry key` in `t20-ledger-test.out` for the runtime rule. MISSING: a four-entry deploy path with per-entry key readback and one real consumer call.
 
 ### Requirement: SLC-005 One ledger for each program
 SLC-005: When the deploy runner deploys a ledger for an R_SL program, the deploy runner SHALL set the constructor anchor to the `c_p` of that program.

@@ -92,7 +92,7 @@ Verification: `tools/t23-suite/accept_args.py` tests (16 pass) reproduce the T17
 - **THEN** it reads: form BUILT (MAP.md:39, :47-66, LEAD PICK 1): `outcome_d = P2(SHK_OUTCOME_V2, 2, kind, payload)` with payload `vd([comm, E_0 .. E_(L_e-1)])` as a Cons/Nil list of Fr values; proof binding OPEN (ERS-012). References: STL-001, SLC-007, D-071.
 
 ### Requirement: ERS-009 A natively refused Compact call has no statement
-ERS-009: If the R_SL executor rejects a Compact call, then the R_SL statement builder SHALL emit no `RslStatement` for the call.
+ERS-009: If the R_SL executor rejects a Compact call on the T23 settlement route, then the R_SL statement builder SHALL emit no `RslStatement` for the call.
 
 Verification: test `rsl_rejected_tapes_refused` (`tests/rsl.rs:75`) and the suite rows refused-as-native; exists.
 
@@ -102,7 +102,7 @@ Verification: test `rsl_rejected_tapes_refused` (`tests/rsl.rs:75`) and the suit
 
 #### Scenario: Status of ERS-009
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT (`mod.rs:43-45` returns status `refused`); LEAD PICK 4 of MAP.md: refused calls are not settled on this route (D-071). This rule is for Compact calls of the T23 route only. A general Sherlock run keeps its provable Rejected and Exhausted outcomes (EUI-005, GP-001). References: MYC-LOW-007, MYC-REF-037, MYC-REF-038.
+- **THEN** it reads: BUILT (`mod.rs:43-45` returns status `refused`); LEAD PICK 4 of MAP.md: refused calls are not settled on this route (D-071). The sentence names the T23 settlement route, so GP-001 is not narrowed: the same program keeps a provable Rejected outcome under the general route (EUI-005, GP-001; FAL-EXEC-4, LEAD PICK for T15). References: MYC-LOW-007, MYC-REF-037, MYC-REF-038.
 
 ### Requirement: ERS-010 The record `RslStatement`
 ERS-010: The R_SL statement builder SHALL write for each halted call one `RslStatement` record with exactly the fields `prog_d`, `input_d`, `outcome_d`, `comm` and `W`.

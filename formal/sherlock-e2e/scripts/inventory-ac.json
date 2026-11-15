@@ -324,7 +324,7 @@
    "id": "BAT-010",
    "group": "C",
    "context": "settlement",
-   "sentence": "While an era end `end_eff` is announced, when the time reaches `end_eff` minus the collection proof time and the inclusion time, the epoch operator SHALL close the open epoch.",
+   "sentence": "While an era end `end_eff` is announced, when the time reaches `end_eff` minus the collection proof time, the inclusion time and one block interval, the epoch operator SHALL close the open epoch.",
    "source": "e2e/sherlock-e2e-batched-settlement",
    "assigned": "settlement"
   },
@@ -332,7 +332,7 @@
    "id": "BAT-011",
    "group": "C",
    "context": "settlement",
-   "sentence": "If the proving time plus the inclusion time of a new run ends after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.",
+   "sentence": "If the proving time plus the inclusion time of a new run ends at or after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.",
    "source": "e2e/sherlock-e2e-batched-settlement",
    "assigned": "settlement"
   },
@@ -468,7 +468,7 @@
    "id": "PVW-006",
    "group": "C",
    "context": "network-operations",
-   "sentence": "When the honest call is included, the Preview runner SHALL submit the 4 controls R1 (changed public input), R2 (flipped proof bit), R4 (other program) and R3 (replay).",
+   "sentence": "When the readback of the included honest call arrives, the Preview runner SHALL submit the 4 controls R1 (changed public input), R2 (flipped proof bit), R4 (other program) and R3 (replay).",
    "source": "e2e/sherlock-e2e-preview-deployment",
    "assigned": "network-operations"
   },
@@ -524,7 +524,7 @@
    "id": "PVW-013",
    "group": "C",
    "context": "network-operations",
-   "sentence": "If the gate record of the wrap key to deploy lacks a pass for RKY-003, RKY-004, RKY-005, the T12 gate or the zero-knowledge checks ZK-012 to ZK-017, then the deploy runner SHALL refuse the final prototype deploy.",
+   "sentence": "If the gate record of the wrap key to deploy lacks a pass for RKY-003, RKY-004, RKY-005, the T12 gate, the zero-knowledge checks ZK-012 to ZK-017 or the 5 wrap checks of WRP-012, then the deploy runner SHALL refuse the final prototype deploy.",
    "source": "e2e/sherlock-e2e-preview-deployment",
    "assigned": "network-operations"
   },
@@ -804,7 +804,7 @@
    "id": "FRC-003",
    "group": "C",
    "context": "network-operations",
-   "sentence": "While a proven, unsubmitted and unrefused call has more than 5 minutes of TTL left, the ledger runner SHALL reuse the saved call on a rerun.",
+   "sentence": "While a proven, unrefused call that is not included has more than 5 minutes of TTL left, the ledger runner SHALL reuse the saved call on a rerun.",
    "source": "e2e/sherlock-e2e-recovery",
    "assigned": "network-operations"
   },
@@ -901,6 +901,14 @@
    "group": "C",
    "context": "network-operations",
    "sentence": "When a lane tip merges into the integration branch, the tested-design loop SHALL record a true result of `git merge-base --is-ancestor` for the tip and the pass result of each required suite on the merged tree.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-016",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If wallet balancing fails with an error other than a transport error, then the ledger runner SHALL record the attempt and stop the call without a retry.",
    "source": "e2e/sherlock-e2e-recovery",
    "assigned": "network-operations"
   },
@@ -1028,7 +1036,7 @@
    "id": "ECC-010",
    "group": "A",
    "context": "compact-compilation",
-   "sentence": "When `mycroft-suite` runs on the 33 compiled suite programs, the Mycroft compiler SHALL give each proof circuit either an image or one refusal code.",
+   "sentence": "When `mycroft-suite` runs on the 33 compiled suite programs, the Mycroft compiler SHALL give each proof circuit either an image or the refusal code of its first failing check in the order read, IR version, input types, lowering and seal.",
    "source": "e2e/sherlock-e2e-compact-compiler",
    "assigned": "compact-compilation"
   },
@@ -1124,7 +1132,7 @@
    "id": "ERS-009",
    "group": "A",
    "context": "sherlock-execution",
-   "sentence": "If the R_SL executor rejects a Compact call, then the R_SL statement builder SHALL emit no `RslStatement` for the call.",
+   "sentence": "If the R_SL executor rejects a Compact call on the T23 settlement route, then the R_SL statement builder SHALL emit no `RslStatement` for the call.",
    "source": "e2e/sherlock-e2e-rsl-statement",
    "assigned": "sherlock-execution"
   },
@@ -1449,6 +1457,14 @@
    "assigned": "conformance"
   },
   {
+   "id": "ECS-015",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "If the T23 runner settled a call without a Preview transaction, then the T23 runner SHALL class the call as blocked with the reason `preview off`.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
    "id": "EUF-001",
    "group": "A",
    "context": "call-flow",
@@ -1580,7 +1596,7 @@
    "id": "ANC-017",
    "group": "completion",
    "context": "completion",
-   "sentence": "When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out` and `j`.",
+   "sentence": "When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out`, the FP-3 link `pack(C_(j+1))` and `j`.",
    "source": "completion/sherlock-anchor-chunks",
    "assigned": "B:bridge"
   },
@@ -2052,15 +2068,15 @@
    "id": "ANC-012",
    "group": "reused",
    "context": "network-operations+settlement",
-   "sentence": "`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`. `K_MAX` SHALL be `min(floor(TTL / (10 x 175.5 s)), 18)`, which is 2 at the default intent TTL of 3,600 s and 0 below 1,755 s, where `sherlock plan` SHALL refuse every entry (Midnight write rule W-5, owner ruling 2026-11-14; LEAD pick for T15 confirmation).",
-   "source": "t20-batched:sherlock-processor-final-20261111/sherlock-anchor-chunks",
+   "sentence": "`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`.",
+   "source": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
    "assigned": "settlement"
   },
   {
    "id": "CF-001",
    "group": "reused",
    "context": "compact-compilation",
-   "sentence": "The frontend SHALL read `Lflattened` after `optimize-circuit2`, the exact input of `reduce-to-zkir`. The manifest and the TypeScript runtime SHALL come from `analyzed-ir` unchanged. One analysis pass `add-sherlock-anchor` SHALL follow `determine-ledger-paths`. The frontend SHALL replace `reduce-to-zkir`, the `zkir-v3 compile-many` key step and the per-circuit key fingerprint.",
+   "sentence": "Where the build is not the e2e prototype (D-016; in the prototype ECC-001 applies and the Mycroft compiler reads only ZKIR 3.1, FAL-COMPACT-COMPILATION-1), the frontend SHALL read `Lflattened` after `optimize-circuit2`, the exact input of `reduce-to-zkir`. The manifest and the TypeScript runtime SHALL come from `analyzed-ir` unchanged. One analysis pass `add-sherlock-anchor` SHALL follow `determine-ledger-paths`.",
    "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
    "assigned": "compact-compilation"
   },
@@ -2324,7 +2340,7 @@
    "id": "DCD-004",
    "group": "reused",
    "context": "settlement+wrap",
-   "sentence": "DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_root, set_root]` with no `shape_d` (owner ruling O9, 2026-11-13) and no claim count (AD-2, OWNER to confirm). Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).",
+   "sentence": "DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_pub, claims_root]` (T20 W-2, LEAD pick for T15 confirmation; it was `[reg_root, set_root]`) with no `shape_d` (owner ruling O9, 2026-11-13) and no claim count (AD-2, OWNER to confirm). Settlement SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005); claims are used by membership, not opened on chain.",
    "source": "sherlock-modular-leaf-20261111/sherlock-decider",
    "assigned": "wrap"
   },
@@ -2781,7 +2797,7 @@
    "group": "reused",
    "context": "settlement",
    "sentence": "The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: claim_pub -> outcome_pub` for runs that their own users submit (FPR-010, FPR-013; amendment of `n_steps` out of the map, owner item F-12), `claim_roots`, one `claims_root` per accepted collection, and the registry root. It SHALL hold no map or set with one entry per collection claim (Midnight write rule, owner ruling 2026-11-14, row T20). Two contracts with separate ledgers SHALL NOT be used.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
@@ -2789,7 +2805,7 @@
    "group": "reused",
    "context": "network-operations+settlement",
    "sentence": "`acceptRun(C_P, input_pub, outcome_pub)` SHALL verify the wrap proof whose effect words carry the three values (FPR-010). Plain `prog_d` and `n_steps` SHALL NOT be call data (ZK-002, FPR-013); `C_P` is LEAD F-7 under N-11, OWNER. It SHALL compute `claim_pub = transientHash([C_P, input_pub, outcome_pub])` and SHALL refuse a `claim_pub` that is already in `runs`.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
@@ -2797,23 +2813,23 @@
    "group": "reused",
    "context": "settlement",
    "sentence": "`acceptCollection(reg_pub, claims_root)` SHALL verify the wrap proof of the collection statement `[reg_pub, claims_root]` (LW-009 and DCD-004 as amended by T20, with no `shape_d`, owner ruling O9 2026-11-13, and no claim count), SHALL check `reg_pub` against the registry state (history per N-8), SHALL refuse a `claims_root` already in `claim_roots`, and SHALL insert it. It SHALL make no per-claim write. `shape_d`, `set_root` and `set_pub` SHALL NOT be call data.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
    "id": "LDG-004",
    "group": "reused",
    "context": "settlement",
-   "sentence": "There SHALL be no `descend` entry and no `openClaim` entry. A Sherlock consumer SHALL discharge a collection claim in circuit from the producer's SET proof (GP-2 hook: DESCEND, DL-STEP, SEAL-WITH-DEPS) and SHALL read no ledger state. A Compact consumer SHALL prove, inside its own call, a path of `D_C` = 20 siblings from the claim's leaf to a root, SHALL read `rootAccepted(root)` from the LEDGER CONTRACT by a cross-contract call, and SHALL keep its own nullifier keyed by the claim alone. The number of ledger writes SHALL NOT depend on the number of claims used or on their depth in `set_root`.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "sentence": "There SHALL be no `descend` entry and no `openClaim` entry. A Sherlock consumer SHALL discharge a collection claim in circuit from the producer's SET proof (GP-2 hook: DESCEND, DL-STEP, SEAL-WITH-DEPS) and SHALL read no ledger state.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
    "id": "LDG-005",
    "group": "reused",
    "context": "settlement",
-   "sentence": "`claims_root` SHALL be the root of a binary Merkle tree over Fr of fixed depth `D_C` = 20, built by `L` from the member heads of the collection's `set_root`: a run claim's leaf SHALL be its `claim_pub`, an empty slot SHALL be 0, a node SHALL be `transientHash([l, r])`, and an `ADM` or `VIEW` head SHALL NOT be a leaf. The foreign leaf is set by LDG-007. The claim list and the paths SHALL stay off chain: the operator SHALL publish the epoch's leaf list to a data-availability store at epoch close and SHALL give each job's submitter its slot and path. A withheld list SHALL NOT make a non-member usable. A claim SHALL be usable only after its epoch's collection is accepted.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "sentence": "`claims_root` SHALL be the root of a binary Merkle tree over Fr of fixed depth `D_C` = 20, built by `L` from the member heads of the collection's `set_root`: a run claim's leaf SHALL be its `claim_pub`, an empty slot SHALL be 0, a node SHALL be `transientHash([l, r])`, and an `ADM` or `VIEW` head SHALL NOT be a leaf. The foreign leaf is set by LDG-007.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
@@ -2821,15 +2837,15 @@
    "group": "reused",
    "context": "settlement",
    "sentence": "When an operator settles proved jobs, the operator SHALL JOIN the run SETs of one epoch and SHALL submit one `acceptCollection` call for the epoch. An epoch with no job SHALL write nothing. The operator SHALL make at most one ledger write per epoch, and the number of ledger writes SHALL NOT grow with the number of jobs.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
    "id": "LDG-007",
    "group": "reused",
    "context": "settlement",
-   "sentence": "The LEDGER CONTRACT SHALL hold no `foreign` map and SHALL have no FOREIGN opening entry. A foreign claim SHALL stay a member of the collection's `set_root` as a `FOREIGN(fclaim_d)` node, and its leaf in the claims tree SHALL be `transientHash([SHK_CLAIM_FGN, fclaim_pub])` with `fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d))`. A consumer SHALL use it with the path check, the `rootAccepted` read and its own nullifier keyed by the leaf. A foreign leaf SHALL NOT pass as a run claim, and a run leaf SHALL NOT pass as a foreign claim.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "sentence": "The LEDGER CONTRACT SHALL hold no `foreign` map and SHALL have no FOREIGN opening entry. A foreign claim SHALL stay a member of the collection's `set_root` as a `FOREIGN(fclaim_d)` node, and its leaf in the claims tree SHALL be `transientHash([SHK_CLAIM_FGN, fclaim_pub])` with `fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d))`. A consumer SHALL use it with the path check, the `rootAccepted` read and its own nullifier keyed by the leaf.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
@@ -2837,7 +2853,7 @@
    "group": "reused",
    "context": "settlement",
    "sentence": "When registry updates exist (N-8), the registry root SHALL be updated at most once per registry epoch, with one new root over the whole entry list, and SHALL NOT be written once per registered or revoked key. A registry epoch with no change SHALL write nothing. The entry list SHALL stay off chain, and a key SHALL be admitted only by a membership path against the registry root proved in circuit (GP-3 hook). `acceptCollection` SHALL refuse a `reg_pub` other than the current root.",
-   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "source": "sherlock-modular-leaf-20261111/sherlock-ledger-contract",
    "assigned": "settlement"
   },
   {
@@ -2908,7 +2924,7 @@
    "id": "LW-009",
    "group": "reused",
    "context": "settlement",
-   "sentence": "A collection SHALL publish `[reg_root, set_root]` through its effect words, with a schema separate from the run statement. `shape_d` SHALL NOT be public (owner ruling O9, 2026-11-13). No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The contract entry SHALL be `acceptCollection(reg_pub, set_pub)`.",
+   "sentence": "A collection SHALL publish `[reg_pub, claims_root]` through its effect words (T20 Midnight write rule W-2, LEAD pick for T15 confirmation; it was `[reg_root, set_root]`), with a schema separate from the run statement. `claims_root` SHALL be the fixed-depth Fr Merkle root over the member claims of `set_root` (LDG-005), built by `L` from `H2` log entries and bound to its lanes by `PUB` entries; `set_root` SHALL stay private.",
    "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
    "assigned": "settlement"
   },
@@ -3004,7 +3020,7 @@
    "id": "MID-002",
    "group": "reused",
    "context": "ledger-verification+settlement+wrap",
-   "sentence": "Every exported entry of a Sherlock contract SHALL hold the same universal wrap key.",
+   "sentence": "Every exported write entry of a Sherlock contract (`acceptRun`, `acceptCollection`) SHALL hold the same universal wrap key; the read entries `readRoot` and `readRun` keep their compiled native keys (SLC-004, ELD-005; FAL-LEDGER-VERIFICATION-1).",
    "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
    "assigned": "ledger-verification"
   },
@@ -3084,7 +3100,7 @@
    "id": "MYC-BLT-007",
    "group": "reused",
    "context": "compact-compilation",
-   "sentence": "Where the machine version has the keccak kit, when a circuit calls `keccak256`, the Mycroft compiler shall emit the keccak chip rule, which the R_SL leaf proves with keccak request rows fed by the SHA input rows into the keccak AIR. Where the machine version has the secp256k1 kit, the Mycroft compiler shall lower a secp256k1 operation to the `Secp*` chips of that kit (MYC-FE-013 to MYC-FE-020), which the leaf proves on one word per field element, with the field modulus as a preprocessed key constant of the row. Neither kit adds a program-specific key: both sit inside the 6-or-9 AIR bucket of the universal leaf. Secp256r1 and Curve25519 operations, and `sha512`, have no kit and are refused (MYC-FE-017, MYC-BLT-008).",
+   "sentence": "Where the machine version has the keccak kit, when a circuit calls `keccak256`, the Mycroft compiler shall emit the keccak chip rule, which the R_SL leaf proves with keccak request rows fed by the SHA input rows into the keccak AIR. The keccak chip value shall be the Keccak-256 digest (Ethereum padding, the `sha3::Keccak256` of the native VM) of the same aligned binary representation that `persistentHash` hashes, as one wide value that only `bytes_into_natives` reads. Where the machine version has the secp256k1 kit, the Mycroft compiler shall lower a secp256k1 operation to the `Secp*` chips of that kit (MYC-FE-013 to MYC-FE-020), which the leaf proves on one word per field element, with the field modulus as a preprocessed key constant of the row. Neither kit adds a program-specific key: both sit inside the 6-or-9 AIR bucket of the universal leaf. Secp256r1 and Curve25519 operations, and `sha512`, have no kit and are refused (MYC-FE-017, MYC-BLT-008).",
    "source": "mycroft-factory:mycroft/spec/specs/builtins",
    "assigned": "compact-compilation"
   },
@@ -3092,7 +3108,7 @@
    "id": "MYC-CHIP-001",
    "group": "reused",
    "context": "compact-compilation+sherlock-execution",
-   "sentence": "The Sherlock leaf shall have one R_SL chip set whose AIRs are WORD, ALU, row PUBLIC, RANGE, SHA (four AIRs) and the keccak AIR, at most 9 AIRs in all (the 6-or-9 AIR bucket of the universal leaf), and shall prove each compiled Sherlock instruction (`field`, `mov`, `eq`, `select`, `lt`, `divmod2`, `range`, `assertEq`, `assert`, `tape`, `eff`, `ret`, halt, and one chip per kit builtin the compiler emits, including the `Secp*` and Jubjub chips) as a fixed sequence of micro-op rows over those AIRs.",
+   "sentence": "The Sherlock leaf shall have one R_SL chip set whose AIRs are WORD, ALU, row PUBLIC, RANGE, the SHA-256 AIRs SHA_REQ, SHA_HASHER and BITWISE8, and the Keccak-256 AIRs KECCAK_REQ, KECCAK_PERM and BITWISE8, at most 8 app AIRs per program, 9 with FP-1 (the 6-or-9 AIR bucket of the universal leaf), and shall prove each compiled Sherlock instruction (`field`, `mov`, `eq`, `select`, `lt`, `divmod2`, `range`, `assertEq`, `assert`, `tape`, `eff`, `ret`, halt, and one chip per kit builtin the compiler emits, including the `Secp*` and Jubjub chips) as a fixed sequence of micro-op rows over those AIRs.",
    "source": "mycroft-factory:mycroft/spec/specs/chipset",
    "assigned": "sherlock-execution"
   },
@@ -3292,7 +3308,7 @@
    "id": "MYC-KEY-008",
    "group": "reused",
    "context": "sherlock-execution",
-   "sentence": "When the universal key set changes, the Mycroft compiler shall produce the same `image_d` from the same source and report the new `prog_d` and anchor word.",
+   "sentence": "When the universal key set changes, the Mycroft compiler shall produce the same `image_d`, `prog_d` and anchor word from the same source and report them.",
    "source": "mycroft-factory:mycroft/spec/specs/keys",
    "assigned": "sherlock-execution"
   },
@@ -3404,7 +3420,7 @@
    "id": "MYC-REF-052",
    "group": "reused",
    "context": "sherlock-execution",
-   "sentence": "If a configuration needs a program-specific or capacity-specific key, a preprocessing key per program, a zero salt or an entry key other than the wrap key, then the Mycroft key generation shall refuse the configuration.",
+   "sentence": "If a configuration needs a program-specific or capacity-specific node, `L`, `L_Fr` or wrap key, a zero salt or a write-entry key other than the wrap key, then the Mycroft key generation shall refuse the configuration.",
    "source": "mycroft-factory:mycroft/spec/specs/refusals",
    "assigned": "sherlock-execution"
   },

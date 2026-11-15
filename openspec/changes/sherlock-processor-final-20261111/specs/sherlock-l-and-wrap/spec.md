@@ -77,11 +77,15 @@ The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The ope
 - **THEN** the proof is refused (mutants `decider_seg_root_as_run`, `decider_set_head_forged`), and the seal predicates stay in NODE INTEGRATION (NODE-003)
 
 ### Requirement: LW-009 The collection statement carries no claim count
-A collection SHALL publish `[reg_root, set_root]` through its effect words, with a schema separate from the run statement. `shape_d` SHALL NOT be public (owner ruling O9, 2026-11-13). No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The contract entry SHALL be `acceptCollection(reg_pub, set_pub)`.
+A collection SHALL publish `[reg_pub, claims_root]` through its effect words (T20 Midnight write rule W-2, LEAD pick for T15 confirmation; it was `[reg_root, set_root]`), with a schema separate from the run statement. `claims_root` SHALL be the fixed-depth Fr Merkle root over the member claims of `set_root` (LDG-005), built by `L` from `H2` log entries and bound to its lanes by `PUB` entries; `set_root` SHALL stay private.
+
+#### Scenario: Further rules of LW-009
+- **WHEN** LW-009 is applied
+- **THEN** `shape_d` SHALL NOT be public (owner ruling O9, 2026-11-13). No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The contract entry SHALL be `acceptCollection(reg_pub, claims_root)`.
 
 #### Scenario: Three runs joined
 - **WHEN** three sealed runs of different programs are joined and wrapped
-- **THEN** the statement is exactly `[reg_root, set_root]` (positive `pos_decider_collection_three_runs` as a real proof), and each claim opens through the LEDGER CONTRACT (LDG-004)
+- **THEN** the statement is exactly `[reg_pub, claims_root]` (positive `pos_decider_collection_three_runs` as a real proof), and each claim is used by membership against `claims_root` (LDG-004)
 
 #### Scenario: Stale registry root
 - **WHEN** the call carries a registry root other than the contract's
@@ -89,7 +93,7 @@ A collection SHALL publish `[reg_root, set_root]` through its effect words, with
 
 #### Scenario: No shape digest in the collection call
 - **WHEN** the compiled `acceptCollection` entry is inspected
-- **THEN** its inputs are exactly `[reg_pub, set_pub]`, it changes only `verified_roots` by adding `set_pub`, and a control entry that takes `shape_d` fails the same check (test `(e) LW-009` and its control in `tools/sherlock-sdk/sherlock-ledger.test.mjs`)
+- **THEN** its inputs are exactly `[reg_pub, claims_root]`, it changes only `claim_roots` by adding `claims_root`, and a control entry that takes `shape_d` fails the same check (test `(e) LW-009` and its control in `tools/sherlock-sdk/sherlock-ledger.test.mjs`)
 
 ### Requirement: LW-010 Replay is refused by `claim_d` only
 The replay identity SHALL be `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023). The contract SHALL key it by its public image `claim_pub = transientHash([C_P, input_pub, outcome_pub])` (FPR-010). Every partition of one run SHALL have the salt of its `input_d`, so every partition SHALL have one `claim_pub`.

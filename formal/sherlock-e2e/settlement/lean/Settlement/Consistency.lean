@@ -171,33 +171,34 @@ theorem LDG_008_once (n : Nat) : regWrites n ≤ 1 ∧ (n = 0 → regWrites n = 
 /-- ERT-004: `active(e)` holds at block time `t` only in `[start, end_eff)`. -/
 def active (start endEff t : Int) : Bool := decide (start ≤ t) && decide (t < endEff)
 
-/-- FAL-SETTLEMENT-3 (BAT-011 against ERT-004): BAT-011 admits a run whose proving time plus
-inclusion time ends exactly at `end_eff` (it refuses only "after"), and ERT-004 does not
-accept at `end_eff`. Counterexample: start 0, end_eff 1,000, now 143, proving 757 s, inclusion
-100 s: the oracle starts the run, and the era is not active when it lands. -/
-theorem finding_bat011_boundary :
-    (run 0 100 5 [7 * opBase + 1000, 4 * opBase + 143, 8 * opBase + 757]).runsStarted = 1 ∧
+/-- Replay of FAL-SETTLEMENT-3 (BAT-011 against ERT-004, FIXED in the text: "ends at or after"):
+the counterexample run (end_eff 1,000, now 143, proving 757 s, inclusion 100 s) would land at
+`end_eff`, where ERT-004 accepts nothing; the oracle now refuses to start it. -/
+theorem replay_bat011_boundary :
+    (run 0 100 5 [7 * opBase + 1000, 4 * opBase + 143, 8 * opBase + 757]).runsStarted = 0 ∧
     active 0 1000 (143 + 757 + 100) = false := by decide
 
-/-- FAL-SETTLEMENT-3 (BAT-010 against ERT-004): the epoch closes at `end_eff` minus the
-collection proof time and the inclusion time, so a root submitted at the close lands at
-`end_eff`, where ERT-004 accepts nothing; BAT-010's scenario says "lands before `end_eff`".
-Counterexample: end_eff 2,000, budgets 200 + 100: close at 1,700, landing 2,000. -/
-theorem finding_bat010_boundary :
-    stepRefusals (run 200 100 5 [7 * opBase + 2000, 5 * opBase, 4 * opBase + 1700]) (6 * opBase + 51) = [] ∧
-    active 0 2000 (1700 + 200 + 100) = false := by decide
+/-- Replay of FAL-SETTLEMENT-3 (BAT-010, FIXED in the text: one block margin): with end_eff
+2,000 and budgets 200 + 100 the close time is 1,699, so the root lands at 1,999, inside
+`[start, end_eff)`; the old counterexample tick to 1,700 is not enabled. -/
+theorem replay_bat010_boundary :
+    deadline (run 200 100 5 [7 * opBase + 2000, 5 * opBase]) = 1699 ∧
+    stepRefusals (run 200 100 5 [7 * opBase + 2000, 5 * opBase]) (4 * opBase + 1700) ≠ [] ∧
+    active 0 2000 (1699 + 200 + 100) = true := by decide
 
-/-- FAL-LEDGER-VERIFICATION-1 (MID-002 against SLC-004): MID-002 says every exported entry
-holds the universal wrap key; SLC-004 installs native keys on the two read entries. In
-every deployed instance of the oracle the read entries hold a key other than the write key. -/
-theorem finding_mid002_read_entries (cb it rr : Int) (ns : List Int) (h : (run cb it rr ns).deployed = true) :
+/-- MID-002 as amended (FAL-LEDGER-VERIFICATION-1, FIXED in the text) with SLC-004: the write
+entries hold the wrap key and the read entries their native keys. In every deployed instance of
+the oracle the read entries hold a key other than the write key. -/
+theorem MID_002_read_entries_native (cb it rr : Int) (ns : List Int) (h : (run cb it rr ns).deployed = true) :
     (run cb it rr ns).keyRoot ≠ (run cb it rr ns).keyRun := by
   have := SLC_001_004_deploy_shape cb it rr ns h
   rw [this.2.2.2.1, this.2.1]; decide
 
-/-- FAL-SETTLEMENT-2 (ANC-012 against BAT-005): the ANC-012 formula gives `K_MAX` = 8 at a
-14,400 s TTL (the runner default today, BAT-006 status), BAT-005 caps at 2 at every TTL. -/
-theorem finding_anc012_formula : min (14400 / 1755 : Int) 18 = 8 ∧ kMax 14400 = 2 := by decide
+/-- FAL-SETTLEMENT-2 (FIXED in the text): ANC-012 now reads `min(floor(TTL / 1,755 s), 2)`, the
+cap of BAT-005. Replay: at a 14,400 s TTL the old formula gave 8, the new one gives 2; 0 below
+1,755 s. -/
+theorem anc012_cap2 : kMax 14400 = 2 ∧ kMax 3600 = 2 ∧ kMax 1754 = 0 ∧ min (14400 / 1755 : Int) 18 = 8 := by
+  decide
 
 /-! ## Era rows consumed here (governance owns the era table) -/
 

@@ -19,7 +19,7 @@ Spec text only; `t23.py` was not read.
 
 Classes (ECS-004): 1 pass, 2 refused-as-native, 3 mismatch, 4 blocked, 5 prove-failed,
 6 n/a. Blocked reasons (ECS-005): 1 R_SL chip set, 2 kit jubjub, 3 kit secp256k1,
-4 kit keccak256, 5 dispatch off, 6 no native Preview transcript.
+4 kit keccak256, 5 dispatch off, 6 no native Preview transcript, 7 Preview off (ECS-015).
 -/
 
 namespace Conformance
@@ -40,6 +40,8 @@ def rSecp : Int := 3
 def rKeccak : Int := 4
 def rDispatchOff : Int := 5
 def rNoNative : Int := 6
+/-- ECS-015 (FAL-CONFORMANCE-1, LEAD PICK): settle ran dry, no Preview transaction. -/
+def rPreviewOff : Int := 7
 
 def nkOk : Int := 1
 def nkRejected : Int := 2
@@ -206,7 +208,9 @@ def apply (s : St) (op : Op) : St :=
     else
       let s' := { s with compareRan := true, compared := s.compared + 1,
                          evidence := s.evidence + ind s.txIncluded + 1 }
-      if eq then classify s' clsPass 0
+      -- ECS-015: a dry settle (Preview off) is blocked, never pass
+      if eq ∧ !s.preview then classify s' clsBlocked rPreviewOff
+      else if eq then classify s' clsPass 0
       else classify { s' with mismatchCompared := s'.mismatchCompared + 1 } clsMismatch 0
   | .reportComplete =>
     -- ECS-014: complete only with every evidence item of every eligible call;
@@ -226,7 +230,7 @@ def Refusal.code : Refusal → String
   | .outsideStateDomain => "outside-state-domain"
 
 def validState (s : St) : Bool :=
-  0 ≤ s.stage && s.stage ≤ 6 && 0 ≤ s.cls && s.cls ≤ 6 && 0 ≤ s.reason && s.reason ≤ 6
+  0 ≤ s.stage && s.stage ≤ 6 && 0 ≤ s.cls && s.cls ≤ 6 && 0 ≤ s.reason && s.reason ≤ 7
     && 0 ≤ s.kits && s.kits ≤ 7 && 0 ≤ s.evidence && s.evidence ≤ evidenceAll
     && 0 ≤ s.nativeKind && s.nativeKind ≤ 3 && 0 ≤ s.maxId && 0 ≤ s.calls
 
@@ -263,7 +267,7 @@ structure Inv (s : St) : Prop where
   /-- ECS-004: a finished call has exactly one class in 1..6; an open call none. -/
   oneClass : (s.stage = 6 → 1 ≤ s.cls ∧ s.cls ≤ 6) ∧ (s.stage ≠ 6 → s.cls = clsNone)
   /-- ECS-005: a blocked call names one reason; no other class carries a reason. -/
-  reasonOk : (s.cls = clsBlocked → 1 ≤ s.reason ∧ s.reason ≤ 6) ∧ (s.cls ≠ clsBlocked → s.reason = 0)
+  reasonOk : (s.cls = clsBlocked → 1 ≤ s.reason ∧ s.reason ≤ 7) ∧ (s.cls ≠ clsBlocked → s.reason = 0)
   /-- ECS-003: the stages run in the order compile, prove, settle, compare. -/
   order : (s.proveRan = true → s.compileRan = true) ∧ (s.settleRan = true → s.proveRan = true) ∧
     (s.compareRan = true → s.settleRan = true)
@@ -316,7 +320,7 @@ include h
 macro "inv_tac" : tactic => `(tactic| (
   cases h
   constructor <;> simp_all [classify, clsNone, clsPass, clsRefused, clsMismatch, clsBlocked,
-    clsProveFailed, clsNa, rChipSet, rJubjub, rSecp, rKeccak, rDispatchOff, rNoNative, nkOk,
+    clsProveFailed, clsNa, rChipSet, rJubjub, rSecp, rKeccak, rDispatchOff, rNoNative, rPreviewOff, nkOk,
     nkRejected, nkPure, evidenceAll, ind] <;> omega))
 
 theorem inv_start (id : Int) (he : s.stage = 0 ∨ s.stage = 6) : Inv (apply s (.start id)) := by
@@ -357,7 +361,7 @@ theorem inv_verify (a b : Bool) (he : s.stage = 4 ∧ s.verified = false) : Inv 
 theorem inv_settle (i : Bool) (he : s.stage = 4) : Inv (apply s (.settle i)) := by
   by_cases h1 : s.preview = true <;> cases i <;> simp [apply, enabled, he, h1] <;> inv_tac
 theorem inv_compare (n e : Bool) (he : s.stage = 5) : Inv (apply s (.compare n e)) := by
-  cases n <;> cases e <;> simp [apply, enabled, he] <;> inv_tac
+  by_cases hp : s.preview = true <;> cases n <;> cases e <;> simp [apply, enabled, he, hp] <;> inv_tac
 theorem inv_report (he : s.stage = 0 ∨ s.stage = 6) : Inv (apply s .reportComplete) := by
   by_cases hc : s.eligibleIncomplete = 0 ∧ s.nMismatch = 0 ∧ 1 ≤ s.calls <;>
     simp [apply, enabled, he, hc] <;> inv_tac
