@@ -12,7 +12,7 @@ The co-processor SHALL prove a run in the layers of `FD/ARCHITECTURE.md` section
 
 #### Scenario: Policy content
 - **WHEN** the scheduling policy of the static plan is read
-- **THEN** it holds the cut points as a function of `N_e` for Stage 1 Compact, and for general programs the per-rule maximum table, the cut rule and the list of admitted padded shard counts
+- **THEN** it holds the cut points as a function of `N_e` for Stage 1 Compact, and for general programs the per-rule maximum table and the cut rule, with no list of admitted shard counts and no schedule menu (owner ruling 2026-11-14 on F-3, SPL-011)
 
 #### Scenario: Two witnesses of one program
 - **WHEN** the plan is run for one program with two different inputs in mind
@@ -75,7 +75,7 @@ The plan binding SHALL be reported proved only when BR-L2 adds the DAG key check
 - **THEN** the DAG key check in `wrap_refines` (part of BR-L2) is open, and no other Lean obligation is listed for this module in the design
 
 ### Requirement: SPL-011 The per-run schedule is outside `plan_d`
-The prover SHALL make the per-run schedule from a metered run under the scheduling policy: the cut points, the tree, the padded shard count from the admitted list, the positions of the discharge shards, and each suspension and resume. The schedule SHALL stay on the user's machine. Soundness SHALL NOT depend on it: each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (FZ-5).
+The prover SHALL make the per-run schedule (cuts, tree, shape, device, concurrency, suspensions) from a metered run and the setup-mode profile `sherlock-profile/1`. `key_root` SHALL hold no schedule menu or shard-count list. The setup mode SHALL NOT select a key, a shape or `plan_d`. The schedule SHALL stay on the user's machine. Each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (FZ-5, SC-010 to SC-013).
 
 #### Scenario: Schedules under one plan
 - **WHEN** one program runs at two run lengths, in two partitions of one run, and once with a suspension and resume, under one `plan_d`, one `key_root` and the universal keys
@@ -84,6 +84,10 @@ The prover SHALL make the per-run schedule from a metered run under the scheduli
 #### Scenario: Shape outside the menu
 - **WHEN** a schedule uses a leaf shape that is not in the shape menu
 - **THEN** the node refuses the leaf (mutant `plan_schedule_outside_policy`)
+
+#### Scenario: Source of the setup mode
+- **WHEN** the status is reported
+- **THEN** the owner ruling of 2026-11-14 replaces F-3: "We want to be completely elastic, Sherlock should have a setup mode where it profiles the machine and optimizes for it", and the EARS of the setup mode are ST, PF and SC in `research/sherlock-t16-elastic-20261114/SETUP-SPEC.md` on branch `t16-elastic`
 
 ### Requirement: SPL-012 The preimage of `plan_d`
 `plan_d` SHALL be `P2(DOM_PLAN, 1: u16, itab_d, menu_d, policy_d, layout_rule_d, place_d)`, each digest the `P2` hash of the canonical word list of one part of the static plan, in that order. `plan_d` SHALL NOT bind a per-run schedule. The word lists and the code of `DOM_PLAN` are FREEZE-PENDING ENC-5.

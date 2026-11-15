@@ -74,11 +74,15 @@ The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to 
 - **THEN** each AIR has the fixed height of the shape, keygen refuses a shape outside the bounds above, D3 at the measured shape prints every term at 100 bits or more and every grindable term at 101 or more (SG-5), and the receipt records seconds per proved step (SG-6)
 
 ### Requirement: SHP-008 The MERGE-WORK key has its own set
-The MERGE-WORK key SHALL meet the STARK kit gate inside its own set `merge_work` (owner ruling N-6 "own bounds", 2026-11-14), not inside the internal set. The set SHALL have the internal parameters and per-AIR bounds and 5,400 columns (T8 AFK pick for owner confirmation at T15). The inline CORE SHALL be split into CORE and FRAME from one frame rule, so that no AIR has more than 1,000 constraints.
+The MERGE-WORK key SHALL meet the STARK kit gate inside its own set `merge_work` (owner ruling N-6 "own bounds", 2026-11-14), not inside the internal set. The set SHALL have the internal parameters and per-AIR bounds and 5,400 columns. The inline CORE SHALL be split into CORE and FRAME from one frame rule, so that no AIR has more than 1,000 constraints.
 
 #### Scenario: MERGE-WORK key at its bounds
 - **WHEN** keygen builds the MERGE-WORK key over N3 with the inline slice kernel
 - **THEN** G1 accepts it under `merge_work` (49 AIRs, 5,284 columns, 999 constraints, 183 interactions, 90 public values, MEASURED in T8b with the 7-row `keys_d` and the step words as CORE columns; 5,128 columns and 171 interactions in T8), and D3 at the bounds has every term at least 100 and every grindable term at least 101
+
+#### Scenario: Source of the column bound
+- **WHEN** the status is reported
+- **THEN** the owner confirmed the 5,400-column bound on 2026-11-14 (LOOP.md, owner rulings), and STACKS with VALUE DIGEST (at least 5,417, Carbon afk-picks F-5) must fit by a second CORE split or a measured raise (lead condition, LPC-002)
 
 ### Requirement: SHP-009 A parent node verifies a MERGE-WORK child
 The `keys_d` table SHALL have seven rows (`UROWS` 7): the four rows of T8 and the rows NW over the MERGE-WORK key, NW2 over NW and N3 over NW2. NW and NW2 SHALL be the universal node circuit keyed over their children, and a node over NW2 SHALL have the N3 key. A child proof SHALL be accepted only at its own `keys_d` row (T8b AFK pick; it changes `keys_d` and so rekeys `L` and `L_Fr`).

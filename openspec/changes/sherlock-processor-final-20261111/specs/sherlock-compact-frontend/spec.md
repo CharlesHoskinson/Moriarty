@@ -29,11 +29,15 @@ For every entry and preimage, `effect_vector(preimage)` SHALL equal the native p
 - **THEN** every run equals native, `N_e` is equal for two tapes, and `spend` takes at most 550 steps
 
 ### Requirement: CF-005 Lowering of Compact builtins
-Stage 1 SHALL lower in straight-line mode over `R_SL_*`. Compact `Field` SHALL stay emulated on FIELD-EMU (OD-14). `transientHash` SHALL be `SPONGE(n)` in the log or POSEIDON-FR-EMU inline. `persistentHash` SHALL run on the `sha2` chip. `ecMul` and `ecMulGenerator` SHALL be log entries while `E` slots last, else JUBJUB-EMU.
+Stage 1 SHALL lower in straight-line mode over `R_SL_*` on R_SL chip set 3, with per-program app keys. Compact `Field` SHALL be a 32-byte Fr word. Every R_SL app SHALL have 6 or 9 AIRs with FP-1. `transientHash` SHALL be the fixed-length midnight-circuits 7.3.0 sponge in ALU rows. `persistentHash` SHALL run on the R_SL_SHA256 AIRs. Jubjub, secp256k1 and `keccak256` SHALL be R_SL kits inside that AIR bucket (RSL-001 to RSL-007).
 
 #### Scenario: Native call with no kit
 - **WHEN** an entry calls a native builtin that no kit covers
 - **THEN** compilation fails with an error that names the missing kit
+
+#### Scenario: Source of the R_SL lowering
+- **WHEN** the status is reported
+- **THEN** the AIRs are WORD, ALU with exact and assert rows, row PUBLIC, RANGE, SHA_IN (always present) and SHA_REQ with the openvm SHA-256 block hasher, the bucket is built design (openvm `rekey-chips` 6f773b2, LEAD PICK, probe on odin run r10), and the secp256k1 and keccak256 kits follow the owner's "yes to both" of 2026-11-15 (wiki log 09:06)
 
 ### Requirement: CF-006 Tape and effect layout
 The tape SHALL be `Cons(salt, Cons(selector, args ++ comm_rand ++ witness, read and callee results in program order))`, static in length and layout per entry. Ledger reads SHALL be `popeq` values from the tape. Writes SHALL be effect words at static indices. A guarded-off impact SHALL write zeros. The host SHALL insert the `Noop` merges of the native builder.

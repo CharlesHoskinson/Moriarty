@@ -162,6 +162,10 @@ The wrap key SHALL be one that ledger 9.1.0.1 reads unchanged: a `ZkStdLib`-arch
 - **WHEN** `L_Fr` carries the complete `L` interface (12,166 public words at 5 lane-map pairs, the log AIRs, `R` as real non-`NOP` entries, an all-non-`NOP` case and a forced-overflow case)
 - **THEN** the proof verifies and D3 reruns at that key (step E3, PENDING)
 
+#### Scenario: Source of the MEM_BUS type
+- **WHEN** the status is reported
+- **THEN** every `MEM_BUS` message of `L_Fr` is typed as LW-020 and LW-021 require, the type element is C-A2c and PK1 (openvm `rekey-chips` fe3601c), a LEAD PICK in the single rekey list that the owner confirmed on 2026-11-15
+
 ### Requirement: LW-019 The parameter set of `L_Fr`
 The `L_Fr` key SHALL use unique decoding at log blowup 3, `l_skip` 2, `n_stack` 18, `w_stack` at most 48, `k_whir` 4, queries 98/83/82 and query PoW 20, with one OOD sample per round, every term at 100 bits or more and every grindable term at 101 bits or more (SQG-004).
 

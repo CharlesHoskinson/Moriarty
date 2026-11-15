@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: ZK-001 Every prover layer runs on the user's machine
-Leaves, nodes, `L`, `L_Fr` and the wrap prover SHALL run on the user's machine. Local devices and GPUs on hosts that the user owns SHALL count as the user's machine (OD-9). STARK proofs, prover checkpoints and the shard plan of a private program SHALL be treated as secrets like the witness.
+Leaves, nodes, `L`, `L_Fr` and the wrap prover SHALL run on the user's machine. Hosts that the user owns SHALL count as the user's machine (OD-9, case A). A host that the user does not own is a helper (case B) and SHALL be refused (ZK-018). No PCS masking SHALL be added while every STARK layer stays in case A. STARK proofs, prover checkpoints and the shard plan of a private program SHALL be treated as secrets like the witness.
 
 #### Scenario: Remote STARK prover
 - **WHEN** a configuration sends a leaf, node, `L` or `L_Fr` job to a host that the user does not own
 - **THEN** the prover refuses the configuration, and the Quint property "no STARK proof, checkpoint or plan leaves the user's machine" of the placement model holds
+
+#### Scenario: Source of case A
+- **WHEN** the status is reported
+- **THEN** the owner ruling of 2026-11-15 reads "we will start with case A and a future design will allow for outsources components using the Veritee model from the MPC Research thread", and no PCS masking is pick T11-3, owner-confirmed 2026-11-15
 
 ### Requirement: ZK-002 The wrap is the only published proof
 The published view of a call SHALL be the call vector and one blinded wrap proof. The used log count, the deferred-or-emulated split, the shard plan, the AIR set and heights, and plain `prog_d` SHALL NOT be in that view.
@@ -15,7 +19,7 @@ The published view of a call SHALL be the call vector and one blinded wrap proof
 - **THEN** the two ledger proofs are indistinguishable (ZK-L1, `wrap_view_only_claim`, built at `bdb92973a` under premise A7)
 
 ### Requirement: ZK-003 Fresh blinders and seeded proofs in test mode only
-Every wrap proof SHALL take fresh CSPRNG blinders. A seeded blinder SHALL be accepted only by a build with the test feature. Byte-identity tests of the GPU wrap SHALL use the test-only seed patch, active only under `GW_DET=1`.
+Every wrap proof SHALL take fresh CSPRNG blinders. `r_P` SHALL be drawn once per deployment, the input salt once per run, and the wrap blinders once per proof (ZK-012, ZK-013). A seeded blinder SHALL be accepted only by a build with the cargo feature `test-seed` (ZK-014). Byte-identity tests of the GPU wrap SHALL use the test-only seed patch under `GW_DET=1` in a `test-seed` build.
 
 #### Scenario: Seeded blinder in a release build
 - **WHEN** a build without the test feature receives a seeded blinder
@@ -24,6 +28,10 @@ Every wrap proof SHALL take fresh CSPRNG blinders. A seeded blinder SHALL be acc
 #### Scenario: EQ-ZK
 - **WHEN** two wraps of one statement are made with fresh blinders at frontend M2b
 - **THEN** their bytes differ and the ledger 9 verifier accepts both
+
+#### Scenario: Source of the lifetimes and the seed guard
+- **WHEN** the status is reported
+- **THEN** the lifetimes are pick T11-1 and the `test-seed` feature (`SHERLOCK_TEST_SEED`, `GW_DET`, `GW_CHIP_SEED`, `GW_SEED`, `wrapd ident`, the `wrap_prove` bench) is pick T11-4, both owner-confirmed 2026-11-15 (wiki log 09:04)
 
 ### Requirement: ZK-004 Nothing from the transcript of `L` is public
 No value derived from the transcript of `L` or of `L_Fr` SHALL become a public input or a constant of the wrap. `X`, `mode`, `j`, `k` and `run_tag` SHALL be public values of `L` only, carried packed in the public values of `L_Fr`. The wrap SHALL take them as private witness.
@@ -58,14 +66,14 @@ The anchor lane SHALL carry `C_P` or a lock value `A_j`. Plain `prog_d` SHALL NO
 - **THEN** the frontend refuses the deploy
 
 ### Requirement: ZK-008 The run shape stays private
-Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` SHALL NOT be public (FPR-013, LEAD F-12 under the owner's `n_steps` rule): the exact height `n_steps = h_hi` that SEAL forwards (NODE-003) SHALL stay private inside the SET forms. Leaf counts SHALL follow the padding rule of the scheduling policy (SPL-011). Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
+Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` SHALL NOT be public (FPR-013, LEAD F-12 under the owner's `n_steps` rule): the exact height `n_steps = h_hi` that SEAL forwards (NODE-003) SHALL stay private inside the SET forms. Leaf counts SHALL stay on the user's machine with the rest of the schedule (SPL-011). Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.
 
 #### Scenario: Secret branch changes the length
 - **WHEN** two inputs of one chunked entry take branches of different transcript length
 - **THEN** both calls have the same chunk count
 
 ### Requirement: ZK-009 No helper sees the plain witness
-The design SHALL NOT allow a helper that proves a STARK layer or `L`, a remote unmasked MSM, NTT, quotient or Merkle hash, the full sponge state on a helper, reuse of a blinding slot, or a helper-made slot. No aggregator SHALL receive STARK proofs. One wrap SHALL settle one `ContractCall`. A user batch SHALL be opt-in with one batch digest per `acceptRun` (OD-12).
+The design SHALL NOT allow a helper (case B of ZK-001) that proves a STARK layer or `L`, a remote unmasked MSM, NTT, quotient or Merkle hash, the full sponge state on a helper, reuse of a blinding slot, or a helper-made slot. No aggregator SHALL receive STARK proofs. One wrap SHALL settle one `ContractCall`. A user batch SHALL be opt-in with one batch digest per `acceptRun` (OD-12).
 
 #### Scenario: Remote MSM
 - **WHEN** a configuration sends an unmasked MSM of the wrap to another host
@@ -76,7 +84,7 @@ The kit SHALL be reported complete only when ZK-L1 and ZK-L2 are proved with axi
 
 #### Scenario: Obligation status
 - **WHEN** the kit status is reported
-- **THEN** ZK-L1 (`wrap_view_only_claim`) is built at `bdb92973a` with premise A7, and ZK-L2 (the encoding of a log in `pv` is unique and does not depend on the used count beyond the call vector) is open
+- **THEN** ZK-L1 (`wrap_view_only_claim`) is built at `bdb92973a` with premise A7, and ZK-L2 (the encoding of a log in `pv` is unique and does not depend on the used count beyond the call vector) is built at `71c4c001b` on branch `t11-zk` (`clean/fork/Clean/Sherlock/ZkPadding.lean`: `pv2_length`, `entTab_eq_pad`, `pv2_inj`, `pv2_count_det`, 0 `sorry`, axioms within `propext`, `Quot.sound`, `Classical.choice`), not yet merged into `tested`
 
 ### Requirement: ZK-011 Public digests hide the salt
 The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))` with `r_P` 8 words per deployment, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))` and `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))`, so the outcome is hidden under the salt inside `input_d` (FP-4, FPR-010). The shard plan SHALL bind to the unsalted `prog_d` inside the STARK layers only. ZK-001 and LW-012 keep proofs local and blinders fresh.

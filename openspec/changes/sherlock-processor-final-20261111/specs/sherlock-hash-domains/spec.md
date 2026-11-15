@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: HDM-001 Fr-side capacity words and use codes
-Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3, rate 2. The initial capacity SHALL be `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. The use codes SHALL be 0 program operations; 1, 2, 3 the Merkle leaf, Merkle node and transcript of `L`; 4 public digests; 5, 6, 7 the Merkle leaf, Merkle node and transcript of `L_Fr` (OD-18).
+Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3, rate 2. The initial capacity SHALL be `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. The use codes SHALL be 0 program operations; 1, 2, 3 the Merkle leaf, Merkle node and transcript of `L`; 4 public digests; 5, 6, 7 the Merkle leaf, Merkle node and transcript of `L_Fr` (OD-18); 8 the lock operand sponge `x_j` of ANC-002.
 
 #### Scenario: Two uses with one capacity
 - **WHEN** a Merkle leaf hash of `L` and a public digest of the same length are computed
@@ -10,6 +10,10 @@ Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3
 #### Scenario: Hash of `L_Fr` against a hash of `L`
 - **WHEN** a Merkle hash or the transcript of `L_Fr` and a hash of `L` of the same length are computed
 - **THEN** their initial states differ, because u = 5, 6, 7 are disjoint from 0 to 4 (static check `vkLFr_ok`, built at `6661325d4` of branch `bridge-lean`)
+
+#### Scenario: Lock use code
+- **WHEN** the lock operand sponge of ANC-002 starts
+- **THEN** its capacity is `6 + 8 * 2^66` (`U_LOCK` = 8, T10q-cx pick inside the owner's `x_j` canon of 2026-11-14)
 
 ### Requirement: HDM-002 Public digest tags
 A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18). The Fr value of each tag SHALL be published with a differential vector before the hash domains freeze (ENC-1); until then the tag rows are FREEZE-PENDING.
@@ -52,6 +56,10 @@ Every Sherlock-defined Poseidon2 hash over BabyBear SHALL absorb its tag word fi
 #### Scenario: Shared tag
 - **WHEN** a new Sherlock digest is defined
 - **THEN** it takes a tag that no other digest uses
+
+#### Scenario: Lock values
+- **WHEN** a lock value `A_j` is computed
+- **THEN** no BabyBear `DOM_LOCK` hash enters it, because the lock operand is the Fr sponge `x_j` of ANC-002 (owner ruling 2026-11-14)
 
 ### Requirement: HDM-008 Squeeze digits are canonical
 Each squeeze SHALL give 5 base-`p` digits with bias at most `2^-100`. The recomposition of the digits SHALL be checked below `r`.

@@ -97,8 +97,13 @@ The gate SHALL count Lean as passed only when BR-L2 is proved, with `ProvenRegim
 - **THEN** the unique decoding `ProvenRegime` and BR-L1 with premises A1 to A7, A2', `vkL_ok` and `vkLFr_ok` build at `6661325d4`, and the leaf-aggregation entry at LogUp PoW 17 and the `L_Fr` parameter gate are open
 
 ### Requirement: SQG-013 The MERGE-WORK parameter set
-The MERGE-WORK nodes SHALL have their own set `merge_work`. It SHALL have the internal parameters and query vector 97/82/81, and the internal bounds with 5,400 columns (owner ruling N-6 "own bounds", 2026-11-14; the column bound is a T8 AFK pick for owner confirmation at T15).
+The MERGE-WORK nodes SHALL have their own set `merge_work`. It SHALL have the internal parameters and query vector 97/82/81, and the internal bounds with 5,400 columns (owner ruling N-6 "own bounds", 2026-11-14).
 
 #### Scenario: D3 of the MERGE-WORK set
 - **WHEN** D3 runs `merge_work` at its bounds
 - **THEN** every term is at least 100 and every grindable term at least 101 (T8: weakest `shift` 101.1643, MEASURED)
+
+#### Scenario: Source of the column bound
+- **WHEN** the status is reported
+- **THEN** the owner confirmed the 5,400-column bound on 2026-11-14 (LOOP.md, owner rulings), and the lead condition of 2026-11-14 holds: the built key fits (5,284 columns), but STACKS and VALUE DIGEST need at least 5,417 (Carbon afk-picks F-5), so row T8c fits both under the bound with a second CORE split or raises the bound with a measurement (LPC-002)
+

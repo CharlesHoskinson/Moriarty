@@ -1,18 +1,34 @@
 ## ADDED Requirements
 
 ### Requirement: ANC-001 The anchor cell holds a salted program value
-The anchor cell `(0)` SHALL hold `C_P = H(SHK_PROGC, r_P, prog_d)`, with one salt `r_P` per deployment, or a lock value `A_j`. It SHALL NOT hold plain `prog_d`. User code SHALL NOT address cell `(0)`.
+The anchor cell SHALL be the top-level ledger slot 15, a key constant of the wrap (`ANCHOR_SLOT`, template lanes 6 and 15). It SHALL hold `C_P = H(SHK_PROGC, r_P, prog_d)`, with one salt `r_P` per deployment, or a lock value `A_j`. It SHALL NOT hold plain `prog_d`. User code SHALL NOT address slot 15.
 
 #### Scenario: User code writes the anchor
-- **WHEN** an entry of user code writes cell `(0)`
-- **THEN** the frontend refuses the contract at compile time
+- **WHEN** an entry of user code writes slot 15
+- **THEN** the frontend refuses the contract at compile time and names the colliding field (MYC-SEAL-021)
+
+#### Scenario: Prover-chosen anchor slot
+- **WHEN** a prover puts slot 0, 1 or 3 in the read key (lane 6) or in the chunk write key (lane 15)
+- **THEN** the wrap template pin refuses the witness (test `t12_anchor_slot_15`)
+
+#### Scenario: Source of slot 15
+- **WHEN** the status is reported
+- **THEN** the move from cell `(0)` to slot 15 is pick T12-SLOT15, confirmed by the owner on 2026-11-15 ("Ye sif you recommend it", wiki log 09:04), with the compiler refusal MYC-SEAL-009 and MYC-SEAL-021, and it lands in the single T11 rekey (openvm `t12-slot15`, not committed on 2026-11-15 09:15)
 
 ### Requirement: ANC-002 Anchor values of a chunked run
-The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, pack(P2(DOM_LOCK, r_P, prog_d, run_tag, j)))` for `1 <= j < k`. `run_tag` SHALL be a fresh salted value per run (OD-16).
+The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x_j)` for `1 <= j < k`, with the lock operand `x_j = sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, j)` over Fr (HDM-001 use code 8). `run_tag` SHALL be a fresh salted value per run (OD-16).
 
 #### Scenario: Last chunk
 - **WHEN** chunk `k` of a run completes
 - **THEN** the anchor holds `C_P` again
+
+#### Scenario: Equal run_tag, other run
+- **WHEN** two runs share the `run_tag` words but differ in input, salt or outcome, or a chunk of a `k`-chunk run reads a lock of another `k`
+- **THEN** the lock values differ and the `L_Fr` tape refuses the splice (NT-2, NT-3, tests `t13_t10q_chunk` 9 of 9)
+
+#### Scenario: Source of the lock form
+- **WHEN** the status is reported
+- **THEN** `c = pack(P2(DOM_PROGC, r_P, prog_d))`, `d_in = pack(input_d)` and `d_out = pack(P2(DOM_OUTHIDE, input_d, outcome_d))` are the three `R` operands that `L` computes from the run root, the owner made the `x_j` form canon on 2026-11-14 in place of `P2(DOM_LOCK, r_P, prog_d, run_tag, j)`, which the `L_Fr` tape cannot compute, and the owner confirmed the T10q-ntfix extension with `k`, `d_in` and `d_out` on 2026-11-15 ("the x_j change", wiki log 09:04; openvm `t10q-ntfix` e3b407d, `iface::lock_x`)
 
 ### Requirement: ANC-003 The anchor statement per case
 Every call SHALL carry the anchor statement `(mode, j, k, a_in, a_out)`. An ordinary call SHALL have `mode` ORD with `a_in = a_out = C_P` and no anchor write. Chunk `j` of `k` SHALL have `mode` CHUNK with `a_in = A_(j-1)` and `a_out = A_j`. It SHALL write `ins anchor := a_out` in the effect region (OD-16).
