@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import Scheduling.Spec
 
-/-! Oracle executable of Scheduling: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Scheduling: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec Scheduling
+open Lean SherlockCodecB Scheduling
 
 def fieldNames : List String :=
   ["memAvail", "cgroupHead", "hasGpu", "gpuReportsMem", "hwGpuTotal", "hwGpuFree", "cores", "proverKeyD", "caps", "calT", "calHost", "calDev", "profWritten", "profFormatOk", "profFieldsOk", "profKeyD", "memBudget", "unified", "gpuCount", "gpuTotal", "gpuFree", "profCores", "calMask", "setupStops", "memUnit", "limMemOn", "limMem", "gpusOff", "limGpuMemOn", "limGpuMem", "n", "prog", "input", "rP", "salt", "box", "scheduled", "calibrated", "schShape", "schDevice", "schConc", "schEst", "cut", "forced", "policy", "peakStark", "peakWrap", "peakCoset", "wrapFree", "starkExtra", "margin", "earlyWraps", "runs", "recBox", "recShape", "recDevice", "recLeaves", "recCalibrated", "recKeys", "recClaim", "nodes"]

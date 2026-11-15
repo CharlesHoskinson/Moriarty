@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import Aggregation.Spec
 
-/-! Oracle executable of Aggregation: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Aggregation: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec Aggregation
+open Lean SherlockCodecB Aggregation
 
 def fieldNames : List String :=
   ["runProg", "keyRoot", "regRoot", "sMax", "mwColumns", "nodeArity", "segOn", "segPre", "segPost", "segLo", "segHi", "chipSets", "leaves", "works", "depsD", "sealed", "claimSteps", "outcome", "lAccepted", "mwKeyOk", "foreignUnits", "suspended", "ckPost", "ckHi", "cKind", "cProg", "cKeyRoot", "cPre", "cPost", "cHPre", "cSteps", "cAirs", "cRegRoot", "cChipSet", "cForged", "cKeyRow", "cStatus", "cOutcome", "cChain", "cManifestOk"]

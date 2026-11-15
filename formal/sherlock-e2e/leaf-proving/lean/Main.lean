@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import LeafProving.Spec
 
-/-! Oracle executable of Leaf Proving: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Leaf Proving: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec LeafProving
+open Lean SherlockCodecB LeafProving
 
 def fieldNames : List String :=
   ["appAirs", "hasSha", "hasKeccak", "appCols", "nonCanonical", "shapeOk", "progD", "inputD",

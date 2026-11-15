@@ -6,7 +6,7 @@
   "kind": "reused",
   "sentence": "The wrap circuit SHALL pin the anchor read key (lane 6) and the chunk write key (lane 15) to the key constant 15.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-014": {
   "id": "ANC-014",
@@ -15,7 +15,7 @@
   "kind": "reused",
   "sentence": "When the SherlockLedger contract is deployed, the SherlockLedger contract SHALL store `C_P` in top-level slot 15.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-015": {
   "id": "ANC-015",
@@ -24,7 +24,7 @@
   "kind": "reused",
   "sentence": "If a contract's ledger layout uses top-level index 15, then the Mycroft compiler SHALL refuse the contract before deploy and name the colliding field.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-016": {
   "id": "ANC-016",
@@ -33,16 +33,16 @@
   "kind": "reused",
   "sentence": "If an ordinary call (mode 0) carries the anchor-write template in lanes 11 to 19 and 21, then the wrap circuit SHALL refuse the witness.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-017": {
   "id": "ANC-017",
   "fam": "ANC",
   "ctx": "bridge",
   "kind": "reused",
-  "sentence": "When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out` and `j`.",
+  "sentence": "When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out`, the FP-3 link `pack(C_(j+1))` and `j`.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-018": {
   "id": "ANC-018",
@@ -51,7 +51,7 @@
   "kind": "reused",
   "sentence": "The `L` circuit SHALL bind every effect lane of the call vector to the guest effect word that the run wrote at that lane.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "ANC-019": {
   "id": "ANC-019",
@@ -60,7 +60,7 @@
   "kind": "reused",
   "sentence": "When a run is cut into `k` chunks, the `L` circuit SHALL bind `k` to the slice count of the run through the forward claim chain.",
   "src": "sherlock-completion-20261115/sherlock-anchor-chunks",
-  "sha": "924f56b1777e22a4"
+  "sha": "7397c00a632c26fe"
  },
  "LW-020": {
   "id": "LW-020",
@@ -501,7 +501,7 @@
   "kind": "own",
   "sentence": "The `L` interface SHALL expose 12,166 public words with 5 lane-map pairs.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-002": {
   "id": "CLB-002",
@@ -510,7 +510,7 @@
   "kind": "own",
   "sentence": "If a call-vector effect lane holds a word that the guest did not write at that lane, then the `L` effect AIR SHALL refuse the witness.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-003": {
   "id": "CLB-003",
@@ -519,7 +519,7 @@
   "kind": "own",
   "sentence": "If a chunked run states a chunk count `k` that differs from its slice count, then the `L` effect AIR SHALL refuse the witness.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-004": {
   "id": "CLB-004",
@@ -528,16 +528,16 @@
   "kind": "own",
   "sentence": "The `L_Fr` interface SHALL use the ledger slot constant `ANCHOR_SLOT` = 15 for the anchor read of every call and for the anchor write of a chunk call.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-005": {
   "id": "CLB-005",
   "fam": "CLB",
   "ctx": "bridge",
   "kind": "own",
-  "sentence": "If a chunk carries a lock whose operand `x_j` differs from `sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, j)` of its run, then the `L_Fr` circuit SHALL refuse the chunk.",
+  "sentence": "If a chunk carries a lock whose operand `x_j` differs from `sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, pack(C_(j+1)), j)` of its run, with `C_(j+1)` the forward claim chain of the run after chunk `j` (ANC-019), then the `L_Fr` circuit SHALL refuse the chunk.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-006": {
   "id": "CLB-006",
@@ -546,7 +546,7 @@
   "kind": "own",
   "sentence": "If an ordinary call (mode 0) carries the anchor-write template, then the interface decoder `iface::decode_with` SHALL refuse the call.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-007": {
   "id": "CLB-007",
@@ -555,7 +555,7 @@
   "kind": "own",
   "sentence": "If a schedule cuts one call into more than `K_MAX` = 2 chunks, then the chunk planner SHALL refuse the call before a proof starts.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "CLB-008": {
   "id": "CLB-008",
@@ -564,7 +564,7 @@
   "kind": "own",
   "sentence": "If the anchor slot constant of the `L_Fr` interface differs from the anchor slot constant of the wrap decoder, then the rekey runner SHALL refuse to start.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-call-binding",
-  "sha": "56870aaee185bcb3"
+  "sha": "38451cf210cb0640"
  },
  "ELA-001": {
   "id": "ELA-001",
@@ -771,7 +771,7 @@
   "kind": "own",
   "sentence": "The `L` prover SHALL prove `L` as a STARK over BabyBear whose Merkle tree and transcript use Midnight Poseidon over the BLS12-381 scalar field.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-002": {
   "id": "LTR-002",
@@ -780,16 +780,16 @@
   "kind": "own",
   "sentence": "The `L_Fr` prover SHALL prove `L_Fr` as a STARK whose base field is the BLS12-381 scalar field with no extension field.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-003": {
   "id": "LTR-003",
   "fam": "LTR",
   "ctx": "bridge",
   "kind": "own",
-  "sentence": "If an `L` key has more than 2,000 columns or an AIR with more than 100 interactions, then the key generator SHALL refuse the key.",
+  "sentence": "If an `L` key has more than 2,200 columns or an AIR with more than 100 interactions, then the key generator SHALL refuse the key.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-004": {
   "id": "LTR-004",
@@ -798,7 +798,7 @@
   "kind": "own",
   "sentence": "If an `L_Fr` tape does not expose the public words through `Tape::expose`, then the `L_Fr` machine SHALL refuse the tape.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-005": {
   "id": "LTR-005",
@@ -807,7 +807,7 @@
   "kind": "own",
   "sentence": "The `L_Fr` tape SHALL replay the Fiat-Shamir transcript of `L` with outputs equal to the outputs of the stock transcript.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-006": {
   "id": "LTR-006",
@@ -816,7 +816,7 @@
   "kind": "own",
   "sentence": "When the `L_Fr` prover completes a proof, the `L_Fr` prover SHALL publish one `LfrProofReady` record with the proof file path, the field `proof_sha256`, the `L_Fr` key pre-hash, the public words and `claim_pub`.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-007": {
   "id": "LTR-007",
@@ -825,7 +825,7 @@
   "kind": "own",
   "sentence": "The `L` prover SHALL use the same `L` key and the same `L_Fr` key for a one-leaf run on path C and for a run on the full tree.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LTR-008": {
   "id": "LTR-008",
@@ -834,7 +834,7 @@
   "kind": "own",
   "sentence": "If the stock verifier refuses an `L_Fr` proof, then the `L_Fr` prover SHALL publish no `LfrProofReady` record for that proof.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-l-transcript",
-  "sha": "bff2c75f88dbcf1b"
+  "sha": "389d2bb7cf6a9549"
  },
  "LFP-001": {
   "id": "LFP-001",
@@ -843,7 +843,7 @@
   "kind": "own",
   "sentence": "The leaf prover SHALL prove every app shard and every leaf-layer proof as a STARK over BabyBear with the Poseidon2 configuration `BabyBearPoseidon2Config`.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-002": {
   "id": "LFP-002",
@@ -852,7 +852,7 @@
   "kind": "own",
   "sentence": "When the leaf prover receives an `RslStatement` and its `ExecutionTrace`, the leaf prover SHALL make, for each shard, one app proof under R_SL chip set 3 and one leaf-layer proof whose N1 pre-hash equals the universal N1 pre-hash.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-003": {
   "id": "LFP-003",
@@ -861,7 +861,7 @@
   "kind": "own",
   "sentence": "If the app shape of an R_SL program needs more than 8 app AIRs, then the leaf prover SHALL refuse the shape before it makes a proof.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-004": {
   "id": "LFP-004",
@@ -870,7 +870,7 @@
   "kind": "own",
   "sentence": "If an app verifying key has more than 30,000 columns, then the leaf harness SHALL refuse the key.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-005": {
   "id": "LFP-005",
@@ -879,7 +879,7 @@
   "kind": "own",
   "sentence": "The leaf prover SHALL prove every leaf shard with the ordered AIR height vector of its admitted shape.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-006": {
   "id": "LFP-006",
@@ -888,7 +888,7 @@
   "kind": "own",
   "sentence": "The leaf AIR SHALL constrain the public value slot `PROG_D` to the `prog_d` of the program that the shard runs.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-007": {
   "id": "LFP-007",
@@ -897,7 +897,7 @@
   "kind": "own",
   "sentence": "If a leaf proof carries a `prog_d` that differs from the `prog_d` of the run, then the N1 statement AIR SHALL refuse the leaf.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-008": {
   "id": "LFP-008",
@@ -906,7 +906,7 @@
   "kind": "own",
   "sentence": "When a run has more steps than one leaf shape holds, the leaf prover SHALL add leaf shards and leave every per-program key and every universal key unchanged.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-009": {
   "id": "LFP-009",
@@ -915,7 +915,7 @@
   "kind": "own",
   "sentence": "When the leaf prover completes the leaves of a run, the leaf prover SHALL publish one `LeafProofsReady` record that names each leaf proof file, its sha256, its public values and the `LeafKeyRef` of the run.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-010": {
   "id": "LFP-010",
@@ -924,7 +924,7 @@
   "kind": "own",
   "sentence": "If the outcome commitment in the FP-1 public values of an R_SL app proof differs from the digest of `comm` and the ordered W of the PUBLIC rows of that proof, then the R_SL app AIR SHALL refuse the trace.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-011": {
   "id": "LFP-011",
@@ -933,7 +933,7 @@
   "kind": "own",
   "sentence": "When the leaf prover proves a shard of an R_SL program, the leaf prover SHALL set the public value slot `PROG_D` to the `prog_d` of ERS-006 for that program.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "LFP-012": {
   "id": "LFP-012",
@@ -942,7 +942,7 @@
   "kind": "own",
   "sentence": "If the digest of the tape that an R_SL app consumed differs from the `input_d` of the leaf statement, then the leaf AIR SHALL refuse the shard.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-leaf-proving",
-  "sha": "b1a5adf0fb9c6ed9"
+  "sha": "679527e2b3421e86"
  },
  "NAG-001": {
   "id": "NAG-001",
@@ -951,7 +951,7 @@
   "kind": "own",
   "sentence": "The node prover SHALL prove N1, N2 and N3 as STARKs over BabyBear at the `INTERNAL` parameter set.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-002": {
   "id": "NAG-002",
@@ -960,7 +960,7 @@
   "kind": "own",
   "sentence": "If a child proof omits `StmtAir`, `ProofShapeAir` or `PublicValuesAir`, then the parent node SHALL refuse the child.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-003": {
   "id": "NAG-003",
@@ -969,7 +969,7 @@
   "kind": "own",
   "sentence": "The N1 statement AIR SHALL open `prog_d` as `P2(DOM_PROG, image_d, plan_d, key_root, machine_version)` and forward `key_root` to its parent.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-004": {
   "id": "NAG-004",
@@ -978,7 +978,7 @@
   "kind": "own",
   "sentence": "When the leaves of one run use more than one chip set of one `key_root`, the node prover SHALL merge the leaves under N2 and N3.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-005": {
   "id": "NAG-005",
@@ -987,7 +987,7 @@
   "kind": "own",
   "sentence": "If a MERGE-WORK key has more than 5,400 columns, then the key generator SHALL refuse the key.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-006": {
   "id": "NAG-006",
@@ -996,7 +996,7 @@
   "kind": "own",
   "sentence": "If a node witness is one of the forged inputs MW-F01, AFK-F7, GP2-F4.2 or the unlinked one-child MERGE-WORK node of AFK-F9(b), then the node AIRs SHALL refuse the witness.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-007": {
   "id": "NAG-007",
@@ -1005,7 +1005,7 @@
   "kind": "own",
   "sentence": "If a node witness is the forged input of counterexample GP2-C2.1, then the node AIRs SHALL refuse the witness.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-008": {
   "id": "NAG-008",
@@ -1014,7 +1014,7 @@
   "kind": "own",
   "sentence": "If the outcome word of a run differs from the outcome that the leaves proved, then the `L` circuit SHALL refuse the node root.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-009": {
   "id": "NAG-009",
@@ -1023,7 +1023,7 @@
   "kind": "own",
   "sentence": "The N1 and N2 merge constraints SHALL check that the step interval of each child starts where the interval of the child before it ends and that its `pre_d` equals the `post_d` of the child before it.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-010": {
   "id": "NAG-010",
@@ -1032,7 +1032,7 @@
   "kind": "own",
   "sentence": "When the node root of a run is proved, the node prover SHALL add each node proof path, its sha256 and its public values to the `ProofBundle` record of the run.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "NAG-011": {
   "id": "NAG-011",
@@ -1041,7 +1041,7 @@
   "kind": "own",
   "sentence": "When an N1 witness carries a nonzero `reg_root` or a MERGE-WORK node has one linked child, the node AIRs SHALL accept the witness.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-node-aggregation",
-  "sha": "5e302154adb56b05"
+  "sha": "e9c1ff5398391b0c"
  },
  "PDM-001": {
   "id": "PDM-001",
@@ -1050,7 +1050,7 @@
   "kind": "own",
   "sentence": "While `wrapd serve` runs, the prover daemon SHALL keep the SRS, the relation, the proving key, the verifying key, the fixed-base tables and the CUDA context loaded.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-002": {
   "id": "PDM-002",
@@ -1059,7 +1059,7 @@
   "kind": "own",
   "sentence": "When the prover daemon starts, the prover daemon SHALL create its Unix socket with mode 0600 under `$XDG_RUNTIME_DIR`.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-003": {
   "id": "PDM-003",
@@ -1068,7 +1068,7 @@
   "kind": "own",
   "sentence": "If a request names an operation other than `prove`, `call`, `stats` or `quit`, then the prover daemon SHALL answer with an error and keep serving.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-004": {
   "id": "PDM-004",
@@ -1077,7 +1077,7 @@
   "kind": "own",
   "sentence": "While the STARK worker runs in serve mode, the STARK worker SHALL keep the STARK keys, the `L` key and the `L_Fr` key loaded on the device.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-005": {
   "id": "PDM-005",
@@ -1086,7 +1086,7 @@
   "kind": "own",
   "sentence": "When the prover daemon serves a `prove` or `call` request, the prover daemon SHALL draw the blinders of that wrap proof from the OS CSPRNG inside the daemon process.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-006": {
   "id": "PDM-006",
@@ -1095,7 +1095,7 @@
   "kind": "own",
   "sentence": "If a request names a key manifest sha256 that differs from the key set the daemon loaded, then the prover daemon SHALL refuse the request.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-007": {
   "id": "PDM-007",
@@ -1104,7 +1104,7 @@
   "kind": "own",
   "sentence": "When a one-leaf call arrives at the prover daemon, the prover daemon SHALL serve the call on path C.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-008": {
   "id": "PDM-008",
@@ -1113,7 +1113,7 @@
   "kind": "own",
   "sentence": "When the prover GUI bridge sends a `stats` request, the prover daemon SHALL answer with the stage, the shard counts and the stage times of the running call and with no witness word.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "PDM-009": {
   "id": "PDM-009",
@@ -1122,7 +1122,7 @@
   "kind": "own",
   "sentence": "The prover daemon SHALL give a proof of statement X after a proof of statement Y the same distribution as a first proof of X, with no blinder of the earlier request in use.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-prover-daemon",
-  "sha": "a7e4a2f451672df6"
+  "sha": "eb54acb5d9e376c0"
  },
  "STM-001": {
   "id": "STM-001",
@@ -1365,7 +1365,7 @@
   "kind": "own",
   "sentence": "The Sherlock prover SHALL prove and verify every program of the Compact suite under one universal key set that has one internal-recursive key, one `L` key, one `L_Fr` key and one wrap key.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-002": {
   "id": "UKS-002",
@@ -1374,7 +1374,7 @@
   "kind": "own",
   "sentence": "The key generator SHALL build `keys_d` from 7 node rows and the foreign rows of the universal key record.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-003": {
   "id": "UKS-003",
@@ -1383,7 +1383,7 @@
   "kind": "own",
   "sentence": "When the rekey adds R_SL chip set 3 to `key_root`, the key generator SHALL give the R_SL key leaves an index that differs from the path C DAG leaf index `KEYDAG_IDX`.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-004": {
   "id": "UKS-004",
@@ -1392,7 +1392,7 @@
   "kind": "own",
   "sentence": "When the rekey completes, the rekey runner SHALL write a universal key manifest that holds the sha256 of every universal key file, `keys_d`, the sha256 of `~/.cache/rekey-t11/LIST.md` and the openvm, stark-backend and Moriarty commits of the keygen tree.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-005": {
   "id": "UKS-005",
@@ -1401,7 +1401,7 @@
   "kind": "own",
   "sentence": "If the key manifest of a box differs from the key manifest of the rekey, then the Sherlock prover on that box SHALL refuse to start a proof.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-006": {
   "id": "UKS-006",
@@ -1410,7 +1410,7 @@
   "kind": "own",
   "sentence": "When the rekey completes, the rekey runner SHALL rerun the gates check-cases, V.9 omit, V.10 check-chain, pathc, pathc-d3, gp2, x7, d3work, iface-fixture, lfr-e3, i7-decode and sg6 on the new keys.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-007": {
   "id": "UKS-007",
@@ -1419,7 +1419,7 @@
   "kind": "own",
   "sentence": "While the security gate of SSG-006 (G1 to G5 and FP-8) has not passed on a key set, the key manifest SHALL mark that key set as `prototype`.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-008": {
   "id": "UKS-008",
@@ -1428,7 +1428,7 @@
   "kind": "own",
   "sentence": "The setup mode SHALL NOT make, change or select a key, a shape, `plan_d` or a value that enters a proof.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-009": {
   "id": "UKS-009",
@@ -1437,7 +1437,7 @@
   "kind": "own",
   "sentence": "If the keygen tree of the rekey is not a descendant of every commit that `~/.cache/rekey-t11/LIST.md` names, then the rekey runner SHALL refuse to start.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "UKS-010": {
   "id": "UKS-010",
@@ -1446,7 +1446,7 @@
   "kind": "own",
   "sentence": "If `~/.cache/rekey-t11/LIST.md` lacks a row for FP-3, the anchor slot 15, the canonical range checks, the R_SL statement bindings of LFP-010 to LFP-012, the R_SL key leaf index of UKS-003 or the era-check words, then the rekey runner SHALL refuse to start.",
   "src": "sherlock-e2e-prototype-20261115/sherlock-e2e-universal-keys",
-  "sha": "390925be294f03b7"
+  "sha": "e80be8a39c0cd951"
  },
  "ZKE-001": {
   "id": "ZKE-001",
@@ -1878,7 +1878,7 @@
   "kind": "reused",
   "sentence": "JOIN SHALL compute `set_root = H(SHK_SET_JOIN, l.set_root, r.set_root)` with no counter and no range check, at any depth (R-5, AD-2 OWNER to confirm). A claim MAY be reused in two branches. One key set SHALL prove a chain, a balanced tree and a DAG with equal final proof size.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-002": {
   "id": "SHP-002",
@@ -1887,16 +1887,16 @@
   "kind": "reused",
   "sentence": "`shape_d` SHALL be `H(SHK_SHAPE, T_NODE, mode, slot_bits, key_sel_0, key_sel_1, shape_0, shape_1, work_kind, work_steps, out_a, out_b)` in this order. No field SHALL be `pre_d`, `post_d`, `body_d`, a memory root, a tail digest, a challenge or an address. Acceptance, replay and consumption SHALL NOT use `shape_d`. Bracketing disclosure SHALL follow N-7.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-003": {
   "id": "SHP-003",
   "fam": "SHP",
   "ctx": "aggregation",
   "kind": "reused",
-  "sentence": "MERGE-WORK SHALL take two enabled prior SEG proofs plus `k >= 1` real owner steps in one node, with `W.pre_d` equal to the right-most child's `post_d`, `W.h_pre` equal to its `h_hi`, and output height `W.h_pre + k` below `2^64`. Two successive nodes SHALL NOT satisfy this requirement. Its fit SHALL be measured by X7 (N-6, OWNER).",
+  "sentence": "MERGE-WORK SHALL take one or two enabled prior SEG proofs plus `k >= 1` real owner steps in one node, with `W.pre_d` equal to the right-most child's `post_d`, `W.h_pre` equal to its `h_hi`, and output height `W.h_pre + k` below `2^64`. Two successive nodes SHALL NOT satisfy this requirement. Its fit SHALL be measured by X7 (N-6, OWNER).",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-004": {
   "id": "SHP-004",
@@ -1905,7 +1905,7 @@
   "kind": "reused",
   "sentence": "A LEAF child SHALL have `shape_j = H(SHK_SHAPE, T_LEAF, h_pre, steps)` from its authenticated lanes. A FOREIGN child SHALL forward `H(SHK_SHAPE, T_FOREIGN, fclaim_d)`. A disabled slot SHALL have the fixed non-zero constant `SHAPE_OFF = H(SHK_SHAPE, T_OFF, 0)`.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-005": {
   "id": "SHP-005",
@@ -1914,7 +1914,7 @@
   "kind": "reused",
   "sentence": "`(out_a, out_b)` SHALL be `(h_lo, h_hi)` for a SEG output, `(set_root, 0)` for a SET, `(chain_d, cover_root)` for a DL, `(set_root, sub_root)` for a SUB and `(0, 0)` for an FV, AW or VW output. A FOREIGN SET at FV completion, and an `ADM` or `VIEW` SET at the completion of ADMIT-WORK or VIEW-WORK, SHALL use the SET rule `(set_root, 0)` (`FD/ARCHITECTURE.md` kit GP-4 hook). `fv_state_d` SHALL NOT enter `shape_d`.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-006": {
   "id": "SHP-006",
@@ -1923,7 +1923,7 @@
   "kind": "reused",
   "sentence": "The inline kernel SHALL be built from the same kit `KitAir` and `KitTrace` implementations as the leaf (CORE, DEC, ALU, RANGE, HASH, STACKS, MEM, the memory backend, VALUE DIGEST, INIT), instantiated in the node's AIR set inside the internal set bounds (SG-4). A separate node emitter SHALL NOT be used. If the kernel does not fit the node shape bounds, the owner SHALL decide under N-6 and GP-4 SHALL NOT be narrowed.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-007": {
   "id": "SHP-007",
@@ -1932,7 +1932,7 @@
   "kind": "reused",
   "sentence": "The shape and MERGE-WORK AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns; the MERGE-WORK key inside its own set, SHP-008), with every AIR required and a fixed height in its menu shape.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-008": {
   "id": "SHP-008",
@@ -1941,7 +1941,7 @@
   "kind": "reused",
   "sentence": "The MERGE-WORK key SHALL meet the STARK kit gate inside its own set `merge_work` (owner ruling N-6 \"own bounds\", 2026-11-14), not inside the internal set. The set SHALL have the internal parameters and per-AIR bounds and 5,400 columns. The inline CORE SHALL be split into CORE and FRAME from one frame rule, so that no AIR has more than 1,000 constraints.",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "SHP-009": {
   "id": "SHP-009",
@@ -1950,7 +1950,7 @@
   "kind": "reused",
   "sentence": "The `keys_d` table SHALL have seven rows (`UROWS` 7): the four rows of T8 and the rows NW over the MERGE-WORK key, NW2 over NW and N3 over NW2. NW and NW2 SHALL be the universal node circuit keyed over their children, and a node over NW2 SHALL have the N3 key. A child proof SHALL be accepted only at its own `keys_d` row (T8b AFK pick; it changes `keys_d` and so rekeys `L` and `L_Fr`).",
   "src": "sherlock-modular-leaf-20261111/sherlock-proof-shape",
-  "sha": "554df270f4caf950"
+  "sha": "57842ce2eef86ad2"
  },
  "ANC-001": {
   "id": "ANC-001",
@@ -1959,16 +1959,16 @@
   "kind": "reused",
   "sentence": "The anchor cell SHALL be the top-level ledger slot 15, a key constant of the wrap (`ANCHOR_SLOT`, template lanes 6 and 15). It SHALL hold `C_P = H(SHK_PROGC, r_P, prog_d)`, with one salt `r_P` per deployment, or a lock value `A_j`. It SHALL NOT hold plain `prog_d`. User code SHALL NOT address slot 15.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-002": {
   "id": "ANC-002",
   "fam": "ANC",
   "ctx": "bridge",
   "kind": "reused",
-  "sentence": "The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x_j)` for `1 <= j < k`, with the lock operand `x_j = sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, j)` over Fr (HDM-001 use code 8). `run_tag` SHALL be a fresh salted value per run (OD-16).",
+  "sentence": "The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x_j)` for `1 <= j < k`, with the lock operand `x_j = sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, pack(C_(j+1)), j)` over Fr (HDM-001 use code 8), where `C_(j+1)` is the forward claim chain of the run's call records after chunk `j` (FP-3, ANC-019). `run_tag` SHALL be a fresh salted value per run (OD-16).",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-003": {
   "id": "ANC-003",
@@ -1977,7 +1977,7 @@
   "kind": "reused",
   "sentence": "Every call SHALL carry the anchor statement `(mode, j, k, a_in, a_out)`. An ordinary call SHALL have `mode` ORD with `a_in = a_out = C_P` and no anchor write. Chunk `j` of `k` SHALL have `mode` CHUNK with `a_in = A_(j-1)` and `a_out = A_j`. It SHALL write `ins anchor := a_out` in the effect region (OD-16).",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-004": {
   "id": "ANC-004",
@@ -1986,7 +1986,7 @@
   "kind": "reused",
   "sentence": "One logical call SHALL run as `k` contract calls in one intent of one transaction on the unmodified ledger. Chunk `j` SHALL claim chunk `j+1`. The anchor lock SHALL hold between chunks.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-005": {
   "id": "ANC-005",
@@ -1995,7 +1995,7 @@
   "kind": "reused",
   "sentence": "Mode 1F SHALL put all chunks in the fallible part of one segment. A failure of a middle chunk SHALL leave the contract state unchanged. The transaction SHALL be included with its fee paid.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-006": {
   "id": "ANC-006",
@@ -2004,7 +2004,7 @@
   "kind": "reused",
   "sentence": "Mode 1G SHALL put all chunks in the guaranteed part, for a callee of a guaranteed caller. A failure SHALL make the transaction invalid. A chain that mixes fallible and guaranteed chunks SHALL be refused.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-007": {
   "id": "ANC-007",
@@ -2013,7 +2013,7 @@
   "kind": "reused",
   "sentence": "The frontend SHALL cut a run only where the native run has stack depth exactly 3, at a boundary that the run certifies. The slice shard SHALL check the cut (R-cut). Every read of context slot 0 and effects slot 1 SHALL be hoisted into a prologue in chunk 1 (R-ctx).",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-008": {
   "id": "ANC-008",
@@ -2022,7 +2022,7 @@
   "kind": "reused",
   "sentence": "A chunked call SHALL have no dropped suffix, no dropped prefix and no interleaving inside or outside its intent. Replay SHALL be bound through `binding_input`. Fees SHALL be checked for the whole transaction before application.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-009": {
   "id": "ANC-009",
@@ -2031,7 +2031,7 @@
   "kind": "reused",
   "sentence": "A hybrid contract SHALL have a second cell `anchor_home` that deploy sets to `C_P` and that no entry writes. A native-routed entry SHALL start with the uncached reads `popeq anchor` and `popeq anchor_home`. Its circuit SHALL assert that the two values are equal (OD-8, OD-16).",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-010": {
   "id": "ANC-010",
@@ -2040,7 +2040,7 @@
   "kind": "reused",
   "sentence": "The chunk tests SHALL run in order: T1 at ledger level with 13 cases and no proofs, T2 on the XC-9 devnet with `chunky.compact` and the controls T2-N and T2-N0, then T3 with universal-key chunks after frontend M5. Under placement V, `bind_label` SHALL compute the claim address and `ep_hash` of each chunk from the pinned windows (FPR-014, LEAD F-13), and the run SHALL write `(addr_c, ep_hash, comm_(j+1))` into the effect words of its `claimContractCall`.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "ANC-011": {
   "id": "ANC-011",
@@ -2049,7 +2049,7 @@
   "kind": "reused",
   "sentence": "The anchor and chunk rules SHALL be reported proved only when CF-L2 is proved with an axiom report that holds only `propext`, `Quot.sound` and `Classical.choice`.",
   "src": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
-  "sha": "39057156bccf3ccb"
+  "sha": "d41d120a06e267b9"
  },
  "DG-001": {
   "id": "DG-001",
@@ -2463,7 +2463,7 @@
   "kind": "reused",
   "sentence": "Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3, rate 2. The initial capacity SHALL be `cap(u, l) = l + u 2^66` for a fixed length `l` and `2^64 + u 2^66` for the transcript. The use codes SHALL be 0 program operations; 1, 2, 3 the Merkle leaf, Merkle node and transcript of `L`; 4 public digests; 5, 6, 7 the Merkle leaf, Merkle node and transcript of `L_Fr` (OD-18); 8 the lock operand sponge `x_j` of ANC-002.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-002": {
   "id": "HDM-002",
@@ -2472,7 +2472,7 @@
   "kind": "reused",
   "sentence": "A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18). The Fr value of each tag SHALL be published with a differential vector before the hash domains freeze (ENC-1); until then the tag rows are FREEZE-PENDING.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-003": {
   "id": "HDM-003",
@@ -2481,7 +2481,7 @@
   "kind": "reused",
   "sentence": "The Merkle leaf and node hashes of `L` (`u` = 1 and 2) SHALL use Midnight's fixed-length sponge in place of the stock leaf hasher and the truncated-permutation compression. A Merkle leaf SHALL pack 8 BabyBear words per Fr element, with checked length and words below `2^31`.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-004": {
   "id": "HDM-004",
@@ -2490,7 +2490,7 @@
   "kind": "reused",
   "sentence": "The transcript of `L` SHALL be the stark-backend multi-field overwrite duplex over Fr with Midnight's permutation, stock in every transition, with one change: the initial capacity cell `s_2 = 2^64 + 3 * 2^66` (OD-18). The verifier of `L` inside `L_Fr` SHALL implement the duplex natively in the trace of `L_Fr`. The transcript of `L_Fr` SHALL be the same duplex with the initial capacity `2^64 + 7 * 2^66`, and the wrap SHALL implement it with the stdlib Poseidon chip.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-005": {
   "id": "HDM-005",
@@ -2499,7 +2499,7 @@
   "kind": "reused",
   "sentence": "The key schedule `sched` SHALL fix the count of words between any two flushes. The verifier of `L` inside `L_Fr` SHALL follow `sched`. It SHALL NOT follow the proof (LW-002).",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-006": {
   "id": "HDM-006",
@@ -2508,7 +2508,7 @@
   "kind": "reused",
   "sentence": "Each non-final round of `L` SHALL take one OOD sample in the stock order of WHIR Construction 5.1: observe the round commitment, sample one OOD point, observe its answer, then the query PoW, the query indices and `gamma` as stock, with the answer batched with the query answers under one `gamma` (`q_i + 1` claims) (OD-19).",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-007": {
   "id": "HDM-007",
@@ -2517,7 +2517,7 @@
   "kind": "reused",
   "sentence": "Every Sherlock-defined Poseidon2 hash over BabyBear SHALL absorb its tag word first, with the total length in the first capacity word. The tags SHALL be `TAG_EMPTY`, `tagStep`, `tagEnt`, `TAG_NODE`, `DOM_PROG`, `DOM_PROGC`, `DOM_LOCK`, `DOM_KEYTRIPLE`, `DOM_KEYDAG`, `DOM_KEYNODE` and `DOM_LAYOUT`. Each new digest SHALL take a new tag. The leaf, leaf-layer and internal layers SHALL keep the stock OpenVM hashes and challenger (premise A4).",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-008": {
   "id": "HDM-008",
@@ -2526,7 +2526,7 @@
   "kind": "reused",
   "sentence": "Each squeeze SHALL give 5 base-`p` digits with bias at most `2^-100`. The recomposition of the digits SHALL be checked below `r`.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-009": {
   "id": "HDM-009",
@@ -2535,7 +2535,7 @@
   "kind": "reused",
   "sentence": "The nine transcript vectors T-FS of `FD/EXPERIMENTS.md` section 2 SHALL give the same digits and the same final state on the CPU prover, the GPU prover, the stark-backend verifier and the `L_Fr` tape, and the same holds for the `L_Fr` transcript on its prover, its verifier and the wrap's verifier of `L_Fr`. Until they pass, the transcript SHALL be reported PENDING.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "HDM-010": {
   "id": "HDM-010",
@@ -2544,7 +2544,7 @@
   "kind": "reused",
   "sentence": "The hash domains and the transcript SHALL be reported proved only when BR-L2 names the two Fr sponge algorithms on the one permutation and follows the one-sample order of HDM-006. Premises A2b (`frSpongeInj`) and A5 (`p2Inj`) SHALL stay named hypotheses.",
   "src": "sherlock-processor-final-20261111/sherlock-hash-domains",
-  "sha": "791338af8fa6ad02"
+  "sha": "48e27871cabd3b4f"
  },
  "LW-001": {
   "id": "LW-001",

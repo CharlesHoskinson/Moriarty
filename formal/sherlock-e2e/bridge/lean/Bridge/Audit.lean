@@ -43,13 +43,13 @@ elab "#audit_ns " n:ident : command => do
 #guard_msgs in
 #print axioms Bridge.ltr003_t10m
 
-/-- info: 'Bridge.ltr003_fp3_conflict' does not depend on any axioms -/
+/-- info: 'Bridge.ltr003_fp3_fits' does not depend on any axioms -/
 #guard_msgs in
-#print axioms Bridge.ltr003_fp3_conflict
+#print axioms Bridge.ltr003_fp3_fits
 
-/-- info: 'Bridge.ltr003_fp3_refused' does not depend on any axioms -/
+/-- info: 'Bridge.ltr003_fp3_accepted' does not depend on any axioms -/
 #guard_msgs in
-#print axioms Bridge.ltr003_fp3_refused
+#print axioms Bridge.ltr003_fp3_accepted
 
 /-- info: 'Bridge.clb001_interface' does not depend on any axioms -/
 #guard_msgs in

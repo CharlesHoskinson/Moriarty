@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import Assurance.Spec
 
-/-! Oracle executable of Assurance: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Assurance: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec Assurance
+open Lean SherlockCodecB Assurance
 
 def fieldNames : List String :=
   ["testSeedBuild", "seedEnv", "constRpPath", "rpDraws", "deploySecret", "saltDraws", "salt", "blinderDraws", "blinders", "devices", "submitted", "roster", "transfers", "usedSlots", "gateBits", "unverified", "confirmedNoFix", "notAttempted", "g5Current", "gateRecord", "recordManifest", "recordOpen", "manifestD", "qualified", "runRecords", "lastRunQualified", "changes", "changeRows", "verdicts", "doneRows"]

@@ -31,20 +31,22 @@ def lColsFp3Derived : Nat := lColsT10m - 1 + effectAirCols
     `L` max_columns 2,200 (LEAD PICK FP3-LCOLS, for T15). -/
 def codeLMaxColsFp3 : Nat := 2200
 
-/-- LTR-003 on the T10m keys: the spec bound and the code bound hold (5 columns headroom). -/
+/-- LTR-003 on the T10m keys: the spec bound (2,200, the code bound of rekey-int) holds. -/
 theorem ltr003_t10m : lColsT10m ≤ lMaxCols ∧ lInterT10m ≤ lMaxInter ∧
-    codeLMaxColsT10m = lMaxCols ∧ codeLMaxInter = lMaxInter ∧ lMaxCols - lColsT10m = 5 := by
+    codeLMaxColsFp3 = lMaxCols ∧ codeLMaxInter = lMaxInter := by
   decide
 
-/-- LTR-003 against CLB-002 (FINDING F-BR-1): the `L` width that FP-3 needs (DERIVED 2,071) is
-    above the spec bound 2,000, so the oracle refuses the `L` key that CLB-002 requires; the
-    committed code bound (2,200) accepts it. -/
-theorem ltr003_fp3_conflict : lColsFp3Derived = 2071 ∧ lMaxCols < lColsFp3Derived ∧
-    lColsFp3Derived ≤ codeLMaxColsFp3 ∧ codeLMaxColsFp3 ≠ lMaxCols := by decide
+/-- F-B-BR-1 (FIXED in the spec text): the `L` width that FP-3 needs (DERIVED 2,071) was above
+    the old bound 2,000 (`codeLMaxColsT10m`); LTR-003 now states the code bound 2,200, so the
+    `L` key of CLB-002 fits with 129 columns of headroom (DERIVED). -/
+theorem ltr003_fp3_fits : lColsFp3Derived = 2071 ∧ codeLMaxColsT10m < lColsFp3Derived ∧
+    lColsFp3Derived ≤ lMaxCols ∧ codeLMaxColsFp3 = lMaxCols ∧ lMaxCols - lColsFp3Derived = 129 := by
+  decide
 
-/-- The FP-3 configuration of the T25 rekey: the bridge keygen refuses it under LTR-003. -/
+/-- Replay of F-B-BR-1: the FP-3 configuration of the T25 rekey (the counterexample of the old
+    text) is accepted by the bridge keygen under LTR-003. -/
 def fp3Keygen : St := init lColsFp3Derived lInterT10m 15 15 1 2 2 true false true true true true true
-theorem ltr003_fp3_refused : (stepRefusals fp3Keygen 0).map Refusal.code = ["l-key-bounds"] := by
+theorem ltr003_fp3_accepted : stepRefusals fp3Keygen 0 = [] := by
   decide
 
 /-! ## Interface (CLB-001, LW-001, LW-003, LW-018, FLG-003, FLG-004) -/
@@ -93,8 +95,9 @@ def codeLockLenNtfix : Nat := 6
 /-- CODE: openvm fp3 a2eeece / rekey-int 155d321 `iface.rs:290` `LOCK_LEN = 7`: FP-3 adds the
     operand `link` = `pack(C_(j+1))` (doc at `iface.rs:288` to `:289`, `lock_x` at `:316`). -/
 def codeLockLenFp3 : Nat := 7
-/-- The operands that CLB-005, ANC-002 and ANC-017 name: c, pack(run_tag), k, d_in, d_out, j. -/
-def specLockOperands : List String := ["c", "pack(run_tag)", "k", "d_in", "d_out", "j"]
+/-- The operands that CLB-005, ANC-002 and ANC-017 name after F-B-BR-2 (D-038 FP-3 link):
+    c, pack(run_tag), k, d_in, d_out, link, j. -/
+def specLockOperands : List String := ["c", "pack(run_tag)", "k", "d_in", "d_out", "link", "j"]
 /-- MODEL: Moriarty t20-batched 5dc1be2ee `models/sherlock/quint/t20-batched/chunkCap.qnt:26`
     `K_MAX = 2` (no Rust constant, CLB-007 status). -/
 def modelKMax : Nat := 2
@@ -103,12 +106,16 @@ theorem clb004_anchor_slot : codeAnchorSlot = anchorSlot := by decide
 
 /-- HDM-001: the lock operand sponge uses use code 8, the code's `U_LOCK`; its fixed-length
     capacity is `l + 8 * 2^66` with `l` the operand count. -/
-theorem hdm001_lock_code : codeULock = 8 ∧ specLockOperands.length = codeLockLenNtfix := by decide
+theorem hdm001_lock_code : codeULock = 8 ∧ specLockOperands.length = codeLockLenFp3 := by decide
 
-/-- CLB-005 against the FP-3 code (FINDING F-BR-2): the merged lock sponge absorbs 7 operands,
-    the requirement text names 6, so the capacities `cap(8, 6)` and `cap(8, 7)` differ. -/
-theorem clb005_fp3_operands : specLockOperands.length ≠ codeLockLenFp3 ∧
-    codeLockLenNtfix + codeULock * 2 ^ 66 ≠ codeLockLenFp3 + codeULock * 2 ^ 66 := by decide
+/-- F-B-BR-2 (FIXED in the spec text): CLB-005, ANC-002 and ANC-017 name the 7 operands of the
+    FP-3 code (`LOCK_LEN = 7`), with the link before `j`; the capacity is `cap(8, 7)`. The old
+    6-operand text gave `cap(8, 6)`, which the code refuses (odin test
+    `fbbr2_six_operand_lock_text_vs_fp3_code`). -/
+theorem clb005_fp3_operands : specLockOperands.length = codeLockLenFp3 ∧
+    codeLockLenNtfix + 1 = specLockOperands.length ∧
+    codeLockLenNtfix + codeULock * 2 ^ 66 ≠ specLockOperands.length + codeULock * 2 ^ 66 := by
+  decide
 
 /-- CLB-007: the model cap equals the spec cap. -/
 theorem clb007_kmax : modelKMax = kMax := by decide

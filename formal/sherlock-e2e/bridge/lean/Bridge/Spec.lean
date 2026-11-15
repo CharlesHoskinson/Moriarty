@@ -74,8 +74,8 @@ structure St where
   wraps : Nat
   deriving DecidableEq, Repr
 
-/-- LTR-003: `L` key bounds. -/
-def lMaxCols : Nat := 2000
+/-- LTR-003: `L` key bounds (2,200 columns after F-B-BR-1: FP-3 `L` is 2,071 DERIVED). -/
+def lMaxCols : Nat := 2200
 def lMaxInter : Nat := 100
 /-- CLB-004, ANC-001, ANC-013: the anchor slot. -/
 def anchorSlot : Nat := 15

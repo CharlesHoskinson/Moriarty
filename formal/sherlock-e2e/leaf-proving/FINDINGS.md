@@ -6,3 +6,7 @@
 | F-B-LFP-2 | LFP-006 | stale citation | LFP-006 status cites openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:41` (slot 8). Line 41 is blank; the doc line is `:42` and `pv::PROG_D = 8` is `:46`. | CONFIRMED (citation fix only) |
 | F-B-LFP-3 | CPR-005, LFP-003 | contradiction between EARS (acknowledged) | LFP-003 scenario refuses a program that calls `persistentHash` and `keccak256` (CODE `rsl/trace.rs:114` assert); CPR-005 forbids a requirement that narrows GP-001 unless an owner decision with an unbounded path. LFP-003 status names the GAP and D-024 (LEAD PICK for T15). | OPEN DESIGN (owner question at T15) |
 | F-B-LFP-4 | LFP-003 | observation | The mixed-hash refusal is an `assert!` (panic) in `Program::new` (`rsl/trace.rs:114`), not a typed refusal; "refuse the shape before it makes a proof" holds, but the refusal has no named code. | OPEN DESIGN (minor) |
+
+## Resolution (2026-11-15)
+
+- F-LFP-1: GUARD HOLDS (the code builds only 5 or 8 app AIRs); the LFP-003 text fix stays with F-leaf-proving-Q1. F-LFP-2: FIXED (`core.rs:46`). F-LFP-3: closed by D-024 (OWNER 2026-11-15, temporary named refusal).

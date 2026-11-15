@@ -47,13 +47,13 @@ Same as `../key-management/ORACLE.md`: request `{"state": St, "op": N}`, answer 
 
 Witness fields (`lCols` to `stockAccepts` except the ids) never change; choose them per trace (`--const`).
 
-State domain (`Valid`, else `outside-capability`): `phase <= 4`; `mode <= 1`; `lKeyId <= keygens`; a key exists only within bounds (`lCols <= 2000`, `lInter <= 100`) and with both slots 15; `planned` implies a key and (`mode = 1` implies `k <= 2`); `phase >= 1` implies `planned`, `laneOk`, (`mode = 1` implies `k = slices`), (`mode = 0` implies not `tplWrite`); `phase >= 2` implies `tapeExposed`, `tapeTyped`, `transcriptOk`, (`mode = 1` implies `lockOk`); `phase >= 3` implies `stockAccepts`; `records != 0` implies `phase = 4`, `recordSha = proofSha`, `stockAccepts`; `phase = 4` implies `records = 1`; `wraps != 0` implies `records != 0` and `movedSha = recordSha`; a nonzero `keyPathC` or `keyFull` equals `lKeyId`.
+State domain (`Valid`, else `outside-capability`): `phase <= 4`; `mode <= 1`; `lKeyId <= keygens`; a key exists only within bounds (`lCols <= 2200`, `lInter <= 100`) and with both slots 15; `planned` implies a key and (`mode = 1` implies `k <= 2`); `phase >= 1` implies `planned`, `laneOk`, (`mode = 1` implies `k = slices`), (`mode = 0` implies not `tplWrite`); `phase >= 2` implies `tapeExposed`, `tapeTyped`, `transcriptOk`, (`mode = 1` implies `lockOk`); `phase >= 3` implies `stockAccepts`; `records != 0` implies `phase = 4`, `recordSha = proofSha`, `stockAccepts`; `phase = 4` implies `records = 1`; `wraps != 0` implies `records != 0` and `movedSha = recordSha`; a nonzero `keyPathC` or `keyFull` equals `lKeyId`.
 
 ## Operations
 
 | code | op | arg | guard (refusal codes, in this order) | effect |
 |---|---|---|---|---|
-| 0 | keygenL | 0 | `lCols <= 2000` and `lInter <= 100` (`l-key-bounds`, LTR-003); `slotIface = 15` (`anchor-slot`, CLB-004); `slotIface = slotWrap` (`slot-mismatch`, CLB-008); `lKeyId = 0` (`keys-exist`, LTR-007) | `keygens += 1`, `lKeyId := keygens + 1` |
+| 0 | keygenL | 0 | `lCols <= 2200` and `lInter <= 100` (`l-key-bounds`, LTR-003); `slotIface = 15` (`anchor-slot`, CLB-004); `slotIface = slotWrap` (`slot-mismatch`, CLB-008); `lKeyId = 0` (`keys-exist`, LTR-007) | `keygens += 1`, `lKeyId := keygens + 1` |
 | 1 | plan | 0 | `lKeyId != 0` (`no-key`); not `planned` (`wrong-phase`); not (`mode = 1` and `k > 2`) (`k-max`, CLB-007) | `planned := true` |
 | 2 | proveL f | f < 2 (0 path C, 1 full tree) | `planned` and `phase = 0` (`wrong-phase`); `laneOk` (`lane-unbound`, CLB-002); not (`mode = 1` and `k != slices`) (`k-mismatch`, CLB-003); not (`mode = 0` and `tplWrite`) (`ordinary-anchor-write`, CLB-006) | `phase := 1`; `keyPathC := lKeyId` (f = 0) or `keyFull := lKeyId` (f = 1) |
 | 3 | proveLfr | 0 | `phase = 1` (`wrong-phase`); `tapeExposed` (`tape-not-exposed`, LTR-004); `tapeTyped` (`ill-typed-tape`, LW-021); `transcriptOk` (`transcript-mismatch`, LTR-005); not (`mode = 1` and not `lockOk`) (`lock-mismatch`, CLB-005) | `phase := 2`, `proofSha += 1` |

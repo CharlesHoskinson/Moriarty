@@ -21,7 +21,7 @@ replayer (`scripts/quint_replay.py --op-var lastOp`) can pass it unchanged.
 
 open Lean
 
-namespace SherlockCodec
+namespace SherlockCodecB
 
 def maxLine : Nat := 65536
 
@@ -203,4 +203,4 @@ def mainWith {σ} (c : Ctx σ) (args : List String) : IO UInt32 := do
   | .ok out => stdout.putStrLn out.compress; return 0
   | .error e => IO.eprintln s!"oracle: {e}"; return 2
 
-end SherlockCodec
+end SherlockCodecB

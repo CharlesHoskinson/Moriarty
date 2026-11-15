@@ -22,11 +22,11 @@ theorem witness_handoff : done.records = 1 ∧ done.wraps = 1 ∧ done.recordSha
     done.phase = 4 := by decide +kernel
 #guard done.records == 1 && done.wraps == 1
 
--- LTR-003: 2,001 columns or 101 interactions: the key generator refuses the key.
-theorem pin_ltr003 : (stepRefusals { honest with lCols := 2001 } 0).map Refusal.code = ["l-key-bounds"] ∧
+-- LTR-003: 2,201 columns or 101 interactions: the key generator refuses the key.
+theorem pin_ltr003 : (stepRefusals { honest with lCols := 2201 } 0).map Refusal.code = ["l-key-bounds"] ∧
     (stepRefusals { honest with lInter := 101 } 0).map Refusal.code = ["l-key-bounds"] ∧
-    stepRefusals { honest with lCols := 2000, lInter := 100 } 0 = [] := by decide +kernel
-#guard (stepRefusals { honest with lCols := 2001 } 0).map Refusal.code == ["l-key-bounds"]
+    stepRefusals { honest with lCols := 2200, lInter := 100 } 0 = [] := by decide +kernel
+#guard (stepRefusals { honest with lCols := 2201 } 0).map Refusal.code == ["l-key-bounds"]
 
 -- CLB-004: slot 0 on both components is refused (anchor-slot).
 theorem pin_clb004 : (stepRefusals { honest with slotIface := 0, slotWrap := 0 } 0).map Refusal.code =

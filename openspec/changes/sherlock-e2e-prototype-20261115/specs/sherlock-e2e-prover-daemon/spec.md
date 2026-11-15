@@ -3,7 +3,7 @@
 ### Requirement: PDM-001 The daemon keeps the wrap state resident
 PDM-001: While `wrapd serve` runs, the prover daemon SHALL keep the SRS, the relation, the proving key, the verifying key, the fixed-base tables and the CUDA context loaded.
 
-Verification: the warm against cold record: huginn 113.01 s one process per call, 71.59 s with the daemon (`~/Projects/Moriarty/llm-wiki/wiki/log.md:3690`); rerun on the T25 keys (LPC-005). Exists.
+Verification: the warm against cold record: huginn 113.01 s one process per call, 71.59 s with the daemon (`~/Projects/Moriarty/llm-wiki/wiki/log.md:3691`); rerun on the T25 keys (LPC-005). Exists.
 
 #### Scenario: Two calls in a row
 - **GIVEN** a daemon that served one call
@@ -45,7 +45,7 @@ Verification: NEW: a socket test with the operation `dump`. To build.
 ### Requirement: PDM-004 The STARK worker keeps the STARK keys on the device
 PDM-004: While the STARK worker runs in serve mode, the STARK worker SHALL keep the STARK keys, the `L` key and the `L_Fr` key loaded on the device.
 
-Verification: the warm record on odin (w1 cold 28.98 s, w1 warm 27.77 s; `~/.cache/box-bus/all.log:42`); rerun on the T25 keys. Exists.
+Verification: NEW: a warm against cold record of the STARK worker alone in serve mode, on the T25 keys. To build.
 
 #### Scenario: A second run
 - **GIVEN** a worker that proved one run
@@ -54,7 +54,7 @@ Verification: the warm record on odin (w1 cold 28.98 s, w1 warm 27.77 s; `~/.cac
 
 #### Scenario: Status of PDM-004
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT and MEASURED on the T10m keys. Evidence: `openvm-t14b` `crates/sherlock-wrap-export/examples/common/t14.rs:30` to `:48` (`T14B_SERVE`); Moriarty `t14b` 5e54263da `research/sherlock-t14b-20261114/RESULTS.md:15`.
+- **THEN** it reads: BUILT; MEASURED evidence OPEN (F-B-BF-2). No record on file times the STARK worker alone with its keys resident: `~/.cache/box-bus/all.log:42` is the w1 wrap baseline ("STARK lfr_call half not run"), and the whole-call records include the wrap daemon (huginn h79, `~/Projects/Moriarty/llm-wiki/wiki/log.md:3691`; odin w5, `log.md:3935`). Owner lane: T14b. Evidence: `openvm-t14b` `crates/sherlock-wrap-export/examples/common/t14.rs:30` to `:48` (`T14B_SERVE`); Moriarty `t14b` 5e54263da `research/sherlock-t14b-20261114/RESULTS.md:15`.
 
 ### Requirement: PDM-005 Blinders are drawn at prove time inside the daemon
 PDM-005: When the prover daemon serves a `prove` or `call` request, the prover daemon SHALL draw the blinders of that wrap proof from the OS CSPRNG inside the daemon process.

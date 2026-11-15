@@ -29,18 +29,18 @@ Verification: tests `i10_gate_at_lfr_params` (openvm `rekey-chips` dcf1b4c `crat
 - **THEN** it reads: BUILT (LOOP T1, T3). Evidence: openvm `rekey-chips` dcf1b4c `crates/sherlock-lfr/src/testing.rs:23` (`Bls12381FrPoseidonConfig`); feature `bls12381-fr-poseidon` at openvm `t10mm` 5b7ada8 `crates/sherlock-lfr/Cargo.toml:11`; parameter set `LFR` at openvm `t10mm` 5b7ada8 `crates/sherlock-lfr/src/frozen.rs:203`.
 
 ### Requirement: LTR-003 L key bounds
-LTR-003: If an `L` key has more than 2,000 columns or an AIR with more than 100 interactions, then the key generator SHALL refuse the key.
+LTR-003: If an `L` key has more than 2,200 columns or an AIR with more than 100 interactions, then the key generator SHALL refuse the key.
 
 Verification: T25 keygen record: the `L` column count and the largest interaction count, checked by `check_vk_bounds`. Exists.
 
 #### Scenario: The rekey adds columns
-- **GIVEN** an `L` key of 2,001 columns after the FP-3 change
+- **GIVEN** an `L` key of 2,201 columns after the FP-3 change
 - **WHEN** the key generator checks the bounds
 - **THEN** the key generator refuses the key and the rekey stops
 
 #### Scenario: Status of LTR-003
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT on the T10m keys with 5 columns of headroom. The FP-3 and slot-15 changes add `L` constraints; the width after T25 is not measured. Owner lane: T25. Evidence: openvm `t10mm` 5b7ada8 `crates/sherlock-lfr/src/frozen.rs:183` holds the `L` bounds; `check_vk_bounds` is at `frozen.rs:434`. Measured on the T10m keys: 1,995 columns and at most 99 interactions (Moriarty 3dc9001a9 `research/sherlock-t10m-20261114/RESULTS.md:11`, Moriarty 3dc9001a9 `research/sherlock-t10m-20261114/RESULTS.md:49`).
+- **THEN** it reads: BUILT. The bound is 2,200 columns (F-B-BR-1, LEAD PICK FP3-LCOLS for T15; the bound was 2,000 before FP-3). FP-3 replaces the bare `Call` AIR with `EffectAir` of 77 columns (MEASURED, `~/.cache/rekey-t11/LIST.md:44`), so `L` with FP-3 is 2,071 columns (DERIVED, `LIST.md:47`), 129 columns below the bound. The width after T25 is not measured. T25 measures it, reruns D3 at that width (`LIST.md:69`), and keeps k <= 21 and the wrap VK at or below 50,000 B. Owner lane: T25. Evidence: openvm `rekey-int` 3826e38 `crates/sherlock-lfr/src/frozen.rs:202` (`max_columns: 2200` in the `L` set at `frozen.rs:183`); `check_vk_bounds` is at `frozen.rs:429`. Measured on the T10m keys: 1,995 columns and at most 99 interactions (Moriarty 3dc9001a9 `research/sherlock-t10m-20261114/RESULTS.md:11`, Moriarty 3dc9001a9 `research/sherlock-t10m-20261114/RESULTS.md:49`).
 
 ### Requirement: LTR-004 Public words go through Tape expose
 LTR-004: If an `L_Fr` tape does not expose the public words through `Tape::expose`, then the `L_Fr` machine SHALL refuse the tape.

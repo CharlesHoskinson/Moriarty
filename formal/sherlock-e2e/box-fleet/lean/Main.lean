@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import BoxFleet.Spec
 
-/-! Oracle executable of Box Fleet: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Box Fleet: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec BoxFleet
+open Lean SherlockCodecB BoxFleet
 
 def fieldNames : List String :=
   ["roster", "slotsUsed", "exclRunning", "remoteJobs", "gpuHolder", "idleMin", "termSent", "termAgeS", "busLog", "shaOk", "transfers", "ownerAway", "q1", "q2", "daemonUp", "socketMode", "keysLoaded", "daemonManifest", "reqManifest", "reqPeerOk", "reqLeaves", "served", "errors", "statsReplies", "statsWitness", "poolFree", "slotsMade", "slotsSpent", "lastPath", "cuda", "nodeEnv", "lEnv", "shardsProved", "runStopped", "stopShard", "stopDevice", "lastAppDev", "lastNodeDev", "lastLDev", "runsStarted", "unitRuns", "claims", "gpuQueries"]

@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import Bridge.Spec
 
-/-! Oracle executable of Bridge: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Bridge: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec Bridge
+open Lean SherlockCodecB Bridge
 
 def fieldNames : List String :=
   ["lCols", "lInter", "slotIface", "slotWrap", "lKeyId", "keygens", "mode", "k", "slices", "laneOk", "tplWrite", "lockOk", "tapeExposed", "tapeTyped", "transcriptOk", "stockAccepts", "planned", "phase", "keyPathC", "keyFull", "verifierRefused", "proofSha", "recordSha", "movedSha", "records", "wraps"]

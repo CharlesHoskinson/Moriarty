@@ -3,13 +3,13 @@ NAG-001	CONSTANT-CHECKED	nag001_internal_params	CODE INTERNAL set (openvm t10mm 
 NAG-002	MODELED	merge_guard, pin_nag002, gate_counts_measured	refusal air-missing (cAirs bits StmtAir, ProofShapeAir, PublicValuesAir); MEASURED V.9 70 cases (research/sherlock-t10m-20261114/RESULTS.md:89)
 NAG-003	MODELED	merge_guard, pin_nag003	refusals prog-d-mismatch, key-root-mismatch; the P2(DOM_PROG, ...) opening is abstracted to equality of prog_d and key_root
 NAG-004	MODELED	pin_merge_chain, merge_guard	leaves of chip sets 3 and 0 under one key_root merge (chipSets bits); no chip-set guard exists, by the sentence
-NAG-005	CONSTANT-CHECKED	keygenWork_guard, pin_nag005, nag005_merge_work_measured, reachable_root	CODE MERGE_WORK_COLUMNS = 5400 (t10mm 5b7ada8 frozen.rs:166); MEASURED MERGE-WORK key 5,284 columns, 49 AIRs, 183 interactions (RESULTS.md:51); oracle refuses 5,401 (refusal columns); Quint bound on state mwColumns
+NAG-005	CONSTANT-CHECKED	keygenWork_guard, pin_nag005, nag005_merge_work_measured, reachable_root	CODE MERGE_WORK_COLUMNS = 5400 (rekey-int 3826e38 frozen.rs:169; t10mm 5b7ada8 :166); current MEASURED width 4,988 (T10q Work kind, rekey-int 3826e38 frozen.rs:166-167); 5,121 DERIVED with STACKS and the value set (:168); earlier layouts 5,128 (T8, :165) and 5,284 (T8b, T10m keys, RESULTS.md:51, :96); oracle refuses 5,401 (refusal columns); Quint bound on state mwColumns
 NAG-006	MODELED	merge_guard, work_guard, pin_forgeries, pin_work	forged witnesses MW-F01, AFK-F7, GP2-F4.2 as cForged 1..3 (refusal forged-witness); AFK-F9(b) unlinked one-child MERGE-WORK = no prior child (refusal no-child)
 NAG-007	MODELED	merge_guard, pin_forgeries	GP2-C2.1 as cForged 5 (refusal forged-witness); the code fix is open (spec status), the oracle states the required behaviour
 NAG-008	MODELED	lCheck_guard, reachable_root, pin_nag008, witness_root	refusal outcome-mismatch; outcome fixed at the seal
 NAG-009	MODELED	merge_guard, swapped_not_linked, pin_nag009_wrong_order, pin_merge_chain	refusal link-broken (pre_d = post_d before, h_pre = h_hi before)
 NAG-010	SPEC-CHECKED	reachable_root	record schema of ProofBundle (paths, sha256, publics): a host record, no transition; consistent with NAG-008 (the root it records is L-accepted and sealed)
-NAG-011	MODELED	pin_nag011_reg_root, pin_work, work_guard	nonzero reg_root accepted in N1 (LEAF child carries none, NODE-008); MERGE-WORK with one linked child accepted. Contradicts the literal text of SHP-003, see F-AGG-1
+NAG-011	MODELED	pin_nag011_reg_root, pin_work, work_guard	nonzero reg_root accepted in N1 (LEAF child carries none, NODE-008); MERGE-WORK with one linked child accepted; SHP-003 now says one or two (F-B-AGG-1 FIXED); odin replay afk_f9_work_one_child accepted, afk_f9_work_one_child_unlinked_refused refused (rekey-int 3826e38)
 GPH-001	SPEC-CHECKED	pin_merge_chain	rule families are leaf-side (chip sets); the oracle's merge has no chip-set or family guard, so both families meet one node key set; the key-set identity is in KeyManagement (addProgram_keeps_universal)
 GPH-002	MODELED	sealWithDeps_guard, pin_clm004, gate_counts_measured	GP-2 consume and SEAL-WITH-DEPS (ops 4, 5); MEASURED gp2 48 of 48 (RESULTS.md:94); MERGE, DESCEND, JOIN, DL-STEP not separate ops (abstracted into consume)
 GPH-003	MODELED	foreign_guard, pin_gph003, shp009_urows	FV unit accepted only as FOREIGN at foreign rows 7, 8 of keys_d (refusals key-selector, key-row); CODE 2 foreign entries (rekey-chips dcf1b4c t7_chain.rs:459)
@@ -32,15 +32,15 @@ NODE-011	SPEC-CHECKED		ADMIT-WORK ROM-row checks are in-circuit; no host state; 
 NODE-012	SPEC-CHECKED		VIEW-WORK under admission form (b) is in-circuit; no host state; no conflict
 NODE-013	SPEC-CHECKED		form (b) seal premise JOIN(ADM, VIEW) is in-circuit hashing; consistent with NODE-010
 NODE-014	CONSTANT-CHECKED	node_keys_internal_measured	MEASURED node keys inside 64 AIRs / 3,000 columns / 200 interactions (RESULTS.md:52-53); CODE bounds frozen.rs:143-147
-NODE-015	CONSTANT-CHECKED	nag005_merge_work_measured, node_keys_internal_measured, shp009_urows	MERGE-WORK key is outside the internal set (5,284 > 3,000) and inside merge_work (5,400); ordinary nodes inside 3,000; MERGE-WORK has a keys_d row (UROWS 7)
+NODE-015	CONSTANT-CHECKED	nag005_merge_work_measured, node_keys_internal_measured, shp009_urows	MERGE-WORK key is outside the internal set (4,988 MEASURED now, 5,284 on the T10m keys, both > 3,000) and inside merge_work (5,400); ordinary nodes inside 3,000; MERGE-WORK has a keys_d row (UROWS 7)
 SHP-001	MODELED	mergeSeg_assoc, linked_assoc	one statement for any bracketing (chain, tree, DAG); the JOIN hash with no counter is in-circuit
 SHP-002	SPEC-CHECKED		shape_d field order is a hash layout; no state; consistent with SHP-004/005
-SHP-003	FINDING	work_guard, pin_work	"two enabled prior SEG proofs" contradicts NAG-011 (one linked child accepted) and the built test afk_f9_work_one_child; oracle follows NAG-011 (F-AGG-1); k >= 1, W.pre_d = right-most post_d, h < 2^64 MODELED
+SHP-003	MODELED	work_guard, pin_work	F-B-AGG-1 FIXED in the text: one or two enabled prior SEG proofs, as NAG-011 and the code (odin replay afk_f9_work_one_child accepted, unlinked one-child refused, rekey-int 3826e38); k >= 1, W.pre_d = right-most post_d, h < 2^64 MODELED
 SHP-004	SPEC-CHECKED		per-child shape hashes (LEAF, FOREIGN, OFF) are in-circuit; no state
 SHP-005	SPEC-CHECKED		(out_a, out_b) encoding per output kind; no state; consistent with NODE-001 (SEG output (h_lo, h_hi))
 SHP-006	SPEC-CHECKED	nag005_merge_work_measured	inline kernel built from the leaf kit AIRs; build-structure requirement; width bound checked under NAG-005
 SHP-007	CONSTANT-CHECKED	node_keys_internal_measured, nag005_merge_work_measured	MEASURED shape and MERGE-WORK AIRs within their sets (RESULTS.md:51-53)
-SHP-008	CONSTANT-CHECKED	nag005_merge_work_measured, keygenWork_guard	CODE MERGE_WORK set = INTERNAL params with 5,400 columns (frozen.rs:155-166); MEASURED 5,284
+SHP-008	CONSTANT-CHECKED	nag005_merge_work_measured, keygenWork_guard	CODE MERGE_WORK set = INTERNAL params with 5,400 columns (rekey-int 3826e38 frozen.rs:157-161, :169); current MEASURED width 4,988 (T10q Work kind, rekey-int 3826e38 frozen.rs:166-167); 5,121 DERIVED with STACKS and the value set (:168); earlier layouts 5,128 (T8, :165) and 5,284 (T8b, T10m keys, RESULTS.md:51, :96)
 SHP-009	CONSTANT-CHECKED	shp009_urows, foreign_guard, merge_guard	CODE UROWS = 7 (t10mm 5b7ada8 stmt.rs:90); NODE child only at a node row, FOREIGN at a foreign row (refusal key-row)
 CLM-001	SPEC-CHECKED		set_root forms and domain separation are hash definitions; no state; consistent with NODE-003 (SET leaf form)
 CLM-002	MODELED	pin_clm004	a SEG (NODE child) is not consumed as a claim (refusal not-a-claim); claim identity content not modelled
@@ -72,5 +72,5 @@ GP-002	MODELED	sealWithDeps_guard, pin_clm004	consumed claim checked in circuit 
 GP-003	MODELED	foreign_guard, pin_gph003	foreign proofs enter only at registered foreign rows; registry membership abstracted to the row check
 GP-004	MODELED	mergeSeg_assoc, linked_assoc, pin_work	any depth and shape over linked SEGs gives one statement; MERGE-WORK adds new work
 LPC-001	SPEC-CHECKED		loop bookkeeping of row T8b (FROZEN / FREEZE-PENDING records); no state
-LPC-002	CONSTANT-CHECKED	lpc002_measured_parts, lpc002_derived_full_width, keygenWork_guard	MEASURED parts 4,988 + 62 <= 5,400 (rekey-chips dcf1b4c frozen.rs:167); full kernel 5,121 is DERIVED (STACKS 71 is an ESTIMATE): the requirement is not yet met by a measurement
+LPC-002	CONSTANT-CHECKED	lpc002_measured_parts, lpc002_derived_full_width, keygenWork_guard	MEASURED parts 4,988 + 62 <= 5,400 (rekey-int 3826e38 frozen.rs:166-168); full kernel 5,121 is DERIVED (STACKS 71 is an ESTIMATE): the requirement is not yet met by a measurement
 LPC-003	SPEC-CHECKED		loop row T8c builds X8 and L over a SET root; process requirement; consistent with GPH-004, GPH-008

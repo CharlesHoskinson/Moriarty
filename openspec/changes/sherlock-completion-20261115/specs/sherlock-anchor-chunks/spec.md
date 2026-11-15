@@ -45,7 +45,7 @@ ANC-016: If an ordinary call (mode 0) carries the anchor-write template in lanes
 - **THEN** the source is T10Q-NTFIX-ORD (LEAD PICK, in the single rekey list that the owner confirmed on 2026-11-15), the verification is `decode.rs` step 5b, MockProver refusal of NT-1 (Moriarty `t10q-ntfix` bb9dc9ae0), `t13_t10q_chunk` 9 of 9 (openvm e3b407d), and the status on 2026-11-15 is: DONE on `t10q-ntfix`, not merged into `t10m`.
 
 ### Requirement: ANC-017 The lock operand binds the run
-ANC-017: When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out` and `j`.
+ANC-017: When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out`, the FP-3 link `pack(C_(j+1))` and `j`.
 
 #### Scenario: The lock operand binds the run
 - **WHEN** two runs share `run_tag` and differ in input

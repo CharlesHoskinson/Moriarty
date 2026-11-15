@@ -1,9 +1,9 @@
-import SherlockCodec
+import SherlockCodecB
 import KeyManagement.Spec
 
-/-! Oracle executable of Key Management: codec only (see `SherlockCodec`). -/
+/-! Oracle executable of Key Management: codec only (see `SherlockCodecB`). -/
 
-open Lean SherlockCodec KeyManagement
+open Lean SherlockCodecB KeyManagement
 
 def fieldNames : List String :=
   ["listRows", "rowsCommitted", "treeHoldsAll", "rslKeyIdx", "keydagIdx", "listD", "manifestD",

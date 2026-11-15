@@ -13,3 +13,8 @@ Checked and not a finding:
 - CLB-007 K_MAX = 2: MODEL t20-batched 5dc1be2ee `chunkCap.qnt:26`; no Rust constant (the spec status says so; GAP, not a finding).
 - HDM-001 lock use code 8 = CODE `U_LOCK = 8` (e3b407d `iface.rs:277`).
 - LTR-003 on the T10m keys: MEASURED 1,995 of 2,000 columns, 99 of 100 interactions (RESULTS.md:11, :49).
+
+## Resolution (2026-11-15)
+
+- F-BR-1: FIXED in the text. LTR-003 states 2,200 columns, the bound of openvm `rekey-int` 3826e38 `frozen.rs:202` (LEAD PICK FP3-LCOLS for T15). Lean `ltr003_fp3_fits`, `ltr003_fp3_accepted`.
+- F-BR-2: FIXED in the text. The lock has 7 operands with the FP-3 link `pack(C_(j+1))` before `j` (D-038 OWNER; LEAD PICK for T15). Odin test `cx/fbbr2_test.rs`: the 6-operand lock is refused. Mutant `cx/fbbr2_link_constant_mutant.py`: a constant link lets a 3-slice run close as 2 chunks. Lean `clb005_fp3_operands`.

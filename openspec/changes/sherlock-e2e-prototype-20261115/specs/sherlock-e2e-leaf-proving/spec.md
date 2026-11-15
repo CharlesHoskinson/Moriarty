@@ -92,7 +92,7 @@ Verification: test `anchor_d2_is_the_progc_operand` (openvm `rekey-chips` dcf1b4
 
 #### Scenario: Status of LFP-006
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: BUILT (LOOP T7). Evidence: openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:41` (slot 8), `core.rs:599` (constraint), `core.rs:1122` (fill). N1 opens the slot at openvm `rekey-chips` dcf1b4c `crates/sherlock-lfr/src/stmt.rs:339`.
+- **THEN** it reads: BUILT (LOOP T7). Evidence: openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:46` (`PROG_D = 8`), `core.rs:599` (constraint), `core.rs:1122` (fill). N1 opens the slot at openvm `rekey-chips` dcf1b4c `crates/sherlock-lfr/src/stmt.rs:339`.
 
 ### Requirement: LFP-007 A wrong prog_d is refused
 LFP-007: If a leaf proof carries a `prog_d` that differs from the `prog_d` of the run, then the N1 statement AIR SHALL refuse the leaf.
@@ -162,7 +162,7 @@ Verification: the test T-RSL-PROGD of ERS-006 and the cases `wrong_prog_d_*` of 
 
 #### Scenario: Status of LFP-011
 - **WHEN** the status is reported on 2026-11-15
-- **THEN** it reads: OPEN. Owner lanes: rekey-chips (leaf), mycroft-factory (the planner). Evidence: Proving side of ERS-006 (slice A): R_SL programs have no `prog_d` today (bus log 09:56, Fable-A). The slot and its constraint exist for the interpreted leaf (openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:41`, `core.rs:599`).
+- **THEN** it reads: OPEN. Owner lanes: rekey-chips (leaf), mycroft-factory (the planner). Evidence: Proving side of ERS-006 (slice A): R_SL programs have no `prog_d` today (bus log 09:56, Fable-A). The slot and its constraint exist for the interpreted leaf (openvm `rekey-chips` dcf1b4c `crates/sherlock-leaf/src/core.rs:46`, `core.rs:599`).
 
 ### Requirement: LFP-012 The R_SL leaf binds the input digest
 LFP-012: If the digest of the tape that an R_SL app consumed differs from the `input_d` of the leaf statement, then the leaf AIR SHALL refuse the shard.

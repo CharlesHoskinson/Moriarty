@@ -13,7 +13,7 @@ Every Fr-side Sherlock hash SHALL use the Midnight Poseidon permutation, width 3
 
 #### Scenario: Lock use code
 - **WHEN** the lock operand sponge of ANC-002 starts
-- **THEN** its capacity is `6 + 8 * 2^66` (`U_LOCK` = 8, T10q-cx pick inside the owner's `x_j` canon of 2026-11-14)
+- **THEN** its capacity is `7 + 8 * 2^66` (`U_LOCK` = 8, T10q-cx pick inside the owner's `x_j` canon of 2026-11-14; 7 operands with the FP-3 link, openvm `rekey-int` 3826e38 `crates/sherlock-lfr/src/iface.rs:293` `cap_lock`)
 
 ### Requirement: HDM-002 Public digest tags
 A public digest SHALL be `PoseidonFr(tag, pack(d2))` with `u` = 4. The tags SHALL be `SHK_PROGC` for `C_P`, `SHK_LOCK` for the lock values `A_j`, `SHK_INPUT` for `input_d` and `SHK_OUTCOME` for `outcome_d` (OD-18). The Fr value of each tag SHALL be published with a differential vector before the hash domains freeze (ENC-1); until then the tag rows are FREEZE-PENDING.

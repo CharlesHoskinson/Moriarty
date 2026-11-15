@@ -16,7 +16,7 @@ The anchor cell SHALL be the top-level ledger slot 15, a key constant of the wra
 - **THEN** the move from cell `(0)` to slot 15 is pick T12-SLOT15, confirmed by the owner on 2026-11-15 ("Ye sif you recommend it", wiki log 09:04), with the compiler refusal MYC-SEAL-009 and MYC-SEAL-021, and it lands in the single T11 rekey (openvm `t12-slot15`, not committed on 2026-11-15 09:15)
 
 ### Requirement: ANC-002 Anchor values of a chunked run
-The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x_j)` for `1 <= j < k`, with the lock operand `x_j = sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, j)` over Fr (HDM-001 use code 8). `run_tag` SHALL be a fresh salted value per run (OD-16).
+The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x_j)` for `1 <= j < k`, with the lock operand `x_j = sponge(U_LOCK; c, pack(run_tag), k, d_in, d_out, pack(C_(j+1)), j)` over Fr (HDM-001 use code 8), where `C_(j+1)` is the forward claim chain of the run's call records after chunk `j` (FP-3, ANC-019). `run_tag` SHALL be a fresh salted value per run (OD-16).
 
 #### Scenario: Last chunk
 - **WHEN** chunk `k` of a run completes
@@ -28,7 +28,7 @@ The anchor values SHALL be `A_0 = A_k = C_P` and `A_j = PoseidonFr_4(SHK_LOCK, x
 
 #### Scenario: Source of the lock form
 - **WHEN** the status is reported
-- **THEN** `c = pack(P2(DOM_PROGC, r_P, prog_d))`, `d_in = pack(input_d)` and `d_out = pack(P2(DOM_OUTHIDE, input_d, outcome_d))` are the three `R` operands that `L` computes from the run root, the owner made the `x_j` form canon on 2026-11-14 in place of `P2(DOM_LOCK, r_P, prog_d, run_tag, j)`, which the `L_Fr` tape cannot compute, and the owner confirmed the T10q-ntfix extension with `k`, `d_in` and `d_out` on 2026-11-15 ("the x_j change", wiki log 09:04; openvm `t10q-ntfix` e3b407d, `iface::lock_x`)
+- **THEN** `c = pack(P2(DOM_PROGC, r_P, prog_d))`, `d_in = pack(input_d)` and `d_out = pack(P2(DOM_OUTHIDE, input_d, outcome_d))` are the three `R` operands that `L` computes from the run root, the owner made the `x_j` form canon on 2026-11-14 in place of `P2(DOM_LOCK, r_P, prog_d, run_tag, j)`, which the `L_Fr` tape cannot compute, the owner confirmed the T10q-ntfix extension with `k`, `d_in` and `d_out` on 2026-11-15 ("the x_j change", wiki log 09:04; openvm `t10q-ntfix` e3b407d, `iface::lock_x`), and the FP-3 link `pack(C_(j+1))` enters before `j` under D-038 (OWNER 2026-11-15; openvm `rekey-int` 3826e38 `crates/sherlock-lfr/src/iface.rs:290` `LOCK_LEN = 7`, `iface.rs:316`; F-B-BR-2, LEAD PICK for T15)
 
 ### Requirement: ANC-003 The anchor statement per case
 Every call SHALL carry the anchor statement `(mode, j, k, a_in, a_out)`. An ordinary call SHALL have `mode` ORD with `a_in = a_out = C_P` and no anchor write. Chunk `j` of `k` SHALL have `mode` CHUNK with `a_in = A_(j-1)` and `a_out = A_j`. It SHALL write `ins anchor := a_out` in the effect region (OD-16).

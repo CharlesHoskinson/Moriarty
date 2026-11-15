@@ -1,7 +1,7 @@
 # ID	verdict	lean	note
 LTR-001	SPEC-CHECKED	hdm004_capacities	proof-system configuration (BabyBear STARK, Midnight Poseidon over Fr for Merkle and transcript), no host state; consistent with HDM-001 use codes 1 to 3 and the L transcript capacity of HDM-004
 LTR-002	SPEC-CHECKED	lw019_lfr_params	field choice of the L_Fr STARK, no host state; consistent with LW-018 and the L_Fr frozen set of LW-019 (CODE 5b7ada8 frozen.rs:203)
-LTR-003	FINDING	keygen_guard, pin_ltr003, ltr003_t10m, ltr003_fp3_conflict, ltr003_fp3_refused	F-BR-1: the spec bound 2,000 columns refuses the L key that FP-3 (CLB-002) needs (DERIVED 2,071 = 1,995 - 1 + 77, LIST.md:44, :47); committed code bound is 2,200 (fp3 a2eeece and rekey-int 155d321 frozen.rs:202, LEAD PICK FP3-LCOLS). T10m MEASURED 1,995 cols / 99 interactions holds (RESULTS.md:11, :49)
+LTR-003	CONSTANT-CHECKED	keygen_guard, pin_ltr003, ltr003_t10m, ltr003_fp3_fits, ltr003_fp3_accepted	F-B-BR-1 FIXED: the text bound is 2,200 columns = CODE rekey-int 3826e38 frozen.rs:202 (LEAD PICK FP3-LCOLS); FP-3 L 2,071 DERIVED (LIST.md:44, :47) fits with 129 columns; replay ltr003_fp3_accepted (the old counterexample keygen is accepted). T10m MEASURED 1,995 cols / 99 interactions (RESULTS.md:11, :49)
 LTR-004	MODELED	proveLfr_guard, pin_lfr	refusal tape-not-exposed (op 3)
 LTR-005	MODELED	proveLfr_guard, pin_lfr	refusal transcript-mismatch (op 3)
 LTR-006	MODELED	wrapStart_guard, reachable_record, witness_handoff, pin_ltr006	record names proof_sha256; a changed byte (op 6 arg 1) gives digest-mismatch at the wrap start
@@ -11,12 +11,12 @@ CLB-001	CONSTANT-CHECKED	clb001_interface, lw018_lfr_statement	CODE LANE_PAIRS =
 CLB-002	MODELED	proveL_guard, reachable_record, pin_clb002	refusal lane-unbound (op 2); width side see F-BR-1
 CLB-003	MODELED	proveL_guard, pin_clb003	refusal k-mismatch (op 2, mode 1)
 CLB-004	MODELED	keygen_guard, pin_clb004, clb004_anchor_slot	refusal anchor-slot at keygen; CODE ANCHOR_SLOT = 15 (t12-slot15 4ea3d05 and rekey-int 155d321 iface.rs:112)
-CLB-005	FINDING	proveLfr_guard, pin_lfr, clb005_fp3_operands	F-BR-2: the sentence names 6 operands; FP-3 code (fp3 a2eeece, rekey-int 155d321 iface.rs:290, :316) absorbs 7 (adds link), so the honest FP-3 lock differs from the stated sponge. Modeled as refusal lock-mismatch
+CLB-005	MODELED	proveLfr_guard, pin_lfr, clb005_fp3_operands	F-B-BR-2 FIXED in the text: 7 operands with the FP-3 link pack(C_(j+1)) before j = CODE rekey-int 3826e38 iface.rs:290 (LOCK_LEN 7), :316 (lock_x); odin test fbbr2_six_operand_lock_text_vs_fp3_code: the old 6-operand lock is refused (bridge/cx/)
 CLB-006	MODELED	proveL_guard, pin_clb006, pin_clb006_chunk	refusal ordinary-anchor-write (op 2, mode 0); a chunk call keeps its template
 CLB-007	MODELED	plan_guard, pin_clb007, clb007_kmax	refusal k-max at plan (op 1); MODEL K_MAX = 2 (t20-batched 5dc1be2ee chunkCap.qnt:26)
 CLB-008	MODELED	keygen_guard, pin_clb008	refusal slot-mismatch at keygen (op 0)
 ANC-001	CONSTANT-CHECKED	clb004_anchor_slot	CODE ANCHOR_SLOT = 15 (rekey-int 155d321 iface.rs:112); the C_P form and the no-plain-prog_d rule are SPEC-level (HDM-002 tags)
-ANC-002	FINDING	clb005_fp3_operands, hdm001_lock_code	F-BR-2: x_j has 6 operands in the text, 7 in the merged FP-3 code; U_LOCK = 8 matches HDM-001 code 8 (e3b407d iface.rs:277)
+ANC-002	CONSTANT-CHECKED	clb005_fp3_operands, hdm001_lock_code	F-B-BR-2 FIXED in the text: x_j has the 7 operands of the code (rekey-int 3826e38 iface.rs:290, :316); U_LOCK = 8 matches HDM-001 code 8 (e3b407d iface.rs:277)
 ANC-003	MODELED	proveL_guard, pin_clb006, pin_clb006_chunk	ordinary call: no anchor write (refusal ordinary-anchor-write); chunk modes carry the write
 ANC-004	SPEC-CHECKED	plan_guard	ledger transaction structure (k calls in one intent): settlement side, no bridge state; consistent with CLB-007 (k <= 2)
 ANC-005	SPEC-CHECKED		ledger mode 1F fallibility: settlement semantics outside the bridge state; no contradiction with ANC-006 (modes exclusive)
@@ -30,7 +30,7 @@ ANC-013	CONSTANT-CHECKED	clb004_anchor_slot	shared with C (WRP): wrap pins lanes
 ANC-014	SPEC-CHECKED	clb004_anchor_slot	contract deploy (slice C, SLC); consistent with the slot constant 15
 ANC-015	SPEC-CHECKED		Mycroft compiler refusal (slice A); consistent with ANC-001 (user code never addresses slot 15)
 ANC-016	MODELED	proveL_guard, pin_clb006	wrap-side twin of CLB-006; the oracle models the refusal at the interface (ordinary-anchor-write); wrap circuit itself is slice C
-ANC-017	FINDING	proveLfr_guard, pin_lfr, clb005_fp3_operands	F-BR-2 (operand list); refusal lock-mismatch modeled
+ANC-017	MODELED	proveLfr_guard, pin_lfr, clb005_fp3_operands	F-B-BR-2 FIXED in the text (operand list with the FP-3 link); refusal lock-mismatch modeled
 ANC-018	MODELED	proveL_guard, pin_clb002	normative binding of CLB-002 (lane-unbound)
 ANC-019	MODELED	proveL_guard, pin_clb003	normative binding of CLB-003 (k-mismatch)
 LW-001	CONSTANT-CHECKED	lw003_call_vector, clb001_interface	public layout: call vector 2 + L_TX = 1,026; interface 12,166 words
@@ -64,7 +64,7 @@ FLG-006	CONSTANT-CHECKED	flg_capacity	largest R (4 entries, 8 values, 4 permutat
 FLG-007	SPEC-CHECKED		admission rule of discretionary entries; no host state
 FLG-008	SPEC-CHECKED		in-circuit binding of pv in L; no host state
 FLG-009	SPEC-CHECKED		reporting rule
-HDM-001	CONSTANT-CHECKED	hdm001_lock_code, hdm004_capacities	use code 8 = CODE U_LOCK (e3b407d iface.rs:277); transcript capacities 2^64 + u 2^66
+HDM-001	CONSTANT-CHECKED	hdm001_lock_code, hdm004_capacities	use code 8 = CODE U_LOCK (e3b407d iface.rs:277); lock capacity 7 + 8 * 2^66 = CODE cap_lock (rekey-int 3826e38 iface.rs:293); transcript capacities 2^64 + u 2^66
 HDM-002	SPEC-CHECKED		public digest tags; no host state
 HDM-003	SPEC-CHECKED		Merkle hash of L; no host state
 HDM-004	CONSTANT-CHECKED	hdm004_capacities	L and L_Fr transcript capacities differ (u = 3, 7) and match HDM-001

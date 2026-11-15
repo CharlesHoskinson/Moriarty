@@ -1,10 +1,10 @@
 # ID	verdict	lean	note
 LFP-001	SPEC-CHECKED	witness_merged	the STARK field and Poseidon2 configuration of each proof is a prover configuration with no state machine (CODE harness.rs:26 sets the engine); consistency: an honest run reaches N1 with no BLS12-381 step, as CPR-001 allows
 LFP-002	MODELED	reachable_leaves, pin_lfp002, rsl001_probe_counts	one app proof and one leaf-layer proof per shard (op 1); universal N1 pre-hash exactly for bucket shapes (MEASURED r10 probe, 5 calls)
-LFP-003	FINDING	admit_guard, pin_lfp003_over, pin_lfp003_mixed, lfp003_bound_code, lfp003_admits_outside_bucket	F-B-LFP-1: the bound "more than 8 app AIRs" admits 6 and 7 app AIRs, which RSL-002 excludes; the oracle refuses them as outside-bucket (RSL-002). Refusals air-count-over-bound, mixed-hash otherwise agree
+LFP-003	FINDING	admit_guard, pin_lfp003_over, pin_lfp003_mixed, lfp003_bound_code, lfp003_admits_outside_bucket	F-B-LFP-1 GUARD HOLDS: the bound "more than 8 app AIRs" admits 6 and 7 app AIRs, which RSL-002 excludes, but the code builds only 5 or 8 (rsl/trace.rs:137, names()); text fix open with F-leaf-proving-Q1. F-B-LFP-3: mixed hash refusal is D-024 (OWNER 2026-11-15). Refusals air-count-over-bound, mixed-hash otherwise agree
 LFP-004	MODELED	admit_guard, pin_lfp004, lfp004_columns, lfp004_refuses_30001	refusal column-bound; CODE frozen.rs:98 (set "app", :83) 30,000; MEASURED max 16,346 (LIST.md:30)
 LFP-005	MODELED	prove_guard, pin_lfp005, lfp005_heights	refusal shape-mismatch; CODE HEIGHTS length 7 (leaf.rs:34) for chip sets 0 to 2; chip set 3 vector not named (spec GAP)
-LFP-006	MODELED	prove_sets_progD, reachable_leaves, pin_lfp006, lfp006_slot_in_fp1	PROG_D slot 8 inside the 54 FP-1 words (CODE core.rs:46, air.rs:223); spec cites core.rs:41 (F-B-LFP-2, citation drift)
+LFP-006	MODELED	prove_sets_progD, reachable_leaves, pin_lfp006, lfp006_slot_in_fp1	PROG_D slot 8 inside the 54 FP-1 words (CODE core.rs:46, air.rs:223); spec cite corrected to core.rs:46 (F-B-LFP-2 FIXED)
 LFP-007	MODELED	merge_guard, reachable_leaves, pin_lfp007	refusal wrong-prog-d at N1 merge (op 4); a foreign leaf (op 2) of the same prog_d is accepted
 LFP-008	MODELED	extend_keeps_keys, shards_monotone, pin_lfp008	op 5 adds shards (ceil(steps / shardCap), SC-003) and keeps key_root and the manifest
 LFP-009	MODELED	publish_guard, pin_lfp009	one LeafProofsReady after every leaf; names every leaf; N1 refuses before it (not-published)
