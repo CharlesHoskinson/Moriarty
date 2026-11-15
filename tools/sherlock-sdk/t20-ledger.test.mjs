@@ -222,3 +222,26 @@ test('W-3 kind separation: a run leaf is not a foreign claim (the control withou
   await consumerCall(c, 'useForeignClaim', t.path(0), claimPub(0));   // accepted: the defect the design refuses
   assert.equal(usedSize(c), 1n);
 });
+
+// ---- Carbon lane qa-20261114-t20-batched counterexamples (COUNTEREXAMPLES.md, t20-batched rows)
+test('lane F-8: one claim at two slots of one root is used once', async () => {
+  const w = await newWorld();
+  const t = claimsTree([claimPub(0), claimPub(0)]);          // a diamond-shared claim at slots 0 and 1
+  await ledgerCall(w, 'acceptCollection', REG, t.root);
+  await consumerCall(w, 'useRunClaim', t.path(0), ...run(0));
+  await assert.rejects(consumerCall(w, 'useRunClaim', t.path(1), ...run(0)), /claim already used/, 'second slot');
+  assert.equal(usedSize(w), 1n);
+});
+
+test('lane F-3: the zero-padded slot is not a claim of the consumer; the control without the tag takes it', async () => {
+  const w = await newWorld();
+  const t = claimsTree([claimPub(0)]);                         // slot 1 holds the padding 0
+  await ledgerCall(w, 'acceptCollection', REG, t.root);
+  await assert.rejects(consumerCall(w, 'useForeignClaim', t.path(1), 0n), /root not accepted/, 'empty slot as foreign');
+  assert.equal(usedSize(w), 0n);
+  const ctl = await modOf('consumer-control-no-kind-tag');
+  const c = await newWorld(ctl);
+  await ledgerCall(c, 'acceptCollection', REG, t.root);
+  await consumerCall(c, 'useForeignClaim', t.path(1), 0n);     // accepted: a raw leaf input admits the padding
+  assert.equal(usedSize(c), 1n);
+});

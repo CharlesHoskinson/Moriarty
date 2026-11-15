@@ -42,8 +42,9 @@ module registryEpoch {
       },
       pendingAdd' = pendingAdd, pendingRevoke' = pendingRevoke,
     } else all {
-      pendingAdd' = if (add) pendingAdd.union(Set(k)) else pendingAdd,
-      pendingRevoke' = if (add) pendingRevoke else pendingRevoke.union(Set(k)),
+      // the last change of a key in an epoch wins (lane F-9.1: an add after a revoke must not stay revoked)
+      pendingAdd' = if (add) pendingAdd.union(Set(k)) else pendingAdd.exclude(Set(k)),
+      pendingRevoke' = if (add) pendingRevoke.exclude(Set(k)) else pendingRevoke.union(Set(k)),
       roots' = roots, current' = current, nextRoot' = nextRoot, regEpoch' = regEpoch, regWrites' = regWrites,
     },
     accepted' = accepted,
@@ -53,8 +54,9 @@ module registryEpoch {
   // change writes nothing
   action closeRegEpoch: bool = all {
     regEpoch < MAX_REG_EPOCH,
-    val changed = pendingAdd.size() + pendingRevoke.size() > 0
     val r = roots.get(current).union(pendingAdd).exclude(pendingRevoke)
+    // a write only when the entry list changes (lane F-9.2: a no-op change writes nothing)
+    val changed = r != roots.get(current)
     all {
       roots' = if (changed) roots.put(nextRoot, r) else roots,
       current' = if (changed) nextRoot else current,

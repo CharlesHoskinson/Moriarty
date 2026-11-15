@@ -25,6 +25,7 @@ witness).
 | host/prose mismatch | GP2-F4.2 | FIXED in T10q (openvm `beba730` (branch `t10q`)) |
 | conditional (standalone shard only) | GP2-C2.1 | open (outside T10q) |
 | forgery accepted (`L_Fr` tape, chunk mode) | T10B-F03 | FIXED in T10q-cx (openvm `bcf2cfd` (branch `t10q-cx`)) |
+| lead Quint model error | T20-F9.1, T20-F9.2 (`registryEpoch.qnt`) | FIXED in t20-batched; no contract defect in T20 |
 
 No attack that a lane called sound was accepted among those attempted (see NOT ATTEMPTED rows). Every guard row is refused by the constraint the
 finding names.
@@ -206,6 +207,29 @@ MEASURED on the T10 ORD tape (`t7_chain t10 chunkcx` on openvm `a74fbc9` = `475b
 `4d8177b` and `0a4a2c8`, `logs/t10q-cx-lock-chunkcx.txt`): 499,657 ops with the lock rule (+34
 over 499,623), and the 14 `L_Fr` machine AIR heights are unchanged (largest 2^19, bound 2^20).
 The honest ORD run passes; the chunk 1 of 1 forgery still fails 2 assertions.
+
+## t20-batched
+
+Lane `qa-20261114-t20-batched` (Gemini 4 Carbon high; lead verdict
+`qa/gemini-quint/qa-20261114-t20-batched/verdict.md`). Contract rows: `node --test
+tools/sherlock-sdk/t20-ledger.test.mjs` on the compiled `sherlock-ledger.compact` and
+`sherlock-claim-consumer.compact` (compactc 0.36.0, compact-runtime 0.21.0, build `~/.cache/t20/build`),
+output `research/sherlock-t20-batched-20261114/t20-ledger-test.out`, 11 pass. Model rows:
+`models/sherlock/quint/t20-batched/run-registryEpoch.out`. MEASURED.
+
+| finding | attempt | input | result | constraint | verdict |
+|---|---|---|---|---|---|
+| F-1 write entries without the wrap key | `acceptCollection` of an unproved root in the harness | native compiled keys on all entries (`t20-ledger.test.mjs`) | accepted in the harness, as intended there; on a deployment the write entries carry the wrap key (kit LEDGER CONTRACT) | deployment rule, not contract code | OPEN DESIGN (next deploy, T10a runner) |
+| F-2 `ADM`/`VIEW` heads in `claims_root` | none on code: `L` collection form is unbuilt (T8b) | lane mutant `t20_batched_m_unbound_claims_root` | caught by `invUsedOnlyMembers` | W-2: seal premises are never leaves | OPEN DESIGN (T8b) |
+| F-3 empty slot 0 used as a claim | `useForeignClaim(0)` with the path of slot 1 of a one-claim root | test `lane F-3` | refused "root not accepted" by `sherlock-claim-consumer` (leaf is `H2(SHK_CLAIM_FGN, 0)`); accepted by `consumer-control-no-kind-tag` (raw leaf) | the consumer computes its leaf in circuit (W-2) | GUARD HOLDS; control CONFIRMED |
+| F-4 registry churn and grace | none on code: `reg_root` is sealed, no update entry | lane tests `strictRegistryChurnStarvationTest`, `graceRevokedKeyTradeoffTest` | model only | N-8 | OPEN DESIGN (N-8) |
+| F-5 rate bound above 291 jobs/s | prose | RESULTS fix 1 per-second row | the bound held only below `2^20 / 3,600` jobs/s | epoch close at `min(3,600 s, 2^20 claims)` | CONFIRMED (prose), fixed in RESULTS |
+| F-6 fallback salt, foreign fallback | prose | W-2 data availability | design text extended | FP-4 salt | OPEN DESIGN |
+| F-7 TTL below 1,755 s | prose | W-5, ANC-012 | the plan now refuses it | TTL rule | OPEN DESIGN |
+| F-8 one claim at two slots of one root | `useRunClaim` at slot 0, then slot 1, of `claimsTree([c, c])` | test `lane F-8` | second call refused "claim already used" | nullifier keyed by the claim alone | GUARD HOLDS |
+| F-9.1 add after revoke in one registry epoch (lead model) | `changeKey(1, false)`, `changeKey(1, true)`, `closeRegEpoch` | `pos_revoke_then_add_registered`, `pos_add_then_revoke_not_registered` | before: key 1 revoked (fails); after: registered, no write (pass) | last change of a key wins | FIXED (t20-batched) |
+| F-9.2 no-op change writes (lead model) | `changeKey(1, true)` on a registered key, `closeRegEpoch` | `pos_noop_add_no_write` | before: one write (fails); after: none (pass) | write only when the entry list changes | FIXED (t20-batched) |
+| F-9.3 lead tests run 0 tests | `run-model.sh` | `--match '^(pos\|neg\|mut)_'` | 7, 1, 1, 1 passing in `run-registryEpoch.out` | runner flag | NOT REPRODUCED |
 
 ## Observation outside the lanes
 

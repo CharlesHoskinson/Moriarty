@@ -29,7 +29,7 @@ One logical call SHALL run as `k` contract calls in one intent of one transactio
 - **THEN** that call fails on the anchor lock
 
 ### Requirement: ANC-012 One call covers every measured entry; chunks are a capped fallback
-`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`. `K_MAX` SHALL be `min(floor(TTL / (10 x 175.5 s)), 18)`, which is 2 at the default intent TTL of 3,600 s (Midnight write rule W-5, owner ruling 2026-11-14; LEAD pick for T15 confirmation).
+`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`. `K_MAX` SHALL be `min(floor(TTL / (10 x 175.5 s)), 18)`, which is 2 at the default intent TTL of 3,600 s and 0 below 1,755 s, where `sherlock plan` SHALL refuse every entry (Midnight write rule W-5, owner ruling 2026-11-14; LEAD pick for T15 confirmation).
 
 #### Scenario: Measured entry, fallback and refusal
 - **WHEN** entries of 474, 699, 1,016 and 1,981 effect words are planned at TTL 3,600 s

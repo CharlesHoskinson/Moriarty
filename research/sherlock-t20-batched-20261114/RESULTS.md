@@ -51,7 +51,7 @@ Writes for `N` operator jobs per epoch of length `T` seconds, at job rate `lambd
 | Before, per second | `lambda` | 6,783 `lambda` | `lambda` | 267 `lambda` | DERIVED |
 | After, per request | `1 / N` | about 6,797 / `N` | `1 / N` wrap plus one JOIN node | 180 / `N` | ESTIMATE |
 | After, per epoch | 1 (0 when no job) | about 6,797 | 1 (plus `N - 1` JOIN nodes, STARK only) | 180 bytes | ESTIMATE |
-| After, per second | `1 / T` (at most 1 / 3,600 = 0.00028) | about 6,797 / `T` (at most 1.9 bytes per second) | `1 / T` | 180 / `T` | DERIVED |
+| After, per second | `1 / T`: at most 1 / 3,600 = 0.00028 while jobs arrive at no more than 2^20 / 3,600 = 291 per second; above that, epochs close at 2^20 claims and the rate is `lambda / 2^20` (Carbon QA lane F-5) | about 6,797 / `T` (at most 1.9 bytes per second below that job rate) | `1 / T` | 180 / `T` | DERIVED |
 
 Example (DERIVED): one prover at its ceiling of 492 jobs per day writes 492 transactions and 3.34 MB per day before; with a 3,600 s epoch it writes at most 24 transactions and about 163 KB per day after.
 
@@ -157,3 +157,7 @@ Quint `registryEpoch.qnt` (`run-registryEpoch.out`): 4 design tests pass (three 
 ## Appendix: superseded anchor contracts
 
 `tools/sherlock-sdk/SUPERSEDED.md` marks `sherlock-anchor.compact`, `rollup-anchor.compact` and `sherlock-ledger-t10.compact` superseded for new designs by the batched `sherlock-ledger.compact`. The first two write twice per batch (`acceptValidity`, `settleValidity`) and grow `validity_ok` and `settled` by one statement per batch. Their sources stay byte-equal: deploy, call and readback scripts and the sealed holdout cases pin their SHA-256, so a header comment in the source would break those pins.
+
+## Carbon Quint QA (all six fixes)
+
+Lane `qa-20261114-t20-batched` (Gemini 4 Carbon high), lead verdict in `qa/gemini-quint/qa-20261114-t20-batched/verdict.md`, rows in `tests/quint-regressions/COUNTEREXAMPLES.md` (section `t20-batched`). The lead reran all 38 commands after repairing the lane model's imports and hash. `invAll` holds on the strict and grace instances, all 12 mutants are caught (the 10 required ones included), and all 8 witnesses are reached. Verdicts: Q1 and Q4 CONSISTENT; Q2, Q3 and Q5 SOUND WITH CONDITIONS. No defect is in the contracts as built. Two errors in the lead model `registryEpoch.qnt` (F-9.1, F-9.2) are fixed, with regression tests. Two compiled-contract tests are added (`lane F-8`: one claim at two slots is used once; `lane F-3`: the empty slot is refused by the example consumer and taken by the control). The finding-driven text is W-2 (leaf computed in circuit; fallback salt), W-4 (registry churn), W-5 and ANC-012 (TTL below 1,755 s refused), and the per-second qualifier of fix 1.
