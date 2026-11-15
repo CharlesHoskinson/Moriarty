@@ -1,0 +1,3933 @@
+{
+ "rows": [
+  {
+   "id": "WRP-001",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "When an `LfrProofReady` event arrives for a ledger call, the wrap prover SHALL produce exactly 1 midnight-proofs PLONK proof with KZG over BLS12-381 and the Blake2b transcript.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-002",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "If a caller asks for a wrap circuit size above k = 21, then the wrap tool SHALL stop before keygen with the message `never k = 22`.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-003",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "If the cost model of the wrap relation gives more than 1,782,573 rows at k = 21, then the wrap tool SHALL stop before keygen.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-004",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "If the serialized wrap verifying key is larger than 50,000 bytes, then the wrap tool SHALL stop without writing `wrap.vk`.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-006",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "The wrap prover SHALL draw the blinders of each wrap proof from the operating system CSPRNG.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-007",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "When the wrap decoder checks the anchor prologue, the wrap circuit SHALL require the anchor read key in lane 6 and the chunk write key in lane 15 to equal the key constant 15.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-008",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "If the generated wrap key differs from the key file named by `E6_EXPECT_VK`, then the wrap tool SHALL stop before writing an output file.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-009",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "When the library verifier accepts a new wrap proof, the wrap tool SHALL write the 3 files `wrap.vk`, `wrap.proof` and `wrap.public.json` into the output folder.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-010",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "The Sherlock key set SHALL hold exactly 1 wrap verifying key for every program, both modes and every ledger deployment of one era.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-011",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "Where the wrap prover runs on a GPU, the wrap prover SHALL use a verifying key byte-equal to the CPU wrap key.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "WRP-012",
+   "group": "C",
+   "context": "wrap",
+   "sentence": "When the wrap is qualified on the T25 key set, the wrap qualification record SHALL hold a pass result for each of the 5 requirements LW-003, LW-004, LW-005, LW-006 and LW-014.",
+   "source": "e2e/sherlock-e2e-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LVR-001",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "The ledger check tool SHALL verify each wrap proof with `VerifierKey::verify` of the stock `midnight-transient-crypto` crate at ledger tag 9.1.0.1 (rev `a2b30128`).",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-002",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "The ledger check crate SHALL resolve each of the 4 ledger crates `midnight-transient-crypto`, `midnight-serialize`, `midnight-base-crypto` and `midnight-storage-core` to git rev `a2b30128` of midnight-ledger.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-003",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "When the ledger check tool loads `wrap.vk`, the ledger check tool SHALL read the key through `VerifierKey::deserialize` in the `MidnightVK` framing.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-004",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "When the ledger check tool verifies a wrap proof, the ledger check tool SHALL also verify 7 vectors with one changed public input and 3 proofs with one flipped byte.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-005",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "If the ledger verifier accepts a tamper control or refuses the honest proof, then the ledger check tool SHALL exit with a nonzero status.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-006",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "When a ledger call is built, the settle runner SHALL run the native ledger 9.1.0.1 validator on the call before the submit.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-007",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "If the native ledger validator refuses the honest call, then the settle runner SHALL submit nothing and mark the proven call as refused.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "LVR-008",
+   "group": "C",
+   "context": "ledger-verification",
+   "sentence": "When the settle runner first connects to a node for a state folder, the settle runner SHALL record the genesis hash and the node version in the run state.",
+   "source": "e2e/sherlock-e2e-ledger-verifier",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "SLC-001",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "The SherlockLedger contract SHALL export exactly 4 entries: `acceptRun`, `acceptCollection`, `rootAccepted` and `runAccepted`.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-002",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "The SherlockLedger contract SHALL hold the anchor in top-level ledger slot 15 as a sealed field that only the constructor writes.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-003",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the deploy runner deploys a SherlockLedger, the deploy runner SHALL install the universal wrap verifying key on `acceptRun` and on `acceptCollection`.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-004",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the deploy runner deploys a SherlockLedger, the deploy runner SHALL install the compiled native key of each read entry on `rootAccepted` and on `runAccepted`.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-005",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the deploy runner deploys a ledger for an R_SL program, the deploy runner SHALL set the constructor anchor to the `c_p` of that program.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-006",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the argument builder receives a `sherlock-accept-bundle/1` on the proving box, the argument builder SHALL return the 4 public words `c_p`, `input_pub`, `outcome_pub` and `claim_pub` as one `StatementPublics` value.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-007",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the argument builder maps a Mycroft call that halts, the argument builder SHALL form the outcome as `Halted([comm, E_0 .. E_(L_e-1)])` with the effect words in call order.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-008",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the argument builder maps a Mycroft call, the argument builder SHALL set `val_d` to the value digest of the call tape, with `fuel` 0, `stack_limit` 0 and the 8-word run salt that the prover supplies.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-009",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If a recomputed public word differs from lane 10, 20, 34 or 39 of the reported call vector, then the argument builder SHALL raise `Mismatch` and write no argument file.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-010",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If the native transcript refuses a suite call, then the settle runner SHALL send no `acceptRun` for that call.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-011",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the replay of a suite program starts on an instance whose state differs from the deploy-block state, the settle runner SHALL deploy a new instance for that program.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "SLC-012",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If the leaf statement of a call does not bind `prog_d`, `input_d` and `outcome_d`, then the settle runner SHALL refuse the live settle of the call.",
+   "source": "e2e/sherlock-e2e-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-001",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the first job of an epoch arrives, the epoch operator SHALL close the epoch at the earlier of 3,600 s after that job and 1,048,576 claims.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-002",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If the submitter of a proved job is not the user who owns the run, then the settle runner SHALL route the job to the epoch collection and send no `acceptRun` for the job.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-003",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When a settlement report is written, the settle runner SHALL state the transaction count, the bytes on chain and the wrap proof count for each request, for each epoch and for each day.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-004",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the T23 suite report is written, the suite report SHALL state the number of SherlockLedger deploys and the number of `acceptRun` transactions of the run.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-005",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If an entry needs more than 2 chunks, then the plan tool SHALL refuse the entry at plan time, at every intent TTL.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-006",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When the settle runner builds an intent on Preview with no TTL given by the user, the settle runner SHALL set the intent TTL to 3,600 s.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-007",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When an epoch closes, the epoch operator SHALL give the submitter of each job the slot index and the 20 sibling words of the job's claim.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-008",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "When an epoch closes, the epoch operator SHALL publish the leaf list of the epoch off chain at 32 bytes for each claim.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-009",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "While the universal key set holds no key for the `L` collection form, the settle runner SHALL refuse to submit an `acceptCollection` call.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-010",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "While an era end `end_eff` is announced, when the time reaches `end_eff` minus the collection proof time and the inclusion time, the epoch operator SHALL close the open epoch.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-011",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If the proving time plus the inclusion time of a new run ends after the announced `end_eff` of the accepting era, then the settle runner SHALL refuse to start the run for that era.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "BAT-012",
+   "group": "C",
+   "context": "settlement",
+   "sentence": "If the T15 freeze record holds no `acceptCollection` receipt on the T25 key set, then the T15 freeze record SHALL list batched collection settlement as open.",
+   "source": "e2e/sherlock-e2e-batched-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "EGV-001",
+   "group": "C",
+   "context": "governance",
+   "sentence": "When the deploy runner deploys a Sherlock contract, the deploy runner SHALL set the maintenance authority to an empty committee with threshold 1 and counter 0.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-002",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If the readback of a deployed contract differs from the maintenance authority `{[], 1, 0}` or from the expected key of an entry, then the deploy runner SHALL stop and mark the contract as unusable.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-003",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If a deployed SherlockLedger is not sealed, then the prototype report SHALL label the receipts of that ledger as transaction-path evidence.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-004",
+   "group": "C",
+   "context": "governance",
+   "sentence": "When the T25 key set is deployed, the deploy runner SHALL record exactly 1 era in the SherlockEraTable, with the digest `keyset_d` of the T25 universal key set.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-005",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If the T25 rekey list holds no row for the era-check words and the T22 premise test holds no failed result for premise A2 or A3, then the rekey runner SHALL refuse to start.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-006",
+   "group": "C",
+   "context": "governance",
+   "sentence": "Where the premise test records a failed premise A2 or A3, when a consumer contract uses a claim, the consumer contract SHALL check `active(era_id)` on the era table.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-007",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If a tool asks for a verifier-key change on a deployed Sherlock contract, then the deploy runner SHALL refuse the request.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-008",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If a governance parameter among `TL`, `RTL`, `Q`, `n`, `GRID` and `SKEW` has no owner ruling at T15, then the T15 freeze record SHALL list the parameter as open with its recommended value.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-009",
+   "group": "C",
+   "context": "governance",
+   "sentence": "When the T22 premise test runs on a ledger 9.1.0.1 devnet, the premise test SHALL record a pass or fail result for each of the 3 premises A1, A2 and A3.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "EGV-010",
+   "group": "C",
+   "context": "governance",
+   "sentence": "If a Midnight hard fork is announced that stops the verification of the proof version of the deployed contracts, then the governance operators SHALL deploy a new era table and new era ledgers with a predecessor link before the fork height.",
+   "source": "e2e/sherlock-e2e-governance",
+   "assigned": "governance"
+  },
+  {
+   "id": "PVW-001",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the genesis hash that the RPC node reports differs from the pinned Preview genesis `0x3c096de2...3796`, then the settle runner SHALL stop before any wallet step.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-002",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The settle runner SHALL send a transaction to 2 chains only: the local devnet `undeployed1` and the pinned Preview genesis.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-003",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the settle runner balances a Preview transaction, the settle runner SHALL price the fee with the ledger parameters read from the Preview chain.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-004",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the Preview runner starts, the Preview runner SHALL start its own `proof-server:9.0.1` container on 127.0.0.1 port 6341.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-005",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The Preview runner SHALL expose the 7 steps `check`, `balance-before`, `deploy`, `call`, `refusals`, `balance-after` and `receipts` as one command each.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-006",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the honest call is included, the Preview runner SHALL submit the 4 controls R1 (changed public input), R2 (flipped proof bit), R4 (other program) and R3 (replay).",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-007",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a submitted control ends with no inclusion, no inclusion timeout and no JSON-RPC error from the node, then the Preview runner SHALL record `no-node-verdict` and fail the verdict.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-008",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a submitted call is not seen in a block within 600 s on Preview, then the Preview runner SHALL record `not-included-timeout` for the call.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-009",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the T12 gate passes on the T25 key set, the deploy runner SHALL deploy the prototype SherlockLedger contracts on Preview with the existing Preview wallet.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-010",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the final prototype call is proved, the Preview runner SHALL run the `L_Fr` prove and the wrap prove on a GPU box that the user owns.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-011",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a Sherlock claim offered to the validium contract has another program commitment or an input root that differs from the stored root, then the validium contract SHALL refuse the batch.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-012",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a tamper control is included in a block, then the Preview runner SHALL record `included` for the control and fail the verdict.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "PVW-013",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the gate record of the wrap key to deploy lacks a pass for RKY-003, RKY-004, RKY-005, the T12 gate or the zero-knowledge checks ZK-012 to ZK-017, then the deploy runner SHALL refuse the final prototype deploy.",
+   "source": "e2e/sherlock-e2e-preview-deployment",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-001",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the settle runner needs the Preview wallet, the settle runner SHALL read the wallet phrase inside its own process from the mode-0600 phrase file of the wallet directory.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-002",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the settle runner writes a message to a log, a state file, an error record or a child process, the settle runner SHALL replace each occurrence of the wallet phrase, of the master seed and of a derived private key with `<seed>`.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-003",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the address derived from the wallet phrase differs from the wallet address pinned in the run configuration, then the settle runner SHALL stop before the wallet starts.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-004",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "While the settle runner syncs, balances, submits or waits for a Preview transaction, the settle runner SHALL hold an exclusive `flock` on `~/.cache/preview-wallet.lock`.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-005",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the receipts writer builds `receipts.json`, the receipts writer SHALL copy only the fields of its allow-list from the run state.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-006",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the balance phase runs, the settle runner SHALL write the public balances of the wallet and no key material.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-007",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The settle runner SHALL submit every Preview transaction from the 1 machine that holds the wallet directory.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-008",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The Moriarty repository SHALL hold 0 wallet phrases, seeds, private keys and deployment blinders `r_P`.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-009",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a wallet phrase file exists in the wallet directory, then the wallet setup tool SHALL refuse to create a wallet in that directory.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "WAL-010",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the mode of the wallet directory is wider than 0700 or the mode of the phrase file is wider than 0600, then the settle runner SHALL stop before the phrase is read.",
+   "source": "e2e/sherlock-e2e-wallet",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-001",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The Sherlock SDK SHALL provide the 7 settlement commands `sherlock_plan`, `lfr_call`, `wrap`, `sherlock-wrap-ledger-check`, `accept_args.py`, `t10a-ledger-run.mjs` and `t17.sh`.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-002",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the ledger runner ends, the ledger runner SHALL exit with 0 for a passed verdict, 4 for a failed verdict and 1 for an error.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-003",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "Where the `dry-run` phase is selected, the ledger runner SHALL run the padding, the JS shape check and the privacy scan with 0 network connections.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-004",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the deployed key recorded in a state folder differs from the `--vk` argument, then the ledger runner SHALL refuse the state folder.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-005",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the wrap tool finishes a phase, the wrap tool SHALL print 1 line that starts with `E5JSON` and holds the phase record as JSON.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-006",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the SDK builds the SherlockLedger contract, the SDK SHALL compile the committed source file with `compactc` 0.36.0.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-007",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If `T10A_TTL_S` is not above 0 and below 1,209,600, then the ledger runner SHALL stop before any transaction is built.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-008",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The T23 suite driver SHALL provide the 2 commands `run` and `selftest`.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-009",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If `SHERLOCK_SDK_ROOT` is not set, then the SDK node test suite SHALL stop with a message that names the variable.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "SCL-010",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "Where a user runs the Sherlock SDK outside the factory, the Sherlock SDK SHALL take the wallet directory, the pinned wallet address, the chain pin and the box roster from the user's configuration.",
+   "source": "e2e/sherlock-e2e-sdk-cli",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-001",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a deploy or a call is included, the receipts writer SHALL record the contract address, the transaction hash, the block height, the status, the transaction bytes and the paid fee.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-002",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the node refuses a call, the receipts writer SHALL record the SHA-256 of the submitted bytes and the JSON-RPC error of the node.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-003",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the ledger runner builds or reads back a call, the ledger runner SHALL scan the call vector, the transcript and the ledger state for the forbidden private words.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-004",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a control word is absent from a scanned surface, then the ledger runner SHALL fail the privacy scan.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-005",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a runner step starts or ends, the Preview runner SHALL append 1 line with a timestamp and the step name to `runs.log`.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-006",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the `check` step runs, the Preview runner SHALL write the SHA-256 of each copied input file, of the `L_Fr` key and of each binary to `manifest.sha256`.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-007",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a suite call is proved, the T23 suite driver SHALL record the box name and the seconds of the 5 stages leaf, node, `L`, `L_Fr` and wrap.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-008",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If wallet balancing fails, then the ledger runner SHALL record the wallet stage and the whole error chain in `calls.<tag>.walletAttempts`.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-009",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a RESULTS file reports a figure, the RESULTS file SHALL label the figure as MEASURED, DERIVED or ESTIMATE.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-010",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the integration record changes, the tested-design loop SHALL run `openspec validate --strict` on every Sherlock change.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-011",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a lane starts, ends, decides or measures, the tested-design loop SHALL append 1 entry to `llm-wiki/wiki/log.md`.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "OBS-012",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "The prover GUI page SHALL show the proof stages, the program source and the schedule of each box for a run in 2 modes, live from the daemon bridge and replay from a recorded run.",
+   "source": "e2e/sherlock-e2e-observability",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-001",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a runner step ends with exit status 0, the Preview runner SHALL write the marker file `<step>.ok` in the state folder.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-002",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a deploy was sent and not confirmed, then the deploy runner SHALL read the recorded address back from the indexer and send no second deploy.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-003",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "While a proven, unsubmitted and unrefused call has more than 5 minutes of TTL left, the ledger runner SHALL reuse the saved call on a rerun.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-004",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If wallet balancing fails with a transport error, then the ledger runner SHALL make at most 4 attempts in total, 30 s apart, with a wallet resync before each new attempt.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-005",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the node refuses the honest call, then the ledger runner SHALL mark the saved call as refused and prove a new call on the next run.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-006",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the readback of the honest call is absent, then the Preview runner SHALL refuse to start the `refusals` step.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-007",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a run is planned to last more than 30 minutes, the tested-design loop SHALL start the run as a `systemd-run --user` unit with an append-mode log file.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-008",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When muninn starts after a crash, the tested-design loop SHALL restart each killed run from its resumable state as a new user unit.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-009",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a gate fails 2 times in a row, then the tested-design loop SHALL stop that row and keep the other rows running.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-010",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a row reaches DONE, the tested-design loop SHALL hold every file of the row in a commit on the row's branch.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-011",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If a push names a branch other than `t10q` before the owner signs T15, then the tested-design loop SHALL hold the push.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-012",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the T23 settle run starts again after a stop, the T23 suite driver SHALL skip each call whose `runs[claim_pub]` readback equals its `outcome_pub`.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-013",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "If the inclusion state of a submitted call is unknown, then the ledger runner SHALL resolve the state from the node and the indexer before the ledger runner builds another submission of the same claim.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-014",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When the ledger runner reuses a saved proof or state file, the ledger runner SHALL check the SHA-256 of the file, the deployed key and the genesis hash against the run state before the reuse.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "FRC-015",
+   "group": "C",
+   "context": "network-operations",
+   "sentence": "When a lane tip merges into the integration branch, the tested-design loop SHALL record a true result of `git merge-base --is-ancestor` for the tip and the pass result of each required suite on the merged tree.",
+   "source": "e2e/sherlock-e2e-recovery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "HLP-001",
+   "group": "C",
+   "context": "placement",
+   "sentence": "When a box returns a wrap proof, the muninn ledger check SHALL verify the proof with the ledger 9.1.0.1 verifier before the result is kept.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-002",
+   "group": "C",
+   "context": "placement",
+   "sentence": "If the muninn ledger check refuses a wrap proof of a box, then the settle runner SHALL submit no call that carries the proof.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-003",
+   "group": "C",
+   "context": "placement",
+   "sentence": "When a box finishes the proof of a call, the box SHALL run the argument builder and return to muninn only the 4 public words `c_p`, `input_pub`, `outcome_pub` and `claim_pub` with the wrap output.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-004",
+   "group": "C",
+   "context": "placement",
+   "sentence": "The proving box SHALL keep `prog_d`, the `r_P` reference, the run salt and the call tape in box-private state.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-005",
+   "group": "C",
+   "context": "placement",
+   "sentence": "The Sherlock SDK SHALL provide 0 commands and 0 options that send a witness, a STARK proof, a prover checkpoint or a shard plan to a host that the user does not own.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-006",
+   "group": "C",
+   "context": "placement",
+   "sentence": "If a design proposes proving on a host that the user does not own, then the design SHALL be a new OpenSpec change on the Veritee seald Sessions model.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-007",
+   "group": "C",
+   "context": "placement",
+   "sentence": "If a job asks a box that holds no wallet directory to sign or submit a transaction, then the box SHALL refuse the job.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "HLP-008",
+   "group": "C",
+   "context": "placement",
+   "sentence": "If the SHA-256 of a received box file differs from the box report or the public call vector differs from the call vector of the requested job, then the muninn ledger check SHALL drop the result before the proof is verified.",
+   "source": "e2e/sherlock-e2e-helper-machines",
+   "assigned": "placement"
+  },
+  {
+   "id": "ECC-001",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When a developer compiles a contract for Sherlock, the Mycroft compiler SHALL read only the ZKIR 3.1 files and the `contract-info.json` that stock `compactc` 0.36.0 writes.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-002",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "The Mycroft compiler SHALL pass every gate of `mycroft/factory/gates.sh` on the MYC requirements of the modules frontend, values, lowering, witness-tape, ledger-ops, builtins and refusals.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-003",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When the Mycroft compiler accepts a proof circuit, the Mycroft compiler SHALL emit one program image with `selector`, `n_out` and `code`, together with one ABI with `selector`, `tape_len`, `slots`, `l_e`, `n_e` and `kits`.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-004",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When `mycroft-suite` serializes one circuit for two prepared calls with different tapes, the Mycroft compiler SHALL write byte-equal image files and byte-equal ABI files.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-005",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "The Mycroft compiler SHALL emit only the 13 instruction shapes of `SInstr`: `Field`, `Mov`, `Eq`, `Select`, `Lt`, `Divmod2`, `Range`, `AssertEq`, `Assert`, `Tape`, `Eff`, `Chip` and `Ret`.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-007",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When a circuit calls `keccak256`, the Mycroft compiler SHALL emit one `chip` instruction that the R_SL rule `R_SL_KECCAK256` proves.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-009",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "Where the Mycroft compiler builds a deployable contract, the Mycroft compiler SHALL use top-level slot 15 as `anchor_slot`.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-010",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When `mycroft-suite` runs on the 33 compiled suite programs, the Mycroft compiler SHALL give each proof circuit either an image or one refusal code.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-011",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When the factory gates replay the golden vectors, the Mycroft compiler SHALL give the statement that the Lean oracle `OracleMain` gives for each vector.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-012",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When `sherlock compile` admits every requested proof circuit of a `compactc` build directory, the Mycroft compiler SHALL write one image file and one ABI file per proof circuit and exit with code 0.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-013",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "If the Mycroft compiler refuses one requested circuit, then the compile command SHALL exit with a non-zero code, print the refusal code of `refusal_code` and write no image file for the request.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ECC-014",
+   "group": "A",
+   "context": "compact-compilation",
+   "sentence": "When a circuit has an input of a Jubjub point type or a Jubjub scalar type, the Mycroft compiler SHALL read the input as tape words in the native public-input encoding.",
+   "source": "e2e/sherlock-e2e-compact-compiler",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "ERS-001",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the `mycroft-emit` tool writes one suite call, the `mycroft-emit` tool SHALL write one JSON file with `schema` equal to `rsl-call/1` and the fields `id`, `circuit`, `label`, `index`, `kits`, `selector`, `n_out`, `l_e`, `n_e`, `tape_len`, `program`, `tape`, `native_words` and `native_comm`.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-002",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "While a call record or an `RslStatement` exists, the Sherlock toolchain SHALL keep the record on boxes that the user owns.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-003",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The R_SL chip set SHALL hold one PUBLIC row for each statement word, the word `comm` first and the effect words W after it, in order.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-005",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the R_SL executor of openvm halts a suite call, the R_SL executor SHALL give a `comm` equal to `native_comm` and effect words W equal, word for word, to `native_words`.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-006",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the Sherlock planner admits an R_SL program, the Sherlock planner SHALL give the program a `prog_d` by the identity formula of MYC-CLM-023 over the image, the plan, `key_root` and the machine version.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-007",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the leaf proves an R_SL call, the leaf SHALL bind the `val_d` inside `input_d` to the value digest of the tape that the app consumed.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-008",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When an R_SL call halts, the R_SL statement builder SHALL set the outcome kind to Halted and the outcome payload to the value digest of the list of `comm` followed by W.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-009",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "If the R_SL executor rejects a Compact call, then the R_SL statement builder SHALL emit no `RslStatement` for the call.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-010",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The R_SL statement builder SHALL write for each halted call one `RslStatement` record with exactly the fields `prog_d`, `input_d`, `outcome_d`, `comm` and `W`.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-011",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When two boxes execute the same call record, the R_SL executor SHALL give byte-equal public words on both boxes.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-012",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When an R_SL app proof enters recursion, the R_SL statement adapter SHALL bind the constrained `comm` and the ordered W of the PUBLIC rows to the outcome commitment that recursion consumes.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-013",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the Mycroft compiler emits a call for the prover, the Mycroft compiler SHALL write the call in schema `rsl-call/1` with the program as an array of instruction objects.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-014",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "If a call record lacks a field or holds a field of a wrong type, then the R_SL compiler SHALL return `Refuse::Unsupported` with the field name.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ERS-015",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "Where an R_SL program has a per-program app key, the Sherlock planner SHALL commit the app key under `key_root` inside `prog_d`.",
+   "source": "e2e/sherlock-e2e-rsl-statement",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-001",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The R_SL chip set SHALL have exactly the 16 rules of `compile::RULES`: `R_SL_FIELD`, `R_SL_SELECT`, `R_SL_EQ`, `R_SL_LT`, `R_SL_DIVMOD2`, `R_SL_RANGE`, `R_SL_ASSERT`, `R_SL_TAPE`, `R_SL_EFF`, `R_SL_RET`, `R_SL_HALT`, `R_SL_SPONGE`, `R_SL_BYTES`, `R_SL_EC`, `R_SL_SHA256` and `R_SL_KECCAK256`.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-002",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The R_SL chip set SHALL prove every rule with the AIRs WORD, ALU, PUBLIC, RANGE and SHA_IN, plus SHA_REQ, SHA_HASHER and BITWISE8 for a SHA-256 program or KECCAK_REQ, KECCAK_PERM and BITWISE8 for a keccak256 program.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-003",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the R_SL compiler reads a `chip` instruction of a suite program, the R_SL compiler SHALL lower the pair of kit and builtin id to micro-ops.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-004",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "While the R_SL chip set has no path that proves SHA-256 and keccak256 in one program, if a program calls both `persistentHash` and `keccak256`, then the R_SL compiler SHALL refuse the program with `Refuse::Unsupported` and the text \"persistentHash and keccak256 in one program\".",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-005",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When a program calls `transientHash` on n words, the R_SL executor SHALL run the width-3 Poseidon permutation of midnight-circuits 7.3.0 as a fixed-length sponge with the start register `[0, 0, n]`.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-006",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the kit tests run, the R_SL kit test suite SHALL compare SHA-256 with crate `sha2`, keccak256 with the Ethereum vectors, Jubjub with midnight-curves 0.3.1, secp256k1 with k256 0.13.4 and Poseidon with midnight-circuits 7.3.0.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-007",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "If a kit trace violates the kit relation for the admitted inputs, then the R_SL app verifier SHALL refuse the proof.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-009",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The secp256k1 kit SHALL accept exactly the operations, type tags and word layouts of `SECP-INTERFACE.md` sections 2 to 4.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-010",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The Jubjub kit SHALL accept exactly the operations and word layouts of one committed interface file that names `EcAdd`, `EcMul`, `EcMulGenerator`, `HashToCurve`, `FromCoordinates`, `IntoCoordinates` and `JubjubScalarFromNative`.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EKT-011",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "If an exact ALU micro-op gives a result at or above its modulus, then the R_SL executor SHALL reject the call.",
+   "source": "e2e/sherlock-e2e-rsl-kits",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-001",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The Sherlock machine SHALL run each program under exactly one rule family, the interpreted family of 120 step rules or the straight-line family `R_SL`, that the `machine_version` inside `prog_d` names.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-002",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the prototype demonstration runs, the Sherlock prover SHALL prove one interpreted-family program and one `R_SL` program under one universal key set.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-003",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When a developer adds a program, the Sherlock prover SHALL need no new universal key, contract class or ceremony.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-004",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the `R_SL` executor finishes a call, the `R_SL` executor SHALL return either one outcome with `comm`, the effect words and the outputs, or one reject code.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-005",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When an interpreted-family run ends, the Sherlock machine SHALL report exactly one of `Halted`, `Rejected` and `Exhausted`.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-006",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "When the suite runs a call, the `R_SL` executor of openvm SHALL give the `comm` and W that the Mycroft reference `sem::sl_run` gives.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-007",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "If a tape has a wrong selector, a non-canonical word, a missing word or a leftover word, then the R_SL prover wrapper SHALL return the status `refused` and start no proof.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-008",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The `R_SL` executor SHALL take the same count of micro-ops for any two tapes of one entry.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-009",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "Where a requirement of change `sherlock-universal-interpreter-design` conflicts with a named requirement of `sherlock-processor-final-20261111`, the Sherlock machine SHALL follow `sherlock-processor-final-20261111`.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "EUI-010",
+   "group": "A",
+   "context": "sherlock-execution",
+   "sentence": "The interpreted-family leaf SHALL prove each of the 120 enabled step rules of decision M-4.",
+   "source": "e2e/sherlock-e2e-universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ECS-001",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When `setup_suite.py` builds the suite, the suite setup tool SHALL record for each program its source repository, path and commit, the file sha256 values, the compile result and the per-circuit `k`, rows and ZKIR operation counts in a manifest of schema `t18-compact-suite-manifest/1`.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-002",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When the native driver runs a suite call, the native driver SHALL store the transcript, the preimage and one reference record of schema `mycroft-native-ref/1` under `native/<id>/transcripts/`.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-003",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When the T23 runner runs a call, the T23 runner SHALL run the stages compile, prove, settle and compare in that order.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-004",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "The T23 runner SHALL give each call exactly one of the classes pass, refused-as-native, mismatch, blocked, prove-failed and n/a.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-005",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "If the T23 runner cannot prove or compare a call, then the T23 runner SHALL class the call as blocked with one reason text.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-006",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "While the machine version holds the kit of a call, the T23 runner SHALL not class the call as blocked for that kit.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-007",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "While `T23_ALLOW_DISPATCH` is not set to 1, the T23 runner SHALL send no call to a prover box.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-008",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "While `T23_ALLOW_PREVIEW` is not set to 1, the T23 runner SHALL submit no Preview transaction.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-009",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "While a refused-as-native row has no executed `R_SL` rejection, the T23 runner SHALL label the row DERIVED in the suite table.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-010",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When the T23 live run ends, the T23 runner SHALL write one suite table with, per call, the class, the Preview transaction hash and block, the comparison with the native transcript, and the prove and wrap time per box.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-011",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "The T23 runner SHALL report 33 programs, 106 circuits and 208 calls, where the 106 circuits include the pure circuit of h02.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-012",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When the T23 runner reports the mismatch count, the T23 runner SHALL report with it the count of calls that reached the compare stage after a proof.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-013",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "The T23 runner SHALL map each recorded scenario call and each executed vector to one identity of program, circuit, label and index, and use that identity in every count that the suite table states.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "ECS-014",
+   "group": "A",
+   "context": "conformance",
+   "sentence": "When the T23 runner reports the live run complete, the T23 runner SHALL hold for each eligible call of the pinned manifest the proof and key-set identity, the stock and ledger 9.1.0.1 verification results, the included Preview transaction and block, the read-back and the native comparison.",
+   "source": "e2e/sherlock-e2e-compact-suite",
+   "assigned": "conformance"
+  },
+  {
+   "id": "EUF-001",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "When a user runs one end-to-end call, the Sherlock toolchain SHALL run the stages in this order: compile, setup, plan, deploy, tape, execute, prove, wrap, ledger check, submit and read-back.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-002",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "The Sherlock toolchain SHALL give each stage only the artifacts and the private state references that the stage dependency table of `design.md` names for the stage.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-005",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "If a stage before submit fails, then the Sherlock toolchain SHALL send no transaction for the call and record the stage name and the error.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-006",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "If the execute stage rejects a Compact call, then the Sherlock toolchain SHALL start no prove stage and no submit stage for the call.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-007",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "While a box has no profile for the installed universal key set, the Sherlock toolchain SHALL refuse a prove stage on the box.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-008",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "When two boxes that the user owns prove the same call, the Sherlock prover SHALL give byte-equal `claim_pub` values.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-009",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "When a developer deploys a second program, the Sherlock toolchain SHALL use the wrap verifier key of the first program, byte for byte.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-010",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "When a settled call is read back, the Sherlock toolchain SHALL compare `runs[claim_pub]` with `outcome_pub` and the outcome with the native transcript of the call.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-011",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "The Sherlock toolchain SHALL run the flow of EUF-001 with no DoctorWatson, herdr, box bus or agent tool on the user's box.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-012",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "If the `compactc` version, the ZKIR version, the machine version, the universal key-set identity or the ledger version of an artifact differs from the pin of the run, then the Sherlock toolchain SHALL stop the call and name the differing pin.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-013",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "When the prototype is reported complete, the Sherlock toolchain SHALL show, for one universal key set, the flow of EUF-001 on every suite call that is not refused-as-native or n/a.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "EUF-014",
+   "group": "A",
+   "context": "call-flow",
+   "sentence": "If a submitted call has no read-back, then the Sherlock toolchain SHALL reconcile the call by its transaction hash and send no second transaction for the same `claim_pub`.",
+   "source": "e2e/sherlock-e2e-user-flow",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "ANC-013",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "The wrap circuit SHALL pin the anchor read key (lane 6) and the chunk write key (lane 15) to the key constant 15.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-014",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the SherlockLedger contract is deployed, the SherlockLedger contract SHALL store `C_P` in top-level slot 15.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-015",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a contract's ledger layout uses top-level index 15, then the Mycroft compiler SHALL refuse the contract before deploy and name the colliding field.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-016",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If an ordinary call (mode 0) carries the anchor-write template in lanes 11 to 19 and 21, then the wrap circuit SHALL refuse the witness.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-017",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a chunk call reads or writes a lock, the `L_Fr` circuit SHALL compute the lock operand `x_j` of ANC-002 from the run's `c`, `run_tag`, `k`, `d_in`, `d_out` and `j`.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-018",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "The `L` circuit SHALL bind every effect lane of the call vector to the guest effect word that the run wrote at that lane.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "ANC-019",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a run is cut into `k` chunks, the `L` circuit SHALL bind `k` to the slice count of the run through the forward claim chain.",
+   "source": "completion/sherlock-anchor-chunks",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "CF-013",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a ZKIR circuit has an input or value of type `Scalar<Secp256k1>` or `Point<Secp256k1>`, the Mycroft compiler SHALL lower it to the secp256k1 R_SL kit of RSL-005.",
+   "source": "completion/sherlock-compact-frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "CF-014",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a ZKIR input type has no R_SL kit, then the Mycroft compiler SHALL refuse the circuit and name the type.",
+   "source": "completion/sherlock-compact-frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "LW-020",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "The `L_Fr` circuit SHALL carry the type element `TY_BB` = 0 or `TY_FR` = 1 as the sixth element of every MEM_BUS message.",
+   "source": "completion/sherlock-l-and-wrap",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "LW-021",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a tape has an ill-typed operand, then the `L_Fr` host SHALL refuse the tape in `Machine::new`.",
+   "source": "completion/sherlock-l-and-wrap",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "LW-022",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a verifying-key WHIR shape has `log_rs < k`, then the wrap host SHALL refuse the shape before it synthesizes a cell.",
+   "source": "completion/sherlock-l-and-wrap",
+   "assigned": "B:bridge"
+  },
+  {
+   "id": "LPC-001",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When row T8b closes, the tested-design loop SHALL record I-13 and the four GP hook rows as FROZEN with real-proof evidence or as FREEZE-PENDING with a measured reason.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:aggregation"
+  },
+  {
+   "id": "LPC-002",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the STACKS AIR and VALUE DIGEST land in the inline kernel, the MERGE-WORK key SHALL have at most 5,400 columns.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:aggregation"
+  },
+  {
+   "id": "LPC-003",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When row T8c runs, the tested-design loop SHALL build the X8 in-circuit Compact verifier and the `L` check over a SET root on real proofs.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:aggregation"
+  },
+  {
+   "id": "LPC-004",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a circuit change lands after openvm c4bd312, the tested-design loop SHALL run a Carbon Quint lane on it and file a lead verdict.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "LPC-005",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey completes, the timing runner SHALL measure warm and cold call time and peak memory on huginn and odin, each against its own baseline.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:box-fleet"
+  },
+  {
+   "id": "LPC-006",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When `pos_plan_schedules` runs two run lengths under one `plan_d`, the node SHALL accept both runs.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:scheduling"
+  },
+  {
+   "id": "LPC-007",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey gives a leaf that proves more than 5 rules, the elastic demo SHALL prove one program at 1x, 2x, 4x and 8x run length under the same keys.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:box-fleet"
+  },
+  {
+   "id": "LPC-008",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When T11 and T12 pass, the prototype runner SHALL run the honest call and the refusals on Preview with the prover on huginn and a second program.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "LPC-009",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When T17 (b) passes, the validium runner SHALL settle at least 2 batches on Preview and refuse an invalid batch and a stale root.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "LPC-010",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When T10q closes, the tested-design loop SHALL merge `t20-batched` 5dc1be2ee into the integration branch.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "LPC-011",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the five build lanes merge, the prover GUI SHALL run live against the T14b daemon and in replay mode.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "LPC-012",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the T22 governance change is reviewed, the tested-design loop SHALL file a Carbon Quint lead verdict for `sherlock-governance`.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "governance"
+  },
+  {
+   "id": "LPC-013",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the T18 (d) deliverables are committed, the Mycroft factory SHALL pass `gates.sh` and `lake build --wfail`.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "LPC-014",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When every row is DONE with a lead verdict or waits on the owner, the tested-design loop SHALL present the interface freeze to the owner.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "LPC-015",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a push targets a branch other than `t10q` before T15, then the tested-design loop SHALL hold the push.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "LPC-016",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a row reaches DONE without a lead verdict in `qa/gemini-quint`, then the tested-design loop SHALL count the row as not DONE for T15.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "LPC-017",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When an owner ruling changes a formula, the tested-design loop SHALL update FINAL-DESIGN.md and ARCHITECTURE.md to the ruled form.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "LPC-018",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a parent constraint of T3 never fires in a test, then the Carbon lane t3-airs SHALL add a forged input that fires it.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "LPC-019",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the Mycroft design closes, the Mycroft Lean library SHALL discharge premise S1 or keep it as a named hypothesis.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "LPC-020",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a box queue names a row that LOOP.md does not list, then the lead SHALL add the row to LOOP.md.",
+   "source": "completion/sherlock-loop-completion",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "RKY-001",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey runs, the rekey runner SHALL regenerate the `L`, `L_Fr` and wrap keys once from every row of `~/.cache/rekey-t11/LIST.md`.",
+   "source": "completion/sherlock-rekey",
+   "assigned": "B:key-management"
+  },
+  {
+   "id": "RKY-002",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a row of the rekey list has no commit on its branch, then the rekey runner SHALL refuse to start.",
+   "source": "completion/sherlock-rekey",
+   "assigned": "B:key-management"
+  },
+  {
+   "id": "RKY-003",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey completes, the rekey runner SHALL measure the wrap at `k = 21` with at most 1,782,573 rows.",
+   "source": "completion/sherlock-rekey",
+   "assigned": "wrap"
+  },
+  {
+   "id": "RKY-004",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey completes, the rekey runner SHALL measure a wrap verifying key of at most 50,000 bytes.",
+   "source": "completion/sherlock-rekey",
+   "assigned": "wrap"
+  },
+  {
+   "id": "RKY-005",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey completes, the D3 calculator SHALL give every term at least 100 bits and every grindable term at least 101 bits on each new key.",
+   "source": "completion/sherlock-rekey",
+   "assigned": "B:key-management"
+  },
+  {
+   "id": "RSL-001",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rsl probe proves a leaf over the R_SL app proof of a suite call, the universal leaf key SHALL give an N1 pre-hash equal to the universal N1 pre-hash.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-002",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "The R_SL chip set SHALL give every R_SL app 6 or 9 AIRs with FP-1.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-003",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the suite prover runs the 142 R_SL suite calls, the R_SL app prover SHALL make one app proof per call that the stock verifier accepts.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-004",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "Where the machine version has the keccak256 kit, when a circuit calls `keccak256`, the R_SL chip set SHALL prove the call inside the 6-or-9 AIR bucket.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-005",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "Where the machine version has the secp256k1 kit, when a circuit calls `ec_mul`, `ec_mul_generator`, `into_coordinates` or `reconstitute_field` on secp256k1 values, the R_SL chip set SHALL prove the call inside the 6-or-9 AIR bucket.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-006",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a circuit calls a jubjub operation, the R_SL chip set SHALL check `on_curve` and `in_subgroup` (`8Q = P`) with micro-op sequences and no new AIR.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-007",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a circuit calls `persistentHash`, the R_SL chip set SHALL prove the hash on the SHA_IN and SHA_REQ AIRs with the openvm SHA-256 block hasher.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "RSL-008",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If an ALU or Poseidon input word of an R_SL row is not canonical, then the R_SL chip set SHALL refuse the row.",
+   "source": "completion/sherlock-rsl-chipset",
+   "assigned": "B:leaf-proving"
+  },
+  {
+   "id": "SQG-014",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When G3 runs, the security gate SHALL compare the transcript vectors of the CPU prover, the GPU prover, the stark-backend verifier, `L` inside `L_Fr` and the wrap on the rekeyed keys.",
+   "source": "completion/sherlock-security-gate",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "SQG-015",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey completes, the security gate SHALL run G4 with the `L_Fr` part, G1, G2, FP-8 and the ledger 9.1.0.1 check on the new keys.",
+   "source": "completion/sherlock-security-gate",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "SQG-016",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a RUNBOOK step is UNVERIFIED, then the security gate SHALL report the gate as not passed.",
+   "source": "completion/sherlock-security-gate",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "STL-001",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the settle runner builds an `acceptRun` call for a suite call, the settle runner SHALL derive `c_p`, `input_pub`, `outcome_pub` and `claim_pub` from the Mycroft statement and the wrap public inputs.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "STL-002",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the suite prover proves a suite call, the suite prover SHALL prove app, leaf, N1, N2, N3, `L`, `L_Fr` and the `k = 21` wrap on the rekeyed universal key set.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "STL-003",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the rekey and T12 pass, the deploy runner SHALL deploy SherlockLedger with the new wrap VK and the anchor in slot 15 on Preview.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "STL-004",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When a suite call settles, the SherlockLedger contract SHALL set `runs[claim_pub]` to `outcome_pub`.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "STL-005",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a settled outcome differs from the native Preview transcript of T18 (a), then the suite report SHALL record the call as a mismatch.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "STL-006",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When Part A runs, the native runner SHALL rerun the 33 suite programs on Preview and compare each call with the 2026-11-14 transcript.",
+   "source": "completion/sherlock-suite-settlement",
+   "assigned": "settlement"
+  },
+  {
+   "id": "ZK-012",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the prover prepares a deployment, the prover SHALL draw `r_P` once from the OS CSPRNG and store it in `deploy.secret` with mode 0600.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-013",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the prover prepares a run, the prover SHALL draw a fresh input salt and store it in `run.secret`.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-014",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a build without the cargo feature `test-seed` receives `SHERLOCK_TEST_SEED`, `GW_DET`, `GW_CHIP_SEED` or `GW_SEED`, then the wrap prover SHALL exit with code 4 and write no proof.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-015",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "When the wrap prover proves one statement twice, the wrap prover SHALL make two proofs that differ byte for byte and that the ledger 9.1.0.1 verifier accepts.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-016",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a request to `wrapd serve` or to the STARK worker reuses a blinding slot, then the daemon SHALL refuse the request.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-017",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "While the wrap runs on a GPU of odin or huginn, the GPU wrap prover SHALL take its blinders from `OsRng`.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-018",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "If a configuration sends a leaf, node, `L`, `L_Fr` or wrap job to a host that the user does not own, then the prover SHALL refuse the configuration.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ZK-019",
+   "group": "completion",
+   "context": "completion",
+   "sentence": "The SherlockSpec Lean library SHALL prove `pv2_inj` and `pv2_count_det` with no axiom outside `propext`, `Quot.sound` and `Classical.choice`.",
+   "source": "completion/sherlock-zero-knowledge",
+   "assigned": "B:assurance"
+  },
+  {
+   "id": "ANC-001",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The anchor cell SHALL be the top-level ledger slot 15, a key constant of the wrap (`ANCHOR_SLOT`, template lanes 6 and 15). It SHALL hold `C_P = H(SHK_PROGC, r_P, prog_d)`, with one salt `r_P` per deployment, or a lock value `A_j`. It SHALL NOT hold plain `prog_d`. User code SHALL NOT address slot 15.",
+   "source": "sherlock-processor-final-20261111/sherlock-anchor-chunks",
+   "assigned": "wrap"
+  },
+  {
+   "id": "ANC-012",
+   "group": "reused",
+   "context": "network-operations+settlement",
+   "sentence": "`L_TX` SHALL stay 1,024, so that one call carries `L_TX - A` = 1,015 effect words and every measured entry runs as one call (largest checked call 474 words, largest static count 699 words, Mycroft `tests/compact-suite`). `sherlock plan` SHALL chunk an entry only when its `L_e` exceeds 1,015 and `k = ceil(L_e / 990) <= K_MAX`, SHALL print `k` and the fee before proving, and SHALL refuse an entry with `k > K_MAX` at plan time, naming the entry, its `L_e` and `K_MAX`. `K_MAX` SHALL be `min(floor(TTL / (10 x 175.5 s)), 18)`, which is 2 at the default intent TTL of 3,600 s and 0 below 1,755 s, where `sherlock plan` SHALL refuse every entry (Midnight write rule W-5, owner ruling 2026-11-14; LEAD pick for T15 confirmation).",
+   "source": "t20-batched:sherlock-processor-final-20261111/sherlock-anchor-chunks",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CF-001",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The frontend SHALL read `Lflattened` after `optimize-circuit2`, the exact input of `reduce-to-zkir`. The manifest and the TypeScript runtime SHALL come from `analyzed-ir` unchanged. One analysis pass `add-sherlock-anchor` SHALL follow `determine-ledger-paths`. The frontend SHALL replace `reduce-to-zkir`, the `zkir-v3 compile-many` key step and the per-circuit key fingerprint.",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "CF-002",
+   "group": "reused",
+   "context": "call-flow+compact-compilation",
+   "sentence": "The frontend SHALL provide `sherlock compile`, `sherlock plan`, `sherlock simulate`, `sherlock deploy`, `sherlock prove` and `sherlock call`. `abi.json` SHALL give per entry the step count `N_e`, the effect words `L_e`, the tape length and the count per builtin.",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "CF-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "For every entry and preimage, `effect_vector(preimage)` SHALL equal the native public-input vector word for word.",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CF-004",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "`N_e` SHALL be the same for any two tapes of one entry.",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CF-005",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Stage 1 SHALL lower in straight-line mode over `R_SL_*` on R_SL chip set 3, with per-program app keys. Compact `Field` SHALL be a 32-byte Fr word. Every R_SL app SHALL have 6 or 9 AIRs with FP-1. `transientHash` SHALL be the fixed-length midnight-circuits 7.3.0 sponge in ALU rows. `persistentHash` SHALL run on the R_SL_SHA256 AIRs. Jubjub, secp256k1 and `keccak256` SHALL be R_SL kits inside that AIR bucket (RSL-001 to RSL-007).",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CF-012",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The kit SHALL be reported complete only when CF-L1 is proved with an axiom report that holds only `propext`, `Quot.sound` and `Classical.choice`.",
+   "source": "sherlock-processor-final-20261111/sherlock-compact-frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "CLM-001",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "A `set_root` SHALL be the pinned-sponge hash of exactly one of `LEAF(claim_d, n_steps)`, `DEP(claim_d, n_steps, cover_root, in_link)`, `JOIN(l, r)`, `FOREIGN(fclaim_d)`, `ADM(adm_d)` and `VIEW(vw_d)`, with distinct domain words that differ from `SHK_RUN`, `SHK_DEPS` and every state and memory domain. This protocol SHALL NOT freeze before X12 passes (N-3).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-002",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "Only the head claim of a verified SET SHALL be discharged. A SEG statement or a state digest SHALL NOT be consumed as a claim. The claim identity SHALL hold no address and no step count.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-003",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "DESCEND SHALL derive `SUB(R, x)` from a verified SET `R` by one-hash openings of `JOIN` or `DEP` nodes. A head opening SHALL give the head claim and its `n_steps`. The discharge SHALL NOT depend on the batching shape of the producer.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-004",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "`deps_d` SHALL start at `EMPTY_DEPS` and each consume event SHALL set `deps_d' = H(SHK_DEPS, deps_d, claim_d')`. SEAL-WITH-DEPS SHALL require `DL.chain_d` equal to the opened `deps_d`, with order and repetition. Plain SEAL SHALL refuse a non-empty chain.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-005",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "If `DL.in_link = c_A` is set, SEAL-WITH-DEPS SHALL re-hash the consumer's `input_d` and `c_A` and SHALL require `outcome_d' == H(O, 1, 0, val_d)`. A Rejected or Exhausted claim SHALL be consumable as a chain element only, never as an input link or a value.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-006",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The built path SHALL be input consumption at the seal (AD-20 option a), with the circuit side of a mid-run consume rule specified so that it needs no new node relation. If the owner reads GP-2 as requiring a mid-run consume rule or a genesis-bound dependency, that work SHALL be required by this change and option (a) SHALL be only a milestone.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-007",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "`DL` SHALL be `(chain_d, cover_root, in_link, prem_root)`. The premise element SHALL be the first element of a DL that a seal uses. It SHALL set `prem_root` and SHALL leave `chain_d`, `cover_root` and `in_link` unchanged. A chain element or an input-link element SHALL take only a `LEAF`, `DEP` or `FOREIGN` head.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-008",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The claim AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns), with every AIR required and a fixed height in its menu shape.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CLM-009",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The GP-2 node modes SHALL be run on real proofs with an honest SEAL-WITH-DEPS: a consumer of chip set 2 whose input value is the Halted value of a producer of chip set 2, through SEAL, the DL-STEP input-link element and SEAL-WITH-DEPS, with a DEP output whose cover opens to the producer's claim. Each SEAL-WITH-DEPS refusal SHALL have a twin that differs from the honest case in one input.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-claim-consumption",
+   "assigned": "settlement"
+  },
+  {
+   "id": "CORE-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "No enabled step SHALL start from a terminal outcome, and a publishing step SHALL be the last enabled step. Closing a leaf SHALL change no counter, fuel, outcome or length. A step that does not fit the remaining capacity SHALL NOT be enabled and SHALL NOT produce `Rejected` or `Exhausted` (SVM-010).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-chip-core",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CORE-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "CORE SHALL compute `rules_d = Poseidon(dom(\"SHK_RULES\"), rid_0, ..., rid_(S-1))` over exactly S lanes in slot order in one whole-sponge HASH slot, with `rid_j = 0` for a disabled slot, and SHALL bind it to the leaf public value `rules_d` (word 32, FP-1). There SHALL be no special case for S = 1. S SHALL be 16 for the first build (AD-6).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-chip-core",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CORE-011",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Each rule family sub-kit SHALL be generated from the `RuleContract`s of its rules (read set, write set, ordered plan, charge behaviour, effect bounds). Each rule SHALL be its reference transition on every branch, checked against the REFERENCE BRIDGE kit. A family that builds constructors SHALL wait for X6 (AD-5).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-chip-core",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CORE-012",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Each rule SHALL charge fuel and counters exactly as the reference does on every branch, and each failure branch SHALL publish the reference outcome. The spike's one-fuel-per-step rule SHALL NOT be copied. The appends, reads, ROM rows and stack step of the maximal branch SHALL be within the `LeafShape`.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-chip-core",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CORE-015",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The slice leaf SHALL have a CORE rule subset chip set 2 (the value set) under its own per-program leaf key in `key_root`, with the rules `XAdtEvalConstructNullary` and `KAdminPublishValue`. The Halted payload SHALL equal the `vd` word of the constant's ROM row, and the INIT opening of `input_d` SHALL take a witnessed input value digest `val_d`. Chip sets 0 and 1 SHALL keep `VAL_NONE` and their keys.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-chip-core",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CPR-003",
+   "group": "reused",
+   "context": "call-flow+sherlock-execution",
+   "sentence": "One universal key set SHALL accept every program: the internal-recursive key, the `L` key and the wrap key. Per-program keys SHALL sit under `key_root` inside `prog_d`. A new program SHALL need no new universal key.",
+   "source": "sherlock-processor-final-20261111/sherlock-general-purpose",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CPR-004",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The co-processor SHALL need no change of the ledger 9.1.0.1 verifier. The wrap SHALL be checked by `VerifierKey::verify` as the ledger runs it today. Ledger 9 refuses a key with the G4 lane gates (M7-0); OD-24 option E keeps this rule with a `ZkStdLib`-architecture wrap over `L_Fr` (LW-017).",
+   "source": "sherlock-processor-final-20261111/sherlock-general-purpose",
+   "assigned": "wrap"
+  },
+  {
+   "id": "CPR-005",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "No requirement, constant or gate of the co-processor SHALL narrow GP-001 to GP-004 or GP-ZK. A design constant that could narrow them SHALL be an owner decision with a path that has no bound.",
+   "source": "sherlock-processor-final-20261111/sherlock-general-purpose",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "CRR-001",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where a consumer contract follows the era table (profile A), the consumer contract SHALL seal the era table address and take the era of each claim as a call argument.",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-002",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where a consumer contract seals its era set (profile B), the consumer contract SHALL read only the era ledgers sealed at its deployment.",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-003",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where a consumer contract follows the era table, the consumer contract SHALL call only a ledger that the era table names for the claim's era, by `ledgerOf(era_id)` or, with one ledger per program, by a leaf of a usable attested root.",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-004",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "If the claim's era is `soundness_ended`, then the consumer contract SHALL refuse the claim (owner item O4, the HFC study's recommended option).",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-005",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The consumer contract SHALL key its nullifier by `H(SHK_CLAIM_NUL, lineage, input_pub, outcome_pub)`, where `lineage` is the `C_P` of the program's first era and a later era's `(C_P', lineage)` pair is a leaf of a usable attested root (GOV-008), and never by the era, the ledger, the claims root or `C_P` (owner item O6).",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-006",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where premise A2 or A3 fails, the consumer contract SHALL refuse the first use of a claim whose era is not active at the time of use.",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "governance"
+  },
+  {
+   "id": "CRR-007",
+   "group": "reused",
+   "context": "governance+settlement",
+   "sentence": "When a consumer contract uses a claim, the consumer contract SHALL write only its own nullifier.",
+   "source": "t22-governance:sherlock-governance/sherlock-consumer-read",
+   "assigned": "settlement"
+  },
+  {
+   "id": "DCD-001",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-001 SHALL be met by LW-007 of `sherlock-processor-final-20261111`. A general run SHALL publish `[C_P, input_pub, outcome_pub]` as effect words of the call vector (FPR-010, FPR-013). Kind 7 under `/1` SHALL follow AD-16. No halo2 run decider SHALL be built (superseded 2026-11-11, old text at commit `0ab8cd79d`).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-002",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-002 SHALL be met by LW-002 to LW-006 of `sherlock-processor-final-20261111`. No accumulator SHALL be carried to the ledger proof. The wrap SHALL verify `L` under the frozen `L` key and SHALL bind every public word to the call vector.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-003",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-003 SHALL be met by LW-010 of `sherlock-processor-final-20261111`. The replay identity SHALL be `claim_d = Poseidon(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-004",
+   "group": "reused",
+   "context": "settlement+wrap",
+   "sentence": "DCD-004 SHALL be met by LW-009 of `sherlock-processor-final-20261111`. The collection statement SHALL be `[reg_root, set_root]` with no `shape_d` (owner ruling O9, 2026-11-13) and no claim count (AD-2, OWNER to confirm). Settlement and claim opening SHALL be owned by the LEDGER CONTRACT (LDG-003 to LDG-005).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-005",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-005 SHALL be met by DG-001 and DG-002 of `sherlock-processor-final-20261111`. The decider gate of 1,000,000 rows SHALL NOT apply. The wrap SHALL fit 85 percent of `2^k - 7` usable rows at the smallest k of 19, 20 and 21, with one fixed 2^16-row range table.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-006",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-006 SHALL be met by LW-008 of `sherlock-processor-final-20261111`. The run root SHALL be a SET root sealed by NODE and opened with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. No seal predicate SHALL be checked again after NODE.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DCD-007",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "DCD-007 SHALL be met by LW-011 of `sherlock-processor-final-20261111`. If AD-20 selects option (b), a `DEP` head with a FOREIGN member SHALL be refused or SHALL be checked against the contract's `reg_root`. Under option (a) this requirement SHALL have no effect.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-decider",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DG-001",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "No BLS12-381 circuit of the co-processor SHALL be keyed above k = 21 (CPR-001).",
+   "source": "sherlock-processor-final-20261111/sherlock-derived-gates",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DG-002",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL fit 85 percent of the `2^k - 7` usable rows at the smallest k of 19, 20 and 21 at which the measured wrap rows fit. The wrap SHALL use the `ZkStdLib` chips (LW-013). The k of the key SHALL be fixed by the measured rows of the stdlib wrap of `L_Fr` at step E5 (M7, D15).",
+   "source": "sherlock-processor-final-20261111/sherlock-derived-gates",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DG-003",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap verifier key SHALL be at most 50,000 bytes (MID-003).",
+   "source": "sherlock-processor-final-20261111/sherlock-derived-gates",
+   "assigned": "wrap"
+  },
+  {
+   "id": "DG-010",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "A failed derived gate SHALL leave its GP target open. It SHALL go to the owner. It SHALL NOT narrow GP-001 to GP-004 or GP-ZK (CPR-005).",
+   "source": "sherlock-processor-final-20261111/sherlock-derived-gates",
+   "assigned": "wrap"
+  },
+  {
+   "id": "ELD-001",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era ledger SHALL deploy with the maintenance authority `{committee: [], threshold: 1, counter: 0}` and hold `era_id` and the era table address in sealed fields that only the constructor writes.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ELD-002",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When an era ledger is deployed, the deploy tool SHALL apply the readback gate of ERT-002 to it before any announcement or attestation names it.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ELD-003",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where premises A1 to A3 hold, the era ledger SHALL make one claimed call to `table.active(era_id)` in every wrap-keyed entry, after the T20 body of the entry, so that the call is checked against the block time at inclusion (part of premise A3).",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ELD-004",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "If `table.active(era_id)` fails, then the era ledger SHALL refuse the whole call.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ELD-005",
+   "group": "reused",
+   "context": "governance+settlement",
+   "sentence": "The era ledger SHALL keep the T20 read entries `rootAccepted` and `runAccepted` with their own compiled native keys and no write.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "settlement"
+  },
+  {
+   "id": "ELD-006",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era ledger's wrap-keyed entries SHALL fit `L_TX` = 1,024 lanes.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ELD-007",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "Where premise A2 or A3 fails, the era ledger SHALL keep the T20 entries unchanged and leave the era check to the consumer read rule CRR-006.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-ledger",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-001",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL deploy with the maintenance authority `{committee: [], threshold: 1, counter: 0}` (LEAD pick; `T22/USE-CASES.md` section 2).",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-002",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When the era table is deployed, the deploy tool SHALL read the authority and every entry's verifier key back from the indexer and require `committee == []`, `threshold >= 1`, `counter == 0` and verifier keys equal to the compiled bytes.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-003",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "If an announced era names a universal key set digest or a ledger that an earlier era holds, then the era table SHALL refuse the announcement.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-004",
+   "group": "reused",
+   "context": "governance+settlement",
+   "sentence": "The era table SHALL let `active(e)` succeed only for an era `e` that is neither `cancelled` nor `soundness_ended`, at a block time in `[start(e), end_eff(e))`, where `end_eff(e) = min(end(e), start(P))` for a pending era `P`.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "settlement"
+  },
+  {
+   "id": "ERT-005",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL make `active(e)` succeed for at most one era at any block time.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-006",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL keep every era record with the `ledger_addr`, `keyset_d` and `start` it had at `announce`.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-007",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL set `end(e)` at most once, never to a later time than `end_eff(e)` at that moment.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-008",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL write no state in its read entries `active`, `era`, `ledgerOf`, `eraSafe` and `ledgerRootUsable`, and give each its own compiled native key.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "governance"
+  },
+  {
+   "id": "ERT-009",
+   "group": "reused",
+   "context": "governance+settlement",
+   "sentence": "If an announcement names a start `T` that is not a multiple of `GRID`, then the era table SHALL refuse it.",
+   "source": "t22-governance:sherlock-governance/sherlock-era-table",
+   "assigned": "settlement"
+  },
+  {
+   "id": "FREG-001",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "A foreign proof SHALL enter only through an entry `entry_d` of the version `sherlock-reg-entry/1` that binds proof system, curve, commitment scheme, SRS id, verifying-key digest, transcript id, public-input schema and count, adapter digest and policy, opened under `reg_root` at the fixed schema depth. `pi_count` SHALL be below `2^32`.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-foreign-registry",
+   "assigned": "settlement"
+  },
+  {
+   "id": "FREG-002",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The foreign lift SHALL prove membership of both the adapter key and the inner foreign key in `reg_root`, SHALL require the adapter verification and the inner verification to complete in circuit (FVR-003) with no accumulator folded, and SHALL emit `fclaim_d = H(SHK_CLAIM, KIND_FOREIGN, vk_id_inner, adapter_id, out_d)` with a domain disjoint from `SHK_RUN`.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-foreign-registry",
+   "assigned": "settlement"
+  },
+  {
+   "id": "FREG-003",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The adapter SHALL consume the verified public inputs as `pi_d` and SHALL derive `out_d` from them. A foreign field SHALL become a value digest only through the authenticated adapter relation. Proof parsing SHALL refuse trailing or missing data.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-foreign-registry",
+   "assigned": "settlement"
+  },
+  {
+   "id": "FREG-004",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The native adapter path SHALL be a milestone task, scoped by X8 (N-10). No foreign proof SHALL be folded into an accumulator, under any SRS (FVR-003). GP-3 SHALL be reported complete only with the general verifier evidence of `sherlock-foreign-verifier`. An adapter-only GP-3 SHALL NOT be an acceptance path.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-foreign-registry",
+   "assigned": "settlement"
+  },
+  {
+   "id": "FREG-005",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The foreign-lift AIRs of the node SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the internal set (height at most `2^19`, at most 1,000 constraints and 200 interactions per AIR, 64 AIRs, 3,000 columns), with every AIR required and a fixed height in its menu shape.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-foreign-registry",
+   "assigned": "settlement"
+  },
+  {
+   "id": "GOV-001",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL accept `announce`, `cancel`, `soundness_end` and `rotate_roster` only with valid signatures of at least `Q` distinct keys of the roster in force.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-002",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When `Q` keys sign `announce(M, ledger_addr, keyset_d, T)` with no pending era and `T >= now + TL`, the era table SHALL add era `M` as `announced` with `start = T` and set `pending = M`.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-003",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When any party calls `activate(M)` at a block time at or after `start(M)`, the era table SHALL write `end(N) = start(M)` for the current era `N`, set `current = M` and clear `pending`.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-004",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL change the accepting era only at the start of an era announced at least `TL` earlier, or by `soundness_end`.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-005",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When `Q` keys of the roster in force sign `rotate_roster(new_roster_d)`, the era table SHALL make `new_roster_d` the roster in force at `now + RTL` and change no era record, ledger, claim or nullifier.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-006",
+   "group": "reused",
+   "context": "governance+settlement",
+   "sentence": "When `Q` keys sign `soundness_end(N)` for the era `N` that `active` accepts now, the era table SHALL first apply a pending activation whose start has passed, then set `end(N)` to the current time and `status(N) = soundness_ended`, and cancel a pending era that has not started, at once and for good.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "settlement"
+  },
+  {
+   "id": "GOV-007",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When `Q` keys sign `cancel(M)` before `start(M)`, the era table SHALL mark `M` `cancelled` and never use the id `M` again.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-008",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When `Q` keys sign `attest(root)`, the era table SHALL record the root of `(era_id, C_P, lineage, ledger)` leaves and make it usable only from `TL` after it was recorded; the `ledger` word names the program's era ledger where one ledger per program is kept (owner item O8) and is zero otherwise.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-009",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL hold every verb as an entry, need no `MaintenanceUpdate`, and have no verb that freezes, seizes or pauses a claim, a ledger or a consumer.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-010",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "The era table SHALL bind each signed message to the table address, the verb, `roster_gen` and a nonce that every signed verb increments.",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GOV-011",
+   "group": "reused",
+   "context": "governance",
+   "sentence": "When `Q` keys of the roster in force sign `cancel_rotation` before a pending rotation takes effect, the era table SHALL drop that rotation (T22 recommendation, owner item O13).",
+   "source": "t22-governance:sherlock-governance/sherlock-governance-verbs",
+   "assigned": "governance"
+  },
+  {
+   "id": "GP-001",
+   "group": "reused",
+   "context": "call-flow+sherlock-execution",
+   "sentence": "One fixed key set SHALL prove the execution of every program of the Sherlock language, on every input, for every run length below 2^64 and every outcome (`Halted(v)` for every value type as a digest of a canonical value encoding, `Rejected(code)`, `Exhausted(kind)`). The public statement SHALL carry `prog_d` and `input_d` as data, not circuit constants. Capacity SHALL NOT depend on the key: a program whose state does not fit one leaf's carriers runs against committed memory.",
+   "source": "sherlock-vm-consensus-20261107/sherlock-general-purpose",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "GPW-001",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap prover SHALL run on the user's GPU. The stock CPU path SHALL stay as the fallback. Under the test seed it SHALL give the same proof bytes as the GPU path.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-002",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The GPU wrap kernels SHALL be built in order: K0 the Fr field header shared with the Fr Poseidon kernel of `L`, K1 NTT over Fr, K2 MSM on G1, K3 the coset-tiled quotient numerator, K4 grand products, K5 evaluations and multiopen, K6 the lookup sort.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-003",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "Under `GW_DET=1`, every CPU and GPU configuration SHALL give one proof SHA-256. Each proof SHALL pass the library verifier and ledger 9 `VerifierKey::verify`. The GPU quotient numerator SHALL equal the CPU values on every point of the extended domain.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-004",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "On the sppark MSM path the wrap prover SHALL compute `MSM(s)` as `MSM(s + r) - MSM(r)` with a fixed vector `r` and `MSM(r)` cached per base table and length. The mask SHALL be witness-independent. It SHALL run on the user's GPU. It SHALL leave the proof bytes unchanged. The Rust MSM path SHALL drop the mask after one re-time on a quiet GPU (owner ruling 2026-11-12).",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-005",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The MSM SHALL stay split between CPU and GPU while the GPU MSM takes more than 0.2 s per `2^20` points.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-006",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "If the Fr Poseidon GPU kernel of `L` slips, the build SHALL wait for the kernel (OD-10). No second Fr proving engine SHALL be built as a call-time fallback (OD-11, owner decision 2026-11-12); `L_Fr` of OD-24 option E is part of the one proving path, and its prover shares the Fr field header K0 (step E4). A measured GPU wrap above 8 s at the chosen k after K1 to K5 SHALL be a fallback trigger of LW-014.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-007",
+   "group": "reused",
+   "context": "network-operations+wrap",
+   "sentence": "A wrap time figure SHALL be reported MEASURED only with its run record and host load. Heavy jobs SHALL run one at a time under `heavy-run`. A quiet-host repeat SHALL stay PENDING until measured. The wrap times of call-time paths 2 and 3 SHALL be reported as ESTIMATE conditional on the fused quotient kernel and the MSM rewrite, with the table of `PR` section 8 (k = 19 proxy, 20 and 21, MEASURED under load) as the baseline.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "GPW-008",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The design lists no Lean obligation for the GPU wrap prover. Its correctness SHALL rest on GPW-003 and on the wrap circuit of kit L AND WRAP, whose obligations are LW-015.",
+   "source": "sherlock-processor-final-20261111/sherlock-gpu-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "INIT-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When `h_pre = 0`, INIT SHALL constrain every word of the first pre state, the memory frontier and token, and both stacks to `Init(prog_d, input_d)` with the one-arena field list of the kit. Equality with a supplied digest SHALL NOT replace the field relation. The SRC-021 text of the field list SHALL wait for AD-18 (OWNER).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-002",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The genesis selector SHALL be `g = is_zero(h_pre)` from the leaf public value `h_pre` (FP-1), not a witness flag. Every INIT constraint SHALL be multiplied by `g`. At `h_pre != 0` INIT SHALL constrain nothing.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "INIT SHALL open `prog_d` to its SVM-005 preimage and SHALL constrain the opened `prog_root` equal to the `prog_root` body word. INIT SHALL open `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)`, with 8 salt words fixed for the run at INIT, and with each of the three limbs below `2^64`. PROG canonicality SHALL be the named premise `ProgCanonical(prog_root)` of the leaf. The seal SHALL discharge it with the `ADM` claim (NODE-010).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-004",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The genesis memory `(len_0, root_0, tail_0)` SHALL be a function of `(prog_d, input_d)`, SHALL be canonical, and every record in it SHALL have `kind` in `1..=4`. INIT SHALL take it as the parameter `GenesisMem` and SHALL be tested with the empty arena until AD-17 is decided.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-005",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Any input admission form SHALL meet I1 to I6 of the kit: no scan of the input, no input-size bound, every used input node authenticated against `val_d` in bounded work, the reference outcome and step count of `apply(prog, x)`, a canonical genesis memory, and one `val_d` per structured value. The form SHALL be AD-17 (OWNER), measured by X11.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Under input admission form (b) (AD-17, OWNER), INIT SHALL set the `view_root` header word (FPR-012) from the witness, or to `VIEW_NONE` when `val_d` is the absent-input constant; `read_input` SHALL refuse `VIEW_NONE`. `in_ty` admissibility SHALL be checked on inspected nodes only (I7); an uninspected subtree SHALL be carried by digest. A full check of `ty(x) == in_ty` by VIEW-WORK SHALL be used only by owner decision.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-007",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Under `sherlock-processor-final-20261111`, `prog_d` SHALL be `P2(DOM_PROG, image_d, plan_d, key_root, machine_version)` (SPL-003) and `input_d` SHALL be `P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` with 8 salt words fixed at INIT (ZK-006). The forms of INIT-003 are the halo2 prototype forms. INIT SHALL open `prog_d` through `image_d` to `prog_root` with the preimages of `FD/ARCHITECTURE.md` section 1.11, FP-4 (FPR-011).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "INIT-008",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The INIT AIRs SHALL meet the STARK kit gate SG-1 to SG-6 of `design.md` section 9 inside the app set (at most 5,000 constraints and 1,000 interactions per AIR, 100 AIRs, 30,000 columns), with every AIR required and a fixed height in its menu shape. Where the inline kernel of SHP-006 carries them, each AIR SHALL also fit the per-AIR bounds of the internal set (1,000 constraints, 200 interactions).",
+   "source": "sherlock-modular-leaf-20261111/sherlock-init-admission",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "LDG-001",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The LEDGER CONTRACT SHALL be one Compact contract with one shared state: `runs: claim_pub -> outcome_pub` for runs that their own users submit (FPR-010, FPR-013; amendment of `n_steps` out of the map, owner item F-12), `claim_roots`, one `claims_root` per accepted collection, and the registry root. It SHALL hold no map or set with one entry per collection claim (Midnight write rule, owner ruling 2026-11-14, row T20). Two contracts with separate ledgers SHALL NOT be used.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-002",
+   "group": "reused",
+   "context": "network-operations+settlement",
+   "sentence": "`acceptRun(C_P, input_pub, outcome_pub)` SHALL verify the wrap proof whose effect words carry the three values (FPR-010). Plain `prog_d` and `n_steps` SHALL NOT be call data (ZK-002, FPR-013); `C_P` is LEAD F-7 under N-11, OWNER. It SHALL compute `claim_pub = transientHash([C_P, input_pub, outcome_pub])` and SHALL refuse a `claim_pub` that is already in `runs`.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-003",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "`acceptCollection(reg_pub, claims_root)` SHALL verify the wrap proof of the collection statement `[reg_pub, claims_root]` (LW-009 and DCD-004 as amended by T20, with no `shape_d`, owner ruling O9 2026-11-13, and no claim count), SHALL check `reg_pub` against the registry state (history per N-8), SHALL refuse a `claims_root` already in `claim_roots`, and SHALL insert it. It SHALL make no per-claim write. `shape_d`, `set_root` and `set_pub` SHALL NOT be call data.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-004",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "There SHALL be no `descend` entry and no `openClaim` entry. A Sherlock consumer SHALL discharge a collection claim in circuit from the producer's SET proof (GP-2 hook: DESCEND, DL-STEP, SEAL-WITH-DEPS) and SHALL read no ledger state. A Compact consumer SHALL prove, inside its own call, a path of `D_C` = 20 siblings from the claim's leaf to a root, SHALL read `rootAccepted(root)` from the LEDGER CONTRACT by a cross-contract call, and SHALL keep its own nullifier keyed by the claim alone. The number of ledger writes SHALL NOT depend on the number of claims used or on their depth in `set_root`.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-005",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "`claims_root` SHALL be the root of a binary Merkle tree over Fr of fixed depth `D_C` = 20, built by `L` from the member heads of the collection's `set_root`: a run claim's leaf SHALL be its `claim_pub`, an empty slot SHALL be 0, a node SHALL be `transientHash([l, r])`, and an `ADM` or `VIEW` head SHALL NOT be a leaf. The foreign leaf is set by LDG-007. The claim list and the paths SHALL stay off chain: the operator SHALL publish the epoch's leaf list to a data-availability store at epoch close and SHALL give each job's submitter its slot and path. A withheld list SHALL NOT make a non-member usable. A claim SHALL be usable only after its epoch's collection is accepted.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-006",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "When an operator settles proved jobs, the operator SHALL JOIN the run SETs of one epoch and SHALL submit one `acceptCollection` call for the epoch. An epoch with no job SHALL write nothing. The operator SHALL make at most one ledger write per epoch, and the number of ledger writes SHALL NOT grow with the number of jobs.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-007",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The LEDGER CONTRACT SHALL hold no `foreign` map and SHALL have no FOREIGN opening entry. A foreign claim SHALL stay a member of the collection's `set_root` as a `FOREIGN(fclaim_d)` node, and its leaf in the claims tree SHALL be `transientHash([SHK_CLAIM_FGN, fclaim_pub])` with `fclaim_pub = PoseidonFr_4(SHK_FCLAIM, pack(fclaim_d))`. A consumer SHALL use it with the path check, the `rootAccepted` read and its own nullifier keyed by the leaf. A foreign leaf SHALL NOT pass as a run claim, and a run leaf SHALL NOT pass as a foreign claim.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LDG-008",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "When registry updates exist (N-8), the registry root SHALL be updated at most once per registry epoch, with one new root over the whole entry list, and SHALL NOT be written once per registered or revoked key. A registry epoch with no change SHALL write nothing. The entry list SHALL stay off chain, and a key SHALL be admitted only by a membership path against the registry root proved in circuit (GP-3 hook). `acceptCollection` SHALL refuse a `reg_pub` other than the current root.",
+   "source": "t20-batched:sherlock-modular-leaf-20261111/sherlock-ledger-contract",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LW-001",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "`L` SHALL verify the node root proof on the full tree or the leaf-layer proof on path C. `L` SHALL take the flattened field log and its tree shape as private witness. `L` SHALL expose the statement words, the anchor statement `(mode, j, k, a_in, a_out)`, `run_tag` for a chunk, `layout_d`, `pv` of `W_pv` words, the DAG commitment `X` and the call vector of `2 + L_TX` words as public values.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-002",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "`L_Fr` SHALL verify the proof of `L` under the frozen `L` key (OD-24 option E). The verifier of `L` inside `L_Fr` SHALL follow the key schedule `sched`, the transcript algorithm of HDM-004 and the one-sample WHIR order of HDM-006 (OD-18, OD-19). It SHALL NOT follow the structure of the proof. The wrap SHALL verify the proof of `L_Fr` natively in Fr under the frozen `L_Fr` key and the `L_Fr` transcript (u = 7, HDM-001).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-003",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL have exactly the call vector of `2 + L_TX` words as public inputs, with `L_TX` = 1,024 (OD-7, OD-15). Lane 0 SHALL be `binding_input`. Lane 1 SHALL be `comm`. Unused lanes SHALL be constrained zero.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-004",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL check range and `Canon` on every logged value, a bounded quotient on every lazy reduction and a canonical recomposition on every squeeze. It SHALL absorb `pv` natively and bind it by one `eq` evaluation. It SHALL replay every entry natively. It SHALL check the offset sums and the padding rules. It SHALL require every entry of the reservation `R` (FLG-004, FLG-006).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-005",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL require the `popeq` lane to equal `a_in`. `a_in` and `a_out` SHALL be outputs of `DIGEST` entries of the log. The `a_in` tag SHALL be `SHK_PROGC` when `mode` is ORD or `j = 1`, else `SHK_LOCK`. The `a_out` tag SHALL be `SHK_PROGC` when `mode` is ORD or `j = k`, else `SHK_LOCK`. Lane 0 SHALL equal `bind`. `layout_d` SHALL equal the key constant (OD-5, OD-16).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-006",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL check `Canon` on the limbs of `X`. The wrap SHALL require `X` to equal the cached-trace commitment of `L` that it reads.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-007",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "A general run SHALL be a Sherlock program whose effect words write its run statement `[C_P, input_pub, outcome_pub]` (OD-15), with the public digest forms of FPR-010. The statement SHALL refuse Running. `n_steps` SHALL NOT be public (FPR-013). No state digest, memory root, tail digest, length, address, plain `prog_d` or `result_be` SHALL be public (LW-003, ZK-002). The public program identity `C_P` is LEAD F-7 under owner item N-11.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-008",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The run statement SHALL come from a SET root sealed by NODE INTEGRATION. The opening layer SHALL recompute `claim_d`. It SHALL open the root with one hash as `LEAF(claim_d, n_steps)` or `DEP(claim_d, n_steps, cover_root, in_link)`. It SHALL refuse a SEG, `JOIN`, `FOREIGN`, `ADM` or `VIEW` root. It SHALL check no seal predicate. The opening layer SHALL be `L` (FPR-007, LEAD F-6).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-009",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "A collection SHALL publish `[reg_root, set_root]` through its effect words, with a schema separate from the run statement. `shape_d` SHALL NOT be public (owner ruling O9, 2026-11-13). No claim count SHALL be public, range-checked or used for soundness (AD-2, OWNER). The entry label SHALL discriminate the collection statement from the run statement (FPR-008). The contract entry SHALL be `acceptCollection(reg_pub, set_pub)`.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "settlement"
+  },
+  {
+   "id": "LW-010",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The replay identity SHALL be `claim_d = P2(SHK_RUN, 1, prog_d, input_d, outcome_d)`, without `n_steps` and without any physical field (SRC-007, SRC-023). The contract SHALL key it by its public image `claim_pub = transientHash([C_P, input_pub, outcome_pub])` (FPR-010). Every partition of one run SHALL have the salt of its `input_d`, so every partition SHALL have one `claim_pub`.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-011",
+   "group": "reused",
+   "context": "settlement+wrap",
+   "sentence": "If AD-20 selects option (b), the run statement SHALL either refuse a `DEP` head whose cover holds a FOREIGN member, or check `reg_root` read from contract state. The three run values SHALL NOT change. Under option (a) this requirement SHALL have no effect.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-012",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "Every wrap proof SHALL use fresh CSPRNG blinders. A seeded wrap proof SHALL exist only in a test mode (ZK-003).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-013",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL be one `ZkStdLib`-architecture circuit (OD-24 option E) that ledger 9.1.0.1 reads with `MidnightVK::read`, at k at most 21. It SHALL verify `L_Fr` with the stdlib chips (Poseidon over Fr, range checks, Fr Merkle paths, the sumcheck and WHIR verifier, the Fr transcript replay). It SHALL have no foreign-field, pairing or SHA chip, and no G4 lane gate (LW-017).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-014",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "Wrap keygen SHALL refuse a log capacity that does not hold the largest reservation `R`, and an `L` or `L_Fr` key whose query vector or shape bounds differ from the frozen set. The Fr-native layer between `L` and the wrap SHALL be `L_Fr` of OD-24 option E. No second Fr proving engine SHALL be built as a call-time fallback (OD-11, owner decision 2026-11-12); `L_Fr` is part of the one proving path.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-015",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The kit SHALL be reported complete only when BR-L2, BR-L4 and DEC-L1 are proved with axiom reports that hold only `propext`, `Quot.sound` and `Classical.choice`. Premises A1 to A7, A2' (`lfrSound`) and the static checks `vkL_ok` and `vkLFr_ok` SHALL stay named hypotheses or kernel-checked conditions.",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-016",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The wrap SHALL be qualified on OD-24 option E (step E5), as the stdlib wrap of `L_Fr` over the complete `L` interface (12,166 public words at 5 lane-map pairs (O7), log AIRs, root and anchor statements, DAG key check), with `R` as real non-`NOP` entries, on the full tree and on path C at the worst admitted shapes. Rows and k SHALL come from keygen, and the serialized ledger key SHALL be measured against 50,000 bytes. A benchmark on `L_cached` with an all-`NOP` log SHALL qualify no gate (FZ-3).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-017",
+   "group": "reused",
+   "context": "ledger-verification+wrap",
+   "sentence": "The wrap key SHALL be one that ledger 9.1.0.1 reads unchanged: a `ZkStdLib`-architecture key (OD-24 option E). No G4 figure SHALL be reported as ledger-accepted. Ledger 9 refuses a key with G4 lane gates (M7-0, MEASURED on a toy key).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-018",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "`L_Fr` SHALL be a STARK on stark-backend over BLS12-381 Fr with no extension field. It SHALL take the proof of `L` as private witness, emulate the BabyBear and `EF` arithmetic of its verifier with a bounded quotient on every reduction, and hash the Merkle paths and transcript of `L` natively. Its own hashes SHALL use u = 5, 6, 7 (HDM-001). Its public values SHALL be the `L` key pre-hash, then the public values of `L` packed 8 per Fr word. Its key SHALL pin the `L` key and heights (LW-019).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "LW-019",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "The `L_Fr` key SHALL use unique decoding at log blowup 3, `l_skip` 2, `n_stack` 18, `w_stack` at most 48, `k_whir` 4, queries 98/83/82 and query PoW 20, with one OOD sample per round, every term at 100 bits or more and every grindable term at 101 bits or more (SQG-004).",
+   "source": "sherlock-processor-final-20261111/sherlock-l-and-wrap",
+   "assigned": "wrap"
+  },
+  {
+   "id": "MID-001",
+   "group": "reused",
+   "context": "ledger-verification+wrap",
+   "sentence": "The ledger SHALL check each Sherlock `ContractCall` with `midnight_transient_crypto::proofs::VerifierKey::verify` on the key installed under the entry label. The wrap SHALL be a midnight-proofs PLONK proof with KZG over BLS12-381 and the Blake2b transcript, with a key that the ledger's `MidnightVK::read` reads. Ledger 9 reads only `ZkStdLib`-architecture keys and refuses a G4 key (M7-0), so the wrap is a `ZkStdLib`-architecture circuit over `L_Fr` (OD-24 option E; CPR-004, LW-017).",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MID-002",
+   "group": "reused",
+   "context": "ledger-verification+settlement+wrap",
+   "sentence": "Every exported entry of a Sherlock contract SHALL hold the same universal wrap key.",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MID-003",
+   "group": "reused",
+   "context": "ledger-verification+wrap",
+   "sentence": "The wrap verifier key SHALL be at most 50,000 bytes. A call SHALL have at most 65,536 public inputs. The wrap SHALL have `2 + L_TX` = 1,026 (OD-7, OD-15). A transaction SHALL be at most 1,048,576 bytes. `VERIFIER_MAX_DEGREE` 14 SHALL be read as a bound on the public inputs, not on the circuit k.",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MID-004",
+   "group": "reused",
+   "context": "ledger-verification+network-operations",
+   "sentence": "The wrap SHALL be qualified on chain by its own records: verifier-key bytes, proof bytes, verify time and fee at `2 + L_TX` public inputs, then a deploy and call of the wrap key on the local devnet and on Preview. The records of today's k = 21 decider SHALL be read as evidence of the transaction path only.",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MID-006",
+   "group": "reused",
+   "context": "ledger-verification+network-operations",
+   "sentence": "The Preview qualification SHALL name the node build that the Preview node reports, `2.1.101-bbd616b1`. The Preview pin SHALL record the same build. A Mainnet operation SHALL follow SWF-009 of `sherlock-vm-consensus-20261107`.",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MID-007",
+   "group": "reused",
+   "context": "ledger-verification",
+   "sentence": "The design lists no Lean obligation for the Midnight side. The settlement rule SHALL rest on LDG-L1 of kit LEDGER CONTRACT in `sherlock-modular-leaf-20261111`.",
+   "source": "sherlock-processor-final-20261111/sherlock-midnight-side",
+   "assigned": "ledger-verification"
+  },
+  {
+   "id": "MYC-ACC-004",
+   "group": "reused",
+   "context": "call-flow",
+   "sentence": "The Mycroft host shall set the transcript version to the ledger's current one (2.3, `onchain-runtime/src/transcript.rs:89-90`).",
+   "source": "mycroft-factory:mycroft/spec/specs/acceptance",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "MYC-ACC-007",
+   "group": "reused",
+   "context": "call-flow+sherlock-execution",
+   "sentence": "When the Mycroft toolchain certifies a suite call, the Mycroft toolchain shall show word equality as in X1 and the same ledger state and effects after the call as the native call.",
+   "source": "mycroft-factory:mycroft/spec/specs/acceptance",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-ACC-008",
+   "group": "reused",
+   "context": "conformance",
+   "sentence": "When the Mycroft project reports conformance, the Mycroft project shall label model proofs, assumed primitives, native differential tests and ledger tests separately, and every number MEASURED, DERIVED or ESTIMATE.",
+   "source": "mycroft-factory:mycroft/spec/specs/acceptance",
+   "assigned": "conformance"
+  },
+  {
+   "id": "MYC-BLT-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When a circuit calls `transientHash`, the Mycroft compiler shall emit one sponge rule of the Fr Poseidon kit over the same input words, in the same order, as the native circuit.",
+   "source": "mycroft-factory:mycroft/spec/specs/builtins",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-BLT-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When a circuit calls an embedded-curve operation (`ec_mul`, `ec_mul_generator`, `hash_to_curve`, `from_coordinates`, `into_coordinates`, `jubjub_scalar_from_native`), the Mycroft compiler shall emit the matching rule of the Jubjub kit, which checks curve membership and the scalar range as the native operation does.",
+   "source": "mycroft-factory:mycroft/spec/specs/builtins",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-BLT-007",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "Where the machine version has the keccak kit, when a circuit calls `keccak256`, the Mycroft compiler shall emit the keccak chip rule, which the R_SL leaf proves with keccak request rows fed by the SHA input rows into the keccak AIR. Where the machine version has the secp256k1 kit, the Mycroft compiler shall lower a secp256k1 operation to the `Secp*` chips of that kit (MYC-FE-013 to MYC-FE-020), which the leaf proves on one word per field element, with the field modulus as a preprocessed key constant of the row. Neither kit adds a program-specific key: both sit inside the 6-or-9 AIR bucket of the universal leaf. Secp256r1 and Curve25519 operations, and `sha512`, have no kit and are refused (MYC-FE-017, MYC-BLT-008).",
+   "source": "mycroft-factory:mycroft/spec/specs/builtins",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-CHIP-001",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "The Sherlock leaf shall have one R_SL chip set whose AIRs are WORD, ALU, row PUBLIC, RANGE, SHA (four AIRs) and the keccak AIR, at most 9 AIRs in all (the 6-or-9 AIR bucket of the universal leaf), and shall prove each compiled Sherlock instruction (`field`, `mov`, `eq`, `select`, `lt`, `divmod2`, `range`, `assertEq`, `assert`, `tape`, `eff`, `ret`, halt, and one chip per kit builtin the compiler emits, including the `Secp*` and Jubjub chips) as a fixed sequence of micro-op rows over those AIRs.",
+   "source": "mycroft-factory:mycroft/spec/specs/chipset",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-CHIP-002",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When the leaf proves one R_SL step, the leaf shall accept the step if and only if `SL.step` of the same instruction on the same machine state returns `ok` with the same next state.",
+   "source": "mycroft-factory:mycroft/spec/specs/chipset",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-CHIP-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If `SL.step` rejects an instruction, then the leaf shall have no accepting row for that step.",
+   "source": "mycroft-factory:mycroft/spec/specs/chipset",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-CHIP-004",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The leaf shall expose the statement `[bind, comm] ++ anchor ++ W ++ zeros` of length `2 + L_TX` as its public values, and no tape word, witness word or `rand` beyond it.",
+   "source": "mycroft-factory:mycroft/spec/specs/chipset",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-CLM-009",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft host shall keep `prog_d`, `r_P`, `input_d`, `outcome_d`, `n_steps`, inner proofs and shard metadata out of every published object; the only program-dependent public word is the anchor word `C_P`.",
+   "source": "mycroft-factory:mycroft/spec/specs/claims",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-CLM-023",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft planner shall compute `prog_d = H(DOM_PROG, image_d, plan_d, key_root, machine_version)`.",
+   "source": "mycroft-factory:mycroft/spec/specs/claims",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-001",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "When the Mycroft compiler compiles a contract in Stage 1, the Mycroft compiler shall consume the ZKIR 3.1 file that stock `compactc` 0.36.0 writes for each proof circuit, together with the `contract-info.json` of the same build.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-FE-002",
+   "group": "reused",
+   "context": "call-flow+compact-compilation",
+   "sentence": "If a ZKIR file states a version other than the pinned version 3.1, then the Mycroft compiler shall refuse the contract and name the version it found.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-FE-009",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "When the Mycroft compiler compiles the same source with the same configuration twice, the Mycroft compiler shall write byte-equal output.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-FE-010",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The Mycroft compiler shall compute the program image of an entry, its ABI and its static schedule from the source and the configuration only.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-FE-011",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "If the Mycroft compiler refuses a contract, then the Mycroft compiler shall report the entry and the named cause, and write no program for the contract.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-FE-013",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Where the machine version has the secp256k1 kit, when a circuit input has the type `Scalar<Secp256k1>`, `Base<Secp256k1>` or `Point<Secp256k1>`, the Mycroft frontend shall read the 2 (field) or 5 (point) raw words of the midnight-circuits 7.3.0 public-input encoding as `tape` reads of kind `arg`, in input order, and then emit one `SecpDecode` chip with `ps = [t]` that maps the raw words to the layout words of the value.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-014",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When the Mycroft frontend reads a circuit, the frontend shall give every ZKIR variable one type (native, digest, `Bytes<32>` pair, secp256k1 base, scalar or point) and expand it into that type's fixed number of word variables, numbered above the largest variable number of the file.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-015",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When an `add`, `mul`, `neg`, `inv`, `test_eq`, `cond_select`, `constrain_eq`, `from_bytes`, `to_bytes`, `ec_mul`, `ec_mul_generator`, `into_coordinates`, `from_coordinates` or `encode` instruction has a secp256k1 operand or result type, the Mycroft frontend shall emit the matching `Secp*` chip of kit `Secp256k1` (`SecpAdd`, `SecpMul`, `SecpNeg`, `SecpInv`, `SecpEq`, `SecpSelect`, `SecpAssertEq`, `SecpFromBytes`, `SecpToBytes`, `SecpEcMul`, `SecpEcMulGenerator`, `SecpIntoCoordinates`, `SecpFromCoordinates`, `SecpEncode`) with the type tag in `ps` where the interface has one, and with the operand words in layout order.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-016",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If an instruction mixes a secp256k1 or `Bytes<32>` pair value with a native word or an immediate, or gives a typed value to an instruction that has no typed rule (for example `impact`, `assert`, `persistent_hash`, `mul` of points, `inv` of a point), then the Mycroft frontend shall refuse the circuit with the refusal typeMismatch and name the instruction and its operand types.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-017",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a circuit input, a `from_bytes` target or a transcript read has a `Secp256r1` or `Curve25519` type, then the Mycroft frontend shall refuse the circuit with the refusal unsupported and name the type.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-018",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a `private_input` or `public_input` instruction, or a circuit output, has a type other than `Scalar<BLS12-381>`, then the Mycroft frontend shall refuse the circuit with the refusal inputType and name the type.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-019",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When the Mycroft frontend reads `to_bytes` of a native word, the frontend shall emit `div_mod_power_of_two` by 248, giving the `Bytes<32>` pair `(x mod 2^248, x >> 248)`. When it reads `bytes_from_natives` of length 32, the frontend shall emit the range checks `lo < 2^248` and `hi < 2^8` and the pair. When it reads `bytes_into_natives` of a pair into 2 words, the frontend shall emit two copies. When it reads `reconstitute_field`, the frontend shall emit the Bytes kit chip `ReconstituteField` with `ps = [bits]`, which gives `divisor 2^bits + modulus` and has no witness unless `bits <= 248`, `modulus < 2^bits`, `divisor < 2^(255 - bits)` and the sum is below `R`.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-020",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a circuit has a secp256k1 input or operation and the machine version has no secp256k1 kit, then the Mycroft compiler shall refuse the circuit with the refusal missingKit and name the kit `secp256k1` and the first `Secp*` chip (for an input, `SecpDecode`).",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-FE-021",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "Where the machine version has the Jubjub kit, when a circuit computes a Jubjub value (`jubjub_scalar_from_native`, `ec_mul_generator`, `ec_mul`, `hash_to_curve`, `from_coordinates`, `add` of two points), the Mycroft frontend shall hold a Jubjub point as its two affine coordinate words `[x, y]` and a Jubjub scalar as one word, and emit the Jubjub kit chip on those words (`JubjubScalarFromNative`, `EcMulGenerator`, `EcMul`, `HashToCurve`, `FromCoordinates`, `EcAdd`). When it reads `into_coordinates` or `encode` of a Jubjub value, the frontend shall emit copies of its words. If a Jubjub value reaches an instruction with no Jubjub rule, then the frontend shall refuse the circuit with typeMismatch.",
+   "source": "mycroft-factory:mycroft/spec/specs/frontend",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-KEY-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall not generate, change or require a new node, `L`, `L_Fr` or wrap key for any program, entry, input, outcome or run length.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-KEY-002",
+   "group": "reused",
+   "context": "call-flow",
+   "sentence": "When a compiled contract is deployed, the Mycroft host shall store the one universal wrap key as the verifier key of every entry.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "MYC-KEY-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall compute `prog_d` from the image, the plan, `key_root` and the machine version only.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-KEY-004",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall give two programs with different images different values of `prog_d`.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-KEY-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft planner shall place every per-program key commitment (app, leaf layer, internal-for-leaf, path C leaf `X` at index 3) under `key_root`, bind `key_root` into `prog_d`, and select chip sets only from the frozen menu.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-KEY-008",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When the universal key set changes, the Mycroft compiler shall produce the same `image_d` from the same source and report the new `prog_d` and anchor word.",
+   "source": "mycroft-factory:mycroft/spec/specs/keys",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-005",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If the folded condition of an assert is false, then the compiled program shall reject the run with no result.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-006",
+   "group": "reused",
+   "context": "conformance+sherlock-execution",
+   "sentence": "The compiled program shall give, for each instruction that is not an input, the same bindings, effect words and outputs as the native reference, or the same rejection.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-007",
+   "group": "reused",
+   "context": "call-flow+sherlock-execution",
+   "sentence": "If a run rejects, then the compiled program shall yield no result, so that no proof and no call statement exist for the call.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-009",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When a run halts, the compiled program shall yield `comm = transientCommit(argument words ++ output words, rand)` as the native reference computes it.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-010",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "When the native reference accepts a call, the compiled program shall halt on the host tape of that call with the same effect vector, zeros included, the same outputs and the same communication commitment.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-012",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "The compiled program shall take the same number of steps, read the same number of tape words and write the same number of effect words in every run that halts.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-013",
+   "group": "reused",
+   "context": "compact-compilation+sherlock-execution",
+   "sentence": "The Mycroft compiler shall emit only instructions of the fixed straight-line rule family and chip rules of kits in the machine version, so that no contract adds a rule, a chip or a key.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-LOW-018",
+   "group": "reused",
+   "context": "conformance",
+   "sentence": "When the conformance test records a result, the conformance test shall keep separate statuses for native compile, ZKIR emission, execution and proof acceptance, together with the source hashes, version pins and exact command outcome.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "conformance"
+  },
+  {
+   "id": "MYC-LOW-019",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The Lean specification shall state, for each theorem it exports, its source semantics, its target semantics and the parameters it trusts.",
+   "source": "mycroft-factory:mycroft/spec/specs/lowering",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-REF-032",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "If the IR version or carrier is not the pinned and validated one, then the Mycroft compiler shall refuse the input.",
+   "source": "mycroft-factory:mycroft/spec/specs/refusals",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-REF-036",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a word read from the tape is not canonical (not below `R`), or a curve point read from the tape is not on the curve, then the Sherlock prover shall refuse the run.",
+   "source": "mycroft-factory:mycroft/spec/specs/refusals",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-REF-037",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If the run fails (false assert, arithmetic underflow, failed range check of any word including a witness word, forged quotient or remainder, refused builtin input, native ADT failure, forged coin input), then the Sherlock prover shall end the run as `Rejected` with no result.",
+   "source": "mycroft-factory:mycroft/spec/specs/refusals",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-REF-038",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If the tape is too short, has leftover words, non-zero filler, a wrong selector or extra or missing records, then the Sherlock prover shall refuse the run.",
+   "source": "mycroft-factory:mycroft/spec/specs/refusals",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-REF-052",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a configuration needs a program-specific or capacity-specific key, a preprocessing key per program, a zero salt or an entry key other than the wrap key, then the Mycroft key generation shall refuse the configuration.",
+   "source": "mycroft-factory:mycroft/spec/specs/refusals",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-SEAL-005",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The universal seal shall fix `anchor_slot` with the wrap key: slot 15 in the production profile, cell `(0)` in the T18 (c) spike on the existing T10m keys (X3).",
+   "source": "mycroft-factory:mycroft/spec/specs/seal",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-SEAL-015",
+   "group": "reused",
+   "context": "call-flow",
+   "sentence": "The universal seal shall use one verifier key for every contract, entry and run, generated with no program, contract or entry as input (X6).",
+   "source": "mycroft-factory:mycroft/spec/specs/seal",
+   "assigned": "call-flow"
+  },
+  {
+   "id": "MYC-SEAL-021",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "If a contract's ledger layout uses the top-level index `anchor_slot` of the profile, then the Mycroft compiler shall refuse the contract before deploy and name the colliding field.",
+   "source": "mycroft-factory:mycroft/spec/specs/seal",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-TAPE-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The compiled program shall read exactly one tape word for each argument word and each input instruction, in program order, whether the guard of the instruction is true or false.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If a run ends with tape words left, or needs a tape word that is absent, then the compiled program shall reject the run.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-007",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "If the selector word of the tape is not the selector of the entry, then the compiled program shall reject the run.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-008",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The compiled program shall read the tape header as salt, selector and commitment randomness, in that order before the argument words, and bind the salt to no variable.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-010",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall add no public word that the native circuit does not have, so an erased `disclose` lowers to no instruction.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-012",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall keep the tape, the salt and every witness and read word out of the effect vector, except where the native circuit places a word there.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TAPE-015",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "When the host builds the tape of a call with secp256k1 inputs, the host shall place the raw preimage input words (2 per field element, 5 per point) in the argument slots in input order, so that the tape arguments and `comm` equal the native preimage inputs.",
+   "source": "mycroft-factory:mycroft/spec/specs/witness-tape",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TRN-008",
+   "group": "reused",
+   "context": "conformance+sherlock-execution",
+   "sentence": "The Mycroft test harness shall take the native reference words of a call from the suite's compactc 0.36.0 reference vector of the same call, never from Mycroft's own output.",
+   "source": "mycroft-factory:mycroft/spec/specs/transcript",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TRN-011",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall record in the ABI one transcript length `L_e` per entry that does not depend on any guard, witness or argument.",
+   "source": "mycroft-factory:mycroft/spec/specs/transcript",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TRN-014",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The Mycroft compiler shall compute lane 1 `comm` with the native formula `transient_commit(inputs ++ outputs, comm_rand)`, with no selector and no extra word.",
+   "source": "mycroft-factory:mycroft/spec/specs/transcript",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "MYC-TRN-017",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "When the Mycroft toolchain reports transcript conformance of a call, the Mycroft toolchain shall report the three checks of decision X1, naming the frame (anchor words, tail noop, declared gas, guaranteed op count) as the only declared difference from the native transaction.",
+   "source": "mycroft-factory:mycroft/spec/specs/transcript",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "MYC-VAL-014",
+   "group": "reused",
+   "context": "compact-compilation",
+   "sentence": "The Mycroft compiler shall represent a native curve value as one IR register whose field encoding has the words of its type (a `Point<Jubjub>` is `x` then `y`), with the native default of the type (the identity `(0, 1)` for a point).",
+   "source": "mycroft-factory:mycroft/spec/specs/values",
+   "assigned": "compact-compilation"
+  },
+  {
+   "id": "PRD-002",
+   "group": "reused",
+   "context": "placement",
+   "sentence": "The daemon SHALL hold a pool of one-use blinding slots with fresh CSPRNG blinders. Each slot SHALL be consumed by exactly one `wrap_prove`. A slot SHALL NOT be serialized off the machine. A slot made by a helper SHALL be refused.",
+   "source": "sherlock-processor-final-20261111/sherlock-prover-daemon",
+   "assigned": "placement"
+  },
+  {
+   "id": "PRD-003",
+   "group": "reused",
+   "context": "placement",
+   "sentence": "No STARK proof, prover checkpoint or shard plan of a private program SHALL leave the daemon's trust domain. The trust domain SHALL be the user's own devices and GPUs (OD-9).",
+   "source": "sherlock-processor-final-20261111/sherlock-prover-daemon",
+   "assigned": "placement"
+  },
+  {
+   "id": "RFB-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The REFERENCE BRIDGE SHALL supply a semantic evaluator (R1) for nominal types, constructors of any arity, planned matches, structured inputs and every outcome. The normative artifact SHALL be the choice of AD-21 (OWNER), with the recommendation a separate evaluator over `moriarty-sherlock-nominal/1`. The work SHALL be sized by X13 first. The language SHALL NOT be cut to a supported subset.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-reference-bridge",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "RFB-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The projection (R3) from the owner-machine state at an owner-event boundary to the reference state SHALL be total for every form of R1. `UnsupportedGeneric` and `UnmappedRule` SHALL NOT occur on the corpus. The corpus SHALL fire all 120 enabled rules, or SHALL record why a source program cannot reach a rule.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-reference-bridge",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "RFB-004",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "The coverage report (R4) SHALL list rules fired, forms projected and gaps per run. A gap SHALL fail the harness and SHALL NOT be skipped. The whole-leaf harness SHALL be an acceptance gate only after the report has zero gaps. The bridge SHALL be trusted host diagnostics only and SHALL NOT be cited as a soundness proof.",
+   "source": "sherlock-modular-leaf-20261111/sherlock-reference-bridge",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "SPL-011",
+   "group": "reused",
+   "context": "call-flow+sherlock-execution",
+   "sentence": "The prover SHALL make the per-run schedule (cuts, tree, shape, device, concurrency, suspensions) from a metered run and the setup-mode profile `sherlock-profile/1`. `key_root` SHALL hold no schedule menu or shard-count list. The setup mode SHALL NOT select a key, a shape or `plan_d`. The schedule SHALL stay on the user's machine. Each leaf shape SHALL be checked against `key_root`, and every schedule of one run SHALL give one `claim_pub` (FZ-5, SC-010 to SC-013).",
+   "source": "sherlock-processor-final-20261111/sherlock-shard-plan",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "SWF-009",
+   "group": "reused",
+   "context": "network-operations",
+   "sentence": "The 2026-11-08 amendment (`MORIARTY-COMPLETION-PROGRAM.md:270-283`) supersedes the `:269` mainnet ban. While any of its conditions is unmet (local Docker at 9.1.0.1 passed, Preview qualification receipts committed, Preview rollback rehearsal receipt committed, pre-deploy checklist passed), no mainnet operation SHALL run.",
+   "source": "sherlock-vm-consensus-20261107/sherlock-delivery",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "UIREQ-001",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a supported program is supplied as input, the interpreter SHALL evaluate it using the same versioned transition rules used for other supported programs.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-002",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a program is admitted, tooling SHALL report its exact supported grammar and versioned execution profile.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-003",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-004",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-005",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a named function calls itself or another named function, the interpreter SHALL apply the ordinary call/return relation.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-006",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a scalar primitive executes, the interpreter SHALL produce its declared checked UInt128 or Bool outcome.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-007",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a declared constructor is evaluated, the interpreter SHALL produce a finite immutable value of its declared nominal type.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-008",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-009",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN an implementation shares an immutable subvalue physically, the interpreter SHALL preserve its structural observations and declared traversal accounting.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-010",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a non-tail call is entered, the interpreter SHALL retain its pending caller computation in explicit frames.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-011",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a pure value returns with no remaining frames, the interpreter SHALL expose that value as a completed pure result.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-012",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a declared execution profile cannot perform its next transition within its runtime bounds, the interpreter SHALL publish the bound outcome defined by that profile.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-013",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a semantic transition consumes work, tooling SHALL report its resource observations under the selected versioned ResourceManifest.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-014",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a supported execution is checkpointed, its encoding SHALL retain the complete resumable machine state defined by its profile.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-015",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a valid pending observation resumes a supported waiting callee, execution SHALL continue through its retained caller frames.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-016",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN proof production inserts a technical chunk boundary, that boundary SHALL preserve source-visible execution observations.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-017",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN the future financial extension reports a segment outcome, it SHALL expose the complete ordered financial observation defined by its adapter.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-018",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-019",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a future financial segment fails locally, the adapter SHALL distinguish its discarded tentative delta from the retained committed prefix, consumed work and residual duties.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-020",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN the compiler maps a financial segment to target phases, it SHALL report the exact correspondence between source outcomes and guaranteed/fallible phase outcomes.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-021",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a K trace is compared with Quint, the adapter SHALL identify its common domain and rule-to-action projection.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-022",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN compilation claims support for a construct, its lowering SHALL have a named semantic correspondence obligation.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-023",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN the interpreter is connected to the native backend, the integration SHALL identify each model transition and its circuit/host/native consumer.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-024",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN an optimization replaces a reference operation or representation, its proposal SHALL state a preservation predicate over all declared observations and costs.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-025",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN an interpreter capability is reported, its evidence record SHALL identify predicate, source tree, profile, consumer, bounds, target and evidence class.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-026",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN Sherlock's reference execution design is prepared for compiler/native integration, the design SHALL include the required Lean/Clean semantic, representation and bounded-step correspondence stage.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-027",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN preparation indexes a supported source program, it SHALL produce a ProgramImage preserving source membership, original function-table order and SourceOccurrenceId provenance.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-028",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN the proposed sherlock-helper-microstep/1 profile performs helper work, it SHALL advance through explicit helper controls with a declared finite bound per transition.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-029",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a ReferenceState is offered to the bounded representation adapter, it SHALL return a MachineImage Bounds F related by RepresentationRelation or an explicit out-of-domain result.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-030",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-031",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a bounded step is prepared for a backend, tooling SHALL report separate ConstraintPlan and WitnessPlan artifacts with their BackendCapabilities disposition.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-032",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN multiple reference transitions share one physical step or chunk, the implementation SHALL expose the ordered ReferenceSlice through its earliest reference stop.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-033",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a reference step is specialized, the specializer SHALL produce bounded ResidualStepIR preserving every dynamic reference boundary.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-034",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "UIREQ-035",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "WHEN a WitnessPlan is evaluated, its baseline SHALL execute a typed dependency DAG in a deterministic uncached order to materialize complete StepRecords.",
+   "source": "sherlock-universal-interpreter-design/universal-interpreter",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ZK-001",
+   "group": "reused",
+   "context": "placement+sherlock-execution",
+   "sentence": "Leaves, nodes, `L`, `L_Fr` and the wrap prover SHALL run on the user's machine. Hosts that the user owns SHALL count as the user's machine (OD-9, case A). A host that the user does not own is a helper (case B) and SHALL be refused (ZK-018). No PCS masking SHALL be added while every STARK layer stays in case A. STARK proofs, prover checkpoints and the shard plan of a private program SHALL be treated as secrets like the witness.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "placement"
+  },
+  {
+   "id": "ZK-002",
+   "group": "reused",
+   "context": "network-operations+sherlock-execution",
+   "sentence": "The published view of a call SHALL be the call vector and one blinded wrap proof. The used log count, the deferred-or-emulated split, the shard plan, the AIR set and heights, and plain `prog_d` SHALL NOT be in that view.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "ZK-003",
+   "group": "reused",
+   "context": "wrap",
+   "sentence": "Every wrap proof SHALL take fresh CSPRNG blinders. `r_P` SHALL be drawn once per deployment, the input salt once per run, and the wrap blinders once per proof (ZK-012, ZK-013). A seeded blinder SHALL be accepted only by a build with the cargo feature `test-seed` (ZK-014). Byte-identity tests of the GPU wrap SHALL use the test-only seed patch under `GW_DET=1` in a `test-seed` build.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "wrap"
+  },
+  {
+   "id": "ZK-006",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The run salt SHALL be 8 BabyBear words from the user's CSPRNG, placed first in the preimage of `input_d = P2(SHK_IN, salt, val_d, fuel_lo, fuel_hi, stack_limit)` and fixed for the run at INIT. The salt SHALL NOT be published in public values, the call vector, a log entry or any other form, except inside the digests of ZK-011. `outcome_d` SHALL carry no salt of its own. The public digests SHALL follow ZK-011.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "settlement"
+  },
+  {
+   "id": "ZK-007",
+   "group": "reused",
+   "context": "network-operations",
+   "sentence": "The anchor lane SHALL carry `C_P` or a lock value `A_j`. Plain `prog_d` SHALL NOT reach the ledger through the anchor (ANC-001).",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "network-operations"
+  },
+  {
+   "id": "ZK-008",
+   "group": "reused",
+   "context": "sherlock-execution",
+   "sentence": "Per-AIR heights and the set of AIRs present SHALL stay inside the user's trust boundary. `n_steps` SHALL NOT be public (FPR-013, LEAD F-12 under the owner's `n_steps` rule): the exact height `n_steps = h_hi` that SEAL forwards (NODE-003) SHALL stay private inside the SET forms. Leaf counts SHALL stay on the user's machine with the rest of the schedule (SPL-011). Where a secret branch changes the transcript length of a chunked call, filler chunks SHALL pad the chunk count to the entry bound.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "sherlock-execution"
+  },
+  {
+   "id": "ZK-009",
+   "group": "reused",
+   "context": "placement",
+   "sentence": "The design SHALL NOT allow a helper (case B of ZK-001) that proves a STARK layer or `L`, a remote unmasked MSM, NTT, quotient or Merkle hash, the full sponge state on a helper, reuse of a blinding slot, or a helper-made slot. No aggregator SHALL receive STARK proofs. One wrap SHALL settle one `ContractCall`. A user batch SHALL be opt-in with one batch digest per `acceptRun` (OD-12).",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "placement"
+  },
+  {
+   "id": "ZK-011",
+   "group": "reused",
+   "context": "settlement",
+   "sentence": "The public digests SHALL be `C_P = PoseidonFr_4(SHK_PROGC, pack(P2(DOM_PROGC, r_P, prog_d)))` with `r_P` 8 words per deployment, `input_pub = PoseidonFr_4(SHK_INPUT, pack(input_d))` and `outcome_pub = PoseidonFr_4(SHK_OUTCOME, pack(P2(DOM_OUTHIDE, input_d, outcome_d)))`, so the outcome is hidden under the salt inside `input_d` (FP-4, FPR-010). The shard plan SHALL bind to the unsalted `prog_d` inside the STARK layers only. ZK-001 and LW-012 keep proofs local and blinders fresh.",
+   "source": "sherlock-processor-final-20261111/sherlock-zero-knowledge",
+   "assigned": "settlement"
+  }
+ ],
+ "undefined_citations": []
+}

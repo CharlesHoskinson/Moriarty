@@ -1,0 +1,16 @@
+| ID | group | context | verdict | Lean artifact | Quint/replay | source / reason |
+|---|---|---|---|---|---|---|
+| LVR-001 | C | ledger-verification | MODELED | `Spec.apply` check branch, `Inv.exitZero`, `LVR_005_exit_status`, pin `pin_unpinned` | pending (Formal-Quint) | LEAD PICK: a check whose manifest gate did not pass exits nonzero (stock verifier = pinned crates) |
+| LVR-002 | C | ledger-verification | MODELED | `Inv.gateCrates`, `LVR_002_gate`, pins `pin_gate_*` | pending (Formal-Quint) | the gate is MISSING in code (spec status) |
+| LVR-003 | C | ledger-verification | MODELED | `Inv.keyNotG4`, `LVR_003_no_g4_key`, pin `pin_g4` | pending (Formal-Quint) | see ORACLE.md |
+| LVR-004 | C | ledger-verification | MODELED | `Inv.controlsPerCheck`, `LVR_004_ten_controls`, `lvr004_lanes` (7 lanes 0, 10, 20, 34, 39, 513, 1025 distinct, 7 + 3 = 10) | pending (Formal-Quint) | see ORACLE.md |
+| LVR-005 | C | ledger-verification | MODELED | `Inv.exitZero`, `LVR_005_exit_status`, pins `pin_lane_passed`, `pin_flip_passed`, `pin_honest_refused` | pending (Formal-Quint) | see ORACLE.md |
+| LVR-006 | C | ledger-verification | MODELED | `Inv.submitAfterNative`, `LVR_006_native_before_submit`, pin `pin_submit_before_native` | pending (Formal-Quint) | see ORACLE.md |
+| LVR-007 | C | ledger-verification | MODELED | `Inv.nativeSplit`, `LVR_007_refused_not_submitted`, `LVR_007_step`, pins `pin_native_refused`, `pin_reprove` | pending (Formal-Quint) | see ORACLE.md |
+| LVR-008 | C | ledger-verification | MODELED | `Inv.genesisSet`, `LVR_008_genesis_stable`, pins `pin_first_connect`, `pin_other_chain`, `pin_same_chain` | pending (Formal-Quint) | LEAD PICK: a reconnect at the same genesis keeps the first version (the later-version record is STL-006's task per spec status) |
+| MID-001 | reused | ledger-verification | MODELED | `apply` loadKey branch (the ledger reader refuses a G4 key), `LVR_003_no_g4_key` | pending (Formal-Quint) | the PLONK/KZG/Blake2b proof form is a constant of the wrap context |
+| MID-002 | reused | ledger-verification | FINDING | `Settlement.Consistency.finding_mid002_read_entries` | n/a (finding) | FAL-LEDGER-VERIFICATION-1: MID-002 (every entry holds the wrap key) contradicts SLC-004 (native keys on read entries); spec text unamended |
+| MID-003 | reused | ledger-verification | CONSTANT-CHECKED | `measured_vk_bytes`, `mid003_public_inputs`, `measured_tx_bytes`, `Consistency.MID_003_ok` | n/a | VK 1,325 B (t17-preview@9e1e7f398:research/sherlock-t17-preview-20261114/RESULTS.md:17), acceptRun 6,780 B (RESULTS.md:19), 6,783 B and limit 1,048,576 (t20-batched@5dc1be2ee:research/sherlock-t20-batched-20261114/RESULTS.md:11,15); T10m key set, T25 open |
+| MID-004 | reused | ledger-verification | SPEC-CHECKED | `Consistency.MID_004_ok`, `consistent`, `MID_004_needs_preview` | n/a | a list of qualification records, no transition; consistent with MID-003 |
+| MID-006 | reused | ledger-verification | SPEC-CHECKED | `Consistency.MID_006_ok`, `consistent`, `MID_006_needs_pin` | n/a | a configuration pin (build 2.1.101-bbd616b1), no transition |
+| MID-007 | reused | ledger-verification | SPEC-CHECKED | `Consistency.MID_007_ok`, `consistent` | n/a | a statement about obligations; settlement rests on LDG, modeled in formal/sherlock-e2e/settlement |

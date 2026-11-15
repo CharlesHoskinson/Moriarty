@@ -1,0 +1,18 @@
+| ID | group | context | verdict | Lean artifact | Quint/replay | source / reason |
+|---|---|---|---|---|---|---|
+| ECS-001 | A | conformance | CONSTANT-CHECKED | `measured_manifest`, Consistency `ECS_001_ok` | n/a | 36 programs = 33 compile + 3 do not (mycroft-factory mycroft/tests/compact-suite/MANIFEST.json schema line 2, compactc line 3, 36 records); no state machine for the setup tool. Key set: none (native) |
+| ECS-002 | A | conformance | MODELED | `Inv.rejectedNoWords`, `measured_native_refs`, pin `pin_rejected_ref` | pending (Formal-Quint) | 208 = 146 ok + 62 rejected (RESULTS.md:5) |
+| ECS-003 | A | conformance | MODELED | `ECS_003_stage_order`, `Inv.order`, `Inv.stageRan`, `Inv.compileMismatch` | pending (Formal-Quint) | stages compile, prove, settle, compare in order; a compile mismatch skips prove |
+| ECS-004 | A | conformance | MODELED | `ECS_004_table_sums`, `Inv.sums`, `Inv.oneClass`, `measured_dryrun_classes` | pending (Formal-Quint) | dry-run classes 0+62+0+145+0+1 = 208 (t23-suite@16836929b T23-DRYRUN.md:13-19, T10m-era tooling) |
+| ECS-005 | A | conformance | MODELED | `ECS_005_blocked_reason`, `Inv.reasonOk`, `measured_blocked_reasons` | pending (Formal-Quint) | LEAD PICK: no R_SL chip set is classed before the dispatch check (first blocking stage). 139+3+2+1 = 145 (T23-DRYRUN.md:27-30) |
+| ECS-006 | A | conformance | MODELED | `Inv.kitOk`, `measured_kit_blocked`, pins `pin_kit_absent`, `pin_kit_present` | pending (Formal-Quint) | kit-blocked 3+2+1 = 6 (T23-DRYRUN.md:28-30). Current suite: 3 blocked (FAL-COMPACT-COMPILATION-2) |
+| ECS-007 | A | conformance | MODELED | `ECS_007_no_dispatch`, `Inv.dispatchOk` | pending (Formal-Quint) | no box message with dispatch off |
+| ECS-008 | A | conformance | MODELED | `ECS_008_no_preview`, `Inv.previewOk`, `measured_dryrun_preview` | pending (Formal-Quint) | no Preview tx with preview off; dry run sent 0 (T23-DRYRUN.md:3). See FAL-CONFORMANCE-1 |
+| ECS-009 | A | conformance | MODELED | `ECS_009_derived_label`, `Inv.derivedOk`, pin `pin_derived` | pending (Formal-Quint) | DERIVED exactly when no rejection was executed |
+| ECS-010 | A | conformance | MODELED | `ECS_010_mismatch_not_done`, `Inv.completeOk`, Consistency `ECS_010_ok` | pending (Formal-Quint) | state part modeled (mismatch keeps the run not complete); table columns as a design predicate |
+| ECS-011 | A | conformance | CONSTANT-CHECKED | `measured_counts`, Consistency `ECS_011_ok`, `ecs011_ecs004` | n/a | 33 programs, 106 = 105 + pure h02, 208 calls (mycroft-factory mycroft/factory/REPORT.md:8-9, RESULTS.md:5; also compiler/SUITE-COVERAGE.md:5). No state machine. Key set: none (native/T10m-era dry run). Sources differ in equal/blocked split (FAL-COMPACT-COMPILATION-2) |
+| ECS-012 | A | conformance | MODELED | `ECS_012_denominator`, `Inv.denominator`, `measured_dryrun_denominator` | pending (Formal-Quint) | 0 mismatches of 0 compared (T23-DRYRUN.md:21) |
+| ECS-013 | A | conformance | MODELED | `ECS_013_one_identity`, `Inv.identity`, pin `pin_duplicate` | pending (Formal-Quint) | a repeated identity is not counted again |
+| ECS-014 | A | conformance | MODELED | `ECS_014_complete_needs_evidence`, `Inv.completeOk`, `Inv.evidenceRange`, pins `pin_settle_dry`, `pin_incomplete_report` | pending (Formal-Quint) | seven evidence items per eligible call; a pass without a Preview tx stays incomplete (FAL-CONFORMANCE-1) |
+| MYC-ACC-008 | reused | conformance | SPEC-CHECKED | Consistency `MYC_ACC_008_ok` | n/a | no state machine: a labelling property of the report |
+| MYC-LOW-018 | reused | conformance | SPEC-CHECKED | Consistency `MYC_LOW_018_ok` | n/a | no state machine: a record-keeping property of the conformance test |

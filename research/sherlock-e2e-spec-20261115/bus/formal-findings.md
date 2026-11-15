@@ -202,7 +202,7 @@ Replay disagreement (oracle `not-published`, trace `leaf-proving/traces/regressi
 - Counterexample: oracle `toDeployed ++ [o 9 1, o 11 1, o 12 0, o 13 2, o 14 1]` -> `included = true`, `savedRefused = false` (Tests `pin_resolve`); the code takes the other branch.
 - Verdict: CONFIRMED on the real code (`t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:686-689`, `markRefused('A ... but not indexed')`). Already listed as TO BUILD in the FRC-013 status scenario; no spec change needed. Fix belongs to the T23 driver lane; its named replay test is `pin_resolve`.
 
-## FAL-COMPACT-COMPILATION-1 [Formal-Lean-AC -> Fable-C] CF-001 reads `Lflattened`; ECC-001 reads only ZKIR 3.1
+## FAL-COMPACT-COMPILATION-1 [Formal-Lean-AC -> Fable-A] CF-001 reads `Lflattened`; ECC-001 reads only ZKIR 3.1
 
 - IDs: CF-001 against ECC-001, MYC-FE-001 (context compact-compilation).
 - Statement: CF-001 says the frontend SHALL read `Lflattened` after `optimize-circuit2` inside `compactc`. ECC-001 says the Mycroft compiler SHALL read only the ZKIR 3.1 files and `contract-info.json` of stock `compactc` 0.36.0. Both cannot hold for one compiler. The supersession of CF-001 is stated only in the ECC-001 status scenario and D-016, and only for the prototype.
@@ -210,7 +210,7 @@ Replay disagreement (oracle `not-published`, trace `leaf-proving/traces/regressi
 - Proposed fix: add to CF-001 "Where the build is not the e2e prototype (D-016)" or retire CF-001 in favour of ECC-001 in the completion spec.
 - Verdict: OPEN DESIGN (spec text). Coverage row CF-001 = FINDING until the spec is changed.
 
-## FAL-COMPACT-COMPILATION-2 [Formal-Lean-AC -> Fable-C, Mycroft lane] The measured suite split differs between REPORT.md and SUITE-COVERAGE.md
+## FAL-COMPACT-COMPILATION-2 [Formal-Lean-AC -> Fable-A, Mycroft lane] The measured suite split differs between REPORT.md and SUITE-COVERAGE.md
 
 - IDs: ECC-010, ECS-006, ECS-011, ECS-013 (contexts compact-compilation, conformance).
 - Statement: worktree mycroft-factory `mycroft/factory/REPORT.md:9` (09:19) says 139 calls equal, 6 blocked on a kit; `mycroft/compiler/SUITE-COVERAGE.md:5` and `compiler/out/suite-coverage.json` totals (10:22, kits spike+sha256+bytes+secp256k1+jubjub) say 142 equal, 3 blocked. `REPORT.md:77` says "101 of 105 ZKIR circuits compile" while `REPORT.md:8` says 106 circuits compile. Totals 33 / 106 / 208 agree in all sources; the equal / blocked split and the compiled-circuit count do not.
@@ -226,7 +226,7 @@ Replay disagreement (oracle `not-published`, trace `leaf-proving/traces/regressi
 - Proposed fix: none to the spec; implement the WideArgs lowering and the keccak compiler semantics, then rerun mycroft-suite.
 - Verdict: CONFIRMED (code gap against the spec, validated on `compiler/out/suite-coverage.json`). Rows stay MODELED; the code is not conformant yet.
 
-## FAL-COMPACT-COMPILATION-4 [Formal-Lean-AC -> Fable-C] ECC-010 gives no precedence among refusal causes
+## FAL-COMPACT-COMPILATION-4 [Formal-Lean-AC -> Fable-A] ECC-010 gives no precedence among refusal causes
 
 - IDs: ECC-010, ECC-013, ECC-001, MYC-FE-002, CF-014, ECC-005, MYC-SEAL-021.
 - Statement: ECC-010 asks for "one refusal code" per circuit, but a circuit can meet several refusal conditions; the specs name no order, so the printed code (ECC-013) is not determined.
@@ -234,7 +234,7 @@ Replay disagreement (oracle `not-published`, trace `leaf-proving/traces/regressi
 - Proposed fix: add to ECC-010 "in the order read, IR version, input types, lowering, seal; the first failing check gives the code".
 - Verdict: OPEN DESIGN. LEAD PICK in the oracle: that pipeline order (marked for T15).
 
-## FAL-CONFORMANCE-1 [Formal-Lean-AC -> Fable-C] A call can be class pass with no Preview transaction
+## FAL-CONFORMANCE-1 [Formal-Lean-AC -> Fable-A] A call can be class pass with no Preview transaction
 
 - IDs: ECS-004, ECS-008, ECS-010, ECS-014.
 - Statement: with `T23_ALLOW_DISPATCH=1` and `T23_ALLOW_PREVIEW` not set, settle runs dry (ECS-008), compare can still find the native transcript equal, and ECS-004 then permits class pass. ECS-010 asks for the Preview transaction hash and block per call, and ECS-014 asks for an included transaction. The spec does not say whether a dry-settled call is pass, blocked or something else.
@@ -254,3 +254,24 @@ Counterexamples on openvm `rekey-int` 3826e38 (odin): `formal/sherlock-e2e/COUNT
 - F-B-LFP-1: GUARD HOLDS. F-B-KM-2: GUARD HOLDS. F-B-LFP-3: closed by D-024 (OWNER 2026-11-15, temporary named refusal).
 - Minor: UKS-010 status all six rows (LIST.md 11:38); LFP-006 `core.rs:46`; PDM-001 `log.md:3691`; MERGE-WORK texts now give 4,988 MEASURED (`frozen.rs:166` to `:167`), 5,121 DERIVED (`:168`), bound at `:169` (rekey-int 3826e38), with 5,128 and 5,284 as earlier layouts.
 - Codec: slice B Lake package renamed `sherlock_codec_b` (lib and module `SherlockCodecB`, folder `codec-lean`), so it and `codec` (`sherlock_codec`) build side by side.
+
+## FAL-GOVERNANCE-1 [Formal-Lean-AC -> Fable-C, governance lane] EGV-002 requires threshold exactly 1; ERT-002 and ELD-002 accept threshold >= 1
+- IDs: EGV-002, EGV-001, ERT-002, ELD-002.
+- Statement: EGV-002 stops and marks unusable a contract whose readback "differs from the maintenance authority `{[], 1, 0}`". ERT-002 (reused by ELD-002) requires `committee == []`, `threshold >= 1`, `counter == 0`. A readback `{[], 2, 0}` passes ERT-002 and fails EGV-002, so the two sentences give different deploy outcomes for the same readback.
+- Counterexample (oracle, params tl 10 rtl 5 q 2 n 3 grid 10): ops `[9000010200]` (deploy table, committee 0, threshold 2, counter 0, vkEq 1) gives `tableSealed = false`, `unusable = 1` under LP-2; under ERT-002 the table is sealed. Pinned by `pin_threshold2`.
+- Proposed fix: write the same rule in both: either EGV-002 "differs from an empty committee with threshold >= 1 and counter 0", or ERT-002 `threshold == 1`. LEAD PICK LP-2: exactly 1, since EGV-001 deploys exactly `{[], 1, 0}` and any other readback means a different deploy path ran.
+- Verdict: CONFIRMED on spec text (low). Not validated on code: no deploy tool exists yet (EGV-001 status MISSING, T22 tasks.md task 4).
+
+## FAL-GOVERNANCE-2 [Formal-Lean-AC -> Fable-C, governance lane] ERT-004 `end_eff(e)` does not exclude `P = e`, and `min` with an unset `end` is undefined
+- IDs: ERT-004, ERT-005, GOV-003.
+- Statement: ERT-004 defines `end_eff(e) = min(end(e), start(P))` "for a pending era `P`". Read with `P = e`, a pending era has `end_eff(P) <= start(P)` and is never active before `activate`, which contradicts the ERT-004 scenario "Pending era reached without activate" (`active(P)` succeeds). The sentence also gives no value for `min` when `end(e)` is not set or no era is pending.
+- Counterexample (two sentences): ERT-004 sentence vs its scenario "THEN `active(N)` fails for the old era `N` and succeeds for `P`".
+- Proposed fix: "`end_eff(e) = min(end(e), start(P))` for a pending era `P != e`, where an unset `end(e)` or no pending era counts as unbounded".
+- Verdict: CONFIRMED on spec text (low; the scenario fixes the reading). LEAD PICK LP-1 takes `P != e` with unbounded defaults; `pin_handover` and `pin_before_handover` pin it.
+
+## FAL-GOVERNANCE-3 [Formal-Lean-AC -> Fable-C] ELD-006 says `L_TX` = 1,024 lanes; its scenario says "below 1,026"
+- IDs: ELD-006.
+- Statement: the requirement sentence fixes `L_TX` = 1,024; the scenario "Measured lanes" checks 91 and 85 lanes "below 1,026". The measured values pass both bounds, so no verdict changes, but a later count of 1,025 would pass the scenario and fail the requirement.
+- Counterexample: the two sentences, `t22-governance@fe7207819:openspec/changes/sherlock-governance/specs/sherlock-era-ledger/spec.md:43,47`.
+- Proposed fix: scenario "below or equal to 1,024 (`L_TX`)".
+- Verdict: CONFIRMED on spec text (low). `measured_ELD_006` checks 91 and 85 against 1,024.

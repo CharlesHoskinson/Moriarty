@@ -1,0 +1,33 @@
+| ID | group | context | verdict | Lean artifact | Quint/replay | source / reason |
+|---|---|---|---|---|---|---|
+| ECC-001 | A | compact-compilation | MODELED | `ECC_001_carrier_refused`, `circuitRefusal` (code 1), Consistency `ECC_001_ok`, `cf001_ecc001_conflict` | pending (Formal-Quint) | e2e/sherlock-e2e-compact-compiler; a non-stock input is refused with code 1. See FAL-COMPACT-COMPILATION-1 (CF-001 conflict outside the prototype) |
+| ECC-002 | A | compact-compilation | MODELED | `ECC_002_settle_needs_gates`, `Inv.settleGated`, `measured_gates`, Consistency `ECC_002_ok` | pending (Formal-Quint) | gates as six bits (KRS emit, oracle-equal, golden, coverage, mutations, compare); measured 58+4=62 mutations, 104+103=207 compare (mycroft-factory mycroft/factory/REPORT.md:16-18) |
+| ECC-003 | A | compact-compilation | MODELED | `ECC_003_one_abi_per_image`, `Inv.okExit`, Consistency `ECC_003_abi_ok` | pending (Formal-Quint) | one image and one ABI per accepted circuit; ABI fields checked as a design predicate |
+| ECC-004 | A | compact-compilation | MODELED | `ECC_004_bytes_witness_free`, `Inv.bytes`, pin `pin_bytes` | pending (Formal-Quint) | the bytes are a function of the source; the tape never enters |
+| ECC-005 | A | compact-compilation | MODELED | `ECC_005_shape_refused`, `shapes_13`, `circuitRefusal` (code 4) | pending (Formal-Quint) | a form outside the 13 shapes is refused; shape count 13 by `decide` |
+| ECC-007 | A | compact-compilation | MODELED | `ECC_007_no_tier3`, `Inv.noTier3`, `Inv.keccakOk` | pending (Formal-Quint) | one keccak chip instruction, never a tier 3 kit. Code today: s02-foreign keccak BLOCKED (compiler/SUITE-COVERAGE.md, FAL-COMPACT-COMPILATION-3) |
+| ECC-009 | A | compact-compilation | MODELED | `ECC_009_deploy_slot_15`, `Inv.slot` | pending (Formal-Quint) | param `deploy` = 1 selects slot 15 |
+| ECC-010 | A | compact-compilation | MODELED | `ECC_010_image_or_refusal`, `Inv.cover`, `Inv.codeOk`, `measured_circuits`, `measured_suite_calls` | pending (Formal-Quint) | one image or one code per circuit. LEAD PICK: precedence read, version, types, lowering, seal (FAL-COMPACT-COMPILATION-4). Measured counts: FAL-COMPACT-COMPILATION-2 |
+| ECC-011 | A | compact-compilation | MODELED | `ECC_002_settle_needs_gates` (oracle-equal gate bit 1), `measured_oracle_equal` | pending (Formal-Quint) | oracle-equal 104/104 and Quint 1,226/1,226 (REPORT.md:10,14), T10m-era vectors |
+| ECC-012 | A | compact-compilation | MODELED | `ECC_012_exit_zero_writes_all`, `Inv.okExit` | pending (Formal-Quint) | exitCode 1 = exit 0 with images = abis = accepted |
+| ECC-013 | A | compact-compilation | MODELED | `ECC_013_refusal_no_image`, `Inv.refusedExit` | pending (Formal-Quint) | LEAD PICK: no partial output for the request (no image for any circuit of a refused request) |
+| ECC-014 | A | compact-compilation | MODELED | `ECC_014_jubjub_tape_words`, `ECC_014_jubjub_admitted`, `Inv.jubjub` | pending (Formal-Quint) | point = two tape words with a curve check, scalar = one word. Code today: j02 verifySchnorrN3 2 calls BLOCKED (FAL-COMPACT-COMPILATION-3) |
+| CF-013 | completion | completion | MODELED | `Inv.secp`, pin `pin_secp` | pending (Formal-Quint) | a secp256k1 input lowers to the RSL-005 kit (secpKit counter) |
+| CF-014 | completion | completion | MODELED | `CF_014_no_kit_refused`, `circuitRefusal` (code 3) | pending (Formal-Quint) | kind 4 (no kit) is refused with the type code |
+| LPC-013 | completion | completion | SPEC-CHECKED | Consistency `LPC_013_ok` | n/a | no state machine: a commit condition on two build results; witness gates pass (REPORT.md:12-18), lake build --wfail green |
+| LPC-019 | completion | completion | SPEC-CHECKED | Consistency `LPC_019_ok` | n/a | no state machine: a closing condition on the Mycroft Lean library (S1 discharged or a named hypothesis) |
+| CF-001 | reused | compact-compilation | FINDING | Consistency `CF_001_ok`, `cf001_ecc001_conflict` | n/a | no state machine (a frontend tap choice). Holds for the prototype only by D-016 supersession; outside it CF-001 contradicts ECC-001 (FAL-COMPACT-COMPILATION-1, OPEN DESIGN) |
+| CF-002 | reused | call-flow+compact-compilation | SPEC-CHECKED | Consistency `CF_002_ok`, `ECC_003_abi_ok` | n/a | no state machine: the command set and ABI fields as a design record |
+| CF-012 | reused | compact-compilation | SPEC-CHECKED | Consistency `CF_012_ok` | n/a | no state machine: a report condition on the CF-L1 axiom report |
+| MYC-BLT-007 | reused | compact-compilation | MODELED | `ECC_007_no_tier3`, `Inv.noTier3`, `Inv.keccakOk` | pending (Formal-Quint) | same transition as ECC-007 |
+| MYC-FE-001 | reused | compact-compilation | MODELED | `ECC_001_carrier_refused`, `circuitRefusal` (code 1) | pending (Formal-Quint) | same transition as ECC-001 |
+| MYC-FE-002 | reused | call-flow+compact-compilation | MODELED | `MYC_FE_002_ir_version_refused`, `circuitRefusal` (code 2), pin `pin_ir32` | pending (Formal-Quint) | also pinned in mycroft-factory mycroft/lean/Mycroft/Oracle/Tests.lean:96-97 |
+| MYC-FE-009 | reused | compact-compilation | MODELED | `ECC_004_bytes_witness_free`, `Inv.bytes` | pending (Formal-Quint) | same source gives the same bytes |
+| MYC-FE-010 | reused | compact-compilation | MODELED | `ECC_004_bytes_witness_free`, `Inv.bytes` | pending (Formal-Quint) | bytes depend on source (and configuration) only |
+| MYC-FE-011 | reused | compact-compilation | MODELED | `ECC_013_refusal_no_image`, `Inv.refusedExit` | pending (Formal-Quint) | refusal names the cause (`lastRefusal`) and writes no program |
+| MYC-LOW-019 | reused | compact-compilation | SPEC-CHECKED | Consistency `MYC_LOW_019_ok` | n/a | no state machine: a documentation property of the Lean specification |
+| MYC-REF-032 | reused | compact-compilation | MODELED | `ECC_001_carrier_refused`, `MYC_FE_002_ir_version_refused` | pending (Formal-Quint) | carrier (code 1) and IR version (code 2) refusals |
+| MYC-SEAL-005 | reused | compact-compilation | MODELED | `ECC_009_deploy_slot_15`, `Inv.slot` | pending (Formal-Quint) | slot 15 (deploy = 1) or cell 0 (deploy = 0, T18 (c) spike) |
+| MYC-SEAL-021 | reused | compact-compilation | MODELED | `MYC_SEAL_021_slot_clash_refused`, `circuitRefusal` (code 5), pin `pin_clash` | pending (Formal-Quint) | refused before deploy |
+| MYC-TRN-017 | reused | compact-compilation | SPEC-CHECKED | Consistency `MYC_TRN_017_ok` | n/a | no state machine: the three X1 checks and the frame as the only declared difference |
+| MYC-VAL-014 | reused | compact-compilation | MODELED | `ECC_014_jubjub_tape_words`, `Inv.jubjub` | pending (Formal-Quint) | a point is x then y, two words |
