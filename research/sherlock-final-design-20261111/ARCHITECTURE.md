@@ -705,7 +705,7 @@ Status words (FZ-1, owner confirmed 2026-11-12):
 | INIT | `image_d`, `prog_d`, `input_d` openings of I-14, `AuthIn` of I-10 | FREEZE-PENDING the FP-9.7 closure tests of FP-9.4 and FP-9.6 (with I-10, I-15) |
 | REFERENCE BRIDGE | host side; the projection onto the digests of I-14 | FREEZE-PENDING the FP-9.7 closure test of the `ty_d` normal form (with I-14) |
 | HOST CHECKPOINT STORE | host side; the checkpoint over the SEG statement of I-13 | FREEZE-PENDING N-4 |
-| LEDGER CONTRACT | entries `acceptRun`, `acceptCollection`, `descend`, `openClaim` | FREEZE-PENDING N-11 (contract surface), O7 and O9 (owner rulings 2026-11-13, edits in T9) and the design `acceptRun` on chain (T10); FP-3 facts 2 and 3 are closed; no claim count in the public statement (AD-2 (c), owner decision 2026-11-12) |
+| LEDGER CONTRACT | entries `acceptRun`, `acceptCollection`, `openClaim` (`descend` removed, FP-3 fact 3) | FREEZE-PENDING N-11 (contract surface), O7 and O9 (owner rulings 2026-11-13, edits in T9) and the design `acceptRun` on chain (T10); FP-3 facts 2 and 3 are closed; no claim count in the public statement (AD-2 (c), owner decision 2026-11-12) |
 | ZERO KNOWLEDGE | the public-input rules of LW-003 and ZK-002, I-22 | FROZEN for the rules; I-22 FREEZE-PENDING the integrated pass of the ENC-1 vectors |
 | COMPACT FRONTEND | `abi.json` per entry, I-26, I-31 to I-33 | FREEZE-PENDING the integrated pass of the ENC-1 vectors (I-31), ENC-3 (I-33) and E5 (`L_TX`, I-27); I-26 FROZEN |
 

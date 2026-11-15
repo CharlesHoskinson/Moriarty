@@ -99,7 +99,7 @@ The design has 26 kits. Each kit is one unit of implementation with one interfac
 | L, L_Fr, WRAP | L AND WRAP | the change of field (`L` to Fr hashing, `L_Fr` to an Fr trace) and the one published proof |
 | CMP | COMPACT FRONTEND | lowering of Compact to straight-line rules, `abi.json`, the anchor prologue, E-1 `bind_label` |
 | CKP | HOST CHECKPOINT STORE, REFERENCE BRIDGE | stop and resume; the semantic reference machine |
-| CON | LEDGER CONTRACT | `acceptRun`, `acceptCollection`, `descend`, `openClaim` over one `runs` map |
+| CON | LEDGER CONTRACT | `acceptRun`, `acceptCollection`, `openClaim` over one `runs` map (`descend` removed, FP-3 fact 3) |
 | all | ZERO KNOWLEDGE | what may be public, blinding, the trust domain |
 
 Two seams are swappable. MEMORY BACKEND is a trait: the dense tail-buffered Merkle tree is the built path; a run-wide LogUp backend (ZmLogUp) exists only as a benchmark. BOUNDARY COMMITMENT is a trait: a Poseidon2 header and body digest is the built path. A swap gives a different key; two profiles never share a key.

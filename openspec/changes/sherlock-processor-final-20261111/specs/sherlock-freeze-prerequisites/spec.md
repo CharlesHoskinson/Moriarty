@@ -97,7 +97,7 @@ The freeze proposal SHALL NOT freeze the public statement codec while these fact
 
 #### Scenario: Fact 2 closure
 - **WHEN** the call-vector lanes are read from the compiled `abi.json` of `acceptRun` and `acceptCollection`
-- **THEN** fact 2 closes only when `fp3_cross_entry_replay` (one claim through `acceptRun`, then through `acceptCollection`, `descend` or `openClaim`, and the reverse order) is refused
+- **THEN** fact 2 closes only when `fp3_cross_entry_replay` (one claim through `acceptRun`, then through `acceptCollection` and `openClaim` (`descend` is removed, FP-3 fact 3), and the reverse order) is refused
 
 #### Scenario: Fact 3 closure
 - **WHEN** the contract-side form of a collection is specified

@@ -42,7 +42,7 @@ Experiments X1 and X2 are done on main (`FD/EXPERIMENTS-MAXIMA.md`) and have no 
 - [ ] F.7 Amend SRC-007 and the contract templates for universal program acceptance and collection opening. Gate: N-11 answered by the owner.
 - [ ] F.8 Name the semantic reference for the full language in the governing change. Gate: AD-21 answered by the owner.
 - [ ] F.9 Add a mid-run consume rule to the governing VM specification only if AD-20 selects it. Gate: AD-20 answered by the owner.
-- [ ] F.10 Write the contract and template work: one contract (kit LEDGER CONTRACT) with two entry points over one `runs` map, `acceptRun` with `prog_d` as call data and `acceptCollection` with `descend` and `openClaim`, and the template recapture (SRC-020) with the operation count per Poseidon that sizes `K_open`. Gate: F.7 and the SRC-020 `validate_call` check with the five mutations refused.
+- [ ] F.10 Write the contract and template work: one contract (kit LEDGER CONTRACT) with two entry points over one `runs` map, `acceptRun` with `prog_d` as call data and `acceptCollection` and `openClaim` (no `descend`: the depth is in the opening proof, FP-3 fact 3), and the template recapture (SRC-020). Gate: F.7 and the SRC-020 `validate_call` check with the five mutations refused.
 
 ## V. Group V: vertical slice (first kit milestone)
 
