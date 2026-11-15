@@ -43,7 +43,16 @@ out = ["# Formal coverage of slices A and C and the completion change (Formal-Le
        "(inventory: `formal/sherlock-e2e/scripts/inventory_ac.py`). Verdicts per FORMAL-BRIEF.md.",
        "MODELED rows are final only when the Quint replay agrees; until then the Quint/replay column",
        "reads `pending`. Completion IDs that Formal-Quint placed in a slice B context are listed in",
-       "the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no double row).", ""]
+       "the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no double row).", "",
+       "Rule for code gaps (LEAD PICK): the verdict names the kind of formal check of the EARS text.",
+       "FINDING is kept for spec-level defects (two EARS that contradict, or an ambiguity that changes",
+       "a transition). A gap between a requirement and the built code (CONFIRMED on code, or recorded",
+       "as TO BUILD / PARTIAL in the spec's status) keeps the row's check verdict and names the gap and",
+       "its FAL-* entry in the reason column. A CONSTANT-CHECKED row whose measured value misses its",
+       "bound says `bound NOT met` (EUI-010, RFB-003).",
+       "",
+       "Rows shared with slice B (DG, LW, ANC, ZK, PRD adopted by both slices) appear here and in",
+       "COVERAGE-FORMAL-B.md; the final COVERAGE-FORMAL.md merge keeps one row per ID.", ""]
 by_group = collections.defaultdict(list)
 counts = collections.Counter()
 seen = set()

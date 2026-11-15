@@ -1,0 +1,285 @@
+import Governance.Spec
+
+/-!
+# Invariants of the Governance oracle
+
+`Inv` holds in `init` and after every operation (`inv_run`). ERT-005 (one accepting
+era at any block time) follows from the pair order of the era slots. The arithmetic
+invariant `InvC` reads only the `Core` projection of the state, so an operation that
+keeps the core keeps it (`invA_of_core`).
+-/
+
+namespace Governance
+
+/-- The cells the arithmetic invariant reads. -/
+structure Core where
+  tl : Int
+  grid : Int
+  q : Int
+  rtl : Int
+  now : Int
+  nextId : Int
+  pending : Int
+  current : Int
+  e1 : Era
+  e2 : Era
+  e3 : Era
+  l1 : Int
+  l2 : Int
+  l3 : Int
+  p1 : Int
+  p2 : Int
+  p3 : Int
+  deriving DecidableEq
+
+def core (s : St) : Core :=
+  { tl := s.tl, grid := s.grid, q := s.q, rtl := s.rtl, now := s.now, nextId := s.nextId,
+    pending := s.pending, current := s.current, e1 := s.e1, e2 := s.e2, e3 := s.e3,
+    l1 := s.l1, l2 := s.l2, l3 := s.l3, p1 := s.prem1, p2 := s.prem2, p3 := s.prem3 }
+
+def live (e : Era) : Prop := e.st = 1 ∨ e.st = 2 ∨ e.st = 3 ∨ e.st = 5
+
+/-- Facts of one era slot `i`. -/
+def SlotOk (c : Core) (e : Era) (i : Int) : Prop :=
+  (0 ≤ e.st ∧ e.st ≤ 5)
+  ∧ (e.st ≠ 0 ↔ i < c.nextId)                         -- GOV-007: ids in order, never reused
+  ∧ (e.st = 1 ↔ c.pending = i)
+  ∧ (e.st = 2 ↔ c.current = i)
+  ∧ ((e.st = 1 ∨ e.st = 2) → e.fin = 0)
+  ∧ ((e.st = 3 ∨ e.st = 5) → 0 < e.fin ∧ e.fin ≤ c.now)
+  ∧ ((e.st = 2 ∨ e.st = 3 ∨ e.st = 5) → e.start ≤ c.now)
+  ∧ (e.st ≠ 0 → c.tl + e.annAt ≤ e.start ∧ e.annAt ≤ c.now ∧ 0 ≤ e.annAt)   -- GOV-002, GOV-004
+  ∧ (e.st ≠ 0 → (e.ledger = 1 ∧ c.l1 = 1) ∨ (e.ledger = 2 ∧ c.l2 = 1) ∨ (e.ledger = 3 ∧ c.l3 = 1))
+      -- ELD-002, EGV-002: an era names only a ledger that passed its readback gate
+  ∧ (e.st ≠ 0 → 1 ≤ e.keyset)
+
+/-- Facts of two era slots `a` (lower id) and `b` (id `j`). -/
+def PairOk (c : Core) (a b : Era) (j : Int) : Prop :=
+  (a.st ≠ 0 → b.st ≠ 0 → a.keyset ≠ b.keyset ∧ a.ledger ≠ b.ledger)        -- ERT-003, EGV-004
+  ∧ (live a → live b → a.start < b.start
+      ∧ ((0 < a.fin ∧ a.fin ≤ b.start) ∨ (c.pending = j ∧ a.fin = 0)))     -- ERT-004, ERT-005
+  ∧ (b.st ≠ 0 → a.st ≠ 0)
+
+def InvC (c : Core) : Prop :=
+  1 ≤ c.tl ∧ 1 ≤ c.grid ∧ 1 ≤ c.q ∧ 0 ≤ c.rtl ∧ 0 ≤ c.now
+  ∧ 1 ≤ c.nextId ∧ c.nextId ≤ 4 ∧ 0 ≤ c.pending ∧ c.pending ≤ 3 ∧ 0 ≤ c.current ∧ c.current ≤ 3
+  ∧ (c.pending ≠ 0 → c.nextId = c.pending + 1)
+  ∧ SlotOk c c.e1 1 ∧ SlotOk c c.e2 2 ∧ SlotOk c c.e3 3
+  ∧ PairOk c c.e1 c.e2 2 ∧ PairOk c c.e1 c.e3 3 ∧ PairOk c c.e2 c.e3 3
+  ∧ (0 ≤ c.l1 ∧ c.l1 ≤ 2 ∧ 0 ≤ c.l2 ∧ c.l2 ≤ 2 ∧ 0 ≤ c.l3 ∧ c.l3 ≤ 2)
+  ∧ (0 ≤ c.p1 ∧ c.p1 ≤ 2 ∧ 0 ≤ c.p2 ∧ c.p2 ≤ 2 ∧ 0 ≤ c.p3 ∧ c.p3 ≤ 2)
+
+/-- The arithmetic invariant. -/
+def InvA (s : St) : Prop := InvC (core s)
+
+/-- The boolean invariant. -/
+def InvB (s : St) : Prop :=
+  (1 < s.nextId → s.tableSealed = true)                                        -- ERT-002
+  ∧ (s.tableSealed = true → s.tableDeployed = true)
+  ∧ (s.rekeyStarted = true → s.eraRow = true ∨ s.prem2 = 2 ∨ s.prem3 = 2)      -- EGV-005
+
+def Inv (s : St) : Prop := InvA s ∧ InvB s
+
+theorem inv_init (tl rtl q n grid : Int) (h : paramsOk tl rtl q n grid = true) :
+    Inv (init tl rtl q n grid) := by
+  simp [paramsOk] at h
+  simp [Inv, InvA, InvB, InvC, core, SlotOk, PairOk, live, init, Era.empty]
+  omega
+
+/-- Rewrite an `if` with a known condition, whatever its `Decidable` instance. -/
+theorem ite_t {α : Type} {c : Prop} {_ : Decidable c} {a b : α} (h : c) : (if c then a else b) = a :=
+  ite_eq_left_of_eq_true a b (eq_true h)
+theorem ite_f {α : Type} {c : Prop} {_ : Decidable c} {a b : α} (h : ¬c) : (if c then a else b) = b :=
+  ite_eq_right_of_eq_false a b (eq_false h)
+
+theorem invA_of_core {s s' : St} (hc : core s' = core s) (h : InvA s) : InvA s' := by
+  unfold InvA; rw [hc]; exact h
+
+/-- Unfold the arithmetic invariant on both sides and close it with `omega`. -/
+macro "ctac" : tactic => `(tactic| (
+  revert ‹InvA _›
+  simp only [InvA, InvC, core, SlotOk, PairOk, live]
+  omega))
+
+/-- An operation that keeps the core, branch by branch. -/
+macro "frame" : tactic => `(tactic| (
+  apply invA_of_core _ ‹InvA _›
+  cases hen : enabled _ _
+  · rw [apply_dis hen]
+  · rw [apply_en hen]; simp only [applyE, refuse, setClaims]
+    (repeat' split) <;> simp [core]))
+
+section
+variable (s : St) (h : InvA s)
+include h
+
+theorem invA_refuse (c : Int) : InvA (refuse s c) :=
+  invA_of_core (by simp [refuse, core]) h
+
+theorem invA_rotate (g r : Int) : InvA (apply s (.rotateRoster g r)) := by frame
+theorem invA_cancelRotation (g : Int) : InvA (apply s (.cancelRotation g)) := by frame
+theorem invA_attest (g r : Int) : InvA (apply s (.attest g r)) := by frame
+theorem invA_vkChange : InvA (apply s .vkChange) := by frame
+theorem invA_report (b : Bool) : InvA (apply s (.reportLedger b)) := by frame
+theorem invA_addEraRow : InvA (apply s .addEraRow) := by frame
+theorem invA_rekeyStart : InvA (apply s .rekeyStart) := by frame
+theorem invA_useAttested : InvA (apply s .useAttested) := by frame
+theorem invA_useClaim (e : Int) : InvA (apply s (.useClaim e)) := by frame
+theorem invA_acceptCall (e : Int) : InvA (apply s (.acceptCall e)) := by frame
+
+end
+
+/-! ## Era transformers
+
+Each era-changing verb maps every slot by one function of the slot index. The slot and
+pair lemmas below each read one or two slots, so `omega` stays small. -/
+
+def mapE (c : Core) (f : Int → Era → Era) : Core :=
+  { c with e1 := f 1 c.e1, e2 := f 2 c.e2, e3 := f 3 c.e3 }
+
+/-- GOV-002: announce era `m`. -/
+def annT (m t k l now : Int) (i : Int) (e : Era) : Era :=
+  if i = m then { st := 1, start := t, fin := 0, keyset := k, ledger := l, annAt := now } else e
+
+/-- GOV-003: activate `m`; the current era `n` gets `end = start(m)`. -/
+def actT (n m sm : Int) (i : Int) (e : Era) : Era :=
+  if i = n then { e with fin := sm, st := 3 } else if i = m then { e with st := 2 } else e
+
+/-- GOV-007: cancel `m`. -/
+def canT (m : Int) (i : Int) (e : Era) : Era := if i = m then { e with st := 4 } else e
+
+/-- GOV-006: soundness end of `n` at `now`; a pending era `p` is cancelled. -/
+def endT (n p now : Int) (i : Int) (e : Era) : Era :=
+  if i = n then { e with fin := now, st := 5 } else if i = p then { e with st := 4 } else e
+
+/-- The scalar part of the invariant (no slot facts). -/
+def Glob (c : Core) : Prop :=
+  1 ≤ c.tl ∧ 1 ≤ c.grid ∧ 1 ≤ c.q ∧ 0 ≤ c.rtl ∧ 0 ≤ c.now
+  ∧ 1 ≤ c.nextId ∧ c.nextId ≤ 4 ∧ 0 ≤ c.pending ∧ c.pending ≤ 3 ∧ 0 ≤ c.current ∧ c.current ≤ 3
+  ∧ (c.pending ≠ 0 → c.nextId = c.pending + 1)
+  ∧ (0 ≤ c.l1 ∧ c.l1 ≤ 2 ∧ 0 ≤ c.l2 ∧ c.l2 ≤ 2 ∧ 0 ≤ c.l3 ∧ c.l3 ≤ 2)
+  ∧ (0 ≤ c.p1 ∧ c.p1 ≤ 2 ∧ 0 ≤ c.p2 ∧ c.p2 ≤ 2 ∧ 0 ≤ c.p3 ∧ c.p3 ≤ 2)
+
+theorem invC_iff (c : Core) : InvC c ↔ Glob c ∧ SlotOk c c.e1 1 ∧ SlotOk c c.e2 2 ∧ SlotOk c c.e3 3
+    ∧ PairOk c c.e1 c.e2 2 ∧ PairOk c c.e1 c.e3 3 ∧ PairOk c c.e2 c.e3 3 := by
+  simp only [InvC, Glob]
+  constructor
+  · intro ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, s1, s2, s3, p1, p2, p3, r1, r2⟩
+    exact ⟨⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, r1, r2⟩, s1, s2, s3, p1, p2, p3⟩
+  · intro ⟨⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, r1, r2⟩, s1, s2, s3, p1, p2, p3⟩
+    exact ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, s1, s2, s3, p1, p2, p3, r1, r2⟩
+
+/-- Assembly: slot and pair lemmas for a transformer give the invariant. -/
+theorem invC_map (c c' : Core) (f : Int → Era → Era) (h : InvC c)
+    (he : c'.e1 = f 1 c.e1 ∧ c'.e2 = f 2 c.e2 ∧ c'.e3 = f 3 c.e3)
+    (hg : Glob c → Glob c')
+    (hs : ∀ i e, 1 ≤ i ∧ i ≤ 3 → SlotOk c e i → SlotOk c' (f i e) i)
+    (hp : ∀ ia j a b, 1 ≤ ia ∧ ia < j ∧ j ≤ 3 → SlotOk c a ia → SlotOk c b j → PairOk c a b j →
+      PairOk c' (f ia a) (f j b) j) : InvC c' := by
+  rw [invC_iff] at h ⊢
+  obtain ⟨g, s1, s2, s3, p12, p13, p23⟩ := h
+  obtain ⟨h1, h2, h3⟩ := he
+  rw [h1, h2, h3]
+  exact ⟨hg g, hs 1 _ (by decide) s1, hs 2 _ (by decide) s2, hs 3 _ (by decide) s3,
+    hp 1 2 _ _ (by decide) s1 s2 p12, hp 1 3 _ _ (by decide) s1 s3 p13,
+    hp 2 3 _ _ (by decide) s2 s3 p23⟩
+
+/-- Shared closing step: unfold the slot and pair facts and the transformer, `omega`. -/
+macro "slot_tac" : tactic => `(tactic| (
+  simp only [SlotOk, PairOk, live, Glob] at *
+  try simp only [true_iff, iff_true, true_or, or_true, true_and, and_true, implies_true,
+    true_implies, false_iff, iff_false, false_or, or_false, false_and, and_false, false_implies,
+    not_true, not_false_eq_true, ne_eq] at *
+  omega))
+
+/-! ### announce -/
+
+theorem slot_ann (c c' : Core) (e : Era) (i m t k l : Int) (hS : SlotOk c e i) (hi : 1 ≤ i ∧ i ≤ 3)
+    (hm : m = c.nextId) (hm3 : m ≤ 3) (hp : c.pending = 0) (ht : c.now + c.tl ≤ t) (hk : 1 ≤ k)
+    (hl : (l = 1 ∧ c.l1 = 1) ∨ (l = 2 ∧ c.l2 = 1) ∨ (l = 3 ∧ c.l3 = 1)) (hn0 : 0 ≤ c.now)
+    (c1 : c'.nextId = m + 1) (c2 : c'.pending = m) (c3 : c'.current = c.current) (c4 : c'.now = c.now)
+    (c5 : c'.tl = c.tl) (c6 : c'.l1 = c.l1 ∧ c'.l2 = c.l2 ∧ c'.l3 = c.l3) :
+    SlotOk c' (annT m t k l c.now i e) i := by
+  by_cases hx : i = m
+  · simp only [annT, hx, ↓reduceIte]; subst hx; slot_tac
+  · simp only [annT, hx, ↓reduceIte]; slot_tac
+
+set_option maxHeartbeats 2000000 in
+theorem pair_ann (c c' : Core) (a b : Era) (ia j m t k l : Int) (hA : SlotOk c a ia)
+    (hB : SlotOk c b j) (hP : PairOk c a b j) (hij : 1 ≤ ia ∧ ia < j ∧ j ≤ 3)
+    (hm : m = c.nextId) (hp : c.pending = 0) (ht : c.now + c.tl ≤ t) (htl : 1 ≤ c.tl)
+    (hka : a.st ≠ 0 → a.keyset ≠ k ∧ a.ledger ≠ l) (hkb : b.st ≠ 0 → b.keyset ≠ k ∧ b.ledger ≠ l)
+    (c2 : c'.pending = m) :
+    PairOk c' (annT m t k l c.now ia a) (annT m t k l c.now j b) j := by
+  by_cases hx : ia = m <;> by_cases hy : j = m <;> simp only [annT, hx, hy, ↓reduceIte] <;>
+    (try subst hx) <;> (try subst hy) <;> slot_tac
+
+/-! ### activate -/
+
+set_option maxHeartbeats 2000000 in
+theorem slot_act (c c' : Core) (e : Era) (i n m sm : Int) (hS : SlotOk c e i) (hi : 1 ≤ i ∧ i ≤ 3)
+    (hn : c.current = n) (hm : c.pending = m) (hm1 : 1 ≤ m) (hsm : 1 ≤ sm ∧ sm ≤ c.now)
+    (hmS : i = m → e.start = sm)
+    (c1 : c'.nextId = c.nextId) (c2 : c'.pending = 0) (c3 : c'.current = m) (c4 : c'.now = c.now)
+    (c5 : c'.tl = c.tl) (c6 : c'.l1 = c.l1 ∧ c'.l2 = c.l2 ∧ c'.l3 = c.l3) :
+    SlotOk c' (actT n m sm i e) i := by
+  by_cases hx : i = n
+  · simp only [actT, hx, ↓reduceIte]; subst hx; slot_tac
+  · by_cases hy : i = m
+    · simp only [actT, hx, hy, ↓reduceIte]; subst hy; slot_tac
+    · simp only [actT, hx, hy, ↓reduceIte]; slot_tac
+
+set_option maxHeartbeats 2000000 in
+theorem pair_act (c c' : Core) (a b : Era) (ia j n m sm : Int) (hA : SlotOk c a ia)
+    (hB : SlotOk c b j) (hP : PairOk c a b j) (hij : 1 ≤ ia ∧ ia < j ∧ j ≤ 3)
+    (hn : c.current = n) (hm : c.pending = m) (hm1 : 1 ≤ m) (hnx : c.nextId = m + 1)
+    (hsm : 1 ≤ sm ∧ sm ≤ c.now) (haS : ia = m → a.start = sm) (hbS : j = m → b.start = sm)
+    (c2 : c'.pending = 0) :
+    PairOk c' (actT n m sm ia a) (actT n m sm j b) j := by
+  by_cases hx : ia = n <;> by_cases hy : j = n <;> by_cases hx2 : ia = m <;> by_cases hy2 : j = m <;>
+    simp only [actT, hx, hy, hx2, hy2, ↓reduceIte] <;> slot_tac
+
+/-! ### cancel -/
+
+set_option maxHeartbeats 2000000 in
+theorem slot_can (c c' : Core) (e : Era) (i m : Int) (hS : SlotOk c e i) (hi : 1 ≤ i ∧ i ≤ 3)
+    (hm : c.pending = m) (hm1 : 1 ≤ m)
+    (c1 : c'.nextId = c.nextId) (c2 : c'.pending = 0) (c3 : c'.current = c.current)
+    (c4 : c'.now = c.now) (c5 : c'.tl = c.tl) (c6 : c'.l1 = c.l1 ∧ c'.l2 = c.l2 ∧ c'.l3 = c.l3) :
+    SlotOk c' (canT m i e) i := by
+  by_cases hx : i = m
+  · simp only [canT, hx, ↓reduceIte]; subst hx; slot_tac
+  · simp only [canT, hx, ↓reduceIte]; slot_tac
+
+set_option maxHeartbeats 2000000 in
+theorem pair_can (c c' : Core) (a b : Era) (ia j m : Int) (hA : SlotOk c a ia)
+    (hB : SlotOk c b j) (hP : PairOk c a b j) (hij : 1 ≤ ia ∧ ia < j ∧ j ≤ 3)
+    (hm : c.pending = m) (hm1 : 1 ≤ m) (c2 : c'.pending = 0) :
+    PairOk c' (canT m ia a) (canT m j b) j := by
+  by_cases hx : ia = m <;> by_cases hy : j = m <;> simp only [canT, hx, hy, ↓reduceIte] <;> slot_tac
+
+/-! ### soundness end -/
+
+set_option maxHeartbeats 2000000 in
+theorem slot_end (c c' : Core) (e : Era) (i n p : Int) (hS : SlotOk c e i) (hi : 1 ≤ i ∧ i ≤ 3)
+    (hn : c.current = n) (hn1 : 1 ≤ n) (hp : c.pending = p) (hnS : i = n → e.start ≤ c.now)
+    (hnow : 1 ≤ c.now)
+    (c1 : c'.nextId = c.nextId) (c2 : c'.pending = 0) (c3 : c'.current = 0) (c4 : c'.now = c.now)
+    (c5 : c'.tl = c.tl) (c6 : c'.l1 = c.l1 ∧ c'.l2 = c.l2 ∧ c'.l3 = c.l3) :
+    SlotOk c' (endT n p c.now i e) i := by
+  by_cases hx : i = n
+  · simp only [endT, hx, ↓reduceIte]; subst hx; slot_tac
+  · by_cases hy : i = p
+    · simp only [endT, hx, hy, ↓reduceIte]; subst hy; slot_tac
+    · simp only [endT, hx, hy, ↓reduceIte]; slot_tac
+
+set_option maxHeartbeats 2000000 in
+theorem pair_end (c c' : Core) (a b : Era) (ia j n p : Int) (hA : SlotOk c a ia)
+    (hB : SlotOk c b j) (hP : PairOk c a b j) (hij : 1 ≤ ia ∧ ia < j ∧ j ≤ 3)
+    (hn : c.current = n) (hn1 : 1 ≤ n) (hp : c.pending = p)
+    (hnx : p ≠ 0 → c.nextId = p + 1) (c2 : c'.pending = 0) :
+    PairOk c' (endT n p c.now ia a) (endT n p c.now j b) j := by
+  by_cases hx : ia = n <;> by_cases hy : j = n <;> by_cases hx2 : ia = p <;> by_cases hy2 : j = p <;>
+    simp only [endT, hx, hy, hx2, hy2, ↓reduceIte] <;> slot_tac
+
+end Governance

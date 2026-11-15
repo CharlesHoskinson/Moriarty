@@ -7,6 +7,16 @@ MODELED rows are final only when the Quint replay agrees; until then the Quint/r
 reads `pending`. Completion IDs that Formal-Quint placed in a slice B context are listed in
 the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no double row).
 
+Rule for code gaps (LEAD PICK): the verdict names the kind of formal check of the EARS text.
+FINDING is kept for spec-level defects (two EARS that contradict, or an ambiguity that changes
+a transition). A gap between a requirement and the built code (CONFIRMED on code, or recorded
+as TO BUILD / PARTIAL in the spec's status) keeps the row's check verdict and names the gap and
+its FAL-* entry in the reason column. A CONSTANT-CHECKED row whose measured value misses its
+bound says `bound NOT met` (EUI-010, RFB-003).
+
+Rows shared with slice B (DG, LW, ANC, ZK, PRD adopted by both slices) appear here and in
+COVERAGE-FORMAL-B.md; the final COVERAGE-FORMAL.md merge keeps one row per ID.
+
 ## Totals
 
 | verdict | rows |
@@ -193,7 +203,7 @@ the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no 
 | EUI-007 | A | sherlock-execution | MODELED | Inv.proofNeedsTape, EUI_007_no_proof_without_tape; pin_tape_* | pending (Formal-Quint) | e2e/sherlock-e2e-universal-interpreter; each tape defect gives stop 3 and no proof |
 | EUI-008 | A | sherlock-execution | MODELED | Inv.static, EUI_008_static_steps; pin_static | pending (Formal-Quint) | e2e/sherlock-e2e-universal-interpreter; microOps = staticOps(image), independent of the tape |
 | EUI-009 | A | sherlock-execution | SPEC-CHECKED | EUI_009_ok | n/a (consistency only) | e2e/sherlock-e2e-universal-interpreter; precedence rule between two changes; no state |
-| EUI-010 | A | sherlock-execution | CONSTANT-CHECKED | EUI_010_rule_gap | n/a | e2e/sherlock-e2e-universal-interpreter; bound 120 rules; MEASURED built 5 + 2 = 7 rules (EUI-010 status, dec.rs:23-29, :40-41, openvm rekey-chips dcf1b4c): bound NOT met, status TO BUILD (slice B gap) |
+| EUI-010 | A | sherlock-execution | CONSTANT-CHECKED | EUI_010_rule_gap | n/a | e2e/sherlock-e2e-universal-interpreter; bound 120 rules; MEASURED built 5 + 2 = 7 rules (EUI-010 status, dec.rs:23-29, :40-41, openvm rekey-chips dcf1b4c): bound NOT met, status TO BUILD (code gap FAL-EXEC-5) |
 | ECS-001 | A | conformance | CONSTANT-CHECKED | `measured_manifest`, Consistency `ECS_001_ok` | n/a | 36 programs = 33 compile + 3 do not (mycroft-factory mycroft/tests/compact-suite/MANIFEST.json schema line 2, compactc line 3, 36 records); no state machine for the setup tool. Key set: none (native) |
 | ECS-002 | A | conformance | MODELED | `Inv.rejectedNoWords`, `measured_native_refs`, pin `pin_rejected_ref` | pending (Formal-Quint) | 208 = 146 ok + 62 rejected (RESULTS.md:5) |
 | ECS-003 | A | conformance | MODELED | `ECS_003_stage_order`, `Inv.order`, `Inv.stageRan`, `Inv.compileMismatch` | pending (Formal-Quint) | stages compile, prove, settle, compare in order; a compile mismatch skips prove |
@@ -358,7 +368,7 @@ the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no 
 | LW-005 | reused | wrap | SPEC-CHECKED | `Wrap.LW_005_ok`, `Wrap.consistent` | n/a (no state machine) | in-circuit anchor checks; qualification bit 2 MODELED in WRP-012; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
 | LW-006 | reused | wrap | SPEC-CHECKED | `Wrap.LW_006_ok`, `Wrap.consistent` | n/a (no state machine) | in-circuit DAG key commitment; qualification bit 3 MODELED in WRP-012; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
 | LW-007 | reused | wrap | SPEC-CHECKED | `Wrap.LW_007_ok`, `Wrap.consistent` | n/a (no state machine) | statement shape; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
-| LW-008 | reused | wrap | SPEC-CHECKED | `Wrap.LW_008_ok`, `Wrap.consistent` | n/a (no state machine) | root-opening rule; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
+| LW-008 | reused | wrap | SPEC-CHECKED | `Wrap.DCD_006_ok`, `Wrap.consistent` | n/a (no state machine) | root-opening rule; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
 | LW-009 | reused | settlement | FINDING | `Consistency.LW_009_ok` | n/a (finding) | FAL-SETTLEMENT-1: in-tree LW-009 publishes [reg_root, set_root]; the t20 text (modeled) publishes [reg_pub, claims_root] |
 | LW-010 | reused | wrap | SPEC-CHECKED | `Wrap.DCD_003_ok`, `Wrap.consistent` | n/a (no state machine) | replay-identity shape (same predicate as DCD-003); consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
 | LW-011 | reused | wrap | SPEC-CHECKED | `Wrap.DCD_007_ok`, `Wrap.consistent` | n/a (no state machine) | conditional on AD-20; both options checked; consistent with WRP-001..012 and the other adopted rows on one design (theorem `consistent`) |
@@ -440,7 +450,7 @@ the last section with a pointer to COVERAGE-FORMAL-B.md (no verdict here, so no 
 | PRD-002 | reused | placement | MODELED | `Placement.PRD_002_one_slot_per_wrap`, `Inv.slots`, pins `pin_helper_slot`, `pin_no_slot`, `pin_one_slot`, `pin_export`; `Consistency.PRD_002_ok` | pending (Formal-Quint) | shared with slice B (PDM, D-040: pool TO BUILD); the pool, one-use consumption, no export and helper-slot refusal are modelled (spec: sherlock-processor-final-20261111/sherlock-prover-daemon) |
 | PRD-003 | reused | placement | MODELED | `Placement.HLP_005_case_A_only` (`Inv.noHelper`), pin `pin_send_helper` | pending (Formal-Quint) | sendOffBox of a STARK proof, checkpoint or shard plan to a host not owned is refused; owned hosts are the trust domain (LP-2) (spec: sherlock-processor-final-20261111/sherlock-prover-daemon) |
 | RFB-001 | reused | sherlock-execution | SPEC-CHECKED | RFB_001_ok | n/a (consistency only) | sherlock-modular-leaf-20261111/sherlock-reference-bridge; host tool obligation |
-| RFB-003 | reused | sherlock-execution | CONSTANT-CHECKED | EUI_010_rule_gap | n/a | sherlock-modular-leaf-20261111/sherlock-reference-bridge; corpus must fire all 120 enabled rules; built 7: bound not met |
+| RFB-003 | reused | sherlock-execution | CONSTANT-CHECKED | EUI_010_rule_gap | n/a | sherlock-modular-leaf-20261111/sherlock-reference-bridge; corpus must fire all 120 enabled rules; built 7: bound NOT met (code gap FAL-EXEC-5) |
 | RFB-004 | reused | sherlock-execution | SPEC-CHECKED | RFB_004_ok | n/a (consistency only) | sherlock-modular-leaf-20261111/sherlock-reference-bridge; coverage gate |
 | SPL-011 | reused | sherlock-execution | SPEC-CHECKED | SPL_011_ok | n/a (consistency only) | sherlock-processor-final-20261111/sherlock-shard-plan; schedule not in key_root |
 | SWF-009 | reused | network-operations | SPEC-CHECKED | SWF_009_ok | n/a (consistency only) | Mainnet conditions; consistent with PVW-002 (the settle runner never targets Mainnet); spec: sherlock-vm-consensus-20261107/sherlock-delivery |

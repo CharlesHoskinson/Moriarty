@@ -36,3 +36,34 @@ Odin trees: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `rek
 | F-B-KM-2 | RKY-002, UKS-003, UKS-009, UKS-010 | Lean `KeyManagement.t25_refused_rekey_int` on rekey-int ca65f27 and LIST.md 11:22 | keygen refused only by `row-uncommitted` | GUARD HOLDS |
 | F-B-BF-2 | PDM-004 | `~/.cache/box-bus/all.log:42` reads "STARK lfr_call half not run" | the cited record is the wrap baseline | CONFIRMED (text); FIXED: evidence OPEN, verification TO BUILD |
 | Minor | UKS-010, LFP-006, PDM-001, NAG-005, SHP-008, SQG-013, D-012 | Reads of LIST.md 11:38 (rows at `:37`, `:44` to `:46`, `:51`, `:57`, `:63`, `:64`), dcf1b4c `core.rs:46`, wiki `log.md:3691`, rekey-int 3826e38 `frozen.rs:165` to `:169`, `:429` | stale count and line numbers | CONFIRMED (text); FIXED. MERGE-WORK: 4,988 MEASURED now, 5,121 DERIVED, bound 5,400 at `:169`; 5,128 and 5,284 are earlier layouts |
+
+## Slices A and C (Formal-Lean-AC findings, 2026-11-15)
+
+The full text of each finding is in `research/sherlock-e2e-spec-20261115/bus/formal-findings.md` (`FAL-*`). The Lean counterexamples are op lists for each context's oracle, pinned as named theorems in `<context>/lean/*/Tests.lean`. Where no code exists to build the counterexample on (the runner or tool is TO BUILD in the spec status), the verdict is OPEN DESIGN or CONFIRMED on spec text, and the table says so.
+
+| Finding | IDs | Counterexample | Basis | Verdict |
+|---|---|---|---|---|
+| FAL-WRAP-1 | WRP-012, PVW-013 | four WRP-012 bits then deploy, refused (`Wrap.pin_deploy_four_bits`); a runner that checks only PVW-013 accepts the same deploy | spec text; no deploy runner exists | OPEN DESIGN (LEAD PICK: both lists must pass) |
+| FAL-LEDGER-VERIFICATION-1 | MID-002, SLC-003, SLC-004, ELD-005 | the T17 runner asserts the wrap key on every entry | code `t17-preview@9e1e7f398:tools/sherlock-sdk/t10a-ledger-run.mjs:644-650` | CONFIRMED (MID-002 text predates SLC-004; narrow it to write entries) |
+| FAL-SETTLEMENT-1 | LDG-001..005, LW-009, DCD-004, SLC-001 | in-tree LDG text has `descend` and `openClaim`, SLC-001 has four entries | spec text; t20-batched 5dc1be2ee holds the fixed text (LPC-010 merge) | OPEN DESIGN (oracle follows t20-batched, LEAD PICK) |
+| FAL-SETTLEMENT-2 | ANC-012, BAT-005 | a 2,971-word plan needs 4 chunks at TTL 14,400 s, and the settlement oracle refuses it | spec text; the chunk planner is not built (`sherlock_plan.rs` has no cap) | CONFIRMED on spec text; OPEN DESIGN on code |
+| FAL-SETTLEMENT-3 | BAT-010, BAT-011, ERT-004 | a run that lands at time 1,000 when the era ends at 1,000 | spec text; the settle runner is TO BUILD | OPEN DESIGN |
+| FAL-NETOPS-1 | PVW-006, FRC-006 | controls are enabled on inclusion, before the readback | code `t17.sh:102` asserts the readback first | GUARD HOLDS |
+| FAL-NETOPS-2 | FRC-003, FRC-005, FRC-013 | a call that timed out and then resolved as not included | code `t10a-ledger-run.mjs:686-689` | OPEN DESIGN (LEAD PICK: reuse) |
+| FAL-NETOPS-3 | FRC-004, OBS-008 | a non-transport balancing error | code `t10a-ledger-run.mjs:764-775` stops on it | OPEN DESIGN (oracle follows the code) |
+| FAL-NETOPS-4 | FRC-013, FRC-005 | an included, unindexed call is marked refused (`NetworkOps.pin_resolve`) | code `t10a-ledger-run.mjs:686-689` | CONFIRMED (code gap, FRC-013 TO BUILD) |
+| FAL-COMPACT-COMPILATION-1 | CF-001, ECC-001 | `cf001_ecc001_conflict` | spec text | OPEN DESIGN |
+| FAL-COMPACT-COMPILATION-2 | ECC-010, ECS-006, ECS-011, ECS-013 | REPORT.md:9 says 139/6; SUITE-COVERAGE.md:5 says 142/3 | files of the mycroft-factory worktree | CONFIRMED (regenerate REPORT.md) |
+| FAL-COMPACT-COMPILATION-3 | ECC-014, ECC-007 | Jubjub point argument and keccak calls are BLOCKED | `compiler/out/suite-coverage.json` | CONFIRMED (code gap) |
+| FAL-COMPACT-COMPILATION-4 | ECC-010 | ops `[1000010000, 2000000000]` with deploy=1 give refusal 1, and a seal-first order gives 5 | spec text | OPEN DESIGN (LEAD PICK: pipeline order) |
+| FAL-CONFORMANCE-1 | ECS-004, ECS-008, ECS-010, ECS-014 | config=1, ops `[1000000001, 2000000001, 3000000001, 4000000000, 6000000000, 7000000003, 8000000000]` give cls 1 with 0 Preview tx | oracle; `ECS_014_complete_needs_evidence` blocks the report | OPEN DESIGN (class); GUARD HOLDS (completion) |
+| FAL-EXEC-1 | MYC-KEY-003, MYC-KEY-008 | `MYC_KEY_003_prog_d_ignores_ukey` | spec text | OPEN DESIGN (owner question for T15) |
+| FAL-EXEC-2 | MYC-REF-052, ERS-015, CF-005 | MYC-REF-052 refuses the per-program key that the code builds | code `rekey-chips` dcf1b4c `rsl/mod.rs:12-13` (odin tree `formal-cx-rekey-chips-dcf1b4c`) | CONFIRMED (MYC text stale) |
+| FAL-EXEC-3 | MYC-CHIP-001, EKT-002 | the chip set has two keccak AIRs, against "at most 9 in all" | code `rsl/trace.rs:133`, `:432-433` | CONFIRMED (wording; the per-program bucket holds) |
+| FAL-EXEC-4 | ERS-009, EUI-004, GP-001, CPR-005 | an R_SL Rejected outcome has no proof route | spec text | OPEN DESIGN (LEAD PICK: option (a), ERS-009 scoped to the settlement route) |
+| FAL-EXEC-5 | EUI-010, RFB-003 | `EUI_010_rule_gap`: 7 < 120 | code `dec.rs:23-29`, `:40-41` | CONFIRMED (code gap, TO BUILD) |
+| FAL-GOVERNANCE-1 | EGV-002, ERT-002, ELD-002 | op `[9000010200]` | spec text; no deploy tool | CONFIRMED on spec text (low) |
+| FAL-GOVERNANCE-2 | ERT-004, ERT-005 | `end_eff` with P = e (`pin_handover`, `pin_before_handover`) | spec text | CONFIRMED on spec text (low; LEAD PICK LP-1) |
+| FAL-GOVERNANCE-3 | ELD-006 | 1,024 against "below 1,026" | spec text; `measured_ELD_006` | CONFIRMED on spec text (low) |
+
+No FAL finding is fixed in the spec yet, so none has a regression trace. When Fable-A or Fable-C fixes one, its pinned theorem is the named replay test. The test must fail on the old reading and pass on the new one.

@@ -275,3 +275,15 @@ Counterexamples on openvm `rekey-int` 3826e38 (odin): `formal/sherlock-e2e/COUNT
 - Counterexample: the two sentences, `t22-governance@fe7207819:openspec/changes/sherlock-governance/specs/sherlock-era-ledger/spec.md:43,47`.
 - Proposed fix: scenario "below or equal to 1,024 (`L_TX`)".
 - Verdict: CONFIRMED on spec text (low). `measured_ELD_006` checks 91 and 85 against 1,024.
+
+## FAL-EXEC-5 [Formal-Lean-AC -> slice B (rekey-chips), Fable-A] EUI-010 / RFB-003 rule bound not met by the built interpreter
+- IDs: EUI-010, RFB-003 (also GP-001).
+- Statement: EUI-010 and RFB-003 require the interpreted family to prove all 120 enabled rules. The EUI-010 status records 5 + 2 = 7 rules built (openvm rekey-chips dcf1b4c `src/dec.rs:23-29`, `:40-41`).
+- Check: `SherlockExec.EUI_010_rule_gap` proves `5 + 2 < 120` and a shortfall of 113 rules over the recorded MEASURED value.
+- Verdict: CONFIRMED as a code gap. It is recorded in the spec status (TO BUILD), and the EARS do not contradict each other. Per the coverage rule for code gaps, the rows stay CONSTANT-CHECKED with `bound NOT met`. No spec text fix is needed. The fix is the rule build of row EUI-010 in slice B.
+
+## Lead validation of FAL-EXEC-2, -3, -5 on code (Formal-Lean-AC)
+- Tree: odin `~/sherlock/src/formal-cx-rekey-chips-dcf1b4c`, the git archive of openvm `rekey-chips` dcf1b4c that slice B built.
+- FAL-EXEC-2 is CONFIRMED on code. `crates/sherlock-leaf/src/rsl/mod.rs:12-13` says "Chip-set key: per program (the program is the preprocessed traces)". The code follows ERS-015, CF-005 and D-004, so the MYC-REF-052 refusal text is stale.
+- FAL-EXEC-3 is CONFIRMED on code. `rsl/trace.rs:133` and `:432-433` name two keccak AIRs, `RSL_KECCAK_REQ` and `RSL_KECCAK_PERM`, beside `RSL_BITWISE8`. That contradicts MYC-CHIP-001, which allows one keccak AIR. The 6-or-9 bucket holds per program (Answer to FAL-EXEC-3, slice B).
+- FAL-EXEC-5 is CONFIRMED on code. `crates/sherlock-leaf/src/dec.rs:23-29` holds `RULES` with 5 entries and `:40-41` holds `RULES_V` with 2, which gives 7 rules against the 120 of EUI-010.
