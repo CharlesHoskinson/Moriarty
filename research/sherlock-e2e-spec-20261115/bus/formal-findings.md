@@ -297,3 +297,35 @@ All 22 FAL-* findings have a verdict. Spec text is fixed in this branch unless a
 - Execution. FAL-EXEC-1: FIXED (LEAD PICK), MYC-KEY-008 keeps `prog_d` as MYC-KEY-003. FAL-EXEC-2 and -3: FIXED, MYC-REF-052 and MYC-CHIP-001 match rekey-int 95cf796. These three are in mycroft-factory cb65c605d. FAL-EXEC-4: FIXED (LEAD PICK (a)), ERS-009 applies on the T23 settlement route. FAL-EXEC-5: CONFIRMED code gap (7 rules, `dec.rs:23-29`), fix request.
 - Governance. FAL-GOVERNANCE-1 to -3: FIXED in t22-governance cf794dc97: ERT-002 `threshold == 1` (LP-2), ERT-004 `end_eff` for `P != e` and an unset end unbounded (LP-1), ELD-006 scenario bound `L_TX` = 1,024. EGV-002 status updated.
 - Regression: the Lean pins are the named replay tests (`Settlement.replay_bat010_boundary`, `replay_bat011_boundary`, `anc012_cap2`, `MID_002_read_entries_native`, `pin_era_close`; `Conformance.pin_preview_off`; `NetworkOps.pin_other_error`). They fail on the old reading and pass on the new one; odin `lake build --wfail` rc 0. COVERAGE-FORMAL-AC.md has 0 FINDING rows. COVERAGE-FORMAL.md merges B and AC, one row per ID (745 rows, 1 FINDING: LFP-003, text fix open with F-leaf-proving-Q1); the B row CPR-005 is SPEC-CHECKED by D-024.
+
+## FAL-FIX lane (2026-11-15 13:30): code fixes of the A/C fix requests, answer to F-leaf-proving-Q1
+
+Each counterexample was built on the real code before the fix. Verdicts are in `formal/sherlock-e2e/COUNTEREXAMPLES.md` (FAL rows). Heavy runs: `~/.cache/lead/fal-fix-box-request.md`.
+
+- FAL-NETOPS-4: CONFIRMED. FIXED in t23-suite bdcc5126c (`call-resolve.mjs`, test `call-resolve.test.mjs`). Two more defects of the same rule (FRC-013) are fixed there. A timed-out submit was marked refused at `t10a-ledger-run.mjs:757`. Suite mode found A in the indexer by the node's extrinsic hash, and that hash never equals the ledger transaction hash that the indexer uses.
+- FAL-LEDGER-VERIFICATION-1: CONFIRMED. FIXED in t23-suite bdcc5126c (`ledger-keys.mjs`, test `ledger-keys.test.mjs`).
+- FAL-SETTLEMENT-2: CONFIRMED. FIXED in openvm rekey-int 349b1e5 (`sherlock_lfr::chunk_cap`, `sherlock_plan` input `settle`).
+- FAL-EXEC-5: CONFIRMED, open defect. The gate test is in openvm rekey-int 349b1e5. The rule build is a slice B lane.
+- FAL-COMPACT-COMPILATION-2: CONFIRMED. FIXED in mycroft-factory b119a63e3. REPORT.md is generated from `out/suite-coverage.json`, and ECC-010 can cite either file.
+- FAL-COMPACT-COMPILATION-3 (ECC-007): CONFIRMED. FIXED in mycroft-factory b119a63e3. keccak256 now has its own kit `Keccak256`. The s02 keccak image holds one `chip` of that kit and no tier 3 kit. `tier3` keeps only `sha512`. The keccak call stays equal to native (148 vectors equal).
+
+Spec text fixes for Fable-A (this lane does not edit openspec/):
+
+### Answer to F-leaf-proving-Q1 (FAL-FIX, LEAD PICK for T15): LFP-003 refuses outside the bucket, FP-1 not counted
+- Options:
+  - (a) Add only "the FP-1 AIR not counted". This still admits 6 and 7 app AIRs, which RSL-002 excludes, so F-B-LFP-1 stays open.
+  - (b) Refuse every count outside the RSL-002 bucket.
+- Pick: (b). One sentence closes both findings and matches the code. On openvm rekey-int 95cf796, `rsl/trace.rs:144-159` (`names()`) builds only 5 app AIRs (no hash) or 8 (one hash kit), and `:158` asserts at most 8 (`MAX_APP_AIRS`, `:49`, FP-1 not counted). A program with both hash kits is refused before the assert (`rsl/compile.rs:900`, `trace.rs:118`).
+- LFP-003 text: "LFP-003: If the app shape of an R_SL program has an app AIR count other than 5 or 8, the FP-1 AIR not counted (6 or 9 AIRs with FP-1, RSL-002), then the leaf prover SHALL refuse the shape before it makes a proof."
+- Title: "An app shape outside the 6-or-9 bucket is refused".
+- Status evidence: replace `rekey-chips` dcf1b4c `trace.rs:49`, `:137`, `:114` with rekey-int 95cf796 `trace.rs:49`, `:158`, `:118`.
+- COVERAGE-FORMAL.md LFP-003 goes from FINDING to SPEC-CHECKED once Fable-A applies the text. The Lean pins `lfp003_admits_outside_bucket` and `lfp003_bound_code` then hold for the new text.
+
+### MID-002 entry names (FAL-FIX, text)
+MID-002 (`sherlock-processor-final-20261111` `sherlock-midnight-side`) names the read entries `readRoot` and `readRun`. SLC-001, SLC-004 and the compiled contract (t20-batched 5dc1be2ee `sherlock-ledger.compact:69`, `:73`) name them `rootAccepted` and `runAccepted`. Proposed: MID-002 uses `rootAccepted` and `runAccepted`. The runner follows the compiled names.
+
+### Status text after these commits (for Fable-A)
+- FRC-013 status: BUILT in t23-suite bdcc5126c (`call-resolve.mjs`). Unit test: `call-resolve.test.mjs`. The devnet fault run is in the box request.
+- SLC-004 and MID-002 status: per-entry key readback BUILT in t23-suite bdcc5126c. The four-entry devnet deploy is in the box request.
+- BAT-005 and ANC-012 status: cap BUILT in openvm rekey-int 349b1e5 (`chunk_cap.rs`). The fee print is still TO BUILD.
+- ECC-007 status: MET in mycroft-factory b119a63e3. ECC-010 source: mycroft-factory b119a63e3 `compiler/SUITE-COVERAGE.md:5`, which `factory/REPORT.md:9` repeats.
