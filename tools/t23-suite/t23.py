@@ -44,6 +44,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import bench  # noqa: E402  (T23 Part B: bench.jsonl, BENCH.md)
+
 H = pathlib.Path.home()
 WT = pathlib.Path(__file__).resolve().parents[2]
 MYC_FACTORY = H / "Projects/Moriarty-wt/mycroft-factory"
@@ -280,7 +283,9 @@ class BoxProver:
                 f"(leaf, node, L, L_Fr, k=21 wrap with the {b['wrapd']} wrapd) on the T11 keys with the R_SL chip set; "
                 f"check the wrap with the stock verifier and the ledger 9.1.0.1 verifier; write {b['outbox']}/{job}/result.json "
                 f"(schema t23-prove-result/1: claim_pub, input_pub, outcome_pub, c_p, calls[{{index, eff, comm}}], "
-                f"wrap_proof, wrap_vk_sha256, stock_verify, ledger_verify, seconds{{leaf, node, l, lfr, wrap}}). "
+                f"wrap_proof, wrap_vk_sha256, stock_verify, ledger_verify, wrap_proof_bytes, keys (cold|warm), "
+                f"seconds{{{', '.join(bench.RESULT_SECONDS)}}} (the tools' own timers: RSLPROBE, T7CHAIN, T10CALL, E5JSON), "
+                f"device{{stage: GPU|CPU}}; partb-bench.sh stage names). "
                 f"Reply 'done t23 {job} <result path>' or 'fail t23 {job} <reason>'.")
 
     def profile_path(self):
@@ -445,6 +450,7 @@ def classify(calls, suite_json, emitted, natprev, suite, prover, settle_mode):
                 row["dispatch"] = pr["commands"]
             rows.append(row)
             continue
+        row["bench"] = bench.from_result("t23", c["id"], c["label"], getattr(prover, "name", "-"), pr["result"])
         row["settle"] = settle_call(settle_mode, pr, job)["status"]
         verdict, detail = compare({"calls": pr["result"]["calls"]}, np_, refs)
         row["compare"] = verdict
@@ -540,6 +546,12 @@ def run(a):
     meta["totals"] = tot
     (out / "t23-suite.json").write_text(json.dumps({"meta": meta, "rows": rows}, indent=1, default=str))
     (out / "T23-SUITE.md").write_text(md)
+    # Part B benchmark: suite-level Mycroft compile (not apportioned to programs) and every proved call's stage times
+    brows = [bench.row(meta["started"], "suite", "-", "-", "mycroft-suite", meta["compile"].get("seconds"), "muninn", "CPU", "-",
+                       "t23.py compile_suite (wall, whole suite)")]
+    for r in rows:
+        brows += r.get("bench", [])
+    bench.write(brows, out, f"T23 Part B benchmark ({a.mode} run)", {"prover": a.prover, "settle": a.settle})
     log("T23-SUITE", json.dumps(tot), "preview_tx_sent=0", "settle_rehearsal=" + str((meta["settle_rehearsal"] or {}).get("status")))
     if tot["mismatch"]:
         return 4
