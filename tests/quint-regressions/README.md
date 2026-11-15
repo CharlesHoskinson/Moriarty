@@ -41,6 +41,12 @@ The driver is in the openvm fork, `~/.cache/m7-wrap/src/openvm-quint-reg`, branc
   when the constraint that the lane's mutant drops is among the failing ones.
 - `pathc.rs` runs the reference decoder `iface::decode_with` (the native twin of
   `tools/sherlock-wrap/src/decode.rs`).
+- `t10q_nt.rs` (handler `t10q`) reads the NT attack from a `t10q_chunk` violation trace and runs
+  the t13 attack calls (`t10q.rs`, shared with `t13_t10q_chunk.rs`) through the `L_Fr` tape, the
+  decoder twin, the FP-3 effect AIR and the anchor cell model. NT-1 is refused by the decoder;
+  NT-2 and NT-3 calls are each accepted alone and the chain stops at `popeq`. The three
+  `t10q-ntfix-NT*-replay` traces are the init state of a `quint test` run and carry no attack:
+  their rows are not-replayed and name the t13 tests.
 
 A row with `expect: refuse` must name `refused_by`. A harness error (the witness could not be
 built) fails the row. It never counts as a refusal. A trace with no manifest row fails the run.
@@ -65,6 +71,12 @@ MEASURED). T10q fixed 7 of the 8 defect rows. Each of their named tests failed o
 MEASURED). T10q added `afk_f9_work_one_child_unlinked_refused`,
 `gp2_cnull_fields_start_free_as_in_the_reference`, and `merge_binds_the_children`
 (openvm `51b12a0`).
+
+T10q-ntfix rows (QR-MANIFEST, openvm rekey-int `3af5323`): the 4 replayed NT rows pass their named
+tests on muninn (`logs/t10q-ntfix-qr-after.txt`, MEASURED). On a scratch tree without the NT-1 decoder
+refusal and without `k`, `d_in`, `d_out` and the FP-3 link in the lock, the 4 fail (variant B in
+`logs/t10q-ntfix-qr-before.txt`: NT-2 and NT-3 ACCEPTED, NT-1 refused only by the FP-3 tape). With
+only the FP-3 link dropped (variant C), the 4 pass: the T10q-ntfix bindings alone refuse NT-2 and NT-3.
 
 ## Rows
 
@@ -135,6 +147,13 @@ not-replayed.
 | PATHC-F5 | pathc-xcheck | Finding 5: X other than keys.x decodes (fixed in T10, decode.rs:368 / iface.rs:749) | `pathc-xcheck-F5-wrap-x-unpinned.itf.json` | `replay_all` | positive | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
 | PATHC-F6A | pathc-xcheck | Finding 6(a): non-canonical X limbs (carry family) | `pathc-xcheck-F6a-x-limb-carry.itf.json` | `replay_all` | guard | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
 | PATHC-F6B | pathc-xcheck | Finding 6(b): non-canonical X limbs (X + r family) | `pathc-xcheck-F6b-x-plus-r.itf.json` | `replay_all` | guard | pass | iface.rs:749 decode_with; tools/sherlock-wrap/src/decode.rs:368 |
+| T10Q-NT | qa-20261114-t10q-chunk | NT-1..3 as built; the trace is the NT-1 witness | `t10q-ntfix-asbuilt-nt.itf.json` | `t10q_nt_asbuilt_trace_refused` | guard | pass (fixed in T10q-ntfix) | iface.rs decode_with 5b; tools/sherlock-wrap/src/decode.rs 5b |
+| T10Q-NT1 | qa-20261114-t10q-chunk | NT-1: an ordinary call carries the anchor write | `t10q-ntfix-NT1-allow-ord-chunk-tpl.itf.json` | `t10q_nt1_ordinary_call_anchor_write_trace_refused` | guard | pass (fixed in T10q-ntfix) | iface.rs decode_with 5b; tools/sherlock-wrap/src/decode.rs 5b |
+| T10Q-NT2 | qa-20261114-t10q-chunk | NT-2: two runs with equal run_tag splice | `t10q-ntfix-NT2-unauth-run-tag.itf.json` | `t10q_nt2_equal_run_tag_splice_trace_refused` | guard | pass (fixed in T10q-ntfix) | iface.rs lock_x; lverify.rs gen_ops_check lock rule |
+| T10Q-NT3 | qa-20261114-t10q-chunk | NT-3: a k change closes a run early | `t10q-ntfix-NT3-unauth-k-per-chunk.itf.json` | `t10q_nt3_k_change_trace_refused` | guard | pass (fixed in T10q-ntfix) | iface.rs lock_x; lverify.rs gen_ops_check lock rule |
+| T10Q-NT1-REPLAY | qa-20261114-t10q-chunk | Quint replay test of NT-1 (init state only) | `t10q-ntfix-NT1-replay.itf.json` | `t13_t10q_chunk::t10q_nt1_ordinary_call_anchor_write_refused` | guard | not-replayed | iface.rs decode_with 5b; tools/sherlock-wrap/src/decode.rs 5b |
+| T10Q-NT2-REPLAY | qa-20261114-t10q-chunk | Quint replay test of NT-2 (init state only) | `t10q-ntfix-NT2-replay.itf.json` | `t13_t10q_chunk::t10q_nt2_equal_run_tag_splice_refused` | guard | not-replayed | iface.rs lock_x; lverify.rs gen_ops_check lock rule |
+| T10Q-NT3-REPLAY | qa-20261114-t10q-chunk | Quint replay test of NT-3 (init state only) | `t10q-ntfix-NT3-replay.itf.json` | `t13_t10q_chunk::t10q_nt3_k_change_refused` | guard | not-replayed | iface.rs lock_x; lverify.rs gen_ops_check lock rule |
 
 ## Limits
 

@@ -674,6 +674,83 @@
    "status": "guard",
    "test": "t10b_f03_chunk_anchor_is_c_p",
    "trace": "t10-bound-F03-chunk-j1-anchor.itf.json"
+  },
+  {
+   "id": "T10Q-NT",
+   "trace": "t10q-ntfix-asbuilt-nt.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "guard",
+   "finding": "T10Q-NT1..3 as built (module t10q_chunk_asbuilt_nt, invRefine violated); the shrunk trace is the NT-1 witness: an ordinary call carries the anchor write",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt_asbuilt_trace_refused",
+   "refused_by": "ordinary call carries the anchor write"
+  },
+  {
+   "id": "T10Q-NT1",
+   "trace": "t10q-ntfix-NT1-allow-ord-chunk-tpl.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "guard",
+   "finding": "NT-1: an ordinary call (mode 0) carries the anchor write template and sets anchor := C_P(A); fixed in wrap decode.rs 5b (Moriarty bb9dc9ae0) and its twin iface::decode_with (openvm e3b407d)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt1_ordinary_call_anchor_write_trace_refused",
+   "refused_by": "ordinary call carries the anchor write"
+  },
+  {
+   "id": "T10Q-NT2",
+   "trace": "t10q-ntfix-NT2-unauth-run-tag.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "guard",
+   "finding": "NT-2: two runs with equal run_tag words splice; fixed in openvm e3b407d (the L_Fr lock absorbs d_in and d_out)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt2_equal_run_tag_splice_trace_refused",
+   "refused_by": "popeq"
+  },
+  {
+   "id": "T10Q-NT3",
+   "trace": "t10q-ntfix-NT3-unauth-k-per-chunk.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "guard",
+   "finding": "NT-3: a k change closes a 3-chunk run after 2 chunks; fixed in openvm e3b407d (the L_Fr lock absorbs k)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt3_k_change_trace_refused",
+   "refused_by": "popeq"
+  },
+  {
+   "id": "T10Q-NT1-REPLAY",
+   "trace": "t10q-ntfix-NT1-replay.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "not-replayed",
+   "finding": "Quint replay test t10qNt1OrdinaryCallAnchorWriteReplayTest (the as-built and fixed verdicts of the NT-1 attack)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt1_ordinary_call_anchor_write_refused",
+   "note": "the trace is the single init state of `quint test --match t10qNt1OrdinaryCallAnchorWriteReplayTest`: the attack is built inside the run block and is not in the state, so no witness exists to map; the attack is replayed by the T10Q-NT1 row and by t13_t10q_chunk::t10q_nt1_ordinary_call_anchor_write_refused (fails on openvm 6a00df3, passes on e3b407d)"
+  },
+  {
+   "id": "T10Q-NT2-REPLAY",
+   "trace": "t10q-ntfix-NT2-replay.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "not-replayed",
+   "finding": "Quint replay test t10qNt2EqualRunTagSpliceReplayTest (the as-built and fixed verdicts of the NT-2 attack)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt2_equal_run_tag_splice_refused",
+   "note": "the trace is the single init state of `quint test --match t10qNt2EqualRunTagSpliceReplayTest`: the attack is built inside the run block and is not in the state, so no witness exists to map; the attack is replayed by the T10Q-NT2 row and by t13_t10q_chunk::t10q_nt2_equal_run_tag_splice_refused (fails on openvm 6a00df3, passes on e3b407d)"
+  },
+  {
+   "id": "T10Q-NT3-REPLAY",
+   "trace": "t10q-ntfix-NT3-replay.itf.json",
+   "handler": "t10q",
+   "expect": "refuse",
+   "status": "not-replayed",
+   "finding": "Quint replay test t10qNt3KChangeReplayTest (the as-built and fixed verdicts of the NT-3 attack)",
+   "lane": "qa-20261114-t10q-chunk",
+   "test": "t10q_nt3_k_change_refused",
+   "note": "the trace is the single init state of `quint test --match t10qNt3KChangeReplayTest`: the attack is built inside the run block and is not in the state, so no witness exists to map; the attack is replayed by the T10Q-NT3 row and by t13_t10q_chunk::t10q_nt3_k_change_refused (fails on openvm 6a00df3, passes on e3b407d)"
   }
  ]
 }
