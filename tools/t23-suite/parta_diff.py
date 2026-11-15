@@ -55,17 +55,29 @@ def raw(state_dir, prog, call):
     return {"verdict": c.get("verdict"), "error": err[:240] or None, "nodeErrorCodes": codes}
 
 
+def norm(e):
+    """Error class: the message without hex, numbers and addresses."""
+    return re.sub(r"[0-9a-fA-F]{8,}|\d+", "#", e or "")[:120]
+
+
 def main():
     old, new = calls(sys.argv[1]), calls(sys.argv[2])
     sd = sys.argv[4:6] if len(sys.argv) >= 6 else None
     rows = []
     for k in sorted(set(old) | set(new)):
         o, n = old.get(k), new.get(k)
+        if o and n and sd:
+            # the rerun has no notes.json overrides: carry the 2026-11-14 label when the raw harness verdict and
+            # the error class are the same as then (e.g. a `$` circuit id refused, a coin the wallet lacks)
+            ro, rn = raw(sd[0], *k), raw(sd[1], *k)
+            if ro and rn and ro["verdict"] == rn["verdict"] and norm(ro["error"]) == norm(rn["error"]) and n["verdict"] != o["verdict"] \
+                    and not o["verdict"].startswith("BLOCKED"):
+                n = {**n, "verdict": o["verdict"], "carried": True}
         rows.append({"program": k[0], "call": k[1], "circuit": (n or o)["circuit"], "old": o and o["verdict"], "new": n and n["verdict"],
                      "oldBucket": o and bucket(o["verdict"]), "newBucket": n and bucket(n["verdict"]),
-                     "new_tx": n and n["tx"], "new_block": n and n["block"], "words": n and n["words"],
+                     "carried20261114Label": bool(n and n.get("carried")), "new_tx": n and n["tx"], "new_block": n and n["block"], "words": n and n["words"],
                      "labelChanged": (o and o["verdict"]) != (n and n["verdict"]),
-                     "changed": (o and bucket(o["verdict"])) != (n and bucket(n["verdict"])),
+                     "changed": bool(n) and (o and bucket(o["verdict"])) != bucket(n["verdict"]),
                      "oldRaw": raw(sd[0], *k) if sd else None, "newRaw": raw(sd[1], *k) if sd else None})
     tot = lambda key: {b: sum(1 for r in rows if r[key] == b) for b in ("pass", "refused-as-native", "mismatch", "blocked/not realizable", "n/a", None)}
     json.dump({"rows": rows, "old": tot("oldBucket"), "new": tot("newBucket"), "changed": sum(r["changed"] for r in rows)},

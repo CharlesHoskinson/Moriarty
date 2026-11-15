@@ -23,11 +23,13 @@ def sh(*a):
     return subprocess.run(a, capture_output=True, text=True).stdout.strip()
 
 
-def status(have_new):
+def status(have_new, notrun):
     log = H / ".cache/t23/logs/partA.log"
     text = log.read_text(errors="replace") if log.exists() else ""
-    if "PARTA DONE" in text and have_new:
-        return "COMPLETE"
+    if have_new and not notrun:
+        return "COMPLETE (all 33 programs finished)"
+    if "PARTA DONE" in text or "retry pass" in text:
+        return f"PARTIAL: {len(notrun)} programs did not finish ({', '.join(notrun)})"
     stops = [l for l in text.splitlines() if "; stop" in l]
     if stops:
         return "STOPPED: " + stops[-1].split(" ", 2)[-1]
@@ -57,7 +59,7 @@ def main():
          "proof server 9.0.1, node 2.1.101, indexer 4.4.101), the same harness (tools/preview/preview.mjs, compare.mjs, "
          "report.py of mycroft c1c78e66f, run from a copy under ~/.cache/t23/partA so the 2026-11-14 receipts are not "
          "touched) and the same funded wallet OP-PV-WALLET. Preview only. All numbers are MEASURED.", "",
-         f"Status: {status(have_new)}.", "",
+         f"Status: {status(have_new, [r['id'] for r in rows if r['id'] not in ran])}.", "",
          "## Chain after the hard fork", "",
          f"Zero-transaction probe at {idn['at']} (tools/t23-suite/preview_probe.py): genesis `{idn['genesis']}` (the pinned "
          f"Preview genesis), node `{idn['system_version']}`, spec {idn['specVersion']}, ledger {idn['ledgerVersion']}, tip "
@@ -90,7 +92,7 @@ def main():
               "| result | 2026-11-14 | 2026-11-15 |", "|---|---:|---:|"]
         for b in ("pass", "refused-as-native", "mismatch", "blocked/not realizable", "n/a"):
             L.append(f"| {b} | {o.get(b, 0)} | {n.get(b, 0)} |")
-        L += ["", f"Calls whose result changed: {diff['changed']}" + ("" if have_new else " (every call: none ran yet)") + ".", ""]
+        L += ["", f"Calls whose result changed: {diff['changed']}" + (f" of {sum(1 for r in diff['rows'] if r['new'])} calls run so far") + ".", ""]
         ch = [r for r in diff["rows"] if r["changed"]] if have_new else []
         if ch:
             L += ["| program | call | 2026-11-14 | 2026-11-15 | raw harness verdict, error |", "|---|---|---|---|---|"]

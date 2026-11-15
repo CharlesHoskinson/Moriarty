@@ -59,8 +59,11 @@ HEAVY = H / ".local/bin/heavy-slot"
 BUS = H / ".cache/box-bus/all.log"
 KITS = "spike+sha256+bytes"
 STUB_BLOCK = "BLOCKED: R_SL chip set (T11)"
-# profile: the box's T16 setup profile (path overridable with T23_<BOX>_PROFILE); its top-level "pipeline" object
-# (openvm t16-elastic 1baf605, PF-008) sets the wrapd serve env: W5_WRAP_TAIL_MIB, W5_PIPELINE, W5_EVICT.
+# profile: the box's T16 setup profile, written by `t16 setup` as OUT/profile.json with a top-level "pipeline"
+# object (openvm t16-elastic 1baf605, examples/common/t16.rs: v["pipeline"] = pipe.to_json(); PF-008). It sets the
+# wrapd serve env: W5_WRAP_TAIL_MIB, W5_PIPELINE, W5_EVICT. LEAD PICK: the box paths below (override with
+# T23_<BOX>_PROFILE) and W5_PIPELINE = the Overlap variant in lower case ("Full" -> "full", as odin ran w7 with
+# W5_PIPELINE=full); no box profile with the pipeline object exists on muninn yet to check other variants.
 BOXES = {"odin": {"pane": "w1:p1", "inbox": "~/sherlock/in/t23", "outbox": "~/sherlock/out/t23", "wrapd": "w6",
                   "profile": "~/sherlock/setup/profile.json"},
          "huginn": {"pane": "w1:p1", "inbox": "~/sherlock/in/t23", "outbox": "~/sherlock/out/t23", "wrapd": "w1",
