@@ -137,3 +137,19 @@ Writes per logical call of `L_e` effect words (each call is the user's own trans
 | Per second, before and after | `k` x `lambda_call` with `k` <= 2 after | | | DERIVED |
 
 Quint `chunkCap.qnt` (`run-chunkCap.out`): 3 design tests pass (474, 699, 1,015 in one call with no anchor write; 1,016 and 1,980 in 2 chunks; 1,981 and 5,000 refused); `Inv` (`MeasuredEntriesOneCall`, `ChunksAtMostCap`, `NoSilentTruncation`, `TtlCoversProving`, `RefusedAtPlanTime`) holds; mutants `no_cap`, `small_ltx` (the 256-word assumption), `cap_truncate`, `cap_four` each break it; witnesses (a 2-chunk plan, a refused plan) reached.
+
+## Fix 6: one `reg_root` update per registry epoch
+
+Rule W-4 in ARCHITECTURE (kit LEDGER CONTRACT write rule and state list); LDG-008 added. Design rule only: the contract keeps `reg_root` sealed (no update entry) until N-8 decides the history and revocation rule; T20 adds no entry and changes no key. The strict reading (only the current root is accepted) is what the contract does today; a one-epoch grace window for the previous root stays an N-8 option.
+
+Writes for `K` key changes (registrations and revocations) in a registry epoch of length `T_reg`:
+
+| | Transactions | Bytes on chain | State growth | Label |
+|---|---|---|---|---|
+| Before (a per-key update, the form N-8 left open) | `K` | about 6,783 `K` | `K` root overwrites | ESTIMATE |
+| After, per registry epoch with a change | 1 | about 6,783 | one root overwrite (32 bytes) | ESTIMATE |
+| After, registry epoch with no change | 0 | 0 | 0 | DERIVED |
+| After, per key | 0; the key is admitted by a membership path in circuit | 0 | 0 | DERIVED |
+| After, per second | at most `1 / T_reg` | at most 6,783 / `T_reg` | | DERIVED |
+
+Quint `registryEpoch.qnt` (`run-registryEpoch.out`): 4 design tests pass (three key changes in one write and the new key used; a collection under the replaced root refused; an unregistered key refused; an epoch with no change writes nothing); `Inv` (`RegWritesPerEpochAtMostOne`, `StaleOrForeignRegRootRefused`, `KeysUsedAreRegistered`) holds; mutants `per_key_write`, `no_reg_check`, `unbound_membership` each break it; witnesses (batched update, new key used) reached.

@@ -54,3 +54,10 @@ The LEDGER CONTRACT SHALL hold no `foreign` map and SHALL have no FOREIGN openin
 #### Scenario: Foreign claim in a collection
 - **WHEN** a collection holds run claims and one foreign claim and its root is accepted
 - **THEN** a consumer uses the foreign claim once with `useForeignClaim` (test `W-3 foreign claim`), and a run leaf offered as a foreign claim is refused, while a consumer with no kind tag accepts it (control `consumer-control-no-kind-tag`; Quint mutant `no_kind_separation`)
+
+### Requirement: LDG-008 One registry root update per registry epoch
+When registry updates exist (N-8), the registry root SHALL be updated at most once per registry epoch, with one new root over the whole entry list, and SHALL NOT be written once per registered or revoked key. A registry epoch with no change SHALL write nothing. The entry list SHALL stay off chain, and a key SHALL be admitted only by a membership path against the registry root proved in circuit (GP-3 hook). `acceptCollection` SHALL refuse a `reg_pub` other than the current root.
+
+#### Scenario: Three key changes in one registry epoch
+- **WHEN** two keys are registered and one is revoked in one registry epoch, and a later collection uses the new keys
+- **THEN** the registry root is written once, the collection under the new root is accepted, a collection under the replaced root is refused, and a collection that uses an unregistered key is refused (Quint `registryEpoch.qnt`: `RegWritesPerEpochAtMostOne`, `StaleOrForeignRegRootRefused`, `KeysUsedAreRegistered`; mutants `per_key_write`, `no_reg_check`, `unbound_membership`)
