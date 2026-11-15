@@ -690,7 +690,8 @@ if (phase === 'deploy') {
   }
   const v = view(cs);
   assert.equal(v.anchor, A_ARGS.anchor); assert.equal(v.reg_root, A_ARGS.reg_pub);
-  assert.ok(v.runs.isEmpty()); assert.ok(v.verified_roots.isEmpty());
+  // T10 contract: verified_roots; SLC-001 contract (t20-batched): claim_roots in the same field 2
+  assert.ok(v.runs.isEmpty()); assert.ok((v.verified_roots ?? v.claim_roots).isEmpty());
   st.deploy = {...st.deploy, txHash: sub.txHash, nodeBlockHeight: sub.blockHeight, blockHash: sub.blockHash,
     blockHeight: action.transaction.block.height, indexedTxHash: action.transaction.hash, txId: action.transaction.id,
     status: action.transaction.transactionResult?.status, paidFees: action.transaction.fee, txBytes: bytes.length,
