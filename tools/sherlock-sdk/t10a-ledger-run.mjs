@@ -37,8 +37,9 @@
 //   T10A_R3_FRESH=1    R3 proves the replay afresh with T10A_PROVER (default: A's proof with the fresh binding)
 //   E6_NODE_PORT / E6_INDEXER_PORT / E6_PROOF_PORT / E6_NODE_CONTAINER  (default 9954 / 8098 / 6340 / e6-node-1)
 // Phases:
-//   deploy   one SherlockLedger, constructor (anchor, reg_pub), KEY on all three entries; the indexed state is read
-//            back and each installed key compared byte for byte with the framed --vk.
+//   deploy   one SherlockLedger, constructor (anchor, reg_pub), KEY on the write entries (all three of the T10 contract;
+//            acceptRun and acceptCollection of the SLC-001 contract, whose read entries keep their compiled keys); the
+//            indexed state is read back and each installed key compared byte for byte with the planned key.
 //   dump     builds the padded acceptRun call for (c_p, input_pub, outcome_pub) against the deployed state, runs the
 //            prover (the dump stub by default) so <out>/vector.json holds the 1,026-word call vector, locates
 //            claim_pub, outcome_pub and the anchor in it, then finishes the tx with the dummy proof for the JS shape
@@ -56,7 +57,9 @@
 //               T10A_R3_FRESH=1): refused. The local circuit run against the post-A state is recorded too (it
 //               refuses with "claim already settled": the contract-level evidence when the node refuses at the proof).
 //            Resumes like e6-local-run.mjs: a proven unbound A saved after its prove, never refused, with > 5 min of
-//            TTL left is reused; done refusals are skipped. Exit 0 = verdict pass, 4 = a verdict failed, 1 = error.
+//            TTL left is reused; done refusals are skipped. Exit 0 = verdict pass, 4 = a verdict failed, 5 = A's inclusion state
+//            is unknown or included but not indexed (FRC-013, call-resolve.mjs: the saved A is kept, not refused; rerun
+//            later), 1 = error.
 //   dry-run  no devnet: the padding, the stub, the JS shape check and the scan against a locally constructed contract.
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync, existsSync, symlinkSync, readlinkSync, renameSync} from 'node:fs';
@@ -69,9 +72,10 @@ import {decodePreimage, callVector, frameVerifierKey, frameProof, padTranscript,
   bigToLeHex, leHexToBig, FR_MODULUS} from './e6-padding.mjs';
 import {nestedWords, contractStateWords, scan, surfaceSizes} from './sherlock-ledger-scan.mjs';
 import {ANCHOR_SLOT, ledgerDeployState, prologueToSlot15} from './anchor-slot.mjs';
+import {resolveInclusion, nodeHasBlockRpc, UNKNOWN_VERDICTS} from './call-resolve.mjs';
+import {compiledEntries, keyPlan, checkInstalled} from './ledger-keys.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const ENTRIES = ['acceptCollection', 'acceptRun', 'openClaim'];
 // ---- arguments
 const argv = process.argv.slice(2), phase = argv.shift();
 const PHASES = ['deploy', 'dump', 'call', 'dry-run', 'balance'];
@@ -160,11 +164,17 @@ const proverKey = readFileSync(join(build, 'keys/acceptRun.prover'));
 // ---- the wrap key (framed for the ledger) and the call values
 const vkFramed = frameVerifierKey(readFileSync(vkPath));
 const vkRaw = new Uint8Array(vkFramed.tagged);
+// FAL-LEDGER-VERIFICATION-1 (MID-002, SLC-004): the entries of the compiled build. The T10/T17 contract
+// (acceptCollection, acceptRun, openClaim) takes the wrap key on all three; the SLC-001 contract takes it on acceptRun
+// and acceptCollection, and its read entries rootAccepted and runAccepted keep their compiled native keys.
+const ENTRIES = compiledEntries(join(build, 'keys'));
+const KEYS = keyPlan(ENTRIES, vkRaw, e => new Uint8Array(readFileSync(join(build, 'keys', `${e}.verifier`))));
 if (st.deploy && st.anchorSlot !== undefined) assert.equal(st.anchorSlot, SLOT, 'the deployed ledger has another anchor slot; use a fresh --out');
 st.anchorSlot = SLOT;
 st.key = {path: vkPath, input: vkFramed.input, taggedBytes: vkRaw.length, taggedSHA256: sha(vkRaw),
   midnightVkBytes: vkFramed.body.length, midnightVkSHA256: sha(vkFramed.body), header: 'midnight:verifier-key[v7]: + SCALE length',
-  installedOn: ENTRIES};
+  installedOn: ENTRIES.filter(e => KEYS[e].kind === 'wrap'),
+  nativeOn: Object.fromEntries(ENTRIES.filter(e => KEYS[e].kind === 'native').map(e => [e, {bytes: KEYS[e].bytes.length, sha256: sha(KEYS[e].bytes)}]))};
 if (st.deploy?.key) assert.equal(st.deploy.key.taggedSHA256, st.key.taggedSHA256, 'the deployed key differs from --vk; use a fresh --out');
 const fr = (x, name) => { const v = BigInt(x); assert.ok(v >= 0n && v < FR_MODULUS, `${name}: not a canonical Fr`); return v; };
 const VALUES = Object.fromEntries(readFileSync(join(here, '../../research/sherlock-enc-fp3-20261112/fp3-closure/VALUES.txt'), 'utf8')
@@ -224,7 +234,7 @@ const constructed = async (anchor, reg) => {
   const initial = await new mod.Contract({}).initialState(rt.createConstructorContext({}, '00'.repeat(32)), anchor, reg);
   const state = ledger.ContractState.deserialize(initial.currentContractState.serialize());
   if (SLOT === ANCHOR_SLOT) state.data = new ledger.ChargedState(ledger.StateValue.decode(ledgerDeployState(rt, anchor, reg)));
-  for (const e of ENTRIES) { const op = new ledger.ContractOperation(); op.verifierKey = vkRaw; state.setOperation(e, op); }
+  for (const e of ENTRIES) { const op = new ledger.ContractOperation(); op.verifierKey = KEYS[e].bytes; state.setOperation(e, op); }
   assert.deepEqual(state.operations().map(String).sort(), ENTRIES);
   return state;
 };
@@ -577,7 +587,10 @@ st.submissions ??= {};
 const submit = async (bytes, tag, label) => {
   const t = performance.now(), startedAt = new Date().toISOString();
   writeFileSync(join(output, `submitted-${tag}.tx`), bytes);
-  st.submissions[tag] = {label, startedAt, verdict: 'sending', txBytes: bytes.length, txSHA256: sha(bytes)}; save();
+  // FRC-013: txHash (set on InBlock) is the node's extrinsic hash; the indexer knows the call by the ledger hash.
+  let ledgerTxHash = null;
+  try { ledgerTxHash = ledger.Transaction.deserialize('signature', 'proof', 'binding', bytes).transactionHash(); } catch {}
+  st.submissions[tag] = {label, startedAt, verdict: 'sending', txBytes: bytes.length, txSHA256: sha(bytes), ledgerTxHash}; save();
   let r;
   try {
     const ev = await Promise.race([node.sendMidnightTransactionAndWait(SerializedTransaction.of(new Uint8Array(bytes)), 'InBlock'),
@@ -666,12 +679,14 @@ if (phase === 'deploy') {
   const indexedState = Buffer.from(action.state, 'hex');
   writeFileSync(join(output, 'deploy-ledger-state.bin'), indexedState);
   const cs = ledger.ContractState.deserialize(indexedState);
-  assert.deepEqual(cs.operations().map(String).sort(), ENTRIES, 'three entries installed');
+  assert.deepEqual(cs.operations().map(String).sort(), ENTRIES, 'the compiled entries installed');
+  // MID-002 / SLC-004: the wrap key on the write entries, the compiled native key on the read entries, each read back
+  const chk = checkInstalled(KEYS, e => cs.operation(e).verifierKey);
   const installed = {};
   for (const e of ENTRIES) {
     const k = Buffer.from(cs.operation(e).verifierKey);
-    assert.ok(k.equals(Buffer.from(vkRaw)), `indexed installed ${e} key equals the framed --vk bytes`);
-    installed[e] = {equalsFramed: true, bytes: k.length, sha256: sha(k)};
+    assert.ok(chk.rows[e].equals, `indexed installed ${e} key equals the ${KEYS[e].kind === 'wrap' ? 'framed --vk' : `compiled keys/${e}.verifier`} bytes`);
+    installed[e] = {kind: KEYS[e].kind, equalsFramed: KEYS[e].kind === 'wrap', equalsPlanned: true, bytes: k.length, sha256: sha(k)};
   }
   const v = view(cs);
   assert.equal(v.anchor, A_ARGS.anchor); assert.equal(v.reg_root, A_ARGS.reg_pub);
@@ -714,12 +729,24 @@ const markRefused = why => { st.calls.valid = {...(st.calls.valid ?? {}), refuse
 if (!st.calls.accept?.readback) {
   let latest = await latestAction(addr);
   assert.ok(latest, `SherlockLedger ${addr} is not on this chain (devnet restarted?); redeploy into a fresh --out`);
-  // single mode: A is the ledger's first call; suite mode: A is pending until its own tx is included
-  const landed = () => MULTI ? st.submissions.A?.verdict === 'included' : latest.__typename === 'ContractCall';
-  if (!landed() && ['sending', 'included'].includes(st.submissions.A?.verdict)) {
-    log(`A was ${st.submissions.A.verdict}; waiting up to 60 s for the indexer`);
-    for (let k = 0; k < 30 && !landed(); k++) { await sleep(2000); latest = await latestAction(addr); }
-    if (!landed()) markRefused(`A ${st.submissions.A.verdict} but not indexed`);
+  // single mode: A is the ledger's first call; suite mode: A has landed when the indexed state holds its claim
+  // (the indexer shows the call; an InBlock event alone is not a readback).
+  const landed = () => MULTI ? view(ledger.ContractState.deserialize(Buffer.from(latest.state, 'hex'))).runs.member(claimPub)
+    : latest.__typename === 'ContractCall';
+  if (!landed() && UNKNOWN_VERDICTS.includes(st.submissions.A?.verdict)) {
+    // FRC-013 (FAL-NETOPS-4): resolve the state from the indexer and the node before any new submission of the
+    // claim; the resolution never marks the saved call refused.
+    log(`A was ${st.submissions.A.verdict}; resolving its inclusion (indexer up to 60 s, then the node)`);
+    const res = await resolveInclusion(st.submissions.A, {
+      indexed: async () => { latest = await latestAction(addr); return landed(); },
+      nodeHasBlock: nodeHasBlockRpc(EP.node), sleep,
+      ttlExpired: () => Boolean(st.calls.valid?.ttl) && Date.parse(st.calls.valid.ttl) <= Date.now()});
+    st.submissions.A.resolved = {...res, at: new Date().toISOString()}; save();
+    if (res.state === 'included, not indexed' || res.state === 'pending') {
+      log(`A: ${res.state}; the saved call is kept, nothing is submitted; rerun later to read it back`);
+      if (w) await w.wallet.stop(); await node.close(); process.exit(5);
+    }
+    if (res.state === 'not included') { st.submissions.A.verdict = 'not-included'; save(); }
   }
   if (!landed()) {
     assert.ok(!view(ledger.ContractState.deserialize(Buffer.from(latest.state, 'hex'))).runs.member(claimPub), 'claim already settled on chain');
@@ -754,12 +781,18 @@ if (!st.calls.accept?.readback) {
       if (r.verdict !== 'included') await ww.wallet.revert(fin.handle, 'T10A A not included').catch(e => log('revert A: ' + e.message));
       return r;
     }, () => ww.wallet.waitForSyncedState());
-    if (sub.verdict !== 'included') {
+    if (sub.verdict === 'refused-by-node') {
       markRefused(`node: ${sub.verdict}`);
       assert.fail(`A not included (${sub.verdict}); see node-log-A.txt; a rerun proves again`);
     }
+    if (sub.verdict !== 'included') { // FRC-013: a timeout or no node verdict leaves the inclusion state unknown
+      log(`A: ${sub.verdict}; inclusion state unknown, the saved call is not refused; a rerun resolves it`);
+      await ww.wallet.stop(); await node.close(); process.exit(5);
+    }
   }
-  const action = await waitAction(addr, 'ContractCall', MULTI ? {hash: st.submissions.A.txHash} : {});
+  const aHash = st.submissions.A.ledgerTxHash ?? ledger.Transaction.deserialize('signature', 'proof', 'binding',
+    readFileSync(join(output, 'call-valid.tx'))).transactionHash();
+  const action = await waitAction(addr, 'ContractCall', MULTI ? {hash: aHash} : {});
   assert.equal(action.entryPoint, 'acceptRun');
   const post = Buffer.from(action.state, 'hex');
   writeFileSync(join(output, 'post-ledger-state.bin'), post);
@@ -772,7 +805,7 @@ if (!st.calls.accept?.readback) {
   const unboundA = ledger.Transaction.deserialize('signature', 'proof', 'pre-binding', readFileSync(join(output, 'valid-unbound.tx')));
   const progJson = c => json(c.guaranteedTranscript.program);
   const samePrograms = progJson(goodCall) === progJson(callOf(unboundA));
-  const keysUnchanged = ENTRIES.every(e => Buffer.from(cs.operation(e).verifierKey).equals(Buffer.from(vkRaw)));
+  const keysUnchanged = checkInstalled(KEYS, e => cs.operation(e).verifierKey).ok;
   st.calls.accept = {readback: true, indexedTxHash: action.transaction.hash, txId: action.transaction.id,
     blockHeight: action.transaction.block.height, status: action.transaction.transactionResult?.status,
     segments: action.transaction.transactionResult?.segments, paidFees: action.transaction.fee, txBytes: goodBytes.length,
