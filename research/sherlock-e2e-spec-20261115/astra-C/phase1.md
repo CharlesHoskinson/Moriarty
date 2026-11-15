@@ -1,0 +1,10 @@
+- Wrote [DRAFT.md](research/sherlock-e2e-spec-20261115/astra-C/DRAFT.md).
+- Covers wrap, settlement, batching, governance and operations.
+- Contains 117 uniquely identified requirements.
+- Every requirement has a scenario and verification line.
+- Reuses existing IDs and identifies explicit amendments.
+- Preserves the brief’s hard rules.
+- Distinguishes measured results from incomplete qualification.
+- Records decision authority and source citations.
+- Lists implementation gaps and source contradictions.
+- Used no git, network, builds, transactions or secret files.

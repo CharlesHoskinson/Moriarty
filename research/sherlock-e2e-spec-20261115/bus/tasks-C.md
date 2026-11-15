@@ -1,0 +1,26 @@
+# Slice C tasks in build order (for tasks.md)
+
+- [ ] Commit the staged `t23-args` builder and MAP.md; commit openvm `t12-slot15` | EARS: FRC-010, SLC-006, WRP-007 | LOOP: T23, T12 | after: none
+- [ ] Add the k = 22 refusal test and the VK size guard with its test to the wrap tool | EARS: WRP-002, WRP-004 | LOOP: T25 | after: none
+- [ ] Add the `cargo metadata` gate for the four ledger crates and a negative fixture for the ledger check | EARS: LVR-002, LVR-005 | LOOP: T12 | after: none
+- [ ] Run the T22 premise test A1 to A3 on a ledger 9.1.0.1 devnet and record pass or fail | EARS: EGV-009 | LOOP: T22 | after: none
+- [ ] Put the era-check row into the rekey list, or record the failed premise; add the check to the rekey runner | EARS: EGV-005, EGV-006 | LOOP: T22, T25 | after: premise test
+- [ ] Move the anchor to slot 15 in `decode.rs` and in SherlockLedger; compile the T20 form with slot 15 | EARS: WRP-007, SLC-001, SLC-002 | LOOP: T12, T25 | after: T10q
+- [ ] Merge `t20-batched` 5dc1be2ee into the integration branch and record ancestry and suites | EARS: SLC-001, FRC-015 | LOOP: T20 | after: T10q
+- [ ] Build the sealed deploy tool with the readback gate (authority and every entry key; native keys on read entries) | EARS: EGV-001, EGV-002, SLC-003, SLC-004 | LOOP: T22 | after: T20 merge
+- [ ] Change the runner default TTL to 3,600 s; pin `K_MAX` = 2 in `sherlock_plan` at every TTL, with tests | EARS: BAT-005, BAT-006, SCL-007 | LOOP: T20 | after: T20 merge
+- [ ] Negative tests of the chain pin, the wallet pin, the scrub with marker secrets, the receipts allow-list, the mode check before the read | EARS: PVW-001, PVW-002, WAL-002, WAL-003, WAL-005, WAL-010 | LOOP: T17 | after: none
+- [ ] Runner recovery: exclusive verdicts, an included control, the unknown inclusion state, artifact hash checks, fault tests | EARS: PVW-007, PVW-008, PVW-012, FRC-001 to FRC-006, FRC-013, FRC-014 | LOOP: T17 | after: none
+- [ ] Qualify the wrap on the T25 keys: rows, VK bytes, LW-003 to LW-006 and LW-014 results, ledger check; write the gate record of the key | EARS: WRP-001, WRP-003, WRP-008 to WRP-012, LVR-001 to LVR-004 | LOOP: T25, T12 | after: T25 keygen
+- [ ] Add the gate-record check to the deploy runner and the readiness gate to the settle runner | EARS: PVW-013, SLC-012 | LOOP: T17, T23 | after: wrap qualification
+- [ ] T23 driver: box-private bundle, four public words back, result binding by sha256 and call vector, muninn check, per-call resume, privacy scan and times per call | EARS: HLP-001 to HLP-004, HLP-008, SLC-009, FRC-012, OBS-003, OBS-007 | LOOP: T23 | after: T25 keygen
+- [ ] Add the huginn or odin prover hook to the Preview runner | EARS: PVW-010 | LOOP: T17 (c) | after: T25 keygen
+- [ ] Deploy one sealed SherlockLedger for each suite program on Preview and record the genesis era | EARS: SLC-005, PVW-009, EGV-004, BAT-004 | LOOP: T23, T17 (c) | after: T12 gate
+- [ ] Run T17 (c): the honest call and the four controls on the T25 keys, with a second program | EARS: PVW-005 to PVW-008, OBS-001, OBS-002, LVR-006 | LOOP: T17 (c) | after: deploy
+- [ ] Settle the suite calls by `acceptRun` and write the suite table with deploy and transaction counts | EARS: SLC-010, SLC-011, BAT-003, BAT-004 | LOOP: T23 | after: T17 (c)
+- [ ] Case A configuration test (a host of another owner is refused) | EARS: HLP-005, HLP-007 | LOOP: T11 | after: T25 keygen
+- [ ] Validium contract and its Preview run | EARS: PVW-011 | LOOP: T19 | after: T17 (b)
+- [ ] Prover GUI page: stages, source, per-box schedule, live and replay | EARS: OBS-012 | LOOP: T21 | after: T14b daemon
+- [ ] Epoch operator: close rule, era-aware close and admission, membership data, leaf list; collection submit when the `L` collection form exists | EARS: BAT-001, BAT-002, BAT-007 to BAT-011 | LOOP: T20, T8c | after: T8c
+- [ ] SDK outside the factory: pins and box roster from user configuration; one end-to-end script | EARS: SCL-001, SCL-010 | LOOP: T15 | after: T23
+- [ ] T15 freeze record: open governance parameters, collection settlement line, case B note, no push | EARS: EGV-008, BAT-012, HLP-006, FRC-011 | LOOP: T15 | after: all rows
