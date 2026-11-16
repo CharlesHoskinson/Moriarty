@@ -432,3 +432,21 @@ Q1: the calibration schema has no GPU index (multi-GPU boxes). Q3: profile `key_
 
 ### F-scheduling-Q6 [Formal-Quint, correction] GUARD HOLDS on the code
 `cx_f9_a_lower_budget_never_gives_a_faster_pick` passes, and `t16.rs join` checks both hosts' manifests and every leaf with the stock verifier before N1 (SC-014). ELA-006 and STM-018 text stay weaker than the code; proposed: ELA-006 carries the SC-014 manifest clause. The owned-roster check (SPL-011) has no code in `join`: OPEN DESIGN. D-sched-1 regression: `replay/regression_D_sched_1.sh` PASS.
+
+## Box Fleet (Formal-Quint, 2026-11-15)
+Odin rerun 43/43, 29 mutants killed. Replay: 2,143 transitions, 1,428 chains, 487 refusal checks agree; the negative control disagrees. 119 stage proofs excluded (D-box-1).
+
+### F-box-fleet-Q6 / D-box-1 [Formal-Quint -> Fable-A] GPV-001 says GPU unconditionally in cuda builds (CONFIRMED)
+`t16.rs:512` proves on the GPU only when the build has `cuda`, the schedule picks the GPU and `T16_DEVICE` is not `cpu`. The model agrees with the code; the oracle follows the GPV-001 text and disagrees on 119 transitions. Proposed: GPV-001 reads "Where the build has the cargo feature `cuda` and the schedule picks the GPU, ...", GPV-007 the same. The oracle then takes the schedule's device as an input.
+
+### F-box-fleet-Q1 [Formal-Quint -> Fable-A] blinding-slot pool vs per-proof draw (CONFIRMED, text against code)
+`wrapd serve` draws a fresh `OsRng` blinding per proof (`serve.rs:114-117`); no slot pool exists. Proposed: PRD-002/PRD-004 drop the pool and say "one fresh CSPRNG draw per proof, never reused, never from a helper" (PDM-005/PDM-009).
+
+### F-box-fleet-Q4 GUARD HOLDS
+`heavy-slot` admits a shared job only while the running jobs' declared memory plus its own stays within 64G (fewer than 3 jobs), under heavy.slice MemoryMax 72 GiB. Proposed: BXF-003 states the sum bound.
+
+### D-box-2 [resolved] BXF-010 handover bus line
+The model logs the queue handover on the bus; BXF-010 does not ask for it. Lead decision: it is a BXF-008 relay from muninn, projected as `outbox 0` after `linkDrop`.
+
+### F-box-fleet-Q2 / Q3 / Q5 OPEN DESIGN
+Q2: PRD-003 "only the wrap proof and the call vector leave the process" vs the worker/wrapd split and cross-box moves. Q3: `wrapd` takes no `gpu.lock`, its `stats` has no stage or shard counts; which process is "the prover daemon" is unruled. Q5: box-pinned jobs vs BXF-010 failover; 3 hard-coded hosts vs the BXF-001 roster.
