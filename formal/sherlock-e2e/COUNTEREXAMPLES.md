@@ -75,6 +75,20 @@ Code read on odin: `~/sherlock/src/formal-cx-t11-mor-57e4bab2a/tools/sherlock-wr
 | D-box-1 | GPV-001 | Replay: 119 `proveShard` transitions with a cuda build and a CPU schedule: model `lastAppDev` 0, oracle 1 (the oracle follows GPV-001 text) | the model and the code agree; the oracle follows the text of Q6 | OPEN DESIGN with Q6 (excluded from the replay, `RAW_GPV=1` reproduces; oracle change waits for the GPV-001 text) |
 | D-box-2 | BXF-010, BXF-008 | Replay: 66 `linkDrop` transitions: model adds a bus line, oracle does not (BXF-010 asks for no line) | the model's handover line is a BXF-008 relay from muninn: projected as `linkDrop` then `outbox 0`, all agree | GUARD HOLDS (projection) |
 
+## Assurance (Formal-Quint)
+
+Code: odin `~/sherlock/src/formal-cx-t11-mor-57e4bab2a` (Moriarty t11-zk 57e4bab2a) and `~/sherlock/src/formal-cx-t11-ovm-36cdbf0` (openvm t11-zk 36cdbf0), the T11 ZK Carbon QA tests (`~/.cache/gemini-lanes/qa-20261115-t11-zk/cx/`).
+
+| Finding | IDs | Counterexample on the code | Result | Verdict |
+|---|---|---|---|---|
+| F-assurance-Q1 | SSG-001 | EARS sentence vs its own Scenario (101-bit grindable floor); the D3 check is a gate script input, no code bound | text inconsistency | OPEN DESIGN |
+| F-assurance-Q2 | SSG-006, SSG-003, SQG-016, SQG-015 | no gate-record writer in code yet (the record is written by the lead) | the oracle refuses `writeRecord` with a CONFIRMED defect, an UNVERIFIED step or stale G5; the text trigger does not | OPEN DESIGN |
+| F-assurance-Q3 | ZK-016, ZK-001, D-040 | `wrapd serve.rs:114-117` draws a fresh `OsRng` per proof; no slot ids exist | ZK-016's "blinding slot" has no code object | CONFIRMED (text against code; same root as F-box-fleet-Q1) |
+| F-assurance-Q4 | ZKE-001, ZKE-002, ZKE-004, ZK-012, ZK-013, ZK-014 | T11 F-T11-1: `zkguard::check_export` accepts an untagged or "fixed" export (refuses only "seeded"); F-T11-3: `~/sherlock/out/t11/G1/args.json` mode 0664 holds `r_P` and the salt beside 0600 `deploy.secret`; F-T11-2: a non-UTF-8 `SHERLOCK_TEST_SEED` reads as unset | witness items 1 and 3 reproduce on odin | CONFIRMED (code: denylist guard, salt in a 0664 file) |
+| F-assurance-Q5 | ZK-013, D-071 | `prepare` writes one salt to `run.secret`; the tape salt of D-071 and resume behaviour are not in the text | unruled | OPEN DESIGN |
+| F-assurance-Q6 | ZKE-007, ZK-015, SSG-005, LPC-016 | text-only (byte strings vs byte ranges; non-openvm circuit changes) | unruled | OPEN DESIGN |
+| D-assure-1 | ZK-013, ZK-003 | Replay: the model makes 98 wrap proofs before any prepared run; the oracle refuses `wrapProve` without a salt (`no-run`) | model abstraction (the wrap statement is not tied to a run); the T14B wrap path reads `run.secret` | GUARD HOLDS (oracle per ZK-013; the 98 transitions are excluded) |
+
 ## Slice B (Formal-Lean-B findings, resolved 2026-11-15 by the slice B resolver)
 
 Odin trees: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `rekey-int` 3826e38 plus the test `bridge/cx/fbbr2_test.rs`, not committed to openvm) and `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2mut` (the same plus the mutant `bridge/cx/fbbr2_link_constant_mutant.py`), each with a fresh empty target. Logs: odin `~/sherlock/formal-e2e/cx-fbbr2.log`, `cx-fbbr2-link-constant.log`, `cx-fbagg1.log`; extracts in `bridge/cx/` and `aggregation/cx/`.

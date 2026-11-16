@@ -450,3 +450,18 @@ The model logs the queue handover on the bus; BXF-010 does not ask for it. Lead 
 
 ### F-box-fleet-Q2 / Q3 / Q5 OPEN DESIGN
 Q2: PRD-003 "only the wrap proof and the call vector leave the process" vs the worker/wrapd split and cross-box moves. Q3: `wrapd` takes no `gpu.lock`, its `stats` has no stage or shard counts; which process is "the prover daemon" is unruled. Q5: box-pinned jobs vs BXF-010 failover; 3 hard-coded hosts vs the BXF-001 roster.
+
+## Assurance (Formal-Quint, 2026-11-15)
+Odin rerun 38/38, 24 mutants killed. Replay: 1,497 transitions, 606 chains, 471 refusal checks agree; the negative control disagrees.
+
+### F-assurance-Q4 [Formal-Quint -> Fable-A] seed and permission guards (CONFIRMED on odin by T11)
+`check_export` refuses only the "seeded" tag (an untagged export passes), and `args.json` (0664) carries `r_P` and the salt. Proposed: ZK-013 writes `run.secret` 0600 and refuses other modes like ZK-012; ZKE-002 fails closed when the run record has no authenticated `features`; ZKE-001/ZK-014 cover the leaf/chain prover and every seed variable.
+
+### F-assurance-Q3 [Formal-Quint -> Fable-A] ZK-016 blinding slot (CONFIRMED, text against code)
+Same root as F-box-fleet-Q1: `wrapd` draws `OsRng` per proof, no slot id exists. Proposed: ZK-016 reads "reuses a blinder" and names the per-proof draw.
+
+### D-assure-1 [resolved] wrap proofs without a prepared run
+The model proves wraps before any `prepareRun`; the oracle refuses (`no-run`, ZK-013). Lead decision: the oracle is right; 98 transitions excluded.
+
+### F-assurance-Q1 / Q2 / Q5 / Q6 OPEN DESIGN
+Q1: SSG-001 sentence lacks the 101-bit floor of its Scenario. Q2: SSG-006 trigger lacks the SSG-003/SQG-016/G5 preconditions the oracle enforces. Q5: tape salt (D-071) and resume. Q6: ZKE-007 vs ZK-015 wording; SSG-005 non-openvm changes.
