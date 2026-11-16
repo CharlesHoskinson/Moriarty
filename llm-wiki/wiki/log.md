@@ -5084,3 +5084,43 @@
 - Moriarty t15-blockers 85d59e1aa (from sherlock-int): zkguard::check_export is an "os" allowlist ("seeded" only under test-seed), wrapd bench guarded; openvm t15-blockers a00b3d9 (from gpu-leafl-t25): Secret::load allowlist, var_os seed check, args/accept-bundle files 0600, T10CALL private fields moved to a 0600 OUT.private.json.
 - Named tests t15_t11_guard.rs and t15_t11_blind.rs fail before and pass after on muninn (cargo test only, no proof); F-T11-4 OPEN DESIGN (liveness, LEAD PICK: after T23 settle); F-T11-5 and F-assurance-Q3 GUARD HOLDS (Q3 spec text open).
 - G5-MAP.md: every frozen-set value cited in frozen.rs; fp8_d3 bounds-all equals T25 d3.json; minimum 101.0110 bits (leaf aggregation query), L 101.0730; nothing under 100. Wrap BLS12-381/KZG and hashes are assumptions (OPEN DESIGN G5-W, G5-H).
+
+## [2026-11-16 07:56] qa | T15 blockers review: RSLCHAIN digests private, guard rerun still owed
+- openvm t15-blockers 7252986: RSLCHAIN drops prog_d, image_d, plan_d to a 0600 file; rsl-chain.json and call.stmt.json 0600; t15_t11_blind 5/5 on muninn.
+- Owed before T11 is DONE: the run.sh guard matrix on a box with an untagged export and a "fixed" secret (both exit 4). The allowlist now refuses pre-T11 exports ($KFIX, pathc lfr-fp8.json, E5 lfr-e3/lfr-real); t25keys.py must stop reading T10CALL/RSLCHAIN prog_d at land.
+- G5-MAP corrected: L_Fr key provenance cited, stark-backend pin marked inferred, unsourced BLS12-381 and hash bit figures removed (G5-W, G5-H stay OPEN DESIGN).
+
+## [2026-11-16 08:00] decision | T15 land blockers: T11 guard fixed with regression tests; G5 mapped to code, minimum 101.01 bits
+- Lead accepts the t15-blockers results (Moriarty 85d59e1aa/921bd7048, openvm a00b3d9/7252986): exports must be tagged "os"; seeded proofs only in test-seed builds; secret-bearing files 0600; no key, AIR or circuit change. A box guard-matrix rerun follows after the T23 final run (boxes busy).
+- G5-MAP.md: the STARK minimum is 101.0110 bits (leaf-aggregation query term), which corrects the earlier 101.07 figure (the L mu term). G5-W (BLS12-381/KZG) and G5-H (hashes) stay OPEN DESIGN with no bit figure; LEAD PICK claim wording "STARK layers >= 101.01 bits, wrap under BLS12-381/KZG".
+- At land, t25keys.py on t23-final must stop reading prog_d/image_d, which the fixed T10CALL/RSLCHAIN no longer print. The running T23 boxes use the older tars, so this does not affect them.
+
+## [2026-11-16 08:25] qa | T25 Carbon lane stopped on an agy stream timeout; resumed in the same pane
+- qa-20261116-t25-rekey: Carbon read the sources for about an hour, then agy stopped with "stream idle timeout (5m0s)" before it wrote a file (pane w1:p1C, status done).
+- Resumed with a continuation prompt in the same pane: write the model one question at a time and typecheck after each step. T12 lane waits for the pane.
+
+## [2026-11-16 08:31] build | tyr joins as a fourth GPU box: onboarding sent
+- Owner Taildropped tyr's details: office PC, Ubuntu 26.04.1 on WSL2, RTX 5090 Laptop 24 GB, Ryzen AI Max+ 395, 62 GiB, tailnet 100.99.125.110, user charl. Only 15 GB free on / (one suite share needs about 60-80 GB).
+- Lead Taildropped TYR-ONBOARDING.md (~/.cache/tyr-onboard/): project state, machine table, link and bus protocol, box-job rules, WSL2 and hard rules; asks for tyr-facts.md (sudo, sshd, Tailscale mode, herdr, CUDA, rust, disk). Next: the owner creates the ssh:tyr YubiKey key; the lead fills the remote-connect templates.
+
+## [2026-11-16 09:51] build | tyr joins as the fifth box; admission gate passes; T11 guard rerun starts
+- tyr (office PC, WSL2, RTX 5090 Laptop 24 GB, CUDA 13.3) is linked by YubiKey SSH (ROOT mode, ufw on tailscale0) with herdr session tyr and a bus. Installs passed the Codex + Opus double check (~/.cache/tyr-install/DECISION.md).
+- A Fable lane (TYR-ROLE.md, LEAD PICK) gave tyr job 1, the T11 guard-matrix box rerun on the t15-blockers trees. Its standing role is untimed correctness work after T15.
+- Admission (MEASURED): t02 and d02 are T25SUITE EQUAL (Sha 30db3035/76bc3b58), wrap.vk 6faac46f. Chain 208.7 s / 188.2 s, wrap 139.5 s / 134.3 s. Both wraps give ledger 9.1.0.1 Ok(()) on muninn.
+- Lead fix: client-setup.sh now normalizes KEYNAME and remote-link checks IdentityFile first (workflowskills 2979e97). A wrong key path had made remote-link skip the PIN prompt.
+
+## [2026-11-16 10:16] decision | T23 rebalance: 7 of odin's calls moved to huginn and loki
+- Lead used the runner's built-in move: odin skip.list plus IN/extra.list on the target. x02-composable-inner (3 calls) went to huginn; z03-block-time (3) and a03-map-field-field (1) went to loki. No representative moved; the x02 and z03 representatives stay on odin, so those two programs now span two boxes (proofs are independent per call).
+- Why (TYR-ROLE.md suggestion): odin keeps the 9 representative key dirs and frees about 25 min sooner for the Preview settle; huginn and loki finish their own lists about 17:20Z.
+
+## [2026-11-16 10:20] build | T23 rep settle starts early: all 9 representatives proven and ledger Ok
+- odin had already proven all 9 representatives, so the lead pulled only their allowlisted files (72, sha256-checked) into ~/.cache/t23/final/ret-odin. All 9 wraps give ledger 9.1.0.1 Ok(()) with every negative refused; rows are in ~/.cache/t23/final/ledger/times.tsv.
+- Unit t23-rep-settle (prep rep, then settle rep, T23_ALLOW_PREVIEW=1) started on muninn while the boxes finish their remaining calls. The split deploy/accept phases (t23-final 7c7d89f29) were not needed.
+
+## [2026-11-16 10:42] build | T11 box guard rerun passes on tyr; eq_zk zero blocks; T23 returns fixed
+- tyr job1: 56/56 guard-matrix steps pass on T25 keys (untagged export and fixed secret exit 4); 4 wraps give ledger Ok(()). The first eq_zk run failed on blocks 30 and 56, which are zero in both proofs and in all 49 odin T23 wraps. LEAD PICK: count only equal non-zero blocks (t15-blockers 8a216ef49).
+- final-box.sh hashed runs.log before logging its RETURN line, so the odin and tyr returns failed sha256sum -c and t23.py final would refuse them. Fixed in t23-final 8f0cdf678: the box logs before hashing, and read_return accepts only the exact one-line append (a tampered runs.log is still refused).
+- odin (49 ok) and huginn (62 ok) returns are pulled; ledger unit t23-ledger-ho is running. tyr starts job2 = m7 (T24 heavy run, 50 MB sync).
+
+## [2026-11-16 14:20] measure | T14 t14-final huginn returned: DONE pending Carbon QA
+huginn t14-final on the T25 keys finished 27/27 steps rc 0 (noisy 0). Return RETURN 409da448 pulled by allowlist to `~/.cache/huginn/t14-final/ret`; sha256 ok on muninn; 35 wrap.vk 6faac46f; ledger 9.1.0.1 Ok(()) on all 35 wrap dirs with every negative refused (`ret/ledger.tsv`). Medians: warm call t02 105.7 s (62.8 s is t14.keys_s), wrap 87.7 s, wrap daemon call 13.2 s, e2e warm 79.6 s (stark 29.6 + wrap 50.0), in-process t10 warm call 29.8 s. LOOP.md T14 row set to DONE pending Carbon Quint QA.
