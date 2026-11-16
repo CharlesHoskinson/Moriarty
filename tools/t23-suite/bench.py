@@ -18,6 +18,15 @@ clock of partb-bench.sh around a tool that prints none:
   wrap            E5JSON phase "prove" prove_s (keygen_s kept apart; proof_bytes)
   ledger_check    E5JSON phase "ledger_9_1_0_1_verify" verify_seconds (ledger-check, stock 9.1.0.1 crates)
   preview_submit  t10a-state.json submissions[tag].seconds (submit to inclusion of acceptRun)
+  preview_deploy  t10a-state.json submissions["deploy-ledger"] (settle rows: tx hash, block, fee; not in call totals)
+
+T23 final run (T23-FINAL-PLAN.md): `ingest --final-dir DIR` reads a box return of final/final-box.sh: times.tsv rows
+final_chain / final_wrap, and per call calls/<label>/prove-result.partial.json (seconds{} per stage, device, keys),
+rsl-chain.json (R_SL bucket), keys.out (T25SUITE check) and wrap.log (E5JSON prove). `--settle STATE.json=PROG/CALL`
+reads one SherlockLedger settle (deploy and acceptRun, tx hash and block; refused submissions counted). Rows carry
+their box, so a calibration call proved on two boxes keeps both rows. BENCH.md then adds the per program by box
+table (prove, wrap, ledger check, Preview tx, blocks), the settle table and the Preview tx count (MEASURED included,
+DERIVED full suite at one ledger per call).
 
 A stage without a measurement is null with a reason, never 0. A call has an end-to-end total only when every stage
 is measured. Rows of subject "standin:A" are the universal upper chain (N1..wrap) measured on the slice program A
@@ -25,7 +34,8 @@ on the same box; they are labelled as such and never summed into an R_SL call's 
 
 Usage:
   bench.py ingest --run NAME --box-dir DIR [--box-dir DIR ...] [--muninn-dir DIR] [--preview STATE.json --map TAG=PROG/CALL]
-                  --out BENCH_DIR        writes BENCH_DIR/bench.jsonl and BENCH_DIR/BENCH.md
+                  [--final-dir DIR ...] [--settle STATE.json=PROG/CALL ...] [--derived-tx N]
+                 --out BENCH_DIR        writes BENCH_DIR/bench.jsonl and BENCH_DIR/BENCH.md
   bench.py render BENCH.jsonl [--title T] writes BENCH.md beside it
   bench.py selftest                      parsers on lines cut from real logs, render, aggregation
 """
@@ -44,9 +54,11 @@ LABEL = {"compactc": "compactc", "mycroft": "Mycroft -> R_SL", "rsl_exec": "R_SL
 PROGRAM_STAGES = ("compactc", "mycroft")
 CALL_STAGES = [s for s in STAGES if s not in PROGRAM_STAGES]
 UPPER = ["n1", "n2", "n3", "l", "lfr", "wrap", "ledger_check"]
+PROVE = ["rsl_exec", "rsl_app", "rsl_leaf", "n1", "n2", "n3", "l", "lfr"]   # the chain process (rslchain key)
+MUNINN = ("ledger_check", "preview_submit")   # stages measured on muninn for a call proved on a box
 # the t23-prove-result/1 seconds{} keys a prover box returns in the final run (t23.py BoxProver.message)
 RESULT_SECONDS = ["rsl_exec", "rsl_app", "rsl_leaf", "n1", "n2", "n3", "l", "lfr", "wrap"]
-BLOCK_UPPER = ("R_SL leaf -> N1 not wired at openvm rekey-int 95cf796: `t7_chain rsl` keys N1 over the R_SL leaf "
+BLOCK_UPPER = ("rehearsal only: R_SL leaf -> N1 not wired at openvm rekey-int 95cf796: `t7_chain rsl` keys N1 over the R_SL leaf "
                "but does not prove it (settle_ready false, SLC-012 planner key_root); see the standin:A rows")
 TSV = ["stage", "program", "call", "box", "device", "keys", "seconds", "rc", "start", "end", "load_start", "load_end",
        "step", "log"]
@@ -192,14 +204,70 @@ def from_result(run, prog, call, box, result):
                 proof_bytes=(result.get("wrap_proof_bytes") if s == "wrap" else None)) for s in RESULT_SECONDS]
 
 
-def fill_blocked(rows, calls, run, preview_note):
+def ingest_final(run, d):
+    """One box return of final/final-box.sh (T23 final run on the T25 keys)."""
+    d = pathlib.Path(d)
+    out, calls = [], []
+    for t in read_tsv(d / "times.tsv"):
+        st, prog, call, box = t["stage"], t["program"], t["call"], t["box"]
+        cd = d / "calls" / f"{prog}.{call}"
+        ok = t["rc"] == 0
+        why = "" if ok else f"exit {t['rc']} ({t['log']})"
+        common = {"load_start": t["load_start"], "load_end": t["load_end"]}
+        if st == "final_chain":
+            calls.append((prog, call, box))
+            pr = cd / "prove-result.partial.json"
+            res = json.loads(pr.read_text()) if (ok and pr.exists()) else None
+            rc = json.loads((cd / "rsl-chain.json").read_text()) if (cd / "rsl-chain.json").exists() else {}
+            kl = (cd / "keys.out").read_text().splitlines() if (cd / "keys.out").exists() else []
+            extra = {"bucket": rc.get("rsl_bucket"), "keys_check": kl[0].split(" ")[0] if kl else None,
+                     "chain_wall_s": t["seconds"], **common}
+            if res:
+                for r in from_result(run, prog, call, box, res):
+                    if r["stage"] in PROVE:
+                        r["source"] = f"{box}:{t['log']} prove-result seconds"
+                        r.update(extra)
+                        out.append(r)
+            else:
+                for s in PROVE:
+                    out.append(row(run, "rsl-call", prog, call, s, None, box, "-", "cold", f"{box}:{t['log']}",
+                                   why or "no prove-result.partial.json", **extra))
+        elif st == "final_wrap":
+            e = [x for x in marker(lines_of(d, t["log"]), "E5JSON") if x.get("phase") == "prove"]
+            e = e[-1] if e else None
+            out.append(row(run, "rsl-call", prog, call, "wrap", e.get("prove_s") if (e and ok) else None, box, t["device"],
+                           t["keys"], f"{box}:{t['log']} E5JSON prove", "" if (e and ok) else (why or "no E5JSON prove line"),
+                           keygen_s=(e or {}).get("keygen_s"), proof_bytes=(e or {}).get("proof_bytes"),
+                           wrap_wall_s=t["seconds"], **common))
+    return out, calls
+
+
+def ingest_settle(run, state, prog, call, box="muninn"):
+    """One SherlockLedger settle on Preview (t10a-state.json of one ledger): deploy + acceptRun, refusals counted."""
+    s = json.loads(pathlib.Path(state).read_text())
+    subs = s.get("submissions", {})
+    out = []
+    refused = sum(1 for k, v in subs.items() if k not in ("deploy-ledger", "A") and v.get("verdict") != "included")
+    for tag, stage in (("deploy-ledger", "preview_deploy"), ("A", "preview_submit")):
+        sub = subs.get(tag)
+        inc = bool(sub) and sub.get("verdict") == "included"
+        out.append(row(run, "settle" if stage == "preview_deploy" else "rsl-call", prog, call, stage,
+                       sub.get("seconds") if inc else None, box, "-", "-", f"{state} submissions.{tag}",
+                       "" if inc else f"not included ({(sub or {}).get('verdict')})", tx=(sub or {}).get("txHash"),
+                       block=(sub or {}).get("blockHeight"), included=inc,
+                       refused_submissions=refused if stage == "preview_submit" else None))
+    return out
+
+
+def fill_blocked(rows, calls, run, preview_note, upper_note=None):
     """Every R_SL call gets a row per stage; a stage without a measurement is null with its reason."""
-    have = {(r["program"], r["call"], r["stage"]) for r in rows if r["subject"] == "rsl-call"}
+    have = {(r["program"], r["call"], r["box"], r["stage"]) for r in rows if r["subject"] == "rsl-call"}
+    have_any = {(r["program"], r["call"], r["stage"]) for r in rows if r["subject"] == "rsl-call"}
     for prog, call, box in calls:
         for s in CALL_STAGES:
-            if (prog, call, s) in have:
+            if (prog, call, box, s) in have or (s in MUNINN and (prog, call, s) in have_any):
                 continue
-            why = preview_note if s == "preview_submit" else (BLOCK_UPPER if s in UPPER else "not run")
+            why = preview_note if s == "preview_submit" else ((upper_note or BLOCK_UPPER) if s in UPPER else "not run")
             rows.append(row(run, "rsl-call", prog, call, s, None, box, "-", "-", "-", why))
     return rows
 
@@ -236,9 +304,33 @@ def stats(rows, subject):
 
 def render(rows, title="T23 Part B benchmark", meta=None):
     meta = meta or {}
-    calls = sorted({(r["program"], r["call"]) for r in rows if r["subject"] == "rsl-call"})
+    # a call is (program, call, proving box); ledger check and Preview rows (muninn) attach to every box of the call
+    cr = [r for r in rows if r["subject"] == "rsl-call"]
+    pbox = {}
+    for r in cr:
+        if r["stage"] not in MUNINN:
+            pbox.setdefault((r["program"], r["call"]), set()).add(r["box"])
+    calls = sorted({(r["program"], r["call"], b) for r in cr for b in (pbox.get((r["program"], r["call"])) or {r["box"]})})
     progs = sorted({r["program"] for r in rows if r["subject"] in ("program", "rsl-call")})
-    by = {(r["subject"], r["program"], r["call"], r["stage"]): r for r in rows}
+    exact = {(r["program"], r["call"], r["box"], r["stage"]): r for r in cr}
+    anyb = {}
+    for r in cr:
+        if r["stage"] in MUNINN:
+            anyb.setdefault((r["program"], r["call"], r["stage"]), r)
+
+    class By(dict):
+        def get(self, k, d=None):
+            if k[0] == "rsl-call":
+                _, p, c, b, st = k
+                return exact.get((p, c, b, st)) or (anyb.get((p, c, st)) if st in MUNINN else None) or d
+            return dict.get(self, k, d)
+
+        def __getitem__(self, k):
+            v = self.get(k)
+            if v is None:
+                raise KeyError(k)
+            return v
+    by = By({(r["subject"], r["program"], r["call"], r["stage"]): r for r in rows if r["subject"] != "rsl-call"})
     prog_rows = {(r["program"], r["stage"]): r for r in rows if r["subject"] == "program"}
     totals, complete = {}, 0
     for pc in calls:
@@ -293,8 +385,7 @@ def render(rows, title="T23 Part B benchmark", meta=None):
                 why = (r or {}).get("reason") or "not run"
                 n = notes.setdefault(why, len(notes) + 1)
                 cells.append(f"— [{n}]")
-        box = next((by[("rsl-call", *pc, s)]["box"] for s in CALL_STAGES if by.get(("rsl-call", *pc, s))), "-")
-        L.append(f"| `{pc[0]}` | `{pc[1]}` | {box} | " + " | ".join(cells) + f" | {hms(totals[pc]) if totals[pc] is not None else '—'} |")
+        L.append(f"| `{pc[0]}` | `{pc[1]}` | {pc[2]} | " + " | ".join(cells) + f" | {hms(totals[pc]) if totals[pc] is not None else '—'} |")
     if notes:
         L += [""] + [f"[{n}] {w}" for w, n in notes.items()]
     # per-program totals
@@ -302,13 +393,16 @@ def render(rows, title="T23 Part B benchmark", meta=None):
           "|---|---:|---:|---:|---:|---:|---:|"]
     for p in progs:
         pcs = [pc for pc in calls if pc[0] == p]
+        tot_ok = pcs and all(totals[pc] is not None for pc in pcs) and all((p, s) in prog_rows for s in PROGRAM_STAGES)
         mr = [by[("rsl-call", *pc, s)] for pc in pcs for s in CALL_STAGES if by.get(("rsl-call", *pc, s))]
         meas = [r for r in mr if r["seconds"] is not None]
         tot = (sum(totals[pc] for pc in pcs) - (len(pcs) - 1) * sum(prog_rows[(p, s)]["seconds"] for s in PROGRAM_STAGES)
-               if pcs and all(totals[pc] is not None for pc in pcs) else None)
+               if tot_ok else None)
         c, m = prog_rows.get((p, "compactc")), prog_rows.get((p, "mycroft"))
         L.append(f"| `{p}` | {len(pcs)} | {fmt((c or {}).get('seconds'))} | {fmt((m or {}).get('seconds'))} | "
                  f"{fmt(sum(r['seconds'] for r in meas)) if meas else '—'} | {len(meas)} of {len(mr)} | {hms(tot)} |")
+    L += per_program_by_box(rows, calls, by)
+    L += settle_section(rows, calls, meta)
     # stand-in upper chain
     if sa:
         L += ["", "## Universal upper chain on the stand-in program A (same boxes)", "",
@@ -333,6 +427,61 @@ def render(rows, title="T23 Part B benchmark", meta=None):
         for r in b:
             L.append(f"| {r['box']} | {r['call'] if r['subject'] == 'build' else r['stage']} | {fmt(r['seconds'])} |")
     return "\n".join(L) + "\n"
+
+
+def per_program_by_box(rows, calls, by):
+    """Final table: per program and proving box, median prove (chain stages), wrap, ledger check; Preview tx, blocks."""
+    keys = sorted({(pc[0], pc[2]) for pc in calls if pc[2] != "muninn"})
+    if not any(by.get(("rsl-call", *pc, "lfr")) and by.get(("rsl-call", *pc, "lfr"))["seconds"] is not None for pc in calls):
+        return []
+    L = ["", "## Per program by box (final run)", "",
+         "Prove = the chain process stages R_SL exec to L_Fr (median per call); wrap = E5JSON prove; ledger check = "
+         "ledger 9.1.0.1 verify on muninn; Preview tx = included transactions (deploy + acceptRun) of the settled calls; "
+         "blocks = acceptRun inclusion blocks.", "",
+         "| program | box | calls | proved | prove median s | wrap median s | ledger check median s | Preview tx | blocks |",
+         "|---|---|---:|---:|---:|---:|---:|---:|---|"]
+    settle = [r for r in rows if r["stage"] in ("preview_deploy", "preview_submit")]
+    for p, b in keys:
+        pcs = [pc for pc in calls if pc[0] == p and pc[2] == b]
+        pv = []
+        for pc in pcs:
+            xs = [by.get(("rsl-call", *pc, s)) for s in PROVE]
+            if all(x and x["seconds"] is not None for x in xs):
+                pv.append(sum(x["seconds"] for x in xs))
+        med = lambda st: [by.get(("rsl-call", *pc, st))["seconds"] for pc in pcs
+                          if by.get(("rsl-call", *pc, st)) and by.get(("rsl-call", *pc, st))["seconds"] is not None]
+        w, lc = med("wrap"), med("ledger_check")
+        cs = {(pc[0], pc[1]) for pc in pcs}
+        tx = [r for r in settle if (r["program"], r["call"]) in cs and r.get("included")]
+        blocks = sorted({str(r["block"]) for r in tx if r["stage"] == "preview_submit" and r.get("block")})
+        L.append(f"| `{p}` | {b} | {len(pcs)} | {len(pv)} | {fmt(statistics.median(pv)) if pv else '—'} | "
+                 f"{fmt(statistics.median(w)) if w else '—'} | {fmt(statistics.median(lc)) if lc else '—'} | "
+                 f"{len(tx) if tx else '—'} | {', '.join(blocks) if blocks else '—'} |")
+    return L
+
+
+def settle_section(rows, calls, meta):
+    settled = {(r["program"], r["call"]) for r in rows if r["stage"] == "preview_deploy"}
+    st = [r for r in rows if r["stage"] in ("preview_deploy", "preview_submit") and (r["program"], r["call"]) in settled]
+    if not st:
+        return []
+    L = ["", "## Preview settle (SherlockLedger, one ledger per settled call)", "",
+         "| program | call | deploy tx | deploy block | acceptRun tx | acceptRun block | submit to inclusion s | refused (not included) |",
+         "|---|---|---|---:|---|---:|---:|---:|"]
+    pcs = sorted({(r["program"], r["call"]) for r in st})
+    for pc in pcs:
+        d = next((r for r in st if (r["program"], r["call"]) == pc and r["stage"] == "preview_deploy"), {})
+        a = next((r for r in st if (r["program"], r["call"]) == pc and r["stage"] == "preview_submit"), {})
+        sh = lambda x: f"`{x[:12]}…`" if x else "—"
+        L.append(f"| `{pc[0]}` | `{pc[1]}` | {sh(d.get('tx'))} | {d.get('block') or '—'} | {sh(a.get('tx'))} | "
+                 f"{a.get('block') or '—'} | {fmt(a.get('seconds'))} | {a.get('refused_submissions') or 0} |")
+    inc = sum(1 for r in st if r.get("included"))
+    ref = sum(r.get("refused_submissions") or 0 for r in st if r["stage"] == "preview_submit")
+    proved = len({(pc[0], pc[1]) for pc in calls if pc[2] != "muninn"})
+    L += ["", f"Preview tx MEASURED: {inc} included ({len(pcs)} settled calls), {ref} refused submissions (no fee, not included).",
+          f"Preview tx DERIVED for the full suite at one ledger per call (acceptRun inserts one claim per tx): "
+          f"{meta.get('derived_tx') or 2 * proved} included tx for {proved} proved calls."]
+    return L
 
 
 def write(rows, outdir, title, meta):
@@ -416,6 +565,52 @@ def selftest():
               and next(r for r in fr if r["stage"] == "lfr")["device"] == "GPU")
         pv = ingest_preview("s", fx / "preview-submission.json", {"A": "p/c"})
         check("preview submit seconds from t10a-state submissions", pv[0]["seconds"] == round(6.376753076999914, 3) and pv[0]["block"] == "115187")
+        # T23 final run: a final-box.sh return on two boxes (one calibration call on both), a settle state
+        for bx, labels in (("huginn", ["t02-counter-example.increment.increment.0", "d02-battleship.player1Shoot.04.0"]),
+                           ("odin", ["t02-counter-example.increment.increment.0", "bad.x.y.0"])):
+            fd = d / f"final-{bx}"
+            tl = []
+            for lb in labels:
+                prog, call = lb.split(".", 1)
+                cd = fd / "calls" / lb
+                (cd / "wrap").mkdir(parents=True)
+                bad = prog == "bad"
+                if not bad:
+                    (cd / "prove-result.partial.json").write_text(json.dumps(
+                        {"seconds": {s_: 2.0 for s_ in PROVE}, "device": {s_: "GPU" for s_ in PROVE}, "keys": "cold"}))
+                    (cd / "rsl-chain.json").write_text(json.dumps({"rsl_bucket": "Sha" if prog.startswith("d02") else "Plain"}))
+                    (cd / "keys.out").write_text("T25SUITE EQUAL x bucket Plain (16 universal fields)\n")
+                    shutil.copy(fx / "wrap.log", cd / "wrap.log")
+                tl.append(("final_chain", prog, call, "GPU", "cold", 120.0, 101 if bad else 0, f"calls/{lb}/chain.log"))
+                if not bad:
+                    tl.append(("final_wrap", prog, call, "CPU", "cold", 108.0, 0, f"calls/{lb}/wrap.log"))
+            (fd / "times.tsv").write_text("".join("\t".join(map(str, (r[0], r[1], r[2], bx, r[3], r[4], r[5], r[6], "s", "e",
+                                                                     "1,1,1", "2,2,2", "step", r[7]))) + "\n" for r in tl))
+        st = {"submissions": {"deploy-ledger": {"verdict": "included", "txHash": "0xdep", "blockHeight": 135999, "seconds": 5.1},
+                              "A": {"verdict": "included", "txHash": "0xacc", "blockHeight": 136144, "seconds": 3.2},
+                              "r1": {"verdict": "refused-by-node"}}}
+        (d / "state.json").write_text(json.dumps(st))
+        fr_rows, fr_calls = [], []
+        for bx in ("huginn", "odin"):
+            r_, c_ = ingest_final("f", d / f"final-{bx}")
+            fr_rows += r_
+            fr_calls += c_
+        fr_rows += ingest_settle("f", d / "state.json", "t02-counter-example", "increment.increment.0")
+        fr_rows = fill_blocked(fr_rows, fr_calls, "f", "not settled (DERIVED)", "not measured")
+        k2 = [r for r in fr_rows if r["program"] == "t02-counter-example" and r["stage"] == "lfr"]
+        check("final: a calibration call keeps one row per box", sorted(r["box"] for r in k2) == ["huginn", "odin"])
+        check("final: wrap from E5JSON, bucket and key check kept",
+              any(r["stage"] == "wrap" and r["seconds"] for r in fr_rows)
+              and any(r.get("bucket") == "Sha" and r.get("keys_check") == "T25SUITE" for r in fr_rows))
+        check("final: failed chain is null with exit reason", all(r["seconds"] is None and "exit 101" in r["reason"]
+              for r in fr_rows if r["program"] == "bad" and r["stage"] in PROVE))
+        check("final: unsettled call gets the DERIVED note", any(r["stage"] == "preview_submit" and r["program"].startswith("d02")
+              and r["reason"] == "not settled (DERIVED)" for r in fr_rows))
+        md3 = render(fr_rows, "final", {"derived_tx": "290"})
+        check("render: per program by box with Preview tx and blocks",
+              "## Per program by box" in md3 and "| `t02-counter-example` | odin | 1 | 1 | 16.0 |" in md3 and "| 2 | 136144 |" in md3)
+        check("render: settle table and tx counts", "| 135999 |" in md3 and "2 included (1 settled calls), 1 refused" in md3
+              and "290 included tx" in md3)
     return 0 if ok else 1
 
 
@@ -428,6 +623,10 @@ def main():
     g.add_argument("--muninn-dir", action="append", default=[])
     g.add_argument("--preview")
     g.add_argument("--map", action="append", default=[], help="TAG=PROG/CALL for --preview")
+    g.add_argument("--final-dir", action="append", default=[], help="box return of final/final-box.sh")
+    g.add_argument("--settle", action="append", default=[], help="STATE.json=PROG/CALL (t10a-state.json of one ledger)")
+    g.add_argument("--derived-tx", help="full-suite included tx (DERIVED) for the settle section")
+    g.add_argument("--upper-note", help="reason for an unmeasured upper stage (default: the rehearsal block)")
     g.add_argument("--preview-note", default="rehearsal: Preview not in scope")
     g.add_argument("--title", default="T23 Part B benchmark")
     g.add_argument("--meta", action="append", default=[], help="KEY=VALUE lines for the header")
@@ -448,10 +647,20 @@ def main():
         r_, c_ = ingest_box(a.run, d)
         rows += r_
         calls += c_
+    for d in a.final_dir:
+        r_, c_ = ingest_final(a.run, d)
+        rows += r_
+        calls += c_
     if a.preview:
         rows += ingest_preview(a.run, a.preview, dict(m.split("=", 1) for m in a.map))
-    rows = fill_blocked(rows, calls, a.run, a.preview_note)
-    write(rows, a.out, a.title, dict(m.split("=", 1) for m in a.meta))
+    for sm in a.settle:
+        st, pc = sm.split("=", 1)
+        rows += ingest_settle(a.run, st, *pc.split("/", 1))
+    rows = fill_blocked(rows, calls, a.run, a.preview_note, a.upper_note)
+    meta = dict(m.split("=", 1) for m in a.meta)
+    if a.derived_tx:
+        meta["derived_tx"] = a.derived_tx
+    write(rows, a.out, a.title, meta)
     print(f"T23BENCH rows {len(rows)} calls {len(calls)} -> {a.out}/bench.jsonl, {a.out}/BENCH.md")
     return 0
 
