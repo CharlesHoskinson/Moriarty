@@ -5042,3 +5042,45 @@
 - Provable on T25: 142 rows = 145 call files (60 Plain, 85 Sha bucket); BLOCKED 3 (2 secp256k1, 1 keccak tier 3). Split huginn 58, odin 55 (9 reps), loki 32, 2 calibration calls per box.
 - LEAD PICKs for T15: SHA-LEAF (Sha bucket leaf recorded on first call, equal across boxes), SETTLE-REP (acceptRun one claim per tx, anchor = c_p: 22 included tx in T23, full suite 290 DERIVED; acceptCollection batching is a T15 item).
 - Box requests staged in ~/.cache/t23/final/ (not sent); open: settle hook for rep calls (odin-t25-rsl-prove.sh), huginn XG sha from the gpu-leafl-t25 return.
+
+## [2026-11-16 06:14] qa | gpu-leafl on the T25 head PASS on huginn: T25 keys, byte-equal cpu/cuda/tg, 3.5x faster call, GPU wrap passes ledger
+- huginn h215 (RETURN c0b3cf45, 97 files, pulled by allowlist): keys equal the T25 table in all three builds (24 fields; key_root 659d6ff6, without R_SL 2397bfe5); all 6 proof layers and call-lfr (72ccf159) byte-equal cpu = cuda = tg.
+- Warm call median (MEASURED, RTX 5080): cpu 380.8 s, cuda 107.7 s, tg 107.4 s (3.5x). L 53.9 -> 2.73 s, L_Fr 225.2 -> 24.9 s; keys() 62.6 s unchanged; peak 10,959 MiB.
+- GPU wrap w/gpu VK 6faac46f: Ok(()) on ledger 9.1.0.1 on muninn (7/7, 3/3 refused). LEAD PICK: gpu-leafl-t25 e8c2896 (cuda build) is the production prover for the T23 full suite.
+
+## [2026-11-16 06:24] commit | T23 final-run requests fixed and ready: huginn pinned to the production cuda prover
+- Moriarty t23-final f40b75914: final-box.sh stops (exit 4) when the wrap asserts a key other than 6faac46f; odin and loki check mori-gpu against 3fd18b166 and build with target-cpu=native.
+- huginn request pins t7_chain 97029be4 and wrap aaf2ebb6 (gpu-leafl-t25 return c0b3cf45). Plan: 98 native-pass files, suite-table gap noted.
+
+## [2026-11-16 06:36] build | T23 final run on the T25 keys started on all three boxes; Sha leaf accepted by N1 on huginn
+- Plan (branch t23-final 636b6a17c/f40b75914, T23-FINAL-PLAN.md): 145 call files provable now (139 R_SL rows = 142 files, plus 3 jubjub); 3 BLOCKED (2 secp256k1, 1 keccak). Split by throughput: huginn 58, odin 55 (all 9 representatives), loki 32; prover gpu-leafl-t25 cuda.
+- LEAD PICK SETTLE-REP: settle one call per program class, 9 runs = 18 Preview tx (22 in T23 with the 4 already included); the full suite one ledger per call would be 290 tx (DERIVED). Batching via acceptCollection, one root per checkpoint, is a T15 item.
+- huginn calibration (h218): t02 Plain and d02 Sha both T25SUITE EQUAL (16 universal fields); chain about 112-119 s + wrap 88 s; the Sha leaf (rsl_key_leaf 30db3035, key_root 76bc3b58) is accepted by N1, so the 85 Sha calls are not blocked.
+- Kits: MEMBACKEND c913de0 gate 20/20 rc 0 and VDG b677d80 batch1 55/55 + 69/69 refused on loki; both deg3 fixes CONFIRMED (stay on branches per the earlier LEAD PICK). loki m6 scale paused for T23 (m95).
+
+## [2026-11-16 06:53] commit | T23 final: the representative settle hook and the final suite table (gap closed)
+- Moriarty t23-final a96d031cd (not pushed): box/odin-t25-rsl-prove.sh RO KDIR CALL CALL_SHA256 (cuda t7_chain under gpu.lock, T25 CPU fallback; pins wrap.vk, slice, call sha256, KDIR/../ok); box-preview-prover.sh passes HP_REMOTE_ARGS; post-t25-settle.sh {args,dry,deploy,call} rep LABEL plus prep rep / settle rep over the 9 reps, one SherlockLedger each, Preview only (T23_ALLOW_PREVIEW=1, any other T10_NET refused).
+- LEAD PICK REP-REFUSALS: R1 to R3 on the first representative (a05-list-field) only; the 9 reps give 18 included tx + 3 refused.
+- t23.py final: suite table from ret-{huginn,odin,loki} (RETURN.sha256, T25SUITE, wrap.vk, ledger Ok(()), compare vs native Preview or native ref only, settle column), invariant 208 = 62 + 1 + 3 + 142 over 145 files holds; then bench.py ingest. Selftest 28/28 PASS.
+- Dry test on t02 inputs (huginn gpu-leafl-t25 c/cuda + w/gpu): args lanes 10/20/34/39 equal, dry PASS (T10A_DRY_CHECK=server, stub prover, no wallet, 136.9 s); final table: t02 pass, acceptRun block 136,144. No submit, odin and wallet untouched.
+
+## [2026-11-16 06:58] decision | Owner rulings 2026-11-16: deg3 merge after T15, settle 9 representatives, BLOCKED calls deferred, GPU prover to production
+- Owner (answers to the lead's questions): merge the deg3 kit fixes (MEMBACKEND c913de0, VDG b677d80) after T15, with the key_root update in the post-prototype rekey; T23 settles the 9 representatives (18 tx plus 3 refusals), the full count DERIVED, the acceptCollection prover a T15 item.
+- Owner: the 3 BLOCKED calls (2 secp256k1, 1 keccak) are deferred past the prototype; their kits go into the next rekey.
+- Owner: merge gpu-leafl-t25 (e8c2896, with the tracegen fix) into the T25 production line; CUDA is the default box prover, CPU stays the reference.
+- odin calibration h243: t02 Plain and d02 Sha T25SUITE EQUAL; the Sha leaf 30db3035 / key_root 76bc3b58 equals huginn's.
+
+## [2026-11-16 07:17] qa | Carbon Quint lanes for T25 and T12 prepared; T25 lane started in the owner's agy pane
+- Lanes ~/.cache/gemini-lanes/qa-20261116-t25-rekey (openvm t25-int d053eaf, Moriarty 1fcc5fb7e: key_root layout, slot 15 in its four places, FP-3 in the key path, one keygen per gate, hard-rule bounds) and qa-20261116-t12-gate (openvm t12-g3 a098153, stark-backend a0346d7, Moriarty tree f46cd68: Rec/Flip ordinals, final WHIR gamma, refusal coverage, cnt/need0, G4).
+- One pane w1:p1C (agent agy), lanes run in sequence; T25 first. The pane had stopped on a network error during the alu-arith kit lane (no REPORT); that launcher is still polling.
+- Commit worktree ~/Projects/Moriarty-wt/qa-t25-t12 (branch qa-t25-t12 from main 2d612495f).
+
+## [2026-11-16 07:35] decision | GPU leaf-to-L port merged into the T25 production line
+- Owner ruling 2026-11-16 applied on muninn: openvm `t25-int` fast-forwarded d053eaf -> e8c2896 (gpu-leafl delta, tracegen fix 5fbd9fd, diagnostic 4c7585c); huginn RETURN c0b3cf45 had T25 keys equal and proofs byte-equal cpu/cuda/tg.
+- stark-backend for T25 is `gpu-leafl` fafb993 through the openvm `[patch]` path (was `t8b-gp` a0346d7; fafb993 carries that commit). `t8b-gp` is unchanged because about 35 other openvm worktrees use it.
+- `cargo check --offline --locked -p sherlock-wrap-export --lib --examples`: default, `cuda,gpu`, `cuda-tracegen,gpu` all rc 0. No proofs; no box or synced tree touched; no push.
+
+## [2026-11-16 07:49] qa | T15 blockers: T11 ZK guard findings fixed, G5 mapped to code
+- Moriarty t15-blockers 85d59e1aa (from sherlock-int): zkguard::check_export is an "os" allowlist ("seeded" only under test-seed), wrapd bench guarded; openvm t15-blockers a00b3d9 (from gpu-leafl-t25): Secret::load allowlist, var_os seed check, args/accept-bundle files 0600, T10CALL private fields moved to a 0600 OUT.private.json.
+- Named tests t15_t11_guard.rs and t15_t11_blind.rs fail before and pass after on muninn (cargo test only, no proof); F-T11-4 OPEN DESIGN (liveness, LEAD PICK: after T23 settle); F-T11-5 and F-assurance-Q3 GUARD HOLDS (Q3 spec text open).
+- G5-MAP.md: every frozen-set value cited in frozen.rs; fp8_d3 bounds-all equals T25 d3.json; minimum 101.0110 bits (leaf aggregation query), L 101.0730; nothing under 100. Wrap BLS12-381/KZG and hashes are assumptions (OPEN DESIGN G5-W, G5-H).
