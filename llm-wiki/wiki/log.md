@@ -5136,3 +5136,8 @@
 - Owner: "add the T20 batching fix to the T15 freeze"; new research/sherlock-tested-design-20261113/T15-FREEZE.md, linked from the T15 row.
 - t20-batched 5dc1be2ee is in neither main nor the deployed T23 contract 705f1ef95, which still has per-claim openClaim and a runs insert per acceptRun.
 - LEAD PICK: merge after the T23 settle ends, re-run the T20 checks, Preview acceptCollection plus acceptRun; T20 row now reads DONE ON BRANCH ONLY.
+
+## [2026-11-16 14:38] lane-done | T23 final on the T25 keys
+- 208 calls: 142 pass, 62 refused-as-native, 3 blocked (secp256k1, keccak), 1 n/a; 0 mismatch; invariant ok (Moriarty-wt/t23-final 28ce82150).
+- 9 rep programs and t02 settled on Preview; j02 and z03 proved on tyr after the odin-source mismatch; 21 included tx.
+- bench ingest fix: ledger times.tsv rows from partb-bench lacked the box column; rows rewritten to the bench schema (original kept as times.tsv.pre-schema-fix).
