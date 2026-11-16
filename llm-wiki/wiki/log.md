@@ -4995,3 +4995,50 @@
 - odin rerun 3 (h231/h232, RETURN c9f1f5fc, pulled by allowlist only): g3-wrap-small 1/1. The in-circuit replay refuses changed samples [0,136,273,410,546], and the native L_Fr verifier refuses the 5 flipped proofs (GKR denominator, GKR layer x2, merkle root x2). Every other step rc 0.
 - Muninn check M: wrap/key-k21 VK 6faac46f Ok(()) on ledger 9.1.0.1 (7/7 changed inputs, 3/3 flipped bytes refused); lake build T25Keys + BridgeAxioms rc 0, 0 sorry.
 - LOOP T12 marked DONE. Next on the critical path: T23 post-T25 Preview settle.
+
+## [2026-11-16 04:52] commit | T12 Moriarty t12-g3 a76d72fea (tree 45664ce) landed; second commit (tree f46cd68) held by a load-flaky T0 test
+- a76d72fea: t12g.sh, g3_wrap.rs, T25Keys.lean, BridgeAxioms, RUNBOOK 3/4/8, CX-2 (T0 PASS on the fourth try).
+- Second commit (CX-3, runner fixes, g3_wrap flipped-proof load) is staged; T0 fails only on factory test_heavy test_copies_run_at_once_with_slots (makespan 1.94 to 2.86 s vs 1.9 s at load ~20); no --no-verify, no DW_SKIP_T0.
+- G4 lake on muninn PASS (0 sorry; T25 eq* no axioms, gate* propext only); g3-wrap-small fix PASS on the run-2 return.
+
+## [2026-11-16 04:53] build | T23 post-T25 settle: request updated for T12 DONE, muninn submit runbook added, follow-up commit retrying
+- Request ~/.cache/t23/post-t25-settle-request.md: odin pauses S5 at a run boundary for the Part A smoke and stays quiet through Part B. The runbook ledger-checks the smoke wraps (partb-bench.sh ledger), re-verifies the args, checks the ssh master, then runs deploy and call for t02 and then standin in unit t23-post-t25-settle.
+- t02 dry-run vector against the T25 t02 wrap statement (MEASURED): only lanes 0 and 1 differ (binding_input, comm), as expected. EUI010_VECTORS is read only by the eui010_batch1 test, so the odin scripts do not set it.
+- Follow-up commit (args re-verifies the kept ledger-args, the hook pulls pins.log) is uncommitted after 4 tries: T0 factory unittests fail on load timing (2.2 to 2.7 s against 1.9 s; the branch lacks 8b3df7924). Unit t23-post-t25-commit retries it, with no bypass.
+
+## [2026-11-16 04:54] decision | T23 post-T25 Preview settle: prep done, odin Part A started; LEAD PICKs on redeploy and args
+- Prep lane (branch t23-post-t25 fa1e02081, request ~/.cache/t23/post-t25-settle-request.md 69472782): the wrap key changes b7f5e43c to 6faac46f, so a redeploy is needed. LEAD PICK: one new SherlockLedger per program (t02, then standin), 4 included tx on Preview; R1 to R3 refusal calls for t02 only, never included.
+- Dry run (T10A_DRY_CHECK=server, stub prover, no wallet) PASS for both programs: proof server /check 13 ops, dump equals the ledger 9.1.0.1 public inputs (1,026 lanes), replay refused (MEASURED).
+- LEAD PICK: keep ~/.cache/t23/post-t25/{t02,standin}/ledger-args.json (0600, the only submit inputs after the return cleanup) until both settles land, then delete them. The lead never reads them.
+- Scripts staged on odin (SHA256SUMS ok); m78 Part A smoke sent. Submit after both smoke wraps pass the muninn ledger check.
+
+## [2026-11-16 05:18] qa | T23 post-T25 smoke wraps pass ledger 9.1.0.1; Preview settle submitted from muninn
+- odin Part A (h237, RETURN 6adbe760, 16 files, pulled by allowlist): t02 rc 0, chain 505.7 s + wrap 108.5 s, public 80c311cc (= T25 t02); standin rc 0, public f8245066; both wrap.vk 6faac46f.
+- Muninn ledger 9.1.0.1: both Ok(()), 7/7 changed inputs and 3/3 flipped bytes refused. Settle args re-verified (1,026 lanes, anchor equal).
+- Unit t23-post-t25-settle started on Preview: deploy t02, call t02, deploy standin, call standin; the wallet stays on muninn. Note: the runbook's step 1 (partb-bench.sh ledger) needs T23B_* env; the lead ran the ledger-check binary directly.
+
+## [2026-11-16 05:30] qa | VDG degree-3 fix b677d80 keeps every universal key: D.3 key chain on loki equals 652c884 above the leaf
+- loki h80: vdg-key-chain ok (3,031 s, T7CASE 10/10). N1 (3 sets), N2, N3, NW, NW2, FV, MERGE-WORK, L over N3 and L_Fr are SAME as 652c884 (pre-hash and bytes). The universal key set does not change, so no owner item and no rekey.
+- DIFF only where CoreAir gained the 5 C_ADLEN columns: app chip sets 0/1 (+2,344 B) and the S=8 path C 0/1; leaf<1> sets 0/1 and path C 0/1 differ in pre-hash only (bytes same). Set 2 app and leaf are SAME.
+- A merge of b677d80 into the T25 line changes only app-level keys for the affected chip sets (MEASURED).
+
+## [2026-11-16 05:38] qa | T23 post-T25: t02 settles on Midnight Preview with the T25 keys (block 136,144); R1 to R3 refused by the node
+- Deploy SherlockLedger (wrap key 6faac46f): included at block 135,999, 5,505 B, 263.5 s wall. acceptRun A: included at block 136,144, 6,780 B; the call took 907 s wall including the live odin box proof (MEASURED).
+- R1 outcome-differs, R2 one proof bit flipped and R3 replay of A after it landed: all refused-by-node (1010 Invalid Transaction, Custom error 115 for R1); none included.
+- 2 of the 4 planned Preview tx are in. standin deploy and call run next in the same unit.
+
+## [2026-11-16 05:57] qa | T23 post-T25 Preview settle DONE: t02 and standin both settle on Midnight Preview with the T25 keys
+- standin: deploy included at block 136,192 (5,505 B, 251 s wall); acceptRun A included at block 136,341 (6,780 B; 909 s wall including the live odin proof). t02: deploy 135,999, A 136,144; R1 to R3 refused by the node.
+- 4 included Preview tx in total, as planned; wallet stayed on muninn; unit t23-post-t25-settle ended.
+- Next: the T23 full-suite plan on the T25 keys (Opus lane), then BENCH.md and T15.
+
+## [2026-11-16 06:12] decision | loki kits-deg3 done; VDG fix changes gp2 key_root, so it stays off the T25 line until T15
+- loki h82/h83: pathc stops at the stale 'bare Call AIR 77 != 1' assertion, as on 652c884 (fixed on t25-int), so not from the deg3 change; s8app ok; gp2 T8GP2 all_pass 48 cases, as on 652c884.
+- gp2 key_root on b677d80 is 1a5639c5, against 2397bfe5 on 652c884; keys_d 5fb82d42 is the same. The app keys of the changed CoreAir sets enter key_root, while the universal recursion keys (N1 to L_Fr) are unchanged (h80).
+- LEAD PICK: keep kit-vdg-deg3 b677d80 and kit-membackend-deg3 c913de0 on their branches; do not merge them into the T25 line now, because that would move key_root after the Preview settle. Merging them with a key_root update is a T15 item.
+
+## [2026-11-16 06:12] commit | T23 final-run plan on the T25 keys: 145 call files over odin, huginn and loki; representative Preview settle
+- Moriarty t23-final 636b6a17c (from t23-post-t25 cf7a86473, not pushed): T23-FINAL-PLAN.md, final/final-box.sh, t25keys.py checksuite, box lists, bench.py final tables (selftest 22/22).
+- Provable on T25: 142 rows = 145 call files (60 Plain, 85 Sha bucket); BLOCKED 3 (2 secp256k1, 1 keccak tier 3). Split huginn 58, odin 55 (9 reps), loki 32, 2 calibration calls per box.
+- LEAD PICKs for T15: SHA-LEAF (Sha bucket leaf recorded on first call, equal across boxes), SETTLE-REP (acceptRun one claim per tx, anchor = c_p: 22 included tx in T23, full suite 290 DERIVED; acceptCollection batching is a T15 item).
+- Box requests staged in ~/.cache/t23/final/ (not sent); open: settle hook for rep calls (odin-t25-rsl-prove.sh), huginn XG sha from the gpu-leafl-t25 return.
