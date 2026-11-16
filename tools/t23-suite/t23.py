@@ -691,6 +691,13 @@ def final_assign(calls, files):
     return by
 
 
+def runs_log_tail_ok(d, rl):
+    """runs.log minus its last line hashes to the RETURN.sha256 entry (final-box.sh appends after hashing)."""
+    want = next((l.split()[0] for l in rl.splitlines() if l.split()[-1].lstrip("./").endswith("runs.log")), None)
+    lines = (d / "runs.log").read_bytes().splitlines(keepends=True)
+    return want is not None and len(lines) > 1 and hashlib.sha256(b"".join(lines[:-1])).hexdigest() == want
+
+
 def read_return(d, vk_sha=T25_VK_SHA):
     """One box return: RETURN.sha256 verified, no forbidden name; {file label: call record}."""
     d = pathlib.Path(d)
@@ -699,6 +706,11 @@ def read_return(d, vk_sha=T25_VK_SHA):
     if bad:
         raise SystemExit(f"final: FORBIDDEN FILE IN RETURN {d} ({len(bad)} lines)")
     r = subprocess.run(["sha256sum", "-c", "--quiet", "RETURN.sha256"], cwd=d, capture_output=True, text=True)
+    failed = [l.rsplit(":", 1)[0] for l in r.stdout.splitlines() if l.endswith(": FAILED")]
+    # final-box.sh logs its own "RETURN ..." line to runs.log after it hashed runs.log. Accept exactly that case:
+    # runs.log is the only mismatch and runs.log without its last line has the recorded sum.
+    if failed == ["runs.log"] and runs_log_tail_ok(d, rl):
+        r = subprocess.CompletedProcess(r.args, 0, "", "")
     if r.returncode:
         raise SystemExit(f"final: RETURN.sha256 check failed in {d}: {(r.stdout + r.stderr).strip().splitlines()[:3]}")
     box = None

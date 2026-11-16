@@ -86,5 +86,6 @@ cd "$OUT" || exit 1
 } > RETURN.list
 grep -E '\.secret|args[^/]*\.json|forbid|vector\.json|accept-bundle\.json|lfr_pk|lfr-call\.json|call-lfr' RETURN.list \
   && { log "FORBIDDEN FILE IN RETURN"; exit 1; }
+log "return set: $(wc -l < RETURN.list) files"   # last runs.log line: written before runs.log is hashed
 xargs -d '\n' sha256sum < RETURN.list > RETURN.sha256
-log "RETURN.sha256 $(sha256sum RETURN.sha256 | cut -c1-64)"
+echo "RETURN.sha256 $(sha256sum RETURN.sha256 | cut -c1-64)"   # stdout only; runs.log is already hashed
