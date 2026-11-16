@@ -4779,3 +4779,168 @@
 - Warm lone call: 301.24 s MEASURED -> 134 s resident DERIVED -> 41-45 s merged GPU DERIVED -> ~40 s (blowup 3) or 32-35 s (blowup 2) after the rekey ESTIMATE -> 24-30 s with kernels ESTIMATE. Collections 4,500-7,200 runs/h per 4-card box ESTIMATE.
 - 6 owner questions, none adopted; all six agents advise against OQ-1 (list decoding) and OQ-2 (cross-owner checkpoints).
 - The chair is a Fable model, so an Opus lane audits the 8 chair decisions (TIE-AUDIT.md), then writes the OpenSpec change sherlock-optimal-design-20261115 with EARS requirements.
+
+## [2026-11-15 22:00] commit | OpenSpec sherlock-optimal-design-20261115: 9 module specs, 74 EARS requirements (sherlock-e2e-spec 412526844)
+- Opus tie audit (~/.cache/design-debate/TIE-AUDIT.md) upheld 7 of 8 chair decisions; reversed C-18 for S3 only: the S3 collector record carries lane-1 comm and a reg_root tape read, so tail-only rebind holds for S2 and is a candidate for S3 until E-REBIND. No hard rule narrowed.
+- Change: proposal, design, tasks, 9 specs (RSH, LFT, WRB, KCH, CSL, PRT, GTR, STC, FQL); OQ-1..OQ-6 are OPEN (owner) notes; tasks list 22 experiments with pass bars and boxes, split key-neutral / prototype rekey / final rekey.
+- openspec validate --strict valid; ears lint 0 defects. T0 PASS; not pushed. Hill-climbing on huginn and odin starts after the prototype (T15).
+
+## [2026-11-15 22:18] qa | S5 scale sweep huginn pre-T25: app+leaf ~1.45 s/call steady (~2,480 calls/h); knee C=4; CPU leaf caps it
+- huginn h190 (d485639 + rsl-gpu-v2 + bench driver; RETURN a1502368): 3,430 calls, every app and leaf proof passed the stock verifier; no keygen. ~/.cache/perf-assessment/scale/huginn-pre/REPORT.md.
+- calls3-a: C=1 2.11-2.32 s/call -> C=4 1.43-1.52 -> C=8 1.37-1.45; C=15 no better. calls4 C=4 1.88-1.95.
+- Leaf runs on CPU: 1.97 s at C=1 rising with C; throughput flat at ~0.73 leaves/s from C>=4 (24 threads saturated). App GPU 0.26-0.35 s; GPU mean utilization 11-14%. On this tree more GPUs would not raise app+leaf throughput; the leaf GPU port (gpu-leafl) is the lever.
+- huginn next: vkmemo box run (m89).
+
+## [2026-11-15 22:30] build | MEMBACKEND kit 1abcfa0: Window/HeapRead/Seg/Flush AIRs; dense-mem Quint 49/49 (sherlock-e2e-spec 48a672d06)
+- openvm kit-membackend 1abcfa0 (from eui010 85765aa): domain tags in the sponge capacity word (LEAD PICK MBK-TAGCAP), Tree8 tail opened on every leaf, flush iff r_pre + appends >= 8; mutants in tests/kit_membackend.rs; cargo check passes on muninn.
+- Lean O14-O16 build (first committed in 21d25b519); O12, O13, O43, O47 still open, and the lane continues on them. Quint denseMemory.qnt + denseStark.qnt, 49 commands match, 12 mutants caught.
+- Finding: the backend alone accepts a cold read of an occupied slot above q; CORE's addr<base route refuses it (cold_route_forged). Batch 3 must keep that route; GUARD HOLDS with it.
+- Box request 6bc294e0 waits for the T25 path. Batch 3 will change chip-set keys, the AIR count and genesis (heap::genesis); no universal key change. Cold read is about 136 SPONGE rows at TOP=63.
+
+## [2026-11-15 22:39] qa | EUI-010 batch 2 box run (odin h179-h182): universal N1-N3, FV, NW2 unchanged; T25 integration starts
+- B: 55 honest pass, 69/69 forged refused, 0 panic. D: gate 47 of 120 (expected; batches 3-6 go to the second rekey per owner "Rekey now, again later"); quint_t16 4/4, cde 4/4, t13 12/12, lib 32/32.
+- Part E 85765aa vs 652c884: N1/N2/N3/FV/NW2 pre_hash EQUAL; app/leaf sets, path C, key_root, MERGE-WORK and NW differ (planned). MERGE-WORK 49 AIRs, 4,997 cols (<5,400), max constraints 1,000 of 1,000.
+- quint_regressions: the same 8 traces fail on both trees (7 ntfix "no manifest row", gp2 m-rom-no-tbl-bind refused by CoreAir #647); pathc rc 101 = stale bare-Call assertion fixed on t25-int by 57501f3. Not batch-2 regressions.
+- T25 lane started: merge 652c884 into t25-int, fix the two Quint regressions, write the odin keygen request. odin resumed the S5 sweep (h183) meanwhile.
+
+## [2026-11-15 22:47] build | T25: eui010 652c884 (EUI-010 batch 2) merged into openvm t25-int as d053eaf
+- Clean ort merge onto 8a17c34; no conflict. `git diff 652c884 d053eaf` lists only the t25-int side: qr/gp2.rs (7d9596b), the fffd9ba keccak re-emit files, t7_chain pathc (FP-3), eq_bits/trace.rs (T11-DET). So every key must equal the odin eui010-3 652c884 run.
+- The two quint_regressions failures of eui010-3 are not batch-2 defects. (a) The odin trace dir qr-ntfix-plus-t16 has the 7 t10q-ntfix traces but no manifest rows; Moriarty sherlock-int 1fcc5fb7e has 69 traces and 69 rows (733d61a1d). (b) 652c884 lacks the 7d9596b gp2 handler (table-12 alias), so C2.1 #647 fired first; t25-int has the handler.
+- Not pushed. The muninn check and the quint subset replay on d053eaf are queued behind heavy-slot.
+
+## [2026-11-15 23:07] qa | T25 t25-int d053eaf: cargo check clean; both quint_regressions failures of eui010-3 pass
+- heavy-slot, fresh target ~/.cache/t25/target-d053eaf: check of sherlock-leaf (tests, examples), sherlock-wrap-export (examples) and sherlock-lfr (tests) rc 0.
+- replay_all on the 8 traces that failed on eui010-3, with the sherlock-int 1fcc5fb7e manifest and slice 67868363: PASS gp2-value-set-m-rom-no-tbl-bind refused by `bus 68 unbalanced: message [19,` (the table bind; refused_by unchanged). The 4 t10q-ntfix traces PASS, 3 are SKIP (not-replayed), and the 4 named t10q_nt*_refused tests pass. Log ~/.cache/t25/qr.log, sha256 11e04317.
+- Fail before: odin eui010-3 at 652c884 (quint_regressions.log ab3f4769), which used a trace dir with no rows and the pre-7d9596b handler. The fixes are the merge (7d9596b handler) and the sherlock-int trace dir. No manifest or code edit. CoreAir #647 is the C2.1 constant-row guard: it is a sound refusal of the old table-0 alias, but it is not the guard under test, so pinning it would weaken the row.
+
+## [2026-11-15 23:12] decision | loki joins as the third GPU box (RTX 5090 Laptop 24 GB); owner puts it in the loop
+- Linked like huginn and odin: YubiKey key ssh:loki, system sshd on 22 (ufw on tailscale0 only), host key SHA256:FXHRfmUg...0f0 matched the box report; herdr session loki, agent loki-agent, bus ~/remote-bus/outbox.log.
+- Install double check (~/.cache/loki-install/DECISION.md): cuda 13.4.3 via pacman with no -Sy (exact transaction cccl 3.5.0, opencl-nvidia 615.78.08 = driver, cuda 13.4.3) and rust 1.90.0/1.91.1/1.99.0 approved; protobuf and lld rejected (Opus: unused); nsight deferred.
+- Owner: "add loki to the loop, going afk, use it to run everything you need". A loki driver lane queues: input sync, smoke test (78-call GPU suite + t02 wrap, ledger check), kit box runs (ALU, STACKS, MEMBACKEND, VDG), gpu-leafl, S1/S3/S5, the T24 heavy run.
+
+## [2026-11-15 23:15] commit | T25 odin keygen request ready; LOOP T25 status (Moriarty 2110a5a17)
+- ~/.cache/t25/keygen-box-request.md, sha256 33db5622. The run makes L, L_Fr and the k=21 wrap key once on openvm t25-int d053eaf with Moriarty sherlock-int 1fcc5fb7e. The trees ship as git-archive tars, checked with diff -r: openvm d29c0804, moriarty 746469cf. A fallback patch from 8a17c34 is b2cdacb1.
+- A pre-keygen gate runs first: L <= 2,200 columns, L_Fr stacked width <= 48 and log height <= 20, check-chain D3 on the measured keys, and wrap rows < 1,782,573 before the wrap key. If any check fails, the run STOPs (never k=22).
+- After keygen it runs the T10m/T10q/T8b gates, pathc, gp2/x7/d3work, the rsl t02 and stand-in runs on the same wrap key, the T11-DET check, and the T12 legs (iface_fixture into fixture-t25, lfr_e3, i7_decode, t12_anchor_slot). Returns use an allowlist and exclude secrets. muninn runs ledger 9.1.0.1 on the returned wrap dirs.
+- LOOP T25 status updated in a docs-only commit 2110a5a17 (T0 PASS). Not pushed. The lead sends the request.
+
+## [2026-11-15 23:19] commit | MEMBACKEND Lean O12, O13, O43, O47 proved (sherlock-e2e-spec c154662c4); task 1.3/2.4 Lean gates closed
+- MemModule.lean: addr_bound, top63_bound (O12); memHist_genesis/leaf/leaves (O43); mem_contract (O13, MEM window as a Module); accepted_fits + src023_accepted (O47; with O14 gives SRC-023 at window capacity). No sorry; axioms propext, Quot.sound, Classical.choice only. T0 PASS.
+- COUNTEREXAMPLES.md: F-dense-Q1 cold_route_forged GUARD HOLDS (conditional on CORE's addr<base route); F-dense-Q2 cold_read_uses_running_root GUARD HOLDS. Batch-3 constraint and owed test mem_cold_read_above_base_refused recorded in EUI-010 PLAN.md.
+- The kit gates still need the box run (request 6bc294e0), now queued on loki.
+
+## [2026-11-15 23:21] decision | T25 keygen request hardened for an unattended odin run (sha256 9ad6f3b4)
+- Coded STOP gates: any nonzero rc in check, build or the tests stops the run. The one exception is eui-gate at rc 101 with "47 of 120". The D3 gate needs at least one FP8D3 line, and every line must say PASS. The fixture-t25 guard is safe to resume. unit.out appends.
+- The stand-in rerun of key-A is dropped. T25GATE reports the key-A L and L_Fr pre_hash beside the 652c884 values.
+- New 3.11 runs the built T12 legs from the t12-gate RUNBOOK: enc_air_vectors (G3 reference and L in L_Fr), wrap i9_enc and i1_transcript, and g1_frozen (G1). The G3 CPU, GPU and verifier legs and G4 Lean are not built, so T12 runs them after T25. Muninn runs the ledger negative controls.
+- odin was not quiet at 22:45 (scale-s5-pre running). The request's quiet gate waits for it.
+
+## [2026-11-15 23:22] decision | T25 keygen sent to odin (m72): t25-int d053eafee39 = 8a17c34 + EUI-010 batch 2
+- Merge clean; muninn cargo check passes; lib 32/32, lfr 26/26, t13 12/12. The 8 Quint traces that failed on eui010-3 pass on d053eaf with the sherlock-int manifest. The gp2 trace keeps its bus-68 refusal: CoreAir #647 is the constant-row guard, not the table bind under test.
+- Request ~/.cache/t25/keygen-box-request.md 9ad6f3b4. Stop gates: tests (eui-gate 47/120 accepted), L <= 2,200 cols, L_Fr stacked width <= 48, D3 on the measured keys, wrap rows < 1,782,573 (k=21). Then the gates, pathc, rsl t02, fixture-t25 + E3 reruns, the built T12 legs; wrap dirs to muninn for the ledger check.
+- odin pauses scale-s5-pre at a run boundary for T25 (resumable). Watch items: L_Fr max log height 20 sits at its bound; T12 G3 legs and G4 are not built yet.
+
+## [2026-11-15 23:27] build | loki joins the box set; smoke inputs synced from huginn via muninn
+- loki: RTX 5090 Laptop 24 GB, Core Ultra 9 275HX, 62 GiB; CUDA 13.4.3, driver 615.78.08 unchanged, rust 1.90.0/1.91.1/1.99.0 (m2). LOOP box table row in Moriarty b8d09f835.
+- Smoke set: openvm d485639 + rsl-gpu-v2 4b3afb76 (byte-equal to git + patch), its siblings, the wrapd and wrap_verify trees, SRS, calls3-a/calls4 and the t02 inputs. 14/14 per-file manifests equal on huginn, muninn and loki (MEASURED). Kit trees for ALU, STACKS, MEMBACKEND and VDG are staged beside them with stark-backend a0346d7.
+- loki agent env had RUSTUP_TOOLCHAIN=stable (1.100), which overrides the repo pins. Every loki unit unsets it and prints `rustc -V`.
+- m4 smoke sent: the 78-call R_SL GPU suite vs huginn h181, and t02 app to wrap vs h185.
+
+## [2026-11-15 23:46] qa | vkmemo on huginn (h192): warm call 261.6 -> 123.6 s with the disk key cache; keys and proofs byte-equal; ledger Ok
+- MEASURED warm wall: off 261.60 s, memo 177.96 s, disk-warm 123.55 / 125.52 s (keys() 62.6 -> 5.7, l_key 72.4 -> 12.9, L prove 73.8 -> 48.8); disk-fill 179.86 s; cache files 73.0 MB x3 per binary.
+- Fingerprint d2fc2b1f in all 11 runs = h185/h188; seeded OUT.json 8d35bb82 and pv 324fdff4 equal across off/fill/warm; c1 corrupt trailer -> 1 recommit, file rewritten byte-equal.
+- muninn ledger 9.1.0.1 check on wrap-r1-off and wrap-r4-disk-warm: Ok(()), 7/7 changed inputs and 3/3 flipped bytes refused. Results ~/.cache/vkmemo/result/.
+- huginn next: the gpu-leafl box run (request 8ce5d1e0, openvm f7e1fd2 + stark-backend fafb993); sync running.
+
+## [2026-11-15 23:48] build | T12 G3/G4 legs: branches t12-g3 (openvm from t25-int d053eaf, Moriarty from t12-gate + sherlock-int 1fcc5fb7e)
+- New: sherlock-lfr `g3` module (recording and one-challenge `Flip` transcripts, T-FS data) and tests `g3_legs` (T-FS L on CPU/ref prover and verifier, T-FS L_Fr, small real L proof: prover = verifier = tape, flips refused, T25 fixture leg), sherlock-wrap-export `g3_lfr` (real small L_Fr, CPU/GPU log files, wrapin export) and example `g4_params`, sherlock-leaf `g3_app` (app CPU leg; cuda GPU transcript and prover leg).
+- Moriarty: wrap test `g3_wrap` (native + in-circuit replay, flipped proofs refused, real lfr-call), runner `t12/t12g.sh`.
+- No GPU prover of L exists on t25-int (the gpu feature accelerates L_Fr only); the GPU legs are L_Fr (mori-gpu) and the app layer (cuda).
+
+## [2026-11-16 01:04] qa | loki smoke + kits; T25 keygen 3.1-3.4 PASS on odin
+- loki smoke (h29): suite 78/78, key_root 454e3bc1 and wrap vk b7f5e43c equal huginn's; chain cold 589.8 s / warm 571.3 s, wrap warm 17.3 / 15.8 s (MEASURED).
+- loki kits: ALU PASS (19/19, v2 5/5); STACKS gate PASS (5/5, 13/13 mutants) but qreg gp2 trace refused by CoreAir #647/#648 instead of bus 68 (attribution vs base85 pending); MEMBACKEND kit FAIL: HeapReadAir degree 4 > 3 at keygen -> fix lane kit-membackend-deg3 started (kit branch only, not on t25-int).
+- odin T25: 3.1 tests, 3.2 lfr-lib 26/26, 3.3 shape (L 2071 cols), 3.4 keygen PASS (L_Fr width 47/48, log height 20 at bound; pre-hashes equal 652c884). 3.5 D3 check-chain running.
+- huginn gpu-leafl: all builds and cpu/cuda/tg key steps ok (key compare stops on mismatch); timings running.
+
+## [2026-11-16 01:21] qa | gpu-leafl on huginn: keys equal CPU/GPU, warm call 381 -> 108 s; tracegen leaf not deterministic
+- KEYS EQUAL across base, cpu, cuda, tg (key_root 565ba920, keys_d 097f126d, l/lfr pre-hash equal). Key wall base 548 s, cpu 462 s, cuda 115 s, tg 117 s (MEASURED, h195).
+- Call walls: base 467.3, cpu 381.0, cuda-off 382.0, cuda 107.7, tg 107.8 s. cpu -> cuda: L prove 51.7 -> 2.8 s, L_Fr prove 226.8 -> 24.4 s, app..n3 layers about 5-8x faster; keys() 62.5 s unchanged (vkmemo disk cache cuts it separately).
+- Determinism finding: the cuda-tracegen build gives a different leaf proof (def7d02f vs 66bc27b5) and call-lfr (22acffb9 vs e7e531c7); every proof passes the stock verifier. LEAD PICK: production uses the cuda build (tracegen off) until the tg leaf trace is deterministic.
+- KBENCH_EQ PASS. Remaining: timed sets, then 3.6 wraps for the muninn ledger check.
+
+## [2026-11-16 01:54] qa | T25 rekey: D3 gates and k=21 wrap PASS on odin; new wrap VK 6faac46f passes ledger 9.1.0.1 on muninn
+- 3.5 (h192): T7 15 cases, V.9 70 cases, V.10 A/B, FP-8 D3 gates 2/2 PASS; weakest security L 101.07 bits, L_Fr query 101.14 bits; N3 fixed point holds; wrap rows 1,762,714 < 1,782,573 at k=21.
+- 3.6 (h193): wrap keygen 39.07 s, prove 55.95 s, proof 2,912 B, wrap.vk 1,325 B (sha256 6faac46f...); wrap-B VK byte-equal (one universal wrap key).
+- muninn ledger 9.1.0.1 check on key-k21 and wrap-B: Ok(()), 7/7 changed inputs and 3/3 flipped bytes refused (MEASURED, ~/.cache/t25/wrap-check).
+- Remaining T25 stages: 3.7 pathc and later, then RETURN.
+
+## [2026-11-16 02:47] qa | T25 3.7 pathc and 3.8 R_SL chain PASS; R_SL wrap passes ledger 9.1.0.1 on muninn
+- 3.7 (h194): T7CPATHC all cases incl. slim_call/slim_stmt (no bare Call AIR assert); FP8D3 gates PASS on pathc and d3work; gp2 48/48 (MERGE-WORK 4,997 cols, 49 AIRs, max 1000/1000); x7 22/22.
+- 3.8 (h195): R_SL key pre-hashes equal key-A; L_Fr width 47; t02 call wrap k=21 keygen 43.23 s, prove 58.90 s, wrap.vk byte-equal 6faac46f.
+- muninn ledger check of t02/wrap-call: Ok(()), 7/7 inputs and 3/3 bytes refused. Loki STACKS/VDG gp2 qreg refusal at CoreAir #647/#648 is the 652c884-alone behaviour; merged t25-int d053eaf refuses at bus 68 (same trace file ea9e6aff).
+- loki vdgbase batch1 panic traced to an old EUI010_VECTORS file (877ccdf3 vs odin's ccaea05f); rerun queued with the 652c884 vectors.
+
+## [2026-11-16 03:08] qa | loki smoke PASS: the 78 R_SL calls match huginn h181, and t02 app to wrap matches h185
+- The suite on the loki GPU matches huginn h181 on every non-timing field for all 78 calls (proved, verify and debug accept, words and comm equal native). App prove sum 15.9 s against huginn's 18.9 s (MEASURED).
+- t02 cold and warm: key_root 454e3bc1, LFRSHAPE 34+13, wrap vk b7f5e43c x3, 2912 B, wrap_verify 3/3, gpu_fallbacks 0. Chain wall 589/570 s against huginn's 381/285 s: the CPU stages (L 175 s) are slower on the laptop CPU, which the owner's builds also shared. Peak RSS 27 GiB. The ledger 9.1.0.1 check is queued in heavy-slot on muninn.
+- Kits on loki: ALU 19/19 and v2 PASS. STACKS 5/5 positives, 13/13 mutants, lib and qreg equal to base 85765aa. MEMBACKEND (HeapReadAir) and VDG (CoreAir) fail keygen at degree 4 > 3 and go to the deg3 fix lane.
+- gp2 m-rom-no-tbl-bind is refused at CoreAir #647/#648 on 85765aa, 652c884, d007862 and 277d1b6, and is never accepted. The bus-68 handler 7d9596b is only in t25-int. VDG base 652c884 batch1 panics with the box-request-2 vectors 877ccdf3; rerun queued with the v4 vectors ccaea05f.
+
+## [2026-11-16 03:13] qa | gpu-leafl DONE on huginn (h200, RETURN 95ef6147): CUDA warm call 105 s vs 463 s baseline; wraps pass ledger 9.1.0.1 on muninn
+- MEASURED warm calls (3 runs each): base 462.6-462.9 s, cpu 375.4-376.4 s, cuda 104.8-105.4 s, tg 107.7 s; cold base 546.5, cpu 458.2, cuda 112.1 s. CUDA is 4.4x the baseline on the RTX 5080.
+- Keys equal across base/cpu/cuda/tg; seeded proofs byte-equal for cpu/cuda-off/cuda; tracegen leaf differs (finding, diagnosis lane started).
+- muninn ledger 9.1.0.1 check on w/cpu, w/gpu, w/gpukey (wrap vk e5ecb8e7, the pre-T25 8a17c34 key): Ok(()), 7/7 and 3/3 refused. Result ~/.cache/gpu-leafl/result/.
+- Request says rerun 3.2/3.3 at the final T25 head; queued for huginn after T25 RETURN with the T12 G3 GPU leg. T25 3.9 det PASS on odin (call-lfr byte-identical f5394654, wrap vk equal, wrap proof bytes differ by OsRng as required).
+
+## [2026-11-16 03:22] qa | S5-GPU on huginn (h204): app + leaf on the GPU reach 0.285 s/call, ~12,600 calls/h, 5.1x the CPU-leaf S5
+- MEASURED s/call median (C=1/2/4/8): N16 0.400/0.326/0.294/0.285, N8 0.390/0.314/0.287/0.283; knee C=4 as before. huginn-pre (CPU leaf) was 1.45 s/call steady and 2.32 at C=1.
+- GPU utilisation 77% mean, 94.5% at C=4 (was 11-14%): the RTX 5080 is now the limit. Device pool 1.70 GB (C=1) -> 5.58 GB (C=8), <= ~0.55 GB per added concurrent app+leaf proof; host HWM 2.5 -> 3.4 GiB.
+- 565 calls, every app and leaf<1> proof accepted by the stock verifier; Plain leaf<1> key equals the k-cuda record. Driver t7_s5 d876591b (scale-s5g.patch cdb7e4d5); gpu-leafl t7_chain 53f6414b unchanged.
+- Result ~/.cache/perf-assessment/scale/huginn-gpu/ (RETURN d7741c08). Feeds the collection-lane estimate (4,500-7,200 runs/h per 4-card box) as a measured per-card app+leaf rate.
+
+## [2026-11-16 03:28] build | T25 single rekey DONE on odin (h200, RETURN c1852bdb): universal keys regenerated, wrap VK 6faac46f
+- 3.10 iface fixture (public_words 12,166, 44 L AIRs, 17.9 min; iface_fixture.json 9c6a254f), lfr-e3 46 decode cases (6 ok, 40 refused for their own reason), i7_decode 2/2, t12_anchor_slot 3/3; 3.11 g3-enc 1/1, g1-frozen 4/4.
+- keys.tsv 120 rows EQUAL the 652c884 table (key_root 2397bfe5, keys_d 5fb82d42; L 469404191..., L_Fr 279628172...); all g1 accepted; every step rc 0 except g3-wrap (rc 101: i9_enc ENC_DIR and enc-wrap-decode fixture not in the tar; input gap, handed to the T12 gate request).
+- muninn ledger 9.1.0.1: key-k21, wrap-B, t02/wrap-call, det/wrap-1, det/wrap-2 all Ok(()), 7/7 inputs and 3/3 bytes refused. Return ~/.cache/t25/result/ (forbidden names excluded).
+- Next: T12 gate (G1-G4) on odin from ~/.cache/t12/gate-box-request.md, then the post-T25 Preview settle, BENCH.md, T15. odin resumed scale-s5-pre meanwhile.
+
+## [2026-11-16 03:32] qa | T12-CX-2: T25 g3-wrap gave no wrap-transcript evidence; count gate refuses it
+- i1_transcript ran 0 of 2 tests (both #[ignore]), rc 0: CONFIRMED vacuous; i9_enc rc 101 (no ENC_DIR, no enc-wrap-decode): GUARD HOLDS; i1 native test skips a missing fixture: CONFIRMED.
+- Replay of the t12g.sh `cnt` gate on the real T25 log (~/.cache/t25/result/logs/g3-wrap.log): FAIL (passed 0, ignored 2); fix: count gates plus fixtures made on the gate tree (step e5fx). Entry in t12/COUNTEREXAMPLES.md.
+
+## [2026-11-16 03:33] commit | T12 G3/G4 legs: openvm t12-g3 ab6540b, Moriarty t12-g3 tree 45664ce
+- openvm ab6540b (off T25 d053eaf, additive, 8 files): g3.rs recorder/flip, g3_legs, g3_lfr, g3_app (cpu + cuda), g4_params.
+- Moriarty tree 45664ce (off sherlock-int 1fcc5fb7e): t12g.sh box runner, g3_wrap.rs, T25Keys.lean (decide on the frozen sets), runbook sections 3/4/8, CX-2. Commit through T0 running.
+- Not compiled on muninn: heavy-slot held by t14b-daemon-e2e (56G) since 23:08.
+
+## [2026-11-16 03:34] decision | T12 gate box request ready for odin; LEAD PICK on the G3 GPU leg
+- ~/.cache/t12/gate-box-request.md: G1 to G4 on the T25 keys, gpu.lock, quiet gate, unit t12-gate, allowlist return; muninn then runs ledger 9.1.0.1 on key-k21 and lake on T25Keys.lean.
+- LEAD PICK for T15: the T25 tree has no GPU prover of L; G3's GPU-prover leg = huginn h117 (T14 stack, L) + T25-tree L_Fr GPU and app GPU legs.
+
+## [2026-11-16 03:48] qa | T12 gate run 1 on odin: G1, G4 and real wraps PASS; three one-challenge refusal legs accept a changed challenge (attribution open)
+- PASS: g3-wrap-real-A 1/1, g3-wrap-real-t02 1/1, e5fx, g1-frozen 4/4, g4-params (8 keys on frozen sets), g4-frozen, g4-cmp (T25Keys.lean byte-equal); g3-wrap i1/i9 4/4 (mix-small 955 events/252 samples equal; runner grep false negative to fix).
+- Finding (h211): verifier accepted the honest proof with challenge 387 changed (L_Fr legs), sample 1499 changed (L all_entries) and challenge 1472 changed (app); other indices refused. Verdict pending: unused sampled value (test index choice) or a binding gap. T23 settle waits on the verdict.
+- GPU builds failed on env only (PATH lacked /usr/lib/wsl/lib, no CUDA_ARCH); rerun with CUDA_ARCH=120. mori-gpu on odin = Moriarty 3fd18b166, clean.
+
+## [2026-11-16 03:52] qa | T12-CX-3: the accepted one-challenge indices are the final WHIR gamma; GUARD HOLDS, no soundness gap
+- L small 387/388, app 1472/1473 (MEASURED), L real 1499 (DERIVED n-1) are each the last sample = last coordinate of the final WHIR gamma (stark-backend verifier/whir.rs:243-248, sample_ext draws D_EF samples).
+- The final gamma only batches final-round residuals (y_i minus e_i), which are 0 on an honest proof; a false proof leaves a nonzero polynomial of degree <= num_queries + 1 in gamma. Not a gap; T23 settle not blocked.
+- Findings: muninn ~/.cache/t12/G3-REFUSAL-FINDINGS.md; t12/COUNTEREXAMPLES.md T12-CX-3.
+
+## [2026-11-16 03:53] commit | T12 G3 refusal legs fixed (openvm t12-g3 23cc607) and runner fixes (Moriarty tree 880b691)
+- g3::final_gamma / bound_challenges; legs refuse bound challenges only and assert the final-gamma samples are accepted on honest proofs.
+- t12g.sh: unanchored E5I1 grep (false negative in run 1), CUDA_ARCH/MORI_GPU_ARCH=120 and /usr/lib/wsl/lib for the gpu/cuda build scripts. Rerun note: gate-box-request.md section 7.
+
+## [2026-11-16 04:02] commit | T12 G3 gpu/cuda test builds fixed (openvm t12-g3 a098153); rerun 2 note
+- g3_lfr: StarkProtocolConfig import (E0599); g3_app cuda: qualified DeviceDataTransporter and check_witness (E0284). One tar openvm-t12g3-a098153 (c64635b4) with the CX-3 refusal fix; request section 8.
+
+## [2026-11-16 04:02] qa | loki kits: the 652c884 D.3 keys equal odin's, line for line
+- On loki, VDG base 652c884 t7_chain keys print the same 30 T7KEY lines as odin eui010-3: app, leaf, N1, N2, N3, FV, MERGE-WORK, NW and NW2 pre_hash, the N3 fixed point and N3 over NW2. The shape and gp2 key lines are also identical (MEASURED, cross-box).
+- key-chain: 10 T7CASE PASS. pathc stops at the pre-existing t7_chain.rs:2065 'bare Call AIR' assertion, as on odin on both 652c884 and 85765aa.
+- The VDG kit 277d1b6 cannot make keys (CoreAir degree 4 > 3). The 277d1b6 against 652c884 N1/N2/N3 comparison waits for the deg3 fix lane.
+
+## [2026-11-16 04:02] decision | T12 refusal finding = final WHIR gamma (GUARD HOLDS); stalled muninn T14b daemon run stopped; loki kits returned
+- T12-CX-3: the accepted indices (L_Fr 387/388, app 1472/1473, L real 1499) are the final WHIR gamma, which only batches final-round residuals (zero on an honest proof; nonzero polynomial of degree <= num_queries+1 on a false one). Legs fixed (openvm t12-g3 23cc607, a098153 build fixes); rerun 2 sent to odin (m76). Write-up ~/.cache/t12/G3-REFUSAL-FINDINGS.md.
+- LEAD decision: stopped t14b-run/t14b-guard on muninn. daemon-e2e call 1 took 5,392 s at the 754 MHz clock cap (muninn is not a timing box, owner ruling) and held 56 G of the heavy slot for 12 h, starving kmb-deg3, kvdg-deg3, t23 ledger and partA. Stages resumable; T14b timings stay from huginn.
+- loki kits DONE (h63, RETURN 36e41034): ALU PASS; STACKS 5/5 + 13/13; MEMBACKEND and VDG keygen degree 4 > 3 (fix lanes now running); 652c884 D.3 chain/shape/s8app/gp2 ok, pathc stale bare-Call assertion (fixed on t25-int). loki-kits-v4 rerun started with vectors ccaea05f.

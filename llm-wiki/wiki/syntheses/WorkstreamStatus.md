@@ -3,7 +3,7 @@ title: "Workstream status"
 type: synthesis
 tags: [status]
 sources: [council-final-s9, animation-v2-notes, k21-recalibration-brief, c6-outcome-ledger9-review, design-2-7-chip-leaf, e2-e4-experiments, quint-chipleaf-final, chip-spike-experiments, runlength-consensus-brief, lookup-cache-brief, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, astra-area1-processor-draft, astra-area2-memory-draft, astra-area3-recursion-draft, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, gemini-area1-processor-draft, gemini-area2-memory-draft, gemini-area3-recursion-draft, council-findings, council-revisions, cost-round-brief, n1-native-circuits, cost-lane-fable, cost-lane-astra, cost-lane-gemini, compact-graph, prover-graph, elastic-chip-brief, elastic-chip-gpu-fable, n1b-native-proving-time]
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 ---
 
 # Workstream status
@@ -12,6 +12,7 @@ State as of 2026-11-15 00:05 local (governance, HFC study and T18 (d) rows added
 
 | Workstream | State | Next step | Pages |
 |---|---|---|---|
+| T25 single rekey and box fleet (2026-11-16) | odin T25 keygen 3.1-3.4 PASS (L 2071 cols, L_Fr width 47/48, log height 20 at bound); loki joined as a third GPU box: smoke 78/78 with key_root 454e3bc1 and wrap vk b7f5e43c equal to huginn; vkmemo MEASURED (warm call 261.6 -> 123.6 s, ledger Ok); MEMBACKEND kit degree 4 > 3 in HeapReadAir (fix lane) | T25 D3 check-chain and k=21 wrap, then T12 gate, Preview settle, T15 | [[log]] |
 | T22 governance (Midnight on-chain representation) | 2026-11-14: owner asked for a governance module, keys rotated by the Fenrir operators, and an HFC-style version system instead of upgradable contracts. LEAD pick, for owner confirmation: sealed-for-life contracts, eras composed by a sealed era registry, Fenrir verbs for activation, retirement and rotation. Lane running in worktree `t22-governance` | Align with the HFC study; OpenSpec, EARS and Quint; owner items (one key set per era, quorum, timelock, overlap window, policy for claims before a soundness bug) | [[log]] |
 | Hard fork combinator study | 2026-11-15: lane reading the primary sources in full (ouroboros-consensus report, HFC docs and code, CIP-1694), fetched with scrapling | HFC-STUDY.md and GOVERNANCE-MODEL.md in `research/sherlock-hfc-study-20261114/`, then into T22 | [[log]] |
 | T18 (d) Mycroft compiler through the software factory | 2026-11-14: lane on factory beta dd5fb49 (pinned snapshot); worktree `mycroft-factory` | Oracle `--step`, Quint ITF replay, k-rust suite, refinement after the spike, SORRIES items | [[log]] |
