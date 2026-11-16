@@ -2,7 +2,7 @@
 
 - derived_tx: 290
 
-**End to end: no call has every stage measured (150 calls).** R_SL front (exec, app, leaf) median 1.1 s over 149 calls; Preview submit not measured in this run.
+**End to end: no call has every stage measured (149 calls).** R_SL front (exec, app, leaf) median 1.1 s over 149 calls; Preview submit not measured in this run.
 
 Times are wall seconds. A dash is a stage without a measurement (reason in the notes); a call has a total only when every stage is measured. Keys: cold = the process generated or loaded its keys in that run, warm = keys resident from a previous call.
 
@@ -87,7 +87,6 @@ Times are wall seconds. A dash is a stage without a measurement (reason in the n
 | `h03-election-ctor` | `vote$reveal.vote-reveal-32-no.0` | loki | 0.01 | 0.44 | 0.67 | 0.49 | 0.46 | 0.45 | 2.17 | 34.3 | 79.5 | 0.06 | — [1] | — |
 | `h03-election-ctor` | `vote$reveal.vote-reveal-33-yes.0` | loki | 0.01 | 0.45 | 0.66 | 0.50 | 0.46 | 0.49 | 2.15 | 27.4 | 79.5 | 0.11 | — [1] | — |
 | `j02-schnorr` | `verifySchnorrN3.verify-valid.0` | odin | 0.09 | 0.79 | 0.67 | 0.51 | 0.48 | 0.47 | 1.51 | 28.9 | 57.7 | 0.07 | 4.08 | — |
-| `j02-schnorr` | `verifySchnorrN3.verify-valid.0.odin-source-20261116` | muninn | — [2] | — [2] | — [2] | — [2] | — [2] | — [2] | — [2] | — [2] | — [2] | — [2] | — [3] | — |
 | `j02-schnorr` | `verifySchnorrN3.verify-wrong-msg.0` | loki | 0.09 | 0.49 | 0.66 | 0.49 | 0.48 | 0.47 | 2.22 | 32.9 | 79.8 | 0.09 | — [1] | — |
 | `s01-natives` | `conv.conv.0` | huginn | 0.00 | 0.50 | 0.49 | 0.45 | 0.40 | 0.40 | 2.78 | 24.8 | 48.1 | 0.06 | — [1] | — |
 | `s01-natives` | `ec.ec.0` | huginn | 0.07 | 0.59 | 0.50 | 0.44 | 0.40 | 0.40 | 2.79 | 22.7 | 48.1 | 0.09 | — [1] | — |
@@ -162,8 +161,6 @@ Times are wall seconds. A dash is a stage without a measurement (reason in the n
 | `z04-set-qualified-coin` | `test_ShieldedCoinInfo.shielded-coin-received.0` | loki | 0.00 | 0.37 | 0.67 | 0.50 | 0.46 | 0.45 | 2.17 | 32.0 | 79.6 | 0.07 | — [1] | — |
 
 [1] not settled: DERIVED (LEAD PICK SETTLE-REP)
-[2] not run
-[3] not included (None)
 
 ## Per program
 
@@ -181,7 +178,7 @@ Times are wall seconds. A dash is a stage without a measurement (reason in the n
 | `d04-coracle` | 6 | — | — | 703.1 | 60 of 66 | — |
 | `d06-nft` | 15 | — | — | 1,175.8 | 151 of 165 | — |
 | `h03-election-ctor` | 13 | — | — | 1,473.1 | 131 of 143 | — |
-| `j02-schnorr` | 3 | — | — | 213.0 | 21 of 23 | — |
+| `j02-schnorr` | 2 | — | — | 213.0 | 21 of 22 | — |
 | `s01-natives` | 7 | — | — | 535.9 | 70 of 77 | — |
 | `s03-language` | 5 | — | — | 455.4 | 51 of 55 | — |
 | `t01-tiny` | 5 | — | — | 452.2 | 50 of 55 | — |
@@ -247,7 +244,6 @@ Prove = the chain process stages R_SL exec to L_Fr (median per call); wrap = E5J
 | `d06-nft` | `transfer.16-transfer-1-to-bob.0` | `0x95224e255d…` | 140227 | `0x942ff5ba7e…` | 140308 | 6.19 | 0 |
 | `h03-election-ctor` | `add_voter.add-voter-31.0` | `0x5315b7aa76…` | 140349 | `0x131123b00f…` | 140430 | 7.22 | 0 |
 | `j02-schnorr` | `verifySchnorrN3.verify-valid.0` | `0xb7d9d5dd18…` | 141315 | `0x8cf9bc7fa7…` | 141386 | 4.08 | 0 |
-| `j02-schnorr` | `verifySchnorrN3.verify-valid.0.odin-source-20261116` | `0x0ce75e4858…` | 141226 | — | — | — | 0 |
 | `s03-language` | `loop.loop.0` | `0xa23cf3c8cc…` | 140869 | `0x480225e77c…` | 140963 | 6.13 | 0 |
 | `t02-counter-example` | `increment.increment.0` | `0xcb25aa99ac…` | 135999 | `0xc4c3313206…` | 136144 | 3.20 | 3 |
 | `x01-composable-outer` | `add.add-cross-contract.1` | `0x36c45cf997…` | 140471 | `0xc4cda40360…` | 140557 | 2.69 | 0 |
@@ -255,7 +251,7 @@ Prove = the chain process stages R_SL exec to L_Fr (median per call); wrap = E5J
 | `z02-unshielded-tokens` | `mintUnshieldedToSelfTest.mintUnshieldedToSelfTest.0` | `0xc4066c157d…` | 140735 | `0x0dbb6abb20…` | 140825 | 3.98 | 0 |
 | `z03-block-time` | `testBlockTimeGt.testBlockTimeGt.0` | `0xbf4404bbbb…` | 141405 | `0x5a951f8feb…` | 141480 | 4.97 | 0 |
 
-Preview tx MEASURED: 21 included (11 settled calls), 6 refused submissions (no fee, not included).
+Preview tx MEASURED: 20 included (10 settled calls), 6 refused submissions (no fee, not included).
 Preview tx DERIVED for the full suite at one ledger per call (acceptRun inserts one claim per tx): 290 included tx for 145 proved calls.
 
 ## Suite statistics per stage

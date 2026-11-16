@@ -1,6 +1,6 @@
 # T23 suite table (final run on the T25 keys)
 
-Built 2026-11-16T14:38:18-0700 from the box returns /home/hoskinson/.cache/t23/final/ret-huginn, /home/hoskinson/.cache/t23/final/ret-odin, /home/hoskinson/.cache/t23/final/ret-loki; ledger check /home/hoskinson/.cache/t23/final/ledger; Preview settles 11.
+Built 2026-11-16T14:43:40-0700 from the box returns /home/hoskinson/.cache/t23/final/ret-huginn, /home/hoskinson/.cache/t23/final/ret-odin, /home/hoskinson/.cache/t23/final/ret-loki; ledger check /home/hoskinson/.cache/t23/final/ledger; Preview settles 10.
 
 Row count: 208 rows = 62 refused-as-native + 1 n/a + 3 BLOCKED (chip set) + 142 provable rows over 145 call files (equal to the plan).
 
