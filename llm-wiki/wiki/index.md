@@ -7,7 +7,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Overview](overview.md): where the program is, in ten lines, with links
 - [Log](log.md): append-only rolling log of every finished workstream step
 
-## Sources (46)
+## Sources (47)
 
 - [AGENTS.md factory charter](sources/agents-charter.md): The charter of the DoctorWatson factory that develops Moriarty.
 - [Sherlock co-processor animation, version 2 notes](sources/animation-v2-notes.md): Working notes for version 2 of the Sherlock animation, started at the owner's request.
@@ -24,6 +24,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Cost round, Fable lane: making Sherlock competitive with native proving](sources/cost-lane-fable.md): The Claude Fable 5.2 answer to cost-round-brief.
 - [Cost round, Gemini lane: ratio decomposition, levers and GPU multicore scaling](sources/cost-lane-gemini.md): The Gemini 4 Carbon high answer to cost-round-brief.
 - [Cost round brief: making Sherlock competitive with native proving](sources/cost-round-brief.md): The owner rejected an unmeasured "1,000 to 10,000 times cheaper" claim and asked how to optimize the design to reduce the gap.
+- [Final council S9 on the co-processor design](sources/council-final-s9.md): Loop step S9 asked three blinded lanes (OpenAI Astra, Google Gemini Argon, Anthropic Opus) whether the design at `de4449b3a` on branch `pipeline-anim` can freeze its...
 - [Council synthesis: does the Sherlock design need improvement?](sources/council-findings.md): The pipeline-animation council checked the final design (`ARCHITECTURE.md` at head `680d2b5af`) while the animation was built.
 - [Revisions applied from the council: P-1 to P-10](sources/council-revisions.md): The work order of council-findings, applied as design text to `ARCHITECTURE.md`, `DECISIONS.md` and the OpenSpec change `sherlock-modular-leaf-20261111`.
 - [Design 2.7: leaf as a chip (proposed, not adopted)](sources/design-2-7-chip-leaf.md): Section 2.7 of the Sherlock VM design proposes the universal leaf as one hand-written circuit: a CPU core plus the chips DEC, PAGE, MEM, ALU with RANGE, and HASH, reached...
@@ -64,7 +65,7 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [mori-chip crate](entities/MoriChip.md): `crates/mori-chip` holds the chip leaf spike: `rf.rs` (32-word register file and spike rules), `rfcore.rs` (layouts and leaf), `poseidon.rs` (Poseidon-only HASH chip),...
 - [Run decider](entities/RunDecider.md): The terminal proof of a run (`crates/mori-recursion/src/run_decider.rs`).
 
-## Concepts (11)
+## Concepts (12)
 
 - [Block cache: 8-record PAGE and ROM cache lines in the chip leaf](concepts/BlockCache.md): The "processor cache" the owner asked for (lookup-cache-brief).
 - [C6 outcome-only publication](concepts/C6OutcomeOnlyPublication.md): Owner decision, 2026-11-10: "go with publishing only the outcome for C6 after gemini carbon and fable and astra review that".
@@ -75,11 +76,13 @@ Every page in the wiki. Rebuild with `python3 llm-wiki/tools/lint.py --write-ind
 - [Modular architecture: module kits, seams and build order](concepts/ModularArchitecture.md): How the Sherlock leaf and recursion are split so that one agent builds and checks one module against a frozen interface.
 - [Owner rules](concepts/OwnerRules.md): Standing rules from the factory charter and the owner's GP definition.
 - [Run-length ceiling (D3 against GP-1)](concepts/RunLengthCeiling.md): The conflict between the proposed chip leaf memory (D3) and the owner's GP-1.
+- [Sherlock bridge](concepts/SherlockBridge.md): Owner, 2026-11-11: "name the mathematical structure we are developing or modifying", then "yes".
 - [Value digest sherlock-value/1](concepts/ValueDigest.md): The canonical value encoding of the C6 review, used for both `input_d` and `outcome_d` (SRC-022, SRC-021 amended) (c6-outcome-ledger9-review).
 - [Zero knowledge end to end](concepts/ZeroKnowledge.md): Owner ruling, 2026-11-11: "we need to make this zero knowledge or else its useless" (k21-recalibration-brief).
 
-## Syntheses (3)
+## Syntheses (4)
 
 - [Animation version 2: running record](syntheses/AnimationV2.md): Owner, 2026-11-11: "keep a log in wiki-llm for version 2 of the animation that reflects all the new design and the compact and ZK compatibility".
+- [Midnight writes audit](syntheses/MidnightWritesAudit.md): Owner ruling of 2026-11-14: no design may write to Midnight per event.
 - [Open owner questions](syntheses/OpenOwnerQuestions.md): Questions the owner must settle.
 - [Workstream status](syntheses/WorkstreamStatus.md): State as of 2026-11-11 14:10 local (cost, Compact graph, council and elastic chip rows added).

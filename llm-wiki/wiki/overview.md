@@ -3,7 +3,7 @@ title: "Overview"
 type: synthesis
 tags: []
 sources: [agents-charter, general-purpose-definition, c6-outcome-ledger9-review, design-2-7-chip-leaf, runlength-consensus, runlength-consensus-audit, final-design-decisions, land-3x-merge, c1-dense-memory-experiment, lookup-cache-consensus, lookup-cache-audit, sherlock-architecture, arch-audit-astra, arch-audit-response, rule-maxima-experiment, council-findings, council-revisions, cost-lane-fable, cost-lane-astra, cost-lane-gemini, n1-native-circuits, elastic-chip-brief, elastic-chip-gpu-fable, n1b-native-proving-time]
-last_updated: 2026-11-11
+last_updated: 2026-11-15
 ---
 
 # Overview
@@ -22,3 +22,9 @@ Moriarty: Sherlock VM, general-purpose recursion and the Doctor Watson factory: 
 10. The design runs on Midnight ledger 9 with changes; no blocker in the ledger ([[MidnightLedger9]]).
 
 Current state: [[WorkstreamStatus]].
+
+Overnight 2026-11-12: the loop drives LOOP-AGENDA S10 to S12 to a final design for the owner's morning review; state in [[WorkstreamStatus]].
+
+T8 (2026-11-14, branch `t8-gp`): the GP-2 node modes and the MERGE-WORK node run on real proofs on one universal key set; the GP hook rows stay FREEZE-PENDING on a Halted leaf run, the X8 verifier and a parent over MERGE-WORK ([[WorkstreamStatus]]).
+
+Freeze experiments X7, X8, X10, X14 and X15 have results on branch `x-exp` (2026-11-12 and 2026-11-13; [[log]]). Owner rulings of 2026-11-12 20:35: `K_rom = 15` frozen; node internal-set budget 64 AIRs, 3,000 columns and 200 interactions per AIR, which D3 holds at 101.1643 bits.

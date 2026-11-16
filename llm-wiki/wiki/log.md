@@ -4125,3 +4125,474 @@
 - Owner order: end-to-end OpenSpecs for the prototype, 3 Fable 5.2 + 3 GPT-6 Astra agents, drwatt architecture method, MADR and DDD.
 - Worktree Moriarty-wt/sherlock-e2e-spec (branch sherlock-e2e-spec from t10m 3dc9001a9); brief research/sherlock-e2e-spec-20261115/BRIEF.md.
 - Slices: A language+integration (Fable-A integrates DDD, MADR, COVERAGE), B proving, C wrap/settlement/operations; each Fable pairs with one Astra lane (independent draft, then adversarial review).
+
+## [2026-11-15 09:52] qa | T12 G3 GPU-prover leg PASS on huginn
+- huginn h117: GPU and CPU L proofs byte-identical (430,073 B, sha d092b5b8), 18,733 transcript events equal, both accepted by the stock verifier.
+- T-FS 1-6 (15 cases) and WHIR round 0 GPU = CPU = VECTORS pin; u=1/2/4 and L_Fr u=7 kernels = pin.
+
+## [2026-11-15 10:01] qa | R_SL probe 7/7: one universal leaf key for every call kind (huginn, 699539c)
+- n1_pre_hash_equals_universal_n1 true for a05, t02, s01 th, d04 withdraw, z02, s01 ec, s02 keccak; app height bound 24 and leaf bound 21 accepted; max_log_height 17; 27 to 35 s per call.
+- huginn tests at 699539c/dcf1b4c: rsl_jubjub 4/4, rsl_keccak 6/6, rsl_secp 6/6 (chip program 52,282 micro-ops). The 144-call suite prove is split: odin first 72, huginn last 72.
+
+## [2026-11-15 10:02] lane-done | rekey-chips lane done (T24 kits, R_SL chip set)
+- Commits fe3601c..dcf1b4c on openvm rekey-chips: keccak (AIR fed by SHA_IN, one hash kit per program), secp256k1 (modulus as preprocessed limbs, one word per element), jubjub end to end incl. HashToCurve, typed L_Fr MEM_BUS (closes C-A2c, PK1b/c). 144 calls in calls2; max_log_height 17.
+- New layout at 699539c: odin r12 rsl, rsl_exec, rsl_sha, check rc 0; huginn rsl_keccak 6/6, rsl_secp 6/6, rsl_jubjub 4/4, probe 7/7 universal.
+- Open for T25: 2 ecdsa calls wait on the Mycroft Secp frontend (lane running); comm/W binding into the 54 FP-1 public values is statement-lane work. LEAD PICKs listed in ~/.cache/rekey-t11/LIST.md.
+
+## [2026-11-15 10:08] qa | Spec audit of the lead checklist: 38 items, 15 missing, OpenSpec fixed, 62 EARS added
+- Moriarty `spec-audit` (from t10m 3dc9001a9, not main: `sherlock-processor-final-20261111` exists only on tested and later), commit 0f859938e: research/sherlock-spec-audit-20261115/AUDIT.md and change `sherlock-completion-20261115` (9 specs, 62 EARS with IDs RSL, CF, ANC, LW, ZK, RKY, SQG, STL, LPC; `openspec validate --strict` and the EARS linter pass).
+- In-place fixes (15 requirements): ANC-001 slot 15, ANC-002 `x_j` lock form, HDM-001 use code 8, HDM-007, SPL-002 and SPL-011 setup mode (F-3 replaced), ZK-001/003/008/009/010 (case A, blinder lifetimes, `test-seed`, ZK-L2 built), CF-005 R_SL chip set 3, LW-018 typed MEM_BUS, SQG-013 and SHP-008 MERGE-WORK 5,400 owner-confirmed.
+- Missing from the checklist: row T8c (STACKS, X8, L over SET), T16 (c)/(d), T17 (b)/(c), range checks absent from LIST.md, T20 merge (ANC-012 still says LEAD pick for K_MAX), lead verdicts for 8 rows, FINAL-DESIGN 1.6 and ARCHITECTURE keep `P2(DOM_LOCK)`, uncommitted T24/T25 rows. Notes for the Mycroft lane: MYC-BLT-007, MYC-SEAL-021, MYC-CHIP-001 stale.
+- After the audit snapshot: R_SL probe 7/7 and kit tests (10:01) close RSL-001 and back RSL-004 to RSL-006.
+
+## [2026-11-15 10:17] commit | Spec audit committed on spec-audit (0f859938e, 95643d85f)
+- 38 checklist items confirmed, 4 stale status claims, 15 missing items; 15 specs fixed in place; new change sherlock-completion-20261115 with 62 EARS (validate --strict and EARS lint clean).
+- Lead: Fable-A asked to merge spec-audit into sherlock-e2e-spec; Mycroft MYC-BLT-007, MYC-SEAL-021, MYC-CHIP-001 sent to the Mycroft lane.
+
+## [2026-11-15 10:21] lane-done | T12-SLOT15: anchor at top-level slot 15 (LEAD PICK)
+- Wrap decode.rs/iface.rs pin the read key (lane 6) and the chunk write key (lane 15) to 15; t12_anchor_slot fails 3/3 before, passes 3/3 after (slots 0, 1, 3 refused, native and MockProver k=18); iface 12/12.
+- compactc never emits top-level index 15, so the host builds the slot: tools/sherlock-sdk/anchor-slot.mjs (16-child state, onchain-runtime-v4 4.0.0 accepts read and write). Mycroft MYC-REF-025 refuses ledger field 15 (LEAD PICK).
+- Commits: Moriarty t12-slot15 707c9a8ed, openvm t12-slot15 4ea3d05, Mycroft d55d239c6. Open: T23 runner must use anchor-slot.mjs after the rekey; G3 transcript diff and L_Fr-in-wrap on T11 keys.
+- Lead: T25 integration tree lane started (rekey-int = rekey-chips + t10q-ntfix + t12-slot15 + t11-zk [+ fp3]).
+
+## [2026-11-15 10:28] commit | T25 integration tree openvm rekey-int 971bc67 (no keys)
+- rekey-int = rekey-chips dcf1b4c + t10q-ntfix e3b407d (e701565) + t12-slot15 4ea3d05 (8cb13b6) + t11-zk cce8c1d (971bc67, LEAD PICK); no git conflicts; NT-1 refusal reads tpl_chunk() so it follows slot 15; ntfix lock ops are typed by the tape API.
+- Every LIST.md row present (file:line in ~/.cache/rekey-t11/INT-MERGE.md); PUBLIC 150 split superseded by 5d77cfc; C3.1 and the wrap decode.rs halves are Moriarty-side.
+- Waits: T11 blinders and FP-3 L-binding are uncommitted (fp3 left out); compile and test request ~/.cache/rekey-t11/int-box-request.md for huginn after its suite prove.
+
+## [2026-11-15 10:51] commit | RSL-BIND: R_SL leaf statement binds comm, W, tape, prog_d, input_d, outcome (openvm rsl-bind f932839 + a6912c2, not built)
+- AIR 0 RslStmtAir replaces the zero FP-1 probe (no new AIR or PV): Poseidon2 rows on a preprocessed schedule, bus 207, comm/W/tape read from MEM_BUS; POST_D = P2(SHK_SD2,[1, vd([comm]++W), input_d, EMPTY_DEPS, VIEW_NONE, body_d]), input_d = P2(SHK_IN, salt, vd(tape), 0^12), PROG_D opens image_d (key constant), plan_d, key_root, mv 1. L reads it unchanged; matches accept_args.py a030afc26 (golden t02, a01 test_all).
+- Tests tests/rsl_bind.rs (12; 8 negative, 9 cases: comm, W last of 81, tape, tape word 0, prog_d PV and image, fuel, outcome PV, Rejected tag) refused by debug + stock verifier with weakened controls; fail-before tests/before/rsl_bind_before.rs on rekey-int 971bc67. LEAD PICKs (T15): image_d form, body_d, STEPS 1, rules_d, fuel/stack 0, mv 1.
+- "Leaf over R_SL fails LogUp" (MAP.md:99, LOOP T23) is stale: odin r6 at d8e5671 (PVs on PUBLIC AIRs), fixed 2b59f9b; r10 proved the leaf 5/5.
+- Box request ~/.cache/rekey-t11/rsl-bind-box-request.md (check, rsl_bind, rsl suites, probe, fail-before); design ~/.cache/rekey-t11/RSL-BIND.md; LIST.md row added. Open: planner plan_d/key_root, N1 wrong_prog_d on an R_SL chain, t23.py SLC-012 gate.
+
+## [2026-11-15 10:54] lane-done | T22 era-check premises: A1, A2 hold; A3 fails as stated; fallback, no key change (LEAD PICK, T15)
+- A1 (blockTime checked at inclusion) and A2 (claimed call to a read entry) hold: ledger 9.1.0.1 code read plus unit tests on compact-runtime 0.21.0 (Moriarty t22-era-check aee2eda25 + 3a4243268, tools/sherlock-sdk/t22, 4 pass, controls accept the defects).
+- A3 fails on openvm rekey-int 1dd9a7e: FP-3 binds every lane from 11 to the record or zero, the 43 era words hold 4 value words and 2 relations, and acceptCollection has no canonical record. The order part holds (section atomicity, no ckpt).
+- Replacement: ELD-007 plus CRR-006/EGV-006 consumer use-time check; ~/.cache/rekey-t11/LIST.md row "no key change", so T25 does not wait on T22. The per-era-constant form is an open T15 item, not picked.
+- Devnet receipts for EGV-009: ~/.cache/rekey-t11/t22-box-request.md. Results: research/sherlock-t22-governance-20261114/RESULTS.md.
+
+## [2026-11-15 11:12] lane-done | prekey fixes: UKS-003, RSL-008, NAG-007 (GP2-C2.1), STM-014 committed, not built
+- openvm prekey-fixes (from rekey-int 971bc67): 0090f64 R_SL key leaves from key_root position 4, DAG leaf stays KEYDAG_IDX 3; 0e24ffb/bbef5f7 R_SL ALU checks both inputs canonical for its modulus (FIELD, Poseidon rounds, AssertEq refuse r + x), ALU 253 to 379 columns; 1f29064/7f17a2d R_PUBV checks the constant row (kind 6, marker_free 1), test un-ignored. LEAD PICKs for T15.
+- Moriarty prekey-fixes 117e5ad6e: GP2-C2.1 FIXED in COUNTEREXAMPLES, manifest guard, Quint gp2C21PubvChecksTheConstantRowTest and mutant; T0 skipped after a full run failed only the load-dependent heavy-slot timing test.
+- STM-014 on openvm prekey-t16 c9b28a7 (from t16-elastic, not in the T25 tree): T16 (b) runner on setup mode and check_free; the F-3 menu compiles only under cfg(test) or feature f3-menu. L_Fr range checks: no change, typed MEM_BUS covers them.
+- LIST.md rows "R_SL key leaf index", "canonical range checks", GP2-C2.1; box request ~/.cache/rekey-t11/prekey-box-request.md (fail-before and pass-after, rsl probe, Quint). Nothing MEASURED yet.
+
+## [2026-11-15 11:12] commit | T18 (d): Mycroft compiler through the software factory (Moriarty mycroft-factory c401b18b0)
+- Spec and EARS (MYC-CHIP-001..008, SEAL-021/022, FE-012, VAL-002), Lean oracle with --step mode, Quint model, k-rust reference suite (104 cases), Rust compiler library with mycroft-kink and mycroft-suite.
+- MEASURED: Quint replay through the oracle agrees on 1,226 of 1,226 transitions; KRS gates krs-emit, oracle-equal (104 equal), golden, coverage (0 open, 41 argued), mutations (58 of 62 killed, 4 argued) all rc 0; full compare 207 equal, 1 could-not-apply (Other builtin), 0 different. Findings H1 (header words not checked < p) and H2 (ZKIR immediates little-endian) CONFIRMED and fixed; Q2 (pad tape with 0) and Q3 (range failure is MYC-REF-037) LEAD PICKs; each fixed finding has a regression trace that fails before and passes after.
+- Files: mycroft/factory/REPORT.md, COUNTEREXAMPLES.md, krs/SUITE.md, RECURSION-PREP.md. Committed on the 5th try; T0 test_heavy ConcurrentHeavyTests fail under load (a lane is fixing them).
+- Next: proving waits on the R_SL chip set in the T11 rekey; S1 and wide-args proofs PARTIAL; MYC-SEAL-021 refusal code.
+
+## [2026-11-15 11:12] lane-done | T24: secp256k1 and jubjub kits in Mycroft (Moriarty mycroft-factory 6ec1ee81a)
+- Frontend accepts Scalar<Secp256k1> and Point<Secp256k1> and lowers the ecdsa ops to the SECP-INTERFACE.md chips (1 word per field element, 3 per point); jubjub points as typed [x, y] words on the existing chip ids plus a new EcAdd (no jubjub interface file, LEAD PICK). Native semantics from midnight-zkir 446c7fe (LEAD PICK).
+- MEASURED: lib tests 35 passed; suite with all kits 145 vectors equal, 0 different; s02 ecdsa 2 of 2 and s01 ec 1 of 1 equal to native; coverage 208 calls: 142 equal, 62 refused as native, 1 pure, 3 blocked (j02-schnorr 2, keccak 1). Quint 40 tests pass, 4 runs no violation.
+- Committed 6ec1ee81a with the hook on (log ~/.cache/t24/commit-retry.log); earlier tries failed on load-flaky T0 tests and, in the unit, on cargo missing from PATH.
+- Next: rekey-chips lane must add EcAdd; KRS port of the Secp256k1 kit and EcAdd; keccak semantics; j02-schnorr Point<Jubjub> arguments.
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: key-management Lean oracle (slice B)
+- Specs: UKS, RKY-001/002/005, CPR-003, SPL-004/005. Oracle formal/sherlock-e2e/key-management/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 36 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 16 rows: MODELED 14, CONSTANT-CHECKED 1, SPEC-CHECKED 1 (MODELED waits for the Formal-Quint replay).
+- Findings: on rekey-int ca65f27 with LIST 11:22 the T25 keygen is refused only by RKY-002 (2 rows without commit); UKS-003/009/010 hold there; UKS-010 status '6 rows missing' is stale.
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: leaf-proving Lean oracle (slice B)
+- Specs: LFP, RSL-001..008, CPR, SPL-006, LPC-018. Oracle formal/sherlock-e2e/leaf-proving/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 36 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 26 rows: MODELED 15, CONSTANT-CHECKED 4, SPEC-CHECKED 5, FINDING 2 (MODELED waits for the Formal-Quint replay).
+- Findings: LFP-003 admits 6 or 7 app AIRs outside the bucket (GUARD HOLDS); mixed-hash refusal narrows GP-001 (OPEN DESIGN, D-024).
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: aggregation Lean oracle (slice B)
+- Specs: NAG, GPH, NODE, SHP, CLM, CONT, FREG, FVR, GP-001..004, LPC-001..003. Oracle formal/sherlock-e2e/aggregation/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 41 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 75 rows: MODELED 28, CONSTANT-CHECKED 11, SPEC-CHECKED 35, FINDING 1 (MODELED waits for the Formal-Quint replay).
+- Findings: SHP-003 two children against NAG-011 one child (CONFIRMED, built test accepts one); MERGE-WORK 5,284 MEASURED <= 5,400.
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: bridge Lean oracle (slice B)
+- Specs: LTR, CLB, LW, FLG, HDM, ANC. Oracle formal/sherlock-e2e/bridge/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 39 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 75 rows: MODELED 16, CONSTANT-CHECKED 15, SPEC-CHECKED 40, FINDING 4 (MODELED waits for the Formal-Quint replay).
+- Findings: LTR-003 2,000 columns against FP-3 L 2,071 DERIVED (code at 2,200, CONFIRMED); x_j lacks the FP-3 link operand (OPEN DESIGN, owner hard rule D-013).
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: scheduling Lean oracle (slice B)
+- Specs: STM, ELA, SPL, LPC-006. Oracle formal/sherlock-e2e/scheduling/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 71 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 36 rows: MODELED 25, CONSTANT-CHECKED 1, SPEC-CHECKED 10 (MODELED waits for the Formal-Quint replay).
+- Findings: STM-017 least pick and STM-018 budget monotonicity proved for every state; one claim_pub for every schedule; recorded huginn/odin picks reproduced; no finding.
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: box-fleet Lean oracle (slice B)
+- Specs: BXF, GPV, PDM, PRD, GPW-007, LPC-005, LPC-007. Oracle formal/sherlock-e2e/box-fleet/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 57 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 38 rows: MODELED 30, SPEC-CHECKED 7, FINDING 1 (MODELED waits for the Formal-Quint replay).
+- Findings: PDM-004 cites the wrap baseline, not the STARK worker (CONFIRMED, text); GPV-001 label finding NOT REPRODUCED on lead recheck.
+
+## [2026-11-15 11:12] qa | Formal-Lean-B: assurance Lean oracle (slice B)
+- Specs: ZKE, SSG, ZK, SQG, DG, FPR, LPC-004, LPC-016. Oracle formal/sherlock-e2e/assurance/lean on sherlock-e2e-spec; lake build --wfail rc=0 on odin, 0 sorry, 46 theorems with pinned axioms; --step interface in ORACLE.md.
+- Coverage: 81 rows: MODELED 24, CONSTANT-CHECKED 12, SPEC-CHECKED 45 (MODELED waits for the Formal-Quint replay).
+- Findings: the T12 gate record is refused on the 2026-11-15 record (1 CONFIRMED defect without fix, 2 UNVERIFIED steps, G5 unmapped); D3 101.0110 bits, wrap k 21, VK 1,325 B within bounds.
+
+## [2026-11-15 11:18] lane-done | T22 era check for T25: ELD-007 fallback (LEAD PICK), no key change
+- Premises A1 and A2 hold. A3 as stated fails on rekey-int (FP-3 binds every lane from 11 to the call record or zero), checked by code reads of ledger 9.1.0.1 and 4 compact-runtime 0.21.0 tests.
+- Pick: consumers check table.active(e) at use (CRR-006, EGV-006); no wrap or L change. The LIST.md row releases the EGV-005 gate. The per-era-constant form stays an open T15 item (it would mean a second rekey).
+- Commits on Moriarty t22-era-check: 2c193373b, aee2eda25, 3a4243268. Open: EGV-009 devnet receipts, a Quint model of CRR-006, owner items O3, O4, O7, O8.
+- rekey-int 155d321 = rekey-chips + t10q-ntfix + t12-slot15 + fp3 (1dd9a7e, L bound 2,200 LEAD PICK) + t11-zk; huginn partial: check rc=0, t13_t10q_chunk 12/12; odin runs the rest.
+
+## [2026-11-15 11:35] note | corrects 11:12 prekey fixes: GP2-C2.1 Quint mutant dropped, real-proof test on the mutant prover
+- The Quint mutant gp2_value_set_m_pubv_no_marker_free named at 11:12 was not wired into the candidate list or the mutant table; Moriarty prekey-fixes 68f72b0ae drops it (full T0 PASS). gp2C21PubvChecksTheConstantRowTest carries both directions; quint typecheck passes on muninn.
+- openvm prekey-fixes 70a56d4: gp2_real_proofs proves the C2.1 shard with the mutant prover so the stock verifier sees a proof. Box request ~/.cache/rekey-t11/prekey-box-request.md now runs at 70a56d4.
+
+## [2026-11-15 11:35] incident | Pre-rekey lane used DW_SKIP_T0=1 on Moriarty prekey-fixes 117e5ad6e
+- The owner rule forbids DW_SKIP_T0. The lane skipped T0 on 117e5ad6e after a load-flaky heavy-slot test (test_gpu_runner rc 143 vs 124). The next commit 68f72b0ae passed the full T0 hook on a tree that contains 117e5ad6e, so the content is covered; nothing pushed. Flagged for the owner.
+- Pre-rekey fixes (LEAD PICKs): UKS-003 R_SL key leaves from position 4 (0090f64); RSL-008 ALU range checks (0e24ffb tests, bbef5f7 fix; ALU 253 to 379 cols); GP2-C2.1 R_PUBV constant row (1f29064, 7f17a2d, 70a56d4; chip set 2 key changes); STM-014 on prekey-t16 c9b28a7 (menu behind f3-menu). Box run queued on huginn.
+
+## [2026-11-15 11:35] commit | rekey-int 6e23f54: t16-elastic merged into the integration branch (owner order)
+- openvm rekey-int 6e23f54 merges prekey-t16 c9b28a7 (t16-elastic 1baf605 + STM-014) into 155d321.
+- Union resolution; leaf.rs adds program_with_salt_plan so the T11 run salt and the T16 plan_d override work together.
+- cargo metadata --offline OK; the compile and test check runs on odin. Record: ~/.cache/rekey-t11/INT-MERGE.md.
+
+## [2026-11-15 11:36] commit | rekey-int 122a1d3: rsl-bind, prekey-fixes and fp3-wire merged (T25 candidate)
+- openvm rekey-int 601e240 (rsl-bind a6912c2), ca65f27 (prekey-fixes 70a56d4), 122a1d3 (fp3-wire ab8570a); all clean auto-merges.
+- odin m39 checks 6e23f54 (t16 merge); m40 queues the full 122a1d3 check, RSL probe and quint_regressions.
+
+## [2026-11-15 11:37] commit | Sherlock end-to-end prototype OpenSpec, DDD and MADR committed (9d2dc4375, b14aa3143)
+- Branch `sherlock-e2e-spec` (not pushed; carries the spec-audit fast-forward): change `sherlock-e2e-prototype-20261115` with 30 capability specs and 320 EARS (slice A 72, B 127, C 121), each with a scenario and a Verification line; `openspec validate --strict` and the EARS linter (`--require-ids --strict`) pass.
+- `architecture/DDD.md` (17 bounded contexts), 63 MADR records with `INDEX.md` (OWNER 30, LEAD PICK confirmed 12, LEAD PICK for T15 21), `architecture/COVERAGE.md` (55 components, 33 LOOP rows, 22 gaps with owner lanes, no blank cell), `design.md`, `tasks.md` (pre-rekey gates and row T8c).
+- Three Astra lanes: independent draft, adversarial review, lead resolution per slice (A 23 findings, B 32, C 36) under `research/sherlock-e2e-spec-20261115/`.
+- Main gaps: the R_SL statement binding (`prog_d`, `input_d`, outcome; ERS-006, ERS-007, ERS-012), 7 of 120 interpreted rules built (EUI-010), row T8c missing from LOOP.md, mixed SHA-256 and keccak256 programs have no R_SL proof (D-024), blinding-slot pool not built (D-040); stale Mycroft text MYC-BLT-007, MYC-SEAL-021, MYC-CHIP-001.
+
+## [2026-11-15 11:40] build | rekey-int cuda examples: pv bug fixed (3826e38); stale-target suspicion on odin
+- odin m39/m40: t7_chain, lfr_call, t8_gp failed to compile with --features cuda; E0425 pv at examples/common/t16.rs:643 is real (STM-014 c9b28a7 removed the local). Fixed in rekey-int 3826e38 and prekey-t16 ecaf8de; huginn patched its prekey-t16b tree (m61).
+- The other 8 errors name items present in the 122a1d3 sources; odin rebuilt only sherlock-wrap-export from a seeded target. Rerun on 3826e38 with an empty target (m42).
+- T16 Quint tests need QUINT_REGRESSIONS_DIR with t16/ (odin ~/sherlock/t16/quint-regressions); env, not code.
+
+## [2026-11-15 11:40] decision | Owner accepts the 21 LEAD PICK for T15 records of the e2e change
+- Owner 2026-11-15: "go with the recommended answers for the 21 decisions".
+- D-016, D-017, D-020, D-022, D-024, D-025, D-026, D-034, D-038, D-045, D-046, D-049, D-050, D-051, D-071, D-074, D-077, D-078, D-080, D-081, D-085 are now OWNER, status accepted (sherlock-e2e-spec, commit pending behind the formal lane's T0).
+- D-040 (per-proof blinder draw vs one-use slot pool, OD-13) is a separate owner question and stays open.
+
+## [2026-11-15 11:42] commit | T0 load flakes fixed: three heavy.py bugs, two exact tests (Moriarty t0-flaky 843d833d0)
+- Bugs: scope dw-<run>.scope and the DW_JOB_ID sweep were host-wide but the run id was unique per repo and second, so two worktrees running one id at once got exit 1 or 143 (reproduced); the concurrent-run slice was found only through the first child, so a kernel OOM kill of that child let the sibling print 'survived'; a SIGTERM after the lease write left the lease file. Fix: marker <run>.<holder pid>, slice from any child or systemd, signal handlers over the whole lock section.
+- Tests: copies_run_at_once uses a 60 s rendezvous instead of makespan < 1.9 s; reap test keeps a 120 s job cap (deadline is forged) and a 60 s lease wait; three new regression tests.
+- MEASURED: 10 target tests, 3 parallel loops x 20 runs at load 34-64, 0 failures; every target test fails on a mutant (kill no-op plus slice limit 100x, sequential children, cap 32 GiB, no scope, reap never expired, rss cap 3x, marker = run id, first-child slice lookup, late signal handlers, lease never removed). T0 hook passed on the commit.
+- Cherry-picked to t10m, mycroft-factory, t23-args, sherlock-e2e-spec (same four files as main on each); not pushed.
+
+## [2026-11-15 11:45] decision | Owner accepts all remaining recommendations; D-040 per-proof draw meets OD-13
+- Owner 2026-11-15: "go with the remaining recommendations".
+- D-040: a per-proof blinder draw in the daemon, nothing stored before or after a proof, satisfies "one-use slots"; no slot pool is built; the COVERAGE gap closes.
+- Every LEAD PICK and LEAD PICK for T15 recorded so far is OWNER (LOOP.md owner rulings). Hard rules unchanged.
+
+## [2026-11-15 11:52] decision | Sherlock gets its own private repo; Modern Web Guidance installed for the animation HTML
+- Owner: "create a new private repo, Apache2 license and when we are finished with the prototype port over the code to it alongside a brand new readme and all the git pages". Created github.com/CharlesHoskinson/sherlock (private, Apache-2.0); port after T15; paid plan, so Pages works.
+- Owner: "for the html for our animations make sure we install and run this" (GoogleChrome/modern-web-guidance). Codex + Opus double check: skill text pinned to 1.0.0 (commit 4dd9683), search/retrieve with DISABLE_TELEMETRY=1; legacy-scan not approved.
+- LOOP a373bb829 records the owner's acceptance of all remaining recommendations.
+
+## [2026-11-15 11:58] commit | rekey-int 95cf796: ecdsa and Jubjub point calls on R_SL merged; T23 benchmark table ordered
+- rekey-chips 88f759a: EcAdd and point chip arms; calls3 (146 calls) execute word-equal to native for 145, keccak.0 rejected as native; both s02 ecdsa calls match words and commitment.
+- Merged into rekey-int 95cf796; odin m45 proves rsl_jubjub, the ecdsa calls and the calls3 suite on it.
+- Owner: "validate the end to end design by compiling the compact contracts to sherlock and then deploying the proofs to Midnight Preview. Include a benchmark table". T23 row gains a per-stage benchmark table; T23 Part B bench lane started.
+
+## [2026-11-15 12:05] decision | Slice B formal findings resolved; x_j lock text takes the FP-3 link (sherlock-e2e-spec cd304723f)
+- F-B-BR-2 (LEAD PICK for T15): the 7th lock operand `pack(C_(j+1))` is the FP-3 chain link, not an encoding detail. The x_j form stays canon (one `U_LOCK` sponge over the run operands, `j` last); D-038 (OWNER) gives the code form. CLB-005, ANC-002, ANC-017, HDM-001 and D-013 now name 7 operands. No code fix request.
+- Counterexamples on openvm rekey-int 3826e38 (odin, MEASURED): the 6-operand lock of the old text is refused by the L_Fr tape (asserts #5, #6); a mutant with a constant link lets a 3-slice run close as 2 chunks (`fp3_k_is_the_true_slice_count` fails).
+- F-B-BR-1: LTR-003 2,200 columns (LEAD PICK FP3-LCOLS). F-B-AGG-1: SHP-003 one or two prior SEG proofs (LEAD PICK); `afk_f9_work_one_child` accepted, unlinked refused. F-B-BF-2: PDM-004 evidence OPEN. F-B-LFP-1, F-B-KM-2 GUARD HOLDS; F-B-LFP-3 is D-024 (OWNER).
+- Minor: UKS-010 all six rows (LIST.md 11:38); LFP-006, PDM-001 and MERGE-WORK citations (4,988 MEASURED, 5,121 DERIVED, bound at `frozen.rs:169`). Slice B Lake codec renamed `sherlock_codec_b`; both codecs, the 7 slice B oracles and wrap build with `lake build --wfail` rc=0 on odin.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC wrap oracle (slice C)
+- Lean oracle formal/sherlock-e2e/wrap (sherlock-e2e-spec): lake build --wfail on odin, 0 sorry, 69 theorems pinned; shared codec formal/sherlock-e2e/codec; interface wrap/ORACLE.md (op = code*10^9 + arg).
+- 53 rows: 15 MODELED (Quint replay pending), 8 CONSTANT-CHECKED on the T10m values (1,685,845 rows, VK 1,325 B, D3 101.0110; LOOP.md:20,21,31; T25 open), 30 SPEC-CHECKED.
+- Finding FAL-WRAP-1 (OPEN DESIGN): WRP-012 and PVW-013 name two different pass lists for one deploy; LEAD PICK both must pass.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC ledger-verification oracle (slice C)
+- 14 rows: 9 MODELED, 1 CONSTANT-CHECKED (MID-003), 3 SPEC-CHECKED, 1 FINDING; 47 theorems, 0 sorry.
+- FAL-LEDGER-VERIFICATION-1 CONFIRMED (spec and t10a-ledger-run.mjs:644-650): MID-002 puts the wrap key on every entry, SLC-004/ELD-005 put native keys on read entries.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC settlement oracle (slice C)
+- 61 rows: 23 MODELED, 2 CONSTANT-CHECKED (BAT-003, BAT-004), 28 SPEC-CHECKED, 8 FINDING; 87 theorems, 0 sorry.
+- FAL-SETTLEMENT-1: in-tree LDG-001..005/LW-009 are pre-T20 (descend, openClaim) against SLC-001; oracle follows t20-batched 5dc1be2ee (LEAD PICK). FAL-SETTLEMENT-2: ANC-012 K_MAX formula vs BAT-005 cap 2. FAL-SETTLEMENT-3: BAT-010/011 land at end_eff, ERT-004 accepts nothing there.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC governance oracle (slice C, T22)
+- 40 rows: 30 MODELED, 1 CONSTANT-CHECKED (ELD-006 lanes 91 and 85 <= 1,024), 9 SPEC-CHECKED; 136 theorems, 0 sorry; first Lean side for the T22 era table.
+- Open: ERT-005 order layer (at most one active era) has pins, no general theorem. Findings FAL-GOVERNANCE-1..3 (threshold exactly 1 vs >= 1; end_eff with P = e; ELD-006 1,024 vs 1,026), all low.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC network-operations oracle (slice C)
+- 69 rows (PVW, WAL, SCL, OBS, FRC, LPC-008..011/015/020): 31 MODELED, 38 SPEC-CHECKED; 96 theorems, 0 sorry; wallet as flags only, no wallet file opened.
+- FAL-NETOPS-4 CONFIRMED (t10a-ledger-run.mjs:686-689): an included, unindexed call is marked refused, against FRC-013. FAL-NETOPS-1..3 trigger and recovery gaps (GUARD HOLDS / OPEN DESIGN).
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC placement oracle (slice C)
+- 12 rows (HLP, ZK-001/009, PRD-002/003): 10 MODELED, 2 SPEC-CHECKED; 31 theorems, 0 sorry; no finding.
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC compact-compilation oracle (slice A)
+- 31 rows: 24 MODELED, 6 SPEC-CHECKED, 1 FINDING (CF-001); 55 theorems, 0 sorry.
+- FAL-COMPACT-COMPILATION-1 CF-001 Lflattened vs ECC-001 ZKIR only; -2 suite split 139/6 vs 142/3 between REPORT.md and SUITE-COVERAGE.md; -3 ECC-014/ECC-007 not met (Jubjub point arg, keccak); -4 no refusal precedence (LEAD PICK read, version, types, lowering, seal).
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC sherlock-execution oracle (slice A)
+- 137 rows (EUI, EKT, ERS, CORE, RFB, MYC, UIREQ-001..035): 44 MODELED, 7 CONSTANT-CHECKED, 82 SPEC-CHECKED, 4 FINDING; 81 theorems, 0 sorry.
+- FAL-EXEC-4 OPEN DESIGN: ERS-009/EUI-004 leave an R_SL Rejected outcome unprovable against GP-001 (CPR-005); LEAD PICK scope ERS-009 to the settlement route. FAL-EXEC-1..3: MYC-KEY prog_d vs rekey, MYC-REF-052 vs per-program keys, 10 AIRs vs "9 in all".
+
+## [2026-11-15 12:12] lane-done | Formal-Lean-AC conformance and call-flow oracles (slice A)
+- conformance 16 rows: 12 MODELED, 2 CONSTANT-CHECKED (ECS-001, ECS-011), 2 SPEC-CHECKED; 54 theorems. call-flow 17 rows: 13 MODELED, 4 SPEC-CHECKED; 50 theorems; 0 sorry.
+- FAL-CONFORMANCE-1 OPEN DESIGN: a call with preview off can be classed pass with 0 Preview tx; ECS-014 still blocks the completion report.
+
+## [2026-11-15 12:12] qa | Formal-Lean-AC coverage: 491 rows, every ID one row
+- formal/sherlock-e2e/COVERAGE-FORMAL-AC.md: 211 MODELED (Quint replay pending), 21 CONSTANT-CHECKED, 204 SPEC-CHECKED, 14 FINDING, 41 completion IDs pointed to slice B contexts.
+- Lead rebuilt all 10 oracles on odin (lake build --wfail green, 706 axiom pins, #audit_ns [] each). 21 findings in research/sherlock-e2e-spec-20261115/bus/formal-findings.md.
+
+## [2026-11-15 12:20] build | T23 Part B benchmark harness (t23-suite a120de0d8) and the odin and huginn rehearsal requests
+- `tools/t23-suite/bench.py` renders bench.jsonl and BENCH.md from the timers the tools already print (RSLPROBE, T7CHAIN, T10CALL, E5JSON prove and ledger 9.1.0.1, t10a-state submission seconds); `partb-bench.sh` adds a process wall clock where a tool has none (fresh target, HEAD check, GPU lock per proving step, load at start and end). A stage without a measurement is null with a reason; a call has a total only when every stage is measured. Selftests 16 of 16 and t23 17 of 17.
+- MEASURED on muninn: compactc 0.36.0 --skip-zk 1.8 s (t02), 1.6 s (a01), 1.8 s (s02); ZKIR byte-equal to the suite native files.
+- Finding: at openvm rekey-int 95cf796 an R_SL call stops at the leaf (`t7_chain rsl` keys N1 but does not prove it; settle_ready false, SLC-012). The rehearsal measures N1 to wrap on the slice program A as a labelled stand-in; T23 step 3 needs an R_SL leaf -> N1 driver.
+- Requests: ~/.cache/t23/partB-rehearsal-request-odin.md (t02, s02 keccak; L_Fr on GPU) and -huginn.md (a01 ADT; L_Fr on CPU); bundle MANIFEST sha256 ec82805a. Wrap tree PROPOSED: merge-tree t11-zk + t12-slot15 (tree 015ccf33), lead confirms. Keccak call is Mycroft `rejected` while native is ok.
+
+## [2026-11-15 12:22] plan | T23 end-to-end gap: R_SL calls stop at the leaf; chain driver lane started
+- T23 Part B bench harness landed (t23-suite a120de0d8); rehearsal requests for odin and huginn on rekey-int 95cf796.
+- At 95cf796 `t7_chain rsl` keys N1 over the R_SL leaf but never proves it (settle_ready false, SLC-012). The rsl-bind lane builds the leaf to wrap driver on branch rsl-chain.
+- FP-3 lane done (openvm fp3 a2eeece, fp3-wire ab8570a); its wire checks run on odin on 95cf796 (m47). LEAD PICK: Moriarty wrap tree = branch sherlock-int (t11-zk + t12-slot15).
+
+## [2026-11-15 12:22] qa | T11 odin eq_zk wrap proofs accepted by the ledger 9.1.0.1 verifier on muninn
+- Both odin eq_zk wrap proofs (2,912 B, 1,026 public inputs, VK = T10q k21 key) verify on midnight-ledger a2b30128 (ledger-9.1.0.1, stock crates): Ok in 0.10 s and 0.13 s.
+- Every changed lane, changed public input and flipped proof byte is refused (7/7, 7/7, 3/3).
+- The eq_zk test still fails on 2 equal aligned blocks (30, 56); the T11 lane decides if they are witness-independent or a blinding defect.
+
+## [2026-11-15 12:22] qa | FP-3 wire box run on rekey-int 95cf796: L 2,071 columns, D3 at the L bounds passes
+- odin m47 ran every step with rc 0: check, t13_t10q_chunk 12/12 (NT-1 and NT-3 residuals refused), sherlock-lfr lib 23/23, fp3_typed, and fp3_l_set (a set without EffectAir is refused before keygen).
+- `t7_chain shape` measured the L key at 48 AIRs and 2,071 columns (EffectAir 77), within LEAD PICK FP3-LCOLS (bound 2,200). D3 at the L bounds (2,200 columns, w_stack 48) passes: weakest term mu 101.0730 bits.
+- Files: Moriarty fp3 research/sherlock-tested-design-20261113/fp3/{SPEC.md,RESULTS.md}; ~/.cache/rekey-t11/LIST.md; the odin logs at ~/sherlock/logs/fp3-wire-95cf796/.
+- Next: FP-3 closes when quint_regressions on openvm fp3 a2eeece passes (huginn). T25 measures the L_Fr height, the wrap rows and the VK bytes.
+
+## [2026-11-15 12:25] commit | Formal-Lean-AC: slices A and C oracles c05c992dd and the follow-up 938695aaf
+- Branch sherlock-e2e-spec, not pushed. 10 Lean oracles, COVERAGE-FORMAL-AC.md (491 rows), COUNTEREXAMPLES.md section "Slices A and C" (22 FAL findings with verdict and basis).
+- FAL-EXEC-2, -3 and -5 CONFIRMED on openvm rekey-chips dcf1b4c (odin formal-cx tree). Coverage rule: FINDING is for spec defects, and a code gap keeps its check verdict and names its FAL entry.
+
+## [2026-11-15 12:26] commit | rsl-chain af24fc1: R_SL Compact call driver from app to L_Fr on the planner key_root
+- openvm branch rsl-chain af24fc1 (from rekey-int 95cf796, not pushed): `t7_chain rslchain key|call` proves one R_SL call through app, leaf, N1, N2, N3, L and L_Fr. Before this commit the chain stopped at the leaf. N1 uses set id 3, with the R_SL key leaf at index 4 of key_root.
+- LEAD PICK RSLC-1: the planner key_root is key_tree(chip sets 0 to 2, DAG leaf, [R_SL leaf of the program]). LEAD PICK RSLC-2: plan_d is empty. The L, L_Fr and wrap keys do not depend on key_root.
+- Outputs: the L_Fr export for the k=21 wrap, args.json and accept-bundle.json for accept_args.py, vector.json, call.stmt.json (settle_ready true) and a partial t23-prove-result/1. The run prints RSLPROBE, T7CHAIN times and T10CALL lines for bench.py.
+- Next: box run per ~/.cache/rekey-t11/rsl-chain-box-request.md (the compile check and first proof), then accept_args.py and ledger-check 9.1.0.1 on muninn.
+
+## [2026-11-15 12:31] note | rsl-chain 81904ed: FP-3 fallback lanes; box request updated
+- Corrects the rsl-chain af24fc1 entry: an ordinary call settles through the FP-3 fallback (wit_of_words takes fb 1), so 81904ed applies fp3::to_fallback to the R_SL run (LEAD PICK RSLC-4). Call mode asserts the given vector is that fallback call. The slot-15 anchor comes from iface::tpl_ord (lane 6 = ANCHOR_SLOT 15).
+- LEAD PICK RSLC-3: setup mode is recorded (T16_PROFILE), not required, for a one-leaf call.
+- Risk: `t7_chain t10` (lfr_call) builds its run with t10_run and no to_fallback, so its L may fail the FP-3 effect AIR at 95cf796. Box step 8 checks this and compares the L, L_Fr and wrap keys with the stand-in.
+- Files: ~/.cache/rekey-t11/rsl-chain-box-request.md (adds T6_SLICE_JSON, the location of the Moriarty sherlock-int d2118454f wrap tree, and the universal-key check).
+
+## [2026-11-15 12:45] qa | Formal-Quint aggregation context: Quint 45/45 on odin, replay agrees
+- Carbon lane e2e-aggregation wrote `formal/sherlock-e2e/aggregation/quint/` (one invariant per NAG/GPH/LPC ID, 18 mutants). The odin rerun gives 45 of 45 expected exits, with inv at 10,000 samples.
+- The replay (`replay/project_aggregation.py`) gives 1,877 transitions and 294 refusal checks in agreement with the Lean oracle. The negative control (a changed `post_d`) gives DISAGREE.
+- Findings Q1 to Q6 are in `bus/formal-findings.md` and `formal/sherlock-e2e/COUNTEREXAMPLES.md`. GP2-C2.1 is CONFIRMED on odin (`gp2_c21_pubv_checks_the_constant_row --ignored`: the forged witness is ACCEPTED). The LPC-002 5,400 bound: GUARD HOLDS (`g1_refuses_keys_outside_the_bounds`).
+
+## [2026-11-15 12:45] commit | Mycroft T24 c761b9138: native keccak256; s02-foreign keccak equal to native
+- Branch mycroft-factory, not pushed. Mycroft rejected the s02 keccak call (BuiltinFailed) because `sem.rs` had no native keccak256. It now hashes the aligned binary repr of persistent_hash with `sha3::Keccak256` 0.11.0, as midnight-zkir 446c7fe does (MYC-BLT-007). sha3 and keccak come from the cargo cache.
+- MEASURED: lib tests 36 passed. Suite with every kit: 146 equal, 0 different, 0 rejected. Coverage: 143 equal, 2 blocked (j02-schnorr).
+- MEASURED: `rsl_exec` on the re-emitted call ~/.cache/rekey-chips/calls4/s02-foreign.keccak.keccak.0.rsl.json is equal to native. All 146 re-emitted files are equal, 0 different.
+
+## [2026-11-15 12:45] commit | Mycroft T24 5b2f6047d: Point<Jubjub> arguments; j02-schnorr equal to native
+- Branch mycroft-factory, not pushed. MYC-FE-022: a `Point<Jubjub>` argument is two raw tape words, then one `FromCoordinates` chip, which is the native decode (`from_xy`, then `try_into_subgroup`). Point equality and select are one native rule per word. LEAD PICK: the frontend expands the argument; there is no typed `Circuit.argTypes`.
+- MEASURED: lib tests 38 passed. Suite with every kit: 148 equal, 0 different, 0 rejected, 0 circuits refused. Coverage: 145 equal, 0 blocked. `rsl_exec` on calls4 (2 j02 files, 1 keccak file): 3 equal. On all 148 re-emitted files: 148 equal.
+- Finding: native Jubjub `from_xy` checks only y and the sign of x (midnight-circuits 7.3.0 FIXME), so `(x + 1, y)` decodes. Mycroft calls the same function and agrees with native.
+
+## [2026-11-15 12:45] commit | T23 settle at anchor slot 15 (t23-suite 705f1ef95); wrap tree branch sherlock-int; rehearsal requests final
+- Moriarty branch `sherlock-int` (LEAD PICK): t11-zk 02141b630 + t12-slot15 707c9a8ed (--no-ff, d2118454f), then fp3 d023b41df (91d933f9f); all clean; fp3 does not change `tools/sherlock-wrap` (subtree ef754902). Not pushed.
+- t23-suite 705f1ef95: t10a-ledger-run.mjs takes anchor-slot.mjs (16-child deploy state, acceptRun prologue reads slot 15) and a suite mode (one ledger per program, each call against it, refusals off per call); t23.py checks the acceptRun words with accept_args.py and plans deploy and call. MEASURED offline dry-run: JS ledger accepts and applies, readback and replay refusal pass, the vector differs from slot 0 only in lane 6 (0 -> 15). No Preview call.
+- Requests final: ~/.cache/t23/partB-rehearsal-request-odin.md and -huginn.md, bundle MANIFEST sha256 53e0a779; odin CUDA ~/.local/cuda/bin; huginn sets E5_SRS_DIR. Final run waits for the rsl-chain R_SL leaf -> wrap driver.
+
+## [2026-11-15 12:45] qa | T11 equal blocks are public zeros; rsl-bind all pass on huginn; j02 and keccak calls prove on odin
+- T11: blocks 30 and 56 are the committed-instance eval and fixed column 14 eval (both public zero); all 52 witness elements differ. GUARD HOLDS; eq_zk is element-wise (t11-zk 7afdbae3b); odin reruns it.
+- huginn rsl-bind a6912c2: rsl_bind 12/12, all R_SL suites pass, 9/9 mutants refused; before-fix forged POST_D accepted (gap shown).
+- odin on rekey-int 95cf796: j02-schnorr 2/2 and keccak 1/1 proved, words and commitment equal native; Mycroft 148/148 calls equal native.
+- rsl-chain driver (81904ed) to huginn (m63); T23 Part B rehearsals to odin (m51) and huginn (m64).
+
+## [2026-11-15 12:45] commit | rsl-chain 2576139: T10A_PROVER box prover and the t7_chain t10 FP-3 fix
+- New file crates/sherlock-wrap-export/rsl-chain-prover.sh follows the t10a-ledger-run.mjs prover contract. It takes {binding_input, preimage} on stdin and runs e6-dump-prover.mjs, then `t7_chain rslchain call` under the key dir's run secrets, then the k=21 wrap (deployed key asserted). It checks the wrap statement against the vector and prints the framed proof on stdout.
+- Risk confirmed by reading the code, not by a run: since fp3-wire, L reads a mode-0 call with fb 1, and L_Fr checks the record against C_FB. The synthetic t10_run lanes do not meet that check. New helper t10_run_fb (t10_run plus fp3::to_fallback) now serves `t7_chain t10` key, args and call, chunkcx's honest ORD run, and rsl-chain.
+- How the T23 runner invokes the prover (T10A_PROVER over ssh to huginn): ~/.cache/rekey-t11/rsl-chain-box-request.md, section T23-SETTLE.
+- Open from the coordinator: is the R_SL key leaf of t02 equal to that of a01? huginn m63 reports it. If the leaf is per program, rework it per chip-set bucket (D-017), never per program.
+
+## [2026-11-15 12:55] commit | T21 prover GUI stage 4: odin run, conformance, chip tab, standalone file
+- Commit d7a919ec9 on prover-gui (not pushed): real T14b daemon run on odin, calls 71.6 to 89.0 s at load 39 to 43 (record odin-t14b-daemon-call); CONFORMANCE.md 21 of 21 mismatches fixed; chip design tab; dist/sherlock-prover.html (two tabs, no network).
+- Stale frame: multisampled default framebuffer on ANGLE/NVIDIA drew stale edges or whole missing faces; scene now draws into a 4-sample target and blits; 0 stale in 80 loads and 75 changes on muninn's GPU.
+- Measured on muninn GPU: frame median 16.7 ms (PERF-002 pass), warm first frame 1.53 s (PERF-009 pass); every browser harness 0 failures on odin; Modern Web Guidance dispositions in CONFORMANCE.md.
+
+## [2026-11-15 12:56] qa | T11 GPU half + ledger-check complete
+- Odin h127: the element-wise eq_zk rerun passes (rc 0). 80 elements. All 52 witness elements differ. The only equal elements are the public zeros committed_instance_eval[0] and fixed_eval[14], so GUARD HOLDS on blocks 30/56 stands. Proofs differ, the public json is equal, and wrap.vk is byte-equal to T10q 2cac64d2. GPU half: guard rc 4 with no files; G1/G2 rc 0 with os blinding; C_P and input_pub differ.
+- On muninn, ledger 9.1.0.1 (rev a2b30128) gives Ok(()) for both proofs. Every changed lane, changed public input and flipped byte is refused. Files: ~/.cache/t11zk/odin/rerun2 (RETURN.sha256 642b0511, sha256 -c OK).
+- RESULTS sections 3, 4, 5 and 7 filled on t11-zk. LOOP T11 is DONE pending Carbon Quint QA (lead verdict); the request is ~/.cache/lead/t11-carbon-qa-request.md. Slot reuse is still running on odin t11zk-all and is not a done-when.
+
+## [2026-11-15 12:56] decision | Slices A and C formal findings resolved: 22 FAL verdicts, merged COVERAGE-FORMAL
+- Commit 1c806f3e7 on sherlock-e2e-spec (not pushed): spec text fixed for FAL-SETTLEMENT-1 to -3 (t20 LDG text in-tree, ANC-012 cap 2, BAT-010/011 boundary), MID-002 write entries only, PVW-013 with WRP-012, FRC-003 reuse, new FRC-016 and ECS-015, CF-001 scoped by D-016, ECC-010 order and one count source, ERS-009 on the T23 settlement route. LEAD PICKs marked for T15.
+- Other trees: mycroft-factory cb65c605d (MYC-KEY-008, MYC-REF-052, MYC-CHIP-001; FAL-EXEC-1 to -3), t22-governance cf794dc97 (ERT-002 threshold 1, ERT-004 end_eff, ELD-006; FAL-GOVERNANCE-1 to -3).
+- Code gaps with fix requests in ~/.cache/lead/fal-fix-*.md: FAL-NETOPS-4, FAL-EXEC-5, ECC-007 chip form (keccak still tier 3, gir.rs:89; ECC-014 met by Mycroft 5b2f6047d), factory REPORT.md counts, planner cap, runner key check. FAL-NETOPS-1 GUARD HOLDS.
+- COVERAGE-FORMAL.md merges B and AC: 745 rows, one per ID, 1 FINDING (LFP-003); openspec --strict valid for 4 changes, EARS lint 322 requirements 0 defects.
+
+## [2026-11-15 13:08] lane-done | T21 prover GUI creative review: PASS after fixes
+- Creative director review of dist/sherlock-prover.html at 1440x900 and 390x844, dark, light and reduced motion: verdict PASS after fix commit 10f766507 on branch prover-gui (not pushed). Report: prover-gui/CREATIVE-REVIEW.md, 13 Animation and 10 Chip findings, each with a ruling.
+- Fixed: a "first call" side tab on the warm odin call (6.4e-07 s of key work), the standalone chrome offset (sheet and column lost 48 px under the tab bar), a play mark on the Pause button, the hint over the base plate name, chip tab copy with build history, cut chain subtitles, the phone Kits table.
+- After the fixes on muninn: node --test 118/118, text and source checks clean, standalone check 0 failures; new file sha256 e20c2576. The scene and shell browser harnesses need a box: ~/.cache/lead/pgui-cd-box-request.md.
+
+## [2026-11-15 13:13] lane-done | RSL-UNI: one R_SL leaf app key per bucket, program bound by prog_d (code, box run pending)
+- Confirmed at openvm rsl-chain 2576139: the R_SL key leaf was per program. Every R_SL AIR kept its program in a preprocessed trace (`crates/sherlock-leaf/src/rsl/air.rs:4`, `boiler!` `preprocessed_trace`, `mod.rs:13`), AIR 0 kept the sponge schedule and `image_d` as key constants (`rsl/stmt.rs` `pre_rows`, `RslStmtAir::preprocessed_trace`, `trace.rs:481` `RslStmtAir::new(stmt::pre_rows(self), weak)`), so `pre_app` and the key leaf built in `examples/common/rsl_chain.rs` (`sh::key(&k.eng, cs.airs_fp1())`, `KeyTriple`) changed with the program.
+- Fix on openvm branch `rsl-uni` 0acf04a (worktree ~/.cache/m7-wrap/src/openvm-rsl-uni, not pushed). LEAD PICK RSLU-1 (for T15): program cells are main cells after a row counter; each program row sends its tuple on PROG_BUS 208; AIR 0 has no preprocessed trace: hash rows hash every tuple into `image_d`, four prog_d rows compute `P2(DOM_PROG, image_d, plan_d, key_root, 1)` with `image_d` linked from the hash rows, then the rsl-bind schedule rows (their cells sent as tuples too). LEAD PICK RSLU-2: the R_SL key leaf is per bucket (no hash, SHA-256, Keccak-256; `trace::bucket_airs`), a deployment key_root lists the three bucket leaves; RSLC-1 (leaf per program) is replaced. Kit tests keep per-program preprocessed keys (`ChipSet::airs`).
+- Tests `tests/rsl_uni.rs`: no preprocessed AIR in any suite program; t02 and a01 vk bytes equal each other and the bucket key; both prove under it; swapped-program mutants (a01 run under t02's prog_d by the image link, by the PV, an unhashed ALU program cell) refused, with weak controls PROG, IMAGE, PV. `t7_chain rslchain leaves A B` prints both R_SL key leaves (RSLUNI). Not built on muninn; box request ~/.cache/rekey-t11/rsl-uni-box-request.md (lead sends). m63 had no leaf result when this lane committed.
+
+## [2026-11-15 13:14] lane-start | rsl-uni 0acf04a box run on odin (m53), stale slice found on both boxes
+- Odin m53 runs rsl-uni 0acf04a (one R_SL key leaf per chip-set bucket): first compile, rsl_uni 4 tests, rsl_bind, kit regressions, `rslchain leaves` t02 vs a01; request ~/.cache/rekey-t11/rsl-uni-box-request.md.
+- `~/sherlock/in/slice_v1.json` is stale on odin and huginn (sha256 cb3842a4, unitctor rom_rows null); the correct slice 67868363 is now at `~/sherlock/in/slice_v1-67868363.json` on both boxes; old file left in place for running units.
+- FP-3 rerun on huginn (m65) and odin m52 use the fixed qr fixture (rekey-int 01b6f76, fp3 8c7cc53).
+
+## [2026-11-15 13:18] qa | FP-3 CLOSED: quint_regressions on fp3 8c7cc53 has no FP-3 failure
+- Huginn m65 (sherlock-fp3-qr2, openvm fp3 8c7cc53, slice 67868363): fp3-lib rc 0. quint_regressions 14 ok, 1 failed, 6 ignored (687.84 s). Both GP2 tests and t10b_chunk_lock_is_bound pass. replay_all: 60 PASS, 2 SKIP, and 7 `no manifest row` t10q-ntfix traces (lane QR-MANIFEST), with no other FAIL.
+- Causes of the first huginn run on a2eeece: the GP2 failures came from a stale slice cb3842a4 (environment), and replay_all from the 7 traces of bb9dc9ae0 without manifest rows (on the base before FP-3). The t10b stall came from the FP-3 fixture, which built the 65,537-call run 18 times; 8c7cc53 builds it once per run.
+- Logs on muninn ~/.cache/fp3/huginn-qr/m65/ (quint-regressions.log sha256 0f654c7f, fp3-lib.log 69d96a1b, rc.txt e0d40ddd). RESULTS.md on Moriarty fp3 records FP-3 as CLOSED.
+
+## [2026-11-15 13:31] lane-done | FAL-FIX: six A/C fix requests on code, F-leaf-proving-Q1 answered
+- FAL-NETOPS-4 CONFIRMED, fixed in Moriarty t23-suite bdcc5126c. `call-resolve.mjs` resolves an unknown inclusion state from the indexer and the node and never marks the call refused. Two more defects are fixed there: a timed-out submit was marked refused, and suite mode matched the indexer by the node extrinsic hash. FAL-LEDGER-VERIFICATION-1 CONFIRMED, fixed in bdcc5126c (`ledger-keys.mjs`: wrap key on the write entries, compiled native key on rootAccepted and runAccepted). Tests `call-resolve.test.mjs` and `ledger-keys.test.mjs` fail before the fix and pass after it; the offline dry-run gives rc 0.
+- FAL-COMPACT-COMPILATION-3 (ECC-007) CONFIRMED, fixed in mycroft-factory b119a63e3: keccak256 has its own kit `Keccak256` in Rust and Lean, with no tier 3 kit. Suite: 148 vectors equal. The KRS and Quint kit sync stays with the KRS lane. FAL-COMPACT-COMPILATION-2 CONFIRMED, fixed in b119a63e3: the REPORT.md suite lines are generated from `out/suite-coverage.json` (`suite_coverage.py --report/--check`).
+- FAL-SETTLEMENT-2 CONFIRMED, fixed in openvm rekey-int 349b1e5 (`chunk_cap.rs`: K_MAX = min(floor(TTL/1,755 s), 2), refusal at plan time). FAL-EXEC-5 CONFIRMED: 113 of the 120 rules have no chip row. The gate test is ignored as an open defect; the rule build is a slice B lane.
+- F-leaf-proving-Q1 answered, LEAD PICK for T15: LFP-003 refuses an app AIR count other than 5 or 8, FP-1 not counted (bus, sherlock-e2e-spec a4c3ae053). MID-002 read-entry names sent to Fable-A. Box request: ~/.cache/lead/fal-fix-box-request.md.
+
+## [2026-11-15 13:59] lane-start | EUI-010: slice B interpreted rule coverage (FAL-EXEC-5)
+- Lane EUI-010 starts on openvm branch `eui010` from rekey-int 3af5323 (worktree ~/.cache/eui010/openvm). Goal: the gate `eui_010_every_enabled_rule_has_a_chip_row` passes without `#[ignore]`, or PLAN.md proves which rules must be disabled. Plan file: ~/.cache/eui010/PLAN.md. No heavy cargo on muninn; heavy runs go to box requests in ~/.cache/eui010/.
+
+## [2026-11-15 14:05] qa | huginn: rsl-chain L_Fr w_stack 54 > 48; FAL-SETTLEMENT-2 cap confirmed; prekey 70a56d4 checks
+- m63 rsl-chain 81904ed t02 `rslchain key`: RSLPROBE statement_bound and universal N1 true, N1..N3 fixed point, then export lfr-call panics `TotalStackedWidthOutOfBounds { w_stack: 48, actual: 54 }`; sent to the rsl-chain lane (raise bound with D3 >= 100 bits, or narrow L_Fr; LEAD PICK, before T25).
+- m66 rekey-int 3af5323: chunk_cap 3/3, sherlock_plan plan_d equal to 95cf796, e2971 refused (needs k = 4 > K_MAX 2) while the 95cf796 control accepts it; EUI-010 gate 113 of 120 rules unbuilt (lane eui010).
+- m59 prekey after 70a56d4: all R_SL suites, uks003, rslcanon, gp2_real_proofs and 7/7 universal-N1 probe pass; one trace gp2-value-set-m-rom-no-tbl-bind refused by a CoreAir constraint instead of bus 68 (lane GP2-ROM attributes it).
+- calls3-b at 95cf796: 73/73 proved and verified (huginn h134).
+
+## [2026-11-15 14:05] decision | rsl-chain r2: L_Fr stacked width 54 over w_stack 48; LEAD PICK narrow, not raise
+- Run: huginn m63 (rsl-chain 81904ed, t02) proved app through L_Fr, then export refused the L_Fr proof shape (w_stack 48, actual 54). T10m measured L_Fr widths [34, 10] = 44 before FP-3.
+- Diagnosis, by code reading: the cause is FP-3, not R_SL. The FP-3 L is larger, so the L_Fr tape is longer and the machine heights grow; the L key and its heights are the same over the R_SL N3 (T7CKEY true).
+- LEAD PICK RSLC-W: narrow L_Fr to at most 47. Raising w_stack would push the wrap to k=22: 96,728 rows of headroom at T10m against about 26k rows per stacked column (DERIVED). D3 does not limit it (L_Fr query term 101.14 bits).
+- Commits: openvm rsl-chain 889bc9d (on rsl-uni acfd93a) adds the LFRSHAPE diagnostic (exit 5, no panic). stark-backend-t8b a0346d7 adds row selectors to the debug evaluator. Next: ~/.cache/rekey-t11/rsl-chain-r2-request.md measures the per-AIR shape and the stand-in.
+
+## [2026-11-15 14:10] commit | QR-MANIFEST: quint-reg rows for the 7 T10q-ntfix NT traces (replay_all "no manifest row" fixed)
+- openvm rekey-int 3af5323: quint_regressions handler `t10q` (tests/qr/t10q_nt.rs) reads the NT attack from a t10q_chunk violation trace and runs the t13 attack calls (builders moved to tests/qr/t10q.rs, shared with t13_t10q_chunk). Named tests t10q_nt1/nt2/nt3/nt_asbuilt *_trace_refused.
+- Moriarty t10q-ntfix a8b52b5db, cherry-picked to t10q 5e90f78d8 and sherlock-int 733d61a1d: 4 replayed rows (NT-1 and asbuilt refused by the decoder twin "ordinary call carries the anchor write"; NT-2 and NT-3 refused at popeq of the chain) and 3 not-replayed rows (the NT*-replay traces are quint test init states with no attack; they name the t13 tests t10q_nt*_refused).
+- MEASURED on muninn: the 4 named tests pass; a scratch tree without the NT fixes and the FP-3 link fails all 4; with only the FP-3 link dropped all 4 pass. Full replay_all goes to a box: ~/.cache/lead/qr-manifest-box-request.md.
+
+## [2026-11-15 14:13] build | EUI-010: plan, batch 1a built, gate still open (FAL-EXEC-5)
+- Facts (~/.cache/eui010/PLAN.md): all 120 rules of M-4 are reference step rules; 102 fire on the X1 corpus, 18 do not, and 3 of those 18 are already built. AD-10 (`ARCHITECTURE.md:3545`) makes an unsupported enabled rule a gap, never a restriction, so no rule is disabled (GP-1). No Lean step-rule reference exists. The 113 split into 6 batches by machinery: 46 image-lane rules, then ROM (20), heap (10), appends (8), frame stack (15), task stack (14). The binding bound is constraints (APP 5,000 per AIR); the MERGE-WORK split CORE (999 of 1,000) keeps the 5 slice rules.
+- LEAD PICKs accepted by the lead for T15: EUI010-REF (Rust reference vectors), EUI010-KERNEL, EUI010-KEYS (batch 1 and any N1 change before T25; later batches change only app/menu keys). Open LEAD PICKs: EUI010-EFFECTS, EUI010-DEC, EUI010-SPLIT.
+- openvm `eui010` 824693a: batch 1a (BHelperEnvGetExit, BHelperEnvPutExit, BHelperFindExit, BHelperFindFailure) in chip sets 0 and 1, full DEC 16 rows, kernel and chip set 2 unchanged; test `eui010_batch1.rs` (honest + forged per rule). `cargo check` clean on muninn; tests and key probe are box request 2. Gate: 11 of 120, still ignored. Row in ~/.cache/rekey-t11/LIST.md.
+
+## [2026-11-15 14:22] build | EUI-010: batch 1a and 1b built (19 rules), gate open at 26 of 120 (FAL-EXEC-5)
+- openvm `eui010` b84e9c8: rekey-int 3af5323 + batch 1a + a merge with rsl-chain 889bc9d (7582f41, lead request; a rebase would drop the gate test and the K_MAX fix) + batch 1b. The 19 batch rules are one table (`core::batch_rules`) for guards, effects and the frame rule. DEC is 128 rows (EUI010-DEC accepted). The kernel and chip set 2 are unchanged. `cargo check -p sherlock-leaf --tests --examples` is clean on muninn.
+- Not proven yet: `tests/eui010_batch1.rs` (one honest and one forged trace per rule) waits on the odin reference vectors and box request 2. Three batch rules never fire on the corpus (FindFailure, BindFailure, ValidateFailure) and wait on RFB-003 constructed cases.
+- 26 batch 1 rules remain before T25: the control-writing legacy and entry rules, and 5 rules that need is-zero/is-equal or ALU gadgets or a helper_visits charge. Plan: ~/.cache/eui010/PLAN.md section 11. The key probe runs once, when batch 1 is complete. LIST.md row updated.
+
+## [2026-11-15 14:24] qa | R_SL universal key leaf restored (rsl-uni acfd93a on odin); manifest rows replay; L_Fr shape measured
+- Odin m53/m54 rsl-uni acfd93a: rsl_uni 4/4, t02 and a01 give one bucket key (rsl_key_leaf 1832b29f, key_root 454e3bc1, key_roots_equal true), 3 swapped-program mutants refused by the stock verifier, rsl_bind 12/12, all kit suites pass, universal N1 8/8; logs ~/.cache/rekey-t11/rsl-uni-out (RETURN.sha256 b01e54d7, sha256 -c OK).
+- Huginn m70 rekey-int 3af5323 + t10q-ntfix a8b52b5db traces: t13 12/12, the 4 t10q_nt tests ok, replay_all 62 PASS 5 SKIP with no missing manifest row; one FAIL left (gp2-value-set-m-rom-no-tbl-bind refused by CoreAir #647/#648 before bus 68), lane GP2-ROM.
+- Huginn m68 r2 889bc9d: t02 rslchain key LFRWIDE stacked width 54 > 48 measured; narrowing to <= 47 (LEAD PICK RSLC-W) goes to the rsl-chain lane.
+
+## [2026-11-15 14:26] lane-done | EUI-010: 19 batch 1 rules built, gate open at 26 of 120, finding EUI010-P3
+- openvm `eui010` c720cdc (rekey-int 3af5323 + rsl-chain 889bc9d merge + batches 1a and 1b). 19 batch rules in chip sets 0 and 1, kernel and chip set 2 unchanged, DEC 128 rows. `cargo check -p sherlock-leaf --tests --examples` is clean. Each rule has one honest and one forged case (the forge changes a word the rule writes); they wait on the odin reference vectors and ~/.cache/eui010/box-request-2.md. Three unfired rules wait on RFB-003 constructed cases.
+- FINDING EUI010-P3: the reference refuses a helper step at `helper_work == max_helper_work` (Exhausted, uncharged; `owner_runtime.rs:3808`). The CORE carries no cap and no rule checks it, and this holds for the 5 slice rules too. The fix is a shared-group change for batch 1, before T25.
+- 26 batch 1 rules remain (PLAN.md section 11 gives the order). The key probe runs once, when batch 1 is complete. The gate stays `#[ignore]`.
+
+## [2026-11-15 14:27] commit | rsl-chain r3 eb2bd12: L_Fr program table narrowed to 13 columns
+- huginn m68 measured the L_Fr shape at 34 main plus 20 program table, 54 in all. The FP-3 tape needs more than 2^19 program rows, so the 20-column table stacks 20 wide at 2^20.
+- The fix (LEAD PICK RSLC-W): PROG_W goes from 18 to 11. Pack, Split, Reshape and Public rows now travel as parts bound by a row id. Expected width 34 + 13 = 47. One table and 2 commitments are kept.
+- The 8-call probe's settle_ready false is not a regression: `t7_chain rsl` hardcodes false, because it keys N1 with a zero key_root and never proves it. rslchain builds the planner key_root and reports true.
+- Next: ~/.cache/rekey-t11/rsl-chain-r2-request.md (r3) runs the lfr tests, the t02 key, the k=21 wrap, the call and the stand-in. A Carbon Quint lane is owed on the parts binding.
+
+## [2026-11-15 14:33] qa | GP2-M-ROM-NO-TBL-BIND: GUARD HOLDS; C2.1 #647/#648 hid the table-bind trace, attack rebuilt
+- huginn h137 and h143: the trace was refused by the GP2-C2.1 guards #647/#648 (openvm 7f17a2d), not bus 68; the old alias row (table 0, kind 8) fails them first. No commit changed the ROM binding; 70a56d4 is test only.
+- Fix, no circuit change: the attack aliases a table-12 row with words (6, 1). openvm gp2-rom 7d9596b (handler); Moriarty gp2-rom (model PROG_U_T12, shrunk 2-state trace; odin quint 0.33.0: 35 OK, 11 tests pass; before: exit 0 and all32 test failed).
+- Manifest refused_by kept, note and COUNTEREXAMPLES on t10q-ntfix e533444e5, t10q eeafbd3ac, sherlock-int 550bf483a.
+- Next: box request ~/.cache/lead/gp2-rom-box-request.md (before, after, and old case with #647/#648 removed); merge gp2-rom 7d9596b into rekey-int before the t10q push.
+
+## [2026-11-15 14:35] qa | EUI010-P3: CONFIRMED on code reading, fixed in CORE and the kernel CORE, verdict recorded
+- Finding: the reference refuses a helper step at helper_work = max_helper_work (P3, owner_runtime.rs:3808-3835); CORE had no cap, so a shard could step past it. Counterexample test eui010_p3.rs at openvm eui010 fc14920 (BHelperEnvGetEmpty from 100,000 to 100,001; control 99,999).
+- Fix bc38a92: `flag(helper work) * (sum_k (hw_k - cap_k) inv_k - 1) = 0` in the full CORE and the split MERGE-WORK kernel CORE (+8 columns, kernel 1,000 of 1,000 constraints). The MERGE-WORK key changes once, before T25. LEAD PICK EUI010-P3CAP (T15): cap 100,000 of profile 1, INIT pins profile 1.
+- Recorded: sherlock-e2e-spec 6790cce95 (COUNTEREXAMPLES row EUI010-P3, FAL bus entry). Run (fails before, passes after) goes in EUI-010 box request 2.
+- Open: the P3 refusal row (Exhausted{HelperWork}) is not built (completeness); next is batch 1c in PLAN.md section 11 order.
+
+## [2026-11-15 14:48] qa | T21 prover GUI: S3 live race fixed, odin shell 122/122
+- Cause of the r3 S3 miss: a record load in flight replaced the idle live model when the bridge hello came first (page race, older than the creative review); fix prover-gui 5daa70f99 (shell/index.js), new race check app/tests/shell/live_race.py.
+- Odin m59 software GL: shell h10 122/122 (S3 model live, mark "Live", fab Prove); live_race.py model live with a 1,500 ms record delay.
+- Creative review verdict PASS after fixes (10f766507, 503e54e8c, 2a62de7c9, 5daa70f99); the earlier "harness timing" ruling is withdrawn in CREATIVE-REVIEW.md.
+
+## [2026-11-15 14:53] build | EUI-010 batch 1c: 26 table rules built, batch 1 complete in code (52 of 120)
+- openvm eui010 6f278c0: src/grule.rs table rules (cases with case columns, guards, nonzero inverse witnesses, record sets, increment gadget, ROM read of the expressions row at ctl.1 or control_origin); shared effect groups across rules (EUI010-EFFECTS). cargo check clean on muninn.
+- Rules: 16 legacy and result-stage rules, PublishExhausted (NOT P1 by three cases), 5 plan entries (Scalar 11 cases), BindEmpty, BindArity, AppendExit (src.len + 1), MatchDistinct (helper visits +1 in CORE, DEC message unchanged).
+- LEAD PICK EUI010-PUSHEQ (T15): PushRefuse guards depth = stack_limit (depth <= stack_limit holds in every reachable state). P3 refusal publishes under the helper rule itself, so it is a refused-step form, not a rule row; not built.
+- Next: ONE box request ~/.cache/eui010/box-request-2.md (probe v2 vectors, honest and forged traces with the MEASURED chip set 0 shape, P3 before/after, gate "68 of 120", regression, keygen and the universal key probe on 3af5323 and 6f278c0).
+
+## [2026-11-15 15:00] qa | T11 slot reuse: stark check fixed, section 5 filled
+- Odin m44 t11zk-all ended rc 1 at the last step, stark, and only on x_twice_identical. Every step before it passed: compare.json 14/14, slot-wrapd T11SLOT equal true (708d2f47).
+- Two served STARK proofs of one statement need not be byte-identical. The new stark_check.py (t11-zk) requires the same public_values and vk.pre_hash for x1 and x2, different proof bytes, a different statement for y, and all calls stock-verified. On the copied odin outputs (~/.cache/t11zk/odin/all, RETURN.sha256 cf70f0e0, sha256 -c OK) it passes 5/5, and the two negative runs are refused.
+- Open: the x1/x2 byte difference does not come from blinding. The STARK layers have no blinders, call draws no secret, and grinding is find_first. x1 was the cold call and x2 the warm one; the cause is not yet known.
+
+## [2026-11-15 15:04] qa | rsl-chain r3 eb2bd12: L_Fr 47 wide, k=21 wrap in gate, ledger 9.1.0.1 accepts
+- Huginn m71 t02 `rslchain key`: LFRSHAPE ok, stacked width 47 = 34 main + 13 program table (w_stack 48); RSLKEY leaf 1832b29f and key_root 454e3bc1 equal odin rsl-uni, universal N1 true.
+- k=21 wrap: 1,762,714 rows under the gate 1,782,573 (headroom 19,859; about 25.6k rows per stacked column, as derived), prove 47.0 s, proof 2,912 B, wrap.vk 1,325 B.
+- Muninn ledger-check 9.1.0.1 on the r3 t02 wrap (~/.cache/rekey-t11/r3-out/t02): Ok in 0.17 s, every changed lane, public input and flipped byte refused.
+- LEAD PICK (T15): wrap.vk is not re-pinned now; the new reference is pinned once at T25; r3 vk b7f5e43c is provisional.
+
+## [2026-11-15 15:04] plan | EUI-010 box request 2 handed to the lead; probe v3 fixed request 1 part A
+- Request 1 part A v1 panicked on odin (h147): lanes() used test_caps (max_frames 64), program `cap` has stack 128. v3 copies probe with the admitted caps (from_layout) and adds programs[name]; odin v3 run: 102 rules, 0 refused, 28 programs (out-1 877ccdf3).
+- Box request 2 (~/.cache/eui010/box-request-2.md): head openvm eui010 3353c11 (per-rule panic report); batch traces with MEASURED shape, P3 before/after (fc14920, bc38a92, head), gate "68 of 120", regression, T7KEY comparison on 3af5323, 889bc9d, head.
+- LEAD PICKs for T15: EUI010-PUSHEQ (vector: depth 8 = stack_limit 8), EUI010-P3REF (P3 refusal is a terminal refused helper step: chip sets 0/1 later, never the kernel). FAL bus correction committed (own hunk).
+
+## [2026-11-15 15:25] qa | Sherlock e2e Formal-Quint: leaf-proving context done
+- Carbon Quint lane leaf-proving: odin rerun 43/43 match; model fix R-leaf-1 (N1 waits for LeafProofsReady) with regression test and shrunk trace.
+- Replay 445 chains and 441 refusal checks against the Lean oracle; one root disagreement D-leaf-2 (oracle blocks the N1 merge after a refused foreign leaf; lead reading: refuse only the leaf, LFP-007).
+- Findings Q1-Q6 and R-leaf-1 in formal/sherlock-e2e/COUNTEREXAMPLES.md: Q2, Q4, Q5 OPEN DESIGN; Q1, Q3, Q6, R-leaf-1 NOT REPRODUCED.
+
+## [2026-11-15 15:25] qa | Sherlock e2e Formal-Quint: bridge context done
+- Carbon Quint lane bridge (23 mutants): odin rerun 48/48 match; replay 4,768 transitions and 853 refusal checks agree with the Bridge oracle; negative control disagrees.
+- Odin oracle binary was stale (pre 2,200-column resolution); rebuilt after lake update of sherlock_codec_b.
+- F-bridge-Q2 CONFIRMED on rekey-int 3826e38 (literal ANC-017/CLB-005 read lock refused, code reads x_(j-1)); Q1 NOT REPRODUCED (12,166 measured); Q3-Q6 OPEN DESIGN.
+
+## [2026-11-15 15:25] push | t10q pushed to origin (FP-3 closed)
+- Moriarty t10q eeafbd3ac pushed as new remote branch (217 commits, owner-authored, no AI attribution); pre-push scan: "seed" lines are test RNG seeds, wallet-status file holds only the public address and balances.
+- T11 stark check fixed on t11-zk 57e4bab2a (stark_check.py: same statement, different bytes; odin outputs 5/5). Cause of x1/x2 byte difference marked OPEN in RESULTS §5 (no blinders in STARK layers; cold vs warm call); probe = one statement proved twice on a warm worker.
+- EUI-010 box request 2 (e6fd2cbb915b, openvm eui010 85765aa with rsl-chain eb2bd12 merged) sent to odin as m62; four trees synced by git archive.
+
+## [2026-11-15 15:25] commit | GP2-ROM regression input text from huginn m74
+- Input case text for GP2-M-rom_no_tbl_bind (table 12 row 0 alias [0x10006, 0], sha256 928bd82f) dumped by the 7d9596b handler; committed gp2-rom 97ac3da48, cherry-picked to t10q-ntfix b124ee41d and sherlock-int 1fcc5fb7e. t10q (pushed) left unchanged.
+
+## [2026-11-15 15:42] qa | rsl-chain r3 complete; T23 rehearsals hit LFRWIDE on 95cf796; t23-int d485639
+- huginn h158 (eb2bd12): warm call lfr_prove 222.0 s, l_prove 70.1 s, LFRSHAPE 47, same lfr/l pre_hash and claim_pub as the key run; wrap2 under r3 wrap.vk b7f5e43c (byte-equal), 2,912 B, prove 45.9 s; stand-in program A keys to the same lfr_pre_hash and keys_d 563c227d: one universal L/L_Fr key across R_SL t02 and the stand-in.
+- T23 Part B rehearsals failed on both boxes (huginn h159, odin h154): tree 95cf796 lacks eb2bd12, L_Fr width 54 > w_stack 48. Builds, mycroft emit (EQUAL to calls3-ref) and rsl app leaf timings are good.
+- openvm t23-int d485639 = rekey-int 7d9596b + merge eb2bd12 (clean); rehearsal rerun sent to huginn as m76. odin 3826e38 steps 4-9 (h153): only the 8 known replay rows fail (fixed in later trees); N1 universal 8/8.
+
+## [2026-11-15 15:44] qa | T11 zero-knowledge Carbon Quint QA: verdict FINDING
+- Carbon lane qa-20261115-t11-zk: 14 mutants killed; odin rerun 40/40 commands match; EQ-ZK blocks 30 and 56 GUARD HOLDS (zero polynomials).
+- CONFIRMED on odin (openvm t11-zk 36cdbf0, Moriarty t11-zk 57e4bab2a): zkguard::check_export and Secret::load use denylists (untagged or "fixed" exports and secrets pass); args.json 0664 holds r_P and salt beside the 0600 secrets; T10CALL prints prog_d and proved_steps.
+- Low or liveness only: non-UTF-8 SHERLOCK_TEST_SEED reads as unset; a second prepare replaces run.secret. DETERMINISTIC_LOOKUP GUARD HOLDS. Verdict file ~/.cache/gemini-lanes/qa-20261115-t11-zk/VERDICT.md.
+
+## [2026-11-15 16:19] qa | rsl-chain eb2bd12 L_Fr program-table parts: Carbon Quint QA PASS
+- Carbon lane qa-20261115-lfr-parts: 4 mutants killed (ids not checked, padding id reused, part order swapped, table count unpinned); odin rerun 30/30 commands match.
+- Real-code bus test on eb2bd12 (odin): mixing, dropping, duplicating, id-0 and swapped parts all unbalance PROG_BUS; the honest execution balances.
+- Hardening, not reachable through Machine: ProgramTableAir::new takes a colliding tag (tag + 32) and pads an empty wide kind as narrow; stale doc comments. Verdict ~/.cache/gemini-lanes/qa-20261115-lfr-parts/VERDICT.md.
+
+## [2026-11-15 16:21] qa | rsl-chain r3 warm-call wrap passes the ledger 9.1.0.1 verifier on muninn
+- huginn wrap-call2 (wrap.vk b7f5e43c, proof 06b0f9c0, 2,912 B, vk 1,325 B): stock ledger-9.1.0.1 verify Ok(()) in 0.29 s; 7/7 changed public inputs, 3/3 flipped proof bytes and every changed lane refused. Log ~/.cache/rekey-t11/r3-out/bench/logs/ledger-t02-call2.log.
+
+## [2026-11-15 16:26] qa | T23 Part B rehearsal passes end to end on t23-int d485639 (huginn, CPU L_Fr)
+- huginn h161: every step rc 0. Builds ovm 51.5 s, lfr 35.3, emit 20.1, wrap 17.0; mycroft emit EQUAL to calls3-ref; rsl_app_leaf cold 6.6/6.4 s; stand-in chain-A cold 1,277 s (10/10 T7CASE PASS); L_Fr key cold 554.5 s (keygen 91.6, prove 225.4, L prove 68.6); args warm 75.0 s; L_Fr call warm 473.9 s (load 8.8, prove 227.2, L 70.2); wrap cold 89.7 s (prove 52.1 s, 2,912 B).
+- LFRSHAPE 47/48; lfr_pre_hash equal to r3 t02 and stand-in; wrap.vk b7f5e43c byte-equal to the r3 provisional vk. Wrap proof acf2925b copied to ~/.cache/t23/partB-r2-huginn for muninn ledger-check.
+- Next: huginn m77 = same run with T23B_LFR_DEV=GPU for the BENCH table GPU column.
+
+## [2026-11-15 16:30] qa | T23 Part B rehearsal wrap proof passes the ledger 9.1.0.1 verifier on muninn
+- huginn h161 wrap-call (acf2925b, vk b7f5e43c): stock ledger-9.1.0.1 verify Ok(()) in 0.11 s; 7/7 changed public inputs and 3/3 flipped proof bytes refused. Log ~/.cache/t23/partB-r2-huginn/bench/logs/ledger-r2-huginn.log.
+
+## [2026-11-15 16:56] qa | Sherlock e2e Formal-Quint: key-management context done
+- Carbon Quint lane key-management: odin rerun 29/29 commands match; replay 2,859 transitions and 291 refusal checks agree with the Key Management oracle; the negative control disagrees.
+- Findings Q1-Q6: Q2 NOT REPRODUCED (t7_chain keys() regenerates the internal-recursive key and keys_d), Q3 GUARD HOLDS (RSL_KEY_IDX0 = 4 static assert), Q1, Q4, Q5, Q6 OPEN DESIGN (text for Fable-A).
+
+## [2026-11-15 17:06] qa | T23 Part B rehearsal on GPU L_Fr (huginn RTX 5080) passes; L_Fr prove 8.5x faster
+- huginn h163 on t23-int d485639, every step rc 0: L_Fr key cold 283.1 s (keygen 17.0, prove 25.1, L 72.1); L_Fr call warm 272.1 s (load 9.3, prove 26.9, L 67.6); vs CPU h161 554.5 / 473.9 s. Chain-A CPU 1,285 s, wrap 89.9 s (prove 51.8 s, 2,912 B).
+- Same lfr_pre_hash and wrap.vk b7f5e43c as the CPU run and r3. Wrap proof feceb2ee copied to ~/.cache/t23/partB-r3gpu-huginn for ledger-check. Next huginn m78: determinism probe (3 GPU + 2 CPU warm calls, same statement) for the T11 open cause.
+- eui010-2 interim triage: quint_t16 failure = missing --features f3-menu in the request; eb2bd12 pathc failure = stale pre-FP-3 "bare Call AIR" width 1 assertion (Call is EffectAir 77); both to fix before T25.
+
+## [2026-11-15 17:20] qa | EUI-010 batch 1 MEASURED on odin (eui010-2): all rules pass, P3 CONFIRMED and fixed
+- odin h156 at openvm eui010 85765aa: batch1 test ok (chip set 0: 7 AIRs, 2,596 columns, max 3,118 constraints of 5,000; 11 unfired rules listed); P3 fails before (fc14920, "CORE accepts a helper step at helper work = max_helper_work"), passes after (bc38a92, 85765aa); gate "68 of 120" as expected; regressions ok except the known manifest/gp2 rows and the stale pathc assertion; quint_t16 4/4 with --features f3-menu.
+- Part E (h155): N1/N2/N3, NW2, FV, T8GP n1_pre EQUAL; app/leaf sets 0/1, S=8 app, MERGE-WORK, key_root, keys_d, L and L_Fr change. Lead: this is the planned T25 change (batch 1 + P3; L/L_Fr verify the merged layers). Control run on 3af5323 sent to odin as m64, with a GPU T23 Part B rehearsal on t23-int d485639.
+
+## [2026-11-15 17:37] qa | Sherlock e2e Formal-Quint: scheduling context done; replay agrees, zero-byte calibration admitted
+- Odin rerun 36/36 of the Carbon lane commands; 100 traces projected to 1,552 chains: 2,360 transitions and 573 refusal checks agree with the Lean oracle; the negative control disagrees.
+- D-sched-1: the model's leaf concurrency is not capped by the leaf count (392 disagreements); profile.rs and the oracle cap it, so the model is wrong.
+- F-scheduling-Q4 CONFIRMED on rekey-int 3826e38 (qsched_cx.rs): a 0-byte calibration passes from_json and is admitted under a 1-byte budget. Q2 and Q5 GUARD HOLDS; Q1, Q3, Q6 OPEN DESIGN.
+
+## [2026-11-15 17:39] qa | T11 open cause narrowed: L_Fr proofs differ on every run, not a cold/warm effect
+- huginn h165 (d485639, 3 GPU + 2 CPU calls of one statement): every pair differs in L_Fr proof bytes, including back-to-back warm runs on one device and key; public values, pv files, vk and blinding fields equal; first difference inside common_main_commit (main trace).
+- Lead check: call mode loads the run secrets and draws nothing (blind.rs RunBlind::load); stark-backend-t8b has no production RNG; HashMap uses in sherlock-lfr/leaf are keyed lookups. Source still open; huginn m79 looks for the lowest differing layer. No soundness or ZK impact (statement equal, stark_check.py compares statements).
+
+## [2026-11-15 17:45] qa | T23 Part B GPU rehearsal wrap proof passes the ledger 9.1.0.1 verifier on muninn
+- huginn h163 wrap-call (feceb2ee, vk b7f5e43c): stock ledger-9.1.0.1 verify Ok(()); changed public inputs and flipped proof bytes all refused. Log ~/.cache/t23/partB-r3gpu-huginn/bench/logs/ledger-r3gpu-huginn.log.

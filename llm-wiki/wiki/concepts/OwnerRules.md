@@ -19,3 +19,5 @@ Standing rules from the factory charter and the owner's GP definition.
 7. **Model CLIs:** subscription logins only; never set `OPENAI_API_KEY`, `CODEX_API_KEY` or `XAI_API_KEY` ([[agents-charter]]).
 8. **Zero knowledge end to end.** Owner, 2026-11-11: "we need to make this zero knowledge or else its useless" ([[k21-recalibration-brief]]). A hard requirement at the level of GP-1 to GP-4. See [[ZeroKnowledge]].
 9. **Terminology.** Sherlock is a universal, elastic proving co-processor for Midnight; owner: "don't lose the terminology" ([[sherlock-terminology]]).
+10. **Never k = 22.** Owner, 2026-11-11: "We will never go to K=22". Every BLS12-381 circuit (wrap, decider) fits k <= 21. See [[SherlockBridge]].
+11. **Shard, never grow a circuit.** Owner, 2026-11-11: "We have to shard proofs like we have been doing". Every proof is a fixed-size shard; work scales by adding shards. See [[SherlockBridge]].

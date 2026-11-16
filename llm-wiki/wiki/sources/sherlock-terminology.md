@@ -24,6 +24,8 @@ The category name and the term table for Sherlock, written at the owner's reques
 - "Recursion" and "modular" stay out of the name and stay correct inside the architecture documents.
 - Terms: Sherlock, Sherlock machine, Sherlock chip, leaf, node, decider, Sherlock prover, Sherlock contract (`SherlockRun`, entry point `acceptRun`), run, claim, Off-chain, On-chain.
 
+- Bridge terms (added 2026-11-11): Sherlock bridge, bridge layer, wrap, deferred field log, STARK engine (OpenVM stark-backend, Plonky3 fallback); see [[SherlockBridge]].
+
 ## Key Quotes
 
 - "Sherlock is a universal, elastic proving co-processor for Midnight. It runs any program off-chain, on the hardware the user has, and Midnight accepts the result with one key set and one contract."

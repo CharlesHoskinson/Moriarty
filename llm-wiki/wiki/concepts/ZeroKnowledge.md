@@ -32,6 +32,10 @@ Item 5 is the owner ruling's rule: fresh blinders in production, seeded proofs a
 - The lane keeps every RNG draw on the CPU, in stock order, from the caller's RNG; the GPU backend never draws randomness. In production the proof server seeds from the operating system, so no two proofs are equal; byte identity is a test property ([[elastic-chip-gpu-fable]]).
 - These are readings of the code (DESIGN); experiment X-D8 confirms or refutes F-D1. They narrow the elastic brief's "byte for byte as the stock prover" goal to a fixed seed and thread count ([[elastic-chip-brief]]).
 
+## Owner decision: the wrap is the zero-knowledge step
+
+Owner, 2026-11-11, answering yes to the proposal: a blinded midnight-proofs wrap over BLS12-381 verifies the last small-field STARK as a private witness and publishes only the statement, so the system is zero knowledge end to end. STARK leaves and nodes are proved only on the user's machine without hiding and are secrets like the witness. Proving on untrusted helper hosts needs hiding STARK layers later. Source: the log entry of this decision; the experiment gate G3 in the framework round.
+
 ## Status
 
 Designed in the k = 21 recalibration round; no lane has reported. The word "zero-knowledge" joins the category name once this design is in the architecture ([[sherlock-terminology]]). Version 2 of the animation gets a privacy scene ([[AnimationV2]]).

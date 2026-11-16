@@ -2,7 +2,7 @@
 title: "Open owner questions"
 type: synthesis
 tags: [open-questions]
-sources: [dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, lookup-cache-consensus, lookup-cache-audit, c1-dense-memory-experiment, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, council-findings, council-revisions, cost-lane-fable, cost-lane-gemini]
+sources: [council-final-s9, dissent-c6-section, c6-outcome-ledger9-review, design-2-7-chip-leaf, general-purpose-definition, runlength-consensus-brief, lookup-cache-brief, gp-architecture, runlength-consensus, runlength-consensus-audit, final-design-decisions, astra-area2-memory-draft, astra-area3-recursion-draft, lookup-cache-consensus, lookup-cache-audit, c1-dense-memory-experiment, rule-maxima-experiment, sherlock-architecture, arch-audit-astra, arch-audit-response, council-findings, council-revisions, cost-lane-fable, cost-lane-gemini]
 last_updated: 2026-11-11
 ---
 
@@ -26,6 +26,11 @@ Questions the owner must settle. Keep each until a source settles it. See [[Work
 | OD-18 | One-arena Init field list in SRC-021 (one `(len, root, tail_d)` in place of four `(root, length)` pairs) | Open, OWNER; lead recommends amending SRC-021 after OD-17 | [[ModularArchitecture]], [[sherlock-architecture]] |
 | OD-20 | Scope of GP-2: input consumption at the seal only, or also a mid-run consume rule; bind the dependency at genesis or at the seal | Open, OWNER, first among the new owner questions; lead built path is input consumption, "the lead's reading, not a settled fact". Council: option (b) also changes the decider (C4) and needs the run-entry `reg_root` rule P-9 ([[council-findings]], [[council-revisions]]) | [[GeneralPurposeRecursion]], [[arch-audit-response]] |
 | OD-23 | `rules_d` consumer: give it a consumer in the LEAF base case of `shape_d`, or amend SRC-001 to a reserved zero lane | Open, OWNER (council P-10, branch `pipeline-anim`); no kit text changed ([[council-findings]] C7, [[council-revisions]]) | [[ModularArchitecture]], [[council-revisions]] |
+| S9-1 | Public form of the program identity (N-11) in the run statement, `acceptRun` and `claim_d`; plain `prog_d` never public | Open, OWNER; all three S9 lanes raised it; FP-3 | [[council-final-s9]] |
+| S9-2 | Public `n_steps`: exact height or padded value | Open, OWNER; FP-6 | [[council-final-s9]] |
+| S9-3 | Which layer (`L` or the wrap) opens the sealed SET head | Open, OWNER; decision C-2; FP-3 | [[council-final-s9]] |
+| S9-4 | OD-2: 22-bit PoW on one fold of `L` against the owner's 21-bit wording; confirmation of OD-1 to OD-4, OD-17, OD-18 before keys freeze | Open, OWNER; FP-8 | [[council-final-s9]] |
+| S9-5 | Confirm lead decisions C-1, C-3, C-4, C-5 of the S9 revision | Lead decisions, pending owner | [[council-final-s9]] |
 | OD-21 | The normative semantic reference for the full language | Open, OWNER; lead recommends a separate evaluator over `moriarty-sherlock-nominal/1`; X13 sizes it | [[ModularArchitecture]], [[sherlock-architecture]] |
 
 Other items the architecture marks OWNER without a row here: OD-6 (only if S changes), OD-10 (only if a rule is to stay out), OD-13 and OD-19 (only if X10 fails and a new leaf statement is needed), OD-22 (only if a second accumulator per SRS is wanted), N-6 (GP-4 inline work if X7 fails; council P-4 removes the separate-emitter fallback, so a misfit goes to the owner under N-6), N-11 (contract surface, SRC-007 per-program contract; council P-8 rewords the recommendation to two entry points of one contract, Owner mark kept). See [[sherlock-architecture]], [[council-revisions]].
