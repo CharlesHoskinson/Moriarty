@@ -27,6 +27,7 @@ Inputs:
 | refused-as-native | 62 | 0 | DERIVED: the native runtime refuses them before a proof, so there is no tape |
 | pure circuit (`h02`) | 1 | 0 | n/a: no ZKIR, no proof, no transaction |
 | **total** | **208** | | |
+| stand-in program A (the universal upper chain, outside the suite) | | 1 | DONE on T25: proved on odin, settled on Preview (section 3) |
 
 Three x01 cross-contract rows have two call files each: the outer `x01 ... .1` and the inner `x02 ... -cross-contract.0`. That is why 139 rows give 142 files.
 
@@ -82,7 +83,7 @@ LEAD PICK SUITE-PROOF: a key-mode run is the suite proof. Lanes 0 and 1 of the c
 
 | box | chain (`rslchain key`, cuda) | wrap | per call | label |
 |---|---:|---:|---:|---|
-| huginn (RTX 5080) | 113.4 s (key-cuda), 116.1 s (cold-cuda) | about 110 s (huginn T25 wrap-gpu step pending; Part B rehearsal 89.9 s, pre-T25) | about 226 s | chain MEASURED on T25; wrap DERIVED |
+| huginn (RTX 5080) | 113.4 s (key-cuda), 116.1 s (cold-cuda); warm call median 107.7 s, peak 10.96 GiB (return c0b3cf45) | about 110 s (Part B rehearsal 89.9 s, pre-T25; the T25 GPU wrap gave 6faac46f and passed ledger 9.1.0.1) | about 226 s | chain MEASURED on T25; wrap time DERIVED |
 | odin (RTX 5090, WSL2) | about 129 s | 108.5 s (keygen 42.9 s, prove 58.8 s; post-T25 smoke) | about 237 s | chain DERIVED; wrap MEASURED on T25 |
 | loki (RTX 5090 Laptop, 62 GiB, owner load) | about 232 s | about 178 s | about 410 s | DERIVED |
 
@@ -119,6 +120,9 @@ For a call proved on two boxes, the suite table records the box that the list as
 
 - Fresh, empty targets.
 - `--offline --locked`, and Cargo.lock unchanged.
+- A wrap key other than 6faac46f is a stop: `wrap` asserts the key under `E6_EXPECT_VK`, and the runner exits 4 when the wrap log shows that assert.
+- The T7KEY and T7CKEY lines that `checksuite` compares are printed while the universal N3 and `L` keys are built (t7_chain.rs lines 1639, 1648 and 1863). They do not depend on the call's bucket.
+- odin and loki build with `RUSTFLAGS="-C target-cpu=native"`, as huginn did, and check the mori-gpu sibling against the 3fd18b166 archive (MORI-GPU SAME or PLACED; a difference is a stop).
 - Quiet gate before each chain (lead ruling h49: timed steps only). The gate waits for a 1-minute load under 2, for at most 600 s, and then the step runs and is labeled MEASURED-NOISY.
 - `gpu.lock` held for every step.
 - `systemd-run --user` with a MemoryMax that suits the box: odin 80G, huginn 72G, loki 48G.
@@ -136,7 +140,7 @@ The runner is `tools/t23-suite/final/final-box.sh`. A stub test on muninn passed
 2. `wrap/wrap.vk` sha256 is 6faac46f.
 3. `T23B_OUT=~/.cache/t23/final/ledger partb-bench.sh ledger t23f-<box>-<label> <dir>/wrap <prog> <call>`: ledger 9.1.0.1, heavy-slot 16G. The program and call arguments make the bench rows attach to the call. The result must be `Ok(())`, with the negatives refused.
 4. `settle_args.py <dir>/prove-result.partial.json <dir>/wrap/wrap.public.json /dev/null`: lanes 10, 20, 34 and 39 equal the anchor, claim_pub, claim_pub and outcome_pub. The output is booleans only.
-5. Compare with native, the existing `t23.py compare` path on the prove result's effect words and `comm`. 95 files have a passing native Preview transcript. For the other 47, the comparison is to the native ref only, and the suite table says so.
+5. Compare with native, the existing `t23.py compare` path on the prove result's effect words and `comm`. 98 files have a passing native Preview transcript (95 R_SL and the 3 jubjub calls). For the other 47, the comparison is to the native ref only, and the suite table says so.
 6. `buckets.tsv` must be equal across the three boxes.
 
 The suite table rows are pass, refused-as-native (62, DERIVED), mismatch (must be 0), BLOCKED (3, with reason), prove-failed (with exit) and n/a (1).
@@ -212,6 +216,10 @@ The prover hook `post-t25-settle.sh` knows only `t02` and `standin`. It calls `o
    - `PUB` is the returned `wrap/wrap.public.json`, with the full lanes check, not `--anchor-only`;
    - `REF` is 0, because only t02 carries R1 to R3.
 
+A second gap: nothing turns the box returns into the suite table yet. `t23.py run` dispatches one call at a time over the bus and has no entry that reads a `final-box.sh` return. A small `t23.py final RET_DIR...` mode (classify, compare and table from the returned prove results, the ledger rows and the settle states) is part of the same follow-up lane. bench.py already reads the returns.
+
+Six h03 labels contain `$` (`vote$commit`, `vote$reveal`). `final-box.sh` quotes every path. The lead quotes them too in the ledger-check loop and in heavy-slot names.
+
 LEAD PICK: the live proof uses the cuda `t7_chain` of the final run, whose keys are proven equal on the box, and falls back to the T25 CPU binary. The run order is the same as for t02: args, dry with `T10A_DRY_CHECK=server`, deploy, call.
 
 ## 4. Benchmark table (bench.py, BENCH.md)
@@ -245,9 +253,9 @@ python3 bench.py ingest --run t23-final --title "T23 final run on the T25 keys" 
 
 ## 5. Order of work
 
-1. huginn's gpu-leafl-t25 return lands (wrap-gpu 6faac46f and the ledger check). The lead pins the cuda `t7_chain` sha from its `binaries.sha256` in the huginn request.
+1. Done: huginn's gpu-leafl-t25 return passed (c0b3cf45). The huginn request pins the cuda `t7_chain` 97029be4 (LEAD PICK: production prover) and the wrap aaf2ebb6.
 2. The stand-in settle ended at 05:57 (unit `t23-post-t25-settle`, DONE). odin is free after the lead checks that no `t23-preview-*` unit is left.
-3. The lead sends the three requests. odin and loki can start at once. huginn starts after step 1.
+3. The lead sends the three requests. huginn is free and starts first. odin stops its S5 sweep at a run boundary and starts. loki starts after its kit reruns (about 30 min), ahead of m6.
 4. Calibration statuses come back. The lead compares the bucket records and rates and rebalances if needed.
 5. As each return lands: the muninn checks (section 2) and bench ingest.
 6. The follow-up lane for the settle hook (section 3 gap). Then the representatives settle one by one on Preview, under `T23_ALLOW_PREVIEW=1`.

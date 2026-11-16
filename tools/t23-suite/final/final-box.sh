@@ -62,6 +62,7 @@ one(){ # $1 kind (cal|rep|run) $2 file $3 bucket from the plan
   if [ $? -ne 0 ]; then echo 3 > "$D/rc"; log "T25 KEY MISMATCH $lbl"; exit 3; fi
   if ! step final_wrap "$prog" "$call" CPU cold "wrap-$lbl" "$R/wrap.log" "$MEM_WRAP" \
        env E6_EXPECT_VK="$IN/t25-wrap.vk" "$W" "$D/key/lfr-call.json" "$D/wrap" 21 0 "$D/key/lfr-call.json"; then
+    if grep -q "the wrap key differs" "$OUT/$R/wrap.log"; then echo 4 > "$D/rc"; log "WRAP KEY DIFFERS FROM 6faac46f $lbl"; exit 4; fi
     echo 2 > "$D/rc"; log "wrap rc!=0 $lbl"; return 0; fi
   echo "$VK_SHA  $D/wrap/wrap.vk" | sha256sum -c --quiet || { echo 4 > "$D/rc"; log "WRAP VK NOT 6faac46f $lbl"; exit 4; }
   cp "$D/key/prove-result.partial.json" "$D/key/rsl-chain.json" "$D/" 2>/dev/null

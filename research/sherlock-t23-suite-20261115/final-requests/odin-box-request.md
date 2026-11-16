@@ -37,7 +37,7 @@ The files are in muninn `~/.cache/t23/final/sync/` (SHA256SUMS lists them):
 | `t25keys.py` | `597427d48472f02a69517b742cccf9705dd0694ead4a8961c71598697266a6f0` |
 | `t25-expected.tsv` | `5bd7c0aca552d24b642f3c12b0d5b263d6a0bc67071ae371c12d9c918ca41cea` |
 | `t25-wrap.vk` | `6faac46fa12e5fc1b561e033f301f055117144cd3dd6a020f5a5f675704d6d5b` |
-| `final-box.sh` | `7d2113674ff7558dcd5987c1690a0110ecb980e6593d98de53b0a4595847373c` |
+| `final-box.sh` | `d1d67451378c12241fdf6af1e35e50935a29320b836bcbe74fab3a3721d50afb` |
 | `odin.list` | `52a741eaddc4a5d2e38728e710cf5de04edf6196ca9c6576b0eed293c3b221c8` |
 
 `t23-final-calls.tar` holds `calls/` (the 145 call files: calls3 without s02, plus j02 from calls4) and
@@ -55,8 +55,10 @@ ssh $BOX "cd ~/$I && sha256sum -c SHA256SUMS && tar -xf t23-final-calls.tar && s
 ssh $BOX "for d in $SRC/openvm-gpu-leafl-t25 $SRC/stark-backend-gpu-leafl; do mkdir -p \$d; [ -z \"\$(ls -A \$d)\" ] || { echo \$d not empty; exit 1; }; done"
 ssh $BOX "cd ~/$I && tar -x -C $SRC/openvm-gpu-leafl-t25 -f openvm-gpu-leafl-t25-e8c2896.tar && tar -x -C $SRC/stark-backend-gpu-leafl -f stark-backend-gpu-leafl-fafb993.tar && echo TREES OK"
 # mori-gpu sibling: the whole Moriarty tree at 3fd18b166 (mori-gpu inherits the workspace root), as m90
-ssh $BOX "test -e $SRC/moriarty" || { ssh $BOX "mkdir -p $SRC/moriarty"; git -C ~/Projects/Moriarty archive --format=tar 3fd18b166 | ssh $BOX "tar -x -C $SRC/moriarty"; }
-ssh $BOX "test -f $SRC/moriarty/crates/mori-gpu/Cargo.toml && test -d $SRC/p3-bls12-381-fr && echo SIBLINGS OK"
+ssh $BOX "mkdir -p ~/$I/moriarty-3fd18b166"; git -C ~/Projects/Moriarty archive --format=tar 3fd18b166 | ssh $BOX "tar -x -C ~/$I/moriarty-3fd18b166"
+ssh $BOX "A=~/$I/moriarty-3fd18b166; B=$SRC/moriarty; if [ -e \$B ]; then diff -r \$A/crates/mori-gpu \$B/crates/mori-gpu && cmp \$A/Cargo.toml \$B/Cargo.toml && echo MORI-GPU SAME; else ln -s \$A \$B && echo MORI-GPU PLACED; fi"
+ssh $BOX "test -d $SRC/p3-bls12-381-fr && echo SIBLINGS OK"
+# MORI-GPU SAME or PLACED is required; a difference is a stop and the lead decides (as m90)
 ```
 
 ## 2. Build (box; NEW empty targets, `--offline --locked`, Cargo.lock unchanged)
@@ -65,6 +67,7 @@ ssh $BOX "test -f $SRC/moriarty/crates/mori-gpu/Cargo.toml && test -d $SRC/p3-bl
 HB=/home/charl/sherlock; S=$HB/src/openvm-gpu-leafl-t25; mkdir -p $HB/out/t23-final
 export CUDA_HOME=$HOME/.local/cuda CUDA_ARCH=120 MORI_GPU_ARCH=120
 export PATH=$CUDA_HOME/bin:/usr/lib/wsl/lib:$PATH LD_LIBRARY_PATH=/usr/lib/wsl/lib:$CUDA_HOME/lib64   # as the m76 t12-gate run: WSL keeps libcuda in /usr/lib/wsl/lib
+export RUSTFLAGS="-C target-cpu=native"   # as the huginn gpu-leafl-t25 builds, so box times compare
 (cd $S && CARGO_TARGET_DIR=$HB/target/t23f-cuda cargo build --offline --locked --release -p sherlock-wrap-export --features cuda,gpu --example t7_chain) > $HB/out/t23-final-build.log 2>&1 || exit 1
 sha256sum $HB/target/t23f-cuda/release/examples/t7_chain $HB/target/t25k-wrap/release/wrap > $HB/out/t23-final/binaries.sha256
 ```

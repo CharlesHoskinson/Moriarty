@@ -37,7 +37,7 @@ The files are in muninn `~/.cache/t23/final/sync/` (SHA256SUMS lists them):
 | `t25keys.py` | `597427d48472f02a69517b742cccf9705dd0694ead4a8961c71598697266a6f0` |
 | `t25-expected.tsv` | `5bd7c0aca552d24b642f3c12b0d5b263d6a0bc67071ae371c12d9c918ca41cea` |
 | `t25-wrap.vk` | `6faac46fa12e5fc1b561e033f301f055117144cd3dd6a020f5a5f675704d6d5b` |
-| `final-box.sh` | `7d2113674ff7558dcd5987c1690a0110ecb980e6593d98de53b0a4595847373c` |
+| `final-box.sh` | `d1d67451378c12241fdf6af1e35e50935a29320b836bcbe74fab3a3721d50afb` |
 | `loki.list` | `69cc4667d4c0ba03d666a0a220ad54784dec9ea627e5519ff88b722fc94647a3` |
 
 `t23-final-calls.tar` holds `calls/` (the 145 call files: calls3 without s02, plus j02 from calls4) and
@@ -55,8 +55,10 @@ ssh $BOX "cd ~/$I && sha256sum -c SHA256SUMS && tar -xf t23-final-calls.tar && s
 ssh $BOX "for d in $SRC/openvm-gpu-leafl-t25 $SRC/stark-backend-gpu-leafl $SRC/moriarty-t25-1fcc5fb7e; do mkdir -p \$d; [ -z \"\$(ls -A \$d)\" ] || { echo \$d not empty; exit 1; }; done"
 ssh $BOX "cd ~/$I && tar -x -C $SRC/openvm-gpu-leafl-t25 -f openvm-gpu-leafl-t25-e8c2896.tar && tar -x -C $SRC/stark-backend-gpu-leafl -f stark-backend-gpu-leafl-fafb993.tar && tar -x -C $SRC -f moriarty-t25-1fcc5fb7e.tar && echo TREES OK"
 # mori-gpu sibling: the whole Moriarty tree at 3fd18b166 (mori-gpu inherits the workspace root), as m90
-ssh $BOX "test -e $SRC/moriarty" || { ssh $BOX "mkdir -p $SRC/moriarty"; git -C ~/Projects/Moriarty archive --format=tar 3fd18b166 | ssh $BOX "tar -x -C $SRC/moriarty"; }
-ssh $BOX "test -f $SRC/moriarty/crates/mori-gpu/Cargo.toml && test -d $SRC/p3-bls12-381-fr && echo SIBLINGS OK"
+ssh $BOX "mkdir -p ~/$I/moriarty-3fd18b166"; git -C ~/Projects/Moriarty archive --format=tar 3fd18b166 | ssh $BOX "tar -x -C ~/$I/moriarty-3fd18b166"
+ssh $BOX "A=~/$I/moriarty-3fd18b166; B=$SRC/moriarty; if [ -e \$B ]; then diff -r \$A/crates/mori-gpu \$B/crates/mori-gpu && cmp \$A/Cargo.toml \$B/Cargo.toml && echo MORI-GPU SAME; else ln -s \$A \$B && echo MORI-GPU PLACED; fi"
+ssh $BOX "test -d $SRC/p3-bls12-381-fr && echo SIBLINGS OK"
+# MORI-GPU SAME or PLACED is required; a difference is a stop and the lead decides (as m90)
 # loki: if $SRC/p3-bls12-381-fr is absent, link it to ~/sherlock/src/kits/p3-bls12-381-fr first
 ```
 
@@ -65,6 +67,7 @@ ssh $BOX "test -f $SRC/moriarty/crates/mori-gpu/Cargo.toml && test -d $SRC/p3-bl
 ```bash
 HB=$HOME/sherlock; S=$HB/src/openvm-gpu-leafl-t25; mkdir -p $HB/out/t23-final
 # the loki CUDA env of the m4 smoke (CUDA 13.4.3, build-t7chain.log), unchanged
+export RUSTFLAGS="-C target-cpu=native"   # as the huginn gpu-leafl-t25 builds, so box times compare
 (cd $S && CARGO_TARGET_DIR=$HB/target/t23f-cuda cargo build --offline --locked --release -p sherlock-wrap-export --features cuda,gpu --example t7_chain) > $HB/out/t23-final-build.log 2>&1 || exit 1
 (cd $HB/src/moriarty-t25-1fcc5fb7e/tools/sherlock-wrap && CARGO_TARGET_DIR=$HB/target/t23f-wrap cargo +1.99.0 build --offline --locked --release --bins) >> $HB/out/t23-final-build.log 2>&1 || exit 1
 sha256sum $HB/target/t23f-cuda/release/examples/t7_chain $HB/target/t23f-wrap/release/wrap > $HB/out/t23-final/binaries.sha256

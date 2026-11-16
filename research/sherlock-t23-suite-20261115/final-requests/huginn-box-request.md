@@ -19,7 +19,7 @@ also a stop (exit 4).
 
 ## 0. Preconditions
 
-- The gpu-leafl-t25 unit has ended and its return (muninn `~/.cache/gpu-leafl/box-huginn-t25/`) passed: wrap-gpu 6faac46f and ledger 9.1.0.1 `Ok(())`. **Before sending, the lead writes the cuda `t7_chain` sha256 from that return's `binaries.sha256` into `XG_SHA` in step 2.** The tree `~/sherlock/src/openvm-gpu-leafl-t25` and the target `~/sherlock/target/gpu-leafl-t25-cuda` of that run are reused; nothing is rebuilt.
+- Met: the gpu-leafl-t25 return passed (RETURN c0b3cf45, muninn `~/.cache/gpu-leafl/t25-result/`): keys equal T25, warm cuda median 107.7 s, GPU wrap 6faac46f with ledger 9.1.0.1 `Ok(())`. LEAD PICK: that cuda build (t7_chain 97029be4) is the production prover. The tree `~/sherlock/src/openvm-gpu-leafl-t25` and the target `~/sherlock/target/gpu-leafl-t25-cuda` of that run are reused; nothing is rebuilt.
 - No other unit holds `~/sherlock/gpu.lock`.
 - At least 20 GB free in `~/sherlock/out`.
 - Never set `SHERLOCK_TEST_SEED`, `GW_DET`, `GW_CHIP_SEED`, `GW_SEED`, `T14_SPANS` or `T7_TRACE_DIFF` (ZK: fresh OS blinding).
@@ -35,7 +35,7 @@ The files are in muninn `~/.cache/t23/final/sync/` (SHA256SUMS lists them):
 | `t25keys.py` | `597427d48472f02a69517b742cccf9705dd0694ead4a8961c71598697266a6f0` |
 | `t25-expected.tsv` | `5bd7c0aca552d24b642f3c12b0d5b263d6a0bc67071ae371c12d9c918ca41cea` |
 | `t25-wrap.vk` | `6faac46fa12e5fc1b561e033f301f055117144cd3dd6a020f5a5f675704d6d5b` |
-| `final-box.sh` | `7d2113674ff7558dcd5987c1690a0110ecb980e6593d98de53b0a4595847373c` |
+| `final-box.sh` | `d1d67451378c12241fdf6af1e35e50935a29320b836bcbe74fab3a3721d50afb` |
 | `huginn.list` | `a1d67567e2a4dadfe3025d834c5a74ac67e68b23cfc4ab24cfe3da0237fa0356` |
 
 `t23-final-calls.tar` holds `calls/` (the 145 call files: calls3 without s02, plus j02 from calls4) and
@@ -58,7 +58,7 @@ The box agent writes `~/sherlock/in/t23-final/run.env`:
 ```bash
 HB=$HOME/sherlock
 export BOX=huginn IN=$HB/in/t23-final OUT=$HB/out/t23-final S=$HB/src/openvm-gpu-leafl-t25
-XG=$HB/target/gpu-leafl-t25-cuda/release/examples/t7_chain; XG_SHA=<cuda t7_chain sha256 from the box-huginn-t25 binaries.sha256>
+XG=$HB/target/gpu-leafl-t25-cuda/release/examples/t7_chain; XG_SHA=97029be4361ec505e49a778f130d044d1381853cc0dd682f9aa339ddddc0ebe7   # gpu-leafl-t25 return c0b3cf45
 echo "$XG_SHA  $XG" | sha256sum -c || exit 9
 mkdir -p $OUT && sha256sum $XG $W > $OUT/binaries.sha256
 W=$HB/target/gpu-leafl-wrap/release/wrap   # m91 wrap binary of the T25 wrap tree 1fcc5fb7e
