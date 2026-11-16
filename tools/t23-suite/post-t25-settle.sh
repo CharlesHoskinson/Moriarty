@@ -13,6 +13,15 @@
 #                                        one SherlockLedger each (dry skipped when dry/PASS exists; deploy and call
 #                                        need it); a rep whose acceptRun is included is skipped
 #                                        (resumable); the first failure stops it                 (T23_ALLOW_PREVIEW=1)
+# Split settle (overlaps the Preview deploys with the box proving; settle rep is unchanged):
+#   post-t25-settle.sh anchor rep LABEL  deploy-args.json (anchor = c_p only) from the returned prove-result.partial.json;
+#                                        no wrap needed. A rep deploy with no dry/PASS uses it (the ledger key is the
+#                                        T25 wrap key, the same for every rep); call later asserts the full args' anchor
+#   post-t25-settle.sh deploy rep [LABEL...]  the deploy of each LABEL (default: every rep) in order; a deployed
+#                                        ledger is skipped; the first failure stops it        (T23_ALLOW_PREVIEW=1)
+#   post-t25-settle.sh accept rep LABEL  only when the returned wrap of LABEL passed the muninn ledger check (t23.py
+#                                        read_ledger Ok in T23_LEDGER, default ~/.cache/t23/final/ledger): args (full
+#                                        lanes), dry (unless dry/PASS), call (acceptRun)              (T23_ALLOW_PREVIEW=1)
 # rep inputs: the odin return of the final run, T23_FINAL_RET (default ~/.cache/t23/final/ret-odin):
 #   calls/LABEL/{rc,prove-result.partial.json,wrap/wrap.public.json,wrap/wrap.proof,wrap/wrap.vk}; args checks the
 #   full lanes 10, 20, 34, 39. The live proof runs on odin: box/odin-t25-rsl-prove.sh RO KDIR CALL CALL_SHA256 with
@@ -25,13 +34,28 @@
 # Request for the box side: ~/.cache/t23/post-t25-settle-request.md. Tx: 2 per program (deploy + acceptRun); the
 # refusals R1 to R3 run for t02 only and are never included (0 tx).
 set -uo pipefail
-ph=${1:?phase}; prog=${2:?program}; label=${3:-}
+ph=${1:?phase}; prog=${2:?program}; label=${3:-}; nargs=$#
 # Preview only: any other net in the caller's environment is refused before any step
 case "${T10_NET:-preview}" in preview) ;; *) echo "refuse: T10_NET=$T10_NET is not preview" >&2; exit 1 ;; esac
 HERE=$(cd "$(dirname "$0")" && pwd); SDK=$(cd "$HERE/../sherlock-sdk" && pwd)
 R=${T25_RESULT:-$HOME/.cache/t25/result}; P=${T23_POST:-$HOME/.cache/t23/post-t25}; C=$P/$prog; TAG=$prog
 REPS=${T23_REPS:-$HERE/final/reps.list}; RET=${T23_FINAL_RET:-$HOME/.cache/t23/final/ret-odin}; BOXR=/home/charl/sherlock
 reps(){ grep -v '^#' "$REPS" | sed -n 's/\.rsl\.json$//p'; }
+if [ "$prog" = rep ] && [ "$ph" = deploy ] && [ $nargs != 3 ]; then   # deploy rep [LABEL...]: the deploy phase alone
+  [ "${T23_ALLOW_PREVIEW:-}" = 1 ] || { echo "set T23_ALLOW_PREVIEW=1 (Preview only)" >&2; exit 2; }
+  mkdir -p "$P/logs"; chmod 700 "$P"; shift 2; [ $# -gt 0 ] || set -- $(reps)
+  for l in "$@"; do bash "$0" deploy rep "$l" || exit $?; done; exit 0
+fi
+if [ "$prog" = rep ] && [ "$ph" = accept ]; then   # accept rep LABEL: gated on the muninn ledger check of its wrap
+  [ "${T23_ALLOW_PREVIEW:-}" = 1 ] || { echo "set T23_ALLOW_PREVIEW=1 (Preview only)" >&2; exit 2; }
+  [ $nargs = 3 ] || { echo "accept rep LABEL" >&2; exit 2; }
+  [[ $label =~ ^[A-Za-z0-9._-]+$ ]] && reps | grep -qxF "$label" || { echo "rep $label is not in $REPS" >&2; exit 2; }
+  python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import t23; r = t23.read_ledger(sys.argv[2]).get((sys.argv[3], sys.argv[4]))
+print("ledger check:", r); sys.exit(r != "Ok")' "$HERE" "${T23_LEDGER:-$HOME/.cache/t23/final/ledger}" "${label%%.*}" "${label#*.}" \
+    || { echo "rep $label: the returned wrap has no ledger 9.1.0.1 Ok row; run partb-bench.sh ledger first" >&2; exit 3; }
+  bash "$0" args rep "$label" && { [ -e "$P/rep/$label/dry/PASS" ] || bash "$0" dry rep "$label"; } || exit $?
+  exec bash "$0" call rep "$label"
+fi
 if [ "$prog" = rep ] && [ -z "$label" ]; then   # the batch phases over every representative
   mkdir -p "$P/logs"; chmod 700 "$P"
   case $ph in
@@ -65,6 +89,7 @@ case $prog in
     csha=$(awk -v f="calls/$label.rsl.json" '$2 == f {print $1}' "$HERE/final/calls.sha256")
     [ ${#csha} = 64 ] || { echo "rep $label has no pin in final/calls.sha256" >&2; exit 3; }
     RARGS="$BOXR/out/t23-final/calls/$label/key $BOXR/in/t23-final/calls/$label.rsl.json $csha"
+    DARGS=$C/deploy-args.json
     if [ "$ph" = args ]; then   # the returned call must be a passing final-run call under the T25 wrap key
       [ "$(cat "$D/rc" 2>/dev/null)" = 0 ] || { echo "rep $label: no rc 0 in $D" >&2; exit 3; }
       echo "$VK_SHA  $D/wrap/wrap.vk" | sha256sum -c --quiet || { echo "rep $label: returned wrap.vk is not 6faac46f" >&2; exit 3; }
@@ -82,6 +107,17 @@ case $ph in
     # the T25 sources left muninn in the return-hygiene pass (2026-11-16 04:24): then re-verify the kept args file
     if [ -s $SRC ]; then python3 $HERE/settle_args.py $SRC $PUB $C/ledger-args.json $MODE; rc=$?
     else python3 $HERE/settle_args.py $C/ledger-args.json $PUB /dev/null $MODE; rc=$?; fi ;;
+  anchor)   # rep only: the deploy args (anchor = c_p) from the returned prove result; prints booleans only
+    [ $prog = rep ] || { echo "anchor: rep LABEL only" >&2; exit 2; }
+    rm -f "$DARGS"; python3 - "$SRC" "$DARGS" <<'PY'; rc=$?
+import json, os, sys
+src = json.load(open(sys.argv[1])); c_p = int(src["c_p"]); ok = int(src.get("anchor", c_p)) == c_p and c_p != 0
+if ok:
+    fd = os.open(sys.argv[2], os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f: json.dump({"anchor": str(c_p)}, f)
+print(json.dumps({"source_anchor_is_c_p": ok, "written": ok})); sys.exit(0 if ok else 1)
+PY
+    ;;
   dry)
     vk; test -s $C/ledger-args.json || { echo "run args first" >&2; exit 3; }
     rm -rf $C/dry; mkdir -p $C/dry
@@ -106,8 +142,12 @@ PY
   deploy|call)
     [ "${T23_ALLOW_PREVIEW:-}" = 1 ] || { echo "set T23_ALLOW_PREVIEW=1 (Preview only; after the T12 gate passed)" >&2; exit 2; }
     vk; test -x $VALIDATE || { echo "native validator missing: $VALIDATE" >&2; exit 3; }
-    test -s $C/dry/t10a-dry-run.json || { echo "run dry first" >&2; exit 3; }
-    [ $prog != rep ] || test -e $C/dry/PASS || { echo "rep $label: no passing dry run" >&2; exit 3; }
+    if [ $prog = rep ] && [ $ph = deploy ] && [ ! -e $C/dry/PASS ] && [ -s "$DARGS" ]; then
+      COMMON="--vk $P/wrap.vk --args $DARGS --build $BUILD --anchor-slot 15"   # early deploy: anchor only (anchor phase)
+    else
+      test -s $C/dry/t10a-dry-run.json || { echo "run dry first" >&2; exit 3; }
+      [ $prog != rep ] || test -e $C/dry/PASS || { echo "rep $label: no passing dry run" >&2; exit 3; }
+    fi
     export T10_NET=preview E6_PROOF_PORT=6341 T10A_TTL_S=7200 T10A_INBLOCK_S=600 E6_VALIDATE_CALL=$VALIDATE
     case "$T10_NET" in preview) ;; *) echo "refuse: not preview" >&2; exit 1;; esac
     if [ $ph = call ]; then
@@ -116,6 +156,6 @@ PY
         HP_BOX_ROOT=/home/charl/sherlock HP_MEM=${HP_MEM:-80G} T10A_PROVER=$SDK/box/box-preview-prover.sh T10A_REFUSALS=$REF
     fi
     ( cd $SDK && node t10a-ledger-run.mjs $ph $COMMON --out $C/ledger ) > $P/logs/$TAG-$ph.log 2>&1; rc=$? ;;
-  *) echo "phase args|dry|deploy|call" >&2; exit 2 ;;
+  *) echo "phase args|anchor|dry|deploy|call (rep: also prep|settle|accept)" >&2; exit 2 ;;
 esac
 log "$ph end rc=$rc wall_s $(awk -v a=$t0 -v b=$(date +%s.%N) 'BEGIN{printf "%.2f", b-a}')"; exit $rc
