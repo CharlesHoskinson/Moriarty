@@ -4653,3 +4653,53 @@
 - Cause: fix 843d833d0 existed on five branches but not on main. The copies test needed two 1 s sleeps to finish in under 1.9 s; the cgroup test found the slice only through its first child. Logs for 2026-11-14/15 show 88 + 72 failures.
 - Port is unchanged; 5/5 runs at load average 26-35 pass. Remaining: the tests still run in the shared heavy.slice (DW_HEAVY_SLICE option not used).
 - Owner asked for a multi-GPU scaling profile and a 4x RTX PRO 6000 Blackwell estimate; added to the Fable assessment (sections 6-8; scaling box request after the critical path).
+
+## [2026-11-15 19:25] qa | Preview rehearsal settle: t02 R_SL Compact call accepted on Preview (pre-T25 keys)
+- acceptRun at block 130,019, tx 0x7488e63acd8d6c2902bde5c3a0c00099e0791ddfec22d0f65b69bb6d48bc1d5d; runs[claim_pub] = outcome_pub on chain; ledger b9bd52e7…97b5 (deploy block 129,790). Steps: deploy 341 s, prove on huginn 705 s (chain 579 + wrap 120), submit to inclusion 5.3 s.
+- Negatives refused locally and by the node (1010 Custom error 115): tampered outcome_pub, flipped proof bit, replay. Tx count 3 (4 when the stand-in A acceptRun lands).
+- Finding: the stored wrap proofs cannot be reused, because lanes 0-1 (binding_input, comm) are fixed per tx build; every settle re-proves for its own call vector.
+- Issue (must be reviewed before the post-T25 settle): the proof server /check refuses the slot-15 transcript ("Public transcript input mismatch for input 4"). An uncommitted patch in ~/.cache/t23/preview-rehearsal/mor reuses the slot-0 /check skips. The node still verified the proof. Results ~/.cache/t23/preview-rehearsal/RESULTS.md.
+
+## [2026-11-15 19:27] qa | Fable 5.2 performance assessment: 301 s warm today, about 30 s realistic with no key change, about 12 s ceiling
+- ~/.cache/perf-assessment/ASSESSMENT.md (sections 1-8) + scaling-box-request.md. Top levers: stop rebuilding keys per process (-167 s; keycache v4 + serve loop not merged on t25-int); L on GPU (71.7 -> 1.40 s, MEASURED on odin on the t14-gpu stack); leaf..N3 on GPU (13.3 -> ~1.5 s).
+- Finding: the t14-gpu GPU stack (openvm 8e6dd2d, 85eef2c, d6020de; stark-backend 0fafe86, e5d7f19) is not on t25-int. The gpu-leafl lane is redirected to port that stack instead of writing a new one.
+- 4x RTX PRO 6000 (ESTIMATE): latency per call unchanged (serial chain); throughput ~600 calls/h now, 1,000-1,400/h at target; host limit ~20 cores + 46 GB per pipeline.
+- Open: batching many calls under one tail (L over SET, T8b) may change keys; decide before T25 keygen.
+
+## [2026-11-15 19:28] qa | Module inventory: 27 processor modules; 0 complete to spec, 23 partial, 3 not started, 1 superseded
+- Rule: a module counts as IMPLEMENTED only when every requirement ID in its spec has code and a test. ~/.cache/module-inventory/INVENTORY.md (t25-int 8a17c34, sherlock-int 1fcc5fb7e).
+- Not started: the GP-3 general verifier (5 subkits), REFERENCE BRIDGE, ZmLogUp (Profile B, out of scope). Most complete: L AND WRAP (Preview acceptRun works; L over a SET root, the T12 gate and the rekey are open).
+- Rule count correction: t25-int has 52 of 120 interpreter rules built (68 missing); batch 2 brings it to 73.
+- Spec drift: tasks.md checkboxes are stale; main ARCHITECTURE.md still lists DECIDER; the SherlockLedger on sherlock-int does not meet LDG-004/007 (the batched form is on t20-batched, not merged); MERGE-WORK width will exceed 5,400 once STACKS and VD join it (Carbon F-5).
+
+## [2026-11-15 19:33] build | EUI kit 2.1 ALU: first cut on openvm kit-alu 5969d15 (not in any chip set; no key change)
+- AluAir provides ALU bus id 1 (26-word message: op, flag, x[8], y[8], z[8]) for ADD, LT, SUB, MUL and EQ. tests/alu_kit.rs has 7 positives and 12 mutants (not run yet; box request ~/.cache/eui-kits/alu/box-request.md, expected 153 columns, 118 constraints, 104 interactions, degree 3). muninn cargo check rc 0.
+- aluArith.qnt (reduced width): 21/21 quint tests pass locally. Lean O4 open: AluRange.lean proves the per-op lemmas, but the composed row theorem and primality are still owed. Carbon lane owed.
+- LEAD PICK ALU-EQBOOL: add s_eq*z0*(1-z0) so the EQ proof does not depend on primality; also range-check the inverse witnesses (ALU-002). Sent back to the lane.
+
+## [2026-11-15 19:35] qa | T25 pre-check on odin (h170/h171): every step passes except lfr_e3 slot-15 decode
+- t25-int 8a17c34 passes: leaf-lib 32/32, quint-reg 20 (replay_all PASS), gp2-real, t13 7/7 + 12/12, eui batch1 (CoreAir 3,118 constraints, 7 AIRs, 2,596 columns), P3, R_SL suites (exec 148 equal), lfr-lib 26/26, lfr-fp3 (EffectAir 77), d3-bounds mu 101.0730. quint-t16/-cde 4/4 after re-sync of the t16 folder.
+- Expected failure: eui-gate "68 of 120 enabled rules have no chip row".
+- FINDING: lfr_e3 0 panics at lfr_e3.rs:411 "anchor template lane 6" on iface::decode of the honest pw (fixture-t10m a41cbbed); i7_decode fails as a result. An Opus diagnosis lane decides stale fixture vs regression (~/.cache/rekey-t25/E3-DIAG.md).
+
+## [2026-11-15 19:36] decision | LEAD PICK LSET-DEFER: L over a SET root waits for the second rekey (owner to confirm at T15)
+- L over SET changes L, L_Fr and the wrap VK (lfr/stmt.rs:1341-1366 constant SEG tag; lverify.rs:1736/1992 single-run R form; wrap.rs/decode.rs lane map). Node keys, keys_d, key_root, MERGE-WORK and the ledger 9.1.0.1 relation stay the same; the contract needs a redeploy.
+- A "single run now, set later" shape saves no rekey; the full feature takes several days (ESTIMATE). Wrap headroom is ~19.9k rows vs ~26k per extra L_Fr column, so it risks k=22. In-L logging fits ~14 members.
+- T25 keys cannot settle a collection; T20 RESULTS:70 "wrap unchanged" is stale for the T25 tree. Verdict ~/.cache/lset-keys/VERDICT.md.
+
+## [2026-11-15 19:40] build | EUI kit 2.5 VALUE DIGEST + CORE appends: openvm kit-vdg 5441e24 (muninn check clean)
+- VdAir (vd.rs) hashes every FP-4 sherlock-value/2 form, the fold step and outcome_d on port 6 vd_req. append.rs/app.rs add CORE appends (3 per slot) and 2 vd requests per slot. kit gate examples/vdg.rs: 6 positives incl. vd_differential_every_form, 20 mutants. 4 mutants owed (read port 2.4, X.9, T3, ENC).
+- valueDigest.qnt typechecks: 5 invariants, 5/5 mutants caught. Lean O23-O26 proved (core Lean, no sorry); O27 open. Carbon lane owed.
+- Key effect (for the second rekey): app/leaf keys of chip sets 0/1, path C, key_root, L and L_Fr change; N1-N3/NW2/FV/MERGE-WORK expected unchanged; CORE about +50 constraints (ESTIMATE). Box request ~/.cache/eui-kits/vdg/box-request.md (629febc4), queued behind the critical path.
+
+## [2026-11-15 19:53] build | EUI-010 batch 2: 21 ROM rules on openvm eui010 652c884 (73 of 120 built)
+- Owner decision "Rekey now, again later": T25 keys batches 1 + 2. Rules: the 8 Eval legacy rules, LiteralValid, EnterBind, CasesTry, CasesPlanHit/Miss, ConstructFields, BindEntry, FindRow, FindEmpty, MatchArm, PlanEntry/Select/NoMatch, BuildEntry (e14e631).
+- Engine: up to 4 ROM read blocks per rule, keys from state or an earlier read; two inc/dec gadgets with checked top carry. 652c884 fixes a decrement soundness gap found in review: the borrow came from an unchecked post-state word (len = 0 through a len != 1 case); borrows now come from the source limb.
+- LEAD PICKs for T15: EUI010-FINDEMPTY (absent ROM open, not a count row), -ABSENT (RomAir absent bit, bus tbl + 32), -ROMH (ROM 32, HASH2/SPONGE 1024, ESTIMATE with a cut rule), -PROGWF (static program facts under the PROG premise), -TAIL, -DEC. Plan: ~/.cache/eui010/PLAN.md sections 13-15.
+- Muninn cargo check clean (heavy-slot); probe v4 checked clean. Box request 3 (~/.cache/eui010/box-request-3.md, sha 391d39c6c96c) measures CORE constraints, the 66 rules, the gate ("47 of 120") and the universal key probe. Open: task 1.3 (MemAir conformance) has no owner and blocks batch 3 cold reads.
+
+## [2026-11-15 19:53] build | EUI kit 2.4 MEMORY BACKEND heap read: openvm kit-membackend aa65a6f (PARTIAL)
+- HeapReadAir (heap.rs) opens ColdRead cells against the pre-token root forwarded on port backend_pre (j=8; cold_read j=7), walking TOP+3 levels. MemBackend seam with NullBackend; 4 positives, 6 mutants; cargo check clean. Cost per read at TOP=63: 66 HASH2 + ~203 SPONGE rows.
+- Open: persist/flush (MBK-003), the Tree8 tail open (MBK-002), 9 mutants, and Lean O14-O16. C1 dense model re-run: 30/30, 23 mutant modules violate invRefine.
+- Blocker for batch 3: MemAir never flushes, so pre.root holds no records and cold reads cannot succeed in a real leaf. Task 1.3 had no owner; it is now assigned to the membackend lane together with flush.
+- LEAD PICK MBK-TAGCAP: node tags go in the capacity word, as MBK-002/E-2 require (the lane used the first rate word).
