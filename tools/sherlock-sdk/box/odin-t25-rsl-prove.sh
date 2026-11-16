@@ -37,7 +37,7 @@ $CSHA  $CALL
 PIN
 test -e "$KDIR/../ok" || fail3 "key dir has no passing final-run call (KDIR/../ok missing): $KDIR"
 test -s "$KDIR/lfr_pk.bitcode" -a -s "$FX" -a -x "$W" || fail3 "missing key dir file or wrap binary: $KDIR"
-if [ -x "$XG" ] && [ -d "$SG" ]; then X=$XG S=$SG DEV=cuda; LOCK=(flock -o "$GPULOCK")
+if [ -x "$XG" ] && [ -d "$SG" ]; then X=$XG S=$SG DEV=cuda; LOCK=()  # HS (heavy-start) already holds gpu.lock; a second flock self-deadlocks (2026-11-16)
 elif [ -x "$XC" ] && [ -d "$SC" ]; then X=$XC S=$SC DEV=cpu-fallback; LOCK=()
 else fail3 "no t7_chain binary (cuda $XG, cpu $XC)"; fi
 export SHERLOCK_SDK_ROOT=$S
