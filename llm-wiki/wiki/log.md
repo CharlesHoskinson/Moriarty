@@ -4944,3 +4944,54 @@
 - T12-CX-3: the accepted indices (L_Fr 387/388, app 1472/1473, L real 1499) are the final WHIR gamma, which only batches final-round residuals (zero on an honest proof; nonzero polynomial of degree <= num_queries+1 on a false one). Legs fixed (openvm t12-g3 23cc607, a098153 build fixes); rerun 2 sent to odin (m76). Write-up ~/.cache/t12/G3-REFUSAL-FINDINGS.md.
 - LEAD decision: stopped t14b-run/t14b-guard on muninn. daemon-e2e call 1 took 5,392 s at the 754 MHz clock cap (muninn is not a timing box, owner ruling) and held 56 G of the heavy slot for 12 h, starving kmb-deg3, kvdg-deg3, t23 ledger and partA. Stages resumable; T14b timings stay from huginn.
 - loki kits DONE (h63, RETURN 36e41034): ALU PASS; STACKS 5/5 + 13/13; MEMBACKEND and VDG keygen degree 4 > 3 (fix lanes now running); 652c884 D.3 chain/shape/s8app/gp2 ok, pathc stale bare-Call assertion (fixed on t25-int). loki-kits-v4 rerun started with vectors ccaea05f.
+
+## [2026-11-16 04:04] qa | tg-det on huginn PASS (h207, RETURN ea65c299): cuda-tracegen leaf difference is a Poseidon2Air row permutation; canonical-order fix makes tg byte-equal to CPU
+- (a) deterministic: c-tg, r2, r3 and tgdiag equal in every layer (leaf def7d02f), call-lfr 22acffb9 x4. With device tracegen off the tg binary equals c-cpu (leaf 66bc27b5, call-lfr e7e531c7): the cause is GPU trace generation.
+- T7_TRACE_DIFF: only Poseidon2Air (AIR 15, height 32768, width 301) differs, as a pure row permutation; ExpBitsLen and every other AIR equal (the CPU ExpBitsLen race risk not hit).
+- Fix openvm gpu-leafl-tgdet 5fbd9fd (canonical-value comparator in recursion poseidon2.cu only): differing=0 in all 3 blocks; tgdet, tgdet-2, c-cpu and tg-nodeoff equal in every layer, call-lfr e7e531c7. LEAD PICK: merge 5fbd9fd into gpu-leafl; tracegen allowed in production after the T25-head rebase rerun.
+- Result ~/.cache/gpu-leafl/tgdet-result/. huginn free.
+
+## [2026-11-16 04:08] build | Kit degree-3 fixes: MEMBACKEND 9cc381b and VDG b677d80; symbolic degree tests catch the loki failures on muninn
+- MEMBACKEND (kit-membackend-deg3 9cc381b from 1abcfa0): degree-4 walk terms in HeapReadAir and FlushAir; LEAD PICK auxiliary ce = cont*endl in both walks plus lf = last*first' in FlushAir. HeapReadAir 135 -> 136, FlushAir 142 -> 144 cols (+3).
+- VDG (kit-vdg-deg3 b677d80 from 277d1b6): degree-4 CORE append gadget term slot*(len' minus len minus the sum of act_j(a_{j+1}-a_j)); LEAD PICK 5 committed dlen columns C_ADLEN with degree-2 definitions; full CoreAir 1180 -> 1185 cols.
+- New symbolic degree tests (no proving) fail on the parents with exactly loki's errors and pass on the fixes; check rc 0, dense_model_walks_reach_root ok, vd::tests 2/2. Request ~/.cache/kit-membackend-fix/box-request.md (4304cefb) staged on loki after loki-kits-v4.
+
+## [2026-11-16 04:10] qa | loki: 652c884 batch1 passes with the v4 vectors; the h51 panic was an input difference
+- vdgbase-batch1 on loki with EUI010_VECTORS ccaea05f (odin eui010-3/A): 55/55 positives, 69/69 forged refused, 0 PANIC, CoreAir shape the same as odin T25 h188.
+- The KMachineEvalCallArguments ROM panic came from the older box-request-2 vectors 877ccdf3, and 652c884 has no defect. The kit scripts now name the vector file per tree.
+
+## [2026-11-16 04:10] qa | T12 gate rerun 2 on odin: every G3/G4 leg PASS except one test bug; T12-CX-3 confirmed on the box
+- Refusal legs: L_Fr flips [1,94,187,286,383] refused, final gamma 384..388 accepted; L real [0,374,748,1122,1495] refused, gamma 1496..1500 (1499 = n-1); app [1,362,724,1092,1468] refused, gamma 1469..1473. No non-gamma flip accepted.
+- GPU legs: g3-lfr cpu.log == gpu.log, GPU call-lfr byte-equal T25 det-1 (f5394654), g3-app-gpu 3/3, g3-wrap-i1-i9 4/4; run-1 passes kept (wrap-real A/t02, e5fx, g1-frozen, g4 params/frozen/cmp).
+- g3-wrap-small rc 101 is a test bug: the in-circuit replay refuses all 5 changed samples, then WrapIn::load asserts stock_verdict true on the flip fixtures (correctly false). Fix + one-step rerun requested.
+- RETURN a6a4f3f9 pulled to ~/.cache/t12/result-r2; wrap/key-k21 Ok(()) on ledger 9.1.0.1 with 7/7 and 3/3 refused. odin resumed scale-s5-pre.
+
+## [2026-11-16 04:16] qa | loki smoke wraps pass the Midnight ledger 9.1.0.1 verifier on muninn
+- The 3 t02 wraps proved on loki (cold, warm-1, warm-2, vk b7f5e43c) return Ok(()) at 2912 B, and a flipped proof byte is refused 3/3 for each wrap.
+
+## [2026-11-16 04:16] commit | gpu-leafl-t25: GPU leaf-to-L port on the T25 head (openvm e8c2896), huginn request written
+- openvm gpu-leafl-t25 e8c2896 = t25-int d053eaf + gpu-leafl delta (8a17c34..f7e1fd2) + 4c7585c + 5fbd9fd, clean cherry-picks. diff d053eaf..e8c2896 is byte-equal to diff 8a17c34..5fbd9fd, and diff 5fbd9fd..e8c2896 to diff 8a17c34..d053eaf: no key, AIR, constraint, param or prover change. Not pushed.
+- muninn cargo check (heavy-slot, target ~/.cache/gpu-leafl-t25/target): default, cuda+gpu, cuda-tracegen+gpu all rc 0. Nothing proved on muninn.
+- huginn request ~/.cache/gpu-leafl/t25-box-request.md (sha256 4cd4f1a9): cpu/cuda/tg builds into new targets, keys vs the T25 table (t25-expected.tsv; key_root_without_rsl 2397bfe5, R_SL key_root 659d6ff6, keys_d 5fb82d42, L/L_Fr pre-hashes; mismatch = stop), call-lfr cpu = cuda = tg, 3 warm calls per build, one GPU wrap (expect wrap VK 6faac46f) for the muninn ledger check. Sync tars + SHA256SUMS in ~/.cache/gpu-leafl/t25-sync/.
+- LEAD PICK: reuse the m91 wrap binary (sha aaf2ebb6) and huginn's stark-backend-gpu-leafl (diff-gated against a fafb993 archive); no baseline or cuda-off runs (the T25 table is the baseline).
+
+## [2026-11-16 04:24] decision | Return hygiene: muninn kept only allowlisted files from the T25 and T12 returns; T12 G4 lake PASS; rerun 3 sent
+- The T25 and T12 run-2 pulls copied files beyond RETURN.sha256 (call-lfr*.json, ledger-args.json, forbid*.json, keys.json and others). Deleted on muninn: 47 from ~/.cache/t25/result, 30 from ~/.cache/t12/result-r2; logs and every wrap dir kept. Future pulls copy only the RETURN.sha256 list.
+- T12: g3-wrap-small test fixed (flip fixtures read without the stock-accept assert, then refused by the wrap's native L_Fr verifier), 1/1 on muninn; G4 lake build of T25Keys + BridgeAxioms rc 0, 0 sorry. Rerun 3 (one step, Moriarty f46cd68) sent to odin (m77).
+- S5-GPU part 2 on huginn (h210, RETURN 3d266c80): 2,260 calls, all verified; s/call at C=4: calls3-a N32 0.299, N73 0.309; calls4 N5 0.579; knee C=4 everywhere (MEASURED).
+
+## [2026-11-16 04:28] commit | T23 post-T25 settle tooling on branch t23-post-t25 (fa1e02081, from t23-suite 581596c01, not pushed)
+- odin-t25-t02-prove.sh and odin-t25-standin-prove.sh: the huginn rehearsal scripts repointed to the T25 key dirs on odin (t02/key and t10/key), the T25 binaries, the env of keygen step 3.8, wrap key t10/out/key-k21 (6faac46f) with fixture t10/key/lfr-call.json, inputs pinned by sha256, steps through heavy-slot.
+- box-preview-prover.sh takes the box uid from the box and has HP_MEM. post-t25-settle.sh runs args, dry, deploy and call per program, and keeps the box hook out of the dry run. settle_args.py builds ledger-args and checks them against the T25 wrap lanes 10, 20, 34 and 39.
+- T0 factory unittests failed once on load timing (2.035 s against 1.9 s; this branch lacks 8b3df7924). Passed on the second try.
+
+## [2026-11-16 04:28] qa | T23 post-T25 settle dry runs pass at anchor slot 15 on the T25 wrap key; redeploy needed; box request written
+- Redeploy needed (MEASURED): the wrap key changes from b7f5e43c to 6faac46f (installed at deploy), and both T25 anchors differ from the rehearsal's. LEAD PICK: one new SherlockLedger per program, 4 included tx on Preview (2 deploys, 2 acceptRun); R1 to R3 for t02 only, refused and never included.
+- Args: t02 from the T25 prove result, with t02/wrap-call lanes 10, 20, 34 and 39 equal to anchor, claim_pub and outcome_pub; standin byte-equal to chain.sh's, anchor lane equal. They are kept at ~/.cache/t23/post-t25/<prog>/ledger-args.json (0600); the return-hygiene pass deleted their sources.
+- Dry run on t02 and standin (MEASURED; T10_NET=preview, offline, stub prover, no box, no wallet): proof server 9.0.1 /check answered all 13 ops on the slot-0 preimage, lane 6 = 15, the dump equals the ledger 9.1.0.1 public inputs (1,026), and validate_call fails only at the proof. The JS shape applies, the scans pass, the post-A readback is equal and the replay is refused. t02 took 509 s, mostly heavy-slot queue.
+- Box request ~/.cache/t23/post-t25-settle-request.md (034724a7). Part A: odin preflight and a smoke proof per program (expect wrap.vk 6faac46f, t02 public 80c311cc). Part B: the live call, driven from muninn through box-preview-prover.sh; only the wrap files and logs return. The submit waits for the T12 PASS and the lead.
+
+## [2026-11-16 04:38] qa | T12 gate DONE on the T25 keys: rerun 3 passes g3-wrap-small; muninn check M passes; T23 unblocked
+- odin rerun 3 (h231/h232, RETURN c9f1f5fc, pulled by allowlist only): g3-wrap-small 1/1. The in-circuit replay refuses changed samples [0,136,273,410,546], and the native L_Fr verifier refuses the 5 flipped proofs (GKR denominator, GKR layer x2, merkle root x2). Every other step rc 0.
+- Muninn check M: wrap/key-k21 VK 6faac46f Ok(()) on ledger 9.1.0.1 (7/7 changed inputs, 3/3 flipped bytes refused); lake build T25Keys + BridgeAxioms rc 0, 0 sorry.
+- LOOP T12 marked DONE. Next on the critical path: T23 post-T25 Preview settle.
