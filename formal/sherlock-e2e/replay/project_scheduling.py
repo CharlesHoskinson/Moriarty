@@ -6,11 +6,13 @@ the model's shape 2 is outside key_root and has no oracle entry.
 Entities and chains:
 - runSetupOnBox b: hardware witness from the written profile (memAvail = RAM, cgroupHead = budget when below
   RAM) -> setup (0); compares memBudget, unified, gpuCount, gpuTotal, gpuFree, profCores, calMask.
-- every new proved-run record (scheduleAndProveFromProfile, scheduleAndProveForcedCut): the box profile as the
-  initial state (profKeyD = the profile's keysD), operator limits as witnesses -> startRun (16) [-> forceCut k
-  (80+k) for the forced cut] -> prove (96); compares scheduled, calibrated, schShape, schDevice, schEst,
-  schConc, runs, recShape, recDevice, recLeaves, recCalibrated.
-- recordUncalibratedProfileKeyMismatch: stale profile (profKeyD = 100) -> startRun; compares calibrated.
+- every new scheduleAndProveFromProfile record: the box profile as the initial state (profKeyD = the profile's
+  keysD, so a stale T10m profile replays STM-008 with calibrated false), operator limits as witnesses ->
+  startRun (16) -> prove (96); compares scheduled, calibrated, schShape, schDevice, schEst, schConc (D-sched-1:
+  min(model capacity, ceil(n / S))), runs, recShape, recDevice, recLeaves, recCalibrated.
+- every new scheduleAndProveForcedCut record: T16 forces shape and device, so the chain starts from the forced
+  schedule -> forceCut k (80+k) -> prove (96).
+- recordUncalibratedProfileKeyMismatch: skipped (no pick fields; STM-008 is replayed through the runs above).
 - joinLeavesTwoBoxes -> join 0 (144); evaluateEarlyWrapGuard admitted -> earlyWrap (160) with policy 2,
   peakWrap = required MiB, starkExtra = margin = 0, wrapFree = free MiB.
 Refusal checks: abortSetupBadCalProof (setup 1, setup-stopped), refuseMalformedProfile (startRun,

@@ -3,7 +3,7 @@
 
 usage: coverage_quint.py
 Reads every `<context>/quint/REPORT.md` coverage table (rows `| `ID` | artifacts | kind | note |`),
-`replay/STATUS.tsv` (context, replay summary) and `replay/FINDINGS.tsv` (EARS ID, finding, verdict).
+`replay/STATUS.tsv` (context, odin rerun, mutants killed, replay summary) and `replay/FINDINGS.tsv` (EARS ID, finding, verdict).
 Writes two columns after `replay`: `Quint` (the invariants and the lane's kind) and `Quint finding`.
 A `pending (Formal-Quint)` replay cell becomes the context's replay summary. A row whose Quint
 finding is a spec-text defect that is still open (verdict OPEN DESIGN, or CONFIRMED against the text)
@@ -34,8 +34,8 @@ st = ROOT / "replay" / "STATUS.tsv"
 if st.exists():
     for line in st.read_text().splitlines():
         if line and not line.startswith("#"):
-            k, v = line.split("\t", 1)
-            status[k] = v
+            k, rerun, mut, rep = line.split("\t", 3)
+            status[k] = f"rerun {rerun}, {mut} mutants killed; replay {rep}"
 findings = collections.defaultdict(list)
 fn = ROOT / "replay" / "FINDINGS.tsv"
 if fn.exists():
@@ -72,7 +72,7 @@ for line in lines:
         c[5] = c[5].replace("pending (Formal-Quint)", rep)
     f = findings.get(rid, [])
     fcell = "; ".join(f"{a} {v}" for a, v in f) or "-"
-    if any(v.startswith("OPEN DESIGN") or v.startswith("CONFIRMED (text") for _, v in f):
+    if any(v.startswith("OPEN DESIGN") or v.startswith("CONFIRMED") for _, v in f):
         c[3] = "FINDING"
     counts[c[3]] += 1
     out.append("| " + " | ".join(c[:6] + [qcell, fcell, c[6]]) + " |")

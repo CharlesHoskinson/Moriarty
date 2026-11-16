@@ -429,3 +429,6 @@ The code fits the wrap policy to the lowered memory and to the host budget on a 
 
 ### F-scheduling-Q1 / Q3 / Q6 OPEN DESIGN
 Q1: the calibration schema has no GPU index (multi-GPU boxes). Q3: profile `key_root` (universal) vs per-program `key_root` of SPL-011 and the per-box path. Q6: STM-018 lacks the ELA-003 precondition; ELA-006 lacks the SC-014 manifest check.
+
+### F-scheduling-Q6 [Formal-Quint, correction] GUARD HOLDS on the code
+`cx_f9_a_lower_budget_never_gives_a_faster_pick` passes, and `t16.rs join` checks both hosts' manifests and every leaf with the stock verifier before N1 (SC-014). ELA-006 and STM-018 text stay weaker than the code; proposed: ELA-006 carries the SC-014 manifest clause. The owned-roster check (SPL-011) has no code in `join`: OPEN DESIGN. D-sched-1 regression: `replay/regression_D_sched_1.sh` PASS.

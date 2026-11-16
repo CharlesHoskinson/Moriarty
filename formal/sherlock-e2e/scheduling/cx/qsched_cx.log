@@ -1,10 +1,12 @@
-QS5 cut [3,3] n=5: Err("cut [3, 3] does not cover 5 steps")
-QS5 shape 2 (no bucket): Err("shape 2 has no key in the universal key set")
-QS2 odin 32 GiB: Full mem 34359738368; capped 16 GiB: AfterQuotient mem 17179869184
-QS4 zero bytes, 1-byte budget: Ok((0, 1, [4, 1]))
+test dsched1_concurrency_capped_at_leaf_count ... DS1 n=5: shape 0 cut [4, 1] concurrency 2 (capacity min(64, 20/4) = 5)
+DS1 n=5 S=8: cut [5] concurrency 1
+test qsched2_policy_from_lowered_and_unified_memory ... QS2 odin 32 GiB: Full mem 34359738368; capped 16 GiB: AfterQuotient mem 17179869184
 QS2 unified 100 GiB budget: Full mem 107374182400; budget limit 16 GiB: AfterQuotient mem 17179869184
+test qsched4_zero_bytes_admitted_under_one_byte_budget ... QS4 zero bytes, 1-byte budget: Ok((0, 1, [4, 1]))
 QS4 zero bytes on a 1-byte GPU: Ok((Gpu, 1))
-test qsched5_overshoot_cut_and_unknown_shape_refused ... ok
-test qsched2_policy_from_lowered_and_unified_memory ... ok
-test qsched4_zero_bytes_admitted_under_one_byte_budget ... ok
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test qsched5_overshoot_cut_and_unknown_shape_refused ... QS5 cut [3,3] n=5: Err("cut [3, 3] does not cover 5 steps")
+QS5 shape 2 (no bucket): Err("shape 2 has no key in the universal key set")
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+---
+test profile::tests::cx_f9_a_lower_budget_never_gives_a_faster_pick ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 31 filtered out; finished in 0.00s

@@ -71,3 +71,17 @@ fn qsched2_policy_from_lowered_and_unified_memory() {
     assert_eq!((m1.mem, m2.mem), (100 * GIB, 16 * GIB));
     let _ = MB;
 }
+
+/// D-sched-1: the run concurrency never exceeds the leaf count (n = 5, S = 4: 2 leaves; S = 8: 1 leaf)
+/// although the budget holds 8 leaves at once.
+#[test]
+fn dsched1_concurrency_capped_at_leaf_count() {
+    let p = prof(vec![], 64 * GIB, vec![cal(0, Device::Cpu, 1.0, GIB, 0), cal(1, Device::Cpu, 1.5, GIB, 0)]);
+    let bs = buckets();
+    let s = schedule(&p, &bs, 5, &Limits::default(), 2).unwrap();
+    println!("DS1 n=5: shape {} cut {:?} concurrency {} (capacity min(64, 20/4) = 5)", s.shape, s.cut, s.concurrency);
+    assert!(s.concurrency as usize <= s.cut.len());
+    let s1 = schedule(&p, &bs[1..], 5, &Limits::default(), 2).unwrap();
+    println!("DS1 n=5 S=8: cut {:?} concurrency {}", s1.cut, s1.concurrency);
+    assert_eq!(s1.concurrency, 1);
+}

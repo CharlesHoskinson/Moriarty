@@ -48,7 +48,7 @@ Odin tree: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `reke
 
 ## Scheduling (Formal-Quint)
 
-Odin tree: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `rekey-int` 3826e38), target `~/sherlock/target/rekey-int-3826e38`. Test `scheduling/cx/qsched_cx.rs` (`cargo test --release -p sherlock-leaf --test qsched_cx`), log `scheduling/cx/qsched_cx.log`: 3 passed.
+Odin tree: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `rekey-int` 3826e38), target `~/sherlock/target/rekey-int-3826e38`. Test `scheduling/cx/qsched_cx.rs` (`cargo test --release -p sherlock-leaf --test qsched_cx`), log `scheduling/cx/qsched_cx.log`: 4 passed.
 
 | Finding | IDs | Counterexample on the code | Result | Verdict |
 |---|---|---|---|---|
@@ -57,8 +57,8 @@ Odin tree: `~/sherlock/src/openvm-rekey-int-3826e38-fbbr2` (copy of openvm `reke
 | F-scheduling-Q3 | STM-006, STM-008, STM-016, SPL-011 | `Profile.key_root` is the universal key set root; no per-program `key_root` in the profile | unruled | OPEN DESIGN |
 | F-scheduling-Q4 | STM-007, STM-011, STM-012 | `qsched4_zero_bytes_admitted_under_one_byte_budget`: `from_json` accepts `host_bytes = device_bytes = 0`; `schedule` admits shape 0 on the CPU under a 1-byte budget (cut [4, 1], concurrency 1) and on a 1-byte GPU | no division by zero (`d.max(1)`), but STM-012 does not refuse a run that a 0-byte calibration admits | CONFIRMED (low: needs a 0-byte measurement in the profile) |
 | F-scheduling-Q5 | STM-004, STM-013, SPL-011 | `qsched5_overshoot_cut_and_unknown_shape_refused`: `check_free` refuses cut [3, 3] for n = 5 ("does not cover 5 steps", exact sum) and shape 2 ("no key in the universal key set") | both refused | GUARD HOLDS (per-program `key_root` vs universal key set text stays with Q3) |
-| F-scheduling-Q6 | STM-018, STM-012, ELA-003, ELA-006 | `cx_f9_a_lower_budget_never_gives_a_faster_pick` holds; the cross-box join manifest check of SC-014 has no code path (joins are TO BUILD) | unruled precondition text | OPEN DESIGN |
-| D-sched-1 | STM-011 | Replay: 392 startRun transitions, model concurrency above the leaf count (e.g. 8 vs 1 for n = 5, S = 8); `schedule` caps `conc.min(m)` and the oracle does too | model drift: the model's concurrency is device capacity | GUARD HOLDS (oracle and code agree; projection takes min(capacity, ceil(n / S)); `RAW_CONC=1` reproduces) |
+| F-scheduling-Q6 | STM-018, STM-012, ELA-003, ELA-006 | `cx_f9_a_lower_budget_never_gives_a_faster_pick` (rekey-int 3826e38 lib test) passed; `t16.rs join` (sherlock-wrap-export examples) records `join_manifests_equal_this_process` and a stock-verifier case per leaf and stops before N1 on a failed case | the code meets SC-014 (manifest equality and stock verifier before any node proof); `join` takes any two OUT dirs, with no owned-roster check | GUARD HOLDS (ELA-006 and STM-018 text weaker than SC-014 and the code); the owned-roster check of SPL-011 is OPEN DESIGN |
+| D-sched-1 | STM-011 | Replay: 392 startRun transitions, model concurrency above the leaf count (e.g. 8 vs 2 for n = 5, S = 4); `dsched1_concurrency_capped_at_leaf_count`: `schedule` gives concurrency 2 for cut [4, 1] and 1 for cut [5] under a budget for 5 | model drift: the model's concurrency is device capacity; code and oracle cap at `ceil(n / S)` | GUARD HOLDS (projection takes min(capacity, ceil(n / S)); regression `replay/regression_D_sched_1.sh`, trace `scheduling/traces/regressions/D-sched-1/`: raw chain disagrees, capped chain agrees, PASS) |
 
 ## Slice B (Formal-Lean-B findings, resolved 2026-11-15 by the slice B resolver)
 
