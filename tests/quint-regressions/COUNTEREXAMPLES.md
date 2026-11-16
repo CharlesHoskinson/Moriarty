@@ -222,3 +222,80 @@ that mutant is refused (`[sel+0, rom+5, r3+10]`).
 Since T10q, `program_v` refuses the ROM edits of `cnull_no_ctor_type`, `cnull_no_ctor_arity` and
 `cnull_no_cst_fields` (the host builds the type normal form and `const_vd` from the edited rows and
 asserts on them). The handler then attacks with the CORE cell edit, and the named constraint still refuses.
+
+## sherlock-e2e slices A and C: Quint findings (lead rerun 2026-11-16)
+
+The ten Quint models of the A and C contexts (`formal/sherlock-e2e/<context>/quint/REPORT.md`, section 2) pass the lead rerun (`formal/sherlock-e2e/RERUN.md`). Each Q-finding below was checked against the code or text at the pinned trees. "read" means the evidence comes from reading the code, and a named test was not rerun. A CONFIRMED row has a regression check in `tests/quint-regressions/e2e-ac/`. Each check asserts the correct behaviour, so it FAILS now (exit 1) and PASSES after the code fix or the spec amendment. The B-context rows are in `formal/sherlock-e2e/COUNTEREXAMPLES.md` and do not change.
+
+Pinned trees:
+- spec: sherlock-e2e-spec c154662c4
+- Mycroft: mycroft-factory 6c93d6421
+- openvm: t25-int e8c2896
+- runners: t23-suite 2594f2b95, t23-final a33a2cd41, t23-post-t25 cf7a86473, t17-preview 9e1e7f398, t23-args 58dd58fdf, t20-batched 5dc1be2ee
+- wrap: t15-blockers 8a216ef49, t12-slot15 707c9a8ed
+- ledger check: t10q 95990a6d3
+- T22 sketch: t22-governance cf794dc97
+
+| Finding | IDs | Counterexample on the code | Result | Verdict |
+|---|---|---|---|---|
+| Q-call-flow-1 | EUF-001, EUF-002, EUF-010 | design.md:56-70 has 13 stages; EUF-001 lists 11; build arguments is `accept_words` (t23.py:365-373) | no joined flow exists to attack | OPEN DESIGN |
+| Q-call-flow-2 | EUF-001, EUF-002 | t23.py:376-385 `settle_plan`: one deploy per program, later calls `--deploy-from` | code follows the second-call scenario | NOT REPRODUCED (text: qualify EUF-001, add `plan` to EUF-002) |
+| Q-call-flow-3 | EUF-010, EUF-011, EUF-006 | read-back in t10a-ledger-run.mjs needs no native; native compare only in t23.py:531-536 (`blocked` without native) | code already splits read-back from compare | NOT REPRODUCED (text: split EUF-010) |
+| Q-call-flow-4 | EUF-014, EUF-008 | t10a-ledger-run.mjs:777-814: after `not included` or `refused-by-node` the runner proves or submits again for the same `claim_pub` | literal EUF-014 bans this; same root as FAL-NETOPS-2 | OPEN DESIGN (scope EUF-014 to unknown/included) |
+| Q-call-flow-5 | LPC-014, EUF-013, LPC-017 | `DOM_LOCK` hits on spec c154662c4: FINAL-DESIGN.md:169, ARCHITECTURE.md 4 (:3209) | LPC-017 GAP holds as stated; LPC-014 loophole is text | OPEN DESIGN |
+| Q-compact-compilation-1 | ECC-003, ECC-012, CF-002 | Mycroft lower.rs:47-54 `struct Abi` (selector, tape_len, slots, l_e, n_e, kits); mycroft-emit main.rs:120-124; no `sherlock <verb>` on any branch | ABI has no count per builtin, which CF-002 asks for, and ECC-003 says BUILT; verbs half is D-085 | CONFIRMED (text against code, ABI half); check `e2e-ac/Q-compact-compilation-1.py` |
+| Q-compact-compilation-2 | ECC-002, LPC-013, LPC-019, CF-012 | Mycroft lean: 0 `sorry`, 0 `axiom`; `lake build --wfail` rc 0 (71 jobs, scratch copy) | SORRIES.md items are premises, not `sorry` | NOT REPRODUCED (model defect) |
+| Q-compact-compilation-3 | ECC-013, ECC-012, ECC-010 | refusal codes pipeline.rs:125-137; no compile command exists | no partial ABI can be written | OPEN DESIGN |
+| Q-compact-compilation-4 | ECC-009, ECC-010, ECC-011 | Mycroft main.rs:30 `SPIKE_SLOT = 0`; no slot-15 profile, no SEAL-021 in compiler/src | status says OPEN | OPEN DESIGN |
+| Q-conformance-1 | ECS-003, ECS-012 | ran the real `table()` (t23-suite t23.py:575) on a compile-stage mismatch row | prints "Mismatch: 1 of 0 compared after a proof" (n > m) | CONFIRMED; check `e2e-ac/Q-conformance-1.py` |
+| Q-conformance-2 | ECS-015, ECS-004, ECS-010, ECS-012 | t23.py classify :531-538, t23-final `classify_final` :832-846: no "preview off" class, settle never overrides | masking does not occur; a proved-equal call with no Preview tx is `pass` (FAL-CONFORMANCE-1 root) | OPEN DESIGN |
+| Q-conformance-3 | ECS-002, ECS-004, ECS-009 | counted Mycroft compact-suite/native: 62 rejected calls; ref_vectors.py:47 skips `outcome != ok` | 0 of 62 have a preimage or a `mycroft-native-ref/1` record; ECS-002 says BUILT for every call | CONFIRMED (text against code); check `e2e-ac/Q-conformance-3.py` |
+| Q-conformance-4 | ECS-010, ECS-011, ECS-014 | t23-final `final_table` :862-889 writes `-` for refused-as-native and n/a rows | wording only | NOT REPRODUCED (text) |
+| Q-sherlock-execution-1 | EKT-001, EKT-003, EKT-009, CORE-006 | t25-int compile.rs:73 `RULES` has 16 entries and no secp; :871 `R_SL_SECP` outside the table | matches the EKT-001 status GAP | OPEN DESIGN |
+| Q-sherlock-execution-2 | EKT-002, EKT-004, CF-005 | compile.rs:898-900 refuses mixed hash; test `rsl_sha_and_keccak_in_one_program_refused` | same root as F-leaf-proving-Q2 (D-024) | OPEN DESIGN |
+| Q-sherlock-execution-3 | ERS-001, -006, -007, -010, -013, -014 | mycroft-emit writes `rsl-call/1` with native fields, no `prog_d`/`input_d`; rsl/mod.rs:49-61 gates proving on the native words | gaps already in the ERS statuses | OPEN DESIGN |
+| Q-sherlock-execution-4 | EUI-001, -004, -005, ERS-008..010 | rsl/mod.rs:50-52: failed assert gives `refused`, no Rejected outcome | same root as FAL-EXEC-4/5 | OPEN DESIGN |
+| Q-sherlock-execution-5 | EUI-009, CORE-003/012, CPR-003 | CPR-003 lists 3 keys, UKS-001 lists 4 (`L_Fr`); UIREQ map unbuilt (D-025) | EARS against EARS | OPEN DESIGN |
+| Q-sherlock-execution-6 | EKT-009, EKT-010 | SECP-INTERFACE.md only in ~/.cache/rekey-chips, in no git history; no Jubjub file | matches the stated gaps (task 1.2) | OPEN DESIGN |
+| Q-placement-1 | HLP-008, HLP-003, HLP-004 | t23.py:365-373 `accept_words` checks self-consistency only; `BoxProver.prove` :323-340 has no job binding or sha256 | a job-12 result passes for job 13; HLP-008 TO BUILD | OPEN DESIGN |
+| Q-placement-2 | HLP-004, HLP-005 | HLP-004 TO BUILD; no result-file scan | text only | OPEN DESIGN |
+| Q-placement-3 | HLP-005, HLP-006, ZK-009 | HLP-005/006 TO BUILD; no outsourcing command | list narrower than ZK-009; no code | OPEN DESIGN |
+| Q-placement-4 | HLP-007, HLP-002 | HLP-002/007 TO BUILD | no guard code | OPEN DESIGN |
+| Q-governance-1 | ERT-004, GOV-002/003/006/007 | T22 sketch era_table.compact: `cancel` clears pending (:71); soundness_end cancels (:94) | no era table built; TL outage is designed | OPEN DESIGN |
+| Q-governance-2 | ERT-003, ERT-006, GOV-008, EGV-004 | sketch `announce` (:59) checks keysets only; per-program ledgers are O8 (D-077) | no code | OPEN DESIGN |
+| Q-governance-3 | EGV-006, CRR-006/007 | EGV-006 TO BUILD; consumer sketch only | no code | OPEN DESIGN |
+| Q-governance-4 | EGV-005/006/009, ELD-003/007 | premises not run (EGV-009 TO BUILD) | A1-fail branch unspecified | OPEN DESIGN |
+| Q-governance-5 | EGV-001/002/003 | no sealed deploy tool; current Preview ledgers unsealed | scoping is text work | OPEN DESIGN |
+| Q-governance-6 | EGV-008, EGV-010 | `SKEW` only in the sketch (:26, owner item P6) and D-077 | text gap; owner parameters | OPEN DESIGN |
+| Q-ledger-verification-1 | LVR-008, MID-006 | t10a-ledger-run.mjs:227-229 asserts genesis equal to the pin (read) | second chain refused; version log open | GUARD HOLDS (no named test) |
+| Q-ledger-verification-2 | LVR-001/002, LW-017 | ledger-check Cargo.toml/lock at 95990a6d3: 4 crates pinned to full 40-hex, the rest registry with checksums, no `[patch]` | graph is stock; LVR-002 gate TO BUILD | OPEN DESIGN |
+| Q-ledger-verification-3 | LVR-003/004/005 | ran the built sherlock-wrap-ledger-check on key-k21 copies: honest, truncated wrap.vk, one flipped proof byte | exit 0, 101, 101 | GUARD HOLDS (main.rs:87; LVR-005 negative test missing) |
+| Q-ledger-verification-4 | LVR-006/007 | t10a-ledger-run.mjs:711-714 `markRefused`, :676 no reuse of a refused call (read) | honest call: no submit, fresh prove | GUARD HOLDS (no fault test) |
+| Q-ledger-verification-5 | LVR-001..007 | no settle path runs sherlock-wrap-ledger-check (t17.sh, post-t25-settle.sh, t23.py) | no EARS asks for it | OPEN DESIGN |
+| Q-network-operations-1 | PVW-002, SCL-010, SWF-009, FRC-004 | t10a-ledger-run.mjs:227-228: Preview pin or `undeployed1` only | code holds PVW-002; SCL-010 TO BUILD | OPEN DESIGN |
+| Q-network-operations-2 | PVW-006/007, FRC-016 | t10a-ledger-run.mjs:819-835 builds R3 against `preState`; T17 RESULTS.md:26 | node refused R3 with error 115 | NOT REPRODUCED |
+| Q-network-operations-3 | PVW-008, FRC-003/013, SCL-007 | FRC-013 state machine not built (:683-726) | race exists in design only | OPEN DESIGN |
+| Q-network-operations-4 | PVW-009, PVW-013 | PVW-013 TO BUILD | EARS against EARS | OPEN DESIGN |
+| Q-network-operations-5 | FRC-011, LPC-015 | wiki log 2026-11-15 15:25 "t10q pushed to origin (FP-3 closed)" | process kept the FP-3 order | NOT REPRODUCED (text) |
+| Q-network-operations-6 | PVW-007/012, SCL-002, FRC-016 | t10a-ledger-run.mjs:849 exits 4 on a failed verdict | matches PVW-007 + SCL-002 | NOT REPRODUCED |
+| Q-settlement-1 | LDG-001, SLC-005, BAT-004 | LDG-001 (modular-leaf ledger-contract spec.md:4) "Two contracts with separate ledgers SHALL NOT be used"; t23-post-t25 t23.py:349 deploys one SherlockLedger per program (:377-385) | code contradicts adopted LDG-001; spec fix only | CONFIRMED (text against code); check `e2e-ac/Q-settlement-1.sh` |
+| Q-settlement-2 | SLC-006/009, STL-004/005 | t23-args accept_args.py:296-321; ran `python3 -m unittest test_accept_args.T17Receipt` | 7/7 OK; the ledger has no chunk entry | NOT REPRODUCED |
+| Q-settlement-3 | BAT-001/002/009/010/011 | no epoch operator code (t20 RESULTS.md:70) | no code path | OPEN DESIGN |
+| Q-settlement-4 | LDG-002, BAT-002 | sherlock-ledger.compact:54-58 `acceptRun` has no caller check; batched spec.md:20 says so | documented design | NOT REPRODUCED |
+| Q-settlement-5 | SLC-001/004, LDG-001..004 | sherlock-ledger.compact:69-75 signatures of `rootAccepted`, `runAccepted` | signatures in code; text omits them | NOT REPRODUCED |
+| Q-settlement-6 | BAT-004, SLC-011 | t23-suite parta.py:48-60: at most 1 deploy per program per run | bound holds | NOT REPRODUCED |
+| Q-wrap-1 | WRP-002/003, RKY-003, DG-002 | wrap.rs:32 `k <= 21`, :52 rows gate; keygen fails for an oversized k (read, binary not run) | no key or proof at an oversized k; late stop only | NOT REPRODUCED |
+| Q-wrap-2 | WRP-006, ZK-003, LW-012, GPW-001/003 | zkguard.rs:15,28-34 refuses GW_DET/GW_SEED/SHERLOCK_TEST_SEED without `test-seed` (exit 4); wrap_prove.rs:74 (read) | production uses `OsRng`; test `seeded_export_refused_without_feature` not rerun | GUARD HOLDS |
+| Q-wrap-3 | WRP-007, ANC-001, LW-003/005 | decode.rs:601-608: lane 15 = 15 is multiplied by `mode` (chunk only); :617-625 refuses ORD with the anchor template | ORD without the anchor write is accepted; tests t12_anchor_slot.rs, t13_t10q_chunk.rs:70-81 | GUARD HOLDS (text: "for a chunk") |
+| Q-wrap-4 | WRP-004/008/009/010 | wrap.rs:87-92: E6_EXPECT_VK assert before the writes; no WRP-004 size guard | size guard TO BUILD (task 3.2) | OPEN DESIGN |
+| Q-wrap-5 | WRP-012, LW-002/013/016 | T25 qualification record TO BUILD | no record | OPEN DESIGN |
+| Q-wrap-6 | WRP-001..008 | design.md:241 "WRP-005 withdrawn, number not reused" | tombstone exists | NOT REPRODUCED |
+
+Totals: 4 CONFIRMED, 13 NOT REPRODUCED, 5 GUARD HOLDS, 30 OPEN DESIGN, 0 PENDING-CX (52 findings).
+
+Code observations from the same pass (not Quint findings):
+
+| Item | IDs | Code | Verdict |
+|---|---|---|---|
+| NEW-LVR-006 | LVR-006 | t23-post-t25 t10a-ledger-run.mjs:420-421 returns `{skipped}` when `T10A_VALIDATE_CALL`/`E6_VALIDATE_CALL` is unset, and the gate at :799 is `!nat.skipped && ...`, so call A is submitted with no native ledger check. t23.py `settle_plan` (:385) does not set the validator; t17.sh and post-t25-settle.sh do. | CONFIRMED (text against code); check `e2e-ac/NEW-LVR-006.sh` |
+| NEW-WRP-009 | WRP-009 | wrap.rs:90-92 writes the three output files before `assert!(lib_ok)` at :95, so a refused proof leaves a full WrapOutput behind | observation: move the assert before the writes |
