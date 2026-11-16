@@ -6,9 +6,11 @@
 #    Part B stand-in lfr_call) for that vector, then the k = 21 wrap under E6_EXPECT_VK; 3. the box's wrap.vk must
 #    equal HP_WRAP_VK (the deployed key) and the wrap statement must equal the vector lane for lane (1,026); frame.
 # Env: HP_CALLS (local work dir), HP_WRAP_VK, HP_TAG, HP_REMOTE (required); HP_BOX (ssh host, default huginn),
-#      HP_BOX_ROOT (sherlock dir on the box, default /home/charles/sherlock), HP_MEM (unit MemoryMax, default 80G).
+#      HP_BOX_ROOT (sherlock dir on the box, default /home/charles/sherlock), HP_MEM (unit MemoryMax, default 80G),
+#      HP_REMOTE_ARGS (words after RO for the remote script, each shell-quoted on the box; unset = RO only).
 #      Post-T25 settle (T23): HP_BOX=odin HP_BOX_ROOT=/home/charl/sherlock HP_REMOTE=odin-t25-t02-prove.sh or
-#      odin-t25-standin-prove.sh (the T25 key dirs; request ~/.cache/t23/post-t25-settle-request.md).
+#      odin-t25-standin-prove.sh (the T25 key dirs; request ~/.cache/t23/post-t25-settle-request.md); the T23
+#      final-run representatives: HP_REMOTE=odin-t25-rsl-prove.sh HP_REMOTE_ARGS="KDIR CALL CALL_SHA256".
 # The box returns only wrap/{wrap.proof,wrap.public.json,wrap.vk}, times.tsv and the step logs; vector.json and
 # call-lfr.json stay on the box.
 # Used on Preview in the T23 rehearsal 2026-11-15 (~/.cache/t23/preview-rehearsal, RESULTS.md). The remote scripts pin
@@ -25,7 +27,8 @@ E6_DUMP="$d/vector.json" node "$SDK/e6-dump-prover.mjs" < "$d/opening.json" >&2 
 test -s "$d/vector.json"
 $SSH "mkdir -p $RO"
 rsync -a "$d/vector.json" "$(dirname "$0")/${HP_REMOTE:?}" $BOX:$RO/
-$SSH "XDG_RUNTIME_DIR=/run/user/\$(id -u) systemd-run --user --unit t23-preview-$n --collect -p MemoryMax=${HP_MEM:-80G} -p Nice=5 bash $RO/${HP_REMOTE:?} $RO" >&2
+qa=; read -ra ra <<< "${HP_REMOTE_ARGS:-}"; [ ${#ra[@]} -gt 0 ] && qa=$(printf ' %q' "${ra[@]}")
+$SSH "XDG_RUNTIME_DIR=/run/user/\$(id -u) systemd-run --user --unit t23-preview-$n --collect -p MemoryMax=${HP_MEM:-80G} -p Nice=5 bash $RO/${HP_REMOTE:?} $RO$qa" >&2
 echo "prover: $BOX unit t23-preview-$n started ($RO)" >&2
 for i in $(seq 1 720); do  # up to 4 h
   sleep 20

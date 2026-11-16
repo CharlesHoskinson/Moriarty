@@ -206,7 +206,7 @@ The 9 representatives cost about 2.10e16 in all. The DERIVED full suite (145 + 1
 
 Settle time MEASURED: a stand-in deploy took 250.98 s. The call phases took 906.96 s (t02) and 909.17 s (stand-in), which include the live odin CPU proofs of 623.7 s and 643.5 s. So 9 representatives × about 1,160 s is about 2.9 h. They run in sequence, because the wallet lock is shared.
 
-### Gap that must close before the representatives settle (follow-up lane, not built here)
+### Gap that must close before the representatives settle (closed below)
 
 The prover hook `post-t25-settle.sh` knows only `t02` and `standin`. It calls `odin-t25-{t02,standin}-prove.sh`, which uses the CPU binaries t25k-d053eaf and fixed key dirs. The representatives need two changes:
 
@@ -221,6 +221,36 @@ A second gap: nothing turns the box returns into the suite table yet. `t23.py ru
 Six h03 labels contain `$` (`vote$commit`, `vote$reveal`). `final-box.sh` quotes every path. The lead quotes them too in the ledger-check loop and in heavy-slot names.
 
 LEAD PICK: the live proof uses the cuda `t7_chain` of the final run, whose keys are proven equal on the box, and falls back to the T25 CPU binary. The run order is the same as for t02: args, dry with `T10A_DRY_CHECK=server`, deploy, call.
+
+### The gap is closed (follow-up lane, 2026-11-16)
+
+- `tools/sherlock-sdk/box/odin-t25-rsl-prove.sh RO KDIR CALL CALL_SHA256` runs `rslchain call KDIR CALL RO/vector.json` and then the wrap under `E6_EXPECT_VK`. It keeps the pins and the rc codes of the t02 script and adds two pins: the call file sha256 from `final/calls.sha256`, and `KDIR/../ok`. It uses the cuda binary under `gpu.lock` and falls back to the CPU binary; `pins.log` names the binary. `box-preview-prover.sh` passes `HP_REMOTE_ARGS` after RO, each word shell-quoted.
+- `post-t25-settle.sh {args|dry|deploy|call} rep LABEL` reads `~/.cache/t23/final/ret-odin/calls/LABEL/`. The args phase needs rc 0 and wrap.vk 6faac46f and does the full lanes check. State goes to `~/.cache/t23/post-t25/rep/LABEL/`, one SherlockLedger per LABEL, and LABEL must be a line of `final/reps.list`. `prep rep` runs args and dry for all 9 and writes `dry/PASS` on a pass. Deploy and call need that marker. `settle rep` runs the 9 in list order, skips a rep whose acceptRun is included and stops at the first failure.
+- Preview only: any `T10_NET` other than preview is refused, and deploy, call and settle need `T23_ALLOW_PREVIEW=1`.
+- **LEAD PICK REP-REFUSALS** (the final-lane task overrides the plan's REF 0): R1 to R3 run on the first representative, `a05-list-field.test.test.0`, only. That adds 3 refused submissions (0 fee, not included). The representatives row becomes 9 deploys, 9 acceptRun, 18 included tx and 3 refused.
+- `t23.py final` builds the suite table from the returns. It checks RETURN.sha256 and refuses a forbidden name. Each row's files are read from the box that its list assigns (calibration: huginn t02, odin d02). The checks are rc, `T25SUITE EQUAL`, wrap.vk, ledger `Ok(())` with every negative refused, then the compare. The compare is against the native Preview transcript, or against the native ref only for the 47 files without one. The settle column follows. It asserts 208 = 62 + 1 + 3 + 142 over 145 files, then runs `bench.py ingest`.
+- Dry test (t02 inputs, the huginn gpu-leafl-t25 T25 key-mode call c/cuda with wrap w/gpu): args lanes equal; dry PASS (`T10A_DRY_CHECK=server`, stub prover, no wallet, 136.9 s); `t23.py final` gives t02 pass against the native Preview transcript, settle block 136,144. The box script was tested on muninn against a stub root.
+
+Muninn runbook for the representative settle (after odin's return is in `~/.cache/t23/final/ret-odin`):
+
+```bash
+cd ~/Projects/Moriarty-wt/t23-final/tools/t23-suite
+REPS=$(grep -v '^#' final/reps.list | sed 's/\.rsl\.json$//')
+# 0. odin: the final unit is done, no t23-preview-* unit runs, and each rep key dir is complete (names and sizes only)
+ssh -O check odin
+ssh odin 'systemctl --user is-active t23-final; systemctl --user list-units --no-pager "t23-preview-*" | grep -c running'
+for l in $REPS; do ssh odin "cd ~/sherlock/out/t23-final/calls/$l && test -e ok && test -s key/lfr_pk.bitcode && test -s key/lfr-call.json && echo OK $l"; done
+# 1. the returned rep wraps on ledger 9.1.0.1 (want Ok(()) for all 9)
+for l in $REPS; do T23B_OUT=~/.cache/t23/final/ledger ./partb-bench.sh ledger t23f-odin-$l ~/.cache/t23/final/ret-odin/calls/$l/wrap ${l%%.*} ${l#*.}; done
+# 2. args and dry for all 9 (no network, no wallet)
+./post-t25-settle.sh prep rep
+# 3. settle on Preview: 9 deploys + 9 acceptRun, R1 to R3 on a05 only (wallet lock shared; about 3 h)
+systemd-run --user --unit t23-rep-settle --collect -p Nice=5 bash -c 'cd ~/Projects/Moriarty-wt/t23-final/tools/t23-suite && T23_ALLOW_PREVIEW=1 ./post-t25-settle.sh settle rep'
+# 4. suite table and BENCH.md
+python3 t23.py final --final-dir ~/.cache/t23/final/ret-huginn --final-dir ~/.cache/t23/final/ret-odin --final-dir ~/.cache/t23/final/ret-loki \
+  --ledger ~/.cache/t23/final/ledger --settle ~/.cache/t23/post-t25/t02/ledger/t10a-state.json=t02-counter-example/increment.increment.0 \
+  --rep-settle-dir ~/.cache/t23/post-t25/rep --out ~/.cache/t23/final/suite
+```
 
 ## 4. Benchmark table (bench.py, BENCH.md)
 

@@ -29,6 +29,10 @@ Suite table columns: pass, refused-as-native, mismatch (must be 0), blocked (wit
 Usage:
   t23.py run [--mode dry|live] [--prover stub|odin|huginn] [--settle dry|preview] [--dispatch]
              [--suite DIR] [--compiler DIR] [--native-preview DIR] [--out DIR] [--skip-build]
+  t23.py final --final-dir RET [--final-dir RET ...] [--ledger DIR] [--settle STATE=PROG/CALL ...]
+             [--rep-settle-dir DIR] [--out DIR] [--no-bench]
+                             the suite table of the T23 final run from the box returns (final/final-box.sh), then
+                             bench.py ingest --final-dir/--muninn-dir/--settle into OUT/bench (T23-FINAL-PLAN.md)
   t23.py selftest            fixture tests of the compare path, the bus parser and the guards
 The wallet is never opened in dry mode and its seed is never read by this script.
 """
@@ -633,6 +637,293 @@ def run(a):
     return 5 if (meta["settle_rehearsal"] or {}).get("status") == "failed" else 0
 
 
+# ---------------------------------------------------------------- final mode (T23 final run on the T25 keys)
+# `t23.py final` builds the suite table from the box returns of final/final-box.sh (T23-FINAL-PLAN.md sections 2 and
+# 3): the 208 suite rows, each provable row mapped to its call files (final/calls.sha256; a cross-contract row has the
+# outer x01 file and the inner x02 file), each file read from the return of the box its list assigns. Checks per call:
+# rc 0, keys.out `T25SUITE EQUAL`, wrap.vk 6faac46f, ledger 9.1.0.1 Ok(()) (with --ledger), then the proved effect
+# words and comm against the native Preview transcript (compare), or against the native ref only where the call has no
+# passing native Preview transcript (labelled "native ref only"). The Preview settle column comes from --settle states.
+# It then runs bench.py ingest on the same returns (--final-dir, --muninn-dir, --settle) unless --no-bench.
+HERE = pathlib.Path(__file__).resolve().parent
+FINAL = HERE / "final"
+T25_VK_SHA = "6faac46fa12e5fc1b561e033f301f055117144cd3dd6a020f5a5f675704d6d5b"
+FORBIDDEN = re.compile(r"\.secret|args[^/]*\.json|forbid|vector\.json|accept-bundle\.json|lfr_pk|lfr-call\.json|call-lfr")
+# the calibration calls are on every list; the plan's share table assigns them (huginn t02, odin d02)
+CAL_OWNER = {"t02-counter-example.increment.increment.0": "huginn", "d02-battleship.player1Shoot.04-alice-shoot-5.0": "odin"}
+CHIP_BLOCK = {("s02-foreign", "ecdsa-valid"): "BLOCKED: secp256k1 chip set deferred (T18 (d) LEAD PICK)",
+              ("s02-foreign", "ecdsa-bad"): "BLOCKED: secp256k1 chip set deferred (T18 (d) LEAD PICK)",
+              ("s02-foreign", "keccak"): "BLOCKED: keccak256 tier 3 chip set deferred (T18 (d) LEAD PICK)"}
+CALL_DIRS = [H / ".cache/rekey-chips/calls3", H / ".cache/rekey-chips/calls4"]
+
+
+def final_files(calls_sha=FINAL / "calls.sha256", call_dirs=CALL_DIRS):
+    """The final run's call files: {file label: (program id, label, index)} from the rsl-call/1 metadata."""
+    out = {}
+    for line in pathlib.Path(calls_sha).read_text().splitlines():
+        if not line.strip():
+            continue
+        name = line.split(None, 1)[1].strip().split("/", 1)[-1]
+        lbl = name[: -len(".rsl.json")]
+        src = next((pathlib.Path(d) / name for d in call_dirs if (pathlib.Path(d) / name).exists()), None)
+        if src:
+            m = json.loads(src.read_text())
+            out[lbl] = (m["id"], m["label"], int(m["index"]))
+        else:  # file name form PROG.CIRCUIT.LABEL.INDEX
+            p = lbl.split(".")
+            out[lbl] = (p[0], ".".join(p[2:-1]), int(p[-1]))
+    return out
+
+
+def final_assign(calls, files):
+    """{(id, label): [file labels]}: a file belongs to its own program's row, else to the one row with its label
+    (the inner x02 file of an x01 cross-contract row)."""
+    rows = {(c["id"], c["label"]) for c in calls}
+    by = {}
+    for f, (pid, lab, _) in sorted(files.items()):
+        key = (pid, lab) if (pid, lab) in rows else None
+        if key is None:
+            cand = [r for r in rows if r[1] == lab]
+            if len(cand) != 1:
+                raise SystemExit(f"final: call file {f} matches {len(cand)} suite rows")
+            key = cand[0]
+        by.setdefault(key, []).append(f)
+    return by
+
+
+def read_return(d, vk_sha=T25_VK_SHA):
+    """One box return: RETURN.sha256 verified, no forbidden name; {file label: call record}."""
+    d = pathlib.Path(d)
+    rl = (d / "RETURN.sha256").read_text()
+    bad = [l for l in rl.splitlines() if FORBIDDEN.search(l)]
+    if bad:
+        raise SystemExit(f"final: FORBIDDEN FILE IN RETURN {d} ({len(bad)} lines)")
+    r = subprocess.run(["sha256sum", "-c", "--quiet", "RETURN.sha256"], cwd=d, capture_output=True, text=True)
+    if r.returncode:
+        raise SystemExit(f"final: RETURN.sha256 check failed in {d}: {(r.stdout + r.stderr).strip().splitlines()[:3]}")
+    box = None
+    for line in (d / "times.tsv").read_text().splitlines() if (d / "times.tsv").exists() else []:
+        box = line.split("\t")[3]
+        break
+    box = box or d.name.removeprefix("ret-")
+    out = {}
+    for cd in sorted((d / "calls").iterdir()) if (d / "calls").is_dir() else []:
+        rc = (cd / "rc").read_text().strip() if (cd / "rc").exists() else None
+        kl = (cd / "keys.out").read_text().splitlines() if (cd / "keys.out").exists() else []
+        vk = cd / "wrap/wrap.vk"
+        pr = cd / "prove-result.partial.json"
+        rs = json.loads((cd / "rsl-chain.json").read_text()) if (cd / "rsl-chain.json").exists() else {}
+        out[cd.name] = {"box": box, "rc": rc, "keys": kl[0] if kl else None,
+                        "vk_ok": vk.exists() and sha256_file(vk) == vk_sha, "bucket": rs.get("rsl_bucket"),
+                        "result": json.loads(pr.read_text()) if pr.exists() else None}
+    return box, out
+
+
+def read_ledger(d):
+    """partb-bench.sh ledger rows: {(program, call): "Ok" | reason}; Ok needs result Ok(()) and every negative refused."""
+    d, out = pathlib.Path(d), {}
+    for line in (d / "times.tsv").read_text().splitlines() if (d / "times.tsv").exists() else []:
+        t = line.split("\t")
+        if len(t) < 14 or t[0] != "ledger_check":
+            continue
+        e = None
+        lp = d / t[13]
+        for l in lp.read_text(errors="replace").splitlines() if lp.exists() else []:
+            if l.startswith("E5JSON ") and '"ledger_9_1_0_1_verify"' in l:
+                e = json.loads(l[7:])
+        neg = e and all(e.get("changed_lane_refused", {}).values()) and all(e.get("changed_public_input_refused", [])) \
+            and all(e.get("flipped_proof_byte_refused", []))
+        out[(t[1], t[2])] = "Ok" if (t[7] == "0" and e and e.get("result") == "Ok(())" and neg) else \
+            f"ledger 9.1.0.1 not Ok (rc {t[7]}, {('result ' + str(e.get('result'))) if e else 'no E5JSON'})"
+    return out
+
+
+def read_settle(state):
+    s = json.loads(pathlib.Path(state).read_text()).get("submissions", {})
+    a = s.get("A") or {}
+    ref = sum(1 for k, v in s.items() if k not in ("deploy-ledger", "A") and v.get("verdict") != "included")
+    return (f"acceptRun block {a.get('blockHeight')}" if a.get("verdict") == "included" else f"not included ({a.get('verdict')})") \
+        + (f", {ref} refused" if ref else "")
+
+
+def list_box(lists):
+    """{file label: box} for rep and run lines (cal lines: CAL_OWNER)."""
+    own = dict(CAL_OWNER)
+    for bx, p in lists.items():
+        for line in pathlib.Path(p).read_text().splitlines():
+            t = line.split("\t")
+            if len(t) >= 2 and t[0] in ("rep", "run"):
+                own[t[1][: -len(".rsl.json")]] = bx
+    return own
+
+
+def ref_only(outcome, refs):
+    for c in outcome["calls"]:
+        ref = refs.get(c["index"])
+        if ref is None:
+            return "different", f"call {c['index']}: no native ref"
+        if [str(w) for w in c["eff"]] != [str(w) for w in ref["transcript_words"]]:
+            return "different", f"call {c['index']}: W differs from the native ref words"
+        if str(c["comm"]) != str(ref["lane1_comm"]):
+            return "different", f"call {c['index']}: comm differs from the native ref lane1_comm"
+    return "equal", "native ref only (no passing native Preview transcript): W and comm equal the native ref"
+
+
+def classify_final(calls, assign, rets, owner, natprev, suite, ledger=None, settles=None):
+    """rets: {box: {file label: record}}. ledger: read_ledger map or None (not given). settles: {file label: text}."""
+    settles = settles or {}
+    rows = []
+    for c in calls:
+        key = (c["id"], c["label"])
+        np_ = natprev.get(key)
+        files = assign.get(key, [])
+        row = {**c, "native_preview": (np_ or {}).get("verdict"), "native_preview_pass": native_pass(np_), "files": files,
+               "box": None, "keys": None, "ledger": None, "compare": None, "settle": None, "bucket": None,
+               "result": None, "reason": ""}
+        rows.append(row)
+        if c["native_outcome"] != "ok":
+            row["result"], row["reason"] = "refused-as-native", "DERIVED, not run: native refuses before proving (no tape)"
+            continue
+        if c["pure"]:
+            row["result"], row["reason"] = "n/a", "pure circuit: no ZKIR, no proof, no transaction"
+            continue
+        if not files:
+            row["result"], row["reason"] = "blocked", CHIP_BLOCK.get(key, "BLOCKED: no call file in the final run")
+            continue
+        recs = []
+        for f in files:
+            b = owner.get(f)
+            rec = rets.get(b, {}).get(f) if b else None
+            if rec is None:  # assigned box has not returned it (or moved by REBALANCE): any box that did
+                rec = next((r[f] for r in rets.values() if f in r), None)
+            recs.append((f, rec))
+        miss = [f for f, r in recs if r is None]
+        if miss:
+            row["result"], row["reason"] = "blocked", f"not returned yet: {', '.join(miss)}"
+            continue
+        row["box"] = "+".join(sorted({r["box"] for _, r in recs}))
+        row["bucket"] = "+".join(sorted({str(r["bucket"]) for _, r in recs if r["bucket"]})) or None
+        bad = [(f, r["rc"]) for f, r in recs if r["rc"] != "0"]
+        if bad:
+            row["result"], row["reason"] = "prove-failed", "; ".join(f"{f}: exit {rc}" for f, rc in bad)
+            continue
+        keys_ok = all((r["keys"] or "").startswith("T25SUITE EQUAL") and r["vk_ok"] for _, r in recs)
+        row["keys"] = "T25SUITE EQUAL, wrap.vk 6faac46f" if keys_ok else "MISMATCH"
+        if not keys_ok:
+            row["result"], row["reason"] = "mismatch", "key check: " + "; ".join(
+                f"{f}: {r['keys'] or 'no keys.out'}{'' if r['vk_ok'] else ', wrap.vk not 6faac46f'}" for f, r in recs)
+            continue
+        if ledger is not None:
+            ls = [ledger.get(tuple(f.split(".", 1)), "ledger check not run") for f in files]
+            row["ledger"] = "Ok" if all(x == "Ok" for x in ls) else "; ".join(x for x in ls if x != "Ok")
+        st = [settles[f] for f in files if f in settles]
+        row["settle"] = "; ".join(st) or None
+        out = {"calls": [cc for _, r in recs for cc in r["result"]["calls"]]}
+        refs = {}
+        for cc in out["calls"]:
+            rp = suite / "native" / c["id"] / "transcripts" / f"{c['label']}.{cc['index']}.ref.json"
+            if rp.exists():
+                refs[cc["index"]] = json.loads(rp.read_text())
+        verdict, detail = compare(out, np_, refs) if row["native_preview_pass"] else ref_only(out, refs)
+        row["compare"] = verdict if row["native_preview_pass"] else f"{verdict} (native ref only)"
+        if verdict != "equal":
+            row["result"], row["reason"] = "mismatch", detail
+        elif row["ledger"] not in (None, "Ok"):
+            row["result"], row["reason"] = ("blocked" if row["ledger"] == "ledger check not run" else "prove-failed"), row["ledger"]
+        else:
+            row["result"], row["reason"] = "pass", detail
+    return rows
+
+
+FINAL_COUNTS = {"rows": 208, "refused-as-native": 62, "n/a": 1, "chip-blocked": 3, "provable": 142, "files": 145}
+
+
+def final_invariant(rows, assign):
+    n = {"rows": len(rows), "refused-as-native": sum(r["result"] == "refused-as-native" for r in rows),
+         "n/a": sum(r["result"] == "n/a" for r in rows),
+         "chip-blocked": sum(r["result"] == "blocked" and r["reason"].startswith(("BLOCKED: secp", "BLOCKED: keccak")) for r in rows),
+         "files": sum(len(v) for v in assign.values())}
+    n["provable"] = sum(1 for r in rows if r["files"])
+    return n, n == FINAL_COUNTS
+
+
+def final_table(rows, meta):
+    cols = ["pass", "refused-as-native", "mismatch", "blocked", "prove-failed", "n/a"]
+    tot = {k: sum(1 for r in rows if r["result"] == k) for k in cols}
+    reasons = {}
+    for r in rows:
+        if r["result"] == "blocked":
+            k = "not returned yet" if r["reason"].startswith("not returned yet") else r["reason"]
+            reasons[k] = reasons.get(k, 0) + 1
+    inv, ok = meta["invariant"], meta["invariant_ok"]
+    L = [f"# T23 suite table (final run on the T25 keys)", "",
+         f"Built {meta['built']} from the box returns {', '.join(meta['returns']) or 'none'}"
+         f"; ledger check {meta['ledger'] or 'not given'}; Preview settles {meta['settles']}.", "",
+         f"Row count: {inv['rows']} rows = {inv['refused-as-native']} refused-as-native + {inv['n/a']} n/a + "
+         f"{inv['chip-blocked']} BLOCKED (chip set) + {inv['provable']} provable rows over {inv['files']} call files "
+         f"({'equal to the plan' if ok else 'DIFFERS FROM THE PLAN 208 = 62 + 1 + 3 + 142 over 145'}).", "",
+         "| result | calls |", "|---|---:|"]
+    L += [f"| {k} | {tot[k]} |" for k in cols] + [f"| total | {len(rows)} |", ""]
+    cmp_ = [r["compare"] for r in rows if r["compare"]]
+    L += [f"Compared after a proof: {len(cmp_)} rows; against the native Preview transcript "
+          f"{sum(1 for x in cmp_ if 'native ref only' not in x)}, against the native ref only "
+          f"{sum(1 for x in cmp_ if 'native ref only' in x)} (no passing native Preview transcript).", "",
+          "Blocked, by reason:", "", "| reason | calls |", "|---|---:|"]
+    L += [f"| {k} | {n} |" for k, n in sorted(reasons.items(), key=lambda x: -x[1])]
+    L += ["", "| program | call | box | bucket | keys | ledger 9.1.0.1 | compare | Preview settle | result | reason |",
+          "|---|---|---|---|---|---|---|---|---|---|"]
+    for r in rows:
+        L.append(f"| `{r['id']}` | `{r['label']}` | {r['box'] or '-'} | {r['bucket'] or '-'} | {r['keys'] or '-'} | "
+                 f"{r['ledger'] or '-'} | {r['compare'] or '-'} | {r['settle'] or '-'} | {r['result']} | {r['reason']} |")
+    return tot, "\n".join(L) + "\n"
+
+
+def final(a):
+    out = pathlib.Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    suite = pathlib.Path(a.suite)
+    calls = suite_calls(suite)
+    assign = final_assign(calls, final_files())
+    rets = {}
+    for d in a.final_dir:
+        box, recs = read_return(d)
+        rets[box] = recs
+    owner = list_box({b: FINAL / f"{b}.list" for b in ("huginn", "odin", "loki")})
+    ledger = read_ledger(a.ledger) if a.ledger else None
+    settle_specs = list(a.settle)
+    for st in sorted(pathlib.Path(a.rep_settle_dir).glob("*/ledger/t10a-state.json")) if a.rep_settle_dir else []:
+        lb = st.parent.parent.name
+        settle_specs.append(f"{st}={lb.split('.', 1)[0]}/{lb.split('.', 1)[1]}")
+    settles = {}
+    for sm in settle_specs:
+        st, pc = sm.split("=", 1)
+        settles[pc.replace("/", ".", 1)] = read_settle(st)
+    rows = classify_final(calls, assign, rets, owner, load_native_preview(a.native_preview), suite, ledger, settles)
+    inv, ok = final_invariant(rows, assign)
+    meta = {"schema": "t23-final/1", "built": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "returns": [str(d) for d in a.final_dir],
+            "ledger": a.ledger, "settles": len(settles), "invariant": inv, "invariant_ok": ok}
+    tot, md = final_table(rows, meta)
+    meta["totals"] = tot
+    (out / "t23-suite-final.json").write_text(json.dumps({"meta": meta, "rows": rows}, indent=1, default=str))
+    (out / "T23-SUITE.md").write_text(md)
+    log("T23-FINAL", json.dumps(tot), "invariant", "ok" if ok else json.dumps(inv))
+    if not a.no_bench:
+        cmd = [sys.executable, str(HERE / "bench.py"), "ingest", "--run", a.run, "--title", a.title, "--out", str(out / "bench")]
+        for d in a.final_dir:
+            cmd += ["--final-dir", str(d)]
+        if a.ledger:
+            cmd += ["--muninn-dir", a.ledger]
+        for sm in settle_specs:
+            cmd += ["--settle", sm]
+        cmd += ["--derived-tx", a.derived_tx, "--upper-note", a.upper_note, "--preview-note", a.preview_note]
+        r = subprocess.run(cmd)
+        if r.returncode:
+            return r.returncode
+    if tot["mismatch"]:
+        return 4
+    return 0 if ok else 6
+
+
 # ---------------------------------------------------------------- self test (fixtures)
 def selftest():
     fx = pathlib.Path(__file__).resolve().parent / "fixtures"
@@ -696,6 +987,7 @@ def selftest():
           and pl["call"][pl["call"].index("--anchor-slot") + 1] == "15" and pl["call"][-2:] == ["--deploy-from", str(PREVIEW_DIR / "p")]
           and pl["env"]["T10A_REFUSALS"] == "0" and pl["env"]["T10_NET"] == "preview")
     ok &= integration(check)
+    final_selftest(check)
     return 0 if ok else 1
 
 
@@ -757,6 +1049,78 @@ def integration(check):
     return tot["mismatch"] == 1
 
 
+def final_selftest(check):
+    """final mode on a synthetic box return: a pass (t02, W and comm from the native ref), a planted word difference
+    (a05), a failed chain (d06, rc 1), a key mismatch (s03), the ledger column and the forbidden-name refusal."""
+    import tempfile
+    suite = DEF["suite"]
+    if not (suite.exists() and pathlib.Path(DEF["native_preview"]).exists()):
+        print("SKIP final selftest (suite data not on this host)")
+        return True
+    calls = suite_calls(suite)
+    files = final_files()
+    assign = final_assign(calls, files)
+    with tempfile.TemporaryDirectory() as td:
+        d = pathlib.Path(td) / "ret-odin"
+        vk = b"selftest wrap key"
+        spec = {"t02-counter-example.increment.increment.0": "pass", "a05-list-field.test.test.0": "plant",
+                "d06-nft.transfer.16-transfer-1-to-bob.0": "rc1", "s03-language.loop.loop.0": "keys"}
+        times = []
+        for f, kind in spec.items():
+            pid, lab, idx = files[f]
+            ref = json.loads((suite / "native" / pid / "transcripts" / f"{lab}.{idx}.ref.json").read_text())
+            eff = [str(w) for w in ref["transcript_words"]]
+            if kind == "plant":
+                eff[-1] = str(int(eff[-1]) + 1)
+            cd = d / "calls" / f
+            (cd / "wrap").mkdir(parents=True)
+            (cd / "rc").write_text("1\n" if kind == "rc1" else "0\n")
+            (cd / "keys.out").write_text(("MISMATCH x bucket Plain" if kind == "keys" else "T25SUITE EQUAL x bucket Plain") + "\n")
+            (cd / "wrap/wrap.vk").write_bytes(vk)
+            if kind != "rc1":
+                (cd / "prove-result.partial.json").write_text(json.dumps({"calls": [{"index": idx, "eff": eff, "comm": ref["lane1_comm"]}]}))
+            times.append("\t".join(["final_chain", f.split(".", 1)[0], f.split(".", 1)[1], "odin", "GPU", "cold", "1.0",
+                                    "1" if kind == "rc1" else "0", "-", "-", "-", "-", "-", f"calls/{f}/chain.log"]))
+        (d / "times.tsv").write_text("\n".join(times) + "\n")
+        lst = [str(x.relative_to(d)) for x in sorted(d.rglob("*")) if x.is_file()]
+        subprocess.run(["sha256sum", *lst], cwd=d, stdout=open(d / "RETURN.sha256", "w"), check=True)
+        box, recs = read_return(d, vk_sha=hashlib.sha256(vk).hexdigest())
+        lg = pathlib.Path(td) / "ledger"
+        (lg / "logs").mkdir(parents=True)
+        e = {"phase": "ledger_9_1_0_1_verify", "result": "Ok(())", "changed_lane_refused": {"a": True},
+             "changed_public_input_refused": [True], "flipped_proof_byte_refused": [True]}
+        (lg / "logs/l.log").write_text("E5JSON " + json.dumps(e) + "\n")
+        (lg / "times.tsv").write_text("\t".join(["ledger_check", "t02-counter-example", "increment.increment.0", "muninn", "CPU",
+                                                 "-", "0.1", "0", "-", "-", "-", "-", "l", "logs/l.log"]) + "\n")
+        led = read_ledger(lg)
+        rows = classify_final(calls, assign, {box: recs}, list_box({b: FINAL / f"{b}.list" for b in ("huginn", "odin", "loki")}),
+                              load_native_preview(DEF["native_preview"]), suite, led,
+                              {"t02-counter-example.increment.increment.0": "acceptRun block 136144, 3 refused"})
+        inv, ok = final_invariant(rows, assign)
+        by = {(r["id"], r["label"]): r for r in rows}
+        check(f"final: row invariant 208 = 62 + 1 + 3 + 142 over 145 files ({inv})", ok)
+        t02 = by[("t02-counter-example", "increment")]
+        check(f"final: t02 passes with ledger Ok and the settle block ({t02['result']}: {t02['reason']})",
+              t02["result"] == "pass" and t02["ledger"] == "Ok" and t02["settle"].startswith("acceptRun block") and t02["box"] == "odin")
+        check("final: planted word difference is a mismatch", by[("a05-list-field", "test")]["result"] == "mismatch")
+        check("final: rc 1 is prove-failed, never pass", by[("d06-nft", "16-transfer-1-to-bob")]["result"] == "prove-failed")
+        check("final: a key MISMATCH line is a mismatch", by[("s03-language", "loop")]["result"] == "mismatch"
+              and by[("s03-language", "loop")]["reason"].startswith("key check"))
+        check("final: a call without a return is blocked, not pass",
+              by[("a01-adt-counter", "test_all")]["result"] == "blocked")
+        xr = [r for r in rows if r["id"] == "x01-composable-outer" and len(r["files"]) == 2]
+        check(f"final: the 3 cross-contract rows hold the outer and the inner file ({len(xr)})", len(xr) == 3)
+        (d / "calls/t02-counter-example.increment.increment.0/call-lfr.json").write_text("{}")
+        with open(d / "RETURN.sha256", "a") as fh:
+            fh.write("0" * 64 + "  calls/t02-counter-example.increment.increment.0/call-lfr.json\n")
+        try:
+            read_return(d)
+            check("final: a forbidden name in RETURN.sha256 is refused", False)
+        except SystemExit as ex:
+            check("final: a forbidden name in RETURN.sha256 is refused", "FORBIDDEN" in str(ex))
+    return ok
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -772,10 +1136,26 @@ def main():
     r.add_argument("--skip-build", action="store_true")
     r.add_argument("--build-mem", default="8G")
     r.add_argument("--run-mem", default="4G")
+    f = sub.add_parser("final", help="suite table from the final-run box returns, then bench.py ingest")
+    f.add_argument("--final-dir", action="append", default=[], help="box return of final/final-box.sh (ret-<box>)")
+    f.add_argument("--ledger", help="partb-bench.sh ledger output dir (T23B_OUT) of the returned wraps")
+    f.add_argument("--settle", action="append", default=[], help="STATE.json=PROG/CALL (t10a-state.json of one ledger)")
+    f.add_argument("--rep-settle-dir", help="post-t25-settle.sh rep states: DIR/<label>/ledger/t10a-state.json")
+    f.add_argument("--suite", default=str(DEF["suite"]))
+    f.add_argument("--native-preview", default=str(DEF["native_preview"]))
+    f.add_argument("--out", default=str(CACHE / "final/suite"))
+    f.add_argument("--no-bench", action="store_true")
+    f.add_argument("--run", default="t23-final")
+    f.add_argument("--title", default="T23 final run on the T25 keys")
+    f.add_argument("--derived-tx", default="290")
+    f.add_argument("--upper-note", default="not measured in the final run")
+    f.add_argument("--preview-note", default="not settled: DERIVED (LEAD PICK SETTLE-REP)")
     sub.add_parser("selftest")
     a = p.parse_args()
     if a.cmd == "selftest":
         return selftest()
+    if a.cmd == "final":
+        return final(a)
     if a.mode == "dry" and a.settle != "dry":
         raise SystemExit("dry mode settles dry only")
     return run(a)
