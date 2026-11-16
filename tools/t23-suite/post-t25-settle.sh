@@ -152,7 +152,7 @@ PY
     case "$T10_NET" in preview) ;; *) echo "refuse: not preview" >&2; exit 1;; esac
     if [ $ph = call ]; then
       test -s $C/ledger/t10a-state.json || { echo "deploy first" >&2; exit 3; }
-      export HP_CALLS=$C/prover-calls HP_WRAP_VK=$P/wrap.vk HP_TAG=t25-$TAG HP_REMOTE=$REMOTE HP_REMOTE_ARGS="$RARGS" HP_BOX=odin \
+      export HP_CALLS=$C/prover-calls HP_WRAP_VK=$P/wrap.vk HP_TAG=t25-$TAG HP_REMOTE=$REMOTE HP_REMOTE_ARGS="$RARGS" HP_BOX=${T23_BOX:-odin} \
         HP_BOX_ROOT=/home/charl/sherlock HP_MEM=${HP_MEM:-80G} T10A_PROVER=$SDK/box/box-preview-prover.sh T10A_REFUSALS=$REF
     fi
     ( cd $SDK && node t10a-ledger-run.mjs $ph $COMMON --out $C/ledger ) > $P/logs/$TAG-$ph.log 2>&1; rc=$? ;;

@@ -30,6 +30,8 @@ fail3(){ echo "$*" >> "$RO/pins.log"; echo 3 > "$RO/rc"; exit 3; }
 export PATH=$HOME/.local/bin:${PATH:-/usr/bin:/bin} T6_SLICE_JSON=$H/in/slice_v1-67868363.json \
   T16_PROFILE=$H/setup/profile.json E5_SRS_DIR=$H/srs RAYON_NUM_THREADS=20
 unset RUSTUP_TOOLCHAIN SHERLOCK_TEST_SEED GW_DET GW_CHIP_SEED GW_SEED T14_SPANS T7_TRACE_DIFF
+# a box other than odin (tyr, 2026-11-16) sets its own VK, W, HS, PM_CHAIN, PM_WRAP and RAYON_NUM_THREADS here
+[ -f "$H/in/t23-final/prove.env" ] && . "$H/in/t23-final/prove.env"
 sha256sum -c --quiet >> "$RO/pins.log" 2>&1 <<PIN || { echo 3 > "$RO/rc"; exit 3; }
 6faac46fa12e5fc1b561e033f301f055117144cd3dd6a020f5a5f675704d6d5b  $VK
 678683632738ea18ea05714434614134e5ed1ea49d6f0205ce9388f720b26ed8  $T6_SLICE_JSON
@@ -44,6 +46,6 @@ export SHERLOCK_SDK_ROOT=$S
 echo "prover $DEV $X $(sha256sum "$X" | cut -c1-16)" >> "$RO/pins.log"
 st(){ local n=$1 m=$2; shift 2; local t0=$(date +%s.%N); ( cd "$S" && "$HS" --mem "$m" --name "t23r-$n-$(basename "$RO")" -- "$@" ) > "$RO/$n.log" 2>&1; local rc=$?
   awk -v n=$n -v rc=$rc -v a=$t0 -v b=$(date +%s.%N) -v l="$(cut -d' ' -f1-3 /proc/loadavg)" 'BEGIN{printf "%s\t%s\t%.2f\t%s\n", n, rc, b-a, l}' >> "$RO/times.tsv"; return $rc; }
-st chain 56G "${LOCK[@]}" "$X" rslchain call "$KDIR" "$CALL" "$RO/vector.json" "$RO/call-lfr.json" || { echo 1 > "$RO/rc"; exit 1; }
-st wrap 64G env E6_EXPECT_VK="$VK" "$W" "$RO/call-lfr.json" "$RO/wrap" 21 0 "$FX" || { echo 2 > "$RO/rc"; exit 2; }
+st chain ${PM_CHAIN:-56G} "${LOCK[@]}" "$X" rslchain call "$KDIR" "$CALL" "$RO/vector.json" "$RO/call-lfr.json" || { echo 1 > "$RO/rc"; exit 1; }
+st wrap ${PM_WRAP:-64G} env E6_EXPECT_VK="$VK" "$W" "$RO/call-lfr.json" "$RO/wrap" 21 0 "$FX" || { echo 2 > "$RO/rc"; exit 2; }
 echo 0 > "$RO/rc"
