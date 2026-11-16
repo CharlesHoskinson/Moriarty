@@ -5171,3 +5171,8 @@
 ## [2026-11-16 15:05] issue | F-1: Preview acceptCollection cannot be proved today
 - The write entries carry the universal wrap key 6faac46f; a wrap of the collection statement [reg_pub, claims_root] needs the `L` collection form (T8b, not built). No acceptCollection call was ever proved on devnet or Preview.
 - One ledger per program stays: the wrap pins lane 10 to the program's C_P (T23-SETTLE), so one ledger cannot take acceptRun calls of several programs (Q-settlement-1).
+
+## [2026-11-16 15:13] build | tyr GPU containers via CDI
+- Install double check passed: Codex APPROVE, Opus APPROVE (~/.cache/install-check/tyr-nvctk/).
+- tyr: nvidia-container-toolkit 1.19.0-1 from the configured NVIDIA repo; apt simulation showed 4 packages only, no driver, docker or CUDA change.
+- CDI spec /etc/cdi/nvidia.yaml; `--device nvidia.com/gpu=all` shows the RTX 5090 Laptop GPU; no docker restart; proof-server and emqx stayed up.
