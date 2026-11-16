@@ -5131,3 +5131,8 @@
 ## [2026-11-16 14:20] qa | T15 Carbon Quint QA: two slots running (T12 on odin, T25 finish in the agy pane)
 - odin headless Carbon: lane qa-20261116-t12-gate synced to ~/sherlock/t15-quint/qa-20261116-t12-gate (paths and quint 0.33.0 edited in PROMPT.md; settings allow only quint typecheck/test/run and reads/writes in the lane folder; git, ssh, cargo, .exe, /mnt/c denied); unit t15q-t12-gate, print timeout 85 min.
 - Pane w1:p1C: the T25 lane (model, tests, three ITF traces already written; no REPORT) copied into the pane cwd (qa-20261114-t16-cde/qa-20261116-t25-rekey); continuation prompt: run the commands, write REPORT.md, no remodel. The value-digest lane that was interrupted in the pane at about 13:28 is left unfinished.
+
+## [2026-11-16 14:35] decision | T15 freeze item F-1: merge T20 batched writes into the deployed contract
+- Owner: "add the T20 batching fix to the T15 freeze"; new research/sherlock-tested-design-20261113/T15-FREEZE.md, linked from the T15 row.
+- t20-batched 5dc1be2ee is in neither main nor the deployed T23 contract 705f1ef95, which still has per-claim openClaim and a runs insert per acceptRun.
+- LEAD PICK: merge after the T23 settle ends, re-run the T20 checks, Preview acceptCollection plus acceptRun; T20 row now reads DONE ON BRANCH ONLY.
