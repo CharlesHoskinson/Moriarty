@@ -5141,3 +5141,8 @@
 - 208 calls: 142 pass, 62 refused-as-native, 3 blocked (secp256k1, keccak), 1 n/a; 0 mismatch; invariant ok (Moriarty-wt/t23-final 28ce82150).
 - 9 rep programs and t02 settled on Preview; j02 and z03 proved on tyr after the odin-source mismatch; 21 included tx.
 - bench ingest fix: ledger times.tsv rows from partb-bench lacked the box column; rows rewritten to the bench schema (original kept as times.tsv.pre-schema-fix).
+
+## [2026-11-16 14:55] lane-done | Sherlock e2e Formal-Quint A/C: lead rerun, counterexamples, tasks reconciled
+- sherlock-e2e-spec bae046079: ten A/C Quint models committed; the lead reran all 17 contexts on muninn (594 REPORT commands) and every one AGREES (formal/sherlock-e2e/RERUN.md); the A/C oracle replay was not run.
+- 52 A/C Q-findings checked on code: 4 CONFIRMED (Q-compact-compilation-1, Q-conformance-1, Q-conformance-3, Q-settlement-1) plus NEW-LVR-006 (the settle runner skips the native ledger check when no validator is set); checks are in tests/quint-regressions/e2e-ac/.
+- sherlock-e2e-spec bdff91183: e2e-prototype tasks.md has 16 of 80 tasks ticked with citations and 64 open; still needs a lane: the A/C replay and Carbon QA (T15 driver).
