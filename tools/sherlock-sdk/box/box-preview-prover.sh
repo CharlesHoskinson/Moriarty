@@ -33,7 +33,7 @@ for i in $(seq 1 720); do  # up to 4 h
   [ -n "$rc" ] && break
 done
 mkdir -p "$d/wrap"
-rsync -a $BOX:$RO/times.tsv $BOX:$RO/chain.log $BOX:$RO/wrap.log "$d/" || true
+rsync -a $BOX:$RO/times.tsv $BOX:$RO/chain.log $BOX:$RO/wrap.log $BOX:$RO/pins.log "$d/" 2>/dev/null || true
 [ "$rc" = 0 ] || { echo "prover: $BOX rc=${rc:-timeout}; see $d/chain.log $d/wrap.log" >&2; exit 1; }
 rsync -a $BOX:$RO/wrap/wrap.proof $BOX:$RO/wrap/wrap.public.json $BOX:$RO/wrap/wrap.vk "$d/wrap/"
 cmp -s "$d/wrap/wrap.vk" "$vk" || { echo "prover: wrap.vk differs from the deployed key" >&2; exit 1; }

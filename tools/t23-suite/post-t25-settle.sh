@@ -30,7 +30,10 @@ vk(){ [ -s $P/wrap.vk ] || install -m 644 $R/t10/out/key-k21/wrap.vk $P/wrap.vk
 COMMON="--vk $P/wrap.vk --args $C/ledger-args.json --build $BUILD --anchor-slot 15"
 log "$ph start"; t0=$(date +%s.%N)
 case $ph in
-  args) python3 $HERE/settle_args.py $SRC $PUB $C/ledger-args.json $MODE; rc=$? ;;
+  args)
+    # the T25 sources left muninn in the return-hygiene pass (2026-11-16 04:24): then re-verify the kept args file
+    if [ -s $SRC ]; then python3 $HERE/settle_args.py $SRC $PUB $C/ledger-args.json $MODE; rc=$?
+    else python3 $HERE/settle_args.py $C/ledger-args.json $PUB /dev/null $MODE; rc=$?; fi ;;
   dry)
     vk; test -s $C/ledger-args.json || { echo "run args first" >&2; exit 3; }
     rm -rf $C/dry; mkdir -p $C/dry
