@@ -5155,3 +5155,19 @@
 ## [2026-11-16 15:05] push | Moriarty main and work branches (owner: "you can push")
 - main 4ea6fa29d..b9d7d5f9c; new branches t23-final, sherlock-e2e-spec, t20-batched.
 - Scan before push: no secret-class files, no wallet material, no attribution trailers; t17 call-vector fixtures hold only the public on-chain words.
+
+## [2026-11-16 14:45] lane-start | T15-FREEZE F-1: merge t20-batched into the deployed T23 line (worktree f1-batched)
+- Branch `f1-batched` from `t23-final` a1b4836c6 (T23 settle over); merge of `t20-batched` 5dc1be2ee.
+- Scope: rebuild the batched SherlockLedger, rerun the T20 checks, Preview acceptCollection and acceptRun, re-settle the T23 reps, fix the e2e-ac findings NEW-LVR-006 and Q-settlement-1.
+
+## [2026-11-16 14:52] commit | f1-batched 195609fb4: merge t20-batched into t23-final
+- Two add/add conflicts: `sherlock-ledger.compact` takes T20 (acceptCollection over claims_root, read entries, no openClaim); `t10a-ledger-run.mjs` takes T23 (slot 15, suite mode, SLC-001 readback).
+- `acceptRun` is word-equal on both sides; the rebuilt acceptRun.zkir and verifier key are byte-equal to the T17 build.
+
+## [2026-11-16 15:20] qa | F-1: T20 checks on the merged commit 195609fb4
+- t20-ledger.test 11 pass 0 fail on the compiled batched contract (~/.cache/f1/build); t20-measure lanes 42/48/17 equal to T20.
+- Quint lead models: design Inv ok on 6 runs, every mutant violates Inv, every witness reached; Carbon QA lane rerun (38 commands) equal to the T20 lead rerun (research/sherlock-f1-batched-20261116).
+
+## [2026-11-16 15:25] issue | F-1: Preview acceptCollection cannot be proved today
+- The write entries carry the universal wrap key 6faac46f; a wrap of the collection statement [reg_pub, claims_root] needs the `L` collection form (T8b, not built). No acceptCollection call was ever proved on devnet or Preview.
+- One ledger per program stays: the wrap pins lane 10 to the program's C_P (T23-SETTLE), so one ledger cannot take acceptRun calls of several programs (Q-settlement-1).
