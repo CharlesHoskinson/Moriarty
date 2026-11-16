@@ -4703,3 +4703,79 @@
 - Open: persist/flush (MBK-003), the Tree8 tail open (MBK-002), 9 mutants, and Lean O14-O16. C1 dense model re-run: 30/30, 23 mutant modules violate invRefine.
 - Blocker for batch 3: MemAir never flushes, so pre.root holds no records and cold reads cannot succeed in a real leaf. Task 1.3 had no owner; it is now assigned to the membackend lane together with flush.
 - LEAD PICK MBK-TAGCAP: node tags go in the capacity word, as MBK-002/E-2 require (the lane used the first rate word).
+
+## [2026-11-15 20:12] build | EUI kit 2.3 STACKS: openvm kit-stacks d007862; X.3 hash-stack Quint run by the lane
+- StacksAir (FRAMES + TASKS): compound step, depth/domain-tagged Poseidon2 chain, STK-002 shape gates, a u64 count that cannot wrap; port stack_step j=9; 5 positives, 13 mutants. Check passes at 88d811d; no box run yet; no key change (no chip set).
+- X.3 hashStacks.qnt: 49/49 commands give their expected exit codes, Apalache passes, 13/13 mutants caught (stack_count_unchecked only with forged pre cells). Carbon lane queued in the Carbon pane after the Formal-Quint lanes; the lead re-run is owed.
+- Lean O11 proved (HashStacks.lean; premise: injective hash). O46 open. Open: FRAMES interactions vs the SHP-006 bound of 200.
+
+## [2026-11-15 20:21] qa | lfr_e3 lane 6: stale fixture, no regression; EUI-010 batch 2 committed (73 of 120)
+- fixture-t10m was proved before T12-SLOT15 moved the anchor to slot 15 (iface.rs:112 ANCHOR_SLOT=15; tpl_ord lane 6 = c(15), was c(0)), so decode_with correctly refuses it (iface.rs:886). ~/.cache/rekey-t25/E3-DIAG.md.
+- Step 3.7 (lfr_e3 + i7_decode at slot 15) moves to after T25 keygen: the fixture is regenerated with the T25 keys. Not a keygen blocker.
+- openvm eui010: e14e631 batch 2 (21 ROM rules, 73 of 120 built), 652c884 decrement borrow fix (EUI010-DEC). The box request from the EUI-010 lane is pending.
+
+## [2026-11-15 20:26] qa | huginn profile (h188): ~128 s of a 261.5 s warm call is 7 commits of 3 distinct child VKs; GPU idle 97%
+- commit_child_vk_meta (LDE + BLS12-381-Fr Poseidon Merkle commit on CPU, ~18 s each) runs 7x per warm call over 3 distinct inputs (N3, path-C leaf sets 0/1). It is deterministic across processes. An in-process memo saves ~73 s; a cross-process cache ~128 s (ESTIMATE). Started key-neutral lane vkmemo (openvm branch vkmemo from 8a17c34).
+- L prove is ~97% CPU BLS-Fr Poseidon (mulx_mont 56%); DFT, sumcheck and constraint eval are each under 1%. Inside L_Fr "GPU" prove, zerocheck 12.2 s, WHIR 8.5 s and the iDFT run on CPU; the L_Fr key load is 8.2 s of serde. Report ~/.cache/perf-assessment/profile-huginn/REPORT.md.
+
+## [2026-11-15 20:26] commit | Slot-15 /check fix landed on t23-suite (d5fda4949, 581596c01); verdict sound
+- The stock acceptRun zkir makes key 0 a constant at transcript input 4; the slot-0 and slot-15 preimages differ only there. /check runs on our side only; on chain the wrap key pins lane 6. Now: both preimages are built and assertSlot15CheckEquivalent is asserted; the slot-0 preimage goes to /check in every phase.
+- Test anchor-slot-check.test.mjs (4 tests; fails at 93987152e, passes after). Box prover hooks committed in tools/sherlock-sdk/box/.
+
+## [2026-11-15 20:50] plan | EUI-010 batch 2 box request 3 sent to odin (m71), the T25 critical path
+- Request ~/.cache/eui010/box-request-3.md (391d39c6): eui010 652c884 (batch 2 + EUI010-DEC) vs 85765aa; probe v4 vectors (ee458c91) on Moriarty sherlock-e2e-spec 5a4ca4386; batch 1+2 traces (66 RULES_X), P3, gate, regression, keygen and key probe.
+- odin pauses scale-s5-pre at a step boundary to resume later. CORE shape first: over 4,500 constraints triggers EUI010-SPLIT before T25.
+
+## [2026-11-15 20:53] qa | EUI-010 batch 1+2 CORE shape MEASURED on odin (h178): 4,137 constraints, no split needed before T25
+- 652c884 chip set 0: CoreAir 962 columns, 4,137 constraints (under the 4,500 split trigger and the 5,000 bound), 149 interactions, pv 54; 7 AIRs, 2,768 columns. RomAir 1,223 columns / 121 constraints / 77 interactions.
+- Part A probe v4: rc 0, 102 rules fired, 0 refused programs (same as v3); rule_vectors.json ccaea05f. Parts B-E running.
+
+## [2026-11-15 21:01] decision | Owner: keys stay open until the final design; 3 Fable + 3 Astra debate converge on the optimal design
+- Owner: "we can change keys until we have a final design. We are looking for the optimial design have 3 fable and 3 astra agents talk to each other, debate, and converge to a final design that improves performance".
+- Owner: "Record it in Wiki-LLM and update our EARS and OpenSpecs for the next ieration. We will hillclimb towards it on Huginn and Odin once we are done with the prototype".
+- Debate in ~/.cache/design-debate (BRIEF.md 8efa0303, ROLES.md). Roles: fable-1 recursion, fable-2 prover systems, fable-3 protocol/settlement; astra-1 fields/hashes/PCS, astra-2 circuits/AIRs, astra-3 red team (gpt-6-astra, codex, read-only). Rounds R1 proposals, R2 cross-critique, R3 votes on a ledger; then FINAL-DESIGN.md with dissent kept.
+- Hard-rule changes are listed as OWNER QUESTIONS, never adopted; T25 tonight stays a prototype rekey. After convergence: a new OpenSpec change with EARS requirements per module for the next iteration. Hill-climb on huginn and odin after the prototype (T15).
+
+## [2026-11-15 21:05] qa | T25 pre-check 3.7: lfr_e3 "anchor template lane 6" is a stale fixture, not a t25-int regression
+- Cause: fixture-t10m (a41cbbed) was proved on openvm t10mm 5b7ada8 (2026-11-14 15:20), before T12-SLOT15 4ea3d05; its L words have lane 6 (the anchor `idx` key) = 0, and iface.rs:126 tpl_ord pins lane 6 to ANCHOR_SLOT = 15 (iface.rs:112, check iface.rs:886-888)
+- MEASURED on muninn (heavy-slot lfre3, host only): 8a17c34 as is reproduces the panic at lfr_e3.rs:411; 8a17c34 with ANCHOR_SLOT = 0 passes all 46 decode cases and writes lfr-e3-decode.json, so lane 6 is the only delta
+- Fix: regenerate the L_iface fixture with iface_fixture on odin at 8a17c34 into a new dir (fixture-t25), then rerun lfr_e3 0 and i7_decode; no code change; T25 keys not affected (t7_chain does not read e3-iface). Report ~/.cache/rekey-t25/E3-DIAG.md
+
+## [2026-11-15 21:07] commit | Mycroft T24 6c93d6421: KRS port of the secp256k1, keccak256 and EcAdd kits; Quint A10 fixed
+- Branch mycroft-factory, not pushed. The KRS definition gains Kit::Secp256k1 with 15 chips, EcAdd (jubjub) and Kit::Keccak256. This is the ECC-007 sync of b119a63e3: keccak256 is no longer a tier 3 chip. There are 3 new missing-kit toy cases and 3 new kit mutations.
+- MEASURED gates: full compare 213 equal, 0 different, 1 could-not-apply (as before). oracle-equal 107 equal. golden current. coverage open 0. mutations 65 (61 killed, 4 argued).
+- Finding A10 (replay): the Quint model checked the tape word before the guard, and 3 traces disagreed with the oracle. Decided as the oracle, KRS and Rust do: guard first. Covered by guardBeforeTapeTest, Rust test a10_guard_checked_before_tape_word and replay/regress/a10. Replay now has 0 differing.
+- openvm rekey-chips fffd9ba (not pushed): mycroft-emit uses Kit::Keccak256, and the s02 keccak test data is re-emitted. rsl_exec gives 148 of 148 equal. ~/.cache/rekey-chips/calls4/ holds 5 calls. Box request: ~/.cache/t24/box-request-t24.md.
+
+## [2026-11-15 21:08] qa | T24 final: Mycroft KRS port of secp256k1/EcAdd/keccak (6c93d6421); 148/148 re-emitted calls equal
+- mycroft-factory c761b9138, 5b2f6047d, 6c93d6421 + openvm fffd9ba: rsl_exec 148/148 equal; suite 148 equal, 0 refused; KRS full compare 213 equal, 1 could-not-apply; mutations 61 of 65 killed, 4 argued; coverage 0 open.
+- LEAD PICKs for T15: Point<Jubjub> args = 2 tape words + one FromCoordinates chip; Quint A10 fixed by checking the guard first (regression tests in Quint, Rust and replay).
+- The requested box proofs of the 5 calls4 files are covered: huginn h181 (GPU+CPU) and odin h172 proved calls4 5/5; odin pre-check rsl-keccak 6/6 on 8a17c34. Native Jubjub decode checks only y and the sign of x; Mycroft matches it.
+
+## [2026-11-15 21:11] commit | STACKS formal: X.3 hashStacks.qnt + Lean O11, O46 committed (sherlock-e2e-spec 6fa88e9ae)
+- T0 PASS. Lean O11 (step_refines, restore_returns_spilled, abs_count_one) and O46 (partition_independentC, partition_independent_flushC) proved; axioms within propext/Quot.sound/Classical.choice.
+- DERIVED from StacksAir at d007862: FRAMES 373 columns / 455 constraints / 73 interactions; TASKS 175 / 224 / 35; both under the SHP-006 bounds (200 interactions, 1,000 constraints). Re-check rc 0; box request a80d173f.
+- Design debate R1: fable-2 (prover systems) and fable-3 (protocol and settlement) written; fable-1 and astra-1..3 pending.
+
+## [2026-11-15 21:21] build | vkmemo: memo + checked disk cache for commit_child_vk_meta (openvm vkmemo c88eb39, key-neutral)
+- crates/recursion batch_constraint/vkmemo.rs: process memo plus an optional VKMEMO_DIR file keyed by sha256 over (format, exe, config, SystemParams, height, full child-VK bitcode), with a self-hash trailer. On any failed check it recomputes and rewrites; VKMEMO=off disables it. Public VK data only, no RNG.
+- 3 host tests pass (memo/disk equal a fresh commit; 9 kinds of corruption + a missing file fall back). ESTIMATE: warm call 261 -> ~135-140 s with a warm disk cache; ~-54 s on top of gpu-leafl's l_pcs memo.
+- Box request ~/.cache/vkmemo/box-request.md (9e649a8b) queued for huginn after S5: byte-equality of keys and proofs, per-stage times, ledger check.
+- Design debate: all 6 R1 proposals written; R2 cross-critique running. Batch-2 box run on odin: every step passes except quint_regressions (5 "no manifest row" + gp2 m-rom-no-tbl-bind now refused by CoreAir #647); full report pending.
+
+## [2026-11-15 21:29] commit | ALU kit db0884d + Lean O4 closed (sherlock-e2e-spec 04142f15b); a shared-index commit mix-up
+- kit-alu db0884d adds the EQ boolean (LEAD PICK ALU-EQBOOL); EQ/MUL inverses stay unranged (z and flag are the same for every inverse; reason documented); check rc 0. aluArith.qnt 22/22 incl. eqBoolRedundant. Lean O4: 2013265921 prime by decide +kernel, plus per-op row theorems add/sub/lt/eq/mul_row; no sorry.
+- Box request 8fe35791 (119 constraints expected); Carbon prompt ready. No key change.
+- Issue: VDG commit 21d25b519 also took the MEM lane's MemContract O14-O16 files, because they were staged in the shared worktree index. Rule for all lanes there: commit by pathspec.
+
+## [2026-11-15 21:36] decision | Design debate R2 done, R3 ledger: 22 contested, 6 owner questions, 28 agreed
+- R2 cross-critiques by all six agents are in ~/.cache/design-debate/R2/. The chair (Fable, not a debater) wrote R3/LEDGER.md: C-01..C-22, OQ-1..OQ-6, 28 agreed items, 15 corrections checked against code.
+- Sharpest disputes: (1) collector run over GP-2 modes with N1-N3 unchanged vs paired-root certificates that move node keys; (2) new L seal vs FP-3 record only; DL-STEP opens LEAF/DEP heads only (gp.rs:20-21), so FOREIGN members in a collector is a GP-3 flag; (3) L_Fr blowup 2 now vs blowup 3 as control until 2 wins measured latency.
+- Corrections: blowup-2 query vector 120/87/82/82 falls below 100 bits (minimum 120/89/83/82); the T25 shape needs 24 stacked columns at n_stack 19; MERGE-WORK 5,417 is stale (4,988 measured).
+- R3 votes launched (3 Fable via resume, 3 Astra via codex).
+
+## [2026-11-15 21:44] decision | Design debate FINAL-DESIGN.md: 22 items decided, 6 owner questions; ties go to an Opus audit
+- ~/.cache/design-debate/FINAL-DESIGN.md: 14 items by majority, 8 by the chair (7 ties at 3-3 Fable vs Astra, all to the Fable side, plus C-04). Collector run with an FP-3 record, gated on E-COLL (fallback: paired-root certificates); DL-STEP gains a FOREIGN head so GP-3 is not narrowed; L_Fr stays at blowup 3 unless blowup 2 wins E-PCS (4-2).
+- Warm lone call: 301.24 s MEASURED -> 134 s resident DERIVED -> 41-45 s merged GPU DERIVED -> ~40 s (blowup 3) or 32-35 s (blowup 2) after the rekey ESTIMATE -> 24-30 s with kernels ESTIMATE. Collections 4,500-7,200 runs/h per 4-card box ESTIMATE.
+- 6 owner questions, none adopted; all six agents advise against OQ-1 (list decoding) and OQ-2 (cross-owner checkpoints).
+- The chair is a Fable model, so an Opus lane audits the 8 chair decisions (TIE-AUDIT.md), then writes the OpenSpec change sherlock-optimal-design-20261115 with EARS requirements.
