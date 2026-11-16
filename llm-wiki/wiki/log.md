@@ -4596,3 +4596,60 @@
 
 ## [2026-11-15 17:45] qa | T23 Part B GPU rehearsal wrap proof passes the ledger 9.1.0.1 verifier on muninn
 - huginn h163 wrap-call (feceb2ee, vk b7f5e43c): stock ledger-9.1.0.1 verify Ok(()); changed public inputs and flipped proof bytes all refused. Log ~/.cache/t23/partB-r3gpu-huginn/bench/logs/ledger-r3gpu-huginn.log.
+
+## [2026-11-15 18:09] qa | Sherlock e2e Formal-Quint: box-fleet context done; GPV-001 text conflicts with the code
+- Odin rerun 43/43, 29 mutants killed; 1,428 projected chains: 2,143 transitions and 487 refusal checks agree with the Lean oracle; the negative control disagrees.
+- F-box-fleet-Q6 CONFIRMED: t16.rs:512 proves on the GPU only when the schedule picks it; GPV-001 says GPU in every cuda build. The oracle follows the text, so 119 CPU-schedule transitions are excluded until the text changes (D-box-1).
+- Q1 CONFIRMED (wrapd draws OsRng per proof, no slot pool); Q4 GUARD HOLDS (heavy-slot sums memory to 64G under a 72 GiB slice); Q2, Q3, Q5 OPEN DESIGN.
+
+## [2026-11-15 18:16] issue | T11 byte-difference cause found: HashMap row order in the leaf's EqBitsAir trace
+- huginn h167/h168 layer probe (2 back-to-back CPU calls, one statement): app proofs equal; lowest differing layer = leaf; of its 40 AIR traces only ctx[29] (VerifierSubCircuit stacking EqBitsAir) differs.
+- Cause: openvm crates/recursion/src/stacking/eq_bits/trace.rs:41,119-123 iterates a std HashMap (per-process RandomState); only cfg(test, cuda) sorts. Same multiset of rows, new permutation per process; the bus-balanced AIR accepts it; statement unchanged; every proof above the leaf differs.
+- Proposed fix (LEAD PICK T11-DET, pending huginn h169 confirmation): iterate b_value_map sorted in every build. Trace order only, no key change. No soundness or ZK impact either way.
+
+## [2026-11-15 18:26] qa | T23 Part B rehearsal on odin GPU L_Fr (RTX 5090, WSL2) passes on t23-int d485639
+- odin h160, every step rc 0: builds ovm 70.3 s, lfr 100.5, emit 25.4, wrap 22.9; app leaf cold t02 8.7 s, s02 keccak 9.5 s; chain-A cold 1,375 s (T7CHAIN PASS, one universal key set); L_Fr key GPU cold 308.6 s; args warm 95.0; L_Fr call GPU warm 302.8; wrap CPU cold 105.6 (prove 57.0 s, 2,912 B, vk 1,325 B b7f5e43c).
+- LFRSHAPE 34 + 13 = 47 of 48; wrap k=21 1,762,714 rows (gate 1,782,573). Same wrap.vk as huginn CPU/GPU and r3. Wrap proof 5ec5924d to muninn ledger-check.
+
+## [2026-11-15 18:33] qa | Control run: rekey-int 3af5323 adds no key change (T25 change = EUI-010 batch 1 + P3)
+- odin h161: 3af5323 keys vs eb2bd12 all EQUAL below L_Fr (N1 sets 0/1/2, N2, N3 fixed point, NW2, FV, MERGE-WORK, NW, app/leaf sets 0/1/2, path C app/leaf S=8, L over N3, key_root 2187d3c8, keys_d 563c227d, n1_pre 1c84c37a); gp2 48/48. L_Fr not reached (LFRWIDE 54 on that tree, expected).
+- Next odin m66: full calls3 (73) + calls4 R_SL suite on t23-int d485639 for the T23 BENCH per-contract rows.
+
+## [2026-11-15 18:34] decision | LEAD PICK T11-DET: EqBitsAir rows sorted in every build; STARK proofs become deterministic
+- huginn h169: scratch copy with only eq_bits/trace.rs sorted; 2 back-to-back CPU calls: all 609 layer hashes equal, call-lfr.json byte-identical (6fade8f3). Fix goes to openvm t25-int (no key change).
+- Consequence: Moriarty t11-zk stark_check.py ("x1, x2 differ in bytes") must become "same statement, bytes may be equal"; the wrap stays randomized (OsRng). T25 adds a determinism gate.
+
+## [2026-11-15 18:35] qa | Sherlock e2e Formal-Quint: assurance context done; replay agrees
+- Odin rerun 38/38, 24 mutants killed; 606 projected chains: 1,497 transitions and 471 refusal checks agree with the Lean oracle; the negative control disagrees.
+- F-assurance-Q4 CONFIRMED by the T11 counterexamples (check_export denylist, args.json 0664 with r_P and salt); Q3 CONFIRMED (no blinding slot in wrapd); Q1, Q2, Q5, Q6 OPEN DESIGN.
+- D-assure-1: the model makes wrap proofs before any prepared run; the oracle refuses per ZK-013, so those 98 transitions are excluded.
+
+## [2026-11-15 18:45] qa | odin GPU rehearsal wrap passes ledger 9.1.0.1; GPU wrap on the r3 circuit measured
+- odin h160 wrap-call 5ec5924d (vk b7f5e43c): stock ledger-9.1.0.1 verify Ok(()) in 0.13 s; 7/7 changed public inputs and 3/3 flipped bytes refused.
+- huginn h176 GPU wrapd (w1 GPU hooks ported onto the r3 sherlock-wrap, scratch build, wrapd 812e0a9f): cold srs+keygen 34.9 s, prove 15.5 s; warm proves 15.5/14.3/14.2 s in one serve; 2,912 B, vk equal b7f5e43c, library and stock verify pass; device peak 12.85 GiB. CPU wrap prove was 52 s.
+
+## [2026-11-15 18:49] decision | Owner: rekey now on EUI-010 batches 1+2, second rekey later; Preview rehearsal settle tonight
+- Owner (present, ~19:00): T25 rekeys on batches 1+2 (73 of 120 rules); batches 3-6 need kits 2.1 ALU, 2.4 heap read, 2.5 VALUE DIGEST + CORE appends, 2.3 STACKS (X.3 Quint first), started now as four parallel Opus lanes (brief ~/.cache/eui-kits/BRIEF.md); EUI010-SPLIT before batch 3.
+- Owner: settle a Preview rehearsal tonight on the pre-T25 keys (wrap.vk b7f5e43c): t02 R_SL call + stand-in A; lane writes ~/.cache/t23/preview-rehearsal/RESULTS.md.
+- T25 prep done: openvm t25-int 8a17c34 (t23-int + eui010 85765aa + rekey-chips fffd9ba + pathc fix 57501f3 + T11-DET); cargo check clean; COVERAGE 0 key gaps; box request 01096f17; pre-check sent to odin m67. Huginn warm GPU wrap e32cd45e ledger Ok (0.11 s).
+
+## [2026-11-15 19:03] qa | huginn calls suite GPU vs CPU app prove (h181): 78/78 equal on both devices
+- Tree d485639 + local rsl-gpu.patch da7cd194 (uncommitted, scratch); calls3-a 73/73 and calls4 5/5 proved on GPU and CPU; exec equal to native, debug and stock CPU verify accept, status identical across devices.
+- App prove sums: calls3-a GPU 18.85 s vs CPU 612.61 s (~32x; warm median 0.243 vs 8.03 s); calls4 GPU 2.53 s vs CPU 77.52 s (~30x). Copy ~/.cache/t23/calls-gpu-huginn (RETURN dcea3b94).
+- Next on huginn (m84): all-GPU end-to-end t02 run (app, chain, L_Fr, wrap) for the T23 BENCH table.
+
+## [2026-11-15 19:04] issue | Only app prove and L_Fr run on GPU; leaf..L are CPU-only (huginn h183)
+- In d485639, rsl_chain's leaf<1>, N1, N2, N3 and L are hard-typed to the CPU engine (t7_chain.rs:76). The h163 "GPU" rehearsal ran L_Fr on GPU (26.9 s) and leaf..L on CPU (l_prove 67.6 s).
+- The T23 BENCH all-GPU row (m85, option A) labels the device of every stage: app GPU, leaf..L CPU, L_Fr GPU, wrap GPU.
+- Open design item (not started): a backend-generic GPU port of the sherlock recursion layers (stmt AIR, leaf/node kinds, FP-3/slot-15 AIRs); upstream recursion has CUDA tracegen.
+
+## [2026-11-15 19:09] decision | Owner: start performance work; leaf->L GPU port lane and a Fable 5.2 optimization assessment
+- Owner (present): "start the leaf→L GPU port lane also have a fable 5.2 agent study what we have and give me an assessment how much optimization is possible".
+- Opus lane gpu-leafl from openvm t25-int 8a17c34: a key-neutral GPU port of leaf<k>, N1-N3 and L (VK/pre_hash byte-identical, CPU verify); muninn checks only; box request waits for the end of the critical path (~/.cache/gpu-leafl/).
+- Fable 5.2 assessor: ~/.cache/perf-assessment/ASSESSMENT.md (per-stage time, floor, key-neutral vs key-changing levers, target and ceiling); read-only.
+- Rule: key-changing performance work waits for the second rekey (EUI-010 batches 3-6), so it does not cause a third rekey.
+
+## [2026-11-15 19:12] commit | T0 heavy tests fixed on main (8b3df7924)
+- Cause: fix 843d833d0 existed on five branches but not on main. The copies test needed two 1 s sleeps to finish in under 1.9 s; the cgroup test found the slice only through its first child. Logs for 2026-11-14/15 show 88 + 72 failures.
+- Port is unchanged; 5/5 runs at load average 26-35 pass. Remaining: the tests still run in the shared heavy.slice (DW_HEAVY_SLICE option not used).
+- Owner asked for a multi-GPU scaling profile and a 4x RTX PRO 6000 Blackwell estimate; added to the Fable assessment (sections 6-8; scaling box request after the critical path).
