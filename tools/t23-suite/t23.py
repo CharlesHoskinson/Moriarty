@@ -351,6 +351,9 @@ class BoxProver:
 # a030afc26). LEAD PICK (T23-SETTLE, for T15): the ledger anchor of a program is the C_P of its runs (FP-3 A_0 = C_P);
 # the binding words come from t10a's tx build, so the wrap proof of a call is made by T10A_PROVER (the box prover of
 # the R_SL chain) for the 1,026-word vector that t10a hands it; the Preview submit time is submissions.A.seconds.
+# The proof server's /check (stock compactc zkir, prologue key 0) refuses slot-15 transcripts, so t10a checks the slot-0
+# preimage of the same circuit run after asserting the two differ only in input 4 (anchor-slot.mjs, Preview rehearsal
+# 2026-11-15). The box prover hook is tools/sherlock-sdk/box/box-preview-prover.sh (HP_* env, T17 (c)).
 SDK = WT / "tools/sherlock-sdk"
 T10A = SDK / "t10a-ledger-run.mjs"
 T17_IN = H / ".cache/t17/in"

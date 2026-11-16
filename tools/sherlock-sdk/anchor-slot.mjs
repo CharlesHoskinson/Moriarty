@@ -59,3 +59,37 @@ export function prologueToSlot15(rt, ops) {
   }
   return [d, {idx: {...ix.idx, path: [c.key(ANCHOR_SLOT)]}}, ...ops.slice(2)];
 }
+
+// T23 /check at slot 15 (Preview rehearsal 2026-11-15). The proof server's /check runs the stock compactc zkir of
+// acceptRun, whose prologue impact is [0x50, 1, 1, 0x00]: the idx key is the constant 0 at public transcript input 4
+// (call-vector lane 6). That zkir therefore refuses every slot-15 transcript ("Public transcript input mismatch for
+// input 4"). The runner sends /check the slot-0 preimage of the same circuit run (same randomness, same TTL) and
+// uses its skips for the slot-15 call. That is sound only when the two preimages differ in input 4 alone (0 -> 15)
+// and the two partitioned programs differ in the op-1 idx key alone, with equal gas: then a stock check of the
+// slot-0 preimage is the check of the slot-15 preimage against the key-15 zkir. This function refuses any other
+// difference. (All acceptRun impacts have the constant guard 1, so the skips are all empty either way;
+// paddedCheckResult refuses any other skips.)
+export const PROLOGUE_KEY_INPUT = 4;
+const canon = x => JSON.stringify(x, (_, v) => typeof v === 'bigint' ? `${v}n` : v instanceof Uint8Array ? [...v] : v);
+const PREIMAGE_FIELDS = ['tag', 'inputs', 'privateTranscript', 'publicTranscriptOutputs', 'bindingInput', 'communicationsCommitment', 'keyLocation'];
+
+/** pre0 and pre15: decoded preimages (e6-padding decodePreimage) of the slot-0 and slot-15 builds; g0 and g15: their
+ * guaranteed transcripts. Throws unless the only difference is the prologue key (input 4: 0 -> 15; op 1 idx path). */
+export function assertSlot15CheckEquivalent(pre0, pre15, g0, g15) {
+  for (const f of PREIMAGE_FIELDS) if (canon(pre0[f]) !== canon(pre15[f])) throw new Error(`slot-15 check: preimage field ${f} differs`);
+  const a = pre0.publicTranscriptInputs, b = pre15.publicTranscriptInputs;
+  if (a.length !== b.length) throw new Error(`slot-15 check: ${a.length} vs ${b.length} public transcript inputs`);
+  const diff = a.map((x, i) => x === b[i] ? null : i).filter(i => i !== null);
+  if (canon(diff) !== canon([PROLOGUE_KEY_INPUT]) || a[PROLOGUE_KEY_INPUT] !== 0n || b[PROLOGUE_KEY_INPUT] !== BigInt(ANCHOR_SLOT)) {
+    throw new Error(`slot-15 check: public transcript inputs differ at [${diff}], not only input ${PROLOGUE_KEY_INPUT} 0 -> ${ANCHOR_SLOT}`);
+  }
+  const p = g0.program, q = g15.program;
+  if (p.length !== q.length) throw new Error(`slot-15 check: ${p.length} vs ${q.length} ops`);
+  const opDiff = p.map((op, i) => canon(op) === canon(q[i]) ? null : i).filter(i => i !== null);
+  const pathless = op => canon({...op?.idx, path: null});
+  if (canon(opDiff) !== canon([1]) || !p[1]?.idx || pathless(p[1]) !== pathless(q[1])) {
+    throw new Error(`slot-15 check: programs differ at ops [${opDiff}], not only the op-1 idx key`);
+  }
+  if (canon(g0.gas) !== canon(g15.gas)) throw new Error('slot-15 check: gas differs');
+  return {input: PROLOGUE_KEY_INPUT, from: 0n, to: BigInt(ANCHOR_SLOT)};
+}

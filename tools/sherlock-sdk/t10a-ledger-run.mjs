@@ -34,6 +34,9 @@
 //   T10A_DUMMY_PROOF   (dump, dry-run) proof used to finish the tx for the shape checks
 //                      (default ~/.cache/e5-wrap/out/lfr-real-k21/wrap.proof)
 //   T10A_TTL_S         intent TTL in seconds (default 14,400)
+//   T10A_DRY_CHECK=server  (dry-run) ask the proof server's /check too. At --anchor-slot 15 every phase sends /check
+//                      the slot-0 preimage of the same circuit run: the stock zkir refuses slot 15 (anchor-slot.mjs
+//                      assertSlot15CheckEquivalent, anchor-slot-check.test.mjs)
 //   T10A_R3_FRESH=1    R3 proves the replay afresh with T10A_PROVER (default: A's proof with the fresh binding)
 //   E6_NODE_PORT / E6_INDEXER_PORT / E6_PROOF_PORT / E6_NODE_CONTAINER  (default 9954 / 8098 / 6340 / e6-node-1)
 // Phases:
@@ -71,7 +74,7 @@ import {createHash} from 'node:crypto';
 import {decodePreimage, callVector, frameVerifierKey, frameProof, padTranscript, paddedCheckResult, assertNormalized,
   bigToLeHex, leHexToBig, FR_MODULUS} from './e6-padding.mjs';
 import {nestedWords, contractStateWords, scan, surfaceSizes} from './sherlock-ledger-scan.mjs';
-import {ANCHOR_SLOT, ledgerDeployState, prologueToSlot15} from './anchor-slot.mjs';
+import {ANCHOR_SLOT, ledgerDeployState, prologueToSlot15, assertSlot15CheckEquivalent} from './anchor-slot.mjs';
 import {resolveInclusion, nodeHasBlockRpc, UNKNOWN_VERDICTS} from './call-resolve.mjs';
 import {compiledEntries, keyPlan, checkInstalled} from './ledger-keys.mjs';
 
@@ -291,22 +294,45 @@ const callTx = async (target, against, args, tag) => {
   const now = new Date();
   const {context, result} = await circuitRun(target, against, args);
   const pd = result.context.callProofDataTrace[0];
-  if (SLOT === ANCHOR_SLOT) pd.publicTranscript = prologueToSlot15(rt, pd.publicTranscript);
   const qc = new ledger.QueryContext(against.data, target);
   qc.block = context.callContext.currentQueryContext.block;
-  const [guaranteed, fallible] = ledger.partitionTranscripts([new ledger.PreTranscript(qc, pd.publicTranscript)], parameters)[0];
-  assert.ok(guaranteed && !fallible, 'acceptRun must be entirely guaranteed');
+  const partition = ops => {
+    const [g, fallible] = ledger.partitionTranscripts([new ledger.PreTranscript(qc, ops)], parameters)[0];
+    assert.ok(g && !fallible, 'acceptRun must be entirely guaranteed');
+    return g;
+  };
   OPERATION = against.operation('acceptRun');
   const rand = ledger.communicationCommitmentRandomness();
   const ttl = ttlOf();
-  let unRaw, skips;
-  const unTx = ledger.Transaction.fromParts(NET, undefined, undefined, ledger.Intent.new(ttl).addCall(proto(target, guaranteed, pd, rand)));
-  await unTx.prove({
-    check: async raw => { unRaw = new Uint8Array(raw); skips = await checkWithServer(raw); return skips ?? Array(guaranteed.program.length).fill(undefined); },
-    lookupKey: async () => ({proverKey, verifierKey: vkRaw, ir}),
-    prove: async () => { throw new Sentinel('unpadded preimage captured'); },
-  }, parameters.transactionCostModel.runtimeCostModel).then(() => assert.fail('unpadded prove must stop'), e => {
-    if (!(e instanceof Sentinel) && !String(e?.message ?? e).includes('unpadded preimage captured')) throw e; });
+  // The unpadded preimage, as the builder hands it to `check` (the prove is stopped before any proof).
+  const preimageOf = async g => {
+    let raw;
+    const tx = ledger.Transaction.fromParts(NET, undefined, undefined, ledger.Intent.new(ttl).addCall(proto(target, g, pd, rand)));
+    await tx.prove({
+      check: async r => { raw = new Uint8Array(r); return Array(g.program.length).fill(undefined); },
+      lookupKey: async () => ({proverKey, verifierKey: vkRaw, ir}),
+      prove: async () => { throw new Sentinel('unpadded preimage captured'); },
+    }, parameters.transactionCostModel.runtimeCostModel).then(() => assert.fail('unpadded prove must stop'), e => {
+      if (!(e instanceof Sentinel) && !String(e?.message ?? e).includes('unpadded preimage captured')) throw e; });
+    return raw;
+  };
+  // T23 (Preview rehearsal 2026-11-15): the proof server's /check runs the stock compactc zkir, which has the
+  // prologue key 0 as a constant and refuses every slot-15 transcript ("Public transcript input mismatch for input
+  // 4"). At slot 15, /check gets the slot-0 preimage of this circuit run (same randomness and TTL), after
+  // assertSlot15CheckEquivalent (anchor-slot.mjs) proves that the slot-15 preimage differs from it only in input 4
+  // (0 -> 15) and the program only in the op-1 idx key, with equal gas.
+  let guaranteed, unRaw, checkRaw;
+  if (SLOT === ANCHOR_SLOT) {
+    const g0 = partition(pd.publicTranscript), raw0 = await preimageOf(g0);
+    pd.publicTranscript = prologueToSlot15(rt, pd.publicTranscript);
+    guaranteed = partition(pd.publicTranscript); unRaw = await preimageOf(guaranteed);
+    assertSlot15CheckEquivalent(decodePreimage(raw0), decodePreimage(unRaw), g0, guaranteed);
+    checkRaw = raw0;
+  } else {
+    guaranteed = partition(pd.publicTranscript); unRaw = checkRaw = await preimageOf(guaranteed);
+  }
+  const skips = await checkWithServer(checkRaw);
+  if (skips) assert.equal(skips.length, guaranteed.program.length, '/check: one skip per op');
   const un = decodePreimage(unRaw);
   assert.equal(un.privateTranscript.length, 0);
   const words = un.publicTranscriptInputs.length;
@@ -318,6 +344,7 @@ const callTx = async (target, against, args, tag) => {
   const info = {tag, target, builtAt: now.toISOString(), ttl: ttl.toISOString(), opsBefore: guaranteed.program.length,
     transcriptWordsBefore: words, noop: {mode: pad.mode, pad: pad.pad, n: pad.noopN}, opsAfter: pad.transcript.program.length,
     lastOpBefore: guaranteed.program.at(-1), checkSkips: skips ? skips.map(s => s ?? null) : 'not asked (dry-run)',
+    checkedPreimage: SLOT === ANCHOR_SLOT ? 'slot-0 build of this circuit run (stock zkir); the slot-15 preimage differs in public transcript input 4 only (0 -> 15)' : 'this call',
     gasBeforePadding: guaranteed.gas, unpaddedPreimageBytes: unRaw.length};
   return {tx, info, checkResult, unpaddedWords: un.publicTranscriptInputs, pd};
 };
