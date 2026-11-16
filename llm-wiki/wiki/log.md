@@ -5122,5 +5122,12 @@
 - final-box.sh hashed runs.log before logging its RETURN line, so the odin and tyr returns failed sha256sum -c and t23.py final would refuse them. Fixed in t23-final 8f0cdf678: the box logs before hashing, and read_return accepts only the exact one-line append (a tampered runs.log is still refused).
 - odin (49 ok) and huginn (62 ok) returns are pulled; ledger unit t23-ledger-ho is running. tyr starts job2 = m7 (T24 heavy run, 50 MB sync).
 
-## [2026-11-16 14:20] measure | T14 t14-final huginn returned: DONE pending Carbon QA
-huginn t14-final on the T25 keys finished 27/27 steps rc 0 (noisy 0). Return RETURN 409da448 pulled by allowlist to `~/.cache/huginn/t14-final/ret`; sha256 ok on muninn; 35 wrap.vk 6faac46f; ledger 9.1.0.1 Ok(()) on all 35 wrap dirs with every negative refused (`ret/ledger.tsv`). Medians: warm call t02 105.7 s (62.8 s is t14.keys_s), wrap 87.7 s, wrap daemon call 13.2 s, e2e warm 79.6 s (stark 29.6 + wrap 50.0), in-process t10 warm call 29.8 s. LOOP.md T14 row set to DONE pending Carbon Quint QA.
+## [2026-11-16 14:20] lane-done | T14 t14-final huginn returned: DONE pending Carbon QA
+- huginn t14-final on the T25 keys: 27/27 steps rc 0, noisy 0; RETURN 409da448 pulled by allowlist to `~/.cache/huginn/t14-final/ret`, sha256 ok on muninn.
+- 35 wrap.vk 6faac46f; ledger 9.1.0.1 Ok(()) on all 35 wrap dirs, every negative refused (`ret/ledger.tsv`).
+- Medians: warm call t02 105.7 s (62.8 s is t14.keys_s), wrap 87.7 s, wrap daemon call 13.2 s, e2e warm 79.6 s, in-process t10 warm call 29.8 s.
+- LOOP.md T14 row set to DONE pending Carbon Quint QA (commit 1a1ae16a5).
+
+## [2026-11-16 14:20] qa | T15 Carbon Quint QA: two slots running (T12 on odin, T25 finish in the agy pane)
+- odin headless Carbon: lane qa-20261116-t12-gate synced to ~/sherlock/t15-quint/qa-20261116-t12-gate (paths and quint 0.33.0 edited in PROMPT.md; settings allow only quint typecheck/test/run and reads/writes in the lane folder; git, ssh, cargo, .exe, /mnt/c denied); unit t15q-t12-gate, print timeout 85 min.
+- Pane w1:p1C: the T25 lane (model, tests, three ITF traces already written; no REPORT) copied into the pane cwd (qa-20261114-t16-cde/qa-20261116-t25-rekey); continuation prompt: run the commands, write REPORT.md, no remodel. The value-digest lane that was interrupted in the pane at about 13:28 is left unfinished.
