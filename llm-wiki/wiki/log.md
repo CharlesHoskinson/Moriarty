@@ -5146,3 +5146,12 @@
 - sherlock-e2e-spec bae046079: ten A/C Quint models committed; the lead reran all 17 contexts on muninn (594 REPORT commands) and every one AGREES (formal/sherlock-e2e/RERUN.md); the A/C oracle replay was not run.
 - 52 A/C Q-findings checked on code: 4 CONFIRMED (Q-compact-compilation-1, Q-conformance-1, Q-conformance-3, Q-settlement-1) plus NEW-LVR-006 (the settle runner skips the native ledger check when no validator is set); checks are in tests/quint-regressions/e2e-ac/.
 - sherlock-e2e-spec bdff91183: e2e-prototype tasks.md has 16 of 80 tasks ticked with citations and 64 open; still needs a lane: the A/C replay and Carbon QA (T15 driver).
+
+## [2026-11-16 14:58] lane-start | Sherlock prototype port and container (repo sherlock, branch prototype)
+- Port allowlist from Moriarty a1b4836c6 (t23-suite, SDK), 1fcc5fb7e (wrap, ledger-check), 3fd18b166 (mori-gpu), openvm e8c2896 and stark-backend fafb993 (T25 trees), Mycroft mycroft-factory.
+- Gate first: CPU-only t7_chain on odin must give the T25 keys (t25keys checksuite) and wrap VK 6faac46f before the container is built.
+- Contract waits on the f1-batched merge (~/.cache/f1/DONE); no push without the owner.
+
+## [2026-11-16 15:05] push | Moriarty main and work branches (owner: "you can push")
+- main 4ea6fa29d..b9d7d5f9c; new branches t23-final, sherlock-e2e-spec, t20-batched.
+- Scan before push: no secret-class files, no wallet material, no attribution trailers; t17 call-vector fixtures hold only the public on-chain words.
