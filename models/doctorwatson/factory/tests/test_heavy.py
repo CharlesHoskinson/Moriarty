@@ -1,4 +1,5 @@
 import fcntl
+import json
 import os
 import time
 
@@ -313,6 +314,34 @@ class MemoryGuardTests(FakeRepo):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn(self.runs()[-1]["memScope"], r.stdout)
 
+    def test_same_run_id_in_two_repos_gets_two_scopes(self):
+        """Two runs of one id in one second (two worktrees) shared dw-<run>.scope: one systemd-run was
+        refused (exit 1) and its cleanup stopped the other's scope (exit 143). The holder pid splits them."""
+        if not self.guard_available():
+            self.skipTest("systemd-run --user --scope unavailable")
+        import subprocess
+        import sys
+        import tempfile
+        from .helpers import PKG_PARENT
+        other = tempfile.TemporaryDirectory()
+        self.addCleanup(other.cleanup)
+        repo2 = os.path.join(other.name, "repo")
+        os.makedirs(os.path.join(repo2, "qa", "sherlock"))
+        env2 = dict(self.env, DW_REPO=repo2, DW_LOCK=os.path.join(other.name, "heavy.lock"),
+                    DW_GPU_LOCK=os.path.join(other.name, "gpu.lock"), DW_QUEUE_DIR=os.path.join(other.name, "q"))
+        argv = [sys.executable, "-m", "factory", "heavy", "--id", "M0", "--", "sh", "-c", 'echo "job=$DW_JOB_ID"; sleep 2']
+        procs = [subprocess.Popen(argv, cwd=PKG_PARENT, env=e, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                 for e in (self.env, env2)]
+        outs = [p.communicate(timeout=120) for p in procs]
+        for p, (out, err) in zip(procs, outs):
+            self.assertEqual(p.returncode, 0, out + err)
+        runs = [self.runs()[-1]]
+        with open(os.path.join(repo2, "qa/sherlock/runs.jsonl")) as fh:
+            runs.append(json.loads(fh.read().splitlines()[-1]))
+        for p, (out, _), run in zip(procs, outs, runs):
+            self.assertIn(f"job={run['run']}.{p.pid}", out)
+            self.assertEqual(run["memScope"], f"dw-{run['run']}.{p.pid}.scope")
+
     def test_poll_fallback_kills_job_over_cap(self):
         r = self.heavy(*self.ALLOC, env={"DW_DEFAULT_RSS_CAP": "0.0625", "DW_MEM_GUARD": "poll"})
         self.assertEqual(r.returncode, 4, r.stdout + r.stderr)
@@ -373,12 +402,19 @@ class ConcurrentHeavyTests(FakeRepo):
         tail = ("--", *cmd) if cmd else ()
         return self.run_cli("heavy", *args, *tail, env=env, timeout=120)
 
+    # Each copy marks its arrival, then waits (60 s ceiling, exit 9) for the other copy's mark. Both
+    # pass only when the copies run at the same time; run one after the other, the first copy
+    # times out. A fixed bound on the makespan (< 1.9 s for two 1 s sleeps) failed under host load.
+    RENDEZVOUS = ("sh", "-c", "echo slot=$DW_SLOT of $DW_SLOTS; touch rv.$DW_SLOT; end=$(($(date +%s) + 60)); "
+                  "while [ ! -e rv.$((1 - DW_SLOT)) ]; do [ $(date +%s) -ge $end ] && exit 9; sleep 0.05; done")
+
     def test_copies_run_at_once_with_slots(self):
-        r = self.heavy("--id", "C1", "--concurrent", "2", cmd=("sh", "-c", "echo slot=$DW_SLOT of $DW_SLOTS; sleep 1"))
+        r = self.heavy("--id", "C1", "--concurrent", "2", cmd=self.RENDEZVOUS)
         self.assertEqual(r.returncode, 0, r.stderr)
         run = self.runs()[-1]
         self.assertEqual(run["concurrent"], 2)
-        self.assertLess(run["wallSeconds"], 1.9)  # makespan, not the sum
+        self.assertEqual(sorted(c["exit"] for c in run["children"]), [0, 0])  # both met: they overlapped
+        self.assertGreaterEqual(run["wallSeconds"], max(c["wallSeconds"] for c in run["children"]))  # makespan
         self.assertEqual(run["aggregateCapBytes"], 100 * self.GIB)
         outs = sorted(self.read_text(c["trace"]).strip() for c in run["children"])
         self.assertEqual(outs, ["slot=0 of 2", "slot=1 of 2"])
@@ -423,6 +459,32 @@ class ConcurrentHeavyTests(FakeRepo):
             self.skipTest("systemd-run --user --scope unavailable")
         res = self._aggregate_kill("cgroup")
         self.assertTrue(res["memSlice"].startswith("heavy-dw_") and res["memSlice"].endswith(".slice"))
+
+    def test_aggregate_kill_when_first_child_dies_unseen(self):
+        """The slice guard must not depend on the first child: under load the kernel OOM-killed it
+        before the poll read its cgroup, the slice's 'oom' event went unread and the sibling ran on."""
+        if not MemoryGuardTests.guard_available(self):
+            self.skipTest("systemd-run --user --scope unavailable")
+        import sys
+        from unittest import mock
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from factory import heavy
+        late = ("python3", "-c", "import time; time.sleep(1.5); b = bytearray(100 * 1024 * 1024); "
+                "b[::4096] = b'x' * len(b[::4096]); time.sleep(60); print('survived')")
+        trace = self.p("qa/sherlock/traces/agg.log")
+        os.makedirs(os.path.dirname(trace), exist_ok=True)
+        marker = "aggf%d%d" % (os.getpid(), time.time_ns() % 100000)
+        # No child's /proc/<pid>/cgroup names its scope (the first child is already dead, the other
+        # not yet moved into its scope) and the RSS poll sees nothing (it lost the race), so only
+        # the slice's own memory.events.local, found through systemd, can stop the survivor.
+        with mock.patch.object(heavy, "_cgroup_dir", lambda pid, unit: None), \
+                mock.patch.object(heavy, "group_rss", lambda pg: 0):
+            res = heavy.run_concurrent([list(self.HOLD), list(late)], self.repo, trace, False,
+                                       {"maxRssBytes": 128 * 1024 ** 2}, 150 * 1024 ** 2, marker, "cgroup")
+        self.assertTrue(res["aggregateExceeded"], res)
+        self.assertNotEqual(res["exit"], 0)
+        for c in res["children"]:
+            self.assertNotIn("survived", self.read_text(c["trace"]))
 
     def test_commands_file(self):
         self.write("cmds.txt", "# two different jobs\necho one\n\necho two\n")

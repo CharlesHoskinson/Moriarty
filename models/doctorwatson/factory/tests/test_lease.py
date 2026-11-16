@@ -174,19 +174,36 @@ class LeaseTests(FakeRepo):
         p.wait(20)
         self.assertIsNone(heavy.read_lease("heavy"))
 
+    def test_signal_after_lease_write_removes_the_lease(self):
+        """A SIGTERM after the lease is written and before the job starts (test_lease_state_api hit this
+        window under host load) must still unwind: lease removed, locks released, exit 143."""
+        code = ("import os, signal, sys, time; from factory import heavy\n"
+                "def late(*a, **k):\n"
+                "    os.kill(os.getpid(), signal.SIGTERM); time.sleep(30); raise SystemExit('no unwind')\n"
+                "heavy.run_command = heavy.run_concurrent = late\n"
+                "sys.exit(heavy.cmd_heavy('A2', None, None, ['sleep', '30']))\n")
+        r = subprocess.run([sys.executable, "-c", code], cwd=PKG_PARENT, env=self.env, capture_output=True,
+                           text=True, timeout=120)
+        self.assertEqual(r.returncode, 143, r.stderr)
+        self.assertFalse(os.path.exists(self.lock + ".lease"))
+        self.assertFalse(locked(self.lock))
+
 
 class ReapCrossTests(FakeRepo):
     def test_reap_dry_run_lists_expired_heavy_lease(self):
         code = (f"import subprocess,sys;sys.path.insert(0,'{PKG_PARENT}');"
                 "subprocess.run(['sleep','0.1']);")
-        # a fake job that outlives a 2 s cap while the lease deadline is already in the past
-        p = subprocess.Popen([sys.executable, "-m", "factory", "heavy", "--id", "RP1", "--max-wall", "2", "--",
-                              "sleep", "30"], cwd=PKG_PARENT, env=self.env, stdout=subprocess.DEVNULL,
+        # A live job whose lease deadline is already in the past (forged below). The job's real wall
+        # cap stays far away: with --max-wall 2 heavy killed the job before the reap subprocess
+        # started under host load, and reap then saw a "stale" lease or none at all.
+        p = subprocess.Popen([sys.executable, "-m", "factory", "heavy", "--id", "RP1", "--max-wall", "120", "--",
+                              "sleep", "120"], cwd=PKG_PARENT, env=self.env, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL)
         self.addCleanup(p.kill)
         lease = self.lock + ".lease"
-        end = time.time() + 15
-        while time.time() < end:
+        d = {}
+        end = time.monotonic() + 60
+        while time.monotonic() < end:
             try:
                 d = json.load(open(lease))
                 if d.get("sid"):
@@ -194,6 +211,7 @@ class ReapCrossTests(FakeRepo):
             except (OSError, ValueError):
                 pass
             time.sleep(0.05)
+        self.assertTrue(d.get("sid"), f"no job sid in the lease after 60 s: {d}")
         d["deadline"] = time.time() - 5  # simulate a job that overran its 2 s cap
         json.dump(d, open(lease, "w"))
         self.assertEqual(d["sid"], d["pid"])
