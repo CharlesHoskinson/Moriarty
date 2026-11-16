@@ -51,12 +51,13 @@ theorem pin_lfp005 : (stepRefusals (apply { honest with shapeOk := false } 0) 16
 theorem pin_lfp006 : proved.leafProgD = 7 := by decide +kernel
 #guard proved.leafProgD == 7
 
--- LFP-007: a leaf of program B (3) joins; N1 refuses the merge. A leaf of the same program
--- (7) does not stop it.
+-- LFP-007: a leaf of program B (3) is refused (wrong-prog-d) and the run still merges its honest
+-- leaves (Formal-Quint D-leaf-2, lead ruling). A leaf of the same program (7) joins.
 theorem pin_lfp007 :
-    (stepRefusals (run proved [3 * 16, 2 * 16 + 3]) (4 * 16)).map Refusal.code = ["wrong-prog-d"] ∧
+    (stepRefusals (run proved [3 * 16]) (2 * 16 + 3)).map Refusal.code = ["wrong-prog-d"] ∧
+    stepRefusals (run proved [3 * 16, 2 * 16 + 3]) (4 * 16) = [] ∧
     stepRefusals (run proved [3 * 16, 2 * 16 + 7]) (4 * 16) = [] := by decide +kernel
-#guard (stepRefusals (run proved [3 * 16, 2 * 16 + 3]) (4 * 16)).map Refusal.code == ["wrong-prog-d"]
+#guard (stepRefusals (run proved [3 * 16]) (2 * 16 + 3)).map Refusal.code == ["wrong-prog-d"]
 
 -- LFP-008: 12 more steps (10 -> 22, shard length 4) give 6 shards instead of 3, and the same key_root and manifest.
 theorem pin_lfp008 : shards (apply (apply honest 0) (5 * 16 + 2)) = 6 ∧

@@ -50,7 +50,7 @@ State domain (`Valid`, else `outside-capability`): `shardCap > 0`; `shardsProved
 |---|---|---|---|---|
 | 0 | admit | 0 | `appAirs <= 8` (`air-count-over-bound`, LFP-003); not both kits (`mixed-hash`, LFP-003); `appAirs + 1` in {6, 9} (`outside-bucket`, RSL-002); `appCols <= 30000` (`column-bound`, LFP-004) | `admitted := true` |
 | 1 | proveShard | 0 | `admitted` (`not-admitted`); `shardsProved < shards` (`all-shards-proved`, LFP-002); `shapeOk` (`shape-mismatch`, LFP-005); `tapeD = inputD` (`input-mismatch`, LFP-012); `fp1Outcome = stmtD` (`statement-unbound`, LFP-010); not `nonCanonical` (`noncanonical-word`, RSL-008) | `shardsProved`, `appProofs`, `leafProofs` += 1; `leafProgD := progD` |
-| 2 | foreignLeaf p | p < 16 | not `merged` (`already-merged`) | `foreignLeaves += 1`; `badLeaves += 1` when `p != progD` |
+| 2 | foreignLeaf p | p < 16 | not `merged` (`already-merged`); `p = progD` (`wrong-prog-d`, LFP-007: N1 refuses the leaf, D-leaf-2) | `foreignLeaves += 1` (a leaf of another program never joins, so `badLeaves` stays 0) |
 | 3 | publish | 0 | `shardsProved = shards` (`leaves-incomplete`, LFP-009) | `records += 1`; `recordLeaves := shards` |
 | 4 | n1Merge | 0 | `records != 0` (`not-published`); `badLeaves = 0` (`wrong-prog-d`, LFP-007) | `merged := true` |
 | 5 | extend d | d < 16 | `shardsProved = 0` and `records = 0` (`run-started`, LFP-008) | `steps += (d + 1) * shardCap` |

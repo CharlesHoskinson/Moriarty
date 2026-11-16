@@ -182,7 +182,10 @@ def stepRefusals (s : St) (op : Nat) : List Refusal :=
   match decodeOp op with
   | .admit => admitRefusals s
   | .proveShard => proveRefusals s
-  | .foreignLeaf _ => if s.merged then [.alreadyMerged] else []                    -- LFP-007
+  -- LFP-007: N1 refuses a leaf whose prog_d differs from the run's; the run keeps its honest
+  -- leaves and still merges (Formal-Quint D-leaf-2, lead ruling).
+  | .foreignLeaf p => (if s.merged then [.alreadyMerged] else []) ++
+                      (if p = s.progD then [] else [.wrongProgD])
   | .publish => if s.shardsProved = shards s then [] else [.leavesIncomplete]      -- LFP-009
   | .n1Merge =>                                                                     -- LFP-007, LFP-009
     (if s.records ≠ 0 then [] else [.notPublished]) ++

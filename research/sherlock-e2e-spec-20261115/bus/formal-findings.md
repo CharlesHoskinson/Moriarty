@@ -288,6 +288,28 @@ Counterexamples on openvm `rekey-int` 3826e38 (odin): `formal/sherlock-e2e/COUNT
 - FAL-EXEC-3 is CONFIRMED on code. `rsl/trace.rs:133` and `:432-433` name two keccak AIRs, `RSL_KECCAK_REQ` and `RSL_KECCAK_PERM`, beside `RSL_BITWISE8`. That contradicts MYC-CHIP-001, which allows one keccak AIR. The 6-or-9 bucket holds per program (Answer to FAL-EXEC-3, slice B).
 - FAL-EXEC-5 is CONFIRMED on code. `crates/sherlock-leaf/src/dec.rs:23-29` holds `RULES` with 5 entries and `:40-41` holds `RULES_V` with 2, which gives 7 rules against the 120 of EUI-010.
 
+## Aggregation (Formal-Quint, 2026-11-15 12:30)
+
+Quint lane `formal/sherlock-e2e/aggregation/quint/REPORT.md`. Replay projector `replay/project_aggregation.py`: 309 transitions and 30 refusal checks agree (20 lane traces); 100-trace rerun pending.
+
+### F-aggregation-Q1 [Formal-Quint -> Fable-A] LPC-002 scenario may raise the 5,400 bound
+LPC-002 SHALL "at most 5,400 columns"; its scenario says a 5,417-column key "splits CORE again or raises the bound with a measurement". MERGE-WORK 5,400 is a hard rule (D-012). Proposed: drop "or raises the bound with a measurement". Code guard holds (`frozen.rs:434`, test `g1_refuses_keys_outside_the_bounds`).
+
+### F-aggregation-Q2 [Formal-Quint -> Fable-A] GPH-003 (FV unit is a direct child of N3) against GPH-004 / GP-003 (foreign proof enters as a consumed claim)
+The code takes the claim-set reading (`Kind::Fv`, `SHK_SET_FOREIGN`). Proposed: GPH-003 says the FV unit is a member of the GP-2 claim set under N3, not a SEG child.
+
+### F-aggregation-Q3 [Formal-Quint -> Fable-A] NAG-004 joins chip set 0 and chip set 3 in one run
+No requirement says how the state digest of an interpreted shard links to an R_SL shard. Proposed: the NAG-004 scenario uses two chip sets of one rule family, or a rule for the cross-family state digest is added.
+
+### F-aggregation-Q4 [Formal-Quint -> Fable-A] NAG-009 names only N1 and N2
+Proposed: "every SEG merge (N1, N2, N3) and every MERGE-WORK node with two children". The code already links them.
+
+### F-aggregation-Q5 [Formal-Quint -> Fable-A] single-run and collection forms of `L`
+NAG-008/NAG-010 describe the single-run `L`; GPH-008 the collection form (T8c, TO BUILD). Proposed: a mode word in the `L` statement and a `ProofBundle` form for SET proofs; LPC-003 names X12.
+
+### F-aggregation-Q6 [Formal-Quint -> Fable-A] NAG-007 GP2-C2.1 is a leaf CoreAir check
+CONFIRMED on odin (forged witness ACCEPTED). Proposed: NAG-007 says "the leaf CoreAir public-value row SHALL refuse", and the fix enters the rekey list.
+
 ## Slices A and C resolution (A/C resolver, 2026-11-15 12:55)
 All 22 FAL-* findings have a verdict. Spec text is fixed in this branch unless a commit is named. Code gaps have fix requests in `~/.cache/lead/fal-fix-<ID>.md`. LEAD PICKs are marked for T15.
 - Settlement. FAL-SETTLEMENT-1: FIXED. The t20-batched text of LDG-001..005, DCD-004 and LW-009 is now in this branch (no `descend`, no `openClaim`, four entries as SLC-001). FAL-SETTLEMENT-2: FIXED. ANC-012 is in processor-final with `K_MAX = min(floor(TTL / (10 x 175.5 s)), 2)` (BAT-005); the planner cap is a fix request. FAL-SETTLEMENT-3: FIXED (LEAD PICK). BAT-010 closes at `end_eff` minus proof time, inclusion time and one block interval; BAT-011 refuses a run that ends at or after `end_eff`.
@@ -345,3 +367,65 @@ MID-002 (`sherlock-processor-final-20261111` `sherlock-midnight-side`) names the
 ### EUI010-P3 correction [lane EUI-010 -> lead] the P3 refusal row is not in batch 1c
 - Correction to the EUI010-P3 entry above: the P3 refusal step is not part of KAdminPublishExhausted. The reference publishes it under the selected helper rule itself (`sel.rule`, disposition RefusedHelperWorkUncharged, outcome Exhausted{HelperWork}; `owner_runtime.rs` P3), so it is a refused form of each helper rule, not one of the 120 rule rows. Batch 1c (openvm `eui010` 6f278c0) built KAdminPublishExhausted (P2, Fuel) without it.
 - LEAD PICK EUI010-P3REF (for T15): the refused form is built later in chip sets 0/1 only, with the P6 cap refusals (the same refused-step form), never in the MERGE-WORK kernel. Reason: the refusal sets a terminal outcome, so it is the last step of a run and never an interior inline step of a MERGE-WORK node; the kernel is also at 1,000 of its 1,000 constraints. The P3 guard (soundness) is in batch 1; the open part is completeness (GP-1) for a run that reaches the cap.
+
+## Bridge (Formal-Quint, 2026-11-15 15:05)
+
+Quint lane `formal/sherlock-e2e/bridge/quint/REPORT.md` (model `bridge.qnt`, 23 mutant instances). Odin rerun: 48/48 commands match the lane's verdicts. Replay projector `replay/project_bridge.py` (one oracle run per proof slot; stage map in its header): 4,768 transitions in 726 chains and 853 refusal checks agree with the Bridge oracle (100 traces of `bridge_main`); the negative control (moved bytes off by one) disagrees at the first transfer. The odin oracle binary was stale (10:57, before the 2,200-column resolution) and was rebuilt at 15:03 after `lake update sherlock_codec_b`. Six model ops have no oracle operation (compile/deploy, `Machine::new`, WHIR shape, slot-15 contract, wrap pin, wrap mode-0 template): ANC-013, ANC-015, ANC-016 (wrap side), LW-022 are covered by Quint only.
+
+### F-bridge-Q1 [Formal-Quint -> Fable-A] CLB-001 status line says the count after T25 is not measured
+CLB-001 scenario: "FP-3 and slot 15 change the interface; the word count after T25 is not measured". Measured on odin: `layout_full_is_12166` passes on openvm `rekey-int` 3826e38 (FP-3 and slot 15 merged). Proposed: the status line states 12,166 MEASURED on rekey-int 3826e38 and drops the "or the record names the new count" escape.
+
+### F-bridge-Q2 [Formal-Quint -> Fable-A] ANC-017 and CLB-005 give the read lock the write-lock operand
+Read literally, a chunk that reads a lock checks `(pack(C_(j+1)), j)`, its own write lock. The code reads `x_(j-1)` with `(pack(C_j), j-1)`. Odin test `qbridge2_literal_read_lock_operand_is_refused` (copy of rekey-int 3826e38): the literal read lock is refused by `gen_ops_check` assert #5. Proposed text: chunk `j` writes `x_j` with `(pack(C_(j+1)), j)` when `j+1 < k`, and reads `x_(j-1)` with `(pack(C_j), j-1)` when `j > 0`.
+
+### F-bridge-Q3 [Formal-Quint -> Fable-A] CLB-006 and ANC-016 guard only template lanes 11 to 19 and 21
+A mode-0 call can address top-level index 15 from a user effect lane (22 and up); `iface::decode_with` has no check on those lanes. The protection is ANC-015 (Mycroft refuses a layout that uses index 15), which is OPEN. Proposed: state in ANC-015/ANC-016 that `C_P` integrity in mode 0 depends on ANC-015, or add a user-lane refusal for key 15.
+
+### F-bridge-Q4 [Formal-Quint -> Fable-A] CLB-008 compares two slot copies; there are four
+Code copies: `sherlock-lfr/src/iface.rs:112` and `moriarty t12-slot15-wrap/src/decode.rs:70`; the SDK ledger and Mycroft copies are not in these trees. Proposed: CLB-008 names all copies and compares each with 15, not only with each other (equal-but-wrong 0 = 0 passes the current text).
+
+### F-bridge-Q5 [Formal-Quint -> Fable-A] `k` names three things
+CLB-003/ANC-019 (stated chunk count), CLB-007 (`K_MAX` host cap) and the WHIR folding `k` (LW-022). Proposed: rename the WHIR one `k_fold` in LW-022 and say in CLB-007 that the cap is host-only.
+
+### F-bridge-Q6 [Formal-Quint -> Fable-A] LTR-006 publishes on prover completion
+LTR-006 publishes `LfrProofReady` when the prover finishes; LTR-008 guards only an explicit verifier refusal. No code publishes `LfrProofReady` yet (grep of moriarty e2e 75cf0f65b and rekey-int 3826e38). Proposed: LTR-006 publishes only after the stock verifier accepts (the oracle and the model already require it).
+
+### D-leaf-2 resolved (Formal-Quint lead, 2026-11-15 15:10)
+No answer from Formal-Lean-B, so the lead applied the ruling. LFP-007 SHALL: "the N1 statement AIR SHALL refuse the leaf". The oracle now refuses op 2 with `wrong-prog-d` when `p != progD`, and the run still merges its honest leaves (the scenario's "N1 refuses the merge" is the merge that contains that leaf). Reason: the old oracle blocked the run for ever after one foreign leaf, which the code does not do (`t7_chain` refuses the merge with the wrong leaf; an honest merge is a new N1 input). `Spec.lean` stepRefusals, pin `pin_lfp007` (Tests.lean) updated; `lake build --wfail` on odin rc 0. Named regression `replay/regression_D_leaf_2.sh` (trace `leaf-proving/traces/regressions/oracle/`): FAIL on the pre-fix oracle (foreign leaf accepted), PASS after (log `D-leaf-2.log`). Full replay after the fix: 856 transitions in 381 chains and 708 refusal checks agree. Proposed text for Fable-A: the LFP-007 scenario says "N1 refuses the leaf; the merge of the run's own leaves proceeds".
+
+## Key Management (Formal-Quint, 2026-11-15 16:54)
+
+Quint lane `formal/sherlock-e2e/key-management/quint/REPORT.md`. Odin rerun 29/29 commands match. Replay projector `replay/project_key_management.py` (one oracle state per trace, a new chain segment when a witness field changes): 2,859 transitions in 254 chains and 291 refusal checks agree (100 traces); the negative control disagrees.
+
+### F-key-management-Q1 [Formal-Quint -> Fable-A] a second keygen during running or settled proofs
+UKS-005 refuses to start a proof on a stale manifest, but no requirement says what happens to a proof that runs while a second keygen replaces the manifest, or to UKS-001 suite records settled under the first. Proposed: UKS-004 adds "a second keygen writes a new manifest id; proofs started under the old manifest finish and settle under it; the UKS-001 suite check is per manifest". A key set frozen under SQG-011 is never rewritten in place (a new era, T22).
+
+### F-key-management-Q2 [Formal-Quint -> Fable-A] RKY-001 names only L, L_Fr and wrap keys
+The code regenerates the internal-recursive key and `keys_d` in the same run (`t7_chain.rs keys()` builds N1, N2, FV, N3 and the fixed point). Proposed: RKY-001 says "the universal key set of UKS-001 and `keys_d` of UKS-002".
+
+### F-key-management-Q3 [Formal-Quint -> Fable-A] UKS-003 compares the R_SL index only with KEYDAG_IDX
+The text allows the R_SL leaf at index 2, which is chip set 2. The code places R_SL key leaves from `RSL_KEY_IDX0 = KEYDAG_IDX + 1 = 4` (static assert, `stmt.rs:271-276`). Proposed: UKS-003 asks for 5 pairwise-distinct positions (chip sets 0 to 3 and KEYDAG_IDX).
+
+### F-key-management-Q4 [Formal-Quint -> Fable-A] UKS-010 refuses a missing era-check row although its status allows the ELD-007 fallback
+Proposed: the era-check clause reads "or the era-check words, unless a recorded failure of premise A2 or A3 selects the ELD-007 fallback row".
+
+### F-key-management-Q5 [Formal-Quint -> Fable-A] "When the rekey completes" triggers UKS-004, UKS-006 and RKY-005 alike
+UKS-006 says a failed gate leaves the rekey not DONE, yet UKS-004 writes the manifest on the same trigger. Proposed: UKS-006 and RKY-005 trigger "when keygen completes"; the UKS-004 manifest of a keygen whose gates fail carries status `gate-failed` and no box takes it.
+
+### F-key-management-Q6 [Formal-Quint -> Fable-A] UKS-002 foreign-row count and UKS-008 in-memory keys()
+Proposed: UKS-002 names the 2 foreign rows; UKS-008 rules that setup may rebuild keys in memory when each matches the manifest sha256 (no key file written, no key selected).
+
+## Scheduling (Formal-Quint, 2026-11-15)
+Odin rerun 36/36 (the lane's trace command wrote to a muninn absolute path; rerun with the relative path). Replay: 2,360 transitions, 1,552 chains, 573 refusal checks agree; the negative control disagrees. Counterexamples: `formal/sherlock-e2e/scheduling/cx/qsched_cx.rs` on rekey-int 3826e38 (3 passed).
+
+### D-sched-1 [Formal-Quint, resolved] model concurrency above the leaf count
+392 startRun transitions disagreed on `schConc` only (model 4..8, oracle 1..3). The model takes the device capacity; `profile.rs schedule` and the oracle cap it at `ceil(n / S)`. STM-011 says "the number of leaves whose bytes fit", so a run of m leaves cannot run more than m at once. Lead decision: the oracle and the code are right; the projector maps min(capacity, ceil(n / S)); `RAW_CONC=1` reproduces the 392.
+
+### F-scheduling-Q4 [Formal-Quint -> Fable-A] STM-007 does not refuse zero measured bytes (CONFIRMED)
+`Profile::from_json` accepts `host_bytes = device_bytes = 0`; `schedule` then admits the run under a 1-byte budget (`a / d.max(1)`), so STM-012 never refuses. Proposed: STM-007 also refuses a calibration entry whose `host_bytes` is 0, or a GPU entry whose `device_bytes` is 0.
+
+### F-scheduling-Q2 / Q5 GUARD HOLDS
+The code fits the wrap policy to the lowered memory and to the host budget on a unified GPU (PF-007); STM-015 text should carry the PF-007 clause. `check_free` refuses the overshooting cut [3, 3] for n = 5 and a shape with no bucket.
+
+### F-scheduling-Q1 / Q3 / Q6 OPEN DESIGN
+Q1: the calibration schema has no GPU index (multi-GPU boxes). Q3: profile `key_root` (universal) vs per-program `key_root` of SPL-011 and the per-box path. Q6: STM-018 lacks the ELA-003 precondition; ELA-006 lacks the SC-014 manifest check.
