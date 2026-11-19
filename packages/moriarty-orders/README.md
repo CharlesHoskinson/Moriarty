@@ -4,8 +4,8 @@ This local release candidate contains the funded O1 fill and cancellation client
 
 ```sh
 # Compare the digest below with release.json before installing.
-sha256sum /absolute/path/moriarty-lang-orders-0.1.0-beta.1.tgz
-npm install --offline --ignore-scripts --no-audit --no-fund /absolute/path/moriarty-lang-orders-0.1.0-beta.1.tgz
+sha256sum /absolute/path/moriarty-lang-orders-0.1.0-beta.2.tgz
+npm install --offline --ignore-scripts --no-audit --no-fund /absolute/path/moriarty-lang-orders-0.1.0-beta.2.tgz
 ./node_modules/.bin/moriarty-orders replay o1-fill
 ./node_modules/.bin/moriarty-orders replay cancel-unfilled
 ```
