@@ -37,24 +37,24 @@ Accountable role — factory maintainer. Planned runner: `python3 scripts/qa/ord
 
 Accountable role — ledger maintainer. Planned runner: `python3 scripts/qa/order-report.py II.1`. Test: `node --test packages/moriarty-orders/test/acceptance.test.mjs`.
 
-- [ ] 3.1 Write `packages/moriarty-orders/test/acceptance.test.mjs` and `packages/moriarty-orders/test/fixtures/acceptance.json`. Freeze signed-field, current-state and complete funded-effect expectations. Pass when the tests distinguish a permitted transition from forged owner, domain substitution, stale state and duplicate use.
-- [ ] 3.2 Implement signed bindings in `packages/moriarty-orders/src/authorization.mjs`. Bind key/account, order, assets, amounts, recipient, program and chain. Pass when each changed binding fails independently.
-- [ ] 3.3 Implement authenticated state access in `packages/moriarty-orders/src/accepted-state.mjs`. Pass when a stale predecessor fails despite a caller's freshness assertion. Two requests against one consumed authority cannot both succeed.
-- [ ] 3.4 Implement native atomic consumption in `packages/moriarty-orders/src/acceptance.mjs` and `packages/moriarty-orders/contracts/acceptance.compact`. Document trust and upgrades in `packages/moriarty-orders/TRUST.md`. Bind the generated kernel and ZKIRv3 verifier identity. Implement the runner case in `scripts/qa/order-report.py`. Register II.1. Write `deliverables/competitor-report/II.1/result.json`. Pass when the native cases reconcile funding, state, authority and all order effects.
+- [x] 3.1 Write `packages/moriarty-orders/test/acceptance.test.mjs` and `packages/moriarty-orders/test/fixtures/acceptance.json`. Freeze signed-field, current-state and complete funded-effect expectations. Pass when the tests distinguish a permitted transition from forged owner, domain substitution, stale state and duplicate use.
+- [x] 3.2 Implement signed bindings in `packages/moriarty-orders/src/authorization.mjs`. Bind key/account, order, assets, amounts, recipient, program and chain. Pass when each changed binding fails independently.
+- [x] 3.3 Implement authenticated state access in `packages/moriarty-orders/src/accepted-state.mjs`. Pass when a stale predecessor fails despite a caller's freshness assertion. Two requests against one consumed authority cannot both succeed.
+- [x] 3.4 Implement native atomic consumption in `packages/moriarty-orders/src/acceptance.mjs` and `packages/moriarty-orders/contracts/acceptance.compact`. Document trust and upgrades in `packages/moriarty-orders/TRUST.md`. Bind the generated kernel and ZKIRv3 verifier identity. Implement the runner case in `scripts/qa/order-report.py`. Register II.1. Write `deliverables/competitor-report/II.1/result.json`. Pass when the native cases reconcile funding, state, authority and all order effects.
 
 ## 4. II.2 Fund canonical O1 after II.1
 
 Accountable role — order-library maintainer. Planned runner: `python3 scripts/qa/order-report.py II.2`. Test: `node --test packages/moriarty-orders/test/o1.test.mjs`.
 
-- [ ] 4.1 Write `packages/moriarty-orders/test/o1.test.mjs` and `packages/moriarty-orders/test/fixtures/o1.json`. Freeze independent account and asset deltas for both permitted outputs and every II.2 rejection. Pass when partial input or an altered recipient fails even with sufficient aggregate output.
-- [ ] 4.2 Deliver `packages/moriarty-orders/orders/o1.mori` through the II.1 adapter. Extend `scripts/qa/order-report.py`. Register II.2. Write `deliverables/competitor-report/II.2/result.json`. Pass when one frozen implementation executes the full spec matrix against funded custody. Retain the independent expectations, complete ledger reconciliation and assumptions for coverage review.
+- [x] 4.1 Write `packages/moriarty-orders/test/o1.test.mjs` and `packages/moriarty-orders/test/fixtures/o1.json`. Freeze independent account and asset deltas for both permitted outputs and every II.2 rejection. Pass when partial input or an altered recipient fails even with sufficient aggregate output.
+- [x] 4.2 Deliver `packages/moriarty-orders/orders/o1.mori` through the II.1 adapter. Extend `scripts/qa/order-report.py`. Register II.2. Write `deliverables/competitor-report/II.2/result.json`. Pass when one frozen implementation executes the full spec matrix against funded custody. Retain the independent expectations, complete ledger reconciliation and assumptions for coverage review.
 
 ## 5. II.3 Support cancellation and recovery after II.1
 
 Accountable role — custody maintainer. Planned runner: `python3 scripts/qa/order-report.py II.3`. Test: `node --test packages/moriarty-orders/test/recovery.test.mjs`.
 
-- [ ] 5.1 Write `packages/moriarty-orders/test/recovery.test.mjs`. Separate unfilled, partially filled and expired cases. Include both fill/cancel orderings, two orders, extra deposits, fresh funding after revocation and recovery beyond the execution horizon. Pass when the fixtures distinguish each owner's recoverable balance and preserved transfers.
-- [ ] 5.2 Implement `packages/moriarty-orders/contracts/recovery.compact`. Document surplus and upgrade rules in `packages/moriarty-orders/TRUST.md`. Extend `scripts/qa/order-report.py`. Register II.3. Write `deliverables/competitor-report/II.3/result.json`. Pass when accepted-state checks preserve completed transfers and prove spendable refunds in all permitted cases. Use a partial-fill policy for partial recovery. Preserve O1's one-fill rule.
+- [x] 5.1 Write `packages/moriarty-orders/test/recovery.test.mjs`. Separate unfilled, partially filled and expired cases. Include both fill/cancel orderings, two orders, extra deposits, fresh funding after revocation and recovery beyond the execution horizon. Pass when the fixtures distinguish each owner's recoverable balance and preserved transfers.
+- [x] 5.2 Implement `packages/moriarty-orders/contracts/recovery.compact`. Document surplus and upgrade rules in `packages/moriarty-orders/TRUST.md`. Extend `scripts/qa/order-report.py`. Register II.3. Write `deliverables/competitor-report/II.3/result.json`. Pass when accepted-state checks preserve completed transfers and prove spendable refunds in all permitted cases. Use a partial-fill policy for partial recovery. Preserve O1's one-fill rule.
 
 ## 6. II.4 Serialize continuations after II.1
 
@@ -69,8 +69,8 @@ Accountable role — continuation maintainer. Planned runner: `python3 scripts/q
 
 Accountable role — oracle maintainer. Planned runner: `python3 scripts/qa/order-report.py II.5`. Test: `node --test packages/moriarty-orders/test/feed.test.mjs`.
 
-- [ ] 7.1 Write `packages/moriarty-orders/test/feed.test.mjs`. Cover valid updates, substitution, timestamp bounds, equality, outage and a changed condition. Pass when a caller's authenticity flag cannot satisfy the positive case.
-- [ ] 7.2 Implement `packages/moriarty-orders/contracts/feed.compact` and `packages/moriarty-orders/src/feed.mjs`. Record controller, update policy, time source and outage handling in `packages/moriarty-orders/TRUST.md`. Extend `scripts/qa/order-report.py`. Register II.5. Write `deliverables/competitor-report/II.5/result.json`. Pass when the adapter rechecks the authenticated observation at execution and all boundary cases match. Preserve the economic correctness assumption.
+- [x] 7.1 Write `packages/moriarty-orders/test/feed.test.mjs`. Cover valid updates, substitution, timestamp bounds, equality, outage and a changed condition. Pass when a caller's authenticity flag cannot satisfy the positive case.
+- [x] 7.2 Implement `packages/moriarty-orders/contracts/feed.compact` and `packages/moriarty-orders/src/feed.mjs`. Record controller, update policy, time source and outage handling in `packages/moriarty-orders/TRUST.md`. Extend `scripts/qa/order-report.py`. Register II.5. Write `deliverables/competitor-report/II.5/result.json`. Pass when the adapter rechecks the authenticated observation at execution and all boundary cases match. Preserve the economic correctness assumption.
 
 ## 8. II.6 Check financial invariants
 
@@ -105,8 +105,8 @@ Accountable role — release maintainer. Planned runner: `python3 scripts/qa/ord
 
 Accountable role — order-library maintainer. Planned runner: `python3 scripts/qa/order-report.py IV.2`. Test: `node --test packages/moriarty-orders/test/o5.test.mjs`.
 
-- [ ] 12.1 Write `packages/moriarty-orders/test/o5.test.mjs`. Freeze permitted delivery and all IV.2 rejection cases. Pass when an earlier true condition cannot authorize a later false one.
-- [ ] 12.2 Deliver `packages/moriarty-orders/orders/o5.mori` through funded custody and the II.5 adapter. Extend `scripts/qa/order-report.py`. Register IV.2. Write `deliverables/competitor-report/IV.2/result.json`. Pass when accepted ledger effects match every case at execution. Retain the actual feed, time and inclusion assumptions for independent review.
+- [x] 12.1 Write `packages/moriarty-orders/test/o5.test.mjs`. Freeze permitted delivery and all IV.2 rejection cases. Pass when an earlier true condition cannot authorize a later false one.
+- [x] 12.2 Deliver `packages/moriarty-orders/orders/o5.mori` through funded custody and the II.5 adapter. Extend `scripts/qa/order-report.py`. Register IV.2. Write `deliverables/competitor-report/IV.2/result.json`. Pass when accepted ledger effects match every case at execution. Retain the actual feed, time and inclusion assumptions for independent review.
 
 ## 13. IV.3 Fund O8 after II.1 and II.2
 
@@ -126,7 +126,7 @@ Accountable role — custody maintainer. Planned runner: `python3 scripts/qa/ord
 
 Accountable role — integration maintainer. Planned check: `python3 scripts/qa/order-report.py IV.6`.
 
-- [ ] 15.1 Write `deliverables/competitor-report/IV.6/decision.md`. Add its decision check to `scripts/qa/order-report.py`. Pass when the cited integration evidence justifies deferral or requires a validated two-chain design. For a design, record proof, custody, finality, reorganization, timeout and late-release/refund cases. Keep O10 coverage and cost open pending implementation, native execution and independent assessment.
+- [x] 15.1 Write `deliverables/competitor-report/IV.6/decision.md`. Add its decision check to `scripts/qa/order-report.py`. Pass when the cited integration evidence justifies deferral or requires a validated two-chain design. For a design, record proof, custody, finality, reorganization, timeout and late-release/refund cases. Keep O10 coverage and cost open pending implementation, native execution and independent assessment.
 
 ## 16. Reconcile delivery and assessment
 

@@ -178,10 +178,97 @@ def check_invariants():
     print(lean, end="")
 
 
+ORDERS = Path("packages/moriarty-orders")
+# Each row pairs a finite suite with an independent strict native replay.
+NATIVE = {
+    "II.1": ("F27", "acceptance", "check-acceptance", [], "src/authorization.mjs"),
+    "II.2": ("U036", "o1", "check-acceptance", [], "native/o1-accounting.mjs"),
+    "II.3": ("F30", "recovery", "check-recovery", [], "src/recovery.mjs"),
+    "II.5": ("F28", "feed", "check-feed", ["II.5"], "src/feed.mjs"),
+    "IV.2": ("U038", "o5", "check-feed", ["IV.2"], None),
+}
+
+
+def write_record(dest, record):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", dir=dest.parent, delete=False) as file:
+        json.dump(record, file, indent=2)
+        file.write("\n")
+    os.replace(file.name, dest)
+
+
+def native_case(case):
+    predicate, suite, checker, extra, scope = NATIVE[case]
+    test = ORDERS / "test" / (suite + ".test.mjs")
+    check = ORDERS / "native" / (checker + ".mjs")
+    evidence = ROOT / REPORT / case
+    # Feed generation retains its own primary result; replay adds a second record.
+    dest = evidence / ("factory-check.json" if checker == "check-feed" else "result.json")
+    result = {"requirement": case, "predicate": predicate, "passed": False, "checks": {},
+              "runner": ["python3", "scripts/qa/order-report.py", case], "assessment": "independent review pending",
+              "target": "local undeployed Midnight ledger, full Rust validation and ZKIRv3",
+              "limitations": ["Controlled local block clock and public test wallets", "Public-network inclusion and finality unassessed"]}
+    try:
+        result["revision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        result["environment"] = {"node": subprocess.check_output(["node","--version"], text=True).strip(),
+                                  "platform": platform.platform(), "machine": platform.machine(),
+                                  "sdkLockSha256": sha((ROOT / "tools/sherlock-sdk/package-lock.json").read_bytes())}
+        with tempfile.TemporaryDirectory(prefix="order-coverage-") as tmp:
+            cmd = ["node", "--test", "--test-reporter=junit", "--test-reporter-destination=stdout"]
+            if scope:
+                cov = Path(tmp) / "lines.lcov"
+                cmd.extend(["--experimental-test-coverage", "--test-reporter=lcov", "--test-reporter-destination=" + str(cov),
+                            "--test-coverage-include=" + str(ORDERS / scope)])
+            xml = execute("finiteTests", cmd + [str(test)], result["checks"])
+            result["tests"] = sorted(test_inventory(xml, {ROOT / test}))
+            if scope:
+                result["coverage"] = {"metric": "Node V8 executed lines / instrumented lines",
+                                      "files": coverage(cov.read_text(), {ORDERS / scope})}
+                result["checks"]["finiteTests"]["command"][6] = "--test-reporter-destination=<scratch>/lines.lcov"
+        raw = execute("strictNativeReplay", ["node", str(check), *extra], result["checks"])
+        # Compact may print its compilation progress before the JSON replay.
+        output = raw.decode()
+        start = re.search(r"^\{", output, flags=re.MULTILINE)
+        if not start:
+            raise ValueError("missing native replay details")
+        result["replay"] = json.loads(output[start.start():])
+        result["inputs"] = {str(path): sha((ROOT / path).read_bytes()) for path in [test, check, ORDERS / "native/replay.mjs"]}
+        result["passed"] = True
+    except (OSError, ValueError, subprocess.SubprocessError, ET.ParseError) as error:
+        result["error"] = str(error)
+        print(error, file=sys.stderr)
+    write_record(dest, result)
+    return 0 if result["passed"] else 1
+
+
+def decision():
+    directory = ROOT / REPORT / "IV.6"
+    path = directory / "decision.md"
+    text = path.read_text()
+    for link in re.findall(r"\]\(([^)]+)\)", text):
+        if not (directory / link).resolve().is_file():
+            raise ValueError("missing O10 decision evidence " + link)
+    cmd = ["node", "--test", "--test-reporter=junit", "--test-name-pattern", "bridge authoring",
+           "packages/moriarty-beta/tests/examples.test.mjs"]
+    checks = {}
+    names = test_inventory(execute("bridgeScope", cmd, checks), {ROOT / cmd[-1]})
+    if len(names) != 1 or "Defer the two-chain order" not in text:
+        raise ValueError("decision and bridge execution check do not agree")
+    write_record(directory / "result.json", {"requirement":"IV.6", "decision":"defer", "passed":True,
+                 "decisionSha256":sha(path.read_bytes()), "checks":checks, "revision":subprocess.check_output(
+                 ["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip(),
+                 "O10":{"coverage":"open","settlementCost":"unavailable","recoveryCost":"unavailable"}})
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case", choices=["I.2", "II.6"])
+    parser.add_argument("case", choices=["I.2", "II.6", "IV.6", *NATIVE])
     args = parser.parse_args()
+    if args.case in NATIVE:
+        return native_case(args.case)
+    if args.case == "IV.6":
+        return decision()
     if args.case == "II.6":
         check_invariants()
         return 0

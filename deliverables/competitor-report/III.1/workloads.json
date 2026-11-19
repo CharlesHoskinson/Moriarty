@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "version": "transaction-cost-profiles-1",
+  "rubric_version": "execution_cost-2",
+  "unit": "transaction resources and native fees",
+  "order_suite": "orders-1",
+  "protocol_fee_amount": 0,
+  "operations": [
+    {
+      "id": "o1-fill",
+      "order_id": "O1",
+      "workload": "Native exact-input order: Alice spends exactly 100 A; Bob receives at least 200 B before t=1400; fill at t=1000; zero protocol fees",
+      "boundary": "valid-unfilled-order-through-finalized-fill-and-asset-accounting",
+      "required_checks": [
+        "valid_fillable_initial_order",
+        "owner_authority",
+        "expected_completion",
+        "zero_protocol_fees",
+        "reject_wrong_input",
+        "reject_underpayment",
+        "reject_expired_fill",
+        "reject_forged_owner",
+        "reject_replay"
+      ],
+      "completion": "Retain setup, full fill, finality and asset accounting. Do not measure an isolated validation call."
+    },
+    {
+      "id": "cancel-unfilled",
+      "order_id": "O1",
+      "workload": "Separate native cancellation workload: a valid unfilled owner-authorized order offers 100 A at price 2 B per A; cancel before expiry and return all locked A to owner; zero protocol fees",
+      "boundary": "valid-unfilled-native-order-through-finalized-revocation-and-owner-recovery",
+      "required_checks": [
+        "valid_fillable_initial_order",
+        "owner_authority",
+        "expected_completion",
+        "zero_protocol_fees",
+        "reject_unauthorized_cancel",
+        "reject_fill_after_cancel",
+        "owner_asset_recovery",
+        "cancel_wins_race"
+      ],
+      "completion": "This is not O1 fill conformance. Prove the native order was fillable before cancellation; retain revocation and any separate owner recovery transactions."
+    },
+    {
+      "id": "o10-settlement",
+      "order_id": "O10",
+      "workload": "O10 settlement: Alice commits 100 A on X for 200 B to Bob on Y before t=1400; authenticate Y inclusion with 10 descendant blocks and release X escrow; zero protocol fees",
+      "boundary": "authorized-order-through-finalized-y-delivery-proof-and-x-settlement",
+      "required_checks": [
+        "valid_fillable_initial_order",
+        "owner_authority",
+        "expected_completion",
+        "zero_protocol_fees",
+        "authenticated_finality",
+        "reject_wrong_recipient",
+        "reject_nonfinal_proof",
+        "reject_refund_after_settlement",
+        "reject_late_delivery"
+      ],
+      "completion": "Retain X commitment, Y delivery, on-chain proof handling, X release and relayer transactions. Retain both chain environments and finality assumptions."
+    },
+    {
+      "id": "o10-recovery",
+      "order_id": "O10",
+      "workload": "O10 recovery: Alice commits 100 A on X for 200 B to Bob on Y; no accepted completion; at t=1500 recover 100 A to Alice and permanently disable settlement; zero protocol fees",
+      "boundary": "authorized-order-through-pending-escrow-and-finalized-owner-recovery",
+      "required_checks": [
+        "valid_fillable_initial_order",
+        "valid_pending_escrow",
+        "owner_authority",
+        "expected_completion",
+        "zero_protocol_fees",
+        "reject_premature_recovery",
+        "reject_settlement_after_refund",
+        "owner_asset_recovery"
+      ],
+      "completion": "Include commitment in this sample before recovery. Check valid pending escrow before the recovery transition; do not claim the pending order remains fillable at recovery time."
+    }
+  ]
+}

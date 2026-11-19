@@ -1,0 +1,51 @@
+// Included by staged-exchange after its bounded-atomic kernel.
+export struct StageTerms {
+  account: UserAddress; executor: UserAddress; network: Bytes<32>; orderId: Bytes<32>;
+  program: Bytes<32>; assetA: Bytes<32>; assetB: Bytes<32>; assetC: Bytes<32>;
+  eventId: Bytes<32>; epoch: Uint<64>;
+}
+export struct Capture {
+  predecessor: Bytes<32>; eventId: Bytes<32>; custody: ContractAddress; orderId: Bytes<32>;
+  program: Bytes<32>; asset: Bytes<32>; amount: Uint<128>; budget: Uint<8>;
+}
+export struct OrderSignature { announcement: JubjubPoint; response: Field; }
+struct StageChallenge {
+  domain: Bytes<32>; terms: StageTerms; instance: ContractAddress; ownerX: Field; ownerY: Field;
+  action: Uint<8>; revision: Uint<128>; announcementX: Field; announcementY: Field;
+}
+struct FirstReceipt {
+  domain: Bytes<32>; custody: ContractAddress; terms: StageTerms;
+  before: KernelState; after: KernelState; revision: Uint<128>;
+}
+export ledger terms: StageTerms;
+export ledger ownerKey: JubjubPoint;
+export ledger funded: Boolean;
+export ledger current: KernelState;
+export ledger remaining: Uint<128>;
+export ledger revision: Uint<128>;
+export ledger pending: Capture;
+export ledger eventEnabled: Boolean;
+export ledger terminal: Uint<8>;
+
+pure circuit equalPoint(a: JubjubPoint, b: JubjubPoint): Boolean {
+  return jubjubPointX(a) == jubjubPointX(b) && jubjubPointY(a) == jubjubPointY(b);
+}
+export pure circuit orderChallenge(t: StageTerms, instance: ContractAddress, key: JubjubPoint,
+                                   action: Uint<8>, nonce: Uint<128>, announcement: JubjubPoint): Field {
+  const h = transientHash<StageChallenge>(StageChallenge {
+    domain: pad(32,"moriarty:stage:schnorr:v1"), terms:t, instance:instance,
+    ownerX:jubjubPointX(key), ownerY:jubjubPointY(key), action:action, revision:nonce,
+    announcementX:jubjubPointX(announcement), announcementY:jubjubPointY(announcement) });
+  return (slice<31>(h as Bytes<32>, 0) as Uint<248>) as Field;
+}
+circuit authorizeStage(action: Uint<8>, sig: OrderSignature): [] {
+  assert(!equalPoint(sig.announcement,ecMulGenerator(0 as JubjubScalar)), "STAGE_IDENTITY");
+  const c = orderChallenge(terms,kernel.self(),ownerKey,action,revision,sig.announcement);
+  assert(equalPoint(ecMulGenerator(sig.response as JubjubScalar),
+                    ecAdd(sig.announcement,ecMul(ownerKey,c as JubjubScalar))), "STAGE_SIGNATURE");
+}
+circuit requireCapture(ticket: Capture): [] {
+  assert(funded && current.f2 == 1 && terminal == 0, "CONTINUATION_CONSUMED");
+  assert(ticket == pending && ticket.custody == kernel.self() && ticket.budget == 1, "CONTINUATION_CAPTURE");
+  assert(unshieldedBalanceGte(ticket.asset,ticket.amount), "CONTINUATION_CUSTODY");
+}

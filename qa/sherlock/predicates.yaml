@@ -1337,3 +1337,58 @@ predicates:
     holdout: false
     deps:
       paths: ["scripts/qa/order-report.py", "packages/moriarty-orders/test/invariants.test.mjs", "experiments/moriarty-language", "clean/fork/lean-toolchain", "clean/fork/Clean/Sherlock/OrderInvariants.lean", "deliverables/competitor-report/II.6"]
+  - id: F27
+    set: F
+    title: "Verify signed order enrollment, native state and atomic consumption"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py II.1"
+    heavy: false
+    depends: []
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#3-ii1-connect-signed-orders-to-native-acceptance"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/II.1/native"]
+  - id: U036
+    set: U
+    title: "Reconcile both complete funded exact-input O1 fills and rejected grants"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py II.2"
+    heavy: false
+    depends: ["F27"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#4-ii2-fund-canonical-o1-after-ii1"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/II.1/native"]
+  - id: F30
+    set: F
+    title: "Reconcile owner refunds, partial trades, order isolation and spendable recovery"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py II.3"
+    heavy: false
+    depends: ["F27"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#5-ii3-support-cancellation-and-recovery-after-ii1"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/II.3/native"]
+  - id: F28
+    set: F
+    title: "Recheck authenticated feed observations against strict native execution"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py II.5"
+    heavy: false
+    depends: []
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#7-ii5-authenticate-named-observations"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/II.5/receipts.json"]
+  - id: U038
+    set: U
+    title: "Settle O5 with a fresh accepted feed observation and funded custody"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py IV.2"
+    heavy: false
+    depends: ["F28", "U036"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#12-iv2-fund-o5-after-ii2-and-ii5"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/IV.2/receipts.json"]

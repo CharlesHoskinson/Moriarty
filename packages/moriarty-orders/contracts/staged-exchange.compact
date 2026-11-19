@@ -1,0 +1,62 @@
+pragma language_version >= 0.23 && <= 0.28;
+import CompactStandardLibrary;
+include "kernel";
+include "continuation";
+
+constructor(t: StageTerms, key: JubjubPoint) {
+  const program: Bytes<32> = Bytes[169,42,20,222,99,254,13,226,69,209,146,20,28,81,167,129,40,247,213,139,161,50,123,138,148,160,180,120,9,211,176,144];
+  assert(t.program == program && t.epoch <= 18446744073709549615, "STAGE_TERMS");
+  assert(t.assetA != t.assetB && t.assetA != t.assetC && t.assetB != t.assetC, "STAGE_ASSETS");
+  assert(t.executor != t.account && !equalPoint(key,ecMulGenerator(0 as JubjubScalar)), "STAGE_PARTIES");
+  terms = disclose(t); ownerKey = disclose(key);
+}
+export circuit fund(): [] {
+  assert(!funded && blockTimeLt((terms.epoch + 1200) as Uint<64>), "STAGE_FUND");
+  receiveUnshielded(terms.assetA,100);
+  current = KernelState { f0:100, f1:0, f2:0 }; remaining = 3; revision = 0; funded = true;
+}
+export circuit first(delivery: Uint<128>, now: Uint<64>, sig: OrderSignature): [] {
+  assert(funded && current.f2 == 0, "STAGE_FIRST");
+  authorizeStage(0,sig);
+  assert(blockTimeLt((terms.epoch + 1200) as Uint<64>) && now < 1200, "FIRST_EXPIRED");
+  assert(blockTimeGte((terms.epoch + disclose(now)) as Uint<64>), "FUTURE_TIME");
+  const r = disclose(transition0(current,Arguments0 { a0:3, a1:delivery },KernelObservations {o0:now as Uint<128>},
+                                 remaining,revision,Hints0 {unused:0}));
+  assert(r.effect0.v0==0 && r.effect0.v1==4 && r.effect0.v2==5 && r.effect0.v3==100, "STAGE_INPUT");
+  assert(r.effect1.v0==1 && r.effect1.v1==5 && r.effect1.v2==4 && r.effect1.v3==delivery, "STAGE_OUTPUT");
+  receiveUnshielded(terms.assetB,r.effect1.v3);
+  sendUnshielded(terms.assetA,r.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  pending = Capture {
+    predecessor:persistentHash<FirstReceipt>(FirstReceipt {domain:pad(32,"moriarty:stage:first:v1"), custody:kernel.self(),
+        terms:terms, before:current, after:r.after, revision:r.revision}),
+    eventId:terms.eventId, custody:kernel.self(), orderId:terms.orderId, program:terms.program,
+    asset:terms.assetB, amount:r.after.f1, budget:1 };
+  current = r.after; remaining = r.remaining; revision = r.revision;
+}
+export circuit enable(eventId: Bytes<32>, sig: OrderSignature): [] {
+  assert(current.f2 == 1 && !eventEnabled && eventId == terms.eventId, "STAGE_EVENT");
+  authorizeStage(1,sig); eventEnabled = true;
+}
+export circuit resume(ticket: Capture, delivery: Uint<128>, now: Uint<64>, sig: OrderSignature): [] {
+  requireCapture(disclose(ticket)); authorizeStage(2,sig);
+  assert(eventEnabled && ticket.eventId == terms.eventId, "CONDITION_FALSE");
+  assert(blockTimeLt((terms.epoch + 1400) as Uint<64>) && now < 1400, "SECOND_EXPIRED");
+  assert(blockTimeGte((terms.epoch + disclose(now)) as Uint<64>), "FUTURE_TIME");
+  const r = disclose(transition1(current,Arguments1 {a0:3,a1:1,a2:delivery}, KernelObservations {o0:now as Uint<128>},
+                                 remaining,revision,Hints1 {unused:0}));
+  assert(r.effect0.v0==1 && r.effect0.v1==4 && r.effect0.v2==5 && r.effect0.v3==ticket.amount, "STAGE_B");
+  assert(r.effect1.v0==2 && r.effect1.v1==5 && r.effect1.v2==3 && r.effect1.v3==delivery, "STAGE_C");
+  receiveUnshielded(terms.assetC,r.effect1.v3);
+  sendUnshielded(terms.assetB,r.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  sendUnshielded(terms.assetC,r.effect1.v3,right<ContractAddress,UserAddress>(terms.account));
+  current = r.after; remaining = r.remaining; revision = r.revision; terminal=1;
+}
+export circuit refund(ticket: Capture, sig: OrderSignature): [] {
+  requireCapture(disclose(ticket)); authorizeStage(3,sig);
+  assert(blockTimeGte((terms.epoch + 1400) as Uint<64>), "NOT_EXPIRED");
+  const r = disclose(transition2(current,Arguments2 {a0:3},KernelObservations {o0:1400},
+                                 remaining,revision,Hints2 {unused:0}));
+  assert(r.effect0.v0==1 && r.effect0.v1==4 && r.effect0.v2==3 && r.effect0.v3==ticket.amount, "REFUND_B");
+  sendUnshielded(terms.assetB,r.effect0.v3,right<ContractAddress,UserAddress>(terms.account));
+  current = r.after; remaining = r.remaining; revision = r.revision; terminal=2;
+}
