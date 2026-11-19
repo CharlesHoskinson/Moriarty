@@ -53,14 +53,35 @@ MUTATIONS = {
                       "tests": ["exact quantum conversion rejects nondivisibility and overflow"],
                       "reason": "'101' !== '100'"},
     "ledger": {"file": ORDER_LEDGER / "src/accepted-state.mjs",
-               "replace": "for (const op of ['fund','fill','cancel'])", "with": "for (const op of ['fund','fill'])",
-               "tests": ["accepted-state reader refuses an absent deployment or a changed verifier pin"],
-               "reason": "did not match the regular expression /cancel.*verifier/i"},
+               "replace": "if (authority.counter !== 0n)", "with": "if (authority.counter < 0n)",
+               "tests": ["accepted-state reader refuses a changed installation, entry point or maintenance authority"],
+               "reason": "Missing expected exception"},
 }
 
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+EVIDENCE_EXCLUDES = [":!deliverables/competitor-report", ":!qa/sherlock/status.json", ":!qa/sherlock/runs.jsonl"]
+
+
+def source_revision():
+    """Name the clean committed code a record comes from; generated evidence and factory state may differ."""
+    dirty = subprocess.check_output(["git", "status", "--porcelain", "--", ".", *EVIDENCE_EXCLUDES],
+                                    cwd=ROOT, text=True).strip()
+    if dirty:
+        if os.environ.get("MORIARTY_EVIDENCE_DRAFT") == "1":
+            return None
+        raise ValueError("run the checks from a clean committed tree:\n" + dirty)
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+
+
+def committed_generator(record):
+    generator = record.get("generator") or {}
+    if generator.get("draft") is not False or not re.fullmatch(r"[0-9a-f]{40}", generator.get("revision") or ""):
+        raise ValueError("native evidence was not generated from a clean committed revision")
+    return generator["revision"]
 
 
 def test_inventory(xml, expected):
@@ -336,6 +357,16 @@ NATIVE = {
     "IV.4": ("U039", "o9", "check-staged", ["IV.4"], None),
     "IV.2": ("U038", "o5", "check-feed", ["IV.2"], "src/o5.mjs"),
 }
+# The record in which each native generator names its clean committed revision.
+GENERATORS = {"II.1": "II.1/native/native-readback.json", "II.2": "II.1/native/native-readback.json",
+              "II.3": "II.3/native/readback.json", "II.4": "IV.4/native/readback.json", "IV.4": "IV.4/native/readback.json",
+              "III.5": "III.5/native/executors.json", "II.5": "II.5/result.json", "IV.2": "IV.2/result.json",
+              "IV.3": "IV.3/result.json"}
+BOUNDARY = {"ledgerApplied": "Every retained transaction passes strict Rust validation (proofs, signatures, balancing, "
+                             "limits) and application against its recorded predecessor state.",
+            "compiledCircuitRefusals": "Each preparation refusal re-executes in the compiled circuit against its recorded "
+                                       "accepted state. No transaction exists for these calls, so their ledger refusal "
+                                       "follows from proof soundness and is not itself observed."}
 
 
 def write_record(dest, record):
@@ -355,10 +386,11 @@ def native_case(case):
     dest = evidence / ("factory-check.json" if checker in ("check-feed", "check-o8") else "result.json")
     result = {"requirement": case, "predicate": predicate, "passed": False, "checks": {},
               "runner": ["python3", "scripts/qa/order-report.py", case], "assessment": "independent review pending",
-              "target": "local undeployed Midnight ledger, full Rust validation and ZKIRv3",
+              "target": "local undeployed Midnight ledger with ZKIRv3 proofs", "evidenceBoundary": BOUNDARY,
               "limitations": ["Controlled local block clock and public test wallets", "Public-network inclusion and finality unassessed"]}
     try:
-        result["revision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        result["revision"] = source_revision()
+        result["draft"] = result["revision"] is None
         result["environment"] = {"node": subprocess.check_output(["node","--version"], text=True).strip(),
                                   "platform": platform.platform(), "machine": platform.machine(),
                                   "sdkLockSha256": sha((ROOT / "tools/sherlock-sdk/package-lock.json").read_bytes())}
@@ -381,6 +413,12 @@ def native_case(case):
         if not start:
             raise ValueError("missing native replay details")
         result["replay"] = json.loads(output[start.start():])
+        result["evidenceClasses"] = result["replay"].get("evidenceClasses")
+        if not result["evidenceClasses"] or not result["evidenceClasses"].get("ledgerApplied"):
+            raise ValueError("checker did not report its evidence classes")
+        result["evidenceRevision"] = committed_generator(json.loads((ROOT / REPORT / GENERATORS[case]).read_bytes()))
+        if checker in ("check-feed", "check-o8"):
+            write_record(evidence / "strict-replay.json", result["replay"])
         result["inputs"] = {str(path): sha((ROOT / path).read_bytes()) for path in [test, check, ORDERS / "native/replay.mjs"]}
         result["passed"] = True
     except (OSError, ValueError, subprocess.SubprocessError, ET.ParseError) as error:
@@ -395,22 +433,31 @@ def distribution():
     base = ROOT / REPORT / "III.6"
     cmd = ["node","--test","--test-reporter=junit",str(suite)]
     checks = {}
-    with tempfile.TemporaryDirectory(prefix="order-install-") as directory:
-        receipt = Path(directory) / "install.json"
-        env = dict(os.environ, MORIARTY_ORDER_INSTALL_RECEIPT=str(receipt))
-        names = test_inventory(execute("cleanInstall", cmd, checks, env=env), {ROOT / suite})
-        install = json.loads(receipt.read_bytes())
-    release = json.loads((base/"release.json").read_bytes())
-    archive = base / release["file"]
-    if install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]:
-        raise ValueError("installed archive digest differs from the release record")
-    write_record(base/"clean-install.json", install)
-    write_record(base/"result.json", {"requirement":"III.6","predicate":"F33","localReplayPassed":True,
-                 "status":"partial","checks":checks,"tests":sorted(names),"package":release["package"],
-                 "version":release["version"],"archiveSha256":release["sha256"],"platform":release["platform"],
-                 "installReceipt":"clean-install.json","releaseRecord":"release.json",
-                 "publication":release["publication"],"outsideReproduction":"deferred"})
-    return 0
+    record = {"requirement":"III.6","predicate":"F33","localReplayPassed":False,"status":"partial","checks":checks,
+              "outsideReproduction":"deferred"}
+    try:
+        record["revision"] = source_revision()
+        record["draft"] = record["revision"] is None
+        release = json.loads((base/"release.json").read_bytes())
+        record.update({"package":release["package"],"version":release["version"],"archiveSha256":release["sha256"],
+                       "platform":release["platform"],"releaseRecord":"release.json","publication":release["publication"]})
+        with tempfile.TemporaryDirectory(prefix="order-install-") as directory:
+            receipt = Path(directory) / "install.json"
+            env = dict(os.environ, MORIARTY_ORDER_INSTALL_RECEIPT=str(receipt))
+            names = test_inventory(execute("cleanInstall", cmd, checks, env=env), {ROOT / suite})
+            install = json.loads(receipt.read_bytes())
+        archive = base / release["file"]
+        if install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]:
+            raise ValueError("installed archive digest differs from the release record")
+        install["revision"] = record["revision"]
+        write_record(base/"clean-install.json", install)
+        record.update({"localReplayPassed":True,"tests":sorted(names),"installReceipt":"clean-install.json"})
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError, ET.ParseError) as error:
+        # Keep the failed attempt; a previous passing record must not survive a failed replay.
+        record["error"] = str(error)[-2400:]
+        print(error, file=sys.stderr)
+    write_record(base/"result.json", record)
+    return 0 if record["localReplayPassed"] else 1
 
 
 def decision():
@@ -427,8 +474,7 @@ def decision():
     if len(names) != 1 or "Defer the two-chain order" not in text:
         raise ValueError("decision and bridge execution check do not agree")
     write_record(directory / "result.json", {"requirement":"IV.6", "decision":"defer", "passed":True,
-                 "decisionSha256":sha(path.read_bytes()), "checks":checks, "revision":subprocess.check_output(
-                 ["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip(),
+                 "decisionSha256":sha(path.read_bytes()), "checks":checks, "revision":source_revision(),
                  "O10":{"coverage":"open","settlementCost":"unavailable","recoveryCost":"unavailable"}})
     return 0
 
@@ -444,9 +490,12 @@ def main():
         return reconcile()
     if args.case == "III.1":
         from order_cost_report import check_costs
+        revision = source_revision()
         suite = ORDERS / "test/measurement.test.mjs"
         test_inventory(execute("measurements", ["node","--test","--test-reporter=junit",str(suite)], {}), {ROOT / suite})
         check_costs()
+        path = ROOT / REPORT / "III.1/result.json"
+        write_record(path, {**json.loads(path.read_bytes()), "checkRevision": revision, "draft": revision is None})
         return 0
     if args.case in NATIVE:
         return native_case(args.case)
@@ -463,7 +512,8 @@ def main():
               "testCommand":["python3","-m","unittest","discover","-s","scripts/qa/tests","-p","test_order_report.py"],
               "environment":{"system":platform.system(),"machine":platform.machine(),"python":platform.python_version()}}
     try:
-        result["revision"] = subprocess.check_output(["git","rev-parse","HEAD"], cwd=ROOT, text=True).strip()
+        result["revision"] = source_revision()
+        result["draft"] = result["revision"] is None
         for tool,cmd in {"node":["node","--version"],"npm":["npm","--version"],
                          "compact":["compact","compile","--version"],
                          "typescript":[str(ROOT / LANG / "node_modules/.bin/tsc"),"--version"]}.items():

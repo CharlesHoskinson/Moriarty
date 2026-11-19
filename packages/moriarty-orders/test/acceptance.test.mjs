@@ -94,14 +94,22 @@ test('canonical guards refuse a short input, short output, fee, stale head and e
     [{revision:1n,fresh:true},/REVISION/],[{time:1400},/EXPIRED/]]) await assert.rejects(()=>fill(args),reason);
 });
 
-test('accepted-state reader refuses an absent deployment or a changed verifier pin', async () => {
-  const {readAcceptedOrder} = await import('../src/accepted-state.mjs');
+test('accepted-state reader refuses a changed installation, entry point or maintenance authority', async () => {
+  const {readAcceptedOrder,verifyInstalledContract} = await import('../src/accepted-state.mjs');
   const {createHash} = await import('node:crypto');
   const digest = v => createHash('sha256').update(v).digest('hex');
-  const expected = {address,network:'undeployed',verifiers:{fund:digest(bytes(8)),fill:digest(bytes(8)),cancel:digest(bytes(7))}};
-
+  const expected = {address,network:'undeployed',verifiers:{fund:digest(bytes(8)),fill:digest(bytes(8)),cancel:digest(bytes(7))},
+    maintenance:{committee:['owner-wallet-key'],threshold:1,counter:'0'}};
+  const installed = (changes={}) => ({operations:()=>['fund','fill','cancel'],
+    operation:op=>({verifierKey:op==='cancel'?bytes(7):bytes(8)}),
+    maintenanceAuthority:{committee:['owner-wallet-key'],threshold:1,counter:0n},...changes});
+  verifyInstalledContract(installed(),expected);
   assert.throws(()=>readAcceptedOrder({network:'undeployed',index:()=>undefined},rt,compiled,expected),/deployment/i);
-  assert.throws(()=>readAcceptedOrder({network:'undeployed',index:()=>({operation:()=>({verifierKey:bytes(8)})})},rt,compiled,expected),/cancel.*verifier/i);
+  assert.throws(()=>verifyInstalledContract(installed({operation:()=>({verifierKey:bytes(8)})}),expected),/cancel verifier/i);
+  assert.throws(()=>verifyInstalledContract(installed({operations:()=>['fund','fill','cancel','drain']}),expected),/entry points/i);
+  assert.throws(()=>verifyInstalledContract(installed({maintenanceAuthority:{committee:['other-wallet-key'],threshold:1,counter:0n}}),expected),/Maintenance authority mismatch/);
+  assert.throws(()=>verifyInstalledContract(installed({maintenanceAuthority:{committee:['owner-wallet-key'],threshold:1,counter:1n}}),expected),/maintenance has been exercised/i);
+  assert.throws(()=>verifyInstalledContract(installed(),{...expected,maintenance:undefined}),/maintenance/i);
 });
 test('owner can recover late and a fill signature cannot authorize a refund', async () => {
   const {contract,fundedState,signature} = await setup();
@@ -124,10 +132,16 @@ test('native wallet enrollment rejects another wallet and a substituted order si
   const other = L.signingKeyFromBip340(bytes(15));
   const account = {bytes:rt.encodeUserAddress(L.addressFromKey(L.signatureVerifyingKey(wallet)))};
   const state = {terms:{...terms,account},owner:rt.ecMulGenerator(ownerSecret)};
-  const d = {address,network:'undeployed',verifiers:{fund:hex(bytes(1)),fill:hex(bytes(2)),cancel:hex(bytes(3))}};
+  const vk = L.signatureVerifyingKey(wallet), otherVk = L.signatureVerifyingKey(other);
+  const d = {address,network:'undeployed',verifiers:{fund:hex(bytes(1)),fill:hex(bytes(2)),cancel:hex(bytes(3))},
+    maintenance:{committee:[vk],threshold:1,counter:'0'}};
   const cert = issueEnrollment(L,rt,d,state,wallet);
   verifyEnrollment(L,rt,d,state,cert);
   assert.throws(()=>issueEnrollment(L,rt,d,state,other),/wallet/i);
   assert.throws(()=>verifyEnrollment(L,rt,d,{...state,owner:rt.ecMulGenerator(9n)},cert),/enrollment/i);
   assert.throws(()=>verifyEnrollment(L,rt,{...d,address:'88'.repeat(32)},state,cert),/enrollment/i);
+  // The signature covers every verifier and the committee. Only the owner wallet may maintain the order.
+  assert.throws(()=>verifyEnrollment(L,rt,{...d,verifiers:{...d.verifiers,drain:hex(bytes(4))}},state,cert),/enrollment/i);
+  assert.throws(()=>verifyEnrollment(L,rt,{...d,maintenance:{committee:[otherVk],threshold:1,counter:'0'}},state,cert),/maintenance/i);
+  assert.throws(()=>verifyEnrollment(L,rt,{...d,maintenance:{committee:[vk,otherVk],threshold:1,counter:'0'}},state,cert),/maintenance/i);
 });

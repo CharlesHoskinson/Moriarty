@@ -7,7 +7,9 @@ import {issueEnrollment, signOrder} from '../src/authorization.mjs';
 import {signFeedUpdate} from '../src/feed.mjs';
 import {FEED_AB, prepareO5Fill, signProviderQuote} from '../src/o5.mjs';
 import {NativeLedger, hash, encode} from './native-ledger.mjs';
-import {retainedTransactions} from '../native/record.mjs';
+import {generatorRecord, retainedTransactions} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
+import {encodeValue} from '../src/values.mjs';
 
 const [buildDir, mintDir, output] = process.argv.slice(2);
 const proofServer = process.env.MORIARTY_ORDER_PROVER || 'http://127.0.0.1:16311';
@@ -17,18 +19,19 @@ const write = (name,data) => writeFileSync(join(output,name),encode(data)+'\n');
 const build = JSON.parse(readFileSync(join(buildDir,'o5-build.json')));
 const report = {requirement:'IV.2',grade:'tested unreleased',network:'undeployed',target:'strict V9 WASM ledger application',
   command:['node','packages/moriarty-orders/test/o5-native.mjs',buildDir,mintDir,output],
-  revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),node:process.version,build,
+  generator:generatorRecord(['node','packages/moriarty-orders/test/o5-native.mjs',buildDir,mintDir,output]),node:process.version,build,
   assessment:'independent assessment pending',assumptions:['Controller price and timely updates','Ledger time, ordering and inclusion',
     'Pinned controller, provider and deployment verifiers','Exact execution-second witness'],
   sources:Object.fromEntries(['contracts/o5.compact','contracts/feed-policy.compact','orders/o5.mori','src/o5.mjs','src/feed.mjs',
     'src/authorization.mjs','src/accepted-state.mjs','src/build-o5.mjs','test/o5-native.mjs','test/native-ledger.mjs'].map(name=>
       [name,hash(readFileSync(join('packages/moriarty-orders',name)))])),fills:[],refusals:[]};
 const retain = retainedTransactions(output);
+const refusals = retainedRefusals(output);
 
 async function run() {
   report.proofServerVersion = (await (await fetch(new URL('/version',proofServer))).text()).trim();
   assert.equal(report.proofServerVersion,'9.0.1');
-  const h = await NativeLedger.create({modules:process.env.MORIARTY_ORDER_MODULES,proofServer,retain});
+  const h = await NativeLedger.create({modules:process.env.MORIARTY_ORDER_MODULES,proofServer,retain,refusals});
   const order = await h.loadContract(buildDir);
   const mintContract = await h.loadContract(mintDir);
   const mint = await h.deploy(mintContract,[],'deploy-test-mint');
@@ -42,10 +45,13 @@ async function run() {
   const owner = h.runtime.ecMulGenerator(ownerSecret);
   const provider = h.runtime.ecMulGenerator(providerSecret);
   const controller = h.runtime.ecMulGenerator(controllerSecret);
-  const instance = await h.deploy(order,[terms,owner,controller,provider],'deploy-O5');
+  const instance = await h.deploy(order,[terms,owner,controller,provider],'deploy-O5',{maintainers:[h.actors.owner]});
   const address = {bytes:h.runtime.encodeContractAddress(instance.address)};
-  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers};
+  // The owner enrolls the feed controller and quote provider together with the verifiers and committee.
+  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers,
+    maintenance:instance.maintenance,pins:{feedController:encodeValue(controller),providerKey:encodeValue(provider)}};
   deployment.enrollment = issueEnrollment(h.L,h.runtime,deployment,{terms,owner},h.actors.owner.key);
+  report.deployment = deployment;
   report.authorities = {owner,controller,provider,ownerWallet:h.actors.owner.address,providerWallet:h.actors.executor.address,
     recipient:h.actors.recipient.address,address:instance.address,enrollment:deployment.enrollment};
   const funded = await h.call(instance,'fund',[],'fund-O5');
@@ -78,27 +84,30 @@ async function run() {
     const observation = {feed:FEED_AB,price,observedAt};
     return [observation,signFeedUpdate(h.runtime,order.generated.pureCircuits,{network:terms.network,address},observation,key)];
   };
-  async function refuse(label,operation,error) {
+  const fillArgs = req => [req.revision,req.input,req.delivery,req.fee,req.now,req.signature,req.feed,req.quote];
+  // The adapter path refuses first; the compiled circuit must refuse the same call, which is recorded for re-execution.
+  async function refuse(label,error,{req,circuit='fill',args}={}) {
     const before = hash(h.state.serialize());
-    await assert.rejects(async()=>operation(),error);
+    if (req) await assert.rejects(async()=>prepare(req),error);
+    const row = await h.refuseCall(instance,circuit,args ?? fillArgs(req),error,label);
     assert.equal(hash(h.state.serialize()),before);
     assert.deepEqual(balances(),baseline);
-    report.refusals.push({label,stage:'contract-call preparation',beforeStateSha256:before,expectedError:error.source});
+    report.refusals.push({label,stage:row.boundary,beforeStateSha256:before,expectedError:error.source,circuitError:row.observedError});
   }
   const sampleTime = h.time;
-  await refuse('missing',()=>prepare(request()),/FEED_UNAVAILABLE/);
-  await refuse('wrong controller',()=>h.prepareCall(instance,'publishFeedUpdate',signUpdate(2n,BigInt(sampleTime),7n)),/FEED_SIGNATURE/);
+  await refuse('missing',/FEED_UNAVAILABLE/,{req:request()});
+  await refuse('wrong controller',/FEED_SIGNATURE/,{circuit:'publishFeedUpdate',args:signUpdate(2n,BigInt(sampleTime),7n)});
   await h.call(instance,'publishFeedUpdate',signUpdate(2n,BigInt(sampleTime)),'publish-price-2');
   const live = h.snapshot();
-  await refuse('substitution',()=>prepare({...request(),feed:new Uint8Array(32)}),/FEED_ID/);
-  await refuse('wrong provider',()=>prepare(request(200n,8n)),/PROVIDER_SIGNATURE/);
+  await refuse('substitution',/FEED_ID/,{req:{...request(),feed:new Uint8Array(32)}});
+  await refuse('wrong provider',/PROVIDER_SIGNATURE/,{req:request(200n,8n)});
   const forged=request();
   forged.signature.response++;
-  await refuse('wrong owner',()=>prepare(forged),/ORDER_SIGNATURE/);
+  await refuse('wrong owner',/ORDER_SIGNATURE/,{req:forged});
   h.time=sampleTime-1;
-  await refuse('future',()=>prepare(request()),/FEED_FUTURE/);
+  await refuse('future',/FEED_FUTURE/,{req:request()});
   h.time=sampleTime+31;
-  await refuse('stale',()=>prepare(request()),/FEED_STALE/);
+  await refuse('stale',/FEED_STALE/,{req:request()});
   for (const [age,amount] of [[0,200n],[30,201n]]) {
     h.restore(live);
     h.time=sampleTime+age;
@@ -115,7 +124,7 @@ async function run() {
   h.restore(live);
   h.time=Number(terms.epoch+terms.expiry);
   await h.call(instance,'publishFeedUpdate',signUpdate(2n,BigInt(h.time)),'publish-at-expiry');
-  await refuse('expiry',()=>prepare(request()),/ORDER_EXPIRED/);
+  await refuse('expiry',/ORDER_EXPIRED/,{req:request()});
   h.restore(live);
   // Prepare for the target second. Pay its DUST from the earlier accepted head
   // before a competing publication can change the accepted block's DUST root.
@@ -133,7 +142,7 @@ async function run() {
     h.time=sampleTime+1;
     await h.call(instance,'publishFeedUpdate',signUpdate(3n,BigInt(h.time)),'change-trigger-before-inclusion');
   } finally { h.clearReservations(); }
-  await refuse('threshold equality',()=>prepare(request()),/FEED_THRESHOLD/);
+  await refuse('threshold equality',/FEED_THRESHOLD/,{req:request()});
   h.time=targetSecond; // Recheck the captured fill at exactly its original inclusion second.
   const before=balances(), record=h.apply(original,'unchanged-fill-after-price-change',{allowFailure:true});
   const after=balances();
@@ -142,6 +151,24 @@ async function run() {
   assert.deepEqual(before,baseline);
   assert.deepEqual(after,before);
   report.changed={before,after,time:record.time,transactionHash:record.transactionHash,error:record.error};
+  // Control: a newer sample at the same price also invalidates the unchanged transaction, while a
+  // freshly prepared fill at that second is accepted. Only the price refuses a fresh fill.
+  h.restore(pre);
+  h.reserveFunding(original);
+  try {
+    h.time=sampleTime+1;
+    await h.call(instance,'publishFeedUpdate',signUpdate(2n,BigInt(h.time)),'newer-sample-same-price');
+  } finally { h.clearReservations(); }
+  h.time=targetSecond;
+  const same=h.apply(original,'unchanged-fill-after-newer-same-price',{allowFailure:true});
+  assert.notEqual(same.status,'success');
+  assert.match(encode(same.error),/mismatch.*read/is);
+  assert.deepEqual(balances(),baseline);
+  const refreshed=await prepare(request());
+  const fresh=h.apply(await h.fundAndProve(h.assemble([refreshed]),order,h.actors.executor),'refreshed-fill-same-price');
+  assert.deepEqual(balances(),{owner:[0,0],executor:[100,999800],recipient:[0,200],custody:[0,0]});
+  report.sameSampleControl={unchanged:{status:same.status,error:same.error,transactionHash:same.transactionHash},
+    refreshed:{status:fresh.status,transactionHash:fresh.transactionHash}};
 }
 try {
   await run();

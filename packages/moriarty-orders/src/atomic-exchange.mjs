@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {verifyInstalledContract} from './accepted-state.mjs';
 
 const hex = value => Buffer.from(value).toString('hex');
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -9,40 +10,66 @@ export function signExchangeLeg(runtime, generated, plan, contractAddress, leg, 
   return runtime.jubjubSchnorrSign(new runtime.CompactTypeVector(1,runtime.CompactTypeField),[message],key);
 }
 
+// O8 maintenance needs all three owners: the committee is exactly the plan's wallets, threshold three.
+function requireJointMaintenance(L, runtime, plan, deployment) {
+  const {committee, threshold} = deployment.maintenance ?? {};
+  const owners = plan.wallets.map(wallet => runtime.decodeUserAddress(wallet.bytes));
+  if (threshold !== 3 || committee?.length !== 3 || committee.some((key, i) => L.addressFromKey(key) !== owners[i])) {
+    throw Error('O8 maintenance must require all three owners');
+  }
+}
+
 export function prepareExchange(ledger,instance,deployment,request) {
   if (deployment.address!==instance.address || deployment.network!==ledger.network) throw Error('O8 deployment mismatch');
   const native=ledger.state.index(deployment.address);
-  const vk=native?.operation('settle')?.verifierKey;
-  if (!vk || digest(vk)!==deployment.verifierSha256) throw Error('O8 verifier mismatch');
+  if (!native) throw Error('O8 deployment absent from accepted head');
+  verifyInstalledContract(native,deployment);
   const state=ledger.runtime.ContractState.deserialize(native.serialize());
   const head=instance.contract.generated.ledger(state.data);
   if (hex(head.exchange.program)!==deployment.programHash || hex(head.exchange.network)!==digest(ledger.network)) throw Error('O8 source or network mismatch');
+  requireJointMaintenance(ledger.L,ledger.runtime,head.exchange,deployment);
   if (head.remaining!==1n || head.revision!==request.revision) throw Error('O8_CONSUMED');
   return ledger.prepareCall(instance,'settle',[request.plan,request.revision,request.now,request.signatures]);
 }
 
-// Each callback belongs to an independent wallet and signs the same fully assembled intent.
-export function signExchangeInputs(ledger,tx,wallets) {
-  const byAddress=new Map(wallets.map(wallet=>[ledger.addressFromKey(wallet.vk),wallet]));
-  for (const [segment,intent] of tx.intents??[]) {
-    const payload=intent.signatureData(segment);
+/**
+ * Check one owner's leg in the final transaction: the owner's inputs carry only its own
+ * color, the next owner receives exactly the leg amount, and all change returns to the owner.
+ */
+export function checkLegTransaction(L, runtime, plan, leg, transaction) {
+  const owners = plan.wallets.map(wallet => runtime.decodeUserAddress(wallet.bytes));
+  const color = hex(plan.colors[leg]), owner = owners[leg], next = owners[(leg+1)%3];
+  if (plan.amounts[leg] !== amounts[leg]) throw Error('O8 leg amount differs from the plan');
+  let input = 0n, delivered = 0n, change = 0n;
+  for (const [, intent] of transaction.intents ?? []) {
     for (const property of ['guaranteedUnshieldedOffer','fallibleUnshieldedOffer']) {
-      const offer=intent[property];
-      if (!offer?.inputs.length) continue;
-      const signatures=offer.inputs.map(input=>{
-        const wallet=byAddress.get(ledger.addressFromKey(input.owner));
-        if (!wallet) throw Error('O8 wallet signature absent');
-        const signature=wallet.sign(payload);
-        if (!ledger.verifySignature(input.owner,payload,signature)) throw Error('O8 wallet signature invalid');
-        return new ledger.SignatureEnabled(signature);
-      });
-      intent[property]=offer.addSignatures(signatures);
+      const offer = intent[property];
+      if (!offer) continue;
+      for (const coin of offer.inputs) {
+        if (L.addressFromKey(coin.owner) !== owner) continue;
+        if (coin.type !== color) throw Error('O8 wallet asked to spend another asset');
+        input += coin.value;
+      }
+      for (const coin of offer.outputs) {
+        if (coin.type !== color) continue;
+        if (coin.owner === next) delivered += coin.value;
+        else if (coin.owner === owner) change += coin.value;
+        else throw Error('O8 leg pays an unexpected recipient');
+      }
     }
-    tx.intents=tx.intents.set(segment,intent);
   }
-  return tx;
+  if (delivered !== amounts[leg] || input - amounts[leg] !== change) throw Error('O8 final intent differs from leg '+leg);
 }
 
+// An independent wallet: it signs only after validating its own leg in the final transaction.
+export function exchangeWallet(L, runtime, plan, leg, actor, sign = message => L.signData(actor.key, message)) {
+  return {address: actor.address, vk: actor.vk, sign(message, {transaction}) {
+    checkLegTransaction(L, runtime, plan, leg, transaction);
+    return sign(message);
+  }};
+}
+
+// Add each owner's unsigned inputs. Signatures are added after proving, by each wallet.
 export function fundExchangeInputs(ledger,transaction,plan,wallets) {
   if (wallets.length!==3 || new Set(wallets.map(wallet=>ledger.L.addressFromKey(wallet.vk))).size!==3) throw Error('O8 needs three distinct wallets');
   const colors=plan.colors.map(hex);
@@ -75,5 +102,5 @@ export function fundExchangeInputs(ledger,transaction,plan,wallets) {
     transaction.intents=transaction.intents.set(segment,intent);
   }
   if(supplied.size!==3)throw Error('O8 funding incomplete');
-  return signExchangeInputs(ledger.L,transaction,wallets);
+  return transaction;
 }

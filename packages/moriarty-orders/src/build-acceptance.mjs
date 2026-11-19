@@ -13,7 +13,7 @@ export function buildAcceptance(output,{skipZk=false,policy='o1'}={}) {
   const builds = {
     o1: {source:'o1', custody:'acceptance', operations:['fund','fill','cancel']},
     executors: {source:'o1', custody:'executors', operations:['fund','fill','cancel']},
-    staged: {source:'o9', custody:'staged-exchange', includes:['continuation'], operations:['fund','first','enable','resume','refund']},
+    staged: {source:'o9', custody:'staged-exchange', includes:['continuation'], operations:['fund','first','enable','resume','refund','withdraw']},
     recovery: {source:'partial-recovery', custody:'recovery', operations:['fund','fill','cancel','depositSurplus']},
   };
   const config = builds[policy];

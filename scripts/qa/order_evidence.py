@@ -10,36 +10,36 @@ DESIGN = ROOT / "openspec/changes/competitive-landscape-adoption/design.md"
 # Scope describes exactly what a passing local check establishes.
 SCOPE = {
     "I.1":"Clean-checkout demos and the intended language suite; 21 original failures reconciled.",
-    "I.2":"Repeatable build, both demos, suite inventory, measured source coverage and caught fee regression.",
+    "I.2":"Repeatable build, both demos, suite inventory, measured source, kernel and ledger coverage and caught controlled regressions in each scope.",
     "II.1":"Signed enrollment, accepted ledger state, single consumption and reconciled funded order effects.",
     "II.2":"One exact 100 A input with 200 or 201 B delivered to the bound recipient.",
     "II.3":"Two distinct orders, partial and expired refunds, surplus isolation and an owner-signed spend.",
-    "II.4":"Accepted predecessor, custody, event and resource limits survive client restart.",
+    "II.4":"One terminal action per race in either order; restarted processes resubmit journals that the ledger refuses; changed continuation fields refuse in the compiled circuit.",
     "II.5":"Signed named feed, sample age, outage and threshold rechecked against the accepted head.",
     "II.6":"Four conditional Lean results for the bounded swap model and executable kernel boundary cases.",
-    "III.1":"Two serial local operations with native fee debits, resource vectors, setup and owner recovery.",
-    "III.5":"Separate credentials and funded clients, fallback window, refused client and owner exit.",
+    "III.1":"Three serial samples of each local operation with native fee debits, resource vectors, setup and owner recovery.",
+    "III.5":"Separate credentials, fallback window with payout to the filling client, refused clients, owner exit and public use without enrollment.",
     "III.6":"Locally prepared versioned O1 archive and clean maintainer install on the declared platform.",
     "IV.2":"Funded O5 at ages zero and thirty, rejecting an earlier trigger after accepted state changes.",
     "IV.3":"All-or-nothing three-owner exchange with signed grants for all funded legs.",
-    "IV.4":"Conditional second trade, preserved first trade, restart, refund and owner spending of residual B.",
+    "IV.4":"Conditional second trade, preserved first trade, restart, refund, owner spending of residual B and owner exit for an unfilled order.",
     "IV.5":"External venue or partner pilot.",
     "IV.6":"Evidence-based decision to defer destination-finality integration.",
 }
 LIMITS = {
     "I.1":"The reproduced historical revision and the repaired delivery revision have separate identities.",
     "I.2":"Coverage is scoped by file, metric and exclusions. Hosted CI is optional.",
-    "II.1":"Wallet enrollment and trusted ledger-head selection are explicit adapter assumptions.",
+    "II.1":"Wallet enrollment and trusted ledger-head selection are explicit adapter assumptions. Preparation refusals re-execute in the compiled circuit; their ledger refusal is not observed.",
     "II.2":"Coverage and changes to the assessment grade await independent review.",
     "II.3":"Surplus creates no owner entitlement. Claims apply to the pinned verifiers.",
-    "II.4":"The trusted accepted ledger must survive between client processes.",
-    "II.5":"The provider controls the quote. Economic correctness and inclusion remain assumptions.",
+    "II.4":"The trusted accepted ledger must survive between client processes. Resume and refund are never eligible at the same time. One continuation type is shown.",
+    "II.5":"The controller chooses price and timing. Economic correctness and inclusion remain assumptions.",
     "II.6":"Compiler, custody and native acceptance correspondence remain open.",
-    "III.1":"Local finality with zero descendants. Both O10 workloads remain unavailable.",
+    "III.1":"Local finality with zero descendants. Prover effort is excluded. Both O10 workloads remain unavailable.",
     "III.5":"The local venue offers no guarantee of inclusion, available liquidity or continued service.",
     "III.6":"Upstream maintainers decide whether to publish after merge. Outside-developer reproduction deferred.",
     "IV.2":"Oracle honesty, clock and transaction inclusion remain assumptions. Independent review pending.",
-    "IV.3":"Only the recorded payer, token, phase and resource configuration was exercised.",
+    "IV.3":"Only the recorded payer, token, phase and resource configuration was exercised. The three wallet callbacks run in one local process.",
     "IV.4":"Only accepted local transactions demonstrate continuation or owner control.",
     "IV.5":"No committed external operator, route or verified partner adoption.",
     "IV.6":"O10 execution, cost, coverage and independent assessment remain open.",
@@ -63,6 +63,8 @@ def reconcile():
         if not primary.exists():
             raise ValueError(f"{case} lacks a delivery receipt")
         result = json.loads(primary.read_bytes())
+        if result.get("draft"):
+            raise ValueError(f"{case} result is a draft from an uncommitted tree")
         if case == "I.1":
             passed = result.get("status") == "verified on clean committed delivery revision"
         elif case == "II.6":

@@ -10,6 +10,7 @@ import {checkO1Accounts} from './o1-accounting.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
 import {verifyEnrollment} from '../src/authorization.mjs';
 import {buildAcceptance} from '../src/build-acceptance.mjs';
+import {rerunRefusals} from './refusals.mjs';
 
 const root = fileURLToPath(new URL('../../../',import.meta.url));
 const evidence = resolve(process.argv[2] || join(root,'deliverables/competitor-report/II.1/native'));
@@ -94,8 +95,20 @@ try {
       assert.equal(before.view.contractStateSha256,after.view.contractStateSha256);
     }
     assert.ok(frozen.requiredRefusals.every(name=>row.diagnostics.some(d=>d.name===name)));
+    for (const d of row.diagnostics) {
+      assert.ok(['compiled-circuit-preparation','ledger application'].includes(d.boundary),d.name);
+    }
+  }
+  // Re-execute every preparation refusal from its recorded accepted state.
+  const refusals = read(join(evidence,'refusals.json'));
+  const rerun = await rerunRefusals({L:ledger,runtime:rt,compiled,directory:evidence,rows:refusals});
+  for (const row of report.rows) {
+    for (const name of frozen.requiredRefusals) {
+      assert.ok(rerun.some(r=>r.label===row.scenario+': '+name),'missing re-executed refusal '+row.scenario+': '+name);
+    }
   }
   console.log(JSON.stringify({schema:'moriarty-orders/acceptance-replay/1',target:'ZKIRv3',caseIds:['II.1','II.2'],
+    evidenceClasses:{ledgerApplied:replay.map(r=>r.label),compiledCircuitRefusals:rerun},
     receiptsSha256:hash(readFileSync(join(evidence,'receipts.json'))),validated:replay},null,2));
 } finally {
   rmSync(output,{recursive:true,force:true});

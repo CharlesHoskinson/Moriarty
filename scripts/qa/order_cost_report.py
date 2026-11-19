@@ -2,7 +2,6 @@
 import hashlib
 import json
 import os
-import platform
 import subprocess
 from pathlib import Path
 
@@ -26,14 +25,14 @@ def read(path):
     return json.loads(path.read_bytes())
 
 
-def export_sample(base, spec, measured, semantic):
+def export_sample(base, measured, semantic, sample_id):
     rows = {r["label"]: r for r in read(base / "receipts.json")}
     directory = base / "assessment"
     results = [{"id": key, "passed": value} for key, value in semantic["results"].items()]
-    check = {"sample_id": "sample-1", "execution_id": semantic["executionId"], "results": results,
+    check = {"sample_id": sample_id, "execution_id": semantic["executionId"], "results": results,
              "command": semantic["command"], "observations": {key: semantic[key] for key in
-             ("initialBalances", "finalBalances", "deployment", "protocolFee")}}
-    sample = {"id": "sample-1", "execution_id": semantic["executionId"], "transactions": [],
+             ("initialBalances", "finalBalances", "deployment", "protocolFee", "generator")}}
+    sample = {"id": sample_id, "execution_id": semantic["executionId"], "transactions": [],
               "checks": {"artifact":save(directory / "checks.json", check), "results":results}}
     for tx in measured["transactions"]:
         row = rows[tx["label"]]
@@ -50,19 +49,48 @@ def export_sample(base, spec, measured, semantic):
         sample["transactions"].append({"step_id":row["label"], "chain":"X", "transaction_id":row["transactionHash"],
             "success":True, "transaction":ref(base / row["transaction"]["file"]), "receipt":receipt,
             "raw_receipt":raw_receipt, "resources":tx["resources"], "fee_paid":tx["fee"], "other_fee_components":[]})
-    return {"recipe_id":spec["id"], "unit":spec["unit"], "environment":spec["environment"],
-            "boundary":spec["boundary"], "outcome":"completed", "samples":[sample]}
+    return sample
+
+
+def bootstrap_fees(base):
+    """The excluded bootstrap registration pays its fee from newly generated DUST, without a spend event."""
+    rows = []
+    for row in read(base / "receipts.json"):
+        if row["label"].startswith("setup-"):
+            rows.append({"label": row["label"], "requiredFeeSpeck": row["requiredFeeSpeck"],
+                         "dustBefore": row.get("dustBefore"), "dustAfter": row.get("dustAfter"),
+                         "spendEvents": len(row.get("dustSpendEvents") or [])})
+    return rows
+
+
+def sample_directories(base):
+    found = sorted((d for d in base.iterdir() if d.is_dir() and d.name.startswith("sample-")),
+                   key=lambda d: int(d.name.split("-", 1)[1]))
+    if len(found) < 2 or [d.name for d in found] != [f"sample-{i}" for i in range(1, len(found) + 1)]:
+        raise ValueError(f"{base.name} needs at least two consecutively numbered serial samples")
+    return found
 
 
 def check_costs():
     directory = ROOT / REPORT
     settings = read(directory / "recipe.json")
     profile = read(directory / "workloads.json")
-    recipes, values, totals = [], {}, {}
+    try:
+        return measure(directory, settings, profile)
+    except Exception as error:
+        # Keep the failure and every sample directory; withhold all operation results.
+        save(directory / "result.json", {"requirement":"III.1","predicate":"F31","passed":False,"error":str(error)[-2400:],
+             "assessment":"no operation result: an incomplete or incompatible sample was retained",
+             "retainedSamples":sorted(str(d.relative_to(ROOT)) for d in (directory / "native").glob("*/sample-*") if d.is_dir())})
+        raise
+
+
+def measure(directory, settings, profile):
+    recipes, values, totals, bootstrap = [], {}, {}, {}
     validator = os.environ.get("MORIARTY_ORDER_VALIDATOR", str(ROOT / "target/debug/examples/validate_call"))
     for definition in profile["operations"]:
         op = definition["id"]
-        environment = {"chain":"Midnight", "network":"undeployed", "hardware":platform.machine(),
+        environment = {"chain":"Midnight", "network":"undeployed", "hardware":"No integration selected",
                        "revision":"No integration selected"}
         ctx = {"execution_mode":"native-local", "chains":{},
                "protocol_fees":{"amount":0,"reason":"Zero application fee in the pinned workload."},
@@ -77,36 +105,55 @@ def check_costs():
             values[op] = {"outcome":"unavailable", "reason":settings["unavailable"][op]}
             continue
         base = directory / "native" / op
-        checks = read(base / "checks.json")
-        environment["revision"] = checks["revision"]
-        proc = subprocess.run(["node", str(SCRIPT), str(base), op, validator], cwd=ROOT,
-                              capture_output=True, text=True, timeout=180)
-        if proc.returncode:
-            raise ValueError(f"{op} strict cost replay failed: {proc.stderr[-1800:]}")
-        measured = json.loads(proc.stdout)
-        totals[op] = {"phases":measured["phases"], "total":measured["total"], "executionId":measured["executionId"]}
+        samples, rows = [], []
+        for sample_dir in sample_directories(base):
+            checks = read(sample_dir / "checks.json")
+            proc = subprocess.run(["node", str(SCRIPT), str(sample_dir), op, validator], cwd=ROOT,
+                                  capture_output=True, text=True, timeout=180)
+            if proc.returncode:
+                raise ValueError(f"{op} {sample_dir.name} strict cost replay failed: {proc.stderr[-1800:]}")
+            measured = json.loads(proc.stdout)
+            samples.append(export_sample(sample_dir, measured, checks, sample_dir.name))
+            rows.append({"sample":sample_dir.name, "phases":measured["phases"], "total":measured["total"],
+                         "executionId":measured["executionId"], "revision":measured["revision"], "host":measured["host"]})
+            bootstrap[f"{op}/{sample_dir.name}"] = bootstrap_fees(sample_dir)
+        # The environment is the measuring host and code, identical across this workload's samples.
+        hosts = {json.dumps(r["host"], sort_keys=True) for r in rows}
+        revisions = {r["revision"] for r in rows}
+        if len(hosts) != 1 or len(revisions) != 1:
+            raise ValueError(f"{op} samples differ in measuring host or revision")
+        host = rows[0]["host"]
+        environment["hardware"] = f"{host['architecture']} ({host['platform']})"
+        environment["revision"] = rows[0]["revision"]
+        totals[op] = {"samples": rows}
         recipe["artifact"] = ref(ROOT / "scripts/qa/order_cost_report.py")
         recipe["command"] = ["python3","scripts/qa/order_cost_report.py",op]
         recipe["steps"] = [{"id":step,"phase":phase,"chain":"X"} for phase in ("setup","operation","recovery")
                            for step in settings["operations"][op][phase]]
         ctx["chains"]["X"] = {"family":"midnight","network":"undeployed","vm":"Midnight ledger v9, ZKIRv3",
             "client":"midnight-ledger 9.1.0 and SDK WASM ledger-v9 1.0.0",
-            "protocol_parameters":ref(base / "parameters.bin"),"native_fee_asset":"DUST","native_fee_decimals":15,
+            "protocol_parameters":ref(base / "sample-1" / "parameters.bin"),"native_fee_asset":"DUST","native_fee_decimals":15,
             "finality_policy":{"mode":"local-acceptance","descendant_blocks":0,"rule":settings["finality"]["rule"]},
             "fee_policy":{"mode":"observed","source":settings["feePolicy"]["rule"],"scope":"all mandatory chain fees",
                           "required_other_fee_components":[]}}
-        values[op] = export_sample(base,recipe,measured,checks)
-    if len({row["executionId"] for row in totals.values()}) != 2:
-        raise ValueError("Each workload requires its own independent execution")
+        values[op] = {"recipe_id":recipe["id"], "unit":recipe["unit"], "environment":environment,
+                      "boundary":recipe["boundary"], "outcome":"completed", "samples":samples}
+    executions = [row["executionId"] for op in totals for row in totals[op]["samples"]]
+    if len(set(executions)) != len(executions):
+        raise ValueError("Each sample requires its own independent execution")
+    zero_phases = {op: {phase: settings["operations"][op]["emptyRecovery"]}
+                   for op in totals for phase in ("recovery",) if not settings["operations"][op][phase]}
     inputs = {"rubric_version":"execution_cost-2", "measurement_profile":{"version":profile["version"],
               "path":PROFILE, "sha256":ref(directory / "workloads.json")["sha256"]}, "recipes":recipes,"values":values}
     packet = save(directory / "assessment-input.json",inputs)
     save(directory / "result.json",{"requirement":"III.1","predicate":"F31","passed":True,
          "assessment":"pending independent assessment", "assessmentInput":packet, "units":settings["resourceUnits"],
          "feePolicy":settings["feePolicy"], "finality":settings["finality"], "totals":totals,
-         "recipe":ref(directory / "recipe.json"), "profile":ref(directory / "workloads.json"),
-         "rawExecutions":{op:ref(directory/"native"/op/"receipts.json") for op in totals},
-         "excludedBootstrap":settings["preexisting"], "exclusions":settings["exclusions"],
+         "zeroPhases":zero_phases, "recipe":ref(directory / "recipe.json"), "profile":ref(directory / "workloads.json"),
+         "rawExecutions":{f"{op}/{row['sample']}":ref(directory/"native"/op/row["sample"]/"receipts.json")
+                          for op in totals for row in totals[op]["samples"]},
+         "excludedBootstrap":{"rule":settings["preexisting"], "observedFees":bootstrap},
+         "exclusions":settings["exclusions"], "proverEffort":"Excluded from Midnight resources; not measured in this sample set.",
          "unavailable":settings["unavailable"],"commands":{"test":["node","--test","packages/moriarty-orders/test/measurement.test.mjs"],
          "runner":["python3","scripts/qa/order-report.py","III.1"]}})
     return values

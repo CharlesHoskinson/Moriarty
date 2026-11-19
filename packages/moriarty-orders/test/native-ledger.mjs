@@ -7,6 +7,7 @@ import {existsSync, readFileSync, symlinkSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
+import {encodeValue, executeCircuit} from '../native/refusals.mjs';
 
 export const encode = x => JSON.stringify(
     x,
@@ -39,6 +40,7 @@ export class NativeLedger {
     h.actors = {};
     h.proofServer = options.proofServer;
     h.retain = options.retain;
+    h.refusals = options.refusals;
     for (const [name, seed] of [['owner', 31], ['recipient', 33], ['executor', 35]]) {
       const key = h.L.signingKeyFromBip340(bytes(seed)), vk = h.L.signatureVerifyingKey(key);
       h.actors[name] = {key, vk, address: h.L.addressFromKey(vk)};
@@ -234,7 +236,9 @@ export class NativeLedger {
       prover: httpClientProvingProvider(this.proofServer, zk)
     };
   }
-  async deploy(contract, args, label) {
+  // Order deployments name their maintenance committee explicitly. Fixtures default
+  // to an empty committee, which no maintenance update can satisfy.
+  async deploy(contract, args, label, {maintainers = [], threshold = 1} = {}) {
     const {L,runtime} = this;
     const context = runtime.createConstructorContext({},'00'.repeat(32));
     const initial = await contract.instance.initialState(context,...args);
@@ -244,24 +248,22 @@ export class NativeLedger {
       operation.verifierKey = await contract.zk.getVerifierKey(name);
       state.setOperation(name,operation);
     }
-    state.maintenanceAuthority = new L.ContractMaintenanceAuthority([this.actors.owner.vk],1);
+    state.maintenanceAuthority = new L.ContractMaintenanceAuthority(maintainers.map(actor => actor.vk ?? actor),threshold);
     const deploy = new L.ContractDeploy(state);
     const intent = L.Intent.new(this.ttl).addDeploy(deploy);
     const tx = await this.fundAndProve(
         this.L.Transaction.fromParts(this.network, undefined, undefined, intent), contract);
     const record = this.apply(tx, label);
-    return {address: deploy.address, contract, record};
+    const authority = state.maintenanceAuthority;
+    return {address: deploy.address, contract, record,
+      maintenance: {committee: [...authority.committee], threshold: authority.threshold, counter: String(authority.counter)}};
   }
   async prepareCall(instance, circuit, args) {
     const {L,runtime} = this, {address,contract} = instance;
     const ledgerState = this.state.index(address);
     assert.ok(ledgerState);
-    const compactState = runtime.ContractState.deserialize(ledgerState.serialize());
-    const ctx = runtime.createCircuitContext({circuitId:circuit,contractAddress:address,
-      coinPublicKeyOrZswapState:'00'.repeat(32),contractState:compactState,privateState:{},time:this.time});
-    const initial = ctx.callContext.currentQueryContext;
-    initial.block = {...initial.block,secondsSinceEpoch:BigInt(this.time),secondsSinceEpochErr:0,lastBlockTime:BigInt(this.time)};
-    const executed = await contract.instance.provableCircuits[circuit](ctx,...args);
+    const {executed, initial} = await executeCircuit({runtime, contract: contract.instance, ledgerState, address,
+      circuit, args, time: this.time});
     assert.equal(executed.context.callProofDataTrace.length,1);
     const p = executed.context.callProofDataTrace[0];
     let query = new L.QueryContext(ledgerState.data,address);
@@ -274,6 +276,24 @@ export class NativeLedger {
         address, circuit, ledgerState.operation(circuit), pre, p.privateTranscriptOutputs, p.input,
         p.output, L.communicationCommitmentRandomness(), circuit);
     return {call, pre, executed, instance, circuit};
+  }
+  /** Require the compiled circuit itself to refuse, and retain the call for re-execution. */
+  async refuseCall(instance, circuit, args, expected, label) {
+    const before = this.state.serialize();
+    let error;
+    try {
+      await this.prepareCall(instance, circuit, args);
+    } catch (caught) {
+      error = caught;
+    }
+    assert.ok(error, label + ': the compiled circuit accepted the call');
+    const observedError = String(error?.message ?? error);
+    assert.match(observedError, expected, label);
+    assert.deepEqual(this.state.serialize(), before);
+    const row = {label, boundary: 'compiled-circuit-preparation', circuit, address: instance.address, time: this.time,
+      args: encodeValue(args), expectedError: expected.source, observedError, stateSha256: hash(before)};
+    this.refusals?.(row, before);
+    return row;
   }
   assemble(prepared) {
     const {L} = this;
@@ -370,7 +390,11 @@ export class NativeLedger {
               const address = L.addressFromKey(coin.owner);
               const wallet = walletForAddress(address);
               assert.equal(wallet?.address, address, 'no signer for final input owner');
-              return new L.SignatureEnabled(L.signData(wallet.key, message));
+              // An independent wallet signs through its own callback after checking the final intent.
+              const signature = wallet.sign ? wallet.sign(message, {segment: id, intent, transaction: merged})
+                                            : L.signData(wallet.key, message);
+              assert.ok(L.verifySignature(coin.owner, message, signature), 'final input signature invalid');
+              return new L.SignatureEnabled(signature);
             });
             intent[property] = L.UnshieldedOffer.new(offer.inputs, offer.outputs, signatures);
           }

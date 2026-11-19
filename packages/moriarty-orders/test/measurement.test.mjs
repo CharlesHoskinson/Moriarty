@@ -26,3 +26,48 @@ test('count actual charged fees, all native resources and strict completion', ()
     const changed=structuredClone(tx);edit(changed);assert.throws(()=>measureTransaction(changed));
   }
 });
+
+test('an omitted setup or recovery step, altered fee, missing field, broken finality or failed check invalidates a sample', async t => {
+  const {cpSync,mkdtempSync,rmSync,writeFileSync,existsSync} = await import('node:fs');
+  const {tmpdir} = await import('node:os');
+  const {join} = await import('node:path');
+  const {fileURLToPath} = await import('node:url');
+  const {measureSample} = await import('../../../scripts/qa/measure-order-lifecycle.mjs');
+  const root = fileURLToPath(new URL('../../../',import.meta.url));
+  const validator = process.env.MORIARTY_ORDER_VALIDATOR ?? join(root,'target/debug/examples/validate_call');
+  assert.ok(existsSync(validator),'build the strict validator: cargo build --locked -p mori-recursion --features sherlock-ledger-validation --example validate_call');
+  const work = mkdtempSync(join(tmpdir(),'order-sample-'));
+  t.after(()=>rmSync(work,{recursive:true,force:true}));
+  const edit = (dir,file,change)=>{
+    const value = JSON.parse(readFileSync(join(dir,file)));
+    change(value);
+    writeFileSync(join(dir,file),JSON.stringify(value,null,2)+'\n');
+  };
+  const scored = (rows,label)=>rows.find(r=>r.label===label);
+  const cases = {
+    'o1-fill':[
+      ['omitted setup',dir=>edit(dir,'receipts.json',rows=>rows.splice(rows.findIndex(r=>r.label==='fund-order'),1))],
+      ['altered fee',dir=>edit(dir,'receipts.json',rows=>{const r=scored(rows,'fill');r.nativeFeeSpeck=String(BigInt(r.nativeFeeSpeck)+1n);})],
+      ['missing resource field',dir=>edit(dir,'receipts.json',rows=>{delete scored(rows,'fill').resources.readTime;})],
+      ['broken finality',dir=>edit(dir,'receipts.json',rows=>{scored(rows,'fill').afterBlockStateSha256='00'.repeat(32);})],
+      ['failed completion check',dir=>edit(dir,'checks.json',c=>{c.results.expected_completion=false;})],
+      ['uncommitted generator',dir=>edit(dir,'checks.json',c=>{c.generator.draft=true;c.generator.revision=null;})],
+    ],
+    'cancel-unfilled':[
+      ['omitted recovery',dir=>edit(dir,'receipts.json',rows=>rows.splice(rows.findIndex(r=>r.label==='spend-refund'),1))],
+    ],
+  };
+  for (const [operation,mutations] of Object.entries(cases)) {
+    const source = join(root,'deliverables/competitor-report/III.1/native',operation,'sample-1');
+    const clean = join(work,operation+'-clean');
+    cpSync(source,clean,{recursive:true});
+    const measured = await measureSample(clean,operation,validator);
+    assert.equal(measured.operation,operation);
+    for (const [name,mutate] of mutations) {
+      const copy = join(work,operation+'-'+name.replaceAll(' ','-'));
+      cpSync(source,copy,{recursive:true});
+      mutate(copy);
+      await assert.rejects(()=>measureSample(copy,operation,validator),name);
+    }
+  }
+});

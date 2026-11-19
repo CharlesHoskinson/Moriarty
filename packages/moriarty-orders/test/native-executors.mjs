@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {NativeLedger,hash} from './native-ledger.mjs';
-import {retainedTransactions,writeEvidence} from '../native/record.mjs';
+import {generatorRecord,retainedTransactions,writeEvidence} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
 import {issueEnrollment,signOrder,verifyEnrollment} from '../src/authorization.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
 import {signExecutor} from '../src/executors.mjs';
@@ -10,9 +11,10 @@ import {signExecutor} from '../src/executors.mjs';
 const [modules,buildDir,mintDir,out] = process.argv.slice(2);
 if (!out) throw Error('usage: native-executors.mjs MODULES EXECUTORS_BUILD MINT_BUILD EVIDENCE');
 const build = JSON.parse(readFileSync(join(buildDir,'acceptance-build.json')));
+const generator = generatorRecord(['node','packages/moriarty-orders/test/native-executors.mjs',...process.argv.slice(2)]);
 const proofServer = process.env.MORIARTY_ORDER_PROVER ?? 'http://127.0.0.1:16311';
 assert.equal((await (await fetch(new URL('/version',proofServer))).text()).trim(),'9.0.1');
-const h = await NativeLedger.create({modules,proofServer,retain:retainedTransactions(out)});
+const h = await NativeLedger.create({modules,proofServer,retain:retainedTransactions(out),refusals:retainedRefusals(out)});
 const {L,runtime} = h;
 const contract = await h.loadContract(buildDir);
 const mint = await h.deploy(await h.loadContract(mintDir),[],'deploy-fixture-faucet');
@@ -34,8 +36,9 @@ const keys = Object.fromEntries(Object.entries(secrets).map(([role,k])=>[role,ru
 const terms = {account:addr(owner),recipient:addr(recipient),executor:addr(primary),orderId:Buffer.from(hash('two-client-order'),'hex'),
   network:Buffer.from(hash(h.network),'hex'),assetA:colors.colorA,assetB:colors.colorB,program:Buffer.from(build.programHash,'hex'),
   epoch:BigInt(h.time+2)-1000n,input:100n,minimum:200n,fee:0n,expiry:1400n};
-const instance = await h.deploy(contract,[terms,keys.owner,keys.primary,keys.fallback],'deploy-restricted-order');
-const d = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers};
+// The fallback client's wallet receives the A from a fallback fill. Only Alice maintains the order.
+const instance = await h.deploy(contract,[terms,keys.owner,keys.primary,keys.fallback,addr(fallback)],'deploy-restricted-order',{maintainers:[owner]});
+const d = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers,maintenance:instance.maintenance};
 d.enrollment = issueEnrollment(L,runtime,d,{terms,owner:keys.owner},owner.key);
 const reader = {network:h.network,index:a=>h.state.index(a)};
 const head = ()=>readAcceptedOrder(reader,runtime,contract.generated,d);
@@ -45,28 +48,26 @@ const base = {terms,contract:{bytes:runtime.encodeContractAddress(instance.addre
 const grant = action=>signOrder(runtime,contract.generated.pureCircuits,{...base,owner:keys.owner,action},secrets.owner);
 const permit = grant(0n);
 const operatorSig = (role,secret)=>signExecutor(runtime,contract.generated.pureCircuits,base,role,secret);
-const prepared = (role,secret)=>h.prepareCall(instance,'fill',[0n,100n,200n,0n,BigInt(h.time)-terms.epoch,permit,
-  role==='fallback',operatorSig(role,secret)]);
+const fillArgs = (role,secret)=>[0n,100n,200n,0n,BigInt(h.time)-terms.epoch,permit,role==='fallback',operatorSig(role,secret)];
+const prepared = (role,secret)=>h.prepareCall(instance,'fill',fillArgs(role,secret));
 const capture = ()=>{
   const s=head();
   const balances = [owner,recipient,primary,fallback].map(actor=>[A,B].map(color=>String(h.balance(actor.address,color))));
   balances.push([A,B].map(color=>String(s.custody.get(color)??0n)));
   return {balances,revision:String(s.revision),closed:String(s.kernelState.f3)};
 };
-const mat = (ownersA,bobB,primaryA,primaryB,backupB,escrowA)=>[
-  [String(ownersA),'0'],['0',String(bobB)],[String(primaryA),String(primaryB)],['0',String(backupB)],[String(escrowA),'0']];
+const mat = (ownersA,bobB,primaryA,primaryB,backupA,backupB,escrowA)=>[
+  [String(ownersA),'0'],['0',String(bobB)],[String(primaryA),String(primaryB)],[String(backupA),String(backupB)],[String(escrowA),'0']];
 const opened = h.snapshot();
 const before = capture();
-assert.deepEqual(before,{balances:mat(0,0,0,999600,400,100),revision:'0',closed:'0'});
+assert.deepEqual(before,{balances:mat(0,0,0,999600,0,400,100),revision:'0',closed:'0'});
 const refusals = [];
-async function refuse(role,secret,reason) {
-  const digest=hash(h.state.serialize());
-  await assert.rejects(()=>prepared(role,secret),reason);
-  assert.equal(hash(h.state.serialize()),digest);
-  refusals.push({role,reason:reason.source,ledgerSha256:digest});
+async function refuse(role,secret,reason,label) {
+  const row=await h.refuseCall(instance,'fill',fillArgs(role,secret),reason,label);
+  refusals.push({label,role,reason:reason.source,boundary:row.boundary,ledgerSha256:row.stateSha256});
 }
-await refuse('primary',secrets.outsider,/CLIENT_SIGNATURE/);
-await refuse('fallback',secrets.fallback,/FALLBACK_WINDOW/);
+await refuse('primary',secrets.outsider,/CLIENT_SIGNATURE/,'outsider-as-primary');
+await refuse('fallback',secrets.fallback,/FALLBACK_WINDOW/,'fallback-before-window');
 async function fill(role,wallet) {
   const call=await prepared(role,secrets[role]);
   const tx=await h.fundAndProve(h.assemble([call]),contract,wallet);
@@ -83,7 +84,7 @@ async function fill(role,wallet) {
 const transactions = {};
 transactions.primary=await fill('primary',primary);
 const primaryResult=capture();
-assert.deepEqual(primaryResult,{balances:mat(0,200,100,999400,400,0),revision:'1',closed:'1'});
+assert.deepEqual(primaryResult,{balances:mat(0,200,100,999400,0,400,0),revision:'1',closed:'1'});
 h.restore(opened);
 const primaryCall=await prepared('primary',secrets.primary);
 const expiredWindow=await h.fundAndProve(h.assemble([primaryCall]),contract,primary);
@@ -92,17 +93,17 @@ const stale = h.apply(expiredWindow,'primary-proof-after-switch',{allowFailure:t
 assert.equal(stale.status,'failure');
 assert.match(String(stale.error),/mismatch/i);
 assert.deepEqual(capture(),before);
-await refuse('fallback',secrets.primary,/CLIENT_SIGNATURE/);
+await refuse('fallback',secrets.primary,/CLIENT_SIGNATURE/,'primary-key-as-fallback');
 transactions.fallback=await fill('fallback',fallback);
 const fallbackResult=capture();
-assert.deepEqual(fallbackResult,{balances:mat(0,200,100,999600,200,0),revision:'1',closed:'1'});
+assert.deepEqual(fallbackResult,{balances:mat(0,200,0,999600,100,200,0),revision:'1',closed:'1'});
 h.restore(opened);
 h.time=Number(terms.epoch)+2001;
 await h.call(instance,'cancel',[0n,grant(1n)],'owner-exit-after-both-stop',owner);
 const recovered=capture();
-assert.deepEqual(recovered,{balances:mat(100,0,0,999600,400,0),revision:'1',closed:'1'});
-writeEvidence(out,'executors.json',{schema:'moriarty-orders/venue/1',network:h.network,build,deployment:d,
-  clients:{primary:{wallet:primary.address,key:keys.primary},fallback:{wallet:fallback.address,key:keys.fallback}},
+assert.deepEqual(recovered,{balances:mat(100,0,0,999600,0,400,0),revision:'1',closed:'1'});
+writeEvidence(out,'executors.json',{schema:'moriarty-orders/venue/1',network:h.network,build,generator,deployment:d,
+  clients:{primary:{wallet:primary.address,key:keys.primary,payee:primary.address},fallback:{wallet:fallback.address,key:keys.fallback,payee:fallback.address}},refusalRecords:'refusals.json',
   accountOrder:['Alice','Bob','primary/venue','fallback','custody'],assetOrder:['A','B'],before,primaryResult,
   fallbackResult,recovered,refusals,transactions,applicationFee:0,fallbackRelativeTime:1100,expiryRelativeTime:1400,
   assessment:'independent external participation pending'});

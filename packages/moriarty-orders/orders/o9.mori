@@ -28,6 +28,9 @@ agreement StagedExchange profile "moriarty-bounded-atomic/1" {
   policy refund_b targets write(refund, proceeds_b), effect(refund, 0, amount) {
     unit B; derivation "entire residual to owner"; rounding none; remainder "none"; comparison "exact"; proof "refund";
   }
+  policy withdraw_a targets write(withdraw, remaining_a), effect(withdraw, 0, amount) {
+    unit A; derivation "unfilled input returned to owner"; rounding none; remainder "none"; comparison "exact"; proof "withdraw";
+  }
   effect Transfer { asset: Text; from: Text; to: Text; amount: Amount; }
   action first(actor: Text, delivery: Amount<B>) {
     guard arg.actor == text("Alice"), "owner";
@@ -57,6 +60,14 @@ agreement StagedExchange profile "moriarty-bounded-atomic/1" {
     guard obs.now >= uint(1400), "not expired";
     emit Transfer { asset: text("ASSET_B"), from: text("escrow"), to: text("Alice"), amount: state.proceeds_b };
     set proceeds_b = amount(0,B);
+    set stage = uint(2);
+  }
+  action withdraw(actor: Text) {
+    guard arg.actor == text("Alice"), "owner";
+    guard state.stage == uint(0), "consumed";
+    guard obs.now >= uint(1200), "first open";
+    emit Transfer { asset: text("ASSET_A"), from: text("escrow"), to: text("Alice"), amount: state.remaining_a };
+    set remaining_a = amount(0,A);
     set stage = uint(2);
   }
 }

@@ -25,8 +25,10 @@ test('both terminal orders route through the installed head and refuse reuse aft
   const digest = bytes => createHash('sha256').update(bytes).digest();
   const installed = bytes(6), address = 'staged-escrow';
   const deployment = {address,network:'local',programHash:Buffer.from(frozen.program).toString('hex'),
-    verifiers:Object.fromEntries(['fund','first','enable','resume','refund'].map(k=>[k,digest(installed).toString('hex')]))};
-  const contract = {operation:()=>({verifierKey:installed}),serialize:()=>bytes(1)};
+    verifiers:Object.fromEntries(['fund','first','enable','resume','refund','withdraw'].map(k=>[k,digest(installed).toString('hex')])),
+    maintenance:{committee:['owner-wallet-key'],threshold:1,counter:'0'}};
+  const contract = {operations:()=>['fund','first','enable','resume','refund','withdraw'],operation:()=>({verifierKey:installed}),
+    maintenanceAuthority:{committee:['owner-wallet-key'],threshold:1,counter:0n},serialize:()=>bytes(1)};
   const terms = {program:frozen.program,network:digest('local')};
   const client = head => ({instance:{address,contract:{generated:{ledger:()=>head}}},ledger:{
     state:{index:()=>contract},network:'local',runtime:{ContractState:{deserialize:()=>({data:{}})}},

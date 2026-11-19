@@ -6,6 +6,7 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {buildO8} from '../src/build-o8.mjs';
 import {replayNativeReceipt} from './replay.mjs';
+import {rerunRefusals} from './refusals.mjs';
 
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 const pkg=join(root,'packages/moriarty-orders');
@@ -96,6 +97,15 @@ try{
   assert.deepEqual(report.refusals.map(r=>r.label).sort(),[...fixture.refusals].sort());
   for(const row of report.refusals){assert.equal(row.before,row.after);assert.deepEqual(row.balances,row.label==='unfunded third leg'?fixture.unfunded:fixture.funded);}
   assert.ok(BigInt(settle.nativeFeeSpeck)>0n);assert.deepEqual(report.resources,settle.resources);
+  // Maintenance requires all three owners; the plan's authority refusals re-execute in the compiled circuit.
+  const m=report.deployment.maintenance;
+  assert.equal(m.threshold,3);assert.deepEqual(m.committee.map(k=>L.addressFromKey(k)),report.fundingWallets);
+  const recorded=JSON.parse(read('refusals.json'));
+  assert.deepEqual(recorded.map(r=>r.label),['missing grant','wrong grant','changed recipient','changed amount']);
+  const rerun=await rerunRefusals({L,runtime:rt,compiled:generated,directory:dir,rows:recorded});
+  for(const row of report.refusals.filter(x=>x.stage==='compiled-circuit-preparation'))assert.ok(rerun.some(x=>x.label===row.label),row.label);
   console.log(JSON.stringify({schema:'moriarty-orders/o8-native-replay/1',requirement:'IV.3',receiptsSha256:report.receiptsSha256,
+    evidenceClasses:{ledgerApplied:validated.map(r=>r.label),compiledCircuitRefusals:rerun,
+      walletOrAdapterRefusals:report.refusals.filter(x=>x.stage!=='compiled-circuit-preparation').map(x=>x.label)},
     validatorSha256:hash(readFileSync(validator)),signedInputs,assetOutputs,transactions:validated}));
 }finally{rmSync(output,{recursive:true,force:true});}

@@ -7,6 +7,7 @@ import {buildAcceptance} from '../src/build-acceptance.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
 import {verifyEnrollment} from '../src/authorization.mjs';
 import {replayNativeReceipt} from './replay.mjs';
+import {rerunRefusals} from './refusals.mjs';
 
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 const evidence=resolve(process.argv[2]??join(root,'deliverables/competitor-report/III.5/native'));
@@ -33,10 +34,11 @@ try {
   const d=report.deployment;
   assert.deepEqual(d.verifiers,report.build.verifiers);
   const branches=[
+    // The client that delivers B receives the 100 A: the primary in row 7, the fallback in row 9.
     {i:6,op:'fund',outcome:'success',state:[[0,0],[0,0],[0,999600],[0,400],[100,0]],revision:0},
     {i:7,op:'fill',outcome:'success',state:[[0,0],[0,200],[100,999400],[0,400],[0,0]],revision:1,client:'primary'},
     {i:8,op:'fill',outcome:'failure',state:[[0,0],[0,0],[0,999600],[0,400],[100,0]],revision:0},
-    {i:9,op:'fill',outcome:'success',state:[[0,0],[0,200],[100,999600],[0,200],[0,0]],revision:1,client:'fallback'},
+    {i:9,op:'fill',outcome:'success',state:[[0,0],[0,200],[0,999600],[100,200],[0,0]],revision:1,client:'fallback'},
     {i:10,op:'cancel',outcome:'success',state:[[100,0],[0,0],[0,999600],[0,400],[0,0]],revision:1},
   ];
   for(const b of branches){
@@ -58,6 +60,8 @@ try {
       assert.deepEqual(encodePoint(installed[role+'Key']),[report.clients[role].key.x,report.clients[role].key.y]);
     }
     assert.notDeepEqual(installed.primaryKey,installed.fallbackKey);
+    assert.equal(rt.decodeUserAddress(installed.fallbackAccount.bytes),report.clients.fallback.payee);
+    assert.equal(rt.decodeUserAddress(order.terms.executor.bytes),report.clients.primary.payee);
     const assets=[order.terms.assetA,order.terms.assetB].map(v=>Buffer.from(v).toString('hex'));
     const wallets=[rt.decodeUserAddress(order.terms.account.bytes),rt.decodeUserAddress(order.terms.recipient.bytes),
       report.clients.primary.wallet,report.clients.fallback.wallet];
@@ -75,7 +79,12 @@ try {
       assert.ok(b.client==='primary' ? t<1100n : t>=1100n && t<1400n);
     }
   }
-  assert.ok(report.refusals.some(r=>r.role==='primary'&&r.reason==='CLIENT_SIGNATURE'));
-  assert.ok(report.refusals.some(r=>r.role==='fallback'&&r.reason==='FALLBACK_WINDOW'));
-  console.log(JSON.stringify({schema:'moriarty-orders/executors-replay/1',validated:replays},null,2));
+  // Re-execute each restricted call: an outsider, a fallback before its window and a reused primary key.
+  const refusals=read('refusals.json');
+  assert.deepEqual(refusals.map(r=>r.label),['outsider-as-primary','fallback-before-window','primary-key-as-fallback']);
+  const rerun=await rerunRefusals({L,runtime:rt,compiled,directory:evidence,rows:refusals});
+  assert.match(rerun[0].error,/CLIENT_SIGNATURE/);assert.match(rerun[1].error,/FALLBACK_WINDOW/);assert.match(rerun[2].error,/CLIENT_SIGNATURE/);
+  assert.deepEqual(d.maintenance.committee,[d.enrollment.key]);
+  console.log(JSON.stringify({schema:'moriarty-orders/executors-replay/1',
+    evidenceClasses:{ledgerApplied:replays.map(r=>r.label),compiledCircuitRefusals:rerun},validated:replays},null,2));
 } finally {rmSync(work,{recursive:true,force:true});}

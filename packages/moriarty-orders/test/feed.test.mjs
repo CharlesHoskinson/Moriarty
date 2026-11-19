@@ -96,7 +96,8 @@ test('outage, future and stale samples refuse on the executing ledger clock', as
 test('substitution, caller flags, replay and altered signed data cannot update state', async () => {
   const feed = await fixture();
   const update = feed.prepare(100n);
-  await assert.rejects(() => feed.publish(100n, {...update, signature: {authentic: true}}));
+  // A caller's claim of authenticity without the controller's signature is refused by the signature check.
+  await assert.rejects(() => feed.publish(100n, {...update, signature: {announcement: {x: 0n, y: 1n}, response: 0n}}), /FEED_SIGNATURE/);
   await assert.rejects(() => feed.publish(100n, feed.prepare(100n, {}, 43n)), /FEED_SIGNATURE/);
   await assert.rejects(() => feed.publish(100n, feed.prepare(100n, {feed: feedId('feed-BA')})), /FEED_ID/);
   await assert.rejects(() => feed.publish(100n, update, rt.sampleContractAddress()), /FEED_SIGNATURE/);
@@ -122,4 +123,16 @@ test('a valid prepared trigger fails transcript replay after a signed price chan
   assert.equal(feed.ledger().feedPrice, 3n);
   assert.throws(() => feed.replay(prepared, 101n), /mismatch between expected .* and actual .* read/);
   await assert.rejects(() => feed.check(101n), /FEED_THRESHOLD/);
+});
+
+test('only the price change refuses a fresh check; a newer sample at the same price still passes', async () => {
+  const feed = await fixture();
+  await feed.publish(100n, feed.prepare(100n));
+  const prepared = await feed.check(100n);
+  await feed.publish(101n, feed.prepare(101n, {price: 2n}));
+  // Any newer sample invalidates the old transcript, but the condition itself still holds.
+  assert.throws(() => feed.replay(prepared, 101n), /mismatch between expected .* and actual .* read/);
+  await feed.check(101n);
+  await feed.publish(102n, feed.prepare(102n, {price: 3n}));
+  await assert.rejects(() => feed.check(102n), /FEED_THRESHOLD/);
 });

@@ -11,6 +11,8 @@ export function signProviderQuote(runtime, generated, grant, providerSecret) {
 
 export function prepareO5Fill(ledger, instance, deployment, request) {
   if (deployment.address !== instance.address) throw Error('Wrong order contract');
+  // The owner enrolls the feed controller and quote provider; the reader compares both with the ledger.
+  if (!deployment.pins?.feedController || !deployment.pins?.providerKey) throw Error('O5 deployment must pin its feed controller and provider');
   const reader = {network: ledger.network, index: address => ledger.state.index(address)};
   const head = readAcceptedOrder(reader, ledger.runtime, instance.contract.generated, deployment);
   verifyEnrollment(ledger.L, ledger.runtime, deployment, head, deployment.enrollment);

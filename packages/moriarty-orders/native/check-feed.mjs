@@ -8,6 +8,9 @@ import {join,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {buildO5} from '../src/build-o5.mjs';
 import {replayNativeReceipt} from './replay.mjs';
+import {rerunRefusals} from './refusals.mjs';
+import {readAcceptedOrder} from '../src/accepted-state.mjs';
+import {verifyEnrollment} from '../src/authorization.mjs';
 
 const root=fileURLToPath(new URL('../../../',import.meta.url));
 const pkg=join(root,'packages/moriarty-orders');
@@ -23,8 +26,10 @@ const json=name=>JSON.parse(read(name));
 const report=json('result.json'), receipts=json('receipts.json');
 const o5=id==='IV.2';
 const expected=o5?['setup-night-reward','setup-dust-registration','deploy-test-mint','mint-order-assets','deploy-O5','fund-O5',
-  'publish-price-2','accepted-O5-age-0','accepted-O5-age-30','publish-at-expiry','baseline-prepared-fill','change-trigger-before-inclusion','unchanged-fill-after-price-change']:
-  ['setup-night-reward','setup-dust-registration','deploy-feed-AB','publish-price-2','fresh-age-0','fresh-age-30','unchanged-transaction-age-31','publish-price-3','unchanged-transaction-new-price'];
+  'publish-price-2','accepted-O5-age-0','accepted-O5-age-30','publish-at-expiry','baseline-prepared-fill','change-trigger-before-inclusion','unchanged-fill-after-price-change',
+  'newer-sample-same-price','unchanged-fill-after-newer-same-price','refreshed-fill-same-price']:
+  ['setup-night-reward','setup-dust-registration','deploy-feed-AB','publish-price-2','fresh-age-0','fresh-age-30','unchanged-transaction-age-31','publish-price-3','unchanged-transaction-new-price',
+  'publish-newer-price-2','unchanged-transaction-newer-same-price','refreshed-check-same-price'];
 assert.deepEqual(receipts.map(row=>row.label),expected);
 assert.equal(report.requirement,id);
 assert.equal(report.status,'passed');
@@ -86,7 +91,13 @@ try {
   assert.equal(stale.time,changed.row.time+(o5?1:0));
   if(o5){
     assert.equal(original.time,stale.time);
-    for (const [label,delivery] of [['fund-O5',0],['accepted-O5-age-0',200],['accepted-O5-age-30',201],['baseline-prepared-fill',200],['unchanged-fill-after-price-change',0]]) {
+    // The accepted deployment carries the enrolled feed controller, provider and owner-only maintenance.
+    const fundedState=post('fund-O5').state;
+    const view=readAcceptedOrder({network:'undeployed',index:a=>fundedState.index(a)},rt,compiled,report.deployment);
+    verifyEnrollment(L,rt,report.deployment,view,report.deployment.enrollment);
+    assert.deepEqual(Object.keys(report.deployment.pins).sort(),['feedController','providerKey']);
+    for (const [label,delivery] of [['fund-O5',0],['accepted-O5-age-0',200],['accepted-O5-age-30',201],['baseline-prepared-fill',200],['unchanged-fill-after-price-change',0],
+      ['unchanged-fill-after-newer-same-price',0],['refreshed-fill-same-price',200]]) {
       const {state,contract,fields}=post(label);
       const colors=[fields.terms.assetA,fields.terms.assetB].map(hex);
       const holdings=address=>colors.map(color=>[...state.utxo.filter(rt.decodeUserAddress(address.bytes))].filter(c=>c.type===color).reduce((n,c)=>n+Number(c.value),0));
@@ -102,6 +113,15 @@ try {
     assert.equal(original.transaction.sha256,records.get('fresh-age-30').transaction.sha256);
     assert.equal(original.transaction.sha256,records.get('unchanged-transaction-age-31').transaction.sha256);
   }
+  // A newer sample at the same price invalidates the unchanged transaction; a fresh call at that second passes.
+  const control=records.get(o5?'unchanged-fill-after-newer-same-price':'unchanged-transaction-newer-same-price');
+  assert.equal(control.transaction.sha256,original.transaction.sha256);
+  assert.equal(post(o5?'newer-sample-same-price':'publish-newer-price-2').fields.feedPrice,2n);
+  const rerun=await rerunRefusals({L,runtime:rt,compiled,directory:dir,rows:JSON.parse(read('refusals.json'))});
+  const expectedRefusals=o5?['missing','wrong controller','substitution','wrong provider','wrong owner','future','stale','expiry','threshold equality']:
+    ['missing','wrong controller','substitution','future','stale','threshold equality'];
+  assert.deepEqual(rerun.map(r=>r.label),expectedRefusals);
   console.log(JSON.stringify({schema:'moriarty-orders/feed-native-replay/1',requirement:id,
+    evidenceClasses:{ledgerApplied:validated.map(r=>r.label),compiledCircuitRefusals:rerun},
     validatorSha256:digest(readFileSync(validator)),receiptsSha256:digest(read('receipts.json')),transactions:validated}));
 }finally{rmSync(output,{recursive:true,force:true});}

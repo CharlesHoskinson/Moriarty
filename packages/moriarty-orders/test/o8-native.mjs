@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {join} from 'node:path';
 import {existsSync,readFileSync,writeFileSync} from 'node:fs';
-import {retainedTransactions,writeEvidence} from '../native/record.mjs';
-import {fundExchangeInputs,prepareExchange,signExchangeLeg} from '../src/atomic-exchange.mjs';
+import {generatorRecord,retainedTransactions,writeEvidence} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
+import {exchangeWallet,fundExchangeInputs,prepareExchange,signExchangeLeg} from '../src/atomic-exchange.mjs';
 import {NativeLedger,hash} from './native-ledger.mjs';
 
 const [buildDir,output]=process.argv.slice(2);
@@ -12,22 +13,22 @@ const build=JSON.parse(readFileSync(join(buildDir,'o8-build.json')));
 const f=JSON.parse(readFileSync(new URL('./fixtures/o8.json',import.meta.url)));
 const proofServer=process.env.MORIARTY_ORDER_PROVER||'http://127.0.0.1:16311';
 const r={requirement:'IV.3',target:'native V9 local ledger',assessment:'independent assessment pending',node:process.version,
-  revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),build,network:'undeployed',
+  generator:generatorRecord(['node','packages/moriarty-orders/test/o8-native.mjs',buildDir,output]),build,network:'undeployed',
   command:['node','packages/moriarty-orders/test/o8-native.mjs',buildDir,output],
-  assumption:'Fresh, fixed native fixture issues only the specified asset supplies. Each independent wallet validates the complete intent and signs its own input. Native DUST fee uses a fourth credential.',
-  limitation:'The common single-payer backend supports one wallet. The O8 adapter balances exactly three unshielded colors, three signature-enabled wallets and one separately paid DUST fee. The public test operator controls all three local keys.',
+  assumption:'Fresh, fixed native fixture issues only the specified asset supplies. After proving, each owner wallet callback checks its own leg in the final transaction (its inputs, the payment to the next owner and its change) and only then signs its own input. Native DUST fee uses a fourth credential. Maintenance requires all three owners.',
+  limitation:'The common single-payer backend supports one wallet. The O8 adapter balances exactly three unshielded colors, three signature-enabled wallets and one separately paid DUST fee. The three wallet callbacks run in one local process, and the public test operator holds all three local keys.',
   sources:Object.fromEntries(['contracts/atomic-exchange.compact','src/atomic-exchange.mjs','orders/o8.mori','test/fixtures/o8-mint.compact',
     'test/fixtures/o8.json','src/build-o8.mjs','test/o8-native.mjs','test/native-ledger.mjs'].map(name=>[name,hash(readFileSync(join('packages/moriarty-orders',name)))])),
   refusals:[]};
 const retain=retainedTransactions(output);
+const refusals=retainedRefusals(output);
 async function run(){
   r.proofServerVersion=(await (await fetch(new URL('/version',proofServer))).text()).trim();
   assert.equal(r.proofServerVersion,'9.0.1');
-  const h=await NativeLedger.create({modules:process.env.MORIARTY_ORDER_MODULES,proofServer,retain});
+  const h=await NativeLedger.create({modules:process.env.MORIARTY_ORDER_MODULES,proofServer,retain,refusals});
   const exchange=await h.loadContract(buildDir), faucet=await h.loadContract(join(buildDir,'mint'));
   const mint=await h.deploy(faucet,[],'deploy-O8-faucet');
   const actors=[h.actors.owner,h.actors.recipient,h.actors.executor];
-  const wallets=actors.map(actor=>({vk:actor.vk,sign:payload=>h.L.signData(actor.key,payload)}));
   const addresses=actors.map(actor=>({bytes:h.runtime.encodeUserAddress(actor.address)}));
   const secrets=[17n,23n,37n]; // Public test credentials for three separate roles.
   const keys=secrets.map(h.runtime.ecMulGenerator);
@@ -41,37 +42,49 @@ async function run(){
     const balances=()=>actors.map(actor=>colors.map(c=>Number(h.balance(actor.address,hex(c)))));
     const plan={network:Buffer.from(hash(h.network),'hex'),id:Buffer.from(hash('O8'), 'hex'),program:Buffer.from(build.programHash,'hex'),
       wallets:addresses,colors,amounts:f.amounts.map(BigInt),epoch:BigInt(h.time)-1000n};
-    const instance=await h.deploy(exchange,[plan,keys],prefix+'deploy-exchange');
-    const deployment={address:instance.address,programHash:build.programHash,verifierSha256:build.verifierSha256,network:h.network};
+    const instance=await h.deploy(exchange,[plan,keys],prefix+'deploy-exchange',{maintainers:actors,threshold:3});
+    const deployment={address:instance.address,programHash:build.programHash,verifierSha256:build.verifierSha256,network:h.network,
+      verifiers:{settle:build.verifierSha256},maintenance:instance.maintenance};
+    const wallets=actors.map((actor,i)=>exchangeWallet(h.L,h.runtime,plan,i,actor));
     const signatures=secrets.map((sk,i)=>signExchangeLeg(h.runtime,exchange.generated,plan,instance.address,i,0n,sk));
     const request={plan,revision:0n,now:BigInt(h.time)-plan.epoch,signatures};
     const prepare=async(req=request)=>h.assemble([await prepareExchange(h,instance,deployment,req)]);
     const expected=underfunded?f.unfunded:f.funded;
     assert.deepEqual(balances(),expected);
-    async function refuse(label,operation,pattern){
+    async function refuse(label,operation,pattern,stage='wallet or adapter before transaction assembly'){
       const before=hash(h.state.serialize());
       await assert.rejects(async()=>operation(),err=>{
         assert.match(err.message,pattern);
-        r.refusals.push({label,before,after:hash(h.state.serialize()),balances:balances(),stage:'before native application',diagnostic:err.message});
+        r.refusals.push({label,before,after:hash(h.state.serialize()),balances:balances(),stage,diagnostic:err.message});
         return true;
       });
       assert.equal(hash(h.state.serialize()),before);
       assert.deepEqual(balances(),expected);
+    }
+    // Authority and plan changes: the compiled settle circuit refuses; the call is recorded for re-execution.
+    async function refuseSettle(label,req,pattern){
+      await refuse(label,()=>prepare(req),pattern,'compiled-circuit-preparation');
+      await h.refuseCall(instance,'settle',[req.plan,req.revision,req.now,req.signatures],pattern,label);
     }
     if(underfunded){
       await refuse('unfunded third leg',async()=>fundExchangeInputs(h,await prepare(),plan,wallets),/insufficient funding for leg 2/);
       continue;
     }
     r.funded=balances();
-    await refuse('missing grant',()=>prepare({...request,signatures:signatures.slice(0,2)}),/expected|argument|vector/i);
-    await refuse('wrong grant',()=>prepare({...request,signatures:[signatures[0],signatures[1],signatures[1]]}),/O8_SIGNATURE/);
-    await refuse('changed recipient',()=>prepare({...request,plan:{...plan,wallets:[addresses[0],addresses[2],addresses[1]]}}),/O8_PLAN/);
-    await refuse('changed amount',()=>prepare({...request,plan:{...plan,amounts:[99n,200n,300n]}}),/O8_PLAN/);
+    // Carol's grant is absent: her slot carries no signature (identity announcement, zero response).
+    const absent={announcement:{x:0n,y:1n},response:0n};
+    await refuseSettle('missing grant',{...request,signatures:[signatures[0],signatures[1],absent]},/O8_SIGNATURE/);
+    await refuseSettle('wrong grant',{...request,signatures:[signatures[0],signatures[1],signatures[1]]},/O8_SIGNATURE/);
+    await refuseSettle('changed recipient',{...request,plan:{...plan,wallets:[addresses[0],addresses[2],addresses[1]]}},/O8_PLAN/);
+    await refuseSettle('changed amount',{...request,plan:{...plan,amounts:[99n,200n,300n]}},/O8_PLAN/);
     await refuse('wrong funding wallet',async()=>fundExchangeInputs(h,await prepare(),plan,[wallets[2],wallets[1],wallets[0]]),/funding wallet mismatch/);
-    await refuse('missing native wallet signature',async()=>fundExchangeInputs(h,await prepare(),plan,[wallets[0],wallets[1],
-      {...wallets[2],sign:()=>{throw Error('Carol declined to sign');}}]),/declined to sign/);
+    // Carol's wallet declines at the final signing step, after proving; no transaction exists.
+    const declining=[wallets[0],wallets[1],exchangeWallet(h.L,h.runtime,plan,2,actors[2],()=>{throw Error('Carol declined to sign');})];
+    await refuse('missing native wallet signature',async()=>h.fundBalancedAndProve(fundExchangeInputs(h,await prepare(),plan,declining),
+      exchange,address=>declining.find(w=>w.address===address)),/declined to sign/);
+    h.clearReservations();
     const funded=fundExchangeInputs(h,await prepare(),plan,wallets);
-    const complete=await h.fundBalancedAndProve(funded,exchange,address=>actors.find(actor=>actor.address===address));
+    const complete=await h.fundBalancedAndProve(funded,exchange,address=>wallets.find(w=>w.address===address));
     const inputs=[];
     const signed=[];
     for(const [segment,intent] of complete.intents){

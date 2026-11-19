@@ -4,7 +4,8 @@ import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {signFeedUpdate} from '../src/feed.mjs';
-import {retainedTransactions} from '../native/record.mjs';
+import {generatorRecord, retainedTransactions} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
 import {NativeLedger, hash} from './native-ledger.mjs';
 
 const feed = Uint8Array.from(Buffer.from('feed-AB'.padEnd(32, '\0')));
@@ -15,7 +16,8 @@ export async function runNativeFeed(h, contract, observed) {
   const secret = 42n; // Public local fixture.
   const network = Uint8Array.from(Buffer.from(hash(h.network), 'hex'));
   const controller = h.runtime.ecMulGenerator(secret);
-  const instance = await h.deploy(contract, [controller, network], 'deploy-feed-AB');
+  const instance = await h.deploy(contract, [controller, network], 'deploy-feed-AB', {maintainers: [h.actors.owner]});
+  observed.maintenance = instance.maintenance;
   const address = {bytes: h.runtime.encodeContractAddress(instance.address)};
   const date = BigInt(h.time);
   observed.contractAddress = instance.address;
@@ -34,13 +36,8 @@ export async function runNativeFeed(h, contract, observed) {
     return {available: current.feedAvailable, observedAt: current.feedObservedAt, price: current.feedPrice};
   }
   async function refuses(label, circuit, args, expectedError) {
-    const before = hash(h.state.serialize());
-    await assert.rejects(async () => h.prepareCall(instance, circuit, args), error => {
-      assert.match(error.message, expectedError);
-      observed.refusals.push({label, stage: 'compact-call-preparation', error: error.message, ledgerSha256: before});
-      return true;
-    });
-    assert.equal(hash(h.state.serialize()), before);
+    const row = await h.refuseCall(instance, circuit, args, expectedError, label);
+    observed.refusals.push({label, stage: row.boundary, error: row.observedError, ledgerSha256: row.stateSha256});
   }
   await refuses('missing', 'checkFeed', [feed], /FEED_UNAVAILABLE/);
   await refuses('wrong controller', 'publishFeedUpdate', update(2n, date, feed, 43n), /FEED_SIGNATURE/);
@@ -83,6 +80,21 @@ export async function runNativeFeed(h, contract, observed) {
   refusePrepared('unchanged-transaction-new-price');
   assert.deepEqual(read(), before);
   observed.afterChangedCondition = read();
+  // Control: a newer sample at the same price invalidates the unchanged transaction too, while a
+  // fresh check at that second passes. Only the price refuses a fresh check.
+  h.restore(snapshot);
+  h.reserveFunding(original);
+  try {
+    h.time++;
+    await h.call(instance, 'publishFeedUpdate', update(2n, date + 1n), 'publish-newer-price-2');
+  } finally {
+    h.clearReservations();
+  }
+  h.time = Number(date) + 1;
+  refusePrepared('unchanged-transaction-newer-same-price');
+  const fresh = await h.prepareCall(instance, 'checkFeed', [feed]);
+  h.apply(await h.fundAndProve(h.assemble([fresh]), contract), 'refreshed-check-same-price');
+  observed.afterSameSampleControl = read();
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -93,7 +105,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   mkdirSync(output, {recursive: true});
   const observed = {requirement: 'II.5', factoryPredicate: 'F28', target: 'Midnight strict native-local ledger',
     command: ['node', 'packages/moriarty-orders/test/feed-native.mjs', build, output, proofServer],
-    revision: execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(),
+    generator: generatorRecord(['node', 'packages/moriarty-orders/test/feed-native.mjs', build, output, proofServer]),
     node: process.version, assessment: 'independent review pending', records: [], refusals: [],
     sources: Object.fromEntries(['contracts/feed.compact','contracts/feed-policy.compact','src/feed.mjs',
       'test/feed-native.mjs','test/native-ledger.mjs','test/feed.test.mjs'].map(name => [name, sha(join('packages/moriarty-orders',name))])),
@@ -107,7 +119,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       transactionSha256: record.serializedTransactionSha256});
   }
   try {
-    const ledger = await NativeLedger.create({modules: process.env.MORIARTY_ORDER_MODULES, proofServer, retain});
+    const ledger = await NativeLedger.create({modules: process.env.MORIARTY_ORDER_MODULES, proofServer, retain, refusals: retainedRefusals(output)});
     observed.compiler = JSON.parse(readFileSync(join(build,'compiler/contract-info.json'),'utf8'))['compiler-version'];
     observed.runtime = JSON.parse(readFileSync(join(process.env.MORIARTY_ORDER_MODULES,'@midnight-ntwrk/compact-runtime/package.json'),'utf8')).version;
     observed.proofServerVersion = (await (await fetch(new URL('/version',proofServer))).text()).trim();

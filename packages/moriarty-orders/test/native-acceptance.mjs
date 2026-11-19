@@ -7,11 +7,14 @@ import {NativeLedger,hash,encode} from './native-ledger.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
 import {prepareFill,acceptFill} from '../src/acceptance.mjs';
 import {issueEnrollment,signOrder} from '../src/authorization.mjs';
+import {generatorRecord} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
 
 const [modules,orderBuild,mintBuild,output] = process.argv.slice(2);
 if (!output) throw Error('usage: node native-acceptance.mjs MODULES BUILT_ORDER BUILT_MINT OUTPUT');
 const out = resolve(output);
 mkdirSync(out,{recursive:true});
+const generator = generatorRecord(['node','packages/moriarty-orders/test/native-acceptance.mjs',...process.argv.slice(2)]);
 const expected = JSON.parse(readFileSync(new URL('./fixtures/acceptance.json',import.meta.url)));
 const o1 = JSON.parse(readFileSync(new URL('./fixtures/o1.json',import.meta.url)));
 const matrix = snap => o1.accountOrder.map(name=>snap[name]);
@@ -36,7 +39,7 @@ function retain(record) {
   records.push(publicReceipt);
   write('receipts.json',records);
 }
-const h = await NativeLedger.create({modules,proofServer,retain});
+const h = await NativeLedger.create({modules,proofServer,retain,refusals:retainedRefusals(out)});
 const orderContract = await h.loadContract(orderBuild);
 const mintContract = await h.loadContract(mintBuild);
 const mint = await h.deploy(mintContract,[],'deploy-faucet');
@@ -52,8 +55,9 @@ for (const [scenario,delivery] of [['exact',200n],['improved',201n]]) {
     program:Buffer.from(build.programHash,'hex'),epoch:BigInt(h.time+2)-1000n,input:100n,minimum:200n,fee:0n,expiry:1400n};
   const secret = 123456789n;
   const owner = h.runtime.ecMulGenerator(secret);
-  const instance = await h.deploy(orderContract,[terms,owner],scenario+'-deploy-order');
-  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers};
+  const instance = await h.deploy(orderContract,[terms,owner],scenario+'-deploy-order',{maintainers:[h.actors.owner]});
+  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers,
+    maintenance:instance.maintenance};
   const reader = {network:h.network,index:address=>h.state.index(address)};
   const read = () => readAcceptedOrder(reader,h.runtime,orderContract.generated,deployment);
   const sign = (changes={},sk=secret) => signOrder(h.runtime,orderContract.generated.pureCircuits,{
@@ -79,12 +83,15 @@ for (const [scenario,delivery] of [['exact',200n],['improved',201n]]) {
   assert.equal(BigInt(h.time)-terms.epoch,1000n);
   const req = {revision:0n,input:100n,delivery,fee:0n,now:1000n,signature:sign()};
   const diagnostics = [];
+  // The adapter refuses first; the compiled circuit must refuse the same call on its own.
   async function refuse(name,change,error) {
     const before = h.state.serialize();
-    await assert.rejects(async()=>prepareFill(h,instance,deployment,{...req,...change}),error,name);
+    const r = {...req,...change};
+    await assert.rejects(async()=>prepareFill(h,instance,deployment,r),error,name);
+    const row = await h.refuseCall(instance,'fill',[r.revision,r.input,r.delivery,r.fee,r.now,r.signature],error,scenario+': '+name);
     assert.deepEqual(h.state.serialize(),before);
     assert.deepEqual(summarize(),expected.funded);
-    diagnostics.push({name,boundary:'contract-call preparation',ledgerSha256:hash(before),networkFeeSpeck:'0'});
+    diagnostics.push({name,boundary:row.boundary,circuitError:row.observedError,ledgerSha256:hash(before),networkFeeSpeck:'0'});
   }
   await refuse('forged owner',{signature:sign({owner:h.runtime.ecMulGenerator(9n)},9n)},/SIGNATURE/);
   for (const [field,value] of Object.entries(terms)) {
@@ -128,5 +135,5 @@ for (const [scenario,delivery] of [['exact',200n],['improved',201n]]) {
   rows.push(row);
   write('scenarios.json',rows);
 }
-write('native-readback.json',{build,proofServerVersion:proofVersion,rows,receipts:'receipts.json',
+write('native-readback.json',{build,generator,proofServerVersion:proofVersion,rows,receipts:'receipts.json',refusals:'refusals.json',
   boundary:'strict JS ledger application; native cryptographic validation is a separate check'});

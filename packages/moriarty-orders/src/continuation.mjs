@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
+import {verifyInstalledContract} from './accepted-state.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const hex = bytes => Buffer.from(bytes).toString('hex');
@@ -23,10 +24,7 @@ export function readContinuation(ledger, runtime, compiled, deployment) {
   if (ledger.network !== deployment.network) throw Error('Wrong continuation network');
   const contract = ledger.index(deployment.address);
   if (!contract) throw Error('Missing continuation contract');
-  for (const operation of ['fund','first','enable','resume','refund']) {
-    const key = contract.operation(operation)?.verifierKey;
-    if (!key || sha(key) !== deployment.verifiers[operation]) throw Error('Wrong continuation verifier '+operation);
-  }
+  verifyInstalledContract(contract, deployment);
   const state = runtime.ContractState.deserialize(contract.serialize());
   const head = compiled.ledger(state.data);
   if (hex(head.terms.program) !== deployment.programHash || hex(head.terms.network) !== sha(ledger.network)) {
@@ -50,4 +48,21 @@ export function prepareTerminal(ledger, instance, deployment, request) {
 
 export function checkO9Balances(observed, expected) {
   if (!isDeepStrictEqual(observed,expected)) throw Error('Unexpected staged exchange balances: '+JSON.stringify(observed));
+}
+
+// The owner wallet enrolls the complete staged installation, including its maintenance committee.
+export function stagedEnrollmentMessage(deployment, ownerAddress, ownerKey) {
+  return Buffer.from(JSON.stringify(['O9-wallet-enrollment/2',deployment,ownerAddress,String(ownerKey.x),String(ownerKey.y)]));
+}
+
+export function verifyStagedEnrollment(L, runtime, deployment, head, enrollment) {
+  const owner = runtime.decodeUserAddress(head.terms.account.bytes);
+  const {committee, threshold} = deployment.maintenance ?? {};
+  if (threshold !== 1 || committee?.length !== 1 || !isDeepStrictEqual(committee[0], enrollment.key)) {
+    throw Error('Staged order maintenance must belong to the enrolled owner wallet');
+  }
+  if (L.addressFromKey(enrollment.key) !== owner
+      || !L.verifySignature(enrollment.key, stagedEnrollmentMessage(deployment, owner, head.ownerKey), enrollment.signature)) {
+    throw Error('Invalid staged wallet enrollment');
+  }
 }

@@ -6,16 +6,18 @@ import {NativeLedger, hash} from './native-ledger.mjs';
 import {issueEnrollment, signOrder, verifyEnrollment} from '../src/authorization.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
 import {checkRecoveryReadback, recoveryReadback} from '../src/recovery.mjs';
-import {retainedTransactions, writeEvidence} from '../native/record.mjs';
+import {generatorRecord, retainedTransactions, writeEvidence} from '../native/record.mjs';
+import {retainedRefusals} from '../native/refusals.mjs';
 
 const [modules, buildDir, mintDir, evidence] = process.argv.slice(2);
 if (!evidence) throw Error('usage: node native-recovery.mjs MODULES RECOVERY_BUILD MINT_BUILD OUT');
 const out = resolve(evidence);
+const generator = generatorRecord(['node','packages/moriarty-orders/test/native-recovery.mjs',...process.argv.slice(2)]);
 const build = JSON.parse(readFileSync(join(buildDir,'acceptance-build.json')));
 const expected = JSON.parse(readFileSync(new URL('./fixtures/recovery.json',import.meta.url)));
 const proofServer = process.env.MORIARTY_ORDER_PROVER ?? 'http://127.0.0.1:16311';
 assert.equal((await (await fetch(new URL('/version',proofServer))).text()).trim(), '9.0.1');
-const h = await NativeLedger.create({modules,proofServer,retain:retainedTransactions(out)});
+const h = await NativeLedger.create({modules,proofServer,retain:retainedTransactions(out),refusals:retainedRefusals(out)});
 const contract = await h.loadContract(buildDir);
 const mint = await h.deploy(await h.loadContract(mintDir),[],'deploy-setup-faucet');
 const {owner, recipient, executor} = h.actors;
@@ -36,8 +38,10 @@ async function openOrder(id, wallet, beneficiary, secret) {
     orderId:Buffer.from(hash(id),'hex'),program:Buffer.from(build.programHash,'hex'),epoch:BigInt(h.time)-1000n,
     input:100n,minimum:80n,expiry:1400n,fee:0n};
   const key = h.runtime.ecMulGenerator(secret);
-  const instance = await h.deploy(contract,[terms,key],id+'-deploy');
-  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers};
+  // Each order is maintained only by its own owner wallet.
+  const instance = await h.deploy(contract,[terms,key],id+'-deploy',{maintainers:[wallet]});
+  const deployment = {address:instance.address,network:h.network,programHash:build.programHash,verifiers:build.verifiers,
+    maintenance:instance.maintenance};
   deployment.enrollment = issueEnrollment(h.L,h.runtime,deployment,{terms,owner:key},wallet.key);
   await h.call(instance,'fund',[],id+'-fund',wallet);
   function grant(action,revision) {
@@ -82,18 +86,18 @@ const pendingFill = await h.prepareCall(first.instance,'fill',fillArgs());
 await h.call(first.instance,'cancel',cancelArgs(0n),'early-full-refund');
 await stale(pendingFill,'prior-fill-after-cancel',executor);
 check('prior-fill-after-cancel','fullRefund');
-await assert.rejects(()=>h.prepareCall(first.instance,'fund',[]),/ALREADY_FUNDED/);
+await h.refuseCall(first.instance,'fund',[],/ALREADY_FUNDED/,'fund-after-revocation');
 await h.call(first.instance,'depositSurplus',[1n],'deposit-after-revocation');
-await assert.rejects(()=>h.prepareCall(first.instance,'fill',fillArgs()),/REVISION|CLOSED/);
+await h.refuseCall(first.instance,'fill',fillArgs(),/REVISION|CLOSED/,'fill-after-revocation');
 check('deposit-after-revocation','revokedWithFreshA');
 
 h.restore(root);
 h.time += 400;
-await assert.rejects(()=>h.prepareCall(first.instance,'fill',fillArgs()),/EXPIRED/);
+await h.refuseCall(first.instance,'fill',fillArgs(),/EXPIRED/,'fill-at-expiry');
 check('at-expiry','funded');
 h.time += 601;
 await h.call(first.instance,'cancel',cancelArgs(0n),'refund-beyond-horizon');
 check('refund-beyond-horizon','fullRefund');
 await transferA(owner,recipient,100n,'spend-owner-full-refund');
 check('spend-owner-full-refund','spentFull');
-writeEvidence(out,'readback.json',{build,network:h.network,deployments:[first.deployment,second.deployment],readbacks});
+writeEvidence(out,'readback.json',{build,generator,refusals:'refusals.json',network:h.network,deployments:[first.deployment,second.deployment],readbacks});

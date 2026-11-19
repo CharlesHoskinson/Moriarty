@@ -17,6 +17,8 @@ export ledger terms: OrderTerms;
 export ledger ownerKey: JubjubPoint;
 export ledger primaryKey: JubjubPoint;
 export ledger fallbackKey: JubjubPoint;
+// The primary client receives A at terms.executor; the fallback client receives A here.
+export ledger fallbackAccount: UserAddress;
 export ledger funded: Boolean;
 export ledger kernelState: KernelState;
 export ledger remaining: Uint<128>;
@@ -26,7 +28,7 @@ pure circuit equalPoint(a: JubjubPoint, b: JubjubPoint): Boolean {
   return jubjubPointX(a) == jubjubPointX(b) && jubjubPointY(a) == jubjubPointY(b);
 }
 
-constructor(order: OrderTerms, owner: JubjubPoint, primary: JubjubPoint, fallback: JubjubPoint) {
+constructor(order: OrderTerms, owner: JubjubPoint, primary: JubjubPoint, fallback: JubjubPoint, fallbackPayee: UserAddress) {
   const pinned: Bytes<32> = Bytes[60,31,122,61,231,137,119,68,50,12,130,50,73,202,111,134,195,201,69,124,54,232,223,1,250,191,83,74,144,56,10,104];
   assert(order.program == pinned, "ORDER_PROGRAM");
   assert(order.assetA != order.assetB, "ORDER_ASSETS");
@@ -37,6 +39,8 @@ constructor(order: OrderTerms, owner: JubjubPoint, primary: JubjubPoint, fallbac
   const zero = ecMulGenerator(0 as JubjubScalar);
   assert(!equalPoint(primary,zero) && !equalPoint(fallback,zero), "CLIENT_IDENTITY");
   assert(!equalPoint(primary,fallback) && !equalPoint(owner,primary) && !equalPoint(owner,fallback), "DISTINCT_CLIENT_KEYS");
+  assert(fallbackPayee != order.executor && fallbackPayee != order.account && fallbackPayee != order.recipient, "DISTINCT_CLIENT_ACCOUNTS");
+  fallbackAccount = disclose(fallbackPayee);
   primaryKey = disclose(primary);
   fallbackKey = disclose(fallback);
   terms = disclose(order);
@@ -93,7 +97,9 @@ export circuit fill(expected: Uint<128>, amountA: Uint<128>, amountB: Uint<128>,
   assert(result.effect1.v0 == 1 && result.effect1.v1 == 5 && result.effect1.v2 == 3 && result.effect1.v3 >= terms.minimum, "B_EFFECT");
   receiveUnshielded(terms.assetB,result.effect1.v3);
   sendUnshielded(terms.assetB,result.effect1.v3,right<ContractAddress,UserAddress>(terms.recipient));
-  sendUnshielded(terms.assetA,result.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  // The client that delivered B in this fill receives the A it bought.
+  const payee = role ? fallbackAccount : terms.executor;
+  sendUnshielded(terms.assetA,result.effect0.v3,right<ContractAddress,UserAddress>(payee));
   kernelState = result.after; remaining = result.remaining; revision = result.revision;
 }
 

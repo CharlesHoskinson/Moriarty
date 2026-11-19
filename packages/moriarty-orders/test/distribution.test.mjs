@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdtempSync,readFileSync,renameSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -44,6 +44,15 @@ test('install the pinned archive offline, run both native lifecycles, then exerc
     assert.deepEqual(operations[1].finalBalances,[[100,0],[0,1000000],[0,0],[0,0]]);
     assert.ok(operations[1].receipts.find(r=>r.label==='spend-refund' && r.outcome==='success'));
     assert.notEqual(spawnSync(cli,['replay','unknown'],options).status,0);
+    // An omitted dependency fails the installed lifecycle command; restoring it recovers the replay.
+    for (const name of ['@midnightntwrk/ledger-v9','@midnight-ntwrk/compact-runtime']) {
+      const installed = [join(pkg,'node_modules',name),join(cwd,'node_modules',name)].find(existsSync);
+      assert.ok(installed,'bundled dependency '+name);
+      renameSync(installed,installed+'.omitted');
+      assert.notEqual(spawnSync(cli,['replay','o1-fill'],options).status,0,'replay without '+name);
+      renameSync(installed+'.omitted',installed);
+    }
+    assert.equal(spawnSync(cli,['replay','o1-fill'],options).status,0);
     const firstState=join(pkg,'replay/o1-fill/00-beforeState.bin');
     const damaged=readFileSync(firstState); damaged[0]^=1; writeFileSync(firstState,damaged);
     assert.notEqual(spawnSync(cli,['replay','o1-fill'],options).status,0);

@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / "deliverables/competitor-report/III.1"
 UPSTREAM = "1ced5fe1e0a83d665184bb496bea01bcb9940449"
+PROFILE = "specifications/execution_cost/profiles-1.json"
 
 
 def main():
@@ -22,6 +23,10 @@ def main():
     for name, sha in expected["sha256"].items():
         if hashlib.sha256((upstream/name).read_bytes()).hexdigest() != sha:
             raise ValueError("incorrect assessment workflow file " + name)
+    # The local workload copy must be byte-identical to the pinned upstream profile.
+    local = hashlib.sha256((BASE/"workloads.json").read_bytes()).hexdigest()
+    if local != expected["sha256"][PROFILE]:
+        raise ValueError("workloads.json differs from the pinned upstream profile")
     sys.path.insert(0, str(upstream))
     from onboarding.execution_cost import validate_selection, validate_value, summarize
     payload = json.loads((BASE/"assessment-input.json").read_bytes())
@@ -36,24 +41,27 @@ def main():
                 shutil.copyfile(ROOT/path, tree/path)
         profile = tree/payload["measurement_profile"]["path"]
         profile.parent.mkdir(parents=True)
-        shutil.copyfile(BASE/"workloads.json", profile)
+        shutil.copyfile(upstream/PROFILE, profile)
         recipes = validate_selection(tree, payload)
         checks = {}
         for op in ("o1-fill", "cancel-unfilled"):
             value = validate_value(tree, recipes[op],payload["values"][op])
-            sample = summarize(recipes[op],value)["chains"]["X"]["samples"][0]
-            for phase in ("setup","operation","recovery","total"):
-                actual = sample["total"] if phase=="total" else sample["phases"][phase]
-                recorded = result["totals"][op]
-                ours = recorded["total"] if phase=="total" else recorded["phases"][phase]
-                for metric in ("resources","fee_paid","transaction_count"):
-                    # The upstream summarizer omits resource keys for an empty phase.
-                    observed = actual[metric]
-                    if metric == "resources" and actual["transaction_count"] == 0 and observed == {}:
-                        observed = dict.fromkeys(ours[metric], 0)
-                    if observed != ours[metric]:
-                        raise ValueError(f"{op} {phase} {metric} differs from pinned workflow")
-            checks[op] = sample["total"]
+            summarized = summarize(recipes[op],value)["chains"]["X"]["samples"]
+            recorded_samples = result["totals"][op]["samples"]
+            if [s["sample_id"] for s in summarized] != [r["sample"] for r in recorded_samples] or len(summarized) < 2:
+                raise ValueError(f"{op} samples differ from the pinned workflow")
+            for sample, recorded in zip(summarized, recorded_samples):
+                for phase in ("setup","operation","recovery","total"):
+                    actual = sample["total"] if phase=="total" else sample["phases"][phase]
+                    ours = recorded["total"] if phase=="total" else recorded["phases"][phase]
+                    for metric in ("resources","fee_paid","transaction_count"):
+                        # The upstream summarizer omits resource keys for an empty phase.
+                        observed = actual[metric]
+                        if metric == "resources" and actual["transaction_count"] == 0 and observed == {}:
+                            observed = dict.fromkeys(ours[metric], 0)
+                        if observed != ours[metric]:
+                            raise ValueError(f"{op} {sample['sample_id']} {phase} {metric} differs from pinned workflow")
+            checks[op] = {s["sample_id"]: s["total"] for s in summarized}
         record = {"upstreamRevision":UPSTREAM,"inputSha256":hashlib.sha256((BASE/"assessment-input.json").read_bytes()).hexdigest(),
                   "command":["python3","scripts/qa/validate_order_cost_handoff.py","<pinned-assessment-root>"],
                   "validated":checks,"assessment":"Workflow input and arithmetic checked. Independent semantic review pending."}

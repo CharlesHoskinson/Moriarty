@@ -8,8 +8,8 @@ import {replayNativeReceipt} from './replay.mjs';
 import {buildAcceptance} from '../src/build-acceptance.mjs';
 import {checkRecoveryReadback, recoveryReadback} from '../src/recovery.mjs';
 import {readAcceptedOrder} from '../src/accepted-state.mjs';
-import {NativeLedger} from '../test/native-ledger.mjs';
-import {signOrder,verifyEnrollment} from '../src/authorization.mjs';
+import {verifyEnrollment} from '../src/authorization.mjs';
+import {rerunRefusals} from './refusals.mjs';
 
 const root = fileURLToPath(new URL('../../../',import.meta.url));
 const directory = process.argv[2] ?? join(root,'deliverables/competitor-report/II.3/native');
@@ -67,21 +67,15 @@ try {
   for (const [i,parent] of parents.entries()) {
     if (parent !== null) assert.equal(records[i].beforeState.sha256,records[parent].afterBlockStateSha256);
   }
-  async function preparation(label, circuit, argsFor, relativeTime, error) {
-    const row = rows.get(label);
-    const state = ledger.LedgerState.deserialize(readFileSync(join(directory,row.afterState.file)));
-    const reader = {network:report.network,index:address=>state.index(address)};
-    const head = readAcceptedOrder(reader,runtime,generated,first);
-    const harness = Object.assign(Object.create(NativeLedger.prototype),{L:ledger,runtime,state,
-      time:Number(head.terms.epoch)+relativeTime});
-    const instance = {address:first.address,contract:{instance:new generated.Contract({})}};
-    await assert.rejects(()=>harness.prepareCall(instance,circuit,argsFor(head)),error);
-  }
-  const fillArgs = head => [0n,40n,80n,0n,1000n,signOrder(runtime,generated.pureCircuits,{
-    terms:head.terms,owner:head.owner,contract:{bytes:runtime.encodeContractAddress(first.address)},
-    action:0n,revision:0n},123456789n)];
-  await preparation('unassigned-deposit','fill',fillArgs,1400,/ORDER_EXPIRED/);
-  await preparation('deposit-after-revocation','fund',()=>[],1000,/ALREADY_FUNDED/);
-  await preparation('deposit-after-revocation','fill',fillArgs,1000,/REVISION|CLOSED/);
-  console.log(JSON.stringify({requirement:'II.3',receipts:records.length,replays,readbacks:checks},null,2));
+  // Re-execute the recorded preparation refusals against their accepted predecessor states.
+  const refusals = json(join(directory,'refusals.json'));
+  assert.deepEqual(refusals.map(r=>r.label),['fund-after-revocation','fill-after-revocation','fill-at-expiry']);
+  const rerun = await rerunRefusals({L:ledger,runtime,compiled:generated,directory,rows:refusals});
+  for (const row of refusals) assert.equal(row.address,first.address);
+  assert.ok(BigInt(refusals[2].time) >= BigInt(rows.get('unassigned-deposit').time)+400n);
+  // The two orders have different owners, and each is maintained only by its own wallet.
+  assert.notDeepEqual(first.maintenance.committee,second.maintenance.committee);
+  for (const deployment of [first,second]) assert.deepEqual(deployment.maintenance.committee,[deployment.enrollment.key]);
+  console.log(JSON.stringify({requirement:'II.3',receipts:records.length,
+    evidenceClasses:{ledgerApplied:replays.map(r=>r.label),compiledCircuitRefusals:rerun},replays,readbacks:checks},null,2));
 } finally { rmSync(output,{recursive:true,force:true}); }

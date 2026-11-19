@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {replayNativeReceipt} from '../../packages/moriarty-orders/native/replay.mjs';
+import {requireCommittedGenerator} from '../../packages/moriarty-orders/native/record.mjs';
 
 const root = fileURLToPath(new URL('../../',import.meta.url));
 const report = join(root,'deliverables/competitor-report/III.1');
@@ -79,7 +80,9 @@ export async function measureSample(directory, operation, validator) {
   assert.equal(semantic.protocolFee,0);
   assert.deepEqual(semantic.finalBalances,operation === 'o1-fill' ?
     [[0,0],[100,999800],[0,200],[0,0]] : [[100,0],[0,1000000],[0,0],[0,0]]);
-  assert.ok(semantic.revision && semantic.executionId);
+  // The sample names the clean committed code and the host that measured it.
+  const revision = requireCommittedGenerator(semantic.generator);
+  assert.ok(semantic.executionId && semantic.generator.platform && semantic.generator.architecture);
   const scored = receipts.filter(r=>!r.label.startsWith('control-') && !r.label.startsWith('setup-'));
   checkInventory(spec,scored.map(r=>r.label));
   assert.deepEqual(receipts.filter(r=>r.label.startsWith('setup-')).map(r=>r.label),
@@ -147,7 +150,8 @@ export async function measureSample(directory, operation, validator) {
   const transactions = scored.map(row => ({...measureTransaction(row), label:row.label, signed:row.transaction}));
   const phases = Object.fromEntries(['setup','operation','recovery'].map(p=>
     [p,sum(transactions.filter(tx=>spec[p].includes(tx.label)))]));
-  return {operation,executionId:semantic.executionId,revision:semantic.revision,boundary:profile.boundary,
+  return {operation,executionId:semantic.executionId,revision,host:{platform:semantic.generator.platform,
+    architecture:semantic.generator.architecture,node:semantic.generator.node},boundary:profile.boundary,
     finality:recipe.finality,feePolicy:recipe.feePolicy,phases,total:sum(transactions),transactions};
 }
 if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {
