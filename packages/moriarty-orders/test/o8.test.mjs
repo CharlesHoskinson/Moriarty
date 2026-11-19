@@ -41,6 +41,19 @@ test('all seven missing, changed and underfunded cases move zero assets',()=>{
   }
 });
 
+test('the same signed settlement fails after Carol spends one C and preserves all three balances',()=>{
+  const r=read('result.json');
+  const receipts=read('receipts.json');
+  const successful=receipts.find(row=>row.label==='atomic-three-owner-settlement');
+  const rejected=receipts.find(row=>row.label==='unchanged-O8-missing-C');
+  assert.equal(successful.transaction.sha256,rejected.transaction.sha256);
+  assert.equal(rejected.transaction.sha256,r.spentLeg.transactionSha256);
+  assert.equal(rejected.beforeState.sha256,r.spentLeg.stateSha256);
+  assert.equal(r.spentLeg.status,'failure');
+  assert.deepEqual(r.spentLeg.balances,fixture.unfunded);
+  assert.ok(rejected.error.includes(`value: 300, owner: UserAddress(${r.fundingWallets[2]})`));
+});
+
 test('the wallet adapter rejects an incomplete funding group and a substituted contract before signing',()=>{
   assert.throws(()=>fundExchangeInputs(undefined,undefined,undefined,[]),/three distinct wallets/);
   assert.throws(()=>prepareExchange({network:'undeployed'},{address:'substituted'},{address:'pinned',network:'undeployed'},{}),/deployment mismatch/);

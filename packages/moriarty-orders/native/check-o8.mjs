@@ -23,7 +23,7 @@ assert.equal(hash(read('receipts.json')),report.receiptsSha256);
 assert.equal(hash(read('parameters.bin')),report.protocolParameters.sha256);
 assert.deepEqual(receipts.map(r=>r.label),['setup-night-reward','setup-dust-registration','deploy-O8-faucet',
   'underfunded-mint-three-assets','underfunded-deploy-exchange','funded-mint-three-assets','funded-deploy-exchange',
-  'atomic-three-owner-settlement','unchanged-O8-at-horizon']);
+  'atomic-three-owner-settlement','unchanged-O8-at-horizon','carol-spends-one-C-before-inclusion','unchanged-O8-missing-C']);
 const output=mkdtempSync(join(tmpdir(),'moriarty-o8-replay-'));
 const L=await import(pathToFileURL(join(modules,'@midnightntwrk/ledger-v9/midnight_ledger_wasm_v9_fs.js')));
 const rt=await import(pathToFileURL(join(modules,'@midnight-ntwrk/compact-runtime/dist/index.js')));
@@ -32,8 +32,8 @@ try{
   for(const key of Object.keys(rebuilt))assert.deepEqual(rebuilt[key],report.build[key],key);
   const generated=await import(pathToFileURL(join(output,'contract/index.js')));
   const validated=receipts.map(row=>replayNativeReceipt(validator,dir,row));
-  const settle=receipts.at(-2), rejected=receipts.at(-1);
-  for (const [record,status] of [[validated.at(-2),'success'],[validated.at(-1),'failure']]){
+  const settle=receipts[7],rejected=receipts[8],spent=receipts[10];
+  for (const [record,status] of [[validated[7],'success'],[validated[8],'failure'],[validated[10],'failure']]){
     assert.equal(record.outcome,status);
     assert.equal(record.contractCalls.length,1);
     const [call]=record.contractCalls;
@@ -41,6 +41,8 @@ try{
     assert.equal(call.entryPoint,'settle');assert.equal(call.verifierKeySHA256,report.build.verifierSha256);
   }
   assert.equal(settle.transaction.sha256,rejected.transaction.sha256);
+  assert.equal(settle.transaction.sha256,spent.transaction.sha256);
+  assert.match(spent.error,/UTXO|unshielded.*input/i);
   assert.match(rejected.error,/mismatch.*read/i);
   const address=report.deployment.address;
   function stateAt(ref){
@@ -55,10 +57,16 @@ try{
     return {state,fields,wallets,colors,funds};
   }
   const pre=stateAt(settle.beforeState),post=stateAt(settle.afterState),afterRefusal=stateAt(rejected.afterState);
+  assert.ok(spent.error.includes(`value: ${fixture.amounts[2]}, owner: UserAddress(${pre.wallets[2]})`));
+  assert.ok(spent.error.includes(`UnshieldedTokenType(${pre.colors[2]})`));
   assert.deepEqual(pre.funds,fixture.funded);
   assert.deepEqual(post.funds,fixture.settled);assert.deepEqual(afterRefusal.funds,fixture.funded);
   assert.equal(pre.fields.revision,0n);assert.equal(post.fields.revision,1n);assert.equal(post.fields.remaining,0n);
   assert.equal(afterRefusal.fields.revision,0n);assert.equal(afterRefusal.fields.remaining,1n);
+  assert.deepEqual(stateAt(spent.beforeState).funds,fixture.unfunded);
+  assert.deepEqual(stateAt(spent.afterState).funds,fixture.unfunded);
+  assert.equal(stateAt(spent.afterState).fields.revision,0n);
+  assert.equal(spent.beforeState.sha256,report.spentLeg.stateSha256);
   assert.deepEqual(pre.wallets,report.fundingWallets);assert.deepEqual(pre.fields.exchange.amounts,fixture.amounts.map(BigInt));
   const tx=L.Transaction.deserialize('signature','proof','binding',read(settle.transaction.file));
   const signedInputs=[],assetOutputs=[];

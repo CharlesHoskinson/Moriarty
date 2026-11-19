@@ -262,13 +262,17 @@ def distribution():
     base = ROOT / REPORT / "III.6"
     cmd = ["node","--test","--test-reporter=junit",str(suite)]
     checks = {}
-    names = test_inventory(execute("cleanInstall",cmd,checks), {ROOT / suite})
+    with tempfile.TemporaryDirectory(prefix="order-install-") as directory:
+        receipt = Path(directory) / "install.json"
+        env = dict(os.environ, MORIARTY_ORDER_INSTALL_RECEIPT=str(receipt))
+        names = test_inventory(execute("cleanInstall", cmd, checks, env=env), {ROOT / suite})
+        install = json.loads(receipt.read_bytes())
     release = json.loads((base/"release.json").read_bytes())
-    install = json.loads((base/"clean-install.json").read_bytes())
     archive = base / release["file"]
     if (release["publication"] != "pending" or release["publicLocation"] is not None
             or install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]):
         raise ValueError("local release identity or publication status changed")
+    write_record(base/"clean-install.json", install)
     write_record(base/"result.json", {"requirement":"III.6","predicate":"F33","localReplayPassed":True,
                  "status":"partial","checks":checks,"tests":sorted(names),"package":release["package"],
                  "version":release["version"],"archiveSha256":release["sha256"],"platform":release["platform"],

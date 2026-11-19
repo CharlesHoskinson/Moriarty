@@ -70,7 +70,17 @@ def reconcile():
         elif case in ("II.5","IV.2","IV.3"):
             passed = result.get("status") == "passed" and json.loads((base/"factory-check.json").read_bytes()).get("passed") is True
         elif case == "III.6":
-            passed = (base/"release.json").is_file() and result.get("localReplayPassed") is True
+            release = json.loads((base/"release.json").read_bytes())
+            install = json.loads((base/"clean-install.json").read_bytes())
+            archive = evidence(base/release["file"])
+            passed = (result.get("localReplayPassed") is True
+                      and result["archiveSha256"] == release["sha256"] == install["sha256"] == archive["sha256"]
+                      and release["publication"] == "pending" and release["publicLocation"] is None)
+        elif case == "III.1":
+            workflow = json.loads((base/"workflow-check.json").read_bytes())
+            passed = (result.get("passed") is True
+                      and workflow["inputSha256"] == evidence(base/"assessment-input.json")["sha256"]
+                      and set(workflow["validated"]) == {"o1-fill","cancel-unfilled"})
         else:
             passed = result.get("passed") is True
         if not passed:
@@ -85,6 +95,8 @@ def reconcile():
             path = base / name
             if path.exists():
                 row["evidence"].append(evidence(path))
+        if case == "III.6":
+            row["evidence"].extend([archive,evidence(base/"clean-install.json")])
         if case in ("II.2","II.4"):
             row["evidence"].append(evidence(REPORT / ("II.1" if case=="II.2" else "IV.4") / "native/receipts.json"))
     output = {"schema":"moriarty-competitive-landscape-evidence/1","recommendations":rows,
