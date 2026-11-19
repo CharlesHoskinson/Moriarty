@@ -3,6 +3,8 @@
 This local release candidate contains the funded O1 fill and cancellation clients, two signed Midnight transaction histories and a Linux arm64 strict Rust ledger verifier. Replay runs offline on Linux arm64 with glibc, Node.js 22.19 or later and npm. Obtain the archive and its expected SHA-256 from the local delivery record. In a new directory, replace the example archive path with its absolute path and run the following commands.
 
 ```sh
+# Compare the digest below with release.json before installing.
+sha256sum /absolute/path/moriarty-lang-orders-0.1.0-beta.1.tgz
 npm install --offline --ignore-scripts --no-audit --no-fund /absolute/path/moriarty-lang-orders-0.1.0-beta.1.tgz
 ./node_modules/.bin/moriarty-orders replay o1-fill
 ./node_modules/.bin/moriarty-orders replay cancel-unfilled
@@ -37,4 +39,4 @@ compactc node_modules/@moriarty-lang/orders/source/acceptance.compact ./o1-build
 
 ## Verification scope
 
-The trust anchor for these replays is the local archive digest. Each replay validates the original proof, wallet signatures, fees, pre-state, transaction and finalized state digest. It decodes balances with the bundled ledger and generated contract interface. The ledger is a controlled, in-memory deployment with synthetic assets. Its one-member maintenance committee can replace verification keys. Switching a deployment or verifier requires a fresh owner decision and enrollment. The archive has no wallet seed, private witness or network endpoint. These are maintainer replays. Public release, independent reproduction and live venue participation remain open.
+The trust anchor for these replays is the local archive digest. For each contract call the bundled Rust verifier validates the V3 proof under the installed key. Native well-formedness checks verify wallet signatures, DUST spending and fee balance. The bootstrap reward uses the ledger’s proof-free reward envelope. The verifier applies each recorded transaction under its specified local block context and checks the immediate post-state and finalized state digests. It decodes balances with the bundled ledger and generated contract interface. The ledger is a controlled, in-memory deployment with synthetic assets. Its one-member maintenance committee can replace verification keys. Switching a deployment or verifier requires a fresh owner decision and enrollment. The example clients require separate wallet and proving infrastructure for new transactions. Local replay uses the archive’s public ledger bytes. The bundled native and WASM library attributions are indexed in `notices/index.json`, and npm dependencies retain their own license files. These are maintainer replays. Public release, independent reproduction and live venue participation remain open.

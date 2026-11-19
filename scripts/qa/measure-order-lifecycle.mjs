@@ -121,7 +121,9 @@ export async function measureSample(directory, operation, validator) {
     previous = row;
     const state = ledger.LedgerState.deserialize(readFileSync(join(directory,row.beforeState.file)));
     const wire = readFileSync(join(directory,row.transaction.file));
-    const tx = ledger.Transaction.deserialize('signature','proof','binding',wire);
+    const reward = row.label === 'setup-night-reward';
+    const tx = ledger.Transaction.deserialize('signature',reward ? 'pre-proof' : 'proof','binding',wire);
+    if (reward) assert.ok(tx.rewards, 'proof-free envelope must be a native reward claim');
     const time = new Date(row.time*1000);
     const before = wallet.walletBalance(time);
     const verified = tx.wellFormed(state,new ledger.WellFormedStrictness(),time);
