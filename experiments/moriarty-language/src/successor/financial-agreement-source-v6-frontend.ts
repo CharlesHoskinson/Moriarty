@@ -355,3 +355,10 @@ export function lowerSource6(ast: Source6Ast): Source6Lowered {
 export function parseAndLowerSource6(source: string): Source6Lowered {
   return lowerSource6(parseSource6(source));
 }
+
+// Public agreement grammar used by the fee-aware lifecycle evaluator.
+export {
+  FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE,
+  parseSuccessorFinancialAgreementSourceV6 as parseFinancialAgreementSourceV6,
+} from './frontend.ts';
+export { formatSuccessorFinancialAgreementSourceV6 as formatFinancialAgreementSourceV6 } from './format.ts';

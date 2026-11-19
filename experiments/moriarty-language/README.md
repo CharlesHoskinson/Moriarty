@@ -1,14 +1,25 @@
 # Experimental bounded-atomic frontend
 
-Requires Node.js 24 (native TypeScript stripping) and an installed `tsc` executable.
-There are no npm runtime dependencies. `npm run build` and `npm run typecheck`
-invoke the actual TypeScript compiler with strict checking and `noEmit`; execution
-uses the TypeScript sources directly.
+Use a complete repository checkout. The suite reads fixtures from the repository root
+and compiles the loan and swap kernels. It requires Node.js with native TypeScript
+stripping (tested with 26.0.0), npm, and the Compact CLI on `PATH` (tested with
+`compact` 0.5.1 and compiler 0.31.0). Check the compiler with `compact compile --version`.
+From the repository root, run
 
 ```sh
+cd experiments/moriarty-language
+npm ci
+npm run demo
+npm run loan-lifecycle-demo
 npm test
-npm run typecheck
+npm run build
 ```
+
+The lockfile supplies TypeScript and the Compact runtime for development. The
+generated test contracts load that runtime from the package's `node_modules`.
+To test an external runtime installation, set `MORIARTY_RUNTIME_NODE_MODULES` to
+its absolute `node_modules` path. The build uses strict TypeScript checking with
+`noEmit`. The demos execute the TypeScript sources directly.
 
 The source-driven APIs in `src/frontend.ts` accept original UTF-8 source bytes
 (or a JavaScript scalar string) and the exact registered `bounds.json` bytes:

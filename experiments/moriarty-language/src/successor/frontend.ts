@@ -8,13 +8,15 @@ export const FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE = 'moriarty-financial-agreeme
 export const FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE = 'moriarty-financial-agreement-source/3';
 export const FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE = 'moriarty-financial-agreement-source/4';
 export const FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE = 'moriarty-financial-agreement-source/5';
+export const FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE = 'moriarty-financial-agreement-source/6';
 
 function isAgreementSourceProfile(profile: string): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
     || profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
     || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
     || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
 }
 
 function isFinancialLexerProfile(profile: string): boolean {
@@ -717,11 +719,13 @@ class Parser {
   private get agreementV3Profile(): boolean {
     return this.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
       || this.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
   }
   private get agreementV4Profile(): boolean {
     return this.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
   }
 
   parseProgram(): Program {
@@ -1467,4 +1471,8 @@ export function parseSuccessorFinancialAgreementSourceV4(source: string): Progra
 /** Distinct origination/accrual agreement entry; /1–/4 never opt into it. */
 export function parseSuccessorFinancialAgreementSourceV5(source: string): Program {
   return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE);
+}
+
+export function parseSuccessorFinancialAgreementSourceV6(source: string): Program {
+  return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE);
 }
