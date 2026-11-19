@@ -15,20 +15,48 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LANG = Path("experiments/moriarty-language")
-LEDGER = Path("experiments/moriarty-midnight-financial/ledger")
+ORDER_LEDGER = Path("packages/moriarty-orders")
 FEE_TEST = LANG / "tests/authority-fee-binding.test.mjs"
-MUTATION_TEST = "exact quantum conversion rejects nondivisibility and overflow"
 INTENT = LANG / "src/successor/financial-outcome-intent.ts"
 REPORT = Path("deliverables/competitor-report")
 TIMEOUT = 240
+# Each scope names the measured files and the suite registered to catch their regressions.
+# The source scope is the complete runtime module graph behind the frontend facade.
 SCOPES = {
-    "source": LANG / "src/frontend.ts",
-    "kernel": LANG / "src/lower-compact.ts",
-    "outcomeIntent": INTENT,
-    "ledgerReadTransport": LEDGER / "financial-rpc.mjs",
+    "source": tuple(LANG / "src" / name for name in ("frontend.ts", "parser.ts", "validate.ts", "checker.ts",
+                                                     "codec.ts", "diagnostics.ts", "registered-bounds.ts")),
+    "kernel": (LANG / "src/lower-compact.ts",),
+    "outcomeIntent": (INTENT,),
+    "ledger": (ORDER_LEDGER / "src/accepted-state.mjs",),
 }
-COVERAGE_SUITES = [LANG / "tests/frontend.test.mjs", LANG / "tests/lowering.test.mjs",
-                   FEE_TEST, LEDGER / "preview-rpc.test.mjs"]
+SCOPE_SUITES = {
+    "source": LANG / "tests/frontend.test.mjs",
+    "kernel": LANG / "tests/lowering.test.mjs",
+    "outcomeIntent": FEE_TEST,
+    "ledger": ORDER_LEDGER / "test/acceptance.test.mjs",
+}
+COVERAGE_SUITES = list(SCOPE_SUITES.values())
+# One controlled mutation per scope. Each changes an expected result on an executed
+# line; only the named tests may fail, each on an assertion that carries the reason.
+MUTATIONS = {
+    "source": {"file": LANG / "src/parser.ts",
+               "replace": "and:{tag:'And',precedence:2}", "with": "and:{tag:'And',precedence:1}",
+               "tests": ["precedence, left association, floor numerator preorder and per-statement IDs are exact"],
+               "reason": "'Not' !== 'And'"},
+    "kernel": {"file": LANG / "src/lower-compact.ts",
+               "replace": "revision: checkedAdd(revision, 1)", "with": "revision: checkedAdd(revision, 2)",
+               "tests": ["generic mapper compiles full loan and swap functions and matches all state/effect operands for four transitions"],
+               "reason": "'2' !== '1'"},
+    "outcomeIntent": {"file": INTENT,
+                      "replace": "(product/BigInt(denominator)).toString()",
+                      "with": "(product/BigInt(denominator) + 1n).toString()",
+                      "tests": ["exact quantum conversion rejects nondivisibility and overflow"],
+                      "reason": "'101' !== '100'"},
+    "ledger": {"file": ORDER_LEDGER / "src/accepted-state.mjs",
+               "replace": "for (const op of ['fund','fill','cancel'])", "with": "for (const op of ['fund','fill'])",
+               "tests": ["accepted-state reader refuses an absent deployment or a changed verifier pin"],
+               "reason": "did not match the regular expression /cancel.*verifier/i"},
+}
 
 
 def sha(data):
@@ -49,9 +77,9 @@ def test_inventory(xml, expected):
     return {case.attrib["name"] for case in cases}
 
 
-def coverage(lcov, required):
-    """Count distinct executed and instrumented lines for each declared file."""
-    rows = {}
+def line_hits(lcov, required):
+    """Return the execution count of every instrumented line in each declared file."""
+    files = {}
     for record in lcov.split("end_of_record"):
         fields = record.splitlines()
         names = [Path(line[3:]) for line in fields if line.startswith("SF:")]
@@ -65,46 +93,109 @@ def coverage(lcov, required):
                 if number in lines or number <= 0 or hits < 0:
                     raise ValueError(f"invalid coverage line in {name}")
                 lines[number] = hits
-        if name in rows or not any(lines.values()):
+        if name in files or not any(lines.values()):
             raise ValueError(f"incomplete or duplicate coverage for {name}")
-        rows[name] = {"covered": sum(hits > 0 for hits in lines.values()), "total": len(lines)}
-    if set(rows) != {str(path) for path in required}:
+        files[name] = lines
+    if set(files) != {str(path) for path in required}:
         raise ValueError("missing scoped coverage files")
-    return rows
+    return files
 
 
-def mutation_outcome(exit_code, xml):
+def coverage(lcov, required):
+    """Count distinct executed and instrumented lines for each declared file."""
+    return {name: {"covered": sum(hits > 0 for hits in lines.values()), "total": len(lines)}
+            for name, lines in line_hits(lcov, required).items()}
+
+
+def failure_text(case):
+    """Return a JUnit failure's message and detail, which carries the assertion cause."""
+    failure = case.find("failure")
+    return "" if failure is None else failure.get("message", "") + "\n" + "".join(failure.itertext())
+
+
+def mutation_outcome(exit_code, xml, mutation, clean_tests):
+    """Accept only the registered assertion failures, with every clean test still executed."""
     if exit_code != 1 or "<testsuites" not in xml:
         raise ValueError("mutation needs an executed assertion failure")
-    failed = [case for case in ET.fromstring(xml).iter("testcase") if case.find("failure") is not None]
-    if len(failed) != 1 or failed[0].get("name") != MUTATION_TEST:
-        raise ValueError("unexpected failing check for the controlled mutation")
-    failure = failed[0].find("failure")
-    if "ERR_ASSERTION" not in ET.tostring(failure, encoding="unicode"):
-        raise ValueError("mutation did not reach the amount assertion")
-    return [MUTATION_TEST]
+    cases = list(ET.fromstring(xml).iter("testcase"))
+    if {case.get("name") for case in cases} != set(clean_tests):
+        raise ValueError("the mutated run did not execute the clean test inventory")
+    failed = [case for case in cases if any(case.find(tag) is not None for tag in ("failure", "error", "skipped"))]
+    names = sorted(case.get("name") for case in failed)
+    if names != sorted(mutation["tests"]):
+        raise ValueError("unexpected failing checks for the controlled mutation: " + ", ".join(names))
+    for case in failed:
+        text = failure_text(case)
+        if "ERR_ASSERTION" not in text or mutation["reason"] not in text:
+            raise ValueError(f"{case.get('name')} did not fail on the expected assertion")
+    return names
 
 
-def probe_mutation(scratch):
-    fixture = scratch / "language"
-    shutil.copytree(ROOT / LANG / "src", fixture / "src")
-    (fixture / "spec").symlink_to(ROOT / LANG / "spec", target_is_directory=True)
-    shutil.copy2(ROOT / LANG / "package.json", fixture / "package.json")
-    (fixture / "tests").mkdir()
-    shutil.copy2(ROOT / FEE_TEST, fixture / "tests" / FEE_TEST.name)
-    target = fixture / INTENT.relative_to(LANG)
+def clean_outcome(exit_code, xml, suite, mutation):
+    """The unmutated fixture must pass every case, including the registered checks."""
+    if exit_code != 0:
+        raise ValueError("the clean fixture fails before the controlled mutation")
+    names = test_inventory(xml, {suite})
+    if not set(mutation["tests"]) <= names:
+        raise ValueError("the clean fixture lacks the registered check")
+    return names
+
+
+def overlay(repo, copies):
+    """Mirror the checkout through symlinks; only the listed paths become private copies."""
+    def expand(directory):
+        if directory.is_symlink():
+            directory.unlink()
+        directory.mkdir(parents=True, exist_ok=True)
+        for entry in (ROOT / directory.relative_to(repo)).iterdir():
+            link = directory / entry.name
+            if entry.name != ".git" and not (link.exists() or link.is_symlink()):
+                link.symlink_to(entry, target_is_directory=entry.is_dir())
+    expand(repo)
+    for path in copies:
+        for depth in range(1, len(path.parts)):
+            parent = repo.joinpath(*path.parts[:depth])
+            if parent.is_symlink():
+                expand(parent)
+        (repo / path).unlink()
+        if (ROOT / path).is_dir():
+            shutil.copytree(ROOT / path, repo / path, symlinks=True)
+        else:
+            shutil.copy2(ROOT / path, repo / path)
+    return repo
+
+
+def probe_mutation(scratch, scope, executed=None):
+    """Seed one scoped regression in a private copy, then restore it and rerun the same suite."""
+    mutation, suite = MUTATIONS[scope], SCOPE_SUITES[scope]
+    package = suite.parents[1]
+    if mutation["file"] not in SCOPES[scope] or package / "src" not in mutation["file"].parents:
+        raise ValueError(f"{scope} mutation lies outside its coverage scope")
+    repo = overlay(scratch / scope, [package / "src", suite])
+    target = repo / mutation["file"]
+    if target.is_symlink() or scratch.resolve() not in target.resolve().parents:
+        raise ValueError(f"{scope} mutation target is not a private copy")
     before = target.read_bytes()
-    old = b'(product/BigInt(denominator)).toString()'
-    new = b'(product/BigInt(denominator) + 1n).toString()'
+    old, new = mutation["replace"].encode(), mutation["with"].encode()
     if before.count(old) != 1:
-        raise ValueError("amount-conversion mutation site changed")
+        raise ValueError(f"{scope} mutation site changed")
+    line = before[:before.index(old)].count(b"\n") + 1
+    if executed is not None and executed.get(str(mutation["file"]), {}).get(line, 0) <= 0:
+        raise ValueError(f"{scope} mutation line {line} is not executed by the scoped suites")
     after = before.replace(old, new)
+    cmd = ["node", "--test", "--test-reporter=junit", str(suite)]
     target.write_bytes(after)
-    cmd = ["node", "--test", "--test-reporter=junit", "tests/" + FEE_TEST.name]
-    proc = subprocess.run(cmd, cwd=fixture, text=True, capture_output=True, timeout=TIMEOUT)
-    failed = mutation_outcome(proc.returncode, proc.stdout)
-    return {"command": cmd, "file": str(INTENT), "beforeSha256": sha(before), "afterSha256": sha(after),
-            "replace": old.decode(), "with": new.decode(), "exit": proc.returncode, "failedTests": failed}
+    try:
+        mutated = subprocess.run(cmd, cwd=repo, text=True, capture_output=True, timeout=TIMEOUT)
+    finally:
+        target.write_bytes(before)
+    clean = subprocess.run(cmd, cwd=repo, text=True, capture_output=True, timeout=TIMEOUT)
+    names = clean_outcome(clean.returncode, clean.stdout, repo / suite, mutation)
+    failed = mutation_outcome(mutated.returncode, mutated.stdout, mutation, names)
+    return {"command": cmd, "file": str(mutation["file"]), "line": line, "beforeSha256": sha(before),
+            "afterSha256": sha(after), "replace": mutation["replace"], "with": mutation["with"],
+            "exit": mutated.returncode, "failedTests": failed, "expectedReason": mutation["reason"],
+            "clean": {"exit": clean.returncode, "restoredSha256": sha(target.read_bytes()), "testCases": len(names)}}
 
 
 def execute(name, cmd, checks, **kwargs):
@@ -144,15 +235,25 @@ def baseline(scratch, result):
     cmd = ["node", "--test", "--experimental-test-coverage", "--test-reporter=junit",
            "--test-reporter-destination=stdout", "--test-reporter=lcov",
            "--test-reporter-destination=" + str(cov)]
-    cmd += ["--test-coverage-include=" + str(p) for p in SCOPES.values()]
+    scoped = {path for paths in SCOPES.values() for path in paths}
+    cmd += ["--test-coverage-include=" + str(p) for paths in SCOPES.values() for p in paths]
     xml = execute("scopedTests", cmd + list(map(str, COVERAGE_SUITES)), checks)
     checks["scopedTests"]["command"][6] = "--test-reporter-destination=<scratch>/lines.lcov"
     test_inventory(xml, {ROOT / path for path in COVERAGE_SUITES})
+    executed = line_hits(cov.read_text(), scoped)
     result["coverage"] = {"metric":"Node V8 executed lines / instrumented lines",
-                          "scope":{k:str(v) for k,v in SCOPES.items()},
-                          "files":coverage(cov.read_text(), set(SCOPES.values())),
-                          "exclusions":"Other source files, generated Compact/ZKIR and native ledger execution. The ledger suite exercises block-anchored RPC reads with a fixture transport."}
-    result["controlledRegression"] = probe_mutation(scratch)
+                          "scope":{k:[str(p) for p in v] for k,v in SCOPES.items()},
+                          "suites":{k:str(v) for k,v in SCOPE_SUITES.items()},
+                          "files":coverage(cov.read_text(), scoped),
+                          "exclusions":"Files outside the declared scopes, including the language evaluator, CLI, "
+                                       "materializer and other successor modules, and the order signing, build and "
+                                       "custody modules. Generated Compact and ZKIR and native ledger execution are "
+                                       "not measured. The ledger suite reads accepted state through fixture readers "
+                                       "that stop at the network, deployment and verifier pin checks; the contract-"
+                                       "state decoding after them runs in the native replays (II.1 and later)."}
+    # Each probe runs in its own scratch mirror and never writes to the checkout.
+    result["controlledRegression"] = {scope: probe_mutation(scratch / "mutations", scope, executed)
+                                      for scope in MUTATIONS}
     # The baseline remains runnable on its own; each installed native predicate
     # supplies coverage from its executable cases at the exact receipt identity.
     evidence = {}
