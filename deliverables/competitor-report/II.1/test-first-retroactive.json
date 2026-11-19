@@ -1,0 +1,30 @@
+{
+  "section": "II.1",
+  "retroactive": true,
+  "revision": "fe38b20a4285c7f4f3469b80de43dc33212c757d",
+  "note": "Run after delivery: the original change committed tests and implementation together.",
+  "testCommand": [
+    "node",
+    "--test",
+    "--test-reporter=junit",
+    "packages/moriarty-orders/test/acceptance.test.mjs"
+  ],
+  "removes": "owner signature verification in the compiled order",
+  "environment": "Darwin arm64",
+  "mutation": {
+    "file": "packages/moriarty-orders/contracts/acceptance.compact",
+    "replace": "ecAdd(sig.announcement,ecMul(ownerKey,c as JubjubScalar))), \"ORDER_SIGNATURE\");",
+    "with": "ecAdd(sig.announcement,ecMul(ownerKey,c as JubjubScalar))) || true, \"ORDER_SIGNATURE\");",
+    "beforeSha256": "40469c11e3a0a9819749a89cc20c3fd11593515894026ecb0543171035b46638",
+    "afterSha256": "e071ca16d3703d1444e73eee71a0b4f7cbf0d001bc828a73a5f5be3cdc28b0f9"
+  },
+  "exit": 1,
+  "failingTests": [
+    "compiled verifier independently binds each signed field",
+    "owner can recover late and a fill signature cannot authorize a refund"
+  ],
+  "outputSha256": "fa5f18efa1ea12cc2d1757fbb8839438c8e90f57b4d77c773c917aee3f344cf3",
+  "outputTail": "ure\" message=\"Missing expected rejection.\">\n[Error [ERR_TEST_FAILURE]: Missing expected rejection.] {\n  code: 'ERR_TEST_FAILURE',\n  failureType: 'testCodeFailure',\n  cause: AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.&lt;anonymous> (file:///private/var/folders/l1/wy3y_4yx4216yqswkds0cv3h0000gp/T/test-first-2q64zyym/tree/packages/moriarty-orders/test/acceptance.test.mjs:117:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /SIGNATURE/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n}\n\t\t</failure>\n\t</testcase>\n\t<testcase name=\"native wallet enrollment rejects another wallet and a substituted order signer\" time=\"0.024045\" classname=\"test\" file=\"/private/var/folders/l1/wy3y_4yx4216yqswkds0cv3h0000gp/T/test-first-2q64zyym/tree/packages/moriarty-orders/test/acceptance.test.mjs\"/>\n\t<!-- tests 7 -->\n\t<!-- suites 0 -->\n\t<!-- pass 5 -->\n\t<!-- fail 2 -->\n\t<!-- cancelled 0 -->\n\t<!-- skipped 0 -->\n\t<!-- todo 0 -->\n\t<!-- duration_ms 761.494167 -->\n</testsuites>\n",
+  "cleanExit": 0,
+  "restoredExit": 0
+}

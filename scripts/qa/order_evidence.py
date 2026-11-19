@@ -92,7 +92,7 @@ def reconcile():
             row["assessment"] = "O10 unassessed"
         row["evidence"] = [evidence(primary)]
         for name in ("factory-check.json","baseline.json","obligations.md","decision.md","release.json","receipts.json",
-                     "native/receipts.json","native/strict-replay.json","assessment-input.json","workflow-check.json","recipe.json","workloads.json","test-first.json"):
+                     "native/receipts.json","native/strict-replay.json","assessment-input.json","workflow-check.json","recipe.json","workloads.json","test-first.json","test-first-retroactive.json"):
             path = base / name
             if path.exists():
                 row["evidence"].append(evidence(path))

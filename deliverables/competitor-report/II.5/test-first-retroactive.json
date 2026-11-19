@@ -1,0 +1,30 @@
+{
+  "section": "II.5",
+  "retroactive": true,
+  "revision": "fe38b20a4285c7f4f3469b80de43dc33212c757d",
+  "note": "Run after delivery: the original change committed tests and implementation together.",
+  "testCommand": [
+    "node",
+    "--test",
+    "--test-reporter=junit",
+    "packages/moriarty-orders/test/feed.test.mjs"
+  ],
+  "removes": "the strict price threshold",
+  "environment": "Darwin arm64",
+  "mutation": {
+    "file": "packages/moriarty-orders/contracts/feed-policy.compact",
+    "replace": "assert(feedPrice < 3, \"FEED_THRESHOLD\");",
+    "with": "assert(feedPrice <= 3, \"FEED_THRESHOLD\");",
+    "beforeSha256": "94ffb6e0c4f5acf6df3bcaef37e7e7a4c40fad2bce5af30fde5bab8f8b71bbf5",
+    "afterSha256": "24d81cbaa25edf1eced1f4e4e5ff04e2e9522094e141dcca491f1322f31dfccf"
+  },
+  "exit": 1,
+  "failingTests": [
+    "a valid prepared trigger fails transcript replay after a signed price change",
+    "only the price change refuses a fresh check; a newer sample at the same price still passes"
+  ],
+  "outputSha256": "68a0705c64bad478b7914a38440db0769840f7e51b72a1ee8c2b1b05fe10ebf5",
+  "outputTail": "ample at the same price still passes\" time=\"0.045585\" classname=\"test\" file=\"/private/var/folders/l1/wy3y_4yx4216yqswkds0cv3h0000gp/T/test-first-2q64zyym/tree/packages/moriarty-orders/test/feed.test.mjs\" failure=\"Missing expected rejection.\">\n\t\t<failure type=\"testCodeFailure\" message=\"Missing expected rejection.\">\n[Error [ERR_TEST_FAILURE]: Missing expected rejection.] {\n  code: 'ERR_TEST_FAILURE',\n  failureType: 'testCodeFailure',\n  cause: AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.&lt;anonymous> (file:///private/var/folders/l1/wy3y_4yx4216yqswkds0cv3h0000gp/T/test-first-2q64zyym/tree/packages/moriarty-orders/test/feed.test.mjs:137:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /FEED_THRESHOLD/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n}\n\t\t</failure>\n\t</testcase>\n\t<!-- tests 6 -->\n\t<!-- suites 0 -->\n\t<!-- pass 4 -->\n\t<!-- fail 2 -->\n\t<!-- cancelled 0 -->\n\t<!-- skipped 0 -->\n\t<!-- todo 0 -->\n\t<!-- duration_ms 493.372625 -->\n</testsuites>\n",
+  "cleanExit": 0,
+  "restoredExit": 0
+}
