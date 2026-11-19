@@ -2,8 +2,8 @@
   "case": "II.6",
   "predicate": "F29",
   "status": "checked conditional model and finite examples",
-  "revision": "c3a1287143f02b7adbbda2635964ec1122b5c1b5",
-  "revisionScope": "Base revision for the existing compiler and kernel. fileSha256 identifies the worktree bytes checked, including the new proof and tests.",
+  "revision": null,
+  "revisionScope": "No commit revision is recorded. fileSha256 binds this receipt to the exact bytes checked, including the proof, negative control, obligations and tests. Regenerate the revision from a commit that contains these digests.",
   "profile": "moriarty-bounded-atomic/1",
   "agreement": "ConstantProductEpoch",
   "programHash": "b00a55b8da611d23c08461a11853151aa50ec7ee8150f9d16afbc66d62e018fa",
@@ -104,9 +104,9 @@
     "namespace": "Clean.Sherlock.OrderInvariants",
     "statements": {
       "conservation": "Each asset total is unchanged over any finite Trace.",
-      "gross_debit_identity": "Gross trader A paid in all decoded transfers plus final trader A equals initial trader A.",
+      "gross_debit_identity": "Gross trader A paid in all model transfers (Action.transfers) of a Trace plus final trader A equals initial trader A.",
       "cumulative_budget": "If initial trader A was funded within budget, gross trader A paid across the Trace is at most budget.",
-      "owner_authority": "Successful guarded Step plus intentAdmits implies the externally authenticated signer is the designated actor and each emitted recipient was permitted."
+      "owner_authority": "Successful guarded Step plus intentAdmits (signer = principal = actor), with the pool and the intent principal in the permitted recipients, implies the externally authenticated signer is the designated owner and each model transfer recipient is permitted. Recipient preservation is derived from the Step guards through step_recipients, not assumed by intentAdmits."
     },
     "axiomsByTheorem": {
       "conservation": [
@@ -129,6 +129,8 @@
     },
     "negativeControl": {
       "target": "conservation",
+      "path": "deliverables/competitor-report/II.6/negative-control/DroppedCredit.lean",
+      "derivedFrom": "clean/fork/Clean/Sherlock/OrderInvariants.lean",
       "isolatedMutation": {
         "replace": "reserveA := s.reserveA + input",
         "with": "reserveA := s.reserveA"
@@ -136,25 +138,32 @@
       "command": [
         "lean",
         "-DwarningAsError=true",
-        "/tmp/MoriartyII6DroppedCredit.lean"
+        "deliverables/competitor-report/II.6/negative-control/DroppedCredit.lean"
       ],
       "exit": 1,
-      "diagnostic": "omega could not prove the goal; a possible counterexample requires positive input"
-    }
+      "diagnostic": "omega could not prove the goal",
+      "expectedFailure": "The runner checks that the file equals the model with only this mutation, that Lean exits 1 with exactly one error inside conservation starting with the diagnostic, that conservation depends on sorryAx and that the other theorems keep their recorded axioms."
+    },
+    "supportingLemmas": {
+      "step_actor": "A successful Step's actor is the action's designated owner.",
+      "step_recipients": "Every model transfer of a successful Step pays the pool or the action's designated owner. An accompanying example shows that Action.transfers without the Step guards does not satisfy this."
+    },
+    "traceEffects": "Trace effects are the model's own Action.transfers. Their correspondence to the generated kernel's effect outputs is an open compiler correspondence obligation."
   },
   "sourceTermination": "Declared lifetime 8, with the last step reserved for close. Source execution bounds are separate from financial proofs.",
   "staticChecks": "The existing frontend admits typed source and nominal settlement declarations during lowering. The finite test regenerates and compares the bound program, metadata and Compact kernel.",
   "openCorrespondence": {
-    "compiler": "No all-input proof of source-to-Compact-to-ZKIRv3 refinement, machine arithmetic, effect encoding or field projection.",
+    "compiler": "No all-input proof of source-to-Compact-to-ZKIRv3 refinement, machine arithmetic, effect encoding or field projection. No proof relates the kernel's effect outputs to the model transfers in a Lean Trace.",
     "custody": "No authenticated funding, key/account map, pool debit authorization, persistent order budget or debit-credit/fee reconciliation in this kernel.",
     "acceptance": "No bound native verifier key, ledger domain/address, transaction, atomic consumption, freshness/replay or final balance observation."
   },
   "ledgerObservation": null,
   "independentAssessment": "open",
   "fileSha256": {
-    "clean/fork/Clean/Sherlock/OrderInvariants.lean": "0309a35243353ed97a6eb7dc7215f36148068ed631daae6715a9df510ca265cd",
+    "clean/fork/Clean/Sherlock/OrderInvariants.lean": "41e0d1458b723afea02f99881926fd81451ab4ed586b2d0e29fa965ff35a143d",
     "clean/fork/lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
-    "deliverables/competitor-report/II.6/obligations.md": "58b6ea2156bdd9d5cebbc89ab6d81af8c6d268df77f29d4fa6d396caff018689",
+    "deliverables/competitor-report/II.6/negative-control/DroppedCredit.lean": "0af72b01bc33648e85a8c0010f60a749c24f9ed865d4e717e9afd88df070bdbb",
+    "deliverables/competitor-report/II.6/obligations.md": "859095f9fca65e0fb5ce3fafc8078b611eb7256943d21f8e1576a14bbbee0b57",
     "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
     "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
     "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",

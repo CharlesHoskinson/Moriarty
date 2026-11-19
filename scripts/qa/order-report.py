@@ -181,13 +181,45 @@ def check_invariants():
     if len(ET.fromstring(output).findall(".//testcase")) != receipt["finiteTests"]["passed"]:
         raise ValueError("invariant boundary cases changed")
     analysis = receipt["formalAnalysis"]
-    lean = execute("lean", ["lean", "-DwarningAsError=true", "clean/fork/Clean/Sherlock/OrderInvariants.lean"], {}).decode()
-    for theorem, axioms in analysis["axiomsByTheorem"].items():
-        name = analysis["namespace"] + "." + theorem
-        match = re.search("'" + re.escape(name) + r"' depends on axioms: \[([^\]]*)\]", lean)
-        if not match or set(match[1].split(", ")) != set(axioms) or "sorryAx" in axioms:
-            raise ValueError("unexpected axiom audit for " + name)
+    model = "clean/fork/Clean/Sherlock/OrderInvariants.lean"
+
+    def audit(output):
+        found = {}
+        for theorem in analysis["axiomsByTheorem"]:
+            name = analysis["namespace"] + "." + theorem
+            match = re.search("'" + re.escape(name) + r"' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)", output)
+            if not match:
+                raise ValueError("missing axiom audit for " + name)
+            found[theorem] = set(match[1].split(", ")) if match[1] else set()
+        return found
+
+    lean = execute("lean", ["lean", "-DwarningAsError=true", model], {}).decode()
+    for theorem, axioms in audit(lean).items():
+        if axioms != set(analysis["axiomsByTheorem"][theorem]) or "sorryAx" in axioms:
+            raise ValueError("unexpected axiom audit for " + theorem)
     print(lean, end="")
+    # The negative control is the model with one isolated mutation and must fail in its target only.
+    control = analysis["negativeControl"]
+    mutation = control["isolatedMutation"]
+    command = ["lean", "-DwarningAsError=true", control["path"]]
+    source = (ROOT / model).read_text()
+    mutant = (ROOT / control["path"]).read_text()
+    if (control["command"] != command or source.count(mutation["replace"]) != 1
+            or mutant != source.replace(mutation["replace"], mutation["with"])):
+        raise ValueError("II.6 negative control is not the model with the recorded mutation")
+    proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=TIMEOUT)
+    output = proc.stdout + proc.stderr
+    lines = mutant.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("theorem " + control["target"] + " "))
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("theorem ")), len(lines))
+    errors = re.findall("^" + re.escape(control["path"]) + r":(\d+):\d+: error: (.*)$", output, flags=re.MULTILINE)
+    found = audit(output)
+    if (proc.returncode != control["exit"] or proc.returncode == 0 or len(errors) != 1
+            or not start < int(errors[0][0]) <= end or not errors[0][1].startswith(control["diagnostic"])
+            or "sorryAx" not in found.pop(control["target"])
+            or any(axioms != set(analysis["axiomsByTheorem"][name]) for name, axioms in found.items())):
+        raise ValueError("II.6 negative control did not fail only in " + control["target"] + "\n" + output[-2400:])
+    print(f"negative control {control['path']}: exit {proc.returncode} in {control['target']}: {errors[0][1]}")
 
 
 ORDERS = Path("packages/moriarty-orders")

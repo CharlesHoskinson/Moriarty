@@ -6,8 +6,9 @@ The source is `experiments/moriarty-language/spec/examples/swap.mori`, profile
 The target is `experiments/moriarty-language/compact/generated/swap/kernel.compact`
 with SHA-256 `090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741`.
 The receipt pins the source, bounds, arithmetic include, mapper, metadata,
-authority evaluator, tests and proof. The registered runner must check both the
-finite examples and the pinned Lean analysis.
+authority evaluator, tests, proof and negative control. The registered runner
+must check the finite examples, the pinned Lean analysis and the failure of the
+negative control.
 
 ## Checked domain and independent expectations
 
@@ -19,16 +20,17 @@ and 4 mean pool, provider and trader. See the committed companion metadata.
 
 | Obligation | Statement, premises and boundary |
 | --- | --- |
-| Accounting, `conservation` | Every finite chain of projected swap and close writes preserves the pool + trader + provider total separately in A and B. Swap credits exactly the input to the A reserve and debits it from trader A. The B reserve pays exactly the output to trader B. Close moves both reserves to the provider. Dropping a single credit invalidates this claim. |
+| Accounting, `conservation` | Every finite chain of projected swap and close writes preserves the pool + trader + provider total separately in A and B. Swap credits exactly the input to the A reserve and debits it from trader A. The B reserve pays exactly the output to trader B. Close moves both reserves to the provider. Dropping a single credit invalidates this claim: `negative-control/DroppedCredit.lean` is the model without the swap's A reserve credit, and `conservation` must fail to check there. |
 | Gross budget, `cumulative_budget` | Sum all trader A input debits along the chain. The sum plus final trader A equals the initial isolated trader A inventory. If that inventory was funded within one owner-authorized budget, total debits stay within it. A closing transfer or incoming B cannot replenish trader A. With 10,000 A, a 10,000 debit exhausts inventory and 9,999 cannot fund it. Resetting a predecessor or externally replenishing A breaks the premise. The per-call simulator cap has independent exact and one-short cases. |
-| Owner and recipient, `owner_authority` | For each transfer in a projected authorized action, the principal equals the designated trader (swap) or provider (close), and its recipient occurs in that principal's permitted recipient list. The source actor and recipient guards and the enclosing outcome-intent checks both apply. A changed actor, changed payout recipient, missing pool or trader destination, mismatched authenticated principal, or failed signature premise prevents authorization. The actor is the instruction authorizer. Pool debits require separate custody authority. |
+| Owner and recipient, `owner_authority` | For a successful projected step whose outcome intent maps the authenticated signer to its principal and that principal to the actor, the signer equals the designated trader (swap) or provider (close). The step's actor and recipient guards restrict every transfer to the pool or that designated owner (`step_recipients`). The intent's recipient list is not assumed to cover the transfers. If the intent permits the pool and its principal, every recipient is permitted. A changed actor, changed payout recipient, missing pool or trader destination, mismatched authenticated principal, or failed signature premise prevents authorization. The actor is the instruction authorizer. Pool debits require separate custody authority. |
 
 The finite tests compare both kernel transitions against independent raw state
 and effect operands. The exact-balance boundary uses a hypothetical kernel
 input. The source simulator uses genuine program genesis with simulated
 authentication flags. The fixture's fixed price/output checks restrict reachable
 swaps. Trace quantification in Lean is over the accounting projection and does
-not claim every projected trace is executable from genesis.
+not claim every projected trace is executable from genesis. A Lean trace lists
+the model's own `Action.transfers`, not effects decoded from the kernel.
 
 ## Conditional relation to ledger effects
 
@@ -36,7 +38,8 @@ not claim every projected trace is executable from genesis.
    executing the compiled JavaScript circuits on fixed inputs checks fixtures.
    A proof that all successful source, Compact and ZKIRv3 executions refine the
    Lean projection, including checked arithmetic, denomination and ABI decoding,
-   remains outstanding.
+   remains outstanding. No proof relates the kernel's effect outputs to the
+   model transfers in a Lean trace.
 2. Custody correspondence is open. The six synthetic balance fields would need
    authenticated matching funded accounts and asset identifiers. Every listed
    transfer would need an equal debit and credit, every pool spend would need
