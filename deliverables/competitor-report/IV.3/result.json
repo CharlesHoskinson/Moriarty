@@ -3,7 +3,19 @@
   "target": "native V9 local ledger",
   "assessment": "independent assessment pending",
   "node": "v26.0.0",
-  "revision": "9b1c7e6fcbff9b71d7be1dffedc4afdee6420c13",
+  "generator": {
+    "revision": "96d29bca656089768e9ad65c550542ef5d64432b",
+    "draft": false,
+    "command": [
+      "node",
+      "packages/moriarty-orders/test/o8-native.mjs",
+      "/private/tmp/claude-502/-Users-andreaskendziorra-repositories-from-me-Moriarty/baa68b53-9da4-490c-8d9c-9b45ad54c359/scratchpad/final-builds/o8",
+      "deliverables/competitor-report/IV.3"
+    ],
+    "node": "v26.0.0",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
   "build": {
     "compilerVersion": "0.36.0 (b5d9e4dfc 2026-11-03)",
     "programHash": "388882b7f449190fe54528955b3934f80d6a8ee885faff800e475adf7c61ce07",
@@ -194,26 +206,26 @@
   "command": [
     "node",
     "packages/moriarty-orders/test/o8-native.mjs",
-    "/private/tmp/moriarty-order-native/v9/o8",
-    "/private/tmp/moriarty-order-native/o8-spent"
+    "/private/tmp/claude-502/-Users-andreaskendziorra-repositories-from-me-Moriarty/baa68b53-9da4-490c-8d9c-9b45ad54c359/scratchpad/final-builds/o8",
+    "deliverables/competitor-report/IV.3"
   ],
-  "assumption": "Fresh, fixed native fixture issues only the specified asset supplies. Each independent wallet validates the complete intent and signs its own input. Native DUST fee uses a fourth credential.",
-  "limitation": "The common single-payer backend supports one wallet. The O8 adapter balances exactly three unshielded colors, three signature-enabled wallets and one separately paid DUST fee. The public test operator controls all three local keys.",
+  "assumption": "Fresh, fixed native fixture issues only the specified asset supplies. After proving, each owner wallet callback checks its own leg in the final transaction (its inputs, the payment to the next owner and its change) and only then signs its own input. Native DUST fee uses a fourth credential. Maintenance requires all three owners.",
+  "limitation": "The common single-payer backend supports one wallet. The O8 adapter balances exactly three unshielded colors, three signature-enabled wallets and one separately paid DUST fee. The three wallet callbacks run in one local process, and the public test operator holds all three local keys.",
   "sources": {
     "contracts/atomic-exchange.compact": "86af8adf7b9a2eff4504606544414de8285cb168f264c7dddd8034f591df61c3",
-    "src/atomic-exchange.mjs": "3aaddb8e039898f589c31131d764e25d519b2582a148d41d87448324577e69ce",
+    "src/atomic-exchange.mjs": "693a2766c96aa88a46c58e76501073dec6fbaf43cb04f4394660e1fbfcd2492b",
     "orders/o8.mori": "7faf51bb21ab8645b68cba3ebde74c56fef5605dab77c26d32ea53c1a2654c3e",
     "test/fixtures/o8-mint.compact": "3c29de5e63a5b5adfeb75e415734d523c9dd3e0755a8a646cc76883414e6dcc6",
     "test/fixtures/o8.json": "17c4039ac223143f9bff9a7e05f0795f458cccbb05033859a60b8e32a71b5962",
     "src/build-o8.mjs": "28b1a1c374c9776f8d4d5d6ac5009cbd6ce285834f993040d2d27c7b4892f8ba",
-    "test/o8-native.mjs": "0544517f0ea0b8bd89226460ff7aec14b3e2c7521d26a65be6e42c05116cec67",
-    "test/native-ledger.mjs": "3aaa82af088bd28e6f69a2554f98aecb67c7973580d23726cb76d40295654b94"
+    "test/o8-native.mjs": "e58b2bad97394e10bfcd41b3688ecccf04a5f369222c961ab83980bd4fbe2d17",
+    "test/native-ledger.mjs": "7a198c67e883247ca87d64deffdb57f8379a7abbdb432bbbf11ec45f62be171d"
   },
   "refusals": [
     {
       "label": "unfunded third leg",
-      "before": "d40c3d75a05644bbb5a743da0465d847c0d459112927c7987ab8b7809130170f",
-      "after": "d40c3d75a05644bbb5a743da0465d847c0d459112927c7987ab8b7809130170f",
+      "before": "e53db038f5c9eaf5b98773604a109ed664e9625444bc58aef06d86c1f82b4eaf",
+      "after": "e53db038f5c9eaf5b98773604a109ed664e9625444bc58aef06d86c1f82b4eaf",
       "balances": [
         [
           100,
@@ -231,13 +243,13 @@
           299
         ]
       ],
-      "stage": "before native application",
+      "stage": "wallet or adapter before transaction assembly",
       "diagnostic": "O8 insufficient funding for leg 2"
     },
     {
       "label": "missing grant",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -255,13 +267,13 @@
           300
         ]
       ],
-      "stage": "before native application",
-      "diagnostic": "type error: settle argument 4 (argument 5 as invoked from Typescript) at atomic-exchange.compact line 53 char 1; expected value of type Vector<3, struct JubjubSchnorrSignature<announcement: JubjubPoint, response: Field>> but received [ { announcement: { x: 47290623875167614143976163234442494367304996227833515285292516458622524434385n, y: 582077977661134619046885498448503742719892668544632542161901134574708306851n }, response: 1528646486408678045736481185160809898115448604199259861327073015359079677390n }, { announcement: { x: 16711014373445486481853829381360117888244644800218139939275814903020670796015n, y: 21858189202952624395676073932815756546674699783336438021712929855351437794360n }, response: 6183824510821274130701500609091083210314198654718203496971643639938644321932n } ]"
+      "stage": "compiled-circuit-preparation",
+      "diagnostic": "failed assert: O8_SIGNATURE"
     },
     {
       "label": "wrong grant",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -279,13 +291,13 @@
           300
         ]
       ],
-      "stage": "before native application",
+      "stage": "compiled-circuit-preparation",
       "diagnostic": "failed assert: O8_SIGNATURE"
     },
     {
       "label": "changed recipient",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -303,13 +315,13 @@
           300
         ]
       ],
-      "stage": "before native application",
+      "stage": "compiled-circuit-preparation",
       "diagnostic": "failed assert: O8_PLAN"
     },
     {
       "label": "changed amount",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -327,13 +339,13 @@
           300
         ]
       ],
-      "stage": "before native application",
+      "stage": "compiled-circuit-preparation",
       "diagnostic": "failed assert: O8_PLAN"
     },
     {
       "label": "wrong funding wallet",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -351,13 +363,13 @@
           300
         ]
       ],
-      "stage": "before native application",
+      "stage": "wallet or adapter before transaction assembly",
       "diagnostic": "O8 funding wallet mismatch"
     },
     {
       "label": "missing native wallet signature",
-      "before": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
-      "after": "ca30542ada30b9a62d367c3895b5406d0d08f8582c0de210cebcd2903ac5b67d",
+      "before": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
+      "after": "69d446d7dede5bbae5adbc825938af4aa1b6576447b6a721ff0c1933e5e439e1",
       "balances": [
         [
           100,
@@ -375,7 +387,7 @@
           300
         ]
       ],
-      "stage": "before native application",
+      "stage": "wallet or adapter before transaction assembly",
       "diagnostic": "Carol declined to sign"
     }
   ],
@@ -403,7 +415,7 @@
     300
   ],
   "outcome": "success",
-  "settlementTx": "57c91403633d8319978e23b24842402fc8d960268617593ecf94d60c7d59c816",
+  "settlementTx": "cd25aece9546fc8d8a4c1150f5afd370d908c895d1be95743bb50cead5d167c6",
   "settled": [
     [
       0,
@@ -425,7 +437,7 @@
   "resources": {
     "readTime": "9163000000",
     "computeTime": "15438696589",
-    "blockUsage": "11445",
+    "blockUsage": "11426",
     "bytesWritten": "484",
     "bytesChurned": "42316"
   },
@@ -436,14 +448,35 @@
   },
   "separateFee": {
     "dustPublicKey": "18774131074784988135501789671053626145176452879118237903295959595633847375578",
-    "nativeFeeSpeck": "1116560000000001",
-    "requiredFeeSpeck": "1092210000000001"
+    "nativeFeeSpeck": "1101960000000001",
+    "requiredFeeSpeck": "1091260000000001"
   },
   "deployment": {
-    "address": "cbd97d997d0b4d2e7ce381b2193fbf9053758b352177cd3f2035bc355d791778",
+    "address": "66b661ab0b96f971446854f2fa1ad7b4c1612b023ef5b5678c701b6e46127ae9",
     "programHash": "388882b7f449190fe54528955b3934f80d6a8ee885faff800e475adf7c61ce07",
     "verifierSha256": "59f5ed9bd538786767abc4a1fd5830abf7802230cf49a6b53464e6344251d0d4",
-    "network": "undeployed"
+    "network": "undeployed",
+    "verifiers": {
+      "settle": "59f5ed9bd538786767abc4a1fd5830abf7802230cf49a6b53464e6344251d0d4"
+    },
+    "maintenance": {
+      "committee": [
+        {
+          "tag": "schnorr",
+          "value": "505f234a81fe3af88625ebda259dbaec44c72b181e2f64735f8b8ec8d7cf7377"
+        },
+        {
+          "tag": "schnorr",
+          "value": "8d7500dd4c12685d1f568b4c2b5048e8534b873319f3a8daa612b469132ec7f7"
+        },
+        {
+          "tag": "schnorr",
+          "value": "e11f40af6b41f494bfbc27c47a178ce572e8b8ca687cc67e1298514861ac5e48"
+        }
+      ],
+      "threshold": 3,
+      "counter": "0"
+    }
   },
   "fundingWallets": [
     "c322b6231b102512d5540e39cf5ddf2ebf28362e91a3e4d1e0668c36aa9bbd30",
@@ -459,16 +492,16 @@
         "y": "19097549670265287402085689751051099877064434235589543463647028264634623812614"
       },
       "recipient": "Bob",
-      "color": "cf2f0b7f969ed1e950a88ebff50aa5512c7f1c0910e923282a79d1df3cf29c5f",
+      "color": "f3d7f4aa71c4e692813aa0def826cb9d4eb4d5ed364276238154e8820184e32e",
       "amount": 100,
       "signature": {
         "announcement": {
-          "x": "47290623875167614143976163234442494367304996227833515285292516458622524434385",
-          "y": "582077977661134619046885498448503742719892668544632542161901134574708306851"
+          "x": "3806667299906625966158111224602547900270907831441152974688647326298251635062",
+          "y": "28058061170768574555376576920855786072462064748751399838911495059714842967531"
         },
-        "response": "1528646486408678045736481185160809898115448604199259861327073015359079677390"
+        "response": "5028545157860893937605669449423672456985128702415291525632124302490236842725"
       },
-      "message": "42953431182581835909282204910992039897820864587238950191025967780310020481273"
+      "message": "27990011141697577266588239785949322326245841918462959283716759577911035313312"
     },
     {
       "owner": "Bob",
@@ -478,16 +511,16 @@
         "y": "11940321602654584262950800843104521268715763534030434482269715217025964911081"
       },
       "recipient": "Carol",
-      "color": "4de7c63bad1cb4def36a5fb576448d3f8bd7572eb4e42a4e7b37b4d84b0c725d",
+      "color": "c55248cb8a8d18fe2f373158884b37ec94e1c28d4d9aa69e0e87704c39ce9ffd",
       "amount": 200,
       "signature": {
         "announcement": {
-          "x": "16711014373445486481853829381360117888244644800218139939275814903020670796015",
-          "y": "21858189202952624395676073932815756546674699783336438021712929855351437794360"
+          "x": "8829898644902565877109979570858243584340479005658507121083239363151249725291",
+          "y": "43028122312685405758133409484105098975508674105391315061860778883106460311635"
         },
-        "response": "6183824510821274130701500609091083210314198654718203496971643639938644321932"
+        "response": "4060295425228324355178597917124777496931253385986661379495581392350287233324"
       },
-      "message": "33662045799075137508537672188548064871647021417454236025368664156746189327980"
+      "message": "47195083840952576376072722418859309881616128437056676164543687603668988769258"
     },
     {
       "owner": "Carol",
@@ -497,16 +530,16 @@
         "y": "34892760791535565718082727313633615407032741867123440073663238049262310881337"
       },
       "recipient": "Alice",
-      "color": "4b4e6807f3166ca0a356f7edc42a9a6f480f25466a71a395db1c93ec467287d4",
+      "color": "f53fc28a5d108adbd628287554845975e925560a98e1914a32a29c3dc73ed05a",
       "amount": 300,
       "signature": {
         "announcement": {
-          "x": "23084073698617192286632018859667294230900860717876779024674640633358588955160",
-          "y": "32472381427091369760369337070884968622910335485697215546358544017679088053583"
+          "x": "40856467691303224544990790602389938053188911550674484418147640673484911219336",
+          "y": "15687007249462614526671575275036525578769766708862626601420466178707974630409"
         },
-        "response": "2408704575320379238303645619219652247986702531063583990660837939498222371544"
+        "response": "1732376016610858554670689842516341106589150364894692690485227180258378717086"
       },
-      "message": "45517643029208344319449206291163377575123789119755433999298962462747692733311"
+      "message": "31143655363854007116791886297124657403322204104463055284597721962812686178909"
     }
   ],
   "nativeSignatures": [
@@ -518,9 +551,9 @@
       "segment": 1,
       "signature": {
         "tag": "schnorr",
-        "value": "af165d63fdb565ae3238fe858e43ed8f8b3f81f9f07349a0f83b3444daa8d9e93abe708f1d7c180f4dbb564616cb37076eb08710e3daa99f5c0af43ab9c93d66"
+        "value": "27d81c71503f2da312634cbab1ffdf234dc663215529ee8af56e1a0f0437426749454d8cfdf8c5de855b8a464fa3d3145a0bab100332c1d7eacb2861ebf45c85"
       },
-      "messageSha256": "550cbf054c251ab9e2274d1e36cb19a2a131de0d75ea6f26bbd6e0a89250cfc7"
+      "messageSha256": "d4b97974635dc3606e7f855591e27004a149f6447cf2767440c766243326fec3"
     },
     {
       "key": {
@@ -530,9 +563,9 @@
       "segment": 1,
       "signature": {
         "tag": "schnorr",
-        "value": "f2466a65b9bec1c2946ae33df836ae4db923b8ebd1b972e1119e3f40e34cc05169abed18773ba34660e347037757d75b95ebba3686ed52c7e8f9d8468d7e885b"
+        "value": "b3ad3d16e6fbc6202e527ab8c491431b88e2b6d691e38637dd845b7fadb9c1823ddfcdf78ff6a6d19f1e6f7dae38bbe3654d6f5f0054c506d225133620a8688b"
       },
-      "messageSha256": "550cbf054c251ab9e2274d1e36cb19a2a131de0d75ea6f26bbd6e0a89250cfc7"
+      "messageSha256": "d4b97974635dc3606e7f855591e27004a149f6447cf2767440c766243326fec3"
     },
     {
       "key": {
@@ -542,9 +575,9 @@
       "segment": 1,
       "signature": {
         "tag": "schnorr",
-        "value": "527d7eb8656b9602c94d491fdec4647d023c22ea9fc946543fadbf93b102dd33ae4c34a45eb38a92f693b0deeba378bc4a93f6666cd84acda5acf445ae991072"
+        "value": "00d5f4cbe6f9a6f9da5885fa8182f8514759b2f05b44ca3b2edf830b0dd3b148be4c97ff157b628244ab0d7db07723de32c8472a00172cd6c3d6e63977cd2e4a"
       },
-      "messageSha256": "550cbf054c251ab9e2274d1e36cb19a2a131de0d75ea6f26bbd6e0a89250cfc7"
+      "messageSha256": "d4b97974635dc3606e7f855591e27004a149f6447cf2767440c766243326fec3"
     }
   ],
   "atHorizon": {
@@ -566,11 +599,11 @@
         300
       ]
     ],
-    "transaction": "57c91403633d8319978e23b24842402fc8d960268617593ecf94d60c7d59c816"
+    "transaction": "cd25aece9546fc8d8a4c1150f5afd370d908c895d1be95743bb50cead5d167c6"
   },
   "spentLeg": {
-    "stateSha256": "d5337a1485aec54330abc843316f2851db7c3053a61050a191cfecbf9fbbd131",
-    "transactionSha256": "57c91403633d8319978e23b24842402fc8d960268617593ecf94d60c7d59c816",
+    "stateSha256": "570469c734c6cf9dc37371de28481023180e61e114a4f68ad166299059784b09",
+    "transactionSha256": "cd25aece9546fc8d8a4c1150f5afd370d908c895d1be95743bb50cead5d167c6",
     "time": 1210637,
     "balances": [
       [
@@ -590,8 +623,8 @@
       ]
     ],
     "status": "failure",
-    "diagnostic": "input missing from utxos set: Utxo { value: 300, owner: UserAddress(06f335ef7c01541de278f53cd9e8148684fe9150a9814513a2212354c81eaecd), type_: UnshieldedTokenType(4b4e6807f3166ca0a356f7edc42a9a6f480f25466a71a395db1c93ec467287d4), intent_hash: IntentHash(b4fb1e4fce58dea9cdd9451e482eab2a5bfddad86203843d8b2f9c302e22f17d), output_no: 2 }"
+    "diagnostic": "input missing from utxos set: Utxo { value: 300, owner: UserAddress(06f335ef7c01541de278f53cd9e8148684fe9150a9814513a2212354c81eaecd), type_: UnshieldedTokenType(f53fc28a5d108adbd628287554845975e925560a98e1914a32a29c3dc73ed05a), intent_hash: IntentHash(60e4e6882ab6f360ddf87a76e0f5d128c4ab55415503360375a018922306ead4), output_no: 2 }"
   },
   "status": "passed",
-  "receiptsSha256": "491a7b158b5357f260d68ca810c6d7672c86bd0361ebbe30ac54e6a40933f334"
+  "receiptsSha256": "6ae9eec9e2a432b2547fb49c31f78f2d6d141000f00f36c2b5f1c81f1e81678b"
 }

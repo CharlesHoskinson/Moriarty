@@ -16,7 +16,7 @@
         "packages/moriarty-orders/test/recovery.test.mjs"
       ],
       "exit": 0,
-      "stdoutSha256": "34910c610112449c98797e64c7088e963c954c1e0119aafcff1f813376bcb26b",
+      "stdoutSha256": "95250942a8bf0b2f7df2186a61ab438663e7bfba72f186c07c7f4051f9b1c10d",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "strictNativeReplay": {
@@ -25,7 +25,7 @@
         "packages/moriarty-orders/native/check-recovery.mjs"
       ],
       "exit": 0,
-      "stdoutSha256": "2f4770d81afaacf7ce453fdef35fe7012c2d669c74639494d978db9ab9fb7b03",
+      "stdoutSha256": "2dad517f4e5d6dc07601ba6815c04120fe0883635ba0e8cefa3bb5bcad5094a0",
       "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   },
@@ -35,21 +35,27 @@
     "II.3"
   ],
   "assessment": "independent review pending",
-  "target": "local undeployed Midnight ledger, full Rust validation and ZKIRv3",
+  "target": "local undeployed Midnight ledger with ZKIRv3 proofs",
+  "evidenceBoundary": {
+    "ledgerApplied": "Every retained transaction passes strict Rust validation (proofs, signatures, balancing, limits) and application against its recorded predecessor state.",
+    "compiledCircuitRefusals": "Each preparation refusal re-executes in the compiled circuit against its recorded accepted state. No transaction exists for these calls, so their ledger refusal follows from proof soundness and is not itself observed."
+  },
   "limitations": [
     "Controlled local block clock and public test wallets",
     "Public-network inclusion and finality unassessed"
   ],
-  "revision": "79288636c400626ff79514b61005ae556100efd2",
+  "revision": "96d29bca656089768e9ad65c550542ef5d64432b",
+  "draft": false,
   "environment": {
     "node": "v26.0.0",
-    "platform": "Linux-7.0.11-orbstack-00360-gc9bc4d96ac70-aarch64-with-glibc2.36",
-    "machine": "aarch64",
+    "platform": "macOS-27.2.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
     "sdkLockSha256": "d6902df62058ae4657f8ae7e7d8cab48b9b19ef8d0417e202b6af8e45720ec63"
   },
   "tests": [
     "partial recovery uses a separate bounded program and leaves the one-fill O1 unchanged",
-    "refund reconciliation distinguishes spent principal, unassigned surplus and the other order"
+    "refund reconciliation distinguishes spent principal, unassigned surplus and the other order",
+    "the compiled recovery policy separates fills, cancellations, surplus, revocation and late recovery"
   ],
   "coverage": {
     "metric": "Node V8 executed lines / instrumented lines",
@@ -63,10 +69,53 @@
   "replay": {
     "requirement": "II.3",
     "receipts": 19,
+    "evidenceClasses": {
+      "ledgerApplied": [
+        "setup-night-reward",
+        "setup-dust-registration",
+        "deploy-setup-faucet",
+        "mint-test-assets",
+        "second-owner-acquires-A",
+        "first-deploy",
+        "first-fund",
+        "second-deploy",
+        "second-fund",
+        "unassigned-deposit",
+        "partial-fill",
+        "prior-cancel-after-fill",
+        "refund-partial",
+        "spend-owner-partial-refund",
+        "early-full-refund",
+        "prior-fill-after-cancel",
+        "deposit-after-revocation",
+        "refund-beyond-horizon",
+        "spend-owner-full-refund"
+      ],
+      "compiledCircuitRefusals": [
+        {
+          "label": "fund-after-revocation",
+          "circuit": "fund",
+          "error": "failed assert: ALREADY_FUNDED",
+          "stateSha256": "3a7e5d8d677cd3a1f32abb1fecc8f7b382e1c7526d4ec26fef62acb5e7d52d20"
+        },
+        {
+          "label": "fill-after-revocation",
+          "circuit": "fill",
+          "error": "failed assert: ORDER_REVISION",
+          "stateSha256": "162b79669dab31144c92fc74cc42ec94342920bfe4a40b6d04b8a30177efd1ad"
+        },
+        {
+          "label": "fill-at-expiry",
+          "circuit": "fill",
+          "error": "failed assert: ORDER_EXPIRED",
+          "stateSha256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe"
+        }
+      ]
+    },
     "replays": [
       {
         "label": "setup-night-reward",
-        "afterBlockStateSHA256": "1f9a5c4c3690d12fa8ed3c4496a6e6ee9b93ae393de4542d5d0ad3e6fd128b90",
+        "afterBlockStateSHA256": "b8afb1413fade946da2166fa163bc806ef903cf6af1fda36e36c811e9d8a34dd",
         "blockContext": {
           "last_block_seconds": 0,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -75,14 +124,14 @@
         "blockSeconds": 0,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "79f79aff05c3eee85b3c4c4ae2b50b657a943b4f57e892de9360b8ea50ba2ddf",
-        "preStateSHA256": "50ef649e260e990c682bcfd2655c15302a1483d647d1dbefc2aec23d54124ee4",
+        "postStateSHA256": "1df77a816607580e6988a46e38d7d4c0ba5a0edbf5a35e445aaeb8caa0d679db",
+        "preStateSHA256": "96cb3a9425a5feb009220b009571d7e5e10b42ee9c5514c05cc961dbde9a8737",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "efa16aa83fd642e6e709cb543ca275746eca625fe7e8af5930ef1f559e9565f4"
+        "transactionSHA256": "cbd1cc251e2633a1b5d1eea8e57b3b5f721cf29130586fd8d90099fe4bb1fbfc"
       },
       {
         "label": "setup-dust-registration",
-        "afterBlockStateSHA256": "3c4c54a83fda797c5700e28709c520a69ce5fc73ea92bdd74a9c2eb59751a712",
+        "afterBlockStateSHA256": "86ac6e099c060be9188187b8f689f6997c20a8819505c06cd22d22b3ee336c2c",
         "blockContext": {
           "last_block_seconds": 605815,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -91,14 +140,14 @@
         "blockSeconds": 605815,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "0609c0b952a5ef1066083b73e0eb02fd1afad828ab0ac64615024839ac087c52",
-        "preStateSHA256": "1f9a5c4c3690d12fa8ed3c4496a6e6ee9b93ae393de4542d5d0ad3e6fd128b90",
+        "postStateSHA256": "72f299604ed5c9ad0c839984e8e727d9d31567f9cdb8652d561340a9d47aa65b",
+        "preStateSHA256": "b8afb1413fade946da2166fa163bc806ef903cf6af1fda36e36c811e9d8a34dd",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "83258253dc9115b8852409b5f6e2d07616f677275c4287c5ea66cce7b5a9f4ea"
+        "transactionSHA256": "b108a5feccedd13ae8982e82d53f3db413d2ade909d3c14c8dc4ce07003f5829"
       },
       {
         "label": "deploy-setup-faucet",
-        "afterBlockStateSHA256": "4fabaa73f3fea45e31d95bd5aec0a92873c7b3756784b478e72f571a4b482f69",
+        "afterBlockStateSHA256": "82deba98558acf695cf5b830413aa97c24f43ad7de3283620437150ea2458efa",
         "blockContext": {
           "last_block_seconds": 1210632,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -107,14 +156,14 @@
         "blockSeconds": 1210632,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "176a0ff3042a3cce72a31213148f1032d53b0e8ecc3ca3f2030e75b2e690fdfe",
-        "preStateSHA256": "3c4c54a83fda797c5700e28709c520a69ce5fc73ea92bdd74a9c2eb59751a712",
+        "postStateSHA256": "ec192b58a8d3590217d7b3045df736922a819728cb510bc7bb62cf5619a07590",
+        "preStateSHA256": "86ac6e099c060be9188187b8f689f6997c20a8819505c06cd22d22b3ee336c2c",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "1e7357acbf69c6977b50a8c1db46b367ca6f0528e45beebfdcbe1e52df7c654c"
+        "transactionSHA256": "a297466b598a852ad9c52560363f54ab1f7bf73c793235fd36db1c67905a8fcb"
       },
       {
         "label": "mint-test-assets",
-        "afterBlockStateSHA256": "6f6863eb917e70263b97f68fd4e64b0d5053615b6295675c0600a381891e4f2c",
+        "afterBlockStateSHA256": "67ac63e721dcb440db4ed52958381233a935540730a5625c9c59bc235bb24fe1",
         "blockContext": {
           "last_block_seconds": 1210633,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -123,23 +172,23 @@
         "blockSeconds": 1210633,
         "contractCalls": [
           {
-            "address": "593ac5510a62e35c983fe8e836afbd8ffbd2ca861adb2b8cc4a911df8915f4d1",
+            "address": "ea57bb880e2d9dc925f7832c9f55f3d1251f7b41f0ddaa84557f420099a9d3d4",
             "entryPoint": "mint",
-            "proofSHA256": "48525fe8932623b75df70a2428d11393703e8cf84005462241cd6da1cb36369a",
+            "proofSHA256": "6480c80cfcf03ee4cfa8c2d688f1be37825f0eacf3c7e00edacb5bd3ac8ae2c9",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "e936a326b0a058b4908ee4fcbbf9a702619635fd39ef4be4ac7d4c800f859555"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "f952ca8b312732a1275f4d8653178b5ccfadae4ab2a9d56f5139ecd62c1c1a60",
-        "preStateSHA256": "4fabaa73f3fea45e31d95bd5aec0a92873c7b3756784b478e72f571a4b482f69",
+        "postStateSHA256": "c336297d06586fb33b6312a55baf0b1c629cbb4d059d15977821d4c5558ffe4f",
+        "preStateSHA256": "82deba98558acf695cf5b830413aa97c24f43ad7de3283620437150ea2458efa",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "26de38c36ff31d696d9c3a455a10d0a4702bec8ddd52f9be3e94f23b447c13b7"
+        "transactionSHA256": "b645a3c98a9722fa40fb716f850a748d9f21a41e10a5d7d0d7edab0006f6fc99"
       },
       {
         "label": "second-owner-acquires-A",
-        "afterBlockStateSHA256": "484b3be8e695b0ddfcb7357f9a5ea98824fac5a44b751489a58cbd7057950422",
+        "afterBlockStateSHA256": "83f2c3a02ac182229ce171eed3c71d48a0dd2cc604de3c781a7645f230f38881",
         "blockContext": {
           "last_block_seconds": 1210634,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -148,14 +197,14 @@
         "blockSeconds": 1210634,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "891ad030f7f607a9bb21142b490d4be2eab509d0657c35c1428b06bf373cbc42",
-        "preStateSHA256": "6f6863eb917e70263b97f68fd4e64b0d5053615b6295675c0600a381891e4f2c",
+        "postStateSHA256": "0ed50154fd8c35be516b5aa94be88c00734dc8ec5e2a20cbd020d9ac027dba26",
+        "preStateSHA256": "67ac63e721dcb440db4ed52958381233a935540730a5625c9c59bc235bb24fe1",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "08e81bcccba4346daea0137f8f26bdf1e6a1a1ff72e5d4d5c05d51dbed77ffd5"
+        "transactionSHA256": "e68b9f74aacb5b390f0dc037878dff7bab00733606ae788399c0b4331cebd535"
       },
       {
         "label": "first-deploy",
-        "afterBlockStateSHA256": "d08638710aae6a94e665598e1475875fa7d9e0e32ad63eb7fdd57a500ec51fd5",
+        "afterBlockStateSHA256": "b8516f8e230ece57355af2fbdb6d05881ad9d5f38fcee64c0825fe90a19ed16b",
         "blockContext": {
           "last_block_seconds": 1210635,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -164,14 +213,14 @@
         "blockSeconds": 1210635,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "f2dbaa44fdb65381e24669bc51e40a2770ec3254e151767acaa44f7f6404d042",
-        "preStateSHA256": "484b3be8e695b0ddfcb7357f9a5ea98824fac5a44b751489a58cbd7057950422",
+        "postStateSHA256": "5114a1e338f0e91538b4e9dc70cf73e270fb3e29a9107bedab7252aaae93857c",
+        "preStateSHA256": "83f2c3a02ac182229ce171eed3c71d48a0dd2cc604de3c781a7645f230f38881",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "d1b5b625189d7514ae753a31769fadb6cb1daf6cf0e4b736535512621a2898d6"
+        "transactionSHA256": "dbf2af274b22338182b6b57879826b5dd48d6c50a67d05af142ac89f56b77814"
       },
       {
         "label": "first-fund",
-        "afterBlockStateSHA256": "8e8a0af320d2359ca1c3521e3bdfe906cc051d85a0d5d30e50a69ff4890f8596",
+        "afterBlockStateSHA256": "222754610c665e9f7923d4706a87ab384e8a443838586e3ed6d9851691ec9541",
         "blockContext": {
           "last_block_seconds": 1210636,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -180,23 +229,23 @@
         "blockSeconds": 1210636,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "fund",
-            "proofSHA256": "fb9a58a37b812ab901215872f1cc0f1df8b561f8e4e5adfc5367a133f34a1739",
+            "proofSHA256": "90944ea0fa60bd2b86d04d19832175d48a21d453f900254d6eef005071b563f1",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "290d1bb0cc13c968b944e31a8af603feb65f417573afe90b13e9ad33c0bc8ba5"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "d55d5d05b308f18cd51eca45eb7312e6c439ed39cf99280c0fa9c84abd3a5759",
-        "preStateSHA256": "d08638710aae6a94e665598e1475875fa7d9e0e32ad63eb7fdd57a500ec51fd5",
+        "postStateSHA256": "af0369f71ba393427215c4961c082ef3499fc14d45b97dfa36d5358b980ed838",
+        "preStateSHA256": "b8516f8e230ece57355af2fbdb6d05881ad9d5f38fcee64c0825fe90a19ed16b",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "8df5cb1647bad36cbc9be5244c5ff305fda797d6cee7bea44cf7ddaef7266d9f"
+        "transactionSHA256": "06778de30ab512e224b9debe6c9628f61f0426c9762e9bdd73227788bb7aac4a"
       },
       {
         "label": "second-deploy",
-        "afterBlockStateSHA256": "29b307caacac7e1ab76a067021545191ace914681c6a1904523b8475ca9e73ef",
+        "afterBlockStateSHA256": "2a94c50bec855592a3765a31c25c2062a10a590736395002a79c303a9fc4b485",
         "blockContext": {
           "last_block_seconds": 1210637,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -205,14 +254,14 @@
         "blockSeconds": 1210637,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "af1b94cbc340002fb00577692d4abe7405666baff1c0e908ab3f69b5dc622f4a",
-        "preStateSHA256": "8e8a0af320d2359ca1c3521e3bdfe906cc051d85a0d5d30e50a69ff4890f8596",
+        "postStateSHA256": "214453c4a85f975e7e89fe3e2db7573f74eea69b99190fa18d3f65dd51b108c8",
+        "preStateSHA256": "222754610c665e9f7923d4706a87ab384e8a443838586e3ed6d9851691ec9541",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "852939608c03916799eb1df696681feca1d564e5a1836c59b92a51c872986bca"
+        "transactionSHA256": "92c626dc5cf9cbfe22cfda10638280846bd36665d412c306da1927423baabbe2"
       },
       {
         "label": "second-fund",
-        "afterBlockStateSHA256": "223fbc801404eb6d1fa907a2357acbcb745354dd8779f0ad80716bd2430b46df",
+        "afterBlockStateSHA256": "4377a40f74de17642accc77b4cf7f8bf483bb616bac730ec31afffacd610fff7",
         "blockContext": {
           "last_block_seconds": 1210638,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -221,23 +270,23 @@
         "blockSeconds": 1210638,
         "contractCalls": [
           {
-            "address": "0e8d0dc5d04a5c64c84c1bad999a71ba59402d4dbc2a2b5eb46dbfafbe66d6d1",
+            "address": "4ec19b29af60172bb4f2fee7afd6ca9071d4489eba0840a1dc5f80b33e010335",
             "entryPoint": "fund",
-            "proofSHA256": "98d328b2f496db011f71e913e929f905d062ff8f0912c36233a1e8c1bb8564f6",
+            "proofSHA256": "bd84caa066d43281d7ca3e097394ea88267896e6a989cb1215ff7241ea49b618",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "290d1bb0cc13c968b944e31a8af603feb65f417573afe90b13e9ad33c0bc8ba5"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "7c584fd18da1919e947e067faff65a0937a1a7256121b22a694b2903d26bd034",
-        "preStateSHA256": "29b307caacac7e1ab76a067021545191ace914681c6a1904523b8475ca9e73ef",
+        "postStateSHA256": "5fcd7fbf275194dd2189016e22a29d026df81a97365640d7d85d8ffe2d4b9b0d",
+        "preStateSHA256": "2a94c50bec855592a3765a31c25c2062a10a590736395002a79c303a9fc4b485",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "1ed82f2c0929fc1cb8d99845d48bf11a213bf3c055c29d01b1af5f62e4ed982e"
+        "transactionSHA256": "621d96ec7232a9964421b11158c50b0d5287de20605b096e0a9713ed0dc95f79"
       },
       {
         "label": "unassigned-deposit",
-        "afterBlockStateSHA256": "7c47d349d916a983da183622536104ec864eb1127b28452fddb63caf01b4895c",
+        "afterBlockStateSHA256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe",
         "blockContext": {
           "last_block_seconds": 1210639,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -246,23 +295,23 @@
         "blockSeconds": 1210639,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "depositSurplus",
-            "proofSHA256": "4ac7a1b3c386c939944a8dddffc30878143fe784642db82d1df973d7bf8d6ad5",
+            "proofSHA256": "e3e2a2df3963c502ea4b34f9442970eac2b836c910e2a373ccd9d33624b2cc85",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "71ad44378439a9ce415533770e9f545259b45ae7b2310beffc399f1eefb7e9cd"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "2956f3abe0fdf33e239f3a64bcbd294045fd43f7dec4b5b45f91c57775b9d10f",
-        "preStateSHA256": "223fbc801404eb6d1fa907a2357acbcb745354dd8779f0ad80716bd2430b46df",
+        "postStateSHA256": "6c6c836c30c9ecf342545e573620b9ac2fe287bca1f6ec03e7f8e7b0cc6d362e",
+        "preStateSHA256": "4377a40f74de17642accc77b4cf7f8bf483bb616bac730ec31afffacd610fff7",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "248137d84aa9c21f05418f518ffae0f5eb710d5a945429b40f16488f1207027f"
+        "transactionSHA256": "10749e9a5d69537397b8b002c30e452056cd31bec84e233e93a0d7072045a1bb"
       },
       {
         "label": "partial-fill",
-        "afterBlockStateSHA256": "5183e1d09a23d8fe80debff2ae40849684c4bcf661faa76826b3dbdf2de0140d",
+        "afterBlockStateSHA256": "11d5fb3061023c7598a635ff699ea497b0ccf9e4e72aaf9d178952b192245e2c",
         "blockContext": {
           "last_block_seconds": 1210640,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -271,23 +320,23 @@
         "blockSeconds": 1210640,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "fill",
-            "proofSHA256": "73e9d7b0cfae5dbc40d8500891be9d179c39b4eadc971d4cc157fd7e943e02de",
+            "proofSHA256": "db2bcce8bf0b5412bcf372daee253bcb9a31dc5bc0d9ca249329d717d521d3d4",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d624bf250ff62dc3b1d97ce489e572fd6b805661d4c18307610b9bddebbc8e75"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "0d145565334e56c8e1da9e7903a0d5b247095955f2ca31564f34fd4217c80152",
-        "preStateSHA256": "7c47d349d916a983da183622536104ec864eb1127b28452fddb63caf01b4895c",
+        "postStateSHA256": "14703ead3e4dc5c3222786900aed565f995ba234c093df787046269d2b058ff1",
+        "preStateSHA256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "3fbc8b3fb53b298bce1f23583269d17ab98e1d4672e6331363d89148b11c6622"
+        "transactionSHA256": "e4164ee22185ea9781ae0da64624c08f69db3e3a82165281d581f8c47d3699b4"
       },
       {
         "label": "prior-cancel-after-fill",
-        "afterBlockStateSHA256": "0a09d69c481abd055a2e386fa3cdcefb27c716caba5aa923a51369048074617f",
+        "afterBlockStateSHA256": "662a9a7f4987bd11b70db7013cda1738d7187876f681bb50730ce2be665b20b1",
         "blockContext": {
           "last_block_seconds": 1210641,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -296,23 +345,23 @@
         "blockSeconds": 1210641,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "cancel",
-            "proofSHA256": "81f10b71df895086f77da79b1b7dd8eb309f14e60ad32161808320ebea33f951",
+            "proofSHA256": "29ffc2411af3e458cc411b71b16141fbd018526f718cb1ac5d1f67dcc2eab866",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d1f983e549d948774bf12e209c5bfcd408a251a4be69e3ca8078a2c4cbe3789c"
           }
         ],
         "outcome": "failure",
-        "postStateSHA256": "5183e1d09a23d8fe80debff2ae40849684c4bcf661faa76826b3dbdf2de0140d",
-        "preStateSHA256": "5183e1d09a23d8fe80debff2ae40849684c4bcf661faa76826b3dbdf2de0140d",
+        "postStateSHA256": "11d5fb3061023c7598a635ff699ea497b0ccf9e4e72aaf9d178952b192245e2c",
+        "preStateSHA256": "11d5fb3061023c7598a635ff699ea497b0ccf9e4e72aaf9d178952b192245e2c",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "6967c5a68a74286accaeb286c587a347d0eb5bc78ab7912b1ebff82f91b7ae09"
+        "transactionSHA256": "f92fa22b7ec4977177e9c9592684264d55f1d43b0c93c9322d97df191d66d5a1"
       },
       {
         "label": "refund-partial",
-        "afterBlockStateSHA256": "e8e626fcc55e7c86ee2b20309b6000ebe9a773e9ff21c42c25f3f66939b9b274",
+        "afterBlockStateSHA256": "027cae2dde073c154e16d7611bf7b3b70918fab032fa05ed83b795e3fac2be85",
         "blockContext": {
           "last_block_seconds": 1210642,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -321,23 +370,23 @@
         "blockSeconds": 1210642,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "cancel",
-            "proofSHA256": "4cf1ba9415eb08e3654ced1718d7017eb3d019a68c3914a4c39ce474c288d5d9",
+            "proofSHA256": "f7b3ab2d0a1e2d5732a3bbe9590287cc8cb90a682c984b940766b12bb2fcd88c",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d1f983e549d948774bf12e209c5bfcd408a251a4be69e3ca8078a2c4cbe3789c"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "5449b546fadeff68a24d7b18d51c4f113b3685543108166f11400297c25ccd90",
-        "preStateSHA256": "0a09d69c481abd055a2e386fa3cdcefb27c716caba5aa923a51369048074617f",
+        "postStateSHA256": "a727e4228d19d6162afcfeae80658774184d3d1ac230a1c4dd2500a1dbc9597f",
+        "preStateSHA256": "662a9a7f4987bd11b70db7013cda1738d7187876f681bb50730ce2be665b20b1",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "ae51013330db4cae017bfd8f8aadc216cabcc8e5c01abbc8842c5b3ee2465fc2"
+        "transactionSHA256": "8ea85644faefe48ab1ac36e10fe593d2d25dc3c79457920ab64a4d85bea61fae"
       },
       {
         "label": "spend-owner-partial-refund",
-        "afterBlockStateSHA256": "a1cdf36912ff3b9cdf9d1e1a0dfdd82ec2db88b5c4e020ca0d135273159f138a",
+        "afterBlockStateSHA256": "147a698ba3277f92d304a4ab1d3a1ea2fa4085fe908e9d34ab0eb0d799bbc3ba",
         "blockContext": {
           "last_block_seconds": 1210643,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -346,14 +395,14 @@
         "blockSeconds": 1210643,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "5d50ecaefd4df02931f91c19c32c153bc94238d8682b56abc3ea78f4731b3fb4",
-        "preStateSHA256": "e8e626fcc55e7c86ee2b20309b6000ebe9a773e9ff21c42c25f3f66939b9b274",
+        "postStateSHA256": "69584753299aae9fb257698316c74498ed842086f403bb9c84552f280369e400",
+        "preStateSHA256": "027cae2dde073c154e16d7611bf7b3b70918fab032fa05ed83b795e3fac2be85",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "fce071d86c26b9c92bfc09dc3f857f1677dccdb80a3cc705fd4ad7f2b54f2ea3"
+        "transactionSHA256": "435284a99078294b2c685f9dc01dba92c76fe962495a1e92d4eb0b3da8296ebc"
       },
       {
         "label": "early-full-refund",
-        "afterBlockStateSHA256": "cf3e50059d63686c6632c5678ed589f3b305757822319a5218f4da69975729b5",
+        "afterBlockStateSHA256": "720571ed2665adb485ebf3895185bcaf5d907c6a3916f07fb8d07e6ea5bf594f",
         "blockContext": {
           "last_block_seconds": 1210640,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -362,23 +411,23 @@
         "blockSeconds": 1210640,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "cancel",
-            "proofSHA256": "7fb9fa4e944fb95559eb74ee646b2c569af2e4e8c616eca5791552b01e42206a",
+            "proofSHA256": "54cefff2a555b35dcfb7b80dce7d8d25c083f831df51d80859d64724693f195e",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d1f983e549d948774bf12e209c5bfcd408a251a4be69e3ca8078a2c4cbe3789c"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "8023a504d875f88f854e2312049e9532c53eecea382276850c16d95bab7dfa7e",
-        "preStateSHA256": "7c47d349d916a983da183622536104ec864eb1127b28452fddb63caf01b4895c",
+        "postStateSHA256": "b9ee7253f898061676415f11851cfa07dfa323b776b84f54ca90a32c10038ef6",
+        "preStateSHA256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "3502f8fa7088119efd53a18ffae36d0f62d7ecd220d9bafaf3b7d3a8f3cd8313"
+        "transactionSHA256": "947c66da027b9cd01fcf0748a0c1a356356b631674c23e2100515946708e9544"
       },
       {
         "label": "prior-fill-after-cancel",
-        "afterBlockStateSHA256": "ce5329035a5fa5e5622c0031d1d9a4b3b0995bbbfea11ac47cf412b812f62be6",
+        "afterBlockStateSHA256": "3a7e5d8d677cd3a1f32abb1fecc8f7b382e1c7526d4ec26fef62acb5e7d52d20",
         "blockContext": {
           "last_block_seconds": 1210641,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -387,23 +436,23 @@
         "blockSeconds": 1210641,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "fill",
-            "proofSHA256": "498b24ad19985bb3015c41d0458360af3c3ff8aed88c410159eb4c724b65b6f3",
+            "proofSHA256": "661ae5e3af9bf5b1d1a90530fb9610f6bfe152872d461722b0e5222ac335d9d2",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d624bf250ff62dc3b1d97ce489e572fd6b805661d4c18307610b9bddebbc8e75"
           }
         ],
         "outcome": "failure",
-        "postStateSHA256": "cf3e50059d63686c6632c5678ed589f3b305757822319a5218f4da69975729b5",
-        "preStateSHA256": "cf3e50059d63686c6632c5678ed589f3b305757822319a5218f4da69975729b5",
+        "postStateSHA256": "720571ed2665adb485ebf3895185bcaf5d907c6a3916f07fb8d07e6ea5bf594f",
+        "preStateSHA256": "720571ed2665adb485ebf3895185bcaf5d907c6a3916f07fb8d07e6ea5bf594f",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "5858305f696d9471dd3fbc932b2ca0edbf0716fde3227199956af859b18b14ae"
+        "transactionSHA256": "3b7ddac2039477014575f403a8e6d1c855994adaaaa0a68ccd60815bd2171510"
       },
       {
         "label": "deposit-after-revocation",
-        "afterBlockStateSHA256": "dd9cbbf4096bacc4212384aa66000467b5e2dd90edd72673afdd9883c99c9fc0",
+        "afterBlockStateSHA256": "162b79669dab31144c92fc74cc42ec94342920bfe4a40b6d04b8a30177efd1ad",
         "blockContext": {
           "last_block_seconds": 1210642,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -412,23 +461,23 @@
         "blockSeconds": 1210642,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "depositSurplus",
-            "proofSHA256": "94a5c77b26f449bc4dc895831dafbeecfb5e05c8ef4aa1bd1a75b00da91a310b",
+            "proofSHA256": "15e4447c31be0130663ba1e8fe114c1faa885050d5a624e4f887c01a309a037a",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "71ad44378439a9ce415533770e9f545259b45ae7b2310beffc399f1eefb7e9cd"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "9b99a52a8b21afd075ce430f073e50b6d67fc9a81fc1b7c5d195617d7210f2cf",
-        "preStateSHA256": "ce5329035a5fa5e5622c0031d1d9a4b3b0995bbbfea11ac47cf412b812f62be6",
+        "postStateSHA256": "0b9db0575602933a6ffe2a0b4036d9076caac9820db5ca2173890fb39a6cf024",
+        "preStateSHA256": "3a7e5d8d677cd3a1f32abb1fecc8f7b382e1c7526d4ec26fef62acb5e7d52d20",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "96e6afb7bfa57de20ad7654b4882c6f8abde3b43fb1cc02aa9ca10f04da4fc7a"
+        "transactionSHA256": "c119b2944ea769b3132ececb9cb05d4df99acec5395b01049569b48e3c341e86"
       },
       {
         "label": "refund-beyond-horizon",
-        "afterBlockStateSHA256": "b226b76e117cf180835dd2eef2626eb6abd9938f630d0ce669aa1b4bcfaabc7e",
+        "afterBlockStateSHA256": "c6ce913fbc16c8a5eedfbde40d532eeb15ce4e041d031c8d75b380304552abd0",
         "blockContext": {
           "last_block_seconds": 1211641,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -437,23 +486,23 @@
         "blockSeconds": 1211641,
         "contractCalls": [
           {
-            "address": "72f224711549ef16ea8d5973d0c171395d1b90f5bdc26ea0b38b2add3e2ca3bb",
+            "address": "035a9e61ac272977cadd479f6e73005b6766ae09fad096a15615d2d61514a8c1",
             "entryPoint": "cancel",
-            "proofSHA256": "ce617fdca12f6786b5256d57a26a3a15ae8492600dd6338ece0013d040820c41",
+            "proofSHA256": "3547eb5a0647ef20e4690322e7c699fe2e80f3f52254440a875a7e449441bfa1",
             "proofVersion": "V3",
             "segment": 1,
             "verifierKeySHA256": "d1f983e549d948774bf12e209c5bfcd408a251a4be69e3ca8078a2c4cbe3789c"
           }
         ],
         "outcome": "success",
-        "postStateSHA256": "538c9bf518e6ac30f05115530d72bcee7fd5bc6247bc149a93959d2758d02738",
-        "preStateSHA256": "7c47d349d916a983da183622536104ec864eb1127b28452fddb63caf01b4895c",
+        "postStateSHA256": "a1c6d48c2d5910c7764df19fbe2155eaab3bc39aef6b8ed1abeb4c470cb186be",
+        "preStateSHA256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "1ef1ed74634442d29733f8226e68de1ca9322aaf99f92a5fc83ba7fb5d18b8db"
+        "transactionSHA256": "1c7393eca6e39c96357e2daca18d76083fd4364eb36aeb0057258a0cc2ec8723"
       },
       {
         "label": "spend-owner-full-refund",
-        "afterBlockStateSHA256": "d0e16e428e441877c0d005d6b8d78d5d61f300909389be88779de02503eff2a7",
+        "afterBlockStateSHA256": "264b044881096a27790fd484cd6de831c5e74d25f71a2671d4652161276086ba",
         "blockContext": {
           "last_block_seconds": 1211642,
           "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -462,10 +511,10 @@
         "blockSeconds": 1211642,
         "contractCalls": [],
         "outcome": "success",
-        "postStateSHA256": "9de0a959413b18a2753cb65fc6d4634e57f7e6c17b61af5ca8a2a5851c7b5c1f",
-        "preStateSHA256": "b226b76e117cf180835dd2eef2626eb6abd9938f630d0ce669aa1b4bcfaabc7e",
+        "postStateSHA256": "3a0b2a3acccfcf5319ae140dec2040f3277d1f207889be06e8d4677016a85461",
+        "preStateSHA256": "c6ce913fbc16c8a5eedfbde40d532eeb15ce4e041d031c8d75b380304552abd0",
         "schema": "moriarty-strict-ledger-replay/1",
-        "transactionSHA256": "603180b46277deb3c7294aa1dc34088322acca6914a9b349c15ab20c820e0d37"
+        "transactionSHA256": "ad3591b6a399ea1ba697b02c27ad6b5065a29f613a5cd603cafe7914433ce5cd"
       }
     ],
     "readbacks": [
@@ -507,9 +556,53 @@
       ]
     ]
   },
+  "evidenceClasses": {
+    "ledgerApplied": [
+      "setup-night-reward",
+      "setup-dust-registration",
+      "deploy-setup-faucet",
+      "mint-test-assets",
+      "second-owner-acquires-A",
+      "first-deploy",
+      "first-fund",
+      "second-deploy",
+      "second-fund",
+      "unassigned-deposit",
+      "partial-fill",
+      "prior-cancel-after-fill",
+      "refund-partial",
+      "spend-owner-partial-refund",
+      "early-full-refund",
+      "prior-fill-after-cancel",
+      "deposit-after-revocation",
+      "refund-beyond-horizon",
+      "spend-owner-full-refund"
+    ],
+    "compiledCircuitRefusals": [
+      {
+        "label": "fund-after-revocation",
+        "circuit": "fund",
+        "error": "failed assert: ALREADY_FUNDED",
+        "stateSha256": "3a7e5d8d677cd3a1f32abb1fecc8f7b382e1c7526d4ec26fef62acb5e7d52d20"
+      },
+      {
+        "label": "fill-after-revocation",
+        "circuit": "fill",
+        "error": "failed assert: ORDER_REVISION",
+        "stateSha256": "162b79669dab31144c92fc74cc42ec94342920bfe4a40b6d04b8a30177efd1ad"
+      },
+      {
+        "label": "fill-at-expiry",
+        "circuit": "fill",
+        "error": "failed assert: ORDER_EXPIRED",
+        "stateSha256": "d54d71166ea79f91f6a9e27eab6fad98b28b1d452e4b652087e8cb8652430abe"
+      }
+    ]
+  },
+  "evidenceRevision": "96d29bca656089768e9ad65c550542ef5d64432b",
   "inputs": {
-    "packages/moriarty-orders/test/recovery.test.mjs": "771064363adf88a071c8b13186f81be50deccb4b6744b60ebc7839fba8cbf858",
-    "packages/moriarty-orders/native/check-recovery.mjs": "983d0196326dab96445639ee5e45b7009e90b701607b71bfe7a279b762785b2b",
+    "packages/moriarty-orders/test/recovery.test.mjs": "017d5dd7bbcc4fb6b2947de71e6eb33f9ad946f54cc66fb66a40575215b5a6c5",
+    "packages/moriarty-orders/native/check-recovery.mjs": "3fa073a4adfe382ef1fff854f6bd2a48bf003508ba46fb07665e74ed17f62ba2",
     "packages/moriarty-orders/native/replay.mjs": "8d8e9ff7040f6cbc4618487b581b536852cb40a671831c572f0ed5cc30c5229e"
   }
 }
