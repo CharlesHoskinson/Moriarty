@@ -99,11 +99,11 @@ Accountable role — application maintainer. Planned runner: `python3 scripts/qa
 
 Accountable role — release maintainer. Planned runner: `python3 scripts/qa/order-report.py III.6`. Test: `node --test packages/moriarty-orders/test/distribution.test.mjs`.
 
-- [x] 11.1 Write `packages/moriarty-orders/test/distribution.test.mjs`. Test fresh installation outside the checkout with only released inputs. Pass when an omitted dependency or missing lifecycle command fails the distribution check.
-- [ ] 11.2 Publish the versioned O1 lifecycle and replay package from `packages/moriarty-orders/package.json`. Deliver public commands in `packages/moriarty-orders/README.md`. Package public replay inputs and expected readbacks in `packages/moriarty-orders/replay/manifest.json`. Record the published locations and digests in `deliverables/competitor-report/III.6/release.json`. Pass when immutable release and package identities resolve to the recorded revision, bytes, operations, trust assumptions and gaps.
-- [x] 11.3 Replay the released instructions as a maintainer on a clean setup. Extend `scripts/qa/order-report.py`. Register III.6. Write `deliverables/competitor-report/III.6/result.json`. Pass when the clean replay reproduces the released ledger effects. Retain revision, package identity, commands, environment, setup time, receipts and outcome. Preserve failed attempts. Mark outside reproduction deferred.
+- [x] 11.1 Write `packages/moriarty-orders/test/distribution.test.mjs`. Test fresh installation outside the checkout using the candidate archive. Pass when an omitted dependency or missing lifecycle command fails the distribution check.
+- [x] 11.2 Prepare the versioned O1 lifecycle and replay archive for upstream review from `packages/moriarty-orders/package.json`. Document its commands, supported operations, trust assumptions and gaps in `packages/moriarty-orders/README.md`. Include the replay inputs and expected readbacks in `packages/moriarty-orders/replay/manifest.json`. Pass when the archive in the PR matches the package version, source commit and SHA-256 recorded in `deliverables/competitor-report/III.6/release.json`.
+- [x] 11.3 Replay the candidate archive on a clean setup using its packaged instructions. Extend `scripts/qa/order-report.py`. Register III.6. Write `deliverables/competitor-report/III.6/result.json`. Pass when the clean replay reproduces the documented ledger effects. Retain revision, package identity, commands, environment, setup time, receipts and outcome. Preserve failed attempts. Mark outside reproduction deferred.
 
-The owner requested a local release candidate and deferred external publication. The offline install and maintainer replay passed on Linux arm64. Step 11.2 stays open for publication. [Local release record](../../../deliverables/competitor-report/III.6/release.json)
+The offline install and maintainer replay passed on Linux arm64. After merge, the maintainers of `CharlesHoskinson/Moriarty` decide whether to publish an upstream release. [Local release record](../../../deliverables/competitor-report/III.6/release.json)
 
 ## 12. IV.2 Fund O5 after II.2 and II.5
 

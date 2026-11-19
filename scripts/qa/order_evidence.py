@@ -37,7 +37,7 @@ LIMITS = {
     "II.6":"Compiler, custody and native acceptance correspondence remain open.",
     "III.1":"Local finality with zero descendants. Both O10 workloads remain unavailable.",
     "III.5":"The local venue offers no guarantee of inclusion, available liquidity or continued service.",
-    "III.6":"External publication pending by owner direction. Outside-developer reproduction deferred.",
+    "III.6":"Upstream maintainers decide whether to publish after merge. Outside-developer reproduction deferred.",
     "IV.2":"Oracle honesty, clock and transaction inclusion remain assumptions. Independent review pending.",
     "IV.3":"Only the recorded payer, token, phase and resource configuration was exercised.",
     "IV.4":"Only accepted local transactions demonstrate continuation or owner control.",
@@ -74,8 +74,7 @@ def reconcile():
             install = json.loads((base/"clean-install.json").read_bytes())
             archive = evidence(base/release["file"])
             passed = (result.get("localReplayPassed") is True
-                      and result["archiveSha256"] == release["sha256"] == install["sha256"] == archive["sha256"]
-                      and release["publication"] == "pending" and release["publicLocation"] is None)
+                      and result["archiveSha256"] == release["sha256"] == install["sha256"] == archive["sha256"])
         elif case == "III.1":
             workflow = json.loads((base/"workflow-check.json").read_bytes())
             passed = (result.get("passed") is True

@@ -269,15 +269,14 @@ def distribution():
         install = json.loads(receipt.read_bytes())
     release = json.loads((base/"release.json").read_bytes())
     archive = base / release["file"]
-    if (release["publication"] != "pending" or release["publicLocation"] is not None
-            or install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]):
-        raise ValueError("local release identity or publication status changed")
+    if install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]:
+        raise ValueError("installed archive digest differs from the release record")
     write_record(base/"clean-install.json", install)
     write_record(base/"result.json", {"requirement":"III.6","predicate":"F33","localReplayPassed":True,
                  "status":"partial","checks":checks,"tests":sorted(names),"package":release["package"],
                  "version":release["version"],"archiveSha256":release["sha256"],"platform":release["platform"],
                  "installReceipt":"clean-install.json","releaseRecord":"release.json",
-                 "publication":"pending by owner direction","outsideReproduction":"deferred"})
+                 "publication":release["publication"],"outsideReproduction":"deferred"})
     return 0
 
 

@@ -146,15 +146,15 @@ Service policy SHALL apply only to that application. Public language use SHALL r
 
 ### Requirement: III.6 Versioned lifecycle release
 
-The maintainer SHALL release a versioned implementation and replay package with source identity, supported operations, trusted components, setup instructions and known gaps. A maintainer SHALL replay the lifecycle from a clean setup using only released documentation and declared public inputs.
+The PR SHALL include a versioned O1 implementation and replay archive with its source commit, package version, SHA-256, supported operations, trusted components, setup instructions and known gaps. A maintainer SHALL replay the lifecycle from a clean installation using the archive, its documentation and declared public inputs. Upstream maintainers decide whether to publish after merge.
 
-#### Scenario: Maintainer reproduces the release
+#### Scenario: Maintainer reproduces the release candidate
 
 - **WHEN** a clean installation completes funded fill, cancellation and owner recovery
 - **THEN** the replay records revision, package version and digest, commands, environment, setup time, receipts and outcome.
 - **AND** the index records outside-developer reproduction as deferred and the report recommendation as partial.
 
-#### Scenario: Released instructions fail
+#### Scenario: Packaged instructions fail
 
 - **WHEN** replay requires an undocumented dependency or cannot reach the claimed ledger outcome
 - **THEN** the failed record remains available and the reproducibility claim stays open.
@@ -225,7 +225,7 @@ A project result SHALL retain provenance, deterministic replay instructions, obs
 #### Scenario: Scoped project closure
 
 - **WHEN** the in-scope work passes and the maintainer replay succeeds
-- **THEN** the change can close with outside reproduction under III.6 and the entire IV.5 pilot explicitly deferred.
+- **THEN** the PR can close with upstream publication and outside reproduction under III.6 and the entire IV.5 pilot explicitly deferred.
 - **AND** external use, live liquidity, independent reproduction and parent acceptance keep their own evidence requirements.
 
 #### Scenario: External pilot becomes possible later

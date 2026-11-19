@@ -9,7 +9,7 @@ The report revision is `1ced5fe1e0a83d665184bb496bea01bcb9940449`. It assessed M
 - Reproduce the assessed language suite. Account for 21 failed tests. Add revision-bound factory checks with scoped coverage.
 - Connect generated kernels to authenticated order authority, current ledger state, funded settlement, recovery, continuations and named observations.
 - Check scoped financial invariants. Exercise O1, O5, O8 and O9 under their individual policies.
-- Measure complete O1 fill and cancellation. Exercise optional executor fallback. Release the supported lifecycle with a clean maintainer replay.
+- Measure complete O1 fill and cancellation. Exercise optional executor fallback. Prepare a versioned O1 release candidate for upstream review and verify a clean maintainer replay.
 - Record whether a concrete integration needs O10. Defer the outside-developer replay and external venue pilot.
 
 ## Capabilities

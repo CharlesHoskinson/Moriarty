@@ -20,6 +20,9 @@ test('install the pinned archive offline, run both native lifecycles, then exerc
     execFileSync('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund','--no-package-lock',archive],options);
     const cli = join(cwd,'node_modules/.bin/moriarty-orders');
     const pkg = join(cwd,'node_modules/@moriarty-lang/orders');
+    const installed = JSON.parse(readFileSync(join(pkg,'package.json')));
+    assert.equal(installed.name, release.package);
+    assert.equal(installed.version, release.version);
     const notices = JSON.parse(readFileSync(join(pkg,'notices/index.json')));
     for (const id of ['midnight-ledger-v9','midnight-ledger-wasm-v9','midnight-onchain-runtime-wasm','blst','@midnight-ntwrk/compact-runtime']) {
       assert.ok(notices.components.some(component=>component.name===id && component.texts.length),id);
