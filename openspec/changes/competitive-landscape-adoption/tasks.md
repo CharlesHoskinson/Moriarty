@@ -24,14 +24,14 @@ npm --prefix experiments/moriarty-language run build
 
 - [x] 1.1 Preserve the [original log](https://github.com/input-output-hk/SOTA-DeFiFormal-Moriarty/blob/1ced5fe1e0a83d665184bb496bea01bcb9940449/moriarty/competitors/moriarty/evidence/maturity-036b16efcce7496a/reproduction-2.log) at `deliverables/competitor-report/I.1/original.log`. Run the documented demos and suite from a complete clean checkout of the assessed SHA. Write `deliverables/competitor-report/I.1/baseline.json`. Pass when it binds the original digest, all 21 failing names, tool versions, dependency inputs, commands and actual exits.
 - [x] 1.2 Reproduce the failing public import in `experiments/moriarty-language/tests/authority-fee-binding.test.mjs`. Check with `node --test experiments/moriarty-language/tests/authority-fee-binding.test.mjs`. Repair the Source/6 import/export contract in `experiments/moriarty-language/src/successor/financial-agreement-source-v6.ts` and `experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts`. Pass when the public evaluator runs the original fee and net-goal assertions.
-- [ ] 1.3 Repair the documented setup in `experiments/moriarty-language/README.md`. Rerun the commands above on the clean delivery revision with the required fixtures and compiler/runtime dependencies. Write `deliverables/competitor-report/I.1/result.json`. Pass when both demos and the intended suite succeed. Link each earlier failure to a verified resolution or a justified scope exclusion. Keep unresolved failures blocking.
+- [x] 1.3 Repair the documented setup in `experiments/moriarty-language/README.md`. Rerun the commands above on the clean delivery revision with the required fixtures and compiler/runtime dependencies. Write `deliverables/competitor-report/I.1/result.json`. Pass when both demos and the intended suite succeed. Link each earlier failure to a verified resolution or a justified scope exclusion. Keep unresolved failures blocking.
 
 ## 2. I.2 Automate the baseline after I.1
 
 Accountable role — factory maintainer. Planned runner: `python3 scripts/qa/order-report.py I.2`. Test: `python3 -m unittest discover -s scripts/qa/tests -p test_order_report.py`.
 
-- [ ] 2.1 Write `scripts/qa/tests/test_order_report.py`. Freeze expectations for missing coverage, omitted suites, false success and a deliberate source, kernel or ledger regression. Pass when the harness detects the seeded defect and records the affected check.
-- [ ] 2.2 Implement `scripts/qa/order-report.py` with a case selector. Register I.2. Write `deliverables/competitor-report/I.2/result.json`. Pass when build, tests and both demos repeat on the named revision. Include scoped coverage for source, kernel and ledger files with metric, denominator and exclusions. Retain clean and deliberately failing runs. Add later behaviors to this coverage as their runners land.
+- [x] 2.1 Write `scripts/qa/tests/test_order_report.py`. Freeze expectations for missing coverage, omitted suites, false success and a deliberate source, kernel or ledger regression. Pass when the harness detects the seeded defect and records the affected check.
+- [x] 2.2 Implement `scripts/qa/order-report.py` with a case selector. Register I.2. Write `deliverables/competitor-report/I.2/result.json`. Pass when build, tests and both demos repeat on the named revision. Include scoped coverage for source, kernel and ledger files with metric, denominator and exclusions. Retain clean and deliberately failing runs. Add later behaviors to this coverage as their runners land.
 
 ## 3. II.1 Connect signed orders to native acceptance
 
@@ -76,8 +76,8 @@ Accountable role — oracle maintainer. Planned runner: `python3 scripts/qa/orde
 
 Accountable role — formal methods maintainer. Planned runner: `python3 scripts/qa/order-report.py II.6`. Test: `node --test packages/moriarty-orders/test/invariants.test.mjs`.
 
-- [ ] 8.1 Freeze statements and independent boundary cases in `packages/moriarty-orders/test/invariants.test.mjs` and `deliverables/competitor-report/II.6/obligations.md`. Bind each to the bounded-atomic profile, generated kernel and ledger premises. Pass when conservation, cumulative budget and owner authority have named domains, assumptions and failure cases.
-- [ ] 8.2 Supply checked results in `clean/fork/Clean/Sherlock/OrderInvariants.lean`. Extend `scripts/qa/order-report.py`. Register II.6. Write `deliverables/competitor-report/II.6/result.json`. Pass when an independent checker can rerun the named results and inspect their premises. Retain exact analysis commands separately from finite-test commands. List open compiler, custody and acceptance correspondence obligations.
+- [x] 8.1 Freeze statements and independent boundary cases in `packages/moriarty-orders/test/invariants.test.mjs` and `deliverables/competitor-report/II.6/obligations.md`. Bind each to the bounded-atomic profile, generated kernel and ledger premises. Pass when conservation, cumulative budget and owner authority have named domains, assumptions and failure cases.
+- [x] 8.2 Supply checked results in `clean/fork/Clean/Sherlock/OrderInvariants.lean`. Extend `scripts/qa/order-report.py`. Register II.6. Write `deliverables/competitor-report/II.6/result.json`. Pass when an independent checker can rerun the named results and inspect their premises. Retain exact analysis commands separately from finite-test commands. List open compiler, custody and acceptance correspondence obligations.
 
 ## 9. III.1 Measure complete operations after II.2 and II.3
 
