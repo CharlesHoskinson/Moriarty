@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Dry-run the pinned upstream assessment workflow on the retained public handoff."""
+import argparse
+import hashlib
+import json
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+BASE = ROOT / "deliverables/competitor-report/III.1"
+UPSTREAM = "1ced5fe1e0a83d665184bb496bea01bcb9940449"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("assessment_root", type=Path, help="directory containing the pinned upstream onboarding package")
+    args = parser.parse_args()
+    upstream = args.assessment_root.resolve()
+    expected = json.loads((BASE/"workflow-pins.json").read_bytes())
+    for name, sha in expected["sha256"].items():
+        if hashlib.sha256((upstream/name).read_bytes()).hexdigest() != sha:
+            raise ValueError("incorrect assessment workflow file " + name)
+    sys.path.insert(0, str(upstream))
+    from onboarding.execution_cost import validate_selection, validate_value, summarize
+    payload = json.loads((BASE/"assessment-input.json").read_bytes())
+    result = json.loads((BASE/"result.json").read_bytes())
+    with tempfile.TemporaryDirectory(prefix="order-assessment-") as tmp:
+        tree = Path(tmp)
+        shutil.copytree(BASE, tree/BASE.relative_to(ROOT))
+        for recipe in payload["recipes"]:
+            if "artifact" in recipe:
+                path = Path(recipe["artifact"]["path"])
+                (tree/path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT/path, tree/path)
+        profile = tree/payload["measurement_profile"]["path"]
+        profile.parent.mkdir(parents=True)
+        shutil.copyfile(BASE/"workloads.json", profile)
+        recipes = validate_selection(tree, payload)
+        checks = {}
+        for op in ("o1-fill", "cancel-unfilled"):
+            value = validate_value(tree, recipes[op],payload["values"][op])
+            sample = summarize(recipes[op],value)["chains"]["X"]["samples"][0]
+            for phase in ("setup","operation","recovery","total"):
+                actual = sample["total"] if phase=="total" else sample["phases"][phase]
+                recorded = result["totals"][op]
+                ours = recorded["total"] if phase=="total" else recorded["phases"][phase]
+                for metric in ("resources","fee_paid","transaction_count"):
+                    # The upstream summarizer omits resource keys for an empty phase.
+                    observed = actual[metric]
+                    if metric == "resources" and actual["transaction_count"] == 0 and observed == {}:
+                        observed = dict.fromkeys(ours[metric], 0)
+                    if observed != ours[metric]:
+                        raise ValueError(f"{op} {phase} {metric} differs from pinned workflow")
+            checks[op] = sample["total"]
+        record = {"upstreamRevision":UPSTREAM,"inputSha256":hashlib.sha256((BASE/"assessment-input.json").read_bytes()).hexdigest(),
+                  "command":["python3","scripts/qa/validate_order_cost_handoff.py","<pinned-assessment-root>"],
+                  "validated":checks,"assessment":"Workflow input and arithmetic checked. Independent semantic review pending."}
+        (BASE/"workflow-check.json").write_text(json.dumps(record,indent=2)+"\n")
+
+
+if __name__ == "__main__":
+    main()

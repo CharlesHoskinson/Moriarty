@@ -11,6 +11,8 @@ Use `scripts/sherlock-next` when the factory selects implementation work. Use th
 - Each test-first step freezes independent inputs and expected effects in its named test or fixture. Run the section's test command before changing behavior. Retain the failing assertion, or an existing pass for a delivered child. A missing file, tool or credential does not demonstrate a behavioral rejection.
 - A **receipt** is the exact JSON output named in the section. Record the test and runner commands, revision, environment and outcomes there. For native cases, include transaction identities, authority, expected and accepted state, fee effects and limitations. Redact private inputs. Retain enough public data to replay each check.
 
+For the native replay checks, install the pinned SDK with `npm ci --prefix tools/sherlock-sdk` and select Compact 0.36.0. Build the strict verifier with `cargo build --locked -p mori-recursion --features sherlock-ledger-validation --example validate_call` through the factory heavy runner. The checks default to `target/debug/examples/validate_call`. Set `MORIARTY_ORDER_VALIDATOR` for an alternate binary path, `COMPACTC` for the 0.36.0 compiler executable, and `MORIARTY_ORDER_MODULES` for an alternate SDK install. The checked-in transactions replay offline. Creating fresh proof-bearing transactions additionally uses the pinned 9.0.1 proof server. The historical I.1 and I.2 language baseline uses its own documented 0.31 toolchain.
+
 ## 1. I.1 Reproduce the assessed baseline
 
 Accountable role — language maintainer. Existing commands from the root:
@@ -60,10 +62,10 @@ Accountable role — custody maintainer. Planned runner: `python3 scripts/qa/ord
 
 Accountable role — continuation maintainer. Planned runner: `python3 scripts/qa/order-report.py II.4`. Test: `node --test packages/moriarty-orders/test/continuation.test.mjs`.
 
-- [ ] 6.1 Write `packages/moriarty-orders/test/continuation.test.mjs`. Freeze rejected replay, substituted custody, changed event and edited-cap cases. Include both resume/refund orders with process termination and restart. Pass when the expected ledger admits only one terminal action.
-- [ ] 6.2 Implement continuation identity in `packages/moriarty-orders/src/continuation.mjs`. Pass when any changed predecessor, event, custody or resource cap fails verification.
-- [ ] 6.3 Persist consumed state in `packages/moriarty-orders/contracts/continuation.compact`. Document storage trust in `packages/moriarty-orders/TRUST.md`. Pass when a restarted client reads the accepted consumption and cannot spend again.
-- [ ] 6.4 Bind resume and refund to that state in `packages/moriarty-orders/src/continuation.mjs`. Extend `scripts/qa/order-report.py`. Register II.4. Write `deliverables/competitor-report/II.4/result.json`. Pass when each funded race produces one accepted terminal outcome across restart.
+- [x] 6.1 Write `packages/moriarty-orders/test/continuation.test.mjs`. Freeze rejected replay, substituted custody, changed event and edited-cap cases. Include both resume/refund orders with process termination and restart. Pass when the expected ledger admits only one terminal action.
+- [x] 6.2 Implement continuation identity in `packages/moriarty-orders/src/continuation.mjs`. Pass when any changed predecessor, event, custody or resource cap fails verification.
+- [x] 6.3 Persist consumed state in `packages/moriarty-orders/contracts/continuation.compact`. Document storage trust in `packages/moriarty-orders/TRUST.md`. Pass when a restarted client reads the accepted consumption and cannot spend again.
+- [x] 6.4 Bind resume and refund to that state in `packages/moriarty-orders/src/continuation.mjs`. Extend `scripts/qa/order-report.py`. Register II.4. Write `deliverables/competitor-report/II.4/result.json`. Pass when each funded race produces one accepted terminal outcome across restart.
 
 ## 7. II.5 Authenticate named observations
 
@@ -83,23 +85,25 @@ Accountable role — formal methods maintainer. Planned runner: `python3 scripts
 
 Accountable role — measurement maintainer. Planned runner: `python3 scripts/qa/order-report.py III.1`. Test: `node --test packages/moriarty-orders/test/measurement.test.mjs`.
 
-- [ ] 9.1 Write `packages/moriarty-orders/test/measurement.test.mjs` and `deliverables/competitor-report/III.1/workloads.json`. Pin both profile workloads, transaction inventory, fee scenario, native resource fields and completion checks before measurement. Pass when omitted setup, recovery, fees, fields or finality invalidate a sample.
-- [ ] 9.2 Implement `scripts/qa/measure-order-lifecycle.mjs`. Extend `scripts/qa/order-report.py`. Register III.1 as heavy. Write `deliverables/competitor-report/III.1/result.json`. Pass when serial samples reconcile every required transaction for both operations and reproduce the phase sums. Retain raw receipts, setup, finality and exclusions. Emit the pinned assessment workflow input at `deliverables/competitor-report/III.1/assessment-input.json`. Retain both O10 observations as unavailable with reasons. Supply the frozen inputs and raw receipts for independent review.
+- [x] 9.1 Write `packages/moriarty-orders/test/measurement.test.mjs` and `deliverables/competitor-report/III.1/workloads.json`. Pin both profile workloads, transaction inventory, fee scenario, native resource fields and completion checks before measurement. Pass when omitted setup, recovery, fees, fields or finality invalidate a sample.
+- [x] 9.2 Implement `scripts/qa/measure-order-lifecycle.mjs`. Extend `scripts/qa/order-report.py`. Register III.1 as heavy. Write `deliverables/competitor-report/III.1/result.json`. Pass when serial samples reconcile every required transaction for both operations and reproduce the phase sums. Retain raw receipts, setup, finality and exclusions. Emit the pinned assessment workflow input at `deliverables/competitor-report/III.1/assessment-input.json`. Retain both O10 observations as unavailable with reasons. Supply the frozen inputs and raw receipts for independent review.
 
 ## 10. III.5 Exercise executor fallback after II.2 and II.3
 
 Accountable role — application maintainer. Planned runner: `python3 scripts/qa/order-report.py III.5`. Test: `node --test packages/moriarty-orders/test/executors.test.mjs`.
 
-- [ ] 10.1 Write `packages/moriarty-orders/test/executors.test.mjs`. Exercise two distinct client authorizations, an unauthorized client and stopped operators. Pass when the cases distinguish separate grants from two sessions sharing one credential.
-- [ ] 10.2 Implement `packages/moriarty-orders/src/executors.mjs`. Document selection, fees, exclusivity, censorship, open participation and fallback in `packages/moriarty-orders/EXECUTORS.md`. Extend `scripts/qa/order-report.py`. Register III.5. Write `deliverables/competitor-report/III.5/result.json`. Pass when funded fill, fallback, policy refusal and owner recovery match ledger readback. Exercise public language use without service enrollment.
+- [x] 10.1 Write `packages/moriarty-orders/test/executors.test.mjs`. Exercise two distinct client authorizations, an unauthorized client and stopped operators. Pass when the cases distinguish separate grants from two sessions sharing one credential.
+- [x] 10.2 Implement `packages/moriarty-orders/src/executors.mjs`. Document selection, fees, exclusivity, censorship, open participation and fallback in `packages/moriarty-orders/EXECUTORS.md`. Extend `scripts/qa/order-report.py`. Register III.5. Write `deliverables/competitor-report/III.5/result.json`. Pass when funded fill, fallback, policy refusal and owner recovery match ledger readback. Exercise public language use without service enrollment.
 
 ## 11. III.6 Release and replay after I.2, II.1, II.2 and II.3
 
 Accountable role — release maintainer. Planned runner: `python3 scripts/qa/order-report.py III.6`. Test: `node --test packages/moriarty-orders/test/distribution.test.mjs`.
 
-- [ ] 11.1 Write `packages/moriarty-orders/test/distribution.test.mjs`. Test fresh installation outside the checkout with only released inputs. Pass when an omitted dependency or missing lifecycle command fails the distribution check.
+- [x] 11.1 Write `packages/moriarty-orders/test/distribution.test.mjs`. Test fresh installation outside the checkout with only released inputs. Pass when an omitted dependency or missing lifecycle command fails the distribution check.
 - [ ] 11.2 Publish the versioned O1 lifecycle and replay package from `packages/moriarty-orders/package.json`. Deliver public commands in `packages/moriarty-orders/README.md`. Package public replay inputs and expected readbacks in `packages/moriarty-orders/replay/manifest.json`. Record the published locations and digests in `deliverables/competitor-report/III.6/release.json`. Pass when immutable release and package identities resolve to the recorded revision, bytes, operations, trust assumptions and gaps.
-- [ ] 11.3 Replay the released instructions as a maintainer on a clean setup. Extend `scripts/qa/order-report.py`. Register III.6. Write `deliverables/competitor-report/III.6/result.json`. Pass when the clean replay reproduces the released ledger effects. Retain revision, package identity, commands, environment, setup time, receipts and outcome. Preserve failed attempts. Mark outside reproduction deferred.
+- [x] 11.3 Replay the released instructions as a maintainer on a clean setup. Extend `scripts/qa/order-report.py`. Register III.6. Write `deliverables/competitor-report/III.6/result.json`. Pass when the clean replay reproduces the released ledger effects. Retain revision, package identity, commands, environment, setup time, receipts and outcome. Preserve failed attempts. Mark outside reproduction deferred.
+
+The owner requested a local release candidate and deferred external publication. The offline install and maintainer replay passed on Linux arm64. Step 11.2 stays open for publication. [Local release record](../../../deliverables/competitor-report/III.6/release.json)
 
 ## 12. IV.2 Fund O5 after II.2 and II.5
 
@@ -112,15 +116,15 @@ Accountable role — order-library maintainer. Planned runner: `python3 scripts/
 
 Accountable role — ledger maintainer. Planned runner: `python3 scripts/qa/order-report.py IV.3`. Test: `node --test packages/moriarty-orders/test/o8.test.mjs`.
 
-- [ ] 13.1 Write `packages/moriarty-orders/test/o8.test.mjs`. Freeze all three owner grants and the complete asset matrix. Pass when altered or missing authority and an unfunded third leg require zero order transfers.
-- [ ] 13.2 Deliver `packages/moriarty-orders/orders/o8.mori` and `packages/moriarty-orders/contracts/atomic-exchange.compact`. Extend `scripts/qa/order-report.py`. Register IV.3. Write `deliverables/competitor-report/IV.3/result.json`. Pass when all three separately authorized legs settle atomically and each failure preserves order balances. Record custody funding, separate fee funding, resource bounds and multiple-payer limitations. A backend refusal leaves delivery open.
+- [x] 13.1 Write `packages/moriarty-orders/test/o8.test.mjs`. Freeze all three owner grants and the complete asset matrix. Pass when altered or missing authority and an unfunded third leg require zero order transfers.
+- [x] 13.2 Deliver `packages/moriarty-orders/orders/o8.mori` and `packages/moriarty-orders/contracts/atomic-exchange.compact`. Extend `scripts/qa/order-report.py`. Register IV.3. Write `deliverables/competitor-report/IV.3/result.json`. Pass when all three separately authorized legs settle atomically and each failure preserves order balances. Record custody funding, separate fee funding, resource bounds and multiple-payer limitations. A backend refusal leaves delivery open.
 
 ## 14. IV.4 Fund O9 after II.3 and II.4
 
 Accountable role — custody maintainer. Planned runner: `python3 scripts/qa/order-report.py IV.4`. Test: `node --test packages/moriarty-orders/test/o9.test.mjs`.
 
-- [ ] 14.1 Write `packages/moriarty-orders/test/o9.test.mjs`. Freeze first-trade balances, second-stage conditions, both race outcomes and restart cases. Pass when neither terminal action can reverse the first trade.
-- [ ] 14.2 Deliver `packages/moriarty-orders/orders/o9.mori` and `packages/moriarty-orders/contracts/staged-exchange.compact`. Extend `scripts/qa/order-report.py`. Register IV.4. Write `deliverables/competitor-report/IV.4/result.json`. Pass when the native ledger records exactly one continuation or refund per trial. Retain a spend of the owner's recovered B.
+- [x] 14.1 Write `packages/moriarty-orders/test/o9.test.mjs`. Freeze first-trade balances, second-stage conditions, both race outcomes and restart cases. Pass when neither terminal action can reverse the first trade.
+- [x] 14.2 Deliver `packages/moriarty-orders/orders/o9.mori` and `packages/moriarty-orders/contracts/staged-exchange.compact`. Extend `scripts/qa/order-report.py`. Register IV.4. Write `deliverables/competitor-report/IV.4/result.json`. Pass when the native ledger records exactly one continuation or refund per trial. Retain a spend of the owner's recovered B.
 
 ## 15. IV.6 Decide O10 after II.2 and II.3
 
@@ -132,6 +136,6 @@ Accountable role — integration maintainer. Planned check: `python3 scripts/qa/
 
 Accountable role — evidence maintainer. Planned check: `python3 scripts/qa/order-report.py reconcile`.
 
-- [ ] 16.1 Reconcile the retained records in `deliverables/competitor-report/index.json`. Add the index check to `scripts/qa/order-report.py`. List the evidence supplied for independent assessment, including the O1, cost and O5 packages. Pass when all 16 report IDs resolve to their scoped outcomes, evidence identities, limitations and assessment status. Record actual independent findings or a pending review for each new assessed claim. Keep pending claims open. Record III.6 as partial and IV.5 as deferred. External reproduction and a partner pilot are outside the closure checks.
+- [x] 16.1 Reconcile the retained records in `deliverables/competitor-report/index.json`. Add the index check to `scripts/qa/order-report.py`. List the evidence supplied for independent assessment, including the O1, cost and O5 packages. Pass when all 16 report IDs resolve to their scoped outcomes, evidence identities, limitations and assessment status. Record actual independent findings or a pending review for each new assessed claim. Keep pending claims open. Record III.6 as partial and IV.5 as deferred. External reproduction and a partner pilot are outside the closure checks.
 
 IV.5 has no implementation or preparation step. Its original dependencies, funded success and failure cases, and downstream evidence obligations remain in the [design mapping](design.md#report-task-mapping).

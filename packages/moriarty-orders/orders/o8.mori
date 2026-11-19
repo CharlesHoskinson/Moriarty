@@ -1,0 +1,38 @@
+agreement ThreeOwnerExchange profile "moriarty-bounded-atomic/1" {
+  lifetime 1;
+  horizon 2000;
+  unit A;
+  unit B;
+  unit C;
+  const alice: Text = text("Alice");
+  const bob: Text = text("Bob");
+  const carol: Text = text("Carol");
+  state closed: UInt128 = uint(0);
+  observation now: UInt128;
+  settlement binding_a asset text("ASSET_A") quantum amount(1, A);
+  settlement binding_b asset text("ASSET_B") quantum amount(1, B);
+  settlement binding_c asset text("ASSET_C") quantum amount(1, C);
+  status episode closed_when closed == uint(1);
+  status agreement no_remaining_notional;
+  policy fixed_a targets effect(settle, 0, amount) {
+    unit A; derivation "exact signed leg"; rounding none; remainder "zero"; comparison "exact"; proof "native acceptance checks";
+  }
+  policy fixed_b targets effect(settle, 1, amount) {
+    unit B; derivation "exact signed leg"; rounding none; remainder "zero"; comparison "exact"; proof "native acceptance checks";
+  }
+  policy fixed_c targets effect(settle, 2, amount) {
+    unit C; derivation "exact signed leg"; rounding none; remainder "zero"; comparison "exact"; proof "native acceptance checks";
+  }
+  effect Transfer { asset: Text; from: Text; to: Text; amount: Amount; }
+  action settle(actor: Text, amount_a: Amount<A>, amount_b: Amount<B>, amount_c: Amount<C>) {
+    guard arg.actor == const.alice, "Alice initiates the agreed exchange";
+    guard state.closed == uint(0), "exchange consumed";
+    guard arg.amount_a == amount(100, A), "exact A leg";
+    guard arg.amount_b == amount(200, B), "exact B leg";
+    guard arg.amount_c == amount(300, C), "exact C leg";
+    set closed = uint(1);
+    emit Transfer { asset: text("ASSET_A"), from: const.alice, to: const.bob, amount: arg.amount_a };
+    emit Transfer { asset: text("ASSET_B"), from: const.bob, to: const.carol, amount: arg.amount_b };
+    emit Transfer { asset: text("ASSET_C"), from: const.carol, to: const.alice, amount: arg.amount_c };
+  }
+}

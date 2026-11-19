@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {buildO5} from '../src/build-o5.mjs';
+import {signProviderQuote,prepareO5Fill} from '../src/o5.mjs';
 import test from 'node:test';
 import {lowerCompact} from '../../../experiments/moriarty-language/src/lower-compact.ts';
 
@@ -47,4 +52,27 @@ test('refusals preserve the order and an earlier funded fill becomes invalid at 
       assert.equal(hash(readFileSync(new URL(ref.file,reportDir))),ref.sha256);
     }
   }
+});
+
+test('the provider signs the precise accepted deployment, amount and recipient terms',async()=>{
+  const output=mkdtempSync(join(tmpdir(),'moriarty-o5-quote-'));
+  try{
+    buildO5(output,{skipZk:true});
+    const generated=await import(pathToFileURL(join(output,'contract/index.js')));
+    const modules=resolve(process.env.MORIARTY_ORDER_MODULES||'tools/sherlock-sdk/node_modules');
+    const rt=await import(pathToFileURL(join(modules,'@midnight-ntwrk/compact-runtime/dist/index.js')));
+    const L=await import(pathToFileURL(join(modules,'@midnightntwrk/ledger-v9/midnight_ledger_wasm_v9_fs.js')));
+    const evidence=report(), address=evidence.authorities.address;
+    const raw=JSON.parse(readFileSync(new URL('receipts.json',reportDir))).find(row=>row.label==='fund-O5');
+    const state=L.LedgerState.deserialize(readFileSync(new URL(raw.afterState.file,reportDir)));
+    const fields=generated.ledger(rt.ContractState.deserialize(state.index(address).serialize()).data);
+    const grant={terms:fields.terms,contract:{bytes:rt.encodeContractAddress(address)},revision:0n,input:100n,delivery:200n};
+    const sig=signProviderQuote(rt,generated,grant,7654321n);
+    const verify=(terms,contract,delivery)=>rt.jubjubSchnorrVerify(new rt.CompactTypeVector(1,rt.CompactTypeField),
+      [generated.pureCircuits.quoteMessage(terms,contract,0n,100n,delivery)],fields.providerKey,sig);
+    assert.equal(verify(grant.terms,grant.contract,200n),true);
+    assert.equal(verify(grant.terms,grant.contract,201n),false);
+    assert.equal(verify({...grant.terms,recipient:grant.terms.account},grant.contract,200n),false);
+    assert.throws(()=>prepareO5Fill(undefined,{address:'other'},{address},{}),/Wrong order contract/);
+  }finally{rmSync(output,{recursive:true,force:true});}
 });

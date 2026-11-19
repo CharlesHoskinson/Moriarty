@@ -1,0 +1,716 @@
+{
+  "rubric_version": "execution_cost-2",
+  "measurement_profile": {
+    "version": "transaction-cost-profiles-1",
+    "path": "specifications/execution_cost/profiles-1.json",
+    "sha256": "c46d35d996e7bcce6fa63395dd4e7555258008c6cba76371f5552f292338202c"
+  },
+  "recipes": [
+    {
+      "order_id": "O1",
+      "workload": "Native exact-input order: Alice spends exactly 100 A; Bob receives at least 200 B before t=1400; fill at t=1000; zero protocol fees",
+      "boundary": "valid-unfilled-order-through-finalized-fill-and-asset-accounting",
+      "id": "o1-fill",
+      "operation_id": "o1-fill",
+      "metric": "transaction_cost",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "d72408f9850450a1122a644821f3cb7263fa9f93"
+      },
+      "context": {
+        "execution_mode": "native-local",
+        "chains": {
+          "X": {
+            "family": "midnight",
+            "network": "undeployed",
+            "vm": "Midnight ledger v9, ZKIRv3",
+            "client": "midnight-ledger 9.1.0 and SDK WASM ledger-v9 1.0.0",
+            "protocol_parameters": {
+              "path": "deliverables/competitor-report/III.1/native/o1-fill/parameters.bin",
+              "sha256": "dff63fd47c0adf57fff9fb9b978081d3226340af3ea51e6d3c448d35efb819f2"
+            },
+            "native_fee_asset": "DUST",
+            "native_fee_decimals": 15,
+            "finality_policy": {
+              "mode": "local-acceptance",
+              "descendant_blocks": 0,
+              "rule": "Strict native Rust proof, signature, balancing and limit verification, local apply outcome and accepted post-state hash."
+            },
+            "fee_policy": {
+              "mode": "observed",
+              "source": "Measure processed DUST spend events and reconcile each with the actual same-time wallet debit. Include excess payment.",
+              "scope": "all mandatory chain fees",
+              "required_other_fee_components": []
+            }
+          }
+        },
+        "protocol_fees": {
+          "amount": 0,
+          "reason": "Zero application fee in the pinned workload."
+        },
+        "exclusions": [
+          "host effort",
+          "proving effort",
+          "Host/prover effort",
+          "Public-network inclusion and finality",
+          "Adversarial controls retained separately",
+          "Off-chain owner grant and wallet enrollment consume no chain transaction"
+        ],
+        "state_policy": {
+          "fixture": "Fresh independent 100 A order",
+          "reset": "Each operation runs serially on a fresh local genesis and receives a new deployment and independently funded 100 A.",
+          "preexisting_shared_setup": "The synthetic base chain supplies NIGHT and registers the fee sponsor for DUST. Preserve these two bootstrap receipts outside the scored sequence. The native reward and registration produce DUST rather than paying it through spend events.",
+          "order_specific_setup": "deploy, mint and fund from the enrolled wallet"
+        }
+      },
+      "steps": [
+        {
+          "id": "deploy-faucet",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "mint-assets",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "deploy-order",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "fund-order",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "fill",
+          "phase": "operation",
+          "chain": "X"
+        }
+      ],
+      "unit": "transaction resources and native fees",
+      "artifact": {
+        "path": "scripts/qa/order_cost_report.py",
+        "sha256": "3f2b043f547483ae5f275e3f9887ed36a3a2e88d3d0e557f65bef81f63f84fd8"
+      },
+      "command": [
+        "python3",
+        "scripts/qa/order_cost_report.py",
+        "o1-fill"
+      ]
+    },
+    {
+      "order_id": "O1",
+      "workload": "Separate native cancellation workload: a valid unfilled owner-authorized order offers 100 A at price 2 B per A; cancel before expiry and return all locked A to owner; zero protocol fees",
+      "boundary": "valid-unfilled-native-order-through-finalized-revocation-and-owner-recovery",
+      "id": "cancel-unfilled",
+      "operation_id": "cancel-unfilled",
+      "metric": "transaction_cost",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "d72408f9850450a1122a644821f3cb7263fa9f93"
+      },
+      "context": {
+        "execution_mode": "native-local",
+        "chains": {
+          "X": {
+            "family": "midnight",
+            "network": "undeployed",
+            "vm": "Midnight ledger v9, ZKIRv3",
+            "client": "midnight-ledger 9.1.0 and SDK WASM ledger-v9 1.0.0",
+            "protocol_parameters": {
+              "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/parameters.bin",
+              "sha256": "dff63fd47c0adf57fff9fb9b978081d3226340af3ea51e6d3c448d35efb819f2"
+            },
+            "native_fee_asset": "DUST",
+            "native_fee_decimals": 15,
+            "finality_policy": {
+              "mode": "local-acceptance",
+              "descendant_blocks": 0,
+              "rule": "Strict native Rust proof, signature, balancing and limit verification, local apply outcome and accepted post-state hash."
+            },
+            "fee_policy": {
+              "mode": "observed",
+              "source": "Measure processed DUST spend events and reconcile each with the actual same-time wallet debit. Include excess payment.",
+              "scope": "all mandatory chain fees",
+              "required_other_fee_components": []
+            }
+          }
+        },
+        "protocol_fees": {
+          "amount": 0,
+          "reason": "Zero application fee in the pinned workload."
+        },
+        "exclusions": [
+          "host effort",
+          "proving effort",
+          "Host/prover effort",
+          "Public-network inclusion and finality",
+          "Adversarial controls retained separately",
+          "Off-chain owner grant and wallet enrollment consume no chain transaction"
+        ],
+        "state_policy": {
+          "fixture": "Fresh independent 100 A order",
+          "reset": "Each operation runs serially on a fresh local genesis and receives a new deployment and independently funded 100 A.",
+          "preexisting_shared_setup": "The synthetic base chain supplies NIGHT and registers the fee sponsor for DUST. Preserve these two bootstrap receipts outside the scored sequence. The native reward and registration produce DUST rather than paying it through spend events.",
+          "order_specific_setup": "deploy, mint and fund from the enrolled wallet"
+        }
+      },
+      "steps": [
+        {
+          "id": "deploy-faucet",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "mint-assets",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "deploy-order",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "fund-order",
+          "phase": "setup",
+          "chain": "X"
+        },
+        {
+          "id": "cancel",
+          "phase": "operation",
+          "chain": "X"
+        },
+        {
+          "id": "spend-refund",
+          "phase": "recovery",
+          "chain": "X"
+        }
+      ],
+      "unit": "transaction resources and native fees",
+      "artifact": {
+        "path": "scripts/qa/order_cost_report.py",
+        "sha256": "3f2b043f547483ae5f275e3f9887ed36a3a2e88d3d0e557f65bef81f63f84fd8"
+      },
+      "command": [
+        "python3",
+        "scripts/qa/order_cost_report.py",
+        "cancel-unfilled"
+      ]
+    },
+    {
+      "order_id": "O10",
+      "workload": "O10 settlement: Alice commits 100 A on X for 200 B to Bob on Y before t=1400; authenticate Y inclusion with 10 descendant blocks and release X escrow; zero protocol fees",
+      "boundary": "authorized-order-through-finalized-y-delivery-proof-and-x-settlement",
+      "id": "o10-settlement",
+      "operation_id": "o10-settlement",
+      "metric": "transaction_cost",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "No integration selected"
+      },
+      "context": {
+        "execution_mode": "native-local",
+        "chains": {},
+        "protocol_fees": {
+          "amount": 0,
+          "reason": "Zero application fee in the pinned workload."
+        },
+        "exclusions": [
+          "host effort",
+          "proving effort",
+          "Host/prover effort",
+          "Public-network inclusion and finality",
+          "Adversarial controls retained separately",
+          "Off-chain owner grant and wallet enrollment consume no chain transaction"
+        ],
+        "state_policy": {
+          "fixture": "Fresh independent 100 A order",
+          "reset": "Each operation runs serially on a fresh local genesis and receives a new deployment and independently funded 100 A.",
+          "preexisting_shared_setup": "The synthetic base chain supplies NIGHT and registers the fee sponsor for DUST. Preserve these two bootstrap receipts outside the scored sequence. The native reward and registration produce DUST rather than paying it through spend events.",
+          "order_specific_setup": "deploy, mint and fund from the enrolled wallet"
+        }
+      },
+      "steps": [],
+      "unit": "transaction resources and native fees"
+    },
+    {
+      "order_id": "O10",
+      "workload": "O10 recovery: Alice commits 100 A on X for 200 B to Bob on Y; no accepted completion; at t=1500 recover 100 A to Alice and permanently disable settlement; zero protocol fees",
+      "boundary": "authorized-order-through-pending-escrow-and-finalized-owner-recovery",
+      "id": "o10-recovery",
+      "operation_id": "o10-recovery",
+      "metric": "transaction_cost",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "No integration selected"
+      },
+      "context": {
+        "execution_mode": "native-local",
+        "chains": {},
+        "protocol_fees": {
+          "amount": 0,
+          "reason": "Zero application fee in the pinned workload."
+        },
+        "exclusions": [
+          "host effort",
+          "proving effort",
+          "Host/prover effort",
+          "Public-network inclusion and finality",
+          "Adversarial controls retained separately",
+          "Off-chain owner grant and wallet enrollment consume no chain transaction"
+        ],
+        "state_policy": {
+          "fixture": "Fresh independent 100 A order",
+          "reset": "Each operation runs serially on a fresh local genesis and receives a new deployment and independently funded 100 A.",
+          "preexisting_shared_setup": "The synthetic base chain supplies NIGHT and registers the fee sponsor for DUST. Preserve these two bootstrap receipts outside the scored sequence. The native reward and registration produce DUST rather than paying it through spend events.",
+          "order_specific_setup": "deploy, mint and fund from the enrolled wallet"
+        }
+      },
+      "steps": [],
+      "unit": "transaction resources and native fees"
+    }
+  ],
+  "values": {
+    "o1-fill": {
+      "recipe_id": "o1-fill",
+      "unit": "transaction resources and native fees",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "d72408f9850450a1122a644821f3cb7263fa9f93"
+      },
+      "boundary": "valid-unfilled-order-through-finalized-fill-and-asset-accounting",
+      "outcome": "completed",
+      "samples": [
+        {
+          "id": "sample-1",
+          "execution_id": "93be9673-aad7-4548-97de-bfb708bc753a",
+          "transactions": [
+            {
+              "step_id": "deploy-faucet",
+              "chain": "X",
+              "transaction_id": "f3f16b5e98403bc42d98d43805e423ff187dc0da987461d066f2b44057947d4f",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/02-transaction.bin",
+                "sha256": "f3f16b5e98403bc42d98d43805e423ff187dc0da987461d066f2b44057947d4f"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/deploy-faucet-receipt.json",
+                "sha256": "bf4ebe802e382dd3807803544abe854ba6ae57c57b7c42a0e1f71efa80b2da33"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/deploy-faucet-raw.json",
+                "sha256": "31506ce0ef8af785a343d118eb174057176a2d043805aeba46e75eba52f03ed6"
+              },
+              "resources": {
+                "readTime": 3655000000,
+                "computeTime": 5777661095,
+                "blockUsage": 5821,
+                "bytesWritten": 3783,
+                "bytesChurned": 15432
+              },
+              "fee_paid": 1201970000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "mint-assets",
+              "chain": "X",
+              "transaction_id": "4efb157bab83cfb9f2b07bdb7daae9515ca3712f1aca95a87e4522ff22d0a137",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/03-transaction.bin",
+                "sha256": "4efb157bab83cfb9f2b07bdb7daae9515ca3712f1aca95a87e4522ff22d0a137"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/mint-assets-receipt.json",
+                "sha256": "6ce08c5ca602359f9ad3005d3f81d5527f6f7279ef342ab3dfc9c3f10c470c43"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/mint-assets-raw.json",
+                "sha256": "4afc7bdf1004854cf0b9f070f4fdc6ebbcce84f35a6f4d0990441084c7deef83"
+              },
+              "resources": {
+                "readTime": 5185000000,
+                "computeTime": 10811428413,
+                "blockUsage": 10484,
+                "bytesWritten": 786,
+                "bytesChurned": 24407
+              },
+              "fee_paid": 925470000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "deploy-order",
+              "chain": "X",
+              "transaction_id": "c1d23ba754cec91ff43659531c7daa265cc5a428d37c84a5ba030f08df8cb3aa",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/04-transaction.bin",
+                "sha256": "c1d23ba754cec91ff43659531c7daa265cc5a428d37c84a5ba030f08df8cb3aa"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/deploy-order-receipt.json",
+                "sha256": "54128d482eb2c0cc76d33c4a46f3dc84ca314d295db8d35c442f0bdaf9023ad6"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/deploy-order-raw.json",
+                "sha256": "ec32dcb7c902beb9bfe348d5a653f745f71e28c7f43153fc087c0216d85a6e42"
+              },
+              "resources": {
+                "readTime": 3655000000,
+                "computeTime": 5777661095,
+                "blockUsage": 9194,
+                "bytesWritten": 8126,
+                "bytesChurned": 15432
+              },
+              "fee_paid": 2239220000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "fund-order",
+              "chain": "X",
+              "transaction_id": "6e15e516e78f0feb653f1edce4f4c59532efcf9ebf3fd4c497ceff549815b360",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/05-transaction.bin",
+                "sha256": "6e15e516e78f0feb653f1edce4f4c59532efcf9ebf3fd4c497ceff549815b360"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/fund-order-receipt.json",
+                "sha256": "ec9ee269477e92629a157eb0a0441be1f0dc64faade6c8194986ab3dc8c332a3"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/fund-order-raw.json",
+                "sha256": "4681bbbbca69b665976ecc19193211b04569391be80749c97ed5b392349c52c9"
+              },
+              "resources": {
+                "readTime": 6783000000,
+                "computeTime": 12375306362,
+                "blockUsage": 8477,
+                "bytesWritten": 261,
+                "bytesChurned": 21240
+              },
+              "fee_paid": 732000000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "fill",
+              "chain": "X",
+              "transaction_id": "f67cfb8daae3518cadf99a7ebb116d4beaf789081449e23a13aa2a859ff70a5d",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/06-transaction.bin",
+                "sha256": "f67cfb8daae3518cadf99a7ebb116d4beaf789081449e23a13aa2a859ff70a5d"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/fill-receipt.json",
+                "sha256": "3c34ecee1845641a6c177e9752e29870bc5158e47793799b567b84b315fa57ad"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/fill-raw.json",
+                "sha256": "8fd744c54536a467ae33a888ddb9cfa87acf4e269722af01f5ebe11ac43963bf"
+              },
+              "resources": {
+                "readTime": 10353000000,
+                "computeTime": 16859682199,
+                "blockUsage": 10605,
+                "bytesWritten": 701,
+                "bytesChurned": 33531
+              },
+              "fee_paid": 1030110000000001,
+              "other_fee_components": []
+            }
+          ],
+          "checks": {
+            "artifact": {
+              "path": "deliverables/competitor-report/III.1/native/o1-fill/assessment/checks.json",
+              "sha256": "2dc45a1c48e5661681be98abf07eedfdd0e5642cab731760426a9bccd236d5b4"
+            },
+            "results": [
+              {
+                "id": "valid_fillable_initial_order",
+                "passed": true
+              },
+              {
+                "id": "owner_authority",
+                "passed": true
+              },
+              {
+                "id": "reject_wrong_input",
+                "passed": true
+              },
+              {
+                "id": "reject_underpayment",
+                "passed": true
+              },
+              {
+                "id": "reject_forged_owner",
+                "passed": true
+              },
+              {
+                "id": "reject_expired_fill",
+                "passed": true
+              },
+              {
+                "id": "reject_replay",
+                "passed": true
+              },
+              {
+                "id": "zero_protocol_fees",
+                "passed": true
+              },
+              {
+                "id": "expected_completion",
+                "passed": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "cancel-unfilled": {
+      "recipe_id": "cancel-unfilled",
+      "unit": "transaction resources and native fees",
+      "environment": {
+        "chain": "Midnight",
+        "network": "undeployed",
+        "hardware": "aarch64",
+        "revision": "d72408f9850450a1122a644821f3cb7263fa9f93"
+      },
+      "boundary": "valid-unfilled-native-order-through-finalized-revocation-and-owner-recovery",
+      "outcome": "completed",
+      "samples": [
+        {
+          "id": "sample-1",
+          "execution_id": "7c4f7433-ee38-4fd5-b838-5b5ca4a3ca56",
+          "transactions": [
+            {
+              "step_id": "deploy-faucet",
+              "chain": "X",
+              "transaction_id": "795d63b077293693d99f1502384ebb8b5e32416cf7ebb49048cdf12b66279e23",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/02-transaction.bin",
+                "sha256": "795d63b077293693d99f1502384ebb8b5e32416cf7ebb49048cdf12b66279e23"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/deploy-faucet-receipt.json",
+                "sha256": "29d6418bab884a2306c075aa227d2bb12792282a9e7826fb08163fabf7248120"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/deploy-faucet-raw.json",
+                "sha256": "fccd2bf7ad6e668aa38fd7191e552aaba086a3671ff888b7eb0b1197835e0452"
+              },
+              "resources": {
+                "readTime": 3655000000,
+                "computeTime": 5777661095,
+                "blockUsage": 5821,
+                "bytesWritten": 3783,
+                "bytesChurned": 15432
+              },
+              "fee_paid": 1201970000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "mint-assets",
+              "chain": "X",
+              "transaction_id": "a2ce573211a531e4f6f57c49650765fd51b0ee660e7b68b5adc7689e02f129b7",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/03-transaction.bin",
+                "sha256": "a2ce573211a531e4f6f57c49650765fd51b0ee660e7b68b5adc7689e02f129b7"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/mint-assets-receipt.json",
+                "sha256": "98ed081f87c2ae489d06a645948c09e4bd1b19cd566d37331ede05898836d60d"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/mint-assets-raw.json",
+                "sha256": "b9ea0e61d4866f20513ed04ba47c9154e00f207f0582b7bb3a7203ccd597e141"
+              },
+              "resources": {
+                "readTime": 5185000000,
+                "computeTime": 10811428413,
+                "blockUsage": 10484,
+                "bytesWritten": 786,
+                "bytesChurned": 24407
+              },
+              "fee_paid": 925470000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "deploy-order",
+              "chain": "X",
+              "transaction_id": "d6ae85925df9c6ed6946baa717638ca04582e5de2fe96c598cb2a11cb34e02bc",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/04-transaction.bin",
+                "sha256": "d6ae85925df9c6ed6946baa717638ca04582e5de2fe96c598cb2a11cb34e02bc"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/deploy-order-receipt.json",
+                "sha256": "ccad37753e6e8925841d338705bc8bcb64903394afc05584b42eb93cb0eb3b9f"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/deploy-order-raw.json",
+                "sha256": "b1510b482901d59f759ff69a14a38b0a55353c7650bed69335b1ad8fde13f435"
+              },
+              "resources": {
+                "readTime": 3655000000,
+                "computeTime": 5777661095,
+                "blockUsage": 9194,
+                "bytesWritten": 8126,
+                "bytesChurned": 15432
+              },
+              "fee_paid": 2239220000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "fund-order",
+              "chain": "X",
+              "transaction_id": "97a5d2fd857cfff46fb0652d0dc6e1d5d5e6399f597d6b5f898129f83f78bf5f",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/05-transaction.bin",
+                "sha256": "97a5d2fd857cfff46fb0652d0dc6e1d5d5e6399f597d6b5f898129f83f78bf5f"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/fund-order-receipt.json",
+                "sha256": "836169171f1ec576ec206f979fb04cc936bb79d6c776f8c9a09878fa79492197"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/fund-order-raw.json",
+                "sha256": "9852887057f079c0a7b5ad86574763cc88a0eee50c940c80c29c9b2a75eec4c0"
+              },
+              "resources": {
+                "readTime": 6783000000,
+                "computeTime": 12375306362,
+                "blockUsage": 8477,
+                "bytesWritten": 261,
+                "bytesChurned": 21240
+              },
+              "fee_paid": 732000000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "cancel",
+              "chain": "X",
+              "transaction_id": "4c251adfe49adf6ae03c9d86df518bcd29387a44beb5320646ffceefe17dabb3",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/06-transaction.bin",
+                "sha256": "4c251adfe49adf6ae03c9d86df518bcd29387a44beb5320646ffceefe17dabb3"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/cancel-receipt.json",
+                "sha256": "3a1e1d46b61c3416b631bd77e4957916c9371b6365e90bed11488da3fb11dfb4"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/cancel-raw.json",
+                "sha256": "240a906c8cab9a963cdec470a83233f472c28b92259debe562f37a022f52e093"
+              },
+              "resources": {
+                "readTime": 7633000000,
+                "computeTime": 13452477958,
+                "blockUsage": 9453,
+                "bytesWritten": 521,
+                "bytesChurned": 21095
+              },
+              "fee_paid": 812150000000001,
+              "other_fee_components": []
+            },
+            {
+              "step_id": "spend-refund",
+              "chain": "X",
+              "transaction_id": "55cd47f4ff1ae02f2e658c57aedaca74a19689c2a9dc47ee09093aad256c99a5",
+              "success": true,
+              "transaction": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/07-transaction.bin",
+                "sha256": "55cd47f4ff1ae02f2e658c57aedaca74a19689c2a9dc47ee09093aad256c99a5"
+              },
+              "receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/spend-refund-receipt.json",
+                "sha256": "3582225c41344c1a758cb528001ba11fa9744bb39f59820ca2b717404cc0e558"
+              },
+              "raw_receipt": {
+                "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/spend-refund-raw.json",
+                "sha256": "c7aa90f1ca6d7e2cb60cbcf953685e05da800a83d89c7ecda2fc710f69ec3ae2"
+              },
+              "resources": {
+                "readTime": 3655000000,
+                "computeTime": 5792519381,
+                "blockUsage": 3673,
+                "bytesWritten": 500,
+                "bytesChurned": 23772
+              },
+              "fee_paid": 521370000000001,
+              "other_fee_components": []
+            }
+          ],
+          "checks": {
+            "artifact": {
+              "path": "deliverables/competitor-report/III.1/native/cancel-unfilled/assessment/checks.json",
+              "sha256": "5737b634e766196ef0d622fdf798c6e9e4a925ae55be86726f5fa6ba6346dff7"
+            },
+            "results": [
+              {
+                "id": "valid_fillable_initial_order",
+                "passed": true
+              },
+              {
+                "id": "owner_authority",
+                "passed": true
+              },
+              {
+                "id": "reject_unauthorized_cancel",
+                "passed": true
+              },
+              {
+                "id": "owner_asset_recovery",
+                "passed": true
+              },
+              {
+                "id": "cancel_wins_race",
+                "passed": true
+              },
+              {
+                "id": "reject_fill_after_cancel",
+                "passed": true
+              },
+              {
+                "id": "zero_protocol_fees",
+                "passed": true
+              },
+              {
+                "id": "expected_completion",
+                "passed": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "o10-settlement": {
+      "outcome": "unavailable",
+      "reason": "No implemented source verifier for finalized destination delivery."
+    },
+    "o10-recovery": {
+      "outcome": "unavailable",
+      "reason": "No qualified two-chain custody and mutually exclusive recovery."
+    }
+  }
+}

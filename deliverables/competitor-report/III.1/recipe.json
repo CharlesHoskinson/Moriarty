@@ -1,0 +1,15 @@
+{
+  "profile": {"origin":"https://github.com/input-output-hk/SOTA-DeFiFormal-Moriarty/blob/1ced5fe1e0a83d665184bb496bea01bcb9940449/specifications/execution_cost/profiles-1.json","file":"workloads.json","sha256":"c46d35d996e7bcce6fa63395dd4e7555258008c6cba76371f5552f292338202c"},
+  "resourceUnits":{"readTime":"protocol-model picoseconds","computeTime":"protocol-model picoseconds","blockUsage":"bytes","bytesWritten":"bytes","bytesChurned":"bytes"},
+  "environment":{"network":"undeployed","ledger":"9.1.0-1","compiler":"0.36.0","prover":"9.0.1","mode":"native-local"},
+  "feePolicy":{"asset":"DUST","unit":"SPECK","decimals":15,"applicationFee":0,"payer":"local DUST sponsor","rule":"Measure processed DUST spend events and reconcile each with the actual same-time wallet debit. Include excess payment."},
+  "finality":{"mode":"local-acceptance","descendantBlocks":0,"rule":"Strict native Rust proof, signature, balancing and limit verification, local apply outcome and accepted post-state hash."},
+  "reset":"Each operation runs serially on a fresh local genesis and receives a new deployment and independently funded 100 A.",
+  "preexisting":"The synthetic base chain supplies NIGHT and registers the fee sponsor for DUST. Preserve these two bootstrap receipts outside the scored sequence. The native reward and registration produce DUST rather than paying it through spend events.",
+  "exclusions":["Host/prover effort","Public-network inclusion and finality","Adversarial controls retained separately","Off-chain owner grant and wallet enrollment consume no chain transaction"],
+  "operations":{
+    "o1-fill":{"setup":["deploy-faucet","mint-assets","deploy-order","fund-order"],"operation":["fill"],"recovery":[],"emptyRecovery":"Delivery closes the order and consumes the full 100 A."},
+    "cancel-unfilled":{"setup":["deploy-faucet","mint-assets","deploy-order","fund-order"],"operation":["cancel"],"recovery":["spend-refund"]}
+  },
+  "unavailable":{"o10-settlement":"No implemented source verifier for finalized destination delivery.","o10-recovery":"No qualified two-chain custody and mutually exclusive recovery."}
+}

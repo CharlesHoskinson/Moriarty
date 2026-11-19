@@ -1,0 +1,80 @@
+pragma language_version >= 0.28 && <= 0.28;
+import CompactStandardLibrary;
+include "kernel";
+
+export struct ExchangePlan {
+  network: Bytes<32>;
+  id: Bytes<32>;
+  program: Bytes<32>;
+  wallets: Vector<3, UserAddress>;
+  colors: Vector<3, Bytes<32>>;
+  amounts: Vector<3, Uint<128>>;
+  epoch: Uint<64>;
+}
+
+struct LegGrant {
+  domain: Bytes<32>;
+  instance: ContractAddress;
+  completePlan: ExchangePlan;
+  leg: Uint<2>;
+  revision: Uint<128>;
+}
+
+export ledger exchange: ExchangePlan;
+export ledger signingKeys: Vector<3, JubjubPoint>;
+export ledger kernelState: KernelState;
+export ledger revision: Uint<128>;
+export ledger remaining: Uint<128>;
+
+constructor(plan: ExchangePlan, owners: Vector<3, JubjubPoint>) {
+  const sourceDigest: Bytes<32> = Bytes[56,136,130,183,244,73,25,15,229,69,40,149,91,57,52,248,13,106,142,232,133,250,255,128,14,71,90,223,124,97,206,7];
+  assert(plan.program == sourceDigest, "O8_PROGRAM");
+  assert(plan.epoch <= 18446744073709549615, "O8_CLOCK");
+  assert(plan.amounts[0] == 100 && plan.amounts[1] == 200 && plan.amounts[2] == 300, "O8_AMOUNTS");
+  for (const i of 0..3) {
+    const next = i == 2 ? 0 : i + 1;
+    assert(plan.wallets[i] != plan.wallets[next], "O8_WALLETS");
+    assert(plan.colors[i] != plan.colors[next], "O8_ASSETS");
+    assert(owners[i] != owners[next] && owners[i] != ecMulGenerator(0 as JubjubScalar), "O8_KEYS");
+  }
+  exchange = disclose(plan);
+  signingKeys = disclose(owners);
+  kernelState = KernelState { f0:0 };
+  remaining = 1;
+  revision = 0;
+}
+
+export pure circuit legMessage(completePlan: ExchangePlan, instance: ContractAddress, leg: Uint<2>, nonce: Uint<128>): Field {
+  return transientHash<LegGrant>(LegGrant {
+    domain: pad(32,"moriarty:o8:leg:v1"), instance: instance, completePlan: completePlan, leg: leg, revision: nonce
+  });
+}
+
+export circuit settle(plan: ExchangePlan, nonce: Uint<128>, now: Uint<64>, signatures: Vector<3, JubjubSchnorrSignature>): [] {
+  assert(plan == exchange, "O8_PLAN");
+  assert(nonce == revision, "O8_CONSUMED");
+  assert(remaining == 1, "O8_CONSUMED");
+  const approved = disclose(plan);
+  for (const i of 0..3) {
+    const message = legMessage(approved,kernel.self(),i as Uint<2>,nonce);
+    assert(jubjubSchnorrVerify<1>([message],signatures[i],signingKeys[i]), "O8_SIGNATURE");
+  }
+  assert(now < 2000, "O8_CLOCK");
+  assert(blockTimeGte((approved.epoch+disclose(now)) as Uint<64>), "O8_CLOCK");
+  assert(blockTimeLt((approved.epoch+2000) as Uint<64>), "O8_EXPIRED");
+  const result = disclose(transition0(kernelState,
+    Arguments0 { a0:3, a1:approved.amounts[0], a2:approved.amounts[1], a3:approved.amounts[2] },
+    KernelObservations { o0:now as Uint<128> },remaining,revision,Hints0 { unused:0 }));
+  assert(result.effect0.v0 == 0 && result.effect0.v1 == 3 && result.effect0.v2 == 4, "O8_ROUTE_A");
+  assert(result.effect1.v0 == 1 && result.effect1.v1 == 4 && result.effect1.v2 == 5, "O8_ROUTE_B");
+  assert(result.effect2.v0 == 2 && result.effect2.v1 == 5 && result.effect2.v2 == 3, "O8_ROUTE_C");
+  receiveUnshielded(approved.colors[0],result.effect0.v3);
+  receiveUnshielded(approved.colors[1],result.effect1.v3);
+  receiveUnshielded(approved.colors[2],result.effect2.v3);
+  sendUnshielded(approved.colors[0],result.effect0.v3,right<ContractAddress,UserAddress>(approved.wallets[1]));
+  sendUnshielded(approved.colors[1],result.effect1.v3,right<ContractAddress,UserAddress>(approved.wallets[2]));
+  sendUnshielded(approved.colors[2],result.effect2.v3,right<ContractAddress,UserAddress>(approved.wallets[0]));
+  kernelState = result.after;
+  revision = result.revision;
+  remaining = result.remaining;
+}

@@ -153,6 +153,18 @@ def baseline(scratch, result):
                           "files":coverage(cov.read_text(), set(SCOPES.values())),
                           "exclusions":"Other source files, generated Compact/ZKIR and native ledger execution. The ledger suite exercises block-anchored RPC reads with a fixture transport."}
     result["controlledRegression"] = probe_mutation(scratch)
+    # The baseline remains runnable on its own; each installed native predicate
+    # supplies coverage from its executable cases at the exact receipt identity.
+    evidence = {}
+    for case, (_, _, checker, _, _) in NATIVE.items():
+        filename = "factory-check.json" if checker in ("check-feed","check-o8") else "result.json"
+        path = ROOT / REPORT / case / filename
+        if path.is_file():
+            record = json.loads(path.read_bytes())
+            if record.get("passed") is True:
+                evidence[case] = {"receipt":str(path.relative_to(ROOT)), "sha256":sha(path.read_bytes()),
+                                  "tests":record["tests"], "scopedCoverage":record.get("coverage")}
+    result["orderBehaviorCoverage"] = evidence
 
 
 def check_invariants():
@@ -185,7 +197,11 @@ NATIVE = {
     "II.2": ("U036", "o1", "check-acceptance", [], "native/o1-accounting.mjs"),
     "II.3": ("F30", "recovery", "check-recovery", [], "src/recovery.mjs"),
     "II.5": ("F28", "feed", "check-feed", ["II.5"], "src/feed.mjs"),
-    "IV.2": ("U038", "o5", "check-feed", ["IV.2"], None),
+    "II.4": ("F32", "continuation", "check-staged", ["II.4"], "src/continuation.mjs"),
+    "III.5": ("U040", "executors", "check-executors", [], "src/executors.mjs"),
+    "IV.3": ("U037", "o8", "check-o8", [], "src/atomic-exchange.mjs"),
+    "IV.4": ("U039", "o9", "check-staged", ["IV.4"], None),
+    "IV.2": ("U038", "o5", "check-feed", ["IV.2"], "src/o5.mjs"),
 }
 
 
@@ -203,7 +219,7 @@ def native_case(case):
     check = ORDERS / "native" / (checker + ".mjs")
     evidence = ROOT / REPORT / case
     # Feed generation retains its own primary result; replay adds a second record.
-    dest = evidence / ("factory-check.json" if checker == "check-feed" else "result.json")
+    dest = evidence / ("factory-check.json" if checker in ("check-feed", "check-o8") else "result.json")
     result = {"requirement": case, "predicate": predicate, "passed": False, "checks": {},
               "runner": ["python3", "scripts/qa/order-report.py", case], "assessment": "independent review pending",
               "target": "local undeployed Midnight ledger, full Rust validation and ZKIRv3",
@@ -241,6 +257,26 @@ def native_case(case):
     return 0 if result["passed"] else 1
 
 
+def distribution():
+    suite = ORDERS / "test/distribution.test.mjs"
+    base = ROOT / REPORT / "III.6"
+    cmd = ["node","--test","--test-reporter=junit",str(suite)]
+    checks = {}
+    names = test_inventory(execute("cleanInstall",cmd,checks), {ROOT / suite})
+    release = json.loads((base/"release.json").read_bytes())
+    install = json.loads((base/"clean-install.json").read_bytes())
+    archive = base / release["file"]
+    if (release["publication"] != "pending" or release["publicLocation"] is not None
+            or install["sha256"] != sha(archive.read_bytes()) or install["sha256"] != release["sha256"]):
+        raise ValueError("local release identity or publication status changed")
+    write_record(base/"result.json", {"requirement":"III.6","predicate":"F33","localReplayPassed":True,
+                 "status":"partial","checks":checks,"tests":sorted(names),"package":release["package"],
+                 "version":release["version"],"archiveSha256":release["sha256"],"platform":release["platform"],
+                 "installReceipt":"clean-install.json","releaseRecord":"release.json",
+                 "publication":"pending by owner direction","outsideReproduction":"deferred"})
+    return 0
+
+
 def decision():
     directory = ROOT / REPORT / "IV.6"
     path = directory / "decision.md"
@@ -263,8 +299,19 @@ def decision():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case", choices=["I.2", "II.6", "IV.6", *NATIVE])
+    parser.add_argument("case", choices=["I.2", "II.6", "III.1", "III.6", "IV.6", "reconcile", *NATIVE])
     args = parser.parse_args()
+    if args.case == "III.6":
+        return distribution()
+    if args.case == "reconcile":
+        from order_evidence import reconcile
+        return reconcile()
+    if args.case == "III.1":
+        from order_cost_report import check_costs
+        suite = ORDERS / "test/measurement.test.mjs"
+        test_inventory(execute("measurements", ["node","--test","--test-reporter=junit",str(suite)], {}), {ROOT / suite})
+        check_costs()
+        return 0
     if args.case in NATIVE:
         return native_case(args.case)
     if args.case == "IV.6":

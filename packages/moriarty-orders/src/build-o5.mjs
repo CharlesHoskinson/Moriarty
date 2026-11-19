@@ -25,7 +25,7 @@ export function buildO5(output, {skipZk = false} = {}) {
   const compilerVersion = execFileSync(compiler,[...selector,'--version'],{encoding:'utf8'}).trim();
   if (!compilerVersion.startsWith('0.36.0')) throw Error('O5 requires Compact 0.36.0');
   execFileSync(compiler,[...selector,...(skipZk?['--skip-zk']:[]),join(stage,'o5.compact'),output],{stdio:'inherit'});
-  const modules = resolve(process.env.MORIARTY_ORDER_MODULES || join(pkg,'node_modules'));
+  const modules = resolve(process.env.MORIARTY_ORDER_MODULES || join(pkg,'../../tools/sherlock-sdk/node_modules'));
   if (!existsSync(join(output,'node_modules'))) symlinkSync(modules,join(output,'node_modules'),'dir');
   const verifiers = {};
   const kernels = {};

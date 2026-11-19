@@ -34,7 +34,7 @@ export function buildAcceptance(output,{skipZk=false,policy='o1'}={}) {
     custodySha256:sha(readFileSync(wrapper)), upstreamArithmeticSha256:sha(arithmetic), arithmeticSha256:sha(readFileSync(join(stage,'arithmetic.compact')))};
   if (config.includes) pins.includes = Object.fromEntries(config.includes.map(name => [name,sha(readFileSync(join(stage,name+'.compact')))]));
   const command = process.env.COMPACTC || 'compact';
-  const selector = process.env.COMPACTC ? [] : ['compile', skipZk && policy === 'o1' ? '+0.31.0' : '+0.36.0'];
+  const selector = process.env.COMPACTC ? [] : ['compile', '+0.36.0'];
   pins.compilerVersion = execFileSync(command,[...selector,'--version'],{encoding:'utf8'}).trim();
   const legacy = pins.compilerVersion.startsWith('0.31.0');
   if (legacy && (!skipZk || policy !== 'o1')) throw Error('Native order builds require Compact 0.36.0');

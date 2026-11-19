@@ -1392,3 +1392,70 @@ predicates:
     holdout: false
     deps:
       paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/IV.2/receipts.json"]
+  - id: F31
+    set: F
+    title: "Measure two complete order lifecycles including setup, native fees and strict replay"
+    tier: T2
+    check: "python3 scripts/qa/order-report.py III.1"
+    heavy: true
+    budget: order-cost-replay
+    depends: ["U036", "F30"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#9-iii1-measure-complete-operations-after-ii2-and-ii3"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "scripts/qa/order_cost_report.py", "scripts/qa/measure-order-lifecycle.mjs", "packages/moriarty-orders/test/measurement.test.mjs", "packages/moriarty-orders/test/native-measurement.mjs", "packages/moriarty-orders/native/replay.mjs", "deliverables/competitor-report/III.1/workloads.json", "deliverables/competitor-report/III.1/recipe.json", "deliverables/competitor-report/III.1/native"]
+  - id: F32
+    set: F
+    title: "Verify durable continuations and exclusive resume or owner refund after client restart"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py II.4"
+    heavy: false
+    depends: ["F27"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#6-ii4-serialize-continuations-after-ii1"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/IV.4/native"]
+  - id: U040
+    set: U
+    title: "Check separate executor authorizations, funded fallback and owner recovery"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py III.5"
+    heavy: false
+    depends: ["U036", "F30"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#10-iii5-exercise-executor-fallback-after-ii2-and-ii3"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/III.5/native"]
+  - id: U039
+    set: U
+    title: "Settle the staged exchange and spend its residual B after a terminal refund"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py IV.4"
+    heavy: false
+    depends: ["F30", "F32"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#14-iv4-fund-o9-after-ii3-and-ii4"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "experiments/moriarty-language/src", "deliverables/competitor-report/IV.4/native"]
+  - id: F33
+    set: F
+    title: "Install the versioned O1 archive offline and replay fill and spendable owner refund"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py III.6"
+    heavy: false
+    depends: ["F26", "F27", "U036", "F30"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#11-iii6-release-and-replay-after-i2-ii1-ii2-and-ii3"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders/test/distribution.test.mjs", "packages/moriarty-orders/replay", "packages/moriarty-orders/package.json", "deliverables/competitor-report/III.6/release.json", "deliverables/competitor-report/III.6/moriarty-lang-orders-0.1.0-beta.1.tgz"]
+  - id: U037
+    set: U
+    title: "Settle three separately authorized and funded transfers in one native exchange"
+    tier: T1
+    check: "python3 scripts/qa/order-report.py IV.3"
+    heavy: false
+    depends: ["F27", "U036"]
+    source: "openspec/changes/competitive-landscape-adoption/tasks.md#13-iv3-fund-o8-after-ii1-and-ii2"
+    holdout: false
+    deps:
+      paths: ["scripts/qa/order-report.py", "packages/moriarty-orders", "crates/mori-recursion/examples/validate_call.rs", "tools/sherlock-sdk/package-lock.json", "deliverables/competitor-report/IV.3/receipts.json"]

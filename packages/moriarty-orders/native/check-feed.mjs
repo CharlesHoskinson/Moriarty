@@ -15,7 +15,7 @@ const id=process.argv[2];
 assert.ok(['II.5','IV.2'].includes(id),'usage: check-feed.mjs II.5|IV.2 [EVIDENCE_DIRECTORY]');
 const dir=resolve(process.argv[3]||join(root,'deliverables/competitor-report',id));
 const validator=process.env.MORIARTY_ORDER_VALIDATOR||join(root,'target/debug/examples/validate_call');
-const modules=resolve(process.env.MORIARTY_ORDER_MODULES||join(pkg,'node_modules'));
+const modules=resolve(process.env.MORIARTY_ORDER_MODULES||join(pkg,'../../tools/sherlock-sdk/node_modules'));
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const hex=bytes=>Buffer.from(bytes).toString('hex');
 const read=name=>readFileSync(join(dir,name));

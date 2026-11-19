@@ -333,9 +333,9 @@ export class NativeLedger {
     return tx;
   }
   async fundAndProve(tx, contract, payer = this.actors.owner) {
-    return this.fundBalancedAndProve(this.balanceTokens(tx, payer), contract);
+    return this.fundBalancedAndProve(this.balanceTokens(tx, payer), contract, () => payer);
   }
-  async fundBalancedAndProve(tx, contract) {
+  async fundBalancedAndProve(tx, contract, walletForAddress) {
     const {L} = this;
     const proven = await tx.prove(contract.prover, this.params.transactionCostModel.runtimeCostModel);
     let fee = proven.fees(this.params), feeTx, iterations = 0;
@@ -357,7 +357,27 @@ export class NativeLedger {
       }
       const provenFee =
           await feeTx.prove(contract.prover, this.params.transactionCostModel.runtimeCostModel);
-      const complete = proven.merge(provenFee).bind();
+      const merged = proven.merge(provenFee);
+      if (walletForAddress) {
+        // A versioned contract proof can change the final signature preimage. Sign
+        // after proving and fee assembly, while the transaction is still mutable.
+        for (const [id, intent] of merged.intents) {
+          const message = intent.signatureData(id);
+          for (const property of ['guaranteedUnshieldedOffer', 'fallibleUnshieldedOffer']) {
+            const offer = intent[property];
+            if (!offer?.inputs.length) continue;
+            const signatures = offer.inputs.map(coin => {
+              const address = L.addressFromKey(coin.owner);
+              const wallet = walletForAddress(address);
+              assert.equal(wallet?.address, address, 'no signer for final input owner');
+              return new L.SignatureEnabled(L.signData(wallet.key, message));
+            });
+            intent[property] = L.UnshieldedOffer.new(offer.inputs, offer.outputs, signatures);
+          }
+          merged.intents = merged.intents.set(id, intent);
+        }
+      }
+      const complete = merged.bind();
       const actual = complete.fees(this.params);
       if (actual > fee) {
         fee = actual;

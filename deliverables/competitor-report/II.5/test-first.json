@@ -1,0 +1,21 @@
+{
+  "suite": "packages/moriarty-orders/test/feed.test.mjs",
+  "original": "The beta oracle example read_fixing simulated as Unsupported. A positive execution expectation failed.",
+  "command": "node --input-type=module -e \"import {readFileSync} from 'node:fs'; import assert from 'node:assert/strict'; import {simulate} from './packages/moriarty-beta/src/bridge.ts'; const s=readFileSync('packages/moriarty-beta/examples/oracle.mori','utf8'); assert.equal(simulate(s,'read_fixing','{}').status,'Accepted');\"",
+  "exit": 1,
+  "actual": "Unsupported",
+  "expected": "Accepted",
+  "regressions": [
+    {
+      "mutation": "Relax feedPrice < 3 to feedPrice <= 3",
+      "actual": "Missing expected exception FEED_THRESHOLD",
+      "exit": 1
+    },
+    {
+      "mutation": "Compile the original 0.31 test without the V3 flag",
+      "actualVersionMajor": 2,
+      "expectedVersionMajor": 3,
+      "exit": 1
+    }
+  ]
+}

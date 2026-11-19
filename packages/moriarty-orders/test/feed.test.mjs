@@ -8,7 +8,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {signFeedUpdate} from '../src/feed.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dependencies = resolve(process.env.MORIARTY_ORDER_MODULES || resolve(here, '../node_modules'));
+const dependencies = resolve(process.env.MORIARTY_ORDER_MODULES || resolve(here, '../../../tools/sherlock-sdk/node_modules'));
 const rt = await import(pathToFileURL(join(dependencies, '@midnight-ntwrk/compact-runtime/dist/index.js')));
 const compileDir = mkdtempSync(join(tmpdir(), 'moriarty-feed-'));
 const ZERO_KEY = '00'.repeat(32);
