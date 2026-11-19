@@ -16,3 +16,5 @@ For each item, use the [roadmap exit](../../../ROADMAP.md), [EARS](requirements.
 The [syntax and semantics reconciliation](../../../docs/MORIARTY-LANGUAGE-REQUIREMENTS-ALIGNMENT.md) maps current local profiles to the U0 semantic interfaces and every MPLR/ZR/MNR obligation. It is documentation evidence only; all product tasks above remain open.
 
 UNI-018/019 close through U0's profile/consumer/admission matrix and the applicable U2 correspondence result. UNI-020 closes through independently frozen U0/U2/U6 financial and work expectations. UNI-021/022 close through scoped U0–U7 evidence records and the M crosswalk. UNI-023 retains U4/U6/U7 membership; UNI-024 retains the U2/U7 developer journey and current maintainer routing. These additions refine existing tasks rather than create a parallel workstream.
+
+The [competitive-landscape adoption change](../competitive-landscape-adoption/design.md#report-task-mapping) maps 16 report recommendations to these U items. Its tasks specify child checks and retain the deferred external obligations.
