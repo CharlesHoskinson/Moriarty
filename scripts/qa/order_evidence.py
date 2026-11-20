@@ -5,6 +5,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from order_cost_report import read_workflow_pins
 
 ROOT = Path(__file__).resolve().parents[2]
 REPORT = ROOT / "deliverables/competitor-report"
@@ -102,9 +103,11 @@ def reconcile(behavior_coverage, *, check_only):
                       and result["archiveSha256"] == release["sha256"] == install["sha256"] == archive["sha256"])
         elif case == "III.1":
             workflow = json.loads((base/"workflow-check.json").read_bytes())
+            pins, pins_sha256 = read_workflow_pins(base)
             passed = (result.get("passed") is True
                       and workflow["inputSha256"] == evidence(base/"assessment-input.json")["sha256"]
-                      and workflow.get("pinsSha256") == evidence(base/"workflow-pins.json")["sha256"]
+                      and workflow.get("pinsSha256") == pins_sha256
+                      and workflow.get("upstreamRevision") == pins["revision"]
                       and set(workflow["validated"]) == {"o1-fill","cancel-unfilled"})
         else:
             passed = result.get("passed") is True

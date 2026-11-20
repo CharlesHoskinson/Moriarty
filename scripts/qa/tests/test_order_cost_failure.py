@@ -123,7 +123,7 @@ class ValidationReuseTests(unittest.TestCase):
             "def summarize(recipe, value):\n    return {'chains': {'X': {'samples': value}}}\n")
         (self.upstream / self.PROFILE).parent.mkdir(parents=True)
         shutil.copyfile(self.report / "workloads.json", self.upstream / self.PROFILE)
-        self.pins = {"revision": "first", "sha256": {name: hashlib.sha256((self.upstream / name).read_bytes()).hexdigest()
+        self.pins = {"revision": "a" * 40, "sha256": {name: hashlib.sha256((self.upstream / name).read_bytes()).hexdigest()
                                                      for name in ("onboarding/execution_cost.py", self.PROFILE)}}
         (self.report / "workflow-pins.json").write_text(json.dumps(self.pins))
         spec = importlib.util.spec_from_file_location("order_cost_report_reuse", qa / "order_cost_report.py")
@@ -162,10 +162,21 @@ class ValidationReuseTests(unittest.TestCase):
         self.costs.check_costs()
         self.validate()
         # A new upstream revision with the same workload profile leaves the packet byte-identical.
-        (self.report / "workflow-pins.json").write_text(json.dumps({**self.pins, "revision": "second"}))
+        new_revision = "b" * 40
+        (self.report / "workflow-pins.json").write_text(json.dumps({**self.pins, "revision": new_revision}))
         self.costs.check_costs()
         self.assertTrue((self.report / "assessment-input.json").is_file())
         self.assertFalse((self.report / "workflow-check.json").exists())
+        self.assertEqual(self.validate()["upstreamRevision"], new_revision)
+
+    def test_replay_drops_validation_with_wrong_revision_even_if_pins_hash_matches(self):
+        self.costs.check_costs()
+        validation = self.validate()
+        validation["upstreamRevision"] = "c" * 40
+        path = self.report / "workflow-check.json"
+        path.write_text(json.dumps(validation))
+        self.costs.check_costs()
+        self.assertFalse(path.exists())
 
     def test_identical_replay_drops_a_validation_without_a_pins_hash(self):
         self.costs.check_costs()

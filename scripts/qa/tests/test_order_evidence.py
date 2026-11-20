@@ -21,7 +21,7 @@ class ReconciliationTests(unittest.TestCase):
         self.root = Path(directory.name)
         self.base = self.root / REPORT
         shutil.copytree(ROOT / REPORT, self.base)
-        for path in (DESIGN, RUNNER, RUNNER.with_name("order_evidence.py")):
+        for path in (DESIGN, RUNNER, RUNNER.with_name("order_evidence.py"), RUNNER.with_name("order_cost_report.py")):
             (self.root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / path, self.root / path)
         # The handoff is a snapshot. Give the fixture its own registered replay inputs.
@@ -110,6 +110,19 @@ class ReconciliationTests(unittest.TestCase):
                 self.assertIn("III.1", final.stderr)
                 self.assertEqual(before, ((self.base / "I.2/result.json").read_bytes(),
                                           (self.base / "index.json").read_bytes()))
+
+    def test_reconciliation_rejects_wrong_workflow_revision_with_matching_pins_hash(self):
+        refresh = self.reconcile()
+        self.assertEqual(refresh.returncode, 0, refresh.stderr)
+        path = self.base / "III.1/workflow-check.json"
+        record = json.loads(path.read_bytes())
+        record["upstreamRevision"] = "b" * 40
+        path.write_text(json.dumps(record))
+        for options in ((), ("--check",)):
+            with self.subTest(options=options):
+                run = self.reconcile(*options)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertIn("III.1", run.stderr)
 
     def test_finalize_refuses_missing_failed_draft_or_unrelated_receipts(self):
         path = self.base / "IV.3/factory-check.json"

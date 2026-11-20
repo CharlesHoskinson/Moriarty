@@ -7,11 +7,10 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from order_cost_report import locked_report, ref, save
+from order_cost_report import locked_report, read_workflow_pins, ref, save
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / "deliverables/competitor-report/III.1"
-UPSTREAM = "1ced5fe1e0a83d665184bb496bea01bcb9940449"
 PROFILE = "specifications/execution_cost/profiles-1.json"
 
 
@@ -25,8 +24,7 @@ def main():
 
 
 def validate(upstream):
-    pins = (BASE/"workflow-pins.json").read_bytes()
-    expected = json.loads(pins)
+    expected, pins_sha256 = read_workflow_pins(BASE)
     for name, sha in expected["sha256"].items():
         if hashlib.sha256((upstream/name).read_bytes()).hexdigest() != sha:
             raise ValueError("incorrect assessment workflow file " + name)
@@ -72,7 +70,7 @@ def validate(upstream):
                         if observed != ours[metric]:
                             raise ValueError(f"{op} {sample['sample_id']} {phase} {metric} differs from pinned workflow")
             checks[op] = {s["sample_id"]: s["total"] for s in summarized}
-        record = {"upstreamRevision":UPSTREAM,"pinsSha256":hashlib.sha256(pins).hexdigest(),
+        record = {"upstreamRevision":expected["revision"],"pinsSha256":pins_sha256,
                   "inputSha256":result["assessmentInput"]["sha256"],
                   "command":["python3","scripts/qa/validate_order_cost_handoff.py","<pinned-assessment-root>"],
                   "validated":checks,"assessment":"Workflow input and arithmetic checked. Independent semantic review pending."}

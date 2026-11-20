@@ -4,6 +4,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -34,6 +35,16 @@ def save(path, value):
 
 def read(path):
     return json.loads(path.read_bytes())
+
+
+def read_workflow_pins(directory):
+    """Read the declared upstream revision and the manifest digest from the same bytes."""
+    raw = (directory / "workflow-pins.json").read_bytes()
+    pins = json.loads(raw)
+    revision = pins.get("revision")
+    if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ValueError("III.1 workflow pins require an upstream commit SHA")
+    return pins, hashlib.sha256(raw).hexdigest()
 
 
 def export_sample(base, measured, semantic, sample_id):
@@ -114,8 +125,8 @@ def check_costs(preflight=None):
             metadata = preflight() if preflight else {}
             settings = read(directory / "recipe.json")
             profile_bytes = (directory / "workloads.json").read_bytes()
-            pins = (directory / "workflow-pins.json").read_bytes()
-            pin = json.loads(pins)["sha256"][PROFILE]
+            pins, pins_sha256 = read_workflow_pins(directory)
+            pin = pins["sha256"][PROFILE]
             if hashlib.sha256(profile_bytes).hexdigest() != pin or settings["profile"]["sha256"] != pin:
                 raise ValueError("cost replay requires the pinned workload profile")
             profile = json.loads(profile_bytes)
@@ -126,7 +137,8 @@ def check_costs(preflight=None):
                 raise ValueError("measure o1-fill and cancel-unfilled and give reasons for unavailable workloads")
             values = measure(directory, settings, profile, metadata)
             if (isinstance(prior_validation, dict) and prior_validation.get("inputSha256") == ref(packet)["sha256"]
-                    and prior_validation.get("pinsSha256") == hashlib.sha256(pins).hexdigest()):
+                    and prior_validation.get("pinsSha256") == pins_sha256
+                    and prior_validation.get("upstreamRevision") == pins["revision"]):
                 save(workflow, prior_validation)
             return values
         except BaseException as error:
