@@ -275,18 +275,7 @@ def baseline(scratch, result):
     # Each probe runs in its own scratch mirror and never writes to the checkout.
     result["controlledRegression"] = {scope: probe_mutation(scratch / "mutations", scope, executed)
                                       for scope in MUTATIONS}
-    # The baseline remains runnable on its own; each installed native predicate
-    # supplies coverage from its executable cases at the exact receipt identity.
-    evidence = {}
-    for case, (_, _, checker, _, _) in NATIVE.items():
-        filename = "factory-check.json" if checker in ("check-feed","check-o8") else "result.json"
-        path = ROOT / REPORT / case / filename
-        if path.is_file():
-            record = json.loads(path.read_bytes())
-            if record.get("passed") is True:
-                evidence[case] = {"receipt":str(path.relative_to(ROOT)), "sha256":sha(path.read_bytes()),
-                                  "tests":record["tests"], "scopedCoverage":record.get("coverage")}
-    result["orderBehaviorCoverage"] = evidence
+    result["orderBehaviorCoverage"] = order_behavior_coverage(complete=False)
 
 
 def check_invariants():
@@ -369,6 +358,66 @@ BOUNDARY = {"ledgerApplied": "Every retained transaction passes strict Rust vali
                                        "follows from proof soundness and is not itself observed."}
 
 
+def native_receipt(case):
+    checker = NATIVE[case][2]
+    filename = "factory-check.json" if checker in ("check-feed", "check-o8") else "result.json"
+    return ROOT / REPORT / case / filename
+
+
+def native_inputs(suite, checker):
+    return [ORDERS / "test" / (suite + ".test.mjs"), ORDERS / "native" / (checker + ".mjs"),
+            ORDERS / "native/replay.mjs"]
+
+
+def native_coverage_row(case):
+    predicate, suite, checker, _, scope = NATIVE[case]
+    path = native_receipt(case)
+    raw = path.read_bytes()
+    record = json.loads(raw)
+    tests = record.get("tests")
+    coverage_row = record.get("coverage")
+    checks = record.get("checks", {})
+    if (record.get("passed") is not True or record.get("draft") is not False
+            or record.get("requirement") != case or record.get("predicate") != predicate
+            or not re.fullmatch(r"[0-9a-f]{40}", record.get("revision") or "")
+            or not isinstance(tests, list) or not tests or not all(isinstance(t, str) and t for t in tests)
+            or any(checks.get(name, {}).get("exit") != 0 for name in ("finiteTests", "strictNativeReplay"))):
+        raise ValueError("lacks a completed, non-draft native check")
+    if scope:
+        measured = (coverage_row or {}).get("files", {}).get(str(ORDERS / scope), {})
+        if not (0 < measured.get("covered", 0) <= measured.get("total", 0)):
+            raise ValueError(f"lacks measured coverage for {scope}")
+    generator_path = ROOT / REPORT / GENERATORS[case]
+    generator = json.loads(generator_path.read_bytes())
+    if record.get("evidenceRevision") != committed_generator(generator):
+        raise ValueError("native generator revision differs from its replay")
+    inputs = {str(p): sha((ROOT / p).read_bytes()) for p in native_inputs(suite, checker)}
+    if record.get("inputs") != inputs:
+        raise ValueError("replay inputs differ from its receipt")
+    replay = record["replay"]
+    if path.name == "factory-check.json":
+        if json.loads((path.parent / "strict-replay.json").read_bytes()) != replay:
+            raise ValueError("strict-replay.json differs from the factory check")
+    if "receiptsSha256" in replay:
+        receipts = generator_path.with_name("receipts.json")
+        if replay["receiptsSha256"] != sha(receipts.read_bytes()):
+            raise ValueError("native receipts differ from their strict replay")
+    return {"receipt": str(path.relative_to(ROOT)), "sha256": sha(raw),
+            "tests": tests, "scopedCoverage": coverage_row}
+
+
+def order_behavior_coverage(*, complete):
+    """The baseline can precede native runs. Final reconciliation requires every registered case."""
+    rows = {}
+    for case in NATIVE:
+        try:
+            rows[case] = native_coverage_row(case)
+        except (ValueError, OSError, KeyError) as error:
+            if complete:
+                raise ValueError(f"{case}: {error}") from error
+    return rows
+
+
 def write_record(dest, record):
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(mode="w", dir=dest.parent, delete=False) as file:
@@ -379,11 +428,11 @@ def write_record(dest, record):
 
 def native_case(case):
     predicate, suite, checker, extra, scope = NATIVE[case]
-    test = ORDERS / "test" / (suite + ".test.mjs")
-    check = ORDERS / "native" / (checker + ".mjs")
+    inputs = native_inputs(suite, checker)
+    test, check, _ = inputs
     evidence = ROOT / REPORT / case
     # Feed generation retains its own primary result; replay adds a second record.
-    dest = evidence / ("factory-check.json" if checker in ("check-feed", "check-o8") else "result.json")
+    dest = native_receipt(case)
     result = {"requirement": case, "predicate": predicate, "passed": False, "checks": {},
               "runner": ["python3", "scripts/qa/order-report.py", case], "assessment": "independent review pending",
               "target": "local undeployed Midnight ledger with ZKIRv3 proofs", "evidenceBoundary": BOUNDARY,
@@ -419,7 +468,7 @@ def native_case(case):
         result["evidenceRevision"] = committed_generator(json.loads((ROOT / REPORT / GENERATORS[case]).read_bytes()))
         if checker in ("check-feed", "check-o8"):
             write_record(evidence / "strict-replay.json", result["replay"])
-        result["inputs"] = {str(path): sha((ROOT / path).read_bytes()) for path in [test, check, ORDERS / "native/replay.mjs"]}
+        result["inputs"] = {str(path): sha((ROOT / path).read_bytes()) for path in inputs}
         result["passed"] = True
     except (OSError, ValueError, subprocess.SubprocessError, ET.ParseError) as error:
         result["error"] = str(error)
@@ -482,20 +531,29 @@ def decision():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("case", choices=["I.2", "II.6", "III.1", "III.6", "IV.6", "reconcile", *NATIVE])
+    parser.add_argument("--check", action="store_true", help="verify retained reconciliation without writing")
     args = parser.parse_args()
+    if args.check and args.case != "reconcile":
+        parser.error("--check requires reconcile")
     if args.case == "III.6":
         return distribution()
     if args.case == "reconcile":
         from order_evidence import reconcile
-        return reconcile()
+        try:
+            return reconcile(order_behavior_coverage(complete=True), check_only=args.check)
+        except (ValueError, OSError) as error:
+            print(error, file=sys.stderr)
+            return 1
     if args.case == "III.1":
         from order_cost_report import check_costs
-        revision = source_revision()
-        suite = ORDERS / "test/measurement.test.mjs"
-        test_inventory(execute("measurements", ["node","--test","--test-reporter=junit",str(suite)], {}), {ROOT / suite})
-        check_costs()
-        path = ROOT / REPORT / "III.1/result.json"
-        write_record(path, {**json.loads(path.read_bytes()), "checkRevision": revision, "draft": revision is None})
+
+        def cost_preflight():
+            revision = source_revision()
+            suite = ORDERS / "test/measurement.test.mjs"
+            test_inventory(execute("measurements", ["node","--test","--test-reporter=junit",str(suite)], {}), {ROOT / suite})
+            return {"checkRevision": revision, "draft": revision is None}
+
+        check_costs(cost_preflight)
         return 0
     if args.case in NATIVE:
         return native_case(args.case)

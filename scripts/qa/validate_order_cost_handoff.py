@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from order_cost_report import locked_report, ref, save
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / "deliverables/competitor-report/III.1"
@@ -18,7 +19,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("assessment_root", type=Path, help="directory containing the pinned upstream onboarding package")
     args = parser.parse_args()
-    upstream = args.assessment_root.resolve()
+    with locked_report(BASE):
+        (BASE/"workflow-check.json").unlink(missing_ok=True)
+        validate(args.assessment_root.resolve())
+
+
+def validate(upstream):
     expected = json.loads((BASE/"workflow-pins.json").read_bytes())
     for name, sha in expected["sha256"].items():
         if hashlib.sha256((upstream/name).read_bytes()).hexdigest() != sha:
@@ -29,8 +35,11 @@ def main():
         raise ValueError("workloads.json differs from the pinned upstream profile")
     sys.path.insert(0, str(upstream))
     from onboarding.execution_cost import validate_selection, validate_value, summarize
-    payload = json.loads((BASE/"assessment-input.json").read_bytes())
     result = json.loads((BASE/"result.json").read_bytes())
+    packet = BASE/"assessment-input.json"
+    if result.get("passed") is not True or result.get("assessmentInput") != ref(packet):
+        raise ValueError("cost replay requires a passing result linked to this assessment input")
+    payload = json.loads(packet.read_bytes())
     with tempfile.TemporaryDirectory(prefix="order-assessment-") as tmp:
         tree = Path(tmp)
         shutil.copytree(BASE, tree/BASE.relative_to(ROOT))
@@ -62,10 +71,10 @@ def main():
                         if observed != ours[metric]:
                             raise ValueError(f"{op} {sample['sample_id']} {phase} {metric} differs from pinned workflow")
             checks[op] = {s["sample_id"]: s["total"] for s in summarized}
-        record = {"upstreamRevision":UPSTREAM,"inputSha256":hashlib.sha256((BASE/"assessment-input.json").read_bytes()).hexdigest(),
+        record = {"upstreamRevision":UPSTREAM,"inputSha256":result["assessmentInput"]["sha256"],
                   "command":["python3","scripts/qa/validate_order_cost_handoff.py","<pinned-assessment-root>"],
                   "validated":checks,"assessment":"Workflow input and arithmetic checked. Independent semantic review pending."}
-        (BASE/"workflow-check.json").write_text(json.dumps(record,indent=2)+"\n")
+        save(BASE/"workflow-check.json", record)
 
 
 if __name__ == "__main__":

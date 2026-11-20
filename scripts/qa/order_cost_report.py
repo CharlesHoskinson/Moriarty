@@ -1,14 +1,18 @@
 """Export replayed native-local cost receipts to the pinned assessment format."""
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import json
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 REPORT = Path("deliverables/competitor-report/III.1")
 SCRIPT = Path("scripts/qa/measure-order-lifecycle.mjs")
 PROFILE = "specifications/execution_cost/profiles-1.json"
+LOCAL_OPERATIONS = ("o1-fill", "cancel-unfilled")
 
 
 def ref(path):
@@ -17,7 +21,14 @@ def ref(path):
 
 def save(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    data = json.dumps(value, indent=2, allow_nan=False) + "\n"
+    with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as temporary:
+        try:
+            temporary.write(data)
+            temporary.close()
+            os.replace(temporary.name, path)
+        finally:
+            Path(temporary.name).unlink(missing_ok=True)
     return ref(path)
 
 
@@ -71,21 +82,62 @@ def sample_directories(base):
     return found
 
 
-def check_costs():
-    directory = ROOT / REPORT
-    settings = read(directory / "recipe.json")
-    profile = read(directory / "workloads.json")
+@contextmanager
+def locked_report(directory):
+    """Serialize sample export, packet publication and pinned workflow validation."""
+    directory.mkdir(parents=True, exist_ok=True)
+    fd = os.open(directory, os.O_RDONLY)
     try:
-        return measure(directory, settings, profile)
-    except Exception as error:
-        # Keep the failure and every sample directory; withhold all operation results.
-        save(directory / "result.json", {"requirement":"III.1","predicate":"F31","passed":False,"error":str(error)[-2400:],
-             "assessment":"no operation result: an incomplete or incompatible sample was retained",
-             "retainedSamples":sorted(str(d.relative_to(ROOT)) for d in (directory / "native").glob("*/sample-*") if d.is_dir())})
-        raise
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
 
 
-def measure(directory, settings, profile):
+def check_costs(preflight=None):
+    directory = ROOT / REPORT
+    packet = directory / "assessment-input.json"
+    workflow = directory / "workflow-check.json"
+    result = directory / "result.json"
+    with locked_report(directory):
+        pending = {"requirement":"III.1", "predicate":"F31", "passed":False,
+                   "assessment":"Cost replay in progress; operation results withheld."}
+        try:
+            save(result, pending)
+            packet.unlink(missing_ok=True)
+            # A byte-identical successful replay can reuse its pinned validation.
+            try:
+                prior_validation = read(workflow)
+            except (FileNotFoundError, ValueError):
+                prior_validation = None
+            workflow.unlink(missing_ok=True)
+            metadata = preflight() if preflight else {}
+            settings = read(directory / "recipe.json")
+            profile_bytes = (directory / "workloads.json").read_bytes()
+            pin = read(directory / "workflow-pins.json")["sha256"][PROFILE]
+            if hashlib.sha256(profile_bytes).hexdigest() != pin or settings["profile"]["sha256"] != pin:
+                raise ValueError("cost replay requires the pinned workload profile")
+            profile = json.loads(profile_bytes)
+            unavailable = {op["id"] for op in profile["operations"]} - set(LOCAL_OPERATIONS)
+            if (set(settings["operations"]) != set(LOCAL_OPERATIONS)
+                    or set(settings["unavailable"]) != unavailable
+                    or not all(isinstance(reason, str) and reason.strip() for reason in settings["unavailable"].values())):
+                raise ValueError("measure o1-fill and cancel-unfilled and give reasons for unavailable workloads")
+            values = measure(directory, settings, profile, metadata)
+            if isinstance(prior_validation, dict) and prior_validation.get("inputSha256") == ref(packet)["sha256"]:
+                save(workflow, prior_validation)
+            return values
+        except BaseException as error:
+            packet.unlink(missing_ok=True)
+            workflow.unlink(missing_ok=True)
+            save(result, {**pending, "error":str(error)[-2400:] or type(error).__name__,
+                          "assessment":"Cost replay failed; operation results withheld.",
+                          "retainedSamples":sorted(str(d.relative_to(ROOT)) for d in
+                              (directory / "native").glob("*/sample-*") if d.is_dir())})
+            raise
+
+
+def measure(directory, settings, profile, metadata):
     recipes, values, totals, bootstrap = [], {}, {}, {}
     validator = os.environ.get("MORIARTY_ORDER_VALIDATOR", str(ROOT / "target/debug/examples/validate_call"))
     for definition in profile["operations"]:
@@ -146,7 +198,7 @@ def measure(directory, settings, profile):
     inputs = {"rubric_version":"execution_cost-2", "measurement_profile":{"version":profile["version"],
               "path":PROFILE, "sha256":ref(directory / "workloads.json")["sha256"]}, "recipes":recipes,"values":values}
     packet = save(directory / "assessment-input.json",inputs)
-    save(directory / "result.json",{"requirement":"III.1","predicate":"F31","passed":True,
+    save(directory / "result.json",{"requirement":"III.1","predicate":"F31","passed":True, **metadata,
          "assessment":"pending independent assessment", "assessmentInput":packet, "units":settings["resourceUnits"],
          "feePolicy":settings["feePolicy"], "finality":settings["finality"], "totals":totals,
          "zeroPhases":zero_phases, "recipe":ref(directory / "recipe.json"), "profile":ref(directory / "workloads.json"),
@@ -162,6 +214,6 @@ def measure(directory, settings, profile):
 if __name__ == "__main__":
     import sys
     selected = sys.argv[1]
-    if selected not in ("o1-fill","cancel-unfilled"):
+    if selected not in LOCAL_OPERATIONS:
         raise SystemExit("choose o1-fill or cancel-unfilled")
     print(json.dumps(check_costs()[selected], allow_nan=False))

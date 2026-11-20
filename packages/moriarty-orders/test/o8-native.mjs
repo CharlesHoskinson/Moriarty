@@ -15,7 +15,7 @@ const proofServer=process.env.MORIARTY_ORDER_PROVER||'http://127.0.0.1:16311';
 const r={requirement:'IV.3',target:'native V9 local ledger',assessment:'independent assessment pending',node:process.version,
   generator:generatorRecord(['node','packages/moriarty-orders/test/o8-native.mjs',buildDir,output]),build,network:'undeployed',
   command:['node','packages/moriarty-orders/test/o8-native.mjs',buildDir,output],
-  assumption:'Fresh, fixed native fixture issues only the specified asset supplies. After proving, each owner wallet callback checks its own leg in the final transaction (its inputs, the payment to the next owner and its change) and only then signs its own input. Native DUST fee uses a fourth credential. Maintenance requires all three owners.',
+  assumption:'Fresh, fixed native fixture issues only the specified asset supplies. Each wallet reads the accepted installation and complete plan, checks every funding input, recipient and change in its single guaranteed settlement intent, and signs the preimage it derives from the proved transaction bytes. Native DUST fee uses a fourth credential. Maintenance requires all three owners.',
   limitation:'The common single-payer backend supports one wallet. The O8 adapter balances exactly three unshielded colors, three signature-enabled wallets and one separately paid DUST fee. The three wallet callbacks run in one local process, and the public test operator holds all three local keys.',
   sources:Object.fromEntries(['contracts/atomic-exchange.compact','src/atomic-exchange.mjs','orders/o8.mori','test/fixtures/o8-mint.compact',
     'test/fixtures/o8.json','src/build-o8.mjs','test/o8-native.mjs','test/native-ledger.mjs'].map(name=>[name,hash(readFileSync(join('packages/moriarty-orders',name)))])),
@@ -45,7 +45,13 @@ async function run(){
     const instance=await h.deploy(exchange,[plan,keys],prefix+'deploy-exchange',{maintainers:actors,threshold:3});
     const deployment={address:instance.address,programHash:build.programHash,verifierSha256:build.verifierSha256,network:h.network,
       verifiers:{settle:build.verifierSha256},maintenance:instance.maintenance};
-    const wallets=actors.map((actor,i)=>exchangeWallet(h.L,h.runtime,plan,i,actor));
+    function enroll(actor, leg, sign) {
+      const wallet = exchangeWallet(h,instance,deployment,plan,leg,actor,sign);
+      return {address:wallet.address,vk:wallet.vk,sign(_message,{transaction}) {
+        return wallet.signSettlement(transaction.serialize());
+      }};
+    }
+    const wallets=actors.map((actor,i)=>enroll(actor,i));
     const signatures=secrets.map((sk,i)=>signExchangeLeg(h.runtime,exchange.generated,plan,instance.address,i,0n,sk));
     const request={plan,revision:0n,now:BigInt(h.time)-plan.epoch,signatures};
     const prepare=async(req=request)=>h.assemble([await prepareExchange(h,instance,deployment,req)]);
@@ -79,7 +85,7 @@ async function run(){
     await refuseSettle('changed amount',{...request,plan:{...plan,amounts:[99n,200n,300n]}},/O8_PLAN/);
     await refuse('wrong funding wallet',async()=>fundExchangeInputs(h,await prepare(),plan,[wallets[2],wallets[1],wallets[0]]),/funding wallet mismatch/);
     // Carol's wallet declines at the final signing step, after proving; no transaction exists.
-    const declining=[wallets[0],wallets[1],exchangeWallet(h.L,h.runtime,plan,2,actors[2],()=>{throw Error('Carol declined to sign');})];
+    const declining=[wallets[0],wallets[1],enroll(actors[2],2,()=>{throw Error('Carol declined to sign');})];
     await refuse('missing native wallet signature',async()=>h.fundBalancedAndProve(fundExchangeInputs(h,await prepare(),plan,declining),
       exchange,address=>declining.find(w=>w.address===address)),/declined to sign/);
     h.clearReservations();

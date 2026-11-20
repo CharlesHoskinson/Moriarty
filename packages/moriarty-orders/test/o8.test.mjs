@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
-import {checkLegTransaction,fundExchangeInputs,prepareExchange,signExchangeLeg} from '../src/atomic-exchange.mjs';
+import {checkExchangeOffer,exchangeWallet,fundExchangeInputs,prepareExchange,signExchangeLeg} from '../src/atomic-exchange.mjs';
 import {lowerCompact} from '../../../experiments/moriarty-language/src/lower-compact.ts';
 
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/o8.json',import.meta.url)));
@@ -59,7 +59,7 @@ test('the wallet adapter rejects an incomplete funding group and a substituted c
   assert.throws(()=>prepareExchange({network:'undeployed'},{address:'substituted'},{address:'pinned',network:'undeployed'},{}),/deployment mismatch/);
 });
 
-test('the compiled settle circuit refuses an absent or substituted grant and accepts all three',async t=>{
+async function compileO8(t) {
   const {mkdtempSync,rmSync}=await import('node:fs');
   const {tmpdir}=await import('node:os');
   const {join}=await import('node:path');
@@ -70,6 +70,47 @@ test('the compiled settle circuit refuses an absent or substituted grant and acc
   const build=buildO8(out,{skipZk:true});
   const rt=await import(pathToFileURL(join(out,'node_modules/@midnight-ntwrk/compact-runtime/dist/index.js')));
   const generated=await import(pathToFileURL(join(out,'contract/index.js')));
+  const L=await import(pathToFileURL(join(out,'node_modules/@midnightntwrk/ledger-v9/midnight_ledger_wasm_v9_fs.js')));
+  return {build,rt,generated,L};
+}
+
+test('all three wallets derive their input signature from the enrolled native settlement bytes',async t=>{
+  const {rt,generated,L}=await compileO8(t);
+  const {deployment}=read('result.json');
+  const receipt=read('receipts.json').find(row=>row.label==='atomic-three-owner-settlement');
+  const bytes=readFileSync(new URL(receipt.transaction.file,directory));
+  const state=L.LedgerState.deserialize(readFileSync(new URL(receipt.beforeState.file,directory)));
+  const ledger={runtime:rt,L,network:deployment.network,state,time:receipt.time};
+  const instance={address:deployment.address,contract:{generated}};
+  const installed=rt.ContractState.deserialize(state.index(instance.address).serialize());
+  const plan=generated.ledger(installed.data).exchange;
+  const tx=L.Transaction.deserialize('signature','proof','binding',bytes);
+  const [segment,intent]=[...tx.intents].find(([,i])=>i.actions.length);
+  const inputs=intent.guaranteedUnshieldedOffer.inputs;
+  for(const [leg,owner] of plan.wallets.entries()){
+    const address=rt.decodeUserAddress(owner.bytes);
+    const index=inputs.findIndex(input=>L.addressFromKey(input.owner)===address);
+    const signature=intent.guaranteedUnshieldedOffer.signatures[index].value;
+    const actor={address,vk:inputs[index].owner};
+    let calls=0;
+    const wallet=exchangeWallet(ledger,instance,deployment,plan,leg,actor,message=>{
+      assert.deepEqual(message,intent.signatureData(segment));
+      calls++;
+      return signature;
+    });
+    assert.equal(typeof wallet.signSettlement,'function','wallet takes serialized settlement as its only signing input');
+    const signed=wallet.signSettlement(bytes,'binding');
+    assert.equal(calls,1);
+    assert.ok(L.verifySignature(actor.vk,intent.signatureData(segment),signed));
+    ledger.time=read('receipts.json').find(row=>row.label==='unchanged-O8-at-horizon').time;
+    assert.throws(()=>wallet.signSettlement(bytes,'binding'),/cannot settle at accepted head/);
+    assert.equal(calls,1);
+    ledger.time=receipt.time;
+  }
+});
+
+test('the compiled settle circuit refuses an absent or substituted grant and accepts all three',async t=>{
+  const {build,rt,generated}=await compileO8(t);
   const bytes=n=>new Uint8Array(32).fill(n);
   const address=rt.sampleContractAddress();
   const plan={network:bytes(1),id:bytes(2),program:Buffer.from(build.programHash,'hex'),wallets:[1,2,3].map(n=>({bytes:bytes(10+n)})),
@@ -91,15 +132,22 @@ test('the compiled settle circuit refuses an absent or substituted grant and acc
   assert.equal(generated.ledger(done.context.callContext.currentQueryContext.state.state).revision,1n);
 });
 
-test('each owner wallet refuses a final transaction that misroutes its leg',()=>{
+test('the complete settlement offer pays all three recipients and returns change to each owner',()=>{
   const L={addressFromKey:key=>key.address};
   const runtime={decodeUserAddress:bytes=>bytes.address};
-  const color=n=>new Uint8Array(32).fill(n), hex=b=>Buffer.from(b).toString('hex');
-  const plan={wallets:['alice','bob','carol'].map(address=>({bytes:{address}})),colors:[color(1),color(2),color(3)],amounts:[100n,200n,300n]};
-  const tx=outputs=>({intents:new Map([[1,{guaranteedUnshieldedOffer:{inputs:[{owner:{address:'carol'},type:hex(color(3)),value:310n}],outputs}}]])});
-  const correct=[{owner:'alice',type:hex(color(3)),value:300n},{owner:'carol',type:hex(color(3)),value:10n}];
-  checkLegTransaction(L,runtime,plan,2,tx(correct));
-  assert.throws(()=>checkLegTransaction(L,runtime,plan,2,tx([{owner:'bob',type:hex(color(3)),value:300n},correct[1]])),/unexpected recipient/);
-  assert.throws(()=>checkLegTransaction(L,runtime,plan,2,tx([{owner:'alice',type:hex(color(3)),value:310n}])),/differs from leg 2/);
-  assert.throws(()=>checkLegTransaction(L,runtime,plan,2,tx([correct[0]])),/differs from leg 2/);
+  const plan={wallets:['alice','bob','carol'].map(address=>({bytes:{address}})),
+    colors:[1,2,3].map(n=>new Uint8Array(32).fill(n)),amounts:[100n,200n,300n]};
+  const input=(i,value)=>({owner:{address:plan.wallets[i].bytes.address},type:Buffer.from(plan.colors[i]).toString('hex'),value});
+  const output=(i,address,value)=>({owner:address,type:Buffer.from(plan.colors[i]).toString('hex'),value});
+  const inputs=[input(0,45n),input(0,60n),input(1,210n),input(2,315n)];
+  const outputs=[output(0,'bob',100n),output(0,'alice',5n),output(1,'carol',200n),
+    output(1,'bob',10n),output(2,'alice',300n),output(2,'carol',15n)];
+  const check=outputs=>checkExchangeOffer(L,runtime,plan,{inputs,outputs});
+  check(outputs);
+  assert.throws(()=>check([...outputs.slice(0,4),output(2,'bob',300n),outputs[5]]),/unexpected recipient/);
+  assert.throws(()=>check([...outputs.slice(0,4),output(2,'alice',315n)]),/differs from leg 2/);
+  for(let leg=0;leg<3;leg++){
+    const withoutChange=outputs.filter((_,i)=>i!==2*leg+1);
+    assert.throws(()=>check(withoutChange),/differs from leg/);
+  }
 });

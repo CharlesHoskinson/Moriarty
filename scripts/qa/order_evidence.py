@@ -2,6 +2,8 @@
 import hashlib
 import json
 import os
+import re
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,8 +52,20 @@ def evidence(path):
     return {"path":path.relative_to(ROOT).as_posix(),"sha256":hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
-def reconcile():
+def encoded(record):
+    return (json.dumps(record, indent=2) + "\n").encode()
+
+
+def replace_record(path, raw):
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temp:
+        temp.write(raw)
+    os.replace(temp.name, path)
+
+
+def reconcile(behavior_coverage, *, check_only):
     rows = {}
+    baseline_path = REPORT / "I.2/result.json"
+    refreshed_baseline = None
     for case, scope in SCOPE.items():
         base = REPORT / case
         row = {"scope":scope,"limitations":LIMITS[case],"evidence":[]}
@@ -67,6 +81,15 @@ def reconcile():
             raise ValueError(f"{case} result is a draft from an uncommitted tree")
         if case == "I.1":
             passed = result.get("status") == "verified on clean committed delivery revision"
+        elif case == "I.2":
+            passed = (result.get("passed") is True and result.get("draft") is False
+                      and result.get("requirement") == case and result.get("predicate") == "F26"
+                      and re.fullmatch(r"[0-9a-f]{40}", result.get("revision") or ""))
+            if result.get("orderBehaviorCoverage") != behavior_coverage:
+                if check_only:
+                    raise ValueError("I.2 orderBehaviorCoverage differs from the completed native receipts")
+                result["orderBehaviorCoverage"] = behavior_coverage
+                refreshed_baseline = encoded(result)
         elif case == "II.6":
             passed = result.get("status") == "checked conditional model and finite examples"
         elif case in ("II.5","IV.2","IV.3"):
@@ -92,10 +115,16 @@ def reconcile():
             row["assessment"] = "O10 unassessed"
         row["evidence"] = [evidence(primary)]
         for name in ("factory-check.json","baseline.json","obligations.md","decision.md","release.json","receipts.json",
-                     "native/receipts.json","native/strict-replay.json","assessment-input.json","workflow-check.json","recipe.json","workloads.json","test-first.json","test-first-retroactive.json"):
+                     "strict-replay.json","native/receipts.json","native/strict-replay.json","assessment-input.json","workflow-check.json","recipe.json","workloads.json","test-first.json","test-first-retroactive.json"):
             path = base / name
             if path.exists():
                 row["evidence"].append(evidence(path))
+        if case == "I.2" and refreshed_baseline is not None:
+            row["evidence"][0]["sha256"] = hashlib.sha256(refreshed_baseline).hexdigest()
+        if case in behavior_coverage:
+            source = behavior_coverage[case]
+            if {"path": source["receipt"], "sha256": source["sha256"]} not in row["evidence"]:
+                raise ValueError(f"{case} receipt changed during reconciliation")
         if case == "III.6":
             row["evidence"].extend([archive,evidence(base/"clean-install.json")])
         if case in ("II.2","II.4"):
@@ -103,7 +132,11 @@ def reconcile():
     output = {"schema":"moriarty-competitive-landscape-evidence/1","recommendations":rows,
               "assessment":"Local implementation and maintainer replay. Independent grades require review of the exact evidence."}
     path = REPORT / "index.json"
-    tmp = path.with_name(f".index-{os.getpid()}.json")
-    tmp.write_text(json.dumps(output,indent=2)+"\n")
-    tmp.replace(path)
+    if check_only:
+        if json.loads(path.read_bytes()) != output:
+            raise ValueError("index.json differs from the reconciled evidence")
+    else:
+        if refreshed_baseline is not None:
+            replace_record(baseline_path, refreshed_baseline)
+        replace_record(path, encoded(output))
     return 0

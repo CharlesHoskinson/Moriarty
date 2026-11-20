@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
 import {verifyInstalledContract} from './accepted-state.mjs';
 
 const hex = value => Buffer.from(value).toString('hex');
@@ -19,7 +20,7 @@ function requireJointMaintenance(L, runtime, plan, deployment) {
   }
 }
 
-export function prepareExchange(ledger,instance,deployment,request) {
+function acceptedExchange(ledger,instance,deployment) {
   if (deployment.address!==instance.address || deployment.network!==ledger.network) throw Error('O8 deployment mismatch');
   const native=ledger.state.index(deployment.address);
   if (!native) throw Error('O8 deployment absent from accepted head');
@@ -28,44 +29,87 @@ export function prepareExchange(ledger,instance,deployment,request) {
   const head=instance.contract.generated.ledger(state.data);
   if (hex(head.exchange.program)!==deployment.programHash || hex(head.exchange.network)!==digest(ledger.network)) throw Error('O8 source or network mismatch');
   requireJointMaintenance(ledger.L,ledger.runtime,head.exchange,deployment);
+  return head;
+}
+
+export function prepareExchange(ledger,instance,deployment,request) {
+  const head=acceptedExchange(ledger,instance,deployment);
   if (head.remaining!==1n || head.revision!==request.revision) throw Error('O8_CONSUMED');
   return ledger.prepareCall(instance,'settle',[request.plan,request.revision,request.now,request.signatures]);
 }
 
-/**
- * Check one owner's leg in the final transaction: the owner's inputs carry only its own
- * color, the next owner receives exactly the leg amount, and all change returns to the owner.
- */
-export function checkLegTransaction(L, runtime, plan, leg, transaction) {
+/** Verify all owner debits, payments and change in the same guaranteed offer. */
+export function checkExchangeOffer(L, runtime, plan, offer) {
   const owners = plan.wallets.map(wallet => runtime.decodeUserAddress(wallet.bytes));
-  const color = hex(plan.colors[leg]), owner = owners[leg], next = owners[(leg+1)%3];
-  if (plan.amounts[leg] !== amounts[leg]) throw Error('O8 leg amount differs from the plan');
-  let input = 0n, delivered = 0n, change = 0n;
-  for (const [, intent] of transaction.intents ?? []) {
-    for (const property of ['guaranteedUnshieldedOffer','fallibleUnshieldedOffer']) {
-      const offer = intent[property];
-      if (!offer) continue;
-      for (const coin of offer.inputs) {
-        if (L.addressFromKey(coin.owner) !== owner) continue;
-        if (coin.type !== color) throw Error('O8 wallet asked to spend another asset');
-        input += coin.value;
-      }
-      for (const coin of offer.outputs) {
-        if (coin.type !== color) continue;
-        if (coin.owner === next) delivered += coin.value;
-        else if (coin.owner === owner) change += coin.value;
-        else throw Error('O8 leg pays an unexpected recipient');
-      }
+  const colors = plan.colors.map(hex);
+  const inputs = [0n, 0n, 0n], payments = [0n, 0n, 0n], change = [0n, 0n, 0n];
+  for (const coin of offer.inputs) {
+    const leg = colors.indexOf(coin.type);
+    if (leg < 0 || L.addressFromKey(coin.owner) !== owners[leg]) throw Error('O8 unexpected funding asset or owner');
+    inputs[leg] += coin.value;
+  }
+  for (const coin of offer.outputs) {
+    const leg = colors.indexOf(coin.type);
+    if (leg < 0) throw Error('O8 unexpected output asset');
+    if (coin.owner === owners[(leg + 1) % 3]) payments[leg] += coin.value;
+    else if (coin.owner === owners[leg]) change[leg] += coin.value;
+    else throw Error('O8 leg pays an unexpected recipient');
+  }
+  for (const [leg, amount] of amounts.entries()) {
+    if (plan.amounts[leg] !== amount || payments[leg] !== amount || inputs[leg] !== amount + change[leg]) {
+      throw Error('O8 final intent differs from leg '+leg);
     }
   }
-  if (delivered !== amounts[leg] || input - amounts[leg] !== change) throw Error('O8 final intent differs from leg '+leg);
 }
 
-// An independent wallet: it signs only after validating its own leg in the final transaction.
-export function exchangeWallet(L, runtime, plan, leg, actor, sign = message => L.signData(actor.key, message)) {
-  return {address: actor.address, vk: actor.vk, sign(message, {transaction}) {
-    checkLegTransaction(L, runtime, plan, leg, transaction);
-    return sign(message);
+function settlementIntent(transaction, contractAddress) {
+  const intents = [...(transaction.intents ?? [])];
+  if (intents.length !== 2 || transaction.guaranteedOffer || transaction.fallibleOffer?.size || transaction.rewards) {
+    throw Error('O8 requires one settlement and a separate DUST fee');
+  }
+  const settlement = intents.find(([, intent]) => intent.actions.length);
+  if (!settlement) throw Error('O8 settlement call missing');
+  const [segment, intent] = settlement;
+  const [, fee] = intents.find(([id]) => id !== segment);
+  if (fee.actions.length || fee.guaranteedUnshieldedOffer || fee.fallibleUnshieldedOffer ||
+      fee.dustActions?.spends.length !== 1 || fee.dustActions.registrations.length) {
+    throw Error('O8 fee intent must contain only one DUST spend');
+  }
+  const [call] = intent.actions;
+  if (intent.actions.length !== 1 || call.address !== contractAddress || call.entryPoint !== 'settle' ||
+      !call.guaranteedTranscript || call.fallibleTranscript || !intent.guaranteedUnshieldedOffer ||
+      intent.fallibleUnshieldedOffer || intent.dustActions) {
+    throw Error('O8 requires one guaranteed settlement call and offer for the enrolled contract');
+  }
+  return settlement;
+}
+
+// Enrollment uses a trusted ledger connection and a separate copy of the approved terms.
+// The signer accepts only serialized, proved transaction data and derives the native preimage.
+export function exchangeWallet(ledger, instance, deployment, plan, leg, actor, sign = message => ledger.L.signData(actor.key, message)) {
+  const {L, runtime} = ledger;
+  const enrolled = structuredClone(plan), pins = structuredClone(deployment);
+  const address = L.addressFromKey(actor.vk);
+  if (!enrolled.wallets[leg] || address !== actor.address || runtime.decodeUserAddress(enrolled.wallets[leg].bytes) !== address) {
+    throw Error('O8 wallet differs from enrolled owner');
+  }
+  return {address, vk: actor.vk, signSettlement(bytes, binding = 'pre-binding') {
+    const head = acceptedExchange(ledger, instance, pins);
+    if (head.remaining !== 1n || head.revision !== 0n) throw Error('O8_CONSUMED');
+    if (!isDeepStrictEqual(structuredClone(head.exchange), enrolled)) throw Error('O8 enrolled plan differs from accepted contract');
+    if (binding !== 'pre-binding' && binding !== 'binding') throw Error('O8 requires a proved native transaction');
+    const tx = L.Transaction.deserialize('signature', 'proof', binding, bytes);
+    const [segment, intent] = settlementIntent(tx, pins.address);
+    checkExchangeOffer(L, runtime, enrolled, intent.guaranteedUnshieldedOffer);
+    const time = BigInt(ledger.time);
+    const verified = tx.wellFormed(ledger.state, new L.WellFormedStrictness(), new Date(ledger.time * 1000));
+    const context = new L.TransactionContext(ledger.state, {
+      secondsSinceEpoch: time, secondsSinceEpochErr: 0, lastBlockTime: time, parentBlockHash: '00'.repeat(32)
+    });
+    // Native apply returns a new state. The wallet reads the outcome and never publishes that state.
+    const [, outcome] = ledger.state.apply(verified, context);
+    if (outcome.type !== 'success') throw Error('O8 cannot settle at accepted head: '+outcome.error);
+    return sign(intent.signatureData(segment));
   }};
 }
 
