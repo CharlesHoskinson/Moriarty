@@ -10,6 +10,14 @@ const directory=new URL('../../../deliverables/competitor-report/IV.3/',import.m
 const read=name=>JSON.parse(readFileSync(new URL(name,directory)));
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 
+test('the retained O8 settlement was generated with the current wallet and native driver', () => {
+  const {sources} = read('result.json');
+  for (const name of ['src/atomic-exchange.mjs', 'test/o8-native.mjs', 'test/native-ledger.mjs']) {
+    const source = readFileSync(new URL('../' + name, import.meta.url));
+    assert.equal(sources[name], digest(source), name);
+  }
+});
+
 test('the O8 source lowers to three named transfers and the archived kernel',()=>{
   const mapping=lowerCompact(readFileSync(new URL('../orders/o8.mori',import.meta.url)),readFileSync(new URL('../../../experiments/moriarty-language/spec/bounds.json',import.meta.url)));
   assert.equal(mapping.metadata.actions[0].effects.length,3);
