@@ -104,6 +104,7 @@ def reconcile(behavior_coverage, *, check_only):
             workflow = json.loads((base/"workflow-check.json").read_bytes())
             passed = (result.get("passed") is True
                       and workflow["inputSha256"] == evidence(base/"assessment-input.json")["sha256"]
+                      and workflow.get("pinsSha256") == evidence(base/"workflow-pins.json")["sha256"]
                       and set(workflow["validated"]) == {"o1-fill","cancel-unfilled"})
         else:
             passed = result.get("passed") is True

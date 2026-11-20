@@ -25,7 +25,8 @@ def main():
 
 
 def validate(upstream):
-    expected = json.loads((BASE/"workflow-pins.json").read_bytes())
+    pins = (BASE/"workflow-pins.json").read_bytes()
+    expected = json.loads(pins)
     for name, sha in expected["sha256"].items():
         if hashlib.sha256((upstream/name).read_bytes()).hexdigest() != sha:
             raise ValueError("incorrect assessment workflow file " + name)
@@ -71,7 +72,8 @@ def validate(upstream):
                         if observed != ours[metric]:
                             raise ValueError(f"{op} {sample['sample_id']} {phase} {metric} differs from pinned workflow")
             checks[op] = {s["sample_id"]: s["total"] for s in summarized}
-        record = {"upstreamRevision":UPSTREAM,"inputSha256":result["assessmentInput"]["sha256"],
+        record = {"upstreamRevision":UPSTREAM,"pinsSha256":hashlib.sha256(pins).hexdigest(),
+                  "inputSha256":result["assessmentInput"]["sha256"],
                   "command":["python3","scripts/qa/validate_order_cost_handoff.py","<pinned-assessment-root>"],
                   "validated":checks,"assessment":"Workflow input and arithmetic checked. Independent semantic review pending."}
         save(BASE/"workflow-check.json", record)

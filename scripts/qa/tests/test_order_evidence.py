@@ -96,6 +96,21 @@ class ReconciliationTests(unittest.TestCase):
                 self.assertIn("IV.3", final.stderr)
             path.write_bytes(original)
 
+    def test_reconciliation_rejects_a_workflow_validation_made_under_other_pins(self):
+        # The fixture has its own replay inputs; refresh the receipt references first.
+        refresh = self.reconcile()
+        self.assertEqual(refresh.returncode, 0, refresh.stderr)
+        path = self.base / "III.1/workflow-pins.json"
+        path.write_text(json.dumps({**json.loads(path.read_bytes()), "revision": "0" * 40}))
+        before = (self.base / "I.2/result.json").read_bytes(), (self.base / "index.json").read_bytes()
+        for options in (("--check",), ()):
+            with self.subTest(options=options):
+                final = self.reconcile(*options)
+                self.assertNotEqual(final.returncode, 0)
+                self.assertIn("III.1", final.stderr)
+                self.assertEqual(before, ((self.base / "I.2/result.json").read_bytes(),
+                                          (self.base / "index.json").read_bytes()))
+
     def test_finalize_refuses_missing_failed_draft_or_unrelated_receipts(self):
         path = self.base / "IV.3/factory-check.json"
         record = json.loads(path.read_bytes())

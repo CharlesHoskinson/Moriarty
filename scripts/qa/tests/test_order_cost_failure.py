@@ -1,3 +1,5 @@
+import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -93,6 +95,85 @@ class CostRunFailureTests(unittest.TestCase):
         self.assertIn("missing-upstream", proc.stderr)
         self.assertFalse((self.report / "workflow-check.json").exists())
         self.assertTrue((self.report / "assessment-input.json").is_file())
+
+
+class ValidationReuseTests(unittest.TestCase):
+    """A byte-identical replay keeps its workflow validation only under the same workflow pins."""
+
+    PROFILE = "specifications/execution_cost/profiles-1.json"
+
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        self.report = self.root / REPORT
+        self.report.mkdir(parents=True)
+        qa = self.root / "scripts/qa"
+        qa.mkdir(parents=True)
+        for name in ("order_cost_report.py", "validate_order_cost_handoff.py"):
+            shutil.copyfile(QA / name, qa / name)
+        for name in ("recipe.json", "workloads.json"):
+            shutil.copyfile(QA.parents[1] / REPORT / name, self.report / name)
+        # A stand-in upstream package whose summarizer returns the submitted samples.
+        self.upstream = self.root / "upstream"
+        (self.upstream / "onboarding").mkdir(parents=True)
+        (self.upstream / "onboarding/execution_cost.py").write_text(
+            "def validate_selection(tree, payload):\n    return {op: op for op in payload['values']}\n"
+            "def validate_value(tree, recipe, value):\n    return value\n"
+            "def summarize(recipe, value):\n    return {'chains': {'X': {'samples': value}}}\n")
+        (self.upstream / self.PROFILE).parent.mkdir(parents=True)
+        shutil.copyfile(self.report / "workloads.json", self.upstream / self.PROFILE)
+        self.pins = {"revision": "first", "sha256": {name: hashlib.sha256((self.upstream / name).read_bytes()).hexdigest()
+                                                     for name in ("onboarding/execution_cost.py", self.PROFILE)}}
+        (self.report / "workflow-pins.json").write_text(json.dumps(self.pins))
+        spec = importlib.util.spec_from_file_location("order_cost_report_reuse", qa / "order_cost_report.py")
+        self.costs = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.costs)
+        self.costs.measure = self.fixed_measurement
+
+    def fixed_measurement(self, directory, settings, profile, metadata):
+        """Replace the native replay with one fixed packet and its matching result."""
+        phase = {"resources": {"readTime": 1}, "fee_paid": 1, "transaction_count": 1}
+        samples = [{"sample_id": f"sample-{n}", "phases": dict.fromkeys(("setup", "operation", "recovery"), phase),
+                    "total": phase} for n in (1, 2)]
+        values = dict.fromkeys(self.costs.LOCAL_OPERATIONS, samples)
+        packet = self.costs.save(directory / "assessment-input.json",
+                                 {"recipes": [], "measurement_profile": {"path": self.PROFILE}, "values": values})
+        totals = {op: {"samples": [{"sample": s["sample_id"], "phases": s["phases"], "total": s["total"]} for s in samples]}
+                  for op in values}
+        self.costs.save(directory / "result.json", {"passed": True, "assessmentInput": packet, "totals": totals})
+        return values
+
+    def validate(self):
+        proc = subprocess.run([sys.executable, "scripts/qa/validate_order_cost_handoff.py", str(self.upstream)],
+                              cwd=self.root, capture_output=True, text=True, timeout=30)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads((self.report / "workflow-check.json").read_bytes())
+
+    def test_identical_replay_keeps_the_validation_made_under_the_same_pins(self):
+        self.costs.check_costs()
+        validation = self.validate()
+        pins = hashlib.sha256((self.report / "workflow-pins.json").read_bytes()).hexdigest()
+        self.assertEqual(validation["pinsSha256"], pins)
+        self.costs.check_costs()
+        self.assertEqual(json.loads((self.report / "workflow-check.json").read_bytes()), validation)
+
+    def test_identical_replay_drops_a_validation_made_under_other_pins(self):
+        self.costs.check_costs()
+        self.validate()
+        # A new upstream revision with the same workload profile leaves the packet byte-identical.
+        (self.report / "workflow-pins.json").write_text(json.dumps({**self.pins, "revision": "second"}))
+        self.costs.check_costs()
+        self.assertTrue((self.report / "assessment-input.json").is_file())
+        self.assertFalse((self.report / "workflow-check.json").exists())
+
+    def test_identical_replay_drops_a_validation_without_a_pins_hash(self):
+        self.costs.check_costs()
+        validation = self.validate()
+        validation.pop("pinsSha256", None)
+        (self.report / "workflow-check.json").write_text(json.dumps(validation))
+        self.costs.check_costs()
+        self.assertFalse((self.report / "workflow-check.json").exists())
 
 
 if __name__ == "__main__":

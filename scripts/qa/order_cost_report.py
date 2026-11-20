@@ -105,7 +105,7 @@ def check_costs(preflight=None):
         try:
             save(result, pending)
             packet.unlink(missing_ok=True)
-            # A byte-identical successful replay can reuse its pinned validation.
+            # A byte-identical successful replay keeps a validation made under the same workflow pins.
             try:
                 prior_validation = read(workflow)
             except (FileNotFoundError, ValueError):
@@ -114,7 +114,8 @@ def check_costs(preflight=None):
             metadata = preflight() if preflight else {}
             settings = read(directory / "recipe.json")
             profile_bytes = (directory / "workloads.json").read_bytes()
-            pin = read(directory / "workflow-pins.json")["sha256"][PROFILE]
+            pins = (directory / "workflow-pins.json").read_bytes()
+            pin = json.loads(pins)["sha256"][PROFILE]
             if hashlib.sha256(profile_bytes).hexdigest() != pin or settings["profile"]["sha256"] != pin:
                 raise ValueError("cost replay requires the pinned workload profile")
             profile = json.loads(profile_bytes)
@@ -124,7 +125,8 @@ def check_costs(preflight=None):
                     or not all(isinstance(reason, str) and reason.strip() for reason in settings["unavailable"].values())):
                 raise ValueError("measure o1-fill and cancel-unfilled and give reasons for unavailable workloads")
             values = measure(directory, settings, profile, metadata)
-            if isinstance(prior_validation, dict) and prior_validation.get("inputSha256") == ref(packet)["sha256"]:
+            if (isinstance(prior_validation, dict) and prior_validation.get("inputSha256") == ref(packet)["sha256"]
+                    and prior_validation.get("pinsSha256") == hashlib.sha256(pins).hexdigest()):
                 save(workflow, prior_validation)
             return values
         except BaseException as error:
