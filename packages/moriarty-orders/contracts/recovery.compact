@@ -1,0 +1,97 @@
+pragma language_version >= 0.23 && <= 0.28;
+import CompactStandardLibrary;
+include "kernel";
+
+export struct OrderTerms {
+  account: UserAddress; recipient: UserAddress; executor: UserAddress;
+  orderId: Bytes<32>; network: Bytes<32>; assetA: Bytes<32>; assetB: Bytes<32>; program: Bytes<32>;
+  epoch: Uint<64>; input: Uint<128>; minimum: Uint<128>; fee: Uint<128>; expiry: Uint<64>;
+}
+export struct OrderSignature { announcement: JubjubPoint; response: Field; }
+struct Challenge {
+  domain: Bytes<32>; terms: OrderTerms; instance: ContractAddress; ownerX: Field; ownerY: Field;
+  action: Uint<8>; revision: Uint<128>; announcementX: Field; announcementY: Field;
+}
+
+export ledger terms: OrderTerms;
+export ledger ownerKey: JubjubPoint;
+export ledger funded: Boolean;
+export ledger kernelState: KernelState;
+export ledger remaining: Uint<128>;
+export ledger revision: Uint<128>;
+
+pure circuit equalPoint(a: JubjubPoint, b: JubjubPoint): Boolean {
+  return jubjubPointX(a) == jubjubPointX(b) && jubjubPointY(a) == jubjubPointY(b);
+}
+
+constructor(order: OrderTerms, owner: JubjubPoint) {
+  const pinned: Bytes<32> = Bytes[160,134,221,55,140,120,146,154,89,148,238,4,149,136,244,144,252,131,62,186,246,209,60,251,94,133,21,14,82,186,52,8];
+  assert(order.program == pinned, "ORDER_PROGRAM");
+  assert(order.assetA != order.assetB, "ORDER_ASSETS");
+  assert(order.account != order.recipient && order.account != order.executor && order.recipient != order.executor, "ORDER_ROLES");
+  assert(order.input == 100 && order.minimum == 80 && order.fee == 0 && order.expiry == 1400, "PARTIAL_TERMS");
+  assert(order.epoch <= 18446744073709549615, "CLOCK_OVERFLOW");
+  assert(!equalPoint(owner,ecMulGenerator(0 as JubjubScalar)), "OWNER_IDENTITY");
+  terms = disclose(order);
+  ownerKey = disclose(owner);
+}
+
+export pure circuit orderChallenge(order: OrderTerms, instance: ContractAddress, owner: JubjubPoint,
+                                   action: Uint<8>, nonce: Uint<128>, announcement: JubjubPoint): Field {
+  const h = transientHash<Challenge>(Challenge { domain: pad(32,"moriarty:order:schnorr:v1"),
+    terms: order, instance: instance, ownerX:jubjubPointX(owner), ownerY:jubjubPointY(owner), action:action, revision:nonce,
+    announcementX:jubjubPointX(announcement), announcementY:jubjubPointY(announcement) });
+  return (slice<31>(h as Bytes<32>, 0) as Uint<248>) as Field;
+}
+
+circuit authorize(action: Uint<8>, expected: Uint<128>, sig: OrderSignature): [] {
+  assert(revision == expected, "ORDER_REVISION");
+  assert(funded && kernelState.f3 == 0, "ORDER_CLOSED");
+  assert(!equalPoint(sig.announcement,ecMulGenerator(0 as JubjubScalar)), "ORDER_SIGNATURE_IDENTITY");
+  const c = orderChallenge(terms,kernel.self(),ownerKey,action,expected,sig.announcement);
+  assert(equalPoint(ecMulGenerator(sig.response as JubjubScalar),ecAdd(sig.announcement,ecMul(ownerKey,c as JubjubScalar))), "ORDER_SIGNATURE");
+}
+
+export circuit fund(): [] {
+  assert(!funded, "ALREADY_FUNDED");
+  assert(blockTimeLt((terms.epoch + terms.expiry) as Uint<64>), "ORDER_EXPIRED");
+  receiveUnshielded(terms.assetA,terms.input);
+  kernelState = KernelState { f0:100, f1:0, f2:0, f3:0 };
+  remaining = 128; revision = 0; funded = true;
+}
+
+export circuit fill(expected: Uint<128>, amountA: Uint<128>, amountB: Uint<128>, applicationFee: Uint<128>,
+                    now: Uint<64>, sig: OrderSignature): [] {
+  authorize(0,expected,sig);
+  assert(applicationFee == terms.fee, "APPLICATION_FEE");
+  assert(blockTimeLt((terms.epoch + terms.expiry) as Uint<64>), "ORDER_EXPIRED");
+  assert(now < terms.expiry, "ORDER_EXPIRED");
+  assert(blockTimeGte((terms.epoch + disclose(now)) as Uint<64>), "ORDER_FUTURE");
+  assert(unshieldedBalanceGte(terms.assetA,kernelState.f0), "CUSTODY_A");
+  const result = disclose(transition0(kernelState,Arguments0 { a0:2, a1:3, a2:amountA, a3:amountB },
+    KernelObservations { o0:now as Uint<128> },remaining,revision,Hints0 { unused:0 }));
+  assert(result.effect0.v0 == 0 && result.effect0.v1 == 4 && result.effect0.v2 == 5 && result.effect0.v3 == 40, "A_EFFECT");
+  assert(result.effect1.v0 == 1 && result.effect1.v1 == 5 && result.effect1.v2 == 3 && result.effect1.v3 >= terms.minimum, "B_EFFECT");
+  receiveUnshielded(terms.assetB,result.effect1.v3);
+  sendUnshielded(terms.assetB,result.effect1.v3,right<ContractAddress,UserAddress>(terms.recipient));
+  sendUnshielded(terms.assetA,result.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  kernelState = result.after; remaining = result.remaining; revision = result.revision;
+}
+
+export circuit cancel(expected: Uint<128>, sig: OrderSignature): [] {
+  authorize(1,expected,sig);
+  // Cancellation is independent of block time. The source only reads its clock in the common horizon guard.
+  const result = disclose(transition1(kernelState,Arguments1 { a0:2 },KernelObservations { o0:0 },
+    remaining,revision,Hints1 { unused:0 }));
+  assert(result.effect0.v0 == 0 && result.effect0.v1 == 4 && result.effect0.v2 == 2 && result.effect0.v3 == kernelState.f0, "REFUND_EFFECT");
+  assert(unshieldedBalanceGte(terms.assetA,result.effect0.v3), "CUSTODY_A");
+  sendUnshielded(terms.assetA,result.effect0.v3,right<ContractAddress,UserAddress>(terms.account));
+  kernelState = result.after; remaining = result.remaining; revision = result.revision;
+}
+
+// Additional A has no order entitlement. It neither increases the refundable
+// balance nor resets a consumed grant, even when deposited after cancellation.
+export circuit depositSurplus(amount: Uint<128>): [] {
+  assert(amount > 0, "EMPTY_DEPOSIT");
+  receiveUnshielded(terms.assetA, disclose(amount));
+}

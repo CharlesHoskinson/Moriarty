@@ -1,0 +1,75 @@
+pragma language_version >= 0.23 && <= 0.28;
+import CompactStandardLibrary;
+include "kernel";
+include "continuation";
+
+constructor(t: StageTerms, key: JubjubPoint) {
+  const program: Bytes<32> = Bytes[43,29,36,128,165,96,67,123,57,96,133,188,136,173,15,182,228,180,94,222,190,216,91,102,114,99,113,223,109,76,217,12];
+  assert(t.program == program && t.epoch <= 18446744073709549615, "STAGE_TERMS");
+  assert(t.assetA != t.assetB && t.assetA != t.assetC && t.assetB != t.assetC, "STAGE_ASSETS");
+  assert(t.executor != t.account && !equalPoint(key,ecMulGenerator(0 as JubjubScalar)), "STAGE_PARTIES");
+  terms = disclose(t); ownerKey = disclose(key);
+}
+export circuit fund(): [] {
+  assert(!funded && blockTimeLt((terms.epoch + 1200) as Uint<64>), "STAGE_FUND");
+  receiveUnshielded(terms.assetA,100);
+  current = KernelState { f0:100, f1:0, f2:0 }; remaining = 3; revision = 0; funded = true;
+}
+export circuit first(delivery: Uint<128>, now: Uint<64>, sig: OrderSignature): [] {
+  assert(funded && current.f2 == 0, "STAGE_FIRST");
+  authorizeStage(0,sig);
+  assert(blockTimeLt((terms.epoch + 1200) as Uint<64>) && now < 1200, "FIRST_EXPIRED");
+  assert(blockTimeGte((terms.epoch + disclose(now)) as Uint<64>), "FUTURE_TIME");
+  const r = disclose(transition0(current,Arguments0 { a0:3, a1:delivery },KernelObservations {o0:now as Uint<128>},
+                                 remaining,revision,Hints0 {unused:0}));
+  assert(r.effect0.v0==0 && r.effect0.v1==4 && r.effect0.v2==5 && r.effect0.v3==100, "STAGE_INPUT");
+  assert(r.effect1.v0==1 && r.effect1.v1==5 && r.effect1.v2==4 && r.effect1.v3==delivery, "STAGE_OUTPUT");
+  receiveUnshielded(terms.assetB,r.effect1.v3);
+  sendUnshielded(terms.assetA,r.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  pending = Capture {
+    predecessor:persistentHash<FirstReceipt>(FirstReceipt {domain:pad(32,"moriarty:stage:first:v1"), custody:kernel.self(),
+        terms:terms, before:current, after:r.after, revision:r.revision}),
+    eventId:terms.eventId, custody:kernel.self(), orderId:terms.orderId, program:terms.program,
+    asset:terms.assetB, amount:r.after.f1, budget:1 };
+  current = r.after; remaining = r.remaining; revision = r.revision;
+}
+export circuit enable(eventId: Bytes<32>, sig: OrderSignature): [] {
+  assert(current.f2 == 1 && !eventEnabled && eventId == terms.eventId, "STAGE_EVENT");
+  authorizeStage(1,sig); eventEnabled = true;
+}
+export circuit resume(ticket: Capture, delivery: Uint<128>, now: Uint<64>, sig: OrderSignature): [] {
+  requireCapture(disclose(ticket)); authorizeStage(2,sig);
+  // The kernel's own condition guard decides eligibility from the accepted event record.
+  const condition: Uint<128> = eventEnabled ? 1 : 0;
+  assert(blockTimeLt((terms.epoch + 1400) as Uint<64>) && now < 1400, "SECOND_EXPIRED");
+  assert(blockTimeGte((terms.epoch + disclose(now)) as Uint<64>), "FUTURE_TIME");
+  const r = disclose(transition1(current,Arguments1 {a0:3,a1:condition,a2:delivery}, KernelObservations {o0:now as Uint<128>},
+                                 remaining,revision,Hints1 {unused:0}));
+  assert(r.effect0.v0==1 && r.effect0.v1==4 && r.effect0.v2==5 && r.effect0.v3==ticket.amount, "STAGE_B");
+  assert(r.effect1.v0==2 && r.effect1.v1==5 && r.effect1.v2==3 && r.effect1.v3==delivery, "STAGE_C");
+  receiveUnshielded(terms.assetC,r.effect1.v3);
+  sendUnshielded(terms.assetB,r.effect0.v3,right<ContractAddress,UserAddress>(terms.executor));
+  sendUnshielded(terms.assetC,r.effect1.v3,right<ContractAddress,UserAddress>(terms.account));
+  current = r.after; remaining = r.remaining; revision = r.revision; terminal=1;
+}
+export circuit refund(ticket: Capture, sig: OrderSignature): [] {
+  requireCapture(disclose(ticket)); authorizeStage(3,sig);
+  assert(blockTimeGte((terms.epoch + 1400) as Uint<64>), "NOT_EXPIRED");
+  const r = disclose(transition2(current,Arguments2 {a0:3},KernelObservations {o0:1400},
+                                 remaining,revision,Hints2 {unused:0}));
+  assert(r.effect0.v0==1 && r.effect0.v1==4 && r.effect0.v2==3 && r.effect0.v3==ticket.amount, "REFUND_B");
+  sendUnshielded(terms.assetB,r.effect0.v3,right<ContractAddress,UserAddress>(terms.account));
+  current = r.after; remaining = r.remaining; revision = r.revision; terminal=2;
+}
+// Owner exit for an order whose first trade never happened before its window closed.
+export circuit withdraw(sig: OrderSignature): [] {
+  assert(funded && current.f2 == 0 && terminal == 0, "STAGE_WITHDRAW");
+  authorizeStage(4,sig);
+  assert(blockTimeGte((terms.epoch + 1200) as Uint<64>), "FIRST_OPEN");
+  const r = disclose(transition3(current,Arguments3 {a0:3},KernelObservations {o0:1200},
+                                 remaining,revision,Hints3 {unused:0}));
+  assert(r.effect0.v0==0 && r.effect0.v1==4 && r.effect0.v2==3 && r.effect0.v3==100, "WITHDRAW_A");
+  assert(unshieldedBalanceGte(terms.assetA,r.effect0.v3), "CUSTODY_A");
+  sendUnshielded(terms.assetA,r.effect0.v3,right<ContractAddress,UserAddress>(terms.account));
+  current = r.after; remaining = r.remaining; revision = r.revision; terminal=3;
+}

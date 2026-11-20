@@ -1,0 +1,58 @@
+// Include in the custody contract so the check and asset release share one transcript.
+struct FeedObservation {
+  feed: Bytes<32>;
+  price: Uint<128>;
+  observedAt: Uint<64>;
+}
+
+struct FeedMessage {
+  protocol: Bytes<32>;
+  network: Bytes<32>;
+  address: ContractAddress;
+  observation: FeedObservation;
+}
+
+export ledger feedController: JubjubPoint;
+export ledger feedNetwork: Bytes<32>;
+export ledger feedAvailable: Boolean;
+export ledger feedPrice: Uint<128>;
+export ledger feedObservedAt: Uint<64>;
+
+circuit initializeFeed(controller: JubjubPoint, network: Bytes<32>): [] {
+  assert(jubjubPointX(controller) != (0 as Field) || jubjubPointY(controller) != (1 as Field), "FEED_CONTROLLER_IDENTITY");
+  feedController = disclose(controller);
+  feedNetwork = disclose(network);
+  feedAvailable = false;
+}
+
+export pure circuit feedMessage(network: Bytes<32>, address: ContractAddress, observation: FeedObservation): Field {
+  return transientHash<FeedMessage>(FeedMessage {
+    protocol: pad(32, "moriarty:feed:schnorr:v1"), network: network, address: address, observation: observation
+  });
+}
+
+circuit requireFreshFeed(observedAt: Uint<64>): [] {
+  assert(blockTimeGte(observedAt), "FEED_FUTURE");
+  const maxTime: Uint<64> = 18446744073709551615;
+  const expiry: Uint<64> = observedAt > 18446744073709551585 ? maxTime : (observedAt + 30) as Uint<64>;
+  assert(blockTimeLte(expiry), "FEED_STALE");
+}
+
+export circuit publishFeedUpdate(observation: FeedObservation, signature: JubjubSchnorrSignature): [] {
+  const sample = disclose(observation);
+  assert(sample.feed == pad(32, "feed-AB"), "FEED_ID");
+  assert(!feedAvailable || sample.observedAt > feedObservedAt, "FEED_SEQUENCE");
+  requireFreshFeed(sample.observedAt);
+  const message = feedMessage(feedNetwork, kernel.self(), sample);
+  assert(jubjubSchnorrVerify<1>([message], signature, feedController), "FEED_SIGNATURE");
+  feedPrice = sample.price;
+  feedObservedAt = sample.observedAt;
+  feedAvailable = true;
+}
+
+circuit requireFeedCondition(expectedFeed: Bytes<32>): [] {
+  assert(expectedFeed == pad(32, "feed-AB"), "FEED_ID");
+  assert(feedAvailable, "FEED_UNAVAILABLE");
+  requireFreshFeed(feedObservedAt);
+  assert(feedPrice < 3, "FEED_THRESHOLD");
+}

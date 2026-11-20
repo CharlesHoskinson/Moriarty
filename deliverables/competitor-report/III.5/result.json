@@ -1,0 +1,379 @@
+{
+  "requirement": "III.5",
+  "predicate": "U040",
+  "passed": true,
+  "checks": {
+    "finiteTests": {
+      "command": [
+        "node",
+        "--test",
+        "--test-reporter=junit",
+        "--test-reporter-destination=stdout",
+        "--experimental-test-coverage",
+        "--test-reporter=lcov",
+        "--test-reporter-destination=<scratch>/lines.lcov",
+        "--test-coverage-include=packages/moriarty-orders/src/executors.mjs",
+        "packages/moriarty-orders/test/executors.test.mjs"
+      ],
+      "exit": 0,
+      "stdoutSha256": "8e531e9da1cd1948ee153b846079236d0035392dc3e7b86325956ebb6954c9e7",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictNativeReplay": {
+      "command": [
+        "node",
+        "packages/moriarty-orders/native/check-executors.mjs"
+      ],
+      "exit": 0,
+      "stdoutSha256": "1f9a1065faecf9a448ef4bd16a64c6db1731811592bc875a8f78929b0347d952",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "runner": [
+    "python3",
+    "scripts/qa/order-report.py",
+    "III.5"
+  ],
+  "assessment": "independent review pending",
+  "target": "local undeployed Midnight ledger with ZKIRv3 proofs",
+  "evidenceBoundary": {
+    "ledgerApplied": "Every retained transaction passes strict Rust validation (proofs, signatures, balancing, limits) and application against its recorded predecessor state.",
+    "compiledCircuitRefusals": "Each preparation refusal re-executes in the compiled circuit against its recorded accepted state. No transaction exists for these calls, so their ledger refusal follows from proof soundness and is not itself observed."
+  },
+  "limitations": [
+    "Controlled local block clock and public test wallets",
+    "Public-network inclusion and finality unassessed"
+  ],
+  "revision": "099c141966116a22cbc80331ab017d07029b0a67",
+  "draft": false,
+  "environment": {
+    "node": "v26.0.0",
+    "platform": "Linux-7.0.11-orbstack-00360-gc9bc4d96ac70-aarch64-with-glibc2.36",
+    "machine": "aarch64",
+    "sdkLockSha256": "d6902df62058ae4657f8ae7e7d8cab48b9b19ef8d0417e202b6af8e45720ec63"
+  },
+  "tests": [
+    "public language use needs only the owner grant and no executor enrollment",
+    "separate keys authorize exclusive primary and fallback windows"
+  ],
+  "coverage": {
+    "metric": "Node V8 executed lines / instrumented lines",
+    "files": {
+      "packages/moriarty-orders/src/executors.mjs": {
+        "covered": 8,
+        "total": 8
+      }
+    }
+  },
+  "replay": {
+    "schema": "moriarty-orders/executors-replay/1",
+    "evidenceClasses": {
+      "ledgerApplied": [
+        "setup-night-reward",
+        "setup-dust-registration",
+        "deploy-fixture-faucet",
+        "mint-test-assets",
+        "fund-independent-fallback-wallet",
+        "deploy-restricted-order",
+        "fund-order",
+        "primary-fill",
+        "primary-proof-after-switch",
+        "fallback-fill",
+        "owner-exit-after-both-stop"
+      ],
+      "compiledCircuitRefusals": [
+        {
+          "label": "outsider-as-primary",
+          "circuit": "fill",
+          "error": "failed assert: CLIENT_SIGNATURE",
+          "stateSha256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc"
+        },
+        {
+          "label": "fallback-before-window",
+          "circuit": "fill",
+          "error": "failed assert: FALLBACK_WINDOW",
+          "stateSha256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc"
+        },
+        {
+          "label": "primary-key-as-fallback",
+          "circuit": "fill",
+          "error": "failed assert: CLIENT_SIGNATURE",
+          "stateSha256": "1de0526511bd65b0d4208eead9511644cb21db87cee64b00776b1aa5d8734be5"
+        }
+      ]
+    },
+    "validated": [
+      {
+        "label": "setup-night-reward",
+        "afterBlockStateSHA256": "77eeb85a55772e8247915d870b2a3f6214d36b85e9584a4a2db1309f4ff32c8c",
+        "blockContext": {
+          "last_block_seconds": 0,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 0,
+        "contractCalls": [],
+        "outcome": "success",
+        "postStateSHA256": "9c4c48dfca40fd569ab8953bcc629ba48edb5493c6315fdc6a7c46779a82b7ea",
+        "preStateSHA256": "b7675900bf0cbeed688c7e6988c212a4fc11fe663dec421a25200252f7f34e16",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "f7d39b6102cc139b6d103432b3c79f75e7a47de17ff9991df8d0e9ff64a43115"
+      },
+      {
+        "label": "setup-dust-registration",
+        "afterBlockStateSHA256": "4b8c27997704d82597f85e8911d91cbe8eef4533c2bfa3515050a6bd4cd1104e",
+        "blockContext": {
+          "last_block_seconds": 605815,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 605815,
+        "contractCalls": [],
+        "outcome": "success",
+        "postStateSHA256": "2034d50d543aaf51ce2c1d0309e1fbcdcdfc5b9b8b5af6c280c895c7f765eab3",
+        "preStateSHA256": "77eeb85a55772e8247915d870b2a3f6214d36b85e9584a4a2db1309f4ff32c8c",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "68366f0aeba65886b0bfa1d2bece6a9ce9f728ad961727909bb1cabb160d3b6a"
+      },
+      {
+        "label": "deploy-fixture-faucet",
+        "afterBlockStateSHA256": "f92a2a8d4cb7b9aac673d7ae8395bb08cdb5ece78d2c3abcb1be2a7aa95c08ab",
+        "blockContext": {
+          "last_block_seconds": 1210632,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210632,
+        "contractCalls": [],
+        "outcome": "success",
+        "postStateSHA256": "a2f195a53fefa0130ec78fde8e316848e8d7de3202e32f894552fdad58aba6e2",
+        "preStateSHA256": "4b8c27997704d82597f85e8911d91cbe8eef4533c2bfa3515050a6bd4cd1104e",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "1a803263dae131560a087abb91976313cf732dedf57eee381917966c77eb9a0a"
+      },
+      {
+        "label": "mint-test-assets",
+        "afterBlockStateSHA256": "4af4dcc13eea84266b0044147c4a8f9439611adf326ef7d4e00f1b297b9e25e7",
+        "blockContext": {
+          "last_block_seconds": 1210633,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210633,
+        "contractCalls": [
+          {
+            "address": "98de0a6c4992f9a955e6e7e162378acba3b6be1d822c85e07448f892e68df9b1",
+            "entryPoint": "mint",
+            "proofSHA256": "0afdae363ad6bbb9762065470b9a208283459b156e5b7cdffb9b1db8f77680a3",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "e936a326b0a058b4908ee4fcbbf9a702619635fd39ef4be4ac7d4c800f859555"
+          }
+        ],
+        "outcome": "success",
+        "postStateSHA256": "cad2966e486ab4e9b9afbdc1b74885c2f827590d927874b296257e5fa1e92988",
+        "preStateSHA256": "f92a2a8d4cb7b9aac673d7ae8395bb08cdb5ece78d2c3abcb1be2a7aa95c08ab",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "9dca8f6859e7925ec82417cb97760070b6cd4ae020e47d43afccbd9b6741ab36"
+      },
+      {
+        "label": "fund-independent-fallback-wallet",
+        "afterBlockStateSHA256": "de5ea1fb75e578be4e8be7402a5d5ad664126c9f6c23eda6b4e86489cd4292dd",
+        "blockContext": {
+          "last_block_seconds": 1210634,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210634,
+        "contractCalls": [],
+        "outcome": "success",
+        "postStateSHA256": "ff47e575b9888d33bbde1596ecea05788ddac16063fecb4accdfe88655b1d6ef",
+        "preStateSHA256": "4af4dcc13eea84266b0044147c4a8f9439611adf326ef7d4e00f1b297b9e25e7",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "4ab84323b8ef1b8d678a3a8dec8c07765e485f6fdb026701fd2b098550bd7dca"
+      },
+      {
+        "label": "deploy-restricted-order",
+        "afterBlockStateSHA256": "9a73071f4832520bc11d49212675462d36ee7c0f3b2758c2e0f46ffec691d8f7",
+        "blockContext": {
+          "last_block_seconds": 1210635,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210635,
+        "contractCalls": [],
+        "outcome": "success",
+        "postStateSHA256": "7d88896a785d649c36795ca888e3473d5e6dc3b79e821a6839899637ec8b8e99",
+        "preStateSHA256": "de5ea1fb75e578be4e8be7402a5d5ad664126c9f6c23eda6b4e86489cd4292dd",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "b847c46a987252981e997c70b51cc52a91fa0f212ce0f062d6da0e8dd8ecb1ea"
+      },
+      {
+        "label": "fund-order",
+        "afterBlockStateSHA256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc",
+        "blockContext": {
+          "last_block_seconds": 1210636,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210636,
+        "contractCalls": [
+          {
+            "address": "48f23063a9754f2e422e712df7b330da3b9c78870c9c6cb29b43204c064be095",
+            "entryPoint": "fund",
+            "proofSHA256": "179e8567fe1939eed48a854c60b56a7b77bbdaf55472af2bcc4ebd91f91638e5",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "e16e1b66c1e5668478e7e631e5aca7ab3300c7f42dd2659b0d1dce1677793f37"
+          }
+        ],
+        "outcome": "success",
+        "postStateSHA256": "dacef93dbeae9be9d949a269d77d85916749a7801a333ec48c77cd384498f889",
+        "preStateSHA256": "9a73071f4832520bc11d49212675462d36ee7c0f3b2758c2e0f46ffec691d8f7",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "c04d2c6122d4cb534f3dec0c2cfc349b5ab95683365535ccaddb3969eeb02246"
+      },
+      {
+        "label": "primary-fill",
+        "afterBlockStateSHA256": "b6fc143eabc95360606d141feffc1f0c03cfb6f3a7b5bc9f411d52893461ea3b",
+        "blockContext": {
+          "last_block_seconds": 1210637,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210637,
+        "contractCalls": [
+          {
+            "address": "48f23063a9754f2e422e712df7b330da3b9c78870c9c6cb29b43204c064be095",
+            "entryPoint": "fill",
+            "proofSHA256": "34326dea1735e14455dfdb0bf1340af8d1a2db9b7b829829f678d799838723cf",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "4a347dd9e44b33b2f095d6d9f93aeb8936dd2b50f888bf8920731fec95186e15"
+          }
+        ],
+        "outcome": "success",
+        "postStateSHA256": "45170a5e993a76e44ff23ebe1171a42a82af8e413e3028a1a4b6d97d940177d1",
+        "preStateSHA256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "d7af94b182bac954c739b5b89938fbffb531367e3f0c921c96d37da56edf8868"
+      },
+      {
+        "label": "primary-proof-after-switch",
+        "afterBlockStateSHA256": "1de0526511bd65b0d4208eead9511644cb21db87cee64b00776b1aa5d8734be5",
+        "blockContext": {
+          "last_block_seconds": 1210737,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210737,
+        "contractCalls": [
+          {
+            "address": "48f23063a9754f2e422e712df7b330da3b9c78870c9c6cb29b43204c064be095",
+            "entryPoint": "fill",
+            "proofSHA256": "4ef35b010807229daff85660851e6a1152345e44b3953af80dcc1e11c070db14",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "4a347dd9e44b33b2f095d6d9f93aeb8936dd2b50f888bf8920731fec95186e15"
+          }
+        ],
+        "outcome": "failure",
+        "postStateSHA256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc",
+        "preStateSHA256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "2da7fd8c859c67510bc1639956af6152368c9488afe9efa6b171b9bbcb029c77"
+      },
+      {
+        "label": "fallback-fill",
+        "afterBlockStateSHA256": "446a7030f73f79d66c40818d3327e4447b0f9a46e8120c94276f1a352dbfccc9",
+        "blockContext": {
+          "last_block_seconds": 1210738,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1210738,
+        "contractCalls": [
+          {
+            "address": "48f23063a9754f2e422e712df7b330da3b9c78870c9c6cb29b43204c064be095",
+            "entryPoint": "fill",
+            "proofSHA256": "26c51427b52bc2d1395cf1feaf205b9bbc79f224e872e7b8716494900b7491a6",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "4a347dd9e44b33b2f095d6d9f93aeb8936dd2b50f888bf8920731fec95186e15"
+          }
+        ],
+        "outcome": "success",
+        "postStateSHA256": "e4c1cd574ebec884bfb17d33fc5e8a33cba126b977e20ff5fd9625f92789d558",
+        "preStateSHA256": "1de0526511bd65b0d4208eead9511644cb21db87cee64b00776b1aa5d8734be5",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "455537d0259dad18146ebf34824c5f0285e4c498caca8b118950a86fbd6353db"
+      },
+      {
+        "label": "owner-exit-after-both-stop",
+        "afterBlockStateSHA256": "dbbed3c7659a747600778f4aca8427fe1d246484358c03503088748be71347df",
+        "blockContext": {
+          "last_block_seconds": 1211638,
+          "parent_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "uncertainty_seconds": 0
+        },
+        "blockSeconds": 1211638,
+        "contractCalls": [
+          {
+            "address": "48f23063a9754f2e422e712df7b330da3b9c78870c9c6cb29b43204c064be095",
+            "entryPoint": "cancel",
+            "proofSHA256": "3a1203319cddd76f73d3bdcc616b89b9583f583b813df78f08493ce2d16d9e93",
+            "proofVersion": "V3",
+            "segment": 1,
+            "verifierKeySHA256": "784e8b9660f1420fce1833e848ed8688279f8ebc2c1b2d8917658b63b6ed84a8"
+          }
+        ],
+        "outcome": "success",
+        "postStateSHA256": "23c366f1b3fee0ba3d5c59cedbb3abaf78d82024da6145adcc9636fe92427079",
+        "preStateSHA256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc",
+        "schema": "moriarty-strict-ledger-replay/1",
+        "transactionSHA256": "e49a9a4285e49947d422547cea2b0878c35d92956275654c73e9d8611a56e515"
+      }
+    ]
+  },
+  "evidenceClasses": {
+    "ledgerApplied": [
+      "setup-night-reward",
+      "setup-dust-registration",
+      "deploy-fixture-faucet",
+      "mint-test-assets",
+      "fund-independent-fallback-wallet",
+      "deploy-restricted-order",
+      "fund-order",
+      "primary-fill",
+      "primary-proof-after-switch",
+      "fallback-fill",
+      "owner-exit-after-both-stop"
+    ],
+    "compiledCircuitRefusals": [
+      {
+        "label": "outsider-as-primary",
+        "circuit": "fill",
+        "error": "failed assert: CLIENT_SIGNATURE",
+        "stateSha256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc"
+      },
+      {
+        "label": "fallback-before-window",
+        "circuit": "fill",
+        "error": "failed assert: FALLBACK_WINDOW",
+        "stateSha256": "3c07c675657094abb87bb630ea75e841c889e43a48ffca06093b31da3878f4bc"
+      },
+      {
+        "label": "primary-key-as-fallback",
+        "circuit": "fill",
+        "error": "failed assert: CLIENT_SIGNATURE",
+        "stateSha256": "1de0526511bd65b0d4208eead9511644cb21db87cee64b00776b1aa5d8734be5"
+      }
+    ]
+  },
+  "evidenceRevision": "96d29bca656089768e9ad65c550542ef5d64432b",
+  "inputs": {
+    "packages/moriarty-orders/test/executors.test.mjs": "68d3d9a93599e77dd5b026041829af597477e53e401a743298d87bcd70ec796c",
+    "packages/moriarty-orders/native/check-executors.mjs": "97ed6bf30df290e79b7d8d0608e9951220187e7fc6ae3e95662c85869366119d",
+    "packages/moriarty-orders/native/replay.mjs": "8d8e9ff7040f6cbc4618487b581b536852cb40a671831c572f0ed5cc30c5229e"
+  }
+}

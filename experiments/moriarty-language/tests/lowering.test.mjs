@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,symlinkSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {lowerCompact,prepareCompactCall,decodeCompactResult,compactSnapshotHarness} from '../src/lower-compact.ts';
 import {createSimulator} from '../src/evaluate.ts';
 const bounds=readFileSync(new URL('../spec/bounds.json',import.meta.url));
 const sources=Object.fromEntries(['loan','swap'].map(name=>[name,readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url))]));
-const runtime=process.env.MORIARTY_RUNTIME_NODE_MODULES??'/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
+const runtime=process.env.MORIARTY_RUNTIME_NODE_MODULES??fileURLToPath(new URL('../node_modules/',import.meta.url));
 const root=mkdtempSync(join(tmpdir(),'moriarty-mapping-'));
 process.on('exit',()=>rmSync(root,{recursive:true,force:true}));
 function compileArtifact(name,mapping){const source=join(root,name+'.compact'),target=join(root,name);writeFileSync(source,mapping.source);const r=spawnSync('compact',['compile','--skip-zk','--compact-path',resolve(new URL('../compact/',import.meta.url).pathname),source,target],{encoding:'utf8',timeout:90000});assert.equal(r.status,0,r.stdout+r.stderr);symlinkSync(runtime,join(target,'node_modules'),'dir');return import(pathToFileURL(join(target,'contract/index.js')).href);}

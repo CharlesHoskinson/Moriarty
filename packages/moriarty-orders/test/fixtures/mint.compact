@@ -1,0 +1,14 @@
+pragma language_version >= 0.23 && <= 0.28;
+import CompactStandardLibrary;
+// Assessment-only setup faucet. The order itself never mints its principal.
+export ledger colorA: Bytes<32>;
+export ledger colorB: Bytes<32>;
+export ledger minted: Boolean;
+export circuit mint(owner: UserAddress, executor: UserAddress, initialA: Uint<64>): [] {
+  assert(!minted, "ALREADY_MINTED");
+  colorA = mintUnshieldedToken(pad(32, "assessment-external-A"), disclose(initialA),
+    right<ContractAddress, UserAddress>(disclose(owner)));
+  colorB = mintUnshieldedToken(pad(32, "assessment-external-B"), 1000000,
+    right<ContractAddress, UserAddress>(disclose(executor)));
+  minted = true;
+}

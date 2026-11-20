@@ -7,6 +7,7 @@ import {
   parseSuccessorFinancialAgreementSourceV3,
   parseSuccessorFinancialAgreementSourceV4,
   parseSuccessorFinancialAgreementSourceV5,
+  parseSuccessorFinancialAgreementSourceV6,
   SuccessorSyntaxError,
   SYNTAX_BOUNDS,
   type Declaration,
@@ -244,4 +245,8 @@ export function formatSuccessorFinancialAgreementSourceV4(source: string): strin
 
 export function formatSuccessorFinancialAgreementSourceV5(source: string): string {
   return formatParsedSource(parseSuccessorFinancialAgreementSourceV5(source));
+}
+
+export function formatSuccessorFinancialAgreementSourceV6(source: string): string {
+  return formatParsedSource(parseSuccessorFinancialAgreementSourceV6(source));
 }

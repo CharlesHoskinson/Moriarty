@@ -1,0 +1,15 @@
+pragma language_version >= 0.28 && <= 0.28;
+import CompactStandardLibrary;
+
+export ledger colors: Vector<3, Bytes<32>>;
+export ledger minted: Boolean;
+export circuit mint(wallets: Vector<3, UserAddress>, third: Uint<64>): [] {
+  assert(!minted, "O8_FIXTURE_ALREADY_MINTED");
+  const owners = disclose(wallets);
+  colors = [
+    mintUnshieldedToken(pad(32,"o8:fixture:A"),100,right<ContractAddress,UserAddress>(owners[0])),
+    mintUnshieldedToken(pad(32,"o8:fixture:B"),200,right<ContractAddress,UserAddress>(owners[1])),
+    mintUnshieldedToken(pad(32,"o8:fixture:C"),disclose(third),right<ContractAddress,UserAddress>(owners[2]))
+  ];
+  minted = true;
+}

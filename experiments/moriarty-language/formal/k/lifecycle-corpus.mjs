@@ -198,7 +198,7 @@ export async function runLifecycleCorpus({
   return report;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (import.meta.main ?? (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href)) {
   const report = await runLifecycleCorpus();
   console.log(JSON.stringify(report));
   process.exitCode = report.ok ? 0 : 1;

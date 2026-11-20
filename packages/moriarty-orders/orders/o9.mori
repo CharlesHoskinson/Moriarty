@@ -1,0 +1,73 @@
+agreement StagedExchange profile "moriarty-bounded-atomic/1" {
+  lifetime 3;
+  horizon 2000;
+  unit A;
+  unit B;
+  unit C;
+  state remaining_a: Amount<A> = amount(100, A);
+  state proceeds_b: Amount<B> = amount(0, B);
+  state stage: UInt128 = uint(0);
+  observation now: UInt128;
+  settlement binding_a asset text("ASSET_A") quantum amount(1, A);
+  settlement binding_b asset text("ASSET_B") quantum amount(1, B);
+  settlement binding_c asset text("ASSET_C") quantum amount(1, C);
+  status episode closed_when stage == uint(2);
+  status agreement no_remaining_notional;
+  policy debit_a targets write(first, remaining_a), effect(first, 0, amount) {
+    unit A; derivation "full first input"; rounding none; remainder "none"; comparison "exact"; proof "first_input";
+  }
+  policy receive_b targets write(first, proceeds_b), effect(first, 1, amount) {
+    unit B; derivation "actual first proceeds"; rounding none; remainder "all held"; comparison "minimum"; proof "first_output";
+  }
+  policy resume_b targets write(resume, proceeds_b), effect(resume, 0, amount) {
+    unit B; derivation "only captured proceeds"; rounding none; remainder "none"; comparison "exact"; proof "second_input";
+  }
+  policy receive_c targets effect(resume, 1, amount) {
+    unit C; derivation "second proceeds"; rounding none; remainder "none"; comparison "minimum"; proof "second_output";
+  }
+  policy refund_b targets write(refund, proceeds_b), effect(refund, 0, amount) {
+    unit B; derivation "entire residual to owner"; rounding none; remainder "none"; comparison "exact"; proof "refund";
+  }
+  policy withdraw_a targets write(withdraw, remaining_a), effect(withdraw, 0, amount) {
+    unit A; derivation "unfilled input returned to owner"; rounding none; remainder "none"; comparison "exact"; proof "withdraw";
+  }
+  effect Transfer { asset: Text; from: Text; to: Text; amount: Amount; }
+  action first(actor: Text, delivery: Amount<B>) {
+    guard arg.actor == text("Alice"), "owner";
+    guard state.stage == uint(0), "stage";
+    guard obs.now < uint(1200), "first expired";
+    guard arg.delivery >= amount(200,B), "first minimum";
+    emit Transfer { asset: text("ASSET_A"), from: text("escrow"), to: text("executor"), amount: state.remaining_a };
+    emit Transfer { asset: text("ASSET_B"), from: text("executor"), to: text("escrow"), amount: arg.delivery };
+    set remaining_a = amount(0,A);
+    set proceeds_b = arg.delivery;
+    set stage = uint(1);
+  }
+  action resume(actor: Text, condition: UInt128, delivery: Amount<C>) {
+    guard arg.actor == text("Alice"), "owner";
+    guard state.stage == uint(1), "consumed";
+    guard arg.condition == uint(1), "condition false";
+    guard obs.now < uint(1400), "second expired";
+    guard arg.delivery >= amount(300,C), "second minimum";
+    emit Transfer { asset: text("ASSET_B"), from: text("escrow"), to: text("executor"), amount: state.proceeds_b };
+    emit Transfer { asset: text("ASSET_C"), from: text("executor"), to: text("Alice"), amount: arg.delivery };
+    set proceeds_b = amount(0,B);
+    set stage = uint(2);
+  }
+  action refund(actor: Text) {
+    guard arg.actor == text("Alice"), "owner";
+    guard state.stage == uint(1), "consumed";
+    guard obs.now >= uint(1400), "not expired";
+    emit Transfer { asset: text("ASSET_B"), from: text("escrow"), to: text("Alice"), amount: state.proceeds_b };
+    set proceeds_b = amount(0,B);
+    set stage = uint(2);
+  }
+  action withdraw(actor: Text) {
+    guard arg.actor == text("Alice"), "owner";
+    guard state.stage == uint(0), "consumed";
+    guard obs.now >= uint(1200), "first open";
+    emit Transfer { asset: text("ASSET_A"), from: text("escrow"), to: text("Alice"), amount: state.remaining_a };
+    set remaining_a = amount(0,A);
+    set stage = uint(2);
+  }
+}

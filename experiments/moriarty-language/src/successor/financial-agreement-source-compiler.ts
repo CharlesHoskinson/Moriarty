@@ -5,6 +5,7 @@ import {
   FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE,
+  FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE,
   FINANCIAL_READ_GENERIC_PRIMARIES,
   FINANCIAL_POST_READ_GENERIC_PRIMARIES,
   parseSuccessorFinancialAgreementSource,
@@ -12,6 +13,7 @@ import {
   parseSuccessorFinancialAgreementSourceV3,
   parseSuccessorFinancialAgreementSourceV4,
   parseSuccessorFinancialAgreementSourceV5,
+  parseSuccessorFinancialAgreementSourceV6,
   SuccessorSyntaxError,
 } from './frontend.ts';
 import type {
@@ -70,6 +72,8 @@ import {
   parseOwnedState,
   snapshotWorkInitial,
 } from './funded-expression-source-v1.ts';
+import { lifecycleOperationBinding as feeOperationBinding } from './funded-expression-source-v2.ts';
+import { FINANCIAL_EXPRESSION_CONTRACT_V5 } from './financial-expression-v5.ts';
 import { admitRepaymentStateJSON } from './repayment.ts';
 import { admitFinancialLifecycleStateJSON } from './financial-lifecycle.ts';
 import type {
@@ -86,11 +90,13 @@ export type AgreementProfile =
   | typeof FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
   | typeof FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
   | typeof FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-  | typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
 
 function extraReserved(profile: AgreementProfile): readonly string[] {
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) {
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE) {
     return [...FINANCIAL_READ_GENERIC_PRIMARIES, ...FINANCIAL_POST_READ_GENERIC_PRIMARIES];
   }
   return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE ? FINANCIAL_READ_GENERIC_PRIMARIES : [];
@@ -99,12 +105,14 @@ function extraReserved(profile: AgreementProfile): readonly string[] {
 function readsEnabled(profile: AgreementProfile): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
     || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
 }
 
 function postReadsEnabled(profile: AgreementProfile): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE;
 }
 
 export interface CompiledAgreementAction {
@@ -161,14 +169,14 @@ export function evaluateCompiledAction(
   compiled: CompiledAgreementAction,
   snapshotCanonicalJSON: string,
   repaymentStateJSON: string,
-  profile?: Exclude<AgreementProfile, typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE>,
+  profile?: Exclude<AgreementProfile, typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE | typeof FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE>,
 ): FundedExpressionResult;
 export function evaluateCompiledAction(
   source: string,
   compiled: CompiledAgreementAction,
   snapshotCanonicalJSON: string,
   repaymentStateJSON: string,
-  profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
+  profile: Exclude<AgreementProfile, typeof FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE> = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
 ): FundedExpressionResult | LifecycleExpressionResult {
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) {
     const admitted = admitFinancialLifecycleStateJSON(repaymentStateJSON);
@@ -239,6 +247,7 @@ export function evaluateCompiledAction(
 }
 
 function parseAgreement(source: string, profile: AgreementProfile): Program {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE) return parseSuccessorFinancialAgreementSourceV6(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) return parseSuccessorFinancialAgreementSourceV5(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) return parseSuccessorFinancialAgreementSourceV4(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) return parseSuccessorFinancialAgreementSourceV3(source);
@@ -530,7 +539,9 @@ function requireProtectedBinding(
   schema: Schema,
   profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
 ): void {
-  const binding = profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+  const binding = profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE
+    ? feeOperationBinding(schema)
+    : profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
     ? lifecycleOperationBinding(schema)
     : operationBinding(schema);
   if ('status' in binding) {
@@ -615,7 +626,9 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
   }
   function compileAction(action: ActionDecl, schema: Schema): CompiledAgreementAction | SourceRejected {
     const lowered = lowerAndCheckFinancialAction(source, action, schema, canonical(schema), {
-      contract: profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+      contract: profile === FINANCIAL_AGREEMENT_SOURCE_V6_PROFILE
+        ? FINANCIAL_EXPRESSION_CONTRACT_V5
+        : profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
         ? FINANCIAL_EXPRESSION_CONTRACT_V4
         : postReadsEnabled(profile)
         ? FINANCIAL_EXPRESSION_CONTRACT_V3

@@ -1,8 +1,15 @@
 //! Native ledger validation. Unlike the distributed JS WASM, proof-verifying is enabled.
-use midnight_base_crypto::{hash::HashOutput, time::Timestamp};
+use midnight_base_crypto::{
+    cost_model::{FixedPoint, NormalizedCost},
+    hash::HashOutput,
+    time::Timestamp,
+};
 use midnight_ledger::{
     semantics::{TransactionContext, TransactionResult},
-    structure::{ContractAction, LedgerState, ProofMarker, ProofVersioned, Signature, Transaction},
+    structure::{
+        ContractAction, LedgerState, ProofMarker, ProofPreimageMarker, ProofVersioned, Signature,
+        Transaction,
+    },
     verify::WellFormedStrictness,
 };
 use midnight_onchain_runtime::context::BlockContext;
@@ -22,6 +29,7 @@ struct Input {
     state: String,
     transaction: String,
     block_seconds: u64,
+    block_context: Option<StrictBlockContext>,
 }
 fn decode<T: Deserializable + Tagged>(raw: &[u8]) -> Result<T, Box<dyn Error>> {
     let mut reader = Cursor::new(raw);
@@ -36,7 +44,114 @@ fn encode<T: Serializable + Tagged>(value: &T) -> Vec<u8> {
     midnight_serialize::tagged_serialize(value, &mut raw).unwrap();
     raw
 }
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct StrictBlockContext {
+    uncertainty_seconds: u32,
+    last_block_seconds: u64,
+    parent_block_hash: String,
+}
+
+fn strict_calls(
+    state: &LedgerState<InMemoryDB>,
+    tx: &Tx,
+) -> Result<Vec<serde_json::Value>, Box<dyn Error>> {
+    let mut calls = Vec::new();
+    for (segment, action) in tx.actions() {
+        if let ContractAction::Call(call) = action {
+            let contract = state.index(call.address).ok_or("missing contract state")?;
+            let operation = contract
+                .operations
+                .get(&call.entry_point)
+                .ok_or("missing operation")?;
+            let ProofVersioned::V3(proof) = &call.proof else {
+                return Err("strict order replay requires V3 contract proofs".into());
+            };
+            let key = operation.v3.as_ref().ok_or("missing V3 verifier key")?;
+            calls.push(serde_json::json!({
+                "segment": segment, "address": hex::encode(call.address.0.0),
+                "entryPoint": std::str::from_utf8(&call.entry_point.0)?,
+                "proofVersion": "V3", "proofSHA256": hex::encode(Sha256::digest(&proof.0)),
+                "verifierKeySHA256": hex::encode(Sha256::digest(encode(key))),
+            }));
+        }
+    }
+    Ok(calls)
+}
+
+fn strict_replay(
+    state: &LedgerState<InMemoryDB>,
+    tx_raw: &[u8],
+    input: &Input,
+    block: &StrictBlockContext,
+) -> Result<serde_json::Value, Box<dyn Error>> {
+    let tblock = Timestamp::from_secs(input.block_seconds);
+    let parent_hash: [u8; 32] = hex::decode(&block.parent_block_hash)?
+        .try_into()
+        .map_err(|_| "expected 32-byte parent block hash")?;
+    type RewardEnvelope =
+        Transaction<Signature, ProofPreimageMarker, PureGeneratorPedersen, InMemoryDB>;
+    let (verified, calls) =
+        if midnight_serialize::peek_tag(&mut Cursor::new(tx_raw))? == RewardEnvelope::tag() {
+            let reward: RewardEnvelope = decode(tx_raw)?;
+            // The SDK wraps proof-free reward claims in this envelope. Contract
+            // calls and all other standard transactions must use proven bytes.
+            if !matches!(reward, Transaction::ClaimRewards(_)) || encode(&reward) != tx_raw {
+                return Err("expected canonical reward claim".into());
+            }
+            (
+                reward.well_formed(state, WellFormedStrictness::default(), tblock)?,
+                Vec::new(),
+            )
+        } else {
+            let tx: Tx = decode(tx_raw)?;
+            if encode(&tx) != tx_raw {
+                return Err("noncanonical transaction".into());
+            }
+            (
+                tx.well_formed(state, WellFormedStrictness::default(), tblock)?,
+                strict_calls(state, &tx)?,
+            )
+        };
+    let (post, result) = state.apply(
+        &verified,
+        &TransactionContext {
+            ref_state: state.clone(),
+            block_context: BlockContext {
+                tblock,
+                tblock_err: block.uncertainty_seconds,
+                parent_block_hash: HashOutput(parent_hash),
+                last_block_time: Timestamp::from_secs(block.last_block_seconds),
+            },
+            whitelist: None,
+        },
+    );
+    let outcome = match result {
+        TransactionResult::Success(_) => "success",
+        TransactionResult::PartialSuccess(_, _) => "partialSuccess",
+        TransactionResult::Failure(_) => "failure",
+    };
+    // Mirror LedgerState.postBlockUpdate(date) from the controlled local SDK.
+    let finalized =
+        post.post_block_update(tblock, NormalizedCost::ZERO, FixedPoint::from_u64_div(1, 2))?;
+    Ok(serde_json::json!({
+        "schema": "moriarty-strict-ledger-replay/1", "outcome": outcome,
+        "blockContext": block, "blockSeconds": input.block_seconds, "contractCalls": calls,
+        "preStateSHA256": hex::encode(Sha256::digest(encode(state))),
+        "transactionSHA256": hex::encode(Sha256::digest(tx_raw)),
+        "postStateSHA256": hex::encode(Sha256::digest(encode(&post))),
+        "afterBlockStateSHA256": hex::encode(Sha256::digest(encode(&finalized))),
+    }))
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
+    let args: Vec<_> = std::env::args().skip(1).collect();
+    let strict = match args.as_slice() {
+        [] => false,
+        [arg] if arg == "--strict" => true,
+        _ => return Err("usage: validate_call [--strict]".into()),
+    };
+
     let mut raw = Vec::new();
     io::stdin()
         .take(32 * 1024 * 1024 + 1)
@@ -45,12 +160,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err("input exceeds 32 MiB".into());
     }
     let input: Input = serde_json::from_slice(&raw)?;
-    let state_raw = hex::decode(input.state)?;
-    let tx_raw = hex::decode(input.transaction)?;
+    let state_raw = hex::decode(&input.state)?;
+    let tx_raw = hex::decode(&input.transaction)?;
     let state: LedgerState<InMemoryDB> = decode(&state_raw)?;
-    let tx: Tx = decode(&tx_raw)?;
-    if encode(&state) != state_raw || encode(&tx) != tx_raw {
+    if encode(&state) != state_raw {
         return Err("noncanonical input".into());
+    }
+    if strict {
+        let block = input
+            .block_context
+            .as_ref()
+            .ok_or("--strict requires block_context")?;
+        println!("{}", strict_replay(&state, &tx_raw, &input, block)?);
+        return Ok(());
+    }
+    if input.block_context.is_some() {
+        return Err("block_context requires --strict".into());
+    }
+    let tx: Tx = decode(&tx_raw)?;
+    if encode(&tx) != tx_raw {
+        return Err("noncanonical transaction".into());
     }
     let Transaction::Standard(standard) = &tx else {
         return Err("expected standard call transaction".into());

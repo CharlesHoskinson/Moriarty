@@ -1,0 +1,59 @@
+agreement FeedConditionedExactInput profile "moriarty-bounded-atomic/1" {
+  lifetime 128;
+  horizon 2000;
+  unit A;
+  unit B;
+  const owner: Text = text("Alice");
+  const recipient: Text = text("Bob");
+  const executor: Text = text("executor");
+  const escrow: Text = text("escrow");
+  const deadline: UInt128 = uint(1400);
+  state remaining_a: Amount<A> = amount(100, A);
+  state spent_a: Amount<A> = amount(0, A);
+  state refunded_a: Amount<A> = amount(0, A);
+  state closed: UInt128 = uint(0);
+  observation now: UInt128;
+  observation price_ab: UInt128;
+  observation sample_age: UInt128;
+  settlement binding_a asset text("ASSET_A") quantum amount(1, A);
+  settlement binding_b asset text("ASSET_B") quantum amount(1, B);
+  status episode closed_when closed == uint(1);
+  status agreement remaining_notional remaining_a;
+  reserve fill for cancel;
+  policy fill_a targets write(fill, remaining_a), write(fill, spent_a), effect(fill, 0, amount) {
+    unit A; derivation "input budget conservation"; rounding none; remainder "explicit remaining or refunded state"; comparison "exact"; proof "assessment_added_probe_not_a_proof";
+  }
+  policy fill_b targets effect(fill, 1, amount) {
+    unit B; derivation "output amount constrained by guards"; rounding none; remainder "explicit remaining or refunded state"; comparison "exact"; proof "assessment_added_probe_not_a_proof";
+  }
+  policy cancel_a targets write(cancel, remaining_a), write(cancel, refunded_a), effect(cancel, 0, amount) {
+    unit A; derivation "all residual A returned to Alice"; rounding none; remainder "explicit remaining or refunded state"; comparison "exact"; proof "assessment_added_probe_not_a_proof";
+  }
+  effect Transfer { asset: Text; from: Text; to: Text; amount: Amount; }
+  action fill(actor: Text, recipient: Text, amount_a: Amount<A>, amount_b: Amount<B>) {
+    guard remaining > uint(1), "reserve cancellation allowance";
+    guard state.closed == uint(0), "order closed";
+    guard arg.actor == const.owner, "only Alice authorizes A";
+    guard arg.recipient == const.recipient, "recipient must be Bob";
+    guard state.remaining_a + state.spent_a + state.refunded_a == amount(100, A), "A accounting";
+    guard obs.now < const.deadline, "order expired";
+    guard obs.price_ab < uint(3), "price must be below three";
+    guard obs.sample_age <= uint(30), "feed sample expired";
+    guard arg.amount_a == amount(100, A), "exact input is 100 A";
+    guard arg.amount_b >= amount(200, B), "output is at least 200 B";
+    set remaining_a = state.remaining_a - arg.amount_a;
+    set spent_a = state.spent_a + arg.amount_a;
+    set closed = uint(1);
+    emit Transfer { asset: text("ASSET_A"), from: const.escrow, to: const.executor, amount: arg.amount_a };
+    emit Transfer { asset: text("ASSET_B"), from: const.executor, to: arg.recipient, amount: arg.amount_b };
+  }
+  action cancel(actor: Text) {
+    guard state.closed == uint(0), "order closed";
+    guard arg.actor == const.owner, "only Alice cancels";
+    guard state.remaining_a + state.spent_a + state.refunded_a == amount(100, A), "A accounting";
+    emit Transfer { asset: text("ASSET_A"), from: const.escrow, to: const.owner, amount: state.remaining_a };
+    set refunded_a = state.refunded_a + state.remaining_a;
+    set remaining_a = amount(0, A);
+    set closed = uint(1);
+  }
+}
